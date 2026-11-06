@@ -1,0 +1,35 @@
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, c) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
+
+unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
+    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
+
+point_friend: points_to(Alice, Bob) <-
+    identity(Alice), friend(Alice, Bob), not points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+point_transitive: points_to(Alice, c) <-
+    identity(Alice), knows(Alice, c), points_to(Alice, Bob), identity(Bob), points_to(Bob, c) guarded by Alice
+
+unpoint: not points_to(Alice, Bob) <-
+    identity(Alice), points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+follow_own: lpoints_to(Alice, Bob, Bob) <-
+    identity(Alice), friend(Alice, Bob), not lpoints_to(Alice, Bob, Bob), identity(Bob) guarded by Alice
+
+follow_friend: lpoints_to(Alice, Bob, Dave) <-
+    identity(Alice), friend(Alice, Bob), not lpoints_to(Alice, Bob, Dave), identity(Bob), lpoints_to(Bob, Carol, Dave) guarded by Alice
+
+follow_transitive: lpoints_to(Alice, Carol, Dave) <-
+    identity(Alice), knows(Alice, Carol), lpoints_to(Alice, Bob, Dave), not lpoints_to(Alice, Carol, Dave), identity(Bob), lpoints_to(Bob, Carol, Dave) guarded by Alice
+
+unfollow: not lpoints_to(Alice, Bob, Dave) <-
+    identity(Alice), lpoints_to(Alice, Bob, Dave), identity(Bob) guarded by Alice

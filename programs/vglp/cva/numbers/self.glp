@@ -16,6 +16,9 @@
 %%   step(p ; t, t1)        :  at p  -fuel, -level(t), +level(t1)      t1 = t + 1
 %%   claim(p?, q ; d, t)    :  at p  friend(q), +claimed(q, d)
 %%                             at q  friend(p), level(t), +honoured(p, d)   d =< t
+%%   mint(p? ; k)           :  at p  started, +k token
+%%   spend(p? ; k)          :  at p  started, k token, -token, +spent(k)
+%%   burn(p? ; k, j)        :  at p  started, k token, -j token, +burnt(k, j)   j =< k
 %%
 %% refuel's k is bound by the schema-binding and named by the request, a
 %% number field, and its fuel atom carries the multiplicity k; step's t occurs
@@ -40,14 +43,26 @@
 %% votes yes, and it commits: alice holds claimed(bob, 2) and bob
 %% honoured(alice, 2).
 %%
+%% Then a required atom with a multiplicity, deleted with none or with a
+%% multiplicity (vGLP 4aa7e60, Section 5.4: "an atom required with a
+%% multiplicity k and deleted with none having k copies required and one
+%% deleted"; "a multiplicity k deleting or adding k copies").  Bob mints 2
+%% tokens.  spend(bob, 3) asks for 3 where he holds 2, and his agent is ready
+%% for no part it names, so the notice is refused(spend(bob, 3), bob, unable)
+%% (ibid.: "with a notice refused(N, p, unable)").  spend(bob, 2) commits,
+%% leaving him one token and spent(2).  He mints 3 more, holding 4;
+%% burn(bob, 5, 2) is refused, unable, and burn(bob, 4, 3) deletes 3, leaving
+%% him one, and burnt(4, 3).
+%%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
 Class    ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; step(Peer, Integer)
-           ; claim(Peer, Peer, Integer).
-Proposal ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; claim(Peer, Peer, Integer).
-Request  ::= propose(Proposal).
+           ; claim(Peer, Peer, Integer) ; mint(Peer, Integer) ; spend(Peer, Integer) ; burn(Peer, Integer, Integer).
+Proposal ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; claim(Peer, Peer, Integer)
+           ; mint(Peer, Integer) ; spend(Peer, Integer) ; burn(Peer, Integer, Integer).
+Request  ::= propose(Proposal) ; refresh.
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
@@ -59,16 +74,16 @@ Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Atom     ::= friend(Peer) ; started ; level(Integer) ; fuel ; claimed(Peer, Integer) ; honoured(Peer, Integer).
+Atom     ::= friend(Peer) ; started ; level(Integer) ; fuel ; claimed(Peer, Integer) ; honoured(Peer, Integer)
+           ; token ; spent(Integer) ; burnt(Integer, Integer).
 Approved ::= Proposal.
-Output   ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
 Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
-Menu     ::= menu(Key, List(Key), Request?).
-Question ::= menu_w(Menu) ; approval_w(Approval).
-Drawn    ::= menu_w(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
+Question ::= request_r(Request?) ; approval_w(Approval).
+Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
@@ -87,7 +102,17 @@ play_numbers(LA?, LB?, N?) :-
          [own([B1], propose(start(B1?))), wait(holds(started)),
           own([B2], propose(refuel(B2?, 2))), wait(holds(level(2))),
           own([B3], propose(befriend(B3?, alice))),
-          wait(holds(honoured(alice, 2)))],
+          wait(holds(honoured(alice, 2))),
+          own([B4], propose(mint(B4?, 2))), wait(holds(token)),
+          own([B5], propose(spend(B5?, 3))),
+          wait(refused(spend(bob, 3), bob, unable)),
+          own([B6], propose(spend(B6?, 2))),
+          wait(holds(spent(2))),
+          own([B7], propose(mint(B7?, 3))), wait(holds(token)),
+          own([B8], propose(burn(B8?, 5, 2))),
+          wait(refused(burn(bob, 5, 2), bob, unable)),
+          own([B9], propose(burn(B9?, 4, 3))),
+          wait(holds(burnt(4, 3)))],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks

@@ -241,8 +241,11 @@ run(_).
       expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
       // The widget at the root's Widget, the type of the widget in a draw
       // (vGLP, Section 6.3; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 4.1).
+      // The views of a construct whose root the person writes are of its view
+      // type, T ; input(Path) (vGLP, Section 6.3, "The construct process").
+      expect(c.source, contains('View_t_r ::= T ; input(Path).'));
       expect(c.source, contains('procedure run_t_r(Integer?, Widget?, '
-          'Stream(_)?, Done?, Stream(Draw(Drawn))).'));
+          'Stream(View_t_r)?, Done?, Stream(Draw(Drawn))).'));
       expect(c.source, contains('constructs_1([spawn(Id, Q, Gs, Ds?) | Ss]) '
           ':- construct_1(Id?, Q?, Gs?, Ds), constructs_1(Ss?).'));
       expect(c.source, contains('construct_1(Id, t_r(X?), Gs, Ds?) :- '));
@@ -2251,6 +2254,60 @@ procedure (YesNo?)*approve(Integer?).
           "form(leave, [field('Peer', peer)])]))]))");
       expect(c.widgets['YesNo?'],
           "named(approval_sentence, buttons([label('Accept', yes), no]))");
+    });
+
+    test('a declaration of buttons: the widget term carries it whole, and a '
+        'label beside each schema and field its buttons name (compiler '
+        'README, 6)', () {
+      const w = 'social_menu([button("Send", [act(send, 1, [1, 2, 4], '
+          '[req(identity, []), req(knows, [at(2)]), forb(friend, [any, at(2)]), '
+          'req(member, [grp(1, 3)]), unless(blocked, [at(2)]), '
+          'proved(identity, [], knows, [at(4)])], [2, 3], '
+          '[field(4, "person", person), field(5, "text", text)], '
+          '[same(1, 4)], [at(1), say(" sends.")])])])';
+      final c = compile('''
+Peer ::= Key.
+Act ::= send(Peer, Peer, String, Peer, String) ; leave(Peer).
+Ask ::= ask(Act?).
+Ask =::= $w.
+procedure (Ask)*request(Integer?).
+(ask(_))*request(_).
+''');
+      final d = DeclaredWidget.parse(w);
+      expect(DeclaredWidget.parse(d.source).source, d.source);
+      expect(d.name, 'social_menu');
+      expect(d.drawnAs, d.source);
+      final a = d.buttons.single.acts.single;
+      expect(a.schema, 'send');
+      expect(a.proposer, 1);
+      expect(a.binds, [2, 3]);
+      expect([for (final f in a.fields) (f.place, f.label, f.type)],
+          [(4, 'person', 'person'), (5, 'text', 'text')]);
+      expect([for (final x in a.pre) x.kind],
+          ['req', 'req', 'forb', 'req', 'unless', 'proved']);
+      expect(a.pre[2].args, [null, 2]);
+      expect(a.pre[3].args, [(1, 3)]);
+      expect(a.same.single.args, [1, 4]);
+      expect(a.text, [1, ' sends.']);
+      expect(
+          c.widgets['Ask'],
+          allOf(
+              startsWith("named('social_menu([button("),
+              contains("label('Send', form(send, [field('Peer', peer), "
+                  "field('Peer', peer), field('String', text), "
+                  "field(person, peer), field(text, text)]))")));
+    });
+
+    test('an act that does not read as the grammar has it is no declaration',
+        () {
+      expect(
+          DeclaredWidget.tryParse('social_menu([button("X", '
+              '[act(x, 1, [1], [], [], [field(2, "s", other)], [], [])])])'),
+          isNull);
+      expect(
+          DeclaredWidget.tryParse(
+              'social_menu([act(x, "Tab", 1, [], [], [])])'),
+          isNull);
     });
 
     test('are refused where W is not an atom, T not a moded type, or two name '

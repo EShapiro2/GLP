@@ -326,8 +326,6 @@ class _ConstructViewState extends State<ConstructView> {
     w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
-      case actCtor when ws.length == 2:
-        return _shown(ws[1], v, at, recs1);
       case labelCtor when ws.length == 2:
         return _shown(ws[1], v, at, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
@@ -517,8 +515,6 @@ class _ConstructViewState extends State<ConstructView> {
     w = w1;
     final (kind, ws) = ctorArgs(w);
     switch (kind) {
-      case actCtor when ws.length == 2:
-        return _question(ws[1], p, at, recs1);
       case labelCtor when ws.length == 2:
         return _question(ws[1], p, at, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
@@ -627,8 +623,6 @@ class _ConstructViewState extends State<ConstructView> {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
-      case actCtor when ws.length == 2:
-        return _editor(ws[1], at, label, recs1);
       case labelCtor when ws.length == 2:
         return _editor(ws[1], at, label, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
@@ -746,8 +740,6 @@ class _ConstructViewState extends State<ConstructView> {
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
-      case actCtor when ws.length == 2:
-        return _value(ws[1], at, recs1);
       case labelCtor when ws.length == 2:
         return _value(ws[1], at, recs1);
       case namedCtor when ws.length == 2:

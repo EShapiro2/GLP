@@ -53,8 +53,12 @@
 //     drawn, each under its ask's functor, construct 0's under output, and of
 //     the grants' raw inputs, the types of its questions (vGLP, Definition
 //     "Construct Process"; vGLP 2026-10-14 11:36 UTC, Udi: yes).  The drawn
-//     value under each functor is typed _: the views are built by
-//     procedures typed at _;
+//     value of a construct whose root the person writes, holding no stream
+//     or list inside it, is input([]), of its view type, T ; input(Path)
+//     ("V is of the view type of T: T with the type S of each position the
+//     person writes replaced by S ; input(Path)", vGLP e22e2ad, Section 6.3,
+//     "The construct process"); every other drawn value is typed _, the
+//     views being built by procedures typed at _;
 //   - the grants routed to the construct arrive whole, input(Id, P, R), each
 //     naming its question by P, which the bridge sends back from the view; a
 //     construct may hold two questions of one type, and each takes only the
@@ -183,7 +187,7 @@ import 'dispatcher.dart'
         pathTypeName,
         personChannelTypeName,
         widgetTypeName;
-import 'canonical.dart' show ActPlace, DeclaredWidget;
+import 'canonical.dart' show DeclaredWidget;
 
 /// The Definition an interactive type is refused by where it is not one.
 const _definition = 'vGLP, Definition "Volitional Procedure, Interactive Type"';
@@ -251,6 +255,10 @@ class GenericNames {
   final String Function(String functor) run;
   final String runEnd;
 
+  /// The view type of the construct of the ask functor f, a type name fresh
+  /// against the program's (vGLP, Section 6.3, "The construct process").
+  final String Function(String functor) view;
+
   /// A procedure name fresh against the program's, for the drawing of the
   /// program's output.
   final String Function(String stem) output;
@@ -280,6 +288,7 @@ class GenericNames {
       required this.constructs,
       required this.run,
       required this.runEnd,
+      required this.view,
       required this.output,
       required this.shown,
       required this.thread,
@@ -633,14 +642,15 @@ class _Generator {
   /// draw(Id, W, f(V)) (vGLP, Definition "Construct Process": "with V under
   /// the functor t of its ask"); withdraw when Done is bound, every question
   /// the construct holds answered and no question still to come, and on
-  /// nothing else; once the views end, wait to withdraw (run_end/3).
-  String _runFor(String f) {
+  /// nothing else; once the views end, wait to withdraw (run_end/3).  Its
+  /// views are of [view] where the compiler prints that type ([_rootView]).
+  String _runFor(String f, [String view = '_']) {
     final known = _runs[f];
     if (known != null) return known;
     final r = gen.run(f);
     _runs[f] = r;
     _out
-      ..writeln('procedure $r(Integer?, $widgetTypeName?, Stream(_)?, '
+      ..writeln('procedure $r(Integer?, $widgetTypeName?, Stream($view)?, '
           '${gen.doneType}?, Stream(${gen.drawType})).')
       ..writeln('$r(Id, _, _, done, [withdraw(Id?)]).')
       ..writeln('$r(Id, W, [V | Vs], Done, [draw(Id?, W?, $f(V?)) | Ds?]) :- '
@@ -897,7 +907,7 @@ class _Generator {
     // type").  The program writes it, so the declaration is of the moded type
     // Stream(Output), with no `?`.
     final d = w == 'shown' ? 'thread' : 'thread($w)';
-    return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
+    return dw == null ? d : 'named(${constantSource(dw.drawnAs)}, $d)';
   }
 
   // --- the construct clause -------------------------------------------------
@@ -918,7 +928,7 @@ class _Generator {
       }
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
           '$answer([], X, Gs?, _, Done), '
-          '${_runFor(f)}(Id?, $w, [input([])], Done?, Ds).';
+          '${_runFor(f, _rootView(f, root))}(Id?, $w, [input([])], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
       // A type the person writes nowhere holds no question, so its construct
@@ -931,6 +941,18 @@ class _Generator {
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
         '$present([], X?, Gs?, _, Vs, Done), '
         '${_runFor(f)}(Id?, $w, Vs?, Done?, Ds).';
+  }
+
+  /// The view type of the construct of [f], whose root [root] the person
+  /// writes and which holds no stream or list inside it, so that the one
+  /// view it draws is input([]), the question at the root: T ; input(Path)
+  /// (vGLP e22e2ad, Section 6.3, "The construct process": "V is of the view
+  /// type of T: T with the type S of each position the person writes replaced
+  /// by S ; input(Path)").
+  String _rootView(String f, _Node root) {
+    final v = gen.view(f);
+    _out.writeln('$v ::= ${root.typeKey} ; input(${gen.pathType}).');
+    return v;
   }
 
   // --- types ------------------------------------------------------------------
@@ -2211,23 +2233,14 @@ class _Generator {
     } finally {
       _labels = outer;
     }
-    return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
+    return dw == null ? d : 'named(${constantSource(dw.drawnAs)}, $d)';
   }
 
   /// [w], the widget of the constructor [f], with the label the declaration
   /// in force gives [f], `label(S, W)`; [w] itself where it gives none.
   String _labelled(String f, String w) {
     final l = _labels?.ofConstructor(f);
-    final lw = l == null ? w : 'label(${constantSource(l)}, $w)';
-    // Where the request's button is drawn, act(place(...), W), where the
-    // declaration says (vGLP, Section 6.2, "The words a platform shows";
-    // canonical.dart, ActPlace).
-    // One wrapper for each guarding role the act is drawn at, the first outermost (vGLP 110caf4, Section 6.2).
-    var w1 = lw;
-    for (final a in (_labels?.ofAct(f) ?? const <ActPlace>[]).reversed) {
-      w1 = 'act(${a.placeSource}, $w1)';
-    }
-    return w1;
+    return l == null ? w : 'label(${constantSource(l)}, $w)';
   }
 
   /// The name of the field at the place [i] of the constructor [f]: the

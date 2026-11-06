@@ -1,0 +1,58 @@
+Environment predicates: now, location, rider, driver
+
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
+
+unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
+    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
+
+point_friend: points_to(Alice, Bob) <-
+    identity(Alice), friend(Alice, Bob), not points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+point_transitive: points_to(Alice, Carol) <-
+    identity(Alice), knows(Alice, Carol), points_to(Alice, Bob), not points_to(Alice, Carol), identity(Bob), points_to(Bob, Carol) guarded by Alice
+
+unpoint: not points_to(Alice, Bob) <-
+    identity(Alice), points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+call_open: open(Alice, r, x, y, e, mx, m), calling(Alice) <-
+    identity(Alice), rider(Alice), not calling(Alice), not busy(Alice) guarded by Alice
+
+call: call(Bob, Alice, r, x, y, e, mx, m) <-
+    identity(Alice), open(Alice, r, x, y, e, mx, m), points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+forward_call: forwarded(Bob, Alice, r, Carol), call_fwd(Carol, Alice, r, x, y, e, mx, m) <-
+    identity(Bob), call(Bob, Alice, r, x, y, e, mx, m), points_to(Bob, Carol), not forwarded(Bob, Alice, r, Carol), identity(Carol)
+
+bid: bidded(Bob, Alice, r, p, d), bid(Alice, Bob, r, p, d) <-
+    identity(Bob), driver(Bob), call(Bob, Alice, r, x, y, e, mx, m), now(Bob, t), identity(Alice), t < e guarded by Bob
+
+bid_fwd: bidded(Bob, Alice, r, p, d), bid(Alice, Bob, r, p, d) <-
+    identity(Bob), driver(Bob), call_fwd(Bob, Alice, r, x, y, e, mx, m), now(Bob, t), identity(Alice), t < e guarded by Bob
+
+award: ride(Alice, Bob, r, x, y, mx, t0, d, f, k, m), fare_locked(Alice, r, f), busy(Alice), not open(Alice, r, x, y, e, mx, m), not calling(Alice), ride(Bob, Alice, r, x, y, mx, t0, d, f, k, m), deposit_locked(Bob, r, k), busy(Bob), not bidded(Bob, Alice, r, p, d) <-
+    identity(Alice), bid(Alice, Bob, r, p, d), now(Alice, t0), open(Alice, r, x, y, e, mx, m), calling(Alice), identity(Bob), bidded(Bob, Alice, r, p, d), not busy(Bob), e <= t0 guarded by Alice
+
+close: not open(Alice, r, x, y, e, mx, m), not calling(Alice) <-
+    identity(Alice), now(Alice, t), open(Alice, r, x, y, e, mx, m), calling(Alice), e <= t guarded by Alice
+
+pickup: riding(Alice, Bob, r, y, t0, d, f, k, m, t), not ride(Alice, Bob, r, x, y, mx, t0, d, f, k, m), riding(Bob, Alice, r, y, t0, d, f, k, m, t), not ride(Bob, Alice, r, x, y, mx, t0, d, f, k, m) <-
+    identity(Alice), location(Alice, x), now(Alice, t), ride(Alice, Bob, r, x, y, mx, t0, d, f, k, m), identity(Bob), location(Bob, x), ride(Bob, Alice, r, x, y, mx, t0, d, f, k, m)
+
+arrive: released(Alice, r, a1, c1), not riding(Alice, Bob, r, y, t0, d, f, k, m, t), not fare_locked(Alice, r, f), not busy(Alice), released(Bob, r, a2, c2), not riding(Bob, Alice, r, y, t0, d, f, k, m, t), not deposit_locked(Bob, r, k), not busy(Bob) <-
+    identity(Alice), location(Alice, y), riding(Alice, Bob, r, y, t0, d, f, k, m, t), fare_locked(Alice, r, f), busy(Alice), identity(Bob), location(Bob, y), riding(Bob, Alice, r, y, t0, d, f, k, m, t), deposit_locked(Bob, r, k), busy(Bob), a1 + a2 = f, c1 + c2 = k, a1 >= 0, a2 >= 0, c1 >= 0, c2 >= 0
+
+cancel: released(Alice, r, a1, c1), not ride(Alice, Bob, r, x, y, mx, t0, d, f, k, m), not fare_locked(Alice, r, f), not busy(Alice), released(Bob, r, a2, c2), not ride(Bob, Alice, r, x, y, mx, t0, d, f, k, m), not deposit_locked(Bob, r, k), not busy(Bob) <-
+    identity(Alice), now(Alice, t), ride(Alice, Bob, r, x, y, mx, t0, d, f, k, m), fare_locked(Alice, r, f), busy(Alice), identity(Bob), ride(Bob, Alice, r, x, y, mx, t0, d, f, k, m), deposit_locked(Bob, r, k), busy(Bob), t > t0 + mx, a1 + a2 = f, c1 + c2 = k, a1 >= 0, a2 >= 0, c1 >= 0, c2 >= 0 guarded by Alice
+
+withdraw: not open(Alice, r, x, y, e, mx, m), not calling(Alice) <-
+    identity(Alice), now(Alice, t), open(Alice, r, x, y, e, mx, m), calling(Alice), t < e guarded by Alice

@@ -791,15 +791,17 @@ _Questions _questions(
 /// 2026-10-02 21:02 UTC, B); and without the generic source, the
 /// compilation's own Ask(Q), the same.  [drawn] is the type of what the
 /// person channel carries, [procTaken] the procedure names taken, which Part
-/// 2 adds to, [inst] the generic source instantiated and [added] the types
-/// the compilation adds.
+/// 2 adds to, [typeTaken] the type names taken, which Part 2 adds to, [inst]
+/// the generic source instantiated and [added] the types the compilation
+/// adds.
 class _Names {
   final String drawn;
   final Set<String> procTaken;
+  final Set<String> typeTaken;
   final InstantiatedDispatcher? inst;
   final _AddedTypes added;
 
-  _Names(this.drawn, this.procTaken, this.inst, this.added);
+  _Names(this.drawn, this.procTaken, this.typeTaken, this.inst, this.added);
 }
 
 /// The names the compilation adds ([_Names]), fresh, too, against every type
@@ -842,7 +844,7 @@ _Names _namesAdded(
       ask: inst?.type(askTypeName) ?? _fresh('Ask', typeNames),
       question: question,
       emitAsk: inst == null);
-  return _Names(drawn, procTaken, inst, added);
+  return _Names(drawn, procTaken, typeNames, inst, added);
 }
 
 /// The compiled procedures, each with its declaration, in source order; a
@@ -918,6 +920,7 @@ _Elicitation? _part2(
         interactive,
         names.added,
         names.procTaken,
+        names.typeTaken,
         {...scopeWidgets, ...widgetDecls.byModedType},
         scope,
         names.drawn,
@@ -1263,6 +1266,7 @@ _Elicitation _elicitation(
     List<InteractiveType> interactive,
     _AddedTypes added,
     Set<String> procTaken,
+    Set<String> typeTaken,
     Map<String, String> widgets,
     TypeEnvironment? scope,
     String drawn,
@@ -1278,6 +1282,7 @@ _Elicitation _elicitation(
     constructs: constructsName,
     runEnd: inst.proc('run_end'),
     run: (f) => freshProc('run_$f'),
+    view: (f) => _fresh('View_$f', typeTaken),
     shown: inst.proc('shown'),
     thread: inst.proc('thread'),
     consViews: inst.proc('cons_views'),
@@ -1513,14 +1518,10 @@ String _widgetType(String left, int line, int column) {
 /// appendix-lp.tex, Definition "Logic Programs Syntax"), so `'inbox_card'`
 /// and `"inbox_card"` name one widget.  Or the atom applied to the list of
 /// the labels its declaration gives the type's constructors,
-/// `social_menu([label(establish, "Join"), label(message, 3, "text")])`:
-/// "A label is the same for every question of its type --- the name of a
-/// request in the menu, the name of a field in its form, the two answers of
-/// an approval question, the name of a list in the view --- so the compiler
-/// writes it into the widget declaration it prints for that type, and a
-/// widget term carries a label beside each constructor of Definition
-/// Default Widget" (vGLP 1126f4f, Section 6.2, "The words a platform
-/// shows"); its text as [DeclaredWidget.source] writes it, which
+/// `w([label(f, "S"), label(f, 3, "S")])`, or the buttons of a platform's
+/// request type, `social_menu([button("Join", [act(...)])])`
+/// (programs/vglp/cva/compiler/README.md, 6; vGLP, Section 6.2, "The words a
+/// platform shows"): its text as [DeclaredWidget.source] writes it, which
 /// [DeclaredWidget.parse] reads back.
 String _widgetAtom(String right, int line, int column) {
   if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(right)) return right;
@@ -1539,8 +1540,9 @@ String _widgetAtom(String right, int line, int column) {
       'A widget declaration "T =::= W" whose W, "$right", is not an atom '
       'naming a widget, nor one applied to the list of its labels, each '
       'label(F, S) or label(F, I, S), F a constructor, I a place of it and S '
-      'a string, and of the places of its requests, act(F, T, M, Ps, Gs, Is), '
-      'meeting(F, I) and text(F, Ws)', line, column, phase: 'parser');
+      'a string, or of its buttons, button(S, Acts), each act '
+      'act(F, M, Pre, Binds, Fields, Same, Text)', line, column,
+      phase: 'parser');
 }
 
 /// A widget a declaration names, with the labels it gives (vGLP 1126f4f,
@@ -1562,28 +1564,22 @@ class DeclaredWidget {
   /// from 1.
   final Map<String, String> places;
 
-  /// Where the button of each request is drawn, by its functor: the entries
-  /// `act(F, T, M, Ps, Gs, Is)`, `meeting(F, I)` and `text(F, Ws)` vGLP's
-  /// compiler prints for a contract with pragmas (vGLP, Section 6.2, "The
-  /// words a platform shows": "The button of an act that names, beside the
-  /// person proposing it, a person or a group is drawn beside each one the
-  /// view lists, on whichever tab lists it, and the button of an act that
-  /// names none on the tab of its contract"; Section 5.4, "The contract's
-  /// words": the question of an act with one guarding role "is text of its
-  /// request form"; programs/vglp/cva/compiler/README.md, "The pragmas").
-  final Map<String, List<ActPlace>> acts;
+  /// The buttons of the request type, in the order of the pragmas: "for its
+  /// request type, a menu of the buttons and the fields of the contract's
+  /// acts" (vGLP, Section 6.2, "The words a platform shows";
+  /// programs/vglp/cva/compiler/README.md, 6).
+  final List<DeclaredButton> buttons;
 
   const DeclaredWidget(this.name,
       [this.constructors = const {},
       this.places = const {},
-      this.acts = const {}]);
+      this.buttons = const []]);
 
   /// The declaration's widget as the map of widget declarations carries it
   /// ([WidgetDeclarations.byModedType]): its name alone, or its name applied
-  /// to its labels, `w([label(f, 'S'), label(f, 3, 'S')])`, and to the
-  /// places of its requests.
+  /// to its labels, `w([label(f, 'S'), label(f, 3, 'S')])`, and its buttons.
   String get source {
-    if (constructors.isEmpty && places.isEmpty && acts.isEmpty) return name;
+    if (constructors.isEmpty && places.isEmpty && buttons.isEmpty) return name;
     final ls = [
       for (final e in constructors.entries)
         'label(${constantSource(e.key)}, ${constantSource(e.value)})',
@@ -1591,12 +1587,17 @@ class DeclaredWidget {
         'label(${constantSource(e.key.substring(0, e.key.lastIndexOf('/')))}, '
             '${e.key.substring(e.key.lastIndexOf('/') + 1)}, '
             '${constantSource(e.value)})',
-      for (final e in acts.entries)
-        for (var i = 0; i < e.value.length; i++)
-          ...e.value[i].entries(e.key, rest: i == 0),
+      for (final b in buttons) b.source,
     ];
     return '${constantSource(name)}([${ls.join(', ')}])';
   }
+
+  /// The `W` of the term `named(W, D)` the widget is drawn by: "the widget W
+  /// its declaration gives, a term of the construct family" (vGLP e22e2ad,
+  /// Section 6.3): its name, and, where it declares buttons, the widget whole,
+  /// in the `Constant` the root's type `Widget` holds there, its text, from
+  /// which the construct family reads the term ([parse]).
+  String get drawnAs => buttons.isEmpty ? name : source;
 
   /// The widget [w] names, as [source] writes it or as a declaration writes
   /// it.
@@ -1615,18 +1616,164 @@ class DeclaredWidget {
       return null;
     }
     if (t is! StructTerm || t.args.length != 1) return null;
-    final entries = _Entries();
+    final constructors = <String, String>{};
+    final places = <String, String>{};
+    final buttons = <DeclaredButton>[];
     Term? cell = t.args.single;
     while (cell is ListTerm && !cell.isNil) {
       final l = cell.head;
       if (l is! StructTerm || l.args.isEmpty) return null;
       final f = _labelConstant(l.args.first);
       if (f == null) return null;
-      if (!entries.add(l, f)) return null;
+      if (l.functor == 'label') {
+        if (!_label(l, f, constructors, places)) return null;
+      } else if (l.functor == 'button' && l.args.length == 2) {
+        final b = _button(l, f);
+        if (b == null) return null;
+        buttons.add(b);
+      } else {
+        return null;
+      }
       cell = cell.tail;
     }
     if (cell is! ListTerm || !cell.isNil) return null;
-    return entries.widget(t.functor);
+    return DeclaredWidget(t.functor, constructors, places, buttons);
+  }
+
+  /// `label(F, S)`, the constructor F labelled S, or `label(F, I, S)`, its
+  /// place I labelled S.
+  static bool _label(StructTerm l, String f, Map<String, String> constructors,
+      Map<String, String> places) {
+    final s = _labelConstant(l.args.last);
+    if (s == null) return false;
+    if (l.args.length == 2) {
+      constructors[f] = s;
+    } else if (l.args.length == 3) {
+      final i = _int(l.args[1]);
+      if (i == null) return false;
+      places['$f/$i'] = s;
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  /// `button(B, Acts)` (programs/vglp/cva/compiler/README.md, 6).
+  static DeclaredButton? _button(StructTerm l, String label) {
+    final xs = _items(l.args[1]);
+    if (xs == null) return null;
+    final acts = <DeclaredAct>[];
+    for (final x in xs) {
+      final a = _act(x);
+      if (a == null) return null;
+      acts.add(a);
+    }
+    return DeclaredButton(label, acts);
+  }
+
+  /// `act(F, M, Roles, Pre, Binds, Fields, Same, Text)`.
+  static DeclaredAct? _act(Term x) {
+    if (x is! StructTerm || x.functor != 'act' || x.args.length != 8) {
+      return null;
+    }
+    final f = _labelConstant(x.args[0]);
+    final m = _int(x.args[1]);
+    final roles = _ints(x.args[2]);
+    final pre = _conditions(x.args[3]);
+    final binds = _ints(x.args[4]);
+    final fields = _fields(x.args[5]);
+    final same = _conditions(x.args[6]);
+    final text = _words(x.args[7]);
+    if (f == null || m == null || roles == null || pre == null ||
+        binds == null || fields == null || same == null || text == null) {
+      return null;
+    }
+    return DeclaredAct(f, m, roles, pre, binds, fields, same, text);
+  }
+
+  /// `Preconds`: a list of `req(P, As)`, `forb(P, As)`, `unless(P, As)`,
+  /// `proved(Q, Ws, P, As)` and `same(K, J)`.
+  static List<ActCondition>? _conditions(Term t) {
+    final xs = _items(t);
+    if (xs == null) return null;
+    final out = <ActCondition>[];
+    for (final x in xs) {
+      final c = _condition(x);
+      if (c == null) return null;
+      out.add(c);
+    }
+    return out;
+  }
+
+  static ActCondition? _condition(Term x) {
+    if (x is! StructTerm) return null;
+    if (x.functor == 'same' && x.args.length == 2) {
+      final k = _int(x.args[0]), j = _int(x.args[1]);
+      if (k == null || j == null) return null;
+      return ActCondition('same', '', [k, j]);
+    }
+    if (x.functor == 'proved' && x.args.length == 4) {
+      final q = _labelConstant(x.args[0]), p = _labelConstant(x.args[2]);
+      final ws = _items(x.args[1]);
+      final as_ = _condArgs(x.args[3]);
+      if (q == null || p == null || ws == null || as_ == null) return null;
+      final wc = [for (final w in ws) _labelConstant(w)];
+      if (wc.contains(null)) return null;
+      return ActCondition('proved', p, as_,
+          proves: q, provesArgs: [for (final w in wc) w!]);
+    }
+    if ((x.functor == 'req' || x.functor == 'forb' || x.functor == 'unless') &&
+        x.args.length == 2) {
+      final p = _labelConstant(x.args[0]);
+      final as_ = _condArgs(x.args[1]);
+      if (p == null || as_ == null) return null;
+      return ActCondition(x.functor, p, as_);
+    }
+    return null;
+  }
+
+  /// The places of an atom's arguments: `at(K)`, the int K; `grp(J, K)`, the
+  /// pair; or `any`, null.
+  static List<Object?>? _condArgs(Term t) {
+    final as_ = _items(t);
+    if (as_ == null) return null;
+    final out = <Object?>[];
+    for (final a in as_) {
+      if (a is StructTerm && a.functor == 'at' && a.args.length == 1) {
+        final k = _int(a.args[0]);
+        if (k == null) return null;
+        out.add(k);
+      } else if (a is StructTerm && a.functor == 'grp' && a.args.length == 2) {
+        final j = _int(a.args[0]), k = _int(a.args[1]);
+        if (j == null || k == null) return null;
+        out.add((j, k));
+      } else if (_labelConstant(a) == 'any') {
+        out.add(null);
+      } else {
+        return null;
+      }
+    }
+    return out;
+  }
+
+  /// `Fields`: a list of `field(I, S, T)`.
+  static List<DeclaredField>? _fields(Term t) {
+    final xs = _items(t);
+    if (xs == null) return null;
+    final out = <DeclaredField>[];
+    for (final x in xs) {
+      if (x is! StructTerm || x.functor != 'field' || x.args.length != 3) {
+        return null;
+      }
+      final i = _int(x.args[0]);
+      final s = _labelConstant(x.args[1]);
+      final ty = _labelConstant(x.args[2]);
+      if (i == null || s == null || !DeclaredField.types.contains(ty)) {
+        return null;
+      }
+      out.add(DeclaredField(i, s, ty!));
+    }
+    return out;
   }
 
   static int? _int(Term t) =>
@@ -1648,119 +1795,6 @@ class DeclaredWidget {
     if (xs == null) return null;
     final is_ = [for (final x in xs) _int(x)];
     return is_.contains(null) ? null : [for (final i in is_) i!];
-  }
-
-  static List<(int, int)>? _groups(Term t) {
-    final xs = _items(t);
-    if (xs == null) return null;
-    final gs = <(int, int)>[];
-    for (final x in xs) {
-      if (x is! StructTerm || x.functor != 'group' || x.args.length != 2) {
-        return null;
-      }
-      final j = _int(x.args[0]), k = _int(x.args[1]);
-      if (j == null || k == null) return null;
-      gs.add((j, k));
-    }
-    return gs;
-  }
-
-  /// The items an act names, `item(K, P)`: the speech act at place K,
-  /// which a row of the list of the predicate P fills.
-  static List<String>? _itemsAt(Term t) {
-    final xs = _items(t);
-    if (xs == null) return null;
-    final is_ = <String>[];
-    for (final x in xs) {
-      final item = _itemAt(x);
-      if (item == null) return null;
-      is_.add(item);
-    }
-    return is_;
-  }
-
-  /// One item an act names, as [DeclaredWidget.source] writes it, or null
-  /// where [x] is none.
-  static String? _itemAt(Term x) {
-    if (x is StructTerm && x.functor == 'proved' && x.args.length == 4) {
-      return _provedItem(x);
-    }
-    if (x is StructTerm && x.functor == 'same' && x.args.length == 2) {
-      return _sameItem(x);
-    }
-    if (x is! StructTerm || x.args.length != 2) return null;
-    final p = x.functor == 'item' || x.functor == 'pick' ? x.args[1] : x.args[0];
-    final pc = _labelConstant(p);
-    if (pc == null) return null;
-    if (x.functor == 'item' || x.functor == 'pick') return _pickedItem(x, pc);
-    if (x.functor == 'atom') return _atomItem(x, pc);
-    if (x.functor == 'req' || x.functor == 'forb' || x.functor == 'unless') {
-      return _conditionItem(x, pc);
-    }
-    return null;
-  }
-
-  /// What the schemas prove of the person at a place from the viewer's records, proved(Q, Ws, P, As): the place offers only a person so proved (vGLP 3ec07a2, Section 6.2, "The words a platform shows": "where the place's role requires an atom that the schemas prove of a person from the viewer's records, as above, only a person so proved is offered").
-  static String? _provedItem(StructTerm x) {
-    final q = _labelConstant(x.args[0]), pc = _labelConstant(x.args[2]);
-    final ws = _items(x.args[1]);
-    final as_ = _condArgs(x.args[3]);
-    if (q == null || pc == null || ws == null || as_ == null) return null;
-    final wc = [for (final w in ws) _labelConstant(w)];
-    if (wc.contains(null)) return null;
-    return 'proved(${constantSource(q)}, [${[for (final w in wc) constantSource(w!)].join(', ')}], '
-        '${constantSource(pc)}, [${as_.join(', ')}])';
-  }
-
-  /// Two places possibly one person, same(K, J) (GSC 316d875, Section 2).
-  static String? _sameItem(StructTerm x) {
-    final k = _int(x.args[0]), j = _int(x.args[1]);
-    if (k == null || j == null) return null;
-    return 'same($k, $j)';
-  }
-
-  /// item(K, P), the speech act at place K, which a row of the list of the predicate P fills; pick(K, P): an agent variable a field names that the proposer's role requires held, picked among the persons of the rows of the list of P (vGLP acd3e74, Section 5.4, "The contract's words").
-  static String? _pickedItem(StructTerm x, String pc) {
-    final k = _int(x.args[0]);
-    if (k == null) return null;
-    return '${x.functor}($k, ${constantSource(pc)})';
-  }
-
-  /// atom(P, Ks), the atom P over the places Ks.
-  static String? _atomItem(StructTerm x, String pc) {
-    final ks = _ints(x.args[1]);
-    if (ks == null) return null;
-    return 'atom(${constantSource(pc)}, [${ks.join(', ')}])';
-  }
-
-  /// The precondition of the act at the proposer's role (vGLP feda043, Section 6.2): each argument at(K), grp(J, K) or any.
-  static String? _conditionItem(StructTerm x, String pc) {
-    final out = _condArgs(x.args[1]);
-    if (out == null) return null;
-    return '${x.functor}(${constantSource(pc)}, [${out.join(', ')}])';
-  }
-
-  /// The places of an atom's arguments, at(K), grp(J, K) or any (vGLP feda043, Section 6.2).
-  static List<String>? _condArgs(Term t) {
-    final as_ = _items(t);
-    if (as_ == null) return null;
-    final out = <String>[];
-    for (final a in as_) {
-      if (a is StructTerm && a.functor == 'at' && a.args.length == 1) {
-        final k = _int(a.args[0]);
-        if (k == null) return null;
-        out.add('at($k)');
-      } else if (a is StructTerm && a.functor == 'grp' && a.args.length == 2) {
-        final j = _int(a.args[0]), k = _int(a.args[1]);
-        if (j == null || k == null) return null;
-        out.add('grp($j, $k)');
-      } else if (_labelConstant(a) == 'any') {
-        out.add('any');
-      } else {
-        return null;
-      }
-    }
-    return out;
   }
 
   static List<Object>? _words(Term t) {
@@ -1791,170 +1825,129 @@ class DeclaredWidget {
     return null;
   }
 
-  /// The label of the constructor [f], or null where none is given.
-  String? ofConstructor(String f) => constructors[f];
-
-  /// The label of the place [i] of the constructor [f], or null.
-  String? ofPlace(String f, int i) => places['$f/$i'];
-
-  /// Where the button of the request [f] is drawn, one place for each of its guarding roles (vGLP 110caf4, Section 6.2: "the button of an act is drawn at each of its guarding roles"), or null where the declaration does not say.
-  List<ActPlace>? ofAct(String f) => acts[f];
-}
-
-/// The entries of a declared widget's list of labels as
-/// [DeclaredWidget.tryParse] reads them, one parser per kind of entry: the
-/// labels of constructors and places, and the places of requests, their
-/// meeting places and the words of their forms.
-class _Entries {
-  final constructors = <String, String>{};
-  final places = <String, String>{};
-  final acts = <String, List<ActPlace>>{};
-  final keysOf = <String, List<int>>{};
-  final wordsOf = <String, List<Object>>{};
-
-  /// Read the entry [l], of the constructor [f]; false where it is none.
-  bool add(StructTerm l, String f) {
-    if (l.functor == 'label') return _label(l, f);
-    if (l.functor == 'act' && l.args.length == 6) return _act(l, f);
-    if (l.functor == 'meeting' && l.args.length == 2) return _meeting(l, f);
-    if (l.functor == 'text' && l.args.length == 2) return _text(l, f);
-    return false;
-  }
-
-  /// `label(F, S)`, the constructor F labelled S, or `label(F, I, S)`, its
-  /// place I labelled S.
-  bool _label(StructTerm l, String f) {
-    final s = DeclaredWidget._labelConstant(l.args.last);
-    if (s == null) return false;
-    if (l.args.length == 2) {
-      constructors[f] = s;
-    } else if (l.args.length == 3) {
-      final i = l.args[1];
-      if (i is! ConstTerm || i.value is! int) return false;
-      places['$f/${i.value}'] = s;
-    } else {
-      return false;
+  /// The label of the constructor [f], or null where none is given: a
+  /// schema's the label of the button that names it.
+  String? ofConstructor(String f) {
+    final l = constructors[f];
+    if (l != null) return l;
+    for (final b in buttons) {
+      if (b.acts.any((a) => a.schema == f)) return b.label;
     }
-    return true;
+    return null;
   }
 
-  /// `act(F, T, M, Ps, Gs, Is)`, where the button of the request F is drawn
-  /// ([ActPlace]).
-  bool _act(StructTerm l, String f) {
-    final tab = l.args[1];
-    final m = DeclaredWidget._int(l.args[2]);
-    final ps = DeclaredWidget._ints(l.args[3]);
-    final gs = DeclaredWidget._groups(l.args[4]);
-    final is_ = DeclaredWidget._itemsAt(l.args[5]);
-    if (tab is! ConstTerm || tab.value is! String || m == null ||
-        ps == null || gs == null || is_ == null) {
-      return false;
-    }
-    (acts[f] ??= []).add(ActPlace()
-      ..tab = tab.value as String
-      ..me = m
-      ..persons = ps
-      ..groups = gs
-      ..items = is_);
-    return true;
-  }
-
-  /// `meeting(F, I)`, a place of the request F a field for a key fills.
-  bool _meeting(StructTerm l, String f) {
-    final i = DeclaredWidget._int(l.args[1]);
-    if (i == null) return false;
-    (keysOf[f] ??= []).add(i);
-    return true;
-  }
-
-  /// `text(F, Ws)`, the words of the request F's form.
-  bool _text(StructTerm l, String f) {
-    final ws = DeclaredWidget._words(l.args[1]);
-    if (ws == null) return false;
-    wordsOf[f] = ws;
-    return true;
-  }
-
-  /// The widget [name] with the entries read.
-  DeclaredWidget widget(String name) {
-    // An act's meeting place and the text of its request form are the same at each guarding role it is drawn at.
-    for (final f in {...keysOf.keys, ...wordsOf.keys}) {
-      final ps = acts[f] ??= [ActPlace()];
-      for (final p in ps) {
-        p.keys = keysOf[f] ?? const [];
-        p.words = wordsOf[f] ?? const [];
+  /// The label of the place [i] of the constructor [f], or null: a schema's
+  /// the label of its field at [i].
+  String? ofPlace(String f, int i) {
+    final l = places['$f/$i'];
+    if (l != null) return l;
+    for (final b in buttons) {
+      for (final a in b.acts) {
+        if (a.schema != f) continue;
+        for (final x in a.fields) {
+          if (x.place == i) return x.label;
+        }
       }
     }
-    // The places of each act its pragma's fields name, label(F, I, S), at each guarding role it is drawn at (vGLP b4022ce, Section 6.2: "only in the row of an entry that fills the one place of the act its pragma's fields do not name").
-    for (final e in acts.entries) {
-      final fs = [
-        for (final k in places.keys)
-          if (k.substring(0, k.lastIndexOf('/')) == e.key)
-            int.parse(k.substring(k.lastIndexOf('/') + 1))
-      ]..sort();
-      for (final p in e.value) {
-        p.fields = fs;
-      }
-    }
-    return DeclaredWidget(name, constructors, places, acts);
+    return null;
   }
 }
 
-/// Where the button of a request is drawn, as a declaration's entries for
-/// it say (vGLP, Section 6.2, "The words a platform shows";
-/// programs/vglp/cva/compiler/README.md, "The pragmas"): the [tab] of its
-/// contract, the place [me] of the person proposing it, the places
-/// [persons] a person the view lists fills and the [groups] a group it lists
-/// fills, each the place of its leader and that of its name, the [items] a
-/// row of a list fills, each the place of its speech act and the predicate
-/// the list lists (vGLP 932c710, Section 6.2: "The button of an act that
-/// names, beside the person proposing it, a person, a group or an item is
-/// drawn beside each one the view lists, ... the row filling the act's
-/// variable"), the places [keys] a field for a key fills where the peer is
-/// not listed, the [words] of the text of its request form, each a
-/// string or the place of a person, and the places [fields] its pragma's
-/// fields name, the declaration's `label(F, I, S)`, each `field(I)` among
-/// the items of the widget term (vGLP b4022ce, Section 6.2: "only in the row
-/// of an entry that fills the one place of the act its pragma's fields do not
-/// name").  Its widget term is `act(place(T, M, Ps, Gs, Is, Ks, Ws), W)`, in
-/// the root's type `Widget` (programs/self.glp).
-class ActPlace {
-  String tab = '';
-  int me = 0;
-  List<int> persons = const [];
-  List<(int, int)> groups = const [];
-  List<String> items = const [];
-  List<int> keys = const [];
-  List<Object> words = const [];
-  List<int> fields = const [];
+/// A button of a platform's request type, `button(B, Acts)`, [label] its
+/// label and [acts] the acts it names (programs/vglp/cva/compiler/README.md,
+/// 6; vGLP, Section 5.4, "The contract's words": "A button is of the acts it
+/// names").
+class DeclaredButton {
+  final String label;
+  final List<DeclaredAct> acts;
+  const DeclaredButton(this.label, this.acts);
 
-  ActPlace();
+  String get source => 'button(${constantSource(label)}, '
+      '[${[for (final a in acts) a.source].join(', ')}])';
+}
 
-  /// The declaration's entries for the request [f]: its act entry, and its meeting and text entries, where [rest].
-  List<String> entries(String f, {bool rest = true}) => [
-        if (me > 0)
-          'act(${constantSource(f)}, ${constantSource(tab)}, $me, '
-              '[${persons.join(', ')}], '
-              '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}], '
-              '$_itemsSource)',
-        if (rest) for (final k in keys) 'meeting(${constantSource(f)}, $k)',
-        if (rest && words.isNotEmpty)
-          'text(${constantSource(f)}, $_wordsSource)',
-      ];
+/// An act of a button at one guarding role, `act(F, M, Pre, Binds, Fields,
+/// Same, Text)` (programs/vglp/cva/compiler/README.md, 6): the schema [schema],
+/// its functor of the request name; the place [proposer] of the viewer; [pre],
+/// the atoms it requires and forbids at the proposer's role and what the
+/// schemas prove; [binds], the places those atoms bind; its [fields]; [same],
+/// its places possibly one person; and [text], the words of its request form,
+/// each a string or the place of a person.
+class DeclaredAct {
+  final String schema;
+  final int proposer;
 
-  String get _itemsSource => '[${items.join(', ')}]';
+  /// The places of the request that hold roles: "distinct roles are bound to
+  /// distinct agents, unless the clause says of two names 'possibly one
+  /// person'", and an agent variable is bound by no such rule (vGLP, Section
+  /// 5.4, "Speech-act schemas as local specifications").
+  final List<int> roles;
+  final List<ActCondition> pre;
+  final List<int> binds;
+  final List<DeclaredField> fields;
+  final List<ActCondition> same;
+  final List<Object> text;
+  const DeclaredAct(this.schema, this.proposer, this.roles, this.pre,
+      this.binds, this.fields, this.same, this.text);
 
-  String get _wordsSource => '[${[
-        for (final w in words)
+  String get source => 'act(${constantSource(schema)}, $proposer, '
+      '[${roles.join(', ')}], '
+      '[${[for (final c in pre) c.source].join(', ')}], '
+      '[${binds.join(', ')}], '
+      '[${[for (final f in fields) f.source].join(', ')}], '
+      '[${[for (final c in same) c.source].join(', ')}], '
+      '[${[
+        for (final w in text)
           w is int ? 'at($w)' : 'say(${constantSource(w as String)})'
-      ].join(', ')}]';
+      ].join(', ')}])';
+}
 
-  /// The term `place(T, M, Ps, Gs, Is, Ks, Ws)` of the widget term.
-  String get placeSource => 'place(${constantSource(tab)}, $me, '
-      '[${persons.join(', ')}], '
-      '[${[for (final (j, k) in groups) 'group($j, $k)'].join(', ')}], '
-      '[${[...items, for (final k in fields) 'field($k)'].join(', ')}], '
-      '[${keys.join(', ')}], $_wordsSource)';
+/// An entry of an act's `Pre` or `Same`: `req(P, As)`, `forb(P, As)`,
+/// `unless(P, As)`, `proved(Q, Ws, P, As)` or `same(K, J)`, by its [kind].  Of
+/// `As`, [args] holds each argument's place: `at(K)` the int K, `grp(J, K)` the
+/// pair `(J, K)`, and `any` null; of `same(K, J)`, the two places.
+class ActCondition {
+  final String kind;
+  final String pred;
+  final List<Object?> args;
+
+  /// The atom `Q(Ws)` a `proved` entry proves.
+  final String proves;
+  final List<String> provesArgs;
+
+  const ActCondition(this.kind, this.pred, this.args,
+      {this.proves = '', this.provesArgs = const []});
+
+  String get source {
+    if (kind == 'same') return 'same(${args[0]}, ${args[1]})';
+    final as_ = '[${[
+      for (final a in args)
+        a is int
+            ? 'at($a)'
+            : a is (int, int)
+                ? 'grp(${a.$1}, ${a.$2})'
+                : 'any'
+    ].join(', ')}]';
+    if (kind == 'proved') {
+      return 'proved(${constantSource(proves)}, '
+          '[${[for (final w in provesArgs) constantSource(w)].join(', ')}], '
+          '${constantSource(pred)}, $as_)';
+    }
+    return '$kind(${constantSource(pred)}, $as_)';
+  }
+}
+
+/// A field of an act, `field(I, S, T)`: its [place], its [label] and its
+/// [type], one of [types].
+class DeclaredField {
+  static const types = {'person', 'key', 'agent', 'text', 'number'};
+
+  final int place;
+  final String label;
+  final String type;
+  const DeclaredField(this.place, this.label, this.type);
+
+  String get source => 'field($place, ${constantSource(label)}, $type)';
 }
 
 // ---------------------------------------------------------------------------

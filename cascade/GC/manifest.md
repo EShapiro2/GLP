@@ -1,9 +1,9 @@
 # A run of the cascade on GC
 
-- Contract: `GC` (`gc` to the checker), its owner's two files `programs/currencies/coins/GC.txt` and `programs/currencies/coins/GC.glp`, copied here as they stood at `af2daf5e`.
+- Contract: `GC` (`gc` to the checker), its owner's two files `programs/currencies/coins/GC.txt` and `programs/currencies/coins/GC.glp`, copied here as they stood at `15f157c3`.
 - The paper: `git@github.com:EShapiro2/GC-Grassroots-Currencies.git` at `35795d6e`, for the paper's own record.
-- The tools: this repository at `af2daf5e` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/currency (the plays with scripted persons).
-- Run on 2026-11-05 07:23 UTC by `cascade.sh gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `15f157c3` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/currency (the plays with scripted persons).
+- Run on 2026-11-06 17:57 UTC by `cascade.sh gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

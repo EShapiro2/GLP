@@ -21,14 +21,14 @@ Proposal ::=
 befriend(Peer, Peer)
 .
 
-Request ::= propose(Proposal).
+Request ::= propose(Proposal) ; refresh.
 
-%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question by its social_menu, with the label of each request and the name of each field the person fills, as the contract's pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group's name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for an acquaintance schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").
+%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Menu =::= social_menu([label(befriend, "Befriend"), act(befriend, "Friends", 1, [2], [], [forb(friend, [at(2)]), unless(friend, [at(2)]), unless(nudged, [at(2)]), unless(nudged_by, [at(2)])]), meeting(befriend, 2)])
+Request? =::= social_menu([button("Befriend", [act(befriend, 1, [1, 2], [forb(friend, [at(2)]), unless(friend, [at(2)]), unless(nudged, [at(2)]), unless(nudged_by, [at(2)])], [], [], [], [])])])
 .
 
-%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(List(Atom), List(Key), List(Approved)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
+%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
 Atom ::=
 friend(Peer)
 ;
@@ -110,8 +110,8 @@ procedure tabs(List(Tab)).
 tabs([tab("Friends", friend)])
 .
 
-%% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names; none, [], where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
-procedure sentence_of(Class?, Peer?, List(Word)).
+%% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names, with the role of the proposer, asked(G, Words); none, asked(0, []), where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
+procedure sentence_of(Class?, Peer?, Asked).
 sentence_of(befriend(V1, V2), Me, Ws?)
 :-
 ground(V2?)
@@ -120,9 +120,9 @@ ground(V1?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, [person(V1?), text(" asks.")])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks.")])], Me?, Ws)
 .
-sentence_of(_, _, []) :- otherwise | true.
+sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
@@ -139,7 +139,7 @@ meet_other(V1?, V2?, Me?, P)
 meeting_peer(_, _, nopeer) :- otherwise | true.
 
 %% ===========================================================================
-%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, Menu, shows the agent's own key and the persons it knows and takes one request (vGLP 321127a, Section 5.4); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the request propose(N) the agent takes a Request, its person's approval, which stands until the transaction is taken or refused; its machine proposes, and proposes again an attempt that yields, with no further question to its person; and a machine that cannot carry out a transaction its person approved refuses it (vGLP f0acbc1, Section 5.4, "Triggers").  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(S, K, A), the machine state S of its app state, the persons K it knows and the approvals A its person made that are pending, each by its request name, when it starts and whenever any changes, and the person's screen shows the last view written; and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable, from the abort outcome, or from its own vote where its own vote no refused the attempt (vGLP e286276, Section 5.4, "The compilation").
+%% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, of the request type Request?, takes one request (vGLP 12f629d, Section 5.4, "The compilation"); the request form reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the request propose(N) the agent takes a Request, its person's approval, which stands until the transaction is taken or refused; its machine proposes, and proposes again an attempt that yields, with no further question to its person; and a machine that cannot carry out a transaction its person approved refuses it (vGLP f0acbc1, Section 5.4, "Triggers").  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(Id, S, K, A, Ts), its own key Id, the machine state S of its app state, the persons K it knows and the approvals A its person made that are pending, each by its request name, and the tabs Ts of its app, when it starts and whenever any changes, and the person's screen shows the last view written; and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable, from the abort outcome, or from its own vote where its own vote no refused the attempt (vGLP e286276, Section 5.4, "The compilation").
 %% ===========================================================================
 
 %% An attempt (i, k, pi, [t]_j, r) (vGLP f0acbc1, Definition "Attempt"): its initiator, its number, its rank, its part, named by a term of Class, a schema-binding of the part, of the attempt's class (Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of its class"), the part's guard set the people in the schema-binding's marked roles, and the request it names, request(Rho, K), where its part is guarded and has an opener, and none otherwise.  The cargoes (Definition "Cargo, App State, Question, Approval, Free, Ready") are its start; a vote on it, a vote no carrying its reason, declined or unable; its outcome, an abort carrying its refuser, the participant whose vote no refused it, with that vote's reason; a yield of it; and a request, request(Rho, K).  A message carries its sender and a cargo, a hello, an ihello, or an introduction, intro(P, Q), P's cargo intro(Q), which Commit and Introduce peers send (Definitions "CVA Platform", "Deciding" and "Introduction Rule, Introduce Peers").  A request is a set of classes (Definition "Local Specification, Part, Guard Set, Opener, Request"): one(C), the class of a guarded part with no opener that the agent guards, C the term naming the class at the agent, a request of the agent to itself; or rho(N), rho_N, the classes of the guarded parts with an opener named N, a request to their opener, the message of the Request carrying N (Section 5.4, "The compilation").  A vote unable of the compiled program carries the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (Section 5.4, "Act schemas").
@@ -169,10 +169,11 @@ Net       ::= msg(Peer, Content).
 Asking    ::= Attempt ; hello(Peer, Proposal).
 %% The approval question of a contract with pragmas carries the sentence the contract puts to the guarding role, which the platform writes, its roles and variables filled in from the binding of the attempt it asks about, each word text(S), as the contract writes it, or person(P), a person the sentence names (vGLP, Section 6.2, "The words a platform shows": "A sentence put to a guarding role names the roles and the variables of the attempt, so the platform writes it into the approval question, and its widget draws it as it draws any output of the program"; Section 5.4, "The contract's words").
 Approval  ::= approval(Asking, List(Word), YesNo?).
-Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
-%% The question of a guarding role beyond the proposer's, q(R, Words), R the person in that role (sentence_of; GSC, Section 2, its first paragraph).
-RoleAsk   ::= q(Peer, List(Word)).
-Menu      ::= menu(Key, List(Key), Request?).
+%% After its sentence and the values of the fields, the approval question shows the atoms the act requires of the proposer whose predicates the tabs list, held(A, K), the atom A with K its copies under the attempt's binding (vGLP e22e2ad, Section 5.4, "The contract's words": "and the atoms the act requires of the proposer whose predicates the tabs list, as the tabs draw them --- in a swap, the coins the proposer gives"; "The compilation": the approval question's term carries those atoms); each atom a word of its own, so that no list is under another, as Definition "Volitional Procedure, Interactive Type" requires of the output.
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
+%% The question of a guarding role beyond the proposer's, q(R, G, Words), R the person in that role and G the role of the proposer (sentence_of; GSC, Section 2, its first paragraph); and what sentence_of gives the agent: asked(G, Words), the role of the proposer, 0 where no question is put to the agent, and the words.
+RoleAsk   ::= q(Peer, Integer, List(Word)).
+Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
 Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
 %% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
@@ -190,7 +191,8 @@ Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
 NTerm     ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm).
 Vars      ::= [] ; [Var | Vars].
 %% An atom a schema adds or deletes may carry a multiplicity, times(K, A), K a number or a numeric variable, for that many copies of A (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications").
-SAtom     ::= atom(Constant, Vars) ; times(Var, SAtom).
+%% rest(K, J, A) is the copies of K.A a role requires beyond the J copies of A it deletes, among the atoms it keeps, as programs/gsc writes it (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom it requires, adds or deletes may carry a multiplicity ..., an atom required with a multiplicity k and deleted with none having k copies required and one deleted"), so K - J copies of A, J being 1 for an atom deleted with no multiplicity.
+SAtom     ::= atom(Constant, Vars) ; times(Var, SAtom) ; rest(Var, Var, SAtom).
 SAtoms    ::= [] ; [SAtom | SAtoms].
 Guard     ::= guarded ; unguarded.
 RoleSpec  ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
@@ -219,16 +221,16 @@ LNorm     ::= norm(Binding) ; badnorm.
 %% The value of a name term is a community name, c(N): community(P) the community name of the person P, dot(N, S) the community name N followed by the speech act S, as dot(community(a), n) names the group n led by a.
 %% Under a binding the wildcard of a cleared atom is itself, any, and N.* the community name of N followed by it, dot_any(C) (GSC 327e035, Definition "Binding": beta(*) := *): the image of a cleared atom, which matches the atoms of a state obtained from it by replacing each wildcard by an argument, a speech act where the wildcard is in a name term (ibid.).
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-%% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a numeric variable X local to a role, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it").
+%% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
 Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
-%% The program's output to its person is of the type of the views, view(S, K, A): S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
+%% The program's output to its person is of the type of the views, view(Id, S, K, A, Ts): Id the agent's own key (vGLP 12f629d, Section 5.4, "The compilation": "its own key k"); S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
 Approved  ::= Proposal.
-%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, its rows showing their counts (vGLP 110caf4, Section 5.4) (vGLP, Section 5.4, "The contract's words": "a tab's name and what it lists into the view the agent writes"), view(S, K, A, Ts).
-Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, each atom it lists shown with its count (vGLP 40f8444, Section 5.4, "The contract's words": "The tab lists the atoms of that predicate in the state, each with its count where the contract adds or deletes the predicate with a multiplicity, the view carrying the whole state"; "the tab's name and its predicate into the view the agent writes"), last in the view, view(Id, S, K, A, Ts).
+Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Shown     ::= shown(Atom) ; unshown.
 Stream(Output) =::= last_state.
@@ -321,12 +323,12 @@ Known     ::= allknown ; unknown(Peer).
 Then      ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
-%% When it starts, its view is written on the output: the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
+%% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
-agent(Id, NetIn, Out?, [view([], [], [], Ts?)|Thr?]) :- ground(Id?) |
+agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
     tabs(Ts),
-    request(Id?, [], Rq),
+    request(Rq),
     tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
     merge(M1?, Ans?, M2),
@@ -334,22 +336,20 @@ agent(Id, NetIn, Out?, [view([], [], [], Ts?)|Thr?]) :- ground(Id?) |
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
         st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
 
-%% A request question: the agent's own key, its identifier, the persons the
-%% agent knows, in the order of identifiers, and the person's one request,
-%% put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no request, and its agent asks no request question.
-procedure (Menu)*request(Key?, List(Key)?, Stream(Trigger)).
-(menu(Id?, Ks?, R))*request(Id, Ks, Out?) :- ground(Id?), ground(Ks?) |
+%% A request question: its question, of the request type Request?, takes the
+%% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part and the alternative refresh (vGLP e22e2ad, Section 5.4, "The compilation"), so that every agent, a contract with no guarded part having the alternative refresh alone, asks a request question when it starts and the next when it reads the answer to the last.
+procedure (Request?)*request(Stream(Trigger)).
+(R)*request(Out?) :-
     await_request(R?, Out).
 procedure await_request(Request?, Stream(Trigger)).
 await_request(propose(C), [req(propose(C?))]).
+await_request(refresh, [req(refresh)]).
 
 %% The next request question, asked on reading the answer to the last, its
 %% answers joining the agent goal's input.
-procedure ask_next(St?, Stream(Trigger), Stream(Trigger)?).
-ask_next(St, Ans?, Ans1) :- ground(St?) |
-    st_id(St?, Id),
-    st_known(St?, Ks),
-    request(Id?, Ks?, R),
+procedure ask_next(Stream(Trigger), Stream(Trigger)?).
+ask_next(Ans?, Ans1) :-
+    request(R),
     merge(R?, Ans1?, Ans).
 
 procedure tag_net(Stream(Net)?, Stream(Trigger)).
@@ -365,6 +365,9 @@ tag_net([], []).
 procedure (Approval)*respond(Attempt?, List(Word)?, Close?, Stream(Trigger)).
 (approval(At?, Ws?, YN))*respond(At, Ws, Cl, Out?) :- ground(At?) |
     await(At?, YN?, Cl?, Out).
+%% The question is asked with its words whole, so that it is drawn once, its words written at once (the thread of a list the program writes is drawn at each element).
+procedure respond_whole(Attempt?, List(Word)?, Close?, Stream(Trigger)).
+respond_whole(At, Ws, Cl, Out?) :- ground(Ws?) | respond(At?, Ws?, Cl?, Out).
 procedure await(Attempt?, YesNo?, Close?, Stream(Trigger)).
 await(At, yes, _, [answered(At?, yes)]).
 await(At, no, _, [answered(At?, no)]).
@@ -374,6 +377,8 @@ await(_, _, close, []).
 procedure (Approval)*greet(Peer?, Proposal?, List(Word)?, Stream(Trigger)).
 (approval(hello(Q?, N?), Ws?, YN))*greet(Q, N, Ws, Out?) :- ground(Q?), ground(N?) |
     await_greet(N?, YN?, Out).
+procedure greet_whole(Peer?, Proposal?, List(Word)?, Stream(Trigger)).
+greet_whole(Q, N, Ws, Out?) :- ground(Ws?) | greet(Q?, N?, Ws?, Out).
 procedure await_greet(Proposal?, YesNo?, Stream(Trigger)).
 await_greet(N, yes, [greeted(N?)]).
 await_greet(_, no, []).
@@ -402,10 +407,16 @@ then_read(no, write_own).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+%% On the answer refresh the agent goal writes its view again and asks the next request question: "a person asks for it to redraw their screen, and the runtime gives it when it restarts the agent from its saved state, the screen not being part of that state" (vGLP e22e2ad, Section 5.4, "The compilation"); the app state does not change, and under the platform mapping it is a stutter (Appendix, the proof of Theorem "Compilation of the Canonical Platform").
+step(req(refresh), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?) |
+    st_app(St?, Ap0),
+    ask_next(Ans, Ans1?),
+    show_view(yes, St?, Thr, Thr1?),
+    next(Th?, no, Ap0?, Ls?, In?, Ans1, Thr1, Out, Ow, Approvals?, H?, St?).
 step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     ground(N?), ground(St?) |
     st_app(St?, Ap0),
-    ask_next(St?, Ans, Ans1?),
+    ask_next(Ans, Ans1?),
     st_id(St?, Id),
     meeting_peer(N?, Id?, Mp),
     meet_hello(Mp?, N?, St?, Out, Out1?, Thr, Thr1?, St0),
@@ -489,10 +500,21 @@ next_n(Th, Kick, Ap0, Ns, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     spend(Ca3?, St?, H?, St0, H1),
     repend(Re?, St0?, Ag, St1),
     own_after(Th?, Ow, Ow1?, U),
-    app(Ag?, Ls?, L1),
+    app(Ag?, Ls?, L0),
+    requests_first(L0?, L1),
     show_state(Ap0?, St?, Thr, Thr1?),
     put_notices(Ns?, Thr1, Thr2?),
     agent_goal(L1?, In?, U?, Ans, Thr2, Out, Ow1, Approvals1?, H1?, St1?).
+
+%% The triggers of the agent goal's own list with every request it puts up again before the rest, each kind in its order: "After every dispatch that changes the app state or consumes a start the agent goal puts up again every request of its person it holds, and then the starts it holds" (vGLP e22e2ad, Section 5.4, "The compilation"), so a request still unread stands before a recheck a later dispatch puts up.
+procedure requests_first(Stream(Trigger)?, Stream(Trigger)).
+requests_first(L, R?) :-
+    requests_split(L?, As, Bs),
+    app(As?, Bs?, R).
+procedure requests_split(Stream(Trigger)?, Stream(Trigger), Stream(Trigger)).
+requests_split([], [], []).
+requests_split([again(N)|Ts], [again(N?)|As?], Bs?) :- requests_split(Ts?, As, Bs).
+requests_split([T|Ts], As?, [T?|Bs?]) :- otherwise | requests_split(Ts?, As, Bs).
 
 %% The view after the dispatch, written where the machine state differs, as a multiset, from that before it, or the approvals pending differ.
 procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
@@ -523,10 +545,11 @@ show_known(Q, St0, St, Thr?, Thr1, St?) :- ground(Q?), ground(St0?), ground(St?)
 procedure show_view(YesNo?, St?, Stream(Output), Stream(Output)?).
 show_view(no, _, Thr1?, Thr1).
 show_view(yes, St, [V?|Thr1?], Thr1) :- view_of(St?, V).
-%% The view at the agent state: its machine state, the contract's atoms; the persons it knows, in the order of identifiers; and the approvals its person made that are pending, each by its request name, in the order they were made.
+%% The view at the agent state: its own key; its machine state, the contract's atoms; the persons it knows, in the order of identifiers; and the approvals its person made that are pending, each by its request name, in the order they were made; and the tabs of its app.
 procedure view_of(St?, Output).
-view_of(St, view(A?, Ks?, Ps?, Ts?)) :- ground(St?) |
+view_of(St, view(Id?, A?, Ks?, Ps?, Ts?)) :- ground(St?) |
     tabs(Ts),
+    st_id(St?, Id),
     st_ms(St?, S),
     atoms_of(S?, A),
     st_known(St?, Ks),
@@ -602,7 +625,7 @@ own_after(write_own, [own|Ow1?], Ow1, yes).
 own_after(own_unread, Ow1?, Ow1, yes).
 own_after(no_own, Ow1?, Ow1, no).
 
-%% repend(Again?, St?, Ag, St1): where the dispatch changed the app state or consumed a start, the requests of its person the agent holds, each put up again, and then a recheck of the starts held waiting, where there are any (vGLP, Section 5.4, "The compilation": "After every dispatch the agent goal puts up again the starts and the requests of its person it holds").  The requests come first, so that a request held while the agent was busy is an approval again before a start of its class is taken, and the person who made it is not asked on that start: "The two-phase commit of the meet then runs with both approvals standing, so no second question is asked" (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1).
+%% repend(Again?, St?, Ag, St1): where the dispatch changed the app state or consumed a start, the requests of its person the agent holds, each put up again, and then a recheck of the starts held waiting, where there are any (vGLP, Section 5.4, "The compilation": "After every dispatch that changes the app state or consumes a start the agent goal puts up again every request of its person it holds, and then the starts it holds").  The requests come first, so that a request held while the agent was busy is an approval again before a start of its class is taken, and the person who made it is not asked on that start: "The two-phase commit of the meet then runs with both approvals standing, so no second question is asked" (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1).
 procedure repend(YesNo?, St?, Stream(Trigger), St).
 repend(no, St, [], St?).
 repend(yes, St, Ag?, St1?) :- ground(St?) |
@@ -895,11 +918,85 @@ dispatch_propose(pgo(I, P, Nm), Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approval
 dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
-%% The words of the first question whose role holds the agent Me, and none, [], where none does.
-procedure ask_of(List(RoleAsk)?, Peer?, List(Word)).
-ask_of([], _, []).
-ask_of([q(P, Ws)|_], Me, Ws?) :- P? =?= Me? | true.
-ask_of([_|Qs], Me, Ws?) :- otherwise | ask_of(Qs?, Me?, Ws).
+%% The first question whose role holds the agent Me, and none, asked(0, []), where none does.
+procedure ask_of(List(RoleAsk)?, Peer?, Asked).
+ask_of([], _, asked(0, [])).
+ask_of([q(P, G, Ws)|_], Me, asked(G?, Ws?)) :- P? =?= Me? | true.
+ask_of([_|Qs], Me, A?) :- otherwise | ask_of(Qs?, Me?, A).
+
+%% The words of the question put to the agent Me on the part C: its sentence and the values of the fields, as sentence_of gives them, and then the atoms the act requires of the proposer whose predicates the tabs list, under the binding C names, one word held(A, K) for each atom with K its copies (vGLP e22e2ad, Section 5.4, "The contract's words").  A variable local to the proposer's role is bound by no schema-binding (ibid., "Speech-act schemas as local specifications"), so an atom naming one is under no binding of the attempt, no Atom shows it (atom_of), and it is left out; so is an atom of a reflexive predicate naming the proposer, which no state holds and no tab lists.
+procedure question_words(Class?, Peer?, List(Word)).
+question_words(C, Me, Ws?) :- ground(C?), ground(Me?) |
+    sentence_of(C?, Me?, A),
+    held_words(A?, C?, Ws).
+procedure held_words(Asked?, Class?, List(Word)).
+held_words(asked(0, Ws), _, Ws?).
+held_words(asked(G, Ws), C, Rs?) :- G? > 0, ground(C?) |
+    term_spec(C?, _, Sp, Bn),
+    held_at(G?, Sp?, Bn?, Ws?, Rs).
+procedure held_at(Integer?, RoleSpecs?, Binding?, List(Word)?, List(Word)).
+held_at(G, Sp, Bn, Ws, Rs?) :- integer(G?), ground(Sp?), ground(Bn?) |
+    nth_spec(Sp?, G?, R),
+    rs_req(R?, Q),
+    tabs(Ts),
+    tab_preds(Ts?, Ps),
+    tabbed_atoms(Q?, Ps?, Q1),
+    img_atoms(Q1?, Bn?, Gs),
+    reflexive_preds(Rf),
+    role_person(G?, Bn?, P),
+    unreflexive(Gs?, Rf?, P?, Gs1),
+    atoms_of(Gs1?, As),
+    held_counts(As?, Hs),
+    app(Ws?, Hs?, Rs).
+procedure tab_preds(List(Tab)?, Preds).
+tab_preds([], []).
+tab_preds([tab(_, P)|Ts], [P?|Ps?]) :- tab_preds(Ts?, Ps).
+tab_preds([tab(_, P, _)|Ts], [P?|Ps?]) :- tab_preds(Ts?, Ps).
+%% The atoms whose predicates Ps holds, each with its multiplicity.
+procedure tabbed_atoms(SAtoms?, Preds?, SAtoms).
+tabbed_atoms([], _, []).
+tabbed_atoms([A|As], Ps, R?) :- ground(A?), ground(Ps?) |
+    satom_pred(A?, P),
+    in_preds(P?, Ps?, B),
+    tabbed_atoms(As?, Ps?, R1),
+    keep_tabbed(B?, A?, R1?, R).
+procedure keep_tabbed(YesNo?, SAtom?, SAtoms?, SAtoms).
+keep_tabbed(yes, A, R, [A?|R?]).
+keep_tabbed(no, _, R, R?).
+procedure satom_pred(SAtom?, Constant).
+satom_pred(atom(P, _), P?).
+satom_pred(times(_, A), P?) :- satom_pred(A?, P).
+satom_pred(rest(_, _, A), P?) :- satom_pred(A?, P).
+procedure in_preds(Constant?, Preds?, YesNo).
+in_preds(_, [], no).
+in_preds(P, [Q|_], yes) :- ground(P?), ground(Q?), P? =?= Q? | true.
+in_preds(P, [_|Qs], B?) :- otherwise | in_preds(P?, Qs?, B).
+procedure unreflexive(GAtoms?, Preds?, Peer?, GAtoms).
+unreflexive([], _, _, []).
+unreflexive([g(F, Vs)|Gs], Rf, P, R?) :- ground(F?), ground(Vs?), ground(Rf?), ground(P?) |
+    in_preds(F?, Rf?, B),
+    names_self(B?, Vs?, P?, Sf),
+    unreflexive(Gs?, Rf?, P?, R1),
+    keep_unless_self(Sf?, g(F?, Vs?), R1?, R).
+procedure names_self(YesNo?, Vals?, Peer?, YesNo).
+names_self(no, _, _, no).
+names_self(yes, [p(Q)], P, yes) :- ground(Q?), ground(P?), Q? =?= P? | true.
+names_self(yes, _, _, no) :- otherwise | true.
+procedure keep_unless_self(YesNo?, GAtom?, GAtoms?, GAtoms).
+keep_unless_self(yes, _, R, R?).
+keep_unless_self(no, G, R, [G?|R?]).
+%% One word for each atom, in the order of the first of its copies, with the number of its copies.
+procedure held_counts(List(Atom)?, List(Word)).
+held_counts([], []).
+held_counts([A|As], [held(A?, K?)|Ws?]) :- ground(A?), ground(As?) |
+    held_copies(As?, A?, 1, K, Bs),
+    held_counts(Bs?, Ws).
+procedure held_copies(List(Atom)?, Atom?, Integer?, Integer, List(Atom)).
+held_copies([], _, K, K?, []).
+held_copies([B|Bs], A, K, K1?, Cs?) :- ground(B?), ground(A?), integer(K?), B? =?= A? |
+    K2 := K? + 1,
+    held_copies(Bs?, A?, K2?, K1, Cs).
+held_copies([B|Bs], A, K, K1?, [B?|Cs?]) :- otherwise | held_copies(Bs?, A?, K?, K1, Cs).
 
 %% --- Discover: the hellos ---------------------------------------------------
 %% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person's yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no acquaintance part, and its agents send no hello.
@@ -959,8 +1056,8 @@ greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St
     st_id(St?, Me),
     st_ms(St?, S),
     name_class(N?, S?, C),
-    sentence_of(C?, Me?, Ws),
-    greet(P?, N?, Ws?, R),
+    question_words(C?, Me?, Ws),
+    greet_whole(P?, N?, Ws?, R),
     merge(R?, Ans1?, Ans).
 
 %% --- Introduce: the ihellos --------------------------------------------------
@@ -1261,8 +1358,8 @@ procedure spawn(ApprovalRes?, Peer?, OpenApprovals?, OpenApprovals, Stream(Trigg
 spawn(noapproval, _, Cs, Cs?, Ans?, Ans).
 spawn(approval_for(At), Me, Cs, [oc(At?, Cl)|Cs?], Ans?, Ans1) :- ground(At?) |
     attempt_class(At?, C),
-    sentence_of(C?, Me?, Ws),
-    respond(At?, Ws?, Cl?, R),
+    question_words(C?, Me?, Ws),
+    respond_whole(At?, Ws?, Cl?, R),
     merge(R?, Ans1?, Ans).
 
 %% --- Answer, on the person's answer to the approval question Start raises ---------------
@@ -3513,6 +3610,7 @@ role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) |
 procedure names_role(SAtoms?, Integer?, YesNo).
 names_role([], _, no).
 names_role([times(_, A)|As], J, R?) :- names_role([A?|As?], J?, R).
+names_role([rest(_, _, A)|As], J, R?) :- names_role([A?|As?], J?, R).
 names_role([atom(_, Vs)|As], J, R?) :- integer(J?), ground(Vs?) |
     flat_names(Vs?, Fs),
     mem(role(J?), Fs?, R1),
@@ -3579,6 +3677,7 @@ procedure atoms_vars(SAtoms?, Vars).
 atoms_vars([], []).
 atoms_vars([atom(_, Vs)|As], R?) :- flat_names(Vs?, Ws), atoms_vars(As?, R1), app(Ws?, R1?, R).
 atoms_vars([times(V, A)|As], [V?|R?]) :- atoms_vars([A?|As?], R).
+atoms_vars([rest(V, J, A)|As], [V?, J?|R?]) :- atoms_vars([A?|As?], R).
 procedure guard_roles(RoleSpecs?, Integer?, Ints).
 guard_roles([], _, []).
 guard_roles([rs(guarded, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) |
@@ -3779,7 +3878,7 @@ mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), g
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
     mate_of(E?, B?, Nm?, Rs?, M).
-%% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
+%% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
     schema_numeric(Nm?, N),
@@ -3804,6 +3903,8 @@ entry_wrong(yes, V, X, Nm, W?) :- local_wrong(V?, X?, Nm?, W).
 entry_wrong(no, _, X, _, W?) :- is_lv(X?, W).
 procedure local_wrong(Var?, Val?, Constant?, YesNo).
 local_wrong(num(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
+local_wrong(pvar(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
+local_wrong(svar(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
 local_wrong(_, _, _, yes) :- otherwise | true.
 procedure is_lv(Val?, YesNo).
 is_lv(lv(_, _), yes).
@@ -3820,6 +3921,8 @@ locals_put([V|Vs], Nm, B, B2?) :- ground(V?), ground(Nm?), ground(B?) |
     locals_put(Vs?, Nm?, B1?, B2).
 procedure local_put(Found?, Var?, Constant?, Binding?, Binding).
 local_put(free, num(X), Nm, B, [b(num(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
+local_put(free, pvar(X), Nm, B, [b(pvar(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
+local_put(free, svar(X), Nm, B, [b(svar(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
 local_put(found(_), _, _, B, B?).
 local_put(free, V, _, B, B?) :- otherwise, ground(V?) | true.
 procedure mate_of(YesNo?, Binding?, Constant?, RoleSpecs?, Mates).
@@ -4088,6 +4191,12 @@ cimg_one(times(V, A), B, Cs?) :- ground(B?) |
     num_of(V?, B?, K),
     cimg_one(A?, B?, C1),
     copies(K?, C1?, Cs).
+cimg_one(rest(V, J, A), B, Cs?) :- ground(B?) |
+    num_of(V?, B?, K),
+    num_of(J?, B?, I),
+    less_by(K?, I?, K1),
+    cimg_one(A?, B?, C1),
+    copies(K1?, C1?, Cs).
 procedure cimg_args(Vars?, Binding?, CVals).
 cimg_args([], _, []).
 cimg_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
@@ -4311,6 +4420,7 @@ keep_s(no, A, R, [A?|R?]).
 procedure s_cleared(SAtom?, YesNo).
 s_cleared(atom(_, Vs), C?) :- vars_wild(Vs?, C).
 s_cleared(times(_, A), C?) :- s_cleared(A?, C).
+s_cleared(rest(_, _, A), C?) :- s_cleared(A?, C).
 procedure vars_wild(Vars?, YesNo).
 vars_wild([], no).
 vars_wild([any|_], yes).
@@ -4354,6 +4464,16 @@ img_one(times(V, A), B, Gs?) :- ground(B?) |
     num_of(V?, B?, K),
     img_one(A?, B?, G1),
     copies(K?, G1?, Gs).
+img_one(rest(V, J, A), B, Gs?) :- ground(B?) |
+    num_of(V?, B?, K),
+    num_of(J?, B?, I),
+    less_by(K?, I?, K1),
+    img_one(A?, B?, G1),
+    copies(K1?, G1?, Gs).
+procedure less_by(NumRes?, NumRes?, NumRes).
+less_by(num_is(K), num_is(J), num_is(N?)) :- N := K? - J?.
+less_by(no_num, _, no_num).
+less_by(num_is(_), no_num, no_num).
 procedure(X) copies(NumRes?, Stream(X)?, Stream(X)).
 copies(num_is(K), G, Gs?) :- K? > 0, ground(G?) |
     K1 := K? - 1,
@@ -4364,6 +4484,7 @@ copies(no_num, G, G?).
 procedure img_atom(SAtom?, Binding?, GAtom).
 img_atom(atom(P, Vs), B, g(P?, Xs?)) :- img_args(Vs?, B?, Xs).
 img_atom(times(_, A), B, G?) :- img_atom(A?, B?, G).
+img_atom(rest(_, _, A), B, G?) :- img_atom(A?, B?, G).
 procedure img_args(Vars?, Binding?, Vals).
 img_args([], _, []).
 img_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
@@ -4416,6 +4537,7 @@ img_sgn(_, _, p(unbound)) :- otherwise | true.
 procedure atom_bound(SAtom?, Binding?, YesNo).
 atom_bound(atom(_, Vs), B, R?) :- vars_bound(Vs?, B?, R).
 atom_bound(times(_, A), B, R?) :- atom_bound(A?, B?, R).
+atom_bound(rest(_, _, A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
 vars_bound([num(X)|Vs], B, R?) :- integer(X?) | vars_bound(Vs?, B?, R).
@@ -4445,6 +4567,9 @@ match_all_each([B|Bs], As, Gs, R?) :- ground(As?), ground(Gs?) |
     app(R1?, R2?, R).
 procedure match_into(SAtom?, GAtoms?, Binding?, Bindings).
 match_into(times(V, A), Gs, B, R?) :- ground(V?), ground(A?), ground(Gs?), ground(B?) |
+    match_into(A?, Gs?, B?, Bs),
+    count_bind(Bs?, V?, A?, Gs?, R).
+match_into(rest(V, _, A), Gs, B, R?) :- ground(V?), ground(A?), ground(Gs?), ground(B?) |
     match_into(A?, Gs?, B?, Bs),
     count_bind(Bs?, V?, A?, Gs?, R).
 match_into(_, [], _, []).
@@ -4562,7 +4687,7 @@ kind_ok(nterm(_), _, no).
 kind_ok(role(_), c(_), no).
 kind_ok(pvar(_), c(_), no).
 kind_ok(svar(_), c(_), no).
-%% A numeric variable matches a number, and lv(S, X), which a schema-binding gives a variable local to a role (local_norm); and nothing else matches either.
+%% A numeric variable matches a number, an agent variable a person and a speech-act variable a speech act; and each matches lv(S, X), which a schema-binding gives a variable local to a role (local_norm), a variable not local to a role so matched being no schema-binding of the class (lv_wrong); and nothing else matches either.
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), lv(_, _), yes).
 kind_ok(num(_), p(_), no).
@@ -4571,9 +4696,9 @@ kind_ok(num(_), c(_), no).
 kind_ok(role(_), n(_), no).
 kind_ok(role(_), lv(_, _), no).
 kind_ok(pvar(_), n(_), no).
-kind_ok(pvar(_), lv(_, _), no).
+kind_ok(pvar(_), lv(_, _), yes).
 kind_ok(svar(_), n(_), no).
-kind_ok(svar(_), lv(_, _), no).
+kind_ok(svar(_), lv(_, _), yes).
 kind_ok(sgn(_, _), n(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.

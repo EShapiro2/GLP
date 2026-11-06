@@ -4,8 +4,8 @@ establish: identity(Alice) <-
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
     identity(Alice), identity(Bob) guarded by Alice, Bob
 
-introduce: knows(Bob, c) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
     identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
@@ -28,8 +28,8 @@ leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
 remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
     identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
 
-close: closed(Alice, n), not listed(Alice, Alice, n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
-    identity(Alice), member(Alice, <Alice>.n), listed(Alice, Alice, n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
+close: closed(Alice, n), not listed(Alice, Alice, n), not member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
+    identity(Alice), listed(Alice, Alice, n), member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
 
 post_own: posted(Alice, x, n) <-
     identity(Alice), member(Alice, <Alice>.n), not posted(Alice, x, n) guarded by Alice

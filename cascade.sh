@@ -186,6 +186,15 @@ if [ -z "$CT" ]; then
     grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
     exit 1
 fi
+# The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
+printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/a.in"
+repl "$WORK/a.in" "$WORK/a.out"
+RD=$(grep -E '^R = ' "$WORK/a.out" | head -1 | sed -e 's/^R = //')
+if [ -z "$RD" ]; then
+    say "GSC's reader, as_read/2, gave no reading of the contract"
+    grep -E '(Error|error|✗)' "$WORK/a.out" | head -10
+    exit 1
+fi
 INTRO=no_introduction
 if grep -q "^introduction_named($NAME," "$SRC/$FILE.glp"; then
     printf '%s\nintroduction_named(%s, I).\n:quit\n' "$SRC/$FILE.glp" "$NAME" > "$WORK/i.in"
@@ -249,11 +258,11 @@ fi
 # 5. The canonical platform, from programs/vglp/cva/compiler, with the
 # contract's words, its pragmas.
 PR=no_pragmas
-if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$CT" 2> "$WORK/pr.err"); then
+if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
     say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
     exit 1
 fi
-printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$CT" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
+printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
 awk '
     $0 == "%% compile begin" { on = 1; next }
