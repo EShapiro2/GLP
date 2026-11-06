@@ -254,7 +254,7 @@ for my $f (@order) {
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
         last if $x =~ /^\d+\./ || $x eq "Pragmas";
-        next unless $x =~ /^(.*)\s+(?:is|are)\s+(?:a\s+)?persons?\.\s*$/;
+        next unless $x =~ /^(.*?)\s+(?:is|are)\s+(?:a\s+)?persons?\.(?:\s|$)/;
         $declared = 1;
         $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
     }
