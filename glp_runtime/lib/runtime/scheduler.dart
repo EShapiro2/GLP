@@ -47,6 +47,24 @@ class Scheduler {
   /// failures) goes through this callback instead of print().
   void Function(String)? traceSink;
 
+  /// The runner contexts of this scheduler, reused run after run as the FCP
+  /// machine's worker state is: a drain takes one for each goal it runs and
+  /// gives it back after ([RunnerContext.reset]).  More than one only where a
+  /// run drains within a run.
+  final List<RunnerContext> _contexts = <RunnerContext>[];
+
+  RunnerContext _takeContext() => _contexts.isNotEmpty
+      ? _contexts.removeLast()
+      : RunnerContext(rt: rt, goalId: 0, kappa: 0);
+
+  void _returnContext(RunnerContext cx) => _contexts.add(cx);
+
+  /// The term formatter every run's context carries: one closure for the
+  /// scheduler, not one per goal.
+  late final String Function(Term, {bool markReaders}) _termFormatter =
+      (term, {bool markReaders = true}) =>
+          _formatTerm(term, markReaders: markReaders);
+
   Scheduler({required this.rt, GoalRunner? runner, Map<Object?, GoalRunner>? runners, this.traceSink})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
@@ -253,6 +271,15 @@ class Scheduler {
     // F at entry: a goal that failed in an earlier drain has already been
     // counted, so only what this drain adds bears on its status.
     final failedAtEntry = rt.failedGoals.length;
+    // The reduction callback for the trace, when the drain is traced: one for
+    // the drain, not one per goal.
+    final onReduction = debug
+        ? (int goalId, String head, String body) {
+            // Print reduction when it occurs (at Commit)
+            // No goal ID prefix - clean output
+            _trace('${_stripArity(head)} :- ${_stripArity(body)}');
+          }
+        : null;
 
     while (cycles < maxCycles) {
       // when_idle (GLP-Spec appendix-guards.tex, e3a8d52; IGLP eadadcd,
@@ -269,9 +296,6 @@ class Scheduler {
       }
       final act = rt.gq.dequeue();
       if (act == null) break;
-      // The goal taken waits on nothing: it leaves the runtime's suspended
-      // map, whichever way it was woken (GlpRuntime.goalTaken).
-      rt.goalTaken(act);
       goalIds?.add(act.id);
       final record = rt.goalRecordOf(act.id);
       final env = record?.env;
@@ -297,28 +321,23 @@ class Scheduler {
       // callback that recorded it, which is why the callback was always set
       // and every goal was formatted for it (the bug of 2026-01-31, a goal
       // that reduced read as failed when the callback was not set).
-      final cx = RunnerContext(
-        rt: rt,
+      final cx = _takeContext();
+      cx.reset(
         goalId: act.id,
         kappa: act.pc,
         env: env,
         goalHead: goalStr,
         goalProcName: procName,
         debugOutput: debugOutput,
-        termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
-        onReduction: debug
-            ? (goalId, head, body) {
-                // Print reduction when it occurs (at Commit)
-                // No goal ID prefix - clean output
-                _trace('${_stripArity(head)} :- ${_stripArity(body)}');
-              }
-            : null,
+        termFormatter: _termFormatter,
+        onReduction: onReduction,
       );
       final result = runner.runWithStatus(cx);
 
       // Track if reduction occurred; a goal that reduced leaves the suspended
       // list.
       final hadReduction = cx.reduced;
+      _returnContext(cx);
       if (hadReduction) suspendedGoals.remove(act.id);
 
       // Track suspended goals (always, not just in debug mode)
@@ -467,15 +486,20 @@ class Scheduler {
   /// [drainToQuiescence]'s: a program that goes on idling and sending never
   /// quiesces, and the cycle then returns `capped`.  F is cumulative across
   /// the drains, so a goal that failed in any of them fails the whole.
-  DrainResult drainAndSend(void Function() send,
-      {int maxCycles = 1000000, bool debug = false}) {
+  ///
+  /// The Sends complete when the layer has answered each message they hand
+  /// it, [send]'s future, a message it refused being back in the outbox:
+  /// "the runtime waits for its answer and, on a refusal, keeps the message"
+  /// (IGLP b014a9e, Implementation Notes, "Networking Seam", The contract).
+  Future<DrainResult> drainAndSend(FutureOr<void> Function() send,
+      {int maxCycles = 1000000, bool debug = false}) async {
     var run = 0;
     final failedAtEntry = rt.failedGoals.length;
     DrainResult last;
     while (true) {
       last = drainToQuiescence(maxCycles: maxCycles - run, debug: debug);
       run += last.goalsRun;
-      send();
+      await send();
       if (last.status == ExecutionStatus.capped) break;
       if (!(rt.hasIdleWaits && rt.isIdle)) break;
       if (run >= maxCycles) break;
@@ -494,7 +518,7 @@ class Scheduler {
   /// for the agents.  The REPL's goal in madGLP mode is drained so
   /// (GlpEngine.runGoal); until 2026-10-02 it made no Sends, and a goal there
   /// waiting on when_idle waited for as long as a message sat in the outbox.
-  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool debugOutput = false, List<int>? goalIds, void Function()? send}) async {
+  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool debugOutput = false, List<int>? goalIds, FutureOr<void> Function()? send}) async {
     final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
@@ -518,7 +542,7 @@ class Scheduler {
       // a goal waiting on when_idle, which it re-tries; at the cap the run
       // stopped with that goal still to re-try ([drainAndSend]).
       if (send != null) {
-        send();
+        await send();
         if (rt.hasIdleWaits && rt.isIdle) {
           if (totalCycles < maxCycles) continue;
           lastStatus = ExecutionStatus.capped;

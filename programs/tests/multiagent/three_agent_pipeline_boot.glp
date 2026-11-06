@@ -14,6 +14,17 @@
 
 procedure boot.
 boot :-
-    producer_init(agent1, _)@agent1,
-    transformer_init(agent2, _)@agent2,
-    consumer_init(agent3, _)@agent3.
+    agent(ch(_?, _), ch(_?, _))@agent1,
+    say(producer_init, agent1, [agent2], ch(_?, _))@agent1,
+    agent(ch(_?, _), ch(_?, _))@agent2,
+    say(transformer_init, agent2, [agent3], ch(_?, _))@agent2,
+    agent(ch(_?, _), ch(_?, _))@agent3,
+    say(consumer_init, agent3, [], ch(_?, _))@agent3.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, three_agent_pipeline/, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, with its own key and the keys of the peers its person knows, its ground arguments; an agent is its public key, and a readable name here is a variable standing for one (Remark "Agent Names"), the agent's key having been made at its spawn.
+
+%% The person at each agent: it tells the agent its role, its key and the keys of the peers it knows, its ground arguments, and reads nothing.
+PersonSays ::= init(Constant, Key, List(Key)).
+
+exported procedure say(Constant?, Key?, List(Key)?, Channel(Stream(Constant), Stream(PersonSays))?).
+say(R, Me, Ps, ch(_, [init(R?, Me?, Ps?)])).

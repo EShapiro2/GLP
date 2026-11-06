@@ -126,6 +126,12 @@ latex_mult(atom(P, As), T, R?) :- ground(P?), ground(As?), ground(T?) |
 latex_mult(times(K, A), T, R?) :- ground(K?), ground(A?), ground(T?) |
     latex_atom(A?, T?, R1),
     latex_arg(K?, ['\\cdot'|R1?], R).
+% rest(K, J, A), the copies of K.A beyond the J deleted (self.glp, Mult),
+% is (K - J).A; a role's required atoms carry it as K.A (nrs_req).
+latex_mult(rest(K, J, A), T, ['('|R?]) :- ground(K?), ground(J?), ground(A?), ground(T?) |
+    latex_atom(A?, T?, R1),
+    latex_operand(J?, [')\\cdot'|R1?], R2),
+    latex_expr(K?, ['-'|R2?], R).
 
 % The atoms of a set are written apart by Sep, a comma, as Section 5.1
 % writes the two atoms befriend requires at a role and the two close deletes
@@ -155,6 +161,13 @@ latex_role_term(crs(listed(I, Rho, As), _, _, _, _, _), _, T, R?) :-
     latex_listed_args(As?, [')', ']'|T?], R1),
     latex_pred(Rho?, ['(', '\\ast'|R1?], R2),
     latex_role(I?, ['['|R2?], R).
+% pi[A], the bound variables replaced by the wildcard in A (def:role).
+latex_role_term(crs(qlisted(I, Rho, As, Xs), _, _, _, _, _), _, T, R?) :-
+    integer(I?), ground(Rho?), ground(As?), ground(Xs?), ground(T?) |
+    args_hidden(As?, Xs?, Hs),
+    latex_args(Hs?, [')', ']'|T?], R1),
+    latex_pred(Rho?, ['('|R1?], R2),
+    latex_role(I?, ['['|R2?], R).
 
 % The arguments u_2, ..., u_r of a listed role, each after a comma, following
 % the * of its first place.
@@ -163,6 +176,18 @@ latex_listed_args([], T, T?).
 latex_listed_args([A|As], T, [','|R?]) :- ground(A?), ground(As?), ground(T?) |
     latex_args([A?|As?], T?, R).
 
+% Each argument among Xs replaced by the wildcard.
+procedure args_hidden(Args?, Args?, Args).
+args_hidden([], _, []).
+args_hidden([A|As], Xs, [B?|R?]) :- ground(A?), ground(As?), ground(Xs?) |
+    args_member(Xs?, A?, M),
+    arg_hidden(M?, A?, B),
+    args_hidden(As?, Xs?, R).
+
+procedure arg_hidden(Ans?, Arg?, Arg).
+arg_hidden(yes, _, any).
+arg_hidden(no, A, A?).
+
 procedure latex_ext(NRoleSpec?, Integer?, Chunks?, Chunks).
 latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
     ground(RS?), integer(I?), ground(T?) |
@@ -170,8 +195,9 @@ latex_ext(RS, I, T, ['\\mathrm{ext}_c('|R?]) :-
 
 % --- The assignment of one role (def:compile) ------------------------------
 % c'_S := (c_S \ -(i)) u +(i), with an empty half left out, and both at a
-% guarding role that adds and deletes nothing, which def:schema admits:
-% c'_S := c_S, the assignment def:compile gives it (1 <= i <= k); S is the
+% role that adds and deletes nothing, a guarding role or a reading role,
+% which def:schema admits (GSC 0380a8a): c'_S := c_S, the assignment
+% def:compile gives it, the state unchanged (1 <= i <= k); S is the
 % subscript, {\Alice} for the agent of an agent role and q for the other
 % agents of a listed role's extent.
 
@@ -331,6 +357,7 @@ mults_member([_|As], B, R?) :- otherwise | mults_member(As?, B?, R).
 procedure atoms_distinct(Mults?, Ans).
 atoms_distinct([], yes).
 atoms_distinct([times(_, _)|_], no).
+atoms_distinct([rest(_, _, _)|_], no).
 atoms_distinct([atom(P, Bs)|As], R?) :- ground(P?), ground(Bs?), ground(As?) |
     mults_member(As?, atom(P?, Bs?), M),
     atoms_distinct1(M?, As?, R).
@@ -446,6 +473,14 @@ latex_constraint(succ(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
 latex_constraint(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     latex_constraint(C2?, T?, R1),
     latex_constraint(C1?, ['\\lor'|R1?], R).
+latex_constraint(implies(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
+    latex_constraint(C2?, T?, R1),
+    latex_constraint(C1?, ['\\rightarrow'|R1?], R).
+latex_constraint(not(C), T, ['\\neg('|R?]) :- latex_constraint(C?, [')'|T?], R).
+latex_constraint(ne(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    latex_cmp(X?, '\\neq', Y?, T?, R).
+latex_constraint(rel(N, Xs), T, ['\\mathrm{', N?, '}('|R?]) :- ground(Xs?), ground(T?) |
+    latex_exprs(Xs?, [')'|T?], R).
 % A signing condition as def:numbers writes it, \mathrm{signed}(u,y) and
 % \mathrm{unsigned}(u,y) (GSC 10fcc92).
 latex_constraint(signed(U, Y), T, ['\\mathrm{signed}('|R?]) :- ground(U?), ground(Y?), ground(T?) |
@@ -470,6 +505,12 @@ latex_expr(minus(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
 latex_expr(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
     latex_operand(B?, T?, R1),
     latex_operand(A?, ['\\cdot'|R1?], R).
+latex_expr(fn(N, Xs), T, ['\\mathrm{', N?, '}('|R?]) :- ground(Xs?), ground(T?) |
+    latex_exprs(Xs?, [')'|T?], R).
+latex_expr(cardinality(Xs, H, A, F), T, ['\\mathrm{cardinality}('|R?]) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(T?) |
+    latex_anchored(H?, A?, F?, [')'|T?], R1),
+    latex_args(Xs?, [','|R1?], R).
 latex_expr(num(X), T, R?) :- latex_arg(num(X?), T?, R).
 latex_expr(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_expr(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
@@ -486,6 +527,8 @@ latex_operand(minus(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
     latex_expr(minus(A?, B?), [')'|T?], R).
 latex_operand(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
     latex_expr(mul(A?, B?), T?, R).
+latex_operand(fn(N, Xs), T, R?) :- latex_expr(fn(N?, Xs?), T?, R).
+latex_operand(cardinality(Xs, H, A, F), T, R?) :- latex_expr(cardinality(Xs?, H?, A?, F?), T?, R).
 latex_operand(num(X), T, R?) :- latex_arg(num(X?), T?, R).
 latex_operand(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_operand(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
@@ -493,6 +536,72 @@ latex_operand(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
 latex_operand(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
 latex_operand(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
 latex_operand(any, T, R?) :- latex_arg(any, T?, R).
+
+procedure latex_exprs(Exprs?, Chunks?, Chunks).
+latex_exprs([], T, T?).
+latex_exprs([X], T, R?) :- latex_expr(X?, T?, R).
+latex_exprs([X, Y|Ys], T, R?) :- ground(X?), ground(Y?), ground(Ys?), ground(T?) |
+    latex_exprs([Y?|Ys?], T?, R1),
+    latex_expr(X?, [','|R1?], R).
+
+% --- Safe formulas (def:role, GSC c8c5ead) ----------------------------------
+% As Definition Safe formula, name term, role writes them, each atom with its
+% holder first.
+procedure latex_held(Arg?, Mult?, Chunks?, Chunks).
+latex_held(H, atom(P, As), T, R?) :- latex_atom(atom(P?, [H?|As?]), T?, R).
+latex_held(H, times(K, atom(P, As)), T, R?) :- latex_mult(times(K?, atom(P?, [H?|As?])), T?, R).
+latex_held(_, rest(K, J, A), T, R?) :- latex_mult(rest(K?, J?, A?), T?, R).
+
+% A and phi, phi left out where it is true.
+procedure latex_anchored(Arg?, Atom?, Form?, Chunks?, Chunks).
+latex_anchored(H, A, fcons(true), T, R?) :- latex_held(H?, A?, T?, R).
+latex_anchored(H, A, F, T, R?) :- otherwise, ground(H?), ground(A?), ground(F?), ground(T?) |
+    latex_form(F?, T?, R1),
+    latex_held(H?, A?, ['\\land'|R1?], R).
+
+procedure latex_form(Form?, Chunks?, Chunks).
+latex_form(fa(H, M), T, R?) :- latex_held(H?, M?, T?, R).
+latex_form(fnot(F), T, ['\\neg '|R?]) :- latex_form(F?, T?, R).
+latex_form(fand(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
+    latex_form(B?, [')'|T?], R1),
+    latex_form(A?, ['\\land'|R1?], R).
+latex_form(for(A, B), T, ['('|R?]) :- ground(A?), ground(B?), ground(T?) |
+    latex_form(B?, [')'|T?], R1),
+    latex_form(A?, ['\\lor'|R1?], R).
+latex_form(fexists(Xs, H, A, F), T, ['\\exists '|R?]) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(T?) |
+    latex_anchored(H?, A?, F?, [')'|T?], R1),
+    latex_args(Xs?, ['\\,('|R1?], R).
+latex_form(fforall(Xs, H, A, F, G), T, ['\\forall '|R?]) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(G?), ground(T?) |
+    latex_forms(G?, [')'|T?], R2),
+    latex_anchored(H?, A?, F?, ['\\rightarrow'|R2?], R1),
+    latex_args(Xs?, ['\\,('|R1?], R).
+latex_form(fcons(C), T, R?) :- latex_constraint(C?, T?, R).
+
+% A conjunction of formulas.
+procedure latex_forms(Forms?, Chunks?, Chunks).
+latex_forms([], T, ['\\top'|T?]).
+latex_forms([F], T, R?) :- latex_form(F?, T?, R).
+latex_forms([F, G|Fs], T, R?) :- ground(F?), ground(G?), ground(Fs?), ground(T?) |
+    latex_forms([G?|Fs?], T?, R1),
+    latex_form(F?, ['\\land'|R1?], R).
+
+% A line per quantified conjunct of the head, and per safe formula of the
+% body, before the constraint: the literals of a conjunct hold after the act,
+% at each of its instances (def:compile).
+procedure conj_lines(Conjuncts?, ChunkLists?, ChunkLists).
+conj_lines([], T, T?).
+conj_lines([conjunct(Xs, I, A, F, _, _, L)|Cs], T, [['\\text{making } '|C?]|R?]) :-
+    ground(Cs?), ground(T?) |
+    latex_form(fforall(Xs?, role(I?), A?, F?, L?), [], C),
+    conj_lines(Cs?, T?, R).
+
+procedure form_lines(Forms?, ChunkLists?, ChunkLists).
+form_lines([], T, T?).
+form_lines([F|Fs], T, [['\\text{provided } '|C?]|R?]) :- ground(Fs?), ground(T?) |
+    latex_form(F?, [], C),
+    form_lines(Fs?, T?, R).
 
 procedure constraint_line(Constraint?, ChunkLists?, ChunkLists).
 constraint_line(true, T, T?).
@@ -587,6 +696,7 @@ membership(A, crs(listed(I, Rho, Us), _, _, _, _, _), Rs, M?) :-
     integer(A?), integer(I?), ground(Rho?), ground(Us?), ground(Rs?) |
     nth_nrs(Rs?, I?, B),
     mem_of(B?, atom(Rho?, [role(A?)|Us?]), M).
+membership(_, crs(qlisted(_, _, _, _), _, _, _, _, _), _, m_open).
 membership(_, rs(_, _, _, _, _), _, m_out).
 
 procedure mem_of(NRoleSpec?, Atom?, Mem).
@@ -990,30 +1100,38 @@ procedure latex_schema_app(NSchema?, Chunks?, Chunks).
 latex_schema_app(Sc, T, ['\\begin{align*}'|R?]) :- ground(Sc?), ground(T?) |
     nsch_roles(Sc?, Rs),
     nsch_constraint(Sc?, Cn),
+    nsch_conjs(Sc?, Cj),
+    nsch_forms(Sc?, Fs),
     plain_schema(Sc?, P),
-    latex_app_plain(P?, Rs?, Cn?, T?, R).
+    latex_app_plain(P?, Rs?, app(Cn?, Cj?, Fs?), T?, R).
 
-procedure latex_app_plain(Schema?, NRoleSpecs?, Constraint?, Chunks?, Chunks).
+% What follows the required and forbidden atoms of a display.
+App ::= app(Constraint, Conjuncts, Forms).
+
+procedure latex_app_plain(Schema?, NRoleSpecs?, App?, Chunks?, Chunks).
 latex_app_plain(P, Rs, Cn, T, R?) :-
     ground(P?), ground(Rs?), ground(Cn?), ground(T?) |
     sch_ext_terms(P?, Es0),
     sch_roles(P?, PRs),
     latex_app_fresh(Rs?, PRs?, Es0?, Cn?, T?, R).
 
-procedure latex_app_fresh(NRoleSpecs?, RoleSpecs?, NameTerms?, Constraint?, Chunks?, Chunks).
+procedure latex_app_fresh(NRoleSpecs?, RoleSpecs?, NameTerms?, App?, Chunks?, Chunks).
 latex_app_fresh(Rs, PRs, Es0, Cn, T, R?) :-
     ground(Rs?), ground(PRs?), ground(Es0?), ground(Cn?), ground(T?) |
     req_ext_terms(PRs?, Qs),
     fresh_terms(Es0?, Qs?, Es),
     latex_app_roles(Rs?, Es?, Cn?, T?, R).
 
-procedure latex_app_roles(NRoleSpecs?, NameTerms?, Constraint?, Chunks?, Chunks).
-latex_app_roles(Rs, Es, Cn, T, R?) :- ground(Rs?), ground(Es?), ground(Cn?), ground(T?) |
+procedure latex_app_roles(NRoleSpecs?, NameTerms?, App?, Chunks?, Chunks).
+latex_app_roles(Rs, Es, app(Cn, Cj, Fs), T, R?) :-
+    ground(Rs?), ground(Es?), ground(Cn?), ground(Cj?), ground(Fs?), ground(T?) |
     agent_idx(Rs?, 1, As),
     listed_idx(Rs?, 1, Ls),
     guard_roles(Rs?, 1, [], G),
     latex_guard(G?, [], GL),
-    constraint_line(Cn?, [GL?], LC),
+    constraint_line(Cn?, [GL?], LC0),
+    conj_lines(Cj?, LC0?, LC1),
+    form_lines(Fs?, LC1?, LC),
     fresh_lines(Es?, LC?, L3),
     gen_lines(As?, Ls?, Rs?, L3?, Lines),
     join_lines(Lines?, ['\\end{align*}'|T?], R).
@@ -1036,7 +1154,8 @@ s3_form(NSc, R?) :- ground(NSc?) |
     s3_form_plain(Sc?, R).
 
 procedure s3_form_plain(Schema?, Ans).
-s3_form_plain(Sc, R?) :- ground(Sc?) |
+s3_form_plain(qschema(_, _, _, _, _, _, _), no).
+s3_form_plain(Sc, R?) :- otherwise, ground(Sc?) |
     sch_roles(Sc?, Rs),
     roles_community(Rs?, A1),
     flip(A1?, A2),
@@ -1125,31 +1244,6 @@ malformed_lines([signed(S, I, _, not_agent_role)|Fs], T,
                  'carries a signed term whose role is not an agent role;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([added_and_deleted(S, I, _)|Fs], T,
-                [S?, 'at role', I?,
-                 'adds and deletes the same atom;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([added_and_cleared(S, I, _)|Fs], T,
-                [S?, 'at role', I?,
-                 'adds an atom that one of its cleared atoms matches;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([wildcard(S, I, _)|Fs], T,
-                [S?, 'at role', I?,
-                 'carries the wildcard in an atom not marked -;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([listed_wildcard(S, I)|Fs], T,
-                [S?, 'at role', I?,
-                 'has a listed role with the wildcard among its arguments;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([changes_nothing(S, I)|Fs], T,
-                [S?, 'at role', I?,
-                 'is not a guarding role and adds and deletes nothing;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
 malformed_lines([no_role_changes(S)|Fs], T,
                 [S?, 'adds and deletes nothing at any role;'|R?]) :-
     ground(Fs?), ground(T?) |
@@ -1167,7 +1261,7 @@ malformed_lines([not_in_head(S, _)|Fs], T,
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([name_term_base(S, _)|Fs], T,
-                [S?, 'has a name term whose base is not an agent role of the schema;'|R?]) :-
+                [S?, 'has a name term whose base is no agent variable of the schema;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([listed_base(S, I)|Fs], T,
@@ -1180,14 +1274,40 @@ malformed_lines([listed_signed(S, I)|Fs], T,
                  'has a listed role with a signed term among its arguments;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([listed_guarded(S, I)|Fs], T,
-                [S?, 'at role', I?,
-                 'has a listed role carrying the mark ?, which only an agent role may carry;'|R?]) :-
+malformed_lines([not_holder(S, P)|Fs], T,
+                [S?, 'has an atom of', P?, 'whose holder is no name of the schema;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([multiplicity_not_added(S, I, _)|Fs], T,
-                [S?, 'at role', I?,
-                 'carries a multiplicity on an atom it neither adds nor deletes;'|R?]) :-
+malformed_lines([not_in_vars(S, P)|Fs], T,
+                [S?, 'has in', P?, 'an argument that is no name and no variable of the schema;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([deleted_not_required(S, I, _)|Fs], T,
+                [S?, 'at role', I?, 'deletes an atom it does not require;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([quantified_condition(S, X)|Fs], T,
+                [S?, 'binds', X?, 'with no one anchor holding it;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([condition_holder(S, H)|Fs], T,
+                [S?, 'has a listed role whose anchor', H?, 'holds, no agent role of it;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([head_formula(S)|Fs], T,
+                [S?, 'has in its head what is no literal and no quantified conjunct;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([listed_agent_role(S, X)|Fs], T,
+                [S?, 'binds', X?, 'and has it hold a literal outside its quantifiers;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([not_in_names(S, X)|Fs], T,
+                [S?, 'binds', X?, 'which holds an atom and is not among its names;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([guard_not_role(S, G)|Fs], T,
+                [S?, 'is guarded by', G?, 'which is no agent variable of it;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([multiplicity_not_numeric(S, I, _)|Fs], T,
@@ -1209,14 +1329,6 @@ malformed_lines([constraint_not_numeric(S, _)|Fs], T,
                 [S?, 'carries a constraint on an argument that is not a number;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([constraint_not_linear(S, _)|Fs], T,
-                [S?, 'carries a constraint that is not linear;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([constraint_not_conjunction(S, _)|Fs], T,
-                [S?, 'carries a constraint that is not a conjunction;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
 malformed_lines([signing_not_agent(S, _)|Fs], T,
                 [S?, 'carries a signing condition whose signer is not an agent role or an agent variable;'|R?]) :-
     ground(Fs?), ground(T?) |
@@ -1227,6 +1339,10 @@ malformed_lines([signing_not_speech_act(S, _)|Fs], T,
     malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+
+% A contract whose reading has faults (programs/gsc self.glp, read_faults).
+exported procedure compile_malformed(Constant?, Faults?).
+compile_malformed(Nm, Fs) :- not_compiled_malformed(Nm?, Fs?).
 
 procedure not_compiled_malformed(Constant?, Faults?).
 not_compiled_malformed(Nm, Fs) :- ground(Nm?), ground(Fs?) |

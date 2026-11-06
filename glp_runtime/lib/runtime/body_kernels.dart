@@ -21,6 +21,7 @@ import 'terms.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart'
     show constantSource, functorNameSource;
 import 'machine_state.dart' show GoalRef;
+import 'sim_clock.dart' show PendingToken;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
@@ -107,10 +108,19 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_list_to_tuple', 2, listToTupleKernel);
   registry.register('_tuple_to_list', 2, tupleToListKernel);
 
+  // Text (GLP-Spec appendix-guards, "Text")
+  registry.register('_string_concat', 2, stringConcatKernel);
+  registry.register('_term_to_string', 2, termToStringKernel);
+
   // Time operations
   registry.register('_now', 1, nowKernel);
   registry.register('_random', 4, randomKernel);
   registry.register('_split_random_seed', 3, splitRandomSeedKernel);
+
+  // Simulated time (GLP-Spec appendix-guards, "Simulated time")
+  registry.register('_start_clock', 1, startClockKernel);
+  registry.register('_rated', 2, ratedKernel);
+  registry.register('_step_clock', 2, stepClockKernel);
 
   // MutualRef operations (O(1) stream append)
   registry.register('_allocate_mutual_reference', 2, mutualRefKernel);
@@ -133,11 +143,8 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Networking seam kernels (Definition Seam Predicates)
   registry.register('_peer_address', 2, peerAddressKernel);
   registry.register('_punch_udp', 1, punchUdpKernel);
-  registry.register('_place_declare', 3, placeDeclareKernel);
-  registry.register('_place_remove', 1, placeRemoveKernel);
-  registry.register('_trust_declare', 2, trustDeclareKernel);
-  registry.register('_peer_declare', 1, peerDeclareKernel);
-  registry.register('_address_declare', 2, addressDeclareKernel);
+  registry.register('_declare', 1, declareKernel);
+  registry.register('_remove', 1, removeKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -190,7 +197,7 @@ BodyKernelResult bindResult(GlpRuntime rt, Object? outputArg, Object value,
       activations = rt.heap.bindVariableConst(outputArg.addr, value);
     }
     for (final act in activations) {
-      rt.gq.enqueue(act);
+      rt.enqueueReactivatedGoal(act);
     }
     return BodyKernelResult.success;
   }
@@ -597,13 +604,13 @@ BodyKernelResult selfModuleKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 /// `'_random'(Seed?, N?, Value, NextSeed)` — seeded random integer (GLP-ICLP
-/// appendix-guards §"Seeded random numbers"). Binds Value to a pseudo-random
-/// integer 1 ≤ Value ≤ N and NextSeed to the next draw's seed. NextSeed is a
-/// function of Seed alone, Value of Seed and N, so threading NextSeed from each
-/// draw into the next reproduces exactly from an initial seed. The generator is
-/// the Park–Miller "minimal standard" LCG (MINSTD): NextSeed = (16807 × s) mod
-/// (2³¹−1), with s the seed normalised into [1, 2³¹−2] so no integer seed traps.
-/// The system-predicate guard integer(Seed?), integer(N?), N? >= 1 guarantees
+/// appendix-guards, "Seeded random numbers"). The generator is SplitMix64
+/// (Steele, Lea and Flood 2014, Figure 16), in 64-bit arithmetic modulo 2^64:
+/// a seed is a 64-bit integer and every 64-bit integer is a seed; NextSeed is
+/// Seed plus the increment 0x9E3779B97F4A7C15; Value is one plus the mix of
+/// NextSeed, taken as an unsigned 64-bit integer, modulo N. Dart's int is the
+/// paper's Integer, 64-bit two's complement with wrapping `+` and `*`. The
+/// system-predicate guard integer(Seed?), integer(N?), N? >= 1 guarantees
 /// ground integer inputs with N ≥ 1, so the checks below are defensive.
 BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 4) {
@@ -617,25 +624,18 @@ BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
   if (n < 1) {
     return kernelAbort('[ABORT] random/4: bound N must be >= 1');
   }
-  const int m = 2147483647; // 2^31 - 1
-  const int a = 16807;
-  var s = seed % m;
-  if (s <= 0) s += m; // normalise into [1, m-1]; 0 would trap MINSTD at 0
-  final int nextSeed = (a * s) % m;
-  final int value = 1 + (nextSeed % n);
+  final int nextSeed = seed + _splitMixIncrement;
+  final int value = 1 + _unsignedRemainder(_mix64(nextSeed), n);
   final r1 = bindResult(rt, args[2], value);
   if (r1 != BodyKernelResult.success) return r1;
   return bindResult(rt, args[3], nextSeed);
 }
 
 /// `'_split_random_seed'(Seed?, S1, S2)` — two seeds from one (GLP-ICLP
-/// appendix-guards §"Splitting a seed"). Binds S1 and S2 to two seeds
-/// determined by Seed, such that the draws from Seed, from S1 and from S2 are
-/// independent streams. The paper names a splittable generator, such as
-/// SplitMix, as what implements it: S1 and S2 are the first two outputs of
-/// SplitMix64 (Steele, Lea and Flood 2014, with Vigna's published constants)
-/// started from state Seed, in 64-bit two's-complement arithmetic. The guard
-/// integer(Seed?) guarantees a ground integer, so the check below is defensive.
+/// appendix-guards, "Splitting a seed"): S1 is the mix of Seed plus the
+/// increment, and S2 the mix of Seed plus twice the increment, the increment
+/// and the mix those of random/4. The guard integer(Seed?) guarantees a ground
+/// integer, so the check below is defensive.
 BodyKernelResult splitRandomSeedKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     print('[ABORT] split_random_seed/3: expected 3 arguments, got ${args.length}');
@@ -646,23 +646,150 @@ BodyKernelResult splitRandomSeedKernel(GlpRuntime rt, List<Object?> args) {
     print('[ABORT] split_random_seed/3: Seed must be an integer');
     return BodyKernelResult.abort;
   }
-  final int s1 = _splitMix64(seed + _splitMixGamma);
-  final int s2 = _splitMix64(seed + 2 * _splitMixGamma);
+  final int s1 = _mix64(seed + _splitMixIncrement);
+  final int s2 = _mix64(seed + 2 * _splitMixIncrement);
   final r1 = bindResult(rt, args[1], s1);
   if (r1 != BodyKernelResult.success) return r1;
   return bindResult(rt, args[2], s2);
 }
 
-/// SplitMix64's increment, the golden-ratio constant 0x9E3779B97F4A7C15.
-const int _splitMixGamma = 0x9E3779B97F4A7C15;
+// ============================================================================
+// SIMULATED TIME (start_clock/1, rated/2, step_clock/2)
+// ============================================================================
+// GLP-Spec appendix-guards.tex at 5fd9a15, "Simulated time (start_clock/1,
+// rated/2, step_clock/2)".  The clock and the queue are the machine's,
+// [GlpRuntime.simClock].
 
-/// SplitMix64's output function (mix64), applied to a state: Dart's native
-/// int is 64-bit two's complement and its `*` wraps, as the generator needs.
-int _splitMix64(int z) {
-  z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9;
-  z = (z ^ (z >>> 27)) * 0x94D049BB133111EB;
-  return z ^ (z >>> 31);
+/// Bind each of [tokens] to stop, every one checked an unbound writer first.
+BodyKernelResult _stopAll(GlpRuntime rt, List<PendingToken> tokens, String who) {
+  for (final t in tokens) {
+    if (rt.heap.isFullyBound(t.writer)) {
+      return kernelAbort('[ABORT] $who: a pending token @${t.writer} is already bound');
+    }
+  }
+  for (final t in tokens) {
+    for (final act in rt.heap.bindVariable(t.writer, ConstTerm('stop'))) {
+      rt.enqueueReactivatedGoal(act);
+    }
+  }
+  return BodyKernelResult.success;
 }
+
+/// `'_start_clock'(Seed?)`: "start_clock(Seed) binds every pending token to
+/// stop, sets the clock to 0, and seeds the clock's generator with Seed".
+BodyKernelResult startClockKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    return kernelAbort('[ABORT] start_clock/1: expected 1 argument, got ${args.length}');
+  }
+  final seed = _getNum(rt, args[0]);
+  if (seed is! int) {
+    return kernelAbort('[ABORT] start_clock/1: Seed must be an integer');
+  }
+  final pending = rt.simClock.start(seed);
+  return _stopAll(rt, pending, 'start_clock/1');
+}
+
+/// `'_rated'(Rate?, Tok)`: "rated(Rate, Tok) makes the token Tok pending, with
+/// activation time the clock plus D, where D is drawn from the exponential
+/// distribution with rate Rate per second".  The draw: "A draw replaces the
+/// state by the state plus the increment, and D = -ln(U)/Rate, where U is one
+/// plus the mix of the new state, taken as an unsigned 64-bit integer and
+/// shifted right by 11 bits, over 2^53, so that 0 < U <= 1."  Aborts before
+/// the first start_clock.
+BodyKernelResult ratedKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort('[ABORT] rated/2: expected 2 arguments, got ${args.length}');
+  }
+  final clock = rt.simClock;
+  if (!clock.started) {
+    return kernelAbort('[ABORT] rated/2: the simulated clock is not started (start_clock/1)');
+  }
+  final rate = _getNum(rt, args[0]);
+  if (rate == null || rate <= 0) {
+    return kernelAbort('[ABORT] rated/2: Rate must be a number > 0');
+  }
+  final tok = _deref(rt, args[1]);
+  if (tok is! VarRef || !rt.heap.isWriter(tok.addr) || rt.heap.isFullyBound(tok.addr)) {
+    return kernelAbort('[ABORT] rated/2: Tok must be an unbound writer');
+  }
+  clock.state = clock.state + _splitMixIncrement;
+  final u = (1 + (_mix64(clock.state) >>> 11)) / _two53;
+  final d = -math.log(u) / rate;
+  clock.add(d, tok.addr);
+  return BodyKernelResult.success;
+}
+
+/// 2^53, as a double.
+const double _two53 = 9007199254740992.0;
+
+/// `'_step_clock'(Horizon?, Step)`: "Where a token is pending whose activation
+/// time T is the least and at most Horizon, the step sets the clock to T,
+/// binds that token to go(T) and assigns Step the term released(T); two tokens
+/// of one activation time are released in the order in which they were made
+/// pending.  Otherwise the step binds every pending token to stop and assigns
+/// Step the term stopped(C), C being the clock."  Aborts before the first
+/// start_clock.
+BodyKernelResult stepClockKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort('[ABORT] step_clock/2: expected 2 arguments, got ${args.length}');
+  }
+  final clock = rt.simClock;
+  if (!clock.started) {
+    return kernelAbort('[ABORT] step_clock/2: the simulated clock is not started (start_clock/1)');
+  }
+  final horizon = _getNum(rt, args[0]);
+  if (horizon == null) {
+    return kernelAbort('[ABORT] step_clock/2: Horizon must be a number');
+  }
+  final step = _deref(rt, args[1]);
+  if (step is! VarRef || !rt.heap.isWriter(step.addr) || rt.heap.isFullyBound(step.addr)) {
+    return kernelAbort('[ABORT] step_clock/2: Step must be an unbound writer');
+  }
+  final first = clock.earliest;
+  if (first != null && first.time <= horizon) {
+    if (rt.heap.isFullyBound(first.writer)) {
+      return kernelAbort('[ABORT] step_clock/2: the pending token @${first.writer} is already bound');
+    }
+    final t = clock.release();
+    for (final act in rt.heap.bindVariable(t.writer, StructTerm('go', [ConstTerm(t.time)]))) {
+      rt.enqueueReactivatedGoal(act);
+    }
+    return bindResult(rt, step, StructTerm('released', [ConstTerm(t.time)]),
+        kernel: 'step_clock/2');
+  }
+  final r = _stopAll(rt, clock.takeAll(), 'step_clock/2');
+  if (r != BodyKernelResult.success) return r;
+  return bindResult(rt, step, StructTerm('stopped', [ConstTerm(clock.clock)]),
+      kernel: 'step_clock/2');
+}
+
+/// SplitMix64's increment, GOLDEN_GAMMA of the source's Figure 16.
+const int _splitMixIncrement = 0x9E3779B97F4A7C15;
+
+/// The source's mix64 (Figure 16): z = (z xor (z >>> 33)) * 0xFF51AFD7ED558CCD;
+/// z = (z xor (z >>> 33)) * 0xC4CEB9FE1A85EC53; z xor (z >>> 33), with >>> the
+/// unsigned shift. Dart's `>>>` is the unsigned shift and its `*` wraps modulo
+/// 2^64.
+int _mix64(int z) {
+  z = (z ^ (z >>> 33)) * 0xFF51AFD7ED558CCD;
+  z = (z ^ (z >>> 33)) * 0xC4CEB9FE1A85EC53;
+  return z ^ (z >>> 33);
+}
+
+/// The remainder of [x], taken as an unsigned 64-bit integer, divided by
+/// [n] ≥ 1. A non-negative [x] is its own unsigned value; a negative [x]
+/// stands for x + 2^64, whose remainder is computed from the quotient of
+/// x >>> 1, which is non-negative, as in Java's Long.remainderUnsigned.
+int _unsignedRemainder(int x, int n) {
+  if (x >= 0) return x % n;
+  final int q = ((x >>> 1) ~/ n) << 1;
+  final int r = x - q * n; // the true remainder, or it plus n; below 2n < 2^64
+  return _unsignedLess(r, n) ? r : r - n;
+}
+
+/// Whether [a] < [b] as unsigned 64-bit integers.
+bool _unsignedLess(int a, int b) =>
+    (a ^ 0x8000000000000000) < (b ^ 0x8000000000000000);
 
 // ============================================================================
 // MUTUAL REFERENCE KERNELS (O(1) Stream Append)
@@ -715,7 +842,7 @@ BodyKernelResult streamAppendKernel(GlpRuntime rt, List<Object?> args) {
   final activations = rt.heap.bindVariable(currentWriterAddr, consCell);
 
   for (final act in activations) {
-    rt.gq.enqueue(act);
+    rt.enqueueReactivatedGoal(act);
   }
 
   // Update MutualRef to point to the new tail's writer
@@ -743,7 +870,7 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
   final activations = rt.heap.bindVariable(currentWriterAddr, ConstTerm(nil));
 
   for (final act in activations) {
-    rt.gq.enqueue(act);
+    rt.enqueueReactivatedGoal(act);
   }
 
   return BodyKernelResult.success;
@@ -1199,33 +1326,11 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The seven kernels behind the seven seam predicates (IGLP, Definition "Seam
-// Predicates"): peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
-// trust_declare/2, and peer_declare/1 and address_declare/2 over
-// GlpNetwork.putKnownPeer and putPeerAddress, the last two since 2026-10-11
-// (GLP-Spec 6e9c276, IGLP c2292b9). Each reaches the networking layer through
-// MadContext.network, a GlpNetwork; the layer functions are
-// GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
-// sign's and self_module's do.
+// The four kernels behind the four seam predicates (IGLP, Definition "Seam Predicates", 3b736bb; GLP-Spec appendix-guards, "Networking seam", 1ce0263): peer_address/2, punch_udp/1, declare/1 and remove/1, '_declare' and '_remove' taking each alternative of Declaration and Removal to the layer function behind it.  They replace, since 2026-11-03, the five kernels of place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2.  Each reaches the networking layer through MadContext.network, a GlpNetwork; the layer functions are GLP-Networking-API's, specified with the seam contract.  Their effects lie outside the madGLP transition system, as sign's and self_module's do.
 //
-// Each GLP wrapper gates its arguments on ground/1, so they are ground here.
-// A realization that does not provide the function throws UnsupportedError,
-// which is a violated precondition and so an abort.
+// Each GLP clause gates its arguments on ground/1, all but a place's stream, so they are ground here.  A realization that does not provide the function throws UnsupportedError, which is a violated precondition and so an abort.
 //
-// Where no layer is bound at all --- the REPL, a test run without the
-// simulation --- the kernel stands in for a layer that observes nothing and
-// does nothing, and none aborts for want of a layer (IGLP
-// appendix-implementation-notes.tex, "One interface", 6ba0329):
-// "peer_address assigns none, place_declare assigns its stream unobservable
-// and nothing more, and the other seam predicates return having done nothing".
-// Until 2026-10-10 each aborted there, "not in madGLP mode (no MadContext)" or
-// "no GlpNetwork bound to this agent".  An argument the predicate does not
-// take is still a violated precondition and an abort, layer or none.  A
-// place's stream is the runtime's bookkeeping and not the layer's, so with no
-// layer place_remove and a further declaration still close it (IGLP
-// madglp-spec.tex, "closed, its tail assigned [], in exactly two cases:
-// place_remove, and a further declaration of the same place"; GLP, 2026-10-11
-// 12:59 UTC, "23:12" (a)): only the reporting is absent.
+// Where no layer is bound at all --- the REPL, a test run without the simulation --- the kernel stands in for a layer that observes nothing and does nothing, and none aborts for want of a layer (IGLP appendix-implementation-notes.tex, "One interface"): "peer_address assigns none, a place declaration records the place and assigns its stream unobservable, the stream closed by its removal or a further declaration as ever, the closing being the runtime's and not the layer's, and the other seam predicates return having done nothing".  An argument the predicate does not take is still a violated precondition and an abort, layer or none.
 
 /// The [MadContext] and the [GlpNetwork] bound to it, or null where no layer
 /// is bound at all: no MadContext, or one with no GlpNetwork.
@@ -1316,136 +1421,14 @@ BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
-/// '_place_declare'(P?, R?, E) — declare place P of radius R about this agent's
-/// location at the time of the call, and grow this agent's own event stream for
-/// P from E's writer. The stream is fed serializer-fashion and closes only on
-/// place_remove or a superseding declaration.
-///
-/// Where no layer is bound, E is assigned `[unobservable | E']` and nothing
-/// more is reported ("One interface", 6ba0329): no event and no `observable`
-/// ever follows.  The declaration stands in the runtime's bookkeeping
-/// ([GlpRuntime.placeStreams]) as it does with a layer, so place_remove or a
-/// further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11
-/// 12:59 UTC, "23:12" (a)).  Until 2026-10-12 nothing was recorded, and E' was
-/// a writer no one held, never closed.
-BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 3) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
-  }
-
-  final place = _groundString(rt, args[0]);
-  if (place == null) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: first argument (P) must be a ground '
-        'constant naming a place, got ${_deref(rt, args[0])}');
-  }
-  final radius = _getNum(rt, args[1]);
-  if (radius == null) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: second argument (R) must be a ground '
-        'number of metres, got ${_deref(rt, args[1])}');
-  }
-
-  final stream = _deref(rt, args[2]);
-  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: third argument (E) must be a writer');
-  }
-
-  final seam = _seamLayer(rt);
-  if (seam == null) {
-    rt.placeStreams.declare(place, stream.addr);
-    rt.placeStreams.deliver(place, ConstTerm('unobservable'));
-    return BodyKernelResult.success;
-  }
-
-  try {
-    seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_place_declare\'/3: ${e.message}');
-  }
-  return BodyKernelResult.success;
-}
-
-/// '_place_remove'(P?) — end the declaration of place P, closing its stream.
-/// Does nothing where P is not declared.  Where no layer is bound it closes
-/// the stream all the same, the runtime's bookkeeping, and tells no layer
-/// ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
-BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 1) {
-    return kernelAbort('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
-  }
-
-  final place = _groundString(rt, args[0]);
-  if (place == null) {
-    return kernelAbort('[ABORT] \'_place_remove\'/1: argument (P) must be a ground constant '
-        'naming a place, got ${_deref(rt, args[0])}');
-  }
-
-  final seam = _seamLayer(rt);
-  if (seam == null) {
-    rt.placeStreams.close(place);
-    return BodyKernelResult.success;
-  }
-
-  try {
-    seam.ctx.removePlace(place);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_place_remove\'/1: ${e.message}');
-  }
-  return BodyKernelResult.success;
-}
-
-/// '_trust_declare'(U?, L?) — set the cold-call trust level of proximity
-/// underlay U, pan or lan, to L, open or closed, and assign nothing (IGLP,
-/// Definition Seam Predicates, 477c586; GLP-Spec appendix-guards, "Proximity
-/// trust", e0b32d7: "Underlay is pan (Bluetooth Low Energy) or lan (the local
-/// network) and Level is open or closed.  Both underlays stand at closed until
-/// declared, a later declaration of an underlay replaces the level then
-/// standing").  An underlay or level the layer does not have is a violated
-/// precondition, and so an abort.  Until 2026-10-09 the first argument was a
-/// proximity medium, ble or lan.  Where no layer is bound it returns having
-/// done nothing ("One interface", 6ba0329).
-BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
-  }
-
-  final underlay = switch (_groundString(rt, args[0])) {
-    'pan' => ProximityUnderlay.pan,
-    'lan' => ProximityUnderlay.lan,
-    _ => null,
-  };
-  if (underlay == null) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: first argument (U) must be pan or '
-        'lan, got ${_deref(rt, args[0])}');
-  }
-  final level = switch (_groundString(rt, args[1])) {
-    'open' => TrustLevel.open,
-    'closed' => TrustLevel.closed,
-    _ => null,
-  };
-  if (level == null) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: second argument (L) must be open or '
-        'closed, got ${_deref(rt, args[1])}');
-  }
-
-  final seam = _seamLayer(rt);
-  if (seam == null) return BodyKernelResult.success;
-
-  try {
-    seam.network.setTrustLevel(underlay, level);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_trust_declare\'/2: ${e.message}');
-  }
-  return BodyKernelResult.success;
-}
-
 /// The key of the peer a program names in a seam predicate's `Key` argument
 /// [name], or null where [name] names none.  Over a real network an agent's
 /// name is its public key (IGLP, Remark "Agent Names"), presented as 64 hex
-/// characters; the simulation realisation names agents symbolically, "resolved
-/// to keys at the seam" (IGLP appendix-implementation-notes.tex, "Simulation
-/// realisation"), through the identifier--key directory its router owns, as its
-/// hosts resolve a message's destination.  A key in hex, as self_key/1 gives
-/// it, names its peer there too.
+/// characters; in a simulation a readable name standing for a key names the
+/// same peer, "the seam resolves both to the one agent" (IGLP 4f84612,
+/// Implementation Notes, "Simulation realisation"), through the
+/// identifier--key directory its router owns, as its hosts resolve a
+/// message's destination ([NetworkDirectory.agentNamed]).
 PubKey? _peerKey(GlpNetwork network, String name) {
   if (network is SimulationNetworkClient) {
     final pk = network.directory.pkOf(name);
@@ -1455,84 +1438,205 @@ PubKey? _peerKey(GlpNetwork network, String name) {
   return PubKey.fromHex(name);
 }
 
-/// '_peer_declare'(P?) — give the layer the public key P of a peer the program
-/// knows, `putKnownPeer(pk)`, and return nothing (IGLP, Definition "Seam
-/// Predicates": "peer_declare gives the layer the public key P of a peer the
-/// program knows"; GLP-Spec appendix-guards, the row '_peer_declare'(Key?) and
-/// "Known peers").  The known-peer set is what Closed trust recognises (GNA,
-/// "Known Peers"); in the simulation the router answers a first contact from a
-/// declared peer under closed ("Simulation realisation").  A P that names no
-/// peer is a violated precondition, and so an abort.  Where no layer is bound
-/// it returns having done nothing ("One interface", 6ba0329).
-BodyKernelResult peerDeclareKernel(GlpRuntime rt, List<Object?> args) {
+/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], and `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E.  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
+BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
+  const who = "'_declare'/1";
   if (args.length != 1) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: expected 1 argument, got ${args.length}');
+    return kernelAbort('[ABORT] $who: expected 1 argument, got ${args.length}');
   }
+  final d = _deref(rt, args[0]);
+  final a = d is StructTerm ? d.args : const <Term>[];
+  final form = d is StructTerm ? '${d.functor}/${a.length}' : null;
+  switch (form) {
+    case 'peer/1':
+      return _declarePeer(rt, a);
+    case 'address/2':
+      return _declareAddress(rt, a);
+    case 'rendezvous/2':
+      return _declareRendezvous(rt, a);
+    case 'trust/2':
+      return _declareTrust(rt, a);
+    case 'place/3':
+      return _declarePlace(rt, a);
+  }
+  return kernelAbort('[ABORT] $who: argument (D) must be a Declaration --- '
+      'peer(P), address(P, A), rendezvous(P, A), trust(U, L) or place(P, R, E) '
+      '--- got $d');
+}
 
-  final name = _groundString(rt, args[0]);
+/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], and `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream.  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
+BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
+  const who = "'_remove'/1";
+  if (args.length != 1) {
+    return kernelAbort('[ABORT] $who: expected 1 argument, got ${args.length}');
+  }
+  final r = _deref(rt, args[0]);
+  final a = r is StructTerm ? r.args : const <Term>[];
+  final form = r is StructTerm ? '${r.functor}/${a.length}' : null;
+  switch (form) {
+    case 'peer/1':
+      return _removePeer(rt, a);
+    case 'rendezvous/1':
+      return _removeRendezvous(rt, a);
+    case 'place/1':
+      return _removePlace(rt, a);
+  }
+  return kernelAbort('[ABORT] $who: argument (R) must be a Removal --- '
+      'peer(P), rendezvous(P) or place(P) --- got $r');
+}
+
+/// Call the layer function [call] with the layer bound to [rt] and the key a ground [arg] names in it, for the alternative [what] of [who].  It returns having done nothing where no layer is bound; an [arg] that is not a ground constant, or that names no peer, is a violated precondition, and so an abort.
+BodyKernelResult _peerCall(GlpRuntime rt, String who, String what, Object? arg,
+    void Function(GlpNetwork network, PubKey pk) call) {
+  final name = _groundString(rt, arg);
   if (name == null) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: argument (P) must be a ground constant '
-        'naming a peer, got ${_deref(rt, args[0])}');
+    return kernelAbort('[ABORT] $who: $what: the key (P) must be a ground '
+        'constant naming a peer, got ${_deref(rt, arg)}');
   }
-
   final seam = _seamLayer(rt);
   if (seam == null) return BodyKernelResult.success;
-
   final pk = _peerKey(seam.network, name);
   if (pk == null) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: $name names no peer: neither a '
+    return kernelAbort('[ABORT] $who: $what: $name names no peer: neither a '
         '64-character hex public key nor an agent the layer names');
   }
+  return _layerCall(who, what, () => call(seam.network, pk));
+}
 
+/// Run the layer function [call], an [UnsupportedError] from it an abort of [who] and [what].
+BodyKernelResult _layerCall(String who, String what, void Function() call) {
   try {
-    seam.network.putKnownPeer(pk);
+    call();
   } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_peer_declare\'/1: ${e.message}');
+    return kernelAbort('[ABORT] $who: $what: ${e.message}');
   }
   return BodyKernelResult.success;
 }
 
-/// '_address_declare'(P?, A?) — give the layer the address A at which peer P
-/// is reached, `putPeerAddress(pk, address)`, and return nothing (IGLP,
-/// Definition "Seam Predicates": "address_declare the address A at which peer
-/// P is reached"; GLP-Spec appendix-guards, the row '_address_declare'(Key?,
-/// String?) and "Known peers").  The layer records it with the known peer
-/// (GNA, "Connectivity and Address"); the simulation realisation takes it to
-/// no effect, "the effect of address_declare/2" not being provided
-/// ("Simulation realisation").  A P that names no peer is a violated
-/// precondition, and so an abort.  Where no layer is bound it returns having
-/// done nothing ("One interface", 6ba0329).
-BodyKernelResult addressDeclareKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: expected 2 arguments, got ${args.length}');
-  }
+/// `declare(peer(P))`: give the layer the public key P of a peer the program knows, `putKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam": "peer(P) gives the networking layer the public key P of a peer the program knows").  The known-peer set is what Closed trust recognises (GNA, "Known Peers"); in the simulation the router answers a first contact from a declared peer under closed ("Simulation realisation").
+BodyKernelResult _declarePeer(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'peer(P)';
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.putKnownPeer(pk));
+}
 
-  final name = _groundString(rt, args[0]);
-  if (name == null) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: first argument (P) must be a ground '
-        'constant naming a peer, got ${_deref(rt, args[0])}');
-  }
-  final address = _groundString(rt, args[1]);
+/// `declare(address(P, A))`: give the layer the address A at which peer P is reached, `putPeerAddress(pk, address)` ("address(P, A) gives the layer the address A at which peer P is reached").  The layer records it with the known peer (GNA, Section 4.2); the simulation realisation takes it to no effect, "the effect of an address or a rendezvous declaration" not being provided ("Simulation realisation").
+BodyKernelResult _declareAddress(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'address(P, A)';
+  final address = _groundString(rt, a[1]);
   if (address == null) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: second argument (A) must be a '
-        'ground constant address, got ${_deref(rt, args[1])}');
+    return kernelAbort('[ABORT] $who: $what: the address (A) must be a ground '
+        'constant, got ${_deref(rt, a[1])}');
+  }
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.putPeerAddress(pk, address));
+}
+
+/// `declare(rendezvous(P, A))`: give the layer a rendezvous server, the agent of key P at address A, or replace its address, `putRendezvousServer(pk, address)` (GLP-Spec appendix-guards, "Networking seam"; GNA 776016c, Section 4.2, "Declare server": "behind declare(rendezvous(Key, Address))").  The simulation realisation takes it to no effect ("Simulation realisation").
+BodyKernelResult _declareRendezvous(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'rendezvous(P, A)';
+  final address = _groundString(rt, a[1]);
+  if (address == null) {
+    return kernelAbort('[ABORT] $who: $what: the address (A) must be a ground '
+        'constant, got ${_deref(rt, a[1])}');
+  }
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.putRendezvousServer(pk, address));
+}
+
+/// `declare(trust(U, L))`: set the cold-call trust level of proximity underlay U, pan or lan, to L, open or closed, `setTrustLevel(underlay, level)` (GLP-Spec appendix-guards, "Proximity trust": "Both underlays stand at closed until declared, a later declaration of an underlay replaces the level then standing, and the two are declared independently").  An underlay or level the layer does not have is a violated precondition, and so an abort.
+BodyKernelResult _declareTrust(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'trust(U, L)';
+  final underlay = switch (_groundString(rt, a[0])) {
+    'pan' => ProximityUnderlay.pan,
+    'lan' => ProximityUnderlay.lan,
+    _ => null,
+  };
+  if (underlay == null) {
+    return kernelAbort('[ABORT] $who: $what: the underlay (U) must be pan or '
+        'lan, got ${_deref(rt, a[0])}');
+  }
+  final level = switch (_groundString(rt, a[1])) {
+    'open' => TrustLevel.open,
+    'closed' => TrustLevel.closed,
+    _ => null,
+  };
+  if (level == null) {
+    return kernelAbort('[ABORT] $who: $what: the level (L) must be open or '
+        'closed, got ${_deref(rt, a[1])}');
+  }
+  final seam = _seamLayer(rt);
+  if (seam == null) return BodyKernelResult.success;
+  return _layerCall(
+      who, what, () => seam.network.setTrustLevel(underlay, level));
+}
+
+/// The name the layer is given for the place a ground constant [arg] names: the constant's printed form, as [formatTerm] prints it, `home` for home and `7` for 7 (IGLP 0e1c9e0, Implementation Notes, "The contract": "The runtime gives the layer a place's name, a constant, as its printed form"; GLP-Spec appendix-guards, "Networking seam": `place(Constant, Number, Stream(PlaceEvent)?)`).  The printed form reads back as the constant, so two constants are two places, 7 and '7' among them.  Null where [arg] is not a ground constant.  Until 2026-11-03 the name was taken only from an atom or a string, and declare(place(7, 100, E)) checked and then aborted.
+String? _placeName(GlpRuntime rt, Object? arg) {
+  final v = _deref(rt, arg);
+  if (v is ConstTerm) return formatTerm(v);
+  if (v is String) return constantSource(v);
+  return null;
+}
+
+/// `declare(place(P, R, E))`: declare place P of radius R about this agent's location at the time of the call, and grow this agent's own event stream for P from E's writer.  The stream is fed serializer-fashion and closes only on `remove(place(P))` or a superseding declaration (IGLP, madglp-spec.tex, after Definition "Seam Predicates").
+///
+/// Where no layer is bound, E is assigned `[unobservable | E']` and nothing more is reported ("One interface", 6ba0329): no event and no `observable` ever follows.  The declaration stands in the runtime's bookkeeping ([GlpRuntime.placeStreams]) as it does with a layer, so its removal or a further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
+BodyKernelResult _declarePlace(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'place(P, R, E)';
+  final place = _placeName(rt, a[0]);
+  if (place == null) {
+    return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
+        'constant, got ${_deref(rt, a[0])}');
+  }
+  final radius = _getNum(rt, a[1]);
+  if (radius == null) {
+    return kernelAbort('[ABORT] $who: $what: the radius (R) must be a ground '
+        'number of metres, got ${_deref(rt, a[1])}');
+  }
+  final stream = _deref(rt, a[2]);
+  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
+    return kernelAbort('[ABORT] $who: $what: the stream (E) must be a writer');
   }
 
   final seam = _seamLayer(rt);
-  if (seam == null) return BodyKernelResult.success;
-
-  final pk = _peerKey(seam.network, name);
-  if (pk == null) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: $name names no peer: neither a '
-        '64-character hex public key nor an agent the layer names');
+  if (seam == null) {
+    rt.placeStreams.declare(place, stream.addr);
+    rt.placeStreams.deliver(place, ConstTerm('unobservable'));
+    return BodyKernelResult.success;
   }
+  return _layerCall(who, what,
+      () => seam.ctx.declarePlace(place, radius.toDouble(), stream.addr));
+}
 
-  try {
-    seam.network.putPeerAddress(pk, address);
-  } on UnsupportedError catch (e) {
-    return kernelAbort('[ABORT] \'_address_declare\'/2: ${e.message}');
+/// `remove(peer(P))`: take P, and any address recorded for it, off the layer's known peers, `removeKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA, "Known Peers").
+BodyKernelResult _removePeer(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'peer(P)';
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.removeKnownPeer(pk));
+}
+
+/// `remove(rendezvous(P))`: take the rendezvous server of key P off and end the layer's session with it, a key not declared doing nothing, `removeRendezvousServer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA 776016c, Section 4.2, "Remove server": "behind remove(rendezvous(Key))").
+BodyKernelResult _removeRendezvous(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'rendezvous(P)';
+  return _peerCall(rt, who, what, a[0],
+      (network, pk) => network.removeRendezvousServer(pk));
+}
+
+/// `remove(place(P))`: end the declaration of place P, closing its stream; does nothing where P is not declared.  Where no layer is bound it closes the stream all the same, the runtime's bookkeeping, and tells no layer ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
+BodyKernelResult _removePlace(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'place(P)';
+  final place = _placeName(rt, a[0]);
+  if (place == null) {
+    return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
+        'constant, got ${_deref(rt, a[0])}');
   }
-  return BodyKernelResult.success;
+  final seam = _seamLayer(rt);
+  if (seam == null) {
+    rt.placeStreams.close(place);
+    return BodyKernelResult.success;
+  }
+  return _layerCall(who, what, () => seam.ctx.removePlace(place));
 }
 
 // =============================================================================
@@ -1571,6 +1675,113 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   return BodyKernelResult.success;
+}
+
+// =============================================================================
+// TEXT (string_concat/2, term_to_string/2)
+// =============================================================================
+// GLP-Spec appendix-guards.tex at ca3c8e5, "Text (string_concat/2,
+// term_to_string/2)".
+
+/// `'_string_concat'(Ss?, S)` --- "assigns S the string of the characters of
+/// the strings of the list Ss, one after another; the empty list contributes
+/// the characters []", and aborts "where an element is not a string".  The
+/// clause of string_concat/2 guards Ss ground.
+BodyKernelResult stringConcatKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        "[ABORT] '_string_concat'/2: expected 2 arguments, got ${args.length}");
+  }
+  final out = StringBuffer();
+  var current = _deref(rt, args[0]);
+  while (true) {
+    if (current is ConstTerm && (current.value == nil || current.value == null)) {
+      break;
+    }
+    if (current is! StructTerm ||
+        current.functor != '.' ||
+        current.args.length != 2) {
+      return kernelAbort(
+          "[ABORT] '_string_concat'/2: the first argument is not a list: $current");
+    }
+    final element = _deref(rt, current.args[0]);
+    if (element is ConstTerm && (element.value == nil || element.value == null)) {
+      out.write('[]');
+    } else if (element is ConstTerm && element.value is String) {
+      out.write(element.value as String);
+    } else {
+      return kernelAbort(
+          "[ABORT] '_string_concat'/2: an element is not a string: $element");
+    }
+    current = _deref(rt, current.args[1]);
+  }
+  return bindResult(rt, args[1], out.toString(), kernel: "'_string_concat'/2");
+}
+
+/// `'_term_to_string'(T?, S)` --- "assigns S a text that the reader reads as
+/// the ground term T", one text per term: [formatTerm], each constant and
+/// functor as the printer writes it, a list as `[a, b]` or `[a, b | T]`,
+/// arguments and elements separated by a comma and a space, and a real as
+/// [realSource].  The clause of term_to_string/2 guards T ground.  A real that
+/// is NaN or infinite has no text the reader reads (GLP-Spec appendix-guards,
+/// "Predefined types": "A number is written as its digits, with an optional
+/// minus directly before them"), so it is out of the kernel's domain and the
+/// kernel aborts ("A body kernel whose precondition fails --- a zero divisor,
+/// an argument out of its domain --- aborts").
+BodyKernelResult termToStringKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        "[ABORT] '_term_to_string'/2: expected 2 arguments, got ${args.length}");
+  }
+  final term = deepDeref(rt, args[0] as Term);
+  final String text;
+  try {
+    text = formatTerm(term, number: realSource);
+  } on ArgumentError catch (e) {
+    return kernelAbort("[ABORT] '_term_to_string'/2: ${e.message}");
+  }
+  return bindResult(rt, args[1], text, kernel: "'_term_to_string'/2");
+}
+
+/// [value] as the reader reads it back: an integer as its digits, and a real
+/// as its digits with a decimal point, the shortest that reads back as the
+/// real, never in exponent form, which the reader does not read (GLP-Spec
+/// appendix-guards, "Predefined types": "A number is written as its digits,
+/// with an optional minus directly before them"; appendix-lp.tex).  Dart
+/// prints `1e-7` and `1e+21`; this prints `0.0000001` and
+/// `1000000000000000000000.0`.  Throws [ArgumentError] on a NaN or infinite
+/// real, which no text reads as.
+String realSource(num value) {
+  if (value is int) return value.toString();
+  final d = value as double;
+  if (!d.isFinite) {
+    throw ArgumentError('the real $d has no text the reader reads as it');
+  }
+  final shown = d.toString();
+  final e = shown.indexOf('e');
+  if (e < 0) return shown;
+  var mantissa = shown.substring(0, e);
+  final exponent = int.parse(shown.substring(e + 1));
+  final negative = mantissa.startsWith('-');
+  if (negative) mantissa = mantissa.substring(1);
+  final point = mantissa.indexOf('.');
+  final digits = mantissa.replaceAll('.', '');
+  // The position of the decimal point in digits, after the shift.
+  final at = (point < 0 ? mantissa.length : point) + exponent;
+  String body;
+  if (at <= 0) {
+    body = '0.${'0' * -at}$digits';
+  } else if (at >= digits.length) {
+    body = '$digits${'0' * (at - digits.length)}.0';
+  } else {
+    body = '${digits.substring(0, at)}.${digits.substring(at)}';
+  }
+  // Trailing zeros after the point, but one digit after it.
+  if (body.contains('.')) {
+    body = body.replaceFirst(RegExp(r'0+$'), '');
+    if (body.endsWith('.')) body = '${body}0';
+  }
+  return negative ? '-$body' : body;
 }
 
 /// Format a ground term as readable GLP syntax.
@@ -1618,6 +1829,9 @@ String formatGroundTerm(Term term) {
 /// constant unquoted, as it stays (bin/glp_repl.dart; GLP #3 Cowork,
 /// 2026-10-04 09:06 UTC).
 ///
+/// [number], where given, prints each number, as [realSource] does for
+/// '_term_to_string'; without it a number prints by [constantSource].
+///
 /// [deref] is called at each variable met and gives the term it is bound to,
 /// or a variable where it is unbound, which [variableName] names; with no
 /// [deref] a variable is shown as the runtime shows it.  A variable met again
@@ -1625,7 +1839,9 @@ String formatGroundTerm(Term term) {
 /// `<circular X>` after the elements before it.  The list is walked along its
 /// spine in a loop and its elements by recursion, as the checker walks it.
 String formatTerm(Term term,
-    {Term Function(VarRef v)? deref, String Function(VarRef v)? variableName}) {
+    {Term Function(VarRef v)? deref,
+    String Function(VarRef v)? variableName,
+    String Function(num value)? number}) {
   final path = <Object>{};
   String name(VarRef v) => variableName?.call(v) ?? v.toString();
 
@@ -1643,6 +1859,7 @@ String formatTerm(Term term,
     if (t is ConstTerm) {
       final value = t.value;
       if (value == null || value == nil) return '[]';
+      if (value is num && number != null) return number(value);
       return constantSource(value);
     }
     if (t is StructTerm && t.functor == '.' && t.args.length == 2) {

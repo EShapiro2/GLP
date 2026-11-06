@@ -9,13 +9,10 @@ Ask ::= ask(Constant, Question).
 Question ::= none.
 Seat(X) ::= seat(Key, Stream(Ask)?, Stream(X)?).
 
-%% The one dimension, its one profile stub, printed one token a line as
-%% transform.glp prints a dimension, which run.sh reads for the draw's counts.
+%% The one dimension, its one profile stub, on one line as transform.glp prints
+%% a dimension, which run.sh reads for the draw's counts.
 Profiles ::= p(Dimension1).
-Dimension1
-::=
-stub
-.
+Dimension1 ::= stub.
 
 exported procedure cva_check(Integer?, Stream(Key)?, Constant).
 cva_check(_, _, yes).

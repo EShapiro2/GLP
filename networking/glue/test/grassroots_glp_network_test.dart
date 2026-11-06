@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:redux/redux.dart';
 import 'package:sodium/sodium_sumo.dart';
@@ -60,6 +62,14 @@ class _FailingQueueStore implements OutboundQueueStore {
   @override
   Future<void> save(String ownerHex, List<OutboundQueueEntry> entries) async =>
       throw StateError('the store refuses the save');
+
+  @override
+  Future<List<DeliveredQueueEntry>> loadDelivered(String ownerHex) async => [];
+
+  @override
+  Future<void> saveDelivered(
+          String ownerHex, List<DeliveredQueueEntry> entries) async =>
+      throw StateError('the store refuses the save');
 }
 
 String _hex(List<int> bytes) =>
@@ -103,10 +113,15 @@ void main() {
 
   Future<GrassrootsNetwork> layerFor(GrassrootsIdentity self,
           {PlaceGeofenceBackend? backend,
-          OutboundQueueStore? queueStore}) async =>
+          OutboundQueueStore? queueStore,
+          Set<Underlay> underlays = const {
+            Underlay.pan,
+            Underlay.lan,
+            Underlay.wan
+          }}) async =>
       GrassrootsNetwork(
         identity: self,
-        underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
+        underlays: underlays,
         store: Store<AppState>(appReducer, initialState: const AppState()),
         sodium: sodium,
         placeGeofenceBackend: backend,
@@ -131,7 +146,7 @@ void main() {
     expect(layer.store.state.knownPeers.known.containsKey(peer.hex), isFalse);
 
     network.setTrustLevel(glp.ProximityUnderlay.lan, glp.TrustLevel.open);
-    // trust_declare(lan, open) reaches the lan sub-object's setTrustLevel
+    // declare(trust(lan, open)) reaches the lan sub-object's setTrustLevel
     // (GNA §2.2).
     expect(layer.store.state.settings.trustLevelOf(ProximityUnderlay.lan),
         ColdCallTrustLevel.open);
@@ -144,6 +159,17 @@ void main() {
     expect(network.networkIdentity(), layer.wan!.networkIdentity());
     expect(() => network.punchUdp('nowhere'), throwsArgumentError,
         reason: "the layer's refusal of an unparseable address, unchanged");
+    // declare(rendezvous(P, A)) and remove(rendezvous(P)) reach the WAN
+    // sub-object's putRendezvousServer and removeRendezvousServer (GNA
+    // 776016c, Section 4.2): the layer's refusal of an unparseable address
+    // comes back unchanged, and a key not declared does nothing.
+    expect(() => network.putRendezvousServer(peer, 'nowhere'),
+        throwsArgumentError,
+        reason: "the layer's refusal of an unparseable address, unchanged");
+    expect(() => network.removeRendezvousServer(peer), returnsNormally);
+    // acknowledge(messageId) (GNA, Section 2.9) reaches the layer's: a
+    // message not kept does nothing.
+    expect(() => network.acknowledge('m-1'), returnsNormally);
 
     await layer.dispose();
   });
@@ -274,4 +300,74 @@ void main() {
 
     await layer.dispose();
   });
+
+  test(
+      'declare(trust(lan, open)) on a layer that runs no LAN returns, and the '
+      'program runs on', () async {
+    // GNA §2.2: "a call on an underlay the layer does not run finds no
+    // sub-object"; a trust declaration for it does nothing (GNA task O (f)).
+    final layer = await layerFor(await identity(),
+        underlays: const {Underlay.pan, Underlay.wan});
+    expect(layer.lan, isNull);
+    final network = GrassrootsGlpNetwork(layer);
+    expect(
+        () => network.setTrustLevel(
+            glp.ProximityUnderlay.lan, glp.TrustLevel.open),
+        returnsNormally);
+    expect(layer.store.state.settings.trustLevelOf(ProximityUnderlay.pan),
+        ColdCallTrustLevel.closed,
+        reason: 'the PAN level stands as it was');
+
+    final out = <String>[];
+    final engine = GlpEngine(
+        rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+    engine.enableMadGLP(agentId: 'alice');
+    engine.runtime.outputCallback = out.add;
+    engine.madContext!.network = network;
+    engine.loadSource('''
+procedure go.
+go :- declare(trust(lan, open)), declared.
+procedure declared.
+declared :- send_to_user([running]).
+''');
+    final result = await engine.runGoal('go');
+    expect(result.succeeded, isTrue,
+        reason: 'the declaration returns, and aborts nothing');
+    expect(out, ['running'], reason: 'the program runs on');
+
+    await layer.dispose();
+  });
+
+  test(
+      "a message the layer kept is delivered again through the glue at "
+      "restart, and the glue's acknowledge(messageId) is the layer's (GNA "
+      "§2.9, §2.11)", () async {
+    final self = await identity();
+    final senderKey = glp.PubKey.fromList((await identity()).publicKey);
+    // What a layer that delivered the message and was not told it is applied
+    // left behind.
+    final store = MemoryOutboundQueueStore();
+    await store.saveDelivered(_hex(self.publicKey), [
+      DeliveredQueueEntry(
+        senderHex: senderKey.hex,
+        messageId: 'm-kept',
+        payload: Uint8List.fromList([4, 2]),
+        underlay: Underlay.lan,
+      ),
+    ]);
+    final layer = await layerFor(self, queueStore: store);
+    final network = GrassrootsGlpNetwork(layer);
+    final delivered =
+        Completer<(glp.PubKey, List<int>, String, glp.Underlay)>();
+    network.onMessageReceived = (s, payload, id, u) =>
+        delivered.complete((s, payload, id, u));
+    final (s, payload, id, u) = await delivered.future;
+    expect((s, id, u), (senderKey, 'm-kept', glp.Underlay.lan));
+    expect(payload, [4, 2]);
+
+    network.acknowledge(id);
+    await layer.dispose();
+    expect(await store.loadDelivered(_hex(self.publicKey)), isEmpty,
+        reason: 'acknowledged through the glue, it is kept no longer');
+  }, timeout: Timeout.none);
 }

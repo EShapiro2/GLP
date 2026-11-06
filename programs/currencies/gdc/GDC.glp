@@ -1,0 +1,86 @@
+%% ---------------------------------------------------------------------------
+%% GDC.glp --- Grassroots Denominated Coins, the contract GDC, Currencies' (Coordination Appendix C; Udi's ruling of 2026-11-04), in the term form programs/gsc reads.  The clauses are in GDC.txt beside this file.  GDC extends GC (programs/currencies/coins/GC.glp), so the term holds GC's seven schemas whole, and every role but establish's requires identity.  dcoin(u, f) in the state of p is a u-coin denominated by f held by p, u's debt of one unit of f (GDC:2); f is a value, written num(f) for want of a value variable in the term form.  GC's swap, pay and redeem take a denominated coin in place of a coin, lot by lot, so each has twins named with d for the denominated lot, under GC's buttons.  Written by Currencies #15 Cowork, 2026-11-04.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer) ; num(Constant).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Mult      ::= Atom ; times(Arg, Atom).
+Mults     ::= [] ; [Mult | Mults].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gdc, C): the contract, GDC (Coordination Appendix C).
+procedure contract_named(Constant?, Declared).
+contract_named(gdc,
+%% GKK:1, Identity: act once, so establish forbids the identity it adds.
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+%% GKK:2, Acquaintance.
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+%% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:1, Minting: p mints k p-coins.
+    schema(mint, ['Alice'], [num(k)],
+       [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+%% GC:2, Swap: p and q, who know each other, swap k u-coins of p's for k1 v-coins of q's; each comes to know the issuer of what they receive.
+    schema(swap, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3, Payment: p pays k q-coins to q, whom p knows.
+    schema(pay, ['Alice', 'Bob'], [num(k)],
+       [rs(guarded,   [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
+%% GC:4, Redemption: p redeems a q-coin against an r-coin q holds, q whom p knows; p comes to know r.
+    schema(redeem, ['Alice', 'Bob'], [pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GDC:1, Minting: p mints k p-coins denominated by f.
+    schema(dmint, ['Alice'], [num(f), num(k)],
+       [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:2 for a denominated coin: p gives k u-coins in f, q gives k1 coins of v.
+    schema(swap_dc, ['Alice', 'Bob'], [pvar(u), num(f), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for a denominated coin: p gives k coins of u, q gives k1 v-coins in f.
+    schema(swap_cd, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(f1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:2 for denominated coins: k u-coins in f for k1 v-coins in f1.
+    schema(swap_dd, ['Alice', 'Bob'], [pvar(u), num(f), num(k), pvar(v), num(f1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GC:3 for a denominated coin: p pays k q-coins in f to q, whom p knows.
+    schema(pay_d, ['Alice', 'Bob'], [num(f), num(k)],
+       [rs(guarded,   [], [times(num(k), atom(dcoin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(dcoin, [role(2), num(f)]))], [], [atom(identity, [])], [])]),
+%% GC:4 for a denominated coin: p redeems a q-coin in f against a coin of r held by q.
+    schema(redeem_dc, ['Alice', 'Bob'], [num(f), pvar(r)],
+       [rs(guarded,   [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+%% GC:4 for a denominated coin: p redeems a q-coin against an r-coin in f held by q.
+    schema(redeem_cd, ['Alice', 'Bob'], [num(f1), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])]),
+%% GC:4 for denominated coins: a q-coin in f against an r-coin in f1 held by q.
+    schema(redeem_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(r)],
+       [rs(guarded,   [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])])]).

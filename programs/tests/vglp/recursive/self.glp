@@ -37,7 +37,7 @@ imported procedure speech#say(Channel(Stream(_), Stream(Output))?,
 imported procedure speech#ask(Channel(Stream(_), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure speech#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The bridge's entries
@@ -152,3 +152,17 @@ procedure newest(_?, _?, Stream(_)).
 newest([], Ds, Es?) :- outputs(Ds?, Es).
 newest([M], Ds, [M? | Es?]) :- outputs(Ds?, Es).
 newest([_, M1 | Ms], Ds, Es?) :- newest([M1? | Ms?], Ds?, Es).
+
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act names the entry the agent runs, and the
+%% person's acts after it are that entry's input.
+Selected ::= [Constant | PersonIn(Drawn)].
+
+exported procedure agent(Channel(Selected, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([E | Gs], []), ch(N, [])) :- start(E?, Gs?, N?).
+
+procedure start(Constant?, PersonIn(Drawn)?, Stream(NetMsg(Constant))?).
+start(say_init, Gs, N) :- say_init(bob, Gs?, N?).
+start(ask_init, Gs, N) :- ask_init(bob, Gs?, N?).

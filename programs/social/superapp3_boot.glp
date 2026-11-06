@@ -8,13 +8,33 @@
 %% bob's assignment and reports it; the warm call befriends alice and bob by
 %% carol's introduction, the handshake opens their root channel, the held end
 %% is released, and alice's execution reads the value.  The persons' scripts
-%% are in core/superapp_plays.glp (sg_init/3, role warm).
+%% are in core/superapp_plays.glp (sg_init/4, modes warm_anchor, warm_holder and warm_friend).
 %%   :artefact programs/social/graph/pingapp programs/social/graph/core
 %%   :boot programs/social/superapp3_boot.glp programs/social/graph/core
 %% Expected: [alice] got(hello_from_bob) after [bob] opened(alice).
 
 procedure boot.
 boot :-
-    sg_init(alice, warm, _)@alice,
-    sg_init(bob, warm, _)@bob,
-    sg_init(carol, warm, _)@carol.
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, warm_anchor, [carol, bob], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, warm_holder, [carol, alice], ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@carol,
+    say(carol, warm_friend, [alice, bob], ch(_?, _))@carol.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel
+%% first and the network channel second (GLP-Spec maglp.tex, Definition
+%% "Multiagent GLP"), which the program, graph/core, answers: a boot defines
+%% no agent/2, and the person goal's first act names the entry the program
+%% starts (IGLP 0e1c9e0, Implementation Notes, "Boot").  The person scripted
+%% at each agent, say/4, run on its person channel in the person's place,
+%% tells the agent the entry, sg_init/4, with its own key, its mode and the
+%% keys of the peers it knows, its ground arguments, alice, bob and carol being
+%% the atoms that stand for the keys in a simulation ("An agent learns the keys of
+%% its peers from its person"; Remark "Agent Names"), and reads nothing.
+SayAct ::= sg_init(Key, Constant, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Key?, Constant?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(P, M, Qs, ch(_, [sg_init(P?, M?, Qs?)])).

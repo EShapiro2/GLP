@@ -12,7 +12,9 @@
 // Until 2026-10-11 the agent printed each element and the screen parsed the
 // line: a string with a space, `Hi there`, and a constant the print left
 // bare, `form(., ...)`, did not parse, and never arrived.
-import 'dart:isolate';
+@Timeout.none
+library;
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,7 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 import 'fixture_term.dart';
+import 'isolate_agents.dart';
 import 'programs_dir.dart';
 
 /// One panel, whose one view is the default display: every screen message
@@ -113,52 +116,24 @@ void main() {
   test('a person\'s text with a space reaches the agent across the isolate '
       'boundary and comes back to the screen whole', () async {
     final programs = programsDir();
-    final reply = ReceivePort();
-    SendPort? commands;
-    final notifies = <GTerm>[];
+    final agents = IsolateAgents();
+    addTearDown(agents.dispose);
     final ui = UiRuntime(
-        manifest: _manifest,
-        onSend: (g) => commands?.send(UserInput(g)));
-    reply.listen((m) {
-      if (m is AgentReady) {
-        commands = m.commandPort;
-      } else if (m is AgentNotify) {
-        notifies.add(m.term);
-        ui.handle(m.term);
-      } else if (m is AgentError) {
-        fail('the agent: ${m.error}');
-      }
-    });
-    final isolate = await Isolate.spawn(
-        agentIsolateEntry,
-        InitAgent(
-          agentId: 'bob',
-          program: '$programs/tests/vglp/bridge',
-          goalLabel: 'inputs_init/3',
-          rootSelfGlpPath: '$programs/self.glp',
-          replyPort: reply.sendPort,
-        ));
-    addTearDown(() {
-      isolate.kill(priority: Isolate.immediate);
-      reply.close();
-    });
-
-    Future<bool> until(bool Function() done) async {
-      final end = DateTime.now().add(const Duration(seconds: 20));
-      while (DateTime.now().isBefore(end)) {
-        if (done()) return true;
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      return done();
-    }
+        manifest: _manifest, onSend: (g) => agents.input('bob', g));
+    agents.onNote = (_, t) => ui.handle(t);
+    await agents.spawn('bob', '$programs/tests/vglp/bridge',
+        '$programs/self.glp',
+        deferStart: false);
+    await agents.until('bob initialised', () => agents.started.contains('bob'));
+    // The person's first act names the entry the fixture's agent/2 runs
+    // (programs/tests/vglp/bridge/self.glp), the agent started from
+    // agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent
+    // GLP"; IGLP, Implementation Notes, "Boot").
+    agents.input('bob', const GAtom('inputs_init'));
 
     // The fixture's seven questions are drawn, the text field among them.
-    expect(
-        await until(() =>
-            commands != null &&
-            ui.bridge.constructs.any((c) => formatTerm(c.widget) == 'text')),
-        isTrue,
-        reason: 'no text field drawn: ${notifies.map(formatTerm).toList()}');
+    await agents.until('a text field drawn',
+        () => ui.bridge.constructs.any((c) => formatTerm(c.widget) == 'text'));
     final text =
         ui.bridge.constructs.firstWhere((c) => formatTerm(c.widget) == 'text');
 
@@ -173,12 +148,8 @@ void main() {
       return v is GList ? v.items : const [];
     }
 
-    expect(
-        await until(() =>
-            output().any((t) => formatTerm(t) == "got(text, 'Hi there')")),
-        isTrue,
-        reason: 'got(text, ...) never arrived: '
-            '${notifies.map(formatTerm).toList()}');
+    await agents.until("got(text, 'Hi there') on the output thread",
+        () => output().any((t) => formatTerm(t) == "got(text, 'Hi there')"));
     final got =
         output().firstWhere((t) => formatTerm(t) == "got(text, 'Hi there')")
             as GStruct;

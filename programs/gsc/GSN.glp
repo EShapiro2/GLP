@@ -1,109 +1,104 @@
 %% ---------------------------------------------------------------------------
-%% GSN.glp --- Grassroots Social Network, the network without provenance,
-%% GSC's (Udi, 2026-10-18; Coordination, to_all 2026-10-18 19:23 UTC), in the
-%% term form programs/gsc reads (its README, "Writing a contract").  The
-%% clauses are in GSN.txt beside this file; GSN extends GSG, which extends GKK, so the term holds
-%% GKK's three schemas and GSG's two, and every role but establish's requires identity.  The network with provenance that this file held until
-%% GLP 4ce1da3a is GSNP (GSNP.txt), its schemas not written.  Written by GAI #2
-%% Cowork at Udi's instruction, 2026-10-18.  The notation of each schema is printed from the term by a run of the cascade (schemas.txt).
-%% A schema's second argument lists its variables in the order of its head
-%% (GSC, Definition Speech-act schema; Udi, 2026-10-19, to GSC #4).
-%%
-%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
-%% and is named by its index, role(1) the schema's first role; x, content, and
-%% n, a group's name, are speech-act variables, svar.  A group is named by its
-%% leader, the role a, and n: its community name <a>.n (GSC, Appendix D),
-%% and close takes the listed role a[listed(*, n)], every member the leader
-%% lists (GSC, Appendix D.4); remove is the leader ending Bob's membership,
-%% GSN:3 (Udi, 2026-10-30, Coordination Appendix E, to GSC #9).  GSN's unfriend
-%% replaces GSG's: its deleted atoms with the wildcard any, or ext_any(N) for <N>.*,
-%% are cleared atoms (GSC, Definition Speech-act schema), deleting every atom
-%% they match and requiring none, so ending a friendship ends every membership
-%% between the two; drop is gone (Udi, 2026-10-30, to GSC #9, on EC6).  The groups follow CSSN's (programs/cssn/CSSN.glp),
-%% without children and without items.
+%% GSN.glp --- the grassroots social network contract, GSC's, extending GSG, in the clause syntax
+%% of GSC's paper, Section 3.2 (Udi, 2026-11-04, to GSC #11; the form is described in GKK.glp).
+%% The clauses are in GSN.txt beside this file: message is GSN:1, create and close GSN:2, join,
+%% leave, remove and GSN's unfriend, which replaces GSG's, GSN:3, and post_own, post and deliver
+%% GSN:4.  A group is the name <Alice>.n, Alice its leader; close has a quantified conjunct in its
+%% body and in its head over every Bob that Alice lists (GSC, Section 3.2); unfriend clears every
+%% listing and membership between the two.  Every role but establish's requires identity.
 %% ---------------------------------------------------------------------------
 
-NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
-            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
-Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer) ; any.
-Args      ::= [] ; [Arg | Args].
-Atom      ::= atom(Constant, Args).
-Atoms     ::= [] ; [Atom | Atoms].
-Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
-            ; listed(Integer, Constant, Args).
-RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
-            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
-RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
-Reach     ::= reach(NameTerm, Constant, NameTerm).
-Reaches   ::= [] ; [Reach | Reaches].
-Names     ::= [] ; [Constant | Names].
-Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
-Contract  ::= [] ; [Schema | Contract].
-Preds     ::= [] ; [Constant | Preds].
-Declared  ::= Contract ; reflexive(Preds, Contract).
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SQLit       ::= SMult ; not(SMult).
+SQLits      ::= [] ; [SQLit | SQLits].
+SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
+SLits       ::= [] ; [SLit | SLits].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr).
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg).
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+Contract    ::= [] ; [Schema | Contract].
 
-%% contract_named(gsn, C): the contract, GSN (Coordination Appendix C).
-procedure contract_named(Constant?, Declared).
+% contract_named(gsn, C): the contract, GSN (Coordination Appendix C).
+procedure contract_named(Constant?, Contract).
 contract_named(gsn,
-   [schema(establish, ['Alice'], [],
-       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-    schema(acquaint, ['Alice', 'Bob'], [],
-       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
-        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
-    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
-       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
-        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-    schema(befriend, ['Alice', 'Bob'], [],
-       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
-    schema(unfriend, ['Alice', 'Bob'], [],
-       [rs(guarded,   [], [atom(friend, [role(2)]), atom(listed, [role(2), any]),
-                           atom(member, [nterm(ext_any(own(2)))])], [atom(identity, [])], []),
-        rs(unguarded, [], [atom(friend, [role(1)]), atom(listed, [role(1), any]),
-                           atom(member, [nterm(ext_any(own(1)))])], [atom(identity, [])], [])]),
-    schema(message, ['Alice', 'Bob'], [svar(x)],
-       [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])], []),
-        rs(unguarded, [atom(received, [svar(x), role(1)])], [],
-                      [atom(identity, [])], [])]),
-    schema(create, ['Alice'], [svar(n)],
-       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]),
-                     atom(listed, [role(1), svar(n)])], [], [atom(identity, [])],
-                    [atom(member, [nterm(ext(own(1), n))]), atom(closed, [svar(n)])])]),
-    schema(join, ['Alice', 'Bob'], [svar(n)],
-       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
-                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(friend, [role(2)])], []),
-        rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [],
-                    [atom(identity, [])],
-                    [atom(member, [nterm(ext(own(1), n))])])]),
-    schema(leave, ['Alice', 'Bob'], [svar(n)],
-       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
-        rs(guarded,   [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-    schema(remove, ['Alice', 'Bob'], [svar(n)],
-       [rs(guarded,   [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
-        rs(unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-    cschema(close, ['Alice', 'Alice'], [svar(n)], [],
-       [rs(guarded, [atom(closed, [svar(n)])],
-                    [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], []),
-        crs(listed(1, listed, [svar(n)]), unguarded,
-            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-    schema(post_own, ['Alice'], [svar(x), svar(n)],
-       [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
-                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))])],
-                    [atom(posted, [svar(x), svar(n)])])]),
-    schema(post, ['Bob', 'Alice'], [svar(x), svar(n)],
-       [rs(guarded,   [], [],
-                      [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []),
-        rs(unguarded, [atom(posted, [svar(x), svar(n)])], [],
-                      [atom(identity, []), atom(member, [nterm(ext(own(2), n))]),
-                       atom(listed, [role(1), svar(n)]), atom(friend, [role(1)])],
-                      [atom(posted, [svar(x), svar(n)])])]),
-    schema(deliver, ['Alice', 'Bob'], [svar(x), svar(n)],
-       [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
-                      [atom(identity, []), atom(member, [nterm(ext(own(1), n))]),
-                       atom(posted, [svar(x), svar(n)]),
-                       atom(listed, [role(2), svar(n)]), atom(friend, [role(2)])],
-                      [atom(delivered, [svar(x), role(2), svar(n)])]),
-        rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [],
-                      [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])]).
+   [sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))], true, ['Alice']),
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
+       true, ['Alice', 'Bob']),
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])), not(atom(listed, ['Alice', 'Bob', '_'])),
+        not(atom(member, ['Alice', ext(own('Bob'), '_')])),
+        not(atom(friend, ['Bob', 'Alice'])), not(atom(listed, ['Bob', 'Alice', '_'])),
+        not(atom(member, ['Bob', ext(own('Alice'), '_')]))],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+    sas(message, ['Alice', 'Bob'], [x],
+       [atom(received, ['Bob', x, 'Alice'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(identity, ['Bob'])],
+       true, ['Alice']),
+    sas(create, ['Alice'], [n],
+       [atom(member, ['Alice', ext(own('Alice'), n)]), atom(listed, ['Alice', 'Alice', n])],
+       [atom(identity, ['Alice']), not(atom(member, ['Alice', ext(own('Alice'), n)])),
+        not(atom(closed, ['Alice', n]))], true, ['Alice']),
+    sas(join, ['Alice', 'Bob'], [n],
+       [atom(listed, ['Alice', 'Bob', n]), atom(member, ['Bob', ext(own('Alice'), n)])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), not(atom(member, ['Bob', ext(own('Alice'), n)]))],
+       true, ['Alice', 'Bob']),
+    sas(leave, ['Alice', 'Bob'], [n],
+       [not(atom(listed, ['Alice', 'Bob', n])), not(atom(member, ['Bob', ext(own('Alice'), n)]))],
+       [atom(identity, ['Alice']), atom(listed, ['Alice', 'Bob', n]),
+        atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])], true, ['Bob']),
+    sas(remove, ['Alice', 'Bob'], [n],
+       [not(atom(listed, ['Alice', 'Bob', n])), not(atom(member, ['Bob', ext(own('Alice'), n)]))],
+       [atom(identity, ['Alice']), atom(listed, ['Alice', 'Bob', n]),
+        atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])], true, ['Alice']),
+    sas(close, ['Alice', 'Bob'], [n],
+       [atom(closed, ['Alice', n]), not(atom(listed, ['Alice', 'Alice', n])),
+        not(atom(member, ['Alice', ext(own('Alice'), n)])),
+        forall('Bob', atom(listed, ['Alice', 'Bob', n]),
+               [not(atom(member, ['Bob', ext(own('Alice'), n)]))])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(listed, ['Alice', 'Alice', n]),
+        forall('Bob', atom(listed, ['Alice', 'Bob', n]),
+               [atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])])],
+       true, ['Alice']),
+    sas(post_own, ['Alice'], [x, n],
+       [atom(posted, ['Alice', x, n])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        not(atom(posted, ['Alice', x, n]))], true, ['Alice']),
+    sas(post, ['Bob', 'Alice'], [x, n],
+       [atom(posted, ['Alice', x, n])],
+       [atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)]),
+        atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
+        not(atom(posted, ['Alice', x, n]))], true, ['Bob']),
+    sas(deliver, ['Alice', 'Bob'], [x, n],
+       [atom(delivered, ['Alice', x, 'Bob', n]), atom(received_in, ['Bob', x, 'Alice', n])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(posted, ['Alice', x, n]), atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
+        not(atom(delivered, ['Alice', x, 'Bob', n])),
+        atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])], true, [])]).

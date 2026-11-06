@@ -1,20 +1,20 @@
-# Writing a Grassroots Social Contract
+# Writing a Grassroots Contract
 
 What a contract writer needs, in one place (Udi, 2026-11-01: "everything that contract writers / developers need should be in GLP").  Coordination writes this file; the language is GSC's paper (arXiv 2609.06231), the method is `speech-act-schemas-guide.md` beside this file, and where this file and a paper differ the paper is right.
 
 ## What a contract is
 
-A grassroots social contract is a finite list of clauses its agents undertake towards one another, written in prose, and its speech-act schemas, written in GLP's term form, which say what each clause permits and what it changes.  The contract is the source of all truth for the platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
+A grassroots contract, a social contract that runs, is a finite list of clauses its agents undertake towards one another, written in prose, and its speech-act schemas, written in GLP's term form, which say what each clause permits and what it changes.  The contract is the source of all truth for the platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
 
 ## The two files
 
 A contract named NAME lives in one copy, in its owner's directory under `programs/`, as two files.
 
-1. `NAME.txt`, the clauses.  Lines beginning with `%` are meta-information: the owner, the paper responsible for the contract --- its title, no authors, with its arXiv link if it is there and `in preparation` if not --- what it extends, what it defines, when it last changed, and where its schemas are.  The rest is the contract verbatim as its paper prints it in a box: the title line, `NAME: <name in full>`; the declaration of its names, `Alice, Bob and Carol are persons.`, a formal part of the contract from which the schemas and the pragmas take their names, saying also what the contract extends; the clauses, numbered from 1, each opening with its legal modality --- `■` enforced (U+25A0), no act of the contract can breach it; `◆` attested (U+25C6), an agent may breach it and the contract records the breach; `○` undertaken (U+25CB), its performance lies outside the contract --- then its title in one or two words and its text; and after the clauses the line `Pragmas` and the pragmas.
+1. `NAME.txt`, the clauses.  Lines beginning with `%` are meta-information: the owner, the paper responsible for the contract, `% Paper: <acronym>, <title>, <link>` --- its acronym, its title, no authors, and its arXiv link if it is there or `in preparation` if not (Udi, 2026-11-05) --- what it extends, what it defines, when it last changed, and where its schemas are.  The rest is the contract verbatim as its paper prints it in a box: the title line, `NAME: <name in full>`; where the contract extends another, a line of its own saying so, `GDO extends GSG`, ending with a reference to the paper of the contract it extends (Udi, 2026-11-05) --- in a paper's box a citation where that paper is on arXiv, and where it is not its acronym and title and then `, in preparation`, as `GDO-L extends GDO (GRH, Grassroots Ride-Hailing, in preparation).`; in `NAME.txt` the acronym, the title and the arXiv link or `in preparation`, in parentheses; no reference where the extended contract is the same paper's; until Code's and vGLP's readers take this line, a `NAME.txt` keeps what it extends on the names line; then the declaration of its names, `Alice, Bob and Carol are persons.`, a formal part of the contract from which the schemas and the pragmas take their names; the clauses, numbered from 1, each opening with its legal modality --- `■` enforced (U+25A0), no act of the contract can breach it; `◆` attested (U+25C6), an agent may breach it and the contract records the breach; `○` undertaken (U+25CB), its performance lies outside the contract --- then its title in one or two words and its text; and after the clauses the line `Pragmas` and the pragmas.
 
 2. `NAME.glp`, the speech-act schemas, the term `schema(Name, Names, Vars, Roles)` for each act the clauses describe, written by the guide.  The term is the one source; a run of the cascade prints the notation from it.
 
-A clause is cited as `GKK:1`.  A contract that extends another has the other's acts and its own, cites the other's clauses and does not restate them, and replaces an act of the other that its clauses change.  Every contract's clauses use Alice and Bob; two names are two persons, and a clause that admits one person in both says "Alice and Bob, possibly one person".  A clause states an obligation, a permission or a prohibition, and nothing else: no explanation inside the box.
+A clause is cited as `GKK:1`.  A contract built on another cites the other's clauses and does not restate them.  Its relation to the other is one of the four relations of GSC's paper, Section 8, Relations among Contracts --- amendment, extension, restriction, instantiation --- and is stated in those terms in its paper and in its header, as `GSN amends GSG` and `GB extends GC`, never as 'replaces' or 'extends with changes' (Udi, 2026-11-06, reported by GSC #11); the paper defines the four and says what the checker redoes for each.  Every contract's clauses use Alice and Bob; two names are two persons, and a clause that admits one person in both says "Alice and Bob, possibly one person".  A clause states an obligation, a permission or a prohibition, and nothing else: no explanation inside the box.
 
 ## The pragmas
 
@@ -33,11 +33,19 @@ A contract's name and its owner are each a ruling of Udi's, never read off a pro
 | GAI | Accountable AI Agents | GnW | GAI | `gai` |
 | GSNP | Grassroots Social Network with Provenance | GSN, GAI | GAI | `gai` |
 | CSSN | Child-Safe Social Network | GSN, GnW | CSSN | `cssn` |
-| GFF | Grassroots Feeds and Followers | GSG | GFF | `gff` |
+| GD | Grassroots Distrust | GSG | GGGA | `ggga` |
 | GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
 | GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
+| DGC | Denominated Grassroots Currencies | GC, GB | Currencies | `currencies/sovereign` |
+| GDC | Grassroots Denominated Coins | GC | Currencies | `currencies/gdc` |
+| GCC | Grassroots Community Currencies | GDC | Currencies | `currencies/gcc` |
+| BCC | Backed Community Currencies | GCC, GDC | Currencies | `currencies/bcc` |
 | AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
-| LBM | Location-Based Matching | GSG | LBM | --- (not yet in the repository) |
+| LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
+| GDO | Grassroots Directed Overlay | GSG | GRH | `lbm` |
+| GDO-L | Grassroots Directed Overlay with Labels | GDO | GFF | `gff` |
+| GFF | Grassroots Feeds and Followers | GDO-L | GFF | `gff` |
+| GRA | Grassroots Ride Auction | GDO | GRH | `lbm` |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 
 A contract extends GSG when its clauses require friendship, and not otherwise.  The current text of every contract is Coordination Appendix E, `/Grassroots/Coordination/sections/E-contracts.tex`, which follows the repository's copies.

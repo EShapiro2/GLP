@@ -1,0 +1,16 @@
+% GDO: Grassroots Directed Overlay --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GRH (Udi, 2026-11-05, to GRH #1; LBM until then, Udi, 2026-11-02, to LBM #4).  The paper, /Users/udi/Grassroots/GRH/main_GRH.tex, prints it in its box in Section Grassroots Directed Overlay, sections/overlay.tex, and cites a clause as GDO:1.
+% Paper: GRH, Grassroots Ride-Hailing, in preparation
+% Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's.  It cites GKK:1 to GKK:3, GSG:1 and GSG:2 whole and restates none.
+% Defines: pointing.  Person, knowing and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
+% Last changed: 2026-11-06, by GRH #1 Cowork: the Location-Based, Bounded Out-Degree Instance moved out to GDO-LB (Udi, to GRH #1); and one line for [Point], the button of both pointing acts, point_friend and point_transitive, and no line for Transitive pointing (Udi, to GRH #1; vGLP, Section 5.4, "A button is of the acts it names"; Code #23, 2026-11-05 14:05 UTC).  2026-11-05, by GRH #1 Cowork: the owner and the paper, and Transitive pointing's pragma without a field, Alice's state binding Carol (Udi, to GRH #1; vGLP, Section 5.4).  Before it: 2026-11-03, the pragmas as Udi approved them to LBM #4; written by LBM #4 Cowork from the paper at LBM main b31edd0, the clauses and the instance in Udi's wording (Udi, 2026-11-02, in Overleaf).
+% Schemas: GDO.glp beside this file, GKK's three, GSG's two and GDO's three over the predicate points_to, Bob a reading role in each (GSC 0380a8a).
+GDO: Grassroots Directed Overlay
+Alice, Bob and Carol are persons.  GDO extends GSG.
+1. ■ Pointing to friend.  Alice, who does not point to their friend Bob, may point to Bob.
+2. ■ Transitive pointing.  Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.
+3. ■ Ceasing to point.  Alice, who points to Bob, may cease pointing to Bob.
+Pragmas
+Pointing: the persons Alice points to.
+Pointing to friend: Alice [Point]
+Ceasing to point: Alice [Unpoint]

@@ -4,4 +4,12 @@
 %% agent (IsolateManager with programDir) with this boot clause on top.
 
 procedure boot.
-boot :- agent_init(alice, _)@alice.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(agent_init(alice), ch(_?, _))@alice.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, guard/, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at each agent, say/2, run on its person channel in the person's place, tells the agent the entry, agent_init/1, with the agent's name, its ground argument, the agent's key having been made at its spawn, and reads nothing.
+SayAct ::= agent_init(Key).
+
+exported procedure say(SayAct?, Channel(Stream(Constant), Stream(SayAct))?).
+say(A, ch(_, [A?])).

@@ -229,7 +229,8 @@ ListTuples ::= [] ; [PeerLists | ListTuples].
 Schemas   ::= [] ; [Schema | Schemas].
 Preds     ::= [] ; [Constant | Preds].
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): an argument of an atom may be a number or a numeric variable, num(X), the number X where X is a number and the variable X otherwise; a schema may carry a constraint on its numeric variables, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"), as programs/gsc writes it: true, and(C1, C2), eq, le, lt, ge and gt of two expressions (X = Y, X =< Y, X < Y, X >= Y, X > Y), succ(X, Y) (Y = X + 1) and or(C1, C2); an expression is a numeric argument, plus(X, Y), minus(X, Y) or mul(X, Y).  The values are whole numbers, Integer, the realisation's type (GSC, ibid.: "Which types the values have --- numbers, strings, dates --- is the realisation's").  schema_numeric(Name, numeric(C, Ls, R)), which the compiler prints from the contract, gives a schema's constraint C, its variables local to a role, Ls, and the role whose local variables the constraint names, at(I), or every where it names none: "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks" (ibid.).
-Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint).
+%% A constraint is "a decidable condition on the values its binding assigns, in the relations their types provide --- linear arithmetic on its numeric variables, and signed(u, y) and unsigned(u, y), that the person bound to u signed the speech act bound to y or did not --- which is evaluated when the schema is bound" (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications"): signed(U, Y) and unsigned(U, Y), U a role or an agent variable and Y a speech-act variable, as programs/gsc writes them (GSC 10fcc92, def:numbers).
+Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; signed(Var, Var) ; unsigned(Var, Var).
 Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 CRole     ::= every ; at(Integer).
 Numeric   ::= numeric(Constraint, Vars, CRole).
@@ -4659,6 +4660,17 @@ con_holds(ge(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?,
 con_holds(gt(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_gt(A?, C?, R).
 con_holds(succ(X, Y), B, R?) :- ground(B?) | num_of(X?, B?, A), num_of(Y?, B?, C), num_succ(A?, C?, R).
 con_holds(or(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), or(R1?, R2?, R).
+%% A signing condition, evaluated at the binding: signed(U, Y) holds where the person the binding gives U is the signer of the speech act it gives Y or of a speech act inside it, and unsigned(U, Y) where that person is not (GSC 10fcc92, def:numbers: "signed(u, y) holding when beta(u) is the signer of beta(y) or of a speech act inside it and unsigned(u, y) otherwise"; vGLP dd37d2a, Section 5.4).  A person or a speech act not bound makes either false, as a number not bound makes a comparison false.
+con_holds(signed(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, yes, R).
+con_holds(unsigned(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, no, R).
+procedure signing(Found?, Found?, YesNo?, YesNo).
+signing(found(p(P)), found(s(S)), W, R?) :- ground(S?) | signed_by(P?, S?, G), same(G?, W?, R).
+signing(_, _, _, no) :- otherwise | true.
+%% Whether the person P signed the speech act or a speech act inside it.
+procedure signed_by(Peer?, Utterance?, YesNo).
+signed_by(P, speech(_, Q), yes) :- P? =?= Q? | true.
+signed_by(P, speech(U, _), R?) :- otherwise | signed_by(P?, U?, R).
+signed_by(_, utterance(_), no).
 %% The value of an expression under the binding, num_is(K), or no_num where a number it names is not bound.
 procedure expr_val(Expr?, Binding?, NumRes).
 expr_val(plus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(plus, A?, C?, R).
@@ -4743,6 +4755,8 @@ con_ext1(succ(X, Y), B, Bs?) :- ground(B?), ground(X?), ground(Y?) |
     num_of(X?, B?, A),
     num_of(Y?, B?, C),
     succ_ext(A?, C?, X?, Y?, B?, Bs).
+con_ext1(signed(_, _), B, [B?]).
+con_ext1(unsigned(_, _), B, [B?]).
 con_ext1(or(C1, C2), B, Bs?) :- ground(B?) |
     con_ext1(C1?, B?, Bs1),
     con_ext1(C2?, B?, Bs2),

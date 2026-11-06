@@ -1,8 +1,9 @@
-%% integer_id_agent.glp --- an agent's program whose entry takes an Integer
-%% where its host posts the agent's id, an atom (multiagent/agent_runtime.dart,
-%% multiagent/isolate_manager.dart; glp_runtime/test/engine/post_goal_test.dart):
-%% the posted goal agent_init(alice, NetIn?) is not well-typed and is refused
-%% before it runs.
+%% integer_id_agent.glp --- an agent's program whose agent/2 takes two
+%% Integers where its host posts every agent's initial goal,
+%% agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)) (GLP-Spec maglp.tex,
+%% Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot";
+%% multiagent/agent_runtime.dart; glp_runtime/test/engine/post_goal_test.dart):
+%% the posted goal is not well-typed and is refused before it runs.
 
-procedure agent_init(Integer?, Stream(_)?).
-agent_init(_, _).
+exported procedure agent(Integer?, Integer?).
+agent(_, _).

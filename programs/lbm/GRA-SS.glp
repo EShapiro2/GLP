@@ -1,0 +1,272 @@
+%% ---------------------------------------------------------------------------
+%% GRA-SS.glp --- the second-score restriction of the grassroots ride auction, GRH's (Udi, 2026-11-06, to GRH #1), in the clause syntax of GSC's paper, Section 3.2, as GRA.glp beside this file.  GRA-SS restricts GRA (GSC, Section 8, Definition Amendment, extension, restriction, instantiation): it deletes GRA's point_transitive, award, close, arrive and cancel and adds, for each, a schema with the same name, head and guard and a stronger body; every other schema is GRA's as written there.  The clauses are in GRA-SS.txt.
+%%
+%% Environment predicates: GRA's, now, location, rider and driver, and since(x, s), the location x and the time s since which the person has been at it.
+%%
+%% The terms m are a value whose type provides fn(w, [m, d]), the willingness to pay W(d) = A - lambda d, fn(lambda, [m]) and fn(deposit, [m]), the deposit D; the maximum pickup delay T is mx, which the call states.  A bid (p, d) has the score W(d) - p and is admissible iff d =< mx and its score is at least 0.
+%%
+%% This file is in the term form GSC proposed to Code (GSC_inbox, GSC #11 to GRH, 2026-11-06 09:27 UTC; GSC main c8c5ead, Definition Safe formula, name term, role): a body is literals and safe formulas, forall(Xs, Anchor, Phi, Psi) and exists(Xs, Anchor, Phi), every bound variable among the arguments of the anchor, a bound person holding an atom being a listed role, read; and, or, not, = and != of persons as eq and ne; cardinality(Xs, Anchor, Phi) in a constraint; and fn(Name, Args), a function a value's type provides.  Code confirms or betters the form.  A person c quantified reads busy at c's machine.  Ties are left as the terms break them: Bob's score is at least every other eligible admissible score.  "Alice was at the pickup point from t0 to t0 + T" is read as Alice having been at it since t0 or before, at the time of the cancellation.
+%%
+%% Written by GRH #1 Cowork, 2026-11-06, from the clauses Udi approved that day.
+%% ---------------------------------------------------------------------------
+
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
+SHeads      ::= [] ; [SHead | SHeads].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
+SExprs      ::= [] ; [SExpr | SExprs].
+SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
+              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
+              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
+SConds      ::= [] ; [SCond | SConds].
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
+Contract    ::= [] ; [Schema | Contract].
+Preds       ::= [] ; [Constant | Preds].
+Declared    ::= Contract ; environment(Preds, Contract).
+
+%% contract_named(gra_ss, C): the contract, GRA-SS.
+procedure contract_named(Constant?, Declared).
+contract_named(gra_ss, environment([now, location, since, rider, driver],
+   [
+%% GKK:1, Identity.
+    sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))],
+       true,
+       ['Alice']),
+%% GKK:2, Acquaintance.
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']),
+        atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']),
+        atom(identity, ['Bob'])],
+       true,
+       ['Alice', 'Bob']),
+%% GKK:3, Introduction.
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']),
+        atom(knows, ['Alice', 'Bob']),
+        atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']),
+        atom(knows, ['Bob', 'Alice'])],
+       true,
+       ['Alice', 'Bob']),
+%% GSG:1, Friendship.
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']),
+        atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']),
+        atom(knows, ['Alice', 'Bob']),
+        not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']),
+        atom(knows, ['Bob', 'Alice']),
+        not(atom(friend, ['Bob', 'Alice']))],
+       true,
+       ['Alice', 'Bob']),
+%% GSG:2, Ending a friendship.
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])),
+        not(atom(friend, ['Bob', 'Alice']))],
+       [atom(identity, ['Alice']),
+        atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']),
+        atom(friend, ['Bob', 'Alice'])],
+       true,
+       ['Alice']),
+%% GDO:1, Pointing to friend; Bob a reading role.
+    sas(point_friend, ['Alice', 'Bob'], [],
+       [atom(points_to, ['Alice', 'Bob'])],
+       [atom(identity, ['Alice']),
+        atom(friend, ['Alice', 'Bob']),
+        not(atom(points_to, ['Alice', 'Bob'])),
+        atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GRA-SS:1, Transitive pointing: GDO:2, where Carol is a driver; Bob and Carol reading roles.
+    sas(point_transitive, ['Alice', 'Bob', 'Carol'], [],
+       [atom(points_to, ['Alice', 'Carol'])],
+       [atom(identity, ['Alice']),
+        atom(knows, ['Alice', 'Carol']),
+        atom(points_to, ['Alice', 'Bob']),
+        not(atom(points_to, ['Alice', 'Carol'])),
+        atom(identity, ['Bob']),
+        atom(points_to, ['Bob', 'Carol']),
+        atom(driver, ['Carol'])],
+       true,
+       ['Alice']),
+%% GDO:3, Ceasing to point; Bob a reading role.
+    sas(unpoint, ['Alice', 'Bob'], [],
+       [not(atom(points_to, ['Alice', 'Bob']))],
+       [atom(identity, ['Alice']),
+        atom(points_to, ['Alice', 'Bob']),
+        atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GRA:1, Call: Alice, a rider who has no open call and no ride, calls for bids on ride r.
+    sas(call_open, ['Alice'], [r, x, y, e, mx, m],
+       [atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(calling, ['Alice'])],
+       [atom(identity, ['Alice']),
+        atom(rider, ['Alice']),
+        not(atom(calling, ['Alice'])),
+        not(atom(busy, ['Alice']))],
+       true,
+       ['Alice']),
+%% GRA:1, Call: the call reaches Bob, whom Alice points to.
+    sas(call, ['Alice', 'Bob'], [r, x, y, e, mx, m],
+       [atom(call, ['Bob', 'Alice', r, num(x), num(y), num(e), num(mx), num(m)])],
+       [atom(identity, ['Alice']),
+        atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(points_to, ['Alice', 'Bob']),
+        atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GRA:1, Call: Bob, who received Alice's call, forwards it to Carol, whom Bob points to; no one guards it, and Alice is an agent variable.
+    sas(forward_call, ['Bob', 'Carol', 'Alice'], ['Alice', r, x, y, e, mx, m],
+       [atom(forwarded, ['Bob', 'Alice', r, 'Carol']),
+        atom(call_fwd, ['Carol', 'Alice', r, num(x), num(y), num(e), num(mx), num(m)])],
+       [atom(identity, ['Bob']),
+        atom(call, ['Bob', 'Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(points_to, ['Bob', 'Carol']),
+        not(atom(forwarded, ['Bob', 'Alice', r, 'Carol'])),
+        atom(identity, ['Carol'])],
+       true,
+       []),
+%% GRA:2, Bid: Bob, a driver who received Alice's call, bids fare p and pickup delay d before the bidding period ends.
+    sas(bid, ['Bob', 'Alice'], [r, x, y, e, mx, m, p, d, t],
+       [atom(bidded, ['Bob', 'Alice', r, num(p), num(d)]),
+        atom(bid, ['Alice', 'Bob', r, num(p), num(d)])],
+       [atom(identity, ['Bob']),
+        atom(driver, ['Bob']),
+        atom(call, ['Bob', 'Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(now, ['Bob', num(t)]),
+        atom(identity, ['Alice'])],
+       lt(num(t), num(e)),
+       ['Bob']),
+%% GRA:2, Bid: the same on a forwarded call of Alice's.
+    sas(bid_fwd, ['Bob', 'Alice'], [r, x, y, e, mx, m, p, d, t],
+       [atom(bidded, ['Bob', 'Alice', r, num(p), num(d)]),
+        atom(bid, ['Alice', 'Bob', r, num(p), num(d)])],
+       [atom(identity, ['Bob']),
+        atom(driver, ['Bob']),
+        atom(call_fwd, ['Bob', 'Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(now, ['Bob', num(t)]),
+        atom(identity, ['Alice'])],
+       lt(num(t), num(e)),
+       ['Bob']),
+%% GRA-SS:2, Award: GRA:3, where Bob's bid is admissible and has the highest score among the bids Alice holds of bidders who have no ride, s2 is the highest score among the other admissible ones or 0, the fare f is W(d) - s2 and the deposit k is D.
+    sas(award, ['Alice', 'Bob'], [r, x, y, e, mx, m, p, d, t0, f, k, s2],
+       [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
+        not(atom(calling, ['Alice'])),
+        atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
+        atom(fare_locked, ['Alice', r, num(f)]),
+        atom(busy, ['Alice']),
+        not(atom(bidded, ['Bob', 'Alice', r, num(p), num(d)])),
+        atom(ride, ['Bob', 'Alice', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
+        atom(deposit_locked, ['Bob', r, num(k)]),
+        atom(busy, ['Bob'])],
+       [atom(identity, ['Alice']),
+        atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(calling, ['Alice']),
+        atom(bid, ['Alice', 'Bob', r, num(p), num(d)]),
+        atom(now, ['Alice', num(t0)]),
+        atom(identity, ['Bob']),
+        atom(bidded, ['Bob', 'Alice', r, num(p), num(d)]),
+        not(atom(busy, ['Bob'])),
+        forall([c, p1, d1], atom(bid, ['Alice', c, r, num(p1), num(d1)]), not(atom(busy, [c])), or(gt(num(d1), num(mx)), le(minus(fn(w, [num(m), num(d1)]), num(p1)), minus(fn(w, [num(m), num(d)]), num(p))))),
+        forall([c, p1, d1], atom(bid, ['Alice', c, r, num(p1), num(d1)]), and(not(atom(busy, [c])), ne(c, 'Bob')), or(gt(num(d1), num(mx)), le(minus(fn(w, [num(m), num(d1)]), num(p1)), num(s2)))),
+        or(eq(num(s2), num(0)), exists([c, p1, d1], atom(bid, ['Alice', c, r, num(p1), num(d1)]), and(not(atom(busy, [c])), and(ne(c, 'Bob'), and(le(num(d1), num(mx)), eq(minus(fn(w, [num(m), num(d1)]), num(p1)), num(s2)))))))],
+       and(le(num(e), num(t0)), and(le(num(d), num(mx)), and(ge(minus(fn(w, [num(m), num(d)]), num(p)), num(0)), and(ge(num(s2), num(0)), and(eq(num(f), minus(fn(w, [num(m), num(d)]), num(s2))), eq(num(k), fn(deposit, [num(m)]))))))),
+       ['Alice']),
+%% GRA-SS:2, Award: GRA:3's closing of the call, where no bid Alice holds of a bidder who has no ride is admissible.
+    sas(close, ['Alice'], [r, x, y, e, mx, m, t],
+       [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
+        not(atom(calling, ['Alice']))],
+       [atom(identity, ['Alice']),
+        atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(calling, ['Alice']),
+        atom(now, ['Alice', num(t)]),
+        forall([c, p1, d1], atom(bid, ['Alice', c, r, num(p1), num(d1)]), not(atom(busy, [c])), or(gt(num(d1), num(mx)), lt(minus(fn(w, [num(m), num(d1)]), num(p1)), num(0))))],
+       le(num(e), num(t)),
+       ['Alice']),
+%% GRA:4, Pickup: recorded when Alice and Bob are both at the pickup point, at Alice's time t; the ride awarded becomes the ride under way; no one guards it.
+    sas(pickup, ['Alice', 'Bob'], [r, x, y, mx, t0, d, f, k, m, t],
+       [not(atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)])),
+        atom(riding, ['Alice', 'Bob', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)]),
+        not(atom(ride, ['Bob', 'Alice', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)])),
+        atom(riding, ['Bob', 'Alice', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)])],
+       [atom(identity, ['Alice']),
+        atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
+        atom(location, ['Alice', num(x)]),
+        atom(now, ['Alice', num(t)]),
+        atom(identity, ['Bob']),
+        atom(ride, ['Bob', 'Alice', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
+        atom(location, ['Bob', num(x)])],
+       true,
+       []),
+%% GRA-SS:3, Arriving: GRA:5, where the refund a1 = min{f, lambda dl} is released to Alice, dl = max{0, t - t0 - d}, t the time of the pickup, and the rest of the fare and the deposit to Bob.
+    sas(arrive, ['Alice', 'Bob'], [r, y, t0, d, f, k, m, t, a1, c1, a2, c2, dl],
+       [not(atom(riding, ['Alice', 'Bob', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)])),
+        not(atom(fare_locked, ['Alice', r, num(f)])),
+        not(atom(busy, ['Alice'])),
+        atom(released, ['Alice', r, num(a1), num(c1)]),
+        not(atom(riding, ['Bob', 'Alice', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)])),
+        not(atom(deposit_locked, ['Bob', r, num(k)])),
+        not(atom(busy, ['Bob'])),
+        atom(released, ['Bob', r, num(a2), num(c2)])],
+       [atom(identity, ['Alice']),
+        atom(riding, ['Alice', 'Bob', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)]),
+        atom(fare_locked, ['Alice', r, num(f)]),
+        atom(busy, ['Alice']),
+        atom(location, ['Alice', num(y)]),
+        atom(identity, ['Bob']),
+        atom(riding, ['Bob', 'Alice', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)]),
+        atom(deposit_locked, ['Bob', r, num(k)]),
+        atom(busy, ['Bob']),
+        atom(location, ['Bob', num(y)])],
+       and(and(eq(plus(num(a1), num(a2)), num(f)), and(eq(plus(num(c1), num(c2)), num(k)), and(ge(num(a1), num(0)), and(ge(num(a2), num(0)), and(ge(num(c1), num(0)), ge(num(c2), num(0))))))), and(eq(num(c1), num(0)), and(eq(num(c2), num(k)), and(or(and(le(minus(minus(num(t), num(t0)), num(d)), num(0)), eq(num(dl), num(0))), and(ge(minus(minus(num(t), num(t0)), num(d)), num(0)), eq(num(dl), minus(minus(num(t), num(t0)), num(d))))), or(and(le(num(f), mul(fn(lambda, [num(m)]), num(dl))), eq(num(a1), num(f))), and(le(mul(fn(lambda, [num(m)]), num(dl)), num(f)), eq(num(a1), mul(fn(lambda, [num(m)]), num(dl))))))))),
+       []),
+%% GRA-SS:4, Cancelling: GRA:6, where the fare and the deposit are released to Alice if Alice has been at the pickup point since t0 or before, and otherwise the fare to Alice and the deposit to Bob.
+    sas(cancel, ['Alice', 'Bob'], [r, x, y, mx, t0, d, f, k, m, t, a1, c1, a2, c2],
+       [not(atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)])),
+        not(atom(fare_locked, ['Alice', r, num(f)])),
+        not(atom(busy, ['Alice'])),
+        atom(released, ['Alice', r, num(a1), num(c1)]),
+        not(atom(ride, ['Bob', 'Alice', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)])),
+        not(atom(deposit_locked, ['Bob', r, num(k)])),
+        not(atom(busy, ['Bob'])),
+        atom(released, ['Bob', r, num(a2), num(c2)])],
+       [atom(identity, ['Alice']),
+        atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
+        atom(fare_locked, ['Alice', r, num(f)]),
+        atom(busy, ['Alice']),
+        atom(now, ['Alice', num(t)]),
+        atom(identity, ['Bob']),
+        atom(ride, ['Bob', 'Alice', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
+        atom(deposit_locked, ['Bob', r, num(k)]),
+        atom(busy, ['Bob']),
+        or(and(exists([s], atom(since, ['Alice', num(x), num(s)]), le(num(s), num(t0))), eq(num(c1), num(k))), and(forall([s], atom(since, ['Alice', num(x), num(s)]), true, gt(num(s), num(t0))), eq(num(c1), num(0))))],
+       and(gt(num(t), plus(num(t0), num(mx))), and(and(eq(plus(num(a1), num(a2)), num(f)), and(eq(plus(num(c1), num(c2)), num(k)), and(ge(num(a1), num(0)), and(ge(num(a2), num(0)), and(ge(num(c1), num(0)), ge(num(c2), num(0))))))), eq(num(a1), num(f)))),
+       ['Alice']),
+%% GRA:7, Withdrawing: Alice withdraws their open call before the bidding period ends.
+    sas(withdraw, ['Alice'], [r, x, y, e, mx, m, t],
+       [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
+        not(atom(calling, ['Alice']))],
+       [atom(identity, ['Alice']),
+        atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)]),
+        atom(calling, ['Alice']),
+        atom(now, ['Alice', num(t)])],
+       lt(num(t), num(e)),
+       ['Alice'])])).

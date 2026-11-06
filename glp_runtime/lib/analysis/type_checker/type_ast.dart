@@ -4,6 +4,7 @@
 // Types are first-class syntactic elements parsed alongside clauses.
 
 import '../../compiler/ast.dart' as ast show Clause;
+import 'moded_term.dart' show sameConstant;
 
 /// Base class for type expressions
 abstract class TypeExpr {
@@ -350,7 +351,10 @@ bool sameTypeExpr(TypeExpr a, TypeExpr b) {
   if (a is PrimitiveModeAlt) {
     return b is PrimitiveModeAlt && a.isInput == b.isInput;
   }
-  if (a is ConstantAlt) return b is ConstantAlt && a.value == b.value;
+  // 1 and 1.0 are distinct constants, an Integer and a Real (GLP paper 3620eeb,
+  // appendix-guards.tex; GLP #11 Cowork, Code_inbox 2026-11-03 16:40 UTC, item
+  // 3), so they are compared as sameConstant compares them, not by ==.
+  if (a is ConstantAlt) return b is ConstantAlt && sameConstant(a.value, b.value);
   if (a is ListNilAlt) return b is ListNilAlt;
   if (a is ListConsAlt) {
     return b is ListConsAlt &&
@@ -433,11 +437,21 @@ class TypeEnvironment {
           if (e.value.clauses[e.key] != null) e.key: e.value.clauses[e.key]!
       };
 
+  /// The environment this one extends, where it was made as that one's
+  /// types and declarations with a few more --- the probe of a call, the
+  /// instantiation of a parameterised procedure, a declaration inferred in
+  /// abstract types --- so that its program DFA is built as a layer over the
+  /// base's, the added types and declarations alone built anew
+  /// (program_dfa.dart, buildProgramDFA).  Null for an environment built
+  /// from a module.
+  final TypeEnvironment? base;
+
   TypeEnvironment(this.types, this.procedures, {
       Map<String, ProcDecl>? paramProcDecls,
       this.typeTemplates = const {},
       this.typeOrigins = const {},
       this.scopeLayers = const {},
+      this.base,
   }) : paramProcDecls = paramProcDecls ?? {};
 
   /// This environment with maps of its own, its layers shared: a scope one

@@ -252,12 +252,13 @@ sg_refl_malformed(S, reflexive([friend], C?)) :-
        schema(self_unfriend, ['Alice'], [],
          [rs(guarded, [], [atom(friend, [role(1)])], [], [])])], C).
 
-% --- negative: a role that does not guard and changes nothing --------------
+% --- negative: a reading role no guarding role records ---------------------
 % poke(Alice?, Bob) :  identity, +poked(Bob)        identity, friend(Alice)
-% def:schema requires +(i) u -(i) nonempty at every role that is not a
-% guarding role; q's role does not guard and adds and deletes nothing, so the
-% contract is malformed, the schema and the role named.  GSNP's forward and
-% post, whose guarding role adds and deletes nothing, are admitted.
+% Bob's role does not guard and adds and deletes nothing, a reading role
+% (def:schema, GSC 0380a8a), and Alice, the guarding role, requires no atom
+% naming Bob; Bob's friend(Alice) joins the role graph, but def:volition
+% asks of a reading role an edge to a guarding role from an atom that
+% guarding role requires: not grassroots, changes_nothing(poke, 2).
 procedure sg_inert_role(WContract?, WContract).
 sg_inert_role(S, C?) :-
     wcontract_app(S?,
@@ -286,6 +287,125 @@ sg_added_deleted(S, C?) :-
     wcontract_app(S?,
       [schema(toggle, ['Alice'], [],
          [rs(guarded, [atom(flag, [])], [atom(flag, [])], [atom(identity, [])], [])])], C).
+
+% --- a reading role a guarding role records ---------------------------------
+% point(Alice?, Bob; c) :  identity, points(Bob), +points(c)    identity, points(c)
+% Alice, who points to Bob, who points to Carol, may decide to point to
+% Carol (Section 3.2, after the example of def:schema): Bob's role is a
+% reading role, and Alice, the guarding role, requires points(Bob), an atom
+% of traceable provenance naming it, so volition holds (def:volition, GSC
+% 0380a8a) and the contract is syntactically grassroots; c is traced
+% through the points(c) Bob requires (def:grounded).
+procedure sg_reading_point(WContract?, WContract).
+sg_reading_point(S, C?) :-
+    wcontract_app(S?,
+      [schema(point, ['Alice', 'Bob'], [pvar(c)],
+         [rs(guarded,   [atom(points, [pvar(c)])], [],
+                        [atom(identity, []), atom(points, [role(2)])], []),
+          rs(unguarded, [], [], [atom(identity, []), atom(points, [pvar(c)])], [])])], C).
+
+% --- an unguarded schema with a reading role and a signature atom ----------
+% nudge(Alice, Bob) :  identity, friend(Bob), +nudged(Bob)    identity, friend(Alice)
+% No role guards and Bob's is a reading role, so def:volition asks a
+% connected role graph, joined by the friend(Bob) Alice requires, and a
+% signature atom (def:signature, GSC c100cdc): nudged(Bob), added at Alice,
+% names Bob, the schema has no variable, it adds no other atom of nudged and
+% no other schema with no guarding role adds one.  Syntactically grassroots.
+procedure sg_reading_unguarded(WContract?, WContract).
+sg_reading_unguarded(S, C?) :-
+    wcontract_app(S?,
+      [schema(nudge, ['Alice', 'Bob'], [],
+         [rs(unguarded, [atom(nudged, [role(2)])], [],
+                        [atom(identity, []), atom(friend, [role(2)])], []),
+          rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])])], C).
+
+% --- every so often: schemas with no guarding role and a signature atom ----
+% tell(Carol, Alice; b) :    identity, friend(Alice), knows(b)
+%                            identity, not told(Carol, b), +told(Carol, b)
+% untell(Carol, Alice; b) :  identity, friend(Alice)
+%                            identity, -told(Carol, b)
+% Carol, every so often, tells their friend Alice that Carol knows b, and
+% withdraws it, as GFF's update and update_ceased (GSC, Section 3.2, after
+% def:schema; GFF:5): no role guards, Carol's is a reading role, and each
+% role graph is joined by the friend(Alice) Carol requires.  told(Carol, b)
+% is a signature atom of each (def:signature, GSC c100cdc): it names Carol,
+% the other agent role, and holds b, the schema's variable; tell adds no
+% other atom of told and untell deletes or clears no other, and no other
+% schema with no guarding role adds one, or deletes or clears one.
+% Syntactically grassroots; b is traced through the knows(b) Carol requires
+% (def:grounded).
+procedure sg_update_schemas(WContract).
+sg_update_schemas([
+    schema(tell, ['Carol', 'Alice'], [pvar(b)],
+       [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], []),
+        rs(unguarded, [atom(told, [role(1), pvar(b)])], [], [atom(identity, [])],
+                      [atom(told, [role(1), pvar(b)])])]),
+    schema(untell, ['Carol', 'Alice'], [pvar(b)],
+       [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)])], []),
+        rs(unguarded, [], [atom(told, [role(1), pvar(b)])], [atom(identity, [])], [])])]).
+
+procedure sg_update(WContract?, WContract).
+sg_update(S, C?) :-
+    sg_update_schemas(U),
+    wcontract_app(S?, U?, C).
+
+% --- negative: a second schema with no guarding role adding told ------------
+% retell(Carol, Alice; b) :  identity, friend(Alice), knows(b), +retold(Alice, b)
+%                            identity, +told(Carol, b)
+% sg_update with retell, which has no guarding role and no reading role and
+% adds told(Carol, b): told(Carol, b) is no longer a signature atom of tell,
+% which has no other (def:signature): no_signature_atom(tell).  untell keeps
+% its own, retell deleting no atom of told.
+procedure sg_update_twice(WContract?, WContract).
+sg_update_twice(S, C?) :-
+    sg_update_schemas(U),
+    wcontract_app(U?,
+      [schema(retell, ['Carol', 'Alice'], [pvar(b)],
+         [rs(unguarded, [atom(retold, [role(2), pvar(b)])], [],
+                        [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], []),
+          rs(unguarded, [atom(told, [role(1), pvar(b)])], [], [atom(identity, [])], [])])], U1),
+    wcontract_app(S?, U1?, C).
+
+% --- negative: a second schema with no guarding role clearing told ----------
+% forget(Alice, Carol) :  identity, friend(Carol), -told(Carol, *), +forgot(Carol)
+%                         identity, +forgotten_by(Alice)
+% sg_update with forget, which has no guarding role and no reading role and
+% clears told(Carol, *): told(Carol, b) is no longer a signature atom of
+% untell, which has no other (def:signature): no_signature_atom(untell).
+procedure sg_update_cleared(WContract?, WContract).
+sg_update_cleared(S, C?) :-
+    sg_update_schemas(U),
+    wcontract_app(U?,
+      [schema(forget, ['Alice', 'Carol'], [],
+         [rs(unguarded, [atom(forgot, [role(2)])], [atom(told, [role(2), any])],
+                        [atom(identity, []), atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(forgotten_by, [role(1)])], [], [atom(identity, [])], [])])], U1),
+    wcontract_app(S?, U1?, C).
+
+% --- negative: an atom that does not name the other agent role --------------
+% tell(Carol, Alice; b) :  identity, friend(Alice), knows(b)
+%                          identity, not told(b), +told(b)
+% told(b) does not name Carol, the other agent role, and is the one atom tell
+% adds or deletes: no_signature_atom(tell) (def:signature).
+procedure sg_update_unnamed(WContract?, WContract).
+sg_update_unnamed(S, C?) :-
+    wcontract_app(S?,
+      [schema(tell, ['Carol', 'Alice'], [pvar(b)],
+         [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], []),
+          rs(unguarded, [atom(told, [pvar(b)])], [], [atom(identity, [])],
+                        [atom(told, [pvar(b)])])])], C).
+
+% --- negative: an atom that does not hold a variable of its schema ----------
+% tell(Carol, Alice; b) :  identity, friend(Alice), knows(b)
+%                          identity, +told(Carol)
+% told(Carol) does not hold b, the schema's variable, and is the one atom
+% tell adds or deletes: no_signature_atom(tell) (def:signature).
+procedure sg_update_unvaried(WContract?, WContract).
+sg_update_unvaried(S, C?) :-
+    wcontract_app(S?,
+      [schema(tell, ['Carol', 'Alice'], [pvar(b)],
+         [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(knows, [pvar(b)])], []),
+          rs(unguarded, [atom(told, [role(1)])], [], [atom(identity, [])], [])])], C).
 
 % --- befriend requiring friend of each agent at its own role ---------------
 % befriend(Alice?, Bob?) :
@@ -525,17 +645,49 @@ sn_listed_guard(S, C?) :-
           crs(listed(1, listed, [svar(n)]), guarded,
               [atom(split_c, [])], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a listed role adding and deleting nothing --------------------
+% --- negative: a listed reading role no guarding role records ---------------
 % idle(Alice?, Alice[listed(*, n)]; n) :  identity, +idled(n)
 %     at Alice[listed(*, n)]: identity
-% A role that is not a guarding role adds or deletes an atom (def:schema,
-% GSC 70afdc4), and a listed role is no guarding role, so the contract is
-% malformed, the listed role named.
+% A listed role is no guarding role, so one adding and deleting nothing is a
+% reading role (def:schema, GSC 0380a8a); Alice requires no atom with an
+% argument of its base, Alice, so no edge reaches the guarding role from an
+% atom it requires (def:volition): changes_nothing(idle, 2).
 procedure sn_listed_inert(WContract?, WContract).
 sn_listed_inert(S, C?) :-
     wcontract_app(S?,
       [cschema(idle, ['Alice', 'Alice'], [svar(n)], [],
          [rs(guarded, [atom(idled, [svar(n)])], [], [atom(identity, [])], []),
+          crs(listed(1, listed, [svar(n)]), unguarded,
+              [], [], [atom(identity, [])], [])])], C).
+
+% --- a listed reading role the guarding role records ------------------------
+% idle(Alice?, Alice[listed(*, n)]; n) :  identity, listed(Alice, n), +idled(n)
+%     at Alice[listed(*, n)]: identity
+% The same with Alice requiring listed(Alice, n), as close's leader does, an
+% atom of traceable provenance with an argument of the listed role's base:
+% volition holds (def:volition, GSC 0380a8a), the contract is syntactically
+% grassroots, and each member's line of the compiled form leaves its state
+% unchanged (def:compile).
+procedure sn_listed_reading(WContract?, WContract).
+sn_listed_reading(S, C?) :-
+    wcontract_app(S?,
+      [cschema(idle, ['Alice', 'Alice'], [svar(n)], [],
+         [rs(guarded, [atom(idled, [svar(n)])], [],
+                      [atom(identity, []), atom(listed, [role(1), svar(n)])], []),
+          crs(listed(1, listed, [svar(n)]), unguarded,
+              [], [], [atom(identity, [])], [])])], C).
+
+% --- negative: a listed reading role in a schema with no guarding role -----
+% idle(Alice, Alice[listed(*, n)]; n) :  identity, +idled(n)
+%     at Alice[listed(*, n)]: identity
+% sn_listed_inert with Alice no longer guarding: idled(n) is a signature
+% atom, but a schema with no guarding role has only agent roles as reading
+% roles (def:volition, GSC c100cdc): listed_reading(idle, 2).
+procedure sn_listed_unguarded(WContract?, WContract).
+sn_listed_unguarded(S, C?) :-
+    wcontract_app(S?,
+      [cschema(idle, ['Alice', 'Alice'], [svar(n)], [],
+         [rs(unguarded, [atom(idled, [svar(n)])], [], [atom(identity, [])], []),
           crs(listed(1, listed, [svar(n)]), unguarded,
               [], [], [atom(identity, [])], [])])], C).
 
@@ -685,6 +837,42 @@ gkk_intro_loose(S, C?) :-
         [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []),
          rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), S?, C).
 
+% --- negative: clause 2 of def:unobstructed and a reading role --------------
+% acquaint(Alice?, Bob?) :  identity, not blocked(Bob), +knows(Bob)    identity, +knows(Alice)
+% block(Alice?, Bob) :  identity, knows(Bob), +blocked(Bob)    identity
+% acquaint forbids blocked(Bob) at Alice, which block adds at Alice with the
+% other agent of the introduction in Bob's role, a reading role (GSC
+% 0380a8a): clause 2 of def:unobstructed does not excuse it, and acquaint is
+% obstructed at Alice.  block meets volition, Alice requiring knows(Bob).
+procedure gkk_block_reading(WContract?, WContract).
+gkk_block_reading(S, C?) :- gkk_block(no, S?, C).
+
+% gkk_block_changing: the same with Bob adding blocked_by(Alice), no reading
+% role, which clause 2 excuses: syntactically grassroots.
+procedure gkk_block_changing(WContract?, WContract).
+gkk_block_changing(S, C?) :- gkk_block(yes, S?, C).
+
+procedure gkk_block_bob(Ans?, Atoms).
+gkk_block_bob(no, []).
+gkk_block_bob(yes, [atom(blocked_by, [role(1)])]).
+
+procedure gkk_block(Ans?, WContract?, WContract).
+gkk_block(A, S, C?) :- ground(A?), ground(S?) |
+    gkk_block_bob(A?, P),
+    schema_set(acquaint,
+      schema(acquaint, ['Alice', 'Bob'], [],
+        [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], [atom(blocked, [role(2)])]),
+         rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), S?, C1),
+    gkk_block2(P?, C1?, C).
+
+procedure gkk_block2(Atoms?, WContract?, WContract).
+gkk_block2(P, C1, C?) :- ground(P?), ground(C1?) |
+    wcontract_app(C1?,
+      [schema(block, ['Alice', 'Bob'], [],
+         [rs(guarded,   [atom(blocked, [role(2)])], [],
+                        [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(unguarded, P?, [], [atom(identity, [])], [])])], C).
+
 % ===========================================================================
 % Clause 1 of def:unobstructed: a schema of arity one forbidding the atom it
 % adds
@@ -764,11 +952,11 @@ cl_edge(S, C?) :-
 
 % --- negative: a cleared atom is no change a role makes ---------------------
 % purge(Alice?, Bob) :  identity, friend(Bob), -listed(Bob, *)    identity, -member(<Alice>.*)
-% def:schema requires +(i) u -(i) nonempty at every role that is not a
-% guarding role and at some role, -(i) the atoms marked - with no wildcard.
-% Bob does not guard and only clears, and neither role adds or deletes an
-% atom, so the contract is malformed: changes_nothing(purge, 2) and
-% no_role_changes(purge).
+% def:schema requires +(i) u -(i) nonempty at some role, -(i) the atoms
+% marked - with no wildcard.  Neither role adds or deletes an atom, so the
+% contract is malformed: no_role_changes(purge); Bob, who does not guard and
+% only clears, is a reading role, which def:volition would decide, and no
+% condition is decided for a malformed contract.
 procedure cl_inert(WContract?, WContract).
 cl_inert(S, C?) :-
     wcontract_app(S?,
@@ -852,9 +1040,8 @@ gkk_establish_clears(S, C?) :-
 % A value names no agent, so the conditions below do not concern it."  In
 % the term form of Currencies' GB.glp: num(x) a value variable, or a number
 % where x is one; times(num(k), A) the atom A with the multiplicity k;
-% nschema(Name, Vars, Constraint, Roles) a schema with a constraint, a
-% conjunction of linear equalities and inequalities (and, eq, le, lt, ge,
-% gt, succ, over plus, minus and a product by a number; self.glp).  A
+% nschema(Name, Vars, Constraint, Roles) a schema with a constraint (and,
+% or, eq, le, lt, ge, gt, succ, over plus, minus and a product; self.glp).  A
 % binding sends a value variable to a value, a multiplicity to a positive
 % whole number (def:binding-numbers).  The
 % fixtures are the checker's and certify nothing of GB, Currencies'
@@ -912,8 +1099,8 @@ nm_bonds(C?) :-
 % --- a number required and supplied ----------------------------------------
 % meet as above, but each role requires score(5), which the schema of arity
 % one score(Alice?; k) : +score(k) adds, guarded and requiring and forbidding
-% nothing, at the binding sending k to 5, which satisfies its constraint,
-% true: clause 1 of def:unobstructed holds, a number matched by equality, and
+% nothing, at the binding sending k to 5, carrying no constraint: clause 1
+% of def:unobstructed holds, a number matched by equality, and
 % the contract is syntactically grassroots.
 procedure nm_supplied(NContract).
 nm_supplied([schema(establish, [],
@@ -941,8 +1128,8 @@ nm_blocked([schema(establish, [],
 
 % --- a number required, and the constraint of the schema adding it ---------
 % meet requiring score(5) at each role (nm_supplied), and a schema of arity
-% one adding score(k) at a binding satisfying its constraint
-% (def:unobstructed, clause 1; def:binding-numbers).
+% one adding score(k), carrying a constraint, so supplying nothing
+% (def:numbers; def:unobstructed, clause 1).
 procedure nm_score_meet(NContract).
 nm_score_meet([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -984,7 +1171,7 @@ nm_other_number(C?) :-
 % --- a number forbidden, and the constraint of the schema adding it --------
 % meet forbidding date(0) at Alice (nm_blocked), and set_date(Alice; t),
 % unguarded and of arity one, requiring identity and adding date(t) at a
-% binding satisfying its constraint (def:unobstructed, clause 2).
+% binding, its constraint unread (the appendix; def:unobstructed, clause 2).
 procedure nm_date_meet(NContract).
 nm_date_meet([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -1333,11 +1520,12 @@ sig_malformed(C?) :-
           crs(listed(1, listed, [svar(n)]), unguarded,
               [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])])], C).
 
-% --- negative: a role that reads a number and changes nothing --------------
+% --- a reading role that reads a number ------------------------------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
 %                                      identity, date(t)
-% Bob does not guard and adds and deletes nothing, which def:schema forbids,
-% numbers or no: changes_nothing(mature, 2).
+% Bob does not guard and adds and deletes nothing, a reading role (def:schema,
+% GSC 0380a8a), numbers or no; Alice, the guarding role, requires knows(Bob),
+% an atom naming Bob, so def:volition admits it.
 procedure nm_reading_role(NContract).
 nm_reading_role(C?) :-
     nm_base(B),
@@ -1347,9 +1535,24 @@ nm_reading_role(C?) :-
                         [atom(identity, []), atom(knows, [role(2)])], []),
           rs(unguarded, [], [], [atom(identity, []), atom(date, [num(t)])], [])])], C).
 
-% --- negative: a multiplicity on an atom required and not deleted ----------
+% --- a variable occurring in a signature atom as its multiplicity ----------
+% tally(Alice, Bob; k) :  identity, knows(Bob)    identity, +k.tallied(Alice)
+% No role guards and Alice's is a reading role; k.tallied(Alice), added at
+% Bob, names Alice and holds k as its multiplicity, so it is a signature atom
+% (def:signature, GSC c100cdc), and the contract is syntactically grassroots.
+procedure nm_tally(NContract).
+nm_tally(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [schema(tally, [num(k)],
+         [rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(unguarded, [times(num(k), atom(tallied, [role(1)]))], [], [atom(identity, [])], [])])], C).
+
+% --- a multiplicity on an atom required and not deleted --------------------
 % spend(Alice?; k) : identity, k.coin(Alice), -coin(Alice)
-% multiplicity_not_added(spend, 1, coin(Alice)).
+% Admitted: a multiplicity on an atom required requires that many copies
+% (def:numbers, GSC 859a007), so the role requires k + 1 copies of coin and
+% deletes one.
 procedure nm_mult_kept(NContract).
 nm_mult_kept(C?) :-
     nm_base(B),
@@ -1360,7 +1563,8 @@ nm_mult_kept(C?) :-
 
 % --- negative: a multiplicity on an atom forbidden -------------------------
 % hoard(Alice?; k) : identity, not k.coin(Alice), +coin(Alice)
-% multiplicity_not_added(hoard, 1, coin(Alice)).
+% multiplicity_forbidden(hoard, 1, coin(Alice)) (def:numbers: "an atom of
+% H, or an unnegated atom of B, ... may carry a multiplicity").
 procedure nm_mult_forbidden(NContract).
 nm_mult_forbidden(C?) :-
     nm_base(B),
@@ -1495,6 +1699,9 @@ contract(wr_rec_third, C?) :- wr_rec_third(C).
 contract(wr_quit, C?) :- wr_quit(C).
 contract(wr_release, C?) :- wr_release(C).
 contract(wr_release_kept, C?) :- wr_release_kept(C).
+contract(wr_free_unrecorded, C?) :- wr_free_unrecorded(C).
+contract(wr_rec_other, C?) :- wr_rec_other(C).
+contract(wr_rec_other_w, C?) :- wr_rec_other_w(C).
 contract(ls_faults, C?) :- ls_faults(C).
 contract(nn_tag, C?) :- nn_tag(C).
 contract(nn_tag_loose, C?) :- nn_tag_loose(C).
@@ -1502,6 +1709,7 @@ contract(nm_bonds, C?) :- nm_bonds(C).
 contract(nm_supplied, C?) :- nm_supplied(C).
 contract(nm_blocked, C?) :- nm_blocked(C).
 contract(nm_reading_role, C?) :- nm_reading_role(C).
+contract(nm_tally, C?) :- nm_tally(C).
 contract(nm_mult_kept, C?) :- nm_mult_kept(C).
 contract(nm_mult_forbidden, C?) :- nm_mult_forbidden(C).
 contract(nm_mult_agent, C?) :- nm_mult_agent(C).
@@ -1557,6 +1765,13 @@ variant(sg_refl_malformed, S, C?) :- sg_refl_malformed(S?, C).
 variant(sg_inert_role, S, C?) :- sg_inert_role(S?, C).
 variant(sg_inert_schema, S, C?) :- sg_inert_schema(S?, C).
 variant(sg_added_deleted, S, C?) :- sg_added_deleted(S?, C).
+variant(sg_reading_point, S, C?) :- sg_reading_point(S?, C).
+variant(sg_reading_unguarded, S, C?) :- sg_reading_unguarded(S?, C).
+variant(sg_update, S, C?) :- sg_update(S?, C).
+variant(sg_update_twice, S, C?) :- sg_update_twice(S?, C).
+variant(sg_update_cleared, S, C?) :- sg_update_cleared(S?, C).
+variant(sg_update_unnamed, S, C?) :- sg_update_unnamed(S?, C).
+variant(sg_update_unvaried, S, C?) :- sg_update_unvaried(S?, C).
 variant(sg_self_required, S, C?) :- sg_self_required(S?, C).
 variant(sg_refl_required, S, C?) :- sg_refl_required(S?, C).
 variant(sg_refl_forbidden, S, C?) :- sg_refl_forbidden(S?, C).
@@ -1564,9 +1779,13 @@ variant(sn_listed_forbidden, S, C?) :- sn_listed_forbidden(S?, C).
 variant(sn_listed_witness, S, C?) :- sn_listed_witness(S?, C).
 variant(sn_listed_guard, S, C?) :- sn_listed_guard(S?, C).
 variant(sn_listed_inert, S, C?) :- sn_listed_inert(S?, C).
+variant(sn_listed_reading, S, C?) :- sn_listed_reading(S?, C).
+variant(sn_listed_unguarded, S, C?) :- sn_listed_unguarded(S?, C).
 variant(gkk_intro_joined, S, C?) :- gkk_intro_joined(S?, C).
 variant(gkk_intro_unjoined, S, C?) :- gkk_intro_unjoined(S?, C).
 variant(gkk_intro_loose, S, C?) :- gkk_intro_loose(S?, C).
+variant(gkk_block_reading, S, C?) :- gkk_block_reading(S?, C).
+variant(gkk_block_changing, S, C?) :- gkk_block_changing(S?, C).
 variant(gkk_establish_clears, S, C?) :- gkk_establish_clears(S?, C).
 variant(cl_no_edge, S, C?) :- cl_no_edge(S?, C).
 variant(cl_edge, S, C?) :- cl_edge(S?, C).
@@ -2471,6 +2690,10 @@ forbid_at_guards(A, [cschema(Nm, Vs, Th, Rs)|Ss], [cschema(Nm?, Vs?, Th?, Rs1?)|
     ground(A?), ground(Ss?) |
     forbid_at_roles(A?, Rs?, Rs1),
     forbid_at_guards(A?, Ss?, R).
+forbid_at_guards(A, [qschema(Nm, Vs, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(Nm?, Vs?, Bd?, Cn?, Rs1?, Cj?, Fs?)|R?]) :-
+    ground(A?), ground(Ss?) |
+    forbid_at_roles(A?, Rs?, Rs1),
+    forbid_at_guards(A?, Ss?, R).
 
 procedure wd_retire(Schema).
 wd_retire(schema(retire, [],
@@ -2670,18 +2893,26 @@ wr_befriend(schema(befriend, [],
     [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(agent, [])]),
      rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(agent, [])])])).
 
-procedure wr_agent_person(Schema).
-wr_agent_person(schema(agent_person_befriend, [svar(y)],
+% agent_person_befriend with Ad added at the free role besides friend(role(1)):
+% the record of the agent, agent_of(role(1), y), which clause 2 of def:relay
+% asks the free role to add (GAI 2e3e5cc).
+procedure wr_agent_person_ad(Atoms?, Schema).
+wr_agent_person_ad(Ad, schema(agent_person_befriend, [svar(y)],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])], []),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(agent, [])]),
+     rs(guarded, [atom(friend, [role(1)])|Ad?], [], [atom(identity, [])], [atom(agent, [])]),
      rs(guarded, [], [],
                  [atom(identity, []), atom(guardian_of, [role(1)]),
                   atom(agent_of, [role(1), svar(y)]), atom(friend, [role(2)])],
                  [atom(agent, [])])])).
 
-procedure wr_agents(Schema).
-wr_agents(schema(agents_befriend, [svar(y), svar(z)],
+procedure wr_agent_person(Schema).
+wr_agent_person(S?) :- wr_agent_person_ad([atom(agent_of, [role(1), svar(y)])], S).
+
+% agents_befriend with Rq required besides at role 3, the guardian role of
+% the agent at role 1.
+procedure wr_agents_rq(Atoms?, Schema).
+wr_agents_rq(Rq, schema(agents_befriend, [svar(y), svar(z)],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])], []),
      rs(guarded, [atom(friend, [role(1)])], [],
@@ -2689,7 +2920,7 @@ wr_agents(schema(agents_befriend, [svar(y), svar(z)],
      rs(guarded, [], [],
                  [atom(identity, []), atom(guardian_of, [role(1)]),
                   atom(agent_of, [role(1), svar(y)]), atom(friend, [role(2)]),
-                  atom(friend, [role(4)])],
+                  atom(friend, [role(4)])|Rq?],
                  [atom(agent, [])]),
      rs(guarded, [], [],
                  [atom(identity, []), atom(guardian_of, [role(2)]),
@@ -2697,14 +2928,22 @@ wr_agents(schema(agents_befriend, [svar(y), svar(z)],
                   atom(friend, [role(3)])],
                  [atom(agent, [])])])).
 
+procedure wr_agents(Schema).
+wr_agents(S?) :- wr_agents_rq([], S).
+
 % wr_with(MakeGuardian, Rest, C): the contract with its make_guardian and
 % the schemas Rest besides; wr_with_enter the same with its enter_agent.
 procedure wr_with_enter(Schema?, Schema?, Contract?, Declared).
-wr_with_enter(N, G, Rest, reflexive([friend], [E?, S?, B?, N?, G?|C?])) :-
-    ground(N?), ground(G?), ground(Rest?) |
+wr_with_enter(N, G, Rest, C?) :- ground(N?), ground(G?), ground(Rest?) |
+    wr_agent_person(AP), wr_agents(AA),
+    wr_with_relays(N?, G?, AP?, AA?, Rest?, C).
+
+% wr_with_relays(N, G, AP, AA, Rest, C): the same with its two relay acts.
+procedure wr_with_relays(Schema?, Schema?, Schema?, Schema?, Contract?, Declared).
+wr_with_relays(N, G, AP, AA, Rest, reflexive([friend], [E?, S?, B?, N?, G?|C?])) :-
+    ground(N?), ground(G?), ground(AP?), ground(AA?), ground(Rest?) |
     wd_establish(E), wa_sign(S), wr_befriend(B),
     wd_unfriends(U),
-    wr_agent_person(AP), wr_agents(AA),
     contract_app([AP?, AA?], Rest?, R),
     contract_app(U?, R?, C).
 
@@ -2854,3 +3093,42 @@ wr_release(C?) :- wr_release_at([atom(principal_of, [pvar(x)])], C).
 % wards.
 procedure wr_release_kept(Declared).
 wr_release_kept(C?) :- wr_release_at([], C).
+
+% --- the relay acts at GAI 2e3e5cc (sections/wards.tex) --------------------
+% Clause 2 of def:relay: where the relay act has two ward roles, the
+% guardian role of one may require e of the other ward role and its record;
+% and the relay act adds at a free role the record of each ward role.  Each
+% fixture changes wr in one place.
+
+% wr_with_ap_aa(AP, AA, C): wr with the relay acts AP and AA.
+procedure wr_with_ap_aa(Schema?, Schema?, Declared).
+wr_with_ap_aa(AP, AA, C?) :- ground(AP?), ground(AA?) |
+    wr_enter_agent(N),
+    wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
+                     [atom(agent_of, [role(3), svar(y)])], G),
+    wr_with_relays(N?, G?, AP?, AA?, [], C).
+
+% wr_free_unrecorded: agent_person_befriend adds at its free role no record
+% of the agent: it is no relay act, and there is no introduction with wards.
+procedure wr_free_unrecorded(Declared).
+wr_free_unrecorded(C?) :-
+    wr_agent_person_ad([], AP), wr_agents(AA),
+    wr_with_ap_aa(AP?, AA?, C).
+
+% wr_rec_other: the guardian of the agent at role 1 of agents_befriend
+% requires besides the record of the other agent, agent_of(role(2), z), with
+% the arguments of the attestation role 2 requires: grassroots with wards as
+% wr is.
+procedure wr_rec_other(Declared).
+wr_rec_other(C?) :-
+    wr_agent_person(AP), wr_agents_rq([atom(agent_of, [role(2), svar(z)])], AA),
+    wr_with_ap_aa(AP?, AA?, C).
+
+% wr_rec_other_w: the guardian of the agent at role 1 of agents_befriend
+% requires principal_of(role(2)), w of the other ward role, which clause 2
+% admits at no role but the other's guardian role: no introduction with
+% wards.
+procedure wr_rec_other_w(Declared).
+wr_rec_other_w(C?) :-
+    wr_agent_person(AP), wr_agents_rq([atom(principal_of, [role(2)])], AA),
+    wr_with_ap_aa(AP?, AA?, C).

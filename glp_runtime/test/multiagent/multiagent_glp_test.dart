@@ -9,6 +9,9 @@
 /// Original IRMA tests: lib/multiagent/archive-irma-2026-01-30/tests/
 /// Converted GLP programs: programs/tests/multiagent/
 
+@Timeout.none
+library;
+
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
@@ -79,7 +82,17 @@ void main() {
       manager.start();
 
       // Wait on the condition, not on the clock: settle() returns when every
-      // agent has drained and flushed what it was handed.
+      // agent has drained and flushed what it was handed, and fails on an
+      // agent's fault or its isolate's end; boot() returns when every agent
+      // is ready and fails likewise.  So neither these waits nor the tests
+      // (Timeout.none) have a clock: a correct run settles (IGLP, Remark
+      // "Message Delivery": "every message is delivered"), and the
+      // agents report quiescence, so a verdict must not depend on how long
+      // the machine takes.  Until 2026-11-02 each test had fifteen seconds,
+      // which under load ran out while the agents' isolates were still
+      // loading their programs: "coop stream" failed in the suite on main
+      // 94aa2bee, and under five concurrent runs its boot alone took six
+      // seconds where alone it takes under one (IGLP-coop).
       await manager.settle();
 
       // Termination is external — shutdown happens in tearDown
@@ -87,51 +100,51 @@ void main() {
 
     test('shared variable: agent1 sends, agent2 receives', () async {
       await runGlpTest('programs/tests/multiagent/shared_variable_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('imported reader: one-way list flow', () async {
       await runGlpTest('programs/tests/multiagent/imported_reader_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('reversed flow: agent2 sends to agent1', () async {
       await runGlpTest('programs/tests/multiagent/reversed_flow_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('coop stream: producer + merge across agents', () async {
       await runGlpTest('programs/tests/multiagent/coop_stream_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('two-hop flow: agent1 -> agent2 -> agent1 round-trip', () async {
       await runGlpTest('programs/tests/multiagent/two_hop_flow_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('bidirectional exchange: symmetric send/receive', () async {
       await runGlpTest('programs/tests/multiagent/bidirectional_exchange_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('three-agent pipeline: produce -> transform -> consume', () async {
       await runGlpTest('programs/tests/multiagent/three_agent_pipeline_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('three-agent merge: two producers feed into one merger', () async {
       await runGlpTest('programs/tests/multiagent/three_agent_merge_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('distribute: one producer broadcasts to two consumers', () async {
       await runGlpTest('programs/tests/multiagent/distribute_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('minimal race: send unbound reader', () async {
       await runGlpTest('programs/tests/multiagent/minimal_race_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('send reader: send unbound reader, instantiate later', () async {
       await runGlpTest('programs/tests/multiagent/send_reader_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
     test('writer response: send writer, receiver writes back', () async {
       await runGlpTest('programs/tests/multiagent/writer_response_boot.glp');
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: Timeout.none);
 
   });
 }

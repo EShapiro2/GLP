@@ -1,6 +1,6 @@
 %% plays.glp --- the child-safe mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; for the seven agents of the village of CSSN, Section 4.6, "Village Demonstration", each with the ends of a root channel to each of the six others handed to it as its conversations, the play standing in for the social graph, which hands the mini-app a conversation with each person its agent knows (CSSN, Section 4.6, "The program in the grassroots app"), as programs/apps/gsnp/plays.glp does for five; and with the network delivering every message an agent sends (vGLP, Section 5.4: "Communicate is the agent goal's reading of a message the network streams carried to it").  Which agents know each other is the platform's: the hello of a meeting schema's request, and the introductions of the contract's introduction rule and of Commit (CSSN, Appendix C.4, "Knowing every participant").  The persons are scripted (person.glp), each under its role, and the play returns their screens; a parent's person also looks at the phones of its children, the screen of each child handed to it as well, line by line.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
 
-imported procedure person#village_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
+imported procedure person#village_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
 
 %% play_village(A, B, G, F, C, D, E): the village of CSSN, Section 4.6, "Village Demonstration", its acts as person.glp's scripts take them: the screens of alice, bob, grace and frank, and of carol, alice's child, and dave and eve, bob's and grace's.  alice looks at carol's phone, and bob and grace at dave's and eve's.
 exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
@@ -8,19 +8,19 @@ play_village(A?, B?, G?, F?, C?, D?, E?) :-
     self_module(M),
     find_type(miniapp/4, T),
     run(miniapp(alice, ch(QA?, WA), ch([conversation(bob, ch(BA?, AB)), conversation(grace, ch(GA?, AG)), conversation(frank, ch(FA?, AF)), conversation(carol, ch(CA?, AC)), conversation(dave, ch(DA?, AD)), conversation(eve, ch(EA?, AE))], _), []), T?, M?),
-    person # village_person(alice, alice, ch(WA?, QA), AW?, A),
+    person # village_person(alice, alice, [bob, grace, frank, carol, dave, eve], ch(WA?, QA), AW?, A),
     run(miniapp(bob, ch(QB?, WB), ch([conversation(alice, ch(AB?, BA)), conversation(grace, ch(GB?, BG)), conversation(frank, ch(FB?, BF)), conversation(carol, ch(CB?, BC)), conversation(dave, ch(DB?, BD)), conversation(eve, ch(EB?, BE))], _), []), T?, M?),
-    person # village_person(bob, bob, ch(WB?, QB), BW?, B),
+    person # village_person(bob, bob, [alice, grace, frank, carol, dave, eve], ch(WB?, QB), BW?, B),
     run(miniapp(grace, ch(QG?, WG), ch([conversation(alice, ch(AG?, GA)), conversation(bob, ch(BG?, GB)), conversation(frank, ch(FG?, GF)), conversation(carol, ch(CG?, GC)), conversation(dave, ch(DG?, GD)), conversation(eve, ch(EG?, GE))], _), []), T?, M?),
-    person # village_person(grace, grace, ch(WG?, QG), GW?, G),
+    person # village_person(grace, grace, [alice, bob, frank, carol, dave, eve], ch(WG?, QG), GW?, G),
     run(miniapp(frank, ch(QF?, WF), ch([conversation(alice, ch(AF?, FA)), conversation(bob, ch(BF?, FB)), conversation(grace, ch(GF?, FG)), conversation(carol, ch(CF?, FC)), conversation(dave, ch(DF?, FD)), conversation(eve, ch(EF?, FE))], _), []), T?, M?),
-    person # village_person(frank, frank, ch(WF?, QF), [], F),
+    person # village_person(frank, frank, [alice, bob, grace, carol, dave, eve], ch(WF?, QF), [], F),
     run(miniapp(carol, ch(QC?, WC), ch([conversation(alice, ch(AC?, CA)), conversation(bob, ch(BC?, CB)), conversation(grace, ch(GC?, CG)), conversation(frank, ch(FC?, CF)), conversation(dave, ch(DC?, CD)), conversation(eve, ch(EC?, CE))], _), []), T?, M?),
-    person # village_person(carol, carol, ch(WC?, QC), [], C0),
+    person # village_person(carol, carol, [alice, bob, grace, frank, dave, eve], ch(WC?, QC), [], C0),
     run(miniapp(dave, ch(QD?, WD), ch([conversation(alice, ch(AD?, DA)), conversation(bob, ch(BD?, DB)), conversation(grace, ch(GD?, DG)), conversation(frank, ch(FD?, DF)), conversation(carol, ch(CD?, DC)), conversation(eve, ch(ED?, DE))], _), []), T?, M?),
-    person # village_person(dave, dave, ch(WD?, QD), [], D0),
+    person # village_person(dave, dave, [alice, bob, grace, frank, carol, eve], ch(WD?, QD), [], D0),
     run(miniapp(eve, ch(QE?, WE), ch([conversation(alice, ch(AE?, EA)), conversation(bob, ch(BE?, EB)), conversation(grace, ch(GE?, EG)), conversation(frank, ch(FE?, EF)), conversation(carol, ch(CE?, EC)), conversation(dave, ch(DE?, ED))], _), []), T?, M?),
-    person # village_person(eve, eve, ch(WE?, QE), [], E0),
+    person # village_person(eve, eve, [alice, bob, grace, frank, carol, dave], ch(WE?, QE), [], E0),
     tee(C0?, C, CW),
     looking(carol, CW?, AW),
     tee(D0?, D, DW),

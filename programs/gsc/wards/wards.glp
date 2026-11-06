@@ -1181,7 +1181,7 @@ guard_adds_ok(rk_ward(_, _), _, _, _, _, yes).
 guard_adds_ok(rk_free, _, _, _, _, yes).
 guard_adds_ok(rk_other, _, _, _, _, yes).
 
-% Clause 2 (GAI a81e827): an atom required at a role.  It is an atom of a reflexive predicate naming the role; or the one atom of a schema of arity one as in clause 1 of def:unobstructed-marks; or, at a ward role, its m or g(sigma); or, at a ward role rho of m, an atom of a predicate h whose arguments are distinct speech-act variables of the schema occurring in no other atom it requires but its record, with the conditions on h and its record h' below (records_of); or, at the guardian role sigma of a ward role rho, v(rho) or w(rho), or the record, the atom of h' whose arguments are rho and the arguments of the h-atom rho requires; or, at a guardian role or a free role, e(kappa) for another guardian role or free role kappa, e reflexive where both are guardian roles; or, where the schema has two ward roles, at the guardian role of one, e of the other ward role (GnW:4).
+% Clause 2 (GAI a81e827): an atom required at a role.  It is an atom of a reflexive predicate naming the role; or the one atom of a schema of arity one as in clause 1 of def:unobstructed-marks; or, at a ward role, its m or g(sigma); or, at a ward role rho of m, an atom of a predicate h whose arguments are distinct speech-act variables of the schema occurring in no other atom it requires but its record, with the conditions on h and its record h' below (records_of); or, at the guardian role sigma of a ward role rho, v(rho) or w(rho), or the record, the atom of h' whose arguments are rho and the arguments of the h-atom rho requires; or, at a guardian role or a free role, e(kappa) for another guardian role or free role kappa, e reflexive where both are guardian roles; or, where the schema has two ward roles, at the guardian role of one, e of the other ward role and its record (GnW:4); and the schema adds at a free role the record of each ward role (free_recs_ok below) (GAI 2e3e5cc).
 
 procedure req_ward_ok(RK?, Atom?, Guardianships?, Ans).
 req_ward_ok(rk_ward(Mk, S), Phi, Gs, R?) :- ground(Mk?), integer(S?), ground(Phi?), ground(Gs?) |
@@ -1751,7 +1751,6 @@ records_of(C, Mk, V, W, H, N, R?) :-
     records_seed1(F?, Hs1?, C?, Mk?, V?, N?, Hs0),
     valid_recs(Hs0?, C?, Mk?, V?, W?, H?, N?, R).
 
-% The atoms the schema requires at its roles, the records T of a predicate among Hs left out at the role S.
 procedure drop_recs1(Ans?, Constant?, Args?, Atoms?, Args?, Preds?, Atoms).
 drop_recs1(yes, _, _, Xs, T, Hs, R?) :- ground(Xs?), ground(T?), ground(Hs?) |
     drop_recs(Xs?, T?, Hs?, R).
@@ -1767,27 +1766,21 @@ drop_recs([atom(Q, As)|Xs], T, Hs, R?) :-
 drop_recs([X|Xs], T, Hs, [X?|R?]) :- otherwise, ground(Xs?), ground(T?), ground(Hs?) |
     drop_recs(Xs?, T?, Hs?, R).
 
-procedure req_less_recs1(Integer?, Integer?, Atoms?, Args?, Preds?, Atoms).
-req_less_recs1(J, S, Q, T, Hs, R?) :- J? =:= S?, ground(Q?), ground(T?), ground(Hs?) |
-    drop_recs(Q?, T?, Hs?, R).
-req_less_recs1(_, _, Q, _, _, Q?) :- otherwise | true.
-
-procedure req_less_recs(RoleSpecs?, Integer?, Integer?, Args?, Preds?, Atoms).
-req_less_recs([], _, _, _, _, []).
-req_less_recs([RS|Rs], J, S, T, Hs, R?) :-
-    ground(RS?), ground(Rs?), integer(J?), integer(S?), ground(T?), ground(Hs?) |
+% The atoms the schema requires at its roles, the records T of a predicate among Hs left out at every role: the record of the ward role, at its guardian role or, where the schema has two ward roles, at the guardian role of the other (def:relay, clause 2, GAI 2e3e5cc), the alternatives of clause 2 admitting it at no other role.
+procedure req_less_recs(RoleSpecs?, Args?, Preds?, Atoms).
+req_less_recs([], _, _, []).
+req_less_recs([RS|Rs], T, Hs, R?) :- ground(RS?), ground(Rs?), ground(T?), ground(Hs?) |
     rs_req(RS?, Q),
-    req_less_recs1(J?, S?, Q?, T?, Hs?, Q1),
-    J1 := J? + 1,
-    req_less_recs(Rs?, J1?, S?, T?, Hs?, R2),
+    drop_recs(Q?, T?, Hs?, Q1),
+    req_less_recs(Rs?, T?, Hs?, R2),
     atoms_app(Q1?, R2?, R).
 
-% The atom of h at the ward role X of Mk, whose guardian role is S, Sr being the roles of the schema: its arguments distinct speech-act variables of the schema, each occurring in no other atom the schema requires but its record at S; every schema of C adding Mk at a role adds an atom of h there; no schema of C deletes an atom of h; and there is a predicate h' of its record (records_of).
+% The atom of h at the ward role X of Mk, whose guardian role is S, Sr being the roles of the schema: its arguments distinct speech-act variables of the schema, each occurring in no other atom the schema requires but its record; every schema of C adding Mk at a role adds an atom of h there; no schema of C deletes an atom of h; and there is a predicate h' of its record (records_of).
 procedure req_h_ok3(Preds?, Ans?, Integer?, Args?, Integer?, RoleSpecs?, Ans).
 req_h_ok3([], _, _, _, _, _, no).
 req_h_ok3([Hp|Hps], A1, S, As, X, Sr, R?) :-
     ground(Hp?), ground(Hps?), ground(A1?), integer(S?), ground(As?), integer(X?), ground(Sr?) |
-    req_less_recs(Sr?, 1, S?, [role(X?)|As?], [Hp?|Hps?], Req),
+    req_less_recs(Sr?, [role(X?)|As?], [Hp?|Hps?], Req),
     svars_once(As?, Req?, A2),
     both_yes(A1?, A2?, R).
 
@@ -1856,13 +1849,25 @@ req_rec_party(atom(Hp, [role(R1)|As]), X, ward(Rho, Mk, S), Sr, C, Gs, R?) :-
     req_rec_hs(Q?, Hp?, As?, Rho?, Mk?, S?, Sr?, C?, Gs?, R).
 req_rec_party(_, _, _, _, _, _, no) :- otherwise | true.
 
+% The record of the other ward role, at the guardian role X of one, where the schema has two ward roles (def:relay, clause 2, GAI 2e3e5cc; GnW:4, Alice holding her record of Dave): the record req_rec_party admits at the guardian role of the other.
+procedure req_rec_other(Atom?, Integer?, Party?, Party?, RoleSpecs?, Contract?, Guardianships?, Ans).
+req_rec_other(Phi, X, ward(_, _, S1), ward(Rho2, Mk2, S2), Sr, C, Gs, R?) :-
+    integer(X?), integer(S1?), S1? =:= X?, integer(Rho2?), ground(Mk2?), integer(S2?),
+    ground(Phi?), ground(Sr?), ground(C?), ground(Gs?) |
+    req_rec_party(Phi?, S2?, ward(Rho2?, Mk2?, S2?), Sr?, C?, Gs?, R).
+req_rec_other(_, _, _, _, _, _, _, no) :- otherwise | true.
+
 procedure req_rec_ok(RK?, Atom?, Integer?, Party?, Party?, RoleSpecs?, Contract?, Guardianships?,
                      Ans).
 req_rec_ok(rk_guard, Phi, X, P1, P2, Sr, C, Gs, R?) :-
     ground(Phi?), integer(X?), ground(P1?), ground(P2?), ground(Sr?), ground(C?), ground(Gs?) |
     req_rec_party(Phi?, X?, P1?, Sr?, C?, Gs?, A1),
     req_rec_party(Phi?, X?, P2?, Sr?, C?, Gs?, A2),
-    or_yes(A1?, A2?, R).
+    req_rec_other(Phi?, X?, P1?, P2?, Sr?, C?, Gs?, A3),
+    req_rec_other(Phi?, X?, P2?, P1?, Sr?, C?, Gs?, A4),
+    or_yes(A1?, A2?, A12),
+    or_yes(A3?, A4?, A34),
+    or_yes(A12?, A34?, R).
 req_rec_ok(rk_ward(_, _), _, _, _, _, _, _, _, no).
 req_rec_ok(rk_free, _, _, _, _, _, _, _, no).
 req_rec_ok(rk_other, _, _, _, _, _, _, _, no).
@@ -1914,6 +1919,74 @@ roles_req([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
     roles_req(Rs?, T),
     atoms_app(Q?, T?, R).
 
+% The end of clause 2 (GAI 2e3e5cc): the schema adds at a free role the record of each ward role, for every atom h(As) the ward role Rho requires that clause 2 admits as an atom of h and as nothing else, as relay_h_for reads it, an atom h'(Rho, As) among the atoms the free role adds, h' a predicate of its record (records_of).  A ward role requiring no atom of h has no record, and asks nothing of the free role.
+procedure has_rec_added(Atoms?, Preds?, Args?, Ans).
+has_rec_added([], _, _, no).
+has_rec_added([atom(Q, As)|Xs], Hs, T, R?) :-
+    ground(As?), ground(T?), As? =?= T?, ground(Q?), ground(Hs?), ground(Xs?) |
+    pred_member(Q?, Hs?, A1),
+    has_rec_added(Xs?, Hs?, T?, A2),
+    or_yes(A1?, A2?, R).
+has_rec_added([_|Xs], Hs, T, R?) :- otherwise, ground(Xs?), ground(Hs?), ground(T?) |
+    has_rec_added(Xs?, Hs?, T?, R).
+
+procedure free_rec_one(Ans?, Atom?, Atoms?, Integer?, RK?, Contract?, Guardianships?, Ans).
+free_rec_one(no, _, _, _, _, _, _, yes).
+free_rec_one(yes, atom(H, As), Ad, Rho, rk_ward(Mk, _), C, Gs, R?) :-
+    ground(H?), ground(As?), ground(Ad?), integer(Rho?), ground(Mk?), ground(C?), ground(Gs?) |
+    v_of(Gs?, Mk?, V),
+    w_of(Gs?, Mk?, W),
+    args_len(As?, N),
+    records_of(C?, Mk?, V?, W?, H?, N?, Hs),
+    has_rec_added(Ad?, Hs?, [role(Rho?)|As?], R).
+free_rec_one(_, _, _, _, _, _, _, no) :- otherwise | true.
+
+procedure free_rec_atoms(Atoms?, Atoms?, Integer?, RK?, Contract?, Preds?, Preds?, Constant?,
+                         Guardianships?, RKs?, Party?, Party?, RoleSpecs?, Ans).
+free_rec_atoms([], _, _, _, _, _, _, _, _, _, _, _, _, yes).
+free_rec_atoms([Phi|Phis], Ad, Rho, KR, C, Rf, Lv, E, Gs, RKs, P1, P2, Sr, R?) :-
+    ground(Phi?), ground(Phis?), ground(Ad?), integer(Rho?), ground(KR?), ground(C?),
+    ground(Rf?), ground(Lv?), ground(E?), ground(Gs?), ground(RKs?), ground(P1?), ground(P2?),
+    ground(Sr?) |
+    req_atom_other(Phi?, Rho?, KR?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, A1),
+    req_h_ok(KR?, Phi?, Rho?, Sr?, C?, Gs?, A2),
+    flip(A1?, N1),
+    both_yes(N1?, A2?, A),
+    free_rec_one(A?, Phi?, Ad?, Rho?, KR?, C?, Gs?, A3),
+    free_rec_atoms(Phis?, Ad?, Rho?, KR?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, A4),
+    both_yes(A3?, A4?, R).
+
+procedure free_recs_party(Party?, Atoms?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
+                          RKs?, Party?, Party?, RoleSpecs?, Ans).
+free_recs_party(ward(Rho, _, _), Ad, C, Rf, Lv, E, Gs, RKs, P1, P2, Sr, R?) :-
+    integer(Rho?), ground(Ad?), ground(C?), ground(Rf?), ground(Lv?), ground(E?), ground(Gs?),
+    ground(RKs?), ground(P1?), ground(P2?), ground(Sr?) |
+    nth_rs(Sr?, Rho?, RS),
+    rs_req(RS?, Q),
+    nth_rk(RKs?, Rho?, KR),
+    free_rec_atoms(Q?, Ad?, Rho?, KR?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, R).
+free_recs_party(free(_), _, _, _, _, _, _, _, _, _, _, yes).
+
+procedure free_recs_ok1(Atoms?, Contract?, Preds?, Preds?, Constant?, Guardianships?, RKs?,
+                        Party?, Party?, RoleSpecs?, Ans).
+free_recs_ok1(Ad, C, Rf, Lv, E, Gs, RKs, P1, P2, Sr, R?) :-
+    ground(Ad?), ground(C?), ground(Rf?), ground(Lv?), ground(E?), ground(Gs?), ground(RKs?),
+    ground(P1?), ground(P2?), ground(Sr?) |
+    free_recs_party(P1?, Ad?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, A1),
+    free_recs_party(P2?, Ad?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure free_recs_ok(RK?, RoleSpec?, Contract?, Preds?, Preds?, Constant?, Guardianships?,
+                       RKs?, Party?, Party?, RoleSpecs?, Ans).
+free_recs_ok(rk_free, RS, C, Rf, Lv, E, Gs, RKs, P1, P2, Sr, R?) :-
+    ground(RS?), ground(C?), ground(Rf?), ground(Lv?), ground(E?), ground(Gs?), ground(RKs?),
+    ground(P1?), ground(P2?), ground(Sr?) |
+    rs_add(RS?, Ad),
+    free_recs_ok1(Ad?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, R).
+free_recs_ok(rk_ward(_, _), _, _, _, _, _, _, _, _, _, _, yes).
+free_recs_ok(rk_guard, _, _, _, _, _, _, _, _, _, _, yes).
+free_recs_ok(rk_other, _, _, _, _, _, _, _, _, _, _, yes).
+
 % Clause 3: every atom the schema forbids at a role is a mark in M or a
 % leaving mark of C (GAI ddf0a33), forbids_marks above.
 
@@ -1942,8 +2015,10 @@ relay_role(RS, X, K, KX, RKs, C, Rf, M, Lv, E, Gs, P1, P2, Sr, R?) :-
     req_atoms_ok(Req?, X?, KX?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, A2),
     rs_forb(RS?, N),
     forbids_marks(N?, M?, Lv?, A3),
+    free_recs_ok(KX?, RS?, C?, Rf?, Lv?, E?, Gs?, RKs?, P1?, P2?, Sr?, A4),
     both_yes(A1?, A2?, A12),
-    both_yes(A12?, A3?, R).
+    both_yes(A3?, A4?, A34),
+    both_yes(A12?, A34?, R).
 
 % adds_e_naming(Phis, E, J, R): some atom of e among Phis names role J.
 procedure adds_e_naming(Atoms?, Constant?, Integer?, Ans).

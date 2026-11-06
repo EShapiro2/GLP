@@ -27,9 +27,10 @@ GKK:1 is the schema `establish(p?)`, which adds `identity` at the person, and ev
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GKK, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu(...)`, the request labels its pragmas give |
 | `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations; GSG's app's file, the same in each app (`../gsg/README.md`) |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, `alice`, `bob` or `carol` |
+| `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice`, `bob` or `carol` |
 | `plays.glp` | `play_keys/3`, the mini-app with no super-app |
-| `self.glp` | the platform's types written again, and the exports |
+| `maglp.glp` | `gkk_agent/4`, the mini-app as maGLP: the agent's key by `self_key/1`, a cold call with a conversation to each agent the person names, and the mini-app over the conversations; `programs/tests/multiagent/gkk_maglp_boot.glp` boots it |
+| `self.glp` | the platform's types written again, the exports, and `agent/2`, which answers an agent's initial goal, the person's first act, `gkk_agent`, naming the entry |
 | `../compile.sh` | the check that each app's `platform.vglp` is what the compiler prints |
 | `screens/` | the screens of the figure of the app in GSC's paper, Section 2.1, and their README |
 

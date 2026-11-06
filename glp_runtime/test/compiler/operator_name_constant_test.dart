@@ -23,12 +23,12 @@ import 'package:test/test.dart';
 
 /// The head arguments of the single clause of [source].
 List<Term> _headArgs(String source) =>
-    Parser(Lexer(source).tokenize()).parse().procedures.single.clauses.single
+    Parser(Lexer(source).tokenize()).parseModule().procedures.single.clauses.single
         .head.args;
 
 /// The body goals of the single clause of [source].
 List<Goal> _body(String source) =>
-    Parser(Lexer(source).tokenize()).parse().procedures.single.clauses.single
+    Parser(Lexer(source).tokenize()).parseModule().procedures.single.clauses.single
         .body!;
 
 /// Every operator name and keyword the lexer makes a token of, punctuation

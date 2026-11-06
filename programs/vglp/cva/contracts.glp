@@ -238,7 +238,8 @@ Reaches   ::= [] ; [Reach | Reaches].
 Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
              ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
-             ; or(Constraint, Constraint).
+             ; or(Constraint, Constraint)
+             ; signed(Arg, Arg) ; unsigned(Arg, Arg).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
@@ -295,7 +296,7 @@ introduction_named(intros, no_introduction).
 introduction_named(days, no_introduction).
 introduction_named(linear, no_introduction).
 
-%% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  These are test code, and their words the compiler's fixtures, not a contract's.
+%% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
 PWords     ::= [] ; [PWord | PWords].
 PSentences ::= [] ; [PWords | PSentences].
@@ -314,17 +315,17 @@ pragmas_named(nudge, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
 pragmas_named(introduce, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
-     act(introduce, '"Introduce"', [], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
+     act(introduce, '"Introduce"', ['""', '""', '"Person"'], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
 pragmas_named(gnudge, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(g, '"G"', [], none, '"Friends"', by([1]))])).
 pragmas_named(childsafe, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(enrol, '"Enrol"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
-     act(cbefriend, '"Cbefriend"', [], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
+     act(cbefriend, '"Cbefriend"', ['""', '""', '"Parent"', '"Their parent"'], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
 pragmas_named(link, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
-     act(link, '"Link"', [], none, '"Friends"', by([1]))])).
+     act(link, '"Link"', ['""', '""', '"Person"'], none, '"Friends"', by([1]))])).
 pragmas_named(friends, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(greet, '"Greet"', [], none, '"Friends"', by([1])),
@@ -345,7 +346,7 @@ pragmas_named(opens, pragmas([list('"Friends"', [friend])],
 pragmas_named(groups, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(create, '"Create"', [], none, '"Friends"', by([1])),
-     act(join, '"Join"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(close, '"Close"', [], none, '"Friends"', by([1]))])).
 pragmas_named(counter, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
@@ -353,34 +354,37 @@ pragmas_named(counter, pragmas([list('"Friends"', [friend])],
 pragmas_named(merges, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(create, '"Create"', [], none, '"Friends"', by([1])),
-     act(join, '"Join"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
-     act(merge, '"Merge"', [], none, '"Friends"', by([1]))])).
+     act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(merge, '"Merge"', ['""', '""', '"Into"'], none, '"Friends"', by([1]))])).
 pragmas_named(coins, pragmas([list('"Coins"', [coin])],
     [act(mint, '"Mint"', [], none, '"Coins"', by([1])),
-     act(swap, '"Swap"', [], said([[], [person(1), text('" asks."')]]), '"Coins"', by([1])),
+     act(swap, '"Swap"', ['""', '""', '"Given"', '"Wanted"'], said([[], [person(1), text('" asks."')]]), '"Coins"', by([1])),
      act(pay, '"Pay"', [], none, '"Coins"', by([1]))])).
 pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(adopt, '"Adopt"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(create, '"Create"', [], none, '"Friends"', by([1])),
-     act(join, '"Join"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
-     act(child_close, '"Child close"', [], none, '"Friends"', by([2]))])).
+     act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(child_close, '"Child close"', ['""', '""', '"Group"'], none, '"Friends"', by([2]))])).
 pragmas_named(numbers, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(start, '"Start"', [], none, '"Friends"', by([1])),
      act(refuel, '"Refuel"', [], none, '"Friends"', by([1])),
-     act(claim, '"Claim"', [], none, '"Friends"', by([1]))])).
+     act(claim, '"Claim"', ['""', '""', '"Amount"'], none, '"Friends"', by([1]))])).
 pragmas_named(bonds, pragmas([list('"Contacts"', [knows])],
     [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
      act(dawn, '"Dawn"', [], none, '"Contacts"', by([1])),
      act(mint_coin, '"Mint coin"', [], none, '"Contacts"', by([1])),
-     act(mint_bond, '"Mint bond"', [], none, '"Contacts"', by([1])),
-     act(swap_cb, '"Swap cb"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
-     act(redeem_bc, '"Redeem bc"', [], none, '"Contacts"', by([1]))])).
+     act(mint_bond, '"Mint bond"', ['""', '"Date"', '"Amount"'], none, '"Contacts"', by([1])),
+     act(swap_cb, '"Swap cb"', ['""', '""', '"Issuer"', '"Amount"', '"Bond issuer"', '"Date"', '"Bonds"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(redeem_bc, '"Redeem bc"', ['""', '""', '"Date"', '"Redeemer"'], none, '"Contacts"', by([1]))])).
 pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
     [act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
-     act(introduce, '"Introduce"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1]))])).
+     act(introduce, '"Introduce"', ['""', '""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(open, '"Open"', [], none, '"Contacts"', by([1])),
+     act(peek, '"Peek"', [], none, '"Contacts"', by([1])),
+     act(post, '"Post"', [], none, '"Contacts"', by([1]))])).
 pragmas_named(days, pragmas([list('"Dates"', [date])],
     [act(dawn, '"Dawn"', [], none, '"Dates"', by([1]))])).
 pragmas_named(linear, pragmas([list('"Levels"', [level])],
@@ -618,7 +622,20 @@ intros([schema(acquaint, [],
            rs(guarded, [atom(knows, [role(1)])], [], [], [])]),
         schema(introduce, [pvar(c)],
           [rs(guarded, [], [], [atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
-           rs(guarded, [atom(knows, [pvar(c)])], [], [atom(knows, [role(1)])], [])])]).
+           rs(guarded, [atom(knows, [pvar(c)])], [], [atom(knows, [role(1)])], [])]),
+        schema(open, [],
+          [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]),
+        schema(peek, [],
+          [rs(guarded, [atom(seen, [role(2)])], [], [atom(knows, [role(2)])], [atom(seen, [role(2)])]),
+           rs(unguarded, [], [], [atom(open, [])], [])]),
+        schema(post, [svar(x)],
+          [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+        nschema(send, [svar(x)], unsigned(role(2), svar(x)),
+          [rs(unguarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(sent, [svar(x), role(2)])]),
+           rs(unguarded, [atom(got, [svar(x)])], [], [], [])]),
+        nschema(credit, [svar(x)], signed(role(2), svar(x)),
+          [rs(unguarded, [atom(credited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(credited, [svar(x), role(2)])]),
+           rs(unguarded, [atom(credit, [svar(x)])], [], [], [])])]).
 
 procedure days(Contract).
 days([schema(dawn, [],
@@ -635,3 +652,4 @@ linear([schema(start, [],
           [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]),
         nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))),
           [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])]).
+

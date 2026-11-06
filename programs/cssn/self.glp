@@ -86,15 +86,15 @@ imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?,
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-%% The scripted person, the instance of the root's second template miniapp_person/4 at Drawn and at Seen.
-imported procedure person#miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-miniapp_person(Id, Role, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, PEnd?, Screen).
+%% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen.
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role?, Ps?, PEnd?, Screen).
 
 %% The scripted person looking also at the phones of the person's children, each line of a child's screen seen(K, S) (person.glp, the step at(K, C)): a parent's state does not change by the child's acts (CSSN, Section 4), so a scripted parent waits on the child's phone, in the village (plays.glp) and in the scenario of the app (glp_multiagent/test/apps_screens_test.dart), where the child's screen is handed to it by the harness.
-imported procedure person#village_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
-exported procedure village_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
-village_person(Id, Role, PEnd, Ws, Screen?) :- person # village_person(Id?, Role?, PEnd?, Ws?, Screen).
+imported procedure person#village_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
+exported procedure village_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
+village_person(Id, Role, Ps, PEnd, Ws, Screen?) :- person # village_person(Id?, Role?, Ps?, PEnd?, Ws?, Screen).
 
 %% The village of CSSN, Section 4.6, "Village Demonstration", with no super-app (plays.glp): the screens of alice, bob, grace, frank, carol, dave and eve.
 imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).

@@ -358,7 +358,8 @@ void main() {
 
   test(
       'IK: a retransmitted message 1 is answered with the same message 2, the '
-      'session it established standing; a new message 1 replaces it',
+      'session it established standing; a replayed message 1 ends nothing, '
+      'and a new handshake replaces the session once it completes',
       () async {
     if (skipped()) return;
     final alice = await identityFromSeed(0x3e);
@@ -366,11 +367,38 @@ void main() {
     final aliceSessions = manager(alice);
     final bobSessions = manager(bob);
     const transport = PeerTransport.udp;
+    final completed = <String>[];
+    bobSessions.onSessionCompleted =
+        (t, pk, peerId) => completed.add('${t.name} ${hexOf(pk)} $peerId');
 
+    Future<Uint8List> sealFrom(NoiseSessionManager sessions, int byte) async =>
+        (await sessions.encryptPacket(
+                GrassrootsPacket(
+                    type: PacketType.fragment,
+                    payload: Uint8List.fromList([byte])),
+                transport: transport,
+                remotePubkey: bob.publicKey))
+            .serialize();
+
+    /// The payload Bob opens and the session it opens under, in hex.
+    Future<(String, String)> openAtBob(Uint8List sealed) async {
+      final (opened, _, hash) = await bobSessions.decryptPacket(
+          GrassrootsPacket.deserialize(sealed),
+          transport: transport,
+          peerId: 'alice-leg',
+          remotePubkey: alice.publicKey);
+      return (hexOf(opened.payload), hexOf(hash));
+    }
+
+    // The first handshake; m1 is what a third party records.
     final m1 = (await aliceSessions.startHandshake(transport, bob.publicKey,
         pattern: NoisePattern.ik))!;
     final first = await bobSessions.handleHandshakePacket(handshake(m1),
         transport: transport, acceptFirstMessage: knownOnly(alice.publicKey));
+    await aliceSessions.handleHandshakePacket(
+        handshake(first.responsePayload!),
+        transport: transport,
+        acceptFirstMessage: (_, __) => false);
     final hash = bobSessions.handshakeHashFor(transport, alice.publicKey);
     final again = await bobSessions.handleHandshakePacket(handshake(m1),
         transport: transport, acceptFirstMessage: knownOnly(alice.publicKey));
@@ -378,16 +406,169 @@ void main() {
     expect(again.responsePayload, first.responsePayload);
     expect(bobSessions.handshakeHashFor(transport, alice.publicKey), hash);
 
-    // Alice restarts and runs a new handshake: it replaces the session.
+    // Alice restarts and runs a new handshake.  Bob answers it, and the
+    // standing session stays until it completes.
     final restarted = manager(alice);
     final fresh = (await restarted.startHandshake(transport, bob.publicKey,
         pattern: NoisePattern.ik))!;
-    final replaced = await bobSessions.handleHandshakePacket(handshake(fresh),
+    final answered = await bobSessions.handleHandshakePacket(handshake(fresh),
         transport: transport, acceptFirstMessage: knownOnly(alice.publicKey));
-    expect(replaced.sessionEstablished, isTrue);
-    expect(replaced.replacedSession, isTrue);
-    expect(bobSessions.handshakeHashFor(transport, alice.publicKey),
-        isNot(hash));
+    expect(answered.sessionEstablished, isFalse,
+        reason: 'message 1 alone completes no handshake');
+    expect(answered.replacedSession, isFalse);
+    expect(answered.responsePayload, isNotNull);
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), hash,
+        reason: 'the live session stands');
+    expect(await openAtBob(await sealFrom(aliceSessions, 1)),
+        ('01', hexOf(hash!)),
+        reason: 'the standing session still carries the pair');
+    final retransmitted = await bobSessions.handleHandshakePacket(
+        handshake(fresh),
+        transport: transport,
+        acceptFirstMessage: knownOnly(alice.publicKey));
+    expect(retransmitted.responsePayload, answered.responsePayload,
+        reason: 'a retransmitted message 1 gets the same message 2');
+    expect(completed, isEmpty);
+
+    // The new handshake completes: Alice's first packet under it opens, and
+    // its session takes the standing one's place.
+    final atRestarted = await restarted.handleHandshakePacket(
+        handshake(answered.responsePayload!),
+        transport: transport,
+        acceptFirstMessage: (_, __) => false);
+    expect(atRestarted.sessionEstablished, isTrue);
+    final newHash = restarted.handshakeHashFor(transport, bob.publicKey)!;
+    expect(newHash, isNot(hash));
+    expect(await openAtBob(await sealFrom(restarted, 2)), ('02', hexOf(newHash)));
+    expect(completed, ['udp ${hexOf(alice.publicKey)} alice-leg'],
+        reason: 'the completion is reported once, before the packet');
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), newHash);
+    expect(bobSessions.finalHandshakePayload(transport, alice.publicKey),
+        answered.responsePayload);
+
+    // The first handshake's recorded message 1, replayed against the live
+    // session: answered, and never completed, so it ends nothing.
+    final replayed = await bobSessions.handleHandshakePacket(handshake(m1),
+        transport: transport, acceptFirstMessage: knownOnly(alice.publicKey));
+    expect(replayed.sessionEstablished, isFalse);
+    expect(replayed.replacedSession, isFalse);
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), newHash,
+        reason: 'a replayed message 1 leaves the live session standing');
+    expect(await openAtBob(await sealFrom(restarted, 3)), ('03', hexOf(newHash)));
+    expect(completed, hasLength(1));
+  });
+
+  test(
+      'XX: a message 1 against a live session leaves it standing; a '
+      'completed XX handshake replaces it', () async {
+    if (skipped()) return;
+    final alice = await identityFromSeed(0x3f);
+    final bob = await identityFromSeed(0x40);
+    final aliceSessions = manager(alice);
+    final bobSessions = manager(bob);
+    const transport = PeerTransport.udp;
+    bool openFor(NoisePattern pattern, Uint8List key) =>
+        pattern == NoisePattern.xx && hexOf(key) == hexOf(alice.publicKey);
+
+    Future<Uint8List> sealFrom(NoiseSessionManager sessions, int byte) async =>
+        (await sessions.encryptPacket(
+                GrassrootsPacket(
+                    type: PacketType.fragment,
+                    payload: Uint8List.fromList([byte])),
+                transport: transport,
+                remotePubkey: bob.publicKey))
+            .serialize();
+
+    /// The payload Bob opens and the session it opens under, in hex.
+    Future<(String, String)> openAtBob(Uint8List sealed) async {
+      final (opened, _, hash) = await bobSessions.decryptPacket(
+          GrassrootsPacket.deserialize(sealed),
+          transport: transport,
+          peerId: 'alice-leg',
+          remotePubkey: alice.publicKey);
+      return (hexOf(opened.payload), hexOf(hash));
+    }
+
+    Future<NoiseHandshakeResult> atBob(Uint8List payload) =>
+        bobSessions.handleHandshakePacket(handshake(payload),
+            transport: transport, peerId: 'alice-leg', acceptFirstMessage: openFor);
+
+    Future<NoiseHandshakeResult> atAlice(
+            NoiseSessionManager sessions, Uint8List payload) =>
+        sessions.handleHandshakePacket(handshake(payload),
+            transport: transport,
+            peerId: 'bob-leg',
+            acceptFirstMessage: (_, __) => false);
+
+    // The first XX handshake; m1 is what a third party records.
+    final m1 = (await aliceSessions.startHandshake(transport, bob.publicKey,
+        pattern: NoisePattern.xx, peerId: 'bob-leg'))!;
+    final m2 = (await atBob(m1)).responsePayload!;
+    final m3 = (await atAlice(aliceSessions, m2)).responsePayload!;
+    expect((await atBob(m3)).sessionEstablished, isTrue);
+    final hash = bobSessions.handshakeHashFor(transport, alice.publicKey)!;
+    expect(await openAtBob(await sealFrom(aliceSessions, 1)), ('01', hexOf(hash)));
+
+    // The recorded message 1, replayed against the live session: answered,
+    // and never completed, so it ends nothing.
+    final replayed = await atBob(m1);
+    expect(replayed.sessionEstablished, isFalse);
+    expect(replayed.replacedSession, isFalse);
+    expect(replayed.responsePayload, isNotNull);
+    expect(bobSessions.hasSession(transport, alice.publicKey), isTrue);
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), hash,
+        reason: 'a replayed message 1 leaves the live session standing');
+    expect(await openAtBob(await sealFrom(aliceSessions, 2)), ('02', hexOf(hash)));
+    // The standing session's own message 3, retransmitted, completes nothing.
+    final staleFinal = await atBob(m3);
+    expect(staleFinal.sessionEstablished, isFalse);
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), hash);
+
+    // Alice restarts and runs a new XX handshake.  Bob answers it, and the
+    // standing session stays until it completes.
+    final restarted = manager(alice);
+    final fresh = (await restarted.startHandshake(transport, bob.publicKey,
+        pattern: NoisePattern.xx, peerId: 'bob-leg'))!;
+    final answered = await atBob(fresh);
+    expect(answered.sessionEstablished, isFalse,
+        reason: 'message 1 alone completes no handshake');
+    expect(answered.replacedSession, isFalse);
+    final freshM2 = answered.responsePayload!;
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), hash,
+        reason: 'the live session stands');
+    expect(await openAtBob(await sealFrom(aliceSessions, 3)), ('03', hexOf(hash)),
+        reason: 'the standing session still carries the pair');
+    expect(bobSessions.handshakeRetransmitPayload(transport, alice.publicKey),
+        freshM2,
+        reason: 'message 2 is retransmitted until message 3 arrives');
+    expect((await atBob(fresh)).responsePayload, freshM2,
+        reason: 'a retransmitted message 1 gets the same message 2');
+
+    // The new handshake completes with its message 3, and its session takes
+    // the standing one's place.
+    final atRestarted = await atAlice(restarted, freshM2);
+    expect(atRestarted.sessionEstablished, isTrue);
+    final freshM3 = atRestarted.responsePayload!;
+    final done = await atBob(freshM3);
+    expect(done.sessionEstablished, isTrue);
+    expect(done.replacedSession, isTrue);
+    expect(done.remotePubkey, alice.publicKey);
+    final newHash = restarted.handshakeHashFor(transport, bob.publicKey)!;
+    expect(newHash, isNot(hash));
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), newHash);
+    expect(bobSessions.handshakeRetransmitPayload(transport, alice.publicKey),
+        isNull);
+    expect(await openAtBob(await sealFrom(restarted, 4)), ('04', hexOf(newHash)));
+    await expectLater(
+        () async => openAtBob(await sealFrom(aliceSessions, 5)),
+        throwsA(anything),
+        reason: 'the replaced session carries nothing');
+
+    // Its message 3, retransmitted, completes nothing again.
+    final again = await atBob(freshM3);
+    expect(again.sessionEstablished, isFalse);
+    expect(again.replacedSession, isFalse);
+    expect(bobSessions.handshakeHashFor(transport, alice.publicKey), newHash);
   });
 
   test('glare: crossed IK first messages leave the smaller key\'s handshake',

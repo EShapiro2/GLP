@@ -60,7 +60,7 @@ imported procedure responder#greet(Offer?, Stream(Decision),
 imported procedure responder#pick(Offer?, Stream(Decision),
     Stream(Ask(Question))).
 imported procedure responder#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% ---------------------------------------------------------------------------
 %% The plays
@@ -199,3 +199,16 @@ answered([], []).
 %% of the person channel.
 procedure to_person(Channel(Stream(_), Stream(Output))?, Stream(Decision)?).
 to_person(ch(_, O?), O).
+
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act names the entry the agent runs, and the
+%% person's acts after it are that entry's input.
+Selected ::= [Constant | PersonIn(Drawn)].
+
+exported procedure agent(Channel(Selected, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([E | Gs], []), ch(N, [])) :- start(E?, Gs?, N?).
+
+procedure start(Constant?, PersonIn(Drawn)?, Stream(NetMsg(Constant))?).
+start(responder_init, Gs, N) :- responder_init(bob, Gs?, N?).

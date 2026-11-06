@@ -51,7 +51,7 @@ Seventeen schemas over fifteen predicates, `friend` and `knows` reflexive (`GAI.
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GAI, as printed, with the words of its pragmas and its widget declarations |
 | `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` |
-| `person.glp` | `miniapp_person/4`: the scripted person, by role, each AI agent's script its program |
+| `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, each AI agent's script its program |
 | `plays.glp` | `play_agents/3`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
 | `../gai_boot.glp` | the super-app hosting the app on three smartphones, under `:boot` |

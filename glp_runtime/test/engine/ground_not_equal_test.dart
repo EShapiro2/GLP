@@ -324,13 +324,13 @@ ne(X, yes) :- X? =?\= stop | true.
       const source = r'ne(X, Y, yes) :- X? =?\= Y?, Y? =?\= stop | true.';
       final printer = GlpPrinter();
       final clause =
-          Parser(Lexer(source).tokenize()).parse().procedures.single.clauses
+          Parser(Lexer(source).tokenize()).parseModule().procedures.single.clauses
               .single;
       final printed = printer.printClause(clause);
       expect(printed, contains(r'(X? =?\= Y?)'));
       expect(printed, contains(r'(Y? =?\= stop)'));
       final reparsed =
-          Parser(Lexer(printed).tokenize()).parse().procedures.single.clauses
+          Parser(Lexer(printed).tokenize()).parseModule().procedures.single.clauses
               .single;
       expect(printer.printClause(reparsed), printed);
     });

@@ -60,18 +60,144 @@ class BytecodeProgram {
 /// Goal-call environment: maps arg slots to heterogeneous Terms (VarRef, ConstTerm, StructTerm).
 /// IGLP: argument registers hold Terms, not just variable IDs.
 class CallEnv {
-  final Map<int, Term> argBySlot;
+  /// The arguments by slot, dense from 0: `A1` at index 0.  A slot past the
+  /// end, or one holding null, is empty.  A register file and not a map, as
+  /// the process record of the FCP machine is a vector of argument words
+  /// (Houri and Shapiro; `Args_PR`), loaded into the registers by index.
+  List<Term?> _args;
 
-  CallEnv({Map<int, Term>? args})
-      : argBySlot = args ?? <int, Term>{};
+  CallEnv({Map<int, Term>? args}) : _args = _listOf(args);
+
+  /// An environment over [args] itself, not a copy.
+  CallEnv.ofList(List<Term?> args) : _args = args;
+
+  static List<Term?> _listOf(Map<int, Term>? args) {
+    if (args == null || args.isEmpty) return const <Term?>[];
+    var n = 0;
+    for (final slot in args.keys) {
+      if (slot >= n) n = slot + 1;
+    }
+    final list = List<Term?>.filled(n, null);
+    for (final MapEntry(key: slot, value: arg) in args.entries) {
+      list[slot] = arg;
+    }
+    return list;
+  }
 
   /// Get argument term at slot (A1, A2, ..., An)
-  Term? arg(int slot) => argBySlot[slot];
+  Term? arg(int slot) => slot < _args.length ? _args[slot] : null;
 
-  /// Update environment with new argument mappings (for requeue/tail calls)
-  void update(Map<int, Term> newArgs) {
-    argBySlot.clear();
-    argBySlot.addAll(newArgs);
+  /// Whether the goal has an argument at [slot].
+  bool has(int slot) => slot < _args.length && _args[slot] != null;
+
+  /// The number of arguments held.
+  int get length {
+    var n = 0;
+    for (final a in _args) {
+      if (a != null) n++;
+    }
+    return n;
+  }
+
+  /// The arguments held, in slot order.
+  Iterable<Term> get values sync* {
+    for (final a in _args) {
+      if (a != null) yield a;
+    }
+  }
+
+  /// The arguments held with their slots, in slot order.
+  Iterable<MapEntry<int, Term>> get entries sync* {
+    for (var i = 0; i < _args.length; i++) {
+      final a = _args[i];
+      if (a != null) yield MapEntry(i, a);
+    }
+  }
+
+  /// The arguments as a map by slot, for display.
+  Map<int, Term> get argBySlot => {for (final e in entries) e.key: e.value};
+
+  /// Replace the arguments (for requeue/tail calls): [newArgs] is taken as
+  /// it is, not copied.
+  void update(List<Term?> newArgs) {
+    _args = newArgs;
+  }
+}
+
+/// A register file indexed from 0, growing as it is written: the argument
+/// registers a body goal is built in ([RunnerContext.argSlots]).  Reading a
+/// register never written gives null.  [clear] empties the registers written
+/// since the last clear and nothing more.
+class RegisterFile {
+  List<Term?> _r = List<Term?>.filled(8, null, growable: true);
+  int _hi = 0;
+
+  Term? operator [](int i) => i < _r.length ? _r[i] : null;
+
+  void operator []=(int i, Term? v) {
+    if (i >= _r.length) {
+      _r.length = i + 8;
+    }
+    _r[i] = v;
+    if (i >= _hi) _hi = i + 1;
+  }
+
+  void clear() {
+    if (_hi == 0) return;
+    _r.fillRange(0, _hi, null);
+    _hi = 0;
+  }
+
+  /// The registers written since the last clear, 0 to the highest, as a new
+  /// list: a goal's arguments, to become its [CallEnv].
+  List<Term?> toList() => List<Term?>.of(_r.getRange(0, _hi), growable: false);
+}
+
+/// The clause's variable registers by index ([RunnerContext.clauseVars]):
+/// codegen's clause variables and temp registers from 0 upwards, and the
+/// structure sentinels -1 and -2 and the anonymous variables from -3 down
+/// ([RunnerContext.freshVoidVar]) below.  Two arrays, one each way; a
+/// register never written, or removed, reads null.
+class ClauseVars {
+  List<Object?> _pos = List<Object?>.filled(16, null, growable: true);
+  List<Object?> _neg = List<Object?>.filled(8, null, growable: true);
+  int _hiPos = 0;
+  int _hiNeg = 0;
+
+  Object? operator [](int i) {
+    if (i >= 0) return i < _pos.length ? _pos[i] : null;
+    final j = -1 - i;
+    return j < _neg.length ? _neg[j] : null;
+  }
+
+  void operator []=(int i, Object? v) {
+    if (i >= 0) {
+      if (i >= _pos.length) _pos.length = i + 16;
+      _pos[i] = v;
+      if (i >= _hiPos) _hiPos = i + 1;
+    } else {
+      final j = -1 - i;
+      if (j >= _neg.length) _neg.length = j + 8;
+      _neg[j] = v;
+      if (j >= _hiNeg) _hiNeg = j + 1;
+    }
+  }
+
+  bool containsKey(int i) => this[i] != null;
+
+  void remove(int i) {
+    this[i] = null;
+  }
+
+  void clear() {
+    if (_hiPos > 0) {
+      _pos.fillRange(0, _hiPos, null);
+      _hiPos = 0;
+    }
+    if (_hiNeg > 0) {
+      _neg.fillRange(0, _hiNeg, null);
+      _hiNeg = 0;
+    }
   }
 }
 
@@ -171,9 +297,9 @@ void _skipSubterm(RunnerContext cx) {
 
 class RunnerContext {
   final GlpRuntime rt;
-  final int goalId;
+  int goalId;
   int kappa;  // Mutable - updated by Requeue for tail calls
-  final CallEnv env;
+  CallEnv env;
   final Map<HeapCell, Object?> sigmaHat = <HeapCell, Object?>{}; // σ̂w: tentative writer bindings
   final Set<HeapCell> Si = <HeapCell>{};       // clause-level preliminary suspension set
   final SuspensionSet U = SuspensionSet(); // goal-level suspension set (reader IDs)
@@ -198,7 +324,7 @@ class RunnerContext {
   /// #3 Cowork, 2026-10-02 15:31 UTC, B).  The clause cannot commit, its
   /// suspension set being non-empty; what is still asked of it is whether it
   /// fails.
-  final Set<int> unknownVars = <int>{};
+  final ClauseVars unknownVars = ClauseVars();
 
   /// The variable that stands for each unknown variable ([unknownVars]),
   /// by its clause-variable index, as its writer and reader cells: an
@@ -214,7 +340,7 @@ class RunnerContext {
   final Set<HeapCell> unknownKeys = <HeapCell>{};
 
   /// Whether clause variable [varIndex] is unknown ([unknownVars]).
-  bool isUnknown(int varIndex) => unknownVars.contains(varIndex);
+  bool isUnknown(int varIndex) => unknownVars[varIndex] != null;
 
   /// The REPEATED HEAD WRITERS of the clause being tried: the clause variables
   /// whose writer occurs more than once in its head, which the byte runner
@@ -247,7 +373,7 @@ class RunnerContext {
   UnifyMode mode = UnifyMode.read;   // Current unification mode
   int S = 0;                          // Structure pointer (current position in structure)
   Object? currentStructure;           // Current structure being traversed
-  final Map<int, Object?> clauseVars = {}; // Clause variable bindings (varIndex → value)
+  final ClauseVars clauseVars = ClauseVars(); // Clause variable bindings (varIndex → value)
 
   // Clause-variable index for the next anonymous variable an `unify_void`
   // creates. Each occurrence of an anonymous variable is a variable of its own
@@ -263,7 +389,7 @@ class RunnerContext {
 
   // Argument registers for goal calls (A1, A2, ..., An)
   // IGLP: heterogeneous term storage
-  final Map<int, Term> argSlots = {};  // argSlot → Term (VarRef, ConstTerm, StructTerm)
+  final RegisterFile argSlots = RegisterFile();  // argSlot → Term (VarRef, ConstTerm, StructTerm)
 
   // Guard argument building mode (for pre-commit structure building)
   int? guardArgSlot;  // Target argSlot when building structure for guard argument
@@ -278,7 +404,7 @@ class RunnerContext {
   // Track reduction for trace output
   String? goalHead;  // Formatted head goal for trace (mutable for tail calls)
   String? goalProcName;  // Procedure name for delayed head formatting
-  final void Function(int goalId, String head, String body)? onReduction;
+  void Function(int goalId, String head, String body)? onReduction;
 
   /// Set at each reduction of this run --- its proceed, and each tail call ---
   /// whether or not the run is traced: the scheduler reads it after the run to
@@ -310,10 +436,10 @@ class RunnerContext {
   }
 
   // Control trace output
-  final bool debugOutput;
+  bool debugOutput;
 
   // Custom term formatter for consistent variable naming
-  final String Function(Term, {bool markReaders})? termFormatter;
+  String Function(Term, {bool markReaders})? termFormatter;
 
   RunnerContext({
     required this.rt,
@@ -326,6 +452,39 @@ class RunnerContext {
     this.debugOutput = false,
     this.termFormatter,
   }) : env = env ?? CallEnv();
+
+  /// Make this context the one for a run of goal [goalId]: every field set as
+  /// the constructor sets it, the containers emptied.  One context serves a
+  /// scheduler's runs in turn, as the FCP machine's worker state serves every
+  /// process ([Scheduler]); until 2026-11-02 each run made its own.
+  void reset({
+    required int goalId,
+    required int kappa,
+    CallEnv? env,
+    String? goalHead,
+    String? goalProcName,
+    void Function(int goalId, String head, String body)? onReduction,
+    bool debugOutput = false,
+    String Function(Term, {bool markReaders})? termFormatter,
+  }) {
+    this.goalId = goalId;
+    this.kappa = kappa;
+    this.env = env ?? CallEnv();
+    this.goalHead = goalHead;
+    this.goalProcName = goalProcName;
+    this.onReduction = onReduction;
+    this.debugOutput = debugOutput;
+    this.termFormatter = termFormatter;
+    clearClause();
+    U.clear();
+    U.touched = false;
+    argSlots.clear();
+    spawnedGoals.clear();
+    reduced = false;
+    E = null;
+    CP = null;
+    _nextVoidVar = -3;
+  }
 
   void clearClause() {
     sigmaHat.clear();
@@ -973,7 +1132,7 @@ Set<Object> _readersOfGoal(RunnerContext cx, Set<Object> variables) {
   final heap = cx.rt.heap;
   final found = <Object>{};
   if (variables.isEmpty) return found;
-  final pending = Queue<Object?>.of(cx.env.argBySlot.values);
+  final pending = Queue<Object?>.of(cx.env.values);
   final seen = <HeapCell>{};
   final seenStructs = Set<StructTerm>.identity();
   while (pending.isNotEmpty && found.length < variables.length) {
@@ -2015,7 +2174,7 @@ void _completeBodyStructure(RunnerContext cx, StructTerm struct,
   if (targetWriterAddr != null) {
     final acts = cx.rt.heap.bindVariableStruct(targetWriterAddr, struct.functor, struct.args);
     for (final a in acts) {
-      cx.rt.gq.enqueue(a);
+      cx.rt.enqueueReactivatedGoal(a);
     }
   }
 
@@ -2044,7 +2203,7 @@ void _completeBodyStructure(RunnerContext cx, StructTerm struct,
       if (cx.S >= parentStruct.args.length && currentWriterAddrInt != null) {
         final acts = cx.rt.heap.bindVariableStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
         for (final a in acts) {
-          cx.rt.gq.enqueue(a);
+          cx.rt.enqueueReactivatedGoal(a);
         }
 
         // Check for more ancestors
@@ -2469,7 +2628,7 @@ mixin OpExecutors {
       sigmaHat: convertedSigmaHat,
     );
     for (final a in acts) {
-      cx.rt.gq.enqueue(a);
+      cx.rt.enqueueReactivatedGoal(a);
     }
     cx.sigmaHat.clear();
     cx.argSlots.clear();
@@ -2702,7 +2861,7 @@ mixin OpExecutors {
     // hard-coded `argSlot >= 10` that capped argument registers at 10 and misread
     // the 11th+ argument of a high-arity goal as a temp register (arity-dispatch
     // bug; codegen keeps temp indices above the arity so they never alias).
-    final bool isClauseVar = !cx.env.argBySlot.containsKey(argSlot);
+    final bool isClauseVar = !cx.env.has(argSlot);
     final arg = isClauseVar ? null : _getArg(cx, argSlot);
 
     if (isClauseVar) {
@@ -2827,7 +2986,7 @@ mixin OpExecutors {
         // ([RunnerContext.unknownVars]); a reader occurrence gives no value
         // and leaves the variable as it is.
         if (!isReader && _hasNoValue(cx, varIndex)) {
-          cx.unknownVars.add(varIndex);
+          cx.unknownVars[varIndex] = true;
         }
         return StepOutcome.advance;
       }
@@ -2948,7 +3107,7 @@ mixin OpExecutors {
     // hard-coded `argSlot >= 10` that capped argument registers at 10 and misread
     // the 11th+ argument of a high-arity goal as a temp register (arity-dispatch
     // bug; codegen keeps temp indices above the arity so they never alias).
-    final bool isClauseVar = !cx.env.argBySlot.containsKey(argSlot);
+    final bool isClauseVar = !cx.env.has(argSlot);
     final arg = isClauseVar ? null : _getArg(cx, argSlot);
 
     if (!isClauseVar && arg == null) {
@@ -3387,7 +3546,7 @@ mixin OpExecutors {
       // only as a reader stayed unknown and a guard over it was passed
       // by, so a clause that fails suspended.
       if (!isReaderMode && _hasNoValue(cx, varIndex)) {
-        cx.unknownVars.add(varIndex);
+        cx.unknownVars[varIndex] = true;
       }
       return StepOutcome.advance;
     }

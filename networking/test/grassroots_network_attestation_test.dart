@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show InternetAddress;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -15,11 +15,8 @@ import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
-
-/// Hermetic host candidates (see the glare test).
-Future<List<InternetAddress>> _loopbackHostAddresses() async =>
-    [InternetAddress.loopbackIPv4];
 
 /// A platform that attests, with a verdict the test chooses.
 ///
@@ -50,6 +47,9 @@ class _StubAttestation implements PlatformAttestation {
   /// peer's key, the version number its message carried, and the session's
   /// handshake hash.
   final List<Uint8List> verified = [];
+
+  /// Completes when this platform first verifies a peer's evidence.
+  final Completer<void> firstVerified = Completer<void>();
 
   @override
   Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async {
@@ -84,6 +84,7 @@ class _StubAttestation implements PlatformAttestation {
         version: evidence.version,
         handshakeHash: handshakeHash,
       ));
+      if (!firstVerified.isCompleted) firstVerified.complete();
     }
     return verdictFor(evidence);
   }
@@ -126,6 +127,10 @@ void main() {
     );
   }
 
+  /// Each node's host-address reader (hermetic: see the glare test), which
+  /// tells when its candidates are read.
+  final hostReaders = Expando<LoopbackHostReader>();
+
   Future<GrassrootsNetwork> startNode(
     GrassrootsIdentity id, {
     PlatformAttestation? attestation,
@@ -134,36 +139,26 @@ void main() {
       appReducer,
       initialState: const AppState(),
     );
+    final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
       underlays: const {Underlay.lan, Underlay.wan},
       store: store,
       sodium: sodium,
-      localHostAddressReader: _loopbackHostAddresses,
+      localHostAddressReader: hosts.call,
       platformAttestation: attestation,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(seconds: 2),
       ),
     );
+    hostReaders[network] = hosts;
     expect(await network.initialize(), isTrue);
     return network;
   }
 
   Future<String> listeningAddress(GrassrootsNetwork network) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.debugLocalCandidates().isEmpty &&
-        DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await hostReaders[network]!.read;
     return network.debugLocalCandidates().first;
-  }
-
-  Future<bool> waitFor(bool Function() predicate, {int seconds = 20}) async {
-    final deadline = DateTime.now().add(Duration(seconds: seconds));
-    while (!predicate() && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    }
-    return predicate();
   }
 
   test('a peer whose platform provides none is reachable and unattested',
@@ -178,11 +173,15 @@ void main() {
     });
 
     final connects = <(String, Underlay, Application?)>[];
-    caller.onPeerConnected = (pk, underlay, application) => connects.add((
-          pk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-          underlay,
-          application,
-        ));
+    final firstConnect = Completer<void>();
+    caller.onPeerConnected = (pk, underlay, application) {
+      connects.add((
+        pk.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+        underlay,
+        application,
+      ));
+      if (!firstConnect.isCompleted) firstConnect.complete();
+    };
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
@@ -194,7 +193,8 @@ void main() {
       Uint8List.fromList(utf8.encode('hello')),
     );
 
-    expect(await waitFor(() => connects.isNotEmpty), isTrue,
+    await firstConnect.future;
+    expect(connects, isNotEmpty,
         reason: 'the exchange must complete and the peer become reachable');
     // Loopback lies within none of the agent's own local prefixes, so the
     // UDP session is WAN.
@@ -203,7 +203,7 @@ void main() {
         reason: 'a platform with no attestation yields null for the '
             'application: the identity is unattested, not refused');
     expect(caller.isPeerReachable(calleeId.publicKey), isTrue);
-  });
+  }, timeout: Timeout.none);
 
   test('the attestation names the identity key and the signature the session',
       () async {
@@ -236,14 +236,20 @@ void main() {
 
     Application? attested;
     var connected = false;
+    final callerConnects = Completer<void>();
     caller.onPeerConnected = (pk, transport, application) {
       connected = true;
       attested = application;
+      if (!callerConnects.isCompleted) callerConnects.complete();
     };
     // Each side judges the other's half on its own schedule: what the callee
     // verified is asserted below, so wait for the callee as well.
     var calleeConnected = false;
-    callee.onPeerConnected = (_, __, ___) => calleeConnected = true;
+    final calleeConnects = Completer<void>();
+    callee.onPeerConnected = (_, __, ___) {
+      calleeConnected = true;
+      if (!calleeConnects.isCompleted) calleeConnects.complete();
+    };
 
     final calleeAddress = await listeningAddress(callee);
     caller.putKnownPeer(calleeId.publicKey);
@@ -254,7 +260,9 @@ void main() {
       Uint8List.fromList(utf8.encode('hello')),
     );
 
-    expect(await waitFor(() => connected && calleeConnected), isTrue);
+    await callerConnects.future;
+    await calleeConnects.future;
+    expect(connected && calleeConnected, isTrue);
     expect(
         attested,
         const Application(
@@ -283,7 +291,7 @@ void main() {
     expect(callerAttestation.signed.first, calleeAttestation.verified.first,
         reason: 'what the caller signed is what the callee verified');
     expect(calleeAttestation.signed.first, callerAttestation.verified.first);
-  });
+  }, timeout: Timeout.none);
 
   test('a failed attestation tears the session down and onPeerConnected does '
       'not fire', () async {
@@ -319,7 +327,8 @@ void main() {
     );
 
     // Wait long enough that a session that was going to come up would have.
-    expect(await waitFor(() => callerAttestation.verified.isNotEmpty), isTrue,
+    await callerAttestation.firstVerified.future;
+    expect(callerAttestation.verified, isNotEmpty,
         reason: 'the caller must have been given something to verify');
     await Future<void>.delayed(const Duration(seconds: 3));
 

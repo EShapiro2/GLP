@@ -407,7 +407,13 @@ List<(ast.Term, TypeExpr)>? _matchAltToTerm(
   return null;
 }
 
-/// Substitute bare template parameters in [e] using [subst].
+/// Substitute bare template parameters in [e] using [subst].  `X?` with S for
+/// X is `S?`, and `(S?)?` is S: the substitution is simultaneous and keeps the
+/// complement operator, which is an involution (TGLP appendix-type-automaton.tex,
+/// Definition "Dual Type Automaton"), as [_substituteTypeExpr] and
+/// [_substituteToExpandedNames] have it (GLP #11 Cowork, Code_inbox 2026-11-03
+/// 16:40 UTC, item 2; until 2026-11-05 a substituted parameter's mode was input
+/// regardless).
 TypeExpr _substParam(TypeExpr expr, Map<String, TypeExpr> subst) =>
     mapTypeExpr(expr, (e) {
       if (e is TypeRef) {
@@ -415,7 +421,10 @@ TypeExpr _substParam(TypeExpr expr, Map<String, TypeExpr> subst) =>
           final r = subst[e.name]!;
           if (e.isInput && r is TypeRef) {
             return TypeRef(r.name, r.line, r.column,
-                isInput: true, typeArgs: r.typeArgs);
+                isInput: !r.isInput, typeArgs: r.typeArgs);
+          }
+          if (e.isInput && r is PrimitiveModeAlt) {
+            return PrimitiveModeAlt(!r.isInput, r.line, r.column);
           }
           return r;
         }

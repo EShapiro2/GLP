@@ -62,7 +62,7 @@ Drawn    ::= card_w(_) ; YesNo.
 
 imported procedure asker#ask(Peer?, Stream(YesNo), Stream(Ask(Question))).
 imported procedure asker#dispatch(Stream(Ask(Question))?,
-    PersonChannel(Drawn)?, Channel(Stream(_), Stream(_))).
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 exported procedure ask_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 ask_init(_, Gs, _) :-

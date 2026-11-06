@@ -1,10 +1,13 @@
-/// The play `coins_ui/3` run in an isolate of its own, over
+/// The play `coins_ui/4` run in an isolate of its own, over
 /// `programs/currencies/coins` resolved from the repo on disc, with the
-/// person's grants injected and her screen read back across the isolate
-/// boundary.
+/// person's first act and grants injected and her screen read back across
+/// the isolate boundary.
 ///
-/// `coins_ui(alice, Grants, _)` is the mini-app's bridge entry
-/// (`programs/currencies/coins/play_ui.glp`): it gives alice's mini-app the
+/// `coins_ui(alice, [bob], Grants, _)` is the mini-app's live-person entry
+/// (`programs/currencies/coins/play_ui.glp`), which the program's agent/2
+/// starts on the person's first act, `coins_ui(alice, [bob])`, her key and the
+/// key of the peer she knows, each a readable name standing for a key (IGLP,
+/// Remark "Agent Names"): it gives alice's mini-app the
 /// person channel `ch(Grants?, Draws)` of vGLP's Definition "Person Channel,
 /// Person Writer, GLP with Persons, Grant", and sends her the draws by
 /// `send_to_user/1`.  The test is the person at the bridge (vGLP,
@@ -13,19 +16,22 @@
 /// and grants `input(Id, P, R)` at the position `P` a draw marks
 /// `input(P)`, `R` the ground term of her act.
 ///
-/// The play is run directly, as test code, with no host: the host posts
-/// `superapp/3` and nothing of Currencies' (GSG Section 5.1; Currencies #7
-/// Cowork, 2026-10-04 09:15 UTC, item 2).  In the play's isolate the engine
-/// loads the coins program and posts `coins_ui(alice, Grants?, [])` through
+/// The play is run directly, as test code, with no host.  In the play's
+/// isolate the engine loads the coins program and posts the agent's initial
+/// goal as AgentRuntime posts it, agent(ch(UserIn?, UserOut), ch(NetIn?,
+/// NetOut)) with send_to_user/1 and send_to_net/1 (GLP-Spec maglp.tex,
+/// Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot"), through
 /// its posting call, which checks the goal as every posted goal is checked
 /// (TGLP modules.tex, "the initial goal posted to the runtime ... is
-/// type-checked before execution as a body goal"; GlpEngine.postGoal); each
-/// grant the test sends is injected into `Grants` through the injector the
-/// call returned, and every term the play sends alice comes back whole.
+/// type-checked before execution as a body goal"; GlpEngine.postGoal); the
+/// person's first act and each grant the test sends are injected into
+/// `UserIn` through the injector the call returned, and every term the play
+/// sends alice comes back whole.
 ///
 /// The widget test beside this one drives the surface; this one holds the
 /// wiring the surface never sees — the resolved program directory, the goal
-/// and its three arguments, and the isolate boundary.
+/// and its first act, and the isolate boundary.
+@Timeout.none
 library;
 
 import 'dart:async';
@@ -48,10 +54,17 @@ class _PlayFault {
   _PlayFault(this.error);
 }
 
+/// The play's isolate has run to quiescence on its start, or on a grant: the
+/// terms that run sent alice are ahead of this on the port, which delivers in
+/// order.
+class _PlayIdle {
+  const _PlayIdle();
+}
+
 /// The play's isolate: [init] is the test's port and the repo's programs/.
 /// It sends back its own port, for alice's grants, once the play is posted;
-/// then each term the play sends alice, whole, and a [_PlayFault] where the load,
-/// the posting or a run fails.
+/// then each term the play sends alice, whole, a [_PlayIdle] when a run is done,
+/// and a [_PlayFault] where the load, the posting or a run fails.
 void _playIsolate((SendPort, String) init) {
   final (reply, repo) = init;
   final grants = ReceivePort();
@@ -59,9 +72,18 @@ void _playIsolate((SendPort, String) init) {
   engine.runtime.outputTermCallback = (t) => reply.send(screenTermOf(t));
   try {
     engine.loadProgram('$repo/currencies/coins');
-    final play = engine.postGoal('coins_ui(alice, Grants?, [])',
-        inputs: ['Grants']);
-    final grantsIn = play.inputs['Grants']!;
+    final play = engine.postGoal(
+        'agent(ch(UserIn?, UserOut), ch(NetIn?, NetOut)), '
+        'send_to_user(UserOut?), send_to_net(NetOut?)',
+        inputs: ['UserIn', 'NetIn']);
+    final grantsIn = play.inputs['UserIn']!;
+    // The person's first act: her key and the key of the peer she knows.
+    grantsIn
+        .inject(runtimeTermOf(const GStruct('coins_ui', [
+          GAtom('alice'),
+          GList([GAtom('bob')])
+        ])))
+        .forEach(engine.runtime.gq.enqueue);
 
     /// The play run until quiescent; a run stopped at the net is reported.
     void drain() {
@@ -69,6 +91,7 @@ void _playIsolate((SendPort, String) init) {
       if (result.status == ExecutionStatus.capped) {
         reply.send(_PlayFault('the play did not quiesce'));
       }
+      reply.send(const _PlayIdle());
     }
 
     reply.send(grants.sendPort);
@@ -96,31 +119,67 @@ void main() {
     final sends = <GTerm>[];
     final r = UiRuntime(manifest: coinsManifest, onSend: sends.add);
 
+    // The waits are on events alone and on no clock (IGLP-coop, 2026-11-02;
+    // until then each polled every 50 ms until a deadline of twenty seconds,
+    // and a grant waited 200 ms): the play's runs are owed, its start and one
+    // for each grant sent, and each [_PlayIdle] is one done; a wait ends when
+    // its condition holds, and fails on a fault, or on quiescence with its
+    // condition not holding, which nothing not sent will change.
+    var owed = 1;
+    var done = 0;
+    final faults = <String>[];
+    final waits = <(String, bool Function(), Completer<void>)>[];
+    void check() {
+      waits.removeWhere((w) {
+        final (what, holds, c) = w;
+        if (faults.isNotEmpty) {
+          c.completeError(StateError('waiting for $what: ${faults.first}'));
+        } else if (holds()) {
+          c.complete();
+        } else if (done >= owed) {
+          c.completeError(
+              StateError('the play is quiescent and $what does not hold'));
+        } else {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    Future<void> until(String what, bool Function() holds) {
+      final c = Completer<void>();
+      waits.add((what, holds, c));
+      check();
+      return c.future;
+    }
+
     reply.listen((m) {
       if (m is SendPort) {
         commands = m;
       } else if (m is GTerm) {
         r.handle(m);
+      } else if (m is _PlayIdle) {
+        done++;
       } else if (m is _PlayFault) {
-        fail('the play: ${m.error}');
+        faults.add('the play: ${m.error}');
       }
+      check();
     });
 
-    final isolate = await Isolate.spawn(_playIsolate, (reply.sendPort, repo));
+    final events = ReceivePort();
+    events.listen((e) {
+      faults.add(e is List
+          ? 'the play\'s isolate threw: ${e.first}'
+          : 'the play\'s isolate exited');
+      check();
+    });
+    final isolate = await Isolate.spawn(_playIsolate, (reply.sendPort, repo),
+        onError: events.sendPort, onExit: events.sendPort);
     addTearDown(() {
+      events.close();
       isolate.kill(priority: Isolate.immediate);
       reply.close();
     });
-
-    Future<bool> until(bool Function() done,
-        {Duration t = const Duration(seconds: 20)}) async {
-      final end = DateTime.now().add(t);
-      while (DateTime.now().isBefore(end)) {
-        if (done()) return true;
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-      return done();
-    }
 
     /// What the agent has written to her, its screen's content: the
     /// elements of the output thread, construct 0, which is how her screen
@@ -153,8 +212,8 @@ void main() {
     /// sent across the isolate boundary in order.
     Future<void> send() async {
       while (sends.isNotEmpty) {
+        owed++;
         commands!.send(sends.removeAt(0));
-        await Future<void>.delayed(const Duration(milliseconds: 200));
       }
     }
 
@@ -177,8 +236,8 @@ void main() {
         "field('WantCoin', peer), field('WantAmount', number)]), "
         "form(pay, [field('Friend', peer), field('Amount', number)]), "
         "form(redeem, [field('Friend', peer), field('WantCoin', peer)])]))";
-    expect(await until(() => drawn(requestForm).length == 1), isTrue,
-        reason: 'the request form, drawn once');
+    await until('the request form, drawn once',
+        () => drawn(requestForm).length == 1);
     final form = drawn(requestForm).single;
     expect(formatTerm(form.view), 'input([])');
     final p = at(form.view)!;
@@ -187,7 +246,7 @@ void main() {
     r.bridge.grant(form.id, p, tryParseTerm('mint(2)')!);
     expect(formatTerm(sends.single), 'input(${form.id}, [], mint(2))');
     await send();
-    await until(() => balances() == 'alice=2');
+    await until('alice=2', () => balances() == 'alice=2');
     expect(balances(), 'alice=2');
 
     // Swap her 2 for bob's 2, the next request on the same form, which a
@@ -197,11 +256,9 @@ void main() {
     r.bridge.grant(
         form.id, p, tryParseTerm('swap(bob, alice, 2, bob, 2)')!);
     await send();
-    expect(
-        await until(() =>
-            screen().any((t) => formatTerm(t) == 'swap_done(bob)')),
-        isTrue);
-    await until(() => balances() == 'bob=2');
+    await until('swap_done(bob)',
+        () => screen().any((t) => formatTerm(t) == 'swap_done(bob)'));
+    await until('bob=2', () => balances() == 'bob=2');
     expect(balances(), 'bob=2');
 
     // Bob proposes the reverse swap: one card, the swap responder's question,
@@ -215,7 +272,7 @@ void main() {
         "field('Amount', shown)])), field('Offered', thread(form(coin, "
         "[field('Issuer', shown), field('Serial', shown)])))])), "
         "field('YesNo', buttons([yes, no]))])";
-    await until(() => drawn(card).length == 1);
+    await until('the card, drawn once', () => drawn(card).length == 1);
     expect(drawn(card), hasLength(1));
     final offer = drawn(card).single;
     // The offer, for her to see: bob wants 2 of his own coins back and offers
@@ -233,11 +290,11 @@ void main() {
     r.bridge.grant(offer.id, at(cardArgs[1])!, const GAtom('yes'));
     expect(formatTerm(sends.single), 'input(${offer.id}, [2], yes)');
     await send();
-    await until(() => balances() == 'alice=2');
+    await until('alice=2', () => balances() == 'alice=2');
     expect(balances(), 'alice=2');
     // Answered, the card is withdrawn; the request form stands.
-    expect(await until(() => r.bridge.construct(offer.id) == null), isTrue,
-        reason: 'the answered card is withdrawn');
+    await until('the answered card withdrawn',
+        () => r.bridge.construct(offer.id) == null);
     expect(r.bridge.constructs.map((c) => c.id), [0, form.id]);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }

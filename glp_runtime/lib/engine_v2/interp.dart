@@ -316,8 +316,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
   /// The goal's argument [slot] dereferenced, for [_clauseFails]: null where
   /// the goal holds no variable there or it is unbound.
   static Object? _indexedArg(RunnerContext cx, int slot) {
-    if (!cx.env.argBySlot.containsKey(slot)) return null;
-    final arg = cx.env.argBySlot[slot];
+    final arg = cx.env.arg(slot);
     if (arg is! VarRef) return null;
     final d = cx.rt.heap.derefAddr(arg.addr);
     return d is Term && d is! VarRef ? d : null;
@@ -735,7 +734,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     }
 
     // Compiled callee — enqueue a new goal at its entry byte offset.
-    final newEnv = CallEnv(args: Map<int, Term>.from(cx.argSlots));
+    final newEnv = CallEnv.ofList(cx.argSlots.toList());
     final newGoalId = cx.rt.nextGoalId++;
     final newGoalRef = GoalRef(newGoalId, symbol.codeOffset);
 
@@ -808,7 +807,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     }
     cx.reduced = true;
 
-    cx.env.update(Map<int, Term>.from(cx.argSlots));
+    cx.env.update(cx.argSlots.toList());
     cx.argSlots.clear();
     cx.spawnedGoals.clear();
     if (tracing) cx.goalHead = newHeadGoalStr;

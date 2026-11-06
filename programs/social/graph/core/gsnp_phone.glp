@@ -1,0 +1,118 @@
+%% gsnp_phone.glp --- one smartphone of programs/apps/gsnp_boot.glp: the super-app's agent on the isolate's network under the person's own key, the mini-app read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts gsnp_phone/4, the entry the person goal's first act names (IGLP 0e1c9e0, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, moved here from the boot file on 2026-11-03 (GLP's ruling, Code_inbox 2026-11-03 14:58 UTC).  The script, the mini-app and its contract are the app's owner's (programs/apps/gsnp).
+
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+
+%% One smartphone: the super-app's agent on the isolate's network under the person's own name, the mini-app read from its artefact beside the program and installed, and the person's acts by role over the peers the person knows along the chain, the previous one and the next: dan knows eve; eve dan and carol; carol eve and bob; bob carol and fay; fay bob.  The mini-app's scripted person is activated under the role, which chooses its script, with the keys the person knows, by which the script names its peers (programs/self.glp, the template miniapp_person/5).
+exported procedure gsnp_phone(Constant?, Key?, List(Key)?, NetInStream?).
+gsnp_phone(dan, Me, [Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(Me?, none, one(Q?), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, dan, [Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gsnp_phone(eve, Me, [P, Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(Me?, one(P?), one(Q?), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, eve, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gsnp_phone(carol, Me, [P, Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(Me?, one(P?), one(Q?), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, carol, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gsnp_phone(bob, Me, [P, Q], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(Me?, one(P?), one(Q?), C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, bob, [P?, Q?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+gsnp_phone(fay, Me, [P], NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("gsnp.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    gsnp_acts(Me?, one(P?), none, C?, CK?, CSig?, AppEnd?, Out?, In),
+    miniapp_person_run(C?, Me?, fay, [P?], PersonEnd?, Screen),
+    send_to_user(Screen?).
+%% A person who knows other than the chain gives has no smartphone here.
+gsnp_phone(_, _, _, _) :- otherwise | true.
+
+Link ::= none ; one(Key).
+
+%% The person's first acts on their super-app: trust the compiler's key and install the mini-app with their end of its person channel; then the first of the chain connects to the next, and every other consents in advance to the invitation of the one before them.
+procedure gsnp_acts(Key?, Link?, Link?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+gsnp_acts(Me, none, one(Q), C, CK, CSig, AppEnd, Outs,
+          [msg(person, Me?, trust(CK?)),
+           msg(person, Me?, install(gsnp, C?, CSig?, AppEnd?)),
+           msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?) |
+    gsnp_run(Me?, none, one(Q?), Outs?, Cmds).
+gsnp_acts(Me, one(P), Next, C, CK, CSig, AppEnd, Outs,
+          [msg(person, Me?, trust(CK?)),
+           msg(person, Me?, install(gsnp, C?, CSig?, AppEnd?)),
+           msg(person, Me?, accept_invite(gsnp, P?)) | Cmds?]) :-
+    ground(Me?), ground(P?) |
+    gsnp_run(Me?, one(P?), Next?, Outs?, Cmds).
+
+%% The person's acts on what their super-app tells them: consent to the request to connect of the one before them; once connected to the one before them, connect to the one after; and once connected to the one after, invite them to the mini-app.
+procedure gsnp_run(Key?, Link?, Link?, AgentToUserStream?, UserInStream).
+gsnp_run(Me, one(P), Next, [msg(agent, person, befriend(P1, X)) | Outs],
+         [msg(person, Me?, decision(yes, P1?, X?)) | Cmds?]) :-
+    ground(Me?), ground(P?), P1? =?= P? |
+    send_to_user([sg(befriend(P1?))]),
+    gsnp_run(Me?, one(P?), Next?, Outs?, Cmds).
+gsnp_run(Me, one(P), one(Q), [msg(agent, person, connected(P1)) | Outs],
+         [msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(P?), ground(Q?), P1? =?= P? |
+    send_to_user([sg(connected(P1?))]),
+    gsnp_run(Me?, one(P?), one(Q?), Outs?, Cmds).
+gsnp_run(Me, one(P), none, [msg(agent, person, connected(P1)) | Outs], Cmds?) :-
+    ground(P?), P1? =?= P? |
+    send_to_user([sg(connected(P1?))]),
+    gsnp_run(Me?, one(P?), none, Outs?, Cmds).
+gsnp_run(Me, Prev, one(Q), [msg(agent, person, connected(Q1)) | Outs],
+         [msg(person, Me?, invite(gsnp, Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?), Q1? =?= Q? |
+    send_to_user([sg(connected(Q1?))]),
+    gsnp_run(Me?, Prev?, one(Q?), Outs?, Cmds).
+gsnp_run(Me, Prev, Next, [_ | Outs], Cmds?) :-
+    otherwise | gsnp_run(Me?, Prev?, Next?, Outs?, Cmds).
+gsnp_run(_, _, _, [], []).
+
+%% The creator's certification, signed here over the mini-app's source identity, the contract's eighteen act schemas, establish, acquaint, introduce, befriend, unfriend, sign, message, forward, create, join, leave, close, drop, post_own, post, post_forward, deliver and deliver_own (programs/gai/GSNP.glp at GLP 35c4211a), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+procedure certified(Content?, String, String).
+certified(M, CK?, CSig?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [establish, acquaint, introduce, befriend, unfriend, sign, message, forward, create, join, leave, close, drop, post_own, post, post_forward, deliver, deliver_own], grassroots), K?, CSig).
+
+%% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gsg_boot.glp and gsn_boot.glp.
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
+    module(M?) |
+    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
+
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
+    D0? =?= D? |
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).

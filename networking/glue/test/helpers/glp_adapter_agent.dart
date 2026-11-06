@@ -3,14 +3,16 @@
 /// second process of `headless_glp_network_test.dart`.
 ///
 ///   dart run test/helpers/glp_adapter_agent.dart <seed-hex> <root-self.glp>
-///       <program> <goal-label> <known-peer-hex>
+///       <program> <first-act> <known-peer-hex>
 ///
 /// The agent's key pair is the Ed25519 pair of the 32-byte seed, the layer's
 /// and the host's alike.  The layer binds an ephemeral UDP port; the peer's
 /// key is put in the layer's known-peer set through the adapter
 /// (`putKnownPeer`), since the headless layer answers no unsolicited inbound
 /// WAN contact from a key outside it (GNA Section 2.7); then the agent is
-/// booted on `<goal-label>`, and the layer started.
+/// booted on the one initial goal, `agent(ch(_?,_), ch(_?,_))` (IGLP,
+/// Implementation Notes, "Boot"), its person's first act the constant
+/// `<first-act>`, and the layer started.
 ///
 /// Prints, one per line: `READY <port> <key-hex>` once listening; `OUT <line>`
 /// for each element the agent sends its person, as its transcript shows it;
@@ -27,6 +29,7 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
@@ -37,7 +40,7 @@ Future<void> main(List<String> args) async {
   ]);
   final rootSelfGlpPath = args[1];
   final program = args[2];
-  final goalLabel = args[3];
+  final firstAct = args[3];
   final knownPeer = glp.PubKey.fromHex(args[4]);
 
   final sodium = await initHeadlessSodium();
@@ -56,7 +59,6 @@ Future<void> main(List<String> args) async {
     agentId: 'agent',
     program: program,
     rootSelfGlpPath: rootSelfGlpPath,
-    goalLabel: goalLabel,
     keyPair: (
       pub: glp.PubKey.fromList(identity.publicKey),
       priv: Uint8List.fromList(identity.privateKey),
@@ -73,6 +75,7 @@ Future<void> main(List<String> args) async {
   // The agent is bound to its layer before the layer starts, so that no
   // message the layer delivers finds no agent.
   await agent.initialize();
+  await agent.injectUserInput(rt.ConstTerm(firstAct));
   // The host installs its own onMessageReceived; report each delivery too.
   final deliver = network.onMessageReceived!;
   network.onMessageReceived = (sender, payload, messageId, underlay) {

@@ -40,11 +40,25 @@ Probe    ::= w(Done?).
 ProbeMsg ::= msg(Constant, Probe).
 Carried  ::= wrapped(Done?).
 
-procedure agent_init(String?, Stream(_)?, Stream(ProbeMsg)?).
+%% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
+%% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
+%% "a deployed agent is spawned by its application with the same initial
+%% goal"): the person's first act tells the agent its role and the keys of the
+%% peers its person knows (IGLP 670d36a, Boot and Remark "Agent Names": an
+%% agent learns its peers' keys from its person; bob here is a variable
+%% standing for a key).
+PersonSays ::= init(String, List(Key)).
 
-%% Alice: transmit a fresh writer to bob, wrapped in w/1.
-agent_init(alice, _, _) :-
-    send_to_net([msg(bob, w(_))]).
+exported procedure agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(ProbeMsg), Stream(NetMsg(Probe)))?).
+agent(ch([init(Role, Ps) | _], []), ch(N, [])) :- agent_init(Role?, Ps?, N?).
+agent(ch([], []), ch(_, [])).
+
+procedure agent_init(String?, List(Key)?, Stream(ProbeMsg)?).
+
+%% Alice: transmit a fresh writer to bob, the key her person gives her, wrapped
+%% in w/1.
+agent_init(alice, [Bob], _) :-
+    send_to_net([msg(Bob?, w(_))]).
 
 %% Bob: receive w(W) from net; a "producer" process forwards W (writer) onto a
 %% local channel stream; a concurrent "consumer" process pulls it back off in its

@@ -1,0 +1,25 @@
+%% gb_boot.glp --- the app of GB, grassroots bonds, on three smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"), as gc_boot.glp runs GC's app on two: under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting GB's mini-app (programs/apps/gb).  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, with the boot clause and the persons; the smartphone, gb_phone/4, is graph/core's (core/gb_phone.glp), started by core's agent/2 on the person's first act (IGLP 30c04c5, Implementation Notes, "Boot"):
+%%   :artefact programs/apps/gb programs/social/graph/core
+%%   :boot programs/apps/gb_boot.glp programs/social/graph/core
+%%
+%% The persons are those of play_bonds (programs/apps/gb/plays.glp), alice, bob and carol: alice knows bob and carol, who each know alice.  Each trusts the compiler's key, reads the certified artefact gb.glpw from graph/core with load_file/2, installs it with one end of a person channel, and writes the first day on its calendar.  alice connects to bob and to carol, who each consent in the super-app's social graph across the isolates, and once connected invites each to the mini-app, which each has consented to in advance; each handshake opens a root channel between the two executions, the two conversations of the play.  Over them the mini-app runs GB's contract as play_bonds runs it, to the day the play writes on bob's calendar once he holds Alice-coins, the loan taken: each establishes their identity and gets the first day as their date, alice comes to know bob and carol, alice mints Alice-coins and Alice-bonds and bob Bob-bonds, and alice takes the loan.  The other end of each person channel is the mini-app's own scripted person (programs/apps/gb/person.glp), activated from the module value under its role; its screen goes to the person, one line each, and so does what the super-app told the person of each connection in its own social graph, sg(connected(Q)).
+%%
+%% The boot settles, as gc_boot.glp's does: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent"), and after each event the platform's agent takes its own transactions until none holds and then waits for the next (vGLP, Section 5.4, "Triggers").
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, alice, [bob, carol], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, bob, [alice], ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@carol,
+    say(carol, carol, [alice], ch(_?, _))@carol.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, gb_phone/4 (graph/core/gb_phone.glp), with the person's part in the script, their own key and the keys of the peers they know, its ground arguments, the readable names being the atoms that stand for the keys in a simulation ("An agent learns the keys of its peers from its person"; Remark "Agent Names"), and reads nothing.
+Role   ::= alice ; bob ; carol.
+SayAct ::= gb_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [gb_phone(R?, Me?, Ps?)])).

@@ -1,4 +1,4 @@
-%% person.glp --- the child-safe mini-app's scripted person: the instance of the root's second template miniapp_person/4 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and village_person/5, the same person looking also at the phones of its children, for the plays of this directory (plays.glp).  It is the scripted person of the apps (programs/apps/gsnp/person.glp), with the village's scripts, the requests it makes reported, and the step at(K, C).
+%% person.glp --- the child-safe mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and village_person/6, the same person looking also at the phones of its children, for the plays of this directory (plays.glp).  It is the scripted person of the apps (programs/apps/gsnp/person.glp), with the village's scripts, the requests it makes reported, and the step at(K, C).
 %%
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP, Section 5.4, "Triggers"); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes, and the notices refused(P, Q, D), when an approval its person made, by a request or by an answer yes, ends by a refusal, Q the refuser and D the reason, declined or unable (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises and a hello asks, approval(A, Ws, YesNo?), A the attempt or hello(P, N), Ws the contract's question.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks) of the request question open; wait(C) waits until the person's screen shows C; at(K, C) waits until the screen of the phone of K, a child of the person, shows C, the parent looking at the child's phone (CSSN #5, Code_inbox.md, 2026-10-18 21:52 UTC: "await_at(Party, Screen), a parent's scripted person watching its child's screen, stands for the plays"), since a parent's state does not change by the child's acts (CSSN, Section 4); and approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  A request is its person's approval, which stands until the transaction is taken or refused: the agent proposes, and proposes again an attempt that yields, with no further question to its person (vGLP f0acbc1, Section 3.2, "The protocol"; Section 5.4, "Triggers"), so a script makes a request once and waits on what it brings about.  A screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, did(R) where it makes the request R, and gave(K, A) where it answers an approval question.
 %%
@@ -13,6 +13,7 @@
 %%   6. Adult-managed group.  Once frank is friends with dave and carol, he creates study and invites dave and then carol, bob and alice, the child's parents, and the child answering yes (child_join(a?, s?, p? ; n)); frank posts 'Welcome to the study group'; dave, once he has it and eve's post to kids_chat, posts 'Hi from Dave!' to frank; carol, once she has dave's, has delivered eve's post and eve has left kids_chat, posts 'Hi from Carol!' to frank.  Each child answers its invitation to the study group once its own requests in kids_chat are made, and bob answers dave's once dave's post to kids_chat has come back to dave.
 %%   7. Parents ending.  Once dave's phone shows carol's post to the study group, grace ends dave's friendship with carol (GnW:3; child_unfriend(r, s, p?)), and carol's agent drops dave from kids_chat, his leader no longer his friend (GSN:4, drop); once dave's phone shows him out of kids_chat, bob ends dave's membership of the study group (child_leave(a, s, p? ; n)).  Once carol's phone shows dave out of kids_chat, alice closes it, child_close(r, p?, r[listed(*, n)] ; n): her request child_close(carol, alice, n) is a Request of rho_N to carol's machine, the opener of its parts, which completes the list from its listed atoms and proposes the close, naming the request, alice's machine voting yes, unasked (vGLP f0acbc1, Section 3.2, Definitions "Local Specification, Part, Guard Set, Opener, Request" and "Proposing"; Section 5.4, "Act schemas as local specifications").
 %%   8. Coming of age.  Once dave's phone shows him out of the study group, bob, eve's creator, declares eve of age (CSSN:4; of_age(r, p?, r[guarded_by(*)])), which ends bob's and grace's guardianship of eve, grace being the parent of eve bob made; eve, an adult, comes to know frank and befriends him, with no parent among the guards (GKK:2, GSG:1).
+%% Each role's person knows the keys of the other six, in the order alice, bob, grace, frank, carol, dave, eve, as the play gives them; each of fig_alice to fig_dave the keys of the other three, in the order alice, bob, carol, dave, as the screens test gives them; its own key is the first argument.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; at(Key, Cond) ; approval(Asked, YesNo).
@@ -34,16 +35,16 @@ YN    ::= y ; n.
 Ev    ::= d(Draw(Drawn)) ; w(Watch).
 Evs   ::= [Ev | Evs].
 
-exported procedure miniapp_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
-miniapp_person(_, Role, ch(Ds, Gs?), S?) :-
-    script(Role?, Ss),
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
+    script(Role?, Me?, Ps?, Ss),
     draws(Ds?, Es),
     person(Es?, Gs, ps(nosess, [], [], Ss?, []), S).
 
 %% The person, looking also at the screens Ws of its children's phones.
-exported procedure village_person(Key?, Constant?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
-village_person(_, Role, ch(Ds, Gs?), Ws, S?) :-
-    script(Role?, Ss),
+exported procedure village_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Watch)?, Stream(Seen)).
+village_person(Me, Role, Ps, ch(Ds, Gs?), Ws, S?) :-
+    script(Role?, Me?, Ps?, Ss),
     looks(Ds?, Ws?, Es),
     person(Es?, Gs, ps(nosess, [], [], Ss?, []), S).
 
@@ -57,166 +58,178 @@ looks(Ds, [W | Ws], [w(W?) | Es?]) :- looks(Ds?, Ws?, Es).
 looks(Ds, [], Es?) :- draws(Ds?, Es).
 
 %% The scripts, by role.  K is kids_chat, speech(utterance(kids_chat), carol), and S the study group, speech(utterance(study), frank).
-procedure script(Constant?, Steps).
-script(alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
-               own([A2], propose(enter(A2?, carol))), wait(holds(parenting(carol))),
-               own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-               own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
-               own([A5, A6], propose(message(A5?, bob, speech(utterance('Hello Bob'), A6?)))),
-               approval(introduce(bob, alice, frank), yes), wait(holds(knows(frank))),
-               own([A7], propose(befriend(A7?, frank))), wait(holds(friend(frank))),
-               own([A7a], propose(child_acquaint(dave, A7a?, bob))), wait(holds(knows(dave))),
-               own([A7b], propose(child_acquaint(eve, A7b?, bob))), wait(holds(knows(eve))),
-               approval(child_acquaint(carol, bob, alice), yes), at(carol, holds(knows(bob))),
-               own([A8], propose(child_acquaint_2(carol, dave, A8?, bob))), at(carol, holds(knows(dave))),
-               own([A9], propose(child_befriend(carol, dave, A9?, bob))), at(carol, holds(friend(dave))),
-               at(carol, known(eve)), wait(known(eve)),
-               own([A10], propose(child_acquaint_2(carol, eve, A10?, bob))), at(carol, holds(knows(eve))),
-               own([A11], propose(child_befriend(carol, eve, A11?, bob))), at(carol, holds(friend(eve))),
-               own([A12], propose(child_acquaint(carol, frank, A12?))), at(carol, holds(knows(frank))),
-               own([A13], propose(child_adult_befriend(carol, frank, A13?))), at(carol, holds(friend(frank))),
-               approval(child_create(carol, alice, speech(utterance(kids_chat), carol)), yes),
-               approval(child_join_2(carol, dave, alice, bob, speech(utterance(kids_chat), carol)), yes),
-               approval(child_join_2(carol, eve, alice, bob, speech(utterance(kids_chat), carol)), yes),
-               approval(child_join(frank, carol, alice, speech(utterance(study), frank)), yes),
-               at(carol, lacks(listed(dave, speech(utterance(kids_chat), carol)))),
-               own([A14], propose(child_close(carol, A14?, speech(utterance(kids_chat), carol)))),
-               at(carol, holds(closed(speech(utterance(kids_chat), carol))))]).
-script(bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-             own([B2], propose(acquaint(B2?, grace))), wait(holds(knows(grace))),
-             own([B2b], propose(befriend(B2b?, grace))), wait(holds(friend(grace))),
-             own([B3], propose(enter(B3?, dave))), wait(holds(parenting(dave))),
-             own([B3a], propose(make_parent(B3a?, grace, dave))), at(dave, holds(guarded_by(grace))),
-             own([B4], propose(enter(B4?, eve))), wait(holds(parenting(eve))),
-             own([B4a], propose(make_parent(B4a?, grace, eve))), at(eve, holds(guarded_by(grace))),
-             approval(acquaint(alice, bob), yes), wait(holds(knows(alice))),
-             own([B5], propose(acquaint(B5?, frank))), wait(holds(knows(frank))),
-             approval(befriend(alice, bob), yes), wait(holds(friend(alice))),
-             wait(holds(received(speech(utterance('Hello Bob'), alice), alice))),
-             own([B6], propose(befriend(B6?, frank))), wait(holds(friend(frank))),
-             own([B7], propose(introduce(B7?, frank, alice))),
-             own([B8], propose(introduce(B8?, alice, frank))),
-             approval(child_acquaint(dave, alice, bob), yes),
-             approval(child_acquaint(eve, alice, bob), yes),
-             own([B8a], propose(child_acquaint(carol, B8a?, alice))), wait(holds(knows(carol))),
-             approval(child_acquaint_2(carol, dave, alice, bob), yes),
-             approval(child_befriend(carol, dave, alice, bob), yes),
-             at(dave, holds(friend(carol))),
-             own([B9, B10], propose(child_acquaint_2(dave, eve, B9?, B10?))), at(dave, holds(knows(eve))),
-             own([B11, B12], propose(child_befriend(dave, eve, B11?, B12?))), at(dave, holds(friend(eve))),
-             approval(child_acquaint_2(carol, eve, alice, bob), yes),
-             approval(child_befriend(carol, eve, alice, bob), yes),
-             at(dave, holds(friend(eve))), at(eve, holds(friend(carol))),
-             own([B13], propose(child_acquaint(dave, frank, B13?))), at(dave, holds(knows(frank))),
-             own([B14], propose(child_adult_befriend(dave, frank, B14?))),
-             approval(child_join_2(carol, dave, alice, bob, speech(utterance(kids_chat), carol)), yes),
-             approval(child_join_2(carol, eve, alice, bob, speech(utterance(kids_chat), carol)), yes),
-             at(dave, holds(friend(frank))),
-             at(dave, holds(received_in(speech(utterance('Thanks Carol!'), dave), carol, speech(utterance(kids_chat), carol)))),
-             approval(child_join(frank, dave, bob, speech(utterance(study), frank)), yes),
-             at(dave, holds(received_in(speech(utterance('Hi from Carol!'), carol), frank, speech(utterance(study), frank)))),
-             at(dave, lacks(friend(carol))),
-             at(dave, lacks(member(dot(community(carol), speech(utterance(kids_chat), carol))))),
-             own([B15], propose(child_leave(frank, dave, B15?, speech(utterance(study), frank)))), at(dave, lacks(member(dot(community(frank), speech(utterance(study), frank))))),
-             own([B16], propose(of_age(eve, B16?))), wait(lacks(parenting(eve)))]).
-script(grace, [own([G1], propose(establish(G1?))), wait(holds(identity)),
-               approval(acquaint(bob, grace), yes),
-               approval(befriend(bob, grace), yes),
-               approval(make_parent(bob, grace, dave), yes),
-               approval(make_parent(bob, grace, eve), yes),
-               at(dave, holds(received_in(speech(utterance('Hi from Carol!'), carol), frank, speech(utterance(study), frank)))),
-               own([G2], propose(child_unfriend(dave, carol, G2?))), at(dave, lacks(friend(carol))),
-               wait(lacks(parenting(eve)))]).
-script(frank, [own([F1], propose(establish(F1?))), wait(holds(identity)),
-               approval(acquaint(bob, frank), yes),
-               approval(befriend(bob, frank), yes),
-               approval(introduce(bob, frank, alice), yes),
-               approval(befriend(alice, frank), yes),
-               approval(child_acquaint(carol, frank, alice), yes),
-               approval(child_adult_befriend(carol, frank, alice), yes),
-               approval(child_acquaint(dave, frank, bob), yes),
-               approval(child_adult_befriend(dave, frank, bob), yes),
-               wait(holds(friend(dave))), wait(holds(friend(carol))),
-               own([F2, F3], propose(create(F2?, speech(utterance(study), F3?)))),
-               wait(holds(member(dot(community(frank), speech(utterance(study), frank))))),
-               own([F4, F5], propose(child_join(F4?, dave, bob, speech(utterance(study), F5?)))), wait(holds(listed(dave, speech(utterance(study), frank)))),
-               own([F6, F7], propose(child_join(F6?, carol, alice, speech(utterance(study), F7?)))), wait(holds(listed(carol, speech(utterance(study), frank)))),
-               own([F8, F9, F10], propose(post_own(F8?, speech(utterance('Welcome to the study group'), F9?), speech(utterance(study), F10?)))),
-               approval(acquaint(eve, frank), yes),
-               approval(befriend(eve, frank), yes)]).
-script(carol, [approval(enter(alice, carol), yes),
-               approval(child_acquaint(carol, bob, alice), yes),
-               approval(child_acquaint_2(carol, dave, alice, bob), yes),
-               approval(child_befriend(carol, dave, alice, bob), yes),
-               approval(child_acquaint_2(carol, eve, alice, bob), yes),
-               approval(child_befriend(carol, eve, alice, bob), yes),
-               approval(child_acquaint(carol, frank, alice), yes),
-               approval(child_adult_befriend(carol, frank, alice), yes),
-               wait(holds(friend(dave))), wait(holds(friend(eve))), wait(holds(friend(frank))),
-               wait(known(dave)), wait(known(eve)),
-               own([C1, C2], propose(child_create(C1?, alice, speech(utterance(kids_chat), C2?)))),
-               wait(holds(member(dot(community(carol), speech(utterance(kids_chat), carol))))),
-               own([C3, C4], propose(child_join_2(C3?, dave, alice, bob, speech(utterance(kids_chat), C4?)))), wait(holds(listed(dave, speech(utterance(kids_chat), carol)))),
-               own([C5, C6], propose(child_join_2(C5?, eve, alice, bob, speech(utterance(kids_chat), C6?)))), wait(holds(listed(eve, speech(utterance(kids_chat), carol)))),
-               own([C7, C8, C9], propose(post_own(C7?, speech(utterance('Welcome everyone!'), C8?), speech(utterance(kids_chat), C9?)))),
-               approval(child_join(frank, carol, alice, speech(utterance(study), frank)), yes),
-               wait(holds(received_in(speech(utterance('Welcome to the study group'), frank), frank, speech(utterance(study), frank)))),
-               wait(holds(received_in(speech(utterance('Hi from Dave!'), dave), frank, speech(utterance(study), frank)))),
-               wait(holds(delivered(speech(utterance('Hi all!'), eve), dave, speech(utterance(kids_chat), carol)))),
-               wait(holds(delivered(speech(utterance('Hi all!'), eve), eve, speech(utterance(kids_chat), carol)))),
-               wait(lacks(listed(eve, speech(utterance(kids_chat), carol)))),
-               own([C10, C11], propose(post(C10?, frank, speech(utterance('Hi from Carol!'), C11?), speech(utterance(study), frank)))), wait(holds(received_in(speech(utterance('Hi from Carol!'), carol), frank, speech(utterance(study), frank))))]).
-script(dave, [approval(enter(bob, dave), yes),
-              approval(child_acquaint(dave, alice, bob), yes),
-              approval(child_acquaint_2(carol, dave, alice, bob), yes),
-              approval(child_befriend(carol, dave, alice, bob), yes),
-              approval(child_acquaint_2(dave, eve, bob, bob), yes),
-              approval(child_befriend(dave, eve, bob, bob), yes),
-              approval(child_acquaint(dave, frank, bob), yes),
-              approval(child_adult_befriend(dave, frank, bob), yes),
-              approval(child_join_2(carol, dave, alice, bob, speech(utterance(kids_chat), carol)), yes),
-              wait(holds(received_in(speech(utterance('Welcome everyone!'), carol), carol, speech(utterance(kids_chat), carol)))),
-              own([D1, D2], propose(post(D1?, carol, speech(utterance('Thanks Carol!'), D2?), speech(utterance(kids_chat), carol)))), wait(holds(received_in(speech(utterance('Thanks Carol!'), dave), carol, speech(utterance(kids_chat), carol)))),
-              approval(child_join(frank, dave, bob, speech(utterance(study), frank)), yes),
-              wait(holds(received_in(speech(utterance('Welcome to the study group'), frank), frank, speech(utterance(study), frank)))),
-              wait(holds(received_in(speech(utterance('Hi all!'), eve), carol, speech(utterance(kids_chat), carol)))),
-              own([D3, D4], propose(post(D3?, frank, speech(utterance('Hi from Dave!'), D4?), speech(utterance(study), frank)))), wait(holds(received_in(speech(utterance('Hi from Dave!'), dave), frank, speech(utterance(study), frank))))]).
-script(eve, [approval(enter(bob, eve), yes),
-             approval(child_acquaint(eve, alice, bob), yes),
-             approval(child_acquaint_2(dave, eve, bob, bob), yes),
-             approval(child_befriend(dave, eve, bob, bob), yes), wait(holds(friend(dave))),
-             approval(child_acquaint_2(carol, eve, alice, bob), yes),
-             approval(child_befriend(carol, eve, alice, bob), yes),
-             approval(child_join_2(carol, eve, alice, bob, speech(utterance(kids_chat), carol)), yes),
-             wait(holds(received_in(speech(utterance('Thanks Carol!'), dave), carol, speech(utterance(kids_chat), carol)))),
-             own([E1, E2], propose(post(E1?, carol, speech(utterance('Hi all!'), E2?), speech(utterance(kids_chat), carol)))), wait(holds(received_in(speech(utterance('Hi all!'), eve), carol, speech(utterance(kids_chat), carol)))),
-             own([E3], propose(leave(carol, E3?, speech(utterance(kids_chat), carol)))), wait(lacks(member(dot(community(carol), speech(utterance(kids_chat), carol))))),
-             wait(lacks(child)),
-             own([E4], propose(acquaint(E4?, frank))), wait(holds(knows(frank))),
-             own([E5], propose(befriend(E5?, frank))), wait(holds(friend(frank)))]).
-%% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob come to know each other (GKK:2; acquaint(p?, q?)) and befriend (GSG:1), Alice proposing; Alice requests that Carol and Dave come to know each other, naming Bob, and Bob, Carol and Dave approve (CSSN:2; child_acquaint_2(r?, s?, p?, q?)); Alice, looking at Carol's phone until it shows that Carol knows Dave, requests that they befriend, naming Bob, and Bob, Carol and Dave approve (CSSN:3; child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)); and Bob declares Dave of age (CSSN:4; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.  The scenario of CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 3.  A scripted Alice is the village's person, village_person/5, looking at Carol's phone, which the harness hands her (self.glp).
-script(fig_alice, [own([A1], propose(establish(A1?))), wait(holds(identity)),
-                   own([A2], propose(enter(A2?, carol))), wait(holds(parenting(carol))),
-                   own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-                   own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
-                   wait(known(dave)),
-                   own([A5], propose(child_acquaint_2(carol, dave, A5?, bob))), at(carol, holds(knows(dave))),
-                   own([A6], propose(child_befriend(carol, dave, A6?, bob)))]).
-script(fig_bob, [own([B1], propose(establish(B1?))), wait(holds(identity)),
-                 own([B2], propose(enter(B2?, dave))), wait(holds(parenting(dave))),
-                 approval(acquaint(alice, bob), yes),
-                 approval(befriend(alice, bob), yes),
-                 approval(child_acquaint_2(carol, dave, alice, bob), yes),
-                 approval(child_befriend(carol, dave, alice, bob), yes)]).
-script(fig_carol, [approval(enter(alice, carol), yes),
-                   approval(child_acquaint_2(carol, dave, alice, bob), yes),
-                   approval(child_befriend(carol, dave, alice, bob), yes),
-                   wait(holds(friend(dave))), wait(known(dave)),
-                   own([C1], propose(unfriend(C1?, dave)))]).
-script(fig_dave, [approval(enter(bob, dave), yes),
-                  approval(child_acquaint_2(carol, dave, alice, bob), yes),
-                  approval(child_befriend(carol, dave, alice, bob), yes)]).
-script(_, []) :- otherwise | true.
+%% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there.
+procedure script(Constant?, Key?, List(Key)?, Steps).
+script(alice, Me, [Bob, _, Frank, Carol, Dave, Eve], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                                                      own([A2], propose(enter(A2?, Carol?))), wait(holds(parenting(Carol?))),
+                                                      own([A3], propose(acquaint(A3?, Bob?))), wait(holds(knows(Bob?))),
+                                                      own([A4], propose(befriend(A4?, Bob?))), wait(holds(friend(Bob?))),
+                                                      own([A5, A6], propose(message(A5?, Bob?, speech(utterance('Hello Bob'), A6?)))),
+                                                      approval(introduce(Bob?, Me?, Frank?), yes), wait(holds(knows(Frank?))),
+                                                      own([A7], propose(befriend(A7?, Frank?))), wait(holds(friend(Frank?))),
+                                                      own([A7a], propose(child_acquaint(Dave?, A7a?, Bob?))), wait(holds(knows(Dave?))),
+                                                      own([A7b], propose(child_acquaint(Eve?, A7b?, Bob?))), wait(holds(knows(Eve?))),
+                                                      approval(child_acquaint(Carol?, Bob?, Me?), yes), at(Carol?, holds(knows(Bob?))),
+                                                      own([A8], propose(child_acquaint_2(Carol?, Dave?, A8?, Bob?))), at(Carol?, holds(knows(Dave?))),
+                                                      own([A9], propose(child_befriend(Carol?, Dave?, A9?, Bob?))), at(Carol?, holds(friend(Dave?))),
+                                                      at(Carol?, known(Eve?)), wait(known(Eve?)),
+                                                      own([A10], propose(child_acquaint_2(Carol?, Eve?, A10?, Bob?))), at(Carol?, holds(knows(Eve?))),
+                                                      own([A11], propose(child_befriend(Carol?, Eve?, A11?, Bob?))), at(Carol?, holds(friend(Eve?))),
+                                                      own([A12], propose(child_acquaint(Carol?, Frank?, A12?))), at(Carol?, holds(knows(Frank?))),
+                                                      own([A13], propose(child_adult_befriend(Carol?, Frank?, A13?))), at(Carol?, holds(friend(Frank?))),
+                                                      approval(child_create(Carol?, Me?, speech(utterance(kids_chat), Carol?)), yes),
+                                                      approval(child_join_2(Carol?, Dave?, Me?, Bob?, speech(utterance(kids_chat), Carol?)), yes),
+                                                      approval(child_join_2(Carol?, Eve?, Me?, Bob?, speech(utterance(kids_chat), Carol?)), yes),
+                                                      approval(child_join(Frank?, Carol?, Me?, speech(utterance(study), Frank?)), yes),
+                                                      at(Carol?, lacks(listed(Dave?, speech(utterance(kids_chat), Carol?)))),
+                                                      own([A14], propose(child_close(Carol?, A14?, speech(utterance(kids_chat), Carol?)))),
+                                                      at(Carol?, holds(closed(speech(utterance(kids_chat), Carol?))))]) :-
+    ground(Me?), ground(Bob?), ground(Frank?), ground(Carol?), ground(Dave?), ground(Eve?) | true.
+script(bob, Me, [Alice, Grace, Frank, Carol, Dave, Eve], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                                                          own([B2], propose(acquaint(B2?, Grace?))), wait(holds(knows(Grace?))),
+                                                          own([B2b], propose(befriend(B2b?, Grace?))), wait(holds(friend(Grace?))),
+                                                          own([B3], propose(enter(B3?, Dave?))), wait(holds(parenting(Dave?))),
+                                                          own([B3a], propose(make_parent(B3a?, Grace?, Dave?))), at(Dave?, holds(guarded_by(Grace?))),
+                                                          own([B4], propose(enter(B4?, Eve?))), wait(holds(parenting(Eve?))),
+                                                          own([B4a], propose(make_parent(B4a?, Grace?, Eve?))), at(Eve?, holds(guarded_by(Grace?))),
+                                                          approval(acquaint(Alice?, Me?), yes), wait(holds(knows(Alice?))),
+                                                          own([B5], propose(acquaint(B5?, Frank?))), wait(holds(knows(Frank?))),
+                                                          approval(befriend(Alice?, Me?), yes), wait(holds(friend(Alice?))),
+                                                          wait(holds(received(speech(utterance('Hello Bob'), Alice?), Alice?))),
+                                                          own([B6], propose(befriend(B6?, Frank?))), wait(holds(friend(Frank?))),
+                                                          own([B7], propose(introduce(B7?, Frank?, Alice?))),
+                                                          own([B8], propose(introduce(B8?, Alice?, Frank?))),
+                                                          approval(child_acquaint(Dave?, Alice?, Me?), yes),
+                                                          approval(child_acquaint(Eve?, Alice?, Me?), yes),
+                                                          own([B8a], propose(child_acquaint(Carol?, B8a?, Alice?))), wait(holds(knows(Carol?))),
+                                                          approval(child_acquaint_2(Carol?, Dave?, Alice?, Me?), yes),
+                                                          approval(child_befriend(Carol?, Dave?, Alice?, Me?), yes),
+                                                          at(Dave?, holds(friend(Carol?))),
+                                                          own([B9, B10], propose(child_acquaint_2(Dave?, Eve?, B9?, B10?))), at(Dave?, holds(knows(Eve?))),
+                                                          own([B11, B12], propose(child_befriend(Dave?, Eve?, B11?, B12?))), at(Dave?, holds(friend(Eve?))),
+                                                          approval(child_acquaint_2(Carol?, Eve?, Alice?, Me?), yes),
+                                                          approval(child_befriend(Carol?, Eve?, Alice?, Me?), yes),
+                                                          at(Dave?, holds(friend(Eve?))), at(Eve?, holds(friend(Carol?))),
+                                                          own([B13], propose(child_acquaint(Dave?, Frank?, B13?))), at(Dave?, holds(knows(Frank?))),
+                                                          own([B14], propose(child_adult_befriend(Dave?, Frank?, B14?))),
+                                                          approval(child_join_2(Carol?, Dave?, Alice?, Me?, speech(utterance(kids_chat), Carol?)), yes),
+                                                          approval(child_join_2(Carol?, Eve?, Alice?, Me?, speech(utterance(kids_chat), Carol?)), yes),
+                                                          at(Dave?, holds(friend(Frank?))),
+                                                          at(Dave?, holds(received_in(speech(utterance('Thanks Carol!'), Dave?), Carol?, speech(utterance(kids_chat), Carol?)))),
+                                                          approval(child_join(Frank?, Dave?, Me?, speech(utterance(study), Frank?)), yes),
+                                                          at(Dave?, holds(received_in(speech(utterance('Hi from Carol!'), Carol?), Frank?, speech(utterance(study), Frank?)))),
+                                                          at(Dave?, lacks(friend(Carol?))),
+                                                          at(Dave?, lacks(member(dot(community(Carol?), speech(utterance(kids_chat), Carol?))))),
+                                                          own([B15], propose(child_leave(Frank?, Dave?, B15?, speech(utterance(study), Frank?)))), at(Dave?, lacks(member(dot(community(Frank?), speech(utterance(study), Frank?))))),
+                                                          own([B16], propose(of_age(Eve?, B16?))), wait(lacks(parenting(Eve?)))]) :-
+    ground(Me?), ground(Alice?), ground(Grace?), ground(Frank?), ground(Carol?), ground(Dave?), ground(Eve?) | true.
+script(grace, Me, [_, Bob, Frank, Carol, Dave, Eve], [own([G1], propose(establish(G1?))), wait(holds(identity)),
+                                                      approval(acquaint(Bob?, Me?), yes),
+                                                      approval(befriend(Bob?, Me?), yes),
+                                                      approval(make_parent(Bob?, Me?, Dave?), yes),
+                                                      approval(make_parent(Bob?, Me?, Eve?), yes),
+                                                      at(Dave?, holds(received_in(speech(utterance('Hi from Carol!'), Carol?), Frank?, speech(utterance(study), Frank?)))),
+                                                      own([G2], propose(child_unfriend(Dave?, Carol?, G2?))), at(Dave?, lacks(friend(Carol?))),
+                                                      wait(lacks(parenting(Eve?)))]) :-
+    ground(Me?), ground(Bob?), ground(Frank?), ground(Carol?), ground(Dave?), ground(Eve?) | true.
+script(frank, Me, [Alice, Bob, _, Carol, Dave, Eve], [own([F1], propose(establish(F1?))), wait(holds(identity)),
+                                                      approval(acquaint(Bob?, Me?), yes),
+                                                      approval(befriend(Bob?, Me?), yes),
+                                                      approval(introduce(Bob?, Me?, Alice?), yes),
+                                                      approval(befriend(Alice?, Me?), yes),
+                                                      approval(child_acquaint(Carol?, Me?, Alice?), yes),
+                                                      approval(child_adult_befriend(Carol?, Me?, Alice?), yes),
+                                                      approval(child_acquaint(Dave?, Me?, Bob?), yes),
+                                                      approval(child_adult_befriend(Dave?, Me?, Bob?), yes),
+                                                      wait(holds(friend(Dave?))), wait(holds(friend(Carol?))),
+                                                      own([F2, F3], propose(create(F2?, speech(utterance(study), F3?)))),
+                                                      wait(holds(member(dot(community(Me?), speech(utterance(study), Me?))))),
+                                                      own([F4, F5], propose(child_join(F4?, Dave?, Bob?, speech(utterance(study), F5?)))), wait(holds(listed(Dave?, speech(utterance(study), Me?)))),
+                                                      own([F6, F7], propose(child_join(F6?, Carol?, Alice?, speech(utterance(study), F7?)))), wait(holds(listed(Carol?, speech(utterance(study), Me?)))),
+                                                      own([F8, F9, F10], propose(post_own(F8?, speech(utterance('Welcome to the study group'), F9?), speech(utterance(study), F10?)))),
+                                                      approval(acquaint(Eve?, Me?), yes),
+                                                      approval(befriend(Eve?, Me?), yes)]) :-
+    ground(Me?), ground(Alice?), ground(Bob?), ground(Carol?), ground(Dave?), ground(Eve?) | true.
+script(carol, Me, [Alice, Bob, _, Frank, Dave, Eve], [approval(enter(Alice?, Me?), yes),
+                                                      approval(child_acquaint(Me?, Bob?, Alice?), yes),
+                                                      approval(child_acquaint_2(Me?, Dave?, Alice?, Bob?), yes),
+                                                      approval(child_befriend(Me?, Dave?, Alice?, Bob?), yes),
+                                                      approval(child_acquaint_2(Me?, Eve?, Alice?, Bob?), yes),
+                                                      approval(child_befriend(Me?, Eve?, Alice?, Bob?), yes),
+                                                      approval(child_acquaint(Me?, Frank?, Alice?), yes),
+                                                      approval(child_adult_befriend(Me?, Frank?, Alice?), yes),
+                                                      wait(holds(friend(Dave?))), wait(holds(friend(Eve?))), wait(holds(friend(Frank?))),
+                                                      wait(known(Dave?)), wait(known(Eve?)),
+                                                      own([C1, C2], propose(child_create(C1?, Alice?, speech(utterance(kids_chat), C2?)))),
+                                                      wait(holds(member(dot(community(Me?), speech(utterance(kids_chat), Me?))))),
+                                                      own([C3, C4], propose(child_join_2(C3?, Dave?, Alice?, Bob?, speech(utterance(kids_chat), C4?)))), wait(holds(listed(Dave?, speech(utterance(kids_chat), Me?)))),
+                                                      own([C5, C6], propose(child_join_2(C5?, Eve?, Alice?, Bob?, speech(utterance(kids_chat), C6?)))), wait(holds(listed(Eve?, speech(utterance(kids_chat), Me?)))),
+                                                      own([C7, C8, C9], propose(post_own(C7?, speech(utterance('Welcome everyone!'), C8?), speech(utterance(kids_chat), C9?)))),
+                                                      approval(child_join(Frank?, Me?, Alice?, speech(utterance(study), Frank?)), yes),
+                                                      wait(holds(received_in(speech(utterance('Welcome to the study group'), Frank?), Frank?, speech(utterance(study), Frank?)))),
+                                                      wait(holds(received_in(speech(utterance('Hi from Dave!'), Dave?), Frank?, speech(utterance(study), Frank?)))),
+                                                      wait(holds(delivered(speech(utterance('Hi all!'), Eve?), Dave?, speech(utterance(kids_chat), Me?)))),
+                                                      wait(holds(delivered(speech(utterance('Hi all!'), Eve?), Eve?, speech(utterance(kids_chat), Me?)))),
+                                                      wait(lacks(listed(Eve?, speech(utterance(kids_chat), Me?)))),
+                                                      own([C10, C11], propose(post(C10?, Frank?, speech(utterance('Hi from Carol!'), C11?), speech(utterance(study), Frank?)))), wait(holds(received_in(speech(utterance('Hi from Carol!'), Me?), Frank?, speech(utterance(study), Frank?))))]) :-
+    ground(Me?), ground(Alice?), ground(Bob?), ground(Frank?), ground(Dave?), ground(Eve?) | true.
+script(dave, Me, [Alice, Bob, _, Frank, Carol, Eve], [approval(enter(Bob?, Me?), yes),
+                                                      approval(child_acquaint(Me?, Alice?, Bob?), yes),
+                                                      approval(child_acquaint_2(Carol?, Me?, Alice?, Bob?), yes),
+                                                      approval(child_befriend(Carol?, Me?, Alice?, Bob?), yes),
+                                                      approval(child_acquaint_2(Me?, Eve?, Bob?, Bob?), yes),
+                                                      approval(child_befriend(Me?, Eve?, Bob?, Bob?), yes),
+                                                      approval(child_acquaint(Me?, Frank?, Bob?), yes),
+                                                      approval(child_adult_befriend(Me?, Frank?, Bob?), yes),
+                                                      approval(child_join_2(Carol?, Me?, Alice?, Bob?, speech(utterance(kids_chat), Carol?)), yes),
+                                                      wait(holds(received_in(speech(utterance('Welcome everyone!'), Carol?), Carol?, speech(utterance(kids_chat), Carol?)))),
+                                                      own([D1, D2], propose(post(D1?, Carol?, speech(utterance('Thanks Carol!'), D2?), speech(utterance(kids_chat), Carol?)))), wait(holds(received_in(speech(utterance('Thanks Carol!'), Me?), Carol?, speech(utterance(kids_chat), Carol?)))),
+                                                      approval(child_join(Frank?, Me?, Bob?, speech(utterance(study), Frank?)), yes),
+                                                      wait(holds(received_in(speech(utterance('Welcome to the study group'), Frank?), Frank?, speech(utterance(study), Frank?)))),
+                                                      wait(holds(received_in(speech(utterance('Hi all!'), Eve?), Carol?, speech(utterance(kids_chat), Carol?)))),
+                                                      own([D3, D4], propose(post(D3?, Frank?, speech(utterance('Hi from Dave!'), D4?), speech(utterance(study), Frank?)))), wait(holds(received_in(speech(utterance('Hi from Dave!'), Me?), Frank?, speech(utterance(study), Frank?))))]) :-
+    ground(Me?), ground(Alice?), ground(Bob?), ground(Frank?), ground(Carol?), ground(Eve?) | true.
+script(eve, Me, [Alice, Bob, _, Frank, Carol, Dave], [approval(enter(Bob?, Me?), yes),
+                                                      approval(child_acquaint(Me?, Alice?, Bob?), yes),
+                                                      approval(child_acquaint_2(Dave?, Me?, Bob?, Bob?), yes),
+                                                      approval(child_befriend(Dave?, Me?, Bob?, Bob?), yes), wait(holds(friend(Dave?))),
+                                                      approval(child_acquaint_2(Carol?, Me?, Alice?, Bob?), yes),
+                                                      approval(child_befriend(Carol?, Me?, Alice?, Bob?), yes),
+                                                      approval(child_join_2(Carol?, Me?, Alice?, Bob?, speech(utterance(kids_chat), Carol?)), yes),
+                                                      wait(holds(received_in(speech(utterance('Thanks Carol!'), Dave?), Carol?, speech(utterance(kids_chat), Carol?)))),
+                                                      own([E1, E2], propose(post(E1?, Carol?, speech(utterance('Hi all!'), E2?), speech(utterance(kids_chat), Carol?)))), wait(holds(received_in(speech(utterance('Hi all!'), Me?), Carol?, speech(utterance(kids_chat), Carol?)))),
+                                                      own([E3], propose(leave(Carol?, E3?, speech(utterance(kids_chat), Carol?)))), wait(lacks(member(dot(community(Carol?), speech(utterance(kids_chat), Carol?))))),
+                                                      wait(lacks(child)),
+                                                      own([E4], propose(acquaint(E4?, Frank?))), wait(holds(knows(Frank?))),
+                                                      own([E5], propose(befriend(E5?, Frank?))), wait(holds(friend(Frank?)))]) :-
+    ground(Me?), ground(Alice?), ground(Bob?), ground(Frank?), ground(Carol?), ground(Dave?) | true.
+%% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob come to know each other (GKK:2; acquaint(p?, q?)) and befriend (GSG:1), Alice proposing; Alice requests that Carol and Dave come to know each other, naming Bob, and Bob, Carol and Dave approve (CSSN:2; child_acquaint_2(r?, s?, p?, q?)); Alice, looking at Carol's phone until it shows that Carol knows Dave, requests that they befriend, naming Bob, and Bob, Carol and Dave approve (CSSN:3; child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)); and Bob declares Dave of age (CSSN:4; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.  The scenario of CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 3.  A scripted Alice is the village's person, village_person/6, looking at Carol's phone, which the harness hands her (self.glp).
+script(fig_alice, _, [Bob, Carol, Dave], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                                          own([A2], propose(enter(A2?, Carol?))), wait(holds(parenting(Carol?))),
+                                          own([A3], propose(acquaint(A3?, Bob?))), wait(holds(knows(Bob?))),
+                                          own([A4], propose(befriend(A4?, Bob?))), wait(holds(friend(Bob?))),
+                                          wait(known(Dave?)),
+                                          own([A5], propose(child_acquaint_2(Carol?, Dave?, A5?, Bob?))), at(Carol?, holds(knows(Dave?))),
+                                          own([A6], propose(child_befriend(Carol?, Dave?, A6?, Bob?)))]) :-
+    ground(Bob?), ground(Carol?), ground(Dave?) | true.
+script(fig_bob, Me, [Alice, Carol, Dave], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                                           own([B2], propose(enter(B2?, Dave?))), wait(holds(parenting(Dave?))),
+                                           approval(acquaint(Alice?, Me?), yes),
+                                           approval(befriend(Alice?, Me?), yes),
+                                           approval(child_acquaint_2(Carol?, Dave?, Alice?, Me?), yes),
+                                           approval(child_befriend(Carol?, Dave?, Alice?, Me?), yes)]) :-
+    ground(Me?), ground(Alice?), ground(Carol?), ground(Dave?) | true.
+script(fig_carol, Me, [Alice, Bob, Dave], [approval(enter(Alice?, Me?), yes),
+                                           approval(child_acquaint_2(Me?, Dave?, Alice?, Bob?), yes),
+                                           approval(child_befriend(Me?, Dave?, Alice?, Bob?), yes),
+                                           wait(holds(friend(Dave?))), wait(known(Dave?)),
+                                           own([C1], propose(unfriend(C1?, Dave?)))]) :-
+    ground(Me?), ground(Alice?), ground(Bob?), ground(Dave?) | true.
+script(fig_dave, Me, [Alice, Bob, Carol], [approval(enter(Bob?, Me?), yes),
+                                           approval(child_acquaint_2(Carol?, Me?, Alice?, Bob?), yes),
+                                           approval(child_befriend(Carol?, Me?, Alice?, Bob?), yes)]) :-
+    ground(Me?), ground(Alice?), ground(Bob?), ground(Carol?) | true.
+script(_, _, _, []) :- otherwise | true.
 
 %% The person.
 procedure person(Evs?, PersonIn(Drawn), PSt?, Stream(Seen)).

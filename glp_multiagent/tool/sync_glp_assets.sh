@@ -14,7 +14,11 @@
 # drifts from the tree.  Until 2026-10-07 this script and lib/glp_sources.dart
 # each listed the files, and both lacked what the trees had gained since:
 # social/graph/ui/self.glp (GSG, gap abe6081f), grassapp/budget/,
-# social/graph/endapp/, cssn/village/ and the currencies' two programs.
+# social/graph/endapp/, cssn/village/ and the currencies' two programs.  The
+# coins and sovereign source trees went with their one-heap hosts,
+# main_coins.dart and main_sovereign.dart, on 2026-11-03 (GLP #11, Code_inbox
+# 2026-11-03 18:03 UTC): the super-app installs those mini-apps as the
+# artefacts built below.
 #
 # The tree is staged under assets/glp/programs/ as the engine reads it, and
 # the certified mini-apps' artefacts are built into it.  Flutter bundles the
@@ -29,7 +33,7 @@ SRC=../programs
 OUT=assets/glp
 DST=$OUT/programs
 # The trees the app loads: GlpPaths's directories, with the root self.glp.
-TREES="social/graph cssn currencies/coins currencies/sovereign currencies/bonds"
+TREES="social/graph cssn currencies/bonds"
 rm -rf "$OUT"
 mkdir -p "$DST"
 

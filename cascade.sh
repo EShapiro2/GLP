@@ -36,6 +36,15 @@
 #   gai         GAI   GAI         programs/gai              ---
 #   gff         GFF   GFF         programs/gff              programs/apps/gff (GFF's, the app's plays)
 #   agora       AGORA Currencies  programs/currencies/agora ---
+#   gdo         GDO   LBM         programs/lbm              ---
+#   dgc         DGC   Currencies  programs/currencies/sovereign ---
+#   gcc         GCC   Currencies  programs/currencies/gcc   ---
+#   gdc         GDC   Currencies  programs/currencies/gdc   ---
+#   bcc         BCC   Currencies  programs/currencies/bcc   ---
+#   gra         GRA   LBM         programs/lbm              ---
+#   gff_i       GFF-I GFF         programs/gff              ---
+#   gd          GD    GGGA        programs/ggga             ---
+#   gdo_l       GDO-L GFF         programs/gff              ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -122,7 +131,16 @@ case "$NAME" in
     gff)  FILE=GFF;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
     agora) FILE=AGORA; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora" >&2; exit 2 ;;
+    gdo)  FILE=GDO;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
+    dgc)  FILE=DGC;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
+    gcc)  FILE=GCC;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
+    gff_i) FILE=GFF-I; OWNER="programs/gff";               PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
+    gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
+    gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gdo_l gff_i" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
@@ -188,9 +206,10 @@ if [ $? -ne 0 ] || [ ! -s "$OUT/schemas.txt" ]; then
     grep -E '(Error|error|✗)' "$WORK/n.out" | head -10
     exit 1
 fi
-# A head ends "... :", after its constraint where it has one (GSC, Section
-# 3.2; programs/gsc/notation.glp).
-say "schemas.txt: $(grep -cE '^[a-z_0-9]*\(.*\)( \| .*)? :$' "$OUT/schemas.txt") schemas"
+# A schema is the clause tau: H <- B, gamma guarded by G, its first line
+# "tau: H <-", H empty in a schema that adds and deletes nothing, and its body
+# on the next line, indented (GSC, Section 3.2; programs/gsc/notation.glp).
+say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
 printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"

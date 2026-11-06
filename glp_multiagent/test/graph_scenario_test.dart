@@ -1,10 +1,13 @@
 /// Live-UI probe for the social-graph scenario: drives the exact path the app
-/// uses (AgentRuntime, the program statically linked, agent_init/3, the
-/// person's UserCmds injected as ground terms) with the canonical compiled
-/// pair programs/social/graph (agent.glp + ui/mediator.glp) booted by
-/// play_ui_boot.glp.
+/// uses (AgentRuntime, the program statically linked, agent/2, the person's
+/// acts injected as ground terms) with the canonical compiled pair
+/// programs/social/graph (agent.glp + ui/mediator.glp) booted by
+/// play_ui_boot.glp's scenario/4.
 ///
-/// The probe is the person: it reads Bob's UserNotify lines (the inbox cards
+/// The probe is the person: its first act tells the agent its key and the keys
+/// of the two peers the person knows, bob's own and alice's and charlie's
+/// (IGLP, Implementation Notes, "Boot": "An agent learns the keys of its peers
+/// from its person"); it then reads Bob's UserNotify lines (the inbox cards
 /// and the screen) and answers with UserCmds (the taps): accept both friend
 /// offers, receive the actors' messages and Charlie's unfriend, then end the
 /// friendship with Alice.
@@ -42,6 +45,10 @@ void main() {
     // handed a term, never text.
     Future<void> act(String term) =>
         agent.injectUserInput(runtimeTermOf(tryParseTerm(term)!));
+
+    // The person's first act: the agent's key and the keys of the peers the
+    // person knows, the first playing Alice's part and the second Charlie's.
+    await act('told(bob, [alice, charlie])');
 
     // Both actors cold-called Bob: two friend-offer cards.
     String reqOf(String who) {

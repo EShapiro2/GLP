@@ -2,12 +2,14 @@
 %% other end of the mini-app's channel is the app's user, not a script, and
 %% the live person is the central bank.
 %%
-%% sovereign_ui(cb, Grants, NetIn) is the entry the Flutter agent runtime
-%% starts, whose three arguments are (Id, UserIn, NetIn), and the entry the
-%% Dart bridge runs (vGLP, sections/elicitation.tex, the paragraph "The
-%% implementation"): the central bank's grants arrive on the second,
-%% input(Id, P, R) as the bridge returns them from its acts on the mini-app's
-%% constructs, and the other half of its person channel --- the constructs the
+%% sovereign_ui(Cb, [Diana, Frank], Grants, NetIn) is the entry the agent's
+%% initial goal starts on the person's first act, sovereign_ui(Cb, [Diana,
+%% Frank]) (self.glp, agent/2): Cb is the agent's own key, and Diana and Frank
+%% the keys of the peers the person knows, each a variable standing for a key
+%% (IGLP, Remark "Agent Names").  The central bank's grants arrive on the
+%% third argument, input(Id, P, R) as the bridge returns them from its acts on
+%% the mini-app's constructs (vGLP, sections/elicitation.tex, the paragraph
+%% "The implementation"), and the other half of its person channel --- the constructs the
 %% dispatcher draws and withdraws, and the screen --- leaves by
 %% send_to_user/1, one term to a line, which is what the bridge reads.  Its
 %% screen is therefore derived from the interactive types of
@@ -53,30 +55,31 @@
 imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 imported procedure denominated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
-exported procedure sovereign_ui(Key?, PersonIn(Drawn)?, Stream(_)?).
-sovereign_ui(cb, Grants, _) :-
-    market(ch(Grants?, Draws)),
+exported procedure sovereign_ui(Key?, SovereignPeers?, PersonIn(Drawn)?, SovereignNet?).
+sovereign_ui(Cb, [Diana, Frank], Grants, _) :-
+    market(Cb?, Diana?, Frank?, ch(Grants?, Draws)),
     send_to_user(Draws?).
 
 %% The market: the central bank's mini-app on its person channel, with an
 %% empty calendar, and the two scripted peers, over the three conversations.
-procedure market(PersonChannel(Drawn)?).
-market(Ui) :-
-    denominated # sovereign(cb, Ui?, [conversation(diana, ch(HD?, DH)), conversation(frank, ch(HF?, FH))], []),
-    peer(diana, [mint(usd, 10), accept(cb),
-                 mint(usd, 15), swap(frank, usd, diana, now, 15, frank, 28, 18),
-                 await(presented(frank, cb, now)),
-                 swap(cb, usd, cb, now, 9, diana, now, 9)],
-         [conversation(cb, ch(DH?, HD)), conversation(frank, ch(DF?, FD))]),
-    peer(frank, [mint(usd, 18, 28), accept(diana),
-                 pay(diana, usd, 3),
-                 redeem(diana, usd, frank, 28), redeem(diana, usd, frank, 28),
-                 redeem(diana, usd, frank, 28), redeem(diana, usd, frank, 28),
-                 redeem(diana, usd, frank, 28),
+procedure market(Key?, Key?, Key?, PersonChannel(Drawn)?).
+market(Cb, Diana, Frank, Ui) :-
+    ground(Cb?), ground(Diana?), ground(Frank?) |
+    denominated # sovereign(Cb?, Ui?, [conversation(Diana?, ch(HD?, DH)), conversation(Frank?, ch(HF?, FH))], []),
+    peer(Diana?, [mint(usd, 10), accept(Cb?),
+                 mint(usd, 15), swap(Frank?, usd, Diana?, now, 15, Frank?, 28, 18),
+                 await(presented(Frank?, Cb?, now)),
+                 swap(Cb?, usd, Cb?, now, 9, Diana?, now, 9)],
+         [conversation(Cb?, ch(DH?, HD)), conversation(Frank?, ch(DF?, FD))]),
+    peer(Frank?, [mint(usd, 18, 28), accept(Diana?),
+                 pay(Diana?, usd, 3),
+                 redeem(Diana?, usd, Frank?, 28), redeem(Diana?, usd, Frank?, 28),
+                 redeem(Diana?, usd, Frank?, 28), redeem(Diana?, usd, Frank?, 28),
+                 redeem(Diana?, usd, Frank?, 28),
                  advance(28),
-                 redeem(diana, usd, cb, now),
-                 pay(cb, usd, 1)],
-         [conversation(diana, ch(FD?, DF)), conversation(cb, ch(FH?, HF))]).
+                 redeem(Diana?, usd, Cb?, now),
+                 pay(Cb?, usd, 1)],
+         [conversation(Diana?, ch(FD?, DF)), conversation(Cb?, ch(FH?, HF))]).
 
 %% A scripted peer: its mini-app, its person on the other end of the channel
 %% writing its calendar, under no agreement, and its screen tagged and
@@ -99,10 +102,11 @@ log_peer(_, []).
 %% waits for Frank's payment of its coin on its own screen, hands him the
 %% fiat unit outside the contract, and then accepts Diana's reverse swap.
 %% Its screen is logged as the peers' are, so its acts are read off the log
-%% as tagged(cb, ...).
+%% as tagged(cb, ...).  The play gives the three keys by readable names, each
+%% standing for a key (IGLP, Remark "Agent Names").
 exported procedure play_sovereign_ui.
 play_sovereign_ui :-
-    market(ch(Grants?, Draws)),
+    market(cb, diana, frank, ch(Grants?, Draws)),
     denominated # person(cb, Draws?, Grants, _,
                     [mint(usd, 30), swap(diana, usd, cb, now, 10, diana, now, 10),
                      await(received(frank, 1)), fiat(frank, 1), accept(diana)],

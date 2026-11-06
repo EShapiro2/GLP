@@ -13,5 +13,5 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 | File | What it shows |
 |---|---|
 | `gsg-a-bob-asked.png` | Alice, who has met Bob (GKK:2), taps Befriend beside him (GSG:1): Bob's Friends tab, the tab of GSG, with GSG's question "Alice asks to be your friend." and the answers yes and no at its top. |
-| `gsg-b-alice-friends.png` | Alice's Friends tab after the befriend commits: a row for Bob, the atom friend(bob), with the buttons of the acts that name a person beside the proposer, Acquaint, Introduce, Befriend and Unfriend. |
-| `gsg-c-alice-ended.png` | Alice's Contacts tab after Bob ends the friendship (GSG:2): Bob listed, knows(bob), with the same buttons; her Friends tab lists no one. |
+| `gsg-b-alice-friends.png` | Alice's Friends tab after the befriend commits: a row for Bob, the atom friend(bob), with Introduce, GKK's "[Introduce]", and Unfriend, GSG's "[Unfriend]", the acts offered in his row while they are friends (vGLP b4022ce, Section "Widgets"). |
+| `gsg-c-alice-ended.png` | Alice's Contacts tab after Bob ends the friendship (GSG:2): her name; Acquaint, GKK's "[Acquaint]", with its field "person", GKK's "<person>"; and Bob listed, knows(bob), with Introduce, GKK's "[Introduce]", and Befriend, GSG's "[Befriend]"; her Friends tab lists no one. |

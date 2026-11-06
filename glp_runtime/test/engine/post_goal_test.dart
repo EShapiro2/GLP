@@ -15,6 +15,7 @@
 /// [GlpEngine.runGoal], which checked, handed the caller no writer.
 ///
 /// Fixtures: programs/tests/post_goal/.
+@Timeout.none
 library;
 
 import 'dart:io';
@@ -175,14 +176,13 @@ void main() {
   });
 
   group('the host posts through it', () {
-    test('AgentRuntime posts its entry goal checked, the person\'s stream its injector',
+    test('AgentRuntime posts agent(ch(_?,_),ch(_?,_)) checked, the person\'s stream its injector',
         () async {
       final lines = <String>[];
       final agent = AgentRuntime(
         agentId: 'alice',
         program: File('$_dir/echo_agent.glp').absolute.path,
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/3',
       )..onOutput = lines.add;
       await agent.initialize();
       expect(agent.initialized, isTrue);
@@ -205,7 +205,6 @@ void main() {
         agentId: 'alice',
         program: File('$_dir/exposed/agent.glp').absolute.path,
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/3',
       )..onOutput = lines.add;
       await agent.initialize();
       expect(agent.initialized, isTrue);
@@ -213,12 +212,11 @@ void main() {
       expect(lines, contains('< doubled(42)'));
     });
 
-    test('AgentRuntime refuses an entry goal that is not well-typed', () async {
+    test('AgentRuntime refuses an agent goal that is not well-typed', () async {
       final agent = AgentRuntime(
         agentId: 'alice',
         program: File('$_dir/integer_id_agent.glp').absolute.path,
         rootSelfGlpPath: _rootSelf,
-        goalLabel: 'agent_init/2',
       );
       await expectLater(
           agent.initialize(),
@@ -227,25 +225,31 @@ void main() {
       expect(agent.initialized, isFalse);
     });
 
-    test('the isolate boot refuses a spawn goal that is not well-typed',
+    // Every agent's goal is agent(ch(_?,_),ch(_?,_)) (IGLP, Implementation
+    // Notes, "Boot"), posted with the runtime's ends of its channels; an
+    // agent/2 whose declaration does not accept it is refused at the posting.
+    // Until 2026-11-02 the spawn goal was the boot clause's G(p, _), here
+    // agent_init(alice, _) against an Integer id.
+    test('the isolate boot refuses an agent goal that is not well-typed',
         () async {
       final manager = IsolateManager();
       addTearDown(manager.shutdown);
       final config = BootLoader().load('''
 procedure boot.
-boot :- agent_init(alice, _)@alice.
-
-${File('$_dir/integer_id_agent.glp').readAsStringSync()}''');
+boot :- agent(ch(_?, _), ch(_?, _))@alice.
+exported procedure agent(Integer?, Integer?).
+agent(_, _).
+''');
       config.rootSelfGlpPath = _rootSelf;
       await expectLater(
         manager.boot(config),
         throwsA(predicate((e) {
           final s = e.toString();
           return s.contains('failed to initialize') &&
-              s.contains('agent_init/2 refused') &&
+              s.contains('agent/2 refused') &&
               s.contains('not well-typed');
         }, 'the agent reports the refused goal, so boot fails fast')),
       );
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout.none);
   });
 }

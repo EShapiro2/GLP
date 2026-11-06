@@ -103,10 +103,10 @@ Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
 Events(Q, T) ::= [Event(Q, T) | Events(Q, T)].
 Turn ::= ask ; grant ; draw.
 
-procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Channel(Stream(_), Stream(_)), Stream(Spawn(Q, T))).
+procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Channel(Stream(Input(T)), Stream(Draw(T))), Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), fair(ask, Asks?, Inputs?, COut?, Es), serve_1(Es?, COut, POut, [], [], 1, Ss).
 
-procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Stream(_), Stream(Draw(T))?, Stream(Spawn(Q, T))).
+procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Stream(Input(T)), Stream(Draw(T))?, Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :- split_grants(PIn?, Inputs, MIn), merge_draws(ODs?, DOut?, POut), fair(ask, Asks?, Inputs?, COut?, Es), serve_1(Es?, COut, DOut, [], [], 1, Ss).
 
 procedure(T) merge_draws(Stream(Draw(T))?, PersonOut(T)?, PersonOut(T)).
@@ -119,7 +119,7 @@ merge_draws_([X | Xs], Ys, [X? | Zs?]) :- merge_draws(Ys?, Xs?, Zs).
 merge_draws_(Xs, [Y | Ys], [Y? | Zs?]) :- merge_draws_(Xs?, Ys?, Zs).
 merge_draws_(Xs, [], Xs?).
 
-procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(_)).
+procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(Input(T))).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :- split_grants(Gs?, Is, Ms).
 
 procedure(Q, T) fair(Turn?, Stream(Ask(Q))?, Inputs(T)?, Stream(Draw(T))?, Events(Q, T)).
@@ -217,7 +217,7 @@ form_module(_, refused) :- otherwise | true.
 
 Drawn ::= approval_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
 
-exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(_), Stream(Output))).
+exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, Ss), output(thread(menu([form(holdings, [field('Holdings', thread(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('Friend', shown)]), form(minted, [field('Amount', shown)]), form(paid, [field('Friend', shown), field('Amount', shown)]), form(received, [field('From', shown), field('Amount', shown)]), form(returned, [field('From', shown), field('Amount', shown)]), form(swap_done, [field('Friend', shown)]), form(swap_declined, [field('Friend', shown)]), form(swap_failed, [field('From', shown)]), form(declined, [field('From', shown)]), form(swap_same, [field('Friend', shown), field('GiveCoin', shown), field('GiveAmount', shown)]), form(redeemed, [field('Friend', shown), field('WantCoin', shown)]), form(menu, [field('Friend', shown), field('Issuers', thread)]), form(presented, [field('From', shown), field('WantCoin', shown)]), form(unfulfilled, [field('From', shown), field('WantCoin', shown)]), form(refused, [field('Friend', shown)]), form(redeem_same, [field('Friend', shown)]), form(lacking, [field('Issuer', shown), field('Amount', shown)]), form(no_conversation, [field('Friend', shown)])])), MOut?, ODs), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question, Drawn))?).
