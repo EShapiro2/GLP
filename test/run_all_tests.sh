@@ -3861,7 +3861,6 @@ check "CVA compiler: vGLP's merges, merge taking two listed roles of one base, c
 check "CVA compiler: vGLP's coins, GC's mint, swap and pay with coins of one unit, certified by GSC's check/2, compiled to the platform it prints (vGLP f0acbc1)" "coins/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's wardclose, child_close taking a listed role whose base is not a guarding role, its guarded part opened by the child, certified by GSC's check/2, compiled to the platform it prints (vGLP f0acbc1)" "wardclose/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's numbers, act schemas with numbers, a multiplicity, a variable local to a role and a constraint checked by the role whose local variable it names, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "numbers/platform.vglp: as printed" "$cva_print"
-check "CVA compiler: vGLP's spends, a required atom with a multiplicity, deleted with none or with a multiplicity, rest(K, J, A) among the atoms it keeps, as GSC's reader writes it, certified by GSC's check/2, compiled to the platform it prints (vGLP 4aa7e60, Section 5.4, \"Act schemas as local specifications\")" "spends/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's bonds, GB's mint_bond, advance and redeem_bc with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "bonds/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's intros, GKK's acquaintance and introduction with no identity, its introduction at a commit, with peek's reading role and send's and credit's signing conditions (vGLP dd37d2a), certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "intros/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's days, an advance that requires the day, today(d), compiled to the platform it prints (vGLP 1423679)" "days/platform.vglp: as printed" "$cva_print"
@@ -4969,21 +4968,6 @@ check "CVA wardclose: alice's screen: she adopted carol and comes to know dave, 
 check_not "CVA wardclose: alice's person is never asked on the close, and no notice is written: the yield ends no approval" "gave(attempt([a-z]*, [0-9]*, [0-9]*, child_close\|gave(child_close\|refused(\|yielded(" "$cva_wardclose"
 
 # Numbers in act schemas (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it.  A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role; a constraint is local to the role whose local variables it names, and to every role where it names none.  Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3).  vGLP's contract numbers (programs/vglp/cva/contracts.glp): start, refuel(p? ; k) adding k fuel, step(p ; t, t1), unguarded, deleting a fuel and level(t) and adding level(t1), succ(t, t1), and claim(p?, q ; d, t), q's role keeping level(t), t local to it and le(d, t) checked by q's machine.  bob starts, asks for two units of fuel, and his machine steps his level once for each, an unguarded part it opens; alice claims 3 of bob, refused unable by bob's machine, his level 2, and then 2, which commits (numbers/self.glp).
-# A required atom with a multiplicity, deleted with none or with a multiplicity (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom required with a multiplicity k and deleted with none having k copies required and one deleted"; "a multiplicity k deleting or adding k copies"; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 2).
-cva_spends=$("$REPL_RUN" <<HEREDOC
-$CVA/spends/
-:limit 2000000
-play_spends(A, B, N).
-:quit
-HEREDOC
-2>&1)
-check "CVA spends: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/spends" "$cva_spends"
-check_not "CVA spends: no type errors" "Type checking failed" "$cva_spends"
-check "CVA spends: spend(bob, 3) refused, unable, where bob holds 2 tokens" "B = \[.*refused(spend(bob, 3), bob, unable)" "$cva_spends"
-check "CVA spends: spend(bob, 2), bob holding 2, commits, leaving one token fewer, one, and spent" "B = \[.*view(bob, \[spent(2), token, started\], \[\], \[\], \[tab('Tokens', token, counted)\])" "$cva_spends"
-check "CVA spends: burn(bob, 5, 2) refused, unable, where bob holds 4 tokens, k required though j is deleted" "B = \[.*refused(burn(bob, 5, 2), bob, unable)" "$cva_spends"
-check "CVA spends: burn(bob, 4, 3), bob holding 4, commits, leaving one token, 3 deleted" "B = \[.*view(bob, \[burnt(4, 3), spent(2), token, started\], \[\], \[\], \[tab('Tokens', token, counted)\])" "$cva_spends"
-
 cva_numbers_load=$("$REPL_RUN" <<HEREDOC
 $CVA/numbers/
 :quit
@@ -4991,7 +4975,7 @@ HEREDOC
 2>&1)
 check "CVA numbers: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/numbers" "$cva_numbers_load"
 check_not "CVA numbers: no type errors" "Type checking failed" "$cva_numbers_load"
-check "CVA numbers: refuel's request names k, a number field, and claim's names d; step, unguarded, is not proposed by a person" "^befriend(Peer, Peer) start(Peer) refuel(Peer, Integer) claim(Peer, Peer, Integer) $" "$(cva_proposal "$CVA/numbers/platform.vglp")"
+check "CVA numbers: refuel's request names k, a number field, and claim's names d; step, unguarded, is not proposed by a person" "^befriend(Peer, Peer) start(Peer) refuel(Peer, Integer) claim(Peer, Peer, Integer) mint(Peer, Integer) spend(Peer, Integer) burn(Peer, Integer, Integer) $" "$(cva_proposal "$CVA/numbers/platform.vglp")"
 cva_numbers=$("$REPL_RUN" <<HEREDOC
 $CVA/numbers/
 :limit 20000000
@@ -5006,6 +4990,11 @@ check "CVA numbers: ... her screen shows the notice naming bob, unable" "A = \[.
 check "CVA numbers: alice claims 2, bob's machine votes yes, and it commits" "sent(alice, bob, start(attempt(alice, 12, 12, claim(alice, bob, 2), none))), sent(bob, alice, vote(attempt(alice, 12, 12, claim(alice, bob, 2), none), yes)), sent(alice, bob, outcome(attempt(alice, 12, 12, claim(alice, bob, 2), none), commit))" "$cva_numbers"
 check "CVA numbers: ... alice holds claimed(bob, 2)" "A = \[.*view(alice, \[claimed(bob, 2), friend(bob)\], \[bob\], \[\], \[tab('Friends', friend)\]) | " "$cva_numbers"
 check "CVA numbers: ... and bob honoured(alice, 2), his level unchanged" "B = \[.*view(bob, \[honoured(alice, 2), friend(alice), level(2), started\], \[alice\], \[\], \[tab('Friends', friend)\]) | " "$cva_numbers"
+# A required atom with a multiplicity, deleted with none or with a multiplicity (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom required with a multiplicity k and deleted with none having k copies required and one deleted"; "a multiplicity k deleting or adding k copies"; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 2): rest(K, J, A) among the atoms a role keeps, as GSC's reader writes it.
+check "CVA numbers, rest: spend(bob, 3) refused, unable, where bob holds 2 tokens" "B = \[.*refused(spend(bob, 3), bob, unable)" "$cva_numbers"
+check "CVA numbers, rest: spend(bob, 2), bob holding 2, commits, leaving one token and spent(2)" "B = \[.*view(bob, \[spent(2), [^]]*token, [^]]*\], \[alice\], \[\], \[tab('Friends', friend)\])" "$cva_numbers"
+check "CVA numbers, rest: burn(bob, 5, 2) refused, unable, where bob holds 4 tokens, k required though j is deleted" "B = \[.*refused(burn(bob, 5, 2), bob, unable)" "$cva_numbers"
+check "CVA numbers, rest: burn(bob, 4, 3), bob holding 4, commits, 3 deleted, one token left" "B = \[.*view(bob, \[burnt(4, 3), spent(2), [a-z(), 0-9]*token, [a-z(), 0-9]*started\], \[alice\], \[\], \[tab('Friends', friend)\])" "$cva_numbers"
 check_not "CVA numbers: bob's person is never asked on a claim, his role not guarding" "gave(claim\|gave(attempt([a-z]*, [0-9]*, [0-9]*, claim" "$cva_numbers"
 check_not "CVA numbers: no introduction: no role requires an atom naming an agent bound to a variable" "intro(" "$cva_numbers"
 
