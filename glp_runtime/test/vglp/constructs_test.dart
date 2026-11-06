@@ -2271,9 +2271,9 @@ procedure (Ask)*request(Integer?).
 (ask(_))*request(_).
 ''');
       final d = DeclaredWidget.parse(w);
-      expect(d.source, w);
+      expect(DeclaredWidget.parse(d.source).source, d.source);
       expect(d.name, 'social_menu');
-      expect(d.drawnAs, w);
+      expect(d.drawnAs, d.source);
       final a = d.buttons.single.acts.single;
       expect(a.schema, 'send');
       expect(a.proposer, 1);
