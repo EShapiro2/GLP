@@ -4103,12 +4103,12 @@ HEREDOC
 check "CVA compiler, pragmas: the clause's one question put to each guarding role other than the proposer's, the second and the third (trio)" 'ask_of(.q(V2?, .person(V1?), text(" asks.").), q(V3?, .person(V1?), text(" asks.").)., Me?, Ws)' "$cva_words"
 check "CVA compiler, pragmas: a contract with a guarded schema no button names, not compiled (nobutton)" "%% not compiled(nobutton)" "$cva_words"
 check "CVA compiler, pragmas: ... the line saying which schema" "%% a guarded schema has no button in the contract's pragmas:(s)" "$cva_words"
-check "CVA compiler, widget: the request type's declaration a menu of buttons, button(B, Acts), no tab, no row and no item in it (wdg)" '^Request =::= social_menu(.button("Sign", ' "$cva_words"
+check "CVA compiler, widget: the request type's declaration a menu of buttons, button(B, Acts), no tab, no row and no item in it (wdg)" '^Request? =::= social_menu(.button("Sign", ' "$cva_words"
 check "CVA compiler, widget: a button of one act with a field, its type text, and the text of its request form, no atom required (wdg, sign)" 'button("Sign", .act(sign, 1, .., .., .field(2, "text", text)., .., .at(1), say(" signs.").).)' "$cva_words"
 check "CVA compiler, widget: an act whose required atom item(y) binds the way, Binds [3], and a field for a person, its type person (wdg, fwd)" 'button("Forward", .act(fwd, 1, .req(item, .at(3).)., .3., .field(2, "Person", person)., .., ..).)' "$cva_words"
 check "CVA compiler, widget: a button of several acts, swap_a and swap_b in one button, each with its number field (wdg, Swap)" 'button("Swap", .act(swap_a, 1, .., .., .field(2, "amount", number)., .., ..), act(swap_b, 1, .., .., .field(2, "amount", number)., .., ..).)' "$cva_words"
 check "CVA compiler, widget: an act with a required and a forbidden atom at the proposer's role, req(knows, [at(2)]) and forb(linked, [at(2)]), Bob bound by knows, and what the schemas prove, unless(linked, [at(2)]) (wdg, link)" 'button("Link", .act(link, 1, .req(knows, .at(2).), forb(linked, .at(2).), unless(linked, .at(2).)., .2., .., .., ..).)' "$cva_words"
-check_not "CVA compiler, widget: ... no label, item, pick, group, meeting or tab entry left (wdg)" 'label(\|item([0-9]\|pick(\|group(\|meeting(\|act([a-z_]*, "' "$(printf '%s\n' "$cva_words" | grep '^Request =::=')"
+check_not "CVA compiler, widget: ... no label, item, pick, group, meeting or tab entry left (wdg)" 'label(\|item([0-9]\|pick(\|group(\|meeting(\|act([a-z_]*, "' "$(printf '%s\n' "$cva_words" | grep '^Request? =::=')"
 
 # Each constant from the contract is written through term_to_string/2, so that the reader reads it back as the same constant, and each line built by string_concat/2 (vGLP 4aa7e60, "Speech-act schemas"; GLP-Spec ca3c8e5, appendix-guards, "Text"; vGLP #23, Code_inbox.md, 2026-11-06 07:57 UTC): a contract with an agent variable 'Carol' and a predicate 'received_in' prints the platform of its renamed twin, but for those names.
 cva_twin_print() {
@@ -4303,7 +4303,7 @@ for c in social_graph coins currency; do
     check_not "CVA approvals, $c: the request question is bare, of the request type Request? (vGLP 12f629d, Section 5.4, \"The compilation\"): no type Menu" "^Menu \|(menu(" "$cva_agent"
     check "CVA approvals, $c: ... asked by a volitional procedure whose question takes one request" "^procedure (Request?)\*request(Stream(Trigger))\.$" "$cva_agent"
     check "CVA approvals, $c: ... its one clause" "^(R)\*request(Out?) :-$" "$cva_agent"
-    check "CVA approvals, $c: ... the widget declaration of the request type on Request" "^Request =::= social_menu(" "$cva_agent"
+    check "CVA approvals, $c: ... the widget declaration of the request question on its moded type, Request? (vGLP, Section 6.2, Definition \"Widget Declaration\": \"where \$T\$ is a moded type\")" "^Request? =::= social_menu(" "$cva_agent"
     check "CVA approvals, $c: an attempt names its request, or none" "^Attempt   ::= attempt(Peer, Integer, Integer, Class, Names)\.$" "$cva_agent"
     check "CVA approvals, $c: ... a request, the class of a guarded part with no opener the agent requests of itself, one(C), or rho_N, rho(N)" "^Rho       ::= one(Class) ; rho(Proposal)\.$" "$cva_agent"
     check "CVA approvals, $c: a vote no carries its reason, declined or unable, with the atoms the schema requires at the voter that its state lacks and those it forbids that its state has; and unable alone, the reason of the notice of a request dropped where the agent is ready for no part it names (vGLP, Section 5.4, \"The compilation\")" "^Reason    ::= declined ; unable ; unable(List(Atom), List(Atom))\.$" "$cva_agent"
@@ -4337,6 +4337,18 @@ for c in social_graph coins currency; do
     check_not "CVA approvals, $c: no notice yielded, no noticed and no proposing on the request question" "yielded(Class)\|noticed(\|propose_cond(\|initiate_cond(" "$cva_agent"
     check_not "CVA approvals, $c: no session question" "Session" "$cva_agent"
 done
+# The widget of a question is the one the declaration in scope names on its moded type (vGLP, Section 6.2, Definitions "Widget Declaration" and "Default Widget"), so the compiled request question is drawn by social_menu and not by its default form: the platform emitted in a scratch directory beside the platforms, whose types it shares, and the directory removed.
+cva_scratch="$CVA/moded_scratch"
+rm -rf "$cva_scratch"; mkdir -p "$cva_scratch"
+cp "$CVA/social_graph/platform.vglp" "$CVA/social_graph/self.glp" "$cva_scratch/"
+"$REPL_RUN" > /dev/null 2>&1 <<HEREDOC
+:emit $cva_scratch
+:quit
+HEREDOC
+cva_emitted=$(cat "$cva_scratch/platform.glp" 2>/dev/null)
+rm -rf "$cva_scratch"
+check "CVA widget: the request question, of the moded type Request?, drawn by the widget its declaration names" "^construct(Id, request_r(X?), Gs, Ds?) :- .*named('social_menu(" "$cva_emitted"
+check "CVA widget: ... and the approval question, of the moded type Approval, by approval_sentence" "^construct(Id, approval_w(X), Gs, Ds?) :- .*named(approval_sentence, " "$cva_emitted"
 # What the loop above does not check of the currency's platform: the request question asked with the agent's own key, when the agent starts and on reading each answer; a peer becoming known at the second hello of an exchange; and nothing on the output but the views and the notices.
 cva_agent=$(cat "$CVA/currency/platform.vglp")
 check "CVA currency: ... the request question asked bare when the agent starts, the key in the view" "^    request(Rq),$" "$cva_agent"
@@ -4384,7 +4396,7 @@ compile(ung, [schema(u, [], [rs(unguarded, [atom(b, [])], [atom(a, [])], [], [])
 HEREDOC
 2>&1)
 check "CVA request type: a contract with no guarded class, compiled" "%% the canonical CVA platform of the contract(ung)" "$cva_ung"
-check_not "CVA request type: ... no request type and no request question, no part being guarded" "^Request ::=\|^Request =::=\|request(Rq)" "$cva_ung"
+check_not "CVA request type: ... no request type and no request question, no part being guarded" "^Request ::=\|^Request? =::=\|request(Rq)" "$cva_ung"
 check_not "CVA request type: ... no Proposal, and no clause on the request propose([t])" "^Proposal ::=\|step(req(propose\|await_request(propose" "$cva_ung"
 
 cva_sg_menu=$("$REPL_RUN" <<HEREDOC
