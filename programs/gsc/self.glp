@@ -237,14 +237,15 @@ RChunks     ::= [] ; [RName | RChunks].
 % UTC): sas(Name, Names, Vars, Head, Body, Constraint, Guards), the schema
 % tau: H <- B, gamma guarded by G.  Names is every agent variable of the
 % schema in order, written one(Name, Other) where its clause admits the two
-% as one person; Vars is every variable of the schema that no conjunct
+% as one person, a bound variable holding an atom being among them or read as
+% if it stood after them (sas_names); Vars is every variable of the schema that no conjunct
 % quantifies and that is no role, its agent variables, its speech-act
 % variables and its value variables (def:schema, "its variables";
 % def:numbers); Head is its literals, an atom atom(Pred, [Holder|Args]) or
 % not(Atom), and its quantified conjuncts forall(Xs, A, Phi, Lits), the
 % conjunct forall Xs (A and Phi -> Lits) of def:role, Xs bound variables of
-% any kind, an agent variable being among Names, a value variable written
-% num(X) and any other a speech-act variable; Body is its literals and its
+% any kind, an agent variable being among Names or holding an atom, a value
+% variable written num(X) and any other a speech-act variable; Body is its literals and its
 % safe formulas, built from atoms and constraints by and(F, G), or(F, G),
 % not(F), exists(Xs, A, Phi) and forall(Xs, A, Phi, Psi), Psi a list of
 % literals or any safe formula; forall(X, A, Lits) is forall([X], A, true,
@@ -343,7 +344,7 @@ wsch_rnames(qschema(_, _, _, _, _, _, _), []).
 wsch_rnames(qschema(_, Ns, _, _, _, Rs, _, _), R?) :- old_rnames(Ns?, Rs?, R).
 wsch_rnames(sas(_, Ns, _, H, B, Cn, G), R?) :- ground(Ns?), ground(H?), ground(B?), ground(Cn?), ground(G?) |
     sas_ana(H?, B?, Cn?, S),
-    sas_table(Ns?, S?, G?, 1, E),
+    sas_table_of(Ns?, S?, G?, E),
     sas_rnames(E?, R).
 procedure old_rnames(Names?, NRoleSpecs?, NameOfs).
 old_rnames(_, [], []).
@@ -660,6 +661,51 @@ sas_aheld([A|As], N, R?) :- ground(As?), ground(N?) |
 procedure sas_aheld1(Ans?, SAtoms?, RName?, Ans).
 sas_aheld1(yes, _, _, yes).
 sas_aheld1(no, As, N, R?) :- sas_aheld(As?, N?, R).
+
+% The names of a schema: those it writes, then each bound variable holding an
+% atom that it does not, a listed role whatever its head says (def:role; GSC
+% #12, Code_inbox.md 2026-11-06 11:26 UTC: "inferring the bound variables is
+% fine"), in the order of their binders.
+procedure sas_names(Names?, SA?, Names).
+sas_names(Ns, sa(_, _, _, _, _, _, _, _, _, _, AA, Bs, _, _), R?) :-
+    ground(Ns?), ground(AA?), ground(Bs?) |
+    sas_bnds_rev(Bs?, [], Bs1),
+    sas_qvars(Bs1?, [], Xs),
+    sas_prev(Xs?, [], Xs1),
+    sas_names1(Xs1?, AA?, Ns?, Ys),
+    sas_names_app(Ns?, Ys?, R).
+
+procedure sas_table_of(Names?, SA?, PNames?, REnts).
+sas_table_of(Ns, A, G, E?) :- ground(Ns?), ground(A?), ground(G?) |
+    sas_names(Ns?, A?, Ns1),
+    sas_table(Ns1?, A?, G?, 1, E).
+
+procedure sas_bnds_rev(Bnds?, Bnds?, Bnds).
+sas_bnds_rev([], T, T?).
+sas_bnds_rev([B|Bs], T, R?) :- sas_bnds_rev(Bs?, [B?|T?], R).
+
+procedure sas_prev(PNames?, PNames?, PNames).
+sas_prev([], T, T?).
+sas_prev([X|Xs], T, R?) :- sas_prev(Xs?, [X?|T?], R).
+
+procedure sas_names_app(Names?, Names?, Names).
+sas_names_app([], T, T?).
+sas_names_app([N|Ns], T, [N?|R?]) :- sas_names_app(Ns?, T?, R).
+
+% The variables among Xs holding an atom and not among Ns.
+procedure sas_names1(PNames?, SAtoms?, Names?, Names).
+sas_names1([], _, _, []).
+sas_names1([X|Xs], AA, Ns, R?) :- ground(X?), ground(Xs?), ground(AA?), ground(Ns?) |
+    sas_aheld(AA?, X?, H),
+    sas_in_names(X?, Ns?, In),
+    flip(In?, Out),
+    both_yes(H?, Out?, A),
+    sas_names1(Xs?, AA?, Ns?, R1),
+    sas_names2(A?, X?, R1?, R).
+
+procedure sas_names2(Ans?, Constant?, Names?, Names).
+sas_names2(no, _, T, T?).
+sas_names2(yes, X, T, [X?|T?]).
 
 % The roles of a schema, numbered in the order of its names: ar(Name, I) an
 % agent role, lr(Name, I) a listed role, av(Name) an agent variable of the
@@ -1498,7 +1544,7 @@ sas_schema(Nm, Ns, Vs, H, B, Cn, G, S?) :- ground(Ns?), ground(H?), ground(B?), 
 
 procedure sas_schema0(Constant?, Names?, PNames?, SA?, PNames?, NSchema).
 sas_schema0(Nm, Ns, Vs, A, G, S?) :- ground(Ns?), ground(A?), ground(G?) |
-    sas_table(Ns?, A?, G?, 1, E),
+    sas_table_of(Ns?, A?, G?, E),
     sas_schema1(Nm?, Vs?, A?, G?, E?, S).
 
 % What a schema is read against (SCtx).
@@ -1563,9 +1609,8 @@ sas_schema3(yes, _, no, Nm, Vs, _, Cn, Rs, _, _, nschema(Nm?, Vs?, Cn?, Rs?)).
 % literal and no quantified conjunct (def:schema: "H, its head, a finite
 % multiset of literals and quantified conjuncts").  listed_agent_role(Schema,
 % X): X bound and the holder of a literal outside its quantifiers, so an
-% agent role too.  not_in_names(Schema, X): X bound, the holder of an atom,
-% and not among the names.  guard_not_role(Schema, Name): a guard no agent
-% variable of the schema ("G a set of agent variables of it", def:schema).
+% agent role too.  guard_not_role(Schema, Name): a guard no agent variable of
+% the schema ("G a set of agent variables of it", def:schema).
 
 procedure sas_fapp(Faults?, Faults?, Faults).
 sas_fapp([], T, T?).
@@ -1792,26 +1837,24 @@ procedure sas_chfault(Integer?, Constant?, Constant?, Faults?, Faults).
 sas_chfault(I, _, _, T, T?) :- I? > 0 | true.
 sas_chfault(I, Nm, P, T, [condition_holder(Nm?, P?)|T?]) :- I? =:= 0 | true.
 
-procedure sas_qfaults(PNames?, Constant?, SA?, Names?, REnts?, Faults?, Faults).
-sas_qfaults([], _, _, _, _, T, T?).
-sas_qfaults([X|Xs], Nm, S, Ns, E, T, R?) :-
-    ground(X?), ground(Nm?), ground(S?), ground(Ns?), ground(E?) |
-    sas_qfaults(Xs?, Nm?, S?, Ns?, E?, T?, F0),
-    sas_qfault(S?, X?, Nm?, Ns?, E?, F0?, R).
+procedure sas_qfaults(PNames?, Constant?, SA?, REnts?, Faults?, Faults).
+sas_qfaults([], _, _, _, T, T?).
+sas_qfaults([X|Xs], Nm, S, E, T, R?) :-
+    ground(X?), ground(Nm?), ground(S?), ground(E?) |
+    sas_qfaults(Xs?, Nm?, S?, E?, T?, F0),
+    sas_qfault(S?, X?, Nm?, E?, F0?, R).
 
-procedure sas_qfault(SA?, Constant?, Constant?, Names?, REnts?, Faults?, Faults).
-sas_qfault(sa(_, _, _, _, _, _, _, PP, _, _, AA, Bs, _, _), X, Nm, Ns, E, T, R?) :-
-    ground(PP?), ground(AA?), ground(Bs?), ground(X?), ground(Nm?), ground(Ns?), ground(E?) |
+procedure sas_qfault(SA?, Constant?, Constant?, REnts?, Faults?, Faults).
+sas_qfault(sa(_, _, _, _, _, _, _, PP, _, _, AA, Bs, _, _), X, Nm, E, T, R?) :-
+    ground(PP?), ground(AA?), ground(Bs?), ground(X?), ground(Nm?), ground(E?) |
     sas_over(Bs?, X?, Over),
     sas_over(Bs?, X?, Over2),
     sas_aheld(AA?, X?, H),
     sas_cond_ok(H?, Over?, X?, C),
     sas_holds(PP?, X?, A),
-    sas_in_names(X?, Ns?, In),
     sas_chfaults(H?, Over2?, Nm?, E?, T?, F0),
     sas_qf1(C?, Nm?, X?, F0?, F1),
-    sas_qf2(A?, Nm?, X?, F1?, F2),
-    sas_qf3(H?, In?, Nm?, X?, F2?, R).
+    sas_qf2(A?, Nm?, X?, F1?, R).
 
 procedure sas_qf1(Ans?, Constant?, Constant?, Faults?, Faults).
 sas_qf1(yes, _, _, T, T?).
@@ -1820,11 +1863,6 @@ sas_qf1(no, Nm, X, T, [quantified_condition(Nm?, X?)|T?]).
 procedure sas_qf2(Ans?, Constant?, Constant?, Faults?, Faults).
 sas_qf2(no, _, _, T, T?).
 sas_qf2(yes, Nm, X, T, [listed_agent_role(Nm?, X?)|T?]).
-
-procedure sas_qf3(Ans?, Ans?, Constant?, Constant?, Faults?, Faults).
-sas_qf3(no, _, _, _, T, T?).
-sas_qf3(yes, yes, _, _, T, T?).
-sas_qf3(yes, no, Nm, X, T, [not_in_names(Nm?, X?)|T?]).
 
 % A formula of the head that is no literal and no quantified conjunct.
 procedure sas_hffaults(SLits?, Constant?, Faults?, Faults).
@@ -1854,7 +1892,7 @@ sas_faults(Nm, Ns, Vs, H, B, Cn, G, R?) :- ground(Ns?), ground(H?), ground(B?), 
 
 procedure sas_faults0(Constant?, Names?, PNames?, SA?, PNames?, Faults).
 sas_faults0(Nm, Ns, Vs, A, G, R?) :- ground(Ns?), ground(A?), ground(G?), ground(Vs?) |
-    sas_table(Ns?, A?, G?, 1, E),
+    sas_table_of(Ns?, A?, G?, E),
     sas_faults1(Nm?, Ns?, Vs?, A?, G?, E?, R).
 
 procedure sas_faults1(Constant?, Names?, PNames?, SA?, PNames?, REnts?, Faults).
@@ -1873,7 +1911,7 @@ sas_faults2(Nm, Ns, sa(HP, HQ, HF, BP, BQ, BF, Cn, PP, AQ, CQ, AA, Bs, Cs, Ks),
     sas_qvars(Bs?, [], Xs2),
     sas_gfaults(G?, Nm?, E?, [], F6),
     sas_hffaults(HF?, Nm?, F6?, F5),
-    sas_qfaults(Xs?, Nm?, sa(HP?, HQ?, HF?, BP?, BQ?, BF?, Cn?, PP?, AQ?, CQ?, AA?, Bs?, Cs?, Ks?), Ns?, E?, F5?, F4),
+    sas_qfaults(Xs?, Nm?, sa(HP?, HQ?, HF?, BP?, BQ?, BF?, Cn?, PP?, AQ?, CQ?, AA?, Bs?, Cs?, Ks?), E?, F5?, F4),
     sas_del_faults(E?, Nm?, sctx(HP1?, HQ1?, BP1?, BQ1?, G?, E?, Vs?, IC?, Vq?, Bs1?, Smp?), F4?, F3),
     sas_cons_vf(Cn?, E?, Vs?, Nm?, F3?, F2c),
     sas_leaves_vf(CQ?, E?, Vq?, Nm?, F2c?, F2b),
@@ -1954,13 +1992,15 @@ Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; envir
 SgnCause ::= not_added ; not_required ; not_agent_role.
 % What def:schema requires of the form of a schema, and a schema formed
 % otherwise violates: no role adding or deleting an atom (no_role_changes).
-% What def:volition requires of a reading role (GSC 0380a8a), a role that is
-% not guarding and adds and deletes nothing: an edge to a guarding role from
-% an atom that guarding role requires; a reading role with none is a fault
+% What def:volition requires of a reading role (GSC 0380a8a, 5e014fd), a role
+% that is not guarding and adds and deletes nothing: an edge to a guarding role
+% from an atom that guarding role requires, or to be a listed role whose base
+% is a guarding role; a reading role with neither is a fault
 % changes_nothing(Schema, Role) of volition, in a verdict not_grassroots.
 % What def:volition requires of a schema with no guarding role and a reading
-% role (GSC c100cdc): a signature atom (def:signature), so one with none is a
-% fault no_signature_atom(Schema), and only agent roles as reading roles, so
+% role (GSC c100cdc, 5e014fd): signature atoms (def:signature), so one with
+% none is a fault no_signature_atom(Schema), and only agent roles as reading
+% roles, so
 % each listed reading role is a fault listed_reading(Schema, Role), in a
 % verdict not_grassroots.  What def:schema requires of a schema's head, its
 % variables distinct agent, speech-act and value variables: an entry of the
@@ -2020,12 +2060,16 @@ Fault ::= no_introductory_act
         ; head_formula(Constant)
         ; quantified_condition(Constant, Constant)
         ; listed_agent_role(Constant, Constant)
-        ; not_in_names(Constant, Constant)
         ; guard_not_role(Constant, Constant).
 Faults  ::= [] ; [Fault | Faults].
-% What def:signature is decided against (volition.glp): sig(Is), the indices
-% of a schema's agent roles.
-SigCtx  ::= sig(Ints).
+% What def:signature is decided against (volition.glp): sig(Is, Cj, OA, OD,
+% TA, TD), the indices of a schema's agent roles, its conjuncts, the
+% predicates of the atoms it adds and of those it deletes or clears, and the
+% same of the other schemas with no guarding role.  sb(Some, Bs): whether some
+% atom at a role is the only one of its predicate, and the bases of the
+% arguments of those that are.
+SigCtx  ::= sig(Ints, Conjuncts, Preds, Preds, Preds, Preds).
+SigBases ::= sb(Ans, Bases).
 
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
 % guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of
@@ -3834,7 +3878,7 @@ procedure as_read_s(WSchema?, WSchema).
 as_read_s(sas(Nm, Ns, Vs, H, B, Cn, G), S?) :-
     ground(Nm?), ground(Ns?), ground(Vs?), ground(H?), ground(B?), ground(Cn?), ground(G?) |
     sas_ana(H?, B?, Cn?, A),
-    sas_table(Ns?, A?, G?, 1, E),
+    sas_table_of(Ns?, A?, G?, E),
     sas_schema(Nm?, Ns?, Vs?, H?, B?, Cn?, G?, S0),
     as_read_n(S0?, E?, S).
 as_read_s(S, S?) :- otherwise | true.

@@ -1302,10 +1302,6 @@ malformed_lines([listed_agent_role(S, X)|Fs], T,
                 [S?, 'binds', X?, 'and has it hold a literal outside its quantifiers;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([not_in_names(S, X)|Fs], T,
-                [S?, 'binds', X?, 'which holds an atom and is not among its names;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
 malformed_lines([guard_not_role(S, G)|Fs], T,
                 [S?, 'is guarded by', G?, 'which is no agent variable of it;'|R?]) :-
     ground(Fs?), ground(T?) |

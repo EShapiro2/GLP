@@ -14,8 +14,9 @@
 % speech-act variable that is an argument of the atom or occurs in a name
 % term among its arguments.  The atoms psi are those required at an agent
 % role, =(i) u -(i), a cleared atom requiring none (def:schema, GSC 327e035),
-% and, of a conditional atom, the anchor of its conjunct; a condition of the
-% body is read by none of this (def:schema, GSC c8c5ead).
+% and, of a conditional atom or a listed role's, the anchor of its conjunct
+% (def:schema, GSC 5e014fd); a condition of the body is read by none of this
+% (def:schema, GSC c8c5ead).
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -229,21 +230,48 @@ prov_plus([atom(_, _)|Xs], Pd, RB, Cx, R?) :-
     otherwise, ground(Xs?), ground(Pd?), ground(RB?), ground(Cx?) |
     prov_plus(Xs?, Pd?, RB?, Cx?, R).
 
-procedure prov_roles1(Ans?, RoleSpecs?, Integer?, Constant?, PCtx?, Ans).
-prov_roles1(no, _, _, _, _, no).
-prov_roles1(yes, Rs, I, Pd, Cx, R?) :-
-    ground(Rs?), integer(I?), ground(Pd?), ground(Cx?) |
+procedure prov_roles1(Ans?, RoleSpecs?, Integer?, Constant?, PCtx?, Preds?, Ans).
+prov_roles1(no, _, _, _, _, _, no).
+prov_roles1(yes, Rs, I, Pd, Cx, E, R?) :-
+    ground(Rs?), integer(I?), ground(Pd?), ground(Cx?), ground(E?) |
     I1 := I? + 1,
-    prov_roles(Rs?, I1?, Pd?, Cx?, R).
+    prov_roles(Rs?, I1?, Pd?, Cx?, E?, R).
 
-procedure prov_roles(RoleSpecs?, Integer?, Constant?, PCtx?, Ans).
-prov_roles([], _, _, _, yes).
-prov_roles([RS|Rs], I, Pd, Cx, R?) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(Pd?), ground(Cx?) |
+procedure prov_roles(RoleSpecs?, Integer?, Constant?, PCtx?, Preds?, Ans).
+prov_roles([], _, _, _, _, yes).
+prov_roles([RS|Rs], I, Pd, Cx, E, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Pd?), ground(Cx?), ground(E?) |
     rs_add(RS?, P),
     role_base(RS?, I?, RB),
-    prov_plus(P?, Pd?, RB?, Cx?, A),
-    prov_roles1(A?, Rs?, I?, Pd?, Cx?, R).
+    role_cx(RS?, I?, Cx?, E?, Cx1),
+    prov_plus(P?, Pd?, RB?, Cx1?, A),
+    prov_roles1(A?, Rs?, I?, Pd?, Cx?, E?, R).
+
+% What the atoms of a role are read against: an agent role's, the schema's; a
+% listed role's, with its anchor, "the anchor of the conjunct counts as an atom
+% its holder requires" (def:schema, GSC 5e014fd).  Every quantifier binding a
+% listed role has one anchor (def:role), which its kind holds.
+procedure role_cx(RoleSpec?, Integer?, PCtx?, Preds?, PCtx).
+role_cx(rs(_, _, _, _, _), _, Cx, _, Cx?).
+role_cx(crs(listed(_, Rho, As), _, _, _, _, _), I, Cx, E, R?) :-
+    ground(Rho?), ground(As?), integer(I?), ground(Cx?), ground(E?) |
+    anchored_cx(atom(Rho?, [role(I?)|As?]), Cx?, E?, R).
+role_cx(crs(qlisted(_, Rho, As, _), _, _, _, _, _), _, Cx, E, R?) :-
+    ground(Rho?), ground(As?), ground(Cx?), ground(E?) |
+    anchored_cx(atom(Rho?, As?), Cx?, E?, R).
+
+% The context with the atom A among those required: at an agent role, and of
+% Phi_E where its predicate is in E.
+procedure anchored_cx(Atom?, PCtx?, Preds?, PCtx).
+anchored_cx(A, pctx(RBs, QBs, QSV, SV), E, pctx(RBs?, QB1?, QSV1?, SV1?)) :-
+    ground(A?), ground(RBs?), ground(QBs?), ground(QSV?), ground(SV?), ground(E?) |
+    phi_bases([A?], E?, QBs?, QB1),
+    phi_args([A?], E?, [], As1),
+    filter_svars(As1?, S1),
+    args_app(S1?, QSV?, QSV1),
+    atoms_args([A?], [], As2),
+    filter_svars(As2?, S2),
+    args_app(S2?, SV?, SV1).
 
 procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans).
 prov_pred1(no, _, _, _, no).
@@ -277,7 +305,7 @@ prov_pred_roles(Rs, Ws, Cj, Pd, Ss, E, R?) :-
 procedure prov_pred_cx(PCtx?, RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
 prov_pred_cx(Cx, Rs, Cj, Pd, Ss, E, R?) :-
     ground(Cx?), ground(Rs?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
-    prov_roles(Rs?, 1, Pd?, Cx?, A1),
+    prov_roles(Rs?, 1, Pd?, Cx?, E?, A1),
     prov_conjs(Cj?, Pd?, Cx?, E?, A2),
     both_yes(A1?, A2?, A),
     prov_pred1(A?, Pd?, Ss?, E?, R).
@@ -287,18 +315,11 @@ prov_pred_cx(Cx, Rs, Cj, Pd, Ss, E, R?) :-
 % atom of = at its holder" (def:grounded).
 procedure prov_conjs(Conjuncts?, Constant?, PCtx?, Preds?, Ans).
 prov_conjs([], _, _, _, yes).
-prov_conjs([conjunct(_, _, A, _, P, _, _)|Cs], Pd, pctx(RBs, QBs, QSV, SV), E, R?) :-
-    ground(A?), ground(P?), ground(Cs?), ground(Pd?), ground(RBs?), ground(QBs?),
-    ground(QSV?), ground(SV?), ground(E?) |
-    phi_bases([A?], E?, QBs?, QB1),
-    phi_args([A?], E?, [], As1),
-    filter_svars(As1?, S1),
-    args_app(S1?, QSV?, QSV1),
-    atoms_args([A?], [], As2),
-    filter_svars(As2?, S2),
-    args_app(S2?, SV?, SV1),
-    prov_hms(P?, Pd?, pctx(RBs?, QB1?, QSV1?, SV1?), A1),
-    prov_conjs1(A1?, Cs?, Pd?, pctx(RBs?, QBs?, QSV?, SV?), E?, R).
+prov_conjs([conjunct(_, _, A, _, P, _, _)|Cs], Pd, Cx, E, R?) :-
+    ground(A?), ground(P?), ground(Cs?), ground(Pd?), ground(Cx?), ground(E?) |
+    anchored_cx(A?, Cx?, E?, Cx1),
+    prov_hms(P?, Pd?, Cx1?, A1),
+    prov_conjs1(A1?, Cs?, Pd?, Cx?, E?, R).
 
 procedure prov_conjs1(Ans?, Conjuncts?, Constant?, PCtx?, Preds?, Ans).
 prov_conjs1(no, _, _, _, _, no).
