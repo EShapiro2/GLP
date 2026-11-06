@@ -7,7 +7,8 @@
 % Schemas: GDO-LB.glp beside this file, GKK's and GSG's five and point_friend, point_transitive and unpoint, guarded by Alice as GDO's; it uses constructs GRH asked GSC for, which its header lists.
 % Pragmas: GDO's, GDO-LB having GDO's acts.
 GDO-LB: Location-Based GDO
-Alice, Bob and Carol are persons.  GDO-LB restricts GDO.  A person has a location.  d > 0 is an integer and e > 0.
+GDO-LB restricts GDO.
+Alice, Bob and Carol are persons.  A person has a location.  d > 0 is an integer and e > 0.
 1. ■ Pointing to friend.  GDO:1, only if either Alice points to less than d persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person pointed to by Alice.
 2. ■ Transitive pointing.  GDO:2, only if Carol is closer to Alice by more than e than some person pointed to by Alice.
 3. ■ Ceasing to point.  GDO:3, only if Alice points to more than d persons, with Bob furthest from Alice among them.
