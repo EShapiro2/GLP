@@ -87,7 +87,6 @@ contract_named(gff_i,
 %% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:1), and Alice holds it as an item of the feed Alice names.
     schema(post, ['Alice'], [svar(x)],
        [rs(guarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [atom(item, [svar(x), role(1)])])]),
-%% GFF:2, Delivery.  Alice, who points to Bob with the feed l, receives from Bob an item x of l that Bob holds; no guarding role, Bob a reading role, received(x, l, Bob) the signature atom (GSC 859a007, Definition Signature atom).
 %% GFF-I:2 restricts GFF:2: Bob, the first role, requires that Bob knows Alice, so Bob's state names Alice, the feed l and the item x.
     schema(deliver, ['Bob', 'Alice'], [pvar(l), svar(x)],
        [rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(item, [svar(x), pvar(l)])], []),
