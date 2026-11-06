@@ -1126,10 +1126,10 @@ cons_cd(or(A, B), E, P, R?) :- ground(A?), ground(B?), ground(E?), ground(P?) |
 cons_cd(not(A), E, P, R?) :- flip(P?, N), cons_cd(A?, E?, N?, R).
 cons_cd(implies(A, B), E, P, R?) :- cons_cd(or(not(A?), B?), E?, P?, R).
 cons_cd(eq(X, Y), E, P, R?) :- ground(X?), ground(Y?), ground(E?), ground(P?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     cd_eq(A?, P?, X?, Y?, E?, R).
 cons_cd(ne(X, Y), E, P, R?) :- ground(X?), ground(Y?), ground(E?), ground(P?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     flip(P?, N),
     cd_eq(A?, N?, X?, Y?, E?, R).
 cons_cd(le(X, Y), E, yes, R?) :- cd_cmp(le, X?, Y?, E?, R).
@@ -1151,7 +1151,8 @@ procedure cd_join(Ans?, Cd?, Cd?, Cd).
 cd_join(yes, cd(D1, W1), cd(D2, W2), cd(D?, W?)) :- dnf_and(D1?, D2?, D), both_yes(W1?, W2?, W).
 cd_join(no, cd(D1, W1), cd(D2, W2), cd(D?, W?)) :- dnf_app(D1?, D2?, D), both_yes(W1?, W2?, W).
 
-% X = Y, or its negation, the first argument yes where the two are agents.
+% X = Y, or its negation, the first argument yes where the two are over no
+% value (name_eq), taken as true as a signing condition is.
 procedure cd_eq(Ans?, Ans?, Expr?, Expr?, VEnv?, Cd).
 cd_eq(yes, _, _, _, _, cd([[]], yes)).
 cd_eq(no, yes, X, Y, E, R?) :- cd_cmp(eq, X?, Y?, E?, R).
