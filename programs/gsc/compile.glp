@@ -510,7 +510,12 @@ latex_expr(fn(N, Xs), T, ['\\mathrm{', N?, '}('|R?]) :- ground(Xs?), ground(T?) 
 latex_expr(cardinality(Xs, H, A, F), T, ['\\mathrm{cardinality}('|R?]) :-
     ground(Xs?), ground(H?), ground(A?), ground(F?), ground(T?) |
     latex_anchored(H?, A?, F?, [')'|T?], R1),
-    latex_args(Xs?, [','|R1?], R).
+    latex_xs_sep(Xs?, R1?, R).
+latex_expr(sum(Xs, H, A, F, U), T, ['\\mathrm{sum}('|R?]) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(U?), ground(T?) |
+    latex_expr(U?, [')'|T?], R2),
+    latex_anchored(H?, A?, F?, [','|R2?], R1),
+    latex_xs_sep(Xs?, R1?, R).
 latex_expr(num(X), T, R?) :- latex_arg(num(X?), T?, R).
 latex_expr(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_expr(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
@@ -529,6 +534,7 @@ latex_operand(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
     latex_expr(mul(A?, B?), T?, R).
 latex_operand(fn(N, Xs), T, R?) :- latex_expr(fn(N?, Xs?), T?, R).
 latex_operand(cardinality(Xs, H, A, F), T, R?) :- latex_expr(cardinality(Xs?, H?, A?, F?), T?, R).
+latex_operand(sum(Xs, H, A, F, U), T, R?) :- latex_expr(sum(Xs?, H?, A?, F?, U?), T?, R).
 latex_operand(num(X), T, R?) :- latex_arg(num(X?), T?, R).
 latex_operand(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_operand(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
@@ -551,6 +557,12 @@ procedure latex_held(Arg?, Mult?, Chunks?, Chunks).
 latex_held(H, atom(P, As), T, R?) :- latex_atom(atom(P?, [H?|As?]), T?, R).
 latex_held(H, times(K, atom(P, As)), T, R?) :- latex_mult(times(K?, atom(P?, [H?|As?])), T?, R).
 latex_held(_, rest(K, J, A), T, R?) :- latex_mult(rest(K?, J?, A?), T?, R).
+
+% The variables of a cardinality or a sum, the comma after them left out
+% where it binds none.
+procedure latex_xs_sep(Args?, Chunks?, Chunks).
+latex_xs_sep([], T, T?).
+latex_xs_sep([X|Xs], T, R?) :- latex_args([X?|Xs?], [','|T?], R).
 
 % A and phi, phi left out where it is true.
 procedure latex_anchored(Arg?, Atom?, Form?, Chunks?, Chunks).

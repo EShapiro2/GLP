@@ -96,9 +96,15 @@ Mults      ::= [] ; [Mult | Mults].
 % succ(X, Y), Y = X + 1, as Currencies' GB.glp writes it; and rel(Name,
 % Args), a relation a type provides.  An expression is a value argument,
 % plus(X, Y), minus(X, Y), mul(X, Y), fn(Name, Args), a function a type
-% provides, or cardinality(Xs, H, A, Phi), "the number of instances of its
-% anchor A at which phi holds", A held by H.  eq and ne also compare agent
-% variables, u = v and u != v (def:numbers).  "No condition reading a
+% provides, cardinality(Xs, H, A, Phi), "the number of instances of its
+% anchor A at which phi holds, each counted as many times as its
+% multiplicity", A held by H, or sum(Xs, H, A, Phi, U), "the sum of a numeric
+% term u over the instances of its anchor A at which phi holds, each taken
+% as many times as its multiplicity" (def:numbers, GSC 67a7da0): the domain
+% is multisets, so k copies of an atom count k, and Xs may be empty, the one
+% instance of A then having the multiplicity of A (def:extent).  A term with
+% an agent in it is no numeric term (check.glp).  eq and ne also compare
+% agent variables, u = v and u != v (def:numbers).  "No condition reading a
 % constraint" (the appendix, after def:binding-numbers), the checker reads
 % one only where def:numbers has a schema's constraint imply a sum of deleted
 % multiplicities (sas_implies_le).
@@ -112,7 +118,8 @@ Constraint ::= true ; and(Constraint, Constraint)
              ; signed(Arg, Arg) ; unsigned(Arg, Arg).
 Constraints ::= [] ; [Constraint | Constraints].
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
-             ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form).
+             ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
+             ; sum(Args, Arg, Atom, Form, Expr).
 Exprs      ::= [] ; [Expr | Exprs].
 % A safe formula (def:role, GSC c8c5ead), built from atoms and constraints by
 % the connectives and the anchored quantifiers: fa(H, M) the atom or
@@ -251,8 +258,9 @@ RChunks     ::= [] ; [RName | RChunks].
 % literals or any safe formula; forall(X, A, Lits) is forall([X], A, true,
 % Lits); a multiplicity is times(K, Atom) (def:numbers), in not(...) of Body
 % that many copies forbidden; Constraint is gamma, true where the schema has
-% none, in which cardinality(Xs, A, Phi) is a whole number; Guards the names
-% of its guards.  An argument is a name
+% none, in which cardinality(Xs, A, Phi) is a whole number and sum(Xs, A,
+% Phi, U) a value of a numeric type, U a numeric term under the binders Xs;
+% Guards the names of its guards.  An argument is a name
 % or a variable of Vars, a constant either way, own(Name) for <Name>,
 % ext(Sigma, Y) for Sigma.y, the wildcard the constant '_' and
 % ext(Sigma, '_') for Sigma._, a value num(X), and a signed term sgn(Y,
@@ -268,7 +276,8 @@ SMult  ::= SAtom ; times(SArg, SAtom).
 SQLit  ::= SMult ; not(SMult).
 SQLits ::= [] ; [SQLit | SQLits].
 SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-         ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint).
+         ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
+         ; sum(PNames, SAtom, SConstraint, SExpr).
 SExprs ::= [] ; [SExpr | SExprs].
 % A safe formula and a constraint are one type, a constraint being a safe
 % formula with no atom and no quantifier.
@@ -477,7 +486,7 @@ sas_pure([], no).
 sas_pure([_|_], no).
 sas_pure(_, yes) :- otherwise | true.
 
-% The binders of a schema, bnd(Xs, A) for a quantifier or a cardinality; and
+% The binders of a schema, bnd(Xs, A) for a quantifier, a cardinality or a sum; and
 % what a walk over its literals and formulas collects: its atoms, anchors
 % among them, its binders, its leaves that are constraints, and its
 % multiplicities.
@@ -541,6 +550,9 @@ sas_walk_x(mul(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
 sas_walk_x(fn(_, Xs), W, R?) :- sas_walk_xs(Xs?, W?, R).
 sas_walk_x(cardinality(Xs, At, Phi), sw(A, B, C, K), R?) :- ground(Xs?), ground(At?) |
     sas_walk(Phi?, sw([At?|A?], [bnd(Xs?, At?)|B?], C?, K?), R).
+sas_walk_x(sum(Xs, At, Phi, U), sw(A, B, C, K), R?) :- ground(Xs?), ground(At?) |
+    sas_walk(Phi?, sw([At?|A?], [bnd(Xs?, At?)|B?], C?, K?), W1),
+    sas_walk_x(U?, W1?, R).
 sas_walk_x(_, W, W?) :- otherwise | true.
 
 % The quantified conjuncts, walked.
@@ -587,7 +599,7 @@ sas_ana3(HP, HQ, HF, BP, BQ, BF, Cn, sa(HP?, HQ?, HF?, BP?, BQ?, BF?, Cn?, PP?, 
     sas_walk_qs(BQ?, W1?, W2),
     sas_walk(HF?, W2?, W3),
     sas_walk(BF?, W3?, W4),
-    sas_ana4(W4?, AQ, CQ, W5),
+    sas_ana4(W4?, Cn?, AQ, CQ, W5),
     sas_qapp(HP?, BP?, PP2),
     sas_walk_lits(PP2?, W5?, W6),
     sas_walk(Cn?, W6?, W7),
@@ -596,8 +608,30 @@ sas_ana3(HP, HQ, HF, BP, BQ, BF, Cn, sa(HP?, HQ?, HF?, BP?, BQ?, BF?, Cn?, PP?, 
 procedure sas_ana5(SW?, SAtoms, Bnds, SLits, SArgs).
 sas_ana5(sw(A, B, C, K), A?, B?, C?, K?).
 
-procedure sas_ana4(SW?, SAtoms, SLits, SW).
-sas_ana4(sw(A, B, C, K), A?, C?, sw(A?, B?, C?, K?)) :- ground(A?), ground(C?) | true.
+% AQ and CQ, the atoms and the constraints the faults of the reading ask of
+% the formulas: those of the conjuncts and formulas, and those a cardinality
+% or a sum of the constraint holds, an anchored safe formula as a
+% quantifier's is (def:numbers).
+procedure sas_ana4(SW?, SConstraint?, SAtoms, SLits, SW).
+sas_ana4(sw(A, B, C, K), Cn, AQ?, CQ?, sw(A?, B?, C?, K?)) :- ground(A?), ground(C?) |
+    sas_cons_x(Cn?, sw(A?, [], C?, []), W),
+    sas_ana5(W?, AQ, _, CQ, _).
+
+% What the cardinalities and sums of a constraint hold, the constraint itself
+% left to sas_cons_vf.
+procedure sas_cons_x(SConstraint?, SW?, SW).
+sas_cons_x(and(X, Y), W, R?) :- sas_cons_x(X?, W?, W1), sas_cons_x(Y?, W1?, R).
+sas_cons_x(or(X, Y), W, R?) :- sas_cons_x(X?, W?, W1), sas_cons_x(Y?, W1?, R).
+sas_cons_x(implies(X, Y), W, R?) :- sas_cons_x(X?, W?, W1), sas_cons_x(Y?, W1?, R).
+sas_cons_x(not(X), W, R?) :- sas_cons_x(X?, W?, R).
+sas_cons_x(eq(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
+sas_cons_x(ne(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
+sas_cons_x(le(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
+sas_cons_x(lt(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
+sas_cons_x(ge(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
+sas_cons_x(gt(X, Y), W, R?) :- sas_walk_xs([X?, Y?], W?, R).
+sas_cons_x(rel(_, Xs), W, R?) :- sas_walk_xs(Xs?, W?, R).
+sas_cons_x(_, W, W?) :- otherwise | true.
 
 % A literal's atom, its multiplicity and whether it is negated.
 procedure sas_lit_atom(SQLit?, SAtom).
@@ -878,6 +912,10 @@ sas_expr(cardinality(Xs, At, Phi), E, V, cardinality(Xs1?, H?, A?, F?)) :-
     ground(Xs?), ground(At?), ground(E?), ground(V?) |
     sas_papp(Xs?, V?, V1),
     sas_card(Xs?, At?, Phi?, E?, V1?, Xs1, H, A, F).
+sas_expr(sum(Xs, At, Phi, U), E, V, sum(Xs1?, H?, A?, F?, U1?)) :-
+    ground(Xs?), ground(At?), ground(E?), ground(V?) |
+    sas_papp(Xs?, V?, V1),
+    sas_sum(Xs?, At?, Phi?, U?, E?, V1?, Xs1, H, A, F, U1).
 sas_expr(own(N), E, V, R?) :- sas_arg(own(N?), E?, V?, R).
 sas_expr(ext(S, Y), E, V, R?) :- sas_arg(ext(S?, Y?), E?, V?, R).
 sas_expr(num(X), E, V, R?) :- sas_arg(num(X?), E?, V?, R).
@@ -891,6 +929,12 @@ sas_card(Xs, At, Phi, E, V, Xs1?, H?, A?, F?) :- ground(At?), ground(E?), ground
     sas_aholder(At?, E?, V?, H),
     sas_iatom(At?, E?, V?, A),
     sas_form(Phi?, E?, V?, F).
+
+% A sum's anchor, phi and term, V1 the variables with those it binds.
+procedure sas_sum(PNames?, SAtom?, SConstraint?, SExpr?, REnts?, PNames?, Args, Arg, Atom, Form, Expr).
+sas_sum(Xs, At, Phi, U, E, V, Xs1?, H?, A?, F?, U1?) :- ground(E?), ground(V?) |
+    sas_card(Xs?, At?, Phi?, E?, V?, Xs1, H, A, F),
+    sas_expr(U?, E?, V?, U1).
 
 procedure sas_exprs(SExprs?, REnts?, PNames?, Exprs).
 sas_exprs([], _, _, []).
@@ -935,6 +979,7 @@ sas_nums_expr(minus(X, Y), T, R?) :- sas_nums_expr(Y?, T?, R1), sas_nums_expr(X?
 sas_nums_expr(mul(X, Y), T, R?) :- sas_nums_expr(Y?, T?, R1), sas_nums_expr(X?, R1?, R).
 sas_nums_expr(fn(_, Xs), T, R?) :- sas_nums_exprs(Xs?, T?, R).
 sas_nums_expr(cardinality(_, _, _), T, T?).
+sas_nums_expr(sum(_, _, _, U), T, R?) :- sas_nums_expr(U?, T?, R).
 sas_nums_expr(num(X), T, R?) :- sas_nums_arg(num(X?), T?, R).
 sas_nums_expr(_, T, T?) :- otherwise | true.
 
@@ -1737,7 +1782,12 @@ sas_expr_vf(minus(X, Y), E, V, Nm, T, R?) :- ground(E?), ground(V?), ground(Nm?)
 sas_expr_vf(mul(X, Y), E, V, Nm, T, R?) :- ground(E?), ground(V?), ground(Nm?) |
     sas_expr_vf(Y?, E?, V?, Nm?, T?, R1), sas_expr_vf(X?, E?, V?, Nm?, R1?, R).
 sas_expr_vf(fn(_, Xs), E, V, Nm, T, R?) :- sas_exprs_vf(Xs?, E?, V?, Nm?, T?, R).
+% A cardinality's and a sum's anchor and phi are among the atoms and the
+% leaves of the formulas (sas_ana4), and a sum's term is read here.
 sas_expr_vf(cardinality(_, _, _), _, _, _, T, T?).
+sas_expr_vf(sum(Xs, _, _, U), E, V, Nm, T, R?) :-
+    sas_papp(Xs?, V?, V1),
+    sas_expr_vf(U?, E?, V1?, Nm?, T?, R).
 sas_expr_vf(own(_), _, _, _, T, T?).
 sas_expr_vf(ext(_, _), _, _, _, T, T?).
 sas_expr_vf(num(_), _, _, _, T, T?).
@@ -2718,6 +2768,78 @@ form_args(fforall(_, H, atom(_, As), F, G), T, [H?|R?]) :- ground(As?), ground(F
     args_app(As?, R1?, R).
 form_args(fcons(C), T, R?) :- constraint_args(C?, T?, R).
 
+% The anchored safe formulas of a constraint or a formula.  A cardinality and
+% a sum bind "as the anchored quantifiers of Definition Role do" (def:numbers),
+% so each is read here as the quantifier fexists(Xs, H, A, Phi), a sum's
+% numeric term u beside its phi as the constraint rel(numeric, [U]), and the
+% checks of a quantifier then ask of them what they ask of a quantifier
+% (num_schema1, nsch_occ_vars).  No condition reads them: schema_args does not.
+procedure cons_anchored(Constraint?, Forms?, Forms).
+cons_anchored(and(X, Y), T, R?) :- cons_anchored(Y?, T?, R1), cons_anchored(X?, R1?, R).
+cons_anchored(or(X, Y), T, R?) :- cons_anchored(Y?, T?, R1), cons_anchored(X?, R1?, R).
+cons_anchored(implies(X, Y), T, R?) :- cons_anchored(Y?, T?, R1), cons_anchored(X?, R1?, R).
+cons_anchored(not(X), T, R?) :- cons_anchored(X?, T?, R).
+cons_anchored(eq(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+cons_anchored(ne(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+cons_anchored(le(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+cons_anchored(lt(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+cons_anchored(ge(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+cons_anchored(gt(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+cons_anchored(rel(_, Xs), T, R?) :- exprs_anchored(Xs?, T?, R).
+cons_anchored(_, T, T?) :- otherwise | true.
+
+procedure expr_anchored(Expr?, Forms?, Forms).
+expr_anchored(plus(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+expr_anchored(minus(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+expr_anchored(mul(X, Y), T, R?) :- expr_anchored(Y?, T?, R1), expr_anchored(X?, R1?, R).
+expr_anchored(fn(_, Xs), T, R?) :- exprs_anchored(Xs?, T?, R).
+expr_anchored(cardinality(Xs, H, A, F), T, [fexists(Xs?, H?, A?, F?)|R?]) :-
+    ground(F?) |
+    form_anchored(F?, T?, R).
+expr_anchored(sum(Xs, H, A, F, U), T, [fexists(Xs?, H?, A?, fand(F?, fcons(rel(numeric, [U?]))))|R?]) :-
+    ground(F?), ground(U?) |
+    expr_anchored(U?, T?, R1),
+    form_anchored(F?, R1?, R).
+expr_anchored(_, T, T?) :- otherwise | true.
+
+procedure exprs_anchored(Exprs?, Forms?, Forms).
+exprs_anchored([], T, T?).
+exprs_anchored([X|Xs], T, R?) :- exprs_anchored(Xs?, T?, R1), expr_anchored(X?, R1?, R).
+
+procedure form_anchored(Form?, Forms?, Forms).
+form_anchored(fa(_, _), T, T?).
+form_anchored(fnot(F), T, R?) :- form_anchored(F?, T?, R).
+form_anchored(fand(X, Y), T, R?) :- form_anchored(Y?, T?, R1), form_anchored(X?, R1?, R).
+form_anchored(for(X, Y), T, R?) :- form_anchored(Y?, T?, R1), form_anchored(X?, R1?, R).
+form_anchored(fexists(_, _, _, F), T, R?) :- form_anchored(F?, T?, R).
+form_anchored(fforall(_, _, _, F, G), T, R?) :- forms_anchored(G?, T?, R1), form_anchored(F?, R1?, R).
+form_anchored(fcons(C), T, R?) :- cons_anchored(C?, T?, R).
+
+procedure forms_anchored(Forms?, Forms?, Forms).
+forms_anchored([], T, T?).
+forms_anchored([F|Fs], T, R?) :- forms_anchored(Fs?, T?, R1), form_anchored(F?, R1?, R).
+
+% The safe formulas of a schema: Fs, and each conjunct's phi and literals.
+procedure conj_forms(Conjuncts?, Forms?, Forms).
+conj_forms([], T, T?).
+conj_forms([conjunct(_, _, _, Phi, _, _, L)|Cs], T, [Phi?|R?]) :- ground(L?), ground(Cs?), ground(T?) |
+    conj_forms(Cs?, T?, R1),
+    forms_app(L?, R1?, R).
+
+procedure forms_app(Forms?, Forms?, Forms).
+forms_app([], T, T?).
+forms_app([F|Fs], T, [F?|R?]) :- forms_app(Fs?, T?, R).
+
+% Those of a schema: of its constraint, its conjuncts and its formulas.
+procedure nsch_anchored(NSchema?, Forms).
+nsch_anchored(S, R?) :- ground(S?) |
+    nsch_constraint(S?, Cn),
+    nsch_conjs(S?, Cj),
+    nsch_forms(S?, Fs),
+    conj_forms(Cj?, Fs?, All),
+    forms_anchored(All?, [], R1),
+    cons_anchored(Cn?, R1?, R).
+
 procedure schema_args(Schema?, Args).
 schema_args(Sc, R?) :- ground(Sc?) |
     sch_roles(Sc?, Rs),
@@ -3661,10 +3783,12 @@ procedure eq_sargs(Ans?, Expr?, Expr?, Args?, Args).
 eq_sargs(no, _, _, T, T?).
 eq_sargs(yes, X, Y, T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 
-% The arguments an expression is made of; a cardinality's are its own.
+% The arguments an expression is made of; a cardinality's and a sum's are
+% their own (cons_anchored).
 procedure expr_args(Expr?, Args?, Args).
 expr_args(fn(_, Xs), T, R?) :- exprs_args(Xs?, T?, R).
 expr_args(cardinality(_, _, _, _), T, T?).
+expr_args(sum(_, _, _, _, _), T, T?).
 expr_args(plus(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 expr_args(minus(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 expr_args(mul(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
@@ -3712,18 +3836,21 @@ nsch_occ_vars(NSc, R?) :- ground(NSc?) |
     plain_schema(NSc?, Sc),
     nsch_roles(NSc?, NRs),
     nsch_constraint(NSc?, Cn),
-    nsch_occ_vars1(Sc?, NRs?, Cn?, R).
+    nsch_anchored(NSc?, An),
+    nsch_occ_vars1(Sc?, NRs?, Cn?, An?, R).
 
-procedure nsch_occ_vars1(Schema?, NRoleSpecs?, Constraint?, Args).
-nsch_occ_vars1(Sc, NRs, Cn, R?) :- ground(Sc?), ground(NRs?), ground(Cn?) |
+procedure nsch_occ_vars1(Schema?, NRoleSpecs?, Constraint?, Forms?, Args).
+nsch_occ_vars1(Sc, NRs, Cn, An, R?) :- ground(Sc?), ground(NRs?), ground(Cn?), ground(An?) |
     sch_occ_vars(Sc?, PS0),
     constraint_sargs(Cn?, [], Ss),
-    sargs_vars(Ss?, SV),
+    forms_args(An?, Ss?, Ss1),
+    sargs_vars(Ss1?, SV),
     args_app(PS0?, SV?, PSV),
     args_dedup(PSV?, PS),
     schema_args(Sc?, As),
     nroles_margs(NRs?, [], Ms),
-    constraint_args(Cn?, [], Cs),
+    forms_args(An?, [], AA),
+    constraint_args(Cn?, AA?, Cs),
     args_app(Ms?, Cs?, MC),
     args_app(As?, MC?, All),
     filter_nvars(All?, Ns),
