@@ -141,6 +141,6 @@ contract_named(bcc,
        [rs(guarded, [atom(dcoin, [pvar(v), num(f)]), atom(knows, [pvar(v)])], [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(ccoin, [role(2), nterm(ext(own_var(c), n)), num(f)])], [atom(locked, [pvar(v), num(f)])], [atom(identity, [])], [])]),
 %% BCC:2, Coin Redemption from a treasurer: Alice redeems a community coin of <c>.n in f issued by u from Bob, a treasurer of <c>.n whom Alice knows, against a coin of r Bob holds; Alice comes to know r.  The twins against a denominated coin and against a community coin Bob holds are GCC's credeem_x form with dcoin and ccoin, not repeated here.
-    schema(tredeem, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(u), pvar(r)],
+    schema(bredeem_t, ['Alice', 'Bob'], [pvar(c), svar(n), num(f), pvar(u), pvar(r)],
        [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
         rs(unguarded, [atom(ccoin, [pvar(u), nterm(ext(own_var(c), n)), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(treasurer, [role(2), nterm(ext(own_var(c), n))])], [])])]).
