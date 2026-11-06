@@ -14,7 +14,7 @@ A contract named NAME lives in one copy, in its owner's directory under `program
 
 2. `NAME.glp`, the speech-act schemas, the term `schema(Name, Names, Vars, Roles)` for each act the clauses describe, written by the guide.  The term is the one source; a run of the cascade prints the notation from it.
 
-A clause is cited as `GKK:1`.  A contract that extends another has the other's acts and its own, cites the other's clauses and does not restate them, and replaces an act of the other that its clauses change.  Every contract's clauses use Alice and Bob; two names are two persons, and a clause that admits one person in both says "Alice and Bob, possibly one person".  A clause states an obligation, a permission or a prohibition, and nothing else: no explanation inside the box.
+A clause is cited as `GKK:1`.  A contract built on another cites the other's clauses and does not restate them.  Its relation to the other is one of the four relations of GSC's paper, Section 8, Relations among Contracts --- amendment, extension, restriction, instantiation --- and is stated in those terms in its paper and in its header, as `GSN amends GSG` and `GB extends GC`, never as 'replaces' or 'extends with changes' (Udi, 2026-11-06, reported by GSC #11); the paper defines the four and says what the checker redoes for each.  Every contract's clauses use Alice and Bob; two names are two persons, and a clause that admits one person in both says "Alice and Bob, possibly one person".  A clause states an obligation, a permission or a prohibition, and nothing else: no explanation inside the box.
 
 ## The pragmas
 
