@@ -31,6 +31,12 @@
 %% both at the destination, releases the fare and the deposit and ends the
 %% ride under way; GRA:6, Cancelling, Alice's, after the maximum pickup delay,
 %% the same of a ride awarded and not picked up, a pickup having deleted it.
+%% calling at p says that p has an open call, and busy that p has a ride, each
+%% of arity zero: call_open forbids both at Alice and adds calling; award
+%% deletes calling at Alice, forbids calling and busy at Bob and adds busy at both; arrive
+%% and cancel delete busy at both.  close, of GRA:3, Alice's, at or after the
+%% end of the period, deletes the call and calling, where the terms select no
+%% bidder; withdraw, GRA:7, Alice's, before the end of the period, the same.
 %% "Alice may not open a bid before then" is the realisation's, the bid held
 %% sealed in Alice's state until the award.  Every role but establish's
 %% requires identity.
@@ -39,7 +45,9 @@
 %% and is named by its index, role(1) the schema's first role.  Written by
 %% LBM #4 Cowork, 2026-11-03; award's ride with the deposit, pickup, arrive and
 %% cancel revised by GRH #1 Cowork, 2026-11-05, so that the schemas are effective
-%% (vGLP, Section 5.4; Code #23, 2026-11-04 16:22 UTC).
+%% (vGLP, Section 5.4; Code #23, 2026-11-04 16:22 UTC); calling, busy, close and
+%% withdraw by GRH #1 Cowork, 2026-11-06, for GRA:1, GRA:3 and GRA:7 as Udi
+%% approved them that day.
 %% ---------------------------------------------------------------------------
 
 NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
@@ -98,9 +106,9 @@ contract_named(gra, environment([now, location],
     schema(unpoint, ['Alice', 'Bob'], [],
        [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GRA:1, Call: Alice calls for bids on ride r, recorded at Alice.
+%% GRA:1, Call: Alice, who has no open call and no ride, calls for bids on ride r, recorded at Alice.
     schema(call_open, ['Alice'], [svar(r), num(x), num(y), num(e), num(mx), svar(m)],
-       [rs(guarded, [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)])], [], [atom(identity, [])], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)])])]),
+       [rs(guarded, [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(calling, [])], [], [atom(identity, [])], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(calling, []), atom(busy, [])])]),
 %% GRA:1, Call: the call reaches Bob, whom Alice points to.
     schema(call, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(e), num(mx), svar(m)],
        [rs(guarded,   [], [], [atom(identity, []), atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(points_to, [role(2)])], []),
@@ -117,19 +125,25 @@ contract_named(gra, environment([now, location],
     nschema(bid_fwd, ['Bob', 'Alice'], [svar(r), num(x), num(y), num(e), num(mx), svar(m), num(p), num(d), num(t)], lt(num(t), num(e)),
        [rs(guarded,   [atom(bidded, [role(2), svar(r), num(p), num(d)])], [], [atom(identity, []), atom(call_fwd, [role(2), svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(now, [num(t)])], []),
         rs(unguarded, [atom(bid, [role(1), svar(r), num(p), num(d)])], [], [atom(identity, [])], [])]),
-%% GRA:3, Award: when the bidding period has ended, Alice awards ride r to Bob at fare f; Alice's fare and Bob's deposit k are locked.
+%% GRA:3, Award: when the bidding period has ended, Alice awards ride r to Bob, who has no open call and no ride, at fare f; Alice's fare and Bob's deposit k are locked.
     nschema(award, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(e), num(mx), svar(m), num(p), num(d), num(t0), num(f), num(k)], le(num(e), num(t0)),
-       [rs(guarded,   [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(fare_locked, [svar(r), num(f)])], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)])], [atom(identity, []), atom(bid, [role(2), svar(r), num(p), num(d)]), atom(now, [num(t0)])], []),
-        rs(unguarded, [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(deposit_locked, [svar(r), num(k)])], [atom(bidded, [role(1), svar(r), num(p), num(d)])], [atom(identity, [])], [])]),
+       [rs(guarded,   [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(fare_locked, [svar(r), num(f)]), atom(busy, [])], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(calling, [])], [atom(identity, []), atom(bid, [role(2), svar(r), num(p), num(d)]), atom(now, [num(t0)])], []),
+        rs(unguarded, [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(deposit_locked, [svar(r), num(k)]), atom(busy, [])], [atom(bidded, [role(1), svar(r), num(p), num(d)])], [atom(identity, [])], [atom(calling, []), atom(busy, [])])]),
+%% GRA:3, Award: when the bidding period has ended and the terms select no bidder, Alice's call is closed.
+    nschema(close, ['Alice'], [svar(r), num(x), num(y), num(e), num(mx), svar(m), num(t)], le(num(e), num(t)),
+       [rs(guarded, [], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(calling, [])], [atom(identity, []), atom(now, [num(t)])], [])]),
 %% GRA:4, Pickup: recorded when Alice and Bob are both at the pickup point, at Alice's time t; the ride awarded becomes the ride under way; no role guards it.
     schema(pickup, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(t)],
        [rs(unguarded, [atom(riding, [role(2), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)])], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)])], [atom(identity, []), atom(location, [num(x)]), atom(now, [num(t)])], []),
         rs(unguarded, [atom(riding, [role(1), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)])], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)])], [atom(identity, []), atom(location, [num(x)])], [])]),
 %% GRA:5, Arriving: when Alice and Bob are both at the destination, the fare and the deposit are released and the ride ends; no role guards it.
     schema(arrive, ['Alice', 'Bob'], [svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)],
-       [rs(unguarded, [], [atom(riding, [role(2), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)]), atom(fare_locked, [svar(r), num(f)])], [atom(identity, []), atom(location, [num(y)])], []),
-        rs(unguarded, [], [atom(riding, [role(1), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)]), atom(deposit_locked, [svar(r), num(k)])], [atom(identity, []), atom(location, [num(y)])], [])]),
+       [rs(unguarded, [], [atom(riding, [role(2), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)]), atom(fare_locked, [svar(r), num(f)]), atom(busy, [])], [atom(identity, []), atom(location, [num(y)])], []),
+        rs(unguarded, [], [atom(riding, [role(1), svar(r), num(y), num(t0), num(d), num(f), num(k), num(t)]), atom(deposit_locked, [svar(r), num(k)]), atom(busy, [])], [atom(identity, []), atom(location, [num(y)])], [])]),
 %% GRA:6, Cancelling: with no pickup recorded within the maximum pickup delay, Alice cancels; the fare and the deposit are released and the ride ends.
     nschema(cancel, ['Alice', 'Bob'], [svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(t)], gt(num(t), plus(num(t0), num(mx))),
-       [rs(guarded,   [], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(fare_locked, [svar(r), num(f)])], [atom(identity, []), atom(now, [num(t)])], []),
-        rs(unguarded, [], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(deposit_locked, [svar(r), num(k)])], [atom(identity, [])], [])])])).
+       [rs(guarded,   [], [atom(ride, [role(2), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(fare_locked, [svar(r), num(f)]), atom(busy, [])], [atom(identity, []), atom(now, [num(t)])], []),
+        rs(unguarded, [], [atom(ride, [role(1), svar(r), num(x), num(y), num(mx), num(t0), num(d), num(f), num(k)]), atom(deposit_locked, [svar(r), num(k)]), atom(busy, [])], [atom(identity, [])], [])]),
+%% GRA:7, Withdrawing: Alice withdraws their open call before the bidding period ends.
+    nschema(withdraw, ['Alice'], [svar(r), num(x), num(y), num(e), num(mx), svar(m), num(t)], lt(num(t), num(e)),
+       [rs(guarded, [], [atom(open, [svar(r), num(x), num(y), num(e), num(mx), svar(m)]), atom(calling, [])], [atom(identity, []), atom(now, [num(t)])], [])])])).

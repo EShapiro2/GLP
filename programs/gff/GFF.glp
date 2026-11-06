@@ -64,23 +64,23 @@ contract_named(gff,
        [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
 %% GDO-L:1, Labeled pointing to friend, with Bob's label, which is named by Bob.
-    schema(lpoint_own, ['Alice', 'Bob'], [],
+    schema(follow_own, ['Alice', 'Bob'], [],
        [rs(guarded,   [atom(lpoints_to, [role(2), role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), role(2)])]),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
 %% GDO-L:1, Labeled pointing to friend, with a label l that Bob points with, to some person d.
-    schema(lpoint_friend, ['Alice', 'Bob'], [pvar(l), pvar(d)],
+    schema(follow_friend, ['Alice', 'Bob'], [pvar(l), pvar(d)],
        [rs(guarded,   [atom(lpoints_to, [role(2), pvar(l)])], [],
                       [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar(l)])]),
         rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(d), pvar(l)])], [])]),
 %% GDO-L:2, Labeled transitive pointing, Carol the agent variable c.
-    schema(lpoint_transitive, ['Alice', 'Bob'], [pvar(c), pvar(l)],
+    schema(follow_transitive, ['Alice', 'Bob'], [pvar(c), pvar(l)],
        [rs(guarded,   [atom(lpoints_to, [pvar(c), pvar(l)])], [],
                       [atom(identity, []), atom(knows, [pvar(c)]), atom(lpoints_to, [role(2), pvar(l)])],
                       [atom(lpoints_to, [pvar(c), pvar(l)])]),
         rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(c), pvar(l)])], [])]),
 %% GDO-L:3, Ceasing to point.
-    schema(lunpoint, ['Alice', 'Bob'], [pvar(l)],
+    schema(unfollow, ['Alice', 'Bob'], [pvar(l)],
        [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar(l)])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
 %% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:1), and Alice holds it as an item of the feed Alice names.
