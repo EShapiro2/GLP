@@ -1006,7 +1006,8 @@ decomp_defs([X|Xs], [equ(lin([t(q(iv(X?)), 1), t(z(nv(X?)), -1), t(q(fv(X?)), -1
 % A value the contract writes is a number, read exactly: a whole one as it
 % is, and one that is not whole as the fraction N / 2^k it is.  An
 % expression is ex(L, D), the form L divided by D > 0; a product is linear
-% where one factor has no variable.  A constraint that is not a conjunction
+% where one factor has no variable; a cardinality and a sum are no linear
+% form.  A constraint that is not a conjunction
 % of linear equalities and inequalities over value arguments is refused
 % before it is read (check.glp); were one read, it would be the false atom.
 
@@ -1104,7 +1105,8 @@ cons_gt(X, Y, E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(gt, X?, Y
 % cons_cd(C, E, Pol, cd(D, W)): D the formula saying the constraint C, or its
 % negation where Pol is no, its value variables read through E, and W no
 % where C has a part that is no linear relation of its value variables, a
-% product of two of them, a function or a relation of a type: def:numbers has
+% product of two of them, a function, a relation of a type, a cardinality or
+% a sum: def:numbers has
 % the checker decide an implication "where the constraint is linear over
 % whole numbers", and refuse the schema otherwise.  An equality of agent
 % variables and a signing condition are over no value, and hold at some

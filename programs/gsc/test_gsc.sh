@@ -1814,6 +1814,58 @@ EOF
 )
 check_eq "the notation prints a safe formula of the body and a constraint on agents" \
          "$n_pick" "$(notation "$CONS_AG" | one_schema pick)"
+# The sum (def:numbers, GSC 0ee69c7): "the sum sum(x, A and phi, u) of a
+# numeric term u over the instances of its anchor A at which phi holds,
+# binding x as cardinality does", written sum(Xs, A, Phi, U).
+ADDV="sas(pledge, ['Alice', 'Bob'], [n, k], [atom(pledged, ['Alice', 'Bob', n, num(k)]), atom(member, ['Bob', n])], [atom(leads, ['Alice', n]), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+PLEDGED="atom(pledged, ['Alice', 'Bob', n, num(k)])"
+room_with() { # room_with <vars> <constraint>
+  gkk_with "$CLS, $ADD1, $ADDV, sas(room, ['Alice'], $1, [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n])], $2, ['Alice'])"
+}
+SUM=$(room_with "[n, d]" "lt(sum(['Bob', k], $PLEDGED, true, num(k)), num(d))")
+SUM_PHI=$(room_with "[n, d, w]" "le(sum(['Bob', k], $PLEDGED, gt(num(k), num(w)), mul(num(w), num(k))), num(d))")
+SUM_TERM=$(room_with "[n, d, w]" "le(sum(['Bob', k], $PLEDGED, true, mul(num(w), num(k))), num(d))")
+SUM_NEST=$(room_with "[n, d]" "le(sum(['Bob', k], $PLEDGED, true, plus(num(k), cardinality(['Carol'], atom(listed, ['Alice', 'Carol', n]), true))), num(d))")
+SUM_FORM=$(gkk_with "$CLS, $ADD1, $ADDV, sas(room, ['Alice', 'Carol'], [n, d], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n]), exists(['Carol'], atom(listed, ['Alice', 'Carol', n]), lt(sum(['Bob', k], $PLEDGED, true, num(k)), num(d)))], true, ['Alice'])")
+F_SUMX=$(room_with "[n, d]" "lt(sum(['Bob', 'Carol', k], $PLEDGED, true, num(k)), num(d))")
+F_SUMU=$(room_with "[n, d]" "lt(sum(['Bob', k], $PLEDGED, true, zz), num(d))")
+SUM_NL=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "and(le(plus(num(i), num(j)), num(k)), le(sum(['Bob'], atom(knows, ['Alice', 'Bob']), true, num(i)), num(k)))")
+out=$(run "check($SUM, V)." "check($SUM_PHI, V)." "check($SUM_NEST, V)." "check($SUM_FORM, V)." \
+          "check($F_SUMX, V)." "check($F_SUMU, V)." "check($SUM_NL, V)." "as_read($SUM, R)." "as_read($SUM_TERM, R).")
+check_eq "a sum in a constraint, binding as a cardinality does" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "a sum with phi, its term naming a value variable of the schema" \
+         "V = syntactically_grassroots" "$(sf 2)"
+check_eq "a cardinality in the term of a sum" \
+         "V = syntactically_grassroots" "$(sf 3)"
+check_eq "a sum in a constraint of a safe formula" \
+         "V = syntactically_grassroots" "$(sf 4)"
+check_eq "a variable a sum binds, absent from its anchor, is refused" \
+         "V = malformed([quantified_condition(room, 'Carol')])" "$(sf 5)"
+check_eq "a term of a sum naming no variable of the schema or of the sum is refused" \
+         "V = malformed([not_in_vars(room, constraint)])" "$(sf 6)"
+check_eq "a sum is not linear: the deletions it would imply are refused" \
+         "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)])), deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 7)"
+check "a sum reads into its bound variables, its anchor's holder, its anchor, phi and its term" \
+      "lt(sum([svar('Bob'), svar(k)], role(1), atom(pledged, [svar('Bob'), svar(n), num(k)]), fcons(true), num(k)), num(d))" "$out"
+check "a value variable that only the term of a sum names is a variable of the schema" \
+      "qschema(room, ['Alice'], [svar(n), num(d), num(w)]" "$out"
+n_sum=$(cat <<'EOF'
+room: has_room(Alice, n) <-
+    leads(Alice, n), sum(Bob, k, pledged(Alice, Bob, n, k), k) < d guarded by Alice
+EOF
+)
+check_eq "the notation prints a sum" \
+         "$n_sum" "$(notation "$SUM" | one_schema room)"
+n_sum_phi=$(cat <<'EOF'
+room: has_room(Alice, n) <-
+    leads(Alice, n), sum(Bob, k, pledged(Alice, Bob, n, k), k > w, w*k) <= d guarded by Alice
+EOF
+)
+check_eq "the notation prints a sum with phi" \
+         "$n_sum_phi" "$(notation "$SUM_PHI" | one_schema room)"
+check "the compiler prints a sum as def:numbers writes it" \
+      "\\mathrm{sum}(" "$(compiled_in sum_c "$SUM" room)"
 check "a schema written qschema compiles in the general form, its conjunct on a line of its own" \
       "\\text{making}" "$(compiled_in cond_c "$COND_OK" note)"
 
