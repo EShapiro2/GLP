@@ -68,7 +68,6 @@ Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, 
 Question ::= request_r(Request?) ; approval_w(Approval).
 Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
-Logged   ::= Output ; gave(Proposal, YesNo).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
@@ -76,7 +75,7 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% play_refresh: alice establishes her identity and, once she sees it, asks for her screen to be redrawn: "On the answer refresh the agent goal writes its view again and asks the next request question" (vGLP e22e2ad, Section 5.4, "The compilation").  She then proposes acquaint, the next request question being open.
-exported procedure play_refresh(Stream(Logged), Stream(Logged), Stream(Sent(Cargo))).
+exported procedure play_refresh(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refresh(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)), req(refresh),
           own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob)))],
