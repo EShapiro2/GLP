@@ -2256,7 +2256,7 @@ procedure (YesNo?)*approve(Integer?).
     test('a declaration of buttons: the widget term carries it whole, and a '
         'label beside each schema and field its buttons name (compiler '
         'README, 6)', () {
-      const w = 'social_menu([button("Send", [act(send, 1, '
+      const w = 'social_menu([button("Send", [act(send, 1, [1, 2, 4], '
           '[req(identity, []), req(knows, [at(2)]), forb(friend, [any, at(2)]), '
           'req(member, [grp(1, 3)]), unless(blocked, [at(2)]), '
           'proved(identity, [], knows, [at(4)])], [2, 3], '
@@ -2299,7 +2299,7 @@ procedure (Ask)*request(Integer?).
         () {
       expect(
           DeclaredWidget.tryParse('social_menu([button("X", '
-              '[act(x, 1, [], [], [field(2, "s", other)], [], [])])])'),
+              '[act(x, 1, [1], [], [], [field(2, "s", other)], [], [])])])'),
           isNull);
       expect(
           DeclaredWidget.tryParse(

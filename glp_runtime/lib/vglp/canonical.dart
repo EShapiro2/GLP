@@ -1587,11 +1587,11 @@ class DeclaredWidget {
     return '${constantSource(name)}([${ls.join(', ')}])';
   }
 
-  /// The `W` of the term `named(W, D)` the widget is drawn by: what its
-  /// declaration gives (vGLP, Section 6.3: "the term named(W, D) of the name
-  /// W its declaration gives"), its name, and, where it declares buttons, the
-  /// widget whole, its text, since `W` is a `Constant` of the root's type
-  /// `Widget` and the construct family draws the buttons from it.
+  /// The `W` of the term `named(W, D)` the widget is drawn by: "the widget W
+  /// its declaration gives, a term of the construct family" (vGLP e22e2ad,
+  /// Section 6.3): its name, and, where it declares buttons, the widget whole,
+  /// in the `Constant` the root's type `Widget` holds there, its text, from
+  /// which the construct family reads the term ([parse]).
   String get drawnAs => buttons.isEmpty ? name : source;
 
   /// The widget [w] names, as [source] writes it or as a declaration writes
@@ -1666,23 +1666,24 @@ class DeclaredWidget {
     return DeclaredButton(label, acts);
   }
 
-  /// `act(F, M, Pre, Binds, Fields, Same, Text)`.
+  /// `act(F, M, Roles, Pre, Binds, Fields, Same, Text)`.
   static DeclaredAct? _act(Term x) {
-    if (x is! StructTerm || x.functor != 'act' || x.args.length != 7) {
+    if (x is! StructTerm || x.functor != 'act' || x.args.length != 8) {
       return null;
     }
     final f = _labelConstant(x.args[0]);
     final m = _int(x.args[1]);
-    final pre = _conditions(x.args[2]);
-    final binds = _ints(x.args[3]);
-    final fields = _fields(x.args[4]);
-    final same = _conditions(x.args[5]);
-    final text = _words(x.args[6]);
-    if (f == null || m == null || pre == null || binds == null ||
-        fields == null || same == null || text == null) {
+    final roles = _ints(x.args[2]);
+    final pre = _conditions(x.args[3]);
+    final binds = _ints(x.args[4]);
+    final fields = _fields(x.args[5]);
+    final same = _conditions(x.args[6]);
+    final text = _words(x.args[7]);
+    if (f == null || m == null || roles == null || pre == null ||
+        binds == null || fields == null || same == null || text == null) {
       return null;
     }
-    return DeclaredAct(f, m, pre, binds, fields, same, text);
+    return DeclaredAct(f, m, roles, pre, binds, fields, same, text);
   }
 
   /// `Preconds`: a list of `req(P, As)`, `forb(P, As)`, `unless(P, As)`,
@@ -1870,15 +1871,22 @@ class DeclaredButton {
 class DeclaredAct {
   final String schema;
   final int proposer;
+
+  /// The places of the request that hold roles: "distinct roles are bound to
+  /// distinct agents, unless the clause says of two names 'possibly one
+  /// person'", and an agent variable is bound by no such rule (vGLP, Section
+  /// 5.4, "Speech-act schemas as local specifications").
+  final List<int> roles;
   final List<ActCondition> pre;
   final List<int> binds;
   final List<DeclaredField> fields;
   final List<ActCondition> same;
   final List<Object> text;
-  const DeclaredAct(this.schema, this.proposer, this.pre, this.binds,
-      this.fields, this.same, this.text);
+  const DeclaredAct(this.schema, this.proposer, this.roles, this.pre,
+      this.binds, this.fields, this.same, this.text);
 
   String get source => 'act(${constantSource(schema)}, $proposer, '
+      '[${roles.join(', ')}], '
       '[${[for (final c in pre) c.source].join(', ')}], '
       '[${binds.join(', ')}], '
       '[${[for (final f in fields) f.source].join(', ')}], '

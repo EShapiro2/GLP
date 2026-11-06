@@ -24,16 +24,17 @@ import 'fixture_term.dart';
 /// The widget of the request question, `named(W, D)`: `W` the declared widget
 /// whole, its buttons (programs/vglp/cva/compiler/README.md, 6;
 /// glp_runtime/lib/vglp/canonical.dart, `DeclaredWidget.drawnAs`), and `D` the
-/// default widget of `Request ::= propose(Proposal)`, the form `propose`,
-/// over [proposals].
+/// default widget of `Request ::= propose(Proposal) ; refresh`, a menu of the
+/// form `propose`, over [proposals], and the constant `refresh`.
 String _requestWidget(String buttons, String proposals) =>
     "named('social_menu([${buttons.replaceAll("'", r"\'")}])', "
-    "form(propose, [field('Proposal', menu([$proposals]))]))";
+    "menu([form(propose, [field('Proposal', menu([$proposals]))]), "
+    "button(refresh)]))";
 
 /// Two proposals: establish, its button Establish, where the state lacks
 /// identity; and befriend, with no button.
 final _requestW = _requestWidget(
-    'button("Establish", [act(establish, 1, [forb(identity, [])], [], [], [], [])])',
+    'button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])])',
     "label('Establish', form(establish, [field('Peer', peer)])), "
         "form(befriend, [field('Peer', peer), field('Peer', peer)])");
 
@@ -43,14 +44,14 @@ final _requestW = _requestWidget(
 /// person field, proved; Swap, two acts of one button, each bound by what is
 /// held, the second also by a maturity.
 final _waysW = _requestWidget(
-    'button("Befriend", [act(befriend, 1, [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), '
-    'button("Introduce", [act(introduce, 1, [req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), '
-    'button("Message", [act(message, 1, [req(friend, [at(2)])], [2], [field(3, "text", text)], [], [])]), '
-    'button("Forward", [act(fwd, 1, [req(item, [at(3)]), proved(identity, [], knows, [at(2)]), unless(blocked, [at(2)])], [3], [field(2, "person", person)], [], [])]), '
-    'button("Swap", [act(swap_c, 1, [req(coin, [at(2)])], [2], [field(3, "amount", number)], [], []), act(swap_d, 1, [req(coin, [at(2)])], [2], [field(3, "amount", number), field(4, "maturity", number)], [], [])]), '
-    'button("Leave", [act(leave, 2, [req(member, [grp(1, 3)])], [1, 3], [], [], [])]), '
-    'button("Sign", [act(sign, 1, [req(identity, [])], [], [field(2, "text", text)], [], [at(1), say(" signs.")])]), '
-    'button("Acquaint", [act(acquaint, 1, [req(identity, [])], [], [field(2, "person", key)], [], [])])',
+    'button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), '
+    'button("Introduce", [act(introduce, 1, [1, 2], [req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), '
+    'button("Message", [act(message, 1, [1, 2], [req(friend, [at(2)])], [2], [field(3, "text", text)], [], [])]), '
+    'button("Forward", [act(fwd, 1, [1, 2], [req(item, [at(3)]), proved(identity, [], knows, [at(2)]), unless(blocked, [at(2)])], [3], [field(2, "person", person)], [], [])]), '
+    'button("Swap", [act(swap_c, 1, [1], [req(coin, [at(2)])], [2], [field(3, "amount", number)], [], []), act(swap_d, 1, [1], [req(coin, [at(2)])], [2], [field(3, "amount", number), field(4, "maturity", number)], [], [])]), '
+    'button("Leave", [act(leave, 2, [1, 2], [req(member, [grp(1, 3)])], [1, 3], [], [], [])]), '
+    'button("Sign", [act(sign, 1, [1], [req(identity, [])], [], [field(2, "text", text)], [], [at(1), say(" signs.")])]), '
+    'button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])])',
     "form(befriend, [field('Peer', peer), field('Peer', peer)]), "
         "form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)]), "
         "form(message, [field('Peer', peer), field('Peer', peer), field('String', text)]), "
@@ -309,5 +310,86 @@ void main() {
     expect(find.byKey(socialKey(1, 'name')), findsNothing);
     expect(find.byType(ElevatedButton), findsNothing);
     expect(s.grants, isEmpty);
+  });
+
+  // A way is a schema-binding: "every binding of the variables of the atoms the schema requires there that a schema-binding makes, distinct roles bound to distinct persons" (vGLP e22e2ad, Section 5.4, "The contract's words"); "distinct roles are bound to distinct agents, unless the clause says of two names 'possibly one person'", and an agent variable is bound by no such rule (vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1).
+  group('the declaration carries the roles', () {
+    const name = "speech(utterance('friends'), alice)";
+    const state = "member(dot(community(alice), $name)), listed(alice, $name), "
+        "listed(bob, $name), knows(bob), knows(carol)";
+    String rolesW(String same) => _requestWidget(
+        'button("Remove", [act(remove, 1, [1, 2], [req(member, [grp(1, 3)]), req(listed, [at(2), at(3)])], [2, 3], [], [$same], [])]), '
+        'button("Introduce", [act(introduce, 1, [1, 2], [req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), '
+        'button("Invite", [act(invite, 1, [1, 2, 3], [req(member, [grp(1, 4)])], [4], [field(2, "guest", person), field(3, "host", person)], [$same], [])])',
+        "form(remove, [field('Peer', peer), field('Peer', peer), field('String', text)]), "
+        "form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)]), "
+        "form(invite, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('String', text)])");
+    (RequestOffers, SocialState) read(String same) {
+      final o = RequestOffers.of(fixtureTerm(rolesW(same)));
+      final (_, s) = SocialState.read(fixtureTerm('[${_view(state, "bob, carol", "")}]'));
+      return (o, s!);
+    }
+
+    test('no way binds two roles to one person', () {
+      final (o, s) = read('');
+      final remove = ActInfo(o.buttons[0].acts.single);
+      expect([for (final w in remove.ways(s.atoms, s.me)) formatTerm(w[2]!)],
+          ['bob']);
+    });
+
+    test('a way binding an agent variable to a role\'s person is a way', () {
+      final (o, s) = read('');
+      final introduce = ActInfo(o.buttons[1].acts.single);
+      final ways = [
+        for (final w in introduce.ways(s.atoms, s.me))
+          '${formatTerm(w[2]!)},${formatTerm(w[3]!)}'
+      ];
+      expect(ways, contains('bob,bob'));
+      expect(ways.length, 4);
+    });
+
+    test('two roles possibly one person may be bound to one', () {
+      final (o, s) = read('same(1, 2)');
+      final remove = ActInfo(o.buttons[0].acts.single);
+      expect([for (final w in remove.ways(s.atoms, s.me)) formatTerm(w[2]!)],
+          unorderedEquals(['alice', 'bob']));
+    });
+
+    test('a field offers no value that binds two roles to one person, but '
+        'for two possibly one person', () {
+      final (o, s) = read('');
+      final invite = ActInfo(o.buttons[2].acts.single);
+      final at = invite.ways(s.atoms, s.me).single;
+      expect(
+          invite.offered(s, s.me, 3, {...at, 2: const GAtom('bob')})
+              .map(formatTerm),
+          ['carol']);
+      final (o1, s1) = read('same(2, 3)');
+      final both = ActInfo(o1.buttons[2].acts.single);
+      expect(
+          both.offered(s1, s1.me, 3, {...at, 2: const GAtom('bob')})
+              .map(formatTerm),
+          ['bob', 'carol']);
+    });
+  });
+
+  testWidgets(
+      'the request refresh: an icon with no word, granting refresh at the '
+      'question\'s position (vGLP e22e2ad, Section 6.2)', (tester) async {
+    final s = _Screen(tester);
+    await s.draw('input([])', output: '[$_aliceView]');
+    final icon = find.byKey(socialKey(1, 'refresh'));
+    expect(icon, findsOneWidget);
+    expect(find.descendant(of: icon, matching: find.byType(Text)), findsNothing);
+    await _tap(tester, 'refresh');
+    expect(s.grants, ['input(1, [], refresh)']);
+  });
+
+  test('heldLine: an atom as its tab draws it, with its count where the tab '
+      'is counted, and the name of the tab', () {
+    final (_, s) = SocialState.read(fixtureTerm(
+        '[${_view("identity", "bob", "tab('Coins', coin, counted), tab('Contacts', knows)")}]'));
+    expect(heldLine(fixtureTerm('coin(alice)'), 2, s), 'Coins: Alice  2');
+    expect(heldLine(fixtureTerm('knows(bob)'), 1, s), 'Contacts: Bob');
   });
 }

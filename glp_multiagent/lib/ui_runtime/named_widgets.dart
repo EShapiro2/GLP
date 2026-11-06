@@ -260,7 +260,7 @@ Widget approvalSentence(
     GTerm? output) {
   final (f, args) = ctorArgs(view);
   if (f == 'approval' && args.length == 3) {
-    return _approvalWorded(context, construct, dflt, args, grant);
+    return _approvalWorded(context, construct, dflt, args, grant, output);
   }
   if (f != 'approval' || args.length != 2) {
     return _cannotDraw(approvalSentenceName, view);
@@ -340,9 +340,24 @@ Widget approvalSentence(
   );
 }
 
+/// A line of an atom the proposer holds, as the tab that lists it draws it, with the name of that tab ([_SocialTabState._wordedAtom]): its first argument by name, with its count [k] where the tab is counted, then its other arguments; the viewer's last view [s] names the tabs.
+String heldLine(GTerm atom, int k, SocialState? s) {
+  final (f, xs) = ctorArgs(atom);
+  final tab = s?.lists.where((l) => l.predicate == f).firstOrNull;
+  final title = xs.isEmpty
+      ? f
+      : [
+          '${_SocialTabState._named(xs.first)}'
+              '${tab?.counted ?? false ? '  $k' : ''}',
+          for (final y in xs.skip(1)) _SocialTabState._signed(y),
+        ].join(', ');
+  return tab == null ? title : '${tab.name}: $title';
+}
+
 /// The approval question of a platform compiled from a contract with pragmas, `approval(Attempt, Ws, YesNo?)`: the sentence the contract puts to the person, `Ws`, which the platform writes, each word `text(S)` drawn as it is and `person(P)` by the person's name (vGLP 1126f4f, Section 6.2, "The words a platform shows": "the platform writes it into the approval question, and its widget draws it as it draws any output of the program"); under it the text of each speech act of the attempt's class, the program's output; and the two answers, each drawn by the label the widget term of `YesNo` carries, or by its constant where it carries none ("A construct family draws the label it is given, and the name of the type where it is given none").  Where the contract puts no sentence to the person, `[]`, the class is drawn as the program writes it, its schema and its persons by name.  No word of a contract is held here.
 Widget _approvalWorded(BuildContext context, OpenConstruct construct,
-    GTerm dflt, List<GTerm> args, void Function(GTerm path, GTerm raw) grant) {
+    GTerm dflt, List<GTerm> args, void Function(GTerm path, GTerm raw) grant,
+    GTerm? output) {
   final p = questionAt(args[2]);
   final pending = pendingAt(args[0]) != null || pendingAt(args[1]) != null;
   final theme = Theme.of(context);
@@ -353,7 +368,7 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
       switch (ctorArgs(w)) {
         ('text', [final t]) => displayText(t),
         ('person', [final q]) => personName(q),
-        ('named', [_, _]) || ('valued', [_, _]) => '',
+        ('named', [_, _]) || ('valued', [_, _]) || ('held', [_, _]) => '',
         _ => displayText(w),
       }
   ].join();
@@ -365,6 +380,13 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
         _ => null,
       }
   ].nonNulls.toList();
+  // After the values, the atoms the act requires of the proposer whose predicates the tabs list, held(A, K), as the tabs draw them (vGLP e22e2ad, Section 5.4, "The contract's words": "as the tabs draw them --- in a swap, the coins the proposer gives"; Section 6.2: "An approval question is drawn as its question, with the values and the proposer's atoms after it"), each beside the name of its tab.
+  final (_, seen) = SocialState.read(output);
+  final held = [
+    for (final w in words)
+      if (ctorArgs(w) case ('held', [final a, final k]))
+        heldLine(a, k is GInt ? k.value : 1, seen)
+  ];
   final (af, axs) = ctorArgs(args[0]);
   // The question Start raises asks of an attempt, attempt(I, N, K, C, R), of its class C; the one an arriving hello asks, hello(Q, N), of the meeting N (vGLP, Section 5.4, "The compilation").
   final cls = af == 'attempt' && axs.length == 5
@@ -402,7 +424,7 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
       Text(sentence,
           key: sentenceKey(construct.id), style: theme.textTheme.titleMedium),
       if (!pending)
-        for (final v in values)
+        for (final v in [...values, ...held])
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(v, style: theme.textTheme.bodyLarge),
@@ -837,7 +859,7 @@ class SocialNotice {
   }
 }
 
-/// An act of a button as the request widget reads it, the declaration's `act(F, M, Pre, Binds, Fields, Same, Text)` (programs/vglp/cva/compiler/README.md, 6): "It draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role" (vGLP, Section 6.2, "The words a platform shows").  A place of the request is the `I`-th argument of `F(...)`; a value of a place is held by its number.
+/// An act of a button as the request widget reads it, the declaration's `act(F, M, Roles, Pre, Binds, Fields, Same, Text)` (programs/vglp/cva/compiler/README.md, 6): "It draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role" (vGLP, Section 6.2, "The words a platform shows").  A place of the request is the `I`-th argument of `F(...)`; a value of a place is held by its number.
 class ActInfo {
   final DeclaredAct act;
   const ActInfo(this.act);
@@ -861,6 +883,23 @@ class ActInfo {
           c.kind == 'same' &&
           ((c.args[0] == i && c.args[1] == j) ||
               (c.args[0] == j && c.args[1] == i)));
+
+  /// Whether [at] binds distinct roles to distinct persons, but for two the clause says are possibly one person: "every binding of the variables of the atoms the schema requires there that a schema-binding makes, distinct roles bound to distinct persons" (vGLP e22e2ad, Section 5.4, "The contract's words").  An agent variable is bound by no such rule, so Introduce with Carol = Bob is a way, and Remove of herself is none (vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1).
+  bool distinct(Map<int, GTerm> at) {
+    final rs = [
+      for (final r in act.roles)
+        if (at.containsKey(r)) r
+    ];
+    for (var i = 0; i < rs.length; i++) {
+      for (var j = i + 1; j < rs.length; j++) {
+        if (!mayShare(rs[i], rs[j]) &&
+            formatTerm(at[rs[i]]!) == formatTerm(at[rs[j]]!)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   /// [at] with the places of the entry [c] the atom [a] fills, an entry's place holding one value; null where [a] does not match [c] under [at].  `any` matches every argument.
   static Map<int, GTerm>? matched(GTerm a, ActCondition c, Map<int, GTerm> at) {
@@ -913,13 +952,15 @@ class ActInfo {
   String valuesOf(Map<int, GTerm> at) =>
       [for (final k in act.binds) formatTerm(at[k]!)].join(',');
 
-  /// Every way the state [atoms] of the viewer [viewer] satisfies the act at the proposer's role, each a binding of the places of the atoms it requires, the proposer's place the viewer's: "every binding of the variables of the atoms the schema requires there under which the state holds those atoms and lacks the atoms the schema forbids there that the binding determines" (ibid.).
+  /// Every way the state [atoms] of the viewer [viewer] satisfies the act at the proposer's role, each a binding of the places of the atoms it requires, the proposer's place the viewer's: "every binding of the variables of the atoms the schema requires there that a schema-binding makes, distinct roles bound to distinct persons, under which the state holds those atoms and lacks the atoms the schema forbids there that the binding determines" (vGLP e22e2ad, Section 5.4, "The contract's words").  Ways that differ only in a variable local to the role are one, by [valuesOf].
   List<Map<int, GTerm>> ways(List<GTerm> atoms, GTerm viewer) {
     final reqs = _of('req').toList();
     final out = <String, Map<int, GTerm>>{};
     void from(int i, Map<int, GTerm> at) {
       if (i == reqs.length) {
-        if (lacks(atoms, at)) out.putIfAbsent(valuesOf(at), () => at);
+        if (lacks(atoms, at) && distinct(at)) {
+          out.putIfAbsent(valuesOf(at), () => at);
+        }
         return;
       }
       for (final a in atoms) {
@@ -965,10 +1006,7 @@ class ActInfo {
     return [
       for (final x in [...s.known, if (mayShare(k, me)) viewer])
         if (seen.add(formatTerm(x)) &&
-            at.entries.every((e) =>
-                e.key == k ||
-                mayShare(k, e.key) ||
-                formatTerm(e.value) != formatTerm(x)) &&
+            distinct({...at, k: x}) &&
             provedAt(s.atoms, k, x) &&
             lacks(s.atoms, {...at, k: x}))
           x
@@ -1134,6 +1172,9 @@ class SocialAsk {
   /// Answer the question with the request `propose(P)`, as the default widget of the request type grants it: the form `propose` holding the form of `P`.
   void propose(GTerm p) => grant(at!, GStruct('propose', [p]));
 
+  /// Answer the question with the request `refresh`: "a person asks for it to redraw their screen" (vGLP e22e2ad, Section 5.4, "The compilation").
+  void refresh() => grant(at!, const GAtom('refresh'));
+
   /// A speech act of the text [text], signed by the person: "speech(utterance(S), P) is the text S by P" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 4), as the default widget of Speech forms it from its fields, a text field and a peer field.
   GTerm say(String text) => GStruct('speech', [
         GStruct('utterance', [GString(text)]),
@@ -1250,14 +1291,26 @@ class _SocialTabState extends State<SocialTab> {
     return _worded(context, s);
   }
 
-  Widget _name(BuildContext context, GTerm me) => Padding(
+  /// The person's name, and the request `refresh`, "drawn as the construct family chooses, by a gesture or an icon, with no word" (vGLP e22e2ad, Section 6.2): an icon, where the question is open.
+  Widget _name(BuildContext context, GTerm me, {VoidCallback? refresh}) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(personName(me),
-            key: socialKey(_id, 'name'),
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold)),
+        child: Row(children: [
+          Expanded(
+            child: Text(personName(me),
+                key: socialKey(_id, 'name'),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+          ),
+          if (refresh != null)
+            IconButton(
+              key: socialKey(_id, 'refresh'),
+              icon: const Icon(Icons.refresh),
+              onPressed: refresh,
+            ),
+        ]),
       );
 
   // --- The apps of contracts with pragmas -----------------------------------
@@ -1296,7 +1349,8 @@ class _SocialTabState extends State<SocialTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (first && ask != null) _name(context, ask.me),
+        if (first && ask != null)
+          _name(context, ask.me, refresh: ask.at == null ? null : ask.refresh),
         if (first)
           for (var i = s.notices.length - 1; i >= 0; i--)
             _wordedNotice(s.notices[i], i, o),
@@ -1612,7 +1666,11 @@ class _SocialTabState extends State<SocialTab> {
     if (key == null) return null;
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final args = [for (var i = 1; i <= n; i++) at[i]];
-    if (args.contains(null) || !w.act.lacks(s.atoms, at)) return null;
+    if (args.contains(null) ||
+        !w.act.lacks(s.atoms, at) ||
+        !w.act.distinct(at)) {
+      return null;
+    }
     return GStruct(w.act.schema, [for (final x in args) x!]);
   }
 

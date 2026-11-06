@@ -84,13 +84,14 @@ const GTerm listEnd = GList([GAtom('end')]);
 const String recCtor = 'rec';
 const String refCtor = 'ref';
 
-/// The widget of a declared widget, `named(W, D)`: the name `W` the
+/// The widget of a declared widget, `named(W, D)`: the widget `W` the
 /// widget declaration `T =::= W` gives and the default widget `D` of `T`,
 /// "drawn with the default widget of its type beside its name, from which it
 /// reads the type's constructors" (vGLP 92e6d3b, Section 6.2, the paragraph
-/// after Proposition "Default Widgets"; Section 6.3: "for a declared widget,
-/// the term named(W, D) of the name W its declaration gives and the default
-/// widget D of its type").  The compiler emits it wherever a declaration in
+/// after Proposition "Default Widgets"; vGLP e22e2ad, Section 6.3: "for a
+/// declared widget, the term named(W, D) of the widget W its declaration
+/// gives, a term of the construct family, and the default widget D of its
+/// type").  The compiler emits it wherever a declaration in
 /// scope names the widget of a position's moded type
 /// (`glp_runtime/lib/vglp/constructs.dart`, `_widget`).
 const String namedCtor = 'named';
