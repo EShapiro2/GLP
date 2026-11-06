@@ -1050,7 +1050,7 @@ expr(mul(A, B), E, R?) :- ground(A?), ground(B?), ground(E?) |
 expr(X, _, ex_bad) :- otherwise, ground(X?) | true.
 
 % A + S.B, S one or minus one.
-procedure ex_add(Ex?, Ex?, Integer?, Ex).
+exported procedure ex_add(Ex?, Ex?, Integer?, Ex).
 ex_add(ex(L1, D1), ex(L2, D2), S, ex(L?, D?)) :-
     ground(L1?), integer(D1?), ground(L2?), integer(D2?), integer(S?) |
     lin_scale(L1?, D2?, A),

@@ -363,6 +363,10 @@ procedure '_ceil'(Number?, Integer).
 procedure '_list_to_tuple'(Stream(_)?, _).
 procedure '_tuple_to_list'(_?, Stream(_)).
 
+% Text (GLP-Spec appendix-guards, the Text kernel rows, ca3c8e5)
+procedure '_string_concat'(List(String)?, String).
+procedure '_term_to_string'(_?, String).
+
 % Time and random
 procedure '_now'(Integer).
 procedure '_random'(Integer?, Integer?, Integer, Integer).
@@ -797,6 +801,25 @@ procedure step_clock(Number?, ClockStep).
 step_clock(Horizon, Step?) :-
   number(Horizon?) |
   '_step_clock'(Horizon?, Step).
+
+% =============================================================================
+% TEXT (string_concat/2, term_to_string/2)
+% =============================================================================
+% string_concat(Ss, S): S is the string of the characters of the strings of
+% the list Ss, one after another, the empty list contributing the characters
+% []; the kernel aborts where an element is not a string.  term_to_string(T,
+% S): S is a text the reader reads as the ground term T, one text per term.  A
+% program that prints GLP source builds each line by these two and prints it by
+% send_to_user/1 (GLP-ICLP appendix-guards, "Text", ca3c8e5).
+procedure string_concat(List(String)?, String).
+string_concat(Ss, S?) :-
+  ground(Ss?) |
+  '_string_concat'(Ss?, S).
+
+procedure term_to_string(_?, String).
+term_to_string(T, S?) :-
+  ground(T?) |
+  '_term_to_string'(T?, S).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)
