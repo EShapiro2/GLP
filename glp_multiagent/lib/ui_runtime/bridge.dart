@@ -95,12 +95,25 @@ const String refCtor = 'ref';
 /// (`glp_runtime/lib/vglp/constructs.dart`, `_widget`).
 const String namedCtor = 'named';
 
-/// The name `W` and the default widget `D` of [w], where it is
-/// `named(W, D)`; null for any other widget.
+/// The name of the declared widget and the default widget `D` of [w], where
+/// it is `named(W, D)`; null for any other widget.  `W` is the name, or, where
+/// the declaration declares buttons, the declared widget whole, its name
+/// applied to them ([declaredText]).
 (String, GTerm)? namedWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
   if (k != namedCtor || ws.length != 2) return null;
-  return (_recName(ws[0]), ws[1]);
+  final n = _recName(ws[0]);
+  final i = n.indexOf('(');
+  return (i < 0 ? n : n.substring(0, i), ws[1]);
+}
+
+/// The `W` of [w], where it is `named(W, D)`, as the declaration gives it,
+/// which `DeclaredWidget.parse` reads (glp_runtime/lib/vglp/canonical.dart;
+/// constructs.dart, `_widget`); null for any other widget.
+String? declaredText(GTerm w) {
+  final (k, ws) = ctorArgs(w);
+  if (k != namedCtor || ws.length != 2) return null;
+  return _recName(ws[0]);
 }
 
 /// A label a widget term carries beside its constructor, `label(S, W)`: the
@@ -117,48 +130,18 @@ const String namedCtor = 'named';
 /// in its entry, `field(L, W)`, `L` the name in place of the type's.
 const String labelCtor = 'label';
 
-/// Where the button of a request is drawn, `act(P, W)`, `P` the term
-/// `place(T, M, Ps, Gs, Is, Ks, Ws)`: the tab of its contract, the place of
-/// the person proposing it, the places a person the view lists fills, the
-/// groups a group it lists fills, the items a row of a list fills, the
-/// places a field for a key fills, and the text
-/// of its request form (vGLP, Section 6.2, "The words a platform shows";
-/// programs/self.glp, the type Widget; programs/vglp/cva/compiler/README.md,
-/// "The pragmas").  The compiler emits it around the widget of each request
-/// of a platform compiled from a contract with pragmas
-/// (`glp_runtime/lib/vglp/constructs.dart`, `_labelled`); a construct family
-/// that does not place buttons draws `W`.
-const String actCtor = 'act';
-
-/// The place `P` and the widget `W` of [w], where it is `act(P, W)`; null
-/// for any other term.
-(GTerm, GTerm)? actWidget(GTerm w) {
-  final (k, ws) = ctorArgs(w);
-  if (k != actCtor || ws.length != 2) return null;
-  return (ws[0], ws[1]);
-}
-
 /// The label `S` and the widget, or the button's constant, `W` of [w], where
-/// it is `label(S, W)`, or `act(P, label(S, W))`; null for any other term.
+/// it is `label(S, W)`; null for any other term.
 (String, GTerm)? labelledWidget(GTerm w) {
-  var cur = w;
-  for (var a = actWidget(cur); a != null; a = actWidget(cur)) {
-    cur = a.$2;
-  }
-  final (k, ws) = ctorArgs(cur);
+  final (k, ws) = ctorArgs(w);
   if (k != labelCtor || ws.length != 2) return null;
   return (displayText(ws[0]), ws[1]);
 }
 
-/// [w] with the labels and the places at its top taken off.
+/// [w] with the labels at its top taken off.
 GTerm unlabelled(GTerm w) {
   var cur = w;
   while (true) {
-    final a = actWidget(cur);
-    if (a != null) {
-      cur = a.$2;
-      continue;
-    }
     final l = labelledWidget(cur);
     if (l == null) return cur;
     cur = l.$2;
@@ -178,7 +161,7 @@ GTerm unlabelled(GTerm w) {
 /// form drawn by it is drawn when the person opens it.
 bool recursiveWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
-  if ((k == namedCtor || k == labelCtor || k == actCtor) && ws.length == 2) {
+  if ((k == namedCtor || k == labelCtor) && ws.length == 2) {
     return recursiveWidget(ws[1]);
   }
   return (k == recCtor && ws.length == 2) || (k == refCtor && ws.length == 1);

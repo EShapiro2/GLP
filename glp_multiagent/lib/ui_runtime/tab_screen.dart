@@ -1,8 +1,8 @@
 /// The screen of tabs of the grassroots app's construct family: the layout of the constructs of a canonical platform's app, its tabs those the view names.  "A question's type fixes a construct's semantic content --- what it shows, what it takes, and the answer each submission forms --- and nothing of its layout" (vGLP, Remark "Construct Families"), so the tabs are the family's layout, and no construct's content changes with them.
 ///
-/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  Its tabs are the lists the last view on construct 0 names, each named by the contract, since the compiler carries "the tab's name and its predicate into the view the agent writes" (vGLP, Section 5.4, "The contract's words"), and each approval question is drawn at the top of the tab of its act's contract, as the request's widget term says (Section 6.2, "The words a platform shows"; `_TabScreenState._worded`).  Before a view naming a list is written, the screen has no tabs, and draws its constructs one under another.  Each tab holds, in order:
+/// The screen is drawn where an open construct is drawn by `last_state` or `social_menu` (named_widgets.dart).  Its tabs are the lists the last view on construct 0 names, each named by the contract, since the compiler carries "the tab's name and its predicate into the view the agent writes" (vGLP, Section 5.4, "The contract's words"), and the approval questions are drawn at the top of the first (Remark "Construct Families": a question's type fixes "nothing of its layout"; `_TabScreenState._worded`).  Before a view naming a list is written, the screen has no tabs, and draws its constructs one under another.  Each tab holds, in order:
 ///
-///   1. the approval questions drawn on it, at its top, each drawn by its widget, an approval question whose act's contract names no tab the view lists in the first;
+///   1. in the first, at its top, the approval questions, each drawn by its widget;
 ///   2. in the first, every other question that is neither an approval question nor the request question, by its widget;
 ///   3. the request question, drawn by `social_menu` in the tab, where it is open; and otherwise construct 0, drawn by `last_state` in the tab.
 ///
@@ -59,15 +59,6 @@ bool _isApproval(OpenConstruct c) {
   return f == 'approval' && (args.length == 2 || args.length == 3);
 }
 
-/// The schema of the class of the attempt of the approval question [c], `approval(attempt(I, N, K, C, R), Q)`, or of the meeting an arriving hello asks of, `approval(hello(Q, N), ...)` (vGLP, Section 5.4, "The compilation"); empty where its view is not one.
-String _classOf(OpenConstruct c) {
-  final (_, args) = ctorArgs(c.view);
-  final (af, xs) = ctorArgs(args[0]);
-  if (af == 'hello' && xs.length == 2) return ctorArgs(xs[1]).$1;
-  if (af != 'attempt' || xs.length != 5) return '';
-  return ctorArgs(xs[3]).$1;
-}
-
 /// Whether the approval question [c] is open: its answer's position, its last, marked `input(P)`.
 bool _open(OpenConstruct c) => questionAt(ctorArgs(c.view).$2.last) != null;
 
@@ -101,9 +92,6 @@ class TabScreen extends StatefulWidget {
 }
 
 class _TabScreenState extends State<TabScreen> {
-  /// The requests the last request question drawn offers, read off its widget term, where each request's button is drawn among them ([RequestOffers]); null before one is drawn.
-  RequestOffers? _offers;
-
   /// The person's own key, as the last view drawn on construct 0 carries it ([SocialState.me]).
   GTerm? _me;
 
@@ -176,7 +164,7 @@ class _TabScreenState extends State<TabScreen> {
         grant: (path, raw) => widget.grant(c.id, path, raw),
       );
 
-  /// The screen of a platform compiled from a contract with pragmas: a tab for each list its view names, in their order, named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words": "for each list the app shows, its name and what it lists"), each holding at its top the approval questions of the acts drawn on it, the tab of an act's contract as the request's widget term says (named_widgets.dart, `ActInfo`), the other questions in the first, and the request question drawn in the tab, or construct 0 where none is open.
+  /// The screen of a platform compiled from a contract with pragmas: a tab for each list its view names, in their order, named by the contract (vGLP 1126f4f, Section 5.4, "The contract's words": "for each list the app shows, its name and what it lists"), the first holding at its top the approval questions and the other questions, and each the request question drawn in the tab, or construct 0 where none is open.
   Widget _worded(
       List<({String name, String predicate, bool counted})> lists,
       OpenConstruct? c0,
@@ -185,16 +173,6 @@ class _TabScreenState extends State<TabScreen> {
       List<OpenConstruct> others,
       GTerm? output) {
     final first = lists.first.predicate;
-    // The tab of an approval question is the tab of its act's contract, as the request's widget term says (named_widgets.dart, ActInfo); the first where it says none.
-    final d = request == null ? null : namedWidget(request.widget)?.$2;
-    if (d != null) _offers = RequestOffers.of(d);
-    String listOf(OpenConstruct a) {
-      final t = _offers?.tabOf(_classOf(a));
-      for (final l in lists) {
-        if (l.name == t) return l.predicate;
-      }
-      return first;
-    }
     final byState = c0 != null && _declared(c0) == lastStateName;
     Widget view(OpenConstruct c, {bool card = true}) =>
         _view(c, output, card: card);
@@ -206,10 +184,10 @@ class _TabScreenState extends State<TabScreen> {
             key: ValueKey('tab-view:list:$pred'),
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              for (final a in approvals)
-                if (listOf(a) == pred) view(a),
-              if (pred == first)
+              if (pred == first) ...[
+                for (final a in approvals) view(a),
                 for (final o in others) view(o),
+              ],
               if (request != null)
                 view(request, card: false)
               else if (c0 != null && (byState || pred == first))
@@ -218,9 +196,8 @@ class _TabScreenState extends State<TabScreen> {
           ),
         );
     Widget label(({String name, String predicate, bool counted}) l) {
-      final n = approvals
-          .where((a) => listOf(a) == l.predicate && _open(a))
-          .length;
+      final n =
+          l.predicate == first ? approvals.where(_open).length : 0;
       return Tab(
         key: listTabKey(l.predicate),
         child: Badge(

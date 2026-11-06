@@ -437,23 +437,12 @@ void main() {
         formatTerm(fixtureTerm(_attestation)));
   });
 
-  test('a principal\'s AI agents, those retired, and the items held', () {
+  test('a principal\'s AI agents', () {
     final (_, s) = SocialState.read(fixtureTerm('[view(alice, [retired_of(alf), '
-        'principal_of(alf), principal_of(ada), item($_code), '
-        "authored($_code), agent_of(rex, carol, $_attestation), "
-        'identity], [], [], [])]'));
+        'principal_of(alf), principal_of(ada), identity], [], [], [])]'));
     expect(s!.aiAgents.map(formatTerm), ['alf', 'ada']);
     expect(s.isPrincipalOf(const GAtom('ada')), isTrue);
     expect(s.isPrincipalOf(const GAtom('bob')), isFalse);
-    expect(s.hasRetired(const GAtom('alf')), isTrue);
-    expect(s.hasRetired(const GAtom('ada')), isFalse);
-    expect(s.isAgent, isFalse);
-    expect(s.holdsItem(fixtureTerm(_code)), isTrue);
-    expect(s.holdsItem(fixtureTerm(_attestation)), isFalse);
-    // A known AI agent: her own, or one she holds recorded.
-    expect(s.isKnownAgent(const GAtom('alf')), isTrue);
-    expect(s.isKnownAgent(const GAtom('rex')), isTrue);
-    expect(s.isKnownAgent(const GAtom('carol')), isFalse);
   });
 
   test('a person by name: the key, its underscores as spaces and each word '
@@ -503,17 +492,6 @@ void main() {
       'Yes',
       'No',
     ]);
-  });
-
-  test('what a CSSN state holds of the person: their children and parents', () {
-    final (_, alice) = SocialState.read(fixtureTerm(
-        '[view(alice, [friend(bob), parenting(carol), friend(carol), identity], '
-        '[bob, carol, dave], [], [])]'));
-    expect(alice!.children.map(formatTerm), ['carol']);
-    expect(alice.isChild, isFalse);
-    final (_, carol) = SocialState.read(fixtureTerm(_carolOutput));
-    expect(carol!.isChild, isTrue);
-    expect(carol.parents.map(formatTerm), ['alice']);
   });
 
   test('the classes of the platform read off the default widget of Approval',

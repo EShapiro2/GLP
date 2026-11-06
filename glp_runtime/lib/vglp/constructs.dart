@@ -183,7 +183,7 @@ import 'dispatcher.dart'
         pathTypeName,
         personChannelTypeName,
         widgetTypeName;
-import 'canonical.dart' show ActPlace, DeclaredWidget;
+import 'canonical.dart' show DeclaredWidget;
 
 /// The Definition an interactive type is refused by where it is not one.
 const _definition = 'vGLP, Definition "Volitional Procedure, Interactive Type"';
@@ -897,7 +897,7 @@ class _Generator {
     // type").  The program writes it, so the declaration is of the moded type
     // Stream(Output), with no `?`.
     final d = w == 'shown' ? 'thread' : 'thread($w)';
-    return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
+    return dw == null ? d : 'named(${constantSource(dw.drawnAs)}, $d)';
   }
 
   // --- the construct clause -------------------------------------------------
@@ -2211,23 +2211,14 @@ class _Generator {
     } finally {
       _labels = outer;
     }
-    return dw == null ? d : 'named(${constantSource(dw.name)}, $d)';
+    return dw == null ? d : 'named(${constantSource(dw.drawnAs)}, $d)';
   }
 
   /// [w], the widget of the constructor [f], with the label the declaration
   /// in force gives [f], `label(S, W)`; [w] itself where it gives none.
   String _labelled(String f, String w) {
     final l = _labels?.ofConstructor(f);
-    final lw = l == null ? w : 'label(${constantSource(l)}, $w)';
-    // Where the request's button is drawn, act(place(...), W), where the
-    // declaration says (vGLP, Section 6.2, "The words a platform shows";
-    // canonical.dart, ActPlace).
-    // One wrapper for each guarding role the act is drawn at, the first outermost (vGLP 110caf4, Section 6.2).
-    var w1 = lw;
-    for (final a in (_labels?.ofAct(f) ?? const <ActPlace>[]).reversed) {
-      w1 = 'act(${a.placeSource}, $w1)';
-    }
-    return w1;
+    return l == null ? w : 'label(${constantSource(l)}, $w)';
   }
 
   /// The name of the field at the place [i] of the constructor [f]: the

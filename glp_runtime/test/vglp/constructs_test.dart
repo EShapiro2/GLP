@@ -2253,6 +2253,60 @@ procedure (YesNo?)*approve(Integer?).
           "named(approval_sentence, buttons([label('Accept', yes), no]))");
     });
 
+    test('a declaration of buttons: the widget term carries it whole, and a '
+        'label beside each schema and field its buttons name (compiler '
+        'README, 6)', () {
+      const w = 'social_menu([button("Send", [act(send, 1, '
+          '[req(identity, []), req(knows, [at(2)]), forb(friend, [any, at(2)]), '
+          'req(member, [grp(1, 3)]), unless(blocked, [at(2)]), '
+          'proved(identity, [], knows, [at(4)])], [2, 3], '
+          '[field(4, "person", person), field(5, "text", text)], '
+          '[same(1, 4)], [at(1), say(" sends.")])])])';
+      final c = compile('''
+Peer ::= Key.
+Act ::= send(Peer, Peer, String, Peer, String) ; leave(Peer).
+Ask ::= ask(Act?).
+Ask =::= $w.
+procedure (Ask)*request(Integer?).
+(ask(_))*request(_).
+''');
+      final d = DeclaredWidget.parse(w);
+      expect(d.source, w);
+      expect(d.name, 'social_menu');
+      expect(d.drawnAs, w);
+      final a = d.buttons.single.acts.single;
+      expect(a.schema, 'send');
+      expect(a.proposer, 1);
+      expect(a.binds, [2, 3]);
+      expect([for (final f in a.fields) (f.place, f.label, f.type)],
+          [(4, 'person', 'person'), (5, 'text', 'text')]);
+      expect([for (final x in a.pre) x.kind],
+          ['req', 'req', 'forb', 'req', 'unless', 'proved']);
+      expect(a.pre[2].args, [null, 2]);
+      expect(a.pre[3].args, [(1, 3)]);
+      expect(a.same.single.args, [1, 4]);
+      expect(a.text, [1, ' sends.']);
+      expect(
+          c.widgets['Ask'],
+          allOf(
+              startsWith("named('social_menu([button("),
+              contains("label('Send', form(send, [field('Peer', peer), "
+                  "field('Peer', peer), field('String', text), "
+                  "field(person, peer), field(text, text)]))")));
+    });
+
+    test('an act that does not read as the grammar has it is no declaration',
+        () {
+      expect(
+          DeclaredWidget.tryParse('social_menu([button("X", '
+              '[act(x, 1, [], [], [field(2, "s", other)], [], [])])])'),
+          isNull);
+      expect(
+          DeclaredWidget.tryParse(
+              'social_menu([act(x, "Tab", 1, [], [], [])])'),
+          isNull);
+    });
+
     test('are refused where W is not an atom, T not a moded type, or two name '
         'one moded type', () {
       expect(() => compile('''
