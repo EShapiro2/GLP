@@ -1623,8 +1623,11 @@ SPENDJC=$(spend_j "[j, k]" "num(j)" "num(k)" "le(num(j), num(k))")
 SPENDJN=$(spend_j "[j, k]" "num(j)" "num(k)" "true")
 SPENDJ3C=$(spend_j "[j]" "num(j)" "num(3)" "le(num(j), num(3))")
 SPENDJ3N=$(spend_j "[j]" "num(j)" "num(3)" "true")
+SPENDJM=$(spend_j "[j, k, m]" "num(j)" "num(k)" "and(le(num(j), num(m)), le(num(m), num(k)))")
+SPEND5K=$(spend_j "[k]" "num(5)" "num(k)" "ge(num(k), num(4))")
 out=$(run "check($SPEND2C, V)." "check($SPEND2N, V)." "check($SPENDJC, V)." "check($SPENDJN, V)." "check($SPENDJ3C, V)." "check($SPENDJ3N, V)." \
-          "as_read($SPEND2C, R)." "as_read($SPENDJC, R)." "as_read($SPENDJ3C, R).")
+          "as_read($SPEND2C, R)." "as_read($SPENDJC, R)." "as_read($SPENDJ3C, R)." \
+          "check($SPENDJM, V)." "check($SPEND5K, V).")
 check_eq "k.coin required, 2.coin deleted, k >= 2: read, and syntactically grassroots" \
          "V = syntactically_grassroots" "$(sv 1)"
 check_eq "k.coin required, 2.coin deleted, no constraint: refused" \
@@ -1637,6 +1640,10 @@ check_eq "3.coin required, j.coin deleted, j <= 3: read, and syntactically grass
          "V = syntactically_grassroots" "$(sv 5)"
 check_eq "3.coin required, j.coin deleted, no constraint: refused" \
          "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sv 6)"
+check_eq "k.coin required, j.coin deleted, j <= m and m <= k over a value m: read, and syntactically grassroots" \
+         "V = syntactically_grassroots" "$(sv 7)"
+check_eq "k.coin required, 5.coin deleted, k >= 4: refused, k being 4 at a binding" \
+         "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sv 8)"
 check "spend as read, 2.coin deleted: the copies of k.coin beyond the two kept" \
       "rs(guarded, [], [times(num(2), atom(coin, [role(1)]))], [atom(identity, []), rest(num(k), num(2), atom(coin, [role(1)]))], [])" "$out"
 check "spend as read, j.coin deleted: the copies of k.coin beyond the j kept" \
