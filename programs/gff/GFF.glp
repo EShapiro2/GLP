@@ -63,32 +63,32 @@ contract_named(gff,
     schema(unpoint, ['Alice', 'Bob'], [],
        [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GDO-L:1, Labeled pointing to friend, with Bob's label, which is named by Bob.
+%% GDO-L:1, Labeled pointing to friend, labeled 'Bob'.
     schema(follow_own, ['Alice', 'Bob'], [],
        [rs(guarded,   [atom(lpoints_to, [role(2), role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), role(2)])]),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GDO-L:1, Labeled pointing to friend, with a label l that Bob points with, to some person d.
-    schema(follow_friend, ['Alice', 'Bob'], [pvar(l), pvar(d)],
-       [rs(guarded,   [atom(lpoints_to, [role(2), pvar(l)])], [],
-                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar(l)])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(d), pvar(l)])], [])]),
+%% GDO-L:1, Labeled pointing to friend, labeled 'Dave', where Bob has a pointer labeled 'Dave', to Carol.
+    schema(follow_friend, ['Alice', 'Bob'], [pvar('Dave'), pvar('Carol')],
+       [rs(guarded,   [atom(lpoints_to, [role(2), pvar('Dave')])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar('Dave')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
 %% GDO-L:2, Labeled transitive pointing, Carol the agent variable c.
-    schema(follow_transitive, ['Alice', 'Bob'], [pvar(c), pvar(l)],
-       [rs(guarded,   [atom(lpoints_to, [pvar(c), pvar(l)])], [],
-                      [atom(identity, []), atom(knows, [pvar(c)]), atom(lpoints_to, [role(2), pvar(l)])],
-                      [atom(lpoints_to, [pvar(c), pvar(l)])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(c), pvar(l)])], [])]),
+    schema(follow_transitive, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')],
+       [rs(guarded,   [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [],
+                      [atom(identity, []), atom(knows, [pvar('Carol')]), atom(lpoints_to, [role(2), pvar('Dave')])],
+                      [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
 %% GDO-L:3, Ceasing to point.
-    schema(unfollow, ['Alice', 'Bob'], [pvar(l)],
-       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar(l)])], [atom(identity, [])], []),
+    schema(unfollow, ['Alice', 'Bob'], [pvar('Dave')],
+       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar('Dave')])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
 %% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:1), and Alice holds it as an item of the feed Alice names.
     schema(post, ['Alice'], [svar(x)],
        [rs(guarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [atom(item, [svar(x), role(1)])])]),
 %% GFF:2, Delivery.  Alice, who points to Bob with the feed l, receives from Bob an item x of l that Bob holds; no guarding role, Bob a reading role, received(x, l, Bob) the signature atom (GSC 859a007, Definition Signature atom).
-    schema(deliver, ['Alice', 'Bob'], [pvar(l), svar(x)],
-       [rs(unguarded, [atom(item, [svar(x), pvar(l)]), atom(received, [svar(x), pvar(l), role(2)])], [],
-                      [atom(identity, []), atom(lpoints_to, [role(2), pvar(l)])],
-                      [atom(item, [svar(x), pvar(l)])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(item, [svar(x), pvar(l)])], [])])]).
+    schema(deliver, ['Alice', 'Bob'], [pvar('Carol'), svar(x)],
+       [rs(unguarded, [atom(item, [svar(x), pvar('Carol')]), atom(received, [svar(x), pvar('Carol'), role(2)])], [],
+                      [atom(identity, []), atom(lpoints_to, [role(2), pvar('Carol')])],
+                      [atom(item, [svar(x), pvar('Carol')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(item, [svar(x), pvar('Carol')])], [])])]).
