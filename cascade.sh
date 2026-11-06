@@ -42,6 +42,7 @@
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
 #   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   LBM         programs/lbm              ---
+#   gff_i       GFF-I GFF         programs/gff              ---
 #   gd          GD    GGGA        programs/ggga             ---
 #   gdo_l       GDO-L GFF         programs/gff              ---
 #
@@ -136,9 +137,10 @@ case "$NAME" in
     gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/LBM";  PLAYDIR="" ;;
+    gff_i) FILE=GFF-I; OWNER="programs/gff";               PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
     gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
     gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gdo_l" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gdo_l gff_i" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
