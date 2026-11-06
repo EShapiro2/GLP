@@ -13,7 +13,9 @@
 % 1934846, a value having no base), and prov_c2s the second, on every
 % speech-act variable that is an argument of the atom or occurs in a name
 % term among its arguments.  The atoms psi are those required at an agent
-% role, =(i) u -(i), a cleared atom requiring none (def:schema, GSC 327e035).
+% role, =(i) u -(i), a cleared atom requiring none (def:schema, GSC 327e035),
+% and, of a conditional atom, the anchor of its conjunct; a condition of the
+% body is read by none of this (def:schema, GSC c8c5ead).
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -43,8 +45,27 @@ procedure contract_preds(Contract?, Preds?, Preds).
 contract_preds([], T, T?).
 contract_preds([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
     sch_roles(S?, Rs),
+    sch_conjs(S?, Cj),
     contract_preds(Ss?, T?, R1),
-    roles_preds(Rs?, R1?, R).
+    conjs_preds(Cj?, R1?, R2),
+    roles_preds(Rs?, R2?, R).
+
+% The anchor and the conditional literals of a conjunct of the head.
+procedure conjs_preds(Conjuncts?, Preds?, Preds).
+conjs_preds([], T, T?).
+conjs_preds([conjunct(_, _, A, _, P, M, _)|Cs], T, R?) :-
+    ground(A?), ground(P?), ground(M?), ground(Cs?), ground(T?) |
+    conjs_preds(Cs?, T?, R1),
+    hms_atoms(M?, M1),
+    hms_atoms(P?, P1),
+    atoms_preds([A?|P1?], R1?, R2),
+    atoms_preds(M1?, R2?, R).
+
+procedure hms_atoms(HMults?, Atoms).
+hms_atoms([], []).
+hms_atoms([hm(_, M)|Ms], [A?|R?]) :- ground(M?) |
+    plain_mult(M?, A),
+    hms_atoms(Ms?, R).
 
 % The predicates occurring in a contract, in order of first occurrence.
 exported procedure all_preds(Contract?, Preds).
@@ -234,24 +255,65 @@ prov_pred(_, [], _, yes).
 prov_pred(Pd, [S|Ss], E, R?) :-
     ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
     sch_roles(S?, Rs),
-    prov_pred_w(Rs?, Pd?, Ss?, E?, R).
+    sch_conjs(S?, Cj),
+    prov_pred_w(Rs?, Cj?, Pd?, Ss?, E?, R).
 
-procedure prov_pred_w(RoleSpecs?, Constant?, Contract?, Preds?, Ans).
-prov_pred_w(Rs, Pd, Ss, E, R?) :-
-    ground(Rs?), ground(Pd?), ground(Ss?), ground(E?) |
+procedure prov_pred_w(RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
+prov_pred_w(Rs, Cj, Pd, Ss, E, R?) :-
+    ground(Rs?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
     agent_roles(Rs?, Ws),
-    prov_pred_roles(Rs?, Ws?, Pd?, Ss?, E?, R).
+    prov_pred_roles(Rs?, Ws?, Cj?, Pd?, Ss?, E?, R).
 
 % Ws are the agent roles of the schema.
-procedure prov_pred_roles(RoleSpecs?, RoleSpecs?, Constant?, Contract?, Preds?, Ans).
-prov_pred_roles(Rs, Ws, Pd, Ss, E, R?) :-
-    ground(Rs?), ground(Ws?), ground(Pd?), ground(Ss?), ground(E?) |
+procedure prov_pred_roles(RoleSpecs?, RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
+prov_pred_roles(Rs, Ws, Cj, Pd, Ss, E, R?) :-
+    ground(Rs?), ground(Ws?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
     role_bases(Rs?, 1, RBs),
     req_bases(Ws?, E?, [], QBs),
     req_phi_svars(Ws?, E?, QSV),
     req_svars(Rs?, SV),
-    prov_roles(Rs?, 1, Pd?, pctx(RBs?, QBs?, QSV?, SV?), A),
+    prov_pred_cx(pctx(RBs?, QBs?, QSV?, SV?), Rs?, Cj?, Pd?, Ss?, E?, R).
+
+procedure prov_pred_cx(PCtx?, RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
+prov_pred_cx(Cx, Rs, Cj, Pd, Ss, E, R?) :-
+    ground(Cx?), ground(Rs?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
+    prov_roles(Rs?, 1, Pd?, Cx?, A1),
+    prov_conjs(Cj?, Pd?, Cx?, E?, A2),
+    both_yes(A1?, A2?, A),
     prov_pred1(A?, Pd?, Ss?, E?, R).
+
+% "A conditional atom added at an agent role is read the same way
+% (Definition Speech-act schema), the anchor of its conjunct counting as an
+% atom of = at its holder" (def:grounded).
+procedure prov_conjs(Conjuncts?, Constant?, PCtx?, Preds?, Ans).
+prov_conjs([], _, _, _, yes).
+prov_conjs([conjunct(_, _, A, _, P, _, _)|Cs], Pd, pctx(RBs, QBs, QSV, SV), E, R?) :-
+    ground(A?), ground(P?), ground(Cs?), ground(Pd?), ground(RBs?), ground(QBs?),
+    ground(QSV?), ground(SV?), ground(E?) |
+    phi_bases([A?], E?, QBs?, QB1),
+    phi_args([A?], E?, [], As1),
+    filter_svars(As1?, S1),
+    args_app(S1?, QSV?, QSV1),
+    atoms_args([A?], [], As2),
+    filter_svars(As2?, S2),
+    args_app(S2?, SV?, SV1),
+    prov_hms(P?, Pd?, pctx(RBs?, QB1?, QSV1?, SV1?), A1),
+    prov_conjs1(A1?, Cs?, Pd?, pctx(RBs?, QBs?, QSV?, SV?), E?, R).
+
+procedure prov_conjs1(Ans?, Conjuncts?, Constant?, PCtx?, Preds?, Ans).
+prov_conjs1(no, _, _, _, _, no).
+prov_conjs1(yes, Cs, Pd, Cx, E, R?) :- prov_conjs(Cs?, Pd?, Cx?, E?, R).
+
+procedure prov_hms(HMults?, Constant?, PCtx?, Ans).
+prov_hms([], _, _, yes).
+prov_hms([hm(J, M)|Ms], Pd, Cx, R?) :- integer(J?), ground(M?), ground(Ms?), ground(Pd?), ground(Cx?) |
+    plain_mult(M?, A),
+    prov_plus([A?], Pd?, b_role(J?), Cx?, B),
+    prov_hms1(B?, Ms?, Pd?, Cx?, R).
+
+procedure prov_hms1(Ans?, HMults?, Constant?, PCtx?, Ans).
+prov_hms1(no, _, _, _, no).
+prov_hms1(yes, Ms, Pd, Cx, R?) :- prov_hms(Ms?, Pd?, Cx?, R).
 
 % ---------------------------------------------------------------------------
 % The fixpoint

@@ -144,8 +144,16 @@ procedure guarded_in(Ints?, RoleSpecs?, Ans).
 guarded_in([], _, no).
 guarded_in([I|Is], Rs, R?) :- integer(I?), ground(Is?), ground(Rs?) |
     nth_rs(Rs?, I?, RS),
-    is_guarding(RS?, A),
+    is_guarding_agent(RS?, A),
     guarded_in1(A?, Is?, Rs?, R).
+
+% def:volition: "a guarding agent role in every connected component", a
+% listed role's extent being possibly empty.
+procedure is_guarding_agent(RoleSpec?, Ans).
+is_guarding_agent(RS, R?) :- ground(RS?) |
+    is_guarding(RS?, G),
+    is_party_role(RS?, P),
+    both_yes(G?, P?, R).
 
 % The first role whose connected component holds no guarding role.
 procedure first_unguarded1(Ans?, Integer?, Integer?, RoleSpecs?, Preds?, Missing).
@@ -320,24 +328,90 @@ listed_reading_faults(J, K, Nm, Rs, R?) :-
 
 % The N-th schema NSc of the contract NC has a signature atom (def:signature):
 % an atom phi it adds or deletes at an agent role pi_i, every agent role of it
-% but pi_i the base of an argument of phi, every variable of it occurring in
-% phi, and phi the only atom it adds, or deletes or clears, with its
-% predicate, no other schema of NC with no guarding role adding, or deleting
-% or clearing, an atom with that predicate.  sig(Is, Vs) holds the indices of
-% its agent roles and its variables.
+% but pi_i the base of an argument of phi, and phi the only atom it adds, or
+% deletes or clears, with its predicate, no other schema of NC with no
+% guarding role adding, or deleting or clearing, an atom with that predicate;
+% a conditional atom of a conjunct of its head is such an atom (def:schema).
+% sig(Is) holds the indices of its agent roles.
 procedure has_signature(NSchema?, Integer?, NContract?, Ans).
 has_signature(NSc, N, NC, R?) :- ground(NSc?), integer(N?), ground(NC?) |
     nsch_roles(NSc?, Rs),
-    nsch_vars(NSc?, Vs),
+    nsch_conjs(NSc?, Cj),
     others_preds(NC?, 1, N?, TA, TD),
-    has_signature1(Rs?, Vs?, TA?, TD?, R).
+    has_signature1(Rs?, Cj?, TA?, TD?, R).
 
-procedure has_signature1(NRoleSpecs?, Args?, Preds?, Preds?, Ans).
-has_signature1(Rs, Vs, TA, TD, R?) :- ground(Rs?), ground(Vs?), ground(TA?), ground(TD?) |
+procedure has_signature1(NRoleSpecs?, Conjuncts?, Preds?, Preds?, Ans).
+has_signature1(Rs, Cj, TA, TD, R?) :- ground(Rs?), ground(Cj?), ground(TA?), ground(TD?) |
     n_agent_roles(Rs?, 1, Is),
-    nroles_add_preds(Rs?, [], OA),
-    nroles_del_preds(Rs?, [], OD),
-    sig_roles(Rs?, 1, sig(Is?, Vs?), OA?, OD?, TA?, TD?, R).
+    nroles_add_preds(Rs?, [], OA0),
+    nroles_del_preds(Rs?, [], OD0),
+    conjs_add_preds(Cj?, OA0?, OA),
+    conjs_del_preds(Cj?, OD0?, OD),
+    has_signature2(Rs?, Cj?, sig(Is?), OA?, OD?, TA?, TD?, R).
+
+procedure has_signature2(NRoleSpecs?, Conjuncts?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+has_signature2(Rs, Cj, X, OA, OD, TA, TD, R?) :-
+    ground(Rs?), ground(Cj?), ground(X?), ground(OA?), ground(OD?), ground(TA?), ground(TD?) |
+    sig_roles(Rs?, 1, X?, OA?, OD?, TA?, TD?, A1),
+    sig_conjs(Cj?, X?, OA?, OD?, TA?, TD?, A2),
+    or_yes(A1?, A2?, R).
+
+% A conditional atom as the signature atom.
+procedure sig_conjs(Conjuncts?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+sig_conjs([], _, _, _, _, _, no).
+sig_conjs([conjunct(_, _, _, _, P, M, _)|Cs], X, OA, OD, TA, TD, R?) :-
+    ground(P?), ground(M?), ground(Cs?), ground(X?),
+    ground(OA?), ground(OD?), ground(TA?), ground(TD?) |
+    sig_hms(P?, X?, OA?, TA?, A1),
+    hms_uncleared(M?, M1),
+    sig_hms(M1?, X?, OD?, TD?, A2),
+    or_yes(A1?, A2?, A),
+    sig_conjs1(A?, Cs?, X?, OA?, OD?, TA?, TD?, R).
+
+procedure sig_conjs1(Ans?, Conjuncts?, SigCtx?, Preds?, Preds?, Preds?, Preds?, Ans).
+sig_conjs1(yes, _, _, _, _, _, _, yes).
+sig_conjs1(no, Cs, X, OA, OD, TA, TD, R?) :- sig_conjs(Cs?, X?, OA?, OD?, TA?, TD?, R).
+
+procedure sig_hms(HMults?, SigCtx?, Preds?, Preds?, Ans).
+sig_hms([], _, _, _, no).
+sig_hms([hm(J, M)|Ms], X, Own, Oth, R?) :-
+    integer(J?), ground(M?), ground(Ms?), ground(X?), ground(Own?), ground(Oth?) |
+    sig_atom(M?, J?, X?, Own?, Oth?, A),
+    sig_hms1(A?, Ms?, X?, Own?, Oth?, R).
+
+procedure sig_hms1(Ans?, HMults?, SigCtx?, Preds?, Preds?, Ans).
+sig_hms1(yes, _, _, _, _, yes).
+sig_hms1(no, Ms, X, Own, Oth, R?) :- sig_hms(Ms?, X?, Own?, Oth?, R).
+
+% The conditional atoms deleted with no wildcard.
+procedure hms_uncleared(HMults?, HMults).
+hms_uncleared([], []).
+hms_uncleared([hm(J, M)|Ms], R?) :- ground(M?), ground(Ms?), integer(J?) |
+    mult_wild(M?, W),
+    hms_uncleared(Ms?, R1),
+    hms_uncleared1(W?, J?, M?, R1?, R).
+
+procedure hms_uncleared1(Ans?, Integer?, Mult?, HMults?, HMults).
+hms_uncleared1(yes, _, _, T, T?).
+hms_uncleared1(no, J, M, T, [hm(J?, M?)|T?]).
+
+procedure hms_preds(HMults?, Preds?, Preds).
+hms_preds([], T, T?).
+hms_preds([hm(_, M)|Ms], T, [P?|R?]) :- ground(M?), ground(Ms?), ground(T?) |
+    mult_pred(M?, P),
+    hms_preds(Ms?, T?, R).
+
+procedure conjs_add_preds(Conjuncts?, Preds?, Preds).
+conjs_add_preds([], T, T?).
+conjs_add_preds([conjunct(_, _, _, _, P, _, _)|Cs], T, R?) :- ground(P?), ground(Cs?), ground(T?) |
+    conjs_add_preds(Cs?, T?, R1),
+    hms_preds(P?, R1?, R).
+
+procedure conjs_del_preds(Conjuncts?, Preds?, Preds).
+conjs_del_preds([], T, T?).
+conjs_del_preds([conjunct(_, _, _, _, _, M, _)|Cs], T, R?) :- ground(M?), ground(Cs?), ground(T?) |
+    conjs_del_preds(Cs?, T?, R1),
+    hms_preds(M?, R1?, R).
 
 % The roles from the J-th on: OA and OD the predicates of the atoms the
 % schema adds, and deletes or clears, TA and TD those of the other schemas
@@ -398,21 +472,17 @@ procedure sig_atom(Mult?, Integer?, SigCtx?, Preds?, Preds?, Ans).
 sig_atom(M, J, X, Own, Oth, R?) :-
     ground(M?), integer(J?), ground(X?), ground(Own?), ground(Oth?) |
     plain_mult(M?, A),
-    mult_vars(M?, Os),
-    sig_atom1(A?, Os?, J?, X?, Own?, Oth?, R).
+    sig_atom1(A?, J?, X?, Own?, Oth?, R).
 
-procedure sig_atom1(Atom?, Args?, Integer?, SigCtx?, Preds?, Preds?, Ans).
-sig_atom1(atom(P, As), Os, J, sig(Is, Vs), Own, Oth, R?) :-
-    ground(P?), ground(As?), ground(Os?), integer(J?), ground(Is?), ground(Vs?),
-    ground(Own?), ground(Oth?) |
+procedure sig_atom1(Atom?, Integer?, SigCtx?, Preds?, Preds?, Ans).
+sig_atom1(atom(P, As), J, sig(Is), Own, Oth, R?) :-
+    ground(P?), ground(As?), integer(J?), ground(Is?), ground(Own?), ground(Oth?) |
     args_bases(As?, [], Bs),
     names_others(Is?, J?, Bs?, A1),
-    args_all_in(Vs?, Os?, A2),
     pred_count(Own?, P?, C),
     pred_member(P?, Oth?, O),
     sig_only(C?, O?, A3),
-    both_yes(A1?, A2?, A12),
-    both_yes(A12?, A3?, R).
+    both_yes(A1?, A3?, R).
 
 % The atom is the only one of its predicate the schema adds (or deletes or
 % clears), and no other schema with no guarding role adds (or deletes or
@@ -437,32 +507,6 @@ procedure names_other(Integer?, Integer?, Bases?, Ans).
 names_other(I, J, _, yes) :- I? =:= J? | true.
 names_other(I, _, Bs, R?) :- otherwise, integer(I?), ground(Bs?) |
     base_member(Bs?, b_role(I?), R).
-
-% Every variable among Vs is among Os.
-procedure args_all_in(Args?, Args?, Ans).
-args_all_in([], _, yes).
-args_all_in([V|Vs], Os, R?) :- ground(V?), ground(Vs?), ground(Os?) |
-    args_member(Os?, V?, A),
-    args_all_in1(A?, Vs?, Os?, R).
-
-procedure args_all_in1(Ans?, Args?, Args?, Ans).
-args_all_in1(no, _, _, no).
-args_all_in1(yes, Vs, Os, R?) :- ground(Vs?), ground(Os?) | args_all_in(Vs?, Os?, R).
-
-% The variables occurring in an atom as written: as an argument, in a name
-% term or a signed term among its arguments, or as its multiplicity.
-procedure mult_vars(Mult?, Args).
-mult_vars(atom(_, As), R?) :- ground(As?) | args_vars(As?, R).
-mult_vars(times(K, atom(_, As)), R?) :- ground(K?), ground(As?) | args_vars([K?|As?], R).
-mult_vars(rest(K, J, atom(_, As)), R?) :- ground(K?), ground(J?), ground(As?) | args_vars([K?, J?|As?], R).
-
-procedure args_vars(Args?, Args).
-args_vars(As, R?) :- ground(As?) |
-    filter_pvars(As?, Ps),
-    filter_svars(As?, Ss),
-    filter_nvars(As?, Ns),
-    args_app(Ss?, Ns?, SN),
-    args_app(Ps?, SN?, R).
 
 % The number of occurrences of a predicate in a list.
 procedure pred_count(Preds?, Constant?, Integer).
@@ -541,18 +585,21 @@ procedure other_preds(Integer?, Integer?, NSchema?, Preds?, Preds?, Preds, Preds
 other_preds(I, N, _, A, D, A?, D?) :- I? =:= N? | true.
 other_preds(_, _, S, A, D, A2?, D2?) :- otherwise, ground(S?), ground(A?), ground(D?) |
     nsch_roles(S?, Rs),
-    other_preds1(Rs?, A?, D?, A2, D2).
+    nsch_conjs(S?, Cj),
+    other_preds1(Rs?, Cj?, A?, D?, A2, D2).
 
-procedure other_preds1(NRoleSpecs?, Preds?, Preds?, Preds, Preds).
-other_preds1(Rs, A, D, A2?, D2?) :- ground(Rs?), ground(A?), ground(D?) |
+procedure other_preds1(NRoleSpecs?, Conjuncts?, Preds?, Preds?, Preds, Preds).
+other_preds1(Rs, Cj, A, D, A2?, D2?) :- ground(Rs?), ground(Cj?), ground(A?), ground(D?) |
     n_some_guarding(Rs?, G),
-    other_preds2(G?, Rs?, A?, D?, A2, D2).
+    other_preds2(G?, Rs?, Cj?, A?, D?, A2, D2).
 
-procedure other_preds2(Ans?, NRoleSpecs?, Preds?, Preds?, Preds, Preds).
-other_preds2(yes, _, A, D, A?, D?).
-other_preds2(no, Rs, A, D, A2?, D2?) :- ground(Rs?), ground(A?), ground(D?) |
-    nroles_add_preds(Rs?, A?, A2),
-    nroles_del_preds(Rs?, D?, D2).
+procedure other_preds2(Ans?, NRoleSpecs?, Conjuncts?, Preds?, Preds?, Preds, Preds).
+other_preds2(yes, _, _, A, D, A?, D?).
+other_preds2(no, Rs, Cj, A, D, A2?, D2?) :- ground(Rs?), ground(Cj?), ground(A?), ground(D?) |
+    nroles_add_preds(Rs?, A?, A1),
+    nroles_del_preds(Rs?, D?, D1),
+    conjs_add_preds(Cj?, A1?, A2),
+    conjs_del_preds(Cj?, D1?, D2).
 
 procedure volition_on(Contract?, NContract?, Integer?, NContract?, Preds?, Faults).
 volition_on([], _, _, _, _, []).

@@ -535,14 +535,14 @@ out=$(run "check_variant(sg_update_unnamed, $GSGV, V).")
 check "an atom not naming the other agent role is no signature atom" \
       "V = not_grassroots([no_signature_atom(tell)])" "$out"
 out=$(run "check_variant(sg_update_unvaried, $GSGV, V).")
-check "an atom not holding the schema's variable is no signature atom" \
-      "V = not_grassroots([no_signature_atom(tell)])" "$out"
+check "an atom not holding the schema's variable is a signature atom, def:signature asking that it name the other agent roles only (GSC c3c5ec7)" \
+      "V = syntactically_grassroots" "$out"
 out=$(run "check_variant(sg_inert_schema, $GSGV, V).")
 check "a schema adding and deleting nothing at any role is refused, though its roles guard" \
       "V = malformed([no_role_changes(look)])" "$out"
 out=$(run "check_variant(sg_added_deleted, $GSGV, V).")
-check "an atom added and deleted at one role is refused" \
-      "V = malformed([added_and_deleted(toggle, 1, atom(flag, []))])" "$out"
+check "an atom added and deleted at one role is admitted, Definition Denotation's proviso deciding it at a transaction (GSC f5b3f06)" \
+      "V = syntactically_grassroots" "$out"
 out=$(run "compile_variant(sg_inert_role, $GSGV)." "compile_variant(sg_inert_schema, $GSGV)." "compile_variant(sg_added_deleted, $GSGV).")
 check "a contract with a reading role no guarding role records is not compiled, being not syntactically grassroots" \
       "% not compiled: sg_inert_role is not syntactically grassroots; check_named gives the faults." \
@@ -550,10 +550,8 @@ check "a contract with a reading role no guarding role records is not compiled, 
 check "nor one whose schema changes nothing at any role" \
       "% not compiled: sg_inert_schema is malformed: look adds and deletes nothing at any role; check_named gives the faults." \
       "$(printf '%s' "$out" | tr '\n' ' ')"
-check "nor one adding and deleting an atom at one role" \
-      "% not compiled: sg_added_deleted is malformed: toggle at role 1 adds and deletes the same atom; check_named gives the faults." \
-      "$(printf '%s' "$out" | tr '\n' ' ')"
-check_not "and no display is printed for any of them" "begin{align" "$out"
+check_not "and neither is one adding and deleting an atom at one role refused" \
+          "sg_added_deleted is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
 
 # --- the compilation (Section 5) -------------------------------------------
 # The displays of the paper, befriend's in Section 5.1, after def:compile,
@@ -654,28 +652,23 @@ out=$(run "check_variant(sg_tri_cschema, $SGP, V).")
 check "tri as a cschema is syntactically grassroots, as tri is" \
       "V = syntactically_grassroots" "$out"
 
-# A name term based on an agent variable, which def:role does not admit
-# (GSC ac7ad63: a name term of a schema is <pi> for an agent role pi of it,
-# or sigma.y): nn_tag's tag(p? ; q, y) adds tagged(<q>.y), <q>.y based on
-# the agent variable q, so the contract is malformed, the name term named,
-# and it is not compiled; nn_tag_loose, the same with tag requiring no
-# friend(q), likewise.  traceable_of decides def:grounded alone, on the
-# term as written.
+# A name term based on an agent variable (def:role, GSC f5b3f06: "<pi> for an
+# agent variable pi of it"): nn_tag's tag(p? ; q, y) adds tagged(<q>.y), <q>.y
+# based on the agent variable q, which friend(q) traces, and it is
+# syntactically grassroots; nn_tag_loose, the same with tag requiring no
+# friend(q), is not, by def:grounded.
 out=$(run 'check_named(nn_tag, V).' 'traceable_of(nn_tag, E).')
-check "a name term based on an agent variable is refused" \
-      "V = malformed([name_term_base(tag, ext(own_var(q), y))])" "$out"
+check "a name term based on an agent variable is admitted" \
+      "V = syntactically_grassroots" "$out"
 check "and traceable_of gives its three predicates" \
       "E = [identity, friend, tagged]" "$out"
 out=$(run 'check_named(nn_tag_loose, V).')
-check "with q traced through nothing, it is refused alike" \
-      "V = malformed([name_term_base(tag, ext(own_var(q), y))])" "$out"
+check "with q traced through nothing, tagged has no traceable provenance" \
+      "V = not_grassroots([untraceable([tagged])])" "$out"
 out=$(run 'compile_named(nn_tag).')
-check "a contract refused for a name term is not compiled, the message naming the fault" \
-      "% not compiled: nn_tag is malformed: tag has a name term whose base is not an agent role of the schema; check_named gives the faults." \
-      "$(printf '%s' "$out" | tr '\n' ' ')"
-check_not "and no display is printed for it" "begin{align" "$out"
+check "and it compiles, in the general form" "begin{align" "$out"
 out=$(run 'compile_named(nn_tag_loose).')
-check "nor is nn_tag_loose" \
+check "nn_tag_loose is not compiled" \
       "% not compiled: nn_tag_loose" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
 
@@ -1117,10 +1110,10 @@ check "a speech act traced through a listed role only fails traceable provenance
 check_not "and noted is not among the predicates traced through agent roles" "noted" \
           "$(printf '%s' "$out" | grep '^E = \|GLP> E = ')"
 out=$(run "check_variant(sn_listed_guard, $GSNV, V)." "compile_variant(sn_listed_guard, $GSNV).")
-check "a listed role carrying the mark ? is refused" \
-      "V = malformed([listed_guarded(split, 3)])" "$out"
-check "and it is not compiled, the message naming the fault" \
-      "% not compiled: sn_listed_guard is malformed: split at role 3 has a listed role carrying the mark ?, which only an agent role may carry; check_named gives the faults." \
+check "a listed role in the guard is admitted, and guards no component of the role graph (def:volition: a guarding agent role in each)" \
+      "V = not_grassroots([volition(split, 1, 2)])" "$out"
+check "and it is not compiled, being not syntactically grassroots" \
+      "% not compiled: sn_listed_guard is not syntactically grassroots" \
       "$(printf '%s' "$out" | tr '\n' ' ')"
 out=$(run "check_variant(sn_listed_inert, $GSNV, V).")
 check "a listed reading role whose guarding role requires no atom of its base fails volition" \
@@ -1233,24 +1226,23 @@ echo "--- numbers (GSC, Section 3.2 and its appendix) ---"
 
 # The checker's fixtures with values (contracts.glp, "Values").  nm_bonds
 # is syntactically grassroots.  def:unobstructed asks that an atom be added
-# by a schema at a binding, which satisfies that schema's constraint
-# (def:binding-numbers), so a number is matched by equality there.  Clause 1:
+# by a schema at a binding, a number matched by equality there, "no condition
+# reading a constraint" (the appendix, after def:binding-numbers), and a
+# schema of arity one of clause 1 carrying none (def:numbers).  Clause 1:
 # nm_supplied's meet requires score(5), which score adds at the binding
-# sending k to 5, its constraint true; nm_admits's score adds it under
-# k > 3, which 5 satisfies; nm_excludes's does not, under k <= 4, which 5
-# fails; nm_other_number's score adds score(4), and 4 is not 5.  Clause 2:
-# nm_forbid_admits's meet forbids date(0), which set_date adds at the
-# binding sending t to 0, under t <= 3, set_date having Bob in no role;
-# nm_forbid_excludes's set_date adds it at no binding, under t > 3.  A
-# value of the introductory act is the introduction's to choose (the
+# sending k to 5, carrying no constraint; nm_admits's and nm_excludes's score
+# carries one, and supplies nothing, whatever it says; nm_other_number's
+# score adds score(4), and 4 is not 5.  Clause 2: nm_forbid_admits's and
+# nm_forbid_excludes's meet forbids date(0), which set_date adds at the
+# binding sending t to 0, its constraint unread, set_date having Bob in no
+# role.  A value of the introductory act is the introduction's to choose (the
 # appendix "Values in Speech-Act Schemas"): in nm_intro_var score adds score(n)
-# whatever the value, and in nm_intro_var_bounded where it is above 3, which
-# the introduction chooses.  nm_blocked's advance adds date(0) where t is
-# -1, a value, under t1 = t + 1, Bob in no role: obstructed.  A multiplicity
-# is a positive whole number at every binding: nm_mult_unsat's raise adds
-# flag, which meet forbids, under k <= 0, at no binding, and nm_mult_sat's,
-# under k <= 1, at the binding sending k to 1; and nm_mult_zero writes a
-# multiplicity 0, which is refused.
+# whatever the value, and in nm_intro_var_bounded score carries a constraint,
+# so supplies nothing.  nm_blocked's advance adds date(0), its constraint
+# unread, Bob in no role: obstructed.  A multiplicity is a positive whole
+# number at every binding, and the constraints of raise are unread:
+# nm_mult_unsat's and nm_mult_sat's raise add flag, which meet forbids; and
+# nm_mult_zero writes a multiplicity 0, which is refused.
 out=$(run "check_named(nm_bonds, V)." "traceable_of(nm_bonds, E)." \
           "check_named(nm_supplied, V)." "check_named(nm_blocked, V).")
 check "a contract with numbers, multiplicities and constraints of each kind is syntactically grassroots" \
@@ -1266,20 +1258,20 @@ out=$(run "check_named(nm_admits, V)." "check_named(nm_excludes, V)." \
           "check_named(nm_forbid_excludes, V)." "check_named(nm_intro_var, V)." \
           "check_named(nm_intro_var_bounded, V)." "compile_named(nm_blocked).")
 nmv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
-check_eq "a required score(5) is supplied by a schema of arity one adding score(k) under a constraint that admits 5, k > 3" \
-         "V = syntactically_grassroots" "$(nmv 1)"
-check_eq "a required score(5) is not supplied by a schema of arity one adding score(k) under a constraint that excludes 5, k <= 4" \
+check_eq "a required score(5) is not supplied by a schema of arity one carrying a constraint, though it admits 5, k > 3" \
+         "V = not_grassroots([obstructed(meet, 1, atom(score, [num(5)]), unobtainable), obstructed(meet, 2, atom(score, [num(5)]), unobtainable)])" "$(nmv 1)"
+check_eq "nor by one carrying a constraint that excludes 5, k <= 4" \
          "V = not_grassroots([obstructed(meet, 1, atom(score, [num(5)]), unobtainable), obstructed(meet, 2, atom(score, [num(5)]), unobtainable)])" "$(nmv 2)"
 check_eq "a required score(5) is not supplied by a schema adding score(4), a number matched by equality" \
          "V = not_grassroots([obstructed(meet, 1, atom(score, [num(5)]), unobtainable), obstructed(meet, 2, atom(score, [num(5)]), unobtainable)])" "$(nmv 3)"
 check_eq "a forbidden date(0) is added by a schema adding date(t) under a constraint that admits 0, t <= 3, the other party in no role: obstructed" \
          "V = not_grassroots([obstructed(meet, 1, atom(date, [num(0)]), blocked_by(set_date, 1, atom(date, [num(t)])))])" "$(nmv 4)"
-check_eq "a forbidden date(0) is added at no binding of a schema adding date(t) under a constraint that excludes 0, t > 3: unobstructed" \
-         "V = syntactically_grassroots" "$(nmv 5)"
+check_eq "a forbidden date(0) is added by a schema adding date(t), the constraint that excludes 0, t > 3, unread: obstructed" \
+         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(0)]), blocked_by(set_date, 1, atom(date, [num(t)])))])" "$(nmv 5)"
 check_eq "a number of the introductory act required, supplied whatever number its introduction chooses" \
          "V = syntactically_grassroots" "$(nmv 6)"
-check_eq "a value of the introductory act required, supplied where its introduction chooses a value above 3, which it does" \
-         "V = syntactically_grassroots" "$(nmv 7)"
+check_eq "a value of the introductory act required, by a schema carrying a constraint: not supplied" \
+         "V = not_grassroots([obstructed(meet, 1, atom(score, [num(n)]), unobtainable), obstructed(meet, 2, atom(score, [num(n)]), unobtainable)])" "$(nmv 7)"
 check "a contract whose introductory act is obstructed by a value is not compiled" \
       "% not compiled: nm_blocked is not syntactically grassroots" "$(printf '%s\n' "$out" | tr '\n' ' ')"
 NMBL=$(run "contract_named(nm_blocked, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //')
@@ -1287,9 +1279,9 @@ check "the introductory acts of that contract name meet obstructed by advance" \
       "A = [intro_act(meet, obstructed([obstructed(meet, 1, atom(date, [num(0)]), blocked_by(advance, 1, atom(date, [num(t1)])))]))]" "$(run "intro_acts($NMBL, A).")"
 out=$(run "check_named(nm_mult_unsat, V)." "check_named(nm_mult_sat, V)." "check_named(nm_mult_zero, V)." "compile_named(nm_mult_zero).")
 mmv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
-check_eq "a schema adding a forbidden atom k times under a constraint no positive whole number satisfies, k <= 0, adds it at no binding: unobstructed" \
-         "V = syntactically_grassroots" "$(mmv 1)"
-check_eq "under k <= 1 it adds it at the binding sending k to 1, the other party in no role: obstructed" \
+check_eq "a schema adding a forbidden atom k times, the constraint no positive whole number satisfies, k <= 0, unread: obstructed" \
+         "V = not_grassroots([obstructed(meet, 1, atom(flag, []), blocked_by(raise, 1, atom(flag, [])))])" "$(mmv 1)"
+check_eq "under k <= 1 too, the other party in no role: obstructed" \
          "V = not_grassroots([obstructed(meet, 1, atom(flag, []), blocked_by(raise, 1, atom(flag, [])))])" "$(mmv 2)"
 check_eq "a multiplicity written as 0 is refused" \
          "V = malformed([multiplicity_not_whole(mint, 1, atom(coin, [role(1)]))])" "$(mmv 3)"
@@ -1307,63 +1299,52 @@ NMB=$(run "contract_named(nm_bonds, C)." | sed -e 's/^\(GLP> \)*//' | grep -E '^
 check_eq "nm_bonds's mint prints its constraint after its body, and as a comma" \
          "$nm_mint_notation" "$(notation "$NMB" | one_schema mint)"
 
-# Every case is decided exactly (linear.glp): whether some choice of the
-# introduction's values meets the clauses is whether a formula of linear
-# equalities and inequalities has a solution, the values rational and a
-# multiplicity a positive whole number, the bindings of a schema that would
-# add an atom the act forbids eliminated first.  nm_two_between's meet has
-# introductions only where 0 < x < y < 1, which no two values within one of
-# a number the contract writes, or halfway between two, satisfy.  nm_cover's
-# meet forbids date(x), which low adds where x <= 5 and high where x >= 5,
-# so at every introduction; nm_gap's high adds it where x >= 6, and an
-# introduction with 5 < x < 6 is unobstructed.  nm_evens's count adds
-# date(2j), j a multiplicity and so whole, and meet's multiplicity k forbids
-# date(k), so the introduction with k = 1 is unobstructed; nm_counts's count
-# adds date(j), every whole number, so none is.  nm_half's meet has the
-# multiplicity k with 2k = 3, which no whole number satisfies: no
-# introduction.  nm_joint's meet requires score(x), supplied where x >= 5,
-# and forbids date(x), added where x >= 5: each clause is met at some x, and
-# both at none.  A constraint that is not a conjunction of linear equalities
-# and inequalities is refused: nm_or's disjunction and nm_nonlinear's
-# product of two value variables.
+# An introductory act carries no constraint, and no condition reads one
+# (def:numbers and the appendix, after def:binding-numbers).  nm_two_between's
+# and nm_half's meet carries one, so is no introductory act.  nm_cover's,
+# nm_gap's and nm_evens's and nm_counts's meet forbid date(x) or date(k), which
+# low, high and count add whatever their constraints say.  nm_joint's meet
+# requires score(x), which a schema with a constraint does not supply, and
+# forbids date(x), added whatever x is.  A constraint is any decidable
+# condition combined by the connectives: nm_or's disjunction and
+# nm_nonlinear's product of two value variables are admitted.
 out=$(run "check_named(nm_two_between, V)." "check_named(nm_cover, V)." \
           "check_named(nm_gap, V)." "check_named(nm_evens, V)." \
           "check_named(nm_counts, V)." "check_named(nm_half, V)." \
           "check_named(nm_joint, V)." "check_named(nm_or, V)." \
           "check_named(nm_nonlinear, V)." "compile_named(nm_nonlinear).")
 lnv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
-check_eq "two values of the introductory act, related, chosen strictly between two numbers the contract writes: syntactically grassroots" \
-         "V = syntactically_grassroots" "$(lnv 1)"
+check_eq "a schema with a constraint is no introductory act" \
+         "V = not_grassroots([no_introductory_act])" "$(lnv 1)"
 check_eq "a value forbidden at the introductory act, added by one schema below 5 and by another above 5: obstructed at every introduction" \
          "V = not_grassroots([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))])" "$(lnv 2)"
-check_eq "added below 5 and above 6, the introduction choosing a value between: syntactically grassroots" \
-         "V = syntactically_grassroots" "$(lnv 3)"
-check_eq "a multiplicity of the act forbidden as a date, added at the even whole numbers, the introduction choosing 1: syntactically grassroots" \
-         "V = syntactically_grassroots" "$(lnv 4)"
+check_eq "added below 5 and above 6, the constraints unread: obstructed" \
+         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))])" "$(lnv 3)"
+check_eq "a multiplicity of the act forbidden as a date, added at the even whole numbers, the constraint unread: obstructed" \
+         "V = not_grassroots([obstructed(meet, 1, atom(date, [num(k)]), blocked_by(count, 1, atom(date, [num(t)])))])" "$(lnv 4)"
 check_eq "added at every whole number: obstructed at every introduction" \
          "V = not_grassroots([obstructed(meet, 1, atom(date, [num(k)]), blocked_by(count, 1, atom(date, [num(t)])))])" "$(lnv 5)"
 check_eq "a multiplicity with 2k = 3, which no whole number satisfies: no introduction" \
          "V = not_grassroots([no_introductory_act])" "$(lnv 6)"
-check_eq "each clause met at some value of the introduction, and both at none: obstructed jointly" \
-         "V = not_grassroots([obstructed_jointly(meet)])" "$(lnv 7)"
-check_eq "a constraint with a disjunction is refused" \
-         "V = malformed([constraint_not_conjunction(mint, or(gt(num(d), num(t)), le(num(d), num(0))))])" "$(lnv 8)"
-check_eq "a constraint with a product of two value variables is refused" \
-         "V = malformed([constraint_not_linear(mint, mul(num(d), num(k)))])" "$(lnv 9)"
-check "and it is not compiled, the fault named" \
-      "mint carries a constraint that is not linear;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
+check_eq "neither clause met, the constraints unread" \
+         "V = not_grassroots([obstructed(meet, 1, atom(score, [num(x)]), unobtainable), obstructed(meet, 1, atom(date, [num(x)]), blocked_by(set_date, 1, atom(date, [num(t)])))])" "$(lnv 7)"
+check_eq "a constraint with a disjunction is admitted" \
+         "V = syntactically_grassroots" "$(lnv 8)"
+check_eq "a constraint with a product of two value variables is admitted" \
+         "V = syntactically_grassroots" "$(lnv 9)"
+check "and it is compiled, the product printed" \
+      "begin{align" "$out"
 
 # A reading role that reads a number, admitted, the guarding role requiring
 # knows of it (def:schema and def:volition, GSC 0380a8a; GB's mature of
 # b9369200, which GB's redemption replaces, redeem since 18f28661).  The
 # malformations the passage forbids, each refused (README, "The
-# verdicts"): a multiplicity on an atom required and not deleted,
-# and on one forbidden, the passage admitting one on an atom added or
-# deleted; a multiplicity that is not a number; a constraint on an agent,
-# the passage admitting one on the value variables; an atom added with a
-# multiplicity and deleted at one role (def:schema); and a head that lists a
+# verdicts"): a multiplicity that is not a number; a constraint on an agent,
+# the passage admitting one on the value variables; and a head that lists a
 # number and a value variable twice and leaves out the value variables
-# the atoms and the constraint carry.
+# the atoms and the constraint carry.  A multiplicity on an atom required, and
+# on one forbidden, is admitted (def:numbers), and so is an atom added with a
+# multiplicity and deleted at one role (GSC f5b3f06).
 out=$(run "check_named(nm_reading_role, V).")
 check "a reading role that reads a number, the guarding role requiring knows of it, is admitted" \
       "V = syntactically_grassroots" "$out"
@@ -1376,14 +1357,14 @@ out=$(run "check_named(nm_mult_kept, V)." \
           "check_named(nm_head, V)." "compile_named(nm_head).")
 check "a multiplicity on an atom required and not deleted is admitted, def:numbers requiring that many copies (GSC 859a007)" \
       "V = syntactically_grassroots" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 1p)"
-check "a multiplicity on an atom forbidden is refused (def:numbers: an unnegated atom of B)" \
-      "V = malformed([multiplicity_forbidden(hoard, 1, atom(coin, [role(1)]))])" "$out"
+check "a multiplicity on an atom forbidden is admitted (def:numbers: the machine then holding fewer than kappa)" \
+      "V = syntactically_grassroots" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 2p)"
 check "a multiplicity that is not a number is refused" \
       "V = malformed([multiplicity_not_numeric(mint, 1, atom(coin, [role(1)]))])" "$out"
 check "a constraint on an agent variable is refused" \
       "V = malformed([constraint_not_numeric(mint, pvar(u))])" "$out"
-check "an atom added with a multiplicity and deleted at one role is refused" \
-      "V = malformed([added_and_deleted(churn, 1, atom(coin, [role(1)]))])" "$out"
+check "an atom added with a multiplicity and deleted at one role is admitted" \
+      "V = syntactically_grassroots" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n 5p)"
 check "a head listing a number and a value variable twice, and leaving out two, is refused" \
       "V = malformed([head_not_variable(mint, num(5)), head_repeated(mint, num(k)), not_in_head(mint, num(d)), not_in_head(mint, num(t))])" "$out"
 check "and it is not compiled, the faults named" \
@@ -1435,26 +1416,23 @@ check "the same atom deleted, and so required, joins the roles: syntactically gr
 out=$(run "check_variant(cl_inert, $GSNV, V).")
 check "a schema whose roles only clear changes nothing, and is refused" \
       "V = malformed([no_role_changes(purge)])" "$out"
-# No atom of +(i) is obtained from an atom of *(i) by replacing its wildcards
-# (def:schema).
+# An atom added that a cleared atom of its role matches is admitted, the
+# denotation's proviso deciding it at a transaction (GSC f5b3f06).
 out=$(run "check_variant(cl_added, $GSNV, V)." "compile_variant(cl_added, $GSNV).")
-check "an atom added that a cleared atom of its role matches is refused, each named" \
-      "V = malformed([added_and_cleared(relist, 1, atom(listed, [role(1), svar(n)])), added_and_cleared(relist, 1, atom(member, [nterm(ext(own(1), n))]))])" "$out"
-check "and it is not compiled, the fault named" \
-      "relist at role 1 adds an atom that one of its cleared atoms matches;" "$(printf '%s' "$out" | tr '\n' ' ')"
-# Only an atom marked - may have the wildcard (def:schema), and a listed
-# role's arguments are arguments of its schema (def:role).
-out=$(run "check_variant(cl_wild, $GSNV, V)." "compile_variant(cl_wild, $GSNV).")
-check "the wildcard outside an atom marked - is refused, in a listed role's arguments and in an atom added, required or forbidden" \
-      "V = malformed([listed_wildcard(sweep, 2), wildcard(peek, 1, atom(seen, [any])), wildcard(peek, 1, atom(listed, [role(1), any])), wildcard(peek, 1, atom(member, [nterm(ext_any(own(1)))]))])" "$out"
-check "and it is not compiled, the faults named" \
-      "peek at role 1 carries the wildcard in an atom not marked -;" "$(printf '%s' "$out" | tr '\n' ' ')"
-# "An atom marked + or -, with no wildcard, may carry a multiplicity"
-# (def:numbers, GSC 593e8a7), so a cleared atom carries none; seen(*), added,
-# carries the wildcard besides (def:schema).
+check "an atom added that a cleared atom of its role matches is admitted" \
+      "V = syntactically_grassroots" "$out"
+check_not "and it is not refused on compiling" "is malformed" "$(printf '%s' "$out" | tr '\n' ' ')"
+# The wildcard may stand anywhere (def:schema, GSC f5b3f06): a variable of its
+# own in an unnegated atom.  seen(_), added, is such a variable in an atom
+# added, which def:grounded cannot trace.
+out=$(run "check_variant(cl_wild, $GSNV, V).")
+check "the wildcard outside a negated atom of the head is read, and an atom added with one has no traceable provenance" \
+      "V = not_grassroots([untraceable([seen])])" "$out"
+# "An atom of H or of B with no wildcard may carry a multiplicity"
+# (def:numbers).
 out=$(run "check_variant(cl_mult, $GSNV, V)." "compile_variant(cl_mult, $GSNV).")
 check "a multiplicity on an atom with the wildcard is refused, on the cleared atoms and on an atom added, each named" \
-      "V = malformed([multiplicity_wildcard(drop, 1, atom(seen, [any])), multiplicity_wildcard(drop, 1, atom(listed, [role(1), any])), multiplicity_wildcard(drop, 1, atom(member, [nterm(ext_any(own(1)))])), wildcard(drop, 1, atom(seen, [any]))])" "$out"
+      "V = malformed([multiplicity_wildcard(drop, 1, atom(seen, [any])), multiplicity_wildcard(drop, 1, atom(listed, [role(1), any])), multiplicity_wildcard(drop, 1, atom(member, [nterm(ext_any(own(1)))]))])" "$out"
 check "and it is not compiled, the fault named" \
       "drop at role 1 carries a multiplicity on an atom with the wildcard;" "$(printf '%s' "$out" | tr '\n' ' ')"
 # Clause 1 of def:unobstructed: the schema of arity one adding an atom the
@@ -1526,10 +1504,9 @@ check "and the speech-act fault named" \
 # before the checker reads the contract (self.glp, sas_faults; README,
 # "Writing a contract"): an atom whose holder is no name; a constant that is
 # no name and not in Vars; an atom deleted and not required (def:schema,
-# -(i) a subset of =(i)), a copy for each copy; a listed role over two
-# conditions, with a literal another holds, holding a literal outside its
-# conjunct, or not among the names (def:role); a guard that is no role
-# (def:schema).
+# -(i) a subset of =(i)), a copy for each copy; a listed role under two
+# anchors, holding a literal outside its quantifier, or not among the names
+# (def:role); a guard no agent variable of the schema (def:schema).
 SAS_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
 sas_close() { # sas_close <names> <head conjunct cond> <body conjunct cond> <body conjunct lits> <more body>
   printf "[%s, sas(close, %s, [n], [atom(closed, ['Alice', n]), forall('Bob', %s, [not(atom(member, ['Bob', ext(own('Alice'), n)]))])], [atom(identity, ['Alice'])%s, forall('Bob', %s, [%s])], true, ['Alice'])]" \
@@ -1546,7 +1523,7 @@ out=$(run "check([sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [no
           "check($(sas_close "['Alice', 'Bob']" "$LC" "$LC" "$MB, atom(identity, ['Alice'])" ""), V)." \
           "check($(sas_close "['Alice', 'Bob']" "$LC" "$LC" "$MB" ", atom(identity, ['Bob'])"), V)." \
           "check($(sas_close "['Alice']" "$LC" "$LC" "$MB" ""), V)." \
-          "check([sas(establish, ['Alice', 'Bob'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice', 'Bob'])], V)." \
+          "check([sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice', 'Bob'])], V)." \
           "check([$SAS_EST, sas(hoard, ['Alice'], [k], [atom(coin, ['Alice', 'Alice'])], [atom(identity, ['Alice']), not(times(num(k), atom(coin, ['Alice', 'Alice'])))], true, ['Alice'])], V)." \
           "compile_contract(unf, [sas(unfriend, ['Alice', 'Bob'], [], [not(atom(friend, ['Alice', 'Bob']))], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice'])]).")
 sv() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
@@ -1562,16 +1539,16 @@ check_not "two copies deleted and three required: read, the copy left required" 
           "deleted_not_required" "$(sv 5)"
 check_eq "close quantifying Bob over two conditions is refused" \
          "V = malformed([quantified_condition(close, 'Bob')])" "$(sv 6)"
-check_eq "close with Alice's identity in Bob's conjunct is refused" \
-         "V = malformed([quantified_holder(close, 'Bob', identity)])" "$(sv 7)"
+check_eq "close with Alice's identity in Bob's conjunct of the body is read, a condition" \
+         "V = not_grassroots([no_introductory_act, untraceable([closed])])" "$(sv 7)"
 check_eq "close with Bob holding a literal outside his conjunct is refused" \
          "V = malformed([listed_agent_role(close, 'Bob')])" "$(sv 8)"
 check_eq "close leaving Bob out of its names is refused" \
          "V = malformed([not_in_names(close, 'Bob')])" "$(sv 9)"
-check_eq "establish guarded by Bob, who is no role of it, is refused" \
+check_eq "establish guarded by Bob, no agent variable of it, is refused" \
          "V = malformed([guard_not_role(establish, 'Bob')])" "$(sv 10)"
-check_eq "a multiplicity on an atom forbidden is refused in the clause syntax too" \
-         "V = malformed([multiplicity_forbidden(hoard, 1, atom(coin, [role(1)]))])" "$(sv 11)"
+check_eq "a multiplicity on an atom forbidden is read in the clause syntax" \
+         "V = not_grassroots([no_introductory_act])" "$(sv 11)"
 check "a contract whose reading has faults is not compiled, its faults named" \
       "deletes an atom it does not require;" "$(printf '%s' "$out" | tr '\n' ' ')"
 # A required k.A with one copy deleted (Definition Speech-act schema: "It is
@@ -1675,6 +1652,132 @@ EOF
 )
 check_eq "a schema with values in the clause syntax prints its multiplicity and its constraint" \
          "$mint_clause" "$(notation "[sas(mint, ['Alice'], [k], [times(num(k), atom(coin, ['Alice', 'Alice']))], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])]" | one_schema mint)"
+
+# --- Safe bodies, listed roles and the rest (GSC c8c5ead, bf0d1df) ----------
+# Each fixture is GKK with the schema named.  The term is settled in the
+# README, "Writing a contract".
+gkk_with() { printf '%s, %s]' "$GKK_SCHEMAS" "$1"; }
+CLS="sas(start, ['Alice'], [n], [atom(leads, ['Alice', n])], [atom(identity, ['Alice'])], true, ['Alice'])"
+ADD1="sas(invite, ['Alice', 'Bob'], [n], [atom(listed, ['Alice', 'Bob', n]), atom(member, ['Bob', n])], [atom(leads, ['Alice', n]), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+# def:schema: a head of literals and quantified conjuncts; the literals an
+# agent role holds in a conjunct of the head are conditional, and def:grounded
+# reads the anchor of the conjunct as required.
+COND_OK=$(gkk_with "$CLS, $ADD1, sas(note, ['Alice', 'Bob'], [n], [atom(busy, ['Alice']), forall(['Bob'], atom(listed, ['Alice', 'Bob', n]), true, [atom(noted, ['Alice', 'Bob', n])])], [atom(leads, ['Alice', n])], true, ['Alice'])")
+COND_BAD=$(gkk_with "$CLS, $ADD1, sas(note, ['Alice', 'Bob', 'Carol'], ['Carol', n], [atom(busy, ['Alice']), forall(['Bob'], atom(listed, ['Alice', 'Bob', n]), true, [atom(noted, ['Alice', 'Carol', n])])], [atom(leads, ['Alice', n])], true, ['Alice'])")
+# A conditional atom is added at a binding: clause 2 of def:unobstructed.
+COND_BLK=$(gkk_with "$CLS, $ADD1, sas(gate, ['Alice', 'Bob'], [], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(open, ['Alice'])), atom(identity, ['Bob']), not(atom(open, ['Bob']))], true, ['Alice', 'Bob']), sas(ajar, ['Alice', 'Bob'], [n], [atom(busy, ['Alice']), forall(['Bob'], atom(listed, ['Alice', 'Bob', n]), true, [atom(open, ['Alice'])])], [atom(leads, ['Alice', n])], true, ['Alice'])")
+# A safe formula of the body gives no edge: Bob, held only in a condition of
+# Alice's, is an agent role with no edge from it.
+BODY_FORM=$(gkk_with "$CLS, $ADD1, sas(greet, ['Alice', 'Bob'], [n], [atom(greeted, ['Bob'])], [atom(identity, ['Alice']), exists(['Carol'], atom(listed, ['Alice', 'Carol', n]), true), or(atom(leads, ['Alice', n]), atom(knows, ['Alice', 'Bob'])), atom(identity, ['Bob'])], true, ['Alice'])")
+# A listed role bound in a safe formula, every member a reading role.
+LIST_EX=$(gkk_with "$CLS, $ADD1, sas(check, ['Alice', 'Bob'], [n], [atom(checked, ['Alice', n])], [atom(leads, ['Alice', n]), exists(['Bob'], atom(listed, ['Alice', 'Bob', n]), atom(member, ['Bob', n]))], true, ['Alice'])")
+# A listed role in the guard, and a guard holding no atom, an agent role.
+LIST_G=$(gkk_with "$CLS, $ADD1, sas(vote, ['Alice', 'Bob'], [n], [atom(voted, ['Alice', n]), forall(['Bob'], atom(listed, ['Alice', 'Bob', n]), true, [atom(saw, ['Bob', n])])], [atom(leads, ['Alice', n])], true, ['Alice', 'Bob'])")
+GUARD_BARE=$(gkk_with "sas(watch, ['Alice', 'Bob'], [], [atom(watched, ['Alice'])], [atom(identity, ['Alice'])], true, ['Alice', 'Bob'])")
+# Constraints on agents and in a quantifier; the wildcard in a required atom;
+# fewer than k copies; cardinality.
+CONS_AG=$(gkk_with "$CLS, $ADD1, sas(pick, ['Alice', 'Bob', 'Carol'], ['Bob', n], [atom(picked, ['Alice', 'Bob'])], [atom(leads, ['Alice', n]), atom(listed, ['Alice', 'Alice', n]), atom(knows, ['Alice', 'Bob']), forall(['Carol'], atom(listed, ['Alice', 'Carol', n]), ne('Carol', 'Bob'), atom(member, ['Carol', n]))], ne('Alice', 'Bob'), ['Alice'])")
+WILD_REQ=$(gkk_with "$CLS, sas(any_lead, ['Alice'], [], [atom(leader, ['Alice'])], [atom(leads, ['Alice', '_'])], true, ['Alice'])")
+FEWER=$(gkk_with "$CLS, sas(cap, ['Alice'], [n, k], [atom(leads, ['Alice', n])], [atom(identity, ['Alice']), not(times(num(k), atom(leads, ['Alice', n])))], true, ['Alice'])")
+CARD=$(gkk_with "$CLS, $ADD1, sas(room, ['Alice'], [n, d], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n])], lt(cardinality(['Bob'], atom(listed, ['Alice', 'Bob', n]), true), num(d)), ['Alice'])")
+# The introductory act and clause 1's schemas have literals for body and head.
+INTRO_F="[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), or(atom(identity, ['Bob']), atom(identity, ['Alice']))], true, ['Alice', 'Bob'])]"
+# The faults.
+F_ANCHOR=$(gkk_with "sas(bad, ['Alice', 'Bob'], [], [atom(x, ['Alice'])], [atom(identity, ['Alice']), exists(['Bob'], atom(knows, ['Alice', 'Alice']), true)], true, ['Alice'])")
+F_TWO=$(gkk_with "sas(bad, ['Alice', 'Bob'], [], [atom(x, ['Alice'])], [forall(['Bob'], atom(knows, ['Alice', 'Bob']), true, [atom(identity, ['Bob'])]), forall(['Bob'], atom(friend, ['Alice', 'Bob']), true, [atom(identity, ['Bob'])])], true, ['Alice'])")
+F_HOLD=$(gkk_with "sas(bad, ['Alice', 'Bob', 'Carol'], [], [atom(x, ['Alice'])], [atom(identity, ['Alice']), exists(['Bob'], atom(knows, ['Alice', 'Bob']), exists(['Carol'], atom(knows, ['Bob', 'Carol']), atom(identity, ['Carol'])))], true, ['Alice'])")
+F_HEAD=$(gkk_with "sas(bad, ['Alice'], [], [or(atom(x, ['Alice']), atom(y, ['Alice']))], [atom(identity, ['Alice'])], true, ['Alice'])")
+out=$(run "check($COND_OK, V)." "check($COND_BAD, V)." "check($COND_BLK, V)." "check($BODY_FORM, V)." "check($LIST_EX, V)." \
+          "check($LIST_G, V)." "check($GUARD_BARE, V)." "check($CONS_AG, V)." "check($WILD_REQ, V)." "check($FEWER, V)." \
+          "check($CARD, V)." "check($INTRO_F, V)." "check($F_ANCHOR, V)." "check($F_TWO, V)." "check($F_HOLD, V)." "check($F_HEAD, V).")
+sf() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
+check_eq "a conditional atom naming the anchor's bound variable: traced by the anchor, read as required" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "a conditional atom naming an agent variable the anchor does not: untraceable" \
+         "V = not_grassroots([untraceable([noted])])" "$(sf 2)"
+check_eq "a conditional atom an introductory act forbids blocks it, clause 2 reading what a role adds at an instance" \
+         "V = syntactically_grassroots" "$(sf 3)"
+check_eq "a safe formula of the body gives no edge: Bob, no guard, adds and is joined to nothing" \
+         "V = not_grassroots([volition(greet, 1, 2)])" "$(sf 4)"
+check_eq "a variable bound in a safe formula and holding an atom is a listed reading role" \
+         "V = not_grassroots([changes_nothing(check, 2)])" "$(sf 5)"
+check_eq "a listed role in the guard, in the component of its agent role" \
+         "V = syntactically_grassroots" "$(sf 6)"
+check_eq "a guard holding no atom is an agent role, and guards a component of its own" \
+         "V = syntactically_grassroots" "$(sf 7)"
+check_eq "ne on agent variables and on a bound variable, in a constraint and in a quantifier" \
+         "V = syntactically_grassroots" "$(sf 8)"
+check_eq "the wildcard in a required atom is a variable of its own" \
+         "V = syntactically_grassroots" "$(sf 9)"
+check_eq "a multiplicity negated in the body, fewer than k copies" \
+         "V = syntactically_grassroots" "$(sf 10)"
+check_eq "a cardinality in a constraint" \
+         "V = syntactically_grassroots" "$(sf 11)"
+check_eq "a schema with a safe formula in its body is no introductory act" \
+         "V = not_grassroots([no_introductory_act])" "$(sf 12)"
+check_eq "a bound variable absent from its anchor is refused" \
+         "V = malformed([quantified_condition(bad, 'Bob')])" "$(sf 13)"
+check_eq "a listed role under two anchors is refused" \
+         "V = malformed([quantified_condition(bad, 'Bob')])" "$(sf 14)"
+check_eq "a listed role whose anchor no agent role holds is refused" \
+         "V = malformed([condition_holder(bad, knows)])" "$(sf 15)"
+check_eq "a head with a formula that is no literal and no quantified conjunct is refused" \
+         "V = malformed([head_formula(bad)])" "$(sf 16)"
+out=$(run "as_read($LIST_G, R)." "as_read($COND_OK, R).")
+check "a listed role in the guard reads guarded, its literals among its role" \
+      "crs(listed(1, listed, [svar(n)]), guarded, [atom(saw, [svar(n)])], [], [], [])" "$out"
+check "a conditional literal reads into a conjunct, at the agent role holding it" \
+      "[hm(1, atom(noted, [pvar('Bob'), svar(n)]))]" "$out"
+# def:numbers: "deleted with multiplicities kappa_1, ..., kappa_n, the
+# schema's constraint implies kappa_1 + ... + kappa_n <= kappa ... the checker
+# decides the implication where the constraint is linear over whole numbers,
+# and refuses the schema otherwise".
+spend_two() { # spend_two <vars> <deleted> <deleted> <required> <constraint>
+  printf "%s, sas(mint, ['Alice'], [k], [times(num(k), atom(coin, ['Alice', 'Alice']))], [atom(identity, ['Alice'])], true, ['Alice']), sas(spend, ['Alice'], %s, [not(times(%s, atom(coin, ['Alice', 'Alice']))), not(times(%s, atom(coin, ['Alice', 'Alice'])))], [atom(identity, ['Alice']), %s], %s, ['Alice'])]" \
+    "$GKK_SCHEMAS" "$1" "$2" "$3" "$4" "$5"
+}
+KREQ="times(num(k), atom(coin, ['Alice', 'Alice']))"
+TWO_OK=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "le(plus(num(i), num(j)), num(k))")
+TWO_NO=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "and(le(num(i), num(k)), le(num(j), num(k)))")
+TWO_OR=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "or(le(plus(num(i), num(j)), num(k)), le(plus(num(i), num(j)), minus(num(k), num(1))))")
+TWO_NL=$(spend_two "[i, j, k]" "num(i)" "num(j)" "$KREQ" "and(le(plus(num(i), num(j)), num(k)), le(mul(num(i), num(j)), num(k)))")
+TWO_REQ=$(spend_two "[]" "num(1)" "num(2)" "atom(coin, ['Alice', 'Alice']), times(num(2), atom(coin, ['Alice', 'Alice']))" "true")
+out=$(run "check($TWO_OK, V)." "check($TWO_NO, V)." "check($TWO_OR, V)." "check($TWO_NL, V)." "check($TWO_REQ, V)." "as_read($TWO_OK, R).")
+check_eq "i.coin and j.coin deleted, k.coin required, i + j <= k: read" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "each at most k and not their sum: refused" \
+         "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 2)"
+check_eq "a linear constraint with a disjunction implying it: read" \
+         "V = syntactically_grassroots" "$(sf 3)"
+check_eq "a constraint that is not linear: refused, though a conjunct implies it, each deletion named" \
+         "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)])), deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 4)"
+check_eq "1.coin and 2.coin deleted, coin and 2.coin required: read, =(i) a multiset" \
+         "V = syntactically_grassroots" "$(sf 5)"
+check "the copies beyond the two deletions kept" \
+      "rest(num(k), plus(num(i), num(j)), atom(coin, [role(1)]))" "$out"
+n_form=$(cat <<'EOF'
+vote: voted(Alice, n), forall Bob (listed(Alice, Bob, n) -> saw(Bob, n)) <-
+    leads(Alice, n) guarded by Alice, Bob
+EOF
+)
+check_eq "the notation prints a quantified conjunct of a schema written qschema, and a listed role in the guard" \
+         "$n_form" "$(notation "$LIST_G" | one_schema vote)"
+n_card=$(cat <<'EOF'
+room: has_room(Alice, n) <-
+    leads(Alice, n), cardinality(Bob, listed(Alice, Bob, n)) < d guarded by Alice
+EOF
+)
+check_eq "the notation prints a cardinality" \
+         "$n_card" "$(notation "$CARD" | one_schema room)"
+n_pick=$(cat <<'EOF'
+pick: picked(Alice, Bob) <-
+    leads(Alice, n), listed(Alice, Alice, n), knows(Alice, Bob), forall Carol (listed(Alice, Carol, n), Carol != Bob -> member(Carol, n)), Alice != Bob guarded by Alice
+EOF
+)
+check_eq "the notation prints a safe formula of the body and a constraint on agents" \
+         "$n_pick" "$(notation "$CONS_AG" | one_schema pick)"
+check "a schema written qschema compiles in the general form, its conjunct on a line of its own" \
+      "\\text{making}" "$(compiled_in cond_c "$COND_OK" note)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

@@ -1040,9 +1040,8 @@ gkk_establish_clears(S, C?) :-
 % A value names no agent, so the conditions below do not concern it."  In
 % the term form of Currencies' GB.glp: num(x) a value variable, or a number
 % where x is one; times(num(k), A) the atom A with the multiplicity k;
-% nschema(Name, Vars, Constraint, Roles) a schema with a constraint, a
-% conjunction of linear equalities and inequalities (and, eq, le, lt, ge,
-% gt, succ, over plus, minus and a product by a number; self.glp).  A
+% nschema(Name, Vars, Constraint, Roles) a schema with a constraint (and,
+% or, eq, le, lt, ge, gt, succ, over plus, minus and a product; self.glp).  A
 % binding sends a value variable to a value, a multiplicity to a positive
 % whole number (def:binding-numbers).  The
 % fixtures are the checker's and certify nothing of GB, Currencies'
@@ -1100,8 +1099,8 @@ nm_bonds(C?) :-
 % --- a number required and supplied ----------------------------------------
 % meet as above, but each role requires score(5), which the schema of arity
 % one score(Alice?; k) : +score(k) adds, guarded and requiring and forbidding
-% nothing, at the binding sending k to 5, which satisfies its constraint,
-% true: clause 1 of def:unobstructed holds, a number matched by equality, and
+% nothing, at the binding sending k to 5, carrying no constraint: clause 1
+% of def:unobstructed holds, a number matched by equality, and
 % the contract is syntactically grassroots.
 procedure nm_supplied(NContract).
 nm_supplied([schema(establish, [],
@@ -1129,8 +1128,8 @@ nm_blocked([schema(establish, [],
 
 % --- a number required, and the constraint of the schema adding it ---------
 % meet requiring score(5) at each role (nm_supplied), and a schema of arity
-% one adding score(k) at a binding satisfying its constraint
-% (def:unobstructed, clause 1; def:binding-numbers).
+% one adding score(k), carrying a constraint, so supplying nothing
+% (def:numbers; def:unobstructed, clause 1).
 procedure nm_score_meet(NContract).
 nm_score_meet([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -1172,7 +1171,7 @@ nm_other_number(C?) :-
 % --- a number forbidden, and the constraint of the schema adding it --------
 % meet forbidding date(0) at Alice (nm_blocked), and set_date(Alice; t),
 % unguarded and of arity one, requiring identity and adding date(t) at a
-% binding satisfying its constraint (def:unobstructed, clause 2).
+% binding, its constraint unread (the appendix; def:unobstructed, clause 2).
 procedure nm_date_meet(NContract).
 nm_date_meet([schema(establish, [],
        [rs(guarded, [atom(identity, [])], [], [], [])]),
@@ -2688,6 +2687,10 @@ forbid_at_guards(A, [schema(Nm, Vs, Rs)|Ss], [schema(Nm?, Vs?, Rs1?)|R?]) :-
     forbid_at_roles(A?, Rs?, Rs1),
     forbid_at_guards(A?, Ss?, R).
 forbid_at_guards(A, [cschema(Nm, Vs, Th, Rs)|Ss], [cschema(Nm?, Vs?, Th?, Rs1?)|R?]) :-
+    ground(A?), ground(Ss?) |
+    forbid_at_roles(A?, Rs?, Rs1),
+    forbid_at_guards(A?, Ss?, R).
+forbid_at_guards(A, [qschema(Nm, Vs, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(Nm?, Vs?, Bd?, Cn?, Rs1?, Cj?, Fs?)|R?]) :-
     ground(A?), ground(Ss?) |
     forbid_at_roles(A?, Rs?, Rs1),
     forbid_at_guards(A?, Ss?, R).

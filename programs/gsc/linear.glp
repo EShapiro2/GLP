@@ -1097,24 +1097,75 @@ cmp_atoms1(ge, X, Y, [geq(L?)]) :- ground(X?), ground(Y?) | ex_diff(Y?, X?, L).
 cmp_atoms1(gt, X, Y, [grt(L?)]) :- ground(X?), ground(Y?) | ex_diff(Y?, X?, L).
 cmp_atoms1(eq, X, Y, [equ(L?)]) :- ground(X?), ground(Y?) | ex_diff(X?, Y?, L).
 
-% cons_conj(C, E, A): the atoms of the constraint C, its value variables
-% read through E.
-exported procedure cons_conj(Constraint?, VEnv?, Conj).
-cons_conj(true, _, []).
-cons_conj(and(A, B), E, R?) :- ground(A?), ground(B?), ground(E?) |
-    cons_conj(A?, E?, R1),
-    cons_conj(B?, E?, R2),
-    conj_app(R1?, R2?, R).
-cons_conj(eq(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(eq, X?, Y?, E?, R).
-cons_conj(le(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(le, X?, Y?, E?, R).
-cons_conj(lt(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(lt, X?, Y?, E?, R).
-cons_conj(ge(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(ge, X?, Y?, E?, R).
-cons_conj(gt(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(gt, X?, Y?, E?, R).
-cons_conj(succ(X, Y), E, R?) :- ground(X?), ground(Y?), ground(E?) |
-    cmp_atoms(eq, plus(X?, num(1)), Y?, E?, R).
-cons_conj(or(_, _), _, [equ(lin([], 1))]).
-% A signing condition is read by no condition of def:syntactically-grassroots
-% (GSC, the appendix "Values in Speech-Act Schemas", after
-% def:binding-numbers), and is taken as true.
-cons_conj(signed(_, _), _, []).
-cons_conj(unsigned(_, _), _, []).
+% cons_gt(X, Y, E, A): the atoms of X > Y, its value variables read through E.
+exported procedure cons_gt(Expr?, Expr?, VEnv?, Conj).
+cons_gt(X, Y, E, R?) :- ground(X?), ground(Y?), ground(E?) | cmp_atoms(gt, X?, Y?, E?, R).
+
+% cons_cd(C, E, Pol, cd(D, W)): D the formula saying the constraint C, or its
+% negation where Pol is no, its value variables read through E, and W no
+% where C has a part that is no linear relation of its value variables, a
+% product of two of them, a function or a relation of a type: def:numbers has
+% the checker decide an implication "where the constraint is linear over
+% whole numbers", and refuse the schema otherwise.  An equality of agent
+% variables and a signing condition are over no value, and hold at some
+% binding either way.
+exported procedure cons_cd(Constraint?, VEnv?, Ans?, Cd).
+cons_cd(true, _, yes, cd([[]], yes)).
+cons_cd(true, _, no, cd([], yes)).
+cons_cd(and(A, B), E, P, R?) :- ground(A?), ground(B?), ground(E?), ground(P?) |
+    cons_cd(A?, E?, P?, X),
+    cons_cd(B?, E?, P?, Y),
+    cd_join(P?, X?, Y?, R).
+cons_cd(or(A, B), E, P, R?) :- ground(A?), ground(B?), ground(E?), ground(P?) |
+    cons_cd(A?, E?, P?, X),
+    cons_cd(B?, E?, P?, Y),
+    flip(P?, N),
+    cd_join(N?, X?, Y?, R).
+cons_cd(not(A), E, P, R?) :- flip(P?, N), cons_cd(A?, E?, N?, R).
+cons_cd(implies(A, B), E, P, R?) :- cons_cd(or(not(A?), B?), E?, P?, R).
+cons_cd(eq(X, Y), E, P, R?) :- ground(X?), ground(Y?), ground(E?), ground(P?) |
+    agent_eq(X?, Y?, A),
+    cd_eq(A?, P?, X?, Y?, E?, R).
+cons_cd(ne(X, Y), E, P, R?) :- ground(X?), ground(Y?), ground(E?), ground(P?) |
+    agent_eq(X?, Y?, A),
+    flip(P?, N),
+    cd_eq(A?, N?, X?, Y?, E?, R).
+cons_cd(le(X, Y), E, yes, R?) :- cd_cmp(le, X?, Y?, E?, R).
+cons_cd(le(X, Y), E, no, R?) :- cd_cmp(gt, X?, Y?, E?, R).
+cons_cd(lt(X, Y), E, yes, R?) :- cd_cmp(lt, X?, Y?, E?, R).
+cons_cd(lt(X, Y), E, no, R?) :- cd_cmp(ge, X?, Y?, E?, R).
+cons_cd(ge(X, Y), E, yes, R?) :- cd_cmp(ge, X?, Y?, E?, R).
+cons_cd(ge(X, Y), E, no, R?) :- cd_cmp(lt, X?, Y?, E?, R).
+cons_cd(gt(X, Y), E, yes, R?) :- cd_cmp(gt, X?, Y?, E?, R).
+cons_cd(gt(X, Y), E, no, R?) :- cd_cmp(le, X?, Y?, E?, R).
+cons_cd(succ(X, Y), E, P, R?) :- ground(X?), ground(Y?), ground(E?), ground(P?) |
+    cd_eq(no, P?, plus(X?, num(1)), Y?, E?, R).
+cons_cd(rel(_, _), _, _, cd([[]], no)).
+cons_cd(signed(_, _), _, _, cd([[]], yes)).
+cons_cd(unsigned(_, _), _, _, cd([[]], yes)).
+
+% And where P is yes, or where it is no.
+procedure cd_join(Ans?, Cd?, Cd?, Cd).
+cd_join(yes, cd(D1, W1), cd(D2, W2), cd(D?, W?)) :- dnf_and(D1?, D2?, D), both_yes(W1?, W2?, W).
+cd_join(no, cd(D1, W1), cd(D2, W2), cd(D?, W?)) :- dnf_app(D1?, D2?, D), both_yes(W1?, W2?, W).
+
+% X = Y, or its negation, the first argument yes where the two are agents.
+procedure cd_eq(Ans?, Ans?, Expr?, Expr?, VEnv?, Cd).
+cd_eq(yes, _, _, _, _, cd([[]], yes)).
+cd_eq(no, yes, X, Y, E, R?) :- cd_cmp(eq, X?, Y?, E?, R).
+cd_eq(no, no, X, Y, E, R?) :- ground(X?), ground(Y?), ground(E?) |
+    cd_cmp(lt, X?, Y?, E?, A),
+    cd_cmp(gt, X?, Y?, E?, B),
+    cd_join(no, A?, B?, R).
+
+procedure cd_cmp(Constant?, Expr?, Expr?, VEnv?, Cd).
+cd_cmp(Op, X, Y, E, R?) :- ground(Op?), ground(X?), ground(Y?), ground(E?) |
+    expr(X?, E?, XX),
+    expr(Y?, E?, XY),
+    cd_cmp1(Op?, XX?, XY?, R).
+
+procedure cd_cmp1(Constant?, Ex?, Ex?, Cd).
+cd_cmp1(_, ex_bad, _, cd([[]], no)).
+cd_cmp1(_, ex(_, _), ex_bad, cd([[]], no)).
+cd_cmp1(Op, ex(L1, D1), ex(L2, D2), cd([C?], yes)) :-
+    cmp_atoms1(Op?, ex(L1?, D1?), ex(L2?, D2?), C).
