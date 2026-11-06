@@ -1,5 +1,5 @@
 #!/bin/bash
-# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A button is of the acts it names, and a button replaces a button (vGLP 4236349, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).  The fields after a button, up to the next button, are that button's, and two lines that stand writing one button are refused, one name being one button with one line (ibid.: "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names").
+# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A contract "has their tabs with its own, a tab of an inherited tab's name replacing it" (vGLP 14d9064, Section 5.4, "The contract's words", its last sentence): the tab it writes stands in the place of the inherited one, which is gone.  A button is of the acts it names, and a button replaces a button (vGLP 4236349, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).  The fields after a button, up to the next button, are that button's, and two lines that stand writing one button are refused, one name being one button with one line (ibid.: "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names").
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
@@ -246,7 +246,7 @@ sub visit {
 my @own = read_txt($top);
 unless (grep { $_ eq "Pragmas" } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
-my (@lists, @acts);
+my (@tabs, @lists, @acts);
 # The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
 my %is_name;
 for my $f (@order) {
@@ -405,7 +405,7 @@ for my $f (@order) {
                     push @w, substr($w, 0, -1) if length($w) > 1 && $w =~ /s$/;
                 }
             }
-            push @lists, "list(" . q_string($title) . ", [" . join(", ", map { q_atom($_) } @w) . "])";
+            push @tabs, { f => $f, name => $name, title => $title, list => "list(" . q_string($title) . ", [" . join(", ", map { q_atom($_) } @w) . "])" };
             $tab = $title if $first;
             $first = 0;
             next;
@@ -546,6 +546,15 @@ for my $f (@order) {
         # A line whose buttons come first names no person before them, and "a button is offered only to the person named before it" (vGLP 8aa82f0, Section 5.4, "The contract words"): a fault, and the contract is not compiled.
         die "pragmas.sh: $f: the pragma \"$title\" names no person before its button, and a button is offered only to the person named before it\n";
     }
+}
+# A tab of an inherited tab’s name replaces it: a contract "has their tabs with its own, a tab of an inherited tab’s name replacing it" (vGLP 14d9064, Section 5.4, "The contract’s words", its last sentence), as GDO-L’s Pointing replaces GDO’s and DGC’s Coins those of GB and GC.  The tabs replacing a tab are those of its name in the contracts extending its contract, directly or through another; the last of them, those no other replaces, stand in its place.
+sub replacing_tabs { my ($t) = @_; return grep { $_->{title} eq $t->{title} && $_->{f} ne $t->{f} && $anc{ $_->{f} }{ $t->{f} } } @tabs }
+my %tab_placed;
+for my $t (@tabs) {
+    my @by = replacing_tabs($t);
+    my @last = @by ? grep { !replacing_tabs($_) } @by : ($t);
+    push @lines_out, "$t->{name}: the tab $t->{title}: replaced by the tab of " . join(" and ", map { $_->{name} } @last) . " of the same name" if @by;
+    for my $k (@last) { push @lists, $k->{list} unless $tab_placed{$k}++ }
 }
 # The places of a request name a field may name, as cvac.glp field_places counts them: its roles but its listed roles, then the variables of its head that a person or the state fills; each slot [kind, place in the request, key], the key of a role its name, "@Name", and of a variable its name.
 sub field_slots {
