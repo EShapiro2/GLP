@@ -1,7 +1,7 @@
 % GFF: Grassroots Feeds and Followers --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GFF (Udi, 2026-10-27).  The paper, /Users/udi/Grassroots/GFF/main_CSSN.tex, prints it in its box and cites a clause as GFF:1.
 % Paper: GFF, Grassroots Feeds and Followers, in preparation
-% Extends: GDO-L, Grassroots Directed Overlay with Labels, GFF's (GDO-L.txt beside this file), and through it GDO, LBM's, GSG and GKK, GSC's.  It cites their clauses whole and restates none.
+% Extends: GDO-L, Grassroots Directed Overlay with Labels, GFF's (GDO-L.txt beside this file), and through it GDO, GRH's, GSG and GKK, GSC's.  It cites their clauses whole and restates none.
 % Defines: feed, item, following.  Label and labeled pointing are defined with GDO-L; Alice, Bob and Carol are variables naming persons.
 % Last changed: 2026-11-05, rewritten by GFF #3 Cowork on GDO-L, the clauses as Udi approved them that day (Udi, to GFF #3: 'I think GFF should be based on overlays, GDO and extend it').  The five clauses of 2026-10-28 --- Following Volition, Following via Friend, Delivery with forwarding, Updating --- are gone, and git holds them.
 % Schemas: GFF.glp beside this file, GDO-L's twelve and two over the predicates item and received: post, clause 1; deliver, clause 2, with no guarding role, Bob a reading role.
