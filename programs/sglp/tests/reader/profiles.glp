@@ -7,19 +7,7 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(fair)
 %% binds(Rating, fair_rating)
-exported procedure
-fair_rating
-(
-Rating
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure fair_rating(Rating, Person?, Integer?, MutualRef?).
 fair_rating(R?, _, S, _)
 :-
 random(S?, 5, K, _)
@@ -28,17 +16,7 @@ rated(0.000011574074074074073, Tok)
 ,
 give(Tok?, K?, slot(R))
 .
-procedure
-give
-(
-Token?
-,
-Integer?
-,
-Slot(Rating)
-?
-)
-.
+procedure give(Token?, Integer?, Slot(Rating)?).
 give(stop, _, _)
 .
 give(go(_), K, slot(rating(K?)))

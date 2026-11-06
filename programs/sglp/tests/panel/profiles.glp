@@ -7,33 +7,12 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(judge)
 %% binds(Panel, judge_panel)
-exported procedure
-judge_panel
-(
-Panel
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure judge_panel(Panel?, Person?, Integer?, MutualRef?).
 judge_panel(panel(Cs), _, S, _)
 :-
 judge(Cs?, S?)
 .
-procedure
-judge
-(
-List(Card)
-?
-,
-Integer?
-)
-.
+procedure judge(List(Card)?, Integer?).
 judge([card(_, A?) | Cs], S)
 :-
 random(S?, 2, K, S1)
@@ -46,17 +25,7 @@ judge(Cs?, S1?)
 .
 judge([], _)
 .
-procedure
-verdict
-(
-Token?
-,
-Integer?
-,
-Slot(YesNo)
-?
-)
-.
+procedure verdict(Token?, Integer?, Slot(YesNo)?).
 verdict(stop, _, _)
 .
 verdict(go(_), 1, slot(yes))

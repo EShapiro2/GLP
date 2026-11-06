@@ -607,9 +607,6 @@ programs/sglp/transform.glp	open-decl	dim_of/3
 programs/sglp/transform.glp	open-decl	dim_of1/5
 programs/sglp/transform.glp	open-decl	dim_same/4
 programs/sglp/transform.glp	open-decl	dim_same1/3
-programs/sglp/transform.glp	open-decl	dual_found/3
-programs/sglp/transform.glp	open-decl	dual_lines/4
-programs/sglp/transform.glp	open-decl	dual_text/2
 programs/sglp/transform.glp	open-decl	edges_from/3
 programs/sglp/transform.glp	open-decl	entry_types/3
 programs/sglp/transform.glp	open-decl	expand/7
@@ -629,14 +626,12 @@ programs/sglp/transform.glp	open-decl	frame_log/5
 programs/sglp/transform.glp	open-decl	frame_log_list/5
 programs/sglp/transform.glp	open-decl	frame_rep/4
 programs/sglp/transform.glp	open-decl	fresh1/8
-programs/sglp/transform.glp	open-decl	functor_text/2
 programs/sglp/transform.glp	open-decl	fw_clauses/5
 programs/sglp/transform.glp	open-decl	goal/3
 programs/sglp/transform.glp	open-decl	goal_needs/3
 programs/sglp/transform.glp	open-decl	grow2/6
 programs/sglp/transform.glp	open-decl	h_answer_clauses/5
 programs/sglp/transform.glp	open-decl	has_cons/3
-programs/sglp/transform.glp	open-decl	has_dual/2
 programs/sglp/transform.glp	open-decl	has_type/3
 programs/sglp/transform.glp	open-decl	head_var/3
 programs/sglp/transform.glp	open-decl	holder/4
@@ -744,11 +739,8 @@ programs/sglp/transform.glp	open-decl	skel/3
 programs/sglp/transform.glp	open-decl	slot_terms/3
 programs/sglp/transform.glp	open-decl	split/3
 programs/sglp/transform.glp	open-decl	stop_clause/5
-programs/sglp/transform.glp	open-decl	stype_def/4
 programs/sglp/transform.glp	open-decl	stype_once1/5
 programs/sglp/transform.glp	open-decl	subst/3
-programs/sglp/transform.glp	open-decl	talt/3
-programs/sglp/transform.glp	open-decl	talt1/4
 programs/sglp/transform.glp	open-decl	tbody/5
 programs/sglp/transform.glp	open-decl	tclause/6
 programs/sglp/transform.glp	open-decl	tclause1/9

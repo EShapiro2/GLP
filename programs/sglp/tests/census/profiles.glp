@@ -2,39 +2,17 @@
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(census, profiles)
 
-Attr
-::=
-age(Integer)
-;
-kids(Integer)
-.
+Attr ::= age(Integer) ; kids(Integer).
 
-Person
-::=
-person(Constant, Constant, List(Attr))
-.
-exported procedure
-village
-(
-Integer?
-,
-List(Person)
-)
-.
+Person ::= person(Constant, Constant, List(Attr)).
+exported procedure village(Integer?, List(Person)).
 village(S, Ps?)
 :-
 random(S?, 5, K, _)
 ,
 family(K?, Ps)
 .
-procedure
-family
-(
-Integer?
-,
-List(Person)
-)
-.
+procedure family(Integer?, List(Person)).
 family(1, [person(ann, parent, [kids(1)]), person(bea, child, [age(7)])])
 .
 family(2, [person(ann, parent, [kids(2)]), person(bea, child, [age(7)]), person(cal, child, [age(5)])])
@@ -48,42 +26,14 @@ family(5, [])
 
 %% person(formal)
 %% binds(Hello, formal_hello)
-exported procedure
-formal_hello
-(
-Hello
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure formal_hello(Hello?, Person?, Integer?, MutualRef?).
 formal_hello(hello(K?, N?), person(Me, _, _), _, Scr)
 :-
 rated(0.0002777777777777778, Tok)
 ,
 greet_back(Tok?, Me?, slot(K), slot(N), Scr?)
 .
-procedure
-greet_back
-(
-Token?
-,
-Constant?
-,
-Slot(Constant)
-?
-,
-Slot(Integer)
-?
-,
-MutualRef?
-)
-.
+procedure greet_back(Token?, Constant?, Slot(Constant)?, Slot(Integer)?, MutualRef?).
 greet_back(stop, _, _, _, _)
 .
 greet_back(go(_), Me, slot(Me?), slot(N?), Scr)
@@ -95,37 +45,14 @@ length(L?, N)
 
 %% person(kind)
 %% binds(Mood, kind_mood)
-exported procedure
-kind_mood
-(
-Mood
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure kind_mood(Mood?, Person?, Integer?, MutualRef?).
 kind_mood(mood(M?), _, _, _)
 :-
 rated(0.0002777777777777778, Tok)
 ,
 tell(Tok?, slot(M), kind)
 .
-procedure
-tell
-(
-Token?
-,
-Slot(Constant)
-?
-,
-Constant?
-)
-.
+procedure tell(Token?, Slot(Constant)?, Constant?).
 tell(stop, _, _)
 .
 tell(go(_), slot(V?), V)
@@ -133,20 +60,7 @@ tell(go(_), slot(V?), V)
 
 %% person(grumpy)
 %% binds(Mood, grumpy_mood)
-exported procedure
-grumpy_mood
-(
-Mood
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure grumpy_mood(Mood?, Person?, Integer?, MutualRef?).
 grumpy_mood(mood(M?), _, _, _)
 :-
 rated(0.0002777777777777778, Tok)
@@ -157,56 +71,21 @@ tell(Tok?, slot(M), grumpy)
 %% person(casual)
 %% binds(Hello, casual_hello)
 %% binds(Mood, casual_mood)
-exported procedure
-casual_hello
-(
-Hello
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure casual_hello(Hello?, Person?, Integer?, MutualRef?).
 casual_hello(hello(K?, A?), H, _, _)
 :-
 rated(0.0002777777777777778, Tok)
 ,
 say_age(Tok?, H?, slot(K), slot(A))
 .
-procedure
-say_age
-(
-Token?
-,
-Person
-?
-,
-Slot(Constant)
-?
-,
-Slot(Integer)
-?
-)
-.
+procedure say_age(Token?, Person?, Slot(Constant)?, Slot(Integer)?).
 say_age(stop, _, _, _)
 .
 say_age(go(_), person(Me, _, As), slot(Me?), slot(Ag?))
 :-
 age_of(As?, Ag)
 .
-procedure
-age_of
-(
-List(Attr)
-?
-,
-Integer
-)
-.
+procedure age_of(List(Attr)?, Integer).
 age_of([], 0)
 .
 age_of([age(A) | _], A?)
@@ -215,20 +94,7 @@ age_of([kids(_) | As], A?)
 :-
 age_of(As?, A)
 .
-exported procedure
-casual_mood
-(
-Mood
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure casual_mood(Mood?, Person?, Integer?, MutualRef?).
 casual_mood(mood(M?), _, _, _)
 :-
 rated(0.0002777777777777778, Tok)

@@ -7,20 +7,7 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(homophile)
 %% binds(Menu, homophile_menu)
-exported procedure
-homophile_menu
-(
-Menu
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure homophile_menu(Menu?, Person?, Integer?, MutualRef?).
 homophile_menu(M, _, S, _)
 :-
 random(S?, 100, K, S1)
@@ -29,19 +16,7 @@ rated(0.0000016534391534391535, Tok)
 ,
 homophile_pick(Tok?, K?, S1?, M?)
 .
-procedure
-homophile_pick
-(
-Token?
-,
-Integer?
-,
-Integer?
-,
-Menu
-?
-)
-.
+procedure homophile_pick(Token?, Integer?, Integer?, Menu?).
 homophile_pick(stop, _, _, _)
 .
 homophile_pick(go(_), K, S, menu(Ss, _, same(P?)))
@@ -63,20 +38,7 @@ one_of(Os?, S?, P)
 
 %% person(indifferent)
 %% binds(Menu, indifferent_menu)
-exported procedure
-indifferent_menu
-(
-Menu
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure indifferent_menu(Menu?, Person?, Integer?, MutualRef?).
 indifferent_menu(M, _, S, _)
 :-
 random(S?, 100, K, S1)
@@ -85,19 +47,7 @@ rated(0.000003306878306878307, Tok)
 ,
 indifferent_pick(Tok?, K?, S1?, M?)
 .
-procedure
-indifferent_pick
-(
-Token?
-,
-Integer?
-,
-Integer?
-,
-Menu
-?
-)
-.
+procedure indifferent_pick(Token?, Integer?, Integer?, Menu?).
 indifferent_pick(stop, _, _, _)
 .
 indifferent_pick(go(_), K, S, menu(Ss, _, same(P?)))
@@ -119,20 +69,7 @@ one_of(Os?, S?, P)
 
 %% person(wary)
 %% binds(Approval, wary_approval)
-exported procedure
-wary_approval
-(
-Approval
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure wary_approval(Approval?, Person?, Integer?, MutualRef?).
 wary_approval(C, _, S, _)
 :-
 random(S?, 100, K, _)
@@ -141,17 +78,7 @@ rated(0.000011574074074074073, Tok)
 ,
 wary_answer(Tok?, K?, C?)
 .
-procedure
-wary_answer
-(
-Token?
-,
-Integer?
-,
-Approval
-?
-)
-.
+procedure wary_answer(Token?, Integer?, Approval?).
 wary_answer(stop, _, _)
 .
 wary_answer(go(_), K, approval(_, yes))
@@ -169,20 +96,7 @@ true
 
 %% person(sociable)
 %% binds(Approval, sociable_approval)
-exported procedure
-sociable_approval
-(
-Approval
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure sociable_approval(Approval?, Person?, Integer?, MutualRef?).
 sociable_approval(C, _, S, _)
 :-
 random(S?, 100, K, _)
@@ -191,17 +105,7 @@ rated(0.0002777777777777778, Tok)
 ,
 sociable_answer(Tok?, K?, C?)
 .
-procedure
-sociable_answer
-(
-Token?
-,
-Integer?
-,
-Approval
-?
-)
-.
+procedure sociable_answer(Token?, Integer?, Approval?).
 sociable_answer(stop, _, _)
 .
 sociable_answer(go(_), K, approval(_, yes))

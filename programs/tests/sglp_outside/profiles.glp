@@ -7,20 +7,7 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(agreeable)
 %% binds(Poll, agreeable_poll)
-exported procedure
-agreeable_poll
-(
-Poll
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure agreeable_poll(Poll?, Person?, Integer?, MutualRef?).
 agreeable_poll(P, _, S, _)
 :-
 random(S?, 100, K, _)
@@ -29,17 +16,7 @@ rated(0.000011574074074074073, Tok)
 ,
 agreeable_answer(Tok?, K?, P?)
 .
-procedure
-agreeable_answer
-(
-Token?
-,
-Integer?
-,
-Poll
-?
-)
-.
+procedure agreeable_answer(Token?, Integer?, Poll?).
 agreeable_answer(stop, _, _)
 .
 agreeable_answer(go(_), K, poll(_, yes))

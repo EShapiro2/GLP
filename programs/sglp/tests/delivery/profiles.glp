@@ -7,36 +7,14 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(talker)
 %% binds(Stream(Msg), talk)
-exported procedure
-talk
-(
-Stream(Msg)
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure talk(Stream(Msg), Person?, Integer?, MutualRef?).
 talk(Ms?, _, _, _)
 :-
 rated(0.0002777777777777778, Tok)
 ,
 say(Tok?, 1, slot(Ms))
 .
-procedure
-say
-(
-Token?
-,
-Integer?
-,
-Slot(Stream(Msg))
-?
-)
-.
+procedure say(Token?, Integer?, Slot(Stream(Msg))?).
 say(stop, _, _)
 .
 say(go(_), I, slot([msg(T?, St) | Ms?]))
@@ -53,17 +31,7 @@ say(go(_), I, slot([]))
 |
 true
 .
-procedure
-next
-(
-Status
-?
-,
-Integer?
-,
-Stream(Msg)
-)
-.
+procedure next(Status?, Integer?, Stream(Msg)).
 next(St, I, Ms?)
 :-
 known(St?)
@@ -74,14 +42,7 @@ rated(0.0002777777777777778, Tok)
 ,
 say(Tok?, I1?, slot(Ms))
 .
-procedure
-text
-(
-Integer?
-,
-String
-)
-.
+procedure text(Integer?, String).
 text(1, hello)
 .
 text(2, there)

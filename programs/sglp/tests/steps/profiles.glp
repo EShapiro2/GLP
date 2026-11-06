@@ -7,65 +7,25 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(stepper)
 %% binds(Ready, get_ready)
-exported procedure
-get_ready
-(
-Ready
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure get_ready(Ready?, Person?, Integer?, MutualRef?).
 get_ready(ready(R?), _, _, _)
 :-
 rated(0.000011574074074074073, Tok)
 ,
 say(Tok?, slot(R))
 .
-procedure
-say
-(
-Token?
-,
-Slot(YesNo)
-?
-)
-.
+procedure say(Token?, Slot(YesNo)?).
 say(stop, _)
 .
 say(go(_), slot(yes))
 .
 %% binds(Panel, judge_fast)
-exported procedure
-judge_fast
-(
-Panel
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-)
-.
+exported procedure judge_fast(Panel?, Person?, Integer?, MutualRef?).
 judge_fast(panel(Cs), _, _, _)
 :-
 judge_cards(Cs?)
 .
-procedure
-judge_cards
-(
-List(Card)
-?
-)
-.
+procedure judge_cards(List(Card)?).
 judge_cards([card(_, A?) | Cs])
 :-
 rated(1.0, Tok)
@@ -76,15 +36,7 @@ judge_cards(Cs?)
 .
 judge_cards([])
 .
-procedure
-verdict
-(
-Token?
-,
-Slot(YesNo)
-?
-)
-.
+procedure verdict(Token?, Slot(YesNo)?).
 verdict(stop, _)
 .
 verdict(go(_), slot(yes))
