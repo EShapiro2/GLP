@@ -82,6 +82,7 @@ enum _Function {
   send,
   declarePlace,
   removePlace,
+  watchPlaces,
 }
 
 /// A call of [function] on the layer; where [id] is given, the agent waits
@@ -234,8 +235,6 @@ class LayerPort {
         _post(_Connectivity(_mirror(), oldAddress, newAddress));
     layer.onNetworkChanged =
         (oldId, newId) => _post(_NetworkChanged(_mirror(), oldId, newId));
-    layer.onPlaceEvent =
-        (place, event) => _post(_Place(_mirror(), place, event));
   }
 
   /// The port the agent's end calls the layer on.
@@ -325,6 +324,16 @@ class LayerPort {
         return layer.declarePlace(a[0] as String, a[1] as double);
       case _Function.removePlace:
         await layer.removePlace(a[0] as String);
+      case _Function.watchPlaces:
+        // Asked for when the agent first declares a place: a layer given no
+        // location service takes no such callback, and refuses the
+        // declaration that follows.
+        try {
+          layer.onPlaceEvent =
+              (place, event) => _post(_Place(_mirror(), place, event));
+        } on StateError {
+          return null;
+        }
     }
     return null;
   }
@@ -564,6 +573,7 @@ class PortGlpNetwork implements GlpNetwork {
   @override
   set onPlaceEvent(void Function(String place, PlaceEvent event)? cb) {
     _onPlaceEvent = cb;
+    _call(_Function.watchPlaces, const []);
     _deliver();
   }
 }

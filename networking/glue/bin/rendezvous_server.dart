@@ -9,10 +9,11 @@
 /// mark of a rendezvous server, so that it answers unsolicited WAN contact
 /// from any key (GNA Section 2.7); it runs the WAN alone, with no
 /// attestation, no location service and no rendezvous servers of its own.
-/// The agent is `programs/examples/rendezvous/rv_agent.glp`, booted on its
-/// entry `rv_server/3` by the runtime's own host, `AgentRuntime`, over the
-/// layer through the adapter, [HeadlessGlpNetwork], as the glue's tests host
-/// theirs.  What the agent coordinates and how is the agent's GLP (GNA
+/// The agent is `programs/examples/rendezvous/rv_agent.glp`, started from
+/// `agent(ch(_?,_),ch(_?,_))`, every agent's initial goal, its person's first
+/// act the social graph's source identity, by the runtime's own host,
+/// `AgentRuntime`, over the layer through the adapter, [HeadlessGlpNetwork],
+/// as the glue's tests host theirs.  What the agent coordinates and how is the agent's GLP (GNA
 /// Section 6); the layer supplies the observed addresses behind
 /// `peer_address/2`.
 ///

@@ -118,6 +118,17 @@ class FakeLayer implements GlpNetwork {
   void Function(String, PlaceEvent)? onPlaceEvent;
 }
 
+/// A layer given no location service, as the Flutter layer without a
+/// geofence backend: it takes no place callback and refuses a declaration.
+class NoPlacesLayer extends FakeLayer {
+  @override
+  set onPlaceEvent(void Function(String, PlaceEvent)? cb) =>
+      throw StateError('no location service');
+  @override
+  Future<bool> declarePlace(String place, double radiusMetres) =>
+      throw StateError('no location service');
+}
+
 void main() {
   final me = PersonIdentity.fromSeed(Uint8List(32));
   final peer = PersonIdentity.fromSeed(Uint8List(32)..fillRange(0, 32, 7)).pub;
@@ -232,6 +243,24 @@ void main() {
     late.onMessageReceived = (sender, payload, id, underlay) =>
         got.add('$id ${payload.length} ${sender == peer}');
     expect(got, ['m1 2 true', 'm2 3 true']);
+  });
+
+  test('a place event reaches the agent once it watches places, and a layer '
+      'with no location service only refuses the declaration', () async {
+    final seen = <String>[];
+    net.onPlaceEvent = (place, event) => seen.add('$place ${event.name}');
+    await settled();
+    layer.onPlaceEvent!('home', PlaceEvent.entered);
+    await settled();
+    expect(seen, ['home entered']);
+
+    final other = NoPlacesLayer();
+    final otherPort = LayerPort(other);
+    addTearDown(otherPort.close);
+    final noPlaces = PortGlpNetwork(otherPort.sendPort, me.keyPair);
+    addTearDown(noPlaces.close);
+    noPlaces.onPlaceEvent = (place, event) {};
+    await expectLater(noPlaces.declarePlace('home', 10), throwsStateError);
   });
 
   test('a layer that runs no WAN: the functions throw, as the layer does',

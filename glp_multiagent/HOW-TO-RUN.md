@@ -114,8 +114,12 @@ dart test test/multiagent/
 ## Architecture
 
 - **The Grassroots Super-App** (`main.dart`, running `main_superapp.dart`):
-  `runVglpApp` (`vglp_app.dart`) runs `programs/social/graph/core` at
-  `superapp_ui/3` in an agent isolate and renders it through `AgentSurface`.
+  `runVglpApp` (`vglp_app.dart`) runs `programs/social/graph/core` in an agent
+  isolate over the networking layer, which the application holds
+  (`agent_entry.dart`), and renders it through `AgentSurface`.  A build gives
+  the agent its rendezvous servers and peers with
+  `--dart-define=GLP_RENDEZVOUS=<key-hex>@<ip:port>` and
+  `--dart-define=GLP_PEERS=<key-hex>[@<ip:port>]`, each a comma separated list.
 - **CSSN group plays** (`main_cssg.dart`): Spawns `glp_repl` subprocess, parses
   tagged output, routes to per-agent panels.
 
@@ -126,7 +130,10 @@ dart test test/multiagent/
 | `lib/main.dart` | The default: the Grassroots Super-App, by `lib/main_superapp.dart` |
 | `lib/main_cssg.dart` | CSSN group plays via REPL subprocess |
 | `lib/isolate_protocol.dart` | Isolate protocol: message types, lifecycle, entry point |
+| `lib/agent_entry.dart` | The entry of a deployed agent: its key pair, its layer |
+| `lib/phone_layer.dart` | The layer the app runs on a phone and on the Mac |
 | `lib/mad_router.dart` | `IsolateRouter` — cross-isolate MAD message routing |
+| `tool/simctl_lan_agents.sh` | Two agents over the LAN: `mac-sim` and `sim-sim` |
 | `macos/Runner/AppDelegate.swift` | Focus fix (makeFirstResponder) |
 | `pubspec.yaml` | Dependencies (glp_runtime, desktop_multi_window) |
 

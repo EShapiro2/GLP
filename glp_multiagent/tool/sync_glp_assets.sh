@@ -32,8 +32,15 @@ cd "$(dirname "$0")/.."           # glp_multiagent/
 SRC=../programs
 OUT=assets/glp
 DST=$OUT/programs
-# The trees the app loads: GlpPaths's directories, with the root self.glp.
-TREES="social/graph cssn currencies/bonds"
+# The trees the app loads: GlpPaths's directories, with the root self.glp, and
+# the directories of the modules the root exposes, which are in every program's
+# scope (TGLP modules.tex, "The -expose directive"), so the engine reads them
+# wherever the program lies, with the directory's self.glp and what that names.
+# Until 2026-11-06 those were not among them, and an agent on the bundle failed
+# at its load: "-expose: module file not found: .../programs/sglp/monitor.glp".
+EXPOSED=$(sed -n 's/^-expose(\(.*\))\.$/\1/p' "$SRC/self.glp" | tr '#' '/' \
+  | while read -r m; do dirname "$m"; done | sort -u)
+TREES="social/graph cssn currencies/bonds $(echo $EXPOSED)"
 rm -rf "$OUT"
 mkdir -p "$DST"
 

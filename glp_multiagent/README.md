@@ -9,7 +9,7 @@ own GLP program and uses its own execution backend and agent topology.
 
 | Entry point | App | Agents | Backend | Status |
 |---|---|---|---|---|
-| `lib/main.dart` | The Grassroots Super-App (`programs/social/graph/core`), the phone app's default; it runs `lib/main_superapp.dart` | alice, with a scripted bob | `runVglpApp` (`lib/vglp_app.dart`) | Working |
+| `lib/main.dart` | The Grassroots Super-App (`programs/social/graph/core`), the phone app's default; it runs `lib/main_superapp.dart` | alice | `runVglpApp` (`lib/vglp_app.dart`), over the networking layer (`lib/agent_entry.dart`) | Working |
 
 `main_sg_mad.dart`, `main_cssg_mad.dart` and `main_cssg_mad_modules.dart` were
 retired on 2026-08-01: each named a program directory that no longer exists
@@ -32,6 +32,8 @@ runtime parses nothing the person sends (2026-10-02).
 | File | Purpose |
 |---|---|
 | `lib/isolate_protocol.dart` | Message types between main isolate and agent isolates, agent isolate entry point, lifecycle documentation |
+| `lib/agent_entry.dart` | The entry of a deployed agent: the key pair made once and kept in the agent's store, the layer instantiated with it, in the application's isolate, and what the agent's isolate is given |
+| `lib/phone_layer.dart` | The layer the app runs: the Flutter package's on a phone, the headless one on the Mac |
 | `lib/mad_router.dart` | `IsolateRouter` — routes MAD messages between agent isolates via `SendPort`, with message buffering for unregistered agents |
 
 ## Two-phase deferred-start protocol
