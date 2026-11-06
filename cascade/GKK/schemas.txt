@@ -4,5 +4,5 @@ establish: identity(Alice) <-
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
     identity(Alice), identity(Bob) guarded by Alice, Bob
 
-introduce: knows(Bob, c) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
