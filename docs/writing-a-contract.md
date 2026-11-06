@@ -14,7 +14,7 @@ A contract named NAME lives in one copy, in its owner's directory under `program
 
 2. `NAME.glp`, the speech-act schemas, the term `schema(Name, Names, Vars, Roles)` for each act the clauses describe, written by the guide.  The term is the one source; a run of the cascade prints the notation from it.
 
-A clause is cited as `GKK:1`.  A contract built on another cites the other's clauses and does not restate them.  Its relation to the other is one of the four relations of GSC's paper, Section 8, Relations among Contracts --- amendment, extension, restriction, instantiation --- and is stated in those terms in its paper and in its header, as `GSN amends GSG` and `GB extends GC`, never as 'replaces' or 'extends with changes' (Udi, 2026-11-06, reported by GSC #11); the paper defines the four and says what the checker redoes for each.  Every contract's clauses use Alice and Bob; two names are two persons, and a clause that admits one person in both says "Alice and Bob, possibly one person".  A clause states an obligation, a permission or a prohibition, and nothing else: no explanation inside the box.
+A clause is cited as `GKK:1`.  A contract built on another cites the other's clauses and does not restate them.  Its relation to the other is one of the five relations of GSC's paper, Section 8, Relations among Contracts --- amendment, extension and instantiation, on schemas, and implementation and restriction, on runs (Udi, 2026-11-06, to GSC #12, reported by GSC) --- and is stated in those terms in its paper and in its header, as `GSN amends GSG` and `GB extends GC`, never as 'replaces' or 'extends with changes' (Udi, 2026-11-06, reported by GSC #11); the paper defines the five and says what the checker redoes for each.  Every contract's clauses use Alice and Bob; two names are two persons, and a clause that admits one person in both says "Alice and Bob, possibly one person".  A clause states an obligation, a permission or a prohibition, and nothing else: no explanation inside the box.
 
 ## The pragmas
 
@@ -24,28 +24,34 @@ The pragmas specify the app, one line per person: a line per tab, naming it and 
 
 A contract's name and its owner are each a ruling of Udi's, never read off a project's name.  The rulings so far, each in `programs/<dir>/`:
 
-| Contract | Name in full | Extends | Owner | Directory |
+| Contract | Name in full | Relation | Owner | Directory |
 |---|---|---|---|---|
 | GKK | Grassroots Keys and Knowledge | --- (the base every contract extends) | GSC | `gsc` |
-| GSG | Grassroots Social Graph | GKK | GSC | `gsc` |
-| GSN | Grassroots Social Network | GSG | GSC | `gsc` |
-| GnW | Guardians 'n' Wards | GSG | GAI | `gai` |
-| GAI | Accountable AI Agents | GnW | GAI | `gai` |
-| GSNP | Grassroots Social Network with Provenance | GSN, GAI | GAI | `gai` |
-| CSSN | Child-Safe Social Network | GSN, GnW | CSSN | `cssn` |
-| GD | Grassroots Distrust | GSG | GGGA | `ggga` |
-| GC | Grassroots Coins | GKK | Currencies | `currencies/coins` |
-| GB | Grassroots Bonds | GC | Currencies | `currencies/bonds` |
-| DGC | Denominated Grassroots Currencies | GC, GB | Currencies | `currencies/sovereign` |
-| GDC | Grassroots Denominated Coins | GC | Currencies | `currencies/gdc` |
-| GCC | Grassroots Community Currencies | GDC | Currencies | `currencies/gcc` |
-| BCC | Backed Community Currencies | GCC, GDC | Currencies | `currencies/bcc` |
-| AGORA | Grassroots Barter | GB | Currencies, until it has a paper | `currencies/agora` |
-| LBM | Location-Based Matching | GSG | not ruled | --- (not in the repository) |
-| GDO | Grassroots Directed Overlay | GSG | GRH | `lbm` |
-| GDO-L | Grassroots Directed Overlay with Labels | GDO | GFF | `gff` |
-| GFF | Grassroots Feeds and Followers | GDO-L | GFF | `gff` |
-| GRA | Grassroots Ride Auction | GDO | GRH | `lbm` |
+| GSG | Grassroots Social Graph | extends GKK | GSC | `gsc` |
+| GSN | Grassroots Social Network | extends GSG | GSC | `gsc` |
+| GnW | Guardians 'n' Wards | extends GSG | GAI | `gai` |
+| GAI | Accountable AI Agents | extends GnW | GAI | `gai` |
+| GSNP | Grassroots Social Network with Provenance | extends GSN, GAI | GAI | `gai` |
+| CSSN | Child-Safe Social Network | extends GSN, GnW | CSSN | `cssn` |
+| GD | Grassroots Distrust | extends GSG | GGGA | `ggga` |
+| GD-S | Separating GD | restricts GD | GGGA | `ggga` |
+| GC | Grassroots Coins | extends GKK | Currencies | `currencies/coins` |
+| GB | Grassroots Bonds | extends GC | Currencies | `currencies/bonds` |
+| DGC | Denominated Grassroots Currencies | extends GC, GB | Currencies | `currencies/sovereign` |
+| GDC | Grassroots Denominated Coins | extends GC | Currencies | `currencies/gdc` |
+| GCC | Grassroots Community Currencies | extends GDC | Currencies | `currencies/gcc` |
+| BCC | Backed Community Currencies | extends GCC, GDC | Currencies | `currencies/bcc` |
+| AGORA | Grassroots Barter | extends GB | Currencies, until it has a paper | `currencies/agora` |
+| LBM | Location-Based Matching | extends GSG | not ruled | --- (not in the repository) |
+| GDO | Grassroots Directed Overlay | extends GSG | GRH | `lbm` |
+| GDO-LB | Location-Based GDO | restricts GDO | GRH | `lbm` |
+| GDO-L | Grassroots Directed Overlay with Labels | extends GDO | GFF | `gff` |
+| GFF | Grassroots Feeds and Followers | extends GDO-L | GFF | `gff` |
+| GFF-I | Implementable GFF | restricts GFF | GFF | `gff` |
+| GFF-PS | Path-Shortening GFF | restricts GFF-I | GFF | `gff` |
+| GFF-FR | Fault-Resilient GFF | restricts GFF-I | GFF | `gff` |
+| GRA | Grassroots Ride Auction | extends GDO | GRH | `lbm` |
+| GRA-SS | Grassroots Ride Auction, Second-Score Restriction | restricts GRA | GRH | `lbm` |
 | GFWC | the grassroots federation | --- | GFWC | `federation` (schemas only) |
 
 A contract extends GSG when its clauses require friendship, and not otherwise.  The current text of every contract is Coordination Appendix E, `/Grassroots/Coordination/sections/E-contracts.tex`, which follows the repository's copies.
