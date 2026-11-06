@@ -510,6 +510,7 @@ programs/self.glp	open-decl	run/2
 programs/self.glp	open-decl	run/3
 programs/self.glp	open-decl	sign/3
 programs/self.glp	open-decl	signature/2
+programs/self.glp	open-decl	term_to_string/2
 programs/self.glp	open-type	Signature
 programs/sglp/sglp.glp	open-decl	show_slots/2
 programs/sglp/sglp.glp	open-decl	show_whole/4
