@@ -1572,6 +1572,66 @@ check "display: the shown structures read back as the term" "S41 = yes" "$a41"
 check "display: a quote in a name escaped as the reader reads it" "P41 = 'it\\\\'s'" "$a41"
 check "display: constant list tails shown" "L41 = \[\[a | b\], \[a, 'B' | 'C'\]\]" "$a41"
 
+
+# --- A42: Text: string_concat/2 and term_to_string/2 ---
+# GLP-Spec appendix-guards.tex, "Text (string_concat/2, term_to_string/2)"
+# (GLP-ICLP-2026 ca3c8e5; GLP #12, Code_inbox 2026-11-06 07:18 UTC).
+# string_concat/2: the characters of the strings one after another, [] as an
+# element contributing the characters [].  term_to_string/2: "a text that the
+# reader reads as the ground term T".  shown(14) prints, by send_to_user/1, a
+# line for each sample, its number and its text, built by the two; a42b reads
+# each printed line back as a goal same(I, Text, R), the reader's term
+# compared with sample I by =?=.  The kernel's abort on a number is the Dart
+# test's (glp_runtime/test/runtime/text_kernels_test.dart): a number is not a
+# String, and a goal or a clause passing one does not type-check.
+echo "--- A42: Text ---"
+a42=$("$REPL_RUN" <<HEREDOC
+$TYPED/text_test.glp
+string_concat(['Menu', '?'], C1).
+string_concat([], C2).
+string_concat(['one'], C3).
+string_concat(['X = ', []], C4).
+text(1, X1).
+shown(14).
+:quit
+HEREDOC
+2>&1)
+check "text: the fixture loads" "Loaded: .*text_test.glp" "$a42"
+check "text: string_concat(['Menu', '?'], S)" "C1 = 'Menu?'" "$a42"
+check "text: string_concat of []" "C2 = ''" "$a42"
+check "text: string_concat of one string" "C3 = one" "$a42"
+check "text: an element [] contributes []" "C4 = 'X = \[\]'" "$a42"
+check "text: term_to_string('Carol', S)" "X1 = '\\\\'Carol\\\\''" "$a42"
+a42_lines=$(echo "$a42" | sed -e 's/^\(GLP> \)*//' | grep -E '^[0-9]+ ')
+check "text: Carol quoted" "^1 'Carol'$" "$a42_lines"
+check "text: G quoted" "^2 'G'$" "$a42_lines"
+check "text: + quoted" "^3 '+'$" "$a42_lines"
+check "text: '42' quoted" "^4 '42'$" "$a42_lines"
+check "text: a string with spaces quoted" "^5 'Flood on Main Street'$" "$a42_lines"
+check "text: a structure" "^6 utterance('Flood on Main Street', f('G', +('Carol')))$" "$a42_lines"
+check "text: a list" "^7 \['Carol', 'G', '+', '42'\]$" "$a42_lines"
+check "text: a list with a tail" "^8 \[a, 'B' | 'C'\]$" "$a42_lines"
+check "text: an integer" "^9 42$" "$a42_lines"
+check "text: a negative integer" "^10 -7$" "$a42_lines"
+check "text: a real" "^11 2\.5$" "$a42_lines"
+check "text: a negative argument" "^12 neg(-7)$" "$a42_lines"
+check "text: reals in digits, no exponent" "^13 f(0\.0000001, 1000000000000000000000\.0)$" "$a42_lines"
+check "text: a list with a structure tail" "^14 \[1, -2\.5 | f(a, -3)\]$" "$a42_lines"
+check "text: fourteen lines printed" "^14$" "$(echo "$a42_lines" | grep -c .)"
+a42_goals=$(echo "$a42_lines" | sed -E 's/^([0-9]+) (.*)$/same(\1, \2, R\1)./')
+a42b=$("$REPL_RUN" <<HEREDOC
+$TYPED/text_test.glp
+$a42_goals
+same(1, 'G', Q).
+:quit
+HEREDOC
+2>&1)
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
+    check "text: printed line $i reads back as sample $i" "R$i = yes" "$a42b"
+done
+check "text: the comparison can fail" "Q = no" "$a42b"
+check_not "text: no abort" "ABORT" "$a42$a42b"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

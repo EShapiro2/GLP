@@ -108,6 +108,10 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_list_to_tuple', 2, listToTupleKernel);
   registry.register('_tuple_to_list', 2, tupleToListKernel);
 
+  // Text (GLP-Spec appendix-guards, "Text")
+  registry.register('_string_concat', 2, stringConcatKernel);
+  registry.register('_term_to_string', 2, termToStringKernel);
+
   // Time operations
   registry.register('_now', 1, nowKernel);
   registry.register('_random', 4, randomKernel);
@@ -1673,6 +1677,113 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
+// =============================================================================
+// TEXT (string_concat/2, term_to_string/2)
+// =============================================================================
+// GLP-Spec appendix-guards.tex at ca3c8e5, "Text (string_concat/2,
+// term_to_string/2)".
+
+/// `'_string_concat'(Ss?, S)` --- "assigns S the string of the characters of
+/// the strings of the list Ss, one after another; the empty list contributes
+/// the characters []", and aborts "where an element is not a string".  The
+/// clause of string_concat/2 guards Ss ground.
+BodyKernelResult stringConcatKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        "[ABORT] '_string_concat'/2: expected 2 arguments, got ${args.length}");
+  }
+  final out = StringBuffer();
+  var current = _deref(rt, args[0]);
+  while (true) {
+    if (current is ConstTerm && (current.value == nil || current.value == null)) {
+      break;
+    }
+    if (current is! StructTerm ||
+        current.functor != '.' ||
+        current.args.length != 2) {
+      return kernelAbort(
+          "[ABORT] '_string_concat'/2: the first argument is not a list: $current");
+    }
+    final element = _deref(rt, current.args[0]);
+    if (element is ConstTerm && (element.value == nil || element.value == null)) {
+      out.write('[]');
+    } else if (element is ConstTerm && element.value is String) {
+      out.write(element.value as String);
+    } else {
+      return kernelAbort(
+          "[ABORT] '_string_concat'/2: an element is not a string: $element");
+    }
+    current = _deref(rt, current.args[1]);
+  }
+  return bindResult(rt, args[1], out.toString(), kernel: "'_string_concat'/2");
+}
+
+/// `'_term_to_string'(T?, S)` --- "assigns S a text that the reader reads as
+/// the ground term T", one text per term: [formatTerm], each constant and
+/// functor as the printer writes it, a list as `[a, b]` or `[a, b | T]`,
+/// arguments and elements separated by a comma and a space, and a real as
+/// [realSource].  The clause of term_to_string/2 guards T ground.  A real that
+/// is NaN or infinite has no text the reader reads (GLP-Spec appendix-guards,
+/// "Predefined types": "A number is written as its digits, with an optional
+/// minus directly before them"), so it is out of the kernel's domain and the
+/// kernel aborts ("A body kernel whose precondition fails --- a zero divisor,
+/// an argument out of its domain --- aborts").
+BodyKernelResult termToStringKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        "[ABORT] '_term_to_string'/2: expected 2 arguments, got ${args.length}");
+  }
+  final term = deepDeref(rt, args[0] as Term);
+  final String text;
+  try {
+    text = formatTerm(term, number: realSource);
+  } on ArgumentError catch (e) {
+    return kernelAbort("[ABORT] '_term_to_string'/2: ${e.message}");
+  }
+  return bindResult(rt, args[1], text, kernel: "'_term_to_string'/2");
+}
+
+/// [value] as the reader reads it back: an integer as its digits, and a real
+/// as its digits with a decimal point, the shortest that reads back as the
+/// real, never in exponent form, which the reader does not read (GLP-Spec
+/// appendix-guards, "Predefined types": "A number is written as its digits,
+/// with an optional minus directly before them"; appendix-lp.tex).  Dart
+/// prints `1e-7` and `1e+21`; this prints `0.0000001` and
+/// `1000000000000000000000.0`.  Throws [ArgumentError] on a NaN or infinite
+/// real, which no text reads as.
+String realSource(num value) {
+  if (value is int) return value.toString();
+  final d = value as double;
+  if (!d.isFinite) {
+    throw ArgumentError('the real $d has no text the reader reads as it');
+  }
+  final shown = d.toString();
+  final e = shown.indexOf('e');
+  if (e < 0) return shown;
+  var mantissa = shown.substring(0, e);
+  final exponent = int.parse(shown.substring(e + 1));
+  final negative = mantissa.startsWith('-');
+  if (negative) mantissa = mantissa.substring(1);
+  final point = mantissa.indexOf('.');
+  final digits = mantissa.replaceAll('.', '');
+  // The position of the decimal point in digits, after the shift.
+  final at = (point < 0 ? mantissa.length : point) + exponent;
+  String body;
+  if (at <= 0) {
+    body = '0.${'0' * -at}$digits';
+  } else if (at >= digits.length) {
+    body = '$digits${'0' * (at - digits.length)}.0';
+  } else {
+    body = '${digits.substring(0, at)}.${digits.substring(at)}';
+  }
+  // Trailing zeros after the point, but one digit after it.
+  if (body.contains('.')) {
+    body = body.replaceFirst(RegExp(r'0+$'), '');
+    if (body.endsWith('.')) body = '${body}0';
+  }
+  return negative ? '-$body' : body;
+}
+
 /// Format a ground term as readable GLP syntax.
 ///
 /// Lists are shown as [a, b, c], atoms as-is, structs as f(a, b).
@@ -1718,6 +1829,9 @@ String formatGroundTerm(Term term) {
 /// constant unquoted, as it stays (bin/glp_repl.dart; GLP #3 Cowork,
 /// 2026-10-04 09:06 UTC).
 ///
+/// [number], where given, prints each number, as [realSource] does for
+/// '_term_to_string'; without it a number prints by [constantSource].
+///
 /// [deref] is called at each variable met and gives the term it is bound to,
 /// or a variable where it is unbound, which [variableName] names; with no
 /// [deref] a variable is shown as the runtime shows it.  A variable met again
@@ -1725,7 +1839,9 @@ String formatGroundTerm(Term term) {
 /// `<circular X>` after the elements before it.  The list is walked along its
 /// spine in a loop and its elements by recursion, as the checker walks it.
 String formatTerm(Term term,
-    {Term Function(VarRef v)? deref, String Function(VarRef v)? variableName}) {
+    {Term Function(VarRef v)? deref,
+    String Function(VarRef v)? variableName,
+    String Function(num value)? number}) {
   final path = <Object>{};
   String name(VarRef v) => variableName?.call(v) ?? v.toString();
 
@@ -1743,6 +1859,7 @@ String formatTerm(Term term,
     if (t is ConstTerm) {
       final value = t.value;
       if (value == null || value == nil) return '[]';
+      if (value is num && number != null) return number(value);
       return constantSource(value);
     }
     if (t is StructTerm && t.functor == '.' && t.args.length == 2) {

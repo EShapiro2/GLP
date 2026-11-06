@@ -134,6 +134,9 @@ const Set<String> builtinProcedures = {
   // Structure
   '_list_to_tuple/2',
   '_tuple_to_list/2',
+  // Text
+  '_string_concat/2',
+  '_term_to_string/2',
   // Time and random
   '_now/1',
   '_random/4',
