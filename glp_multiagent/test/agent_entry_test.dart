@@ -102,6 +102,40 @@ void main() {
     expect(AgentDeclarations.parse().peers, isEmpty);
   });
 
+  test('a deployed agent\'s second start goes on from the state its store '
+      'holds, and the application sends no first act', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final directory = '$agents/restart';
+    final core = '${programsDir()}/social/graph/core';
+    final first = await AgentEntry.open(
+        persona: 'alice', directory: directory, makeLayer: headless);
+    final running = await AgentRun.spawn(first,
+        persona: 'alice',
+        program: core,
+        rootSelf: root,
+        entryAct: 'superapp_ui');
+    await running.first((l) => l.startsWith('NOTE ') && l.contains('connect'));
+    await running.stop();
+    final key = first.keyPair.pub;
+    await first.close();
+
+    final second = await AgentEntry.open(
+        persona: 'alice', directory: directory, makeLayer: headless);
+    addTearDown(second.close);
+    expect(second.keyPair.pub, key);
+    final again = await AgentRun.spawn(second,
+        persona: 'alice',
+        program: core,
+        rootSelf: root,
+        entryAct: 'superapp_ui');
+    await again.first((l) => l.startsWith('[INIT] Restored'));
+    expect(again.lines.where((l) => l.startsWith('USER_INPUT:')), isEmpty);
+    await again.stop();
+  }, timeout: Timeout.none);
+
   test('two deployed agents in isolates: a cold call and an assignment cross '
       'between them over their layers', () async {
     if (sodiumUnavailable != null) {

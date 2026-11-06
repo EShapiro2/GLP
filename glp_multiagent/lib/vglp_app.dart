@@ -173,7 +173,7 @@ class _VglpScreenState extends State<VglpScreen> {
   @override
   Widget build(BuildContext context) {
     final ui = _ui;
-    final body = ui == null
+    final body = ui == null || _status.startsWith('Error')
         ? Center(
             child: Text(_status, style: const TextStyle(color: Colors.grey)))
         : AgentSurface(agentId: _p.person, runtime: ui);

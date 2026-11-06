@@ -88,7 +88,7 @@ void main() {
     }
 
     // Its sources are every .glp of the trees the app loads --- the
-    // directories GlpPaths names --- read from the repository as discovery
+    // directories GlpPaths names and those of the modules the root exposes --- read from the repository as discovery
     // reads a program: every .glp of the tree, the self.glp of each directory
     // from the root down to it (TGLP modules.tex, Compilation, first step),
     // and a .vglp no .glp stands beside, with the dispatcher's generic source; and
@@ -100,11 +100,19 @@ void main() {
     String rel(String path) => 'programs/${path.substring(programs.length + 1)}';
     final expected = <String>{'programs/self.glp'};
     var vglp = false;
-    for (final tree in [
+    // With them the directories of the modules the root exposes, which are in
+    // every program's scope (TGLP modules.tex, "The -expose directive").
+    final exposed = {
+      for (final m in RegExp(r'^-expose\((.*)\)\.$', multiLine: true)
+          .allMatches(File(repo.rootSelfGlp).readAsStringSync()))
+        File('$programs/${m.group(1)!.replaceAll('#', '/')}.glp').parent.path,
+    };
+    for (final tree in {
       repo.graphDir,
       repo.cssnDir,
       repo.bondsDir,
-    ]) {
+      ...exposed,
+    }) {
       expect(tree.startsWith('$programs/'), isTrue, reason: tree);
       for (var d = Directory(tree).parent;
           d.path.length > programs.length;

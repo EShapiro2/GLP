@@ -14,7 +14,11 @@
 # (integration_test/lan_agent_test.dart).  The harness gives each its peer's
 # key and address over GNA's blackboard (networking/tool/e2e_blackboard.dart).
 #
-# Prints each agent's report; exits 0 where both report.  A run that never
+# Prints each agent's report, the underlay its peer's message came over and
+# whether its second start had the same key; exits 0 where both report.  The
+# headless layer runs the WAN alone, so the Mac reports wan and the simulator
+# lan.  Two simulators share the Mac's addresses and DNS-SD resolves each to
+# 127.0.0.1, which the layer's local prefixes leave out, so both report wan.  A run that never
 # ends is stopped after LAN_WATCHDOG seconds, 900 unless given, the two builds
 # included.
 set -uo pipefail

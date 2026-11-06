@@ -25,6 +25,7 @@ import 'dart:isolate';
 
 import 'package:glp_multiagent/agent_entry.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart' show PersonGoal;
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 
@@ -77,6 +78,9 @@ class AgentRun {
   final ReceivePort _exit = ReceivePort();
   late final Isolate _isolate;
   final List<String> lines = [];
+
+  /// What the agent's program emitted to its person, each as printed.
+  final List<String> notes = [];
   final List<(bool Function(String), Completer<String>)> _waiting = [];
   SendPort? _commands;
   Object? _fault;
@@ -88,12 +92,14 @@ class AgentRun {
   }
 
   /// Spawn the agent of [persona], running [program] under the root
-  /// [rootSelf], on [entry]'s key pair and layer, its person [person].
+  /// [rootSelf], on [entry]'s key pair and layer: its person the scripted
+  /// [person], or the live person, whose first act starts [entryAct].
   static Future<AgentRun> spawn(AgentEntry entry,
       {required String persona,
       required String program,
       required String rootSelf,
-      required PersonGoal person}) async {
+      PersonGoal? person,
+      String? entryAct}) async {
     final run = AgentRun._();
     run._isolate = await Isolate.spawn(
       agentIsolateEntry,
@@ -104,6 +110,7 @@ class AgentRun {
         replyPort: run._reply.sendPort,
         deployment: entry.deployment,
         person: person,
+        entry: entryAct,
       ),
       onError: run._ended.sendPort,
       onExit: run._ended.sendPort,
@@ -119,6 +126,9 @@ class AgentRun {
         _add(line);
       case AgentLog(:final message):
         _add(message);
+      case AgentNotify(:final term):
+        notes.add(formatTerm(term));
+        _add('NOTE ${notes.last}');
       case AgentError(:final error):
         _end('it reported $error');
     }
