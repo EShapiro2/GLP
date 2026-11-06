@@ -35,7 +35,7 @@ Class    ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
 Proposal ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
-Request  ::= propose(Proposal).
+Request  ::= propose(Proposal) ; refresh.
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
@@ -53,7 +53,7 @@ Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refus
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
 Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
+Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
 Question ::= request_r(Request?) ; approval_w(Approval).
 Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
