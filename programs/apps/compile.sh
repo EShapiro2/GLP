@@ -69,6 +69,13 @@ for app in $APPS; do
     printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$name" > "$WORK/c.in"
     repl "$WORK/c.in" "$WORK/c.out"
     ct=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
+    # The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
+    rd=""
+    if [ -n "$ct" ]; then
+        printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$ct" > "$WORK/a.in"
+        repl "$WORK/a.in" "$WORK/a.out"
+        rd=$(grep -E '^R = ' "$WORK/a.out" | head -1 | sed -e 's/^R = //')
+    fi
     intro=no_introduction
     if grep -q "^introduction_named($name," "$src"; then
         printf '%s\nintroduction_named(%s, I).\n:quit\n' "$src" "$name" > "$WORK/i.in"
@@ -78,7 +85,7 @@ for app in $APPS; do
     fi
     # The contract's words: its pragmas, from its NAME.txt and those of the contracts it extends.
     pr=no_pragmas
-    if [ -f "${src%.glp}.txt" ] && ! pr=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" "$ct" 2> "$WORK/pr.err"); then
+    if [ -f "${src%.glp}.txt" ] && ! pr=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${src%.glp}.txt" "$rd" 2> "$WORK/pr.err"); then
         echo "$app: its pragmas were not read: $(head -1 "$WORK/pr.err")"
         OK=0
         continue
@@ -89,12 +96,12 @@ for app in $APPS; do
         repl "$WORK/v.in" "$WORK/v.out"
         vt=$(grep -E '^V = ' "$WORK/v.out" | head -1 | sed -e 's/^V = //')
     fi
-    if [ -z "$ct" ] || [ -z "$vt" ]; then
+    if [ -z "$ct" ] || [ -z "$rd" ] || [ -z "$vt" ]; then
         echo "$app: no contract or no verdict from $src"
         OK=0
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$ct" "$vt" "$intro" "$pr" > "$WORK/p.in"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$rd" "$vt" "$intro" "$pr" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/p.out"
     mkdir -p "$WORK/out/$app"
     out="$WORK/out/$app/platform.vglp"

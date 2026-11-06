@@ -615,6 +615,9 @@ mults_numeric([times(K, A)|Ms], Nm, I, T, R?) :-
     mults_numeric(Ms?, Nm?, I?, T?, R1),
     mult_whole_fault(Wh?, A?, Nm?, I?, R1?, R2),
     mult_num_fault(Ok?, A?, Nm?, I?, R2?, R).
+mults_numeric([rest(K, _, A)|Ms], Nm, I, T, R?) :-
+    ground(K?), ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_numeric([times(K?, A?)|Ms?], Nm?, I?, T?, R).
 
 % A multiplicity written as a number is a positive whole number
 % (def:numbers); a value variable is one at every binding
@@ -637,6 +640,9 @@ mults_wild([atom(_, _)|Ms], Nm, I, T, R?) :-
 mults_wild([times(_, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_wild(Ms?, Nm?, I?, T?, R).
+mults_wild([rest(_, _, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_wild(Ms?, Nm?, I?, T?, R).
 
 % The atoms a role adds or deletes, Mults, those carrying the wildcard and
 % the others.
@@ -652,6 +658,9 @@ mults_forbidden([atom(_, _)|Ms], Nm, I, T, R?) :-
     ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_forbidden(Ms?, Nm?, I?, T?, R).
 mults_forbidden([times(_, A)|Ms], Nm, I, T, [multiplicity_forbidden(Nm?, I?, A?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_forbidden(Ms?, Nm?, I?, T?, R).
+mults_forbidden([rest(_, _, A)|Ms], Nm, I, T, [multiplicity_forbidden(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_forbidden(Ms?, Nm?, I?, T?, R).
 

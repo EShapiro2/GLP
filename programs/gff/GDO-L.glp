@@ -1,0 +1,89 @@
+%% ---------------------------------------------------------------------------
+%% GDO-L.glp --- the grassroots directed overlay with labels, GFF's (Udi,
+%% 2026-11-05, to GFF #3), in the term form programs/gsc reads (its README,
+%% "Writing a contract").  GDO-L extends GDO (programs/lbm/GDO.glp), so the
+%% term holds GKK's three schemas, GSG's two and GDO's three, as GDO.glp has
+%% them; the clauses are in GDO-L.txt beside this file.
+%%
+%% One predicate more: lpoints_to(q, l) in the state of p says that p points
+%% to q with the label l.  A label is named by a person, so l is an agent
+%% variable, and Bob's label is Bob.  GDO-L:1 is two schemas, follow_own,
+%% with Bob's label, and follow_friend, with a label Bob points with;
+%% GDO-L:2 is follow_transitive and GDO-L:3 unfollow.  In each Bob is a
+%% reading role, and Alice, the guarding role, requires or deletes an atom
+%% naming Bob (GSC 859a007, Definitions Speech-act schema and Volition).  A
+%% label reaches Alice as Bob, a role, or from an atom Bob requires
+%% (Definition Traceable provenance).  Every role requires identity.
+%%
+%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
+%% and is named by its index, role(1) the schema's first role.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gdo_l, C): the contract, GDO-L.
+procedure contract_named(Constant?, Declared).
+contract_named(gdo_l,
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(befriend, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
+    schema(unfriend, ['Alice', 'Bob'], [],
+       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+    schema(point_friend, ['Alice', 'Bob'], [],
+       [rs(guarded,   [atom(points_to, [role(2)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+    schema(point_transitive, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded,   [atom(points_to, [pvar(c)])], [],
+                      [atom(identity, []), atom(knows, [pvar(c)]), atom(points_to, [role(2)])], []),
+        rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar(c)])], [])]),
+    schema(unpoint, ['Alice', 'Bob'], [],
+       [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+%% GDO-L:1, Labeled pointing to friend, with Bob's label, which is named by Bob.
+    schema(follow_own, ['Alice', 'Bob'], [],
+       [rs(guarded,   [atom(lpoints_to, [role(2), role(2)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), role(2)])]),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+%% GDO-L:1, Labeled pointing to friend, with a label l that Bob points with, to some person d.
+    schema(follow_friend, ['Alice', 'Bob'], [pvar(l), pvar(d)],
+       [rs(guarded,   [atom(lpoints_to, [role(2), pvar(l)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar(l)])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(d), pvar(l)])], [])]),
+%% GDO-L:2, Labeled transitive pointing, Carol the agent variable c.
+    schema(follow_transitive, ['Alice', 'Bob'], [pvar(c), pvar(l)],
+       [rs(guarded,   [atom(lpoints_to, [pvar(c), pvar(l)])], [],
+                      [atom(identity, []), atom(knows, [pvar(c)]), atom(lpoints_to, [role(2), pvar(l)])],
+                      [atom(lpoints_to, [pvar(c), pvar(l)])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(c), pvar(l)])], [])]),
+%% GDO-L:3, Ceasing to point.
+    schema(unfollow, ['Alice', 'Bob'], [pvar(l)],
+       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar(l)])], [atom(identity, [])], []),
+        rs(unguarded, [], [], [atom(identity, [])], [])])]).

@@ -1,6 +1,6 @@
 % CSSN: Child-Safe Social Network --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: CSSN.  The paper, /Users/udi/Grassroots/CSSN/main_CSSN.tex, prints it in its box in Section 4.1 and cites a clause as CSSN:1.
-% Paper: Child-Safe Social Networking: From Social Contract to App, in preparation
+% Paper: CSSN, Child-Safe Social Networking: From Social Contract to App, in preparation
 % Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and through it GSG and GKK, GSC's; and GnW, Guardians 'n' Wards, GAI's (programs/gai), its wards children and their guardians parents.  It cites their clauses whole and restates none.
 % Defines: parent, a guardian of a child's ward; the definition stands before the box in the paper.
 % Last changed: 2026-10-30, to Udi's revision of the contracts in Coordination Appendix E (Udi, 2026-10-30; Coordination #11, to_all 10:18 UTC), with CSSN #13's changes that Udi approved: clause 1 opens with 'Only', clause 2 without its last phrase, which GnW:4 covers, clause 4 undertaken, and clause 5, a child's messages, since GKK, GSG and GSN apply only to persons (Udi, 2026-10-30, to GAI #10); the pragmas follow GnW as agreed with GAI that day (GAI #10, CSSN_inbox 11:37 UTC; CSSN #13's changes 2 to 6, GAI_inbox 11:29 to 11:48 UTC).  The history before this is in git.

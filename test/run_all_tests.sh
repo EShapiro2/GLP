@@ -1572,6 +1572,66 @@ check "display: the shown structures read back as the term" "S41 = yes" "$a41"
 check "display: a quote in a name escaped as the reader reads it" "P41 = 'it\\\\'s'" "$a41"
 check "display: constant list tails shown" "L41 = \[\[a | b\], \[a, 'B' | 'C'\]\]" "$a41"
 
+
+# --- A42: Text: string_concat/2 and term_to_string/2 ---
+# GLP-Spec appendix-guards.tex, "Text (string_concat/2, term_to_string/2)"
+# (GLP-ICLP-2026 ca3c8e5; GLP #12, Code_inbox 2026-11-06 07:18 UTC).
+# string_concat/2: the characters of the strings one after another, [] as an
+# element contributing the characters [].  term_to_string/2: "a text that the
+# reader reads as the ground term T".  shown(14) prints, by send_to_user/1, a
+# line for each sample, its number and its text, built by the two; a42b reads
+# each printed line back as a goal same(I, Text, R), the reader's term
+# compared with sample I by =?=.  The kernel's abort on a number is the Dart
+# test's (glp_runtime/test/runtime/text_kernels_test.dart): a number is not a
+# String, and a goal or a clause passing one does not type-check.
+echo "--- A42: Text ---"
+a42=$("$REPL_RUN" <<HEREDOC
+$TYPED/text_test.glp
+string_concat(['Menu', '?'], C1).
+string_concat([], C2).
+string_concat(['one'], C3).
+string_concat(['X = ', []], C4).
+text(1, X1).
+shown(14).
+:quit
+HEREDOC
+2>&1)
+check "text: the fixture loads" "Loaded: .*text_test.glp" "$a42"
+check "text: string_concat(['Menu', '?'], S)" "C1 = 'Menu?'" "$a42"
+check "text: string_concat of []" "C2 = ''" "$a42"
+check "text: string_concat of one string" "C3 = one" "$a42"
+check "text: an element [] contributes []" "C4 = 'X = \[\]'" "$a42"
+check "text: term_to_string('Carol', S)" "X1 = '\\\\'Carol\\\\''" "$a42"
+a42_lines=$(echo "$a42" | sed -e 's/^\(GLP> \)*//' | grep -E '^[0-9]+ ')
+check "text: Carol quoted" "^1 'Carol'$" "$a42_lines"
+check "text: G quoted" "^2 'G'$" "$a42_lines"
+check "text: + quoted" "^3 '+'$" "$a42_lines"
+check "text: '42' quoted" "^4 '42'$" "$a42_lines"
+check "text: a string with spaces quoted" "^5 'Flood on Main Street'$" "$a42_lines"
+check "text: a structure" "^6 utterance('Flood on Main Street', f('G', +('Carol')))$" "$a42_lines"
+check "text: a list" "^7 \['Carol', 'G', '+', '42'\]$" "$a42_lines"
+check "text: a list with a tail" "^8 \[a, 'B' | 'C'\]$" "$a42_lines"
+check "text: an integer" "^9 42$" "$a42_lines"
+check "text: a negative integer" "^10 -7$" "$a42_lines"
+check "text: a real" "^11 2\.5$" "$a42_lines"
+check "text: a negative argument" "^12 neg(-7)$" "$a42_lines"
+check "text: reals in digits, no exponent" "^13 f(0\.0000001, 1000000000000000000000\.0)$" "$a42_lines"
+check "text: a list with a structure tail" "^14 \[1, -2\.5 | f(a, -3)\]$" "$a42_lines"
+check "text: fourteen lines printed" "^14$" "$(echo "$a42_lines" | grep -c .)"
+a42_goals=$(echo "$a42_lines" | sed -E 's/^([0-9]+) (.*)$/same(\1, \2, R\1)./')
+a42b=$("$REPL_RUN" <<HEREDOC
+$TYPED/text_test.glp
+$a42_goals
+same(1, 'G', Q).
+:quit
+HEREDOC
+2>&1)
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
+    check "text: printed line $i reads back as sample $i" "R$i = yes" "$a42b"
+done
+check "text: the comparison can fail" "Q = no" "$a42b"
+check_not "text: no abort" "ABORT" "$a42$a42b"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
@@ -3808,7 +3868,7 @@ check "CVA compiler: vGLP's linear, constraints of a linear equality and an ineq
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
-check "CVA compiler: ... and the label of each button in its request widget (bonds, acquaint for GKK's meet, vGLP #22's task, item 2)" 'label(acquaint, "Acquaint")' "$(cat "$CVA/bonds/platform.vglp")"
+check "CVA compiler: ... and each button in its request widget, by its label (bonds, acquaint for GKK's meet, vGLP #22's task, item 2)" 'button("Acquaint", \[act(acquaint, ' "$(cat "$CVA/bonds/platform.vglp")"
 check_not "CVA compiler: ... no schema meet left in vGLP's contracts (bonds, intros)" "schema(meet," "$(cat "$CVA/contracts.glp")"
 
 # The fixtures below are checked, not printed: compile/3 gives the compiler no pragmas, so a fixture that passes the checks, its verdict, local and effective, is refused with the line saying so, "%% not compiled, having no pragmas(Name)", and one that fails a check is refused with the fault, "%% not compiled(Name)"; a fixture whose printed platform a check reads carries a minimal pragmas term, compile/5 (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).
@@ -3921,11 +3981,10 @@ check "CVA compiler: a constraint holding unsigned(role(2), svar(x)), passing th
 check_not "CVA compiler: ... and not refused" "%% not compiled(signing_con)" "$cva_refuse"
 check "CVA compiler: a signing condition on no agent, malformed, is not compiled (signing_bad)" "%% not compiled(signing_bad)" "$cva_refuse"
 check "CVA compiler: ... the verdict named" "%% it is malformed; check_named in programs/gsc gives the faults." "$cva_refuse"
-# "the compiler refusing a line whose fields leave unnamed a place that one entry does not fill", "a group <a>.n filling both its leader a and n" (vGLP 305c8d0, Section 5.4, "The contract's words"): link(p?, q, r)'s line with no field leaves q and r unnamed, which no one entry fills, and is refused with its reason; with a field naming r it is compiled; and GSN's leave(a, b? ; n), Bob's line with no field, leaves a and n unnamed, which the group <a>.n fills, and is compiled (group_row).
-check "CVA compiler: a pragma line whose fields leave two places of the act unnamed, refused (unnamed_two)" "%% not compiled(unnamed_two)" "$cva_refuse"
-check "CVA compiler: ... with its reason" "%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, \"The contract's words\"):" "$cva_refuse"
-check "CVA compiler: ... the schema and the places unnamed" "%% the schema and the places its fields leave unnamed(link, 2)" "$cva_refuse"
-check "CVA compiler: the same line with a field naming r, leaving one place unnamed, the row's, compiled (unnamed_one)" "%% the canonical CVA platform of the contract(unnamed_one)" "$cva_refuse"
+# A line's fields are the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and pragmas.sh refuses a line whose fields are not these (vGLP 40f8444, Section 5.4, "The contract's words"; the pragmas.sh fixtures below): the compiler takes the pragmas pragmas.sh gives it, and no longer refuses a line by the places one entry fills.  link(p?, q, r), its proposer requiring friend(q) and friend(r), binds both, and its line with no field is compiled (unnamed_two), as is the same act given a field for r (unnamed_one), and GSN's leave(a, b? ; n), Bob's line with no field (group_row).
+check "CVA compiler: a line with no field, its act's other roles bound by the atoms its proposer requires, compiled (unnamed_two)" "%% the canonical CVA platform of the contract(unnamed_two)" "$cva_refuse"
+check_not "CVA compiler: ... and not refused" "%% not compiled(unnamed_two)" "$cva_refuse"
+check "CVA compiler: the same act with a field for r, compiled (unnamed_one)" "%% the canonical CVA platform of the contract(unnamed_one)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(unnamed_one)" "$cva_refuse"
 check "CVA compiler: a line leaving a group's leader and its name unnamed, the places one entry, the group, fills, compiled (group_row)" "%% the canonical CVA platform of the contract(group_row)" "$cva_refuse"
 check_not "CVA compiler: ... and not refused" "%% not compiled(group_row)" "$cva_refuse"
@@ -4031,23 +4090,43 @@ check "CVA compiler: unfriending, one class guarded by either party, passing the
 check "CVA compiler: unfriending whose first role forbids an atom, a transaction determined by the binding of one party first alone, passing the checks, two parts guarded by one party each (asym)" "%% not compiled, having no pragmas(asym)" "$cva_refuse"
 check_not "CVA compiler: ... no schema-binding named against it" "%% the schema-binding(unf(person(0), person(1)))" "$cva_refuse"
 
-# The contract's words (vGLP 8aa82f0, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"): a question put to each guarding role other than the proposer's, the proposer, by([1]), named before the button, as pragmas.sh reads a line (trio); "the compiler requires a button for every guarded schema" (nobutton); and the button of an act that names an item, a speech act the proposer's role requires in an atom of a predicate the app lists, drawn beside each row of that list, act(F, T, M, Ps, Gs, Is), Is its items, item(K, P) (items).
+# The contract's words (vGLP 8aa82f0, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"): a question put to each guarding role other than the proposer's, the proposer, by([1]), named before the button, as pragmas.sh reads a line (trio); "the compiler requires a button for every guarded schema" (nobutton); and the widget declaration of the request type, a button for each button of the pragmas with the acts it names, each act(F, M, Pre, Binds, Fields, Same, Text), the atoms it requires and forbids at the proposer's role, the places they bind and its fields with their labels and types, in the schema's order (vGLP 4236349, Section 6.2: the request widget "draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role, with the values that way binds and the act's fields"; README.md of programs/vglp/cva/compiler, 6) (wdg).
 cva_words=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 200000000
 compile(trio, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [act(s, '"S"', ['""', '""', '"Person"'], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Xs"', by([1]))])).
 compile(nobutton, [schema(s, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Xs"', [x, xs])], [])).
-compile(items, [schema(sign, [svar(y)], [rs(guarded, [atom(item, [svar(y)])], [], [], [])]), schema(fwd, [svar(y)], [rs(guarded, [], [], [atom(item, [svar(y)])], []), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])])], syntactically_grassroots, no_introduction, pragmas([list('"Items"', [item, items])], [act(sign, '"Sign"', ['"text"'], none, '"Items"', by([1])), act(fwd, '"Forward"', ['""', '"Person"'], none, '"Items"', by([1]))])).
+compile(wdg, [schema(sign, [svar(y)], [rs(guarded, [atom(item, [svar(y)])], [], [], [])]), schema(fwd, [svar(y)], [rs(guarded, [], [], [atom(item, [svar(y)])], []), rs(unguarded, [atom(item, [sgn(y, 1)])], [], [], [])]), schema(swap_a, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])]), schema(swap_b, [num(k)], [rs(guarded, [times(num(k), atom(bond, [role(1)]))], [], [], [])]), schema(link, [], [rs(guarded, [atom(linked, [role(2)])], [], [atom(knows, [role(2)])], [atom(linked, [role(2)])]), rs(guarded, [atom(linked, [role(1)])], [], [atom(knows, [role(1)])], [atom(linked, [role(1)])])])], syntactically_grassroots, no_introduction, pragmas([list('"Items"', [item, items])], [act(sign, '"Sign"', ['""', '"text"'], said([[person(1), text('" signs."')]]), '"Items"', by([1])), act(fwd, '"Forward"', ['""', '"Person"'], none, '"Items"', by([1])), act(swap_a, '"Swap"', ['""', '"amount"'], none, '"Items"', by([1])), act(swap_b, '"Swap"', ['""', '"amount"'], none, '"Items"', by([1])), act(link, '"Link"', [], said([[], [person(1), text('" asks."')]]), '"Items"', by([1]))])).
 :quit
 HEREDOC
 2>&1)
 check "CVA compiler, pragmas: the clause's one question put to each guarding role other than the proposer's, the second and the third (trio)" 'ask_of(.q(V2?, .person(V1?), text(" asks.").), q(V3?, .person(V1?), text(" asks.").)., Me?, Ws)' "$cva_words"
 check "CVA compiler, pragmas: a contract with a guarded schema no button names, not compiled (nobutton)" "%% not compiled(nobutton)" "$cva_words"
 check "CVA compiler, pragmas: ... the line saying which schema" "%% a guarded schema has no button in the contract's pragmas:(s)" "$cva_words"
-check "CVA compiler, pragmas: the button of an act naming an item the proposer holds drawn beside each row of the list of its predicate, item(3, item), and beside each person the view lists, [2] (items)" 'act(fwd, "Items", 1, .2., .., .item(3, item), req(item, .at(3).).)' "$cva_words"
-check "CVA compiler, pragmas: ... an act naming no item, sign, with none" 'act(sign, "Items", 1, .., .., ..)' "$cva_words"
+check "CVA compiler, widget: the request type's declaration a menu of buttons, button(B, Acts), no tab, no row and no item in it (wdg)" '^Request =::= social_menu(.button("Sign", ' "$cva_words"
+check "CVA compiler, widget: a button of one act with a field, its type text, and the text of its request form, no atom required (wdg, sign)" 'button("Sign", .act(sign, 1, .., .., .field(2, "text", text)., .., .at(1), say(" signs.").).)' "$cva_words"
+check "CVA compiler, widget: an act whose required atom item(y) binds the way, Binds [3], and a field for a person, its type person (wdg, fwd)" 'button("Forward", .act(fwd, 1, .req(item, .at(3).)., .3., .field(2, "Person", person)., .., ..).)' "$cva_words"
+check "CVA compiler, widget: a button of several acts, swap_a and swap_b in one button, each with its number field (wdg, Swap)" 'button("Swap", .act(swap_a, 1, .., .., .field(2, "amount", number)., .., ..), act(swap_b, 1, .., .., .field(2, "amount", number)., .., ..).)' "$cva_words"
+check "CVA compiler, widget: an act with a required and a forbidden atom at the proposer's role, req(knows, [at(2)]) and forb(linked, [at(2)]), Bob bound by knows, and what the schemas prove, unless(linked, [at(2)]) (wdg, link)" 'button("Link", .act(link, 1, .req(knows, .at(2).), forb(linked, .at(2).), unless(linked, .at(2).)., .2., .., .., ..).)' "$cva_words"
+check_not "CVA compiler, widget: ... no label, item, pick, group, meeting or tab entry left (wdg)" 'label(\|item([0-9]\|pick(\|group(\|meeting(\|act([a-z_]*, "' "$(printf '%s\n' "$cva_words" | grep '^Request =::=')"
 
-# The pragmas of a contract that extends another (vGLP ffcb093, Section 5.4, "The contract's words": "where it writes a schema anew for a clause it inherits, its line for that clause replaces the inherited line"; "a variable is picked among the items the viewer holds where the proposer's role requires it held"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 1): GAI's GSNP writes message anew, its proposer's role requiring authored(x), and its Messaging line, Alice [Message] <item>, replaces GSN's, Alice [Message] <text>, which is not checked against GSNP's message; x, held at the proposer's role, is the field <item>, at the request's third place.
+# Each constant from the contract is written through term_to_string/2, so that the reader reads it back as the same constant, and each line built by string_concat/2 (vGLP 4aa7e60, "Speech-act schemas"; GLP-Spec ca3c8e5, appendix-guards, "Text"; vGLP #23, Code_inbox.md, 2026-11-06 07:57 UTC): a contract with an agent variable 'Carol' and a predicate 'received_in' prints the platform of its renamed twin, but for those names.
+cva_twin_print() {
+"$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 200000000
+compile(twin, [schema(pass, [pvar($1)], [rs(guarded, [atom($2, [pvar($1)])], [atom(held, [role(2)])], [atom(held, [role(2)])], []), rs(guarded, [atom(held, [role(1)])], [], [], [atom(held, [role(1)])])])], syntactically_grassroots, no_introduction, pragmas([list('"Got"', [$2])], [act(pass, '"Pass"', ['""', '""', '"Got"'], said([[], [person(1), text('" asks."')]]), '"Got"', by([1]))])).
+:quit
+HEREDOC
+}
+cva_twin_a=$(cva_twin_print "'Carol'" "'received_in'" 2>&1)
+cva_twin_b=$(cva_twin_print dora taken_in 2>&1)
+check "CVA compiler, text: an agent variable 'Carol' printed so that the reader reads it back, pvar('Carol') (twin)" "^schema_entry(pass, schema(pass, \[pvar('Carol')\], " "$cva_twin_a"
+check "CVA compiler, text: ... a plain predicate bare, received_in (twin)" "atom(received_in, \[pvar('Carol')\])" "$cva_twin_a"
+check "CVA compiler, text: the platform of the renamed twin but for those names (twin)" "^same$" "$([ "$(printf '%s\n' "$cva_twin_a" | sed -e "s/'Carol'/dora/g" -e 's/received_in/taken_in/g')" = "$cva_twin_b" ] && echo same || echo differs)"
+check "CVA compiler, text: ... a platform printed (twin)" "the canonical CVA platform of the contract(twin)" "$cva_twin_b"
+
+# The pragmas of a contract that extends another (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one"): GAI's GSNP writes its own [Message] line, which replaces GSN's.
 cva_gsnp_out=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/gai/GSNP.glp
 contract_named(gsnp, C).
@@ -4055,9 +4134,92 @@ contract_named(gsnp, C).
 HEREDOC
 2>&1)
 cva_gsnp_term=$(echo "$cva_gsnp_out" | sed -e 's/^\(GLP> \)*//' | sed -n -e 's/^C = //p' | head -1)
-cva_gsnp_pragmas=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_term" 2>&1 || true)
-check "CVA pragmas: GSNP's pragmas read, its Messaging line replacing GSN's, message's x, held at Alice by authored(x), the field <item> (GSNP.txt)" "act('message', '\"Message\"', \['\"\"', '\"\"', '\"item\"'\], none, '\"Items\"', by(\[1\]))" "$cva_gsnp_pragmas"
-check_not "CVA pragmas: ... GSN's Messaging line not kept, one act of message, nor checked against GSNP's message" "act('message'.*act('message'\|names 1 fields" "$cva_gsnp_pragmas"
+cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_term" 2>&1 || true)
+check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "GSN: Messaging: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name" "$cva_gsnp_pragmas"
+# The rule on fixtures of pragmas.sh's own (vGLP 40f8444, Section 5.4, "The contract's words"): XB, its Link line naming a field for Bob, whom link's friend(Bob) at Alice binds, refused, the field named (bound); XE, extending XB, whose Joint link line writes [Link] under another clause's title and replaces XB's Link line, whose term has no mint, so XB's [Mint] goes, and whose [Link] has no field, read (inherit); XC, its [Mint] with no field for k, a multiplicity naming no variable bound, refused, the variable named (unnamed).
+cva_px=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XB' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' '2. ■ Link. Alice may link Bob.' '3. ■ Minting. Alice may mint coins.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' 'Link: Alice [Link] <person>' 'Minting: Alice [Mint] <amount>' > "$cva_px/XB.txt"
+printf '%s\n' '% Extends: XB, the base.' 'XE' 'Alice and Bob are persons.' '1. ■ Joint link. Alice may link Bob, a friend.' 'Pragmas' 'Linked: those Alice linked.' 'Joint link: Alice [Link]' > "$cva_px/XE.txt"
+printf '%s\n' '% Extends: nothing.' 'XC' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint]' > "$cva_px/XC.txt"
+cva_px_bef="schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(knows, [role(2)])], []), rs(guarded, [atom(friend, [role(1)])], [], [atom(knows, [role(1)])], [])])"
+cva_px_link="schema(link, ['Alice', 'Bob'], [], [rs(guarded, [atom(linked, [role(2)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [], [], [], [])])"
+cva_px_mint="schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])"
+cva_px_bound=$(bash "$CVA/compiler/pragmas.sh" "$cva_px/XB.txt" "[$cva_px_bef, $cva_px_link, $cva_px_mint]" 2>&1; echo "exit $?")
+cva_px_inherit=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_px/XE.txt" "[$cva_px_bef, $cva_px_link]" 2>&1; echo "exit $?")
+cva_px_unnamed=$(bash "$CVA/compiler/pragmas.sh" "$cva_px/XC.txt" "[$cva_px_mint]" 2>&1; echo "exit $?")
+rm -rf "$cva_px"
+check "CVA pragmas: a field naming a variable the proposer's required atoms bind, refused (bound)" 'the pragma "Link" has the field <person> beyond the variables of link that the atoms its proposer’s role requires do not bind, which are none; those atoms bind Bob' "$cva_px_bound"
+check "CVA pragmas: ... and pragmas.sh exits 1" "^exit 1$" "$cva_px_bound"
+check_not "CVA pragmas: ... the Minting line not refused (bound)" 'the pragma "Minting"' "$cva_px_bound"
+check "CVA pragmas: a line of an extending contract replaces the inherited line with a button of the same name, under another clause's title (inherit)" "XB: Link: Alice \[Link\] <person>: replaced by the line of XE.txt with a button of the same name" "$cva_px_inherit"
+check "CVA pragmas: ... an inherited button whose contract has no act it names goes, with its field (inherit)" "XB: Minting: Alice \[Mint\]: gone, the contract having no act it names" "$cva_px_inherit"
+check "CVA pragmas: ... the inherited button that stands, with its question, read (inherit)" "act('befriend', '\"Befriend\"', \[\], said(\[\[\], \[person(1), text('\" asks to be your friend.\"')\]\]), '\"Friends\"', by(\[1\]))" "$cva_px_inherit"
+check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
+check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
+check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# Several buttons on a line, and one button on two lines (vGLP 40f8444, Section 5.4, "The contract's words": "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1 and 2): the fields after a button, up to the next button, are that button's, so XM's "[Mint] <amount> [Burn]" is read, mint with k and burn with none (buttons), and XN's "[Mint] [Burn] <amount>" refused, mint leaving k unnamed and burn's <amount> beyond its variables (buttons_order); XD's [Mint] on two lines refused, the button and both lines named (twice); and XH extends XB-L, a contract's name with a hyphened part read whole, as GFF's GDO-L (hyphen).
+cva_pb=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XM' 'Alice is a person.' '1. ■ Minting. Alice may mint coins and burn one.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount> [Burn]' > "$cva_pb/XM.txt"
+printf '%s\n' '% Extends: nothing.' 'XN' 'Alice is a person.' '1. ■ Minting. Alice may mint coins and burn one.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] [Burn] <amount>' > "$cva_pb/XN.txt"
+printf '%s\n' '% Extends: nothing.' 'XD' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' '2. ■ Burning. Alice may burn a coin.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' 'Burning: Alice [Mint] <amount> [Burn]' > "$cva_pb/XD.txt"
+printf '%s\n' '% Extends: nothing.' 'XB-L' 'Alice is a person.' '1. ■ Burning. Alice may burn a coin.' 'Pragmas' 'Coins: the coins Alice holds.' 'Burning: Alice [Burn]' > "$cva_pb/XB-L.txt"
+printf '%s\n' '% Extends: XB-L, the base (XB-L.txt beside this file).' 'XH' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Minted: the coins Alice minted.' 'Minting: Alice [Mint] <amount>' > "$cva_pb/XH.txt"
+cva_pb_burn="schema(burn, ['Alice'], [], [rs(guarded, [], [atom(coin, [role(1)])], [atom(coin, [role(1)])], [])])"
+cva_pb_buttons=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pb/XM.txt" "[$cva_px_mint, $cva_pb_burn]" 2>&1; echo "exit $?")
+cva_pb_order=$(bash "$CVA/compiler/pragmas.sh" "$cva_pb/XN.txt" "[$cva_px_mint, $cva_pb_burn]" 2>&1; echo "exit $?")
+cva_pb_twice=$(bash "$CVA/compiler/pragmas.sh" "$cva_pb/XD.txt" "[$cva_px_mint, $cva_pb_burn]" 2>&1; echo "exit $?")
+cva_pb_hyphen=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pb/XH.txt" "[$cva_px_mint, $cva_pb_burn]" 2>&1; echo "exit $?")
+rm -rf "$cva_pb"
+check "CVA pragmas: the fields after a button, up to the next, are its own: [Mint] <amount> names k (buttons)" "XM: Minting: Alice \[Mint\] <amount>: fields k" "$cva_pb_buttons"
+check "CVA pragmas: ... and [Burn] after it has none (buttons)" "XM: Minting: Alice \[Burn\]: fields none" "$cva_pb_buttons"
+check "CVA pragmas: ... both acts read (buttons)" "act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\])), act('burn', '\"Burn\"', \[\], none, '\"Coins\"', by(\[1\]))" "$cva_pb_buttons"
+check "CVA pragmas: [Mint] [Burn] <amount>: mint, with no field of its own, leaves k unnamed (buttons_order)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_pb_order"
+check "CVA pragmas: ... and <amount> is beyond burn's variables (buttons_order)" 'the pragma "Minting" has the field <amount> beyond the variables of burn' "$cva_pb_order"
+check "CVA pragmas: ... and pragmas.sh exits 1 (buttons_order)" "^exit 1$" "$cva_pb_order"
+check "CVA pragmas: one button written by two lines, refused, the button and both lines named (twice)" 'the button \[Mint\] is written by two lines, "XD: Minting: Alice \[Mint\] <amount>" and "XD: Burning: Alice \[Mint\] <amount> \[Burn\]"' "$cva_pb_twice"
+check "CVA pragmas: ... and pragmas.sh exits 1 (twice)" "^exit 1$" "$cva_pb_twice"
+check "CVA pragmas: a contract extending one whose name has a hyphened part, XB-L, reads its lines (hyphen)" "XB-L: Burning: Alice \[Burn\]: fields none" "$cva_pb_hyphen"
+check "CVA pragmas: ... and its tab (hyphen)" "list('\"Coins\"', \['coin'\]), list('\"Minted\"', \['coin'\])" "$cva_pb_hyphen"
+# A button replaces a button (vGLP 4236349, Section 5.4, "The contract's words", its last sentence: "where the contract writes a button of an inherited button's name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing"): XK extends XG, whose line writes [Create] <name> [Close], and writes only [Close]; XG's [Create], with its field, stands (replace_one).
+cva_pr=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XG' 'Alice is a person.' '1. ■ Groups. Alice may create a group and close it.' 'Pragmas' 'Led: the groups Alice leads.' 'Groups: Alice [Create] <name> [Close]' > "$cva_pr/XG.txt"
+printf '%s\n' '% Extends: XG, the base.' 'XK' 'Alice is a person.' '1. ■ Closing. Alice may close a group.' 'Pragmas' 'Closed: the groups Alice closed.' 'Closing: Alice [Close]' > "$cva_pr/XK.txt"
+cva_pr_create="schema(create, ['Alice'], [svar(n)], [rs(guarded, [atom(leads, [svar(n)])], [], [], [atom(leads, [svar(n)])])])"
+cva_pr_close="schema(close, ['Alice'], [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(leads, [svar(n)])], [atom(leads, [svar(n)])], [])])"
+cva_pr_one=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pr/XK.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+rm -rf "$cva_pr"
+check "CVA pragmas: a button of an inherited button's name replaces that button (replace_one)" "XG: Groups: Alice \[Close\]: replaced by the line of XK.txt with a button of the same name, the other buttons of the line standing" "$cva_pr_one"
+check "CVA pragmas: ... the other button of the inherited line stands, with its field (replace_one)" "XG: Groups: Alice \[Create\] <name>: fields n" "$cva_pr_one"
+check "CVA pragmas: ... both acts read, [Create] on its contract's tab and [Close] on the extending one's (replace_one)" "act('create', '\"Create\"', \['\"\"', '\"name\"'\], none, '\"Led\"', by(\[1\])), act('close', '\"Close\"', \[\], none, '\"Closed\"', by(\[1\]))" "$cva_pr_one"
+check "CVA pragmas: ... and pragmas.sh exits 0 (replace_one)" "^exit 0$" "$cva_pr_one"
+# The line saying what a contract is written from, the first after its title and before its names declaration, "<NAME> <relation> <NAME'> (...)." or with no parentheses, the relation one of extends, amends, restricts and instantiates, several contracts joined by "and" (style guide 36; GSC, Section 8; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1): pragmas.sh takes the contracts it names as those whose pragmas the contract has, and reads the % Extends line where the line is absent.
+cva_prel=$(mktemp -d)
+mkdir "$cva_prel/old" "$cva_prel/new" "$cva_prel/hy"
+for d in old new hy; do printf '%s\n' 'XG' 'Alice is a person.' '1. ■ Groups. Alice may create a group and close it.' 'Pragmas' 'Led: the groups Alice leads.' 'Groups: Alice [Create] <name> [Close]' > "$cva_prel/$d/XG.txt"; done
+printf '%s\n' '% Extends: XG, the base.' 'XK' 'Alice is a person.' '1. ■ Closing. Alice may close a group.' 'Pragmas' 'Closed: the groups Alice closed.' 'Closing: Alice [Close]' > "$cva_prel/old/XK.txt"
+printf '%s\n' '% Extends: nothing.' 'XK' 'XK amends XG (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2601.00001).' 'Alice is a person.' '1. ■ Closing. Alice may close a group.' 'Pragmas' 'Closed: the groups Alice closed.' 'Closing: Alice [Close]' > "$cva_prel/new/XK.txt"
+printf '%s\n' 'XG-L' 'Alice is a person.' '1. ■ Labels. Alice may close a group.' 'Pragmas' 'Labelled: the groups Alice closed.' > "$cva_prel/hy/XG-L.txt"
+printf '%s\n' 'XK: Closing' 'XK extends XG and XG-L.' 'Alice is a person.' '1. ■ Closing. Alice may close a group.' 'Pragmas' 'Closed: the groups Alice closed.' 'Closing: Alice [Close]' > "$cva_prel/hy/XK.txt"
+printf '%s\n' 'XK' 'XK extends XNONE.' 'Alice is a person.' '1. ■ Closing. Alice may close a group.' 'Pragmas' 'Closing: Alice [Close]' > "$cva_prel/hy/XN.txt"
+cva_prel_old=$(bash "$CVA/compiler/pragmas.sh" "$cva_prel/old/XK.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+cva_prel_new=$(bash "$CVA/compiler/pragmas.sh" "$cva_prel/new/XK.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+cva_prel_hy=$(bash "$CVA/compiler/pragmas.sh" "$cva_prel/hy/XK.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+cva_prel_no=$(bash "$CVA/compiler/pragmas.sh" "$cva_prel/hy/XN.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+rm -rf "$cva_prel"
+check "CVA pragmas: a fixture with the relation line prints what one with the % Extends line prints (relation)" "^same$" "$([ "$cva_prel_old" = "$cva_prel_new" ] && echo same || echo differs)"
+check "CVA pragmas: ... and it reads the contract named, XG's tab and XK's (relation)" "pragmas(\[list('\"Led\"', \['leads'\]), list('\"Closed\"', \['closed'\])\]" "$cva_prel_new"
+check "CVA pragmas: several contracts joined by and, a hyphenated name read whole, XG-L's tab among the lists (relation)" "list('\"Labelled\"', \['closed'\])" "$cva_prel_hy"
+check "CVA pragmas: ... and pragmas.sh exits 0 (relation)" "^exit 0$" "$cva_prel_hy"
+check "CVA pragmas: a contract the line names with no NAME.txt, refused, named (relation)" "the contract XNONE, which its line saying what it is written from names, has no XNONE.txt" "$cva_prel_no"
+
+# A variable local to a role is no place of the request and has no field (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it"): XL's [Lpf] <label>, lpf(Alice, Bob ; l, d) its d local to Bob's role, names l and no field for d (local_field).
+cva_pl=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XL' 'Alice and Bob are persons.' '1. ■ Labeled pointing. Alice may point to their friend Bob with a label Bob points with.' 'Pragmas' 'Pointing: the persons Alice points to.' 'Labeled pointing: Alice [Lpf] <label>' > "$cva_pl/XL.txt"
+cva_pl_lpf="schema(lpf, ['Alice', 'Bob'], [pvar(l), pvar(d)], [rs(guarded, [atom(lp, [role(2), pvar(l)])], [], [atom(friend, [role(2)])], [atom(lp, [role(2), pvar(l)])]), rs(unguarded, [], [], [atom(lp, [pvar(d), pvar(l)])], [])])"
+cva_pl_out=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pl/XL.txt" "[$cva_pl_lpf]" 2>&1; echo "exit $?")
+rm -rf "$cva_pl"
+check "CVA pragmas: an agent variable local to another role has no field (local_field)" "XL: Labeled pointing: Alice \[Lpf\] <label>: fields l$" "$cva_pl_out"
+check "CVA pragmas: ... the act's fields name l at its third place, d no place of the request (local_field)" "act('lpf', '\"Lpf\"', \['\"\"', '\"\"', '\"label\"'\], none, '\"Pointing\"', by(\[1\]))" "$cva_pl_out"
 
 # The classes are the contract's equivalence, generated by relating two
 # transactions when one schema-binding determines both (vGLP 9c819f5, Section
@@ -4087,6 +4249,7 @@ compile(wards, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []
 compile(wards_leaving, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, 2), free(2))], [retired])).
 compile(signed, [schema(fwd, [svar(x)], [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots).
 compile(deadfree, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [pvar(x)], [rs(guarded, [atom(z, [])], [], [atom(q, [pvar(x)])], [atom(q, [pvar(x)])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
+compile(localagent, [schema(lpf, [pvar(l), pvar(d)], [rs(guarded, [atom(lp, [role(2), pvar(l)])], [], [atom(friend, [role(2)])], [atom(lp, [role(2), pvar(l)])]), rs(unguarded, [], [], [atom(lp, [pvar(d), pvar(l)])], [])])], syntactically_grassroots).
 compile(sibling, reflexive([friend], [schema(csib, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
 compile(sibling_noclash, reflexive([friend], [schema(csib, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
 compile(clash2_marks, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(unguarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [], [rs(unguarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
@@ -4105,6 +4268,9 @@ check "CVA compiler: ... and one with a leaving mark, the verdict's fifth argume
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, passes the checks (signed)" "%% not compiled, having no pragmas(signed)" "$cva_classes"
 check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"
 check "CVA compiler: ... the schema and the variable named" "%% the schema and the variable(s2, pvar(x))" "$cva_classes"
+# Every variable local to a role (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role, as the person d where Bob's role requires that Bob point to someone with a label"; the effectiveness condition's "but a variable local to a role"): GDO-L's lpoint_friend, its agent variable d only in lp(d, l) required at Bob's role, passes the checks (localagent).
+check "CVA compiler: an agent variable local to a role is excepted from effectiveness, passing the checks (localagent)" "%% not compiled, having no pragmas(localagent)" "$cva_classes"
+check_not "CVA compiler: ... and not refused as not effective (localagent)" "%% the schema and the variable(lpf" "$cva_classes"
 check "CVA compiler: CSSN's sibling case, a child role and an adult role at one person, two classes (sibling)" "%% not compiled, having no pragmas(sibling)" "$cva_classes"
 check "CVA compiler: the adult role not forbidding child, one class, all marking the same people, passing the checks (sibling_noclash)" "%% not compiled, having no pragmas(sibling_noclash)" "$cva_classes"
 check "CVA compiler: the parent of the adult role not marked, two classes, passing the checks (sibling_marks)" "%% not compiled, having no pragmas(sibling_marks)" "$cva_classes"
@@ -4809,7 +4975,7 @@ HEREDOC
 2>&1)
 check "CVA numbers: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/numbers" "$cva_numbers_load"
 check_not "CVA numbers: no type errors" "Type checking failed" "$cva_numbers_load"
-check "CVA numbers: refuel's request names k, a number field, and claim's names d; step, unguarded, is not proposed by a person" "^befriend(Peer, Peer) start(Peer) refuel(Peer, Integer) claim(Peer, Peer, Integer) $" "$(cva_proposal "$CVA/numbers/platform.vglp")"
+check "CVA numbers: refuel's request names k, a number field, and claim's names d; step, unguarded, is not proposed by a person" "^befriend(Peer, Peer) start(Peer) refuel(Peer, Integer) claim(Peer, Peer, Integer) mint(Peer, Integer) spend(Peer, Integer) burn(Peer, Integer, Integer) $" "$(cva_proposal "$CVA/numbers/platform.vglp")"
 cva_numbers=$("$REPL_RUN" <<HEREDOC
 $CVA/numbers/
 :limit 20000000
@@ -4823,7 +4989,12 @@ check "CVA numbers: alice claims 3 of bob: bob's machine, his level 2, votes no,
 check "CVA numbers: ... her screen shows the notice naming bob, unable" "A = \[.*refused(claim(alice, bob, 3), bob, unable(\[\], \[\]))" "$cva_numbers"
 check "CVA numbers: alice claims 2, bob's machine votes yes, and it commits" "sent(alice, bob, start(attempt(alice, 12, 12, claim(alice, bob, 2), none))), sent(bob, alice, vote(attempt(alice, 12, 12, claim(alice, bob, 2), none), yes)), sent(alice, bob, outcome(attempt(alice, 12, 12, claim(alice, bob, 2), none), commit))" "$cva_numbers"
 check "CVA numbers: ... alice holds claimed(bob, 2)" "A = \[.*view(alice, \[claimed(bob, 2), friend(bob)\], \[bob\], \[\], \[tab('Friends', friend)\]) | " "$cva_numbers"
-check "CVA numbers: ... and bob honoured(alice, 2), his level unchanged" "B = \[.*view(bob, \[honoured(alice, 2), friend(alice), level(2), started\], \[alice\], \[\], \[tab('Friends', friend)\]) | " "$cva_numbers"
+check "CVA numbers: ... and bob honoured(alice, 2), his level unchanged" "B = \[.*view(bob, \[honoured(alice, 2), friend(alice), level(2), started\], \[alice\], \[\], \[tab('Friends', friend)\])" "$cva_numbers"
+# A required atom with a multiplicity, deleted with none or with a multiplicity (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom required with a multiplicity k and deleted with none having k copies required and one deleted"; "a multiplicity k deleting or adding k copies"; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 2): rest(K, J, A) among the atoms a role keeps, as GSC's reader writes it.
+check "CVA numbers, rest: spend(bob, 3) refused, unable, where bob holds 2 tokens" "B = \[.*refused(spend(bob, 3), bob, unable)" "$cva_numbers"
+check "CVA numbers, rest: spend(bob, 2), bob holding 2, commits, leaving one token and spent(2)" "B = \[.*view(bob, \[spent(2), [^]]*token, [^]]*\], \[alice\], \[\], \[tab('Friends', friend)\])" "$cva_numbers"
+check "CVA numbers, rest: burn(bob, 5, 2) refused, unable, where bob holds 4 tokens, k required though j is deleted" "B = \[.*refused(burn(bob, 5, 2), bob, unable)" "$cva_numbers"
+check "CVA numbers, rest: burn(bob, 4, 3), bob holding 4, commits, 3 deleted, one token left" "B = \[.*view(bob, \[burnt(4, 3), spent(2), [a-z(), 0-9]*token, [a-z(), 0-9]*started\], \[alice\], \[\], \[tab('Friends', friend)\])" "$cva_numbers"
 check_not "CVA numbers: bob's person is never asked on a claim, his role not guarding" "gave(claim\|gave(attempt([a-z]*, [0-9]*, [0-9]*, claim" "$cva_numbers"
 check_not "CVA numbers: no introduction: no role requires an atom naming an agent bound to a variable" "intro(" "$cva_numbers"
 

@@ -104,6 +104,12 @@ c_hmult(I, atom(P, As), Ns, T, R?) :- c_hatom(I?, atom(P?, As?), Ns?, T?, R).
 c_hmult(I, times(K, A), Ns, T, R?) :- ground(Ns?) |
     c_hatom(I?, A?, Ns?, T?, R1),
     c_arg(K?, Ns?, ['.'|R1?], R).
+% rest(K, J, A), the copies of K.A beyond the J deleted (self.glp, Mult),
+% is (K - J).A; a role's required atoms carry it as K.A (nrs_req).
+c_hmult(I, rest(K, J, A), Ns, T, ['('|R?]) :- ground(Ns?) |
+    c_hatom(I?, A?, Ns?, T?, R1),
+    c_arg(J?, Ns?, [').'|R1?], R2),
+    c_arg(K?, Ns?, [' - '|R2?], R).
 
 % pl(I, A) the atom A of role I, ng(I, A) it negated, qa(I, Kind, Lits) the
 % quantified conjunct of the listed role I, cn(Gamma) the constraint.
@@ -146,12 +152,10 @@ c_hlits(RS, I, L?) :- ground(RS?), integer(I?) |
 
 procedure c_blits(NRoleSpec?, Integer?, LItems).
 c_blits(RS, I, L?) :- ground(RS?), integer(I?) |
-    nrs_keep(RS?, K),
-    nrs_del(RS?, D),
+    nrs_req(RS?, Q),
     nrs_forb(RS?, F),
     c_marks(F?, I?, yes, [], L2),
-    c_marks(D?, I?, no, L2?, L1),
-    c_marks(K?, I?, no, L1?, L).
+    c_marks(Q?, I?, no, L2?, L).
 
 % A role's literals: an agent role's in the clause, a listed role's in its
 % quantified conjunct, which a role with none there omits.

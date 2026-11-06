@@ -1,0 +1,52 @@
+%% string_concat/2 and term_to_string/2 (GLP-Spec appendix-guards.tex, "Text
+%% (string_concat/2, term_to_string/2)", GLP-ICLP-2026 ca3c8e5): "A program
+%% that prints GLP source, as a compiler does, builds each line as a string by
+%% these two ... and prints it by send_to_user/1".  shown(N) prints a line for
+%% each of the samples 1 to N, its number and the text of the sample, both by
+%% term_to_string/2, joined by string_concat/2; Harness A42 reads each line back
+%% as a goal same(I, Text, R), which compares the term the reader reads with
+%% sample I.
+
+Sample ::= String ; Number ; [Sample | Sample] ; utterance(String, Sample) ;
+    f(Sample, Sample) ; '+'(Sample) ; neg(Sample).
+Answer ::= yes ; no.
+
+procedure sample(Integer?, Sample).
+sample(1, 'Carol').
+sample(2, 'G').
+sample(3, '+').
+sample(4, '42').
+sample(5, 'Flood on Main Street').
+sample(6, utterance('Flood on Main Street', f('G', '+'('Carol')))).
+sample(7, ['Carol', 'G', '+', '42']).
+sample(8, [a, 'B' | 'C']).
+sample(9, 42).
+sample(10, -7).
+sample(11, 2.5).
+sample(12, neg(-7)).
+sample(13, f(0.0000001, 1000000000000000000000.0)).
+sample(14, [1, -2.5 | f(a, -3)]).
+
+procedure texts(Integer?, Integer?, Stream(String)).
+texts(I, N, [Line?|Ls?]) :- I? =< N? |
+  sample(I?, S),
+  term_to_string(S?, T),
+  term_to_string(I?, L),
+  string_concat([L?, ' ', T?], Line),
+  I1 := I? + 1,
+  texts(I1?, N?, Ls).
+texts(I, N, []) :- I? > N? | true.
+
+procedure shown(Integer?).
+shown(N) :- texts(1, N?, Ls), send_to_user(Ls?).
+
+procedure same(Integer?, Sample?, Answer).
+same(I, T, R?) :- sample(I?, S), compare(S?, T?, R).
+
+procedure compare(Sample?, Sample?, Answer).
+compare(A, B, yes) :- ground(A?), ground(B?), A? =?= B? | true.
+compare(A, B, no) :- ground(A?), ground(B?), A? =?\= B? | true.
+
+%% The text of one sample, for the REPL to show.
+procedure text(Integer?, String).
+text(I, T?) :- sample(I?, S), term_to_string(S?, T).

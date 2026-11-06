@@ -1,9 +1,9 @@
 #!/bin/bash
-# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  Of two lines naming one schema, of a contract and of one it extends, the extending contract's is kept, and only the line kept is checked ("where it writes a schema anew for a clause it inherits, its line for that clause replaces the inherited line", ibid.).
+# The pragmas of a contract, as the term vGLP's compiler reads them (README.md beside this file, "The pragmas"; vGLP, Section 5.4, "The contract's words"; GSC, Section 2, its first paragraph): the lines after the line "Pragmas" of the contract's NAME.txt and of the NAME.txt of every contract it extends, by its "% Extends:" line and theirs, the contracts extended first.  A contract whose own NAME.txt has no line "Pragmas" has none, no_pragmas, which the compiler refuses: "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words").  A button is of the acts it names, and a button replaces a button (vGLP 4236349, Section 5.4, "The contract's words", its last sentence): "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing".  A line's fields name, in the schemas' order, the variables of its button's acts that the atoms each requires at the proposer's role do not bind, and a line whose fields are not these is refused (ibid.).  The fields after a button, up to the next button, are that button's, and two lines that stand writing one button are refused, one name being one button with one line (ibid.: "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names").
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find; 2 on a bad argument.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler writes a word as it is, the reader reading the double-quoted string back as the word.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find, and on every line it refuses, each named with the variable its fields leave unnamed or the field beyond them; 2 on a bad argument.  With PRAGMAS_LINES set it prints on the standard error each button line and the variables its fields name by the rule, or why it is refused, replaced or gone.
 
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
@@ -11,7 +11,7 @@ PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 my ($top, $programs, $term) = @ARGV;
-# The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A numeric variable local to a role, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP, Section 5.4, "Act schemas as local specifications": "Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"), as t, the date of the issuer, in the redeem_bc of GB.
+# The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A variable local to a role, agent, speech-act or numeric, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state.  Every other variable is bound by the schema-binding, and a request names it"), as t, the date of the issuer, in the redeem_bc of GB, and d, the person Bob points to with the label, in the lpoint_friend of GDO-L.
 # The arguments of the term at the top level of the text $s, split at its commas outside brackets.
 sub top_args {
     my ($s) = @_;
@@ -38,8 +38,13 @@ sub inside {
     }
     return ("", length $s);
 }
-# The numeric variables local to a role of the schema whose arguments are @args.
-sub local_nums {
+# The variables local to a role of the schema whose arguments are @args: "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"), an agent, speech-act or numeric variable alike, inside a name term or a signed term included; each named by its name, as the head writes it.
+sub var_tokens {
+    my ($t) = @_;
+    $t =~ s/\batom\(\w+,/atom(/g;
+    return map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($t =~ /(\x27(?:[^\x27\\]|\\.)*\x27|\b[A-Za-z_]\w*\b)(?!\s*\()/g);
+}
+sub local_vars {
     my (@args) = @_;
     my $roles = $args[-1];
     $roles =~ s/^\[//; $roles =~ s/\]$//;
@@ -50,16 +55,16 @@ sub local_nums {
         my ($f) = $spec =~ /^(c?rs)\(/ or next;
         my ($body) = inside($spec, length $f);
         my @p = top_args($body);
-        shift @p if $f eq "crs";
-        for my $k (0 .. $#p) {
-            for my $x ($p[$k] =~ /\bnum\((\w+)\)/g) {
+        if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind) }
+        for my $k (1 .. $#p) {
+            for my $x (var_tokens($p[$k])) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 } else { $elsewhere{$x} = 1 }
             }
         }
     }
     return grep { !$elsewhere{$_} && keys %{ $at{$_} } == 1 } keys %at;
 }
-my (@snames, %svars, %preds);
+my (@snames, %svars, %preds, %locals);
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
     while ($term =~ /\b([nc]?schema)\(/g) {
@@ -73,9 +78,11 @@ if (defined $term && $term ne "") {
         my ($n, $a) = @args[0, $named ? 2 : 1];
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
-        my %local = map { $_ => 1 } local_nums(@args);
+        my %local = map { $_ => 1 } local_vars(@args);
         $a =~ s/^\[//; $a =~ s/\]$//;
-        $svars{$n} = [ grep { !($local{$_} && $a =~ /\bnum\(\Q$_\E\)/) } ($a =~ /\w+\((\w+)\)/g) ];
+        my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
+        $locals{$n} = { map { $_ => 1 } grep { $local{$_} } @hv };
+        $svars{$n} = [ grep { !$local{$_} } @hv ];
     }
 }
 # The contract term read whole, for the roles of each schema: tparse gives a term as [functor, args] for a compound, ["[]", items] for a list, and [name] for a constant.
@@ -117,7 +124,7 @@ sub tstr {   # a term written back, to compare arguments
     return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
 }
 # Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); its head, $head{S}, the variables after its roles; and the names of its roles, $rnames{S}, where its head names them (GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do").
-my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered);
+my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered, @lines_out, @faults);
 sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
@@ -144,7 +151,9 @@ sub find_schemas {
             my ($kind, $g, @c) = $r->[0] eq "crs" ? @{ $r->[1] } : (undef, @{ $r->[1] });
             push @rs, { guarded => ($g->[0] eq "unguarded" ? 0 : 1),
                         listed => ((defined $kind && $kind->[0] eq "listed") ? 1 : 0),
-                        comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ] };
+                        comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ],
+                        # The same lists as parsed terms, an atom with a multiplicity, times(K, A), read as its atom A, its multiplicity K not an argument of it (GSC, Appendix "Numbers": "a multiplicity k.phi is k copies of phi").
+                        atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ] };
         }
         $roles{$n} = \@rs;
         return;
@@ -153,7 +162,7 @@ sub find_schemas {
 }
 if (defined $term && $term ne "") { $tsrc = $term; find_schemas(tparse()) }
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
-my %seen; my @order;
+my %seen; my @order; my %extends;
 my %named_by_button;
 sub realising {
     my ($act) = @_;
@@ -188,21 +197,48 @@ sub q_atom {   # a GLP quoted name holding the text $s
 sub q_string { # a quoted name holding the GLP source of the string $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return q_atom("\"$s\"");
 }
+# The contracts a contract names on the line saying what it is written from, the first after its title and before its names declaration, "<NAME> <relation> <OTHER> (...)." or with no parentheses, the relation one of extends, amends, restricts and instantiates, several contracts joined by "and" (style guide 36; GSC, Section 8; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1); nothing where the contract has no such line.  A name is read whole with a hyphened part, as GDO-L.
+sub relation_names {
+    my ($f, @l) = @_;
+    my @body = grep { !/^%/ && /\S/ } @l;
+    return () unless @body >= 2;
+    my $nm = qr/[A-Z][A-Za-z0-9]*(?:-[A-Z][A-Za-z0-9]*)*/;
+    return () unless $body[1] =~ /^$nm\s+(?:extends|amends|restricts|instantiates)\s+(.*?)\.\s*$/;
+    my $of = $1;
+    $of =~ s/\s*\([^()]*\)//g;
+    my @names = split /\s*,\s*(?:and\s+)?|\s+and\s+/, $of;
+    for my $n (@names) { $n =~ /^$nm$/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$n\"\n" }
+    return @names;
+}
 sub visit {
     my ($f) = @_;
     return if $seen{$f}++;
     my @l = read_txt($f);
     my ($ext) = grep { /^% Extends:/ } @l;
-    if (defined $ext) {
+    my @rel = relation_names($f, @l);
+    if (@rel) {
+        (my $dir = $f) =~ s{/[^/]*$}{};
+        my %named;
+        for my $n (@rel) {
+            next if $named{$n}++;
+            my $g = find_txt($n, $dir);
+            defined $g or die "pragmas.sh: $f: the contract $n, which its line saying what it is written from names, has no $n.txt\n";
+            visit($g);
+            push @{ $extends{$f} }, $g;
+        }
+    } elsif (defined $ext) {
         (my $dir = $f) =~ s{/[^/]*$}{};
         my %named;
         # The contracts it extends are named in the first sentence of the line, a file name such as GC.txt in it not a contract extended.
         (my $first = $ext) =~ s/^% Extends:\s*//;
         $first =~ s/\.\s.*$//;
-        for my $n ($first =~ /\b([A-Z][A-Za-z]*[A-Z])\b(?![\x27\x{2019}]s|\.\w)/g) {
+        # A name may carry a hyphened part, as GDO-L, which GFF extends (GFF.txt), read whole and not as GDO.
+        for my $n ($first =~ /\b([A-Z][A-Za-z]*[A-Z](?:-[A-Z][A-Za-z]*)*)\b(?!-|[\x27\x{2019}]s|\.\w)/g) {
             next if $named{$n}++;
             my $g = find_txt($n, $dir);
-            visit($g) if defined $g;
+            next unless defined $g;
+            visit($g);
+            push @{ $extends{$f} }, $g;
         }
     }
     push @order, $f;
@@ -211,14 +247,6 @@ my @own = read_txt($top);
 unless (grep { $_ eq "Pragmas" } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
 my (@lists, @acts);
-# Every button of every contract read, by the schema name it bears, so that a schema one button names is realised by no other.
-for my $f (@order) {
-    my $after = 0;
-    for my $x (read_txt($f)) {
-        if (!$after) { $after = 1 if $x eq "Pragmas"; next }
-        while ($x =~ /\[([^\]]+)\]/g) { (my $a = lc $1) =~ s/ +/_/g; $named_by_button{$a} = 1 }
-    }
-}
 # The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
 my %is_name;
 for my $f (@order) {
@@ -253,21 +281,94 @@ for my $f (reverse @order) {
         }
     }
 }
-for my $f (@order) {
-    my @l = read_txt($f);
-    # A line indented after a pragma line continues it (GSC, Section 2, its first paragraph; the guide, step 7: "an indented line for each other proposer, written the same way; and an indented line for each other person asked, their name, a colon, the question"), carried on its line after the mark \x01.
-    {
-        my (@m, $aft);
-        for my $x (@l) {
-            if ($aft && $x =~ /^\s+\S/ && @m && $m[-1] ne "Pragmas") { $m[-1] .= "\x01" . $x; next }
-            $aft = 1 if $x eq "Pragmas";
-            push @m, $x;
-        }
-        @l = @m;
+# The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below).
+sub joined {
+    my ($f) = @_;
+    my (@m, $aft);
+    for my $x (read_txt($f)) {
+        if ($aft && $x =~ /^\s+\S/ && @m && $m[-1] ne "Pragmas") { $m[-1] .= "\x01" . $x; next }
+        $aft = 1 if $x eq "Pragmas";
+        push @m, $x;
     }
+    return @m;
+}
+# The contracts each contract extends, directly or through another: $anc{F}{G} where F extends G.
+my %anc;
+sub ancestors { my ($f, $g) = @_; for my $h (@{ $extends{$g} // [] }) { next if $anc{$f}{$h}++; ancestors($f, $h) } }
+ancestors($_, $_) for @order;
+# The button lines of every contract read, each a line naming a person and the buttons they propose, the clause line or an indented line after it, with its question lines (vGLP 40f8444, Section 5.4, "The contract’s words": "A line follows for each other person who proposes, likewise, and for each person asked, their name, a colon, and the question put to them; a question line belongs to the button line nearest above it"), by its key, file, line and rank; and the buttons each bears.
+my (%line_buttons, @line_keys, %line_shown);
+for my $f (@order) {
+    my %own; my $after = 0; my $tabs = 1; my $ln = -1;
+    for my $x (joined($f)) {
+        $ln++;
+        next if $x =~ /^%/;
+        if (!$after) {
+            $own{$2} = 1 if $x =~ /^(\d+)\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?([^.]+)\.\s*(.*)$/;
+            $after = 1 if $x eq "Pragmas";
+            next;
+        }
+        next if $x =~ /^\s*$/;
+        my ($title, $rest) = $x =~ /^([^:]+):\s*(.*)$/ or next;
+        $tabs = 0 if $tabs && (exists $own{$title} || exists $xclause{$title});
+        next if $tabs;
+        my $pi = -1;
+        for my $part (split /\x01/, $rest) {
+            next unless $pi < 0 ? $part =~ /^[A-Z][A-Za-z]*\s+\[/ : $part =~ /^\s+[A-Z][A-Za-z]*\s+\[/;
+            $pi++;
+            my $k = "$f\x02$ln\x02$pi";
+            push @line_keys, $k;
+            $line_buttons{$k} = [ map { (my $a = lc $_) =~ s/ +/_/g; $a } ($part =~ /\[([^\]]+)\]/g) ];
+            (my $nm = $f) =~ s{.*/}{}; $nm =~ s/\.txt$//;
+            (my $txt = $part) =~ s/^\s+//;
+            $line_shown{$k} = "$nm: $title: $txt";
+        }
+    }
+}
+# A button of a contract is replaced where a contract extending it writes a button of its name: "where the contract writes a button of an inherited button’s name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing" (vGLP 4236349, Section 5.4, "The contract’s words", its last sentence), as GSN’s [Close] on a line of its own would leave the [Create] of the line it was on.  $replaced{K}{B} is the line of the extending contract that replaces the button B of the line K, and a line all of whose buttons are replaced is gone, its questions with it.
+my %replaced;
+for my $k (@line_keys) {
+    my ($f) = split /\x02/, $k;
+    for my $b (@{ $line_buttons{$k} }) {
+        for my $k2 (@line_keys) {
+            my ($g) = split /\x02/, $k2;
+            next unless $anc{$g}{$f} && $g ne $f;
+            if (grep { $_ eq $b } @{ $line_buttons{$k2} }) { $replaced{$k}{$b} = $k2; last }
+        }
+    }
+}
+sub all_replaced { my ($k) = @_; return 0 unless $replaced{$k}; return !grep { !$replaced{$k}{$_} } @{ $line_buttons{$k} } }
+# A button is of the acts it names, so one name is one button, with one line: two kept lines writing a button of one name, or one line writing it twice, are a fault of the contract, refused, the button and both lines named (vGLP 40f8444, Section 5.4, "The contract’s words": "for each act they propose, its button, in brackets, bearing the act’s name"; "A button is of the acts it names"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1).
+my (%button_line, @dup_out);
+for my $k (@line_keys) {
+    my %once;
+    my @orig = $line_shown{$k} =~ /\[([^\]]+)\]/g;
+    for my $bi (0 .. $#{ $line_buttons{$k} }) {
+        my ($b, $ob) = ($line_buttons{$k}[$bi], $orig[$bi]);
+        next if $replaced{$k}{$b};
+        if ($once{$b}++) {
+            push @dup_out, "$line_shown{$k}: refused, the button [$ob] written twice on it";
+            push @faults, "pragmas.sh: the line \"$line_shown{$k}\" writes the button [$ob] twice, and a button is of the acts it names, one name one button (vGLP, Section 5.4, \"The contract’s words\")\n";
+            next;
+        }
+        if (exists $button_line{$b}) {
+            push @dup_out, "$line_shown{$k}: refused, the button [$ob] written also by the line \"$line_shown{ $button_line{$b} }\"";
+            push @faults, "pragmas.sh: the button [$ob] is written by two lines, \"$line_shown{ $button_line{$b} }\" and \"$line_shown{$k}\", and a button is of the acts it names, one name one button with one line (vGLP, Section 5.4, \"The contract’s words\")\n";
+            next;
+        }
+        $button_line{$b} = $k;
+    }
+}
+# Every button of every line kept, by the schema name it bears, so that a schema one button names by its own name is realised by no other.
+for my $k (@line_keys) { $named_by_button{$_} = 1 for grep { !$replaced{$k}{$_} } @{ $line_buttons{$k} } }
+for my $f (@order) {
+    # A line indented after a pragma line continues it (GSC, Section 2, its first paragraph; the guide, step 7: "an indented line for each other proposer, written the same way; and an indented line for each other person asked, their name, a colon, the question"), carried on its line after the mark \x01.
+    my @l = joined($f);
+    my $ln = -1;
     (my $name = $f) =~ s{.*/}{}; $name =~ s/\.txt$//;
     my %clause; my %body; my $after = 0; my $first = 1; my $tabs = 1; my $tab = "";
     for my $x (@l) {
+        $ln++;
         next if $x =~ /^%/;
         if (!$after) {
             if ($x =~ /^(\d+)\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?([^.]+)\.\s*(.*)$/) { $clause{$2} = $1; $body{$2} = $3 }
@@ -313,8 +414,9 @@ for my $f (@order) {
         exists $clause{$title} or die "pragmas.sh: $f: the pragma \"$title\" names no clause of $name or of a contract it extends\n";
         # A run of buttons and its fields, held until every tab is read: the acts are printed after the pragmas (below), each schema the line fits with its proposer.
         my $emit = sub {
-            my ($bs, $fs, $said, $by, $pl, $fit, $err, $reals) = @_;
-            push @pending, { buttons => $bs, fields => $fs, said => $said, by => $by, pl => $pl, fit => $fit, err => $err, reals => $reals, tab => $tab, f => $f, title => $title };
+            my ($bs, $fs, $said, $by, $pl, $fit, $err, $reals, $who) = @_;
+            push @pending, { buttons => $bs, fields => $fs, said => $said, by => $by, pl => $pl, fit => $fit, err => $err, reals => $reals, tab => $tab, f => $f, title => $title, who => $who, name => $name };
+            push @lines_out, "\x03$#pending";
         };
         # A pragma line (GSC 25b6b3c, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them, a question line belonging to the nearest button line above it.  "A name in a pragma is the schema role of that name, the schemas naming their roles as the clauses do" (GSC 25b6b3c, Section 2): each name is the role its schema term names so, $rnames{S}, and a name no role of the schema bears, in a question, is the agent variable of an act with one, as Carol of GKK:3 is c of introduce, filled by its field; any other is a fault.  "A button is offered only to the person named before it", by([G]), G the role of that person, which must be guarding; "the persons named before the questions are asked", each question put to the role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role an act needs that the line names neither as its proposer nor as asked is a fault, the act never asking that person.  A question naming the one guarding role of an act is text of its request form.
         if ($rest !~ /^\[/) {
@@ -343,15 +445,40 @@ for my $f (@order) {
                 }
                 die "pragmas.sh: $f: the pragma \"$title\" has an indented line it cannot read: $p\n";
             }
-            for my $pr (@props) {
+            for my $pi (0 .. $#props) {
+                my $pr = $props[$pi];
+                # A button an extending contract writes (%replaced, above) is replaced, with its fields, and the other buttons of the line stand, with the line’s questions; a line all of whose buttons are replaced is gone, its questions with it.
+                my $lk = "$f\x02$ln\x02$pi";
+                if (all_replaced($lk)) {
+                    my %gs = map { (my $g = (split /\x02/, $_)[0]) =~ s{.*/}{}; $g => 1 } values %{ $replaced{$lk} };
+                    push @lines_out, "$name: $title: $pr->{name} $pr->{tail}: replaced by the line of " . join(" and ", sort keys %gs) . (@{ $line_buttons{$lk} } == 1 ? " with a button of the same name" : " with buttons of the same names");
+                    next;
+                }
                 my $tail = $pr->{tail};
                 while ($tail ne "") {
+                    # The fields after a button, up to the next button, are that button’s, each button checked against its own fields (vGLP 40f8444, Section 5.4, "The contract’s words": "for each act they propose, its button, in brackets, bearing the act’s name, and its fields, in angle brackets"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 2), as DGC’s "[Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>" and GSN’s "[Create] <name> [Close]".
                     my @buttons;
-                    while ($tail =~ s/^\[([^\]]+)\]\s*//) { push @buttons, $1 }
+                    push @buttons, $1 if $tail =~ s/^\[([^\]]+)\]\s*//;
                     @buttons or die "pragmas.sh: $f: the pragma \"$title\" has words it cannot read: $tail\n";
                     my @fields;
                     while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
                     $tail =~ /^(\[|$)/ or die "pragmas.sh: $f: the pragma \"$title\" has words it cannot read: $tail\n";
+                    (my $ba = lc $buttons[0]) =~ s/ +/_/g;
+                    if ($replaced{$lk} && $replaced{$lk}{$ba}) {
+                        (my $g = (split /\x02/, $replaced{$lk}{$ba})[0]) =~ s{.*/}{};
+                        push @lines_out, "$name: $title: $pr->{name} [$buttons[0]]" . join("", map { " <$_>" } @fields) . ": replaced by the line of $g with a button of the same name, the other buttons of the line standing";
+                        next;
+                    }
+                    # An inherited button stands while the contract has an act it names, and goes with its fields and its questions where it has none (vGLP 40f8444, Section 5.4, "The contract’s words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it"), as GC’s [Mint] in DGC, whose term has no mint; a button of the contract itself that names no act is a fault (below).
+                    if ($f ne $top && @snames) {
+                        my @gone = grep { (my $a = lc $_) =~ s/ +/_/g; !grep { exists $roles{$_} } realising($a) } @buttons;
+                        if (@gone) {
+                            push @lines_out, "$name: $title: $pr->{name} " . join("", map { "[$_]" } @gone) . ": gone, the contract having no act it names";
+                            my %g = map { $_ => 1 } @gone;
+                            @buttons = grep { !$g{$_} } @buttons;
+                            next unless @buttons;
+                        }
+                    }
                     my (%said, %by, %plof, %fit, %err, %reals);
                     for my $button (@buttons) {
                         (my $a = lc $button) =~ s/ +/_/g;
@@ -411,7 +538,7 @@ for my $f (@order) {
                         $err{$button} = @real == 1 ? $why[0] : "pragmas.sh: $f: the pragma \"$title\" fits none of the schemas [$button] covers:\n" . join("", @why)
                             unless grep { $fit{$_} } @real;
                     }
-                    $emit->(\@buttons, \@fields, \%said, \%by, \%plof, \%fit, \%err, \%reals);
+                    $emit->(\@buttons, \@fields, \%said, \%by, \%plof, \%fit, \%err, \%reals, $pr->{name});
                 }
             }
             next;
@@ -432,89 +559,109 @@ sub field_slots {
         $i++;
         push @sl, ["role", $i, "@" . ($rnames{$S}[$j - 1] // $j), $j];
     }
+    # A variable local to a role is no place of the request (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it"), as cvac.glp takes the head less its local variables.
     for my $v (@{ $head{$S} }) {
+        (my $vn = $v->[1][0][0] // "") =~ s/^\x27|\x27$//g;
+        next if $locals{$S} && $locals{$S}{$vn};
         $i++;
         next unless $v->[0] =~ /^(pvar|svar|num)$/;
-        push @sl, [$v->[0], $i, $v->[1][0][0]];
+        push @sl, [$v->[0], $i, $vn];
     }
     return @sl;
 }
-# The slots a pragma field names, for the act S proposed at its role pl: each slot but the proposer and the entry, the place the row of a tab fills (vGLP 516a0a2, Section 6.2: "A button is drawn in the row of a tab entry, whose person takes a role of the act, with the act fields beside it"), the first in the order of the head that an atom of a tab predicate, required or deleted at pl, names; a numeric variable local to a role being no field.  A variable the proposer’s role requires held is a field, picked among the items the viewer holds (vGLP ffcb093, Section 5.4, "The contract’s words": "a variable is picked among the items the viewer holds where the proposer’s role requires it held, and typed otherwise"), as GSNP’s message, whose proposer’s role requires authored(x), names x by <item>.
-sub field_keys2 {
+# The variables an atom names: a role by role(k), or by own(k) in a name term, as "rK"; an agent, speech-act or numeric variable by its name, as "vX", the speech acts of a name term among them, <u>.y naming u and y (GSC, Section 3.1: "a name term naming its base and the speech-act variables in it").
+sub atom_keys {
+    my ($t) = @_;
+    return () if @$t == 1;
+    my ($fn, $as) = @$t;
+    return ("r$as->[0][0]") if ($fn eq "role" || $fn eq "own") && @$as == 1 && $as->[0][0] =~ /^\d+$/;
+    my $uq = sub { (my $x = $_[0]) =~ s/^\x27|\x27$//g; return $x };
+    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|own_var)$/ && @$as == 1;
+    return (atom_keys($as->[0]), "v" . $uq->($as->[1][0])) if $fn eq "ext" && @$as == 2;
+    return map { atom_keys($_) } @$as;
+}
+# Whether an atom is cleared, the wildcard among its arguments or as the speech act of a name term: it requires nothing (GSC, Definition "Speech-act schema"; vGLP 40f8444, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none").
+sub cleared { my ($t) = @_; return 0 if !ref $t; return 1 if @$t == 1 && ($t->[0] eq "any"); return 1 if $t->[0] eq "ext_any"; return 0 if @$t == 1; return scalar grep { cleared($_) } @{ $t->[1] } }
+# The variables the atoms the schema S requires at its role pl bind, a multiplicity not among them (vGLP 40f8444, Section 5.4, "The contract’s words": "The proposer’s machine finds in its own state every way to satisfy an act at the proposer’s role: every binding of the variables of the atoms the schema requires there under which the state holds those atoms and lacks the atoms the schema forbids there that the binding determines"): the atoms it keeps there and those it deletes, a deleted atom being required (GSC, Definition "Speech-act schema": "-(i) is a subset of =(i)"), but for a cleared one; and the proposer pl itself.
+sub bound_keys {
     my ($S, $pl) = @_;
     my $rs = $roles{$S}[$pl - 1];
-    my @atoms = (@{ $rs->{comps}[2] }, @{ $rs->{comps}[1] });
+    my %b = ("r$pl" => 1);
+    for my $a (@{ $rs->{atoms}[2] }, grep { !cleared($_) } @{ $rs->{atoms}[1] }) { $b{$_} = 1 for atom_keys($a) }
+    return %b;
+}
+# The variables of the act S proposed at its role pl that a field names: "A field is for a variable of the schema that those atoms do not bind --- a text, a number, a new name, a person the proposer’s state does not name --- and the fields of a line name these variables, of the acts its button names together, in the schemas’ order" (vGLP 40f8444, Section 5.4, "The contract’s words"): the places of its request a field may name (field_slots) that the atoms it requires at pl do not bind, a variable local to a role being bound by that role and named by no request (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it").
+sub field_keys3 {
+    my ($S, $pl) = @_;
+    my %b = bound_keys($S, $pl);
     my %fills = map { $_ => 1 } @{ $svars{$S} };
-    my %entry;
-    # The entry: the places the first atom of a tab predicate, required or deleted at pl, names beside the proposer, a role by role(k) or by own(k) in a name term, a variable by its name, as a group <a>.n names its leader and n.
-    my %key_of = map { ($_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]") => $_->[2] } field_slots($S);
-    for my $a (@atoms) {
-        next unless $tabpred{ $a->[0] };
-        my $t = join(",", map { tstr($_) } @{ $a->[1] });
-        my %here;
-        $here{"r$1"} = 1 while $t =~ /\b(?:role|own)\((\d+)\)/g;
-        $here{"v$1"} = 1 while $t =~ /\b(?:pvar|svar|num)\((\w+)\)/g;
-        $here{"v$1"} = 1 while $t =~ /ext\([^,]+,(\w+)\)/g;
-        delete $here{"r$pl"};
-        next unless grep { exists $key_of{$_} } keys %here;
-        $entry{ $key_of{$_} } = 1 for grep { exists $key_of{$_} } keys %here;
-        last;
-    }
     return grep {
-        my $k = $_->[2];
-        !($_->[0] eq "role" && $_->[3] == $pl) && !$entry{$k}
-            && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{$k})
+        my $k = $_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]";
+        !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] })
     } field_slots($S);
 }
-# A line of a contract that extends another replaces the inherited line naming the same schema: "where it writes a schema anew for a clause it inherits, its line for that clause replaces the inherited line" (vGLP ffcb093, Section 5.4, "The contract’s words"), as GSNP’s Messaging line, its message requiring authored(x) at Alice, replaces GSN’s.  The contracts are read the extended first, so of the runs of buttons naming a schema the last read is kept, and only a run kept is checked, against the schemas it names, its fit and its fields: each run, button by button, names the schemas it fits, or, where it fits none, those its button covers.
-my %last;
+# A variable by the name the schema gives it: a role by its name, as Bob, and any other by its own.
+sub var_name { my ($sl) = @_; (my $n = $sl->[2]) =~ s/^@//; return $n }
+my %kept_fit; my @line_of;
 for my $i (0 .. $#pending) {
     my $pd = $pending[$i];
-    for my $b (0 .. $#{ $pd->{buttons} }) {
-        my $button = $pd->{buttons}[$b];
-        my @named = grep { $pd->{fit}{$_} } @{ $pd->{reals}{$button} };
-        @named = @{ $pd->{reals}{$button} } unless @named;
-        $last{$_} = "$i/$b" for @named;
-    }
-}
-my %kept_fit;
-for my $i (0 .. $#pending) {
-    my $pd = $pending[$i];
-    my ($f, $title, $tab) = @{$pd}{qw(f title tab)};
+    my ($f, $title, $tab, $name) = @{$pd}{qw(f title tab name)};
     my @fields = @{ $pd->{fields} };
-    for my $b (0 .. $#{ $pd->{buttons} }) {
-        my $button = $pd->{buttons}[$b];
-        my @real = grep { $pd->{fit}{$_} } @{ $pd->{reals}{$button} };
-        my @mine = grep { $last{$_} eq "$i/$b" } (@real ? @real : @{ $pd->{reals}{$button} });
-        next unless @mine;
-        die $pd->{err}{$button} if exists $pd->{err}{$button};
-        $kept_fit{$_} = 1 for @real;
-        # The fields name, in order, the union of the slots of the schemas the button realises here, each schema in the order of its head, each slot merged in after the one before it (GSC, Code_inbox.md, 2026-10-24 08:06 UTC: "the fields the union of their variables in head order, an inapplicable field left empty").
-        my @u;
-        for my $S (@real) {
-            my $at = -1;
-            for my $k (map { $_->[2] } field_keys2($S, $pd->{pl}{$S})) {
-                my ($i) = grep { $u[$_] eq $k } 0 .. $#u;
-                if (defined $i) { $at = $i; next }
-                splice(@u, $at + 1, 0, $k); $at++;
-            }
+    my @real;
+    my $failed = 0;
+    for my $button (@{ $pd->{buttons} }) {
+        if (exists $pd->{err}{$button}) { push @faults, $pd->{err}{$button}; $failed = 1; next }
+        push @real, grep { $pd->{fit}{$_} } @{ $pd->{reals}{$button} };
+    }
+    my $shown = "$name: $title: $pd->{who} " . join("", map { "[$_]" } @{ $pd->{buttons} }) . join("", map { " <$_>" } @fields);
+    if ($failed) { push @{ $line_of[$i] }, "$shown: refused, its buttons fitting no act"; next }
+    $kept_fit{$_} = 1 for @real;
+    # The variables the line’s fields must name: those of its button’s acts that the atoms each requires at its proposer’s role do not bind, of the acts together, in the schemas’ order, each schema in the order of its request, a variable merged in after the one before it (GSC, Code_inbox.md, 2026-10-24 08:06 UTC: "the fields the union of their variables in head order").
+    my (@u, %uname);
+    for my $S (@real) {
+        my $at = -1;
+        for my $sl (field_keys3($S, $pd->{pl}{$S})) {
+            my $k = $sl->[2];
+            $uname{$k} //= var_name($sl);
+            my ($j) = grep { $u[$_] eq $k } 0 .. $#u;
+            if (defined $j) { $at = $j; next }
+            splice(@u, $at + 1, 0, $k); $at++;
         }
-        @fields <= @u or die "pragmas.sh: $f: the pragma \"$title\" names " . scalar(@fields) . " fields, and its acts have " . scalar(@u) . " places a field may name\n";
-        my %name; @name{ @u[0 .. $#fields] } = @fields if @fields;
-        for my $S (@mine) {
-            my %mine = map { $_->[2] => 1 } field_keys2($S, $pd->{pl}{$S});
-            my @own = map { $mine{ $_->[2] } && exists $name{ $_->[2] } ? $name{ $_->[2] } : "" } field_slots($S);
-            pop @own while @own && $own[-1] eq "";
-            push @acts, "act(" . q_atom($S) . ", " . q_string($button) . ", ["
-                . join(", ", map { q_string($_) } @own) . "], " . ($pd->{said}{$S} // "none") . ", " . q_string($tab) . ", " . ($pd->{by}{$S} // "any") . ")";
-        }
+    }
+    my $rule = join(" ", map { $uname{$_} } @u);
+    # "the compiler refuses a line whose fields are not these" (vGLP 40f8444, Section 5.4, "The contract’s words").
+    if (@fields < @u) {
+        push @{ $line_of[$i] }, "$shown: refused; the fields the rule gives name " . ($rule eq "" ? "nothing" : $rule) . ", and " . join(", ", map { $uname{$_} } @u[scalar(@fields) .. $#u]) . (@u - @fields == 1 ? " is unnamed" : " are unnamed");
+        push @faults, "pragmas.sh: $f: the pragma \"$title\" leaves unnamed the variable " . join(", ", map { $uname{$_} } @u[scalar(@fields) .. $#u]) . " of " . join(", ", @real) . ", which the atoms its proposer’s role requires do not bind (vGLP, Section 5.4, \"The contract’s words\": \"the fields of a line name these variables\")\n";
+        next;
+    }
+    if (@fields > @u) {
+        my @all = map { [ $_, $pd->{pl}{$_} ] } @real;
+        my %bn; for my $x (@all) { my %b = bound_keys(@$x); for my $sl (field_slots($x->[0])) { my $k = $sl->[0] eq "role" ? "r$sl->[3]" : "v$sl->[2]"; $bn{ var_name($sl) } = 1 if $b{$k} && !($sl->[0] eq "role" && $sl->[3] == $x->[1]) } }
+        my $bound = join(", ", sort keys %bn);
+        push @{ $line_of[$i] }, "$shown: refused; the fields the rule gives name " . ($rule eq "" ? "nothing" : $rule) . ", and " . join(", ", map { "<$_>" } @fields[scalar(@u) .. $#fields]) . (@fields - @u == 1 ? " names a variable" : " name variables") . " the proposer’s state binds" . ($bound eq "" ? "" : " ($bound)");
+        push @faults, "pragmas.sh: $f: the pragma \"$title\" has the field " . join(", ", map { "<$_>" } @fields[scalar(@u) .. $#fields]) . " beyond the variables of " . join(", ", @real) . " that the atoms its proposer’s role requires do not bind" . ($rule eq "" ? ", which are none" : ", $rule") . ($bound eq "" ? "" : "; those atoms bind $bound") . " (vGLP, Section 5.4, \"The contract’s words\": \"A field is for a variable of the schema that those atoms do not bind\")\n";
+        next;
+    }
+    push @{ $line_of[$i] }, "$shown: fields " . ($rule eq "" ? "none" : $rule);
+    my %fname; @fname{@u} = @fields;
+    for my $S (@real) {
+        my %mine = map { $_->[2] => 1 } field_keys3($S, $pd->{pl}{$S});
+        my @own = map { $mine{ $_->[2] } ? $fname{ $_->[2] } : "" } field_slots($S);
+        pop @own while @own && $own[-1] eq "";
+        my $button = (grep { grep { $_ eq $S } @{ $pd->{reals}{$_} } } @{ $pd->{buttons} })[0];
+        push @acts, "act(" . q_atom($S) . ", " . q_string($button) . ", ["
+            . join(", ", map { q_string($_) } @own) . "], " . ($pd->{said}{$S} // "none") . ", " . q_string($tab) . ", " . ($pd->{by}{$S} // "any") . ")";
     }
 }
 # A schema a button covers that no kept line fits has no proposer, and "a button is offered only to the person named before it" (vGLP 516a0a2, Section 5.4): a fault, and the contract is not compiled.
 for my $S (sort keys %covered) {
     next if $kept_fit{$S};
     next unless exists $roles{$S} && guarding($S);
-    die "pragmas.sh: the schema $S, which [$covered{$S}] covers, is fitted by no line: no person is named before a button for it\n";
+    push @faults, "pragmas.sh: the schema $S, which [$covered{$S}] covers, is fitted by no line: no person is named before a button for it\n";
 }
+# Each button line and what the rule gives it, on the standard error, where PRAGMAS_LINES is set.
+print STDERR map { /^\x03(\d+)$/ ? map { "$_\n" } @{ $line_of[$1] // [] } : "$_\n" } @lines_out, @dup_out if $ENV{PRAGMAS_LINES};
+if (@faults) { print STDERR @faults; exit 1 }
 print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
 ' "$1" "$PROGRAMS" "${2:-}"

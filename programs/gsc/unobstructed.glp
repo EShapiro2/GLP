@@ -33,6 +33,7 @@ imported procedure linear#conj_app(Conj?, Conj?, Conj).
 imported procedure linear#elim_block(Conj?, DNF).
 imported procedure linear#cons_conj(Constraint?, VEnv?, Conj).
 imported procedure linear#ex_num(Constant?, Ex).
+imported procedure linear#ex_add(Ex?, Ex?, Integer?, Ex).
 imported procedure linear#ex_var(Var?, Ex).
 imported procedure linear#ex_eq(Ex?, Ex?, Conj).
 imported procedure linear#decomp_defs(Constants?, Conj).
@@ -384,6 +385,15 @@ mult_one(times(K, _), B, PwI, [C?]) :- ground(K?), ground(B?), ground(PwI?) |
     val_ex(W?, PwI?, X),
     linear # ex_num(1, Y),
     linear # ex_eq(X?, Y?, C).
+% rest(K, J, A) is (K - J).A (self.glp, Mult): one copy where K is J + 1.
+mult_one(rest(K, J, _), B, PwI, [C?]) :- ground(K?), ground(J?), ground(B?), ground(PwI?) |
+    apply_arg(B?, K?, W),
+    val_ex(W?, PwI?, X),
+    apply_arg(B?, J?, WJ),
+    val_ex(WJ?, PwI?, XJ),
+    linear # ex_num(1, One),
+    linear # ex_add(XJ?, One?, 1, Y),
+    linear # ex_eq(X?, Y?, C).
 
 procedure once_others(Mults?, Mult?, Ans?, GAtom?, Subst?, Args?, DNF).
 once_others([], _, _, _, _, _, [[]]).
@@ -700,13 +710,11 @@ unob_roles([], _, _, _, _, _, _, _, []).
 unob_roles([RS|Rs], I, Nm, B, NC, Fb, Rf, PwI, R?) :-
     ground(RS?), ground(Rs?), integer(I?), ground(Nm?), ground(B?), ground(NC?), integer(Fb?),
     ground(Rf?), ground(PwI?) |
-    nrs_del(RS?, M),
-    nrs_keep(RS?, K),
+    nrs_req(RS?, Req),
     nrs_forb(RS?, N),
     apply_arg(B?, role(I?), V),
     O := 3 - I?,
     apply_arg(B?, role(O?), OV),
-    mults_app(K?, M?, Req),
     unob_role1(V?, Req?, N?, I?, Nm?, B?, NC?, ctx(OV?, Fb?), Rf?, PwI?, F1),
     I1 := I? + 1,
     unob_roles(Rs?, I1?, Nm?, B?, NC?, Fb?, Rf?, PwI?, F2),
@@ -1064,6 +1072,7 @@ nrs_kf(crs(_, _, _, _, K, N), K?, N?).
 procedure env_atoms(Mults?, Integer?, Constant?, Preds?, Faults).
 env_atoms([], _, _, _, []).
 env_atoms([times(_, A)|As], I, Nm, Ev, F?) :- env_atoms([A?|As?], I?, Nm?, Ev?, F).
+env_atoms([rest(_, _, A)|As], I, Nm, Ev, F?) :- env_atoms([A?|As?], I?, Nm?, Ev?, F).
 env_atoms([atom(P, Xs)|As], I, Nm, Ev, F?) :- ground(P?), ground(Xs?), integer(I?), ground(Nm?), ground(Ev?) |
     pred_member(P?, Ev?, B),
     env_atom(B?, atom(P?, Xs?), I?, Nm?, F1),

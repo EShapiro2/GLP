@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
-%% GDO.glp --- the grassroots directed overlay's contract, LBM's (Coordination
-%% Appendix C; Udi, 2026-11-02), in the term form programs/gsc reads (its
+%% GDO.glp --- the grassroots directed overlay's contract, GRH's (Coordination
+%% Appendix C; Udi, 2026-11-05; LBM's until then), in the term form programs/gsc reads (its
 %% README, "Writing a contract").  GDO extends GSG (programs/gsc/GSG.glp), so
 %% the term holds GKK's three schemas and GSG's two; the clauses are in GDO.txt:
 %% point_friend is clause 1, Pointing to friend, point_transitive clause 2,

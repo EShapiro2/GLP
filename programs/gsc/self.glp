@@ -77,7 +77,15 @@ Atoms ::= [] ; [Atom | Atoms].
 % its clauses ask that an atom be added at a binding, which satisfies its
 % schema's constraint (def:binding-numbers), so a number is matched by
 % equality under that binding.
-Mult       ::= Atom ; times(Arg, Atom).
+% rest(K, J, A) is the copies of K.A a role requires beyond the J copies of
+% A it deletes, K or J a value variable: def:numbers admits a required k.A
+% with j copies deleted where "the schema's constraint ensures j <= k, so
+% that -(i) is a subset of =(i) at every binding", and the denotation
+% deletes the j copies (Definition Denotation).  It occurs only among a
+% role's Keep, beside the j copies of A among its Del; the role requires
+% k.A (nrs_req), deletes j copies, and its plain form keeps the copies
+% deleted (plain_mults).
+Mult       ::= Atom ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Mults      ::= [] ; [Mult | Mults].
 % A constraint is "a conjunction of linear equalities and inequalities over
 % its value variables and values" (def:numbers): true, and(C1, C2), and
@@ -663,46 +671,157 @@ sas_conds1(no, _, Qs, N, R?) :- sas_conds(Qs?, N?, R).
 % =(i) less -(i), a copy for each copy deleted, and the atoms deleted that
 % =(i) does not hold: an atom required k times and deleted j < k times,
 % k and j numbers, leaves k - j copies (def:numbers: "kappa copies of
-% phi").
-Count ::= cnt(Constant, Atom) ; nocnt.
+% phi"), and k = j leaves none; an atom required k times and deleted j
+% times, k or j a value variable, leaves rest(k, j, A) where the schema's
+% constraint implies j <= k, and is refused otherwise (def:numbers: "where
+% an atom is required with multiplicity kappa and deleted with multiplicity
+% kappa', the schema's constraint ensures kappa' <= kappa, so that -(i) is
+% a subset of =(i) at every binding").  The constraint implies j <= k when
+% no values satisfy it with j > k, each multiplicity a positive whole number
+% (def:binding-numbers): sas_implies_le, decided exactly by linear.glp.
+Count ::= cnt(Constant, Atom) ; vcnt(Arg, Atom) ; nocnt.
 procedure sas_count(Mult?, Count).
 sas_count(atom(P, As), cnt(1, atom(P?, As?))).
 sas_count(times(num(K), A), cnt(K?, A?)) :- number(K?) | true.
+sas_count(times(num(K), A), vcnt(num(K?), A?)) :- otherwise, ground(K?), ground(A?) | true.
 sas_count(_, nocnt) :- otherwise | true.
 
 Cut ::= cut(Mults) ; nocut.
-procedure sas_cut(Count?, Count?, Cut).
-sas_cut(cnt(K, A), cnt(J, B), cut(R?)) :- A? =?= B?, number(K?), number(J?), K? > J?, ground(A?) |
+procedure sas_cut(Count?, Count?, ICtx?, Cut).
+sas_cut(cnt(K, A), cnt(J, B), _, cut(R?)) :- A? =?= B?, number(K?), number(J?), K? > J?, ground(A?) |
     N := K? - J?,
     sas_copies(N?, A?, R).
-sas_cut(_, _, nocut) :- otherwise | true.
+sas_cut(cnt(K, A), cnt(J, B), _, cut([])) :- A? =?= B?, number(K?), number(J?), K? =:= J? | true.
+sas_cut(cnt(K, A), cnt(J, B), _, nocut) :- A? =?= B?, number(K?), number(J?), K? < J? | true.
+sas_cut(CX, CD, IC, R?) :- otherwise, ground(CX?), ground(CD?), ground(IC?) | sas_cut_v(CX?, CD?, IC?, R).
+
+% k.A required and j.A deleted, k or j a value variable.
+procedure sas_cut_v(Count?, Count?, ICtx?, Cut).
+sas_cut_v(vcnt(K, A), cnt(J, B), IC, R?) :- A? =?= B?, ground(K?), ground(J?), ground(A?), ground(IC?) |
+    sas_cut_i(K?, num(J?), A?, IC?, R).
+sas_cut_v(cnt(K, A), vcnt(J, B), IC, R?) :- A? =?= B?, ground(K?), ground(J?), ground(A?), ground(IC?) |
+    sas_cut_i(num(K?), J?, A?, IC?, R).
+sas_cut_v(vcnt(K, A), vcnt(J, B), IC, R?) :- A? =?= B?, ground(K?), ground(J?), ground(A?), ground(IC?) |
+    sas_cut_i(K?, J?, A?, IC?, R).
+sas_cut_v(_, _, _, nocut) :- otherwise | true.
+
+procedure sas_cut_i(Arg?, Arg?, Atom?, ICtx?, Cut).
+sas_cut_i(K, J, A, IC, R?) :- ground(K?), ground(J?), ground(A?), ground(IC?) |
+    sas_implies_le(IC?, J?, K?, Ans),
+    sas_cut_i1(Ans?, K?, J?, A?, R).
+
+procedure sas_cut_i1(Ans?, Arg?, Arg?, Atom?, Cut).
+sas_cut_i1(yes, K, J, A, cut([rest(K?, J?, A?)])).
+sas_cut_i1(no, _, _, _, nocut).
+
+% What a schema's multiplicities are compared under: its constraint in the
+% checker's form, and its value variables as linear.glp's variables, whole
+% where the schema writes them as a multiplicity and rational otherwise
+% (linear.glp, the header).
+ICtx ::= ictx(Constraint, VEnv).
+
+% sas_implies_le(IC, J, K, A): the constraint implies J <= K, no values
+% satisfying it, each multiplicity a positive whole number
+% (def:binding-numbers), with J > K.
+imported procedure linear#cons_conj(Constraint?, VEnv?, Conj).
+imported procedure linear#conj_app(Conj?, Conj?, Conj).
+imported procedure linear#sat_conj(Conj?, Ans).
+procedure sas_implies_le(ICtx?, Arg?, Arg?, Ans).
+sas_implies_le(ictx(Cn, Env), J, K, R?) :- ground(Cn?), ground(Env?), ground(J?), ground(K?) |
+    sas_env_bounds(Env?, Bn),
+    linear # cons_conj(and(Cn?, gt(J?, K?)), Env?, C),
+    linear # conj_app(Bn?, C?, BC),
+    linear # sat_conj(BC?, S),
+    sas_not(S?, R).
+
+procedure sas_not(Ans?, Ans).
+sas_not(yes, no).
+sas_not(no, yes).
+
+% Each whole variable is at least one, a multiplicity being a positive whole
+% number (def:binding-numbers).
+procedure sas_env_bounds(VEnv?, Conj).
+sas_env_bounds([], []).
+sas_env_bounds([vb(_, z(N))|E], [geq(lin([t(z(N?), 1)], -1))|R?]) :- sas_env_bounds(E?, R).
+sas_env_bounds([vb(_, q(_))|E], R?) :- sas_env_bounds(E?, R).
+
+% The context of a schema: its constraint read, and a variable for each
+% value variable it writes, Ms those it writes as a multiplicity.
+procedure sas_ictx(SConstraint?, REnts?, PNames?, PNames?, PNames?, ICtx).
+sas_ictx(Cn, E, Vs, Nums, Ms, ictx(Cn1?, Env?)) :- ground(Cn?), ground(E?), ground(Vs?), ground(Nums?), ground(Ms?) |
+    sas_cons(Cn?, E?, Vs?, Cn1),
+    sas_venv(Nums?, Ms?, Env).
+
+procedure sas_venv(PNames?, PNames?, VEnv).
+sas_venv([], _, []).
+sas_venv([X|Xs], Ms, [vb(X?, V?)|R?]) :- ground(X?), ground(Ms?) |
+    sas_in(X?, Ms?, A),
+    sas_kvar(A?, X?, V),
+    sas_venv(Xs?, Ms?, R).
+
+procedure sas_kvar(Ans?, Constant?, Var).
+sas_kvar(yes, X, z(iv(X?))).
+sas_kvar(no, X, q(iv(X?))).
+
+% The value variables a schema writes as a multiplicity.
+procedure sas_mnums_lits(SQLits?, PNames?, PNames).
+sas_mnums_lits([], T, T?).
+sas_mnums_lits([L|Ls], T, R?) :- ground(L?) |
+    sas_lit_mult(L?, M),
+    sas_mnums_lits(Ls?, T?, R1),
+    sas_mnums_mult(M?, R1?, R).
+
+procedure sas_mnums_mult(SMult?, PNames?, PNames).
+sas_mnums_mult(times(K, _), T, R?) :- sas_nums_arg(K?, T?, R).
+sas_mnums_mult(_, T, T?) :- otherwise | true.
+
+procedure sas_mnums_quants(Quants?, PNames?, PNames).
+sas_mnums_quants([], T, T?).
+sas_mnums_quants([q(_, _, Q)|Qs], T, R?) :-
+    sas_mnums_quants(Qs?, T?, R1),
+    sas_mnums_lits(Q?, R1?, R).
+
+% The value variables a schema writes, and the context they give.
+procedure sas_ictx_of(SQLits?, Quants?, SQLits?, Quants?, SConstraint?, REnts?, PNames?, ICtx).
+sas_ictx_of(HP, HQ, BP, BQ, Cn, E, Vs, IC?) :-
+    ground(HP?), ground(HQ?), ground(BP?), ground(BQ?), ground(Cn?), ground(E?), ground(Vs?) |
+    sas_nums_lits(HP?, [], N1),
+    sas_nums_lits(BP?, N1?, N2),
+    sas_nums_quants(HQ?, N2?, N3),
+    sas_nums_quants(BQ?, N3?, N4),
+    sas_nums_cons(Cn?, N4?, Nums),
+    sas_mnums_lits(HP?, [], M1),
+    sas_mnums_lits(BP?, M1?, M2),
+    sas_mnums_quants(HQ?, M2?, M3),
+    sas_mnums_quants(BQ?, M3?, Ms),
+    sas_ictx(Cn?, E?, Vs?, Nums?, Ms?, IC).
 
 procedure sas_copies(Constant?, Atom?, Mults).
 sas_copies(N, A, [A?]) :- N? =:= 1 | true.
 sas_copies(N, A, [times(num(N?), A?)]) :- otherwise | true.
 
-procedure sas_take(Mults?, Mult?, Mults, Ans).
-sas_take([], _, [], no).
-sas_take([X|Xs], D, Xs?, yes) :- X? =?= D? | true.
-sas_take([X|Xs], D, R?, A?) :- otherwise, ground(X?), ground(D?) |
+procedure sas_take(Mults?, Mult?, ICtx?, Mults, Ans).
+sas_take([], _, _, [], no).
+sas_take([X|Xs], D, _, Xs?, yes) :- X? =?= D? | true.
+sas_take([X|Xs], D, IC, R?, A?) :- otherwise, ground(X?), ground(D?), ground(IC?) |
     sas_count(X?, CX),
     sas_count(D?, CD),
-    sas_cut(CX?, CD?, C),
-    sas_take1(C?, X?, Xs?, D?, R, A).
+    sas_cut(CX?, CD?, IC?, C),
+    sas_take1(C?, X?, Xs?, D?, IC?, R, A).
 
-procedure sas_take1(Cut?, Mult?, Mults?, Mult?, Mults, Ans).
-sas_take1(cut(Ys), _, Xs, _, R?, yes) :- mults_app(Ys?, Xs?, R).
-sas_take1(nocut, X, Xs, D, [X?|R?], A?) :- sas_take(Xs?, D?, R, A).
+procedure sas_take1(Cut?, Mult?, Mults?, Mult?, ICtx?, Mults, Ans).
+sas_take1(cut(Ys), _, Xs, _, _, R?, yes) :- mults_app(Ys?, Xs?, R).
+sas_take1(nocut, X, Xs, D, IC, [X?|R?], A?) :- sas_take(Xs?, D?, IC?, R, A).
 
-procedure sas_minus(Mults?, Mults?, Mults, Mults).
-sas_minus(Rq, [], Rq?, []).
-sas_minus(Rq, [D|Ds], K?, M?) :- ground(D?) |
-    sas_take(Rq?, D?, Rq1, A),
-    sas_minus1(A?, D?, Rq1?, Ds?, K, M).
+procedure sas_minus(Mults?, Mults?, ICtx?, Mults, Mults).
+sas_minus(Rq, [], _, Rq?, []).
+sas_minus(Rq, [D|Ds], IC, K?, M?) :- ground(D?), ground(IC?) |
+    sas_take(Rq?, D?, IC?, Rq1, A),
+    sas_minus1(A?, D?, Rq1?, Ds?, IC?, K, M).
 
-procedure sas_minus1(Ans?, Mult?, Mults?, Mults?, Mults, Mults).
-sas_minus1(yes, _, Rq, Ds, K?, M?) :- sas_minus(Rq?, Ds?, K, M).
-sas_minus1(no, D, Rq, Ds, K?, [D?|M?]) :- sas_minus(Rq?, Ds?, K, M).
+procedure sas_minus1(Ans?, Mult?, Mults?, Mults?, ICtx?, Mults, Mults).
+sas_minus1(yes, _, Rq, Ds, IC, K?, M?) :- sas_minus(Rq?, Ds?, IC?, K, M).
+sas_minus1(no, D, Rq, Ds, IC, K?, [D?|M?]) :- sas_minus(Rq?, Ds?, IC?, K, M).
 
 procedure sas_guard(Ans?, Guard).
 sas_guard(yes, guarded).
@@ -720,26 +839,26 @@ sas_ing1(no, Gs, N, R?) :- sas_ing(Gs?, N?, R).
 
 % What a schema is read against: its plain literals and its conjuncts in
 % Head and in Body, its guards, its role table and its Vars.
-SCtx ::= sctx(SQLits, Quants, SQLits, Quants, PNames, REnts, PNames).
+SCtx ::= sctx(SQLits, Quants, SQLits, Quants, PNames, REnts, PNames, ICtx).
 
 % An agent role N: what it adds and deletes, and requires and forbids.
 procedure sas_rs(RName?, SCtx?, NRoleSpec, Mults).
-sas_rs(N, sctx(HP, _, BP, _, G, E, V), R?, M?) :- ground(N?), ground(E?), ground(V?) |
+sas_rs(N, sctx(HP, _, BP, _, G, E, V, IC), R?, M?) :- ground(N?), ground(E?), ground(V?) |
     sas_ing(G?, N?, Gi),
     sas_guard(Gi?, Gd),
     sas_part(HP?, N?, E?, V?, Add, Del),
     sas_part(BP?, N?, E?, V?, Req, Forb),
-    sas_rs1(Gd?, Add?, Del?, Req?, Forb?, R, M).
+    sas_rs1(Gd?, Add?, Del?, Req?, Forb?, IC?, R, M).
 
 % The role, and the atoms it deletes that it does not require.
-procedure sas_rs1(Guard?, Mults?, Mults?, Mults?, Mults?, NRoleSpec, Mults).
-sas_rs1(Gd, Add, Del, Req, Forb, rs(Gd?, Add?, Del?, Keep?, Forb?), M?) :- ground(Del?) |
+procedure sas_rs1(Guard?, Mults?, Mults?, Mults?, Mults?, ICtx?, NRoleSpec, Mults).
+sas_rs1(Gd, Add, Del, Req, Forb, IC, rs(Gd?, Add?, Del?, Keep?, Forb?), M?) :- ground(Del?), ground(IC?) |
     mults_cleared(Del?, no, D0),
-    sas_minus(Req?, D0?, Keep, M).
+    sas_minus(Req?, D0?, IC?, Keep, M).
 
 % A listed role N, its kind read off its condition.
 procedure sas_crs(RName?, SCtx?, NRoleSpec, Mults).
-sas_crs(N, sctx(_, HQ, _, BQ, G, E, V), R?, M?) :- ground(N?), ground(HQ?), ground(BQ?), ground(E?), ground(V?) |
+sas_crs(N, sctx(_, HQ, _, BQ, G, E, V, IC), R?, M?) :- ground(N?), ground(HQ?), ground(BQ?), ground(E?), ground(V?) |
     sas_ing(G?, N?, Gi),
     sas_guard(Gi?, Gd),
     sas_qlits(HQ?, N?, HL),
@@ -750,12 +869,12 @@ sas_crs(N, sctx(_, HQ, _, BQ, G, E, V), R?, M?) :- ground(N?), ground(HQ?), grou
     sas_conds(BQ?, N?, C2),
     sas_aapp(C1?, C2?, Cs),
     sas_kind(Cs?, E?, V?, K),
-    sas_crs1(K?, Gd?, Add?, Del?, Req?, Forb?, R, M).
+    sas_crs1(K?, Gd?, Add?, Del?, Req?, Forb?, IC?, R, M).
 
-procedure sas_crs1(RoleKind?, Guard?, Mults?, Mults?, Mults?, Mults?, NRoleSpec, Mults).
-sas_crs1(K, Gd, Add, Del, Req, Forb, crs(K?, Gd?, Add?, Del?, Keep?, Forb?), M?) :- ground(Del?) |
+procedure sas_crs1(RoleKind?, Guard?, Mults?, Mults?, Mults?, Mults?, ICtx?, NRoleSpec, Mults).
+sas_crs1(K, Gd, Add, Del, Req, Forb, IC, crs(K?, Gd?, Add?, Del?, Keep?, Forb?), M?) :- ground(Del?), ground(IC?) |
     mults_cleared(Del?, no, D0),
-    sas_minus(Req?, D0?, Keep, M).
+    sas_minus(Req?, D0?, IC?, Keep, M).
 
 % The kind of a listed role, pi[rho(_, u_2, ..., u_r)], from its condition
 % rho(pi, x, u_2, ..., u_r) (def:role); a condition formed otherwise is a
@@ -800,12 +919,18 @@ sas_schema0(Nm, Ns, Vs, HP, HQ, BP, BQ, Cn, G, S?) :-
     sas_qapp(HP?, BP?, PP),
     sas_quapp(HQ?, BQ?, QQ),
     sas_table(Ns?, PP?, QQ?, 1, E),
-    sas_schema1(Nm?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?), Cn?, S).
+    sas_schema0a(Nm?, HP?, HQ?, BP?, BQ?, G?, E?, Vs?, Cn?, S).
+
+procedure sas_schema0a(Constant?, SQLits?, Quants?, SQLits?, Quants?, PNames?, REnts?, PNames?, SConstraint?, NSchema).
+sas_schema0a(Nm, HP, HQ, BP, BQ, G, E, Vs, Cn, S?) :-
+    ground(HP?), ground(HQ?), ground(BP?), ground(BQ?), ground(E?), ground(Vs?), ground(Cn?) |
+    sas_ictx_of(HP?, HQ?, BP?, BQ?, Cn?, E?, Vs?, IC),
+    sas_schema1(Nm?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?, IC?), Cn?, S).
 
 procedure sas_schema1(Constant?, SCtx?, SConstraint?, NSchema).
-sas_schema1(Nm, sctx(HP, HQ, BP, BQ, G, E, Vs), Cn, S?) :-
+sas_schema1(Nm, sctx(HP, HQ, BP, BQ, G, E, Vs, IC), Cn, S?) :-
     ground(HP?), ground(HQ?), ground(BP?), ground(BQ?), ground(E?), ground(Vs?), ground(Cn?) |
-    sas_roles(E?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?), Rs),
+    sas_roles(E?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?, IC?), Rs),
     sas_has_lr(E?, L),
     sas_true(Cn?, T),
     sas_nums_lits(HP?, [], N1),
@@ -1000,6 +1125,8 @@ procedure sas_mfaults(Mults?, Constant?, Integer?, Faults?, Faults).
 sas_mfaults([], _, _, T, T?).
 sas_mfaults([atom(P, As)|Ms], Nm, I, T, [deleted_not_required(Nm?, I?, atom(P?, As?))|R?]) :-
     ground(Nm?), integer(I?) | sas_mfaults(Ms?, Nm?, I?, T?, R).
+sas_mfaults([rest(_, _, A)|Ms], Nm, I, T, [deleted_not_required(Nm?, I?, A?)|R?]) :-
+    ground(Nm?), integer(I?) | sas_mfaults(Ms?, Nm?, I?, T?, R).
 sas_mfaults([times(_, A)|Ms], Nm, I, T, [deleted_not_required(Nm?, I?, A?)|R?]) :-
     ground(Nm?), integer(I?) | sas_mfaults(Ms?, Nm?, I?, T?, R).
 
@@ -1080,16 +1207,22 @@ sas_faults0(Nm, Ns, Vs, HP, HQ, BP, BQ, Cn, G, R?) :-
     sas_quapp(HQ?, BQ?, QQ1),
     sas_quapp(HQ?, BQ?, QQ2),
     sas_table(Ns?, PP1?, QQ1?, 1, E),
-    sas_faults1(Nm?, Ns?, PP2?, QQ2?, Cn?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?), R).
+    sas_faults0a(Nm?, Ns?, PP2?, QQ2?, Cn?, HP?, HQ?, BP?, BQ?, G?, E?, Vs?, R).
+
+procedure sas_faults0a(Constant?, Names?, SQLits?, Quants?, SConstraint?, SQLits?, Quants?, SQLits?, Quants?, PNames?, REnts?, PNames?, Faults).
+sas_faults0a(Nm, Ns, PP, QQ, Cn, HP, HQ, BP, BQ, G, E, Vs, R?) :-
+    ground(HP?), ground(HQ?), ground(BP?), ground(BQ?), ground(E?), ground(Vs?), ground(Cn?) |
+    sas_ictx_of(HP?, HQ?, BP?, BQ?, Cn?, E?, Vs?, IC),
+    sas_faults1(Nm?, Ns?, PP?, QQ?, Cn?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?, IC?), R).
 
 procedure sas_faults1(Constant?, Names?, SQLits?, Quants?, SConstraint?, SCtx?, Faults).
-sas_faults1(Nm, Ns, PP, QQ, Cn, sctx(HP, HQ, BP, BQ, G, E, Vs), R?) :-
+sas_faults1(Nm, Ns, PP, QQ, Cn, sctx(HP, HQ, BP, BQ, G, E, Vs, IC), R?) :-
     ground(Nm?), ground(Ns?), ground(PP?), ground(QQ?), ground(HP?), ground(HQ?),
     ground(BP?), ground(BQ?), ground(G?), ground(E?), ground(Vs?) |
     sas_qvars(QQ?, [], Xs),
     sas_gfaults(G?, Nm?, E?, [], F5),
     sas_qfaults(Xs?, Nm?, QQ?, PP?, Ns?, F5?, F4),
-    sas_del_faults(E?, Nm?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?), F4?, F3),
+    sas_del_faults(E?, Nm?, sctx(HP?, HQ?, BP?, BQ?, G?, E?, Vs?, IC?), F4?, F3),
     sas_cons_vf(Cn?, E?, Vs?, Nm?, F3?, F2c),
     sas_quants_vf(QQ?, E?, Vs?, Nm?, F2c?, F2b),
     sas_lits_vf(PP?, E?, Vs?, Nm?, F2b?, F2),
@@ -2460,10 +2593,14 @@ nts_empty([_|_], no).
 procedure plain_mult(Mult?, Atom).
 plain_mult(atom(P, As), atom(P?, As?)).
 plain_mult(times(_, A), A?).
+plain_mult(rest(_, _, A), A?).
 
+% rest(K, J, A) is dropped: the plain form's Del keeps the copies deleted,
+% and the copies beyond them are a multiplicity, which the plain form drops.
 procedure plain_mults(Mults?, Atoms).
 plain_mults([], []).
-plain_mults([M|Ms], [A?|R?]) :- ground(M?), ground(Ms?) |
+plain_mults([rest(_, _, _)|Ms], R?) :- plain_mults(Ms?, R).
+plain_mults([M|Ms], [A?|R?]) :- otherwise, ground(M?), ground(Ms?) |
     plain_mult(M?, A),
     plain_mults(Ms?, R).
 
@@ -2577,6 +2714,7 @@ nrs_clear(RS, R?) :- ground(RS?) |
 procedure mult_wild(Mult?, Ans).
 mult_wild(atom(P, As), R?) :- ground(P?), ground(As?) | atom_wild(atom(P?, As?), R).
 mult_wild(times(_, A), R?) :- ground(A?) | atom_wild(A?, R).
+mult_wild(rest(_, _, A), R?) :- ground(A?) | atom_wild(A?, R).
 
 procedure mults_cleared1(Ans?, Ans?, Mult?, Mults?, Mults).
 mults_cleared1(B, W, A, Xs, [A?|R?]) :- B? =?= W?, ground(Xs?) |
@@ -2602,12 +2740,33 @@ procedure mults_app(Mults?, Mults?, Mults).
 mults_app([], T, T?).
 mults_app([M|Ms], T, [M?|R?]) :- mults_app(Ms?, T?, R).
 
-% The atoms a role requires, as written: =(i) u -(i).
+% The atoms a role requires, as written: =(i) u -(i), each rest(K, J, A) of
+% Keep written K.A with the J copies of A it stands beside taken from -(i)
+% (rest, above).
 procedure nrs_req(NRoleSpec?, Mults).
 nrs_req(RS, R?) :- ground(RS?) |
     nrs_del(RS?, M),
     nrs_keep(RS?, K),
-    mults_app(K?, M?, R).
+    mults_rest(K?, M?, K1, M1),
+    mults_app(K1?, M1?, R).
+
+% Keep and -(i), each rest(K, J, A) of Keep made K.A and the J copies of A
+% taken from -(i).
+procedure mults_rest(Mults?, Mults?, Mults, Mults).
+mults_rest([], D, [], D?).
+mults_rest([rest(K, J, A)|Ks], D, [times(K?, A?)|R?], D1?) :- ground(K?), ground(J?), ground(A?), ground(D?) |
+    mults_take_j(D?, J?, A?, D0),
+    mults_rest(Ks?, D0?, R, D1).
+mults_rest([M|Ks], D, [M?|R?], D1?) :- otherwise, ground(D?) |
+    mults_rest(Ks?, D?, R, D1).
+
+% Mults less J copies of the atom A, written A where J is 1, or J.A.
+procedure mults_take_j(Mults?, Arg?, Atom?, Mults).
+mults_take_j([], _, _, []).
+mults_take_j([M|Ms], J, A, Ms?) :- M? =?= A?, J? =?= num(1) | true.
+mults_take_j([times(K, M)|Ms], J, A, Ms?) :- M? =?= A?, K? =?= J? | true.
+mults_take_j([times(num(K), M)|Ms], num(J), A, Ms?) :- M? =?= A?, number(K?), number(J?), K? =:= J? | true.
+mults_take_j([M|Ms], J, A, [M?|R?]) :- otherwise, ground(J?), ground(A?) | mults_take_j(Ms?, J?, A?, R).
 
 procedure n_is_guarding(NRoleSpec?, Ans).
 n_is_guarding(RS, R?) :- ground(RS?) |
@@ -2684,6 +2843,7 @@ procedure mults_margs(Mults?, Args?, Args).
 mults_margs([], T, T?).
 mults_margs([atom(_, _)|Ms], T, R?) :- ground(Ms?), ground(T?) | mults_margs(Ms?, T?, R).
 mults_margs([times(K, _)|Ms], T, [K?|R?]) :- ground(Ms?), ground(T?) | mults_margs(Ms?, T?, R).
+mults_margs([rest(K, J, _)|Ms], T, [K?, J?|R?]) :- ground(Ms?), ground(T?) | mults_margs(Ms?, T?, R).
 
 procedure nroles_margs(NRoleSpecs?, Args?, Args).
 nroles_margs([], T, T?).
@@ -2840,6 +3000,74 @@ check_read([], C, V?) :- ground(C?) |
     env_preds(C?, Ev),
     check # check_env(D?, Ev?, V).
 check_read([F|Fs], _, malformed([F?|Fs?])).
+
+% A contract as the checker reads it, each schema of the clause syntax in
+% the checker's form with its roles' names, schema(Name, Names, Vars,
+% Roles), cschema(Name, Names, Vars, [], Roles) or nschema(Name, Names,
+% Vars, Constraint, Roles), Names the names of its roles in order, a listed
+% role named by its base; a schema in the checker's form is left as it is.
+% A contract in either wrapped form, reflexive(Preds, Contract) or
+% environment(Preds, Body), is given in the same wrapper with each schema
+% inside as read, descending as unnamed/2 does.  The variants of
+% contracts.glp change a contract in the checker's form (contracts.glp, the
+% header), and test_gsc.sh makes them on an owner's contract as it reads it.
+exported procedure as_read(WDeclared?, WDeclared).
+as_read([], []).
+as_read([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
+as_read(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
+as_read(environment(Ev, B), environment(Ev?, D?)) :- ground(Ev?), ground(B?) | as_read_b(B?, D).
+
+procedure as_read_b(WBody?, WBody).
+as_read_b([], []).
+as_read_b([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
+as_read_b(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
+
+procedure as_read_c(WContract?, WContract).
+as_read_c([], []).
+as_read_c([S|Ss], [S1?|R?]) :- ground(S?), ground(Ss?) |
+    as_read_s(S?, S1),
+    as_read_c(Ss?, R).
+
+procedure as_read_s(WSchema?, WSchema).
+as_read_s(sas(Nm, Ns, Vs, H, B, Cn, G), S?) :-
+    ground(Nm?), ground(Ns?), ground(Vs?), ground(H?), ground(B?), ground(Cn?), ground(G?) |
+    sas_split(H?, HP, HQ),
+    sas_split(B?, BP, BQ),
+    sas_qapp(HP?, BP?, PP),
+    sas_quapp(HQ?, BQ?, QQ),
+    sas_table(Ns?, PP?, QQ?, 1, E),
+    sas_schema(Nm?, Ns?, Vs?, H?, B?, Cn?, G?, S0),
+    as_read_n(S0?, E?, S).
+as_read_s(S, S?) :- otherwise | true.
+
+procedure as_read_n(NSchema?, REnts?, WSchema).
+as_read_n(schema(Nm, Vs, Rs), E, schema(Nm?, Ns?, Vs?, Rs?)) :- ground(Rs?), ground(E?) |
+    as_read_names(Rs?, E?, 1, Ns).
+as_read_n(cschema(Nm, Vs, X, Rs), E, cschema(Nm?, Ns?, Vs?, X?, Rs?)) :- ground(Rs?), ground(E?) |
+    as_read_names(Rs?, E?, 1, Ns).
+as_read_n(nschema(Nm, Vs, Cn, Rs), E, nschema(Nm?, Ns?, Vs?, Cn?, Rs?)) :- ground(Rs?), ground(E?) |
+    as_read_names(Rs?, E?, 1, Ns).
+
+% The name of each role, numbered from I: an agent role's its own and a
+% listed role's that of its base.
+procedure as_read_names(NRoleSpecs?, REnts?, Integer?, Names).
+as_read_names([], _, _, []).
+as_read_names([rs(_, _, _, _, _)|Rs], E, I, [N?|R?]) :- ground(Rs?), ground(E?), integer(I?) |
+    as_read_name(E?, I?, N),
+    I1 := I? + 1,
+    as_read_names(Rs?, E?, I1?, R).
+as_read_names([crs(listed(J, _, _), _, _, _, _, _)|Rs], E, I, [N?|R?]) :-
+    ground(Rs?), ground(E?), integer(I?), integer(J?) |
+    as_read_name(E?, J?, N),
+    I1 := I? + 1,
+    as_read_names(Rs?, E?, I1?, R).
+
+% The name of the role numbered I in the table.
+procedure as_read_name(REnts?, Integer?, RName).
+as_read_name([], _, '_').
+as_read_name([ar(N, J)|_], I, N?) :- I? =:= J? | true.
+as_read_name([lr(N, J)|_], I, N?) :- I? =:= J? | true.
+as_read_name([_|Es], I, R?) :- otherwise, integer(I?) | as_read_name(Es?, I?, R).
 
 imported procedure check#check_named(Constant?, Verdict).
 exported procedure check_named(Constant?, Verdict).
