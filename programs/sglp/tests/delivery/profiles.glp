@@ -7,87 +7,42 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(talker)
 %% binds(Stream(Msg), talk)
-exported procedure
-talk
-(
-Stream(Msg)
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-talk(Ms?, _, _, Mon, _)
+exported procedure talk(Stream(Msg), Person?, Integer?, MutualRef?).
+talk(Ms?, _, _, _)
 :-
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
-say(Tok?, 1, slot(Ms), Mon?)
+say(Tok?, 1, slot(Ms))
 .
-procedure
-say
-(
-Token?
-,
-Integer?
-,
-Slot(Stream(Msg))
-?
-,
-MutualRef?
-)
+procedure say(Token?, Integer?, Slot(Stream(Msg))?).
+say(stop, _, _)
 .
-say(stop, _, _, _)
-.
-say(go, I, slot([msg(T?, St) | Ms?]), Mon)
+say(go(_), I, slot([msg(T?, St) | Ms?]))
 :-
 '=<'(I?, 3)
 |
 text(I?, T)
 ,
-next(St?, I?, Ms, Mon?)
+next(St?, I?, Ms)
 .
-say(go, I, slot([]), _)
+say(go(_), I, slot([]))
 :-
 '>'(I?, 3)
 |
 true
 .
-procedure
-next
-(
-Status
-?
-,
-Integer?
-,
-Stream(Msg)
-,
-MutualRef?
-)
-.
-next(St, I, Ms?, Mon)
+procedure next(Status?, Integer?, Stream(Msg)).
+next(St, I, Ms?)
 :-
 known(St?)
 |
 ':='(I1, '+'(I?, 1))
 ,
-stream_append(rated('/'(1, hour), Tok), Mon?, _)
+rated(0.0002777777777777778, Tok)
 ,
-say(Tok?, I1?, slot(Ms), Mon?)
+say(Tok?, I1?, slot(Ms))
 .
-procedure
-text
-(
-Integer?
-,
-String
-)
-.
+procedure text(Integer?, String).
 text(1, hello)
 .
 text(2, there)

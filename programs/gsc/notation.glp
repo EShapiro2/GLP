@@ -108,18 +108,21 @@ c_hmult(I, times(K, A), Ns, T, R?) :- ground(Ns?) |
 % is (K - J).A; a role's required atoms carry it as K.A (nrs_req).
 c_hmult(I, rest(K, J, A), Ns, T, ['('|R?]) :- ground(Ns?) |
     c_hatom(I?, A?, Ns?, T?, R1),
-    c_arg(J?, Ns?, [').'|R1?], R2),
-    c_arg(K?, Ns?, [' - '|R2?], R).
+    c_operand(J?, Ns?, [').'|R1?], R2),
+    c_expr(K?, Ns?, [' - '|R2?], R).
 
 % pl(I, A) the atom A of role I, ng(I, A) it negated, qa(I, Kind, Lits) the
-% quantified conjunct of the listed role I, cn(Gamma) the constraint.
+% quantified conjunct of the listed role I, cn(Gamma) the constraint, and
+% fm(F) a safe formula (def:role), a quantified conjunct of a schema written
+% qschema among them.
 LItem  ::= pl(Integer, Mult) ; ng(Integer, Mult) ; qa(Integer, RoleKind, LItems)
-         ; cn(Constraint).
+         ; cn(Constraint) ; fm(Form).
 LItems ::= [] ; [LItem | LItems].
 
 procedure c_item(LItem?, NameOfs?, RChunks?, RChunks).
 c_item(pl(I, A), Ns, T, R?) :- c_hmult(I?, A?, Ns?, T?, R).
 c_item(ng(I, A), Ns, T, ['not '|R?]) :- c_hmult(I?, A?, Ns?, T?, R).
+c_item(qa(_, qlisted(_, _, _, _), _), _, T, T?).
 c_item(qa(I, listed(J, Rho, Us), Ls), Ns, T, ['forall '|R?]) :- integer(I?), ground(Ns?) |
     c_items(Ls?, Ns?, [')'|T?], R4),
     c_rest(Us?, Ns?, [') -> '|R4?], R3),
@@ -127,6 +130,75 @@ c_item(qa(I, listed(J, Rho, Us), Ls), Ns, T, ['forall '|R?]) :- integer(I?), gro
     c_name(J?, Ns?, [', '|R2?], R1),
     c_name(I?, Ns?, [' (', Rho?, '('|R1?], R).
 c_item(cn(C), Ns, T, R?) :- c_constraint(C?, Ns?, T?, R).
+c_item(fm(F), Ns, T, R?) :- c_form(F?, Ns?, T?, R).
+
+% --- Safe formulas (def:role, GSC c8c5ead) ----------------------------------
+% An atom with its holder first.
+procedure c_held(Arg?, Mult?, NameOfs?, RChunks?, RChunks).
+c_held(H, atom(P, As), Ns, T, [P?, '('|R?]) :- ground(Ns?) |
+    c_rest(As?, Ns?, [')'|T?], R1),
+    c_arg(H?, Ns?, R1?, R).
+c_held(H, times(K, A), Ns, T, R?) :- ground(Ns?) |
+    c_held(H?, A?, Ns?, T?, R1),
+    c_arg(K?, Ns?, ['.'|R1?], R).
+c_held(H, rest(K, J, A), Ns, T, R?) :- ground(H?), ground(Ns?) |
+    c_hrest(H?, rest(K?, J?, A?), Ns?, T?, R).
+
+procedure c_hrest(Arg?, Mult?, NameOfs?, RChunks?, RChunks).
+c_hrest(H, rest(K, _, A), Ns, T, R?) :- ground(Ns?) |
+    c_held(H?, A?, Ns?, T?, R1),
+    c_expr(K?, Ns?, ['.'|R1?], R).
+c_hrest(_, _, _, T, T?) :- otherwise | true.
+
+% The variables a quantifier binds, apart by a comma.
+procedure c_xs(Args?, NameOfs?, RChunks?, RChunks).
+c_xs([], _, T, T?).
+c_xs([X], Ns, T, R?) :- c_arg(X?, Ns?, T?, R).
+c_xs([X, Y|Ys], Ns, T, R?) :- ground(Ns?) |
+    c_xs([Y?|Ys?], Ns?, T?, R1),
+    c_arg(X?, Ns?, [', '|R1?], R).
+
+% A and phi, phi left out where it is true.
+procedure c_anchored(Arg?, Atom?, Form?, NameOfs?, RChunks?, RChunks).
+c_anchored(H, A, fcons(true), Ns, T, R?) :- c_held(H?, A?, Ns?, T?, R).
+c_anchored(H, A, F, Ns, T, R?) :- otherwise, ground(Ns?) |
+    c_form(F?, Ns?, T?, R1),
+    c_held(H?, A?, Ns?, [', '|R1?], R).
+
+procedure c_form(Form?, NameOfs?, RChunks?, RChunks).
+c_form(fa(H, M), Ns, T, R?) :- c_held(H?, M?, Ns?, T?, R).
+c_form(fnot(F), Ns, T, ['not '|R?]) :- c_form(F?, Ns?, T?, R).
+c_form(fand(A, B), Ns, T, ['('|R?]) :- ground(Ns?) |
+    c_form(B?, Ns?, [')'|T?], R1),
+    c_form(A?, Ns?, [' and '|R1?], R).
+c_form(for(A, B), Ns, T, ['('|R?]) :- ground(Ns?) |
+    c_form(B?, Ns?, [')'|T?], R1),
+    c_form(A?, Ns?, [' or '|R1?], R).
+c_form(fexists(Xs, H, A, F), Ns, T, ['exists '|R?]) :- ground(Ns?) |
+    c_anchored(H?, A?, F?, Ns?, [')'|T?], R1),
+    c_xs(Xs?, Ns?, [' ('|R1?], R).
+c_form(fforall(Xs, H, A, F, G), Ns, T, ['forall '|R?]) :- ground(Ns?) |
+    c_forms(G?, Ns?, [')'|T?], R2),
+    c_anchored(H?, A?, F?, Ns?, [' -> '|R2?], R1),
+    c_xs(Xs?, Ns?, [' ('|R1?], R).
+c_form(fcons(C), Ns, T, R?) :- c_constraint(C?, Ns?, T?, R).
+
+procedure c_forms(Forms?, NameOfs?, RChunks?, RChunks).
+c_forms([], _, T, ['true'|T?]).
+c_forms([F], Ns, T, R?) :- c_form(F?, Ns?, T?, R).
+c_forms([F, G|Fs], Ns, T, R?) :- ground(Ns?) |
+    c_forms([G?|Fs?], Ns?, T?, R1),
+    c_form(F?, Ns?, [', '|R1?], R).
+
+% The conjuncts of the head, and the formulas of the body, as items.
+procedure c_conj_items(Conjuncts?, LItems?, LItems).
+c_conj_items([], T, T?).
+c_conj_items([conjunct(Xs, I, A, F, _, _, L)|Cs], T, [fm(fforall(Xs?, role(I?), A?, F?, L?))|R?]) :-
+    c_conj_items(Cs?, T?, R).
+
+procedure c_form_items(Forms?, LItems?, LItems).
+c_form_items([], T, T?).
+c_form_items([F|Fs], T, [fm(F?)|R?]) :- c_form_items(Fs?, T?, R).
 
 % The items apart by a comma.
 procedure c_items(LItems?, NameOfs?, RChunks?, RChunks).
@@ -161,8 +233,9 @@ c_blits(RS, I, L?) :- ground(RS?), integer(I?) |
 % quantified conjunct, which a role with none there omits.
 procedure c_role(NRoleSpec?, Integer?, LItems?, LItems?, LItems).
 c_role(rs(_, _, _, _, _), _, L, T, R?) :- litems_app(L?, T?, R).
-c_role(crs(_, _, _, _, _, _), _, [], T, T?).
-c_role(crs(K, _, _, _, _, _), I, [L|Ls], T, [qa(I?, K?, [L?|Ls?])|T?]).
+c_role(crs(qlisted(_, _, _, _), _, _, _, _, _), _, _, T, T?).
+c_role(crs(_, _, _, _, _, _), _, [], T, T?) :- otherwise | true.
+c_role(crs(K, _, _, _, _, _), I, [L|Ls], T, [qa(I?, K?, [L?|Ls?])|T?]) :- otherwise | true.
 
 procedure litems_app(LItems?, LItems?, LItems).
 litems_app([], T, T?).
@@ -220,6 +293,8 @@ c_empty([], yes).
 c_empty([_|_], no).
 
 % --- The constraint (def:numbers) -------------------------------------------
+% not as not (...), implies as ->, ne as !=, a relation or a function of a
+% type by its name and its arguments, a cardinality as def:numbers writes it.
 % and as a comma, eq, le, lt, ge and gt as =, <=, <, >= and >, succ(X, Y) as
 % Y = X + 1; plus, minus and a product as +, - and *, an operand that is a
 % sum or a difference in parentheses where it follows a minus or is a factor;
@@ -233,6 +308,12 @@ c_constraint(and(C1, C2), Ns, T, R?) :- ground(Ns?) |
 c_constraint(or(C1, C2), Ns, T, R?) :- ground(Ns?) |
     c_constraint(C2?, Ns?, T?, R1),
     c_constraint(C1?, Ns?, [' or '|R1?], R).
+c_constraint(implies(C1, C2), Ns, T, R?) :- ground(Ns?) |
+    c_constraint(C2?, Ns?, T?, R1),
+    c_constraint(C1?, Ns?, [' -> '|R1?], R).
+c_constraint(not(C), Ns, T, ['not ('|R?]) :- c_constraint(C?, Ns?, [')'|T?], R).
+c_constraint(rel(N, Xs), Ns, T, [N?, '('|R?]) :- c_exprs(Xs?, Ns?, [')'|T?], R).
+c_constraint(ne(X, Y), Ns, T, R?) :- c_cmp(X?, ' != ', Y?, Ns?, T?, R).
 c_constraint(eq(X, Y), Ns, T, R?) :- c_cmp(X?, ' = ', Y?, Ns?, T?, R).
 c_constraint(le(X, Y), Ns, T, R?) :- c_cmp(X?, ' <= ', Y?, Ns?, T?, R).
 c_constraint(lt(X, Y), Ns, T, R?) :- c_cmp(X?, ' < ', Y?, Ns?, T?, R).
@@ -263,6 +344,10 @@ c_expr(minus(A, B), Ns, T, R?) :- ground(Ns?) |
 c_expr(mul(A, B), Ns, T, R?) :- ground(Ns?) |
     c_operand(B?, Ns?, T?, R1),
     c_operand(A?, Ns?, ['*'|R1?], R).
+c_expr(fn(N, Xs), Ns, T, [N?, '('|R?]) :- c_exprs(Xs?, Ns?, [')'|T?], R).
+c_expr(cardinality(Xs, H, A, F), Ns, T, ['cardinality('|R?]) :- ground(Ns?) |
+    c_anchored(H?, A?, F?, Ns?, [')'|T?], R1),
+    c_xs(Xs?, Ns?, [', '|R1?], R).
 c_expr(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
 c_expr(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_expr(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
@@ -271,10 +356,19 @@ c_expr(nterm(N), Ns, T, R?) :- c_arg(nterm(N?), Ns?, T?, R).
 c_expr(sgn(Y, J), Ns, T, R?) :- c_arg(sgn(Y?, J?), Ns?, T?, R).
 c_expr(any, Ns, T, R?) :- c_arg(any, Ns?, T?, R).
 
+procedure c_exprs(Exprs?, NameOfs?, RChunks?, RChunks).
+c_exprs([], _, T, T?).
+c_exprs([X], Ns, T, R?) :- c_expr(X?, Ns?, T?, R).
+c_exprs([X, Y|Ys], Ns, T, R?) :- ground(Ns?) |
+    c_exprs([Y?|Ys?], Ns?, T?, R1),
+    c_expr(X?, Ns?, [', '|R1?], R).
+
 procedure c_operand(Expr?, NameOfs?, RChunks?, RChunks).
 c_operand(plus(A, B), Ns, T, ['('|R?]) :- c_expr(plus(A?, B?), Ns?, [')'|T?], R).
 c_operand(minus(A, B), Ns, T, ['('|R?]) :- c_expr(minus(A?, B?), Ns?, [')'|T?], R).
 c_operand(mul(A, B), Ns, T, R?) :- c_expr(mul(A?, B?), Ns?, T?, R).
+c_operand(fn(N, Xs), Ns, T, R?) :- c_expr(fn(N?, Xs?), Ns?, T?, R).
+c_operand(cardinality(Xs, H, A, F), Ns, T, R?) :- c_expr(cardinality(Xs?, H?, A?, F?), Ns?, T?, R).
 c_operand(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
 c_operand(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_operand(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
@@ -291,13 +385,18 @@ c_schema(Sc, Ns, T, [Nm?, ': '|R?]) :- ground(Sc?), ground(Ns?) |
     nsch_name(Sc?, Nm),
     nsch_roles(Sc?, Rs),
     nsch_constraint(Sc?, Cn),
-    c_schema1(Rs?, Cn?, Ns?, T?, R).
+    nsch_conjs(Sc?, Cj),
+    nsch_forms(Sc?, Fs),
+    c_schema1(Rs?, Cn?, Cj?, Fs?, Ns?, T?, R).
 
-procedure c_schema1(NRoleSpecs?, Constraint?, NameOfs?, RChunks?, RChunks).
-c_schema1(Rs, Cn, Ns, T, R?) :- ground(Rs?), ground(Ns?) |
-    c_head(Rs?, 1, H),
+procedure c_schema1(NRoleSpecs?, Constraint?, Conjuncts?, Forms?, NameOfs?, RChunks?, RChunks).
+c_schema1(Rs, Cn, Cj, Fs, Ns, T, R?) :- ground(Rs?), ground(Ns?) |
+    c_head(Rs?, 1, H0),
+    c_conj_items(Cj?, [], Hc),
+    litems_app(H0?, Hc?, H),
     c_gamma(Cn?, Gm),
-    c_body(Rs?, 1, Gm?, B),
+    c_form_items(Fs?, Gm?, FG),
+    c_body(Rs?, 1, FG?, B),
     c_guards(Rs?, 1, Gs),
     c_schema2(H?, B?, Gs?, Ns?, T?, R).
 

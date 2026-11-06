@@ -93,14 +93,10 @@ cp "$HERE/self.glp.in" "$RUNDIR/self.glp" && cp "$HERE/harness.glp.in" "$RUNDIR/
     cp "$PRINTED/population.glp" "$RUNDIR/population.glp" || exit 2
 
 # The dimensions' profiles, in the order population.glp declares them, the
-# lines of each type DimensionK ::= p1 ; p2 ; ... ., a dimension's profiles
+# line of each type DimensionK ::= p1 ; p2 ; ... ., a dimension's profiles
 # separated by spaces and the dimensions by |.
 PROFS=$(awk '
-    /^Dimension[0-9]+$/ { d = 1; next }
-    d == 1 && $0 == "::=" { d = 2; next }
-    d == 2 && $0 == "." { d = 0; printf "|"; next }
-    d == 2 && $0 != ";" { printf "%s ", $0; next }
-    { d = 0 }' "$RUNDIR/population.glp")
+    /^Dimension[0-9]+ ::= / { sub(/^[^ ]+ ::= /, ""); sub(/\.$/, ""); gsub(/ ; /, " "); printf "%s |", $0 }' "$RUNDIR/population.glp")
 
 case "$LOG" in
     *.log) DRAWF="${LOG%.log}.draw" ;;

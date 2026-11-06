@@ -52,7 +52,7 @@
 %%   run village [greeting of parent ~ (formal : 1.0),
 %%                temper of parent ~ (kind : 0.5 ; grumpy : 0.5),
 %%                play of child ~ (casual : 1.0)]
-%%       until 1 day seed 20260927.
+%%       until 1 day seed 20260929.
 %%
 %% The census, village, draws a family from its seed: a parent, ann, its
 %% attribute the number of its children, and one to three children, each its
@@ -134,4 +134,4 @@ source(
        [mix(greeting, parent, [share(formal, 1.0)]),
         mix(temper, parent, [share(kind, 0.5), share(grumpy, 0.5)]),
         mix(play, child, [share(casual, 1.0)])],
-       1, day, 20260927)]).
+       1, day, 20260929)]).

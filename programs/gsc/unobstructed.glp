@@ -10,14 +10,14 @@
 % its own.  intro_bindings enumerates them and keeps the introductions.  An
 % introduction chooses its own values (the appendix "Values in Act
 % Schemas", after def:binding-numbers): the clauses are decided on the
-% contract as written, a value matched by equality at a binding satisfying
-% its schema's constraint, and whether some choice of the values meets them
-% all is decided exactly, the constraints being linear (values, below;
-% linear.glp).
+% contract as written, a value matched by equality, "no condition reading a
+% constraint" (the appendix), and whether some choice of the values meets
+% them all is decided exactly (values, below; linear.glp).
 %
 % An introductory act is guarded in both its roles, which are therefore
-% agent roles, and has no name term (def:introduction); so has each schema
-% of arity one of clause 1 of def:unobstructed.  A listed role adds at the
+% agent roles, has no name term, has literals for its body and head
+% (def:introduction) and carries no constraint (def:numbers); so has each
+% schema of arity one of clause 1 of def:unobstructed.  A listed role adds at the
 % agents of its extent, which no binding names, so the second part of clause
 % 2 of def:unobstructed is asked of the agent roles of a schema, and its
 % first part of the listed roles: none adds an atom of the predicate of an
@@ -31,7 +31,6 @@ imported procedure linear#dnf_not(DNF?, DNF).
 imported procedure linear#dnf_app(DNF?, DNF?, DNF).
 imported procedure linear#conj_app(Conj?, Conj?, Conj).
 imported procedure linear#elim_block(Conj?, DNF).
-imported procedure linear#cons_conj(Constraint?, VEnv?, Conj).
 imported procedure linear#ex_num(Constant?, Ex).
 imported procedure linear#ex_add(Ex?, Ex?, Integer?, Ex).
 imported procedure linear#ex_var(Var?, Ex).
@@ -135,8 +134,8 @@ intro_bindings(Sc, R?) :- ground(Sc?) |
     pvar_assignments(PV?, PAs),
     intro_filter(PAs?, SB?, Sc?, R).
 
-% Arity two, both roles guarded, so agent roles, and no name term
-% (def:introduction).
+% Arity two, both roles guarded, so agent roles, no name term and literals
+% for its body and head (def:introduction), and no constraint (def:numbers).
 procedure two_guarded(RoleSpecs?, Ans).
 two_guarded([rs(guarded, _, _, _, _), rs(guarded, _, _, _, _)], yes).
 two_guarded(Rs, no) :- otherwise, ground(Rs?) | true.
@@ -147,11 +146,42 @@ is_two_guarded(Sc, R?) :- ground(Sc?) |
     two_guarded(Rs?, A1),
     sch_nts(Sc?, Ns),
     nts_empty(Ns?, A2),
-    both_yes(A1?, A2?, R).
+    sch_bare(Sc?, A3),
+    both_yes(A1?, A2?, A12),
+    both_yes(A12?, A3?, R).
+
+procedure sch_bare(Schema?, Ans).
+sch_bare(qschema(_, _, _, _, _, _, _), no).
+sch_bare(_, yes) :- otherwise | true.
 
 procedure iab1(Ans?, Schema?, Substs).
 iab1(no, _, []).
 iab1(yes, Sc, R?) :- ground(Sc?) | intro_bindings(Sc?, R).
+
+% A schema as written that may be an introductory act or a schema of clause
+% 1: it has literals for its body and head and carries no constraint
+% (def:introduction, def:unobstructed, def:numbers).
+procedure nsch_bare(NSchema?, Ans).
+nsch_bare(S, R?) :- ground(S?) |
+    nsch_literal(S?, A),
+    nsch_constraint(S?, C),
+    cons_none(C?, B),
+    both_yes(A?, B?, R).
+
+procedure cons_none(Constraint?, Ans).
+cons_none(true, yes).
+cons_none(_, no) :- otherwise | true.
+
+% The introductions of the schema written NS, empty unless it is an
+% introductory act.
+procedure act_bindings(NSchema?, Schema?, Substs).
+act_bindings(NS, S, R?) :- ground(NS?), ground(S?) |
+    nsch_bare(NS?, A),
+    act_bindings1(A?, S?, R).
+
+procedure act_bindings1(Ans?, Schema?, Substs).
+act_bindings1(no, _, []).
+act_bindings1(yes, S, R?) :- intro_act_bindings(S?, R).
 
 % The introductions of a schema, empty unless it is an introductory act.
 % The search for an introduction with wards reads it too (wards).
@@ -168,11 +198,11 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
 % (def:binding-numbers), and an introduction chooses its own values (the
 % appendix, after def:binding-numbers).  The clauses of def:unobstructed ask
 % that an atom be added at a binding of a schema, a value matched by
-% equality: the images of the act's atoms carry nfree(X) for its value
-% variable X, a match against another schema's atom records the equations
-% it rests on (match_atom, self.glp), and the binding of that schema is a
-% conjunction of linear atoms over the act's values and its own
-% (inst_conj).  Whether some choice of the act's values meets every clause
+% equality and "no condition reading a constraint" (the appendix): the images
+% of the act's atoms carry nfree(X) for its value variable X, a match against
+% another schema's atom records the equations it rests on (match_atom,
+% self.glp), and the binding of that schema is a conjunction of linear atoms
+% over the act's values and its own (inst_conj).  Whether some choice of the act's values meets every clause
 % is then decided exactly (linear.glp): a supplying schema's binding is
 % chosen with the values, and a blocking schema's bindings are eliminated,
 % the formula left over the act's values negated.
@@ -248,9 +278,9 @@ env_bind(free, _, _, []).
 
 % inst_conj(NSc, Tg, S, E, PwI, C): a binding of the schema NSc extending
 % the match S, E of one of its atoms, its value variables named by Tg: it
-% satisfies NSc's constraint, sends each multiplicity to a positive whole
-% number, and each value variable S binds to its image, and the equations E
-% hold; PwI are the multiplicities of the act.
+% sends each multiplicity to a positive whole number and each value variable
+% S binds to its image, and the equations E hold, no condition reading its
+% constraint; PwI are the multiplicities of the act.
 procedure inst_conj(NSchema?, Tg?, Subst?, Eqs?, Args?, Conj).
 inst_conj(NSc, Tg, S, E, PwI, R?) :-
     ground(NSc?), ground(Tg?), ground(S?), ground(E?), ground(PwI?) |
@@ -259,22 +289,20 @@ inst_conj(NSc, Tg, S, E, PwI, R?) :-
     inst_conj1(Vs?, Nx?, Tg?, S?, E?, PwI?, R).
 
 procedure inst_conj1(Args?, NumCtx?, Tg?, Subst?, Eqs?, Args?, Conj).
-inst_conj1(Vs, nc(Cn, Pw), Tg, S, E, PwI, R?) :-
-    ground(Vs?), ground(Cn?), ground(Pw?), ground(Tg?), ground(S?), ground(E?),
+inst_conj1(Vs, nc(_, Pw), Tg, S, E, PwI, R?) :-
+    ground(Vs?), ground(Pw?), ground(Tg?), ground(S?), ground(E?),
     ground(PwI?) |
     inst_env(Vs?, Pw?, Tg?, Env),
-    inst_conj2(Env?, Cn?, S?, E?, PwI?, R).
+    inst_conj2(Env?, S?, E?, PwI?, R).
 
-procedure inst_conj2(VEnv?, Constraint?, Subst?, Eqs?, Args?, Conj).
-inst_conj2(Env, Cn, S, E, PwI, R?) :-
-    ground(Env?), ground(Cn?), ground(S?), ground(E?), ground(PwI?) |
+procedure inst_conj2(VEnv?, Subst?, Eqs?, Args?, Conj).
+inst_conj2(Env, S, E, PwI, R?) :-
+    ground(Env?), ground(S?), ground(E?), ground(PwI?) |
     env_bounds(Env?, B),
     env_binds(Env?, S?, PwI?, Q),
-    linear # cons_conj(Cn?, Env?, C),
     eqs_conj(E?, PwI?, Es),
     linear # conj_app(B?, Q?, BQ),
-    linear # conj_app(C?, Es?, CE),
-    linear # conj_app(BQ?, CE?, R).
+    linear # conj_app(BQ?, Es?, R).
 
 % The value variables of a schema, in the order of its head.
 procedure sch_vvars(NSchema?, Args).
@@ -284,7 +312,8 @@ sch_vvars(NSc, R?) :- ground(NSc?) |
 
 % --- clause 1 of def:unobstructed -----------------------------------------
 % The atom is added by a schema of arity one, guarded in its role, with no
-% name term, requiring and clearing nothing (GSC 327e035: its role's atoms
+% name term, with literals for its body and head, carrying no constraint
+% (def:numbers), requiring and clearing nothing (GSC 327e035: its role's atoms
 % marked -, -(i) and the cleared atoms *(i), and its unmarked atoms are
 % none), and forbidding nothing or only that atom,
 % which the introductory act then requires once at its role, at a binding
@@ -348,6 +377,13 @@ unary_supplies1(_, _, _, _, _, _, _, _, _, []) :- otherwise | true.
 procedure unary_supplies0(Schema?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
 unary_supplies0(Sc, NSc, G, V, O, Tg, PwI, R?) :-
     ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
+    nsch_bare(NSc?, A),
+    unary_supplies2(A?, Sc?, NSc?, G?, V?, O?, Tg?, PwI?, R).
+
+procedure unary_supplies2(Ans?, Schema?, NSchema?, GAtom?, Val?, DNF?, Tg?, Args?, DNF).
+unary_supplies2(no, _, _, _, _, _, _, _, []).
+unary_supplies2(yes, Sc, NSc, G, V, O, Tg, PwI, R?) :-
+    ground(Sc?), ground(NSc?), ground(G?), ground(V?), ground(O?), ground(Tg?), ground(PwI?) |
     sch_roles(Sc?, Rs),
     sch_nts(Sc?, Ns),
     nsch_roles(NSc?, NRs),
@@ -387,13 +423,22 @@ mult_one(times(K, _), B, PwI, [C?]) :- ground(K?), ground(B?), ground(PwI?) |
     linear # ex_eq(X?, Y?, C).
 % rest(K, J, A) is (K - J).A (self.glp, Mult): one copy where K is J + 1.
 mult_one(rest(K, J, _), B, PwI, [C?]) :- ground(K?), ground(J?), ground(B?), ground(PwI?) |
-    apply_arg(B?, K?, W),
-    val_ex(W?, PwI?, X),
-    apply_arg(B?, J?, WJ),
-    val_ex(WJ?, PwI?, XJ),
+    sum_ex(K?, B?, PwI?, X),
+    sum_ex(J?, B?, PwI?, XJ),
     linear # ex_num(1, One),
     linear # ex_add(XJ?, One?, 1, Y),
     linear # ex_eq(X?, Y?, C).
+
+% A sum of value arguments under the binding B (rest, self.glp).
+procedure sum_ex(Expr?, Subst?, Args?, Ex).
+sum_ex(plus(X, Y), B, PwI, R?) :- ground(X?), ground(Y?), ground(B?), ground(PwI?) |
+    sum_ex(X?, B?, PwI?, A),
+    sum_ex(Y?, B?, PwI?, C),
+    linear # ex_add(A?, C?, 1, R).
+sum_ex(num(X), B, PwI, R?) :- ground(X?), ground(B?), ground(PwI?) |
+    apply_arg(B?, num(X?), W),
+    val_ex(W?, PwI?, R).
+sum_ex(_, _, _, ex_bad) :- otherwise | true.
 
 procedure once_others(Mults?, Mult?, Ans?, GAtom?, Subst?, Args?, DNF).
 once_others([], _, _, _, _, _, [[]]).
@@ -468,8 +513,10 @@ num_eqr(_, _, eqr_no) :- otherwise | true.
 % --- clause 2 of def:unobstructed, its second part: the agent roles -------
 % Every atom every schema adds at an agent role is matched against the
 % forbidden one at that party, a value by equality, and a match is a binding
-% adding it where the binding satisfies the schema's constraint and sends
-% each multiplicity to a positive whole number.  A binding adding it that the
+% adding it where the binding sends each multiplicity to a positive whole
+% number, no condition reading the schema's constraint.  An atom a role adds
+% conditionally, at an instance of a conjunct of the head, is added at a
+% binding too ("the role adds ... them at each instance", def:schema).  A binding adding it that the
 % clause does not excuse is a block.  excused/5 is the clause's two tests,
 % both read off the completed binding, values naming no one: the other
 % party of the introduction holds a role that is not a reading role (GSC
@@ -572,7 +619,41 @@ schema_blocks0(Sc, NSc, Cx, G, P, PwI, R?) :-
     sch_roles(Sc?, Rs),
     sch_name(Sc?, Nm),
     nsch_roles(NSc?, NRs),
-    role_blocks(NRs?, 1, Sc?, Rs?, Nm?, NSc?, Cx?, G?, P?, PwI?, R).
+    nsch_roles(NSc?, NRs2),
+    sch_roles(Sc?, Rs2),
+    nsch_conjs(NSc?, Cj),
+    role_blocks(NRs?, 1, Sc?, Rs?, Nm?, NSc?, Cx?, G?, P?, PwI?, B1),
+    conj_blocks(Cj?, NRs2?, Sc?, Rs2?, Nm?, NSc?, Cx?, G?, P?, PwI?, B2),
+    blks_app(B1?, B2?, R).
+
+% The conditional atoms of the conjuncts of the head.
+procedure conj_blocks(Conjuncts?, NRoleSpecs?, Schema?, RoleSpecs?, Constant?, NSchema?, Ctx?, GAtom?, Val?, Args?, Blks).
+conj_blocks([], _, _, _, _, _, _, _, _, _, []).
+conj_blocks([conjunct(_, _, _, _, P, _, _)|Cs], NRs, Sc, Rs, Nm, NSc, Cx, G, Q, PwI, R?) :-
+    ground(P?), ground(Cs?), ground(NRs?), ground(Sc?), ground(Rs?), ground(Nm?), ground(NSc?),
+    ground(Cx?), ground(G?), ground(Q?), ground(PwI?) |
+    hm_blocks(P?, NRs?, Sc?, Rs?, Nm?, NSc?, Cx?, G?, Q?, PwI?, B1),
+    conj_blocks(Cs?, NRs?, Sc?, Rs?, Nm?, NSc?, Cx?, G?, Q?, PwI?, B2),
+    blks_app(B1?, B2?, R).
+
+procedure hm_blocks(HMults?, NRoleSpecs?, Schema?, RoleSpecs?, Constant?, NSchema?, Ctx?, GAtom?, Val?, Args?, Blks).
+hm_blocks([], _, _, _, _, _, _, _, _, _, []).
+hm_blocks([hm(J, M)|Ms], NRs, Sc, Rs, Nm, NSc, Cx, G, Q, PwI, R?) :-
+    integer(J?), ground(M?), ground(Ms?), ground(NRs?), ground(Sc?), ground(Rs?), ground(Nm?),
+    ground(NSc?), ground(Cx?), ground(G?), ground(Q?), ground(PwI?) |
+    nth_plus(NRs?, J?, Plus),
+    plain_mult(M?, Psi),
+    plus_block(Psi?, Plus?, J?, Sc?, Rs?, Nm?, NSc?, Cx?, G?, Q?, PwI?, B1),
+    hm_blocks(Ms?, NRs?, Sc?, Rs?, Nm?, NSc?, Cx?, G?, Q?, PwI?, B2),
+    blks_app(B1?, B2?, R).
+
+% +(J), of the J-th role as written.
+procedure nth_plus(NRoleSpecs?, Integer?, Mults).
+nth_plus([], _, []).
+nth_plus([RS|_], J, R?) :- J? =:= 1, ground(RS?) | nrs_add(RS?, R).
+nth_plus([_|Rs], J, R?) :- J? > 1, integer(J?), ground(Rs?) |
+    J1 := J? - 1,
+    nth_plus(Rs?, J1?, R).
 
 % blocker(NC, Cx, G, P, PwI, Bs): the blocks of the forbidden atom G at the
 % person P, in the order of the contract.
@@ -792,9 +873,9 @@ listed_faults([RS|Rs], I, Nm, C, R?) :-
 % intro_bindings enumerates the assignments of its agent and speech-act
 % variables, and for each the act's values are those the introduction
 % chooses (the appendix "Values in Speech-Act Schemas"), each bound to its image
-% nfree (sym_binds).  The binding satisfies the act's constraint and sends
-% each multiplicity to a positive whole number (def:binding-numbers): the
-% base conjunction, with the act's rational values written n + f
+% nfree (sym_binds).  The binding sends each multiplicity to a positive whole
+% number (def:binding-numbers), an introductory act carrying no constraint
+% (def:numbers): the base conjunction, with the act's rational values written n + f
 % (linear.glp, decomp_defs).  Where the base has no solution the assignment
 % is no introduction; otherwise it is one at some values where the base
 % and every condition of every role (Items) have a solution together, and
@@ -825,21 +906,19 @@ env_qnames([], []).
 env_qnames([vb(X, q(_))|E], [X?|R?]) :- env_qnames(E?, R).
 env_qnames([vb(_, z(_))|E], R?) :- env_qnames(E?, R).
 
-% The base: the act's constraint, its multiplicities at least one, and its
-% rational values written n + f.
-procedure base_conj(Args?, Constraint?, Args?, Conj).
-base_conj(Vs, Cn, Pw, R?) :- ground(Vs?), ground(Cn?), ground(Pw?) |
+% The base: the act's multiplicities at least one, and its rational values
+% written n + f.
+procedure base_conj(Args?, Args?, Conj).
+base_conj(Vs, Pw, R?) :- ground(Vs?), ground(Pw?) |
     intro_env(Vs?, Pw?, Env),
-    base_conj1(Env?, Cn?, R).
+    base_conj1(Env?, R).
 
-procedure base_conj1(VEnv?, Constraint?, Conj).
-base_conj1(Env, Cn, R?) :- ground(Env?), ground(Cn?) |
+procedure base_conj1(VEnv?, Conj).
+base_conj1(Env, R?) :- ground(Env?) |
     env_bounds(Env?, Bn),
     env_qnames(Env?, Qs),
     linear # decomp_defs(Qs?, Df),
-    linear # cons_conj(Cn?, Env?, C),
-    linear # conj_app(Bn?, Df?, BD),
-    linear # conj_app(BD?, C?, R).
+    linear # conj_app(Bn?, Df?, R).
 
 % The formulas the conditions put to the values, and whether a fault the
 % values do not touch is among them.
@@ -941,10 +1020,10 @@ intro_b(B, ic(S, NS, NC, C, Rf), R?) :-
     intro_b1(Vs?, Nx?, B?, ic(S?, NS?, NC?, C?, Rf?), R).
 
 procedure intro_b1(Args?, NumCtx?, Subst?, IntroCtx?, Try).
-intro_b1(Vs, nc(Cn, Pw), B, Ix, R?) :-
-    ground(Vs?), ground(Cn?), ground(Pw?), ground(B?), ground(Ix?) |
+intro_b1(Vs, nc(_, Pw), B, Ix, R?) :-
+    ground(Vs?), ground(Pw?), ground(B?), ground(Ix?) |
     sym_binds(Vs?, B?, Bv),
-    base_conj(Vs?, Cn?, Pw?, Base),
+    base_conj(Vs?, Pw?, Base),
     intro_b2(Base?, Bv?, Pw?, Ix?, R).
 
 procedure intro_b2(Conj?, Subst?, Args?, IntroCtx?, Try).
@@ -999,7 +1078,7 @@ intro_try([B|Bs], S, NS, NSs, NC, C, Rf, Ca, R?) :-
 procedure intro_scan1(Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, Cand?, Faults).
 intro_scan1(S, NS, NSs, NC, C, Rf, Ca, R?) :-
     ground(S?), ground(NS?), ground(NSs?), ground(NC?), ground(C?), ground(Rf?), ground(Ca?) |
-    intro_act_bindings(S?, Bs),
+    act_bindings(NS?, S?, Bs),
     intro_try(Bs?, S?, NS?, NSs?, NC?, C?, Rf?, Ca?, R).
 
 procedure intro_scan(NContract?, NContract?, Contract?, Preds?, Cand?, Faults).
@@ -1050,8 +1129,8 @@ env_split([NS|NSs], Ev, NCf?, EF?) :- ground(NS?), ground(NSs?), ground(Ev?) |
     env_keep(F1?, NS?, S?, NCf1?, EF1?, NCf, EF).
 procedure env_keep(Faults?, NSchema?, Schema?, NContract?, Faults?, NContract, Faults).
 env_keep([], NS, _, NCf, EF, [NS?|NCf?], EF?).
-env_keep([F|Fs], _, S, NCf, EF, NCf?, EF2?) :- ground(F?), ground(Fs?), ground(S?), ground(EF?) |
-    intro_act_bindings(S?, Bs),
+env_keep([F|Fs], NS, S, NCf, EF, NCf?, EF2?) :- ground(F?), ground(Fs?), ground(NS?), ground(S?), ground(EF?) |
+    act_bindings(NS?, S?, Bs),
     env_keep1(Bs?, [F?|Fs?], EF?, EF2).
 procedure env_keep1(Substs?, Faults?, Faults?, Faults).
 env_keep1([], _, EF, EF?).
@@ -1129,7 +1208,7 @@ ia_add(Bs, S, NS, NC, C, Rf, T, R?) :-
 procedure ia_scan1(Schema?, NSchema?, NContract?, NContract?, Contract?, Preds?, IntroActs).
 ia_scan1(S, NS, NSs, NC, C, Rf, R?) :-
     ground(S?), ground(NS?), ground(NSs?), ground(NC?), ground(C?), ground(Rf?) |
-    intro_act_bindings(S?, Bs),
+    act_bindings(NS?, S?, Bs),
     ia_scan(NSs?, NC?, C?, Rf?, R1),
     ia_add(Bs?, S?, NS?, NC?, C?, Rf?, R1?, R).
 

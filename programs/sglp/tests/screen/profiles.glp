@@ -7,42 +7,17 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(looker)
 %% binds(Count, look_count)
-exported procedure
-look_count
-(
-Count
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-look_count(C, _, _, Mon, Scr)
+exported procedure look_count(Count?, Person?, Integer?, MutualRef?).
+look_count(C, _, _, Scr)
 :-
-stream_append(rated('/'(1, second), Tok), Mon?, _)
+rated(1.0, Tok)
 ,
 look(Tok?, C?, Scr?)
 .
-procedure
-look
-(
-Token?
-,
-Count
-?
-,
-MutualRef?
-)
-.
+procedure look(Token?, Count?, MutualRef?).
 look(stop, _, _)
 .
-look(go, count(N?), Scr)
+look(go(_), count(N?), Scr)
 :-
 stream_append(seen(L), Scr?, _)
 ,

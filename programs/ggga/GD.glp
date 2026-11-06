@@ -1,19 +1,18 @@
 %% ---------------------------------------------------------------------------
 %% GD.glp --- the grassroots distrust contract, GGGA's (Coordination Appendix C;
 %% Udi, 2026-11-05), in the term form programs/gsc reads (its README, "Writing a
-%% contract").  GD extends GSG (programs/gsc/GSG.glp), so the term holds GKK's
-%% three schemas and GSG's unfriend; the clauses are in GD.txt: distrust and
-%% distrust_friend are clause 1, Distrust, of a person Alice knows who is not
-%% her friend and of a friend, the second ending the friendship; propagate is
-%% clause 2, Propagated distrust, with Carol the agent variable c and Bob a
-%% reading role, neither guarding nor changing state, whom Alice, the guarding
-%% role, names by the friend atom she requires (GSC, Definitions Speech-act
-%% schema and Volition); cease is clause 3, Ceasing to distrust; befriend is
-%% clause 4, Friendship, which replaces GSG:1 and forbids at each role the
-%% distrust of the other.  Clause 5, Taking sides, is undertaken and describes
-%% no act.  distrusts(q) in the state of p says that p distrusts q.  Every role
-%% but establish's requires identity.  The notation of each schema is printed
-%% from the term by a run of the cascade (schemas.txt).
+%% contract").  GD extends GSG (programs/gsc/GSG.glp; GSC, Section Relations
+%% among Contracts), so the term holds GKK's three schemas and GSG's two, as GSG
+%% has them; the clauses are in GD.txt: distrust and distrust_friend are clause
+%% 1, Distrust, of a person Alice knows who is not her friend and of a friend,
+%% the second ending the friendship; propagate is clause 2, Propagated distrust,
+%% with Carol the agent variable c and Bob a reading role, neither guarding nor
+%% changing state, whom Alice, the guarding role, names by the friend atom she
+%% requires (GSC, Definitions Speech-act schema and Volition); cease is clause 3,
+%% Ceasing to distrust.  distrusts(q) in the state of p says that p distrusts q.
+%% Every role but establish's requires identity.  GD-S.glp beside this file
+%% restricts it.  The notation of each schema is printed from the term by a run
+%% of the cascade (schemas.txt).
 %%
 %% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
 %% and is named by its index, role(1) the schema's first role; c is an agent
@@ -52,10 +51,8 @@ contract_named(gd,
        [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
         rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
     schema(befriend, ['Alice', 'Bob'], [],
-       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])],
-                    [atom(friend, [role(2)]), atom(distrusts, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])],
-                    [atom(friend, [role(1)]), atom(distrusts, [role(1)])])]),
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
     schema(unfriend, ['Alice', 'Bob'], [],
        [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
