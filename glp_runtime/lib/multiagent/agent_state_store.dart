@@ -9,12 +9,42 @@
 /// simulation and the tests, the memory of the process that outlives the
 /// agent.  The host saves the state in each event cycle, before the cycle's
 /// messages are handed to the layer, and reads it at restart ([AgentRuntime]).
+///
+/// The store keeps the agent's key pair too, first among what Persistence
+/// lists: the state is first saved in the agent's first cycle, and the key
+/// pair is needed before it, the layer being instantiated with it and the
+/// modules compiled for the agent certified under it (Implementation Notes,
+/// "Boot"), so the store keeps it apart from the state, and [keptKeyPair]
+/// makes it once.
 library;
 
 import 'dart:io';
 import 'dart:typed_data';
 
-/// The store of one agent's saved state.
+import 'glp_network.dart' show PubKey;
+import 'identity.dart';
+
+/// An agent's Ed25519 key pair: its public key, and the 64-byte private key
+/// of `ed25519_edwards`, the 32-byte seed followed by the public key.
+typedef AgentKeyPair = ({PubKey pub, Uint8List priv});
+
+/// The key pair [store] keeps for the agent of persona [persona], made and
+/// saved at the agent's first start: "it makes the agent's key pair from a
+/// seed drawn from outside the program --- the SHA-256 of the clock, the
+/// device's hardware identifiers and the persona's name ... --- and keeps it
+/// across restarts (Persistence), so the key pair is made once, at the
+/// agent's first start" (IGLP, Implementation Notes, "Boot").  Throws where
+/// the key pair cannot be kept: an agent whose key is not kept would have
+/// another at its next start.
+Future<AgentKeyPair> keptKeyPair(AgentStateStore store, String persona) async {
+  final kept = await store.loadKeyPair();
+  if (kept != null) return kept;
+  final made = PersonIdentity.forPersona(persona).keyPair;
+  await store.saveKeyPair(made);
+  return made;
+}
+
+/// The store of one agent's saved state and key pair.
 abstract class AgentStateStore {
   /// The state last saved, or null where none was.
   Future<Uint8List?> load();
@@ -23,15 +53,27 @@ abstract class AgentStateStore {
   /// state is kept; completes with an error where it is not, and then the
   /// state saved before it stands.
   Future<void> save(Uint8List state);
+
+  /// The agent's key pair, or null where none was saved: before its first
+  /// start.
+  Future<AgentKeyPair?> loadKeyPair();
+
+  /// Save the agent's [keyPair].  Completes once it is kept; completes with
+  /// an error where it is not.
+  Future<void> saveKeyPair(AgentKeyPair keyPair);
 }
 
-/// A store in one file, which the embedding application names.  A save writes
-/// a file beside it and renames it over the file, so a termination during the
-/// save leaves the state saved before it.
+/// A store in one file, which the embedding application names, and the key
+/// pair's file beside it, `<path>.key`, holding the 32-byte seed from which
+/// the pair is made again.  A save writes a file beside it and renames it over
+/// the file, so a termination during the save leaves the state saved before
+/// it.
 class FileAgentStateStore implements AgentStateStore {
   final String path;
 
   FileAgentStateStore(this.path);
+
+  File get _keyFile => File('$path.key');
 
   @override
   Future<Uint8List?> load() async {
@@ -46,6 +88,27 @@ class FileAgentStateStore implements AgentStateStore {
     await next.writeAsBytes(state, flush: true);
     await next.rename(path);
   }
+
+  @override
+  Future<AgentKeyPair?> loadKeyPair() async {
+    final f = _keyFile;
+    if (!await f.exists()) return null;
+    final seed = await f.readAsBytes();
+    if (seed.length != 32) {
+      throw StateError('${f.path} holds ${seed.length} bytes, and an '
+          'agent\'s key pair is kept as its 32-byte seed');
+    }
+    return PersonIdentity.fromSeed(seed).keyPair;
+  }
+
+  @override
+  Future<void> saveKeyPair(AgentKeyPair keyPair) async {
+    await _keyFile.parent.create(recursive: true);
+    final next = File('${_keyFile.path}.next');
+    await next.writeAsBytes(Uint8List.sublistView(keyPair.priv, 0, 32),
+        flush: true);
+    await next.rename(_keyFile.path);
+  }
 }
 
 /// A store in the memory of the process, which outlives the agents it hosts:
@@ -59,6 +122,14 @@ class MemoryAgentStateStore implements AgentStateStore {
 
   /// The number of saves kept.
   int saves = 0;
+
+  AgentKeyPair? _keyPair;
+
+  @override
+  Future<AgentKeyPair?> loadKeyPair() async => _keyPair;
+
+  @override
+  Future<void> saveKeyPair(AgentKeyPair keyPair) async => _keyPair = keyPair;
 
   @override
   Future<Uint8List?> load() async => _state;
