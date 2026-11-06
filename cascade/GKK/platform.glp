@@ -3563,7 +3563,8 @@ procedure take_request(Formed(Request)?, Path?, Request, Input(Drawn)?, Inputs(D
 take_request(formed(V), _, V?, _, Gs, Gs?, done).
 take_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_request(P?, X, Gs?, Gs1, Done).
 
-procedure run_request_r(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+View_request_r ::= Request ; input(Path).
+procedure run_request_r(Integer?, Widget?, Stream(View_request_r)?, Done?, Stream(Draw(Drawn))).
 run_request_r(Id, _, _, done, [withdraw(Id?)]).
 run_request_r(Id, W, [V | Vs], Done, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r(Id?, W?, Vs?, Done?, Ds).
 run_request_r(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
