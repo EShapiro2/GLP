@@ -812,8 +812,13 @@ class _Run {
     }
     await top(q);
     final asks = '${personName(GAtom(p.name))} asks to be your friend.';
-    expect(textsOf(q, a),
-        [asks, worded ? 'yes' : 'Accept', worded ? 'no' : 'Decline']);
+    // After the question, the atoms the act requires of the proposer whose predicates the tabs list, as the tabs draw them (vGLP e22e2ad, Section 5.4, "The contract's words"): befriend requires knows(q).
+    expect(textsOf(q, a), [
+      asks,
+      if (worded) 'Contacts: ${personName(GAtom(q.name))}',
+      worded ? 'yes' : 'Accept',
+      worded ? 'no' : 'Decline'
+    ]);
     if (!worded) {
       // At the top of Friends, before the person's own name.
       expect(tester.getTopLeft(on(q, find.text(asks))).dy,
@@ -955,8 +960,13 @@ void appsScreens(Screens screens) {
     expect(formatTerm(a.view),
         contains(', introduce(alice, bob, carol), none), '));
     await run.top(bob);
-    expect(run.textsOf(bob, a),
-        ['Alice asks to introduce Carol to you.', 'yes', 'no']);
+    expect(run.textsOf(bob, a), [
+      'Alice asks to introduce Carol to you.',
+      'Contacts: Bob',
+      'Contacts: Carol',
+      'yes',
+      'no'
+    ]);
     run.plain(bob);
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
@@ -1094,7 +1104,15 @@ void appsScreens(Screens screens) {
     await run.top(bob);
     const asks = 'Alice asks you to join their group.';
     // The group's name, a speech act of Alice's, is drawn with its signer: "A speech act, in a row, a question or a field, is drawn with its signers" (vGLP 516a0a2, Section 6.2).
-    expect(run.textsOf(bob, a), [asks, 'friends\nAlice', 'yes', 'no']);
+    // Then the atoms the act requires of the proposer whose predicates the tabs list: the group Alice leads (vGLP e22e2ad, Section 5.4, "The contract's words"), and her friend.
+    expect(run.textsOf(bob, a), [
+      asks,
+      'Groups: friends, Alice',
+      'Friends: Bob',
+      'friends\nAlice',
+      'yes',
+      'no'
+    ]);
     run.plain(bob);
     await run.shoot(bob, 'gsn-b-bob-asked-to-join.png');
 
@@ -1165,8 +1183,7 @@ void appsScreens(Screens screens) {
     run.plain(alice, allow: const {'Peer'});
     ElevatedButton sendRemove() => run.tester
         .widget<ElevatedButton>(run.control(alice, 'send:remove:'));
-    expect(sendRemove().onPressed, isNull);
-    await run.tap(alice, run.control(alice, 'pick:remove::bob,$friends'));
+    // Her one way, Bob, the way that binds her own place to Bob's being none (vGLP e22e2ad, Section 5.4, "The contract's words": "distinct roles bound to distinct persons"), is chosen.
     expect(sendRemove().onPressed, isNotNull);
     await run.list(alice, 'member');
 
@@ -1234,12 +1251,14 @@ void appsScreens(Screens screens) {
     await run.top(bob);
     const asks = 'Alice asks to swap coins with you.';
     // After it, each value of the binding the question does not name, by the name of its field (vGLP 110caf4, Section 5.4, "The contract's words").
+    // Then the atoms the act requires of the proposer whose predicates the tabs list, as the tabs draw them: "in a swap, the coins the proposer gives" (vGLP e22e2ad, Section 5.4, "The contract's words"), the issuer given, bound by coin(u), among them.
     expect(run.textsOf(bob, a), [
       asks,
-      'issuer given: Alice',
       'amount given: 2',
       'issuer wanted: Bob',
       'amount wanted: 3',
+      'Contacts: Bob',
+      'Coins: Alice  2',
       'yes',
       'no'
     ]);
@@ -1343,11 +1362,12 @@ void appsScreens(Screens screens) {
     await run.top(bob);
     expect(run.textsOf(bob, a), [
       'Alice asks to swap coins or bonds with you.',
-      'issuer given: Alice',
       'amount given: 2',
       'issuer wanted: Bob',
       'maturity wanted: 5',
       'amount wanted: 3',
+      'Contacts: Bob',
+      'Coins: Alice  2',
       'yes',
       'no'
     ]);
@@ -1389,8 +1409,9 @@ void appsScreens(Screens screens) {
     await run.top(carol);
     expect(run.textsOf(carol, d), [
       'Alice asks to deposit coins or bonds with you.',
-      'issuer: Alice',
       'amount: 2',
+      'Contacts: Carol',
+      'Coins: Alice  2',
       'yes',
       'no'
     ]);
@@ -1455,10 +1476,11 @@ void appsScreens(Screens screens) {
       await run.top(v[q]!);
       expect(run.textsOf(v[q]!, a), [
         '${personName(GAtom(p))} asks to swap coins with you.',
-        'issuer given: ${personName(GAtom(u))}',
         'amount given: $k',
         'issuer wanted: ${personName(GAtom(w))}',
         'amount wanted: $k1',
+        'Contacts: ${personName(GAtom(q))}',
+        'Coins: ${personName(GAtom(u))}  $k',
         'yes',
         'no'
       ]);
