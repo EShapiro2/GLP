@@ -1,0 +1,126 @@
+%% ---------------------------------------------------------------------------
+%% GDO-LB.glp --- the location-based grassroots directed overlay, Location-Based GDO, GRH's (Udi, 2026-11-06, to GRH #1, who named it), in the clause syntax of GSC's paper, Section 3.2.  GDO-LB amends GDO (GSC, Section 8): it deletes GDO's point_friend, point_transitive and unpoint and adds, for each, a schema with the same name and head, no guard, since the instance says when the act is taken, and a stronger body; GKK's and GSG's five are as GSG.glp writes them.  The clauses are in GDO-LB.txt.
+%%
+%% Environment predicates, which the platform keeps current and no schema adds or deletes: location(x), the person's location; degree(d) and threshold(e), the instance's d and e.  fn(dist, [x1, x2]) is the distance of two locations.
+%%
+%% This file uses what GSC's paper does not yet have and GRH asked GSC for (GSC_inbox.md, 2026-11-06 07:59 and 08:36 UTC), as GRA-SS.glp does: all(Vars, Lits, C) and some(Vars, Lits, C) in a constraint, fn(Name, Args), and, here, card(Vars, Lits), the number of values of Vars under which the literals hold, the persons Alice points to.  A person c quantified reads location at c's machine.
+%%
+%% Written by GRH #1 Cowork, 2026-11-06, from the instance in GDO's box, Udi's text.
+%% ---------------------------------------------------------------------------
+
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SQLit       ::= SMult ; not(SMult).
+SQLits      ::= [] ; [SQLit | SQLits].
+SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
+SLits       ::= [] ; [SLit | SLits].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; fn(Constant, SExprs) ; card(PNames, SQLits).
+SExprs      ::= [] ; [SExpr | SExprs].
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
+              ; same(SArg, SArg) ; ne(SArg, SArg)
+              ; all(PNames, SQLits, SConstraint) ; some(PNames, SQLits, SConstraint).
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+Contract    ::= [] ; [Schema | Contract].
+Preds       ::= [] ; [Constant | Preds].
+Declared    ::= Contract ; environment(Preds, Contract).
+
+%% contract_named(gdo_lb, C): the contract, GDO-LB.
+procedure contract_named(Constant?, Declared).
+contract_named(gdo_lb, environment([location, degree, threshold],
+   [
+%% GKK:1, Identity.
+    sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))],
+       true,
+       ['Alice']),
+%% GKK:2, Acquaintance.
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']),
+        atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']),
+        atom(identity, ['Bob'])],
+       true,
+       ['Alice', 'Bob']),
+%% GKK:3, Introduction.
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']),
+        atom(knows, ['Alice', 'Bob']),
+        atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']),
+        atom(knows, ['Bob', 'Alice'])],
+       true,
+       ['Alice', 'Bob']),
+%% GSG:1, Friendship.
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']),
+        atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']),
+        atom(knows, ['Alice', 'Bob']),
+        not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']),
+        atom(knows, ['Bob', 'Alice']),
+        not(atom(friend, ['Bob', 'Alice']))],
+       true,
+       ['Alice', 'Bob']),
+%% GSG:2, Ending a friendship.
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])),
+        not(atom(friend, ['Bob', 'Alice']))],
+       [atom(identity, ['Alice']),
+        atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']),
+        atom(friend, ['Bob', 'Alice'])],
+       true,
+       ['Alice']),
+%% GDO-LB:1, Pointing to friend: GDO:1, taken iff Alice points to fewer than d persons and Bob is the closest of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person Alice points to; no one guards it, and Bob is a reading role.
+    sas(point_friend, ['Alice', 'Bob'], [xa, xb, dd, ee],
+       [atom(points_to, ['Alice', 'Bob'])],
+       [atom(identity, ['Alice']),
+        atom(friend, ['Alice', 'Bob']),
+        not(atom(points_to, ['Alice', 'Bob'])),
+        atom(location, ['Alice', num(xa)]),
+        atom(degree, ['Alice', num(dd)]),
+        atom(threshold, ['Alice', num(ee)]),
+        atom(identity, ['Bob']),
+        atom(location, ['Bob', num(xb)])],
+       or(and(lt(card([c], [atom(points_to, ['Alice', c])]), num(dd)), all([c, xc], [atom(friend, ['Alice', c]), not(atom(points_to, ['Alice', c])), atom(location, [c, num(xc)])], le(fn(dist, [num(xa), num(xb)]), fn(dist, [num(xa), num(xc)])))), some([c, xc], [atom(points_to, ['Alice', c]), atom(location, [c, num(xc)])], gt(minus(fn(dist, [num(xa), num(xc)]), fn(dist, [num(xa), num(xb)])), num(ee)))),
+       []),
+%% GDO-LB:2, Transitive pointing: GDO:2, taken iff Carol is closer to Alice by more than e than some person Alice points to; no one guards it, and Bob and Carol are reading roles.
+    sas(point_transitive, ['Alice', 'Bob', 'Carol'], [xa, xc, ee],
+       [atom(points_to, ['Alice', 'Carol'])],
+       [atom(identity, ['Alice']),
+        atom(knows, ['Alice', 'Carol']),
+        atom(points_to, ['Alice', 'Bob']),
+        not(atom(points_to, ['Alice', 'Carol'])),
+        atom(location, ['Alice', num(xa)]),
+        atom(threshold, ['Alice', num(ee)]),
+        atom(identity, ['Bob']),
+        atom(points_to, ['Bob', 'Carol']),
+        atom(location, ['Carol', num(xc)])],
+       some([c, x2], [atom(points_to, ['Alice', c]), atom(location, [c, num(x2)])], gt(minus(fn(dist, [num(xa), num(x2)]), fn(dist, [num(xa), num(xc)])), num(ee))),
+       []),
+%% GDO-LB:3, Ceasing to point: GDO:3, taken iff Alice points to more than d persons, Bob the furthest from Alice among them; no one guards it, and Bob is a reading role.
+    sas(unpoint, ['Alice', 'Bob'], [xa, xb, dd],
+       [not(atom(points_to, ['Alice', 'Bob']))],
+       [atom(identity, ['Alice']),
+        atom(points_to, ['Alice', 'Bob']),
+        atom(location, ['Alice', num(xa)]),
+        atom(degree, ['Alice', num(dd)]),
+        atom(identity, ['Bob']),
+        atom(location, ['Bob', num(xb)])],
+       and(gt(card([c], [atom(points_to, ['Alice', c])]), num(dd)), all([c, xc], [atom(points_to, ['Alice', c]), atom(location, [c, num(xc)])], le(fn(dist, [num(xa), num(xc)]), fn(dist, [num(xa), num(xb)])))),
+       [])])).

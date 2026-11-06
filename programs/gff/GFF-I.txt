@@ -1,0 +1,14 @@
+% GFF-I: Implementable GFF --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GFF (Udi, 2026-11-06, to GFF #3).  The paper, /Users/udi/Grassroots/GFF/main_CSSN.tex, prints it in its box and cites a clause as GFF-I:1.
+% Paper: GFF, Grassroots Feeds and Followers, in preparation
+% Restricts: GFF, GFF's (GFF.txt beside this file), and with it GDO-L, GDO, GSG and GKK.  Its clauses restrict GDO-L:2 and GFF:2, citing them, as GDO-LB restricts GDO; every other clause is kept.
+% Defines: nothing.
+% Last changed: 2026-11-06, written by GFF #3 Cowork (Udi, 2026-11-06, to GFF #3: 'GFF-I should restrict GFF', and 'ok, so do it' to GFF #3's proposal that GFF-I be GFF with two bodies strengthened, that Carol knows Alice in Labeled transitive pointing and that Bob knows Alice in Delivery).  vGLP's compiler refused GFF's Delivery, no machine knowing both the follower and the item (Code #24, 2026-11-06 08:33 UTC); GFF-I is the contract vGLP compiles for GFF, and the paper proves that it implements GFF.
+% Schemas: GFF-I.glp beside this file, GFF's fourteen, follow_transitive and deliver with stronger bodies.
+GFF-I: Implementable GFF
+Alice, Bob and Carol are persons, Bob and Carol possibly one person.  GFF-I restricts GFF.
+1. ■ Labeled transitive pointing.  GDO-L:2, only if Carol knows Alice.
+2. ■ Delivery.  GFF:2, only if Bob knows Alice.
+Pragmas
+Posts: Alice's feed.
+Feeds: the feeds Alice follows; under a feed, the persons Alice follows it through and its items, each once.

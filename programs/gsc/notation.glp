@@ -104,11 +104,12 @@ c_hmult(I, atom(P, As), Ns, T, R?) :- c_hatom(I?, atom(P?, As?), Ns?, T?, R).
 c_hmult(I, times(K, A), Ns, T, R?) :- ground(Ns?) |
     c_hatom(I?, A?, Ns?, T?, R1),
     c_arg(K?, Ns?, ['.'|R1?], R).
-% rest(K, A), the copies of K.A beyond one (self.glp, Mult), is (K - 1).A;
-% a role's required atoms carry it as K.A (nrs_req).
-c_hmult(I, rest(K, A), Ns, T, ['('|R?]) :- ground(Ns?) |
+% rest(K, J, A), the copies of K.A beyond the J deleted (self.glp, Mult),
+% is (K - J).A; a role's required atoms carry it as K.A (nrs_req).
+c_hmult(I, rest(K, J, A), Ns, T, ['('|R?]) :- ground(Ns?) |
     c_hatom(I?, A?, Ns?, T?, R1),
-    c_arg(K?, Ns?, [' - 1).'|R1?], R).
+    c_arg(J?, Ns?, [').'|R1?], R2),
+    c_arg(K?, Ns?, [' - '|R2?], R).
 
 % pl(I, A) the atom A of role I, ng(I, A) it negated, qa(I, Kind, Lits) the
 % quantified conjunct of the listed role I, cn(Gamma) the constraint.

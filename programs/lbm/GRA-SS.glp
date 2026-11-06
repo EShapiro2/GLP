@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% GRA-SI.glp --- the second-score instance of the grassroots ride auction, GRH's (Udi, 2026-11-06, to GRH #1), in the clause syntax of GSC's paper, Section 3.2, as GRA.glp beside this file.  GRA-SI restricts GRA (GSC, Section 8, Definition Amendment, extension, restriction, instantiation): it deletes GRA's point_transitive, award, close, arrive and cancel and adds, for each, a schema with the same name, head and guard and a stronger body; every other schema is GRA's as written there.  The clauses are in GRA-SI.txt.
+%% GRA-SS.glp --- the second-score restriction of the grassroots ride auction, GRH's (Udi, 2026-11-06, to GRH #1), in the clause syntax of GSC's paper, Section 3.2, as GRA.glp beside this file.  GRA-SS restricts GRA (GSC, Section 8, Definition Amendment, extension, restriction, instantiation): it deletes GRA's point_transitive, award, close, arrive and cancel and adds, for each, a schema with the same name, head and guard and a stronger body; every other schema is GRA's as written there.  The clauses are in GRA-SS.txt.
 %%
 %% Environment predicates: GRA's, now, location, rider and driver, and since(x, s), the location x and the time s since which the person has been at it.
 %%
@@ -38,9 +38,9 @@ Contract    ::= [] ; [Schema | Contract].
 Preds       ::= [] ; [Constant | Preds].
 Declared    ::= Contract ; environment(Preds, Contract).
 
-%% contract_named(gra_si, C): the contract, GRA-SI.
+%% contract_named(gra_ss, C): the contract, GRA-SS.
 procedure contract_named(Constant?, Declared).
-contract_named(gra_si, environment([now, location, since, rider, driver],
+contract_named(gra_ss, environment([now, location, since, rider, driver],
    [
 %% GKK:1, Identity.
     sas(establish, ['Alice'], [],
@@ -97,7 +97,7 @@ contract_named(gra_si, environment([now, location, since, rider, driver],
         atom(identity, ['Bob'])],
        true,
        ['Alice']),
-%% GRA-SI:1, Transitive pointing: GDO:2, where Carol is a driver; Bob and Carol reading roles.
+%% GRA-SS:1, Transitive pointing: GDO:2, where Carol is a driver; Bob and Carol reading roles.
     sas(point_transitive, ['Alice', 'Bob', 'Carol'], [],
        [atom(points_to, ['Alice', 'Carol'])],
        [atom(identity, ['Alice']),
@@ -169,7 +169,7 @@ contract_named(gra_si, environment([now, location, since, rider, driver],
         atom(identity, ['Alice'])],
        lt(num(t), num(e)),
        ['Bob']),
-%% GRA-SI:2, Award: GRA:3, where Bob's bid is admissible and has the highest score among the bids Alice holds of bidders who have no ride, s2 is the highest score among the other admissible ones or 0, the fare f is W(d) - s2 and the deposit k is D.
+%% GRA-SS:2, Award: GRA:3, where Bob's bid is admissible and has the highest score among the bids Alice holds of bidders who have no ride, s2 is the highest score among the other admissible ones or 0, the fare f is W(d) - s2 and the deposit k is D.
     sas(award, ['Alice', 'Bob'], [r, x, y, e, mx, m, p, d, t0, f, k, s2],
        [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
         not(atom(calling, ['Alice'])),
@@ -190,7 +190,7 @@ contract_named(gra_si, environment([now, location, since, rider, driver],
         not(atom(busy, ['Bob']))],
        and(le(num(e), num(t0)), and(le(num(d), num(mx)), and(ge(minus(fn(w, [num(m), num(d)]), num(p)), num(0)), and(all([c, p1, d1], [atom(bid, ['Alice', c, r, num(p1), num(d1)]), not(atom(busy, [c]))], or(gt(num(d1), num(mx)), le(minus(fn(w, [num(m), num(d1)]), num(p1)), minus(fn(w, [num(m), num(d)]), num(p))))), and(ge(num(s2), num(0)), and(all([c, p1, d1], [atom(bid, ['Alice', c, r, num(p1), num(d1)]), not(atom(busy, [c]))], or(same(c, 'Bob'), or(gt(num(d1), num(mx)), le(minus(fn(w, [num(m), num(d1)]), num(p1)), num(s2))))), and(or(eq(num(s2), num(0)), some([c, p1, d1], [atom(bid, ['Alice', c, r, num(p1), num(d1)]), not(atom(busy, [c]))], and(ne(c, 'Bob'), and(le(num(d1), num(mx)), eq(minus(fn(w, [num(m), num(d1)]), num(p1)), num(s2)))))), and(eq(num(f), minus(fn(w, [num(m), num(d)]), num(s2))), eq(num(k), fn(deposit, [num(m)])))))))))),
        ['Alice']),
-%% GRA-SI:2, Award: GRA:3's closing of the call, where no bid Alice holds of a bidder who has no ride is admissible.
+%% GRA-SS:2, Award: GRA:3's closing of the call, where no bid Alice holds of a bidder who has no ride is admissible.
     sas(close, ['Alice'], [r, x, y, e, mx, m, t],
        [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
         not(atom(calling, ['Alice']))],
@@ -215,7 +215,7 @@ contract_named(gra_si, environment([now, location, since, rider, driver],
         atom(location, ['Bob', num(x)])],
        true,
        []),
-%% GRA-SI:3, Arriving: GRA:5, where the refund a1 = min{f, lambda dl} is released to Alice, dl = max{0, t - t0 - d}, t the time of the pickup, and the rest of the fare and the deposit to Bob.
+%% GRA-SS:3, Arriving: GRA:5, where the refund a1 = min{f, lambda dl} is released to Alice, dl = max{0, t - t0 - d}, t the time of the pickup, and the rest of the fare and the deposit to Bob.
     sas(arrive, ['Alice', 'Bob'], [r, y, t0, d, f, k, m, t, a1, c1, a2, c2, dl],
        [not(atom(riding, ['Alice', 'Bob', r, num(y), num(t0), num(d), num(f), num(k), num(m), num(t)])),
         not(atom(fare_locked, ['Alice', r, num(f)])),
@@ -237,7 +237,7 @@ contract_named(gra_si, environment([now, location, since, rider, driver],
         atom(location, ['Bob', num(y)])],
        and(and(eq(plus(num(a1), num(a2)), num(f)), and(eq(plus(num(c1), num(c2)), num(k)), and(ge(num(a1), num(0)), and(ge(num(a2), num(0)), and(ge(num(c1), num(0)), ge(num(c2), num(0))))))), and(eq(num(c1), num(0)), and(eq(num(c2), num(k)), and(or(and(le(minus(minus(num(t), num(t0)), num(d)), num(0)), eq(num(dl), num(0))), and(ge(minus(minus(num(t), num(t0)), num(d)), num(0)), eq(num(dl), minus(minus(num(t), num(t0)), num(d))))), or(and(le(num(f), mul(fn(lambda, [num(m)]), num(dl))), eq(num(a1), num(f))), and(le(mul(fn(lambda, [num(m)]), num(dl)), num(f)), eq(num(a1), mul(fn(lambda, [num(m)]), num(dl))))))))),
        []),
-%% GRA-SI:4, Cancelling: GRA:6, where the fare and the deposit are released to Alice if Alice has been at the pickup point since t0 or before, and otherwise the fare to Alice and the deposit to Bob.
+%% GRA-SS:4, Cancelling: GRA:6, where the fare and the deposit are released to Alice if Alice has been at the pickup point since t0 or before, and otherwise the fare to Alice and the deposit to Bob.
     sas(cancel, ['Alice', 'Bob'], [r, x, y, mx, t0, d, f, k, m, t, a1, c1, a2, c2],
        [not(atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)])),
         not(atom(fare_locked, ['Alice', r, num(f)])),

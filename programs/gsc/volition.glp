@@ -454,7 +454,7 @@ args_all_in1(yes, Vs, Os, R?) :- ground(Vs?), ground(Os?) | args_all_in(Vs?, Os?
 procedure mult_vars(Mult?, Args).
 mult_vars(atom(_, As), R?) :- ground(As?) | args_vars(As?, R).
 mult_vars(times(K, atom(_, As)), R?) :- ground(K?), ground(As?) | args_vars([K?|As?], R).
-mult_vars(rest(K, atom(_, As)), R?) :- ground(K?), ground(As?) | args_vars([K?|As?], R).
+mult_vars(rest(K, J, atom(_, As)), R?) :- ground(K?), ground(J?), ground(As?) | args_vars([K?, J?|As?], R).
 
 procedure args_vars(Args?, Args).
 args_vars(As, R?) :- ground(As?) |
@@ -475,7 +475,7 @@ pred_count([_|Ps], Q, N?) :- otherwise, ground(Ps?), ground(Q?) | pred_count(Ps?
 procedure mult_pred(Mult?, Constant).
 mult_pred(atom(P, _), P?).
 mult_pred(times(_, atom(P, _)), P?).
-mult_pred(rest(_, atom(P, _)), P?).
+mult_pred(rest(_, _, atom(P, _)), P?).
 
 procedure mults_preds(Mults?, Preds?, Preds).
 mults_preds([], T, T?).

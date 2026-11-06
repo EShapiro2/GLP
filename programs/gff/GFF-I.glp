@@ -1,0 +1,96 @@
+%% ---------------------------------------------------------------------------
+%% GFF-I.glp --- the implementable restriction of GFF, GFF's (Udi, 2026-11-06,
+%% to GFF #3), in the term form programs/gsc reads (its README, "Writing a
+%% contract").  GFF-I restricts GFF (GFF.glp beside this file; GSC, Section
+%% Relations among Contracts, Definition Amendment, extension, restriction,
+%% instantiation): it has GFF's schemas, two with stronger bodies, the same
+%% heads, guards and names.  follow_transitive (GFF-I:1, restricting GDO-L:2)
+%% has Carol as a reading role requiring knows(Alice); deliver (GFF-I:2,
+%% restricting GFF:2) has Bob as its first role, requiring knows(Alice) and
+%% item(x, l), so that the atoms its first role requires name every other role
+%% and every variable of what it adds (vGLP, Section 5.4, an effective
+%% contract).  The clauses are in GFF-I.txt.
+%%
+%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
+%% and is named by its index, role(1) the schema's first role.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gff_i, C): the contract, GFF-I.
+procedure contract_named(Constant?, Declared).
+contract_named(gff_i,
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(befriend, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
+    schema(unfriend, ['Alice', 'Bob'], [],
+       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+    schema(point_friend, ['Alice', 'Bob'], [],
+       [rs(guarded,   [atom(points_to, [role(2)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+    schema(point_transitive, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded,   [atom(points_to, [pvar(c)])], [],
+                      [atom(identity, []), atom(knows, [pvar(c)]), atom(points_to, [role(2)])], []),
+        rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar(c)])], [])]),
+    schema(unpoint, ['Alice', 'Bob'], [],
+       [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+%% GDO-L:1, Labeled pointing to friend, with Bob's label, which is named by Bob.
+    schema(follow_own, ['Alice', 'Bob'], [],
+       [rs(guarded,   [atom(lpoints_to, [role(2), role(2)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), role(2)])]),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+%% GDO-L:1, Labeled pointing to friend, with a label l that Bob points with, to some person d.
+    schema(follow_friend, ['Alice', 'Bob'], [pvar(l), pvar(d)],
+       [rs(guarded,   [atom(lpoints_to, [role(2), pvar(l)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar(l)])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(d), pvar(l)])], [])]),
+%% GFF-I:1 restricts GDO-L:2: Carol, a reading role now, requires that Carol knows Alice.
+    schema(follow_transitive, ['Alice', 'Bob', 'Carol'], [pvar(l)],
+       [rs(guarded,   [atom(lpoints_to, [role(3), pvar(l)])], [],
+                      [atom(identity, []), atom(knows, [role(3)]), atom(lpoints_to, [role(2), pvar(l)])],
+                      [atom(lpoints_to, [role(3), pvar(l)])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [role(3), pvar(l)])], []),
+        rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GDO-L:3, Ceasing to point.
+    schema(unfollow, ['Alice', 'Bob'], [pvar(l)],
+       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar(l)])], [atom(identity, [])], []),
+        rs(unguarded, [], [], [atom(identity, [])], [])]),
+%% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:1), and Alice holds it as an item of the feed Alice names.
+    schema(post, ['Alice'], [svar(x)],
+       [rs(guarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [atom(item, [svar(x), role(1)])])]),
+%% GFF-I:2 restricts GFF:2: Bob, the first role, requires that Bob knows Alice, so Bob's state names Alice, the feed l and the item x.
+    schema(deliver, ['Bob', 'Alice'], [pvar(l), svar(x)],
+       [rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(item, [svar(x), pvar(l)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(l)]), atom(received, [svar(x), pvar(l), role(1)])], [],
+                      [atom(identity, []), atom(lpoints_to, [role(1), pvar(l)])],
+                      [atom(item, [svar(x), pvar(l)])])])]).
+

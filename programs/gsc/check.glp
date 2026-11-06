@@ -615,7 +615,7 @@ mults_numeric([times(K, A)|Ms], Nm, I, T, R?) :-
     mults_numeric(Ms?, Nm?, I?, T?, R1),
     mult_whole_fault(Wh?, A?, Nm?, I?, R1?, R2),
     mult_num_fault(Ok?, A?, Nm?, I?, R2?, R).
-mults_numeric([rest(K, A)|Ms], Nm, I, T, R?) :-
+mults_numeric([rest(K, _, A)|Ms], Nm, I, T, R?) :-
     ground(K?), ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_numeric([times(K?, A?)|Ms?], Nm?, I?, T?, R).
 
@@ -640,7 +640,7 @@ mults_wild([atom(_, _)|Ms], Nm, I, T, R?) :-
 mults_wild([times(_, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_wild(Ms?, Nm?, I?, T?, R).
-mults_wild([rest(_, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
+mults_wild([rest(_, _, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_wild(Ms?, Nm?, I?, T?, R).
 
@@ -660,7 +660,7 @@ mults_forbidden([atom(_, _)|Ms], Nm, I, T, R?) :-
 mults_forbidden([times(_, A)|Ms], Nm, I, T, [multiplicity_forbidden(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_forbidden(Ms?, Nm?, I?, T?, R).
-mults_forbidden([rest(_, A)|Ms], Nm, I, T, [multiplicity_forbidden(Nm?, I?, A?)|R?]) :-
+mults_forbidden([rest(_, _, A)|Ms], Nm, I, T, [multiplicity_forbidden(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_forbidden(Ms?, Nm?, I?, T?, R).
 
