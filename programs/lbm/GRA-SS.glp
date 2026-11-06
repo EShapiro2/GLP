@@ -5,7 +5,7 @@
 %%
 %% The terms m are a value whose type provides fn(w, [m, d]), the willingness to pay W(d) = A - lambda d, fn(lambda, [m]) and fn(deposit, [m]), the deposit D; the maximum pickup delay T is mx, which the call states.  A bid (p, d) has the score W(d) - p and is admissible iff d =< mx and its score is at least 0.
 %%
-%% This file is in the term form GSC proposed to Code (GSC_inbox, GSC #11 to GRH, 2026-11-06 09:27 UTC; GSC main c8c5ead, Definition Safe formula, name term, role): a body is literals and safe formulas, forall(Xs, Anchor, Phi, Psi) and exists(Xs, Anchor, Phi), every bound variable among the arguments of the anchor, a bound person holding an atom being a listed role, read; and, or, not, = and != of persons as eq and ne; cardinality(Xs, Anchor, Phi) in a constraint; and fn(Name, Args), a function a value's type provides.  Code confirms or betters the form.  A person c quantified reads busy at c's machine.  Ties are left as the terms break them: Bob's score is at least every other eligible admissible score.  "Alice was at the pickup point from t0 to t0 + T" is read as Alice having been at it since t0 or before, at the time of the cancellation.
+%% This file is in the term form GSC proposed to Code (GSC_inbox, GSC #11 to GRH, 2026-11-06 09:27 UTC; GSC main c8c5ead, Definition Safe formula, name term, role): a body is literals and safe formulas, forall(Xs, Anchor, Phi, Psi) and exists(Xs, Anchor, Phi), every bound variable among the arguments of the anchor, a bound person holding an atom being a listed role, read; and, or, not, = and != of persons as eq and ne; cardinality(Xs, Anchor, Phi) in a constraint; and fn(Name, Args), a function a value's type provides.  Code confirms or betters the form.  A person c quantified reads busy at c's machine, and is in Names (Code #24, 2026-11-06 11:08 UTC).  Ties are left as the terms break them: Bob's score is at least every other eligible admissible score.  "Alice was at the pickup point from t0 to t0 + T" is read as Alice having been at it since t0 or before, at the time of the cancellation.
 %%
 %% Written by GRH #1 Cowork, 2026-11-06, from the clauses Udi approved that day.
 %% ---------------------------------------------------------------------------
@@ -167,7 +167,7 @@ contract_named(gra_ss, environment([now, location, since, rider, driver],
        lt(num(t), num(e)),
        ['Bob']),
 %% GRA-SS:2, Award: GRA:3, where Bob's bid is admissible and has the highest score among the bids Alice holds of bidders who have no ride, s2 is the highest score among the other admissible ones or 0, the fare f is W(d) - s2 and the deposit k is D.
-    sas(award, ['Alice', 'Bob'], [r, x, y, e, mx, m, p, d, t0, f, k, s2],
+    sas(award, ['Alice', 'Bob', 'c'], [r, x, y, e, mx, m, p, d, t0, f, k, s2],
        [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
         not(atom(calling, ['Alice'])),
         atom(ride, ['Alice', 'Bob', r, num(x), num(y), num(mx), num(t0), num(d), num(f), num(k), num(m)]),
@@ -191,7 +191,7 @@ contract_named(gra_ss, environment([now, location, since, rider, driver],
        and(le(num(e), num(t0)), and(le(num(d), num(mx)), and(ge(minus(fn(w, [num(m), num(d)]), num(p)), num(0)), and(ge(num(s2), num(0)), and(eq(num(f), minus(fn(w, [num(m), num(d)]), num(s2))), eq(num(k), fn(deposit, [num(m)]))))))),
        ['Alice']),
 %% GRA-SS:2, Award: GRA:3's closing of the call, where no bid Alice holds of a bidder who has no ride is admissible.
-    sas(close, ['Alice'], [r, x, y, e, mx, m, t],
+    sas(close, ['Alice', 'c'], [r, x, y, e, mx, m, t],
        [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
         not(atom(calling, ['Alice']))],
        [atom(identity, ['Alice']),

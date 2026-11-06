@@ -3,7 +3,7 @@
 %%
 %% Environment predicates, which the platform keeps current and no schema adds or deletes: location(x), the person's location; degree(d) and threshold(e), the contract's d and e.  fn(dist, [x1, x2]) is the distance of two locations.
 %%
-%% This file is in the term form GSC proposed to Code (GSC_inbox, GSC #11 to GRH, 2026-11-06 09:27 UTC; GSC main c8c5ead, Definition Safe formula, name term, role): a body is literals and safe formulas, forall(Xs, Anchor, Phi, Psi) and exists(Xs, Anchor, Phi), every bound variable among the arguments of the anchor, a bound person holding an atom being a listed role, read; and, or, not, = and != of persons as eq and ne; cardinality(Xs, Anchor, Phi) in a constraint; and fn(Name, Args), a function a value's type provides.  Code confirms or betters the form.  A person c quantified reads location at c's machine, by a quantifier nested under the one that binds c.
+%% This file is in the term form GSC proposed to Code (GSC_inbox, GSC #11 to GRH, 2026-11-06 09:27 UTC; GSC main c8c5ead, Definition Safe formula, name term, role): a body is literals and safe formulas, forall(Xs, Anchor, Phi, Psi) and exists(Xs, Anchor, Phi), every bound variable among the arguments of the anchor, a bound person holding an atom being a listed role, read; and, or, not, = and != of persons as eq and ne; cardinality(Xs, Anchor, Phi) in a constraint; and fn(Name, Args), a function a value's type provides.  Code confirms or betters the form.  A person c quantified reads location at c's machine, by a quantifier nested under the one that binds c; each bound person is in Names, and each scope has its own name (Code #24, 2026-11-06 11:08 UTC).
 %%
 %% Written by GRH #1 Cowork, 2026-11-06, from GDO-LB's clauses, Udi's text with "only if".
 %% ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ contract_named(gdo_lb, environment([location, degree, threshold],
        true,
        ['Alice']),
 %% GDO-LB:1, Pointing to friend: GDO:1, only if Alice points to fewer than d persons and Bob is the closest of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person Alice points to; Bob is a reading role.
-    sas(point_friend, ['Alice', 'Bob'], [xa, xb, dd, ee],
+    sas(point_friend, ['Alice', 'Bob', 'c', 'c2'], [xa, xb, dd, ee],
        [atom(points_to, ['Alice', 'Bob'])],
        [atom(identity, ['Alice']),
         atom(friend, ['Alice', 'Bob']),
@@ -94,11 +94,11 @@ contract_named(gdo_lb, environment([location, degree, threshold],
         atom(threshold, ['Alice', num(ee)]),
         atom(identity, ['Bob']),
         atom(location, ['Bob', num(xb)]),
-        or(and(lt(cardinality([c], atom(points_to, ['Alice', c]), true), num(dd)), forall([c], atom(friend, ['Alice', c]), not(atom(points_to, ['Alice', c])), forall([xc], atom(location, [c, num(xc)]), true, le(fn(dist, [num(xa), num(xb)]), fn(dist, [num(xa), num(xc)]))))), exists([c], atom(points_to, ['Alice', c]), exists([xc], atom(location, [c, num(xc)]), gt(minus(fn(dist, [num(xa), num(xc)]), fn(dist, [num(xa), num(xb)])), num(ee)))))],
+        or(and(lt(cardinality([c], atom(points_to, ['Alice', c]), true), num(dd)), forall([c], atom(friend, ['Alice', c]), not(atom(points_to, ['Alice', c])), forall([xc], atom(location, [c, num(xc)]), true, le(fn(dist, [num(xa), num(xb)]), fn(dist, [num(xa), num(xc)]))))), exists([c2], atom(points_to, ['Alice', c2]), exists([x2], atom(location, [c2, num(x2)]), gt(minus(fn(dist, [num(xa), num(x2)]), fn(dist, [num(xa), num(xb)])), num(ee)))))],
        true,
        ['Alice']),
 %% GDO-LB:2, Transitive pointing: GDO:2, only if Carol is closer to Alice by more than e than some person Alice points to; Bob and Carol are reading roles.
-    sas(point_transitive, ['Alice', 'Bob', 'Carol'], [xa, xc, ee],
+    sas(point_transitive, ['Alice', 'Bob', 'Carol', 'c'], [xa, xc, ee],
        [atom(points_to, ['Alice', 'Carol'])],
        [atom(identity, ['Alice']),
         atom(knows, ['Alice', 'Carol']),
@@ -113,7 +113,7 @@ contract_named(gdo_lb, environment([location, degree, threshold],
        true,
        ['Alice']),
 %% GDO-LB:3, Ceasing to point: GDO:3, only if Alice points to more than d persons, Bob the furthest from Alice among them; Bob is a reading role.
-    sas(unpoint, ['Alice', 'Bob'], [xa, xb, dd],
+    sas(unpoint, ['Alice', 'Bob', 'c'], [xa, xb, dd],
        [not(atom(points_to, ['Alice', 'Bob']))],
        [atom(identity, ['Alice']),
         atom(points_to, ['Alice', 'Bob']),
