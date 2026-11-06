@@ -37,9 +37,9 @@ unfriend(Peer, Peer)
 
 Request ::= propose(Proposal).
 
-%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the request type Request, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with the label of each request and the name of each field the person fills, as the contract's pragmas give them, label(F, S) for the request F and label(F, I, S) for its place I; where the button of each request is drawn, act(F, T, M, Ps, Gs, Is), T the tab of its contract, M the place of the person proposing it, Ps the places of the persons it names beside them, which a person the view lists fills, Gs the groups it names, group(J, K), the leader at place J and the group's name at place K, which a group the view lists fills, and Is the items it names, item(K, P), the speech act at place K, which a row of the list of the predicate P fills; meeting(F, I) for an acquaintance schema, its peer at place I, which a field for the key fills where the peer is not listed; and text(F, Ws), the question of an act with one guarding role, text of its request form, each word say(S) or at(I), the person at place I (README.md beside this file, "The pragmas").
+%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the request type Request, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request =::= social_menu([label(establish, "Establish"), act(establish, "Contacts", 1, [], [], [forb(identity, [])]), label(acquaint, "Acquaint"), label(acquaint, 2, "person"), act(acquaint, "Contacts", 1, [2], [], [req(identity, []), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)])]), meeting(acquaint, 2), label(introduce, "Introduce"), label(introduce, 3, "person"), act(introduce, "Contacts", 1, [2], [], [item(2, knows), pick(3, knows), req(identity, []), req(knows, [at(2)]), req(knows, [at(3)]), proved(identity, [], knows, [at(2)]), proved(knows, [v], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(knows, [v], friend, [at(2)])]), label(befriend, "Befriend"), act(befriend, "Friends", 1, [2], [], [item(2, knows), req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)]), proved(identity, [], knows, [at(2)]), proved(knows, [v], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(knows, [v], friend, [at(2)])]), label(unfriend, "Unfriend"), act(unfriend, "Friends", 1, [2], [], [item(2, friend), req(identity, []), req(friend, [at(2)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)])])])
+Request =::= social_menu([button("Establish", [act(establish, 1, [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 1, [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [req(identity, []), req(friend, [at(2)])], [2], [], [], [])])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
@@ -61,7 +61,7 @@ atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar(Carol)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(Carol)])], []), rs(guarded, [atom(knows, [pvar(Carol)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -69,7 +69,7 @@ schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])],
 .
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
-schema_entry(introduce, schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(introduce, schema(introduce, [pvar(Carol)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(Carol)])], []), rs(guarded, [atom(knows, [pvar(Carol)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
 schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]))
 .
@@ -93,7 +93,7 @@ binding_of(establish(V1), establish, [b(role(1), p(V1?))])
 .
 binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(c), p(V3?))])
+binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(Carol), p(V3?))])
 .
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
@@ -129,7 +129,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(pvar(c), B?, D?, V3)
+val_peer(pvar(Carol), B?, D?, V3)
 .
 class_of(befriend, B, D, befriend(V1?, V2?))
 :-
@@ -312,7 +312,7 @@ LNorm     ::= norm(Binding) ; badnorm.
 %% The value of a name term is a community name, c(N): community(P) the community name of the person P, dot(N, S) the community name N followed by the speech act S, as dot(community(a), n) names the group n led by a.
 %% Under a binding the wildcard of a cleared atom is itself, any, and N.* the community name of N followed by it, dot_any(C) (GSC 327e035, Definition "Binding": beta(*) := *): the image of a cleared atom, which matches the atoms of a state obtained from it by replacing each wildcard by an argument, a speech act where the wildcard is in a name term (ibid.).
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-%% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a numeric variable X local to a role, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it").
+%% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
 Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
@@ -320,7 +320,7 @@ GAtom     ::= g(Constant, Vals).
 GAtoms    ::= [] ; [GAtom | GAtoms].
 %% The program's output to its person is of the type of the views, view(Id, S, K, A, Ts): Id the agent's own key (vGLP 12f629d, Section 5.4, "The compilation": "its own key k"); S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
 Approved  ::= Proposal.
-%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, its rows showing their counts (vGLP 110caf4, Section 5.4) (vGLP, Section 5.4, "The contract's words": "the tab's name and its predicate into the view the agent writes"), last in the view, view(Id, S, K, A, Ts).
+%% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, each atom it lists shown with its count (vGLP 40f8444, Section 5.4, "The contract's words": "The tab lists the atoms of that predicate in the state, each with its count where the contract adds or deletes the predicate with a multiplicity, the view carrying the whole state"; "the tab's name and its predicate into the view the agent writes"), last in the view, view(Id, S, K, A, Ts).
 Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Shown     ::= shown(Atom) ; unshown.
@@ -3870,7 +3870,7 @@ mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), g
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
     mate_of(E?, B?, Nm?, Rs?, M).
-%% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role: the schema-binding does not bind it").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
+%% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
     schema_numeric(Nm?, N),
@@ -3895,6 +3895,8 @@ entry_wrong(yes, V, X, Nm, W?) :- local_wrong(V?, X?, Nm?, W).
 entry_wrong(no, _, X, _, W?) :- is_lv(X?, W).
 procedure local_wrong(Var?, Val?, Constant?, YesNo).
 local_wrong(num(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
+local_wrong(pvar(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
+local_wrong(svar(Xn), X, Nm, W?) :- ground(Xn?), ground(Nm?) | same(X?, lv(Nm?, Xn?), S), neg(S?, W).
 local_wrong(_, _, _, yes) :- otherwise | true.
 procedure is_lv(Val?, YesNo).
 is_lv(lv(_, _), yes).
@@ -3911,6 +3913,8 @@ locals_put([V|Vs], Nm, B, B2?) :- ground(V?), ground(Nm?), ground(B?) |
     locals_put(Vs?, Nm?, B1?, B2).
 procedure local_put(Found?, Var?, Constant?, Binding?, Binding).
 local_put(free, num(X), Nm, B, [b(num(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
+local_put(free, pvar(X), Nm, B, [b(pvar(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
+local_put(free, svar(X), Nm, B, [b(svar(X?), lv(Nm?, X?))|B?]) :- ground(X?), ground(Nm?) | true.
 local_put(found(_), _, _, B, B?).
 local_put(free, V, _, B, B?) :- otherwise, ground(V?) | true.
 procedure mate_of(YesNo?, Binding?, Constant?, RoleSpecs?, Mates).
@@ -4653,7 +4657,7 @@ kind_ok(nterm(_), _, no).
 kind_ok(role(_), c(_), no).
 kind_ok(pvar(_), c(_), no).
 kind_ok(svar(_), c(_), no).
-%% A numeric variable matches a number, and lv(S, X), which a schema-binding gives a variable local to a role (local_norm); and nothing else matches either.
+%% A numeric variable matches a number, an agent variable a person and a speech-act variable a speech act; and each matches lv(S, X), which a schema-binding gives a variable local to a role (local_norm), a variable not local to a role so matched being no schema-binding of the class (lv_wrong); and nothing else matches either.
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), lv(_, _), yes).
 kind_ok(num(_), p(_), no).
@@ -4662,9 +4666,9 @@ kind_ok(num(_), c(_), no).
 kind_ok(role(_), n(_), no).
 kind_ok(role(_), lv(_, _), no).
 kind_ok(pvar(_), n(_), no).
-kind_ok(pvar(_), lv(_, _), no).
+kind_ok(pvar(_), lv(_, _), yes).
 kind_ok(svar(_), n(_), no).
-kind_ok(svar(_), lv(_, _), no).
+kind_ok(svar(_), lv(_, _), yes).
 kind_ok(sgn(_, _), n(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.
