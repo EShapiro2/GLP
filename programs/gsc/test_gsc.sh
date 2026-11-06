@@ -490,7 +490,7 @@ check "the empty contract has no introductory act" \
 # reading role no guarding role records fails volition, changes_nothing,
 # and the contract is not compiled; a reading role the guarding role
 # records is admitted, and compiles with its state unchanged; and an
-# unguarded schema with a reading role is admitted with a signature atom
+# unguarded schema with a reading role is admitted with signature atoms
 # (GSC c100cdc, def:signature) and refused without one.  A schema no role of
 # which adds or deletes an atom, and an atom added and deleted at one role,
 # are each refused, the contract malformed, and it is not compiled.  The
@@ -537,6 +537,31 @@ check "an atom not naming the other agent role is no signature atom" \
 out=$(run "check_variant(sg_update_unvaried, $GSGV, V).")
 check "an atom not holding the schema's variable is a signature atom, def:signature asking that it name the other agent roles only (GSC c3c5ec7)" \
       "V = syntactically_grassroots" "$out"
+# Signature atoms are a set at one role (def:signature, GSC 5e014fd).
+out=$(run "check_variant(sg_sig_set, $GSGV, V)." "check_variant(sg_sig_split, $GSGV, V)." "check_variant(sg_sig_twice, $GSGV, V).")
+sg() { printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^V = ' | sed -n "$1p"; }
+check_eq "two atoms at one role, each the only one of its predicate, together naming the other agent roles, are signature atoms" \
+         "V = syntactically_grassroots" "$(sg 1)"
+check_eq "atoms at two roles are none" \
+         "V = not_grassroots([no_signature_atom(tell)])" "$(sg 2)"
+check_eq "two atoms of one predicate are none" \
+         "V = not_grassroots([no_signature_atom(tell)])" "$(sg 3)"
+# A listed role's literal is traced through the anchor of its conjunct, which
+# counts as an atom its holder requires (def:schema, GSC 5e014fd).
+out=$(run "check_variant(sg_anchor_traced, $GSGV, V)." "check_variant(sg_anchor_loose, $GSGV, V)." "check_variant(sg_anchor_other, $GSGV, V).")
+check_eq "a second bound variable of a listed role's literal is traced through the anchor" \
+         "V = syntactically_grassroots" "$(sg 1)"
+check_eq "not through an anchor of a predicate with no traceable provenance" \
+         "V = not_grassroots([untraceable([paired, met])])" "$(sg 2)"
+check_eq "and a variable that is no argument of the anchor is not traced by it" \
+         "V = not_grassroots([untraceable([met])])" "$(sg 3)"
+# Theorem What the check preserves, clause 2: a reading role added by a
+# stronger body needs its edge, which check/2 reports as it reports any.
+out=$(run "check_variant(sg_added_reading, $GSGV, V)." "check_variant(sg_added_reading_edge, $GSGV, V).")
+check_eq "a reading role added to unfriend with no edge to a guarding role is reported" \
+         "V = not_grassroots([volition(unfriend, 1, 3), changes_nothing(unfriend, 3)])" "$(sg 1)"
+check_eq "and with the edge it holds" \
+         "V = syntactically_grassroots" "$(sg 2)"
 out=$(run "check_variant(sg_inert_schema, $GSGV, V).")
 check "a schema adding and deleting nothing at any role is refused, though its roles guard" \
       "V = malformed([no_role_changes(look)])" "$out"
@@ -1116,8 +1141,20 @@ check "and it is not compiled, being not syntactically grassroots" \
       "% not compiled: sn_listed_guard is not syntactically grassroots" \
       "$(printf '%s' "$out" | tr '\n' ' ')"
 out=$(run "check_variant(sn_listed_inert, $GSNV, V).")
-check "a listed reading role whose guarding role requires no atom of its base fails volition" \
-      "V = not_grassroots([changes_nothing(idle, 2)])" "$out"
+check "a listed reading role whose base is a guarding role, which its anchor names, needs no atom of the guarding role (def:volition, GSC 5e014fd)" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_variant(sn_listed_far, $GSNV, V).")
+check "a listed reading role whose base is no guarding role and no guarding role's atom names has no edge" \
+      "V = not_grassroots([volition(idle, 1, 2), changes_nothing(idle, 3)])" "$out"
+out=$(run "check_variant(sn_listed_far_edge, $GSNV, V).")
+check "and with the guarding role requiring an atom naming its base it is admitted" \
+      "V = syntactically_grassroots" "$out"
+out=$(run "check_variant(sn_cond_listed, $GSNV, V)." "variant(sn_cond_listed, $GSNV, D), as_read(D, R)." "variant(sn_cond_listed_named, $GSNV, D), as_read(D, R).")
+check "a variable bound in a condition, holding an atom, its anchor held by the guarding role, is admitted (GSC #12, 2026-11-06 11:26 UTC, 1)" \
+      "V = syntactically_grassroots" "$out"
+check_eq "and the reader infers it, reading the contract as if it were among the names" \
+         "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | sed -n 1p)" \
+         "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | sed -n 2p)"
 out=$(run "check_variant(sn_listed_reading, $GSNV, V).")
 check "a listed reading role whose guarding role requires listed(Alice, n), as close's leader does, is admitted" \
       "V = syntactically_grassroots" "$out"
@@ -1505,8 +1542,9 @@ check "and the speech-act fault named" \
 # "Writing a contract"): an atom whose holder is no name; a constant that is
 # no name and not in Vars; an atom deleted and not required (def:schema,
 # -(i) a subset of =(i)), a copy for each copy; a listed role under two
-# anchors, holding a literal outside its quantifier, or not among the names
-# (def:role); a guard no agent variable of the schema (def:schema).
+# anchors, or holding a literal outside its quantifier (def:role); a guard no
+# agent variable of the schema (def:schema).  A bound variable holding an atom
+# need not be among the names.
 SAS_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
 sas_close() { # sas_close <names> <head conjunct cond> <body conjunct cond> <body conjunct lits> <more body>
   printf "[%s, sas(close, %s, [n], [atom(closed, ['Alice', n]), forall('Bob', %s, [not(atom(member, ['Bob', ext(own('Alice'), n)]))])], [atom(identity, ['Alice'])%s, forall('Bob', %s, [%s])], true, ['Alice'])]" \
@@ -1543,8 +1581,8 @@ check_eq "close with Alice's identity in Bob's conjunct of the body is read, a c
          "V = not_grassroots([no_introductory_act, untraceable([closed])])" "$(sv 7)"
 check_eq "close with Bob holding a literal outside his conjunct is refused" \
          "V = malformed([listed_agent_role(close, 'Bob')])" "$(sv 8)"
-check_eq "close leaving Bob out of its names is refused" \
-         "V = malformed([not_in_names(close, 'Bob')])" "$(sv 9)"
+check_eq "close leaving Bob out of its names is read, the reader inferring a bound variable holding an atom" \
+         "$(sv 7)" "$(sv 9)"
 check_eq "establish guarded by Bob, no agent variable of it, is refused" \
          "V = malformed([guard_not_role(establish, 'Bob')])" "$(sv 10)"
 check_eq "a multiplicity on an atom forbidden is read in the clause syntax" \
@@ -1699,8 +1737,8 @@ check_eq "a conditional atom an introductory act forbids blocks it, clause 2 rea
          "V = syntactically_grassroots" "$(sf 3)"
 check_eq "a safe formula of the body gives no edge: Bob, no guard, adds and is joined to nothing" \
          "V = not_grassroots([volition(greet, 1, 2)])" "$(sf 4)"
-check_eq "a variable bound in a safe formula and holding an atom is a listed reading role" \
-         "V = not_grassroots([changes_nothing(check, 2)])" "$(sf 5)"
+check_eq "a variable bound in a safe formula and holding an atom is a listed reading role, its base the guarding role (def:volition, GSC 5e014fd)" \
+         "V = syntactically_grassroots" "$(sf 5)"
 check_eq "a listed role in the guard, in the component of its agent role" \
          "V = syntactically_grassroots" "$(sf 6)"
 check_eq "a guard holding no atom is an agent role, and guards a component of its own" \

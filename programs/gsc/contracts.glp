@@ -387,6 +387,108 @@ sg_update_cleared(S, C?) :-
 %                          identity, not told(b), +told(b)
 % told(b) does not name Carol, the other agent role, and is the one atom tell
 % adds or deletes: no_signature_atom(tell) (def:signature).
+% --- signature atoms, a set at one role (def:signature, GSC 5e014fd) --------
+% tell(Alice, Bob, Carol) :  identity, friend(Bob), friend(Carol), +told(Carol), +heard(Bob)
+%                            identity    identity
+% No atom names both reading roles; told(Carol) and heard(Bob), each the only
+% atom of its predicate, at one role, together do.
+procedure sg_sig_set(WContract?, WContract).
+sg_sig_set(S, C?) :-
+    wcontract_app(S?,
+      [sas(tell, ['Alice', 'Bob', 'Carol'], [],
+         [atom(told, ['Alice', 'Carol']), atom(heard, ['Alice', 'Bob'])],
+         [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Alice', 'Carol']),
+          atom(identity, ['Bob']), atom(identity, ['Carol'])],
+         true, [])], C).
+
+% The atoms at two roles: at Alice told(Carol) leaves Bob, and at Bob
+% heard(Alice) leaves Carol.
+procedure sg_sig_split(WContract?, WContract).
+sg_sig_split(S, C?) :-
+    wcontract_app(S?,
+      [sas(tell, ['Alice', 'Bob', 'Carol'], [],
+         [atom(told, ['Alice', 'Carol']), atom(heard, ['Bob', 'Alice'])],
+         [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Alice', 'Carol']),
+          atom(identity, ['Bob']), atom(identity, ['Carol'])],
+         true, [])], C).
+
+% Two atoms of one predicate, so neither is the only atom of it.
+procedure sg_sig_twice(WContract?, WContract).
+sg_sig_twice(S, C?) :-
+    wcontract_app(S?,
+      [sas(tell, ['Alice', 'Bob', 'Carol'], [],
+         [atom(told, ['Alice', 'Carol']), atom(told, ['Alice', 'Bob'])],
+         [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Alice', 'Carol']),
+          atom(identity, ['Bob']), atom(identity, ['Carol'])],
+         true, [])], C).
+
+% --- a listed role's literal, traced through its anchor (def:schema, GSC 5e014fd)
+% pair(Alice?; b, c) :  friend(b), friend(c), +paired(b, c)
+% meet(Alice?, Alice[paired(*, _)]) :  at x, each paired(x, c) of Alice: +met(c)
+% c, a second bound variable, is an argument of the anchor paired(x, c), which
+% counts as an atom Alice requires, and paired is of traceable provenance.
+procedure sg_anchor_traced(WContract?, WContract).
+sg_anchor_traced(S, C?) :-
+    wcontract_app(S?,
+      [sas(pair, ['Alice', b, c], [b, c],
+         [atom(paired, ['Alice', b, c])],
+         [atom(friend, ['Alice', b]), atom(friend, ['Alice', c])],
+         true, ['Alice']),
+       sas(meet, ['Alice', x, c], [],
+         [forall([x, c], atom(paired, ['Alice', x, c]), true, [atom(met, [x, c])])],
+         [atom(identity, ['Alice'])],
+         true, ['Alice'])], C).
+
+% paired untraceable, c being required nowhere, so the anchor traces nothing.
+procedure sg_anchor_loose(WContract?, WContract).
+sg_anchor_loose(S, C?) :-
+    wcontract_app(S?,
+      [sas(pair, ['Alice', b, c], [b, c],
+         [atom(paired, ['Alice', b, c])],
+         [atom(friend, ['Alice', b])],
+         true, ['Alice']),
+       sas(meet, ['Alice', x, c], [],
+         [forall([x, c], atom(paired, ['Alice', x, c]), true, [atom(met, [x, c])])],
+         [atom(identity, ['Alice'])],
+         true, ['Alice'])], C).
+
+% d is no argument of the anchor: only the anchor of its conjunct counts.
+procedure sg_anchor_other(WContract?, WContract).
+sg_anchor_other(S, C?) :-
+    wcontract_app(S?,
+      [sas(pair, ['Alice', b, c], [b, c],
+         [atom(paired, ['Alice', b, c])],
+         [atom(friend, ['Alice', b]), atom(friend, ['Alice', c])],
+         true, ['Alice']),
+       sas(meet, ['Alice', x, c, d], [d],
+         [forall([x, c], atom(paired, ['Alice', x, c]), true, [atom(met, [x, d])])],
+         [atom(identity, ['Alice'])],
+         true, ['Alice'])], C).
+
+% --- a reading role added by a stronger body (thm:relations, clause 2) -------
+% GSG's unfriend with Carol's identity required of it: Carol is a reading role
+% with no edge to a guarding role, which check/2 reports; with Alice requiring
+% knows(Carol), the edge, it holds.
+procedure sg_added_reading(WContract?, WContract).
+sg_added_reading(S, C?) :-
+    schema_set(unfriend,
+      sas(unfriend, ['Alice', 'Bob', 'Carol'], [],
+         [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+         [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+          atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice']),
+          atom(identity, ['Carol'])],
+         true, ['Alice']), S?, C).
+
+procedure sg_added_reading_edge(WContract?, WContract).
+sg_added_reading_edge(S, C?) :-
+    schema_set(unfriend,
+      sas(unfriend, ['Alice', 'Bob', 'Carol'], [],
+         [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+         [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+          atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice']),
+          atom(identity, ['Carol'])],
+         true, ['Alice']), S?, C).
+
 procedure sg_update_unnamed(WContract?, WContract).
 sg_update_unnamed(S, C?) :-
     wcontract_app(S?,
@@ -645,13 +747,13 @@ sn_listed_guard(S, C?) :-
           crs(listed(1, listed, [svar(n)]), guarded,
               [atom(split_c, [])], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a listed reading role no guarding role records ---------------
+% --- a listed reading role whose base is a guarding role --------------------
 % idle(Alice?, Alice[listed(*, n)]; n) :  identity, +idled(n)
 %     at Alice[listed(*, n)]: identity
 % A listed role is no guarding role, so one adding and deleting nothing is a
-% reading role (def:schema, GSC 0380a8a); Alice requires no atom with an
-% argument of its base, Alice, so no edge reaches the guarding role from an
-% atom it requires (def:volition): changes_nothing(idle, 2).
+% reading role (def:schema, GSC 0380a8a).  Alice requires no atom with an
+% argument of its base, Alice, and its base is a guarding role, which its
+% anchor names, so volition holds (def:volition, GSC 5e014fd).
 procedure sn_listed_inert(WContract?, WContract).
 sn_listed_inert(S, C?) :-
     wcontract_app(S?,
@@ -659,6 +761,54 @@ sn_listed_inert(S, C?) :-
          [rs(guarded, [atom(idled, [svar(n)])], [], [atom(identity, [])], []),
           crs(listed(1, listed, [svar(n)]), unguarded,
               [], [], [atom(identity, [])], [])])], C).
+
+% --- a listed reading role of a role that is no guarding role ---------------
+% idle(Alice?, Carol, Carol[listed(*, n)]; n) :  +idled(n)    +noted(n)
+%     at Carol[listed(*, n)]: identity
+% Its base, Carol, is no guarding role and Alice requires no atom naming
+% Carol: the role graph joins Carol and their listed role and leaves Alice,
+% and the listed role has no edge to a guarding role (def:volition).
+procedure sn_listed_far(WContract?, WContract).
+sn_listed_far(S, C?) :-
+    wcontract_app(S?,
+      [sas(idle, ['Alice', 'Carol', x], [n],
+         [atom(idled, ['Alice', n]), atom(noted, ['Carol', n])],
+         [forall(x, atom(listed, ['Carol', x, n]), [atom(identity, [x])])],
+         true, ['Alice'])], C).
+
+% The same with Alice requiring knows(Carol), an atom of traceable provenance
+% naming the listed role's base, an edge from an atom the guarding role
+% requires.
+procedure sn_listed_far_edge(WContract?, WContract).
+sn_listed_far_edge(S, C?) :-
+    wcontract_app(S?,
+      [sas(idle, ['Alice', 'Carol', x], [n],
+         [atom(idled, ['Alice', n]), atom(noted, ['Carol', n])],
+         [atom(knows, ['Alice', 'Carol']),
+          forall(x, atom(listed, ['Carol', x, n]), [atom(identity, [x])])],
+         true, ['Alice'])], C).
+
+% --- a variable bound in a condition of the body, holding an atom ------------
+% wake(Alice?; n) :  +woken(n), provided exists x (listed(Alice, x, n), busy(x))
+% x is a listed reading role whose base is the guarding role (def:role,
+% def:volition, GSC 5e014fd), read only in a condition, as GRH's busy(c).  Its
+% name need not be written (sn_cond_listed_named writes it): the reader
+% infers a bound variable holding an atom.
+procedure sn_cond_listed(WContract?, WContract).
+sn_cond_listed(S, C?) :-
+    wcontract_app(S?,
+      [sas(wake, ['Alice'], [n],
+         [atom(woken, ['Alice', n])],
+         [exists([x], atom(listed, ['Alice', x, n]), atom(busy, [x]))],
+         true, ['Alice'])], C).
+
+procedure sn_cond_listed_named(WContract?, WContract).
+sn_cond_listed_named(S, C?) :-
+    wcontract_app(S?,
+      [sas(wake, ['Alice', x], [n],
+         [atom(woken, ['Alice', n])],
+         [exists([x], atom(listed, ['Alice', x, n]), atom(busy, [x]))],
+         true, ['Alice'])], C).
 
 % --- a listed reading role the guarding role records ------------------------
 % idle(Alice?, Alice[listed(*, n)]; n) :  identity, listed(Alice, n), +idled(n)
@@ -800,6 +950,7 @@ wcontract_app([S|Ss], T, [S?|R?]) :- wcontract_app(Ss?, T?, R).
 procedure schema_set(Constant?, WSchema?, WContract?, WContract).
 schema_set(_, _, [], []).
 schema_set(Nm, N, [schema(M, _, _, _)|Ss], [N?|Ss?]) :- Nm? =?= M? | true.
+schema_set(Nm, N, [sas(M, _, _, _, _, _, _)|Ss], [N?|Ss?]) :- Nm? =?= M? | true.
 schema_set(Nm, N, [S|Ss], [S?|R?]) :-
     otherwise, ground(Nm?), ground(N?), ground(Ss?) |
     schema_set(Nm?, N?, Ss?, R).
@@ -1780,6 +1931,18 @@ variant(sn_listed_witness, S, C?) :- sn_listed_witness(S?, C).
 variant(sn_listed_guard, S, C?) :- sn_listed_guard(S?, C).
 variant(sn_listed_inert, S, C?) :- sn_listed_inert(S?, C).
 variant(sn_listed_reading, S, C?) :- sn_listed_reading(S?, C).
+variant(sn_listed_far, S, C?) :- sn_listed_far(S?, C).
+variant(sn_listed_far_edge, S, C?) :- sn_listed_far_edge(S?, C).
+variant(sn_cond_listed, S, C?) :- sn_cond_listed(S?, C).
+variant(sn_cond_listed_named, S, C?) :- sn_cond_listed_named(S?, C).
+variant(sg_sig_set, S, C?) :- sg_sig_set(S?, C).
+variant(sg_sig_split, S, C?) :- sg_sig_split(S?, C).
+variant(sg_sig_twice, S, C?) :- sg_sig_twice(S?, C).
+variant(sg_anchor_traced, S, C?) :- sg_anchor_traced(S?, C).
+variant(sg_anchor_loose, S, C?) :- sg_anchor_loose(S?, C).
+variant(sg_anchor_other, S, C?) :- sg_anchor_other(S?, C).
+variant(sg_added_reading, S, C?) :- sg_added_reading(S?, C).
+variant(sg_added_reading_edge, S, C?) :- sg_added_reading_edge(S?, C).
 variant(sn_listed_unguarded, S, C?) :- sn_listed_unguarded(S?, C).
 variant(gkk_intro_joined, S, C?) :- gkk_intro_joined(S?, C).
 variant(gkk_intro_unjoined, S, C?) :- gkk_intro_unjoined(S?, C).
