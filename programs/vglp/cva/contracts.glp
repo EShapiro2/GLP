@@ -225,12 +225,12 @@ Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
-Mult      ::= Atom ; times(Arg, Atom).
+Mult      ::= Atom ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Mults     ::= [] ; [Mult | Mults].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
             ; listed(Integer, Constant, Args).
-RoleSpec  ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+RoleSpec  ::= rs(Guard, Mults, Mults, Mults, Atoms)
             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Reach     ::= reach(NameTerm, Constant, NameTerm).
@@ -266,6 +266,7 @@ contract_named(merges, C?) :- merges(C).
 contract_named(coins, C?) :- coins(C).
 contract_named(wardclose, C?) :- wardclose(C).
 contract_named(numbers, C?) :- numbers(C).
+contract_named(spends, C?) :- spends(C).
 contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
 contract_named(days, C?) :- days(C).
@@ -291,6 +292,7 @@ introduction_named(merges, no_introduction).
 introduction_named(coins, no_introduction).
 introduction_named(wardclose, no_introduction).
 introduction_named(numbers, no_introduction).
+introduction_named(spends, no_introduction).
 introduction_named(bonds, no_introduction).
 introduction_named(intros, no_introduction).
 introduction_named(days, no_introduction).
@@ -371,6 +373,11 @@ pragmas_named(numbers, pragmas([list('"Friends"', [friend])],
      act(start, '"Start"', [], none, '"Friends"', by([1])),
      act(refuel, '"Refuel"', [], none, '"Friends"', by([1])),
      act(claim, '"Claim"', ['""', '""', '"Amount"'], none, '"Friends"', by([1]))])).
+pragmas_named(spends, pragmas([list('"Tokens"', [token])],
+    [act(start, '"Start"', [], none, '"Tokens"', by([1])),
+     act(mint, '"Mint"', ['""', '"Amount"'], none, '"Tokens"', by([1])),
+     act(spend, '"Spend"', ['""', '"Amount"'], none, '"Tokens"', by([1])),
+     act(burn, '"Burn"', ['""', '"Held"', '"Amount"'], none, '"Tokens"', by([1]))])).
 pragmas_named(bonds, pragmas([list('"Contacts"', [knows])],
     [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
@@ -594,6 +601,17 @@ numbers([schema(befriend, [],
          nschema(claim, [num(d), num(t)], le(num(d), num(t)),
            [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []),
             rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])])]).
+
+%% A required atom with a multiplicity, deleted with none or with a multiplicity (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom required with a multiplicity k and deleted with none having k copies required and one deleted"; "a multiplicity k deleting or adding k copies"): spend requires k tokens and deletes one, burn requires k and deletes j, rest(K, J, A) among the atoms a role keeps being the copies beyond those it deletes, as GSC's reader writes it.
+procedure spends(Contract).
+spends([schema(start, [],
+          [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
+        schema(mint, [num(k)],
+          [rs(guarded, [times(num(k), atom(token, []))], [], [atom(started, [])], [])]),
+        schema(spend, [num(k)],
+          [rs(guarded, [atom(spent, [num(k)])], [atom(token, [])], [atom(started, []), rest(num(k), num(1), atom(token, []))], [])]),
+        nschema(burn, [num(k), num(j)], le(num(j), num(k)),
+          [rs(guarded, [atom(burnt, [num(k), num(j)])], [times(num(j), atom(token, []))], [atom(started, []), rest(num(k), num(j), atom(token, []))], [])])]).
 
 procedure bonds(Contract).
 bonds([schema(establish, [],

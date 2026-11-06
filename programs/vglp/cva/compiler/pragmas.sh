@@ -3,7 +3,7 @@
 #
 #   bash programs/vglp/cva/compiler/pragmas.sh <NAME.txt>
 #
-# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler's printer writes a constant as it is.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find, and on every line it refuses, each named with the variable its fields leave unnamed or the field beyond them; 2 on a bad argument.  With PRAGMAS_LINES set it prints on the standard error each button line and the variables its fields name by the rule, or why it is refused, replaced or gone.
+# prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler writes a word as it is, the reader reading the double-quoted string back as the word.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find, and on every line it refuses, each named with the variable its fields leave unnamed or the field beyond them; 2 on a bad argument.  With PRAGMAS_LINES set it prints on the standard error each button line and the variables its fields name by the rule, or why it is refused, replaced or gone.
 
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
@@ -197,12 +197,36 @@ sub q_atom {   # a GLP quoted name holding the text $s
 sub q_string { # a quoted name holding the GLP source of the string $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return q_atom("\"$s\"");
 }
+# The contracts a contract names on the line saying what it is written from, the first after its title and before its names declaration, "<NAME> <relation> <OTHER> (...)." or with no parentheses, the relation one of extends, amends, restricts and instantiates, several contracts joined by "and" (style guide 36; GSC, Section 8; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1); nothing where the contract has no such line.  A name is read whole with a hyphened part, as GDO-L.
+sub relation_names {
+    my ($f, @l) = @_;
+    my @body = grep { !/^%/ && /\S/ } @l;
+    return () unless @body >= 2;
+    my $nm = qr/[A-Z][A-Za-z0-9]*(?:-[A-Z][A-Za-z0-9]*)*/;
+    return () unless $body[1] =~ /^$nm\s+(?:extends|amends|restricts|instantiates)\s+(.*?)\.\s*$/;
+    my $of = $1;
+    $of =~ s/\s*\([^()]*\)//g;
+    my @names = split /\s*,\s*(?:and\s+)?|\s+and\s+/, $of;
+    for my $n (@names) { $n =~ /^$nm$/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$n\"\n" }
+    return @names;
+}
 sub visit {
     my ($f) = @_;
     return if $seen{$f}++;
     my @l = read_txt($f);
     my ($ext) = grep { /^% Extends:/ } @l;
-    if (defined $ext) {
+    my @rel = relation_names($f, @l);
+    if (@rel) {
+        (my $dir = $f) =~ s{/[^/]*$}{};
+        my %named;
+        for my $n (@rel) {
+            next if $named{$n}++;
+            my $g = find_txt($n, $dir);
+            defined $g or die "pragmas.sh: $f: the contract $n, which its line saying what it is written from names, has no $n.txt\n";
+            visit($g);
+            push @{ $extends{$f} }, $g;
+        }
+    } elsif (defined $ext) {
         (my $dir = $f) =~ s{/[^/]*$}{};
         my %named;
         # The contracts it extends are named in the first sentence of the line, a file name such as GC.txt in it not a contract extended.

@@ -27,7 +27,7 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer) ; num(Constant) ; any.
 Args      ::= [] ; [Arg | Args].
-Atom      ::= atom(Constant, Args) ; times(Arg, Atom).
+Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
 %% listed(I, Rho, Args) is the listed role pi_I[rho(*, u_2, ..., u_r)] of the agent role pi_I, its base, Args its arguments u_2, ..., u_r (GSC 8064cfb, Appendix D, Definition "Role"; programs/gsc/self.glp at GLP 96908b2d).
@@ -195,6 +195,7 @@ keep_atom(no, A, R, [A?|R?]).
 procedure cleared(Atom?, YesNo).
 cleared(atom(_, As), C?) :- args_wild(As?, C).
 cleared(times(_, A), C?) :- cleared(A?, C).
+cleared(rest(_, _, A), C?) :- cleared(A?, C).
 procedure args_wild(Args?, YesNo).
 args_wild([], no).
 args_wild([any|_], yes).
@@ -235,6 +236,7 @@ atoms_args([], []).
 atoms_args([atom(_, As)|Xs], R?) :- atoms_args(Xs?, R1), app(As?, R1?, R).
 %% A multiplicity is an argument of its atom here: "an atom it adds or deletes may carry a multiplicity, a number or a numeric variable" (vGLP 613ee8d, Section 5.4).
 atoms_args([times(K, A)|Xs], [K?|R?]) :- atoms_args([A?|Xs?], R).
+atoms_args([rest(K, J, A)|Xs], [K?, J?|R?]) :- atoms_args([A?|Xs?], R).
 
 %% --- Numbers -----------------------------------------------------------------
 %% "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ...; a constraint is local to the role whose local variables it names, and to every role where it names none.  A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state.  Every other variable is bound by the schema-binding, and a request names it" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications").  num_info(Name, Constraint, Locals, Role): a schema's constraint, true where it has none; its local variables, each loc(I, V), V an agent, speech-act or numeric variable, pvar(X), svar(X) or num(X), and I the index of the role it is local to; and the role whose local variables the constraint names, at(I), every where it names none, so that every role checks it, and two_roles where it names those of two roles or more, which the contract being a local specification forbids ("a constraint names the local variables of one role", ibid.).
@@ -341,3 +343,28 @@ remove_all(X, [Y|Ys], [Y?|Zs?]) :- otherwise | remove_all(X?, Ys?, Zs).
 VPlace    ::= vp(Integer, String, Constant).
 VPlaces   ::= [] ; [VPlace | VPlaces].
 FieldAt   ::= field(String) ; nofield.
+
+%% Lines of source.  The compiler builds each line it prints as a string (cvac.glp, the head of the file): call_text(F, As, T), T the text of F applied to the texts As, F as it is, a name of the compiler's own or the words of a comment; named_call(F, As, T), the same for a name F from the contract, through term_to_string/2, F alone where As is empty; said(H, C, T), the comment H applied to the constant C; list_text(As, T), the texts As as a list (GLP-Spec ca3c8e5, appendix-guards, "Text": "a list as [a, b] or [a, b | T], arguments and elements separated by a comma and a space").
+procedure call_text(String?, Strings?, String).
+call_text(F, As, T?) :- ground(F?), ground(As?) |
+    join_texts(As?, J),
+    string_concat([F?, '(', J?, ')'], T).
+procedure named_call(Constant?, Strings?, String).
+named_call(F, [], T?) :- term_to_string(F?, T).
+named_call(F, [A|As], T?) :- ground(F?), ground(A?), ground(As?) |
+    term_to_string(F?, Ft),
+    call_text(Ft?, [A?|As?], T).
+procedure said(String?, Constant?, String).
+said(H, C, T?) :- ground(H?), ground(C?) |
+    term_to_string(C?, Ct),
+    call_text(H?, [Ct?], T).
+procedure list_text(Strings?, String).
+list_text(As, T?) :- ground(As?) |
+    join_texts(As?, J),
+    string_concat(['[', J?, ']'], T).
+procedure join_texts(Strings?, String).
+join_texts([], '').
+join_texts([A], A?).
+join_texts([A, B|As], T?) :- ground(A?), ground(B?), ground(As?) |
+    join_texts([B?|As?], J),
+    string_concat([A?, ', ', J?], T).

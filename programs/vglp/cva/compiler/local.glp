@@ -27,7 +27,7 @@ Deltas   ::= [] ; [Delta | Deltas].
 Found    ::= found(Val) ; unbound.
 
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): the table Nt gives each schema its constraint, its local variables and the role whose local variables the constraint names (num_info_of below; self.glp, NumInfo); "the contract is a local specification where ... a constraint names the local variables of one role" (numeric_locality), and effective where "every variable of a schema that occurs in an atom it requires or forbids, but a numeric variable local to a role, also occurs in an atom it deletes or adds, ... and the atoms each unguarded schema requires at its first role name every other role and every variable of its deleted and added atoms, or the constraint gives the variable finitely many values once those are bound" (effective_lines).
-exported procedure faults(Contract?, Preds?, NumInfos?, Stream(_)).
+exported procedure faults(Contract?, Preds?, NumInfos?, Strings).
 faults(C, Rf, Nt, Ls?) :- ground(C?), ground(Rf?), ground(Nt?) |
     effective_lines(C?, Nt?, L1),
     locality_lines(C?, C?, Rf?, L2),
@@ -103,18 +103,18 @@ con_role1([I], at(I?)).
 con_role1([_, _|_], two_roles).
 
 %% "the contract is a local specification where ... a constraint names the local variables of one role" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); a contract whose constraint names those of two roles is refused, the schema named.
-procedure numeric_locality(NumInfos?, Stream(_)).
+procedure numeric_locality(NumInfos?, Strings).
 numeric_locality([], []).
 numeric_locality([num_info(S, _, _, R)|Ns], L?) :- ground(S?) |
     numeric_locality1(R?, S?, L1),
     numeric_locality(Ns?, L2),
     lapp(L1?, L2?, L).
-procedure numeric_locality1(CRole?, Constant?, Stream(_)).
+procedure numeric_locality1(CRole?, Constant?, Strings).
 numeric_locality1(every, _, []).
 numeric_locality1(at(_), _, []).
 numeric_locality1(two_roles, S, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a constraint',
         '%% names the local variables of two roles or more, and it names those of one:', T?]) :-
-    ground(S?) | T =.. ['%% the schema', S?].
+    ground(S?) | said('%% the schema', S?, T).
 
 %% The variables a constraint gives finitely many values once those of Bd are bound: succ(X, Y), Y = X + 1, gives Y one value once X is bound, and X one once Y is; eq(X, Y), an equality of two linear expressions (GSC bcc1891, Definition "Schema with values"), gives its one numeric variable not in Bd one value, where it has one and its coefficient in X - Y is not 0; le, lt, ge and gt give a variable no finite set of values; and(C1, C2) gives a variable finitely many values where C1 or C2 does; or(C1, C2) where each of C1 and C2 does (vGLP 613ee8d, Section 5.4: "or the constraint gives the variable finitely many values once those are bound").  A number is bound.
 procedure con_det(Constraint?, Args?, Args).
@@ -246,7 +246,7 @@ val_or_free(unbound, V, free_var(V?)).
 
 %% --- Effective -------------------------------------------------------------
 %% Each schema: every variable of an atom it requires or forbids, but a variable local to a role (vGLP 8a3ae79, Section 5.4: "but a variable local to a role"), a variable of an atom it deletes or adds (free_lines); and, where it marks no role, the atoms its first role requires naming every other role and every variable of its deleted and added atoms, or the constraint giving the variable finitely many values once those are bound (effective_one).
-procedure effective_lines(Contract?, NumInfos?, Stream(_)).
+procedure effective_lines(Contract?, NumInfos?, Strings).
 effective_lines([], _, []).
 effective_lines([schema(Nm, _, Rs)|Ss], Nt, L?) :- ground(Nm?), ground(Rs?), ground(Nt?) |
     num_lookup(Nm?, Nt?, Ni),
@@ -255,7 +255,7 @@ effective_lines([schema(Nm, _, Rs)|Ss], Nt, L?) :- ground(Nm?), ground(Rs?), gro
     lapp(L1?, L2?, L).
 effective_lines([cschema(_, _, _, _)|Ss], Nt, L?) :- effective_lines(Ss?, Nt?, L).
 effective_lines([nschema(_, _, _, _)|Ss], Nt, L?) :- effective_lines(Ss?, Nt?, L).
-procedure effective_schema(NumInfo?, Constant?, RoleSpecs?, Stream(_)).
+procedure effective_schema(NumInfo?, Constant?, RoleSpecs?, Strings).
 effective_schema(num_info(_, Con, Ls, _), Nm, Rs, L?) :- ground(Nm?), ground(Rs?), ground(Ls?), ground(Con?) |
     loc_vars(Ls?, Lv),
     free_lines(Nm?, Rs?, Lv?, L0),
@@ -273,7 +273,7 @@ guarded_any1(no, Rs, B?) :- guarded_any(Rs?, B).
 
 %% A variable of an atom the schema requires or forbids, at any role, that no
 %% atom it deletes or adds holds, a signed term's variable included.
-procedure free_lines(Constant?, RoleSpecs?, Args?, Stream(_)).
+procedure free_lines(Constant?, RoleSpecs?, Args?, Strings).
 free_lines(Nm, Rs, Lv, L?) :- ground(Nm?), ground(Rs?) |
     kept_forbidden_args(Rs?, Kf0),
     flat_args(Kf0?, Kf1),
@@ -283,12 +283,12 @@ free_lines(Nm, Rs, Lv, L?) :- ground(Nm?), ground(Rs?) |
     flat_args(Ch0?, Ch),
     first_absent(Kf?, Ch?, F),
     free_lines1(F?, Nm?, L).
-procedure free_lines1(Args?, Constant?, Stream(_)).
+procedure free_lines1(Args?, Constant?, Strings).
 free_lines1([], _, []).
 free_lines1([V|_], Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a variable of',
         '%% the schema occurs in an atom it requires or forbids and in no atom it deletes or adds:',
         T?]) :-
-    ground(Nm?), ground(V?) | T =.. ['%% the schema and the variable', Nm?, V?].
+    ground(Nm?), ground(V?) | term_to_string(Nm?, Nt), term_to_string(V?, Vt), call_text('%% the schema and the variable', [Nt?, Vt?], T).
 %% The arguments of the atoms a schema requires or forbids, the listing atoms rho(q, u_2, ..., u_r) the base person of a listed role requires among them (vGLP f5f1644, Section 5.4, the paragraph on act schemas: "for p the person in the base of a listed role, p lists in d_p exactly the people of that role in L").
 procedure kept_forbidden_args(RoleSpecs?, Args).
 kept_forbidden_args([], []).
@@ -336,7 +336,7 @@ procedure first_absent1(YesNo?, Arg?, Args?, Args?, Args).
 first_absent1(no, A, _, _, [A?]).
 first_absent1(yes, _, As, Ch, F?) :- first_absent(As?, Ch?, F).
 
-procedure effective_one(YesNo?, Constant?, RoleSpecs?, Constraint?, Stream(_)).
+procedure effective_one(YesNo?, Constant?, RoleSpecs?, Constraint?, Strings).
 effective_one(yes, _, _, _, []).
 effective_one(no, Nm, Rs, Con, L?) :- ground(Rs?), ground(Nm?), ground(Con?) |
     first_required_args(Rs?, Fa1),
@@ -366,12 +366,12 @@ det_more([], _, Fa, Fa?).
 det_more([A|As], Con, Fa, Bd?) :- ground(Fa?) |
     app(Fa?, [A?|As?], Fa1),
     determined(Con?, Fa1?, Bd).
-procedure effective_one1(YesNo?, Constant?, Stream(_)).
+procedure effective_one1(YesNo?, Constant?, Strings).
 effective_one1(yes, _, []).
 effective_one1(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): an unguarded',
         '%% schema whose first role requires no atom naming some other role, or some variable of',
         '%% an atom it deletes or adds that its constraint gives no finite set of values:', T?]) :-
-    ground(Nm?) | T =.. ['%% the schema', Nm?].
+    ground(Nm?) | said('%% the schema', Nm?, T).
 %% The arguments of the listing atoms the first role requires where it is the base of listed roles; the people of a listed role are those its base person lists, so its own place is no other role its first role must name (vGLP c649c0d, Section 5.4, the paragraph on act schemas: "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role, so that the agent that proposes a part the schema determines, its guard or its opener, reads the people of those roles from its own state").
 procedure first_listing_args(RoleSpecs?, Args).
 first_listing_args(Rs, As?) :- ground(Rs?) |
@@ -397,18 +397,18 @@ keep_role(yes, _, R, R?).
 keep_role(no, J, R, [role(J?)|R?]).
 
 %% "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role, so that the agent that proposes a part the schema determines, its guard or its opener, reads the people of those roles from its own state" (vGLP a890465, Section 5.4, the paragraph on act schemas; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC: "refuse as not effective a schema whose listed roles have different bases", and 15:57 UTC, item 1): the listed roles of a schema have one base, and the compiler takes it where it is the schema's only guarding role, or where it is not a guarding role and is the schema's first role, whatever its guarding roles, as CSSN's child_close(r, p?, r[listed(*, n)] ; n), whose base r opens the part p guards; otherwise the contract is not effective, the schema named.
-procedure listed_lines(Constant?, RoleSpecs?, Stream(_)).
+procedure listed_lines(Constant?, RoleSpecs?, Strings).
 listed_lines(Nm, Rs, L?) :- ground(Nm?), ground(Rs?) |
     listed_bases(Rs?, Bs0),
     dedup(Bs0?, Bs),
     guard_indices(Rs?, 1, Gs),
     listed_lines1(Bs?, Gs?, Nm?, L).
-procedure listed_lines1(Ints?, Ints?, Constant?, Stream(_)).
+procedure listed_lines1(Ints?, Ints?, Constant?, Strings).
 listed_lines1([], _, _, []).
 listed_lines1([B], Gs, Nm, L?) :- listed_ok(B?, Gs?, Ok), listed_lines2(Ok?, Nm?, L).
 listed_lines1([_, _|_], _, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema whose',
         '%% listed roles have different bases:', T?]) :-
-    ground(Nm?) | T =.. ['%% the schema', Nm?].
+    ground(Nm?) | said('%% the schema', Nm?, T).
 procedure guard_indices(RoleSpecs?, Integer?, Ints).
 guard_indices([], _, []).
 guard_indices([R|Rs], I, Gs?) :- ground(R?), integer(I?) |
@@ -432,11 +432,11 @@ listed_ok1(no, B, _, R?) :- int_is(B?, 1, R).
 procedure int_is(Integer?, Integer?, YesNo).
 int_is(A, B, yes) :- A? =:= B? | true.
 int_is(_, _, no) :- otherwise | true.
-procedure listed_lines2(YesNo?, Constant?, Stream(_)).
+procedure listed_lines2(YesNo?, Constant?, Strings).
 listed_lines2(yes, _, []).
 listed_lines2(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a',
         '%% listed role whose base is neither its only guarding role nor, not a guarding role, its first role:', T?]) :-
-    ground(Nm?) | T =.. ['%% the schema', Nm?].
+    ground(Nm?) | said('%% the schema', Nm?, T).
 
 procedure first_required_args(RoleSpecs?, Args).
 first_required_args([], []).
@@ -807,6 +807,7 @@ role_names(R, J, B?) :- ground(R?), integer(J?) |
 procedure names_role(Atoms?, Integer?, YesNo).
 names_role([], _, no).
 names_role([times(_, A)|Xs], J, B?) :- names_role([A?|Xs?], J?, B).
+names_role([rest(_, _, A)|Xs], J, B?) :- names_role([A?|Xs?], J?, B).
 names_role([atom(_, As)|Xs], J, B?) :- integer(J?), ground(As?) |
     flat_args(As?, Fs),
     mem(role(J?), Fs?, B1),
@@ -899,6 +900,7 @@ procedure img_atoms(Atoms?, Binding?, GAs).
 img_atoms([], _, []).
 %% A multiplicity asks nothing of whether a schema-binding determines a transaction here, its atom taken once.
 img_atoms([times(_, A)|Xs], B, Gs?) :- img_atoms([A?|Xs?], B?, Gs).
+img_atoms([rest(_, _, A)|Xs], B, Gs?) :- img_atoms([A?|Xs?], B?, Gs).
 img_atoms([atom(P, As)|Xs], B, [ga(P?, Vs?)|Gs?]) :- ground(B?) |
     img_args(As?, B?, Vs),
     img_atoms(Xs?, B?, Gs).
@@ -949,7 +951,7 @@ procedure(X) meets1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
 meets1(yes, _, _, yes).
 meets1(no, Xs, B, R?) :- meets(Xs?, B?, R).
 
-procedure lapp(Stream(_)?, Stream(_)?, Stream(_)).
+procedure lapp(Strings?, Strings?, Strings).
 lapp([], Ys, Ys?).
 lapp([X|Xs], Ys, [X?|Zs?]) :- lapp(Xs?, Ys?, Zs).
 
@@ -959,7 +961,7 @@ LMate   ::= lm(Constant, RoleSpecs, Binding).
 LMates  ::= [] ; [LMate | LMates].
 MRes    ::= mok(Binding) ; mno.
 DFound  ::= dfound(GAs, GAs) ; dnone.
-procedure locality_lines(Contract?, Contract?, Preds?, Stream(_)).
+procedure locality_lines(Contract?, Contract?, Preds?, Strings).
 locality_lines([], _, _, []).
 locality_lines([schema(Nm, Hd, Rs)|Ss], C, Rf, L?) :- ground(Nm?), ground(Hd?), ground(Rs?), ground(C?), ground(Rf?) |
     opened_schema(Rs?, Op),
@@ -979,28 +981,28 @@ opened_base([B|_], Rs, Op?) :- ground(Rs?), integer(B?) |
     nth_spec(Rs?, B?, R),
     rs_guarded(R?, G),
     neg(G?, Op).
-procedure locality_schema(YesNo?, Constant?, Args?, RoleSpecs?, Contract?, Preds?, Stream(_)).
+procedure locality_schema(YesNo?, Constant?, Args?, RoleSpecs?, Contract?, Preds?, Strings).
 locality_schema(no, _, _, _, _, _, []).
 locality_schema(yes, Nm, Hd, Rs, C, Rf, L?) :- ground(Rs?) |
     guard_indices(Rs?, 1, Gs),
     locality_one(Gs?, Nm?, Hd?, Rs?, C?, Rf?, L).
-procedure locality_one(Ints?, Constant?, Args?, RoleSpecs?, Contract?, Preds?, Stream(_)).
+procedure locality_one(Ints?, Constant?, Args?, RoleSpecs?, Contract?, Preds?, Strings).
 %% "every such schema has one guarding role or none" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, 2026-10-20 21:00 UTC): a schema of no guarding role determines unguarded parts, opened by the least person in its first role.
 locality_one([], _, _, _, _, _, []).
 locality_one([_, _|_], Nm, _, _, _, _, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema',
         '%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:', T?]) :-
-    ground(Nm?) | T =.. ['%% the schema', Nm?].
+    ground(Nm?) | said('%% the schema', Nm?, T).
 locality_one([G], Nm, Hd, Rs, C, Rf, L?) :- ground(Hd?), ground(Rs?), ground(Nm?), integer(G?) |
     canon_bindings(Rs?, Hd?, Bs),
     opener_bindings(Bs?, G?, Nm?, Rs?, C?, Rf?, Ns),
     dedup(Ns?, Ns1),
     locality_faults(Ns1?, Nm?, L).
-procedure locality_faults(Preds?, Constant?, Stream(_)).
+procedure locality_faults(Preds?, Constant?, Strings).
 locality_faults([], _, []).
 locality_faults([N2|_], Nm, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a guard of a',
         '%% guarded part with an opener, of a schema with a listed role whose base is not a guarding role,',
         '%% guards another guarded part of its class that is not determined likewise, with the same opener:', T?]) :-
-    ground(Nm?), ground(N2?) | T =.. ['%% the schema and the other', Nm?, N2?].
+    ground(Nm?), ground(N2?) | term_to_string(Nm?, Nt), term_to_string(N2?, Ot), call_text('%% the schema and the other', [Nt?, Ot?], T).
 %% The schemas of the other parts at fault, over the schema-bindings Bs of the schema: each determining a transaction, its person in the first role not its guard.
 procedure opener_bindings(Bindings?, Integer?, Constant?, RoleSpecs?, Contract?, Preds?, Preds).
 opener_bindings([], _, _, _, _, _, []).
@@ -1275,6 +1277,7 @@ match_into1(mno, A, Gs, B, R?) :- match_into(A?, Gs?, B?, R).
 procedure match_ga(Atom?, GA?, Binding?, MRes).
 match_ga(atom(P, As), ga(Q, Vs), B, R?) :- P? =?= Q? | match_vals(As?, Vs?, B?, R).
 match_ga(times(_, A), G, B, R?) :- match_ga(A?, G?, B?, R).
+match_ga(rest(_, _, A), G, B, R?) :- match_ga(A?, G?, B?, R).
 match_ga(_, _, _, mno) :- otherwise | true.
 procedure match_vals(Args?, Vals?, Binding?, MRes).
 match_vals([], [], B, mok(B?)).
