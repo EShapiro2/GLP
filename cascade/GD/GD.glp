@@ -1,0 +1,73 @@
+%% ---------------------------------------------------------------------------
+%% GD.glp --- the grassroots distrust contract, GGGA's (Coordination Appendix C;
+%% Udi, 2026-11-05), in the term form programs/gsc reads (its README, "Writing a
+%% contract").  GD extends GSG (programs/gsc/GSG.glp; GSC, Section Relations
+%% among Contracts), so the term holds GKK's three schemas and GSG's two, as GSG
+%% has them; the clauses are in GD.txt: distrust and distrust_friend are clause
+%% 1, Distrust, of a person Alice knows who is not her friend and of a friend,
+%% the second ending the friendship; propagate is clause 2, Propagated distrust,
+%% with Carol the agent variable c and Bob a reading role, neither guarding nor
+%% changing state, whom Alice, the guarding role, names by the friend atom she
+%% requires (GSC, Definitions Speech-act schema and Volition); cease is clause 3,
+%% Ceasing to distrust.  distrusts(q) in the state of p says that p distrusts q.
+%% Every role but establish's requires identity.  GD-S.glp beside this file
+%% restricts it.  The notation of each schema is printed from the term by a run
+%% of the cascade (schemas.txt).
+%%
+%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
+%% and is named by its index, role(1) the schema's first role; c is an agent
+%% variable, pvar.
+%% ---------------------------------------------------------------------------
+
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+            ; sgn(Constant, Integer).
+Args      ::= [] ; [Arg | Args].
+Atom      ::= atom(Constant, Args).
+Atoms     ::= [] ; [Atom | Atoms].
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Names     ::= [] ; [Constant | Names].
+Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+Preds     ::= [] ; [Constant | Preds].
+Declared  ::= Contract ; reflexive(Preds, Contract).
+
+%% contract_named(gd, C): the contract, GD (Coordination Appendix C).
+procedure contract_named(Constant?, Declared).
+contract_named(gd,
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(befriend, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
+    schema(unfriend, ['Alice', 'Bob'], [],
+       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+    schema(distrust, ['Alice'], [pvar(c)],
+       [rs(guarded, [atom(distrusts, [pvar(c)])], [],
+                    [atom(identity, []), atom(knows, [pvar(c)])],
+                    [atom(distrusts, [pvar(c)]), atom(friend, [pvar(c)])])]),
+    schema(distrust_friend, ['Alice', 'Carol'], [],
+       [rs(guarded,   [atom(distrusts, [role(2)])], [atom(friend, [role(2)])],
+                      [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]),
+        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
+    schema(propagate, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded,   [atom(distrusts, [pvar(c)])], [],
+                      [atom(identity, []), atom(friend, [role(2)])],
+                      [atom(distrusts, [pvar(c)]), atom(friend, [pvar(c)])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(distrusts, [pvar(c)])], [])]),
+    schema(cease, ['Alice'], [pvar(c)],
+       [rs(guarded, [], [atom(distrusts, [pvar(c)])], [atom(identity, [])], [])])]).
