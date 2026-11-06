@@ -516,7 +516,11 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % condition ... written in the relations and functions the types of the
 % values provide", and no condition reads it (the appendix).  The same is
 % asked of the safe formulas of a body and the conjuncts of a head, a role
-% in a formula being any agent variable of it.
+% in a formula being any agent variable of it, and of each cardinality's and
+% sum's anchored safe formula, as of a quantifier's (def:numbers, binding "as
+% the anchored quantifiers ... do"; GSC #12, 2026-11-06 17:23 UTC): an agent
+% is no value, so a term with an agent in it is no numeric term, and each
+% such argument of a sum's term is constraint_not_numeric.
 
 procedure is_num(Arg?, Ans).
 is_num(num(_), yes).
@@ -631,7 +635,11 @@ num_schema1(Nm, Rs, Cn, Cj, Fs, R?) :- ground(Nm?), ground(Rs?), ground(Cn?), gr
     num_roles(Rs?, 1, Nm?, F1),
     cons_check(Cn?, Rs?, Nm?, F2),
     agents_all(Rs?, Rs1),
-    conj_forms(Cj?, Fs?, All),
+    conj_forms(Cj?, Fs?, All0),
+    forms_anchored(All0?, [], An0),
+    cons_anchored(Cn?, An0?, An),
+    conj_forms(Cj?, Fs?, All1),
+    forms_app(An?, All1?, All),
     forms_parts(All?, pp([], []), P),
     fp_parts(P?, Cs, Hs),
     conses_check(Cs?, Rs1?, Nm?, F3),
@@ -660,17 +668,6 @@ procedure agents_all(NRoleSpecs?, NRoleSpecs).
 agents_all([], []).
 agents_all([rs(G, P, M, K, N)|Rs], [rs(G?, P?, M?, K?, N?)|R?]) :- agents_all(Rs?, R).
 agents_all([crs(_, G, P, M, K, N)|Rs], [rs(G?, P?, M?, K?, N?)|R?]) :- agents_all(Rs?, R).
-
-% The safe formulas of a schema: Fs, and each conjunct's phi and literals.
-procedure conj_forms(Conjuncts?, Forms?, Forms).
-conj_forms([], T, T?).
-conj_forms([conjunct(_, _, _, Phi, _, _, L)|Cs], T, [Phi?|R?]) :- ground(L?), ground(Cs?), ground(T?) |
-    conj_forms(Cs?, T?, R1),
-    forms_app(L?, R1?, R).
-
-procedure forms_app(Forms?, Forms?, Forms).
-forms_app([], T, T?).
-forms_app([F|Fs], T, [F?|R?]) :- forms_app(Fs?, T?, R).
 
 % The constraints of safe formulas, and their multiplicities at a holder.
 FP ::= pp(Constraints, HMults).

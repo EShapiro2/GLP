@@ -1866,6 +1866,110 @@ check_eq "the notation prints a sum with phi" \
          "$n_sum_phi" "$(notation "$SUM_PHI" | one_schema room)"
 check "the compiler prints a sum as def:numbers writes it" \
       "\\mathrm{sum}(" "$(compiled_in sum_c "$SUM" room)"
+# Multisets (GSC 67a7da0, Section 3.1, def:extent, def:numbers): a cardinality
+# and a sum take each instance "as many times as its multiplicity", so k
+# copies of an atom count k.  The checker reads no constraint, so the
+# multiplicity is the realisation's; what it reads is the form that says so, a
+# cardinality or a sum binding no variable, whose one instance is a copy of
+# its anchor.
+COPIES="atom(listed, ['Alice', b, n])"
+CARD_COPIES=$(room_with "[n, d, b]" "lt(cardinality([], $COPIES, true), num(d))")
+SUM_COPIES=$(room_with "[n, d, b, w]" "le(sum([], $COPIES, true, num(w)), num(d))")
+out=$(run "check($CARD_COPIES, V)." "check($SUM_COPIES, V)." "as_read($CARD_COPIES, R).")
+check_eq "a cardinality binding no variable, its anchor's copies its instances" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "a sum binding no variable" \
+         "V = syntactically_grassroots" "$(sf 2)"
+check "a cardinality binding no variable reads with no binders" \
+      "lt(cardinality([], role(1), atom(listed, [svar(b), svar(n)]), fcons(true)), num(d))" "$out"
+n_copies=$(cat <<'EOF2'
+room: has_room(Alice, n) <-
+    leads(Alice, n), cardinality(listed(Alice, b, n)) < d guarded by Alice
+EOF2
+)
+check_eq "the notation prints a cardinality binding no variable with no comma" \
+         "$n_copies" "$(notation "$CARD_COPIES" | one_schema room)"
+n_sum_copies=$(cat <<'EOF2'
+room: has_room(Alice, n) <-
+    leads(Alice, n), sum(listed(Alice, b, n), w) <= d guarded by Alice
+EOF2
+)
+check_eq "the notation prints a sum binding no variable with no comma" \
+         "$n_sum_copies" "$(notation "$SUM_COPIES" | one_schema room)"
+check "the compiler prints a cardinality binding no variable with no comma" \
+      "\\mathrm{cardinality}(\\mathit{listed}" "$(compiled_in card_copies_c "$CARD_COPIES" room)"
+# "A numeric term" (def:numbers): an agent is not a value, so a term with an
+# agent in it is not numeric, and no more is a speech-act variable's (GSC #12,
+# 2026-11-06 17:23 UTC, 1).  The same fault as in any constraint expression.
+sum_of() { room_with "[n, d]" "le(sum(['Bob', k], $PLEDGED, true, $1), num(d))"; }
+LISTED="atom(listed, ['Alice', 'Bob', n])"
+card_where() { room_with "[n, d]" "le(cardinality(['Bob'], $LISTED, $1), num(d))"; }
+named_where() { gkk_with "$CLS, $ADD1, sas(room, ['Alice', 'Bob'], [n, d], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n])], le(cardinality(['Bob'], $LISTED, $1), num(d)), ['Alice'])"; }
+F_U_ROLE=$(sum_of "mul(num(k), 'Alice')")
+F_U_BOUND=$(sum_of "'Bob'")
+F_U_FN=$(sum_of "fn(price, ['Alice'])")
+F_U_NEST=$(sum_of "plus(num(k), sum(['Carol'], atom(listed, ['Alice', 'Carol', n]), true, 'Alice'))")
+F_U_SA=$(sum_of "n")
+F_U_FORM=$(gkk_with "$CLS, $ADD1, $ADDV, sas(room, ['Alice', 'Carol'], [n, d], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n]), exists(['Carol'], atom(listed, ['Alice', 'Carol', n]), lt(sum(['Bob', k], $PLEDGED, true, 'Alice'), num(d)))], true, ['Alice'])")
+F_PHI_ROLE=$(card_where "lt(num(d), 'Alice')")
+PHI_NE=$(named_where "ne('Bob', 'Alice')")
+out=$(run "check($F_U_ROLE, V)." "check($F_U_BOUND, V)." "check($F_U_FN, V)." "check($F_U_NEST, V)." "check($F_U_SA, V)." \
+          "check($F_U_FORM, V)." "check($F_PHI_ROLE, V)." "check($PHI_NE, V).")
+check_eq "a term of a sum with an agent role in it is no numeric term" \
+         "V = malformed([constraint_not_numeric(room, role(1))])" "$(sf 1)"
+check_eq "a term of a sum that is its bound agent variable is none" \
+         "V = malformed([constraint_not_numeric(room, svar('Bob'))])" "$(sf 2)"
+check_eq "nor a function of a type applied to an agent" \
+         "V = malformed([constraint_not_numeric(room, role(1))])" "$(sf 3)"
+check_eq "nor an agent in the term of a sum in the term of a sum" \
+         "V = malformed([constraint_not_numeric(room, role(1))])" "$(sf 4)"
+check_eq "nor a speech-act variable" \
+         "V = malformed([constraint_not_numeric(room, svar(n))])" "$(sf 5)"
+check_eq "nor an agent in the term of a sum in a constraint of a safe formula" \
+         "V = malformed([constraint_not_numeric(room, role(1))])" "$(sf 6)"
+check_eq "an agent in an order relation of phi is refused as in any constraint" \
+         "V = malformed([constraint_not_numeric(room, role(1))])" "$(sf 7)"
+check_eq "and an inequality of two agent variables in phi is read" \
+         "V = syntactically_grassroots" "$(sf 8)"
+# A cardinality's or a sum's anchor and phi are an anchored safe formula as a
+# quantifier's are (GSC #12, 2026-11-06 17:23 UTC, 2), in a schema's
+# constraint as in a formula's.
+F_A_ARG=$(room_with "[n, d]" "le(cardinality(['Bob'], atom(listed, ['Alice', 'Bob', zz]), true), num(d))")
+F_S_ARG=$(room_with "[n, d]" "le(sum(['Bob', k], atom(pledged, ['Alice', 'Bob', zz, num(k)]), true, num(k)), num(d))")
+F_PHI_ATOM=$(card_where "atom(member, ['Alice', zz])")
+F_PHI_CONS=$(card_where "lt(num(d), zz)")
+F_PHI_MULT=$(card_where "times(num(0), atom(member, ['Alice', n]))")
+F_PHI_WILD=$(card_where "times(num(d), atom(member, ['Alice', '_']))")
+F_A_NT=$(room_with "[n, d]" "le(cardinality(['Bob'], atom(listed, ['Alice', 'Bob', ext(own('Alice'), y)]), true), num(d))")
+F_A_HOLD=$(room_with "[n, d]" "le(cardinality(['Bob'], atom(knows, [zz, 'Bob']), true), num(d))")
+F_A_TWO=$(room_with "[n, d]" "and(le(cardinality(['Bob'], $LISTED, atom(identity, ['Bob'])), num(d)), le(cardinality(['Bob'], atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob'])), num(d)))")
+F_PHI_SIGN=$(card_where "signed(num(d), n)")
+A_LISTED=$(card_where "atom(identity, ['Bob'])")
+out=$(run "check($F_A_ARG, V)." "check($F_S_ARG, V)." "check($F_PHI_ATOM, V)." "check($F_PHI_CONS, V)." "check($F_PHI_MULT, V)." \
+          "check($F_PHI_WILD, V)." "check($F_A_NT, V)." "check($F_A_HOLD, V)." "check($F_A_TWO, V)." "check($F_PHI_SIGN, V)." \
+          "check($A_LISTED, V).")
+check_eq "an argument of a cardinality's anchor in no variable of the schema is refused" \
+         "V = malformed([not_in_vars(room, listed)])" "$(sf 1)"
+check_eq "and of a sum's" \
+         "V = malformed([not_in_vars(room, pledged)])" "$(sf 2)"
+check_eq "and of an atom of phi" \
+         "V = malformed([not_in_vars(room, member)])" "$(sf 3)"
+check_eq "and of a constraint of phi" \
+         "V = malformed([not_in_vars(room, constraint)])" "$(sf 4)"
+check_eq "a multiplicity of phi that is no positive whole number is refused" \
+         "V = malformed([multiplicity_not_whole(room, 1, atom(member, [svar(n)]))])" "$(sf 5)"
+check_eq "a multiplicity of phi on the wildcard is refused" \
+         "V = malformed([multiplicity_wildcard(room, 1, atom(member, [any]))])" "$(sf 6)"
+check_eq "a speech-act variable of a name term of the anchor outside the head is refused" \
+         "V = malformed([not_in_head(room, svar(y))])" "$(sf 7)"
+check_eq "an anchor whose holder is no name is refused" \
+         "V = malformed([not_holder(room, knows)])" "$(sf 8)"
+check_eq "a listed role under two anchors of cardinalities is refused" \
+         "V = malformed([quantified_condition(room, 'Bob')])" "$(sf 9)"
+check_eq "a signing condition of phi on no agent is refused" \
+         "V = malformed([signing_not_agent(room, num(d))])" "$(sf 10)"
+check_eq "a variable a cardinality binds, holding an atom of phi, is a listed role" \
+         "V = syntactically_grassroots" "$(sf 11)"
 check "a schema written qschema compiles in the general form, its conjunct on a line of its own" \
       "\\text{making}" "$(compiled_in cond_c "$COND_OK" note)"
 
