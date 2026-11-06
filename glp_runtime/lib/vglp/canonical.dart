@@ -791,15 +791,17 @@ _Questions _questions(
 /// 2026-10-02 21:02 UTC, B); and without the generic source, the
 /// compilation's own Ask(Q), the same.  [drawn] is the type of what the
 /// person channel carries, [procTaken] the procedure names taken, which Part
-/// 2 adds to, [inst] the generic source instantiated and [added] the types
-/// the compilation adds.
+/// 2 adds to, [typeTaken] the type names taken, which Part 2 adds to, [inst]
+/// the generic source instantiated and [added] the types the compilation
+/// adds.
 class _Names {
   final String drawn;
   final Set<String> procTaken;
+  final Set<String> typeTaken;
   final InstantiatedDispatcher? inst;
   final _AddedTypes added;
 
-  _Names(this.drawn, this.procTaken, this.inst, this.added);
+  _Names(this.drawn, this.procTaken, this.typeTaken, this.inst, this.added);
 }
 
 /// The names the compilation adds ([_Names]), fresh, too, against every type
@@ -842,7 +844,7 @@ _Names _namesAdded(
       ask: inst?.type(askTypeName) ?? _fresh('Ask', typeNames),
       question: question,
       emitAsk: inst == null);
-  return _Names(drawn, procTaken, inst, added);
+  return _Names(drawn, procTaken, typeNames, inst, added);
 }
 
 /// The compiled procedures, each with its declaration, in source order; a
@@ -918,6 +920,7 @@ _Elicitation? _part2(
         interactive,
         names.added,
         names.procTaken,
+        names.typeTaken,
         {...scopeWidgets, ...widgetDecls.byModedType},
         scope,
         names.drawn,
@@ -1263,6 +1266,7 @@ _Elicitation _elicitation(
     List<InteractiveType> interactive,
     _AddedTypes added,
     Set<String> procTaken,
+    Set<String> typeTaken,
     Map<String, String> widgets,
     TypeEnvironment? scope,
     String drawn,
@@ -1278,6 +1282,7 @@ _Elicitation _elicitation(
     constructs: constructsName,
     runEnd: inst.proc('run_end'),
     run: (f) => freshProc('run_$f'),
+    view: (f) => _fresh('View_$f', typeTaken),
     shown: inst.proc('shown'),
     thread: inst.proc('thread'),
     consViews: inst.proc('cons_views'),

@@ -357,7 +357,6 @@ programs/currencies/bonds/dated/bonds_agent.glp	open-decl	present_swapCard/6
 programs/currencies/bonds/dated/bonds_agent.glp	open-decl	present_swapCard_wait/6
 programs/currencies/bonds/dated/bonds_agent.glp	open-decl	present_transferCard/6
 programs/currencies/bonds/dated/bonds_agent.glp	open-decl	present_transferCard_wait/6
-programs/currencies/bonds/dated/bonds_agent.glp	open-decl	run_stream_request_r/5
 programs/currencies/bonds/dated/bonds_agent.glp	open-decl	run_swapCard_w/5
 programs/currencies/bonds/dated/bonds_agent.glp	open-decl	run_transferCard_w/5
 programs/currencies/bonds/dated/bonds_agent.glp	open-decl	shown/3
@@ -398,7 +397,6 @@ programs/currencies/coins/currency/coins_agent.glp	open-decl	form_yesNo/2
 programs/currencies/coins/currency/coins_agent.glp	open-decl	present_approval/6
 programs/currencies/coins/currency/coins_agent.glp	open-decl	present_approval_wait/6
 programs/currencies/coins/currency/coins_agent.glp	open-decl	run_approval_w/5
-programs/currencies/coins/currency/coins_agent.glp	open-decl	run_stream_request_r/5
 programs/currencies/coins/currency/coins_agent.glp	open-decl	shown/3
 programs/currencies/coins/currency/coins_agent.glp	open-decl	shown_whole/2
 programs/currencies/coins/currency/coins_agent.glp	open-decl	start_approval_approval_2/3
@@ -449,7 +447,6 @@ programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	present_
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	present_swapCard_wait/6
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	present_transferCard/6
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	present_transferCard_wait/6
-programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	run_stream_request_r/5
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	run_swapCard_w/5
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	run_transferCard_w/5
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-decl	shown/3
@@ -776,7 +773,6 @@ programs/social/graph/core/home.glp	open-decl	present_introRequest/6
 programs/social/graph/core/home.glp	open-decl	present_introRequest_wait/6
 programs/social/graph/core/home.glp	open-decl	run_friendRequest_w/5
 programs/social/graph/core/home.glp	open-decl	run_introRequest_w/5
-programs/social/graph/core/home.glp	open-decl	run_stream_request_r/5
 programs/social/graph/core/home.glp	open-decl	shown/3
 programs/social/graph/core/home.glp	open-decl	shown_whole/2
 programs/social/graph/core/home.glp	open-decl	start_friendRequest_from_2/3
@@ -842,7 +838,6 @@ programs/tests/linker_tree/agents/adult.glp	open-decl	run_card_w/5
 programs/tests/linker_tree/agents/adult.glp	open-decl	run_groupCard_w/5
 programs/tests/linker_tree/agents/adult.glp	open-decl	run_inviteCard_w/5
 programs/tests/linker_tree/agents/adult.glp	open-decl	run_joinCard_w/5
-programs/tests/linker_tree/agents/adult.glp	open-decl	run_stream_request_r/5
 programs/tests/linker_tree/agents/adult.glp	open-decl	shown/3
 programs/tests/linker_tree/agents/adult.glp	open-decl	shown_whole/2
 programs/tests/linker_tree/agents/adult.glp	open-decl	start_card_card_2/3
@@ -882,7 +877,6 @@ programs/tests/linker_tree/agents/child.glp	open-decl	run_card_w/5
 programs/tests/linker_tree/agents/child.glp	open-decl	run_groupCard_w/5
 programs/tests/linker_tree/agents/child.glp	open-decl	run_inviteCard_w/5
 programs/tests/linker_tree/agents/child.glp	open-decl	run_joinCard_w/5
-programs/tests/linker_tree/agents/child.glp	open-decl	run_stream_request_r/5
 programs/tests/linker_tree/agents/child.glp	open-decl	shown/3
 programs/tests/linker_tree/agents/child.glp	open-decl	shown_whole/2
 programs/tests/linker_tree/agents/child.glp	open-decl	start_card_card_2/3
@@ -923,7 +917,6 @@ programs/tests/linker_tree/agents/parent.glp	open-decl	run_card_w/5
 programs/tests/linker_tree/agents/parent.glp	open-decl	run_groupCard_w/5
 programs/tests/linker_tree/agents/parent.glp	open-decl	run_inviteCard_w/5
 programs/tests/linker_tree/agents/parent.glp	open-decl	run_joinCard_w/5
-programs/tests/linker_tree/agents/parent.glp	open-decl	run_stream_request_r/5
 programs/tests/linker_tree/agents/parent.glp	open-decl	shown/3
 programs/tests/linker_tree/agents/parent.glp	open-decl	shown_whole/2
 programs/tests/linker_tree/agents/parent.glp	open-decl	start_card_card_2/3
