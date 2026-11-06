@@ -9,7 +9,7 @@
 Peer     ::= Key.
 Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer).
 Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer).
-Request  ::= propose(Proposal).
+Request  ::= propose(Proposal) ; refresh.
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
@@ -27,7 +27,7 @@ Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking   ::= Attempt ; hello(Peer, Proposal).
 Approved ::= Proposal.
 Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
+Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
 Question ::= request_r(Request?) ; approval_w(Approval).
 Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
 Ask(Q)   ::= ask(Constant, Q).
