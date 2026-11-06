@@ -5,8 +5,8 @@
 %% term holds GKK's three schemas, GSG's two and GDO's three, as GDO.glp has
 %% them; the clauses are in GDO-L.txt beside this file.
 %%
-%% One predicate more: lpoints_to(q, l) in the state of p says that p points
-%% to q with the label l.  A label is named by a person, so l is an agent
+%% One predicate more: lpoints_to(q, Dave) in the state of p says that p has
+%% a pointer to q labeled 'Dave'; the label is the person Dave, an agent
 %% variable, and Bob's label is Bob.  GDO-L:1 is two schemas, follow_own,
 %% with Bob's label, and follow_friend, with a label Bob points with;
 %% GDO-L:2 is follow_transitive and GDO-L:3 unfollow.  In each Bob is a
@@ -67,23 +67,23 @@ contract_named(gdo_l,
     schema(unpoint, ['Alice', 'Bob'], [],
        [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GDO-L:1, Labeled pointing to friend, with Bob's label, which is named by Bob.
+%% GDO-L:1, Labeled pointing to friend, labeled 'Bob'.
     schema(follow_own, ['Alice', 'Bob'], [],
        [rs(guarded,   [atom(lpoints_to, [role(2), role(2)])], [],
                       [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), role(2)])]),
         rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GDO-L:1, Labeled pointing to friend, with a label l that Bob points with, to some person d.
-    schema(follow_friend, ['Alice', 'Bob'], [pvar(l), pvar(d)],
-       [rs(guarded,   [atom(lpoints_to, [role(2), pvar(l)])], [],
-                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar(l)])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(d), pvar(l)])], [])]),
+%% GDO-L:1, Labeled pointing to friend, labeled 'Dave', where Bob has a pointer labeled 'Dave', to Carol.
+    schema(follow_friend, ['Alice', 'Bob'], [pvar('Dave'), pvar('Carol')],
+       [rs(guarded,   [atom(lpoints_to, [role(2), pvar('Dave')])], [],
+                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar('Dave')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
 %% GDO-L:2, Labeled transitive pointing, Carol the agent variable c.
-    schema(follow_transitive, ['Alice', 'Bob'], [pvar(c), pvar(l)],
-       [rs(guarded,   [atom(lpoints_to, [pvar(c), pvar(l)])], [],
-                      [atom(identity, []), atom(knows, [pvar(c)]), atom(lpoints_to, [role(2), pvar(l)])],
-                      [atom(lpoints_to, [pvar(c), pvar(l)])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar(c), pvar(l)])], [])]),
+    schema(follow_transitive, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')],
+       [rs(guarded,   [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [],
+                      [atom(identity, []), atom(knows, [pvar('Carol')]), atom(lpoints_to, [role(2), pvar('Dave')])],
+                      [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
 %% GDO-L:3, Ceasing to point.
-    schema(unfollow, ['Alice', 'Bob'], [pvar(l)],
-       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar(l)])], [atom(identity, [])], []),
+    schema(unfollow, ['Alice', 'Bob'], [pvar('Dave')],
+       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar('Dave')])], [atom(identity, [])], []),
         rs(unguarded, [], [], [atom(identity, [])], [])])]).
