@@ -1,10 +1,13 @@
 // glp_runtime/test/compiler/type_def_question_mark_test.dart
 //
-// A `?` standing apart in a type definition marks the type name before it:
-// `T ?` is `T?`, the dual of T, as a procedure declaration reads it.  TGLP
-// typed-glp.tex, "Type Declarations": "GLP types are specified using BNF rules
-// with the complementation operator ?", and "its dual (for example Stream?) is
-// an input type".  A `?` that marks nothing is refused with a message, not
+// A `?` in a type definition marks the type name before it, `T?` being the
+// dual of T.  TGLP typed-glp.tex, "Type Declarations": "GLP types are
+// specified using BNF rules with the complementation operator ?", and "its
+// dual (for example Stream?) is an input type".  A type and its `?` are written
+// with nothing between them, and the reader refuses a program that puts white
+// space or a line break there (GLP-Spec ef7c2cb, appendix-guards.tex,
+// "Predefined types"), so `T ?` is refused; from 2026-10-10 to 2026-11-02 it
+// was read as `T?`.  A `?` that marks nothing is refused with a message, not
 // dropped (GLP #3 Cowork, 2026-10-10 07:48 UTC, "00:26": "A parser that drops
 // a mark silently is at fault whatever the syntax").  Until 2026-10-10 the
 // type-definition parser consumed a `?` standing apart and dropped it, so
@@ -62,7 +65,7 @@ w(g(1)).
 ''';
 
 void main() {
-  group('"T ?" in a type definition is "T?"', () {
+  group('"T ?" in a type definition is refused, and "T?" read', () {
     for (final (what, apart, joined) in [
       ('an argument of a structure', 'Q ::= f(R ?).', 'Q ::= f(R?).'),
       ('an alternative, the alias of a dual', 'Q ::= R ?.', 'Q ::= R?.'),
@@ -81,13 +84,24 @@ void main() {
           'Q ::= f(R?, R, R?) ; g(R, R?).'),
     ]) {
       test(what, () {
-        expect(_typeDefs(apart), _typeDefs(joined));
+        final e = _refusal(apart);
+        expect(e.category, ErrorCategory.syntax, reason: '$e');
+        expect(e.message, contains('a type and its "?" are written with '
+            'nothing between them'));
+        // The refusal points at the first "?" standing apart.
+        expect(e.line, 1);
+        expect(e.column, apart.indexOf(' ?') + 2, reason: '$e');
+        expect(_typeDefs(joined), hasLength(1), reason: joined);
       });
     }
 
-    test('as a procedure declaration reads it', () {
-      final m = Parser(Lexer('R ::= g(Integer).\nQ ::= f(R ?).\n'
-              'imported procedure m#p(R ?, Q).')
+    test('as a procedure declaration refuses it', () {
+      final e = _refusal('R ::= g(Integer).\nQ ::= f(R?).\n'
+          'imported procedure m#p(R ?, Q).');
+      expect(e.message, contains('between the type "R" and its "?"'));
+      expect(e.line, 3);
+      final m = Parser(Lexer('R ::= g(Integer).\nQ ::= f(R?).\n'
+              'imported procedure m#p(R?, Q).')
           .tokenize())
           .parseModule();
       expect('${m.procDeclarations.single.argTypes.first}', 'R?');
@@ -102,7 +116,6 @@ void main() {
       ('after a number', 'Q ::= f(5 ?).', '5'),
       ('after a string', 'Q ::= f("s" ?).', 's'),
       ('after a dual, joined', 'Q ::= f(R? ?).', 'R?'),
-      ('after a dual, apart', 'Q ::= f(R ? ?).', 'R?'),
       ('after _?', 'Q ::= f(_? ?).', '_?'),
       ('after a parameterised dual', 'Q ::= f(Stream(R)? ?).', 'Stream(R)?'),
     ]) {
@@ -243,14 +256,19 @@ void main() {
     setUp(() => engine = GlpEngine(
         rootSelfGlpPath: File('../programs/self.glp').absolute.path));
 
-    for (final dual in ['R ?', 'R?']) {
-      test('Q ::= f($dual) loads and runs, its dual kept', () async {
-        expect(engine.loadSource(_case(dual)), isTrue);
-        final r = await engine.runGoal('p([f(Y)]).');
-        expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
-        expect(r.bindings['Y'].toString(), 'g(Const(1))');
-      });
-    }
+    test('Q ::= f(R?) loads and runs, its dual kept', () async {
+      expect(engine.loadSource(_case('R?')), isTrue);
+      final r = await engine.runGoal('p([f(Y)]).');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(r.bindings['Y'].toString(), 'g(Const(1))');
+    });
+
+    test('Q ::= f(R ?) does not load, refused at the "?"', () {
+      expect(
+          () => engine.loadSource(_case('R ?')),
+          throwsA(predicate((e) => '$e'.contains(
+              'a type and its "?" are written with nothing between them'))));
+    });
 
     test('without the dual, Q ::= f(R), it does not load', () {
       expect(() => engine.loadSource(_case('R')), throwsA(anything));

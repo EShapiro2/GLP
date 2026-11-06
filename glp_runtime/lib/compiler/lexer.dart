@@ -15,11 +15,16 @@ class Lexer {
     final tokens = <Token>[];
 
     while (!_isAtEnd()) {
+      final before = _current;
       _skipWhitespaceAndComments();
       if (_isAtEnd()) break;
 
+      // Layout before a token is recorded on it ([Token.spaceBefore]), for
+      // the parser to refuse it between a functor and its "(" and between a
+      // type and its "?" (GLP-Spec ef7c2cb, appendix-guards.tex).
+      final laidOut = _current > before && tokens.isNotEmpty;
       final token = _scanToken();
-      tokens.add(token);
+      tokens.add(laidOut ? token.withSpaceBefore(true) : token);
     }
 
     tokens.add(Token(TokenType.EOF, '', _line, _column));
