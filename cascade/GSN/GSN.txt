@@ -13,6 +13,8 @@ Alice and Bob are persons.
 4. ■ Group messaging.  A member of a group may send a message to the group, and its leader delivers it to every current member.
 Pragmas
 Groups: the groups Alice is a member of.
+Messages: the messages Alice received.
+Posts: the posts delivered to Alice.
 Messaging: Alice [Message] <text>
 Group: Alice [Create] <name> [Close]
 Joining and Leaving: Alice [Join]
