@@ -26,7 +26,7 @@ calendars([X | Xs], [X? | Ys?], KB?, KA?, P) :-
 calendars([], [], [], [], _).
 
 procedure turn(Seen?, Phase?, Stream(Integer), Stream(Integer)?, Stream(Integer), Stream(Integer)?, Phase).
-turn(view(S, _, _, _), P, KB?, KB1, KA?, KA1, P1?) :-
+turn(view(_, S, _, _, _), P, KB?, KB1, KA?, KA1, P1?) :-
     ground(S?), ground(P?) |
     awaited(P?, W),
     count_atom(W?, S?, N),
@@ -87,7 +87,7 @@ cal_then(0, Xs, Ys?, W, D, K?) :- cal_when(Xs?, Ys, W?, D?, K).
 cal_then(N, Xs, Ys?, _, D, [D?]) :- N? > 0 | pass(Xs?, Ys).
 
 procedure met(Seen?, When?, Integer).
-met(view(S, _, _, _), holds(A), N?) :- count_atom(A?, S?, N).
+met(view(_, S, _, _, _), holds(A), N?) :- count_atom(A?, S?, N).
 met(refused(P, Q, _), refused_by(P1, Q1), 1) :- P? =?= P1?, Q? =?= Q1? | true.
 met(_, _, 0) :- otherwise | true.
 
