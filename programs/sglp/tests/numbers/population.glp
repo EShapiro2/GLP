@@ -5,45 +5,16 @@
 %% The run declaration of the source:
 %% (run(1, [mix(counting, [share(counter, 1.0)])], 1, week, 20260927))
 
-Profiles
-::=
-agent(Dimension1)
-.
-Dimension1
-::=
-counter
-.
+Profiles ::= agent(Dimension1).
+Dimension1 ::= counter.
 Ask ::= ask(Constant, Question).
-Question
-::=
-stream_integer_r
-(
-Stream(Integer)
-?
-)
-.
+Question ::= stream_integer_r(Stream(Integer)?).
 
 %% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws, person(K, agent, []).
 Person ::= person(Constant, Constant, List(Constant)).
 
 %% The person procedures, in the profiles module.
-imported procedure
-profiles
-#
-count
-(
-Stream(Integer)
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+imported procedure profiles#count(Stream(Integer), Person?, Integer?, MutualRef?).
 
 %% The person process (sGLP's paper, Section 3, Definition "Person Process"; Section 4, "The person process").
 exported procedure person(Integer?, Profiles?, Person?, MutualRef?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
@@ -51,11 +22,9 @@ person(A, agent(counter), H, Mon, Scr, Seed, Log, [ask('Stream(Integer)?', strea
 :-
 ground(H?)
 |
-random(Seed?, 2147483646, K, S)
+split_random_seed(Seed?, K, S)
 ,
-profiles
-#
-count(Y, H?, K?, Mon?, Scr?)
+profiles # count(Y, H?, K?, Scr?)
 ,
 relay_1(A?, 'Stream(Integer)?', E, Y?, Mon?, Log?)
 ,
@@ -64,46 +33,14 @@ person(A?, agent(counter), H?, Mon?, Scr?, S?, Log?, As?)
 person(_, _, _, _, _, _, _, []).
 
 %% The relay of an interactive type (Definition "Copy, Relay").
-procedure
-relay_1
-(
-Integer?
-,
-Constant?
-,
-Stream(Integer)
-,
-Stream(Integer)
-?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure relay_1(Integer?, Constant?, Stream(Integer), Stream(Integer)?, MutualRef?, MutualRef?).
 relay_1(A, Type, X?, Y, Mon, Log)
 :-
 answer_1(A?, Type?, Y?, X, Mon?, Log?)
 .
 
 %% The answer, handed over and logged (Section 4, "The person process" and "The log").
-procedure
-answer_1
-(
-Integer?
-,
-Constant?
-,
-Stream(Integer)
-?
-,
-Stream(Integer)
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure answer_1(Integer?, Constant?, Stream(Integer)?, Stream(Integer), MutualRef?, MutualRef?).
 answer_1(A, Type, [], [], Mon, Log)
 :-
 stream_append(time(Time), Mon?, _)
@@ -133,52 +70,16 @@ exported procedure(X) start_screen(Integer?, Stream(X)?, MutualRef?, MutualRef?,
 start_screen(A, O, Mon, Log, Scr?) :- allocate_mutual_reference(Scr, Rs), screen(A?, O?, [], Rs?, Mon?, Log?).
 
 %% The run declaration: its persons, horizon, seed and thresholds.
-exported procedure
-declaration
-(
-Integer
-,
-Number
-,
-Span
-,
-Integer
-)
-.
+exported procedure declaration(Integer, Number, Span, Integer).
 declaration(1, 1, week, 20260927)
 .
 
 %% The persons of the run, drawn by its census (sGLP's paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).
-exported procedure
-persons
-(
-Integer?
-,
-Stream(Constant)
-?
-,
-Constant
-,
-List(Person)
-,
-Integer
-)
-.
+exported procedure persons(Integer?, Stream(Constant)?, Constant, List(Person), Integer).
 persons(B, Ks, Ok?, Ps?, B?) :- integer(B?) | agent_persons(Ks?, Ps0), checked(Ps0?, Ok, Ps).
-procedure
-agent_persons
-(
-Stream(Constant)
-?
-,
-List(Person)
-)
-.
+procedure agent_persons(Stream(Constant)?, List(Person)).
 agent_persons([], []).
 agent_persons([K|Ks], [person(K?, agent, [])|Ps?]) :- agent_persons(Ks?, Ps).
-procedure skip(Integer?, Integer?, Integer).
-skip(0, S, S?).
-skip(J, S, S1?) :- J? > 0, integer(S?) | random(S?, 1, _, S2), J1 := J? - 1, skip(J1?, S2?, S1).
 procedure checked(List(Person)?, Constant, List(Person)).
 checked([], no, []).
 checked([P|Ps], Ok?, [P?|Ps?]) :- ground(P?), ground(Ps?) | roles_ok([P?|Ps?], Ok).
@@ -190,20 +91,8 @@ roles_ok(Ps?, Ok)
 .
 roles_ok([_|_], no) :- otherwise | true.
 
-%% An agent's stochastic person, one profile per dimension of the role of its person, drawn from its block (Appendix B).
-exported procedure
-stochastic_person
-(
-Integer?
-,
-Person
-?
-,
-Profiles
-,
-Integer
-)
-.
+%% An agent's stochastic person, one profile per dimension of the role of its person, drawn from its seed (Appendix B).
+exported procedure stochastic_person(Integer?, Person?, Profiles, Integer).
 stochastic_person(B, person(_, agent, _), agent(P1?), S?)
 :-
 random(B?, 100, K1, S)
@@ -212,13 +101,6 @@ counting(K1?, P1)
 .
 
 %% The draw of the dimension(counting)
-procedure
-counting
-(
-Integer?
-,
-Dimension1
-)
-.
+procedure counting(Integer?, Dimension1).
 counting(_, counter)
 .

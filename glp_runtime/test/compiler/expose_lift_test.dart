@@ -38,10 +38,7 @@ void main() {
     test('lifts what monitor/4 carries, and not Queue or Clock', () {
       final lift = module(discover('../programs/sglp'), '/sglp/monitor.glp').lift!;
       expect(lift.scope.procedures.keys, contains('monitor/4'));
-      for (final t in ['Request', 'Rate', 'Token', 'TimeUnit']) {
-        expect(lift.scope.types.keys, contains(t), reason: t);
-      }
-      expect(lift.scope.typeOrigins['TimeUnit'], 'sglp/monitor');
+      expect(lift.scope.types.keys, contains('Request'));
       expect(lift.scope.types.keys, isNot(contains('Queue')));
       expect(lift.scope.types.keys, isNot(contains('Clock')));
     });

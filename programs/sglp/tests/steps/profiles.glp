@@ -7,91 +7,37 @@ Person ::= person(Constant, Constant, List(Constant)).
 
 %% person(stepper)
 %% binds(Ready, get_ready)
-exported procedure
-get_ready
-(
-Ready
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-get_ready(ready(R?), _, _, Mon, _)
+exported procedure get_ready(Ready?, Person?, Integer?, MutualRef?).
+get_ready(ready(R?), _, _, _)
 :-
-stream_append(rated('/'(1, day), Tok), Mon?, _)
+rated(0.000011574074074074073, Tok)
 ,
 say(Tok?, slot(R))
 .
-procedure
-say
-(
-Token?
-,
-Slot(YesNo)
-?
-)
-.
+procedure say(Token?, Slot(YesNo)?).
 say(stop, _)
 .
-say(go, slot(yes))
+say(go(_), slot(yes))
 .
 %% binds(Panel, judge_fast)
-exported procedure
-judge_fast
-(
-Panel
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-judge_fast(panel(Cs), _, _, Mon, _)
+exported procedure judge_fast(Panel?, Person?, Integer?, MutualRef?).
+judge_fast(panel(Cs), _, _, _)
 :-
-judge_cards(Cs?, Mon?)
+judge_cards(Cs?)
 .
-procedure
-judge_cards
-(
-List(Card)
-?
-,
-MutualRef?
-)
-.
-judge_cards([card(_, A?) | Cs], Mon)
+procedure judge_cards(List(Card)?).
+judge_cards([card(_, A?) | Cs])
 :-
-stream_append(rated('/'(3600, hour), Tok), Mon?, _)
+rated(1.0, Tok)
 ,
 verdict(Tok?, slot(A))
 ,
-judge_cards(Cs?, Mon?)
+judge_cards(Cs?)
 .
-judge_cards([], _)
+judge_cards([])
 .
-procedure
-verdict
-(
-Token?
-,
-Slot(YesNo)
-?
-)
-.
+procedure verdict(Token?, Slot(YesNo)?).
 verdict(stop, _)
 .
-verdict(go, slot(yes))
+verdict(go(_), slot(yes))
 .

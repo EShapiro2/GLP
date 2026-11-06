@@ -3,149 +3,26 @@
 %% transform(census, population)
 
 %% The run declaration of the source:
-%% (run(village, [mix(greeting, parent, [share(formal, 1.0)]), mix(temper, parent, [share(kind, 0.5), share(grumpy, 0.5)]), mix(play, child, [share(casual, 1.0)])], 1, day, 20260927))
+%% (run(village, [mix(greeting, parent, [share(formal, 1.0)]), mix(temper, parent, [share(kind, 0.5), share(grumpy, 0.5)]), mix(play, child, [share(casual, 1.0)])], 1, day, 20260929))
 
-Profiles
-::=
-parent(Dimension1, Dimension2)
-;
-child(Dimension3)
-.
-Dimension1
-::=
-formal
-.
-Dimension2
-::=
-kind
-;
-grumpy
-.
-Dimension3
-::=
-casual
-.
+Profiles ::= parent(Dimension1, Dimension2) ; child(Dimension3).
+Dimension1 ::= formal.
+Dimension2 ::= kind ; grumpy.
+Dimension3 ::= casual.
 Ask ::= ask(Constant, Question).
-Question
-::=
-hello_w(Hello)
-;
-mood_w(Mood)
-.
-Attr
-::=
-age(Integer)
-;
-kids(Integer)
-.
-Person
-::=
-person(Constant, Constant, List(Attr))
-.
+Question ::= hello_w(Hello) ; mood_w(Mood).
+Attr ::= age(Integer) ; kids(Integer).
+Person ::= person(Constant, Constant, List(Attr)).
 
 %% The person procedures, in the profiles module.
-imported procedure
-profiles
-#
-formal_hello
-(
-Hello
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-imported procedure
-profiles
-#
-kind_mood
-(
-Mood
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-imported procedure
-profiles
-#
-grumpy_mood
-(
-Mood
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-imported procedure
-profiles
-#
-casual_hello
-(
-Hello
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
-imported procedure
-profiles
-#
-casual_mood
-(
-Mood
-?
-,
-Person
-?
-,
-Integer?
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+imported procedure profiles#formal_hello(Hello?, Person?, Integer?, MutualRef?).
+imported procedure profiles#kind_mood(Mood?, Person?, Integer?, MutualRef?).
+imported procedure profiles#grumpy_mood(Mood?, Person?, Integer?, MutualRef?).
+imported procedure profiles#casual_hello(Hello?, Person?, Integer?, MutualRef?).
+imported procedure profiles#casual_mood(Mood?, Person?, Integer?, MutualRef?).
 
 %% The census, in the profiles module.
-imported procedure
-profiles
-#
-village
-(
-Integer?
-,
-List(Person)
-)
-.
+imported procedure profiles#village(Integer?, List(Person)).
 
 %% The person process (sGLP's paper, Section 3, Definition "Person Process"; Section 4, "The person process").
 exported procedure person(Integer?, Profiles?, Person?, MutualRef?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
@@ -153,11 +30,9 @@ person(A, parent(formal, D2), H, Mon, Scr, Seed, Log, [ask('Hello', hello_w(E)) 
 :-
 ground(H?)
 |
-random(Seed?, 2147483646, K, S)
+split_random_seed(Seed?, K, S)
 ,
-profiles
-#
-formal_hello(Y?, H?, K?, Mon?, Scr?)
+profiles # formal_hello(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Hello', E?, Y, Mon?, Log?)
 ,
@@ -167,11 +42,9 @@ person(A, parent(D1, kind), H, Mon, Scr, Seed, Log, [ask('Mood', mood_w(E)) | As
 :-
 ground(H?)
 |
-random(Seed?, 2147483646, K, S)
+split_random_seed(Seed?, K, S)
 ,
-profiles
-#
-kind_mood(Y?, H?, K?, Mon?, Scr?)
+profiles # kind_mood(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Mood', E?, Y, Mon?, Log?)
 ,
@@ -181,11 +54,9 @@ person(A, parent(D1, grumpy), H, Mon, Scr, Seed, Log, [ask('Mood', mood_w(E)) | 
 :-
 ground(H?)
 |
-random(Seed?, 2147483646, K, S)
+split_random_seed(Seed?, K, S)
 ,
-profiles
-#
-grumpy_mood(Y?, H?, K?, Mon?, Scr?)
+profiles # grumpy_mood(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Mood', E?, Y, Mon?, Log?)
 ,
@@ -195,11 +66,9 @@ person(A, child(casual), H, Mon, Scr, Seed, Log, [ask('Hello', hello_w(E)) | As]
 :-
 ground(H?)
 |
-random(Seed?, 2147483646, K, S)
+split_random_seed(Seed?, K, S)
 ,
-profiles
-#
-casual_hello(Y?, H?, K?, Mon?, Scr?)
+profiles # casual_hello(Y?, H?, K?, Scr?)
 ,
 relay_1(A?, 'Hello', E?, Y, Mon?, Log?)
 ,
@@ -209,11 +78,9 @@ person(A, child(casual), H, Mon, Scr, Seed, Log, [ask('Mood', mood_w(E)) | As])
 :-
 ground(H?)
 |
-random(Seed?, 2147483646, K, S)
+split_random_seed(Seed?, K, S)
 ,
-profiles
-#
-casual_mood(Y?, H?, K?, Mon?, Scr?)
+profiles # casual_mood(Y?, H?, K?, Scr?)
 ,
 relay_2(A?, 'Mood', E?, Y, Mon?, Log?)
 ,
@@ -222,23 +89,7 @@ person(A?, child(casual), H?, Mon?, Scr?, S?, Log?, As?)
 person(_, _, _, _, _, _, _, []).
 
 %% The relay of an interactive type (Definition "Copy, Relay").
-procedure
-relay_1
-(
-Integer?
-,
-Constant?
-,
-Hello
-?
-,
-Hello
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure relay_1(Integer?, Constant?, Hello?, Hello, MutualRef?, MutualRef?).
 relay_1(A, Type, hello(X1?, X2?), hello(Y1, Y2), Mon, Log)
 :-
 answer_1(A?, Type?, Y1?, X1, Mon?, Log?)
@@ -247,45 +98,14 @@ answer_2(A?, Type?, Y2?, X2, Mon?, Log?)
 .
 
 %% The relay of an interactive type (Definition "Copy, Relay").
-procedure
-relay_2
-(
-Integer?
-,
-Constant?
-,
-Mood
-?
-,
-Mood
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure relay_2(Integer?, Constant?, Mood?, Mood, MutualRef?, MutualRef?).
 relay_2(A, Type, mood(X1?), mood(Y1), Mon, Log)
 :-
 answer_3(A?, Type?, Y1?, X1, Mon?, Log?)
 .
 
 %% The answer, handed over and logged (Section 4, "The person process" and "The log").
-procedure
-answer_1
-(
-Integer?
-,
-Constant?
-,
-Constant?
-,
-Constant
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure answer_1(Integer?, Constant?, Constant?, Constant, MutualRef?, MutualRef?).
 answer_1(A, Type, Y1, Y1?, Mon, Log)
 :-
 ground(Y1?)
@@ -296,22 +116,7 @@ stream_append(entry(Time?, A?, Type?, hello(Y1?, '_')), Log?, _)
 .
 
 %% The answer, handed over and logged (Section 4, "The person process" and "The log").
-procedure
-answer_2
-(
-Integer?
-,
-Constant?
-,
-Integer?
-,
-Integer
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure answer_2(Integer?, Constant?, Integer?, Integer, MutualRef?, MutualRef?).
 answer_2(A, Type, Y2, Y2?, Mon, Log)
 :-
 ground(Y2?)
@@ -322,22 +127,7 @@ stream_append(entry(Time?, A?, Type?, hello('_', Y2?)), Log?, _)
 .
 
 %% The answer, handed over and logged (Section 4, "The person process" and "The log").
-procedure
-answer_3
-(
-Integer?
-,
-Constant?
-,
-Constant?
-,
-Constant
-,
-MutualRef?
-,
-MutualRef?
-)
-.
+procedure answer_3(Integer?, Constant?, Constant?, Constant, MutualRef?, MutualRef?).
 answer_3(A, Type, Y1, Y1?, Mon, Log)
 :-
 ground(Y1?)
@@ -359,54 +149,22 @@ exported procedure(X) start_screen(Integer?, Stream(X)?, MutualRef?, MutualRef?,
 start_screen(A, O, Mon, Log, Scr?) :- allocate_mutual_reference(Scr, Rs), screen(A?, O?, [], Rs?, Mon?, Log?).
 
 %% The run declaration: its persons, horizon, seed and thresholds.
-exported procedure
-declaration
-(
-Constant
-,
-Number
-,
-Span
-,
-Integer
-,
-Integer
-)
-.
-declaration(village, 1, day, 20260927, 50)
+exported procedure declaration(Constant, Number, Span, Integer, Integer).
+declaration(village, 1, day, 20260929, 50)
 .
 
 %% The persons of the run, drawn by its census (sGLP's paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).
-exported procedure
-persons
-(
-Integer?
-,
-Stream(Constant)
-?
-,
-Constant
-,
-List(Person)
-,
-Integer
-)
-.
+exported procedure persons(Integer?, Stream(Constant)?, Constant, List(Person), Integer).
 persons(B, _, Ok?, Ps?, B1?)
 :-
 integer(B?)
 |
-profiles
-#
-village(B?, Ps0)
+split_random_seed(B?, C, B1)
+,
+profiles # village(C?, Ps0)
 ,
 checked(Ps0?, Ok, Ps)
-,
-skip(4096, B?, B1)
 .
-procedure skip(Integer?, Integer?, Integer).
-skip(0, S, S?).
-skip(J, S, S1?) :- J? > 0, integer(S?) | random(S?, 1, _, S2), J1 := J? - 1, skip(J1?, S2?, S1).
 procedure checked(List(Person)?, Constant, List(Person)).
 checked([], no, []).
 checked([P|Ps], Ok?, [P?|Ps?]) :- ground(P?), ground(Ps?) | roles_ok([P?|Ps?], Ok).
@@ -422,22 +180,8 @@ roles_ok(Ps?, Ok)
 .
 roles_ok([_|_], no) :- otherwise | true.
 
-%% An agent's stochastic person, one profile per dimension of the role of its person, drawn from its block (Appendix B).
-exported procedure
-stochastic_person
-(
-Integer?
-,
-Person
-?
-,
-Integer?
-,
-Profiles
-,
-Integer
-)
-.
+%% An agent's stochastic person, one profile per dimension of the role of its person, drawn from its seed (Appendix B).
+exported procedure stochastic_person(Integer?, Person?, Integer?, Profiles, Integer).
 stochastic_person(B, person(_, parent, _), T1, parent(P1?, P2?), S?)
 :-
 random(B?, 100, K1, B1)
@@ -456,28 +200,12 @@ play(K1?, P1)
 .
 
 %% The draw of the dimension(greeting)
-procedure
-greeting
-(
-Integer?
-,
-Dimension1
-)
-.
+procedure greeting(Integer?, Dimension1).
 greeting(_, formal)
 .
 
 %% The draw of the dimension(temper)
-procedure
-temper
-(
-Integer?
-,
-Integer?
-,
-Dimension2
-)
-.
+procedure temper(Integer?, Integer?, Dimension2).
 temper(K, T1, kind)
 :-
 '=<'(K?, T1?)
@@ -492,13 +220,6 @@ true
 .
 
 %% The draw of the dimension(play)
-procedure
-play
-(
-Integer?
-,
-Dimension3
-)
-.
+procedure play(Integer?, Dimension3).
 play(_, casual)
 .
