@@ -21,9 +21,12 @@ import 'dart:async';
 import 'dart:isolate';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
+import 'agent_entry.dart';
 import 'glp_sources.dart';
 import 'isolate_protocol.dart';
+import 'phone_layer.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
@@ -49,12 +52,17 @@ class VglpProgram {
   /// the program takes no first act.
   final String? entry;
 
+  /// What the agent declares to its layer at every start: the rendezvous
+  /// servers, and the peers known before the person's first acquaintance.
+  final AgentDeclarations declarations;
+
   const VglpProgram({
     required this.title,
     required this.person,
     required this.directory,
     required this.manifest,
     this.entry,
+    this.declarations = const AgentDeclarations(),
   });
 }
 
@@ -89,6 +97,7 @@ class _VglpScreenState extends State<VglpScreen> {
   StreamSubscription<dynamic>? _replies;
   Isolate? _isolate;
   SendPort? _commands;
+  AgentEntry? _entry;
   UiRuntime? _ui;
   String _status = 'Starting…';
 
@@ -106,6 +115,7 @@ class _VglpScreenState extends State<VglpScreen> {
     _replies?.cancel();
     _replyPort.close();
     _isolate?.kill(priority: Isolate.immediate);
+    _entry?.close();
     super.dispose();
   }
 
@@ -119,6 +129,16 @@ class _VglpScreenState extends State<VglpScreen> {
       };
     setState(() {});
     try {
+      // The agent's key pair and its layer (agent_entry.dart); the agent's
+      // directory is the app's own, which the person does not see.
+      final support = await getApplicationSupportDirectory();
+      final entry = await AgentEntry.open(
+        persona: _p.person,
+        directory: '${support.path}/agents',
+        makeLayer: phoneLayer,
+      );
+      _entry = entry;
+      entry.declare(_p.declarations);
       _isolate = await Isolate.spawn(
         agentIsolateEntry,
         InitAgent(
@@ -128,6 +148,7 @@ class _VglpScreenState extends State<VglpScreen> {
           replyPort: _replyPort.sendPort,
           deferStart: false,
           entry: _p.entry,
+          deployment: entry.deployment,
         ),
       );
     } catch (e) {

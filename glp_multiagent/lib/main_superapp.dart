@@ -4,9 +4,8 @@
 /// `programs/social/graph/core`, until 2026-11-03 at `superapp_ui/3`, the
 /// bridge entry of `programs/social/graph/core/home_ui.glp`: alice's social-graph agent with
 /// the person interface of `home.vglp` on the person channel of vGLP's
-/// Definition "Person Channel, Person Writer, GLP with Persons, Grant", and a
-/// scripted bob across a crossbar so that Connect and Invite have someone to
-/// reach.  Nothing on this screen is written here: the bridge draws the
+/// Definition "Person Channel, Person Writer, GLP with Persons, Grant", over
+/// the networking layer (`agent_entry.dart`).  Nothing on this screen is written here: the bridge draws the
 /// constructs the compiled program's dispatcher draws, each the default
 /// widget of its interactive type, and returns alice's input as grants;
 /// [superappManifest] views what the super-app tells her; and the shell is
@@ -24,8 +23,16 @@
 /// channel.
 library;
 
+import 'agent_entry.dart';
 import 'manifests/superapp_ui.dart';
 import 'vglp_app.dart';
+
+/// The rendezvous servers and the peers the build gives the agent, each a
+/// comma separated list of `<key-hex>@<ip:port>`
+/// ([AgentDeclarations.parse]): a phone has no way yet to hear of them from
+/// its person, a first acquaintance being the next rung's.
+const _rendezvous = String.fromEnvironment('GLP_RENDEZVOUS');
+const _peers = String.fromEnvironment('GLP_PEERS');
 
 void main() => runVglpApp(VglpProgram(
       title: 'Apps',
@@ -33,4 +40,6 @@ void main() => runVglpApp(VglpProgram(
       directory: (glp) => glp.coreDir,
       manifest: superappManifest,
       entry: 'superapp_ui',
+      declarations:
+          AgentDeclarations.parse(rendezvous: _rendezvous, peers: _peers),
     ));

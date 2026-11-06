@@ -36,6 +36,9 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
+import 'package:glp_runtime/multiagent/boot_loader.dart' show PersonGoal;
+import 'package:glp_runtime/multiagent/port_network.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 import 'ui_runtime/term.dart';
@@ -45,6 +48,16 @@ import 'ui_runtime/term.dart';
 // =============================================================================
 
 sealed class ToAgentMsg {}
+
+/// What a deployed agent's isolate is given by the application's entry
+/// ([AgentEntry], `agent_entry.dart`): its key pair, the file of its store,
+/// and the port of the layer the application holds.
+class AgentDeployment {
+  final AgentKeyPair keyPair;
+  final String statePath;
+  final SendPort layerPort;
+  AgentDeployment(this.keyPair, this.statePath, this.layerPort);
+}
 
 /// Initialization message — sent as the spawn argument.
 class InitAgent extends ToAgentMsg {
@@ -75,6 +88,14 @@ class InitAgent extends ToAgentMsg {
   /// where the agent's person gives the first act, as a test's does.
   final String? entry;
 
+  /// The agent's key pair, store and layer, where it is deployed.  Null in
+  /// the simulation, whose coordinator routes the agent's messages.
+  final AgentDeployment? deployment;
+
+  /// The person scripted in GLP at this agent, where the harness gives the
+  /// agent one ([AgentRuntime.person]).  Null where the person is the person.
+  final PersonGoal? person;
+
   InitAgent({
     required this.agentId,
     required this.program,
@@ -82,6 +103,8 @@ class InitAgent extends ToAgentMsg {
     required this.replyPort,
     this.deferStart = false,
     this.entry,
+    this.deployment,
+    this.person,
   });
 }
 
@@ -199,10 +222,23 @@ Future<void> _runAgent(InitAgent init) async {
   final commandPort = ReceivePort();
   final agentId = init.agentId;
 
+  // A deployed agent runs over the layer the application holds, under the
+  // key pair the layer was instantiated with, and keeps its state in its
+  // store (IGLP, Implementation Notes, "Boot" and "Persistence").
+  final deployed = init.deployment;
+  final network = deployed == null
+      ? null
+      : PortGlpNetwork(deployed.layerPort, deployed.keyPair);
+
   final agent = AgentRuntime(
     agentId: agentId,
     program: init.program,
     rootSelfGlpPath: init.rootSelfGlpPath,
+    person: init.person,
+    keyPair: deployed?.keyPair,
+    network: network,
+    stateStore:
+        deployed == null ? null : FileAgentStateStore(deployed.statePath),
   );
 
   // Wire callbacks to send messages back to the main isolate: what the
@@ -234,6 +270,7 @@ Future<void> _runAgent(InitAgent init) async {
       _sendStats(agent, init.replyPort);
     } catch (e) {
       init.replyPort.send(AgentError(agentId, e.toString()));
+      network?.close();
       commandPort.close();
       return;
     }
@@ -250,6 +287,7 @@ Future<void> _runAgent(InitAgent init) async {
         _sendStats(agent, init.replyPort);
       } catch (e) {
         init.replyPort.send(AgentError(agentId, e.toString()));
+        network?.close();
         commandPort.close();
         break;
       }
@@ -261,6 +299,7 @@ Future<void> _runAgent(InitAgent init) async {
       _sendStats(agent, init.replyPort);
     } else if (msg is DisposeAgent) {
       agent.dispose();
+      network?.close();
       commandPort.close();
       break;
     }

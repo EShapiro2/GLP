@@ -18,9 +18,15 @@ dependencies:
   glp_runtime:
     path: ../glp_runtime
 
-  # GrassApp Duo: cross-phone madGLP routing over the Grassroots transport.
+  # The agent's networking layer (lib/phone_layer.dart): the layer of the
+  # Flutter package on a phone, the headless layer of the core on the Mac, and
+  # GNA's backend glue, which puts the runtime's interface over each.
   grassroots_networking:
     path: ../networking
+  grassroots_networking_core:
+    path: ../networking/core
+  grassroots_networking_glue:
+    path: ../networking/glue
   redux: ^5.0.0
   cryptography: ^2.7.0
   sodium_libs: ^3.4.0
@@ -34,12 +40,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
-  # The runtime's host over GNA's headless layer, through the adapter, GNA's
-  # backend glue (test/agent_runtime_headless_test.dart).
-  grassroots_networking_core:
-    path: ../networking/core
-  grassroots_networking_glue:
-    path: ../networking/glue
   sodium: ^3.4.6
 
 flutter:
