@@ -4192,6 +4192,17 @@ check "CVA pragmas: a button of an inherited button's name replaces that button 
 check "CVA pragmas: ... the other button of the inherited line stands, with its field (replace_one)" "XG: Groups: Alice \[Create\] <name>: fields n" "$cva_pr_one"
 check "CVA pragmas: ... both acts read, [Create] on its contract's tab and [Close] on the extending one's (replace_one)" "act('create', '\"Create\"', \['\"\"', '\"name\"'\], none, '\"Led\"', by(\[1\])), act('close', '\"Close\"', \[\], none, '\"Closed\"', by(\[1\]))" "$cva_pr_one"
 check "CVA pragmas: ... and pragmas.sh exits 0 (replace_one)" "^exit 0$" "$cva_pr_one"
+# A tab of an inherited tab's name replaces it (vGLP 14d9064, Section 5.4, "The contract's words", its last sentence: "has their tabs with its own, a tab of an inherited tab's name replacing it"): XT, its tabs Led and Closed, and XU and XV, each extending the one before, XU writing Led and XV writing Closed and Led; each tab printed once, in the place of the tab it replaces, the last written, with XU's own tab Kept after them (replace_tab); as GDO-L's Pointing replaces GDO's (replace_tab GDO-L).
+cva_pt=$(mktemp -d)
+printf '%s\n' 'XT' 'Alice is a person.' '1. ■ Groups. Alice may create a group and close it.' 'Pragmas' 'Led: the groups Alice leads.' 'Closed: the groups Alice leads.' 'Groups: Alice [Create] <name> [Close]' > "$cva_pt/XT.txt"
+printf '%s\n' 'XU' 'XU extends XT.' 'Alice is a person.' '1. ■ Keeping. Alice may close a group.' 'Pragmas' 'Led: the groups Alice closed.' 'Kept: the groups Alice leads.' > "$cva_pt/XU.txt"
+printf '%s\n' 'XV' 'XV extends XU.' 'Alice is a person.' '1. ■ Closing. Alice may close a group.' 'Pragmas' 'Closed: the groups Alice closed.' 'Led: the groups Alice leads.' > "$cva_pt/XV.txt"
+cva_pt_one=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pt/XV.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+rm -rf "$cva_pt"
+check "CVA pragmas: a tab of an inherited tab's name replaces it, each tab once, in the place of the tab it replaces, the last written (replace_tab)" "^pragmas(\[list('\"Led\"', \['leads'\]), list('\"Closed\"', \['closed'\]), list('\"Kept\"', \['leads'\])\], " "$cva_pt_one"
+check "CVA pragmas: ... the replaced tab named, with the last that replaces it (replace_tab)" "^XT: the tab Closed: replaced by the tab of XV of the same name$" "$cva_pt_one"
+check "CVA pragmas: ... through a contract between (replace_tab)" "^XT: the tab Led: replaced by the tab of XV of the same name$" "$cva_pt_one"
+check "CVA pragmas: ... and pragmas.sh exits 0 (replace_tab)" "^exit 0$" "$cva_pt_one"
 # The line saying what a contract is written from, the first after its title and before its names declaration, "<NAME> <relation> <NAME'> (...)." or with no parentheses, the relation one of extends, amends, restricts and instantiates, several contracts joined by "and" (style guide 36; GSC, Section 8; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1): pragmas.sh takes the contracts it names as those whose pragmas the contract has, and reads the % Extends line where the line is absent.
 cva_prel=$(mktemp -d)
 mkdir "$cva_prel/old" "$cva_prel/new" "$cva_prel/hy"
