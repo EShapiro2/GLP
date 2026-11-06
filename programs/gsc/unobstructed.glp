@@ -33,6 +33,7 @@ imported procedure linear#conj_app(Conj?, Conj?, Conj).
 imported procedure linear#elim_block(Conj?, DNF).
 imported procedure linear#cons_conj(Constraint?, VEnv?, Conj).
 imported procedure linear#ex_num(Constant?, Ex).
+imported procedure linear#ex_add(Ex?, Ex?, Integer?, Ex).
 imported procedure linear#ex_var(Var?, Ex).
 imported procedure linear#ex_eq(Ex?, Ex?, Conj).
 imported procedure linear#decomp_defs(Constants?, Conj).
@@ -384,11 +385,14 @@ mult_one(times(K, _), B, PwI, [C?]) :- ground(K?), ground(B?), ground(PwI?) |
     val_ex(W?, PwI?, X),
     linear # ex_num(1, Y),
     linear # ex_eq(X?, Y?, C).
-% rest(K, A) is (K - 1).A (self.glp, Mult): one copy where K is 2.
-mult_one(rest(K, _), B, PwI, [C?]) :- ground(K?), ground(B?), ground(PwI?) |
+% rest(K, J, A) is (K - J).A (self.glp, Mult): one copy where K is J + 1.
+mult_one(rest(K, J, _), B, PwI, [C?]) :- ground(K?), ground(J?), ground(B?), ground(PwI?) |
     apply_arg(B?, K?, W),
     val_ex(W?, PwI?, X),
-    linear # ex_num(2, Y),
+    apply_arg(B?, J?, WJ),
+    val_ex(WJ?, PwI?, XJ),
+    linear # ex_num(1, One),
+    linear # ex_add(XJ?, One?, 1, Y),
     linear # ex_eq(X?, Y?, C).
 
 procedure once_others(Mults?, Mult?, Ans?, GAtom?, Subst?, Args?, DNF).
@@ -1068,7 +1072,7 @@ nrs_kf(crs(_, _, _, _, K, N), K?, N?).
 procedure env_atoms(Mults?, Integer?, Constant?, Preds?, Faults).
 env_atoms([], _, _, _, []).
 env_atoms([times(_, A)|As], I, Nm, Ev, F?) :- env_atoms([A?|As?], I?, Nm?, Ev?, F).
-env_atoms([rest(_, A)|As], I, Nm, Ev, F?) :- env_atoms([A?|As?], I?, Nm?, Ev?, F).
+env_atoms([rest(_, _, A)|As], I, Nm, Ev, F?) :- env_atoms([A?|As?], I?, Nm?, Ev?, F).
 env_atoms([atom(P, Xs)|As], I, Nm, Ev, F?) :- ground(P?), ground(Xs?), integer(I?), ground(Nm?), ground(Ev?) |
     pred_member(P?, Ev?, B),
     env_atom(B?, atom(P?, Xs?), I?, Nm?, F1),
