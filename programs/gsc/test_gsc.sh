@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the clause of Definition Speech-act schema, tau: H <- B guarded by G, printed from a contract's term (notation.glp, GSC 859a007); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable; and the clause syntax, sas(Name, Names, Vars, Head, Body, Constraint, Guards) (GSC 859a007, Sections 3.1 and 3.2): GKK, GSG and GSN so written by their owner, each read from its file, each fault of the reading, and a required k.A with one copy deleted, read and compiled deleting one copy (Definition Denotation), and with j copies deleted, j a number or a variable, read where the constraint implies j <= k and refused otherwise (def:numbers).  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects GSC's contracts, GKK, GSG and GSN, the checker's fixtures, and, for as_read/2's wrapped forms, GAI's GSNP.glp and Currencies' DGC.glp read unchanged (Code #23, 2026-11-05); every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the clause of Definition Speech-act schema, tau: H <- B guarded by G, printed from a contract's term (notation.glp, GSC 859a007); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable; then equalities and inequalities of two speech-act variables or two name terms, as of two agent variables (def:numbers, GSC 6f0bda1), in a schema's constraint and in a count's, a sum's and a quantifier's phi; and the clause syntax, sas(Name, Names, Vars, Head, Body, Constraint, Guards) (GSC 859a007, Sections 3.1 and 3.2): GKK, GSG and GSN so written by their owner, each read from its file, each fault of the reading, and a required k.A with one copy deleted, read and compiled deleting one copy (Definition Denotation), and with j copies deleted, j a number or a variable, read where the constraint implies j <= k and refused otherwise (def:numbers).  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects GSC's contracts, GKK, GSG and GSN, the checker's fixtures, and, for as_read/2's wrapped forms, GAI's GSNP.glp and Currencies' DGC.glp read unchanged (Code #23, 2026-11-05); every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -1972,6 +1972,110 @@ check_eq "a variable a cardinality binds, holding an atom of phi, is a listed ro
          "V = syntactically_grassroots" "$(sf 11)"
 check "a schema written qschema compiles in the general form, its conjunct on a line of its own" \
       "\\text{making}" "$(compiled_in cond_c "$COND_OK" note)"
+
+# Equalities and inequalities u = v and u != v of two speech-act variables or
+# two name terms, as of two agent variables (def:numbers, GSC 6f0bda1), in a
+# count's or a sum's or a quantifier's phi as anywhere a constraint stands.
+# Over no value, they are no constraint_not_numeric, and no condition reads
+# them.  Each side is of one kind: a pair of two kinds is refused as before.
+# A wildcard stands in an atom (def:schema), so a name term with one is none.
+room_two() { gkk_with "$CLS, sas(room, ['Alice'], [n, m], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n]), atom(leads, ['Alice', m])], $1, ['Alice'])"; }
+NT_N="ext(own('Alice'), n)"
+NT_M="ext(own('Alice'), m)"
+BOUND_Y="atom(listed, ['Alice', 'Bob', y])"
+PLEDGED_Y="atom(pledged, ['Alice', 'Bob', y, num(k)])"
+card_y() { room_with "[n, d]" "le(cardinality(['Bob', y], $BOUND_Y, $1), num(d))"; }
+body_with() { gkk_with "$CLS, $ADD1, sas(room, ['Alice'], [n], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n]), $1], true, ['Alice'])"; }
+head_with() { gkk_with "$CLS, $ADD1, sas(room, ['Alice'], [n], [atom(has_room, ['Alice', n]), $1], [atom(leads, ['Alice', n])], true, ['Alice'])"; }
+E_S=$(room_two "eq(n, m)")
+E_S_NE=$(room_two "ne(n, m)")
+E_N=$(room_two "eq($NT_N, $NT_M)")
+E_N_NE=$(room_two "ne(own('Alice'), $NT_N)")
+E_NV=$(gkk_with "$CLS, sas(room, ['Alice', c], [c, n, m], [atom(has_room, ['Alice', n])], [atom(leads, ['Alice', n]), atom(leads, ['Alice', m]), atom(knows, ['Alice', c])], ne(ext(own(c), n), $NT_M), ['Alice'])")
+E_C=$(card_y "eq(y, n)")
+E_C_NT=$(card_y "ne(ext(own('Alice'), y), $NT_N)")
+E_SUM=$(room_with "[n, d]" "le(sum(['Bob', y, k], $PLEDGED_Y, eq(y, n), num(k)), num(d))")
+E_EX=$(body_with "exists(['Bob', y], $BOUND_Y, ne(y, n))")
+E_FA=$(body_with "forall(['Bob', y], $BOUND_Y, ne(ext(own('Alice'), y), $NT_N), atom(leads, ['Alice', y]))")
+E_HD=$(head_with "forall(['Bob', y], $BOUND_Y, ne(y, n), [atom(seen, ['Alice', y])])")
+out=$(run "check($E_S, V)." "check($E_S_NE, V)." "check($E_N, V)." "check($E_N_NE, V)." "check($E_NV, V)." "check($E_C, V)." \
+          "check($E_C_NT, V)." "check($E_SUM, V)." "check($E_EX, V)." "check($E_FA, V)." "check($E_HD, V).")
+check_eq "an equality of two speech-act variables in a schema's constraint is read" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "and an inequality" "V = syntactically_grassroots" "$(sf 2)"
+check_eq "an equality of two name terms is read" "V = syntactically_grassroots" "$(sf 3)"
+check_eq "and an inequality, the terms of different depths" "V = syntactically_grassroots" "$(sf 4)"
+check_eq "a name term over an agent variable that is no role is one too" "V = syntactically_grassroots" "$(sf 5)"
+check_eq "a speech-act variable a cardinality binds is compared in its phi" "V = syntactically_grassroots" "$(sf 6)"
+check_eq "and a name term over it" "V = syntactically_grassroots" "$(sf 7)"
+check_eq "a speech-act variable a sum binds is compared in its phi" "V = syntactically_grassroots" "$(sf 8)"
+check_eq "and one an existential quantifier of a body binds" "V = syntactically_grassroots" "$(sf 9)"
+check_eq "and a name term in a universal quantifier's phi of a body" "V = syntactically_grassroots" "$(sf 10)"
+check_eq "and one in a quantified conjunct of a head" "V = syntactically_grassroots" "$(sf 11)"
+# Each side of one kind; of two kinds, each side named, as before.
+X_AS=$(room_two "eq('Alice', n)")
+X_SN=$(room_two "eq(n, own('Alice'))")
+X_AN=$(room_two "ne('Alice', own('Alice'))")
+X_SV=$(room_two "eq(n, num(0))")
+X_ORD=$(room_two "le(n, m)")
+X_WILD=$(room_two "eq(ext(own('Alice'), '_'), $NT_N)")
+X_BARE=$(room_two "eq('_', n)")
+X_SGN=$(room_two "eq(sgn(n, 'Alice'), n)")
+X_CHI=$(card_y "eq('Alice', y)")
+out=$(run "check($X_AS, V)." "check($X_SN, V)." "check($X_AN, V)." "check($X_SV, V)." "check($X_ORD, V)." "check($X_WILD, V)." \
+          "check($X_BARE, V)." "check($X_SGN, V)." "check($X_CHI, V).")
+check_eq "an agent and a speech-act variable are not compared" \
+         "V = malformed([constraint_not_numeric(room, role(1)), constraint_not_numeric(room, svar(n))])" "$(sf 1)"
+check_eq "nor a speech-act variable and a name term" \
+         "V = malformed([constraint_not_numeric(room, svar(n)), constraint_not_numeric(room, nterm(own(1)))])" "$(sf 2)"
+check_eq "nor an agent and a name term" \
+         "V = malformed([constraint_not_numeric(room, role(1)), constraint_not_numeric(room, nterm(own(1)))])" "$(sf 3)"
+check_eq "nor a speech-act variable and a value" \
+         "V = malformed([constraint_not_numeric(room, svar(n))])" "$(sf 4)"
+check_eq "speech-act variables have no order" \
+         "V = malformed([constraint_not_numeric(room, svar(n)), constraint_not_numeric(room, svar(m))])" "$(sf 5)"
+check_eq "a name term with a wildcard is not compared" \
+         "V = malformed([constraint_not_numeric(room, nterm(ext_any(own(1)))), constraint_not_numeric(room, nterm(ext(own(1), n)))])" "$(sf 6)"
+check_eq "nor the wildcard" \
+         "V = malformed([constraint_not_numeric(room, any), constraint_not_numeric(room, svar(n))])" "$(sf 7)"
+check_eq "nor a signed term" \
+         "V = malformed([constraint_not_numeric(room, sgn(n, 1)), constraint_not_numeric(room, svar(n))])" "$(sf 8)"
+check_eq "and two kinds in a cardinality's phi are refused as in any constraint" \
+         "V = malformed([constraint_not_numeric(room, role(1)), constraint_not_numeric(room, svar(y))])" "$(sf 9)"
+# The variables of an equality are the schema's, and a name term's base an
+# agent variable, as an atom's.
+V_S=$(room_two "eq(n, zz)")
+V_NTY=$(room_two "eq(ext(own('Alice'), zz), $NT_N)")
+V_NTB=$(room_two "eq(own(zz), own('Alice'))")
+V_NTS=$(room_two "eq(own(n), own('Alice'))")
+V_LISTED=$(room_with "[n, d]" "and(le(cardinality(['Bob'], $LISTED, atom(identity, ['Bob'])), num(d)), eq(own('Bob'), own('Alice')))")
+out=$(run "check($V_S, V)." "check($V_NTY, V)." "check($V_NTB, V)." "check($V_NTS, V)." "check($V_LISTED, V)." "check_named(eq_name_base, V).")
+check_eq "a variable of an equality in no variable of the schema is refused" \
+         "V = malformed([not_in_vars(room, constraint)])" "$(sf 1)"
+check_eq "a speech-act variable of a name term outside the head is refused" \
+         "V = malformed([not_in_head(room, svar(zz))])" "$(sf 2)"
+check_eq "and the base of a name term outside the head" \
+         "V = malformed([not_in_head(room, pvar(zz))])" "$(sf 3)"
+check_eq "a speech-act variable is no base of a name term" \
+         "V = malformed([not_in_head(room, pvar(n))])" "$(sf 4)"
+check_eq "a listed role is out of scope in a schema's constraint, as an agent role's base asks" \
+         "V = malformed([name_term_base(room, own(2))])" "$(sf 5)"
+check_eq "a name term over no role of the schema is refused" \
+         "V = malformed([name_term_base(tag, own(3))])" "$(sf 6)"
+# linear.glp takes an equality over no value as true: it stands beside the
+# linear part of an implication, and supplies none of it.
+L_YES=$(spend_j "[j, k, n, m]" "num(j)" "num(k)" "and(le(num(j), num(k)), ne(n, m))")
+L_NO=$(spend_j "[j, k, n, m]" "num(j)" "num(k)" "ne(n, m)")
+out=$(run "check($L_YES, V)." "check($L_NO, V).")
+check_eq "an inequality of speech-act variables beside the linear part of an implication is read" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "and implies no multiplicity" \
+         "V = malformed([deleted_not_required(spend, 1, atom(coin, [role(1)]))])" "$(sf 2)"
+# Printed and compiled as the equalities of agent variables are.
+check "an inequality of speech-act variables is printed" "n != m" "$(notation "$E_S_NE")"
+check "an equality of name terms is printed" "<Alice>.n = <Alice>.m" "$(notation "$E_N")"
+check "an inequality of speech-act variables is compiled" 'n\neqm' "$(compiled_in e_s "$E_S_NE" room)"
+check "an equality of name terms is compiled" '=\langle' "$(compiled_in e_n "$E_N" room)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
