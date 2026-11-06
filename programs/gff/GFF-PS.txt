@@ -3,7 +3,7 @@
 % Paper: GFF, Grassroots Feeds and Followers, in preparation
 % Restricts: GFF-I, GFF's (GFF-I.txt beside this file), and through it GFF, GDO-L, GDO, GSG and GKK.  It adds one act no person wills, which takes in one act two of GFF-I's, GFF-I:1 and GDO-L:3 (GSC, Definition Implementation, restriction).
 % Defines: nothing.
-% Last changed: 2026-11-06, written by GFF #3 Cowork, the clause as Udi approved it that day ('yes' to GFF #3's wording, pointers labeled by persons in quotes), with 'and none to Carol' added by GFF #3, since a pointer to Carol labeled 'Dave' is one at most, for Udi's approval in retrospect.  It replaces the path-shortening instance of 2026-11-05: 'logically it is a restriction' (Udi, 2026-11-06).
+% Last changed: 2026-11-06, written by GFF #3 Cowork, the clause as Udi approved it that day ('yes' to GFF #3's wording, pointers labeled by persons in quotes), with 'and none to Carol', a pointer to Carol labeled 'Dave' being one at most (Udi, 2026-11-06, approving GFF #3's addition).  It replaces the path-shortening instance of 2026-11-05: 'logically it is a restriction' (Udi, 2026-11-06).
 % Schemas: GFF-PS.glp beside this file, in the clause syntax, GFF-I's fifteen and shorten.
 GFF-PS: Path-Shortening GFF
 GFF-PS restricts GFF-I.
