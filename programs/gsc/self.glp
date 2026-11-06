@@ -103,8 +103,9 @@ Mults      ::= [] ; [Mult | Mults].
 % as many times as its multiplicity" (def:numbers, GSC 67a7da0): the domain
 % is multisets, so k copies of an atom count k, and Xs may be empty, the one
 % instance of A then having the multiplicity of A (def:extent).  A term with
-% an agent in it is no numeric term (check.glp).  eq and ne also compare
-% agent variables, u = v and u != v (def:numbers).  "No condition reading a
+% an agent in it is no numeric term (check.glp).  eq and ne also compare two
+% agent variables, two speech-act variables or two name terms, u = v and
+% u != v (def:numbers, GSC 6f0bda1).  "No condition reading a
 % constraint" (the appendix, after def:binding-numbers), the checker reads
 % one only where def:numbers has a schema's constraint imply a sum of deleted
 % multiplicities (sas_implies_le).
@@ -3698,17 +3699,18 @@ n_is_guarding(RS, R?) :- ground(RS?) |
 
 % The arguments of a constraint's linear equalities and inequalities, and the
 % multiplicities among a multiset as written.  A signing condition is over an
-% agent and a speech act, not over values, and gives none.
+% agent and a speech act, not over values, and gives none, and neither does an
+% equality of agent variables, speech-act variables or name terms (name_eq).
 procedure constraint_args(Constraint?, Args?, Args).
 constraint_args(true, T, T?).
 constraint_args(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_args(C2?, T?, R1),
     constraint_args(C1?, R1?, R).
 constraint_args(eq(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     eq_args(A?, X?, Y?, T?, R).
 constraint_args(ne(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     eq_args(A?, X?, Y?, T?, R).
 constraint_args(not(C), T, R?) :- constraint_args(C?, T?, R).
 constraint_args(implies(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
@@ -3726,17 +3728,35 @@ constraint_args(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
 constraint_args(signed(_, _), T, T?).
 constraint_args(unsigned(_, _), T, T?).
 
-% An equality or an inequality of two agent variables is over no value.
-procedure agent_eq(Expr?, Expr?, Ans).
-agent_eq(X, Y, R?) :- ground(X?), ground(Y?) |
-    arg_agent(X?, A),
-    arg_agent(Y?, B),
-    both_yes(A?, B?, R).
+% An equality or an inequality of two agent variables, two speech-act
+% variables or two name terms is over no value (def:numbers, GSC 6f0bda1).
+% A wildcard stands in an atom (def:schema), so a name term with one is none
+% of these.
+procedure name_eq(Expr?, Expr?, Ans).
+name_eq(X, Y, R?) :- ground(X?), ground(Y?) |
+    arg_kind(X?, A),
+    arg_kind(Y?, B),
+    kind_same(A?, B?, R).
 
-procedure arg_agent(Expr?, Ans).
-arg_agent(role(_), yes).
-arg_agent(pvar(_), yes).
-arg_agent(X, no) :- otherwise, ground(X?) | true.
+ArgKind ::= k_agent ; k_speech ; k_name ; k_other.
+procedure arg_kind(Expr?, ArgKind).
+arg_kind(role(_), k_agent).
+arg_kind(pvar(_), k_agent).
+arg_kind(svar(_), k_speech).
+arg_kind(nterm(S), R?) :- ground(S?) |
+    nt_wild(S?, W),
+    nterm_kind(W?, R).
+arg_kind(X, k_other) :- otherwise, ground(X?) | true.
+
+procedure nterm_kind(Ans?, ArgKind).
+nterm_kind(no, k_name).
+nterm_kind(yes, k_other).
+
+procedure kind_same(ArgKind?, ArgKind?, Ans).
+kind_same(k_agent, k_agent, yes).
+kind_same(k_speech, k_speech, yes).
+kind_same(k_name, k_name, yes).
+kind_same(_, _, no) :- otherwise | true.
 
 procedure eq_args(Ans?, Expr?, Expr?, Args?, Args).
 eq_args(yes, _, _, T, T?).
@@ -3751,7 +3771,8 @@ sargs_vars(Ss, R?) :- ground(Ss?) |
     args_app(Ps?, Ys?, R).
 
 % The arguments of a constraint's signing conditions, u and y of each
-% signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92).
+% signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), and of its
+% equalities over no value (name_eq), whose variables the head lists too.
 procedure constraint_sargs(Constraint?, Args?, Args).
 constraint_sargs(true, T, T?).
 constraint_sargs(and(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
@@ -3761,10 +3782,10 @@ constraint_sargs(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_sargs(C2?, T?, R1),
     constraint_sargs(C1?, R1?, R).
 constraint_sargs(eq(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     eq_sargs(A?, X?, Y?, T?, R).
 constraint_sargs(ne(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     eq_sargs(A?, X?, Y?, T?, R).
 constraint_sargs(not(C), T, R?) :- constraint_sargs(C?, T?, R).
 constraint_sargs(implies(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |

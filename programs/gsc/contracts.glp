@@ -1671,6 +1671,17 @@ sig_malformed(C?) :-
           crs(listed(1, listed, [svar(n)]), unguarded,
               [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])])], C).
 
+% --- an equality of name terms over no agent role of the schema -------------
+% tag(Alice?; n) | <pi_3> = <Alice> : identity, +tagged(n)
+% The base of a name term of u = v is as an agent variable u or v is
+% (def:numbers, GSC 6f0bda1): name_term_base(tag, own(3)).
+procedure eq_name_base(NContract).
+eq_name_base(C?) :-
+    nm_base(B),
+    ncontract_app(B?,
+      [nschema(tag, [svar(n)], eq(nterm(own(3)), nterm(own(1))),
+         [rs(guarded, [atom(tagged, [svar(n)])], [], [atom(identity, [])], [])])], C).
+
 % --- a reading role that reads a number ------------------------------------
 % mature(Alice?, Bob; d, t) | d <= t : identity, knows(Bob), -bond(Bob, d), +coin(Bob)
 %                                      identity, date(t)
@@ -1893,6 +1904,7 @@ contract(sig_novol, C?) :- sig_novol(C).
 contract(sig_novol_conds, C?) :- sig_novol_conds(C).
 contract(sig_blocked, C?) :- sig_blocked(C).
 contract(sig_malformed, C?) :- sig_malformed(C).
+contract(eq_name_base, C?) :- eq_name_base(C).
 contract(uo_twice, C?) :- uo_twice(C).
 contract(uo_twice_free, C?) :- uo_twice_free(C).
 contract(uo_other, C?) :- uo_other(C).

@@ -511,7 +511,8 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % value argument a fault multiplicity_not_numeric(Schema, Role, Atom), and a
 % number no positive whole number a fault multiplicity_not_whole(Schema,
 % Role, Atom).  Each argument of a constraint that is no value argument, but
-% in an equality or inequality of two agent variables, is a fault
+% in an equality or inequality of two agent variables, two speech-act
+% variables or two name terms (GSC 6f0bda1), is a fault
 % constraint_not_numeric(Schema, Arg).  A constraint is otherwise "a decidable
 % condition ... written in the relations and functions the types of the
 % values provide", and no condition reads it (the appendix).  The same is
@@ -704,9 +705,12 @@ hmults_check([hm(I, M)|Ms], Nm, T, R?) :- integer(I?), ground(M?), ground(Nm?), 
 % is a fault signing_not_agent(Schema, U), and each y that is not svar(Y) a
 % fault signing_not_speech_act(Schema, Y); a variable among them that the
 % head does not list is not_in_head (head_schema).  So too of the agent
-% variables u and v of u = v and u != v (def:numbers).  No condition of
-% def:syntactically-grassroots reads a signing condition (the appendix,
-% after def:binding-numbers): linear.glp takes each as true.
+% variables u and v of u = v and u != v (def:numbers); the base of a name
+% term u or v is as the agent variable is, a fault name_term_base(Schema,
+% NameTerm) otherwise, and a speech-act variable asks nothing more.  No
+% condition of
+% def:syntactically-grassroots reads a signing condition or an equality (the
+% appendix, after def:binding-numbers): linear.glp takes each as true.
 
 % The I-th role of a schema as written is an agent role.
 procedure nrs_agent_at(NRoleSpecs?, Integer?, Ans).
@@ -770,25 +774,41 @@ signing_faults(succ(_, _), _, _, T, T?).
 signing_faults(signed(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
 signing_faults(unsigned(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
 
-% u = v and u != v, of two agent variables: each an agent role of the schema
-% or an agent variable.
+% u = v and u != v, of two agent variables, each an agent role of the schema
+% or an agent variable, of two speech-act variables, or of two name terms
+% (def:numbers, GSC 6f0bda1).
 procedure agent_cmp_faults(Expr?, Expr?, NRoleSpecs?, Constant?, Faults?, Faults).
 agent_cmp_faults(X, Y, Rs, Nm, T, R?) :- ground(X?), ground(Y?), ground(Rs?), ground(Nm?), ground(T?) |
-    agent_eq(X?, Y?, A),
+    name_eq(X?, Y?, A),
     agent_cmp1(A?, X?, Y?, Rs?, Nm?, T?, R).
 
 procedure agent_cmp1(Ans?, Expr?, Expr?, NRoleSpecs?, Constant?, Faults?, Faults).
 agent_cmp1(no, _, _, _, _, T, T?).
 agent_cmp1(yes, X, Y, Rs, Nm, T, R?) :- ground(X?), ground(Y?), ground(Rs?), ground(Nm?), ground(T?) |
     exprs_args([X?, Y?], [], As),
-    agent_args_faults(As?, Rs?, Nm?, T?, R).
+    cmp_args_faults(As?, Rs?, Nm?, T?, R).
 
-procedure agent_args_faults(Args?, NRoleSpecs?, Constant?, Faults?, Faults).
-agent_args_faults([], _, _, T, T?).
-agent_args_faults([U|Us], Rs, Nm, T, R?) :- ground(U?), ground(Us?), ground(Rs?), ground(Nm?), ground(T?) |
+procedure cmp_args_faults(Args?, NRoleSpecs?, Constant?, Faults?, Faults).
+cmp_args_faults([], _, _, T, T?).
+cmp_args_faults([U|Us], Rs, Nm, T, R?) :- ground(U?), ground(Us?), ground(Rs?), ground(Nm?), ground(T?) |
+    cmp_args_faults(Us?, Rs?, Nm?, T?, R1),
+    cmp_arg_fault(U?, Rs?, Nm?, R1?, R).
+
+procedure cmp_arg_fault(Arg?, NRoleSpecs?, Constant?, Faults?, Faults).
+cmp_arg_fault(svar(_), _, _, T, T?).
+cmp_arg_fault(nterm(S), Rs, Nm, T, R?) :- ground(S?), ground(Rs?), ground(Nm?), ground(T?) |
+    nt_base(S?, B),
+    cmp_base(B?, Rs?, A),
+    nt_base_fault(A?, Nm?, S?, T?, R).
+cmp_arg_fault(U, Rs, Nm, T, R?) :- otherwise, ground(U?), ground(Rs?), ground(Nm?), ground(T?) |
     sign_agent(U?, Rs?, A),
-    agent_args_faults(Us?, Rs?, Nm?, T?, R1),
-    sign_agent_fault(A?, U?, Nm?, R1?, R).
+    sign_agent_fault(A?, U?, Nm?, T?, R).
+
+% The base of a name term in a constraint: an agent role of the schema, or
+% any variable the head lists.
+procedure cmp_base(Base?, NRoleSpecs?, Ans).
+cmp_base(b_role(I), Rs, R?) :- integer(I?), ground(Rs?) | nrs_agent_at(Rs?, I?, R).
+cmp_base(_, _, yes) :- otherwise | true.
 
 procedure num_schemas(NContract?, Faults).
 num_schemas([], []).
