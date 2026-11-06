@@ -260,6 +260,8 @@
 #       draw each agent's stochastic person of its role; and the run refused
 #       for a census drawing nobody and one drawing a person of a role of no
 #       dimension.
+# And, unnumbered: the printer (each line one string, by GLP's string_concat/2
+# and term_to_string/2) and the seeds (tests/seeds, Appendix B, "Seeds").
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -441,6 +443,25 @@ A=$(awk 'FNR == NR { if ($1 == "agent") line[$2] = $3 " " $4; next }
 echo "        the .draw file of (iv): $A of 100 agents' lines not the profiles the log shows"
 [ "$A" -eq 0 ]
 check "each agent's line in the .draw file of (iv) is its profiles as the log of (iv) shows them" $?
+repl "$WORK/seeds.out" ':limit 1000000000000' "$HERE/tests/seeds" 'first_draws(20260927, 100, Ps).'
+A=$(sed 's/^\(GLP> \)*//' "$WORK/seeds.out" | awk '
+    /^Ps = \[/ {
+        s = $0
+        while (match(s, /pair\([0-9]+, [0-9]+\)/)) {
+            q = substr(s, RSTART + 5, RLENGTH - 6); s = substr(s, RSTART + RLENGTH)
+            split(q, f, ", "); n++; k1[n] = f[1] + 0; k2[n] = f[2] + 0
+        }
+    }
+    END {
+        while ((getline line < draw) > 0) {
+            split(line, g, " "); if (g[1] != "agent") continue
+            a = g[2] + 0; seen++
+            if (g[3] != (k1[a] <= 60 ? "homophile" : "indifferent") || g[4] != (k2[a] <= 70 ? "wary" : "sociable")) bad++
+        }
+        print (n == 100 && seen == 100) ? bad + 0 : "no"
+    }' draw="$WORK/y.draw")
+[ "$A" = 0 ]
+check "the draw of (iv) is the seeds of Appendix B: the clock's split from the run's first, then one for each agent, from which its profiles are drawn (tests/seeds)" $?
 grep -q '^draw homophile 0 indifferent 100 wary 0 sociable 100$' "$WORK/m0-0.out" &&
     [ "$(draw_file_errors "$WORK/m0-0.draw" 100)" -eq 0 ] &&
     [ "$(grep -c '^agent [0-9]* indifferent sociable$' "$WORK/m0-0.draw")" -eq 100 ]
@@ -624,13 +645,33 @@ check "a mix with a share of 0.0 is translated, last or first, and its draw of 1
     grep -q "^person(A, agent(p), H, Mon, Scr, Seed, Log, \\[ask('Q', q_w(E)) | As\\])$" "$WORK/txgood.lines" &&
     grep -q "^relay_1(A?, 'Q', E?, Y, Mon?, Log?)$" "$WORK/txgood.lines" &&
     grep -q '^relay_1(A, Type, q(X1?), q(Y1), Mon, Log)$' "$WORK/txgood.lines" &&
-    grep -q '^random(Seed?, 2147483646, K, S)$' "$WORK/txgood.lines" &&
-    grep -q '^p_q(Y?, H?, K?, Scr?)$' "$WORK/txgood.lines" &&
+    grep -q '^split_random_seed(Seed?, K, S)$' "$WORK/txgood.lines" &&
+    grep -q '^profiles # p_q(Y?, H?, K?, Scr?)$' "$WORK/txgood.lines" &&
     grep -q '^person(A?, agent(p), H?, Mon?, Scr?, S?, Log?, As?)$' "$WORK/txgood.lines" &&
     ! grep -q '^random(Seed?, 1, _, S)$' "$WORK/txgood.lines" &&
     grep -q '^declaration(2, 1, day, 1)$' "$WORK/txgood.lines" &&
     grep -q '^d(_, p)$' "$WORK/txgood.lines"
 check "the mended source is translated: the token and its clause go(_), its stop clause dropping the arguments, the rated goal rated(R, Tok), R the rate a second, the screen's reference, the asks, the person process's clause on an ask, its person and its seeding, the declaration and the draw" $?
+# The printer (GLP-ICLP, appendix-guards, "Text"; sGLP #10, Code_inbox.md
+# 2026-11-06 09:41 UTC, item 2): each line one string, a type T? T then ?, a
+# functor with its ( on the same line, every constant of the source by
+# term_to_string/2 --- in a clause and in a type's alternative a constant the
+# reader would read as anything else quoted, a capitalised type's name not.
+QV="[type('Note', ['Hello there', '42', plain]), type('Q', [q(dual('Note'))]), volitional('Q', '\\'Q\\'', q_w, ask(dual('Note')))]"
+QP="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q('Hello there')), [], []), clause(ans(q('42')), [], []), clause(ans(q(plain)), [], [])"
+repl "$WORK/txtext.out" ':limit 1000000000000' "$HERE" \
+    "transform_terms($QV, [$QP, type('Tag', ['one tag', other('Note', dual('Note'))]), run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)."
+sed 's/^\(GLP> \)*//' "$WORK/txtext.out" > "$WORK/txtext.lines"
+! grep -q '^%% not transformed' "$WORK/txtext.lines" &&
+    grep -q "^Tag ::= 'one tag' ; other(Note, Note?)\.$" "$WORK/txtext.lines" &&
+    grep -q "^procedure ans(Token?, Q?)\.$" "$WORK/txtext.lines" &&
+    grep -q "^exported procedure p_q(Q?, Person?, Integer?, MutualRef?)\.$" "$WORK/txtext.lines" &&
+    grep -q "^ans(go(_), q('Hello there'))$" "$WORK/txtext.lines" &&
+    grep -q "^ans(go(_), q('42'))$" "$WORK/txtext.lines" &&
+    grep -q "^ans(go(_), q(plain))$" "$WORK/txtext.lines" &&
+    ! grep -qE '^(\?|\()' "$WORK/txtext.lines"
+check "the printer: a declaration and a type definition each one line, a type T? T then ?, every constant of the source by term_to_string/2, in a clause and in a type's alternative, a type's name not quoted" $?
+
 # Reader mode: one interactive type Rating in reader mode, (Rating?)*rate, the
 # person procedure fair_rating of profile fair writing the whole term, a
 # rating of 1..5, after a rated goal of give, which receives the writer in a
@@ -653,7 +694,7 @@ awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } 
     grep -q '^imported procedure profiles#fair_rating(Rating, Person?, Integer?, ' "$WORK/txreader.pop" &&
     grep -A 5 "^person(A, agent(fair), H, Mon, Scr, Seed, Log, \\[ask('Rating?', rating_r(E?)) | As\\])$" "$WORK/txreader.pop" | tr '\n' ' ' |
         grep -q ' :- ground(H?) | split_random_seed(Seed?, K, S) , $' &&
-    grep -q '^fair_rating(Y, H?, K?, Scr?)$' "$WORK/txreader.pop" &&
+    grep -q '^profiles # fair_rating(Y, H?, K?, Scr?)$' "$WORK/txreader.pop" &&
     grep -q "^relay_1(A?, 'Rating?', E, Y?, Mon?, Log?)$" "$WORK/txreader.pop" &&
     grep -A 19 '^procedure relay_1(' "$WORK/txreader.pop" | tr '\n' ' ' |
         grep -q '^procedure relay_1(Integer?, Constant?, Rating, Rating?, MutualRef?, MutualRef?)\. relay_1(A, Type, X?, Y, Mon, Log) :- answer_1(A?, Type?, Y?, X, Mon?, Log?) \. ' &&
@@ -666,7 +707,7 @@ awk '$0 == "%% transform begin" { k++; next } $0 == "%% transform end" { next } 
 check "in reader mode the person goal receives a writer and the program the reader: the person procedure of the dual type, its person second, the ask chosen by its type constant and taken apart to its functor only, rating_r(E?), the person ground, and the relay over its own type, relay_1(Rating, Rating?), the answer assigned from the copy and logged (Definitions \"Copy, Relay\" and \"Person Process\", sGLP a5aa59b and 0270ac6; sGLP's task of 2026-10-14 09:46 UTC, items 1 and 3)" $?
 ! grep -q '^%% not transformed' "$WORK/txreader.bid" &&
     grep -q "^person(A, agent(fair), H, Mon, Scr, Seed, Log, \\[ask('Bid?', bid_r(E?)) | As\\])$" "$WORK/txreader.bid" &&
-    grep -q '^fair_bid(Y, H?, K?, Scr?)$' "$WORK/txreader.bid" &&
+    grep -q '^profiles # fair_bid(Y, H?, K?, Scr?)$' "$WORK/txreader.bid" &&
     grep -q "^relay_1(A?, 'Bid?', E, Y?, Mon?, Log?)$" "$WORK/txreader.bid" &&
     grep -q '^answer_1(A?, Type?, Y?, X, Mon?, Log?)$' "$WORK/txreader.bid" &&
     grep -A 9 '^answer_1(A, Type, bid(Z1, Z2?), bid(Z1?, Z3), Mon, Log)$' "$WORK/txreader.bid" | tr '\n' ' ' |
@@ -701,7 +742,7 @@ for k in 1 2 3 4; do
 done
 ! grep -q '^%% not transformed' "$WORK/txmoded.1" &&
     grep -q "^person(A, agent(p), H, Mon, Scr, Seed, Log, \\[ask('Post', post_w(E)) | As\\])$" "$WORK/txmoded.1" &&
-    grep -q '^p_post(Y?, H?, K?, Scr?)$' "$WORK/txmoded.1" &&
+    grep -q '^profiles # p_post(Y?, H?, K?, Scr?)$' "$WORK/txmoded.1" &&
     grep -q '^relay_1(A, Type, post(X1, X2?), post(X1?, Y2), Mon, Log)$' "$WORK/txmoded.1" &&
     grep -q '^answer_1(A?, Type?, X1?, Y2?, X2, Mon?, Log?)$' "$WORK/txmoded.1" &&
     grep -A 9 '^answer_1(A, Type, X1, line(Z1, Z2?), line(Z1?, Z3), Mon, Log)$' "$WORK/txmoded.1" | tr '\n' ' ' |
@@ -1182,8 +1223,8 @@ check "the check fails on a record whose log or printed population was changed, 
 # of 2026-10-20 08:00 UTC, items 1, 2 and 7): the census pair draws p1, a
 # host, and p2, a guest, keyed by the platform's keys; a host has two
 # dimensions and a guest one; the run is cva/run.sh's with census for its
-# agents, the agents the persons in the census's order, from the blocks after
-# the census's; and a record of it and its check.
+# agents, the agents the persons in the census's order, each from a seed of
+# its own; and a record of it and its check.
 mkdir -p "$CVA/census"
 bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/census_sglp.glp" --out "$CVA/census" > "$WORK/cva_ctx.out" 2>&1
 st=$?
@@ -1310,9 +1351,10 @@ grep '^entry(\|^clock(\|^Ps = \|^Ds = ' "$WORK/census.lines" | sed 's/^/        
 # A census drawing nobody (seed 2) and one drawing a person of a role of no
 # dimension, a stranger (seed 3): the run is refused, taking no goal but the
 # line refused, no entry and no clock.  The paper fixes no seed; under
-# SplitMix64, random/4 on main since 0c4eed59, 2 and 3 are the least seeds
-# from which census_persons/3 draws the one and the other (seeds 1 to 60
-# probed: nobody from 2, 10, 13, ...; a stranger from 3, 7, 9, ...).
+# SplitMix64, with the census's seed split as Appendix B says, 2 and 3 are the
+# least seeds from which census_persons/3 draws the one and the other; the run
+# declaration's seed, 20260929, is the least from 20260927 from which it draws
+# a family.
 repl "$WORK/census_refused.out" ':limit 1000000000000' "$HERE/tests/census" 'census_persons(2, Ok, Ps).' 'census_persons(3, Ok, Ps).' 'census_seeded(2, Ps).' 'census_seeded(3, Ps).'
 sed 's/^\(GLP> \)*//' "$WORK/census_refused.out" > "$WORK/census_refused.lines"
 grep -q '^Ok = no$' "$WORK/census_refused.lines" && [ "$(grep -c '^Ok = no$' "$WORK/census_refused.lines")" -eq 2 ] &&

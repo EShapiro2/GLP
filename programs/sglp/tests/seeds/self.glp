@@ -1,0 +1,24 @@
+%% The seeds of a run by sGLP's paper, Appendix B, "Seeds", apart from the
+%% harnesses: every seed split from the run's by split_random_seed, the clock's
+%% first and then one for each agent, each from what the last split left, and
+%% from an agent's its two profiles' draws.  test_sglp.sh holds them to the
+%% draw of the social graph's run.
+
+Pair ::= pair(Integer, Integer).
+
+%% first_draws(Seed?, N?, Ps): the two draws of 1..100 of agents 1..N of a run
+%% of seed Seed that names no census.
+exported procedure first_draws(Integer?, Integer?, Stream(Pair)).
+first_draws(Seed, N, Ps?) :-
+    split_random_seed(Seed?, _, B),
+    agents(N?, B?, Ps).
+
+procedure agents(Integer?, Integer?, Stream(Pair)).
+agents(0, _, []).
+agents(N, B, [pair(K1?, K2?)|Ps?]) :-
+    N? > 0 |
+    split_random_seed(B?, A, B1),
+    random(A?, 100, K1, S),
+    random(S?, 100, K2, _),
+    N1 := N? - 1,
+    agents(N1?, B1?, Ps).

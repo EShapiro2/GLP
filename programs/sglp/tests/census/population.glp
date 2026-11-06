@@ -3,7 +3,7 @@
 %% transform(census, population)
 
 %% The run declaration of the source:
-%% (run(village, [mix(greeting, parent, [share(formal, 1.0)]), mix(temper, parent, [share(kind, 0.5), share(grumpy, 0.5)]), mix(play, child, [share(casual, 1.0)])], 1, day, 20260927))
+%% (run(village, [mix(greeting, parent, [share(formal, 1.0)]), mix(temper, parent, [share(kind, 0.5), share(grumpy, 0.5)]), mix(play, child, [share(casual, 1.0)])], 1, day, 20260929))
 
 Profiles ::= parent(Dimension1, Dimension2) ; child(Dimension3).
 Dimension1 ::= formal.
@@ -150,7 +150,7 @@ start_screen(A, O, Mon, Log, Scr?) :- allocate_mutual_reference(Scr, Rs), screen
 
 %% The run declaration: its persons, horizon, seed and thresholds.
 exported procedure declaration(Constant, Number, Span, Integer, Integer).
-declaration(village, 1, day, 20260927, 50)
+declaration(village, 1, day, 20260929, 50)
 .
 
 %% The persons of the run, drawn by its census (sGLP's paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).
