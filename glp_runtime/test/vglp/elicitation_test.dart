@@ -31,7 +31,7 @@
 // the chat input of Section 3, and its play) and programs/tests/vglp/cards
 // (cards.vglp, a stream and a list the program writes whose elements hold
 // questions, and its plays; Task D) and programs/tests/vglp/pending
-// (pending.vglp, positions the program writes after the ask, drawn pending,
+// (pending.vglp, positions the program writes after the ask, drawn once written whole,
 // and its plays) and programs/tests/vglp/recursive (speech.vglp, recursive
 // interactive types with no mode inversion, written whole by the person or
 // by the program, and its plays); the Real question and the card of two
@@ -954,10 +954,9 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
   // "Question"), each element drawn as it is presented and its questions
   // answered as any grant.  programs/tests/vglp/cards: cards.vglp, and the
   // plays of its self.glp, whose scripted person logs each view it reads,
-  // view(V), and answers once the cards it waits for are drawn.  The stream
-  // is drawn as its elements so far (vGLP 118e04d, Definition "Construct
-  // Process"): a list the program has written whole when it is drawn is
-  // drawn whole, with no view before it.
+  // view(V), and answers once the cards it waits for are drawn.  A list the
+  // program writes is drawn once written whole, closed, with no view before
+  // it (vGLP, Section 6.3, "The construct process").
   group('a stream or a list the program writes whose elements hold questions '
       '(Task D)', () {
     test('a panel of two cards, a list the program writes at once: drawn '
@@ -973,86 +972,67 @@ nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
       expect(log, contains('withdrawn(1)'));
     });
 
-    test('a stream of cards: the third drawn only once the first two are '
-        'answered, then answered as they were, and the construct withdrawn '
-        'with the stream closed', () async {
+    test('a list of three cards: drawn once, whole, each card answered at '
+        'its own position, and the construct withdrawn', () async {
       final r = await _play('cards', 'play_deal(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
       final log = r['Log'];
-      // The first two cards drawn together, the stream's unwritten tail not
-      // drawn.
-      expect(log, startsWith('[two([1, 2], [2, 1, 2]), '));
-      // No view holds the third card before the person answers the first
-      // two, which they do on reading two(...).
-      expect(log.substring(0, log.indexOf('two(')), isNot(contains('card(3')));
-      expect(log, contains('three([2, 2, 1, 2])'));
-      expect(log.indexOf('three('), greaterThan(log.indexOf('two(')));
+      // The three cards drawn together, the first view drawn.
+      expect(log, startsWith('[three([1, 2], [2, 1, 2], [2, 2, 1, 2]), '));
       for (final got in ['got(1, yes)', 'got(2, yes)', 'got(3, no)']) {
         expect(log, contains(got));
       }
-      expect(log.indexOf('got(3, no)'), greaterThan(log.indexOf('three(')));
       expect(log, contains('withdrawn(1)'));
+      expect(log, isNot(contains('view(')));
     });
   });
 
-  // vGLP #8 Cowork, 2026-10-11 20:48 UTC ("19:09 (D, Q1)") and 22:51 UTC,
-  // Udi approved; vGLP 118e04d, Definition "Construct Process": "It has the
-  // bridge draw the widget of T with the output so far, again as more
-  // arrives, each widget position the program has not yet written whole ---
-  // the root, a field, an element of any stream, the thread's included ---
-  // drawn as pending, and a stream's unwritten tail not drawn, so that the
-  // questions beside it are offered at once".  programs/tests/vglp/pending:
-  // pending.vglp, and the plays of its self.glp, whose scripted person logs
-  // what it reads and sends the program its word, peer(P) or word(W), which
-  // writes what the program has left unwritten.
-  group('a position the program has not yet written whole is drawn pending',
-      () {
-    test('a card whose Peer the program writes after the ask: drawn with its '
-        'Peer pending(P) and its question input(Q) at once, drawn again once '
-        'the Peer is written, and answered', () async {
+  // vGLP, Section 6.3, "The construct process": "A construct process has the
+  // bridge draw the widget of T once every reader in the output it holds is
+  // assigned, with that output and its questions" (vGLP #24 Cowork,
+  // Code_inbox.md, 2026-11-07 17:19 UTC, 6(i); from vGLP 118e04d until then
+  // each position not yet written whole was drawn pending).
+  // programs/tests/vglp/pending: pending.vglp, and the plays of its self.glp,
+  // whose scripted person sends the program its word, peer(P) or word(W),
+  // which writes what the program has left unwritten, before anything is
+  // drawn, and logs what it reads.
+  group('the output of a question is drawn once written whole', () {
+    test('a card whose Peer the program writes after the ask: drawn first '
+        'once the Peer is written, with it, and answered', () async {
       final r = await _play('pending', 'play_late(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      // The Peer pending at [1], the question at [2]; the person sends bob,
-      // the card is drawn again with bob in it, and the person answers yes.
-      expect(r['Log'],
-          '[pending(1, [1], [2]), whole(1, [2]), got(0, yes), withdrawn(1) | _]');
+      // No view of the card before the whole one, its question at [2].
+      expect(r['Log'], '[whole(1, [2]), got(0, yes), withdrawn(1) | _]');
     });
 
-    test('its question is answerable at once: answered while its Peer is '
-        'still pending, the program receives the answer, and the construct '
-        'withdraws, holding no question', () async {
+    test('the same card declined: drawn first once the Peer is written, and '
+        'answered no; the construct withdraws, holding no question', () async {
       final r = await _play('pending', 'play_late_answered(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      expect(r['Log'], '[pending(1, [1], [2]), got(0, no), withdrawn(1) | _]');
+      expect(r['Log'], '[whole(1, [2]), got(0, no), withdrawn(1) | _]');
     });
 
-    test('a stream partly written: its first element pending, its second\'s '
-        'Peer pending, its third whole and its tail not drawn; the third '
-        'answered first, its grant passing the pending element and the '
-        'question before it; the second answered while its Peer is pending; '
-        'each drawn again as it is written; the stream closed and the '
-        'construct withdrawn', () async {
+    test('a list of cards, the second\'s Peer written after the ask: drawn '
+        'first once the Peer is written, every card in it, each answered at '
+        'its own position, and the construct withdrawn', () async {
       final r = await _play('pending', 'play_deal(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      // third(P1, P2, Q2, Q3): the view [pending(P1), card(pending(P2),
-      // input(Q2)), card(bob, input(Q3))], three elements and no more.
-      expect(
-          r['Log'],
-          '[third([1], [2, 1, 1], [2, 1, 2], [2, 2, 1, 2]), got(3, yes), '
-          'second([1, 2], [2, 1, 1], [2, 1, 2]), got(2, no), first([1, 2]), '
-          'got(1, yes), withdrawn(1) | _]');
+      final log = r['Log'];
+      // all(Q1, Q2, Q3): the view [card(carol, input(Q1)), card(dave,
+      // input(Q2)), card(bob, input(Q3))], the first view drawn.
+      expect(log, startsWith('[all([1, 2], [2, 1, 2], [2, 2, 1, 2]), '));
+      for (final got in ['got(1, yes)', 'got(2, no)', 'got(3, yes)']) {
+        expect(log, contains(got));
+      }
+      expect(log, contains('withdrawn(1)'));
+      expect(log, isNot(contains('view(')));
     });
 
-    test('a thread element written before its argument is bound: drawn '
-        'pending(P) at its own position beside the question, the thread\'s '
-        'unwritten tail not drawn, then drawn whole', () async {
+    test('a list element written before its argument is bound: the board '
+        'drawn first once it is, whole, and answered', () async {
       final r = await _play('pending', 'play_board(Log)');
       expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
-      // The second note at [1, 2, 1]: the thread at [1], its second cell at
-      // [1, 2], that cell's element at [1, 2, 1].
-      expect(r['Log'],
-          '[pending(1, [1, 2, 1], [2]), whole(1, [2]), got(0, yes), '
-          'withdrawn(1) | _]');
+      expect(r['Log'], '[whole(1, [2]), got(0, yes), withdrawn(1) | _]');
     });
   });
 

@@ -1,7 +1,7 @@
 %% views.glp --- the generic part of the construct processes of the canonical
-%% compilation that is typed over the type of a position: the views of the
-%% positions the program writes, and the forming of the primitive positions of
-%% an answer (vGLP, Section 6.3, "The construct process").
+%% compilation that is typed over the type of a position: the views of a
+%% list's cells, and the forming of the primitive positions of an answer
+%% (vGLP, Section 6.3, "The construct process").
 %%
 %% The compilation emits it, with dispatcher.glp beside it, into every compiled
 %% program, under names fresh against the program's (glp_runtime/lib/vglp/
@@ -14,82 +14,26 @@
 %% sec:abstract-parameters); dispatcher.glp, which loads and type-checks by
 %% itself, holds the rest.
 
-%% The view of a position of a construct: "V is of the view type of T: T with
-%% the type S of each position the person writes replaced by S ; input(Path),
-%% and of each position the program writes inside the person's answers by S ;
-%% pending(Path), so no value drawn is typed by a wildcard" (vGLP, Section
-%% 6.3, "The construct process").  A position the person writes is drawn
-%% input(P), Questioned(S); a widget position the program has not yet
-%% written whole is drawn pending(P) until it is, Pending(S); the views are
-%% built by the procedures below, typed over S, as the dispatcher's are over
-%% T.
+%% The view of a position the person writes: "V is of the view type of T: T
+%% with the type S of each position the person writes replaced by S ;
+%% input(Path), and of each position the program writes inside the person's
+%% answers by S ; pending(Path), so no value drawn is typed by a wildcard"
+%% (vGLP, Section 6.3, "The construct process").  A position the person
+%% writes is drawn input(P), Questioned(S).  The output of a question is drawn
+%% once written whole, "once every reader in the output it holds is
+%% assigned" (ibid.; vGLP, Definition "Reduce and Communicate in vmaGLP"), so
+%% a position the program writes outside the person's answers is drawn as it
+%% is written, S, and none is drawn pending; Pending(S) ::= S ; pending(Path)
+%% types the positions the program writes inside the person's answers, which
+%% the compilation does not build (glp_runtime/lib/vglp/constructs.dart,
+%% _checkPersonWritable), so it is not defined here.
 Questioned(S) ::= S ; input(Path).
-Pending(S) ::= S ; pending(Path).
-
-%% PENDING (vGLP 118e04d, Definition "Construct Process": "It has the bridge
-%% draw the widget of T with the output so far, again as more arrives, each
-%% widget position the program has not yet written whole --- the root, a
-%% field, an element of any stream, the thread's included --- drawn as
-%% pending, and a stream's unwritten tail not drawn, so that the questions
-%% beside it are offered at once").  A widget position the program has not
-%% yet written whole when it is drawn is drawn pending(P), P its path, as a
-%% position the person writes is drawn input(P), and drawn again once
-%% written; a stream is drawn as the list of its elements so far, its
-%% unwritten tail not drawn.  Which of the two a position is drawn as is
-%% decided by the first clause that can reduce (GLP-Spec, Definition "cGLP
-%% Transition System", Reduce: "the first clause for which the GLP reduction
-%% of A with C succeeds"): the clause for the position written whole where
-%% it is, and the pending clause after it where it is not.
-
-%% shown(P?, X?, Views): the views of a widget position the program writes
-%% and the person does not, at path P: X itself where it is written whole
-%% when drawn; pending(P) where it is not, and X once it is.
-procedure(S) shown(Path?, S?, Stream(Pending(S))).
-shown(_, X, [X?]) :-
-    ground(X?) | true.
-shown(P, X, [pending(P?) | Vs?]) :-
-    shown_whole(X?, Vs).
-
-%% shown_whole(X?, Views): X, once written whole.
-procedure(S) shown_whole(S?, Stream(Pending(S))).
-shown_whole(X, [X?]) :-
-    ground(X?) | true.
-
-%% thread(P?, Xs?, Views): the views of a stream the program writes and the
-%% person does not, at path P: the list of its elements so far, each at its
-%% own path --- the element of a list cell at P with 1 at its end, its tail
-%% at P with 2 at its end --- drawn by shown/3, pending until written whole;
-%% its unwritten tail not drawn; again as each cell and each element is
-%% written.
-procedure(S) thread(Path?, Stream(S)?, Stream(List(Pending(S)))).
-thread(P, [X | Xs], Vs?) :-
-    thread_cell(P?, X?, Xs?, Vs).
-thread(_, [], [[]]).
-thread(P, Xs, [[] | Vs?]) :-
-    thread_tail(P?, Xs?, Vs).
-
-%% thread_tail(P?, Xs?, Views): the views of a stream at P, drawn with no
-%% element of it yet, as its tail is written.
-procedure(S) thread_tail(Path?, Stream(S)?, Stream(List(Pending(S)))).
-thread_tail(P, [X | Xs], Vs?) :-
-    thread_cell(P?, X?, Xs?, Vs).
-thread_tail(_, [], []).
-
-%% thread_cell(P?, X?, Xs?, Views): the views of the list cell [X | Xs] at P.
-procedure(S) thread_cell(Path?, S?, Stream(S)?, Stream(List(Pending(S)))).
-thread_cell(P, X, Xs, Vs?) :-
-    ground(P?) |
-    path(P?, 1, P1),
-    path(P?, 2, P2),
-    shown(P1?, X?, V1),
-    thread(P2?, Xs?, V2),
-    cons_views(V1?, V2?, Vs).
 
 %% cons_views(Es?, Ts?, Views): the views of a list cell from the views of
 %% its element, Es, and those of its tail, Ts, each the list of the tail's
-%% elements so far: [E | T], again each time either is drawn again.  An
-%% element and a tail are each drawn before their views close, but each is a
-%% stream, whose [] the procedure covers.
+%% elements: [E | T], again each time either is drawn again.  An element and
+%% a tail are each drawn before their views close, but each is a stream,
+%% whose [] the procedure covers.
 procedure(V) cons_views(Stream(V)?, Stream(List(V))?, Stream(List(V))).
 cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :-
     ground(E?), ground(T?) |
