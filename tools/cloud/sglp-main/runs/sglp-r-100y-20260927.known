@@ -1,0 +1,11 @@
+known_at 2629800 mean 13.80 least 4 most 30 agents 100 no_menu 0
+at 2629800 offers 634 other_sex 191 share 0.3013
+at 2629800 yes_within 203 yes_across 81 yes_to_friend_within 66 yes_to_friend_across 27
+known_at 31557600 mean 97.59 least 90 most 99 agents 100 no_menu 0
+at 31557600 offers 7532 other_sex 2318 share 0.3078
+at 31557600 yes_within 2242 yes_across 1006 yes_to_friend_within 985 yes_to_friend_across 364
+known_at end mean 97.59 least 90 most 99 agents 100 no_menu 0
+at end offers 7532 other_sex 2318 share 0.3078
+at end yes_within 2242 yes_across 1006 yes_to_friend_within 985 yes_to_friend_across 364
+offers 7532 other_sex 2318 share 0.3078
+yes_within 2242 yes_across 1006 yes_to_friend_within 985 yes_to_friend_across 364
