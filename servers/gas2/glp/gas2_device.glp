@@ -1,0 +1,263 @@
+%% gas2_device.glp --- the Grassroots Super-App on a device with a live person, for
+%% GAS2.  GAS2 puts this module in programs/social/graph/core of the copy of GLP a
+%% device runs, with the three lines core/self.glp needs to start it (the person's
+%% first act gas2_device(Key) in CoreAct, this module's import, and core_start's
+%% clause), as it does for its phones.  It is the super-app of superapp/3
+%% (core/self.glp) with one difference: a mini-app the person installs is drawn for
+%% the person, its draws tagged with its number, and the person's grants on it are
+%% routed back to it, where superapp/3's home holds the mini-app's person channel
+%% (home.vglp, install_act/6, hold_person/1).  The friend and introduction requests
+%% the agent raises are answered by the person's acts here, as home's cards answer
+%% them.
+%%
+%% The person's acts after the first are the grants of the super-app's person
+%% channel, Input(HomeDrawn), as core/self.glp types them.  GAS2's device writes:
+%%   input(0, [], trust(K))            trust the compiler's key K
+%%   input(6, [], install(_, File))    trust the compiler that certified the mini-app in File
+%%   input(0, [], install(App, File))  install the certified mini-app in File as App
+%%   input(0, [], connect(Q))          ask Q to be friends
+%%   input(0, [], invite(App, Q))      invite the friend Q to App
+%%   input(1, [], invite(App, P))      consent to P's invitation to App
+%%   input(2, [], connect(P))          yes to P's request to be friends; 3: no
+%%   input(4, [], connect(O))          yes to an introduction to O; 5: no
+%%   input(7, [N], connect(T))         the key T to the person of mini-app N, the
+%%                                     N-th installed, counted from 1: the person's
+%%                                     grants as keys, which the mini-app's own live
+%%                                     person reads back (GAS2's person.glp)
+%% and it shows the person, by send_to_user/1:
+%%   me(Key), app(N, App, Seen)        what mini-app N's live person shows: each draw,
+%%                                     drawn(D)
+%%   friend_request(P), intro_request(From, O), told(AgentContent), compiler(App, K)
+
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+
+DevOut  ::= me(Key) ; friend_request(Key) ; intro_request(Key, Key) ; told(AgentContent)
+          ; compiler(String, String) ; installing(Integer, String) ; not_a_module(String)
+          ; app(Integer, String, Opaque) ; answered(Key).
+DevEv   ::= ui(Input(HomeDrawn)) ; ag(AgentToUserMsg).
+Pend    ::= pend(Key, PendingValue) ; pendi(Key, PendingValue) ; pre(Key, Decision)
+          ; fr(Constant) ; inv(Key, String).
+Has     ::= yes ; no.
+Pre     ::= pre(Decision) ; nopre.
+Pends   ::= [] ; [Pend | Pends].
+AppRoute  ::= route(Integer, Stream(Key)?).
+AppRoutes ::= [] ; [AppRoute | AppRoutes].
+Taken   ::= taken(PendingValue) ; none.
+
+exported procedure gas2_device(Key?, Grants?, NetInStream?).
+gas2_device(Me, Grants, NetIn) :-
+    ground(Me?) |
+    agent # agent(Me?, In?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    send_to_user([me(Me?)]),
+    from_ui(Grants?, E1),
+    from_agent(Outs?, E2),
+    merge(E1?, E2?, Evs),
+    dev(Me?, Evs?, [], [], 1, In, Shown),
+    send_to_user(Shown?).
+
+procedure from_ui(Grants?, Stream(DevEv)).
+from_ui([G | Gs], [ui(G?) | Es?]) :- from_ui(Gs?, Es).
+from_ui([], []).
+
+procedure from_agent(AgentToUserStream?, Stream(DevEv)).
+from_agent([M | Ms], [ag(M?) | Es?]) :- from_agent(Ms?, Es).
+from_agent([], []).
+
+%% dev(Me, Events, Pends, Routes, Next, ToAgent, Shown): the person's acts and the
+%% agent's notices, one at a time; Pends the requests waiting for the person, Routes
+%% the grant writer of each mini-app installed, Next the number of the next one.
+procedure dev(Key?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+dev(Me, [ui(input(0, [], trust(K))) | Es], Ps, Rs, N, [msg(person, Me?, trust(K?)) | In?], Sh?) :-
+    ground(Me?), ground(K?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(0, [], install(App, File))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(App?), ground(File?) |
+    load_file(File?, C),
+    install(C?, Me?, App?, File?, N?, Es?, Ps?, Rs?, In, Sh).
+dev(Me, [ui(input(6, [], install(_, File))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(File?) |
+    load_file(File?, C),
+    trust_of(C?, Me?, Es?, Ps?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(0, [], connect(Q))) | Es], Ps, Rs, N, [msg(person, Me?, connect(Q?)) | In?], Sh?) :-
+    ground(Me?), ground(Q?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(0, [], invite(App, Q))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(App?), ground(Q?) |
+    has_friend(Q?, Ps?, Ps1, H),
+    invite_go(H?, Me?, App?, Q?, Es?, Ps1?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(1, [], invite(App, P))) | Es], Ps, Rs, N, [msg(person, Me?, accept_invite(App?, P?)) | In?], Sh?) :-
+    ground(Me?), ground(App?), ground(P?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(2, [], connect(P))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(P?) |
+    take(pend, P?, Ps?, Ps1, T),
+    friend_answer(T?, yes, Me?, P?, Es?, Ps1?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(3, [], connect(P))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(P?) |
+    take(pend, P?, Ps?, Ps1, T),
+    friend_answer(T?, no, Me?, P?, Es?, Ps1?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(4, [], connect(O))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(O?) |
+    take(pendi, O?, Ps?, Ps1, T),
+    intro_answer(T?, yes, Me?, O?, Es?, Ps1?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(5, [], connect(O))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(O?) |
+    take(pendi, O?, Ps?, Ps1, T),
+    intro_answer(T?, no, Me?, O?, Es?, Ps1?, Rs?, N?, In, Sh).
+dev(Me, [ui(input(7, [A], connect(T))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(A?), ground(T?) |
+    grant(A?, T?, Rs?, Rs1),
+    dev(Me?, Es?, Ps?, Rs1?, N?, In, Sh).
+dev(Me, [ag(msg(agent, person, befriend(From, PV))) | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), ground(From?) |
+    take_pre(From?, Ps?, Ps1, A),
+    request(A?, Me?, From?, PV?, Es?, Ps1?, Rs?, N?, In, Sh).
+dev(Me, [ag(msg(agent, person, befriend_intro(From, O, PV))) | Es], Ps, Rs, N, In?, [intro_request(From?, O?) | Sh?]) :-
+    ground(Me?), ground(From?), ground(O?) |
+    dev(Me?, Es?, [pendi(O?, PV?) | Ps?], Rs?, N?, In, Sh).
+dev(Me, [ag(msg(agent, person, connected(Q))) | Es], Ps, Rs, N, In?, [told(connected(Q?)) | Sh?]) :-
+    ground(Me?), ground(Q?) |
+    take_invites(Q?, Ps?, Ps1, Is),
+    invites(Is?, Me?, Es?, [fr(Q?) | Ps1?], Rs?, N?, In, Sh).
+dev(Me, [ag(msg(agent, person, C)) | Es], Ps, Rs, N, In?, [told(C?) | Sh?]) :-
+    ground(Me?), ground(C?), otherwise |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+dev(Me, [_ | Es], Ps, Rs, N, In?, Sh?) :-
+    ground(Me?), otherwise |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+dev(_, [], _, Rs, _, [], []) :-
+    close_grants(Rs?).
+
+%% install(C, Me, App, File, N, ...): the mini-app read from File installed as App,
+%% the person holding its person channel's other end: its draws shown, tagged N, and
+%% its grants written through the route of N.  The creator's certification is signed
+%% here over its source identity, as home.vglp's install_act/6 signs it.  What File
+%% held, if not a module, is reported.
+procedure install(Content?, Key?, String?, String?, Integer?, Stream(DevEv)?, Pends?, AppRoutes?, UserInStream, Stream(DevOut)).
+install(M, Me, App, File, N, Es, Ps, Rs, [msg(person, Me?, install(App?, M?, CSig?, AppEnd?)) | In?],
+        [compiler(File?, CK?), installing(N?, App?) | Sh?]) :-
+    module(M?), ground(N?), ground(App?) |
+    decompose_module(M?, CK, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [], grassroots), K?, CSig),
+    new_channel(AppEnd, PersonEnd),
+    miniapp_person_run(M?, Me?, live, T?, PersonEnd?, Screen),
+    tag(N?, App?, Screen?, Out),
+    send_to_user(Out?),
+    N1 := N? + 1,
+    dev(Me?, Es?, Ps?, [route(N?, T) | Rs?], N1?, In, Sh).
+install(S, Me, _, File, N, Es, Ps, Rs, In?, [not_a_module(File?) | Sh?]) :-
+    string(S?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+
+%% What the mini-app's live person shows, tagged with the mini-app's number and name.
+procedure tag(Integer?, String?, Stream(Opaque)?, Stream(DevOut)).
+tag(N, App, [X | Xs], [app(N?, App?, X?) | Out?]) :- ground(N?), ground(App?) | tag(N?, App?, Xs?, Out).
+tag(_, _, [], []).
+
+%% grant(N, T, Routes, Routes1): the key T written on the stream of mini-app N's person.
+procedure grant(Integer?, Key?, AppRoutes?, AppRoutes).
+grant(N, T, [route(N1, [T? | W?]) | Rs], [route(N1?, W) | Rs?]) :-
+    N? =?= N1? | true.
+grant(N, T, [R | Rs], [R? | Rs1?]) :-
+    otherwise | grant(N?, T?, Rs?, Rs1).
+grant(_, _, [], []).
+
+%% The mini-app's live person, activated from the module value by run/3 at the type
+%% identity of the root's second template's opaque instance, as the phones of
+%% programs/social/graph/core activate their scripted persons (gsg_phone.glp).
+procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
+    module(M?) |
+    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp_person/5, M?, H),
+    person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
+
+procedure person_at(Stream(Constant)?, Stream(Constant)?, Module?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
+person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
+    D0? =?= D? |
+    find_type(miniapp_person/5, [D?, S?], T),
+    run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
+person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+
+%% take(Kind, K, Pends, Pends1, T): the pending request of K, of the kind, taken out.
+procedure take(Constant?, Key?, Pends?, Pends, Taken).
+take(pend, K, [pend(K1, PV) | Ps], Ps?, taken(PV?)) :- K? =?= K1? | true.
+take(pendi, K, [pendi(K1, PV) | Ps], Ps?, taken(PV?)) :- K? =?= K1? | true.
+take(Kd, K, [X | Ps], [X? | Ps1?], T?) :- otherwise | take(Kd?, K?, Ps?, Ps1, T).
+take(_, _, [], [], none).
+
+procedure friend_answer(Taken?, Decision?, Key?, Key?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+friend_answer(taken(PV), D, Me, P, Es, Ps, Rs, N, [msg(person, Me?, decision(D?, P?, PV?)) | In?], Sh?) :-
+    ground(Me?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+friend_answer(none, D, Me, P, Es, Ps, Rs, N, In?, Sh?) :-
+    dev(Me?, Es?, [pre(P?, D?) | Ps?], Rs?, N?, In, Sh).
+
+procedure intro_answer(Taken?, Decision?, Key?, Key?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+intro_answer(taken(PV), yes, Me, O, Es, Ps, Rs, N, [msg(person, Me?, accept_intro(O?, PV?)) | In?], Sh?) :-
+    ground(Me?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+intro_answer(taken(PV), no, Me, O, Es, Ps, Rs, N, [msg(person, Me?, reject_intro(O?, PV?)) | In?], Sh?) :-
+    ground(Me?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+intro_answer(none, _, Me, _, Es, Ps, Rs, N, In?, Sh?) :-
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+
+%% A request to be friends: answered at once where the person answered it in advance,
+%% else shown and kept until the person answers.
+procedure request(Pre?, Key?, Key?, PendingValue?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+request(pre(D), Me, From, PV, Es, Ps, Rs, N, [msg(person, Me?, decision(D?, From?, PV?)) | In?], [answered(From?) | Sh?]) :-
+    ground(Me?), ground(From?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+request(nopre, Me, From, PV, Es, Ps, Rs, N, In?, [friend_request(From?) | Sh?]) :-
+    ground(From?) |
+    dev(Me?, Es?, [pend(From?, PV?) | Ps?], Rs?, N?, In, Sh).
+
+procedure take_pre(Key?, Pends?, Pends, Pre).
+take_pre(K, [pre(K1, D) | Ps], Ps?, pre(D?)) :- K? =?= K1? | true.
+take_pre(K, [X | Ps], [X? | Ps1?], T?) :- otherwise | take_pre(K?, Ps?, Ps1, T).
+take_pre(_, [], [], nopre).
+
+%% Trust the compiler whose certificate the mini-app in a file carries.
+procedure trust_of(Content?, Key?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+trust_of(M, Me, Es, Ps, Rs, N, [msg(person, Me?, trust(CK?)) | In?], Sh?) :-
+    module(M?), ground(Me?) |
+    decompose_module(M?, CK, _, _),
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+trust_of(S, Me, Es, Ps, Rs, N, In?, Sh?) :-
+    string(S?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+
+%% An invitation to someone not yet a friend waits until they are one.
+procedure invite_go(Has?, Key?, String?, Key?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+invite_go(yes, Me, App, Q, Es, Ps, Rs, N, [msg(person, Me?, invite(App?, Q?)) | In?], Sh?) :-
+    ground(Me?) |
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+invite_go(no, Me, App, Q, Es, Ps, Rs, N, In?, Sh?) :-
+    dev(Me?, Es?, [inv(Q?, App?) | Ps?], Rs?, N?, In, Sh).
+
+procedure invites(Pends?, Key?, Stream(DevEv)?, Pends?, AppRoutes?, Integer?, UserInStream, Stream(DevOut)).
+invites([inv(Q, App) | Is], Me, Es, Ps, Rs, N, [msg(person, Me?, invite(App?, Q?)) | In?], Sh?) :-
+    ground(Me?) |
+    invites(Is?, Me?, Es?, Ps?, Rs?, N?, In, Sh).
+invites([_ | Is], Me, Es, Ps, Rs, N, In?, Sh?) :-
+    otherwise |
+    invites(Is?, Me?, Es?, Ps?, Rs?, N?, In, Sh).
+invites([], Me, Es, Ps, Rs, N, In?, Sh?) :-
+    dev(Me?, Es?, Ps?, Rs?, N?, In, Sh).
+
+procedure has_friend(Key?, Pends?, Pends, Has).
+has_friend(K, [fr(K1) | Ps], [fr(K1?) | Ps?], yes) :- K? =?= K1? | true.
+has_friend(K, [X | Ps], [X? | Ps1?], H?) :- otherwise | has_friend(K?, Ps?, Ps1, H).
+has_friend(_, [], [], no).
+
+procedure take_invites(Constant?, Pends?, Pends, Pends).
+take_invites(K, [inv(K1, App) | Ps], Ps1?, [inv(K1?, App?) | Is?]) :- K? =?= K1? | take_invites(K?, Ps?, Ps1, Is).
+take_invites(K, [X | Ps], [X? | Ps1?], Is?) :- otherwise | take_invites(K?, Ps?, Ps1, Is).
+take_invites(_, [], [], []).
+
+procedure close_grants(AppRoutes?).
+close_grants([route(_, []) | Rs]) :- close_grants(Rs?).
+close_grants([]).

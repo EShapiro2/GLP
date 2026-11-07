@@ -146,13 +146,16 @@ class Glp:
     def artefact(self, app_dir, dest_dir):
         """Certify a mini-app's directory: (path of its .glpw, None) or (None, the refusal)."""
         os.makedirs(dest_dir, exist_ok=True)
-        out = self.repl([f':artefact {self.rp(app_dir)} {self.rp(dest_dir)}'], timeout=900)
         name = os.path.basename(os.path.normpath(app_dir))
         p = os.path.join(dest_dir, name + '.glpw')
-        if os.path.exists(p) and not any('refus' in l.lower() or 'error' in l.lower() for l in out):
+        if os.path.exists(p):
+            os.remove(p)
+        out = self.repl([f':artefact {self.rp(app_dir)} {self.rp(dest_dir)}'], timeout=900)
+        if os.path.exists(p) and any('Wrote' in l and 'certified under' in l for l in out):
             return p, None
-        why = [l for l in out if l.strip() and 'Loaded' not in l and 'Goodbye' not in l]
-        return None, '; '.join(why[:4]) or 'no artefact written'
+        why = [l for l in out if l.strip() and not l.startswith(('Loaded', 'Goodbye', '╔', '║', '╚',
+                                                                 'Build', 'Working', 'Input', 'Commands'))]
+        return None, '\n'.join(why[:12]) or 'no artefact written'
 
     def boot(self, boot_file, program_dir, artefacts=(), timeout=300):
         """Run a boot: the REPL's :artefact for each mini-app the phones install, then :boot."""
