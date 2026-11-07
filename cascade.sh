@@ -30,6 +30,7 @@
 #   gpd         GPD   GSA         programs/social/graph     ---
 #   gas         GAS   GSA         programs/social/graph     ---
 #   grv         GRV   GSA         programs/examples/rendezvous ---
+#   gpe         GPE   GSA         programs/social/graph     ---
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              social_network
 #   gsnp        GSNP  GAI         programs/gai              ---
@@ -128,6 +129,7 @@ case "$NAME" in
     gpd)  FILE=GPD;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GFP (GSA #2, 2026-11-07)
     gas)  FILE=GAS;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GPD (GSA #2, 2026-11-07)
     grv)  FILE=GRV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSG (GSA #2, 2026-11-07)
+    gpe)  FILE=GPE;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GKK (GSA #2, 2026-11-07)
     gkk)  FILE=GKK;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
           PLAYAT="programs/apps/gkk" ;;
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
@@ -156,7 +158,7 @@ case "$NAME" in
     gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
     gd_s) FILE=GD-S; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
     gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gfp gpd gas grv gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gfp gpd gas grv gpe gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
