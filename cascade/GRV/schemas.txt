@@ -1,0 +1,29 @@
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
+
+unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
+    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
+
+open_server: server(Carol) <-
+    identity(Carol), not server(Carol) guarded by Carol
+
+register: registered_with(Alice, Carol, s), registered(Carol, Alice, s, e) <-
+    identity(Alice), knows(Alice, Carol), not registered_with(Alice, Carol, s), identity(Carol), server(Carol), not registered(Carol, Alice, s, _), not used(Carol, Alice, s) guarded by Alice
+
+redeem: redeemed(Bob, a, s), used(Carol, a, s), not registered(Carol, a, s, e) <-
+    identity(Bob), knows(Bob, Carol), identity(Carol), server(Carol), registered(Carol, a, s, e) guarded by Bob
+
+present: waiting(Carol, Alice, Bob) <-
+    identity(Alice), knows(Alice, Carol), friend(Alice, Bob), identity(Carol), server(Carol), not waiting(Carol, Alice, Bob) guarded by Alice
+
+match: matched(Carol, a, b), not waiting(Carol, a, b), not waiting(Carol, b, a) <-
+    identity(Carol), server(Carol), waiting(Carol, a, b), waiting(Carol, b, a)
