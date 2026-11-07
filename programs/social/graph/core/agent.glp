@@ -239,7 +239,7 @@ agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
 %% Install a certified mini-app.  The compiler's certificate is accepted when
 %% its key is one the person trusts (Section 6.4), and the creator's
 %% certification must be signed over this source identity with the checker's
-%% verdict that the contract is grassroots.  signature/2 assigns unsigned on a
+%% verdict, as the checker prints it, certifying the contract.  signature/2 assigns unsigned on a
 %% forged certification, and the super-app refuses to install it (Section 6.1).
 %% Every mini-app is installed alike: its grants are its end of its person
 %% channel, at Opaque, and a calendar the super-app writes (Section 3, "What
@@ -521,8 +521,8 @@ agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
 
 %% verify_install(M, CSig, Trusted, V): what load_file/2 gave must be a Module
 %% (a forged artefact is its text), the compiler's key must be trusted, and the
-%% creator's certification signed over the module's source identity with the
-%% verdict grassroots.
+%% creator's certification signed over the module's source identity with a
+%% verdict of the checker that certifies the contract (cert_check/4).
 procedure verify_install(Content?, String?, Stream(String)?, Verdict).
 verify_install(M, CSig, Trusted, V?) :-
     module(M?) |
@@ -549,9 +549,23 @@ procedure cert_signed(Signature?, String?, Module?, Verdict).
 cert_signed(signed(_, _, Cert), Src, M, V?) :- cert_check(Cert?, Src?, M?, V).
 cert_signed(unsigned, _, _, refused).
 
-%% The signed term is untyped; the certification is read by its shape.
+%% The signed term is untyped; the certification is read by its shape.  The
+%% developer's warranty carries the checker's verdict as the checker prints it,
+%% and a program is installed only where that verdict certifies its contract
+%% (GSA paper, Section 3, "A grassroots program is compiled from its
+%% contract"): syntactically_grassroots, for a contract of agent roles or of
+%% listed roles, and the two verdicts with wards, the verdicts on which the
+%% cascade's compiler compiles (programs/gsc/check.glp, verdict/2 and
+%% wards_verdict1/4; compile.glp, compile_on/3).  not_grassroots(Faults),
+%% malformed(Faults) and any other term, the word grassroots among them, are
+%% refused.
 procedure cert_check(_?, String?, Module?, Verdict).
-cert_check(creator_cert(Src1, _, grassroots), Src, M, ok(M?)) :- Src? =?= Src1? | true.
+cert_check(creator_cert(Src1, _, syntactically_grassroots), Src, M, ok(M?)) :-
+    Src? =?= Src1? | true.
+cert_check(creator_cert(Src1, _, syntactically_grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
+    Src? =?= Src1? | true.
+cert_check(creator_cert(Src1, _, grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
+    Src? =?= Src1? | true.
 cert_check(_, _, _, refused) :- otherwise | true.
 
 %% install_step(V, App, CSig, Ui, Apps, Apps1): a mini-app installed is held

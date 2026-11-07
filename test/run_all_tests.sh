@@ -7138,6 +7138,11 @@ play_install(alice, "cssn.glpw", cssn, I1).
 play_install(alice, "currency.glpw", currency, I2).
 play_install(alice, "pingapp.glpw", ping, I3).
 play_forged_cert(alice, I4).
+play_verdict(alice, with_wards, V1).
+play_verdict(alice, wards, V2).
+play_verdict(alice, not_grassroots, V3).
+play_verdict(alice, malformed, V4).
+play_verdict(alice, word, V5).
 play_forged_invite(alice, bob, F1).
 play_forged_join(alice, bob, F2).
 play_forged_root(alice, bob, F3).
@@ -7159,6 +7164,16 @@ check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
 check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
 check "SG super-app: the super-app installs the certified pingapp" "I3 = \[ping\]" "$sg_core"
 check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
+# The checker's verdict a certification carries, as the checker prints it (GSA
+# paper, Section 3, "A grassroots program is compiled from its contract"): a
+# verdict that certifies the contract, with wards or without, installs; one
+# that does not, and the word grassroots, which the checker never prints,
+# install nothing (play_verdict/3; agent.glp, cert_check/4).
+check "SG super-app: a certification with the verdict syntactically_grassroots_with_wards installs" "V1 = \[ping\]" "$sg_core"
+check "SG super-app: a certification with the verdict grassroots_with_wards installs" "V2 = \[ping\]" "$sg_core"
+check "SG super-app: a certification with the verdict not_grassroots installs nothing" "V3 = \[\]" "$sg_core"
+check "SG super-app: a certification with the verdict malformed installs nothing" "V4 = \[\]" "$sg_core"
+check "SG super-app: a certification with the word grassroots, no verdict of the checker, installs nothing" "V5 = \[\]" "$sg_core"
 check "SG super-app refuses a forgery: an invitation that is not a signed term delivers nothing, and the next message arrives" "F1 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: an undertaking that is not a signed term creates no root channel, and the next message arrives" "F2 = \[msg(agent, person, received(bob, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"

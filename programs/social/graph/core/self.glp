@@ -289,6 +289,12 @@ imported procedure superapp_plays#play_forged_cert(Key?, Stream(Constant)).
 exported procedure play_forged_cert(Key?, Stream(Constant)).
 play_forged_cert(P, I?) :- superapp_plays # play_forged_cert(P?, I).
 
+%% The checker's verdict a certification carries: installed where it
+%% certifies the contract, refused otherwise (GSA paper, Section 3).
+imported procedure superapp_plays#play_verdict(Key?, Constant?, Stream(Constant)).
+exported procedure play_verdict(Key?, Constant?, Stream(Constant)).
+play_verdict(P, Kind, I?) :- superapp_plays # play_verdict(P?, Kind?, I).
+
 imported procedure superapp_plays#play_forged_invite(Key?, Key?, AgentToUserStream).
 exported procedure play_forged_invite(Key?, Key?, AgentToUserStream).
 play_forged_invite(P, Q, O?) :- superapp_plays # play_forged_invite(P?, Q?, O).
