@@ -1335,9 +1335,10 @@ procedure (Stream(_))*tell(Stream(_)?).
           refusedAt('The interactive type Stream(_) $why', 1, 1));
     });
 
-    test('a position the person writes of a type parameter is refused '
-        'outright, the message citing the Definition (vGLP #7 Cowork, '
-        '2026-10-11 14:31 UTC, item 1)', () {
+    test('a type parameter in an interactive type is refused outright, at a '
+        'position the person writes or the program does, the message citing '
+        'the Definition (vGLP #7 Cowork, 2026-10-11 14:31 UTC, item 1; vGLP '
+        '2f1dc92)', () {
       const box = '''
 Box(X) ::= box(X).
 procedure(X) (Box(X)?)*take(X).
@@ -1345,9 +1346,9 @@ procedure(X) (Box(X)?)*take(X).
 ''';
       final (l1, c1) = at(box, 'procedure');
       const why = 'The interactive type Box(X)? is refused: the person writes '
-          'a position of type X, a type parameter, and an interactive type has '
-          '"no type parameter at a position the person writes" (vGLP, '
-          'Definition "Volitional Procedure, Interactive Type")';
+          'a position of type X, a type parameter, and an interactive type '
+          '"has no type parameter" (vGLP, Definition "Volitional Procedure, '
+          'Interactive Type")';
       expect(() => compile(box), refusedAt(why, l1, c1));
       // The whole type a parameter, and a stream's element one.
       const whole = '''
@@ -1372,15 +1373,33 @@ procedure(E) (Stream(E)?)*takes(Stream(E)).
               'a position of type E, a type parameter',
               1,
               1));
-      // At a position the program writes a parameter is shown.
-      final c = compile('''
+      // At a position the program writes a parameter is refused too: an
+      // interactive type "has no type parameter" (vGLP 2f1dc92, Definition
+      // "Volitional Procedure, Interactive Type"; vGLP #24, Code_inbox.md,
+      // 2026-11-07 17:25 UTC); the card is written with a closed type.
+      const open = '''
 YesNo ::= yes ; no.
 Card(X) ::= card(X, YesNo?).
 procedure(X) (Card(X))*see(X?, YesNo).
 (card(V?, A))*see(V, A?).
+''';
+      final (l3, c3) = at(open, 'procedure');
+      expect(
+          () => compile(open),
+          refusedAt(
+              'The interactive type Card(X) is refused: the program writes a '
+              'position of type X, a type parameter, and an interactive type '
+              '"has no type parameter"',
+              l3,
+              c3));
+      final c = compile('''
+YesNo ::= yes ; no.
+Card ::= card(Integer, YesNo?).
+procedure (Card)*see(Integer?, YesNo).
+(card(V?, A))*see(V, A?).
 ''');
-      expect(c.widgets['Card(X)'],
-          "form(card, [field('X', shown), field('YesNo', buttons([yes, no]))])");
+      expect(c.widgets['Card'],
+          "form(card, [field('Integer', shown), field('YesNo', buttons([yes, no]))])");
     });
   });
 
