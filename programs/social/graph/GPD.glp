@@ -1,21 +1,26 @@
 %% ---------------------------------------------------------------------------
-%% GPD.glp --- the Grassroots Programs Dissemination contract, GSA's, extending GSG, in the clause
+%% GPD.glp --- the Grassroots Programs Dissemination contract, GSA's, extending GFP, in the clause
 %% syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in
-%% GPD.txt beside this file: publish is GPD:1, Program Publication; trust and distrust GPD:2, Developer
-%% Trust; offer GPD:3, Program Offering; install_own and install GPD:4, Program Installation;
-%% invite_new and invite_installed GPD:5, Program Invitation, one clause in two schemas, by whether
-%% Bob has the program installed; leave GPD:6, Leaving a Program.  GKK's
-%% three schemas and GSG's two come first; every role requires identity.  A program is the name
-%% term <Carol>.p, Carol its developer; published(Carol, <Carol>.p) says that Carol published it,
-%% trusts(Alice, Carol) that Alice trusts Carol as a developer, offered(Alice, <Carol>.p) that it
-%% was offered to Alice, installed(Alice, <Carol>.p) that Alice installed it, and
-%% participant(Alice, <Carol>.p, Bob) that Alice converses with Bob in it.  Written by GSA #1
-%% Cowork, 2026-11-07, a draft for Udi's approval and GSC's checker.
+%% GPD.txt beside this file: publish is GPD:1, Program Publication; trust and distrust GPD:2,
+%% Developer Trust; offer GPD:3, Program Offering, GFP's forward of a program; install_own and
+%% install GPD:4, Program Installation; invite_new and invite_installed GPD:5, Program Invitation,
+%% one clause in two schemas, by whether Bob has the program installed; leave GPD:6, Leaving a
+%% Program.  GKK's, GSG's and GFP's schemas come first; every role but establish's requires
+%% identity.  A program is an item (GFP:1), x as its developer created and signed it; a held copy
+%% y carries the signatures of those who passed it on, sgn(..sgn(x, Carol).., Dave) (GFP:2), and
+%% the recipient sees the list (Udi, 2026-11-07): author_of(y) is the first signer, the developer,
+%% and item_of(y) the item under the forwarding signatures, by which installed and participant
+%% name the program alike at every participant; program(x) says that x is a grassroots contract
+%% with its schemas and pragmas.  The three are decidable conditions on the values (GSC, Definition
+%% Schema with values), added to the term form here and asked of GSC's checker, 2026-11-07.
+%% published(Carol, x) says that Carol published x, trusts(Alice, Carol) that Alice trusts Carol as
+%% a developer, installed(Alice, p) that Alice installed the program p, and participant(Alice, p,
+%% Bob) that Alice converses with Bob in p.  Written by GSA #1 Cowork, 2026-11-07.
 %% ---------------------------------------------------------------------------
 
 SNT         ::= own(Constant) ; ext(SNT, Constant).
 SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-              ; sgn(Constant, Constant).
+              ; sgn(Constant, Constant) ; item_of(Constant).
 SArgs       ::= [] ; [SArg | SArgs].
 SAtom       ::= atom(Constant, SArgs).
 SMult       ::= SAtom ; times(SArg, SAtom).
@@ -23,12 +28,13 @@ SQLit       ::= SMult ; not(SMult).
 SQLits      ::= [] ; [SQLit | SQLits].
 SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
 SLits       ::= [] ; [SLit | SLits].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr).
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; author_of(Constant).
 SConstraint ::= true ; and(SConstraint, SConstraint)
               ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
               ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
               ; or(SConstraint, SConstraint)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg).
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SArg).
 RName       ::= Constant ; one(Constant, Constant).
 Names       ::= [] ; [RName | Names].
 PNames      ::= [] ; [Constant | PNames].
@@ -57,10 +63,17 @@ contract_named(gpd,
        [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
        [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
         atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
-    sas(publish, ['Carol'], [p],
-       [atom(published, ['Carol', ext(own('Carol'), p)])],
-       [atom(identity, ['Carol']), not(atom(published, ['Carol', ext(own('Carol'), p)]))],
-       true, ['Carol']),
+    sas(create, ['Alice'], [x],
+       [atom(item, ['Alice', x])],
+       [atom(identity, ['Alice']), not(atom(item, ['Alice', x]))], true, ['Alice']),
+    sas(forward, ['Alice', 'Bob'], [x],
+       [atom(item, ['Bob', sgn(x, 'Alice')])],
+       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob'])], true, ['Alice']),
+    sas(publish, ['Carol'], [x],
+       [atom(item, ['Carol', x]), atom(published, ['Carol', x])],
+       [atom(identity, ['Carol']), not(atom(item, ['Carol', x]))],
+       program(x), ['Carol']),
     sas(trust, ['Alice', 'Carol'], ['Carol'],
        [atom(trusts, ['Alice', 'Carol'])],
        [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), not(atom(trusts, ['Alice', 'Carol']))],
@@ -69,44 +82,42 @@ contract_named(gpd,
        [not(atom(trusts, ['Alice', 'Carol']))],
        [atom(identity, ['Alice']), atom(trusts, ['Alice', 'Carol'])],
        true, ['Alice']),
-    sas(offer, ['Carol', 'Alice'], [p],
-       [atom(offered, ['Alice', ext(own('Carol'), p)])],
-       [atom(identity, ['Carol']), atom(published, ['Carol', ext(own('Carol'), p)]), atom(knows, ['Carol', 'Alice']),
-        atom(identity, ['Alice']), not(atom(offered, ['Alice', ext(own('Carol'), p)]))],
-       true, ['Carol']),
-    sas(install_own, ['Alice'], [p],
-       [atom(installed, ['Alice', ext(own('Alice'), p)])],
-       [atom(identity, ['Alice']), atom(published, ['Alice', ext(own('Alice'), p)]),
-        not(atom(installed, ['Alice', ext(own('Alice'), p)]))],
+    sas(offer, ['Carol', 'Alice'], [y],
+       [atom(item, ['Alice', sgn(y, 'Carol')])],
+       [atom(identity, ['Carol']), atom(item, ['Carol', y]), atom(friend, ['Carol', 'Alice']),
+        atom(identity, ['Alice'])],
+       program(item_of(y)), ['Carol']),
+    sas(install_own, ['Alice'], [x],
+       [atom(installed, ['Alice', x])],
+       [atom(identity, ['Alice']), atom(published, ['Alice', x]), not(atom(installed, ['Alice', x]))],
        true, ['Alice']),
-    sas(install, ['Alice', 'Carol'], ['Carol', p],
-       [atom(installed, ['Alice', ext(own('Carol'), p)])],
-       [atom(identity, ['Alice']), atom(offered, ['Alice', ext(own('Carol'), p)]), atom(trusts, ['Alice', 'Carol']),
-        not(atom(installed, ['Alice', ext(own('Carol'), p)]))],
-       true, ['Alice']),
-    sas(invite_new, ['Alice', 'Bob', 'Carol'], ['Carol', p],
-       [atom(participant, ['Alice', ext(own('Carol'), p), 'Bob']),
-        atom(participant, ['Bob', ext(own('Carol'), p), 'Alice']), atom(installed, ['Bob', ext(own('Carol'), p)])],
-       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(installed, ['Alice', ext(own('Carol'), p)]),
-        not(atom(participant, ['Alice', ext(own('Carol'), p), 'Bob'])),
+    sas(install, ['Alice', 'Bob'], ['Bob', y],
+       [atom(installed, ['Alice', item_of(y)])],
+       [atom(identity, ['Alice']), atom(item, ['Alice', y]), atom(trusts, ['Alice', 'Bob']),
+        not(atom(installed, ['Alice', item_of(y)]))],
+       and(program(item_of(y)), eq(author_of(y), 'Bob')), ['Alice']),
+    sas(invite_new, ['Alice', 'Bob', 'Carol'], ['Carol', y],
+       [atom(participant, ['Alice', item_of(y), 'Bob']),
+        atom(participant, ['Bob', item_of(y), 'Alice']), atom(item, ['Bob', sgn(y, 'Alice')]),
+        atom(installed, ['Bob', item_of(y)])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(item, ['Alice', y]),
+        atom(installed, ['Alice', item_of(y)]), not(atom(participant, ['Alice', item_of(y), 'Bob'])),
         atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice']), atom(trusts, ['Bob', 'Carol']),
-        not(atom(installed, ['Bob', ext(own('Carol'), p)]))],
-       true, ['Alice', 'Bob']),
-    sas(invite_installed, ['Alice', 'Bob', 'Carol'], ['Carol', p],
-       [atom(participant, ['Alice', ext(own('Carol'), p), 'Bob']),
-        atom(participant, ['Bob', ext(own('Carol'), p), 'Alice'])],
-       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(installed, ['Alice', ext(own('Carol'), p)]),
-        not(atom(participant, ['Alice', ext(own('Carol'), p), 'Bob'])),
+        not(atom(installed, ['Bob', item_of(y)]))],
+       eq(author_of(y), 'Carol'), ['Alice', 'Bob']),
+    sas(invite_installed, ['Alice', 'Bob', 'Carol'], ['Carol', y],
+       [atom(participant, ['Alice', item_of(y), 'Bob']),
+        atom(participant, ['Bob', item_of(y), 'Alice'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(item, ['Alice', y]),
+        atom(installed, ['Alice', item_of(y)]), not(atom(participant, ['Alice', item_of(y), 'Bob'])),
         atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice']), atom(trusts, ['Bob', 'Carol']),
-        atom(installed, ['Bob', ext(own('Carol'), p)]),
-        not(atom(participant, ['Bob', ext(own('Carol'), p), 'Alice']))],
-       true, ['Alice', 'Bob']),
-    sas(leave, ['Alice', 'Bob', 'Carol'], ['Carol', p],
-       [not(atom(installed, ['Alice', ext(own('Carol'), p)])),
-        not(atom(participant, ['Alice', ext(own('Carol'), p), '_'])),
-        forall('Bob', atom(participant, ['Alice', ext(own('Carol'), p), 'Bob']),
-               [not(atom(participant, ['Bob', ext(own('Carol'), p), 'Alice']))])],
-       [atom(identity, ['Alice']), atom(installed, ['Alice', ext(own('Carol'), p)]),
-        forall('Bob', atom(participant, ['Alice', ext(own('Carol'), p), 'Bob']),
-               [atom(identity, ['Bob']), atom(participant, ['Bob', ext(own('Carol'), p), 'Alice'])])],
+        atom(installed, ['Bob', item_of(y)]), not(atom(participant, ['Bob', item_of(y), 'Alice']))],
+       eq(author_of(y), 'Carol'), ['Alice', 'Bob']),
+    sas(leave, ['Alice', 'Bob'], [p],
+       [not(atom(installed, ['Alice', p])), not(atom(participant, ['Alice', p, '_'])),
+        forall('Bob', atom(participant, ['Alice', p, 'Bob']),
+               [not(atom(participant, ['Bob', p, 'Alice']))])],
+       [atom(identity, ['Alice']), atom(installed, ['Alice', p]),
+        forall('Bob', atom(participant, ['Alice', p, 'Bob']),
+               [atom(identity, ['Bob']), atom(participant, ['Bob', p, 'Alice'])])],
        true, ['Alice'])]).
