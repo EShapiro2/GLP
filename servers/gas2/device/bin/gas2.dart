@@ -66,6 +66,7 @@ Future<void> main(List<String> args) async {
   };
   await server.start(port);
   stdout.writeln('GAS2: http://127.0.0.1:$port/  (you are ${kp.pub.hex})');
+  relay.onCarrier = host.carried;
   relay.setOn(true);
   await host.start();
   stdout.writeln('GAS2: ${host.status}');

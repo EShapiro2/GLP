@@ -100,6 +100,7 @@ Future<Person> open(String h) async {
       }
     };
   final p = Person(host, page, relay);
+  relay.onCarrier = host.carried;
   relay.setOn(true);
   unawaited(host.start());
   return p;

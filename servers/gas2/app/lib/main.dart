@@ -133,6 +133,7 @@ class _ShellState extends State<Shell> {
         await _start();
       };
       final port = await server.start(0);
+      relay.onCarrier = host.carried;
       relay.setOn(true);
       final w = await GasView.open('http://127.0.0.1:$port/',
           background: _bg, onMessage: (m) => unawaited(_native(m)), onLoaded: () {});

@@ -88,6 +88,7 @@ input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--line);
 .qr svg { width: min(72vw, 260px); height: auto; background: #fff; border-radius: 12px; padding: 8px; }
 .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--card); padding: 9px 16px; border-radius: 99px; font-size: 14px; z-index: 9; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.on { opacity: .95; }
+.via { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--accent2); color: var(--soft); font-size: 12px; margin-left: 4px; vertical-align: 1px; }
 /* the rack turns around */
 main { transition: transform .23s ease-in, opacity .23s; transform-origin: 50% 30%; }
 main.turn { transform: perspective(1200px) rotateY(90deg); opacity: .3; }
@@ -130,6 +131,9 @@ const nm = k => k === S?.me ? 'you' : (names[k] || short(k));
 // a person's color, from their key, the same on every device
 const hue = k => parseInt((k || '0').slice(0, 6), 16) % 360;
 const dot = k => `<span class="dot" style="background:hsl(${hue(k)},55%,52%)">${esc((names[k] || k || '?').slice(0, 1).toUpperCase())}</span>`;
+// a message's carrier, as an icon: the relay, Bluetooth, the local network
+const VIA = {relay: ['☁︎', 'through the relay'], pan: ['ᛒ', 'over Bluetooth'], lan: ['≋', 'over the local network'], near: ['≋', 'directly']};
+const via = v => v && VIA[v] ? `<span class="via" title="${VIA[v][1]}">${VIA[v][0]}</span>` : '';
 let toastT = null;
 function toast(s) { const t = $('#toast'); t.textContent = s; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
 
@@ -266,7 +270,7 @@ function drawHome() {
   h += `<h2><span class="grow">Friends</span><button class="link" onclick="go('__friend')">Add a friend</button></h2><div class="card">`;
   for (const k of S.friends) {
     if (naming === k) h += `<div class="row">${dot(k)}<input id="nm" class="grow" placeholder="A name for ${esc(short(k))}" value="${esc(names[k] || '')}" onkeydown="if(event.key==='Enter')saveName('${k}')"><button class="b" onclick="saveName('${k}')">Save</button></div>`;
-    else h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b>${names[k] ? ` <span class="muted small">${esc(short(k))}</span>` : ''}</span><button class="link" onclick="naming='${k}';draw()">${names[k] ? 'Rename' : 'Give a name'}</button></div>`;
+    else h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b>${names[k] ? ` <span class="muted small">${esc(short(k))}</span>` : ''} ${via((S.lastVia || {})[k])}</span><button class="link" onclick="naming='${k}';draw()">${names[k] ? 'Rename' : 'Give a name'}</button></div>`;
   }
   const near = (S.nearby || []).filter(p => !S.friends.includes(p.key));
   for (const p of near) h += `<div class="row">${dot(p.key)}<span class="grow"><b>${esc(nm(p.key))}</b> <span class="muted small">near you${p.over.length ? ', over ' + esc(p.over.join(', ')) : ''}</span></span><button class="b alt" onclick="addKey('${p.key}')">Add</button></div>`;
@@ -360,7 +364,7 @@ function playHtml(a, r, menu, props) {
   h += `<h2><span class="grow">Play with</span>${S.friends.length ? '' : `<button class="link" onclick="go('__friend')">Add a friend</button>`}</h2><div class="card">`;
   for (const k of S.friends) {
     const inv = (a.invited || []).includes(k), acc = (a.accepted || []).includes(k);
-    h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b></span><button class="b ${inv ? 'ok' : 'alt'}" onclick="act({op:'invite',app:'${a.app}',key:'${k}'},'Invited ${esc(nm(k))}')">${inv ? 'Invited ✓' : 'Invite'}</button><button class="b ${acc ? 'ok' : 'alt'}" onclick="act({op:'accept',app:'${a.app}',key:'${k}'},'Accepted ${esc(nm(k))}')">${acc ? 'Accepted ✓' : 'Accept'}</button></div>`;
+    h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b> ${via((S.lastVia || {})[k])}</span><button class="b ${inv ? 'ok' : 'alt'}" onclick="act({op:'invite',app:'${a.app}',key:'${k}'},'Invited ${esc(nm(k))}')">${inv ? 'Invited ✓' : 'Invite'}</button><button class="b ${acc ? 'ok' : 'alt'}" onclick="act({op:'accept',app:'${a.app}',key:'${k}'},'Accepted ${esc(nm(k))}')">${acc ? 'Accepted ✓' : 'Accept'}</button></div>`;
   }
   if (!S.friends.length) h += `<div class="empty">Add a friend first.</div>`;
   else h += `<div class="small muted" style="padding-top:6px">One of you taps Invite, the other Accept; both need ${esc(a.title)} added.</div>`;
@@ -483,8 +487,9 @@ function drawBack() {
   });
   friends.forEach((k, j) => {
     g += unit(pos['f' + j], nm(k), short(k) + '…', `hsl(${hue(k)},55%,52%)`);
-    const over = near.get(k);
-    if (over && over.length) cable(pos['f' + j], pos.near, '#2bb3a0');
+    const last = (S.lastVia || {})[k], over = near.get(k);
+    if (last === 'relay') cable(pos['f' + j], pos.relay, '#a1a1a6');
+    else if (last || (over && over.length)) cable(pos['f' + j], pos.near, '#2bb3a0');
   });
   const empty = (p, t) => `<text x="${p[0] + uw / 2}" y="${p[1] + 26}" text-anchor="middle" font-size="12" fill="#6e6e73">${t}</text>`;
   if (!apps.length) g += empty(narrow ? [10, pos.sa[1] + uh + 34] : [236, 40], 'no mini-app yet');
@@ -497,6 +502,8 @@ function drawBack() {
     ${g}${cables}${jacks}</svg>`;
   let h = `<div class="backpanel">${svg}<div class="small muted" style="padding:2px 6px 8px">A cable from a mini-app to a friend: you invited them, or took their invitation. Tab, or &lt;/&gt;, turns the rack around again.</div></div>`;
   if (a) h += hoodHtml(a, readApp(a));
+  const ws = S.wires || [];
+  h += `<h2>Messages, and their carrier</h2><div class="card" style="max-height:300px;overflow:auto">${ws.length ? ws.slice(0, 40).map(w => `<div class="row" style="padding:5px 0"><span class="mono muted" style="width:62px">${new Date(w.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'})}</span><span>${w.out ? '↑ to' : '↓ from'}</span>${dot(w.key).replace('class="dot"', 'class="dot" style="width:22px;height:22px;font-size:11px;background:hsl(' + hue(w.key) + ',55%,52%)"')}<span class="grow">${esc(nm(w.key))}</span>${via(w.via)}<span class="small muted">${esc((VIA[w.via] || [0, w.via])[1])}</span></div>`).join('') : '<div class="empty">No message yet.</div>'}</div>`;
   h += `<h2>Signals</h2><div class="card"><div class="small">Status: ${esc(S.status)} · acts waiting: ${esc(JSON.stringify(S.pending || []))} s · state version ${S.version}</div><pre>${esc((S.log || []).join('\n'))}</pre></div>`;
   $('#main').innerHTML = h;
 }
@@ -561,7 +568,7 @@ function install(app) { act({op: 'install', app}, 'Adding: your device certifies
 function flip() {
   const m = $('#main');
   m.classList.add('turn');
-  setTimeout(() => { hood = !hood; if (hood) api('api/state?debug').then(r => r.json()).then(j => { S.log = j.log; S.pending = j.pending; if (hood) draw(); }).catch(() => {}); draw(); m.classList.remove('turn'); m.classList.add('turned'); setTimeout(() => m.classList.remove('turned'), 260); }, 230);
+  setTimeout(() => { hood = !hood; if (hood) api('api/state?debug').then(r => r.json()).then(j => { S.log = j.log; S.pending = j.pending; S.wires = j.wires; if (hood) draw(); }).catch(() => {}); draw(); m.classList.remove('turn'); m.classList.add('turned'); setTimeout(() => m.classList.remove('turned'), 260); }, 230);
 }
 document.addEventListener('keydown', e => {
   if (e.key === 'Tab' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) { e.preventDefault(); flip(); }

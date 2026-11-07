@@ -76,6 +76,19 @@ class SuperHost {
   /// those (the app on a phone): key -> the underlays over which they are connected.
   final Map<String, Set<String>> nearby = {};
 
+  /// The latest messages to and from friends, each with its carrier ('relay', 'pan' for
+  /// Bluetooth, 'lan' for the local network), newest last; and each friend's last carrier.
+  final List<Map<String, Object>> wires = [];
+  final Map<String, String> lastVia = {};
+
+  /// A message's carrier, as the network tells it (RelayGlpNetwork.onCarrier).
+  void carried(PubKey pk, bool out, String via) {
+    wires.add({'t': DateTime.now().millisecondsSinceEpoch, 'key': pk.hex, 'out': out, 'via': via});
+    if (wires.length > 200) wires.removeAt(0);
+    lastVia[pk.hex] = via;
+    _changed();
+  }
+
   /// Told of each person found or connected near, by key (the relay is told, so
   /// that it reaches them when they go away).
   void Function(PubKey pk)? onNear;
@@ -313,13 +326,13 @@ class SuperHost {
     };
     agent.onUserOutput = _shown;
     agent.onPeerDiscovered = (pk, u) {
-      if (pk.hex == me) return;
+      if (pk.hex == me || u == Underlay.wan) return; // the relay's peers are not near
       nearby.putIfAbsent(pk.hex, () => {});
       onNear?.call(pk);
       _changed();
     };
     agent.onPeerConnected = (pk, u, _) {
-      if (pk.hex == me) return;
+      if (pk.hex == me || u == Underlay.wan) return;
       nearby.putIfAbsent(pk.hex, () => {}).add(u.name);
       onNear?.call(pk);
       _changed();
@@ -532,6 +545,8 @@ class SuperHost {
         'friends': friends,
         'friendRequests': friendRequests,
         'introRequests': introRequests,
+        'lastVia': lastVia,
+        if (debug) 'wires': wires.reversed.take(80).toList(),
         'nearby': [
           for (final e in nearby.entries) {'key': e.key, 'over': e.value.toList()}
         ],

@@ -83,6 +83,11 @@ class RelayGlpNetwork implements GlpNetwork {
   /// message goes through the relay, none through the layer.
   bool relayOnly = false;
 
+  /// Told of each message, with its carrier: 'relay', or the underlay of the layer
+  /// beneath ('pan' for Bluetooth, 'lan' for the local network); [out] when it is sent.
+  void Function(PubKey pk, bool out, String via)? onCarrier;
+  final Map<String, String> _nearBy = {}; // a peer's key -> the underlay it is connected over
+
   /// What the relay is doing, for the screen: 'off', 'connecting', 'online',
   /// or `offline: <why>`.
   String state = 'off';
@@ -103,12 +108,19 @@ class RelayGlpNetwork implements GlpNetwork {
   }) : relay = Uri.parse(relayUrl.endsWith('/') ? relayUrl : '$relayUrl/') {
     _signKey = SecureKey.fromList(sodium, privateKey);
     _boxKey = sodium.crypto.sign.skToCurve25519(_signKey);
-    inner.onPeerConnected = (pk, u, id) => onPeerConnected?.call(pk, u, id);
+    inner.onPeerConnected = (pk, u, id) {
+      _nearBy[pk.hex] = u.name;
+      onPeerConnected?.call(pk, u, id);
+    };
     inner.onPeerDisconnected = (pk, u) {
+      if (_nearBy[pk.hex] == u.name) _nearBy.remove(pk.hex);
       onPeerDisconnected?.call(pk, u);
       if (_relayPeer(pk)) onPeerConnected?.call(pk, Underlay.wan, null);
     };
-    inner.onMessageReceived = (s, p, id, u) => onMessageReceived?.call(s, p, id, u);
+    inner.onMessageReceived = (s, p, id, u) {
+      onCarrier?.call(s, false, u.name);
+      onMessageReceived?.call(s, p, id, u);
+    };
     inner.onPeerDiscovered = (pk, u) => onPeerDiscovered?.call(pk, u);
     // The WAN's and the places' callbacks are the layer's own, set on it only
     // when the runtime sets them: a layer with no place backend refuses an
@@ -209,7 +221,11 @@ class RelayGlpNetwork implements GlpNetwork {
 
   @override
   Future<void> send(PubKey pk, Uint8List payload) {
-    if (!_on || (!relayOnly && inner.isPeerReachable(pk))) return inner.send(pk, payload);
+    if (!_on || (!relayOnly && inner.isPeerReachable(pk))) {
+      onCarrier?.call(pk, true, _nearBy[pk.hex] ?? 'near');
+      return inner.send(pk, payload);
+    }
+    onCarrier?.call(pk, true, 'relay');
     return _enqueue(pk, _kindMsg, payload, app);
   }
 
@@ -348,6 +364,7 @@ class RelayGlpNetwork implements GlpNetwork {
     if (kind == _kindMsg && app == this.app) {
       final messageId = 'relay:$tag';
       _applying[messageId] = (seenKey, sent);
+      onCarrier?.call(pk, false, 'relay');
       onMessageReceived?.call(pk, Uint8List.sublistView(plain, 11 + alen), messageId, Underlay.wan);
     } else {
       _markSeen(seenKey, sent);
