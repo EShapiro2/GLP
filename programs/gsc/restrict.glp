@@ -413,6 +413,8 @@ rn_expr(real(X), M, R?) :- ground(X?), ground(M?) |
     rn_arg(real(X?), M?, A),
     arg_expr(A?, R).
 rn_expr(any, _, any).
+rn_expr(author_of(Y), M, author_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_expr(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
 rn_expr(plus(X, Y), M, plus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
     rn_expr(X?, M?, X1),
     rn_expr(Y?, M?, Y1).
@@ -482,6 +484,7 @@ rn_cons(signed(X, Y), M, signed(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?)
 rn_cons(unsigned(X, Y), M, unsigned(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
     rn_arg(X?, M?, X1), rn_arg(Y?, M?, Y1).
 rn_cons(rel(N, Xs), M, rel(N?, Xs1?)) :- ground(Xs?), ground(M?) | rn_exprs(Xs?, M?, Xs1).
+rn_cons(program(X), M, program(X1?)) :- ground(X?), ground(M?) | rn_expr(X?, M?, X1).
 
 procedure rn_form(Form?, RMs?, Form).
 rn_form(fa(H, A), M, fa(H1?, A1?)) :- ground(H?), ground(A?), ground(M?) |
