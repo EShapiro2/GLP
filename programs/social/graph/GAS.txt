@@ -17,5 +17,5 @@ Stores: the stores Alice trusts.
 Listings: the programs listed in Alice's store.
 Store: Carol [Open store] <name>
 Listing: Carol [List]
-Store Trust: Alice [Trust store] [Distrust store]
+Store Trust: Alice [Trust store] <store> [Distrust store] <store>
 Installation from a Store: Alice [Install]
