@@ -9,7 +9,7 @@ GPE: Grassroots Physical Encounters
 GPE extends GKK (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Alice and Bob are persons.  A person is nearby Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a place is where Alice is.
 1. ■ Open Place.  Alice may declare the place she is in open, and may close it.
-2. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, know each other.
+2. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, may know each other.
 Interface pragmas
 Nearby: the persons nearby whom Alice knows.
 Open Place: Alice [Open place] [Close place]
