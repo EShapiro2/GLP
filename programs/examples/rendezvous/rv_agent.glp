@@ -22,9 +22,13 @@
 %%      it refuses --- matches the two requests, and tells each to punch to
 %%      the other's address via its Reply: A gets punch(AddrB), B punch(AddrA)
 %%
-%% Admission (GNA Section 6, "Rendezvous Server", paragraphs "The
-%% rendezvous agent", "Reconnection" and "Versions"; Section 5, "The Seam",
-%% paragraph "Signatures"):
+%% Admission by key (GSA, Section "The Secure Grassroots Social Graph",
+%% "Distribution and Activation", paragraph "Reconnection": "the rendezvous
+%% agent checks that each request is signed by the key it names and that the
+%% two signatures are the two friends' over their pair ... The rendezvous
+%% agent checks keys, so an update of the Grassroots App leaves the
+%% signatures friends hold good"; GSA #2's task of 2026-11-07: "No version
+%% numbers and no source identities"; GNA Section 6, "Reconnection"):
 %%   on befriending, each friend signs the one pair attest(PkA, PkB), PkA
 %%   being the lexicographically smaller key --- PkA @< PkB, the standard
 %%   order of constants (GLP-Spec appendix-guards) --- and gives the
@@ -34,36 +38,27 @@
 %%   each signature apart with signature/2, which assigns
 %%   signed(Key, Hash, Term) --- the signer's key, the source identity of
 %%   the signing program and the term signed --- where it verifies, and
-%%   unsigned where it does not; admit_reconnect/7 and admit_available/7
+%%   unsigned where it does not; admit_reconnect/6 and admit_available/6
 %%   dispatch on that:
 %%
-%%       reconnect from A for B:   signed(B, H, attest(PkA, PkB))   admits
-%%       available from B for A:   signed(A, H, attest(PkA, PkB))   admits
+%%       reconnect from A for B:   signed(B, _, attest(PkA, PkB))   admits
+%%       available from B for A:   signed(A, _, attest(PkA, PkB))   admits
 %%
-%%   the signer being the other party the request names, {PkA, PkB} =
-%%   {A, B} with PkA @< PkB, and H the source identity of the social-graph
-%%   program of one of the compatible versions (GNA Section 6, "Versions":
-%%   "the rendezvous agent is told, when it starts, the compatible versions
-%%   with the source identities of their social-graph programs, and admits a
-%%   signed term by any of them").  The agent is told them as Versions, a
-%%   list of version(V, H), V a version number and H the source identity of
-%%   that version's social-graph program, the first argument of rv_agent/3;
-%%   compatible/3 finds whether H is one of them.  Each signature is admitted
-%%   on its own: the two friends of a pair may each run any compatible
-%%   version, and each signature was made under the version its signer ran
-%%   when the two befriended.  Anything else --- unsigned, another signer,
-%%   another term, the pair out of that order, or a Hash no compatible
-%%   version's --- is refused with rejected.  Versions is never read from the
-%%   request.
-
-%%   Under the plain REPL the tests present no attestation signed under the
-%%   social graph, so through the agent they exercise the reject path
-%%   alone, but for tests 22 and 24, whose test program stands in for the
-%%   graph of a compatible version:
-%%   its available is admitted and reaches peer_address/2, which with no
+%%   the signer being the other party the request names and {PkA, PkB} =
+%%   {A, B} with PkA @< PkB.  The source identity Hash is not read: the agent
+%%   checks keys and no program identity, so a signature made under an
+%%   earlier version of the Grassroots App stays good, and the two of a pair
+%%   may have been made under different ones.  Anything else --- unsigned,
+%%   another signer, another term, or the pair out of that order --- is
+%%   refused with rejected.
+%%
+%%   Under the plain REPL the tests present no verified signature but their
+%%   own: through the agent they exercise the reject path, but for tests 22
+%%   and 25, whose test program signs the pair under its own key: its
+%%   available is admitted and reaches peer_address/2, which with no
 %%   networking layer bound assigns none (IGLP, "One interface"), and is
-%%   refused there.  The dispatch on what peer_address/2 reports is given
-%%   its two answers directly.
+%%   refused there.  The dispatch on what signature/2 reports, and on what
+%%   peer_address/2 reports, is given their answers directly.
 %%
 %% System predicates:
 %%   signature(Signed?, Signature) — root self.glp (GLP-Spec catalogue):
@@ -99,15 +94,6 @@ PendingEntry ::= needs(Key, Key, String, SignalReply?)
                  %% ready(B_pk, A_pk, AddrB, ReplyB?) — B is available for A
 PendingList ::= [] ; [PendingEntry | PendingList].
 
-%% A compatible version, as the agent is told it at boot: version(V, H), V
-%% the version number (GNA Implementation Notes: a whole number below 2^63)
-%% and H the source identity of that version's social-graph program.
-Version ::= version(Integer, Hash).
-Versions ::= [] ; [Version | Versions].
-
-%% What compatible/3 finds of a signing program's source identity.
-Admission ::= admitted ; refused.
-
 %% A message as it arrives on the agent's network input: msg(Q, M), Q the
 %% agent's own key, to which the sender addressed it, and M the message
 RvNetMsg ::= msg(Key, SignalMsg).
@@ -118,28 +104,25 @@ SignalIn ::= [] ; [SignalMsg | SignalIn].
 %% THE SERVER'S ENTRY
 %% =============================================================================
 
-%% rv_server(Id, Versions, NetIn): the rendezvous server's agent, as a GLP
-%% runtime over the headless layer boots it (networking/glue/bin/
-%% rendezvous_server.dart): Id is the agent's own key, Versions the
-%% compatible versions, each version(V, H) with H the source identity of
-%% version V's social-graph program, and NetIn the network input, each element
+%% rv_server(Id, NetIn): the rendezvous server's agent, as a GLP runtime over
+%% the headless layer boots it (networking/glue/bin/rendezvous_server.dart):
+%% Id is the agent's own key and NetIn the network input, each element
 %% msg(Id, M) with M a reconnect or available sent to this agent.  The
 %% envelope is taken off and the agent runs over what it carried, with
 %% nothing pending.
-exported procedure rv_server(Key?, Versions?, RvNetIn?).
-rv_server(_, Versions, NetIn) :-
+exported procedure rv_server(Key?, RvNetIn?).
+rv_server(_, NetIn) :-
     rv_unwrap(NetIn?, In),
-    rv_agent(Versions?, In?, []).
+    rv_agent(In?, []).
 
 %% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
 %% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
 %% "a deployed agent is spawned by its application with the same initial
-%% goal"): the person's first act is the list of compatible versions, and
-%% self_key/1 gives the agent its own key; by these agent/2 starts the
-%% server's agent, rv_server/3, on the network input.
-exported procedure agent(Channel(Stream(Versions), Stream(Constant))?, Channel(RvNetIn, Stream(NetMsg(Constant)))?).
-agent(ch([Vs | _], []), ch(N, [])) :- self_key(K), rv_server(K?, Vs?, N?).
-agent(ch([], []), ch(_, [])).
+%% goal"): the agent is told nothing at boot and reads nothing from its
+%% person, whose output it closes; self_key/1 gives it its own key, and
+%% agent/2 starts the server's agent, rv_server/2, on the network input.
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(RvNetIn, Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(N, [])) :- self_key(K), rv_server(K?, N?).
 
 procedure rv_unwrap(RvNetIn?, SignalIn).
 rv_unwrap([msg(_, M) | Ms], [M? | In?]) :- rv_unwrap(Ms?, In).
@@ -149,126 +132,86 @@ rv_unwrap([], []).
 %% MAIN LOOP
 %% =============================================================================
 
-exported procedure rv_agent(Versions?, Stream(SignalMsg)?, PendingList?).
+exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
 
 %% A requests reconnection to B, presenting SigB, B's signature over the
-%% pair.  signature/2 takes it apart and admit_reconnect/7 dispatches on
-%% what it reports, against the compatible versions Versions.  The guard
-%% grounds Versions, which is read twice.
-rv_agent(Versions, [reconnect(A, B, Sig, ReplyA?)|In], Pending) :-
-    ground(Versions?) |
+%% pair.  signature/2 takes it apart and admit_reconnect/6 dispatches on
+%% what it reports.
+rv_agent([reconnect(A, B, Sig, ReplyA?)|In], Pending) :-
     signature(Sig?, S),
-    admit_reconnect(Versions?, A?, B?, S?, ReplyA, Pending?, Pending1),
-    rv_agent(Versions?, In?, Pending1?).
+    admit_reconnect(A?, B?, S?, ReplyA, Pending?, Pending1),
+    rv_agent(In?, Pending1?).
 
 %% B is available for reconnection from A, presenting SigA, A's signature
 %% over the same pair; verified as the reconnect request is, by
-%% admit_available/7.
-rv_agent(Versions, [available(B, A, Sig, ReplyB?)|In], Pending) :-
-    ground(Versions?) |
+%% admit_available/6.
+rv_agent([available(B, A, Sig, ReplyB?)|In], Pending) :-
     signature(Sig?, S),
-    admit_available(Versions?, B?, A?, S?, ReplyB, Pending?, Pending1),
-    rv_agent(Versions?, In?, Pending1?).
+    admit_available(B?, A?, S?, ReplyB, Pending?, Pending1),
+    rv_agent(In?, Pending1?).
 
-rv_agent(_, [], _).
+rv_agent([], _).
 
 %% =============================================================================
 %% admit_reconnect: dispatch on what signature/2 reports for A's request
 %% =============================================================================
 
-exported procedure admit_reconnect(Versions?, Key?, Key?, Signature?,
-                                   SignalReply, PendingList?, PendingList).
+exported procedure admit_reconnect(Key?, Key?, Signature?, SignalReply,
+                                   PendingList?, PendingList).
 
-%% B signed the pair, A's key the smaller: admitted where the signing
-%% program H is a compatible version's social graph, which compatible/3
-%% finds and admit_reconnect_by/6 dispatches on.  The guard grounds A and B.
-admit_reconnect(Versions, A, B, signed(K, H, attest(P1, P2)), ReplyA?,
+%% B signed the pair, A's key the smaller: admitted, under whatever program
+%% B signed it.  Only then does the RV agent read A's address from the
+%% networking layer via the root's peer_address (so A does not need to
+%% self-report its address), and match_reconnect/6 dispatches on what it
+%% reports.  The guard grounds A and B.
+admit_reconnect(A, B, signed(K, _, attest(P1, P2)), ReplyA?,
                 Pending, Pending1?) :-
     K? =?= B?, A? @< B?, P1? =?= A?, P2? =?= B? |
-    compatible(H?, Versions?, C),
-    admit_reconnect_by(C?, A?, B?, ReplyA, Pending?, Pending1).
+    peer_address(A?, PeerAddressA),
+    match_reconnect(A?, B?, PeerAddressA?, ReplyA, Pending?, Pending1).
 
-%% B signed the pair, B's key the smaller: as above.
-admit_reconnect(Versions, A, B, signed(K, H, attest(P1, P2)), ReplyA?,
+%% B signed the pair, B's key the smaller: admitted, as above.
+admit_reconnect(A, B, signed(K, _, attest(P1, P2)), ReplyA?,
                 Pending, Pending1?) :-
     K? =?= B?, B? @< A?, P1? =?= B?, P2? =?= A? |
-    compatible(H?, Versions?, C),
-    admit_reconnect_by(C?, A?, B?, ReplyA, Pending?, Pending1).
+    peer_address(A?, PeerAddressA),
+    match_reconnect(A?, B?, PeerAddressA?, ReplyA, Pending?, Pending1).
 
 %% unsigned, another signer, another term or the pair out of order: the
 %% reply is bound to `rejected` and the request is not added to the pending
-%% list.  That the signature verifies, and who made it under which program,
-%% is signature/2's; what the binding authorizes is this agent's logic.
-admit_reconnect(_, _, _, _, rejected, Pending, Pending?) :-
+%% list.  That the signature verifies, and who made it, is signature/2's;
+%% what the binding authorizes is this agent's logic.
+admit_reconnect(_, _, _, rejected, Pending, Pending?) :-
     otherwise | true.
-
-%% admit_reconnect_by: A's request, its signature B's over the pair, admitted
-%% where the signing program is a compatible version's social graph.  Only
-%% then does the RV agent read A's address from the networking layer via the
-%% root's peer_address (so A does not need to self-report its address), and
-%% match_reconnect/6 dispatches on what it reports.  Under another program
-%% the request is refused, and not added to the pending list.
-procedure admit_reconnect_by(Admission?, Key?, Key?, SignalReply,
-                             PendingList?, PendingList).
-admit_reconnect_by(admitted, A, B, ReplyA?, Pending, Pending1?) :-
-    ground(A?), ground(B?) |
-    peer_address(A?, PeerAddressA),
-    match_reconnect(A?, B?, PeerAddressA?, ReplyA, Pending?, Pending1).
-admit_reconnect_by(refused, _, _, rejected, Pending, Pending?).
 
 %% =============================================================================
 %% admit_available: dispatch on what signature/2 reports for B's request
 %% =============================================================================
 
-exported procedure admit_available(Versions?, Key?, Key?, Signature?,
-                                   SignalReply, PendingList?, PendingList).
+exported procedure admit_available(Key?, Key?, Signature?, SignalReply,
+                                   PendingList?, PendingList).
 
-%% A signed the pair, A's key the smaller: admitted where the signing
-%% program H is a compatible version's social graph.  The guard grounds A
-%% and B.
-admit_available(Versions, B, A, signed(K, H, attest(P1, P2)), ReplyB?,
+%% A signed the pair, A's key the smaller: admitted, under whatever program
+%% A signed it.  Only then does the RV agent read B's address via
+%% peer_address, and match_available/6 dispatches on what it reports.  The
+%% guard grounds A and B.
+admit_available(B, A, signed(K, _, attest(P1, P2)), ReplyB?,
                 Pending, Pending1?) :-
     K? =?= A?, A? @< B?, P1? =?= A?, P2? =?= B? |
-    compatible(H?, Versions?, C),
-    admit_available_by(C?, B?, A?, ReplyB, Pending?, Pending1).
-
-%% A signed the pair, B's key the smaller: as above.
-admit_available(Versions, B, A, signed(K, H, attest(P1, P2)), ReplyB?,
-                Pending, Pending1?) :-
-    K? =?= A?, B? @< A?, P1? =?= B?, P2? =?= A? |
-    compatible(H?, Versions?, C),
-    admit_available_by(C?, B?, A?, ReplyB, Pending?, Pending1).
-
-%% unsigned, another signer, another term or the pair out of order:
-%% refused, as admit_reconnect/7 refuses.
-admit_available(_, _, _, _, rejected, Pending, Pending?) :-
-    otherwise | true.
-
-%% admit_available_by: B's request, its signature A's over the pair,
-%% admitted where the signing program is a compatible version's social
-%% graph; only then does the RV agent read B's address via peer_address, and
-%% match_available/6 dispatches on what it reports.
-procedure admit_available_by(Admission?, Key?, Key?, SignalReply,
-                             PendingList?, PendingList).
-admit_available_by(admitted, B, A, ReplyB?, Pending, Pending1?) :-
-    ground(A?), ground(B?) |
     peer_address(B?, PeerAddressB),
     match_available(B?, A?, PeerAddressB?, ReplyB, Pending?, Pending1).
-admit_available_by(refused, _, _, rejected, Pending, Pending?).
 
-%% =============================================================================
-%% compatible: whether a signing program is a compatible version's social
-%% graph (GNA Section 6, "Versions")
-%% =============================================================================
+%% A signed the pair, B's key the smaller: admitted, as above.
+admit_available(B, A, signed(K, _, attest(P1, P2)), ReplyB?,
+                Pending, Pending1?) :-
+    K? =?= A?, B? @< A?, P1? =?= B?, P2? =?= A? |
+    peer_address(B?, PeerAddressB),
+    match_available(B?, A?, PeerAddressB?, ReplyB, Pending?, Pending1).
 
-%% compatible(H, Versions, C): C is admitted where H is the source identity
-%% of some version(V, H) of Versions, and refused where it is none.
-exported procedure compatible(Hash?, Versions?, Admission).
-compatible(_, [], refused).
-compatible(H, [version(_, H1) | _], admitted) :-
-    H? =?= H1? | true.
-compatible(H, [_ | Vs], C?) :-
-    otherwise | compatible(H?, Vs?, C).
+%% unsigned, another signer, another term or the pair out of order:
+%% refused, as admit_reconnect/6 refuses.
+admit_available(_, _, _, rejected, Pending, Pending?) :-
+    otherwise | true.
 
 %% =============================================================================
 %% match_reconnect: dispatch on what peer_address/2 reports for A
