@@ -4386,23 +4386,35 @@ part_dom(share(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(b
 part_dom(share(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(noted, [p(carol)]), g(noted, [p(erin)])], D7).
 unable_reason(share(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(noted, [p(carol)]), g(noted, [p(erin)])], R8).
 apply_part(share(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)])], S9).
+name_class(pass(alice, bob), [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], C10).
+part_dom(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], D11).
+unable_reason(pass(alice, bob, [i(carol, 2), i(dave, 1), i(dave, 3)]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], R12).
+apply_part(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), bob, [g(started, []), g(knows, [p(alice)])], S13).
+class_info(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), alice, [], R14, A14).
 :quit
 HEREDOC
 2>&1)
 rm -rf "${cva_sh_dir:?}"
 check "CVA shares: the platform emitted to GLP" "wrote .*vg_shares_.*platform.glp" "$cva_sh_emit"
 check "CVA shares: the class term carries the list of instances after the schema's variables, List(Peer)" "^share(Peer, Peer, List(Peer))$" "$(cat "$CVA/shares/platform.vglp")"
-check "CVA shares: ... and its listing, instances(K, Base, X, A, Phi, CAdd, CDel)" "instances(1, 1, pvar(x), atom(noted, \[pvar(x)\]), fcons(true), \[hm(2, atom(seen, \[pvar(x)\]))\], \[\])" "$(cat "$CVA/shares/platform.vglp")"
+check "CVA shares: ... and its listing, instances(K, Base, X, A, Phi, CAdd, CDel)" "instances(1, 1, \[pvar(x)\], atom(noted, \[pvar(x)\]), fcons(true), \[hm(2, atom(seen, \[pvar(x)\]))\], \[\])" "$(cat "$CVA/shares/platform.vglp")"
 check "CVA shares: the base finds the instances in its own state, the persons it noted, in the order of identifiers" "C1 = share(alice, bob, \[carol, dave\])" "$cva_sh"
 check "CVA shares: ... none where it noted none" "C2 = share(alice, bob, \[\])" "$cva_sh"
 check "CVA shares: the request name is the schema-binding, with no list" "N3 = pname(share(alice, bob))" "$cva_sh"
-check "CVA shares: the conditional literal added at bob's role once for each instance, inst(1, J) standing for the J-th" "R4 = \[rs(guarded, \[\], \[\], \[atom(started, \[\]), atom(knows, \[role(2)\])\], \[\]), rs(guarded, \[atom(seen, \[inst(1, 2)\]), atom(seen, \[inst(1, 1)\]), atom(shared, \[role(1)\])\]" "$cva_sh"
-check "CVA shares: ... the binding sending each to its instance" "B4 = \[b(role(1), p(alice)), b(role(2), p(bob)), b(inst(1, 1), p(carol)), b(inst(1, 2), p(dave))\]" "$cva_sh"
-check "CVA shares: the class of the part: bob adds seen of each instance, and the schema-binding with the list is found among the class's changes" "R5 = cls(ci(share(alice, bob, \[carol, dave\]), \[delta(alice, \[\], \[\]), delta(bob, \[\], \[g(seen, \[p(dave)\]), g(seen, \[p(carol)\]), g(shared, \[p(alice)\])\])\], \[alice, bob\], \[pt(share(alice, bob, \[carol, dave\]), \[alice, bob\], proposed(\[alice\]))\], \[mate(share, .*b(inst(1, 1), p(carol)), b(inst(1, 2), p(dave))\]" "$cva_sh"
+check "CVA shares: the conditional literal added at bob's role once for each instance, inst(1, J, x) standing for x at the J-th" "R4 = \[rs(guarded, \[\], \[\], \[atom(started, \[\]), atom(knows, \[role(2)\])\], \[\]), rs(guarded, \[atom(seen, \[inst(1, 2, pvar(x))\]), atom(seen, \[inst(1, 1, pvar(x))\]), atom(shared, \[role(1)\])\]" "$cva_sh"
+check "CVA shares: ... the binding sending each to its instance's value" "B4 = \[b(role(1), p(alice)), b(role(2), p(bob)), b(inst(1, 1, pvar(x)), p(carol)), b(inst(1, 2, pvar(x)), p(dave))\]" "$cva_sh"
+check "CVA shares: the class of the part: bob adds seen of each instance, and the schema-binding with the list is found among the class's changes" "R5 = cls(ci(share(alice, bob, \[carol, dave\]), \[delta(alice, \[\], \[\]), delta(bob, \[\], \[g(seen, \[p(dave)\]), g(seen, \[p(carol)\]), g(shared, \[p(alice)\])\])\], \[alice, bob\], \[pt(share(alice, bob, \[carol, dave\]), \[alice, bob\], proposed(\[alice\]))\], \[mate(share, .*b(inst(1, 1, pvar(x)), p(carol)), b(inst(1, 2, pvar(x)), p(dave))\]" "$cva_sh"
 check "CVA shares: alice's domain holds where her state has exactly the instances of the list" "D6 = yes" "$cva_sh"
 check "CVA shares: ... and not where it has others" "D7 = no" "$cva_sh"
 check "CVA shares: her unable vote names the anchor of the instance she lacks and that of the one she has beyond the list" "R8 = unable(\[noted(dave)\], \[noted(erin)\])" "$cva_sh"
 check "CVA shares: bob's effect adds seen of each instance" "S9 = \[g(seen, \[p(dave)\]), g(seen, \[p(carol)\]), g(shared, \[p(alice)\]), g(started, \[\]), g(knows, \[p(alice)\])\]" "$cva_sh"
+check "CVA shares: a conjunct binding two variables, a person and a number, an instance an assignment of both, its type i(Peer, Integer) in the class term (vGLP 2f1dc92; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC)" "^Inst_pass_1 ::= i(Peer, Integer)\.$" "$(cat "$CVA/shares/platform.vglp")"
+check "CVA shares: ... pass's class term, List(Inst_pass_1) after its variables" "^pass(Peer, Peer, List(Inst_pass_1))$" "$(cat "$CVA/shares/platform.vglp")"
+check "CVA shares: ... the base finds each assignment its anchor and its state give, carol owing 2 and 5 two instances" "C10 = pass(alice, bob, \[i(carol, 2), i(carol, 5), i(dave, 1)\])" "$cva_sh"
+check "CVA shares: ... the base's domain holds at exactly those instances" "D11 = yes" "$cva_sh"
+check "CVA shares: ... its unable vote names the anchor it lacks and the one it has beyond the list" "R12 = unable(\[owes(dave, 3)\], \[owes(carol, 5)\])" "$cva_sh"
+check "CVA shares: ... bob's effect adds owed of each assignment" "S13 = \[g(owed, \[p(dave), n(1)\]), g(owed, \[p(carol), n(5)\]), g(owed, \[p(carol), n(2)\]), g(passed, \[p(alice)\])" "$cva_sh"
+check "CVA shares: ... the class's schema-binding found among its changes, each variable at each instance an entry inst(1, J, X)" "R14 = cls(ci(pass(alice, bob, \[i(carol, 2), i(carol, 5), i(dave, 1)\]), .*b(inst(1, 1, pvar(x)), p(carol)), b(inst(1, 1, num(k)), n(2)), b(inst(1, 2, pvar(x)), p(carol)), b(inst(1, 2, num(k)), n(5)), b(inst(1, 3, pvar(x)), p(dave)), b(inst(1, 3, num(k)), n(1))\]" "$cva_sh"
 check_not "CVA shares: no goal left unread" "not well-typed\|→ failed" "$cva_sh"
 # A variable the constraint determines from the variables local to a role is local to that role (vGLP 9ee6f87, Section 5.4: "and so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds"): vGLP's linear, climb's t1 = t + 2 and mark's 3 m = t + 3, t local to the first role, so t1 and m are local too, in no class term, the machine computing them.
 cva_lin=$(cat "$CVA/linear/platform.vglp")
@@ -5065,7 +5077,7 @@ check_not "CVA opens: no person answers for the unguarded parts" "gave(attempt([
 cva_groups_text=$(cat "$CVA/groups/platform.vglp")
 check "CVA groups: the class term of close carries the list of the people of its listed role" "^close(Peer, List(Peer), Speech)$" "$cva_groups_text"
 check "CVA groups: ... its request name, the schema-binding, its head with no extent, does not" "^befriend(Peer, Peer) create(Peer, Speech) join(Peer, Peer, Speech) close(Peer, Speech) $" "$(cva_proposal "$CVA/groups/platform.vglp")"
-check "CVA groups: the binding of a class term of close, its listed role's place and a role for each of its people (listed_binding)" "^listed_binding(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], \[V2?\], B)$" "$cva_groups_text"
+check "CVA groups: the binding of a class term of close, its listed role's place and a role for each of its people (listed_binding; ppl(L) a listed role's list, ins(L) a conjunct's instances)" "^listed_binding(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], \[ppl(V2?)\], B)$" "$cva_groups_text"
 check "CVA groups: the request name completed with the people the agent lists (listed_class)" "^listed_class(close, \[b(role(1), p(V1?)), b(svar(n), s(V3?))\], St?, C)$" "$cva_groups_text"
 check "CVA groups: the base person lists exactly the people of the listed role" "^    listing_ok(Nm?, Bn?, Id?, S?, B2),$" "$cva_groups_text"
 cva_groups_load=$("$REPL_RUN" <<HEREDOC
@@ -5097,7 +5109,7 @@ check_not "CVA groups: no person asked for close" "gave(attempt([a-z]*, [0-9]*, 
 cva_merges_text=$(cat "$CVA/merges/platform.vglp" 2>&1 || true)
 check "CVA merges: the class term of merge carries the people of each listed role, in the order of the roles" "^merge(Peer, List(Peer), List(Peer), Speech, Speech)$" "$cva_merges_text"
 check "CVA merges: ... its request name, the schema-binding, does not" "^befriend(Peer, Peer) create(Peer, Speech) join(Peer, Peer, Speech) merge(Peer, Speech, Speech) $" "$(cva_proposal "$CVA/merges/platform.vglp")"
-check "CVA merges: the binding of a class term of merge, from the lists of the people of its two listed roles (listed_binding)" "^listed_binding(merge, \[b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))\], \[V2?, V3?\], B)$" "$cva_merges_text"
+check "CVA merges: the binding of a class term of merge, from the lists of the people of its two listed roles (listed_binding)" "^listed_binding(merge, \[b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))\], \[ppl(V2?), ppl(V3?)\], B)$" "$cva_merges_text"
 check "CVA merges: ... and the people of each listed role from a schema-binding, the first's (copies_of)" "^copies_of(B?, 2, V2)$" "$cva_merges_text"
 check "CVA merges: ... and the second's" "^copies_of(B?, 3, V3)$" "$cva_merges_text"
 check "CVA merges: the request name completed with the people the agent lists in each (listed_class)" "^listed_class(merge, \[b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))\], St?, C)$" "$cva_merges_text"

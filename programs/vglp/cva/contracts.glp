@@ -243,8 +243,11 @@
 %%   note(p? ; x)          :  at p  started, knows(x), not noted(x), +noted(x)
 %%   share(p?, q?)         :  at p  started, knows(q); at q  started, knows(p), not shared(p), +shared(p)
 %%                            and forall x (noted(x) at p -> seen(x) at q)
+%%   owe(p? ; x, k)        :  at p  started, knows(x), not owes(x, k), +owes(x, k)
+%%   pass(p?, q?)          :  at p  started, knows(q); at q  started, knows(p), not passed(p), +passed(p)
+%%                            and forall x, k (owes(x, k) at p -> owed(x, k) at q)
 %%
-%% share's conjunct is local to its base, p, the role holding its anchor: p's machine finds the persons it has noted, the attempt names them, share(p, q, L), and q sees each.  Section VG runs its printed procedures on given states.
+%% share's conjunct is local to its base, p, the role holding its anchor: p's machine finds the persons it has noted, the attempt names them, share(p, q, L), and q sees each.  pass's conjunct binds two variables, a person and a number, an instance an assignment of both (vGLP 2f1dc92; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC), each i(x, k) in the class term, pass(p, q, L).  Section VG runs their printed procedures on given states.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
@@ -453,7 +456,9 @@ pragmas_named(shares, pragmas([list('"Notes"', [noted]), list('"Seen"', [seen])]
     [act(start, '"Start"', [], none, '"Notes"', by([1])),
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
      act(note, '"Note"', [], none, '"Notes"', by([1])),
-     act(share, '"Share"', [], said([[], [person(1), text('" shares the persons they noted."')]]), '"Notes"', by([1]))])).
+     act(share, '"Share"', [], said([[], [person(1), text('" shares the persons they noted."')]]), '"Notes"', by([1])),
+     act(owe, '"Owe"', ['"amount"'], none, '"Notes"', by([1])),
+     act(pass, '"Pass"', [], said([[], [person(1), text('" passes on what they owe."')]]), '"Notes"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -747,6 +752,13 @@ shares([schema(start, [],
           [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
            rs(guarded, [atom(shared, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(shared, [role(1)])])],
           [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [hm(2, atom(seen, [pvar(x)]))], [], [fa(role(2), atom(seen, [pvar(x)]))])],
+          []),
+        schema(owe, [pvar(x), num(k)],
+          [rs(guarded, [atom(owes, [pvar(x), num(k)])], [], [atom(started, []), atom(knows, [pvar(x)])], [atom(owes, [pvar(x), num(k)])])]),
+        qschema(pass, [], [pvar(x), num(k)], true,
+          [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
+           rs(guarded, [atom(passed, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(passed, [role(1)])])],
+          [conjunct([pvar(x), num(k)], 1, atom(owes, [pvar(x), num(k)]), fcons(true), [hm(2, atom(owed, [pvar(x), num(k)]))], [], [fa(role(2), atom(owed, [pvar(x), num(k)]))])],
           [])]).
 
 procedure forms(Contract).

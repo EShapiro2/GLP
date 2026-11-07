@@ -162,7 +162,7 @@ q_schema(qschema(S, _, _, C, Rs, Cj, Fs), L?) :- ground(S?), ground(Rs?), ground
     inst_base_lines(Cj?, Rs?, S?, L3),
     lapp(L1?, L2?, L12),
     lapp(L12?, L3?, L).
-%% A quantified conjunct the compiler takes: one binding a listed role, and one binding no listed role whose quantifier binds one agent variable X and which has conditional literals at a role other than the one holding its anchor, its instances a list the attempt names: "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), as GCC's appoint's "every person Alice lists as appointed, Bob lists too".  The compiler does not take yet, and refuses with the reason: a conjunct deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, whose instances that role's machine would find in its own state; one whose quantifier binds another variable, or more than one; and one with a conditional literal at a listed role, or naming X inside a name term.
+%% A quantified conjunct the compiler takes: one binding a listed role, and one binding no listed role, its quantifier binding variables Xs of any kind, which has conditional literals at a role other than the one holding its anchor, its instances, assignments of Xs, a list the attempt names (vGLP 2f1dc92 and vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC: a conjunct may bind several variables of any kind, an instance being an assignment of all of them): "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), as GCC's appoint's "every person Alice lists as appointed, Bob lists too".  The compiler does not take yet, and refuses with the reason: a conjunct deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, whose instances that role's machine would find in its own state; one binding a listed role and other variables; and one with a conditional literal at a listed role, or with a signed term of a speech-act variable of Xs.
 procedure odd_conjunct(Conjuncts?, Ints?, YesNo).
 odd_conjunct([], _, no).
 odd_conjunct([conjunct([role(I)], _, _, _, _, [], _)|Cs], Lis, B?) :- integer(I?), ground(Lis?) |
@@ -170,18 +170,25 @@ odd_conjunct([conjunct([role(I)], _, _, _, _, [], _)|Cs], Lis, B?) :- integer(I?
     neg(In?, B1),
     odd_conjunct(Cs?, Lis?, B2),
     or(B1?, B2?, B).
-odd_conjunct([conjunct([pvar(X)], Bi, _, _, [H|Hs], [], _)|Cs], Lis, B?) :- ground(X?), integer(Bi?), ground(H?), ground(Hs?), ground(Lis?) |
-    inst_odd(pvar(X?), Bi?, [H?|Hs?], Lis?, B1),
+odd_conjunct([conjunct([X|Xs], Bi, _, _, [H|Hs], [], _)|Cs], Lis, B?) :- ground(X?), ground(Xs?), integer(Bi?), ground(H?), ground(Hs?), ground(Lis?) |
+    has_role([X?|Xs?], R),
+    inst_odd([X?|Xs?], Bi?, [H?|Hs?], Lis?, B0),
+    or(R?, B0?, B1),
     odd_conjunct(Cs?, Lis?, B2),
     or(B1?, B2?, B).
 odd_conjunct([_|_], _, yes) :- otherwise | true.
-%% Whether a conjunct binding the agent variable V, its anchor held by the role Bi, with the conditional literals Hs, is one the compiler does not take: none of them at a role other than Bi, one at a listed role of Lis, or one naming V inside a name term.
-procedure inst_odd(Arg?, Integer?, HMults?, Ints?, YesNo).
-inst_odd(V, Bi, Hs, Lis, B?) :- ground(V?), integer(Bi?), ground(Hs?), ground(Lis?) |
+%% Whether the variables a quantifier binds name a role, a listed role bound with others.
+procedure has_role(Args?, YesNo).
+has_role([], no).
+has_role([role(_)|_], yes).
+has_role([_|Xs], R?) :- otherwise | has_role(Xs?, R).
+%% Whether a conjunct binding the variables Xs, its anchor held by the role Bi, with the conditional literals Hs, is one the compiler does not take: none of them at a role other than Bi, one at a listed role of Lis, or one with a signed term of a speech-act variable of Xs.
+procedure inst_odd(Args?, Integer?, HMults?, Ints?, YesNo).
+inst_odd(Xs, Bi, Hs, Lis, B?) :- ground(Xs?), integer(Bi?), ground(Hs?), ground(Lis?) |
     hm_other(Hs?, Bi?, O),
     neg(O?, NotO),
     hm_listed(Hs?, Lis?, Li),
-    hm_nested(Hs?, V?, N),
+    hm_signed(Hs?, Xs?, N),
     or(Li?, N?, B1),
     or(NotO?, B1?, B).
 procedure hm_other(HMults?, Integer?, YesNo).
@@ -194,28 +201,23 @@ hm_listed([hm(J, _)|Hs], Lis, B?) :- integer(J?), ground(Lis?) |
     mem_int(J?, Lis?, B1),
     hm_listed(Hs?, Lis?, B2),
     or(B1?, B2?, B).
-procedure hm_nested(HMults?, Arg?, YesNo).
-hm_nested([], _, no).
-hm_nested([hm(_, M)|Hs], V, B?) :- ground(V?) |
-    atom_nests(M?, V?, B1),
-    hm_nested(Hs?, V?, B2),
+procedure hm_signed(HMults?, Args?, YesNo).
+hm_signed([], _, no).
+hm_signed([hm(_, M)|Hs], Xs, B?) :- ground(Xs?) |
+    atom_signs(M?, Xs?, B1),
+    hm_signed(Hs?, Xs?, B2),
     or(B1?, B2?, B).
-procedure atom_nests(Atom?, Arg?, YesNo).
-atom_nests(atom(_, As), V, B?) :- args_nest(As?, V?, B).
-atom_nests(times(_, A), V, B?) :- atom_nests(A?, V?, B).
-atom_nests(rest(_, _, A), V, B?) :- atom_nests(A?, V?, B).
-procedure args_nest(Args?, Arg?, YesNo).
-args_nest([], _, no).
-args_nest([nterm(T)|As], V, B?) :- ground(V?) |
-    nt_nests(T?, V?, B1),
-    args_nest(As?, V?, B2),
+procedure atom_signs(Atom?, Args?, YesNo).
+atom_signs(atom(_, As), Xs, B?) :- args_sign(As?, Xs?, B).
+atom_signs(times(_, A), Xs, B?) :- atom_signs(A?, Xs?, B).
+atom_signs(rest(_, _, A), Xs, B?) :- atom_signs(A?, Xs?, B).
+procedure args_sign(Args?, Args?, YesNo).
+args_sign([], _, no).
+args_sign([sgn(Y, _)|As], Xs, B?) :- ground(Y?), ground(Xs?) |
+    mem(svar(Y?), Xs?, B1),
+    args_sign(As?, Xs?, B2),
     or(B1?, B2?, B).
-args_nest([_|As], V, B?) :- otherwise | args_nest(As?, V?, B).
-procedure nt_nests(NameTerm?, Arg?, YesNo).
-nt_nests(own_var(X), V, B?) :- ground(X?), ground(V?) | mem(pvar(X?), [V?], B).
-nt_nests(ext(T, _), V, B?) :- nt_nests(T?, V?, B).
-nt_nests(ext_any(T), V, B?) :- nt_nests(T?, V?, B).
-nt_nests(_, _, no) :- otherwise | true.
+args_sign([_|As], Xs, B?) :- otherwise | args_sign(As?, Xs?, B).
 %% The conjuncts of a schema local to their base and not to one role, those of its listed roles and those whose instances the attempt names, have one base, which is a guarding role or, where the schema has one guarding role or none, its first role: "The conjuncts of a schema that are local to their base and not to one role have one base, the base of the schema" and "the base of a schema is a guarding role or, where the schema has one guarding role or none, its first role, so that the person who proposes a part the schema determines ... finds the instances in their own state" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"; local.glp, listed_ok).  Checked here for a schema with a conjunct whose instances the attempt names; local.glp checks the bases of the listed roles.
 procedure inst_base_lines(Conjuncts?, RoleSpecs?, Constant?, Lines).
 inst_base_lines(Cj, Rs, S, L?) :- ground(Cj?), ground(Rs?), ground(S?) |
@@ -254,7 +256,7 @@ odd_qlisted([crs(qlisted(_, _, _, _), _, _, _, _, _)|_], _, yes) :- otherwise | 
 odd_qlisted([_|Rs], I, B?) :- otherwise, integer(I?) | I1 := I? + 1, odd_qlisted(Rs?, I1?, B).
 procedure conjunct_lines(YesNo?, Constant?, Lines).
 conjunct_lines(no, _, []).
-conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not carry yet: one deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "for a conjunct local to p\'s role, in d_p"); one binding no listed role whose quantifier binds other than one agent variable, or with a conditional literal at a listed role or naming its bound variable in a name term; or a listed role whose person is not the first argument of its anchor or whose quantifier binds another variable:', T?]) :-
+conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not carry yet: one deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "for a conjunct local to p\'s role, in d_p"); one binding a listed role and other variables, or with a conditional literal at a listed role or a signed term of a speech-act variable its quantifier binds; or a listed role whose person is not the first argument of its anchor or whose quantifier binds another variable:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 procedure beyond_lines(YesNo?, Constant?, Lines).
 beyond_lines(no, _, []).
@@ -295,7 +297,7 @@ expr_beyond(sgn(_, _), no).
 expr_beyond(num(_), no).
 expr_beyond(any, no).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-expr_beyond(ilist(_), no).
+expr_beyond(ilist(_, _), no).
 procedure fn_named(Constant?, YesNo).
 fn_named(min, no).
 fn_named(floor, no).
@@ -541,7 +543,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_acts(W?, Was),
     worded_lx(W?, Lx2),
     base_lines(C?, Was?, Lx2?, Lb),
-    lapp(Lm0?, Lb?, Lm),
+    worded_lx(W?, Lx5),
+    inst_conv_lines(Lx5?, Lc),
+    lapp(Lb?, Lc?, Lbc),
+    lapp(Lm0?, Lbc?, Lm),
     lapp(Le0?, Lm?, Le),
     name_class_lines(Ci?, Ps?, Ln0),
     name_class_decl(Ln0?, Ln1),
@@ -562,7 +567,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     lapp(L3?, Lnx?, L3x),
     lapp(L2?, ['',
         'procedure class_of(Constant?, Binding?, Peer?, Class).'|L3x?], L2x),
-    lapp(L1?, Lr1?, L1x),
+    worded_lx(W?, Lx4),
+    inst_type_lines(Lx4?, Lt),
+    lapp(L1?, Lt?, L1t),
+    lapp(L1t?, Lr1?, L1x),
     lapp(Lr?, La1?, Lr1),
     lapp(Le?, ['',
         'procedure reflexive_preds(Preds).',
@@ -619,7 +627,7 @@ var_types_l([sgn(_, _)|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([any|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([num(_)|Vs], Lis, ['Integer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 %% The place of the instances of a conjunct, the list of them, each a person, the one agent variable its quantifier binds, in the order of identifiers (inst_heads).
-var_types_l([ilist(_)|Vs], Lis, ['List(Peer)'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([ilist(_, T)|Vs], Lis, [L?|Ts?]) :- ground(T?) | string_concat(['List(', T?, ')'], L), var_types_l(Vs?, Lis?, Ts).
 procedure role_type(YesNo?, String).
 role_type(yes, 'List(Peer)').
 role_type(no, 'Peer').
@@ -648,7 +656,7 @@ var_types([any|Vs], Ts?) :- var_types(Vs?, Ts).
 %% A numeric variable the schema-binding binds, a number in the class term and in the request, so the request form takes it, a number field (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a request names it, so the request form takes it").
 var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-var_types([ilist(_)|Vs], Ts?) :- var_types(Vs?, Ts).
+var_types([ilist(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
 %% Whether the contract requires the day: a schema requires the atom today(d) at a role (vGLP, Section 5.4, "Act schemas as local specifications": "A contract may require the day: the compiled agent reads, with its triggers, a calendar, a stream of dates the device writes, one a day, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema may require at a role").
 procedure day_required(Contract?, YesNo).
@@ -868,7 +876,7 @@ arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
 %% The wildcard is in no atom of a state, a cleared atom being none (rs_atoms); the clause covers the type and is never reached.
 arg_kinds([any|Xs], Ks?) :- arg_kinds(Xs?, Ks).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-arg_kinds([ilist(_)|Xs], Ks?) :- arg_kinds(Xs?, Ks).
+arg_kinds([ilist(_, _)|Xs], Ks?) :- arg_kinds(Xs?, Ks).
 %% Atom ::= the alternatives, separated by ;, each the predicate applied to its argument types, a predicate of no argument a constant.
 procedure atom_alts(Sigs?, Lines).
 atom_alts([], ['.']).
@@ -947,21 +955,35 @@ binding_line_l([I|Is], S, Vs, Lb, [T?, ':-', G?, '.']) :- integer(I?), ground(Is
     var_names(Vs?, 1, Ns, _),
     bind_terms_skip(Vs?, 1, [I?|Is?], Bs0),
     sapp(Bs0?, Lb?, Bs),
-    list_names([I?|Is?], Lqs),
+    list_args([I?|Is?], Vs?, S?, Lqs, Pre),
     named_call(S?, Ns?, Hd),
     term_to_string(S?, S1),
     term_to_string(S?, S2),
     list_text(Bs?, Bl),
     list_text(Lqs?, Ql),
     call_text(binding_of, [Hd?, S1?, 'B?'], T),
-    call_text(listed_binding, [S2?, Bl?, Ql?, 'B'], G).
-%% The names, V_i?, of the places i of the listed roles, as a list.
-procedure list_names(Ints?, Strings).
-list_names([], []).
-list_names([I|Is], [Q?|Qs?]) :- integer(I?) |
+    call_text(listed_binding, [S2?, Bl?, Ql?, 'B'], G0),
+    string_concat([Pre?, G0?], G).
+%% The lists of the places Lis of a class term, ppl(Vi?) at a listed role's, and ins(Iki?) at the instances of the k-th conjunct, Iki the instances in the shared text's form, which the goals Pre give, each followed by a comma (inst_in_S_K).
+procedure list_args(Ints?, Args?, Constant?, Strings, String).
+list_args([], _, _, [], '').
+list_args([I|Is], Vs, S, [A?|As?], P?) :- integer(I?), ground(Vs?), ground(S?) |
+    nth_arg(I?, Vs?, V),
     vname(I?, F),
     name_of(F?, _, Q),
-    list_names(Is?, Qs).
+    list_arg(V?, Q?, S?, A, P1),
+    list_args(Is?, Vs?, S?, As, P2),
+    string_concat([P1?, P2?], P).
+procedure list_arg(Arg?, String?, Constant?, String, String).
+list_arg(ilist(K, _), Q, S, A?, P?) :- integer(K?), ground(Q?), ground(S?) |
+    term_to_string(K?, Kt),
+    string_concat(['Ik', Kt?], J),
+    string_concat(['Ik', Kt?, '?'], Jq),
+    ix_name('inst_in_', S?, K?, I),
+    call_text(I?, [Q?, J?], P0),
+    string_concat([P0?, ', '], P),
+    call_text(ins, [Jq?], A).
+list_arg(V, Q, _, A?, '') :- otherwise, ground(V?), ground(Q?) | call_text(ppl, [Q?], A).
 procedure bind_terms_skip(Args?, Integer?, Ints?, Strings).
 bind_terms_skip([], _, _, []).
 bind_terms_skip([V|Vs], I, Lis, Bs?) :- ground(V?), integer(I?), ground(Lis?) |
@@ -1039,19 +1061,27 @@ val_goals([V|Vs], I, S, Lis, [G?|L?]) :- ground(V?), integer(I?), ground(S?), gr
     vname(I?, F),
     name_of(F?, N, _),
     mem(I?, Lis?, In),
-    val_goal_l(In?, I?, V?, N?, G),
+    val_goal_l(In?, I?, V?, N?, S?, G),
     I1 := I? + 1,
     val_goals1(Vs?, I1?, S?, Lis?, L).
 procedure val_goals1(Args?, Integer?, Constant?, Ints?, Lines).
 val_goals1([], _, _, _, ['.']).
 val_goals1([V|Vs], I, S, Lis, [','|L?]) :- val_goals([V?|Vs?], I?, S?, Lis?, L).
-procedure val_goal_l(YesNo?, Integer?, Arg?, String?, String).
-val_goal_l(yes, I, V, N, G?) :- list_goal(V?, I?, N?, G).
-val_goal_l(no, _, V, N, G?) :- val_goal(V?, N?, G).
-%% At the place of the instances of the K-th conjunct, the instances the binding carries for it, in the order of identifiers (insts_of(B, K, Vi)).
-procedure list_goal(Arg?, Integer?, String?, String).
-list_goal(ilist(K), _, N, G?) :- integer(K?), ground(N?) | term_to_string(K?, Kt), call_text(insts_of, ['B?', Kt?, N?], G).
-list_goal(V, I, N, G?) :- otherwise, ground(V?), integer(I?), ground(N?) | term_to_string(I?, It), call_text(copies_of, ['B?', It?, N?], G).
+procedure val_goal_l(YesNo?, Integer?, Arg?, String?, Constant?, String).
+val_goal_l(yes, I, V, N, S, G?) :- list_goal(V?, I?, N?, S?, G).
+val_goal_l(no, _, V, N, _, G?) :- val_goal(V?, N?, G).
+%% At the place of the instances of the K-th conjunct, the instances the binding carries for it, in the order of terms, in the class term's form (inst_list(S, B, K, Jk), inst_out_S_K(Jk, Vi)).
+procedure list_goal(Arg?, Integer?, String?, Constant?, String).
+list_goal(ilist(K, _), _, N, S, G?) :- integer(K?), ground(N?), ground(S?) |
+    term_to_string(K?, Kt),
+    term_to_string(S?, St),
+    string_concat(['Jk', Kt?], J),
+    string_concat(['Jk', Kt?, '?'], Jq),
+    ix_name('inst_out_', S?, K?, O),
+    call_text(inst_list, [St?, 'B?', Kt?, J?], G1),
+    call_text(O?, [Jq?, N?], G2),
+    string_concat([G1?, ', ', G2?], G).
+list_goal(V, I, N, _, G?) :- otherwise, ground(V?), integer(I?), ground(N?) | term_to_string(I?, It), call_text(copies_of, ['B?', It?, N?], G).
 procedure val_goal(Arg?, String?, String).
 val_goal(svar(X), N, G?) :- ground(X?), ground(N?) | term_to_string(svar(X?), Vt), call_text(val_speech, [Vt?, 'B?', 'D?', N?], G).
 val_goal(role(I), N, G?) :- ground(N?) | term_to_string(role(I?), Vt), call_text(val_peer, [Vt?, 'B?', 'D?', N?], G).
@@ -1064,7 +1094,7 @@ val_goal(sgn(_, _), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', '
 %% The wildcard is no variable of a schema; the clause covers the type.
 val_goal(any, N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
 %% The place of a conjunct's instances is a list (list_goal); the clause covers the type.
-val_goal(ilist(_), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
+val_goal(ilist(_, _), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
 
 procedure vname(Integer?, Found).
 vname(1, named('V1', 'V1?')).
@@ -1175,23 +1205,99 @@ lx_table([qschema(S, _, _, _, _, Cj, Fs)|Ss], Lx?) :- ground(S?), ground(Cj?) |
     app(L1?, L23?, L123),
     app(L0?, L123?, Lx).
 lx_table([_|Ss], Lx?) :- otherwise | lx_table(Ss?, Lx).
-%% Each conjunct binding no listed role, its quantifier binding the agent variable X, the K-th of its schema in conjunct order: ix(S, K, Base, X, A, Phi, CAdd, CDel), its instances a list the attempt names (q_lines lets through no other such conjunct).
+%% Each conjunct binding no listed role, its quantifier binding the variables Xs, the K-th of its schema in conjunct order: ix(S, K, Base, Xs, A, Phi, CAdd, CDel), its instances a list the attempt names (q_lines lets through no other such conjunct).
 procedure ix_conjs(Conjuncts?, Constant?, Integer?, Lxs).
 ix_conjs([], _, _, []).
-ix_conjs([conjunct([pvar(X)], Bi, A, Phi, CA, CD, _)|Cs], S, K, [ix(S?, K?, Bi?, pvar(X?), A?, Phi?, CA?, CD?)|Ls?]) :- ground(S?), integer(K?) |
+ix_conjs([conjunct([role(_)], _, _, _, _, _, _)|Cs], S, K, Ls?) :- ix_conjs(Cs?, S?, K?, Ls).
+ix_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, K, [ix(S?, K?, Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- otherwise, ground(S?), integer(K?) |
     K1 := K? + 1,
     ix_conjs(Cs?, S?, K1?, Ls).
-ix_conjs([_|Cs], S, K, Ls?) :- otherwise | ix_conjs(Cs?, S?, K?, Ls).
 %% The lists of instances of a schema's conjuncts, instances(K, Base, X, A, Phi, CAdd, CDel), in conjunct order.
 procedure ix_listings(Lxs?, Constant?, TListings).
 ix_listings([], _, []).
 ix_listings([ix(S1, K, Bi, X, A, Phi, CA, CD)|Lx], S, [instances(K?, Bi?, X?, A?, Phi?, CA?, CD?)|Is?]) :- S1? =?= S? | ix_listings(Lx?, S?, Is).
 ix_listings([_|Lx], S, Is?) :- otherwise | ix_listings(Lx?, S?, Is).
-%% Their places, ilist(K), after the variables of the class term, in conjunct order.
+%% Their places, ilist(K, T), after the variables of the class term, in conjunct order, T the type of an instance (ix_type).
 procedure ix_ilists(Lxs?, Constant?, Args).
 ix_ilists([], _, []).
-ix_ilists([ix(S1, K, _, _, _, _, _, _)|Lx], S, [ilist(K?)|Ks?]) :- S1? =?= S? | ix_ilists(Lx?, S?, Ks).
+ix_ilists([ix(S1, K, _, Xs, _, _, _, _)|Lx], S, [ilist(K?, T?)|Ks?]) :- S1? =?= S?, ground(S?), integer(K?) | ix_type(S?, K?, Xs?, T), ix_ilists(Lx?, S?, Ks).
 ix_ilists([_|Lx], S, Ks?) :- otherwise | ix_ilists(Lx?, S?, Ks).
+%% The type of an instance of the K-th conjunct of the schema S, binding the variables Xs: the type of its one variable's value, Peer, Speech or Integer; or, binding several, Inst_S_K ::= i(T_1, ..., T_n), the types of their values in their order (inst_type_lines), since a type expression in a class term is a name and a list in a class term holds no list (vGLP, Section 5.1, Definition "Volitional Procedure, Interactive Type": "never under another Stream or List").
+procedure ix_type(Constant?, Integer?, Args?, String).
+ix_type(_, _, [X], T?) :- kind_type(X?, T).
+ix_type(S, K, [_, _|_], T?) :- ix_name('Inst_', S?, K?, T).
+%% A quantifier binds at least one variable (GSC, the reader's conjunct); the clause covers the type.
+ix_type(_, _, [], 'Peer').
+procedure kind_type(Arg?, String).
+kind_type(svar(_), 'Speech').
+kind_type(num(_), 'Integer').
+kind_type(_, 'Peer') :- otherwise | true.
+procedure kind_wrap(Arg?, String).
+kind_wrap(svar(_), 's').
+kind_wrap(num(_), 'n').
+kind_wrap(_, 'p') :- otherwise | true.
+%% A name of the K-th conjunct of the schema S: P, S, _ and K.
+procedure ix_name(String?, Constant?, Integer?, String).
+ix_name(P, S, K, T?) :- ground(P?), ground(S?), integer(K?) |
+    term_to_string(S?, St),
+    term_to_string(K?, Kt),
+    string_concat([P?, St?, '_', Kt?], T).
+%% Inst_S_K ::= i(T_1, ..., T_n). for each conjunct binding several variables.
+procedure inst_type_lines(Lxs?, Lines).
+inst_type_lines([], []).
+inst_type_lines([ix(S, K, _, [X, Y|Zs], _, _, _, _)|Lx], ['', T?|L?]) :- ground(S?), integer(K?), ground(X?), ground(Y?), ground(Zs?) |
+    ix_name('Inst_', S?, K?, N),
+    var_kind_types([X?, Y?|Zs?], Ts),
+    call_text(i, Ts?, I),
+    string_concat([N?, ' ::= ', I?, '.'], T),
+    inst_type_lines(Lx?, L).
+inst_type_lines([_|Lx], L?) :- otherwise | inst_type_lines(Lx?, L).
+procedure var_kind_types(Args?, Strings).
+var_kind_types([], []).
+var_kind_types([X|Xs], [T?|Ts?]) :- kind_type(X?, T), var_kind_types(Xs?, Ts).
+%% For each conjunct whose instances the attempt names, inst_out_S_K(Is, L), the instances of the shared text's form, each the list of its values, to the class term's list L of them, and inst_in_S_K(L, Is), back (insts_of, listed_binding).
+procedure inst_conv_lines(Lxs?, Lines).
+inst_conv_lines([], []).
+inst_conv_lines([ix(S, K, _, Xs, _, _, _, _)|Lx], L?) :- ground(S?), integer(K?), ground(Xs?) |
+    ix_name('inst_out_', S?, K?, O),
+    ix_name('inst_in_', S?, K?, I),
+    ix_type(S?, K?, Xs?, T),
+    inst_vals_text(Xs?, 1, Vi, Vo),
+    inst_term_text(Xs?, Wi, Wo),
+    string_concat(['procedure ', O?, '(Insts?, List(', T?, ')).'], P1),
+    string_concat([O?, '([], []).'], C1),
+    string_concat([O?, '([', Vi?, '|Is], [', Wo?, '|Os?]) :- ', O?, '(Is?, Os).'], C2),
+    string_concat([O?, '([_|Is], Os?) :- otherwise | ', O?, '(Is?, Os).'], C3),
+    string_concat(['procedure ', I?, '(List(', T?, ')?, Insts).'], P2),
+    string_concat([I?, '([], []).'], C4),
+    string_concat([I?, '([', Wi?, '|Os], [', Vo?, '|Is?]) :- ', I?, '(Os?, Is).'], C5),
+    inst_conv_lines(Lx?, L1),
+    lapp(['', P1?, C1?, C2?, C3?, '', P2?, C4?, C5?], L1?, L).
+inst_conv_lines([_|Lx], L?) :- otherwise | inst_conv_lines(Lx?, L).
+%% The list of the values of an instance, [p(V1), s(V2), ...] as read and [p(V1?), s(V2?), ...] as written.
+procedure inst_vals_text(Args?, Integer?, String, String).
+inst_vals_text(Xs, J, Ti?, To?) :- ground(Xs?), integer(J?) |
+    val_texts(Xs?, J?, Ai, Ao),
+    list_text(Ai?, Ti),
+    list_text(Ao?, To).
+procedure val_texts(Args?, Integer?, Strings, Strings).
+val_texts([], _, [], []).
+val_texts([X|Xs], J, [A?|As?], [B?|Bs?]) :- ground(X?), integer(J?) |
+    kind_wrap(X?, W),
+    vname(J?, F),
+    name_of(F?, N, Q),
+    call_text(W?, [N?], A),
+    call_text(W?, [Q?], B),
+    J1 := J? + 1,
+    val_texts(Xs?, J1?, As, Bs).
+%% The class term's form of an instance: its one value, V1, or i(V1, ..., Vn); as read and as written.
+procedure inst_term_text(Args?, String, String).
+inst_term_text([], 'V1', 'V1?').
+inst_term_text([_], 'V1', 'V1?').
+inst_term_text([X, Y|Zs], Ti?, To?) :- ground(X?), ground(Y?), ground(Zs?) |
+    var_names([X?, Y?|Zs?], 1, Ns, Qs),
+    call_text(i, Ns?, Ti),
+    call_text(i, Qs?, To).
 %% Their bases.
 procedure ix_bases(Lxs?, Constant?, Ints).
 ix_bases([], _, []).
@@ -1637,7 +1743,7 @@ a_field(num(_), _, _, yes).
 a_field(nterm(_), _, _, no).
 a_field(sgn(_, _), _, _, no).
 a_field(any, _, _, no).
-a_field(ilist(_), _, _, no).
+a_field(ilist(_, _), _, _, no).
 procedure keep_int(YesNo?, Integer?, Ints?, Ints).
 keep_int(yes, I, Is, [I?|Is?]).
 keep_int(no, _, Is, Is?).
@@ -1662,7 +1768,7 @@ a_person(num(_), _, _, no).
 a_person(nterm(_), _, _, no).
 a_person(sgn(_, _), _, _, no).
 a_person(any, _, _, no).
-a_person(ilist(_), _, _, no).
+a_person(ilist(_, _), _, _, no).
 
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows": "The compiler prints three widget declarations for a platform: for its request type, a menu of the buttons and the fields of the contract's acts; for its approval type, the question with the buttons yes and no"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the buttons the contract's pragmas give, button(B, Acts), B the label in brackets and Acts the acts it names (Section 5.4, "The contract's words": "A button is of the acts it names"); each act, for each guarding role at which it is proposed, act(F, M, Pre, Binds, Fields, Same, Text): F its schema, M the place of the proposer in its request, Pre the atoms its schema requires and forbids at the proposer's role and what the schemas prove, Binds the places of its request those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, in the schema's order, Same its places possibly one person and Text the text of its request form (Section 6.2: the request widget "draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role, with the values that way binds and the act's fields").  It carries no tab and no row: where the construct family draws a button is its own choice, from the atoms that bind the way (Section 6.2: "How the buttons of one act are arranged, each beside the atoms that bind it or as one button with a picker, is the construct family's").  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  The grammar is README.md's beside this file, 6.
 procedure widget_lines(Worded?, Contract?, Preds?, DrawCtx?, Lines).
@@ -1775,7 +1881,7 @@ field_type(num(_), _, number).
 field_type(nterm(_), _, text).
 field_type(sgn(_, _), _, text).
 field_type(any, _, text).
-field_type(ilist(_), _, text).
+field_type(ilist(_, _), _, text).
 %% An act for each guarding role G at which it is proposed: its proposer's place M, its precondition there (condition_places) and the places that precondition binds.
 procedure role_acts(Ints?, Constant?, Args?, RoleSpecs?, DrawCtx?, WFields?, Preconds?, FWords?, WActs).
 role_acts([], _, _, _, _, _, _, _, []).

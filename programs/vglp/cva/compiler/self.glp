@@ -24,9 +24,9 @@
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 %% Act schemas allow numbers (GSC 9231074, Section 3.2; vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it"): num(X) is the numeric variable X where X is a name and the number X where X is a number, and times(K, A) is the atom A with the multiplicity K, as programs/gsc/self.glp writes them.
-%% ilist(K) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
+%% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer) ; num(Constant) ; any ; ilist(Integer).
+            ; sgn(Constant, Integer) ; num(Constant) ; any ; ilist(Integer, String).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -302,7 +302,7 @@ is_nvar(svar(_), no).
 is_nvar(nterm(_), no).
 is_nvar(sgn(_, _), no).
 is_nvar(any, no).
-is_nvar(ilist(_), no).
+is_nvar(ilist(_, _), no).
 %% The numeric arguments a constraint names, those of its expressions included.
 procedure con_args(Constraint?, Args).
 con_args(true, []).
@@ -337,7 +337,7 @@ expr_args(sgn(Y, J), [sgn(Y?, J?)]).
 %% The wildcard is in no constraint (GSC 327e035: it occurs only in a cleared atom); the clause covers the type.
 expr_args(any, [any]).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-expr_args(ilist(_), []).
+expr_args(ilist(_, _), []).
 %% A function's arguments; a cardinality and a sum, which bind their own variables, are refused before any procedure reads their arguments (cvac.glp, q_lines), and the clauses cover the type.
 expr_args(fn(_, Es), A?) :- exprl_args(Es?, A).
 expr_args(cardinality(_, _, _, _), []).
@@ -350,17 +350,17 @@ exprl_args([E|Es], A?) :- expr_args(E?, A1), exprl_args(Es?, A2), app(A1?, A2?, 
 Listing  ::= listing(Integer, Integer, Constant, Args).
 Listings ::= [] ; [Listing | Listings].
 %% A listed role as the shared text reads it (cvac.glp, text_schemas): listing(I, Base, Rho, Args, Phi, CAdd, CDel), the condition Phi of its quantifier and the conditional literals CAdd and CDel of its conjunct, each hm(J, M) the atom M at the agent role J for each person of the role (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "the instances of a conjunct with a listed role give the people of the role, one for each instance, and the instances of a conjunct with conditional literals give the atoms each adds or deletes").
-%% A conjunct with conditional literals at a role other than the one holding its anchor, binding no listed role, as the shared text reads it: instances(K, Base, X, A, Phi, CAdd, CDel), the K-th such conjunct of its schema, Base the index of the role holding its anchor A, X the agent variable its quantifier binds, Phi its condition and CAdd and CDel its conditional literals, each hm(J, M) the atom M at the agent role J for each instance, X in M standing for that instance (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "the instances of a conjunct with conditional literals give the atoms each adds or deletes"; "A conjunct ... with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction").
+%% A conjunct with conditional literals at a role other than the one holding its anchor, binding no listed role, as the shared text reads it: instances(K, Base, Xs, A, Phi, CAdd, CDel), the K-th such conjunct of its schema, Base the index of the role holding its anchor A, Xs the variables its quantifier binds, of any kind, an instance an assignment of all of them, Phi its condition and CAdd and CDel its conditional literals, each hm(J, M) the atom M at the agent role J for each instance, each variable of Xs in M standing for its value at that instance (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "the instances of a conjunct with conditional literals give the atoms each adds or deletes"; "A conjunct ... with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction").
 TListing  ::= listing(Integer, Integer, Constant, Args, Form, HMults, HMults)
-            ; instances(Integer, Integer, Arg, Atom, Form, HMults, HMults).
+            ; instances(Integer, Integer, Args, Atom, Form, HMults, HMults).
 TListings ::= [] ; [TListing | TListings].
 %% A schema as the shared text reads it: schema(Name, Head, Roles), or lschema(Name, Head, Roles, Listings) for one with listed roles.
 TSchema   ::= schema(Constant, Args, RoleSpecs) ; lschema(Constant, Args, RoleSpecs, TListings).
 TSchemas  ::= [] ; [TSchema | TSchemas].
 %% The condition and the conditional literals of each listed role of a schema with quantifiers, lx(Schema, I, Phi, CAdd, CDel) (cvac.glp, lx_table).
-%% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, X, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
+%% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
-            ; ix(Constant, Integer, Integer, Arg, Atom, Form, HMults, HMults).
+            ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).
@@ -375,7 +375,7 @@ list_places(Rs, Hd, Lis?) :- ground(Rs?), ground(Hd?) |
     app(L1?, L2?, Lis).
 procedure ilist_places(Args?, Integer?, Ints).
 ilist_places([], _, []).
-ilist_places([ilist(_)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, ilist_places(Vs?, I1?, Is).
+ilist_places([ilist(_, _)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, ilist_places(Vs?, I1?, Is).
 ilist_places([_|Vs], I, Is?) :- otherwise, integer(I?) | I1 := I? + 1, ilist_places(Vs?, I1?, Is).
 procedure listed_all(RoleSpecs?, Integer?, Listings).
 listed_all([], _, []).

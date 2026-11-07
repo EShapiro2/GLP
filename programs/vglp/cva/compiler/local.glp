@@ -279,7 +279,7 @@ var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
 var_name(any, novar).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-var_name(ilist(_), novar).
+var_name(ilist(_, _), novar).
 procedure same_name(VName?, VName?, YesNo).
 same_name(vn(N), vn(M), yes) :- N? =?= M? | true.
 same_name(_, _, no) :- otherwise | true.
@@ -455,7 +455,7 @@ lin_coef(sgn(_, _), _, 0).
 %% The wildcard is in no constraint (GSC 327e035: it occurs only in a cleared atom); the clause covers the type.
 lin_coef(any, _, 0).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-lin_coef(ilist(_), _, 0).
+lin_coef(ilist(_, _), _, 0).
 %% A function, a count and a sum carry no variable of the equality's own: a count or a sum is evaluated in the state, its value a number (the printed text's con_counted), and a function of numbers alone is one.
 lin_coef(fn(_, _), _, 0).
 lin_coef(cardinality(_, _, _, _), _, 0).
@@ -588,7 +588,7 @@ variables_of([nterm(_)|As], R?) :- variables_of(As?, R).
 variables_of([sgn(_, _)|As], R?) :- variables_of(As?, R).
 variables_of([any|As], R?) :- variables_of(As?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-variables_of([ilist(_)|As], R?) :- variables_of(As?, R).
+variables_of([ilist(_, _)|As], R?) :- variables_of(As?, R).
 %% The arguments with each signed term sgn(y, i) taken as its variable y and
 %% its role i, which it names; the wildcard of a cleared atom is no variable and names nothing, and is left out (vGLP f8127b1, Section 5.4, "Act schemas as local specifications").
 procedure flat_args(Args?, Args).
@@ -875,7 +875,7 @@ person_vars([sgn(_, _)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([any|Vs], R?) :- person_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-person_vars([ilist(_)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([ilist(_, _)|Vs], R?) :- person_vars(Vs?, R).
 procedure speech_vars(Args?, Args).
 speech_vars([], []).
 speech_vars([svar(X)|Vs], [svar(X?)|R?]) :- speech_vars(Vs?, R).
@@ -886,7 +886,7 @@ speech_vars([sgn(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-speech_vars([ilist(_)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([ilist(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 
 %% rgs(Vs, N, B, Bs): every extension of B sending Vs to people, person(N)
 %% being the first not yet used.
@@ -1143,7 +1143,7 @@ adm_var(num(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
 adm_var(any, _, _, _, yes).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-adm_var(ilist(_), _, _, _, yes).
+adm_var(ilist(_, _), _, _, _, yes).
 procedure adm_var1(YesNo?, Found?, Ints?, YesNo).
 adm_var1(yes, _, _, yes).
 adm_var1(no, found(sp(_, S)), Gp, R?) :- mem(S?, Gp?, R).
