@@ -121,6 +121,34 @@ jobs:
           name: macos
           path: GAS2-macos.zip
 
+  ios:
+    needs: tree
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: servers/gas2/app/assets
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+      # unsigned: a person signs it with their own Apple ID when they sideload it
+      # (Sideloadly, AltStore)
+      - name: Build
+        working-directory: servers/gas2/app
+        run: flutter pub get && flutter build ios --release --no-codesign
+      - name: Pack the .ipa
+        run: |
+          mkdir -p ipa/Payload
+          cp -R servers/gas2/app/build/ios/iphoneos/Runner.app ipa/Payload/
+          cd ipa && zip -qr "$GITHUB_WORKSPACE/GAS2.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: GAS2.ipa
+
   linux:
     needs: tree
     runs-on: ubuntu-latest
@@ -151,7 +179,7 @@ jobs:
           path: GAS2-linux.tar.gz
 
   publish:
-    needs: [android, windows, macos, linux]
+    needs: [android, windows, macos, linux, ios]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -166,7 +194,7 @@ jobs:
         run: |
           ls -la out
           gh release view gas2-latest >/dev/null 2>&1 || gh release create gas2-latest --title "GAS2 (latest)" --notes "The GAS2 apps, built from the GAS2 branch." --prerelease --target "${{ github.sha }}"
-          for f in out/GAS2.apk out/GAS2-windows.zip out/GAS2-macos.zip out/GAS2-linux.tar.gz; do
+          for f in out/GAS2.apk out/GAS2.ipa out/GAS2-windows.zip out/GAS2-macos.zip out/GAS2-linux.tar.gz; do
             [ -f "$f" ] && gh release upload gas2-latest "$f" --clobber
           done
           gh release edit gas2-latest --notes "The GAS2 apps, built from the GAS2 branch at ${{ github.sha }} on $(date -u +%Y-%m-%dT%H:%MZ)."
