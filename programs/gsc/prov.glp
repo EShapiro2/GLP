@@ -433,8 +433,30 @@ procedure body_names(RoleSpecs?, Forms?, Constraint?, Preds?, Bases).
 body_names(Rs, Fs, Cn, E, R?) :- ground(Rs?), ground(Fs?), ground(Cn?), ground(E?) |
     conj_flat(fcons(Cn?), [], T0),
     forms_flat(Fs?, T0?, T1),
-    body_lits(Rs?, 1, T1?, Cs),
+    body_names0(T1?, Rs?, E?, R).
+
+procedure body_names0(Forms?, RoleSpecs?, Preds?, Bases).
+body_names0(T, Rs, E, R?) :- ground(T?), ground(Rs?), ground(E?) |
+    has_eq(T?, Q),
+    body_names1(Q?, T?, Rs?, E?, R).
+
+% The atoms the agent roles require are psi already (def:grounded), so they
+% are read into the conjunction only where a conjunct u = v of it may carry
+% what they name to another variable; a body of literals alone names nothing
+% more than its psi.
+procedure body_names1(Ans?, Forms?, RoleSpecs?, Preds?, Bases).
+body_names1(no, [], _, _, []).
+body_names1(no, [F|Fs], Rs, E, R?) :- ground(F?), ground(Fs?), ground(Rs?), ground(E?) |
+    conj_names([F?|Fs?], Rs?, E?, R).
+body_names1(yes, T, Rs, E, R?) :- ground(T?), ground(Rs?), ground(E?) |
+    body_lits(Rs?, 1, T?, Cs),
     conj_names(Cs?, Rs?, E?, R).
+
+% Whether a conjunct of a conjunction is u = v.
+procedure has_eq(Forms?, Ans).
+has_eq([], no).
+has_eq([fcons(eq(_, _))|_], yes).
+has_eq([_|Fs], R?) :- otherwise | has_eq(Fs?, R).
 
 % The conjuncts of the safe formulas of a body, before T.
 procedure forms_flat(Forms?, Forms?, Forms).
