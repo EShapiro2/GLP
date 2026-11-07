@@ -13,7 +13,7 @@ befriend: friend(Alice, Bob), friend(Bob, Alice) <-
 unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
     identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-create: item(Alice, x) <-
+sign: item(Alice, x) <-
     identity(Alice), not item(Alice, x) guarded by Alice
 
 forward: item(Bob, sgn(x, Alice)) <-

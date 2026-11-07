@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% GFP.glp --- Grassroots Forwarding with Provenance, GSC's, extending GSG, in the clause syntax
 %% of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GFP.txt
-%% beside this file: create is GFP:1, Creation, and forward GFP:2, Forwarding; GKK's and GSG's
+%% beside this file: sign is GFP:1, Signing, and forward GFP:2, Forwarding; GKK's and GSG's
 %% schemas come first, every role but establish's requiring identity.  sgn(x, 'Alice') is the
 %% speech act x signed over by the agent in the role Alice (GSC, Section 3.2, signed terms).
 %% ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ contract_named(gfp,
        [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
        [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
         atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
-    sas(create, ['Alice'], [x],
+    sas(sign, ['Alice'], [x],
        [atom(item, ['Alice', x])],
        [atom(identity, ['Alice']), not(atom(item, ['Alice', x]))], true, ['Alice']),
     sas(forward, ['Alice', 'Bob'], [x],

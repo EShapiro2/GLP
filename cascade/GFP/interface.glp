@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), create('Peer', 'Speech'), forward('Peer', 'Peer', 'Speech')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), create('Peer', 'Speech'), forward('Peer', 'Peer', 'Speech')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), forward('Peer', 'Peer', 'Speech')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), sign('Peer', 'Speech'), forward('Peer', 'Peer', 'Speech')]),
   type('Request', [propose('Proposal'), refresh]),
   type('Atom', [identity, knows('Peer'), friend('Peer'), item('Speech')]),
   type('Peer', ['Key']),
@@ -1077,7 +1077,7 @@ interface([
   compiled(form_utterance, 2),
   compiled(join_speech_speech_2, 3),
   compiled(form_speech, 2),
-  compiled(join_proposal_create_2, 3),
+  compiled(join_proposal_sign_2, 3),
   compiled(join_proposal_forward_3, 4),
   compiled(form_proposal, 2),
   compiled(join_request_propose_1, 2),
