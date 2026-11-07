@@ -24,6 +24,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 button.b { border: 0; background: var(--blue); color: #fff; font: inherit; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 99px; cursor: pointer; white-space: nowrap; }
 button.b.alt { background: #e8e8ed; color: var(--ink); }
 button.b.ok { background: var(--ok); }
+button.b.no { background: #c4421a; }
 button.b:disabled { opacity: .45; cursor: default; }
 input, select { font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; width: 100%; min-width: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -145,15 +146,15 @@ function render() {
   const installed = S.apps.filter(a => a.installed);
   const step = (n, done, html) => `<div class="step"><span class="n ${done ? 'done' : ''}">${done ? '✓' : n}</span><div class="grow">${html}</div></div>`;
   let h = '';
-  if (!S.trusted || !installed.length || !S.friends.length) {
+  if (!installed.length || !S.friends.length) {
     h += `<div class="card" style="display:grid;gap:10px">
-      ${step(1, S.trusted, S.trusted ? 'Your compiler is trusted' : `Trust your own compiler: the mini-apps here are certified under your key. <button class="b" onclick="act({op:'trust'})">Trust</button>`)}
-      ${step(2, installed.length > 0, 'Install a mini-app, below')}
-      ${step(3, S.friends.length > 0, 'Add a person near you, or by their key, and they say yes')}
+      ${step(1, installed.length > 0, 'Install a mini-app, below: your device certifies it under your own key')}
+      ${step(2, S.friends.length > 0, 'Add a person near you, or by their key, and they say yes')}
     </div>`;
   }
   h += `<h2>You</h2><div class="card"><div class="small muted">Your key; give it to a person to add you</div>
-    <div class="row"><span class="mono grow" id="mykey">${esc(S.me)}</span><button class="b alt" onclick="copyKey()">Copy</button></div>${S.hosted ? `
+    <div class="row"><span class="mono grow" id="mykey">${esc(S.me)}</span><button class="b alt" onclick="copyKey()">Copy</button></div>
+    <div class="row">${over ? `<span class="grow small">This deletes your key, your friends and your mini-apps here.</span><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button>` : `<span class="grow"></span><button class="b alt" onclick="over=true;draw()">Start over</button>`}</div>${S.hosted ? `
     <div class="note"><b>GAS2 on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you.  This browser keeps the only way back to you here; clearing its site data loses this person.  The app on a phone or computer keeps your key on the device.</div>` : ''}</div>`;
   h += `<h2>People</h2><div class="card">`;
   for (const k of S.friendRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b> asks to be your friend</span><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false})">No</button></div>`;
@@ -170,7 +171,7 @@ function render() {
   h += `<h2>Mini-apps</h2><div class="card">`;
   for (const a of S.apps) {
     h += `<div class="row"><span class="grow"><b>${esc(a.id)}</b> <span class="muted">${esc(a.title)}</span></span>
-      ${a.installed ? `<button class="b" onclick="openApp('${a.app}')">Open</button>` : `<button class="b alt" ${S.trusted ? '' : 'disabled'} onclick="act({op:'install',app:'${a.app}'})">Install</button>`}</div>`;
+      ${a.installed ? `<button class="b" onclick="openApp('${a.app}')">Open</button>` : a.preparing ? `<button class="b alt" disabled>Preparing…</button>` : `<button class="b alt" onclick="act({op:'install',app:'${a.app}'})">Install</button>`}</div>`;
   }
   h += `<div class="small muted" style="margin-top:8px">A mini-app from GAS2's app maker: its link</div>
     <div class="row"><input id="madelink" class="grow" placeholder="https://talmonlab.bgu.ac.il/gas2/maker.html?k=…"><button class="b alt" onclick="addMade()">Add</button></div>`;
@@ -187,6 +188,18 @@ function copyKey() {
 // the device's back button: out of a mini-app
 window.gas2Back = () => { if (open) closeApp(); };
 function rename(k) { const n = prompt('A name for ' + short(k), names[k] || ''); if (n !== null) { names[k] = n.trim(); saveNames(); draw(); } }
+// start over: a new key pair, nothing kept, here and on the device or the server
+let over = false;
+async function startOver() {
+  await api('api/reset', {method: 'POST'});
+  try { localStorage.removeItem('gas2token'); localStorage.removeItem('gas2names'); } catch (e) {}
+  document.body.innerHTML = '<p style="padding:24px;color:#6e6e73">Starting over…</p>';
+  // the page comes back with the new person (in the app, the app opens it again)
+  for (;;) {
+    await new Promise(r => setTimeout(r, 3000));
+    try { if ((await fetch('api/state', {cache: 'no-store'})).status) { location.replace(location.pathname); return; } } catch (e) {}
+  }
+}
 async function addNear(k) { await api('api/add', {method: 'POST', body: JSON.stringify({key: k})}); }
 async function addPerson() {
   const k = $('#add').value.trim().toLowerCase();

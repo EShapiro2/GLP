@@ -80,7 +80,19 @@ Future<Person> open(String h) async {
   )..relayOnly = true;
   final host = SuperHost(tree: own.path, keyPair: kp, network: relay, dataDir: dir);
   final page = PageServer(host: host, www: www, addPerson: (k) => relay.addPerson(PubKey.fromHex(k)))
-    ..extra = {'hosted': true};
+    ..extra = {'hosted': true}
+    ..reset = () async {
+      // the person gone: their key pair, their data; the page starts a new one
+      close(h);
+      File('$data/users/$h.json').deleteSync();
+      await Future<void>.delayed(const Duration(seconds: 2));
+      try {
+        final d = Directory(dir);
+        if (d.existsSync()) d.deleteSync(recursive: true);
+      } on Object catch (e) {
+        stderr.writeln('reset: $dir: $e');
+      }
+    };
   final p = Person(host, page, relay);
   relay.setOn(true);
   unawaited(host.start());

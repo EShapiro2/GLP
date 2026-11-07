@@ -73,6 +73,7 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   GasView? web;
   String status = 'Starting…';
+  SodiumSumo? _sodium;
 
   @override
   void initState() {
@@ -84,7 +85,7 @@ class _ShellState extends State<Shell> {
     try {
       final home = '${(await getApplicationSupportDirectory()).path}/gas2';
       await unbundle('$home/bundle');
-      final sodium = await SodiumSumoInit.init();
+      final sodium = _sodium ??= await SodiumSumoInit.init();
       final keyFile = File('$home/key.json');
       late final ({PubKey pub, Uint8List priv}) kp;
       if (keyFile.existsSync()) {
@@ -106,6 +107,31 @@ class _ShellState extends State<Shell> {
       final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home)
         ..onNear = relay.putKnownPeer;
       final server = PageServer(host: host, www: '$home/bundle/web', addPerson: (k) => relay.addPerson(PubKey.fromHex(k)));
+      // Start over: the network stopped, everything the app keeps deleted, and the
+      // app started again, which makes a new key pair
+      server.reset = () async {
+        relay.dispose();
+        try {
+          await near?.dispose();
+        } on Object {
+          // gone already
+        }
+        await server.stop();
+        for (final e in Directory(home).listSync()) {
+          try {
+            e.deleteSync(recursive: true);
+          } on Object {
+            // the next start writes over it
+          }
+        }
+        final old = web;
+        setState(() {
+          web = null;
+          status = 'Starting over…';
+        });
+        await old?.dispose();
+        await _start();
+      };
       final port = await server.start(0);
       relay.setOn(true);
       final w = await GasView.open('http://127.0.0.1:$port/',

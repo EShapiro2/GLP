@@ -34,6 +34,7 @@ class MiniApp {
   final String title;
   final Map<String, Object?> shapes;
   int? n; // its number in the harness, once installed
+  bool preparing = false; // being certified, for its install
   final Map<int, Object?> draws = {}; // construct id -> draw(Id, W, V) as JSON
   MiniApp(this.app, this.id, this.title, this.shapes);
 }
@@ -104,12 +105,23 @@ class SuperHost {
       ...(jsonDecode(File('$tree/gas2_apps.json').readAsStringSync()) as List).cast<Map>(),
       for (final f in _madeFiles()) _unpack(jsonDecode(f.readAsStringSync()) as Map),
     ];
-    var i = 0;
     for (final m in idx) {
-      i++;
       apps.add(MiniApp(m['app'] as String, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
-      await _certify(m['app'] as String, 'preparing the mini-apps ($i of ${idx.length}): ${m['title']}');
+      // certified at its first install (_certify); one certified before is put in place
+      _kept(m['app'] as String);
     }
+  }
+
+  /// A mini-app certified before, for this version of its files, put where the
+  /// harness loads it: true where there was one.
+  bool _kept(String app) {
+    final kept = File('$dataDir/certified/$app.glpw');
+    final stamp = File('$dataDir/certified/$app.stamp');
+    if (kept.existsSync() && stamp.existsSync() && stamp.readAsStringSync() == '$me ${_digest('$tree/apps/$app')}') {
+      kept.copySync('$core/$app.glpw');
+      return true;
+    }
+    return false;
   }
 
   List<File> _madeFiles() {
@@ -132,18 +144,10 @@ class SuperHost {
   }
 
   /// Certify [app] under the person's key, once per version of its files, and keep it.
-  Future<void> _certify(String app, String doing) async {
+  Future<void> _certify(String app) async {
+    if (_kept(app)) return;
     final out = File('$core/$app.glpw');
-    final kept = File('$dataDir/certified/$app.glpw');
-    final stamp = File('$dataDir/certified/$app.stamp');
-    final version = '$me ${_digest('$tree/apps/$app')}';
-    if (kept.existsSync() && stamp.existsSync() && stamp.readAsStringSync() == version) {
-      kept.copySync(out.path);
-      return;
-    }
-    status = doing;
-    _changed();
-    // in an isolate of its own: compiling a mini-app takes seconds (minutes, on a
+    // in an isolate of its own: compiling a mini-app takes seconds (a minute, on a
     // phone), and the page and the network are served meanwhile
     final rs = rootSelf, src = '$tree/apps/$app', pub = keyPair.pub, priv = keyPair.priv;
     final bytes = await Isolate.run(() {
@@ -152,9 +156,9 @@ class SuperHost {
       return (engine.appModule!.artefact as Artefact).toBytes();
     });
     out.writeAsBytesSync(bytes);
-    kept.parent.createSync(recursive: true);
+    final kept = File('$dataDir/certified/$app.glpw')..parent.createSync(recursive: true);
     out.copySync(kept.path);
-    stamp.writeAsStringSync(version);
+    File('$dataDir/certified/$app.stamp').writeAsStringSync('$me ${_digest(src)}');
   }
 
   /// Add a mini-app made by GAS2's app maker, from its link: the maker's page
@@ -174,11 +178,6 @@ class SuperHost {
       if (apps.any((x) => x.app == app)) {
         _note('${m['id']} is here already');
         return;
-      }
-      try {
-        await _certify(app, 'preparing ${m['title']}');
-      } finally {
-        status = 'ready';
       }
       final f = File('$dataDir/made/$app.json');
       f.parent.createSync(recursive: true);
@@ -343,7 +342,25 @@ class SuperHost {
     _changed();
   }
 
-  Future<void> install(String app) => _inject(_in(0, [], _c('install', [app, '$app.glpw'])));
+  /// Install [app]: the person's compiler trusted first, where not yet (the mini-apps
+  /// here are certified under the person's own key), and the mini-app certified.
+  Future<void> install(String app) async {
+    final m = apps.firstWhere((x) => x.app == app);
+    if (m.preparing || m.n != null) return;
+    if (!trusted) await trustMyCompiler();
+    m.preparing = true;
+    _changed();
+    try {
+      await _certify(app);
+    } catch (e) {
+      _note('could not prepare ${m.title}: $e');
+      return;
+    } finally {
+      m.preparing = false;
+      _changed();
+    }
+    await _inject(_in(0, [], _c('install', [app, '$app.glpw'])));
+  }
   Future<void> connect(String key) => _inject(_in(0, [], _c('connect', [key])));
   Future<void> invite(String app, String key) => _inject(_in(0, [], _c('invite', [app, key])));
   Future<void> accept(String app, String key) => _inject(_in(1, [], _c('invite', [app, key])));
@@ -408,6 +425,7 @@ class SuperHost {
               'id': m.id,
               'title': m.title,
               'installed': m.n != null,
+              'preparing': m.preparing,
               'draws': {for (final e in m.draws.entries) '${e.key}': e.value},
               'shapes': m.shapes,
             }

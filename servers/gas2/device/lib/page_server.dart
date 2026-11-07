@@ -1,5 +1,6 @@
 // The device's page and its API, on the loopback: GET api/state, POST api/act,
-// POST api/add (a person met from afar, by their key), and the page's files.
+// POST api/add (a person met from afar, by their key), POST api/reset (start over: a
+// new key pair, nothing kept), and the page's files.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -10,9 +11,13 @@ class PageServer {
   final SuperHost host;
   final String www;
   final Future<void> Function(String key) addPerson;
+
+  /// Start over: the person's key pair and everything kept for them deleted, and the
+  /// super-app started again under a new pair (each host does it its own way).
+  Future<void> Function()? reset;
   HttpServer? _server;
 
-  PageServer({required this.host, required this.www, required this.addPerson});
+  PageServer({required this.host, required this.www, required this.addPerson, this.reset});
 
   Future<int> start(int port) async {
     final s = _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
@@ -79,6 +84,11 @@ class PageServer {
       await addPerson(k);
       await host.connect(k);
       await _json(r, {'ok': true});
+      return true;
+    }
+    if (r.method == 'POST' && p == '/api/reset' && reset != null) {
+      await _json(r, {'ok': true});
+      unawaited(Future(() => reset!()).catchError((e) => stderr.writeln('reset: $e')));
       return true;
     }
     return false;

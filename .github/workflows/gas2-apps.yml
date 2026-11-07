@@ -142,7 +142,7 @@ jobs:
           cp gas2 "$GITHUB_WORKSPACE/GAS2-linux/"
           cp -r web "$GITHUB_WORKSPACE/GAS2-linux/web"
           cp -r "$GITHUB_WORKSPACE/tree" "$GITHUB_WORKSPACE/GAS2-linux/tree"
-          printf '#!/bin/sh\ncd "$(dirname "$0")"\n./gas2 --tree tree/programs --www web --data "${HOME}/.gas2" "$@"\n' > "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
+          printf '#!/bin/sh\n# exit code 3: the person started over, and GAS2 starts again\ncd "$(dirname "$0")"\nwhile :; do ./gas2 --tree tree/programs --www web --data "${HOME}/.gas2" "$@"; [ $? -eq 3 ] || break; done\n' > "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
           chmod +x "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
           cd "$GITHUB_WORKSPACE" && tar czf GAS2-linux.tar.gz GAS2-linux
       - uses: actions/upload-artifact@v4
