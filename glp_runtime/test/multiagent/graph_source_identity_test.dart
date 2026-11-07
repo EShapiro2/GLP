@@ -1,7 +1,5 @@
-/// The social graph's source identity: the Hash a rendezvous server is given
-/// (`--graph`, networking/glue/bin/rendezvous_server.dart) and admits a
-/// reconnection attestation under (programs/examples/rendezvous/rv_agent.glp,
-/// "Capability verification").
+/// The social graph's source identity: the Hash signature/2 reports for the
+/// social graph's reconnection attestation.
 ///
 /// The phone's agent loads programs/social/graph/core as its one program
 /// (glp_multiagent/lib/main_superapp.dart, GlpPaths.coreDir;
