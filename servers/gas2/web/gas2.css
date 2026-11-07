@@ -130,25 +130,16 @@ pre.raw { font-size: 11.5px; max-height: 280px; overflow: auto; background: var(
   .top nav a { padding: 9px 2px; border-top: 1px solid var(--line); font-size: 16px; }
   .hoodbtn { margin-left: auto; }
 }
-/* under the hood, the site looks like a terminal */
-body.hood { --ink: #c6f7c9; --soft: #6fbf76; --line: #1e3a22; --bg: #0a0e0a; --card: #101710; --stuck-bg: #18241a; --runs-bg: #12301a; --warn-bg: #2e2610;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--bg); color: var(--ink); }
-body.hood a { color: #7cf08a; }
-body.hood .top { background: rgba(10,14,10,.92); border-color: var(--line); }
-body.hood .hoodbtn.on { background: #39d353; color: #0a0e0a; }
-body.hood .brand .mark { background: #39d353; }
-body.hood .hero p, body.hood .muted, body.hood .small { color: var(--soft); }
-body.hood .btn { background: #39d353; color: #0a0e0a; }
-body.hood .btn.alt { background: #1b2a1d; color: var(--ink); }
-body.hood .card, body.hood .item, body.hood .app2 { box-shadow: none; border: 1px solid var(--line); }
-body.hood .node text { fill: var(--ink); }
-body.hood .why, body.hood pre.raw { background: #070a07; color: var(--ink); }
-body.hood .phone { background: #0d140d; border-color: var(--line); }
-body.hood .ev { background: #101710; border-color: var(--line); }
-body.hood input, body.hood select, body.hood textarea { background: #070a07 !important; color: var(--ink) !important; border-color: var(--line) !important; }
-body.hood .hood-only.boxed { border-color: #2f6b38; }
-body.hood .hoodtag { background: #39d353; color: #0a0e0a; }
-
+/* under the hood: the same site, a little like a terminal; what it adds stands out */
+body.hood { --bg: #eceeea; --line: #d9ddd5; background: var(--bg); }
+html:has(body.hood) { background: #eceeea; }
+html { background: #f5f5f7; }
+body.hood .top { background: rgba(236,238,234,.9); }
+body.hood .hoodbtn.on { background: #1d1d1f; color: #7cf08a; }
+body.hood .hood-only { color: var(--ink); }
+body.hood .hood-only.boxed { border: 1.5px solid #9fd9a6; background: #f6fbf6; }
+body.hood .hoodtag { background: #1d1d1f; color: #7cf08a; }
+body.hood .chip { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 /* the mini-apps explorer */
 .xhead { display: flex; align-items: center; gap: 14px; margin: 6px 0 12px; flex-wrap: wrap; }
 .seg2 { display: flex; background: rgba(118,118,128,.12); border-radius: 10px; padding: 2px; margin-left: auto; }

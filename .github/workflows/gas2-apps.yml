@@ -115,6 +115,8 @@ jobs:
       - name: Zip
         run: |
           cd servers/gas2/app/build/macos/Build/Products/Release
+          # signed ad hoc, whole, so that macOS lets the person open it once they allow it
+          codesign --force --deep --sign - GAS2.app
           ditto -c -k --keepParent GAS2.app "$GITHUB_WORKSPACE/GAS2-macos.zip"
       - uses: actions/upload-artifact@v4
         with:

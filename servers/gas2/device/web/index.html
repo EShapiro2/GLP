@@ -105,6 +105,9 @@ const store = {
 };
 // where the page is: home, '__browse' (all mini-apps), '__friend' (add a friend, the QR),
 // '__settings', or a mini-app
+let back = null; // where Settings returns to
+// the settings button: into Settings, and out again to where the person was
+function gearClick() { if (open === '__settings') go(back); else { back = open; go('__settings'); } }
 let S = null, open = null, form = null, pane = 'play', naming = null, over = false;
 let names = store.get('gas2names', {});
 // the person's look, and whether they see under the hood: this page's alone
@@ -238,7 +241,7 @@ function bar(title, back, extra = '') {
   const st = hood ? (S.status === 'ready' ? 'ready · ' + short(S.me) : S.status) + ((S.pending || []).length ? ' · ' + S.pending.length + ' waiting' : '')
     : (S.status === 'ready' ? '' : S.status);
   $('#hd').innerHTML = `${back ? `<button class="back" onclick="go(${back === 'home' ? 'null' : `'${back}'`})">‹</button>` : ''}<b>${esc(title)}</b>${extra}<span class="st">${esc(st)}</span>
-    <button class="hood ${hood ? 'on' : ''}" title="Under the hood" onclick="setHood(${!hood})">&lt;/&gt;</button><button class="gear" title="Settings" onclick="go('__settings')">⚙︎</button>`;
+    <button class="hood ${hood ? 'on' : ''}" title="Under the hood" onclick="setHood(${!hood})">&lt;/&gt;</button><button class="gear" title="Settings" onclick="gearClick()">⚙︎</button>`;
 }
 
 function drawHome() {
@@ -318,7 +321,7 @@ function drawFriend() {
 }
 
 function drawSettings() {
-  bar('Settings', 'home');
+  bar('Settings', back || 'home');
   const looks = [['clean', 'Clean', 'The contract\'s own words and terms, plain'], ['fancy', 'Fancy', 'The same, made friendly: colors, faces, counts']];
   let h = `<h2>Look</h2><div class="looks">${looks.map(([k, n, d]) => `<button class="look ${theme === k ? 'on' : ''}" data-theme="${k}" onclick="setTheme('${k}')"><div class="sw"><div class="bar"></div><div class="bar" style="width:70%"></div><div class="btn"></div></div><div class="nm">${n}</div><div class="ds">${d}</div></button>`).join('')}</div>
     <div class="small muted" style="margin:8px 4px">The look changes this page only. Your key, your friends, the contracts and their certificates are the same under both. The <span class="mono">&lt;/&gt;</span> button on top shows what happens under the hood.</div>`;

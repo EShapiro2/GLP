@@ -102,7 +102,7 @@ load().then(D => {
     <p class="small" style="margin:0 0 6px"><a href="apps.html">‹ Mini-apps</a></p>
     <div class="head1"><h1>${esc(c.title)}</h1><span class="muted">${esc(c.id)}</span><span class="chip ${st.cls} hood-only">${esc(st.short)}</span></div>
     <p class="small muted hood-only">${c.owner ? 'Owner ' + esc(c.owner) + ' · ' : ''}<a href="${gh}${esc(c.file)}" target="_blank" rel="noopener">${esc(c.file)}</a>${c.paper ? '<br>' + esc(c.paper) : ''}</p>
-    ${c.artefact ? `<div class="cta"><a class="btn" href="../gas2web/">Open in GAS2 on the web</a><a class="btn alt" href="get.html">Get the app</a></div><p class="small muted" style="margin-top:0">In the app: Add a mini-app, then ${esc(c.title)}.</p>` : `<p class="muted">Not an app yet: ${esc(st.text)}</p>`}
+    ${c.artefact ? `<p class="muted">A mini-app of GAS2: in the app, <i>Add a mini-app</i>, then ${esc(c.title.replace(/^Grassroots /, ''))}. <a href="get.html">Get the app</a></p>` : `<p class="muted">Not an app yet: ${esc(st.text)}</p>`}
 
     <section class="card">
       <h3>The rules</h3>

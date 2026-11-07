@@ -106,7 +106,7 @@ function drawMap(D) {
 // --- the explorer ---
 let D0 = null;
 const hueOf = id => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-const icon = c => `<span class="icon" style="background:hsl(${hueOf(c.id)},58%,${HOOD ? 30 : 55}%)">${esc(c.id.replace(/-/g, '').slice(0, 4))}</span>`;
+const icon = c => `<span class="icon" style="background:hsl(${hueOf(c.id)},58%,55%)">${esc(c.id.replace(/-/g, '').slice(0, 4))}</span>`;
 function drawRows() {
   if (!D0) return;
   const q = ($('#q').value || '').trim().toLowerCase();
@@ -119,7 +119,7 @@ function drawRows() {
       <span class="grow"><b>${esc(c.title.replace(/^Grassroots /, ''))}</b> <span class="muted small">${esc(c.id)}</span>
       <span class="sub">${esc(c.clauses.map(k => k.name).join(' · '))}</span></span>
       ${HOOD ? `<span class="chip ${status(c).cls}">${esc(status(c).short)}</span>` : ''}
-      ${c.artefact ? `<span class="btn sm" onclick="event.preventDefault();location.href='../gas2web/'">Open</span>` : ''}</a>`).join('')
+      <span class="muted" style="font-size:20px">›</span></a>`).join('')
     || '<p class="muted" style="padding:12px">Nothing matches.</p>';
 }
 function view(v) {
