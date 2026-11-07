@@ -1,0 +1,36 @@
+program /home/user/GLP-worktrees/sglp-e92/programs/sglp: coins(100, <the friends of /home/user/sglp-main/sglp-sweep-h60-w70-15.graph>, 1, year, 15, 50, 50)
+graph /home/user/sglp-main/sglp-sweep-h60-w70-15.graph: 1847 edges, agents 1..100 each on one at least
+draw spender 48 saver 52 generous 55 cautious 45
+draw /home/user/sglp-main/sglp-coins-grid-s50-c50-15.draw: the counts and 100 agents' profiles
+wall-clock 13 s; load average: 4.30, 3.92, 3.68
+[CERTIFICATE REFUSED] sglp reaches the network or the person: sglp/coins/harness:go/10 calls send_to_user/1; sglp/social_graph/harness:go/9 calls send_to_user/1; sglp/transform:transform/2 calls send_to_user/1; sglp/transform:part/4 calls send_to_user/1
+✓ Loaded program: /home/user/GLP-worktrees/sglp-e92/programs/sglp
+→ suspended
+log /home/user/sglp-main/sglp-coins-grid-s50-c50-15.log: 23244 lines, 4634352 bytes
+month 1 at 2629800 circulation 2790 holdings 337 wallets 95 pays 1447 proposals 334 accepted 334 declined 0
+month 2 at 5259600 circulation 3553 holdings 412 wallets 96 pays 2894 proposals 570 accepted 568 declined 1
+month 3 at 7889400 circulation 4465 holdings 473 wallets 97 pays 4318 proposals 812 accepted 808 declined 2
+month 4 at 10519200 circulation 5335 holdings 536 wallets 94 pays 5774 proposals 1055 accepted 1050 declined 5
+month 5 at 13149000 circulation 6226 holdings 577 wallets 96 pays 7224 proposals 1296 accepted 1290 declined 5
+month 6 at 15778800 circulation 7055 holdings 611 wallets 96 pays 8643 proposals 1533 accepted 1523 declined 10
+month 7 at 18408600 circulation 7811 holdings 643 wallets 97 pays 10048 proposals 1771 accepted 1753 declined 18
+month 8 at 21038400 circulation 8797 holdings 687 wallets 96 pays 11469 proposals 2021 accepted 1991 declined 29
+month 9 at 23668200 circulation 9278 holdings 696 wallets 97 pays 12851 proposals 2238 accepted 2202 declined 36
+month 10 at 26298000 circulation 10238 holdings 734 wallets 98 pays 14316 proposals 2502 accepted 2446 declined 55
+month 11 at 28927800 circulation 11503 holdings 799 wallets 99 pays 15727 proposals 2772 accepted 2702 declined 70
+month 12 at 31557600 circulation 11826 holdings 780 wallets 98 pays 17219 proposals 3012 accepted 2917 declined 95
+answers 23243
+menu_answers 20231
+offer_answers 3012
+pays 17219
+proposals 3012
+accepted 2917
+declined 95
+circulation 11826
+holdings 780
+wallets 98
+clock 31557424.535345905
+unread 0
+unordered 0
+unmatched 0
+exit 0

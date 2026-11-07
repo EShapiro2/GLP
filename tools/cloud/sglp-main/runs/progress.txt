@@ -1,0 +1,740 @@
+2026-11-07 13:13:15 UTC start sglp-r-100y-20260927
+2026-11-07 13:13:15 UTC start sglp-r-100y-1
+2026-11-07 13:13:15 UTC start sglp-sweep-h60-w70-20260927
+2026-11-07 13:13:50 UTC done sglp-r-100y-1: wall-clock 34 s; edges 1617
+2026-11-07 13:13:50 UTC start sglp-sweep-h0-w0-1
+2026-11-07 13:14:01 UTC done sglp-r-100y-20260927: wall-clock 45 s; edges 1899
+2026-11-07 13:14:01 UTC start sglp-sweep-h0-w70-1
+2026-11-07 13:14:02 UTC done sglp-sweep-h60-w70-20260927: wall-clock 46 s; edges 1899
+2026-11-07 13:14:02 UTC start sglp-sweep-h0-w100-1
+2026-11-07 13:14:33 UTC done sglp-sweep-h0-w100-1: wall-clock 30 s; edges 1529
+2026-11-07 13:14:33 UTC start sglp-sweep-h60-w0-1
+2026-11-07 13:15:09 UTC done sglp-sweep-h0-w70-1: wall-clock 67 s; edges 2394
+2026-11-07 13:15:09 UTC start sglp-sweep-h60-w70-1
+2026-11-07 13:15:45 UTC done sglp-sweep-h60-w70-1: wall-clock 35 s; edges 1617
+2026-11-07 13:15:45 UTC start sglp-sweep-h60-w100-1
+2026-11-07 13:16:00 UTC done sglp-sweep-h60-w100-1: wall-clock 14 s; edges 971
+2026-11-07 13:16:00 UTC start sglp-sweep-h100-w0-1
+2026-11-07 13:16:21 UTC done sglp-sweep-h60-w0-1: wall-clock 107 s; edges 3101
+2026-11-07 13:16:21 UTC start sglp-sweep-h100-w70-1
+2026-11-07 13:16:39 UTC done sglp-sweep-h100-w70-1: wall-clock 16 s; edges 1101
+2026-11-07 13:16:39 UTC start sglp-sweep-h100-w100-1
+2026-11-07 13:16:47 UTC done sglp-sweep-h100-w100-1: wall-clock 7 s; edges 624
+2026-11-07 13:16:47 UTC start sglp-sweep-h0-w0-2
+2026-11-07 13:16:51 UTC done sglp-sweep-h100-w0-1: wall-clock 50 s; edges 2065
+2026-11-07 13:16:51 UTC start sglp-sweep-h0-w70-2
+2026-11-07 13:16:53 UTC done sglp-sweep-h0-w0-1: wall-clock 181 s; edges 4181
+2026-11-07 13:16:53 UTC start sglp-sweep-h0-w100-2
+2026-11-07 13:17:26 UTC done sglp-sweep-h0-w100-2: wall-clock 32 s; edges 1594
+2026-11-07 13:17:26 UTC start sglp-sweep-h60-w0-2
+2026-11-07 13:18:10 UTC done sglp-sweep-h0-w70-2: wall-clock 77 s; edges 2604
+2026-11-07 13:18:10 UTC start sglp-sweep-h60-w70-2
+2026-11-07 13:19:02 UTC done sglp-sweep-h60-w70-2: wall-clock 51 s; edges 1962
+2026-11-07 13:19:02 UTC start sglp-sweep-h60-w100-2
+2026-11-07 13:19:20 UTC done sglp-sweep-h60-w100-2: wall-clock 17 s; edges 1126
+2026-11-07 13:19:20 UTC start sglp-sweep-h100-w0-2
+2026-11-07 13:19:29 UTC done sglp-sweep-h60-w0-2: wall-clock 122 s; edges 3323
+2026-11-07 13:19:29 UTC start sglp-sweep-h100-w70-2
+2026-11-07 13:19:51 UTC done sglp-sweep-h100-w70-2: wall-clock 21 s; edges 1297
+2026-11-07 13:19:51 UTC start sglp-sweep-h100-w100-2
+2026-11-07 13:19:55 UTC done sglp-sweep-h0-w0-2: wall-clock 186 s; edges 4172
+2026-11-07 13:19:55 UTC start sglp-sweep-h0-w0-3
+2026-11-07 13:20:00 UTC done sglp-sweep-h100-w100-2: wall-clock 8 s; edges 691
+2026-11-07 13:20:00 UTC start sglp-sweep-h0-w70-3
+2026-11-07 13:20:13 UTC done sglp-sweep-h100-w0-2: wall-clock 51 s; edges 2097
+2026-11-07 13:20:13 UTC start sglp-sweep-h0-w100-3
+2026-11-07 13:20:44 UTC done sglp-sweep-h0-w100-3: wall-clock 30 s; edges 1562
+2026-11-07 13:20:44 UTC start sglp-sweep-h60-w0-3
+2026-11-07 13:21:13 UTC done sglp-sweep-h0-w70-3: wall-clock 71 s; edges 2471
+2026-11-07 13:21:13 UTC start sglp-sweep-h60-w70-3
+2026-11-07 13:21:54 UTC done sglp-sweep-h60-w70-3: wall-clock 39 s; edges 1694
+2026-11-07 13:21:54 UTC start sglp-sweep-h60-w100-3
+2026-11-07 13:22:10 UTC done sglp-sweep-h60-w100-3: wall-clock 15 s; edges 1059
+2026-11-07 13:22:10 UTC start sglp-sweep-h100-w0-3
+2026-11-07 13:22:33 UTC done sglp-sweep-h60-w0-3: wall-clock 107 s; edges 3015
+2026-11-07 13:22:33 UTC start sglp-sweep-h100-w70-3
+2026-11-07 13:22:54 UTC done sglp-sweep-h100-w70-3: wall-clock 19 s; edges 1199
+2026-11-07 13:22:54 UTC start sglp-sweep-h100-w100-3
+2026-11-07 13:23:04 UTC done sglp-sweep-h100-w100-3: wall-clock 9 s; edges 692
+2026-11-07 13:23:04 UTC start sglp-sweep-h0-w0-4
+2026-11-07 13:23:05 UTC done sglp-sweep-h0-w0-3: wall-clock 189 s; edges 4153
+2026-11-07 13:23:05 UTC start sglp-sweep-h0-w70-4
+2026-11-07 13:23:09 UTC done sglp-sweep-h100-w0-3: wall-clock 57 s; edges 2144
+2026-11-07 13:23:09 UTC start sglp-sweep-h0-w100-4
+2026-11-07 13:23:42 UTC done sglp-sweep-h0-w100-4: wall-clock 32 s; edges 1578
+2026-11-07 13:23:42 UTC start sglp-sweep-h60-w0-4
+2026-11-07 13:24:25 UTC done sglp-sweep-h0-w70-4: wall-clock 78 s; edges 2556
+2026-11-07 13:24:25 UTC start sglp-sweep-h60-w70-4
+2026-11-07 13:25:05 UTC done sglp-sweep-h60-w70-4: wall-clock 38 s; edges 1738
+2026-11-07 13:25:05 UTC start sglp-sweep-h60-w100-4
+2026-11-07 13:25:20 UTC done sglp-sweep-h60-w100-4: wall-clock 14 s; edges 966
+2026-11-07 13:25:20 UTC start sglp-sweep-h100-w0-4
+2026-11-07 13:25:29 UTC done sglp-sweep-h60-w0-4: wall-clock 106 s; edges 2994
+2026-11-07 13:25:29 UTC start sglp-sweep-h100-w70-4
+2026-11-07 13:25:49 UTC done sglp-sweep-h100-w70-4: wall-clock 19 s; edges 1225
+2026-11-07 13:25:49 UTC start sglp-sweep-h100-w100-4
+2026-11-07 13:25:58 UTC done sglp-sweep-h100-w100-4: wall-clock 8 s; edges 633
+2026-11-07 13:25:58 UTC start sglp-sweep-h0-w0-5
+2026-11-07 13:26:14 UTC done sglp-sweep-h100-w0-4: wall-clock 53 s; edges 2116
+2026-11-07 13:26:14 UTC start sglp-sweep-h0-w70-5
+2026-11-07 13:26:15 UTC done sglp-sweep-h0-w0-4: wall-clock 190 s; edges 4201
+2026-11-07 13:26:15 UTC start sglp-sweep-h0-w100-5
+2026-11-07 13:26:47 UTC done sglp-sweep-h0-w100-5: wall-clock 30 s; edges 1531
+2026-11-07 13:26:47 UTC start sglp-sweep-h60-w0-5
+2026-11-07 13:27:41 UTC done sglp-sweep-h0-w70-5: wall-clock 86 s; edges 2784
+2026-11-07 13:27:41 UTC start sglp-sweep-h60-w70-5
+2026-11-07 13:28:34 UTC done sglp-sweep-h60-w70-5: wall-clock 51 s; edges 2059
+2026-11-07 13:28:35 UTC start sglp-sweep-h60-w100-5
+2026-11-07 13:28:44 UTC done sglp-sweep-h60-w0-5: wall-clock 115 s; edges 3225
+2026-11-07 13:28:44 UTC start sglp-sweep-h100-w0-5
+2026-11-07 13:28:53 UTC done sglp-sweep-h60-w100-5: wall-clock 17 s; edges 1095
+2026-11-07 13:28:53 UTC start sglp-sweep-h100-w70-5
+2026-11-07 13:29:02 UTC done sglp-sweep-h0-w0-5: wall-clock 183 s; edges 4119
+2026-11-07 13:29:02 UTC start sglp-sweep-h100-w100-5
+2026-11-07 13:29:11 UTC done sglp-sweep-h100-w100-5: wall-clock 8 s; edges 654
+2026-11-07 13:29:11 UTC start sglp-sweep-h0-w0-6
+2026-11-07 13:29:17 UTC done sglp-sweep-h100-w70-5: wall-clock 23 s; edges 1320
+2026-11-07 13:29:17 UTC start sglp-sweep-h0-w70-6
+2026-11-07 13:29:36 UTC done sglp-sweep-h100-w0-5: wall-clock 50 s; edges 2054
+2026-11-07 13:29:36 UTC start sglp-sweep-h0-w100-6
+2026-11-07 13:30:07 UTC done sglp-sweep-h0-w100-6: wall-clock 30 s; edges 1549
+2026-11-07 13:30:07 UTC start sglp-sweep-h60-w0-6
+2026-11-07 13:30:46 UTC done sglp-sweep-h0-w70-6: wall-clock 88 s; edges 2753
+2026-11-07 13:30:46 UTC start sglp-sweep-h60-w70-6
+2026-11-07 13:31:39 UTC done sglp-sweep-h60-w70-6: wall-clock 51 s; edges 2011
+2026-11-07 13:31:39 UTC start sglp-sweep-h60-w100-6
+2026-11-07 13:31:57 UTC done sglp-sweep-h60-w100-6: wall-clock 16 s; edges 1074
+2026-11-07 13:31:58 UTC start sglp-sweep-h100-w0-6
+2026-11-07 13:32:08 UTC done sglp-sweep-h60-w0-6: wall-clock 119 s; edges 3231
+2026-11-07 13:32:08 UTC start sglp-sweep-h100-w70-6
+2026-11-07 13:32:28 UTC done sglp-sweep-h0-w0-6: wall-clock 196 s; edges 4202
+2026-11-07 13:32:28 UTC start sglp-sweep-h100-w100-6
+2026-11-07 13:32:34 UTC done sglp-sweep-h100-w70-6: wall-clock 25 s; edges 1321
+2026-11-07 13:32:34 UTC start sglp-sweep-h0-w0-7
+2026-11-07 13:32:38 UTC done sglp-sweep-h100-w100-6: wall-clock 8 s; edges 703
+2026-11-07 13:32:38 UTC start sglp-sweep-h0-w70-7
+2026-11-07 13:32:58 UTC done sglp-sweep-h100-w0-6: wall-clock 59 s; edges 2127
+2026-11-07 13:32:58 UTC start sglp-sweep-h0-w100-7
+2026-11-07 13:33:32 UTC done sglp-sweep-h0-w100-7: wall-clock 33 s; edges 1576
+2026-11-07 13:33:32 UTC start sglp-sweep-h60-w0-7
+2026-11-07 13:33:58 UTC done sglp-sweep-h0-w70-7: wall-clock 78 s; edges 2517
+2026-11-07 13:33:58 UTC start sglp-sweep-h60-w70-7
+2026-11-07 13:34:39 UTC done sglp-sweep-h60-w70-7: wall-clock 40 s; edges 1766
+2026-11-07 13:34:39 UTC start sglp-sweep-h60-w100-7
+2026-11-07 13:34:56 UTC done sglp-sweep-h60-w100-7: wall-clock 16 s; edges 1044
+2026-11-07 13:34:56 UTC start sglp-sweep-h100-w0-7
+2026-11-07 13:35:22 UTC done sglp-sweep-h60-w0-7: wall-clock 109 s; edges 3085
+2026-11-07 13:35:22 UTC start sglp-sweep-h100-w70-7
+2026-11-07 13:35:43 UTC done sglp-sweep-h100-w70-7: wall-clock 20 s; edges 1217
+2026-11-07 13:35:43 UTC start sglp-sweep-h100-w100-7
+2026-11-07 13:35:46 UTC done sglp-sweep-h0-w0-7: wall-clock 191 s; edges 4173
+2026-11-07 13:35:46 UTC start sglp-sweep-h0-w0-8
+2026-11-07 13:35:51 UTC done sglp-sweep-h100-w0-7: wall-clock 53 s; edges 2111
+2026-11-07 13:35:51 UTC start sglp-sweep-h0-w70-8
+2026-11-07 13:35:52 UTC done sglp-sweep-h100-w100-7: wall-clock 8 s; edges 660
+2026-11-07 13:35:52 UTC start sglp-sweep-h0-w100-8
+2026-11-07 13:36:22 UTC done sglp-sweep-h0-w100-8: wall-clock 29 s; edges 1513
+2026-11-07 13:36:22 UTC start sglp-sweep-h60-w0-8
+2026-11-07 13:37:05 UTC done sglp-sweep-h0-w70-8: wall-clock 73 s; edges 2533
+2026-11-07 13:37:05 UTC start sglp-sweep-h60-w70-8
+2026-11-07 13:37:47 UTC done sglp-sweep-h60-w70-8: wall-clock 41 s; edges 1740
+2026-11-07 13:37:47 UTC start sglp-sweep-h60-w100-8
+2026-11-07 13:38:03 UTC done sglp-sweep-h60-w100-8: wall-clock 15 s; edges 1000
+2026-11-07 13:38:03 UTC start sglp-sweep-h100-w0-8
+2026-11-07 13:38:08 UTC done sglp-sweep-h60-w0-8: wall-clock 105 s; edges 3003
+2026-11-07 13:38:08 UTC start sglp-sweep-h100-w70-8
+2026-11-07 13:38:27 UTC done sglp-sweep-h100-w70-8: wall-clock 18 s; edges 1203
+2026-11-07 13:38:27 UTC start sglp-sweep-h100-w100-8
+2026-11-07 13:38:35 UTC done sglp-sweep-h100-w100-8: wall-clock 7 s; edges 651
+2026-11-07 13:38:35 UTC start sglp-sweep-h0-w0-9
+2026-11-07 13:38:48 UTC done sglp-sweep-h0-w0-8: wall-clock 180 s; edges 4144
+2026-11-07 13:38:48 UTC start sglp-sweep-h0-w70-9
+2026-11-07 13:38:55 UTC done sglp-sweep-h100-w0-8: wall-clock 51 s; edges 2135
+2026-11-07 13:38:55 UTC start sglp-sweep-h0-w100-9
+2026-11-07 13:39:23 UTC done sglp-sweep-h0-w100-9: wall-clock 27 s; edges 1440
+2026-11-07 13:39:23 UTC start sglp-sweep-h60-w0-9
+2026-11-07 13:39:55 UTC done sglp-sweep-h0-w70-9: wall-clock 66 s; edges 2403
+2026-11-07 13:39:55 UTC start sglp-sweep-h60-w70-9
+2026-11-07 13:40:29 UTC done sglp-sweep-h60-w70-9: wall-clock 32 s; edges 1563
+2026-11-07 13:40:29 UTC start sglp-sweep-h60-w100-9
+2026-11-07 13:40:44 UTC done sglp-sweep-h60-w100-9: wall-clock 14 s; edges 945
+2026-11-07 13:40:44 UTC start sglp-sweep-h100-w0-9
+2026-11-07 13:41:05 UTC done sglp-sweep-h60-w0-9: wall-clock 101 s; edges 2956
+2026-11-07 13:41:05 UTC start sglp-sweep-h100-w70-9
+2026-11-07 13:41:24 UTC done sglp-sweep-h100-w70-9: wall-clock 18 s; edges 1127
+2026-11-07 13:41:24 UTC start sglp-sweep-h100-w100-9
+2026-11-07 13:41:33 UTC done sglp-sweep-h100-w100-9: wall-clock 8 s; edges 672
+2026-11-07 13:41:33 UTC start sglp-sweep-h0-w0-10
+2026-11-07 13:41:36 UTC done sglp-sweep-h0-w0-9: wall-clock 180 s; edges 4123
+2026-11-07 13:41:36 UTC start sglp-sweep-h0-w70-10
+2026-11-07 13:41:36 UTC done sglp-sweep-h100-w0-9: wall-clock 51 s; edges 2076
+2026-11-07 13:41:36 UTC start sglp-sweep-h0-w100-10
+2026-11-07 13:42:08 UTC done sglp-sweep-h0-w100-10: wall-clock 30 s; edges 1539
+2026-11-07 13:42:08 UTC start sglp-sweep-h60-w0-10
+2026-11-07 13:42:49 UTC done sglp-sweep-h0-w70-10: wall-clock 72 s; edges 2494
+2026-11-07 13:42:49 UTC start sglp-sweep-h60-w70-10
+2026-11-07 13:43:34 UTC done sglp-sweep-h60-w70-10: wall-clock 43 s; edges 1804
+2026-11-07 13:43:34 UTC start sglp-sweep-h60-w100-10
+2026-11-07 13:43:53 UTC done sglp-sweep-h60-w100-10: wall-clock 18 s; edges 1089
+2026-11-07 13:43:53 UTC start sglp-sweep-h100-w0-10
+2026-11-07 13:44:12 UTC done sglp-sweep-h60-w0-10: wall-clock 122 s; edges 3191
+2026-11-07 13:44:12 UTC start sglp-sweep-h100-w70-10
+2026-11-07 13:44:33 UTC done sglp-sweep-h100-w70-10: wall-clock 20 s; edges 1238
+2026-11-07 13:44:33 UTC start sglp-sweep-h100-w100-10
+2026-11-07 13:44:43 UTC done sglp-sweep-h100-w100-10: wall-clock 8 s; edges 679
+2026-11-07 13:44:43 UTC start sglp-sweep-h0-w0-11
+2026-11-07 13:44:46 UTC done sglp-sweep-h0-w0-10: wall-clock 192 s; edges 4178
+2026-11-07 13:44:46 UTC start sglp-sweep-h0-w70-11
+2026-11-07 13:44:50 UTC done sglp-sweep-h100-w0-10: wall-clock 56 s; edges 2103
+2026-11-07 13:44:50 UTC start sglp-sweep-h0-w100-11
+2026-11-07 13:45:21 UTC done sglp-sweep-h0-w100-11: wall-clock 29 s; edges 1532
+2026-11-07 13:45:21 UTC start sglp-sweep-h60-w0-11
+2026-11-07 13:45:54 UTC done sglp-sweep-h0-w70-11: wall-clock 67 s; edges 2390
+2026-11-07 13:45:54 UTC start sglp-sweep-h60-w70-11
+2026-11-07 13:46:30 UTC done sglp-sweep-h60-w70-11: wall-clock 35 s; edges 1541
+2026-11-07 13:46:30 UTC start sglp-sweep-h60-w100-11
+2026-11-07 13:46:45 UTC done sglp-sweep-h60-w100-11: wall-clock 14 s; edges 917
+2026-11-07 13:46:45 UTC start sglp-sweep-h100-w0-11
+2026-11-07 13:47:10 UTC done sglp-sweep-h60-w0-11: wall-clock 108 s; edges 2947
+2026-11-07 13:47:10 UTC start sglp-sweep-h100-w70-11
+2026-11-07 13:47:29 UTC done sglp-sweep-h100-w70-11: wall-clock 17 s; edges 1099
+2026-11-07 13:47:29 UTC start sglp-sweep-h100-w100-11
+2026-11-07 13:47:37 UTC done sglp-sweep-h100-w100-11: wall-clock 7 s; edges 636
+2026-11-07 13:47:37 UTC start sglp-sweep-h0-w0-12
+2026-11-07 13:47:39 UTC done sglp-sweep-h100-w0-11: wall-clock 53 s; edges 2120
+2026-11-07 13:47:39 UTC start sglp-sweep-h0-w70-12
+2026-11-07 13:47:59 UTC done sglp-sweep-h0-w0-11: wall-clock 195 s; edges 4159
+2026-11-07 13:47:59 UTC start sglp-sweep-h0-w100-12
+2026-11-07 13:48:30 UTC done sglp-sweep-h0-w100-12: wall-clock 30 s; edges 1526
+2026-11-07 13:48:30 UTC start sglp-sweep-h60-w0-12
+2026-11-07 13:49:11 UTC done sglp-sweep-h0-w70-12: wall-clock 91 s; edges 2926
+2026-11-07 13:49:11 UTC start sglp-sweep-h60-w70-12
+2026-11-07 13:50:07 UTC done sglp-sweep-h60-w70-12: wall-clock 54 s; edges 2087
+2026-11-07 13:50:07 UTC start sglp-sweep-h60-w100-12
+2026-11-07 13:50:24 UTC done sglp-sweep-h60-w100-12: wall-clock 16 s; edges 1076
+2026-11-07 13:50:24 UTC start sglp-sweep-h100-w0-12
+2026-11-07 13:50:25 UTC done sglp-sweep-h60-w0-12: wall-clock 113 s; edges 3187
+2026-11-07 13:50:25 UTC start sglp-sweep-h100-w70-12
+2026-11-07 13:50:41 UTC done sglp-sweep-h0-w0-12: wall-clock 183 s; edges 4193
+2026-11-07 13:50:41 UTC start sglp-sweep-h100-w100-12
+2026-11-07 13:50:49 UTC done sglp-sweep-h100-w70-12: wall-clock 23 s; edges 1406
+2026-11-07 13:50:49 UTC start sglp-sweep-h0-w0-13
+2026-11-07 13:50:50 UTC done sglp-sweep-h100-w100-12: wall-clock 8 s; edges 699
+2026-11-07 13:50:50 UTC start sglp-sweep-h0-w70-13
+2026-11-07 13:51:18 UTC done sglp-sweep-h100-w0-12: wall-clock 52 s; edges 2129
+2026-11-07 13:51:18 UTC start sglp-sweep-h0-w100-13
+2026-11-07 13:51:49 UTC done sglp-sweep-h0-w100-13: wall-clock 30 s; edges 1540
+2026-11-07 13:51:49 UTC start sglp-sweep-h60-w0-13
+2026-11-07 13:52:17 UTC done sglp-sweep-h0-w70-13: wall-clock 85 s; edges 2848
+2026-11-07 13:52:17 UTC start sglp-sweep-h60-w70-13
+2026-11-07 13:53:07 UTC done sglp-sweep-h60-w70-13: wall-clock 49 s; edges 2064
+2026-11-07 13:53:07 UTC start sglp-sweep-h60-w100-13
+2026-11-07 13:53:23 UTC done sglp-sweep-h60-w100-13: wall-clock 15 s; edges 1010
+2026-11-07 13:53:23 UTC start sglp-sweep-h100-w0-13
+2026-11-07 13:53:43 UTC done sglp-sweep-h60-w0-13: wall-clock 113 s; edges 3216
+2026-11-07 13:53:43 UTC start sglp-sweep-h100-w70-13
+2026-11-07 13:53:54 UTC done sglp-sweep-h0-w0-13: wall-clock 184 s; edges 4131
+2026-11-07 13:53:54 UTC start sglp-sweep-h100-w100-13
+2026-11-07 13:54:03 UTC done sglp-sweep-h100-w100-13: wall-clock 8 s; edges 665
+2026-11-07 13:54:03 UTC start sglp-sweep-h0-w0-14
+2026-11-07 13:54:08 UTC done sglp-sweep-h100-w70-13: wall-clock 24 s; edges 1346
+2026-11-07 13:54:08 UTC start sglp-sweep-h0-w70-14
+2026-11-07 13:54:15 UTC done sglp-sweep-h100-w0-13: wall-clock 51 s; edges 2100
+2026-11-07 13:54:15 UTC start sglp-sweep-h0-w100-14
+2026-11-07 13:54:48 UTC done sglp-sweep-h0-w100-14: wall-clock 32 s; edges 1589
+2026-11-07 13:54:48 UTC start sglp-sweep-h60-w0-14
+2026-11-07 13:55:21 UTC done sglp-sweep-h0-w70-14: wall-clock 72 s; edges 2499
+2026-11-07 13:55:21 UTC start sglp-sweep-h60-w70-14
+2026-11-07 13:56:06 UTC done sglp-sweep-h60-w70-14: wall-clock 43 s; edges 1824
+2026-11-07 13:56:06 UTC start sglp-sweep-h60-w100-14
+2026-11-07 13:56:25 UTC done sglp-sweep-h60-w100-14: wall-clock 17 s; edges 1054
+2026-11-07 13:56:25 UTC start sglp-sweep-h100-w0-14
+2026-11-07 13:56:48 UTC done sglp-sweep-h60-w0-14: wall-clock 119 s; edges 3205
+2026-11-07 13:56:48 UTC start sglp-sweep-h100-w70-14
+2026-11-07 13:57:10 UTC done sglp-sweep-h100-w70-14: wall-clock 21 s; edges 1199
+2026-11-07 13:57:10 UTC start sglp-sweep-h100-w100-14
+2026-11-07 13:57:18 UTC done sglp-sweep-h0-w0-14: wall-clock 193 s; edges 4190
+2026-11-07 13:57:18 UTC start sglp-sweep-h0-w0-15
+2026-11-07 13:57:20 UTC done sglp-sweep-h100-w100-14: wall-clock 9 s; edges 702
+2026-11-07 13:57:20 UTC start sglp-sweep-h0-w70-15
+2026-11-07 13:57:22 UTC done sglp-sweep-h100-w0-14: wall-clock 56 s; edges 2125
+2026-11-07 13:57:22 UTC start sglp-sweep-h0-w100-15
+2026-11-07 13:57:53 UTC done sglp-sweep-h0-w100-15: wall-clock 30 s; edges 1493
+2026-11-07 13:57:53 UTC start sglp-sweep-h60-w0-15
+2026-11-07 13:58:33 UTC done sglp-sweep-h0-w70-15: wall-clock 72 s; edges 2451
+2026-11-07 13:58:33 UTC start sglp-sweep-h60-w70-15
+2026-11-07 13:59:16 UTC done sglp-sweep-h60-w70-15: wall-clock 42 s; edges 1847
+2026-11-07 13:59:16 UTC start sglp-sweep-h60-w100-15
+2026-11-07 13:59:34 UTC done sglp-sweep-h60-w100-15: wall-clock 17 s; edges 1120
+2026-11-07 13:59:34 UTC start sglp-sweep-h100-w0-15
+2026-11-07 13:59:49 UTC done sglp-sweep-h60-w0-15: wall-clock 115 s; edges 3138
+2026-11-07 13:59:49 UTC start sglp-sweep-h100-w70-15
+2026-11-07 14:00:09 UTC done sglp-sweep-h100-w70-15: wall-clock 18 s; edges 1186
+2026-11-07 14:00:09 UTC start sglp-sweep-h100-w100-15
+2026-11-07 14:00:18 UTC done sglp-sweep-h100-w100-15: wall-clock 8 s; edges 696
+2026-11-07 14:00:18 UTC start sglp-sweep-h0-w0-16
+2026-11-07 14:00:22 UTC done sglp-sweep-h0-w0-15: wall-clock 183 s; edges 4133
+2026-11-07 14:00:22 UTC start sglp-sweep-h0-w70-16
+2026-11-07 14:00:28 UTC done sglp-sweep-h100-w0-15: wall-clock 52 s; edges 2139
+2026-11-07 14:00:28 UTC start sglp-sweep-h0-w100-16
+2026-11-07 14:01:00 UTC done sglp-sweep-h0-w100-16: wall-clock 30 s; edges 1509
+2026-11-07 14:01:00 UTC start sglp-sweep-h60-w0-16
+2026-11-07 14:01:34 UTC done sglp-sweep-h0-w70-16: wall-clock 71 s; edges 2469
+2026-11-07 14:01:34 UTC start sglp-sweep-h60-w70-16
+2026-11-07 14:02:21 UTC done sglp-sweep-h60-w70-16: wall-clock 45 s; edges 1813
+2026-11-07 14:02:21 UTC start sglp-sweep-h60-w100-16
+2026-11-07 14:02:41 UTC done sglp-sweep-h60-w100-16: wall-clock 19 s; edges 1101
+2026-11-07 14:02:41 UTC start sglp-sweep-h100-w0-16
+2026-11-07 14:03:09 UTC done sglp-sweep-h60-w0-16: wall-clock 128 s; edges 3291
+2026-11-07 14:03:09 UTC start sglp-sweep-h100-w70-16
+2026-11-07 14:03:29 UTC done sglp-sweep-h100-w70-16: wall-clock 19 s; edges 1143
+2026-11-07 14:03:29 UTC start sglp-sweep-h100-w100-16
+2026-11-07 14:03:35 UTC done sglp-sweep-h0-w0-16: wall-clock 196 s; edges 4172
+2026-11-07 14:03:35 UTC start sglp-sweep-h0-w0-17
+2026-11-07 14:03:36 UTC done sglp-sweep-h100-w0-16: wall-clock 53 s; edges 2113
+2026-11-07 14:03:36 UTC start sglp-sweep-h0-w70-17
+2026-11-07 14:03:38 UTC done sglp-sweep-h100-w100-16: wall-clock 8 s; edges 671
+2026-11-07 14:03:38 UTC start sglp-sweep-h0-w100-17
+2026-11-07 14:04:09 UTC done sglp-sweep-h0-w100-17: wall-clock 29 s; edges 1532
+2026-11-07 14:04:09 UTC start sglp-sweep-h60-w0-17
+2026-11-07 14:04:55 UTC done sglp-sweep-h0-w70-17: wall-clock 77 s; edges 2576
+2026-11-07 14:04:55 UTC start sglp-sweep-h60-w70-17
+2026-11-07 14:05:37 UTC done sglp-sweep-h60-w70-17: wall-clock 41 s; edges 1796
+2026-11-07 14:05:37 UTC start sglp-sweep-h60-w100-17
+2026-11-07 14:05:52 UTC done sglp-sweep-h60-w100-17: wall-clock 14 s; edges 955
+2026-11-07 14:05:52 UTC start sglp-sweep-h100-w0-17
+2026-11-07 14:05:56 UTC done sglp-sweep-h60-w0-17: wall-clock 106 s; edges 2979
+2026-11-07 14:05:56 UTC start sglp-sweep-h100-w70-17
+2026-11-07 14:06:17 UTC done sglp-sweep-h100-w70-17: wall-clock 20 s; edges 1212
+2026-11-07 14:06:17 UTC start sglp-sweep-h100-w100-17
+2026-11-07 14:06:26 UTC done sglp-sweep-h100-w100-17: wall-clock 8 s; edges 678
+2026-11-07 14:06:26 UTC start sglp-sweep-h0-w0-18
+2026-11-07 14:06:43 UTC done sglp-sweep-h0-w0-17: wall-clock 186 s; edges 4152
+2026-11-07 14:06:43 UTC start sglp-sweep-h0-w70-18
+2026-11-07 14:06:46 UTC done sglp-sweep-h100-w0-17: wall-clock 53 s; edges 2111
+2026-11-07 14:06:46 UTC start sglp-sweep-h0-w100-18
+2026-11-07 14:07:18 UTC done sglp-sweep-h0-w100-18: wall-clock 31 s; edges 1568
+2026-11-07 14:07:18 UTC start sglp-sweep-h60-w0-18
+2026-11-07 14:07:59 UTC done sglp-sweep-h0-w70-18: wall-clock 75 s; edges 2538
+2026-11-07 14:07:59 UTC start sglp-sweep-h60-w70-18
+2026-11-07 14:08:42 UTC done sglp-sweep-h60-w70-18: wall-clock 42 s; edges 1791
+2026-11-07 14:08:42 UTC start sglp-sweep-h60-w100-18
+2026-11-07 14:08:59 UTC done sglp-sweep-h60-w100-18: wall-clock 15 s; edges 1001
+2026-11-07 14:08:59 UTC start sglp-sweep-h100-w0-18
+2026-11-07 14:09:19 UTC done sglp-sweep-h60-w0-18: wall-clock 119 s; edges 3188
+2026-11-07 14:09:19 UTC start sglp-sweep-h100-w70-18
+2026-11-07 14:09:39 UTC done sglp-sweep-h0-w0-18: wall-clock 191 s; edges 4228
+2026-11-07 14:09:39 UTC start sglp-sweep-h100-w100-18
+2026-11-07 14:09:39 UTC done sglp-sweep-h100-w70-18: wall-clock 19 s; edges 1170
+2026-11-07 14:09:39 UTC start sglp-sweep-h0-w0-19
+2026-11-07 14:09:48 UTC done sglp-sweep-h100-w100-18: wall-clock 8 s; edges 645
+2026-11-07 14:09:48 UTC start sglp-sweep-h0-w70-19
+2026-11-07 14:09:53 UTC done sglp-sweep-h100-w0-18: wall-clock 53 s; edges 2111
+2026-11-07 14:09:53 UTC start sglp-sweep-h0-w100-19
+2026-11-07 14:10:29 UTC done sglp-sweep-h0-w100-19: wall-clock 34 s; edges 1576
+2026-11-07 14:10:29 UTC start sglp-sweep-h60-w0-19
+2026-11-07 14:11:08 UTC done sglp-sweep-h0-w70-19: wall-clock 79 s; edges 2524
+2026-11-07 14:11:08 UTC start sglp-sweep-h60-w70-19
+2026-11-07 14:11:56 UTC done sglp-sweep-h60-w70-19: wall-clock 46 s; edges 1833
+2026-11-07 14:11:56 UTC start sglp-sweep-h60-w100-19
+2026-11-07 14:12:16 UTC done sglp-sweep-h60-w100-19: wall-clock 19 s; edges 1111
+2026-11-07 14:12:16 UTC start sglp-sweep-h100-w0-19
+2026-11-07 14:12:34 UTC done sglp-sweep-h60-w0-19: wall-clock 123 s; edges 3176
+2026-11-07 14:12:34 UTC start sglp-sweep-h100-w70-19
+2026-11-07 14:12:56 UTC done sglp-sweep-h100-w70-19: wall-clock 21 s; edges 1205
+2026-11-07 14:12:56 UTC start sglp-sweep-h100-w100-19
+2026-11-07 14:12:58 UTC done sglp-sweep-h0-w0-19: wall-clock 197 s; edges 4207
+2026-11-07 14:12:58 UTC start sglp-sweep-h0-w0-20
+2026-11-07 14:13:06 UTC done sglp-sweep-h100-w100-19: wall-clock 9 s; edges 655
+2026-11-07 14:13:06 UTC start sglp-sweep-h0-w70-20
+2026-11-07 14:13:15 UTC done sglp-sweep-h100-w0-19: wall-clock 57 s; edges 2108
+2026-11-07 14:13:15 UTC start sglp-sweep-h0-w100-20
+2026-11-07 14:13:47 UTC done sglp-sweep-h0-w100-20: wall-clock 31 s; edges 1489
+2026-11-07 14:13:47 UTC start sglp-sweep-h60-w0-20
+2026-11-07 14:14:27 UTC done sglp-sweep-h0-w70-20: wall-clock 80 s; edges 2632
+2026-11-07 14:14:27 UTC start sglp-sweep-h60-w70-20
+2026-11-07 14:15:15 UTC done sglp-sweep-h60-w70-20: wall-clock 47 s; edges 1864
+2026-11-07 14:15:15 UTC start sglp-sweep-h60-w100-20
+2026-11-07 14:15:32 UTC done sglp-sweep-h60-w100-20: wall-clock 16 s; edges 1000
+2026-11-07 14:15:32 UTC start sglp-sweep-h100-w0-20
+2026-11-07 14:15:45 UTC done sglp-sweep-h60-w0-20: wall-clock 117 s; edges 3112
+2026-11-07 14:15:45 UTC start sglp-sweep-h100-w70-20
+2026-11-07 14:16:06 UTC done sglp-sweep-h100-w70-20: wall-clock 20 s; edges 1196
+2026-11-07 14:16:06 UTC start sglp-sweep-h100-w100-20
+2026-11-07 14:16:14 UTC done sglp-sweep-h0-w0-20: wall-clock 194 s; edges 4182
+2026-11-07 14:16:16 UTC done sglp-sweep-h100-w100-20: wall-clock 9 s; edges 661
+2026-11-07 14:16:27 UTC done sglp-sweep-h100-w0-20: wall-clock 53 s; edges 2075
+2026-11-07 14:16:27 UTC PHASE1-DONE
+2026-11-07 14:16:27 UTC start sglp-coins-100y-20260927
+2026-11-07 14:16:27 UTC start sglp-coins-100y-1
+2026-11-07 14:16:27 UTC start sglp-coins-grid-s0-c50-20260927
+2026-11-07 14:16:32 UTC done sglp-coins-grid-s0-c50-20260927: wall-clock 4 s; circulation 1451
+2026-11-07 14:16:32 UTC start sglp-coins-grid-s50-c50-20260927
+2026-11-07 14:16:42 UTC done sglp-coins-100y-20260927: wall-clock 14 s; circulation 10327
+2026-11-07 14:16:42 UTC start sglp-coins-grid-s100-c50-20260927
+2026-11-07 14:16:42 UTC done sglp-coins-100y-1: wall-clock 14 s; circulation 11862
+2026-11-07 14:16:42 UTC start sglp-coins-grid-s0-c0-1
+2026-11-07 14:16:47 UTC done sglp-coins-grid-s0-c0-1: wall-clock 4 s; circulation 1915
+2026-11-07 14:16:47 UTC start sglp-coins-grid-s0-c50-1
+2026-11-07 14:16:47 UTC done sglp-coins-grid-s50-c50-20260927: wall-clock 14 s; circulation 10327
+2026-11-07 14:16:47 UTC start sglp-coins-grid-s0-c100-1
+2026-11-07 14:16:52 UTC done sglp-coins-grid-s0-c50-1: wall-clock 4 s; circulation 1915
+2026-11-07 14:16:52 UTC start sglp-coins-grid-s50-c0-1
+2026-11-07 14:16:53 UTC done sglp-coins-grid-s0-c100-1: wall-clock 4 s; circulation 1915
+2026-11-07 14:16:53 UTC start sglp-coins-grid-s50-c50-1
+2026-11-07 14:17:04 UTC done sglp-coins-grid-s100-c50-20260927: wall-clock 21 s; circulation 1951
+2026-11-07 14:17:04 UTC start sglp-coins-grid-s50-c100-1
+2026-11-07 14:17:07 UTC done sglp-coins-grid-s50-c50-1: wall-clock 13 s; circulation 11862
+2026-11-07 14:17:07 UTC start sglp-coins-grid-s100-c0-1
+2026-11-07 14:17:07 UTC done sglp-coins-grid-s50-c0-1: wall-clock 13 s; circulation 12567
+2026-11-07 14:17:07 UTC start sglp-coins-grid-s100-c50-1
+2026-11-07 14:17:19 UTC done sglp-coins-grid-s50-c100-1: wall-clock 13 s; circulation 10542
+2026-11-07 14:17:19 UTC start sglp-coins-grid-s100-c100-1
+2026-11-07 14:17:29 UTC done sglp-coins-grid-s100-c0-1: wall-clock 21 s; circulation 1592
+2026-11-07 14:17:29 UTC start sglp-coins-grid-s0-c0-2
+2026-11-07 14:17:30 UTC done sglp-coins-grid-s100-c50-1: wall-clock 21 s; circulation 1592
+2026-11-07 14:17:30 UTC start sglp-coins-grid-s0-c50-2
+2026-11-07 14:17:35 UTC done sglp-coins-grid-s0-c0-2: wall-clock 4 s; circulation 1750
+2026-11-07 14:17:35 UTC start sglp-coins-grid-s0-c100-2
+2026-11-07 14:17:36 UTC done sglp-coins-grid-s0-c50-2: wall-clock 4 s; circulation 1750
+2026-11-07 14:17:36 UTC start sglp-coins-grid-s50-c0-2
+2026-11-07 14:17:40 UTC done sglp-coins-grid-s0-c100-2: wall-clock 4 s; circulation 1750
+2026-11-07 14:17:40 UTC start sglp-coins-grid-s50-c50-2
+2026-11-07 14:17:41 UTC done sglp-coins-grid-s100-c100-1: wall-clock 20 s; circulation 2163
+2026-11-07 14:17:41 UTC start sglp-coins-grid-s50-c100-2
+2026-11-07 14:17:49 UTC done sglp-coins-grid-s50-c0-2: wall-clock 12 s; circulation 11206
+2026-11-07 14:17:49 UTC start sglp-coins-grid-s100-c0-2
+2026-11-07 14:17:55 UTC done sglp-coins-grid-s50-c50-2: wall-clock 12 s; circulation 11085
+2026-11-07 14:17:55 UTC start sglp-coins-grid-s100-c50-2
+2026-11-07 14:17:55 UTC done sglp-coins-grid-s50-c100-2: wall-clock 13 s; circulation 9412
+2026-11-07 14:17:55 UTC start sglp-coins-grid-s100-c100-2
+2026-11-07 14:18:12 UTC done sglp-coins-grid-s100-c0-2: wall-clock 22 s; circulation 2090
+2026-11-07 14:18:12 UTC start sglp-coins-grid-s0-c0-3
+2026-11-07 14:18:17 UTC done sglp-coins-grid-s100-c50-2: wall-clock 21 s; circulation 2090
+2026-11-07 14:18:17 UTC start sglp-coins-grid-s0-c50-3
+2026-11-07 14:18:18 UTC done sglp-coins-grid-s100-c100-2: wall-clock 20 s; circulation 2013
+2026-11-07 14:18:18 UTC start sglp-coins-grid-s0-c100-3
+2026-11-07 14:18:18 UTC done sglp-coins-grid-s0-c0-3: wall-clock 5 s; circulation 1717
+2026-11-07 14:18:18 UTC start sglp-coins-grid-s50-c0-3
+2026-11-07 14:18:23 UTC done sglp-coins-grid-s0-c50-3: wall-clock 4 s; circulation 1717
+2026-11-07 14:18:23 UTC start sglp-coins-grid-s50-c50-3
+2026-11-07 14:18:23 UTC done sglp-coins-grid-s0-c100-3: wall-clock 4 s; circulation 1717
+2026-11-07 14:18:23 UTC start sglp-coins-grid-s50-c100-3
+2026-11-07 14:18:33 UTC done sglp-coins-grid-s50-c0-3: wall-clock 13 s; circulation 11862
+2026-11-07 14:18:33 UTC start sglp-coins-grid-s100-c0-3
+2026-11-07 14:18:38 UTC done sglp-coins-grid-s50-c50-3: wall-clock 13 s; circulation 11632
+2026-11-07 14:18:38 UTC start sglp-coins-grid-s100-c50-3
+2026-11-07 14:18:38 UTC done sglp-coins-grid-s50-c100-3: wall-clock 14 s; circulation 10620
+2026-11-07 14:18:38 UTC start sglp-coins-grid-s100-c100-3
+2026-11-07 14:18:55 UTC done sglp-coins-grid-s100-c0-3: wall-clock 20 s; circulation 1793
+2026-11-07 14:18:55 UTC start sglp-coins-grid-s0-c0-4
+2026-11-07 14:19:00 UTC done sglp-coins-grid-s100-c50-3: wall-clock 20 s; circulation 1793
+2026-11-07 14:19:00 UTC start sglp-coins-grid-s0-c50-4
+2026-11-07 14:19:00 UTC done sglp-coins-grid-s0-c0-4: wall-clock 4 s; circulation 1537
+2026-11-07 14:19:00 UTC start sglp-coins-grid-s0-c100-4
+2026-11-07 14:19:00 UTC done sglp-coins-grid-s100-c100-3: wall-clock 21 s; circulation 1984
+2026-11-07 14:19:00 UTC start sglp-coins-grid-s50-c0-4
+2026-11-07 14:19:05 UTC done sglp-coins-grid-s0-c50-4: wall-clock 4 s; circulation 1537
+2026-11-07 14:19:05 UTC start sglp-coins-grid-s50-c50-4
+2026-11-07 14:19:05 UTC done sglp-coins-grid-s0-c100-4: wall-clock 4 s; circulation 1537
+2026-11-07 14:19:05 UTC start sglp-coins-grid-s50-c100-4
+2026-11-07 14:19:15 UTC done sglp-coins-grid-s50-c0-4: wall-clock 14 s; circulation 11890
+2026-11-07 14:19:15 UTC start sglp-coins-grid-s100-c0-4
+2026-11-07 14:19:20 UTC done sglp-coins-grid-s50-c100-4: wall-clock 14 s; circulation 10345
+2026-11-07 14:19:20 UTC start sglp-coins-grid-s100-c50-4
+2026-11-07 14:19:20 UTC done sglp-coins-grid-s50-c50-4: wall-clock 14 s; circulation 11239
+2026-11-07 14:19:20 UTC start sglp-coins-grid-s100-c100-4
+2026-11-07 14:19:38 UTC done sglp-coins-grid-s100-c0-4: wall-clock 21 s; circulation 1865
+2026-11-07 14:19:38 UTC start sglp-coins-grid-s0-c0-5
+2026-11-07 14:19:42 UTC done sglp-coins-grid-s100-c100-4: wall-clock 20 s; circulation 1865
+2026-11-07 14:19:42 UTC start sglp-coins-grid-s0-c50-5
+2026-11-07 14:19:43 UTC done sglp-coins-grid-s100-c50-4: wall-clock 21 s; circulation 1865
+2026-11-07 14:19:43 UTC start sglp-coins-grid-s0-c100-5
+2026-11-07 14:19:43 UTC done sglp-coins-grid-s0-c0-5: wall-clock 4 s; circulation 1641
+2026-11-07 14:19:43 UTC start sglp-coins-grid-s50-c0-5
+2026-11-07 14:19:48 UTC done sglp-coins-grid-s0-c50-5: wall-clock 4 s; circulation 1641
+2026-11-07 14:19:48 UTC start sglp-coins-grid-s50-c50-5
+2026-11-07 14:19:49 UTC done sglp-coins-grid-s0-c100-5: wall-clock 5 s; circulation 1641
+2026-11-07 14:19:49 UTC start sglp-coins-grid-s50-c100-5
+2026-11-07 14:19:57 UTC done sglp-coins-grid-s50-c0-5: wall-clock 12 s; circulation 11504
+2026-11-07 14:19:57 UTC start sglp-coins-grid-s100-c0-5
+2026-11-07 14:20:03 UTC done sglp-coins-grid-s50-c100-5: wall-clock 12 s; circulation 10540
+2026-11-07 14:20:03 UTC start sglp-coins-grid-s100-c50-5
+2026-11-07 14:20:03 UTC done sglp-coins-grid-s50-c50-5: wall-clock 14 s; circulation 11790
+2026-11-07 14:20:03 UTC start sglp-coins-grid-s100-c100-5
+2026-11-07 14:20:20 UTC done sglp-coins-grid-s100-c0-5: wall-clock 20 s; circulation 1691
+2026-11-07 14:20:20 UTC start sglp-coins-grid-s0-c0-6
+2026-11-07 14:20:25 UTC done sglp-coins-grid-s0-c0-6: wall-clock 4 s; circulation 1484
+2026-11-07 14:20:25 UTC start sglp-coins-grid-s0-c50-6
+2026-11-07 14:20:26 UTC done sglp-coins-grid-s100-c50-5: wall-clock 21 s; circulation 1691
+2026-11-07 14:20:26 UTC start sglp-coins-grid-s0-c100-6
+2026-11-07 14:20:26 UTC done sglp-coins-grid-s100-c100-5: wall-clock 22 s; circulation 1691
+2026-11-07 14:20:26 UTC start sglp-coins-grid-s50-c0-6
+2026-11-07 14:20:30 UTC done sglp-coins-grid-s0-c50-6: wall-clock 4 s; circulation 1484
+2026-11-07 14:20:31 UTC start sglp-coins-grid-s50-c50-6
+2026-11-07 14:20:31 UTC done sglp-coins-grid-s0-c100-6: wall-clock 4 s; circulation 1484
+2026-11-07 14:20:31 UTC start sglp-coins-grid-s50-c100-6
+2026-11-07 14:20:41 UTC done sglp-coins-grid-s50-c0-6: wall-clock 14 s; circulation 10872
+2026-11-07 14:20:41 UTC start sglp-coins-grid-s100-c0-6
+2026-11-07 14:20:46 UTC done sglp-coins-grid-s50-c100-6: wall-clock 14 s; circulation 9900
+2026-11-07 14:20:46 UTC start sglp-coins-grid-s100-c50-6
+2026-11-07 14:20:46 UTC done sglp-coins-grid-s50-c50-6: wall-clock 14 s; circulation 10620
+2026-11-07 14:20:46 UTC start sglp-coins-grid-s100-c100-6
+2026-11-07 14:21:04 UTC done sglp-coins-grid-s100-c0-6: wall-clock 22 s; circulation 1527
+2026-11-07 14:21:04 UTC start sglp-coins-grid-s0-c0-7
+2026-11-07 14:21:08 UTC done sglp-coins-grid-s100-c100-6: wall-clock 20 s; circulation 1527
+2026-11-07 14:21:08 UTC start sglp-coins-grid-s0-c50-7
+2026-11-07 14:21:08 UTC done sglp-coins-grid-s100-c50-6: wall-clock 21 s; circulation 1527
+2026-11-07 14:21:08 UTC start sglp-coins-grid-s0-c100-7
+2026-11-07 14:21:10 UTC done sglp-coins-grid-s0-c0-7: wall-clock 4 s; circulation 1610
+2026-11-07 14:21:10 UTC start sglp-coins-grid-s50-c0-7
+2026-11-07 14:21:13 UTC done sglp-coins-grid-s0-c50-7: wall-clock 4 s; circulation 1610
+2026-11-07 14:21:13 UTC start sglp-coins-grid-s50-c50-7
+2026-11-07 14:21:14 UTC done sglp-coins-grid-s0-c100-7: wall-clock 4 s; circulation 1610
+2026-11-07 14:21:14 UTC start sglp-coins-grid-s50-c100-7
+2026-11-07 14:21:24 UTC done sglp-coins-grid-s50-c0-7: wall-clock 13 s; circulation 12819
+2026-11-07 14:21:24 UTC start sglp-coins-grid-s100-c0-7
+2026-11-07 14:21:27 UTC done sglp-coins-grid-s50-c50-7: wall-clock 13 s; circulation 12445
+2026-11-07 14:21:27 UTC start sglp-coins-grid-s100-c50-7
+2026-11-07 14:21:28 UTC done sglp-coins-grid-s50-c100-7: wall-clock 13 s; circulation 10876
+2026-11-07 14:21:28 UTC start sglp-coins-grid-s100-c100-7
+2026-11-07 14:21:45 UTC done sglp-coins-grid-s100-c0-7: wall-clock 20 s; circulation 1803
+2026-11-07 14:21:45 UTC start sglp-coins-grid-s0-c0-8
+2026-11-07 14:21:49 UTC done sglp-coins-grid-s100-c50-7: wall-clock 20 s; circulation 1803
+2026-11-07 14:21:49 UTC start sglp-coins-grid-s0-c50-8
+2026-11-07 14:21:50 UTC done sglp-coins-grid-s100-c100-7: wall-clock 20 s; circulation 1803
+2026-11-07 14:21:50 UTC start sglp-coins-grid-s0-c100-8
+2026-11-07 14:21:51 UTC done sglp-coins-grid-s0-c0-8: wall-clock 4 s; circulation 1737
+2026-11-07 14:21:51 UTC start sglp-coins-grid-s50-c0-8
+2026-11-07 14:21:54 UTC done sglp-coins-grid-s0-c50-8: wall-clock 4 s; circulation 1737
+2026-11-07 14:21:54 UTC start sglp-coins-grid-s50-c50-8
+2026-11-07 14:21:55 UTC done sglp-coins-grid-s0-c100-8: wall-clock 4 s; circulation 1737
+2026-11-07 14:21:55 UTC start sglp-coins-grid-s50-c100-8
+2026-11-07 14:22:05 UTC done sglp-coins-grid-s50-c0-8: wall-clock 13 s; circulation 12704
+2026-11-07 14:22:05 UTC start sglp-coins-grid-s100-c0-8
+2026-11-07 14:22:08 UTC done sglp-coins-grid-s50-c50-8: wall-clock 12 s; circulation 11923
+2026-11-07 14:22:08 UTC start sglp-coins-grid-s100-c50-8
+2026-11-07 14:22:10 UTC done sglp-coins-grid-s50-c100-8: wall-clock 14 s; circulation 9956
+2026-11-07 14:22:10 UTC start sglp-coins-grid-s100-c100-8
+2026-11-07 14:22:27 UTC done sglp-coins-grid-s100-c0-8: wall-clock 20 s; circulation 1840
+2026-11-07 14:22:27 UTC start sglp-coins-grid-s0-c0-9
+2026-11-07 14:22:31 UTC done sglp-coins-grid-s100-c50-8: wall-clock 21 s; circulation 1856
+2026-11-07 14:22:31 UTC start sglp-coins-grid-s0-c50-9
+2026-11-07 14:22:31 UTC done sglp-coins-grid-s100-c100-8: wall-clock 20 s; circulation 1644
+2026-11-07 14:22:31 UTC start sglp-coins-grid-s0-c100-9
+2026-11-07 14:22:32 UTC done sglp-coins-grid-s0-c0-9: wall-clock 4 s; circulation 1579
+2026-11-07 14:22:32 UTC start sglp-coins-grid-s50-c0-9
+2026-11-07 14:22:36 UTC done sglp-coins-grid-s0-c50-9: wall-clock 4 s; circulation 1579
+2026-11-07 14:22:36 UTC start sglp-coins-grid-s50-c50-9
+2026-11-07 14:22:37 UTC done sglp-coins-grid-s0-c100-9: wall-clock 4 s; circulation 1579
+2026-11-07 14:22:37 UTC start sglp-coins-grid-s50-c100-9
+2026-11-07 14:22:47 UTC done sglp-coins-grid-s50-c0-9: wall-clock 14 s; circulation 11141
+2026-11-07 14:22:47 UTC start sglp-coins-grid-s100-c0-9
+2026-11-07 14:22:51 UTC done sglp-coins-grid-s50-c50-9: wall-clock 14 s; circulation 10396
+2026-11-07 14:22:51 UTC start sglp-coins-grid-s100-c50-9
+2026-11-07 14:22:52 UTC done sglp-coins-grid-s50-c100-9: wall-clock 14 s; circulation 9358
+2026-11-07 14:22:52 UTC start sglp-coins-grid-s100-c100-9
+2026-11-07 14:23:09 UTC done sglp-coins-grid-s100-c0-9: wall-clock 20 s; circulation 1463
+2026-11-07 14:23:09 UTC start sglp-coins-grid-s0-c0-10
+2026-11-07 14:23:12 UTC done sglp-coins-grid-s100-c50-9: wall-clock 20 s; circulation 1463
+2026-11-07 14:23:12 UTC start sglp-coins-grid-s0-c50-10
+2026-11-07 14:23:14 UTC done sglp-coins-grid-s100-c100-9: wall-clock 19 s; circulation 1463
+2026-11-07 14:23:14 UTC start sglp-coins-grid-s0-c100-10
+2026-11-07 14:23:14 UTC done sglp-coins-grid-s0-c0-10: wall-clock 4 s; circulation 1884
+2026-11-07 14:23:14 UTC start sglp-coins-grid-s50-c0-10
+2026-11-07 14:23:18 UTC done sglp-coins-grid-s0-c50-10: wall-clock 4 s; circulation 1884
+2026-11-07 14:23:18 UTC start sglp-coins-grid-s50-c50-10
+2026-11-07 14:23:19 UTC done sglp-coins-grid-s0-c100-10: wall-clock 4 s; circulation 1884
+2026-11-07 14:23:19 UTC start sglp-coins-grid-s50-c100-10
+2026-11-07 14:23:29 UTC done sglp-coins-grid-s50-c0-10: wall-clock 13 s; circulation 10750
+2026-11-07 14:23:29 UTC start sglp-coins-grid-s100-c0-10
+2026-11-07 14:23:33 UTC done sglp-coins-grid-s50-c50-10: wall-clock 13 s; circulation 10354
+2026-11-07 14:23:33 UTC start sglp-coins-grid-s100-c50-10
+2026-11-07 14:23:35 UTC done sglp-coins-grid-s50-c100-10: wall-clock 14 s; circulation 9622
+2026-11-07 14:23:35 UTC start sglp-coins-grid-s100-c100-10
+2026-11-07 14:23:50 UTC done sglp-coins-grid-s100-c0-10: wall-clock 20 s; circulation 1769
+2026-11-07 14:23:50 UTC start sglp-coins-grid-s0-c0-11
+2026-11-07 14:23:54 UTC done sglp-coins-grid-s100-c50-10: wall-clock 20 s; circulation 1769
+2026-11-07 14:23:54 UTC start sglp-coins-grid-s0-c50-11
+2026-11-07 14:23:56 UTC done sglp-coins-grid-s0-c0-11: wall-clock 4 s; circulation 1532
+2026-11-07 14:23:56 UTC start sglp-coins-grid-s0-c100-11
+2026-11-07 14:23:56 UTC done sglp-coins-grid-s100-c100-10: wall-clock 20 s; circulation 1875
+2026-11-07 14:23:56 UTC start sglp-coins-grid-s50-c0-11
+2026-11-07 14:24:00 UTC done sglp-coins-grid-s0-c50-11: wall-clock 4 s; circulation 1532
+2026-11-07 14:24:00 UTC start sglp-coins-grid-s50-c50-11
+2026-11-07 14:24:01 UTC done sglp-coins-grid-s0-c100-11: wall-clock 4 s; circulation 1532
+2026-11-07 14:24:01 UTC start sglp-coins-grid-s50-c100-11
+2026-11-07 14:24:12 UTC done sglp-coins-grid-s50-c0-11: wall-clock 15 s; circulation 12283
+2026-11-07 14:24:12 UTC start sglp-coins-grid-s100-c0-11
+2026-11-07 14:24:16 UTC done sglp-coins-grid-s50-c50-11: wall-clock 15 s; circulation 11470
+2026-11-07 14:24:16 UTC start sglp-coins-grid-s100-c50-11
+2026-11-07 14:24:18 UTC done sglp-coins-grid-s50-c100-11: wall-clock 15 s; circulation 10453
+2026-11-07 14:24:18 UTC start sglp-coins-grid-s100-c100-11
+2026-11-07 14:24:33 UTC done sglp-coins-grid-s100-c0-11: wall-clock 19 s; circulation 1918
+2026-11-07 14:24:33 UTC start sglp-coins-grid-s0-c0-12
+2026-11-07 14:24:38 UTC done sglp-coins-grid-s100-c50-11: wall-clock 20 s; circulation 1918
+2026-11-07 14:24:38 UTC start sglp-coins-grid-s0-c50-12
+2026-11-07 14:24:39 UTC done sglp-coins-grid-s0-c0-12: wall-clock 5 s; circulation 1634
+2026-11-07 14:24:39 UTC start sglp-coins-grid-s0-c100-12
+2026-11-07 14:24:41 UTC done sglp-coins-grid-s100-c100-11: wall-clock 22 s; circulation 1602
+2026-11-07 14:24:41 UTC start sglp-coins-grid-s50-c0-12
+2026-11-07 14:24:44 UTC done sglp-coins-grid-s0-c50-12: wall-clock 5 s; circulation 1634
+2026-11-07 14:24:44 UTC start sglp-coins-grid-s50-c50-12
+2026-11-07 14:24:45 UTC done sglp-coins-grid-s0-c100-12: wall-clock 4 s; circulation 1634
+2026-11-07 14:24:45 UTC start sglp-coins-grid-s50-c100-12
+2026-11-07 14:24:57 UTC done sglp-coins-grid-s50-c0-12: wall-clock 15 s; circulation 10919
+2026-11-07 14:24:57 UTC start sglp-coins-grid-s100-c0-12
+2026-11-07 14:25:00 UTC done sglp-coins-grid-s50-c50-12: wall-clock 15 s; circulation 10435
+2026-11-07 14:25:00 UTC start sglp-coins-grid-s100-c50-12
+2026-11-07 14:25:01 UTC done sglp-coins-grid-s50-c100-12: wall-clock 15 s; circulation 9818
+2026-11-07 14:25:01 UTC start sglp-coins-grid-s100-c100-12
+2026-11-07 14:25:22 UTC done sglp-coins-grid-s100-c0-12: wall-clock 22 s; circulation 1626
+2026-11-07 14:25:22 UTC start sglp-coins-grid-s0-c0-13
+2026-11-07 14:25:24 UTC done sglp-coins-grid-s100-c50-12: wall-clock 22 s; circulation 1626
+2026-11-07 14:25:24 UTC start sglp-coins-grid-s0-c50-13
+2026-11-07 14:25:25 UTC done sglp-coins-grid-s100-c100-12: wall-clock 23 s; circulation 1810
+2026-11-07 14:25:25 UTC start sglp-coins-grid-s0-c100-13
+2026-11-07 14:25:27 UTC done sglp-coins-grid-s0-c0-13: wall-clock 4 s; circulation 1661
+2026-11-07 14:25:27 UTC start sglp-coins-grid-s50-c0-13
+2026-11-07 14:25:30 UTC done sglp-coins-grid-s0-c50-13: wall-clock 5 s; circulation 1661
+2026-11-07 14:25:30 UTC start sglp-coins-grid-s50-c50-13
+2026-11-07 14:25:31 UTC done sglp-coins-grid-s0-c100-13: wall-clock 5 s; circulation 1661
+2026-11-07 14:25:31 UTC start sglp-coins-grid-s50-c100-13
+2026-11-07 14:25:43 UTC done sglp-coins-grid-s50-c0-13: wall-clock 15 s; circulation 11559
+2026-11-07 14:25:44 UTC start sglp-coins-grid-s100-c0-13
+2026-11-07 14:25:46 UTC done sglp-coins-grid-s50-c50-13: wall-clock 15 s; circulation 11003
+2026-11-07 14:25:46 UTC start sglp-coins-grid-s100-c50-13
+2026-11-07 14:25:47 UTC done sglp-coins-grid-s50-c100-13: wall-clock 15 s; circulation 10318
+2026-11-07 14:25:47 UTC start sglp-coins-grid-s100-c100-13
+2026-11-07 14:26:07 UTC done sglp-coins-grid-s100-c0-13: wall-clock 21 s; circulation 1533
+2026-11-07 14:26:07 UTC start sglp-coins-grid-s0-c0-14
+2026-11-07 14:26:09 UTC done sglp-coins-grid-s100-c50-13: wall-clock 22 s; circulation 1533
+2026-11-07 14:26:09 UTC start sglp-coins-grid-s0-c50-14
+2026-11-07 14:26:11 UTC done sglp-coins-grid-s100-c100-13: wall-clock 22 s; circulation 1533
+2026-11-07 14:26:11 UTC start sglp-coins-grid-s0-c100-14
+2026-11-07 14:26:12 UTC done sglp-coins-grid-s0-c0-14: wall-clock 4 s; circulation 1701
+2026-11-07 14:26:12 UTC start sglp-coins-grid-s50-c0-14
+2026-11-07 14:26:14 UTC done sglp-coins-grid-s0-c50-14: wall-clock 4 s; circulation 1701
+2026-11-07 14:26:15 UTC start sglp-coins-grid-s50-c50-14
+2026-11-07 14:26:16 UTC done sglp-coins-grid-s0-c100-14: wall-clock 4 s; circulation 1701
+2026-11-07 14:26:16 UTC start sglp-coins-grid-s50-c100-14
+2026-11-07 14:26:26 UTC done sglp-coins-grid-s50-c0-14: wall-clock 13 s; circulation 11727
+2026-11-07 14:26:26 UTC start sglp-coins-grid-s100-c0-14
+2026-11-07 14:26:29 UTC done sglp-coins-grid-s50-c50-14: wall-clock 12 s; circulation 11092
+2026-11-07 14:26:29 UTC start sglp-coins-grid-s100-c50-14
+2026-11-07 14:26:31 UTC done sglp-coins-grid-s50-c100-14: wall-clock 13 s; circulation 10470
+2026-11-07 14:26:31 UTC start sglp-coins-grid-s100-c100-14
+2026-11-07 14:26:48 UTC done sglp-coins-grid-s100-c0-14: wall-clock 20 s; circulation 1863
+2026-11-07 14:26:48 UTC start sglp-coins-grid-s0-c0-15
+2026-11-07 14:26:51 UTC done sglp-coins-grid-s100-c50-14: wall-clock 21 s; circulation 1863
+2026-11-07 14:26:51 UTC start sglp-coins-grid-s0-c50-15
+2026-11-07 14:26:55 UTC done sglp-coins-grid-s0-c0-15: wall-clock 5 s; circulation 1757
+2026-11-07 14:26:55 UTC start sglp-coins-grid-s0-c100-15
+2026-11-07 14:26:55 UTC done sglp-coins-grid-s100-c100-14: wall-clock 22 s; circulation 2012
+2026-11-07 14:26:55 UTC start sglp-coins-grid-s50-c0-15
+2026-11-07 14:26:57 UTC done sglp-coins-grid-s0-c50-15: wall-clock 5 s; circulation 1757
+2026-11-07 14:26:57 UTC start sglp-coins-grid-s50-c50-15
+2026-11-07 14:27:01 UTC done sglp-coins-grid-s0-c100-15: wall-clock 4 s; circulation 1757
+2026-11-07 14:27:01 UTC start sglp-coins-grid-s50-c100-15
+2026-11-07 14:27:10 UTC done sglp-coins-grid-s50-c0-15: wall-clock 13 s; circulation 12196
+2026-11-07 14:27:10 UTC start sglp-coins-grid-s100-c0-15
+2026-11-07 14:27:12 UTC done sglp-coins-grid-s50-c50-15: wall-clock 13 s; circulation 11826
+2026-11-07 14:27:12 UTC start sglp-coins-grid-s100-c50-15
+2026-11-07 14:27:15 UTC done sglp-coins-grid-s50-c100-15: wall-clock 13 s; circulation 10277
+2026-11-07 14:27:15 UTC start sglp-coins-grid-s100-c100-15
+2026-11-07 14:27:31 UTC done sglp-coins-grid-s100-c0-15: wall-clock 19 s; circulation 2043
+2026-11-07 14:27:31 UTC start sglp-coins-grid-s0-c0-16
+2026-11-07 14:27:33 UTC done sglp-coins-grid-s100-c50-15: wall-clock 20 s; circulation 2043
+2026-11-07 14:27:33 UTC start sglp-coins-grid-s0-c50-16
+2026-11-07 14:27:36 UTC done sglp-coins-grid-s100-c100-15: wall-clock 20 s; circulation 1625
+2026-11-07 14:27:36 UTC start sglp-coins-grid-s0-c100-16
+2026-11-07 14:27:36 UTC done sglp-coins-grid-s0-c0-16: wall-clock 4 s; circulation 1657
+2026-11-07 14:27:36 UTC start sglp-coins-grid-s50-c0-16
+2026-11-07 14:27:38 UTC done sglp-coins-grid-s0-c50-16: wall-clock 4 s; circulation 1657
+2026-11-07 14:27:38 UTC start sglp-coins-grid-s50-c50-16
+2026-11-07 14:27:41 UTC done sglp-coins-grid-s0-c100-16: wall-clock 4 s; circulation 1657
+2026-11-07 14:27:41 UTC start sglp-coins-grid-s50-c100-16
+2026-11-07 14:27:49 UTC done sglp-coins-grid-s50-c0-16: wall-clock 11 s; circulation 10850
+2026-11-07 14:27:49 UTC start sglp-coins-grid-s100-c0-16
+2026-11-07 14:27:51 UTC done sglp-coins-grid-s50-c50-16: wall-clock 12 s; circulation 10389
+2026-11-07 14:27:52 UTC start sglp-coins-grid-s100-c50-16
+2026-11-07 14:27:54 UTC done sglp-coins-grid-s50-c100-16: wall-clock 12 s; circulation 9507
+2026-11-07 14:27:54 UTC start sglp-coins-grid-s100-c100-16
+2026-11-07 14:28:10 UTC done sglp-coins-grid-s100-c0-16: wall-clock 20 s; circulation 1796
+2026-11-07 14:28:10 UTC start sglp-coins-grid-s0-c0-17
+2026-11-07 14:28:12 UTC done sglp-coins-grid-s100-c50-16: wall-clock 19 s; circulation 1796
+2026-11-07 14:28:12 UTC start sglp-coins-grid-s0-c50-17
+2026-11-07 14:28:15 UTC done sglp-coins-grid-s100-c100-16: wall-clock 19 s; circulation 1796
+2026-11-07 14:28:15 UTC start sglp-coins-grid-s0-c100-17
+2026-11-07 14:28:15 UTC done sglp-coins-grid-s0-c0-17: wall-clock 4 s; circulation 1617
+2026-11-07 14:28:15 UTC start sglp-coins-grid-s50-c0-17
+2026-11-07 14:28:18 UTC done sglp-coins-grid-s0-c50-17: wall-clock 4 s; circulation 1617
+2026-11-07 14:28:18 UTC start sglp-coins-grid-s50-c50-17
+2026-11-07 14:28:20 UTC done sglp-coins-grid-s0-c100-17: wall-clock 4 s; circulation 1617
+2026-11-07 14:28:20 UTC start sglp-coins-grid-s50-c100-17
+2026-11-07 14:28:31 UTC done sglp-coins-grid-s50-c0-17: wall-clock 14 s; circulation 11674
+2026-11-07 14:28:31 UTC start sglp-coins-grid-s100-c0-17
+2026-11-07 14:28:33 UTC done sglp-coins-grid-s50-c50-17: wall-clock 14 s; circulation 11483
+2026-11-07 14:28:33 UTC start sglp-coins-grid-s100-c50-17
+2026-11-07 14:28:35 UTC done sglp-coins-grid-s50-c100-17: wall-clock 14 s; circulation 10087
+2026-11-07 14:28:35 UTC start sglp-coins-grid-s100-c100-17
+2026-11-07 14:28:52 UTC done sglp-coins-grid-s100-c0-17: wall-clock 19 s; circulation 1915
+2026-11-07 14:28:52 UTC start sglp-coins-grid-s0-c0-18
+2026-11-07 14:28:53 UTC done sglp-coins-grid-s100-c50-17: wall-clock 19 s; circulation 1915
+2026-11-07 14:28:53 UTC start sglp-coins-grid-s0-c50-18
+2026-11-07 14:28:57 UTC done sglp-coins-grid-s0-c0-18: wall-clock 4 s; circulation 1702
+2026-11-07 14:28:57 UTC start sglp-coins-grid-s0-c100-18
+2026-11-07 14:28:57 UTC done sglp-coins-grid-s100-c100-17: wall-clock 21 s; circulation 1915
+2026-11-07 14:28:57 UTC start sglp-coins-grid-s50-c0-18
+2026-11-07 14:28:59 UTC done sglp-coins-grid-s0-c50-18: wall-clock 4 s; circulation 1702
+2026-11-07 14:28:59 UTC start sglp-coins-grid-s50-c50-18
+2026-11-07 14:29:02 UTC done sglp-coins-grid-s0-c100-18: wall-clock 4 s; circulation 1702
+2026-11-07 14:29:02 UTC start sglp-coins-grid-s50-c100-18
+2026-11-07 14:29:11 UTC done sglp-coins-grid-s50-c0-18: wall-clock 13 s; circulation 10860
+2026-11-07 14:29:11 UTC start sglp-coins-grid-s100-c0-18
+2026-11-07 14:29:13 UTC done sglp-coins-grid-s50-c50-18: wall-clock 13 s; circulation 10750
+2026-11-07 14:29:13 UTC start sglp-coins-grid-s100-c50-18
+2026-11-07 14:29:16 UTC done sglp-coins-grid-s50-c100-18: wall-clock 12 s; circulation 9320
+2026-11-07 14:29:16 UTC start sglp-coins-grid-s100-c100-18
+2026-11-07 14:29:32 UTC done sglp-coins-grid-s100-c0-18: wall-clock 19 s; circulation 1883
+2026-11-07 14:29:32 UTC start sglp-coins-grid-s0-c0-19
+2026-11-07 14:29:35 UTC done sglp-coins-grid-s100-c50-18: wall-clock 21 s; circulation 1883
+2026-11-07 14:29:35 UTC start sglp-coins-grid-s0-c50-19
+2026-11-07 14:29:37 UTC done sglp-coins-grid-s100-c100-18: wall-clock 20 s; circulation 1688
+2026-11-07 14:29:37 UTC start sglp-coins-grid-s0-c100-19
+2026-11-07 14:29:38 UTC done sglp-coins-grid-s0-c0-19: wall-clock 3 s; circulation 1671
+2026-11-07 14:29:38 UTC start sglp-coins-grid-s50-c0-19
+2026-11-07 14:29:40 UTC done sglp-coins-grid-s0-c50-19: wall-clock 4 s; circulation 1671
+2026-11-07 14:29:40 UTC start sglp-coins-grid-s50-c50-19
+2026-11-07 14:29:42 UTC done sglp-coins-grid-s0-c100-19: wall-clock 4 s; circulation 1671
+2026-11-07 14:29:42 UTC start sglp-coins-grid-s50-c100-19
+2026-11-07 14:29:50 UTC done sglp-coins-grid-s50-c0-19: wall-clock 11 s; circulation 11266
+2026-11-07 14:29:50 UTC start sglp-coins-grid-s100-c0-19
+2026-11-07 14:29:54 UTC done sglp-coins-grid-s50-c50-19: wall-clock 13 s; circulation 11084
+2026-11-07 14:29:54 UTC start sglp-coins-grid-s100-c50-19
+2026-11-07 14:29:55 UTC done sglp-coins-grid-s50-c100-19: wall-clock 12 s; circulation 9647
+2026-11-07 14:29:55 UTC start sglp-coins-grid-s100-c100-19
+2026-11-07 14:30:11 UTC done sglp-coins-grid-s100-c0-19: wall-clock 18 s; circulation 1573
+2026-11-07 14:30:11 UTC start sglp-coins-grid-s0-c0-20
+2026-11-07 14:30:15 UTC done sglp-coins-grid-s100-c50-19: wall-clock 19 s; circulation 1573
+2026-11-07 14:30:15 UTC start sglp-coins-grid-s0-c50-20
+2026-11-07 14:30:15 UTC done sglp-coins-grid-s100-c100-19: wall-clock 19 s; circulation 1573
+2026-11-07 14:30:15 UTC start sglp-coins-grid-s0-c100-20
+2026-11-07 14:30:16 UTC done sglp-coins-grid-s0-c0-20: wall-clock 3 s; circulation 1731
+2026-11-07 14:30:16 UTC start sglp-coins-grid-s50-c0-20
+2026-11-07 14:30:19 UTC done sglp-coins-grid-s0-c50-20: wall-clock 3 s; circulation 1731
+2026-11-07 14:30:19 UTC start sglp-coins-grid-s50-c50-20
+2026-11-07 14:30:20 UTC done sglp-coins-grid-s0-c100-20: wall-clock 4 s; circulation 1731
+2026-11-07 14:30:20 UTC start sglp-coins-grid-s50-c100-20
+2026-11-07 14:30:29 UTC done sglp-coins-grid-s50-c0-20: wall-clock 12 s; circulation 11981
+2026-11-07 14:30:29 UTC start sglp-coins-grid-s100-c0-20
+2026-11-07 14:30:33 UTC done sglp-coins-grid-s50-c50-20: wall-clock 12 s; circulation 11692
+2026-11-07 14:30:33 UTC start sglp-coins-grid-s100-c50-20
+2026-11-07 14:30:33 UTC done sglp-coins-grid-s50-c100-20: wall-clock 12 s; circulation 10363
+2026-11-07 14:30:33 UTC start sglp-coins-grid-s100-c100-20
+2026-11-07 14:30:49 UTC done sglp-coins-grid-s100-c0-20: wall-clock 19 s; circulation 1710
+2026-11-07 14:30:53 UTC done sglp-coins-grid-s100-c50-20: wall-clock 18 s; circulation 1710
+2026-11-07 14:30:54 UTC done sglp-coins-grid-s100-c100-20: wall-clock 19 s; circulation 1710
+2026-11-07 14:30:54 UTC start claim
+MEAS-DONE
+2026-11-07 14:30:55 UTC ALL-DONE

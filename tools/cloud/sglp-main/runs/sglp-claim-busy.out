@@ -1,0 +1,22 @@
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: e92fb71
+Working directory: /home/user/GLP-worktrees/sglp-e92/glp_runtime
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot, :deliveries
+
+Loaded root self.glp
+
+GLP> Goal reduction limit set to 1000000000000
+GLP> [CERTIFICATE REFUSED] busy reaches the network or the person: sglp/tests/busy:busy/1 calls send_to_user/1; sglp/tests/busy:busy_late/1 calls send_to_user/1
+✓ Loaded program: /home/user/GLP-worktrees/sglp-e92/programs/sglp/tests/busy
+GLP> after
+→ suspended
+
+GLP> after
+→ suspended
+
+GLP> Goodbye!

@@ -1,0 +1,18 @@
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: e92fb71
+Working directory: /home/user/GLP-worktrees/sglp-e92/glp_runtime
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot, :deliveries
+
+Loaded root self.glp
+
+GLP> Goal reduction limit set to 1000000000000
+GLP> ✓ Loaded program: /home/user/GLP-worktrees/sglp-e92/programs/sglp/tests/law
+GLP> S = stats(10000, 0.21751575689391048, 0.04676802397673373)
+→ succeeds
+
+GLP> Goodbye!

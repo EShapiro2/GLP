@@ -1,0 +1,22 @@
+start 2026-11-07 14:09:48 UTC
+program /home/user/GLP-worktrees/sglp-e92/programs/sglp: social_graph(100, 1, year, 19, 0, 70)
+draw homophile 0 indifferent 100 wary 71 sociable 29
+draw /home/user/sglp-main/sglp-sweep-h0-w70-19.draw: the counts and 100 agents' profiles
+wall-clock 79 s; load average: 3.84, 3.65, 3.49
+[CERTIFICATE REFUSED] sglp reaches the network or the person: sglp/coins/harness:go/10 calls send_to_user/1; sglp/social_graph/harness:go/9 calls send_to_user/1; sglp/transform:transform/2 calls send_to_user/1; sglp/transform:part/4 calls send_to_user/1
+✓ Loaded program: /home/user/GLP-worktrees/sglp-e92/programs/sglp
+→ suspended
+log /home/user/sglp-main/sglp-sweep-h0-w70-19.log: 20849 lines, 4248132 bytes
+answers 20848
+menu_answers 10435
+approval_answers 10413
+yes 4292
+edges 2524
+components 1
+isolated 0
+largest 100
+clock 31554426.56087467
+unread 0
+graph /home/user/sglp-main/sglp-sweep-h0-w70-19.graph
+exit 0
+end 2026-11-07 14:11:08 UTC

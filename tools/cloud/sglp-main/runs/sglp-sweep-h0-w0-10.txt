@@ -1,0 +1,23 @@
+draw homophile 0 indifferent 100 wary 0 sociable 100
+answers 20882
+menu_answers 10441
+approval_answers 10441
+yes 9429
+edges 4178
+components 1
+isolated 0
+largest 100
+clock 31556516.154097445
+unread 0
+month 1 at 2629800 edges 565 components 1 isolated 0 largest 100 within 268 across 297
+month 2 at 5259600 edges 1188 components 1 isolated 0 largest 100 within 591 across 597
+month 3 at 7889400 edges 1748 components 1 isolated 0 largest 100 within 856 across 892
+month 4 at 10519200 edges 2247 components 1 isolated 0 largest 100 within 1106 across 1141
+month 5 at 13149000 edges 2633 components 1 isolated 0 largest 100 within 1303 across 1330
+month 6 at 15778800 edges 2975 components 1 isolated 0 largest 100 within 1479 across 1496
+month 7 at 18408600 edges 3254 components 1 isolated 0 largest 100 within 1615 across 1639
+month 8 at 21038400 edges 3501 components 1 isolated 0 largest 100 within 1738 across 1763
+month 9 at 23668200 edges 3697 components 1 isolated 0 largest 100 within 1839 across 1858
+month 10 at 26298000 edges 3902 components 1 isolated 0 largest 100 within 1938 across 1964
+month 11 at 28927800 edges 4057 components 1 isolated 0 largest 100 within 2015 across 2042
+month 12 at 31557600 edges 4178 components 1 isolated 0 largest 100 within 2069 across 2109

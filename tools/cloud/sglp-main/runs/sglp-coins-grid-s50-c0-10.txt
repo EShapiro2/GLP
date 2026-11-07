@@ -1,0 +1,26 @@
+month 1 at 2629800 circulation 2541 holdings 301 wallets 94 pays 1473 proposals 329 accepted 329 declined 0
+month 2 at 5259600 circulation 3210 holdings 360 wallets 96 pays 2965 proposals 563 accepted 563 declined 0
+month 3 at 7889400 circulation 3994 holdings 431 wallets 95 pays 4441 proposals 805 accepted 803 declined 0
+month 4 at 10519200 circulation 4834 holdings 495 wallets 98 pays 5940 proposals 1048 accepted 1047 declined 0
+month 5 at 13149000 circulation 5422 holdings 515 wallets 93 pays 7417 proposals 1279 accepted 1279 declined 0
+month 6 at 15778800 circulation 6274 holdings 567 wallets 97 pays 8900 proposals 1520 accepted 1520 declined 0
+month 7 at 18408600 circulation 6786 holdings 568 wallets 95 pays 10413 proposals 1748 accepted 1748 declined 0
+month 8 at 21038400 circulation 7630 holdings 600 wallets 98 pays 11908 proposals 1994 accepted 1994 declined 0
+month 9 at 23668200 circulation 8456 holdings 641 wallets 99 pays 13340 proposals 2229 accepted 2229 declined 0
+month 10 at 26298000 circulation 9139 holdings 666 wallets 98 pays 14802 proposals 2461 accepted 2461 declined 0
+month 11 at 28927800 circulation 9784 holdings 666 wallets 96 pays 16322 proposals 2701 accepted 2701 declined 0
+month 12 at 31557600 circulation 10750 holdings 687 wallets 99 pays 17787 proposals 2947 accepted 2947 declined 0
+answers 23681
+menu_answers 20734
+offer_answers 2947
+pays 17787
+proposals 2947
+accepted 2947
+declined 0
+circulation 10750
+holdings 687
+wallets 99
+clock 31556324.798883017
+unread 0
+unordered 0
+unmatched 0
