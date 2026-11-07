@@ -12,9 +12,8 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
             ; available(Key, Key, SignedTerm, SignalReply?).
 
-Version ::= version(Integer, Hash).
-Versions ::= [] ; [Version | Versions].
-Admission ::= admitted ; refused.
+RvNetMsg ::= msg(Key, SignalMsg).
+RvNetIn ::= [] ; [RvNetMsg | RvNetIn].
 
 imported procedure rv_agent#find_ready(Key?, Key?, String?,
                                         SignalReply,
@@ -22,15 +21,14 @@ imported procedure rv_agent#find_ready(Key?, Key?, String?,
 imported procedure rv_agent#find_needs(Key?, Key?, String?,
                                         SignalReply,
                                         PendingList?, PendingList).
-imported procedure rv_agent#rv_agent(Versions?, Stream(SignalMsg)?,
-                                      PendingList?).
-imported procedure rv_agent#admit_reconnect(Versions?, Key?, Key?, Signature?,
+imported procedure rv_agent#rv_agent(Stream(SignalMsg)?, PendingList?).
+imported procedure rv_agent#rv_server(Key?, RvNetIn?).
+imported procedure rv_agent#admit_reconnect(Key?, Key?, Signature?,
                                              SignalReply,
                                              PendingList?, PendingList).
-imported procedure rv_agent#admit_available(Versions?, Key?, Key?, Signature?,
+imported procedure rv_agent#admit_available(Key?, Key?, Signature?,
                                              SignalReply,
                                              PendingList?, PendingList).
-imported procedure rv_agent#compatible(Hash?, Versions?, Admission).
 imported procedure rv_agent#match_reconnect(Key?, Key?, PeerAddress?,
                                              SignalReply,
                                              PendingList?, PendingList).
@@ -39,10 +37,11 @@ imported procedure rv_agent#match_available(Key?, Key?, PeerAddress?,
                                              PendingList?, PendingList).
 
 %% In every test below alice @< bob and carol @< dave, so the pair of alice
-%% and bob in the fixed order is attest(alice, bob).  The agent is given the
-%% compatible versions (GNA Section 6, "Versions"); where a test needs only
-%% one, it is [version(1, graph_hash)], graph_hash standing for the source
-%% identity of version 1's social-graph program.
+%% and bob in the fixed order is attest(alice, bob).  The agent admits by
+%% key and reads no source identity (GSA, "Distribution and Activation",
+%% "Reconnection"): graph_hash, hash_v1 and hash_v2 stand for the source
+%% identities of programs a signature may have been made under, and no test
+%% gives the agent one.
 
 %% =============================================================================
 %% Test 1: A arrives first, no B waiting → entry stored in pending
@@ -116,16 +115,14 @@ test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
 %% =============================================================================
 %%
 %% Every request below is rejected: its Sig is no signed term, so
-%% signature/2 assigns unsigned and admit_reconnect/7 or admit_available/7
-%% refuses it.  No test under the plain REPL presents a signature over the
-%% pair made under the social graph (graph_hash stands for the source
-%% identity of the one compatible version's), so these tests exercise the
-%% reject path and the pending list around it.
+%% signature/2 assigns unsigned and admit_reconnect/6 or admit_available/6
+%% refuses it.  These tests present no signature that verifies, so they
+%% exercise the reject path and the pending list around it.
 
 exported procedure test7_agent_single_reconnect(SignalReply).
 test7_agent_single_reconnect(ReplyA?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [reconnect(alice, bob, sig_ab, ReplyA)], []).
+        [reconnect(alice, bob, sig_ab, ReplyA)], []).
 
 %% Expected: ReplyA = rejected, agent terminates on empty stream
 
@@ -139,8 +136,8 @@ test7_agent_single_reconnect(ReplyA?) :-
 exported procedure test8_available_then_reconnect_rejected(SignalReply, SignalReply).
 test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [available(bob, alice, sig_ba, ReplyB),
-                     reconnect(alice, bob, sig_ab, ReplyA)], []).
+        [available(bob, alice, sig_ba, ReplyB),
+         reconnect(alice, bob, sig_ab, ReplyA)], []).
 
 %% Expected: ReplyA = rejected, ReplyB = rejected
 
@@ -153,8 +150,8 @@ test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
 exported procedure test9_two_reconnects_rejected(SignalReply, SignalReply).
 test9_two_reconnects_rejected(RA1?, RA2?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [reconnect(alice, bob, sig_ab, RA1),
-                     reconnect(carol, dave, sig_cd, RA2)], []).
+        [reconnect(alice, bob, sig_ab, RA1),
+         reconnect(carol, dave, sig_cd, RA2)], []).
 
 %% Expected: RA1 = rejected, RA2 = rejected
 
@@ -168,8 +165,8 @@ test9_two_reconnects_rejected(RA1?, RA2?) :-
 exported procedure test10_reconnect_then_available(SignalReply, SignalReply).
 test10_reconnect_then_available(RA?, RB?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [reconnect(alice, bob, sig_ab, RA),
-                     available(bob, alice, sig_ba, RB)], []).
+        [reconnect(alice, bob, sig_ab, RA),
+         available(bob, alice, sig_ba, RB)], []).
 
 %% Expected: RA = rejected, RB = rejected
 
@@ -184,7 +181,7 @@ test10_reconnect_then_available(RA?, RB?) :-
 exported procedure test11_reconnect_rejected(SignalReply).
 test11_reconnect_rejected(RA?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [reconnect(alice, bob, bad_sig, RA)], []).
+        [reconnect(alice, bob, bad_sig, RA)], []).
 
 %% Expected: RA = rejected
 
@@ -200,60 +197,50 @@ test11_reconnect_rejected(RA?) :-
 exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalReply, SignalReply).
 test12_rejected_does_not_block_stream(RA1?, RA2?, RB?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [reconnect(alice, bob, bad_sig, RA1),
-                     available(bob, alice, bad_sig, RB),
-                     reconnect(alice, bob, good_sig, RA2)], []).
+        [reconnect(alice, bob, bad_sig, RA1),
+         available(bob, alice, bad_sig, RB),
+         reconnect(alice, bob, good_sig, RA2)], []).
 
 %% Expected: RA1 = rejected, RA2 = rejected, RB = rejected
 
 %% =============================================================================
 %% Test 13: admit_reconnect refuses every Signature but B's over the pair
-%% under a compatible version's social graph
 %% =============================================================================
 %%
 %% The dispatch on what signature/2 reports, given each refused form
 %% directly: unsigned; carol's signature where the request names bob;
-%% bob's over another term; and bob's over attest(alice, bob) made under
-%% another program than the graph.
+%% bob's over another term; and alice's own over attest(alice, bob), the
+%% requester's where the request needs bob's.
 
 exported procedure test13_dispatch_refuses(SignalReply, SignalReply,
                                            SignalReply, SignalReply).
 test13_dispatch_refuses(R1?, R2?, R3?, R4?) :-
-    rv_agent # admit_reconnect([version(1, graph_hash)], alice, bob, unsigned, R1, [], _),
-    rv_agent # admit_reconnect([version(1, graph_hash)], alice, bob,
+    rv_agent # admit_reconnect(alice, bob, unsigned, R1, [], _),
+    rv_agent # admit_reconnect(alice, bob,
         signed(carol, graph_hash, attest(alice, bob)), R2, [], _),
-    rv_agent # admit_reconnect([version(1, graph_hash)], alice, bob,
+    rv_agent # admit_reconnect(alice, bob,
         signed(bob, graph_hash, attest(alice, carol)), R3, [], _),
-    rv_agent # admit_reconnect([version(1, graph_hash)], alice, bob,
-        signed(bob, other_hash, attest(alice, bob)), R4, [], _).
+    rv_agent # admit_reconnect(alice, bob,
+        signed(alice, graph_hash, attest(alice, bob)), R4, [], _).
 
 %% Expected: R1 = R2 = R3 = R4 = rejected
 
 %% =============================================================================
-%% Test 14: a signature that verifies, made under another program, is rejected
+%% Test 14: a verified signature of the requester's own is rejected
 %% =============================================================================
 %%
-%% This test program signs the pair of alice and K, in the fixed order,
-%% under the person's own key K, and presents it as K's attestation for
-%% alice.  signature/2 verifies it and reports signed(K, H, Pair), the
-%% signer and the term those the request names; but H is this test
-%% program's source identity and not the social graph's, so the request is
-%% refused.
+%% This test program signs the pair of K and alice, in the fixed order,
+%% under the person's own key K, and presents it with K's reconnection
+%% request for alice.  signature/2 verifies it and reports signed(K, H,
+%% Pair), the term the pair the request names; but the request needs
+%% alice's signature, the other party's, and carries K's own, so it is
+%% refused, whatever program H names.
 
-exported procedure test14_other_program_rejected(SignalReply).
-test14_other_program_rejected(RA?) :-
+exported procedure test14_own_signature_rejected(SignalReply).
+test14_own_signature_rejected(RA?) :-
     self_key(K),
-    present_own_attestation(alice, K?, RA).
-
-procedure present_own_attestation(Key?, Key?, SignalReply).
-present_own_attestation(A, B, RA?) :-
-    ground(A?), ground(B?), A? @< B? |
-    sign(attest(A?, B?), B?, Sig),
-    rv_agent # rv_agent([version(1, graph_hash)], [reconnect(A?, B?, Sig?, RA)], []).
-present_own_attestation(A, B, RA?) :-
-    ground(A?), ground(B?), B? @< A? |
-    sign(attest(B?, A?), B?, Sig),
-    rv_agent # rv_agent([version(1, graph_hash)], [reconnect(A?, B?, Sig?, RA)], []).
+    sign_own_pair(K?, alice, Sig),
+    rv_agent # rv_agent([reconnect(K?, alice, Sig?, RA)], []).
 
 %% Expected: RA = rejected
 
@@ -291,25 +278,24 @@ test16_match_on_address(ReplyA?, ReplyB?, Pending1?) :-
 
 %% =============================================================================
 %% Test 17: admit_available refuses every Signature but A's over the pair
-%% under a compatible version's social graph
 %% =============================================================================
 %%
 %% B's availability for A verified as the reconnect request is, given each
 %% refused form directly: unsigned; bob's own signature where the request
 %% needs alice's; alice's over the pair out of the fixed order,
-%% attest(bob, alice); and alice's over attest(alice, bob) made under
-%% another program than the graph.
+%% attest(bob, alice); and carol's over attest(alice, bob), a third party's
+%% where the request needs alice's.
 
 exported procedure test17_available_dispatch_refuses(SignalReply, SignalReply,
                                                      SignalReply, SignalReply).
 test17_available_dispatch_refuses(R1?, R2?, R3?, R4?) :-
-    rv_agent # admit_available([version(1, graph_hash)], bob, alice, unsigned, R1, [], _),
-    rv_agent # admit_available([version(1, graph_hash)], bob, alice,
+    rv_agent # admit_available(bob, alice, unsigned, R1, [], _),
+    rv_agent # admit_available(bob, alice,
         signed(bob, graph_hash, attest(alice, bob)), R2, [], _),
-    rv_agent # admit_available([version(1, graph_hash)], bob, alice,
+    rv_agent # admit_available(bob, alice,
         signed(alice, graph_hash, attest(bob, alice)), R3, [], _),
-    rv_agent # admit_available([version(1, graph_hash)], bob, alice,
-        signed(alice, other_hash, attest(alice, bob)), R4, [], _).
+    rv_agent # admit_available(bob, alice,
+        signed(carol, graph_hash, attest(alice, bob)), R4, [], _).
 
 %% Expected: R1 = R2 = R3 = R4 = rejected
 
@@ -325,7 +311,7 @@ exported procedure test18_unverified_available_not_matched(SignalReply,
                                                            SignalReply).
 test18_unverified_available_not_matched(ReplyB?, ReplyA?) :-
     rv_agent # rv_agent(
-        [version(1, graph_hash)], [available(bob, alice, bad_sig, ReplyB)],
+        [available(bob, alice, bad_sig, ReplyB)],
         [needs(alice, bob, addr_a, ReplyA)]).
 
 %% Expected: ReplyB = rejected, ReplyA unbound
@@ -334,13 +320,12 @@ test18_unverified_available_not_matched(ReplyB?, ReplyA?) :-
 %% Test 19: a reconnect carrying the pair out of the fixed order is refused
 %% =============================================================================
 %%
-%% bob's signature, under the graph, over attest(bob, alice): signer and
-%% program are right, but the pair is not in the fixed order, alice being
-%% the smaller key.
+%% bob's signature over attest(bob, alice): the signer is right, but the
+%% pair is not in the fixed order, alice being the smaller key.
 
 exported procedure test19_reconnect_pair_out_of_order(SignalReply).
 test19_reconnect_pair_out_of_order(R?) :-
-    rv_agent # admit_reconnect([version(1, graph_hash)], alice, bob,
+    rv_agent # admit_reconnect(alice, bob,
         signed(bob, graph_hash, attest(bob, alice)), R, [], _).
 
 %% Expected: R = rejected
@@ -382,18 +367,16 @@ test21_match_available_on_address(ReplyA?, ReplyB?, Pending1?) :-
 %% networking layer.  This test program stands in for the social graph: it
 %% signs the pair of the person's own key K and bob, in the fixed order,
 %% under K --- K being A, whose signature B's availability carries --- and
-%% gives the agent as its one compatible version, version(1, Graph), Graph
-%% the program identity signature/2 reports for that signature.  The agent
-%% takes the signature apart, finds it A's over the pair under Graph, and
-%% admits the availability; it then reads B's
-%% address through the root's peer_address/2.  Under the plain REPL no
-%% networking layer is bound, and the runtime stands in for a layer that
-%% observes nothing (IGLP, "One interface"): peer_address/2 assigns none,
-%% and match_available/6 refuses.  So B is rejected and A, waiting, is told
-%% nothing --- test 18's outcome, reached here through the admission and the
-%% layer and not through the signature.  The two punches, which follow only
-%% where the layer observes an address, are tests 16 and 21, given
-%% address(S) directly.
+%% the agent, given no program identity, takes the signature apart, finds it
+%% A's over the pair, and admits the availability under this test program,
+%% which is no social graph's; it then reads B's address through the root's
+%% peer_address/2.  Under the plain REPL no networking layer is bound, and
+%% the runtime stands in for a layer that observes nothing (IGLP, "One
+%% interface"): peer_address/2 assigns none, and match_available/6 refuses.
+%% So B is rejected and A, waiting, is told nothing --- test 18's outcome,
+%% reached here through the admission and the layer and not through the
+%% signature.  The two punches, which follow only where the layer observes
+%% an address, are tests 16 and 21, given address(S) directly.
 %%
 %% Report is what signature/2 reports for the signature presented.
 
@@ -419,102 +402,98 @@ procedure present_signed_available(Key?, Key?, SignedTerm?, Signature,
 present_signed_available(A, B, Sig, Report?, ReplyB?, ReplyA?) :-
     ground(A?), ground(B?), ground(Sig?) |
     signature(Sig?, Report),
-    signature(Sig?, S),
-    graph_of(S?, Graph),
-    rv_agent # rv_agent([version(1, Graph?)], [available(B?, A?, Sig?, ReplyB)],
+    rv_agent # rv_agent([available(B?, A?, Sig?, ReplyB)],
                         [needs(A?, B?, addr_a, ReplyA)]).
-
-%% The program identity a signature was made under, given the agent as Graph.
-procedure graph_of(Signature?, Hash).
-graph_of(signed(_, H, _), H?).
-graph_of(unsigned, no_graph).
 
 %% Expected: Report = signed(K, H, attest(..)), K self_key's answer and the
 %%           pair K's and bob's in the fixed order;
 %%           ReplyB = rejected, ReplyA unbound
 
 %% =============================================================================
-%% Test 23: compatible/3 admits each listed source identity, and no other
+%% Test 23: the two signatures of a pair, made under different programs,
+%% are each admitted
 %% =============================================================================
 %%
-%% GNA Section 6, "Versions": the agent "admits a signed term by any of"
-%% the compatible versions' social-graph programs.  Two versions are
-%% listed, version 1 under hash_v1 and version 2 under hash_v2: each of the
-%% two identities is admitted, the second after the scan passes the first;
-%% other_hash, listed under no version, is refused; and with no compatible
-%% version nothing is admitted.
+%% GSA, "Distribution and Activation", "Reconnection": the agent "checks
+%% that each request is signed by the key it names and that the two
+%% signatures are the two friends' over their pair", and checks keys and no
+%% program identity, so a signature made under an earlier version of the
+%% Grassroots App stays good.  alice's reconnect for bob carries bob's
+%% signature over attest(alice, bob) made under hash_v1, and bob's available
+%% for alice carries alice's over the same pair made under hash_v2; the
+%% dispatch on what signature/2 reports is given each directly.  Both are
+%% admitted: each reads its requester's address through peer_address/2,
+%% which with no networking layer bound assigns none, so each is then
+%% rejected there.  Posted under :trace, the suite finds the two
+%% peer_address/2 calls, alice's and bob's.
 
-exported procedure test23_compatible(Admission, Admission, Admission,
-                                     Admission).
-test23_compatible(C1?, C2?, C3?, C4?) :-
-    rv_agent # compatible(hash_v1,
-        [version(1, hash_v1), version(2, hash_v2)], C1),
-    rv_agent # compatible(hash_v2,
-        [version(1, hash_v1), version(2, hash_v2)], C2),
-    rv_agent # compatible(other_hash,
-        [version(1, hash_v1), version(2, hash_v2)], C3),
-    rv_agent # compatible(hash_v1, [], C4).
+exported procedure test23_admitted_under_any_program(SignalReply,
+                                                     SignalReply).
+test23_admitted_under_any_program(RA?, RB?) :-
+    rv_agent # admit_reconnect(alice, bob,
+        signed(bob, hash_v1, attest(alice, bob)), RA, [], P1),
+    rv_agent # admit_available(bob, alice,
+        signed(alice, hash_v2, attest(alice, bob)), RB, P1?, _).
 
-%% Expected: C1 = admitted, C2 = admitted, C3 = refused, C4 = refused
-
-%% =============================================================================
-%% Test 24: a request signed under each listed identity is admitted, one
-%% under an identity not listed is refused
-%% =============================================================================
-%%
-%% admit_reconnect/7 given bob's signature over attest(alice, bob) under
-%% each of the two compatible versions' identities, and under other_hash,
-%% listed under none.  An admitted request reads alice's address through
-%% peer_address/2, which with no networking layer bound assigns none, so
-%% every reply is rejected; posted under :trace, the suite counts the
-%% peer_address/2 calls: two, one for each admitted request, and none for
-%% the third.
-
-exported procedure test24_each_version_admitted(SignalReply, SignalReply,
-                                                SignalReply).
-test24_each_version_admitted(R1?, R2?, R3?) :-
-    rv_agent # admit_reconnect(
-        [version(1, hash_v1), version(2, hash_v2)], alice, bob,
-        signed(bob, hash_v1, attest(alice, bob)), R1, [], _),
-    rv_agent # admit_reconnect(
-        [version(1, hash_v1), version(2, hash_v2)], alice, bob,
-        signed(bob, hash_v2, attest(alice, bob)), R2, [], _),
-    rv_agent # admit_reconnect(
-        [version(1, hash_v1), version(2, hash_v2)], alice, bob,
-        signed(bob, other_hash, attest(alice, bob)), R3, [], _).
-
-%% Expected: R1 = R2 = R3 = rejected; peer_address(alice, none) called twice
+%% Expected: RA = RB = rejected; peer_address(alice, none) and
+%%           peer_address(bob, none) each called once
 
 %% =============================================================================
-%% Test 25: through the agent, a verified signature under a version listed
-%% second is admitted, and under no listed version refused
+%% Test 24: every other Signature is refused before the layer is asked
 %% =============================================================================
 %%
-%% As test 22, the test program standing in for the graph: its signature
-%% over the pair of K and bob, verified, made under Graph.  Given
-%% [version(1, other_hash), version(2, Graph)], the agent admits bob's
-%% available and reads bob's address (Admitted, the reply, rejected for the
-%% address none); given [version(1, hash_v1), version(2, hash_v2)], Graph
-%% listed under neither, it refuses it without reading an address
-%% (Refused).  The suite, under :trace, holds the trace to one
-%% peer_address/2 call, the first's.
+%% The four refused forms, each on a reconnect from alice for bob and on an
+%% available from bob for alice: unsigned; a signature by another key,
+%% carol's; the signer's over another term; and the signer's over the pair
+%% out of the fixed order.  None is admitted, so none reads an address:
+%% posted under :trace, the suite finds no peer_address/2 call.
 
-exported procedure test25_agent_versions(SignalReply, SignalReply).
-test25_agent_versions(Admitted?, Refused?) :-
+exported procedure test24_refused(SignalReply, SignalReply, SignalReply,
+                                  SignalReply, SignalReply, SignalReply,
+                                  SignalReply, SignalReply).
+test24_refused(R1?, R2?, R3?, R4?, R5?, R6?, R7?, R8?) :-
+    rv_agent # admit_reconnect(alice, bob, unsigned, R1, [], _),
+    rv_agent # admit_reconnect(alice, bob,
+        signed(carol, hash_v1, attest(alice, bob)), R2, [], _),
+    rv_agent # admit_reconnect(alice, bob,
+        signed(bob, hash_v1, attest(alice, carol)), R3, [], _),
+    rv_agent # admit_reconnect(alice, bob,
+        signed(bob, hash_v1, attest(bob, alice)), R4, [], _),
+    rv_agent # admit_available(bob, alice, unsigned, R5, [], _),
+    rv_agent # admit_available(bob, alice,
+        signed(carol, hash_v2, attest(alice, bob)), R6, [], _),
+    rv_agent # admit_available(bob, alice,
+        signed(alice, hash_v2, attest(alice, carol)), R7, [], _),
+    rv_agent # admit_available(bob, alice,
+        signed(alice, hash_v2, attest(bob, alice)), R8, [], _).
+
+%% Expected: R1 = ... = R8 = rejected; no peer_address/2 call
+
+%% =============================================================================
+%% Test 25: through the server's entry, a verified signature is admitted by
+%% its key, and the requester's own refused
+%% =============================================================================
+%%
+%% rv_server/2, the entry the rendezvous server boots the agent on, is given
+%% no program identity and a network input of two envelopes: bob's
+%% available for K, carrying K's verified signature over their pair, made
+%% under this test program, which is admitted and reads bob's address; and
+%% K's reconnect for bob, carrying the same signature, K's own where it
+%% needs bob's, which is refused without reading an address.  Posted under
+%% :trace, the suite finds one peer_address/2 call, bob's.
+
+exported procedure test25_server_admits_by_key(SignalReply, SignalReply).
+test25_server_admits_by_key(Admitted?, Refused?) :-
     self_key(K),
     sign_own_pair(K?, bob, Sig),
-    present_under_versions(K?, bob, Sig?, Admitted, Refused).
+    present_to_server(K?, bob, Sig?, Admitted, Refused).
 
-procedure present_under_versions(Key?, Key?, SignedTerm?, SignalReply,
-                                 SignalReply).
-present_under_versions(A, B, Sig, Admitted?, Refused?) :-
+procedure present_to_server(Key?, Key?, SignedTerm?, SignalReply,
+                            SignalReply).
+present_to_server(A, B, Sig, Admitted?, Refused?) :-
     ground(A?), ground(B?), ground(Sig?) |
-    signature(Sig?, S),
-    graph_of(S?, Graph),
-    rv_agent # rv_agent([version(1, other_hash), version(2, Graph?)],
-                        [available(B?, A?, Sig?, Admitted)], []),
-    rv_agent # rv_agent([version(1, hash_v1), version(2, hash_v2)],
-                        [available(B?, A?, Sig?, Refused)], []).
+    rv_agent # rv_server(rv, [msg(rv, available(B?, A?, Sig?, Admitted)),
+                              msg(rv, reconnect(A?, B?, Sig?, Refused))]).
 
 %% Expected: Admitted = rejected (after peer_address(bob, none)),
 %%           Refused = rejected (with no peer_address call)
