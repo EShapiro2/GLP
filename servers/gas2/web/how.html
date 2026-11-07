@@ -251,7 +251,7 @@ body.hood .hoodtag{background:#1d1d1f;color:#7cf08a}
     <p>Get the app for Android, Windows, macOS or Linux, or use it on the web with nothing to install (on the web, talmonlab's server runs your super-app and keeps your key). Add a friend, add a mini-app, and play.</p>
     <p>This is a research project, a first version: expect rough edges.</p>
     <div class="cta">
-      <a class="btn blue" href="get.html">Get the app</a>
+      <a class="btn blue" href="./#get">Get the app</a>
       <a class="btn grey" href="apps.html">Browse the mini-apps</a>
     </div>
   </section>
@@ -296,7 +296,7 @@ body.hood .hoodtag{background:#1d1d1f;color:#7cf08a}
   <p>Both smartphones read the mini-app's artefact from the server's disk, so the friend-to-friend shipping of the program itself is not part of the run. The creator's certification is signed in the run by the phone that installs the mini-app. The smartphones of these runs are isolates in one process on GAS2's server. The same super-app runs for a real person in GAS2's app, below.</p>
 
   <h2>On a device</h2>
-  <p>GAS2's app (<a href="get.html">get it here</a>) runs the same super-app, <code>programs/social/graph/core</code>, for a real person, with GAS2's device harness in place of the super-app's own entry <code>superapp/3</code>. The two differ in one thing: a mini-app the person installs is shown to the person.</p>
+  <p>GAS2's app (<a href="./#get">get it here</a>) runs the same super-app, <code>programs/social/graph/core</code>, for a real person, with GAS2's device harness in place of the super-app's own entry <code>superapp/3</code>. The two differ in one thing: a mini-app the person installs is shown to the person.</p>
   <p>In GLP the super-app holds a mini-app's person channel at the type <code>Opaque</code> and can only pass it on, so nothing outside the mini-app can write the person's input into it. So each of GAS2's mini-apps carries a live person of its own. The super-app runs it at the mini-app's own types, as the plays run their scripted persons. It shows the person every draw the mini-app makes, and reads the person's answers back from strings the device writes.</p>
   <p>Each device certifies its mini-apps under the person's own key, so the person trusts their own compiler. Friendship, the invitation, the undertakings and the handshake are the super-app's, as in the runs above. On a phone the super-app's network is GNA's layer, Bluetooth and the local network, so the people near show on the page and are added with one tap; people not near are reached through talmonlab's relay, encrypted end to end. A computer uses the relay alone.</p>
   <p><b>On the web</b> (for iPhones, where there is no app yet) the same page and the same super-app run for the person on talmonlab's server, over the relay. The server holds the person's key, and the page says so.</p>

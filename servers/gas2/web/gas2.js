@@ -61,7 +61,7 @@ function setHood(on) {
 }
 // The top bar, the same on every page; on a phone its links fold into a menu
 function nav(active) {
-  const links = [['apps.html', 'Mini-apps', 'apps'], ['how.html', 'How it works', 'how'], ['maker.html', 'Make an app', 'maker'], ['get.html', 'Get the app', 'get']];
+  const links = [['apps.html', 'Mini-apps', 'apps'], ['how.html', 'How it works', 'how'], ['maker.html', 'Make an app', 'maker']];
   document.querySelector('header.top').innerHTML = `<a class="brand" href="./"><span class="mark"></span>GAS2</a>
     <nav id="navl">${links.map(([u, t, k]) => `<a href="${u}" class="${k === active ? 'on' : ''}">${t}</a>`).join('')}</nav>
     <button class="hoodbtn ${HOOD ? 'on' : ''}" title="Under the hood: the technical parts" onclick="setHood(!HOOD)">&lt;/&gt;</button>

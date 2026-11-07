@@ -5,18 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GAS2 · grassroots contracts on the Grassroots Super-App</title>
 <link rel="stylesheet" href="gas2.css">
+<style>
+.dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.dl a { display: block; background: var(--card); border-radius: 14px; padding: 14px 16px; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.dl a:hover { text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.dl b { font-size: 16px; }
+.dl span { display: block; font-size: 13px; color: var(--soft); margin-top: 2px; }
+ol.steps2 li { margin: 6px 0; }
+</style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
 </head>
 <body>
 <header class="top"></header>
 <main>
-  <section class="hero" style="padding-top:8vh">
+  <section class="hero" style="padding-top:5vh">
     <h1>Social contracts that run.</h1>
     <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement.</p>
     <p>Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up. In GAS2 all of them live in one app, the Grassroots Super-App.</p>
     <p class="small muted hood-only" id="build">Loading…</p>
   </section>
+  <section class="prose" style="padding-bottom:40px">
+  <h2 class="sec" id="get">Get the app</h2>
+  <p>One app, your Grassroots Super-App: it keeps your key and your friends, and runs the mini-apps you add.</p>
+  <p class="small muted hood-only" id="rel">The apps are built from the GAS2 branch by GitHub's machines.</p>
+
+  <div class="dl">
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2.apk"><b>Android</b><span>GAS2.apk: allow installing from your browser, then open it</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-windows.zip"><b>Windows</b><span>Unzip, then run gas_phone.exe in the GAS2 folder</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-macos.zip"><b>Mac</b><span>Unzip and open GAS2; if macOS says it cannot open it, see below</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-linux.tar.gz"><b>Linux</b><span>Unpack, run ./run.sh, and open the address it prints</span></a>
+    <a href="../gas2web/"><b>Any browser, or an iPhone</b><span>GAS2 on the web: your super-app runs on talmonlab's server, which holds your key</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2.ipa"><b>iPhone, sideloaded</b><span>GAS2.ipa, installed with Sideloadly or AltStore and a free Apple ID; renewed every 7 days. Not tested yet</span></a>
+  </div>
+  <p class="small muted"><b>On a Mac</b>, GAS2 is not signed by Apple, so the first time macOS refuses to open it. Open System Settings, Privacy &amp; Security, scroll down to "GAS2 was blocked", and click <b>Open Anyway</b>. Or, in Terminal: <code>xattr -dr com.apple.quarantine</code> followed by a space and GAS2 dragged into the window, then Enter.</p>
+  <p class="small muted">GAS2 on the web is the same app, run for you on talmonlab's server: the server keeps your key, so it could act as you. On an iPhone, add it to the home screen from Safari's Share menu.</p>
+
+  <p class="small muted">On a device your key stays on the device. Messages go directly over Bluetooth or the local network where they can, and otherwise through talmonlab's relay, encrypted end to end: the relay sees who writes to whom and when, and nothing else.</p>
+  </section>
 </main>
+<script>
+fetch('https://api.github.com/repos/nimrodtalmon/GLP/releases/tags/gas2-latest').then(r => r.ok ? r.json() : null).then(j => {
+  if (!j) return;
+  const names = (j.assets || []).map(a => a.name);
+  document.getElementById('rel').textContent = (j.body || '') + (names.length ? ' Files: ' + names.join(', ') + '.' : '');
+}).catch(() => {});
+</script>
 <script src="gas2.js"></script>
 <script>
 nav('');
