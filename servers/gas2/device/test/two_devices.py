@@ -11,14 +11,32 @@ import os, urllib.error
 BASE = {'A': os.environ.get('GAS2_A', 'http://127.0.0.1:8301'), 'B': os.environ.get('GAS2_B', 'http://127.0.0.1:8302')}
 TOKEN = {}
 def call(p, path, body=None):
-    for _ in range(2):
+    for _ in range(20):
         h = {'X-GAS2-Token': TOKEN[p]} if p in TOKEN else {}
         r = urllib.request.Request(BASE[p] + path, data=None if body is None else json.dumps(body).encode(), headers=h, method='GET' if body is None else 'POST')
         try:
-            return json.load(urllib.request.urlopen(r))
+            return json.load(urllib.request.urlopen(r, timeout=60))
         except urllib.error.HTTPError as e:
             if e.code != 401: raise
+        except (urllib.error.URLError, ConnectionError, TimeoutError):
+            time.sleep(3)  # a server restarting, a network's blip
+            continue
             TOKEN[p] = json.load(urllib.request.urlopen(urllib.request.Request(BASE[p] + '/api/start', data=b'', method='POST')))['token']
+if any(b.startswith('https:') for b in BASE.values()):
+    # through a proxy curl takes better than urllib does
+    import subprocess
+    def call(p, path, body=None):
+        for _ in range(20):
+            h = ['-H', 'X-GAS2-Token: ' + TOKEN[p]] if p in TOKEN else []
+            d = ['-X', 'POST', '--data-binary', json.dumps(body)] if body is not None else []
+            r = subprocess.run(['curl', '-s', '-m', '60', '-w', '\n%{http_code}', *h, *d, BASE[p] + path], capture_output=True, text=True)
+            out, _, code = r.stdout.rpartition('\n')
+            if code == '401':
+                TOKEN[p] = json.loads(subprocess.run(['curl', '-s', '-X', 'POST', BASE[p] + '/api/start'], capture_output=True, text=True).stdout)['token']
+                continue
+            if code == '200':
+                return json.loads(out)
+            time.sleep(3)
 def st(p): return call(p, '/api/state')
 def act(p, j): call(p, '/api/act', j)
 def add(p, k): call(p, '/api/add', {'key': k})
