@@ -19,7 +19,7 @@ SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
                ; ready(Key, Key, String, SignalReply?)
                ; invited(Key, Integer, SignalReply?)
-               ; used(Key, Integer).
+               ; used(Key, Integer, Integer).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% Friend-mediated rendezvous (fmrv) — a friend already reachable over BLE
@@ -258,6 +258,26 @@ imported procedure rv_agent_test#test37_expired_link_through_agent(SignalReply, 
 exported procedure test37_expired_link_through_agent(SignalReply, SignalReply).
 test37_expired_link_through_agent(X1?, X2?) :-
     rv_agent_test # test37_expired_link_through_agent(X1, X2).
+
+imported procedure rv_agent_test#test38_redeem_other_server(SignalReply, SignalReply, PendingList).
+exported procedure test38_redeem_other_server(SignalReply, SignalReply, PendingList).
+test38_redeem_other_server(X1?, X2?, X3?) :-
+    rv_agent_test # test38_redeem_other_server(X1, X2, X3).
+
+imported procedure rv_agent_test#test39_server_own_key(SignalReply, SignalReply, SignalReply, SignalReply).
+exported procedure test39_server_own_key(SignalReply, SignalReply, SignalReply, SignalReply).
+test39_server_own_key(X1?, X2?, X3?, X4?) :-
+    rv_agent_test # test39_server_own_key(X1, X2, X3, X4).
+
+imported procedure rv_agent_test#test40_prune_used(SignalReply, PendingList, PendingList).
+exported procedure test40_prune_used(SignalReply, PendingList, PendingList).
+test40_prune_used(X1?, X2?, X3?) :-
+    rv_agent_test # test40_prune_used(X1, X2, X3).
+
+imported procedure rv_agent_test#test41_used_dropped_through_agent(SignalReply, SignalReply).
+exported procedure test41_used_dropped_through_agent(SignalReply, SignalReply).
+test41_used_dropped_through_agent(X1?, X2?) :-
+    rv_agent_test # test41_used_dropped_through_agent(X1, X2).
 
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test

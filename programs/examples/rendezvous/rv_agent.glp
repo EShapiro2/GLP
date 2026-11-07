@@ -74,16 +74,24 @@
 %%      invited(I_pk, Serial, ReplyI) on the pending list.
 %%   2. The recipient R redeems the link:  redeem(R_pk, Link, ReplyR)
 %%      admitted where signature/2 reports Link signed by the inviter it
-%%      names and now/1 is before its expiry; the agent then reads the
-%%      address at which the layer observes each of I and R by
+%%      names, the link names this agent, its Rv being the agent's own key,
+%%      Id of rv_server/2, and now/1 is before its expiry; the agent then
+%%      reads the address at which the layer observes each of I and R by
 %%      peer_address/2, refusing where it observes none, and accepts only
 %%      where the serial is registered for I and unused, which it marks used,
-%%      used(I_pk, Serial), so that a link admits one first contact.
+%%      used(I_pk, Serial, Expiry), so that a link admits one first contact.
 %%   3. The relay: ReplyI = punch(AddrR), ReplyR = punch(AddrI).  Each calls
 %%      punch_udp/1 towards the other, and the deterministic initiator, the
 %%      endpoint with the smaller key, connects (GNA, "IP connection").
 %%   A refused redemption changes nothing: the serial stays unused and I
-%%   waits.
+%%   waits.  An unredeemed registration waits until its serial is redeemed;
+%%   a used serial is kept until its link's expiry and then dropped: the
+%%   agent reads now/1 at every request and, before it acts on the request,
+%%   drops each used(I_pk, Serial, Expiry) with now at or past Expiry, the
+%%   link's expiry as the redemption that used it carried.  Once dropped, the
+%%   agent holds no record of the serial, so a later registration of it is
+%%   admitted as a first one; a redemption of the dropped link is refused,
+%%   the link having expired.
 %%
 %% System predicates:
 %%   now(T) — root self.glp (GLP-Spec catalogue): the current Unix
@@ -129,8 +137,9 @@ PendingEntry ::= needs(Key, Key, String, SignalReply?)
                  %% ready(B_pk, A_pk, AddrB, ReplyB?) — B is available for A
                ; invited(Key, Integer, SignalReply?)
                  %% invited(I_pk, Serial, ReplyI?) — I's serial, unused
-               ; used(Key, Integer).
-                 %% used(I_pk, Serial) — I's serial, redeemed
+               ; used(Key, Integer, Integer).
+                 %% used(I_pk, Serial, Expiry) — I's serial, redeemed, kept
+                 %% until its link's expiry
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% A message as it arrives on the agent's network input: msg(Q, M), Q the
@@ -146,13 +155,13 @@ SignalIn ::= [] ; [SignalMsg | SignalIn].
 %% rv_server(Id, NetIn): the rendezvous server's agent, as a GLP runtime over
 %% the headless layer boots it (networking/glue/bin/rendezvous_server.dart):
 %% Id is the agent's own key and NetIn the network input, each element
-%% msg(Id, M) with M a reconnect or available sent to this agent.  The
-%% envelope is taken off and the agent runs over what it carried, with
-%% nothing pending.
+%% msg(Id, M) with M a request sent to this agent.  The envelope is taken
+%% off and the agent runs over what it carried, with nothing pending, knowing
+%% its own key Id, by which it tells a link that names it.
 exported procedure rv_server(Key?, RvNetIn?).
-rv_server(_, NetIn) :-
+rv_server(Id, NetIn) :-
     rv_unwrap(NetIn?, In),
-    rv_agent(In?, []).
+    rv_agent(Id?, In?, []).
 
 %% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (GLP-Spec
 %% maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot":
@@ -171,41 +180,80 @@ rv_unwrap([], []).
 %% MAIN LOOP
 %% =============================================================================
 
-exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
+%% rv_agent(Id, In, Pending): the agent of key Id over its requests In, with
+%% Pending the requests awaiting their match and the serials of the links it
+%% has registered or matched.  At each request it reads the clock by now/1,
+%% and rv_request/5 acts on the request at that time.  The guard grounds Id.
+exported procedure rv_agent(Key?, Stream(SignalMsg)?, PendingList?).
+rv_agent(Id, [M|In], Pending) :-
+    ground(Id?) |
+    now(T),
+    rv_request(Id?, M?, T?, Pending?, Pending1),
+    rv_agent(Id?, In?, Pending1?).
+rv_agent(_, [], _).
+
+%% rv_request(Id, M, T, Pending, Pending1): the request M at time T.  The used
+%% serials whose links have expired by T are dropped first, by prune_used/3.
+%% The guard grounds T.
+procedure rv_request(Key?, SignalMsg?, Integer?, PendingList?, PendingList).
 
 %% A requests reconnection to B, presenting SigB, B's signature over the
 %% pair.  signature/2 takes it apart and admit_reconnect/6 dispatches on
 %% what it reports.
-rv_agent([reconnect(A, B, Sig, ReplyA?)|In], Pending) :-
+rv_request(_, reconnect(A, B, Sig, ReplyA?), T, Pending, Pending1?) :-
+    integer(T?) |
+    prune_used(T?, Pending?, Pending0),
     signature(Sig?, S),
-    admit_reconnect(A?, B?, S?, ReplyA, Pending?, Pending1),
-    rv_agent(In?, Pending1?).
+    admit_reconnect(A?, B?, S?, ReplyA, Pending0?, Pending1).
 
 %% B is available for reconnection from A, presenting SigA, A's signature
 %% over the same pair; verified as the reconnect request is, by
 %% admit_available/6.
-rv_agent([available(B, A, Sig, ReplyB?)|In], Pending) :-
+rv_request(_, available(B, A, Sig, ReplyB?), T, Pending, Pending1?) :-
+    integer(T?) |
+    prune_used(T?, Pending?, Pending0),
     signature(Sig?, S),
-    admit_available(B?, A?, S?, ReplyB, Pending?, Pending1),
-    rv_agent(In?, Pending1?).
+    admit_available(B?, A?, S?, ReplyB, Pending0?, Pending1).
 
 %% The inviter I registers the serial of its invitation link, over its
-%% session with this server; the link carries what is checked.  The clock is
-%% not read: whether the link has expired is decided at its redemption.
-rv_agent([register(I, Link, ReplyI?)|In], Pending) :-
+%% session with this server; the link carries what is checked.  Whether the
+%% link has expired, and whether it names this agent, is decided at its
+%% redemption.
+rv_request(_, register(I, Link, ReplyI?), T, Pending, Pending1?) :-
+    integer(T?) |
+    prune_used(T?, Pending?, Pending0),
     signature(Link?, S),
-    admit_register(I?, S?, ReplyI, Pending?, Pending1),
-    rv_agent(In?, Pending1?).
+    admit_register(I?, S?, ReplyI, Pending0?, Pending1).
 
-%% The recipient R redeems the link it was sent; the clock is read by now/1
-%% and admit_redeem/6 dispatches on what signature/2 reports and on it.
-rv_agent([redeem(R, Link, ReplyR?)|In], Pending) :-
+%% The recipient R redeems the link it was sent; admit_redeem/7 dispatches
+%% on what signature/2 reports, on the agent's own key Id and on the clock.
+rv_request(Id, redeem(R, Link, ReplyR?), T, Pending, Pending1?) :-
+    integer(T?) |
+    prune_used(T?, Pending?, Pending0),
     signature(Link?, S),
-    now(T),
-    admit_redeem(R?, S?, T?, ReplyR, Pending?, Pending1),
-    rv_agent(In?, Pending1?).
+    admit_redeem(Id?, R?, S?, T?, ReplyR, Pending0?, Pending1).
 
-rv_agent([], _).
+%% =============================================================================
+%% prune_used: drop the used serials whose links have expired
+%% =============================================================================
+
+%% prune_used(T, Pending, Pending1): Pending1 is Pending without the entries
+%% used(I, Serial, Expiry) with T at or past Expiry; every other entry is
+%% kept, in its order.
+exported procedure prune_used(Integer?, PendingList?, PendingList).
+
+%% A used serial whose link has expired: dropped.
+prune_used(T, [used(_, _, E)|Ps], Ps1?) :-
+    integer(T?), integer(E?), T? >= E? |
+    prune_used(T?, Ps?, Ps1).
+
+%% Any other entry, a used serial whose link has not expired among them:
+%% kept.
+prune_used(T, [P|Ps], [P?|Ps1?]) :-
+    otherwise |
+    prune_used(T?, Ps?, Ps1).
+
+prune_used(_, [], []).
 
 %% =============================================================================
 %% admit_reconnect: dispatch on what signature/2 reports for A's request
@@ -304,7 +352,8 @@ register_serial(I, S, rejected, [invited(I2, S2, R2?)|Ps],
 
 %% I has registered this serial already, and it is used: refused, so that a
 %% link admits one first contact.
-register_serial(I, S, rejected, [used(I2, S2)|Ps], [used(I2?, S2?)|Ps?]) :-
+register_serial(I, S, rejected, [used(I2, S2, E2)|Ps],
+                [used(I2?, S2?, E2?)|Ps?]) :-
     I? =?= I2?, S? =?= S2? | true.
 
 %% Another entry: kept, and the search goes on.
@@ -320,42 +369,50 @@ register_serial(I, S, ReplyI?, [], [invited(I?, S?, ReplyI)]).
 %% on the clock
 %% =============================================================================
 
-exported procedure admit_redeem(Key?, Signature?, Integer?, SignalReply,
+%% admit_redeem(Id, R, S, T, ReplyR, Pending, Pending1): the redemption by R
+%% of the link signature/2 reports as S, at the agent of key Id, at time T.
+exported procedure admit_redeem(Key?, Key?, Signature?, Integer?, SignalReply,
                                 PendingList?, PendingList).
 
-%% The link is signed by the inviter it names, and the clock T is before its
-%% expiry: admitted, under whatever program the inviter signed it.  The RV
-%% agent then reads the address at which the layer observes each of the two,
-%% and redeem_addresses/7 dispatches on what it reports.
-admit_redeem(R, signed(K, _, invitation(I, _, _, Serial, Expiry)), T, ReplyR?,
-             Pending, Pending1?) :-
-    K? =?= I?, integer(Serial?), integer(Expiry?), T? < Expiry? |
+%% The link is signed by the inviter it names, names this agent, its Rv
+%% being the agent's own key Id, and the clock T is before its expiry:
+%% admitted, under whatever program the inviter signed it.  The RV agent
+%% then reads the address at which the layer observes each of the two, and
+%% redeem_addresses/8 dispatches on what it reports.
+admit_redeem(Id, R, signed(K, _, invitation(I, Rv, _, Serial, Expiry)), T,
+             ReplyR?, Pending, Pending1?) :-
+    K? =?= I?, Rv? =?= Id?, integer(Serial?), integer(Expiry?),
+    T? < Expiry? |
     peer_address(I?, PeerAddressI),
     peer_address(R?, PeerAddressR),
-    redeem_addresses(I?, Serial?, PeerAddressI?, PeerAddressR?, ReplyR,
-                     Pending?, Pending1).
+    redeem_addresses(I?, Serial?, Expiry?, PeerAddressI?, PeerAddressR?,
+                     ReplyR, Pending?, Pending1).
 
-%% unsigned, a link signed by another than the inviter it names, another
-%% term, or expired: refused, and nothing is changed.
-admit_redeem(_, _, _, rejected, Pending, Pending?) :-
+%% unsigned, a link signed by another than the inviter it names, a link
+%% naming another server, another term, or expired: refused, and nothing is
+%% changed.
+admit_redeem(_, _, _, _, rejected, Pending, Pending?) :-
     otherwise | true.
 
 %% =============================================================================
 %% redeem_addresses: dispatch on what peer_address/2 reports for the two
 %% =============================================================================
 
-exported procedure redeem_addresses(Key?, Integer?, PeerAddress?, PeerAddress?,
-                                    SignalReply, PendingList?, PendingList).
+%% redeem_addresses(I, Serial, Expiry, PeerAddressI, PeerAddressR, ReplyR,
+%% Pending, Pending1): Expiry the link's, kept with the serial once used.
+exported procedure redeem_addresses(Key?, Integer?, Integer?, PeerAddress?,
+                                    PeerAddress?, SignalReply, PendingList?,
+                                    PendingList).
 
 %% The layer observes both: look for the serial, registered for the inviter
 %% and unused.
-redeem_addresses(I, S, address(AddrI), address(AddrR), ReplyR?,
+redeem_addresses(I, S, E, address(AddrI), address(AddrR), ReplyR?,
                  Pending, Pending1?) :-
-    find_invited(I?, S?, AddrI?, AddrR?, ReplyR, Pending?, Pending1).
+    find_invited(I?, S?, E?, AddrI?, AddrR?, ReplyR, Pending?, Pending1).
 
 %% The layer observes no address for one of the two: there is none to relay,
 %% so the redemption is refused and the serial is left as it was.
-redeem_addresses(_, _, _, _, rejected, Pending, Pending?) :-
+redeem_addresses(_, _, _, _, _, rejected, Pending, Pending?) :-
     otherwise | true.
 
 %% =============================================================================
@@ -363,24 +420,25 @@ redeem_addresses(_, _, _, _, rejected, Pending, Pending?) :-
 %% registered for the inviter and unused
 %% =============================================================================
 
-exported procedure find_invited(Key?, Integer?, String?, String?, SignalReply,
-                                PendingList?, PendingList).
+%% find_invited(I, Serial, Expiry, AddrI, AddrR, ReplyR, Pending, Pending1).
+exported procedure find_invited(Key?, Integer?, Integer?, String?, String?,
+                                SignalReply, PendingList?, PendingList).
 
-%% Registered and unused: marked used, and each is told the address the RV
-%% agent observes for the other --- the inviter the recipient's, the
-%% recipient the inviter's.
-find_invited(I, S, AddrI, AddrR, ReplyR?, [invited(I2, S2, ReplyI?)|Ps],
-             [used(I2?, S2?)|Ps?]) :-
+%% Registered and unused: marked used until the link's expiry E, and each is
+%% told the address the RV agent observes for the other --- the inviter the
+%% recipient's, the recipient the inviter's.
+find_invited(I, S, E, AddrI, AddrR, ReplyR?, [invited(I2, S2, ReplyI?)|Ps],
+             [used(I2?, S2?, E?)|Ps?]) :-
     I? =?= I2?, S? =?= S2? |
     complete_rendezvous(AddrI?, AddrR?, ReplyI, ReplyR).
 
 %% Another entry, a used serial among them: kept, and the search goes on.
-find_invited(I, S, AddrI, AddrR, ReplyR?, [P|Ps], [P?|Ps1?]) :-
+find_invited(I, S, E, AddrI, AddrR, ReplyR?, [P|Ps], [P?|Ps1?]) :-
     otherwise |
-    find_invited(I?, S?, AddrI?, AddrR?, ReplyR, Ps?, Ps1).
+    find_invited(I?, S?, E?, AddrI?, AddrR?, ReplyR, Ps?, Ps1).
 
 %% Not registered for the inviter, or used: refused.
-find_invited(_, _, _, _, rejected, [], []).
+find_invited(_, _, _, _, _, rejected, [], []).
 
 %% =============================================================================
 %% match_reconnect: dispatch on what peer_address/2 reports for A

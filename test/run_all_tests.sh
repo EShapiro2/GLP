@@ -7020,6 +7020,10 @@ test34_redeem_refused(R341, R342, R343, R344, R345, P34).
 test35_redeem_admitted_no_layer(RI35, RR35, P35).
 test36_link_through_agent(S36, RI36, RR36).
 test37_expired_link_through_agent(RI37, RR37).
+test38_redeem_other_server(RI38, RR38, P38).
+test39_server_own_key(RI3910, RR3910, RI3911, RR3911).
+test40_prune_used(RI40, P401, P402).
+test41_used_dropped_through_agent(RD41, RK41).
 :quit
 HEREDOC
 2>&1)
@@ -7185,10 +7189,13 @@ check "RV agent test25: the reconnect carrying the requester's own signature is 
 # registers its serial as unused, and redeem(R, Link, ReplyR) is admitted
 # where the link is signed by the inviter it names and now/1 is before its
 # expiry, relayed where the layer observes both and the serial is registered
-# for the inviter and unused, which marks it used.  Tests 26 to 35 give the
-# dispatch its forms directly; 36 and 37 sign a link with sign/3 and give it
-# to the agent's loop, where peer_address/2, with no layer bound, assigns
-# none.
+# for the inviter and unused, which marks it used until the link's expiry.
+# The redemption is admitted only where the link names the agent, its Rv
+# the agent's own key (rv in every test), and a used serial is dropped at
+# the first request at or past its link's expiry.  Tests 26 to 35, 38 and 40
+# give the dispatch its forms directly; 36, 37, 39 and 41 sign a link with
+# sign/3 and give it to the agent's loop, where peer_address/2, with no
+# layer bound, assigns none.
 # A key as the trace prints it, unquoted whatever its first character.
 rv_tkey="\('\?[0-9a-f]\{64\}'\?\)"
 _rv_pa() { printf '%s\n' "$1" | grep -c '^:peer_address('; }
@@ -7209,14 +7216,14 @@ check "RV agent test28: a serial registered and unused is not registered again" 
 check "RV agent test28: the registration standing still waits" "^R280 = <unbound>$" "$rv_28"
 check "RV agent test28: the unused entry is left as it was" "^P281 = \[invited(alice, 7, X[0-9]*)\]$" "$rv_28"
 check "RV agent test28: a used serial is not registered again" "^R282 = rejected$" "$rv_28"
-check "RV agent test28: the used entry is left as it was" "^P282 = \[used(alice, 7)\]$" "$rv_28"
+check "RV agent test28: the used entry is left as it was" "^P282 = \[used(alice, 7, 1000)\]$" "$rv_28"
 check "RV agent test28: another serial of the inviter is registered" "^R283 = <unbound>$" "$rv_28"
-check "RV agent test28: the other serial is entered after the used one" "^P283 = \[used(alice, 7), invited(alice, 8, X[0-9]*)\]$" "$rv_28"
+check "RV agent test28: the other serial is entered after the used one" "^P283 = \[used(alice, 7, 1000), invited(alice, 8, X[0-9]*)\]$" "$rv_28"
 rv_29=$(_rv_answer 44)
 check "RV agent test29 succeeds" "^→ succeeds$" "$rv_29"
 check "RV agent test29: a valid redemption, the inviter told the recipient's address" "^RI29 = punch(addr_b)$" "$rv_29"
 check "RV agent test29: a valid redemption, the recipient told the inviter's address" "^RR29 = punch(addr_a)$" "$rv_29"
-check "RV agent test29: the serial is marked used, the other pair's entry left pending" "^P29 = \[ready(carol, dave, addr_c, X[0-9]*), used(alice, 7)\]$" "$rv_29"
+check "RV agent test29: the serial is marked used, the other pair's entry left pending" "^P29 = \[ready(carol, dave, addr_c, X[0-9]*), used(alice, 7, 1000)\]$" "$rv_29"
 rv_30=$(_rv_answer 45)
 check "RV agent test30 succeeds" "^→ succeeds$" "$rv_30"
 check "RV agent test30: no address observed for the inviter, the redemption is refused" "^R301 = rejected$" "$rv_30"
@@ -7234,13 +7241,13 @@ check "RV agent test31: the other inviter's entry is left as it was" "^P312 = \[
 rv_32=$(_rv_answer 47)
 check "RV agent test32 succeeds" "^→ succeeds$" "$rv_32"
 check "RV agent test32: a used serial is refused" "^R32 = rejected$" "$rv_32"
-check "RV agent test32: the used entry is left as it was" "^P32 = \[used(alice, 7)\]$" "$rv_32"
+check "RV agent test32: the used entry is left as it was" "^P32 = \[used(alice, 7, 1000)\]$" "$rv_32"
 rv_33=$(_rv_answer 48)
 check "RV agent test33 succeeds" "^→ succeeds$" "$rv_33"
 check "RV agent test33: the first redemption, the inviter told the recipient's address" "^RI33 = punch(addr_b)$" "$rv_33"
 check "RV agent test33: the first redemption, the recipient told the inviter's address" "^R331 = punch(addr_a)$" "$rv_33"
 check "RV agent test33: a second redemption of the link is refused" "^R332 = rejected$" "$rv_33"
-check "RV agent test33: the serial stays used" "^P33 = \[used(alice, 7)\]$" "$rv_33"
+check "RV agent test33: the serial stays used" "^P33 = \[used(alice, 7, 1000)\]$" "$rv_33"
 rv_34=$(_rv_answer 49)
 check "RV agent test34 succeeds" "^→ succeeds$" "$rv_34"
 check "RV agent test34: no refused redemption reaches the layer" "^0$" "$(_rv_pa "$rv_34")"
@@ -7270,6 +7277,29 @@ check "RV agent test37 succeeds" "^→ succeeds$" "$rv_37"
 check "RV agent test37: an expired link's redemption does not reach the layer" "^0$" "$(_rv_pa "$rv_37")"
 check "RV agent test37: an expired link's redemption is refused" "^RR37 = rejected$" "$rv_37"
 check "RV agent test37: the inviter is told nothing" "^RI37 = <unbound>$" "$rv_37"
+rv_38=$(_rv_answer 53)
+check "RV agent test38 succeeds" "^→ succeeds$" "$rv_38"
+check "RV agent test38: a link naming another server does not reach the layer" "^0$" "$(_rv_pa "$rv_38")"
+check "RV agent test38: a link naming another server is refused" "^RR38 = rejected$" "$rv_38"
+check "RV agent test38: the inviter is told nothing" "^RI38 = <unbound>$" "$rv_38"
+check "RV agent test38: the serial is left unused" "^P38 = \[invited(alice, 7, X[0-9]*)\]$" "$rv_38"
+rv_39=$(_rv_answer 54)
+check "RV agent test39 succeeds" "^→ succeeds$" "$rv_39"
+check "RV agent test39: through rv_server/2, only the link naming the server's own key reaches the layer" "^2$" "$(_rv_pa "$rv_39")"
+check "RV agent test39: the redemption of the link naming the server reads the recipient's address once" "^1$" "$(printf '%s\n' "$rv_39" | grep -c '^:peer_address(bob, none) :- true$')"
+check "RV agent test39: the link naming the server, no address observed, is refused" "^RR3910 = rejected$" "$rv_39"
+check "RV agent test39: the link naming another server is refused" "^RR3911 = rejected$" "$rv_39"
+check "RV agent test39: the inviter of the link naming the server is told nothing" "^RI3910 = <unbound>$" "$rv_39"
+check "RV agent test39: the link naming another server is registered all the same" "^RI3911 = <unbound>$" "$rv_39"
+rv_40=$(_rv_answer 55)
+check "RV agent test40 succeeds" "^→ succeeds$" "$rv_40"
+check "RV agent test40: used serials at or past their links' expiry are dropped, every other entry kept in its order" "^P401 = \[ready(carol, dave, addr_c, X[0-9]*), used(alice, 8, 1001), invited(alice, 9, X[0-9]*)\]$" "$rv_40"
+check "RV agent test40: the registered inviter still waits" "^RI40 = <unbound>$" "$rv_40"
+check "RV agent test40: a used serial before its link's expiry is kept" "^P402 = \[used(alice, 7, 1000)\]$" "$rv_40"
+rv_41=$(_rv_answer 56)
+check "RV agent test41 succeeds" "^→ succeeds$" "$rv_41"
+check "RV agent test41: through the agent, a used serial past its link's expiry is dropped and the serial registered again" "^RD41 = <unbound>$" "$rv_41"
+check "RV agent test41: through the agent, a used serial before its link's expiry is kept and the registration refused" "^RK41 = rejected$" "$rv_41"
 
 # rv_server/2, the entry the rendezvous server boots the agent on
 # (networking/glue/bin/rendezvous_server.dart): the module loaded as the
