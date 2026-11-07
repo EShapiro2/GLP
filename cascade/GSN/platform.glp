@@ -252,7 +252,7 @@ procedure sentence_of(Class?, Peer?, Asked).
 sentence_of(acquaint(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' wishes that you know each other.')])], Me?, Ws).
 sentence_of(introduce(V1, V2, V3), Me, Ws?) :- ground(V2?), ground(V1?), ground(V3?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to introduce '), person(V3?), text(' to you.')])], Me?, Ws).
 sentence_of(befriend(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to be your friend.')])], Me?, Ws).
-sentence_of(join(V1, V2, _), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks you to join their group.')])], Me?, Ws).
+sentence_of(join(V1, V2, _), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks you to join her group.')])], Me?, Ws).
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).

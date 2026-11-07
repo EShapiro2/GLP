@@ -468,7 +468,7 @@ ground(V1?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks you to join their group.")])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks you to join her group.")])], Me?, Ws)
 .
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
