@@ -252,11 +252,14 @@ FormWord ::= say(String) ; at(Integer).
 % it the mini-app, on its person's consent, asks for a warm call: an
 % introduction, by the friend that passed it the end, to the anchor the name
 % carries (GSG paper, Section "Distribution and Activation", "Contact between
-% two participants").
+% two participants"); and, for a message to a peer it has no route to, it asks
+% for an invitation of that peer to the program, invite(Key) (GSA paper,
+% Section 3, "Distribution with an invitation"; GLP #13, Udi approving,
+% 2026-11-07).
 RootChannel(T) ::= ch(Stream(T), Stream(T)?).
 Conversation(T) ::= conversation(Key, RootChannel(T)).
 SgToApp(T) ::= Conversation(T) ; held(GlobalName, Key).
-AppToSg ::= warm_call(GlobalName, Key).
+AppToSg ::= warm_call(GlobalName, Key) ; invite(Key).
 SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 
 % =============================================================================
