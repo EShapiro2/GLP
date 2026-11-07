@@ -461,13 +461,26 @@ CanonicalContext _contextFor(VglpProgram program, String path,
             scope.types.containsKey(n) || scope.typeTemplates.containsKey(n),
         resolveIn: resolveIn);
 
+/// The exact source text each parsed module came from ([_parseFile]).  The
+/// checked-programs cache (GlpEngine, loadProgram) keys a program by the text
+/// that was parsed, never by a later read of the file, which an edit between
+/// the parse and the read would falsify.
+final _parsedSource = Expando<String>('parsedSource');
+
+/// The source text [m] was parsed from; null for a module not parsed by
+/// [_parseFile], a composite among them (a self.vglp layered into its
+/// self.glp, [_withLayer]).
+String? parsedSourceOf(Module m) => _parsedSource[m];
+
 /// The module of the file at [path]; a virtual self.glp's is empty
 /// ([selfGlpSource]).
-Module _parseFile(String path) => Parser(Lexer(isSelfGlpFile(path)
-            ? selfGlpSource(path)
-            : File(path).readAsStringSync())
-        .tokenize())
-    .parseModule();
+Module _parseFile(String path) {
+  final text =
+      isSelfGlpFile(path) ? selfGlpSource(path) : File(path).readAsStringSync();
+  final module = Parser(Lexer(text).tokenize()).parseModule();
+  _parsedSource[module] = text;
+  return module;
+}
 
 /// The module of the self.glp [self], at [selfPath], with the compiled text
 /// of the self.vglp beside it, [layer], at [layerPath]: one module, one layer
@@ -683,7 +696,7 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
   // file named boot_direct.glp or mad_boot.glp, and every file under a
   // directory named mad_boot, was left out by its name.
   for (final file in glpFiles) {
-    final filename = file.path.split(Platform.pathSeparator).last;
+    final filename = ppath.basename(file.path); // '/' or '\\' on Windows
 
     // Parse the module
     var module = _parseFile(file.path);
@@ -742,7 +755,7 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
   final vglpFiles = _listFiles(root)
       .where((f) => f.path.endsWith('.vglp'))
       .where((f) {
-    final filename = f.path.split(Platform.pathSeparator).last;
+    final filename = ppath.basename(f.path);
     // A self.vglp is no module: its layer joins its self.glp's.
     if (filename == selfVglp) return false;
     final stem = filename.substring(0, filename.length - '.vglp'.length);
@@ -861,7 +874,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   // type checking, so it must also be linked, or its procedures are unresolved
   // at runtime. (The ancestor self.glp ABOVE the directory are added below.)
   final ownSelf = File('$dir${Platform.pathSeparator}self.glp');
-  if (file.path.split(Platform.pathSeparator).last != 'self.glp' &&
+  if (ppath.basename(file.path) != 'self.glp' &&
       ownSelf.existsSync()) {
     final selfModule = _parseFile(ownSelf.path);
     final selfChain = discoverSelfChain(
@@ -1629,10 +1642,14 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
 /// ι(T) ([TypeIdentityTables.opaque]; TGLP modules.tex, Dynamic Activation,
 /// "Opaque types"), which the interface text's derivation records too.  The
 /// tables are otherwise as they are without it.
+final _linkedTables = Expando<TypeIdentityTables>('typeIdentityTables');
+
 TypeIdentityTables linkedTypeIdentityTables(
     List<DiscoveredModule> modules, LinkResult linked,
     {Map<String, EntryTemplate> entryTemplates = const {}}) {
-  final tables = typeIdentityTablesForModule(
+  // The tables are a function of the linked program, which a program loaded
+  // again unchanged shares (GlpEngine._checked): built once for it.
+  final tables = _linkedTables[linked] ??= typeIdentityTablesForModule(
       linkedFlatModule(modules, linked, allDeclarations: true),
       ancestorScope: primitiveScope());
   if (entryTemplates.isEmpty) return tables;

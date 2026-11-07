@@ -806,9 +806,11 @@ String _normFile(String path) => ppath.normalize(File(path).absolute.path);
 
 /// The last segment of the directory holding [path].
 String _directoryLabel(String path) {
-  final dir = File(path).absolute.parent.path;
-  final parts = dir.split(Platform.pathSeparator).where((p) => p.isNotEmpty);
-  return parts.isEmpty ? dir : parts.last;
+  // By the path package, which reads either separator on Windows, where a
+  // directory named "dir/" lists its files as "dir/f" (2026-11-04).
+  final dir = ppath.normalize(File(path).absolute.parent.path);
+  final last = ppath.basename(dir);
+  return last.isEmpty ? dir : last;
 }
 
 /// The language primitives, `Π` of TGLP Definition "Root, Scope": the base of
