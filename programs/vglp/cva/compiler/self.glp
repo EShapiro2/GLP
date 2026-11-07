@@ -25,8 +25,9 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 %% Act schemas allow numbers (GSC 9231074, Section 3.2; vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it"): num(X) is the numeric variable X where X is a name and the number X where X is a number, and times(K, A) is the atom A with the multiplicity K, as programs/gsc/self.glp writes them.
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
+%% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer) ; num(Constant) ; any ; ilist(Integer, String).
+            ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -49,11 +50,14 @@ Constraint ::= true ; and(Constraint, Constraint)
              ; or(Constraint, Constraint)
              ; signed(Arg, Arg) ; unsigned(Arg, Arg)
              ; not(Constraint) ; implies(Constraint, Constraint)
-             ; ne(Expr, Expr) ; rel(Constant, Exprs).
+             ; ne(Expr, Expr) ; rel(Constant, Exprs)
+             ; program(Expr).
 %% not, implies and ne, and the relations rel(Name, Args), functions fn(Name, Args), cardinalities cardinality(Xs, H, A, Phi) and sums sum(Xs, H, A, Phi, U) a constraint may hold, as programs/gsc/self.glp writes them (GSC c8c5ead, def:numbers).  vGLP's constraint is "a decidable condition on the values its binding assigns, in the relations their types provide --- linear arithmetic on its numeric variables, and signed(u, y) and unsigned(u, y)" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), so the compiler takes not, implies and ne, and refuses a contract with a relation, a function, a cardinality or a sum (cvac.glp, q_lines).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
-             ; sum(Args, Arg, Atom, Form, Expr).
+             ; sum(Args, Arg, Atom, Form, Expr)
+             ; author_of(Arg) ; item_of(Arg).
+%% author_of(Y), item_of(Y) and program(E), the author and the item of the speech act bound to Y and a condition on an utterance its type provides, as programs/gsc/self.glp writes them (GSC 65a26da, def:numbers): vGLP's Section 5.4 (fe12932) names none of them among the relations and functions a constraint is over, so the compiler refuses a contract that holds one, with the reason (cvac.glp, con_beyond).
 Exprs      ::= [] ; [Expr | Exprs].
 Constraints ::= [] ; [Constraint | Constraints].
 %% A safe formula (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc/self.glp writes it: fa(H, M) the atom or multiplicity M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi), Psi a list, and fcons(C) a constraint.
@@ -296,6 +300,7 @@ loc_vars([loc(_, V)|Ls], [V?|Vs?]) :- loc_vars(Ls?, Vs).
 procedure is_nvar(Arg?, YesNo).
 is_nvar(num(X), no) :- number(X?) | true.
 is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
+is_nvar(real(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
@@ -321,6 +326,8 @@ con_args(not(C), A?) :- con_args(C?, A).
 con_args(implies(C1, C2), A?) :- con_args(C1?, A1), con_args(C2?, A2), app(A1?, A2?, A).
 con_args(ne(X, Y), A?) :- exprs_args(X?, Y?, A).
 con_args(rel(_, Es), A?) :- exprl_args(Es?, A).
+%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
+con_args(program(_), []).
 procedure exprs_args(Expr?, Expr?, Args).
 exprs_args(X, Y, A?) :- expr_args(X?, A1), expr_args(Y?, A2), app(A1?, A2?, A).
 %% The numeric arguments of an expression, in order.
@@ -329,6 +336,7 @@ expr_args(plus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(minus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(mul(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(num(X), [num(X?)]).
+expr_args(real(X), [num(X?)]).
 expr_args(role(I), [role(I?)]).
 expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
@@ -342,6 +350,9 @@ expr_args(ilist(_, _), []).
 expr_args(fn(_, Es), A?) :- exprl_args(Es?, A).
 expr_args(cardinality(_, _, _, _), []).
 expr_args(sum(_, _, _, _, _), []).
+%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
+expr_args(author_of(_), []).
+expr_args(item_of(_), []).
 procedure exprl_args(Exprs?, Args).
 exprl_args([], []).
 exprl_args([E|Es], A?) :- expr_args(E?, A1), exprl_args(Es?, A2), app(A1?, A2?, A).
@@ -359,8 +370,12 @@ TSchema   ::= schema(Constant, Args, RoleSpecs) ; lschema(Constant, Args, RoleSp
 TSchemas  ::= [] ; [TSchema | TSchemas].
 %% The condition and the conditional literals of each listed role of a schema with quantifiers, lx(Schema, I, Phi, CAdd, CDel) (cvac.glp, lx_table).
 %% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
+%% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
+%% And each real variable X of a schema S, rl(S, X) (cvac.glp, real_lx).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
-            ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults).
+            ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
+            ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults)
+            ; rl(Constant, Constant).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).

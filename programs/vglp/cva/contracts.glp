@@ -55,9 +55,10 @@
 %%                             at p  child(r), friend(q), +approved(r, s)
 %%                             at q  child(s), friend(p), +approved(s, r)
 %%
-%% A parent proposing cbefriend must know every participant, the other child
-%% included, before it proposes (vGLP, Definition "Canonical CVA Platform",
-%% Propose).  childsafe/self.glp plays it.
+%%   acquaint(p?, q?)      :  at p  +knows(q)
+%%                             at q  +knows(p)
+%%
+%% acquaint is GKK's Acquaintance (programs/gsc/GKK.glp) without its identity atoms, which childsafe has not, adding no friend atom, so that the proposer of cbefriend, the child in its first role, which its pragma names before its button and so its base (vGLP 0b51a60, Section 5.4), comes to know the other child and the other parent before it proposes: "Propose ... is taken only where p knows every agent it sends a message to" (vGLP, Definition "Proposing"), and befriending them would add the friend atom cbefriend forbids (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, Red 1).  childsafe/self.glp plays it.
 %%
 %% link is a three-party act guarded at its initiator alone, so that two
 %% initiators can propose attempts whose participants meet in two agents
@@ -247,14 +248,26 @@
 %%   pass(p?, q?)          :  at p  started, knows(q); at q  started, knows(p), not passed(p), +passed(p)
 %%                            and forall x, k (owes(x, k) at p -> owed(x, k) at q)
 %%
-%% share's conjunct is local to its base, p, the role holding its anchor: p's machine finds the persons it has noted, the attempt names them, share(p, q, L), and q sees each.  pass's conjunct binds two variables, a person and a number, an instance an assignment of both (vGLP 2f1dc92; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC), each i(x, k) in the class term, pass(p, q, L).  Section VG runs their printed procedures on given states.
+%%   tally(p?, q?)         :  at p  started, knows(q); at q  started, knows(p), not tallied(p), +tallied(p)
+%%                            and forall x, k (owes(x, k) at p -> owed_by(x) at q)
+%%   clear(p?, q?)         :  at p  started, knows(q); at q  started, knows(p), not cleared(p), +cleared(p)
+%%                            and forall x (noted(x) at p -> not seen(x) at q)
+%%   settle(p?)            :  at p  started, not settled, +settled
+%%                            and forall x (noted(x) at p -> done(x) at p)
+%%   wipe(p?)              :  at p  started, settled, not wiped, +wiped
+%%                            and forall x (noted(x) at p -> not noted(x) at p)
+%%   pour(p? ; real v)     :  at p  started, +poured(v)      | v > 0
+%%   drain(p? ; real v)    :  at p  started, -poured(v), +drained(v)
+%%
+%% share's conjunct is local to its base, p, the role holding its anchor: p's machine finds the persons it has noted, the attempt names them, share(p, q, L), and q sees each.  tally's instance is restricted to x, the one variable its literal names, without repetition: "the attempt names them, each restricted to the variables the conjunct's literals name and without repetition" (vGLP fe12932, Section 5.4), tally(p, q, L), L a list of persons.  clear deletes a conditional literal at q, which q's state need not hold: "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct ... included, which d_p need not hold" (ibid.).  settle's and wipe's conjuncts are local to p, the role holding their anchor, p finding the instances in its own state and adding or deleting its literals at each (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (i), (ii) and (iv)).  pour and drain have a real variable, real(v) among their variables (vGLP fb40cff, Section 5.4: "a value variable, whose type, a whole number or a real, the schema writes with it"; GSC's reader, programs/gsc/self.glp, Arg), pour's v a field and drain's local to p, found in its state.  pass's conjunct binds two variables, a person and a number, an instance an assignment of both (vGLP 2f1dc92; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC), each i(x, k) in the class term, pass(p, q, L).  Section VG runs their printed procedures on given states.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
+%% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; num(Constant).
+            ; num(Constant) ; real(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -374,6 +387,7 @@ pragmas_named(gnudge, pragmas([list('"Friends"', [friend])],
      act(g, '"G"', [], none, '"Friends"', by([1]))])).
 pragmas_named(childsafe, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(enrol, '"Enrol"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(cbefriend, '"Cbefriend"', ['""', '""', '"Parent"', '"Their parent"'], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
 pragmas_named(link, pragmas([list('"Friends"', [friend])],
@@ -458,7 +472,13 @@ pragmas_named(shares, pragmas([list('"Notes"', [noted]), list('"Seen"', [seen])]
      act(note, '"Note"', [], none, '"Notes"', by([1])),
      act(share, '"Share"', [], said([[], [person(1), text('" shares the persons they noted."')]]), '"Notes"', by([1])),
      act(owe, '"Owe"', ['"amount"'], none, '"Notes"', by([1])),
-     act(pass, '"Pass"', [], said([[], [person(1), text('" passes on what they owe."')]]), '"Notes"', by([1]))])).
+     act(pass, '"Pass"', [], said([[], [person(1), text('" passes on what they owe."')]]), '"Notes"', by([1])),
+     act(tally, '"Tally"', [], said([[], [person(1), text('" tallies whom they owe."')]]), '"Notes"', by([1])),
+     act(clear, '"Clear"', [], said([[], [person(1), text('" clears what you saw of their notes."')]]), '"Notes"', by([1])),
+     act(settle, '"Settle"', [], none, '"Notes"', by([1])),
+     act(wipe, '"Wipe"', [], none, '"Notes"', by([1])),
+     act(pour, '"Pour"', ['"amount"'], none, '"Notes"', by([1])),
+     act(drain, '"Drain"', [], none, '"Notes"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -499,6 +519,9 @@ procedure childsafe(Contract).
 childsafe([schema(befriend, [],
              [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
               rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+           schema(acquaint, [],
+             [rs(guarded, [atom(knows, [role(2)])], [], [], []),
+              rs(guarded, [atom(knows, [role(1)])], [], [], [])]),
            schema(enrol, [],
              [rs(guarded, [atom(child, [role(2)])], [], [], [atom(child, [role(2)])]),
               rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]),
@@ -759,7 +782,29 @@ shares([schema(start, [],
           [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
            rs(guarded, [atom(passed, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(passed, [role(1)])])],
           [conjunct([pvar(x), num(k)], 1, atom(owes, [pvar(x), num(k)]), fcons(true), [hm(2, atom(owed, [pvar(x), num(k)]))], [], [fa(role(2), atom(owed, [pvar(x), num(k)]))])],
-          [])]).
+          []),
+        qschema(tally, [], [pvar(x), num(k)], true,
+          [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
+           rs(guarded, [atom(tallied, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(tallied, [role(1)])])],
+          [conjunct([pvar(x), num(k)], 1, atom(owes, [pvar(x), num(k)]), fcons(true), [hm(2, atom(owed_by, [pvar(x)]))], [], [fa(role(2), atom(owed_by, [pvar(x)]))])],
+          []),
+        qschema(clear, [], [pvar(x)], true,
+          [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
+           rs(guarded, [atom(cleared, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(cleared, [role(1)])])],
+          [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [], [hm(2, atom(seen, [pvar(x)]))], [fnot(fa(role(2), atom(seen, [pvar(x)])))])],
+          []),
+        qschema(settle, [], [pvar(x)], true,
+          [rs(guarded, [atom(settled, [])], [], [atom(started, [])], [atom(settled, [])])],
+          [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [hm(1, atom(done, [pvar(x)]))], [], [fa(role(1), atom(done, [pvar(x)]))])],
+          []),
+        qschema(wipe, [], [pvar(x)], true,
+          [rs(guarded, [atom(wiped, [])], [], [atom(started, []), atom(settled, [])], [atom(wiped, [])])],
+          [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [], [hm(1, atom(noted, [pvar(x)]))], [fnot(fa(role(1), atom(noted, [pvar(x)])))])],
+          []),
+        nschema(pour, [real(v)], gt(num(v), num(0)),
+          [rs(guarded, [atom(poured, [num(v)])], [], [atom(started, [])], [])]),
+        schema(drain, [real(v)],
+          [rs(guarded, [atom(drained, [num(v)])], [atom(poured, [num(v)])], [atom(started, [])], [])])]).
 
 procedure forms(Contract).
 forms([schema(start, [],

@@ -5,6 +5,8 @@
 #
 # prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler writes a word as it is, the reader reading the double-quoted string back as the word.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find, and on every line it refuses, each named with the variable its fields leave unnamed or the field beyond them; 2 on a bad argument.  With PRAGMAS_LINES set it prints on the standard error each button line and the variables its fields name by the rule, or why it is refused, replaced or gone.
 
+# A NAME.txt may carry two kinds of pragmas under their headings, "Interface pragmas" and "Implementation pragmas", "Pragmas" alone meaning the interface ones (GSC, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69): the interface pragmas are read as above, and the implementation pragmas are skipped, no paper yet saying what form they take in the app's code.
+
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
 PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -225,6 +227,10 @@ sub find_txt {
     for my $g (glob("$programs/*/$name.txt"), glob("$programs/*/*/$name.txt")) { return $g }
     return undef;
 }
+# The headings of the pragmas (GSC, Section 2, its first paragraph, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69; GSC #13, Code_inbox.md, 2026-11-07 19:29 UTC, 2): a NAME.txt may carry "Interface pragmas" and "Implementation pragmas", "Pragmas" alone meaning the interface ones.  The interface pragmas are read as the pragmas were; the implementation pragmas are skipped, no paper yet saying what form they take in the app\x27s code.
+sub iface_head { my ($x) = @_; return $x eq "Pragmas" || $x eq "Interface pragmas" }
+sub impl_head { my ($x) = @_; return $x eq "Implementation pragmas" }
+sub any_head { my ($x) = @_; return iface_head($x) || impl_head($x) }
 sub read_txt {
     my ($f) = @_;
     open(my $h, "<", $f) or die "pragmas.sh: cannot read $f\n";
@@ -283,7 +289,7 @@ sub visit {
     push @order, $f;
 }
 my @own = read_txt($top);
-unless (grep { $_ eq "Pragmas" } @own) { print "no_pragmas\n"; exit 0 }
+unless (grep { iface_head($_) } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
 my (@tabs, @lists, @acts);
 # The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
@@ -292,14 +298,14 @@ for my $f (@order) {
     my $declared = 0;
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
-        last if $x =~ /^\d+\./ || $x eq "Pragmas";
+        last if $x =~ /^\d+\./ || any_head($x);
         next unless $x =~ /^(.*?)\s+(?:is|are)\s+(?:a\s+)?persons?\.(?:\s|$)/;
         $declared = 1;
         $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
     }
     next if $declared;
     for my $x (read_txt($f)) {
-        last if $x eq "Pragmas";
+        last if any_head($x);
         next unless $x =~ /^\d+\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?[^.]+\.\s+(.*)$/;
         for my $sen (split /(?<=[.!?;:])\s+/, $1) {
             my @w = ($sen =~ /([A-Za-z]+)/g);
@@ -313,20 +319,22 @@ my (%xclause, %xbody);
 for my $f (reverse @order) {
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
-        last if $x eq "Pragmas";
+        last if any_head($x);
         if ($x =~ /^(\d+)\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?([^.]+)\.\s*(.*)$/) {
             next if exists $xclause{$2};
             $xclause{$2} = $1; $xbody{$2} = $3;
         }
     }
 }
-# The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below).
+# The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below): an interface heading, "Pragmas" or "Interface pragmas", is the line "Pragmas", and an implementation heading and every line after it up to the next interface heading are skipped (iface_head, impl_head).
 sub joined {
     my ($f) = @_;
-    my (@m, $aft);
+    my (@m, $aft, $impl);
     for my $x (read_txt($f)) {
+        if (impl_head($x)) { $impl = 1; next }
+        if (iface_head($x)) { $impl = 0; $aft = 1; push @m, "Pragmas"; next }
+        next if $impl;
         if ($aft && $x =~ /^\s+\S/ && @m && $m[-1] ne "Pragmas") { $m[-1] .= "\x01" . $x; next }
-        $aft = 1 if $x eq "Pragmas";
         push @m, $x;
     }
     return @m;
@@ -615,7 +623,7 @@ sub field_slots {
         (my $vn = $v->[1][0][0] // "") =~ s/^\x27|\x27$//g;
         next if $locals{$S} && $locals{$S}{$vn};
         $i++;
-        next unless $v->[0] =~ /^(pvar|svar|num)$/;
+        next unless $v->[0] =~ /^(pvar|svar|num|real)$/;
         push @sl, [$v->[0], $i, $vn];
     }
     return @sl;
@@ -627,7 +635,7 @@ sub atom_keys {
     my ($fn, $as) = @$t;
     return ("r$as->[0][0]") if ($fn eq "role" || $fn eq "own") && @$as == 1 && $as->[0][0] =~ /^\d+$/;
     my $uq = sub { (my $x = $_[0]) =~ s/^\x27|\x27$//g; return $x };
-    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|own_var)$/ && @$as == 1;
+    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|real|own_var)$/ && @$as == 1;
     return (atom_keys($as->[0]), "v" . $uq->($as->[1][0])) if $fn eq "ext" && @$as == 2;
     return map { atom_keys($_) } @$as;
 }

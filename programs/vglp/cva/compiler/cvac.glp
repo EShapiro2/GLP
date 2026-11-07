@@ -55,14 +55,21 @@ compile_q([L|Ls], _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 compile_q([], Nm, D, V, I, words(P, E0, _)) :- ground(D?), ground(I?) |
-    decl_schemas(D?, Cq0),
+    decl_schemas(D?, Cr0),
+    reals_off(Cr0?, Cq0),
     q_normal(Cq0?, C0),
-    decl_schemas(D?, Cq1),
+    decl_schemas(D?, Cr1),
+    reals_off(Cr1?, Cq1),
     q_normal(Cq1?, C1),
-    decl_schemas(D?, Cq2),
+    decl_schemas(D?, Cr2),
+    reals_off(Cr2?, Cq2),
     q_normal(Cq2?, C2),
-    decl_schemas(D?, Cq3),
-    lx_table(Cq3?, Lx),
+    decl_schemas(D?, Cr3),
+    reals_off(Cr3?, Cq3),
+    lx_table(Cq3?, Lx0),
+    decl_schemas(D?, Cr4),
+    real_lx(Cr4?, Rl),
+    app(Lx0?, Rl?, Lx),
     W = words(P?, E0?, Lx?),
     num_table(C1?, Nt),
     num_table(C2?, Nt1),
@@ -70,14 +77,62 @@ compile_q([], Nm, D, V, I, words(P, E0, _)) :- ground(D?), ground(I?) |
     decl_reflexive(D?, Rf),
     intro_preds(I?, E),
     compile0(Nm?, C?, Rf?, E?, Nt?, V?, W?).
+%% A real variable the constraint determines, local to a role (local.glp, det_locals), is refused with the reason: the printed text would compute it by arithmetic, and GLP types the result of := on reals Number, not Real (TGLP; the root self.glp declares '_real'(Number?, Number)), so no well-typed procedure gives it the type Real its atoms and the class term carry (vGLP #24, Code_inbox.md, 2026-11-07, 5).  A real the class term gives, or that the role's state holds, is carried.
+procedure real_det_lines(Contract?, NumInfos?, Words?, Constant?, Lines).
+real_det_lines(C, Nt, W, Nm, L?) :- ground(Nt?) |
+    words_lx(W?, Lx),
+    dets_real(C?, Nt?, Lx?, Ss),
+    real_det_lines1(Ss?, L0),
+    head_line(L0?, Nm?, L).
+procedure words_lx(Words?, Lxs).
+words_lx(words(_, _, Lx), Lx?).
+procedure real_det_lines1(Preds?, Lines).
+real_det_lines1([], []).
+real_det_lines1([S|Ss], ['%% it has a real variable the constraint determines, which the compiler does not carry: GLP types the result of arithmetic on reals Number, not Real, so the printed text cannot give it the type Real (vGLP #24, Code_inbox.md, 2026-11-07, 5):', T?|L?]) :- ground(S?) |
+    said('%% the schema', S?, T),
+    real_det_lines1(Ss?, L).
+procedure dets_real(Contract?, NumInfos?, Lxs?, Preds).
+dets_real([], _, _, []).
+dets_real([schema(S, _, Rs)|Cs], Nt, Lx, R?) :- ground(S?), ground(Rs?), ground(Nt?), ground(Lx?) |
+    det_real_of(S?, Rs?, Nt?, Lx?, D),
+    dets_real(Cs?, Nt?, Lx?, R1),
+    keep_pred(D?, S?, R1?, R).
+dets_real([nschema(S, _, _, Rs)|Cs], Nt, Lx, R?) :- ground(S?), ground(Rs?), ground(Nt?), ground(Lx?) |
+    det_real_of(S?, Rs?, Nt?, Lx?, D),
+    dets_real(Cs?, Nt?, Lx?, R1),
+    keep_pred(D?, S?, R1?, R).
+dets_real([cschema(_, _, _, _)|Cs], Nt, Lx, R?) :- dets_real(Cs?, Nt?, Lx?, R).
+procedure det_real_of(Constant?, RoleSpecs?, NumInfos?, Lxs?, YesNo).
+det_real_of(S, Rs, Nt, Lx, D?) :- ground(S?), ground(Rs?) |
+    reals_of(Lx?, S?, Xs),
+    num_lookup(S?, Nt?, Ni),
+    ni_locs(Ni?, Ls),
+    added_args(Rs?, Aa),
+    det_real(Xs?, Ls?, Aa?, D).
+procedure ni_locs(NumInfo?, Locs).
+ni_locs(num_info(_, _, Ls, _, _), Ls?).
+procedure added_args(RoleSpecs?, Args).
+added_args([], []).
+added_args([R|Rs], As?) :- ground(R?) | rs_lists(R?, P, _, _, _), atoms_args(P?, A1), added_args(Rs?, A2), app(A1?, A2?, As).
+procedure det_real(Preds?, Locs?, Args?, YesNo).
+det_real([], _, _, no).
+det_real([X|Xs], Ls, Aa, D?) :- ground(X?), ground(Ls?), ground(Aa?) |
+    loc_vars(Ls?, Lv),
+    mem(num(X?), Lv?, L),
+    mem(num(X?), Aa?, A),
+    and(L?, A?, D1),
+    det_real(Xs?, Ls?, Aa?, D2),
+    or(D1?, D2?, D).
 procedure intro_preds(Intro?, Preds).
 intro_preds(no_introduction, []).
 intro_preds(introduction(P), [P?]).
 procedure compile0(Constant?, Contract?, Preds?, Preds?, NumInfos?, Verdict?, Words?).
-compile0(Nm, C, Rf, E, Nt, V, W) :- ground(Nm?), ground(C?) |
+compile0(Nm, C, Rf, E, Nt, V, W) :- ground(Nm?), ground(C?), ground(Nt?), ground(W?) |
     verdict_lines(V?, Nm?, L1),
     role_lines(C?, Nm?, L2),
-    lapp(L1?, L2?, L),
+    real_det_lines(C?, Nt?, W?, Nm?, L3),
+    lapp(L2?, L3?, L23),
+    lapp(L1?, L23?, L),
     compile1(L?, Nm?, C?, Rf?, E?, Nt?, W?).
 
 procedure compile1(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
@@ -129,7 +184,7 @@ compile4([L|Ls], Nm, _, _, _, _, _, _) :- ground(Nm?) |
 %% --- The contract compiled ------------------------------------------------
 %% What the compiler takes of a schema with quantifiers (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), qschema in GSC's term form, and of a constraint, and the lines refusing what it does not take, the schema named, before any other procedure reads the contract:
 %% (1) A safe formula of the body local to a role, "the machine of the person in that role evaluates it in its own state", is taken (local.glp, form_infos; the printed text's forms_at).
-%% (2) A listed role bound by a quantifier, qlisted in GSC's term form, whose person is the first argument of its anchor after the holder and the one variable its quantifier binds, is taken as listed/3 with the condition of its quantifier, and a quantified conjunct that binds it with its conditional literals added at other roles, one for each person of the role (q_normal, lx_table; the printed text's listing/7): "its request name is the schema-binding" (vGLP 9ee6f87, Section 5.4), the class term naming the people of the role, as for listed/3.  A conjunct binding no listed role, its quantifier binding one agent variable, with a conditional literal at a role other than the one holding its anchor, is taken, its instances a list the base finds and the attempt names (ix_conjs, inst_heads; the printed text's instances/7).  A conditional literal deleted, a conjunct local to the role holding its anchor, one binding other than one agent variable, one with a conditional literal at a listed role or naming its bound variable in a name term, and any other listed role are not yet taken, and refused with the reason (odd_conjunct, inst_odd, odd_qlisted).
+%% (2) A listed role bound by a quantifier, qlisted in GSC's term form, whose person is the first argument of its anchor after the holder and the one variable its quantifier binds, is taken as listed/3 with the condition of its quantifier, and a quantified conjunct that binds it with its conditional literals added at other roles, one for each person of the role (q_normal, lx_table; the printed text's listing/7): "its request name is the schema-binding" (vGLP 9ee6f87, Section 5.4), the class term naming the people of the role, as for listed/3.  A conjunct binding no listed role, with a conditional literal at a role other than the one holding its anchor, is taken, its instances a list the base finds and the attempt names, each restricted to the variables its literals name, without repetition (ix_conjs, hm_named, inst_heads; the printed text's instances/7).  A conjunct binding no listed role whose conditional literals are all at the role holding its anchor is local to that role, which finds its instances in its own state and applies its literals at each (lc_conjs, local_lines; the printed text's local_effect).  A conditional literal deleted is subtracted from a state that need not hold it (the printed text's opt).  One with a conditional literal at a listed role or holding a signed term of a speech-act variable its quantifier binds, one whose literals at another role name none of its bound variables, and any other listed role are not yet taken, and refused with the reason (odd_conjunct, inst_odd, odd_qlisted).
 %% (3) A count and a sum of a quantifier's instances, and the functions min and floor, in a constraint or a safe formula are taken, the count or the sum local to the role holding its anchor (local.glp, con_counts; the printed text's con_counted): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4).  A relation rel(Name, Args) and a function the paper does not name are not: the paper names no relation of a value type beyond comparison, and no function beyond min and floor.
 procedure q_lines(QContract?, Constant?, Lines).
 q_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
@@ -165,14 +220,15 @@ q_schema(qschema(S, _, _, C, Rs, Cj, Fs), L?) :- ground(S?), ground(Rs?), ground
 %% A quantified conjunct the compiler takes: one binding a listed role, and one binding no listed role, its quantifier binding variables Xs of any kind, which has conditional literals at a role other than the one holding its anchor, its instances, assignments of Xs, a list the attempt names (vGLP 2f1dc92 and vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC: a conjunct may bind several variables of any kind, an instance being an assignment of all of them): "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), as GCC's appoint's "every person Alice lists as appointed, Bob lists too".  The compiler does not take yet, and refuses with the reason: a conjunct deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, whose instances that role's machine would find in its own state; one binding a listed role and other variables; and one with a conditional literal at a listed role, or with a signed term of a speech-act variable of Xs.
 procedure odd_conjunct(Conjuncts?, Ints?, YesNo).
 odd_conjunct([], _, no).
-odd_conjunct([conjunct([role(I)], _, _, _, _, [], _)|Cs], Lis, B?) :- integer(I?), ground(Lis?) |
+odd_conjunct([conjunct([role(I)], _, _, _, _, _, _)|Cs], Lis, B?) :- integer(I?), ground(Lis?) |
     mem_int(I?, Lis?, In),
     neg(In?, B1),
     odd_conjunct(Cs?, Lis?, B2),
     or(B1?, B2?, B).
-odd_conjunct([conjunct([X|Xs], Bi, _, _, [H|Hs], [], _)|Cs], Lis, B?) :- ground(X?), ground(Xs?), integer(Bi?), ground(H?), ground(Hs?), ground(Lis?) |
+odd_conjunct([conjunct([X|Xs], Bi, _, _, CA, CD, _)|Cs], Lis, B?) :- ground(X?), ground(Xs?), integer(Bi?), ground(CA?), ground(CD?), ground(Lis?) |
     has_role([X?|Xs?], R),
-    inst_odd([X?|Xs?], Bi?, [H?|Hs?], Lis?, B0),
+    app(CA?, CD?, H),
+    inst_odd([X?|Xs?], Bi?, H?, Lis?, B0),
     or(R?, B0?, B1),
     odd_conjunct(Cs?, Lis?, B2),
     or(B1?, B2?, B).
@@ -182,15 +238,47 @@ procedure has_role(Args?, YesNo).
 has_role([], no).
 has_role([role(_)|_], yes).
 has_role([_|Xs], R?) :- otherwise | has_role(Xs?, R).
-%% Whether a conjunct binding the variables Xs, its anchor held by the role Bi, with the conditional literals Hs, is one the compiler does not take: none of them at a role other than Bi, one at a listed role of Lis, or one with a signed term of a speech-act variable of Xs.
+%% Whether a conjunct binding the variables Xs, its anchor held by the role Bi, with the conditional literals Hs, is one the compiler does not take: one at a listed role of Lis; one with a signed term of a speech-act variable of Xs, refused with the reason until a contract needs it (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (iii)); and one with a literal at a role other than Bi whose literals name none of Xs, its instances restricted to no variable (hm_named).
 procedure inst_odd(Args?, Integer?, HMults?, Ints?, YesNo).
 inst_odd(Xs, Bi, Hs, Lis, B?) :- ground(Xs?), integer(Bi?), ground(Hs?), ground(Lis?) |
     hm_other(Hs?, Bi?, O),
-    neg(O?, NotO),
+    hm_named(Hs?, Xs?, Xr),
+    no_args(Xr?, E),
+    and(O?, E?, OE),
     hm_listed(Hs?, Lis?, Li),
     hm_signed(Hs?, Xs?, N),
     or(Li?, N?, B1),
-    or(NotO?, B1?, B).
+    or(OE?, B1?, B).
+procedure no_args(Args?, YesNo).
+no_args([], yes).
+no_args([_|_], no).
+%% The variables of Xs that the conditional literals Hs name, in the order of Xs: "the attempt names them, each restricted to the variables the conjunct's literals name and without repetition" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"), a variable in a name term or a signed term, or a multiplicity, named as one in an atom is.
+procedure hm_named(HMults?, Args?, Args).
+hm_named(Hs, Xs, Xr?) :- ground(Hs?), ground(Xs?) |
+    hm_atoms(Hs?, Ms),
+    atoms_args(Ms?, As0),
+    flat_args(As0?, As),
+    named_xs(Xs?, As?, Xr).
+procedure flat_args(Args?, Args).
+flat_args([], []).
+flat_args([nterm(N)|As], R?) :- nterm_args(N?, R1), flat_args(As?, R2), app(R1?, R2?, R).
+flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
+flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
+procedure nterm_args(NameTerm?, Args).
+nterm_args(own(I), [role(I?)]).
+nterm_args(own_var(X), [pvar(X?)]).
+nterm_args(nvar(X), [pvar(X?)]).
+nterm_args(ext(N, Y), [svar(Y?)|R?]) :- nterm_args(N?, R).
+nterm_args(ext_any(N), R?) :- nterm_args(N?, R).
+procedure named_xs(Args?, Args?, Args).
+named_xs([], _, []).
+named_xs([X|Xs], As, R?) :- ground(X?), ground(As?) |
+    mem(X?, As?, In),
+    named_xs(Xs?, As?, R1),
+    keep_named(In?, X?, R1?, R).
+procedure keep_named(YesNo?, Arg?, Args?, Args).
+keep_named(yes, X, R, [X?|R?]).
+keep_named(no, _, R, R?).
 procedure hm_other(HMults?, Integer?, YesNo).
 hm_other([], _, no).
 hm_other([hm(J, _)|_], Bi, yes) :- J? =\= Bi? | true.
@@ -230,8 +318,12 @@ inst_base_lines(Cj, Rs, S, L?) :- ground(Cj?), ground(Rs?), ground(S?) |
     inst_base_lines1(Ib?, Bs?, Gs?, S?, L).
 procedure inst_bases(Conjuncts?, Ints).
 inst_bases([], []).
-inst_bases([conjunct([pvar(_)], Bi, _, _, _, _, _)|Cs], [Bi?|Bs?]) :- inst_bases(Cs?, Bs).
-inst_bases([_|Cs], Bs?) :- otherwise | inst_bases(Cs?, Bs).
+inst_bases([conjunct([role(_)], _, _, _, _, _, _)|Cs], Bs?) :- inst_bases(Cs?, Bs).
+inst_bases([conjunct(_, Bi, _, _, CA, CD, _)|Cs], Bs?) :- otherwise, integer(Bi?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_other(H?, Bi?, O),
+    inst_bases(Cs?, Bs1),
+    keep_int(O?, Bi?, Bs1?, Bs).
 procedure q_bases(RoleSpecs?, Ints).
 q_bases([], []).
 q_bases([crs(qlisted(Bi, _, _, _), _, _, _, _, _)|Rs], [Bi?|Bs?]) :- q_bases(Rs?, Bs).
@@ -256,11 +348,11 @@ odd_qlisted([crs(qlisted(_, _, _, _), _, _, _, _, _)|_], _, yes) :- otherwise | 
 odd_qlisted([_|Rs], I, B?) :- otherwise, integer(I?) | I1 := I? + 1, odd_qlisted(Rs?, I1?, B).
 procedure conjunct_lines(YesNo?, Constant?, Lines).
 conjunct_lines(no, _, []).
-conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not carry yet: one deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "for a conjunct local to p\'s role, in d_p"); one binding a listed role and other variables, or with a conditional literal at a listed role or a signed term of a speech-act variable its quantifier binds; or a listed role whose person is not the first argument of its anchor or whose quantifier binds another variable:', T?]) :-
+conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not carry yet: one binding a listed role and other variables, or with a conditional literal at a listed role; one with a conditional literal holding a signed term of a speech-act variable its quantifier binds, refused until a contract needs it (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (iii)); one with a conditional literal at a role other than the one holding its anchor whose literals name no variable its quantifier binds, an instance restricted to none; or a listed role whose person is not the first argument of its anchor or whose quantifier binds another variable:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 procedure beyond_lines(YesNo?, Constant?, Lines).
 beyond_lines(no, _, []).
-beyond_lines(yes, S, ['%% it has a relation or a function other than min and floor in a constraint or a safe formula, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the signing conditions, counts and sums:', T?]) :-
+beyond_lines(yes, S, ['%% it has a relation or a function other than min and floor in a constraint or a safe formula, the author, the item or a program condition of a speech act among them, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the signing conditions, counts and sums:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 %% Whether a constraint, an expression or a safe formula holds a relation, or a function other than min and floor.
 procedure con_beyond(Constraint?, YesNo).
@@ -279,10 +371,13 @@ con_beyond(succ(_, _), no).
 con_beyond(signed(_, _), no).
 con_beyond(unsigned(_, _), no).
 con_beyond(rel(_, _), yes).
+con_beyond(program(_), yes).
 procedure exprs_beyond(Expr?, Expr?, YesNo).
 exprs_beyond(X, Y, B?) :- expr_beyond(X?, B1), expr_beyond(Y?, B2), or(B1?, B2?, B).
 procedure expr_beyond(Expr?, YesNo).
 expr_beyond(plus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+expr_beyond(author_of(_), yes).
+expr_beyond(item_of(_), yes).
 expr_beyond(minus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
 expr_beyond(mul(X, Y), B?) :- exprs_beyond(X?, Y?, B).
 %% A function the paper names, min or floor, is taken, and a count and a sum (vGLP 9ee6f87, Section 5.4: "over the relations and functions the value types provide --- comparison and arithmetic, min and floor, and signed(u, y) and unsigned(u, y) ... --- and over the count and the sum of the instances of a quantifier"); any other function is not.
@@ -295,6 +390,7 @@ expr_beyond(svar(_), no).
 expr_beyond(nterm(_), no).
 expr_beyond(sgn(_, _), no).
 expr_beyond(num(_), no).
+expr_beyond(real(_), no).
 expr_beyond(any, no).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 expr_beyond(ilist(_, _), no).
@@ -317,6 +413,55 @@ form_beyond(fexists(_, _, _, F), B?) :- form_beyond(F?, B).
 form_beyond(fforall(_, _, _, F, Gs), B?) :- form_beyond(F?, B1), forms_beyond(Gs?, B2), or(B1?, B2?, B).
 form_beyond(fcons(C), B?) :- con_beyond(C?, B).
 
+%% A real variable, real(X) among a schema's variables, is num(X) to every check and every place of the shared text (reals_off), the schema writing num(X) in its atoms and its constraint; its type, Real, is printed from the table rl(S, X) (real_lx), into the class term, the request type and the atoms (real_heads, real_atoms): "a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07, 5).
+procedure reals_off(QContract?, QContract).
+reals_off([], []).
+reals_off([schema(S, Hd, Rs)|Ss], [schema(S?, Hd1?, Rs?)|Ns?]) :- nums_of(Hd?, Hd1), reals_off(Ss?, Ns).
+reals_off([cschema(S, Hd, Rc, Rs)|Ss], [cschema(S?, Hd1?, Rc?, Rs?)|Ns?]) :- nums_of(Hd?, Hd1), reals_off(Ss?, Ns).
+reals_off([nschema(S, Hd, Cn, Rs)|Ss], [nschema(S?, Hd1?, Cn?, Rs?)|Ns?]) :- nums_of(Hd?, Hd1), reals_off(Ss?, Ns).
+reals_off([qschema(S, Hd, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(S?, Hd1?, Bd1?, Cn?, Rs?, Cj?, Fs?)|Ns?]) :- nums_of(Hd?, Hd1), nums_of(Bd?, Bd1), reals_off(Ss?, Ns).
+procedure nums_of(Args?, Args).
+nums_of([], []).
+nums_of([real(X)|As], [num(X?)|Bs?]) :- nums_of(As?, Bs).
+nums_of([A|As], [A?|Bs?]) :- otherwise | nums_of(As?, Bs).
+procedure real_lx(QContract?, Lxs).
+real_lx([], []).
+real_lx([schema(S, Hd, _)|Ss], L?) :- ground(S?) | hd_reals(Hd?, S?, L1), real_lx(Ss?, L2), app(L1?, L2?, L).
+real_lx([cschema(S, Hd, _, _)|Ss], L?) :- ground(S?) | hd_reals(Hd?, S?, L1), real_lx(Ss?, L2), app(L1?, L2?, L).
+real_lx([nschema(S, Hd, _, _)|Ss], L?) :- ground(S?) | hd_reals(Hd?, S?, L1), real_lx(Ss?, L2), app(L1?, L2?, L).
+real_lx([qschema(S, Hd, _, _, _, _, _)|Ss], L?) :- ground(S?) | hd_reals(Hd?, S?, L1), real_lx(Ss?, L2), app(L1?, L2?, L).
+procedure hd_reals(Args?, Constant?, Lxs).
+hd_reals([], _, []).
+hd_reals([real(X)|As], S, [rl(S?, X?)|L?]) :- ground(S?) | hd_reals(As?, S?, L).
+hd_reals([_|As], S, L?) :- otherwise | hd_reals(As?, S?, L).
+%% The contract with each real variable of a schema's head written real(X) again, for the printers of the class term and the request type.
+procedure real_heads(Contract?, Lxs?, Contract).
+real_heads([], _, []).
+real_heads([schema(S, Hd, Rs)|Ss], Lx, [schema(S?, Hd1?, Rs?)|Cs?]) :- ground(S?), ground(Lx?) |
+    reals_of(Lx?, S?, Xs),
+    reals_on(Hd?, Xs?, Hd1),
+    real_heads(Ss?, Lx?, Cs).
+real_heads([cschema(S, Hd, Rc, Rs)|Ss], Lx, [cschema(S?, Hd?, Rc?, Rs?)|Cs?]) :- real_heads(Ss?, Lx?, Cs).
+real_heads([nschema(S, Hd, Cn, Rs)|Ss], Lx, [nschema(S?, Hd?, Cn?, Rs?)|Cs?]) :- real_heads(Ss?, Lx?, Cs).
+procedure reals_of(Lxs?, Constant?, Preds).
+reals_of([], _, []).
+reals_of([rl(S1, X)|Lx], S, [X?|Xs?]) :- S1? =?= S? | reals_of(Lx?, S?, Xs).
+reals_of([_|Lx], S, Xs?) :- otherwise | reals_of(Lx?, S?, Xs).
+procedure reals_on(Args?, Preds?, Args).
+reals_on([], _, []).
+reals_on([num(X)|As], Xs, [A?|Bs?]) :- ground(X?), ground(Xs?) | mem(X?, Xs?, In), real_if(In?, X?, A), reals_on(As?, Xs?, Bs).
+reals_on([A|As], Xs, [A?|Bs?]) :- otherwise | reals_on(As?, Xs?, Bs).
+procedure real_if(YesNo?, Constant?, Arg).
+real_if(yes, X, real(X?)).
+real_if(no, X, num(X?)).
+%% The atoms of a schema with each argument num(X) of a real variable X written real(X), for the type Atom.
+procedure real_atoms(Atoms?, Preds?, Atoms).
+real_atoms([], _, []).
+real_atoms([M|Ms], Xs, [M1?|Ns?]) :- ground(Xs?) | real_atom(M?, Xs?, M1), real_atoms(Ms?, Xs?, Ns).
+procedure real_atom(Atom?, Preds?, Atom).
+real_atom(atom(F, As), Xs, atom(F?, As1?)) :- reals_on(As?, Xs?, As1).
+real_atom(times(K, A), Xs, times(K?, A1?)) :- real_atom(A?, Xs?, A1).
+real_atom(rest(K, J, A), Xs, rest(K?, J?, A1?)) :- real_atom(A?, Xs?, A1).
 procedure decl_schemas(Declared?, QContract).
 decl_schemas([], []).
 decl_schemas([S|Ss], [S?|Ss?]).
@@ -513,7 +658,9 @@ count_args([_|As], N?) :- count_args(As?, M), N := M? + 1.
 procedure module_lines(Constant?, Contract?, Preds?, Preds?, NumInfos?, Worded?, Preds?, Lines).
 module_lines(Nm, C, Rf, E, Nt, W, Ps, Ls?) :- ground(C?), ground(W?) |
     worded_lx(W?, Lx),
-    inst_heads(C?, Lx?, Ci),
+    worded_lx(W?, Lx1),
+    real_heads(C?, Lx1?, Cr),
+    inst_heads(Cr?, Lx?, Ci),
     module_lines0(Nm?, C?, Ci?, Rf?, E?, Nt?, W?, Ps?, Ls).
 %% Ci is the contract C with the places of the lists of instances in each schema's head (inst_heads), which the printers of the class term read: its type, binding_of, class_of, name_class, request_name and sentence_of.
 procedure module_lines0(Constant?, Contract?, Contract?, Preds?, Preds?, NumInfos?, Worded?, Preds?, Lines).
@@ -521,7 +668,9 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     said('%% the canonical CVA platform of the contract', Nm?, H),
     class_lines(Ci?, L1),
     text # fixed_text(Fx),
-    proposal_alts(C?, Ps?, Pa),
+    worded_lx(W?, Lx8),
+    real_heads(C?, Lx8?, Cr),
+    proposal_alts(Cr?, Ps?, Pa),
     request_lines(Pa?, Lr0),
     any_name(Ps?, Gd),
     day_required(C?, Dy),
@@ -542,7 +691,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     numeric_lines(Nt?, Lm0),
     worded_acts(W?, Was),
     worded_lx(W?, Lx2),
-    base_lines(C?, Was?, Lx2?, Lb),
+    base_lines(C?, Was?, Lx2?, Lb0),
+    worded_lx(W?, Lx6),
+    local_lines(Lx6?, Ll),
+    lapp(Lb0?, Ll?, Lb),
     worded_lx(W?, Lx5),
     inst_conv_lines(Lx5?, Lc),
     lapp(Lb?, Lc?, Lbc),
@@ -626,6 +778,7 @@ var_types_l([sgn(_, _)|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 %% The wildcard of a cleared atom is no variable of a schema (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
 var_types_l([any|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([num(_)|Vs], Lis, ['Integer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([real(_)|Vs], Lis, ['Real'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 %% The place of the instances of a conjunct, the list of them, each a person, the one agent variable its quantifier binds, in the order of identifiers (inst_heads).
 var_types_l([ilist(_, T)|Vs], Lis, [L?|Ts?]) :- ground(T?) | string_concat(['List(', T?, ')'], L), var_types_l(Vs?, Lis?, Ts).
 procedure role_type(YesNo?, String).
@@ -655,6 +808,7 @@ var_types([sgn(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 var_types([any|Vs], Ts?) :- var_types(Vs?, Ts).
 %% A numeric variable the schema-binding binds, a number in the class term and in the request, so the request form takes it, a number field (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a request names it, so the request form takes it").
 var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
+var_types([real(_)|Vs], ['Real'|Ts?]) :- var_types(Vs?, Ts).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_types([ilist(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
@@ -779,13 +933,13 @@ reader_vals([K|Ks], I, [W?|Ws?]) :- ground(K?), integer(I?) |
     reader_vals(Ks?, I1?, Ws).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) in the shared text (vGLP 12f629d, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view carrying "its own key k, the machine state s of its app state, the persons K it knows and the approvals A its person made that are pending"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
-Kind  ::= peer ; speech ; name ; num.
+Kind  ::= peer ; speech ; name ; num ; real.
 Kinds ::= [] ; [Kind | Kinds].
 Sig   ::= sig(Constant, Kinds).
 Sigs  ::= [] ; [Sig | Sigs].
 procedure atom_parts(Contract?, NumInfos?, Lxs?, Lines).
-atom_parts(C, Nt, Lx, ['', '%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").', 'Atom ::='|L?]) :- ground(C?), ground(Nt?) |
-    contract_atoms(C?, As0),
+atom_parts(C, Nt, Lx, ['', '%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").', 'Atom ::='|L?]) :- ground(C?), ground(Nt?), ground(Lx?) |
+    contract_ratoms(C?, Lx?, As0),
     nt_atoms(Nt?, As1),
     lx_atoms(Lx?, As2),
     app(As1?, As2?, As12),
@@ -844,6 +998,17 @@ e_atoms(E, []) :- otherwise, ground(E?) | true.
 procedure es_atoms(Exprs?, Atoms).
 es_atoms([], []).
 es_atoms([E|Es], As?) :- e_atoms(E?, A1), es_atoms(Es?, A2), app(A1?, A2?, As).
+%% The atoms of the schemas, each argument of a real variable written real(X), its type Real (real_atoms).
+procedure contract_ratoms(Contract?, Lxs?, Atoms).
+contract_ratoms([], _, []).
+contract_ratoms([schema(S, _, Rs)|Ss], Lx, As?) :- ground(S?), ground(Lx?) |
+    rs_atoms(Rs?, A0),
+    reals_of(Lx?, S?, Xs),
+    real_atoms(A0?, Xs?, A1),
+    contract_ratoms(Ss?, Lx?, A2),
+    app(A1?, A2?, As).
+contract_ratoms([cschema(_, _, _, Rs)|Ss], Lx, As?) :- rs_atoms(Rs?, A1), contract_ratoms(Ss?, Lx?, A2), app(A1?, A2?, As).
+contract_ratoms([nschema(_, _, _, Rs)|Ss], Lx, As?) :- rs_atoms(Rs?, A1), contract_ratoms(Ss?, Lx?, A2), app(A1?, A2?, As).
 procedure contract_atoms(Contract?, Atoms).
 contract_atoms([], []).
 contract_atoms([schema(_, _, Rs)|Ss], As?) :- rs_atoms(Rs?, A1), contract_atoms(Ss?, A2), app(A1?, A2?, As).
@@ -873,6 +1038,7 @@ arg_kinds([nterm(_)|Xs], [name|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([svar(_)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([sgn(_, _)|Xs], [speech|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
+arg_kinds([real(_)|Xs], [real|Ks?]) :- arg_kinds(Xs?, Ks).
 %% The wildcard is in no atom of a state, a cleared atom being none (rs_atoms); the clause covers the type and is never reached.
 arg_kinds([any|Xs], Ks?) :- arg_kinds(Xs?, Ks).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
@@ -897,6 +1063,7 @@ kind_types([peer|Ks], ['Peer'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([speech|Ks], ['Speech'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([name|Ks], ['CName'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([num|Ks], ['Integer'|Ts?]) :- kind_types(Ks?, Ts).
+kind_types([real|Ks], ['Real'|Ts?]) :- kind_types(Ks?, Ts).
 %% atom_of(g(f, [p(V1), s(V2)]), shown(f(V1?, V2?))), one clause per alternative of Atom, and a last clause on any other atom, which covers the type GAtom and is never reached: the agent holds only atoms the contract's schemas add.
 procedure atom_of_lines(Sigs?, Lines).
 atom_of_lines([], ['atom_of(_, unshown) :- otherwise | true.']).
@@ -926,6 +1093,7 @@ kind_val(peer, N, W?) :- call_text(p, [N?], W).
 kind_val(name, N, W?) :- call_text(c, [N?], W).
 kind_val(speech, N, W?) :- call_text(s, [N?], W).
 kind_val(num, N, W?) :- call_text(n, [N?], W).
+kind_val(real, N, W?) :- call_text(r, [N?], W).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]), and, for each variable local to a role, agent, speech-act or numeric, b(pvar(X), lv(s, X)), b(svar(X), lv(s, X)) or b(num(X), lv(s, X)): the schema-binding does not bind it, and its value in the binding stands for the variable, which the state of the person in its role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state"; the shared text, dom_bindings).
 procedure binding_lines(Contract?, NumInfos?, Lines).
@@ -945,6 +1113,7 @@ local_binds(num_info(_, _, Ls, _, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs),
 procedure local_binds1(Args?, Constant?, Strings).
 local_binds1([], _, []).
 local_binds1([num(X)|Vs], S, [T?|Lb?]) :- ground(X?), ground(S?) | term_to_string(b(num(X?), lv(S?, X?)), T), local_binds1(Vs?, S?, Lb).
+local_binds1([real(X)|Vs], S, [T?|Lb?]) :- ground(X?), ground(S?) | term_to_string(b(num(X?), lv(S?, X?)), T), local_binds1(Vs?, S?, Lb).
 local_binds1([pvar(X)|Vs], S, [T?|Lb?]) :- ground(X?), ground(S?) | term_to_string(b(pvar(X?), lv(S?, X?)), T), local_binds1(Vs?, S?, Lb).
 local_binds1([svar(X)|Vs], S, [T?|Lb?]) :- ground(X?), ground(S?) | term_to_string(b(svar(X?), lv(S?, X?)), T), local_binds1(Vs?, S?, Lb).
 local_binds1([_|Vs], S, Lb?) :- otherwise | local_binds1(Vs?, S?, Lb).
@@ -996,7 +1165,8 @@ keep_bind(yes, _, _, Bs, Bs?).
 keep_bind(no, I, V, Bs, [X?|Bs?]) :- ground(V?), integer(I?) |
     vname(I?, F),
     wrapped(V?, F?, W),
-    term_to_string(V?, Vt),
+    bind_key(V?, K),
+    term_to_string(K?, Vt),
     call_text(b, [Vt?, W?], X).
 procedure binding_line(Constant?, Args?, Strings?, String).
 binding_line(S, Vs, Lb, T?) :- ground(S?), ground(Vs?) |
@@ -1012,16 +1182,22 @@ bind_terms([], _, []).
 bind_terms([V|Vs], I, [X?|Bs?]) :- ground(V?), integer(I?) |
     vname(I?, F),
     wrapped(V?, F?, W),
-    term_to_string(V?, Vt),
+    bind_key(V?, K),
+    term_to_string(K?, Vt),
     call_text(b, [Vt?, W?], X),
     I1 := I? + 1,
     bind_terms(Vs?, I1?, Bs).
+%% A real variable is num(X) in the binding, the atoms and the constraint writing num(X) of it (reals_off).
+procedure bind_key(Arg?, Arg).
+bind_key(real(X), num(X?)).
+bind_key(A, A?) :- otherwise | true.
 procedure wrapped(Arg?, Found?, String).
 wrapped(role(_), named(_, Q), W?) :- call_text(p, [Q?], W).
 wrapped(pvar(_), named(_, Q), W?) :- call_text(p, [Q?], W).
 wrapped(svar(_), named(_, Q), W?) :- call_text(s, [Q?], W).
 wrapped(nterm(_), named(_, Q), W?) :- call_text(p, [Q?], W).
 wrapped(num(_), named(_, Q), W?) :- call_text(n, [Q?], W).
+wrapped(real(_), named(_, Q), W?) :- call_text(r, [Q?], W).
 wrapped(_, unnamed, 'p(unnamed)').
 procedure var_names(Args?, Integer?, Strings, Strings).
 var_names([], _, [], []).
@@ -1088,6 +1264,7 @@ val_goal(role(I), N, G?) :- ground(N?) | term_to_string(role(I?), Vt), call_text
 val_goal(pvar(X), N, G?) :- ground(X?), ground(N?) | term_to_string(pvar(X?), Vt), call_text(val_peer, [Vt?, 'B?', 'D?', N?], G).
 val_goal(nterm(_), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
 val_goal(num(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_num, [Vt?, 'B?', N?], G).
+val_goal(real(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_real, [Vt?, 'B?', N?], G).
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 val_goal(sgn(_, _), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
@@ -1197,7 +1374,9 @@ mem_int(I, [_|Js], B?) :- otherwise | mem_int(I?, Js?, B).
 procedure lx_table(QContract?, Lxs).
 lx_table([], []).
 lx_table([qschema(S, _, _, _, _, Cj, Fs)|Ss], Lx?) :- ground(S?), ground(Cj?) |
-    ix_conjs(Cj?, S?, 1, L0),
+    ix_conjs(Cj?, S?, 1, L0a),
+    lc_conjs(Cj?, S?, L0b),
+    app(L0a?, L0b?, L0),
     lx_conjs(Cj?, S?, L1),
     lx_forms(Fs?, S?, Cj?, L2),
     lx_table(Ss?, L3),
@@ -1209,9 +1388,32 @@ lx_table([_|Ss], Lx?) :- otherwise | lx_table(Ss?, Lx).
 procedure ix_conjs(Conjuncts?, Constant?, Integer?, Lxs).
 ix_conjs([], _, _, []).
 ix_conjs([conjunct([role(_)], _, _, _, _, _, _)|Cs], S, K, Ls?) :- ix_conjs(Cs?, S?, K?, Ls).
-ix_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, K, [ix(S?, K?, Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- otherwise, ground(S?), integer(K?) |
+ix_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, K, Ls?) :- otherwise, ground(S?), integer(K?), ground(Xs?), integer(Bi?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_other(H?, Bi?, O),
+    ix_conj(O?, S?, K?, Bi?, Xs?, A?, Phi?, CA?, CD?, Cs?, Ls).
+%% A conjunct with a conditional literal at a role other than the one holding its anchor is one whose instances the attempt names, each restricted to the variables its literals name (hm_named); one whose literals are all at the role holding its anchor is local to that role (lc_conjs).
+procedure ix_conj(YesNo?, Constant?, Integer?, Integer?, Args?, Atom?, Form?, HMults?, HMults?, Conjuncts?, Lxs).
+ix_conj(no, S, K, _, _, _, _, _, _, Cs, Ls?) :- ix_conjs(Cs?, S?, K?, Ls).
+ix_conj(yes, S, K, Bi, Xs, A, Phi, CA, CD, Cs, [ix(S?, K?, Bi?, Xr?, A?, Phi?, CA?, CD?)|Ls?]) :- ground(S?), integer(K?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_named(H?, Xs?, Xr),
     K1 := K? + 1,
     ix_conjs(Cs?, S?, K1?, Ls).
+%% Each conjunct binding no listed role whose conditional literals are all at the role holding its anchor: "A safe formula of B, a constraint, and a quantified conjunct, is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"), lc(S, Bi, Xs, A, Phi, CAdd, CDel), Xs the variables its literals name (hm_named): the role finds the instances in its own state and applies its literals at each (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (ii)).
+procedure lc_conjs(Conjuncts?, Constant?, Lxs).
+lc_conjs([], _, []).
+lc_conjs([conjunct([role(_)], _, _, _, _, _, _)|Cs], S, Ls?) :- lc_conjs(Cs?, S?, Ls).
+lc_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, Ls?) :- otherwise, ground(S?), ground(Xs?), integer(Bi?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_other(H?, Bi?, O),
+    lc_conj(O?, S?, Bi?, Xs?, A?, Phi?, CA?, CD?, Cs?, Ls).
+procedure lc_conj(YesNo?, Constant?, Integer?, Args?, Atom?, Form?, HMults?, HMults?, Conjuncts?, Lxs).
+lc_conj(yes, S, _, _, _, _, _, _, Cs, Ls?) :- lc_conjs(Cs?, S?, Ls).
+lc_conj(no, S, Bi, Xs, A, Phi, CA, CD, Cs, [lc(S?, Bi?, Xr?, A?, Phi?, CA?, CD?)|Ls?]) :- ground(S?), ground(Xs?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_named(H?, Xs?, Xr),
+    lc_conjs(Cs?, S?, Ls).
 %% The lists of instances of a schema's conjuncts, instances(K, Base, X, A, Phi, CAdd, CDel), in conjunct order.
 procedure ix_listings(Lxs?, Constant?, TListings).
 ix_listings([], _, []).
@@ -1231,10 +1433,12 @@ ix_type(_, _, [], 'Peer').
 procedure kind_type(Arg?, String).
 kind_type(svar(_), 'Speech').
 kind_type(num(_), 'Integer').
+kind_type(real(_), 'Real').
 kind_type(_, 'Peer') :- otherwise | true.
 procedure kind_wrap(Arg?, String).
 kind_wrap(svar(_), 's').
 kind_wrap(num(_), 'n').
+kind_wrap(real(_), 'r').
 kind_wrap(_, 'p') :- otherwise | true.
 %% A name of the K-th conjunct of the schema S: P, S, _ and K.
 procedure ix_name(String?, Constant?, Integer?, String).
@@ -1345,6 +1549,29 @@ entry_lines([X|Xs], [E?, '.'|L?]) :- ground(X?) |
     term_to_string(E0?, E),
     entry_lines(Xs?, L).
 %% The base of each schema, schema_base(Name, I), the index of its role: the base of its listed roles, and, for a schema with none, the guarding role its pragma names before its button or, having no guarding role, its first role: "The conjuncts of a schema that are local to their base and not to one role have one base, the base of the schema; a schema with none has as its base the guarding role its pragma names before its button (below) or, having no guarding role, its first role" (vGLP 0b51a60, Section 5.4, "Speech-act schemas as local specifications").  The role the pragma names is the first of by(Gs) of the act of the schema (self.glp, Proposer: "the one the line names as its proposer where it names one"); where the pragmas give no role for it, any, its first guarding role.  The proposer of a guarded part with no opener is the person in the base (ibid.: "where the base of the schema is a guarding role, its proposer is the person in the base"; the printed text's part_bases).
+%% The conjuncts of each schema local to the role holding their anchor, schema_locals(Name, Locals), each local(Base, Xs, A, Phi, CAdd, CDel), in conjunct order (lc_conjs): "the instances of a conjunct with conditional literals give the atoms each adds or deletes", the role "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct, in L or, for a conjunct local to p's role, in d_p, included, which d_p need not hold, ... plus the added ones, likewise" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"); the printed text's local_effect applies them.
+procedure local_lines(Lxs?, Lines).
+local_lines(Lx, ['', 'procedure schema_locals(Constant?, Locals).'|L?]) :- ground(Lx?) |
+    lc_names(Lx?, Ns0),
+    dedup(Ns0?, Ns),
+    local_lines1(Ns?, Lx?, L).
+procedure lc_names(Lxs?, Preds).
+lc_names([], []).
+lc_names([lc(S, _, _, _, _, _, _)|Lx], [S?|Ns?]) :- lc_names(Lx?, Ns).
+lc_names([_|Lx], Ns?) :- otherwise | lc_names(Lx?, Ns).
+procedure local_lines1(Preds?, Lxs?, Lines).
+local_lines1([], _, ['schema_locals(_, []) :- otherwise | true.']).
+local_lines1([S|Ss], Lx, [T?, '.'|L?]) :- ground(S?), ground(Lx?) |
+    lc_of(Lx?, S?, Ls),
+    T0 =.. [schema_locals, S?, Ls?],
+    term_to_string(T0?, T),
+    local_lines1(Ss?, Lx?, L).
+TLocal  ::= local(Integer, Args, Atom, Form, HMults, HMults).
+TLocals ::= [] ; [TLocal | TLocals].
+procedure lc_of(Lxs?, Constant?, TLocals).
+lc_of([], _, []).
+lc_of([lc(S1, Bi, Xs, A, Phi, CA, CD)|Lx], S, [local(Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- S1? =?= S? | lc_of(Lx?, S?, Ls).
+lc_of([_|Lx], S, Ls?) :- otherwise | lc_of(Lx?, S?, Ls).
 procedure worded_acts(Worded?, PActs).
 worded_acts(words(pragmas(_, As), _, _), As?).
 procedure base_lines(Contract?, PActs?, Lxs?, Lines).
@@ -1598,6 +1825,15 @@ lx_atoms([lx(_, _, _, CA, CD)|Ls], As?) :-
     lx_atoms(Ls?, A3),
     app(A2?, A3?, A23),
     app(A1?, A23?, As).
+lx_atoms([rl(_, _)|Ls], As?) :- lx_atoms(Ls?, As).
+lx_atoms([lc(_, _, _, A, Phi, CA, CD)|Ls], [A?|As?]) :-
+    f_atoms(Phi?, A0),
+    hm_atoms(CA?, A1),
+    hm_atoms(CD?, A2),
+    lx_atoms(Ls?, A3),
+    app(A2?, A3?, A23),
+    app(A1?, A23?, A123),
+    app(A0?, A123?, As).
 lx_atoms([ix(_, _, _, _, A, Phi, CA, CD)|Ls], [A?|As?]) :-
     f_atoms(Phi?, A0),
     hm_atoms(CA?, A1),
@@ -1740,6 +1976,7 @@ a_field(role(_), I, Lis, F?) :- ground(Lis?) | mem(I?, Lis?, In), neg(In?, F).
 a_field(pvar(_), _, _, yes).
 a_field(svar(_), _, _, yes).
 a_field(num(_), _, _, yes).
+a_field(real(_), _, _, yes).
 a_field(nterm(_), _, _, no).
 a_field(sgn(_, _), _, _, no).
 a_field(any, _, _, no).
@@ -1765,6 +2002,7 @@ a_person(role(_), I, Lis, P?) :- mem(I?, Lis?, In), neg(In?, P).
 a_person(pvar(_), _, _, yes).
 a_person(svar(_), _, _, no).
 a_person(num(_), _, _, no).
+a_person(real(_), _, _, no).
 a_person(nterm(_), _, _, no).
 a_person(sgn(_, _), _, _, no).
 a_person(any, _, _, no).
@@ -1877,6 +2115,7 @@ field_type(role(_), yes, key).
 field_type(pvar(_), _, agent).
 field_type(svar(_), _, text).
 field_type(num(_), _, number).
+field_type(real(_), _, number).
 %% A name term, a signed term and the wildcard are at no place a field may name (field_places); the clauses cover the type.
 field_type(nterm(_), _, text).
 field_type(sgn(_, _), _, text).
@@ -2480,6 +2719,8 @@ procedure value_kind(Arg?, Constant).
 value_kind(role(_), named).
 value_kind(pvar(_), named).
 value_kind(num(_), valued).
+%% A real field's value is not yet shown after the question: the word valued(S, K) is of the type Integer in every play that declares the platform's types again, and a real there needs it of the type Number in each.
+value_kind(real(_), none).
 value_kind(_, none) :- otherwise | true.
 procedure value_place(YesNo?, Constant?, FieldAt?, Integer?, VPlaces).
 value_place(yes, _, _, _, []).
