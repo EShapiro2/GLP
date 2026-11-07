@@ -1419,14 +1419,51 @@ request_name_decl([X|Xs], ['', 'procedure request_name(Class?, PName).', X?|Xs1?
 
 %% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; a sentence naming a person, Alice, Bob or Carol, that its schema does not have; and a guarded schema no button names (unnamed_lines).
 procedure word_faults(Worded?, Contract?, NumInfos?, Preds?, Lines).
-word_faults(words(pragmas(Ls, As), _, Lx), C, Nt, Ps, F?) :- ground(Ls?), ground(As?), ground(C?), ground(Ps?) |
+word_faults(words(pragmas(Ls, As), _, Lx), C, Nt, Ps, F?) :- ground(Ls?), ground(As?), ground(C?), ground(Ps?), ground(Lx?) |
     contract_preds_lx(C?, Nt?, Lx?, Pr),
     list_faults(Ls?, Pr?, F1),
     act_faults(As?, C?, F2),
     act_names(As?, Ns),
     unnamed_lines(Ps?, Ns?, F3),
+    proposer_faults(As?, C?, Lx?, F4),
     lapp(F1?, F2?, F12),
-    lapp(F12?, F3?, F).
+    lapp(F3?, F4?, F34),
+    lapp(F12?, F34?, F).
+%% The person named before a button, of a schema whose conjuncts local to their base have a base that guards, is the person in the base: "The person named before a button is in a guarding role of its acts: in the base, where the base guards, and then their proposer, or, where the base is an opener, the one guard, who requests it" (vGLP 9ee6f87, Section 5.4, "The contract's words"), the base finding the instances in its own state.  A line naming another, by(Gs) of its act with a role other than the base, is a fault, the schema named.
+procedure proposer_faults(PActs?, Contract?, Lxs?, Lines).
+proposer_faults([], _, _, []).
+proposer_faults([act(S, _, _, _, _, P)|As], C, Lx, F?) :- ground(S?), ground(P?), ground(C?), ground(Lx?) |
+    find_schema(S?, C?, Sf),
+    ix_bases(Lx?, S?, Ib),
+    proposer_fault(Sf?, Ib?, P?, S?, F1),
+    proposer_faults(As?, C?, Lx?, F2),
+    lapp(F1?, F2?, F).
+procedure proposer_fault(SFound?, Ints?, Proposer?, Constant?, Lines).
+proposer_fault(nosfound, _, _, _, []).
+proposer_fault(sfound(_, Rs), Ib, P, S, F?) :- ground(Rs?), ground(Ib?), ground(P?), ground(S?) |
+    listed_bases(Rs?, Lb),
+    app(Lb?, Ib?, Bs),
+    guard_indices1(Rs?, 1, Gs),
+    proposer_fault1(Bs?, Gs?, P?, S?, F).
+procedure proposer_fault1(Ints?, Ints?, Proposer?, Constant?, Lines).
+proposer_fault1([], _, _, _, []).
+proposer_fault1([B|_], Gs, P, S, F?) :- integer(B?), ground(Gs?), ground(P?), ground(S?) |
+    mem_int(B?, Gs?, G),
+    by_roles(P?, Ns),
+    others_than(Ns?, B?, O),
+    proposer_fault2(G?, O?, S?, F).
+procedure by_roles(Proposer?, Ints).
+by_roles(by(Ns), Ns?).
+by_roles(by(Ns, _), Ns?).
+by_roles(any, []).
+procedure others_than(Ints?, Integer?, YesNo).
+others_than([], _, no).
+others_than([N|_], B, yes) :- N? =\= B? | true.
+others_than([_|Ns], B, O?) :- otherwise | others_than(Ns?, B?, O).
+procedure proposer_fault2(YesNo?, YesNo?, Constant?, Lines).
+proposer_fault2(yes, yes, S, [T?]) :- ground(S?) |
+    said('%% a line of its pragmas names before a button a person other than the base of its schema, which guards (vGLP 9ee6f87, Section 5.4, "The contract\'s words": "The person named before a button is in a guarding role of its acts: in the base, where the base guards, and then their proposer"):', S?, T).
+proposer_fault2(_, _, _, []) :- otherwise | true.
 
 %% The predicates of the contract's atoms, each once.
 procedure contract_preds(Contract?, NumInfos?, Preds).

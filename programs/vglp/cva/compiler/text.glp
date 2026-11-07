@@ -3010,7 +3010,7 @@ fixed_text([
     'procedure hat(Preds?, Peer?, GAtoms?, GAtoms).',
     'hat([], _, S, S?).',
     'hat([P|Ps], Id, S, [g(P?, [p(Id?)])|R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).',
-    '%% The reason of a vote unable of the compiled program, unable(Lacks, Has): "the atoms the schema requires at the voter that its state lacks and those it forbids that its state has" (vGLP f0acbc1, Section 5.4, "Act schemas"), as the contract writes them, the atoms of the reflexive predicates naming the voter holding there; and, for the person in the base of a listed role, who "lists in d_p exactly the people of that role in L" (Section 5.4, "Act schemas as local specifications"), the listing atoms of the people of the role its state lacks, and those of others it has.',
+    '%% The reason of a vote unable of the compiled program, unable(Lacks, Has): "the atoms the schema requires at the voter that its state lacks and those it forbids that its state has" (vGLP f0acbc1, Section 5.4, "Act schemas"), as the contract writes them, the atoms of the reflexive predicates naming the voter holding there; and, for the person in the base of a listed role, who "lists in d_p exactly the people of that role in L" (Section 5.4, "Act schemas as local specifications"), the listing atoms of the people of the role its state lacks, and those of others it has; and, for the person in the base of a conjunct whose instances the attempt names, the anchors of the instances of the list its state lacks, and those of the instances it has beyond the list (gaps_of).',
     'procedure unable_reason(Class?, Peer?, GAtoms?, Reason).',
     'unable_reason(P, Id, S, unable(L?, H?)) :- ground(P?), ground(S?) |',
     '    term_spec(P?, Nm, Rs, Bn),',
