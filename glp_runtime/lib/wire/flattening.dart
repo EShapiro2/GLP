@@ -8,7 +8,7 @@
 /// print bytes.
 ///
 /// Canonical print: UTF-8, LF line ends, no comments, one declaration or clause
-/// per line. Order: (i) the project's type definitions, lexicographically by
+/// per line. Order: (i) the reachable type definitions, lexicographically by
 /// name; (ii) the exported procedure declarations, lexicographically by name
 /// then arity; (iii) the procedures, lexicographically by renamed name then
 /// arity — within a procedure, clauses keep source order (semantic). Procedure
@@ -18,9 +18,11 @@
 /// chain (TGLP modules.tex, Compilation, first step), so its procedures that the
 /// entry points reach and its type definitions are printed with the program's
 /// own, the procedures under the names the renaming gave them; until
-/// 2026-10-04 they were left out as ambient. Type-definition reachability
-/// pruning is a refinement not yet applied: the program's type definitions are
-/// all included (procedure reachability — the DCE — is applied).
+/// 2026-10-04 they were left out as ambient. The type definitions printed are
+/// those the reachable procedures' declarations reference, and those that
+/// these reference in turn, from self.glp files outside the program's tree
+/// among them (IGLP 9c605b3, "Deterministic Flattening"; [reachableTypeDefs]);
+/// until 2026-11-07 every type definition of the program was printed.
 library;
 
 import 'dart:convert';
@@ -92,9 +94,12 @@ Uint8List hashOfPrint(String canonical) =>
   // checkedLinkedProgram type-checks and applies the five linking steps,
   // including step-5 DCE, so program.procedures is the reachable set.
   final linked = checkedLinkedProgram(modules, rootDir: projectDir);
-  // The program's type definitions, the root self.glp's among them, each name
-  // the one the entry module's scope resolves ([programTypeDefs]).
-  final typeDefs = programTypeDefs(modules, rootDir: projectDir);
+  // The type definitions the reachable procedures' declarations reference,
+  // and those these reference in turn, the root self.glp's among them, each
+  // name the one the entry module's scope resolves where that is one reached
+  // ([programTypeDefs], [reachableTypeDefs]).
+  final typeDefs = reachableTypeDefs(
+      modules, linked, programTypeDefs(modules, rootDir: projectDir));
   final print = canonicalPrint(
     program: linked.program,
     procDeclarations: linked.procDeclarations,

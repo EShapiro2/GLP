@@ -136,5 +136,27 @@ void main() {
         'disconnected:Underlay.pan'
       ]);
     });
+
+    test('the simulation attests nothing: a connected peer\'s session is '
+        'unattested for peer_app/2, and a disconnected one has none',
+        () async {
+      // GLP-Spec appendix-guards, "Networking seam" (5fab8ac); IGLP,
+      // "Simulation realisation": the simulation attests nothing, so a
+      // connection carries no application.
+      final agent = AgentRuntime(
+        agentId: 'a',
+        program: play,
+        rootSelfGlpPath: root,
+      );
+      await agent.initialize();
+      final pk = generateKeyPair().pub;
+      expect(agent.ctx!.peerSession(pk), isNull);
+      agent.onConnectivityEvent(pk, Underlay.pan, ConnectivityEvent.connected);
+      expect(agent.ctx!.peerSession(pk), isNotNull);
+      expect(agent.ctx!.peerSession(pk)!.application, isNull);
+      agent.onConnectivityEvent(
+          pk, Underlay.pan, ConnectivityEvent.disconnected);
+      expect(agent.ctx!.peerSession(pk), isNull);
+    });
   });
 }

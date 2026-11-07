@@ -125,7 +125,7 @@ class AgentRuntime {
   /// parameters of [GlpNetwork]'s (GNA, "Connection and Reachability" and
   /// "Concepts and Principles", Discovery). The coordinator forwards router
   /// events via [onConnectivityEvent].
-  void Function(PubKey pk, Underlay underlay, Object? identity)?
+  void Function(PubKey pk, Underlay underlay, Application? application)?
       onPeerConnected;
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
@@ -265,8 +265,10 @@ class AgentRuntime {
       PubKey peer, Underlay underlay, ConnectivityEvent event) {
     switch (event) {
       case ConnectivityEvent.connected:
+        _ctx?.peerConnected(peer, underlay, null);
         onPeerConnected?.call(peer, underlay, null);
       case ConnectivityEvent.disconnected:
+        _ctx?.peerDisconnected(peer, underlay);
         onPeerDisconnected?.call(peer, underlay);
       case ConnectivityEvent.discovered:
         onPeerDiscovered?.call(
@@ -836,17 +838,21 @@ class AgentRuntime {
           .catchError((Object _) {}));
     };
 
-    // Connectivity, surfaced as the layer reports it, its attested identity
-    // with it.  A connection the layer reports is also when a message it
-    // refused is sent again, where M_p holds one ([_Retry]).
-    network.onPeerConnected = (pk, underlay, identity) {
-      onPeerConnected?.call(pk, underlay, identity);
+    // Connectivity, surfaced as the layer reports it, its attested
+    // application with it, and recorded for peer_app/2 ([MadContext.
+    // peerConnected]).  A connection the layer reports is also when a message
+    // it refused is sent again, where M_p holds one ([_Retry]).
+    network.onPeerConnected = (pk, underlay, application) {
+      _ctx?.peerConnected(pk, underlay, application);
+      onPeerConnected?.call(pk, underlay, application);
       if (_ctx?.mp.hasSendable ?? false) {
         unawaited(_submit(const _Retry()).catchError((Object _) {}));
       }
     };
-    network.onPeerDisconnected =
-        (pk, underlay) => onPeerDisconnected?.call(pk, underlay);
+    network.onPeerDisconnected = (pk, underlay) {
+      _ctx?.peerDisconnected(pk, underlay);
+      onPeerDisconnected?.call(pk, underlay);
+    };
     network.onPeerDiscovered =
         (pk, underlay) => onPeerDiscovered?.call(pk, underlay);
   }

@@ -1357,10 +1357,14 @@ class GlpEngine {
         typeDefs.putIfAbsent(td.name, () => td);
       }
     }
+    // h(M) prints the type definitions the reachable procedures' declarations
+    // reference, and those these reference in turn (IGLP 9c605b3,
+    // "Deterministic Flattening"; [reachableTypeDefs]), as [flattenProject]
+    // does; the interface table below carries the types the exports reach.
     final hM = hashOfPrint(canonicalPrint(
       program: linked.program,
       procDeclarations: linked.procDeclarations,
-      typeDefs: typeDefs.values.toList(),
+      typeDefs: reachableTypeDefs(modules, linked, typeDefs).values.toList(),
     ));
     // The artefact's interface table: the module's exports are its entry
     // points — the linked program's bare (unprefixed) procedures (modules.tex

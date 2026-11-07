@@ -93,6 +93,8 @@ latex_arg(real(X), T, [X?|T?]).
 % The wildcard of a cleared atom, \ast, as Section 3.3 writes unfriend's
 % \mathit{listed}(\Bob,\ast).
 latex_arg(any, T, ['\\ast'|T?]).
+% An item, item(y) (def:numbers, GSC 4401dd6).
+latex_arg(item_of(Y), T, ['\\mathrm{item}('|R?]) :- latex_arg(Y?, [')'|T?], R).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).
@@ -1357,8 +1359,8 @@ malformed_lines([signing_not_speech_act(S, _)|Fs], T,
                 [S?, 'carries a signing condition on what is not a speech-act variable;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([item_argument(S, P)|Fs], T,
-                [S?, 'has in', P?, 'the item of a speech act, which stands only in a constraint;'|R?]) :-
+malformed_lines([item_argument(S, Y)|Fs], T,
+                [S?, 'has the item of', Y?, 'as an argument of an atom, and no agent role requires', Y?, ';'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |

@@ -6,11 +6,15 @@
 SignalReply ::= punch(String) ; rejected.
 
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
-               ; ready(Key, Key, String, SignalReply?).
+               ; ready(Key, Key, String, SignalReply?)
+               ; invited(Key, Integer, SignalReply?)
+               ; used(Key, Integer, Integer).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
-            ; available(Key, Key, SignedTerm, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?)
+            ; register(Key, SignedTerm, SignalReply?)
+            ; redeem(Key, SignedTerm, SignalReply?).
 
 RvNetMsg ::= msg(Key, SignalMsg).
 RvNetIn ::= [] ; [RvNetMsg | RvNetIn].
@@ -21,7 +25,7 @@ imported procedure rv_agent#find_ready(Key?, Key?, String?,
 imported procedure rv_agent#find_needs(Key?, Key?, String?,
                                         SignalReply,
                                         PendingList?, PendingList).
-imported procedure rv_agent#rv_agent(Stream(SignalMsg)?, PendingList?).
+imported procedure rv_agent#rv_agent(Key?, Stream(SignalMsg)?, PendingList?).
 imported procedure rv_agent#rv_server(Key?, RvNetIn?).
 imported procedure rv_agent#admit_reconnect(Key?, Key?, Signature?,
                                              SignalReply,
@@ -35,6 +39,21 @@ imported procedure rv_agent#match_reconnect(Key?, Key?, PeerAddress?,
 imported procedure rv_agent#match_available(Key?, Key?, PeerAddress?,
                                              SignalReply,
                                              PendingList?, PendingList).
+imported procedure rv_agent#admit_register(Key?, Signature?, SignalReply,
+                                            PendingList?, PendingList).
+imported procedure rv_agent#register_serial(Key?, Integer?, SignalReply,
+                                             PendingList?, PendingList).
+imported procedure rv_agent#admit_redeem(Key?, Key?, Signature?, Integer?,
+                                          SignalReply,
+                                          PendingList?, PendingList).
+imported procedure rv_agent#redeem_addresses(Key?, Integer?, Integer?,
+                                              PeerAddress?, PeerAddress?,
+                                              SignalReply,
+                                              PendingList?, PendingList).
+imported procedure rv_agent#find_invited(Key?, Integer?, Integer?, String?,
+                                          String?, SignalReply,
+                                          PendingList?, PendingList).
+imported procedure rv_agent#prune_used(Integer?, PendingList?, PendingList).
 
 %% In every test below alice @< bob and carol @< dave, so the pair of alice
 %% and bob in the fixed order is attest(alice, bob).  The agent admits by
@@ -121,7 +140,7 @@ test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
 
 exported procedure test7_agent_single_reconnect(SignalReply).
 test7_agent_single_reconnect(ReplyA?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [reconnect(alice, bob, sig_ab, ReplyA)], []).
 
 %% Expected: ReplyA = rejected, agent terminates on empty stream
@@ -135,7 +154,7 @@ test7_agent_single_reconnect(ReplyA?) :-
 
 exported procedure test8_available_then_reconnect_rejected(SignalReply, SignalReply).
 test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [available(bob, alice, sig_ba, ReplyB),
          reconnect(alice, bob, sig_ab, ReplyA)], []).
 
@@ -149,7 +168,7 @@ test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
 
 exported procedure test9_two_reconnects_rejected(SignalReply, SignalReply).
 test9_two_reconnects_rejected(RA1?, RA2?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [reconnect(alice, bob, sig_ab, RA1),
          reconnect(carol, dave, sig_cd, RA2)], []).
 
@@ -164,7 +183,7 @@ test9_two_reconnects_rejected(RA1?, RA2?) :-
 
 exported procedure test10_reconnect_then_available(SignalReply, SignalReply).
 test10_reconnect_then_available(RA?, RB?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [reconnect(alice, bob, sig_ab, RA),
          available(bob, alice, sig_ba, RB)], []).
 
@@ -180,7 +199,7 @@ test10_reconnect_then_available(RA?, RB?) :-
 
 exported procedure test11_reconnect_rejected(SignalReply).
 test11_reconnect_rejected(RA?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [reconnect(alice, bob, bad_sig, RA)], []).
 
 %% Expected: RA = rejected
@@ -196,7 +215,7 @@ test11_reconnect_rejected(RA?) :-
 
 exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalReply, SignalReply).
 test12_rejected_does_not_block_stream(RA1?, RA2?, RB?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [reconnect(alice, bob, bad_sig, RA1),
          available(bob, alice, bad_sig, RB),
          reconnect(alice, bob, good_sig, RA2)], []).
@@ -240,7 +259,7 @@ exported procedure test14_own_signature_rejected(SignalReply).
 test14_own_signature_rejected(RA?) :-
     self_key(K),
     sign_own_pair(K?, alice, Sig),
-    rv_agent # rv_agent([reconnect(K?, alice, Sig?, RA)], []).
+    rv_agent # rv_agent(rv, [reconnect(K?, alice, Sig?, RA)], []).
 
 %% Expected: RA = rejected
 
@@ -310,7 +329,7 @@ test17_available_dispatch_refuses(R1?, R2?, R3?, R4?) :-
 exported procedure test18_unverified_available_not_matched(SignalReply,
                                                            SignalReply).
 test18_unverified_available_not_matched(ReplyB?, ReplyA?) :-
-    rv_agent # rv_agent(
+    rv_agent # rv_agent(rv,
         [available(bob, alice, bad_sig, ReplyB)],
         [needs(alice, bob, addr_a, ReplyA)]).
 
@@ -402,7 +421,7 @@ procedure present_signed_available(Key?, Key?, SignedTerm?, Signature,
 present_signed_available(A, B, Sig, Report?, ReplyB?, ReplyA?) :-
     ground(A?), ground(B?), ground(Sig?) |
     signature(Sig?, Report),
-    rv_agent # rv_agent([available(B?, A?, Sig?, ReplyB)],
+    rv_agent # rv_agent(rv, [available(B?, A?, Sig?, ReplyB)],
                         [needs(A?, B?, addr_a, ReplyA)]).
 
 %% Expected: Report = signed(K, H, attest(..)), K self_key's answer and the
@@ -497,3 +516,389 @@ present_to_server(A, B, Sig, Admitted?, Refused?) :-
 
 %% Expected: Admitted = rejected (after peer_address(bob, none)),
 %%           Refused = rejected (with no peer_address call)
+
+%% =============================================================================
+%% Invitation links (GNA Section 6, "Invitation links")
+%% =============================================================================
+%%
+%% A link is the term invitation(I, Rv, RvAddr, Serial, Expiry) signed by
+%% the inviter I with sign/3: I's key, the rendezvous server's key and
+%% address, the serial and the expiry, in Unix milliseconds, now/1's unit.
+%% The inviter registers it by register(I, Link, ReplyI); the recipient R
+%% redeems it by redeem(R, Link, ReplyR).  In tests 26 to 35 the dispatch on
+%% what signature/2 reports, on the clock and on what peer_address/2
+%% reports is given its forms directly: alice is the inviter, bob the
+%% recipient, rv the server, whose agent's own key is rv, h a source
+%% identity no test reads, and the clock 999 or later against an expiry of
+%% 1000.  A used serial carries its link's expiry, used(alice, 7, 1000).
+
+%% =============================================================================
+%% Test 26: a registration, the link signed by the inviter it names
+%% =============================================================================
+
+exported procedure test26_register(SignalReply, PendingList).
+test26_register(ReplyI?, Pending1?) :-
+    rv_agent # admit_register(alice,
+        signed(alice, h, invitation(alice, rv, rv_addr, 7, 1000)),
+        ReplyI, [], Pending1).
+
+%% Expected: Pending1 = [invited(alice, 7, _)], ReplyI unbound
+
+%% =============================================================================
+%% Test 27: registrations refused
+%% =============================================================================
+%%
+%% unsigned; a link signed by another key than the one the registration
+%% names; another term; and a link naming another inviter than its signer.
+%% Each is refused and nothing is registered.
+
+exported procedure test27_register_refused(SignalReply, SignalReply,
+                                           SignalReply, SignalReply,
+                                           PendingList).
+test27_register_refused(R1?, R2?, R3?, R4?, P4?) :-
+    rv_agent # admit_register(alice, unsigned, R1, [], P1),
+    rv_agent # admit_register(alice,
+        signed(carol, h, invitation(alice, rv, rv_addr, 7, 1000)),
+        R2, P1?, P2),
+    rv_agent # admit_register(alice,
+        signed(alice, h, attest(alice, bob)), R3, P2?, P3),
+    rv_agent # admit_register(alice,
+        signed(alice, h, invitation(carol, rv, rv_addr, 7, 1000)),
+        R4, P3?, P4).
+
+%% Expected: R1 = ... = R4 = rejected, P4 = []
+
+%% =============================================================================
+%% Test 28: a serial is registered once
+%% =============================================================================
+%%
+%% alice's serial 7 registered and unused, and registered and used: a
+%% second registration of it is refused and the entry left as it was;
+%% alice's serial 8 is registered after it.
+
+exported procedure test28_register_once(SignalReply, SignalReply,
+                                        SignalReply, SignalReply,
+                                        PendingList, PendingList,
+                                        PendingList).
+test28_register_once(R0?, R1?, R2?, R3?, P1?, P2?, P3?) :-
+    rv_agent # register_serial(alice, 7, R1, [invited(alice, 7, R0)], P1),
+    rv_agent # register_serial(alice, 7, R2, [used(alice, 7, 1000)], P2),
+    rv_agent # register_serial(alice, 8, R3, [used(alice, 7, 1000)], P3).
+
+%% Expected: R1 = R2 = rejected, R0 and R3 unbound;
+%%           P1 = [invited(alice, 7, _)], P2 = [used(alice, 7, 1000)],
+%%           P3 = [used(alice, 7, 1000), invited(alice, 8, _)]
+
+%% =============================================================================
+%% Test 29: a valid redemption
+%% =============================================================================
+%%
+%% The layer observes alice at addr_a and bob at addr_b; alice's serial 7 is
+%% registered and unused, behind another pair's reconnection entry.  The
+%% serial is marked used, alice is told bob's address and bob alice's; the
+%% other entry is left pending.
+
+exported procedure test29_redeem(SignalReply, SignalReply, PendingList).
+test29_redeem(ReplyI?, ReplyR?, Pending1?) :-
+    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a),
+        address(addr_b), ReplyR, [ready(carol, dave, addr_c, _), invited(alice, 7, ReplyI)],
+        Pending1).
+
+%% Expected: ReplyI = punch(addr_b), ReplyR = punch(addr_a),
+%%           Pending1 = [ready(carol, dave, addr_c, _), used(alice, 7, 1000)]
+
+%% =============================================================================
+%% Test 30: a redemption where the layer observes no address
+%% =============================================================================
+%%
+%% none for the inviter, and none for the recipient: each refused, the
+%% serial left unused and the inviter told nothing.
+
+exported procedure test30_redeem_no_address(SignalReply, SignalReply,
+                                            SignalReply, PendingList).
+test30_redeem_no_address(ReplyI?, R1?, R2?, P2?) :-
+    rv_agent # redeem_addresses(alice, 7, 1000, none, address(addr_b), R1,
+        [invited(alice, 7, ReplyI)], P1),
+    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a), none, R2,
+        P1?, P2).
+
+%% Expected: R1 = R2 = rejected, ReplyI unbound, P2 = [invited(alice, 7, _)]
+
+%% =============================================================================
+%% Test 31: a redemption of a serial not registered for the inviter
+%% =============================================================================
+%%
+%% alice's serial 8 where only her 7 is registered, and alice's 7 where only
+%% carol's 7 is: each refused, the entries left as they were.
+
+exported procedure test31_redeem_unregistered(SignalReply, SignalReply,
+                                              SignalReply, SignalReply,
+                                              PendingList, PendingList).
+test31_redeem_unregistered(R1?, R2?, RA?, RC?, P1?, P2?) :-
+    rv_agent # find_invited(alice, 8, 1000, addr_a, addr_b, R1,
+        [invited(alice, 7, RA)], P1),
+    rv_agent # find_invited(alice, 7, 1000, addr_a, addr_b, R2,
+        [invited(carol, 7, RC)], P2).
+
+%% Expected: R1 = R2 = rejected, RA and RC unbound,
+%%           P1 = [invited(alice, 7, _)], P2 = [invited(carol, 7, _)]
+
+%% =============================================================================
+%% Test 32: a redemption of a used serial
+%% =============================================================================
+
+exported procedure test32_redeem_used(SignalReply, PendingList).
+test32_redeem_used(R?, P1?) :-
+    rv_agent # find_invited(alice, 7, 1000, addr_a, addr_b, R,
+        [used(alice, 7, 1000)], P1).
+
+%% Expected: R = rejected, P1 = [used(alice, 7, 1000)]
+
+%% =============================================================================
+%% Test 33: a second redemption of one link
+%% =============================================================================
+%%
+%% bob redeems alice's serial 7 and is told her address; carol then redeems
+%% the same link and is refused, the serial being used.
+
+exported procedure test33_redeem_twice(SignalReply, SignalReply, SignalReply,
+                                       PendingList).
+test33_redeem_twice(ReplyI?, R1?, R2?, P2?) :-
+    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a),
+        address(addr_b), R1, [invited(alice, 7, ReplyI)], P1),
+    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a),
+        address(addr_c), R2, P1?, P2).
+
+%% Expected: ReplyI = punch(addr_b), R1 = punch(addr_a), R2 = rejected,
+%%           P2 = [used(alice, 7, 1000)]
+
+%% =============================================================================
+%% Test 34: redemptions refused before the layer is asked
+%% =============================================================================
+%%
+%% unsigned; a link signed by another key than the inviter it names;
+%% another term; and a link expired, the clock past its expiry and at it.
+%% None reads an address: posted under :trace, the suite finds no
+%% peer_address/2 call; and the serial stays unused.
+
+exported procedure test34_redeem_refused(SignalReply, SignalReply,
+                                         SignalReply, SignalReply,
+                                         SignalReply, PendingList).
+test34_redeem_refused(R1?, R2?, R3?, R4?, R5?, P5?) :-
+    rv_agent # admit_redeem(rv, bob, unsigned, 999, R1,
+        [invited(alice, 7, _)], P1),
+    rv_agent # admit_redeem(rv, bob,
+        signed(carol, h, invitation(alice, rv, rv_addr, 7, 1000)), 999, R2,
+        P1?, P2),
+    rv_agent # admit_redeem(rv, bob, signed(alice, h, attest(alice, bob)), 999,
+        R3, P2?, P3),
+    rv_agent # admit_redeem(rv, bob,
+        signed(alice, h, invitation(alice, rv, rv_addr, 7, 1000)), 2000, R4,
+        P3?, P4),
+    rv_agent # admit_redeem(rv, bob,
+        signed(alice, h, invitation(alice, rv, rv_addr, 7, 1000)), 1000, R5,
+        P4?, P5).
+
+%% Expected: R1 = ... = R5 = rejected, P5 = [invited(alice, 7, _)];
+%%           no peer_address/2 call
+
+%% =============================================================================
+%% Test 35: an admitted redemption reaches the layer
+%% =============================================================================
+%%
+%% The link signed by the inviter it names, the clock before its expiry: the
+%% agent reads the address of each of the two through peer_address/2, which
+%% with no networking layer bound assigns none (IGLP, "One interface"), so
+%% the redemption is refused there and the serial left unused.  Posted under
+%% :trace, the suite finds the two calls, alice's and bob's.
+
+exported procedure test35_redeem_admitted_no_layer(SignalReply, SignalReply,
+                                                   PendingList).
+test35_redeem_admitted_no_layer(ReplyI?, ReplyR?, Pending1?) :-
+    rv_agent # admit_redeem(rv, bob,
+        signed(alice, h, invitation(alice, rv, rv_addr, 7, 1000)), 999,
+        ReplyR, [invited(alice, 7, ReplyI)], Pending1).
+
+%% Expected: ReplyR = rejected, ReplyI unbound,
+%%           Pending1 = [invited(alice, 7, _)];
+%%           peer_address(alice, none) and peer_address(bob, none) called
+
+%% =============================================================================
+%% Test 36: a link made by sign/3, registered and redeemed through the agent
+%% =============================================================================
+%%
+%% This test program stands in for the social graph: it signs, under the
+%% person's own key K, a link to rv expiring an hour after now/1, and the
+%% agent, given register(K, Link, ReplyI) and redeem(bob, Link, ReplyR),
+%% registers its serial and admits the redemption, reading the two
+%% addresses through peer_address/2, none with no layer bound, so bob is
+%% refused there and K told nothing.  Report is what signature/2 reports
+%% for the link.  Posted under :trace, the suite finds the two
+%% peer_address/2 calls.
+
+exported procedure test36_link_through_agent(Signature, SignalReply,
+                                             SignalReply).
+test36_link_through_agent(Report?, ReplyI?, ReplyR?) :-
+    self_key(K),
+    now(T),
+    Expiry := T? + 3600000,
+    sign_link(K?, 7, Expiry?, Link),
+    present_link(K?, bob, Link?, Report, ReplyI, ReplyR).
+
+%% The inviter I signs the link with serial S and expiry E under its own key.
+procedure sign_link(Key?, Integer?, Integer?, SignedTerm).
+sign_link(I, S, E, Link?) :-
+    ground(I?), integer(S?), integer(E?) |
+    sign(invitation(I?, rv, rv_addr, S?, E?), I?, Link).
+
+%% I registers the link and R redeems it, in that order, on the agent's
+%% input.
+procedure present_link(Key?, Key?, SignedTerm?, Signature, SignalReply,
+                       SignalReply).
+present_link(I, R, Link, Report?, ReplyI?, ReplyR?) :-
+    ground(I?), ground(R?), ground(Link?) |
+    signature(Link?, Report),
+    rv_agent # rv_agent(rv, [register(I?, Link?, ReplyI),
+                         redeem(R?, Link?, ReplyR)], []).
+
+%% Expected: Report = signed(K, H, invitation(K, rv, rv_addr, 7, E));
+%%           ReplyR = rejected, ReplyI unbound;
+%%           peer_address(K, none) and peer_address(bob, none) called
+
+%% =============================================================================
+%% Test 37: an expired link made by sign/3, through the agent
+%% =============================================================================
+%%
+%% The link of test 36, its expiry a millisecond before now/1: registered,
+%% and its redemption refused without reading an address.  Posted under
+%% :trace, the suite finds no peer_address/2 call.
+
+exported procedure test37_expired_link_through_agent(SignalReply,
+                                                     SignalReply).
+test37_expired_link_through_agent(ReplyI?, ReplyR?) :-
+    self_key(K),
+    now(T),
+    Expiry := T? - 1,
+    sign_link(K?, 8, Expiry?, Link),
+    present_link(K?, bob, Link?, _, ReplyI, ReplyR).
+
+%% Expected: ReplyR = rejected, ReplyI unbound; no peer_address/2 call
+
+%% =============================================================================
+%% Test 38: a redemption of a link naming another server is refused
+%% =============================================================================
+%%
+%% The link is signed by the inviter it names and has not expired, but its
+%% Rv is other_rv, not the agent's own key rv: refused before the layer is
+%% asked, and the serial stays unused.  Posted under :trace, the suite finds
+%% no peer_address/2 call.
+
+exported procedure test38_redeem_other_server(SignalReply, SignalReply,
+                                              PendingList).
+test38_redeem_other_server(ReplyI?, ReplyR?, Pending1?) :-
+    rv_agent # admit_redeem(rv, bob,
+        signed(alice, h, invitation(alice, other_rv, rv_addr, 7, 1000)), 999,
+        ReplyR, [invited(alice, 7, ReplyI)], Pending1).
+
+%% Expected: ReplyR = rejected, ReplyI unbound,
+%%           Pending1 = [invited(alice, 7, _)]; no peer_address/2 call
+
+%% =============================================================================
+%% Test 39: through the server's entry, a link naming the server is admitted
+%% and a link naming another refused
+%% =============================================================================
+%%
+%% rv_server/2 is booted with its own key rv and given, under the person's
+%% own key K, two links made by sign/3, each registered and redeemed: serial
+%% 10 naming rv and serial 11 naming other_rv.  The registration does not
+%% read Rv, so both are registered; the redemption of 10 is admitted and
+%% reads the two addresses, none with no layer bound, and is refused there;
+%% the redemption of 11 is refused without reading one.  Posted under
+%% :trace, the suite finds two peer_address/2 calls, bob's one of them.
+
+exported procedure test39_server_own_key(SignalReply, SignalReply,
+                                         SignalReply, SignalReply).
+test39_server_own_key(ReplyI10?, ReplyR10?, ReplyI11?, ReplyR11?) :-
+    self_key(K),
+    now(T),
+    Expiry := T? + 3600000,
+    present_two_links(K?, Expiry?, ReplyI10, ReplyR10, ReplyI11, ReplyR11).
+
+%% The inviter I signs the link with server Rv, serial S and expiry E under
+%% its own key.
+procedure sign_link_to(Key?, Key?, Integer?, Integer?, SignedTerm).
+sign_link_to(I, Rv, S, E, Link?) :-
+    ground(I?), ground(Rv?), integer(S?), integer(E?) |
+    sign(invitation(I?, Rv?, rv_addr, S?, E?), I?, Link).
+
+procedure present_two_links(Key?, Integer?, SignalReply, SignalReply,
+                            SignalReply, SignalReply).
+present_two_links(I, E, ReplyI10?, ReplyR10?, ReplyI11?, ReplyR11?) :-
+    ground(I?), integer(E?) |
+    sign_link_to(I?, rv, 10, E?, L10),
+    sign_link_to(I?, other_rv, 11, E?, L11),
+    present_to_server_links(I?, L10?, L11?, ReplyI10, ReplyR10, ReplyI11,
+                            ReplyR11).
+
+procedure present_to_server_links(Key?, SignedTerm?, SignedTerm?, SignalReply,
+                                  SignalReply, SignalReply, SignalReply).
+present_to_server_links(I, L10, L11, ReplyI10?, ReplyR10?, ReplyI11?,
+                        ReplyR11?) :-
+    ground(I?), ground(L10?), ground(L11?) |
+    rv_agent # rv_server(rv, [msg(rv, register(I?, L10?, ReplyI10)),
+                              msg(rv, redeem(bob, L10?, ReplyR10)),
+                              msg(rv, register(I?, L11?, ReplyI11)),
+                              msg(rv, redeem(bob, L11?, ReplyR11))]).
+
+%% Expected: ReplyR10 = ReplyR11 = rejected, ReplyI10 and ReplyI11 unbound;
+%%           peer_address(K, none) and peer_address(bob, none) called once
+%%           each, for serial 10 alone
+
+%% =============================================================================
+%% Test 40: used serials are dropped at their links' expiry
+%% =============================================================================
+%%
+%% prune_used/3 at the clock 1000: alice's serial 7, its link expiring at
+%% 1000, and carol's 7, at 999, are dropped; alice's 8, at 1001, is kept,
+%% and so is every entry not a used serial, in its order.  At the clock 999
+%% alice's serial 7 is kept.
+
+exported procedure test40_prune_used(SignalReply, PendingList, PendingList).
+test40_prune_used(ReplyI?, P1?, P2?) :-
+    rv_agent # prune_used(1000,
+        [used(alice, 7, 1000), ready(carol, dave, addr_c, _),
+         used(alice, 8, 1001), invited(alice, 9, ReplyI),
+         used(carol, 7, 999)], P1),
+    rv_agent # prune_used(999, [used(alice, 7, 1000)], P2).
+
+%% Expected: P1 = [ready(carol, dave, addr_c, _), used(alice, 8, 1001),
+%%                 invited(alice, 9, ReplyI)], ReplyI unbound;
+%%           P2 = [used(alice, 7, 1000)]
+
+%% =============================================================================
+%% Test 41: through the agent, a used serial is dropped at its link's expiry
+%% =============================================================================
+%%
+%% K's serial 9 used, its link expiring at 0, long past, and again used, its
+%% link expiring an hour after now/1; K registers a link of serial 9 with
+%% each.  The agent reads the clock at the request: the first used entry is
+%% dropped, the agent holding no record of the serial after it, so the
+%% registration is admitted and waits; the second is kept, so the
+%% registration is refused.
+
+exported procedure test41_used_dropped_through_agent(SignalReply,
+                                                     SignalReply).
+test41_used_dropped_through_agent(Dropped?, Kept?) :-
+    self_key(K),
+    now(T),
+    Expiry := T? + 3600000,
+    sign_link(K?, 9, Expiry?, Link),
+    present_used(K?, Link?, Expiry?, Dropped, Kept).
+
+procedure present_used(Key?, SignedTerm?, Integer?, SignalReply, SignalReply).
+present_used(I, Link, E, Dropped?, Kept?) :-
+    ground(I?), ground(Link?), integer(E?) |
+    rv_agent # rv_agent(rv, [register(I?, Link?, Dropped)], [used(I?, 9, 0)]),
+    rv_agent # rv_agent(rv, [register(I?, Link?, Kept)], [used(I?, 9, E?)]).
+
+%% Expected: Dropped unbound (registered again), Kept = rejected

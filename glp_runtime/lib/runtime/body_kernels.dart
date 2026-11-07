@@ -25,7 +25,7 @@ import 'sim_clock.dart' show PendingToken;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
-    show GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
+    show Application, GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -142,6 +142,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // Networking seam kernels (Definition Seam Predicates)
   registry.register('_peer_address', 2, peerAddressKernel);
+  registry.register('_peer_app', 2, peerAppKernel);
   registry.register('_punch_udp', 1, punchUdpKernel);
   registry.register('_declare', 1, declareKernel);
   registry.register('_remove', 1, removeKernel);
@@ -1326,11 +1327,11 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The four kernels behind the four seam predicates (IGLP, Definition "Seam Predicates", 3b736bb; GLP-Spec appendix-guards, "Networking seam", 1ce0263): peer_address/2, punch_udp/1, declare/1 and remove/1, '_declare' and '_remove' taking each alternative of Declaration and Removal to the layer function behind it.  They replace, since 2026-11-03, the five kernels of place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2.  Each reaches the networking layer through MadContext.network, a GlpNetwork; the layer functions are GLP-Networking-API's, specified with the seam contract.  Their effects lie outside the madGLP transition system, as sign's and self_module's do.
+// The five kernels behind the five seam predicates (IGLP, Definition "Seam Predicates", 3b736bb, peer_app/2 since 4a334c2; GLP-Spec appendix-guards, "Networking seam", 1ce0263, peer_app/2 since 5fab8ac): peer_address/2, peer_app/2, punch_udp/1, declare/1 and remove/1, '_declare' and '_remove' taking each alternative of Declaration and Removal to the layer function behind it.  They replace, since 2026-11-03, the five kernels of place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2.  Each reaches the networking layer through MadContext.network, a GlpNetwork; the layer functions are GLP-Networking-API's, specified with the seam contract.  Their effects lie outside the madGLP transition system, as sign's and self_module's do.
 //
 // Each GLP clause gates its arguments on ground/1, all but a place's stream, so they are ground here.  A realization that does not provide the function throws UnsupportedError, which is a violated precondition and so an abort.
 //
-// Where no layer is bound at all --- the REPL, a test run without the simulation --- the kernel stands in for a layer that observes nothing and does nothing, and none aborts for want of a layer (IGLP appendix-implementation-notes.tex, "One interface"): "peer_address assigns none, a place declaration records the place and assigns its stream unobservable, the stream closed by its removal or a further declaration as ever, the closing being the runtime's and not the layer's, and the other seam predicates return having done nothing".  An argument the predicate does not take is still a violated precondition and an abort, layer or none.
+// Where no layer is bound at all --- the REPL, a test run without the simulation --- the kernel stands in for a layer that observes nothing and does nothing, and none aborts for want of a layer (IGLP appendix-implementation-notes.tex, "One interface"): "peer_address assigns none, a place declaration records the place and assigns its stream unobservable, the stream closed by its removal or a further declaration as ever, the closing being the runtime's and not the layer's, and the other seam predicates return having done nothing".  peer_app/2, which the passage does not name, assigns none likewise: a layer that observes nothing has no session with any peer.  An argument the predicate does not take is still a violated precondition and an abort, layer or none.
 
 /// The [MadContext] and the [GlpNetwork] bound to it, or null where no layer
 /// is bound at all: no MadContext, or one with no GlpNetwork.
@@ -1395,6 +1396,59 @@ BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
       address == null
           ? ConstTerm('none')
           : StructTerm('address', [ConstTerm(address)]));
+}
+
+/// '_peer_app'(P?, A) — assign A `app(D, N, V)`, the developer D, the name N
+/// and the version number V of the app attested in the layer's session with
+/// peer P, `unattested` where that session is unattested, or `none` where the
+/// layer has no session with P (GLP-Spec appendix-guards, "Networking seam",
+/// 5fab8ac: `peer_app(Key?, App)`, `App ::= app(String, String, Integer) ;
+/// unattested ; none`; IGLP, Definition "Seam Predicates", 4a334c2).  The
+/// kernel reads what the layer reported with `onPeerConnected(pk, underlay,
+/// application?)` (GNA api.tex, Section 2.3), which the runtime records
+/// ([MadContext.peerSession]): the application where the session is attested,
+/// null where it is unattested; a peer the layer has reported connected over
+/// no underlay it has not since reported disconnected has no session.  Like
+/// `none` of peer_address/2, `none` and `unattested` are values and not
+/// failures.  P is the peer's name, its key, or in a simulation a readable
+/// name standing for one ([_peerKey]).  Where no layer is bound, A is `none`
+/// whatever P names: a layer that observes nothing has no session with any
+/// peer ("One interface").
+BodyKernelResult peerAppKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort('[ABORT] \'_peer_app\'/2: expected 2 arguments, got ${args.length}');
+  }
+
+  final name = _groundString(rt, args[0]);
+  if (name == null) {
+    return kernelAbort('[ABORT] \'_peer_app\'/2: first argument (P) must be a ground '
+        'constant naming a peer, got ${_deref(rt, args[0])}');
+  }
+
+  final seam = _seamLayer(rt);
+  if (seam == null) return bindResult(rt, args[1], ConstTerm('none'));
+
+  final pk = _peerKey(seam.network, name);
+  if (pk == null) {
+    return kernelAbort('[ABORT] \'_peer_app\'/2: $name names no peer: neither a '
+        '64-character hex public key nor an agent the layer names');
+  }
+
+  final session = seam.ctx.peerSession(pk);
+  final Term app;
+  if (session == null) {
+    app = ConstTerm('none');
+  } else {
+    final Application? a = session.application;
+    app = a == null
+        ? ConstTerm('unattested')
+        : StructTerm('app', [
+            ConstTerm(a.developer),
+            ConstTerm(a.name),
+            ConstTerm(a.version),
+          ]);
+  }
+  return bindResult(rt, args[1], app);
 }
 
 /// '_punch_udp'(A?) — open a path to address A and return nothing.  Where no
