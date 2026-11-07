@@ -1632,6 +1632,37 @@ done
 check "text: the comparison can fail" "Q = no" "$a42b"
 check_not "text: no abort" "ABORT" "$a42$a42b"
 
+# --- A43: The tree library, programs/lib/tree ---
+# A size-annotated balanced tree of constants (Code #24's task 2, Cloud_inbox
+# 2026-11-06 17:50 UTC): each operation against a list model, the balance at
+# every node after each insertion, in a drawn order and in ascending and
+# descending order, and kth at every index.  tree_test.glp's header names the
+# checks; each test gives ok when every check holds.
+echo "--- A43: lib/tree ---"
+a43=$("$REPL_RUN" <<HEREDOC
+:limit 100000000
+$GLP_DIR/programs/lib/tree/
+test_insert(300, 7, R1).
+test_insert(300, 500, R2).
+test_ascending(200, R3).
+test_descending(200, R4).
+test_from_list(300, 11, R5).
+test_member(300, 13, R6).
+test_kth(300, 17, R7).
+test_union(150, 19, 23, R8).
+:quit
+HEREDOC
+2>&1)
+check "tree: the library and its tests load" "Loaded program: .*lib/tree" "$a43"
+check "tree: insertion in a drawn order, seed 7" "R1 = ok" "$a43"
+check "tree: insertion in a drawn order, seed 500" "R2 = ok" "$a43"
+check "tree: insertion in ascending order" "R3 = ok" "$a43"
+check "tree: insertion in descending order" "R4 = ok" "$a43"
+check "tree: from_list" "R5 = ok" "$a43"
+check "tree: member" "R6 = ok" "$a43"
+check "tree: kth at every index" "R7 = ok" "$a43"
+check "tree: union" "R8 = ok" "$a43"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
