@@ -8,24 +8,30 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="./">GAS2</a>
-  <nav><a href="./" class="on">Contracts</a><a href="maker.html">App maker</a><a href="get.html">Get the app</a><a href="how.html">How it works</a></nav>
-</header>
+<header class="top"></header>
 <main>
-  <section class="intro">
-    <h1>Grassroots contracts, each a mini-app of the Grassroots Super-App</h1>
-    <p>Every contract in GLP's repository, how it relates to the others, and whether the cascade takes it all the way down to a certified mini-app that runs on super-apps. Rebuilt from GLP's main branch every hour.</p>
-    <p class="build" id="build">Loading…</p>
+  <section class="hero">
+    <h1>Social contracts that run.</h1>
+    <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement.</p>
+    <p>Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up. In GAS2 all of them live in one app, the Grassroots Super-App.</p>
+    <div class="cta"><a class="btn" href="get.html">Get the app</a><a class="btn alt" href="../gas2web/">Try it on the web</a><a class="btn alt" href="how.html">How it works →</a></div>
+    <p class="small muted hood-only" id="build">Loading…</p>
   </section>
 
+  <h2 class="sec">The mini-apps</h2>
+  <p class="muted" style="margin-top:-6px">Each is a contract of GLP, made into an app. Open one in GAS2, invite a friend, and play.</p>
+  <div class="apps2" id="apps"></div>
+
+  <h2 class="sec">How they fit together</h2>
+  <p class="muted" style="margin-top:-6px">Contracts build on each other: an arrow points to what a contract builds on.</p>
   <section class="card">
     <div class="legend" id="legend"></div>
     <div id="mapwrap"><svg id="map" role="img" aria-label="The contracts and their relations"></svg><div id="tip"></div></div>
   </section>
 
-  <section>
-    <h2 class="sec">All contracts</h2>
+  <section class="hood-only boxed">
+    <h2 class="sec"><span class="hoodtag">&lt;/&gt;</span>Every contract, and how far the cascade takes it</h2>
+    <p class="muted small">Every contract in GLP's main branch, rebuilt every hour: those that reach a certified mini-app, and where the others stop.</p>
     <div class="grid" id="list"></div>
   </section>
 </main>
@@ -120,9 +126,18 @@ function drawList(D) {
   }).join('');
 }
 
+function drawApps(D) {
+  const cs = D.contracts.filter(c => c.artefact).sort((a, b) => a.title.localeCompare(b.title));
+  $('#apps').innerHTML = cs.map(c => `<div class="app2"><div class="id">${esc(c.id)}</div><div class="t">${esc(c.title.replace(/^Grassroots /, ''))}</div>
+    <div class="cl">${esc(c.clauses.map(x => x.name).join(' · '))}</div>
+    <div class="acts"><a class="btn sm" href="../gas2web/">Play</a><a class="btn alt sm" href="contract.html?c=${encodeURIComponent(c.id)}">The rules</a></div></div>`).join('')
+    || '<p class="muted">The first build is under way.</p>';
+}
+
+nav('home');
 load().then(D => {
   $('#build').innerHTML = buildLine(D);
-  legend(D); drawMap(D); drawList(D);
+  drawApps(D); legend(D); drawMap(D); drawList(D);
 }).catch(e => { $('#build').textContent = e.message; });
 </script>
 </body>

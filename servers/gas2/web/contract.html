@@ -8,10 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="./">GAS2</a>
-  <nav><a href="./">Contracts</a><a href="maker.html">App maker</a><a href="get.html">Get the app</a><a href="how.html">How it works</a></nav>
-</header>
+<header class="top"></header>
 <main id="page"><p class="muted" id="build">Loading…</p></main>
 <script src="gas2.js"></script>
 <script>
@@ -90,6 +87,7 @@ async function run(cid, which, btn, el) {
   btn.disabled = false; btn.textContent = t;
 }
 
+nav('home');
 load().then(D => {
   const id = new URLSearchParams(location.search).get('c');
   const c = D.contracts.find(x => x.id === id);
@@ -99,11 +97,21 @@ load().then(D => {
   const up = D.relations.filter(r => r.from === c.id), down = D.relations.filter(r => r.to === c.id);
   const relChip = (r, other) => `<a class="${r.kind}" href="contract.html?c=${encodeURIComponent(other)}" title="${esc(r.how)}"><i>${r.kind}</i> ${esc(other)}</a>`;
   const gh = `https://github.com/EShapiro2/GLP/blob/${D.commit.sha}/`;
+  const MOD = {'■': ['Enforced', 'the app makes it so'], '◆': ['Attested', 'you sign that it is true'], '○': ['Undertaken', 'a promise the app cannot check']};
   $('#page').innerHTML = `
-    <div class="head1"><h1>${esc(c.id)}</h1><span class="chip ${st.cls}">${esc(st.short)}</span></div>
-    <p style="font-size:18px;margin:4px 0">${esc(c.title)}</p>
-    <p class="small muted">${c.owner ? 'Owner ' + esc(c.owner) + ' · ' : ''}<a href="${gh}${esc(c.file)}" target="_blank" rel="noopener">${esc(c.file)}</a>${c.paper ? '<br>' + esc(c.paper) : ''}</p>
+    <div class="head1"><h1>${esc(c.title)}</h1><span class="muted">${esc(c.id)}</span><span class="chip ${st.cls} hood-only">${esc(st.short)}</span></div>
+    <p class="small muted hood-only">${c.owner ? 'Owner ' + esc(c.owner) + ' · ' : ''}<a href="${gh}${esc(c.file)}" target="_blank" rel="noopener">${esc(c.file)}</a>${c.paper ? '<br>' + esc(c.paper) : ''}</p>
+    ${c.artefact ? `<div class="cta"><a class="btn" href="../gas2web/">Play it in GAS2</a><a class="btn alt" href="get.html">Get the app</a></div>` : `<p class="muted">Not an app yet: ${esc(st.text)}</p>`}
 
+    <section class="card">
+      <h3>The rules</h3>
+      ${c.preamble ? `<p class="muted">${esc(c.preamble)}</p>` : ''}
+      ${c.clauses.length ? c.clauses.map(k => `<div style="display:grid;grid-template-columns:22px 1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)"><span title="${esc((MOD[k.mod] || [k.mod])[0])}">${esc(k.mod)}</span><div><b>${k.n}. ${esc(k.name)}</b>${MOD[k.mod] ? ` <span class="small muted">· ${esc(MOD[k.mod][0].toLowerCase())}: ${esc(MOD[k.mod][1])}</span>` : ''}<br>${esc(k.text)}</div></div>`).join('') : '<p class="muted small">Its rules are those of the contracts it builds on.</p>'}
+    </section>
+    ${up.length ? `<p class="small muted">It builds on ${up.map(r => `<a href="contract.html?c=${encodeURIComponent(r.to)}">${esc(r.to)}</a>`).join(', ')}.</p>` : ''}
+
+    <div class="hood-only boxed">
+    <h2 class="sec"><span class="hoodtag">&lt;/&gt;</span>Under the hood</h2>
     <section class="card">
       <h3>Relations</h3>
       ${up.length ? `<div class="small muted">It</div><div class="rel">${up.map(r => relChip(r, r.to)).join('')}</div>` : '<p class="small muted">It builds on no other contract.</p>'}
@@ -111,11 +119,6 @@ load().then(D => {
       ${up.filter(r => r.how.startsWith('computed: ')).map(r => `<p class="small muted">${esc(r.to)}: its schemas show that ${esc(c.id)} ${esc(r.how.slice(10))}.</p>`).join('')}
     </section>
 
-    <section class="card">
-      <h3>The contract</h3>
-      ${c.preamble ? `<p class="muted">${esc(c.preamble)}</p>` : ''}
-      ${c.clauses.length ? `<ol class="clauses">${c.clauses.map(k => `<li value="${k.n}"><b>${esc(k.name)}.</b> ${esc(k.text)}</li>`).join('')}</ol>` : '<p class="muted small">Its clauses are those of the contracts it builds on.</p>'}
-    </section>
 
     <section class="card">
       <h3>Down the cascade</h3>
@@ -133,7 +136,8 @@ load().then(D => {
       <div class="bar"><button class="btn" id="go">Run</button>${c.udiArtefact ? `<button class="btn alt" id="go2">Run the hand-written play</button><span class="small muted">programs/apps/${esc(c.udiBoot)}: longer scripts, on GLP's own app</span>` : ''}</div>
       <div id="out"></div>
     </section>` : ''}
-    <p class="small muted">${buildLine(D)}</p>`;
+    <p class="small muted">${buildLine(D)}</p>
+    </div>`;
   if (c.artefact) {
     $('#go').onclick = () => run(c.id, 'gas2', $('#go'), $('#out'));
     if (c.udiArtefact) $('#go2').onclick = () => run(c.id, 'udi', $('#go2'), $('#out'));

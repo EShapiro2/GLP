@@ -13,6 +13,7 @@
 </style>
 </head>
 <body>
+<header class="top"></header>
 <main class="prose">
   <h1>A friend on GAS2</h1>
   <p>Someone showed you their GAS2 code. To be friends, add their key in your GAS2.</p>
@@ -32,5 +33,7 @@ const ok = /^[0-9a-f]{64}$/.test(K);
 document.getElementById('k').textContent = ok ? K : 'This link carries no key.';
 document.getElementById('web').href = ok ? '../gas2web/?friend=' + K : '../gas2web/';
 </script>
+<script src="gas2.js"></script>
+<script>nav('');</script>
 </body>
 </html>

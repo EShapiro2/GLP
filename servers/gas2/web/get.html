@@ -16,10 +16,7 @@ ol.steps2 li { margin: 6px 0; }
 </style>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="./">GAS2</a>
-  <nav><a href="./">Contracts</a><a href="maker.html">App maker</a><a href="get.html" class="on">Get the app</a><a href="how.html">How it works</a></nav>
-</header>
+<header class="top"></header>
 <main class="prose">
   <h1>GAS2 on your device</h1>
   <p>Your own Grassroots Super-App. Its mini-apps are the contracts on this site that the cascade takes all the way down, and your device certifies each one under your own key. You meet people by their keys, and the two of you then use a mini-app together.</p>
@@ -51,5 +48,7 @@ fetch('https://api.github.com/repos/nimrodtalmon/GLP/releases/tags/gas2-latest')
   document.getElementById('rel').textContent = (j.body || '') + (names.length ? ' Files: ' + names.join(', ') + '.' : '');
 }).catch(() => {});
 </script>
+<script src="gas2.js"></script>
+<script>nav('get');</script>
 </body>
 </html>

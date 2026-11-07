@@ -23,10 +23,7 @@ ol.cas { margin: 6px 0 0 18px; padding: 0; } ol.cas li { margin: 2px 0; }
 </style>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="./">GAS2</a>
-  <nav><a href="./">Contracts</a><a href="maker.html" class="on">App maker</a><a href="get.html">Get the app</a><a href="how.html">How it works</a></nav>
-</header>
+<header class="top"></header>
 <main class="prose">
   <h1>Make a mini-app</h1>
   <p>Write a grassroots contract, and GAS2 takes it down the same cascade it takes every contract of GLP's main down: GSC reads the act schemas and checks that the contract is grassroots, the pragmas say what the person sees, vGLP compiles the platform, and the REPL certifies the mini-app. What comes out is a link: whoever opens it on GAS2 adds the mini-app, which their own device certifies under their own key, and two people who added it can use it together.</p>
@@ -47,6 +44,7 @@ ol.cas { margin: 6px 0 0 18px; padding: 0; } ol.cas li { margin: 2px 0; }
   <div id="out" style="margin-top:14px"></div>
 </main>
 <script src="gas2.js"></script>
+<script>nav('maker');</script>
 <script>
 let D = null;
 const STEPS = [['schemas', 'GSC reads the act schemas'], ['check', 'GSC checks the contract is grassroots'],

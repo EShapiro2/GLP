@@ -48,3 +48,22 @@ function status(c) {
   if (c.step === 'schemas') return {cls: 'stuck', short: 'no schemas', rank: 0, text: 'It has no act schemas of its own.'};
   return {cls: 'stuck', short: 'stuck', rank: 0, text: why};
 }
+
+// Under the hood: each page's technical part, shown on demand and remembered
+let HOOD = false;
+try { HOOD = localStorage.getItem('gas2site_hood') === '1'; } catch (e) {}
+function setHood(on) {
+  HOOD = on;
+  try { localStorage.setItem('gas2site_hood', on ? '1' : '0'); } catch (e) {}
+  document.body.classList.toggle('hood', on);
+  document.querySelectorAll('.hoodbtn').forEach(b => b.classList.toggle('on', on));
+  if (window.onHood) window.onHood(on);
+}
+// The top bar, the same on every page
+function nav(active) {
+  const links = [['./', 'Mini-apps', 'home'], ['how.html', 'How it works', 'how'], ['maker.html', 'Make an app', 'maker'], ['get.html', 'Get the app', 'get']];
+  document.querySelector('header.top').innerHTML = `<a class="brand" href="./"><span class="mark"></span>GAS2</a>
+    <nav>${links.map(([u, t, k]) => `<a href="${u}" class="${k === active ? 'on' : ''}">${t}</a>`).join('')}</nav>
+    <button class="hoodbtn ${HOOD ? 'on' : ''}" title="Under the hood: the technical parts" onclick="setHood(!HOOD)">&lt;/&gt;</button>`;
+  document.body.classList.toggle('hood', HOOD);
+}
