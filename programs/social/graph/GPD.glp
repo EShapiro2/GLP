@@ -10,8 +10,8 @@
 %% y carries the signatures of those who passed it on, sgn(..sgn(x, Carol).., Dave) (GFP:2), and
 %% the recipient sees the list (Udi, 2026-11-07): author_of(y) is the first signer, the developer,
 %% and item_of(y) the item under the forwarding signatures, by which installed and participant
-%% name the program alike at every participant; program(x) says that x is a grassroots contract
-%% with its schemas and pragmas.  The three are decidable conditions on the values (GSC, Definition
+%% name the program alike at every participant; program(x) says that x is compiled code signed by its
+%% compiler that gives the grassroots contract it is compiled from (Udi, 2026-11-07).  The three are decidable conditions on the values (GSC, Definition
 %% Schema with values), added to the term form here and asked of GSC's checker, 2026-11-07.
 %% published(Carol, x) says that Carol published x, trusts(Alice, Carol) that Alice trusts Carol as
 %% a developer, installed(Alice, p) that Alice installed the program p, and participant(Alice, p,
