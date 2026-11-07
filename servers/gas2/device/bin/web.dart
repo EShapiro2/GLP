@@ -68,9 +68,14 @@ Future<Person> open(String h) async {
   final j = jsonDecode(File('$data/users/$h.json').readAsStringSync()) as Map;
   final kp = (pub: PubKey.fromHex(j['publicKey'] as String), priv: Uint8List.fromList(base64Decode(j['privateKey'] as String)));
   final dir = '$data/people/${kp.pub.hex}';
+  // A person keeps the tree they started on: their saved state indexes its code, and the
+  // site's builds of GLP's main, hourly, would leave it behind.  Mini-apps installed later
+  // are the site's current ones (SuperHost.site).
   final own = Directory('$dir/tree');
-  if (own.existsSync()) own.deleteSync(recursive: true);
-  await copyTree(Directory(tree()), own);
+  if (!File('${own.path}/gas2_apps.json').existsSync()) {
+    if (own.existsSync()) own.deleteSync(recursive: true);
+    await copyTree(Directory(tree()), own);
+  }
   final relay = RelayGlpNetwork(
     inner: OfflineGlpNetwork(sodium: sodium, me: kp.pub, privateKey: kp.priv),
     sodium: sodium,

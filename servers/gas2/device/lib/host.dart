@@ -59,7 +59,11 @@ class SuperHost {
   String get core => '$tree/social/graph/core';
   String get rootSelf => '$tree/self.glp';
 
-  late final AgentRuntime agent;
+  late AgentRuntime agent;
+
+  /// The super-app's code, as one number (its certified mini-apps left out): a state saved
+  /// under other code cannot be resumed, its goals indexing code that is not there.
+  late final String coreVersion = _digest(core, skipCertified: true);
   _Store? _store;
   bool get resumed => _store?.loaded ?? false;
   final List<MiniApp> apps = [];
@@ -249,9 +253,9 @@ class SuperHost {
   }
 
   /// The files of a directory, as one number: their names and lengths and contents.
-  static String _digest(String dir) {
+  static String _digest(String dir, {bool skipCertified = false}) {
     var h = 0;
-    final fs = Directory(dir).listSync(recursive: true).whereType<File>().toList()
+    final fs = Directory(dir).listSync(recursive: true).whereType<File>().where((f) => !skipCertified || !f.path.endsWith('.glpw')).toList()
       ..sort((a, b) => a.path.compareTo(b.path));
     for (final f in fs) {
       // the names with '/' on every system, so that one mini-app has one digest everywhere
@@ -265,40 +269,21 @@ class SuperHost {
   Future<void> start() async {
     try {
       await _prepareApps();
-      final store = _store = _Store('$dataDir/state.bin', this);
-      agent = AgentRuntime(
-        agentId: me,
-        program: core,
-        rootSelfGlpPath: rootSelf,
-        keyPair: keyPair,
-        network: network,
-        stateStore: store,
-      );
-      agent.maxQuiescenceCycles = 20000000;
-      agent.onOutput = (l) {
-        log.add(l);
-        if (log.length > 400) log.removeAt(0);
-      };
-      agent.onUserOutput = _shown;
-      agent.onPeerDiscovered = (pk, u) {
-        if (pk.hex == me) return;
-        nearby.putIfAbsent(pk.hex, () => {});
-        onNear?.call(pk);
-        _changed();
-      };
-      agent.onPeerConnected = (pk, u, _) {
-        if (pk.hex == me) return;
-        nearby.putIfAbsent(pk.hex, () => {}).add(u.name);
-        onNear?.call(pk);
-        _changed();
-      };
-      agent.onPeerDisconnected = (pk, u) {
-        nearby[pk.hex]?.remove(u.name);
-        _changed();
-      };
+      var store = _store = _Store('$dataDir/state.bin', this);
+      _makeAgent(store);
       status = 'starting the super-app';
       _changed();
-      await agent.initialize();
+      try {
+        await agent.initialize();
+      } catch (e) {
+        if (!store.loaded) rethrow;
+        // a state this code cannot resume (GAS2 was updated under it): kept aside, and
+        // the super-app started afresh under the same key
+        store.setAside(e);
+        store = _store = _Store('$dataDir/state.bin', this);
+        _makeAgent(store);
+        await agent.initialize();
+      }
       // A person who was here before goes on where they left off: the agent's state
       // and what the page shows were saved together (_Store).
       if (!store.loaded) await _send(rt.StructTerm('gas2_device', [rt.ConstTerm(me)]));
@@ -310,6 +295,53 @@ class SuperHost {
       if (!_up.isCompleted) _up.completeError(e);
     }
     _changed();
+  }
+
+  void _makeAgent(_Store store) {
+    agent = AgentRuntime(
+      agentId: me,
+      program: core,
+      rootSelfGlpPath: rootSelf,
+      keyPair: keyPair,
+      network: network,
+      stateStore: store,
+    );
+    agent.maxQuiescenceCycles = 20000000;
+    agent.onOutput = (l) {
+      log.add(l);
+      if (log.length > 400) log.removeAt(0);
+    };
+    agent.onUserOutput = _shown;
+    agent.onPeerDiscovered = (pk, u) {
+      if (pk.hex == me) return;
+      nearby.putIfAbsent(pk.hex, () => {});
+      onNear?.call(pk);
+      _changed();
+    };
+    agent.onPeerConnected = (pk, u, _) {
+      if (pk.hex == me) return;
+      nearby.putIfAbsent(pk.hex, () => {}).add(u.name);
+      onNear?.call(pk);
+      _changed();
+    };
+    agent.onPeerDisconnected = (pk, u) {
+      nearby[pk.hex]?.remove(u.name);
+      _changed();
+    };
+  }
+
+  /// What the page shows, back to a fresh start (the person's key and names stay).
+  void _forget() {
+    trusted = false;
+    friends.clear();
+    friendRequests.clear();
+    introRequests.clear();
+    for (final m in apps) {
+      m.n = null;
+      m.draws.clear();
+      m.invited.clear();
+      m.accepted.clear();
+    }
   }
 
   // --- What the harness shows ---------------------------------------------------
@@ -581,6 +613,10 @@ class _Store implements AgentStateStore {
       if (b.length < 8 || ascii.decode(b.sublist(0, 4)) != 'GAS2') return null;
       final n = ByteData.sublistView(b, 4, 8).getUint32(0);
       final v = jsonDecode(utf8.decode(b.sublist(8, 8 + n))) as Map<String, dynamic>;
+      if (v['core'] != null && v['core'] != host.coreVersion) {
+        setAside('saved under other code');
+        return null;
+      }
       host.trusted = v['trusted'] == true;
       host.friends..clear()..addAll((v['friends'] as List).cast<String>());
       host.friendRequests..clear()..addAll((v['friendRequests'] as List).cast<String>());
@@ -602,9 +638,20 @@ class _Store implements AgentStateStore {
     }
   }
 
+  /// The saved state put aside, under its time, and what the page shows forgotten.
+  void setAside(Object why) {
+    final f = File(path);
+    if (f.existsSync()) f.renameSync('$path.${DateTime.now().millisecondsSinceEpoch}.old');
+    loaded = false;
+    host._forget();
+    host._note('GAS2 was updated, and your super-app started afresh: your key is the same, but add your friends and install your mini-apps again.');
+    stderr.writeln('state set aside: $why');
+  }
+
   @override
   Future<void> save(Uint8List state) async {
     final view = utf8.encode(jsonEncode({
+      'core': host.coreVersion,
       'trusted': host.trusted,
       'friends': host.friends,
       'friendRequests': host.friendRequests,
