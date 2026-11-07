@@ -207,8 +207,9 @@ intro_act_bindings(Sc, R?) :- ground(Sc?) |
 % chosen with the values, and a blocking schema's bindings are eliminated,
 % the formula left over the act's values negated.
 
-% The variable of the value variable X of the act: whole where the act uses
-% X as a multiplicity (Pw), rational otherwise.
+% The variable of the value variable X of the act: whole where it is of type
+% num or the act uses X as a multiplicity (Pw, then its whole variables),
+% rational where it is of type real (GSC 8b1460f).
 procedure ivar(Constant?, Args?, Var).
 ivar(X, Pw, R?) :- ground(X?), ground(Pw?) |
     args_member(Pw?, num(X?), A),
@@ -241,23 +242,37 @@ eqs_conj([eqv(V, W)|Es], Pw, R?) :- ground(V?), ground(W?), ground(Es?), ground(
     linear # conj_app(A?, R1?, R).
 
 % The value variables of a schema read as variables named by Tg, whole where
-% the schema uses them as multiplicities (Pw).
+% they are of type num or the schema uses them as multiplicities (Wh).
 procedure inst_env(Args?, Args?, Tg?, VEnv).
 inst_env([], _, _, []).
-inst_env([num(X)|Vs], Pw, Tg, [vb(X?, V?)|R?]) :-
-    ground(X?), ground(Vs?), ground(Pw?), ground(Tg?) |
-    args_member(Pw?, num(X?), A),
+inst_env([num(X)|Vs], Wh, Tg, [vb(X?, V?)|R?]) :-
+    ground(X?), ground(Vs?), ground(Wh?), ground(Tg?) |
+    args_member(Wh?, num(X?), A),
     tg_name(Tg?, X?, N),
     kind_var(A?, N?, V),
-    inst_env(Vs?, Pw?, Tg?, R).
-inst_env([_|Vs], Pw, Tg, R?) :- otherwise | inst_env(Vs?, Pw?, Tg?, R).
+    inst_env(Vs?, Wh?, Tg?, R).
+inst_env([real(X)|Vs], Wh, Tg, [vb(X?, V?)|R?]) :-
+    ground(X?), ground(Vs?), ground(Wh?), ground(Tg?) |
+    args_member(Wh?, num(X?), A),
+    tg_name(Tg?, X?, N),
+    kind_var(A?, N?, V),
+    inst_env(Vs?, Wh?, Tg?, R).
+inst_env([_|Vs], Wh, Tg, R?) :- otherwise | inst_env(Vs?, Wh?, Tg?, R).
 
-% Each whole variable is at least one, a multiplicity being a positive whole
-% number (def:binding-numbers).
-procedure env_bounds(VEnv?, Conj).
-env_bounds([], []).
-env_bounds([vb(_, z(N))|E], [geq(lin([t(z(N?), 1)], -1))|R?]) :- env_bounds(E?, R).
-env_bounds([vb(_, q(_))|E], R?) :- env_bounds(E?, R).
+% Each variable used as a multiplicity, Pw, is at least one, a multiplicity
+% being a positive whole number (def:binding-numbers); a whole value variable
+% that is none is any whole number.
+procedure env_bounds(VEnv?, Args?, Conj).
+env_bounds([], _, []).
+env_bounds([vb(X, V)|E], Pw, R?) :- ground(X?), ground(V?), ground(E?), ground(Pw?) |
+    args_member(Pw?, num(X?), A),
+    env_bounds(E?, Pw?, R1),
+    env_bound(A?, V?, R1?, R).
+
+procedure env_bound(Ans?, Var?, Conj?, Conj).
+env_bound(yes, z(N), T, [geq(lin([t(z(N?), 1)], -1))|T?]).
+env_bound(yes, q(_), T, T?).
+env_bound(no, _, T, T?).
 
 % Each value variable the match binds equals its image.
 procedure env_binds(VEnv?, Subst?, Args?, Conj).
@@ -280,7 +295,8 @@ env_bind(free, _, _, []).
 % the match S, E of one of its atoms, its value variables named by Tg: it
 % sends each multiplicity to a positive whole number and each value variable
 % S binds to its image, and the equations E hold, no condition reading its
-% constraint; PwI are the multiplicities of the act.
+% constraint; PwI are the whole value variables of the act, of type num or
+% written as a multiplicity.
 procedure inst_conj(NSchema?, Tg?, Subst?, Eqs?, Args?, Conj).
 inst_conj(NSc, Tg, S, E, PwI, R?) :-
     ground(NSc?), ground(Tg?), ground(S?), ground(E?), ground(PwI?) |
@@ -292,13 +308,14 @@ procedure inst_conj1(Args?, NumCtx?, Tg?, Subst?, Eqs?, Args?, Conj).
 inst_conj1(Vs, nc(_, Pw), Tg, S, E, PwI, R?) :-
     ground(Vs?), ground(Pw?), ground(Tg?), ground(S?), ground(E?),
     ground(PwI?) |
-    inst_env(Vs?, Pw?, Tg?, Env),
-    inst_conj2(Env?, S?, E?, PwI?, R).
+    whole_vvars(Vs?, Pw?, Wh),
+    inst_env(Vs?, Wh?, Tg?, Env),
+    inst_conj2(Env?, Pw?, S?, E?, PwI?, R).
 
-procedure inst_conj2(VEnv?, Subst?, Eqs?, Args?, Conj).
-inst_conj2(Env, S, E, PwI, R?) :-
-    ground(Env?), ground(S?), ground(E?), ground(PwI?) |
-    env_bounds(Env?, B),
+procedure inst_conj2(VEnv?, Args?, Subst?, Eqs?, Args?, Conj).
+inst_conj2(Env, Pw, S, E, PwI, R?) :-
+    ground(Env?), ground(Pw?), ground(S?), ground(E?), ground(PwI?) |
+    env_bounds(Env?, Pw?, B),
     env_binds(Env?, S?, PwI?, Q),
     eqs_conj(E?, PwI?, Es),
     linear # conj_app(B?, Q?, BQ),
@@ -308,7 +325,24 @@ inst_conj2(Env, S, E, PwI, R?) :-
 procedure sch_vvars(NSchema?, Args).
 sch_vvars(NSc, R?) :- ground(NSc?) |
     nsch_vars(NSc?, Vs),
-    filter_nvars(Vs?, R).
+    filter_vvars(Vs?, R).
+
+% The value variables among a schema's variables, num(X) whole and real(X)
+% real (GSC 8b1460f; self.glp, Arg).
+procedure filter_vvars(Args?, Args).
+filter_vvars([], []).
+filter_vvars([num(X)|As], [num(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
+filter_vvars([real(X)|As], [real(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
+filter_vvars([_|As], R?) :- otherwise, ground(As?) | filter_vvars(As?, R).
+
+% The value variables taken as whole: those of type num, and those written as
+% a multiplicity, Pw, "a positive whole number" (def:binding-numbers); a value
+% variable of type real ranges over the rationals (linear.glp).  Each as
+% num(X), as Pw writes them.
+procedure whole_vvars(Args?, Args?, Args).
+whole_vvars([], Pw, Pw?).
+whole_vvars([num(X)|Vs], Pw, [num(X?)|R?]) :- ground(X?), ground(Vs?), ground(Pw?) | whole_vvars(Vs?, Pw?, R).
+whole_vvars([_|Vs], Pw, R?) :- otherwise, ground(Vs?), ground(Pw?) | whole_vvars(Vs?, Pw?, R).
 
 % --- clause 1 of def:unobstructed -----------------------------------------
 % The atom is added by a schema of arity one, guarded in its role, with no
@@ -891,12 +925,18 @@ sym_binds([], B, B?).
 sym_binds([num(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
+sym_binds([real(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
+    ground(X?), ground(Vs?), ground(B?) |
+    sym_binds(Vs?, B?, R).
 sym_binds([A|Vs], B, R?) :- otherwise, ground(A?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 
 procedure intro_env(Args?, Args?, VEnv).
 intro_env([], _, []).
 intro_env([num(X)|Vs], Pw, [vb(X?, V?)|R?]) :- ground(X?), ground(Vs?), ground(Pw?) |
+    ivar(X?, Pw?, V),
+    intro_env(Vs?, Pw?, R).
+intro_env([real(X)|Vs], Pw, [vb(X?, V?)|R?]) :- ground(X?), ground(Vs?), ground(Pw?) |
     ivar(X?, Pw?, V),
     intro_env(Vs?, Pw?, R).
 intro_env([_|Vs], Pw, R?) :- otherwise | intro_env(Vs?, Pw?, R).
@@ -906,16 +946,16 @@ env_qnames([], []).
 env_qnames([vb(X, q(_))|E], [X?|R?]) :- env_qnames(E?, R).
 env_qnames([vb(_, z(_))|E], R?) :- env_qnames(E?, R).
 
-% The base: the act's multiplicities at least one, and its rational values
-% written n + f.
-procedure base_conj(Args?, Args?, Conj).
-base_conj(Vs, Pw, R?) :- ground(Vs?), ground(Pw?) |
-    intro_env(Vs?, Pw?, Env),
-    base_conj1(Env?, R).
+% The base: the act's multiplicities, Pw, at least one, and its rational
+% values written n + f; Wh its whole values.
+procedure base_conj(Args?, Args?, Args?, Conj).
+base_conj(Vs, Wh, Pw, R?) :- ground(Vs?), ground(Wh?), ground(Pw?) |
+    intro_env(Vs?, Wh?, Env),
+    base_conj1(Env?, Pw?, R).
 
-procedure base_conj1(VEnv?, Conj).
-base_conj1(Env, R?) :- ground(Env?) |
-    env_bounds(Env?, Bn),
+procedure base_conj1(VEnv?, Args?, Conj).
+base_conj1(Env, Pw, R?) :- ground(Env?), ground(Pw?) |
+    env_bounds(Env?, Pw?, Bn),
     env_qnames(Env?, Qs),
     linear # decomp_defs(Qs?, Df),
     linear # conj_app(Bn?, Df?, R).
@@ -1022,9 +1062,11 @@ intro_b(B, ic(S, NS, NC, C, Rf), R?) :-
 procedure intro_b1(Args?, NumCtx?, Subst?, IntroCtx?, Try).
 intro_b1(Vs, nc(_, Pw), B, Ix, R?) :-
     ground(Vs?), ground(Pw?), ground(B?), ground(Ix?) |
+    whole_vvars(Vs?, Pw?, Wh),
+    whole_vvars(Vs?, Pw?, Wh2),
     sym_binds(Vs?, B?, Bv),
-    base_conj(Vs?, Pw?, Base),
-    intro_b2(Base?, Bv?, Pw?, Ix?, R).
+    base_conj(Vs?, Wh?, Pw?, Base),
+    intro_b2(Base?, Bv?, Wh2?, Ix?, R).
 
 procedure intro_b2(Conj?, Subst?, Args?, IntroCtx?, Try).
 intro_b2(Base, Bv, Pw, Ix, R?) :- ground(Base?), ground(Bv?), ground(Pw?), ground(Ix?) |

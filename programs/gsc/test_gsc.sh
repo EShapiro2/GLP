@@ -125,7 +125,11 @@ DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
-      "cschema(close, ['Alice', 'Alice'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
+      "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
+# A listed role is named by the variable its quantifier binds, the clause's
+# name for the member (GSC 7324ec7, Section 2): close's Bob, not its base
+# Alice; vGLP's pragma reader maps a pragma's name to its role by these.
+check_not "GSN's close names its listed role by its base no more" "cschema(close, ['Alice', 'Alice']" "$GSNV"
 # GSG: befriend is an introductory act and meet too; meet is unobstructed,
 # identity being added by establish, of arity one, guarded, requiring
 # nothing and forbidding only the identity it adds, which meet requires once
@@ -1766,6 +1770,15 @@ check "a listed role in the guard reads guarded, its literals among its role" \
       "crs(listed(1, listed, [svar(n)]), guarded, [atom(saw, [svar(n)])], [], [], [])" "$out"
 check "a conditional literal reads into a conjunct, at the agent role holding it" \
       "[hm(1, atom(noted, [pvar('Bob'), svar(n)]))]" "$out"
+# The names as_read gives a listed role: the variable its quantifier binds
+# (GSC 7324ec7, Section 2), of a listed role bound with no condition, Bob of
+# vote, and of one bound with a condition, Dave of vote2, its base Alice and
+# the agent role Carol beside it.
+LIST_Q=$(gkk_with "$CLS, $ADD1, sas(vote2, ['Alice', 'Carol', 'Dave'], [n], [atom(voted, ['Alice', n]), forall(['Dave'], atom(listed, ['Alice', 'Dave', n]), ne('Dave', 'Carol'), [atom(saw, ['Dave', n])])], [atom(leads, ['Alice', n]), atom(listed, ['Alice', 'Carol', n]), atom(identity, ['Carol'])], true, ['Alice', 'Dave'])")
+out=$(run "as_read($LIST_G, R)." "as_read($LIST_Q, R).")
+check "vote's listed role is named Bob, the variable its quantifier binds" "schema(vote, ['Alice', 'Bob']" "$out"
+check "vote2's listed role, bound with a condition, is named Dave, the variable its quantifier binds" "schema(vote2, ['Alice', 'Carol', 'Dave']" "$out"
+check_not "and not Alice, its base" "schema(vote2, ['Alice', 'Carol', 'Alice']" "$out"
 # def:numbers: "deleted with multiplicities kappa_1, ..., kappa_n, the
 # schema's constraint implies kappa_1 + ... + kappa_n <= kappa ... the checker
 # decides the implication where the constraint is linear over whole numbers,
@@ -2085,9 +2098,10 @@ check "an equality of name terms is compiled" '=\langle' "$(compiled_in e_n "$E_
 # u's being named; a disjunction both disjuncts of which name it; exists(Xs,
 # A and phi) with A and phi naming it and Xs not binding it.  tell adds
 # told(Alice, Dave), Dave an agent variable no atom it requires names, so
-# told is traced only where its formula F names Dave.  Each formula is read
-# alone, as "a safe formula of B" says: a constraint u = v that is a body
-# item of its own names nothing beside a literal of the body.
+# told is traced only where its formula F names Dave.  The body is read as
+# one conjunction, of its literals, its safe formulas and its constraint
+# (def:grounded, GSC 7324ec7): a constraint u = v that is a body item of its
+# own, or the schema's constraint, names Dave beside a literal naming Carol.
 tell_with() { gkk_with "sas(tell, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Dave'], [atom(told, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), $1], true, ['Alice'])"; }
 SF_OR=$(tell_with "or(atom(knows, ['Bob', 'Dave']), atom(knows, ['Alice', 'Dave']))")
 SF_OR1=$(tell_with "or(atom(knows, ['Bob', 'Dave']), atom(identity, ['Bob']))")
@@ -2120,8 +2134,8 @@ check_eq "and Carol = Dave, written the other way" \
          "V = syntactically_grassroots" "$(sf 6)"
 check_eq "Dave != Carol beside a conjunct naming Carol names nothing" \
          "V = not_grassroots([untraceable([told])])" "$(sf 7)"
-check_eq "Dave = Carol as a safe formula of its own, beside a literal naming Carol, names nothing: a safe formula is read alone" \
-         "V = not_grassroots([untraceable([told])])" "$(sf 8)"
+check_eq "Dave = Carol as a safe formula of its own, beside a literal naming Carol, names Dave: the body is one conjunction (GSC 7324ec7)" \
+         "V = syntactically_grassroots" "$(sf 8)"
 check_eq "the guide's disjunction, an atom naming Dave or Carol = Dave beside an atom naming Carol, traces told" \
          "V = syntactically_grassroots" "$(sf 9)"
 check_eq "exists c (knows(Bob, c) and knows(Bob, Dave)) names Dave, c not binding it" \
@@ -2147,6 +2161,135 @@ check_eq "a speech-act variable named in both disjuncts by atoms of Phi_E traces
          "V = not_grassroots([untraceable([held])])" "$(sf 1)"
 check_eq "and named in one disjunct only, item is untraceable" \
          "V = not_grassroots([untraceable([held, item])])" "$(sf 2)"
+# The body read as one conjunction with its constraint (def:grounded, GSC
+# 7324ec7): eq(Dave, Carol) as the schema's constraint, beside the literal
+# knows(Bob, Carol), names Dave; ne names nothing; and u = v names a
+# speech-act variable as it names a base, y = y' beside an atom naming y'
+# naming y.
+tell_cn() { gkk_with "sas(tell, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Dave'], [atom(told, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), $1], $2, ['Alice'])"; }
+CN_EQ=$(tell_cn "atom(knows, ['Bob', 'Carol'])" "eq('Dave', 'Carol')")
+CN_NE=$(tell_cn "atom(knows, ['Bob', 'Carol'])" "ne('Dave', 'Carol')")
+CN_NONE=$(tell_cn "atom(identity, ['Bob'])" "eq('Dave', 'Carol')")
+fwd_cn() { gkk_with "$SVX, sas(fwd, ['Alice', 'Bob'], [x, y], [atom(item, ['Alice', x])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(held, ['Bob', 'Bob', x]), $1], $2, ['Alice'])"; }
+SY_EQ=$(fwd_cn "atom(heard, ['Bob', y])" "eq(x, y)")
+SY_NE=$(fwd_cn "atom(heard, ['Bob', y])" "ne(x, y)")
+SY_BODY=$(fwd_cn "atom(heard, ['Bob', y]), eq(y, x)" true)
+out=$(run "check($CN_EQ, V)." "check($CN_NE, V)." "check($CN_NONE, V)." "check($SY_EQ, V)." "check($SY_NE, V)." "check($SY_BODY, V).")
+check_eq "the constraint Dave = Carol beside the literal knows(Bob, Carol) names Dave: the body is read with its constraint" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "the constraint Dave != Carol names nothing" \
+         "V = not_grassroots([untraceable([told])])" "$(sf 2)"
+check_eq "the constraint Dave = Carol with nothing naming Carol names nothing" \
+         "V = not_grassroots([untraceable([told])])" "$(sf 3)"
+check_eq "x = y in the constraint beside heard(Bob, y), an atom of Phi_E, names the speech-act variable x, and item is traced" \
+         "V = not_grassroots([untraceable([held])])" "$(sf 4)"
+check_eq "x != y names nothing, and item is untraceable" \
+         "V = not_grassroots([untraceable([held, item])])" "$(sf 5)"
+check_eq "y = x as a body item of its own, beside heard(Bob, y), names x" \
+         "V = not_grassroots([untraceable([held])])" "$(sf 6)"
+# A bound variable's kind (README, "Writing a contract"): the c bound by
+# exists([c], knows(Bob, c), c = Dave) is an agent variable where it is
+# among Names, and c = Dave, of two agent variables, names Dave; left out of
+# Names, c is a speech-act variable, and c = Dave, of two kinds, is refused
+# (def:numbers).
+bound_c() { gkk_with "sas(tell, $1, ['Carol', 'Dave'], [atom(told, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), $2], true, ['Alice'])"; }
+BC_IN=$(bound_c "['Alice', 'Bob', 'Carol', 'Dave', c]" "exists([c], atom(knows, ['Bob', c]), eq(c, 'Dave'))")
+BC_FIRST=$(bound_c "[c, 'Alice', 'Bob', 'Carol', 'Dave']" "exists([c], atom(knows, ['Bob', c]), eq(c, 'Dave'))")
+BC_OUT=$(bound_c "['Alice', 'Bob', 'Carol', 'Dave']" "exists([c], atom(knows, ['Bob', c]), eq(c, 'Dave'))")
+BC_NOEQ=$(bound_c "['Alice', 'Bob', 'Carol', 'Dave', c]" "exists([c], atom(knows, ['Bob', c]), true)")
+out=$(run "check($BC_IN, V)." "check($BC_FIRST, V)." "check($BC_OUT, V)." "check($BC_NOEQ, V)." "as_read($BC_IN, R).")
+check_eq "c among Names is a bound agent variable, and exists c (knows(Bob, c) and c = Dave) names Dave" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "and so wherever Names writes it, a bound name holding no atom taking no role's number" \
+         "V = syntactically_grassroots" "$(sf 2)"
+check_eq "c out of Names is a speech-act variable, and c = Dave, of two kinds, is refused" \
+         "V = malformed([constraint_not_numeric(tell, svar(c)), constraint_not_numeric(tell, pvar('Dave'))])" "$(sf 3)"
+check_eq "exists c (knows(Bob, c)) names c, which it binds, and not Dave" \
+         "V = not_grassroots([untraceable([told])])" "$(sf 4)"
+check "the bound c read as an agent variable, pvar(c), in the quantifier" "fexists([pvar(c)], role(2), atom(knows, [pvar(c)]), fcons(eq(pvar(c), pvar('Dave'))))" "$out"
+
+# A value variable has a type, which the term form writes (GSC 8b1460f, the
+# appendix "Values in Speech-Act Schemas"): num(X) whole and real(X) real.
+# The reader writes the type in the schema's Vars and the value argument
+# num(X) in its atoms; a variable written both ways is refused, value_type;
+# and the checker takes a whole one over the whole numbers: the act meet
+# forbids date(x), which low and high add at every binding of their t, clause
+# 2 reading no constraint ("Values" in README.md), so a whole t blocks every
+# whole x and no real x but a whole one.
+RE_MINT=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', real(k)])], [atom(identity, ['Alice'])], gt(real(k), num(0)), ['Alice'])")
+RE_MIX=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', real(k)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
+gap_of() { gkk_with "sas(meet, ['Alice', 'Bob'], [x], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(date, ['Alice', $1(x)])), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(low, ['Alice'], [t], [atom(date, ['Alice', $2(t)])], [atom(identity, ['Alice'])], le($2(t), num(5)), ['Alice']), sas(high, ['Alice'], [t], [atom(date, ['Alice', $2(t)])], [atom(identity, ['Alice'])], ge($2(t), num(6)), ['Alice'])"; }
+out=$(run "as_read($RE_MINT, R)." "check($RE_MINT, V)." "check($RE_MIX, V)." "intro_acts($(gap_of num num), A)." "intro_acts($(gap_of real num), A)." "intro_acts($(gap_of real real), A).")
+check "real(k) is read as the value argument num(k), its type real(k) in the head" "nschema(mint, ['Alice'], [real(k)], gt(num(k), num(0)), [rs(guarded, [atom(coin, [num(k)])]" "$out"
+check_eq "a contract with a real value variable is checked as one with a whole one" "V = syntactically_grassroots" "$(sf 1)"
+check_eq "a value variable written num(k) and real(k) is refused, of two types" "V = malformed([value_type(mint, k)])" "$(sf 2)"
+check "a whole t blocks every whole x: meet obstructed" "intro_act(meet, obstructed([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))]))" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
+check "a whole t blocks no real x but a whole one: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
+check "a real t blocks every real x: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 3p)"
+
+# Restriction by its syntactic approximations (GSC, Section 8: def:stronger,
+# prop:syntactic; restrict.glp, README "Restriction"), over GSG written in the
+# clause syntax: befriend strengthened by an atom of its body, by (a); unfriend
+# deleted, by (a); an unguarded befriend_auto with befriend's head and roles
+# and a stronger body added, by (b); an added guarded schema, no step; a
+# predicate the base has not, outside the proposition; introduce with its
+# variable renamed, the same schema read up to the names of its variables; an
+# unguarded nudge strengthened, by (c), under an invariant; a step of (a) in a
+# contract whose unguarded poke has no atom naming both its roles, no simple
+# unguarded classes; and the base against its restriction, no step.
+EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+ACQ="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob'])"
+INTRO="sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+INTRO_D="sas(introduce, ['Alice', 'Bob', 'Dave'], ['Dave'], [atom(knows, ['Bob', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Dave']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+BF="sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob'])"
+BFS="sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob'])"
+BFT="sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(trusts, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob'])"
+BFA="sas(befriend_auto, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, [])"
+BF2="sas(befriend2, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice'])"
+UF="sas(unfriend, ['Alice', 'Bob'], [], [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice'])"
+NUDGE="sas(nudge, ['Alice', 'Bob'], [], [atom(nudged, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(nudged, ['Alice', 'Bob'])), atom(identity, ['Bob'])], true, [])"
+NUDGES="sas(nudge, ['Alice', 'Bob'], [], [atom(nudged, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(knows, ['Alice', 'Bob']), not(atom(nudged, ['Alice', 'Bob'])), atom(identity, ['Bob'])], true, [])"
+POKE="sas(poke, ['Alice', 'Bob'], [], [atom(poked, ['Alice']), atom(poked, ['Bob'])], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(poked, ['Alice'])), atom(identity, ['Bob']), not(atom(poked, ['Bob']))], true, [])"
+RS_GSG="[$EST, $ACQ, $INTRO, $BF, $UF]"
+RS_A="[$EST, $ACQ, $INTRO, $BFS, $UF]"
+RS_DEL="[$EST, $ACQ, $INTRO, $BF]"
+RS_B="[$EST, $ACQ, $INTRO, $BF, $UF, $BFA]"
+RS_G="[$EST, $ACQ, $INTRO, $BF, $UF, $BF2]"
+RS_T="[$EST, $ACQ, $INTRO, $BFT, $UF]"
+RS_REN="[$EST, $ACQ, $INTRO_D, $BFS, $UF]"
+RS_CB="[$EST, $ACQ, $INTRO, $BF, $UF, $NUDGE]"
+RS_C="[$EST, $ACQ, $INTRO, $BF, $UF, $NUDGES]"
+RS_PB="[$EST, $ACQ, $INTRO, $BF, $UF, $POKE]"
+RS_PA="[$EST, $ACQ, $INTRO, $BFS, $UF, $POKE]"
+
+out=$(run "restricts($RS_A, $RS_GSG, V)." "restricts($RS_DEL, $RS_GSG, V)." "restricts($RS_B, $RS_GSG, V)." "restricts($RS_G, $RS_GSG, V)." "restricts($RS_T, $RS_GSG, V)." "restricts($RS_REN, $RS_GSG, V)." "restricts($RS_C, $RS_CB, V)." "restricts($RS_PA, $RS_PB, V)." "restricts($RS_GSG, $RS_A, V).")
+check_eq "befriend with a stronger body, its name and guards, restricts GSG by (a)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 1)"
+check_eq "deleting unfriend, which has a guarding agent role, restricts GSG by (a)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), deleted_a(unfriend)])" "$(sf 2)"
+check_eq "adding an unguarded befriend_auto with befriend's head and roles and a stronger body restricts GSG by (b)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), added_b(befriend_auto, befriend)])" "$(sf 3)"
+check_eq "adding a guarded schema is no step of the proposition" \
+         "V = not_shown([added_guarded(befriend2)])" "$(sf 4)"
+check_eq "a predicate the base has not puts the contract outside the proposition" \
+         "V = not_shown([preds_not_in_base([trusts])])" "$(sf 5)"
+check_eq "introduce with Carol named Dave is read up to the names of its variables" \
+         "V = restriction([kept(establish), kept(acquaint), replaced_a(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 6)"
+check_eq "nudge, unguarded, strengthened is a step of (c), restricting under its invariant" \
+         "V = restriction_given_invariant([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), replaced_c(nudge)], [nudge])" "$(sf 7)"
+check_eq "a step of (a) in a contract whose unguarded poke has no atom naming both its roles: no simple unguarded classes shown" \
+         "V = not_shown([no_simple_unguarded(poke), no_simple_unguarded(poke)])" "$(sf 8)"
+check_eq "GSG is not shown to restrict its restriction: befriend requires less" \
+         "V = not_shown([body_not_stronger(befriend, [not_required(1, atom(knows, [role(1)]))])])" "$(sf 9)"
+vt() { echo "sas(t, ['Alice'], [k], [atom(coin, ['Alice', $1(k)])], [atom(identity, ['Alice'])], $2, ['Alice'])"; }
+out=$(run "stronger_body($(vt num 'gt(num(k), num(1))'), $(vt num 'gt(num(k), num(0))'), V)." "stronger_body($(vt num 'gt(num(k), num(0))'), $(vt num 'gt(num(k), num(1))'), V)." "stronger_body($(vt num 'gt(num(k), num(0))'), $(vt num 'ge(num(k), num(1))'), V)." "stronger_body($(vt real 'gt(real(k), num(0))'), $(vt real 'ge(real(k), num(1))'), V)." "stronger_body($(vt num 'and(gt(num(k), num(0)), le(num(k), num(9)))'), $(vt num 'le(num(k), num(9))'), V)." "stronger_body($BFS, $BF, V)." "stronger_body($INTRO_D, $INTRO, V).")
+check_eq "k > 1 implies k > 0: a stronger body" "V = stronger" "$(sf 1)"
+check_eq "k > 0 implies not k > 1" "V = not_stronger([constraint_not_implied(gt(num(k), num(1)))])" "$(sf 2)"
+check_eq "a whole k > 0 implies k >= 1" "V = stronger" "$(sf 3)"
+check_eq "a real k > 0 does not" "V = not_stronger([constraint_not_implied(ge(num(k), num(1)))])" "$(sf 4)"
+check_eq "a conjunct of the weaker constraint that is a conjunct of the stronger is implied" "V = stronger" "$(sf 5)"
+check_eq "befriend with an atom more in its body is stronger" "V = stronger" "$(sf 6)"
+check_eq "introduce with its variable renamed is the same schema" "V = stronger" "$(sf 7)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

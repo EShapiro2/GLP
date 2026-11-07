@@ -82,6 +82,7 @@ c_arg(svar(X), _, T, [X?|T?]).
 c_arg(nterm(S), Ns, T, R?) :- c_nt(S?, Ns?, T?, R).
 c_arg(sgn(X, J), Ns, T, ['sgn(', X?, ', '|R?]) :- c_name(J?, Ns?, [')'|T?], R).
 c_arg(num(X), _, T, [X?|T?]).
+c_arg(real(X), _, T, [X?|T?]).
 c_arg(any, _, T, ['_'|T?]).
 
 % The arguments, each after a comma.
@@ -360,6 +361,7 @@ c_expr(sum(Xs, H, A, F, U), Ns, T, ['sum('|R?]) :- ground(Ns?) |
     c_anchored(H?, A?, F?, Ns?, [', '|R2?], R1),
     c_xs_sep(Xs?, Ns?, R1?, R).
 c_expr(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
+c_expr(real(X), Ns, T, R?) :- c_arg(real(X?), Ns?, T?, R).
 c_expr(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_expr(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
 c_expr(svar(X), Ns, T, R?) :- c_arg(svar(X?), Ns?, T?, R).
@@ -382,6 +384,7 @@ c_operand(fn(N, Xs), Ns, T, R?) :- c_expr(fn(N?, Xs?), Ns?, T?, R).
 c_operand(cardinality(Xs, H, A, F), Ns, T, R?) :- c_expr(cardinality(Xs?, H?, A?, F?), Ns?, T?, R).
 c_operand(sum(Xs, H, A, F, U), Ns, T, R?) :- c_expr(sum(Xs?, H?, A?, F?, U?), Ns?, T?, R).
 c_operand(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
+c_operand(real(X), Ns, T, R?) :- c_arg(real(X?), Ns?, T?, R).
 c_operand(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_operand(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
 c_operand(svar(X), Ns, T, R?) :- c_arg(svar(X?), Ns?, T?, R).
