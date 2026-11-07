@@ -58,6 +58,22 @@ class Glp:
         self.last = lines
         return lines
 
+    def rp(self, path):
+        """A path as the REPL reads it on any system: relative to glp_runtime, where the
+        REPL runs, with forward slashes and no trailing separator (GAS's make.py found
+        that the REPL on Windows loads a program so named)."""
+        r = os.path.relpath(os.path.abspath(path), self.rt).replace('\\', '/')
+        return r.rstrip('/')
+
+    def load(self, path, goals, timeout=600):
+        """Load a program and run goals: named relative first, then absolute, until it loads."""
+        out = []
+        for name in (self.rp(path), os.path.abspath(path)):
+            out = self.repl([name] + goals, timeout)
+            if any('Loaded' in l and 'root' not in l for l in out):
+                return out
+        return out
+
     @staticmethod
     def answer(lines, var):
         for l in lines:
@@ -71,21 +87,19 @@ class Glp:
     # --- the cascade, as programs/apps/compile.sh takes it -----------------------------
 
     def contract(self, glp_file, name):
-        return self.answer(self.repl([glp_file, f'contract_named({name}, C).']), 'C')
+        return self.answer(self.load(glp_file, [f'contract_named({name}, C).']), 'C')
 
     def as_read(self, term):
-        return self.answer(self.repl([self.path('programs', 'gsc') + os.sep, ':limit 10000000',
-                                      f'as_read({term}, R).']), 'R')
+        return self.answer(self.load(self.path('programs', 'gsc'), [':limit 10000000', f'as_read({term}, R).']), 'R')
 
     def verdict(self, term):
-        return self.answer(self.repl([self.path('programs', 'gsc') + os.sep, ':limit 10000000',
-                                      f'check({term}, V).']), 'V')
+        return self.answer(self.load(self.path('programs', 'gsc'), [':limit 10000000', f'check({term}, V).']), 'V')
 
     def introduction(self, glp_file, name):
         src = open(glp_file, encoding='utf-8').read()
         if not re.search(rf'^introduction_named\({re.escape(name)},', src, re.M):
             return 'no_introduction'
-        return self.answer(self.repl([glp_file, f'introduction_named({name}, I).']), 'I') or 'no_introduction'
+        return self.answer(self.load(glp_file, [f'introduction_named({name}, I).']), 'I') or 'no_introduction'
 
     def pragmas(self, txt_file, read_term):
         """(pragmas term, None) or (None, the reason pragmas.sh gives)."""
@@ -98,8 +112,9 @@ class Glp:
 
     def compile_platform(self, name, read_term, verdict, intro, pragmas):
         """(platform text, None) or (None, why not), as compile.sh decides it."""
-        out = self.repl([self.path('programs', 'vglp', 'cva', 'compiler') + os.sep, ':limit 1000000000',
-                         f'compile({name}, {read_term}, {verdict}, {intro}, {pragmas}).'], timeout=1200)
+        out = self.load(self.path('programs', 'vglp', 'cva', 'compiler'),
+                        [':limit 1000000000', f'compile({name}, {read_term}, {verdict}, {intro}, {pragmas}).'],
+                        timeout=1200)
         body, on, done = [], False, False
         for l in out:
             if l == '%% compile begin':
@@ -122,7 +137,7 @@ class Glp:
     def artefact(self, app_dir, dest_dir):
         """Certify a mini-app's directory: (path of its .glpw, None) or (None, the refusal)."""
         os.makedirs(dest_dir, exist_ok=True)
-        out = self.repl([f':artefact {app_dir} {dest_dir}'], timeout=900)
+        out = self.repl([f':artefact {self.rp(app_dir)} {self.rp(dest_dir)}'], timeout=900)
         name = os.path.basename(os.path.normpath(app_dir))
         p = os.path.join(dest_dir, name + '.glpw')
         if os.path.exists(p) and not any('refus' in l.lower() or 'error' in l.lower() for l in out):
@@ -132,8 +147,8 @@ class Glp:
 
     def boot(self, boot_file, program_dir, artefacts=(), timeout=300):
         """Run a boot: the REPL's :artefact for each mini-app the phones install, then :boot."""
-        lines = [f':artefact {a} {program_dir}' for a in artefacts]
-        lines.append(f':boot {boot_file} {program_dir}')
+        lines = [f':artefact {self.rp(a)} {self.rp(program_dir)}' for a in artefacts]
+        lines.append(f':boot {self.rp(boot_file)} {self.rp(program_dir)}')
         return self.repl(lines, timeout=timeout)
 
 
