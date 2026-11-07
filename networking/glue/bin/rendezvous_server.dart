@@ -27,17 +27,25 @@
 /// Run:
 ///   rendezvous_server --identity rv-identity.json --port 9516 \
 ///     --public-address 203.0.113.7:9516 --outbound-queue-file rv-queue.json \
-///     --graph <hash> \
+///     --compatible 7:<hash> --compatible 8:<hash> \
 ///     --program <GLP>/programs/examples/rendezvous/rv_agent.glp \
 ///     --root-self <GLP>/programs/self.glp
 ///
 /// `--identity` is the key pair, a JSON file `{"seed": <hex>}` created with a
 /// fresh seed on first run; `--outbound-queue-file` the file that keeps the
 /// layer's fair-delivery queue, so that it survives the termination of the
-/// server (GNA Section 2.11); `--graph` is the social graph's source identity,
-/// the Hash `signature/2` reports for a signature made under the social
-/// graph, which the agent admits a reconnection attestation under and no
-/// other (rv_agent.glp, "Capability verification").
+/// server (GNA Section 2.11); `--compatible <version>:<source identity>`, given
+/// once for each compatible version of the Grassroots App and at least once,
+/// names the version number, a whole number below 2^63 (GNA Implementation
+/// Notes), and the source identity of that version's social-graph program,
+/// 64 lowercase hexadecimal digits, the Hash `signature/2` reports for a
+/// signature made under it (`glp_runtime/bin/source_identity.dart` prints
+/// it).  The agent is told them, as the list of `version(V, H)` in the order
+/// given, and admits a signed term made under any of them and no other
+/// (GNA Section 6, "Versions": "the rendezvous agent is told, when it starts,
+/// the compatible versions with the source identities of their social-graph
+/// programs, and admits a signed term by any of them"; rv_agent.glp,
+/// "Admission").
 ///
 /// Prints `READY <port> <key-hex>` once listening, then `OUT <term>` for each
 /// element the agent sends its person and `CONNECTED <key-hex>` and
@@ -71,10 +79,13 @@ Future<void> main(List<String> argv) async {
         mandatory: true,
         help: "The layer's fair-delivery queue: a JSON file, so that the "
             'queue survives the termination of the server (GNA Section 2.11)')
-    ..addOption('graph',
-        mandatory: true,
-        help: "The social graph's source identity, the Hash under which the "
-            'agent admits a reconnection attestation')
+    ..addMultiOption('compatible',
+        splitCommas: false,
+        valueHelp: 'version:source-identity',
+        help: 'A compatible version of the Grassroots App and the source '
+            "identity of its social-graph program, under which the agent "
+            'admits a signed term; once for each, at least once (GNA Section '
+            '6, "Versions")')
     ..addOption('program',
         mandatory: true,
         help: 'The rendezvous agent: programs/examples/rendezvous/rv_agent.glp')
@@ -97,6 +108,23 @@ Future<void> main(List<String> argv) async {
   final port = int.tryParse(args['port'] as String);
   if (port == null) {
     stderr.writeln('--port: not a port: ${args['port']}');
+    exit(64);
+  }
+
+  final versions = <rt.Term>[];
+  for (final c in args['compatible'] as List<String>) {
+    final version = _compatibleVersion(c);
+    if (version == null) {
+      stderr.writeln('--compatible: not <version>:<source identity>, the '
+          'version a whole number below 2^63 and the source identity 64 '
+          'lowercase hexadecimal digits: $c');
+      exit(64);
+    }
+    versions.add(version);
+  }
+  if (versions.isEmpty) {
+    stderr.writeln('--compatible: at least one compatible version is needed');
+    stderr.writeln(parser.usage);
     exit(64);
   }
 
@@ -138,8 +166,9 @@ Future<void> main(List<String> argv) async {
   // The agent is started from agent(ch(_?,_),ch(_?,_)), every agent's initial
   // goal (IGLP, Implementation Notes, "Boot": "a deployed agent is spawned by
   // its application with the same initial goal"); its person's first act is
-  // the social graph's source identity, the one it admits attestations under.
-  await agent.injectUserInput(rt.ConstTerm(args['graph'] as String));
+  // the list of the compatible versions, under whose social-graph programs it
+  // admits a signed term.
+  await agent.injectUserInput(_list(versions));
   if (!await layer.start()) {
     stderr.writeln('could not bind UDP port $port');
     exit(1);
@@ -162,4 +191,23 @@ Future<void> main(List<String> argv) async {
   agent.dispose();
   await layer.dispose();
   exit(0);
+}
+
+/// `version(V, H)` of `--compatible V:H`, or null where it is not that form.
+rt.Term? _compatibleVersion(String value) {
+  final m = RegExp(r'^(\d+):([0-9a-f]{64})$').firstMatch(value);
+  if (m == null) return null;
+  final version = int.tryParse(m.group(1)!);
+  if (version == null) return null;
+  return rt.StructTerm(
+      'version', [rt.ConstTerm(version), rt.ConstTerm(m.group(2)!)]);
+}
+
+/// The GLP list of [items], in their order.
+rt.Term _list(List<rt.Term> items) {
+  rt.Term list = rt.ConstTerm(rt.nil);
+  for (final t in items.reversed) {
+    list = rt.StructTerm('.', [t, list]);
+  }
+  return list;
 }
