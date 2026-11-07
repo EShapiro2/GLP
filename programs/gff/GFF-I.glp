@@ -1,103 +1,111 @@
 %% ---------------------------------------------------------------------------
-%% GFF-I.glp --- the implementable restriction of GFF, GFF's (Udi, 2026-11-06,
-%% to GFF #3), in the term form programs/gsc reads (its README, "Writing a
-%% contract").  GFF-I restricts GFF (GFF.glp beside this file; GSC, Section
-%% Relations among Contracts, Definition Amendment, extension, restriction,
-%% instantiation): it has GFF's schemas, two with stronger bodies, the same
-%% heads, guards and names.  follow_transitive (GFF-I:1, restricting GDO-L:2)
-%% has Carol as a reading role requiring knows(Alice); deliver (GFF-I:2,
-%% restricting GFF:2) has Bob as its first role, requiring knows(Alice) and
-%% item(x, l), so that the atoms its first role requires name every other role
-%% and every variable of what it adds (vGLP, Section 5.4, an effective
-%% contract).  The clauses are in GFF-I.txt.
-%%
-%% A role is rs(Guard, Add, Del, Keep, Forb), its +(i), -(i), =(i) and not(i),
-%% and is named by its index, role(1) the schema's first role.
+%% GFF-I.glp --- Implementable GFF, GFF's, in the clause syntax of GSC's paper, Section 3.2,
+%% the term form GDO-LB.glp writes.  It restricts GFF: follow_transitive and follow_transitive_friend require that Carol knows Alice, and deliver that Bob knows Alice, Bob its first role.
+%% Friends have each other's pointers, labeled by the friend, with no atom
+%% (GDO-L's preamble; Udi, 2026-11-07): a body requiring a Dave-pointer to Bob
+%% reads the atom or the friendship with Bob, Bob being Dave.  Every role
+%% requires identity.  The clauses are in GFF-I.txt beside this file.
 %% ---------------------------------------------------------------------------
 
-NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
-            ; ext(NameTerm, Constant).
-Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer).
-Args      ::= [] ; [Arg | Args].
-Atom      ::= atom(Constant, Args).
-Atoms     ::= [] ; [Atom | Atoms].
-Guard     ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
-RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
-            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
-RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
-Reach     ::= reach(NameTerm, Constant, NameTerm).
-Reaches   ::= [] ; [Reach | Reaches].
-Names     ::= [] ; [Constant | Names].
-Schema    ::= schema(Constant, Names, Args, RoleSpecs) ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
-Contract  ::= [] ; [Schema | Contract].
-Preds     ::= [] ; [Constant | Preds].
-Declared  ::= Contract ; reflexive(Preds, Contract).
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
+SHeads      ::= [] ; [SHead | SHeads].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
+SExprs      ::= [] ; [SExpr | SExprs].
+SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
+              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
+              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
+SConds      ::= [] ; [SCond | SConds].
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
+Contract    ::= [] ; [Schema | Contract].
+Preds       ::= [] ; [Constant | Preds].
+Declared    ::= Contract ; environment(Preds, Contract).
 
 %% contract_named(gff_i, C): the contract, GFF-I.
 procedure contract_named(Constant?, Declared).
 contract_named(gff_i,
-   [schema(establish, ['Alice'], [],
-       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-    schema(acquaint, ['Alice', 'Bob'], [],
-       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
-        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
-    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
-       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
-        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-    schema(befriend, ['Alice', 'Bob'], [],
-       [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]),
-    schema(unfriend, ['Alice', 'Bob'], [],
-       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
-        rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
-    schema(point_friend, ['Alice', 'Bob'], [],
-       [rs(guarded,   [atom(points_to, [role(2)])], [],
-                      [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]),
-        rs(unguarded, [], [], [atom(identity, [])], [])]),
-    schema(point_transitive, ['Alice', 'Bob'], [pvar(c)],
-       [rs(guarded,   [atom(points_to, [pvar(c)])], [],
-                      [atom(identity, []), atom(knows, [pvar(c)]), atom(points_to, [role(2)])], []),
-        rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar(c)])], [])]),
-    schema(unpoint, ['Alice', 'Bob'], [],
-       [rs(guarded,   [], [atom(points_to, [role(2)])], [atom(identity, [])], []),
-        rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GDO-L:1, Labeled pointing to friend, labeled 'Bob'.
-    schema(follow_own, ['Alice', 'Bob'], [],
-       [rs(guarded,   [atom(lpoints_to, [role(2), role(2)])], [],
-                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), role(2)])]),
-        rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GDO-L:1, Labeled pointing to friend, labeled 'Dave', where Bob has a pointer labeled 'Dave', to Carol.
-    schema(follow_friend, ['Alice', 'Bob'], [pvar('Dave'), pvar('Carol')],
-       [rs(guarded,   [atom(lpoints_to, [role(2), pvar('Dave')])], [],
-                      [atom(identity, []), atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar('Dave')])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
-%% GFF-I:1 restricts GDO-L:2: Carol, a reading role now, requires that Carol knows Alice.
-    schema(follow_transitive, ['Alice', 'Bob', 'Carol'], [pvar('Dave')],
-       [rs(guarded,   [atom(lpoints_to, [role(3), pvar('Dave')])], [],
-                      [atom(identity, []), atom(knows, [role(3)]), atom(lpoints_to, [role(2), pvar('Dave')])],
-                      [atom(lpoints_to, [role(3), pvar('Dave')])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [role(3), pvar('Dave')])], []),
-        rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% GFF-I:1 restricts GDO-L:2 through Alice's friend Bob: Carol, a reading role, requires that Carol knows Alice.
-    schema(follow_transitive_friend, ['Alice', 'Bob', 'Carol'], [pvar('Dave')],
-       [rs(guarded,   [atom(lpoints_to, [role(3), pvar('Dave')])], [],
-                      [atom(identity, []), atom(knows, [role(3)]), atom(friend, [role(2)])],
-                      [atom(lpoints_to, [role(3), pvar('Dave')])]),
-        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [role(3), pvar('Dave')])], []),
-        rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% GDO-L:3, Ceasing to point.
-    schema(unfollow, ['Alice', 'Bob'], [pvar('Dave')],
-       [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar('Dave')])], [atom(identity, [])], []),
-        rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% GFF:1, Feed.  Alice posts an item x to their feed; x is a speech act Alice signs (GKK:1), and Alice holds it as an item of the feed Alice names.
-    schema(post, ['Alice'], [svar(x)],
-       [rs(guarded, [atom(item, [svar(x), role(1)])], [], [atom(identity, [])], [atom(item, [svar(x), role(1)])])]),
-%% GFF-I:2 restricts GFF:2: Bob, the first role, requires that Bob knows Alice, so Bob's state names Alice, the feed l and the item x.
-    schema(deliver, ['Bob', 'Alice'], [pvar('Carol'), svar(x)],
-       [rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(item, [svar(x), pvar('Carol')])], []),
-        rs(unguarded, [atom(item, [svar(x), pvar('Carol')]), atom(received, [svar(x), pvar('Carol'), role(1)])], [],
-                      [atom(identity, []), atom(lpoints_to, [role(1), pvar('Carol')])],
-                      [atom(item, [svar(x), pvar('Carol')])])])]).
-
+   [sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))], true, ['Alice']),
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
+       true, ['Alice', 'Bob']),
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+%% GDO:1, Pointing to friend.
+    sas(point_friend, ['Alice', 'Bob'], [],
+       [atom(points_to, ['Alice', 'Bob'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(points_to, ['Alice', 'Bob'])), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GDO:2, Transitive pointing.
+    sas(point_transitive, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(points_to, ['Alice', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(points_to, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(points_to, ['Bob', 'Carol'])],
+       true,
+       ['Alice']),
+%% GDO:3, Ceasing to point.
+    sas(unpoint, ['Alice', 'Bob'], [],
+       [not(atom(points_to, ['Alice', 'Bob']))],
+       [atom(identity, ['Alice']), atom(points_to, ['Alice', 'Bob']), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GDO-L:1, Labeled pointing to friend: a Dave-pointer to friend Bob, who has one, explicit or, Bob being Dave's friend, implied.
+    sas(follow_friend, ['Alice', 'Bob', 'Dave', 'Carol'], ['Dave', 'Carol'],
+       [atom(lpoints_to, ['Alice', 'Bob', 'Dave'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Bob', 'Dave'])), atom(identity, ['Bob']), or(atom(lpoints_to, ['Bob', 'Carol', 'Dave']), and(atom(friend, ['Bob', 'Carol']), eq('Carol', 'Dave')))],
+       true,
+       ['Alice']),
+%% GFF-I:1 (GDO-L:2, only if Carol knows Alice; Carol a reading role), Labeled transitive pointing, through a Dave-pointer to Bob.
+    sas(follow_transitive, ['Alice', 'Bob', 'Carol', 'Dave'], ['Dave'],
+       [atom(lpoints_to, ['Alice', 'Carol', 'Dave'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(lpoints_to, ['Alice', 'Bob', 'Dave']), not(atom(lpoints_to, ['Alice', 'Carol', 'Dave'])), not(and(atom(friend, ['Alice', 'Carol']), eq('Carol', 'Dave'))), atom(identity, ['Bob']), or(atom(lpoints_to, ['Bob', 'Carol', 'Dave']), and(atom(friend, ['Bob', 'Carol']), eq('Carol', 'Dave'))), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice'])],
+       true,
+       ['Alice']),
+%% GFF-I:1 (GDO-L:2, only if Carol knows Alice; Carol a reading role), Labeled transitive pointing, through Alice's friend Bob.
+    sas(follow_transitive_friend, ['Alice', 'Bob', 'Carol', 'Dave'], ['Dave'],
+       [atom(lpoints_to, ['Alice', 'Carol', 'Dave'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Carol', 'Dave'])), not(and(atom(friend, ['Alice', 'Carol']), eq('Carol', 'Dave'))), atom(identity, ['Bob']), or(atom(lpoints_to, ['Bob', 'Carol', 'Dave']), and(atom(friend, ['Bob', 'Carol']), eq('Carol', 'Dave'))), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice'])],
+       true,
+       ['Alice']),
+%% GDO-L:3, Ceasing to point: a Dave-pointer Alice added.
+    sas(unfollow, ['Alice', 'Bob', 'Dave'], ['Dave'],
+       [not(atom(lpoints_to, ['Alice', 'Bob', 'Dave']))],
+       [atom(identity, ['Alice']), atom(lpoints_to, ['Alice', 'Bob', 'Dave']), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GFF:1, Feed.  The item x occurs in no atom the act requires, so Alice signs it.
+    sas(post, ['Alice'], [x],
+       [atom(item, ['Alice', x, 'Alice'])],
+       [atom(identity, ['Alice']), not(atom(item, ['Alice', x, 'Alice']))],
+       true,
+       ['Alice']),
+%% GFF-I:2, Delivery: GFF:2, only if Bob knows Alice; Bob its first role and a reading role, received(Alice, x, Carol, Bob) its signature atom.
+    sas(deliver, ['Bob', 'Alice', 'Carol'], ['Carol', x],
+       [atom(item, ['Alice', x, 'Carol']), atom(received, ['Alice', x, 'Carol', 'Bob'])],
+       [atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(item, ['Bob', x, 'Carol']), atom(identity, ['Alice']), or(atom(lpoints_to, ['Alice', 'Bob', 'Carol']), and(atom(friend, ['Alice', 'Bob']), eq('Bob', 'Carol'))), not(atom(item, ['Alice', x, 'Carol']))],
+       true,
+       [])
+]).

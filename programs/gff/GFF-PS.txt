@@ -3,10 +3,10 @@
 % Paper: GFF, Grassroots Feeds and Followers, in preparation
 % Restricts: GFF-I, GFF's (GFF-I.txt beside this file), and through it GFF, GDO-L, GDO, GSG and GKK.  It adds one act no person wills, which takes in one act two of GFF-I's, GFF-I:1 and GDO-L:3 (GSC, Definition Implementation, restriction).
 % Defines: nothing.
-% Last changed: 2026-11-07, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-06, written by GFF #3 Cowork, the clause as Udi approved it that day ('yes' to GFF #3's wording, pointers labeled by persons in quotes), with 'and none to Carol', a Dave-pointer to Carol being one at most (Udi, 2026-11-06, approving GFF #3's addition).  It replaces the path-shortening instance of 2026-11-05: 'logically it is a restriction' (Udi, 2026-11-06).
-% Schemas: GFF-PS.glp beside this file, in the clause syntax, GFF-I's sixteen and shorten.
+% Last changed: 2026-11-07, the pointers friendship implies, as GDO-L's preamble says them, read in the schemas' bodies, follow_own gone (Udi, 2026-11-07).  Earlier that day, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-06, written by GFF #3 Cowork, the clause as Udi approved it that day ('yes' to GFF #3's wording, pointers labeled by persons in quotes), with 'and none to Carol', a Dave-pointer to Carol being one at most (Udi, 2026-11-06, approving GFF #3's addition).  It replaces the path-shortening instance of 2026-11-05: 'logically it is a restriction' (Udi, 2026-11-06).
+% Schemas: GFF-PS.glp beside this file, in the clause syntax, GFF-I's fourteen and shorten.
 GFF-PS: Path-Shortening GFF
 GFF-PS restricts GFF-I.
-Alice, Bob, Carol and Dave are persons.
+Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
 1. ■ Shortening.  Alice, who knows Carol and has a Dave-pointer to Bob and none to Carol, while Bob has a Dave-pointer to Carol and Carol knows Alice, replaces it by a Dave-pointer to Carol.
 Pragmas

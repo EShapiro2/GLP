@@ -3,10 +3,10 @@
 % Paper: GFF, Grassroots Feeds and Followers, in preparation
 % Extends: GFF-FR, GFF's (GFF-FR.txt beside this file), and through it GFF-I, GFF, GDO-L, GDO, GSG and GKK.  It adds one act no person wills.
 % Defines: back-channel.
-% Last changed: 2026-11-07, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-07, written by GFF #3 Cowork, the clause in Udi's words (to GFF #3: 'Alice, who follows Dave through Bob and Carol, and receives a Dave item first from Bob, forwards it to Carol'), with pointers labeled by persons.  Carol records the item and its sender with received_back, delivery's received being delivery's signature atom (GSC, Definition Signature atoms).
-% Schemas: GFF-FR-BC.glp beside this file, in the clause syntax, GFF-FR's seventeen and back_forward.
+% Last changed: 2026-11-07, the pointers friendship implies, as GDO-L's preamble says them, read in the schemas' bodies, follow_own gone (Udi, 2026-11-07).  Earlier that day, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-07, written by GFF #3 Cowork, the clause in Udi's words (to GFF #3: 'Alice, who follows Dave through Bob and Carol, and receives a Dave item first from Bob, forwards it to Carol'), with pointers labeled by persons.  Carol records the item and its sender with received_back, delivery's received being delivery's signature atom (GSC, Definition Signature atoms).
+% Schemas: GFF-FR-BC.glp beside this file, in the clause syntax, GFF-FR's fifteen and back_forward.
 GFF-FR-BC: Fault-Resilient GFF with Back-Channels
 GFF-FR-BC extends GFF-FR.
-Alice, Bob, Carol and Dave are persons.
+Alice, Bob, Carol and Dave are persons, Bob and Dave possibly one person.
 1. ■ Back-channel.  Alice, who has Dave-pointers to Bob and to Carol and receives an item of Dave's feed first from Bob, forwards it to Carol.
 Pragmas
