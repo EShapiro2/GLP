@@ -4190,6 +4190,17 @@ check "CVA pragmas: ... the inherited button that stands, with its question, rea
 check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
 check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
 check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# Two kinds of pragmas (GSC, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69; GSC #13, Code_inbox.md, 2026-11-07 19:29 UTC, 2): "Interface pragmas" read as "Pragmas" are, and "Implementation pragmas", and every line after it to the next interface heading, skipped, no paper yet saying what form they take in the app's code (XI); and "Pragmas" alone the interface ones (XP).
+cva_ph=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XI' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Interface pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' 'Implementation pragmas' 'Minting: before minting, the app checks the amount.' > "$cva_ph/XI.txt"
+printf '%s\n' '% Extends: nothing.' 'XP' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' > "$cva_ph/XP.txt"
+cva_ph_mint="schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])"
+cva_ph_i=$(bash "$CVA/compiler/pragmas.sh" "$cva_ph/XI.txt" "[$cva_ph_mint]" 2>&1; echo "exit $?")
+cva_ph_p=$(bash "$CVA/compiler/pragmas.sh" "$cva_ph/XP.txt" "[$cva_ph_mint]" 2>&1; echo "exit $?")
+rm -rf "$cva_ph"
+check "CVA pragmas: the interface pragmas under their heading read, the implementation pragmas skipped (XI)" "^pragmas(\[list('\"Coins\"', \['coin'\])\], \[act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))\])$" "$cva_ph_i"
+check "CVA pragmas: ... and pragmas.sh exits 0 (XI)" "^exit 0$" "$cva_ph_i"
+check "CVA pragmas: ... the same as under the heading Pragmas alone (XP)" "^pragmas(\[list('\"Coins\"', \['coin'\])\], \[act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))\])$" "$cva_ph_p"
 # Several buttons on a line, and one button on two lines (vGLP 40f8444, Section 5.4, "The contract's words": "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1 and 2): the fields after a button, up to the next button, are that button's, so XM's "[Mint] <amount> [Burn]" is read, mint with k and burn with none (buttons), and XN's "[Mint] [Burn] <amount>" refused, mint leaving k unnamed and burn's <amount> beyond its variables (buttons_order); XD's [Mint] on two lines refused, the button and both lines named (twice); and XH extends XB-L, a contract's name with a hyphened part read whole, as GFF's GDO-L (hyphen).
 cva_pb=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XM' 'Alice is a person.' '1. ■ Minting. Alice may mint coins and burn one.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount> [Burn]' > "$cva_pb/XM.txt"
