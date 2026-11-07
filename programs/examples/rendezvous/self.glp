@@ -18,6 +18,13 @@ PendingEntry ::= needs(Key, Key, String, SignalReply?)
                ; ready(Key, Key, String, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
+%% The compatible versions the rendezvous agent is told at boot (GNA
+%% Section 6, "Versions"): version(V, H), H the source identity of version
+%% V's social-graph program; and what compatible/3 finds of a source identity.
+Version ::= version(Integer, Hash).
+Versions ::= [] ; [Version | Versions].
+Admission ::= admitted ; refused.
+
 %% Friend-mediated rendezvous (fmrv) — a friend already reachable over BLE
 %% relays addresses so two NAT-bound friends can punch to each other.
 
@@ -171,6 +178,27 @@ exported procedure test22_available_admitted_no_layer(Signature, SignalReply,
                                                       SignalReply).
 test22_available_admitted_no_layer(S?, RB?, RA?) :-
     rv_agent_test # test22_available_admitted_no_layer(S, RB, RA).
+
+imported procedure rv_agent_test#test23_compatible(Admission, Admission,
+                                                   Admission, Admission).
+exported procedure test23_compatible(Admission, Admission, Admission,
+                                     Admission).
+test23_compatible(C1?, C2?, C3?, C4?) :-
+    rv_agent_test # test23_compatible(C1, C2, C3, C4).
+
+imported procedure rv_agent_test#test24_each_version_admitted(SignalReply,
+                                                              SignalReply,
+                                                              SignalReply).
+exported procedure test24_each_version_admitted(SignalReply, SignalReply,
+                                                SignalReply).
+test24_each_version_admitted(R1?, R2?, R3?) :-
+    rv_agent_test # test24_each_version_admitted(R1, R2, R3).
+
+imported procedure rv_agent_test#test25_agent_versions(SignalReply,
+                                                       SignalReply).
+exported procedure test25_agent_versions(SignalReply, SignalReply).
+test25_agent_versions(RA?, RR?) :-
+    rv_agent_test # test25_agent_versions(RA, RR).
 
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test

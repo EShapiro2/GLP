@@ -28,7 +28,12 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// from the layer by `peer_address/2`, and relays to each the address it
 /// observes for the other, whereupon each declares it (`declare(address(P, A))`)
 /// and punches toward it (`punch_udp/1`).  A request whose signature is the
-/// requester's own is refused.  And, item 3 of GNA's task of 2026-10-09,
+/// requester's own is refused.  The server is started with the compatible
+/// versions (GNA Section 6, "Versions"), each `--compatible V:H`, H the
+/// source identity of version V's social-graph program, and admits a
+/// signature made under any of them: the friends' program, which signs, is
+/// listed as the second of two versions, and a server that lists it under
+/// no version refuses both friends (the third test).  And, item 3 of GNA's task of 2026-10-09,
 /// the same after one friend changes address, the two reconnecting (the
 /// second test, whose comment says what the loopback can and cannot show).
 ///
@@ -161,9 +166,12 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
 
   /// The server, a process of its own, and two friends, each a madGLP agent
   /// over its own headless layer, which is declared the server, holding each
-  /// other's
-  /// signature over their pair; each friend's layer started.
-  Future<_World> standUp(int rvFill, int aFill, int bFill) async {
+  /// other's signature over their pair; each friend's layer started.  The
+  /// server is given the compatible versions [compatible] names for the
+  /// friends' program identity, by default two: version 1 under another
+  /// program's, and version 2 under the friends'.
+  Future<_World> standUp(int rvFill, int aFill, int bFill,
+      {List<String> Function(String graph)? compatible}) async {
     // The server's port, and its key pair as an identity file.
     final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     final rvPort = probe.port;
@@ -226,8 +234,11 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       '127.0.0.1:$rvPort',
       '--outbound-queue-file',
       '${dir.path}/rv-$rvFill-queue.json',
-      '--graph',
-      graph,
+      for (final c in (compatible ??
+          (graph) => ['1:$_otherIdentity', '2:$graph'])(graph)) ...[
+        '--compatible',
+        c,
+      ],
       '--program',
       rvAgentPath,
       '--root-self',
@@ -387,7 +398,44 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
         isTrue);
     expect(serverLines, contains('CONNECTED ${a.key.hex}'));
   }, timeout: Timeout.none);
+
+  // GNA Section 6, "Versions": the agent admits a signed term by the
+  // social-graph program of a compatible version, and by no other.  The
+  // server is told two versions, neither under the friends' program: each
+  // friend's request carries the other's genuine signature over their pair,
+  // and both are refused.
+  test(
+      'a server whose compatible versions do not list the program the '
+      'friends signed under refuses both their requests', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final (:rvKey, :a, :b, :sigA, :sigB, serverLines: _) = await standUp(
+        0x7c, 0x3e, 0x4f,
+        compatible: (graph) {
+      expect(graph, isNot(_otherIdentity));
+      return ['1:$_otherIdentity', '2:${'cd' * 32}'];
+    });
+
+    await a.agent.injectUserInput(
+        _struct('reconnect', [_const(rvKey.hex), _const(b.key.hex), sigB]));
+    await b.agent.injectUserInput(
+        _struct('available', [_const(rvKey.hex), _const(a.key.hex), sigA]));
+
+    final rejectedA = await a.saidOne('rejected');
+    final rejectedB = await b.saidOne('rejected');
+    expect(_value(rejectedA.args[0]), b.key.hex);
+    expect(_value(rejectedB.args[0]), a.key.hex);
+    expect(a.said.whereType<rt.StructTerm>().map((t) => t.functor),
+        isNot(contains('punched')));
+    expect(b.said.whereType<rt.StructTerm>().map((t) => t.functor),
+        isNot(contains('punched')));
+  }, timeout: Timeout.none);
 }
+
+/// A source identity no program here has: 64 lowercase hexadecimal digits.
+final String _otherIdentity = 'ab' * 32;
 
 /// Completes once [a] and [b] each hold the other reachable: checked now and
 /// after every reachability event of either layer, whose callbacks are

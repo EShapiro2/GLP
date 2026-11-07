@@ -6881,10 +6881,13 @@ if _section RV; then
 # answering the load.  Under the plain REPL no signature over a pair is made
 # under the social graph, so every reconnect and available through the agent
 # is rejected; what peer_address/2 reports, address(S) or none, is given to
-# the agent's dispatch on it directly.  Test 22 alone has its test program
-# stand in for the graph, so an available is admitted and reaches
-# peer_address/2, which with no networking layer bound assigns none (IGLP,
-# "One interface").  punch_udp/1 is the root's, which there returns having
+# the agent's dispatch on it directly.  Tests 22 and 25 alone have their test
+# program stand in for the graph of a compatible version, so an available is
+# admitted and reaches peer_address/2, which with no networking layer bound
+# assigns none (IGLP, "One interface").  The agent is given the compatible
+# versions, each version(V, H) with H the source identity of version V's
+# social-graph program, and admits a signature under any of them (GNA
+# Section 6, "Versions"): tests 23 to 25.  punch_udp/1 is the root's, which there returns having
 # done nothing; rv_client.glp and fmrv.glp carried stubs of it until
 # 2026-10-10.
 echo "=== Section RV: Rendezvous example (GNA) ==="
@@ -6927,8 +6930,11 @@ fmrv4_empty.
 fmrv5_mediate_unknown(FA5).
 fmrv6_punch_to_not_found.
 fmrv7_mediate_unknown_from(FA7).
+test23_compatible(C231, C232, C233, C234).
 :trace
 test22_available_admitted_no_layer(S22, RB22, RA22).
+test24_each_version_admitted(R241, R242, R243).
+test25_agent_versions(RA25, RR25).
 :quit
 HEREDOC
 2>&1)
@@ -7037,26 +7043,63 @@ check "RV fmrv test6: punch_to(not_found) is a no-op" "^→ succeeds$" "$(_rv_an
 check "RV fmrv test7 succeeds" "^→ succeeds$" "$(_rv_answer 35)"
 check "RV fmrv test7: an unknown requester sends alice not_found" "^FA7 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 35)"
 
-# rv_agent_test.glp test 22, posted last and under :trace (answer 36 is the
-# :trace command's): the admitting path.  The test program signs the pair of
-# self_key's K and bob under K and gives the agent as Graph the identity
-# signature/2 reports, so bob's available for K verifies and is admitted; the
+# rv_agent_test.glp test 23: compatible/3 admits each of two listed source
+# identities, and refuses one listed under no version, and any under none.
+check "RV agent test23 succeeds" "^→ succeeds$" "$(_rv_answer 36)"
+check "RV agent test23: the identity of the version listed first is admitted" "^C231 = admitted$" "$(_rv_answer 36)"
+check "RV agent test23: the identity of the version listed second is admitted" "^C232 = admitted$" "$(_rv_answer 36)"
+check "RV agent test23: an identity listed under no version is refused" "^C233 = refused$" "$(_rv_answer 36)"
+check "RV agent test23: with no compatible version, nothing is admitted" "^C234 = refused$" "$(_rv_answer 36)"
+
+# rv_agent_test.glp test 22, posted under :trace (answer 37 is the :trace
+# command's): the admitting path.  The test program signs the pair of
+# self_key's K and bob under K and gives the agent as its one compatible
+# version version(1, Graph), Graph the identity signature/2 reports, so
+# bob's available for K verifies and is admitted; the
 # trace shows the agent's peer_address/2 call, which only an admitted request
 # makes, and with no layer bound it assigns none (IGLP, "One interface"), so
 # bob is rejected and K, waiting, is told nothing.
 rv_key="\('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)"
-check "RV agent test22 succeeds" "^→ succeeds$" "$(_rv_answer 37)"
-check "RV agent test22: the available's signature verifies, A's own over the pair in the fixed order" "^S22 = signed($rv_key, $rv_key, attest(\(\1, bob\|bob, \1\)))$" "$(_rv_answer 37)"
-check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 37)"
-check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 37)"
-check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 37)"
+check "RV agent test22 succeeds" "^→ succeeds$" "$(_rv_answer 38)"
+check "RV agent test22: the available's signature verifies, A's own over the pair in the fixed order" "^S22 = signed($rv_key, $rv_key, attest(\(\1, bob\|bob, \1\)))$" "$(_rv_answer 38)"
+check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 38)"
+check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 38)"
+check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 38)"
+
+# rv_agent_test.glp test 24, under :trace: admit_reconnect/7 given bob's
+# signature over the pair under each of two compatible versions' identities
+# and under one listed under none.  Each admitted request reads alice's
+# address, none with no layer bound, so all three are rejected; the trace
+# holds two peer_address/2 calls, the two admitted, and the third refused
+# without one.
+rv_24=$(_rv_answer 39)
+check "RV agent test24 succeeds" "^→ succeeds$" "$rv_24"
+check "RV agent test24: a signature under the first listed version's identity is admitted" ":compatible(hash_v1, \[version(1, hash_v1) | \[version(2, hash_v2)\]\], admitted) :- true$" "$rv_24"
+check "RV agent test24: a signature under the second listed version's identity is admitted" ":compatible(hash_v2, \[version(2, hash_v2)\], admitted) :- true$" "$rv_24"
+check "RV agent test24: a signature under an identity listed under no version is refused" ":compatible(other_hash, \[\], refused) :- true$" "$rv_24"
+check "RV agent test24: each admitted request, and only those, reaches the layer" "^2$" "$(printf '%s\n' "$rv_24" | grep -c '^:peer_address(alice, none) :- true$')"
+check "RV agent test24: the request under the first listed version is rejected, the layer observing no address" "^R241 = rejected$" "$rv_24"
+check "RV agent test24: the request under the second listed version is rejected, the layer observing no address" "^R242 = rejected$" "$rv_24"
+check "RV agent test24: the request under no listed version is rejected" "^R243 = rejected$" "$rv_24"
+
+# rv_agent_test.glp test 25, under :trace: through the agent, the test
+# program's verified signature, made under Graph, admitted where Graph is
+# the identity of the version listed second, and refused where it is no
+# listed version's, with no address read.
+rv_25=$(_rv_answer 40)
+check "RV agent test25 succeeds" "^→ succeeds$" "$rv_25"
+check "RV agent test25: under the version listed second, the available is admitted and reaches the layer" ":admit_available_by(admitted, bob, " "$rv_25"
+check "RV agent test25: under no listed version, the available is refused" ":admit_available_by(refused, bob, " "$rv_25"
+check "RV agent test25: only the admitted available reaches the layer" "^1$" "$(printf '%s\n' "$rv_25" | grep -c '^:peer_address(bob, none) :- true$')"
+check "RV agent test25: the admitted available is rejected for the address none" "^RA25 = rejected$" "$rv_25"
+check "RV agent test25: the available under no listed version is rejected" "^RR25 = rejected$" "$rv_25"
 
 # rv_server/3, the entry the rendezvous server boots the agent on
 # (networking/glue/bin/rendezvous_server.dart): the module loaded as the
 # program, and a network input of one msg(Id, M) envelope, whose M reaches the
 # agent; an unsigned reconnect is refused.  The server itself, over the layer,
 # is networking/glue/test/rendezvous_server_test.dart's.
-rv_server_out=$(printf 'load %s\nrv_server(rv, g, [msg(rv, reconnect(alice, bob, sig, RS))]).\n:quit\n' \
+rv_server_out=$(printf 'load %s\nrv_server(rv, [version(1, g)], [msg(rv, reconnect(alice, bob, sig, RS))]).\n:quit\n' \
     "$GLP_DIR/programs/examples/rendezvous/rv_agent.glp" | "$REPL_RUN" 2>&1)
 check "RV rv_server loads as the server's program" "Loaded: .*rv_agent.glp" "$rv_server_out"
 check "RV rv_server: the envelope is taken off, and an unsigned reconnect refused" "^GLP> RS = rejected$" "$rv_server_out"

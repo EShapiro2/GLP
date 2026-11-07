@@ -16,12 +16,15 @@ PendingEntry ::= needs(Key, Key, String, SignalReply?)
                ; ready(Key, Key, String, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
+Version ::= version(Integer, Hash).
+Versions ::= [] ; [Version | Versions].
+
 imported procedure rv_client#make_reconnect(Key?, Key?, SignedTerm?,
                                              SignalMsg, SignalReply).
 imported procedure rv_client#make_available(Key?, Key?, SignedTerm?,
                                              SignalMsg, SignalReply).
 imported procedure rv_client#handle_reply(SignalReply?).
-imported procedure rv_agent#rv_agent(Hash?, Stream(SignalMsg)?,
+imported procedure rv_agent#rv_agent(Versions?, Stream(SignalMsg)?,
                                       PendingList?).
 
 %% =============================================================================
@@ -62,7 +65,7 @@ exported procedure test3_full_scenario_a_first(SignalReply, SignalReply).
 test3_full_scenario_a_first(ReplyA?, ReplyB?) :-
     rv_client # make_reconnect(alice, bob, sig_ab, MsgA, ReplyA),
     rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
-    rv_agent # rv_agent(graph_hash, [MsgA?, MsgB?], []).
+    rv_agent # rv_agent([version(1, graph_hash)], [MsgA?, MsgB?], []).
 
 %% =============================================================================
 %% Test 4: full scenario — B first, A second
@@ -79,7 +82,7 @@ exported procedure test4_full_scenario_b_first(SignalReply, SignalReply).
 test4_full_scenario_b_first(ReplyA?, ReplyB?) :-
     rv_client # make_reconnect(alice, bob, sig_ab, MsgA, ReplyA),
     rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
-    rv_agent # rv_agent(graph_hash, [MsgB?, MsgA?], []).
+    rv_agent # rv_agent([version(1, graph_hash)], [MsgB?, MsgA?], []).
 
 %% =============================================================================
 %% Test 5: full scenario with handle_reply dispatch
@@ -94,7 +97,7 @@ exported procedure test5_full_scenario_with_handlers.
 test5_full_scenario_with_handlers :-
     rv_client # make_reconnect(alice, bob, sig_ab, MsgA, ReplyA),
     rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
-    rv_agent # rv_agent(graph_hash, [MsgA?, MsgB?], []),
+    rv_agent # rv_agent([version(1, graph_hash)], [MsgA?, MsgB?], []),
     rv_client # handle_reply(ReplyA?),
     rv_client # handle_reply(ReplyB?).
 
@@ -117,7 +120,7 @@ exported procedure test6_bad_signature(SignalReply, SignalReply).
 test6_bad_signature(ReplyA?, ReplyB?) :-
     rv_client # make_reconnect(alice, bob, bad_sig, MsgA, ReplyA),
     rv_client # make_available(bob, alice, sig_ba, MsgB, ReplyB),
-    rv_agent # rv_agent(graph_hash, [MsgA?, MsgB?], []).
+    rv_agent # rv_agent([version(1, graph_hash)], [MsgA?, MsgB?], []).
 
 %% =============================================================================
 %% Test 7: handle_reply dispatches punch(Addr) to punch_udp
