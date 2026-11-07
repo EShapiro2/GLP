@@ -42,9 +42,13 @@ PeerLists ::= [] ; [Peers | PeerLists].
 ListTuples ::= [] ; [PeerLists | ListTuples].
 Schemas ::= [] ; [Schema | Schemas].
 Preds ::= [] ; [Constant | Preds].
-Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; signed(Var, Var) ; unsigned(Var, Var).
+Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
 Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 CRole ::= every ; at(Integer).
+Form ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
+Forms ::= [] ; [Form | Forms].
+SForm ::= sform(CRole, Form).
+SForms ::= [] ; [SForm | SForms].
 Numeric ::= numeric(Constraint, Vars, CRole).
 NumRes ::= num_is(Integer) ; no_num.
 LNorm ::= norm(Binding) ; badnorm.
@@ -183,6 +187,9 @@ schema_numeric(advance, numeric(and(succ(num(t), num(t1)), le(num(t1), num(d))),
 schema_numeric(redeem_bc, numeric(le(num(d), num(t)), [num(t)], at(2))).
 schema_numeric(redeem_bb, numeric(le(num(d), num(t)), [num(t)], at(2))).
 schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
+
+procedure schema_forms(Constant?, SForms).
+schema_forms(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
 reflexive_preds([]).
@@ -1215,7 +1222,7 @@ extend_each([B | Bs], C, R?) :- ground(C?) | con_extend(C?, B?, R1), extend_each
 
 procedure opened2(Bindings?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
 opened2([], _, _, _, _, []).
-opened2([B | Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) | first_spec(Rs?, R1), cand_ok([R1?], B?, Sh?, Ok1), con_at(Nm?, B?, Id?, Con), con_holds(Con?, B?, Ok2), nums_bound(Nm?, B?, Ok3), and(Ok1?, Ok2?, Ok12), and(Ok12?, Ok3?, Ok), opened3(Ok?, Nm?, B?, Id?, Sh?, C1), opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2), app(C1?, C2?, Cs).
+opened2([B | Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) | first_spec(Rs?, R1), cand_ok([R1?], B?, Sh?, Ok1), con_at(Nm?, B?, Id?, Con), con_holds(Con?, B?, Ok2), nums_bound(Nm?, B?, Ok3), forms_at(Nm?, B?, Id?, Fs), forms_hold(Fs?, B?, Sh?, Ok4), and(Ok1?, Ok2?, Ok12), and(Ok12?, Ok3?, Ok123), and(Ok123?, Ok4?, Ok), opened3(Ok?, Nm?, B?, Id?, Sh?, C1), opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2), app(C1?, C2?, Cs).
 
 procedure opened3(YesNo?, Constant?, Binding?, Peer?, GAtoms?, Stream(Class)).
 opened3(no, _, _, _, _, []).
@@ -1952,7 +1959,15 @@ procedure same_part1(Peers?, Constant?, Binding?, Constant?, Binding?, YesNo).
 same_part1(Q, N1, B1, N2, B2, B?) :- ground(N1?), ground(B1?), ground(N2?), ground(B2?) | marked_people(N1?, B1?, G1), marked_people(N2?, B2?, G2), same_bpart(Q?, N1?, B1?, G1?, N2?, B2?, G2?, B).
 
 procedure same_bpart(Peers?, Constant?, Binding?, Peers?, Constant?, Binding?, Peers?, YesNo).
-same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(B1?), ground(B2?) | same(G1?, G2?, E1), bound_spec(N1?, B1?, Rs1), bound_spec(N2?, B2?, Rs2), reflexive_preds(Rf), same_doms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, E2), and(E1?, E2?, B).
+same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(N1?), ground(N2?), ground(B1?), ground(B2?) | same(G1?, G2?, E1), bound_spec(N1?, B1?, Rs1), bound_spec(N2?, B2?, Rs2), reflexive_preds(Rf), same_doms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, E2), same_forms(N1?, N2?, E3), and(E1?, E2?, E12), and(E12?, E3?, B).
+
+procedure same_forms(Constant?, Constant?, YesNo).
+same_forms(N1, N2, yes) :- (N1? =?= N2?) | true.
+same_forms(N1, N2, B?) :- otherwise | schema_forms(N1?, F1), schema_forms(N2?, F2), no_forms(F1?, F2?, B).
+
+procedure no_forms(SForms?, SForms?, YesNo).
+no_forms([], [], yes).
+no_forms(_, _, no) :- otherwise | true.
 
 procedure marked_people(Constant?, Binding?, Peers).
 marked_people(Nm, B, G?) :- ground(B?) | bound_spec(Nm?, B?, Rs), marked_of(Rs?, B?, G).
@@ -1979,14 +1994,67 @@ procedure mate_dom(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, YesNo).
 mate_dom(Nm, Rs, B, Id, Sh, R?) :- ground(Rs?), ground(B?), ground(Id?), ground(Sh?) | dom_bindings(Nm?, Rs?, B?, Id?, Sh?, Bs), some_binding(Bs?, R).
 
 procedure dom_bindings(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, Bindings).
-dom_bindings(Nm, Rs, B, Id, Sh, Bs?) :- ground(Nm?), ground(Rs?), ground(B?), ground(Id?), ground(Sh?) | specs_at(Rs?, 1, B?, Id?, RsP), unlocal(B?, B0), con_at(Nm?, B?, Id?, Con), dom_bindings1(RsP?, B0?, Sh?, Con?, Bs).
+dom_bindings(Nm, Rs, B, Id, Sh, Bs?) :- ground(Nm?), ground(Rs?), ground(B?), ground(Id?), ground(Sh?) | specs_at(Rs?, 1, B?, Id?, RsP), unlocal(B?, B0), con_at(Nm?, B?, Id?, Con), forms_at(Nm?, B?, Id?, Fs), dom_bindings1(RsP?, B0?, Sh?, Con?, Fs?, Bs).
 
-procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Bindings).
-dom_bindings1(RsP, B0, Sh, Con, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) | reqs_of(RsP?, Q), match_all(Q?, Sh?, B0?, Cs), dom_keep(Cs?, RsP?, Sh?, Con?, Bs).
+procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Forms?, Bindings).
+dom_bindings1(RsP, B0, Sh, Con, Fs, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) | reqs_of(RsP?, Q), match_all(Q?, Sh?, B0?, Cs), dom_keep(Cs?, RsP?, Sh?, Con?, Fs?, Bs).
 
-procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Bindings).
-dom_keep([], _, _, _, []).
-dom_keep([B | Bs], RsP, Sh, Con, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?) | cand_ok(RsP?, B?, Sh?, O1), con_holds(Con?, B?, O2), and(O1?, O2?, Ok), dom_keep(Bs?, RsP?, Sh?, Con?, R1), keep_binding(Ok?, B?, R1?, R).
+procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Forms?, Bindings).
+dom_keep([], _, _, _, _, []).
+dom_keep([B | Bs], RsP, Sh, Con, Fs, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?), ground(Fs?) | cand_ok(RsP?, B?, Sh?, O1), con_holds(Con?, B?, O2), forms_hold(Fs?, B?, Sh?, O3), and(O1?, O2?, O12), and(O12?, O3?, Ok), dom_keep(Bs?, RsP?, Sh?, Con?, Fs?, R1), keep_binding(Ok?, B?, R1?, R).
+
+procedure forms_at(Constant?, Binding?, Peer?, Forms).
+forms_at(Nm, B, Id, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), forms_at1(Sf?, B?, Id?, Fs).
+
+procedure forms_at1(SForms?, Binding?, Peer?, Forms).
+forms_at1([], _, _, []).
+forms_at1([sform(every, F) | Sf], B, Id, [F? | Fs?]) :- forms_at1(Sf?, B?, Id?, Fs).
+forms_at1([sform(at(I), F) | Sf], B, Id, Fs?) :- ground(B?), ground(Id?) | role_person(I?, B?, P), same(P?, Id?, Me), forms_at1(Sf?, B?, Id?, Fs1), keep_form(Me?, F?, Fs1?, Fs).
+
+procedure keep_form(YesNo?, Form?, Forms?, Forms).
+keep_form(yes, F, Fs, [F? | Fs?]).
+keep_form(no, _, Fs, Fs?).
+
+procedure forms_hold(Forms?, Binding?, GAtoms?, YesNo).
+forms_hold([], _, _, yes).
+forms_hold([F | Fs], B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), forms_hold1(R1?, Fs?, B?, Sh?, R).
+
+procedure forms_hold1(YesNo?, Forms?, Binding?, GAtoms?, YesNo).
+forms_hold1(no, _, _, _, no).
+forms_hold1(yes, Fs, B, Sh, R?) :- forms_hold(Fs?, B?, Sh?, R).
+
+procedure form_holds(Form?, Binding?, GAtoms?, YesNo).
+form_holds(fa(_, M), B, Sh, R?) :- ground(B?), ground(M?) | atom_bound(M?, B?, Bd), fa_holds(Bd?, M?, B?, Sh?, R).
+form_holds(fnot(F), B, Sh, R?) :- form_holds(F?, B?, Sh?, R1), neg(R1?, R).
+form_holds(fand(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), and(R1?, R2?, R).
+form_holds(for(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), or(R1?, R2?, R).
+form_holds(fexists(_, _, A, F), B, Sh, R?) :- ground(Sh?), ground(F?) | match_into(A?, Sh?, B?, Bs), some_holds(Bs?, F?, Sh?, R).
+form_holds(fforall(_, _, A, F, Gs), B, Sh, R?) :- ground(Sh?), ground(F?), ground(Gs?) | match_into(A?, Sh?, B?, Bs), all_hold(Bs?, F?, Gs?, Sh?, R).
+form_holds(fcons(C), B, _, R?) :- con_holds(C?, B?, R).
+
+procedure fa_holds(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
+fa_holds(yes, M, B, Sh, R?) :- img_one(M?, B?, G), ms_sub(G?, Sh?, R).
+fa_holds(no, _, _, _, no).
+
+procedure some_holds(Bindings?, Form?, GAtoms?, YesNo).
+some_holds([], _, _, no).
+some_holds([B | Bs], F, Sh, R?) :- ground(F?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), some_holds1(R1?, Bs?, F?, Sh?, R).
+
+procedure some_holds1(YesNo?, Bindings?, Form?, GAtoms?, YesNo).
+some_holds1(yes, _, _, _, yes).
+some_holds1(no, Bs, F, Sh, R?) :- some_holds(Bs?, F?, Sh?, R).
+
+procedure all_hold(Bindings?, Form?, Forms?, GAtoms?, YesNo).
+all_hold([], _, _, _, yes).
+all_hold([B | Bs], F, Gs, Sh, R?) :- ground(B?), ground(F?), ground(Gs?), ground(Sh?) | form_holds(F?, B?, Sh?, C), concl_holds(C?, Gs?, B?, Sh?, R1), all_hold1(R1?, Bs?, F?, Gs?, Sh?, R).
+
+procedure concl_holds(YesNo?, Forms?, Binding?, GAtoms?, YesNo).
+concl_holds(no, _, _, _, yes).
+concl_holds(yes, Gs, B, Sh, R?) :- forms_hold(Gs?, B?, Sh?, R).
+
+procedure all_hold1(YesNo?, Bindings?, Form?, Forms?, GAtoms?, YesNo).
+all_hold1(no, _, _, _, _, no).
+all_hold1(yes, Bs, F, Gs, Sh, R?) :- all_hold(Bs?, F?, Gs?, Sh?, R).
 
 procedure reqs_of(RoleSpecs?, SAtoms).
 reqs_of([], []).
@@ -3090,7 +3158,10 @@ num_val(no_num, 0).
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
 con_holds(and(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), and(R1?, R2?, R).
-con_holds(eq(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_eq(A?, C?, R).
+con_holds(eq(X, Y), B, R?) :- ground(B?), ground(X?), ground(Y?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), eq_vals(A?, C?, X?, Y?, B?, R).
+con_holds(ne(X, Y), B, R?) :- ground(B?), ground(X?), ground(Y?) | con_holds(eq(X?, Y?), B?, R1), ne_vals(R1?, X?, Y?, B?, R).
+con_holds(not(C), B, R?) :- con_holds(C?, B?, R1), neg(R1?, R).
+con_holds(implies(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), neg(R1?, N1), or(N1?, R2?, R).
 con_holds(le(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_le(A?, C?, R).
 con_holds(lt(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_gt(C?, A?, R).
 con_holds(ge(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_le(C?, A?, R).
@@ -3099,6 +3170,51 @@ con_holds(succ(X, Y), B, R?) :- ground(B?) | num_of(X?, B?, A), num_of(Y?, B?, C
 con_holds(or(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), or(R1?, R2?, R).
 con_holds(signed(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, yes, R).
 con_holds(unsigned(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, no, R).
+
+procedure eq_vals(NumRes?, NumRes?, Expr?, Expr?, Binding?, YesNo).
+eq_vals(num_is(A), num_is(C), _, _, _, R?) :- num_eq(num_is(A?), num_is(C?), R).
+eq_vals(no_num, no_num, X, Y, B, R?) :- ground(B?) | expr_term(X?, B?, U), expr_term(Y?, B?, V), same_term(U?, V?, R).
+eq_vals(_, _, _, _, _, no) :- otherwise | true.
+
+procedure ne_vals(YesNo?, Expr?, Expr?, Binding?, YesNo).
+ne_vals(yes, _, _, _, no).
+ne_vals(no, X, Y, B, R?) :- ground(B?) | expr_bound(X?, B?, R1), expr_bound(Y?, B?, R2), and(R1?, R2?, R).
+
+procedure expr_term(Expr?, Binding?, Found).
+expr_term(nterm(N), B, found(c(C?))) :- ground(B?), ground(N?) | nt_vars(N?, Vs), vars_bound(Vs?, B?, Bd), nt_term(Bd?, N?, B?, C).
+expr_term(E, B, F?) :- otherwise | expr_term1(E?, B?, F).
+
+procedure expr_term1(Expr?, Binding?, Found).
+expr_term1(role(I), B, F?) :- lookup(role(I?), B?, F).
+expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
+expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
+expr_term1(_, _, free) :- otherwise | true.
+
+procedure nt_term(YesNo?, NTerm?, Binding?, CName).
+nt_term(yes, N, B, C?) :- nt_img(N?, B?, C).
+nt_term(no, _, _, dot_any(community(unbound))).
+
+procedure same_term(Found?, Found?, YesNo).
+same_term(found(U), found(V), R?) :- ground(U?), ground(V?) | bound_val(U?, BU), bound_val(V?, BV), and(BU?, BV?, Bb), same_if(Bb?, U?, V?, R).
+same_term(_, _, no) :- otherwise | true.
+
+procedure same_if(YesNo?, Val?, Val?, YesNo).
+same_if(yes, U, V, R?) :- same(U?, V?, R).
+same_if(no, _, _, no).
+
+procedure bound_val(Val?, YesNo).
+bound_val(lv(_, _), no).
+bound_val(any, no).
+bound_val(c(dot_any(_)), no).
+bound_val(_, yes) :- otherwise | true.
+
+procedure expr_bound(Expr?, Binding?, YesNo).
+expr_bound(E, B, R?) :- ground(E?), ground(B?) | expr_val(E?, B?, N), expr_term(E?, B?, T), has_value(N?, T?, R).
+
+procedure has_value(NumRes?, Found?, YesNo).
+has_value(num_is(_), _, yes).
+has_value(no_num, found(V), R?) :- bound_val(V?, R).
+has_value(no_num, free, no).
 
 procedure signing(Found?, Found?, YesNo?, YesNo).
 signing(found(p(P)), found(s(S)), W, R?) :- ground(S?) | signed_by(P?, S?, G), same(G?, W?, R).
@@ -3192,6 +3308,9 @@ con_ext1(gt(_, _), B, [B?]).
 con_ext1(succ(X, Y), B, Bs?) :- ground(B?), ground(X?), ground(Y?) | num_of(X?, B?, A), num_of(Y?, B?, C), succ_ext(A?, C?, X?, Y?, B?, Bs).
 con_ext1(signed(_, _), B, [B?]).
 con_ext1(unsigned(_, _), B, [B?]).
+con_ext1(not(_), B, [B?]).
+con_ext1(implies(_, _), B, [B?]).
+con_ext1(ne(_, _), B, [B?]).
 con_ext1(or(C1, C2), B, Bs?) :- ground(B?) | con_ext1(C1?, B?, Bs1), con_ext1(C2?, B?, Bs2), app(Bs1?, Bs2?, Bs).
 
 procedure ext_by(Bindings?, Constraint?, Bindings).
