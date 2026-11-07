@@ -314,7 +314,7 @@ function drawGlobe(){
         : P.pdf ? `${esc(P.name)} (<a href="${P.pdf}" target="_blank" rel="noopener">PDF</a>, ${esc(P.state)})`
         : P.state ? `${esc(P.name)}, ${esc(P.state)}` : esc(P.name || '');
       const r = wrap.getBoundingClientRect();
-      tip.innerHTML = `<b>${esc(c.title)}</b>${esc(c.about)}<br><span style="opacity:.75">${esc(c.owner)}${ref ? ' · ' : ''}${ref}</span>`;
+      tip.innerHTML = `<b>${esc(c.label)}</b>${esc(c.about)}<br><span style="opacity:.75">${esc(c.owner)}${ref ? ' · ' : ''}${ref}</span>`;
       tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
       tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 270)) + 'px';
       tip.style.top = (e.clientY - r.top + 14) + 'px'; };
@@ -342,14 +342,14 @@ function globeNav(){
 const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']]];
 const OPEN = new Set();
 function drawShelves(){
-  $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.length} contracts, ${D.contracts.filter(c => c.live).length} with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
-    const cs = D.contracts.filter(c => fams.includes(c.family));
+  $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.filter(c => c.live).length} contracts, each with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
+    const cs = D.contracts.filter(c => c.live && fams.includes(c.family));
     if (!cs.length) return '';
     return `<div class="grp${OPEN.has(i) ? ' open' : ''}" data-g="${i}"><button class="tog" aria-expanded="${OPEN.has(i)}"><h2>${title}</h2>
         <span class="minis">${cs.map(c => `<span class="mini" style="background:${grad(c)}">${c.icon}</span>`).join('')}</span>
         <span class="cnt">${cs.length}</span><span class="chev">›</span></button>
       <div class="card shelf">${cs.map(c => `<div class="app" data-id="${c.id}">${icon(c)}
-        <div class="t"><div class="nm">${esc(c.title)}</div><div class="ab">${esc(c.about)}</div></div><a class="pill ghost" href="#${c.id}">About</a>${openBtn(c)}</div>`).join('')}</div></div>`;
+        <div class="t"><div class="nm">${esc(c.label)}</div><div class="ab">${esc(c.about)}</div></div><a class="pill ghost" href="#${c.id}">About</a>${openBtn(c)}</div>`).join('')}</div></div>`;
   }).join('');
   document.querySelectorAll('.grp').forEach(g => g.querySelector('.tog').onclick = () => {
     const i = +g.dataset.g; OPEN.has(i) ? OPEN.delete(i) : OPEN.add(i);
@@ -406,7 +406,7 @@ function page(c, hood){
   $('#view').innerHTML = `
     <span class="crumbs" data-go="">‹ All contracts</span>
     <div class="prod">${icon(c)}
-      <div><h1>${esc(c.title)}</h1><div class="sub">${esc(c.about)}</div>
+      <div><h1>${esc(c.label)}</h1><div class="sub">${esc(c.about)}</div>
       <div class="acts">${c.live ? `<a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>

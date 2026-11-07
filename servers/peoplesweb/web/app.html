@@ -420,8 +420,8 @@ async function poll(){
 $('#reset').onclick = async () => { $('#stxt').textContent = 'Starting over…'; startedAt = null; await fetch(api('reset'), {method: 'POST'}); VER = -1; for (const k in used) delete used[k]; };
 
 if (META){
-  document.title = `${META.title} · live`;
-  $('#title').textContent = META.title;
+  document.title = `${META.label || META.title} · live`;
+  $('#title').textContent = META.label || META.title;
   $('#ticon').textContent = META.icon;
   $('#ticon').style.background = `linear-gradient(160deg, ${FAM[META.family][0]}, ${FAM[META.family][1]})`;
   $('#about').href = './#' + META.id;
@@ -430,7 +430,7 @@ fetch(`specs/${C}.json`).then(r => { if (!r.ok) throw 0; return r.json(); }).the
   SPEC = s;
   const m = META || s.meta;
   if (m && m.icon){
-    $('#title').textContent = m.title; document.title = `${m.title} · live`;
+    $('#title').textContent = m.label || m.title; document.title = `${m.label || m.title} · live`;
     $('#ticon').textContent = m.icon;
     if (FAM[m.family]) $('#ticon').style.background = `linear-gradient(160deg, ${FAM[m.family][0]}, ${FAM[m.family][1]})`;
   } else if (!META) $('#title').textContent = `${s.id}: ${s.title}`;

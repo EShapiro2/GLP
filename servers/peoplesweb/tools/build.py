@@ -180,6 +180,14 @@ for n in sorted(set(compiled) | set(cat)):
     d = os.path.join(GLP, 'cascade', n)
     _a = about.get(n, ['📄', 'other', ''])
     c['icon'], c['family'], c['about'] = _a[0], _a[1], _a[2] or c['title'] + '.'
+    # The shown name starts with the letters, and a contract built on another
+    # names the base by its letters, never by its full title: "GDO-L: GDO with
+    # Labels" (Udi, 2026-11-07).
+    t = c['title']
+    for p in c['extends']:
+        if p in cat:
+            t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
+    c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
     c['paper'] = paper_of(n, c['owner'])
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
