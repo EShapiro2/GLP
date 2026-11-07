@@ -83,7 +83,9 @@ def prepare(clone):
     """The working copy at the branch's head, GAS2's files of an earlier build removed."""
     if not os.path.exists(os.path.join(clone, '.git')):
         os.makedirs(os.path.dirname(clone), exist_ok=True)
-        git(['clone', '--depth', '1', '-b', BRANCH, UPSTREAM, clone])
+        # LF endings as committed: pragmas.sh and the GLP reader read the files as written
+        git(['-c', 'core.autocrlf=false', 'clone', '--depth', '1', '-b', BRANCH, UPSTREAM, clone])
+        git(['-C', clone, 'config', 'core.autocrlf', 'false'])
     else:
         git(['-C', clone, 'fetch', '--depth', '1', 'origin', BRANCH])
         git(['-C', clone, 'reset', '--hard', 'FETCH_HEAD'])
