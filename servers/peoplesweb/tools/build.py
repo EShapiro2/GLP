@@ -155,6 +155,8 @@ for n in compiled:
 
 
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
+pd = os.path.join(HERE, 'web', 'papers')
+served = {f[:-4] for f in os.listdir(pd)} if os.path.isdir(pd) else set()
 byid = dict(cat)
 
 
@@ -189,7 +191,7 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
     c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
-    c['paper'] = paper_of(n, c['owner'])
+    c['paper'] = paper_of(n, c['owner'], served)
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -215,6 +217,10 @@ commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capt
 for f in os.listdir(os.path.join(HERE, 'web')):
     if f.endswith(('.html', '.png')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
+if served:
+    os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
+    for f in os.listdir(pd):
+        shutil.copy(os.path.join(pd, f), os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

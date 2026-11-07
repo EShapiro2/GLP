@@ -43,8 +43,10 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .node.hit rect.bg{stroke:#1d1d1f;stroke-width:2.5}
 .edge{stroke:#c7c7cc;stroke-width:1.5;fill:none}
 .edge.dim{opacity:.1}
-#tip{position:absolute;pointer-events:none;background:rgba(29,29,31,.92);color:#fff;border-radius:12px;padding:9px 12px;font-size:13px;max-width:260px;opacity:0;transition:opacity .12s;z-index:3;backdrop-filter:blur(8px)}
-#tip b{display:block;font-size:14px;margin-bottom:2px}
+#tip{position:absolute;pointer-events:none;background:rgba(29,29,31,.94);color:#fff;border-radius:14px;padding:14px 16px;font-size:13.5px;line-height:1.5;max-width:360px;opacity:0;transition:opacity .12s;z-index:3;backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#tip b{display:block;font-size:15.5px;margin-bottom:3px}
+#tip .cite{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.18);font-size:13px;color:#d9d9de}
+#tip .cite i{color:#fff}
 #tip a{color:#8ec6ff;text-decoration:underline}
 .grp{margin-top:12px}
 .tog{display:flex;align-items:center;gap:14px;width:100%;border:none;text-align:left;cursor:pointer;padding:14px 18px;background:var(--card);border-radius:20px;box-shadow:var(--shadow);transition:box-shadow .15s}
@@ -310,13 +312,15 @@ function drawGlobe(){
     n.onclick = () => { if (!DRAGGED) go(c.id); };
     n.onmouseenter = e => { clearTimeout(hideT);
       const P = c.paper || {};
-      const ref = P.arxiv ? `${esc(P.name)}, <a href="https://arxiv.org/abs/${P.arxiv}" target="_blank" rel="noopener">arXiv:${P.arxiv}</a>`
-        : P.pdf ? `${esc(P.name)} (<a href="${P.pdf}" target="_blank" rel="noopener">PDF</a>, ${esc(P.state)})`
-        : P.state ? `${esc(P.name)}, ${esc(P.state)}` : esc(P.name || '');
+      const link = P.arxiv ? `<a href="https://arxiv.org/abs/${P.arxiv}" target="_blank" rel="noopener">arXiv:${P.arxiv}</a>`
+        : P.pdf ? `<a href="${P.pdf}" target="_blank" rel="noopener">PDF</a>${P.state ? `, ${esc(P.state)}` : ''}`
+        : esc(P.state || '');
+      const cite = P.title ? `<div class="cite"><i>${esc(P.title)}</i>${P.authors ? `. ${esc(P.authors)}` : ''}.${link ? ` ${link}` : ''}</div>`
+        : link ? `<div class="cite">${link}</div>` : '';
       const r = wrap.getBoundingClientRect();
-      tip.innerHTML = `<b>${esc(c.label)}</b>${esc(c.about)}<br><span style="opacity:.75">${esc(c.owner)}${ref ? ' · ' : ''}${ref}</span>`;
+      tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${cite}`;
       tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
-      tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 270)) + 'px';
+      tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px';
       tip.style.top = (e.clientY - r.top + 14) + 'px'; };
     n.onmouseleave = () => { hideT = setTimeout(() => { tip.style.opacity = 0; tip.style.pointerEvents = 'none'; }, 350); };
   });
