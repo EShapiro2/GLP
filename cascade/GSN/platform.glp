@@ -3714,6 +3714,8 @@ Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), Stream(Draw(T))?).
 Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
 Events(Q, T) ::= [Event(Q, T) | Events(Q, T)].
 Turn ::= ask ; grant ; draw.
+Questioned(S) ::= S ; input(Path).
+Pending(S) ::= S ; pending(Path).
 
 procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Channel(Stream(Input(T)), Stream(Draw(T))), Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), fair(ask, Asks?, Inputs?, COut?, Es), serve(Es?, COut, POut, [], [], 1, Ss).
@@ -3764,66 +3766,42 @@ remove_route(_, [], [], Xs, Xs?).
 procedure(T) run_end(Integer?, Done?, Stream(Draw(T))).
 run_end(Id, done, [withdraw(Id?)]).
 
-procedure all_done(Stream(Done)?, Done).
-all_done([done | Ds], D?) :- all_done(Ds?, D).
-all_done([], done).
-
-procedure shown(Path?, _?, Stream(_)).
-shown(_, X, [X?]) :- ground(X?) | true.
-shown(P, X, [pending(P?) | Vs?]) :- shown_whole(X?, Vs).
-
-procedure shown_whole(_?, Stream(_)).
-shown_whole(X, [X?]) :- ground(X?) | true.
-
-procedure thread(Path?, Stream(_)?, Stream(Stream(_))).
-thread(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
-thread(_, [], [[]]).
-thread(P, Xs, [[] | Vs?]) :- thread_tail(P?, Xs?, Vs).
-
-procedure thread_tail(Path?, Stream(_)?, Stream(Stream(_))).
-thread_tail(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
-thread_tail(_, [], []).
-
-procedure thread_cell(Path?, _?, Stream(_)?, Stream(Stream(_))).
-thread_cell(P, X, Xs, Vs?) :- ground(P?) | path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).
-
-procedure cons_views(Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
-cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
-cons_views([], _, []).
-cons_views(_, [], []).
-
-procedure cons_more(_?, Stream(_)?, Stream(_)?, Stream(Stream(_))?, Stream(Stream(_))).
-cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
-cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
-cons_more(_, _, [], [], []).
-
 procedure path(Path?, Integer?, Path).
 path([I | P], J, [I? | Q?]) :- path(P?, J?, Q).
 path([], J, [J?]).
 
-procedure form_string(_?, Formed(String)).
+procedure(S) shown(Path?, S?, Stream(Pending(S))).
+shown(_, X, [X?]) :- ground(X?) | true.
+shown(P, X, [pending(P?) | Vs?]) :- shown_whole(X?, Vs).
+
+procedure(S) shown_whole(S?, Stream(Pending(S))).
+shown_whole(X, [X?]) :- ground(X?) | true.
+
+procedure(S) thread(Path?, Stream(S)?, Stream(List(Pending(S)))).
+thread(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread(_, [], [[]]).
+thread(P, Xs, [[] | Vs?]) :- thread_tail(P?, Xs?, Vs).
+
+procedure(S) thread_tail(Path?, Stream(S)?, Stream(List(Pending(S)))).
+thread_tail(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
+thread_tail(_, [], []).
+
+procedure(S) thread_cell(Path?, S?, Stream(S)?, Stream(List(Pending(S)))).
+thread_cell(P, X, Xs, Vs?) :- ground(P?) | path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).
+
+procedure(V) cons_views(Stream(V)?, Stream(List(V))?, Stream(List(V))).
+cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_views([], _, []).
+cons_views(_, [], []).
+
+procedure(V) cons_more(V?, List(V)?, Stream(V)?, Stream(List(V))?, Stream(List(V))).
+cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(_, _, [], [], []).
+
+procedure(T) form_string(T?, Formed(String)).
 form_string(R, F?) :- string(R?) | F = formed(R?).
 form_string(_, refused) :- otherwise | true.
-
-procedure form_integer(_?, Formed(Integer)).
-form_integer(R, F?) :- integer(R?) | F = formed(R?).
-form_integer(_, refused) :- otherwise | true.
-
-procedure form_number(_?, Formed(Number)).
-form_number(R, F?) :- number(R?) | F = formed(R?).
-form_number(_, refused) :- otherwise | true.
-
-procedure form_real(_?, Formed(Real)).
-form_real(R, F?) :- real(R?) | F = formed(R?).
-form_real(_, refused) :- otherwise | true.
-
-procedure form_constant(_?, Formed(Constant)).
-form_constant(R, F?) :- constant(R?) | F = formed(R?).
-form_constant(_, refused) :- otherwise | true.
-
-procedure form_module(_?, Formed(Module)).
-form_module(R, F?) :- module(R?) | F = formed(R?).
-form_module(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
@@ -3888,7 +3866,7 @@ join_utterance_speech_2(formed(X1), formed(X2), formed(speech(X1?, X2?))).
 join_utterance_speech_2(refused, _, refused).
 join_utterance_speech_2(_, refused, refused).
 
-procedure form_utterance(_?, Formed(Utterance)).
+procedure form_utterance(Utterance?, Formed(Utterance)).
 form_utterance(utterance(R1), F?) :- form_string(R1?, F1), join_utterance_utterance_1(F1?, F).
 form_utterance(speech(R1, R2), F?) :- form_utterance(R1?, F1), form_string(R2?, F2), join_utterance_speech_2(F1?, F2?, F).
 form_utterance(_, refused) :- otherwise | true.
@@ -3898,7 +3876,7 @@ join_speech_speech_2(formed(X1), formed(X2), formed(speech(X1?, X2?))).
 join_speech_speech_2(refused, _, refused).
 join_speech_speech_2(_, refused, refused).
 
-procedure form_speech(_?, Formed(Speech)).
+procedure form_speech(Speech?, Formed(Speech)).
 form_speech(speech(R1, R2), F?) :- form_utterance(R1?, F1), form_string(R2?, F2), join_speech_speech_2(F1?, F2?, F).
 form_speech(_, refused) :- otherwise | true.
 
@@ -3949,7 +3927,7 @@ join_proposal_post_4(_, refused, _, _, refused).
 join_proposal_post_4(_, _, refused, _, refused).
 join_proposal_post_4(_, _, _, refused, refused).
 
-procedure form_proposal(_?, Formed(Proposal)).
+procedure form_proposal(Proposal?, Formed(Proposal)).
 form_proposal(establish(R1), F?) :- form_string(R1?, F1), join_proposal_establish_1(F1?, F).
 form_proposal(acquaint(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_proposal_acquaint_2(F1?, F2?, F).
 form_proposal(introduce(R1, R2, R3), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), join_proposal_introduce_3(F1?, F2?, F3?, F).
@@ -3969,7 +3947,7 @@ procedure join_request_propose_1(Formed(Proposal)?, Formed(Request)).
 join_request_propose_1(formed(X1), formed(propose(X1?))).
 join_request_propose_1(refused, refused).
 
-procedure form_request(_?, Formed(Request)).
+procedure form_request(Drawn?, Formed(Request)).
 form_request(propose(R1), F?) :- form_proposal(R1?, F1), join_request_propose_1(F1?, F).
 form_request(refresh, formed(refresh)).
 form_request(_, refused) :- otherwise | true.
@@ -3988,7 +3966,7 @@ run_request_r(Id, _, _, done, [withdraw(Id?)]).
 run_request_r(Id, W, [V | Vs], Done, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r(Id?, W?, Vs?, Done?, Ds).
 run_request_r(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
-procedure form_yesNo(_?, Formed(YesNo)).
+procedure form_yesNo(Drawn?, Formed(YesNo)).
 form_yesNo(yes, formed(yes)).
 form_yesNo(no, formed(no)).
 form_yesNo(_, refused) :- otherwise | true.
@@ -4001,26 +3979,27 @@ procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, Input(Drawn)?, Inputs(Drawn)?
 take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).
 take_yesNo(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_yesNo(P?, X, Gs?, Gs1, Done).
 
-procedure start_approval_approval_3(Stream(_)?, Stream(_)?, Stream(_)?, Stream(_)).
+View_approval ::= approval(Pending(Asking), List(Pending(Word)), Questioned(YesNo)) ; pending(Path).
+procedure start_approval_approval_3(Stream(Pending(Asking))?, Stream(List(Pending(Word)))?, Stream(Questioned(YesNo))?, Stream(View_approval)).
 start_approval_approval_3([V1 | S1], [V2 | S2], [V3 | S3], [approval(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_approval_approval_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
 start_approval_approval_3([], _, _, []).
 start_approval_approval_3(_, [], _, []).
 start_approval_approval_3(_, _, [], []).
 
-procedure comb_approval_approval_3(_?, _?, _?, Stream(_)?, Stream(_)?, Stream(_)?, Stream(_)).
+procedure comb_approval_approval_3(Pending(Asking)?, List(Pending(Word))?, Questioned(YesNo)?, Stream(Pending(Asking))?, Stream(List(Pending(Word)))?, Stream(Questioned(YesNo))?, Stream(View_approval)).
 comb_approval_approval_3(_, V2, V3, [V1 | S1], S2, S3, [approval(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_approval_approval_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
 comb_approval_approval_3(V1, _, V3, S1, [V2 | S2], S3, [approval(V1?, V2?, V3?) | Vs?]) :- ground(V1?), ground(V2?), ground(V3?) | comb_approval_approval_3(V1?, V2?, V3?, S1?, S2?, S3?, Vs).
 comb_approval_approval_3(_, _, _, [], [], [], []).
 
-procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_approval), Done).
 present_approval(P, approval(H1, H2, H3?), Gs, Gs1?, Vs?, D3?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, Q2), thread(Q2?, H2?, V2), path(P?, 3, M3), path(P?, 3, Q3), answer_yesNo(Q3?, H3, Gs?, Gs1, D3), start_approval_approval_3(V1?, V2?, [input(M3?)], Vs).
 present_approval(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_approval_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure present_approval_wait(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(_), Done).
+procedure present_approval_wait(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_approval), Done).
 present_approval_wait(P, approval(H1, H2, H3?), Gs, Gs1?, Vs?, Done?) :- present_approval(P?, approval(H1?, H2?, H3), Gs?, Gs1, Vs, Done).
 present_approval_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_approval_wait(P?, X?, Gs?, Gs1, Vs, Done).
 
-procedure run_approval_w(Integer?, Widget?, Stream(_)?, Done?, Stream(Draw(Drawn))).
+procedure run_approval_w(Integer?, Widget?, Stream(View_approval)?, Done?, Stream(Draw(Drawn))).
 run_approval_w(Id, _, _, done, [withdraw(Id?)]).
 run_approval_w(Id, W, [V | Vs], Done, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w(Id?, W?, Vs?, Done?, Ds).
 run_approval_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
