@@ -88,39 +88,100 @@ class SuperHost {
     if (notes.length > 200) notes.removeAt(0);
   }
 
-  /// The mini-apps the tree carries (apps.json, written by GAS2), each certified
-  /// under the person's key where not already.
+  /// The mini-apps the tree carries (apps.json, written by GAS2), and those the person
+  /// added from the app maker (dataDir/made), each certified under the person's key
+  /// where not already.
   Future<void> _prepareApps() async {
-    final idx = jsonDecode(File('$tree/gas2_apps.json').readAsStringSync()) as List;
+    final idx = [
+      ...(jsonDecode(File('$tree/gas2_apps.json').readAsStringSync()) as List).cast<Map>(),
+      for (final f in _madeFiles()) _unpack(jsonDecode(f.readAsStringSync()) as Map),
+    ];
     var i = 0;
-    for (final a in idx) {
-      final m = a as Map;
+    for (final m in idx) {
       i++;
+      apps.add(MiniApp(m['app'] as String, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
+      await _certify(m['app'] as String, 'preparing the mini-apps ($i of ${idx.length}): ${m['title']}');
+    }
+  }
+
+  List<File> _madeFiles() {
+    final d = Directory('$dataDir/made');
+    if (!d.existsSync()) return [];
+    return d.listSync().whereType<File>().where((f) => f.path.endsWith('.json')).toList()..sort((a, b) => a.path.compareTo(b.path));
+  }
+
+  /// A mini-app from the maker (server.py's /made/<key>.json) written into the tree; its index entry.
+  Map _unpack(Map j) {
+    final app = j['app'] as String;
+    if (!RegExp(r'^gas2m_[a-z0-9_]+$').hasMatch(app)) throw ArgumentError('not a made mini-app: $app');
+    final files = (j['files'] as Map).cast<String, String>();
+    final d = Directory('$tree/apps/$app')..createSync(recursive: true);
+    for (final e in files.entries) {
+      if (!RegExp(r'^[a-z0-9_]+\.(glp|vglp|json)$').hasMatch(e.key)) throw ArgumentError('not a mini-app file: ${e.key}');
+      File('${d.path}/${e.key}').writeAsStringSync(e.value);
+    }
+    return {'app': app, 'id': j['id'], 'title': j['title'], 'shapes': j['shapes']};
+  }
+
+  /// Certify [app] under the person's key, once per version of its files, and keep it.
+  Future<void> _certify(String app, String doing) async {
+    final out = File('$core/$app.glpw');
+    final kept = File('$dataDir/certified/$app.glpw');
+    final stamp = File('$dataDir/certified/$app.stamp');
+    final version = '$me ${_digest('$tree/apps/$app')}';
+    if (kept.existsSync() && stamp.existsSync() && stamp.readAsStringSync() == version) {
+      kept.copySync(out.path);
+      return;
+    }
+    status = doing;
+    _changed();
+    // in an isolate of its own: compiling a mini-app takes seconds (minutes, on a
+    // phone), and the page and the network are served meanwhile
+    final rs = rootSelf, src = '$tree/apps/$app', pub = keyPair.pub, priv = keyPair.priv;
+    final bytes = await Isolate.run(() {
+      final engine = GlpEngine(rootSelfGlpPath: rs, identity: PersonIdentity(pub, priv));
+      engine.loadProgram(src);
+      return (engine.appModule!.artefact as Artefact).toBytes();
+    });
+    out.writeAsBytesSync(bytes);
+    kept.parent.createSync(recursive: true);
+    out.copySync(kept.path);
+    stamp.writeAsStringSync(version);
+  }
+
+  /// Add a mini-app made by GAS2's app maker, from its link: the maker's page
+  /// (…/maker.html?k=<key>) or its file (…/made/<key>.json).
+  Future<void> addApp(String link) async {
+    var u = Uri.parse(link.trim());
+    final k = u.queryParameters['k'];
+    if (k != null) u = u.resolve('made/$k.json');
+    final c = HttpClient();
+    try {
+      final r = await (await c.getUrl(u)).close();
+      if (r.statusCode != 200) throw StateError('the link answered ${r.statusCode}');
+      final body = await utf8.decoder.bind(r).join();
+      final j = jsonDecode(body) as Map;
+      final m = _unpack(j);
       final app = m['app'] as String;
-      apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
-      // certified once per person and per version of the mini-app's files, and kept
-      final out = File('$core/$app.glpw');
-      final kept = File('$dataDir/certified/$app.glpw');
-      final stamp = File('$dataDir/certified/$app.stamp');
-      final version = '$me ${_digest('$tree/apps/$app')}';
-      if (kept.existsSync() && stamp.existsSync() && stamp.readAsStringSync() == version) {
-        kept.copySync(out.path);
-        continue;
+      if (apps.any((x) => x.app == app)) {
+        _note('${m['id']} is here already');
+        return;
       }
-      status = 'preparing the mini-apps ($i of ${idx.length}): ${m['title']}';
+      try {
+        await _certify(app, 'preparing ${m['title']}');
+      } finally {
+        status = 'ready';
+      }
+      final f = File('$dataDir/made/$app.json');
+      f.parent.createSync(recursive: true);
+      f.writeAsStringSync(body);
+      apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
+      _note('added ${m['id']}, ${m['title']}, from the app maker');
+    } catch (e) {
+      _note('could not add the mini-app: $e');
+    } finally {
+      c.close();
       _changed();
-      // in an isolate of its own: compiling a mini-app takes seconds (minutes, on a
-      // phone), and the page and the network are served meanwhile
-      final rs = rootSelf, src = '$tree/apps/$app', pub = keyPair.pub, priv = keyPair.priv;
-      final bytes = await Isolate.run(() {
-        final engine = GlpEngine(rootSelfGlpPath: rs, identity: PersonIdentity(pub, priv));
-        engine.loadProgram(src);
-        return (engine.appModule!.artefact as Artefact).toBytes();
-      });
-      out.writeAsBytesSync(bytes);
-      kept.parent.createSync(recursive: true);
-      out.copySync(kept.path);
-      stamp.writeAsStringSync(version);
     }
   }
 
@@ -343,6 +404,8 @@ class SuperHost {
         return answerFriend(j['key'] as String, j['yes'] == true);
       case 'intro':
         return answerIntro(j['key'] as String, j['yes'] == true);
+      case 'add':
+        return addApp(j['link'] as String);
       case 'grant':
         return grant(j['app'] as String, j['id'] as int, (j['path'] as List).cast<int>(), j['value']);
     }

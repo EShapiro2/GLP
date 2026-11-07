@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAS2 · app maker</title>
+<link rel="stylesheet" href="gas2.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
+<style>
+textarea { width: 100%; box-sizing: border-box; font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; border: 1px solid #d8d8de; border-radius: 10px; padding: 10px; background: #fff; }
+#txt { height: 260px; } #glp { height: 360px; }
+.mk { display: grid; gap: 10px; }
+.mk .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mk input, .mk select { font: inherit; padding: 7px 10px; border: 1px solid #d8d8de; border-radius: 9px; background: #fff; }
+.btn { font: inherit; padding: 8px 16px; border-radius: 10px; border: 0; background: #34c759; color: #fff; font-weight: 600; cursor: pointer; }
+.btn.alt { background: #e9e9ee; color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+.res { background: var(--card); border-radius: 14px; padding: 14px 16px; }
+.res .why { white-space: pre-wrap; font: 12.5px/1.45 ui-monospace, Menlo, Consolas, monospace; background: #fff6f0; border-radius: 8px; padding: 8px; }
+.res .link { font: 12.5px ui-monospace, Menlo, Consolas, monospace; word-break: break-all; background: #f2f2f7; padding: 6px 8px; border-radius: 8px; }
+ol.cas { margin: 6px 0 0 18px; padding: 0; } ol.cas li { margin: 2px 0; }
+.ok { color: #1f8a3b; } .no { color: #c4421a; } .wait { color: var(--soft); }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">GAS2</a>
+  <nav><a href="./">Contracts</a><a href="maker.html" class="on">App maker</a><a href="get.html">Get the app</a><a href="how.html">How it works</a></nav>
+</header>
+<main class="prose">
+  <h1>Make a mini-app</h1>
+  <p>Write a grassroots contract, and GAS2 takes it down the same cascade it takes every contract of GLP's main down: GSC reads the act schemas and checks that the contract is grassroots, the pragmas say what the person sees, vGLP compiles the platform, and the REPL certifies the mini-app. What comes out is a link: whoever opens it on GAS2 adds the mini-app, which their own device certifies under their own key, and two people who added it can use it together.</p>
+  <p class="small muted">A contract is two files, as in GLP's tree: its text, NAME.txt (the title line, the clauses, and after <code>Pragmas</code> the tabs and buttons of the mini-app), and its act schemas, NAME.glp (the term <code>contract_named/2</code> prints). Start from a contract here, give it a name of its own, and change what you like.</p>
+
+  <div class="mk" id="form">
+    <div class="row">
+      <span>Start from</span><select id="base"></select>
+      <span>as</span><input id="nid" size="8" placeholder="NAME"><input id="ntitle" size="28" placeholder="Title">
+      <button class="btn alt" onclick="start()">Start</button>
+    </div>
+    <div class="small muted">Text (NAME.txt)</div>
+    <textarea id="txt" spellcheck="false"></textarea>
+    <div class="small muted">Act schemas (NAME.glp)</div>
+    <textarea id="glp" spellcheck="false"></textarea>
+    <div class="row"><button class="btn" id="go" onclick="make()">Make the mini-app</button><span class="small muted" id="build"></span></div>
+  </div>
+  <div id="out" style="margin-top:14px"></div>
+</main>
+<script src="gas2.js"></script>
+<script>
+let D = null;
+const STEPS = [['schemas', 'GSC reads the act schemas'], ['check', 'GSC checks the contract is grassroots'],
+  ['pragmas', 'the pragmas say what the person sees'], ['compile', 'vGLP compiles the platform'], ['certify', 'the REPL certifies the mini-app']];
+
+async function init() {
+  D = await load();
+  $('#build').innerHTML = buildLine(D);
+  const cs = D.contracts.filter(c => c.verdict === 'syntactically_grassroots').sort((a, b) => a.id.localeCompare(b.id));
+  $('#base').innerHTML = cs.map(c => `<option value="${esc(c.id)}"${c.id === 'GC' ? ' selected' : ''}>${esc(c.id)}: ${esc(c.title)}</option>`).join('');
+  const k = new URLSearchParams(location.search).get('k');
+  if (k) { $('#form').style.display = 'none'; watch(k); }
+}
+
+async function start() {
+  const b = $('#base').value, id = $('#nid').value.trim(), title = $('#ntitle').value.trim();
+  if (id && !/^[A-Z][A-Za-z0-9]*(-[A-Z0-9]+)*$/.test(id)) return alert('A name as GLP names its contracts: capitals and digits, like GC or GDO-LB.');
+  if (id && D.contracts.some(c => c.id === id)) return alert(id + ' is a contract of GLP already; give yours a name of its own.');
+  const r = await fetch('api/source/' + encodeURIComponent(b));
+  if (!r.ok) return alert('Could not read ' + b);
+  const s = await r.json();
+  let txt = s.txt, glp = s.glp;
+  if (id) {
+    const low = id.toLowerCase().replace(/-/g, '_'), blow = b.toLowerCase().replace(/-/g, '_');
+    // the first line names the contract; the % lines are its owner's notes, which are not yours
+    txt = txt.split('\n').filter(l => !l.startsWith('%')).join('\n')
+      .replace(new RegExp('^' + b.replace(/-/g, '\\-') + ': .*$', 'm'), `${id}: ${title || id}`);
+    txt = `% ${id}: made with GAS2's app maker, from ${b}.\n` + txt;
+    glp = glp.replace(new RegExp('contract_named\\(' + blow + ',', 'g'), `contract_named(${low},`);
+  }
+  $('#txt').value = txt; $('#glp').value = glp;
+}
+
+async function make() {
+  const txt = $('#txt').value, glp = $('#glp').value;
+  if (!txt.trim() || !glp.trim()) return alert('Start from a contract, or write both files.');
+  $('#go').disabled = true;
+  try {
+    const r = await (await fetch('api/make', {method: 'POST', body: JSON.stringify({base: $('#base').value, txt, glp})})).json();
+    if (r.error) { alert(r.error); return; }
+    history.replaceState(null, '', '?k=' + r.key);
+    watch(r.key);
+  } finally { $('#go').disabled = false; }
+}
+
+async function watch(k) {
+  for (;;) {
+    const r = await fetch('api/made/' + k, {cache: 'no-store'});
+    if (!r.ok) { $('#out').innerHTML = `<div class="res">No mini-app ${esc(k)} here.</div>`; return; }
+    const m = await r.json();
+    show(m);
+    if (m.step !== 'queued' && m.step !== 'running') return;
+    await new Promise(res => setTimeout(res, 3000));
+  }
+}
+
+function show(m) {
+  let h = `<div class="res">`;
+  if (m.id) h += `<h2 style="margin-top:0">${esc(m.id)}: ${esc(m.title)}</h2>`;
+  if (m.step === 'queued') h += `<p class="wait">Waiting for the maker${m.ahead ? ` (${m.ahead} ahead)` : ''}…</p>`;
+  else if (m.step === 'running') h += `<p class="wait">Down the cascade (a minute or two)…</p>`;
+  else {
+    const at = m.step === 'made' ? STEPS.length : STEPS.findIndex(s => s[0] === m.step);
+    if (at >= 0) h += `<ol class="cas">${STEPS.map((s, i) => `<li class="${i < at ? 'ok' : i === at ? 'no' : 'wait'}">${i < at ? '✓' : i === at ? '✗' : '·'} ${esc(s[1])}</li>`).join('')}</ol>`;
+    if (m.why) h += `<p>It stopped: </p><div class="why">${esc(m.why)}</div>`;
+    if (m.step === 'made') {
+      const link = new URL('maker.html?k=' + m.key, location.href).href;
+      const web = new URL('../gas2web/?add=' + encodeURIComponent(link), location.href).href;
+      h += `<p>Its acts: ${(m.acts || []).map(a => `<code>${esc(a)}</code>`).join(' ')}</p>
+        <p><b>The mini-app's link</b>, to share:</p><div class="link" id="lnk">${esc(link)}</div>
+        <p class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn alt" onclick="navigator.clipboard.writeText('${esc(link)}')">Copy the link</button>
+        <a class="btn" style="text-decoration:none" href="${esc(web)}">Add it on GAS2 on the web</a></p>
+        <p class="small muted">On the app on a phone or a computer: Mini-apps, paste the link, Add. Your device certifies it under your key; then invite a friend who added it too.</p>`;
+    }
+    h += `<p class="small muted"><a href="maker.html">Make another</a></p>`;
+  }
+  $('#out').innerHTML = h + `</div>`;
+}
+init().catch(e => { $('#build').textContent = String(e); });
+</script>
+</body>
+</html>

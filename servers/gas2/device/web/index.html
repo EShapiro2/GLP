@@ -75,6 +75,7 @@ async function poll() {
     try {
       const r = await api('api/state' + (v >= 0 ? '?since=' + v : ''));
       S = await r.json(); v = S.version; draw();
+      if (toAdd && S.status === 'ready') { const l = toAdd; toAdd = null; history.replaceState(null, '', location.pathname); addMade(l); }
     } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
   }
 }
@@ -165,6 +166,8 @@ function render() {
     h += `<div class="row"><span class="grow"><b>${esc(a.id)}</b> <span class="muted">${esc(a.title)}</span></span>
       ${a.installed ? `<button class="b" onclick="openApp('${a.app}')">Open</button>` : `<button class="b alt" ${S.trusted ? '' : 'disabled'} onclick="act({op:'install',app:'${a.app}'})">Install</button>`}</div>`;
   }
+  h += `<div class="small muted" style="margin-top:8px">A mini-app from GAS2's app maker: its link</div>
+    <div class="row"><input id="madelink" class="grow" placeholder="https://talmonlab.bgu.ac.il/gas2/maker.html?k=…"><button class="b alt" onclick="addMade()">Add</button></div>`;
   h += `</div>`;
   if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, 8).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
   $('#main').innerHTML = h;
@@ -183,6 +186,13 @@ async function addPerson() {
   const r = await (await api('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
   if (r.error) alert(r.error); else $('#add').value = '';
 }
+function addMade(link) {
+  link = link || $('#madelink').value.trim();
+  if (!link) return;
+  act({op: 'add', link}); if ($('#madelink')) $('#madelink').value = '';
+}
+// opened with ?add=<link>, from the app maker's page: added once the super-app is ready
+let toAdd = new URLSearchParams(location.search).get('add');
 function openApp(app) { open = app; form = null; draw(); window.scrollTo(0, 0); }
 function closeApp() { open = null; form = null; draw(); }
 

@@ -45,6 +45,10 @@ def propose(p, f, args):
 A, B = 'A', 'B'
 wait(lambda: st(A)['status'] == 'ready' and st(B)['status'] == 'ready', 120, 'ready')
 ka, kb = st(A)['me'], st(B)['me']
+# GAS2_ADD: a link of the app maker, added on both first (APP is then the made app's name)
+if os.environ.get('GAS2_ADD'):
+    for p in (A, B): act(p, {'op': 'add', 'link': os.environ['GAS2_ADD']})
+    wait(lambda: all(any(a['app'] == APP for a in st(p)['apps']) for p in (A, B)), 300, 'added from the maker')
 print('apps', [a['app'] for a in st(A)['apps']])
 for p in (A, B):
     act(p, {'op': 'trust'}); time.sleep(0.5); act(p, {'op': 'install', 'app': APP})

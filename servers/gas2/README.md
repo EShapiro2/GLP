@@ -27,3 +27,21 @@ Environment: `PORT` (5101), `HOST` (127.0.0.1), `DATA`, `UPSTREAM` (https://gith
 - `device/`: the person's super-app and its page (Dart; also a program for computers, `bin/gas2.dart`).
 - `app/`: the Flutter shell for Android, Windows and macOS (`tool/sync_assets.sh <tree>` before a build).
 - `.github/workflows/gas2-apps.yml` (at the repository's root): builds the tree and the apps for Android, Windows, macOS and Linux on every push to this branch, onto the release `gas2-latest`, which `web/get.html` links to.
+
+## The app maker
+
+`web/maker.html`: a person writes a contract, its text (NAME.txt) and its act schemas
+(NAME.glp), starting from one of GLP's.  `POST /api/make` queues it; `tools/make.py`
+takes it down build.py's cascade in the live working copy (one job at a time, under the
+lock a build takes to reset its slot) and certifies the mini-app; `GET /api/made/<key>`
+says how far it got and why it stopped, and `/made/<key>.json` is the mini-app's
+directory, which a device writes under `programs/apps/` and certifies under its
+person's key (`device/lib/host.dart`, `addApp`).  The link to share is
+`maker.html?k=<key>`; the device's page takes it under Mini-apps.
+
+## On the web
+
+`device/bin/web.dart`, talmonlab's app gas2web (port 5201): the device's page for
+those with no app (iPhones), each person's super-app run on the server over the relay,
+from the device tree of the site's live build (each build writes it, `out/device`).  The
+server holds the person's key, and the page says so.

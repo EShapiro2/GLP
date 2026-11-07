@@ -42,6 +42,13 @@ state = {'live': None, 'building': False, 'buildStarted': None, 'lastCheck': Non
          'nextCheck': None, 'lastBuildSeconds': None, 'log': []}
 run_lock = threading.Lock()
 run_cache = {}
+# the app maker: jobs one at a time in the live working copy (tools/make.py); a build
+# takes the lock to bring its slot to the head, so no job runs in a copy being reset
+MADE = os.path.join(DATA, 'made')
+make_lock = threading.Lock()
+make_queue = []
+make_cv = threading.Condition()
+make_running = {'key': None}
 
 
 def log(msg):
@@ -144,7 +151,8 @@ def build_once(force=False):
     state['building'], state['buildStarted'] = True, time.time()
     try:
         log(f'building {head[:8] if head else "?"} in slot {target}')
-        g = prepare(os.path.join(slot(target), 'glp'))
+        with make_lock:
+            g = prepare(os.path.join(slot(target), 'glp'))
         out = os.path.join(slot(target), 'out.new')
         shutil.rmtree(out, ignore_errors=True)
         env = dict(os.environ, GLPC=g.repl_exe, BASH=g.bash, GAS2_TOOLS=tools_hash())
@@ -223,6 +231,78 @@ def run_app(cid, which):
         return r
 
 
+def maker():
+    while True:
+        with make_cv:
+            while not make_queue:
+                make_cv.wait()
+            key = make_queue.pop(0)
+        job = os.path.join(MADE, key)
+        make_running['key'] = key
+        try:
+            with make_lock:
+                s = state['live'] or live_slot()
+                g = Glp(os.path.join(slot(s), 'glp'))
+                p = subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'make.py'), g.root, job],
+                                   env=dict(os.environ, GLPC=g.repl_exe, BASH=g.bash), capture_output=True,
+                                   text=True, encoding='utf-8', errors='replace', timeout=1800)
+            if not os.path.exists(os.path.join(job, 'result.json')):
+                with open(os.path.join(job, 'result.json'), 'w', encoding='utf-8') as f:
+                    json.dump({'key': key, 'step': 'maker', 'why': (p.stderr or p.stdout)[-800:]}, f)
+            log(f'made {key}: {p.stdout.strip()[-200:]}')
+        except Exception as e:
+            with open(os.path.join(job, 'result.json'), 'w', encoding='utf-8') as f:
+                json.dump({'key': key, 'step': 'maker', 'why': str(e)[:800]}, f)
+        finally:
+            make_running['key'] = None
+
+
+def make_job(body):
+    s, data = live_data()
+    if not data:
+        return 503, {'error': 'the first build is under way'}
+    txt, glp_ = body.get('txt'), body.get('glp')
+    if not isinstance(txt, str) or not isinstance(glp_, str) or len(txt) + len(glp_) > 200000:
+        return 400, {'error': 'a contract is its text and its schemas, under 200 KB'}
+    import hashlib
+    key = hashlib.sha256('\0'.join([txt, glp_, data['commit']['sha']]).encode('utf-8')).hexdigest()[:16]
+    job = os.path.join(MADE, key)
+    if os.path.exists(os.path.join(job, 'result.json')) or key in make_queue or make_running['key'] == key:
+        return 200, {'key': key}
+    if len(make_queue) >= 10:
+        return 503, {'error': 'the maker is busy; try again in a few minutes'}
+    os.makedirs(job, exist_ok=True)
+    with open(os.path.join(job, 'job.json'), 'w', encoding='utf-8') as f:
+        json.dump({'txt': txt, 'glp': glp_, 'base': body.get('base'), 'commit': data['commit']['sha']}, f)
+    with make_cv:
+        make_queue.append(key)
+        make_cv.notify()
+    return 200, {'key': key}
+
+
+def made(key):
+    job = os.path.join(MADE, key)
+    r = os.path.join(job, 'result.json')
+    if os.path.exists(r):
+        return json.load(open(r, encoding='utf-8'))
+    if make_running['key'] == key:
+        return {'key': key, 'step': 'running'}
+    if key in make_queue:
+        return {'key': key, 'step': 'queued', 'ahead': make_queue.index(key) + (1 if make_running['key'] else 0)}
+    return None
+
+
+def source(cid):
+    s, data = live_data()
+    c = next((x for x in (data or {}).get('contracts', []) if x['id'] == cid), None)
+    if not c:
+        return None
+    root = os.path.join(slot(s), 'glp')
+    t = os.path.join(root, *c['file'].split('/'))
+    rd = lambda p: open(p, encoding='utf-8').read() if os.path.exists(p) else ''
+    return {'id': cid, 'txt': rd(t), 'glp': rd(t[:-4] + '.glp')}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -266,6 +346,17 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             s = state['live'] or live_slot()
             return self.file(os.path.join(slot(s), 'out', m.group(1), m.group(2))) if s else self.send(404, {})
+        m = re.fullmatch(r'/api/source/([A-Za-z0-9-]+)', p)
+        if m:
+            r = source(m.group(1))
+            return self.send(200, r) if r else self.send(404, {'error': 'no such contract'})
+        m = re.fullmatch(r'/api/made/([0-9a-f]{16})', p)
+        if m:
+            r = made(m.group(1))
+            return self.send(200, r) if r else self.send(404, {'error': 'no such app'})
+        m = re.fullmatch(r'/made/([0-9a-f]{16})\.json', p)
+        if m:
+            return self.file(os.path.join(MADE, m.group(1), 'app.json'))
         m = re.fullmatch(r'/([a-z0-9_-]+\.(html|css|js|svg|png|ico))', p)
         if m:
             return self.file(os.path.join(WEB, m.group(1)))
@@ -280,6 +371,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, run_app(m.group(1), which))
             except Exception as e:
                 return self.send(500, {'error': str(e)[:500]})
+        if u.path == '/api/make':
+            try:
+                n = int(self.headers.get('Content-Length') or 0)
+                code, r = make_job(json.loads(self.rfile.read(min(n, 300000)).decode('utf-8')))
+                return self.send(code, r)
+            except Exception as e:
+                return self.send(400, {'error': str(e)[:300]})
         self.send(404, {'error': 'not found'})
 
 
@@ -294,6 +392,8 @@ def status():
 
 if __name__ == '__main__':
     threading.Thread(target=updater, daemon=True).start()
+    os.makedirs(MADE, exist_ok=True)
+    threading.Thread(target=maker, daemon=True).start()
     srv = ThreadingHTTPServer(('127.0.0.1' if os.environ.get('HOST') is None else os.environ['HOST'], PORT), Handler)
     log(f'GAS2 on port {PORT}, following {UPSTREAM} {BRANCH}, data in {DATA}')
     srv.serve_forever()
