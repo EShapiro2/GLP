@@ -451,7 +451,8 @@ module_lines(Nm, C, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), ground(Rf
     text_schemas(C?, Lx?, Ct),
     schema_lines(Ct?, T1, Le0),
     numeric_lines(Nt?, Lm0),
-    base_lines(C?, Lb),
+    worded_acts(W?, Was),
+    base_lines(C?, Was?, Lb),
     lapp(Lm0?, Lb?, Lm),
     lapp(Le0?, Lm?, Le),
     name_class_lines(C?, Ps?, Ln0),
@@ -1099,20 +1100,32 @@ entry_lines([X|Xs], [E?, '.'|L?]) :- ground(X?) |
     E0 =.. [schema_entry, Nm?, X?],
     term_to_string(E0?, E),
     entry_lines(Xs?, L).
-%% The base of each schema, schema_base(Name, I), the index of its role: the base of its listed roles, and, for a schema with none, its first guarding role or, having none, its first role: "The conjuncts of a schema that are local to their base and not to one role have one base, the base of the schema; a schema with none has as its base its first guarding role or, having none, its first role" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").  The proposer of a guarded part with no opener is the person in the base (ibid.: "where the base of the schema is a guarding role, its proposer is the person in the base"; the printed text's part_bases).
-procedure base_lines(Contract?, Lines).
-base_lines(C, ['', 'procedure schema_base(Constant?, Integer).'|L?]) :- ground(C?) | base_lines1(C?, L).
-procedure base_lines1(Contract?, Lines).
-base_lines1([], ['schema_base(_, 1) :- otherwise | true.']).
-base_lines1([schema(S, _, Rs)|Ss], [T?, '.'|L?]) :- ground(S?), ground(Rs?) |
+%% The base of each schema, schema_base(Name, I), the index of its role: the base of its listed roles, and, for a schema with none, the guarding role its pragma names before its button or, having no guarding role, its first role: "The conjuncts of a schema that are local to their base and not to one role have one base, the base of the schema; a schema with none has as its base the guarding role its pragma names before its button (below) or, having no guarding role, its first role" (vGLP 0b51a60, Section 5.4, "Speech-act schemas as local specifications").  The role the pragma names is the first of by(Gs) of the act of the schema (self.glp, Proposer: "the one the line names as its proposer where it names one"); where the pragmas give no role for it, any, its first guarding role.  The proposer of a guarded part with no opener is the person in the base (ibid.: "where the base of the schema is a guarding role, its proposer is the person in the base"; the printed text's part_bases).
+procedure worded_acts(Worded?, PActs).
+worded_acts(words(pragmas(_, As), _, _), As?).
+procedure base_lines(Contract?, PActs?, Lines).
+base_lines(C, As, ['', 'procedure schema_base(Constant?, Integer).'|L?]) :- ground(C?), ground(As?) | base_lines1(C?, As?, L).
+procedure base_lines1(Contract?, PActs?, Lines).
+base_lines1([], _, ['schema_base(_, 1) :- otherwise | true.']).
+base_lines1([schema(S, _, Rs)|Ss], As, [T?, '.'|L?]) :- ground(S?), ground(Rs?), ground(As?) |
     listed_bases(Rs?, Bs),
     guard_indices1(Rs?, 1, Gs),
-    base_of(Bs?, Gs?, B),
+    named_role(As?, S?, Gs?, Ns),
+    base_of(Bs?, Ns?, B),
     T0 =.. [schema_base, S?, B?],
     term_to_string(T0?, T),
-    base_lines1(Ss?, L).
-base_lines1([cschema(_, _, _, _)|Ss], L?) :- base_lines1(Ss?, L).
-base_lines1([nschema(_, _, _, _)|Ss], L?) :- base_lines1(Ss?, L).
+    base_lines1(Ss?, As?, L).
+base_lines1([cschema(_, _, _, _)|Ss], As, L?) :- base_lines1(Ss?, As?, L).
+base_lines1([nschema(_, _, _, _)|Ss], As, L?) :- base_lines1(Ss?, As?, L).
+%% The guarding role the pragma of the schema S names before its button, first, then the schema's guarding roles Gs: the first of by(Ns) of the act of S, a guarding role at which the act is proposed (self.glp, Proposer), where it names one.
+procedure named_role(PActs?, Constant?, Ints?, Ints).
+named_role([], _, Gs, Gs?).
+named_role([act(S1, _, _, _, _, P)|_], S, Gs, Ns?) :- S1? =?= S?, ground(Gs?) | proposer_role(P?, Gs?, Ns).
+named_role([_|As], S, Gs, Ns?) :- otherwise | named_role(As?, S?, Gs?, Ns).
+procedure proposer_role(Proposer?, Ints?, Ints).
+proposer_role(by([N|_]), Gs, [N?|Gs?]).
+proposer_role(by([N|_], _), Gs, [N?|Gs?]).
+proposer_role(_, Gs, Gs?) :- otherwise | true.
 procedure base_of(Ints?, Ints?, Integer).
 base_of([B|_], _, B?).
 base_of([], [G|_], G?).
