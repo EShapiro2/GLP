@@ -20,26 +20,19 @@ ol.steps2 li { margin: 6px 0; }
 <main class="prose">
   <h1>GAS2 on your device</h1>
   <p>Your own Grassroots Super-App. Its mini-apps are the contracts on this site that the cascade takes all the way down, and your device certifies each one under your own key. You meet people by their keys, and the two of you then use a mini-app together.</p>
-  <p class="small muted" id="rel">The apps are built from the GAS2 branch by GitHub's machines.</p>
+  <p class="small muted hood-only" id="rel">The apps are built from the GAS2 branch by GitHub's machines.</p>
 
   <div class="dl">
     <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2.apk"><b>Android</b><span>GAS2.apk: allow installing from your browser, then open it</span></a>
     <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-windows.zip"><b>Windows</b><span>Unzip, then run gas_phone.exe in the GAS2 folder</span></a>
     <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-macos.zip"><b>Mac</b><span>Unzip; the first time, right-click GAS2 and choose Open</span></a>
     <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-linux.tar.gz"><b>Linux</b><span>Unpack, run ./run.sh, and open the address it prints</span></a>
-    <a href="../gas2web/"><b>iPhone, or any browser</b><span>GAS2 on the web: your super-app runs on talmonlab's server, which holds your key</span></a>
+    <a href="../gas2web/"><b>Any browser, or an iPhone</b><span>GAS2 on the web: your super-app runs on talmonlab's server, which holds your key</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2.ipa"><b>iPhone, sideloaded</b><span>GAS2.ipa, installed with Sideloadly or AltStore and a free Apple ID; renewed every 7 days. Not tested yet</span></a>
   </div>
-  <p class="small muted">There is no iPhone app yet. GAS2 on the web is the same page and the same super-app, run for you on talmonlab's server over the relay; the server keeps your key, so it could act as you, and your browser keeps the only way back to you there. Add it to the home screen from Safari's Share menu.</p>
+  <p class="small muted">GAS2 on the web is the same app, run for you on talmonlab's server: the server keeps your key, so it could act as you. On an iPhone, add it to the home screen from Safari's Share menu.</p>
 
-  <h2>A first test, with two devices</h2>
-  <ol class="steps2">
-    <li>Open GAS2 on both devices and tap <b>Trust</b>, so that each trusts its own compiler.</li>
-    <li>On both, install the same mini-app, for example <b>GKK</b>, Grassroots Keys and Knowledge.</li>
-    <li>One of you copies their key and sends it to the other, who pastes it under People and taps <b>Add</b>. The first is asked whether to be friends and taps <b>Yes</b>.</li>
-    <li>Both open the mini-app. One taps <b>Invite</b> next to the other, and the other taps <b>Accept theirs</b>. After a moment the mini-app shows its state on both.</li>
-    <li>Each taps <b>Establish</b> to establish an identity. Then one taps <b>Acquaint</b> and picks the other, who is asked and taps <b>Yes</b>. Now each lists the other under Contacts.</li>
-  </ol>
-  <p>Messages between the two devices go through talmonlab's relay, encrypted end to end between your two keys. The relay sees who writes to whom and when, and nothing else. Your key pair stays on your device.</p>
+  <p class="small muted">On a device your key stays on the device. Messages go directly over Bluetooth or the local network where they can, and otherwise through talmonlab's relay, encrypted end to end: the relay sees who writes to whom and when, and nothing else.</p>
 </main>
 <script>
 fetch('https://api.github.com/repos/nimrodtalmon/GLP/releases/tags/gas2-latest').then(r => r.ok ? r.json() : null).then(j => {

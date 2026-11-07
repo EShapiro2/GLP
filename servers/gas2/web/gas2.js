@@ -59,11 +59,12 @@ function setHood(on) {
   document.querySelectorAll('.hoodbtn').forEach(b => b.classList.toggle('on', on));
   if (window.onHood) window.onHood(on);
 }
-// The top bar, the same on every page
+// The top bar, the same on every page; on a phone its links fold into a menu
 function nav(active) {
-  const links = [['./', 'Mini-apps', 'home'], ['how.html', 'How it works', 'how'], ['maker.html', 'Make an app', 'maker'], ['get.html', 'Get the app', 'get']];
+  const links = [['apps.html', 'Mini-apps', 'apps'], ['how.html', 'How it works', 'how'], ['maker.html', 'Make an app', 'maker'], ['get.html', 'Get the app', 'get']];
   document.querySelector('header.top').innerHTML = `<a class="brand" href="./"><span class="mark"></span>GAS2</a>
-    <nav>${links.map(([u, t, k]) => `<a href="${u}" class="${k === active ? 'on' : ''}">${t}</a>`).join('')}</nav>
-    <button class="hoodbtn ${HOOD ? 'on' : ''}" title="Under the hood: the technical parts" onclick="setHood(!HOOD)">&lt;/&gt;</button>`;
+    <nav id="navl">${links.map(([u, t, k]) => `<a href="${u}" class="${k === active ? 'on' : ''}">${t}</a>`).join('')}</nav>
+    <button class="hoodbtn ${HOOD ? 'on' : ''}" title="Under the hood: the technical parts" onclick="setHood(!HOOD)">&lt;/&gt;</button>
+    <button class="menubtn" aria-label="Menu" onclick="document.getElementById('navl').classList.toggle('open')">☰</button>`;
   document.body.classList.toggle('hood', HOOD);
 }

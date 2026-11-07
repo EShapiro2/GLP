@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAS2 · mini-apps</title>
+<link rel="stylesheet" href="gas2.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top"></header>
+<main>
+  <div class="xhead">
+    <h1 style="margin:0">Mini-apps</h1>
+    <div class="seg2"><button id="vlist" class="on" onclick="view('list')">List</button><button id="vmap" onclick="view('map')">Map</button></div>
+  </div>
+  <input id="q" class="search" type="search" placeholder="Search: a name, a rule, a word" oninput="drawRows()" autocomplete="off">
+  <div class="small muted" id="count"></div>
+  <div class="xbox" id="listbox"><div id="rows"></div></div>
+  <div class="xbox card" id="mapbox" style="display:none;padding:12px">
+    <div class="legend" id="legend"></div>
+    <div id="mapwrap"><svg id="map" role="img" aria-label="The contracts and their relations"></svg><div id="tip"></div></div>
+  </div>
+  <p class="small muted hood-only" id="build">Loading…</p>
+</main>
+<script src="gas2.js"></script>
+<script>
+const KIND = {
+  extends: {label: 'extends', desc: 'adds acts, keeps all of its base'},
+  amends: {label: 'amends', desc: 'deletes or replaces some acts of its base'},
+  restricts: {label: 'restricts', desc: 'allows fewer runs than its base'},
+  instantiates: {label: 'instantiates', desc: 'fills in a parametric base'},
+  implements: {label: 'implements', desc: 'realises its base through a map of states'}
+};
+
+function legend(D) {
+  const used = new Set(D.relations.map(r => r.kind));
+  let s = Object.entries(KIND).filter(([k]) => used.has(k)).map(([k, v]) =>
+    `<span class="lg"><svg width="34" height="10"><line x1="2" y1="5" x2="32" y2="5" class="edge ${k}"/></svg><b>${v.label}</b> ${v.desc}</span>`).join('');
+  s += `<span class="lg"><i class="dot runs"></i>a mini-app that runs</span><span class="lg"><i class="dot stuck"></i>not yet an app</span>`;
+  $('#legend').innerHTML = s;
+}
+
+function layout(D) {
+  const ids = D.contracts.map(c => c.id);
+  const parents = Object.fromEntries(ids.map(i => [i, []]));
+  D.relations.forEach(r => { if (parents[r.from] && ids.includes(r.to)) parents[r.from].push(r.to); });
+  const depth = {};
+  const dep = (i, seen = new Set()) => {
+    if (depth[i] !== undefined) return depth[i];
+    if (seen.has(i)) return 0;
+    seen.add(i);
+    return depth[i] = parents[i].length ? 1 + Math.max(...parents[i].map(p => dep(p, seen))) : 0;
+  };
+  ids.forEach(i => dep(i));
+  const layers = [];
+  ids.forEach(i => (layers[depth[i]] = layers[depth[i]] || []).push(i));
+  // order each layer by the mean position of its parents
+  const pos = {};
+  layers.forEach((L, d) => {
+    if (d > 0) L.sort((a, b) => mean(parents[a].map(p => pos[p])) - mean(parents[b].map(p => pos[p])) || a.localeCompare(b));
+    L.forEach((i, k) => pos[i] = (k + 0.5) / L.length);
+  });
+  return {layers, pos, depth, parents};
+}
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0.5;
+
+function drawMap(D) {
+  const {layers} = layout(D);
+  const W = 1000, rowH = 92, nw = 104, nh = 34, H = layers.length * rowH + 20;
+  const by = Object.fromEntries(D.contracts.map(c => [c.id, c]));
+  const xy = {};
+  layers.forEach((L, d) => L.forEach((id, k) => { xy[id] = {x: W * (k + 0.5) / L.length, y: 30 + d * rowH + nh / 2}; }));
+  let s = `<defs>${Object.keys(KIND).map(k => `<marker id="ar-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head ${k}"/></marker>`).join('')}</defs>`;
+  D.relations.forEach(r => {
+    const a = xy[r.from], b = xy[r.to];
+    if (!a || !b) return;
+    const y1 = a.y - nh / 2, y2 = b.y + nh / 2 + 3, my = (y1 + y2) / 2;
+    s += `<path class="edge ${r.kind}" data-from="${r.from}" data-to="${r.to}" d="M${a.x},${y1} C${a.x},${my} ${b.x},${my} ${b.x},${y2}" marker-end="url(#ar-${r.kind})"><title>${esc(r.from)} ${r.kind} ${esc(r.to)} — ${esc(r.how)}</title></path>`;
+  });
+  D.contracts.forEach(c => {
+    const p = xy[c.id];
+    const st = status(c);
+    s += `<a href="contract.html?c=${encodeURIComponent(c.id)}" class="node ${st.cls}" data-id="${c.id}">
+      <rect x="${p.x - nw / 2}" y="${p.y - nh / 2}" width="${nw}" height="${nh}" rx="9"/>
+      <text x="${p.x}" y="${p.y + 5}" text-anchor="middle">${esc(c.id)}</text></a>`;
+  });
+  const g = $('#map');
+  g.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  g.innerHTML = s;
+  const tip = $('#tip');
+  g.querySelectorAll('.node').forEach(n => {
+    const c = by[n.dataset.id];
+    n.addEventListener('mouseenter', () => {
+      const r = n.getBoundingClientRect(), w = $('#mapwrap').getBoundingClientRect();
+      tip.innerHTML = `<b>${esc(c.id)}</b> · ${esc(c.title)}<br><span>${esc(status(c).text)}</span>`;
+      tip.style.left = (r.left - w.left + r.width / 2) + 'px';
+      tip.style.top = (r.bottom - w.top + 6) + 'px';
+      tip.classList.add('on');
+      g.querySelectorAll('.edge').forEach(e => e.classList.toggle('dim', e.dataset.from !== c.id && e.dataset.to !== c.id));
+    });
+    n.addEventListener('mouseleave', () => { tip.classList.remove('on'); g.querySelectorAll('.edge').forEach(e => e.classList.remove('dim')); });
+  });
+}
+
+// --- the explorer ---
+let D0 = null;
+const hueOf = id => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+const icon = c => `<span class="icon" style="background:hsl(${hueOf(c.id)},58%,${HOOD ? 30 : 55}%)">${esc(c.id.replace(/-/g, '').slice(0, 4))}</span>`;
+function drawRows() {
+  if (!D0) return;
+  const q = ($('#q').value || '').trim().toLowerCase();
+  // the contracts that are mini-apps; under the hood, every contract, with how far it got
+  const cs = D0.contracts.filter(c => HOOD || c.artefact)
+    .filter(c => !q || [c.id, c.title, c.preamble || '', ...c.clauses.map(k => k.name + ' ' + k.text)].join(' ').toLowerCase().includes(q))
+    .sort((a, b) => (HOOD ? status(b).rank - status(a).rank : 0) || a.title.localeCompare(b.title));
+  $('#count').textContent = cs.length + (HOOD ? ' contracts' : ' mini-apps') + (q ? ' found' : '');
+  $('#rows').innerHTML = cs.map(c => `<a class="xrow" href="contract.html?c=${encodeURIComponent(c.id)}">${icon(c)}
+      <span class="grow"><b>${esc(c.title.replace(/^Grassroots /, ''))}</b> <span class="muted small">${esc(c.id)}</span>
+      <span class="sub">${esc(c.clauses.map(k => k.name).join(' · '))}</span></span>
+      ${HOOD ? `<span class="chip ${status(c).cls}">${esc(status(c).short)}</span>` : ''}
+      ${c.artefact ? `<span class="btn sm" onclick="event.preventDefault();location.href='../gas2web/'">Open</span>` : ''}</a>`).join('')
+    || '<p class="muted" style="padding:12px">Nothing matches.</p>';
+}
+function view(v) {
+  $('#vlist').classList.toggle('on', v === 'list'); $('#vmap').classList.toggle('on', v === 'map');
+  $('#listbox').style.display = v === 'list' ? '' : 'none'; $('#q').style.display = $('#count').style.display = v === 'list' ? '' : 'none';
+  $('#mapbox').style.display = v === 'map' ? '' : 'none';
+}
+window.onHood = () => drawRows();
+nav('apps');
+load().then(D => {
+  D0 = D; $('#build').innerHTML = buildLine(D);
+  drawRows(); legend(D); drawMap(D);
+}).catch(e => { $('#count').textContent = e.message; });
+</script>
+</body>
+</html>

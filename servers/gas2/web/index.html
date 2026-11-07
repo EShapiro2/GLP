@@ -10,135 +10,18 @@
 <body>
 <header class="top"></header>
 <main>
-  <section class="hero">
+  <section class="hero" style="padding-top:8vh">
     <h1>Social contracts that run.</h1>
     <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement.</p>
     <p>Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up. In GAS2 all of them live in one app, the Grassroots Super-App.</p>
-    <div class="cta"><a class="btn" href="get.html">Get the app</a><a class="btn alt" href="../gas2web/">Try it on the web</a><a class="btn alt" href="how.html">How it works →</a></div>
     <p class="small muted hood-only" id="build">Loading…</p>
-  </section>
-
-  <h2 class="sec">The mini-apps</h2>
-  <p class="muted" style="margin-top:-6px">Each is a contract of GLP, made into an app. Open one in GAS2, invite a friend, and play.</p>
-  <div class="apps2" id="apps"></div>
-
-  <h2 class="sec">How they fit together</h2>
-  <p class="muted" style="margin-top:-6px">Contracts build on each other: an arrow points to what a contract builds on.</p>
-  <section class="card">
-    <div class="legend" id="legend"></div>
-    <div id="mapwrap"><svg id="map" role="img" aria-label="The contracts and their relations"></svg><div id="tip"></div></div>
-  </section>
-
-  <section class="hood-only boxed">
-    <h2 class="sec"><span class="hoodtag">&lt;/&gt;</span>Every contract, and how far the cascade takes it</h2>
-    <p class="muted small">Every contract in GLP's main branch, rebuilt every hour: those that reach a certified mini-app, and where the others stop.</p>
-    <div class="grid" id="list"></div>
   </section>
 </main>
 <script src="gas2.js"></script>
 <script>
-const KIND = {
-  extends: {label: 'extends', desc: 'adds acts, keeps all of its base'},
-  amends: {label: 'amends', desc: 'deletes or replaces some acts of its base'},
-  restricts: {label: 'restricts', desc: 'allows fewer runs than its base'},
-  instantiates: {label: 'instantiates', desc: 'fills in a parametric base'},
-  implements: {label: 'implements', desc: 'realises its base through a map of states'}
-};
-
-function legend(D) {
-  const used = new Set(D.relations.map(r => r.kind));
-  let s = Object.entries(KIND).filter(([k]) => used.has(k)).map(([k, v]) =>
-    `<span class="lg"><svg width="34" height="10"><line x1="2" y1="5" x2="32" y2="5" class="edge ${k}"/></svg><b>${v.label}</b> ${v.desc}</span>`).join('');
-  s += `<span class="lg"><i class="dot runs"></i>a mini-app that runs</span><span class="lg"><i class="dot stuck"></i>not yet an app</span>`;
-  $('#legend').innerHTML = s;
-}
-
-function layout(D) {
-  const ids = D.contracts.map(c => c.id);
-  const parents = Object.fromEntries(ids.map(i => [i, []]));
-  D.relations.forEach(r => { if (parents[r.from] && ids.includes(r.to)) parents[r.from].push(r.to); });
-  const depth = {};
-  const dep = (i, seen = new Set()) => {
-    if (depth[i] !== undefined) return depth[i];
-    if (seen.has(i)) return 0;
-    seen.add(i);
-    return depth[i] = parents[i].length ? 1 + Math.max(...parents[i].map(p => dep(p, seen))) : 0;
-  };
-  ids.forEach(i => dep(i));
-  const layers = [];
-  ids.forEach(i => (layers[depth[i]] = layers[depth[i]] || []).push(i));
-  // order each layer by the mean position of its parents
-  const pos = {};
-  layers.forEach((L, d) => {
-    if (d > 0) L.sort((a, b) => mean(parents[a].map(p => pos[p])) - mean(parents[b].map(p => pos[p])) || a.localeCompare(b));
-    L.forEach((i, k) => pos[i] = (k + 0.5) / L.length);
-  });
-  return {layers, pos, depth, parents};
-}
-const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0.5;
-
-function drawMap(D) {
-  const {layers} = layout(D);
-  const W = 1000, rowH = 92, nw = 104, nh = 34, H = layers.length * rowH + 20;
-  const by = Object.fromEntries(D.contracts.map(c => [c.id, c]));
-  const xy = {};
-  layers.forEach((L, d) => L.forEach((id, k) => { xy[id] = {x: W * (k + 0.5) / L.length, y: 30 + d * rowH + nh / 2}; }));
-  let s = `<defs>${Object.keys(KIND).map(k => `<marker id="ar-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head ${k}"/></marker>`).join('')}</defs>`;
-  D.relations.forEach(r => {
-    const a = xy[r.from], b = xy[r.to];
-    if (!a || !b) return;
-    const y1 = a.y - nh / 2, y2 = b.y + nh / 2 + 3, my = (y1 + y2) / 2;
-    s += `<path class="edge ${r.kind}" data-from="${r.from}" data-to="${r.to}" d="M${a.x},${y1} C${a.x},${my} ${b.x},${my} ${b.x},${y2}" marker-end="url(#ar-${r.kind})"><title>${esc(r.from)} ${r.kind} ${esc(r.to)} — ${esc(r.how)}</title></path>`;
-  });
-  D.contracts.forEach(c => {
-    const p = xy[c.id];
-    const st = status(c);
-    s += `<a href="contract.html?c=${encodeURIComponent(c.id)}" class="node ${st.cls}" data-id="${c.id}">
-      <rect x="${p.x - nw / 2}" y="${p.y - nh / 2}" width="${nw}" height="${nh}" rx="9"/>
-      <text x="${p.x}" y="${p.y + 5}" text-anchor="middle">${esc(c.id)}</text></a>`;
-  });
-  const g = $('#map');
-  g.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  g.innerHTML = s;
-  const tip = $('#tip');
-  g.querySelectorAll('.node').forEach(n => {
-    const c = by[n.dataset.id];
-    n.addEventListener('mouseenter', () => {
-      const r = n.getBoundingClientRect(), w = $('#mapwrap').getBoundingClientRect();
-      tip.innerHTML = `<b>${esc(c.id)}</b> · ${esc(c.title)}<br><span>${esc(status(c).text)}</span>`;
-      tip.style.left = (r.left - w.left + r.width / 2) + 'px';
-      tip.style.top = (r.bottom - w.top + 6) + 'px';
-      tip.classList.add('on');
-      g.querySelectorAll('.edge').forEach(e => e.classList.toggle('dim', e.dataset.from !== c.id && e.dataset.to !== c.id));
-    });
-    n.addEventListener('mouseleave', () => { tip.classList.remove('on'); g.querySelectorAll('.edge').forEach(e => e.classList.remove('dim')); });
-  });
-}
-
-function drawList(D) {
-  const cs = [...D.contracts].sort((a, b) => (status(b).rank - status(a).rank) || a.id.localeCompare(b.id));
-  $('#list').innerHTML = cs.map(c => {
-    const st = status(c);
-    return `<a class="item" href="contract.html?c=${encodeURIComponent(c.id)}">
-      <div class="row"><b>${esc(c.id)}</b><span class="chip ${st.cls}">${esc(st.short)}</span></div>
-      <div class="t">${esc(c.title)}</div>
-      <div class="o">${esc(c.owner || '')}${c.clauses.length ? ' · ' + c.clauses.length + (c.clauses.length === 1 ? ' clause' : ' clauses') : ''}</div></a>`;
-  }).join('');
-}
-
-function drawApps(D) {
-  const cs = D.contracts.filter(c => c.artefact).sort((a, b) => a.title.localeCompare(b.title));
-  $('#apps').innerHTML = cs.map(c => `<div class="app2"><div class="id">${esc(c.id)}</div><div class="t">${esc(c.title.replace(/^Grassroots /, ''))}</div>
-    <div class="cl">${esc(c.clauses.map(x => x.name).join(' · '))}</div>
-    <div class="acts"><a class="btn sm" href="../gas2web/">Play</a><a class="btn alt sm" href="contract.html?c=${encodeURIComponent(c.id)}">The rules</a></div></div>`).join('')
-    || '<p class="muted">The first build is under way.</p>';
-}
-
-nav('home');
-load().then(D => {
-  $('#build').innerHTML = buildLine(D);
-  drawApps(D); legend(D); drawMap(D); drawList(D);
-}).catch(e => { $('#build').textContent = e.message; });
+nav('');
+window.onHood = on => { if (on && !window._b) { window._b = 1; load().then(D => { $('#build').innerHTML = buildLine(D); }).catch(() => {}); } };
+if (HOOD) window.onHood(true);
 </script>
 </body>
 </html>

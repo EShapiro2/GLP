@@ -131,6 +131,22 @@ body:not(.hood) .hood-only{display:none!important}
 .hoodbox td,.hoodbox th{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
 .hoodbox th{font-size:13px;color:var(--mute);font-weight:600}
 .hoodbox code{font:13px var(--mono);background:#ececf0;padding:0 4px;border-radius:4px}
+.menubtn{display:none;border:0;background:none;font-size:20px;color:var(--ink);padding:2px 6px;cursor:pointer}
+@media (max-width:700px){.top{gap:10px;padding:10px 14px;flex-wrap:wrap}.menubtn{display:block}.top nav{display:none;order:9;width:100%;flex-direction:column;gap:0;padding:6px 0 4px}.top nav.open{display:flex}.top nav a{padding:9px 2px;border-top:1px solid var(--line);font-size:16px}}
+body.hood{--bg:#0a0e0a;--card:#101710;--ink:#c6f7c9;--ink2:#a6e8ac;--mute:#6fbf76;--faint:#4f8f55;--line:#1e3a22;--blue:#39d353;--shadow:none;font-family:var(--mono)}
+body.hood header{background:rgba(10,14,10,.92);border-color:var(--line)}
+body.hood .card{border:1px solid var(--line)}
+body.hood .btn.blue{color:#0a0e0a}
+body.hood .hoodbtn.on{background:#39d353;color:#0a0e0a}
+body.hood .brand .mark{background:#39d353}
+body.hood .steps{background:#0d140d}body.hood .steps li.on{background:var(--card)}
+body.hood .pane blockquote{background:#0d140d}
+body.hood .ph{background:#0d140d}body.hood .ph .msg{background:var(--card)}
+body.hood .hoodbox code{background:#070a07}
+body.hood .sn{color:#0a0e0a}
+body.hood .seg{background:#18241a}body.hood .seg button.on{background:#2b4a30;color:var(--ink)}
+body.hood .btn.grey{background:#1b2a1d;color:var(--ink)}
+body.hood .mock{background:#0d140d}body.hood .mock .bub{background:var(--card)}
 /* the super-app figure */
 #f5 text{font-family:Inter,sans-serif}
 @media (max-width:680px){

@@ -20,26 +20,36 @@ textarea { width: 100%; box-sizing: border-box; font: 12.5px/1.45 ui-monospace, 
 .res .link { font: 12.5px ui-monospace, Menlo, Consolas, monospace; word-break: break-all; background: #f2f2f7; padding: 6px 8px; border-radius: 8px; }
 ol.cas { margin: 6px 0 0 18px; padding: 0; } ol.cas li { margin: 2px 0; }
 .ok { color: #1f8a3b; } .no { color: #c4421a; } .wait { color: var(--soft); }
+.mk .row input, .mk .row select { min-width: 0; flex: 1 1 110px; max-width: 100%; }
+.mk .row { flex-wrap: wrap; }
+.mk { grid-template-columns: minmax(0, 1fr); }
+.mk select { max-width: 100%; }
+textarea { max-width: 100%; }
 </style>
 </head>
 <body>
 <header class="top"></header>
 <main class="prose">
   <h1>Make a mini-app</h1>
-  <p>Write a grassroots contract, and GAS2 takes it down the same cascade it takes every contract of GLP's main down: GSC reads the act schemas and checks that the contract is grassroots, the pragmas say what the person sees, vGLP compiles the platform, and the REPL certifies the mini-app. What comes out is a link: whoever opens it on GAS2 adds the mini-app, which their own device certifies under their own key, and two people who added it can use it together.</p>
-  <p class="small muted">A contract is two files, as in GLP's tree: its text, NAME.txt (the title line, the clauses, and after <code>Pragmas</code> the tabs and buttons of the mini-app), and its act schemas, NAME.glp (the term <code>contract_named/2</code> prints). Start from a contract here, give it a name of its own, and change what you like.</p>
+  <p>Write a contract, and our server turns it into a mini-app: the same programs that make every mini-app here. You get a link; whoever opens it in GAS2 adds your mini-app, and two people who added it can use it together.</p>
 
   <div class="mk" id="form">
+    <h3 style="margin:10px 0 0">1. Start from a contract</h3>
     <div class="row">
-      <span>Start from</span><select id="base"></select>
-      <span>as</span><input id="nid" size="8" placeholder="NAME"><input id="ntitle" size="28" placeholder="Title">
+      <select id="base"></select>
+      <span>as</span><input id="nid" size="8" placeholder="NAME"><input id="ntitle" size="26" placeholder="Title">
       <button class="btn alt" onclick="start()">Start</button>
     </div>
-    <div class="small muted">Text (NAME.txt)</div>
+    <div class="small muted">Pick one that is close to what you want, and give yours a short name of capitals (like MYC) and a title.</div>
+    <h3 style="margin:14px 0 0">2. Change it</h3>
+    <div class="small muted">The rules and the app's words (NAME.txt): the title line, the clauses, and after <code>Pragmas</code> the tabs and buttons of the app.</div>
     <textarea id="txt" spellcheck="false"></textarea>
-    <div class="small muted">Act schemas (NAME.glp)</div>
+    <div class="small muted">The rules in exact form, the act schemas (NAME.glp).</div>
     <textarea id="glp" spellcheck="false"></textarea>
-    <div class="row"><button class="btn" id="go" onclick="make()">Make the mini-app</button><span class="small muted" id="build"></span></div>
+    <h3 style="margin:14px 0 0">3. Make it</h3>
+    <div class="row"><button class="btn" id="go" onclick="make()">Make the mini-app</button></div>
+    <div class="small muted">Takes about a minute. Our server checks that the contract is grassroots, compiles it, and certifies the mini-app. Then this page gives you its link, or tells you the step where it stopped and why.</div>
+    <div class="small muted hood-only" id="build"></div>
   </div>
   <div id="out" style="margin-top:14px"></div>
 </main>
@@ -86,6 +96,8 @@ async function make() {
     const r = await (await fetch('api/make', {method: 'POST', body: JSON.stringify({base: $('#base').value, txt, glp})})).json();
     if (r.error) { alert(r.error); return; }
     history.replaceState(null, '', '?k=' + r.key);
+    $('#out').innerHTML = '<div class="res"><p class="wait">Sent to the server…</p></div>';
+    $('#out').scrollIntoView({behavior: 'smooth', block: 'center'});
     watch(r.key);
   } finally { $('#go').disabled = false; }
 }
