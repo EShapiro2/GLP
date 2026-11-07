@@ -1,9 +1,10 @@
 %% ---------------------------------------------------------------------------
 %% GSA.glp --- the Grassroots Super-App and App Store contract, GSA's, extending GSG, in the clause
 %% syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in
-%% GSA.txt beside this file: publish is GSA:1, Publication; trust and distrust GSA:2, Trust; offer,
-%% install and install_own GSA:3, Offering; invite_new and invite_installed GSA:4, Invitation, one
-%% clause in two schemas, by whether Bob has the program installed; leave GSA:5, Leaving.  GKK's
+%% GSA.txt beside this file: publish is GSA:1, Program Publication; trust and distrust GSA:2, Developer
+%% Trust; offer, install and install_own GSA:3, Program Offering and Installation; invite_new and
+%% invite_installed GSA:4, Program Invitation, one clause in two schemas, by whether Bob has the
+%% program installed; leave GSA:5, Leaving a Program.  GKK's
 %% three schemas and GSG's two come first; every role requires identity.  A program is the name
 %% term <Carol>.p, Carol its developer; published(Carol, <Carol>.p) says that Carol published it,
 %% trusts(Alice, Carol) that Alice trusts Carol as a developer, offered(Alice, <Carol>.p) that it
