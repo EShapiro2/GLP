@@ -460,6 +460,50 @@ void main() {
       expect(await out.lineWhere((l) => l.startsWith('< ')), '< entered');
     });
 
+    test("the layer's onPeerConnected and onPeerDisconnected are recorded for "
+        'peer_app/2, and still reach the host', () async {
+      // GLP-Spec appendix-guards, "Networking seam" (5fab8ac): peer_app(P, A)
+      // assigns app(D, N, V) of the app attested in the layer's session with
+      // P, unattested where that session is unattested, or none where the
+      // layer has no session with P; the kernel reads what the layer
+      // reported with onPeerConnected (GNA api.tex, Section 2.3).
+      final wire = _Wire();
+      final kp = generateKeyPair();
+      final network = _WireNetwork(kp, wire);
+      final agent = AgentRuntime(
+        agentId: 'a',
+        program: play,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: network,
+      );
+      final seen = <String>[];
+      agent.onPeerConnected = (pk, u, application) => seen.add('$u $application');
+      agent.onPeerDisconnected = (pk, u) => seen.add('$u down');
+      await agent.initialize();
+      final attested = generateKeyPair().pub;
+      final unattested = generateKeyPair().pub;
+      const app =
+          Application(developer: 'TEAM', name: 'app.grassroots', version: 7);
+
+      expect(agent.ctx!.peerSession(attested), isNull);
+      network.onPeerConnected!(attested, Underlay.wan, app);
+      network.onPeerConnected!(unattested, Underlay.pan, null);
+      expect(agent.ctx!.peerSession(attested)?.application, app);
+      expect(agent.ctx!.peerSession(unattested), isNotNull);
+      expect(agent.ctx!.peerSession(unattested)!.application, isNull,
+          reason: 'an unattested session');
+
+      network.onPeerDisconnected!(attested, Underlay.wan);
+      expect(agent.ctx!.peerSession(attested), isNull,
+          reason: 'no session over any underlay');
+      expect(seen, [
+        '${Underlay.wan} $app',
+        '${Underlay.pan} null',
+        '${Underlay.wan} down',
+      ]);
+    });
+
     test('the agent\'s key pair is the layer\'s', () {
       final wire = _Wire();
       final kp = generateKeyPair();

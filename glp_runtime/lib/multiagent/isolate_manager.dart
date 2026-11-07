@@ -816,8 +816,11 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
         config.mainPort.send(RouterKnownPeer(agentId, pk, known)),
   );
   final GlpNetwork network = simulation;
-  // Back the seam predicates (IGLP Definition Seam Predicates).
+  // Back the seam predicates (IGLP Definition Seam Predicates), peer_app/2
+  // by what the layer reports of each peer's session.
   ctx.network = network;
+  network.onPeerConnected = ctx.peerConnected;
+  network.onPeerDisconnected = ctx.peerDisconnected;
 
   // A destination, in a global name or in a message, is a key or a readable
   // name standing for one, and the seam resolves both to the one agent (IGLP

@@ -765,6 +765,46 @@ class MadContext {
 
   GlpNetwork? _placeEventHandlerNetwork;
 
+  /// What the layer reported with `onPeerConnected(pk, underlay,
+  /// application?)` (GNA api.tex, Section 2.3), by peer key hex: for each
+  /// underlay over which the peer is connected and not since reported
+  /// disconnected, the attested application, null for an unattested session.
+  /// Each map is in order of report, the latest last.  Backs `peer_app/2`
+  /// (GLP-Spec appendix-guards, "Networking seam", 5fab8ac; IGLP, Definition
+  /// "Seam Predicates", 4a334c2).  A session is the layer's and is proved
+  /// again after a restart ("A peer that restarts proves itself again before
+  /// it is reachable", GNA, Section 2.6), so the record is not part of the
+  /// agent's saved state.
+  final Map<String, Map<Underlay, Application?>> _peerSessions = {};
+
+  /// The layer reported [pk] connected over [underlay], with the attested
+  /// [application], null where the session is unattested.  Called by the host
+  /// that binds the network, from the layer's `onPeerConnected`.
+  void peerConnected(PubKey pk, Underlay underlay, Application? application) {
+    final sessions = _peerSessions.putIfAbsent(pk.hex, () => {});
+    sessions.remove(underlay); // the latest report last
+    sessions[underlay] = application;
+  }
+
+  /// The layer reported [pk] no longer reachable over [underlay].  Called by
+  /// the host that binds the network, from the layer's `onPeerDisconnected`.
+  void peerDisconnected(PubKey pk, Underlay underlay) {
+    final sessions = _peerSessions[pk.hex];
+    if (sessions == null) return;
+    sessions.remove(underlay);
+    if (sessions.isEmpty) _peerSessions.remove(pk.hex);
+  }
+
+  /// The layer's session with [pk] as reported, or null where it has none:
+  /// its attested application, null where the session is unattested.  Where
+  /// the peer is connected over more than one underlay, the application
+  /// reported last.
+  ({Application? application})? peerSession(PubKey pk) {
+    final sessions = _peerSessions[pk.hex];
+    if (sessions == null || sessions.isEmpty) return null;
+    return (application: sessions.values.last);
+  }
+
   /// Deliver [event] on [place]'s stream, serializer-fashion (Definition Seam
   /// Predicates): bind the current tail writer to `[event | E'?]`, retain the
   /// fresh writer as the new tail, and reactivate whatever suspended on the
