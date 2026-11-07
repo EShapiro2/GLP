@@ -64,7 +64,20 @@ num_info_of(Nm, Hd, C, Fs, Rs, num_info(Nm?, C?, Ls?, R?, Fi?)) :- ground(Hd?), 
 procedure det_locals(Constraint?, Args?, RoleSpecs?, Locs?, Locs).
 det_locals(C, Hd, Rs, Ls, R?) :- ground(C?), ground(Hd?), ground(Rs?), ground(Ls?) |
     con_conjuncts(C?, Cs),
-    det_each(Cs?, Hd?, Rs?, Ls?, R).
+    det_each(Cs?, Hd?, Rs?, Ls?, Ls1),
+    locs_len(Ls?, N0),
+    det_more(Ls1?, N0?, C?, Hd?, Rs?, R).
+procedure det_more(Locs?, Integer?, Constraint?, Args?, RoleSpecs?, Locs).
+det_more(Ls1, N0, C, Hd, Rs, R?) :- ground(Ls1?) |
+    locs_len(Ls1?, N1),
+    det_again(N1?, N0?, C?, Hd?, Rs?, Ls1?, R).
+%% Taken again until no variable more is local: a variable determined from one determined so is local too, as t2 = t1 + 1 with t1 = t + 1.
+procedure det_again(Integer?, Integer?, Constraint?, Args?, RoleSpecs?, Locs?, Locs).
+det_again(N1, N0, C, Hd, Rs, Ls, R?) :- N1? > N0? | det_locals(C?, Hd?, Rs?, Ls?, R).
+det_again(_, _, _, _, _, Ls, Ls?) :- otherwise | true.
+procedure locs_len(Locs?, Integer).
+locs_len([], 0).
+locs_len([_|Ls], N?) :- locs_len(Ls?, M), N := M? + 1.
 procedure con_conjuncts(Constraint?, Constraints).
 con_conjuncts(and(C1, C2), R?) :- con_conjuncts(C1?, R1), con_conjuncts(C2?, R2), app(R1?, R2?, R).
 con_conjuncts(C, [C?]) :- otherwise | true.
@@ -678,23 +691,23 @@ guard_indices([R|Rs], I, Gs?) :- ground(R?), integer(I?) |
 procedure keep_index(YesNo?, Integer?, Ints?, Ints).
 keep_index(yes, I, Gs, [I?|Gs?]).
 keep_index(no, _, Gs, Gs?).
-%% listed_ok(B, Gs, Ok): the base B, of the guarding roles Gs, is the schema's only guarding role, or is not a guarding role and is its first role.
+%% listed_ok(B, Gs, Ok): the base B, of the guarding roles Gs, is a guarding role, or, where the schema has one guarding role or none, its first role: "and the base of a schema is a guarding role or, where the schema has one guarding role or none, its first role, so that the person who proposes a part the schema determines, its proposer, the base, or, where the base is not a guard, its opener on the guard's request, finds the instances in their own state" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 procedure listed_ok(Integer?, Ints?, YesNo).
 listed_ok(B, Gs, R?) :- integer(B?), ground(Gs?) |
     mem(B?, Gs?, In),
     listed_ok1(In?, B?, Gs?, R).
 procedure listed_ok1(YesNo?, Integer?, Ints?, YesNo).
-listed_ok1(yes, _, [_], yes).
-listed_ok1(yes, _, [_, _|_], no).
-listed_ok1(yes, _, [], no).
-listed_ok1(no, B, _, R?) :- int_is(B?, 1, R).
+listed_ok1(yes, _, _, yes).
+listed_ok1(no, B, [], R?) :- int_is(B?, 1, R).
+listed_ok1(no, B, [_], R?) :- int_is(B?, 1, R).
+listed_ok1(no, _, [_, _|_], no).
 procedure int_is(Integer?, Integer?, YesNo).
 int_is(A, B, yes) :- A? =:= B? | true.
 int_is(_, _, no) :- otherwise | true.
 procedure listed_lines2(YesNo?, Constant?, Strings).
 listed_lines2(yes, _, []).
 listed_lines2(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a',
-        '%% listed role whose base is neither its only guarding role nor, not a guarding role, its first role:', T?]) :-
+        '%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:', T?]) :-
     ground(Nm?) | said('%% the schema', Nm?, T).
 
 procedure first_required_args(RoleSpecs?, Args).

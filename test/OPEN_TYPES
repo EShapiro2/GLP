@@ -1499,11 +1499,6 @@ programs/vglp/cva/childsafe/self.glp	open-type	Drawn
 programs/vglp/cva/coins/self.glp	open-decl	play_coins/4
 programs/vglp/cva/coins/self.glp	open-decl	trio/7
 programs/vglp/cva/coins/self.glp	open-type	Drawn
-programs/vglp/cva/compiler/cvac.glp	open-decl	entry_lines/2
-programs/vglp/cva/compiler/cvac.glp	open-decl	schema_lines/3
-programs/vglp/cva/compiler/cvac.glp	open-decl	schema_name/2
-programs/vglp/cva/compiler/cvac.glp	open-decl	text_schema/5
-programs/vglp/cva/compiler/cvac.glp	open-decl	text_schemas/2
 programs/vglp/cva/counter/self.glp	open-decl	pair/5
 programs/vglp/cva/counter/self.glp	open-decl	play_counter/3
 programs/vglp/cva/counter/self.glp	open-type	Drawn

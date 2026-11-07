@@ -178,6 +178,8 @@ for my $n (keys %cons) {
         for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { $named_at{$_}{$r} = 1 for atom_keys($a) } }
     }
     for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
+    my $more = 1;
+    while ($more) { $more = 0;
     for my $c (con_conjs($cons{$n})) {
         next unless $c->[0] eq "eq";
         my %vs = map { $_ => 1 } (expr_nvars($c->[1][0]), expr_nvars($c->[1][1]));
@@ -190,9 +192,12 @@ for my $n (keys %cons) {
         next unless @at == 1 && $at[0] == $i;
         (my $vn = $v) =~ s/^v//;
         next unless grep { $_ eq $vn } @{ $svars{$n} || [] };
+        next if $locals{$n}{$vn};
         $locals{$n}{$vn} = 1;
         $role_of{$v} = $i;
         $svars{$n} = [ grep { $_ ne $vn } @{ $svars{$n} } ];
+        $more = 1;
+    }
     }
 }
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
@@ -541,10 +546,13 @@ for my $f (@order) {
                                 @av == 1 or die "pragmas.sh: $f: the pragma \"$title\" names $x, whom no role of $S bears, and $S has " . scalar(@av) . " agent variables\n";
                                 return $av[0] + 1;
                             };
+                            # A listed role is asked by its name, each person of its list (vGLP 9ee6f87, Section 5.4, “Speech-act schemas as local specifications”: the guard set of a part is the people in its guarding roles, “those in a listed guarding role being those of L”), its place the role’s own.
+                            my %lpl;
+                            for my $j (1 .. scalar @{ $roles{$S} }) { $lpl{ $rnames{$S}[$j - 1] } //= $j if $roles{$S}[$j - 1]{listed} && defined $rnames{$S}[$j - 1] }
                             my %q;
                             for my $x (@{ $pr->{asked} }) {
-                                exists $rk{ $x->[0] } or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], whom no role of $S bears\n";
-                                my $place = $pp[ $rk{ $x->[0] } - 1 ];
+                                exists $rk{ $x->[0] } || exists $lpl{ $x->[0] } or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], whom no role of $S bears\n";
+                                my $place = exists $rk{ $x->[0] } ? $pp[ $rk{ $x->[0] } - 1 ] : $lpl{ $x->[0] };
                                 grep { $_ == $place } @g or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], who is in no guarding role of $S\n";
                                 !exists $q{$place} or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0] twice\n";
                                 $q{$place} = "[" . join(", ", map { $_->[0] eq "text" ? "text(" . q_string($_->[1]) . ")" : "person(" . $rank->($_->[1]) . ")" } @{ $x->[1] }) . "]";

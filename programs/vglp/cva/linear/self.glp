@@ -10,6 +10,10 @@
 %% and the variable of the added atom is the value the equality gives once t
 %% is bound (vGLP, Section 5.4, "Act schemas as local specifications": "or the
 %% constraint gives the variable finitely many values once those are bound").
+%% t1 and m, which the constraint determines from t, are local to p's role too,
+%% in no class term, p's machine computing them (vGLP 9ee6f87, Section 5.4:
+%% "and so is a variable the constraint determines from the variables local to
+%% that role and the variables the schema-binding binds"): climb(p), mark(p).
 %%
 %% play_linear: one agent, alice, her person scripted (../self.glp).  She
 %%   requests start, which adds started and level(0), and refuel(alice, 5),
@@ -24,7 +28,7 @@
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= start(Peer) ; refuel(Peer, Integer) ; climb(Peer, Integer) ; mark(Peer, Integer).
+Class    ::= start(Peer) ; refuel(Peer, Integer) ; climb(Peer) ; mark(Peer).
 Proposal ::= start(Peer) ; refuel(Peer, Integer).
 Request  ::= propose(Proposal) ; refresh.
 YesNo    ::= yes ; no.
