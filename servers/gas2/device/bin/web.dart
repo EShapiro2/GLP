@@ -15,7 +15,8 @@
 // Environment: PORT (5201); HOST (the loopback); DATA (./gas2web-data); TREE, the
 // device tree (tools/device_tree.py), or GAS2_DATA, the GAS2 site's data, whose live
 // build's device tree is taken; WWW (the device's page, ../web); RELAY_URL (talmonlab's
-// relay); LIBSODIUM_PATH; MAX (25); IDLE (15).
+// relay); GAS2_SITE, the GAS2 site whose current mini-apps are installed (none by
+// default); LIBSODIUM_PATH; MAX (25); IDLE (15).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -78,7 +79,7 @@ Future<Person> open(String h) async {
     dir: '$dir/relay',
     relayUrl: relayUrl,
   )..relayOnly = true;
-  final host = SuperHost(tree: own.path, keyPair: kp, network: relay, dataDir: dir);
+  final host = SuperHost(tree: own.path, keyPair: kp, network: relay, dataDir: dir, site: env['GAS2_SITE']);
   final page = PageServer(host: host, www: www, addPerson: (k) => relay.addPerson(PubKey.fromHex(k)))
     ..extra = {'hosted': true}
     ..reset = () async {

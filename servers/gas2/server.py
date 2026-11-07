@@ -292,6 +292,29 @@ def made(key):
     return None
 
 
+def live_app(app):
+    """A mini-app of the live build as a device installs it: so that two devices
+    installing it run one source, whichever build their app came with."""
+    s = state['live'] or live_slot()
+    if not s:
+        return None
+    root = os.path.join(slot(s), 'out', 'device', 'programs')
+    try:
+        idx = json.load(open(os.path.join(root, 'gas2_apps.json'), encoding='utf-8'))
+    except OSError:
+        return None
+    e = next((x for x in idx if x['app'] == app), None)
+    d = os.path.join(root, 'apps', app)
+    if not e or not os.path.isdir(d):
+        return None
+    files = {}
+    for n in sorted(os.listdir(d)):
+        if re.fullmatch(r'[a-z0-9_]+\.(glp|vglp|json)', n):
+            with open(os.path.join(d, n), encoding='utf-8') as f:
+                files[n] = f.read()
+    return dict(e, files=files)
+
+
 def source(cid):
     s, data = live_data()
     c = next((x for x in (data or {}).get('contracts', []) if x['id'] == cid), None)
@@ -354,6 +377,10 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             r = made(m.group(1))
             return self.send(200, r) if r else self.send(404, {'error': 'no such app'})
+        m = re.fullmatch(r'/apps/(gas2_[a-z0-9_]+)\.json', p)
+        if m:
+            r = live_app(m.group(1))
+            return self.send(200, r) if r else self.send(404, {'error': 'no such mini-app'})
         m = re.fullmatch(r'/made/([0-9a-f]{16})\.json', p)
         if m:
             return self.file(os.path.join(MADE, m.group(1), 'app.json'))

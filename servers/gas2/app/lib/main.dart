@@ -104,7 +104,7 @@ class _ShellState extends State<Shell> {
         app: 'gas2',
         dir: '$home/relay',
       )..relayOnly = near == null;
-      final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home)
+      final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home, site: 'https://talmonlab.bgu.ac.il/gas2')
         ..onNear = relay.putKnownPeer;
       final server = PageServer(host: host, www: '$home/bundle/web', addPerson: (k) => relay.addPerson(PubKey.fromHex(k)));
       // Start over: the network stopped, everything the app keeps deleted, and the

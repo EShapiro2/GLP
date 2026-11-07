@@ -2,6 +2,7 @@
 //
 //   dart run bin/gas2.dart --tree <programs> [--data <dir>] [--port 8301]
 //                          [--relay https://talmonlab.bgu.ac.il/gasrelay]
+//                          [--site https://talmonlab.bgu.ac.il/gas2 | none]
 //
 // The tree is a copy of GLP's programs/ that GAS2 prepared (tools/device_tree.py).
 // The person's key pair is made at first start and kept in <data>/key.json.  The
@@ -32,6 +33,7 @@ Future<void> main(List<String> args) async {
   final data = _opt(args, 'data') ?? 'gas2-data';
   final port = int.parse(_opt(args, 'port') ?? '8301');
   final relayUrl = _opt(args, 'relay') ?? defaultRelay;
+  final site = _opt(args, 'site') ?? 'https://talmonlab.bgu.ac.il/gas2';
   final www = _opt(args, 'www') ?? '${File(Platform.script.toFilePath()).parent.parent.path}/web';
   final sodium = await loadSodium();
   final kp = keyPairIn(sodium, data);
@@ -48,7 +50,7 @@ Future<void> main(List<String> args) async {
   final own = Directory('$data/tree');
   if (own.existsSync()) own.deleteSync(recursive: true);
   await copyTree(Directory(tree), own);
-  final host = SuperHost(tree: own.path, keyPair: kp, network: relay, dataDir: data);
+  final host = SuperHost(tree: own.path, keyPair: kp, network: relay, dataDir: data, site: site == 'none' ? null : site);
   final server = PageServer(host: host, www: www, addPerson: (k) => relay.addPerson(PubKey.fromHex(k)));
   // Start over: everything in the data directory deleted, and GAS2 ended with code 3,
   // on which run.sh starts it again (a new key pair is made at the start)

@@ -32,7 +32,8 @@ class MiniApp {
   final String app; // gas2_<id>
   final String id; // the contract
   final String title;
-  final Map<String, Object?> shapes;
+  Map<String, Object?> shapes;
+  String version = ''; // its files, as a short digest: two who play must have the same
   int? n; // its number in the harness, once installed
   bool preparing = false; // being certified, for its install
   final Map<int, Object?> draws = {}; // construct id -> draw(Id, W, V) as JSON
@@ -45,7 +46,12 @@ class SuperHost {
   final GlpNetwork network;
   final String dataDir;
 
-  SuperHost({required this.tree, required this.keyPair, required this.network, required this.dataDir});
+  /// The GAS2 site, whose live build's mini-apps are installed where it answers
+  /// (/apps/<app>.json): two devices installing a mini-app then run one source,
+  /// whichever build their app came with.
+  final String? site;
+
+  SuperHost({required this.tree, required this.keyPair, required this.network, required this.dataDir, this.site});
 
   String get me => keyPair.pub.hex;
   String get core => '$tree/social/graph/core';
@@ -109,6 +115,7 @@ class SuperHost {
       apps.add(MiniApp(m['app'] as String, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
       // certified at its first install (_certify); one certified before is put in place
       _kept(m['app'] as String);
+      apps.last.version = _digest('$tree/apps/${m['app']}').padLeft(6, '0').substring(0, 6);
     }
   }
 
@@ -161,6 +168,39 @@ class SuperHost {
     File('$dataDir/certified/$app.stamp').writeAsStringSync('$me ${_digest(src)}');
   }
 
+  /// The site's current version of [m], where the site answers and it differs from
+  /// the one here; the one here otherwise.
+  Future<void> _fromSite(MiniApp m) async {
+    final base = site;
+    if (base == null || !m.app.startsWith('gas2_')) return;
+    final c = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+    try {
+      final r = await (await c.getUrl(Uri.parse('$base/apps/${m.app}.json'))).close().timeout(const Duration(seconds: 20));
+      if (r.statusCode != 200) return;
+      final j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
+      final files = (j['files'] as Map).cast<String, String>();
+      final d = Directory('$tree/apps/${m.app}');
+      final same = files.entries.every((e) {
+        final f = File('${d.path}/${e.key}');
+        return f.existsSync() && f.readAsStringSync() == e.value;
+      });
+      if (same) return;
+      for (final f in d.listSync().whereType<File>()) {
+        f.deleteSync();
+      }
+      for (final e in files.entries) {
+        if (RegExp(r'^[a-z0-9_]+\.(glp|vglp|json)$').hasMatch(e.key)) File('${d.path}/${e.key}').writeAsStringSync(e.value);
+      }
+      m.shapes = (j['shapes'] as Map).cast<String, Object?>();
+      m.version = _digest(d.path).padLeft(6, '0').substring(0, 6);
+      _note('${m.title}: the site\'s current version, ${m.version}');
+    } on Object catch (e) {
+      log.add('site: ${m.app}: $e'); // offline: the version the app came with
+    } finally {
+      c.close();
+    }
+  }
+
   /// Add a mini-app made by GAS2's app maker, from its link: the maker's page
   /// (…/maker.html?k=<key>) or its file (…/made/<key>.json).
   Future<void> addApp(String link) async {
@@ -182,7 +222,8 @@ class SuperHost {
       final f = File('$dataDir/made/$app.json');
       f.parent.createSync(recursive: true);
       f.writeAsStringSync(body);
-      apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
+      apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>())
+        ..version = _digest('$tree/apps/$app').padLeft(6, '0').substring(0, 6));
       _note('added ${m['id']}, ${m['title']}, from the app maker');
     } catch (e) {
       _note('could not add the mini-app: $e');
@@ -198,7 +239,8 @@ class SuperHost {
     final fs = Directory(dir).listSync(recursive: true).whereType<File>().toList()
       ..sort((a, b) => a.path.compareTo(b.path));
     for (final f in fs) {
-      for (final b in [...utf8.encode(f.path.substring(dir.length)), ...f.readAsBytesSync()]) {
+      // the names with '/' on every system, so that one mini-app has one digest everywhere
+      for (final b in [...utf8.encode(f.path.substring(dir.length).replaceAll('\\', '/')), ...f.readAsBytesSync()]) {
         h = (h * 31 + b) & 0x3fffffff;
       }
     }
@@ -369,6 +411,7 @@ class SuperHost {
     m.preparing = true;
     _changed();
     try {
+      await _fromSite(m);
       await _certify(app);
     } catch (e) {
       _note('could not prepare ${m.title}: $e');
@@ -447,6 +490,7 @@ class SuperHost {
               'title': m.title,
               'installed': m.n != null,
               'preparing': m.preparing,
+              'version': m.version,
               'draws': {for (final e in m.draws.entries) '${e.key}': e.value},
               'shapes': m.shapes,
             }
