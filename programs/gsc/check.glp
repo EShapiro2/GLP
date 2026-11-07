@@ -56,7 +56,7 @@
 
 imported procedure unobstructed#intro_result_env(NContract?, Preds?, Preds?, Faults).
 imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
-imported procedure prov#traceable(Contract?, Preds).
+imported procedure prov#traceable_c(Contract?, Constraints?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
 imported procedure volition#volition_faults(Contract?, NContract?, Preds?, Faults).
 imported procedure wards#wards(Contract?, Preds?, Wards).
@@ -78,7 +78,8 @@ untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 
 procedure check_contract(Contract?, NContract?, Preds?, Preds?, Verdict).
 check_contract(C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?) |
-    prov # traceable(C?, E),
+    ncontract_constraints(NC?, Cns),
+    prov # traceable_c(C?, Cns?, E),
     contract_verdict(C?, NC?, Rf?, Ev?, E?, V).
 
 % E is read by two conjuncts, so it is taken ground in a head of its own.
@@ -879,8 +880,8 @@ check_variant(Nm, B, V?) :- ground(Nm?), ground(B?) |
 
 % The predicates of traceable provenance, for inspection: the largest set
 % having it (def:grounded).
-procedure traceable_in(Contract?, Preds).
-traceable_in(C, E?) :- ground(C?) | prov # traceable(C?, E).
+procedure traceable_in(Contract?, Constraints?, Preds).
+traceable_in(C, Cns, E?) :- ground(C?), ground(Cns?) | prov # traceable_c(C?, Cns?, E).
 
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- ground(Nm?) |
@@ -890,12 +891,16 @@ traceable_of(Nm, E?) :- ground(Nm?) |
 exported procedure traceable_preds(NDeclared?, Preds).
 traceable_preds(D, E?) :- ground(D?) |
     plain_decl(D?, PD),
-    traceable_pd(PD?, E).
+    ndecl_schemas(D?, NC),
+    ncontract_constraints(NC?, Cns),
+    traceable_pd(PD?, Cns?, E).
 
-procedure traceable_pd(Declared?, Preds).
-traceable_pd(D, E?) :- ground(D?) |
+% Each schema's constraint is read with its body (def:grounded, GSC 7324ec7),
+% so the constraints of the contract as written go beside its plain form.
+procedure traceable_pd(Declared?, Constraints?, Preds).
+traceable_pd(D, Cns, E?) :- ground(D?), ground(Cns?) |
     decl_schemas(D?, C),
-    traceable_in(C?, E).
+    traceable_in(C?, Cns?, E).
 
 exported procedure traceable_variant(Constant?, WContract?, Preds).
 traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |

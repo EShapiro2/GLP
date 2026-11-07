@@ -3592,6 +3592,15 @@ nsch_constraint(cschema(_, _, _, _), true).
 nsch_constraint(nschema(_, _, C, _), C?).
 nsch_constraint(qschema(_, _, _, C, _, _, _), C?).
 
+% The constraints of a contract's schemas as written, in their order, which
+% its plain form drops (plain_schema) and traceable provenance reads
+% (def:grounded, GSC 7324ec7).
+procedure ncontract_constraints(NContract?, Constraints).
+ncontract_constraints([], []).
+ncontract_constraints([S|Ss], [C?|R?]) :- ground(S?), ground(Ss?) |
+    nsch_constraint(S?, C),
+    ncontract_constraints(Ss?, R).
+
 procedure nrs_guard(NRoleSpec?, Guard).
 nrs_guard(rs(G, _, _, _, _), G?).
 nrs_guard(crs(_, G, _, _, _, _), G?).

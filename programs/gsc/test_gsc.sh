@@ -2085,9 +2085,10 @@ check "an equality of name terms is compiled" '=\langle' "$(compiled_in e_n "$E_
 # u's being named; a disjunction both disjuncts of which name it; exists(Xs,
 # A and phi) with A and phi naming it and Xs not binding it.  tell adds
 # told(Alice, Dave), Dave an agent variable no atom it requires names, so
-# told is traced only where its formula F names Dave.  Each formula is read
-# alone, as "a safe formula of B" says: a constraint u = v that is a body
-# item of its own names nothing beside a literal of the body.
+# told is traced only where its formula F names Dave.  The body is read as
+# one conjunction, of its literals, its safe formulas and its constraint
+# (def:grounded, GSC 7324ec7): a constraint u = v that is a body item of its
+# own, or the schema's constraint, names Dave beside a literal naming Carol.
 tell_with() { gkk_with "sas(tell, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Dave'], [atom(told, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), $1], true, ['Alice'])"; }
 SF_OR=$(tell_with "or(atom(knows, ['Bob', 'Dave']), atom(knows, ['Alice', 'Dave']))")
 SF_OR1=$(tell_with "or(atom(knows, ['Bob', 'Dave']), atom(identity, ['Bob']))")
@@ -2120,8 +2121,8 @@ check_eq "and Carol = Dave, written the other way" \
          "V = syntactically_grassroots" "$(sf 6)"
 check_eq "Dave != Carol beside a conjunct naming Carol names nothing" \
          "V = not_grassroots([untraceable([told])])" "$(sf 7)"
-check_eq "Dave = Carol as a safe formula of its own, beside a literal naming Carol, names nothing: a safe formula is read alone" \
-         "V = not_grassroots([untraceable([told])])" "$(sf 8)"
+check_eq "Dave = Carol as a safe formula of its own, beside a literal naming Carol, names Dave: the body is one conjunction (GSC 7324ec7)" \
+         "V = syntactically_grassroots" "$(sf 8)"
 check_eq "the guide's disjunction, an atom naming Dave or Carol = Dave beside an atom naming Carol, traces told" \
          "V = syntactically_grassroots" "$(sf 9)"
 check_eq "exists c (knows(Bob, c) and knows(Bob, Dave)) names Dave, c not binding it" \
@@ -2147,6 +2148,32 @@ check_eq "a speech-act variable named in both disjuncts by atoms of Phi_E traces
          "V = not_grassroots([untraceable([held])])" "$(sf 1)"
 check_eq "and named in one disjunct only, item is untraceable" \
          "V = not_grassroots([untraceable([held, item])])" "$(sf 2)"
+# The body read as one conjunction with its constraint (def:grounded, GSC
+# 7324ec7): eq(Dave, Carol) as the schema's constraint, beside the literal
+# knows(Bob, Carol), names Dave; ne names nothing; and u = v names a
+# speech-act variable as it names a base, y = y' beside an atom naming y'
+# naming y.
+tell_cn() { gkk_with "sas(tell, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Dave'], [atom(told, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), $1], $2, ['Alice'])"; }
+CN_EQ=$(tell_cn "atom(knows, ['Bob', 'Carol'])" "eq('Dave', 'Carol')")
+CN_NE=$(tell_cn "atom(knows, ['Bob', 'Carol'])" "ne('Dave', 'Carol')")
+CN_NONE=$(tell_cn "atom(identity, ['Bob'])" "eq('Dave', 'Carol')")
+fwd_cn() { gkk_with "$SVX, sas(fwd, ['Alice', 'Bob'], [x, y], [atom(item, ['Alice', x])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(held, ['Bob', 'Bob', x]), $1], $2, ['Alice'])"; }
+SY_EQ=$(fwd_cn "atom(heard, ['Bob', y])" "eq(x, y)")
+SY_NE=$(fwd_cn "atom(heard, ['Bob', y])" "ne(x, y)")
+SY_BODY=$(fwd_cn "atom(heard, ['Bob', y]), eq(y, x)" true)
+out=$(run "check($CN_EQ, V)." "check($CN_NE, V)." "check($CN_NONE, V)." "check($SY_EQ, V)." "check($SY_NE, V)." "check($SY_BODY, V).")
+check_eq "the constraint Dave = Carol beside the literal knows(Bob, Carol) names Dave: the body is read with its constraint" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "the constraint Dave != Carol names nothing" \
+         "V = not_grassroots([untraceable([told])])" "$(sf 2)"
+check_eq "the constraint Dave = Carol with nothing naming Carol names nothing" \
+         "V = not_grassroots([untraceable([told])])" "$(sf 3)"
+check_eq "x = y in the constraint beside heard(Bob, y), an atom of Phi_E, names the speech-act variable x, and item is traced" \
+         "V = not_grassroots([untraceable([held])])" "$(sf 4)"
+check_eq "x != y names nothing, and item is untraceable" \
+         "V = not_grassroots([untraceable([held, item])])" "$(sf 5)"
+check_eq "y = x as a body item of its own, beside heard(Bob, y), names x" \
+         "V = not_grassroots([untraceable([held])])" "$(sf 6)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
