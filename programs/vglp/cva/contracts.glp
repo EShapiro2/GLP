@@ -235,6 +235,19 @@
 %%                            | sum of w over wt(w) at p >= min(2 floor(d), 100)
 %%
 %% start is its introductory act; fill and heavy are unguarded, opened by p, d local to p's role and bound by the cap(d) p's state holds from startup; the count of tok counts each copy, so p's machine takes fill until it holds d copies, and the sum of the weights given at deployment decides heavy.  Section VG runs its agent with no person.
+%%
+%% shares is a contract with a quantified conjunct whose instances the attempt names, binding no listed role and with a conditional literal at a role other than the one holding its anchor, as GCC's appoint's "every person Alice lists as appointed, Bob lists too" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction"):
+%%
+%%   start(p?)             :  at p  not started, +started
+%%   acquaint(p?, q?)      :  at p  started, not knows(q), +knows(q); at q likewise
+%%   note(p? ; x)          :  at p  started, knows(x), not noted(x), +noted(x)
+%%   share(p?, q?)         :  at p  started, knows(q); at q  started, knows(p), not shared(p), +shared(p)
+%%                            and forall x (noted(x) at p -> seen(x) at q)
+%%   owe(p? ; x, k)        :  at p  started, knows(x), not owes(x, k), +owes(x, k)
+%%   pass(p?, q?)          :  at p  started, knows(q); at q  started, knows(p), not passed(p), +passed(p)
+%%                            and forall x, k (owes(x, k) at p -> owed(x, k) at q)
+%%
+%% share's conjunct is local to its base, p, the role holding its anchor: p's machine finds the persons it has noted, the attempt names them, share(p, q, L), and q sees each.  pass's conjunct binds two variables, a person and a number, an instance an assignment of both (vGLP 2f1dc92; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC), each i(x, k) in the class term, pass(p, q, L).  Section VG runs their printed procedures on given states.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
@@ -306,6 +319,7 @@ contract_named(days, C?) :- days(C).
 contract_named(linear, C?) :- linear(C).
 contract_named(forms, C?) :- forms(C).
 contract_named(counts, environment([cap, wt], C?)) :- counts(C).
+contract_named(shares, C?) :- shares(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -333,6 +347,7 @@ introduction_named(days, no_introduction).
 introduction_named(linear, no_introduction).
 introduction_named(forms, no_introduction).
 introduction_named(counts, no_introduction).
+introduction_named(shares, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -437,6 +452,13 @@ pragmas_named(forms, pragmas([list('"Blocks"', [blocked])],
      act(arm, '"Arm"', [], none, '"Blocks"', by([1]))])).
 pragmas_named(counts, pragmas([list('"Tokens"', [tok]), list('"Weights"', [wt])],
     [act(start, '"Start"', [], none, '"Tokens"', by([1]))])).
+pragmas_named(shares, pragmas([list('"Notes"', [noted]), list('"Seen"', [seen])],
+    [act(start, '"Start"', [], none, '"Notes"', by([1])),
+     act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
+     act(note, '"Note"', [], none, '"Notes"', by([1])),
+     act(share, '"Share"', [], said([[], [person(1), text('" shares the persons they noted."')]]), '"Notes"', by([1])),
+     act(owe, '"Owe"', ['"amount"'], none, '"Notes"', by([1])),
+     act(pass, '"Pass"', [], said([[], [person(1), text('" passes on what they owe."')]]), '"Notes"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -717,6 +739,27 @@ counts([schema(start, [],
           ge(sum([num(w)], role(1), atom(wt, [num(w)]), fcons(true), num(w)), fn(min, [mul(fn(floor, [num(d)]), num(2)), num(100)])),
           [rs(unguarded, [atom(heavy, [])], [], [atom(cap, [num(d)])], [atom(heavy, [])])],
           [], [])]).
+
+procedure shares(Contract).
+shares([schema(start, [],
+          [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
+        schema(acquaint, [],
+          [rs(guarded, [atom(knows, [role(2)])], [], [atom(started, [])], [atom(knows, [role(2)])]),
+           rs(guarded, [atom(knows, [role(1)])], [], [atom(started, [])], [atom(knows, [role(1)])])]),
+        schema(note, [pvar(x)],
+          [rs(guarded, [atom(noted, [pvar(x)])], [], [atom(started, []), atom(knows, [pvar(x)])], [atom(noted, [pvar(x)])])]),
+        qschema(share, [], [pvar(x)], true,
+          [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
+           rs(guarded, [atom(shared, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(shared, [role(1)])])],
+          [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [hm(2, atom(seen, [pvar(x)]))], [], [fa(role(2), atom(seen, [pvar(x)]))])],
+          []),
+        schema(owe, [pvar(x), num(k)],
+          [rs(guarded, [atom(owes, [pvar(x), num(k)])], [], [atom(started, []), atom(knows, [pvar(x)])], [atom(owes, [pvar(x), num(k)])])]),
+        qschema(pass, [], [pvar(x), num(k)], true,
+          [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []),
+           rs(guarded, [atom(passed, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(passed, [role(1)])])],
+          [conjunct([pvar(x), num(k)], 1, atom(owes, [pvar(x), num(k)]), fcons(true), [hm(2, atom(owed, [pvar(x), num(k)]))], [], [fa(role(2), atom(owed, [pvar(x), num(k)]))])],
+          [])]).
 
 procedure forms(Contract).
 forms([schema(start, [],

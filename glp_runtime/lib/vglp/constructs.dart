@@ -125,8 +125,8 @@
 // unions, and Stream or List as the whole type or as an argument of a tuple,
 // never under another Stream or List, and a Stream only at a position the
 // person writes; a named type in it is recursive only if it has no mode
-// inversion, and it has no type parameter at a position the person
-// writes").  Refused, each naming the type, over the whole interactive type,
+// inversion, and it has no type parameter" (vGLP 2f1dc92, which dropped "at
+// a position the person writes")).  Refused, each naming the type, over the whole interactive type,
 // a structure the program writes included, one holding no question too
 // (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2; vGLP #8 Cowork,
 // 2026-10-11 15:47 UTC, items 1 and 3; _checkInteractive): a stream or a
@@ -1348,9 +1348,8 @@ class _Generator {
   /// built, tuples and unions, and Stream or List as the whole type or as an
   /// argument of a tuple, never under another Stream or List, and a Stream
   /// only at a position the person writes; a named type in it is recursive
-  /// only if it has no mode inversion, and it has no type parameter at a
-  /// position the person writes" (vGLP 092c9fe, Definition "Volitional
-  /// Procedure, Interactive Type").  Each is refused over the whole
+  /// only if it has no mode inversion, and it has no type parameter" (vGLP
+  /// 2f1dc92, Definition "Volitional Procedure, Interactive Type").  Each is refused over the whole
   /// interactive type, a structure the program writes included, one holding
   /// no question too (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2;
   /// vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 1: "The flat refusals hold
@@ -1434,12 +1433,13 @@ class _Generator {
         }
       }
       for (final a in _nodeAlts(n)) {
-        if (a is _LeafAlt && a.leaf == _Leaf.param && n.person) {
+        // "it has no type parameter" (vGLP 2f1dc92), at a position either
+        // writes.
+        if (a is _LeafAlt && a.leaf == _Leaf.param) {
           throw CompileError(
-              'The interactive type ${it.written} is refused: the person '
+              'The interactive type ${it.written} is refused: ${who(n)} '
               'writes a position of type ${a.name}, a type parameter, and an '
-              'interactive type has "no type parameter at a position the '
-              'person writes" ($_definition)',
+              'interactive type "has no type parameter" ($_definition)',
               it.line, it.column, phase: 'analyzer');
         }
         if (a is _LeafAlt && a.leaf == _Leaf.any) {
@@ -2530,9 +2530,9 @@ class _Generator {
         throw StateError('The type _ where the person writes, which '
             '_checkInteractive refuses');
       case _Leaf.param:
-        // "no type parameter at a position the person writes" (vGLP,
-        // Definition "Volitional Procedure, Interactive Type"): refused
-        // before its widget is drawn (_checkInteractive).
+        // "it has no type parameter" (vGLP 2f1dc92, Definition "Volitional
+        // Procedure, Interactive Type"): refused before its widget is drawn
+        // (_checkInteractive).
         throw StateError('A type parameter where the person writes, which '
             '_checkInteractive refuses');
     }
