@@ -58,6 +58,14 @@ class SuperHost {
   final List<String> friendRequests = [];
   final List<List<String>> introRequests = [];
   final List<String> log = [];
+
+  /// The people near, over Bluetooth or the local network, where the device has
+  /// those (the app on a phone): key -> the underlays over which they are connected.
+  final Map<String, Set<String>> nearby = {};
+
+  /// Told of each person found or connected near, by key (the relay is told, so
+  /// that it reaches them when they go away).
+  void Function(PubKey pk)? onNear;
   final List<String> notes = [];
   bool trusted = false;
   String status = 'starting';
@@ -216,6 +224,22 @@ class SuperHost {
         if (log.length > 400) log.removeAt(0);
       };
       agent.onUserOutput = _shown;
+      agent.onPeerDiscovered = (pk, u) {
+        if (pk.hex == me) return;
+        nearby.putIfAbsent(pk.hex, () => {});
+        onNear?.call(pk);
+        _changed();
+      };
+      agent.onPeerConnected = (pk, u, _) {
+        if (pk.hex == me) return;
+        nearby.putIfAbsent(pk.hex, () => {}).add(u.name);
+        onNear?.call(pk);
+        _changed();
+      };
+      agent.onPeerDisconnected = (pk, u) {
+        nearby[pk.hex]?.remove(u.name);
+        _changed();
+      };
       status = 'starting the super-app';
       _changed();
       await agent.initialize();
@@ -372,6 +396,9 @@ class SuperHost {
         'friends': friends,
         'friendRequests': friendRequests,
         'introRequests': introRequests,
+        'nearby': [
+          for (final e in nearby.entries) {'key': e.key, 'over': e.value.toList()}
+        ],
         'notes': notes.reversed.take(30).toList(),
         if (Platform.environment['GAS2_DEBUG'] != null) 'log': log.reversed.take(60).toList(),
         'apps': [

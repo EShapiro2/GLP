@@ -10,7 +10,7 @@ name: GAS2 apps
 on:
   push:
     branches: [GAS2]
-    paths: ['servers/gas2/**', 'glp_runtime/lib/**', 'programs/**', '.github/workflows/gas2-apps.yml']
+    paths: ['servers/gas2/**', 'glp_runtime/lib/**', 'programs/**', 'networking/**', '.github/workflows/gas2-apps.yml']
   workflow_dispatch:
 permissions:
   contents: write

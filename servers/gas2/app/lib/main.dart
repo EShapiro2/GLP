@@ -7,6 +7,11 @@
 // relay, and shows the page, served on the loopback, in a web view.  The person's
 // key pair is made at first start and kept with the app's files.
 //
+// On a phone the super-app's network is GNA's layer, Bluetooth and the local network,
+// first contact Open on both, as GAS's phone has it, under talmonlab's relay for people
+// not near; where the layer does not start (no Bluetooth, permissions refused), the
+// relay alone.
+//
 // The page's "Copy" posts the key to the app, which puts it on the clipboard (a web
 // view's own clipboard is not always the system's).
 import 'dart:async';
@@ -14,6 +19,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' show Ed25519;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gas2_device/host.dart';
@@ -21,7 +27,10 @@ import 'package:gas2_device/offline_network.dart';
 import 'package:gas2_device/page_server.dart';
 import 'package:gas2_device/relay_network.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:grassroots_networking/grassroots_networking.dart' as gn;
+import 'package:grassroots_networking_glue/grassroots_glp_network.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'view.dart';
@@ -86,14 +95,16 @@ class _ShellState extends State<Shell> {
         kp = (pub: PubKey.fromList(k.publicKey), priv: k.secretKey.extractBytes());
         keyFile.writeAsStringSync(jsonEncode({'publicKey': kp.pub.hex, 'privateKey': base64Encode(kp.priv)}));
       }
+      final near = await _near(kp, sodium);
       final relay = RelayGlpNetwork(
-        inner: OfflineGlpNetwork(sodium: sodium, me: kp.pub, privateKey: kp.priv),
+        inner: near == null ? OfflineGlpNetwork(sodium: sodium, me: kp.pub, privateKey: kp.priv) : GrassrootsGlpNetwork(near),
         sodium: sodium,
         privateKey: kp.priv,
         app: 'gas2',
         dir: '$home/relay',
-      )..relayOnly = true;
-      final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home);
+      )..relayOnly = near == null;
+      final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home)
+        ..onNear = relay.putKnownPeer;
       final server = PageServer(host: host, www: '$home/bundle/web', addPerson: (k) => relay.addPerson(PubKey.fromHex(k)));
       final port = await server.start(0);
       relay.setOn(true);
@@ -101,8 +112,38 @@ class _ShellState extends State<Shell> {
           background: _bg, onMessage: (m) => unawaited(_native(m)), onLoaded: () {});
       setState(() => web = w);
       await host.start();
+      // discovery and connections begin once the agent is bound to the layer
+      if (near != null) {
+        try {
+          await near.start();
+        } catch (e) {
+          host.notes.add('Bluetooth and the local network did not start: $e');
+        }
+      }
     } catch (e) {
       setState(() => status = 'Could not start: $e');
+    }
+  }
+
+  /// GNA's layer over Bluetooth and the local network, under the person's key; null
+  /// where it does not come up.
+  Future<gn.GrassrootsNetwork?> _near(({PubKey pub, Uint8List priv}) kp, SodiumSumo sodium) async {
+    if (!(Platform.isAndroid || Platform.isIOS || Platform.isMacOS)) return null;
+    try {
+      final id = await gn.GrassrootsIdentity.create(keyPair: await Ed25519().newKeyPairFromSeed(kp.priv.sublist(0, 32)));
+      final layer = gn.GrassrootsNetwork(
+        identity: id,
+        underlays: {gn.Underlay.pan, gn.Underlay.lan},
+        store: Store<gn.AppState>(gn.appReducer, initialState: gn.AppState()),
+        sodium: sodium,
+      );
+      await layer.initialize();
+      await layer.pan?.setTrustLevel(gn.ColdCallTrustLevel.open);
+      await layer.lan?.setTrustLevel(gn.ColdCallTrustLevel.open);
+      return layer;
+    } catch (e) {
+      debugPrint('GAS2: no Bluetooth or local network: $e');
+      return null;
     }
   }
 

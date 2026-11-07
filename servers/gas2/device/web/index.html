@@ -149,7 +149,7 @@ function render() {
     h += `<div class="card" style="display:grid;gap:10px">
       ${step(1, S.trusted, S.trusted ? 'Your compiler is trusted' : `Trust your own compiler: the mini-apps here are certified under your key. <button class="b" onclick="act({op:'trust'})">Trust</button>`)}
       ${step(2, installed.length > 0, 'Install a mini-app, below')}
-      ${step(3, S.friends.length > 0, 'Add a person by their key, and they say yes')}
+      ${step(3, S.friends.length > 0, 'Add a person near you, or by their key, and they say yes')}
     </div>`;
   }
   h += `<h2>You</h2><div class="card"><div class="small muted">Your key; give it to a person to add you</div>
@@ -160,6 +160,12 @@ function render() {
   for (const [by, k] of S.introRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(by))}</b> introduces <b>${esc(nm(k))}</b></span><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false})">No</button></div>`;
   for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b>${names[k] ? ` <span class="mono muted">${esc(short(k))}</span>` : ''}</span><button class="b alt" onclick="rename('${k}')">Name</button></div>`;
   if (!S.friends.length && !S.friendRequests.length) h += `<div class="empty">No one yet.</div>`;
+  // near, over Bluetooth or the local network (the app on a phone): added with one tap
+  const near = (S.nearby || []).filter(p => !S.friends.includes(p.key));
+  if (near.length) {
+    h += `<div class="small muted" style="margin-top:8px">Near you</div>`;
+    for (const p of near) h += `<div class="row"><span class="grow"><b>${esc(nm(p.key))}</b> <span class="muted small">${esc(p.over.length ? 'over ' + p.over.join(', ') : 'seen')}</span></span><button class="b alt" onclick="addNear('${p.key}')">Add</button></div>`;
+  }
   h += `<div class="row"><input id="add" placeholder="A person's key" autocomplete="off"><button class="b" onclick="addPerson()">Add</button></div></div>`;
   h += `<h2>Mini-apps</h2><div class="card">`;
   for (const a of S.apps) {
@@ -181,6 +187,7 @@ function copyKey() {
 // the device's back button: out of a mini-app
 window.gas2Back = () => { if (open) closeApp(); };
 function rename(k) { const n = prompt('A name for ' + short(k), names[k] || ''); if (n !== null) { names[k] = n.trim(); saveNames(); draw(); } }
+async function addNear(k) { await api('api/add', {method: 'POST', body: JSON.stringify({key: k})}); }
 async function addPerson() {
   const k = $('#add').value.trim().toLowerCase();
   const r = await (await api('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();

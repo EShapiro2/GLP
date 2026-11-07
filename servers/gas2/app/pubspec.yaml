@@ -15,6 +15,16 @@ dependencies:
   # GAS2's device: the super-app's host, its page server, the relay.
   gas2_device:
     path: ../device
+  # GNA's networking layer (Bluetooth, the local network) and its glue, the
+  # runtime's network interface over it.
+  grassroots_networking:
+    path: ../../../networking
+  grassroots_networking_core:
+    path: ../../../networking/core
+  grassroots_networking_glue:
+    path: ../../../networking/glue
+  redux: ^5.0.0
+  cryptography: ^2.9.0
   sodium_libs: ^3.4.4+1
   path_provider: ^2.1.2
   webview_flutter: ^4.10.0
