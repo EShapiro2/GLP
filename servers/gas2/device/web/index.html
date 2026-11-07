@@ -58,6 +58,12 @@ input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--line);
 .app .who { display: flex; gap: 3px; min-height: 22px; }
 .app .who .dot { width: 22px; height: 22px; font-size: 11px; }
 .app .badge { position: absolute; top: 10px; right: 10px; background: var(--no); color: #fff; font-size: 11.5px; font-weight: 700; border-radius: 99px; padding: 1px 8px; }
+.xbox { max-height: calc(100vh - 300px); min-height: 200px; overflow: auto; background: var(--card); border-radius: var(--r); margin-top: 8px; box-shadow: var(--shadow); }
+.xrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.xrow:last-child { border-bottom: 0; }
+.xrow .grow { flex: 1; min-width: 0; }
+.xrow .sub { display: block; font-size: 12.5px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon { width: 40px; height: 40px; border-radius: 11px; flex: none; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 12px; }
 .app.add { border: 2px dashed var(--line); background: transparent; box-shadow: none; place-content: center; text-align: center; color: var(--accent); font-weight: 600; min-height: 120px; }
 .seg { display: flex; background: var(--accent2); border-radius: 99px; padding: 3px; margin: 10px 0 4px; }
 .seg button { flex: 1; border: 0; background: none; font: inherit; font-size: 14px; padding: 6px; border-radius: 99px; color: var(--ink); cursor: pointer; }
@@ -220,6 +226,7 @@ function draw() {
   const keep = {}, focus = document.activeElement?.id;
   document.querySelectorAll('input, select').forEach(e => { if (e.id && e.type !== 'checkbox') keep[e.id] = e.value; });
   const screens = {__settings: drawSettings, __browse: drawBrowse, __friend: drawFriend};
+  if (open === '__browse' && document.getElementById('brows')) { bar('Add a mini-app', 'home'); drawBrowseRows(); return; }
   if (screens[open]) screens[open]();
   else if (open && S.apps.some(a => a.app === open)) drawApp(S.apps.find(a => a.app === open));
   else { open = null; drawHome(); }
@@ -274,17 +281,27 @@ function drawHome() {
 
 function drawBrowse() {
   bar('Add a mini-app', 'home');
-  let h = `<div class="note" style="margin:8px 4px">Each mini-app is a contract of GLP, compiled for this super-app. Your device certifies it under your own key when you add it.</div><div class="apps">`;
-  const apps = [...S.apps].sort((a, b) => a.title.localeCompare(b.title));
-  for (const a of apps) {
-    const btn = a.installed ? `<button class="b" onclick="event.stopPropagation();go('${a.app}')">Open</button>`
-      : a.preparing ? `<button class="b alt" disabled>Preparing…</button>`
-      : `<button class="b alt" onclick="event.stopPropagation();install('${a.app}')">Add</button>`;
-    h += `<div class="app" onclick="go('${a.app}')"><div class="id">${esc(a.id)}</div><div class="t">${esc(a.title)}</div><div class="p">${esc((a.about?.clauses || []).map(c => c.name).join(' · '))}</div><div>${btn}</div></div>`;
-  }
-  h += `</div><h2>From the app maker</h2><div class="card"><div class="row"><input id="madelink" class="grow" placeholder="Its link: …/gas2/maker.html?k=…"><button class="b alt" onclick="addMade()">Add</button></div>
-    <div class="small muted">Make your own at <span class="mono">${esc(SITE)}maker.html</span></div></div>`;
+  let h = `<input id="bq" type="search" placeholder="Search: a name, a rule, a word" autocomplete="off" oninput="drawBrowseRows()" style="margin-top:10px">
+    <div class="xbox" id="brows"></div>
+    <h2>From a link or a code</h2><div class="card"><div class="row"><input id="madelink" class="grow" placeholder="A link from the app maker, or its code" onkeydown="if(event.key==='Enter')addMade()"><button class="b alt" onclick="addMade()">Add</button></div>
+    <div class="small muted">Someone made a mini-app at <span class="mono">${esc(SITE)}maker.html</span> and sent you its link or its code.</div></div>`;
   $('#main').innerHTML = h;
+  drawBrowseRows();
+}
+// the rows alone, so that typing in the search keeps its place
+function drawBrowseRows() {
+  const box = document.getElementById('brows'); if (!box) return;
+  const q = (document.getElementById('bq')?.value || '').trim().toLowerCase();
+  const hueOf = id => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  const apps = [...S.apps].sort((a, b) => a.title.localeCompare(b.title))
+    .filter(a => !q || [a.id, a.title, ...(a.about?.clauses || []).map(c => c.name + ' ' + c.text)].join(' ').toLowerCase().includes(q));
+  box.innerHTML = apps.map(a => {
+    const btn = a.installed ? `<button class="b" onclick="event.stopPropagation();go('${a.app}')">Open</button>`
+      : a.preparing ? `<button class="b alt" disabled>Adding…</button>`
+      : `<button class="b alt" onclick="event.stopPropagation();install('${a.app}')">Add</button>`;
+    return `<div class="xrow" onclick="details('${a.app}')"><span class="icon" style="background:hsl(${hueOf(a.id)},58%,${fancy() ? 55 : 35}%)">${esc(a.id.replace(/-/g, '').slice(0, 4))}</span>
+      <span class="grow"><b>${esc(a.title.replace(/^Grassroots /, ''))}</b> <span class="muted small">${esc(a.id)}</span><span class="sub">${esc((a.about?.clauses || []).map(c => c.name).join(' · '))}</span></span>${btn}</div>`;
+  }).join('') || '<div class="empty" style="padding:12px">Nothing matches.</div>';
 }
 
 function drawFriend() {
@@ -310,7 +327,7 @@ function drawSettings() {
 }
 
 function drawApp(a) {
-  bar(a.title, 'home');
+  bar(a.title, a.installed || a.preparing ? 'home' : '__browse');
   const r = readApp(a);
   const menu = r.req ? menuOf(r.req.w) : [];
   const props = ((a.shapes || {}).Proposal || []).filter(p => p[0] === 'ctor');
@@ -439,6 +456,8 @@ async function propose() {
 }
 async function grant(app, id, path, value, said) { await act({op: 'grant', app, id, path, value}, said); }
 
+// a mini-app's page, at its rules (from the list of all of them)
+function details(app) { go(app); pane = S.apps.find(a => a.app === app)?.installed ? 'play' : 'rules'; draw(); }
 function go(where) { open = where; form = null; pane = 'play'; over = false; naming = null; draw(); window.scrollTo(0, 0); }
 function install(app) { act({op: 'install', app}, 'Adding: your device certifies it'); }
 function setTheme(k) { theme = k; store.set('gas2theme', k); document.documentElement.dataset.theme = k; draw(); }
@@ -472,6 +491,8 @@ function addPasted() {
 function addMade(link) {
   link = link || $('#madelink')?.value.trim();
   if (!link) return;
+  // a maker's code alone: the site's file of that mini-app
+  if (/^[0-9a-f]{16}$/i.test(link)) link = SITE + 'made/' + link.toLowerCase() + '.json';
   act({op: 'add', link}, 'Adding the mini-app…'); if ($('#madelink')) $('#madelink').value = '';
 }
 // start over: a new key pair, nothing kept, here and on the device or the server
