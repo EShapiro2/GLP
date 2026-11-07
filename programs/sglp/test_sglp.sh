@@ -225,22 +225,24 @@
 #       REPL's :emit, with the scripted profiles of tests/cva/scripted_sglp.glp:
 #       the platform's interface printed in sGLP's term form (cva/interface.sh),
 #       the record's interface.glp, its types, its volitional declarations,
-#       Menu's and Approval's, respond and greet, and its compiled predicates;
-#       the profiles transformed against it (transform.sh --interface); two
-#       agents for a day (cva/run.sh), two runs from seed 20260927 writing one
-#       log and seed 1 another, each menu showing its agent's own key and the
-#       people it knows, the scripted person proposing establishing, an
+#       the request question Request?'s, request, and Approval's, respond and
+#       greet, and its compiled predicates; the profiles transformed against it
+#       (transform.sh --interface); two agents for a day (cva/run.sh), two runs
+#       from seed 20260927 writing one log and seed 1 another, the scripted
+#       person answering each request question by proposing establishing, an
 #       acquaintance with the other and befriending it, an acquaintance and an
 #       attempt to befriend approved at the other, and each element of the
-#       program's output each agent's
-#       screen shows, output, a view or a notice (sGLP's task of 2026-10-20
-#       08:00 UTC, items 4 and 5); the population's draw beside the log; a
+#       program's output each agent's screen shows, output, a view showing its
+#       agent's own key or a notice (sGLP's task of 2026-10-20 08:00 UTC, items
+#       4 and 5, and of 2026-11-06 18:43 UTC, item 2; vGLP e22e2ad, "The
+#       compilation"); the population's draw beside the log; a
 #       simulation record in a scratch root (cva/record.sh), its check passing
 #       on it and failing on its log or its printed population changed; and a
 #       census over the platform, tests/cva/census_sglp.glp, two persons keyed
 #       by the platform's keys, a host of two dimensions and a guest of one,
-#       run with census for its agents (cva/run.sh), its draw, its menus showing
-#       each agent's person's key, and a record of it and its check; and the
+#       run with census for its agents (cva/run.sh), its draw, its requests
+#       and its views showing each agent's person's key, and a record of it and
+#       its check; and the
 #       network with a census whose keys are not in @<'s order (tests/route;
 #       sGLP #9, Code_inbox 2026-10-24 14:07 UTC): three agents keyed p2, p1
 #       and p3, each sending a message to each key, every message reaching
@@ -1124,30 +1126,31 @@ check "the canonical platform of the social graph compiled to GLP, its agent/5 t
 bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
 st=$?
 [ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/GSG/interface.glp" &&
-    grep -q "^  type('Menu', \[menu('Key', 'List'('Key'), dual('Request'))\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Request', \[propose('Proposal'), refresh\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Approval', \[approval('Asking', 'List'('Word'), dual('YesNo'))\]),$" "$CVA/interface.glp" &&
-    grep -q "^  type('Request', \[propose('Proposal')\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Output', \[view('Key', 'List'('Atom'), 'List'('Key'), 'List'('Approved'), 'List'('Tab')), refused('Approved', 'Key', 'Reason')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Key', \['String'\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('List'('X'), \[\[\], \['X' | 'List'('X')\]\]),$" "$CVA/interface.glp" &&
-    grep -q "^  volitional('Menu', '\\\\'Menu\\\\'', menu_w, request(dual('Key'), dual('List'('Key')), 'Stream'('Trigger'))),$" "$CVA/interface.glp" &&
+    grep -q "^  volitional(dual('Request'), '\\\\'Request?\\\\'', request_r, request('Stream'('Trigger'))),$" "$CVA/interface.glp" &&
     grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, respond(" "$CVA/interface.glp" &&
     grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, greet(" "$CVA/interface.glp" &&
-    grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 5),$" "$CVA/interface.glp" &&
+    grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 3),$" "$CVA/interface.glp" &&
     [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
-check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Menu, Approval and Request among them, and the root's it names, Key and List, its volitional declarations, Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates" $?
+check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal) or refresh, Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP e22e2ad, \"The compilation\")" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
 bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
 st=$?
 tr '\n' ' ' < "$CVA/printed/population.glp" > "$WORK/cva_pop.flat"
 [ "$st" -eq 0 ] && ! grep -q '^%% not transformed' "$CVA/printed/population.glp" "$CVA/printed/profiles.glp" &&
-    grep -q "relay_1(A, Type, menu(X1, X2, X3?), menu(X1?, X2?, Y3), Mon, Log) :- ground(X1?) , ground(X2?) | answer_1(" "$WORK/cva_pop.flat" &&
+    grep -q "Question ::= request_r(Request?) ; approval_w(Approval)\." "$WORK/cva_pop.flat" &&
+    grep -q "relay_1(A, Type, X?, Y, Mon, Log) :- answer_1(A?, Type?, Y?, X, Mon?, Log?) \." "$WORK/cva_pop.flat" &&
     grep -q "stochastic_agent(A, B, H, Mon, Log, Asks, O) :- ground(H?) | stochastic_person(B?, H?, P, S) , split_random_seed(S?, Seed, _) , start_screen(A?, O?, Mon?, Log?, Scr) , person(A?, P?, H?, Mon?, Scr?, Seed?, Log?, Asks?) \." "$WORK/cva_pop.flat" &&
     grep -q "run_declaration(2, 1, day, 20260927) \." "$WORK/cva_pop.flat" &&
     grep -q "Person ::= person(Key, Constant, List(Constant))" "$WORK/cva_pop.flat" &&
     grep -q "Person ::= person(Key, Constant, List(Constant))" "$CVA/printed/profiles.glp" &&
     grep -q "cva_agents(B, Ks, Mon, Log, Keys?, Seats?) :- persons(B?, Ks?, _, Ps, B1), seats(1, Ps?, B1?, Mon?, Log?, Keys, Seats)\." "$WORK/cva_pop.flat" &&
     grep -q "Seat(X) ::= seat(Key, Stream(Ask)?, Stream(X)?)\." "$WORK/cva_pop.flat"
-check "the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Menu, the person of run n agents keyed by the platform's Key, the run's entries of one arity, each agent's seat, its person process and its screen" $?
+check "the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Request?, in reader mode, the person of run n agents keyed by the platform's Key, the run's entries of one arity, each agent's seat, its person process and its screen" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_tx.out"
 for r in a b s1; do
     seed=20260927; [ "$r" = s1 ] && seed=1
@@ -1163,12 +1166,11 @@ awk -F'\t' '
         n++; t = $1 + 0; if (t < last || t > 86400) bad++; last = t
         if ($2 != 1 && $2 != 2) { bad++; next }
         me = "p" $2; other = ($2 == 1) ? "p2" : "p1"
-        if ($3 == "Menu") {
-            if (index($4, "menu(" me ", [") != 1) bad++
+        if ($3 == "Request?") {
             seen[$2]++
-            if (index($4, "propose(establish(" me "))")) est++
-            else if (index($4, "propose(acquaint(" me ", " other "))")) acq++
-            else if (index($4, "propose(befriend(" me ", " other "))")) bef++
+            if ($4 == "propose(establish(" me "))") est++
+            else if ($4 == "propose(acquaint(" me ", " other "))") acq++
+            else if ($4 == "propose(befriend(" me ", " other "))") bef++
             else bad++
         } else if ($3 == "Approval") {
             if ($4 ~ ("^approval\\(attempt\\(" other ", [0-9]+, [0-9]+, befriend\\(" other ", " me "\\), none\\), \\[.*\\], yes\\)$")) app++
@@ -1176,15 +1178,15 @@ awk -F'\t' '
             else bad++
         } else if ($3 == "output") {
             out[$2]++
-            if ($4 !~ /^(view|refused)\(/) bad++
-            if (out[$2] == 1 && ($1 + 0 != 0 || $4 != "view([], [], [], [tab(Contacts, knows), tab(Friends, friend)])")) bad++
-            if ($4 ~ ("^view\\(\\[[^]]*knows\\(" other "\\)")) kn++
-            if ($4 ~ ("^view\\(\\[[^]]*friend\\(" other "\\)")) fr++
+            if ($4 !~ ("^(view\\(" me ", |refused\\()")) bad++
+            if (out[$2] == 1 && ($1 + 0 != 0 || $4 != "view(" me ", [], [], [], [tab(Contacts, knows), tab(Friends, friend)])")) bad++
+            if ($4 ~ ("^view\\(" me ", \\[[^]]*knows\\(" other "\\)")) kn++
+            if ($4 ~ ("^view\\(" me ", \\[[^]]*friend\\(" other "\\)")) fr++
         } else bad++
     }
     NF == 1 { c = $1 + 0; clocked = 1 }
     END { exit !(n > 0 && seen[1] && seen[2] && est > 0 && acq > 0 && bef > 0 && aq > 0 && app > 0 && out[1] > 0 && out[2] > 0 && kn > 0 && fr > 0 && clocked && c == last && !bad) }' "$WORK/cva_a.log"
-check "the log: each menu showing its agent's own key and the people it knows, answered by proposing establishing, an acquaintance with the other or befriending it, each at least once; the other's hello or attempt of acquaintance and its attempt to befriend approved yes; and each element of the program's output each agent's screen shows, output, a view or a notice, the first the empty view at 0 with the record's two tabs, an acquaintance and a friendship in a view after the approvals; in the order of time; the clock last (sGLP's task of 2026-10-20 08:00 UTC, item 5, and of 2026-11-04 16:22 UTC, item 3)" $?
+check "the log: each request question answered by proposing establishing, an acquaintance with the other or befriending it, each at least once; the other's hello or attempt of acquaintance and its attempt to befriend approved yes; and each element of the program's output each agent's screen shows, output, a view showing its agent's own key or a notice, the first the empty view at 0 with the record's two tabs, an acquaintance and a friendship in a view after the approvals; in the order of time; the clock last (sGLP's task of 2026-10-20 08:00 UTC, item 5, of 2026-11-04 16:22 UTC, item 3, and of 2026-11-06 18:43 UTC, item 2)" $?
 printf 'draw scripted 2 agreeable 2\nagent 1 scripted agreeable\nagent 2 scripted agreeable\n' | cmp -s - "$WORK/cva_a.draw"
 check "the population's draw beside the log: its counts, then agents 1 and 2 with their profiles" $?
 grep -E '^(draw|wall-clock)' "$WORK/cva_a.out" | sed 's/^/        /'
@@ -1233,7 +1235,7 @@ tr '\n' ' ' < "$CVA/census/population.glp" > "$WORK/cva_cpop.flat"
     grep -q "Profiles ::= host(Dimension1, Dimension2) ; guest(Dimension3)\. " "$WORK/cva_cpop.flat" &&
     grep -q "run_declaration(pair, 1, day, 20260927) \. " "$WORK/cva_cpop.flat" &&
     grep -q "Seat(X) ::= seat(Key, Stream(Ask)?, Stream(X)?)\. " "$WORK/cva_cpop.flat" &&
-    grep -q "person(A, guest(guest), H, Mon, Scr, Seed, Log, \[ask('Menu', menu_w(E)) | As\]) :- ground(H?) | split_random_seed(Seed?, K, S) , profiles # script_menu(Y?, H?, K?, Scr?) , " "$WORK/cva_cpop.flat"
+    grep -q "person(A, guest(guest), H, Mon, Scr, Seed, Log, \[ask('Request?', request_r(E?)) | As\]) :- ground(H?) | split_random_seed(Seed?, K, S) , profiles # script_request(Y, H?, K?, Scr?) , relay_1(A?, 'Request?', E, Y?, Mon?, Log?) , " "$WORK/cva_cpop.flat"
 check "a census over the canonical platform transformed against its interface: two roles, the guest's one dimension declaring both questions by the host's person procedures, the seats keyed by the platform's Key" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_ctx.out"
 bash "$HERE/cva/run.sh" "$CVA/platform.glp" "$CVA/census" census '1 day' 20260927 "$WORK/cva_c.log" > "$WORK/cva_c.out" 2>&1
@@ -1242,11 +1244,15 @@ check "the census's two agents on the canonical platform, one day, seed 20260927
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_c.out"
 printf 'draw scripted 1 agreeable 1 guest 1\nagent 1 scripted agreeable\nagent 2 guest\n' | cmp -s - "$WORK/cva_c.draw" &&
     awk -F'\t' '
-        NF == 4 && $3 == "Menu" { if (index($4, "menu(p" $2 ", [") != 1) bad++; m[$2]++ }
-        NF == 4 && $3 == "output" { o[$2]++ }
+        NF == 4 && $3 == "Request?" {
+            me = "p" $2; other = ($2 == 1) ? "p2" : "p1"
+            if ($4 != "propose(establish(" me "))" && $4 != "propose(acquaint(" me ", " other "))" && $4 != "propose(befriend(" me ", " other "))") bad++
+            m[$2]++
+        }
+        NF == 4 && $3 == "output" { if ($4 ~ /^view\(/ && index($4, "view(p" $2 ", ") != 1) bad++; o[$2]++ }
         NF == 1 { clocked = 1 }
         END { exit !(m[1] > 0 && m[2] > 0 && o[1] > 0 && o[2] > 0 && clocked && !bad) }' "$WORK/cva_c.log"
-check "the draw beside the log the host's two profiles and the guest's one, agents 1 and 2 the census's persons in its order; each agent's menus show its person's key, p1 and p2, and its screen's output lines are logged" $?
+check "the draw beside the log the host's two profiles and the guest's one, agents 1 and 2 the census's persons in its order; each agent's requests are proposals by its person's key, p1 and p2, read off its person, and its views show that key; its screen's output lines are logged" $?
 mkdir -p "$WORK/simc"
 bash "$HERE/cva/record.sh" GSG "$HERE/tests/cva/census_sglp.glp" --cascade "$CVA" --root "$WORK/simc" > "$WORK/cva_crec.out" 2>&1
 st=$?
