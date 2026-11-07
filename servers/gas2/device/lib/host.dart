@@ -175,9 +175,17 @@ class SuperHost {
     if (base == null || !m.app.startsWith('gas2_')) return;
     final c = HttpClient()..connectionTimeout = const Duration(seconds: 10);
     try {
-      final r = await (await c.getUrl(Uri.parse('$base/apps/${m.app}.json'))).close().timeout(const Duration(seconds: 20));
-      if (r.statusCode != 200) return;
-      final j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
+      Map? j;
+      for (var i = 0; j == null; i++) {
+        try {
+          final r = await (await c.getUrl(Uri.parse('$base/apps/${m.app}.json'))).close().timeout(const Duration(seconds: 20));
+          if (r.statusCode != 200) return;
+          j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
+        } on Object {
+          if (i == 2) rethrow; // a network's blip, twice more
+          await Future<void>.delayed(const Duration(seconds: 1));
+        }
+      }
       final files = (j['files'] as Map).cast<String, String>();
       final d = Directory('$tree/apps/${m.app}');
       final same = files.entries.every((e) {
