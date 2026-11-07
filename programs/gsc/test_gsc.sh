@@ -125,7 +125,11 @@ DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
-      "cschema(close, ['Alice', 'Alice'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
+      "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
+# A listed role is named by the variable its quantifier binds, the clause's
+# name for the member (GSC 7324ec7, Section 2): close's Bob, not its base
+# Alice; vGLP's pragma reader maps a pragma's name to its role by these.
+check_not "GSN's close names its listed role by its base no more" "cschema(close, ['Alice', 'Alice']" "$GSNV"
 # GSG: befriend is an introductory act and meet too; meet is unobstructed,
 # identity being added by establish, of arity one, guarded, requiring
 # nothing and forbidding only the identity it adds, which meet requires once
@@ -1766,6 +1770,15 @@ check "a listed role in the guard reads guarded, its literals among its role" \
       "crs(listed(1, listed, [svar(n)]), guarded, [atom(saw, [svar(n)])], [], [], [])" "$out"
 check "a conditional literal reads into a conjunct, at the agent role holding it" \
       "[hm(1, atom(noted, [pvar('Bob'), svar(n)]))]" "$out"
+# The names as_read gives a listed role: the variable its quantifier binds
+# (GSC 7324ec7, Section 2), of a listed role bound with no condition, Bob of
+# vote, and of one bound with a condition, Dave of vote2, its base Alice and
+# the agent role Carol beside it.
+LIST_Q=$(gkk_with "$CLS, $ADD1, sas(vote2, ['Alice', 'Carol', 'Dave'], [n], [atom(voted, ['Alice', n]), forall(['Dave'], atom(listed, ['Alice', 'Dave', n]), ne('Dave', 'Carol'), [atom(saw, ['Dave', n])])], [atom(leads, ['Alice', n]), atom(listed, ['Alice', 'Carol', n]), atom(identity, ['Carol'])], true, ['Alice', 'Dave'])")
+out=$(run "as_read($LIST_G, R)." "as_read($LIST_Q, R).")
+check "vote's listed role is named Bob, the variable its quantifier binds" "schema(vote, ['Alice', 'Bob']" "$out"
+check "vote2's listed role, bound with a condition, is named Dave, the variable its quantifier binds" "schema(vote2, ['Alice', 'Carol', 'Dave']" "$out"
+check_not "and not Alice, its base" "schema(vote2, ['Alice', 'Carol', 'Alice']" "$out"
 # def:numbers: "deleted with multiplicities kappa_1, ..., kappa_n, the
 # schema's constraint implies kappa_1 + ... + kappa_n <= kappa ... the checker
 # decides the implication where the constraint is linear over whole numbers,
@@ -2174,6 +2187,26 @@ check_eq "x != y names nothing, and item is untraceable" \
          "V = not_grassroots([untraceable([held, item])])" "$(sf 5)"
 check_eq "y = x as a body item of its own, beside heard(Bob, y), names x" \
          "V = not_grassroots([untraceable([held])])" "$(sf 6)"
+# A bound variable's kind (README, "Writing a contract"): the c bound by
+# exists([c], knows(Bob, c), c = Dave) is an agent variable where it is
+# among Names, and c = Dave, of two agent variables, names Dave; left out of
+# Names, c is a speech-act variable, and c = Dave, of two kinds, is refused
+# (def:numbers).
+bound_c() { gkk_with "sas(tell, $1, ['Carol', 'Dave'], [atom(told, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob']), $2], true, ['Alice'])"; }
+BC_IN=$(bound_c "['Alice', 'Bob', 'Carol', 'Dave', c]" "exists([c], atom(knows, ['Bob', c]), eq(c, 'Dave'))")
+BC_FIRST=$(bound_c "[c, 'Alice', 'Bob', 'Carol', 'Dave']" "exists([c], atom(knows, ['Bob', c]), eq(c, 'Dave'))")
+BC_OUT=$(bound_c "['Alice', 'Bob', 'Carol', 'Dave']" "exists([c], atom(knows, ['Bob', c]), eq(c, 'Dave'))")
+BC_NOEQ=$(bound_c "['Alice', 'Bob', 'Carol', 'Dave', c]" "exists([c], atom(knows, ['Bob', c]), true)")
+out=$(run "check($BC_IN, V)." "check($BC_FIRST, V)." "check($BC_OUT, V)." "check($BC_NOEQ, V)." "as_read($BC_IN, R).")
+check_eq "c among Names is a bound agent variable, and exists c (knows(Bob, c) and c = Dave) names Dave" \
+         "V = syntactically_grassroots" "$(sf 1)"
+check_eq "and so wherever Names writes it, a bound name holding no atom taking no role's number" \
+         "V = syntactically_grassroots" "$(sf 2)"
+check_eq "c out of Names is a speech-act variable, and c = Dave, of two kinds, is refused" \
+         "V = malformed([constraint_not_numeric(tell, svar(c)), constraint_not_numeric(tell, pvar('Dave'))])" "$(sf 3)"
+check_eq "exists c (knows(Bob, c)) names c, which it binds, and not Dave" \
+         "V = not_grassroots([untraceable([told])])" "$(sf 4)"
+check "the bound c read as an agent variable, pvar(c), in the quantifier" "fexists([pvar(c)], role(2), atom(knows, [pvar(c)]), fcons(eq(pvar(c), pvar('Dave'))))" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

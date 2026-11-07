@@ -221,8 +221,10 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % the clauses do"; GKK.glp, GSG.glp and GSN.glp at GLP ec7c578c): a schema's
 % head lists its roles by the clause's names, schema(Name, Names, Vars,
 % Roles), cschema(Name, Names, Vars, [], Roles) and nschema(Name, Names, Vars,
-% Constraint, Roles), Names the names of its roles in order, a listed role
-% named by its base; a schema written without them, as the owners' contracts
+% Constraint, Roles), Names the names of its roles in order, the name at a
+% listed role's place not read (as_read names a listed role of the clause
+% syntax by the variable its quantifier binds, GSC 7324ec7); a schema
+% written without them, as the owners' contracts
 % not yet rewritten write it, is read as before.  A contract may name its
 % environment predicates (GSC 25b6b3c, Section 3.2 and the appendix "Values
 % in Speech-Act Schemas": "whose atoms are over values, which the machine holds from
@@ -4008,7 +4010,10 @@ check_read([F|Fs], _, malformed([F?|Fs?])).
 % the checker's form with its roles' names, schema(Name, Names, Vars,
 % Roles), cschema(Name, Names, Vars, [], Roles) or nschema(Name, Names,
 % Vars, Constraint, Roles), Names the names of its roles in order, a listed
-% role named by its base; a schema in the checker's form is left as it is.
+% role named by the variable its quantifier binds (GSC 7324ec7, Section 2: "A
+% name in a pragma is the schema's role of that name, the schemas naming
+% their roles as the clauses do, a listed role by the variable its quantifier
+% binds"); a schema in the checker's form is left as it is.
 % A contract in either wrapped form, reflexive(Preds, Contract) or
 % environment(Preds, Body), is given in the same wrapper with each schema
 % inside as read, descending as unnamed/2 does.  The variants of
@@ -4050,22 +4055,14 @@ as_read_n(nschema(Nm, Vs, Cn, Rs), E, nschema(Nm?, Ns?, Vs?, Cn?, Rs?)) :- groun
 as_read_n(qschema(Nm, Vs, Bd, Cn, Rs, Cj, Fs), E, qschema(Nm?, Ns?, Vs?, Bd?, Cn?, Rs?, Cj?, Fs?)) :- ground(Rs?), ground(E?) |
     as_read_names(Rs?, E?, 1, Ns).
 
-% The name of each role, numbered from I: an agent role's its own and a
-% listed role's that of its base.
+% The name of each role, numbered from I, as its clause names it: an agent
+% role's its own and a listed role's the variable its quantifier binds (GSC
+% 7324ec7, Section 2), the table numbering the roles in the order of the
+% schema's names.
 procedure as_read_names(NRoleSpecs?, REnts?, Integer?, Names).
 as_read_names([], _, _, []).
-as_read_names([rs(_, _, _, _, _)|Rs], E, I, [N?|R?]) :- ground(Rs?), ground(E?), integer(I?) |
+as_read_names([_|Rs], E, I, [N?|R?]) :- ground(Rs?), ground(E?), integer(I?) |
     as_read_name(E?, I?, N),
-    I1 := I? + 1,
-    as_read_names(Rs?, E?, I1?, R).
-as_read_names([crs(listed(J, _, _), _, _, _, _, _)|Rs], E, I, [N?|R?]) :-
-    ground(Rs?), ground(E?), integer(I?), integer(J?) |
-    as_read_name(E?, J?, N),
-    I1 := I? + 1,
-    as_read_names(Rs?, E?, I1?, R).
-as_read_names([crs(qlisted(J, _, _, _), _, _, _, _, _)|Rs], E, I, [N?|R?]) :-
-    ground(Rs?), ground(E?), integer(I?), integer(J?) |
-    as_read_name(E?, J?, N),
     I1 := I? + 1,
     as_read_names(Rs?, E?, I1?, R).
 
