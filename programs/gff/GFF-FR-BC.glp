@@ -1,0 +1,133 @@
+%% ---------------------------------------------------------------------------
+%% GFF-FR-BC.glp --- Fault-Resilient GFF with Back-Channels, GFF's (Udi,
+%% 2026-11-07, to GFF #3), in the clause syntax of GSC's paper, Section 3.2,
+%% the term form GDO-LB.glp writes.  GFF-FR-BC extends GFF-FR (GFF-FR.glp
+%% beside this file): it has GFF-FR's schemas and one more, back_forward,
+%% GFF-FR-BC:1, an act no person wills, by which Alice, who has pointers
+%% labeled 'Dave' to Bob and to Carol and received an item of Dave's feed
+%% from Bob, forwards it to Carol, who records it with received_back, a
+%% predicate of its own, delivery's received being delivery's signature atom.
+%% Environment predicate: redundancy(d).  Every role requires identity.  The
+%% clauses are in GFF-FR-BC.txt.
+%% ---------------------------------------------------------------------------
+
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
+SHeads      ::= [] ; [SHead | SHeads].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
+SExprs      ::= [] ; [SExpr | SExprs].
+SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
+              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
+              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
+SConds      ::= [] ; [SCond | SConds].
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
+Contract    ::= [] ; [Schema | Contract].
+Preds       ::= [] ; [Constant | Preds].
+Declared    ::= Contract ; environment(Preds, Contract).
+
+%% contract_named(gff_fr_bc, C): the contract, GFF-FR-BC.
+procedure contract_named(Constant?, Declared).
+contract_named(gff_fr_bc, environment([redundancy],
+   [sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))], true, ['Alice']),
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
+       true, ['Alice', 'Bob']),
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+%% GDO:1, Pointing to friend.
+    sas(point_friend, ['Alice', 'Bob'], [],
+       [atom(points_to, ['Alice', 'Bob'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(points_to, ['Alice', 'Bob'])), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GDO:2, Transitive pointing.
+    sas(point_transitive, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(points_to, ['Alice', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(points_to, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(points_to, ['Bob', 'Carol'])],
+       true,
+       ['Alice']),
+%% GDO:3, Ceasing to point.
+    sas(unpoint, ['Alice', 'Bob'], [],
+       [not(atom(points_to, ['Alice', 'Bob']))],
+       [atom(identity, ['Alice']), atom(points_to, ['Alice', 'Bob']), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GDO-L:1, Labeled pointing to friend, labeled 'Bob'.
+    sas(follow_own, ['Alice', 'Bob'], [],
+       [atom(lpoints_to, ['Alice', 'Bob', 'Bob'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Bob', 'Bob'])), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GDO-L:1, Labeled pointing to friend, labeled 'Dave', where Bob has a pointer labeled 'Dave', to Carol.
+    sas(follow_friend, ['Alice', 'Bob', 'Dave', 'Carol'], ['Dave', 'Carol'],
+       [atom(lpoints_to, ['Alice', 'Bob', 'Dave'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Bob', 'Dave'])), atom(identity, ['Bob']), atom(lpoints_to, ['Bob', 'Carol', 'Dave'])],
+       true,
+       ['Alice']),
+%% GFF-I:1, Labeled transitive pointing: GDO-L:2, only if Carol knows Alice; Bob and Carol are reading roles.
+    sas(follow_transitive, ['Alice', 'Bob', 'Carol', 'Dave'], ['Dave'],
+       [atom(lpoints_to, ['Alice', 'Carol', 'Dave'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(lpoints_to, ['Alice', 'Bob', 'Dave']), not(atom(lpoints_to, ['Alice', 'Carol', 'Dave'])), atom(identity, ['Bob']), atom(lpoints_to, ['Bob', 'Carol', 'Dave']), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice'])],
+       true,
+       ['Alice']),
+%% GFF-I:1, Labeled transitive pointing through Alice's friend Bob: GDO-L:2, only if Carol knows Alice; Bob and Carol are reading roles.
+    sas(follow_transitive_friend, ['Alice', 'Bob', 'Carol', 'Dave'], ['Dave'],
+       [atom(lpoints_to, ['Alice', 'Carol', 'Dave'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Carol', 'Dave'])), atom(identity, ['Bob']), atom(lpoints_to, ['Bob', 'Carol', 'Dave']), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice'])],
+       true,
+       ['Alice']),
+%% GDO-L:3, Ceasing to point.
+    sas(unfollow, ['Alice', 'Bob', 'Dave'], ['Dave'],
+       [not(atom(lpoints_to, ['Alice', 'Bob', 'Dave']))],
+       [atom(identity, ['Alice']), atom(lpoints_to, ['Alice', 'Bob', 'Dave']), atom(identity, ['Bob'])],
+       true,
+       ['Alice']),
+%% GFF:1, Feed.  The item x occurs in no atom the act requires, so Alice signs it.
+    sas(post, ['Alice'], [x],
+       [atom(item, ['Alice', x, 'Alice'])],
+       [atom(identity, ['Alice']), not(atom(item, ['Alice', x, 'Alice']))],
+       true,
+       ['Alice']),
+%% GFF-I:2, Delivery: GFF:2, only if Bob knows Alice; no guarding role, Bob its first role and a reading role, received(Alice, x, Carol, Bob) its signature atom.
+    sas(deliver, ['Bob', 'Alice', 'Carol'], ['Carol', x],
+       [atom(item, ['Alice', x, 'Carol']), atom(received, ['Alice', x, 'Carol', 'Bob'])],
+       [atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(item, ['Bob', x, 'Carol']), atom(identity, ['Alice']), atom(lpoints_to, ['Alice', 'Bob', 'Carol']), not(atom(item, ['Alice', x, 'Carol']))],
+       true,
+       []),
+%% GFF-FR:1, Redundant following: no guarding role; Bob is a reading role; lpoints_to(Alice, Bob, Carol), added, is its signature atom; c and e are local to their roles, f is bound in the cardinality, and dd is the contract's d.
+    sas(redundant_follow, ['Alice', 'Bob', 'Carol', c, e, f], ['Carol', c, e, dd],
+       [atom(lpoints_to, ['Alice', 'Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Bob', 'Carol'])), atom(lpoints_to, ['Alice', c, 'Carol']), atom(redundancy, ['Alice', num(dd)]), atom(identity, ['Bob']), atom(lpoints_to, ['Bob', e, 'Carol'])],
+       lt(cardinality([f], atom(lpoints_to, ['Alice', f, 'Carol']), true), num(dd)),
+       []),
+%% GFF-FR-BC:1, Back-channel: no guarding role; Alice is the first role and a reading role, Carol receives; received_back(Carol, x, Dave, Alice) is its signature atom; Bob is an agent variable.
+    sas(back_forward, ['Alice', 'Carol', 'Bob', 'Dave'], ['Bob', 'Dave', x],
+       [atom(item, ['Carol', x, 'Dave']), atom(received_back, ['Carol', x, 'Dave', 'Alice'])],
+       [atom(identity, ['Alice']), atom(lpoints_to, ['Alice', 'Bob', 'Dave']), atom(lpoints_to, ['Alice', 'Carol', 'Dave']), atom(item, ['Alice', x, 'Dave']), atom(received, ['Alice', x, 'Dave', 'Bob']), atom(identity, ['Carol']), not(atom(item, ['Carol', x, 'Dave']))],
+       true,
+       [])
+])).

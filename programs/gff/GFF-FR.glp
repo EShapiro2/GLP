@@ -95,6 +95,12 @@ contract_named(gff_fr, environment([redundancy],
        [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(lpoints_to, ['Alice', 'Bob', 'Dave']), not(atom(lpoints_to, ['Alice', 'Carol', 'Dave'])), atom(identity, ['Bob']), atom(lpoints_to, ['Bob', 'Carol', 'Dave']), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice'])],
        true,
        ['Alice']),
+%% GFF-I:1, Labeled transitive pointing through Alice's friend Bob: GDO-L:2, only if Carol knows Alice; Bob and Carol are reading roles.
+    sas(follow_transitive_friend, ['Alice', 'Bob', 'Carol', 'Dave'], ['Dave'],
+       [atom(lpoints_to, ['Alice', 'Carol', 'Dave'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']), not(atom(lpoints_to, ['Alice', 'Carol', 'Dave'])), atom(identity, ['Bob']), atom(lpoints_to, ['Bob', 'Carol', 'Dave']), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice'])],
+       true,
+       ['Alice']),
 %% GDO-L:3, Ceasing to point.
     sas(unfollow, ['Alice', 'Bob', 'Dave'], ['Dave'],
        [not(atom(lpoints_to, ['Alice', 'Bob', 'Dave']))],

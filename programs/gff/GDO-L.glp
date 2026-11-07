@@ -83,6 +83,12 @@ contract_named(gdo_l,
                       [atom(identity, []), atom(knows, [pvar('Carol')]), atom(lpoints_to, [role(2), pvar('Dave')])],
                       [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])]),
         rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
+%% GDO-L:2, Labeled transitive pointing, through Alice's friend Bob.
+    schema(follow_transitive_friend, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')],
+       [rs(guarded,   [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [],
+                      [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])],
+                      [atom(lpoints_to, [pvar('Carol'), pvar('Dave')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [pvar('Carol'), pvar('Dave')])], [])]),
 %% GDO-L:3, Ceasing to point.
     schema(unfollow, ['Alice', 'Bob'], [pvar('Dave')],
        [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar('Dave')])], [atom(identity, [])], []),

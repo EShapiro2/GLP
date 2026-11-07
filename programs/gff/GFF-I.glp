@@ -80,6 +80,13 @@ contract_named(gff_i,
                       [atom(lpoints_to, [role(3), pvar('Dave')])]),
         rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [role(3), pvar('Dave')])], []),
         rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% GFF-I:1 restricts GDO-L:2 through Alice's friend Bob: Carol, a reading role, requires that Carol knows Alice.
+    schema(follow_transitive_friend, ['Alice', 'Bob', 'Carol'], [pvar('Dave')],
+       [rs(guarded,   [atom(lpoints_to, [role(3), pvar('Dave')])], [],
+                      [atom(identity, []), atom(knows, [role(3)]), atom(friend, [role(2)])],
+                      [atom(lpoints_to, [role(3), pvar('Dave')])]),
+        rs(unguarded, [], [], [atom(identity, []), atom(lpoints_to, [role(3), pvar('Dave')])], []),
+        rs(unguarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
 %% GDO-L:3, Ceasing to point.
     schema(unfollow, ['Alice', 'Bob'], [pvar('Dave')],
        [rs(guarded,   [], [atom(lpoints_to, [role(2), pvar('Dave')])], [atom(identity, [])], []),

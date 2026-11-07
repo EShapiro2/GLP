@@ -4,7 +4,7 @@
 % Restricts: GFF, GFF's (GFF.txt beside this file), and with it GDO-L, GDO, GSG and GKK.  Its clauses restrict GDO-L:2 and GFF:2, citing them, as GDO-LB restricts GDO; every other clause is kept.
 % Defines: nothing.
 % Last changed: 2026-11-06, written by GFF #3 Cowork (Udi, 2026-11-06, to GFF #3: 'GFF-I should restrict GFF', and 'ok, so do it' to GFF #3's proposal that GFF-I be GFF with two bodies strengthened, that Carol knows Alice in Labeled transitive pointing and that Bob knows Alice in Delivery).  vGLP's compiler refused GFF's Delivery, no machine knowing both the follower and the item (Code #24, 2026-11-06 08:33 UTC); GFF-I is the contract vGLP compiles for GFF.  It restricts GFF in GSC's sense, stronger bodies with the same heads, guards and names, and in the sense of runs, every correct run of it having the machine configurations of a correct run of GFF, which the paper proves (Udi, 2026-11-06: restriction defined on runs, syntactic conditions its approximations, a set that is open and expected to grow).
-% Schemas: GFF-I.glp beside this file, GFF's fourteen, follow_transitive and deliver with stronger bodies.
+% Schemas: GFF-I.glp beside this file, GFF's fifteen, follow_transitive, follow_transitive_friend and deliver with stronger bodies.
 GFF-I: Implementable GFF
 GFF-I restricts GFF.
 Alice, Bob and Carol are persons, Bob and Carol possibly one person.
