@@ -782,6 +782,22 @@ signing_faults(gt(_, _), _, _, T, T?).
 signing_faults(succ(_, _), _, _, T, T?).
 signing_faults(signed(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
 signing_faults(unsigned(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
+signing_faults(program(X), _, Nm, T, R?) :- utter_fault(X?, Nm?, T?, R).
+
+% author(y) and item(y) are of a speech-act variable y of the schema
+% (def:numbers: "the author author(y), the first signer of y", "the item
+% item(y), the utterance under the signatures of y"), and so is the item a
+% condition program(X) is on: each other y is a fault
+% signing_not_speech_act(Schema, Y).  A condition on what is no item is
+% constraint_not_numeric (constraint_args).
+procedure utter_fault(Expr?, Constant?, Faults?, Faults).
+utter_fault(author_of(Y), Nm, T, R?) :- ground(Y?), ground(Nm?), ground(T?) |
+    sign_speech_act(Y?, B),
+    sign_speech_act_fault(B?, Y?, Nm?, T?, R).
+utter_fault(item_of(Y), Nm, T, R?) :- ground(Y?), ground(Nm?), ground(T?) |
+    sign_speech_act(Y?, B),
+    sign_speech_act_fault(B?, Y?, Nm?, T?, R).
+utter_fault(_, _, T, T?) :- otherwise | true.
 
 % u = v and u != v, of two agent variables, each an agent role of the schema
 % or an agent variable, of two speech-act variables, or of two name terms
@@ -794,7 +810,16 @@ agent_cmp_faults(X, Y, Rs, Nm, T, R?) :- ground(X?), ground(Y?), ground(Rs?), gr
 procedure agent_cmp1(Ans?, Expr?, Expr?, NRoleSpecs?, Constant?, Faults?, Faults).
 agent_cmp1(no, _, _, _, _, T, T?).
 agent_cmp1(yes, X, Y, Rs, Nm, T, R?) :- ground(X?), ground(Y?), ground(Rs?), ground(Nm?), ground(T?) |
-    exprs_args([X?, Y?], [], As),
+    cmp_side_faults(Y?, Rs?, Nm?, T?, R1),
+    cmp_side_faults(X?, Rs?, Nm?, R1?, R).
+
+% A side of u = v: author(y) or item(y), asking y be a speech-act variable
+% (utter_fault), or an argument of the kind name_eq found.
+procedure cmp_side_faults(Expr?, NRoleSpecs?, Constant?, Faults?, Faults).
+cmp_side_faults(author_of(Y), _, Nm, T, R?) :- utter_fault(author_of(Y?), Nm?, T?, R).
+cmp_side_faults(item_of(Y), _, Nm, T, R?) :- utter_fault(item_of(Y?), Nm?, T?, R).
+cmp_side_faults(X, Rs, Nm, T, R?) :- otherwise, ground(X?), ground(Rs?), ground(Nm?), ground(T?) |
+    exprs_args([X?], [], As),
     cmp_args_faults(As?, Rs?, Nm?, T?, R).
 
 procedure cmp_args_faults(Args?, NRoleSpecs?, Constant?, Faults?, Faults).

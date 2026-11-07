@@ -116,6 +116,25 @@ Mults      ::= [] ; [Mult | Mults].
 % constraint" (the appendix, after def:binding-numbers), the checker reads
 % one only where def:numbers has a schema's constraint imply a sum of deleted
 % multiplicities (sas_implies_le).
+% author_of(Y) and item_of(Y) are the author author(y), the first, innermost,
+% signer of y, and the item item(y), the utterance under the signatures of y,
+% and program(item_of(Y)) the decidable condition on that utterance that its
+% type provides, named program as GSA's GPD.glp names it (def:numbers and def:binding-numbers
+% at GSC 6df39d4: "the author author(y), the first signer of y, in an
+% equality with an agent role or agent variable, the item item(y), the
+% utterance under the signatures of y, in an equality with another, and a
+% decidable condition on that utterance that its type provides, as that it is
+% a grassroots contract with its schemas and pragmas"; GFP:1 and GFP:2, "the
+% author of an item is its first signer").  Y is svar(Y), each variable listed
+% in the head: eq(author_of(Y), U), U role(I) or pvar(X), either way round,
+% eq(item_of(Y), item_of(Y1)), and ne of each, its negation, the connectives
+% combining them; any other Y is signing_not_speech_act(Schema, Y), and
+% author_of and item_of anywhere else, or program on what is no item,
+% constraint_not_numeric (check.glp).  No condition reads them (the appendix,
+% after def:binding-numbers), so the checker takes each as true, as it takes a
+% signing condition.  item_of(Y) as an argument of an atom is a fault of the
+% reading, item_argument(Schema, Predicate) (sas_faults): def:numbers admits
+% it only in a constraint.
 % signed(U, Y) and unsigned(U, Y) are the signing conditions signed(u, y) and unsigned(u, y), u an agent role or agent variable and y a speech-act variable of the schema (def:numbers, GSC 10fcc92): U is role(I), I an agent role of the schema, or pvar(X), and Y is svar(Y), each variable listed in the head; any other U is a fault signing_not_agent(Schema, U) and any other Y a fault signing_not_speech_act(Schema, Y) (check.glp).  The conditions of def:syntactically-grassroots read no signing condition (the appendix, after def:binding-numbers), so the checker takes each as true.
 Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
@@ -123,11 +142,13 @@ Constraint ::= true ; and(Constraint, Constraint)
              ; or(Constraint, Constraint) ; not(Constraint)
              ; implies(Constraint, Constraint)
              ; ne(Expr, Expr) ; rel(Constant, Exprs)
-             ; signed(Arg, Arg) ; unsigned(Arg, Arg).
+             ; signed(Arg, Arg) ; unsigned(Arg, Arg)
+             ; program(Expr).
 Constraints ::= [] ; [Constraint | Constraints].
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
-             ; sum(Args, Arg, Atom, Form, Expr).
+             ; sum(Args, Arg, Atom, Form, Expr)
+             ; author_of(Arg) ; item_of(Arg).
 Exprs      ::= [] ; [Expr | Exprs].
 % A safe formula (def:role, GSC c8c5ead), built from atoms and constraints by
 % the connectives and the anchored quantifiers: fa(H, M) the atom or
@@ -278,7 +299,7 @@ RChunks     ::= [] ; [RName | RChunks].
 % constant taken from there (sas_bare below).
 SNT    ::= own(Constant) ; ext(SNT, Constant).
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; sgn(Constant, Constant).
+         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant).
 SArgs  ::= [] ; [SArg | SArgs].
 SAtom  ::= atom(Constant, SArgs).
 SAtoms ::= [] ; [SAtom | SAtoms].
@@ -287,7 +308,7 @@ SQLit  ::= SMult ; not(SMult).
 SQLits ::= [] ; [SQLit | SQLits].
 SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
          ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
-         ; sum(PNames, SAtom, SConstraint, SExpr).
+         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
 SExprs ::= [] ; [SExpr | SExprs].
 % A safe formula and a constraint are one type, a constraint being a safe
 % formula with no atom and no quantifier.
@@ -297,7 +318,7 @@ SConstraint ::= true ; and(SConstraint, SConstraint)
               ; or(SConstraint, SConstraint) ; not(SConstraint)
               ; implies(SConstraint, SConstraint)
               ; ne(SExpr, SExpr) ; rel(Constant, SExprs)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr)
               ; atom(Constant, SArgs) ; times(SArg, SAtom)
               ; exists(PNames, SAtom, SConstraint)
               ; forall(PNames, SAtom, SConstraint, SConstraint)
@@ -538,6 +559,7 @@ sas_walk(rel(N, Xs), sw(A, B, C, K), R?) :- ground(N?), ground(Xs?) |
 sas_walk(succ(X, Y), sw(A, B, C, K), sw(A?, B?, [succ(X?, Y?)|C?], K?)).
 sas_walk(signed(X, Y), sw(A, B, C, K), sw(A?, B?, [signed(X?, Y?)|C?], K?)).
 sas_walk(unsigned(X, Y), sw(A, B, C, K), sw(A?, B?, [unsigned(X?, Y?)|C?], K?)).
+sas_walk(program(X), sw(A, B, C, K), sw(A?, B?, [program(X?)|C?], K?)).
 
 procedure sas_walk_lits(SQLits?, SW?, SW).
 sas_walk_lits([], W, W?).
@@ -836,6 +858,11 @@ sas_arg(real(X), _, _, num(X?)) :- otherwise | true.
 sas_arg(sgn(Y, N), E, _, sgn(Y?, I?)) :-
     sas_look(N?, E?, L),
     sas_index(L?, I).
+% item_of(Y), the item of Y, stands only in a constraint (def:numbers: "the
+% item item(y) ... in an equality with another, and a decidable condition on
+% that utterance that its type provides"); as an argument of an atom it is a
+% fault of the reading, item_argument (sas_faults), read as the wildcard.
+sas_arg(item_of(_), _, _, any).
 sas_arg(C, E, V, R?) :- otherwise | sas_bare(C?, E?, V?, R).
 
 procedure(X) sas_bare(X?, REnts?, PNames?, Arg).
@@ -910,6 +937,7 @@ sas_cons(signed(X, Y), E, V, signed(X1?, Y1?)) :- ground(E?), ground(V?) |
     sas_arg(X?, E?, V?, X1), sas_arg(Y?, E?, V?, Y1).
 sas_cons(unsigned(X, Y), E, V, unsigned(X1?, Y1?)) :- ground(E?), ground(V?) |
     sas_arg(X?, E?, V?, X1), sas_arg(Y?, E?, V?, Y1).
+sas_cons(program(X), E, V, program(X1?)) :- sas_expr(X?, E?, V?, X1).
 % An atom or a quantifier is no constraint: sas_ana moves a formula out of the
 % place of the constraint, and sas_form reads what is above a constraint.
 sas_cons(_, _, _, true) :- otherwise | true.
@@ -935,6 +963,8 @@ sas_expr(ext(S, Y), E, V, R?) :- sas_arg(ext(S?, Y?), E?, V?, R).
 sas_expr(num(X), E, V, R?) :- sas_arg(num(X?), E?, V?, R).
 sas_expr(real(X), E, V, R?) :- sas_arg(real(X?), E?, V?, R).
 sas_expr(sgn(Y, N), E, V, R?) :- sas_arg(sgn(Y?, N?), E?, V?, R).
+sas_expr(author_of(Y), E, V, author_of(R?)) :- sas_bare(Y?, E?, V?, R).
+sas_expr(item_of(Y), E, V, item_of(R?)) :- sas_bare(Y?, E?, V?, R).
 sas_expr(C, E, V, R?) :- otherwise | sas_bare(C?, E?, V?, R).
 
 % A cardinality's anchor and phi, V1 the variables with those it binds.
@@ -1793,6 +1823,7 @@ sas_arg_vf(ext(_, _), _, _, _, _, T, T?).
 sas_arg_vf(num(_), _, _, _, _, T, T?).
 sas_arg_vf(real(_), _, _, _, _, T, T?).
 sas_arg_vf(sgn(_, _), _, _, _, _, T, T?).
+sas_arg_vf(item_of(_), _, _, Nm, P, T, [item_argument(Nm?, P?)|T?]).
 sas_arg_vf(C, E, V, Nm, P, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, P?, T?, R).
 
 procedure(X) sas_bare_vf(X?, REnts?, PNames?, Constant?, Constant?, Faults?, Faults).
@@ -1874,6 +1905,7 @@ sas_cons_vf(signed(X, Y), E, V, Nm, T, R?) :- ground(E?), ground(V?), ground(Nm?
     sas_arg_vf(Y?, E?, V?, Nm?, constraint, T?, R1), sas_arg_vf(X?, E?, V?, Nm?, constraint, R1?, R).
 sas_cons_vf(unsigned(X, Y), E, V, Nm, T, R?) :- ground(E?), ground(V?), ground(Nm?) |
     sas_arg_vf(Y?, E?, V?, Nm?, constraint, T?, R1), sas_arg_vf(X?, E?, V?, Nm?, constraint, R1?, R).
+sas_cons_vf(program(X), E, V, Nm, T, R?) :- sas_expr_vf(X?, E?, V?, Nm?, T?, R).
 sas_cons_vf(_, _, _, _, T, T?) :- otherwise | true.
 
 procedure sas_expr_vf(SExpr?, REnts?, PNames?, Constant?, Faults?, Faults).
@@ -1895,6 +1927,8 @@ sas_expr_vf(ext(_, _), _, _, _, T, T?).
 sas_expr_vf(num(_), _, _, _, T, T?).
 sas_expr_vf(real(_), _, _, _, T, T?).
 sas_expr_vf(sgn(_, _), _, _, _, T, T?).
+sas_expr_vf(author_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
+sas_expr_vf(item_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
 sas_expr_vf(C, E, V, Nm, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, constraint, T?, R).
 
 procedure sas_exprs_vf(SExprs?, REnts?, PNames?, Constant?, Faults?, Faults).
@@ -2235,7 +2269,8 @@ Fault ::= no_introductory_act
         ; quantified_condition(Constant, Constant)
         ; listed_agent_role(Constant, Constant)
         ; guard_not_role(Constant, Constant)
-        ; value_type(Constant, Constant).
+        ; value_type(Constant, Constant)
+        ; item_argument(Constant, Constant).
 Faults  ::= [] ; [Fault | Faults].
 % What def:signature is decided against (volition.glp): sig(Is, Cj, OA, OD,
 % TA, TD), the indices of a schema's agent roles, its conjuncts, the
@@ -3871,6 +3906,22 @@ constraint_args(or(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_args(C1?, R1?, R).
 constraint_args(signed(_, _), T, T?).
 constraint_args(unsigned(_, _), T, T?).
+constraint_args(program(X), T, R?) :- ground(X?), ground(T?) |
+    utterance(X?, A),
+    program_args(A?, X?, T?, R).
+
+% program(X) is a condition on an utterance, the item of a speech act
+% (def:numbers: "a decidable condition on that utterance that its type
+% provides"), over no value, its speech-act variable asked of by
+% signing_faults (check.glp); on anything else its arguments are no value
+% arguments, each constraint_not_numeric.
+procedure utterance(Expr?, Ans).
+utterance(item_of(_), yes).
+utterance(X, no) :- otherwise, ground(X?) | true.
+
+procedure program_args(Ans?, Expr?, Args?, Args).
+program_args(yes, _, T, T?).
+program_args(no, X, T, R?) :- ground(X?), ground(T?) | exprs_args([X?], T?, R).
 
 % An equality or an inequality of two agent variables, two speech-act
 % variables or two name terms is over no value (def:numbers, GSC 6f0bda1).
@@ -3882,7 +3933,7 @@ name_eq(X, Y, R?) :- ground(X?), ground(Y?) |
     arg_kind(Y?, B),
     kind_same(A?, B?, R).
 
-ArgKind ::= k_agent ; k_speech ; k_name ; k_other.
+ArgKind ::= k_agent ; k_speech ; k_name ; k_author ; k_item ; k_other.
 procedure arg_kind(Expr?, ArgKind).
 arg_kind(role(_), k_agent).
 arg_kind(pvar(_), k_agent).
@@ -3890,6 +3941,8 @@ arg_kind(svar(_), k_speech).
 arg_kind(nterm(S), R?) :- ground(S?) |
     nt_wild(S?, W),
     nterm_kind(W?, R).
+arg_kind(author_of(_), k_author).
+arg_kind(item_of(_), k_item).
 arg_kind(X, k_other) :- otherwise, ground(X?) | true.
 
 procedure nterm_kind(Ans?, ArgKind).
@@ -3900,6 +3953,9 @@ procedure kind_same(ArgKind?, ArgKind?, Ans).
 kind_same(k_agent, k_agent, yes).
 kind_same(k_speech, k_speech, yes).
 kind_same(k_name, k_name, yes).
+kind_same(k_author, k_agent, yes).
+kind_same(k_agent, k_author, yes).
+kind_same(k_item, k_item, yes).
 kind_same(_, _, no) :- otherwise | true.
 
 procedure eq_args(Ans?, Expr?, Expr?, Args?, Args).
@@ -3943,6 +3999,7 @@ constraint_sargs(gt(_, _), T, T?).
 constraint_sargs(succ(_, _), T, T?).
 constraint_sargs(signed(U, Y), T, [U?, Y?|T?]).
 constraint_sargs(unsigned(U, Y), T, [U?, Y?|T?]).
+constraint_sargs(program(X), T, R?) :- ground(X?), ground(T?) | exprs_args([X?], T?, R).
 
 procedure eq_sargs(Ans?, Expr?, Expr?, Args?, Args).
 eq_sargs(no, _, _, T, T?).
@@ -3965,6 +4022,8 @@ expr_args(svar(X), T, [svar(X?)|T?]).
 expr_args(nterm(N), T, [nterm(N?)|T?]).
 expr_args(sgn(Y, J), T, [sgn(Y?, J?)|T?]).
 expr_args(any, T, [any|T?]).
+expr_args(author_of(Y), T, [Y?|T?]).
+expr_args(item_of(Y), T, [Y?|T?]).
 
 procedure exprs_args(Exprs?, Args?, Args).
 exprs_args([], T, T?).
