@@ -1,9 +1,9 @@
 # A run of the cascade on GDO
 
-- Contract: `GDO` (`gdo` to the checker), its owner's two files `programs/lbm/GDO.txt` and `programs/lbm/GDO.glp`, copied here as they stood at `722dfad1`.
-- The paper: `git@github.com:EShapiro2/LBM-Location-Based-Matching.git` at `719a3a64`, for the paper's own record.
-- The tools: this repository at `722dfad1` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-07 14:46 UTC by `cascade.sh gdo`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GDO` (`gdo` to the checker), its owner's two files `programs/lbm/GDO.txt` and `programs/lbm/GDO.glp`, copied here as they stood at `ee1e5ca2`.
+- The paper: `git@github.com:EShapiro2/GRH-Grassroots-Ride-Hailing.git` at `a356368d`, for the paper's own record.
+- The tools: this repository at `ee1e5ca2` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-07 15:51 UTC by `cascade.sh gdo`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
