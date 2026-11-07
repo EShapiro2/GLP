@@ -1,1 +1,1 @@
-not_grassroots([volition(encounter, 1, 2)])
+syntactically_grassroots

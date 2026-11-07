@@ -2,9 +2,9 @@
 %% GPE.glp --- the Grassroots Physical Encounters contract, GSA's, extending GKK, in the clause
 %% syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GPE.txt
 %% beside this file: open_place and close_place are GPE:1, Open Place; encounter GPE:2, Encounter,
-%% an act with no guard, both having consented by opening the place, which the operating system
-%% puts to the platform when the layer reports a phone nearby whose keys were exchanged under open
-%% trust (GNA).  GKK's three schemas come first.  open(Alice) says that Alice declared the place she
+%% guarded by both, each one's consent given by their app while their place is open (the
+%% implementation pragma), which the operating system puts to the platform when the layer reports a
+%% phone nearby whose keys were exchanged under open trust (GNA).  GKK's three schemas come first.  open(Alice) says that Alice declared the place she
 %% is in open; being nearby is the layer's report and no atom.  Written by GSA #2 Cowork,
 %% 2026-11-07, for GSC's checker.
 %% ---------------------------------------------------------------------------
@@ -55,4 +55,4 @@ contract_named(gpe,
        [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
        [atom(identity, ['Alice']), atom(open, ['Alice']), not(atom(knows, ['Alice', 'Bob'])),
         atom(identity, ['Bob']), atom(open, ['Bob']), not(atom(knows, ['Bob', 'Alice']))],
-       true, [])]).
+       true, ['Alice', 'Bob'])]).
