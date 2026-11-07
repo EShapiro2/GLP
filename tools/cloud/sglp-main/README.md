@@ -1,0 +1,3 @@
+# The sGLP paper's runs on main e92fb71d, for Cloud #3 (Code #25, 2026-11-07)
+
+The scripts that made the runs of 2026-11-04 on the Mac, as they stood: runs.sh (the social graph and coins years, the sweep and the grid), meas.sh (the claim's two tests and the 30-day cost runs), tables.sh (the tables), and REPORT.md (the counts of Code's report of 2026-11-04).  Their paths are the Mac's: WT is the GLP checkout, T the output directory, LOCK the run-slot wrapper (on the Mac, tmp/glp-run.sh; in the container, run without it).  october-names.txt lists the October file names, one base name a line, each with its .out, .log, .draw, .graph or .txt.  The cost runs are the Mac's, tmp/sglp-main/REPORT-cost.md there; leave out meas.sh's cost loop.
