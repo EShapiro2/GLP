@@ -378,7 +378,7 @@ function doSearch(){
     g.style.display = q && !any ? 'none' : ''; g.classList.toggle('open', q ? any : OPEN.has(+g.dataset.g)); });
   lastRows();
 }
-$('#q').addEventListener('input', () => { if (C[location.hash.slice(1).split('-')[0]]) go(null); doSearch(); });
+$('#q').addEventListener('input', () => { if (C[location.hash.slice(1).replace(/-hood$/, '')]) go(null); doSearch(); });
 $('#q').addEventListener('keydown', e => { if (e.key === 'Enter'){ const a = document.querySelector('.app:not(.dim)'); if (a) go(a.dataset.id); } });
 
 /* ---------- routing ---------- */
@@ -392,7 +392,10 @@ document.addEventListener('keydown', e => {
 let LAST = null;
 window.addEventListener('hashchange', route);
 function route(){
-  const [id, part] = location.hash.slice(1).split('-');
+  // The hood suffix is '-hood'; a contract's own name may hold hyphens (GDO-L).
+  const h = location.hash.slice(1);
+  const part = h.endsWith('-hood') ? 'hood' : '';
+  const id = part ? h.slice(0, -5) : h;
   if (!C[id]){ LAST = null; $('#view').style.display = 'none'; $('#top').style.display = ''; lastRows(); return; }
   $('#top').style.display = 'none';
   const v = $('#view'); v.style.display = 'block'; v.classList.remove('zoomin'); void v.offsetWidth; v.classList.add('zoomin');
