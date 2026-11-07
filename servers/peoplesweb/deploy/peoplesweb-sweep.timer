@@ -1,0 +1,11 @@
+# Deployed to /etc/systemd/system/peoplesweb-sweep.timer and enabled:
+#   systemctl enable --now peoplesweb-sweep.timer
+[Unit]
+Description=peoplesweb.org hourly sweep
+
+[Timer]
+OnCalendar=*-*-* *:11:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

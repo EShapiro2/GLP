@@ -1,0 +1,10 @@
+# The hourly sweep (deploy/peoplesweb-sweep.timer): pull the clone, rebuild the
+# site, copy it to Caddy's root, restart the live server.  Deployed to
+# /etc/systemd/system/peoplesweb-sweep.service.
+[Unit]
+Description=peoplesweb.org hourly sweep
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/srv/glp/servers/peoplesweb/deploy/sweep.sh

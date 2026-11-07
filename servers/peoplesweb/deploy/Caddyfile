@@ -1,0 +1,10 @@
+# Caddy for GAS, the GLP app store, at peoplesweb.org.  Deployed to
+# /etc/caddy/Caddyfile; Caddy gets and renews the certificate once the
+# delegation reaches the registry.  The static site is what deploy/sweep.sh
+# copies from the build; the live apps' API is proxied to the server
+# (deploy/peoplesweb.service).
+peoplesweb.org {
+	root * /var/www/peoplesweb.org
+	reverse_proxy /api/* 127.0.0.1:8080
+	file_server
+}
