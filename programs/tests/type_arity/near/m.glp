@@ -1,0 +1,16 @@
+%% Box(Integer) is the enclosing self.glp's Box(X), box/1; Box is near/self.glp's,
+%% box/2 (../self.glp).  run(N): N = 7 + (1 + 2) = 10.
+exported procedure run(Integer).
+run(N?) :- wrap(7, W), unwrap(W?, A), pair(B), sum(B?, C), N := A? + C?.
+
+procedure wrap(Integer?, Box(Integer)).
+wrap(X, box(X?)).
+
+procedure unwrap(Box(Integer)?, Integer).
+unwrap(box(X), X?).
+
+procedure pair(Box).
+pair(box(1, 2)).
+
+procedure sum(Box?, Integer).
+sum(box(X, Y), Z?) :- Z := X? + Y?.

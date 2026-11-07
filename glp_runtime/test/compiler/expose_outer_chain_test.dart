@@ -111,13 +111,17 @@ void main() {
             m.ast.typeDefs.any((t) => t.name == 'Draw' && t.typeParams.isEmpty)),
         isTrue);
     final defs = programTypeDefs(modules, rootDir: dir);
-    expect(defs['Draw']!.typeParams, hasLength(1));
+    // A type is named by its name and its number of parameters (GLP #13,
+    // Code_inbox 2026-11-07 23:40 UTC, item 1): the root's Draw(T) is Draw/1,
+    // and sglp's 0-ary Draw, Draw/0, is another type.
+    expect(defs['Draw/1']!.typeParams, hasLength(1));
+    expect(defs['Draw/0']!.typeParams, isEmpty);
     // A type lifted from a self.glp outside the tree is the program's:
     // own_scope's Level, which lib/self.glp defines.
     final own =
         Directory('../programs/tests/expose/own_scope/app').absolute.path;
     final ownDefs = programTypeDefs(discover(own), rootDir: own);
-    expect(ownDefs['Level']!.alternatives, hasLength(2));
+    expect(ownDefs['Level/0']!.alternatives, hasLength(2));
   });
 
   test("neg/, calling double/2, is refused: lib/self.glp is not on its "

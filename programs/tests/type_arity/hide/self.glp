@@ -1,0 +1,7 @@
+%% A Box(X) of its own, nearer to m.glp than the enclosing Box(X), which it
+%% hides: m.glp's Box(Integer) is this one, two of X (../self.glp).
+Box(X) ::= two(X, X).
+
+imported procedure m#run(Integer).
+exported procedure run(Integer).
+run(N?) :- m # run(N).

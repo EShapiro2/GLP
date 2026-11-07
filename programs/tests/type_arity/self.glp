@@ -1,0 +1,11 @@
+%% A type is named by its name and its number of parameters, as a procedure is
+%% by its name and arity; a type reference resolves to the nearest scope
+%% defining a type of that name and that number of parameters (GLP #13,
+%% Code_inbox 2026-11-07 23:40 UTC, item 1, Udi approving; TGLP modules.tex,
+%% Compilation, fourth step).  This self.glp defines Box(X), one parameter; its
+%% two subdirectories each define a Box nearer to their modules
+%% (glp_runtime/test/compiler/type_arity_test.dart):
+%%
+%%   near/  a 0-ary Box, which does not hide this Box(X): near/m.glp names both;
+%%   hide/  a Box(X) of its own, which hides this one: hide/m.glp names it.
+Box(X) ::= box(X).
