@@ -352,7 +352,7 @@ conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not c
     ground(S?) | said('%% the schema', S?, T).
 procedure beyond_lines(YesNo?, Constant?, Lines).
 beyond_lines(no, _, []).
-beyond_lines(yes, S, ['%% it has a relation or a function other than min and floor in a constraint or a safe formula, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the signing conditions, counts and sums:', T?]) :-
+beyond_lines(yes, S, ['%% it has a relation or a function other than min and floor in a constraint or a safe formula, the author, the item or a program condition of a speech act among them, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the signing conditions, counts and sums:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 %% Whether a constraint, an expression or a safe formula holds a relation, or a function other than min and floor.
 procedure con_beyond(Constraint?, YesNo).
@@ -371,10 +371,13 @@ con_beyond(succ(_, _), no).
 con_beyond(signed(_, _), no).
 con_beyond(unsigned(_, _), no).
 con_beyond(rel(_, _), yes).
+con_beyond(program(_), yes).
 procedure exprs_beyond(Expr?, Expr?, YesNo).
 exprs_beyond(X, Y, B?) :- expr_beyond(X?, B1), expr_beyond(Y?, B2), or(B1?, B2?, B).
 procedure expr_beyond(Expr?, YesNo).
 expr_beyond(plus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+expr_beyond(author_of(_), yes).
+expr_beyond(item_of(_), yes).
 expr_beyond(minus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
 expr_beyond(mul(X, Y), B?) :- exprs_beyond(X?, Y?, B).
 %% A function the paper names, min or floor, is taken, and a count and a sum (vGLP 9ee6f87, Section 5.4: "over the relations and functions the value types provide --- comparison and arithmetic, min and floor, and signed(u, y) and unsigned(u, y) ... --- and over the count and the sum of the instances of a quantifier"); any other function is not.

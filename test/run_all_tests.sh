@@ -4344,6 +4344,7 @@ compile(q_inst_sgn, [qschema(s, ['Alice', 'Bob'], [], [svar(y)], true, [rs(guard
 compile(q_inst_none, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [hm(2, atom(seen, []))], [], [fa(role(2), atom(seen, []))])], [])], syntactically_grassroots).
 compile(q_inst_del, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [], [hm(2, atom(seen, [pvar('Dave')]))], [fnot(fa(role(2), atom(seen, [pvar('Dave')])))])], [])], syntactically_grassroots).
 compile(q_real_det, [nschema(halve, [real(v), real(h)], eq(mul(num(2), num(h)), num(v)), [rs(guarded, [atom(half, [num(h)])], [atom(poured, [num(v)])], [], [])])], syntactically_grassroots).
+compile(q_author, [nschema(sign, [svar(y)], eq(author_of(svar(y)), role(1)), [rs(guarded, [atom(item, [svar(y)])], [], [], [])])], syntactically_grassroots).
 compile(q_real, [schema(pour, [real(v)], [rs(guarded, [atom(poured, [num(v)])], [], [], [])])], syntactically_grassroots).
 compile(q_read, [qschema(s, ['Alice', 'Bob'], [], [pvar('Bob')], true, [rs(guarded, [atom(polled, [])], [], [], [atom(polled, [])]), crs(qlisted(1, admitted, [role(2)], [role(2)]), unguarded, [], [], [atom(in, [])], [])], [], [fforall([role(2)], role(1), atom(admitted, [role(2)]), fcons(true), [fa(role(2), atom(in, []))])])], syntactically_grassroots).
 :quit
@@ -4370,8 +4371,10 @@ check "CVA compiler: ... the class term naming the people of the listed role, th
 check "CVA compiler: a real variable, real(v) among the schema's variables, taken, passing the checks (q_real; vGLP fb40cff, Section 5.4)" "%% not compiled, having no pragmas(q_real)" "$cva_q"
 check "CVA compiler: a real variable the constraint determines, refused with the reason, GLP typing arithmetic on reals Number (q_real_det)" "%% not compiled(q_real_det)" "$cva_q"
 check "CVA compiler: ... the reason (q_real_det)" "it has a real variable the constraint determines, which the compiler does not carry" "$cva_q"
+check "CVA compiler: the author of a speech act in a constraint, GSC's author_of (GSC 65a26da), read and refused with the reason, vGLP's Section 5.4 naming no author, item or program condition (q_author)" "%% not compiled(q_author)" "$cva_q"
+check "CVA compiler: ... the reason (q_author)" "the author, the item or a program condition of a speech act among them, which vGLP Section 5.4 does not name" "$cva_q"
 check "CVA compiler: a listed reading role, its base guarding, passing the checks (q_read)" "%% not compiled, having no pragmas(q_read)" "$cva_q"
-check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card, q_inst, q_inst_by, q_inst_local, q_inst_sgn, q_inst_none, q_inst_del, q_inst_base, q_guard, q_real_det, q_real, q_read)" "not well-typed\|→ failed" "$cva_q"
+check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card, q_inst, q_inst_by, q_inst_local, q_inst_sgn, q_inst_none, q_inst_del, q_inst_base, q_guard, q_real_det, q_author, q_real, q_read)" "not well-typed\|→ failed" "$cva_q"
 
 # Counts, sums, min and floor, and environment predicates (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3 and 4): vGLP's counts, its agent run with no person and given at deployment cap(3) and the weights wt(4) and wt(2), which it holds from startup and its first view shows; fill, whose constraint counts the copies of tok its state holds, is taken until it holds three; and heavy, whose constraint sums the weights against min(2 floor(3), 100) = 6, is taken; with the weights wt(4) and wt(1), whose sum is 5, it is not.
 cva_cnt_dir="$GLP_DIR/programs/tests/vg_counts_$$"

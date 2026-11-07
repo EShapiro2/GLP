@@ -158,6 +158,8 @@ con_counts(succ(_, _), []).
 con_counts(signed(_, _), []).
 con_counts(unsigned(_, _), []).
 con_counts(rel(_, Es), K?) :- exprs_counts(Es?, K).
+%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
+con_counts(program(_), []).
 procedure exprs_counts(Exprs?, Exprs).
 exprs_counts([], []).
 exprs_counts([E|Es], K?) :- expr_counts(E?, K1), exprs_counts(Es?, K2), app(K1?, K2?, K).
@@ -414,6 +416,8 @@ con_det(not(_), _, []).
 con_det(implies(_, _), _, []).
 con_det(ne(_, _), _, []).
 con_det(rel(_, _), _, []).
+%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
+con_det(program(_), _, []).
 %% The numeric variables among the arguments that are not in Bd, each once, added to U0.
 procedure unbound_nvars(Args?, Args?, Args?, Args).
 unbound_nvars([], _, U0, U0?).
@@ -464,6 +468,9 @@ lin_coef(ilist(_, _), _, 0).
 lin_coef(fn(_, _), _, 0).
 lin_coef(cardinality(_, _, _, _), _, 0).
 lin_coef(sum(_, _, _, _, _), _, 0).
+%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
+lin_coef(author_of(_), _, 0).
+lin_coef(item_of(_), _, 0).
 procedure same_arg_coef(Arg?, Arg?, Number).
 same_arg_coef(A, V, 1) :- A? =?= V? | true.
 same_arg_coef(_, _, 0) :- otherwise | true.
