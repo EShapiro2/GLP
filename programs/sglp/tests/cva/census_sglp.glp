@@ -10,18 +10,18 @@
 %%   pair(_, [person(p1, host, [p2]), person(p2, guest, [])]).
 %%
 %%   person scripted.
-%%   Menu =::= script_menu.
-%%   (script_menu and act as in scripted_sglp.glp)
+%%   Request =::= script_request.
+%%   (script_request and act as in scripted_sglp.glp)
 %%
 %%   person agreeable.
 %%   Approval =::= agree.
 %%   (agree and say_yes as in scripted_sglp.glp)
 %%
 %%   person guest.
-%%   Menu =::= script_menu.
+%%   Request =::= script_request.
 %%   Approval =::= agree.
 %%
-%%   run pair [menus of host ~ (scripted : 1.0),
+%%   run pair [requests of host ~ (scripted : 1.0),
 %%             approvals of host ~ (agreeable : 1.0),
 %%             guesting of guest ~ (guest : 1.0)]
 %%       until 1 day seed 20260927.
@@ -40,11 +40,11 @@ source([
    clause(pair(var('_'), [person(p1, host, [p2]), person(p2, guest, [])]), [], []),
 
    person(scripted),
-   binds('Menu', script_menu),
-   decl(script_menu(dual('Menu'), dual('Person'), dual('Integer'))),
-   clause(script_menu(menu(p1, var('_'), var('R?')), var('_'), var('S')), [],
+   binds('Request', script_request),
+   decl(script_request('Request', dual('Person'), dual('Integer'))),
+   clause(script_request(var('R?'), person(p1, var('_'), var('_')), var('S')), [],
           [random(var('S?'), 3, var('K'), var('_')), rated(act(var('K?'), p1, p2, slot(var('R'))), rate(1, hour))]),
-   clause(script_menu(menu(p2, var('_'), var('R?')), var('_'), var('S')), [],
+   clause(script_request(var('R?'), person(p2, var('_'), var('_')), var('S')), [],
           [random(var('S?'), 3, var('K'), var('_')), rated(act(var('K?'), p2, p1, slot(var('R'))), rate(1, hour))]),
    decl(act(dual('Integer'), dual('Key'), dual('Key'), dual('Slot'('Request')))),
    clause(act(1, var('Me'), var('_'), slot(propose(establish(var('Me?'))))), [], []),
@@ -59,11 +59,11 @@ source([
    clause(say_yes(slot(yes)), [], []),
 
    person(guest),
-   binds('Menu', script_menu),
+   binds('Request', script_request),
    binds('Approval', agree),
 
    run(pair,
-       [mix(menus, host, [share(scripted, 1.0)]),
+       [mix(requests, host, [share(scripted, 1.0)]),
         mix(approvals, host, [share(agreeable, 1.0)]),
         mix(guesting, guest, [share(guest, 1.0)])],
        1, day, 20260927)]).
