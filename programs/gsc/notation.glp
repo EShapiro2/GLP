@@ -84,6 +84,7 @@ c_arg(sgn(X, J), Ns, T, ['sgn(', X?, ', '|R?]) :- c_name(J?, Ns?, [')'|T?], R).
 c_arg(num(X), _, T, [X?|T?]).
 c_arg(real(X), _, T, [X?|T?]).
 c_arg(any, _, T, ['_'|T?]).
+c_arg(item_of(Y), Ns, T, ['item('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 
 % The arguments, each after a comma.
 procedure c_rest(Args?, NameOfs?, RChunks?, RChunks).

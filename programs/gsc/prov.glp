@@ -168,6 +168,10 @@ prov_c1(svar(_), _, _, _, yes).
 % A value is no agent role, no agent variable and no name term, so the
 % definition asks nothing of it (the appendix "Values in Speech-Act Schemas").
 prov_c1(num(_), _, _, _, yes).
+% Nor of an item, an utterance, which names no agent (the appendix, GSC
+% 4401dd6: "A value, and an utterance, is no agent role, no agent variable and
+% no name term, so it has no base").
+prov_c1(item_of(_), _, _, _, yes).
 prov_c1(A, RB, RBs, QBs, R?) :-
     otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |
     arg_base(A?, B),

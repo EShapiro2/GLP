@@ -58,8 +58,15 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % among a schema's variables, num(X) is a whole value variable and real(X) a
 % real one; an atom, a multiplicity and a constraint write the value argument
 % num(X) of either, the variable's type being its head's.
+% item_of(svar(Y)) is the item item(y) of the speech-act variable y, the
+% utterance under the signatures of y, an argument of an atom and an
+% expression of a constraint (def:numbers, GSC 4401dd6); it names no agent and
+% has no base (the appendix, after def:binding-numbers: "A value, and an
+% utterance, is no agent role, no agent variable and no name term, so it has
+% no base"), and a binding sends it to the utterance beta(y) carries.
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-        ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any.
+        ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any
+        ; item_of(Arg).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
@@ -129,12 +136,16 @@ Mults      ::= [] ; [Mult | Mults].
 % in the head: eq(author_of(Y), U), U role(I) or pvar(X), either way round,
 % eq(item_of(Y), item_of(Y1)), and ne of each, its negation, the connectives
 % combining them; any other Y is signing_not_speech_act(Schema, Y), and
-% author_of and item_of anywhere else, or program on what is no item,
+% author_of and item_of anywhere else in a constraint, or program on what is no item,
 % constraint_not_numeric (check.glp).  No condition reads them (the appendix,
 % after def:binding-numbers), so the checker takes each as true, as it takes a
-% signing condition.  item_of(Y) as an argument of an atom is a fault of the
-% reading, item_argument(Schema, Predicate) (sas_faults): def:numbers admits
-% it only in a constraint.
+% signing condition.  item_of(Y) is also an argument of an atom (def:numbers
+% at GSC 4401dd6: "an argument of an atom may be a value or a value variable,
+% or the item item(y) of a speech-act variable y of the schema that an agent
+% role requires, the utterance under the signatures of y, which names no
+% agent"), item_of(svar(Y)) in the checker's form (Arg, below): Y not svar(Y)
+% is signing_not_speech_act(Schema, Y), and Y in no atom an agent role
+% requires item_argument(Schema, Y) (check.glp, item_schemas).
 % signed(U, Y) and unsigned(U, Y) are the signing conditions signed(u, y) and unsigned(u, y), u an agent role or agent variable and y a speech-act variable of the schema (def:numbers, GSC 10fcc92): U is role(I), I an agent role of the schema, or pvar(X), and Y is svar(Y), each variable listed in the head; any other U is a fault signing_not_agent(Schema, U) and any other Y a fault signing_not_speech_act(Schema, Y) (check.glp).  The conditions of def:syntactically-grassroots read no signing condition (the appendix, after def:binding-numbers), so the checker takes each as true.
 Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
@@ -148,7 +159,7 @@ Constraints ::= [] ; [Constraint | Constraints].
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
              ; sum(Args, Arg, Atom, Form, Expr)
-             ; author_of(Arg) ; item_of(Arg).
+             ; author_of(Arg).
 Exprs      ::= [] ; [Expr | Exprs].
 % A safe formula (def:role, GSC c8c5ead), built from atoms and constraints by
 % the connectives and the anchored quantifiers: fa(H, M) the atom or
@@ -858,11 +869,10 @@ sas_arg(real(X), _, _, num(X?)) :- otherwise | true.
 sas_arg(sgn(Y, N), E, _, sgn(Y?, I?)) :-
     sas_look(N?, E?, L),
     sas_index(L?, I).
-% item_of(Y), the item of Y, stands only in a constraint (def:numbers: "the
-% item item(y) ... in an equality with another, and a decidable condition on
-% that utterance that its type provides"); as an argument of an atom it is a
-% fault of the reading, item_argument (sas_faults), read as the wildcard.
-sas_arg(item_of(_), _, _, any).
+% item_of(Y), the item of Y, is an argument of an atom (def:numbers, GSC
+% 4401dd6), item_of(svar(Y)), Y read as a bare argument is: check.glp asks
+% that Y be a speech-act variable an agent role requires (item_schemas).
+sas_arg(item_of(Y), E, V, item_of(R?)) :- sas_bare(Y?, E?, V?, R).
 sas_arg(C, E, V, R?) :- otherwise | sas_bare(C?, E?, V?, R).
 
 procedure(X) sas_bare(X?, REnts?, PNames?, Arg).
@@ -1823,7 +1833,7 @@ sas_arg_vf(ext(_, _), _, _, _, _, T, T?).
 sas_arg_vf(num(_), _, _, _, _, T, T?).
 sas_arg_vf(real(_), _, _, _, _, T, T?).
 sas_arg_vf(sgn(_, _), _, _, _, _, T, T?).
-sas_arg_vf(item_of(_), _, _, Nm, P, T, [item_argument(Nm?, P?)|T?]).
+sas_arg_vf(item_of(Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
 sas_arg_vf(C, E, V, Nm, P, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, P?, T?, R).
 
 procedure(X) sas_bare_vf(X?, REnts?, PNames?, Constant?, Constant?, Faults?, Faults).
@@ -2164,9 +2174,14 @@ read_faults(environment(_, B), R?) :- wbody_faults(B?, R).
 % chosen must satisfy (unobstructed.glp).  A value names no agent (GSC,
 % Section 3.2), so neither names anyone.  vany is the image of the wildcard
 % in an atom the act requires or forbids, which any argument meets
-% (def:binding, "matches").
+% (def:binding, "matches").  utt(S) is the image of an item item(y), the
+% utterance under the signatures of the speech act a binding sends y to, S
+% that speech act with its signatures over it removed, signed(S, P) carrying
+% the utterance S carries (GSC 4401dd6: "a binding sends item(y) to the
+% utterance beta(y) carries, so an item holds the same program, or the same
+% post, whoever signed it over"); an utterance names no agent.
 Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef
-        ; nval(Constant) ; nfree(Constant) ; vany.
+        ; nval(Constant) ; nfree(Constant) ; vany ; utt(Val).
 Vals  ::= [] ; [Val | Vals].
 GAtom ::= gatom(Constant, Vals).
 
@@ -2584,9 +2599,17 @@ apply_arg(S, sgn(Y, J), signed(SV?, PV?)) :- ground(S?), ground(Y?), integer(J?)
     apply_arg(S?, role(J?), PV).
 apply_arg(S, num(X), V?) :- ground(S?), ground(X?) | apply_num(S?, X?, V).
 apply_arg(_, any, vany).
+apply_arg(S, item_of(Y), V?) :- ground(S?), ground(Y?) |
+    apply_arg(S?, Y?, W),
+    item_val(W?, V).
 apply_arg(S, A, V?) :- otherwise, ground(S?), ground(A?) |
     subst_lookup(S?, A?, F),
     unwrap_val(F?, V).
+
+% The item of a speech act: the utterance under its signatures (utt, Val).
+procedure item_val(Val?, Val).
+item_val(signed(S, _), V?) :- item_val(S?, V).
+item_val(W, utt(W?)) :- otherwise | true.
 
 % The image of a value argument (GSC, Section 3.2): the number itself, or
 % what the binding sends the value variable to; one the binding leaves free
@@ -2628,24 +2651,28 @@ kind_ok(role(_), signed(_, _), no).
 kind_ok(role(_), undef, no).
 kind_ok(role(_), nval(_), no).
 kind_ok(role(_), nfree(_), no).
+kind_ok(role(_), utt(_), no).
 kind_ok(pvar(_), person(_), yes).
 kind_ok(pvar(_), speech(_), no).
 kind_ok(pvar(_), signed(_, _), no).
 kind_ok(pvar(_), undef, no).
 kind_ok(pvar(_), nval(_), no).
 kind_ok(pvar(_), nfree(_), no).
+kind_ok(pvar(_), utt(_), no).
 kind_ok(svar(_), person(_), no).
 kind_ok(svar(_), speech(_), yes).
 kind_ok(svar(_), signed(_, _), yes).
 kind_ok(svar(_), undef, no).
 kind_ok(svar(_), nval(_), no).
 kind_ok(svar(_), nfree(_), no).
+kind_ok(svar(_), utt(_), no).
 kind_ok(nterm(_), person(_), no).
 kind_ok(nterm(_), speech(_), no).
 kind_ok(nterm(_), signed(_, _), no).
 kind_ok(nterm(_), undef, no).
 kind_ok(nterm(_), nval(_), no).
 kind_ok(nterm(_), nfree(_), no).
+kind_ok(nterm(_), utt(_), no).
 % A signed term is matched by its two parts (match_sgn below), never here.
 kind_ok(sgn(_, _), person(_), no).
 kind_ok(sgn(_, _), speech(_), no).
@@ -2653,6 +2680,7 @@ kind_ok(sgn(_, _), signed(_, _), yes).
 kind_ok(sgn(_, _), undef, no).
 kind_ok(sgn(_, _), nval(_), no).
 kind_ok(sgn(_, _), nfree(_), no).
+kind_ok(sgn(_, _), utt(_), no).
 % A value argument matches a number and nothing else (match_num below).
 kind_ok(num(_), nval(_), yes).
 kind_ok(num(_), nfree(_), yes).
@@ -2660,14 +2688,17 @@ kind_ok(num(_), person(_), no).
 kind_ok(num(_), speech(_), no).
 kind_ok(num(_), signed(_, _), no).
 kind_ok(num(_), undef, no).
+kind_ok(num(_), utt(_), no).
 kind_ok(real(_), nval(_), yes).
 kind_ok(real(_), nfree(_), yes).
 kind_ok(real(_), person(_), no).
 kind_ok(real(_), speech(_), no).
 kind_ok(real(_), signed(_, _), no).
 kind_ok(real(_), undef, no).
-% The wildcard is matched by match_one, never here.
+kind_ok(real(_), utt(_), no).
+% The wildcard and an item are matched by match_one, never here.
 kind_ok(any, _, no).
+kind_ok(item_of(_), _, no).
 
 % roles_at(S, V, Js): the indices of the roles S sends to V.  Clause 2 of
 % def:unobstructed asks of the other party that one of them be no reading
@@ -2760,6 +2791,7 @@ binding_ok(sgn(_, _), _, _, _, no).
 binding_ok(num(_), _, _, _, no).
 binding_ok(real(_), _, _, _, no).
 binding_ok(any, _, _, _, no).
+binding_ok(item_of(_), _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, Eqs?, MatchRes).
 match_bind(yes, A, V, S, E, match([bind(A?, V?)|S?], E?)).
@@ -2795,6 +2827,7 @@ match_sgn(_, _, undef, _, _, _, nomatch).
 match_sgn(_, _, nval(_), _, _, _, nomatch).
 match_sgn(_, _, nfree(_), _, _, _, nomatch).
 match_sgn(_, _, vany, _, _, _, nomatch).
+match_sgn(_, _, utt(_), _, _, _, nomatch).
 
 % A value argument num(X) matches a value by equality (def:unobstructed, at
 % a binding of its schema; def:binding-numbers): the number X matches the
@@ -2846,6 +2879,9 @@ match_one(sgn(Y, J), V, S, E, Rs, R?) :-
     match_sgn(Y?, J?, V?, S?, E?, Rs?, R).
 match_one(num(X), V, S, E, _, R?) :- ground(X?), ground(V?), ground(S?), ground(E?) |
     match_num(X?, V?, S?, E?, R).
+match_one(item_of(Y), V, S, E, Rs, R?) :-
+    ground(Y?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
+    match_item(Y?, V?, S?, E?, Rs?, R).
 match_one(A, V, S, E, Rs, R?) :-
     otherwise, ground(A?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
     subst_lookup(S?, A?, F),
@@ -2866,12 +2902,54 @@ match_args([A|As], [V|Vs], S, E, Rs, R?) :-
     match_one(A?, V?, S?, E?, Rs?, R1),
     match_rest(R1?, As?, Vs?, Rs?, R).
 
+% An item item(y) matches an utterance (utt, Val): where the binding sends y
+% to a speech act already, the utterance it carries; and otherwise y is sent
+% to the speech act the utterance is, which carries it (item_val), as some
+% binding does (def:binding-numbers, GSC 4401dd6: "a binding sends item(y)
+% to the utterance beta(y) carries").  It matches nothing else but the
+% wildcard's image (match_one).
+procedure match_item(Arg?, Val?, Subst?, Eqs?, RoleSpecs?, MatchRes).
+match_item(Y, utt(B), S, E, Rs, R?) :-
+    ground(Y?), ground(B?), ground(S?), ground(E?), ground(Rs?) |
+    subst_lookup(S?, Y?, F),
+    match_item1(F?, Y?, B?, S?, E?, Rs?, R).
+match_item(_, _, _, _, _, nomatch) :- otherwise | true.
+
+procedure match_item1(Found?, Arg?, Val?, Subst?, Eqs?, RoleSpecs?, MatchRes).
+match_item1(bound(W), _, B, S, E, _, R?) :- ground(W?), ground(B?), ground(S?), ground(E?) |
+    item_val(W?, U),
+    val_same(U?, utt(B?), S?, E?, R).
+match_item1(free, Y, B, S, E, Rs, R?) :- ground(Y?), ground(B?), ground(S?), ground(E?), ground(Rs?) |
+    match_one(Y?, B?, S?, E?, Rs?, R).
+
+% The arguments of an atom with their values, the items last, so that a
+% speech-act variable the atom carries is bound before its item is matched
+% (match_item).
+procedure items_last(Args?, Vals?, Args, Vals).
+items_last(As, Vs, A1?, V1?) :- ground(As?), ground(Vs?) |
+    split_items(As?, Vs?, NA, NV, IA, IV),
+    args_app(NA?, IA?, A1),
+    vals_app(NV?, IV?, V1).
+
+procedure split_items(Args?, Vals?, Args, Vals, Args, Vals).
+split_items([], [], [], [], [], []).
+split_items([item_of(Y)|As], [V|Vs], NA?, NV?, [item_of(Y?)|IA?], [V?|IV?]) :-
+    split_items(As?, Vs?, NA, NV, IA, IV).
+split_items([A|As], [V|Vs], [A?|NA?], [V?|NV?], IA?, IV?) :- otherwise |
+    split_items(As?, Vs?, NA, NV, IA, IV).
+split_items(As, Vs, As?, Vs?, [], []) :- otherwise | true.
+
+procedure vals_app(Vals?, Vals?, Vals).
+vals_app([], T, T?).
+vals_app([V|Vs], T, [V?|R?]) :- vals_app(Vs?, T?, R).
+
 % match_atom(Psi, G, Rs, S, E, R): the match of Psi against G extending the
-% binding S and the equations E.
+% binding S and the equations E, its items matched last (items_last).
 procedure match_atom(Atom?, GAtom?, RoleSpecs?, Subst?, Eqs?, MatchRes).
 match_atom(atom(P, As), gatom(Q, Vs), Rs, S, E, R?) :-
     P? =?= Q?, ground(As?), ground(Vs?), ground(Rs?), ground(S?), ground(E?) |
-    match_args(As?, Vs?, S?, E?, Rs?, R).
+    items_last(As?, Vs?, As1, Vs1),
+    match_args(As1?, Vs1?, S?, E?, Rs?, R).
 match_atom(atom(_, _), gatom(_, _), _, _, _, nomatch) :- otherwise | true.
 
 % A positive whole number, the value of a multiplicity (def:numbers,
@@ -3043,6 +3121,7 @@ filter_pvars([sgn(_, _)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([num(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([real(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([any|As], R?) :- filter_pvars(As?, R).
+filter_pvars([item_of(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_pvars(S?, Ps),
     filter_pvars(As?, R1),
@@ -3057,6 +3136,9 @@ filter_svars([sgn(Y, _)|As], [svar(Y?)|R?]) :- filter_svars(As?, R).
 filter_svars([num(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([real(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([any|As], R?) :- filter_svars(As?, R).
+% An item names no agent and has no base (Arg), so the speech-act variable
+% inside it is not read as one the atom carries.
+filter_svars([item_of(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_svars(S?, Ss),
     filter_svars(As?, R1),
@@ -3120,6 +3202,7 @@ fresh_val(sgn(_, _), _, undef).
 fresh_val(num(X), _, nfree(X?)).
 fresh_val(real(X), _, nfree(X?)).
 fresh_val(any, _, undef).
+fresh_val(item_of(_), _, undef).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -3517,6 +3600,8 @@ arg_base(sgn(_, J), b_role(J?)).
 arg_base(num(_), b_num).
 arg_base(real(_), b_num).
 arg_base(any, b_any).
+% An item, an utterance, has no base, as a value has none (Arg).
+arg_base(item_of(_), b_num).
 
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
@@ -3540,6 +3625,8 @@ args_bases([num(_)|As], T, R?) :- ground(As?), ground(T?) |
 args_bases([svar(_)|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([any|As], T, R?) :- ground(As?), ground(T?) |
+    args_bases(As?, T?, R).
+args_bases([item_of(_)|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([A|As], T, [B?|R?]) :- otherwise, ground(A?), ground(As?), ground(T?) |
     arg_base(A?, B),

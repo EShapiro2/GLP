@@ -254,6 +254,7 @@ vm_arg(svar(Y), B, M, R?) :- ground(Y?), ground(B?), ground(M?) | vm_var(svar(Y?
 vm_arg(num(X), B, M, R?) :- ground(X?), ground(B?), ground(M?), number(X?) | vm_same(num(X?), B?, M?, R).
 vm_arg(num(X), B, M, R?) :- otherwise, ground(X?), ground(B?), ground(M?) | vm_var(num(X?), B?, M?, R).
 vm_arg(nterm(S), nterm(T), M, R?) :- ground(S?), ground(T?), ground(M?) | vm_nt(S?, T?, M?, R).
+vm_arg(item_of(Y), item_of(Z), M, R?) :- ground(Y?), ground(Z?), ground(M?) | vm_arg(Y?, Z?, M?, R).
 vm_arg(A, B, M, R?) :- otherwise, ground(A?), ground(B?), ground(M?) | vm_same(A?, B?, M?, R).
 
 procedure vm_same(Arg?, Arg?, RMs?, VMR).
@@ -342,6 +343,7 @@ rn_arg(real(X), M, real(R?)) :- ground(X?), ground(M?) |
     vm_read(M?, num(X?), A),
     num_name(A?, X?, R).
 rn_arg(any, _, any).
+rn_arg(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
 
 % The name of a value argument, the variable's own where it is no num(X).
 procedure num_name(Arg?, Constant?, Constant).
@@ -449,6 +451,7 @@ arg_expr(sgn(Y, I), sgn(Y?, I?)).
 arg_expr(num(X), num(X?)).
 arg_expr(real(X), real(X?)).
 arg_expr(any, any).
+arg_expr(item_of(Y), item_of(Y?)).
 
 procedure rn_exprs(Exprs?, RMs?, Exprs).
 rn_exprs([], _, []).
