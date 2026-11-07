@@ -1,10 +1,10 @@
 %% ---------------------------------------------------------------------------
-%% GAS.glp --- the Grassroots App Store contract, GSA's, extending GSA, in the clause syntax of
+%% GAS.glp --- the Grassroots App Store contract, GSA's, extending GPD, in the clause syntax of
 %% GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GAS.txt beside
 %% this file: open_store is GAS:1, Store; list GAS:2, Listing; trust_store and distrust_store GAS:3,
-%% Store Trust; install_listed GAS:4, Installation from a Store.  GSA's fourteen schemas come first.
+%% Store Trust; install_listed GAS:4, Installation from a Store.  GPD's fourteen schemas come first.
 %% A store is the name term <Carol>.s, Carol its owner; store(Carol, <Carol>.s) says that Carol set
-%% it up, listed(Carol, <Carol>.s, <Dave>.p) that she listed Dave's program in it, and
+%% it up, listed(Carol, <Carol>.s, <Bob>.p) that she listed Bob's program in it, Bob a reading role whose published atom names it, and
 %% trusts_store(Alice, <Carol>.s) that Alice trusts the store.  Written by GSA #1 Cowork,
 %% 2026-11-07, a draft for Udi's approval and GSC's checker.
 %% ---------------------------------------------------------------------------
@@ -110,11 +110,11 @@ contract_named(gas,
        [atom(store, ['Carol', ext(own('Carol'), s)])],
        [atom(identity, ['Carol']), not(atom(store, ['Carol', ext(own('Carol'), s)]))],
        true, ['Carol']),
-    sas(list, ['Carol', 'Dave'], ['Dave', s, p],
-       [atom(listed, ['Carol', ext(own('Carol'), s), ext(own('Dave'), p)])],
-       [atom(identity, ['Carol']), atom(store, ['Carol', ext(own('Carol'), s)]),
-        atom(offered, ['Carol', ext(own('Dave'), p)]), atom(trusts, ['Carol', 'Dave']),
-        not(atom(listed, ['Carol', ext(own('Carol'), s), ext(own('Dave'), p)]))],
+    sas(list, ['Carol', 'Bob'], [s, p],
+       [atom(listed, ['Carol', ext(own('Carol'), s), ext(own('Bob'), p)])],
+       [atom(identity, ['Carol']), atom(store, ['Carol', ext(own('Carol'), s)]), atom(trusts, ['Carol', 'Bob']),
+        not(atom(listed, ['Carol', ext(own('Carol'), s), ext(own('Bob'), p)])),
+        atom(identity, ['Bob']), atom(published, ['Bob', ext(own('Bob'), p)])],
        true, ['Carol']),
     sas(trust_store, ['Alice', 'Carol'], [s],
        [atom(trusts_store, ['Alice', ext(own('Carol'), s)])],
@@ -126,10 +126,10 @@ contract_named(gas,
        [not(atom(trusts_store, ['Alice', ext(own('Carol'), s)]))],
        [atom(identity, ['Alice']), atom(trusts_store, ['Alice', ext(own('Carol'), s)])],
        true, ['Alice']),
-    sas(install_listed, ['Alice', 'Carol', 'Dave'], ['Dave', s, p],
-       [atom(installed, ['Alice', ext(own('Dave'), p)])],
+    sas(install_listed, ['Alice', 'Carol', 'Bob'], ['Bob', s, p],
+       [atom(installed, ['Alice', ext(own('Bob'), p)])],
        [atom(identity, ['Alice']), atom(trusts_store, ['Alice', ext(own('Carol'), s)]),
-        not(atom(installed, ['Alice', ext(own('Dave'), p)])),
+        not(atom(installed, ['Alice', ext(own('Bob'), p)])),
         atom(identity, ['Carol']), atom(store, ['Carol', ext(own('Carol'), s)]),
-        atom(listed, ['Carol', ext(own('Carol'), s), ext(own('Dave'), p)]), atom(trusts, ['Carol', 'Dave'])],
+        atom(listed, ['Carol', ext(own('Carol'), s), ext(own('Bob'), p)])],
        true, ['Alice'])]).

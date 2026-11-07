@@ -1,10 +1,10 @@
 %% ---------------------------------------------------------------------------
-%% GSA.glp --- the Grassroots Super-App and App Store contract, GSA's, extending GSG, in the clause
+%% GPD.glp --- the Grassroots Programs Dissemination contract, GSA's, extending GSG, in the clause
 %% syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in
-%% GSA.txt beside this file: publish is GSA:1, Program Publication; trust and distrust GSA:2, Developer
-%% Trust; offer GSA:3, Program Offering; install_own and install GSA:4, Program Installation;
-%% invite_new and invite_installed GSA:5, Program Invitation, one clause in two schemas, by whether
-%% Bob has the program installed; leave GSA:6, Leaving a Program.  GKK's
+%% GPD.txt beside this file: publish is GPD:1, Program Publication; trust and distrust GPD:2, Developer
+%% Trust; offer GPD:3, Program Offering; install_own and install GPD:4, Program Installation;
+%% invite_new and invite_installed GPD:5, Program Invitation, one clause in two schemas, by whether
+%% Bob has the program installed; leave GPD:6, Leaving a Program.  GKK's
 %% three schemas and GSG's two come first; every role requires identity.  A program is the name
 %% term <Carol>.p, Carol its developer; published(Carol, <Carol>.p) says that Carol published it,
 %% trusts(Alice, Carol) that Alice trusts Carol as a developer, offered(Alice, <Carol>.p) that it
@@ -35,9 +35,9 @@ PNames      ::= [] ; [Constant | PNames].
 Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
 Contract    ::= [] ; [Schema | Contract].
 
-% contract_named(gsa, C): the contract, GSA (Coordination Appendix C).
+% contract_named(gpd, C): the contract, GPD (Coordination Appendix C).
 procedure contract_named(Constant?, Contract).
-contract_named(gsa,
+contract_named(gpd,
    [sas(establish, ['Alice'], [],
        [atom(identity, ['Alice'])],
        [not(atom(identity, ['Alice']))], true, ['Alice']),
