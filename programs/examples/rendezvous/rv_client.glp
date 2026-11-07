@@ -55,9 +55,14 @@ SignalReply ::= punch(String) ; rejected.
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
               %% reconnect(A_pk, B_pk, SigB, Reply) — SigB is B's
               %% signature over the pair attest(PkA, PkB), PkA @< PkB
-            ; available(Key, Key, SignedTerm, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?)
               %% available(B_pk, A_pk, SigA, Reply) — SigA is A's
               %% signature over the same pair
+            ; register(Key, SignedTerm, SignalReply?)
+              %% register(I_pk, Link, Reply) — the inviter registers its
+              %% invitation link's serial (rv_agent.glp)
+            ; redeem(Key, SignedTerm, SignalReply?).
+              %% redeem(R_pk, Link, Reply) — the recipient redeems the link
 
 %% =============================================================================
 %% make_reconnect: build a reconnect cold-call message

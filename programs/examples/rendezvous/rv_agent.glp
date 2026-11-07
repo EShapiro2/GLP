@@ -1,7 +1,8 @@
 %% rv_agent.glp - Rendezvous Agent
 %%
 %% A minimal GLP agent that coordinates reconnection between agents
-%% that lost connectivity due to IP address changes.
+%% that lost connectivity due to IP address changes, and the redemption of
+%% an invitation link (GNA Section 6, "The rendezvous agent").
 %%
 %% - Accepts cold-calls from any agent (no friends list, no social graph)
 %% - Verifies each party's reconnection attestation with the language's
@@ -60,7 +61,33 @@
 %%   refused there.  The dispatch on what signature/2 reports, and on what
 %%   peer_address/2 reports, is given their answers directly.
 %%
+%% Invitation links (GNA Section 6, "Invitation links"):
+%%   a link is the term invitation(I, Rv, RvAddr, Serial, Expiry), signed by
+%%   the inviter I with sign/3: I's key, the rendezvous server's key and
+%%   address, a serial I keeps (an Integer) and the expiry, an hour after
+%%   creation, in Unix milliseconds, now/1's unit.
+%%   1. I, over its session with this server, registers the serial as
+%%      unused:  register(I_pk, Link, ReplyI)
+%%      admitted where signature/2 reports Link signed by I and naming I as
+%%      the inviter, and I has not registered that serial before; else
+%%      ReplyI = rejected.  An admitted registration waits as
+%%      invited(I_pk, Serial, ReplyI) on the pending list.
+%%   2. The recipient R redeems the link:  redeem(R_pk, Link, ReplyR)
+%%      admitted where signature/2 reports Link signed by the inviter it
+%%      names and now/1 is before its expiry; the agent then reads the
+%%      address at which the layer observes each of I and R by
+%%      peer_address/2, refusing where it observes none, and accepts only
+%%      where the serial is registered for I and unused, which it marks used,
+%%      used(I_pk, Serial), so that a link admits one first contact.
+%%   3. The relay: ReplyI = punch(AddrR), ReplyR = punch(AddrI).  Each calls
+%%      punch_udp/1 towards the other, and the deterministic initiator, the
+%%      endpoint with the smaller key, connects (GNA, "IP connection").
+%%   A refused redemption changes nothing: the serial stays unused and I
+%%   waits.
+%%
 %% System predicates:
+%%   now(T) — root self.glp (GLP-Spec catalogue): the current Unix
+%%     timestamp in milliseconds.
 %%   signature(Signed?, Signature) — root self.glp (GLP-Spec catalogue):
 %%     signed(Key, Hash, Term) or unsigned.
 %%   peer_address(Pk?, PeerAddress) — root self.glp (GLP-Spec catalogue):
@@ -83,15 +110,27 @@ SignalReply ::= punch(String) ; rejected.
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
               %% reconnect(A_pk, B_pk, SigB, ReplyA) — SigB is B's
               %% signature over the pair attest(PkA, PkB), PkA @< PkB
-            ; available(Key, Key, SignedTerm, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?)
               %% available(B_pk, A_pk, SigA, ReplyB) — SigA is A's
               %% signature over the same pair
+            ; register(Key, SignedTerm, SignalReply?)
+              %% register(I_pk, Link, ReplyI) — the inviter I registers the
+              %% serial of its invitation link Link as unused; ReplyI is
+              %% the address of the recipient who redeems it, punch(AddrR),
+              %% or rejected
+            ; redeem(Key, SignedTerm, SignalReply?).
+              %% redeem(R_pk, Link, ReplyR) — the recipient R redeems the
+              %% link Link; ReplyR is punch(AddrI), or rejected
 
 %% Pending entries awaiting a match
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
                  %% needs(A_pk, B_pk, AddrA, ReplyA?) — A wants to reconnect to B
-               ; ready(Key, Key, String, SignalReply?).
+               ; ready(Key, Key, String, SignalReply?)
                  %% ready(B_pk, A_pk, AddrB, ReplyB?) — B is available for A
+               ; invited(Key, Integer, SignalReply?)
+                 %% invited(I_pk, Serial, ReplyI?) — I's serial, unused
+               ; used(Key, Integer).
+                 %% used(I_pk, Serial) — I's serial, redeemed
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% A message as it arrives on the agent's network input: msg(Q, M), Q the
@@ -148,6 +187,22 @@ rv_agent([reconnect(A, B, Sig, ReplyA?)|In], Pending) :-
 rv_agent([available(B, A, Sig, ReplyB?)|In], Pending) :-
     signature(Sig?, S),
     admit_available(B?, A?, S?, ReplyB, Pending?, Pending1),
+    rv_agent(In?, Pending1?).
+
+%% The inviter I registers the serial of its invitation link, over its
+%% session with this server; the link carries what is checked.  The clock is
+%% not read: whether the link has expired is decided at its redemption.
+rv_agent([register(I, Link, ReplyI?)|In], Pending) :-
+    signature(Link?, S),
+    admit_register(I?, S?, ReplyI, Pending?, Pending1),
+    rv_agent(In?, Pending1?).
+
+%% The recipient R redeems the link it was sent; the clock is read by now/1
+%% and admit_redeem/6 dispatches on what signature/2 reports and on it.
+rv_agent([redeem(R, Link, ReplyR?)|In], Pending) :-
+    signature(Link?, S),
+    now(T),
+    admit_redeem(R?, S?, T?, ReplyR, Pending?, Pending1),
     rv_agent(In?, Pending1?).
 
 rv_agent([], _).
@@ -212,6 +267,120 @@ admit_available(B, A, signed(K, _, attest(P1, P2)), ReplyB?,
 %% refused, as admit_reconnect/6 refuses.
 admit_available(_, _, _, rejected, Pending, Pending?) :-
     otherwise | true.
+
+%% =============================================================================
+%% admit_register: dispatch on what signature/2 reports for a registration
+%% =============================================================================
+
+exported procedure admit_register(Key?, Signature?, SignalReply,
+                                  PendingList?, PendingList).
+
+%% The link is signed by the key the registration names, and names that key
+%% as the inviter: admitted, under whatever program I signed it, and
+%% register_serial/5 enters the serial as unused unless I has registered it
+%% already.  The guard grounds I and the serial.
+admit_register(I, signed(K, _, invitation(I1, _, _, Serial, _)), ReplyI?,
+               Pending, Pending1?) :-
+    K? =?= I?, I1? =?= I?, integer(Serial?) |
+    register_serial(I?, Serial?, ReplyI, Pending?, Pending1).
+
+%% unsigned, another signer, another term or another inviter: refused, and
+%% nothing is registered.
+admit_register(_, _, rejected, Pending, Pending?) :-
+    otherwise | true.
+
+%% =============================================================================
+%% register_serial: enter I's serial as unused, once
+%% =============================================================================
+
+exported procedure register_serial(Key?, Integer?, SignalReply,
+                                   PendingList?, PendingList).
+
+%% I has registered this serial already, and it is unused: refused, and the
+%% registration standing is left as it was.
+register_serial(I, S, rejected, [invited(I2, S2, R2?)|Ps],
+                [invited(I2?, S2?, R2)|Ps?]) :-
+    I? =?= I2?, S? =?= S2? | true.
+
+%% I has registered this serial already, and it is used: refused, so that a
+%% link admits one first contact.
+register_serial(I, S, rejected, [used(I2, S2)|Ps], [used(I2?, S2?)|Ps?]) :-
+    I? =?= I2?, S? =?= S2? | true.
+
+%% Another entry: kept, and the search goes on.
+register_serial(I, S, ReplyI?, [P|Ps], [P?|Ps1?]) :-
+    otherwise |
+    register_serial(I?, S?, ReplyI, Ps?, Ps1).
+
+%% Not registered: entered as unused, I's reply awaiting the redemption.
+register_serial(I, S, ReplyI?, [], [invited(I?, S?, ReplyI)]).
+
+%% =============================================================================
+%% admit_redeem: dispatch on what signature/2 reports for a redemption, and
+%% on the clock
+%% =============================================================================
+
+exported procedure admit_redeem(Key?, Signature?, Integer?, SignalReply,
+                                PendingList?, PendingList).
+
+%% The link is signed by the inviter it names, and the clock T is before its
+%% expiry: admitted, under whatever program the inviter signed it.  The RV
+%% agent then reads the address at which the layer observes each of the two,
+%% and redeem_addresses/7 dispatches on what it reports.
+admit_redeem(R, signed(K, _, invitation(I, _, _, Serial, Expiry)), T, ReplyR?,
+             Pending, Pending1?) :-
+    K? =?= I?, integer(Serial?), integer(Expiry?), T? < Expiry? |
+    peer_address(I?, PeerAddressI),
+    peer_address(R?, PeerAddressR),
+    redeem_addresses(I?, Serial?, PeerAddressI?, PeerAddressR?, ReplyR,
+                     Pending?, Pending1).
+
+%% unsigned, a link signed by another than the inviter it names, another
+%% term, or expired: refused, and nothing is changed.
+admit_redeem(_, _, _, rejected, Pending, Pending?) :-
+    otherwise | true.
+
+%% =============================================================================
+%% redeem_addresses: dispatch on what peer_address/2 reports for the two
+%% =============================================================================
+
+exported procedure redeem_addresses(Key?, Integer?, PeerAddress?, PeerAddress?,
+                                    SignalReply, PendingList?, PendingList).
+
+%% The layer observes both: look for the serial, registered for the inviter
+%% and unused.
+redeem_addresses(I, S, address(AddrI), address(AddrR), ReplyR?,
+                 Pending, Pending1?) :-
+    find_invited(I?, S?, AddrI?, AddrR?, ReplyR, Pending?, Pending1).
+
+%% The layer observes no address for one of the two: there is none to relay,
+%% so the redemption is refused and the serial is left as it was.
+redeem_addresses(_, _, _, _, rejected, Pending, Pending?) :-
+    otherwise | true.
+
+%% =============================================================================
+%% find_invited: the redemption arrived, search pending for the serial
+%% registered for the inviter and unused
+%% =============================================================================
+
+exported procedure find_invited(Key?, Integer?, String?, String?, SignalReply,
+                                PendingList?, PendingList).
+
+%% Registered and unused: marked used, and each is told the address the RV
+%% agent observes for the other --- the inviter the recipient's, the
+%% recipient the inviter's.
+find_invited(I, S, AddrI, AddrR, ReplyR?, [invited(I2, S2, ReplyI?)|Ps],
+             [used(I2?, S2?)|Ps?]) :-
+    I? =?= I2?, S? =?= S2? |
+    complete_rendezvous(AddrI?, AddrR?, ReplyI, ReplyR).
+
+%% Another entry, a used serial among them: kept, and the search goes on.
+find_invited(I, S, AddrI, AddrR, ReplyR?, [P|Ps], [P?|Ps1?]) :-
+    otherwise |
+    find_invited(I?, S?, AddrI?, AddrR?, ReplyR, Ps?, Ps1).
+
+%% Not registered for the inviter, or used: refused.
+find_invited(_, _, _, _, rejected, [], []).
 
 %% =============================================================================
 %% match_reconnect: dispatch on what peer_address/2 reports for A
