@@ -54,7 +54,9 @@ class Glp:
         except subprocess.TimeoutExpired as e:
             out = (e.stdout or b'').decode('utf-8', 'replace') if isinstance(e.stdout, bytes) else (e.stdout or '')
             out += '\n[timeout]'
-        return [re.sub(r'^(GLP> )+', '', l) for l in out.split('\n')]
+        lines = [re.sub(r'^(GLP> )+', '', l.rstrip('\r')) for l in out.split('\n')]
+        self.last = lines
+        return lines
 
     @staticmethod
     def answer(lines, var):

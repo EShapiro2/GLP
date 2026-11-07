@@ -109,6 +109,23 @@ def prepare(clone):
     return g
 
 
+def tools_hash():
+    """GAS2's own build code: a build made by other code is rebuilt."""
+    import hashlib
+    h = hashlib.sha256()
+    for f in sorted(os.listdir(os.path.join(HERE, 'tools'))):
+        if f.endswith('.py'):
+            h.update(open(os.path.join(HERE, 'tools', f), 'rb').read())
+    return h.hexdigest()[:16]
+
+
+def built_with(s):
+    try:
+        return json.load(open(os.path.join(slot(s), 'out', 'data.json'), encoding='utf-8')).get('tools')
+    except Exception:
+        return None
+
+
 def build_once(force=False):
     live = live_slot()
     target = 'b' if live == 'a' else 'a'
@@ -119,7 +136,8 @@ def build_once(force=False):
         state['lastError'] = f'checking {UPSTREAM}: {e}'
         log(state['lastError'])
         return
-    if live and not force and head and head == head_of(os.path.join(slot(live), 'glp')):
+    if live and not force and head and head == head_of(os.path.join(slot(live), 'glp')) \
+            and built_with(live) == tools_hash():
         log(f'{BRANCH} is still {head[:8]}; nothing to build')
         return
     state['building'], state['buildStarted'] = True, time.time()
@@ -128,7 +146,7 @@ def build_once(force=False):
         g = prepare(os.path.join(slot(target), 'glp'))
         out = os.path.join(slot(target), 'out.new')
         shutil.rmtree(out, ignore_errors=True)
-        env = dict(os.environ, GLPC=g.repl_exe, BASH=g.bash)
+        env = dict(os.environ, GLPC=g.repl_exe, BASH=g.bash, GAS2_TOOLS=tools_hash())
         p = subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'build.py'), g.root, out],
                            env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
         if p.returncode != 0 or not os.path.exists(os.path.join(out, 'data.json')):

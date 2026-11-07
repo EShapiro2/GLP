@@ -159,7 +159,8 @@ def cascade(g, c):
     t0 = time.time()
     C = g.contract(f, name)
     if not C:
-        r['why'], r['step'] = 'the contract term was not read', 'schemas'
+        tail = [l for l in getattr(g, 'last', []) if l.strip()][-6:]
+        r['why'], r['step'] = 'the contract term was not read: ' + ' | '.join(tail)[-600:], 'schemas'
         return r
     r['term'] = C
     R = g.as_read(C)
@@ -309,6 +310,7 @@ def main(root, out):
     data = {'commit': {'sha': commit[0], 'date': commit[1] if len(commit) > 1 else '',
                        'subject': commit[2] if len(commit) > 2 else ''},
             'built': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            'tools': os.environ.get('GAS2_TOOLS'),
             'contracts': contracts, 'relations': edges}
     tmp = os.path.join(out, 'data.json.tmp')
     with open(tmp, 'w', encoding='utf-8') as f:
