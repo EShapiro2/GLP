@@ -246,7 +246,7 @@ request_name(post(V1, V2, V3, V4), pname(post(V1?, V2?, V3?, V4?))).
 request_name(_, nopname) :- otherwise | true.
 
 procedure tabs(List(Tab)).
-tabs([tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', received), tab('Posts', delivered)]).
+tabs([tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', received), tab('Posts', received_in)]).
 
 procedure sentence_of(Class?, Peer?, Asked).
 sentence_of(acquaint(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' wishes that you know each other.')])], Me?, Ws).

@@ -14,7 +14,7 @@ Alice and Bob are persons.
 Pragmas
 Groups: the groups Alice is a member of.
 Messages: the messages Alice received.
-Posts: the posts delivered to Alice.
+Posts: the posts Alice received in her groups.
 Messaging: Alice [Message] <text>
 Group: Alice [Create] <name> [Close]
 Joining and Leaving: Alice [Join]
