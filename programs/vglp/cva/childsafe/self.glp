@@ -14,26 +14,29 @@
 %%   dave bob's.  alice enrols carol and bob dave, each child asked by the
 %%   approval question the hello carrying the enrolment asks, enrol a meeting
 %%   schema of the contract (vGLP, Section 5.4, "The compilation"); bob then
-%%   befriends alice, who is asked likewise.  alice befriends dave, dave asked
-%%   likewise, the meeting by which alice comes to know dave, the Discover the
-%%   initiator needs before it proposes; alice proposes cbefriend(carol, dave,
-%%   alice, bob), carol, dave and bob are asked and answer yes, and it commits
-%%   at all four.  Only alice, of its four guards, knows every participant:
-%%   carol knows alice alone, and bob and dave each other and alice.  alice's Commit introduces
-%%   every two of bob, carol and dave to each other, once per pair, and each
-%%   comes to know the others by the ihellos they exchange, bob and dave
-%%   knowing each other already (vGLP e2bc4f4, Definition "Deciding", Commit;
-%%   Definition "Holds, For, Connected, Unobstructed, Steady": one of its
-%%   guards "knows every other participant").  The enrolments and the
-%%   befriending, binary, introduce no one.
+%%   befriends alice, who is asked likewise.  carol, the child in cbefriend's
+%%   first role, which its pragma names before its button and so the base of
+%%   the schema and the proposer of its part (vGLP 0b51a60, Section 5.4), meets
+%%   bob and then dave by acquaint, GKK's Acquaintance, which adds no friend
+%%   atom, each asked by the hello carrying it: the Discover the initiator needs
+%%   before it proposes, "Propose ... is taken only where p knows every agent it
+%%   sends a message to" (vGLP, Definition "Proposing"); carol then proposes
+%%   cbefriend(carol, dave, alice, bob), alice, dave and bob are asked and answer
+%%   yes, and it commits at all four (vGLP #24, Code_inbox.md, 2026-11-07 18:52
+%%   UTC, Red 1).  carol's Commit introduces every two of alice, bob and dave to
+%%   each other, once per pair, and each comes to know the others by the
+%%   ihellos they exchange, alice and bob, and bob and dave, knowing each other
+%%   already, so alice and dave come to know each other (vGLP e2bc4f4,
+%%   Definition "Deciding", Commit).  The enrolments, the befriending and the
+%%   acquaintances, binary, introduce no one.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
+Class    ::= befriend(Peer, Peer) ; acquaint(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
-Proposal ::= befriend(Peer, Peer) ; enrol(Peer, Peer)
+Proposal ::= befriend(Peer, Peer) ; acquaint(Peer, Peer) ; enrol(Peer, Peer)
            ; cbefriend(Peer, Peer, Peer, Peer).
 Request  ::= propose(Proposal) ; refresh.
 YesNo    ::= yes ; no.
@@ -47,7 +50,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Atom     ::= friend(Peer) ; child(Peer) ; parent(Peer) ; approved(Peer, Peer).
+Atom     ::= friend(Peer) ; knows(Peer) ; child(Peer) ; parent(Peer) ; approved(Peer, Peer).
 Approved ::= Proposal.
 Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
@@ -70,18 +73,21 @@ play_childsafe(LA?, LB?, LC?, LD?, N?) :-
              wait(holds(child(carol))),
              approval(befriend(bob, alice), yes),
              wait(holds(friend(bob))),
-             own([A0], propose(befriend(A0?, dave))),
-             wait(holds(friend(dave))),
-             own([A2], propose(cbefriend(carol, dave, A2?, bob)))],
+             approval(cbefriend(carol, dave, alice, bob), yes)],
             [own([B1], propose(enrol(B1?, dave))),
              wait(holds(child(dave))),
              own([B2], propose(befriend(B2?, alice))),
              wait(holds(friend(alice))),
+             approval(acquaint(carol, bob), yes),
              approval(cbefriend(carol, dave, alice, bob), yes)],
             [approval(enrol(alice, carol), yes),
-             approval(cbefriend(carol, dave, alice, bob), yes)],
+             own([C1], propose(acquaint(C1?, bob))),
+             wait(holds(knows(bob))),
+             own([C2], propose(acquaint(C2?, dave))),
+             wait(holds(knows(dave))),
+             own([C3], propose(cbefriend(C3?, dave, alice, bob)))],
             [approval(enrol(bob, dave), yes),
-             approval(befriend(alice, dave), yes),
+             approval(acquaint(carol, dave), yes),
              approval(cbefriend(carol, dave, alice, bob), yes)],
             LA, LB, LC, LD, N).
 

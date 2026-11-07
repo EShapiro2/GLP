@@ -55,9 +55,10 @@
 %%                             at p  child(r), friend(q), +approved(r, s)
 %%                             at q  child(s), friend(p), +approved(s, r)
 %%
-%% A parent proposing cbefriend must know every participant, the other child
-%% included, before it proposes (vGLP, Definition "Canonical CVA Platform",
-%% Propose).  childsafe/self.glp plays it.
+%%   acquaint(p?, q?)      :  at p  +knows(q)
+%%                             at q  +knows(p)
+%%
+%% acquaint is GKK's Acquaintance (programs/gsc/GKK.glp) without its identity atoms, which childsafe has not, adding no friend atom, so that the proposer of cbefriend, the child in its first role, which its pragma names before its button and so its base (vGLP 0b51a60, Section 5.4), comes to know the other child and the other parent before it proposes: "Propose ... is taken only where p knows every agent it sends a message to" (vGLP, Definition "Proposing"), and befriending them would add the friend atom cbefriend forbids (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, Red 1).  childsafe/self.glp plays it.
 %%
 %% link is a three-party act guarded at its initiator alone, so that two
 %% initiators can propose attempts whose participants meet in two agents
@@ -374,6 +375,7 @@ pragmas_named(gnudge, pragmas([list('"Friends"', [friend])],
      act(g, '"G"', [], none, '"Friends"', by([1]))])).
 pragmas_named(childsafe, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(enrol, '"Enrol"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(cbefriend, '"Cbefriend"', ['""', '""', '"Parent"', '"Their parent"'], said([[], [person(1), text('" asks."')], [person(1), text('" asks."')], [person(1), text('" asks."')]]), '"Friends"', by([1]))])).
 pragmas_named(link, pragmas([list('"Friends"', [friend])],
@@ -499,6 +501,9 @@ procedure childsafe(Contract).
 childsafe([schema(befriend, [],
              [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
               rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+           schema(acquaint, [],
+             [rs(guarded, [atom(knows, [role(2)])], [], [], []),
+              rs(guarded, [atom(knows, [role(1)])], [], [], [])]),
            schema(enrol, [],
              [rs(guarded, [atom(child, [role(2)])], [], [], [atom(child, [role(2)])]),
               rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]),

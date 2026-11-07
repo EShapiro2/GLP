@@ -4876,11 +4876,14 @@ check "CVA gnudge: alice's nudge committed at both" "sent(alice, bob, outcome(at
 check "CVA gnudge: bob's nudge, the part he opens, retried at the wounded rank, committed at both" "sent(bob, alice, outcome(attempt(bob, 4, 3, nudge(bob, alice), none), commit))" "$cva_gnudge"
 check_not "CVA gnudge: nothing aborted for ever: no third attempt at either nudge" "attempt(alice, [4-9], [0-9]*, nudge\|attempt(bob, [5-9], [0-9]*, nudge" "$cva_gnudge"
 
-# vGLP's contract childsafe (programs/vglp/cva/contracts.glp): befriend, enrol
-# and a four-party cbefriend guarded by all four (vGLP 2026-10-13 12:05 UTC,
-# item 5).  Seek and Refer removed (vGLP ac065e0): alice and dave request each
-# other known before alice proposes cbefriend(carol, dave, alice, bob), which
-# commits at all four.
+# vGLP's contract childsafe (programs/vglp/cva/contracts.glp): befriend, acquaint
+# (GKK's Acquaintance, adding no friend atom), enrol and a four-party cbefriend
+# guarded by all four (vGLP 2026-10-13 12:05 UTC, item 5).  Its pragma names
+# carol, the child in its first role, before its button, so carol is the base
+# of the schema and the proposer of its part (vGLP 0b51a60, Section 5.4): she
+# meets bob and dave by acquaint before she proposes cbefriend(carol, dave,
+# alice, bob), which commits at all four (vGLP #24, Code_inbox.md, 2026-11-07
+# 18:52 UTC, Red 1).
 cva_cs_load=$("$REPL_RUN" <<HEREDOC
 $CVA/childsafe/
 :quit
@@ -4896,26 +4899,27 @@ play_childsafe(A, B, C, D, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA childsafe: alice, knowing carol and bob, comes to know dave by befriending him, a meeting schema, his yes to her hello his request of it; she proposes cbefriend, attempt 8, her request pending until it commits, and sees it approved" "A = \[.*view(alice, \[friend(dave), friend(bob), child(carol)\], \[bob, carol, dave\], \[\], \[tab('Friends', friend)\]), view(alice, \[friend(dave), friend(bob), child(carol)\], \[bob, carol, dave\], \[cbefriend(carol, dave, alice, bob)\], \[tab('Friends', friend)\]), view(alice, \[approved(carol, dave), friend(dave), friend(bob), child(carol)\], \[bob, carol, dave\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
-check "CVA childsafe: ... its start told to carol" "sent(alice, carol, start(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none)))" "$cva_cs"
-check "CVA childsafe: dave, knowing bob, is asked on alice's hello of befriend and answers yes, comes to know alice, and is asked on cbefriend" "D = \[view(dave, \[\], \[\], \[\], \[tab('Friends', friend)\]), gave(enrol(bob, dave), yes), view(dave, \[\], \[bob\], \[\], \[tab('Friends', friend)\]), .*gave(befriend(alice, dave), yes), view(dave, \[parent(bob)\], \[alice, bob\], \[\], \[tab('Friends', friend)\]), .*gave(cbefriend(carol, dave, alice, bob), yes)" "$cva_cs"
-check_not "CVA childsafe: no seek and no refer" "seek(\|refer(" "$cva_cs"
-check "CVA childsafe: the three yeses, carol's, dave's and bob's" "sent(carol, alice, vote(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), yes)), sent(dave, alice, vote(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), yes)), sent(bob, alice, vote(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), yes))" "$cva_cs"
-check "CVA childsafe: ... and it commits at carol" "sent(alice, carol, outcome(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), commit))" "$cva_cs"
-check "CVA childsafe: ... at dave" "sent(alice, dave, outcome(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), commit))" "$cva_cs"
-check "CVA childsafe: ... and at bob" "sent(alice, bob, outcome(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), commit))" "$cva_cs"
+check "CVA childsafe: carol, knowing alice, meets bob and dave by acquaint, each asked by her hello, the Discover the initiator needs; she proposes cbefriend, her request pending until it commits, and sees it committed" "C = \[.*view(carol, \[knows(dave), knows(bob), parent(alice)\], \[alice, bob, dave\], \[\], \[tab('Friends', friend)\]), view(carol, \[knows(dave), knows(bob), parent(alice)\], \[alice, bob, dave\], \[cbefriend(carol, dave, alice, bob)\], \[tab('Friends', friend)\]), view(carol, \[friend(dave), knows(dave), knows(bob), parent(alice)\], \[alice, bob, dave\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
+check "CVA childsafe: ... its start told to alice" "sent(carol, alice, start(attempt(carol, [0-9]*, [0-9]*, cbefriend(carol, dave, alice, bob), none)))" "$cva_cs"
+check "CVA childsafe: dave, knowing bob, is asked on carol's hello of acquaint and answers yes, comes to know carol, and is asked on cbefriend" "D = \[view(dave, \[\], \[\], \[\], \[tab('Friends', friend)\]), gave(enrol(bob, dave), yes), view(dave, \[\], \[bob\], \[\], \[tab('Friends', friend)\]), .*gave(acquaint(carol, dave), yes), view(dave, \[parent(bob)\], \[bob, carol\], \[\], \[tab('Friends', friend)\]), .*gave(cbefriend(carol, dave, alice, bob), yes)" "$cva_cs"
+check_not "CVA childsafe: no seek, no refer, and no befriending of a child by the other parent" "seek(\|refer(\|befriend(alice, dave)\|befriend(bob, carol)" "$cva_cs"
+check "CVA childsafe: the three yeses, dave's, alice's and bob's" "sent(dave, carol, vote(attempt(carol, \([0-9]*\), \([0-9]*\), cbefriend(carol, dave, alice, bob), none), yes)), sent(alice, carol, vote(attempt(carol, \1, \2, cbefriend(carol, dave, alice, bob), none), yes)), sent(bob, carol, vote(attempt(carol, \1, \2, cbefriend(carol, dave, alice, bob), none), yes))" "$cva_cs"
+check "CVA childsafe: ... and it commits at dave" "sent(carol, dave, outcome(attempt(carol, [0-9]*, [0-9]*, cbefriend(carol, dave, alice, bob), none), commit))" "$cva_cs"
+check "CVA childsafe: ... at alice" "sent(carol, alice, outcome(attempt(carol, [0-9]*, [0-9]*, cbefriend(carol, dave, alice, bob), none), commit))" "$cva_cs"
+check "CVA childsafe: ... and at bob" "sent(carol, bob, outcome(attempt(carol, [0-9]*, [0-9]*, cbefriend(carol, dave, alice, bob), none), commit))" "$cva_cs"
 # Commit introduces the other participants of its attempt to each other, once
-# per pair (vGLP e2bc4f4, Definition "Deciding", Commit): only alice, of the
-# four guards, knows every participant (Definition "Holds, For, Connected,
-# Unobstructed, Steady"), carol knowing alice alone, and the attempt commits;
-# alice's Commit introduces every two of bob, carol and dave, bob and dave
-# knowing each other already, and each comes to know the others (CSSN's
-# child_befriend(carol, dave, alice, bob), CSSN to vGLP, 2026-10-19 11:21 UTC).
-check "CVA childsafe: alice's Commit introduces every two of bob, carol and dave to each other, once per pair, after the outcomes" "sent(alice, bob, outcome(attempt(alice, 8, 8, cbefriend(carol, dave, alice, bob), none), commit)), intro(alice, bob, carol), intro(alice, carol, bob), intro(alice, bob, dave), intro(alice, dave, bob), intro(alice, carol, dave), intro(alice, dave, carol) |" "$cva_cs"
-check_not "CVA childsafe: the enrolments and the befriendings, binary, introduce no one: no introduction before cbefriend commits" "intro([a-z]*, [a-z]*, [a-z]*).*outcome(attempt(alice, 8, 8, cbefriend" "$cva_cs"
-check "CVA childsafe: carol, who knew alice alone, comes to know bob and dave" "C = \[.*view(carol, \[friend(dave), parent(alice)\], \[alice\], \[\], \[tab('Friends', friend)\]), .*view(carol, \[friend(dave), parent(alice)\], \[alice, bob, dave\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
-check "CVA childsafe: ... dave comes to know carol" "D = \[.*view(dave, \[friend(carol), friend(alice), parent(bob)\], \[alice, bob\], \[\], \[tab('Friends', friend)\]), view(dave, \[friend(carol), friend(alice), parent(bob)\], \[alice, bob, carol\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
-check "CVA childsafe: ... and bob carol" "B = \[.*view(bob, \[approved(dave, carol), friend(alice), child(dave)\], \[alice, dave\], \[\], \[tab('Friends', friend)\]), view(bob, \[approved(dave, carol), friend(alice), child(dave)\], \[alice, carol, dave\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
+# per pair (vGLP e2bc4f4, Definition "Deciding", Commit): carol, the initiator,
+# knows every participant (Definition "Holds, For, Connected, Unobstructed,
+# Steady"), alice knowing bob and carol alone, and the attempt commits; carol's
+# Commit introduces every two of alice, bob and dave, alice and bob, and bob
+# and dave, knowing each other already, and alice and dave come to know each
+# other (CSSN's child_befriend(carol, dave, alice, bob), CSSN to vGLP,
+# 2026-10-19 11:21 UTC).
+check "CVA childsafe: carol's Commit introduces every two of alice, bob and dave to each other, once per pair, after the outcomes" "sent(carol, bob, outcome(attempt(carol, [0-9]*, [0-9]*, cbefriend(carol, dave, alice, bob), none), commit)), intro(carol, alice, bob), intro(carol, bob, alice), intro(carol, alice, dave), intro(carol, dave, alice), intro(carol, bob, dave), intro(carol, dave, bob) |" "$cva_cs"
+check_not "CVA childsafe: the enrolments, the befriending and the acquaintances, binary, introduce no one: no introduction before cbefriend commits" "intro([a-z]*, [a-z]*, [a-z]*).*outcome(attempt(carol, [0-9]*, [0-9]*, cbefriend" "$cva_cs"
+check "CVA childsafe: alice, who knew bob and carol, comes to know dave" "A = \[.*view(alice, \[approved(carol, dave), friend(bob), child(carol)\], \[bob, carol\], \[\], \[tab('Friends', friend)\]), view(alice, \[approved(carol, dave), friend(bob), child(carol)\], \[bob, carol, dave\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
+check "CVA childsafe: ... dave comes to know alice" "D = \[.*view(dave, \[friend(carol), knows(carol), parent(bob)\], \[bob, carol\], \[\], \[tab('Friends', friend)\]), view(dave, \[friend(carol), knows(carol), parent(bob)\], \[alice, bob, carol\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
+check "CVA childsafe: ... and bob, who knew all three, records the approval" "B = \[.*view(bob, \[approved(dave, carol), knows(carol), friend(alice), child(dave)\], \[alice, carol, dave\], \[\], \[tab('Friends', friend)\]) |" "$cva_cs"
 
 # vGLP's contract link (programs/vglp/cva/contracts.glp): befriend and a
 # three-party link guarded at its initiator alone (vGLP 2026-10-13 17:53 UTC,

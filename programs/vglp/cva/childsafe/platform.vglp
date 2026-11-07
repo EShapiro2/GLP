@@ -14,6 +14,8 @@
 Class ::=
 befriend(Peer, Peer)
 ;
+acquaint(Peer, Peer)
+;
 enrol(Peer, Peer)
 ;
 cbefriend(Peer, Peer, Peer, Peer)
@@ -21,6 +23,8 @@ cbefriend(Peer, Peer, Peer, Peer)
 
 Proposal ::=
 befriend(Peer, Peer)
+;
+acquaint(Peer, Peer)
 ;
 enrol(Peer, Peer)
 ;
@@ -31,12 +35,14 @@ Request ::= propose(Proposal) ; refresh.
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Befriend", [act(befriend, 1, [1, 2], [forb(friend, [at(2)]), unless(friend, [at(2)])], [], [], [], [])]), button("Enrol", [act(enrol, 1, [1, 2], [forb(child, [at(2)]), unless(child, [at(2)]), unless(approved, [at(2), any])], [], [], [], [])]), button("Cbefriend", [act(cbefriend, 1, [1, 2, 3, 4], [req(parent, [at(3)]), forb(friend, [at(2)]), unless(friend, [at(2)]), proved(child, [v], parent, [at(3)])], [3], [field(3, "Parent", person), field(4, "Their parent", person)], [], [])])])
+Request? =::= social_menu([button("Befriend", [act(befriend, 1, [1, 2], [forb(friend, [at(2)]), unless(friend, [at(2)])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [], [], [], [], [])]), button("Enrol", [act(enrol, 1, [1, 2], [forb(child, [at(2)]), unless(child, [at(2)]), unless(approved, [at(2), any])], [], [], [], [])]), button("Cbefriend", [act(cbefriend, 1, [1, 2, 3, 4], [req(parent, [at(3)]), forb(friend, [at(2)]), unless(friend, [at(2)]), proved(child, [v], parent, [at(3)])], [3], [field(3, "Parent", person), field(4, "Their parent", person)], [], [])])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
 Atom ::=
 friend(Peer)
+;
+knows(Peer)
 ;
 child(Peer)
 ;
@@ -48,6 +54,8 @@ approved(Peer, Peer)
 procedure atom_of(GAtom?, Shown).
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
+atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
+.
 atom_of(g(child, [p(V1)]), shown(child(V1?)))
 .
 atom_of(g(parent, [p(V1)]), shown(parent(V1?)))
@@ -57,11 +65,13 @@ atom_of(g(approved, [p(V1), p(V2)]), shown(approved(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(enrol, [], [rs(guarded, [atom(child, [role(2)])], [], [], [atom(child, [role(2)])]), rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]), schema(cbefriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(parent, [role(4)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approved, [role(1), role(2)])], [], [atom(child, [role(1)]), atom(friend, [role(4)])], []), rs(guarded, [atom(approved, [role(2), role(1)])], [], [atom(child, [role(2)]), atom(friend, [role(3)])], [])])])
+contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], []), rs(guarded, [atom(knows, [role(1)])], [], [], [])]), schema(enrol, [], [rs(guarded, [atom(child, [role(2)])], [], [], [atom(child, [role(2)])]), rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]), schema(cbefriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(parent, [role(4)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approved, [role(1), role(2)])], [], [atom(child, [role(1)]), atom(friend, [role(4)])], []), rs(guarded, [atom(approved, [role(2), role(1)])], [], [atom(child, [role(2)]), atom(friend, [role(3)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
 schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]))
+.
+schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], []), rs(guarded, [atom(knows, [role(1)])], [], [], [])]))
 .
 schema_entry(enrol, schema(enrol, [], [rs(guarded, [atom(child, [role(2)])], [], [], [atom(child, [role(2)])]), rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]))
 .
@@ -77,6 +87,8 @@ schema_forms(_, []) :- otherwise | true.
 
 procedure schema_base(Constant?, Integer).
 schema_base(befriend, 1)
+.
+schema_base(acquaint, 1)
 .
 schema_base(enrol, 1)
 .
@@ -95,6 +107,8 @@ introduction_preds([])
 procedure binding_of(Class?, Constant, Binding).
 binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
+binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+.
 binding_of(enrol(V1, V2), enrol, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(cbefriend(V1, V2, V3, V4), cbefriend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?))])
@@ -102,6 +116,16 @@ binding_of(cbefriend(V1, V2, V3, V4), cbefriend, [b(role(1), p(V1?)), b(role(2),
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
 class_of(befriend, B, D, befriend(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
+class_of(acquaint, B, D, acquaint(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -139,6 +163,8 @@ val_peer(role(4), B?, D?, V4)
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
+name_class(acquaint(V1, V2), _, acquaint(V1?, V2?))
+.
 name_class(enrol(V1, V2), _, enrol(V1?, V2?))
 .
 name_class(cbefriend(V1, V2, V3, V4), _, cbefriend(V1?, V2?, V3?, V4?))
@@ -146,6 +172,8 @@ name_class(cbefriend(V1, V2, V3, V4), _, cbefriend(V1?, V2?, V3?, V4?))
 
 procedure request_name(Class?, PName).
 request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
+.
+request_name(acquaint(V1, V2), pname(acquaint(V1?, V2?)))
 .
 request_name(enrol(V1, V2), pname(enrol(V1?, V2?)))
 .
@@ -161,6 +189,16 @@ tabs([tab("Friends", friend)])
 %% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names, with the role of the proposer, asked(G, Words); none, asked(0, []), where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
 procedure sentence_of(Class?, Peer?, Asked).
 sentence_of(befriend(V1, V2), Me, Ws?)
+:-
+ground(V2?)
+,
+ground(V1?)
+,
+ground(Me?)
+|
+ask_of([q(V2?, 1, [person(V1?), text(" asks.")])], Me?, Ws)
+.
+sentence_of(acquaint(V1, V2), Me, Ws?)
 :-
 ground(V2?)
 ,
@@ -199,6 +237,16 @@ sentence_of(_, _, asked(0, [])) :- otherwise | true.
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(befriend(V1, V2), Me, P?)
+:-
+ground(V1?)
+,
+ground(V2?)
+,
+ground(Me?)
+|
+meet_other(V1?, V2?, Me?, P)
+.
+meeting_peer(acquaint(V1, V2), Me, P?)
 :-
 ground(V1?)
 ,
