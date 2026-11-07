@@ -303,6 +303,40 @@ class ProcDecl {
   String toString() => '${_visibilityPrefix}procedure $qualifiedName(${argTypes.join(', ')}).';
 }
 
+/// The expansion instance [name], `T<A1,...,An>` (param_expansion.dart,
+/// `expandedName`), with every argument [rename] renames replaced by its
+/// value, nested instances through, an argument's input mark `?` kept: the
+/// name the expansion of `T(A1',...,An')` gives the template at the renamed
+/// arguments.  A name with no `<` is returned as it is.
+String renameInstanceName(String name, Map<String, String> rename) {
+  final lt = name.indexOf('<');
+  if (lt < 0 || !name.endsWith('>')) return name;
+  final body = name.substring(lt + 1, name.length - 1);
+  final args = <String>[];
+  var depth = 0, start = 0;
+  for (var i = 0; i < body.length; i++) {
+    final c = body[i];
+    if (c == '<') {
+      depth++;
+    } else if (c == '>') {
+      depth--;
+    } else if (c == ',' && depth == 0) {
+      args.add(body.substring(start, i).trim());
+      start = i + 1;
+    }
+  }
+  if (start < body.length) args.add(body.substring(start).trim());
+  String one(String a) {
+    final input = a != '_?' && a.endsWith('?');
+    final bare = input ? a.substring(0, a.length - 1) : a;
+    final renamed = bare.contains('<')
+        ? renameInstanceName(bare, rename)
+        : (rename[bare] ?? bare);
+    return input ? '$renamed?' : renamed;
+  }
+  return '${name.substring(0, lt)}<${args.map(one).join(',')}>';
+}
+
 /// [expr] with every type name in [rename] replaced by its value, in the name
 /// of a reference and in its type arguments, through every constructor. A
 /// name in [typeParams] is a type parameter, names no type and is left alone.
@@ -523,6 +557,39 @@ class TypeEnvironment {
       grew = false;
       for (final name in types.keys) {
         if (rename.containsKey(name)) continue;
+        // An expansion instance is named by its arguments, `Stream<Peers>`
+        // the template Stream at the type named Peers.  Once an argument's
+        // name is kept under `<origin>:T`, the instance is the template at
+        // that type, and the bare name, `Stream<Peers>`, denotes the
+        // template at the winner's: so the instance is renamed with its
+        // arguments, `Stream<<origin>:Peers>`, the name an expansion of
+        // `Stream(<origin>:Peers)` gives it, whether or not the winner
+        // defines the bare name.  Until 2026-11-07 it kept the bare name
+        // where the winner did not define it, and a module's call of a
+        // parameterised procedure at its own Peers was checked against the
+        // enclosing scope's Peers through the enclosing scope's
+        // `Stream<Peers>`, which [materializeInstantiations] found already
+        // defined (TGLP modules.tex, Compilation, fourth step: "every type
+        // reference is resolved ... to the renamed type of the nearest scope
+        // defining it"; programs/tests/nearest_type).
+        if (name.contains('<')) {
+          final derived = renameInstanceName(name, rename);
+          if (derived != name) {
+            var fresh = derived;
+            if (taken.contains(fresh) || rename.containsValue(fresh)) {
+              final origin = typeOrigins[name] ?? ownLabel ?? 'outer';
+              fresh = '$origin:$name';
+              for (var k = 2;
+                  taken.contains(fresh) || rename.containsValue(fresh);
+                  k++) {
+                fresh = '$origin$k:$name';
+              }
+            }
+            rename[name] = fresh;
+            grew = true;
+            continue;
+          }
+        }
         final theirs = winner.types[name];
         if (theirs == null) continue;
         if (sameTypeDef(_renameTypeDef(types[name]!, rename), theirs)) continue;
