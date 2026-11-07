@@ -14,6 +14,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart' show GlpEngine;
@@ -64,9 +65,22 @@ class SuperHost {
   void Function()? onChange;
   Future<void> _queue = Future.value();
 
+  final List<Completer<void>> _waiting = [];
+
   void _changed() {
     version++;
     onChange?.call();
+    for (final c in _waiting) {
+      if (!c.isCompleted) c.complete();
+    }
+    _waiting.clear();
+  }
+
+  /// Completes at the next change of what the page shows.
+  Future<void> nextChange() {
+    final c = Completer<void>();
+    _waiting.add(c);
+    return c.future;
   }
 
   void _note(String s) {
@@ -78,9 +92,10 @@ class SuperHost {
   /// under the person's key where not already.
   Future<void> _prepareApps() async {
     final idx = jsonDecode(File('$tree/gas2_apps.json').readAsStringSync()) as List;
-    final identity = PersonIdentity(keyPair.pub, keyPair.priv);
+    var i = 0;
     for (final a in idx) {
       final m = a as Map;
+      i++;
       final app = m['app'] as String;
       apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
       // certified once per person and per version of the mini-app's files, and kept
@@ -92,12 +107,17 @@ class SuperHost {
         kept.copySync(out.path);
         continue;
       }
-      status = 'certifying ${m['title']}';
+      status = 'preparing the mini-apps ($i of ${idx.length}): ${m['title']}';
       _changed();
-      final engine = GlpEngine(rootSelfGlpPath: rootSelf, identity: identity);
-      engine.loadProgram('$tree/apps/$app');
-      final art = engine.appModule!.artefact as Artefact;
-      out.writeAsBytesSync(art.toBytes());
+      // in an isolate of its own: compiling a mini-app takes seconds (minutes, on a
+      // phone), and the page and the network are served meanwhile
+      final rs = rootSelf, src = '$tree/apps/$app', pub = keyPair.pub, priv = keyPair.priv;
+      final bytes = await Isolate.run(() {
+        final engine = GlpEngine(rootSelfGlpPath: rs, identity: PersonIdentity(pub, priv));
+        engine.loadProgram(src);
+        return (engine.appModule!.artefact as Artefact).toBytes();
+      });
+      out.writeAsBytesSync(bytes);
       kept.parent.createSync(recursive: true);
       out.copySync(kept.path);
       stamp.writeAsStringSync(version);

@@ -5,9 +5,23 @@
 #   python3 test/two_devices.py [gas2_gkk | gas2_gc | gas2_gsn]
 import json, time, urllib.request, sys
 APP = sys.argv[1] if len(sys.argv) > 1 else 'gas2_gc'
-def st(p): return json.load(urllib.request.urlopen(f'http://127.0.0.1:{p}/api/state'))
-def act(p, j): urllib.request.urlopen(urllib.request.Request(f'http://127.0.0.1:{p}/api/act', data=json.dumps(j).encode(), method='POST')).read()
-def add(p, k): urllib.request.urlopen(urllib.request.Request(f'http://127.0.0.1:{p}/api/add', data=json.dumps({'key': k}).encode(), method='POST')).read()
+# A device is a page's base URL: GAS2_A and GAS2_B (default the two devices on the
+# loopback); a base on GAS2 on the web (bin/web.dart) is a person made there at first call.
+import os, urllib.error
+BASE = {'A': os.environ.get('GAS2_A', 'http://127.0.0.1:8301'), 'B': os.environ.get('GAS2_B', 'http://127.0.0.1:8302')}
+TOKEN = {}
+def call(p, path, body=None):
+    for _ in range(2):
+        h = {'X-GAS2-Token': TOKEN[p]} if p in TOKEN else {}
+        r = urllib.request.Request(BASE[p] + path, data=None if body is None else json.dumps(body).encode(), headers=h, method='GET' if body is None else 'POST')
+        try:
+            return json.load(urllib.request.urlopen(r))
+        except urllib.error.HTTPError as e:
+            if e.code != 401: raise
+            TOKEN[p] = json.load(urllib.request.urlopen(urllib.request.Request(BASE[p] + '/api/start', data=b'', method='POST')))['token']
+def st(p): return call(p, '/api/state')
+def act(p, j): call(p, '/api/act', j)
+def add(p, k): call(p, '/api/add', {'key': k})
 def app(p): return next(a for a in st(p)['apps'] if a['app'] == APP)
 def wait(cond, t=60, what=''):
     for _ in range(t*2):
@@ -28,7 +42,8 @@ def view(p):
 def propose(p, f, args):
     i, path = wait(lambda: req(p), what='request question')
     act(p, {'op': 'grant', 'app': APP, 'id': i, 'path': path, 'value': {'propose': {'f': f, 'a': args}}})
-A, B = 8301, 8302
+A, B = 'A', 'B'
+wait(lambda: st(A)['status'] == 'ready' and st(B)['status'] == 'ready', 120, 'ready')
 ka, kb = st(A)['me'], st(B)['me']
 print('apps', [a['app'] for a in st(A)['apps']])
 for p in (A, B):

@@ -31,7 +31,7 @@ class PageServer {
     'png': 'image/png',
   };
 
-  Future<void> _json(HttpRequest r, Object? body, [int code = 200]) async {
+  static Future<void> _json(HttpRequest r, Object? body, [int code = 200]) async {
     r.response.statusCode = code;
     r.response.headers.set('Content-Type', 'application/json; charset=utf-8');
     r.response.headers.set('Cache-Control', 'no-store');
@@ -41,44 +41,8 @@ class PageServer {
 
   Future<void> _serve(HttpRequest r) async {
     try {
-      final p = r.uri.path;
-      if (r.method == 'GET' && p == '/api/state') {
-        // long poll: answer at once, or when the state changes after the version asked
-        final since = int.tryParse(r.uri.queryParameters['since'] ?? '');
-        if (since != null && since == host.version) {
-          final c = Completer<void>();
-          final prev = host.onChange;
-          host.onChange = () {
-            prev?.call();
-            if (!c.isCompleted) c.complete();
-          };
-          await c.future.timeout(const Duration(seconds: 25), onTimeout: () {});
-          host.onChange = prev;
-        }
-        return await _json(r, host.state());
-      }
-      if (r.method == 'POST' && p == '/api/act') {
-        final j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
-        unawaited(host.act(j).catchError((e) => stderr.writeln('act $j: $e')));
-        return await _json(r, {"ok": true});
-      }
-      if (r.method == 'POST' && p == '/api/add') {
-        final j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
-        final k = (j['key'] as String).trim().toLowerCase();
-        if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(k)) return await _json(r, {"error": "not a key"}, 400);
-        await addPerson(k);
-        await host.connect(k);
-        return await _json(r, {"ok": true});
-      }
-      final name = p == '/' ? 'index.html' : p.substring(1);
-      final f = File('$www/$name');
-      if (!RegExp(r'^[a-z0-9_.-]+$').hasMatch(name) || !f.existsSync()) {
-        r.response.statusCode = 404;
-        return await r.response.close();
-      }
-      r.response.headers.set('Content-Type', _types[name.split('.').last] ?? 'application/octet-stream');
-      await r.response.addStream(f.openRead());
-      await r.response.close();
+      if (await api(r, r.uri.path)) return;
+      await file(r, www, r.uri.path);
     } catch (e) {
       try {
         await _json(r, {'error': '$e'}, 500);
@@ -86,5 +50,55 @@ class PageServer {
         // the client went away
       }
     }
+  }
+
+  /// The person's API, at [p]: true where [r] was one of its requests, answered.
+  Future<bool> api(HttpRequest r, String p) async {
+    if (r.method == 'GET' && p == '/api/state') {
+      // long poll: answer at once, or when the state changes after the version asked
+      final since = int.tryParse(r.uri.queryParameters['since'] ?? '');
+      if (since != null && since == host.version) {
+        await host.nextChange().timeout(const Duration(seconds: 25), onTimeout: () {});
+      }
+      await _json(r, {...host.state(), ...extra});
+      return true;
+    }
+    if (r.method == 'POST' && p == '/api/act') {
+      final j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
+      unawaited(host.act(j).catchError((e) => stderr.writeln('act $j: $e')));
+      await _json(r, {'ok': true});
+      return true;
+    }
+    if (r.method == 'POST' && p == '/api/add') {
+      final j = jsonDecode(await utf8.decoder.bind(r).join()) as Map;
+      final k = (j['key'] as String).trim().toLowerCase();
+      if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(k)) {
+        await _json(r, {'error': 'not a key'}, 400);
+        return true;
+      }
+      await addPerson(k);
+      await host.connect(k);
+      await _json(r, {'ok': true});
+      return true;
+    }
+    return false;
+  }
+
+  /// What the page's state carries besides the host's: on the web, that the key is kept here.
+  Map<String, Object?> extra = const {};
+
+  /// One of the page's files.
+  static Future<void> file(HttpRequest r, String www, String p) async {
+    final name = p == '/' || p.isEmpty ? 'index.html' : p.substring(1);
+    final f = File('$www/$name');
+    if (!RegExp(r'^[a-z0-9_.-]+$').hasMatch(name) || !f.existsSync()) {
+      r.response.statusCode = 404;
+      await r.response.close();
+      return;
+    }
+    r.response.headers.set('Content-Type', _types[name.split('.').last] ?? 'application/octet-stream');
+    r.response.headers.set('Cache-Control', 'no-cache');
+    await r.response.addStream(f.openRead());
+    await r.response.close();
   }
 }

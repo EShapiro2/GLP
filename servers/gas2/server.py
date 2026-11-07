@@ -116,6 +116,7 @@ def tools_hash():
     for f in sorted(os.listdir(os.path.join(HERE, 'tools'))):
         if f.endswith('.py'):
             h.update(open(os.path.join(HERE, 'tools', f), 'rb').read())
+    h.update(b'device-tree')  # the build writes the device tree since 2026-11-07
     return h.hexdigest()[:16]
 
 
@@ -152,6 +153,12 @@ def build_once(force=False):
         if p.returncode != 0 or not os.path.exists(os.path.join(out, 'data.json')):
             raise RuntimeError('build.py: ' + (p.stderr or p.stdout)[-800:])
         log(p.stdout.strip().split('\n')[-1])
+        # the part of GLP a device runs, for GAS2 on the web (device/bin/web.dart)
+        d = subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'device_tree.py'), g.root,
+                            os.path.join(out, 'device'), os.path.join(out, 'data.json')],
+                           capture_output=True, text=True, encoding='utf-8', errors='replace')
+        if d.returncode != 0:
+            log('device tree: ' + (d.stderr or d.stdout)[-400:])
         final = os.path.join(slot(target), 'out')
         shutil.rmtree(final, ignore_errors=True)
         os.replace(out, final)

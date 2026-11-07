@@ -52,13 +52,28 @@ const saveNames = () => { try { localStorage.setItem('gas2names', JSON.stringify
 const short = k => k ? k.slice(0, 6) : '';
 const nm = k => k === S?.me ? 'you' : (names[k] || short(k));
 
-async function act(j) { await fetch('api/act', {method: 'POST', body: JSON.stringify(j)}); }
+// On the web (bin/web.dart) a person is a token this browser keeps; on a device the
+// page is the device's own and there is none.
+let token = null;
+try { token = localStorage.getItem('gas2token'); } catch (e) {}
+async function api(path, opts = {}) {
+  for (let i = 0; i < 2; i++) {
+    const r = await fetch(path, {...opts, cache: 'no-store', headers: token ? {'X-GAS2-Token': token} : {}});
+    if (r.status !== 401) return r;
+    const j = await r.json().catch(() => ({}));
+    if (!j.start) return r;
+    token = (await (await fetch('api/start', {method: 'POST'})).json()).token;
+    try { localStorage.setItem('gas2token', token); } catch (e) {}
+  }
+  throw new Error('no person');
+}
+async function act(j) { await api('api/act', {method: 'POST', body: JSON.stringify(j)}); }
 
 async function poll() {
   let v = -1;
   for (;;) {
     try {
-      const r = await fetch('api/state' + (v >= 0 ? '?since=' + v : ''), {cache: 'no-store'});
+      const r = await api('api/state' + (v >= 0 ? '?since=' + v : ''));
       S = await r.json(); v = S.version; draw();
     } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
   }
@@ -137,7 +152,8 @@ function render() {
     </div>`;
   }
   h += `<h2>You</h2><div class="card"><div class="small muted">Your key; give it to a person to add you</div>
-    <div class="row"><span class="mono grow" id="mykey">${esc(S.me)}</span><button class="b alt" onclick="copyKey()">Copy</button></div></div>`;
+    <div class="row"><span class="mono grow" id="mykey">${esc(S.me)}</span><button class="b alt" onclick="copyKey()">Copy</button></div>${S.hosted ? `
+    <div class="note"><b>GAS2 on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you.  This browser keeps the only way back to you here; clearing its site data loses this person.  The app on a phone or computer keeps your key on the device.</div>` : ''}</div>`;
   h += `<h2>People</h2><div class="card">`;
   for (const k of S.friendRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b> asks to be your friend</span><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false})">No</button></div>`;
   for (const [by, k] of S.introRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(by))}</b> introduces <b>${esc(nm(k))}</b></span><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false})">No</button></div>`;
@@ -164,7 +180,7 @@ window.gas2Back = () => { if (open) closeApp(); };
 function rename(k) { const n = prompt('A name for ' + short(k), names[k] || ''); if (n !== null) { names[k] = n.trim(); saveNames(); draw(); } }
 async function addPerson() {
   const k = $('#add').value.trim().toLowerCase();
-  const r = await (await fetch('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
+  const r = await (await api('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
   if (r.error) alert(r.error); else $('#add').value = '';
 }
 function openApp(app) { open = app; form = null; draw(); window.scrollTo(0, 0); }
