@@ -42,7 +42,9 @@
 # run, so that the log is the same with it as without (sGLP's code task of
 # 2026-10-03 09:45 UTC); the run's wall-clock and CPU time and the machine's
 # load as it ends; the REPL process's instructions retired and peak memory
-# footprint (/usr/bin/time -l); the REPL's status lines; the log's size; and
+# footprint, where /usr/bin/time -l is there to measure them (macOS), the run
+# otherwise as the social graph's run.sh, wall-clock and load only (sGLP's task
+# of 2026-11-06 18:43 UTC, item 1); the REPL's status lines; the log's size; and
 # circulation.awk's months and totals on the log.  Writes the draw itself
 # beside the log, to <log> with its .log replaced by .draw, or with .draw added
 # where it has none, as the social graph's run.sh does: the line "draw spender
@@ -173,8 +175,13 @@ printf ':limit 1000000000000000\n%s\n%s.\n:quit\n' "$SGLP" "$GOAL" > "$WORK/inpu
 # The REPL's output: the log's lines go to <log>, tab-separated, as they come;
 # the status lines to $WORK/status.  A line may carry the prompt "GLP> ".
 : > "$LOG" || exit 2
+# The timer, macOS's /usr/bin/time -l, only where it is there; elsewhere the
+# REPL runs as the social graph's run.sh runs it.
+TIMER=0
+/usr/bin/time -l -p true > /dev/null 2>&1 && TIMER=1
+repl() { if [ "$TIMER" = 1 ]; then /usr/bin/time -l -p -o "$WORK/time" bin/glpc; else bin/glpc; fi; }
 START=$(date +%s)
-(cd "$RT" && /usr/bin/time -l -p -o "$WORK/time" bin/glpc < "$WORK/input" 2>&1) |
+(cd "$RT" && repl < "$WORK/input" 2>&1) |
 awk -v logf="$LOG" -v status="$WORK/status" '
     { sub(/^(GLP> )+/, "") }
     /^entry\(/ {
@@ -202,8 +209,12 @@ echo "program $SGLP: coins($N, <the friends of $GRAPH>, $COUNT, $UNIT, $SEED, $S
 echo "graph $GRAPH: $EDGES edges, agents 1..$N each on one at least"
 echo "draw ${DRAW:-none: coins_draw/5 gave no answer listing agents 1..$N}"
 [ -n "$DRAW" ] && echo "draw $DRAWF: the counts and $N agents' profiles"
-echo "wall-clock $((END - START)) s; cpu $(awk '$1 == "user" { u = $2 } $1 == "sys" { s = $2 } END { printf "user %s s, sys %s s", u, s }' "$WORK/time"); $LOAD"
-echo "$(awk '$2 == "instructions" && $3 == "retired" { i = $1 } $2 == "peak" { p = $1 } END { printf "instructions retired %s; peak memory footprint %s bytes", i, p }' "$WORK/time")"
+if [ "$TIMER" = 1 ]; then
+    echo "wall-clock $((END - START)) s; cpu $(awk '$1 == "user" { u = $2 } $1 == "sys" { s = $2 } END { printf "user %s s, sys %s s", u, s }' "$WORK/time"); $LOAD"
+    echo "$(awk '$2 == "instructions" && $3 == "retired" { i = $1 } $2 == "peak" { p = $1 } END { printf "instructions retired %s; peak memory footprint %s bytes", i, p }' "$WORK/time")"
+else
+    echo "wall-clock $((END - START)) s; $LOAD"
+fi
 cat "$WORK/status"
 echo "log $LOG: $(wc -l < "$LOG" | tr -d ' ') lines, $(wc -c < "$LOG" | tr -d ' ') bytes"
 
