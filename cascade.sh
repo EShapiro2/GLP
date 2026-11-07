@@ -26,6 +26,7 @@
 #
 #   <contract>  NAME  owner       files in                  plays in
 #   gkk         GKK   GSC         programs/gsc              programs/apps/gkk (GSC's, the app's plays)
+#   gfp         GFP   GSC         programs/gsc              ---
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              social_network
 #   gsnp        GSNP  GAI         programs/gai              ---
@@ -120,6 +121,7 @@ case "$MODE" in write|--check|--record) ;; *) usage ;; esac
 PLAYAT=""          # the owner's plays, a directory of the repository, where it keeps them
 PLAYLIMIT=600000   # the reductions the plays' REPL session may take
 case "$NAME" in
+    gfp)  FILE=GFP;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, extends GSG (GSC #13, 2026-11-07)
     gkk)  FILE=GKK;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
           PLAYAT="programs/apps/gkk" ;;
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
@@ -148,7 +150,7 @@ case "$NAME" in
     gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
     gd_s) FILE=GD-S; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
     gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $NAME; the names are gkk gfp gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc" >&2; exit 2 ;;
 esac
 SRC="$GLP_DIR/$OWNER"
 REC="$GLP_DIR/cascade/$FILE"
