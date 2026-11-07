@@ -167,6 +167,34 @@ sub find_schemas {
     find_schemas($_) for @{ $t->[1] };
 }
 if (defined $term && $term ne "") { $tsrc = $term; find_schemas(tparse()) }
+# A variable the constraint determines from the variables local to one role and those the schema-binding binds, that only that role’s atoms name, is local to that role, and is no place of the request: "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer’s state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), as local.glp’s det_locals decides it: an equality conjunct of the constraint whose one variable not local, of a coefficient not 0, is of the head.
+sub con_conjs { my ($c) = @_; return () if !ref $c || @$c == 1; return (con_conjs($c->[1][0]), con_conjs($c->[1][1])) if $c->[0] eq "and"; return ($c) }
+for my $n (keys %cons) {
+    next unless $roles{$n};
+    my (%role_of, %named_at);
+    my $r = 0;
+    for my $rs (@{ $roles{$n} }) {
+        $r++;
+        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { $named_at{$_}{$r} = 1 for atom_keys($a) } }
+    }
+    for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
+    for my $c (con_conjs($cons{$n})) {
+        next unless $c->[0] eq "eq";
+        my %vs = map { $_ => 1 } (expr_nvars($c->[1][0]), expr_nvars($c->[1][1]));
+        my @nl = grep { !$role_of{$_} } keys %vs;
+        my %lr = map { $role_of{$_} => 1 } grep { $role_of{$_} } keys %vs;
+        next unless @nl == 1 && keys %lr == 1;
+        my ($v) = @nl; my ($i) = keys %lr;
+        next unless lin_coef(["minus", [$c->[1][0], $c->[1][1]]], $v) != 0;
+        my @at = keys %{ $named_at{$v} || {} };
+        next unless @at == 1 && $at[0] == $i;
+        (my $vn = $v) =~ s/^v//;
+        next unless grep { $_ eq $vn } @{ $svars{$n} || [] };
+        $locals{$n}{$vn} = 1;
+        $role_of{$v} = $i;
+        $svars{$n} = [ grep { $_ ne $vn } @{ $svars{$n} } ];
+    }
+}
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
 my %named_by_button;

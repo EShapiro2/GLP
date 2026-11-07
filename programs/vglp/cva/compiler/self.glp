@@ -54,6 +54,7 @@ Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
              ; sum(Args, Arg, Atom, Form, Expr).
 Exprs      ::= [] ; [Expr | Exprs].
+Constraints ::= [] ; [Constraint | Constraints].
 %% A safe formula (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc/self.glp writes it: fa(H, M) the atom or multiplicity M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi), Psi a list, and fcons(C) a constraint.
 Form       ::= fa(Arg, Atom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
              ; fexists(Args, Arg, Atom, Form)
@@ -195,9 +196,13 @@ imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
 exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
-imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?).
+%% The contract's environment predicates, environment(Preds, Body) (programs/gsc/self.glp, WDeclared), go to the compiler beside the contract: "An environment predicate is the day, by the calendar, or a value the contract declares and does not fix ...: given when the platform is deployed, held from startup" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?).
 exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
-compile(Nm, D, V, I, P) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?, P?).
+compile(Nm, D, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?).
+procedure env_of(WDeclared?, Preds).
+env_of(environment(Ps, _), Ps?).
+env_of(_, []) :- otherwise | true.
 
 %% ---------------------------------------------------------------------------
 %% Shared by the modules of the compiler
