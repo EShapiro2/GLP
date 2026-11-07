@@ -88,6 +88,21 @@ input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--line);
 .qr svg { width: min(72vw, 260px); height: auto; background: #fff; border-radius: 12px; padding: 8px; }
 .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--card); padding: 9px 16px; border-radius: 99px; font-size: 14px; z-index: 9; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.on { opacity: .95; }
+/* the rack turns around */
+main { transition: transform .23s ease-in, opacity .23s; transform-origin: 50% 30%; }
+main.turn { transform: perspective(1200px) rotateY(90deg); opacity: .3; }
+main.turned { animation: turnin .26s ease-out; }
+@keyframes turnin { from { transform: perspective(1200px) rotateY(-90deg); opacity: .3; } to { transform: none; opacity: 1; } }
+.backpanel { background: repeating-linear-gradient(90deg, #dcdce1 0 2px, #d3d3d9 2px 4px); border-radius: var(--r); padding: 10px 6px 0; margin: 10px 0; box-shadow: inset 0 0 0 1px #c7c7cc; }
+.rack { width: 100%; height: auto; display: block; font-family: var(--font); }
+header .gear { width: 32px; height: 32px; border-radius: 50%; background: var(--accent2); color: var(--accent); font-weight: 700; font-size: 14px; padding: 0; }
+header .gear.on { background: var(--accent); color: var(--onaccent); }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 4px; }
+.dots span { font-size: 12.5px; padding: 4px 10px; border-radius: 99px; background: var(--accent2); color: var(--soft); }
+.dots span.on { background: var(--accent); color: var(--onaccent); font-weight: 600; }
+.dots span.done { color: var(--ok); }
+.ob { display: grid; gap: 12px; padding: 18px 16px; }
+.ob h3 { font-size: 21px; margin: 0; }
 pre { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; max-height: 360px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 8px; margin: 6px 0 0; }
 </style>
 </head>
@@ -107,12 +122,14 @@ const store = {
 // '__settings', or a mini-app
 let back = null; // where Settings returns to
 // the settings button: into Settings, and out again to where the person was
-function gearClick() { if (open === '__settings') go(back); else { back = open; go('__settings'); } }
+function gearClick() { hood = false; if (open === '__you') go(back); else { back = open; go('__you'); } }
 let S = null, open = null, form = null, pane = 'play', naming = null, over = false;
 let names = store.get('gas2names', {});
+let myName = store.get('gas2myname', '');
+// the first steps, until done or skipped: name, a friend, a mini-app, play
+let ob = store.get('gas2onboard', 0);
 // the person's look, and whether they see under the hood: this page's alone
-let theme = store.get('gas2theme', 'fancy'), hood = store.get('gas2hood', false);
-if (!['clean', 'fancy'].includes(theme)) theme = 'fancy';
+let theme = 'fancy', hood = false; // hood: the back of the rack, its cables (</>, or Tab)
 document.documentElement.dataset.theme = theme;
 const fancy = () => theme === 'fancy';
 const SITE = 'https://talmonlab.bgu.ac.il/gas2/';
@@ -228,7 +245,9 @@ function draw() {
   // what the person is typing survives a redraw
   const keep = {}, focus = document.activeElement?.id;
   document.querySelectorAll('input, select').forEach(e => { if (e.id && e.type !== 'checkbox') keep[e.id] = e.value; });
-  const screens = {__settings: drawSettings, __browse: drawBrowse, __friend: drawFriend};
+  const screens = {__you: drawYou, __browse: drawBrowse, __friend: drawFriend, __start: drawStart};
+  if (hood) { drawBack(); return; }
+  if (open === null && ob < 5) open = '__start';
   if (open === '__browse' && document.getElementById('brows')) { bar('Add a mini-app', 'home'); drawBrowseRows(); return; }
   if (screens[open]) screens[open]();
   else if (open && S.apps.some(a => a.app === open)) drawApp(S.apps.find(a => a.app === open));
@@ -241,7 +260,7 @@ function bar(title, back, extra = '') {
   const st = hood ? (S.status === 'ready' ? 'ready · ' + short(S.me) : S.status) + ((S.pending || []).length ? ' · ' + S.pending.length + ' waiting' : '')
     : (S.status === 'ready' ? '' : S.status);
   $('#hd').innerHTML = `${back ? `<button class="back" onclick="go(${back === 'home' ? 'null' : `'${back}'`})">‹</button>` : ''}<b>${esc(title)}</b>${extra}<span class="st">${esc(st)}</span>
-    <button class="hood ${hood ? 'on' : ''}" title="Under the hood" onclick="setHood(${!hood})">&lt;/&gt;</button><button class="gear" title="Settings" onclick="gearClick()">⚙︎</button>`;
+    <button class="hood ${hood ? 'on' : ''}" title="The back: the cables (Tab)" onclick="flip()">&lt;/&gt;</button><button class="gear ${open === '__you' ? 'on' : ''}" title="You" onclick="gearClick()">${esc((myName || '☺').slice(0, 1).toUpperCase())}</button>`;
 }
 
 function drawHome() {
@@ -249,23 +268,9 @@ function drawHome() {
   const mine = S.apps.filter(a => a.installed || a.preparing);
   const step = (n, done, html) => `<div class="step"><span class="n ${done ? 'done' : ''}">${done ? '✓' : n}</span><div class="grow">${html}</div></div>`;
   let h = '';
-  if (!mine.length || !S.friends.length) {
-    h += `<div class="card"><h3>${fancy() ? 'Welcome to your Grassroots Super-App' : 'Your super-app'}</h3>
-      ${step(1, S.friends.length > 0, 'Add a friend: show them your QR code, or theirs to you')}
-      ${step(2, mine.length > 0, 'Add a mini-app')}
-      ${step(3, false, 'Open it, invite your friend, and play')}</div>`;
-  }
   // what others ask of this person comes first
   for (const k of S.friendRequests) h += `<div class="ask"><div class="who">Friend request</div><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b> wants to be your friend</span></div><div class="acts" style="margin-top:10px"><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true},'Friends with ${esc(nm(k))}')">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false},'Declined')">No</button></div></div>`;
   for (const [by, k] of S.introRequests) h += `<div class="ask"><div class="who">Introduction</div><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(by))}</b> introduces you to <b>${esc(nm(k))}</b></span></div><div class="acts" style="margin-top:10px"><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true},'Friends with ${esc(nm(k))}')">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false},'Declined')">No</button></div></div>`;
-
-  h += `<h2><span class="grow">My mini-apps</span></h2><div class="apps">`;
-  for (const a of mine) {
-    const r = readApp(a), withs = [...new Set([...(a.invited || []), ...(a.accepted || [])])];
-    h += `<button class="app" onclick="go('${a.app}')">${r.asks.length ? `<span class="badge">${r.asks.length}</span>` : ''}<div class="id">${esc(a.id)}</div><div class="t">${esc(a.title)}</div>
-      <div class="who">${a.preparing ? '<span class="small muted">Preparing…</span>' : withs.length ? (fancy() ? withs.map(dot).join('') : `<span class="small muted">with ${withs.map(nm).map(esc).join(', ')}</span>`) : '<span class="small muted">Invite a friend</span>'}</div></button>`;
-  }
-  h += `<button class="app add" onclick="go('__browse')">＋<br>Add a mini-app</button></div>`;
 
   h += `<h2><span class="grow">Friends</span><button class="link" onclick="go('__friend')">Add a friend</button></h2><div class="card">`;
   for (const k of S.friends) {
@@ -276,6 +281,14 @@ function drawHome() {
   for (const p of near) h += `<div class="row">${dot(p.key)}<span class="grow"><b>${esc(nm(p.key))}</b> <span class="muted small">near you${p.over.length ? ', over ' + esc(p.over.join(', ')) : ''}</span></span><button class="b alt" onclick="addKey('${p.key}')">Add</button></div>`;
   if (!S.friends.length && !near.length) h += `<div class="empty">No friends yet. <button class="link" onclick="go('__friend')">Add one</button></div>`;
   h += `</div>`;
+  h += `<h2><span class="grow">My mini-apps</span></h2><div class="apps">`;
+  for (const a of mine) {
+    const r = readApp(a), withs = [...new Set([...(a.invited || []), ...(a.accepted || [])])];
+    h += `<button class="app" onclick="go('${a.app}')">${r.asks.length ? `<span class="badge">${r.asks.length}</span>` : ''}<div class="id">${esc(a.id)}</div><div class="t">${esc(a.title)}</div>
+      <div class="who">${a.preparing ? '<span class="small muted">Preparing…</span>' : withs.length ? (fancy() ? withs.map(dot).join('') : `<span class="small muted">with ${withs.map(nm).map(esc).join(', ')}</span>`) : '<span class="small muted">Invite a friend</span>'}</div></button>`;
+  }
+  h += `<button class="app add" onclick="go('__browse')">＋<br>Add a mini-app</button></div>`;
+
   if (S.hosted) h += `<div class="note" style="margin:10px 4px"><b>GAS2 on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you. This browser keeps the only way back to you here; clearing its site data loses this person. The app on a phone or computer keeps your key on the device.</div>`;
   if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, hood ? 30 : 5).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
   if (hood || DEBUG) h += `<h2>Under the hood</h2><div class="card"><div class="small">You: <span class="mono">${esc(S.me)}</span></div><div class="small">Status: ${esc(S.status)} · acts waiting: ${esc(JSON.stringify(S.pending || []))} s · state version ${S.version}</div><pre>${esc((S.log || []).join('\n'))}</pre></div>`;
@@ -283,7 +296,7 @@ function drawHome() {
 }
 
 function drawBrowse() {
-  bar('Add a mini-app', 'home');
+  bar('Add a mini-app', ob < 5 ? '__start' : 'home');
   let h = `<input id="bq" type="search" placeholder="Search: a name, a rule, a word" autocomplete="off" oninput="drawBrowseRows()" style="margin-top:10px">
     <div class="xbox" id="brows"></div>
     <h2>From a link or a code</h2><div class="card"><div class="row"><input id="madelink" class="grow" placeholder="A link from the app maker, or its code" onkeydown="if(event.key==='Enter')addMade()"><button class="b alt" onclick="addMade()">Add</button></div>
@@ -320,26 +333,69 @@ function drawFriend() {
   $('#main').innerHTML = h;
 }
 
-function drawSettings() {
-  bar('Settings', back || 'home');
-  const looks = [['clean', 'Clean', 'The contract\'s own words and terms, plain'], ['fancy', 'Fancy', 'The same, made friendly: colors, faces, counts']];
-  let h = `<h2>Look</h2><div class="looks">${looks.map(([k, n, d]) => `<button class="look ${theme === k ? 'on' : ''}" data-theme="${k}" onclick="setTheme('${k}')"><div class="sw"><div class="bar"></div><div class="bar" style="width:70%"></div><div class="btn"></div></div><div class="nm">${n}</div><div class="ds">${d}</div></button>`).join('')}</div>
-    <div class="small muted" style="margin:8px 4px">The look changes this page only. Your key, your friends, the contracts and their certificates are the same under both. The <span class="mono">&lt;/&gt;</span> button on top shows what happens under the hood.</div>`;
+function drawYou() {
+  bar('You', back || 'home');
+  let h = `<div class="card" style="text-align:center;padding:18px 14px"><span class="dot" style="width:64px;height:64px;font-size:26px;margin:0 auto 10px;background:hsl(${hue(S.me)},55%,52%)">${esc((myName || '?').slice(0, 1).toUpperCase())}</span>
+    <input id="myname" placeholder="Your name" value="${esc(myName)}" style="text-align:center;font-size:17px;font-weight:600" onchange="setMyName(this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+    <div class="small muted" style="margin-top:6px">Your name stays on this device: your friends see your key, and name you themselves.</div></div>
+    <h2>Your key</h2><div class="card"><div class="mono">${esc(S.me)}</div><div class="acts" style="margin-top:10px"><button class="b alt" onclick="copyText('${S.me}','Your key is copied')">Copy</button><button class="b alt" onclick="go('__friend')">Show my code</button></div>
+    <div class="small muted" style="margin-top:8px">${S.hosted ? 'It is kept on talmonlab\'s server, which runs your super-app (GAS2 on the web).' : 'It is kept on this device only.'}</div></div>`;
   h += `<h2>Start over</h2><div class="card">${over ? `<div class="small" style="margin-bottom:8px">This deletes your key, your friends and your mini-apps here. It cannot be undone.</div><div class="acts"><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button></div>` : `<div class="row"><span class="grow small muted">A new key, and nothing kept</span><button class="b alt" onclick="over=true;draw()">Start over</button></div>`}</div>`;
   $('#main').innerHTML = h;
 }
+function setMyName(v) { myName = v.trim(); store.set('gas2myname', myName); draw(); }
+
+// The first steps: a name, a friend, a mini-app, and playing together.  Friends belong to
+// the super-app, so they come first; each mini-app then invites from them.
+function drawStart() {
+  const gkk = S.apps.find(a => a.id === 'GKK') || S.apps[0];
+  const steps = ['Your name', 'A friend', 'A mini-app', 'Play'];
+  const i = Math.min(ob, 3);
+  $('#hd').innerHTML = `<b>Welcome to GAS2</b><button class="link" style="margin-left:auto" onclick="obDone()">Skip</button>`;
+  let h = `<div class="dots">${steps.map((t, j) => `<span class="${j < i ? 'done' : j === i ? 'on' : ''}">${j < i ? '✓' : j + 1} ${t}</span>`).join('')}</div>`;
+  if (i === 0) h += `<div class="card ob"><h3>What is your name?</h3><div class="muted">It stays on this device; it is for you. Friends see your key.</div>
+      <input id="obname" placeholder="Your name" value="${esc(myName)}" onkeydown="if(event.key==='Enter')obNext()"><button class="b big" onclick="obNext()">Next</button></div>`;
+  if (i === 1) {
+    const link = SITE + 'friend.html?k=' + S.me;
+    let qr = ''; try { const c = qrcode(0, 'M'); c.addData(link); c.make(); qr = c.createSvgTag({cellSize: 4, margin: 0, scalable: true}); } catch (e) {}
+    const asked = S.friends.length ? `<div class="note">✓ Friends with ${S.friends.map(nm).map(esc).join(', ')}</div>` : '';
+    h += `<div class="card ob"><h3>Add a friend</h3><div class="muted">Friends belong to your super-app; you invite them into each mini-app. Show them your code, or paste theirs. They are asked, and say yes.</div>
+      <div class="qr">${qr}</div><div class="acts" style="justify-content:center"><button class="b alt" onclick="share('${link}')">Send the link</button></div>
+      <div class="row"><input id="add" placeholder="Their key or link" autocomplete="off" onkeydown="if(event.key==='Enter')addPasted()"><button class="b" onclick="addPasted()">Add</button></div>
+      ${(S.nearby || []).filter(p => !S.friends.includes(p.key)).map(p => `<div class="row">${dot(p.key)}<span class="grow">${esc(nm(p.key))} <span class="muted small">near you</span></span><button class="b alt" onclick="addKey('${p.key}')">Add</button></div>`).join('')}
+      ${asked}<button class="b big ${S.friends.length ? '' : 'alt'}" onclick="obNext()">${S.friends.length ? 'Next' : 'Next; they answer meanwhile'}</button></div>`;
+  }
+  if (i === 2) {
+    const g = gkk, done = S.apps.some(x => x.installed || x.preparing);
+    h += `<div class="card ob"><h3>Add a mini-app</h3><div class="muted">Each mini-app is a contract. The simplest is <b>${esc(g?.title || '')}</b>: say who you are, and who you know.</div>
+      ${g ? `<div class="xrow" style="border:0;padding:12px 0"><span class="icon" style="background:hsl(${[...g.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7)},58%,55%)">${esc(g.id)}</span><span class="grow"><b>${esc(g.title.replace(/^Grassroots /, ''))}</b><span class="sub">${esc((g.about?.clauses || []).map(c => c.name).join(' · '))}</span></span>
+        ${g.installed ? '<span class="pill">Added ✓</span>' : g.preparing ? '<span class="pill">Adding…</span>' : `<button class="b" onclick="install('${g.app}')">Add</button>`}</div>` : ''}
+      <button class="link" onclick="ob=2;go('__browse')">Or choose another</button>
+      <button class="b big ${done ? '' : 'alt'}" onclick="obNext()" ${done ? '' : 'disabled'}>Next</button></div>`;
+  }
+  if (i === 3) {
+    const a = S.apps.find(x => x.installed) || gkk;
+    h += `<div class="card ob"><h3>Play together</h3><div class="muted">Open ${esc(a?.title || 'the mini-app')} and invite your friend. They add it too, open it, and tap Accept. Then each of you sees it come alive.</div>
+      <button class="b big" onclick="obDone('${a?.app || ''}')">Open ${esc((a?.title || '').replace(/^Grassroots /, ''))}</button></div>`;
+  }
+  $('#main').innerHTML = h;
+}
+function obNext() {
+  if (ob === 0) { const v = ($('#obname')?.value || '').trim(); if (v) setMyName(v); }
+  ob = Math.min(ob + 1, 3); store.set('gas2onboard', ob); draw();
+}
+function obDone(app) { ob = 5; store.set('gas2onboard', 5); go(app || null); }
 
 function drawApp(a) {
   bar(a.title, a.installed || a.preparing ? 'home' : '__browse');
   const r = readApp(a);
   const menu = r.req ? menuOf(r.req.w) : [];
   const props = ((a.shapes || {}).Proposal || []).filter(p => p[0] === 'ctor');
-  const panes = [['play', 'Play'], ['rules', 'Rules']].concat(hood ? [['hood', 'Under the hood']] : []);
+  const panes = [['play', 'Play'], ['rules', 'Rules']];
   if (!panes.some(p => p[0] === pane)) pane = 'play';
   let h = `<div class="seg">${panes.map(([k, n]) => `<button class="${pane === k ? 'on' : ''}" onclick="pane='${k}';form=null;draw()">${n}${k === 'play' && r.asks.length ? ' •' : ''}</button>`).join('')}</div>`;
   if (!a.installed) h += `<div class="card"><div class="row"><span class="grow">${a.preparing ? 'Preparing: your device certifies it under your key…' : 'Not added yet.'}</span>${a.preparing ? '' : `<button class="b" onclick="install('${a.app}')">Add</button>`}</div></div>`;
   if (pane === 'rules') h += rulesHtml(a);
-  else if (pane === 'hood') h += hoodHtml(a, r);
   else if (a.installed) h += playHtml(a, r, menu, props);
   $('#main').innerHTML = h;
   window._acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []}));
@@ -407,6 +463,93 @@ function rulesHtml(a) {
   return h + `<div class="small muted" style="margin:6px 4px">Enforced: the app does not let it be broken. Attested: it is signed for. Undertaken: each person promises it.</div>`;
 }
 
+// --- the back of the rack: what is wired to what, and the signals on the wires ---
+function drawBack() {
+  const a = open && S.apps.find(x => x.app === open);
+  bar(a ? a.title + ' · the back' : 'The back', null);
+  const apps = a ? [a] : S.apps.filter(x => x.installed);
+  const friends = S.friends;
+  const near = new Map((S.nearby || []).map(p => [p.key, p.over]));
+  // the rack: on a wide screen three columns (the super-app, its mini-apps, the friends) and
+  // the network below; on a phone the same, stacked
+  const narrow = innerWidth < 640;
+  const uw = narrow ? 164 : 168, uh = 44, gap = 12;
+  const pos = {};
+  let W, H, heads;
+  if (!narrow) {
+    const x0 = 14, x1 = 236, x2 = 458, y = i => 40 + i * (uh + gap);
+    const rows = Math.max(apps.length, friends.length, 2);
+    W = 640; H = 40 + rows * (uh + gap) + 76;
+    pos.sa = [x0, y(0)]; pos.you = [x0, y(1)];
+    apps.forEach((m, i) => pos['a' + i] = [x1, y(i)]);
+    friends.forEach((k, j) => pos['f' + j] = [x2, y(j)]);
+    pos.relay = [x1 - 60, H - 60]; pos.near = [x2, H - 60];
+    heads = [[x0, 'YOUR SUPER-APP'], [x1, a ? 'THIS MINI-APP' : 'MINI-APPS'], [x2, 'FRIENDS']].map(([x, t]) => [x, 22, t]);
+  } else {
+    W = 360; const cx = [10, 186];
+    let yy = 30;
+    heads = [[10, 22, 'YOUR SUPER-APP']];
+    pos.sa = [cx[0], yy]; pos.you = [cx[1], yy]; yy += uh + 34;
+    heads.push([10, yy - 8, a ? 'THIS MINI-APP' : 'MINI-APPS']);
+    apps.forEach((m, i) => { pos['a' + i] = [cx[i % 2], yy + Math.floor(i / 2) * (uh + gap)]; });
+    yy += Math.max(1, Math.ceil(apps.length / 2)) * (uh + gap) + 34;
+    heads.push([10, yy - 8, 'FRIENDS']);
+    friends.forEach((k, j) => { pos['f' + j] = [cx[j % 2], yy + Math.floor(j / 2) * (uh + gap)]; });
+    yy += Math.max(1, Math.ceil(friends.length / 2)) * (uh + gap) + 34;
+    heads.push([10, yy - 8, 'THE NETWORK']);
+    pos.relay = [cx[0], yy]; pos.near = [cx[1], yy];
+    H = yy + uh + 14;
+  }
+  const hueA = id => [...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  let g = '';
+  const unit = (p, title, sub, col) => { const [x, yy] = p; return `<g><rect x="${x}" y="${yy}" width="${uw}" height="${uh}" rx="5" fill="#4a4a50" stroke="#2c2c30"/>
+    <circle cx="${x + 7}" cy="${yy + 7}" r="2.2" fill="#8a8a92"/><circle cx="${x + 7}" cy="${yy + uh - 7}" r="2.2" fill="#8a8a92"/><circle cx="${x + uw - 7}" cy="${yy + 7}" r="2.2" fill="#8a8a92"/><circle cx="${x + uw - 7}" cy="${yy + uh - 7}" r="2.2" fill="#8a8a92"/>
+    <rect x="${x + 14}" y="${yy + 10}" width="4" height="${uh - 20}" rx="2" fill="${col}"/>
+    <text x="${x + 24}" y="${yy + 20}" font-size="12.5" font-weight="700" fill="#f2f2f5">${esc(String(title).slice(0, 18))}</text><text x="${x + 24}" y="${yy + 35}" font-size="10.5" fill="#c7c7cf" font-family="ui-monospace,Menlo,monospace">${esc(String(sub).slice(0, 22))}</text></g>`; };
+  // where a cable plugs in: the side of a unit facing the other one
+  const plug = (p, q) => {
+    const [x, yy] = p, [qx, qy] = q;
+    if (Math.abs(qy - yy) > uh) return [x + uw / 2 + (qx > x + 10 ? 30 : qx < x - 10 ? -30 : 0), qy > yy ? yy + uh - 4 : yy + 4];
+    return [qx > x ? x + uw - 4 : x + 4, yy + uh / 2];
+  };
+  const jack = ([x, yy]) => `<circle cx="${x}" cy="${yy}" r="5.5" fill="#1d1d20" stroke="#9a9aa2" stroke-width="1.5"/>`;
+  let cables = '', jacks = '';
+  const cable = (p, q, col) => {
+    const A = plug(p, q), B = plug(q, p), dx = B[0] - A[0], dy = B[1] - A[1];
+    const sag = 22 + Math.abs(dx) * .08 + Math.abs(dy) * .08;
+    const c1 = Math.abs(dy) > uh ? [A[0], A[1] + Math.sign(dy) * 40 + sag * .4] : [A[0] + Math.sign(dx) * 50, A[1] + sag];
+    const c2 = Math.abs(dy) > uh ? [B[0], B[1] - Math.sign(dy) * 40 + sag * .4] : [B[0] - Math.sign(dx) * 50, B[1] + sag];
+    cables += `<path d="M${A[0]},${A[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${B[0]},${B[1]}" fill="none" stroke="${col}" stroke-width="4.5" stroke-linecap="round" opacity=".92"/>`;
+    jacks += jack(A) + jack(B);
+  };
+  g += unit(pos.sa, 'Super-app', S.status === 'ready' ? 'ready' : S.status, '#7b4dff');
+  g += unit(pos.you, myName || 'You', short(S.me) + '…', `hsl(${hue(S.me)},55%,52%)`);
+  apps.forEach((m, i) => {
+    const col = `hsl(${hueA(m.id)},62%,55%)`, r = readApp(m);
+    g += unit(pos['a' + i], m.title.replace(/^Grassroots /, ''), 'v ' + m.version + (r.asks.length ? ' · ' + r.asks.length + ' ask' : '') + (r.last && (r.last[3] || []).length ? ' · ' + r.last[3].length + ' wait' : ''), col);
+    cable(pos.sa, pos['a' + i], col);
+    friends.forEach((k, j) => { if ((m.invited || []).includes(k) || (m.accepted || []).includes(k)) cable(pos['a' + i], pos['f' + j], col); });
+  });
+  friends.forEach((k, j) => {
+    g += unit(pos['f' + j], nm(k), short(k) + '…', `hsl(${hue(k)},55%,52%)`);
+    const over = near.get(k);
+    if (over && over.length) cable(pos['f' + j], pos.near, '#2bb3a0');
+  });
+  const empty = (p, t) => `<text x="${p[0] + uw / 2}" y="${p[1] + 26}" text-anchor="middle" font-size="12" fill="#6e6e73">${t}</text>`;
+  if (!apps.length) g += empty(narrow ? [10, pos.sa[1] + uh + 34] : [236, 40], 'no mini-app yet');
+  if (!friends.length) g += empty(narrow ? [10, (pos.relay[1] - uh - 46)] : [458, 40], 'no friend yet');
+  g += unit(pos.relay, 'Relay', 'talmonlab · sealed', '#8e8e93');
+  g += unit(pos.near, 'Bluetooth · Wi-Fi', near.size ? near.size + ' near' : 'nobody near', '#169482');
+  cable(pos.you, pos.relay, '#a1a1a6');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" class="rack" role="img" aria-label="The back: what is wired to what">
+    ${heads.map(([x, yy, t]) => `<text x="${x}" y="${yy}" font-size="11" fill="#6e6e73" letter-spacing=".08em">${t}</text>`).join('')}
+    ${g}${cables}${jacks}</svg>`;
+  let h = `<div class="backpanel">${svg}<div class="small muted" style="padding:2px 6px 8px">A cable from a mini-app to a friend: you invited them, or took their invitation. Tab, or &lt;/&gt;, turns the rack around again.</div></div>`;
+  if (a) h += hoodHtml(a, readApp(a));
+  h += `<h2>Signals</h2><div class="card"><div class="small">Status: ${esc(S.status)} · acts waiting: ${esc(JSON.stringify(S.pending || []))} s · state version ${S.version}</div><pre>${esc((S.log || []).join('\n'))}</pre></div>`;
+  $('#main').innerHTML = h;
+}
+
 function hoodHtml(a, r) {
   return `<div class="card"><div class="row"><span class="grow">Contract</span><b>${esc(a.id)}</b> <a class="small" href="${SITE}contract.html?c=${encodeURIComponent(a.id)}" target="_blank">on the site</a></div><div class="row"><span class="grow">Mini-app</span><span class="mono">${esc(a.app)}</span></div><div class="row"><span class="grow">Version (its files)</span><span class="mono">${esc(a.version)}</span></div>
     <div class="small muted" style="margin-top:6px">The person you play with needs the same version.</div></div>
@@ -463,8 +606,15 @@ async function grant(app, id, path, value, said) { await act({op: 'grant', app, 
 function details(app) { go(app); pane = S.apps.find(a => a.app === app)?.installed ? 'play' : 'rules'; draw(); }
 function go(where) { open = where; form = null; pane = 'play'; over = false; naming = null; draw(); window.scrollTo(0, 0); }
 function install(app) { act({op: 'install', app}, 'Adding: your device certifies it'); }
-function setTheme(k) { theme = k; store.set('gas2theme', k); document.documentElement.dataset.theme = k; draw(); }
-function setHood(on) { hood = on; store.set('gas2hood', on); draw(); }
+// </>: the rack turns around, as in a studio's rack: the back shows the cables
+function flip() {
+  const m = $('#main');
+  m.classList.add('turn');
+  setTimeout(() => { hood = !hood; if (hood) api('api/state?debug').then(r => r.json()).then(j => { S.log = j.log; S.pending = j.pending; if (hood) draw(); }).catch(() => {}); draw(); m.classList.remove('turn'); m.classList.add('turned'); setTimeout(() => m.classList.remove('turned'), 260); }, 230);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Tab' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) { e.preventDefault(); flip(); }
+});
 function saveName(k) { const v = ($('#nm')?.value || '').trim(); if (v) names[k] = v; else delete names[k]; store.set('gas2names', names); naming = null; draw(); }
 function copyText(s, said) {
   if (window.GASNative) window.GASNative.postMessage(JSON.stringify({copy: s}));
@@ -476,7 +626,7 @@ async function share(link) {
   copyText(link, 'Link copied: send it to your friend');
 }
 // the device's back button: out of a screen
-window.gas2Back = () => { if (open) go(null); };
+window.gas2Back = () => { if (hood) flip(); else if (open) go(null); };
 async function addKey(k) {
   const r = await (await api('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
   if (r.error) return toast(r.error);
