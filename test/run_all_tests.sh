@@ -3896,6 +3896,7 @@ check "CVA compiler: vGLP's bonds, GB's mint_bond, advance and redeem_bc with GK
 check "CVA compiler: vGLP's intros, GKK's acquaintance and introduction with no identity, its introduction at a commit, with peek's reading role and send's and credit's signing conditions (vGLP dd37d2a), certified by GSC's check/2, compiled to the platform it prints (vGLP 613ee8d)" "intros/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's days, an advance that requires the day, today(d), compiled to the platform it prints (vGLP 1423679)" "days/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's linear, constraints of a linear equality and an inequality in GSC's form, compiled to the platform it prints (GSC bcc1891)" "linear/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's forms, a safe formula in a schema's body local to its role, in GSC's term form qschema, compiled to the platform it prints (vGLP bcb2726)" "forms/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -4313,6 +4314,40 @@ check "CVA compiler: ... the schema and the variable named" "%% the schema and t
 # Every variable local to a role (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role, as the person d where Bob's role requires that Bob point to someone with a label"; the effectiveness condition's "but a variable local to a role"): GDO-L's lpoint_friend, its agent variable d only in lp(d, l) required at Bob's role, passes the checks (localagent).
 check "CVA compiler: an agent variable local to a role is excepted from effectiveness, passing the checks (localagent)" "%% not compiled, having no pragmas(localagent)" "$cva_classes"
 check_not "CVA compiler: ... and not refused as not effective (localagent)" "%% the schema and the variable(lpf" "$cva_classes"
+
+# Speech-act schemas with quantifiers, qschema in GSC's term form (programs/gsc/self.glp; vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"): a safe formula of the body local to a role is taken, GFF-I's unfollow, not(and(friend(Alice, Bob), eq(Bob, Dave))) at Alice (q_local); one whose atoms two roles hold is local to no role and refused (q_nowhere); a quantified conjunct, a listed role bound by a quantifier, is refused, the request name of a part whose base guards carrying its instances, a list, where Definition "Effective Local Specification" has no List in a request name (q_conjunct); and a cardinality in a constraint is refused, vGLP's constraint being linear arithmetic and signing conditions (q_card).
+cva_q=$("$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 100000000
+compile(q_local, [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), qschema(unfollow, ['Alice', 'Bob'], [pvar('Dave')], [], true, [rs(guarded, [], [atom(lpoints_to, [role(2), pvar('Dave')])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])], [], [fnot(fand(fa(role(1), atom(friend, [role(2)])), fcons(eq(role(2), pvar('Dave')))))])], syntactically_grassroots).
+compile(q_nowhere, [qschema(s, ['Alice', 'Bob'], [], [], true, [rs(guarded, [atom(z, [])], [], [], []), rs(guarded, [atom(w, [])], [], [], [])], [], [fand(fa(role(1), atom(a, [])), fa(role(2), atom(b, [])))])], syntactically_grassroots).
+compile(q_conjunct, [qschema(s, ['Alice', 'Bob', 'Alice'], [], [pvar('Carol')], true, [rs(guarded, [], [], [atom(member, [role(3)])], []), rs(guarded, [atom(in, [])], [], [], []), crs(qlisted(1, member, [role(3)], [role(3)]), guarded, [atom(joined, [role(2)])], [], [], [])], [conjunct([role(3)], 1, atom(member, [role(3)]), fcons(true), [], [], [fa(role(3), atom(joined, [role(2)]))])], [])], syntactically_grassroots).
+compile(q_card, [qschema(s, ['Alice'], [num(d)], [pvar(f)], lt(cardinality([pvar(f)], role(1), atom(p, [pvar(f)]), fcons(true)), num(d)), [rs(guarded, [atom(z, [num(d)])], [], [], [])], [], [])], syntactically_grassroots).
+:quit
+HEREDOC
+2>&1)
+check "CVA compiler: a schema with a safe formula of its body local to its first role, qschema, passes the checks (q_local)" "%% not compiled, having no pragmas(q_local)" "$cva_q"
+check "CVA compiler: a safe formula whose atoms two roles hold, refused as local to no role (q_nowhere)" "formula of a schema's body is local to no role" "$cva_q"
+check "CVA compiler: ... the schema named (q_nowhere)" "%% the schema(s)" "$cva_q"
+check "CVA compiler: a quantified conjunct with a listed role, refused, a request name carrying its instances being a list (q_conjunct)" "%% not compiled(q_conjunct)" "$cva_q"
+check "CVA compiler: ... the reason (q_conjunct)" "has no List in a request name:" "$cva_q"
+check "CVA compiler: a cardinality in a constraint, refused (q_card)" "%% not compiled(q_card)" "$cva_q"
+check "CVA compiler: ... the reason (q_card)" "it has a relation, a function, a cardinality or a sum in a constraint or a safe formula" "$cva_q"
+check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card)" "not well-typed\|→ failed" "$cva_q"
+
+# pragmas.sh reads qschema: a button names the schemas bearing its name with a suffix, qschema among them, GFF-I's [Follow] naming follow_friend and follow_transitive (q_button); and a variable the constraint determines from those the proposer's atoms bind and the other fields is no field: "A field is for a variable of the schema that those atoms do not bind and the constraint does not determine from the variables they bind and the other fields" (vGLP bcb2726, Section 5.4, "The contract's words"), GCC's cmint, i1 = i + k, its one field k (q_det).
+cva_qp=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XQ' 'Alice, Bob and Carol are persons.' '1. ■ Following. Alice may follow.' '2. ■ Minting. Alice may mint.' 'Pragmas' 'Pointing: the lpoints to Alice has.' 'Following: Alice [Follow] <label>' 'Minting: Alice [Cmint] <amount>' > "$cva_qp/XQ.txt"
+cva_qp_ff="schema(follow_friend, ['Alice', 'Bob'], [pvar('Dave')], [rs(guarded, [atom(lpoints_to, [role(2), pvar('Dave')])], [], [atom(friend, [role(2)])], [atom(lpoints_to, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, [])], [])])"
+cva_qp_ft="qschema(follow_transitive, ['Alice', 'Bob', 'Carol'], [pvar('Dave')], [], true, [rs(guarded, [atom(lpoints_to, [role(3), pvar('Dave')])], [], [atom(knows, [role(3)]), atom(lpoints_to, [role(2), pvar('Dave')])], [atom(lpoints_to, [role(3), pvar('Dave')])]), rs(unguarded, [], [], [atom(lpoints_to, [role(3), pvar('Dave')])], []), rs(unguarded, [], [], [atom(identity, [])], [])], [], [fnot(fand(fa(role(1), atom(friend, [role(3)])), fcons(eq(role(3), pvar('Dave')))))])"
+cva_qp_cm="nschema(cmint, ['Alice'], [num(k), num(i), num(i1)], eq(num(i1), plus(num(i), num(k))), [rs(guarded, [times(num(k), atom(ccoin, [role(1)])), atom(issued, [num(i1)])], [atom(issued, [num(i)])], [atom(treasurer, [])], [])])"
+cva_qp_out=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_qp/XQ.txt" "[$cva_qp_ff, $cva_qp_ft, $cva_qp_cm]" 2>&1; echo "exit $?")
+rm -rf "$cva_qp"
+check "CVA pragmas: [Follow] names follow_transitive, a qschema, beside follow_friend (q_button)" "act('follow_transitive', '\"Follow\"', \[\], none, '\"Pointing\"', by(\[1\]))" "$cva_qp_out"
+check "CVA pragmas: ... follow_friend's field the label, Dave (q_button)" "act('follow_friend', '\"Follow\"', \['\"\"', '\"\"', '\"label\"'\], none, '\"Pointing\"', by(\[1\]))" "$cva_qp_out"
+check "CVA pragmas: cmint's one field, k, i1 determined by i1 = i + k (q_det)" "XQ: Minting: Alice \[Cmint\] <amount>: fields k$" "$cva_qp_out"
+check "CVA pragmas: ... the act's field at k's place, none at i1's (q_det)" "act('cmint', '\"Cmint\"', \['\"\"', '\"amount\"'\], none, '\"Pointing\"', by(\[1\]))" "$cva_qp_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (q_button, q_det)" "^exit 0$" "$cva_qp_out"
 check "CVA compiler: CSSN's sibling case, a child role and an adult role at one person, two classes (sibling)" "%% not compiled, having no pragmas(sibling)" "$cva_classes"
 check "CVA compiler: the adult role not forbidding child, one class, all marking the same people, passing the checks (sibling_noclash)" "%% not compiled, having no pragmas(sibling_noclash)" "$cva_classes"
 check "CVA compiler: the parent of the adult role not marked, two classes, passing the checks (sibling_marks)" "%% not compiled, having no pragmas(sibling_marks)" "$cva_classes"
@@ -5233,6 +5268,34 @@ HEREDOC
 check "CVA linear: alice starts at level 0 and refuels 5; her machine marks level 0, 3m = 0 + 3 giving m = 1, and climbs from 0 to 2, 4 and 6, t1 = t + 2, each climb deleting a fuel, and not from 6, where t < 6 fails, two fuel left; and it marks level 6, m = 3" "A = \[view(alice, \[\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[\], \[\], \[start(alice)\], \[tab('Levels', level)\]), view(alice, \[started, level(0)\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[marked(1), started, level(0)\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[marked(1), started, level(0)\], \[\], \[refuel(alice, 5)\], \[tab('Levels', level)\]), view(alice, \[fuel, fuel, fuel, fuel, fuel, marked(1), started, level(0)\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[level(2), fuel, fuel, fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[level(4), fuel, fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[level(6), fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[marked(3), level(6), fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]) | " "$cva_linear"
 check_not "CVA linear: ... no mark at the levels 2 and 4, where 3m = t + 3 has no whole number m, and no level above 6" "marked(2)\|marked(4)\|level(8)" "$cva_linear"
 check "CVA linear: ... and the run suspends, none of alice's own transactions holding" "→ suspended" "$cva_linear"
+
+# A safe formula of a schema's body, local to a role, "the machine of the person in that role evaluates it in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"): vGLP's forms (programs/vglp/cva/contracts.glp), tick(p) with not exists b (blocked(b) at p and b > 2), its platform emitted by the canonical compilation into a scratch directory and its procedures called on states; and eq comparing two persons, as GFF-I's not(and(friend(Alice, Carol), eq(Carol, Dave))) does ("eq and ne also compare two agent variables", GSC c8c5ead, def:numbers).  The play harness, programs/vglp/cva/self.glp, is on test/OPEN_TYPES, and a play over it would be new GLP with an open type, so the procedures are called directly (qschema_forms).
+check "CVA forms: the safe formula printed with the role it is local to, role 1 (qschema_forms)" "^schema_forms(tick, \[sform(at(1), fnot(fexists(\[num(b)\], role(1), atom(blocked, \[num(b)\]), fcons(gt(num(b), num(2))))))\])$" "$(cat "$CVA/forms/platform.vglp")"
+cva_forms_dir="$GLP_DIR/programs/tests/vg_forms_$$"
+mkdir -p "$cva_forms_dir" && cp "$CVA/forms/platform.vglp" "$cva_forms_dir/"
+cva_forms=$("$REPL_RUN" <<HEREDOC
+:emit $cva_forms_dir
+load $cva_forms_dir/platform.glp
+:limit 10000000
+forms_at(tick, [b(role(1), p(alice))], alice, F1), forms_hold(F1?, [b(role(1), p(alice))], [g(armed, []), g(blocked, [n(5)])], R1).
+forms_at(tick, [b(role(1), p(alice))], alice, F2), forms_hold(F2?, [b(role(1), p(alice))], [g(armed, []), g(blocked, [n(1)])], R2).
+contract_schemas(S3), opened(S3?, alice, [g(started, []), g(armed, []), g(blocked, [n(5)])], C3).
+contract_schemas(S4), opened(S4?, alice, [g(started, []), g(armed, []), g(blocked, [n(1)])], C4).
+schema_entry(tick, schema(_, _, R5)), dom_bindings(tick, R5?, [b(role(1), p(alice))], alice, [g(armed, []), g(blocked, [n(5)]), g(blocked, [n(1)])], B5).
+form_holds(fnot(fand(fa(role(1), atom(friend, [role(2)])), fcons(eq(role(2), pvar('Dave'))))), [b(role(1), p(alice)), b(role(2), p(bob)), b(pvar('Dave'), p(bob))], [g(friend, [p(bob)])], R6).
+form_holds(fnot(fand(fa(role(1), atom(friend, [role(2)])), fcons(eq(role(2), pvar('Dave'))))), [b(role(1), p(alice)), b(role(2), p(bob)), b(pvar('Dave'), p(carol))], [g(friend, [p(bob)])], R7).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_forms_dir"
+check "CVA forms: the platform emitted and loaded, its types checked (qschema_forms)" "Loaded: .*vg_forms_.*platform.glp" "$cva_forms"
+check "CVA forms: ... blocked(5) at alice, 5 > 2: the formula does not hold (qschema_forms)" "^R1 = no$" "$cva_forms"
+check "CVA forms: ... blocked(1) alone: it holds (qschema_forms)" "^R2 = yes$" "$cva_forms"
+check "CVA forms: ... alice's machine opens no tick where it fails (qschema_forms)" "^C3 = \[\]$" "$cva_forms"
+check "CVA forms: ... and opens tick(alice) where it holds (qschema_forms)" "^C4 = \[tick(alice)\]$" "$cva_forms"
+check "CVA forms: ... the precondition at alice, armed and the formula, held by no binding where some blocked(b) has b > 2 (qschema_forms)" "^B5 = \[\]$" "$cva_forms"
+check "CVA forms: eq comparing two persons: not(friend(Bob) and Bob = Dave) fails where Dave is Bob (qschema_forms)" "R6 = no$" "$cva_forms"
+check "CVA forms: ... and holds where Dave is Carol (qschema_forms)" "R7 = yes$" "$cva_forms"
 
 # GSC's social network, GSN (programs/gsc/GSN.glp, the checker's gsn), compiled and run with scripted persons (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, item 5; vGLP a890465, Section 7): four agents; create, join with its approval question, a message, a member's post and the leader's deliveries of it, leave, a second group, bob's, with alice a member, unfriend ending every membership between bob and alice in one act by its cleared atoms (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "A schema may mark an atom it deletes as cleared ... the act deletes every atom of the state that it matches, and requires none, as GSN's unfriend ends every membership between the two"; vGLP #22's task, Code_inbox 2026-10-31 07:33 UTC), and close by the leader taking the listed role a[listed(*, n)] of every member the leader lists (social_network/self.glp).
 cva_net_load=$("$REPL_RUN" <<HEREDOC

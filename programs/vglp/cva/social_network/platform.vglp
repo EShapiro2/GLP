@@ -160,6 +160,9 @@ schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 procedure schema_numeric(Constant?, Numeric).
 schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
 
+procedure schema_forms(Constant?, SForms).
+schema_forms(_, []) :- otherwise | true.
+
 procedure reflexive_preds(Preds).
 reflexive_preds([])
 .
@@ -556,9 +559,15 @@ Schemas   ::= [] ; [Schema | Schemas].
 Preds     ::= [] ; [Constant | Preds].
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): an argument of an atom may be a number or a numeric variable, num(X), the number X where X is a number and the variable X otherwise; a schema may carry a constraint on its numeric variables, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"), as programs/gsc writes it: true, and(C1, C2), eq, le, lt, ge and gt of two expressions (X = Y, X =< Y, X < Y, X >= Y, X > Y), succ(X, Y) (Y = X + 1) and or(C1, C2); an expression is a numeric argument, plus(X, Y), minus(X, Y) or mul(X, Y).  The values are whole numbers, Integer, the realisation's type (GSC, ibid.: "Which types the values have --- numbers, strings, dates --- is the realisation's").  schema_numeric(Name, numeric(C, Ls, R)), which the compiler prints from the contract, gives a schema's constraint C, its variables local to a role, Ls, and the role whose local variables the constraint names, at(I), or every where it names none: "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks" (ibid.).
 %% A constraint is "a decidable condition on the values its binding assigns, in the relations their types provide --- linear arithmetic on its numeric variables, and signed(u, y) and unsigned(u, y), that the person bound to u signed the speech act bound to y or did not --- which is evaluated when the schema is bound" (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications"): signed(U, Y) and unsigned(U, Y), U a role or an agent variable and Y a speech-act variable, as programs/gsc writes them (GSC 10fcc92, def:numbers).
-Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; signed(Var, Var) ; unsigned(Var, Var).
+%% A constraint may also hold not(C), implies(C1, C2) and ne(X, Y), X != Y, as programs/gsc writes them (GSC c8c5ead, def:numbers); eq and ne compare two agents, two speech acts or two community names as they compare two numbers ("eq and ne also compare two agent variables, two speech-act variables or two name terms", ibid.).
+Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; signed(Var, Var) ; unsigned(Var, Var) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr).
 Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 CRole     ::= every ; at(Integer).
+%% A safe formula of a schema's body (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc writes it: fa(H, M) the atom M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi) and fcons(C), a constraint.  schema_forms(Name, Forms), which the compiler prints from the contract, gives each with the role it is local to, sform(at(I), F), or sform(every, F), every role checking it: "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (ibid.).
+Form      ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
+Forms     ::= [] ; [Form | Forms].
+SForm     ::= sform(CRole, Form).
+SForms    ::= [] ; [SForm | SForms].
 Numeric   ::= numeric(Constraint, Vars, CRole).
 NumRes    ::= num_is(Integer) ; no_num.
 LNorm     ::= norm(Binding) ; badnorm.
@@ -2333,8 +2342,11 @@ opened2([B|Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), gr
     con_at(Nm?, B?, Id?, Con),
     con_holds(Con?, B?, Ok2),
     nums_bound(Nm?, B?, Ok3),
+    forms_at(Nm?, B?, Id?, Fs),
+    forms_hold(Fs?, B?, Sh?, Ok4),
     and(Ok1?, Ok2?, Ok12),
-    and(Ok12?, Ok3?, Ok),
+    and(Ok12?, Ok3?, Ok123),
+    and(Ok123?, Ok4?, Ok),
     opened3(Ok?, Nm?, B?, Id?, Sh?, C1),
     opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2),
     app(C1?, C2?, Cs).
@@ -3533,13 +3545,22 @@ same_part1(Q, N1, B1, N2, B2, B?) :- ground(N1?), ground(B1?), ground(N2?), grou
     same_bpart(Q?, N1?, B1?, G1?, N2?, B2?, G2?, B).
 %% The same, of two schema-bindings with the people they mark.
 procedure same_bpart(Peers?, Constant?, Binding?, Peers?, Constant?, Binding?, Peers?, YesNo).
-same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(B1?), ground(B2?) |
+same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(N1?), ground(N2?), ground(B1?), ground(B2?) |
     same(G1?, G2?, E1),
     bound_spec(N1?, B1?, Rs1),
     bound_spec(N2?, B2?, Rs2),
     reflexive_preds(Rf),
     same_doms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, E2),
-    and(E1?, E2?, B).
+    same_forms(N1?, N2?, E3),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, B).
+%% Two schema-bindings require the same safe formulas where they are of one schema, or of two with none: a safe formula is part of the domain, "the safe formulas and the conjuncts local to p's role holding at d_p under that binding" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), and two schemas with formulas are taken to determine distinct parts.
+procedure same_forms(Constant?, Constant?, YesNo).
+same_forms(N1, N2, yes) :- N1? =?= N2? | true.
+same_forms(N1, N2, B?) :- otherwise | schema_forms(N1?, F1), schema_forms(N2?, F2), no_forms(F1?, F2?, B).
+procedure no_forms(SForms?, SForms?, YesNo).
+no_forms([], [], yes).
+no_forms(_, _, no) :- otherwise | true.
 %% The people in the marked roles of a schema-binding, a set, in the order of identifiers.
 procedure marked_people(Constant?, Binding?, Peers).
 marked_people(Nm, B, G?) :- ground(B?) |
@@ -3586,20 +3607,79 @@ dom_bindings(Nm, Rs, B, Id, Sh, Bs?) :- ground(Nm?), ground(Rs?), ground(B?), gr
     specs_at(Rs?, 1, B?, Id?, RsP),
     unlocal(B?, B0),
     con_at(Nm?, B?, Id?, Con),
-    dom_bindings1(RsP?, B0?, Sh?, Con?, Bs).
-procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Bindings).
-dom_bindings1(RsP, B0, Sh, Con, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) |
+    forms_at(Nm?, B?, Id?, Fs),
+    dom_bindings1(RsP?, B0?, Sh?, Con?, Fs?, Bs).
+procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Forms?, Bindings).
+dom_bindings1(RsP, B0, Sh, Con, Fs, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) |
     reqs_of(RsP?, Q),
     match_all(Q?, Sh?, B0?, Cs),
-    dom_keep(Cs?, RsP?, Sh?, Con?, Bs).
-procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Bindings).
-dom_keep([], _, _, _, []).
-dom_keep([B|Bs], RsP, Sh, Con, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?) |
+    dom_keep(Cs?, RsP?, Sh?, Con?, Fs?, Bs).
+%% Each binding under which the required atoms are in the state, the forbidden ones not, the constraint holds where it is local to a role sent to Id, and the safe formulas local to such a role hold in the state (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "the safe formulas and the conjuncts local to p's role holding at d_p under that binding").
+procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Forms?, Bindings).
+dom_keep([], _, _, _, _, []).
+dom_keep([B|Bs], RsP, Sh, Con, Fs, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?), ground(Fs?) |
     cand_ok(RsP?, B?, Sh?, O1),
     con_holds(Con?, B?, O2),
-    and(O1?, O2?, Ok),
-    dom_keep(Bs?, RsP?, Sh?, Con?, R1),
+    forms_hold(Fs?, B?, Sh?, O3),
+    and(O1?, O2?, O12),
+    and(O12?, O3?, Ok),
+    dom_keep(Bs?, RsP?, Sh?, Con?, Fs?, R1),
     keep_binding(Ok?, B?, R1?, R).
+%% The safe formulas the agent Id evaluates for the schema-binding B: those local to every role, and those local to a role sent to Id (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "the machine of the person in that role evaluates it in its own state").
+procedure forms_at(Constant?, Binding?, Peer?, Forms).
+forms_at(Nm, B, Id, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), forms_at1(Sf?, B?, Id?, Fs).
+procedure forms_at1(SForms?, Binding?, Peer?, Forms).
+forms_at1([], _, _, []).
+forms_at1([sform(every, F)|Sf], B, Id, [F?|Fs?]) :- forms_at1(Sf?, B?, Id?, Fs).
+forms_at1([sform(at(I), F)|Sf], B, Id, Fs?) :- ground(B?), ground(Id?) |
+    role_person(I?, B?, P),
+    same(P?, Id?, Me),
+    forms_at1(Sf?, B?, Id?, Fs1),
+    keep_form(Me?, F?, Fs1?, Fs).
+procedure keep_form(YesNo?, Form?, Forms?, Forms).
+keep_form(yes, F, Fs, [F?|Fs?]).
+keep_form(no, _, Fs, Fs?).
+%% Whether each safe formula holds in the state Sh under the binding B: an atom where its copies are in Sh; not, and and or as they read; exists Xs (A and Phi) where some binding extending B under which A is in Sh has Phi hold; forall Xs (A and Phi -> Psi) where every such binding under which Phi holds has every formula of Psi hold; and a constraint where it holds under B (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"; "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds").
+procedure forms_hold(Forms?, Binding?, GAtoms?, YesNo).
+forms_hold([], _, _, yes).
+forms_hold([F|Fs], B, Sh, R?) :- ground(B?), ground(Sh?) |
+    form_holds(F?, B?, Sh?, R1),
+    forms_hold1(R1?, Fs?, B?, Sh?, R).
+procedure forms_hold1(YesNo?, Forms?, Binding?, GAtoms?, YesNo).
+forms_hold1(no, _, _, _, no).
+forms_hold1(yes, Fs, B, Sh, R?) :- forms_hold(Fs?, B?, Sh?, R).
+procedure form_holds(Form?, Binding?, GAtoms?, YesNo).
+form_holds(fa(_, M), B, Sh, R?) :- ground(B?), ground(M?) | atom_bound(M?, B?, Bd), fa_holds(Bd?, M?, B?, Sh?, R).
+form_holds(fnot(F), B, Sh, R?) :- form_holds(F?, B?, Sh?, R1), neg(R1?, R).
+form_holds(fand(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), and(R1?, R2?, R).
+form_holds(for(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), or(R1?, R2?, R).
+form_holds(fexists(_, _, A, F), B, Sh, R?) :- ground(Sh?), ground(F?) | match_into(A?, Sh?, B?, Bs), some_holds(Bs?, F?, Sh?, R).
+form_holds(fforall(_, _, A, F, Gs), B, Sh, R?) :- ground(Sh?), ground(F?), ground(Gs?) | match_into(A?, Sh?, B?, Bs), all_hold(Bs?, F?, Gs?, Sh?, R).
+form_holds(fcons(C), B, _, R?) :- con_holds(C?, B?, R).
+%% An atom of a formula holds where its copies are in the state; one with a variable the binding leaves free, which a local formula never has, does not.
+procedure fa_holds(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
+fa_holds(yes, M, B, Sh, R?) :- img_one(M?, B?, G), ms_sub(G?, Sh?, R).
+fa_holds(no, _, _, _, no).
+procedure some_holds(Bindings?, Form?, GAtoms?, YesNo).
+some_holds([], _, _, no).
+some_holds([B|Bs], F, Sh, R?) :- ground(F?), ground(Sh?) |
+    form_holds(F?, B?, Sh?, R1),
+    some_holds1(R1?, Bs?, F?, Sh?, R).
+procedure some_holds1(YesNo?, Bindings?, Form?, GAtoms?, YesNo).
+some_holds1(yes, _, _, _, yes).
+some_holds1(no, Bs, F, Sh, R?) :- some_holds(Bs?, F?, Sh?, R).
+procedure all_hold(Bindings?, Form?, Forms?, GAtoms?, YesNo).
+all_hold([], _, _, _, yes).
+all_hold([B|Bs], F, Gs, Sh, R?) :- ground(B?), ground(F?), ground(Gs?), ground(Sh?) |
+    form_holds(F?, B?, Sh?, C),
+    concl_holds(C?, Gs?, B?, Sh?, R1),
+    all_hold1(R1?, Bs?, F?, Gs?, Sh?, R).
+procedure concl_holds(YesNo?, Forms?, Binding?, GAtoms?, YesNo).
+concl_holds(no, _, _, _, yes).
+concl_holds(yes, Gs, B, Sh, R?) :- forms_hold(Gs?, B?, Sh?, R).
+procedure all_hold1(YesNo?, Bindings?, Form?, Forms?, GAtoms?, YesNo).
+all_hold1(no, _, _, _, _, no).
+all_hold1(yes, Bs, F, Gs, Sh, R?) :- all_hold(Bs?, F?, Gs?, Sh?, R).
 procedure reqs_of(RoleSpecs?, SAtoms).
 reqs_of([], []).
 reqs_of([R|Rs], Q?) :- ground(R?) | rs_req(R?, Q1), reqs_of(Rs?, Q2), app(Q1?, Q2?, Q).
@@ -5102,7 +5182,10 @@ num_val(no_num, 0).
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
 con_holds(and(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), and(R1?, R2?, R).
-con_holds(eq(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_eq(A?, C?, R).
+con_holds(eq(X, Y), B, R?) :- ground(B?), ground(X?), ground(Y?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), eq_vals(A?, C?, X?, Y?, B?, R).
+con_holds(ne(X, Y), B, R?) :- ground(B?), ground(X?), ground(Y?) | con_holds(eq(X?, Y?), B?, R1), ne_vals(R1?, X?, Y?, B?, R).
+con_holds(not(C), B, R?) :- con_holds(C?, B?, R1), neg(R1?, R).
+con_holds(implies(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), neg(R1?, N1), or(N1?, R2?, R).
 con_holds(le(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_le(A?, C?, R).
 con_holds(lt(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_gt(C?, A?, R).
 con_holds(ge(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_le(C?, A?, R).
@@ -5112,6 +5195,44 @@ con_holds(or(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C
 %% A signing condition, evaluated at the binding: signed(U, Y) holds where the person the binding gives U is the signer of the speech act it gives Y or of a speech act inside it, and unsigned(U, Y) where that person is not (GSC 10fcc92, def:numbers: "signed(u, y) holding when beta(u) is the signer of beta(y) or of a speech act inside it and unsigned(u, y) otherwise"; vGLP dd37d2a, Section 5.4).  A person or a speech act not bound makes either false, as a number not bound makes a comparison false.
 con_holds(signed(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, yes, R).
 con_holds(unsigned(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, no, R).
+%% Two expressions are equal where both are numbers and equal, or neither is and they are one person, one speech act or one community name under the binding ("eq and ne also compare two agent variables, two speech-act variables or two name terms", GSC c8c5ead, def:numbers); a variable the binding leaves free makes either false, as a number not bound makes a comparison false.
+procedure eq_vals(NumRes?, NumRes?, Expr?, Expr?, Binding?, YesNo).
+eq_vals(num_is(A), num_is(C), _, _, _, R?) :- num_eq(num_is(A?), num_is(C?), R).
+eq_vals(no_num, no_num, X, Y, B, R?) :- ground(B?) | expr_term(X?, B?, U), expr_term(Y?, B?, V), same_term(U?, V?, R).
+eq_vals(_, _, _, _, _, no) :- otherwise | true.
+procedure ne_vals(YesNo?, Expr?, Expr?, Binding?, YesNo).
+ne_vals(yes, _, _, _, no).
+ne_vals(no, X, Y, B, R?) :- ground(B?) | expr_bound(X?, B?, R1), expr_bound(Y?, B?, R2), and(R1?, R2?, R).
+%% The value of an expression that names no number: a person, a speech act or a community name, found(V), or free where the binding leaves it free.
+procedure expr_term(Expr?, Binding?, Found).
+expr_term(nterm(N), B, found(c(C?))) :- ground(B?), ground(N?) | nt_vars(N?, Vs), vars_bound(Vs?, B?, Bd), nt_term(Bd?, N?, B?, C).
+expr_term(E, B, F?) :- otherwise | expr_term1(E?, B?, F).
+procedure expr_term1(Expr?, Binding?, Found).
+expr_term1(role(I), B, F?) :- lookup(role(I?), B?, F).
+expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
+expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
+expr_term1(_, _, free) :- otherwise | true.
+procedure nt_term(YesNo?, NTerm?, Binding?, CName).
+nt_term(yes, N, B, C?) :- nt_img(N?, B?, C).
+nt_term(no, _, _, dot_any(community(unbound))).
+procedure same_term(Found?, Found?, YesNo).
+same_term(found(U), found(V), R?) :- ground(U?), ground(V?) | bound_val(U?, BU), bound_val(V?, BV), and(BU?, BV?, Bb), same_if(Bb?, U?, V?, R).
+same_term(_, _, no) :- otherwise | true.
+procedure same_if(YesNo?, Val?, Val?, YesNo).
+same_if(yes, U, V, R?) :- same(U?, V?, R).
+same_if(no, _, _, no).
+procedure bound_val(Val?, YesNo).
+bound_val(lv(_, _), no).
+bound_val(any, no).
+bound_val(c(dot_any(_)), no).
+bound_val(_, yes) :- otherwise | true.
+%% Whether an expression has a value under the binding, a number or a term.
+procedure expr_bound(Expr?, Binding?, YesNo).
+expr_bound(E, B, R?) :- ground(E?), ground(B?) | expr_val(E?, B?, N), expr_term(E?, B?, T), has_value(N?, T?, R).
+procedure has_value(NumRes?, Found?, YesNo).
+has_value(num_is(_), _, yes).
+has_value(no_num, found(V), R?) :- bound_val(V?, R).
+has_value(no_num, free, no).
 procedure signing(Found?, Found?, YesNo?, YesNo).
 signing(found(p(P)), found(s(S)), W, R?) :- ground(S?) | signed_by(P?, S?, G), same(G?, W?, R).
 signing(_, _, _, no) :- otherwise | true.
@@ -5206,6 +5327,9 @@ con_ext1(succ(X, Y), B, Bs?) :- ground(B?), ground(X?), ground(Y?) |
     succ_ext(A?, C?, X?, Y?, B?, Bs).
 con_ext1(signed(_, _), B, [B?]).
 con_ext1(unsigned(_, _), B, [B?]).
+con_ext1(not(_), B, [B?]).
+con_ext1(implies(_, _), B, [B?]).
+con_ext1(ne(_, _), B, [B?]).
 con_ext1(or(C1, C2), B, Bs?) :- ground(B?) |
     con_ext1(C1?, B?, Bs1),
     con_ext1(C2?, B?, Bs2),
