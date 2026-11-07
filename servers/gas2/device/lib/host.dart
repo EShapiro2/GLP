@@ -18,6 +18,7 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart' show GlpEngine;
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
@@ -49,6 +50,8 @@ class SuperHost {
   String get rootSelf => '$tree/self.glp';
 
   late final AgentRuntime agent;
+  _Store? _store;
+  bool get resumed => _store?.loaded ?? false;
   final List<MiniApp> apps = [];
   final List<String> friends = [];
   final List<String> friendRequests = [];
@@ -80,29 +83,51 @@ class SuperHost {
       final m = a as Map;
       final app = m['app'] as String;
       apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
+      // certified once per person and per version of the mini-app's files, and kept
       final out = File('$core/$app.glpw');
-      final stamp = File('$dataDir/certified/$app');
-      if (out.existsSync() && stamp.existsSync() && stamp.readAsStringSync() == '$me ${out.lengthSync()}') continue;
-      status = 'certifying $app';
+      final kept = File('$dataDir/certified/$app.glpw');
+      final stamp = File('$dataDir/certified/$app.stamp');
+      final version = '$me ${_digest('$tree/apps/$app')}';
+      if (kept.existsSync() && stamp.existsSync() && stamp.readAsStringSync() == version) {
+        kept.copySync(out.path);
+        continue;
+      }
+      status = 'certifying ${m['title']}';
       _changed();
       final engine = GlpEngine(rootSelfGlpPath: rootSelf, identity: identity);
       engine.loadProgram('$tree/apps/$app');
       final art = engine.appModule!.artefact as Artefact;
       out.writeAsBytesSync(art.toBytes());
-      stamp.parent.createSync(recursive: true);
-      stamp.writeAsStringSync('$me ${out.lengthSync()}');
+      kept.parent.createSync(recursive: true);
+      out.copySync(kept.path);
+      stamp.writeAsStringSync(version);
     }
+  }
+
+  /// The files of a directory, as one number: their names and lengths and contents.
+  static String _digest(String dir) {
+    var h = 0;
+    final fs = Directory(dir).listSync(recursive: true).whereType<File>().toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final f in fs) {
+      for (final b in [...utf8.encode(f.path.substring(dir.length)), ...f.readAsBytesSync()]) {
+        h = (h * 31 + b) & 0x3fffffff;
+      }
+    }
+    return h.toRadixString(16);
   }
 
   Future<void> start() async {
     try {
       await _prepareApps();
+      final store = _store = _Store('$dataDir/state.bin', this);
       agent = AgentRuntime(
         agentId: me,
         program: core,
         rootSelfGlpPath: rootSelf,
         keyPair: keyPair,
         network: network,
+        stateStore: store,
       );
       agent.maxQuiescenceCycles = 20000000;
       agent.onOutput = (l) {
@@ -113,7 +138,9 @@ class SuperHost {
       status = 'starting the super-app';
       _changed();
       await agent.initialize();
-      await _inject(rt.StructTerm('gas2_device', [rt.ConstTerm(me)]));
+      // A person who was here before goes on where they left off: the agent's state
+      // and what the page shows were saved together (_Store).
+      if (!store.loaded) await _inject(rt.StructTerm('gas2_device', [rt.ConstTerm(me)]));
       status = 'ready';
     } catch (e, st) {
       status = 'failed: $e';
@@ -300,5 +327,73 @@ class SuperHost {
         return grant(j['app'] as String, j['id'] as int, (j['path'] as List).cast<int>(), j['value']);
     }
     throw ArgumentError('no such act: ${j['op']}');
+  }
+}
+
+/// The agent's state, saved in each event cycle (AgentStateStore), with what the
+/// page shows at that moment, so that the two are always of one moment, as GAS's
+/// phone keeps them (servers/gas/core/lib/person_host.dart).
+class _Store implements AgentStateStore {
+  final String path;
+  final SuperHost host;
+  bool loaded = false;
+  _Store(this.path, this.host);
+
+  @override
+  Future<Uint8List?> load() async {
+    final f = File(path);
+    if (!f.existsSync()) return null;
+    try {
+      final b = await f.readAsBytes();
+      if (b.length < 8 || ascii.decode(b.sublist(0, 4)) != 'GAS2') return null;
+      final n = ByteData.sublistView(b, 4, 8).getUint32(0);
+      final v = jsonDecode(utf8.decode(b.sublist(8, 8 + n))) as Map<String, dynamic>;
+      host.trusted = v['trusted'] == true;
+      host.friends..clear()..addAll((v['friends'] as List).cast<String>());
+      host.friendRequests..clear()..addAll((v['friendRequests'] as List).cast<String>());
+      host.introRequests..clear()..addAll([for (final r in v['introRequests'] as List) (r as List).cast<String>()]);
+      host.notes..clear()..addAll((v['notes'] as List).cast<String>());
+      final apps = v['apps'] as Map<String, dynamic>;
+      for (final m in host.apps) {
+        final a = apps[m.app] as Map<String, dynamic>?;
+        if (a == null) continue;
+        m.n = a['n'] as int?;
+        m.draws..clear()..addAll({for (final e in (a['draws'] as Map).entries) int.parse(e.key as String): e.value});
+      }
+      loaded = true;
+      return Uint8List.sublistView(b, 8 + n);
+    } on Object {
+      return null; // unreadable: a fresh start
+    }
+  }
+
+  @override
+  Future<void> save(Uint8List state) async {
+    final view = utf8.encode(jsonEncode({
+      'trusted': host.trusted,
+      'friends': host.friends,
+      'friendRequests': host.friendRequests,
+      'introRequests': host.introRequests,
+      'notes': host.notes,
+      'apps': {
+        for (final m in host.apps)
+          m.app: {'n': m.n, 'draws': m.draws.map((k, v) => MapEntry('$k', v))}
+      },
+    }));
+    final head = ByteData(8)
+      ..setUint8(0, 0x47)
+      ..setUint8(1, 0x41)
+      ..setUint8(2, 0x53)
+      ..setUint8(3, 0x32)
+      ..setUint32(4, view.length);
+    final f = File(path);
+    f.parent.createSync(recursive: true);
+    final tmp = File('$path.new');
+    final out = BytesBuilder(copy: false)
+      ..add(head.buffer.asUint8List())
+      ..add(view)
+      ..add(state);
+    await tmp.writeAsBytes(out.takeBytes(), flush: true);
+    await tmp.rename(path);
   }
 }

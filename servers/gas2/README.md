@@ -1,6 +1,6 @@
 # GAS2
 
-A site that follows this repository's main branch and shows every grassroots contract in it: how the contracts relate, and each contract taken down the cascade to a certified mini-app of the Grassroots Super-App (`programs/social/graph/core`), with a live run of the mini-app on two super-apps. Live at https://talmonlab.bgu.ac.il/gas2/.
+Two parts. The person's app (`app/`, over `device/`) is the Grassroots Super-App of `programs/social/graph/core` on a phone or a computer, with mini-apps made from the contracts; see `device/README.md`. The site, below, follows this repository's main branch and shows every grassroots contract in it: how the contracts relate, and each contract taken down the cascade to a certified mini-app of the Grassroots Super-App (`programs/social/graph/core`), with a live run of the mini-app on two super-apps. Live at https://talmonlab.bgu.ac.il/gas2/.
 
 ## Run
 
@@ -19,3 +19,11 @@ Environment: `PORT` (5101), `HOST` (127.0.0.1), `DATA`, `UPSTREAM` (https://gith
 - `tools/build.py`: every `programs/**/NAME.txt`, its cascade, its mini-app, one run of it, and the relations among the contracts. A relation's kind is the one the contract's text states (`X restricts Y`). Otherwise it is computed from the two contracts' schemas as GSC's reader reads them, with variables renamed in order: `extends` if every schema of the base is kept, `amends` if some are deleted or replaced (GSC, Definition "Amendment, extension, instantiation"). Its output is `data.json`, `artefacts/*.glpw` and `platforms/*.vglp`.
 - `server.py`: the site, `data.json`, the files, `GET api/status`, and `POST api/run/<ID>?which=gas2|udi`, a live run in the serving working copy (GAS2's run, or the hand-written play of `programs/apps/<id>_boot.glp`).
 - `web/`: the pages: `index.html` (the map and the list), `contract.html?c=<ID>` and `how.html`.
+
+## The app
+
+- `glp/gas2_device.glp`: the device harness, the super-app for a live person (`device/README.md`).
+- `tools/device_tree.py`: the part of a built working copy a device runs, with GAS2's mini-apps and the harness.
+- `device/`: the person's super-app and its page (Dart; also a program for computers, `bin/gas2.dart`).
+- `app/`: the Flutter shell for Android, Windows and macOS (`tool/sync_assets.sh <tree>` before a build).
+- `.github/workflows/gas2-apps.yml` (at the repository's root): builds the tree and the apps for Android, Windows, macOS and Linux on every push to this branch, onto the release `gas2-latest`, which `web/get.html` links to.
