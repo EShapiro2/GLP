@@ -615,7 +615,7 @@ sub field_slots {
         (my $vn = $v->[1][0][0] // "") =~ s/^\x27|\x27$//g;
         next if $locals{$S} && $locals{$S}{$vn};
         $i++;
-        next unless $v->[0] =~ /^(pvar|svar|num)$/;
+        next unless $v->[0] =~ /^(pvar|svar|num|real)$/;
         push @sl, [$v->[0], $i, $vn];
     }
     return @sl;
@@ -627,7 +627,7 @@ sub atom_keys {
     my ($fn, $as) = @$t;
     return ("r$as->[0][0]") if ($fn eq "role" || $fn eq "own") && @$as == 1 && $as->[0][0] =~ /^\d+$/;
     my $uq = sub { (my $x = $_[0]) =~ s/^\x27|\x27$//g; return $x };
-    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|own_var)$/ && @$as == 1;
+    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|real|own_var)$/ && @$as == 1;
     return (atom_keys($as->[0]), "v" . $uq->($as->[1][0])) if $fn eq "ext" && @$as == 2;
     return map { atom_keys($_) } @$as;
 }

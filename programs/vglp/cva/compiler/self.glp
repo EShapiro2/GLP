@@ -25,8 +25,9 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 %% Act schemas allow numbers (GSC 9231074, Section 3.2; vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it"): num(X) is the numeric variable X where X is a name and the number X where X is a number, and times(K, A) is the atom A with the multiplicity K, as programs/gsc/self.glp writes them.
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
+%% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer) ; num(Constant) ; any ; ilist(Integer, String).
+            ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -296,6 +297,7 @@ loc_vars([loc(_, V)|Ls], [V?|Vs?]) :- loc_vars(Ls?, Vs).
 procedure is_nvar(Arg?, YesNo).
 is_nvar(num(X), no) :- number(X?) | true.
 is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
+is_nvar(real(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
@@ -329,6 +331,7 @@ expr_args(plus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(minus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(mul(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(num(X), [num(X?)]).
+expr_args(real(X), [num(X?)]).
 expr_args(role(I), [role(I?)]).
 expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
@@ -360,9 +363,11 @@ TSchemas  ::= [] ; [TSchema | TSchemas].
 %% The condition and the conditional literals of each listed role of a schema with quantifiers, lx(Schema, I, Phi, CAdd, CDel) (cvac.glp, lx_table).
 %% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
 %% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
+%% And each real variable X of a schema S, rl(S, X) (cvac.glp, real_lx).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
             ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
-            ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults).
+            ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults)
+            ; rl(Constant, Constant).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).

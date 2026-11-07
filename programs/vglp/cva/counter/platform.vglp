@@ -272,7 +272,7 @@ Forms     ::= [] ; [Form | Forms].
 SForm     ::= sform(CRole, Form).
 SForms    ::= [] ; [SForm | SForms].
 Numeric   ::= numeric(Constraint, Vars, CRole).
-NumRes    ::= num_is(Integer) ; no_num.
+NumRes    ::= num_is(Number) ; no_num.
 LNorm     ::= norm(Binding) ; badnorm.
 
 %% A machine state is a multiset of ground atoms, a list; an atom's arguments
@@ -282,7 +282,8 @@ LNorm     ::= norm(Binding) ; badnorm.
 %% Under a binding the wildcard of a cleared atom is itself, any, and N.* the community name of N followed by it, dot_any(C) (GSC 327e035, Definition "Binding": beta(*) := *): the image of a cleared atom, which matches the atoms of a state obtained from it by replacing each wildcard by an argument, a speech act where the wildcard is in a name term (ibid.).
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 %% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
-Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant) ; any.
+%% A value is a whole number, n(K), or a real, r(X), "a value, a whole number, a real or a string, or a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"); arithmetic on them is on numbers, a result with a real among its operands a real.
+Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
@@ -2607,6 +2608,7 @@ val_names(p(Q), C, B?) :- same(Q?, C?, B).
 val_names(s(speech(_, Q)), C, B?) :- same(Q?, C?, B).
 val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
+val_names(r(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 procedure cname_base(CName?, Peer).
@@ -3981,6 +3983,7 @@ adm_var1(no, found(s(speech(_, P))), Gp, R?) :- mem(P?, Gp?, R).
 adm_var1(no, found(p(_)), _, no).
 adm_var1(no, found(c(_)), _, no).
 adm_var1(no, found(n(_)), _, no).
+adm_var1(no, found(r(_)), _, no).
 adm_var1(no, found(lv(_, _)), _, no).
 adm_var1(no, free, _, no).
 adm_var1(no, found(any), _, no).
@@ -4282,6 +4285,7 @@ is_lv(p(_), no).
 is_lv(s(_), no).
 is_lv(c(_), no).
 is_lv(n(_), no).
+is_lv(r(_), no).
 is_lv(any, no).
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
 locals_put([], _, B, B?).
@@ -5070,6 +5074,7 @@ found_peer(found(p(P)), P?).
 found_peer(found(s(_)), unbound).
 found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
+found_peer(found(r(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -5175,7 +5180,7 @@ atom_bound(rest(_, _, A), B, R?) :- atom_bound(A?, B?, R).
 atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
-vars_bound([num(X)|Vs], B, R?) :- integer(X?) | vars_bound(Vs?, B?, R).
+vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),
@@ -5233,7 +5238,7 @@ match_args([sgn(Y, I)|Vs], [X|Xs], B, R?) :- ground(Y?), ground(I?), ground(X?),
 match_args([nterm(N)|Vs], [X|Xs], B, R?) :- ground(N?), ground(X?), ground(B?) |
     name_parts(N?, X?, Ps),
     match_name(Ps?, Vs?, Xs?, B?, R).
-match_args([num(X)|Vs], [Y|Ys], B, R?) :- integer(X?), ground(Y?), ground(B?) |
+match_args([num(X)|Vs], [Y|Ys], B, R?) :- number(X?), ground(Y?), ground(B?) |
     lit_val(X?, Y?, E),
     lit_then(E?, Vs?, Ys?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of the image of a cleared atom, and nothing else, binding nothing: the deleted atoms of a class carry the images of the cleared atoms of its schema-bindings (joins), and a schema-binding found by matching them has the same cleared atoms.
@@ -5245,8 +5250,9 @@ match_args([V|Vs], [X|Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B
     kind_ok(V?, X?, K),
     match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
 %% A number in an atom of a schema matches that number.
-procedure lit_val(Integer?, Val?, YesNo).
+procedure lit_val(Number?, Val?, YesNo).
 lit_val(X, n(K), yes) :- X? =:= K? | true.
+lit_val(X, r(K), yes) :- X? =:= K? | true.
 lit_val(_, _, no) :- otherwise | true.
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
@@ -5275,6 +5281,7 @@ name_parts(N, c(C), Ps?) :- nt_parts(N?, C?, Ps).
 name_parts(_, p(_), noparts).
 name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
+name_parts(_, r(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 procedure nt_parts(NTerm?, CName?, NameParts).
@@ -5301,6 +5308,7 @@ sgn_parts(s(speech(utterance(_), _)), unsigned).
 sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
+sgn_parts(r(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
@@ -5330,17 +5338,22 @@ kind_ok(pvar(_), c(_), no).
 kind_ok(svar(_), c(_), no).
 %% A numeric variable matches a number, an agent variable a person and a speech-act variable a speech act; and each matches lv(S, X), which a schema-binding gives a variable local to a role (local_norm), a variable not local to a role so matched being no schema-binding of the class (lv_wrong); and nothing else matches either.
 kind_ok(num(_), n(_), yes).
+kind_ok(num(_), r(_), yes).
 kind_ok(num(_), lv(_, _), yes).
 kind_ok(num(_), p(_), no).
 kind_ok(num(_), s(_), no).
 kind_ok(num(_), c(_), no).
 kind_ok(role(_), n(_), no).
+kind_ok(role(_), r(_), no).
 kind_ok(role(_), lv(_, _), no).
 kind_ok(pvar(_), n(_), no).
+kind_ok(pvar(_), r(_), no).
 kind_ok(pvar(_), lv(_, _), yes).
 kind_ok(svar(_), n(_), no).
+kind_ok(svar(_), r(_), no).
 kind_ok(svar(_), lv(_, _), yes).
 kind_ok(sgn(_, _), n(_), no).
+kind_ok(sgn(_, _), r(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
 %% A variable a conjunct's quantifier binds, at an instance, matches as the variable does (inst_binds).
 kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
@@ -5357,6 +5370,7 @@ val_peer1(found(p(P)), _, P?).
 val_peer1(found(s(_)), D, D?).
 val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
+val_peer1(found(r(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -5367,6 +5381,7 @@ val_speech1(found(s(S)), _, S?).
 val_speech1(found(p(_)), D, speech(utterance(none), D?)).
 val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
+val_speech1(found(r(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -5377,10 +5392,11 @@ val_speech1(found(any), D, speech(utterance(none), D?)).
 
 %% The number a binding gives a numeric argument: the number itself, n(K) bound to the variable, or none.
 procedure num_of(Var?, Binding?, NumRes).
-num_of(num(X), _, num_is(N?)) :- integer(X?) | N := X?.
+num_of(num(X), _, num_is(N?)) :- number(X?) | N := X?.
 num_of(V, B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), num_found(F?, R).
 procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
+num_found(found(r(K)), num_is(K?)).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -5391,8 +5407,14 @@ num_found(found(any), no_num).
 procedure val_num(Var?, Binding?, Integer).
 val_num(V, B, K?) :- num_of(V?, B?, R), num_val(R?, K).
 procedure num_val(NumRes?, Integer).
-num_val(num_is(K), K?).
-num_val(no_num, 0).
+num_val(num_is(K), I?) :- integer(K?) | I := integer(K?).
+num_val(_, 0) :- otherwise | true.
+%% The real of a real variable of a class term, written in the term (class_of), a whole number found there taken as a real; 0.0 where none is bound.
+procedure val_real(Var?, Binding?, Real).
+val_real(V, B, K?) :- ground(B?) | lookup(V?, B?, F), real_found(F?, K).
+procedure real_found(Found?, Real).
+real_found(found(r(K)), K?).
+real_found(_, 0.0) :- otherwise | true.
 %% Whether the constraint holds under the binding, every number it names bound: and(C1, C2), C1 and C2; eq(X, Y), X = Y; le(X, Y), X =< Y; lt(X, Y), X < Y; ge(X, Y), X >= Y; gt(X, Y), X > Y; succ(X, Y), Y = X + 1; or(C1, C2), C1 or C2, X and Y the values of the expressions under the binding.  A number not bound makes a comparison false.
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
@@ -5477,14 +5499,15 @@ expr_val(nterm(_), _, no_num).
 expr_val(any, _, no_num).
 expr_val(inst(_, _, _), _, no_num).
 procedure num_op(Constant?, NumRes?, NumRes?, NumRes).
-num_op(plus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := A? + C?.
-num_op(minus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := A? - C?.
-num_op(mul, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := A? * C?.
-num_op(min, num_is(A), num_is(C), num_is(A?)) :- integer(A?), integer(C?), A? =< C? | true.
-num_op(min, num_is(A), num_is(C), num_is(C?)) :- integer(A?), integer(C?), A? > C? | true.
+num_op(plus, num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?) | K := A? + C?.
+num_op(minus, num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?) | K := A? - C?.
+num_op(mul, num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?) | K := A? * C?.
+num_op(min, num_is(A), num_is(C), num_is(A?)) :- number(A?), number(C?), A? =< C? | true.
+num_op(min, num_is(A), num_is(C), num_is(C?)) :- number(A?), number(C?), A? > C? | true.
 num_op(_, _, _, no_num) :- otherwise | true.
 procedure num_floor(NumRes?, NumRes).
 num_floor(num_is(A), num_is(A?)) :- integer(A?) | true.
+num_floor(num_is(A), num_is(K?)) :- real(A?) | K := floor(A?).
 num_floor(_, no_num) :- otherwise | true.
 procedure num_eq(NumRes?, NumRes?, YesNo).
 num_eq(num_is(A), num_is(C), yes) :- A? =:= C? | true.
@@ -5496,7 +5519,7 @@ procedure num_le(NumRes?, NumRes?, YesNo).
 num_le(num_is(A), num_is(C), yes) :- A? =< C? | true.
 num_le(_, _, no) :- otherwise | true.
 procedure num_succ(NumRes?, NumRes?, YesNo).
-num_succ(num_is(A), num_is(C), R?) :- integer(A?), integer(C?) | A1 := A? + 1, same_int(A1?, C?, R).
+num_succ(num_is(A), num_is(C), R?) :- integer(A?), integer(C?) | A1 := integer(A?) + 1, C1 := integer(C?), same_int(A1?, C1?, R).
 num_succ(_, _, no) :- otherwise | true.
 %% The constraint the agent Id checks for the schema-binding B: "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): the constraint where it is local to every role, or to a role sent to Id, and true otherwise.
 procedure con_at(Constant?, Binding?, Peer?, Constraint).
@@ -5552,16 +5575,16 @@ count_holding([B|Bs], F, Sh, K0, K?) :- ground(F?), ground(Sh?), integer(K0?) |
 procedure count_add(YesNo?, Integer?, Integer).
 count_add(yes, K0, K?) :- K := K0? + 1.
 count_add(no, K0, K0?).
-procedure sum_holding(Bindings?, Form?, Expr?, GAtoms?, Integer?, Integer).
+procedure sum_holding(Bindings?, Form?, Expr?, GAtoms?, Number?, Number).
 sum_holding([], _, _, _, K, K?).
-sum_holding([B|Bs], F, U, Sh, K0, K?) :- ground(B?), ground(F?), ground(U?), ground(Sh?), integer(K0?) |
+sum_holding([B|Bs], F, U, Sh, K0, K?) :- ground(B?), ground(F?), ground(U?), ground(Sh?), number(K0?) |
     form_holds(F?, B?, Sh?, H),
     expr_counted(U?, B?, Sh?, U1),
     expr_val(U1?, B?, V),
     sum_add(H?, V?, K0?, K1),
     sum_holding(Bs?, F?, U?, Sh?, K1?, K).
-procedure sum_add(YesNo?, NumRes?, Integer?, Integer).
-sum_add(yes, num_is(V), K0, K?) :- integer(V?) | K := K0? + V?.
+procedure sum_add(YesNo?, NumRes?, Number?, Number).
+sum_add(yes, num_is(V), K0, K?) :- number(V?), number(K0?) | K := K0? + V?.
 sum_add(_, _, K0, K0?) :- otherwise | true.
 %% Whether the schema-binding B can hold its constraint: where the constraint names no variable local to a role, every number it names is bound by B, and it holds under B or the schema-binding determines no transaction; where it names some, a state binds them, and that is asked of the state (dom_bindings).
 procedure con_live(Constant?, Binding?, YesNo).
@@ -5629,8 +5652,9 @@ eq_ext1([V], X, Y, B, Bs?) :- ground(V?), ground(X?), ground(Y?), ground(B?) |
 eq_ext1(_, _, _, B, [B?]) :- otherwise | true.
 procedure eq_solve(NumRes?, NumRes?, Var?, Binding?, Bindings).
 eq_solve(num_is(D0), num_is(D1), V, B, Bs?) :- integer(D0?), integer(D1?) |
-    C := D1? - D0?,
-    eq_solve1(C?, D0?, V?, B?, Bs).
+    C := integer(D1?) - integer(D0?),
+    D := integer(D0?),
+    eq_solve1(C?, D?, V?, B?, Bs).
 eq_solve(_, _, _, B, [B?]) :- otherwise | true.
 procedure eq_solve1(Integer?, Integer?, Var?, Binding?, Bindings).
 eq_solve1(C, D0, V, B, [[b(V?, n(K?))|B?]]) :- C? =\= 0, D0? mod C? =:= 0 | K := (0 - D0?) // C?.
@@ -5640,7 +5664,7 @@ procedure expr_free(Expr?, Binding?, Vars?, Vars).
 expr_free(plus(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
 expr_free(minus(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
 expr_free(mul(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
-expr_free(num(X), _, F0, F0?) :- integer(X?) | true.
+expr_free(num(X), _, F0, F0?) :- number(X?) | true.
 expr_free(num(X), B, F0, F?) :- otherwise, ground(X?), ground(B?), ground(F0?) |
     num_of(num(X?), B?, R),
     leaf_free1(R?, num(X?), F0?, F).
@@ -5668,8 +5692,8 @@ procedure add_var(YesNo?, Var?, Vars?, Vars).
 add_var(yes, _, F0, F0?).
 add_var(no, V, F0, [V?|F0?]).
 procedure succ_ext(NumRes?, NumRes?, Var?, Var?, Binding?, Bindings).
-succ_ext(num_is(A), no_num, _, Y, B, [[b(Y?, n(A1?))|B?]]) :- integer(A?) | A1 := A? + 1.
-succ_ext(no_num, num_is(C), X, _, B, [[b(X?, n(C1?))|B?]]) :- integer(C?) | C1 := C? - 1.
+succ_ext(num_is(A), no_num, _, Y, B, [[b(Y?, n(A1?))|B?]]) :- integer(A?) | A1 := integer(A?) + 1.
+succ_ext(no_num, num_is(C), X, _, B, [[b(X?, n(C1?))|B?]]) :- integer(C?) | C1 := integer(C?) - 1.
 succ_ext(_, _, _, _, B, [B?]) :- otherwise | true.
 %% Whether the binding binds a number to every numeric variable of the schema's head, its variables local to a role apart, which the compiler leaves out of it.
 procedure nums_bound(Constant?, Binding?, YesNo).

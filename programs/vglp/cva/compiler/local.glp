@@ -274,6 +274,8 @@ procedure var_name(Arg?, VName).
 var_name(pvar(X), vn(X?)).
 var_name(svar(X), vn(X?)).
 var_name(num(X), vn(X?)).
+%% A real variable is num(X) to the checks (cvac.glp, reals_off); the clause covers the type.
+var_name(real(X), vn(X?)).
 var_name(role(_), novar).
 var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
@@ -447,6 +449,8 @@ lin_coef(mul(A, B), V, K?) :- ground(A?), ground(B?), ground(V?) |
     has_nvar(AA?, HA),
     mul_coef(HA?, A?, B?, V?, K).
 lin_coef(num(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
+%% A real variable is num(X) to the checks (cvac.glp, reals_off); the clause covers the type.
+lin_coef(real(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
 lin_coef(role(_), _, 0).
 lin_coef(pvar(_), _, 0).
 lin_coef(svar(_), _, 0).
@@ -581,6 +585,8 @@ kept_forbidden_args([R|Rs], As?) :- ground(R?) |
 procedure variables_of(Args?, Args).
 variables_of([], []).
 variables_of([num(X)|As], R?) :- ground(X?) | is_nvar(num(X?), B), variables_of(As?, R1), keep_arg_if(B?, num(X?), R1?, R).
+%% A real variable is num(X) to the checks (cvac.glp, reals_off); the clause covers the type.
+variables_of([real(X)|As], [num(X?)|R?]) :- variables_of(As?, R).
 variables_of([pvar(X)|As], [pvar(X?)|R?]) :- variables_of(As?, R).
 variables_of([svar(X)|As], [svar(X?)|R?]) :- variables_of(As?, R).
 variables_of([role(_)|As], R?) :- variables_of(As?, R).
@@ -873,6 +879,7 @@ person_vars([svar(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([nterm(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([sgn(_, _)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([real(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([any|Vs], R?) :- person_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 person_vars([ilist(_, _)|Vs], R?) :- person_vars(Vs?, R).
@@ -884,6 +891,7 @@ speech_vars([pvar(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([nterm(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([sgn(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([real(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 speech_vars([ilist(_, _)|Vs], R?) :- speech_vars(Vs?, R).
@@ -1140,6 +1148,7 @@ adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
+adm_var(real(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
 adm_var(any, _, _, _, yes).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
