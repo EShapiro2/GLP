@@ -91,7 +91,9 @@ void main() {
     // directories GlpPaths names --- read from the repository as discovery
     // reads a program: every .glp of the tree, the self.glp of each directory
     // from the root down to it (TGLP modules.tex, Compilation, first step),
-    // and a .vglp no .glp stands beside, with the dispatcher's generic source; and
+    // and a .vglp no .glp stands beside, with the dispatcher's generic source
+    // and the part typed over the type of a position, views.glp, as
+    // tool/sync_glp_assets.sh stages them; and
     // nothing else.  Until 2026-10-07 the loader and the script each listed
     // the files, and both lacked programs/social/graph/ui/self.glp (GSG,
     // gap abe6081f).
@@ -125,6 +127,7 @@ void main() {
     }
     if (vglp) {
       expected.add('programs/vglp/dispatcher.glp');
+      expected.add('programs/vglp/views.glp');
     }
     final sources = bundled.keys.where((p) => !p.endsWith('.glpw')).toSet();
     expect(sources, contains('programs/social/graph/ui/self.glp'));
