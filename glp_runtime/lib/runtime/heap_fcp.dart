@@ -703,9 +703,12 @@ class HeapFCP {
     return bindWriter(writerAddr, ConstTerm(v));
   }
 
-  /// Bind variable to structure
-  List<GoalRef> bindVariableStruct(HeapCell writerAddr, String functor, List<Term> args) {
-    return bindWriter(writerAddr, StructTerm(functor, args));
+  /// Bind variable to structure.  [groundMark] is the ground mark of the
+  /// structure this one copies, where it copies one: the copy is the same term
+  /// (IGLP appendix-implementation-notes.tex, "Ground mark").
+  List<GoalRef> bindVariableStruct(HeapCell writerAddr, String functor, List<Term> args,
+      {bool groundMark = false}) {
+    return bindWriter(writerAddr, StructTerm(functor, args)..groundMark = groundMark);
   }
 
   /// Compatibility: isWriterBound
@@ -809,8 +812,11 @@ class HeapFCP {
       }
       if (heapArgs.length == source.args.length) {
         frames.removeLast();
-        // Allocate a ValueTag cell containing the StructTerm with VarRef args
-        final cell = allocateValue(StructTerm(source.functor, heapArgs));
+        // Allocate a ValueTag cell containing the StructTerm with VarRef args.
+        // The copy is the same term as its source, so it carries the source's
+        // ground mark (IGLP appendix-implementation-notes.tex, "Ground mark").
+        final cell = allocateValue(StructTerm(source.functor, heapArgs)
+          ..groundMark = source.groundMark);
         if (frames.isEmpty) return cell;
         stored = cell;
         continue;
