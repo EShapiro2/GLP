@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAS2 · contract</title>
+<link rel="stylesheet" href="gas2.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">GAS2</a>
+  <nav><a href="./">Contracts</a><a href="how.html">How it works</a></nav>
+</header>
+<main id="page"><p class="muted" id="build">Loading…</p></main>
+<script src="gas2.js"></script>
+<script>
+const STEPS = [
+  ['schemas', 'Act schemas', 'the contract as GSC writes it'],
+  ['check', 'Checker', 'syntactically grassroots?'],
+  ['pragmas', 'Pragmas', 'the words its app shows'],
+  ['compile', 'Compiler', 'the canonical platform'],
+  ['artefact', 'Certified', 'the mini-app’s artefact'],
+  ['run', 'Runs', 'on two super-apps']
+];
+
+function stepsOf(c) {
+  const order = ['schemas', 'check', 'pragmas', 'compile'];
+  const failed = c.step === 'compiled' ? null : c.step;
+  const st = {};
+  order.forEach((k, i) => st[k] = failed === null ? 'ok' : (i < order.indexOf(failed) ? 'ok' : (k === failed ? 'no' : '')));
+  st.artefact = c.artefact ? 'ok' : (c.app ? 'no' : '');
+  const run = c.checked && c.checked.gas2;
+  st.run = run ? (run.settled && run.lines ? 'ok' : 'no') : '';
+  return st;
+}
+
+// A GLP term, split at its top-level commas.
+function args(s) {
+  const out = []; let d = 0, cur = '', q = false;
+  for (const ch of s) {
+    if (ch === "'") q = !q;
+    if (!q && '([' .includes(ch)) d++;
+    if (!q && ')]'.includes(ch)) d--;
+    if (!q && ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+const inner = (s, f) => s.startsWith(f + '(') && s.endsWith(')') ? s.slice(f.length + 1, -1) : null;
+const list = s => s === '[]' ? [] : args(s.replace(/^\[|\]$/g, ''));
+
+function event(t) {
+  let x;
+  if ((x = inner(t, 'sg'))) {
+    let y;
+    if ((y = inner(x, 'connected'))) return `<div class="ev sg"><span class="k">Super-app</span> · friends with ${esc(y)} in the social graph</div>`;
+    if ((y = inner(x, 'befriend'))) return `<div class="ev sg"><span class="k">Super-app</span> · ${esc(y)} asks to be friends; the person says yes</div>`;
+    return `<div class="ev sg"><span class="k">Super-app</span> · ${esc(x)}</div>`;
+  }
+  if ((x = inner(t, 'view'))) {
+    const a = args(x);
+    const atoms = list(a[1] || '[]'), known = list(a[2] || '[]'), pend = list(a[3] || '[]');
+    return `<div class="ev"><span class="k">Mini-app</span> · <span class="atoms">${atoms.length ? 'holds ' + atoms.map(z => `<code>${esc(z)}</code>`).join(' ') : 'holds nothing yet'}${known.length ? ' · knows ' + esc(known.join(', ')) : ''}</span>${pend.length ? `<div class="pend">proposed: ${esc(pend.join(', '))}</div>` : ''}</div>`;
+  }
+  if ((x = inner(t, 'menu'))) return `<div class="ev"><span class="k">Mini-app</span> · the request form is open</div>`;
+  if ((x = inner(t, 'gave'))) { const a = args(x); return `<div class="ev gave"><span class="k">Person</span> · answers ${esc(a[1])} to ${esc(a[0])}</div>`; }
+  if ((x = inner(t, 'refused'))) return `<div class="ev gave"><span class="k">Mini-app</span> · refused: ${esc(x)}</div>`;
+  return `<div class="ev">${esc(t)}</div>`;
+}
+
+function showRun(el, r) {
+  if (r.error) { el.innerHTML = `<p class="why">${esc(r.error)}</p>`; return; }
+  const rank = {alice: 0, bob: 1, carol: 2};
+  const who = [...new Set(r.lines.map(l => l[0]))].sort((a, b) => (rank[a] ?? 9) - (rank[b] ?? 9) || a.localeCompare(b));
+  const col = {alice: 'var(--alice)', bob: 'var(--bob)', carol: 'var(--carol)'};
+  el.innerHTML = `<p class="small muted">${r.settled ? 'Settled' : 'Did not settle'} after ${r.seconds}s, on GLP ${esc((r.commit || '').slice(0, 8))}; ${r.lines.length} things the persons saw.</p>
+    <div class="phones">${who.map(w => `<div class="phone"><h4><i style="background:${col[w] || '#888'}"></i>${esc(w)}’s smartphone</h4>${r.lines.filter(l => l[0] === w).map(l => event(l[1])).join('')}</div>`).join('')}</div>
+    ${r.errors && r.errors.length ? `<p class="why">${esc(r.errors.join('\n'))}</p>` : ''}`;
+}
+
+async function run(cid, which, btn, el) {
+  btn.disabled = true; const t = btn.textContent; btn.textContent = 'Running…';
+  el.innerHTML = '<p class="small muted">Starting the super-apps…</p>';
+  try {
+    const r = await (await fetch(`api/run/${encodeURIComponent(cid)}?which=${which}`, {method: 'POST'})).json();
+    showRun(el, r);
+  } catch (e) { el.innerHTML = `<p class="why">${esc(e.message)}</p>`; }
+  btn.disabled = false; btn.textContent = t;
+}
+
+load().then(D => {
+  const id = new URLSearchParams(location.search).get('c');
+  const c = D.contracts.find(x => x.id === id);
+  if (!c) { $('#page').innerHTML = '<p>No such contract. <a href="./">All contracts</a></p>'; return; }
+  document.title = `GAS2 · ${c.id}`;
+  const st = status(c), steps = stepsOf(c);
+  const up = D.relations.filter(r => r.from === c.id), down = D.relations.filter(r => r.to === c.id);
+  const relChip = (r, other) => `<a class="${r.kind}" href="contract.html?c=${encodeURIComponent(other)}" title="${esc(r.how)}"><i>${r.kind}</i> ${esc(other)}</a>`;
+  const gh = `https://github.com/EShapiro2/GLP/blob/${D.commit.sha}/`;
+  $('#page').innerHTML = `
+    <div class="head1"><h1>${esc(c.id)}</h1><span class="chip ${st.cls}">${esc(st.short)}</span></div>
+    <p style="font-size:18px;margin:4px 0">${esc(c.title)}</p>
+    <p class="small muted">${c.owner ? 'Owner ' + esc(c.owner) + ' · ' : ''}<a href="${gh}${esc(c.file)}" target="_blank" rel="noopener">${esc(c.file)}</a>${c.paper ? '<br>' + esc(c.paper) : ''}</p>
+
+    <section class="card">
+      <h3>Relations</h3>
+      ${up.length ? `<div class="small muted">It</div><div class="rel">${up.map(r => relChip(r, r.to)).join('')}</div>` : '<p class="small muted">It builds on no other contract.</p>'}
+      ${down.length ? `<div class="small muted">Built on it</div><div class="rel">${down.map(r => `<a class="${r.kind}" href="contract.html?c=${encodeURIComponent(r.from)}" title="${esc(r.how)}">${esc(r.from)} <i>${r.kind} it</i></a>`).join('')}</div>` : ''}
+      ${up.filter(r => r.how.startsWith('computed: ')).map(r => `<p class="small muted">${esc(r.to)}: its schemas show that ${esc(c.id)} ${esc(r.how.slice(10))}.</p>`).join('')}
+    </section>
+
+    <section class="card">
+      <h3>The contract</h3>
+      ${c.preamble ? `<p class="muted">${esc(c.preamble)}</p>` : ''}
+      ${c.clauses.length ? `<ol class="clauses">${c.clauses.map(k => `<li value="${k.n}"><b>${esc(k.name)}.</b> ${esc(k.text)}</li>`).join('')}</ol>` : '<p class="muted small">Its clauses are those of the contracts it builds on.</p>'}
+    </section>
+
+    <section class="card">
+      <h3>Down the cascade</h3>
+      <p class="small muted">From the contract to a mini-app, by the steps of GLP's own tools; nothing on the way is written by hand.</p>
+      <div class="steps">${STEPS.map(([k, n, d]) => `<div class="step ${steps[k]}"><b>${n}</b>${d}</div>`).join('')}</div>
+      ${c.why ? `<div class="why">${esc(c.why)}</div>` : ''}
+      ${c.artefactWhy ? `<div class="why">${esc(c.artefactWhy)}</div>` : ''}
+      ${c.artefact ? `<p class="small">Files: <a href="${esc(c.artefact)}" download>${esc(c.app)}.glpw</a> (the certified mini-app) · <a href="platforms/${encodeURIComponent(c.id)}.vglp" target="_blank">platform.vglp</a> (the platform the compiler printed)</p>` : ''}
+    </section>
+
+    ${c.artefact ? `<section class="card">
+      <h3>Run it on two super-apps</h3>
+      <p class="small muted">A live run, now, on GAS2's server: two super-apps, Alice's and Bob's, each in an isolate of its own with its own key pair. They become friends in the social graph; each trusts the compiler and installs the mini-app once its certificates check; Alice invites Bob, and the handshake opens their conversation. Then each person establishes an identity in the mini-app, and Alice proposes that they know each other, which Bob accepts.</p>
+      <div class="bar"><button class="btn" id="go">Run</button>${c.udiArtefact ? `<button class="btn alt" id="go2">Run the hand-written play</button><span class="small muted">programs/apps/${esc(c.udiBoot)}: longer scripts, on GLP's own app</span>` : ''}</div>
+      <div id="out"></div>
+    </section>` : ''}
+    <p class="small muted">${buildLine(D)}</p>`;
+  if (c.artefact) {
+    $('#go').onclick = () => run(c.id, 'gas2', $('#go'), $('#out'));
+    if (c.udiArtefact) $('#go2').onclick = () => run(c.id, 'udi', $('#go2'), $('#out'));
+  }
+}).catch(e => { $('#page').innerHTML = `<p class="why">${esc(e.message)}</p>`; });
+</script>
+</body>
+</html>

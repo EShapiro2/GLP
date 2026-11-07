@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAS2 · how it works</title>
+<link rel="stylesheet" href="gas2.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">GAS2</a>
+  <nav><a href="./">Contracts</a><a href="how.html" class="on">How it works</a></nav>
+</header>
+<main class="prose">
+  <h1>How GAS2 works</h1>
+  <p>GAS2 follows the main branch of GLP's repository. Every hour it reads every grassroots contract there, works out how the contracts relate, takes each one down the cascade to a mini-app of the Grassroots Super-App, and runs that mini-app on two super-apps. Each step uses GLP's own tools, so the site always shows what the repository can do at that moment.</p>
+
+  <h2>From a contract to a mini-app</h2>
+  <p>A contract is written in plain English, its clauses, and as act schemas. GAS2 takes the steps that GLP's <code>programs/apps/compile.sh</code> takes for the apps written there by hand:</p>
+  <table>
+    <tr><th>Step</th><th>What it gives</th><th>GLP's tool</th></tr>
+    <tr><td>Act schemas</td><td>the contract as a term</td><td><code>contract_named/2</code> in the owner's file</td></tr>
+    <tr><td>Checker</td><td>whether the contract is syntactically grassroots</td><td><code>check/2</code>, <code>programs/gsc</code></td></tr>
+    <tr><td>Pragmas</td><td>the words the app shows: tabs, buttons, fields</td><td><code>pragmas.sh</code></td></tr>
+    <tr><td>Compiler</td><td>the contract's canonical platform</td><td><code>compile/5</code>, vGLP's compiler</td></tr>
+    <tr><td>Certified</td><td>the mini-app's artefact, a <code>.glpw</code> file</td><td>the REPL's <code>:artefact</code></td></tr>
+    <tr><td>Runs</td><td>a run on two super-apps</td><td>the REPL's <code>:boot</code></td></tr>
+  </table>
+  <p>The mini-app is the platform plus the files every app in <code>programs/apps</code> has. These are the entry <code>miniapp/4</code>, which is the same file in every app, the platform's types written again, and a scripted person. GAS2 writes them out for each contract, using GLP's own files with only the contract's name and a short script put in. No contract needs code written by hand to become a mini-app. Where one does not get there, the contract's page says which step stopped it and why, in the tool's own words.</p>
+
+  <h2>A run on two super-apps</h2>
+  <p>Each run starts two smartphones, Alice's and Bob's, as two isolates of GLP's runtime. Each runs the super-app, the program in <code>programs/social/graph/core</code>, under its own key pair. Each person's acts on their super-app are scripted, and so are their acts in the mini-app:</p>
+  <ol>
+    <li>Each person trusts the compiler's key. Each installs the mini-app, and the super-app installs it only if its certificate is from a trusted compiler and its creator certified it as grassroots.</li>
+    <li>Alice asks to be Bob's friend, and Bob says yes. They are now friends in the social graph, and each holds the attestation of their friendship, signed under their own key.</li>
+    <li>Alice invites Bob to the mini-app with a signed invitation, and Bob, who said yes in advance, joins.</li>
+    <li>At the handshake each side signs an undertaking to keep the contract. They compare the mini-app's source identity and the type identity of its entry, and only then does the conversation open.</li>
+    <li>The super-app activates the mini-app with its grants: the person's key, the person's screen, and the channel to the social graph. In the mini-app, each person establishes an identity, and Alice proposes that the two know each other, which Bob accepts.</li>
+  </ol>
+  <p>For the contracts whose apps are written by hand in <code>programs/apps</code>, the contract's page also runs that app's own play, with its longer scripts.</p>
+
+  <h2>What of the Grassroots Super-App this exercises</h2>
+  <table>
+    <tr><th>In the design of the super-app</th><th>In GAS2's run</th></tr>
+    <tr><td>The GLP virtual machine, each smartphone a unit of distribution</td><td>Each smartphone is an isolate of GLP's runtime running the super-app's program.</td></tr>
+    <tr><td>The secure social graph: befriending</td><td>Alice and Bob become friends by Bob's consent; the befriending mints the attestation of their friendship.</td></tr>
+    <tr><td>Certified mini-apps</td><td>The compiler's certificate, which the REPL gives only to a program that reaches neither the network nor the person, and the creator's certification, both checked at installation.</td></tr>
+    <tr><td>Distribution with an invitation</td><td>A signed invitation from a friend, checked by the invitee.</td></tr>
+    <tr><td>Activation and joining</td><td>Signed undertakings and the handshake on source identity and type identity, then activation with the grants.</td></tr>
+    <tr><td>Recovery through custodian friends, introductions to non-friends, resource bounds on mini-apps</td><td>Present in the super-app's program, not exercised by these runs.</td></tr>
+  </table>
+  <p>Both smartphones read the mini-app's artefact from the server's disk, so the friend-to-friend shipping of the program itself is not part of the run. The creator's certification is signed in the run by the phone that installs the mini-app. The smartphones are isolates in one process on GAS2's server; the same program on real devices, over GLP's networking layer, is the next step.</p>
+
+  <h2>How the relations are found</h2>
+  <p>GSC defines five relations between contracts. Three are about schemas: <b>amends</b> deletes and adds schemas, <b>extends</b> amends while deleting nothing, and <b>instantiates</b> fills in a parametric contract's parameters. Two are about runs: <b>implements</b>, and <b>restricts</b>, which allows only runs of the base. Each contract's text names what it builds on. Where the text also says how, for example "GD-S restricts GD", the map shows that.</p>
+  <p>Otherwise GAS2 compares the two contracts' schemas, as GSC's reader reads them, with their variables renamed in order. If every schema of the base is kept unchanged, then the contract <b>extends</b> it. If some are deleted or replaced, then it <b>amends</b> it, and the contract's page says which. Whether one contract restricts another cannot be decided in general (GSC, Proposition "Restriction is undecidable"), so restriction is shown only where a contract's text states it.</p>
+
+  <h2>Where it lives</h2>
+  <p>The code is <code>servers/gas2</code> on the GAS2 branch of <a href="https://github.com/nimrodtalmon/GLP/tree/GAS2/servers/gas2" target="_blank" rel="noopener">nimrodtalmon/GLP</a>. It keeps two working copies of GLP's main branch and builds the new head in one while serving the other, switching only when a build is complete. Its state is at <a href="api/status">api/status</a>.</p>
+</main>
+</body>
+</html>
