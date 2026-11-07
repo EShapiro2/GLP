@@ -18,11 +18,12 @@
 %%
 %% The messages to and from the bridge are vGLP's (2026-10-01 23:55 UTC, E;
 %% the grant naming its question, vGLP #5 Cowork, 2026-10-04 09:05 UTC, C):
-%% a construct sends draw(Id, W, V), W its widget and V the output so far with
-%% each position the person writes shown as input(P), P that position's path,
-%% and each widget position the program has not yet written whole shown as
-%% pending(P), a stream's unwritten tail not shown (vGLP 118e04d, Definition
-%% "Construct Process"), again as more arrives, and withdraw(Id).
+%% a construct sends draw(Id, W, V), W its widget and V the output of its
+%% question, once written whole, with each position the person writes shown
+%% as input(P), P that position's path (vGLP, Section 6.3, "The construct
+%% process": "once every reader in the output it holds is assigned, with
+%% that output and its questions"), again as its questions are drawn again,
+%% and withdraw(Id).
 %%
 %% A GRANT is input(Id, P, R): Id the identifier of the construct, P the
 %% position of the question in it, and R the ground term of the person's
@@ -266,13 +267,16 @@ remove_route(_, [], [], Xs, Xs?).
 %% The construct process: what is common to every interactive type
 %% ---------------------------------------------------------------------------
 
-%% The drawing of each construct process, run_f(Id?, W?, Views?, Done?, Ds),
-%% is the compilation's, one per functor f of the program's questions: it
-%% draws each view V of construct Id with its widget W as it arrives, as
-%% draw(Id, W, f(V)), V under the functor of its ask (vGLP, Definition
-%% "Construct Process"), and withdraws when Done is bound, every question the
-%% construct holds answered and no question still to come, and on nothing
-%% else; once the views end it waits to withdraw, by run_end/3.
+%% The drawing of each construct process, run_f(Id?, W?, Views?, Done?, Gs?,
+%% Gs1, Ds), is the compilation's, one per functor f of the program's
+%% questions: it draws the first view V of construct Id with its widget W, as
+%% draw(Id, W, f(V)), V under the functor of its ask, and only then hands its
+%% questions their grants, Gs1 the grants Gs, a question being answered only
+%% once drawn (vGLP, Section 6.3, "The construct process": "On a grant
+%% input(Id, Pos, R) for a question W it holds and has drawn"); then it draws
+%% each view after it as it arrives, and withdraws when Done is bound, every
+%% question the construct holds answered and no question still to come, and
+%% on nothing else; once the views end it waits to withdraw, by run_end/3.
 
 %% run_end(Id?, Done?, Ds): the view is final; wait to withdraw.
 procedure(T) run_end(Integer?, Done?, Stream(Draw(T))).

@@ -17,7 +17,7 @@
 %% A grant is input(Id, P, R), P the path of argument indices from the root
 %% of the interactive variable's term, the element of a list cell at P with 1
 %% at its end and its tail at P with 2 at its end: in the panel the cards'
-%% answers are at [1, 1, 2] and [1, 2, 1, 2]; in the stream at [1, 2],
+%% answers are at [1, 1, 2] and [1, 2, 1, 2]; in the list of cards at [1, 2],
 %% [2, 1, 2] and [2, 2, 1, 2].  The scripted person sends back the P it reads
 %% in the view.
 %%
@@ -27,10 +27,10 @@
 YesNo    ::= yes ; no.
 Card     ::= card(Integer, YesNo?).
 Panel    ::= panel(List(Card)).
-Question ::= panel_w(Panel) ; stream_card_w(Stream(Card))
+Question ::= panel_w(Panel) ; list_card_w(List(Card))
            ; stream_yesNo_w(Stream(YesNo?)).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= panel_w(_) ; stream_card_w(_) ; stream_yesNo_w(_) ; output(List(Output)) ; YesNo.
+Drawn    ::= panel_w(_) ; list_card_w(_) ; stream_yesNo_w(_) ; output(List(Output)) ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).
@@ -56,7 +56,7 @@ panel_init(_, Gs, _) :-
     cards # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
 
-%% The stream of three cards.
+%% The list of three cards.
 exported procedure deal_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
 deal_init(_, Gs, _) :-
     cards # deal(MCh?, Asks),
@@ -92,7 +92,7 @@ panel_person([draw(Id, _, panel_w(panel([card(1, input(Q1)), card(2, input(Q2))]
 panel_person([draw(_, _, panel_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     panel_person(Ds?, Gs, Log).
-panel_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+panel_person([draw(_, _, list_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     panel_person(Ds?, Gs, Log).
 panel_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
@@ -103,8 +103,8 @@ panel_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 panel_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
     panel_person(Ds?, Gs, Log).
 
-%% The stream: once the first two cards are drawn, the person answers both
-%% yes; once the third is drawn, no.
+%% The list: once its three cards are drawn, the person answers the first
+%% two yes and the third no.
 exported procedure play_deal(Stream(_)).
 play_deal(Log?) :-
     cards # deal(MCh?, Asks),
@@ -113,20 +113,16 @@ play_deal(Log?) :-
     deal_person(Es?, Gs, Log).
 
 procedure deal_person(_?, PersonIn(Drawn), Stream(_)).
-deal_person([draw(Id, _, stream_card_w([card(1, input(Q1)), card(2, input(Q2))])) | Ds],
-            [input(Id?, Q1?, yes), input(Id?, Q2?, yes) | Gs?],
-            [two(Q1?, Q2?) | Log?]) :-
-    ground(Id?), ground(Q1?), ground(Q2?) |
-    deal_person(Ds?, Gs, Log).
-deal_person([draw(Id, _, stream_card_w([card(1, _), card(2, _), card(3, input(Q3))])) | Ds],
-            [input(Id?, Q3?, no) | Gs?],
-            [three(Q3?) | Log?]) :-
-    ground(Id?), ground(Q3?) |
+deal_person([draw(Id, _, list_card_w([card(1, input(Q1)), card(2, input(Q2)),
+                         card(3, input(Q3))])) | Ds],
+            [input(Id?, Q1?, yes), input(Id?, Q2?, yes), input(Id?, Q3?, no) | Gs?],
+            [three(Q1?, Q2?, Q3?) | Log?]) :-
+    ground(Id?), ground(Q1?), ground(Q2?), ground(Q3?) |
     deal_person(Ds?, Gs, Log).
 deal_person([draw(_, _, panel_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+deal_person([draw(_, _, list_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     deal_person(Ds?, Gs, Log).
 deal_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-

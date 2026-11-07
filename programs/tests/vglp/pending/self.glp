@@ -1,8 +1,9 @@
 %% self.glp --- the entries by which the Dart bridge runs pending.vglp, for its
 %% Flutter tests, glp_multiagent/test/bridge_test.dart, and the plays by which
 %% a scripted person answers it, for glp_runtime/test/vglp/elicitation_test.dart:
-%% the pending drawing of vGLP 118e04d, Definition "Construct Process" (vGLP
-%% #8 Cowork, 2026-10-11 20:48 UTC and 22:51 UTC, Udi approved).
+%% the output of a question drawn once written whole (vGLP, Section 6.3, "The
+%% construct process"; vGLP #24 Cowork, Code_inbox.md, 2026-11-07 17:19 UTC,
+%% 6(i)).
 %%
 %% Each entry is the host's (glp_runtime/lib/multiagent/agent_runtime.dart),
 %% as cards/self.glp's are.  Each play spawns the compiled goal with the
@@ -16,9 +17,9 @@
 %% Definition "Person Channel, Person Writer, GLP with Persons, Grant"), so
 %% the word is not on it: each entry and each play splits what the person
 %% sends, the grants onto the person channel and the words onto the program's
-%% own input, split_words/3, and gives the program its end, program_end/3.  A
-%% view marks a widget position the program has not yet written whole
-%% pending(P).
+%% own input, split_words/3, and gives the program its end, program_end/3.
+%% Nothing is drawn of a question before the program has written its output
+%% whole, so each person sends the program its word before any draw.
 %%
 %% The types of pending.vglp and those its compilation adds, written again
 %% for the declarations of the procedures imported from its compiled module.
@@ -27,10 +28,10 @@ Peer     ::= Constant.
 YesNo    ::= yes ; no.
 Card     ::= card(Peer, YesNo?).
 Note     ::= note(Constant).
-Board    ::= board(Stream(Note), YesNo?).
-Question ::= card_w(Card) ; stream_card_w(Stream(Card)) ; board_w(Board).
+Board    ::= board(List(Note), YesNo?).
+Question ::= card_w(Card) ; list_card_w(List(Card)) ; board_w(Board).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= card_w(_) ; stream_card_w(_) ; board_w(_) ; output(List(Output)) ; YesNo.
+Drawn    ::= card_w(_) ; list_card_w(_) ; board_w(_) ; output(List(Output)) ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).
@@ -58,7 +59,7 @@ late_init(_, Us, _) :-
     program_end(MCh?, Ws?, PCh),
     send_to_user(Ds?).
 
-%% The stream of three cards.
+%% The list of three cards.
 exported procedure deal_init(Constant?, Stream(_)?, Stream(_)?).
 deal_init(_, Us, _) :-
     split_words(Us?, Gs, Ws),
@@ -67,7 +68,7 @@ deal_init(_, Us, _) :-
     program_end(MCh?, Ws?, PCh),
     send_to_user(Ds?).
 
-%% The thread of notes beside a question.
+%% The list of notes beside a question.
 exported procedure board_init(Constant?, Stream(_)?, Stream(_)?).
 board_init(_, Us, _) :-
     split_words(Us?, Gs, Ws),
@@ -80,23 +81,18 @@ board_init(_, Us, _) :-
 %% The plays
 %% ---------------------------------------------------------------------------
 
-%% The card, drawn with its Peer pending and its question open: the person
-%% sends the peer, and once the card is drawn again with bob in it, answers
-%% yes.
+%% The card: the person sends the peer, bob, before anything is drawn of
+%% it, and once the card is drawn, whole, with bob in it, answers yes.
 exported procedure play_late(Stream(_)).
 play_late(Log?) :-
     pending # late(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
     program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    split_words(Us?, Gs, Ws),
+    split_words([peer(bob) | Us?], Gs, Ws),
     late_person(Es?, Us, Log).
 
 procedure late_person(_?, Stream(_), Stream(_)).
-late_person([draw(Id, _, card_w(card(pending(P), input(Q)))) | Ds],
-            [peer(bob) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
-    ground(Id?), ground(P?), ground(Q?) |
-    late_person(Ds?, Gs, Log).
 late_person([draw(Id, _, card_w(card(bob, input(Q)))) | Ds],
             [input(Id?, Q?, yes) | Gs?], [whole(Id?, Q?) | Log?]) :-
     ground(Id?), ground(Q?) |
@@ -104,7 +100,7 @@ late_person([draw(Id, _, card_w(card(bob, input(Q)))) | Ds],
 late_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     late_person(Ds?, Gs, Log).
-late_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+late_person([draw(_, _, list_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     late_person(Ds?, Gs, Log).
 late_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
@@ -118,27 +114,27 @@ late_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 late_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
     late_person(Ds?, Gs, Log).
 
-%% The same card, answered while its Peer is still pending: the question
-%% beside the pending position is offered at once.  The person never sends
-%% the peer.
+%% The same card, declined: the person sends the peer, bob, before anything
+%% is drawn of it, and once the card is drawn, whole, answers no.  (Until
+%% vGLP #24 6(i) the person answered it while its Peer was pending.)
 exported procedure play_late_answered(Stream(_)).
 play_late_answered(Log?) :-
     pending # late(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
     program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    split_words(Us?, Gs, Ws),
+    split_words([peer(bob) | Us?], Gs, Ws),
     early_person(Es?, Us, Log).
 
 procedure early_person(_?, Stream(_), Stream(_)).
-early_person([draw(Id, _, card_w(card(pending(P), input(Q)))) | Ds],
-             [input(Id?, Q?, no) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
-    ground(Id?), ground(P?), ground(Q?) |
+early_person([draw(Id, _, card_w(card(bob, input(Q)))) | Ds],
+             [input(Id?, Q?, no) | Gs?], [whole(Id?, Q?) | Log?]) :-
+    ground(Id?), ground(Q?) |
     early_person(Ds?, Gs, Log).
 early_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     early_person(Ds?, Gs, Log).
-early_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+early_person([draw(_, _, list_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     early_person(Ds?, Gs, Log).
 early_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
@@ -152,43 +148,29 @@ early_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 early_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
     early_person(Ds?, Gs, Log).
 
-%% The stream of cards: drawn with its first card pending, its second's Peer
-%% pending and its third whole, its tail not drawn.  The person answers the
-%% third first, yes; once the first is written, the second, no, its Peer
-%% still pending; then sends the peer, dave; and once the second is drawn
-%% again with dave in it, answers the first, yes.
+%% The list of cards: the person sends the peer, dave, before anything is
+%% drawn of it; once the list is drawn, whole, with dave in its second card,
+%% answers the third yes, the second no and the first yes.
 exported procedure play_deal(Stream(_)).
 play_deal(Log?) :-
     pending # deal(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
     program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    split_words(Us?, Gs, Ws),
+    split_words([peer(dave) | Us?], Gs, Ws),
     deal_person(Es?, Us, Log).
 
 procedure deal_person(_?, Stream(_), Stream(_)).
-deal_person([draw(Id, _, stream_card_w([pending(P1), card(pending(P2), input(Q2)),
+deal_person([draw(Id, _, list_card_w([card(carol, input(Q1)), card(dave, input(Q2)),
                          card(bob, input(Q3))])) | Ds],
-            [input(Id?, Q3?, yes) | Gs?],
-            [third(P1?, P2?, Q2?, Q3?) | Log?]) :-
-    ground(Id?), ground(P1?), ground(P2?), ground(Q2?), ground(Q3?) |
-    deal_person(Ds?, Gs, Log).
-deal_person([draw(Id, _, stream_card_w([card(carol, input(Q1)), card(pending(P2), input(Q2)),
-                         card(bob, _)])) | Ds],
-            [input(Id?, Q2?, no) | Gs?],
-            [second(Q1?, P2?, Q2?) | Log?]) :-
-    ground(Id?), ground(Q1?), ground(P2?), ground(Q2?) |
-    deal_person(Ds?, Gs, Log).
-deal_person([draw(Id, _, stream_card_w([card(carol, input(Q1)), card(dave, _),
-                         card(bob, _)])) | Ds],
-            [input(Id?, Q1?, yes) | Gs?],
-            [first(Q1?) | Log?]) :-
-    ground(Id?), ground(Q1?) |
+            [input(Id?, Q3?, yes), input(Id?, Q2?, no), input(Id?, Q1?, yes) | Gs?],
+            [all(Q1?, Q2?, Q3?) | Log?]) :-
+    ground(Id?), ground(Q1?), ground(Q2?), ground(Q3?) |
     deal_person(Ds?, Gs, Log).
 deal_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     deal_person(Ds?, Gs, Log).
-deal_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+deal_person([draw(_, _, list_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     deal_person(Ds?, Gs, Log).
 deal_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
@@ -199,29 +181,22 @@ deal_person([draw(_, _, output(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     deal_person(Ds?, Gs, Log).
 deal_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     deal_person(Ds?, Gs, Log).
-deal_person([got(2, no) | Ds], [peer(dave) | Gs?], [got(2, no) | Log?]) :-
-    deal_person(Ds?, Gs, Log).
 deal_person([got(N, X) | Ds], Gs?, [got(N?, X?) | Log?]) :-
-    otherwise |
     deal_person(Ds?, Gs, Log).
 
-%% The thread of notes: drawn with its second note pending, its tail not
-%% drawn; the person sends the word, and once the note is drawn whole,
-%% answers yes.
+%% The board: the person sends the word, second, before anything is drawn of
+%% it; once the board is drawn, whole, with its second note in it, answers
+%% yes.
 exported procedure play_board(Stream(_)).
 play_board(Log?) :-
     pending # board(PCh?, Asks),
     pending # dispatch(Asks?, ch(Gs?, Ds), MCh),
     program_end(MCh?, Ws?, PCh),
     outputs(Ds?, Es),
-    split_words(Us?, Gs, Ws),
+    split_words([word(second) | Us?], Gs, Ws),
     board_person(Es?, Us, Log).
 
 procedure board_person(_?, Stream(_), Stream(_)).
-board_person([draw(Id, _, board_w(board([note(first), pending(P)], input(Q)))) | Ds],
-             [word(second) | Gs?], [pending(Id?, P?, Q?) | Log?]) :-
-    ground(Id?), ground(P?), ground(Q?) |
-    board_person(Ds?, Gs, Log).
 board_person([draw(Id, _, board_w(board([note(first), note(second)], input(Q)))) | Ds],
              [input(Id?, Q?, yes) | Gs?], [whole(Id?, Q?) | Log?]) :-
     ground(Id?), ground(Q?) |
@@ -229,7 +204,7 @@ board_person([draw(Id, _, board_w(board([note(first), note(second)], input(Q))))
 board_person([draw(_, _, card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     board_person(Ds?, Gs, Log).
-board_person([draw(_, _, stream_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
+board_person([draw(_, _, list_card_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
     otherwise |
     board_person(Ds?, Gs, Log).
 board_person([draw(_, _, board_w(V)) | Ds], Gs?, [view(V?) | Log?]) :-
