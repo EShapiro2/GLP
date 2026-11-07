@@ -141,7 +141,7 @@ Future<void> handle(HttpRequest r) async {
     // The site is served under a prefix (/gas2web) that the proxy strips.
     final p = r.uri.path;
     if (p == '/api/health') {
-      return await json(r, 200, {'ok': true, 'running': running.length, 'tree': tree()});
+      return await json(r, 200, {'ok': true, 'running': running.length, 'tree': tree(), 'faults': faults});
     }
     if (r.method == 'POST' && p == '/api/start') {
       final token = List.generate(32, (_) => _rnd.nextInt(256)).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
@@ -173,7 +173,18 @@ Future<void> handle(HttpRequest r) async {
   }
 }
 
-Future<void> main() async {
+/// What went wrong unhandled, the newest last, kept and shown by api/health: one person's
+/// fault does not end the others' super-apps.
+final faults = <String>[];
+
+void main() => runZonedGuarded(_main, (e, st) {
+      final s = '${DateTime.now().toUtc().toIso8601String()} $e\n${st.toString().split('\n').take(8).join('\n')}';
+      stderr.writeln('fault: $s');
+      faults.add(s);
+      if (faults.length > 20) faults.removeAt(0);
+    });
+
+Future<void> _main() async {
   sodium = await loadSodium();
   final port = int.tryParse(env['PORT'] ?? '') ?? 5201;
   final server = await HttpServer.bind(env['HOST'] ?? InternetAddress.loopbackIPv4, port);

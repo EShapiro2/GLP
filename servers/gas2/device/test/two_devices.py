@@ -18,10 +18,9 @@ def call(p, path, body=None):
             return json.load(urllib.request.urlopen(r, timeout=60))
         except urllib.error.HTTPError as e:
             if e.code != 401: raise
+            TOKEN[p] = json.load(urllib.request.urlopen(urllib.request.Request(BASE[p] + '/api/start', data=b'', method='POST')))['token']
         except (urllib.error.URLError, ConnectionError, TimeoutError):
             time.sleep(3)  # a server restarting, a network's blip
-            continue
-            TOKEN[p] = json.load(urllib.request.urlopen(urllib.request.Request(BASE[p] + '/api/start', data=b'', method='POST')))['token']
 if any(b.startswith('https:') for b in BASE.values()):
     # through a proxy curl takes better than urllib does
     import subprocess
