@@ -1,0 +1,21 @@
+% GAS: Grassroots App Store --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GSA (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GSA/main_SGSG.tex, prints it in its box in the section on the store and cites a clause as GAS:1.
+% Paper: GSA, The Grassroots Super-App and App Store, in preparation
+% Extends: GSA, Grassroots Super-App and App Store, GSA's (programs/social/graph), and through it GSG and GKK.  It cites their clauses whole and restates none.
+% Defines: store, defined in the box after the declaration, a contract being self-contained.  Program and developer are defined with GSA; Alice, Carol and Dave are variables naming distinct persons.
+% Last changed: 2026-11-07, written by GSA #1 Cowork at Udi's word: a store is a separate contract; listing only, and a program is installed from a store as long as the store's owner trusts its developer (Udi, 2026-11-07); a draft for Udi's approval and GSC's checker.
+% Schemas: GAS.glp beside this file, GSA's thirteen and five over the predicates store, listed, trusts_store and installed, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+GAS: Grassroots App Store
+GAS extends GSA.
+Alice, Carol and Dave are persons.  A store is a list of programs its owner keeps under a name of their own.
+1. ■ Store.  Carol may set up a store under a name of her own.
+2. ■ Listing.  Carol may list in her store a program offered to her by a developer she trusts.
+3. ■ Store Trust.  Alice may trust Carol's store, Carol being known to her, and may withdraw her trust.
+4. ■ Installation from a Store.  Alice may install a program listed in a store she trusts, as long as the store's owner trusts its developer.
+Pragmas
+Stores: the stores Alice trusts.
+Listings: the programs listed in Alice's store.
+Store: Carol [Open store] <name>
+Listing: Carol [List]
+Store Trust: Alice [Trust store] [Distrust store]
+Installation from a Store: Alice [Install]
