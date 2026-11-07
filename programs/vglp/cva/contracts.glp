@@ -215,6 +215,16 @@
 %%   mark(p ; t, m)        :  at p  level(t), not marked(m), +marked(m)  3m = t + 3
 %%
 %% climb and mark are unguarded, opened by p; t is local to p's role in each, bound by the level p holds; climb's t1 is the one value its equality gives, and its inequality holds below 6; mark's m is the whole number its equality gives, where there is one, at the levels 0 and 6 and at no level between.  linear/self.glp plays it.
+%%
+%% forms is a contract with a safe formula in a schema's body, local to the role holding its atoms, which "the machine of the person in that role evaluates in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), in GSC's term form, qschema(Name, Vars, Bound, Constraint, Roles, Conjuncts, Forms) (programs/gsc/self.glp):
+%%
+%%   start(p?)             :  at p  not started, +started
+%%   block(p? ; k)         :  at p  started, +blocked(k)
+%%   arm(p?)               :  at p  started, not armed, +armed
+%%   tick(p)               :  at p  armed, not ticked, +ticked
+%%                            and not exists b (blocked(b) at p and b > 2)
+%%
+%% tick is unguarded, opened by p, its body's formula local to p's role, an existential quantifier whose anchor p holds, its condition a constraint on the variable it binds: p's machine takes tick where no blocked(b) of its state has b > 2.  forms/self.glp plays it.
 %% ---------------------------------------------------------------------------
 
 %% The contract, as programs/gsc/self.glp writes it, with the numbers act schemas allow (GSC 9231074, Section 3.2): num(X) the numeric variable X where X is a name and the number X where X is a number, times(K, A) the atom A with the multiplicity K, and nschema(Name, Vars, Constraint, Roles) a schema with a constraint on its numeric variables.
@@ -243,7 +253,18 @@ Constraint ::= true ; and(Constraint, Constraint)
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
-            ; nschema(Constant, Args, Constraint, RoleSpecs).
+            ; nschema(Constant, Args, Constraint, RoleSpecs)
+            ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms).
+%% A safe formula and a quantified conjunct, as programs/gsc/self.glp writes them.
+Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
+             ; fexists(Args, Arg, Atom, Form)
+             ; fforall(Args, Arg, Atom, Form, Forms)
+             ; fcons(Constraint).
+Forms      ::= [] ; [Form | Forms].
+HMult      ::= hm(Integer, Mult).
+HMults     ::= [] ; [HMult | HMults].
+Conjunct   ::= conjunct(Args, Integer, Atom, Form, HMults, HMults, Forms).
+Conjuncts  ::= [] ; [Conjunct | Conjuncts].
 Contract  ::= [] ; [Schema | Contract].
 Preds     ::= [] ; [Constant | Preds].
 Declared  ::= Contract ; reflexive(Preds, Contract).
@@ -270,6 +291,7 @@ contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
 contract_named(days, C?) :- days(C).
 contract_named(linear, C?) :- linear(C).
+contract_named(forms, C?) :- forms(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -295,6 +317,7 @@ introduction_named(bonds, no_introduction).
 introduction_named(intros, no_introduction).
 introduction_named(days, no_introduction).
 introduction_named(linear, no_introduction).
+introduction_named(forms, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -393,6 +416,10 @@ pragmas_named(days, pragmas([list('"Dates"', [date])],
 pragmas_named(linear, pragmas([list('"Levels"', [level])],
     [act(start, '"Start"', [], none, '"Levels"', by([1])),
      act(refuel, '"Refuel"', [], none, '"Levels"', by([1]))])).
+pragmas_named(forms, pragmas([list('"Blocks"', [blocked])],
+    [act(start, '"Start"', [], none, '"Blocks"', by([1])),
+     act(block, '"Block"', ['""', '"level"'], none, '"Blocks"', by([1])),
+     act(arm, '"Arm"', [], none, '"Blocks"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -663,3 +690,14 @@ linear([schema(start, [],
         nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))),
           [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])]).
 
+procedure forms(Contract).
+forms([schema(start, [],
+         [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
+       schema(block, [num(k)],
+         [rs(guarded, [atom(blocked, [num(k)])], [], [atom(started, [])], [])]),
+       schema(arm, [],
+         [rs(guarded, [atom(armed, [])], [], [atom(started, [])], [atom(armed, [])])]),
+       qschema(tick, [], [num(b)], true,
+         [rs(unguarded, [atom(ticked, [])], [], [atom(armed, [])], [atom(ticked, [])])],
+         [],
+         [fnot(fexists([num(b)], role(1), atom(blocked, [num(b)]), fcons(gt(num(b), num(2)))))])]).

@@ -45,8 +45,7 @@ sub var_tokens {
     return map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($t =~ /(\x27(?:[^\x27\\]|\\.)*\x27|\b[A-Za-z_]\w*\b)(?!\s*\()/g);
 }
 sub local_vars {
-    my (@args) = @_;
-    my $roles = $args[-1];
+    my ($roles) = @_;
     $roles =~ s/^\[//; $roles =~ s/\]$//;
     my (%at, %elsewhere);
     my $r = 0;
@@ -67,18 +66,20 @@ sub local_vars {
 my (@snames, %svars, %preds, %locals);
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
-    while ($term =~ /\b([nc]?schema)\(/g) {
+    while ($term =~ /\b([ncq]?schema)\(/g) {
         my $kw = $1;
         my $open = pos($term) - 1;
         my ($body, $end) = inside($term, $open);
         pos($term) = $open + 1;
         my @args = top_args($body);
         # A schema whose head names its roles, schema(Name, Names, Vars, Roles), cschema(Name, Names, Vars, Reaches, Roles) or nschema(Name, Names, Vars, Constraint, Roles) (programs/gsc/README.md), carries its variables third.
-        my $named = ($kw eq "schema" && @args == 4) || ($kw ne "schema" && @args == 5);
+        # A schema with quantifiers, qschema(Name, Names, Vars, Bound, Constraint, Roles, Conjuncts, Forms), or with no Names (programs/gsc/self.glp), carries its roles sixth, or fifth, and not last.
+        my $named = ($kw eq "schema" && @args == 4) || ($kw eq "qschema" && @args == 8) || ($kw ne "schema" && $kw ne "qschema" && @args == 5);
         my ($n, $a) = @args[0, $named ? 2 : 1];
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
-        my %local = map { $_ => 1 } local_vars(@args);
+        my $rarg = $kw eq "qschema" ? $args[$named ? 5 : 4] : $args[-1];
+        my %local = map { $_ => 1 } local_vars($rarg);
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
         $locals{$n} = { map { $_ => 1 } grep { $local{$_} } @hv };
@@ -124,14 +125,18 @@ sub tstr {   # a term written back, to compare arguments
     return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
 }
 # Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); its head, $head{S}, the variables after its roles; and the names of its roles, $rnames{S}, where its head names them (GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do").
-my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered, @lines_out, @faults);
+my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered, @lines_out, @faults, %cons);
 sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
-    if ($t->[0] =~ /^[nc]?schema$/ && @{ $t->[1][0] } == 1) {
+    if ($t->[0] =~ /^[ncq]?schema$/ && @{ $t->[1][0] } == 1) {
         my $n = $t->[1][0][0];
         return if exists $roles{$n};
-        my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($t->[0] ne "schema" && @{ $t->[1] } == 5);
+        my $q = $t->[0] eq "qschema";
+        my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($q && @{ $t->[1] } == 8) || (!$q && $t->[0] ne "schema" && @{ $t->[1] } == 5);
+        # The constraint of an nschema or a qschema, which a field does not name a variable it determines (field_keys3).
+        $cons{$n} = $t->[1][$named ? 4 : 3] if $q;
+        $cons{$n} = $t->[1][$named ? 3 : 2] if $t->[0] eq "nschema";
         $head{$n} = $t->[1][$named ? 2 : 1][1];
         # A name is the role name, or one(Name, Other), the role Name possibly the person of the role Other (GSC 316d875, Section 2), read as Name.
         if ($named) { $rnames{$n} = [ map { my $e = $_->[0] eq "one" ? $_->[1][0] : $_; (my $x = $e->[0]) =~ s/^\x27|\x27$//g; $x } @{ $t->[1][1][1] } ] }
@@ -147,10 +152,11 @@ sub find_schemas {
             }
         }
         my @rs;
-        for my $r (@{ $t->[1][-1][1] }) {
+        my $rterm = $q ? $t->[1][$named ? 5 : 4] : $t->[1][-1];
+        for my $r (@{ $rterm->[1] }) {
             my ($kind, $g, @c) = $r->[0] eq "crs" ? @{ $r->[1] } : (undef, @{ $r->[1] });
             push @rs, { guarded => ($g->[0] eq "unguarded" ? 0 : 1),
-                        listed => ((defined $kind && $kind->[0] eq "listed") ? 1 : 0),
+                        listed => ((defined $kind && ($kind->[0] eq "listed" || $kind->[0] eq "qlisted")) ? 1 : 0),
                         comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ],
                         # The same lists as parsed terms, an atom with a multiplicity, times(K, A), read as its atom A, its multiplicity K not an argument of it (GSC, Appendix "Numbers": "a multiplicity k.phi is k copies of phi").
                         atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ] };
@@ -600,14 +606,67 @@ sub bound_keys {
     return %b;
 }
 # The variables of the act S proposed at its role pl that a field names: "A field is for a variable of the schema that those atoms do not bind --- a text, a number, a new name, a person the proposer’s state does not name --- and the fields of a line name these variables, of the acts its button names together, in the schemas’ order" (vGLP 40f8444, Section 5.4, "The contract’s words"): the places of its request a field may name (field_slots) that the atoms it requires at pl do not bind, a variable local to a role being bound by that role and named by no request (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it").
+# A variable the constraint determines from those the atoms bind and the other fields is no field: "A field is for a variable of the schema that those atoms do not bind and the constraint does not determine from the variables they bind and the other fields" (vGLP bcb2726, Section 5.4, "The contract’s words"), as GCC’s cmint’s i1, which i, bound by the issued count the treasurer holds, and the field k give; the slots are taken in the order of the request, a variable being determined from the bound ones and the fields before it.
 sub field_keys3 {
     my ($S, $pl) = @_;
     my %b = bound_keys($S, $pl);
     my %fills = map { $_ => 1 } @{ $svars{$S} };
-    return grep {
+    my @out;
+    for (field_slots($S)) {
         my $k = $_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]";
-        !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] })
-    } field_slots($S);
+        next unless !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] });
+        if ($_->[0] eq "num" && $cons{$S}) {
+            my %known = (%b, map { ($_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]") => 1 } @out);
+            my %d = map { $_ => 1 } det_closure($cons{$S}, \%known);
+            next if $d{$k};
+        }
+        push @out, $_;
+    }
+    return @out;
+}
+# The numeric variables a constraint gives finitely many values once those of %$known are bound, taken again with each it gives, as local.glp’s con_det and determined decide it: succ(X, Y) gives Y once X is bound and X once Y is; eq(X, Y) its one numeric variable not bound, where its coefficient in X - Y is not 0; and(C1, C2) what either gives; or(C1, C2) what both give; the rest give none.
+sub nvar_key { my ($e) = @_; return undef unless @$e == 2 && $e->[0] eq "num"; my $x = $e->[1][0][0]; return undef if $x =~ /^-?\d+$/; $x =~ s/^\x27|\x27$//g; return "v$x" }
+sub expr_nvars { my ($e) = @_; return () if @$e == 1; my $v = nvar_key($e); return ($v) if defined $v; return () if $e->[0] eq "num"; return map { expr_nvars($_) } @{ $e->[1] } if $e->[0] =~ /^(plus|minus|mul)$/; return () }
+sub const_of { my ($e) = @_; return 0 if @$e == 1; return $e->[1][0][0] + 0 if $e->[0] eq "num" && $e->[1][0][0] =~ /^-?\d+$/; my ($a, $b) = @{ $e->[1] }; return const_of($a) + const_of($b) if $e->[0] eq "plus"; return const_of($a) - const_of($b) if $e->[0] eq "minus"; return const_of($a) * const_of($b) if $e->[0] eq "mul"; return 0 }
+sub lin_coef {
+    my ($e, $v) = @_;
+    return 0 if @$e == 1;
+    if ($e->[0] eq "num") { my $k = nvar_key($e); return (defined $k && $k eq $v) ? 1 : 0 }
+    my ($a, $b) = @{ $e->[1] };
+    return lin_coef($a, $v) + lin_coef($b, $v) if $e->[0] eq "plus";
+    return lin_coef($a, $v) - lin_coef($b, $v) if $e->[0] eq "minus";
+    return (expr_nvars($a) ? lin_coef($a, $v) * const_of($b) : const_of($a) * lin_coef($b, $v)) if $e->[0] eq "mul";
+    return 0;
+}
+sub con_det1 {
+    my ($c, $known) = @_;
+    return () if @$c == 1;
+    my ($f, $as) = @$c;
+    return (con_det1($as->[0], $known), con_det1($as->[1], $known)) if $f eq "and";
+    if ($f eq "or") { my %d2 = map { $_ => 1 } con_det1($as->[1], $known); return grep { $d2{$_} } con_det1($as->[0], $known) }
+    if ($f eq "eq") {
+        my %u; $u{$_} = 1 for grep { !$known->{$_} } (expr_nvars($as->[0]), expr_nvars($as->[1]));
+        my @u = keys %u;
+        return () unless @u == 1;
+        return lin_coef(["minus", [$as->[0], $as->[1]]], $u[0]) != 0 ? @u : ();
+    }
+    if ($f eq "succ") {
+        my ($x, $y) = map { nvar_key($_) } @$as;
+        my $bx = !defined $x || $known->{$x}; my $by = !defined $y || $known->{$y};
+        return ($y) if $bx && !$by;
+        return ($x) if $by && !$bx;
+    }
+    return ();
+}
+sub det_closure {
+    my ($c, $known) = @_;
+    my %k = %$known; my %d;
+    while (1) {
+        my @n = grep { !$k{$_} } con_det1($c, \%k);
+        last unless @n;
+        $k{$_} = $d{$_} = 1 for @n;
+    }
+    return keys %d;
 }
 # A variable by the name the schema gives it: a role by its name, as Bob, and any other by its own.
 sub var_name { my ($sl) = @_; (my $n = $sl->[2]) =~ s/^@//; return $n }

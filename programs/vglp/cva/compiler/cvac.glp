@@ -17,7 +17,7 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line)
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Strings).
-imported procedure local#num_info_of(Constant?, Args?, Constraint?, RoleSpecs?, NumInfo).
+imported procedure local#num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, NumInfo).
 imported procedure local#proposable(Contract?, Preds?, Preds).
 
 Found ::= named(String, String) ; unnamed.
@@ -41,7 +41,16 @@ Worded ::= words(Given).
 Given  ::= pragmas(PLists, PActs).
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
 procedure compile_intro(Constant?, Declared?, Verdict?, Intro?, Words?).
-compile_intro(Nm, D, V, I, W) :- ground(D?), ground(I?) |
+compile_intro(Nm, D, V, I, W) :- ground(Nm?), ground(D?) |
+    decl_schemas(D?, Cq),
+    q_lines(Cq?, Nm?, Lq),
+    compile_q(Lq?, Nm?, D?, V?, I?, W?).
+%% A contract the compiler does not take, by q_lines, is refused before any other procedure reads it, with the lines saying why.
+procedure compile_q(Lines?, Constant?, Declared?, Verdict?, Intro?, Words?).
+compile_q([L|Ls], _, _, _, _, _) :-
+    send_to_user(['%% compile begin', L?|Ls1?]),
+    lapp(Ls?, ['%% compile end'], Ls1).
+compile_q([], Nm, D, V, I, W) :- ground(D?), ground(I?) |
     decl_schemas(D?, C0),
     decl_schemas(D?, C1),
     decl_schemas(D?, C2),
@@ -108,7 +117,97 @@ compile4([L|Ls], Nm, _, _, _, _, _, _) :- ground(Nm?) |
     lapp(Ls?, ['%% compile end'], Ls1).
 
 %% --- The contract compiled ------------------------------------------------
-procedure decl_schemas(Declared?, Contract).
+%% What the compiler takes of a schema with quantifiers (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), qschema in GSC's term form, and of a constraint, and the lines refusing what it does not take, the schema named, before any other procedure reads the contract:
+%% (1) A safe formula of the body local to a role, "the machine of the person in that role evaluates it in its own state", is taken (local.glp, form_infos; the printed text's forms_at).
+%% (2) A quantified conjunct of the head, with a listed role bound by its quantifier or with conditional literals, is not: "its request name is the schema-binding with, where the base of the schema is a guarding role, the instances of L" (ibid.), a list of instances, where Definition "Effective Local Specification" has "a request name, a term of an interactive type in which no Stream or List occurs", and the view carries the approvals by their request names, under a List (Section 5.4, "The compilation").  Until the paper says how a request name carries the instances, the compiler refuses such a schema.
+%% (3) A relation, a function, a cardinality or a sum in a constraint or a safe formula is not: the constraint is "a decidable condition on the values its binding assigns, in the relations their types provide --- linear arithmetic on its numeric variables, and signed(u, y) and unsigned(u, y)" (ibid.).
+procedure q_lines(QContract?, Constant?, Lines).
+q_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
+    q_faults(C?, L0),
+    head_line(L0?, Nm?, L).
+procedure q_faults(QContract?, Lines).
+q_faults([], []).
+q_faults([S|Ss], L?) :- ground(S?) |
+    q_schema(S?, L1),
+    q_faults(Ss?, L2),
+    lapp(L1?, L2?, L).
+procedure q_schema(QSchema?, Lines).
+q_schema(schema(_, _, _), []).
+q_schema(cschema(_, _, _, _), []).
+q_schema(nschema(S, _, C, _), L?) :- ground(S?) |
+    con_beyond(C?, B),
+    beyond_lines(B?, S?, L).
+q_schema(qschema(S, _, _, C, Rs, Cj, Fs), L?) :- ground(S?), ground(Rs?) |
+    some_conjunct(Cj?, Q1),
+    some_qlisted(Rs?, Q2),
+    or(Q1?, Q2?, Q),
+    conjunct_lines(Q?, S?, L1),
+    con_beyond(C?, B1),
+    forms_beyond(Fs?, B2),
+    or(B1?, B2?, B),
+    beyond_lines(B?, S?, L2),
+    lapp(L1?, L2?, L).
+procedure some_conjunct(Conjuncts?, YesNo).
+some_conjunct([], no).
+some_conjunct([_|_], yes).
+procedure some_qlisted(RoleSpecs?, YesNo).
+some_qlisted([], no).
+some_qlisted([crs(qlisted(_, _, _, _), _, _, _, _, _)|_], yes).
+some_qlisted([_|Rs], B?) :- otherwise | some_qlisted(Rs?, B).
+procedure conjunct_lines(YesNo?, Constant?, Lines).
+conjunct_lines(no, _, []).
+conjunct_lines(yes, S, ['%% it has a quantified conjunct in a schema\'s head, a listed role bound by its quantifier or conditional literals, which the compiler does not take: the request name of a part whose base is a guarding role carries the instances (vGLP, Section 5.4, "Speech-act schemas as local specifications"), a list, where Definition "Effective Local Specification" has no List in a request name:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+procedure beyond_lines(YesNo?, Constant?, Lines).
+beyond_lines(no, _, []).
+beyond_lines(yes, S, ['%% it has a relation, a function, a cardinality or a sum in a constraint or a safe formula, which vGLP Section 5.4 does not take, a constraint being of linear arithmetic and signing conditions:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+%% Whether a constraint, an expression or a safe formula holds a relation, a function, a cardinality or a sum.
+procedure con_beyond(Constraint?, YesNo).
+con_beyond(true, no).
+con_beyond(and(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
+con_beyond(or(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
+con_beyond(implies(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
+con_beyond(not(C), B?) :- con_beyond(C?, B).
+con_beyond(eq(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(ne(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(le(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(lt(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(ge(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(gt(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(succ(_, _), no).
+con_beyond(signed(_, _), no).
+con_beyond(unsigned(_, _), no).
+con_beyond(rel(_, _), yes).
+procedure exprs_beyond(Expr?, Expr?, YesNo).
+exprs_beyond(X, Y, B?) :- expr_beyond(X?, B1), expr_beyond(Y?, B2), or(B1?, B2?, B).
+procedure expr_beyond(Expr?, YesNo).
+expr_beyond(plus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+expr_beyond(minus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+expr_beyond(mul(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+expr_beyond(fn(_, _), yes).
+expr_beyond(cardinality(_, _, _, _), yes).
+expr_beyond(sum(_, _, _, _, _), yes).
+expr_beyond(role(_), no).
+expr_beyond(pvar(_), no).
+expr_beyond(svar(_), no).
+expr_beyond(nterm(_), no).
+expr_beyond(sgn(_, _), no).
+expr_beyond(num(_), no).
+expr_beyond(any, no).
+procedure forms_beyond(Forms?, YesNo).
+forms_beyond([], no).
+forms_beyond([F|Fs], B?) :- form_beyond(F?, B1), forms_beyond(Fs?, B2), or(B1?, B2?, B).
+procedure form_beyond(Form?, YesNo).
+form_beyond(fa(_, _), no).
+form_beyond(fnot(F), B?) :- form_beyond(F?, B).
+form_beyond(fand(F, G), B?) :- form_beyond(F?, B1), form_beyond(G?, B2), or(B1?, B2?, B).
+form_beyond(for(F, G), B?) :- form_beyond(F?, B1), form_beyond(G?, B2), or(B1?, B2?, B).
+form_beyond(fexists(_, _, _, F), B?) :- form_beyond(F?, B).
+form_beyond(fforall(_, _, _, F, Gs), B?) :- form_beyond(F?, B1), forms_beyond(Gs?, B2), or(B1?, B2?, B).
+form_beyond(fcons(C), B?) :- con_beyond(C?, B).
+
+procedure decl_schemas(Declared?, QContract).
 decl_schemas([], []).
 decl_schemas([S|Ss], [S?|Ss?]).
 decl_schemas(reflexive(_, C), C?).
@@ -242,7 +341,7 @@ head_line([], _, []).
 head_line([X|Xs], Nm, [H?, X?|Xs?]) :- ground(Nm?) | said('%% not compiled', Nm?, H).
 
 %% A cschema with no reach conditions is a schema of its roles (GSC, Appendix D: a schema carrying a finite set of reach conditions is written cschema, programs/gsc/README.md); a schema with a constraint, nschema, is a schema of its roles, its constraint in the table Nt; and each schema's head is taken less its local variables.
-procedure plain_contract(Contract?, NumInfos?, Contract).
+procedure plain_contract(QContract?, NumInfos?, Contract).
 plain_contract([], _, []).
 plain_contract([schema(S, Hd, Rs)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- ground(S?), ground(Nt?) |
     strip_locals(S?, Hd?, Nt?, Hd1),
@@ -254,10 +353,14 @@ plain_contract([cschema(S, Hd, [], Rs)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- 
     strip_locals(S?, Hd?, Nt?, Hd1),
     plain_contract(Ss?, Nt?, Ps).
 plain_contract([cschema(S, Hd, [R|Rc], Rs)|Ss], Nt, [cschema(S?, Hd?, [R?|Rc?], Rs?)|Ps?]) :- plain_contract(Ss?, Nt?, Ps).
+%% A schema with quantifiers, no quantified conjunct in its head and agent roles alone (q_lines), is a schema of its roles, its constraint and the safe formulas of its body in the table Nt.
+plain_contract([qschema(S, Hd, _, _, Rs, _, _)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- ground(S?), ground(Nt?) |
+    strip_locals(S?, Hd?, Nt?, Hd1),
+    plain_contract(Ss?, Nt?, Ps).
 procedure strip_locals(Constant?, Args?, NumInfos?, Args).
 strip_locals(S, Hd, Nt, Hd1?) :- num_lookup(S?, Nt?, Ni), strip_locals1(Ni?, Hd?, Hd1).
 procedure strip_locals1(NumInfo?, Args?, Args).
-strip_locals1(num_info(_, _, Ls, _), Hd, Hd1?) :- loc_vars(Ls?, Vs), drop_args(Hd?, Vs?, Hd1).
+strip_locals1(num_info(_, _, Ls, _, _), Hd, Hd1?) :- loc_vars(Ls?, Vs), drop_args(Hd?, Vs?, Hd1).
 procedure drop_args(Args?, Args?, Args).
 drop_args([], _, []).
 drop_args([A|As], Vs, R?) :- ground(A?), ground(Vs?) |
@@ -268,11 +371,13 @@ procedure keep_unless(YesNo?, Arg?, Args?, Args).
 keep_unless(yes, _, R, R?).
 keep_unless(no, A, R, [A?|R?]).
 %% The table of the schemas' numbers: each schema's constraint, true where it has none, its local variables and the role whose local variables the constraint names (local.glp, num_info_of).
-procedure num_table(Contract?, NumInfos).
+procedure num_table(QContract?, NumInfos).
 num_table([], []).
-num_table([schema(S, Hd, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, Rs?, N), num_table(Ss?, Ns).
-num_table([nschema(S, Hd, C, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, C?, Rs?, N), num_table(Ss?, Ns).
-num_table([cschema(S, Hd, _, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, Rs?, N), num_table(Ss?, Ns).
+num_table([schema(S, Hd, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, [], Rs?, N), num_table(Ss?, Ns).
+num_table([nschema(S, Hd, C, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, C?, [], Rs?, N), num_table(Ss?, Ns).
+num_table([cschema(S, Hd, _, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, [], Rs?, N), num_table(Ss?, Ns).
+%% A schema with quantifiers whose head has no quantified conjunct and whose roles are agent roles, the only one q_lines lets through: its constraint and the safe formulas of its body, each with the role it is local to (local.glp, form_infos).
+num_table([qschema(S, Hd, _, C, Rs, _, Fs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, C?, Fs?, Rs?, N), num_table(Ss?, Ns).
 
 %% A schema's variables are named V1, V2, ... in the printed clauses; there are
 %% as many names as vname/3 has.
@@ -577,7 +682,7 @@ binding_lines([schema(S, Hd, Rs)|Ss], Nt, L?) :- ground(S?), ground(Hd?), ground
 binding_lines([cschema(_, _, _, _)|Ss], Nt, L?) :- binding_lines(Ss?, Nt?, L).
 binding_lines([nschema(_, _, _, _)|Ss], Nt, L?) :- binding_lines(Ss?, Nt?, L).
 procedure local_binds(NumInfo?, Constant?, Strings).
-local_binds(num_info(_, _, Ls, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs), local_binds1(Vs?, S?, Lb).
+local_binds(num_info(_, _, Ls, _, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs), local_binds1(Vs?, S?, Lb).
 procedure local_binds1(Args?, Constant?, Strings).
 local_binds1([], _, []).
 local_binds1([num(X)|Vs], S, [T?|Lb?]) :- ground(X?), ground(S?) | term_to_string(b(num(X?), lv(S?, X?)), T), local_binds1(Vs?, S?, Lb).
@@ -766,16 +871,37 @@ entry_lines([X|Xs], [E?, '.'|L?]) :- ground(X?) |
     entry_lines(Xs?, L).
 %% The schemas' numbers, schema_numeric(Name, numeric(Constraint, Locals, Role)), printed for each schema with a constraint or a local variable: its constraint, its variables local to a role and the role whose local variables the constraint names, at(I), or every, where it names none and every role checks it (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks"); any other schema has none, numeric(true, [], every).
 procedure numeric_lines(NumInfos?, Lines).
-numeric_lines(Nt, ['', 'procedure schema_numeric(Constant?, Numeric).'|L?]) :- numeric_lines1(Nt?, L).
+numeric_lines(Nt, ['', 'procedure schema_numeric(Constant?, Numeric).'|L?]) :- ground(Nt?) |
+    numeric_lines1(Nt?, L1),
+    form_lines(Nt?, L2),
+    lapp(L1?, ['', 'procedure schema_forms(Constant?, SForms).'|L2?], L).
 procedure numeric_lines1(NumInfos?, Lines).
 numeric_lines1([], ['schema_numeric(_, numeric(true, [], every)) :- otherwise | true.']).
-numeric_lines1([num_info(S, C, Ls, R)|Ns], L?) :- ground(S?), ground(C?), ground(Ls?), ground(R?) |
+numeric_lines1([num_info(S, C, Ls, R, _)|Ns], L?) :- ground(S?), ground(C?), ground(Ls?), ground(R?) |
     loc_vars(Ls?, Vs1),
     loc_vars(Ls?, Vs2),
     plain_num(C?, Vs1?, R?, P),
     numeric_line(P?, S?, C?, Vs2?, R?, L1),
     numeric_lines1(Ns?, L2),
     lapp(L1?, L2?, L).
+%% The safe formulas of the schemas' bodies, schema_forms(Name, Forms), printed for each schema with one, each sform(R, F), F the formula as programs/gsc writes it and R the role it is local to, at(I), or every, which every role checks (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state"; local.glp, form_infos, which refuses one local to no role).
+procedure form_lines(NumInfos?, Lines).
+form_lines([], ['schema_forms(_, []) :- otherwise | true.']).
+form_lines([num_info(S, _, _, _, Fi)|Ns], L?) :- ground(S?), ground(Fi?) |
+    form_line(Fi?, S?, L1),
+    form_lines(Ns?, L2),
+    lapp(L1?, L2?, L).
+procedure form_line(FInfos?, Constant?, Lines).
+form_line([], _, []).
+form_line([F|Fs], S, [T?, '.']) :- ground(S?), ground(F?), ground(Fs?) |
+    sforms([F?|Fs?], Sf),
+    T0 =.. [schema_forms, S?, Sf?],
+    term_to_string(T0?, T).
+SForm  ::= sform(FRole, Form).
+SForms ::= [] ; [SForm | SForms].
+procedure sforms(FInfos?, SForms).
+sforms([], []).
+sforms([fi(R, F)|Fs], [sform(R?, F?)|Ss?]) :- sforms(Fs?, Ss).
 procedure plain_num(Constraint?, Args?, CRole?, YesNo).
 plain_num(true, [], every, yes).
 plain_num(_, _, _, no) :- otherwise | true.

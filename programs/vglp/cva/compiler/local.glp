@@ -37,14 +37,130 @@ faults(C, Rf, Nt, Ls?) :- ground(C?), ground(Rf?), ground(Nt?) |
 
 %% --- Numbers -----------------------------------------------------------------
 %% num_info_of(Name, Head, Constraint, Roles, Info): the schema's constraint, its local variables and the role whose local variables the constraint names (self.glp, NumInfo).  "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role, as the person d where Bob's role requires that Bob point to someone with a label" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"): a variable of the head, agent, speech-act or numeric, that occurs in an atom some role keeps or deletes, inside a name term or a signed term or as a multiplicity on such an atom included (self.glp, atoms_args; flat_args), at one role, and in no atom added or forbidden, nor among a listed role's arguments; "a constraint is local to the role whose local variables it names, and to every role where it names none" (ibid.), at(I) or every, and two_roles where it names those of two roles or more.
-exported procedure num_info_of(Constant?, Args?, Constraint?, RoleSpecs?, NumInfo).
-num_info_of(Nm, Hd, C, Rs, num_info(Nm?, C?, Ls?, R?)) :- ground(Hd?), ground(Rs?), ground(C?) |
+%% num_info_of(Name, Head, Constraint, Forms, Roles, Info) gives also the safe formulas of the schema's body, each with the role it is local to (form_infos).
+exported procedure num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, NumInfo).
+num_info_of(Nm, Hd, C, Fs, Rs, num_info(Nm?, C?, Ls?, R?, Fi?)) :- ground(Hd?), ground(Rs?), ground(C?) |
     variables_of(Hd?, Vs1),
     variables_of(Hd?, Vs2),
+    variables_of(Hd?, Vs3),
+    variables_of(Hd?, Vs4),
     locals_of(Vs1?, Rs?, Ls),
     locals_of(Vs2?, Rs?, Ls1),
+    locals_of(Vs3?, Rs?, Ls2),
     con_args(C?, Ca),
-    con_role(Ca?, Ls1?, R).
+    con_role(Ca?, Ls1?, R),
+    form_infos(Fs?, Vs4?, Ls2?, Fi).
+
+%% --- Safe formulas -------------------------------------------------------------
+%% "A safe formula of B, and a quantified conjunct, is local to a role where every atom of it, but the literals of a listed role in its conclusion, is held by that role, and every variable of it is a role, a variable of the schema, a variable of its quantifiers or local to that role: the machine of the person in that role evaluates it in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications").  A formula's roles are the agent roles holding its atoms and the roles its local variables are local to: one role, at(I); none, every, a formula with no atom and no local variable, which every role checks, as a constraint naming no local variable is ("a constraint is local to the role whose local variables it names, and to every role where it names none", ibid.); two or more, or an atom held by no agent role, or a variable none of these, nowhere, a fault (numeric_locality).  The variables of the schema are those of its head Vs; a quantifier's own variables are those it binds, matched by name, as the term writes a bound variable by its name.
+procedure form_infos(Forms?, Args?, Locs?, FInfos).
+form_infos([], _, _, []).
+form_infos([F|Fs], Vs, Ls, [fi(R?, F?)|Is?]) :- ground(F?), ground(Vs?), ground(Ls?) |
+    form_role(F?, Vs?, Ls?, R),
+    form_infos(Fs?, Vs?, Ls?, Is).
+procedure form_role(Form?, Args?, Locs?, FRole).
+form_role(F, Vs, Ls, R?) :- ground(F?), ground(Vs?), ground(Ls?) |
+    form_holders(F?, Hs),
+    form_free(F?, Fv),
+    holder_roles(Hs?, Hr, Hok),
+    var_roles(Fv?, Vs?, Ls?, Vr, Vok),
+    app(Hr?, Vr?, Rr0),
+    dedup(Rr0?, Rr),
+    and(Hok?, Vok?, Ok),
+    frole(Ok?, Rr?, R).
+procedure frole(YesNo?, Ints?, FRole).
+frole(no, _, nowhere).
+frole(yes, [], every).
+frole(yes, [I], at(I?)).
+frole(yes, [_, _|_], nowhere).
+%% The holders of a formula's atoms and of its quantifiers' anchors.
+procedure form_holders(Form?, Args).
+form_holders(fa(H, _), [H?]).
+form_holders(fnot(F), Hs?) :- form_holders(F?, Hs).
+form_holders(fand(F, G), Hs?) :- form_holders(F?, H1), form_holders(G?, H2), app(H1?, H2?, Hs).
+form_holders(for(F, G), Hs?) :- form_holders(F?, H1), form_holders(G?, H2), app(H1?, H2?, Hs).
+form_holders(fexists(_, H, _, F), [H?|Hs?]) :- form_holders(F?, Hs).
+form_holders(fforall(_, H, _, F, Gs), [H?|Hs?]) :- form_holders(F?, H1), forms_holders(Gs?, H2), app(H1?, H2?, Hs).
+form_holders(fcons(_), []).
+procedure forms_holders(Forms?, Args).
+forms_holders([], []).
+forms_holders([F|Fs], Hs?) :- form_holders(F?, H1), forms_holders(Fs?, H2), app(H1?, H2?, Hs).
+%% The roles holding the atoms, and whether each holder is an agent role.
+procedure holder_roles(Args?, Ints, YesNo).
+holder_roles([], [], yes).
+holder_roles([role(I)|Hs], [I?|Is?], B?) :- holder_roles(Hs?, Is, B).
+holder_roles([_|Hs], Is?, B?) :- otherwise | holder_roles(Hs?, Is, B1), and(no, B1?, B).
+%% The free variables of a formula, the variables its quantifiers bind left out: a holder, the arguments of its atoms, a name term or a signed term taken as its variables, and those of its constraints, a number being no variable.
+procedure form_free(Form?, Args).
+form_free(fa(H, M), Fv?) :- atoms_args([M?], A0), app([H?], A0?, A1), flat_args(A1?, A2), form_vars(A2?, Fv).
+form_free(fnot(F), Fv?) :- form_free(F?, Fv).
+form_free(fand(F, G), Fv?) :- form_free(F?, F1), form_free(G?, F2), app(F1?, F2?, Fv).
+form_free(for(F, G), Fv?) :- form_free(F?, F1), form_free(G?, F2), app(F1?, F2?, Fv).
+form_free(fexists(Xs, H, A, F), Fv?) :- ground(Xs?) |
+    form_free(fa(H?, A?), F1),
+    form_free(F?, F2),
+    app(F1?, F2?, F12),
+    unbound_by(F12?, Xs?, Fv).
+form_free(fforall(Xs, H, A, F, Gs), Fv?) :- ground(Xs?) |
+    form_free(fa(H?, A?), F1),
+    form_free(F?, F2),
+    forms_free(Gs?, F3),
+    app(F2?, F3?, F23),
+    app(F1?, F23?, F13),
+    unbound_by(F13?, Xs?, Fv).
+form_free(fcons(C), Fv?) :- con_args(C?, A0), flat_args(A0?, A1), form_vars(A1?, Fv).
+procedure forms_free(Forms?, Args).
+forms_free([], []).
+forms_free([F|Fs], Fv?) :- form_free(F?, F1), forms_free(Fs?, F2), app(F1?, F2?, Fv).
+%% The roles and the agent, speech-act and numeric variables among the arguments.
+procedure form_vars(Args?, Args).
+form_vars([], []).
+form_vars([role(I)|As], [role(I?)|R?]) :- form_vars(As?, R).
+form_vars([A|As], R?) :- otherwise, ground(A?) | variables_of([A?], V), form_vars(As?, R1), app(V?, R1?, R).
+%% The arguments less those a quantifier binds, by the name of the variable.
+procedure unbound_by(Args?, Args?, Args).
+unbound_by([], _, []).
+unbound_by([A|As], Xs, R?) :- ground(A?), ground(Xs?) |
+    bound_name(A?, Xs?, B),
+    neg(B?, Keep),
+    unbound_by(As?, Xs?, R1),
+    keep_arg_if(Keep?, A?, R1?, R).
+procedure bound_name(Arg?, Args?, YesNo).
+bound_name(_, [], no).
+bound_name(A, [X|Xs], B?) :- ground(A?), ground(X?) | same_var(A?, X?, B1), bound_name1(B1?, A?, Xs?, B).
+procedure bound_name1(YesNo?, Arg?, Args?, YesNo).
+bound_name1(yes, _, _, yes).
+bound_name1(no, A, Xs, B?) :- bound_name(A?, Xs?, B).
+procedure same_var(Arg?, Arg?, YesNo).
+same_var(role(I), role(J), yes) :- I? =:= J? | true.
+same_var(A, X, B?) :- otherwise | var_name(A?, NA), var_name(X?, NX), same_name(NA?, NX?, B).
+VName ::= vn(Constant) ; novar.
+procedure var_name(Arg?, VName).
+var_name(pvar(X), vn(X?)).
+var_name(svar(X), vn(X?)).
+var_name(num(X), vn(X?)).
+var_name(role(_), novar).
+var_name(nterm(_), novar).
+var_name(sgn(_, _), novar).
+var_name(any, novar).
+procedure same_name(VName?, VName?, YesNo).
+same_name(vn(N), vn(M), yes) :- N? =?= M? | true.
+same_name(_, _, no) :- otherwise | true.
+%% The roles the free variables of a formula tie it to, and whether each is a role, a variable of the schema or local to a role: a variable local to a role ties it to that role.
+procedure var_roles(Args?, Args?, Locs?, Ints, YesNo).
+var_roles([], _, _, [], yes).
+var_roles([role(_)|As], Vs, Ls, Is?, B?) :- var_roles(As?, Vs?, Ls?, Is, B).
+var_roles([A|As], Vs, Ls, Is?, B?) :- otherwise, ground(A?), ground(Vs?), ground(Ls?) |
+    loc_role(A?, Ls?, I1),
+    loc_role(A?, Ls?, I0),
+    mem(A?, Vs?, InV),
+    var_ok(I0?, InV?, B1),
+    var_roles(As?, Vs?, Ls?, I2, B2),
+    app(I1?, I2?, Is),
+    and(B1?, B2?, B).
+procedure var_ok(Ints?, YesNo?, YesNo).
+var_ok([_|_], _, yes).
+var_ok([], InV, InV?).
 procedure keep_arg_if(YesNo?, Arg?, Args?, Args).
 keep_arg_if(yes, A, R, [A?|R?]).
 keep_arg_if(no, _, R, R?).
@@ -105,10 +221,20 @@ con_role1([_, _|_], two_roles).
 %% "the contract is a local specification where ... a constraint names the local variables of one role" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); a contract whose constraint names those of two roles is refused, the schema named.
 procedure numeric_locality(NumInfos?, Strings).
 numeric_locality([], []).
-numeric_locality([num_info(S, _, _, R)|Ns], L?) :- ground(S?) |
+numeric_locality([num_info(S, _, _, R, Fi)|Ns], L?) :- ground(S?) |
     numeric_locality1(R?, S?, L1),
+    form_locality(Fi?, S?, L0),
     numeric_locality(Ns?, L2),
-    lapp(L1?, L2?, L).
+    lapp(L1?, L0?, L10),
+    lapp(L10?, L2?, L).
+%% "A safe formula of B ... is local to a role where every atom of it ... is held by that role, and every variable of it is a role, a variable of the schema, a variable of its quantifiers or local to that role" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"); a formula local to no role is refused, the schema named, its machine of no person evaluating it in its own state.
+procedure form_locality(FInfos?, Constant?, Strings).
+form_locality([], _, []).
+form_locality([fi(nowhere, _)|_], S, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a safe',
+        '%% formula of a schema\'s body is local to no role, its atoms held by no one role or a variable of it none of the schema\'s:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+form_locality([fi(every, _)|Fs], S, L?) :- form_locality(Fs?, S?, L).
+form_locality([fi(at(_), _)|Fs], S, L?) :- form_locality(Fs?, S?, L).
 procedure numeric_locality1(CRole?, Constant?, Strings).
 numeric_locality1(every, _, []).
 numeric_locality1(at(_), _, []).
@@ -142,6 +268,11 @@ con_det(or(C1, C2), Bd, D?) :- ground(Bd?) |
 %% A signing condition, signed(u, y) or unsigned(u, y), gives no variable a value: it is a condition on the agent and the speech act the binding assigns (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications").
 con_det(signed(_, _), _, []).
 con_det(unsigned(_, _), _, []).
+%% A negation, an implication, an inequality u != v and a relation give no variable a value.
+con_det(not(_), _, []).
+con_det(implies(_, _), _, []).
+con_det(ne(_, _), _, []).
+con_det(rel(_, _), _, []).
 %% The numeric variables among the arguments that are not in Bd, each once, added to U0.
 procedure unbound_nvars(Args?, Args?, Args?, Args).
 unbound_nvars([], _, U0, U0?).
@@ -184,6 +315,10 @@ lin_coef(nterm(_), _, 0).
 lin_coef(sgn(_, _), _, 0).
 %% The wildcard is in no constraint (GSC 327e035: it occurs only in a cleared atom); the clause covers the type.
 lin_coef(any, _, 0).
+%% A function, a cardinality and a sum are refused before the contract is read here (cvac.glp, q_lines); the clauses cover the type.
+lin_coef(fn(_, _), _, 0).
+lin_coef(cardinality(_, _, _, _), _, 0).
+lin_coef(sum(_, _, _, _, _), _, 0).
 procedure same_arg_coef(Arg?, Arg?, Number).
 same_arg_coef(A, V, 1) :- A? =?= V? | true.
 same_arg_coef(_, _, 0) :- otherwise | true.
@@ -256,7 +391,7 @@ effective_lines([schema(Nm, _, Rs)|Ss], Nt, L?) :- ground(Nm?), ground(Rs?), gro
 effective_lines([cschema(_, _, _, _)|Ss], Nt, L?) :- effective_lines(Ss?, Nt?, L).
 effective_lines([nschema(_, _, _, _)|Ss], Nt, L?) :- effective_lines(Ss?, Nt?, L).
 procedure effective_schema(NumInfo?, Constant?, RoleSpecs?, Strings).
-effective_schema(num_info(_, Con, Ls, _), Nm, Rs, L?) :- ground(Nm?), ground(Rs?), ground(Ls?), ground(Con?) |
+effective_schema(num_info(_, Con, Ls, _, _), Nm, Rs, L?) :- ground(Nm?), ground(Rs?), ground(Ls?), ground(Con?) |
     loc_vars(Ls?, Lv),
     free_lines(Nm?, Rs?, Lv?, L0),
     guarded_any(Rs?, G),
