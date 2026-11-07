@@ -1,0 +1,172 @@
+# GAS2's apps: the person's Grassroots Super-App for Android, Windows, macOS and
+# Linux (servers/gas2/app; on a computer also servers/gas2/device's page), built from
+# the GAS2 branch and put on the release gas2-latest of this repository, which the
+# GAS2 site links to (https://talmonlab.bgu.ac.il/gas2/get.html).
+#
+# The tree the apps carry is made first, on Linux: GLP's REPL, every contract of
+# the branch taken down the cascade to a mini-app (servers/gas2/tools/build.py), and
+# the part of GLP a device runs (tools/device_tree.py).
+name: GAS2 apps
+on:
+  push:
+    branches: [GAS2]
+    paths: ['servers/gas2/**', 'glp_runtime/lib/**', 'programs/**', '.github/workflows/gas2-apps.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gas2-apps
+  cancel-in-progress: true
+jobs:
+  tree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.7
+      - name: The REPL
+        working-directory: glp_runtime
+        run: dart pub get && dart compile exe bin/glp_repl.dart -o bin/glp_repl_exe
+      - name: The contracts, their mini-apps, and the device's tree
+        run: |
+          python3 -I servers/gas2/tools/build.py "$GITHUB_WORKSPACE" /tmp/gas2out
+          python3 -I servers/gas2/tools/device_tree.py "$GITHUB_WORKSPACE" /tmp/tree /tmp/gas2out/data.json
+          cd servers/gas2/app && bash tool/sync_assets.sh /tmp/tree
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: servers/gas2/app/assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tree
+          path: /tmp/tree
+
+  android:
+    needs: tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: servers/gas2/app/assets
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+      - name: Build
+        working-directory: servers/gas2/app
+        run: flutter pub get && flutter build apk --release
+      - run: cp servers/gas2/app/build/app/outputs/flutter-apk/app-release.apk GAS2.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: GAS2.apk
+
+  windows:
+    needs: tree
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: servers/gas2/app/assets
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+      - name: Build
+        working-directory: servers/gas2/app
+        shell: bash
+        run: flutter pub get && flutter build windows --release
+      - name: Zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory GAS2 | Out-Null
+          Copy-Item "servers/gas2/app/build/windows/x64/runner/Release/*" GAS2 -Recurse
+          Compress-Archive -Path GAS2 -DestinationPath GAS2-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: GAS2-windows.zip
+
+  macos:
+    needs: tree
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: assets
+          path: servers/gas2/app/assets
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+      - name: Build
+        working-directory: servers/gas2/app
+        run: flutter pub get && flutter build macos --release
+      - name: Zip
+        run: |
+          cd servers/gas2/app/build/macos/Build/Products/Release
+          ditto -c -k --keepParent GAS2.app "$GITHUB_WORKSPACE/GAS2-macos.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: GAS2-macos.zip
+
+  linux:
+    needs: tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: tree
+          path: tree
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.7
+      - name: Build
+        working-directory: servers/gas2/device
+        run: |
+          dart pub get
+          dart compile exe bin/gas2.dart -o gas2
+          mkdir -p "$GITHUB_WORKSPACE/GAS2-linux"
+          cp gas2 "$GITHUB_WORKSPACE/GAS2-linux/"
+          cp -r web "$GITHUB_WORKSPACE/GAS2-linux/web"
+          cp -r "$GITHUB_WORKSPACE/tree" "$GITHUB_WORKSPACE/GAS2-linux/tree"
+          printf '#!/bin/sh\ncd "$(dirname "$0")"\n./gas2 --tree tree/programs --www web --data "${HOME}/.gas2" "$@"\n' > "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
+          chmod +x "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
+          cd "$GITHUB_WORKSPACE" && tar czf GAS2-linux.tar.gz GAS2-linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: GAS2-linux.tar.gz
+
+  publish:
+    needs: [android, windows, macos, linux]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Release gas2-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -la out
+          gh release view gas2-latest >/dev/null 2>&1 || gh release create gas2-latest --title "GAS2 (latest)" --notes "The GAS2 apps, built from the GAS2 branch." --prerelease --target "${{ github.sha }}"
+          for f in out/GAS2.apk out/GAS2-windows.zip out/GAS2-macos.zip out/GAS2-linux.tar.gz; do
+            [ -f "$f" ] && gh release upload gas2-latest "$f" --clobber
+          done
+          gh release edit gas2-latest --notes "The GAS2 apps, built from the GAS2 branch at ${{ github.sha }} on $(date -u +%Y-%m-%dT%H:%MZ)."

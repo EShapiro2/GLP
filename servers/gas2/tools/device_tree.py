@@ -2,7 +2,7 @@
 device's super-app loads, as glp_multiagent/tool/sync_glp_assets.sh stages it for
 GLP's own app, with GAS2's mini-apps and its device harness.
 
-    python3 -I tools/device_tree.py <built GLP working copy> <output directory>
+    python3 -I tools/device_tree.py <built GLP working copy> <output directory> [<data.json>]
 
 The output holds programs/: the root self.glp, every self.glp between the root and
 programs/social/graph, every .glp of that tree and every .vglp no .glp stands for,
@@ -72,5 +72,12 @@ def device_tree(root, out, apps=None):
     return dst
 
 
+def apps_of(data_json):
+    """The mini-apps a GAS2 build made, [(app, id, title)], from its data.json."""
+    d = json.load(open(data_json, encoding='utf-8'))
+    return [(c['app'], c['id'], c['title']) for c in d['contracts'] if c.get('artefact')]
+
+
 if __name__ == '__main__':
-    print(device_tree(sys.argv[1], sys.argv[2]))
+    # device_tree.py <built GLP working copy> <output> [<the build's data.json>]
+    print(device_tree(sys.argv[1], sys.argv[2], apps_of(sys.argv[3]) if len(sys.argv) > 3 else None))

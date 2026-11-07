@@ -1,1 +1,267 @@
-<!doctype html><title>GAS2</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GAS2</title>
+<style>
+:root { --ink:#1d1d1f; --soft:#6e6e73; --line:#e5e5ea; --bg:#f2f2f7; --card:#fff; --ok:#34c759; --blue:#0071e3; --warn:#ff9f0a; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
+header { position: sticky; top: 0; z-index: 3; background: rgba(255,255,255,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+header b { font-size: 18px; letter-spacing: -.02em; }
+header .st { margin-left: auto; font-size: 12px; color: var(--soft); }
+header .back { border: 0; background: none; color: var(--blue); font: inherit; padding: 0; cursor: pointer; }
+main { max-width: 560px; margin: 0 auto; padding: 12px 12px 40px; }
+.card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--soft); margin: 18px 4px 6px; font-weight: 600; }
+.row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.grow { flex: 1; min-width: 0; }
+.muted { color: var(--soft); }
+.small { font-size: 12.5px; }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
+button.b { border: 0; background: var(--blue); color: #fff; font: inherit; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 99px; cursor: pointer; white-space: nowrap; }
+button.b.alt { background: #e8e8ed; color: var(--ink); }
+button.b.ok { background: var(--ok); }
+button.b:disabled { opacity: .45; cursor: default; }
+input, select { font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; width: 100%; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-size: 12.5px; background: var(--bg); border-radius: 99px; padding: 2px 9px; }
+.step { display: flex; gap: 10px; align-items: center; }
+.step .n { width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 12px; display: grid; place-items: center; flex: none; }
+.step .n.done { background: var(--ok); }
+.ask { background: #fff7e6; border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+.acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.form { background: var(--bg); border-radius: 12px; padding: 10px; margin-top: 8px; display: grid; gap: 8px; }
+.form label { font-size: 12.5px; color: var(--soft); display: grid; gap: 3px; }
+.tab { margin: 8px 0 2px; font-weight: 600; font-size: 14px; }
+.empty { color: var(--soft); font-size: 13px; padding: 4px 0; }
+.note { font-size: 12.5px; color: var(--soft); padding: 2px 0; }
+</style>
+</head>
+<body>
+<header id="hd"><b>GAS2</b><span class="st" id="st">starting…</span></header>
+<main id="main"></main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S = null, open = null, form = null, names = {};
+try { names = JSON.parse(localStorage.getItem('gas2names') || '{}'); } catch (e) {}
+const saveNames = () => { try { localStorage.setItem('gas2names', JSON.stringify(names)); } catch (e) {} };
+const short = k => k ? k.slice(0, 6) : '';
+const nm = k => k === S?.me ? 'you' : (names[k] || short(k));
+
+async function act(j) { await fetch('api/act', {method: 'POST', body: JSON.stringify(j)}); }
+
+async function poll() {
+  let v = -1;
+  for (;;) {
+    try {
+      const r = await fetch('api/state' + (v >= 0 ? '?since=' + v : ''), {cache: 'no-store'});
+      S = await r.json(); v = S.version; draw();
+    } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
+  }
+}
+
+// --- GLP terms as the host gives them: {f, a}, lists, strings, numbers ---
+const F = (t, f) => t && t.f === f ? t.a : null;
+
+// the social_menu spec, a GLP term written as text, read into {f, a}
+function parseTerm(s) {
+  let i = 0;
+  const ws = () => { while (/\s/.test(s[i])) i++; };
+  function term() {
+    ws();
+    if (s[i] === '[') { i++; const xs = []; ws(); if (s[i] === ']') { i++; return xs; }
+      for (;;) { xs.push(term()); ws(); if (s[i] === ',') { i++; continue; } if (s[i] === ']') { i++; return xs; } throw 'list'; } }
+    if (s[i] === '"' || s[i] === "'") { const q = s[i++]; let o = ''; while (s[i] !== q) { if (s[i] === '\\') i++; o += s[i++]; } i++; return o; }
+    let m = /^-?\d+/.exec(s.slice(i)); if (m) { i += m[0].length; return +m[0]; }
+    m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(s.slice(i)); if (!m) throw 'term at ' + i;
+    i += m[0].length; ws();
+    if (s[i] === '(') { i++; const a = []; for (;;) { a.push(term()); ws(); if (s[i] === ',') { i++; continue; } if (s[i] === ')') { i++; break; } throw 'args'; } return {f: m[0], a}; }
+    return m[0];
+  }
+  return term();
+}
+
+function menuOf(w) {
+  // named('social_menu([...])', D)
+  const n = F(w, 'named');
+  if (!n || typeof n[0] !== 'string' || !n[0].startsWith('social_menu')) return [];
+  try {
+    const t = parseTerm(n[0]);
+    return (F(t, 'social_menu')[0] || []).map(b => {
+      const [label, acts] = F(b, 'button');
+      return acts.map(a => { const x = F(a, 'act'); return {label, act: x[0], fields: (x[5] || []).map(f => ({i: F(f, 'field')[0], label: F(f, 'field')[1], kind: F(f, 'field')[2]}))}; });
+    }).flat();
+  } catch (e) { return []; }
+}
+
+function words(ws) {
+  return (ws || []).map(w => F(w, 'person') ? '<b>' + esc(nm(F(w, 'person')[0])) + '</b>' : F(w, 'text') ? esc(F(w, 'text')[0])
+    : F(w, 'named') ? esc(F(w, 'named')[0]) + ' ' + esc(nm(F(w, 'named')[1])) : F(w, 'valued') ? esc(F(w, 'valued')[0]) + ' ' + esc(F(w, 'valued')[1]) : esc(JSON.stringify(w))).join('');
+}
+
+function termText(t) {
+  if (typeof t === 'string') return t.length === 64 && /^[0-9a-f]+$/.test(t) ? nm(t) : t;
+  if (typeof t === 'number') return String(t);
+  if (Array.isArray(t)) return '[' + t.map(termText).join(', ') + ']';
+  if (t && t.f === 'speech') { const u = F(t.a[0], 'utterance'); return u ? '“' + u[0] + '”' : termText(t.a[0]); }
+  if (t && t.f) return t.f + (t.a.length ? '(' + t.a.map(termText).join(', ') + ')' : '');
+  return String(t);
+}
+
+// --- the screens ---
+function draw() {
+  // what the person is typing survives a redraw
+  const keep = {}, focus = document.activeElement?.id;
+  document.querySelectorAll('input, select').forEach(e => { if (e.id) keep[e.id] = e.value; });
+  render();
+  for (const [id, v] of Object.entries(keep)) { const e = document.getElementById(id); if (e) e.value = v; }
+  if (focus) document.getElementById(focus)?.focus();
+}
+
+function render() {
+  const st = S.status === 'ready' ? 'you are ' + short(S.me) : S.status;
+  if (open) return drawApp(S.apps.find(a => a.app === open));
+  $('#hd').innerHTML = `<b>GAS2</b><span class="st">${esc(st)}</span>`;
+  const installed = S.apps.filter(a => a.installed);
+  const step = (n, done, html) => `<div class="step"><span class="n ${done ? 'done' : ''}">${done ? '✓' : n}</span><div class="grow">${html}</div></div>`;
+  let h = '';
+  if (!S.trusted || !installed.length || !S.friends.length) {
+    h += `<div class="card" style="display:grid;gap:10px">
+      ${step(1, S.trusted, S.trusted ? 'Your compiler is trusted' : `Trust your own compiler: the mini-apps here are certified under your key. <button class="b" onclick="act({op:'trust'})">Trust</button>`)}
+      ${step(2, installed.length > 0, 'Install a mini-app, below')}
+      ${step(3, S.friends.length > 0, 'Add a person by their key, and they say yes')}
+    </div>`;
+  }
+  h += `<h2>You</h2><div class="card"><div class="small muted">Your key; give it to a person to add you</div>
+    <div class="row"><span class="mono grow" id="mykey">${esc(S.me)}</span><button class="b alt" onclick="copyKey()">Copy</button></div></div>`;
+  h += `<h2>People</h2><div class="card">`;
+  for (const k of S.friendRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b> asks to be your friend</span><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false})">No</button></div>`;
+  for (const [by, k] of S.introRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(by))}</b> introduces <b>${esc(nm(k))}</b></span><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false})">No</button></div>`;
+  for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b>${names[k] ? ` <span class="mono muted">${esc(short(k))}</span>` : ''}</span><button class="b alt" onclick="rename('${k}')">Name</button></div>`;
+  if (!S.friends.length && !S.friendRequests.length) h += `<div class="empty">No one yet.</div>`;
+  h += `<div class="row"><input id="add" placeholder="A person's key" autocomplete="off"><button class="b" onclick="addPerson()">Add</button></div></div>`;
+  h += `<h2>Mini-apps</h2><div class="card">`;
+  for (const a of S.apps) {
+    h += `<div class="row"><span class="grow"><b>${esc(a.id)}</b> <span class="muted">${esc(a.title)}</span></span>
+      ${a.installed ? `<button class="b" onclick="openApp('${a.app}')">Open</button>` : `<button class="b alt" ${S.trusted ? '' : 'disabled'} onclick="act({op:'install',app:'${a.app}'})">Install</button>`}</div>`;
+  }
+  h += `</div>`;
+  if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, 8).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
+  $('#main').innerHTML = h;
+}
+
+function copyKey() {
+  if (window.GASNative) window.GASNative.postMessage(JSON.stringify({copy: S.me}));
+  else navigator.clipboard?.writeText(S.me);
+  const r = document.createRange(); r.selectNodeContents($('#mykey')); getSelection().removeAllRanges(); getSelection().addRange(r);
+}
+// the device's back button: out of a mini-app
+window.gas2Back = () => { if (open) closeApp(); };
+function rename(k) { const n = prompt('A name for ' + short(k), names[k] || ''); if (n !== null) { names[k] = n.trim(); saveNames(); draw(); } }
+async function addPerson() {
+  const k = $('#add').value.trim().toLowerCase();
+  const r = await (await fetch('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
+  if (r.error) alert(r.error); else $('#add').value = '';
+}
+function openApp(app) { open = app; form = null; draw(); window.scrollTo(0, 0); }
+function closeApp() { open = null; form = null; draw(); }
+
+function drawApp(a) {
+  $('#hd').innerHTML = `<button class="back" onclick="closeApp()">‹ Back</button><b>${esc(a.id)}</b><span class="st">${esc(a.title)}</span>`;
+  const draws = Object.entries(a.draws).map(([id, d]) => ({id: +id, w: d.w, v: d.v}));
+  const out = draws.find(d => d.id === 0);
+  const thread = out ? (F(out.v, 'output') || [[]])[0] : [];
+  let last = null; const notices = [];
+  for (const x of thread) { if (F(x, 'view')) { last = F(x, 'view'); notices.length = 0; } else notices.push(x); }
+  const req = draws.find(d => F(d.v, 'request_r'));
+  const asks = draws.filter(d => F(d.v, 'approval_w'));
+  const menu = req ? menuOf(req.w) : [];
+  const shapes = a.shapes || {};
+  const props = (shapes.Proposal || []).filter(p => p[0] === 'ctor');
+  let h = '';
+  // the people to play with: friends in the super-app
+  h += `<h2>Play with</h2><div class="card">`;
+  for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b></span><button class="b alt" onclick="act({op:'invite',app:'${a.app}',key:'${k}'})">Invite</button><button class="b alt" onclick="act({op:'accept',app:'${a.app}',key:'${k}'})">Accept theirs</button></div>`;
+  if (!S.friends.length) h += `<div class="empty">Add a person first.</div>`;
+  h += `<div class="small muted" style="padding-top:6px">One of you invites, the other accepts; then you meet in ${esc(a.id)}.</div></div>`;
+  for (const d of asks) {
+    const ap = F(F(d.v, 'approval_w')[0], 'approval');
+    const p = F(ap[2], 'input')[0];
+    const ws = ap[1] && ap[1].length ? words(ap[1]) : esc(termText(F(ap[0], 'hello') ? F(ap[0], 'hello')[1] : (F(ap[0], 'attempt') || [])[3]));
+    h += `<div class="ask">${ws}<div class="acts" style="margin-top:8px"><button class="b ok" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'yes')">Yes</button><button class="b alt" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'no')">No</button></div></div>`;
+  }
+  h += `<h2>State</h2><div class="card">`;
+  if (!last) h += `<div class="empty">Not running yet: invite a friend, or accept their invitation.</div>`;
+  else {
+    const atoms = last[1] || [], known = last[2] || [], pend = last[3] || [], tabs = last[4] || [];
+    for (const t of tabs) { const [name, pred] = F(t, 'tab'); const xs = atoms.filter(x => x && x.f === pred);
+      h += `<div class="tab">${esc(name)}</div><div class="chips">${xs.length ? xs.map(x => `<span class="chip">${esc(x.a.map(termText).join(' · '))}</span>`).join('') : '<span class="empty">none</span>'}</div>`; }
+    const rest = atoms.filter(x => !tabs.some(t => x && x.f === F(t, 'tab')[1]));
+    if (rest.length) h += `<div class="tab">Holds</div><div class="chips">${rest.map(x => `<span class="chip">${esc(termText(x))}</span>`).join('')}</div>`;
+    if (known.length && !tabs.some(t => F(t, 'tab')[1] === 'knows')) h += `<div class="tab">Knows</div><div class="chips">${known.map(k => `<span class="chip">${esc(nm(k))}</span>`).join('')}</div>`;
+    if (pend.length) h += `<div class="tab">Proposed, waiting</div><div class="chips">${pend.map(x => `<span class="chip">${esc(termText(x))}</span>`).join('')}</div>`;
+    for (const n of notices) h += `<div class="note">${esc(termText(n))}</div>`;
+  }
+  h += `</div>`;
+  if (req && last) {
+    h += `<h2>Do</h2><div class="card"><div class="acts">`;
+    const acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []}));
+    acts.forEach((m, i) => { h += `<button class="b ${form && form.i === i ? '' : 'alt'}" onclick="pick(${i})">${esc(m.label)}</button>`; });
+    h += `</div>`;
+    if (form) h += formHtml(acts[form.i], props, last);
+    h += `</div>`;
+  }
+  $('#main').innerHTML = h;
+  window._acts = (menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []})));
+  window._req = req; window._props = props; window._app = a.app;
+}
+
+function pick(i) { form = form && form.i === i ? null : {i}; draw(); }
+
+function argKinds(act, props) {
+  const p = props.find(x => x[1] === act);
+  return p ? p[2] : [];
+}
+
+function formHtml(m, props, last) {
+  const kinds = argKinds(m.act, props);
+  const people = [...new Set([...(last[2] || []), ...S.friends])];
+  let h = `<div class="form">`;
+  kinds.forEach((t, j) => {
+    const i = j + 1;
+    if (i === 1) return;
+    const f = m.fields.find(x => x.i === i);
+    const label = f ? f.label : (t === 'Peer' ? 'person' : t.toLowerCase());
+    if (t === 'Peer' || t === 'Key') h += `<label>${esc(label)}<select id="arg${i}">${people.map(k => `<option value="${k}">${esc(nm(k))}</option>`).join('')}</select></label>`;
+    else if (t === 'Integer') h += `<label>${esc(label)}<input id="arg${i}" type="number" min="0" step="1" value="1"></label>`;
+    else h += `<label>${esc(label)}<input id="arg${i}" type="text"></label>`;
+  });
+  h += `<div><button class="b" onclick="propose()">${esc(m.label)}</button></div></div>`;
+  return h;
+}
+
+async function propose() {
+  const m = window._acts[form.i], kinds = argKinds(m.act, window._props);
+  const args = kinds.map((t, j) => {
+    const i = j + 1;
+    if (i === 1) return S.me;
+    const v = document.getElementById('arg' + i)?.value ?? '';
+    if (t === 'Integer') return parseInt(v || '0', 10);
+    if (t === 'Speech') return {f: 'speech', a: [{f: 'utterance', a: [v]}, S.me]};
+    return v;
+  });
+  const p = F(F(window._req.v, 'request_r')[0], 'input')[0];
+  form = null;
+  await grant(window._app, window._req.id, p, {propose: {f: m.act, a: args}});
+}
+
+async function grant(app, id, path, value) { await act({op: 'grant', app, id, path, value}); }
+
+poll();
+</script>
+</body>
+</html>
