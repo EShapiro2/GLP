@@ -492,10 +492,18 @@ head_schema1(Nm, H, Bd, Os, R?) :- ground(Nm?), ground(H?), ground(Bd?), ground(
 procedure head_schema(NSchema?, Faults).
 head_schema(S, R?) :- ground(S?) |
     nsch_name(S?, Nm),
-    nsch_vars(S?, H),
+    nsch_vars(S?, H0),
+    head_untyped(H0?, H),
     nsch_bound(S?, Bd),
     nsch_occ_vars(S?, Os),
     head_schema1(Nm?, H?, Bd?, Os?, R).
+
+% A value variable's type is its head's, real(X) or num(X) (self.glp, Arg),
+% and its atoms write num(X) of either, so the head is compared as num(X).
+procedure head_untyped(Args?, Args).
+head_untyped([], []).
+head_untyped([real(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
+head_untyped([A|As], [A?|R?]) :- otherwise | head_untyped(As?, R).
 
 procedure head_schemas(NContract?, Faults).
 head_schemas([], []).

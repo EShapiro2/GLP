@@ -89,6 +89,7 @@ latex_arg(sgn(X, J), T, ['\\mathrm{sgn}(', X?, ','|R?]) :-
     latex_role(J?, [')'|T?], R).
 % A value argument, the value variable as it is named or the number.
 latex_arg(num(X), T, [X?|T?]).
+latex_arg(real(X), T, [X?|T?]).
 % The wildcard of a cleared atom, \ast, as Section 3.3 writes unfriend's
 % \mathit{listed}(\Bob,\ast).
 latex_arg(any, T, ['\\ast'|T?]).
@@ -517,6 +518,7 @@ latex_expr(sum(Xs, H, A, F, U), T, ['\\mathrm{sum}('|R?]) :-
     latex_anchored(H?, A?, F?, [','|R2?], R1),
     latex_xs_sep(Xs?, R1?, R).
 latex_expr(num(X), T, R?) :- latex_arg(num(X?), T?, R).
+latex_expr(real(X), T, R?) :- latex_arg(real(X?), T?, R).
 latex_expr(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_expr(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
 latex_expr(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
@@ -536,6 +538,7 @@ latex_operand(fn(N, Xs), T, R?) :- latex_expr(fn(N?, Xs?), T?, R).
 latex_operand(cardinality(Xs, H, A, F), T, R?) :- latex_expr(cardinality(Xs?, H?, A?, F?), T?, R).
 latex_operand(sum(Xs, H, A, F, U), T, R?) :- latex_expr(sum(Xs?, H?, A?, F?, U?), T?, R).
 latex_operand(num(X), T, R?) :- latex_arg(num(X?), T?, R).
+latex_operand(real(X), T, R?) :- latex_arg(real(X?), T?, R).
 latex_operand(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_operand(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
 latex_operand(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).

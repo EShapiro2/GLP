@@ -2208,5 +2208,24 @@ check_eq "exists c (knows(Bob, c)) names c, which it binds, and not Dave" \
          "V = not_grassroots([untraceable([told])])" "$(sf 4)"
 check "the bound c read as an agent variable, pvar(c), in the quantifier" "fexists([pvar(c)], role(2), atom(knows, [pvar(c)]), fcons(eq(pvar(c), pvar('Dave'))))" "$out"
 
+# A value variable has a type, which the term form writes (GSC 8b1460f, the
+# appendix "Values in Speech-Act Schemas"): num(X) whole and real(X) real.
+# The reader writes the type in the schema's Vars and the value argument
+# num(X) in its atoms; a variable written both ways is refused, value_type;
+# and the checker takes a whole one over the whole numbers: the act meet
+# forbids date(x), which low and high add at every binding of their t, clause
+# 2 reading no constraint ("Values" in README.md), so a whole t blocks every
+# whole x and no real x but a whole one.
+RE_MINT=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', real(k)])], [atom(identity, ['Alice'])], gt(real(k), num(0)), ['Alice'])")
+RE_MIX=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', real(k)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
+gap_of() { gkk_with "sas(meet, ['Alice', 'Bob'], [x], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(date, ['Alice', $1(x)])), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(low, ['Alice'], [t], [atom(date, ['Alice', $2(t)])], [atom(identity, ['Alice'])], le($2(t), num(5)), ['Alice']), sas(high, ['Alice'], [t], [atom(date, ['Alice', $2(t)])], [atom(identity, ['Alice'])], ge($2(t), num(6)), ['Alice'])"; }
+out=$(run "as_read($RE_MINT, R)." "check($RE_MINT, V)." "check($RE_MIX, V)." "intro_acts($(gap_of num num), A)." "intro_acts($(gap_of real num), A)." "intro_acts($(gap_of real real), A).")
+check "real(k) is read as the value argument num(k), its type real(k) in the head" "nschema(mint, ['Alice'], [real(k)], gt(num(k), num(0)), [rs(guarded, [atom(coin, [num(k)])]" "$out"
+check_eq "a contract with a real value variable is checked as one with a whole one" "V = syntactically_grassroots" "$(sf 1)"
+check_eq "a value variable written num(k) and real(k) is refused, of two types" "V = malformed([value_type(mint, k)])" "$(sf 2)"
+check "a whole t blocks every whole x: meet obstructed" "intro_act(meet, obstructed([obstructed(meet, 1, atom(date, [num(x)]), blocked_by(low, 1, atom(date, [num(t)])))]))" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
+check "a whole t blocks no real x but a whole one: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
+check "a real t blocks every real x: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 3p)"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
