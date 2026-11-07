@@ -287,6 +287,8 @@ def main(root, out):
         if e['udiApp'] and e['udiBoot']:
             a, why = g.artefact(g.path('programs', 'apps', e['udiApp']), core)
             e['udiArtefact'] = bool(a)
+            if not a:
+                e['udiArtefactWhy'] = why
             if a:
                 shutil.copy(a, os.path.join(art_dir, os.path.basename(a)))
 

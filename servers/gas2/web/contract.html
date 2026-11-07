@@ -123,6 +123,7 @@ load().then(D => {
       <div class="steps">${STEPS.map(([k, n, d]) => `<div class="step ${steps[k]}"><b>${n}</b>${d}</div>`).join('')}</div>
       ${c.why ? `<div class="why">${esc(c.why)}</div>` : ''}
       ${c.artefactWhy ? `<div class="why">${esc(c.artefactWhy)}</div>` : ''}
+      ${c.udiApp && !c.udiArtefact ? `<p class="small muted">Its hand-written app, programs/apps/${esc(c.udiApp)}, does not certify at this commit${c.udiArtefactWhy ? ':' : '.'}</p>${c.udiArtefactWhy ? `<div class="why">${esc(c.udiArtefactWhy)}</div>` : ''}` : ''}
       ${c.artefact ? `<p class="small">Files: <a href="${esc(c.artefact)}" download>${esc(c.app)}.glpw</a> (the certified mini-app) · <a href="platforms/${encodeURIComponent(c.id)}.vglp" target="_blank">platform.vglp</a> (the platform the compiler printed)</p>` : ''}
     </section>
 
