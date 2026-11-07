@@ -219,7 +219,7 @@ procedure creator_certification(Module?, String).
 creator_certification(M, CSig?) :-
     decompose_module(M?, _, Src, _),
     self_key(K),
-    sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
 
 %% The person's end of the mini-app's person channel is held by hold_person/1
 %% (self.glp) until there is a screen to show it on, its draws read to their

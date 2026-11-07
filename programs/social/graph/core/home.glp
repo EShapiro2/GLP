@@ -64,7 +64,7 @@ install_act(M, App, Id, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, U
 install_act(S, _, Id, Reqs, Outs, Cmds?, D?) :- string(S?) | serve(Reqs?, Id?, Outs?, Cmds, D).
 
 procedure creator_certification(Module?, String).
-creator_certification(M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+creator_certification(M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
 
 %% --- the dispatcher (programs/vglp/dispatcher.glp) ---
 

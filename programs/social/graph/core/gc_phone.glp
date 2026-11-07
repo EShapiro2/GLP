@@ -84,7 +84,7 @@ certified(M, CK?, CSig?) :-
     module(M?) |
     decompose_module(M?, CK, Src, _),
     self_key(K),
-    sign(creator_cert(Src?, [establish, acquaint, introduce, mint, swap, pay, redeem], grassroots), K?, CSig).
+    sign(creator_cert(Src?, [establish, acquaint, introduce, mint, swap, pay, redeem], syntactically_grassroots), K?, CSig).
 
 %% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gsg_boot.glp.
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).

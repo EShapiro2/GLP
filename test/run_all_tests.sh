@@ -7181,6 +7181,11 @@ play_install(alice, "cssn.glpw", cssn, I1).
 play_install(alice, "currency.glpw", currency, I2).
 play_install(alice, "pingapp.glpw", ping, I3).
 play_forged_cert(alice, I4).
+play_verdict(alice, with_wards, V1).
+play_verdict(alice, wards, V2).
+play_verdict(alice, not_grassroots, V3).
+play_verdict(alice, malformed, V4).
+play_verdict(alice, word, V5).
 play_forged_invite(alice, bob, F1).
 play_forged_join(alice, bob, F2).
 play_forged_root(alice, bob, F3).
@@ -7202,6 +7207,16 @@ check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
 check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
 check "SG super-app: the super-app installs the certified pingapp" "I3 = \[ping\]" "$sg_core"
 check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
+# The checker's verdict a certification carries, as the checker prints it (GSA
+# paper, Section 3, "A grassroots program is compiled from its contract"): a
+# verdict that certifies the contract, with wards or without, installs; one
+# that does not, and the word grassroots, which the checker never prints,
+# install nothing (play_verdict/3; agent.glp, cert_check/4).
+check "SG super-app: a certification with the verdict syntactically_grassroots_with_wards installs" "V1 = \[ping\]" "$sg_core"
+check "SG super-app: a certification with the verdict grassroots_with_wards installs" "V2 = \[ping\]" "$sg_core"
+check "SG super-app: a certification with the verdict not_grassroots installs nothing" "V3 = \[\]" "$sg_core"
+check "SG super-app: a certification with the verdict malformed installs nothing" "V4 = \[\]" "$sg_core"
+check "SG super-app: a certification with the word grassroots, no verdict of the checker, installs nothing" "V5 = \[\]" "$sg_core"
 check "SG super-app refuses a forgery: an invitation that is not a signed term delivers nothing, and the next message arrives" "F1 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: an undertaking that is not a signed term creates no root channel, and the next message arrives" "F2 = \[msg(agent, person, received(bob, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
@@ -7440,6 +7455,49 @@ check "SG currency on two smartphones: alice's swap with bob done" "\[alice\] sw
 check "SG currency on two smartphones: bob's swap with alice done" "\[bob\] swap_done(alice)" "$sg_coins"
 check "SG currency on two smartphones: alice holds bob's coin" "\[alice\] holdings(\[lot(bob, 2)\])" "$sg_coins"
 check "SG currency on two smartphones: bob holds alice's coin" "\[bob\] holdings(\[lot(alice, 2)\])" "$sg_coins"
+
+# Activation without an invitation (GSA paper, Section 3, "A grassroots
+# program instance": "An instance begins with one person, who installs the
+# certified program and activates it; others join it on invitation"), and a
+# later invitation to the running execution ("Activation and joining"):
+# alice installs the currency and activates it with no peer, her scripted
+# person mints 3 and her screen shows it before she knows anyone; she then
+# connects to bob and invites him, and the conversation opens on the
+# execution she activated alone, its screen showing it after her holdings
+# (play_activate/4; agent.glp, activate_app/6 and deliver/9).  Its own
+# session, as the mini-app plays above are.
+sg_activate=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
+$SG_CORE
+:limit 5000000
+play_activate(alice, bob, A, B).
+:quit
+HEREDOC
+2>&1)
+check "SG activation alone: alice's execution, activated with no invitation and no peer, mints, then the later invitation's conversation opens on it" "A = \[minted(3), holdings(\[lot(alice, 3)\]), opened(bob) | " "$sg_activate"
+check "SG activation alone: bob, invited, joins alice's running execution" "B = \[opened(alice) | " "$sg_activate"
+check_not "SG activation alone: no failed play" "→ failed" "$sg_activate"
+
+# Currencies' play_mint on one smartphone, one boot per program
+# (programs/currencies/<program>_mint_boot.glp): alice alone, with her own key,
+# installs the mini-app from its certified artefact and activates it with no
+# invitation and no peer, and her scripted person, under the role mint, mints
+# 3; her lines are play_mint's screen, in order.
+for sg_mint in "coins coins/currency [minted(3), holdings([lot(alice, 3)])]" \
+               "dated bonds/dated [minted(3, now), holdings([lot(alice, now, 3)])]" \
+               "sovereign sovereign/denominated [minted(3, now), holdings([lot(alice, usd, now, 3)])]"; do
+    sg_mint_name=${sg_mint%% *}; sg_mint_rest=${sg_mint#* }; sg_mint_dir=${sg_mint_rest%% *}; sg_mint_lines=${sg_mint_rest#* }
+    sg_mint_out=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/currencies/$sg_mint_dir $SG_CORE
+:boot $GLP_DIR/programs/currencies/${sg_mint_name}_mint_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+    rm -f "$SG_CORE"/*.glpw
+    check "SG activation alone on a smartphone, $sg_mint_name play_mint: the boot settles" "Boot settled: 1 agents (alice)" "$sg_mint_out"
+    check_not "SG activation alone on a smartphone, $sg_mint_name play_mint: no event stopped at the cap" "did not quiesce" "$sg_mint_out"
+    boot_same "SG activation alone on a smartphone, $sg_mint_name play_mint: alice's lines are play_mint's screen" "$sg_mint_lines" "$(boot_person alice "$sg_mint_out")"
+done
 
 # The child-safe platform on two smartphones (paper Section 7): the same
 # super-app hosting CSSN's mini-app from its certified artefact; adopting the

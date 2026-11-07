@@ -73,4 +73,6 @@ miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) |
 miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, _, [await(opened(Alice?)), mint(2, 30), accept(Alice?)], none, S).
 %% The roles of the other plays, for their boots on smartphones (programs/currencies/dated_*_boot.glp; Currencies #15, Code_inbox 2026-11-05 07:26 UTC): same, alice's script of play_same, bob's being bob's above.
 miniapp_person(Me, same, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, _, [await(opened(Bob?)), mint(2), swap(Bob?, Me?, now, 2, Bob?, 30, 2), redeem(Bob?, 30, Bob?, 30), swap(Bob?, Bob?, 30, 2, Bob?, 30, 2)], none, S).
+%% The role of play_mint, for its boot on a smartphone (programs/currencies/dated_mint_boot.glp): mint, the person alone, who activates the mini-app with no invitation and no peer (GSA paper, Section 3, "A grassroots program instance") and mints 3, play_mint's script.
+miniapp_person(Me, mint, _, ch(Ds, Gs?), S?) :- ground(Me?) | person # person(Me?, Ds?, Gs, _, [mint(3)], none, S).
 miniapp_person(Me, _, _, ch(Ds, Gs?), S?) :- otherwise | person # person(Me?, Ds?, Gs, _, [], none, S).
