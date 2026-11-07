@@ -92,5 +92,66 @@ void main() {
         d.deleteSync(recursive: true);
       }
     });
+
+    // The print keeps "the type definitions their declarations reference",
+    // the reachable procedures' (IGLP 9c605b3, code-format-fragment.tex,
+    // "Deterministic Flattening"): a type defined in a module the program does
+    // not reach is not printed, and its edit leaves h(M) as it was; a type a
+    // reachable declaration references is printed, with the types its
+    // definition references, and its edit moves h(M).
+    test('types: a type of a module the program does not reach leaves h(M) '
+        'unchanged; a reached type and the types it references are printed',
+        () {
+      final d = _project(_typed(tag: 'red ; green'));
+      try {
+        File('${d.path}/other.glp').writeAsStringSync(_other('a ; b'));
+        final f1 = flattenProject(d.path, rootSelfGlpPath: _rootSelf);
+        expect(f1.print, contains('Item ::= item(Integer, Tag).'));
+        expect(f1.print, contains('Tag ::= red ; green.'),
+            reason: 'Tag is reached through Item\'s definition');
+        expect(f1.print, isNot(contains('Unreached')),
+            reason: 'no reachable declaration references other.glp\'s type');
+        expect(f1.print, isNot(contains('Spare')),
+            reason: 'main.glp defines Spare, but no declaration references it');
+
+        File('${d.path}/other.glp').writeAsStringSync(_other('a ; b ; c'));
+        final f2 = flattenProject(d.path, rootSelfGlpPath: _rootSelf);
+        expect(f2.hM, f1.hM,
+            reason: 'other.glp is a module of the program the entry points do '
+                'not reach, so its type is not in the print');
+
+        _edit(d, _typed(tag: 'red ; green ; blue'));
+        final f3 = flattenProject(d.path, rootSelfGlpPath: _rootSelf);
+        expect(f3.hM, isNot(f1.hM),
+            reason: 'Tag is reached from count/2\'s declaration, through Item');
+      } finally {
+        d.deleteSync(recursive: true);
+      }
+    });
   });
 }
+
+/// main.glp of a project whose go/2 reaches count/2, whose declaration
+/// references Item, whose definition references Tag, of the alternatives
+/// [tag]; Spare is defined and referenced by no declaration.
+String _typed({required String tag}) => '''
+Tag ::= $tag.
+Item ::= item(Integer, Tag).
+Spare ::= spare(Integer).
+
+exported procedure go(Integer?, Integer).
+go(X, Y?) :- count(item(X?, red), Y).
+
+procedure count(Item?, Integer).
+count(item(N, _), Y?) :- Y := N? + 1.
+''';
+
+/// other.glp: a module of the program that nothing the entry points reach
+/// calls, defining the type Unreached with the alternatives [alts].
+String _other(String alts) => '''
+Unreached ::= $alts.
+
+procedure pick(Unreached?, Integer).
+pick(_, 1).
+''';
+

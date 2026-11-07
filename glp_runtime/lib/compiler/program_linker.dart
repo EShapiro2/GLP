@@ -1724,6 +1724,89 @@ Map<String, TypeDef> programTypeDefs(List<DiscoveredModule> modules,
   return out;
 }
 
+/// The type definitions the source identity's canonical print keeps, by
+/// their names in the source: "the procedures reachable from the root's
+/// exported entry points and the type definitions their declarations
+/// reference, from self.glp files outside the program's tree among them"
+/// (IGLP 9c605b3, code-format-fragment.tex, "Deterministic Flattening").  The
+/// reachable procedures are [linked]'s after step 5 (TGLP modules.tex,
+/// Compilation, fifth step), and the types their declarations reference are
+/// read from [LinkResult.checkedDeclarations], where each reference is
+/// resolved to the renamed type of the nearest scope defining it (fourth
+/// step), and followed through the renamed definitions ([_renamedTypeDefs]),
+/// so that each definition reached is the one the reference names, and the
+/// types those definitions reference in turn are reached the same way.  A
+/// name defined by no module of the program --- a primitive type, or a
+/// definition's own parameter --- contributes nothing.  Each name reached is
+/// printed as [typeDefs] names it where its definition there is one reached,
+/// and as the first definition reached of that name otherwise.  Until
+/// 2026-11-07 every type definition of every module of the program was
+/// printed, and a type the program does not reach changed its h(M).
+Map<String, TypeDef> reachableTypeDefs(List<DiscoveredModule> modules,
+    LinkResult linked, Map<String, TypeDef> typeDefs) {
+  final owners = typeOwnersByModule(modules);
+  // Each renamed definition, keyed by its renamed name and arity, with the
+  // definition as its module writes it.
+  final renamed = <String, (TypeDef, TypeDef)>{};
+  for (final mod in modules) {
+    final defs = mod.ast.typeDefs;
+    final rs = _renamedTypeDefs(mod, owners[mod.filePath]!);
+    for (var i = 0; i < rs.length; i++) {
+      renamed.putIfAbsent(
+          '${rs[i].name}/${rs[i].typeParams.length}', () => (rs[i], defs[i]));
+    }
+  }
+  final procedures = {
+    for (final p in linked.program.procedures) '${p.name}/${p.arity}'
+  };
+  final pending = <String>[];
+  void collect(TypeExpr e) {
+    if (e is TypeRef) {
+      pending.add('${e.name}/${e.typeArgs.length}');
+      for (final a in e.typeArgs) {
+        collect(a);
+      }
+    } else if (e is StructAlt) {
+      for (final a in e.args) {
+        collect(a);
+      }
+    } else if (e is ListConsAlt) {
+      collect(e.head);
+      collect(e.tail);
+    } else if (e is DiffListAlt) {
+      collect(e.content);
+      collect(e.hole);
+    }
+    // ConstantAlt, ListNilAlt and PrimitiveModeAlt name no type.
+  }
+
+  for (final d in linked.checkedDeclarations) {
+    if (!procedures.contains('${d.name}/${d.arity}')) continue;
+    for (final t in d.argTypes) {
+      collect(t);
+    }
+  }
+  final seen = <String>{};
+  final reached = <String, List<TypeDef>>{};
+  while (pending.isNotEmpty) {
+    final key = pending.removeLast();
+    if (!seen.add(key)) continue;
+    final def = renamed[key];
+    if (def == null) continue;
+    final (r, source) = def;
+    (reached[source.name] ??= []).add(source);
+    for (final alt in r.alternatives) {
+      collect(alt);
+    }
+  }
+  return {
+    for (final e in reached.entries)
+      e.key: e.value.any((td) => identical(td, typeDefs[e.key]))
+          ? typeDefs[e.key]!
+          : e.value.first,
+  };
+}
+
 /// An entry of a program declared, in the module whose exports are the
 /// program's entry points, as the instance at a type of a parameterised
 /// declaration of that module's ancestor scope of its key: the [entry]'s
