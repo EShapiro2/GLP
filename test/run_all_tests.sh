@@ -7598,6 +7598,9 @@ bench(meta, 100, 7, L2).
 play_clean(O5, R5).
 play_abort_waiting(O6, R6).
 play_abort_interpreted(O7, R7, Witness).
+play_grants(O8, L8).
+play_conjunction(O9, O10, L9).
+play_abort(O11, L11).
 :quit
 HEREDOC
 2>&1)
@@ -7612,6 +7615,11 @@ check "SG budget: the counter under bounded/3" "Out = \[1, 2, 3, 4, 5\]" "$sg_bu
 check "SG budget: the residual program" "Out2 = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: residual counter of 100 under grants of 7" "L = 100" "$sg_budget"
 check "SG budget: meta-interpreted counter of 100 under grants of 7" "L2 = 100" "$sg_budget"
+check "SG budget execute/4: the counter under grants of 2 reduces, requests twice and closes" "L8 = \[granted, granted, closed\]" "$sg_budget"
+check "SG budget execute/4: the counter's output under grants" "O8 = \[1, 2, 3, 4, 5\]" "$sg_budget"
+check "SG budget execute/4: a conjunction splits the budget, merges the requests" "L9 = \[granted, granted, granted, closed\]" "$sg_budget"
+check "SG budget execute/4: the second conjunct's output" "O10 = \[1, 2\]" "$sg_budget"
+check "SG budget execute/4: abort at the first request ends the goal and closes the request stream" "L11 = \[aborted, closed\]" "$sg_budget"
 check_not "SG budget no failed play" "→ failed" "$sg_budget"
 
 echo ""

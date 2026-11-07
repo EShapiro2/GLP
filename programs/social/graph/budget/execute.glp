@@ -1,0 +1,118 @@
+%% execute.glp --- the meta-interpreter execute(Goal, Budget, Requests, Control)
+%% of GSA Section 6.3, with resume/6 as listed there and merge/3 and
+%% distribute/3 of Appendix C, typed; reduce/4 for the stream counter count/3
+%% of Section 6.3; and plays that run the counter under it with a granting and
+%% aborting Grassroots App.  The types Goal, Request and Reduction are in
+%% self.glp.
+%%
+%% GLP has no clause/2 and no meta-call, so reduce/4 is the program interpreted,
+%% one clause for each of its clauses, and Goal is that program's goal type: the
+%% meta-interpreter is typed with respect to the program, as the compiler will
+%% fold it with respect to the program.
+
+%% =============================================================================
+%% THE META-INTERPRETER (Section 6.3)
+%% =============================================================================
+
+procedure execute(Goal?, Integer?, Stream(Request), Stream(Constant)?).
+execute(true, _, [], _).
+execute((A, B), N, Rs?, Cs) :-
+    N1 := N? // 2, N2 := N? - N1?,
+    distribute(Cs?, Cs1, Cs2),
+    execute(A?, N1?, Rs1, Cs1?),
+    execute(B?, N2?, Rs2, Cs2?),
+    merge(Rs1?, Rs2?, Rs).
+execute(G, N, Rs?, Cs) :-
+    otherwise, unknown(Cs?), N? > 0 |
+    N1 := N? - 1, reduce(G?, G1, B, Ok),
+    resume(Ok?, G1?, B?, N1?, Rs, Cs?).
+execute(G, N, [more(N1)|Rs?], Cs) :-
+    otherwise, unknown(Cs?), N? =?= 0 |
+    execute(G?, N1?, Rs, Cs?).
+execute(_, _, [], [abort|_]).
+
+procedure resume(Reduction?, Goal?, Goal?, Integer?, Stream(Request), Stream(Constant)?).
+resume(reduced, _, B, N, Rs?, Cs) :-
+    execute(B?, N?, Rs, Cs?).
+resume(failed, G, _, _, [failed(G?)], _).
+
+%% =============================================================================
+%% THE META-INTERPRETER'S STREAMS (Appendix C)
+%% =============================================================================
+
+procedure merge(Stream(Request)?, Stream(Request)?, Stream(Request)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+distribute([X|Xs], [X?|Ys?], [X?|Zs?]) :-
+    constant(X?) | distribute(Xs?, Ys, Zs).
+distribute([], [], []).
+
+%% =============================================================================
+%% THE PROGRAM INTERPRETED: reduce/4 for the stream counter (Section 6.3)
+%% =============================================================================
+%% count([_|Xs], N, [N1?|Out?]) :- N1 := N? + 1, count(Xs?, N1?, Out).
+%% count([], _, []).
+%% One clause of reduce/4 for each clause of count/3: its head the clause's
+%% head, its body the clause's system goals, B its user goals, Ok reduced; and
+%% one clause for a goal no clause of the program reduces, which hands the goal
+%% back as G1 and assigns Ok failed.
+
+procedure reduce(Goal?, Goal, Goal, Reduction).
+reduce(count([_|Xs], N, [N1?|Out?]), true, count(Xs?, N1?, Out), reduced) :-
+    N1 := N? + 1.
+reduce(count([], _, []), true, true, reduced).
+reduce(G, G?, true, failed) :- otherwise | true.
+
+%% =============================================================================
+%% THE GRASSROOTS APP, AS A PLAY HAS IT
+%% =============================================================================
+%% app(Rs, Grants, Cs, Log): reads the program's request stream Rs; assigns each
+%% more(N) the next of Grants, and once Grants is spent writes abort on the
+%% control stream Cs; reads failed(G) and abandons G; and closes Cs when Rs
+%% closes (Appendix C).  Log records what it read: granted, aborted, failed,
+%% and closed when Rs closes.
+
+procedure app(Stream(Request)?, Stream(Integer)?, Stream(Constant), Stream(Constant)).
+app([more(K?)|Rs], [K|Ks], Cs?, [granted|Log?]) :- app(Rs?, Ks?, Cs, Log).
+app([more(0)|Rs], [], [abort], [aborted|Log?]) :- drain(Rs?, Log).
+app([failed(_)|Rs], Ks, Cs?, [failed|Log?]) :- app(Rs?, Ks?, Cs, Log).
+app([], _, [], [closed]).
+
+%% drain(Rs, Log): after the abort, reads Rs to its close.
+procedure drain(Stream(Request)?, Stream(Constant)).
+drain([_|Rs], Log?) :- drain(Rs?, Log).
+drain([], [closed]).
+
+%% =============================================================================
+%% PLAYS
+%% =============================================================================
+
+%% play_grants(Out, Log): the counter over five elements, budget 2, grants of 2:
+%% six reductions, two requests, clean termination.
+%% Out = [1, 2, 3, 4, 5], Log = [granted, granted, closed].
+exported procedure play_grants(Stream(Integer), Stream(Constant)).
+play_grants(Out?, Log?) :-
+    execute(count([1, 2, 3, 4, 5], 0, Out), 2, Rs, Cs?),
+    app(Rs?, [2, 2, 2], Cs, Log).
+
+%% play_conjunction(Out1, Out2, Log): two counters in conjunction, budget 3,
+%% split 1 and 2, their request streams merged and the control stream
+%% distributed; grants of 2.
+%% Out1 = [1, 2, 3], Out2 = [1, 2], Log = [granted, granted, granted, closed].
+exported procedure play_conjunction(Stream(Integer), Stream(Integer), Stream(Constant)).
+play_conjunction(Out1?, Out2?, Log?) :-
+    execute((count([1, 2, 3], 0, Out1), count([4, 5], 0, Out2)), 3, Rs, Cs?),
+    app(Rs?, [2, 2, 2], Cs, Log).
+
+%% play_abort(Out, Log): the counter, budget 2 and no grant: at its first
+%% request the Grassroots App writes abort, the goal ends and the request
+%% stream closes.  Out = [1, 2 | _], its tail never written,
+%% Log = [aborted, closed].
+exported procedure play_abort(Stream(Integer), Stream(Constant)).
+play_abort(Out?, Log?) :-
+    execute(count([1, 2, 3, 4, 5], 0, Out), 2, Rs, Cs?),
+    app(Rs?, [], Cs, Log).

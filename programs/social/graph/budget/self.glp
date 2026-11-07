@@ -12,6 +12,17 @@ BudgetRequest ::= more(Integer?).
 %% program under grants (residual), or bounded/3 under grants (meta).
 BenchKind ::= plain ; residual ; meta.
 
+%% execute.glp: the meta-interpreter of Section 6.3 as listed, typed.  Goal is
+%% the goal type of the program interpreted, here the stream counter count/3:
+%% true, a conjunction, or a goal of the program, each argument from the side of
+%% the goal's caller (a reader it passes in, a writer it passes for the
+%% program to write).  Request is what the program writes on its request
+%% stream: more(N), N for the Grassroots App to assign, or failed(G), a goal no
+%% clause of the program reduces.  Reduction is what reduce/4 tells resume/6.
+Goal ::= true ; (Goal, Goal) ; count(Stream(Integer), Integer, Stream(Integer)?).
+Request ::= more(Integer?) ; failed(Goal).
+Reduction ::= reduced ; failed.
+
 imported procedure bounded # play_meta(Stream(Integer)).
 exported procedure play_meta(Stream(Integer)).
 play_meta(Out?) :- bounded # play_meta(Out).
@@ -35,3 +46,15 @@ play_clean(Out?, Rs?) :- bounded # play_clean(Out, Rs).
 imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(BudgetRequest), Constant).
 exported procedure play_abort_interpreted(Stream(Integer), Stream(BudgetRequest), Constant).
 play_abort_interpreted(Out?, Rs?, W?) :- bounded # play_abort_interpreted(Out, Rs, W).
+
+imported procedure execute # play_grants(Stream(Integer), Stream(Constant)).
+exported procedure play_grants(Stream(Integer), Stream(Constant)).
+play_grants(Out?, Log?) :- execute # play_grants(Out, Log).
+
+imported procedure execute # play_conjunction(Stream(Integer), Stream(Integer), Stream(Constant)).
+exported procedure play_conjunction(Stream(Integer), Stream(Integer), Stream(Constant)).
+play_conjunction(Out1?, Out2?, Log?) :- execute # play_conjunction(Out1, Out2, Log).
+
+imported procedure execute # play_abort(Stream(Integer), Stream(Constant)).
+exported procedure play_abort(Stream(Integer), Stream(Constant)).
+play_abort(Out?, Log?) :- execute # play_abort(Out, Log).
