@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GAS2 · contract</title>
+<title>GAS · contract</title>
 <link rel="stylesheet" href="gas2.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
 </head>
@@ -92,7 +92,7 @@ load().then(D => {
   const id = new URLSearchParams(location.search).get('c');
   const c = D.contracts.find(x => x.id === id);
   if (!c) { $('#page').innerHTML = '<p>No such contract. <a href="./">All contracts</a></p>'; return; }
-  document.title = `GAS2 · ${c.id}`;
+  document.title = `GAS · ${c.id}`;
   const st = status(c), steps = stepsOf(c);
   const up = D.relations.filter(r => r.from === c.id), down = D.relations.filter(r => r.to === c.id);
   const relChip = (r, other) => `<a class="${r.kind}" href="contract.html?c=${encodeURIComponent(other)}" title="${esc(r.how)}"><i>${r.kind}</i> ${esc(other)}</a>`;
@@ -101,7 +101,7 @@ load().then(D => {
   $('#page').innerHTML = `
     <div class="head1"><h1>${esc(c.title)}</h1><span class="muted">${esc(c.id)}</span><span class="chip ${st.cls} hood-only">${esc(st.short)}</span></div>
     <p class="small muted hood-only">${c.owner ? 'Owner ' + esc(c.owner) + ' · ' : ''}<a href="${gh}${esc(c.file)}" target="_blank" rel="noopener">${esc(c.file)}</a>${c.paper ? '<br>' + esc(c.paper) : ''}</p>
-    ${c.artefact ? `<p class="muted">A mini-app of GAS2: in the app, <i>Add a mini-app</i>, then ${esc(c.title.replace(/^Grassroots /, ''))}. <a href="./#get">Get the app</a></p>` : `<p class="muted">Not an app yet: ${esc(st.text)}</p>`}
+    ${c.artefact ? `<p class="muted">A mini-app of GAS: in the app, <i>Add a mini-app</i>, then ${esc(c.title.replace(/^Grassroots /, ''))}. <a href="./#get">Get the app</a></p>` : `<p class="muted">Not an app yet: ${esc(st.text)}</p>`}
 
     <section class="card">
       <h3>The rules</h3>
@@ -132,7 +132,7 @@ load().then(D => {
 
     ${c.artefact ? `<section class="card">
       <h3>Run it on two super-apps</h3>
-      <p class="small muted">A live run, now, on GAS2's server: two super-apps, Alice's and Bob's, each in an isolate of its own with its own key pair. They become friends in the social graph; each trusts the compiler and installs the mini-app once its certificates check; Alice invites Bob, and the handshake opens their conversation. Then each person establishes an identity in the mini-app, and Alice proposes that they know each other, which Bob accepts.</p>
+      <p class="small muted">A live run, now, on GAS's server: two super-apps, Alice's and Bob's, each in an isolate of its own with its own key pair. They become friends in the social graph; each trusts the compiler and installs the mini-app once its certificates check; Alice invites Bob, and the handshake opens their conversation. Then each person establishes an identity in the mini-app, and Alice proposes that they know each other, which Bob accepts.</p>
       <div class="bar"><button class="btn" id="go">Run</button>${c.udiArtefact ? `<button class="btn alt" id="go2">Run the hand-written play</button><span class="small muted">programs/apps/${esc(c.udiBoot)}: longer scripts, on GLP's own app</span>` : ''}</div>
       <div id="out"></div>
     </section>` : ''}

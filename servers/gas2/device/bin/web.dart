@@ -144,7 +144,7 @@ Future<void> json(HttpRequest r, int code, Object o) async {
 
 Future<void> handle(HttpRequest r) async {
   try {
-    // The site is served under a prefix (/gas2web) that the proxy strips.
+    // The site is served under a prefix (/gasweb) that the proxy strips.
     final p = r.uri.path;
     if (p == '/api/health') {
       return await json(r, 200, {'ok': true, 'running': running.length, 'tree': tree(), 'faults': faults});

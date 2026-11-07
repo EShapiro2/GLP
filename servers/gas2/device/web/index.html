@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GAS2</title>
+<title>GAS</title>
 <style>
 /* Two looks.  Clean: plain, the contract's own words and terms, as close to the code as a
    page gets.  Fancy: the same, for people: colors, people's faces, counts, friendly words.
@@ -102,7 +102,7 @@ pre { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; max-heigh
 </style>
 </head>
 <body>
-<header id="hd"><b>GAS2</b><span class="st">starting…</span></header>
+<header id="hd"><b>GAS</b><span class="st">starting…</span></header>
 <main id="main"></main>
 <div class="toast" id="toast"></div>
 <script src="qrcode.js"></script>
@@ -125,7 +125,7 @@ let myName = store.get('gas2myname', '');
 let theme = 'fancy', hood = false; // hood: the back of the rack, its cables (</>, or Tab)
 document.documentElement.dataset.theme = theme;
 const fancy = () => theme === 'fancy';
-const SITE = 'https://talmonlab.bgu.ac.il/gas2/';
+const SITE = 'https://talmonlab.bgu.ac.il/gas/';
 const short = k => k ? k.slice(0, 6) : '';
 const nm = k => k === S?.me ? 'you' : (names[k] || short(k));
 // a person's color, from their key, the same on every device
@@ -259,7 +259,7 @@ function bar(title, back, extra = '') {
 }
 
 function drawHome() {
-  bar('GAS2');
+  bar('GAS');
   const mine = S.apps.filter(a => a.installed || a.preparing);
   const step = (n, done, html) => `<div class="step"><span class="n ${done ? 'done' : ''}">${done ? '✓' : n}</span><div class="grow">${html}</div></div>`;
   let h = '';
@@ -284,7 +284,7 @@ function drawHome() {
   }
   h += `<button class="app add" onclick="go('__browse')">＋<br>Add a mini-app</button></div>`;
 
-  if (S.hosted) h += `<div class="note" style="margin:10px 4px"><b>GAS2 on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you. This browser keeps the only way back to you here; clearing its site data loses this person. The app on a phone or computer keeps your key on the device.</div>`;
+  if (S.hosted) h += `<div class="note" style="margin:10px 4px"><b>GAS on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you. This browser keeps the only way back to you here; clearing its site data loses this person. The app on a phone or computer keeps your key on the device.</div>`;
   if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, hood ? 30 : 5).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
   if (hood || DEBUG) h += `<h2>Under the hood</h2><div class="card"><div class="small">You: <span class="mono">${esc(S.me)}</span></div><div class="small">Status: ${esc(S.status)} · acts waiting: ${esc(JSON.stringify(S.pending || []))} s · state version ${S.version}</div><pre>${esc((S.log || []).join('\n'))}</pre></div>`;
   $('#main').innerHTML = h;
@@ -334,7 +334,7 @@ function drawYou() {
     <input id="myname" placeholder="Your name" value="${esc(myName)}" style="text-align:center;font-size:17px;font-weight:600" onchange="setMyName(this.value)" onkeydown="if(event.key==='Enter')this.blur()">
     <div class="small muted" style="margin-top:6px">Your name stays on this device: your friends see your key, and name you themselves.</div></div>
     <h2>Your key</h2><div class="card"><div class="mono">${esc(S.me)}</div><div class="acts" style="margin-top:10px"><button class="b alt" onclick="copyText('${S.me}','Your key is copied')">Copy</button><button class="b alt" onclick="go('__friend')">Show my code</button></div>
-    <div class="small muted" style="margin-top:8px">${S.hosted ? 'It is kept on talmonlab\'s server, which runs your super-app (GAS2 on the web).' : 'It is kept on this device only.'}</div></div>`;
+    <div class="small muted" style="margin-top:8px">${S.hosted ? 'It is kept on talmonlab\'s server, which runs your super-app (GAS on the web).' : 'It is kept on this device only.'}</div></div>`;
   h += `<h2>Start over</h2><div class="card">${over ? `<div class="small" style="margin-bottom:8px">This deletes your key, your friends and your mini-apps here. It cannot be undone.</div><div class="acts"><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button></div>` : `<div class="row"><span class="grow small muted">A new key, and nothing kept</span><button class="b alt" onclick="over=true;draw()">Start over</button></div>`}</div>`;
   $('#main').innerHTML = h;
 }
@@ -580,7 +580,7 @@ function copyText(s, said) {
   toast(said);
 }
 async function share(link) {
-  if (navigator.share) { try { await navigator.share({title: 'Add me on GAS2', url: link}); return; } catch (e) {} }
+  if (navigator.share) { try { await navigator.share({title: 'Add me on GAS', url: link}); return; } catch (e) {} }
   copyText(link, 'Link copied: send it to your friend');
 }
 // the device's back button: out of a screen

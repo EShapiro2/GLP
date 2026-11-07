@@ -13,7 +13,7 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <application
         android:usesCleartextTraffic="true"
-        android:label="GAS2"
+        android:label="GAS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,4 +1,4 @@
-// GAS2's pages: the shared helpers.
+// GAS's pages: the shared helpers.
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 
@@ -62,7 +62,7 @@ function setHood(on) {
 // The top bar, the same on every page: the name, which leads home, a way back, and </>
 function nav(active) {
   const back = {apps: ['./', 'Home'], how: ['./', 'Home'], maker: ['apps.html', 'App browser'], contract: ['apps.html', 'App browser']}[active];
-  document.querySelector('header.top').innerHTML = `<a class="brand" href="./"><span class="mark"></span>GAS2</a>
+  document.querySelector('header.top').innerHTML = `<a class="brand" href="./"><span class="mark"></span>GAS</a>
     ${back ? `<a class="backlink" href="${back[0]}">‹ ${back[1]}</a>` : ''}
     <button class="hoodbtn ${HOOD ? 'on' : ''}" title="Under the hood: the technical parts" onclick="setHood(!HOOD)">&lt;/&gt;</button>`;
   document.body.classList.toggle('hood', HOOD);

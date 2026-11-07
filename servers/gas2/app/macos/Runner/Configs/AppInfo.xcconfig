@@ -5,7 +5,7 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = GAS2
+PRODUCT_NAME = GAS
 
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = il.ac.bgu.talmonlab.gas2

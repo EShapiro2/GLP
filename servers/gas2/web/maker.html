@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GAS2 · app maker</title>
+<title>GAS · app maker</title>
 <link rel="stylesheet" href="gas2.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
 <style>
@@ -31,7 +31,7 @@ textarea { max-width: 100%; }
 <header class="top"></header>
 <main class="prose">
   <h1>Make a mini-app</h1>
-  <p>Write a contract, and our server turns it into a mini-app: the same programs that make every mini-app here. You get a link; whoever opens it in GAS2 adds your mini-app, and two people who added it can use it together.</p>
+  <p>Write a contract, and our server turns it into a mini-app: the same programs that make every mini-app here. You get a link; whoever opens it in GAS adds your mini-app, and two people who added it can use it together.</p>
 
   <div class="mk" id="form">
     <h3 style="margin:10px 0 0">1. Start from a contract</h3>
@@ -82,7 +82,7 @@ async function start() {
     // the first line names the contract; the % lines are its owner's notes, which are not yours
     txt = txt.split('\n').filter(l => !l.startsWith('%')).join('\n')
       .replace(new RegExp('^' + b.replace(/-/g, '\\-') + ': .*$', 'm'), `${id}: ${title || id}`);
-    txt = `% ${id}: made with GAS2's app maker, from ${b}.\n` + txt;
+    txt = `% ${id}: made with GAS's app maker, from ${b}.\n` + txt;
     glp = glp.replace(new RegExp('contract_named\\(' + blow + ',', 'g'), `contract_named(${low},`);
   }
   $('#txt').value = txt; $('#glp').value = glp;
@@ -124,11 +124,11 @@ function show(m) {
     if (m.why) h += `<p>It stopped: </p><div class="why">${esc(m.why)}</div>`;
     if (m.step === 'made') {
       const link = new URL('maker.html?k=' + m.key, location.href).href;
-      const web = new URL('../gas2web/?add=' + encodeURIComponent(link), location.href).href;
+      const web = new URL('../gasweb/?add=' + encodeURIComponent(link), location.href).href;
       h += `<p>Its acts: ${(m.acts || []).map(a => `<code>${esc(a)}</code>`).join(' ')}</p>
         <p><b>The mini-app's link</b>, to share:</p><div class="link" id="lnk">${esc(link)}</div>
         <p class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn alt" onclick="navigator.clipboard.writeText('${esc(link)}')">Copy the link</button>
-        <a class="btn" style="text-decoration:none" href="${esc(web)}">Add it on GAS2 on the web</a></p>
+        <a class="btn" style="text-decoration:none" href="${esc(web)}">Add it on GAS on the web</a></p>
         <p class="small muted">In the app: Add a mini-app, then under "From a link or a code" paste the link (or just the code), and Add. Your device certifies it under your key; then invite a friend who added it too.</p>`;
     }
     h += `<p class="small muted"><a href="maker.html">Make another</a></p>`;

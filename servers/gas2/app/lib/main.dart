@@ -46,7 +46,7 @@ Future<void> main() async {
     systemNavigationBarColor: _bg,
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
-  runApp(const MaterialApp(title: 'GAS2', debugShowCheckedModeBanner: false, home: Shell()));
+  runApp(const MaterialApp(title: 'GAS', debugShowCheckedModeBanner: false, home: Shell()));
 }
 
 /// The bundle, unpacked into [base]: the tree and the page, afresh at each start.
@@ -104,7 +104,7 @@ class _ShellState extends State<Shell> {
         app: 'gas2',
         dir: '$home/relay',
       )..relayOnly = near == null;
-      final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home, site: 'https://talmonlab.bgu.ac.il/gas2')
+      final host = SuperHost(tree: '$home/bundle/programs', keyPair: kp, network: relay, dataDir: home, site: 'https://talmonlab.bgu.ac.il/gas')
         ..onNear = relay.putKnownPeer;
       final server = PageServer(host: host, www: '$home/bundle/web', addPerson: (k) => relay.addPerson(PubKey.fromHex(k)));
       // Start over: the network stopped, everything the app keeps deleted, and the

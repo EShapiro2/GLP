@@ -1,15 +1,15 @@
-# GAS2's apps: the person's Grassroots Super-App for Android, Windows, macOS and
+# GAS's apps: the person's Grassroots Super-App for Android, Windows, macOS and
 # Linux (servers/gas2/app; on a computer also servers/gas2/device's page), built from
 # the GAS2 branch and put on the release gas2-latest of this repository, which the
-# GAS2 site links to (https://talmonlab.bgu.ac.il/gas2/get.html).
+# GAS site links to (https://talmonlab.bgu.ac.il/gas/#get).
 #
 # The tree the apps carry is made first, on Linux: GLP's REPL, every contract of
 # the branch taken down the cascade to a mini-app (servers/gas2/tools/build.py), and
 # the part of GLP a device runs (tools/device_tree.py).
-name: GAS2 apps
+name: GAS apps
 on:
   push:
-    branches: [GAS2]
+    branches: [main]
     paths: ['servers/gas2/**', 'glp_runtime/lib/**', 'programs/**', 'networking/**', '.github/workflows/gas2-apps.yml']
   workflow_dispatch:
 permissions:
@@ -62,11 +62,11 @@ jobs:
       - name: Build
         working-directory: servers/gas2/app
         run: flutter pub get && flutter build apk --release
-      - run: cp servers/gas2/app/build/app/outputs/flutter-apk/app-release.apk GAS2.apk
+      - run: cp servers/gas2/app/build/app/outputs/flutter-apk/app-release.apk GAS.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: GAS2.apk
+          path: GAS.apk
 
   windows:
     needs: tree
@@ -88,13 +88,13 @@ jobs:
       - name: Zip
         shell: pwsh
         run: |
-          New-Item -ItemType Directory GAS2 | Out-Null
-          Copy-Item "servers/gas2/app/build/windows/x64/runner/Release/*" GAS2 -Recurse
-          Compress-Archive -Path GAS2 -DestinationPath GAS2-windows.zip
+          New-Item -ItemType Directory GAS | Out-Null
+          Copy-Item "servers/gas2/app/build/windows/x64/runner/Release/*" GAS -Recurse
+          Compress-Archive -Path GAS -DestinationPath GAS-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: GAS2-windows.zip
+          path: GAS-windows.zip
 
   macos:
     needs: tree
@@ -116,12 +116,12 @@ jobs:
         run: |
           cd servers/gas2/app/build/macos/Build/Products/Release
           # signed ad hoc, whole, so that macOS lets the person open it once they allow it
-          codesign --force --deep --sign - GAS2.app
-          ditto -c -k --keepParent GAS2.app "$GITHUB_WORKSPACE/GAS2-macos.zip"
+          codesign --force --deep --sign - GAS.app
+          ditto -c -k --keepParent GAS.app "$GITHUB_WORKSPACE/GAS-macos.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: GAS2-macos.zip
+          path: GAS-macos.zip
 
   ios:
     needs: tree
@@ -145,11 +145,11 @@ jobs:
         run: |
           mkdir -p ipa/Payload
           cp -R servers/gas2/app/build/ios/iphoneos/Runner.app ipa/Payload/
-          cd ipa && zip -qr "$GITHUB_WORKSPACE/GAS2.ipa" Payload
+          cd ipa && zip -qr "$GITHUB_WORKSPACE/GAS.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
           name: ios
-          path: GAS2.ipa
+          path: GAS.ipa
 
   linux:
     needs: tree
@@ -168,17 +168,17 @@ jobs:
         run: |
           dart pub get
           dart compile exe bin/gas2.dart -o gas2
-          mkdir -p "$GITHUB_WORKSPACE/GAS2-linux"
-          cp gas2 "$GITHUB_WORKSPACE/GAS2-linux/"
-          cp -r web "$GITHUB_WORKSPACE/GAS2-linux/web"
-          cp -r "$GITHUB_WORKSPACE/tree" "$GITHUB_WORKSPACE/GAS2-linux/tree"
-          printf '#!/bin/sh\n# exit code 3: the person started over, and GAS2 starts again\ncd "$(dirname "$0")"\nwhile :; do ./gas2 --tree tree/programs --www web --data "${HOME}/.gas2" "$@"; [ $? -eq 3 ] || break; done\n' > "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
-          chmod +x "$GITHUB_WORKSPACE/GAS2-linux/run.sh"
-          cd "$GITHUB_WORKSPACE" && tar czf GAS2-linux.tar.gz GAS2-linux
+          mkdir -p "$GITHUB_WORKSPACE/GAS-linux"
+          cp gas2 "$GITHUB_WORKSPACE/GAS-linux/"
+          cp -r web "$GITHUB_WORKSPACE/GAS-linux/web"
+          cp -r "$GITHUB_WORKSPACE/tree" "$GITHUB_WORKSPACE/GAS-linux/tree"
+          printf '#!/bin/sh\n# exit code 3: the person started over, and GAS starts again\ncd "$(dirname "$0")"\nwhile :; do ./gas2 --tree tree/programs --www web --data "${HOME}/.gas2" "$@"; [ $? -eq 3 ] || break; done\n' > "$GITHUB_WORKSPACE/GAS-linux/run.sh"
+          chmod +x "$GITHUB_WORKSPACE/GAS-linux/run.sh"
+          cd "$GITHUB_WORKSPACE" && tar czf GAS-linux.tar.gz GAS-linux
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: GAS2-linux.tar.gz
+          path: GAS-linux.tar.gz
 
   publish:
     needs: [android, windows, macos, linux, ios]
@@ -195,8 +195,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           ls -la out
-          gh release view gas2-latest >/dev/null 2>&1 || gh release create gas2-latest --title "GAS2 (latest)" --notes "The GAS2 apps, built from the GAS2 branch." --prerelease --target "${{ github.sha }}"
-          for f in out/GAS2.apk out/GAS2.ipa out/GAS2-windows.zip out/GAS2-macos.zip out/GAS2-linux.tar.gz; do
+          gh release view gas2-latest >/dev/null 2>&1 || gh release create gas2-latest --title "GAS (latest)" --notes "The GAS apps, built from main." --prerelease --target "${{ github.sha }}"
+          for a in GAS2.apk GAS2.ipa GAS2-windows.zip GAS2-macos.zip GAS2-linux.tar.gz; do
+            gh release delete-asset gas2-latest "$a" -y 2>/dev/null || true
+          done
+          for f in out/GAS.apk out/GAS.ipa out/GAS-windows.zip out/GAS-macos.zip out/GAS-linux.tar.gz; do
             [ -f "$f" ] && gh release upload gas2-latest "$f" --clobber
           done
-          gh release edit gas2-latest --notes "The GAS2 apps, built from the GAS2 branch at ${{ github.sha }} on $(date -u +%Y-%m-%dT%H:%MZ)."
+          gh release edit gas2-latest --title "GAS (latest)" --notes "The GAS apps, built from main at ${{ github.sha }} on $(date -u +%Y-%m-%dT%H:%MZ)."

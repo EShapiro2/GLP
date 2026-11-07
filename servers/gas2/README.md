@@ -1,4 +1,4 @@
-# GAS2
+# GAS
 
 Two parts. The person's app (`app/`, over `device/`) is the Grassroots Super-App of `programs/social/graph/core` on a phone or a computer, with mini-apps made from the contracts; see `device/README.md`. The site, below, follows this repository's main branch and shows every grassroots contract in it: how the contracts relate, and each contract taken down the cascade to a certified mini-app of the Grassroots Super-App (`programs/social/graph/core`), with a live run of the mini-app on two super-apps. Live at https://talmonlab.bgu.ac.il/gas2/.
 
@@ -26,7 +26,7 @@ Environment: `PORT` (5101), `HOST` (127.0.0.1), `DATA`, `UPSTREAM` (https://gith
 - `tools/device_tree.py`: the part of a built working copy a device runs, with GAS2's mini-apps and the harness.
 - `device/`: the person's super-app and its page (Dart; also a program for computers, `bin/gas2.dart`).
 - `app/`: the Flutter shell for Android, Windows and macOS (`tool/sync_assets.sh <tree>` before a build).
-- `.github/workflows/gas2-apps.yml` (at the repository's root): builds the tree and the apps for Android, Windows, macOS and Linux on every push to this branch, onto the release `gas2-latest`, which `web/get.html` links to.
+- `.github/workflows/gas2-apps.yml` (at the repository's root): builds the tree and the apps for Android, Windows, macOS and Linux on every push to main, onto the release `gas2-latest`, which the site's home page links to.
 
 ## The app maker
 
@@ -41,7 +41,7 @@ person's key (`device/lib/host.dart`, `addApp`).  The link to share is
 
 ## On the web
 
-`device/bin/web.dart`, talmonlab's app gas2web (port 5201): the device's page for
+`device/bin/web.dart`, talmonlab's app gasweb (https://talmonlab.bgu.ac.il/gasweb/): the device's page for
 those with no app (iPhones), each person's super-app run on the server over the relay,
 from the device tree of the site's live build (each build writes it, `out/device`).  The
 server holds the person's key, and the page says so.
