@@ -348,41 +348,6 @@ agent(Id, [app_request(App, warm_call(Name, Via))|UserIn], NetIn, Outs,
     warm_step(C?, Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?,
               host(Apps?, Atts?, Pend1?, Trusted?)).
 
-%% A running program's request to invite a friend it has no conversation with
-%% (GSA paper, Section 3, "Distribution with an invitation": "the program's
-%% first message to a friend it has no conversation with is its request to
-%% invite him, which it hands to the Grassroots App over its social-graph
-%% channel, naming Bob"): the social graph runs the invitation of that friend
-%% to that program, as the person's invite does.  A request naming someone with
-%% no friend channel here is passed over: no friend channel carries the offer.
-agent(Id, [app_request(App, invite(Q))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    ground(Id?), ground(App?), ground(Q?) |
-    anchor_friend(Q?, Outs?, Outs1, F),
-    app_module(App?, Apps?, Apps1, L),
-    program_invite(F?, L?, Id?, App?, Q?, UserIn?, NetIn?, Outs1?,
-                   host(Apps1?, Atts?, Pend?, Trusted?)).
-
-%% The person's answer to an invitation whose program was shipped here and
-%% checked (Section 3, "Distribution with an invitation"): install it under
-%% App, with its end of its person channel, and join; an answer with no such
-%% offer here is nothing, its person channel held for good.
-agent(Id, [msg(person, Id1, install_invited(App, From, Src, Ui))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(App?), ground(From?), ground(Src?) |
-    take_shipped(From?, Src?, Pend?, Pend1, Sh),
-    shipped_install(Sh?, Id?, App?, From?, Src?, Ui?, UserIn?, NetIn?, Outs?,
-                    host(Apps?, Atts?, Pend1?, Trusted?)).
-
-%% The person declines the offer of a program shipped here: the program is
-%% dropped and the inviter told, its kept end closed.
-agent(Id, [msg(person, Id1, decline_offer(From, Src))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(Src?) |
-    take_shipped(From?, Src?, Pend?, Pend1, Sh),
-    decline_shipped(Sh?, Id?, From?, Src?, UserIn?, NetIn?, Outs?,
-                    host(Apps?, Atts?, Pend1?, Trusted?)).
-
 %% A mini-app's execution has ended.  Its entry in the registry returns from
 %% running to idle, so that the next invitation activates the mini-app afresh
 %% by run/3 instead of handing the new conversation's root channel to an
@@ -504,31 +469,6 @@ agent(Id, UserIn, [msg(From, Id1, decline(Src))|NetIn], Outs,
     take_invited(From?, Src?, Pend?, Pend1, I),
     close_kept(I?),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend1?, Trusted?)).
-
-%% The invitee lacks the program it was invited to, and asks for it by its
-%% source identity: where it is installed here, ship it, its module value,
-%% which carries its compiler's certificate, and the creator's certification
-%% (Section 3, "Distribution with an invitation": "where he lacks the program
-%% it asks Alice's Grassroots App for it, which ships it").
-agent(Id, UserIn, [msg(From, Id1, want(Src))|NetIn], Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(Src?) |
-    app_ship(Src?, Apps?, Apps1, Sh),
-    ship_step(Sh?, Id?, From?, Src?, UserIn?, NetIn?, Outs?,
-              host(Apps1?, Atts?, Pend?, Trusted?)).
-
-%% The program shipped for an invitation waiting for it: checked as an
-%% installation is (verify_install/4), and its source identity the one the
-%% invitation offered; then the person is asked.  A program that fails the
-%% checks is dropped and the invitation declined; a program no invitation
-%% waits for is dropped.
-agent(Id, UserIn, [msg(From, Id1, program(Src, M, CSig))|NetIn], Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(Src?), ground(Trusted?) |
-    take_fetching(From?, Src?, Pend?, Pend1, Fe),
-    verify_install(M?, CSig?, Trusted?, V),
-    shipped_step(Fe?, V?, Id?, From?, Src?, CSig?, UserIn?, NetIn?, Outs?,
-                 host(Apps?, Atts?, Pend1?, Trusted?)).
 
 %% The handshake, at the invitee: the inviter's undertaking and type identity
 %% arrive; verify them against the mini-app this agent joined; on success hand
@@ -822,126 +762,9 @@ offer_step(false, Id, _, _, _, ch(_, []), UserIn, NetIn, Outs, Host) :-
 procedure offer_consent(Consent?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
 offer_consent(app(App), Id, From, Src, _, End, UserIn, NetIn, Outs, Host) :-
     do_join(Id?, App?, From?, Src?, End?, UserIn?, NetIn?, Outs?, Host?).
-%% With no consent given before it, the invitation is looked up in the
-%% registry by its source identity (Section 3, "Distribution with an
-%% invitation": "The invitation is the same whether Bob has the program or
-%% not.  Bob's Grassroots App looks the source identity up in its registry"):
-%% where the program is installed here the person is asked at once, the offer
-%% kept; where it is not, the inviter is asked for it, the offer kept until it
-%% arrives.
 offer_consent(none, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    app_ship(Src?, Apps?, Apps1, Sh),
-    offer_ask(Sh?, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?,
-              host(Apps1?, Atts?, Pend?, Trusted?)).
-
-procedure offer_ask(Ship?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
-offer_ask(ship(_, _), Id, From, Src, InvSig, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    send_user(msg(agent, person, invited(From?, Src?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?,
+    agent(Id?, UserIn?, NetIn?, Outs?,
           host(Apps?, Atts?, [offered(From?, Src?, InvSig?, End?) | Pend?], Trusted?)).
-offer_ask(none, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    send_friend(From?, msg(Id?, From?, want(Src?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?,
-          host(Apps?, Atts?, [fetching(From?, Src?, InvSig?, End?) | Pend?], Trusted?)).
-
-%% --- A program shipped to an invitee that lacks it (Section 3,
-%% "Distribution with an invitation") ---
-
-%% program_invite(F, L, Id, App, Q, ...): a program's request to invite Q, run
-%% as the person's invite where Q is a friend; passed over otherwise.
-procedure program_invite(AnchorFriend?, AppLookup?, Key?, Constant?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
-program_invite(found(_), L, Id, App, Q, UserIn, NetIn, Outs, Host) :-
-    invite_step(L?, Id?, App?, Q?, UserIn?, NetIn?, Outs?, Host?).
-program_invite(none, _, Id, _, _, UserIn, NetIn, Outs, Host) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
-
-%% app_ship(Src, Apps, Apps1, Sh): the program installed here of source
-%% identity Src, its module value and the creator's certification, or none.
-procedure app_ship(String?, AppList?, AppList, Ship).
-app_ship(Src, [app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest1?], Sh?) :-
-    decompose_module(M?, _, Src1, _),
-    ship_has(Src?, Src1?, M?, C?, Rest?, Rest1, Sh).
-app_ship(_, [], [], none).
-
-procedure ship_has(String?, String?, Module?, String?, AppList?, AppList, Ship).
-ship_has(S, S1, M, C, Rest, Rest?, ship(M?, C?)) :- S? =?= S1? | true.
-ship_has(S, _, _, _, Rest, Rest1?, Sh?) :- otherwise | app_ship(S?, Rest?, Rest1, Sh).
-
-%% ship_step(Sh, Id, From, Src, ...): the program shipped to From, or nothing
-%% where it is not installed here.
-procedure ship_step(Ship?, Key?, Key?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
-ship_step(ship(M, C), Id, From, Src, UserIn, NetIn, Outs, Host) :-
-    send_friend(From?, msg(Id?, From?, program(Src?, M?, C?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
-ship_step(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
-
-%% take_fetching(From, Src, Pend, Pend1, Fe): the invitation from From waiting
-%% for the program of source identity Src, removed, with its signed invitation
-%% and the end it carried; none where there is none.
-procedure take_fetching(Key?, String?, PendingInv?, PendingInv, Fetch).
-take_fetching(From, Src, [fetching(F, S, I, End) | Rest], Rest?, fetch(I?, End?)) :-
-    From? =?= F?, Src? =?= S? | true.
-take_fetching(From, Src, [P | Rest], [P? | Rest1?], Fe?) :-
-    otherwise | take_fetching(From?, Src?, Rest?, Rest1, Fe).
-take_fetching(_, _, [], [], none).
-
-%% shipped_step(Fe, V, Id, From, Src, CSig, ...): the program shipped checked,
-%% its source identity compared with the offered one, and the person asked,
-%% the program kept with the end the invitation carried; a program that fails
-%% a check is dropped and the invitation declined, its end closed; one no
-%% invitation waits for, dropped.
-procedure shipped_step(Fetch?, Verdict?, Key?, Key?, String?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
-shipped_step(fetch(_, End), ok(M), Id, From, Src, CSig, UserIn, NetIn, Outs, Host) :-
-    decompose_module(M?, _, Src1, _),
-    shipped_src(Src1?, Src?, M?, CSig?, End?, Id?, From?, UserIn?, NetIn?, Outs?, Host?).
-shipped_step(fetch(_, ch(_, [])), refused, Id, From, Src, _, UserIn, NetIn, Outs, Host) :-
-    send_friend(From?, msg(Id?, From?, decline(Src?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
-shipped_step(none, _, Id, _, _, _, UserIn, NetIn, Outs, Host) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
-
-procedure shipped_src(String?, String?, Module?, String?, RootChannel(Opaque)?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
-shipped_src(S1, S, M, CSig, End, Id, From, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    S1? =?= S? |
-    send_user(msg(agent, person, invited(From?, S?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?,
-          host(Apps?, Atts?, [shipped(From?, S?, M?, CSig?, End?) | Pend?], Trusted?)).
-shipped_src(_, S, _, _, ch(_, []), Id, From, UserIn, NetIn, Outs, Host) :-
-    otherwise |
-    send_friend(From?, msg(Id?, From?, decline(S?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
-
-%% take_shipped(From, Src, Pend, Pend1, Sh): the program from From of source
-%% identity Src, shipped and checked, removed, with its certification and the
-%% end its invitation carried; none where there is none.
-procedure take_shipped(Key?, String?, PendingInv?, PendingInv, Shipped).
-take_shipped(From, Src, [shipped(F, S, M, C, End) | Rest], Rest?, shipped(M?, C?, End?)) :-
-    From? =?= F?, Src? =?= S? | true.
-take_shipped(From, Src, [P | Rest], [P? | Rest1?], Sh?) :-
-    otherwise | take_shipped(From?, Src?, Rest?, Rest1, Sh).
-take_shipped(_, _, [], [], none).
-
-%% shipped_install(Sh, Id, App, From, Src, Ui, ...): the program installed
-%% under App with the person's end of its person channel, and the join sent
-%% (do_join/9), as for a program installed before.
-procedure shipped_install(Shipped?, Key?, Constant?, Key?, String?, PersonChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
-shipped_install(shipped(M, CSig, End), Id, App, From, Src, Ui, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    install_step(ok(M?), App?, CSig?, Ui?, Apps?, Apps1),
-    do_join(Id?, App?, From?, Src?, End?, UserIn?, NetIn?, Outs?,
-            host(Apps1?, Atts?, Pend?, Trusted?)).
-shipped_install(none, Id, _, _, _, Ui, UserIn, NetIn, Outs, Host) :-
-    idle_channel(Ui?),
-    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
-
-%% decline_shipped(Sh, Id, From, Src, ...): the program dropped and the
-%% inviter told, the end its invitation carried closed.
-procedure decline_shipped(Shipped?, Key?, Key?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
-decline_shipped(shipped(_, _, ch(_, [])), Id, From, Src, UserIn, NetIn, Outs, Host) :-
-    send_friend(From?, msg(Id?, From?, decline(Src?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
-decline_shipped(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 
 %% do_join: the person having consented, where the mini-app is installed here
 %% with the offered source identity, sign the undertaking to keep its contract
@@ -1158,8 +981,6 @@ copy_calendar([], [], []).
 procedure inject_requests(Constant?, Stream(AppToSg)?, UserInStream?, UserInStream).
 inject_requests(App, [warm_call(N, V) | Up], Ys, [app_request(App?, warm_call(N?, V?)) | Ys1?]) :-
     ground(V?) | inject_requests(App?, Up?, Ys?, Ys1).
-inject_requests(App, [invite(Q) | Up], Ys, [app_request(App?, invite(Q?)) | Ys1?]) :-
-    ground(Q?) | inject_requests(App?, Up?, Ys?, Ys1).
 inject_requests(App, Up, [Y | Ys], [Y? | Ys1?]) :-
     inject_requests(App?, Up?, Ys?, Ys1).
 inject_requests(_, _, [], []).
