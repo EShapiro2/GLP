@@ -44,12 +44,147 @@ num_info_of(Nm, Hd, C, Fs, Rs, num_info(Nm?, C?, Ls?, R?, Fi?)) :- ground(Hd?), 
     variables_of(Hd?, Vs2),
     variables_of(Hd?, Vs3),
     variables_of(Hd?, Vs4),
-    locals_of(Vs1?, Rs?, Ls),
-    locals_of(Vs2?, Rs?, Ls1),
-    locals_of(Vs3?, Rs?, Ls2),
-    con_args(C?, Ca),
-    con_role(Ca?, Ls1?, R),
+    locals_of(Vs1?, Rs?, Ls00),
+    locals_of(Vs2?, Rs?, Ls10),
+    locals_of(Vs3?, Rs?, Ls20),
+    det_locals(C?, Hd?, Rs?, Ls00?, Ls),
+    det_locals(C?, Hd?, Rs?, Ls10?, Ls1),
+    det_locals(C?, Hd?, Rs?, Ls20?, Ls2),
+    con_args(C?, Ca0),
+    con_counts(C?, Ks),
+    counts_free(Ks?, Cf),
+    app(Ca0?, Cf?, Ca),
+    con_counts(C?, Ks1),
+    counts_holders(Ks1?, Ch),
+    holder_roles(Ch?, Hr, _),
+    con_role(Ca?, Hr?, Ls1?, R),
     form_infos(Fs?, Vs4?, Ls2?, Fi).
+
+%% "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer's state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): a numeric variable of the head, not local by its occurrences, that an equality conjunct of the constraint determines, its one variable not local, with a coefficient not 0, from variables local to one role I, one at least, and others the schema-binding binds, and that only role I's atoms name, is local to I: "the machine of the person in that role finds a value for it in its own state, or computes it" (ibid.).
+procedure det_locals(Constraint?, Args?, RoleSpecs?, Locs?, Locs).
+det_locals(C, Hd, Rs, Ls, R?) :- ground(C?), ground(Hd?), ground(Rs?), ground(Ls?) |
+    con_conjuncts(C?, Cs),
+    det_each(Cs?, Hd?, Rs?, Ls?, Ls1),
+    locs_len(Ls?, N0),
+    det_more(Ls1?, N0?, C?, Hd?, Rs?, R).
+procedure det_more(Locs?, Integer?, Constraint?, Args?, RoleSpecs?, Locs).
+det_more(Ls1, N0, C, Hd, Rs, R?) :- ground(Ls1?) |
+    locs_len(Ls1?, N1),
+    det_again(N1?, N0?, C?, Hd?, Rs?, Ls1?, R).
+%% Taken again until no variable more is local: a variable determined from one determined so is local too, as t2 = t1 + 1 with t1 = t + 1.
+procedure det_again(Integer?, Integer?, Constraint?, Args?, RoleSpecs?, Locs?, Locs).
+det_again(N1, N0, C, Hd, Rs, Ls, R?) :- N1? > N0? | det_locals(C?, Hd?, Rs?, Ls?, R).
+det_again(_, _, _, _, _, Ls, Ls?) :- otherwise | true.
+procedure locs_len(Locs?, Integer).
+locs_len([], 0).
+locs_len([_|Ls], N?) :- locs_len(Ls?, M), N := M? + 1.
+procedure con_conjuncts(Constraint?, Constraints).
+con_conjuncts(and(C1, C2), R?) :- con_conjuncts(C1?, R1), con_conjuncts(C2?, R2), app(R1?, R2?, R).
+con_conjuncts(C, [C?]) :- otherwise | true.
+procedure det_each(Constraints?, Args?, RoleSpecs?, Locs?, Locs).
+det_each([], _, _, Ls, Ls?).
+det_each([eq(X, Y)|Cs], Hd, Rs, Ls, R?) :- ground(X?), ground(Y?), ground(Hd?), ground(Rs?), ground(Ls?) |
+    exprs_args(X?, Y?, A0),
+    variables_of(A0?, A1),
+    dedup(A1?, A),
+    det_split(A?, Ls?, Lr0, Nl),
+    dedup(Lr0?, Lr),
+    det_one(Nl?, Lr?, X?, Y?, Hd?, Rs?, Ls?, Ls1),
+    det_each(Cs?, Hd?, Rs?, Ls1?, R).
+det_each([_|Cs], Hd, Rs, Ls, R?) :- otherwise | det_each(Cs?, Hd?, Rs?, Ls?, R).
+%% The roles of the variables local to a role among the arguments, and the arguments local to none.
+procedure det_split(Args?, Locs?, Ints, Args).
+det_split([], _, [], []).
+det_split([A|As], Ls, Is?, Ns?) :- ground(A?), ground(Ls?) |
+    loc_role(A?, Ls?, I1),
+    loc_role(A?, Ls?, I2),
+    det_split(As?, Ls?, Is1, Ns1),
+    app(I1?, Is1?, Is),
+    det_keep(I2?, A?, Ns1?, Ns).
+procedure det_keep(Ints?, Arg?, Args?, Args).
+det_keep([], A, Ns, [A?|Ns?]).
+det_keep([_|_], _, Ns, Ns?).
+procedure det_one(Args?, Ints?, Expr?, Expr?, Args?, RoleSpecs?, Locs?, Locs).
+det_one([V], [I], X, Y, Hd, Rs, Ls, R?) :- ground(V?), integer(I?), ground(X?), ground(Y?), ground(Hd?), ground(Rs?), ground(Ls?) |
+    is_nvar(V?, Nv),
+    mem(V?, Hd?, InH),
+    lin_coef(minus(X?, Y?), V?, K),
+    roles_naming(Rs?, 1, V?, Is0),
+    dedup(Is0?, Is),
+    det_ok(Nv?, InH?, K?, Is?, I?, Ok),
+    det_add(Ok?, I?, V?, Ls?, R).
+det_one(_, _, _, _, _, _, Ls, Ls?) :- otherwise | true.
+procedure det_ok(YesNo?, YesNo?, Number?, Ints?, Integer?, YesNo).
+det_ok(yes, yes, K, [J], I, yes) :- K? =\= 0, J? =:= I? | true.
+det_ok(_, _, _, _, _, no) :- otherwise | true.
+procedure det_add(YesNo?, Integer?, Arg?, Locs?, Locs).
+det_add(yes, I, V, Ls, [loc(I?, V?)|Ls?]).
+det_add(no, _, _, Ls, Ls?).
+%% The indices of the roles any of whose atoms, or the arguments of whose listed role, name V.
+procedure roles_naming(RoleSpecs?, Integer?, Arg?, Ints).
+roles_naming([], _, _, []).
+roles_naming([R|Rs], I, V, Is?) :- ground(R?), integer(I?), ground(V?) |
+    rs_lists(R?, P, M, K, N),
+    atoms_args(P?, A1),
+    atoms_args(M?, A2),
+    atoms_args(K?, A3),
+    atoms_args(N?, A4),
+    kind_args(R?, A5),
+    app(A1?, A2?, A12),
+    app(A3?, A4?, A34),
+    app(A12?, A34?, A14),
+    app(A14?, A5?, A15),
+    flat_args(A15?, Af),
+    mem(V?, Af?, In),
+    I1 := I? + 1,
+    roles_naming(Rs?, I1?, V?, Is1),
+    keep_index(In?, I?, Is1?, Is).
+
+%% --- Counts and sums ------------------------------------------------------------
+%% "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4: "A safe formula of B, a constraint, and a quantified conjunct, is local to a role where every atom of it, the anchors of its counts and sums included, ... is held by that role").  The counts and the sums of a constraint, outermost first; the holders of their anchors and of the atoms of their conditions; and their free variables, those their quantifiers bind left out.
+procedure con_counts(Constraint?, Exprs).
+con_counts(true, []).
+con_counts(and(C1, C2), K?) :- con_counts(C1?, K1), con_counts(C2?, K2), app(K1?, K2?, K).
+con_counts(or(C1, C2), K?) :- con_counts(C1?, K1), con_counts(C2?, K2), app(K1?, K2?, K).
+con_counts(implies(C1, C2), K?) :- con_counts(C1?, K1), con_counts(C2?, K2), app(K1?, K2?, K).
+con_counts(not(C), K?) :- con_counts(C?, K).
+con_counts(eq(X, Y), K?) :- exprs_counts([X?, Y?], K).
+con_counts(ne(X, Y), K?) :- exprs_counts([X?, Y?], K).
+con_counts(le(X, Y), K?) :- exprs_counts([X?, Y?], K).
+con_counts(lt(X, Y), K?) :- exprs_counts([X?, Y?], K).
+con_counts(ge(X, Y), K?) :- exprs_counts([X?, Y?], K).
+con_counts(gt(X, Y), K?) :- exprs_counts([X?, Y?], K).
+con_counts(succ(_, _), []).
+con_counts(signed(_, _), []).
+con_counts(unsigned(_, _), []).
+con_counts(rel(_, Es), K?) :- exprs_counts(Es?, K).
+procedure exprs_counts(Exprs?, Exprs).
+exprs_counts([], []).
+exprs_counts([E|Es], K?) :- expr_counts(E?, K1), exprs_counts(Es?, K2), app(K1?, K2?, K).
+procedure expr_counts(Expr?, Exprs).
+expr_counts(plus(X, Y), K?) :- exprs_counts([X?, Y?], K).
+expr_counts(minus(X, Y), K?) :- exprs_counts([X?, Y?], K).
+expr_counts(mul(X, Y), K?) :- exprs_counts([X?, Y?], K).
+expr_counts(fn(_, Es), K?) :- exprs_counts(Es?, K).
+expr_counts(cardinality(Xs, H, A, F), [cardinality(Xs?, H?, A?, F?)]).
+expr_counts(sum(Xs, H, A, F, U), [sum(Xs?, H?, A?, F?, U?)]).
+expr_counts(E, []) :- otherwise, ground(E?) | true.
+procedure counts_holders(Exprs?, Args).
+counts_holders([], []).
+counts_holders([cardinality(_, H, _, F)|Ks], [H?|Hs?]) :- form_holders(F?, H1), counts_holders(Ks?, H2), app(H1?, H2?, Hs).
+counts_holders([sum(_, H, _, F, U)|Ks], [H?|Hs?]) :-
+    form_holders(fand(F?, fcons(eq(U?, num(0)))), H1),
+    counts_holders(Ks?, H2),
+    app(H1?, H2?, Hs).
+counts_holders([_|Ks], Hs?) :- otherwise | counts_holders(Ks?, Hs).
+procedure counts_free(Exprs?, Args).
+counts_free([], []).
+counts_free([cardinality(Xs, H, A, F)|Ks], Fv?) :- form_free(fexists(Xs?, H?, A?, F?), F1), counts_free(Ks?, F2), app(F1?, F2?, Fv).
+counts_free([sum(Xs, H, A, F, U)|Ks], Fv?) :-
+    form_free(fexists(Xs?, H?, A?, fand(F?, fcons(eq(U?, num(0))))), F1),
+    counts_free(Ks?, F2),
+    app(F1?, F2?, Fv).
+counts_free([_|Ks], Fv?) :- otherwise | counts_free(Ks?, Fv).
 
 %% --- Safe formulas -------------------------------------------------------------
 %% "A safe formula of B, and a quantified conjunct, is local to a role where every atom of it, but the literals of a listed role in its conclusion, is held by that role, and every variable of it is a role, a variable of the schema, a variable of its quantifiers or local to that role: the machine of the person in that role evaluates it in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications").  A formula's roles are the agent roles holding its atoms and the roles its local variables are local to: one role, at(I); none, every, a formula with no atom and no local variable, which every role checks, as a constraint naming no local variable is ("a constraint is local to the role whose local variables it names, and to every role where it names none", ibid.); two or more, or an atom held by no agent role, or a variable none of these, nowhere, a fault (numeric_locality).  The variables of the schema are those of its head Vs; a quantifier's own variables are those it binds, matched by name, as the term writes a bound variable by its name.
@@ -81,7 +216,7 @@ form_holders(fand(F, G), Hs?) :- form_holders(F?, H1), form_holders(G?, H2), app
 form_holders(for(F, G), Hs?) :- form_holders(F?, H1), form_holders(G?, H2), app(H1?, H2?, Hs).
 form_holders(fexists(_, H, _, F), [H?|Hs?]) :- form_holders(F?, Hs).
 form_holders(fforall(_, H, _, F, Gs), [H?|Hs?]) :- form_holders(F?, H1), forms_holders(Gs?, H2), app(H1?, H2?, Hs).
-form_holders(fcons(_), []).
+form_holders(fcons(C), Hs?) :- con_counts(C?, Ks), counts_holders(Ks?, Hs).
 procedure forms_holders(Forms?, Args).
 forms_holders([], []).
 forms_holders([F|Fs], Hs?) :- form_holders(F?, H1), forms_holders(Fs?, H2), app(H1?, H2?, Hs).
@@ -108,7 +243,7 @@ form_free(fforall(Xs, H, A, F, Gs), Fv?) :- ground(Xs?) |
     app(F2?, F3?, F23),
     app(F1?, F23?, F13),
     unbound_by(F13?, Xs?, Fv).
-form_free(fcons(C), Fv?) :- con_args(C?, A0), flat_args(A0?, A1), form_vars(A1?, Fv).
+form_free(fcons(C), Fv?) :- ground(C?) | con_args(C?, A0), flat_args(A0?, A1), form_vars(A1?, F1), con_counts(C?, Ks), counts_free(Ks?, F2), app(F1?, F2?, Fv).
 procedure forms_free(Forms?, Args).
 forms_free([], []).
 forms_free([F|Fs], Fv?) :- form_free(F?, F1), forms_free(Fs?, F2), app(F1?, F2?, Fv).
@@ -198,10 +333,12 @@ local_one([_], yes, _, Ls, Ls?).
 local_one([], _, _, Ls, Ls?).
 local_one([_, _|_], _, _, Ls, Ls?).
 %% The role whose local variables the constraint names.
-procedure con_role(Args?, Locs?, CRole).
-con_role(Ca, Ls, R?) :- ground(Ca?), ground(Ls?) |
+%% The roles of the local variables it names and the roles holding the anchors of its counts and sums.
+procedure con_role(Args?, Ints?, Locs?, CRole).
+con_role(Ca, Hr, Ls, R?) :- ground(Ca?), ground(Hr?), ground(Ls?) |
     con_roles(Ca?, Ls?, Is0),
-    dedup(Is0?, Is),
+    app(Is0?, Hr?, Is1),
+    dedup(Is1?, Is),
     con_role1(Is?, R).
 procedure con_roles(Args?, Locs?, Ints).
 con_roles([], _, []).
@@ -315,7 +452,7 @@ lin_coef(nterm(_), _, 0).
 lin_coef(sgn(_, _), _, 0).
 %% The wildcard is in no constraint (GSC 327e035: it occurs only in a cleared atom); the clause covers the type.
 lin_coef(any, _, 0).
-%% A function, a cardinality and a sum are refused before the contract is read here (cvac.glp, q_lines); the clauses cover the type.
+%% A function, a count and a sum carry no variable of the equality's own: a count or a sum is evaluated in the state, its value a number (the printed text's con_counted), and a function of numbers alone is one.
 lin_coef(fn(_, _), _, 0).
 lin_coef(cardinality(_, _, _, _), _, 0).
 lin_coef(sum(_, _, _, _, _), _, 0).
@@ -554,23 +691,23 @@ guard_indices([R|Rs], I, Gs?) :- ground(R?), integer(I?) |
 procedure keep_index(YesNo?, Integer?, Ints?, Ints).
 keep_index(yes, I, Gs, [I?|Gs?]).
 keep_index(no, _, Gs, Gs?).
-%% listed_ok(B, Gs, Ok): the base B, of the guarding roles Gs, is the schema's only guarding role, or is not a guarding role and is its first role.
+%% listed_ok(B, Gs, Ok): the base B, of the guarding roles Gs, is a guarding role, or, where the schema has one guarding role or none, its first role: "and the base of a schema is a guarding role or, where the schema has one guarding role or none, its first role, so that the person who proposes a part the schema determines, its proposer, the base, or, where the base is not a guard, its opener on the guard's request, finds the instances in their own state" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 procedure listed_ok(Integer?, Ints?, YesNo).
 listed_ok(B, Gs, R?) :- integer(B?), ground(Gs?) |
     mem(B?, Gs?, In),
     listed_ok1(In?, B?, Gs?, R).
 procedure listed_ok1(YesNo?, Integer?, Ints?, YesNo).
-listed_ok1(yes, _, [_], yes).
-listed_ok1(yes, _, [_, _|_], no).
-listed_ok1(yes, _, [], no).
-listed_ok1(no, B, _, R?) :- int_is(B?, 1, R).
+listed_ok1(yes, _, _, yes).
+listed_ok1(no, B, [], R?) :- int_is(B?, 1, R).
+listed_ok1(no, B, [_], R?) :- int_is(B?, 1, R).
+listed_ok1(no, _, [_, _|_], no).
 procedure int_is(Integer?, Integer?, YesNo).
 int_is(A, B, yes) :- A? =:= B? | true.
 int_is(_, _, no) :- otherwise | true.
 procedure listed_lines2(YesNo?, Constant?, Strings).
 listed_lines2(yes, _, []).
 listed_lines2(no, Nm, ['%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a',
-        '%% listed role whose base is neither its only guarding role nor, not a guarding role, its first role:', T?]) :-
+        '%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:', T?]) :-
     ground(Nm?) | said('%% the schema', Nm?, T).
 
 procedure first_required_args(RoleSpecs?, Args).
