@@ -86,16 +86,24 @@ if APP == 'gas2_gc':
     propose(A, 'mint', [ka, 5])
     wait(lambda: any(isinstance(x, dict) and x.get('f') == 'coin' for x in view(A)[1]), what='minted')
     print('A holds', [x for x in view(A)[1] if isinstance(x, dict) and x.get('f') == 'coin'][:3])
-    propose(A, 'pay', [ka, kb, 2])
-    def bcoins():
-        return [x for x in view(B)[1] if isinstance(x, dict) and x.get('f') == 'coin']
-    ok = None
-    for _ in range(60):
-        if asks(B):
-            a = asks(B)[0]; act(B, {'op': 'grant', 'app': APP, 'id': a[0], 'path': a[1], 'value': 'yes'})
-        if bcoins(): ok = bcoins(); break
-        time.sleep(1)
-    print('B holds', ok)
+    # GC:3, payment, pays Bob-coins Alice holds to Bob: A gets a B-coin by a swap first
+    def coins(p, of):
+        return [x for x in view(p)[1] if isinstance(x, dict) and x.get('f') == 'coin' and x['a'][0] == of]
+    def approve(p, until, what):
+        for _ in range(90):
+            for a in asks(p):
+                act(p, {'op': 'grant', 'app': APP, 'id': a[0], 'path': a[1], 'value': 'yes'})
+            if until(): return
+            time.sleep(1)
+        raise SystemExit('timeout: ' + what)
+    propose(B, 'mint', [kb, 3])
+    wait(lambda: len(coins(B, kb)) == 3, what='B minted')
+    propose(A, 'swap', [ka, kb, ka, 2, kb, 1])
+    approve(B, lambda: len(coins(A, kb)) == 1 and len(coins(B, ka)) == 2, 'swapped')
+    print('swapped: A holds', len(coins(A, ka)), 'A-coins and', len(coins(A, kb)), 'B-coin; B holds', len(coins(B, ka)), 'A-coins')
+    propose(A, 'pay', [ka, kb, 1])
+    approve(B, lambda: not coins(A, kb) and len(coins(B, kb)) == 3, 'paid')
+    print('paid: B holds', len(coins(B, kb)), 'B-coins again')
 if APP == 'gas2_gsn':
     propose(A, 'befriend', [ka, kb])
     a = wait(lambda: asks(B), what='befriend asked')[0]
