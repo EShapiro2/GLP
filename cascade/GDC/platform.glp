@@ -22,7 +22,7 @@ Net ::= msg(Peer, Content).
 Asking ::= Attempt ; hello(Peer, Proposal).
 Approval ::= approval(Asking, List(Word), YesNo?).
 Word ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
-RoleAsk ::= q(Peer, Integer, List(Word)).
+RoleAsk ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked ::= asked(Integer, List(Word)).
 Close ::= close.
 Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
@@ -36,14 +36,17 @@ Guard ::= guarded ; unguarded.
 RoleSpec ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 Schema ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listings).
-Listing ::= listing(Integer, Integer, Constant, Vars).
+Listing ::= listing(Integer, Integer, Constant, Vars, Form, HMults, HMults).
+HMult ::= hm(Integer, SAtom).
+HMults ::= [] ; [HMult | HMults].
 Listings ::= [] ; [Listing | Listings].
 PeerLists ::= [] ; [Peers | PeerLists].
 ListTuples ::= [] ; [PeerLists | ListTuples].
 Schemas ::= [] ; [Schema | Schemas].
 Preds ::= [] ; [Constant | Preds].
 Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
-Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
+Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr).
+Exprs ::= [] ; [Expr | Exprs].
 CRole ::= every ; at(Integer).
 Form ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
 Forms ::= [] ; [Form | Forms].
@@ -75,7 +78,7 @@ Delta ::= delta(Peer, GAtoms, GAtoms).
 Deltas ::= [] ; [Delta | Deltas].
 Mate ::= mate(Constant, Binding, Peers, Peer).
 Mates ::= [] ; [Mate | Mates].
-Opener ::= opener(Peer) ; guarded_part.
+Opener ::= opener(Peer) ; proposed(Peers).
 Part ::= pt(Class, Peers, Opener).
 Parts ::= [] ; [Part | Parts].
 Info ::= ci(Class, Deltas, Peers, Parts, Mates).
@@ -177,6 +180,24 @@ schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
 schema_forms(_, []) :- otherwise | true.
+
+procedure schema_base(Constant?, Integer).
+schema_base(establish, 1).
+schema_base(acquaint, 1).
+schema_base(introduce, 1).
+schema_base(mint, 1).
+schema_base(swap, 1).
+schema_base(pay, 1).
+schema_base(redeem, 1).
+schema_base(dmint, 1).
+schema_base(swap_dc, 1).
+schema_base(swap_cd, 1).
+schema_base(swap_dd, 1).
+schema_base(pay_d, 1).
+schema_base(redeem_dc, 1).
+schema_base(redeem_cd, 1).
+schema_base(redeem_dd, 1).
+schema_base(_, 1) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
 reflexive_preds([]).
@@ -457,7 +478,7 @@ request_cond1(cls(I), N, C, St, Cd?, St?) :- ground(I?), ground(N?), ground(C?),
 
 procedure request_cands(PartRes?, Info?, Proposal?, Class?, St?, RQ).
 request_cands(nopart, _, _, _, _, rq([], no, no)).
-request_cands(part(pt(_, G, guarded_part)), I, _, C, St, rq(Cs?, Bz?, RdN?)) :- ground(G?), ground(I?), ground(C?), ground(St?) | st_id(St?, Id), mem(Id?, G?, Gd), free_i(I?, St?, Fr), st_ms(St?, S), part_dom(C?, Id?, S?, Dm), self_request(I?, St?, NPd), and(Gd?, Fr?, B1), and(B1?, Dm?, B2), and(B2?, NPd?, B), self_cand(B?, C?, Id?, Cs), neg(Fr?, NFr), and(Gd?, NFr?, Bz), and(Gd?, Dm?, RdN).
+request_cands(part(pt(_, G, proposed(_))), I, _, C, St, rq(Cs?, Bz?, RdN?)) :- ground(G?), ground(I?), ground(C?), ground(St?) | st_id(St?, Id), mem(Id?, G?, Gd), free_i(I?, St?, Fr), st_ms(St?, S), part_dom(C?, Id?, S?, Dm), self_request(I?, St?, NPd), and(Gd?, Fr?, B1), and(B1?, Dm?, B2), and(B2?, NPd?, B), self_cand(B?, C?, Id?, Cs), neg(Fr?, NFr), and(Gd?, NFr?, Bz), and(Gd?, Dm?, RdN).
 request_cands(part(pt(_, G, opener(O))), _, N, C, St, rq(Cs?, Bz?, RdN?)) :- ground(G?), ground(N?), ground(C?), ground(St?) | st_id(St?, Id), mem(Id?, G?, Gd), same(O?, Id?, Me), neg(Me?, NMe), free_rho(N?, St?, Fr), st_ms(St?, S), part_dom(C?, Id?, S?, Rd), st_app(St?, Ap), app_recs(Ap?, Rc), pending_request(rho(N?), Rc?, Pd), neg(Pd?, NPd), known_st(O?, St?, Kn), and(Gd?, NMe?, B1), and(B1?, Fr?, B2), and(B2?, Rd?, B3), and(B3?, NPd?, B4), and(B4?, Kn?, B), rho_cand(B?, N?, O?, Cs), neg(Fr?, NFr), and(B1?, NFr?, Bz), or(Gd?, Me?, GO), st_ms(St?, S2), part_dom(C?, Id?, S2?, Dm), and(GO?, Dm?, RdN).
 
 procedure rho_cand(YesNo?, Proposal?, Peer?, RCands).
@@ -524,7 +545,7 @@ in_rho(ci(_, _, Q, Pts, Ms), N, Id, B?) :- ground(Q?), ground(Ms?), ground(N?) |
 procedure opener_parts(Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
 opener_parts([], _, _, _, _, no).
 opener_parts([pt(T, G, opener(_)) | Ps], Q, Ms, N, Id, B?) :- ground(T?), ground(G?), ground(Q?), ground(Ms?), ground(N?) | part_named(Ms?, T?, G?, Q?, N?, Id?, B1), opener_parts1(B1?, Ps?, Q?, Ms?, N?, Id?, B).
-opener_parts([pt(_, _, guarded_part) | Ps], Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
+opener_parts([pt(_, _, proposed(_)) | Ps], Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
 
 procedure opener_parts1(YesNo?, Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
 opener_parts1(yes, _, _, _, _, _, yes).
@@ -611,7 +632,12 @@ dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St
 procedure ask_of(List(RoleAsk)?, Peer?, Asked).
 ask_of([], _, asked(0, [])).
 ask_of([q(P, G, Ws) | _], Me, asked(G?, Ws?)) :- (P? =?= Me?) | true.
+ask_of([ql(L, G, Ws) | Qs], Me, A?) :- ground(L?), ground(Me?) | mem(Me?, L?, In), ask_list(In?, G?, Ws?, Qs?, Me?, A).
 ask_of([_ | Qs], Me, A?) :- otherwise | ask_of(Qs?, Me?, A).
+
+procedure ask_list(YesNo?, Integer?, List(Word)?, List(RoleAsk)?, Peer?, Asked).
+ask_list(yes, G, Ws, _, _, asked(G?, Ws?)).
+ask_list(no, _, _, Qs, Me, A?) :- ask_of(Qs?, Me?, A).
 
 procedure question_words(Class?, Peer?, List(Word)).
 question_words(C, Me, Ws?) :- ground(C?), ground(Me?) | sentence_of(C?, Me?, A), held_words(A?, C?, Ws).
@@ -984,7 +1010,7 @@ held_cand(cls(I), F, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term
 
 procedure opens_for(PartRes?, Peer?, Peer?, YesNo).
 opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) | same(O?, Id?, B1), mem(F?, G?, B2), and(B1?, B2?, B).
-opens_for(part(pt(_, _, guarded_part)), _, _, no).
+opens_for(part(pt(_, _, proposed(_))), _, _, no).
 opens_for(nopart, _, _, no).
 
 procedure vote_cands0(Recs?, V?, St?, Cands, St).
@@ -1164,18 +1190,18 @@ opened([lschema(Nm, _, Rs, _) | Ss], Id, Sh, Cs?) :- ground(Nm?), ground(Rs?), g
 procedure opened1(Ints?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
 opened1([_ | _], _, _, _, _, []).
 opened1([], _, [], _, _, []).
-opened1([], Nm, [R | Rs], Id, Sh, Cs?) :- ground(Nm?), ground(R?), ground(Id?), ground(Sh?) | rs_req(R?, Q), match_all(Q?, Sh?, [b(role(1), p(Id?))], Bs0), schema_numeric(Nm?, N), num_extend(N?, Bs0?, Bs), opened2(Bs?, Nm?, [R? | Rs?], Id?, Sh?, Cs).
+opened1([], Nm, [R | Rs], Id, Sh, Cs?) :- ground(Nm?), ground(R?), ground(Id?), ground(Sh?) | rs_req(R?, Q), match_all(Q?, Sh?, [b(role(1), p(Id?))], Bs0), schema_numeric(Nm?, N), num_extend(N?, Bs0?, Sh?, Bs), opened2(Bs?, Nm?, [R? | Rs?], Id?, Sh?, Cs).
 
-procedure num_extend(Numeric?, Bindings?, Bindings).
-num_extend(numeric(C, _, _), Bs, R?) :- ground(C?) | extend_each(Bs?, C?, R).
+procedure num_extend(Numeric?, Bindings?, GAtoms?, Bindings).
+num_extend(numeric(C, _, _), Bs, Sh, R?) :- ground(C?) | extend_each(Bs?, C?, Sh?, R).
 
-procedure extend_each(Bindings?, Constraint?, Bindings).
-extend_each([], _, []).
-extend_each([B | Bs], C, R?) :- ground(C?) | con_extend(C?, B?, R1), extend_each(Bs?, C?, R2), app(R1?, R2?, R).
+procedure extend_each(Bindings?, Constraint?, GAtoms?, Bindings).
+extend_each([], _, _, []).
+extend_each([B | Bs], C, Sh, R?) :- ground(C?), ground(B?), ground(Sh?) | con_counted(C?, B?, Sh?, C1), con_extend(C1?, B?, R1), extend_each(Bs?, C?, Sh?, R2), app(R1?, R2?, R).
 
 procedure opened2(Bindings?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
 opened2([], _, _, _, _, []).
-opened2([B | Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) | first_spec(Rs?, R1), cand_ok([R1?], B?, Sh?, Ok1), con_at(Nm?, B?, Id?, Con), con_holds(Con?, B?, Ok2), nums_bound(Nm?, B?, Ok3), forms_at(Nm?, B?, Id?, Fs), forms_hold(Fs?, B?, Sh?, Ok4), and(Ok1?, Ok2?, Ok12), and(Ok12?, Ok3?, Ok123), and(Ok123?, Ok4?, Ok), opened3(Ok?, Nm?, B?, Id?, Sh?, C1), opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2), app(C1?, C2?, Cs).
+opened2([B | Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) | first_spec(Rs?, R1), cand_ok([R1?], B?, Sh?, Ok1), con_at(Nm?, B?, Id?, Con), con_counted(Con?, B?, Sh?, Con1), con_holds(Con1?, B?, Ok2), nums_bound(Nm?, B?, Ok3), forms_at(Nm?, B?, Id?, Fs), forms_hold(Fs?, B?, Sh?, Ok4), and(Ok1?, Ok2?, Ok12), and(Ok12?, Ok3?, Ok123), and(Ok123?, Ok4?, Ok), opened3(Ok?, Nm?, B?, Id?, Sh?, C1), opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2), app(C1?, C2?, Cs).
 
 procedure opened3(YesNo?, Constant?, Binding?, Peer?, GAtoms?, Stream(Class)).
 opened3(no, _, _, _, _, []).
@@ -1811,11 +1837,15 @@ precedes(_, _, no) :- otherwise | true.
 
 procedure guarding_parts(Parts?, Peer?, Classes).
 guarding_parts([], _, []).
-guarding_parts([pt(T, G, Op) | Ps], Id, R?) :- ground(Id?) | mem(Id?, G?, B1), no_opener(Op?, B2), and(B1?, B2?, B), guarding_parts(Ps?, Id?, R1), keep_class(B?, T?, R1?, R).
+guarding_parts([pt(T, _, Op) | Ps], Id, R?) :- ground(Id?) | proposes_op(Op?, Id?, B), guarding_parts(Ps?, Id?, R1), keep_class(B?, T?, R1?, R).
+
+procedure proposes_op(Opener?, Peer?, YesNo).
+proposes_op(proposed(Ob), Id, B?) :- mem(Id?, Ob?, B).
+proposes_op(opener(_), _, no).
 
 procedure no_opener(Opener?, YesNo).
 no_opener(opener(_), no).
-no_opener(guarded_part, yes).
+no_opener(proposed(_), yes).
 
 procedure opening_parts(Parts?, Peer?, Classes).
 opening_parts([], _, []).
@@ -1823,7 +1853,7 @@ opening_parts([pt(T, G, Op) | Ps], Id, R?) :- ground(Id?) | is_opener(Op?, Id?, 
 
 procedure is_opener(Opener?, Peer?, YesNo).
 is_opener(opener(P), Id, B?) :- same(P?, Id?, B).
-is_opener(guarded_part, _, no).
+is_opener(proposed(_), _, no).
 
 procedure all_in(Peers?, Peers?, YesNo).
 all_in([], _, yes).
@@ -1876,11 +1906,11 @@ listing_gaps1(lschema(_, _, _, Lsts), Bn, Id, S, L?, H?) :- gaps_of(Lsts?, Bn?, 
 
 procedure gaps_of(Listings?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
 gaps_of([], _, _, _, [], []).
-gaps_of([listing(I, Bi, Rho, As) | Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) | role_person(Bi?, Bn?, P), same(P?, Id?, Base), gaps_one(Base?, I?, Rho?, As?, Bn?, S?, L1, H1), gaps_of(Lsts?, Bn?, Id?, S?, L2, H2), app(L1?, L2?, L), app(H1?, H2?, H).
+gaps_of([listing(I, Bi, Rho, As, Phi, _, _) | Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) | role_person(Bi?, Bn?, P), same(P?, Id?, Base), gaps_one(Base?, I?, Rho?, As?, Phi?, Bn?, S?, L1, H1), gaps_of(Lsts?, Bn?, Id?, S?, L2, H2), app(L1?, L2?, L), app(H1?, H2?, H).
 
-procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, GAtoms, GAtoms).
-gaps_one(no, _, _, _, _, _, [], []).
-gaps_one(yes, I, Rho, As, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?) | copies_of(Bn?, I?, Want), list_at(Rho?, As?, Bn?, S?, Have), img_args(As?, Bn?, Vs), gaps_two(Want?, Have?, Rho?, Vs?, L, H).
+procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, GAtoms, GAtoms).
+gaps_one(no, _, _, _, _, _, _, [], []).
+gaps_one(yes, I, Rho, As, Phi, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?), integer(I?) | copies_of(Bn?, I?, Want), list_at(I?, Rho?, As?, Phi?, Bn?, S?, Have), img_args(As?, Bn?, Vs), gaps_two(Want?, Have?, Rho?, Vs?, L, H).
 
 procedure gaps_two(Peers?, Peers?, Constant?, Vals?, GAtoms, GAtoms).
 gaps_two(Want, Have, Rho, Vs, L?, H?) :- ground(Want?), ground(Have?), ground(Rho?), ground(Vs?) | peers_minus(Want?, Have?, Lp), peers_minus(Have?, Want?, Hp), listing_atoms(Lp?, Rho?, Vs?, L), listing_atoms(Hp?, Rho?, Vs?, H).
@@ -1950,11 +1980,11 @@ procedure dom_bindings(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, Bindings
 dom_bindings(Nm, Rs, B, Id, Sh, Bs?) :- ground(Nm?), ground(Rs?), ground(B?), ground(Id?), ground(Sh?) | specs_at(Rs?, 1, B?, Id?, RsP), unlocal(B?, B0), con_at(Nm?, B?, Id?, Con), forms_at(Nm?, B?, Id?, Fs), dom_bindings1(RsP?, B0?, Sh?, Con?, Fs?, Bs).
 
 procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Forms?, Bindings).
-dom_bindings1(RsP, B0, Sh, Con, Fs, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) | reqs_of(RsP?, Q), match_all(Q?, Sh?, B0?, Cs), dom_keep(Cs?, RsP?, Sh?, Con?, Fs?, Bs).
+dom_bindings1(RsP, B0, Sh, Con, Fs, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) | reqs_of(RsP?, Q), match_all(Q?, Sh?, B0?, Cs0), extend_each(Cs0?, Con?, Sh?, Cs1), dedup(Cs1?, Cs), dom_keep(Cs?, RsP?, Sh?, Con?, Fs?, Bs).
 
 procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Forms?, Bindings).
 dom_keep([], _, _, _, _, []).
-dom_keep([B | Bs], RsP, Sh, Con, Fs, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?), ground(Fs?) | cand_ok(RsP?, B?, Sh?, O1), con_holds(Con?, B?, O2), forms_hold(Fs?, B?, Sh?, O3), and(O1?, O2?, O12), and(O12?, O3?, Ok), dom_keep(Bs?, RsP?, Sh?, Con?, Fs?, R1), keep_binding(Ok?, B?, R1?, R).
+dom_keep([B | Bs], RsP, Sh, Con, Fs, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?), ground(Fs?) | cand_ok(RsP?, B?, Sh?, O1), con_counted(Con?, B?, Sh?, Con1), con_holds(Con1?, B?, O2), forms_hold(Fs?, B?, Sh?, O3), and(O1?, O2?, O12), and(O12?, O3?, Ok), dom_keep(Bs?, RsP?, Sh?, Con?, Fs?, R1), keep_binding(Ok?, B?, R1?, R).
 
 procedure forms_at(Constant?, Binding?, Peer?, Forms).
 forms_at(Nm, B, Id, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), forms_at1(Sf?, B?, Id?, Fs).
@@ -1983,7 +2013,7 @@ form_holds(fand(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?
 form_holds(for(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), or(R1?, R2?, R).
 form_holds(fexists(_, _, A, F), B, Sh, R?) :- ground(Sh?), ground(F?) | match_into(A?, Sh?, B?, Bs), some_holds(Bs?, F?, Sh?, R).
 form_holds(fforall(_, _, A, F, Gs), B, Sh, R?) :- ground(Sh?), ground(F?), ground(Gs?) | match_into(A?, Sh?, B?, Bs), all_hold(Bs?, F?, Gs?, Sh?, R).
-form_holds(fcons(C), B, _, R?) :- con_holds(C?, B?, R).
+form_holds(fcons(C), B, Sh, R?) :- ground(B?) | con_counted(C?, B?, Sh?, C1), con_holds(C1?, B?, R).
 
 procedure fa_holds(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
 fa_holds(yes, M, B, Sh, R?) :- img_one(M?, B?, G), ms_sub(G?, Sh?, R).
@@ -2329,7 +2359,7 @@ on_base([B | Bs], Lsts, R?) :- ground(B?), ground(Lsts?) | on_bases(Lsts?, B?, E
 
 procedure on_bases(Listings?, Binding?, YesNo).
 on_bases([], _, yes).
-on_bases([listing(I, Bi, _, _) | Lsts], B, E?) :- ground(B?) | role_person(I?, B?, P), role_person(Bi?, B?, Q), same(P?, Q?, E1), on_bases(Lsts?, B?, E2), and(E1?, E2?, E).
+on_bases([listing(I, Bi, _, _, _, _, _) | Lsts], B, E?) :- ground(B?) | role_person(I?, B?, P), role_person(Bi?, B?, Q), same(P?, Q?, E1), on_bases(Lsts?, B?, E2), and(E1?, E2?, E).
 
 procedure keep_binding(YesNo?, Binding?, Bindings?, Bindings).
 keep_binding(yes, B, R, [B? | R?]).
@@ -2499,7 +2529,7 @@ parts_of([M | Ms], All, Q, Id, Seen, Pts?) :- ground(M?), ground(Q?), ground(See
 
 procedure parts_of1(YesNo?, Mate?, Mates?, Mates?, Peers?, Peer?, Mates?, Parts).
 parts_of1(yes, _, Ms, All, Q, Id, Seen, Pts?) :- parts_of(Ms?, All?, Q?, Id?, Seen?, Pts).
-parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?) | Pts?]) :- ground(N?), ground(B?), ground(G?), ground(F?), ground(All?), ground(Q?), ground(Id?) | class_of(N?, B?, Id?, T), part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs), part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo), part_opener(G?, Fs?, Fo?, Op), parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?) | Seen?], Pts).
+parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?) | Pts?]) :- ground(N?), ground(B?), ground(G?), ground(F?), ground(All?), ground(Q?), ground(Id?) | class_of(N?, B?, Id?, T), part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs), part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo), part_bases(All?, G?, Ob), part_opener(G?, Fs?, Fo?, Ob?, Op), parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?) | Seen?], Pts).
 
 procedure part_seen(Mates?, Mate?, Peers?, YesNo).
 part_seen([], _, _, no).
@@ -2523,19 +2553,23 @@ opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
 procedure opens_guarded1(Schema?, YesNo).
 opens_guarded1(schema(_, _, _), no).
 opens_guarded1(lschema(_, _, _, []), no).
-opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _) | _]), B?) :- ground(Rs?), integer(Bi?) | nth_spec(Rs?, Bi?, R), spec_unguarded(R?, B).
+opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _, _, _, _) | _]), B?) :- ground(Rs?), integer(Bi?) | nth_spec(Rs?, Bi?, R), spec_unguarded(R?, B).
 
 procedure spec_unguarded(RoleSpec?, YesNo).
 spec_unguarded(rs(unguarded, _, _, _, _), yes).
 spec_unguarded(rs(guarded, _, _, _, _), no).
 
-procedure part_opener(Peers?, Peers?, Peers?, Opener).
-part_opener([], Fs, _, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
-part_opener([_ | _], _, Fo, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Op).
+procedure part_opener(Peers?, Peers?, Peers?, Peers?, Opener).
+part_opener([], Fs, _, Ob, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Ob?, Op).
+part_opener([_ | _], _, Fo, Ob, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Ob?, Op).
 
-procedure least_opener(Peers?, Opener).
-least_opener([P | _], opener(P?)).
-least_opener([], guarded_part).
+procedure least_opener(Peers?, Peers?, Opener).
+least_opener([P | _], _, opener(P?)).
+least_opener([], Ob, proposed(Ob1?)) :- sort_peers(Ob?, Ob0), dedup(Ob0?, Ob1).
+
+procedure part_bases(Mates?, Peers?, Peers).
+part_bases([], _, []).
+part_bases([mate(N, B, _, _) | Ms], G, Ob?) :- ground(N?), ground(B?), ground(G?) | schema_base(N?, Bi), role_person(Bi?, B?, P), mem(P?, G?, In), part_bases(Ms?, G?, Ob1), keep_peer(In?, P?, Ob1?, Ob).
 
 procedure same_mpart(Peers?, Mate?, Mate?, YesNo).
 same_mpart(Q, mate(N1, B1, G1, _), mate(N2, B2, G2, _), B?) :- same_bpart(Q?, N1?, B1?, G1?, N2?, B2?, G2?, B).
@@ -2680,19 +2714,38 @@ bound_spec1(lschema(_, _, Rs, Lsts), B, Rs1?) :- ground(Rs?), ground(B?), ground
 
 procedure lists_of(Listings?, Binding?, PeerLists).
 lists_of([], _, []).
-lists_of([listing(I, _, _, _) | Lsts], B, [L? | Ls?]) :- ground(B?) | copies_of(B?, I?, L), lists_of(Lsts?, B?, Ls).
+lists_of([listing(I, _, _, _, _, _, _) | Lsts], B, [L? | Ls?]) :- ground(B?) | copies_of(B?, I?, L), lists_of(Lsts?, B?, Ls).
 
 procedure spec_for(RoleSpecs?, Listings?, PeerLists?, RoleSpecs).
-spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?) | blank_listed(Lsts?, Rs?, Rs0), listed_copies(Lsts?, Ls?, Rs?, Cs), app(Rs0?, Cs?, Rs1).
+spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?), ground(Ls?) | rs_len(Rs?, K), K1 := (K? + 1), blank_listed(Lsts?, Rs?, Rs0), listed_copies(Lsts?, Ls?, Rs?, K1?, Cs), cond_specs(Lsts?, Ls?, K1?, Rs0?, Rs0c), app(Rs0c?, Cs?, Rs1).
+
+procedure cond_specs(Listings?, PeerLists?, Integer?, RoleSpecs?, RoleSpecs).
+cond_specs([], _, _, Rs, Rs?).
+cond_specs([_ | _], [], _, Rs, Rs?).
+cond_specs([listing(I, _, _, _, _, CA, CD) | Lsts], [L | Ls], J, Rs, Rs2?) :- ground(L?), integer(I?), integer(J?), ground(CA?), ground(CD?) | cond_people(L?, I?, J?, CA?, CD?, Rs?, Rs1, J1), cond_specs(Lsts?, Ls?, J1?, Rs1?, Rs2).
+
+procedure cond_people(Peers?, Integer?, Integer?, HMults?, HMults?, RoleSpecs?, RoleSpecs, Integer).
+cond_people([], _, J, _, _, Rs, Rs?, J?).
+cond_people([_ | Ps], I, J, CA, CD, Rs, Rs3?, J2?) :- integer(I?), integer(J?), ground(CA?), ground(CD?) | cond_add(CA?, I?, J?, add, Rs?, Rs1), cond_add(CD?, I?, J?, del, Rs1?, Rs2), J1 := (J? + 1), cond_people(Ps?, I?, J1?, CA?, CD?, Rs2?, Rs3, J2).
+
+procedure cond_add(HMults?, Integer?, Integer?, Constant?, RoleSpecs?, RoleSpecs).
+cond_add([], _, _, _, Rs, Rs?).
+cond_add([hm(R, M) | Hs], I, J, W, Rs, Rs2?) :- integer(I?), integer(J?), ground(W?) | renum_atom(M?, I?, J?, M1), add_to_role(Rs?, R?, 1, W?, M1?, Rs1), cond_add(Hs?, I?, J?, W?, Rs1?, Rs2).
+
+procedure add_to_role(RoleSpecs?, Integer?, Integer?, Constant?, SAtom?, RoleSpecs).
+add_to_role([], _, _, _, _, []).
+add_to_role([rs(G, A, D, K, F) | Rs], R, I, add, M, [rs(G?, [M? | A?], D?, K?, F?) | Rs?]) :- (R? =:= I?) | true.
+add_to_role([rs(G, A, D, K, F) | Rs], R, I, del, M, [rs(G?, A?, [M? | D?], K?, F?) | Rs?]) :- (R? =:= I?) | true.
+add_to_role([X | Rs], R, I, W, M, [X? | Rs1?]) :- otherwise, integer(I?) | I1 := (I? + 1), add_to_role(Rs?, R?, I1?, W?, M?, Rs1).
 
 procedure blank_listed(Listings?, RoleSpecs?, RoleSpecs).
 blank_listed([], Rs, Rs?).
-blank_listed([listing(I, _, _, _) | Lsts], Rs, Rs2?) :- blank_at(Rs?, I?, 1, Rs1), blank_listed(Lsts?, Rs1?, Rs2).
+blank_listed([listing(I, _, _, _, _, _, _) | Lsts], Rs, Rs2?) :- blank_at(Rs?, I?, 1, Rs1), blank_listed(Lsts?, Rs1?, Rs2).
 
-procedure listed_copies(Listings?, PeerLists?, RoleSpecs?, RoleSpecs).
-listed_copies([], _, _, []).
-listed_copies([listing(I, _, _, _) | Lsts], [L | Ls], Rs, Cs?) :- ground(Rs?) | nth_spec(Rs?, I?, R), spec_copies(L?, R?, C1), listed_copies(Lsts?, Ls?, Rs?, C2), app(C1?, C2?, Cs).
-listed_copies([_ | _], [], _, []).
+procedure listed_copies(Listings?, PeerLists?, RoleSpecs?, Integer?, RoleSpecs).
+listed_copies([], _, _, _, []).
+listed_copies([listing(I, _, _, _, _, _, _) | Lsts], [L | Ls], Rs, J, Cs?) :- ground(Rs?), integer(I?) | nth_spec(Rs?, I?, R), spec_copies(L?, R?, I?, J?, C1, J1), listed_copies(Lsts?, Ls?, Rs?, J1?, C2), app(C1?, C2?, Cs).
+listed_copies([_ | _], [], _, _, []).
 
 procedure blank_at(RoleSpecs?, Integer?, Integer?, RoleSpecs).
 blank_at([], _, _, []).
@@ -2702,9 +2755,37 @@ procedure blank_one(Integer?, Integer?, RoleSpec?, RoleSpec).
 blank_one(I, J, _, rs(unguarded, [], [], [], [])) :- (I? =:= J?) | true.
 blank_one(_, _, R, R?) :- otherwise | true.
 
-procedure spec_copies(Peers?, RoleSpec?, RoleSpecs).
-spec_copies([], _, []).
-spec_copies([_ | Ps], R, [R? | Rs?]) :- ground(R?) | spec_copies(Ps?, R?, Rs).
+procedure spec_copies(Peers?, RoleSpec?, Integer?, Integer?, RoleSpecs, Integer).
+spec_copies([], _, _, J, [], J?).
+spec_copies([_ | Ps], R, I, J, [R1? | Rs?], J2?) :- ground(R?), integer(I?), integer(J?) | renum_spec(R?, I?, J?, R1), J1 := (J? + 1), spec_copies(Ps?, R?, I?, J1?, Rs, J2).
+
+procedure renum_spec(RoleSpec?, Integer?, Integer?, RoleSpec).
+renum_spec(rs(G, A, D, K, F), I, J, rs(G?, A1?, D1?, K1?, F1?)) :- integer(I?), integer(J?) | renum_atoms(A?, I?, J?, A1), renum_atoms(D?, I?, J?, D1), renum_atoms(K?, I?, J?, K1), renum_atoms(F?, I?, J?, F1).
+
+procedure renum_atoms(SAtoms?, Integer?, Integer?, SAtoms).
+renum_atoms([], _, _, []).
+renum_atoms([M | Ms], I, J, [M1? | Ms1?]) :- integer(I?), integer(J?) | renum_atom(M?, I?, J?, M1), renum_atoms(Ms?, I?, J?, Ms1).
+
+procedure renum_atom(SAtom?, Integer?, Integer?, SAtom).
+renum_atom(atom(P, Vs), I, J, atom(P?, Vs1?)) :- renum_vars(Vs?, I?, J?, Vs1).
+renum_atom(times(V, M), I, J, times(V1?, M1?)) :- integer(I?), integer(J?) | renum_var(V?, I?, J?, V1), renum_atom(M?, I?, J?, M1).
+renum_atom(rest(V, W, M), I, J, rest(V1?, W1?, M1?)) :- integer(I?), integer(J?) | renum_var(V?, I?, J?, V1), renum_var(W?, I?, J?, W1), renum_atom(M?, I?, J?, M1).
+
+procedure renum_vars(Vars?, Integer?, Integer?, Vars).
+renum_vars([], _, _, []).
+renum_vars([V | Vs], I, J, [V1? | Vs1?]) :- integer(I?), integer(J?) | renum_var(V?, I?, J?, V1), renum_vars(Vs?, I?, J?, Vs1).
+
+procedure renum_var(Var?, Integer?, Integer?, Var).
+renum_var(role(K), I, J, role(J?)) :- (K? =:= I?) | true.
+renum_var(sgn(Y, K), I, J, sgn(Y?, J?)) :- (K? =:= I?) | true.
+renum_var(nterm(N), I, J, nterm(N1?)) :- renum_nt(N?, I?, J?, N1).
+renum_var(V, _, _, V?) :- otherwise | true.
+
+procedure renum_nt(NTerm?, Integer?, Integer?, NTerm).
+renum_nt(own(K), I, J, own(J?)) :- (K? =:= I?) | true.
+renum_nt(ext(N, Y), I, J, ext(N1?, Y?)) :- renum_nt(N?, I?, J?, N1).
+renum_nt(ext_any(N), I, J, ext_any(N1?)) :- renum_nt(N?, I?, J?, N1).
+renum_nt(N, _, _, N?) :- otherwise | true.
 
 procedure copies_of(Binding?, Integer?, List(Peer)).
 copies_of(B, I, L?) :- ground(B?), integer(I?) | NI := (0 - I?), neg_people(B?, NI?, Ps0), sort_peers(Ps0?, Ps1), dedup(Ps1?, L).
@@ -2723,7 +2804,7 @@ listed_binding1(lschema(_, _, Rs, Lsts), B0, Ls, B?) :- ground(Rs?), ground(B0?)
 
 procedure base_binds(Listings?, Binding?, Binding).
 base_binds([], _, []).
-base_binds([listing(I, Bi, _, _) | Lsts], B0, [b(role(I?), p(P?)) | Bs?]) :- ground(B0?) | role_person(Bi?, B0?, P), base_binds(Lsts?, B0?, Bs).
+base_binds([listing(I, Bi, _, _, _, _, _) | Lsts], B0, [b(role(I?), p(P?)) | Bs?]) :- ground(B0?) | role_person(Bi?, B0?, P), base_binds(Lsts?, B0?, Bs).
 
 procedure sorted_lists(PeerLists?, PeerLists).
 sorted_lists([], []).
@@ -2731,7 +2812,7 @@ sorted_lists([L | Ls], [L1? | Ls1?]) :- sort_peers(L?, L0), dedup(L0?, L1), sort
 
 procedure tuple_binds(Listings?, PeerLists?, Integer?, Binding).
 tuple_binds([], _, _, []).
-tuple_binds([listing(I, _, _, _) | Lsts], [L | Ls], J, Bs?) :- ground(L?), integer(I?) | copy_binds(L?, J?, Cs, J1), NI := (0 - I?), neg_binds(L?, NI?, Ns), tuple_binds(Lsts?, Ls?, J1?, Bs1), app(Ns?, Bs1?, Bs2), app(Cs?, Bs2?, Bs).
+tuple_binds([listing(I, _, _, _, _, _, _) | Lsts], [L | Ls], J, Bs?) :- ground(L?), integer(I?) | copy_binds(L?, J?, Cs, J1), NI := (0 - I?), neg_binds(L?, NI?, Ns), tuple_binds(Lsts?, Ls?, J1?, Bs1), app(Ns?, Bs1?, Bs2), app(Cs?, Bs2?, Bs).
 tuple_binds([_ | _], [], _, []).
 
 procedure copy_binds(Peers?, Integer?, Binding, Integer).
@@ -2751,10 +2832,14 @@ listed_people1(lschema(_, _, _, Lsts), B0, S, Ls?) :- lists_at(Lsts?, B0?, S?, L
 
 procedure lists_at(Listings?, Binding?, GAtoms?, PeerLists).
 lists_at([], _, _, []).
-lists_at([listing(_, _, Rho, As) | Lsts], B0, S, [L? | Ls?]) :- ground(B0?), ground(S?) | list_at(Rho?, As?, B0?, S?, L), lists_at(Lsts?, B0?, S?, Ls).
+lists_at([listing(I, _, Rho, As, Phi, _, _) | Lsts], B0, S, [L? | Ls?]) :- ground(B0?), ground(S?) | list_at(I?, Rho?, As?, Phi?, B0?, S?, L), lists_at(Lsts?, B0?, S?, Ls).
 
-procedure list_at(Constant?, Vars?, Binding?, GAtoms?, List(Peer)).
-list_at(Rho, As, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) | img_args(As?, B0?, Vs), listing_in(S?, Rho?, Vs?, Ps0), sort_peers(Ps0?, Ps1), dedup(Ps1?, L).
+procedure list_at(Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, List(Peer)).
+list_at(I, Rho, As, Phi, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) | img_args(As?, B0?, Vs), listing_in(S?, Rho?, Vs?, Ps0), phi_people(Ps0?, I?, Phi?, B0?, S?, Ps00), sort_peers(Ps00?, Ps1), dedup(Ps1?, L).
+
+procedure phi_people(Peers?, Integer?, Form?, Binding?, GAtoms?, Peers).
+phi_people([], _, _, _, _, []).
+phi_people([Q | Qs], I, Phi, B0, S, R?) :- ground(Q?), integer(I?), ground(Phi?), ground(B0?), ground(S?) | form_holds(Phi?, [b(role(I?), p(Q?)) | B0?], S?, H), phi_people(Qs?, I?, Phi?, B0?, S?, R1), keep_peer(H?, Q?, R1?, R).
 
 procedure listing_in(GAtoms?, Constant?, Vals?, Peers).
 listing_in([], _, _, []).
@@ -2773,11 +2858,11 @@ listing_ok1(lschema(_, _, _, Lsts), B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?
 
 procedure listings_ok(Listings?, Binding?, Peer?, GAtoms?, YesNo).
 listings_ok([], _, _, _, yes).
-listings_ok([listing(I, Bi, Rho, As) | Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) | role_person(Bi?, B?, P), same(P?, Id?, Base), listing_one(Base?, I?, Rho?, As?, B?, S?, Ok1), listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
+listings_ok([listing(I, Bi, Rho, As, Phi, _, _) | Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) | role_person(Bi?, B?, P), same(P?, Id?, Base), listing_one(Base?, I?, Rho?, As?, Phi?, B?, S?, Ok1), listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
 
-procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, YesNo).
-listing_one(no, _, _, _, _, _, yes).
-listing_one(yes, I, Rho, As, B, S, Ok?) :- ground(B?) | copies_of(B?, I?, L), list_at(Rho?, As?, B?, S?, L1), same(L?, L1?, Ok).
+procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, YesNo).
+listing_one(no, _, _, _, _, _, _, yes).
+listing_one(yes, I, Rho, As, Phi, B, S, Ok?) :- ground(B?), integer(I?) | copies_of(B?, I?, L), list_at(I?, Rho?, As?, Phi?, B?, S?, L1), same(L?, L1?, Ok).
 
 procedure listings_ok1(YesNo?, Listings?, Binding?, Peer?, GAtoms?, YesNo).
 listings_ok1(no, _, _, _, _, no).
@@ -3183,6 +3268,11 @@ expr_val(plus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?
 expr_val(minus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(minus, A?, C?, R).
 expr_val(mul(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(mul, A?, C?, R).
 expr_val(num(X), B, R?) :- ground(B?) | num_of(num(X?), B?, R).
+expr_val(fn(min, [X, Y]), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(min, A?, C?, R).
+expr_val(fn(floor, [X]), B, R?) :- expr_val(X?, B?, A), num_floor(A?, R).
+expr_val(fn(_, _), _, no_num) :- otherwise | true.
+expr_val(cardinality(_, _, _, _), _, no_num).
+expr_val(sum(_, _, _, _, _), _, no_num).
 expr_val(role(_), _, no_num).
 expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
@@ -3194,7 +3284,13 @@ procedure num_op(Constant?, NumRes?, NumRes?, NumRes).
 num_op(plus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := (A? + C?).
 num_op(minus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := (A? - C?).
 num_op(mul, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := (A? * C?).
+num_op(min, num_is(A), num_is(C), num_is(A?)) :- integer(A?), integer(C?), (A? =< C?) | true.
+num_op(min, num_is(A), num_is(C), num_is(C?)) :- integer(A?), integer(C?), (A? > C?) | true.
 num_op(_, _, _, no_num) :- otherwise | true.
+
+procedure num_floor(NumRes?, NumRes).
+num_floor(num_is(A), num_is(A?)) :- integer(A?) | true.
+num_floor(_, no_num) :- otherwise | true.
 
 procedure num_eq(NumRes?, NumRes?, YesNo).
 num_eq(num_is(A), num_is(C), yes) :- (A? =:= C?) | true.
@@ -3222,6 +3318,51 @@ con_at0(numeric(C, _, at(I)), B, Id, C1?) :- ground(B?) | role_person(I?, B?, P)
 procedure con_if(YesNo?, Constraint?, Constraint).
 con_if(yes, C, C?).
 con_if(no, _, true).
+
+procedure con_counted(Constraint?, Binding?, GAtoms?, Constraint).
+con_counted(true, _, _, true).
+con_counted(and(C1, C2), B, Sh, and(D1?, D2?)) :- ground(B?), ground(Sh?) | con_counted(C1?, B?, Sh?, D1), con_counted(C2?, B?, Sh?, D2).
+con_counted(or(C1, C2), B, Sh, or(D1?, D2?)) :- ground(B?), ground(Sh?) | con_counted(C1?, B?, Sh?, D1), con_counted(C2?, B?, Sh?, D2).
+con_counted(implies(C1, C2), B, Sh, implies(D1?, D2?)) :- ground(B?), ground(Sh?) | con_counted(C1?, B?, Sh?, D1), con_counted(C2?, B?, Sh?, D2).
+con_counted(not(C), B, Sh, not(D?)) :- con_counted(C?, B?, Sh?, D).
+con_counted(eq(X, Y), B, Sh, eq(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(ne(X, Y), B, Sh, ne(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(le(X, Y), B, Sh, le(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(lt(X, Y), B, Sh, lt(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(ge(X, Y), B, Sh, ge(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(gt(X, Y), B, Sh, gt(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(succ(X, Y), _, _, succ(X?, Y?)).
+con_counted(signed(X, Y), _, _, signed(X?, Y?)).
+con_counted(unsigned(X, Y), _, _, unsigned(X?, Y?)).
+
+procedure expr_counted(Expr?, Binding?, GAtoms?, Expr).
+expr_counted(plus(X, Y), B, Sh, plus(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+expr_counted(minus(X, Y), B, Sh, minus(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+expr_counted(mul(X, Y), B, Sh, mul(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+expr_counted(fn(F, Es), B, Sh, fn(F?, Ds?)) :- exprs_counted(Es?, B?, Sh?, Ds).
+expr_counted(cardinality(_, _, A, F), B, Sh, num(K?)) :- ground(A?), ground(F?), ground(B?), ground(Sh?) | match_into(A?, Sh?, B?, Bs), count_holding(Bs?, F?, Sh?, 0, K).
+expr_counted(sum(_, _, A, F, U), B, Sh, num(K?)) :- ground(A?), ground(F?), ground(U?), ground(B?), ground(Sh?) | match_into(A?, Sh?, B?, Bs), sum_holding(Bs?, F?, U?, Sh?, 0, K).
+expr_counted(E, _, _, E?) :- otherwise | true.
+
+procedure exprs_counted(Exprs?, Binding?, GAtoms?, Exprs).
+exprs_counted([], _, _, []).
+exprs_counted([E | Es], B, Sh, [D? | Ds?]) :- ground(B?), ground(Sh?) | expr_counted(E?, B?, Sh?, D), exprs_counted(Es?, B?, Sh?, Ds).
+
+procedure count_holding(Bindings?, Form?, GAtoms?, Integer?, Integer).
+count_holding([], _, _, K, K?).
+count_holding([B | Bs], F, Sh, K0, K?) :- ground(F?), ground(Sh?), integer(K0?) | form_holds(F?, B?, Sh?, H), count_add(H?, K0?, K1), count_holding(Bs?, F?, Sh?, K1?, K).
+
+procedure count_add(YesNo?, Integer?, Integer).
+count_add(yes, K0, K?) :- K := (K0? + 1).
+count_add(no, K0, K0?).
+
+procedure sum_holding(Bindings?, Form?, Expr?, GAtoms?, Integer?, Integer).
+sum_holding([], _, _, _, K, K?).
+sum_holding([B | Bs], F, U, Sh, K0, K?) :- ground(B?), ground(F?), ground(U?), ground(Sh?), integer(K0?) | form_holds(F?, B?, Sh?, H), expr_counted(U?, B?, Sh?, U1), expr_val(U1?, B?, V), sum_add(H?, V?, K0?, K1), sum_holding(Bs?, F?, U?, Sh?, K1?, K).
+
+procedure sum_add(YesNo?, NumRes?, Integer?, Integer).
+sum_add(yes, num_is(V), K0, K?) :- integer(V?) | K := (K0? + V?).
+sum_add(_, _, K0, K0?) :- otherwise | true.
 
 procedure con_live(Constant?, Binding?, YesNo).
 con_live(Nm, B, V?) :- ground(Nm?) | schema_numeric(Nm?, N), con_live1(N?, B?, V).
@@ -3297,6 +3438,13 @@ expr_free(svar(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).
+expr_free(fn(_, Es), B, F0, F?) :- ground(B?) | exprs_free(Es?, B?, F0?, F).
+expr_free(cardinality(_, _, _, _), _, F0, F0?).
+expr_free(sum(_, _, _, _, _), _, F0, F0?).
+
+procedure exprs_free(Exprs?, Binding?, Vars?, Vars).
+exprs_free([], _, F0, F0?).
+exprs_free([E | Es], B, F0, F?) :- ground(B?) | expr_free(E?, B?, F0?, F1), exprs_free(Es?, B?, F1?, F).
 
 procedure leaf_free1(NumRes?, Var?, Vars?, Vars).
 leaf_free1(num_is(_), _, F0, F0?).
