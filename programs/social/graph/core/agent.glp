@@ -239,7 +239,7 @@ agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
 %% Install a certified mini-app.  The compiler's certificate is accepted when
 %% its key is one the person trusts (Section 6.4), and the creator's
 %% certification must be signed over this source identity with the checker's
-%% verdict that the contract is grassroots.  signature/2 assigns unsigned on a
+%% verdict, as the checker prints it, certifying the contract.  signature/2 assigns unsigned on a
 %% forged certification, and the super-app refuses to install it (Section 6.1).
 %% Every mini-app is installed alike: its grants are its end of its person
 %% channel, at Opaque, and a calendar the super-app writes (Section 3, "What
@@ -250,6 +250,20 @@ agent(Id, [msg(person, Id1, install(App, M, CSig, Ui))|UserIn], NetIn, Outs,
     verify_install(M?, CSig?, Trusted?, V),
     install_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% Activate a mini-app installed here (GSA paper, Section 3, "A grassroots
+%% program instance": "An instance begins with one person, who installs the
+%% certified program and activates it; others join it on invitation"): from
+%% the registry, with its two grants and its calendar, with no invitation and
+%% no peer.  A later invitation to it is looked up in the registry and its
+%% root channel goes to the running execution ("Activation and joining";
+%% deliver/9).  A mini-app running already, or not installed, is left as it
+%% is.
+agent(Id, [msg(person, Id1, activate(App))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?) |
+    activate_app(App?, Id?, Apps?, Apps1, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Today's date, from the device's clock (superapp/3) or a play's script:
 %% written on the calendar of every mini-app installed, one date a day (GSG
@@ -521,8 +535,8 @@ agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
 
 %% verify_install(M, CSig, Trusted, V): what load_file/2 gave must be a Module
 %% (a forged artefact is its text), the compiler's key must be trusted, and the
-%% creator's certification signed over the module's source identity with the
-%% verdict grassroots.
+%% creator's certification signed over the module's source identity with a
+%% verdict of the checker that certifies the contract (cert_check/4).
 procedure verify_install(Content?, String?, Stream(String)?, Verdict).
 verify_install(M, CSig, Trusted, V?) :-
     module(M?) |
@@ -549,9 +563,23 @@ procedure cert_signed(Signature?, String?, Module?, Verdict).
 cert_signed(signed(_, _, Cert), Src, M, V?) :- cert_check(Cert?, Src?, M?, V).
 cert_signed(unsigned, _, _, refused).
 
-%% The signed term is untyped; the certification is read by its shape.
+%% The signed term is untyped; the certification is read by its shape.  The
+%% developer's warranty carries the checker's verdict as the checker prints it,
+%% and a program is installed only where that verdict certifies its contract
+%% (GSA paper, Section 3, "A grassroots program is compiled from its
+%% contract"): syntactically_grassroots, for a contract of agent roles or of
+%% listed roles, and the two verdicts with wards, the verdicts on which the
+%% cascade's compiler compiles (programs/gsc/check.glp, verdict/2 and
+%% wards_verdict1/4; compile.glp, compile_on/3).  not_grassroots(Faults),
+%% malformed(Faults) and any other term, the word grassroots among them, are
+%% refused.
 procedure cert_check(_?, String?, Module?, Verdict).
-cert_check(creator_cert(Src1, _, grassroots), Src, M, ok(M?)) :- Src? =?= Src1? | true.
+cert_check(creator_cert(Src1, _, syntactically_grassroots), Src, M, ok(M?)) :-
+    Src? =?= Src1? | true.
+cert_check(creator_cert(Src1, _, syntactically_grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
+    Src? =?= Src1? | true.
+cert_check(creator_cert(Src1, _, grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
+    Src? =?= Src1? | true.
 cert_check(_, _, _, refused) :- otherwise | true.
 
 %% install_step(V, App, CSig, Ui, Apps, Apps1): a mini-app installed is held
@@ -904,6 +932,26 @@ deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?, Cal, Ds?)) | Rest],
 deliver(App, Friend, End, Id, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
     otherwise | deliver(App?, Friend?, End?, Id?, M?, Rest?, Rest1, UserIn?, UserIn1).
 deliver(_, _, _, _, _, [], [], UserIn, UserIn?).
+
+%% activate_app(App, Id, Apps, Apps1, UserIn, UserIn1): the person's
+%% activation of the mini-app installed as App, with no invitation and no
+%% peer.  An idle entry is activated with exactly its three grants, as
+%% deliver/9 activates one: the end of its person channel and the calendar
+%% held since installation, the calendar copied and the copy kept for its next
+%% activation, and its social-graph channel, on which no conversation is yet
+%% open; the entry is then running, its writer of that channel kept, so that a
+%% later invitation's root channel goes to this execution.  An entry running
+%% already is passed over, and so is every entry of another name.
+procedure activate_app(Constant?, Key?, AppList?, AppList, UserInStream?, UserInStream).
+activate_app(App, Id, [app(A, M, C, idle(Ui, Cal, Ds?)) | Rest],
+             [app(A?, M?, C?, running(Sg, Kept?, Ds)) | Rest?], UserIn, UserIn1?) :-
+    App? =?= A? |
+    copy_calendar(Cal?, Given, Kept),
+    activate(M?, Id?, Ui?, Sg?, Up, Given?),
+    inject_requests(App?, Up?, UserIn?, UserIn1).
+activate_app(App, Id, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
+    otherwise | activate_app(App?, Id?, Rest?, Rest1, UserIn?, UserIn1).
+activate_app(_, _, [], [], UserIn, UserIn?).
 
 %% activate(M, Id, Ui, Sg, Up, Cal): the mini-app activated by run/3 at the
 %% type identity of the entry template's opaque instance at the type its

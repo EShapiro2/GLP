@@ -3,18 +3,18 @@
 % Paper: GSA, The Grassroots Super-App and App Store, in preparation
 % Extends: GFP, Grassroots Forwarding with Provenance, GSC's, factored out of GSNP with GAI (Udi, 2026-11-07, approving GSA #1's proposal; proposed to GSC and GAI the same day), and through it GSG and GKK.  It cites their clauses whole and restates none.
 % Defines: program and developer, defined in the box after the declaration, a contract being self-contained; a program is an item of GFP's, compiled code signed by its compiler that gives its contract, its developer its author (Udi, 2026-11-07).  Person, knowing a person, friend and item are defined with GKK, GSG and GFP; Alice, Bob and Carol are variables naming distinct persons.
-% Last changed: 2026-11-07, provenance by GFP: GPD extends GFP, publishing creates a program as an item, offering forwards it, an invitation adds the inviter's signature (Udi, 2026-11-07); the schemas rewritten on GFP the same evening; named GPD, Grassroots Programs Dissemination, by Udi in Overleaf (GSA 83e6201), GSA until then; Offering and Installation two clauses, Installation in Udi's words, and the clause titles made informative (Udi, 2026-11-07); written by GSA #1 Cowork from the GSA paper (Sections 3 and 6), at Udi's word that what the super-app does by hand is specified as a contract where it can be; a draft for Udi's approval and GSC's checker.
+% Last changed: 2026-11-07, implementation pragmas beside the interface pragmas, the checks of Program Installation, the two kinds and their names proposed to GSC (Udi, 2026-11-07); provenance by GFP: GPD extends GFP, publishing creates a program as an item, offering forwards it, an invitation adds the inviter's signature (Udi, 2026-11-07); the schemas rewritten on GFP the same evening; named GPD, Grassroots Programs Dissemination, by Udi in Overleaf (GSA 83e6201), GSA until then; Offering and Installation two clauses, Installation in Udi's words, and the clause titles made informative (Udi, 2026-11-07); written by GSA #1 Cowork from the GSA paper (Sections 3 and 6), at Udi's word that what the super-app does by hand is specified as a contract where it can be; a draft for Udi's approval and GSC's checker.
 % Schemas: GPD.glp beside this file, GKK's, GSG's and GFP's seven and nine over published, trusts, installed and participant, with GFP's item, and the value conditions program, author_of and item_of, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GPD: Grassroots Programs Dissemination
 GPD extends GFP (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-Alice, Bob and Carol are persons.  A program is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from; its developer is its author.
-1. ◆ Program Publication.  Carol may publish a program by signing it, attesting that it is the result of compiling the contract it gives and is expected to behave correctly according to it.
+Alice, Bob and Carol are persons.  A program is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its developer is its author.
+1. ◆ Program Publication.  Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
 2. ■ Developer Trust.  Alice may trust Carol, whom she knows, as a developer, and may withdraw her trust.
 3. ■ Program Offering.  Carol may offer a program she holds to her friend Alice by forwarding it to her.
 4. ■ Program Installation.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
 5. ■ Program Invitation.  Alice may invite her friend Bob to join her in a program she installed, with Bob's consent, Bob trusting its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 6. ■ Leaving a Program.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
-Pragmas
+Interface pragmas
 Programs: the programs Alice installed.
 Developers: the developers Alice trusts.
 Offers: the programs offered to Alice.
@@ -25,3 +25,5 @@ Program Installation: Alice [Install own] [Install]
 Program Invitation: Alice [Invite]
   Bob: Alice invites you to join her in a program.
 Leaving a Program: Alice [Leave]
+Implementation pragmas
+Program Installation: before installing a program, Alice's app checks that its developer is one she trusts, that its schemas pass the checker, and that its compiler's certificate matches its code; the code is type-checked when activated.

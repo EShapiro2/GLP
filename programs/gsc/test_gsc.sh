@@ -4,7 +4,7 @@
 #
 #   bash programs/gsc/test_gsc.sh
 #
-# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the clause of Definition Speech-act schema, tau: H <- B guarded by G, printed from a contract's term (notation.glp, GSC 859a007); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable; then equalities and inequalities of two speech-act variables or two name terms, as of two agent variables (def:numbers, GSC 6f0bda1), in a schema's constraint and in a count's, a sum's and a quantifier's phi; and the clause syntax, sas(Name, Names, Vars, Head, Body, Constraint, Guards) (GSC 859a007, Sections 3.1 and 3.2): GKK, GSG and GSN so written by their owner, each read from its file, each fault of the reading, and a required k.A with one copy deleted, read and compiled deleting one copy (Definition Denotation), and with j copies deleted, j a number or a variable, read where the constraint implies j <= k and refused otherwise (def:numbers); then traceable provenance through a safe formula of the body (def:grounded, GSC cd0f73e), a positive and a negative for each way a safe formula names a base or a speech-act variable: an atom of Phi_E held by an agent role, a conjunction, u = v beside a conjunct naming v, a disjunction, and exists Xs (A and phi), Xs not binding it.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects GSC's contracts, GKK, GSG and GSN, the checker's fixtures, and, for as_read/2's wrapped forms, GAI's GSNP.glp and Currencies' DGC.glp read unchanged (Code #23, 2026-11-05); every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
+# GSC's contracts GKK, GSG and GSN (programs/gsc/), GKK the base contract every contract extends, its establish forbidding the identity it adds (GKK:1, GSC b2bb8be), its introductory act acquaint, knows of traceable provenance and introduce's roles joined by knows(q) at p (GSC, Sections 2.1 and 7.1; intro_acts/2 and variants of GKK), GSN being the social network of /Grassroots/GSC Section 3.3, which Section 7.1 certifies by hand by def:syntactically-grassroots, one definition for a contract of agent roles and listed roles (GSC ac7ad63); each read from its file, each schema listing its variables in its head (GSC 0228e79), each extending GKK holding GKK's schemas as GKK.glp writes them; and contracts over GSG, broken in one place each, one per way of failing the three conjuncts of def:syntactically-grassroots; then clause 1 of def:unobstructed on a schema of arity one that forbids the atom it adds; then clause 2 of def:unobstructed with the other agent in a reading role; then contracts declaring a predicate reflexive (GAI's appendix "Contracts with Wards"); then schemas not formed as def:schema requires, refused, a guarding role adding and deleting nothing, admitted, and reading roles (GSC 0380a8a), admitted where a guarding role requires an atom naming them, compiled with their state unchanged, and failing volition otherwise; and those of a schema with no guarding role (GSC c100cdc), admitted with a signature atom and refused without one or as listed roles; then the compilation of Section 5, against the displays of befriend and close in Section 5.1; then small contracts on the speech-act variables of traceable provenance and on volition by connected component, and a contract with a name term based on an agent variable, which def:role does not admit, refused; then the signed speech-act term, on contracts admitted with it and on contracts refused for a signed term where it is forbidden; then contracts with wards (GAI's appendix "Contracts with Wards"), on a fixture of children and parents, on one of children and AI agents, on each broken in one place per clause, on one of children and AI agents whose relay acts require the AI agent's attestation, an atom of h of clause 2 of def:relay, which adds no record of it and is refused, and on it broken in one place per condition of that alternative, on one with a leaving mark and on it broken in one place per clause of def:leaving, and on agent-named contracts with wards (def:sg-wards, CSSN's paper) with a listed role; then contracts with listed roles and name terms over GSN, failing a condition each by a listed role, a listed role refused for the mark ?, and a listed reading role, failing volition or admitted; then listed roles formed otherwise than def:role allows, and schemas whose head is not their variables (def:schema); then the clause of Definition Speech-act schema, tau: H <- B guarded by G, printed from a contract's term (notation.glp, GSC 859a007); then cleared atoms (GSC 327e035): GSN's unfriend in the notation and compiled with K_p, and fixtures on each rule --- a cleared atom puts no edge in the role graph, is no change a role makes, matches no atom its role adds, a wildcard only in an atom marked -, and a schema of arity one that clears supplies nothing under clause 1 of def:unobstructed; then the values speech-act schemas allow (GSC, Section 3.2 and its appendix "Values in Speech-Act Schemas"), which traceable provenance and volition do not concern, a value naming no agent: a contract with numbers certified, def:unobstructed on numbers --- a number required and supplied, or not, by a schema of arity one at a binding satisfying its constraint, a number matched by equality, a number forbidden and added, or not, at such a binding, a value the introduction chooses, a value below every number the contract writes, and a multiplicity a positive whole number at every binding --- and a fixture of each malformation the passage forbids; then signing conditions in a constraint, signed(u, y) and unsigned(u, y) (def:numbers, GSC 10fcc92), accepted with the verdict of the same fixture without them, printed, compiled, and refused where u is no agent role or agent variable or y no speech-act variable; then equalities and inequalities of two speech-act variables or two name terms, as of two agent variables (def:numbers, GSC 6f0bda1), in a schema's constraint and in a count's, a sum's and a quantifier's phi; and the clause syntax, sas(Name, Names, Vars, Head, Body, Constraint, Guards) (GSC 859a007, Sections 3.1 and 3.2): GKK, GSG and GSN so written by their owner, each read from its file, each fault of the reading, and a required k.A with one copy deleted, read and compiled deleting one copy (Definition Denotation), and with j copies deleted, j a number or a variable, read where the constraint implies j <= k and refused otherwise (def:numbers); then traceable provenance through a safe formula of the body (def:grounded, GSC cd0f73e), a positive and a negative for each way a safe formula names a base or a speech-act variable: an atom of Phi_E held by an agent role, a conjunction, u = v beside a conjunct naming v, a disjunction, and exists Xs (A and phi), Xs not binding it; then the author author(y), the item item(y) and a condition on that utterance in a constraint (def:numbers, GSC 6df39d4), taken as true, read, printed and compiled, and refused elsewhere, item(y) as an argument of an atom a fault of the reading.  The federation extension of speech-act schemas left GSC's paper (GSC f3c4f43) and its checks left with its code (Coordination #7, 2026-10-20).  A contract is its owner's and the checker reads its term (contracts.glp, the header): a fixture that changes one is a variant, given by name and the owner's term.  This script expects GSC's contracts, GKK, GSG and GSN, the checker's fixtures, and, for as_read/2's wrapped forms, GAI's GSNP.glp and Currencies' DGC.glp read unchanged (Code #23, 2026-11-05); every other owner's contract is checked and recorded by Code from its own .glp, by cascade.sh (GSC #8, 2026-10-25 18:26 UTC).  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -109,9 +109,11 @@ GSNV=$(asread "$GSNT")
 # as_read takes a contract in either wrapped form, reflexive(Preds,
 # Contract) and environment(Preds, Body), as check/2 and unnamed/2 do, and
 # gives the same wrapper with each schema inside as read: GKK in the clause
-# syntax, wrapped, reads to GKK as read, wrapped; an owner's wrapped contract
-# in the checker's form, GSNP's reflexive and DGC's environment, reads to
-# itself.
+# syntax, wrapped, reads to GKK as read, wrapped; DGC's environment contract,
+# in the checker's form, reads to itself; and GSNP's reflexive contract, in
+# the clause syntax since GAI d0d98714, reads to its wrapper with each schema
+# in the checker's form, its author(y) in a constraint read too (GSC
+# 6df39d4, def:numbers).
 check_eq "as_read gives a reflexive contract its wrapper, each schema inside as read" \
       "reflexive([friend, knows], $GKKV)" "$(asread "reflexive([friend, knows], $GKKT)")"
 check_eq "as_read gives an environment contract its wrapper, each schema inside as read" \
@@ -119,8 +121,10 @@ check_eq "as_read gives an environment contract its wrapper, each schema inside 
 check_eq "as_read descends an environment contract's reflexive body as unnamed/2 does" \
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
 GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
-check "GSNP's contract is reflexive" "reflexive([friend, knows], [schema(" "$GSNPT"
-check_eq "as_read gives GSNP, reflexive in the checker's form, as it is" "$GSNPT" "$(asread "$GSNPT")"
+check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
+GSNPV=$(asread "$GSNPT")
+check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
+check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
@@ -2290,6 +2294,69 @@ check_eq "a real k > 0 does not" "V = not_stronger([constraint_not_implied(ge(nu
 check_eq "a conjunct of the weaker constraint that is a conjunct of the stronger is implied" "V = stronger" "$(sf 5)"
 check_eq "befriend with an atom more in its body is stronger" "V = stronger" "$(sf 6)"
 check_eq "introduce with its variable renamed is the same schema" "V = stronger" "$(sf 7)"
+
+# --- the author, the item and a condition on an utterance (GSC 6df39d4, def:numbers) ---
+# "the author author(y), the first signer of y, in an equality with an agent
+# role or agent variable, the item item(y), the utterance under the
+# signatures of y, in an equality with another, and a decidable condition on
+# that utterance that its type provides" (def:numbers), the term form
+# author_of(y), item_of(y) and program(item_of(y)) (README.md, "Writing a
+# contract").  No condition reads them, so each is taken as true: forward
+# with its author named, or not named, has the verdict of forward with no
+# constraint.  author_of and item_of elsewhere, program on what is no item,
+# and author_of or item_of of what is no speech-act variable are refused; and
+# item_of(y) as an argument of an atom is a fault of the reading.
+AU_SIGN="sas(sign, ['Alice'], [x], [atom(item, ['Alice', x])], [atom(identity, ['Alice']), not(atom(item, ['Alice', x]))], true, ['Alice'])"
+au_fwd() { printf "%s, %s, sas(forward, ['Alice', 'Bob'], [x], [atom(item, ['Bob', sgn(x, 'Alice')])], [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(knows, ['Alice', 'Bob']), atom(identity, ['Bob'])], %s, ['Alice'])]" "$GKK_SCHEMAS" "$AU_SIGN" "$1"; }
+AU_PAIR="$GKK_SCHEMAS, $AU_SIGN, sas(pair, ['Alice'], [x, y], [atom(paired, ['Alice', x, y])], [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(item, ['Alice', y]), not(atom(paired, ['Alice', x, y]))], and(eq(item_of(x), item_of(y)), program(item_of(x))), ['Alice'])]"
+AU_ARG="$GKK_SCHEMAS, $AU_SIGN, sas(keep, ['Alice'], [x], [atom(kept, ['Alice', item_of(x)])], [atom(identity, ['Alice']), atom(item, ['Alice', x])], true, ['Alice'])]"
+out=$(run "check($(au_fwd true), V)." \
+          "check($(au_fwd "eq(author_of(x), 'Alice')"), V)." \
+          "check($(au_fwd "ne(author_of(x), 'Bob')"), V)." \
+          "check($(au_fwd "eq('Alice', author_of(x))"), V)." \
+          "check($AU_PAIR, V)." \
+          "check($(au_fwd "eq(author_of(x), author_of(x))"), V)." \
+          "check($(au_fwd "eq(author_of('Bob'), 'Alice')"), V)." \
+          "check($(au_fwd "program(x)"), V)." \
+          "check($(au_fwd "eq(item_of(x), 'Bob')"), V)." \
+          "check($(au_fwd "le(author_of(x), num(3))"), V)." \
+          "check($(au_fwd "program(item_of('Bob'))"), V)." \
+          "check($(au_fwd "eq(author_of(z), 'Alice')"), V)." \
+          "check($AU_ARG, V).")
+check_eq "forward with no constraint is syntactically grassroots" "V = syntactically_grassroots" "$(sf 1)"
+check_eq "author(x) = Alice is taken as true: the same verdict" "V = syntactically_grassroots" "$(sf 2)"
+check_eq "author(x) != Bob, its negation, is taken as true: the same verdict" "V = syntactically_grassroots" "$(sf 3)"
+check_eq "Alice = author(x), the equality either way round" "V = syntactically_grassroots" "$(sf 4)"
+check_eq "item(x) = item(y) and program(item(x)) are taken as true" "V = syntactically_grassroots" "$(sf 5)"
+check_eq "author(x) = author(x), the author in an equality with no agent role or agent variable, is refused" \
+         "V = malformed([constraint_not_numeric(forward, svar(x)), constraint_not_numeric(forward, svar(x))])" "$(sf 6)"
+check_eq "the author of a role, no speech-act variable, is refused" \
+         "V = malformed([signing_not_speech_act(forward, role(2))])" "$(sf 7)"
+check_eq "program(x), a condition on a speech act and not on its item, is refused" \
+         "V = malformed([constraint_not_numeric(forward, svar(x))])" "$(sf 8)"
+check_eq "item(x) = Bob, the item in an equality with no item, is refused" \
+         "V = malformed([constraint_not_numeric(forward, svar(x)), constraint_not_numeric(forward, role(2))])" "$(sf 9)"
+check_eq "author(x) <= 3, the author in no equality, is refused" \
+         "V = malformed([constraint_not_numeric(forward, svar(x))])" "$(sf 10)"
+check_eq "program(item(Bob)), the item of a role, is refused" \
+         "V = malformed([signing_not_speech_act(forward, role(2))])" "$(sf 11)"
+check_eq "author(z), z not among the schema's variables, is a fault of the reading" \
+         "V = malformed([not_in_vars(forward, constraint)])" "$(sf 12)"
+check_eq "item(x) as an argument of an atom is a fault of the reading" \
+         "V = malformed([item_argument(keep, kept)])" "$(sf 13)"
+check "as_read gives author(x) = Alice as author_of(svar(x)) = role(1)" \
+      "nschema(forward, ['Alice', 'Bob'], [svar(x)], eq(author_of(svar(x)), role(1)), " "$(asread "$(au_fwd "eq(author_of(x), 'Alice')")")"
+check "as_read gives item(x) = item(y) and program(item(x))" \
+      "nschema(pair, ['Alice'], [svar(x), svar(y)], and(eq(item_of(svar(x)), item_of(svar(y))), program(item_of(svar(x)))), " "$(asread "$AU_PAIR")"
+check "the notation prints author(x) != Bob" "author(x) != Bob guarded by Alice" "$(notation "$(au_fwd "ne(author_of(x), 'Bob')")")"
+check "the notation prints item(x) = item(y), program(item(x))" "item(x) = item(y), program(item(x)) guarded by Alice" "$(notation "$AU_PAIR")"
+out=$(run "compile_schema_in(t, $(au_fwd "eq(author_of(x), 'Alice')"), forward)." "compile_schema_in(t, $AU_PAIR, pair)." "compile_contract(t, $AU_ARG).")
+check "the compiled form writes \\mathrm{author}(x) = \\Alice in the proviso" \
+      '\text{provided}\mathrm{author}(x)=\Alice' "$(printf '%s' "$out" | squash)"
+check "and \\mathrm{item}(x) = \\mathrm{item}(y) \\land \\mathrm{program}(\\mathrm{item}(x))" \
+      '\text{provided}\mathrm{item}(x)=\mathrm{item}(y)\land\mathrm{program}(\mathrm{item}(x))' "$(printf '%s' "$out" | squash)"
+check "a contract with an item as an atom's argument is not compiled, the fault named" \
+      "the item of a speech act, which stands only in a constraint;" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

@@ -1145,6 +1145,7 @@ cons_cd(succ(X, Y), E, P, R?) :- ground(X?), ground(Y?), ground(E?), ground(P?) 
 cons_cd(rel(_, _), _, _, cd([[]], no)).
 cons_cd(signed(_, _), _, _, cd([[]], yes)).
 cons_cd(unsigned(_, _), _, _, cd([[]], yes)).
+cons_cd(program(_), _, _, cd([[]], yes)).
 
 % And where P is yes, or where it is no.
 procedure cd_join(Ans?, Cd?, Cd?, Cd).

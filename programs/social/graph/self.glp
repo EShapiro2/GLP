@@ -59,6 +59,10 @@ UserContent ::= connect(Key)
               %% attestation: read back the attestation minted at the
               %% befriending (Section 5.5).
               ; install(Constant, Content, String, PersonChannel(Opaque))
+              %% activate: the person activates a mini-app installed here,
+              %% with no invitation and no peer, beginning an instance of one
+              %% (GSA paper, Section 3, "A grassroots program instance").
+              ; activate(Constant)
               ; date(Integer)
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)

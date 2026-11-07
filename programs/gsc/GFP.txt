@@ -2,15 +2,15 @@
 % Owner: GSC (Udi, 2026-11-07, to GSC #13, on GSA #1's proposal of 18:09 UTC, which he supported).  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.3 and cites a clause as GFP:1; GSNP, GAI's, and GPD, GSA's, extend it.
 % Paper: GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK.  It cites their clauses whole and restates none.
-% Defines: item, a speech act a person holds, created by signing it or received signed over by the friend who forwarded it; the signatures an item carries are its provenance.
+% Defines: item, a speech act a person holds, created by signing it or received signed over by the friend who forwarded it; the signatures an item carries are its provenance, and its author, defined in the box, is its first signer (Udi, 2026-11-07, to GAI #12: GFP owns it; GPD and GSNP use it, as author(y) and item(y) in constraints, GSC's values appendix).  The act is sign, the button [Sign], GSN having create and [Create] (GAI #12's finding, 2026-11-07).
 % Last changed: 2026-11-07, written by GSC #13 Cowork from GSA #1's proposal: GFP:1 Creation, GFP:2 Forwarding, GSNP:1 factored out of GSNP (GAI's) so that provenance is defined once and GPD (GSA's) extends it.
 % Schemas: GFP.glp beside this file, GKK's three, GSG's two and two over the predicate item, forward adding at Bob the item signed over by Alice, sgn(x, Alice), the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GFP: Grassroots Forwarding with Provenance
 GFP extends GSG.
-Alice and Bob are persons.
-1. ■ Creation.  Alice may create an item by signing it.
+Alice and Bob are persons.  The author of an item is its first signer.
+1. ■ Signing.  Alice may create an item by signing it.
 2. ■ Forwarding.  Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries; Bob sees them.
 Pragmas
 Items: the items Alice holds, each with its signatures.
-Creation: Alice [Create] <text>
+Signing: Alice [Sign] <text>
 Forwarding: Alice [Forward]

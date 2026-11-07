@@ -18,10 +18,15 @@
 %%
 %%   Panel           two cards in a list the program writes at once, each
 %%                   answered as its own question
-%%   Stream(Card)    a stream of cards, its third written once the first two
-%%                   are answered
+%%   List(Card)      a list of three cards, drawn once written whole
 %%   Stream(YesNo?)  a stream the program writes whose elements are
 %%                   themselves questions
+%%
+%% The output of a question is drawn once written whole, "once every reader
+%% in the output it holds is assigned" (vGLP, Section 6.3, "The construct
+%% process"); until vGLP #24 Cowork's 6(i) (Code_inbox.md, 2026-11-07 17:19
+%% UTC) the stream of cards was drawn as it grew, its third card written
+%% once the first two were answered, which is no longer drawn.
 
 YesNo   ::= yes ; no.
 Card    ::= card(Integer, YesNo?).
@@ -35,7 +40,7 @@ Panel   ::= panel(List(Card)).
 exported procedure panel(Channel(Stream(_), Stream(Output))?).
 panel(ch(_, Out?)) :- show(Out).
 
-%% A stream of three cards.
+%% A list of three cards.
 exported procedure deal(Channel(Stream(_), Stream(Output))?).
 deal(ch(_, Out?)) :- cards(Out).
 
@@ -53,15 +58,12 @@ procedure (Panel)*show(Stream(Output)).
 (panel([card(1, A1), card(2, A2)]))*show(Out?) :-
     answered(1, A1?, O1), answered(2, A2?, O2), merge(O1?, O2?, Out).
 
-%% The stream shows two cards, and a third once both are answered; then it
-%% ends.
-procedure (Stream(Card))*cards(Stream(Output)).
-([card(1, A1), card(2, A2) | Cs?])*cards(Out?) :-
-    third(A1?, A2?, Cs, Out).
-
-procedure third(YesNo?, YesNo?, Stream(Card), Stream(Output)).
-third(A1, A2, [card(3, A3)], [got(1, A1?), got(2, A2?) | Out?]) :-
-    ground(A1?), ground(A2?) | answered(3, A3?, Out).
+%% The list shows three cards at once, and the program reads each answer as
+%% the person gives it.
+procedure (List(Card))*cards(Stream(Output)).
+([card(1, A1), card(2, A2), card(3, A3)])*cards(Out?) :-
+    answered(1, A1?, O1), answered(2, A2?, O2), answered(3, A3?, O3),
+    merge(O1?, O2?, O12), merge(O12?, O3?, Out).
 
 %% The stream of two questions, each element the person's to write.
 procedure (Stream(YesNo?))*ballot(Stream(Output)).

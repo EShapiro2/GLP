@@ -1,0 +1,21 @@
+%% dated_mint_boot.glp --- the bonds program's play_mint on one smartphone (GSA paper, Section 3, "A grassroots program instance": "An instance begins with one person, who installs the certified program and activates it"): under the boot harness, one isolate, alice, with her own key pair, running the social graph of programs/social/graph/core as her super-app and hosting the mini-app, programs/currencies/bonds/dated, the certified program.  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, with the boot clause and the person; the smartphone, dated_phone/4, is graph/core's (core/dated_phone.glp), started by core's agent/2 on the person's first act (IGLP 30c04c5, Implementation Notes, "Boot"):
+%%   :artefact programs/currencies/bonds/dated programs/social/graph/core
+%%   :boot programs/currencies/dated_mint_boot.glp programs/social/graph/core
+%%
+%% alice, alone, knows no peer: she trusts the compiler's key, reads the certified artefact dated.glpw from graph/core with load_file/2, installs it with one end of a person channel and activates it, with no invitation and no peer; the other end of the person channel is the mini-app's own scripted person (programs/currencies/bonds/dated/plays.glp, miniapp_person/5) under the role mint, who mints 3, play_mint's script, and its screen goes to the person, one line each: play_mint's screen, [minted(3, now), holdings([lot(alice, now, 3)]) | _].
+%%
+%% The boot settles, as gc_boot.glp's does: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent").
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(mint, alice, [], ch(_?, _))@alice.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 30c04c5, Implementation Notes, "Boot").  The person scripted at the agent, say/4, run on its person channel in the person's place, tells the agent the entry, dated_phone/4 (graph/core/dated_phone.glp), with the person's role in the play, her own key and the keys of the peers she knows, none, its ground arguments, alice being the atom that stands for her key in a simulation (Remark "Agent Names"), and reads nothing.
+Role   ::= mint.
+SayAct ::= dated_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [dated_phone(R?, Me?, Ps?)])).

@@ -1,13 +1,15 @@
 %% pending.vglp --- positions the program writes after the ask, for the
 %% construct processes (glp_runtime/test/vglp/elicitation_test.dart) and the
-%% Dart bridge (glp_multiagent/test/bridge_test.dart): vGLP's pending
-%% drawing of 2026-10-11 (vGLP #8 Cowork, 20:48 UTC, "19:09 (D, Q1)", and
-%% 22:51 UTC, Udi approved).  vGLP 118e04d, Definition "Construct Process":
-%% the construct process "has the bridge draw the widget of T with the output
-%% so far, again as more arrives, each widget position the program has not
-%% yet written whole --- the root, a field, an element of any stream, the
-%% thread's included --- drawn as pending, and a stream's unwritten tail not
-%% drawn, so that the questions beside it are offered at once".
+%% Dart bridge (glp_multiagent/test/bridge_test.dart).  The output of a
+%% question is drawn once written whole: "A construct process has the bridge
+%% draw the widget of T once every reader in the output it holds is assigned,
+%% with that output and its questions"; and a question is answered only once
+%% drawn: "On a grant input(Id, Pos, R) for a question W it holds and has
+%% drawn" (vGLP, Section 6.3, "The construct process"; vGLP #24 Cowork,
+%% Code_inbox.md, 2026-11-07 17:19 UTC, 6(i)).  From vGLP 118e04d until then
+%% each position not yet written whole was drawn pending, the questions
+%% beside it offered at once, which this module tested; the directory keeps
+%% its name, which the bridge's tests use.
 %%
 %% Each agent reads its own end of the person channel, MCh, on which the
 %% dispatcher passes it every grant that is not input(Id, P, R), and takes
@@ -18,18 +20,15 @@
 %%
 %%   late    a card whose Peer the program writes after the ask: the peer
 %%           the person's word names
-%%   deal    a stream of three cards: the first written once the third is
-%%           answered, the second's Peer the person's word, the third whole;
-%%           its tail written, [], once all three are answered
-%%   board   a thread of notes beside a question, its second note written
-%%           before its argument, the person's word, is bound
+%%   deal    a list of three cards, the second's Peer the person's word
+%%   board   a list of notes beside a question, its second note's argument
+%%           the person's word
 
 Peer  ::= Constant.
 YesNo ::= yes ; no.
 Card  ::= card(Peer, YesNo?).
 Note  ::= note(Constant).
-Board ::= board(Stream(Note), YesNo?).
-Fin   ::= fin.
+Board ::= board(List(Note), YesNo?).
 
 %% ---------------------------------------------------------------------------
 %% The agents
@@ -39,11 +38,11 @@ Fin   ::= fin.
 exported procedure late(Channel(Stream(_), Stream(Output))?).
 late(ch(In, Out?)) :- peer_of(In?, Peer), respond(Peer?, Out).
 
-%% A stream of three cards, the second's Peer the person's word.
+%% A list of three cards, the second's Peer the person's word.
 exported procedure deal(Channel(Stream(_), Stream(Output))?).
 deal(ch(In, Out?)) :- peer_of(In?, Peer), cards(Peer?, Out).
 
-%% A thread of notes beside a question, the second note's argument the
+%% A list of notes beside a question, the second note's argument the
 %% person's word.
 exported procedure board(Channel(Stream(_), Stream(Output))?).
 board(ch(In, Out?)) :- word_of(In?, W), notes(W?, Out).
@@ -54,27 +53,23 @@ board(ch(In, Out?)) :- word_of(In?, W), notes(W?, Out).
 
 %% The card is written at once, its Peer whenever the person's word comes.
 procedure (Card)*respond(Peer?, Stream(Output)).
-(card(Peer?, A))*respond(Peer, Out?) :- answered(0, A?, Out, _).
+(card(Peer?, A))*respond(Peer, Out?) :- answered(0, A?, Out).
 
-%% The stream: its first card unwritten, its second with the Peer still to
-%% come, its third whole, and its tail unwritten.  Once the third is
-%% answered the program writes the first; once the first and the second are
-%% answered, it closes the stream.
-procedure (Stream(Card))*cards(Peer?, Stream(Output)).
-([X1?, card(Peer?, A2), card(bob, A3) | Cs?])*cards(Peer, Out?) :-
-    answered(3, A3?, O3, F3),
-    first(F3?, X1, O1, F1),
-    answered(2, A2?, O2, F2),
+%% The list: its first and third cards whole, its second with the Peer still
+%% to come.
+procedure (List(Card))*cards(Peer?, Stream(Output)).
+([card(carol, A1), card(Peer?, A2), card(bob, A3)])*cards(Peer, Out?) :-
+    answered(1, A1?, O1),
+    answered(2, A2?, O2),
+    answered(3, A3?, O3),
     merge(O3?, O2?, O32),
-    merge(O32?, O1?, Out),
-    close(F1?, F2?, Cs).
+    merge(O32?, O1?, Out).
 
-%% The thread: its first note whole, its second written before its argument
-%% is, and its tail closed once the question is answered.
+%% The board: its first note whole, its second written before its argument
+%% is.
 procedure (Board)*notes(Constant?, Stream(Output)).
-(board([note(first), note(W?) | Ns?], A))*notes(W, Out?) :-
-    answered(0, A?, Out, F),
-    end_notes(F?, Ns).
+(board([note(first), note(W?)], A))*notes(W, Out?) :-
+    answered(0, A?, Out).
 
 %% ---------------------------------------------------------------------------
 %% Helpers
@@ -95,20 +90,7 @@ word_of([word(W) | _], W1?) :- constant(W?) | W1 = W?.
 word_of([_ | In], W?) :- otherwise | word_of(In?, W).
 word_of([], none).
 
-%% answered(N?, X?, Out, F): once the person has answered X, got(N, X) on
-%% the program's output to the person, which then closes, and F fin.
-procedure answered(Integer?, YesNo?, Stream(Output), Fin).
-answered(N, X, [got(N?, X?)], fin) :- ground(X?) | true.
-
-%% first(F?, X, Out, F1): once F is fin, X the first card, card(carol, A),
-%% and its answer awaited as answered/4 awaits one.
-procedure first(Fin?, Card, Stream(Output), Fin).
-first(fin, card(carol, A), Out?, F?) :- answered(1, A?, Out, F).
-
-%% close(F1?, F2?, Cs): the stream closed once both are fin.
-procedure close(Fin?, Fin?, Stream(Card)).
-close(fin, fin, []).
-
-%% end_notes(F?, Ns): the thread closed once F is fin.
-procedure end_notes(Fin?, Stream(Note)).
-end_notes(fin, []).
+%% answered(N?, X?, Out): once the person has answered X, got(N, X) on the
+%% program's output to the person, which then closes.
+procedure answered(Integer?, YesNo?, Stream(Output)).
+answered(N, X, [got(N?, X?)]) :- ground(X?) | true.

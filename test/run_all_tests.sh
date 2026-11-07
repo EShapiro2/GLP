@@ -6937,10 +6937,13 @@ if _section RV; then
 # answering the load.  Under the plain REPL no signature over a pair is made
 # under the social graph, so every reconnect and available through the agent
 # is rejected; what peer_address/2 reports, address(S) or none, is given to
-# the agent's dispatch on it directly.  Test 22 alone has its test program
-# stand in for the graph, so an available is admitted and reaches
-# peer_address/2, which with no networking layer bound assigns none (IGLP,
-# "One interface").  punch_udp/1 is the root's, which there returns having
+# the agent's dispatch on it directly.  Tests 22 and 25 alone have their test
+# program stand in for the graph of a compatible version, so an available is
+# admitted and reaches peer_address/2, which with no networking layer bound
+# assigns none (IGLP, "One interface").  The agent is given the compatible
+# versions, each version(V, H) with H the source identity of version V's
+# social-graph program, and admits a signature under any of them (GNA
+# Section 6, "Versions"): tests 23 to 25.  punch_udp/1 is the root's, which there returns having
 # done nothing; rv_client.glp and fmrv.glp carried stubs of it until
 # 2026-10-10.
 echo "=== Section RV: Rendezvous example (GNA) ==="
@@ -6983,8 +6986,11 @@ fmrv4_empty.
 fmrv5_mediate_unknown(FA5).
 fmrv6_punch_to_not_found.
 fmrv7_mediate_unknown_from(FA7).
+test23_compatible(C231, C232, C233, C234).
 :trace
 test22_available_admitted_no_layer(S22, RB22, RA22).
+test24_each_version_admitted(R241, R242, R243).
+test25_agent_versions(RA25, RR25).
 :quit
 HEREDOC
 2>&1)
@@ -7093,26 +7099,63 @@ check "RV fmrv test6: punch_to(not_found) is a no-op" "^→ succeeds$" "$(_rv_an
 check "RV fmrv test7 succeeds" "^→ succeeds$" "$(_rv_answer 35)"
 check "RV fmrv test7: an unknown requester sends alice not_found" "^FA7 = \[msg(bob, alice, punch_to(not_found)) | X[0-9]*\]$" "$(_rv_answer 35)"
 
-# rv_agent_test.glp test 22, posted last and under :trace (answer 36 is the
-# :trace command's): the admitting path.  The test program signs the pair of
-# self_key's K and bob under K and gives the agent as Graph the identity
-# signature/2 reports, so bob's available for K verifies and is admitted; the
+# rv_agent_test.glp test 23: compatible/3 admits each of two listed source
+# identities, and refuses one listed under no version, and any under none.
+check "RV agent test23 succeeds" "^→ succeeds$" "$(_rv_answer 36)"
+check "RV agent test23: the identity of the version listed first is admitted" "^C231 = admitted$" "$(_rv_answer 36)"
+check "RV agent test23: the identity of the version listed second is admitted" "^C232 = admitted$" "$(_rv_answer 36)"
+check "RV agent test23: an identity listed under no version is refused" "^C233 = refused$" "$(_rv_answer 36)"
+check "RV agent test23: with no compatible version, nothing is admitted" "^C234 = refused$" "$(_rv_answer 36)"
+
+# rv_agent_test.glp test 22, posted under :trace (answer 37 is the :trace
+# command's): the admitting path.  The test program signs the pair of
+# self_key's K and bob under K and gives the agent as its one compatible
+# version version(1, Graph), Graph the identity signature/2 reports, so
+# bob's available for K verifies and is admitted; the
 # trace shows the agent's peer_address/2 call, which only an admitted request
 # makes, and with no layer bound it assigns none (IGLP, "One interface"), so
 # bob is rejected and K, waiting, is told nothing.
 rv_key="\('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)"
-check "RV agent test22 succeeds" "^→ succeeds$" "$(_rv_answer 37)"
-check "RV agent test22: the available's signature verifies, A's own over the pair in the fixed order" "^S22 = signed($rv_key, $rv_key, attest(\(\1, bob\|bob, \1\)))$" "$(_rv_answer 37)"
-check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 37)"
-check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 37)"
-check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 37)"
+check "RV agent test22 succeeds" "^→ succeeds$" "$(_rv_answer 38)"
+check "RV agent test22: the available's signature verifies, A's own over the pair in the fixed order" "^S22 = signed($rv_key, $rv_key, attest(\(\1, bob\|bob, \1\)))$" "$(_rv_answer 38)"
+check "RV agent test22: the admitted available reaches the layer, which observes no address for B" "^:peer_address(bob, none) :- true$" "$(_rv_answer 38)"
+check "RV agent test22: no address observed for B, the admitted available is rejected" "^RB22 = rejected$" "$(_rv_answer 38)"
+check "RV agent test22: no address observed for B, the waiting A is told nothing" "^RA22 = <unbound>$" "$(_rv_answer 38)"
+
+# rv_agent_test.glp test 24, under :trace: admit_reconnect/7 given bob's
+# signature over the pair under each of two compatible versions' identities
+# and under one listed under none.  Each admitted request reads alice's
+# address, none with no layer bound, so all three are rejected; the trace
+# holds two peer_address/2 calls, the two admitted, and the third refused
+# without one.
+rv_24=$(_rv_answer 39)
+check "RV agent test24 succeeds" "^→ succeeds$" "$rv_24"
+check "RV agent test24: a signature under the first listed version's identity is admitted" ":compatible(hash_v1, \[version(1, hash_v1) | \[version(2, hash_v2)\]\], admitted) :- true$" "$rv_24"
+check "RV agent test24: a signature under the second listed version's identity is admitted" ":compatible(hash_v2, \[version(2, hash_v2)\], admitted) :- true$" "$rv_24"
+check "RV agent test24: a signature under an identity listed under no version is refused" ":compatible(other_hash, \[\], refused) :- true$" "$rv_24"
+check "RV agent test24: each admitted request, and only those, reaches the layer" "^2$" "$(printf '%s\n' "$rv_24" | grep -c '^:peer_address(alice, none) :- true$')"
+check "RV agent test24: the request under the first listed version is rejected, the layer observing no address" "^R241 = rejected$" "$rv_24"
+check "RV agent test24: the request under the second listed version is rejected, the layer observing no address" "^R242 = rejected$" "$rv_24"
+check "RV agent test24: the request under no listed version is rejected" "^R243 = rejected$" "$rv_24"
+
+# rv_agent_test.glp test 25, under :trace: through the agent, the test
+# program's verified signature, made under Graph, admitted where Graph is
+# the identity of the version listed second, and refused where it is no
+# listed version's, with no address read.
+rv_25=$(_rv_answer 40)
+check "RV agent test25 succeeds" "^→ succeeds$" "$rv_25"
+check "RV agent test25: under the version listed second, the available is admitted and reaches the layer" ":admit_available_by(admitted, bob, " "$rv_25"
+check "RV agent test25: under no listed version, the available is refused" ":admit_available_by(refused, bob, " "$rv_25"
+check "RV agent test25: only the admitted available reaches the layer" "^1$" "$(printf '%s\n' "$rv_25" | grep -c '^:peer_address(bob, none) :- true$')"
+check "RV agent test25: the admitted available is rejected for the address none" "^RA25 = rejected$" "$rv_25"
+check "RV agent test25: the available under no listed version is rejected" "^RR25 = rejected$" "$rv_25"
 
 # rv_server/3, the entry the rendezvous server boots the agent on
 # (networking/glue/bin/rendezvous_server.dart): the module loaded as the
 # program, and a network input of one msg(Id, M) envelope, whose M reaches the
 # agent; an unsigned reconnect is refused.  The server itself, over the layer,
 # is networking/glue/test/rendezvous_server_test.dart's.
-rv_server_out=$(printf 'load %s\nrv_server(rv, g, [msg(rv, reconnect(alice, bob, sig, RS))]).\n:quit\n' \
+rv_server_out=$(printf 'load %s\nrv_server(rv, [version(1, g)], [msg(rv, reconnect(alice, bob, sig, RS))]).\n:quit\n' \
     "$GLP_DIR/programs/examples/rendezvous/rv_agent.glp" | "$REPL_RUN" 2>&1)
 check "RV rv_server loads as the server's program" "Loaded: .*rv_agent.glp" "$rv_server_out"
 check "RV rv_server: the envelope is taken off, and an unsigned reconnect refused" "^GLP> RS = rejected$" "$rv_server_out"
@@ -7194,6 +7237,11 @@ play_install(alice, "cssn.glpw", cssn, I1).
 play_install(alice, "currency.glpw", currency, I2).
 play_install(alice, "pingapp.glpw", ping, I3).
 play_forged_cert(alice, I4).
+play_verdict(alice, with_wards, V1).
+play_verdict(alice, wards, V2).
+play_verdict(alice, not_grassroots, V3).
+play_verdict(alice, malformed, V4).
+play_verdict(alice, word, V5).
 play_forged_invite(alice, bob, F1).
 play_forged_join(alice, bob, F2).
 play_forged_root(alice, bob, F3).
@@ -7215,6 +7263,16 @@ check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
 check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
 check "SG super-app: the super-app installs the certified pingapp" "I3 = \[ping\]" "$sg_core"
 check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
+# The checker's verdict a certification carries, as the checker prints it (GSA
+# paper, Section 3, "A grassroots program is compiled from its contract"): a
+# verdict that certifies the contract, with wards or without, installs; one
+# that does not, and the word grassroots, which the checker never prints,
+# install nothing (play_verdict/3; agent.glp, cert_check/4).
+check "SG super-app: a certification with the verdict syntactically_grassroots_with_wards installs" "V1 = \[ping\]" "$sg_core"
+check "SG super-app: a certification with the verdict grassroots_with_wards installs" "V2 = \[ping\]" "$sg_core"
+check "SG super-app: a certification with the verdict not_grassroots installs nothing" "V3 = \[\]" "$sg_core"
+check "SG super-app: a certification with the verdict malformed installs nothing" "V4 = \[\]" "$sg_core"
+check "SG super-app: a certification with the word grassroots, no verdict of the checker, installs nothing" "V5 = \[\]" "$sg_core"
 check "SG super-app refuses a forgery: an invitation that is not a signed term delivers nothing, and the next message arrives" "F1 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: an undertaking that is not a signed term creates no root channel, and the next message arrives" "F2 = \[msg(agent, person, received(bob, hello))\]" "$sg_core"
 check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
@@ -7453,6 +7511,49 @@ check "SG currency on two smartphones: alice's swap with bob done" "\[alice\] sw
 check "SG currency on two smartphones: bob's swap with alice done" "\[bob\] swap_done(alice)" "$sg_coins"
 check "SG currency on two smartphones: alice holds bob's coin" "\[alice\] holdings(\[lot(bob, 2)\])" "$sg_coins"
 check "SG currency on two smartphones: bob holds alice's coin" "\[bob\] holdings(\[lot(alice, 2)\])" "$sg_coins"
+
+# Activation without an invitation (GSA paper, Section 3, "A grassroots
+# program instance": "An instance begins with one person, who installs the
+# certified program and activates it; others join it on invitation"), and a
+# later invitation to the running execution ("Activation and joining"):
+# alice installs the currency and activates it with no peer, her scripted
+# person mints 3 and her screen shows it before she knows anyone; she then
+# connects to bob and invites him, and the conversation opens on the
+# execution she activated alone, its screen showing it after her holdings
+# (play_activate/4; agent.glp, activate_app/6 and deliver/9).  Its own
+# session, as the mini-app plays above are.
+sg_activate=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
+$SG_CORE
+:limit 5000000
+play_activate(alice, bob, A, B).
+:quit
+HEREDOC
+2>&1)
+check "SG activation alone: alice's execution, activated with no invitation and no peer, mints, then the later invitation's conversation opens on it" "A = \[minted(3), holdings(\[lot(alice, 3)\]), opened(bob) | " "$sg_activate"
+check "SG activation alone: bob, invited, joins alice's running execution" "B = \[opened(alice) | " "$sg_activate"
+check_not "SG activation alone: no failed play" "→ failed" "$sg_activate"
+
+# Currencies' play_mint on one smartphone, one boot per program
+# (programs/currencies/<program>_mint_boot.glp): alice alone, with her own key,
+# installs the mini-app from its certified artefact and activates it with no
+# invitation and no peer, and her scripted person, under the role mint, mints
+# 3; her lines are play_mint's screen, in order.
+for sg_mint in "coins coins/currency [minted(3), holdings([lot(alice, 3)])]" \
+               "dated bonds/dated [minted(3, now), holdings([lot(alice, now, 3)])]" \
+               "sovereign sovereign/denominated [minted(3, now), holdings([lot(alice, usd, now, 3)])]"; do
+    sg_mint_name=${sg_mint%% *}; sg_mint_rest=${sg_mint#* }; sg_mint_dir=${sg_mint_rest%% *}; sg_mint_lines=${sg_mint_rest#* }
+    sg_mint_out=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/currencies/$sg_mint_dir $SG_CORE
+:boot $GLP_DIR/programs/currencies/${sg_mint_name}_mint_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+    rm -f "$SG_CORE"/*.glpw
+    check "SG activation alone on a smartphone, $sg_mint_name play_mint: the boot settles" "Boot settled: 1 agents (alice)" "$sg_mint_out"
+    check_not "SG activation alone on a smartphone, $sg_mint_name play_mint: no event stopped at the cap" "did not quiesce" "$sg_mint_out"
+    boot_same "SG activation alone on a smartphone, $sg_mint_name play_mint: alice's lines are play_mint's screen" "$sg_mint_lines" "$(boot_person alice "$sg_mint_out")"
+done
 
 # The child-safe platform on two smartphones (paper Section 7): the same
 # super-app hosting CSSN's mini-app from its certified artefact; adopting the

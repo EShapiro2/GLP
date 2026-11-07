@@ -1,9 +1,9 @@
 # A run of the cascade on GDC
 
-- Contract: `GDC` (`gdc` to the checker), its owner's two files `programs/currencies/gdc/GDC.txt` and `programs/currencies/gdc/GDC.glp`, copied here as they stood at `2c4d0a89`.
+- Contract: `GDC` (`gdc` to the checker), its owner's two files `programs/currencies/gdc/GDC.txt` and `programs/currencies/gdc/GDC.glp`, copied here as they stood at `bfcc7185`.
 - The paper: `https://github.com/EShapiro2/GCC-Grassroots-Commmunity-Currencies.git` at `1ead98dc`, for the paper's own record.
-- The tools: this repository at `2c4d0a89` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-07 18:02 UTC by `cascade.sh gdc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `bfcc7185` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-07 19:19 UTC by `cascade.sh gdc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

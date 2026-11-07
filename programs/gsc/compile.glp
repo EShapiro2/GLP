@@ -490,6 +490,9 @@ latex_constraint(signed(U, Y), T, ['\\mathrm{signed}('|R?]) :- ground(U?), groun
 latex_constraint(unsigned(U, Y), T, ['\\mathrm{unsigned}('|R?]) :- ground(U?), ground(Y?), ground(T?) |
     latex_arg(Y?, [')'|T?], R1),
     latex_arg(U?, [','|R1?], R).
+% The condition program(item(y)) on an utterance, as \mathrm{program}(\mathrm{item}(y)).
+latex_constraint(program(X), T, ['\\mathrm{program}('|R?]) :- ground(X?), ground(T?) |
+    latex_expr(X?, [')'|T?], R).
 
 procedure latex_cmp(Expr?, Constant?, Expr?, Chunks?, Chunks).
 latex_cmp(X, Op, Y, T, R?) :- ground(X?), ground(Op?), ground(Y?), ground(T?) |
@@ -525,6 +528,10 @@ latex_expr(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
 latex_expr(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
 latex_expr(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
 latex_expr(any, T, R?) :- latex_arg(any, T?, R).
+% The author and the item of a speech act, as def:numbers writes them,
+% \mathrm{author}(y) and \mathrm{item}(y).
+latex_expr(author_of(Y), T, ['\\mathrm{author}('|R?]) :- latex_arg(Y?, [')'|T?], R).
+latex_expr(item_of(Y), T, ['\\mathrm{item}('|R?]) :- latex_arg(Y?, [')'|T?], R).
 
 % An operand in parentheses where it is a sum or a difference.
 procedure latex_operand(Expr?, Chunks?, Chunks).
@@ -545,6 +552,8 @@ latex_operand(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
 latex_operand(nterm(N), T, R?) :- latex_arg(nterm(N?), T?, R).
 latex_operand(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
 latex_operand(any, T, R?) :- latex_arg(any, T?, R).
+latex_operand(author_of(Y), T, R?) :- latex_expr(author_of(Y?), T?, R).
+latex_operand(item_of(Y), T, R?) :- latex_expr(item_of(Y?), T?, R).
 
 procedure latex_exprs(Exprs?, Chunks?, Chunks).
 latex_exprs([], T, T?).
@@ -1346,6 +1355,10 @@ malformed_lines([signing_not_agent(S, _)|Fs], T,
     malformed_lines(Fs?, T?, R).
 malformed_lines([signing_not_speech_act(S, _)|Fs], T,
                 [S?, 'carries a signing condition on what is not a speech-act variable;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
+malformed_lines([item_argument(S, P)|Fs], T,
+                [S?, 'has in', P?, 'the item of a speech act, which stands only in a constraint;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
