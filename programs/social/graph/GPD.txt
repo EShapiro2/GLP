@@ -7,8 +7,8 @@
 % Schemas: GPD.glp beside this file, GKK's, GSG's and GFP's seven and nine over published, trusts, installed and participant, with GFP's item, and the value conditions program, author_of and item_of, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GPD: Grassroots Programs Dissemination
 GPD extends GFP (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-Alice, Bob and Carol are persons.  A program is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from; its developer is its author.
-1. ◆ Program Publication.  Carol may publish a program by signing it, attesting that it is the result of compiling the contract it gives and is expected to behave correctly according to it.
+Alice, Bob and Carol are persons.  A program is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its developer is its author.
+1. ◆ Program Publication.  Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
 2. ■ Developer Trust.  Alice may trust Carol, whom she knows, as a developer, and may withdraw her trust.
 3. ■ Program Offering.  Carol may offer a program she holds to her friend Alice by forwarding it to her.
 4. ■ Program Installation.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
