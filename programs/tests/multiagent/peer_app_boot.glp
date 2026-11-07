@@ -1,0 +1,27 @@
+%% peer_app_boot.glp --- peer_app/2 under :boot, the app the harness names.
+%
+% IGLP 4a9ad28, Implementation Notes, "Simulation realisation": "The router
+% reports each connection and disconnection to the agents, and reports every
+% peer attested with the app the harness names, its developer, name and
+% version"; the adjacency relation is total by default, so alice and bob are
+% connected from the boot.  IGLP, Definition "Seam Predicates": peer_app
+% assigns app(D, N, V), unattested or none.  The REPL's :app names the app a
+% :boot reports; alice asks peer_app for bob at her start and tells her person
+% the answer.  Section MB, MB7, runs it with an app named and with none.
+
+procedure boot.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+
+PaMsg ::= poke.
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(PaMsg)), Stream(NetMsg(PaMsg)))?).
+agent(ch(In, []), ch(_, [])) :- start(In?).
+
+procedure start(Stream(Constant)?).
+start([alice | _]) :- peer_app(bob, A), send_to_user([A?]).
+start([bob | _]).
+start([]).
+
+%% The person at each agent tells it its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).

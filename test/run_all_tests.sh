@@ -6811,6 +6811,20 @@ check "MB6 bob's key likewise" "\[bob\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$
 check "MB6 alice knows bob, by his key" "\[alice\] knows('\{0,1\}${mb6_kb:-none}'\{0,1\})$" "$mb6"
 check "MB6 bob knows alice, by her key" "\[bob\] knows('\{0,1\}${mb6_ka:-none}'\{0,1\})$" "$mb6"
 
+# MB7: peer_app/2 under :boot, the app the harness names (IGLP 4a9ad28, Implementation Notes, "Simulation realisation": "The router reports each connection and disconnection to the agents, and reports every peer attested with the app the harness names, its developer, name and version"; Definition "Seam Predicates").  The REPL's :app names it; alice asks peer_app for bob, connected from the boot, and tells her person.  With no app named a connection is reported unattested.
+mb7=$("$REPL_RUN" <<HEREDOC
+:app TEAM app.grassroots 7
+:boot $GLP_DIR/programs/tests/multiagent/peer_app_boot.glp
+:app none
+:boot $GLP_DIR/programs/tests/multiagent/peer_app_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "MB7 :app names the app a :boot reports every peer attested with" "App named: app(TEAM, app.grassroots, 7)" "$mb7"
+check "MB7 peer_app assigns the app the harness names for a connected peer" "\[alice\] app('TEAM', 'app.grassroots', 7)$" "$mb7"
+check "MB7 with no app named, peer_app assigns unattested for a connected peer" "\[alice\] unattested$" "$mb7"
+check_not "MB7 no failed goal" "→ failed" "$mb7"
+
 echo ""
 fi  # Section MB
 

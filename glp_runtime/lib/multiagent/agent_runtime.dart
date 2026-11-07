@@ -257,16 +257,20 @@ class AgentRuntime {
     return pk;
   }
 
-  /// Forward a router connectivity event to this client's callbacks.  The
-  /// simulation attests nothing, so a connection carries no identity; a
-  /// discovery is over a proximity underlay, the PAN throughout (IGLP,
-  /// "Simulation realisation").
+  /// Forward a router connectivity event to this client's callbacks.  A
+  /// connection is attested with [application], the app the harness names
+  /// (IGLP 4a9ad28, "Simulation realisation": the router "reports every peer
+  /// attested with the app the harness names, its developer, name and
+  /// version"), so peer_app/2 assigns app(D, N, V); where the harness names
+  /// none the connection is unattested.  A discovery is over a proximity
+  /// underlay, the PAN throughout (IGLP, "Simulation realisation").
   void onConnectivityEvent(
-      PubKey peer, Underlay underlay, ConnectivityEvent event) {
+      PubKey peer, Underlay underlay, ConnectivityEvent event,
+      {Application? application}) {
     switch (event) {
       case ConnectivityEvent.connected:
-        _ctx?.peerConnected(peer, underlay, null);
-        onPeerConnected?.call(peer, underlay, null);
+        _ctx?.peerConnected(peer, underlay, application);
+        onPeerConnected?.call(peer, underlay, application);
       case ConnectivityEvent.disconnected:
         _ctx?.peerDisconnected(peer, underlay);
         onPeerDisconnected?.call(peer, underlay);
