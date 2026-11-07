@@ -1,9 +1,9 @@
 # A run of the cascade on GFF-I
 
-- Contract: `GFF-I` (`gff_i` to the checker), its owner's two files `programs/gff/GFF-I.txt` and `programs/gff/GFF-I.glp`, copied here as they stood at `89979d9c`.
+- Contract: `GFF-I` (`gff_i` to the checker), its owner's two files `programs/gff/GFF-I.txt` and `programs/gff/GFF-I.glp`, copied here as they stood at `dcb98c8c`.
 - The paper: `https://github.com/EShapiro2/GFF-Grassroots-Feeds-and-Followers.git` at `b6ea2eab`, for the paper's own record.
-- The tools: this repository at `89979d9c` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-07 19:20 UTC by `cascade.sh gff_i`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `dcb98c8c` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-07 20:40 UTC by `cascade.sh gff_i`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
