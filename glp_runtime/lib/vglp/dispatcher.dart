@@ -1,7 +1,9 @@
 // glp_runtime/lib/vglp/dispatcher.dart
 //
 // The dispatcher and the generic part of the construct processes: read from
-// programs/vglp/dispatcher.glp and instantiated into a compiled program.
+// programs/vglp/dispatcher.glp and programs/vglp/views.glp, the views and the
+// forming typed over the type of a position, and instantiated into a compiled
+// program.
 // Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation" and
 // the paragraph before it; vGLP's code task of 2026-10-02 00:13 UTC, Part 2,
 // with the answers of 2026-10-01 23:55 UTC (E) and 2026-10-02 08:26 UTC; the
@@ -73,6 +75,15 @@ const constructsHook = 'constructs';
 class DispatcherSource {
   static const fileName = 'dispatcher.glp';
 
+  /// The part of the generic source typed over the type of a position, the
+  /// views and the forming of primitive positions, beside [fileName]: its
+  /// procedures are well typed at the types the construct processes call
+  /// them at, so it is no program by itself, and dispatcher.glp, which is,
+  /// holds the rest (programs/vglp/views.glp; vGLP, Section 6.3, "The
+  /// construct process"; TGLP, parameterized-types.tex,
+  /// sec:abstract-parameters).
+  static const viewsFileName = 'views.glp';
+
   final ast.Module module;
 
   DispatcherSource(this.module);
@@ -87,7 +98,9 @@ class DispatcherSource {
           'processes into every compiled program and reads them from there '
           '(vGLP, Definition "Canonical Compilation")');
     }
-    return DispatcherSource.fromText(file.readAsStringSync());
+    final views = File('$directory${Platform.pathSeparator}$viewsFileName');
+    return DispatcherSource.fromText(file.readAsStringSync() +
+        (views.existsSync() ? '\n${views.readAsStringSync()}' : ''));
   }
 
   factory DispatcherSource.fromText(String text) =>

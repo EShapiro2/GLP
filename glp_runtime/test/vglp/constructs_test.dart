@@ -328,7 +328,10 @@ procedure (T?)*p.
           contains('present_card_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, '
               'Done?) :- present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).'));
       expect(s, contains('procedure path(Path?, Integer?, Path).'));
-      expect(s, contains('procedure shown(Path?, _?, Stream(_)).'));
+      // Typed over the type of the position it draws, its views of the view
+      // type (vGLP, Section 6.3, "The construct process").
+      expect(s, contains('procedure(S) shown(Path?, S?, Stream(Pending(S))).'));
+      expect(s, contains('Pending(S) ::= S ; pending(Path).'));
       expect(s, contains('shown(P, X, [pending(P?) | Vs?]) :- '
           'shown_whole(X?, Vs).'));
     });
@@ -336,7 +339,10 @@ procedure (T?)*p.
     test('binds the question with the term the person\'s input forms, by '
         'clauses typed at its type, the result carrying the term, a grant of '
         'no such term passed on', () {
-      expect(s, contains('procedure form_yesNo(_?, Formed(YesNo)).'));
+      // The person's raw input is of the person channel's type, T, Drawn,
+      // YesNo being the type of a question (vGLP, Section 6.3, "The construct
+      // process": "the grants' raw inputs are of the types of its questions").
+      expect(s, contains('procedure form_yesNo(Drawn?, Formed(YesNo)).'));
       expect(s, contains('form_yesNo(yes, formed(yes)).'));
       expect(s, contains('form_yesNo(no, formed(no)).'));
       expect(s, contains('form_yesNo(_, refused) :- otherwise | true.'));
@@ -400,9 +406,13 @@ procedure (Request?)*agent(Integer?).
 (post(T))*agent(_) :- ground(T?) | true.
 (quit)*agent(_).
 ''').source;
-      for (final f in ['string', 'integer', 'number', 'real', 'constant',
-          'module']) {
-        expect(s, contains('procedure form_$f(_?, Formed('));
+      // The formers of the primitives a construct calls, each typed over
+      // the type of the input it forms, and only those: one no call
+      // instantiates has no well-typing (TGLP, parameterized-types.tex,
+      // sec:abstract-parameters).
+      expect(s, contains('procedure(T) form_string(T?, Formed(String)).'));
+      for (final f in ['integer', 'number', 'real', 'constant', 'module']) {
+        expect(s, isNot(contains('procedure(T) form_$f(')));
       }
       expect(s, isNot(contains('form_any')));
     });
@@ -415,7 +425,9 @@ Bid ::= bid(Amount, String).
 procedure (Bid?)*offer(Bid).
 (B)*offer(B?).
 ''').source;
-      expect(s, contains('procedure form_amount(_?, Formed(Amount)).'));
+      // Amount is a position of the question's type, not a question's type,
+      // so its former takes an Amount.
+      expect(s, contains('procedure form_amount(Amount?, Formed(Amount)).'));
       expect(s, contains('form_amount(none, formed(none)).'));
       expect(s,
           contains('form_amount(R, F?) :- integer(R?) | F = formed(R?).'));
@@ -495,7 +507,7 @@ procedure (Price?)*quote(Price).
           c.source,
           contains('form_price(price(R1), F?) :- form_real(R1?, F1), '
               'join_price_price_1(F1?, F).'));
-      expect(c.source, contains('procedure form_real(_?, Formed(Real)).'));
+      expect(c.source, contains('procedure(T) form_real(T?, Formed(Real)).'));
       expect(c.source,
           contains('form_real(R, F?) :- real(R?) | F = formed(R?).'));
     });

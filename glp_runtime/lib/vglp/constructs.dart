@@ -57,8 +57,13 @@
 //     or list inside it, is input([]), of its view type, T ; input(Path)
 //     ("V is of the view type of T: T with the type S of each position the
 //     person writes replaced by S ; input(Path)", vGLP e22e2ad, Section 6.3,
-//     "The construct process"); every other drawn value is typed _, the
-//     views being built by procedures typed at _;
+//     "The construct process"); every other drawn value is of the view type
+//     the compilation forms for its node, a position the person writes
+//     Questioned(S), S ; input(Path), one the program writes Pending(S), S ;
+//     pending(Path), a stream of them the list of its elements' views, and
+//     a structure holding a question the union of its alternatives' views
+//     and pending(Path) (_presentView, _openView; programs/vglp/views.glp),
+//     the views built by procedures typed over them;
 //   - the grants routed to the construct arrive whole, input(Id, P, R), each
 //     naming its question by P, which the bridge sends back from the view; a
 //     construct may hold two questions of one type, and each takes only the
@@ -83,7 +88,10 @@
 //     Compilation", at c994328).
 //
 // THE FORMING CLAUSES form a term of a question's type from the person's
-// input, which is typed at _: a constant by matching it, a primitive by its
+// input, which is of T, the type of the person channel, where the type
+// formed is a question's, and of the type formed where it is a position of
+// one (_resolveFormed); a primitive's former, in views.glp, is typed over
+// the input's type: a constant by matching it, a primitive by its
 // guard (string/1, integer/1, ...), a structure argument by argument, the
 // children's results joined.  Their result carries the term, Formed(T) ::=
 // formed(T) ; refused, so every clause writes what it holds (vGLP #5 Cowork,
@@ -270,6 +278,13 @@ class GenericNames {
   final Map<_Leaf, String> _leafFormers;
   final String formedType;
   final String doneType;
+
+  /// The views of a position: Questioned(S), S ; input(Path), at a position
+  /// the person writes, and Pending(S), S ; pending(Path), at a widget
+  /// position the program writes (programs/vglp/views.glp; vGLP, Section
+  /// 6.3, "The construct process": "V is of the view type of T").
+  final String questionedType;
+  final String pendingType;
   /// The type of what the person channel carries, T, the union the
   /// compilation forms; and the types at T the construct processes name:
   /// Draw(T), Input(T), Inputs(T), Path and PersonChannel(T) as applied.
@@ -303,6 +318,8 @@ class GenericNames {
       required String formModule,
       required this.formedType,
       required this.doneType,
+      required this.questionedType,
+      required this.pendingType,
       required this.drawn,
       required this.inputsType,
       required this.spawnType,
@@ -546,6 +563,18 @@ class _Generator {
   /// The drawing procedure of each ask functor, run_f/5.
   final _runs = <String, String>{};
 
+  /// The view type of each ask functor's construct, the type of the values
+  /// it draws under the functor (vGLP, Section 6.3, "The construct process":
+  /// "V is of the view type of T"), and the view types formed, by node.
+  final _rootViews = <String, String>{};
+  final _viewMemo = <String, String>{};
+
+  /// A former's argument, the person's raw input or a position of it, marked
+  /// by the type it forms: the type of the person channel, T, where the type
+  /// is one of the grants' raw inputs, whose answer_N hands it R of T, and
+  /// the type itself where it is only a position of one ([_resolveFormed]).
+  static const _formedMark = '\u0001';
+
   _Generator(this.gen, this.resolve, this.sourceDeclared, this.fresh,
       this.questionType, this.constructName)
       : declared = sourceDeclared;
@@ -610,7 +639,18 @@ class _Generator {
         widgets[t.written] = w;
         hook.writeln(_constructClause(t, root, w));
         // The views its construct draws, each under the functor of its ask,
-        // typed _ (the head comment, "The drawn value under each functor").
+        // are of its view type, run_f's (vGLP, Section 6.3, "The construct
+        // process"); in T they stay typed _, since every GLP module that
+        // imports the dispatcher writes T again by hand, with f(_), and an
+        // import agrees with its export only where their types are equal
+        // (TGLP modules.tex, "Cross-module type checking").  The paper has
+        // the compilation write the types it forms into each such module
+        // (vGLP, Section 6.3, "The canonical compilation": "the compilation
+        // writes into each module that imports a compiled procedure or the
+        // dispatcher the types it forms for them, among them the type of the
+        // asks, the view types and the parameter of the person channel"),
+        // which is not built: until it is, T's alternative of each ask
+        // functor is f(_).
         drawnAlts.add('${t.functor}(_)');
       } finally {
         declared = sourceDeclared;
@@ -634,8 +674,17 @@ class _Generator {
         : '';
     final drawnDef =
         '${gen.drawn} ::= ${drawnAlts.join(' ; ')}.\n$endDefs\n';
-    return ConstructProcesses('$drawnDef$hook$_out', widgets);
+    return ConstructProcesses(
+        _resolveFormed('$drawnDef$hook$_out'), widgets);
   }
+
+  /// Each former's argument marked by the type it forms ([_formedMark]): T,
+  /// the type of the person channel, where that type is one of the grants'
+  /// raw inputs, which the union T holds (_rUnion), and the type itself
+  /// otherwise.
+  String _resolveFormed(String text) => text.replaceAllMapped(
+      RegExp('$_formedMark([^$_formedMark]*)$_formedMark'),
+      (m) => _rTypes.containsKey(m[1]) ? gen.drawn : m[1]!);
 
   /// run_f(Id?, W?, Views?, Done?, Ds): draw each view V of construct Id
   /// with its widget W as it arrives, under the functor f of its ask,
@@ -644,7 +693,7 @@ class _Generator {
   /// the construct holds answered and no question still to come, and on
   /// nothing else; once the views end, wait to withdraw (run_end/3).  Its
   /// views are of [view] where the compiler prints that type ([_rootView]).
-  String _runFor(String f, [String view = '_']) {
+  String _runFor(String f, String view) {
     final known = _runs[f];
     if (known != null) return known;
     final r = gen.run(f);
@@ -922,25 +971,30 @@ class _Generator {
       if (_holdsNested(root)) {
         // The form's answer leaves its streams and lists open, each a
         // question of its own drawn under it: the view after the answer.
+        final v = _rootViews[f] = _qView(root);
         return '$constructName(Id, $f(X?), Gs, Ds?) :- '
             '$answer([], X, Gs?, _, Vs, Done), '
-            '${_runFor(f)}(Id?, $w, [input([]) | Vs?], Done?, Ds).';
+            '${_runFor(f, v)}(Id?, $w, [input([]) | Vs?], Done?, Ds).';
       }
+      final v = _rootViews[f] = _rootView(f, root);
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
           '$answer([], X, Gs?, _, Done), '
-          '${_runFor(f, _rootView(f, root))}(Id?, $w, [input([])], Done?, Ds).';
+          '${_runFor(f, v)}(Id?, $w, [input([])], Done?, Ds).';
     }
     if (!_hasQuestion(root)) {
       // A type the person writes nowhere holds no question, so its construct
       // has every question it holds answered at once, and withdraws (Definition
       // "Construct, Submission, Complete Widget": a construct is presented
       // while its question is open).
+      // It draws nothing; its functor in T is of its type.
+      _rootViews[f] = root.typeKey;
       return '$constructName(Id, $f(_), _, [withdraw(Id?)]).';
     }
     final present = _present(root, t);
+    final v = _rootViews[f] = _presentView(root);
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
         '$present([], X?, Gs?, _, Vs, Done), '
-        '${_runFor(f)}(Id?, $w, Vs?, Done?, Ds).';
+        '${_runFor(f, v)}(Id?, $w, Vs?, Done?, Ds).';
   }
 
   /// The view type of the construct of [f], whose root [root] the person
@@ -953,6 +1007,109 @@ class _Generator {
     final v = gen.view(f);
     _out.writeln('$v ::= ${root.typeKey} ; input(${gen.pathType}).');
     return v;
+  }
+
+  // --- view types -------------------------------------------------------------
+
+  /// The view type of a construct's positions (vGLP, Section 6.3, "The
+  /// construct process": "V is of the view type of T: T with the type S of
+  /// each position the person writes replaced by S ; input(Path), and of
+  /// each position the program writes inside the person's answers by S ;
+  /// pending(Path), so no value drawn is typed by a wildcard"), as the
+  /// construct draws them: a position the person writes Questioned(S); a
+  /// widget position the program writes holding no question Pending(S),
+  /// drawn pending until written whole (vGLP 118e04d, Definition "Construct
+  /// Process"), a stream of them the list of its elements' views so far,
+  /// List(Pending(E)); and a position the program writes holding a question
+  /// its own view type, [_presentView].
+
+  /// The view of [k], a child of a structure or a stream, as its parent's
+  /// clause draws it.
+  String _childView(_Node k) {
+    if (k.person) return _qView(k);
+    if (!_hasQuestion(k)) {
+      final e = _streamElement(k);
+      if (e != null) {
+        return 'List(${gen.pendingType}(${k.child(e).typeKey}))';
+      }
+      return '${gen.pendingType}(${k.typeKey})';
+    }
+    return _presentView(k);
+  }
+
+  /// The view of a question [k]: S ; input(Path), S its type, or, where its
+  /// answer leaves a stream or a list open under it, the answer's view
+  /// ([_openView]).
+  String _qView(_Node k) => '${gen.questionedType}('
+      '${_holdsNested(k) ? _openView(k) : k.typeKey})';
+
+  /// The view of the answer of [n], a question holding a stream or a list
+  /// inside a form the person writes: the term answered, each such position
+  /// drawn input(Q) (open_N), a type formed for [n].
+  String _openView(_Node n) {
+    final key = 'open:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final ref = '${gen.view('open_${_typeStem(n.type)}')}${_declParams(n)}';
+    _viewMemo[key] = ref;
+    final alts = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _StructAlt) {
+        final kids = _children(n, a);
+        alts.add(_apply(a, [
+          for (final k in kids)
+            _isNestedSeq(n, k)
+                ? '${gen.questionedType}(${k.typeKey})'
+                : _holdsNested(k)
+                    ? _openView(k)
+                    : k.typeKey
+        ]));
+      } else {
+        alts.add(_plainAlt(n, a));
+      }
+    }
+    _out.writeln('$ref ::= ${alts.join(' ; ')}.');
+    return ref;
+  }
+
+  /// The view of [n], a position the program writes holding a question, as
+  /// present_N draws it: each alternative holding a question with its
+  /// arguments' views, each other alternative as written, drawn whole, and
+  /// pending(Path) until it is; a stream or a list the list of its
+  /// elements' views so far.
+  String _presentView(_Node n) {
+    final key = 'present:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final seq = _seqOf(n);
+    if (seq != null) {
+      final e = n.child(seq.elem);
+      final r = 'List(${e.person ? _qView(e) : _presentView(e)})';
+      return _viewMemo[key] = r;
+    }
+    final ref = '${gen.view(_typeStem(n.type))}${_declParams(n)}';
+    _viewMemo[key] = ref;
+    final alts = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _StructAlt && _children(n, a).any(_hasQuestion)) {
+        alts.add(_apply(a, [for (final k in _children(n, a)) _childView(k)]));
+      } else {
+        alts.add(_plainAlt(n, a));
+      }
+    }
+    alts.add('pending(${gen.pathType})');
+    _out.writeln('$ref ::= ${alts.join(' ; ')}.');
+    return ref;
+  }
+
+  /// An alternative of [n] as a view holds it whole, each argument of its
+  /// type with no mode: the person or the program writes it whole before it
+  /// is drawn.
+  String _plainAlt(_Node n, _Alt a) {
+    if (a is _StructAlt || a is _ConsAlt) {
+      return _apply(a, [for (final k in _children(n, a)) k.typeKey]);
+    }
+    return _altText(a);
   }
 
   // --- types ------------------------------------------------------------------
@@ -1581,7 +1738,7 @@ class _Generator {
     final nested = _holdsNested(n);
     final vs = nested ? ', Vs' : '';
     final vsOut = nested ? ', Vs?' : '';
-    final vsType = nested ? ', Stream(_)' : '';
+    final vsType = nested ? ', Stream(${_qView(n)})' : '';
     final form = _former(e ?? n);
     _rTypes.putIfAbsent((e ?? n).typeKey, () => e ?? n);
     if (seq != null && seq.list) _rListEnd = true;
@@ -1682,8 +1839,8 @@ class _Generator {
           '${acc.gsIn}?, ${_apply(a, views)}, $doneHead) :- '
           '$g0${acc.goals.join(', ')}.');
     }
-    _out.writeln('procedure$p $name($t?, ${gen.pathType}?, $t, $gs?, $gs, _, '
-        '${gen.doneType}).');
+    _out.writeln('procedure$p $name($t?, ${gen.pathType}?, $t, $gs?, $gs, '
+        '${_openView(n)}, ${gen.doneType}).');
     for (final c in clauses) {
       _out.writeln(c);
     }
@@ -1760,7 +1917,8 @@ class _Generator {
             'F = formed(R?).');
       }
     }
-    _out.writeln('procedure$p $name(_?, $formed($t)).');
+    _out.writeln('procedure$p $name($_formedMark$t$_formedMark?, '
+        '$formed($t)).');
     for (final l in [...lines, ...leaves]) {
       _out.writeln(l);
     }
@@ -1885,15 +2043,16 @@ class _Generator {
         'ground(P?) | $wait(P?, X?, Gs?, Gs1, Vs, Done).');
     forwards.add('$wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- '
         '$wait(P?, X?, Gs?, Gs1, Vs, Done).');
+    final view = _presentView(n);
     _out.writeln('procedure$p $name(${gen.pathType}?, $t?, '
-        '$gs?, $gs, Stream(_), $done).');
+        '$gs?, $gs, Stream($view), $done).');
     for (final c in clauses) {
       _out.writeln(c);
     }
     _out
       ..writeln()
       ..writeln('procedure$p $wait(${gen.pathType}?, $t?, $gs?, $gs, '
-          'Stream(_), $done).');
+          'Stream($view), $done).');
     for (final c in forwards) {
       _out.writeln(c);
     }
@@ -1984,9 +2143,8 @@ class _Generator {
         '${_present(e, it)}(Q1?, X?, Gs?, Gs1, V1, D1)',
       ];
     }
-    // The views are lists of the elements' views, Stream(Stream(_)), as
-    // thread/3's are.
-    const vs = 'Stream(Stream(_))';
+    // The views are lists of the elements' views, as thread/3's are.
+    final vs = 'Stream(${_presentView(n)})';
     _out
       ..writeln('procedure$p $name($pt?, $t?, $gs?, $gs, $vs, $done).')
       ..writeln('$name(P, [$inCell | Xs], Gs, Gs1?, Vs?, Done?) :- '
@@ -2124,7 +2282,9 @@ class _Generator {
     if (!_emitted.add('start:${n.typeKey}:$suffix')) return start;
     final p = _declParams(n);
     final k = kids.length;
-    final streams = List.filled(k, 'Stream(_)?').join(', ');
+    final views = [for (final c in kids) _childView(c)];
+    final streams = [for (final v in views) 'Stream($v)?'].join(', ');
+    final out = 'Stream(${_presentView(n)})';
     final vs = [for (var i = 0; i < k; i++) 'V${i + 1}'];
     final vr = [for (var i = 0; i < k; i++) 'V${i + 1}?'];
     final ground = [for (var i = 0; i < k; i++) 'ground(V${i + 1}?)'].join(', ');
@@ -2138,7 +2298,7 @@ class _Generator {
     ];
     if (!multi.contains(true)) {
       _out
-        ..writeln('procedure$p $start($streams, Stream(_)).')
+        ..writeln('procedure$p $start($streams, $out).')
         ..writeln('$start(${[for (final v in vs) '[$v | _]'].join(', ')}, '
             '[${_apply(a, vr)}]).');
       closed.forEach(_out.writeln);
@@ -2149,15 +2309,15 @@ class _Generator {
     final ss = [for (var i = 0; i < k; i++) 'S${i + 1}'];
     final sr = [for (var i = 0; i < k; i++) 'S${i + 1}?'];
     _out
-      ..writeln('procedure$p $start($streams, Stream(_)).')
+      ..writeln('procedure$p $start($streams, $out).')
       ..writeln('$start(${[for (var i = 0; i < k; i++) '[${vs[i]} | ${ss[i]}]'].join(', ')}, '
           '[${_apply(a, vr)} | Vs?]) :- $ground | '
           '$comb(${vr.join(', ')}, ${sr.join(', ')}, Vs).');
     closed.forEach(_out.writeln);
     _out
       ..writeln()
-      ..writeln('procedure$p $comb(${List.filled(k, '_?').join(', ')}, '
-          '$streams, Stream(_)).');
+      ..writeln('procedure$p $comb(${[for (final v in views) '$v?'].join(', ')}, '
+          '$streams, $out).');
     for (var i = 0; i < k; i++) {
       if (!multi[i]) continue;
       final olds = [

@@ -1296,6 +1296,8 @@ _Elicitation _elicitation(
     formModule: inst.proc('form_module'),
     formedType: inst.type('Formed'),
     doneType: inst.type('Done'),
+    questionedType: inst.type('Questioned'),
+    pendingType: inst.type('Pending'),
     drawn: drawn,
     inputsType: '${inst.type(inputsTypeName)}($drawn)',
     spawnType: inst.type(spawnTypeName),
@@ -1338,8 +1340,14 @@ _Elicitation _elicitation(
 
   // The generic procedures emitted: those reached from the dispatcher's entry
   // point and from those the construct processes call.
-  final reached =
-      reachableGeneric(dispatcher, [dispatchEntry, ...GenericNames.used]);
+  // Those the construct processes call: a procedure of views.glp is well
+  // typed at the types its calls give it, and one no call instantiates has
+  // no well-typing (TGLP, parameterized-types.tex, sec:abstract-parameters).
+  bool called(String g) => RegExp(
+          '(?<![A-Za-z0-9_])${RegExp.escape(inst.proc(g))}\\(')
+      .hasMatch(constructs.source);
+  final reached = reachableGeneric(dispatcher,
+      [dispatchEntry, ...GenericNames.used.where(called)]);
   final emittedNames = {for (final g in reached) inst.procNames[g]!};
   return _Elicitation(
     inst.typeDefs,
