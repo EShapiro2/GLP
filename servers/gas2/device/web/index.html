@@ -234,7 +234,7 @@ function drawApp(a) {
   let h = '';
   // the people to play with: friends in the super-app
   h += `<h2>Play with</h2><div class="card"><div class="small muted">Version ${esc(a.version)}: the person you play with needs the same version of ${esc(a.id)}; it shows here on their side too.</div>`;
-  for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b></span><button class="b alt" onclick="act({op:'invite',app:'${a.app}',key:'${k}'})">Invite</button><button class="b alt" onclick="act({op:'accept',app:'${a.app}',key:'${k}'})">Accept theirs</button></div>`;
+  for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b></span><button class="b ${(a.invited || []).includes(k) ? 'ok' : 'alt'}" onclick="act({op:'invite',app:'${a.app}',key:'${k}'})">${(a.invited || []).includes(k) ? 'Invited ✓' : 'Invite'}</button><button class="b ${(a.accepted || []).includes(k) ? 'ok' : 'alt'}" onclick="act({op:'accept',app:'${a.app}',key:'${k}'})">${(a.accepted || []).includes(k) ? 'Accepted ✓' : 'Accept theirs'}</button></div>`;
   if (!S.friends.length) h += `<div class="empty">Add a person first.</div>`;
   h += `<div class="small muted" style="padding-top:6px">One of you invites, the other accepts; then you meet in ${esc(a.id)}.</div></div>`;
   for (const d of asks) {

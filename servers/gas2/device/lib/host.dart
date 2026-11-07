@@ -36,6 +36,7 @@ class MiniApp {
   String version = ''; // its files, as a short digest: two who play must have the same
   int? n; // its number in the harness, once installed
   bool preparing = false; // being certified, for its install
+  final Set<String> invited = {}, accepted = {}; // the friends invited to it, whose invitations taken
   final Map<int, Object?> draws = {}; // construct id -> draw(Id, W, V) as JSON
   MiniApp(this.app, this.id, this.title, this.shapes);
 }
@@ -431,8 +432,19 @@ class SuperHost {
     await _inject(_in(0, [], _c('install', [app, '$app.glpw'])));
   }
   Future<void> connect(String key) => _inject(_in(0, [], _c('connect', [key])));
-  Future<void> invite(String app, String key) => _inject(_in(0, [], _c('invite', [app, key])));
-  Future<void> accept(String app, String key) => _inject(_in(1, [], _c('invite', [app, key])));
+  Future<void> invite(String app, String key) async {
+    await _inject(_in(0, [], _c('invite', [app, key])));
+    apps.firstWhere((x) => x.app == app).invited.add(key);
+    _note('Invited ${_short(key)} to ${_title(app)}');
+    _changed();
+  }
+
+  Future<void> accept(String app, String key) async {
+    await _inject(_in(1, [], _c('invite', [app, key])));
+    apps.firstWhere((x) => x.app == app).accepted.add(key);
+    _note('Accepted the invitation of ${_short(key)} to ${_title(app)}');
+    _changed();
+  }
   Future<void> answerFriend(String key, bool yes) async {
     friendRequests.remove(key);
     await _inject(_in(yes ? 2 : 3, [], _c('connect', [key])));
@@ -499,6 +511,8 @@ class SuperHost {
               'installed': m.n != null,
               'preparing': m.preparing,
               'version': m.version,
+              'invited': m.invited.toList(),
+              'accepted': m.accepted.toList(),
               'draws': {for (final e in m.draws.entries) '${e.key}': e.value},
               'shapes': m.shapes,
             }
@@ -571,6 +585,8 @@ class _Store implements AgentStateStore {
         if (a == null) continue;
         m.n = a['n'] as int?;
         m.draws..clear()..addAll({for (final e in (a['draws'] as Map).entries) int.parse(e.key as String): e.value});
+        m.invited.addAll(((a['invited'] as List?) ?? []).cast<String>());
+        m.accepted.addAll(((a['accepted'] as List?) ?? []).cast<String>());
       }
       loaded = true;
       return Uint8List.sublistView(b, 8 + n);
@@ -589,7 +605,7 @@ class _Store implements AgentStateStore {
       'notes': host.notes,
       'apps': {
         for (final m in host.apps)
-          m.app: {'n': m.n, 'draws': m.draws.map((k, v) => MapEntry('$k', v))}
+          m.app: {'n': m.n, 'draws': m.draws.map((k, v) => MapEntry('$k', v)), 'invited': m.invited.toList(), 'accepted': m.accepted.toList()}
       },
     }));
     final head = ByteData(8)
