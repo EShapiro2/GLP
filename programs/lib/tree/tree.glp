@@ -1,0 +1,158 @@
+%% tree.glp - a size-annotated balanced tree, holding a set of constants.
+%% Owner: GLP (a typed library; Code #24's task 2, Cloud_inbox 2026-11-06 17:50 UTC).
+%%
+%% Tree(X) is nil, or node(L, K, R, S): the elements of L precede K, those of R
+%% follow it, and S is the number of elements of the tree.  Elements are
+%% ordered by @<, the standard order of constants (GLP-Spec appendix-guards.tex),
+%% and the tree holds each element once.  The balance is the weight balance of
+%% Adams, with the parameters 3 and 2 that Hirai and Yamamoto proved correct for
+%% insertion: at every node, 3 * (|L| + 1) >= |R| + 1 and 3 * (|R| + 1) >= |L| + 1,
+%% so the height is logarithmic in the size.
+%%
+%% size, kth, insert and member take time logarithmic in the size; from_list,
+%% to_list and union take time linear in the sizes.
+
+Tree(X) ::= nil ; Node(X).
+Node(X) ::= node(Tree(X), X, Tree(X), Integer).
+
+Member ::= yes ; no.
+
+%% from_list(Xs, T): T holds the elements of Xs, a list in strictly ascending
+%% order.
+exported procedure(X) from_list(List(X)?, Tree(X)).
+from_list(Xs, T?) :- count(Xs?, 0, N, Ys), build(N?, Ys?, T, Rest), discard(Rest?).
+
+%% size(T, N): T holds N elements.
+exported procedure(X) size(Tree(X)?, Integer).
+size(nil, 0).
+size(node(_, _, _, S), S?).
+
+%% kth(T, I, X): X is the element of T at index I, counted from 0 in ascending
+%% order; 0 =< I < N, where T holds N elements, and the goal fails otherwise.
+exported procedure(X) kth(Node(X)?, Integer?, X).
+kth(node(L, K, R, _), I, X?) :- sized(L?, Sl, L1), kth_at(Sl?, I?, L1?, K?, R?, X).
+
+%% insert(X, T, T1): T1 holds the elements of T and X.
+exported procedure(X) insert(X?, Tree(X)?, Tree(X)).
+insert(X, nil, node(nil, X?, nil, 1)).
+insert(X, node(L, K, R, _), T?) :- X? @< K? | insert(X?, L?, L1), balance(L1?, K?, R?, T).
+insert(X, node(L, K, R, _), T?) :- K? @< X? | insert(X?, R?, R1), balance(L?, K?, R1?, T).
+insert(_, node(L, K, R, S), node(L?, K?, R?, S?)) :- otherwise | true.
+
+%% member(X, T, A): A is yes if T holds X, and no otherwise.
+exported procedure(X) member(X?, Tree(X)?, Member).
+member(_, nil, no).
+member(X, node(L, K, _, _), A?) :- X? @< K? | member(X?, L?, A).
+member(X, node(_, K, R, _), A?) :- K? @< X? | member(X?, R?, A).
+member(_, node(_, _, _, _), yes) :- otherwise | true.
+
+%% union(T1, T2, T): T holds the elements of T1 and of T2.
+exported procedure(X) union(Tree(X)?, Tree(X)?, Tree(X)).
+union(T1, T2, T?) :- to_list(T1?, Xs), to_list(T2?, Ys), union_lists(Xs?, Ys?, Zs), from_list(Zs?, T).
+
+%% to_list(T, Xs): Xs is the elements of T in ascending order.
+exported procedure(X) to_list(Tree(X)?, List(X)).
+to_list(T, Xs?) :- to_list_onto(T?, [], Xs).
+
+%% to_list_onto(T, Acc, Xs): Xs is the elements of T in ascending order,
+%% followed by Acc.
+procedure(X) to_list_onto(Tree(X)?, List(X)?, List(X)).
+to_list_onto(nil, Acc, Acc?).
+to_list_onto(node(L, K, R, _), Acc, Xs?) :- to_list_onto(R?, Acc?, Acc1), to_list_onto(L?, [K? | Acc1?], Xs).
+
+%% count(Xs, N0, N, Ys): Xs has N - N0 elements, and Ys is Xs.
+procedure(X) count(List(X)?, Integer?, Integer, List(X)).
+count([], N, N?, []).
+count([X | Xs], N0, N?, [X? | Ys?]) :- N1 := N0? + 1, count(Xs?, N1?, N, Ys).
+
+%% build(N, Xs, T, Rest): T holds the first N elements of Xs, and Rest is the
+%% elements after them; a node's two subtrees differ in size by at most one.
+procedure(X) build(Integer?, List(X)?, Tree(X), List(X)).
+build(0, Xs, nil, Xs?).
+build(N, Xs, T?, Rest?) :- N? > 0 |
+    Nl := (N? - 1) // 2, Nr := N? - 1 - Nl?,
+    build(Nl?, Xs?, L, Ys), build_node(N?, Nr?, L?, Ys?, T, Rest).
+
+%% build_node(N, Nr, L, Ys, T, Rest): T is node(L, K, R) holding N elements,
+%% Ys being [K | Zs], R holding the first Nr elements of Zs and Rest the
+%% elements after them.  Ys is [] only where Xs held fewer than N elements,
+%% which from_list does not give build; T is then L.
+procedure(X) build_node(Integer?, Integer?, Tree(X)?, List(X)?, Tree(X), List(X)).
+build_node(N, Nr, L, [K | Zs], node(L?, K?, R?, N?), Rest?) :- build(Nr?, Zs?, R, Rest).
+build_node(_, _, L, [], L?, []).
+
+%% discard(Xs): Xs is consumed.
+procedure(X) discard(List(X)?).
+discard([]).
+discard([_ | _]).
+
+%% union_lists(Xs, Ys, Zs): Zs is the elements of Xs and of Ys, each once, in
+%% ascending order; Xs and Ys are in strictly ascending order.
+procedure(X) union_lists(List(X)?, List(X)?, List(X)).
+union_lists([], Ys, Ys?).
+union_lists([X | Xs], [], [X? | Xs?]).
+union_lists([X | Xs], [Y | Ys], [X? | Zs?]) :- X? @< Y? | union_lists(Xs?, [Y? | Ys?], Zs).
+union_lists([X | Xs], [Y | Ys], [Y? | Zs?]) :- Y? @< X? | union_lists([X? | Xs?], Ys?, Zs).
+union_lists([X | Xs], [_ | Ys], [X? | Zs?]) :- otherwise | union_lists(Xs?, Ys?, Zs).
+
+%% sized(T, N, T1): T holds N elements, and T1 is T.
+procedure(X) sized(Tree(X)?, Integer, Tree(X)).
+sized(nil, 0, nil).
+sized(node(L, K, R, S), S?, node(L?, K?, R?, S?)).
+
+%% kth_at(Sl, I, L, K, R, X): X is the element at index I of node(L, K, R, _),
+%% where L holds Sl elements.
+procedure(X) kth_at(Integer?, Integer?, Tree(X)?, X?, Tree(X)?, X).
+kth_at(Sl, I, node(A, B, C, D), _, _, X?) :- I? < Sl? | kth(node(A?, B?, C?, D?), I?, X).
+kth_at(Sl, I, _, K, _, K?) :- I? =:= Sl? | true.
+kth_at(Sl, I, _, _, node(A, B, C, D), X?) :- I? > Sl? | I1 := I? - Sl? - 1, kth(node(A?, B?, C?, D?), I1?, X).
+
+%% balance(L, K, R, T): T is a balanced tree holding the elements of L, K and
+%% R, where L and R are balanced and one of them has gained or lost at most one
+%% element since the two were in balance.
+procedure(X) balance(Tree(X)?, X?, Tree(X)?, Tree(X)).
+balance(L, K, R, T?) :- sized(L?, Sl, L1), sized(R?, Sr, R1), balance_at(Sl?, Sr?, L1?, K?, R1?, T).
+
+procedure(X) balance_at(Integer?, Integer?, Tree(X)?, X?, Tree(X)?, Tree(X)).
+balance_at(Sl, Sr, L, K, R, T?) :- 3 * (Sl? + 1) < Sr? + 1 | rotate_left(Sl?, L?, K?, R?, T).
+balance_at(Sl, Sr, L, K, R, T?) :- 3 * (Sr? + 1) < Sl? + 1 | rotate_right(Sr?, L?, K?, R?, T).
+balance_at(Sl, Sr, L, K, R, node(L?, K?, R?, S?)) :- otherwise | S := Sl? + Sr? + 1.
+
+%% rotate_left(Sl, L, K, R, T): R is too heavy for L, which holds Sl elements.
+%% R is then not nil; for nil, T is node(L, K, nil).
+procedure(X) rotate_left(Integer?, Tree(X)?, X?, Tree(X)?, Tree(X)).
+rotate_left(Sl, L, K, nil, node(L?, K?, nil, S?)) :- S := Sl? + 1.
+rotate_left(Sl, L, K, node(RL, RK, RR, Sr), T?) :-
+    sized(RL?, Srl, RL1), sized(RR?, Srr, RR1),
+    rotate_left_at(Sl?, Srl?, Srr?, Sr?, L?, K?, RL1?, RK?, RR1?, T).
+
+procedure(X) rotate_left_at(Integer?, Integer?, Integer?, Integer?, Tree(X)?, X?, Tree(X)?, X?, Tree(X)?, Tree(X)).
+rotate_left_at(Sl, Srl, Srr, Sr, L, K, RL, RK, RR, node(node(L?, K?, RL?, S1?), RK?, RR?, S?)) :-
+    Srl? + 1 < 2 * (Srr? + 1) |
+    S1 := Sl? + Srl? + 1, S := Sl? + Sr? + 1.
+rotate_left_at(Sl, _, Srr, _, L, K, node(A, B, C, _), RK, RR, T?) :- otherwise |
+    sized(A?, Sa, A1), sized(C?, Sc, C1),
+    double_rotation(Sl?, Sa?, Sc?, Srr?, L?, K?, A1?, B?, C1?, RK?, RR?, T).
+
+%% rotate_right(Sr, L, K, R, T): L is too heavy for R, which holds Sr elements.
+%% L is then not nil; for nil, T is node(nil, K, R).
+procedure(X) rotate_right(Integer?, Tree(X)?, X?, Tree(X)?, Tree(X)).
+rotate_right(Sr, nil, K, R, node(nil, K?, R?, S?)) :- S := Sr? + 1.
+rotate_right(Sr, node(LL, LK, LR, Sl), K, R, T?) :-
+    sized(LL?, Sll, LL1), sized(LR?, Slr, LR1),
+    rotate_right_at(Sr?, Sll?, Slr?, Sl?, LL1?, LK?, LR1?, K?, R?, T).
+
+procedure(X) rotate_right_at(Integer?, Integer?, Integer?, Integer?, Tree(X)?, X?, Tree(X)?, X?, Tree(X)?, Tree(X)).
+rotate_right_at(Sr, Sll, Slr, Sl, LL, LK, LR, K, R, node(LL?, LK?, node(LR?, K?, R?, S1?), S?)) :-
+    Slr? + 1 < 2 * (Sll? + 1) |
+    S1 := Slr? + Sr? + 1, S := Sl? + Sr? + 1.
+rotate_right_at(Sr, Sll, _, _, LL, LK, node(A, B, C, _), K, R, T?) :- otherwise |
+    sized(A?, Sa, A1), sized(C?, Sc, C1),
+    double_rotation(Sll?, Sa?, Sc?, Sr?, LL?, LK?, A1?, B?, C1?, K?, R?, T).
+
+%% double_rotation(S1, Sa, Sc, S4, T1, K1, A, B, C, K2, T4, T): T is
+%% node(node(T1, K1, A), B, node(C, K2, T4)), its sizes computed from S1, Sa,
+%% Sc and S4, the sizes of T1, A, C and T4.
+procedure(X) double_rotation(Integer?, Integer?, Integer?, Integer?, Tree(X)?, X?, Tree(X)?, X?, Tree(X)?, X?, Tree(X)?, Tree(X)).
+double_rotation(S1, Sa, Sc, S4, T1, K1, A, B, C, K2, T4, node(node(T1?, K1?, A?, Sl?), B?, node(C?, K2?, T4?, Sr?), S?)) :-
+    Sl := S1? + Sa? + 1, Sr := Sc? + S4? + 1, S := Sl? + Sr? + 1.

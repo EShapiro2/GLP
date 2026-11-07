@@ -1,0 +1,157 @@
+%% tree_test.glp - tests of tree.glp against a list model.
+%% Owner: GLP (Code #24's task 2, Cloud_inbox 2026-11-06 17:50 UTC).
+%%
+%% The model of a tree is the ascending list of its elements.  Each test draws
+%% integers from 0 to 100 by a linear congruential sequence, builds a tree and
+%% its model, and gives ok if every check holds and bad otherwise:
+%%   test_insert: after each insertion, the tree's list is the model, its size
+%%     is the model's length, and every node is in balance with its stored size
+%%     the size of its subtree;
+%%   test_ascending and test_descending: the same, inserting 0 to N - 1 in
+%%     ascending and in descending order;
+%%   test_from_list: the same of the tree from_list builds from a model;
+%%   test_member: member answers as the model does for each of 0 to 100;
+%%   test_kth: kth gives the model's element at every index;
+%%   test_union: the union of two trees is the union of their models.
+%% Load the directory and run, e.g., test_insert(200, 7, R).
+
+
+exported procedure test_insert(Integer?, Integer?, Result).
+test_insert(N, Seed, R?) :- draw(N?, Seed?, Xs), insert_all(Xs?, nil, [], ok, _, _, R).
+
+exported procedure test_ascending(Integer?, Result).
+test_ascending(N, R?) :- ascending(0, N?, Xs), insert_all(Xs?, nil, [], ok, _, _, R).
+
+exported procedure test_descending(Integer?, Result).
+test_descending(N, R?) :- descending(N?, Xs), insert_all(Xs?, nil, [], ok, _, _, R).
+
+exported procedure test_from_list(Integer?, Integer?, Result).
+test_from_list(N, Seed, R?) :- draw(N?, Seed?, Xs), insert_all(Xs?, nil, [], ok, _, M, _), from_model(M?, R).
+
+exported procedure test_member(Integer?, Integer?, Result).
+test_member(N, Seed, R?) :- draw(N?, Seed?, Xs), insert_all(Xs?, nil, [], ok, T, M, _), member_all(0, T?, M?, R).
+
+exported procedure test_kth(Integer?, Integer?, Result).
+test_kth(N, Seed, R?) :- draw(N?, Seed?, Xs), insert_all(Xs?, nil, [], ok, T, M, _), kth_all(T?, M?, 0, R).
+
+exported procedure test_union(Integer?, Integer?, Integer?, Result).
+test_union(N, Seed1, Seed2, R?) :-
+    draw(N?, Seed1?, Xs), draw(N?, Seed2?, Ys),
+    insert_all(Xs?, nil, [], ok, T1, M1, _), insert_all(Ys?, nil, [], ok, T2, M2, _),
+    union_of(T1?, T2?, M1?, M2?, R).
+
+%% draw(N, S, Xs): Xs is N integers from 0 to 100, from the seed S.
+procedure draw(Integer?, Integer?, List(Integer)).
+draw(0, _, []).
+draw(N, S, [V? | Vs?]) :- N? > 0 | V := S? mod 101, S1 := (S? * 37 + 11) mod 1009, N1 := N? - 1, draw(N1?, S1?, Vs).
+
+%% ascending(I, N, Xs): Xs is I to N - 1 in ascending order.
+procedure ascending(Integer?, Integer?, List(Integer)).
+ascending(I, N, []) :- I? >= N? | true.
+ascending(I, N, [I? | Xs?]) :- I? < N? | I1 := I? + 1, ascending(I1?, N?, Xs).
+
+%% descending(N, Xs): Xs is N - 1 to 0 in descending order.
+procedure descending(Integer?, List(Integer)).
+descending(0, []).
+descending(N, [N1? | Xs?]) :- N? > 0 | N1 := N? - 1, descending(N1?, Xs).
+
+%% insert_all(Xs, T, M, R, T1, M1, R1): T1 and M1 are T and M with the
+%% elements of Xs inserted, each insertion checked; R1 is ok if R is and every
+%% check held.
+procedure insert_all(List(Integer)?, Tree(Integer)?, List(Integer)?, Result?, Tree(Integer), List(Integer), Result).
+insert_all([], T, M, R, T?, M?, R?).
+insert_all([X | Xs], T, M, R, T2?, M2?, R2?) :-
+    insert(X?, T?, T1), model_insert(X?, M?, M1), insert_next(Xs?, T1?, M1?, R?, T2, M2, R2).
+
+procedure insert_next(List(Integer)?, Tree(Integer)?, List(Integer)?, Result?, Tree(Integer), List(Integer), Result).
+insert_next(Xs, T, M, R, T2?, M2?, R2?) :- ground(T?), ground(M?) |
+    same(T?, M?, R1), both(R?, R1?, R3), insert_all(Xs?, T?, M?, R3?, T2, M2, R2).
+
+%% same(T, M, R): R is ok if T's list is M, T's size is M's length, and T is in
+%% balance at every node with its stored sizes right.
+procedure same(Tree(Integer)?, List(Integer)?, Result).
+same(T, M, R?) :- ground(T?), ground(M?) |
+    to_list(T?, Xs), equal_lists(Xs?, M?, R1),
+    size(T?, N), model_length(M?, 0, L), equal_integers(N?, L?, R2),
+    balanced(T?, _, R3),
+    both(R1?, R2?, R4), both(R4?, R3?, R).
+
+%% balanced(T, S, R): S is T's stored size, and R is ok if every node of T is
+%% in balance, 3 * (|L| + 1) >= |R| + 1 and 3 * (|R| + 1) >= |L| + 1, and stores
+%% its subtree's size.
+procedure balanced(Tree(Integer)?, Integer, Result).
+balanced(nil, 0, ok).
+balanced(node(L, _, Rt, S), S?, R?) :- balanced(L?, Sl, R1), balanced(Rt?, Sr, R2), balanced_node(Sl?, Sr?, S?, R1?, R2?, R).
+
+procedure balanced_node(Integer?, Integer?, Integer?, Result?, Result?, Result).
+balanced_node(Sl, Sr, S, ok, ok, ok) :- S? =:= Sl? + Sr? + 1, 3 * (Sl? + 1) >= Sr? + 1, 3 * (Sr? + 1) >= Sl? + 1 | true.
+balanced_node(_, _, _, _, _, bad) :- otherwise | true.
+
+%% from_model(M, R): R is ok if the tree from_list builds from M is the same as M.
+procedure from_model(List(Integer)?, Result).
+from_model(M, R?) :- ground(M?) | from_list(M?, T), same(T?, M?, R).
+
+%% member_all(V, T, M, R): R is ok if member answers as M does for V to 100.
+procedure member_all(Integer?, Tree(Integer)?, List(Integer)?, Result).
+member_all(V, _, _, ok) :- V? > 100 | true.
+member_all(V, T, M, R?) :- V? =< 100, ground(T?), ground(M?) |
+    member(V?, T?, A), model_member(V?, M?, B), equal_answers(A?, B?, R1),
+    V1 := V? + 1, member_all(V1?, T?, M?, R2), both(R1?, R2?, R).
+
+%% kth_all(T, M, I, R): R is ok if kth of T gives the element of M at each
+%% index from I, M being the model after its first I elements.
+procedure kth_all(Tree(Integer)?, List(Integer)?, Integer?, Result).
+kth_all(_, [], _, ok).
+kth_all(T, [Y | Ys], I, R?) :- ground(T?) |
+    kth_one(T?, I?, Y?, R1), I1 := I? + 1, kth_all(T?, Ys?, I1?, R2), both(R1?, R2?, R).
+
+procedure kth_one(Tree(Integer)?, Integer?, Integer?, Result).
+kth_one(nil, _, _, bad).
+kth_one(node(A, B, C, D), I, Y, R?) :- kth(node(A?, B?, C?, D?), I?, X), equal_integers(X?, Y?, R).
+
+%% union_of(T1, T2, M1, M2, R): R is ok if the union of T1 and T2 is the same
+%% as the union of M1 and M2.
+procedure union_of(Tree(Integer)?, Tree(Integer)?, List(Integer)?, List(Integer)?, Result).
+union_of(T1, T2, M1, M2, R?) :- union(T1?, T2?, T), model_union(M2?, M1?, M), union_check(T?, M?, R).
+
+procedure union_check(Tree(Integer)?, List(Integer)?, Result).
+union_check(T, M, R?) :- ground(T?), ground(M?) | same(T?, M?, R).
+
+%% The model: an ascending list of integers, each once.
+procedure model_insert(Integer?, List(Integer)?, List(Integer)).
+model_insert(X, [], [X?]).
+model_insert(X, [Y | Ys], [X?, Y? | Ys?]) :- X? < Y? | true.
+model_insert(X, [Y | Ys], [Y? | Zs?]) :- X? > Y? | model_insert(X?, Ys?, Zs).
+model_insert(X, [Y | Ys], [Y? | Ys?]) :- X? =:= Y? | true.
+
+procedure model_union(List(Integer)?, List(Integer)?, List(Integer)).
+model_union([], M, M?).
+model_union([X | Xs], M, M2?) :- model_insert(X?, M?, M1), model_union(Xs?, M1?, M2).
+
+procedure model_member(Integer?, List(Integer)?, Member).
+model_member(_, [], no).
+model_member(X, [Y | _], yes) :- X? =:= Y? | true.
+model_member(X, [Y | Ys], A?) :- X? =\= Y? | model_member(X?, Ys?, A).
+
+procedure model_length(List(Integer)?, Integer?, Integer).
+model_length([], N, N?).
+model_length([_ | Xs], N, L?) :- N1 := N? + 1, model_length(Xs?, N1?, L).
+
+procedure equal_lists(List(Integer)?, List(Integer)?, Result).
+equal_lists(Xs, Ys, ok) :- Xs? =?= Ys? | true.
+equal_lists(_, _, bad) :- otherwise | true.
+
+procedure equal_integers(Integer?, Integer?, Result).
+equal_integers(X, Y, ok) :- X? =:= Y? | true.
+equal_integers(_, _, bad) :- otherwise | true.
+
+procedure equal_answers(Member?, Member?, Result).
+equal_answers(yes, yes, ok).
+equal_answers(no, no, ok).
+equal_answers(yes, no, bad).
+equal_answers(no, yes, bad).
+
+procedure both(Result?, Result?, Result).
+both(ok, ok, ok).
+both(ok, bad, bad).
+both(bad, _, bad).
