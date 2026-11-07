@@ -10,10 +10,14 @@
 SignalReply ::= punch(String) ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
-            ; available(Key, Key, SignedTerm, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?)
+            ; register(Key, SignedTerm, SignalReply?)
+            ; redeem(Key, SignedTerm, SignalReply?).
 
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
-               ; ready(Key, Key, String, SignalReply?).
+               ; ready(Key, Key, String, SignalReply?)
+               ; invited(Key, Integer, SignalReply?)
+               ; used(Key, Integer).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 imported procedure rv_client#make_reconnect(Key?, Key?, SignedTerm?,
