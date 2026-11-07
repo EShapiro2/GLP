@@ -247,7 +247,21 @@ class GlpEngine {
   /// (module_hierarchy.dart, [rootScope]): a file-less source's, given no
   /// other, and the one every scope the engine builds is built over, so the
   /// root's layer is one and its procedures are certified once per engine.
-  late final TypeEnvironment _rootScope = rootScope(_rootSelfGlpPath);
+  late final TypeEnvironment _rootScope = _buildRootScope();
+
+  /// The root self.glp's text as [_rootScope] was built: read before the
+  /// build and again after, and kept only where the two reads agree, so it is
+  /// byte for byte the text the scope's own parse saw; null otherwise, and
+  /// the checked-programs cache then stores nothing for this engine
+  /// ([_sourcesKey]).
+  String? _rootTextAtScope;
+
+  TypeEnvironment _buildRootScope() {
+    final before = selfGlpSource(_rootSelfGlpPath);
+    final scope = rootScope(_rootSelfGlpPath);
+    _rootTextAtScope = before == selfGlpSource(_rootSelfGlpPath) ? before : null;
+    return scope;
+  }
 
   /// Clear all loaded programs except root self.glp.
   ///
@@ -722,6 +736,46 @@ class GlpEngine {
     return env;
   }
 
+  /// The programs checked in this process, by their sources ([_sourcesKey]):
+  /// the modules discovered and the linked program checkedLinkedProgram
+  /// returned, at most [_checkedMax] of them, the oldest let go first.
+  static final _checked = <String, ({List<DiscoveredModule> modules, LinkResult linked})>{};
+  static const _checkedMax = 24;
+
+  static void _remember(String key, ({List<DiscoveredModule> modules, LinkResult linked}) v) {
+    _checked.remove(key);
+    _checked[key] = v;
+    while (_checked.length > _checkedMax) {
+      _checked.remove(_checked.keys.first);
+    }
+  }
+
+  /// What the check of a program depends on: its directory, the root
+  /// self.glp's text as this engine's scope was built ([_rootTextAtScope]),
+  /// and the path and the text each module was parsed from ([parsedSourceOf])
+  /// --- never a later read of a file, which an edit between the parse and
+  /// the read would falsify.  Null, and the program is then checked each
+  /// time, where either is unknown: a composite module (a self.vglp layered
+  /// into its self.glp) among them, or a root edited as the scope was built.
+  String? _sourcesKey(String programDir, List<DiscoveredModule> modules) {
+    final root = _rootTextAtScope;
+    if (root == null) return null;
+    final b = StringBuffer()
+      ..write(Directory(programDir).absolute.path)
+      ..write('\u0000')
+      ..write(root);
+    for (final m in [...modules]..sort((x, y) => x.filePath.compareTo(y.filePath))) {
+      final src = parsedSourceOf(m.ast);
+      if (src == null) return null;
+      b
+        ..write('\u0000')
+        ..write(m.filePath)
+        ..write('\u0000')
+        ..write(src);
+    }
+    return b.toString();
+  }
+
   /// Load an entire program directory via static linking.
   ///
   /// Discovers all modules, type-checks each independently, links into a
@@ -736,17 +790,24 @@ class GlpEngine {
   /// the program's self.glp ... These exports are the compiled module's entry
   /// points").
   bool loadProgram(String programDir) {
-    final modules = discoverProgram(programDir,
+    final discovered = discoverProgram(programDir,
         rootSelfGlpPath: _rootSelfGlpPath, rootScope: _rootScope);
-    if (modules.isEmpty) {
+    if (discovered.isEmpty) {
       throw Exception('No modules found in $programDir');
     }
 
     // Gate (paper: modules §Static Linking — only a well-typed program is
     // compiled and run): checkedLinkedProgram type-checks the linked program and
     // returns it for compilation only if well-typed, else throws. There is no
-    // other path to a compiled program.
-    final linked = checkedLinkedProgram(modules, rootDir: programDir);
+    // other path to a compiled program.  The check is a function of the
+    // program's sources and the root self.glp: a program checked before in
+    // this process, its sources unchanged byte for byte, is not checked again
+    // ([_checked]); its modules and linked program are the ones checked.
+    final key = _sourcesKey(programDir, discovered);
+    final hit = key == null ? null : _checked[key];
+    final modules = hit?.modules ?? discovered;
+    final linked = hit?.linked ?? checkedLinkedProgram(modules, rootDir: programDir);
+    if (hit == null && key != null) _remember(key, (modules: modules, linked: linked));
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
