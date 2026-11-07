@@ -121,7 +121,7 @@ Asked    ::= Class ; Attempt.
 Seen     ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo).
 
 %% The network of the platform over the conversations (miniapp.glp): what its router reads, a conversation the social graph opened, the peer's key and this side's end of its root channel, or a message the agent sent; a conversation's route, the peer's key and the writer of the conversation's outgoing stream; and whether a message went on a conversation or is held for one not yet open.
-NetEvent ::= opened(Key, RootChannel(Net)) ; sent(Net).
+NetEvent ::= opened(Key, RootChannel(Net)) ; sent(Net) ; declined(Key).
 Route    ::= route(Key, Stream(Net)?).
 Routes   ::= [] ; [Route | Routes].
 Sending  ::= went ; held(Net).

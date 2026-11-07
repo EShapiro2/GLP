@@ -16,7 +16,7 @@
 %% holds the mini-app's ends at Opaque and passes them on.
 
 %% The root channel's messages between two executions: a greeting, and the
-%% probe of the warm call, which carries the writer of the probe's value.
+%% probe of a held link, which carries the writer of the probe's value.
 PingMsg     ::= hello(Key) ; probe(ProbeValue?).
 %% The probe's value (miniapp.glp): what the far side assigns, or
 %% unreachable, which the sender writes where the probe reaches nobody.

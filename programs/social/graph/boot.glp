@@ -115,38 +115,3 @@ play_introduce_neither(A, B, C, D) :-
                   [friend_output(D?, ToDave), user_output(AliceOut)]),
     report_intro(to_dave, ToDave?),
     send_to_user(AliceOut?).
-
-%% A friend asks to be introduced to the anchor of a held name and the person
-%% consents (Section 5.2, the warm call's introduction): the requester and the
-%% anchor are both alice's friends, so the introduction goes out on both.
-exported procedure play_request_intro_both(Key?, Key?, Key?).
-play_request_intro_both(A, B, C) :-
-    ground(A?), ground(B?), ground(C?) |
-    core # agent(A?, [msg(person, A?, allow_intro(B?, C?))],
-                  [msg(B?, A?, request_intro(C?))],
-                  [friend_output(B?, ToBob), friend_output(C?, ToCarol),
-                   user_output(AliceOut)]),
-    report_intro(req_to_bob, ToBob?),
-    report_intro(req_to_carol, ToCarol?),
-    send_to_user(AliceOut?).
-
-%% The requester is not alice's friend: alice has no friend channel to him, so
-%% the request is not taken up and the consent introduces nobody.
-exported procedure play_request_intro_stranger(Key?, Key?, Key?).
-play_request_intro_stranger(A, B, C) :-
-    ground(A?), ground(B?), ground(C?) |
-    core # agent(A?, [msg(person, A?, allow_intro(B?, C?))],
-                  [msg(B?, A?, request_intro(C?))],
-                  [friend_output(C?, ToCarol), user_output(AliceOut)]),
-    report_intro(req_to_carol, ToCarol?),
-    send_to_user(AliceOut?).
-
-%% The anchor is not alice's friend: the same, from the other side.
-exported procedure play_request_intro_no_anchor(Key?, Key?, Key?).
-play_request_intro_no_anchor(A, B, C) :-
-    ground(A?), ground(B?) |
-    core # agent(A?, [msg(person, A?, allow_intro(B?, C?))],
-                  [msg(B?, A?, request_intro(C?))],
-                  [friend_output(B?, ToBob), user_output(AliceOut)]),
-    report_intro(req_to_bob, ToBob?),
-    send_to_user(AliceOut?).
