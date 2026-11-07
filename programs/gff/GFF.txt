@@ -3,13 +3,13 @@
 % Paper: GFF, Grassroots Feeds and Followers, in preparation
 % Extends: GDO-L, Grassroots Directed Overlay with Labels, GFF's (GDO-L.txt beside this file), and through it GDO, GRH's, GSG and GKK, GSC's.  It cites their clauses whole and restates none.
 % Defines: feed, item, following.  Label and labeled pointing are defined with GDO-L; Alice, Bob and Carol are variables naming persons.
-% Last changed: 2026-11-06, the declaration and Delivery with pointers labeled by persons, 'Carol' (Udi, 2026-11-06, to GFF #3), the acts unchanged; and the Posts tab names its predicate, item, 'the items Alice holds', posted and received alike (Udi, 2026-11-06, to GFF #3; vGLP 5.4, Code #24 10:02 UTC).  2026-11-05, rewritten by GFF #3 Cowork on GDO-L, the clauses as Udi approved them that day (Udi, to GFF #3: 'I think GFF should be based on overlays, GDO and extend it').  The five clauses of 2026-10-28 --- Following Volition, Following via Friend, Delivery with forwarding, Updating --- are gone, and git holds them.
+% Last changed: 2026-11-07, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-06, the declaration and Delivery with pointers labeled by persons, 'Carol' (Udi, 2026-11-06, to GFF #3), the acts unchanged; and the Posts tab names its predicate, item, 'the items Alice holds', posted and received alike (Udi, 2026-11-06, to GFF #3; vGLP 5.4, Code #24 10:02 UTC).  2026-11-05, rewritten by GFF #3 Cowork on GDO-L, the clauses as Udi approved them that day (Udi, to GFF #3: 'I think GFF should be based on overlays, GDO and extend it').  The five clauses of 2026-10-28 --- Following Volition, Following via Friend, Delivery with forwarding, Updating --- are gone, and git holds them.
 % Schemas: GFF.glp beside this file, GDO-L's thirteen and two over the predicates item and received: post, clause 1; deliver, clause 2, with no guarding role, Bob a reading role.
 GFF: Grassroots Feeds and Followers
 GFF extends GDO-L.
-Alice, Bob and Carol are persons, Bob and Carol possibly one person.  A feed is named by its author, and Alice follows Carol's feed through Bob when Alice has a pointer to Bob labeled 'Carol'.
+Alice, Bob and Carol are persons, Bob and Carol possibly one person.  A feed is named by its author, and Alice follows Carol's feed through Bob when Alice has a Carol-pointer to Bob.
 1. ■ Feed.  Alice has a feed and may post to it an item, created or received.
-2. ■ Delivery.  Alice, who has a pointer to Bob labeled 'Carol', receives from Bob every item of Carol's feed that Bob holds.
+2. ■ Delivery.  Alice, who has a Carol-pointer to Bob, receives from Bob every item of Carol's feed that Bob holds.
 Pragmas
 Posts: the items Alice holds.
 Feeds: the feeds Alice follows; under a feed, the persons Alice follows it through and its items, each once.
