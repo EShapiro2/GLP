@@ -1,64 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="clean">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>GAS2</title>
 <style>
-:root { --ink:#1d1d1f; --soft:#6e6e73; --line:#e5e5ea; --bg:#f2f2f7; --card:#fff; --ok:#34c759; --blue:#0071e3; --warn:#ff9f0a; }
+/* The looks: each only colors and shapes the page; the person, their key, the contracts and
+   their certificates are the same under every one. */
+[data-theme=clean]   { --ink:#1d1d1f; --soft:#6e6e73; --line:#e5e5ea; --bg:#f2f2f7; --card:#fff; --accent:#0071e3; --accent2:#e8e8ed; --onaccent:#fff; --ok:#34c759; --no:#d7372b; --ask:#fff4dc; --r:14px; --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --head:var(--font); --hdbg:rgba(255,255,255,.9); --shadow:none; --page:var(--bg); }
+[data-theme=night]   { --ink:#f5f5f7; --soft:#98989f; --line:#2c2c2e; --bg:#000; --card:#1c1c1e; --accent:#0a84ff; --accent2:#2c2c2e; --onaccent:#fff; --ok:#30d158; --no:#ff453a; --ask:#3a2f12; --r:14px; --font:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --head:var(--font); --hdbg:rgba(20,20,22,.9); --shadow:none; --page:var(--bg); }
+[data-theme=playful] { --ink:#2b2140; --soft:#7a6f8f; --line:#efe7fb; --bg:#f7f1ff; --card:#fff; --accent:#7b4dff; --accent2:#f0e9ff; --onaccent:#fff; --ok:#12b886; --no:#ff5470; --ask:#fff0f4; --r:22px; --font:ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif; --head:var(--font); --hdbg:rgba(255,255,255,.85); --shadow:0 6px 18px rgba(123,77,255,.12); --page:linear-gradient(160deg,#f7f1ff 0%,#fff4ec 100%); }
+[data-theme=paper]   { --ink:#3b3226; --soft:#8a7d6a; --line:#e7dcc8; --bg:#f4efe6; --card:#fffaf1; --accent:#8a5a2b; --accent2:#efe5d3; --onaccent:#fffaf1; --ok:#4f7d3a; --no:#a8432d; --ask:#f6e8c8; --r:6px; --font:"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; --head:Georgia, "Times New Roman", serif; --hdbg:rgba(244,239,230,.92); --shadow:0 1px 0 #e7dcc8; --page:var(--bg); }
 * { box-sizing: border-box; }
-body { margin: 0; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); }
-header { position: sticky; top: 0; z-index: 3; background: rgba(255,255,255,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
-header b { font-size: 18px; letter-spacing: -.02em; }
-header .st { margin-left: auto; font-size: 12px; color: var(--soft); }
-header .back { border: 0; background: none; color: var(--blue); font: inherit; padding: 0; cursor: pointer; }
-main { max-width: 560px; margin: 0 auto; padding: 12px 12px 40px; }
-.card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
-h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--soft); margin: 18px 4px 6px; font-weight: 600; }
-.row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+html, body { min-height: 100%; }
+body { margin: 0; font: 15px/1.45 var(--font); color: var(--ink); background: var(--page); background-attachment: fixed; }
+header { position: sticky; top: 0; z-index: 3; background: var(--hdbg); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); padding: 10px 14px; display: flex; align-items: center; gap: 10px; min-height: 48px; }
+header b { flex: 1; font: 700 18px/1.2 var(--head); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header .st { font-size: 12px; color: var(--soft); white-space: nowrap; }
+header .back, header .gear { border: 0; background: none; color: var(--accent); font: inherit; font-size: 16px; padding: 4px; cursor: pointer; }
+header .gear { font-size: 19px; color: var(--soft); }
+main { max-width: 560px; margin: 0 auto; padding: 8px 12px 48px; }
+.card { background: var(--card); border-radius: var(--r); padding: 12px 14px; margin: 10px 0; box-shadow: var(--shadow); }
+h2 { font: 600 12.5px/1.3 var(--font); text-transform: uppercase; letter-spacing: .05em; color: var(--soft); margin: 20px 4px 6px; }
+h3 { font: 700 16px/1.3 var(--head); margin: 0 0 6px; }
+.row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .row:last-child { border-bottom: 0; }
 .grow { flex: 1; min-width: 0; }
 .muted { color: var(--soft); }
 .small { font-size: 12.5px; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
-button.b { border: 0; background: var(--blue); color: #fff; font: inherit; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 99px; cursor: pointer; white-space: nowrap; }
-button.b.alt { background: #e8e8ed; color: var(--ink); }
-button.b.ok { background: var(--ok); }
-button.b.no { background: #c4421a; }
+button.b { border: 0; background: var(--accent); color: var(--onaccent); font: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 99px; cursor: pointer; white-space: nowrap; }
+button.b.alt { background: var(--accent2); color: var(--ink); }
+button.b.ok { background: var(--ok); color: #fff; }
+button.b.no { background: var(--no); color: #fff; }
 button.b:disabled { opacity: .45; cursor: default; }
-input, select { font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; width: 100%; min-width: 0; }
-.chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.chip { font-size: 12.5px; background: var(--bg); border-radius: 99px; padding: 2px 9px; }
-.step { display: flex; gap: 10px; align-items: center; }
-.step .n { width: 22px; height: 22px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 12px; display: grid; place-items: center; flex: none; }
-.step .n.done { background: var(--ok); }
-.ask { background: #fff7e6; border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
-.acts { display: flex; flex-wrap: wrap; gap: 6px; }
-.form { background: var(--bg); border-radius: 12px; padding: 10px; margin-top: 8px; display: grid; gap: 8px; }
-.form label { font-size: 12.5px; color: var(--soft); display: grid; gap: 3px; }
-.tab { margin: 8px 0 2px; font-weight: 600; font-size: 14px; }
-.empty { color: var(--soft); font-size: 13px; padding: 4px 0; }
-.note { font-size: 12.5px; color: var(--soft); padding: 2px 0; }
+button.link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; padding: 0; cursor: pointer; }
+input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); width: 100%; min-width: 0; }
+.step { display: flex; gap: 10px; align-items: center; padding: 3px 0; }
+.step .n { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--onaccent); font-size: 12px; display: grid; place-items: center; flex: none; }
+.step .n.done { background: var(--ok); color: #fff; }
+.ask { background: var(--ask); border-radius: var(--r); padding: 12px 14px; margin: 10px 0; }
+.ask .who { font-size: 12.5px; color: var(--soft); margin-bottom: 2px; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.form { background: var(--bg); border-radius: var(--r); padding: 12px; margin-top: 10px; display: grid; gap: 10px; }
+.form label { font-size: 12.5px; color: var(--soft); display: grid; gap: 4px; }
+.empty { color: var(--soft); font-size: 13.5px; padding: 4px 0; }
+.note { font-size: 12.5px; color: var(--soft); padding: 3px 0; }
+.apps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.app { background: var(--card); border-radius: var(--r); padding: 12px; display: grid; gap: 6px; align-content: start; box-shadow: var(--shadow); }
+.app .t { font: 700 15px/1.25 var(--head); }
+.app .id { font-size: 11.5px; color: var(--soft); letter-spacing: .03em; }
+.app .p { font-size: 12.5px; color: var(--soft); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: 3.6em; }
+.app button { justify-self: start; }
+.seg { display: flex; background: var(--accent2); border-radius: 99px; padding: 3px; margin: 10px 0 4px; }
+.seg button { flex: 1; border: 0; background: none; font: inherit; font-size: 14px; padding: 6px; border-radius: 99px; color: var(--ink); cursor: pointer; }
+.seg button.on { background: var(--card); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.items { display: grid; gap: 6px; }
+.item { display: flex; align-items: center; gap: 10px; }
+.dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; }
+.item .cnt { margin-left: auto; font-weight: 700; }
+.pill { font-size: 12px; background: var(--accent2); border-radius: 99px; padding: 2px 9px; color: var(--soft); white-space: nowrap; }
+.clause { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.clause:last-child { border-bottom: 0; }
+.themes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.theme { border: 2px solid transparent; border-radius: 16px; padding: 10px; cursor: pointer; background: var(--page); color: var(--ink); text-align: left; font: inherit; }
+.theme.on { border-color: var(--accent); }
+.theme .sw { background: var(--card); border-radius: var(--r); padding: 8px; display: grid; gap: 6px; box-shadow: var(--shadow); }
+.theme .bar { height: 8px; border-radius: 9px; background: var(--line); }
+.theme .btn { height: 18px; width: 56%; border-radius: 99px; background: var(--accent); }
+.theme .nm { font: 700 14px var(--head); margin-top: 8px; }
+.switch { display: flex; align-items: center; gap: 10px; }
+.switch input { width: auto; }
+pre { white-space: pre-wrap; word-break: break-all; font-size: 11.5px; max-height: 360px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 8px; margin: 6px 0 0; }
 </style>
 </head>
 <body>
-<header id="hd"><b>GAS2</b><span class="st" id="st">starting…</span></header>
+<header id="hd"><b>GAS2</b><span class="st">starting…</span></header>
 <main id="main"></main>
 <script>
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let S = null, open = null, form = null, names = {};
-try { names = JSON.parse(localStorage.getItem('gas2names') || '{}'); } catch (e) {}
-const saveNames = () => { try { localStorage.setItem('gas2names', JSON.stringify(names)); } catch (e) {} };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let S = null, open = null, form = null, pane = 'play', naming = null, over = false;
+let names = store.get('gas2names', {});
+// the person's look, and whether they see under the hood: this page's alone
+let theme = store.get('gas2theme', 'clean'), hood = store.get('gas2hood', false);
+document.documentElement.dataset.theme = theme;
 const short = k => k ? k.slice(0, 6) : '';
 const nm = k => k === S?.me ? 'you' : (names[k] || short(k));
+// a person's color, from their key, the same on every device
+const hue = k => parseInt((k || '0').slice(0, 6), 16) % 360;
+const dot = k => `<span class="dot" style="background:hsl(${hue(k)},55%,52%)">${esc((names[k] || k || '?').slice(0, 1).toUpperCase())}</span>`;
 
 // On the web (bin/web.dart) a person is a token this browser keeps; on a device the
 // page is the device's own and there is none.
 let token = null;
-// ?debug: the agent's log and the acts waiting, at the bottom of the page
-const DEBUG = new URLSearchParams(location.search).has('debug');
 try { token = localStorage.getItem('gas2token'); } catch (e) {}
+const DEBUG = new URLSearchParams(location.search).has('debug');
 async function api(path, opts = {}) {
   for (let i = 0; i < 2; i++) {
     const r = await fetch(path, {...opts, cache: 'no-store', headers: token ? {'X-GAS2-Token': token} : {}});
@@ -76,7 +117,7 @@ async function poll() {
   let v = -1;
   for (;;) {
     try {
-      const r = await api('api/state' + (v >= 0 ? '?since=' + v : '?') + (DEBUG ? '&debug' : ''));
+      const r = await api('api/state' + (v >= 0 ? '?since=' + v : '?') + (hood || DEBUG ? '&debug' : ''));
       S = await r.json(); v = S.version; draw();
       if (toAdd && S.status === 'ready') { const l = toAdd; toAdd = null; history.replaceState(null, '', location.pathname); addMade(l); }
     } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
@@ -104,30 +145,33 @@ function parseTerm(s) {
   return term();
 }
 
+// the buttons the contract's pragmas name, with the fields each asks for
 function menuOf(w) {
-  // named('social_menu([...])', D)
   const n = F(w, 'named');
   if (!n || typeof n[0] !== 'string' || !n[0].startsWith('social_menu')) return [];
   try {
     const t = parseTerm(n[0]);
     return (F(t, 'social_menu')[0] || []).map(b => {
       const [label, acts] = F(b, 'button');
-      return acts.map(a => { const x = F(a, 'act'); return {label, act: x[0], fields: (x[5] || []).map(f => ({i: F(f, 'field')[0], label: F(f, 'field')[1], kind: F(f, 'field')[2]}))}; });
+      return acts.map(a => { const x = F(a, 'act'); return {label, act: x[0], roles: x[2] || [], reqs: (x[3] || []).map(r => F(r, 'req')).filter(Boolean),
+        fields: (x[5] || []).map(f => ({i: F(f, 'field')[0], label: F(f, 'field')[1], kind: F(f, 'field')[2]}))}; });
     }).flat();
   } catch (e) { return []; }
 }
 
+// the sentence the contract's pragmas put to a person, its persons by name
 function words(ws) {
   return (ws || []).map(w => F(w, 'person') ? '<b>' + esc(nm(F(w, 'person')[0])) + '</b>' : F(w, 'text') ? esc(F(w, 'text')[0])
     : F(w, 'named') ? esc(F(w, 'named')[0]) + ' ' + esc(nm(F(w, 'named')[1])) : F(w, 'valued') ? esc(F(w, 'valued')[0]) + ' ' + esc(F(w, 'valued')[1]) : esc(JSON.stringify(w))).join('');
 }
 
+const isKey = t => typeof t === 'string' && t.length === 64 && /^[0-9a-f]+$/.test(t);
 function termText(t) {
-  if (typeof t === 'string') return t.length === 64 && /^[0-9a-f]+$/.test(t) ? nm(t) : t;
-  if (typeof t === 'number') return String(t);
-  if (Array.isArray(t)) return '[' + t.map(termText).join(', ') + ']';
+  if (isKey(t)) return nm(t);
+  if (typeof t === 'string' || typeof t === 'number') return String(t);
+  if (Array.isArray(t)) return t.map(termText).join(', ');
   if (t && t.f === 'speech') { const u = F(t.a[0], 'utterance'); return u ? '“' + u[0] + '”' : termText(t.a[0]); }
-  if (t && t.f) return t.f + (t.a.length ? '(' + t.a.map(termText).join(', ') + ')' : '');
+  if (t && t.f) return t.f.replace(/_/g, ' ') + (t.a.length ? ' ' + t.a.map(termText).join(', ') : '');
   return String(t);
 }
 
@@ -135,92 +179,75 @@ function termText(t) {
 function draw() {
   // what the person is typing survives a redraw
   const keep = {}, focus = document.activeElement?.id;
-  document.querySelectorAll('input, select').forEach(e => { if (e.id) keep[e.id] = e.value; });
-  render();
+  document.querySelectorAll('input, select').forEach(e => { if (e.id && e.type !== 'checkbox') keep[e.id] = e.value; });
+  if (open === '__settings') drawSettings();
+  else if (open) drawApp(S.apps.find(a => a.app === open));
+  else drawHome();
   for (const [id, v] of Object.entries(keep)) { const e = document.getElementById(id); if (e) e.value = v; }
   if (focus) document.getElementById(focus)?.focus();
 }
+const gear = `<button class="gear" title="Settings" onclick="go('__settings')">⚙︎</button>`;
 
-function render() {
-  const st = S.status === 'ready' ? 'you are ' + short(S.me) : S.status;
-  if (open) return drawApp(S.apps.find(a => a.app === open));
-  $('#hd').innerHTML = `<b>GAS2</b><span class="st">${esc(st)}</span>`;
+function drawHome() {
+  const st = S.status === 'ready' ? '' : S.status;
+  $('#hd').innerHTML = `<b>GAS2</b><span class="st">${esc(st)}</span>${gear}`;
   const installed = S.apps.filter(a => a.installed);
   const step = (n, done, html) => `<div class="step"><span class="n ${done ? 'done' : ''}">${done ? '✓' : n}</span><div class="grow">${html}</div></div>`;
   let h = '';
   if (!installed.length || !S.friends.length) {
-    h += `<div class="card" style="display:grid;gap:10px">
-      ${step(1, installed.length > 0, 'Install a mini-app, below: your device certifies it under your own key')}
-      ${step(2, S.friends.length > 0, 'Add a person near you, or by their key, and they say yes')}
-    </div>`;
+    h += `<div class="card"><h3>Welcome to your Grassroots Super-App</h3>
+      ${step(1, S.friends.length > 0, 'Add a friend: near you, or by their key')}
+      ${step(2, installed.length > 0, 'Install a mini-app, below')}
+      ${step(3, false, 'Open it, invite your friend, and play')}</div>`;
   }
-  h += `<h2>You</h2><div class="card"><div class="small muted">Your key; give it to a person to add you</div>
-    <div class="row"><span class="mono grow" id="mykey">${esc(S.me)}</span><button class="b alt" onclick="copyKey()">Copy</button></div>
-    <div class="row">${over ? `<span class="grow small">This deletes your key, your friends and your mini-apps here.</span><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button>` : `<span class="grow"></span><button class="b alt" onclick="over=true;draw()">Start over</button>`}</div>${S.hosted ? `
-    <div class="note"><b>GAS2 on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you.  This browser keeps the only way back to you here; clearing its site data loses this person.  The app on a phone or computer keeps your key on the device.</div>` : ''}</div>`;
-  h += `<h2>People</h2><div class="card">`;
-  for (const k of S.friendRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b> asks to be your friend</span><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false})">No</button></div>`;
-  for (const [by, k] of S.introRequests) h += `<div class="row"><span class="grow"><b>${esc(nm(by))}</b> introduces <b>${esc(nm(k))}</b></span><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false})">No</button></div>`;
-  for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b>${names[k] ? ` <span class="mono muted">${esc(short(k))}</span>` : ''}</span><button class="b alt" onclick="rename('${k}')">Name</button></div>`;
-  if (!S.friends.length && !S.friendRequests.length) h += `<div class="empty">No one yet.</div>`;
-  // near, over Bluetooth or the local network (the app on a phone): added with one tap
+  // what others ask of this person comes first
+  for (const k of S.friendRequests) h += `<div class="ask"><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b> wants to be your friend</span></div><div class="acts" style="margin-top:10px"><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false})">No</button></div></div>`;
+  for (const [by, k] of S.introRequests) h += `<div class="ask"><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(by))}</b> introduces you to <b>${esc(nm(k))}</b></span></div><div class="acts" style="margin-top:10px"><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true})">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false})">No</button></div></div>`;
+
+  h += `<h2>Mini-apps</h2><div class="apps">`;
+  const apps = [...S.apps].sort((a, b) => (b.installed - a.installed) || a.title.localeCompare(b.title));
+  for (const a of apps) {
+    const btn = a.installed ? `<button class="b" onclick="openApp('${a.app}')">Open</button>`
+      : a.preparing ? `<button class="b alt" disabled>Preparing…</button>`
+      : `<button class="b alt" onclick="act({op:'install',app:'${a.app}'})">Install</button>`;
+    h += `<div class="app"><div class="id">${esc(a.id)}</div><div class="t">${esc(a.title)}</div><div class="p">${esc((a.about?.clauses || []).map(c => c.name).join(' · '))}</div>${btn}</div>`;
+  }
+  h += `</div>`;
+
+  h += `<h2>Friends</h2><div class="card">`;
+  for (const k of S.friends) {
+    if (naming === k) h += `<div class="row">${dot(k)}<input id="nm" class="grow" placeholder="A name for ${esc(short(k))}" value="${esc(names[k] || '')}"><button class="b" onclick="saveName('${k}')">Save</button></div>`;
+    else h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b>${names[k] ? ` <span class="muted small">${esc(short(k))}</span>` : ''}</span><button class="link" onclick="naming='${k}';draw()">${names[k] ? 'Rename' : 'Name'}</button></div>`;
+  }
+  if (!S.friends.length) h += `<div class="empty">No friends yet.</div>`;
   const near = (S.nearby || []).filter(p => !S.friends.includes(p.key));
   if (near.length) {
-    h += `<div class="small muted" style="margin-top:8px">Near you</div>`;
-    for (const p of near) h += `<div class="row"><span class="grow"><b>${esc(nm(p.key))}</b> <span class="muted small">${esc(p.over.length ? 'over ' + p.over.join(', ') : 'seen')}</span></span><button class="b alt" onclick="addNear('${p.key}')">Add</button></div>`;
+    h += `<div class="small muted" style="margin-top:10px">Near you</div>`;
+    for (const p of near) h += `<div class="row">${dot(p.key)}<span class="grow"><b>${esc(nm(p.key))}</b> <span class="muted small">${esc(p.over.length ? 'over ' + p.over.join(', ') : 'seen')}</span></span><button class="b alt" onclick="addNear('${p.key}')">Add</button></div>`;
   }
-  h += `<div class="row"><input id="add" placeholder="A person's key" autocomplete="off"><button class="b" onclick="addPerson()">Add</button></div></div>`;
-  h += `<h2>Mini-apps</h2><div class="card">`;
-  for (const a of S.apps) {
-    h += `<div class="row"><span class="grow"><b>${esc(a.id)}</b> <span class="muted">${esc(a.title)}</span></span>
-      ${a.installed ? `<button class="b" onclick="openApp('${a.app}')">Open</button>` : a.preparing ? `<button class="b alt" disabled>Preparing…</button>` : `<button class="b alt" onclick="act({op:'install',app:'${a.app}'})">Install</button>`}</div>`;
-  }
-  h += `<div class="small muted" style="margin-top:8px">A mini-app from GAS2's app maker: its link</div>
-    <div class="row"><input id="madelink" class="grow" placeholder="https://talmonlab.bgu.ac.il/gas2/maker.html?k=…"><button class="b alt" onclick="addMade()">Add</button></div>`;
-  h += `</div>`;
-  if (DEBUG) h += `<h2>Debug</h2><div class="card"><div class="small">status: ${esc(S.status)}; acts waiting: ${esc(JSON.stringify(S.pending || []))} s; version ${S.version}</div><pre class="small" style="white-space:pre-wrap;max-height:400px;overflow:auto">${esc((S.log || []).join('\n'))}</pre></div>`;
-  if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, 8).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
+  h += `<div class="row"><input id="add" placeholder="Paste a friend's key" autocomplete="off"><button class="b" onclick="addPerson()">Add</button></div></div>`;
+
+  h += `<h2>You</h2><div class="card"><div class="row">${dot(S.me)}<span class="grow">Your key <span class="mono muted" id="mykey">${esc(hood ? S.me : short(S.me) + '…')}</span></span><button class="b alt" onclick="copyKey()">Copy</button></div>
+    <div class="small muted">Send it to a friend, so they can add you.</div>${S.hosted ? `
+    <div class="note" style="margin-top:8px"><b>GAS2 on the web.</b> Your super-app runs on talmonlab's server, which holds your key: the server could act as you. This browser keeps the only way back to you here; clearing its site data loses this person. The app on a phone or computer keeps your key on the device.</div>` : ''}</div>`;
+  if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, hood ? 30 : 6).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
+  if (hood || DEBUG) h += `<h2>Under the hood</h2><div class="card"><div class="small">Status: ${esc(S.status)} · acts waiting: ${esc(JSON.stringify(S.pending || []))} s · state version ${S.version}</div><pre>${esc((S.log || []).join('\n'))}</pre></div>`;
   $('#main').innerHTML = h;
 }
 
-function copyKey() {
-  if (window.GASNative) window.GASNative.postMessage(JSON.stringify({copy: S.me}));
-  else navigator.clipboard?.writeText(S.me);
-  const r = document.createRange(); r.selectNodeContents($('#mykey')); getSelection().removeAllRanges(); getSelection().addRange(r);
+function drawSettings() {
+  $('#hd').innerHTML = `<button class="back" onclick="go(null)">‹ Back</button><b>Settings</b>`;
+  const looks = [['clean', 'Clean'], ['night', 'Night'], ['playful', 'Playful'], ['paper', 'Paper']];
+  let h = `<h2>Look &amp; feel</h2><div class="themes">${looks.map(([k, n]) => `<button class="theme ${theme === k ? 'on' : ''}" data-theme="${k}" onclick="setTheme('${k}')"><div class="sw"><div class="bar"></div><div class="bar" style="width:70%"></div><div class="btn"></div></div><div class="nm">${n}</div></button>`).join('')}</div>
+    <div class="small muted" style="margin:8px 4px">The look changes this page only. Your key, your friends, the contracts and their certificates are the same under every look.</div>`;
+  h += `<h2>Under the hood</h2><div class="card"><label class="switch"><input type="checkbox" ${hood ? 'checked' : ''} onchange="setHood(this.checked)"><span class="grow">Show what happens inside: the agent's log, each mini-app's version, its raw state and what the contract says, word for word</span></label></div>`;
+  h += `<h2>A mini-app from the app maker</h2><div class="card"><div class="row"><input id="madelink" class="grow" placeholder="Its link: …/gas2/maker.html?k=…"><button class="b alt" onclick="addMade()">Add</button></div></div>`;
+  h += `<h2>Start over</h2><div class="card">${over ? `<div class="small" style="margin-bottom:8px">This deletes your key, your friends and your mini-apps here. It cannot be undone.</div><div class="acts"><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button></div>` : `<div class="row"><span class="grow small muted">A new key, and nothing kept</span><button class="b alt" onclick="over=true;draw()">Start over</button></div>`}</div>`;
+  $('#main').innerHTML = h;
 }
-// the device's back button: out of a mini-app
-window.gas2Back = () => { if (open) closeApp(); };
-function rename(k) { const n = prompt('A name for ' + short(k), names[k] || ''); if (n !== null) { names[k] = n.trim(); saveNames(); draw(); } }
-// start over: a new key pair, nothing kept, here and on the device or the server
-let over = false;
-async function startOver() {
-  await api('api/reset', {method: 'POST'});
-  try { localStorage.removeItem('gas2token'); localStorage.removeItem('gas2names'); } catch (e) {}
-  document.body.innerHTML = '<p style="padding:24px;color:#6e6e73">Starting over…</p>';
-  // the page comes back with the new person (in the app, the app opens it again)
-  for (;;) {
-    await new Promise(r => setTimeout(r, 3000));
-    try { if ((await fetch('api/state', {cache: 'no-store'})).status) { location.replace(location.pathname); return; } } catch (e) {}
-  }
-}
-async function addNear(k) { await api('api/add', {method: 'POST', body: JSON.stringify({key: k})}); }
-async function addPerson() {
-  const k = $('#add').value.trim().toLowerCase();
-  const r = await (await api('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
-  if (r.error) alert(r.error); else $('#add').value = '';
-}
-function addMade(link) {
-  link = link || $('#madelink').value.trim();
-  if (!link) return;
-  act({op: 'add', link}); if ($('#madelink')) $('#madelink').value = '';
-}
-// opened with ?add=<link>, from the app maker's page: added once the super-app is ready
-let toAdd = new URLSearchParams(location.search).get('add');
-function openApp(app) { open = app; form = null; draw(); window.scrollTo(0, 0); }
-function closeApp() { open = null; form = null; draw(); }
 
 function drawApp(a) {
-  $('#hd').innerHTML = `<button class="back" onclick="closeApp()">‹ Back</button><b>${esc(a.id)}</b><span class="st">${esc(a.title)}</span>`;
+  $('#hd').innerHTML = `<button class="back" onclick="go(null)">‹</button><b>${esc(a.title)}</b>${gear}`;
   const draws = Object.entries(a.draws).map(([id, d]) => ({id: +id, w: d.w, v: d.v}));
   const out = draws.find(d => d.id === 0);
   const thread = out ? (F(out.v, 'output') || [[]])[0] : [];
@@ -229,65 +256,107 @@ function drawApp(a) {
   const req = draws.find(d => F(d.v, 'request_r'));
   const asks = draws.filter(d => F(d.v, 'approval_w'));
   const menu = req ? menuOf(req.w) : [];
-  const shapes = a.shapes || {};
-  const props = (shapes.Proposal || []).filter(p => p[0] === 'ctor');
+  const props = ((a.shapes || {}).Proposal || []).filter(p => p[0] === 'ctor');
+  const panes = [['play', 'Play'], ['rules', 'Rules']].concat(hood ? [['hood', 'Under the hood']] : []);
+  if (!panes.some(p => p[0] === pane)) pane = 'play';
+  let h = `<div class="seg">${panes.map(([k, n]) => `<button class="${pane === k ? 'on' : ''}" onclick="pane='${k}';form=null;draw()">${n}${k === 'play' && asks.length ? ' •' : ''}</button>`).join('')}</div>`;
+  if (pane === 'rules') h += rulesHtml(a);
+  else if (pane === 'hood') h += hoodHtml(a, draws, last);
+  else h += playHtml(a, asks, last, notices, req, menu, props);
+  $('#main').innerHTML = h;
+  window._acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []}));
+  window._req = req; window._props = props; window._app = a.app;
+}
+
+function playHtml(a, asks, last, notices, req, menu, props) {
   let h = '';
-  // the people to play with: friends in the super-app
-  h += `<h2>Play with</h2><div class="card"><div class="small muted">Version ${esc(a.version)}: the person you play with needs the same version of ${esc(a.id)}; it shows here on their side too.</div>`;
-  for (const k of S.friends) h += `<div class="row"><span class="grow"><b>${esc(nm(k))}</b></span><button class="b ${(a.invited || []).includes(k) ? 'ok' : 'alt'}" onclick="act({op:'invite',app:'${a.app}',key:'${k}'})">${(a.invited || []).includes(k) ? 'Invited ✓' : 'Invite'}</button><button class="b ${(a.accepted || []).includes(k) ? 'ok' : 'alt'}" onclick="act({op:'accept',app:'${a.app}',key:'${k}'})">${(a.accepted || []).includes(k) ? 'Accepted ✓' : 'Accept theirs'}</button></div>`;
-  if (!S.friends.length) h += `<div class="empty">Add a person first.</div>`;
-  h += `<div class="small muted" style="padding-top:6px">One of you invites, the other accepts; then you meet in ${esc(a.id)}.</div></div>`;
+  // what the contract asks of this person
   for (const d of asks) {
     const ap = F(F(d.v, 'approval_w')[0], 'approval');
     const p = F(ap[2], 'input')[0];
     const ws = ap[1] && ap[1].length ? words(ap[1]) : esc(termText(F(ap[0], 'hello') ? F(ap[0], 'hello')[1] : (F(ap[0], 'attempt') || [])[3]));
-    h += `<div class="ask">${ws}<div class="acts" style="margin-top:8px"><button class="b ok" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'yes')">Yes</button><button class="b alt" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'no')">No</button></div></div>`;
+    h += `<div class="ask"><div class="who">Asks you</div>${ws}<div class="acts" style="margin-top:10px"><button class="b ok" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'yes')">Yes</button><button class="b alt" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'no')">No</button></div></div>`;
   }
-  h += `<h2>State</h2><div class="card">`;
-  if (!last) h += `<div class="empty">Not running yet: invite a friend, or accept their invitation.</div>`;
-  else {
-    const atoms = last[1] || [], known = last[2] || [], pend = last[3] || [], tabs = last[4] || [];
-    for (const t of tabs) { const [name, pred] = F(t, 'tab'); const xs = atoms.filter(x => x && x.f === pred);
-      h += `<div class="tab">${esc(name)}</div><div class="chips">${xs.length ? xs.map(x => `<span class="chip">${esc(x.a.map(termText).join(' · '))}</span>`).join('') : '<span class="empty">none</span>'}</div>`; }
-    const rest = atoms.filter(x => !tabs.some(t => x && x.f === F(t, 'tab')[1]));
-    if (rest.length) h += `<div class="tab">Holds</div><div class="chips">${rest.map(x => `<span class="chip">${esc(termText(x))}</span>`).join('')}</div>`;
-    if (known.length && !tabs.some(t => F(t, 'tab')[1] === 'knows')) h += `<div class="tab">Knows</div><div class="chips">${known.map(k => `<span class="chip">${esc(nm(k))}</span>`).join('')}</div>`;
-    if (pend.length) h += `<div class="tab">Proposed, waiting</div><div class="chips">${pend.map(x => `<span class="chip">${esc(termText(x))}</span>`).join('')}</div>`;
-    for (const n of notices) h += `<div class="note">${esc(termText(n))}</div>`;
+  // who this person plays with
+  h += `<h2>Play with</h2><div class="card">`;
+  for (const k of S.friends) {
+    const inv = (a.invited || []).includes(k), acc = (a.accepted || []).includes(k);
+    h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b></span><button class="b ${inv ? 'ok' : 'alt'}" onclick="act({op:'invite',app:'${a.app}',key:'${k}'})">${inv ? 'Invited ✓' : 'Invite'}</button><button class="b ${acc ? 'ok' : 'alt'}" onclick="act({op:'accept',app:'${a.app}',key:'${k}'})">${acc ? 'Accepted ✓' : 'Accept'}</button></div>`;
   }
+  if (!S.friends.length) h += `<div class="empty">Add a friend first, on the home screen.</div>`;
+  else h += `<div class="small muted" style="padding-top:6px">One of you taps Invite, the other Accept. Both of you need ${esc(a.title)} installed.</div>`;
   h += `</div>`;
-  if (req && last) {
-    h += `<h2>Do</h2><div class="card"><div class="acts">`;
+  if (!last) return h + `<div class="card"><div class="empty">${esc(a.title)} starts once a friend joins you in it.</div></div>`;
+  // what this person holds, as the contract's pragmas name it
+  const atoms = last[1] || [], known = last[2] || [], pend = last[3] || [], tabs = last[4] || [];
+  for (const t of tabs) {
+    const [name, pred, how] = F(t, 'tab');
+    const xs = atoms.filter(x => x && x.f === pred);
+    h += `<h2>${esc(name)}</h2><div class="card"><div class="items">`;
+    if (!xs.length) h += `<div class="empty">None yet.</div>`;
+    else if (how === 'counted') {
+      const c = {};
+      for (const x of xs) { const k = JSON.stringify(x.a); c[k] = (c[k] || 0) + 1; }
+      for (const [k, n] of Object.entries(c)) { const args = JSON.parse(k); h += `<div class="item">${isKey(args[0]) ? dot(args[0]) : ''}<span>${esc(args.map(termText).join(' · '))}</span><span class="cnt">${n}</span></div>`; }
+    } else for (const k of new Set(xs.map(x => JSON.stringify(x.a)))) { const args = JSON.parse(k); h += `<div class="item">${isKey(args[0]) ? dot(args[0]) : ''}<span>${esc(args.map(termText).join(' · ') || pred)}</span></div>`; }
+    h += `</div></div>`;
+  }
+  const rest = atoms.filter(x => !tabs.some(t => x && x.f === F(t, 'tab')[1]));
+  if (rest.length) h += `<h2>Also</h2><div class="card"><div class="items">${[...new Set(rest.map(x => termText(x)))].map(t => `<div class="item"><span>✓ ${esc(t)}</span></div>`).join('')}</div></div>`;
+  if (known.length && !tabs.some(t => F(t, 'tab')[1] === 'knows')) h += `<h2>You know</h2><div class="card"><div class="items">${known.map(k => `<div class="item">${dot(k)}<span>${esc(nm(k))}</span></div>`).join('')}</div></div>`;
+  if (pend.length) h += `<div class="card"><div class="small muted">Waiting for the others to answer</div>${pend.map(x => `<div class="note">${esc(termText(x))}…</div>`).join('')}</div>`;
+  for (const n of notices) h += `<div class="note">${esc(termText(n))}</div>`;
+  // what this person can do: the contract's buttons
+  if (req) {
     const acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []}));
+    h += `<h2>Do</h2><div class="card"><div class="acts">`;
     acts.forEach((m, i) => { h += `<button class="b ${form && form.i === i ? '' : 'alt'}" onclick="pick(${i})">${esc(m.label)}</button>`; });
     h += `</div>`;
     if (form) h += formHtml(acts[form.i], props, last);
     h += `</div>`;
   }
-  $('#main').innerHTML = h;
-  window._acts = (menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []})));
-  window._req = req; window._props = props; window._app = a.app;
+  return h;
+}
+
+function rulesHtml(a) {
+  const ab = a.about || {}, cs = ab.clauses || [];
+  const mod = {'■': 'enforced', '◆': 'attested', '○': 'undertaken'};
+  let h = `<div class="card"><h3>${esc(a.title)}</h3><div class="muted">${esc(ab.preamble || '')}</div></div>`;
+  if (!cs.length) return h + `<div class="card"><div class="empty">The contract's words did not come with this mini-app.</div></div>`;
+  h += `<div class="card">${cs.map(c => `<div class="clause"><div class="row" style="padding:0;border:0"><b class="grow">${c.n}. ${esc(c.name)}</b><span class="pill">${esc(mod[c.mod] || c.mod)}</span></div><div>${esc(c.text)}</div></div>`).join('')}</div>`;
+  return h + `<div class="small muted" style="margin:6px 4px">Enforced: the app does not let it be broken. Attested: it is signed for. Undertaken: each person promises it.</div>`;
+}
+
+function hoodHtml(a, draws, last) {
+  return `<div class="card"><div class="row"><span class="grow">Contract</span><b>${esc(a.id)}</b></div><div class="row"><span class="grow">Mini-app</span><span class="mono">${esc(a.app)}</span></div><div class="row"><span class="grow">Version (its files)</span><span class="mono">${esc(a.version)}</span></div>
+    <div class="small muted" style="margin-top:6px">The person you play with needs the same version.</div></div>
+    <h2>The view, raw</h2><div class="card"><pre>${esc(JSON.stringify(last, null, 1))}</pre></div>
+    <h2>Every draw</h2><div class="card"><pre>${esc(JSON.stringify(draws, null, 1))}</pre></div>`;
 }
 
 function pick(i) { form = form && form.i === i ? null : {i}; draw(); }
-
-function argKinds(act, props) {
-  const p = props.find(x => x[1] === act);
-  return p ? p[2] : [];
-}
+const argKinds = (act, props) => (props.find(x => x[1] === act) || [0, 0, []])[2];
 
 function formHtml(m, props, last) {
-  const kinds = argKinds(m.act, props);
-  const people = [...new Set([...(last[2] || []), ...S.friends])];
+  const kinds = argKinds(m.act, props), atoms = last[1] || [];
+  const people = [...new Set([...(last[2] || []), ...S.friends])].filter(k => k !== S.me);
+  const sel = (i, label, ks) => `<label>${esc(label)}<select id="arg${i}">${ks.length ? ks.map(k => `<option value="${esc(k)}">${esc(termText(k))}</option>`).join('') : '<option value="">(none yet)</option>'}</select></label>`;
   let h = `<div class="form">`;
   kinds.forEach((t, j) => {
     const i = j + 1;
     if (i === 1) return;
     const f = m.fields.find(x => x.i === i);
-    const label = f ? f.label : (t === 'Peer' ? 'person' : t.toLowerCase());
-    if (t === 'Peer' || t === 'Key') h += `<label>${esc(label)}<select id="arg${i}">${people.map(k => `<option value="${k}">${esc(nm(k))}</option>`).join('')}</select></label>`;
-    else if (t === 'Integer') h += `<label>${esc(label)}<input id="arg${i}" type="number" min="0" step="1" value="1"></label>`;
-    else h += `<label>${esc(label)}<input id="arg${i}" type="text"></label>`;
+    // an argument the act requires the proposer to hold: chosen from what they hold
+    const req = (m.reqs || []).find(r => (r[1] || []).some(z => (F(z, 'at') || [])[0] === i));
+    const role = (m.roles || []).includes(i);
+    if (f && (t === 'Peer' || t === 'Key')) h += sel(i, f.label, people);
+    else if (f && t === 'Integer') h += `<label>${esc(f.label)}<input id="arg${i}" type="number" min="1" step="1" value="1" inputmode="numeric"></label>`;
+    else if (f) h += `<label>${esc(f.label)}<input id="arg${i}" type="text"></label>`;
+    else if (req && req[0] === 'knows') h += sel(i, role ? 'with' : 'person', (last[2] || []).filter(k => k !== S.me));
+    else if (req) h += sel(i, req[0].replace(/_/g, ' ') + ' of', [...new Set(atoms.filter(x => x && x.f === req[0]).map(x => x.a[0]))]);
+    else if (t === 'Peer' || t === 'Key') h += sel(i, role ? 'with' : 'person', people);
+    else if (t === 'Integer') h += `<label>${esc(t.toLowerCase())}<input id="arg${i}" type="number" min="1" step="1" value="1" inputmode="numeric"></label>`;
+    else h += `<label>${esc(t.toLowerCase())}<input id="arg${i}" type="text"></label>`;
   });
   h += `<div><button class="b" onclick="propose()">${esc(m.label)}</button></div></div>`;
   return h;
@@ -307,8 +376,45 @@ async function propose() {
   form = null;
   await grant(window._app, window._req.id, p, {propose: {f: m.act, a: args}});
 }
-
 async function grant(app, id, path, value) { await act({op: 'grant', app, id, path, value}); }
+
+function go(where) { open = where; form = null; pane = 'play'; over = false; draw(); window.scrollTo(0, 0); }
+function openApp(app) { go(app); }
+function setTheme(k) { theme = k; store.set('gas2theme', k); document.documentElement.dataset.theme = k; draw(); }
+function setHood(on) { hood = on; store.set('gas2hood', on); draw(); }
+function saveName(k) { const v = ($('#nm')?.value || '').trim(); if (v) names[k] = v; else delete names[k]; store.set('gas2names', names); naming = null; draw(); }
+function copyKey() {
+  if (window.GASNative) window.GASNative.postMessage(JSON.stringify({copy: S.me}));
+  else navigator.clipboard?.writeText(S.me);
+  const b = event?.target; if (b) { b.textContent = 'Copied ✓'; setTimeout(() => draw(), 1200); }
+}
+// the device's back button: out of a mini-app or the settings
+window.gas2Back = () => { if (open) go(null); };
+async function addNear(k) { await api('api/add', {method: 'POST', body: JSON.stringify({key: k})}); }
+async function addPerson() {
+  const k = $('#add').value.trim().toLowerCase();
+  const r = await (await api('api/add', {method: 'POST', body: JSON.stringify({key: k})})).json();
+  if (r.error) alert(r.error); else $('#add').value = '';
+}
+function addMade(link) {
+  link = link || $('#madelink')?.value.trim();
+  if (!link) return;
+  act({op: 'add', link}); if ($('#madelink')) $('#madelink').value = '';
+  if (open === '__settings') go(null);
+}
+// opened with ?add=<link>, from the app maker's page: added once the super-app is ready
+let toAdd = new URLSearchParams(location.search).get('add');
+// start over: a new key pair, nothing kept, here and on the device or the server
+async function startOver() {
+  await api('api/reset', {method: 'POST'});
+  try { localStorage.removeItem('gas2token'); localStorage.removeItem('gas2names'); } catch (e) {}
+  document.body.innerHTML = '<p style="padding:24px;color:#6e6e73">Starting over…</p>';
+  // the page comes back with the new person (in the app, the app opens it again)
+  for (;;) {
+    await new Promise(r => setTimeout(r, 3000));
+    try { if ((await fetch('api/state', {cache: 'no-store'})).status) { location.replace(location.pathname); return; } } catch (e) {}
+  }
+}
 
 poll();
 </script>

@@ -74,7 +74,8 @@ def make(root, job):
             files[n] = f.read()
     shapes = json.loads(files['shapes.json'])
     with open(os.path.join(job, 'app.json'), 'w', encoding='utf-8') as f:
-        json.dump({'app': app, 'id': cid, 'title': title, 'shapes': shapes, 'files': files}, f, ensure_ascii=False)
+        json.dump({'app': app, 'id': cid, 'title': title, 'shapes': shapes, 'files': files,
+                   'preamble': c['preamble'], 'clauses': c['clauses']}, f, ensure_ascii=False)
     return done(step='made', app=app)
 
 

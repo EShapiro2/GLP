@@ -59,13 +59,14 @@ def device_tree(root, out, apps=None):
         apps = [(a, a[5:].upper(), a[5:].upper()) for a in sorted(os.listdir(os.path.join(src, 'apps')))
                 if a.startswith('gas2_') and os.path.isdir(os.path.join(src, 'apps', a))]
     index = []
-    for app, cid, title in apps:
+    for app, cid, title, *about in apps:
         a = os.path.join(src, 'apps', app)
         if not os.path.exists(os.path.join(a, 'shapes.json')):
             continue
         shutil.copytree(a, os.path.join(dst, 'apps', app))
         shapes = json.load(open(os.path.join(a, 'shapes.json'), encoding='utf-8'))
-        index.append({'app': app, 'id': cid, 'title': title, 'shapes': shapes})
+        # the contract's words, for the device's Rules
+        index.append(dict({'app': app, 'id': cid, 'title': title, 'shapes': shapes}, **(about[0] if about else {})))
     with open(os.path.join(dst, 'gas2_apps.json'), 'w', encoding='utf-8') as f:
         json.dump(index, f, indent=1)
     M.patch_device(Glp(out), os.path.join(HERE, 'glp', 'gas2_device.glp'))
@@ -75,7 +76,8 @@ def device_tree(root, out, apps=None):
 def apps_of(data_json):
     """The mini-apps a GAS2 build made, [(app, id, title)], from its data.json."""
     d = json.load(open(data_json, encoding='utf-8'))
-    return [(c['app'], c['id'], c['title']) for c in d['contracts'] if c.get('artefact')]
+    return [(c['app'], c['id'], c['title'], {'preamble': c.get('preamble', ''), 'clauses': c.get('clauses', [])})
+            for c in d['contracts'] if c.get('artefact')]
 
 
 if __name__ == '__main__':

@@ -33,6 +33,7 @@ class MiniApp {
   final String id; // the contract
   final String title;
   Map<String, Object?> shapes;
+  Map<String, Object?> about = const {}; // the contract's preamble and clauses, for the page's Rules
   String version = ''; // its files, as a short digest: two who play must have the same
   int? n; // its number in the harness, once installed
   bool preparing = false; // being certified, for its install
@@ -113,7 +114,8 @@ class SuperHost {
       for (final f in _madeFiles()) _unpack(jsonDecode(f.readAsStringSync()) as Map),
     ];
     for (final m in idx) {
-      apps.add(MiniApp(m['app'] as String, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>()));
+      apps.add(MiniApp(m['app'] as String, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>())
+        ..about = _about(m));
       // certified at its first install (_certify); one certified before is put in place
       _kept(m['app'] as String);
       apps.last.version = _digest('$tree/apps/${m['app']}').padLeft(6, '0').substring(0, 6);
@@ -132,6 +134,8 @@ class SuperHost {
     return false;
   }
 
+  static Map<String, Object?> _about(Map m) => {'preamble': m['preamble'] ?? '', 'clauses': m['clauses'] ?? const []};
+
   List<File> _madeFiles() {
     final d = Directory('$dataDir/made');
     if (!d.existsSync()) return [];
@@ -148,7 +152,7 @@ class SuperHost {
       if (!RegExp(r'^[a-z0-9_]+\.(glp|vglp|json)$').hasMatch(e.key)) throw ArgumentError('not a mini-app file: ${e.key}');
       File('${d.path}/${e.key}').writeAsStringSync(e.value);
     }
-    return {'app': app, 'id': j['id'], 'title': j['title'], 'shapes': j['shapes']};
+    return {'app': app, 'id': j['id'], 'title': j['title'], 'shapes': j['shapes'], 'preamble': j['preamble'], 'clauses': j['clauses']};
   }
 
   /// Certify [app] under the person's key, once per version of its files, and keep it.
@@ -201,6 +205,7 @@ class SuperHost {
         if (RegExp(r'^[a-z0-9_]+\.(glp|vglp|json)$').hasMatch(e.key)) File('${d.path}/${e.key}').writeAsStringSync(e.value);
       }
       m.shapes = (j['shapes'] as Map).cast<String, Object?>();
+      if (j['clauses'] != null) m.about = _about(j);
       m.version = _digest(d.path).padLeft(6, '0').substring(0, 6);
       _note('${m.title}: the site\'s current version, ${m.version}');
     } on Object catch (e) {
@@ -232,6 +237,7 @@ class SuperHost {
       f.parent.createSync(recursive: true);
       f.writeAsStringSync(body);
       apps.add(MiniApp(app, m['id'] as String, m['title'] as String, (m['shapes'] as Map).cast<String, Object?>())
+        ..about = _about(m)
         ..version = _digest('$tree/apps/$app').padLeft(6, '0').substring(0, 6));
       _note('added ${m['id']}, ${m['title']}, from the app maker');
     } catch (e) {
@@ -515,6 +521,7 @@ class SuperHost {
               'accepted': m.accepted.toList(),
               'draws': {for (final e in m.draws.entries) '${e.key}': e.value},
               'shapes': m.shapes,
+              'about': m.about,
             }
         ],
       };
