@@ -150,7 +150,8 @@ NoticeContent ::= befriend(Key)
                 ; rejected(Constant)
                 ; unfriended(Constant)
                 ; received(Key, Constant)
-                ; not_a_friend(Key).
+                ; not_a_friend(Key)
+                ; invited(Key, String).
 Output ::= Notice.
 
 %% The notices, onto the program's output to the person; the person's input
@@ -182,6 +183,8 @@ notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?)), msg(A?, P?, rec
     ground(A?), ground(P?), ground(K?), ground(C?) | true.
 notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, not_a_friend(K?))) :-
     ground(A?), ground(P?), ground(K?) | true.
+notice(msg(A, P, invited(K, S)), msg(A?, P?, invited(K?, S?)), msg(A?, P?, invited(K?, S?))) :-
+    ground(A?), ground(P?), ground(K?), ground(S?) | true.
 
 %% The person's end of a mini-app's person channel that no screen shows ---
 %% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play
@@ -328,6 +331,12 @@ play_both(P, Q, A?, B?, C?, D?) :- superapp_plays # play_both(P?, Q?, A, B, C, D
 imported procedure superapp_plays#play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 exported procedure play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 play_reinvite(P, Q, A?, B?) :- superapp_plays # play_reinvite(P?, Q?, A, B).
+
+%% The invitation from within a program (GSA paper, Section 3, "Distribution
+%% with an invitation"), on the app gsn or gc, the invitee lacking it.
+imported procedure superapp_plays#play_program_invite(Key?, Key?, Constant?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_program_invite(Key?, Key?, Constant?, Stream(Opaque), Stream(Opaque)).
+play_program_invite(P, Q, App, A?, B?) :- superapp_plays # play_program_invite(P?, Q?, App?, A, B).
 
 imported procedure superapp_plays#play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 exported procedure play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).

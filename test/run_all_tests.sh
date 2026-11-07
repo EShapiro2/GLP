@@ -7372,6 +7372,44 @@ check "SG super-app hosts the child-safe platform: alice connected to bob" "N1 =
 check "SG super-app hosts the child-safe platform: bob connected and greeted" "N2 = \[connected(alice), received(alice, hello) | " "$sg_cs"
 check_not "SG super-app hosts the child-safe platform: no failed play" "→ failed" "$sg_cs"
 
+# The invitation from within a program (GSA paper, Section 3, "Distribution
+# with an invitation"; GSA #2, Code_inbox.md 2026-11-07 20:49 UTC, Udi
+# approving): alice installs the app, befriends bob and activates it; her
+# person's first act naming bob is held, and the program asks the social graph
+# to invite him; bob lacks the program, his super-app fetches it from alice's,
+# checks it and asks him; he installs it and joins, the conversation opens,
+# and the held message arrives.  GSN, then GC, each in its own session, as
+# the other hosted plays run (play_program_invite).
+sg_pi_gsn=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gsn $SG_CORE
+$SG_CORE
+:limit 20000000
+play_program_invite(alice, bob, gsn, A, B).
+:quit
+HEREDOC
+2>&1)
+rm -f "$SG_CORE/gsn.glpw"
+check "SG invitation from within a program, GSN: the app's artefact is certified" "gsn.glpw --- certified under" "$sg_pi_gsn"
+check "SG invitation from within a program, GSN: bob, fetching the program, answers alice's acquaintance, held until the conversation opened" "gave(acquaint(alice, bob), yes)" "$sg_pi_gsn"
+check "SG invitation from within a program, GSN: alice lists bob in her group" "listed(bob, speech(utterance(friends), alice))" "$sg_pi_gsn"
+check "SG invitation from within a program, GSN: bob receives 'Hi Bob'" "received(speech(utterance('Hi Bob'), alice), alice)" "$sg_pi_gsn"
+check_not "SG invitation from within a program, GSN: no failed goal" "→ failed" "$sg_pi_gsn"
+
+sg_pi_gc=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/apps/gc $SG_CORE
+$SG_CORE
+:limit 20000000
+play_program_invite(alice, bob, gc, A, B).
+:quit
+HEREDOC
+2>&1)
+rm -f "$SG_CORE/gc.glpw"
+check "SG invitation from within a program, GC: the app's artefact is certified" "gc.glpw --- certified under" "$sg_pi_gc"
+check "SG invitation from within a program, GC: bob, fetching the program, answers yes to alice's swap" "gave(swap(alice, bob, alice, 2, bob, 3), yes)" "$sg_pi_gc"
+check "SG invitation from within a program, GC: alice, having paid two Bob-coins to bob, holds one" "view(alice, \[coin(bob), knows(bob), knows(bob), identity\]" "$sg_pi_gc"
+check "SG invitation from within a program, GC: bob holds the two Alice-coins and the two Bob-coins paid to him" "view(bob, \[coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), knows(alice), identity\]" "$sg_pi_gc"
+check_not "SG invitation from within a program, GC: no failed goal" "→ failed" "$sg_pi_gc"
+
 # BOTH mini-apps under one super-app, in one heap (paper Section 7, Theorem
 # 6.5): each person installs the currency and the child-safe platform, each
 # with its own user-interface grant; the friend is invited to both, both

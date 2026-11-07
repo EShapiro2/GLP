@@ -1349,3 +1349,98 @@ bob_sv_run(Me, Q, [msg(agent, person, befriend(F, P)) | Outs],
     bob_sv_run(Me?, Q?, Outs?, Cmds).
 bob_sv_run(Me, Q, [_ | Outs], Cmds?) :- otherwise | bob_sv_run(Me?, Q?, Outs?, Cmds).
 bob_sv_run(_, _, [], []).
+
+%% =============================================================================
+%% play_program_invite(A, B, App, AliceUi, BobUi): the invitation from within a
+%% program (GSA paper, Section 3, "Distribution with an invitation"), on the app
+%% App of programs/apps, gsn or gc, read from its certified artefact beside
+%% this program.  alice, A, trusts its compiler, installs it, befriends bob, B,
+%% and once connected activates it, with no invitation and no peer; her
+%% person's first act naming bob sends him a message, which the program holds,
+%% asking the social graph, up its social-graph channel, to invite bob.  bob
+%% trusts the compiler but lacks the program: his super-app asks alice's for it,
+%% which ships it; his checks it, and only then asks bob, who installs it under
+%% App with his end of its person channel and joins; the handshake opens the
+%% conversation, and the held message arrives.  Each person's screen is the
+%% app's scripted person's, under its role alice or bob.
+%% Expected: each screen the steps of the app's two-person play over the
+%% conversation the invitation opened, → suspends, the person channels never
+%% closing.
+%% =============================================================================
+exported procedure play_program_invite(Key?, Key?, Constant?, Stream(Opaque), Stream(Opaque)).
+play_program_invite(A, B, App, AliceUi?, BobUi?) :-
+    ground(A?), ground(B?), ground(App?) |
+    crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    app_artefact(App?, Name, Schemas),
+    load_file(Name?, C),
+    certified_as(C?, Schemas?, CK, CSig),
+    agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    new_channel(AliceApp, AlicePerson),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson?, AliceUi),
+    program_inviter(A?, B?, App?, C?, CK?, CSig?, AliceApp?, AliceOut?, AliceIn),
+    agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    program_invitee(B?, A?, App?, C?, CK?, BobOut?, BobUi, BobIn).
+
+%% The artefact of an app of programs/apps the plays read, and its contract's
+%% act schemas, which the creator's certification names (programs/gsc/GSN.glp;
+%% programs/currencies/coins/GC.glp), as the app's phone signs it
+%% (gsn_phone.glp, gc_phone.glp).
+procedure app_artefact(Constant?, String, Stream(Constant)).
+app_artefact(gsn, "gsn.glpw", [establish, acquaint, introduce, befriend, unfriend, message, create, join, leave, close, drop, post_own, post, deliver]).
+app_artefact(gc, "gc.glpw", [establish, acquaint, introduce, mint, swap, pay, redeem]).
+
+%% certified_as(M, Schemas, CK, CSig): as certified/3, over the act schemas
+%% given.
+procedure certified_as(Content?, Stream(Constant)?, String, String).
+certified_as(M, Schemas, CK?, CSig?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, Schemas?, syntactically_grassroots), K?, CSig).
+
+%% The inviter's person: trust the compiler, install the program with her end
+%% of its person channel, connect to Q, and once connected activate it; then
+%% keep her person stream open, the program inviting Q by itself.
+procedure program_inviter(Key?, Key?, Constant?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+program_inviter(Me, Q, App, M, CK, CSig, Ui, Outs,
+                [msg(person, Me?, trust(CK?)),
+                 msg(person, Me?, install(App?, M?, CSig?, Ui?)),
+                 msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?), ground(App?) |
+    inviter_run(Me?, Q?, App?, Outs?, Cmds).
+
+procedure inviter_run(Key?, Key?, Constant?, AgentToUserStream?, UserInStream).
+inviter_run(Me, Q, App, [msg(agent, person, connected(F)) | Outs],
+            [msg(person, Me?, activate(App?)) | Cmds?]) :-
+    F? =?= Q? | idle_run(Outs?, Cmds).
+inviter_run(Me, Q, App, [_ | Outs], Cmds?) :- otherwise | inviter_run(Me?, Q?, App?, Outs?, Cmds).
+inviter_run(_, _, _, [], []).
+
+%% The person stream kept open while the agent tells the person anything,
+%% closed when it tells the person nothing more.
+procedure idle_run(AgentToUserStream?, UserInStream).
+idle_run([_ | Outs], Cmds?) :- idle_run(Outs?, Cmds).
+idle_run([], []).
+
+%% The invitee's person: trust the compiler, consent to P's request to
+%% connect, and, asked about P's invitation once the program is at hand and
+%% checked, install it under App with his end of its person channel, its
+%% scripted person, under the role bob, on the other end; Ui its screen.
+procedure program_invitee(Key?, Key?, Constant?, Content?, String?, AgentToUserStream?, Stream(Opaque), UserInStream).
+program_invitee(Me, P, App, M, CK, Outs, Ui?, [msg(person, Me?, trust(CK?)) | Cmds?]) :-
+    ground(Me?), ground(P?) |
+    invitee_run(Me?, P?, App?, M?, Outs?, Ui, Cmds).
+
+procedure invitee_run(Key?, Key?, Constant?, Content?, AgentToUserStream?, Stream(Opaque), UserInStream).
+invitee_run(Me, P, App, M, [msg(agent, person, befriend(F, X)) | Outs], Ui?,
+            [msg(person, Me?, decision(yes, F?, X?)) | Cmds?]) :-
+    F? =?= P? | invitee_run(Me?, P?, App?, M?, Outs?, Ui, Cmds).
+invitee_run(Me, P, App, M, [msg(agent, person, invited(F, Src)) | Outs], Ui?,
+            [msg(person, Me?, install_invited(App?, F?, Src?, AppEnd?)) | Cmds?]) :-
+    F? =?= P? |
+    new_channel(AppEnd, PersonEnd),
+    miniapp_person_run(M?, Me?, bob, [P?], PersonEnd?, Ui),
+    idle_run(Outs?, Cmds).
+invitee_run(Me, P, App, M, [_ | Outs], Ui?, Cmds?) :-
+    otherwise | invitee_run(Me?, P?, App?, M?, Outs?, Ui, Cmds).
+invitee_run(_, _, _, _, [], [], []).

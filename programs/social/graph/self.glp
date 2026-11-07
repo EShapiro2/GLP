@@ -67,6 +67,14 @@ UserContent ::= connect(Key)
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Key)
+              %% The person's answer to the offer of a program shipped to
+              %% this agent, which it lacked (GSA paper, Section 3,
+              %% "Distribution with an invitation"): install it under a name,
+              %% with its end of its person channel, and join; or decline it,
+              %% the program dropped.  The offer is named by the inviter and
+              %% the source identity the person was told of.
+              ; install_invited(Constant, Key, String, PersonChannel(Opaque))
+              ; decline_offer(Key, String)
               ; attestation(Constant, String?)
               %% trust: the person trusts a compiler's key (Section 6.4); the
               %% bundled compiler's, trusted by installing the super-app.
@@ -92,7 +100,12 @@ AgentContent ::= befriend(Key, PendingValue)
                %% A message the person addressed to someone who is not their
                %% friend is not sent, and the agent tells the person so
                %% (Section 5.1).
-               ; not_a_friend(Key).
+               ; not_a_friend(Key)
+               %% An invitation to a program, its program at hand and checked:
+               %% the inviter and the source identity (GSA paper, Section 3,
+               %% "Distribution with an invitation": "only then does it ask
+               %% Bob, who reads the contract and consents or declines").
+               ; invited(Key, String).
 
 %% Network content (2-arg cold-call: msg(Dest, Content)): the caller, the
 %% caller's consent, bound before sending, and the callee's consent, for the
@@ -122,6 +135,13 @@ FriendContent ::= text(Constant)
                 ; join(String, Constant, String)
                 ; decline(String)
                 ; root(String, Constant, String)
+                %% An invitee lacking the program asks the inviter for it by
+                %% its source identity, and the inviter ships the program,
+                %% its module value with its compiler's certificate, and the
+                %% creator's certification (GSA paper, Section 3,
+                %% "Distribution with an invitation").
+                ; want(String)
+                ; program(String, Module, String)
                 %% The warm call (Section 5.2): the holder asks the forwarding
                 %% friend for an introduction to the anchor; over the friend
                 %% channel that results, warm_call(App) to the anchor.  The
@@ -161,6 +181,13 @@ AppLookup ::= found(Module) ; missing.
 Verdict   ::= ok(Module) ; refused.
 Joined    ::= ok(Constant) ; refused.
 Offer     ::= none ; offer(RootChannel(Opaque)).
+%% A program installed here to ship, by its source identity: its module value
+%% and the creator's certification; an invitation waiting for the program it
+%% offers, the signed invitation and the end it carried; and a shipped program
+%% checked and waiting for the person, with that end.
+Ship      ::= none ; ship(Module, String).
+Fetch     ::= none ; fetch(String, RootChannel(Opaque)).
+Shipped   ::= none ; shipped(Module, String, RootChannel(Opaque)).
 Consent   ::= none ; app(Constant).
 Kept      ::= none ; kept(Constant, RootChannel(Opaque)).
 
@@ -196,6 +223,13 @@ AttestList ::= [] ; [Attest | AttestList].
 Pending      ::= invited(Constant, Key, String, RootChannel(Opaque))
                ; offered(Key, String, String, RootChannel(Opaque))
                ; consented(String, Key, Constant)
+               %% At the invitee lacking the program: the offer waiting for
+               %% it (inviter, source identity, signed invitation, end); and
+               %% the program shipped and checked, waiting for the person
+               %% (inviter, source identity, module, creator's
+               %% certification, end).
+               ; fetching(Key, String, String, RootChannel(Opaque))
+               ; shipped(Key, String, Module, String, RootChannel(Opaque))
                ; joining(Constant, Key, String, RootChannel(Opaque))
                %% The warm call (Section 5.2), at the holder: the warm call
                %% under way (mini-app, held name), or waiting for the person's
