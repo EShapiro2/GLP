@@ -129,7 +129,7 @@ compile4([L|Ls], Nm, _, _, _, _, _, _) :- ground(Nm?) |
 %% --- The contract compiled ------------------------------------------------
 %% What the compiler takes of a schema with quantifiers (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), qschema in GSC's term form, and of a constraint, and the lines refusing what it does not take, the schema named, before any other procedure reads the contract:
 %% (1) A safe formula of the body local to a role, "the machine of the person in that role evaluates it in its own state", is taken (local.glp, form_infos; the printed text's forms_at).
-%% (2) A listed role bound by a quantifier, qlisted in GSC's term form, whose person is the first argument of its anchor after the holder and the one variable its quantifier binds, is taken as listed/3 with the condition of its quantifier, and a quantified conjunct that binds it with its conditional literals added at other roles, one for each person of the role (q_normal, lx_table; the printed text's listing/7): "its request name is the schema-binding" (vGLP 9ee6f87, Section 5.4), the class term naming the people of the role, as for listed/3.  A conjunct binding no listed role, its quantifier binding one agent variable, with a conditional literal at a role other than the one holding its anchor, is taken, its instances a list the base finds and the attempt names (ix_conjs, inst_heads; the printed text's instances/7).  A conditional literal deleted, a conjunct local to the role holding its anchor, one binding other than one agent variable, one with a conditional literal at a listed role or naming its bound variable in a name term, and any other listed role are not yet taken, and refused with the reason (odd_conjunct, inst_odd, odd_qlisted).
+%% (2) A listed role bound by a quantifier, qlisted in GSC's term form, whose person is the first argument of its anchor after the holder and the one variable its quantifier binds, is taken as listed/3 with the condition of its quantifier, and a quantified conjunct that binds it with its conditional literals added at other roles, one for each person of the role (q_normal, lx_table; the printed text's listing/7): "its request name is the schema-binding" (vGLP 9ee6f87, Section 5.4), the class term naming the people of the role, as for listed/3.  A conjunct binding no listed role, with a conditional literal at a role other than the one holding its anchor, is taken, its instances a list the base finds and the attempt names, each restricted to the variables its literals name, without repetition (ix_conjs, hm_named, inst_heads; the printed text's instances/7).  A conjunct binding no listed role whose conditional literals are all at the role holding its anchor is local to that role, which finds its instances in its own state and applies its literals at each (lc_conjs, local_lines; the printed text's local_effect).  A conditional literal deleted is subtracted from a state that need not hold it (the printed text's opt).  One with a conditional literal at a listed role or holding a signed term of a speech-act variable its quantifier binds, one whose literals at another role name none of its bound variables, and any other listed role are not yet taken, and refused with the reason (odd_conjunct, inst_odd, odd_qlisted).
 %% (3) A count and a sum of a quantifier's instances, and the functions min and floor, in a constraint or a safe formula are taken, the count or the sum local to the role holding its anchor (local.glp, con_counts; the printed text's con_counted): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4).  A relation rel(Name, Args) and a function the paper does not name are not: the paper names no relation of a value type beyond comparison, and no function beyond min and floor.
 procedure q_lines(QContract?, Constant?, Lines).
 q_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
@@ -165,14 +165,15 @@ q_schema(qschema(S, _, _, C, Rs, Cj, Fs), L?) :- ground(S?), ground(Rs?), ground
 %% A quantified conjunct the compiler takes: one binding a listed role, and one binding no listed role, its quantifier binding variables Xs of any kind, which has conditional literals at a role other than the one holding its anchor, its instances, assignments of Xs, a list the attempt names (vGLP 2f1dc92 and vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC: a conjunct may bind several variables of any kind, an instance being an assignment of all of them): "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), as GCC's appoint's "every person Alice lists as appointed, Bob lists too".  The compiler does not take yet, and refuses with the reason: a conjunct deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, whose instances that role's machine would find in its own state; one binding a listed role and other variables; and one with a conditional literal at a listed role, or with a signed term of a speech-act variable of Xs.
 procedure odd_conjunct(Conjuncts?, Ints?, YesNo).
 odd_conjunct([], _, no).
-odd_conjunct([conjunct([role(I)], _, _, _, _, [], _)|Cs], Lis, B?) :- integer(I?), ground(Lis?) |
+odd_conjunct([conjunct([role(I)], _, _, _, _, _, _)|Cs], Lis, B?) :- integer(I?), ground(Lis?) |
     mem_int(I?, Lis?, In),
     neg(In?, B1),
     odd_conjunct(Cs?, Lis?, B2),
     or(B1?, B2?, B).
-odd_conjunct([conjunct([X|Xs], Bi, _, _, [H|Hs], [], _)|Cs], Lis, B?) :- ground(X?), ground(Xs?), integer(Bi?), ground(H?), ground(Hs?), ground(Lis?) |
+odd_conjunct([conjunct([X|Xs], Bi, _, _, CA, CD, _)|Cs], Lis, B?) :- ground(X?), ground(Xs?), integer(Bi?), ground(CA?), ground(CD?), ground(Lis?) |
     has_role([X?|Xs?], R),
-    inst_odd([X?|Xs?], Bi?, [H?|Hs?], Lis?, B0),
+    app(CA?, CD?, H),
+    inst_odd([X?|Xs?], Bi?, H?, Lis?, B0),
     or(R?, B0?, B1),
     odd_conjunct(Cs?, Lis?, B2),
     or(B1?, B2?, B).
@@ -182,15 +183,47 @@ procedure has_role(Args?, YesNo).
 has_role([], no).
 has_role([role(_)|_], yes).
 has_role([_|Xs], R?) :- otherwise | has_role(Xs?, R).
-%% Whether a conjunct binding the variables Xs, its anchor held by the role Bi, with the conditional literals Hs, is one the compiler does not take: none of them at a role other than Bi, one at a listed role of Lis, or one with a signed term of a speech-act variable of Xs.
+%% Whether a conjunct binding the variables Xs, its anchor held by the role Bi, with the conditional literals Hs, is one the compiler does not take: one at a listed role of Lis; one with a signed term of a speech-act variable of Xs, refused with the reason until a contract needs it (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (iii)); and one with a literal at a role other than Bi whose literals name none of Xs, its instances restricted to no variable (hm_named).
 procedure inst_odd(Args?, Integer?, HMults?, Ints?, YesNo).
 inst_odd(Xs, Bi, Hs, Lis, B?) :- ground(Xs?), integer(Bi?), ground(Hs?), ground(Lis?) |
     hm_other(Hs?, Bi?, O),
-    neg(O?, NotO),
+    hm_named(Hs?, Xs?, Xr),
+    no_args(Xr?, E),
+    and(O?, E?, OE),
     hm_listed(Hs?, Lis?, Li),
     hm_signed(Hs?, Xs?, N),
     or(Li?, N?, B1),
-    or(NotO?, B1?, B).
+    or(OE?, B1?, B).
+procedure no_args(Args?, YesNo).
+no_args([], yes).
+no_args([_|_], no).
+%% The variables of Xs that the conditional literals Hs name, in the order of Xs: "the attempt names them, each restricted to the variables the conjunct's literals name and without repetition" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"), a variable in a name term or a signed term, or a multiplicity, named as one in an atom is.
+procedure hm_named(HMults?, Args?, Args).
+hm_named(Hs, Xs, Xr?) :- ground(Hs?), ground(Xs?) |
+    hm_atoms(Hs?, Ms),
+    atoms_args(Ms?, As0),
+    flat_args(As0?, As),
+    named_xs(Xs?, As?, Xr).
+procedure flat_args(Args?, Args).
+flat_args([], []).
+flat_args([nterm(N)|As], R?) :- nterm_args(N?, R1), flat_args(As?, R2), app(R1?, R2?, R).
+flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
+flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
+procedure nterm_args(NameTerm?, Args).
+nterm_args(own(I), [role(I?)]).
+nterm_args(own_var(X), [pvar(X?)]).
+nterm_args(nvar(X), [pvar(X?)]).
+nterm_args(ext(N, Y), [svar(Y?)|R?]) :- nterm_args(N?, R).
+nterm_args(ext_any(N), R?) :- nterm_args(N?, R).
+procedure named_xs(Args?, Args?, Args).
+named_xs([], _, []).
+named_xs([X|Xs], As, R?) :- ground(X?), ground(As?) |
+    mem(X?, As?, In),
+    named_xs(Xs?, As?, R1),
+    keep_named(In?, X?, R1?, R).
+procedure keep_named(YesNo?, Arg?, Args?, Args).
+keep_named(yes, X, R, [X?|R?]).
+keep_named(no, _, R, R?).
 procedure hm_other(HMults?, Integer?, YesNo).
 hm_other([], _, no).
 hm_other([hm(J, _)|_], Bi, yes) :- J? =\= Bi? | true.
@@ -230,8 +263,12 @@ inst_base_lines(Cj, Rs, S, L?) :- ground(Cj?), ground(Rs?), ground(S?) |
     inst_base_lines1(Ib?, Bs?, Gs?, S?, L).
 procedure inst_bases(Conjuncts?, Ints).
 inst_bases([], []).
-inst_bases([conjunct([pvar(_)], Bi, _, _, _, _, _)|Cs], [Bi?|Bs?]) :- inst_bases(Cs?, Bs).
-inst_bases([_|Cs], Bs?) :- otherwise | inst_bases(Cs?, Bs).
+inst_bases([conjunct([role(_)], _, _, _, _, _, _)|Cs], Bs?) :- inst_bases(Cs?, Bs).
+inst_bases([conjunct(_, Bi, _, _, CA, CD, _)|Cs], Bs?) :- otherwise, integer(Bi?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_other(H?, Bi?, O),
+    inst_bases(Cs?, Bs1),
+    keep_int(O?, Bi?, Bs1?, Bs).
 procedure q_bases(RoleSpecs?, Ints).
 q_bases([], []).
 q_bases([crs(qlisted(Bi, _, _, _), _, _, _, _, _)|Rs], [Bi?|Bs?]) :- q_bases(Rs?, Bs).
@@ -256,7 +293,7 @@ odd_qlisted([crs(qlisted(_, _, _, _), _, _, _, _, _)|_], _, yes) :- otherwise | 
 odd_qlisted([_|Rs], I, B?) :- otherwise, integer(I?) | I1 := I? + 1, odd_qlisted(Rs?, I1?, B).
 procedure conjunct_lines(YesNo?, Constant?, Lines).
 conjunct_lines(no, _, []).
-conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not carry yet: one deleting a conditional literal; one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "for a conjunct local to p\'s role, in d_p"); one binding a listed role and other variables, or with a conditional literal at a listed role or a signed term of a speech-act variable its quantifier binds; or a listed role whose person is not the first argument of its anchor or whose quantifier binds another variable:', T?]) :-
+conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not carry yet: one binding a listed role and other variables, or with a conditional literal at a listed role; one with a conditional literal holding a signed term of a speech-act variable its quantifier binds, refused until a contract needs it (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (iii)); one with a conditional literal at a role other than the one holding its anchor whose literals name no variable its quantifier binds, an instance restricted to none; or a listed role whose person is not the first argument of its anchor or whose quantifier binds another variable:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 procedure beyond_lines(YesNo?, Constant?, Lines).
 beyond_lines(no, _, []).
@@ -542,7 +579,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     numeric_lines(Nt?, Lm0),
     worded_acts(W?, Was),
     worded_lx(W?, Lx2),
-    base_lines(C?, Was?, Lx2?, Lb),
+    base_lines(C?, Was?, Lx2?, Lb0),
+    worded_lx(W?, Lx6),
+    local_lines(Lx6?, Ll),
+    lapp(Lb0?, Ll?, Lb),
     worded_lx(W?, Lx5),
     inst_conv_lines(Lx5?, Lc),
     lapp(Lb?, Lc?, Lbc),
@@ -1197,7 +1237,9 @@ mem_int(I, [_|Js], B?) :- otherwise | mem_int(I?, Js?, B).
 procedure lx_table(QContract?, Lxs).
 lx_table([], []).
 lx_table([qschema(S, _, _, _, _, Cj, Fs)|Ss], Lx?) :- ground(S?), ground(Cj?) |
-    ix_conjs(Cj?, S?, 1, L0),
+    ix_conjs(Cj?, S?, 1, L0a),
+    lc_conjs(Cj?, S?, L0b),
+    app(L0a?, L0b?, L0),
     lx_conjs(Cj?, S?, L1),
     lx_forms(Fs?, S?, Cj?, L2),
     lx_table(Ss?, L3),
@@ -1209,9 +1251,32 @@ lx_table([_|Ss], Lx?) :- otherwise | lx_table(Ss?, Lx).
 procedure ix_conjs(Conjuncts?, Constant?, Integer?, Lxs).
 ix_conjs([], _, _, []).
 ix_conjs([conjunct([role(_)], _, _, _, _, _, _)|Cs], S, K, Ls?) :- ix_conjs(Cs?, S?, K?, Ls).
-ix_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, K, [ix(S?, K?, Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- otherwise, ground(S?), integer(K?) |
+ix_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, K, Ls?) :- otherwise, ground(S?), integer(K?), ground(Xs?), integer(Bi?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_other(H?, Bi?, O),
+    ix_conj(O?, S?, K?, Bi?, Xs?, A?, Phi?, CA?, CD?, Cs?, Ls).
+%% A conjunct with a conditional literal at a role other than the one holding its anchor is one whose instances the attempt names, each restricted to the variables its literals name (hm_named); one whose literals are all at the role holding its anchor is local to that role (lc_conjs).
+procedure ix_conj(YesNo?, Constant?, Integer?, Integer?, Args?, Atom?, Form?, HMults?, HMults?, Conjuncts?, Lxs).
+ix_conj(no, S, K, _, _, _, _, _, _, Cs, Ls?) :- ix_conjs(Cs?, S?, K?, Ls).
+ix_conj(yes, S, K, Bi, Xs, A, Phi, CA, CD, Cs, [ix(S?, K?, Bi?, Xr?, A?, Phi?, CA?, CD?)|Ls?]) :- ground(S?), integer(K?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_named(H?, Xs?, Xr),
     K1 := K? + 1,
     ix_conjs(Cs?, S?, K1?, Ls).
+%% Each conjunct binding no listed role whose conditional literals are all at the role holding its anchor: "A safe formula of B, a constraint, and a quantified conjunct, is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"), lc(S, Bi, Xs, A, Phi, CAdd, CDel), Xs the variables its literals name (hm_named): the role finds the instances in its own state and applies its literals at each (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (ii)).
+procedure lc_conjs(Conjuncts?, Constant?, Lxs).
+lc_conjs([], _, []).
+lc_conjs([conjunct([role(_)], _, _, _, _, _, _)|Cs], S, Ls?) :- lc_conjs(Cs?, S?, Ls).
+lc_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, _)|Cs], S, Ls?) :- otherwise, ground(S?), ground(Xs?), integer(Bi?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_other(H?, Bi?, O),
+    lc_conj(O?, S?, Bi?, Xs?, A?, Phi?, CA?, CD?, Cs?, Ls).
+procedure lc_conj(YesNo?, Constant?, Integer?, Args?, Atom?, Form?, HMults?, HMults?, Conjuncts?, Lxs).
+lc_conj(yes, S, _, _, _, _, _, _, Cs, Ls?) :- lc_conjs(Cs?, S?, Ls).
+lc_conj(no, S, Bi, Xs, A, Phi, CA, CD, Cs, [lc(S?, Bi?, Xr?, A?, Phi?, CA?, CD?)|Ls?]) :- ground(S?), ground(Xs?), ground(CA?), ground(CD?) |
+    app(CA?, CD?, H),
+    hm_named(H?, Xs?, Xr),
+    lc_conjs(Cs?, S?, Ls).
 %% The lists of instances of a schema's conjuncts, instances(K, Base, X, A, Phi, CAdd, CDel), in conjunct order.
 procedure ix_listings(Lxs?, Constant?, TListings).
 ix_listings([], _, []).
@@ -1345,6 +1410,29 @@ entry_lines([X|Xs], [E?, '.'|L?]) :- ground(X?) |
     term_to_string(E0?, E),
     entry_lines(Xs?, L).
 %% The base of each schema, schema_base(Name, I), the index of its role: the base of its listed roles, and, for a schema with none, the guarding role its pragma names before its button or, having no guarding role, its first role: "The conjuncts of a schema that are local to their base and not to one role have one base, the base of the schema; a schema with none has as its base the guarding role its pragma names before its button (below) or, having no guarding role, its first role" (vGLP 0b51a60, Section 5.4, "Speech-act schemas as local specifications").  The role the pragma names is the first of by(Gs) of the act of the schema (self.glp, Proposer: "the one the line names as its proposer where it names one"); where the pragmas give no role for it, any, its first guarding role.  The proposer of a guarded part with no opener is the person in the base (ibid.: "where the base of the schema is a guarding role, its proposer is the person in the base"; the printed text's part_bases).
+%% The conjuncts of each schema local to the role holding their anchor, schema_locals(Name, Locals), each local(Base, Xs, A, Phi, CAdd, CDel), in conjunct order (lc_conjs): "the instances of a conjunct with conditional literals give the atoms each adds or deletes", the role "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct, in L or, for a conjunct local to p's role, in d_p, included, which d_p need not hold, ... plus the added ones, likewise" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"); the printed text's local_effect applies them.
+procedure local_lines(Lxs?, Lines).
+local_lines(Lx, ['', 'procedure schema_locals(Constant?, Locals).'|L?]) :- ground(Lx?) |
+    lc_names(Lx?, Ns0),
+    dedup(Ns0?, Ns),
+    local_lines1(Ns?, Lx?, L).
+procedure lc_names(Lxs?, Preds).
+lc_names([], []).
+lc_names([lc(S, _, _, _, _, _, _)|Lx], [S?|Ns?]) :- lc_names(Lx?, Ns).
+lc_names([_|Lx], Ns?) :- otherwise | lc_names(Lx?, Ns).
+procedure local_lines1(Preds?, Lxs?, Lines).
+local_lines1([], _, ['schema_locals(_, []) :- otherwise | true.']).
+local_lines1([S|Ss], Lx, [T?, '.'|L?]) :- ground(S?), ground(Lx?) |
+    lc_of(Lx?, S?, Ls),
+    T0 =.. [schema_locals, S?, Ls?],
+    term_to_string(T0?, T),
+    local_lines1(Ss?, Lx?, L).
+TLocal  ::= local(Integer, Args, Atom, Form, HMults, HMults).
+TLocals ::= [] ; [TLocal | TLocals].
+procedure lc_of(Lxs?, Constant?, TLocals).
+lc_of([], _, []).
+lc_of([lc(S1, Bi, Xs, A, Phi, CA, CD)|Lx], S, [local(Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- S1? =?= S? | lc_of(Lx?, S?, Ls).
+lc_of([_|Lx], S, Ls?) :- otherwise | lc_of(Lx?, S?, Ls).
 procedure worded_acts(Worded?, PActs).
 worded_acts(words(pragmas(_, As), _, _), As?).
 procedure base_lines(Contract?, PActs?, Lxs?, Lines).
@@ -1598,6 +1686,14 @@ lx_atoms([lx(_, _, _, CA, CD)|Ls], As?) :-
     lx_atoms(Ls?, A3),
     app(A2?, A3?, A23),
     app(A1?, A23?, As).
+lx_atoms([lc(_, _, _, A, Phi, CA, CD)|Ls], [A?|As?]) :-
+    f_atoms(Phi?, A0),
+    hm_atoms(CA?, A1),
+    hm_atoms(CD?, A2),
+    lx_atoms(Ls?, A3),
+    app(A2?, A3?, A23),
+    app(A1?, A23?, A123),
+    app(A0?, A123?, As).
 lx_atoms([ix(_, _, _, _, A, Phi, CA, CD)|Ls], [A?|As?]) :-
     f_atoms(Phi?, A0),
     hm_atoms(CA?, A1),

@@ -359,8 +359,10 @@ TSchema   ::= schema(Constant, Args, RoleSpecs) ; lschema(Constant, Args, RoleSp
 TSchemas  ::= [] ; [TSchema | TSchemas].
 %% The condition and the conditional literals of each listed role of a schema with quantifiers, lx(Schema, I, Phi, CAdd, CDel) (cvac.glp, lx_table).
 %% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
+%% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
-            ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults).
+            ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
+            ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).

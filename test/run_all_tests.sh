@@ -4329,6 +4329,9 @@ compile(q_guard, [qschema(s, ['Alice', 'Bob', 'Carol'], [], [pvar('Carol')], tru
 compile(q_inst_by, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [atom(in, [])])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [hm(2, atom(seen, [pvar('Dave')]))], [], [fa(role(2), atom(seen, [pvar('Dave')]))])], [])], syntactically_grassroots, no_introduction, pragmas([list('"Members"', [member])], [act(s, '"S"', [], said([[person(2), text('" asks."')], []]), '"Members"', by([2]))])).
 compile(q_inst_local, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [hm(1, atom(seen, [pvar('Dave')]))], [], [fa(role(1), atom(seen, [pvar('Dave')]))])], [])], syntactically_grassroots).
 compile(q_inst_base, [qschema(s, ['Alice', 'Bob', 'Carol'], [], [pvar('Dave')], true, [rs(guarded, [atom(in, [])], [], [], [atom(in, [])]), rs(guarded, [atom(in, [])], [], [], [atom(in, [])]), rs(unguarded, [], [], [], [])], [conjunct([pvar('Dave')], 3, atom(member, [pvar('Dave')]), fcons(true), [hm(2, atom(seen, [pvar('Dave')]))], [], [fa(role(2), atom(seen, [pvar('Dave')]))])], [])], syntactically_grassroots).
+compile(q_inst_sgn, [qschema(s, ['Alice', 'Bob'], [], [svar(y)], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([svar(y)], 1, atom(item, [svar(y)]), fcons(true), [hm(2, atom(got, [sgn(y, 1)]))], [], [fa(role(2), atom(got, [sgn(y, 1)]))])], [])], syntactically_grassroots).
+compile(q_inst_none, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [hm(2, atom(seen, []))], [], [fa(role(2), atom(seen, []))])], [])], syntactically_grassroots).
+compile(q_inst_del, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [], [hm(2, atom(seen, [pvar('Dave')]))], [fnot(fa(role(2), atom(seen, [pvar('Dave')])))])], [])], syntactically_grassroots).
 compile(q_read, [qschema(s, ['Alice', 'Bob'], [], [pvar('Bob')], true, [rs(guarded, [atom(polled, [])], [], [], [atom(polled, [])]), crs(qlisted(1, admitted, [role(2)], [role(2)]), unguarded, [], [], [atom(in, [])], [])], [], [fforall([role(2)], role(1), atom(admitted, [role(2)]), fcons(true), [fa(role(2), atom(in, []))])])], syntactically_grassroots).
 :quit
 HEREDOC
@@ -4340,8 +4343,11 @@ check "CVA compiler: a quantified conjunct binding a listed guarding role, taken
 check "CVA compiler: a count in a constraint, local to the role holding its anchor, taken, passing the checks (q_card)" "%% not compiled, having no pragmas(q_card)" "$cva_q"
 check "CVA compiler: a conjunct binding no listed role with a conditional literal at a role other than the one holding its anchor, its instances a list the attempt names, taken, passing the checks (q_inst; vGLP 9ee6f87, Section 5.4)" "%% not compiled, having no pragmas(q_inst)" "$cva_q"
 check "CVA compiler: a pragma naming before the button a person other than the base of a schema with a conjunct whose instances the attempt names, the base guarding, refused (q_inst_by; vGLP 9ee6f87, Section 5.4, \"The contract's words\")" "names before a button a person other than the base of its schema, which guards" "$cva_q"
-check "CVA compiler: a conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, refused, the compiler not carrying it yet (q_inst_local)" "%% not compiled(q_inst_local)" "$cva_q"
-check "CVA compiler: ... the reason (q_inst_local)" "one binding no listed role whose conditional literals are all at the role holding its anchor, local to that role" "$cva_q"
+check "CVA compiler: a conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, taken, passing the checks, the role finding its instances in its own state (q_inst_local; vGLP fe12932, Section 5.4; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (ii))" "%% not compiled, having no pragmas(q_inst_local)" "$cva_q"
+check "CVA compiler: a conditional literal holding a signed term of a speech-act variable its quantifier binds, refused until a contract needs it (q_inst_sgn; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (iii))" "%% not compiled(q_inst_sgn)" "$cva_q"
+check "CVA compiler: ... the reason (q_inst_sgn)" "a conditional literal holding a signed term of a speech-act variable its quantifier binds, refused until a contract needs it" "$cva_q"
+check "CVA compiler: a conjunct whose literals at another role name no variable its quantifier binds, an instance restricted to none, refused (q_inst_none)" "%% not compiled(q_inst_none)" "$cva_q"
+check "CVA compiler: a conjunct deleting a conditional literal at another role, taken, passing the checks (q_inst_del; vGLP fe12932, Section 5.4; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (i))" "%% not compiled, having no pragmas(q_inst_del)" "$cva_q"
 check "CVA compiler: a conjunct whose instances the attempt names, its base neither a guarding role nor, the schema having two guarding roles, its first role, refused as not effective (q_inst_base)" "%% not compiled(q_inst_base)" "$cva_q"
 check "CVA compiler: ... the reason (q_inst_base)" "a schema with a conjunct whose instances the attempt names, whose base is neither" "$cva_q"
 check "CVA compiler: a listed guarding role with a condition and a conditional literal, its listing carrying both (q_guard)" "^schema_entry(s, lschema(s, \[\], .*\[listing(3, 1, admitted, \[\], fcons(ne(role(3), role(2))), \[hm(2, atom(seen, \[role(3)\]))\], \[\])\]))$" "$cva_q"
@@ -4349,7 +4355,7 @@ check "CVA compiler: ... its question put to each person of its list (q_guard)" 
 check "CVA compiler: ... its base, the base of its listed role, its first role (q_guard)" "^schema_base(s, 1)$" "$cva_q"
 check "CVA compiler: ... the class term naming the people of the listed role, the request name not (q_guard)" "^s(Peer, Peer, List(Peer))$" "$cva_q"
 check "CVA compiler: a listed reading role, its base guarding, passing the checks (q_read)" "%% not compiled, having no pragmas(q_read)" "$cva_q"
-check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card, q_inst, q_inst_by, q_inst_local, q_inst_base, q_guard, q_read)" "not well-typed\|→ failed" "$cva_q"
+check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card, q_inst, q_inst_by, q_inst_local, q_inst_sgn, q_inst_none, q_inst_del, q_inst_base, q_guard, q_read)" "not well-typed\|→ failed" "$cva_q"
 
 # Counts, sums, min and floor, and environment predicates (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3 and 4): vGLP's counts, its agent run with no person and given at deployment cap(3) and the weights wt(4) and wt(2), which it holds from startup and its first view shows; fill, whose constraint counts the copies of tok its state holds, is taken until it holds three; and heavy, whose constraint sums the weights against min(2 floor(3), 100) = 6, is taken; with the weights wt(4) and wt(1), whose sum is 5, it is not.
 cva_cnt_dir="$GLP_DIR/programs/tests/vg_counts_$$"
@@ -4391,6 +4397,18 @@ part_dom(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), alice, [g(sta
 unable_reason(pass(alice, bob, [i(carol, 2), i(dave, 1), i(dave, 3)]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], R12).
 apply_part(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), bob, [g(started, []), g(knows, [p(alice)])], S13).
 class_info(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), alice, [], R14, A14).
+iota_pairs(share(alice, bob, [carol, dave]), alice, I15).
+name_class(tally(alice, bob), [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], C16).
+part_dom(tally(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], D17).
+unable_reason(tally(alice, bob, [carol, erin]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)])], R18).
+apply_part(tally(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)])], S19).
+class_info(tally(alice, bob, [carol, dave]), alice, [], R20, A20).
+part_dom(clear(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)]), g(seen, [p(carol)])], D21).
+apply_part(clear(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)]), g(seen, [p(carol)]), g(seen, [p(erin)])], S22).
+apply_part(settle(alice), alice, [g(started, []), g(noted, [p(carol)]), g(noted, [p(dave)])], S23).
+apply_part(wipe(alice), alice, [g(settled, []), g(started, []), g(noted, [p(carol)]), g(noted, [p(dave)])], S24).
+part_dom(wipe(alice), alice, [g(started, []), g(settled, [])], D25).
+question_words(share(alice, bob, [carol, dave]), bob, W26).
 :quit
 HEREDOC
 2>&1)
@@ -4415,6 +4433,21 @@ check "CVA shares: ... the base's domain holds at exactly those instances" "D11 
 check "CVA shares: ... its unable vote names the anchor it lacks and the one it has beyond the list" "R12 = unable(\[owes(dave, 3)\], \[owes(carol, 5)\])" "$cva_sh"
 check "CVA shares: ... bob's effect adds owed of each assignment" "S13 = \[g(owed, \[p(dave), n(1)\]), g(owed, \[p(carol), n(5)\]), g(owed, \[p(carol), n(2)\]), g(passed, \[p(alice)\])" "$cva_sh"
 check "CVA shares: ... the class's schema-binding found among its changes, each variable at each instance an entry inst(1, J, X)" "R14 = cls(ci(pass(alice, bob, \[i(carol, 2), i(carol, 5), i(dave, 1)\]), .*b(inst(1, 1, pvar(x)), p(carol)), b(inst(1, 1, num(k)), n(2)), b(inst(1, 2, pvar(x)), p(carol)), b(inst(1, 2, num(k)), n(5)), b(inst(1, 3, pvar(x)), p(dave)), b(inst(1, 3, num(k)), n(1))\]" "$cva_sh"
+# The introduction rule, the anchors and the instances restricted (vGLP fe12932, Section 5.4; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC): "a schema-binding in which p's role requires an atom naming an agent c bound to a variable of the schema or of an instance of the part and the person q in another role gains an atom naming c" gives p the pair {q, c}, the anchor counting as an atom its holder requires, "so Alice introduces Bob and Dave at the commit"; tally's instances restricted to the variable its literal names, without repetition; clear's deleted conditional literal subtracted from a state that need not hold it; settle's and wipe's conjuncts local to alice's role, which finds the instances in its own state and applies the literals at each; and the approval question showing the anchors at the proposer where a tab lists their predicate (line 9).
+check "CVA shares: the introduction rule gives alice, the base, the pairs of bob, who gains seen of each instance, and each person her instances bind" "I15 = \[pr(bob, carol), pr(bob, dave)\]" "$cva_sh"
+check "CVA shares: tally's instances restricted to the variable its literal names, without repetition, carol owing twice one instance" "C16 = tally(alice, bob, \[carol, dave\])" "$cva_sh"
+check "CVA shares: ... the class term List(Peer)" "^tally(Peer, Peer, List(Peer))$" "$(cat "$CVA/shares/platform.vglp")"
+check "CVA shares: ... the base's domain holds at exactly those restricted instances" "D17 = yes" "$cva_sh"
+check "CVA shares: ... its unable vote names the anchor it has beyond the list, and leaves out that of an instance it lacks, which binds no amount" "R18 = unable(\[\], \[owes(dave, 1)\])" "$cva_sh"
+check "CVA shares: ... bob's effect adds owed_by of each instance once" "S19 = \[g(owed_by, \[p(dave)\]), g(owed_by, \[p(carol)\]), g(tallied, \[p(alice)\]), g(started, \[\]), g(knows, \[p(alice)\])\]" "$cva_sh"
+check "CVA shares: ... the class's schema-binding found among its changes, one entry inst(1, J, x) for each instance" "R20 = cls(ci(tally(alice, bob, \[carol, dave\]), .*\[mate(tally, \[b(role(2), p(bob)), b(role(1), p(alice)), b(inst(1, 1, pvar(x)), p(carol)), b(inst(1, 2, pvar(x)), p(dave))\]" "$cva_sh"
+check "CVA shares: clear's deleted conditional literal is not required: bob's domain holds where he holds seen of one instance and not the other" "D21 = yes" "$cva_sh"
+check "CVA shares: ... and his effect subtracts seen of each instance, which his state need not hold, leaving the others" "S22 = \[g(cleared, \[p(alice)\]), g(started, \[\]), g(knows, \[p(alice)\]), g(seen, \[p(erin)\])\]" "$cva_sh"
+check "CVA shares: settle's conjunct, local to alice's role, adds done of each instance she finds in her own state" "S23 = \[g(settled, \[\]), g(done, \[p(carol)\]), g(done, \[p(dave)\]), g(started, \[\]), g(noted, \[p(carol)\]), g(noted, \[p(dave)\])\]" "$cva_sh"
+check "CVA shares: wipe's, local to her role, deletes noted at each instance" "S24 = \[g(wiped, \[\]), g(settled, \[\]), g(started, \[\])\]" "$cva_sh"
+check "CVA shares: ... a local conjunct asks nothing of the domain: wipe holds where she noted no one" "D25 = yes" "$cva_sh"
+check "CVA shares: the approval question shows bob the anchors alice requires, the tab Notes listing noted (line 9)" "W26 = \[person(alice), text(' shares the persons they noted.'), held(noted(carol), 1), held(noted(dave), 1)\]" "$cva_sh"
+check "CVA shares: the local conjuncts printed with their roles, schema_locals" "^schema_locals(settle, \[local(1, \[pvar(x)\], atom(noted, \[pvar(x)\]), fcons(true), \[hm(1, atom(done, \[pvar(x)\]))\], \[\])\])$" "$(cat "$CVA/shares/platform.vglp")"
 check_not "CVA shares: no goal left unread" "not well-typed\|→ failed" "$cva_sh"
 # A variable the constraint determines from the variables local to a role is local to that role (vGLP 9ee6f87, Section 5.4: "and so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds"): vGLP's linear, climb's t1 = t + 2 and mark's 3 m = t + 3, t local to the first role, so t1 and m are local too, in no class term, the machine computing them.
 cva_lin=$(cat "$CVA/linear/platform.vglp")
