@@ -102,10 +102,19 @@ class Glp:
         return self.answer(self.load(glp_file, [f'introduction_named({name}, I).']), 'I') or 'no_introduction'
 
     def pragmas(self, txt_file, read_term):
-        """(pragmas term, None) or (None, the reason pragmas.sh gives)."""
+        """(pragmas term, None) or (None, the reason pragmas.sh gives).  The contract term,
+        often longer than a Windows command line may be, reaches pragmas.sh through a file
+        that bash reads."""
         script = self.path('programs', 'vglp', 'cva', 'compiler', 'pragmas.sh')
-        args = [self.bash, _posix(script, self.bash), _posix(txt_file, self.bash), read_term]
-        p = subprocess.run(args, capture_output=True, text=True, encoding='utf-8', errors='replace')
+        fd, tf = tempfile.mkstemp(suffix='.term')
+        with os.fdopen(fd, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(read_term)
+        try:
+            args = [self.bash, '-c', 'exec bash "$0" "$1" "$(cat "$2")"',
+                    _posix(script, self.bash), _posix(txt_file, self.bash), _posix(tf, self.bash)]
+            p = subprocess.run(args, capture_output=True, text=True, encoding='utf-8', errors='replace')
+        finally:
+            os.remove(tf)
         if p.returncode != 0:
             return None, (p.stderr.strip().split('\n') or ['pragmas not read'])[0]
         return p.stdout.strip(), None
