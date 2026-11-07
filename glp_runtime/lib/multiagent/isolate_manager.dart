@@ -117,16 +117,23 @@ class Deliver extends IsolateMessage {
 /// named by its id in the directory.  One unit of work, answered with
 /// [AgentIdle].  Until 2026-11-07 no connectivity event reached an agent
 /// isolate, and peer_app/2 answered `none` for every peer under `:boot`.
+///
+/// A connection carries the [application] the session with the peer is
+/// attested with: the app the harness names ([IsolateManager.boot]), "The
+/// router ... reports every peer attested with the app the harness names, its
+/// developer, name and version" (IGLP 4a9ad28, "Simulation realisation");
+/// null, the session unattested, where the harness names none.
 class PeerConnectivity extends IsolateMessage {
   final String peerId;
   final Underlay underlay;
   final ConnectivityEvent event;
+  final Application? application;
 
-  PeerConnectivity(this.peerId, this.underlay, this.event);
+  PeerConnectivity(this.peerId, this.underlay, this.event, [this.application]);
 
   @override
   String toString() => 'PeerConnectivity($peerId, ${underlay.name}, '
-      '${event.name})';
+      '${event.name}${application == null ? '' : ', $application'})';
 }
 
 /// An agent reports that it has finished one unit of work — a `Start`, a
@@ -409,8 +416,15 @@ class IsolateManager {
 
   /// Boot all agents from configuration.
   ///
+  /// [application] is the app the harness names: the router reports every
+  /// peer connected attested with it, its developer, name and version (IGLP
+  /// 4a9ad28, "Simulation realisation"), so peer_app/2 assigns app(D, N, V).
+  /// Where the harness names none, a connection is reported unattested.
+  ///
   /// Returns when all agents are ready (but not yet started).
-  Future<void> boot(BootConfig config, {TraceConfig traceConfig = TraceConfig.off}) async {
+  Future<void> boot(BootConfig config,
+      {TraceConfig traceConfig = TraceConfig.off,
+      Application? application}) async {
     _traceConfig = traceConfig;
     final readyCompleter = Completer<void>();
     _booting = readyCompleter;
@@ -470,13 +484,17 @@ class IsolateManager {
     // every agent is ready ([SimulationRouter.bootComplete]), and a pair the
     // harness cuts and restores ([cut], [restore]).  Each report is one unit
     // of work handed to the agent, so a settle waits until it is recorded.
+    // A connection is reported attested with the app the harness names,
+    // [application] (IGLP 4a9ad28, "Simulation realisation"), unattested
+    // where it names none.
     router.onConnectivity = (toId, peerPk, underlay, event) {
       final port = _agentPorts[toId];
       if (port == null) return; // not ready: no isolate to report to yet
       final peerId = router.directory.idOf(peerPk);
       if (peerId == null) return; // the router reports only agents it holds
       _noteWorkSent(toId);
-      port.send(PeerConnectivity(peerId, underlay, event));
+      port.send(PeerConnectivity(peerId, underlay, event,
+          event == ConnectivityEvent.connected ? application : null));
     };
 
     // Single listener for all messages
@@ -993,11 +1011,13 @@ Future<void> _eventLoop(
     } else if (msg is PeerConnectivity) {
       // What the layer reports of a peer, surfaced through the network's
       // callbacks as the layer surfaces it, and so recorded for peer_app/2
-      // ([MadContext.peerConnected], [MadContext.peerDisconnected]).  The
-      // simulation attests nothing: what it reports as a peer's app is not
-      // yet in IGLP, and until it is a connection is reported unattested
-      // (GLP #13, Code_inbox 2026-11-07 22:03 UTC, item 2), as
-      // AgentRuntime.onConnectivityEvent reports it.  A connection is also
+      // ([MadContext.peerConnected], [MadContext.peerDisconnected]).  A
+      // connection carries the app the harness names, the session attested
+      // with it, or null, unattested, where the harness names none (IGLP
+      // 4a9ad28, "Simulation realisation": the router "reports every peer
+      // attested with the app the harness names, its developer, name and
+      // version"), as AgentRuntime.onConnectivityEvent reports it.  Until
+      // 2026-11-07 every connection was reported unattested.  A connection is also
       // when a message the layer refused is sent again, where M_p holds one
       // (IGLP, The contract: "on a refusal, keeps the message and sends it
       // again with the agent's next Sends, or when the layer reports a peer
@@ -1010,7 +1030,7 @@ Future<void> _eventLoop(
         log('Peer ${msg.peerId} ${msg.event.name} over ${msg.underlay.name}');
         switch (msg.event) {
           case ConnectivityEvent.connected:
-            network.onPeerConnected?.call(peerPk, msg.underlay, null);
+            network.onPeerConnected?.call(peerPk, msg.underlay, msg.application);
             if (ctx.mp.hasSendable) await runEvent();
           case ConnectivityEvent.disconnected:
             network.onPeerDisconnected?.call(peerPk, msg.underlay);

@@ -1,20 +1,24 @@
 /// peer_app/2 under the isolate simulation, the path of the REPL's `:boot`:
 /// the router reports each agent's connections and disconnections to its
-/// isolate, which records them, so peer_app answers `unattested` for a
-/// connected peer and `none` for one the harness has cut off.
+/// isolate, which records them, so peer_app answers `app(D, N, V)`, the app
+/// the harness names, for a connected peer and `none` for one the harness has
+/// cut off.
 ///
-/// IGLP, Implementation Notes, "Networking Seam", The contract: "the layer
-/// reports peer discovery, connection, disconnection, and reachability ...
-/// the runtime records the app the layer reports attested in its session with
-/// each peer, for peer_app"; "Simulation realisation": "The adjacency relation
-/// is total by default, every agent a PAN peer of every other, and the harness
-/// cuts and restores it".  IGLP, Definition "Seam Predicates": peer_app
-/// assigns "unattested where that session is unattested, or none where the
-/// layer has no session with P".  What the simulation reports as a peer's app
-/// is not yet in IGLP; until it is, the simulation reports a connection
-/// unattested (GLP #13, Code_inbox 2026-11-07 22:03 UTC, item 2).  Until
-/// 2026-11-07 the isolate simulation delivered no connectivity event to any
-/// agent, and peer_app answered `none` for every peer under `:boot`.
+/// IGLP 4a9ad28, Implementation Notes, "Networking Seam", The contract: "the
+/// layer reports peer discovery, connection, disconnection, and reachability
+/// ... the runtime records the app the layer reports attested in its session
+/// with each peer, for peer_app"; "Simulation realisation": "The adjacency
+/// relation is total by default, every agent a PAN peer of every other, and
+/// the harness cuts and restores it", and "The router reports each connection
+/// and disconnection to the agents, and reports every peer attested with the
+/// app the harness names, its developer, name and version".  IGLP, Definition
+/// "Seam Predicates": peer_app assigns "app(D, N, V) ... unattested where that
+/// session is unattested, or none where the layer has no session with P".
+/// The harness names the app by IsolateManager.boot's `application`, the
+/// REPL's `:app`; where it names none, the paper does not say, and a
+/// connection is reported unattested, as before 2026-11-07.  Until 2026-11-07
+/// the isolate simulation delivered no connectivity event to any agent, and
+/// peer_app answered `none` for every peer under `:boot`.
 ///
 /// Alice asks peer_app for bob each time a poke reaches her.  The three pokes
 /// come from carol, dave and erin, each pair held from the start and released
@@ -28,6 +32,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
 const _boot = '''
@@ -63,12 +68,14 @@ void main() {
   setUp(() => manager = IsolateManager());
   tearDown(() async => manager.shutdown());
 
-  test('peer_app answers unattested for a connected peer, none once the '
-      'adjacency is cut, and unattested again once it is restored', () async {
+  /// Boot the five agents, the harness naming [application], and hold
+  /// alice's three answers to [connected], none and [connected]: connected,
+  /// cut, restored.
+  Future<void> phases(Application? application, String connected) async {
     final config = BootLoader().load(_boot);
     config.rootSelfGlpPath = _rootSelf;
 
-    await manager.boot(config);
+    await manager.boot(config, application: application);
     for (final poker in ['carol', 'dave', 'erin']) {
       manager.holdDelivery(poker, 'alice');
     }
@@ -79,22 +86,36 @@ void main() {
 
     manager.releaseDelivery('carol', 'alice');
     await manager.settle();
-    expect(manager.outputOf('alice'), ['unattested'],
-        reason: 'alice and bob are connected from the boot, and the '
-            'simulation attests nothing');
+    expect(manager.outputOf('alice'), [connected],
+        reason: 'alice and bob are connected from the boot');
 
     manager.cut('alice', 'bob');
     manager.releaseDelivery('dave', 'alice');
     await manager.settle();
-    expect(manager.outputOf('alice'), ['unattested', 'none'],
+    expect(manager.outputOf('alice'), [connected, 'none'],
         reason: 'the cut is reported to alice as bob disconnected');
 
     manager.restore('alice', 'bob');
     manager.releaseDelivery('erin', 'alice');
     await manager.settle();
-    expect(manager.outputOf('alice'), ['unattested', 'none', 'unattested'],
-        reason: 'the restore is reported to alice as bob connected');
+    expect(manager.outputOf('alice'), [connected, 'none', connected],
+        reason: 'the restore is reported to alice as bob connected, '
+            'attested again');
 
     expect(manager.faults, isEmpty);
+  }
+
+  test('peer_app answers app(D, N, V), the app the harness names, for a '
+      'connected peer, none once the adjacency is cut, and app(D, N, V) '
+      'again once it is restored', () async {
+    await phases(
+        const Application(
+            developer: 'TEAM', name: 'app.grassroots', version: 7),
+        "app('TEAM', 'app.grassroots', 7)");
+  }, timeout: Timeout.none);
+
+  test('where the harness names no app, a connected peer is unattested',
+      () async {
+    await phases(null, 'unattested');
   }, timeout: Timeout.none);
 }
