@@ -251,6 +251,20 @@ agent(Id, [msg(person, Id1, install(App, M, CSig, Ui))|UserIn], NetIn, Outs,
     install_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
+%% Activate a mini-app installed here (GSA paper, Section 3, "A grassroots
+%% program instance": "An instance begins with one person, who installs the
+%% certified program and activates it; others join it on invitation"): from
+%% the registry, with its two grants and its calendar, with no invitation and
+%% no peer.  A later invitation to it is looked up in the registry and its
+%% root channel goes to the running execution ("Activation and joining";
+%% deliver/9).  A mini-app running already, or not installed, is left as it
+%% is.
+agent(Id, [msg(person, Id1, activate(App))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?) |
+    activate_app(App?, Id?, Apps?, Apps1, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
 %% Today's date, from the device's clock (superapp/3) or a play's script:
 %% written on the calendar of every mini-app installed, one date a day (GSG
 %% paper, Section 3: "a calendar, a stream of dates the super-app writes from
@@ -918,6 +932,26 @@ deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?, Cal, Ds?)) | Rest],
 deliver(App, Friend, End, Id, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
     otherwise | deliver(App?, Friend?, End?, Id?, M?, Rest?, Rest1, UserIn?, UserIn1).
 deliver(_, _, _, _, _, [], [], UserIn, UserIn?).
+
+%% activate_app(App, Id, Apps, Apps1, UserIn, UserIn1): the person's
+%% activation of the mini-app installed as App, with no invitation and no
+%% peer.  An idle entry is activated with exactly its three grants, as
+%% deliver/9 activates one: the end of its person channel and the calendar
+%% held since installation, the calendar copied and the copy kept for its next
+%% activation, and its social-graph channel, on which no conversation is yet
+%% open; the entry is then running, its writer of that channel kept, so that a
+%% later invitation's root channel goes to this execution.  An entry running
+%% already is passed over, and so is every entry of another name.
+procedure activate_app(Constant?, Key?, AppList?, AppList, UserInStream?, UserInStream).
+activate_app(App, Id, [app(A, M, C, idle(Ui, Cal, Ds?)) | Rest],
+             [app(A?, M?, C?, running(Sg, Kept?, Ds)) | Rest?], UserIn, UserIn1?) :-
+    App? =?= A? |
+    copy_calendar(Cal?, Given, Kept),
+    activate(M?, Id?, Ui?, Sg?, Up, Given?),
+    inject_requests(App?, Up?, UserIn?, UserIn1).
+activate_app(App, Id, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
+    otherwise | activate_app(App?, Id?, Rest?, Rest1, UserIn?, UserIn1).
+activate_app(_, _, [], [], UserIn, UserIn?).
 
 %% activate(M, Id, Ui, Sg, Up, Cal): the mini-app activated by run/3 at the
 %% type identity of the entry template's opaque instance at the type its

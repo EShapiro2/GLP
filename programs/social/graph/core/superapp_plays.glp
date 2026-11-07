@@ -897,6 +897,58 @@ play_coins(A, B, ScreenA?, ScreenB?) :-
     bob_coins_person(B?, A?, C?, CSig?, AppEndB?, BobOut?, BobIn),
     miniapp_person_run(C?, B?, bob, [A?], PersonEndB?, ScreenB).
 
+%% =============================================================================
+%% play_activate(A, B, ScreenA, ScreenB): activation without an invitation,
+%% and a later invitation to the running execution (GSA paper, Section 3, "A
+%% grassroots program instance" and "Activation and joining").  alice, A,
+%% installs the currency and activates it, with no invitation and no peer;
+%% her execution's scripted person, under the role mint, mints 3, and once her
+%% screen has shown the mint and her holdings she connects to bob, B, and
+%% invites him.  bob installs the currency and consents in advance, and the
+%% handshake opens their conversation; at alice the registry records the
+%% currency running, so the root channel goes to the execution she activated
+%% alone, whose screen then shows the conversation opened, on the person
+%% channel that execution holds since her activation.  bob's scripted person,
+%% under a role with no script, reports his screen.
+%% Expected: ScreenA = [minted(3), holdings([lot(alice, 3)]), opened(bob) |
+%% _], ScreenB = [opened(alice) | _], → suspended.
+%% =============================================================================
+exported procedure play_activate(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_activate(A, B, ScreenA?, ScreenB?) :-
+    ground(A?), ground(B?) |
+    crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    load_file("currency.glpw", C),
+    certified(C?, _, CSig),
+    new_channel(AppEndA, PersonEndA),
+    new_channel(AppEndB, PersonEndB),
+    agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    miniapp_person_run(C?, A?, mint, [B?], PersonEndA?, ShownA),
+    tee(ShownA?, ScreenA, SeenA),
+    alice_alone_person(A?, B?, C?, CSig?, AppEndA?, AliceOut?, SeenA?, AliceIn),
+    agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_coins_person(B?, A?, C?, CSig?, AppEndB?, BobOut?, BobIn),
+    miniapp_person_run(C?, B?, watch, [A?], PersonEndB?, ScreenB).
+
+%% alice's person in play_activate: install the currency and activate it,
+%% alone; then, once her execution's screen has shown two items, connect to
+%% Q and, once connected, invite Q.  The screen's items are counted, never
+%% inspected.
+procedure alice_alone_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_alone_person(Me, Q, C, CSig, AppEnd, Outs, Seen,
+                   [msg(person, Me?, install(currency, C?, CSig?, AppEnd?)),
+                    msg(person, Me?, activate(currency)) | Cmds?]) :-
+    ground(Me?), ground(Q?) |
+    alice_after_two(Me?, Q?, Outs?, Seen?, Cmds).
+
+procedure alice_after_two(Key?, Key?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_after_two(Me, Q, Outs, [_, _ | Seen], [msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Q?) |
+    sink(Seen?),
+    alice_coins_run(Me?, Q?, Outs?, Cmds).
+%% The screen closed before two items: her person stream closes.
+alice_after_two(_, _, _, [_], []).
+alice_after_two(_, _, _, [], []).
+
 %% The installers of play_coins: each installs the currency with its end of
 %% its person channel; the play writes no date, the currency keeping none.
 procedure alice_coins_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).

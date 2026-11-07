@@ -311,6 +311,12 @@ imported procedure superapp_plays#play_coins(Key?, Key?, Stream(Opaque), Stream(
 exported procedure play_coins(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 play_coins(P, Q, A?, B?) :- superapp_plays # play_coins(P?, Q?, A, B).
 
+%% Activation without an invitation, and a later invitation to the running
+%% execution (GSA paper, Section 3).
+imported procedure superapp_plays#play_activate(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+exported procedure play_activate(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_activate(P, Q, A?, B?) :- superapp_plays # play_activate(P?, Q?, A, B).
+
 imported procedure superapp_plays#play_cssn(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 exported procedure play_cssn(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 play_cssn(P, Q, A?, B?) :- superapp_plays # play_cssn(P?, Q?, A, B).

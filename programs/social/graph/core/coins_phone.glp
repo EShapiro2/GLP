@@ -14,6 +14,9 @@ coins_phone(ui_alice, Me, [Bob], NetIn) :-
     person_coins(Me?, ui_alice, [Bob?], [Bob?], [], NetIn?).
 coins_phone(ui_bob, Me, [Alice], NetIn) :-
     person_coins(Me?, ui_bob, [Alice?], [], [Alice?], NetIn?).
+%% mint, play_mint's person alone (programs/currencies/coins_mint_boot.glp): she knows no peer, installs the mini-app and activates it, with no invitation (GSA paper, Section 3, "A grassroots program instance").
+coins_phone(mint, Me, [], NetIn) :-
+    person_alone(Me?, NetIn?).
 %% A person who knows other peers than the plays give has no smartphone here.
 coins_phone(_, _, _, _) :- otherwise | true.
 
@@ -29,6 +32,25 @@ person_coins(Me, Role, Ps, Calls, Accepts, NetIn) :-
     acts(Me?, currency, Calls?, Accepts?, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
     miniapp_person_run(C?, Me?, Role?, Ps?, PersonEnd?, Screen),
     send_to_user(Screen?).
+
+%% person_alone(Me, NetIn): one person's smartphone, the person alone: the super-app's agent on the isolate's network under the person's own key, its home answering what the agent tells the person (core/self.glp, scripted_home/5), the mini-app installed from its artefact and activated by the person with no invitation and no peer, and its scripted person under the role mint, knowing no peer (programs/currencies/coins/currency/plays.glp, miniapp_person/5).
+procedure person_alone(Key?, NetInStream?).
+person_alone(Me, NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("currency.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    alone_acts(Me?, currency, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, mint, [], PersonEnd?, Screen),
+    send_to_user(Screen?).
+
+%% alone_acts(Me, App, C, CK, CSig, AppEnd, Notices, Cmds): the person's acts on their super-app, alone: trust the compiler's key, install the mini-app with their end of its person channel, and activate it; the notices the super-app tells the person are read as calls_run/5 reads them, with no peer called.
+procedure alone_acts(Key?, Constant?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+alone_acts(Me, App, C, CK, CSig, AppEnd, Notices,
+           [msg(person, Me?, trust(CK?)), msg(person, Me?, install(App?, C?, CSig?, AppEnd?)), msg(person, Me?, activate(App?)) | Cmds?]) :-
+    calls_run(Me?, App?, [], Notices?, Cmds).
 
 %% acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices, Cmds): a person's acts on their super-app: trust the compiler's key, install the mini-app with their end of its person channel, consent in advance to the invitation of each peer in Accepts, connect to each peer in Calls, and, as each connection is reported, invite the peer connected where they called them; every connection is reported to the person, sg(connected(Q)).
 procedure acts(Key?, Constant?, List(Key)?, List(Key)?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
