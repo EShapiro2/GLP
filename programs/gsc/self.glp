@@ -4227,6 +4227,66 @@ imported procedure check#traceable_variant(Constant?, WContract?, Preds).
 exported procedure traceable_variant(Constant?, WContract?, Preds).
 traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 
+% --- Restriction by its syntactic approximations (restrict.glp) ------------
+% GSC, Section "Relations among Contracts": def:stronger and prop:syntactic.
+% nd(Name, RoleNames, Schema): a schema as written, the names of its roles
+% (wsch_rnames) and its form; rm(I, J), role I of the weaker schema read as
+% role J of the stronger, J 0 where it is none, and pm(X, J), its agent
+% variable X read as role J; SB, whether the body of one schema is shown
+% stronger than another's (def:stronger), with the faults where it is not,
+% each of the weaker schema's role I, atom, formula, conjunct of its
+% constraint or variable that the condition misses; shape(NoNewRole,
+% SameGuards); RStep, a step of prop:syntactic taken from C to C', and
+% RFault, why C' is not shown to restrict C; RVerdict, restriction(Steps),
+% C' restricting C by them, restriction_given_invariant(Steps, Schemas), the
+% same where the invariant of clause (c) holds of each schema named, which
+% no syntactic condition decides, or not_shown(Faults).
+ND       ::= nd(Constant, NameOfs, NSchema).
+NDs      ::= [] ; [ND | NDs].
+NDFound  ::= nd_found(ND) ; nd_none.
+WFound   ::= ws_found(WSchema) ; ws_none.
+OfFound  ::= of(Constant) ; no_of.
+RM       ::= rm(Integer, Integer) ; pm(Constant, Integer) ; vm(Arg, Arg).
+VMR      ::= vmr(RMs) ; vm_clash.
+VFoundA  ::= va_found(Arg) ; va_none.
+RMs      ::= [] ; [RM | RMs].
+SBFault  ::= role_missing(Integer) ; role_kind(Integer) ; head_differs(Integer)
+           ; conjuncts_differ ; not_required(Integer, Mult)
+           ; not_forbidden(Integer, Mult) ; formula_missing(Form)
+           ; constraint_not_implied(Constraint) ; variable_missing(Arg)
+           ; carried_differ ; extra_role(Integer) ; variable_clash(Arg).
+SBFaults ::= [] ; [SBFault | SBFaults].
+SB       ::= stronger ; not_stronger(SBFaults).
+Shape    ::= shape(Ans, Ans).
+% What a stronger body is decided on, and what restriction is: the parts of
+% the two schemas, and of the two contracts.
+SBParts  ::= sbp(NRoleSpecs, NRoleSpecs, Conjuncts, Conjuncts, Forms, Forms,
+                 Constraint, Constraint, Args, Args, NumCtx).
+RParts   ::= rp(Verdict, Verdict, Preds, Preds, WContract, WContract, Wrap).
+RStep    ::= kept(Constant) ; replaced_a(Constant) ; replaced_c(Constant)
+           ; added_b(Constant, Constant) ; deleted_a(Constant).
+RSteps   ::= [] ; [RStep | RSteps].
+RFault   ::= not_sg(Constant, Verdict) ; preds_not_in_base(Preds)
+           ; body_not_stronger(Constant, SBFaults) ; guards_differ(Constant)
+           ; roles_differ(Constant) ; added_guarded(Constant)
+           ; no_schema_of(Constant) ; deleted_unguarded(Constant)
+           ; step_not_sg(RStep, Verdict) ; no_simple_unguarded(Constant).
+RFaults  ::= [] ; [RFault | RFaults].
+RVerdict ::= restriction(RSteps) ; restriction_given_invariant(RSteps, Constants)
+           ; not_shown(RFaults).
+Wrap     ::= w_list ; w_refl(Preds) ; w_env(Preds) ; w_env_refl(Preds, Preds).
+
+imported procedure restrict#restricts(WDeclared?, WDeclared?, RVerdict).
+% restricts(C', C, V): whether C' restricts C by prop:syntactic (restrict.glp).
+exported procedure restricts(WDeclared?, WDeclared?, RVerdict).
+restricts(R, B, V?) :- restrict # restricts(R?, B?, V).
+
+imported procedure restrict#stronger_body(WSchema?, WSchema?, SB).
+% stronger_body(Tau', Tau, SB): whether the body of Tau' is shown stronger than
+% that of Tau, by the checker's sufficient condition for def:stronger.
+exported procedure stronger_body(WSchema?, WSchema?, SB).
+stronger_body(S, T, V?) :- restrict # stronger_body(S?, T?, V).
+
 % The introductory acts of a contract, for inspection (def:introduction,
 % def:unobstructed): each unobstructed, or obstructed with its faults.
 imported procedure check#intro_acts(NDeclared?, IntroActs).

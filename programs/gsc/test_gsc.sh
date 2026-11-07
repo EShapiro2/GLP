@@ -2227,5 +2227,69 @@ check "a whole t blocks every whole x: meet obstructed" "intro_act(meet, obstruc
 check "a whole t blocks no real x but a whole one: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
 check "a real t blocks every real x: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 3p)"
 
+# Restriction by its syntactic approximations (GSC, Section 8: def:stronger,
+# prop:syntactic; restrict.glp, README "Restriction"), over GSG written in the
+# clause syntax: befriend strengthened by an atom of its body, by (a); unfriend
+# deleted, by (a); an unguarded befriend_auto with befriend's head and roles
+# and a stronger body added, by (b); an added guarded schema, no step; a
+# predicate the base has not, outside the proposition; introduce with its
+# variable renamed, the same schema read up to the names of its variables; an
+# unguarded nudge strengthened, by (c), under an invariant; a step of (a) in a
+# contract whose unguarded poke has no atom naming both its roles, no simple
+# unguarded classes; and the base against its restriction, no step.
+EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+ACQ="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob'])"
+INTRO="sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+INTRO_D="sas(introduce, ['Alice', 'Bob', 'Dave'], ['Dave'], [atom(knows, ['Bob', 'Dave'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Dave']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+BF="sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob'])"
+BFS="sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob'])"
+BFT="sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(trusts, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob'])"
+BFA="sas(befriend_auto, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, [])"
+BF2="sas(befriend2, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice'])"
+UF="sas(unfriend, ['Alice', 'Bob'], [], [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice'])"
+NUDGE="sas(nudge, ['Alice', 'Bob'], [], [atom(nudged, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(nudged, ['Alice', 'Bob'])), atom(identity, ['Bob'])], true, [])"
+NUDGES="sas(nudge, ['Alice', 'Bob'], [], [atom(nudged, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), atom(knows, ['Alice', 'Bob']), not(atom(nudged, ['Alice', 'Bob'])), atom(identity, ['Bob'])], true, [])"
+POKE="sas(poke, ['Alice', 'Bob'], [], [atom(poked, ['Alice']), atom(poked, ['Bob'])], [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(poked, ['Alice'])), atom(identity, ['Bob']), not(atom(poked, ['Bob']))], true, [])"
+RS_GSG="[$EST, $ACQ, $INTRO, $BF, $UF]"
+RS_A="[$EST, $ACQ, $INTRO, $BFS, $UF]"
+RS_DEL="[$EST, $ACQ, $INTRO, $BF]"
+RS_B="[$EST, $ACQ, $INTRO, $BF, $UF, $BFA]"
+RS_G="[$EST, $ACQ, $INTRO, $BF, $UF, $BF2]"
+RS_T="[$EST, $ACQ, $INTRO, $BFT, $UF]"
+RS_REN="[$EST, $ACQ, $INTRO_D, $BFS, $UF]"
+RS_CB="[$EST, $ACQ, $INTRO, $BF, $UF, $NUDGE]"
+RS_C="[$EST, $ACQ, $INTRO, $BF, $UF, $NUDGES]"
+RS_PB="[$EST, $ACQ, $INTRO, $BF, $UF, $POKE]"
+RS_PA="[$EST, $ACQ, $INTRO, $BFS, $UF, $POKE]"
+
+out=$(run "restricts($RS_A, $RS_GSG, V)." "restricts($RS_DEL, $RS_GSG, V)." "restricts($RS_B, $RS_GSG, V)." "restricts($RS_G, $RS_GSG, V)." "restricts($RS_T, $RS_GSG, V)." "restricts($RS_REN, $RS_GSG, V)." "restricts($RS_C, $RS_CB, V)." "restricts($RS_PA, $RS_PB, V)." "restricts($RS_GSG, $RS_A, V).")
+check_eq "befriend with a stronger body, its name and guards, restricts GSG by (a)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 1)"
+check_eq "deleting unfriend, which has a guarding agent role, restricts GSG by (a)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), deleted_a(unfriend)])" "$(sf 2)"
+check_eq "adding an unguarded befriend_auto with befriend's head and roles and a stronger body restricts GSG by (b)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), added_b(befriend_auto, befriend)])" "$(sf 3)"
+check_eq "adding a guarded schema is no step of the proposition" \
+         "V = not_shown([added_guarded(befriend2)])" "$(sf 4)"
+check_eq "a predicate the base has not puts the contract outside the proposition" \
+         "V = not_shown([preds_not_in_base([trusts])])" "$(sf 5)"
+check_eq "introduce with Carol named Dave is read up to the names of its variables" \
+         "V = restriction([kept(establish), kept(acquaint), replaced_a(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 6)"
+check_eq "nudge, unguarded, strengthened is a step of (c), restricting under its invariant" \
+         "V = restriction_given_invariant([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), replaced_c(nudge)], [nudge])" "$(sf 7)"
+check_eq "a step of (a) in a contract whose unguarded poke has no atom naming both its roles: no simple unguarded classes shown" \
+         "V = not_shown([no_simple_unguarded(poke), no_simple_unguarded(poke)])" "$(sf 8)"
+check_eq "GSG is not shown to restrict its restriction: befriend requires less" \
+         "V = not_shown([body_not_stronger(befriend, [not_required(1, atom(knows, [role(1)]))])])" "$(sf 9)"
+vt() { echo "sas(t, ['Alice'], [k], [atom(coin, ['Alice', $1(k)])], [atom(identity, ['Alice'])], $2, ['Alice'])"; }
+out=$(run "stronger_body($(vt num 'gt(num(k), num(1))'), $(vt num 'gt(num(k), num(0))'), V)." "stronger_body($(vt num 'gt(num(k), num(0))'), $(vt num 'gt(num(k), num(1))'), V)." "stronger_body($(vt num 'gt(num(k), num(0))'), $(vt num 'ge(num(k), num(1))'), V)." "stronger_body($(vt real 'gt(real(k), num(0))'), $(vt real 'ge(real(k), num(1))'), V)." "stronger_body($(vt num 'and(gt(num(k), num(0)), le(num(k), num(9)))'), $(vt num 'le(num(k), num(9))'), V)." "stronger_body($BFS, $BF, V)." "stronger_body($INTRO_D, $INTRO, V).")
+check_eq "k > 1 implies k > 0: a stronger body" "V = stronger" "$(sf 1)"
+check_eq "k > 0 implies not k > 1" "V = not_stronger([constraint_not_implied(gt(num(k), num(1)))])" "$(sf 2)"
+check_eq "a whole k > 0 implies k >= 1" "V = stronger" "$(sf 3)"
+check_eq "a real k > 0 does not" "V = not_stronger([constraint_not_implied(ge(num(k), num(1)))])" "$(sf 4)"
+check_eq "a conjunct of the weaker constraint that is a conjunct of the stronger is implied" "V = stronger" "$(sf 5)"
+check_eq "befriend with an atom more in its body is stronger" "V = stronger" "$(sf 6)"
+check_eq "introduce with its variable renamed is the same schema" "V = stronger" "$(sf 7)"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
