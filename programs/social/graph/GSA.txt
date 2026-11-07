@@ -4,7 +4,7 @@
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK.  It cites GKK:1 to GKK:3 and GSG:1 to GSG:3 whole and restates none.
 % Defines: program and developer, defined in the box after the declaration, a contract being self-contained.  Person, knowing a person and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
 % Last changed: 2026-11-07, Offering and Installation two clauses, Installation in Udi's words, and the clause titles made informative (Udi, 2026-11-07); written by GSA #1 Cowork from the GSA paper (Sections 3 and 6), at Udi's word that what the super-app does by hand is specified as a contract where it can be; a draft for Udi's approval and GSC's checker.
-% Schemas: GSA.glp beside this file, GSG's five and eight over the predicates published, trusts, offered, installed and participant, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Schemas: GSA.glp beside this file, GSG's five and nine over the predicates published, trusts, offered, installed and participant, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSA: Grassroots Super-App and App Store
 GSA extends GSG (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Alice, Bob and Carol are persons.  A program is a grassroots contract with its speech-act schemas and pragmas, published under a name of its developer's, the person who publishes it, and compiled from them into the code its participants run.

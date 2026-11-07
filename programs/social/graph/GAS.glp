@@ -2,7 +2,7 @@
 %% GAS.glp --- the Grassroots App Store contract, GSA's, extending GSA, in the clause syntax of
 %% GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GAS.txt beside
 %% this file: open_store is GAS:1, Store; list GAS:2, Listing; trust_store and distrust_store GAS:3,
-%% Store Trust; install_listed GAS:4, Installation from a Store.  GSA's thirteen schemas come first.
+%% Store Trust; install_listed GAS:4, Installation from a Store.  GSA's fourteen schemas come first.
 %% A store is the name term <Carol>.s, Carol its owner; store(Carol, <Carol>.s) says that Carol set
 %% it up, listed(Carol, <Carol>.s, <Dave>.p) that she listed Dave's program in it, and
 %% trusts_store(Alice, <Carol>.s) that Alice trusts the store.  Written by GSA #1 Cowork,
