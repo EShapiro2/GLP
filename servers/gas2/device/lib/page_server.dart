@@ -65,7 +65,7 @@ class PageServer {
       if (since != null && since == host.version) {
         await host.nextChange().timeout(const Duration(seconds: 25), onTimeout: () {});
       }
-      await _json(r, {...host.state(), ...extra});
+      await _json(r, {...host.state(debug: r.uri.queryParameters.containsKey('debug')), ...extra});
       return true;
     }
     if (r.method == 'POST' && p == '/api/act') {

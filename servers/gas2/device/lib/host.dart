@@ -244,11 +244,13 @@ class SuperHost {
       await agent.initialize();
       // A person who was here before goes on where they left off: the agent's state
       // and what the page shows were saved together (_Store).
-      if (!store.loaded) await _inject(rt.StructTerm('gas2_device', [rt.ConstTerm(me)]));
+      if (!store.loaded) await _send(rt.StructTerm('gas2_device', [rt.ConstTerm(me)]));
       status = 'ready';
+      _up.complete();
     } catch (e, st) {
       status = 'failed: $e';
       stderr.writeln('$e\n$st');
+      if (!_up.isCompleted) _up.completeError(e);
     }
     _changed();
   }
@@ -321,7 +323,23 @@ class SuperHost {
 
   // --- The person's acts ------------------------------------------------------------
 
-  Future<void> _inject(rt.Term t) {
+  /// The person's acts wait until the super-app is up (start): one injected before
+  /// its agent is initialised would be lost.
+  final Completer<void> _up = Completer<void>();
+  final List<DateTime> _pending = [];
+
+  Future<void> _inject(rt.Term t) async {
+    final at = DateTime.now();
+    _pending.add(at);
+    try {
+      await _up.future;
+      await _send(t);
+    } finally {
+      _pending.remove(at);
+    }
+  }
+
+  Future<void> _send(rt.Term t) {
     final f = _queue.then((_) => agent.injectUserInput(t));
     _queue = f.catchError((_) {});
     return f;
@@ -405,7 +423,7 @@ class SuperHost {
 
   // --- For the page -------------------------------------------------------------------
 
-  Map<String, Object?> state() => {
+  Map<String, Object?> state({bool debug = false}) => {
         'version': version,
         'status': status,
         'me': me,
@@ -417,7 +435,10 @@ class SuperHost {
           for (final e in nearby.entries) {'key': e.key, 'over': e.value.toList()}
         ],
         'notes': notes.reversed.take(30).toList(),
-        if (Platform.environment['GAS2_DEBUG'] != null) 'log': log.reversed.take(60).toList(),
+        if (debug || Platform.environment['GAS2_DEBUG'] != null) ...{
+          'log': log.reversed.take(80).toList(),
+          'pending': [for (final d in _pending) DateTime.now().difference(d).inSeconds],
+        },
         'apps': [
           for (final m in apps)
             {
@@ -433,7 +454,18 @@ class SuperHost {
       };
 
   /// One act of the page: {"op": ..., ...}.
+  /// One of the page's acts; what goes wrong is told the person (Lately).
   Future<void> act(Map j) async {
+    try {
+      await _act(j);
+    } catch (e) {
+      _note('${j['op']} did not go through: $e');
+      _changed();
+      rethrow;
+    }
+  }
+
+  Future<void> _act(Map j) async {
     switch (j['op']) {
       case 'trust':
         return trustMyCompiler();

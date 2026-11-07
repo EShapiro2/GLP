@@ -56,6 +56,8 @@ const nm = k => k === S?.me ? 'you' : (names[k] || short(k));
 // On the web (bin/web.dart) a person is a token this browser keeps; on a device the
 // page is the device's own and there is none.
 let token = null;
+// ?debug: the agent's log and the acts waiting, at the bottom of the page
+const DEBUG = new URLSearchParams(location.search).has('debug');
 try { token = localStorage.getItem('gas2token'); } catch (e) {}
 async function api(path, opts = {}) {
   for (let i = 0; i < 2; i++) {
@@ -74,7 +76,7 @@ async function poll() {
   let v = -1;
   for (;;) {
     try {
-      const r = await api('api/state' + (v >= 0 ? '?since=' + v : ''));
+      const r = await api('api/state' + (v >= 0 ? '?since=' + v : '?') + (DEBUG ? '&debug' : ''));
       S = await r.json(); v = S.version; draw();
       if (toAdd && S.status === 'ready') { const l = toAdd; toAdd = null; history.replaceState(null, '', location.pathname); addMade(l); }
     } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
@@ -176,6 +178,7 @@ function render() {
   h += `<div class="small muted" style="margin-top:8px">A mini-app from GAS2's app maker: its link</div>
     <div class="row"><input id="madelink" class="grow" placeholder="https://talmonlab.bgu.ac.il/gas2/maker.html?k=…"><button class="b alt" onclick="addMade()">Add</button></div>`;
   h += `</div>`;
+  if (DEBUG) h += `<h2>Debug</h2><div class="card"><div class="small">status: ${esc(S.status)}; acts waiting: ${esc(JSON.stringify(S.pending || []))} s; version ${S.version}</div><pre class="small" style="white-space:pre-wrap;max-height:400px;overflow:auto">${esc((S.log || []).join('\n'))}</pre></div>`;
   if (S.notes.length) h += `<h2>Lately</h2><div class="card">${S.notes.slice(0, 8).map(n => `<div class="note">${esc(n.replace(/[0-9a-f]{64}/g, nm))}</div>`).join('')}</div>`;
   $('#main').innerHTML = h;
 }
