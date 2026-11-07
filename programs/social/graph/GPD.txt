@@ -14,7 +14,7 @@ Alice, Bob and Carol are persons.  A program is an item: compiled code, signed b
 4. ■ Program Installation.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
 5. ■ Program Invitation.  Alice may invite her friend Bob to join her in a program she installed, with Bob's consent, Bob trusting its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 6. ■ Leaving a Program.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
-Pragmas
+Interface pragmas
 Programs: the programs Alice installed.
 Developers: the developers Alice trusts.
 Offers: the programs offered to Alice.

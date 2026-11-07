@@ -12,7 +12,7 @@ Alice, Bob and Carol are persons.  A store is a list of programs its owner keeps
 2. ○ Listing.  Carol may list in her store a program developed by Bob, after adding her signature to its signatures, as long as she trusts Bob as a developer.
 3. ■ Store Trust.  Alice may trust Carol's store, Carol being known to her, and may withdraw her trust.
 4. ■ Installation from a Store.  Alice may install a program listed in a store she trusts.
-Pragmas
+Interface pragmas
 Stores: the stores Alice trusts.
 Listings: the programs listed in Alice's store.
 Store: Carol [Open store] <name>
