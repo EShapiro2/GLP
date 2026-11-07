@@ -2,9 +2,9 @@
 %% GSA.glp --- the Grassroots Super-App and App Store contract, GSA's, extending GSG, in the clause
 %% syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in
 %% GSA.txt beside this file: publish is GSA:1, Program Publication; trust and distrust GSA:2, Developer
-%% Trust; offer, install and install_own GSA:3, Program Offering and Installation; invite_new and
-%% invite_installed GSA:4, Program Invitation, one clause in two schemas, by whether Bob has the
-%% program installed; leave GSA:5, Leaving a Program.  GKK's
+%% Trust; offer GSA:3, Program Offering; install_own and install GSA:4, Program Installation;
+%% invite_new and invite_installed GSA:5, Program Invitation, one clause in two schemas, by whether
+%% Bob has the program installed; leave GSA:6, Leaving a Program.  GKK's
 %% three schemas and GSG's two come first; every role requires identity.  A program is the name
 %% term <Carol>.p, Carol its developer; published(Carol, <Carol>.p) says that Carol published it,
 %% trusts(Alice, Carol) that Alice trusts Carol as a developer, offered(Alice, <Carol>.p) that it
@@ -74,16 +74,16 @@ contract_named(gsa,
        [atom(identity, ['Carol']), atom(published, ['Carol', ext(own('Carol'), p)]), atom(knows, ['Carol', 'Alice']),
         atom(identity, ['Alice']), not(atom(offered, ['Alice', ext(own('Carol'), p)]))],
        true, ['Carol']),
+    sas(install_own, ['Alice'], [p],
+       [atom(installed, ['Alice', ext(own('Alice'), p)])],
+       [atom(identity, ['Alice']), atom(published, ['Alice', ext(own('Alice'), p)]),
+        not(atom(installed, ['Alice', ext(own('Alice'), p)]))],
+       true, ['Alice']),
     sas(install, ['Alice', 'Carol'], ['Carol', p],
        [atom(installed, ['Alice', ext(own('Carol'), p)])],
        [atom(identity, ['Alice']), atom(offered, ['Alice', ext(own('Carol'), p)]), atom(trusts, ['Alice', 'Carol']),
         not(atom(installed, ['Alice', ext(own('Carol'), p)]))],
        true, ['Alice']),
-    sas(install_own, ['Carol'], [p],
-       [atom(installed, ['Carol', ext(own('Carol'), p)])],
-       [atom(identity, ['Carol']), atom(published, ['Carol', ext(own('Carol'), p)]),
-        not(atom(installed, ['Carol', ext(own('Carol'), p)]))],
-       true, ['Carol']),
     sas(invite_new, ['Alice', 'Bob', 'Carol'], ['Carol', p],
        [atom(participant, ['Alice', ext(own('Carol'), p), 'Bob']),
         atom(participant, ['Bob', ext(own('Carol'), p), 'Alice']), atom(installed, ['Bob', ext(own('Carol'), p)])],

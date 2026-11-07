@@ -3,25 +3,25 @@
 % Paper: GSA, The Grassroots Super-App and App Store, in preparation
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK.  It cites GKK:1 to GKK:3 and GSG:1 to GSG:3 whole and restates none.
 % Defines: program and developer, defined in the box after the declaration, a contract being self-contained.  Person, knowing a person and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
-% Last changed: 2026-11-07, the clause titles made informative (Udi, 2026-11-07); written by GSA #1 Cowork from the GSA paper (Sections 3 and 6), at Udi's word that what the super-app does by hand is specified as a contract where it can be; a draft for Udi's approval and GSC's checker.
+% Last changed: 2026-11-07, Offering and Installation two clauses, Installation in Udi's words, and the clause titles made informative (Udi, 2026-11-07); written by GSA #1 Cowork from the GSA paper (Sections 3 and 6), at Udi's word that what the super-app does by hand is specified as a contract where it can be; a draft for Udi's approval and GSC's checker.
 % Schemas: GSA.glp beside this file, GSG's five and eight over the predicates published, trusts, offered, installed and participant, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GSA: Grassroots Super-App and App Store
 GSA extends GSG (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Alice, Bob and Carol are persons.  A program is a grassroots contract with its speech-act schemas and pragmas, published under a name of its developer's, the person who publishes it, and compiled from them into the code its participants run.
 1. ◆ Program Publication.  Carol may publish a program under a name of her own, certifying that its schemas say what its clauses say.
 2. ■ Developer Trust.  Alice may trust Carol, whom she knows, as a developer, and may withdraw her trust.
-3. ■ Program Offering and Installation.  Carol may offer a program she published to Alice, whom she knows; Alice may install a program offered to her by a developer she trusts; Carol may install a program she published.
-4. ■ Program Invitation.  Alice may invite her friend Bob to join her in a program she installed, with Bob's consent, Bob trusting its developer; Bob then has the program installed, and each is a participant of the program with the other.
-5. ■ Leaving a Program.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
+3. ■ Program Offering.  Carol may offer a program she published to Alice, whom she knows.
+4. ■ Program Installation.  Alice may install a program she published, as well as a program offered to her by a developer she trusts.
+5. ■ Program Invitation.  Alice may invite her friend Bob to join her in a program she installed, with Bob's consent, Bob trusting its developer; Bob then has the program installed, and each is a participant of the program with the other.
+6. ■ Leaving a Program.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
 Pragmas
 Programs: the programs Alice installed.
 Developers: the developers Alice trusts.
 Offers: the programs offered to Alice.
 Program Publication: Carol [Publish] <program>
 Developer Trust: Alice [Trust] [Distrust]
-Program Offering and Installation: Carol [Offer]
-  Alice [Install]
-  Carol [Install own]
+Program Offering: Carol [Offer]
+Program Installation: Alice [Install own] [Install]
 Program Invitation: Alice [Invite]
   Bob: Alice invites you to join her in a program.
 Leaving a Program: Alice [Leave]
