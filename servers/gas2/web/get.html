@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GAS2 · get the app</title>
+<link rel="stylesheet" href="gas2.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2334c759'/%3E%3Ctext x='16' y='22' font-size='15' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3EG2%3C/text%3E%3C/svg%3E">
+<style>
+.dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.dl a { display: block; background: var(--card); border-radius: 14px; padding: 14px 16px; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.dl a:hover { text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+.dl b { font-size: 16px; }
+.dl span { display: block; font-size: 13px; color: var(--soft); margin-top: 2px; }
+ol.steps2 li { margin: 6px 0; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">GAS2</a>
+  <nav><a href="./">Contracts</a><a href="get.html" class="on">Get the app</a><a href="how.html">How it works</a></nav>
+</header>
+<main class="prose">
+  <h1>GAS2 on your device</h1>
+  <p>Your own Grassroots Super-App. Its mini-apps are the contracts on this site that the cascade takes all the way down, and your device certifies each one under your own key. You meet people by their keys, and the two of you then use a mini-app together.</p>
+  <p class="small muted" id="rel">The apps are built from the GAS2 branch by GitHub's machines.</p>
+
+  <div class="dl">
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2.apk"><b>Android</b><span>GAS2.apk: allow installing from your browser, then open it</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-windows.zip"><b>Windows</b><span>Unzip, then run gas_phone.exe in the GAS2 folder</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-macos.zip"><b>Mac</b><span>Unzip; the first time, right-click GAS2 and choose Open</span></a>
+    <a href="https://github.com/nimrodtalmon/GLP/releases/download/gas2-latest/GAS2-linux.tar.gz"><b>Linux</b><span>Unpack, run ./run.sh, and open the address it prints</span></a>
+  </div>
+  <p class="small muted">There is no iPhone app yet.</p>
+
+  <h2>A first test, with two devices</h2>
+  <ol class="steps2">
+    <li>Open GAS2 on both devices and tap <b>Trust</b>, so that each trusts its own compiler.</li>
+    <li>On both, install the same mini-app, for example <b>GKK</b>, Grassroots Keys and Knowledge.</li>
+    <li>One of you copies their key and sends it to the other, who pastes it under People and taps <b>Add</b>. The first is asked whether to be friends and taps <b>Yes</b>.</li>
+    <li>Both open the mini-app. One taps <b>Invite</b> next to the other, and the other taps <b>Accept theirs</b>. After a moment the mini-app shows its state on both.</li>
+    <li>Each taps <b>Establish</b> to establish an identity. Then one taps <b>Acquaint</b> and picks the other, who is asked and taps <b>Yes</b>. Now each lists the other under Contacts.</li>
+  </ol>
+  <p>Messages between the two devices go through talmonlab's relay, encrypted end to end between your two keys. The relay sees who writes to whom and when, and nothing else. Your key pair stays on your device.</p>
+</main>
+<script>
+fetch('https://api.github.com/repos/nimrodtalmon/GLP/releases/tags/gas2-latest').then(r => r.ok ? r.json() : null).then(j => {
+  if (!j) return;
+  const names = (j.assets || []).map(a => a.name);
+  document.getElementById('rel').textContent = (j.body || '') + (names.length ? ' Files: ' + names.join(', ') + '.' : '');
+}).catch(() => {});
+</script>
+</body>
+</html>

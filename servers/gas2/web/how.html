@@ -10,7 +10,7 @@
 <body>
 <header class="top">
   <a class="brand" href="./">GAS2</a>
-  <nav><a href="./">Contracts</a><a href="how.html" class="on">How it works</a></nav>
+  <nav><a href="./">Contracts</a><a href="get.html">Get the app</a><a href="how.html" class="on">How it works</a></nav>
 </header>
 <main class="prose">
   <h1>How GAS2 works</h1>
@@ -50,7 +50,12 @@
     <tr><td>Activation and joining</td><td>Signed undertakings and the handshake on source identity and type identity, then activation with the grants.</td></tr>
     <tr><td>Recovery through custodian friends, introductions to non-friends, resource bounds on mini-apps</td><td>Present in the super-app's program, not exercised by these runs.</td></tr>
   </table>
-  <p>Both smartphones read the mini-app's artefact from the server's disk, so the friend-to-friend shipping of the program itself is not part of the run. The creator's certification is signed in the run by the phone that installs the mini-app. The smartphones are isolates in one process on GAS2's server; the same program on real devices, over GLP's networking layer, is the next step.</p>
+  <p>Both smartphones read the mini-app's artefact from the server's disk, so the friend-to-friend shipping of the program itself is not part of the run. The creator's certification is signed in the run by the phone that installs the mini-app. The smartphones of these runs are isolates in one process on GAS2's server. The same super-app runs for a real person in GAS2's app, below.</p>
+
+  <h2>On a device</h2>
+  <p>GAS2's app (<a href="get.html">get it here</a>) runs the same super-app, <code>programs/social/graph/core</code>, for a real person, with GAS2's device harness in place of the super-app's own entry <code>superapp/3</code>. The two differ in one thing: a mini-app the person installs is shown to the person.</p>
+  <p>In GLP the super-app holds a mini-app's person channel at the type <code>Opaque</code> and can only pass it on, so nothing outside the mini-app can write the person's input into it. So each of GAS2's mini-apps carries a live person of its own. The super-app runs it at the mini-app's own types, as the plays run their scripted persons. It shows the person every draw the mini-app makes, and reads the person's answers back from strings the device writes.</p>
+  <p>Each device certifies its mini-apps under the person's own key, so the person trusts their own compiler. Friendship, the invitation, the undertakings and the handshake are the super-app's, as in the runs above. Messages between devices go through talmonlab's relay, encrypted end to end; Bluetooth and the local network are not used yet.</p>
 
   <h2>How the relations are found</h2>
   <p>GSC defines five relations between contracts. Three are about schemas: <b>amends</b> deletes and adds schemas, <b>extends</b> amends while deleting nothing, and <b>instantiates</b> fills in a parametric contract's parameters. Two are about runs: <b>implements</b>, and <b>restricts</b>, which allows only runs of the base. Each contract's text names what it builds on. Where the text also says how, for example "GD-S restricts GD", the map shows that.</p>
