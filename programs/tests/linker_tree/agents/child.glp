@@ -93,7 +93,6 @@ Event(Q, T) ::= Ask(Q) ; Input(T) ; Draw(T).
 Events(Q, T) ::= [Event(Q, T) | Events(Q, T)].
 Turn ::= ask ; grant ; draw.
 Questioned(S) ::= S ; input(Path).
-Pending(S) ::= S ; pending(Path).
 
 procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?, Channel(Stream(Input(T)), Stream(Draw(T))), Stream(Spawn(Q, T))).
 dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :- split_grants(PIn?, Inputs, MIn), fair(ask, Asks?, Inputs?, COut?, Es), serve(Es?, COut, POut, [], [], 1, Ss).
@@ -148,35 +147,6 @@ procedure path(Path?, Integer?, Path).
 path([I | P], J, [I? | Q?]) :- path(P?, J?, Q).
 path([], J, [J?]).
 
-procedure(S) shown(Path?, S?, Stream(Pending(S))).
-shown(_, X, [X?]) :- ground(X?) | true.
-shown(P, X, [pending(P?) | Vs?]) :- shown_whole(X?, Vs).
-
-procedure(S) shown_whole(S?, Stream(Pending(S))).
-shown_whole(X, [X?]) :- ground(X?) | true.
-
-procedure(S) thread(Path?, Stream(S)?, Stream(List(Pending(S)))).
-thread(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
-thread(_, [], [[]]).
-thread(P, Xs, [[] | Vs?]) :- thread_tail(P?, Xs?, Vs).
-
-procedure(S) thread_tail(Path?, Stream(S)?, Stream(List(Pending(S)))).
-thread_tail(P, [X | Xs], Vs?) :- thread_cell(P?, X?, Xs?, Vs).
-thread_tail(_, [], []).
-
-procedure(S) thread_cell(Path?, S?, Stream(S)?, Stream(List(Pending(S)))).
-thread_cell(P, X, Xs, Vs?) :- ground(P?) | path(P?, 1, P1), path(P?, 2, P2), shown(P1?, X?, V1), thread(P2?, Xs?, V2), cons_views(V1?, V2?, Vs).
-
-procedure(V) cons_views(Stream(V)?, Stream(List(V))?, Stream(List(V))).
-cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
-cons_views([], _, []).
-cons_views(_, [], []).
-
-procedure(V) cons_more(V?, List(V)?, Stream(V)?, Stream(List(V))?, Stream(List(V))).
-cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
-cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- ground(E?), ground(T?) | cons_more(E?, T?, Es?, Ts?, Vs).
-cons_more(_, _, [], [], []).
-
 procedure(T) form_string(T?, Formed(String)).
 form_string(R, F?) :- string(R?) | F = formed(R?).
 form_string(_, refused) :- otherwise | true.
@@ -197,11 +167,11 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs?, _, Vs, Done), run_card_w(Id?, form(card, [field('Intro', form(intro, [field('Parent', shown), field('Child', shown), field('OtherChild', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
-construct(Id, groupCard_w(X), Gs, Ds?) :- present_groupCard([], X?, Gs?, _, Vs, Done), run_groupCard_w(Id?, form(card, [field('GroupOffer', form(group, [field('GroupId', form(group_id, [field('Leader', shown), field('Name', shown)]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
-construct(Id, joinCard_w(X), Gs, Ds?) :- present_joinCard([], X?, Gs?, _, Vs, Done), run_joinCard_w(Id?, form(card, [field('JoinOffer', form(join, [field('GroupId', form(group_id, [field('Leader', shown), field('Name', shown)])), field('Child', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
-construct(Id, inviteCard_w(X), Gs, Ds?) :- present_inviteCard([], X?, Gs?, _, Vs, Done), run_inviteCard_w(Id?, form(card, [field('InviteOffer', form(invite, [field('GroupId', form(group_id, [field('Leader', shown), field('Name', shown)])), field('Member', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Ds).
-construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs?, _, Done), run_stream_request_r(Id?, input_box(menu([form(introduce, [field('MyChild', peer), field('Friend', peer), field('FriendsChild', peer)]), form(declare_of_age, [field('MyChild', peer)]), form(sign, [field('Text', text)]), form(forward, [field('Friend', peer), field('Item', rec('Item', form(sgn, [field('Content', rec('Content', menu([text, form(sgn, [field('Content', ref('Content')), field('Key', peer)])]))), field('Key', peer)])))]), form(unfriend, [field('Friend', peer)]), form(unfriend_child, [field('MyChild', peer), field('Friend', peer)]), form(create_group, [field('Name', text)]), form(invite, [field('Name', text), field('Friend', peer)]), form(invite_child, [field('Name', text), field('FriendsChild', peer), field('Friend', peer)]), form(post, [field('GroupId', form(group_id, [field('Leader', peer), field('Name', text)])), field('Item', rec('Item', form(sgn, [field('Content', rec('Content', menu([text, form(sgn, [field('Content', ref('Content')), field('Key', peer)])]))), field('Key', peer)])))]), form(leave, [field('GroupId', form(group_id, [field('Leader', peer), field('Name', text)]))]), form(leave_child, [field('MyChild', peer), field('GroupId', form(group_id, [field('Leader', peer), field('Name', text)]))])])), [input([])], Done?, Ds).
+construct(Id, card_w(X), Gs, Ds?) :- present_card([], X?, Gs1?, _, Vs, Done), run_card_w(Id?, form(card, [field('Intro', form(intro, [field('Parent', shown), field('Child', shown), field('OtherChild', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, groupCard_w(X), Gs, Ds?) :- present_groupCard([], X?, Gs1?, _, Vs, Done), run_groupCard_w(Id?, form(card, [field('GroupOffer', form(group, [field('GroupId', form(group_id, [field('Leader', shown), field('Name', shown)]))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, joinCard_w(X), Gs, Ds?) :- present_joinCard([], X?, Gs1?, _, Vs, Done), run_joinCard_w(Id?, form(card, [field('JoinOffer', form(join, [field('GroupId', form(group_id, [field('Leader', shown), field('Name', shown)])), field('Child', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, inviteCard_w(X), Gs, Ds?) :- present_inviteCard([], X?, Gs1?, _, Vs, Done), run_inviteCard_w(Id?, form(card, [field('InviteOffer', form(invite, [field('GroupId', form(group_id, [field('Leader', shown), field('Name', shown)])), field('Member', shown)])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(introduce, [field('MyChild', peer), field('Friend', peer), field('FriendsChild', peer)]), form(declare_of_age, [field('MyChild', peer)]), form(sign, [field('Text', text)]), form(forward, [field('Friend', peer), field('Item', rec('Item', form(sgn, [field('Content', rec('Content', menu([text, form(sgn, [field('Content', ref('Content')), field('Key', peer)])]))), field('Key', peer)])))]), form(unfriend, [field('Friend', peer)]), form(unfriend_child, [field('MyChild', peer), field('Friend', peer)]), form(create_group, [field('Name', text)]), form(invite, [field('Name', text), field('Friend', peer)]), form(invite_child, [field('Name', text), field('FriendsChild', peer), field('Friend', peer)]), form(post, [field('GroupId', form(group_id, [field('Leader', peer), field('Name', text)])), field('Item', rec('Item', form(sgn, [field('Content', rec('Content', menu([text, form(sgn, [field('Content', ref('Content')), field('Key', peer)])]))), field('Key', peer)])))]), form(leave, [field('GroupId', form(group_id, [field('Leader', peer), field('Name', text)]))]), form(leave_child, [field('MyChild', peer), field('GroupId', form(group_id, [field('Leader', peer), field('Name', text)]))])])), [input([])], Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget?, Stream(Output)?, Stream(Draw(Drawn))).
 output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
@@ -230,97 +200,57 @@ procedure take_yesNo(Formed(YesNo)?, Path?, YesNo, Input(Drawn)?, Inputs(Drawn)?
 take_yesNo(formed(V), _, V?, _, Gs, Gs?, done).
 take_yesNo(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_yesNo(P?, X, Gs?, Gs1, Done).
 
-View_card ::= card(Pending(Intro), Questioned(YesNo)) ; pending(Path).
-procedure start_card_card_2(Stream(Pending(Intro))?, Stream(Questioned(YesNo))?, Stream(View_card)).
-start_card_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_card_card_2(V1?, V2?, S1?, S2?, Vs).
-start_card_card_2([], _, []).
-start_card_card_2(_, [], []).
-
-procedure comb_card_card_2(Pending(Intro)?, Questioned(YesNo)?, Stream(Pending(Intro))?, Stream(Questioned(YesNo))?, Stream(View_card)).
-comb_card_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_card_card_2(V1?, V2?, S1?, S2?, Vs).
-comb_card_card_2(_, _, [], [], []).
-
+View_card ::= card(Intro, Questioned(YesNo)).
 procedure present_card(Path?, Card?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_card), Done).
-present_card(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_card_card_2(V1?, [input(M2?)], Vs).
-present_card(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).
+present_card(P, card(H1, H2?), Gs, Gs1?, [card(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2).
 
-procedure present_card_wait(Path?, Card?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_card), Done).
-present_card_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_card(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
-present_card_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_card_wait(P?, X?, Gs?, Gs1, Vs, Done).
+procedure run_card_w(Integer?, Widget?, Stream(View_card)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+run_card_w(Id, W, [V | Vs], Done, Gs, Gs?, [draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_card_w_more(Id?, W?, Vs?, Done?, Ds).
+run_card_w(Id, _, [], Done, Gs, Gs?, Ds?) :- run_end(Id?, Done?, Ds).
 
-procedure run_card_w(Integer?, Widget?, Stream(View_card)?, Done?, Stream(Draw(Drawn))).
-run_card_w(Id, _, _, done, [withdraw(Id?)]).
-run_card_w(Id, W, [V | Vs], Done, [draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_card_w(Id?, W?, Vs?, Done?, Ds).
-run_card_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+procedure run_card_w_more(Integer?, Widget?, Stream(View_card)?, Done?, Stream(Draw(Drawn))).
+run_card_w_more(Id, _, _, done, [withdraw(Id?)]).
+run_card_w_more(Id, W, [V | Vs], Done, [draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_card_w_more(Id?, W?, Vs?, Done?, Ds).
+run_card_w_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
-View_groupCard ::= card(Pending(GroupOffer), Questioned(YesNo)) ; pending(Path).
-procedure start_groupCard_card_2(Stream(Pending(GroupOffer))?, Stream(Questioned(YesNo))?, Stream(View_groupCard)).
-start_groupCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_groupCard_card_2(V1?, V2?, S1?, S2?, Vs).
-start_groupCard_card_2([], _, []).
-start_groupCard_card_2(_, [], []).
-
-procedure comb_groupCard_card_2(Pending(GroupOffer)?, Questioned(YesNo)?, Stream(Pending(GroupOffer))?, Stream(Questioned(YesNo))?, Stream(View_groupCard)).
-comb_groupCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_groupCard_card_2(V1?, V2?, S1?, S2?, Vs).
-comb_groupCard_card_2(_, _, [], [], []).
-
+View_groupCard ::= card(GroupOffer, Questioned(YesNo)).
 procedure present_groupCard(Path?, GroupCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_groupCard), Done).
-present_groupCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_groupCard_card_2(V1?, [input(M2?)], Vs).
-present_groupCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_groupCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+present_groupCard(P, card(H1, H2?), Gs, Gs1?, [card(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2).
 
-procedure present_groupCard_wait(Path?, GroupCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_groupCard), Done).
-present_groupCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_groupCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
-present_groupCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_groupCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+procedure run_groupCard_w(Integer?, Widget?, Stream(View_groupCard)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+run_groupCard_w(Id, W, [V | Vs], Done, Gs, Gs?, [draw(Id?, W?, groupCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_groupCard_w_more(Id?, W?, Vs?, Done?, Ds).
+run_groupCard_w(Id, _, [], Done, Gs, Gs?, Ds?) :- run_end(Id?, Done?, Ds).
 
-procedure run_groupCard_w(Integer?, Widget?, Stream(View_groupCard)?, Done?, Stream(Draw(Drawn))).
-run_groupCard_w(Id, _, _, done, [withdraw(Id?)]).
-run_groupCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, groupCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_groupCard_w(Id?, W?, Vs?, Done?, Ds).
-run_groupCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+procedure run_groupCard_w_more(Integer?, Widget?, Stream(View_groupCard)?, Done?, Stream(Draw(Drawn))).
+run_groupCard_w_more(Id, _, _, done, [withdraw(Id?)]).
+run_groupCard_w_more(Id, W, [V | Vs], Done, [draw(Id?, W?, groupCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_groupCard_w_more(Id?, W?, Vs?, Done?, Ds).
+run_groupCard_w_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
-View_joinCard ::= card(Pending(JoinOffer), Questioned(YesNo)) ; pending(Path).
-procedure start_joinCard_card_2(Stream(Pending(JoinOffer))?, Stream(Questioned(YesNo))?, Stream(View_joinCard)).
-start_joinCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_joinCard_card_2(V1?, V2?, S1?, S2?, Vs).
-start_joinCard_card_2([], _, []).
-start_joinCard_card_2(_, [], []).
-
-procedure comb_joinCard_card_2(Pending(JoinOffer)?, Questioned(YesNo)?, Stream(Pending(JoinOffer))?, Stream(Questioned(YesNo))?, Stream(View_joinCard)).
-comb_joinCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_joinCard_card_2(V1?, V2?, S1?, S2?, Vs).
-comb_joinCard_card_2(_, _, [], [], []).
-
+View_joinCard ::= card(JoinOffer, Questioned(YesNo)).
 procedure present_joinCard(Path?, JoinCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_joinCard), Done).
-present_joinCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_joinCard_card_2(V1?, [input(M2?)], Vs).
-present_joinCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_joinCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+present_joinCard(P, card(H1, H2?), Gs, Gs1?, [card(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2).
 
-procedure present_joinCard_wait(Path?, JoinCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_joinCard), Done).
-present_joinCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_joinCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
-present_joinCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_joinCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+procedure run_joinCard_w(Integer?, Widget?, Stream(View_joinCard)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+run_joinCard_w(Id, W, [V | Vs], Done, Gs, Gs?, [draw(Id?, W?, joinCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_joinCard_w_more(Id?, W?, Vs?, Done?, Ds).
+run_joinCard_w(Id, _, [], Done, Gs, Gs?, Ds?) :- run_end(Id?, Done?, Ds).
 
-procedure run_joinCard_w(Integer?, Widget?, Stream(View_joinCard)?, Done?, Stream(Draw(Drawn))).
-run_joinCard_w(Id, _, _, done, [withdraw(Id?)]).
-run_joinCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, joinCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_joinCard_w(Id?, W?, Vs?, Done?, Ds).
-run_joinCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+procedure run_joinCard_w_more(Integer?, Widget?, Stream(View_joinCard)?, Done?, Stream(Draw(Drawn))).
+run_joinCard_w_more(Id, _, _, done, [withdraw(Id?)]).
+run_joinCard_w_more(Id, W, [V | Vs], Done, [draw(Id?, W?, joinCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_joinCard_w_more(Id?, W?, Vs?, Done?, Ds).
+run_joinCard_w_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
-View_inviteCard ::= card(Pending(InviteOffer), Questioned(YesNo)) ; pending(Path).
-procedure start_inviteCard_card_2(Stream(Pending(InviteOffer))?, Stream(Questioned(YesNo))?, Stream(View_inviteCard)).
-start_inviteCard_card_2([V1 | S1], [V2 | S2], [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_inviteCard_card_2(V1?, V2?, S1?, S2?, Vs).
-start_inviteCard_card_2([], _, []).
-start_inviteCard_card_2(_, [], []).
-
-procedure comb_inviteCard_card_2(Pending(InviteOffer)?, Questioned(YesNo)?, Stream(Pending(InviteOffer))?, Stream(Questioned(YesNo))?, Stream(View_inviteCard)).
-comb_inviteCard_card_2(_, V2, [V1 | S1], S2, [card(V1?, V2?) | Vs?]) :- ground(V1?), ground(V2?) | comb_inviteCard_card_2(V1?, V2?, S1?, S2?, Vs).
-comb_inviteCard_card_2(_, _, [], [], []).
-
+View_inviteCard ::= card(InviteOffer, Questioned(YesNo)).
 procedure present_inviteCard(Path?, InviteCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_inviteCard), Done).
-present_inviteCard(P, card(H1, H2?), Gs, Gs1?, Vs?, D2?) :- ground(P?) | path(P?, 1, Q1), shown(Q1?, H1?, V1), path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2), start_inviteCard_card_2(V1?, [input(M2?)], Vs).
-present_inviteCard(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- ground(P?) | present_inviteCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+present_inviteCard(P, card(H1, H2?), Gs, Gs1?, [card(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2).
 
-procedure present_inviteCard_wait(Path?, InviteCard?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_inviteCard), Done).
-present_inviteCard_wait(P, card(H1, H2?), Gs, Gs1?, Vs?, Done?) :- present_inviteCard(P?, card(H1?, H2), Gs?, Gs1, Vs, Done).
-present_inviteCard_wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- present_inviteCard_wait(P?, X?, Gs?, Gs1, Vs, Done).
+procedure run_inviteCard_w(Integer?, Widget?, Stream(View_inviteCard)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+run_inviteCard_w(Id, W, [V | Vs], Done, Gs, Gs?, [draw(Id?, W?, inviteCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_inviteCard_w_more(Id?, W?, Vs?, Done?, Ds).
+run_inviteCard_w(Id, _, [], Done, Gs, Gs?, Ds?) :- run_end(Id?, Done?, Ds).
 
-procedure run_inviteCard_w(Integer?, Widget?, Stream(View_inviteCard)?, Done?, Stream(Draw(Drawn))).
-run_inviteCard_w(Id, _, _, done, [withdraw(Id?)]).
-run_inviteCard_w(Id, W, [V | Vs], Done, [draw(Id?, W?, inviteCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_inviteCard_w(Id?, W?, Vs?, Done?, Ds).
-run_inviteCard_w(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+procedure run_inviteCard_w_more(Integer?, Widget?, Stream(View_inviteCard)?, Done?, Stream(Draw(Drawn))).
+run_inviteCard_w_more(Id, _, _, done, [withdraw(Id?)]).
+run_inviteCard_w_more(Id, W, [V | Vs], Done, [draw(Id?, W?, inviteCard_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_inviteCard_w_more(Id?, W?, Vs?, Done?, Ds).
+run_inviteCard_w_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
 procedure join_request_introduce_3(Formed(MyChild)?, Formed(Friend)?, Formed(FriendsChild)?, Formed(Request)).
 join_request_introduce_3(formed(X1), formed(X2), formed(X3), formed(introduce(X1?, X2?, X3?))).
@@ -431,8 +361,12 @@ take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stre
 take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
 
 View_stream_request_r ::= Stream(Request) ; input(Path).
-procedure run_stream_request_r(Integer?, Widget?, Stream(View_stream_request_r)?, Done?, Stream(Draw(Drawn))).
-run_stream_request_r(Id, _, _, done, [withdraw(Id?)]).
-run_stream_request_r(Id, W, [V | Vs], Done, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r(Id?, W?, Vs?, Done?, Ds).
-run_stream_request_r(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+procedure run_stream_request_r(Integer?, Widget?, Stream(View_stream_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+run_stream_request_r(Id, W, [V | Vs], Done, Gs, Gs?, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r_more(Id?, W?, Vs?, Done?, Ds).
+run_stream_request_r(Id, _, [], Done, Gs, Gs?, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure run_stream_request_r_more(Integer?, Widget?, Stream(View_stream_request_r)?, Done?, Stream(Draw(Drawn))).
+run_stream_request_r_more(Id, _, _, done, [withdraw(Id?)]).
+run_stream_request_r_more(Id, W, [V | Vs], Done, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r_more(Id?, W?, Vs?, Done?, Ds).
+run_stream_request_r_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
