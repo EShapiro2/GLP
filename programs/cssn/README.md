@@ -26,7 +26,7 @@ The platform carries the two widget declarations the compiler prints, `Approval 
 | `person.glp` | the scripted person, by role, with the keys the person knows, by which its script names its peers: the village's seven, and `fig_alice` to `fig_dave` of the app's scenario; `village_person/6`, a parent looking also at their children's phones |
 | `plays.glp` | `play_village/7`, the village of Section 4.6.3, with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
-| `CSSN_sglp.glp` | the profiles of CSSN's simulation, sGLP's term form |
+| `../sglp/cssn/` | CSSN's simulation under sGLP, CSSN's files under `programs/sglp`, where a simulation of another project's platform lives (sGLP #11, Code_inbox 2026-11-07 21:21 UTC, Udi approving): `CSSN_sglp.glp`, the profiles in sGLP's term form, and `sim/`, the measures of a run's log and the figure of its edges |
 | `figures/` | the screens of Figure 3, the band of Figure 2, `village.py`, and their README |
 
 ## Running it

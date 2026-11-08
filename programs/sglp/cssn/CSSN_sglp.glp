@@ -2,15 +2,18 @@
 %% CSSN_sglp.glp --- CSSN's sGLP source: the simulation of the child-safe social
 %% network under sGLP (CSSN, Section 5, "Simulating the Child-Safe Social
 %% Graph"), in the term form the transformation reads (programs/sglp/README.md,
-%% "The term form"), over the canonical CVA platform of CSSN.glp beside it, whose
-%% interface the cascade prints as cascade/CSSN/interface.glp:
-%%   programs/sglp/transform.sh --interface cascade/CSSN/interface.glp --source programs/cssn/CSSN_sglp.glp --out <dir>
+%% "The term form"), over the canonical CVA platform of programs/cssn/CSSN.glp,
+%% whose interface the cascade prints as cascade/CSSN/interface.glp:
+%%   programs/sglp/transform.sh --interface cascade/CSSN/interface.glp --source programs/sglp/cssn/CSSN_sglp.glp --out <dir>
 %% The census, the profiles and the run declaration are sGLP's paper's, Section 3
 %% at 0270ac6 (a census draws the persons, person(Key, Role, Attributes); a
 %% dimension of profiles is of one role; a person procedure takes a copy of the
 %% question, the person and a seed, and reads what the person has seen by
 %% seen(L)).  Written by CSSN #8 Cowork, 2026-10-20 (claude.md, "Code": the
-%% owner writes programs/<owner>/<NAME>_sglp.glp); the surface form of each
+%% owner writes its sGLP source), in programs/cssn until 2026-11-08 and now in
+%% programs/sglp/cssn, where an owner's sGLP source lives (Coordination's
+%% to_all, 2026-11-07 22:13 UTC; sGLP #11, Code_inbox 2026-11-07 21:21 UTC,
+%% Udi approving: CSSN owns the files of programs/sglp/cssn); the surface form of each
 %% part is in the comment above it.  The questions are the platform's two:
 %% Menu, menu(Me, Known, Request?), and Approval, approval(Attempt, YesNo?); its
 %% output, Output, is view(Atoms, Known), refused(Class, Key) or yielded(Class).

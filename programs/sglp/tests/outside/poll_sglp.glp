@@ -11,7 +11,7 @@
 %%
 %%   run 1 agents [voter ~ (agreeable : 1.0)] until 30 days seed 20260927.
 %%
-%% bash programs/sglp/transform.sh --source programs/tests/sglp_outside prints
+%% bash programs/sglp/transform.sh --source programs/sglp/tests/outside prints
 %% from it profiles.glp and population.glp, beside it.
 
 exported procedure source(SglpTerms, SglpTerms).
