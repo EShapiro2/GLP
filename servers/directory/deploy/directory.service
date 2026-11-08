@@ -1,0 +1,27 @@
+# systemd unit for GDS, the Grassroots Directory Service (GNA Section 7),
+# servers/directory.  Deployed to /etc/systemd/system/directory.service.
+# Runs as the system user `glp`, which owns the clone at /srv/glp; the store
+# of listings is /var/lib/glp/directory.json, outside the clone, so a sweep
+# leaves it be.  Caddy, in front (servers/peoplesweb/deploy/Caddyfile),
+# proxies peoplesweb.org/directory here.  The SMTP relay is given in
+# /etc/glp/directory.env (see README, "The server"); without SMTP_HOST the
+# verification mails are written to the journal and not sent.
+[Unit]
+Description=GDS, the Grassroots Directory Service, at peoplesweb.org/directory
+After=network.target
+
+[Service]
+User=glp
+Group=glp
+WorkingDirectory=/srv/glp/servers/directory
+Environment=HOST=127.0.0.1 PORT=8090 BASE_URL=https://peoplesweb.org DATA=/var/lib/glp/directory.json
+EnvironmentFile=-/etc/glp/directory.env
+ExecStartPre=/usr/bin/dart pub get
+ExecStart=/usr/bin/dart run bin/directory_server.dart
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/srv/glp /var/lib/glp
+
+[Install]
+WantedBy=multi-user.target

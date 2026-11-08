@@ -1,0 +1,9 @@
+name: directory_server
+description: GDS, the Grassroots Directory Service (GNA Section 7) - the directory's page, its verification mail and its listings with their links, by hand.
+publish_to: none
+environment:
+  sdk: ^3.9.4
+dependencies:
+  mailer: ^6.4.1
+dev_dependencies:
+  test: ^1.25.0

@@ -2,9 +2,11 @@
 # /etc/caddy/Caddyfile; Caddy gets and renews the certificate once the
 # delegation reaches the registry.  The static site is what deploy/sweep.sh
 # copies from the build; the live apps' API is proxied to the server
-# (deploy/peoplesweb.service).
+# (deploy/peoplesweb.service), and the directory, peoplesweb.org/directory,
+# to its own (servers/directory/deploy/directory.service).
 peoplesweb.org {
 	root * /var/www/peoplesweb.org
 	reverse_proxy /api/* 127.0.0.1:8080
+	reverse_proxy /directory* 127.0.0.1:8090
 	file_server
 }
