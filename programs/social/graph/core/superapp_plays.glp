@@ -792,7 +792,9 @@ sg_init(Me, warm_friend, [A, H], NetIn) :-
 %% under befriend_known the person picks the one person she knows, nearby, and
 %% never opens the place; under encounter_introduce the
 %% person opens the place and, friends with the person she knew and with a
-%% newcomer, introduces the newcomer to her (GKK:3).
+%% newcomer, introduces the newcomer to her (GKK:3) by picking introduce on
+%% home's card of the two (GKK's pragma Introduction, "Alice [Introduce]";
+%% picking_home/6 under Pick introduce).
 sg_init(Me, encounter_befriend, Ks, NetIn) :- nearby_phone(Me?, encounter_befriend, Ks?, NetIn?).
 sg_init(Me, encounter, Ks, NetIn) :- nearby_phone(Me?, encounter, Ks?, NetIn?).
 sg_init(Me, befriend_known, Ks, NetIn) :- nearby_phone(Me?, befriend_known, Ks?, NetIn?).
@@ -816,6 +818,7 @@ nearby_phone(Me, Mode, Ks, NetIn) :-
 procedure pick_mode(Constant?, PickMode).
 pick_mode(encounter_befriend, first).
 pick_mode(befriend_known, first).
+pick_mode(encounter_introduce, introduce).
 pick_mode(_, none) :- otherwise | true.
 
 %% nearby_person(Mode, Me, Ks, Notices, Cmds): the person's script by Mode,
@@ -827,8 +830,8 @@ nearby_person(encounter, Me, _, Ns, [msg(person, Me?, open_place) | Cs?]) :-
     ground(Me?) | idle_person(Ns?, Cs).
 nearby_person(befriend_known, Me, _, Ns, Cs?) :-
     ground(Me?) | idle_person(Ns?, Cs).
-nearby_person(encounter_introduce, Me, [K | _], Ns, [msg(person, Me?, open_place) | Cs?]) :-
-    ground(Me?), ground(K?) | introducing(Me?, K?, none, Ns?, Cs).
+nearby_person(encounter_introduce, Me, _, Ns, [msg(person, Me?, open_place) | Cs?]) :-
+    ground(Me?) | idle_person(Ns?, Cs).
 nearby_person(_, _, _, Ns, Cs?) :- otherwise | idle_person(Ns?, Cs).
 
 %% The place closed once the person she picked is a friend, the first friend
@@ -838,22 +841,6 @@ close_on_friend(Me, [msg(agent, person, connected(_)) | Ns], [msg(person, Me?, c
     ground(Me?) | idle_person(Ns?, Cs).
 close_on_friend(Me, [_ | Ns], Cs?) :- otherwise | close_on_friend(Me?, Ns?, Cs).
 close_on_friend(_, [], []).
-
-%% The introducer: friends with the person she knew, K, and with a newcomer,
-%% in either order, she introduces the newcomer to K.  W is none, k (K is a
-%% friend), or new(N) (the newcomer N is).
-NewcomerWait ::= none ; k ; new(Key).
-procedure introducing(Key?, Key?, NewcomerWait?, Stream(Output)?, UserInStream).
-introducing(Me, K, none, [msg(agent, person, connected(X)) | Ns], Cs?) :-
-    X? =?= K? | introducing(Me?, K?, k, Ns?, Cs).
-introducing(Me, K, none, [msg(agent, person, connected(X)) | Ns], Cs?) :-
-    X? =?\= K?, ground(X?) | introducing(Me?, K?, new(X?), Ns?, Cs).
-introducing(Me, K, k, [msg(agent, person, connected(X)) | Ns], [msg(person, Me?, introduce(X?, K?)) | Cs?]) :-
-    X? =?\= K?, ground(Me?), ground(X?), ground(K?) | idle_person(Ns?, Cs).
-introducing(Me, K, new(N), [msg(agent, person, connected(X)) | Ns], [msg(person, Me?, introduce(N?, K?)) | Cs?]) :-
-    X? =?= K?, ground(Me?), ground(N?) | idle_person(Ns?, Cs).
-introducing(Me, K, W, [_ | Ns], Cs?) :- otherwise | introducing(Me?, K?, W?, Ns?, Cs).
-introducing(_, _, _, [], []).
 
 %% Nothing more to will: the notices read to their end.
 procedure idle_person(Stream(Output)?, UserInStream).

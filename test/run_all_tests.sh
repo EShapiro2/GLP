@@ -7528,6 +7528,7 @@ play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
 play_home(alice, befriend, [msg(agent, person, nearby([bob])), msg(agent, person, connected(carol)), msg(agent, person, nearby([bob, carol])), msg(agent, person, nearby([bob, carol, dave]))], CB, LB).
+play_home(bob, introduce, [msg(agent, person, connected(alice)), msg(agent, person, connected(carol))], CX, LX).
 :quit
 HEREDOC
 2>&1)
@@ -7542,6 +7543,8 @@ check "SG super-app home: yes on the introduction's card is accept_intro, the pe
 check "SG super-app home: no on the introduction's card is reject_intro, the pending value passed back" "CN = \[msg(person, alice, reject_intro(bob, error))\]" "$sg_home"
 check "SG super-app home: each person nearby whom the person knows gets a card with befriend, once, and a friend none (GSA paper, Appendix 'Nearby': the person befriends one by picking them there)" "LB = \[nearby(bob), nearby(dave) | " "$sg_home"
 check "SG super-app home: picking befriend on a card is the person's request to befriend that person, no key typed" "CB = \[msg(person, alice, connect(bob)), msg(person, alice, connect(dave))\]" "$sg_home"
+check "SG super-app home: two friends, home draws a card of the two with the button introduce (GKK's pragma Introduction, Alice [Introduce])" "LX = \[introduction(alice, carol) | " "$sg_home"
+check "SG super-app home: picking introduce is the person's act of GKK:3, the later friend introduced to the earlier" "CX = \[msg(person, bob, introduce(carol, alice))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
 
 # The operating system's invitation links (core/links.glp; GNA Section 6,
