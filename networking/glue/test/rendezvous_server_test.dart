@@ -75,6 +75,18 @@ void main() {
   //                           naming F and carrying Sig, F's signature
   //   available(Rv, F, Sig)   send Rv an availability notice for F, carrying
   //                           Sig, F's signature
+  //   invite(Rv, RvAddr, Serial, Expiry)
+  //                           sign invitation(Me, Rv, RvAddr, Serial, Expiry),
+  //                           register it with Rv and report link(L)
+  //   register_again(Rv, L)   register the link L with Rv once more
+  //   redeem_link(Rv, L)      sign redeem(Me, L) and redeem it at Rv
+  //
+  // On the answer to a registration: punch(K, Addr), K the recipient who
+  // redeemed it, declare Addr as K's address, punch toward it and report
+  // invitee_punched(K, Addr); rejected, report register_rejected.  On the
+  // answer to a redemption: punch(K, Addr), K the inviter, declare K a peer at
+  // Addr, punch and report inviter_punched(K, Addr); rejected, report
+  // redeem_rejected.
   //
   // On the server's reply: punch(K, Addr), K being F, the friend named,
   // declare Addr as F's address, punch toward it and report punched(F, Addr)
@@ -84,7 +96,10 @@ void main() {
   const friendProgram = r'''
 FriendAct ::= attest(Key)
             ; reconnect(Key, Key, SignedTerm)
-            ; available(Key, Key, SignedTerm).
+            ; available(Key, Key, SignedTerm)
+            ; invite(Key, String, Integer, Integer)
+            ; register_again(Key, SignedTerm)
+            ; redeem_link(Key, SignedTerm).
 FriendActs ::= [] ; [FriendAct | FriendActs].
 SignalReply ::= punch(Key, String) ; rejected.
 
@@ -104,7 +119,41 @@ acts(Me, [available(Rv, F, Sig) | In]) :- ground(Me?), ground(F?) |
     send_to_net([msg(Rv?, available(Me?, F?, Sig?, Reply))]),
     on_reply(F?, Reply?),
     acts(Me?, In?).
+acts(Me, [invite(Rv, RvAddr, Serial, Expiry) | In]) :- ground(Me?) |
+    sign(invitation(Me?, Rv?, RvAddr?, Serial?, Expiry?), Me?, L),
+    registered(Me?, Rv?, L?),
+    acts(Me?, In?).
+acts(Me, [register_again(Rv, L) | In]) :- ground(Me?) |
+    send_to_net([msg(Rv?, register(Me?, L?, Reply))]),
+    on_registered(Reply?),
+    acts(Me?, In?).
+acts(Me, [redeem_link(Rv, L) | In]) :- ground(Me?) |
+    sign(redeem(Me?, L?), Me?, S),
+    send_to_net([msg(Rv?, redeem(Me?, S?, Reply))]),
+    on_redeemed(Reply?),
+    acts(Me?, In?).
 acts(_, []).
+
+procedure registered(Key?, Key?, SignedTerm?).
+registered(Me, Rv, L) :- ground(L?) |
+    send_to_net([msg(Rv?, register(Me?, L?, Reply))]),
+    send_to_user([link(L?)]),
+    on_registered(Reply?).
+
+procedure on_registered(SignalReply?).
+on_registered(punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([invitee_punched(K?, Addr?)]).
+on_registered(rejected) :- send_to_user([register_rejected]).
+
+procedure on_redeemed(SignalReply?).
+on_redeemed(punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(peer(K?)),
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([inviter_punched(K?, Addr?)]).
+on_redeemed(rejected) :- send_to_user([redeem_rejected]).
 
 procedure attest_pair(Key?, Key?).
 attest_pair(K, F) :- ground(K?), ground(F?), K? @< F? |
@@ -277,9 +326,12 @@ friend_version(2).
     );
   }
 
-  /// The server, a process of its own, started and listening; what it says,
-  /// line by line.
-  Future<List<String>> launch(_Server srv) async {
+  /// The servers launched, by the fill of their seed, each with its last run.
+  final launched = <int, ({_Server srv, _Run run})>{};
+
+  /// The server, a process of its own, started and listening, its state kept
+  /// in a file of its own across a restart; the process and what it says.
+  Future<_Run> startServer(_Server srv) async {
     final (:rvKey, :rvPort, :identityPath, :rvFill) = srv;
     final server = await Process.start(serverExecutable, [
       '--identity',
@@ -290,6 +342,8 @@ friend_version(2).
       '127.0.0.1:$rvPort',
       '--outbound-queue-file',
       '${dir.path}/rv-$rvFill-queue.json',
+      '--state-file',
+      '${dir.path}/rv-$rvFill-state',
       '--program',
       rvAgentPath,
       '--root-self',
@@ -317,8 +371,15 @@ friend_version(2).
         .split(' ');
     expect(ready, ['READY', '$rvPort', rvKey.hex],
         reason: 'the server listens on its port, named by its key');
-    return serverLines;
+    final run = (process: server, lines: serverLines, more: serverLine.stream);
+    launched[rvFill] = (srv: srv, run: run);
+    return run;
   }
+
+  /// The server, a process of its own, started and listening; what it says,
+  /// line by line.
+  Future<List<String>> launch(_Server srv) async =>
+      (await startServer(srv)).lines;
 
   /// The server, a process of its own, and two friends, each a madGLP agent
   /// over its own headless layer, which is declared the server, holding each
@@ -623,6 +684,57 @@ friend_version(2).
     }
   }, timeout: Timeout.none);
 
+  // IGLP, Definition "Restart" ("the local state s_p of p at restart is its
+  // local state at termination"), for the rendezvous agent (GNA Section 6,
+  // "Invitation links"): A registers a link with the server; the server
+  // refuses the same serial registered again, an answer that leaves the
+  // server only from a state its store holds (IGLP, Implementation Notes,
+  // "Persistence"), so the registration is saved.  The server stops and
+  // starts again from its state file, at its address and under its key; once
+  // both friends' layers hold a session with it again, B redeems the link,
+  // which the restarted server finds registered and unused: each is told the
+  // other's key and address.
+  test(
+      'a registration survives a restart of the server: the server, '
+      'restarted from its state file, redeems the link registered before',
+      () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final (:rvKey, :a, :b, sigA: _, sigB: _, serverLines: _) =
+        await standUp(0x79, 0x35, 0x46);
+    final (:srv, :run) = launched[0x79]!;
+    final rvAddress = '127.0.0.1:${srv.rvPort}';
+    final expiry = DateTime.now().millisecondsSinceEpoch + 3600 * 1000;
+
+    await a.agent.injectUserInput(_struct('invite',
+        [_const(rvKey.hex), _const(rvAddress), rt.ConstTerm(1), rt.ConstTerm(expiry)]));
+    final link = (await a.saidOne('link')).args[0];
+    await a.agent.injectUserInput(
+        _struct('register_again', [_const(rvKey.hex), link]));
+    expect(await a.saidAtom('register_rejected'), isNotNull,
+        reason: 'the serial is registered, and the state that holds it saved');
+
+    // The server stops, and starts again from its state file.
+    run.process.kill(ProcessSignal.sigterm);
+    await run.process.exitCode;
+    final again = await startServer(srv);
+    await _line(again.lines, again.more, (l) => l == 'CONNECTED ${a.key.hex}');
+    await _line(again.lines, again.more, (l) => l == 'CONNECTED ${b.key.hex}');
+
+    await b.agent.injectUserInput(
+        _struct('redeem_link', [_const(rvKey.hex), link]));
+    final toB = await b.saidOne('inviter_punched');
+    final toA = await a.saidOne('invitee_punched');
+    expect(_value(toB.args[0]), a.key.hex);
+    expect(_loopback(_value(toB.args[1]), a.layer.boundPort!), isTrue,
+        reason: _value(toB.args[1]));
+    expect(_value(toA.args[0]), b.key.hex);
+    expect(_loopback(_value(toA.args[1]), b.layer.boundPort!), isTrue,
+        reason: _value(toA.args[1]));
+  }, timeout: Timeout.none);
+
   // GDS:2 and GDS:4 on the app's side over the WAN (GNA Section 7, "The
   // messages"): a scripted directory, a madGLP agent over a headless layer
   // marked to answer any key at an address of its own, as a rendezvous
@@ -730,6 +842,9 @@ friend_version(2).
 }
 
 /// The server's port, its key, its identity file and the fill of its seed.
+/// A run of the server: its process, what it has said and what it says next.
+typedef _Run = ({Process process, List<String> lines, Stream<String> more});
+
 typedef _Server = ({
   glp.PubKey rvKey,
   int rvPort,
@@ -831,6 +946,17 @@ class _Friend {
 
   /// The first element this agent sent its person whose functor is
   /// [functor], once it has sent it.
+  /// The first constant [name] this agent sent its person, once it has sent
+  /// it.
+  Future<rt.Term> saidAtom(String name) async {
+    bool named(rt.Term t) => t is rt.ConstTerm && t.value == name;
+    for (final t in said) {
+      if (named(t)) return t;
+    }
+    printOnFailure('${agent.agentId} waits for $name');
+    return _said.stream.firstWhere(named);
+  }
+
   Future<rt.StructTerm> saidOne(String functor) async {
     bool named(rt.Term t) => t is rt.StructTerm && t.functor == functor;
     for (final t in said) {

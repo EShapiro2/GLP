@@ -9,12 +9,15 @@
 //
 //   directory_server --identity gds-identity.json --port 9518 \
 //     --public-address 203.0.113.7:9518 --outbound-queue-file gds-queue.json \
+//     --state-file gds-state \
 //     --program <GLP>/programs/examples/rendezvous/gds_agent.glp \
 //     --root-self <GLP>/programs/self.glp \
 //     [--rendezvous <key-hex>@<ip:port> ...]
 //
 // --identity is the key pair, a JSON file {"seed": <hex>} created with a
-// fresh seed on first run; --rendezvous a rendezvous server the layer
+// fresh seed on first run; --state-file where the agent's local state is kept
+// across a restart, the files <state-file>, .key and .program (IGLP,
+// Implementation Notes, "Persistence"); --rendezvous a rendezvous server the layer
 // declares, by its key and address, as many as given.
 //
 // Prints `READY <udp-port> <key-hex> <base>/directory` once both listen, the
@@ -29,6 +32,7 @@ import 'package:directory_server/agent.dart';
 import 'package:directory_server/mail.dart';
 import 'package:directory_server/server.dart';
 import 'package:directory_server/store.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:grassroots_networking_core/src/headless/identity_file.dart';
 
@@ -38,6 +42,7 @@ Future<void> main(List<String> argv) async {
     ..addOption('port', mandatory: true, help: 'The UDP port the layer listens on')
     ..addOption('public-address', mandatory: true, help: "The directory's static public ip:port; with --port, its server address (GNA Section 2.2)")
     ..addOption('outbound-queue-file', mandatory: true, help: "The layer's fair-delivery queue, a JSON file (GNA Section 2.11)")
+    ..addOption('state-file', mandatory: true, help: "Where the agent's local state is kept across a restart (IGLP, Definition Restart)")
     ..addOption('program', mandatory: true, help: "The directory's agent: programs/examples/rendezvous/gds_agent.glp")
     ..addOption('root-self', mandatory: true, help: 'The root self.glp: programs/self.glp')
     ..addMultiOption('rendezvous', help: 'A rendezvous server the layer declares: <key-hex>@<ip:port>')
@@ -87,6 +92,7 @@ Future<void> main(List<String> argv) async {
     port: udp,
     publicAddress: args['public-address'] as String,
     queue: FileOutboundQueueStore(args['outbound-queue-file'] as String),
+    state: FileAgentStateStore(args['state-file'] as String),
     program: args['program'] as String,
     rootSelf: args['root-self'] as String,
     rendezvous: rendezvous,
@@ -98,6 +104,7 @@ Future<void> main(List<String> argv) async {
   agent.onLine = (line) => stdout.writeln('AGENT $line');
 
   final server = await HttpServer.bind(host, port);
+  service.onLog = stdout.writeln;
   server.listen(service.handle);
   // Expired links dropped, and buffers below their floor asked for again.
   final sweep = Timer.periodic(const Duration(minutes: 1), (_) => service.store.sweep());

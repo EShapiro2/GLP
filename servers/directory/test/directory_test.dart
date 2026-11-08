@@ -131,7 +131,7 @@ void main() {
       expect(asks.last, ('klee', 1), reason: 'both expired, the floor asked for again');
     });
 
-    test('what was asked for and not supplied is not kept across a restart', () {
+    test('what was asked for and not supplied is kept across a restart, and asked again when the person lists again', () {
       final dir = Directory.systemTemp.createTempSync('gds');
       final f = File('${dir.path}/d.json');
       final s = Store(file: f, now: clock);
@@ -139,9 +139,14 @@ void main() {
       expect(s.byKey('kmo')!.wanted, 1);
       final asks = <(String, int)>[];
       final s2 = Store(file: f, now: clock, onAsk: (k, n) => asks.add((k, n)));
-      expect(s2.byKey('kmo')!.wanted, 0);
+      expect(s2.byKey('kmo')!.wanted, 1);
       s2.sweep();
+      expect(asks, isEmpty, reason: 'one asked already keeps the floor');
+      expect(s2.relist('kmo', 'mo@example.org', name: 'Mo M', listed: false), isTrue);
+      expect(s2.relist('kother', 'mo@example.org'), isFalse, reason: 'not verified for that key');
+      s2.reask('kmo');
       expect(asks, [('kmo', 1)]);
+      expect((s2.byKey('kmo')!.name, s2.byKey('kmo')!.listed, s2.byKey('kmo')!.wanted), ('Mo M', false, 1));
       dir.deleteSync(recursive: true);
     });
   });
@@ -182,9 +187,12 @@ void main() {
 
     test('list, verify by the mailed link, look up and get a link', () async {
       final d = DirectoryService(store, mail, base);
+      final logged = <String>[];
+      d.onLog = logged.add;
       expect(await d.list('khal', 'hal@example.org', name: 'Hal <b>'), isNull);
       final body = mail.sent.single.$3;
       final link = RegExp(r'(http\S+/directory/verify\?t=\w+)').firstMatch(body)!.group(1)!;
+      expect(logged, ['mailed hal@example.org: $link'], reason: "the mail's link in the server's log");
       expect(await get(link.substring(base.length)), contains('is verified and listed'));
       store.supply('khal', [Link('cafe01', t + day)]);
       final page = await get('/directory');

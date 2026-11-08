@@ -17,7 +17,8 @@
 // many to ask for, through [Store.onAsk]; the directory's agent asks the
 // person's app, on the Supply stream of their list (GNA Section 7, "The
 // messages").  [Listing.wanted] counts the links asked for and not yet
-// supplied; a restart ends every Supply stream, so it starts at nought.
+// supplied; it is asked again when the person lists again, on the new Supply
+// stream (GNA Section 7).
 //
 // The store is a JSON file, written whole after each change.
 import 'dart:convert';
@@ -71,16 +72,15 @@ class Listing {
 
   Map<String, Object?> toJson() => {
         'email': email, 'key': key, 'name': name, 'listed': listed, 'verified': verified,
-        'request': request?.toJson(), 'mailedAt': mailedAt,
+        'request': request?.toJson(), 'mailedAt': mailedAt, 'wanted': wanted,
         'links': [for (final l in links) l.toJson()],
       };
 
-  /// A listing as the file holds it.  What was asked for and not supplied is
-  /// not kept: the Supply streams ended with the directory.
+  /// A listing as the file holds it.
   static Listing fromJson(Map<String, dynamic> j) => Listing(j['email'] as String,
       key: j['key'] as String?, name: j['name'] as String?, listed: j['listed'] as bool, verified: j['verified'] as bool,
       request: j['request'] == null ? null : Request.fromJson(j['request'] as Map<String, dynamic>),
-      mailedAt: j['mailedAt'] as int,
+      mailedAt: j['mailedAt'] as int, wanted: (j['wanted'] as int?) ?? 0,
       links: [for (final l in j['links'] as List) Link.fromJson(l as Map<String, dynamic>)]);
 }
 
@@ -207,6 +207,34 @@ class Store {
       return l;
     }
     return null;
+  }
+
+  /// GNA Section 7: a list from the person of [key] for an address the
+  /// directory already holds verified for them is answered with no mail, its
+  /// name and visibility replacing the earlier ones.  Returns whether it was
+  /// such a list; the caller then asks on the person's new Supply by
+  /// [reask].
+  bool relist(String key, String email, {String? name, bool listed = true}) {
+    final l = _byEmail[normalEmail(email)];
+    if (l == null || !l.verified || l.key != key) return false;
+    l
+      ..name = (name == null || name.trim().isEmpty) ? null : name.trim()
+      ..listed = listed;
+    _save();
+    return true;
+  }
+
+  /// The person of [key] listed again, on a new Supply stream: what was asked
+  /// on the earlier one is asked again on it, at least enough to keep the
+  /// floor (GNA Section 7: "on which the directory asks at once for the
+  /// buffer").
+  void reask(String key) {
+    final l = _byKey(key);
+    if (l == null) return;
+    _drop(l);
+    final n = max(l.wanted, floor - l.links.length);
+    l.wanted = 0;
+    _ask(l, n);
   }
 
   Listing? _byKey(String key) {
