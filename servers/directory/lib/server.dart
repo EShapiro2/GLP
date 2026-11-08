@@ -20,6 +20,12 @@ class DirectoryService {
   final String base;
   DirectoryService(this.store, this.mailer, this.base);
 
+  /// Called with a line for the server's log for each verification mail
+  /// sent, `mailed <address>: <link>`, so that the live suite, which reads
+  /// the log on the VPS, can open the link of a mail it made the directory
+  /// send to an address that receives none (tools/live/bin/live_gds.dart).
+  void Function(String line)? onLog;
+
   /// GDS:2's verification: the mail with its link.  Called by the
   /// directory's agent on the person's List or List unlisted, [key] the
   /// person's; refused as the store refuses.  Returns null where the mail was
@@ -34,6 +40,7 @@ class DirectoryService {
             'Someone, we hope you, asked to be ${listed ? 'listed' : 'found by email address and name'} in the Grassroots Directory at $base/directory under this address${name == null || name.isEmpty ? '' : ', with the name $name'}.\n\n'
             'To confirm, open this link:\n$base/directory/verify?t=$token\n\n'
             'If it was not you, ignore this mail; nothing is listed until the link is opened.\n');
+        onLog?.call('mailed $email: $base/directory/verify?t=$token');
         return null;
     }
   }

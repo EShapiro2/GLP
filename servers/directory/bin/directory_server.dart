@@ -104,6 +104,7 @@ Future<void> main(List<String> argv) async {
   agent.onLine = (line) => stdout.writeln('AGENT $line');
 
   final server = await HttpServer.bind(host, port);
+  service.onLog = stdout.writeln;
   server.listen(service.handle);
   // Expired links dropped, and buffers below their floor asked for again.
   final sweep = Timer.periodic(const Duration(minutes: 1), (_) => service.store.sweep());

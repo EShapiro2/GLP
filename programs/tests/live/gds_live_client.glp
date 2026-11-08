@@ -1,0 +1,163 @@
+%% gds_live_client.glp - the client of the live directory tests
+%%
+%% The agent each test person runs off the VPS, against the live directory
+%% (GNA Section 7, "Grassroots Directory Service"; servers/directory) and the
+%% live rendezvous server (GNA Section 6); tools/live/bin/live_gds.dart drives
+%% it.  It is the smallest stand-in for the operating system's part of GDS, as
+%% rv_live_client.glp is of GRV's: it signs what it is told to sign, sends the
+%% message it is told to send, and reports every answer and every ask to its
+%% person, tagged with the number the test gave.  It judges nothing: the test
+%% judges the answers against the paper.
+%%
+%% Acts (the test injects each as the person's act):
+%%   list_named(Tag, D, Email, Name, Vis)   sign listing(Me, Email, Name, Vis)
+%%                                          and send D list(Me, Signed,
+%%                                          Supply, Reply)
+%%   list_unnamed(Tag, D, Email, Vis)       the same, the name none
+%%   supply(Tag, D, Rv, RvAddr, Serial, Offset)
+%%                                          sign invitation(Me, Rv, RvAddr,
+%%                                          Serial, now + Offset), register
+%%                                          it with Rv (GRV:2) and supply it
+%%                                          to D, supply(Me, [Link])
+%%   redeem(Tag, Rv, Link)                  sign redeem(Me, Link) and send Rv
+%%                                          redeem(Me, Signed, Reply) (GRV:3)
+%%   unlist(Tag, D)                         sign unlist(Me) and send D
+%%                                          unlist(Me, Signed, Reply)
+%%
+%% Reports: list_reply(Tag, R) for the directory's answer to a list, verify,
+%% listed or rejected; asked(Tag, N) for each more(N) on the Supply of list
+%% Tag, and closed(Tag) when it closes; supplied(Tag, Link) for a link made
+%% and supplied; reg_reply(Tag, R) for the rendezvous server's answer to its
+%% registration, punch(K, A) at its redemption or rejected; redeem_reply(Tag,
+%% R) for its answer to a redemption, on which the inviter is declared at the
+%% address and punched towards; unlist_reply(Tag, R), unlisted or rejected.
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+GdsVis ::= listed ; unlisted.
+GdsListReply ::= verify ; listed ; rejected.
+GdsUnlistReply ::= unlisted ; rejected.
+GdsAsk ::= more(Integer).
+GdsLinks ::= [] ; [SignedTerm | GdsLinks].
+GdsSignal ::= punch(Key, String) ; rejected.
+
+GdsMsg ::= list(Key, SignedTerm, Stream(GdsAsk)?, GdsListReply?)
+         ; supply(Key, GdsLinks)
+         ; unlist(Key, SignedTerm, GdsUnlistReply?)
+         ; register(Key, SignedTerm, GdsSignal?)
+         ; redeem(Key, SignedTerm, GdsSignal?).
+
+GdsAct ::= list_named(Integer, Key, String, String, GdsVis)
+         ; list_unnamed(Integer, Key, String, GdsVis)
+         ; supply(Integer, Key, Key, String, Integer, Integer)
+         ; redeem(Integer, Key, SignedTerm)
+         ; unlist(Integer, Key).
+
+GdsOut ::= list_reply(Integer, GdsListReply)
+         ; asked(Integer, Integer)
+         ; closed(Integer)
+         ; supplied(Integer, SignedTerm)
+         ; reg_reply(Integer, GdsSignal)
+         ; redeem_reply(Integer, GdsSignal)
+         ; unlist_reply(Integer, GdsUnlistReply).
+
+%% =============================================================================
+%% THE AGENT
+%% =============================================================================
+
+exported procedure agent(Channel(Stream(GdsAct), Stream(GdsOut))?,
+                         Channel(Stream(NetMsg(GdsMsg)), Stream(NetMsg(GdsMsg)))?).
+agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
+
+procedure acts(Key?, Stream(GdsAct)?).
+acts(Me, [list_named(Tag, D, Email, Name, Vis) | In]) :- ground(Me?) |
+    sign(listing(Me?, Email?, Name?, Vis?), Me?, Signed),
+    send_list(Tag?, D?, Me?, Signed?),
+    acts(Me?, In?).
+acts(Me, [list_unnamed(Tag, D, Email, Vis) | In]) :- ground(Me?) |
+    sign(listing(Me?, Email?, none, Vis?), Me?, Signed),
+    send_list(Tag?, D?, Me?, Signed?),
+    acts(Me?, In?).
+acts(Me, [supply(Tag, D, Rv, RvAddr, Serial, Offset) | In]) :- ground(Me?) |
+    make_link(Me?, Rv?, RvAddr?, Serial?, Offset?, Link),
+    register_supply(Tag?, D?, Rv?, Me?, Link?),
+    acts(Me?, In?).
+acts(Me, [redeem(Tag, Rv, Link) | In]) :- ground(Me?), ground(Link?) |
+    sign(redeem(Me?, Link?), Me?, Signed),
+    send_redeem(Tag?, Rv?, Me?, Signed?),
+    acts(Me?, In?).
+acts(Me, [unlist(Tag, D) | In]) :- ground(Me?) |
+    sign(unlist(Me?), Me?, Signed),
+    send_unlist(Tag?, D?, Me?, Signed?),
+    acts(Me?, In?).
+acts(_, []).
+
+%% send_list(Tag, D, Me, Signed): the list request, its answer and its asks
+%% reported.
+procedure send_list(Integer?, Key?, Key?, SignedTerm?).
+send_list(Tag, D, Me, Signed) :- integer(Tag?), ground(Signed?) |
+    send_to_net([msg(D?, list(Me?, Signed?, Supply, Reply))]),
+    on_list_reply(Tag?, Reply?),
+    on_asks(Tag?, Supply?).
+
+procedure on_list_reply(Integer?, GdsListReply?).
+on_list_reply(Tag, verify) :- send_to_user([list_reply(Tag?, verify)]).
+on_list_reply(Tag, listed) :- send_to_user([list_reply(Tag?, listed)]).
+on_list_reply(Tag, rejected) :- send_to_user([list_reply(Tag?, rejected)]).
+
+procedure on_asks(Integer?, Stream(GdsAsk)?).
+on_asks(Tag, [more(N) | Asks]) :- integer(Tag?) |
+    send_to_user([asked(Tag?, N?)]),
+    on_asks(Tag?, Asks?).
+on_asks(Tag, []) :- send_to_user([closed(Tag?)]).
+
+%% make_link(Me, Rv, RvAddr, Serial, Offset, Link): the link naming Me as the
+%% inviter, expiring Offset milliseconds from now, signed by Me.
+procedure make_link(Key?, Key?, String?, Integer?, Integer?, SignedTerm).
+make_link(Me, Rv, RvAddr, Serial, Offset, Link?) :-
+    ground(Me?), ground(Rv?), ground(RvAddr?), integer(Serial?), integer(Offset?) |
+    now(T),
+    Expiry := T? + Offset?,
+    sign(invitation(Me?, Rv?, RvAddr?, Serial?, Expiry?), Me?, Link).
+
+%% register_supply(Tag, D, Rv, Me, Link): the link registered with Rv and
+%% supplied to D.
+procedure register_supply(Integer?, Key?, Key?, Key?, SignedTerm?).
+register_supply(Tag, D, Rv, Me, Link) :- integer(Tag?), ground(Me?), ground(Link?) |
+    send_to_net([msg(Rv?, register(Me?, Link?, Reply)),
+                 msg(D?, supply(Me?, [Link?]))]),
+    on_signal(reg, Tag?, Reply?),
+    send_to_user([supplied(Tag?, Link?)]).
+
+procedure send_redeem(Integer?, Key?, Key?, SignedTerm?).
+send_redeem(Tag, Rv, Me, Signed) :- ground(Signed?) |
+    send_to_net([msg(Rv?, redeem(Me?, Signed?, Reply))]),
+    on_signal(redeem, Tag?, Reply?).
+
+GdsSignalOf ::= reg ; redeem.
+
+%% on_signal(Of, Tag, Reply): the rendezvous server's answer reported; on a
+%% punch the peer is declared at the address and punched towards.
+procedure on_signal(GdsSignalOf?, Integer?, GdsSignal?).
+on_signal(Of, Tag, punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(peer(K?)),
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    report_signal(Of?, Tag?, punch(K?, Addr?)).
+on_signal(Of, Tag, rejected) :-
+    report_signal(Of?, Tag?, rejected).
+
+procedure report_signal(GdsSignalOf?, Integer?, GdsSignal?).
+report_signal(reg, Tag, R) :- ground(R?) | send_to_user([reg_reply(Tag?, R?)]).
+report_signal(redeem, Tag, R) :- ground(R?) | send_to_user([redeem_reply(Tag?, R?)]).
+
+procedure send_unlist(Integer?, Key?, Key?, SignedTerm?).
+send_unlist(Tag, D, Me, Signed) :- ground(Signed?) |
+    send_to_net([msg(D?, unlist(Me?, Signed?, Reply))]),
+    on_unlist_reply(Tag?, Reply?).
+
+procedure on_unlist_reply(Integer?, GdsUnlistReply?).
+on_unlist_reply(Tag, unlisted) :- send_to_user([unlist_reply(Tag?, unlisted)]).
+on_unlist_reply(Tag, rejected) :- send_to_user([unlist_reply(Tag?, rejected)]).

@@ -187,9 +187,12 @@ void main() {
 
     test('list, verify by the mailed link, look up and get a link', () async {
       final d = DirectoryService(store, mail, base);
+      final logged = <String>[];
+      d.onLog = logged.add;
       expect(await d.list('khal', 'hal@example.org', name: 'Hal <b>'), isNull);
       final body = mail.sent.single.$3;
       final link = RegExp(r'(http\S+/directory/verify\?t=\w+)').firstMatch(body)!.group(1)!;
+      expect(logged, ['mailed hal@example.org: $link'], reason: "the mail's link in the server's log");
       expect(await get(link.substring(base.length)), contains('is verified and listed'));
       store.supply('khal', [Link('cafe01', t + day)]);
       final page = await get('/directory');
