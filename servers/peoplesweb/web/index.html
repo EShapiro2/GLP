@@ -231,8 +231,9 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-help
 // pole, a ring per depth, longitudes grouped by subtree so a family holds
 // together; each contract an ellipse painted on the surface, its name
 // horizontal; extends widens from a point to its tip, restricts narrows to
-// one; drag turns the globe, the wheel zooms, the far side is hidden.
-const DEPTH = {}, PHI = {}, KIDS = {};
+// one, amends keeps one width and is barred, implements is dashed and
+// instantiates dotted; drag turns the globe, the wheel zooms, the far side is hidden.
+const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {};
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
   const ps = C[id].extends.filter(p => C[p]);
@@ -248,13 +249,36 @@ function layout(){
     let x = lo;
     for (const k of ks){ const w = (hi - lo) * leaves(k) / tot; place(k, x, x + w); x += w; }
   })('GKK', -80 * Math.PI/180, 80 * Math.PI/180);
+  // Spread each ring so no two names overlap, measured as seen from the
+  // front (x = R sin phi), neighbours pushed apart in order and kept on the
+  // visible half; a ring too full for one row sets alternate names a little
+  // above and below it, and then only names on the same row need the room.
+  const maxd = MAXD(), um = Math.sin(84 * Math.PI/180), w = id => 0.33*11*id.length + 0.8*11;
+  for (let d = 1; d <= maxd; d++){
+    const ring = D.contracts.map(c => c.id).filter(id => DEPTH[id] === d).sort((a, b) => PHI[a] - PHI[b]);
+    const R = 265 * Math.sin(Math.PI * (d + 0.6) / (maxd + 2.8));
+    const full = (a, b) => (w(a) + w(b) + 10) / R;
+    const two = ring.reduce((n, id) => n + 2*w(id) + 10, 0) > 1.6 * um * R;
+    if (two) ring.forEach((id, i) => LAT[id] = i % 2 ? 0.22 : -0.22);
+    const u = ring.map(id => Math.sin(PHI[id]));
+    const pairs = [];
+    for (let i = 1; i < ring.length; i++) pairs.push([i-1, i, two ? 0.3 * full(ring[i-1], ring[i]) : full(ring[i-1], ring[i])]);
+    if (two) for (let i = 2; i < ring.length; i++) pairs.push([i-2, i, full(ring[i-2], ring[i])]);
+    for (let it = 0; it < 600; it++){
+      let moved = false;
+      for (const [a, b, g] of pairs){ const need = g - (u[b] - u[a]); if (need > 1e-4){ u[a] -= need/2; u[b] += need/2; moved = true; } }
+      for (let i = 0; i < u.length; i++) u[i] = Math.max(-um, Math.min(um, u[i]));
+      if (!moved) break;
+    }
+    ring.forEach((id, i) => PHI[id] = Math.asin(u[i]));
+  }
 }
 const MAXD = () => Math.max(...Object.values(DEPTH));
 const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 const GW = 1120, GH = 640, CX = GW/2, CY = GH/2 + 12;
 function drawGlobe(){
   const S = 265 * V.zoom, al = V.tilt, maxd = MAXD();
-  const th = id => DEPTH[id] === 0 ? 0 : Math.PI * (DEPTH[id] + 0.6) / (maxd + 2.8);
+  const th = id => DEPTH[id] === 0 ? 0 : Math.PI * (DEPTH[id] + 0.6 + (LAT[id] || 0)) / (maxd + 2.8);
   const proj = (t, ph) => { ph -= V.phi0;
     const x = Math.sin(t)*Math.sin(ph), y = Math.cos(t), z = Math.sin(t)*Math.cos(ph);
     return [CX + S*x, CY - S*(y*Math.cos(al) - z*Math.sin(al)), y*Math.sin(al) + z*Math.cos(al)]; };
@@ -277,6 +301,15 @@ function drawGlobe(){
     const bx = qx - ux*hl, by = qy - uy*hl;
     const pts = [[px+nx*w0,py+ny*w0],[bx+nx*w1,by+ny*w1],[bx+nx*hw,by+ny*hw],[qx,qy],[bx-nx*hw,by-ny*hw],[bx-nx*w1,by-ny*w1],[px-nx*w0,py-ny*w0]];
     return `<polygon points="${pts.map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
+  // amends: a shaft of one width with a bar across its middle; implements a
+  // dashed shaft, instantiates a dotted one, each with the same head.
+  const ends = (p, q, pad0, pad1) => { const dx = q[0]-p[0], dy = q[1]-p[1], Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln;
+    return [p[0]+ux*pad0, p[1]+uy*pad0, q[0]-ux*pad1, q[1]-uy*pad1, ux, uy]; };
+  const cross = (p, q, w, fill, pad0, pad1) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), mx = (ax+bx)/2 - ux*4*k, my = (ay+by)/2 - uy*4*k;
+    return `<line x1="${(mx-uy*w).toFixed(1)}" y1="${(my+ux*w).toFixed(1)}" x2="${(mx+uy*w).toFixed(1)}" y2="${(my-ux*w).toFixed(1)}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`; };
+  const stroked = (p, q, dash, fill, pad0, pad1) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*k, hw = 6.5*k, cx = bx-ux*hl, cy = by-uy*hl;
+    return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
+      + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
   const fs = Math.max(10, 11*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
   const pad = (id, ux, uy) => 1/Math.sqrt((ux/rx(id))**2 + (uy/ry)**2) + 2;
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
@@ -284,8 +317,11 @@ function drawGlobe(){
     const [px, py] = pos[p], [qx, qy] = pos[c.id];
     const Ln = Math.hypot(qx-px, qy-py) || 1, ux = (qx-px)/Ln, uy = (qy-py)/Ln;
     const col = FAM[famOf(c)][1], p0 = pad(p, ux, uy), p1 = pad(c.id, ux, uy);
-    s += c.relation === 'restricts'
-      ? taper(pos[p], pos[c.id], 4.2*k, 0.4*k, 7*k, 2.8*k, col, p0, p1)
+    s += c.relation === 'restricts' ? taper(pos[p], pos[c.id], 4.2*k, 0.4*k, 7*k, 2.8*k, col, p0, p1)
+      : c.relation === 'amends' ? taper(pos[p], pos[c.id], 2.2*k, 2.2*k, 9*k, 6.5*k, col, p0, p1)
+          + cross(pos[p], pos[c.id], 6*k, col, p0, p1)
+      : c.relation === 'implements' ? stroked(pos[p], pos[c.id], `${7*k} ${4*k}`, col, p0, p1)
+      : c.relation === 'instantiates' ? stroked(pos[p], pos[c.id], `${0.1} ${4.5*k}`, col, p0, p1)
       : taper(pos[p], pos[c.id], 0.4*k, 4.2*k, 10*k, 7.5*k, col, p0, p1);
   }));
   D.contracts.forEach(c => {
@@ -300,7 +336,7 @@ function drawGlobe(){
     const fe = Math.max(0.55, Math.min(1, de/(S*Math.sin(t)*eps))), fn = Math.max(0.55, Math.min(1, dn/(S*eps)));
     const ex = (Ce[0]-Cp[0])/de*rx(c.id)*fe, ey = (Ce[1]-Cp[1])/de*rx(c.id)*fe;
     const nx2 = (Cn[0]-Cp[0])/dn*ry*fn, ny2 = (Cn[1]-Cp[1])/dn*ry*fn;
-    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, ry*Math.cos(al)].map(x => x.toFixed(2)).join(' ')
+    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, ry*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
@@ -349,8 +385,8 @@ function globeNav(){
 const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']], ['Operating System', ['os']], ['Network', ['network']], ['Other', ['other']]];
 const OPEN = new Set();
 function drawShelves(){
-  $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.filter(c => c.live).length} contracts, each with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
-    const cs = D.contracts.filter(c => c.live && fams.includes(c.family));
+  $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.length} contracts, ${D.contracts.filter(c => c.live).length} with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
+    const cs = D.contracts.filter(c => fams.includes(famOf(c)));
     if (!cs.length) return '';
     return `<div class="grp${OPEN.has(i) ? ' open' : ''}" data-g="${i}"><button class="tog" aria-expanded="${OPEN.has(i)}"><h2>${title}</h2>
         <span class="minis">${cs.map(c => `<span class="mini" style="background:${grad(c)}">${c.icon}</span>`).join('')}</span>
