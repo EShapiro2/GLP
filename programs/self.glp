@@ -64,15 +64,17 @@ PeerAddress ::= address(String) ; none.
 % that session is unattested, or none where the layer has no session with it.
 App ::= app(String, String, Integer) ; unattested ; none.
 
-% What declare/1 and remove/1 take (GLP-Spec appendix-guards, "Networking seam", 1ce0263; nearby since 210cee1): a declaration to the networking layer or the platform, of a peer the program knows, the address at which a peer is reached, a rendezvous server, a proximity underlay's cold-call trust level, a place with the stream of its events or a watch on the agents nearby over a proximity underlay with the stream of their presences; and the end of a declaration.
+% What declare/1 and remove/1 take (GLP-Spec appendix-guards, "Networking seam", 1ce0263; nearby since 210cee1; reachable since cb9df43): a declaration to the networking layer or the platform, of a peer the program knows, the address at which a peer is reached, a rendezvous server, a proximity underlay's cold-call trust level, a place with the stream of its events, a watch on the agents nearby over a proximity underlay with the stream of their presences or a watch on the agents the layer connects to over the WAN with the stream of their reaches; and the end of a declaration.
 Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String)
       ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)
-      ; nearby(Underlay, Stream(Presence)?).
-Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant) ; nearby(Underlay).
+      ; nearby(Underlay, Stream(Presence)?) ; reachable(Stream(Reach)?).
+Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant) ; nearby(Underlay)
+      ; reachable.
 Underlay ::= pan ; lan.
 TrustLevel ::= open ; closed.
 PlaceEvent ::= entered ; exited ; observable ; unobservable.
 Presence ::= seen(Key) ; gone(Key).
+Reach ::= connected(Key) ; lost(Key).
 
 % The global name of a link end, which the runtime reports when it holds a link
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
@@ -955,7 +957,7 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % =============================================================================
 % NETWORKING SEAM (peer_address/2, peer_app/2, punch_udp/1, declare/1, remove/1)
 % =============================================================================
-% GLP-Spec's appendix-guards lists the five among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263; peer_app/2 since 5fab8ac): peer_address(Key?, PeerAddress), peer_app(Key?, App), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types App, Declaration, Removal, Underlay, TrustLevel, PlaceEvent and Presence above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb; peer_app/2 since 4a334c2), and their kernels '_peer_address', '_peer_app', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
+% GLP-Spec's appendix-guards lists the five among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263; peer_app/2 since 5fab8ac): peer_address(Key?, PeerAddress), peer_app(Key?, App), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types App, Declaration, Removal, Underlay, TrustLevel, PlaceEvent, Presence and Reach above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb; peer_app/2 since 4a334c2), and their kernels '_peer_address', '_peer_app', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
 
 %% peer_address/2 - assign A address(S), S the address at which the layer
 %% observes peer P, or none where it observes no address for P.
@@ -974,15 +976,16 @@ peer_app(P, A?) :- ground(P?) | '_peer_app'(P?, A).
 procedure punch_udp(String?).
 punch_udp(A) :- ground(A?) | '_punch_udp'(A?).
 
-%% declare/1 - make the declaration D to the networking layer or the platform: peer(P) gives the layer the public key P of a peer the program knows; address(P, A) the address A at which peer P is reached; rendezvous(P, A) a rendezvous server, the agent of key P at address A, or replaces its address; trust(U, L) sets the cold-call trust level of proximity underlay U to L, both underlays standing at closed until declared; place(P, R, E) declares a place P of radius R about the declaring agent's location at the time of the call, and assigns E the stream of that agent's own entered and exited events for P, carrying unobservable where the layer stops reporting crossings and observable where it resumes, a further declaration of the same place superseding the earlier one and closing its stream; nearby(U, S) assigns S a stream of the agents nearby over proximity underlay U, seen(K) when the layer discovers on U an agent of key K that it recognises or, under open trust, contacts, and gone(K) when that agent can no longer be reached over U, a further declaration on the same underlay superseding the earlier one and closing its stream (GLP-Spec appendix-guards, "Networking seam", 210cee1; IGLP, Definition "Seam Predicates", b20951d).
+%% declare/1 - make the declaration D to the networking layer or the platform: peer(P) gives the layer the public key P of a peer the program knows; address(P, A) the address A at which peer P is reached; rendezvous(P, A) a rendezvous server, the agent of key P at address A, or replaces its address; trust(U, L) sets the cold-call trust level of proximity underlay U to L, both underlays standing at closed until declared; place(P, R, E) declares a place P of radius R about the declaring agent's location at the time of the call, and assigns E the stream of that agent's own entered and exited events for P, carrying unobservable where the layer stops reporting crossings and observable where it resumes, a further declaration of the same place superseding the earlier one and closing its stream; nearby(U, S) assigns S a stream of the agents nearby over proximity underlay U, seen(K) when the layer discovers on U an agent of key K that it recognises or, under open trust, contacts, and gone(K) when that agent can no longer be reached over U, a further declaration on the same underlay superseding the earlier one and closing its stream; reachable(S) assigns S a stream of the agents the layer connects to over the WAN, connected(K) when the layer has a session with the agent of key K over the WAN, beginning with every agent it has one with when it is declared, and lost(K) when that session ends, a further declaration superseding the earlier one and closing its stream (GLP-Spec appendix-guards, "Networking seam", 210cee1, cb9df43; IGLP, Definition "Seam Predicates", b20951d, 0c77e47).
 procedure declare(Declaration?).
 declare(place(P, R, E?)) :-
     ground(P?), ground(R?) | '_declare'(place(P?, R?, E)).
 declare(nearby(U, S?)) :-
     ground(U?) | '_declare'(nearby(U?, S)).
+declare(reachable(S?)) :- '_declare'(reachable(S)).
 declare(D) :- ground(D?) | '_declare'(D?).
 
-%% remove/1 - end the declaration R: peer(P) takes P, and any address recorded for it, off the layer's known peers; rendezvous(P) takes the server off and ends the layer's session with it, a key not declared doing nothing; place(P) ends the declaration of P, closing its stream, and does nothing where P is not declared; nearby(U) ends the nearby declaration on U, closing its stream, and does nothing where none stands.
+%% remove/1 - end the declaration R: peer(P) takes P, and any address recorded for it, off the layer's known peers; rendezvous(P) takes the server off and ends the layer's session with it, a key not declared doing nothing; place(P) ends the declaration of P, closing its stream, and does nothing where P is not declared; nearby(U) ends the nearby declaration on U, closing its stream, and does nothing where none stands; reachable ends the reachable declaration, closing its stream, and does nothing where none stands.
 procedure remove(Removal?).
 remove(R) :- ground(R?) | '_remove'(R?).
 

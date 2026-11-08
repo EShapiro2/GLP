@@ -391,6 +391,16 @@ class AgentRuntime {
       _acceptedSinceSave.clear();
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
+      // The layer starts empty at every launch, and at a restart the runtime
+      // makes every declaration the store holds to it again before any goal
+      // of the agent is reduced; the program does not declare again (IGLP
+      // 0c77e47, Implementation Notes, "Persistence").  Until 2026-11-08 the
+      // store kept the places and nearby declarations alone and told the new
+      // layer none, so a restarted agent's layer knew no peer, trust level
+      // or place.
+      final redeclared = _ctx!.declareStandingToLayer();
+      _log('INIT: ${redeclared.length} standing declarations made to the '
+          'layer again');
       _output('[INIT] Restored the agent\'s saved state');
       await _submit(const _Resume());
       // The person's screen is not part of the local state: at a restart the
@@ -522,6 +532,12 @@ class AgentRuntime {
     _ctx!.presenceSink = (underlay, presence, declaration) => unawaited(
         _submit(_Presence(underlay, presence, declaration))
             .catchError((Object _) {}));
+
+    // A reach on the reachable stream likewise (IGLP 0c77e47, after
+    // Definition "Seam Predicates": "A place event and a presence or a reach
+    // on a nearby or reachable stream are bridged below the madGLP layer").
+    _ctx!.reachSink = (reach, declaration) => unawaited(
+        _submit(_Reach(reach, declaration)).catchError((Object _) {}));
 
     _output('[INIT] Loaded GLP program');
   }
@@ -1037,6 +1053,8 @@ class AgentRuntime {
         _ctx!.deliverPlaceEvent(place, event, declaration: declaration);
       case _Presence(:final underlay, :final presence, :final declaration):
         _ctx!.deliverPresence(underlay, presence, declaration: declaration);
+      case _Reach(:final reach, :final declaration):
+        _ctx!.deliverReach(reach, declaration: declaration);
     }
     return true;
   }
@@ -1460,6 +1478,17 @@ final class _Presence extends _AgentEvent {
   const _Presence(this.underlay, this.presence, this.declaration);
   @override
   String toString() => 'the presence $presence over ${underlay.name}';
+}
+
+/// A reach the layer reports for the reachable declaration that stood when it
+/// was reported, [declaration]: `connected(K)` or `lost(K)` (GLP-Spec
+/// cb9df43, "Networking seam").
+final class _Reach extends _AgentEvent {
+  final rt.Term reach;
+  final int declaration;
+  const _Reach(this.reach, this.declaration);
+  @override
+  String toString() => 'the reach $reach';
 }
 
 /// A restart's refusal of an update (IGLP 61f3283, madglp-spec.tex,

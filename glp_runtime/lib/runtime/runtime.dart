@@ -3,6 +3,7 @@ import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'body_kernels.dart';
 import 'place_streams.dart';
+import 'seam_declarations.dart';
 import 'sim_clock.dart';
 import 'saved_state.dart';
 import 'terms.dart' show Term, ModuleTerm;
@@ -128,6 +129,18 @@ class GlpRuntime {
   /// b20951d, Definition "Seam Predicates" and the paragraph after it), kept
   /// whether a networking layer is bound or none is.
   late final PlaceStreams nearbyStreams = PlaceStreams(this);
+
+  /// The reachable declaration and its stream, under the one key `wan`: the
+  /// runtime's bookkeeping behind declare(reachable(S)) and remove(reachable),
+  /// fed and closed as a place's stream (GLP-Spec cb9df43, appendix-guards,
+  /// "Networking seam"; IGLP 0c77e47, Definition "Seam Predicates" and the
+  /// paragraph after it), kept whether a networking layer is bound or none is.
+  late final PlaceStreams reachableStreams = PlaceStreams(this);
+
+  /// The declarations made to the networking layer that stand, kept so that
+  /// a restart makes each to the new layer again (seam_declarations.dart;
+  /// IGLP 0c77e47, Implementation Notes, "Persistence").
+  final SeamDeclarations seamDeclarations = SeamDeclarations();
 
   /// The machine's simulated clock and its queue of pending tokens (GLP-Spec
   /// appendix-guards.tex at 5fd9a15, "Simulated time": "The clock is of one
@@ -454,6 +467,8 @@ class GlpRuntime {
     }
     placeStreams.saveState(w);
     nearbyStreams.saveState(w);
+    reachableStreams.saveState(w);
+    seamDeclarations.saveState(w);
   }
 
   /// Read back what [saveState] wrote, into this runtime, fresh from its
@@ -517,6 +532,8 @@ class GlpRuntime {
     }
     placeStreams.restoreState(r);
     nearbyStreams.restoreState(r);
+    reachableStreams.restoreState(r);
+    seamDeclarations.restoreState(r);
   }
 
   /// The goals held, by id, and the program key each runs: what a restarted

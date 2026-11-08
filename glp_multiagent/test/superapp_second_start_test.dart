@@ -208,8 +208,11 @@ void main() {
     // is taken from the restored state.
     second.request(const GAtom('close_place'));
     await second.host.idle;
+    // The layer starts empty at every launch, and at the restart the
+    // runtime made the trust levels standing, open, to it again before any
+    // goal was reduced (IGLP 0c77e47, Implementation Notes, "Persistence").
     expect((second.host.network as _Alone).declared,
-        ['pan closed', 'lan closed']);
+        ['pan open', 'lan open', 'pan closed', 'lan closed']);
     expect(second.errors, isEmpty);
     second.host.dispose();
   }, timeout: const Timeout(Duration(minutes: 3)));

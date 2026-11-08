@@ -379,6 +379,104 @@ removed :- remove(rendezvous('${serverKey.hex}')).
     expect(network.isPeerReachable(serverKey), isFalse);
   }, timeout: Timeout.none);
 
+  test(
+      'declare(reachable(S)) gives S connected(K) when the layer has a session '
+      'with K over the WAN and lost(K) when it ends; remove(reachable) closes '
+      'S (GLP-Spec cb9df43, "Networking seam"; IGLP 0c77e47)', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    // A WAN session made and ended: the layer dials a declared rendezvous
+    // server and ends its session with it when the server is removed, as the
+    // test above has it.
+    final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = probe.port;
+    probe.close();
+    final serverId = await identityFromSeed(seedOf(0x27));
+    final server = HeadlessGrassrootsNetwork(
+      identity: serverId,
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
+      rendezvousServer: true,
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(server.dispose);
+    expect(await server.start(), isTrue);
+
+    final layer = HeadlessGrassrootsNetwork(
+      identity: await identityFromSeed(seedOf(0x28)),
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(layer.dispose);
+    expect(await layer.start(), isTrue);
+    final network = HeadlessGlpNetwork(layer);
+    final serverKey = glp.PubKey.fromList(serverId.publicKey);
+
+    final out = <String>[];
+    final engine = GlpEngine(
+        rootSelfGlpPath: File('../../programs/self.glp').absolute.path);
+    engine.enableMadGLP(agentId: 'alice');
+    engine.runtime.outputCallback = out.add;
+    final ctx = engine.madContext!;
+    ctx.network = network;
+    // What the layer reports reaches the runtime, as the agent's host binds
+    // it (AgentRuntime, isolate_manager.dart).
+    final connected = Completer<void>();
+    final disconnected = Completer<void>();
+    network.onPeerConnected = (pk, underlay, application) {
+      ctx.peerConnected(pk, underlay, application);
+      if (pk == serverKey && underlay == glp.Underlay.wan &&
+          !connected.isCompleted) {
+        connected.complete();
+      }
+    };
+    network.onPeerDisconnected = (pk, underlay) {
+      ctx.peerDisconnected(pk, underlay);
+      if (pk == serverKey && underlay == glp.Underlay.wan &&
+          !disconnected.isCompleted) {
+        disconnected.complete();
+      }
+    };
+    engine.loadSource('''
+procedure watched.
+watched :- declare(reachable(S)), watch(S?).
+procedure watch(Stream(Reach)?).
+watch([R | S]) :- ground(R?) | send_to_user([R?]), watch(S?).
+watch([]) :- send_to_user([closed]).
+procedure declared.
+declared :- declare(rendezvous('${serverKey.hex}', '127.0.0.1:$port')).
+procedure removed.
+removed :- remove(rendezvous('${serverKey.hex}')).
+procedure ended.
+ended :- remove(reachable).
+procedure tick.
+tick.
+''');
+
+    await engine.runGoal('watched');
+    expect(out, isEmpty, reason: 'no session over the WAN yet');
+    expect((await engine.runGoal('declared')).succeeded, isTrue);
+    await connected.future;
+    await engine.runGoal('tick');
+    expect(out, [contains('connected(')], reason: 'the session comes up');
+    expect(out.single, contains(serverKey.hex));
+
+    // The watch suspended on S is part of the drain, so a run may end
+    // suspended; it does not fail.
+    expect((await engine.runGoal('removed')).failed, isFalse);
+    await disconnected.future;
+    await engine.runGoal('tick');
+    expect(out.length, 2);
+    expect(out[1], allOf(contains('lost('), contains(serverKey.hex)),
+        reason: 'the session ends');
+
+    expect((await engine.runGoal('ended')).failed, isFalse);
+    expect(out.last, 'closed', reason: 'remove(reachable) closes the stream');
+  }, timeout: Timeout.none);
+
   group('two runtimes over two headless layers in two processes', () {
     // The agents' one program: each agent started from agent(ch(_?,_),
     // ch(_?,_)), every agent's initial goal (IGLP, Implementation Notes,

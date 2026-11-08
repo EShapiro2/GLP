@@ -9,10 +9,12 @@ library;
 import 'dart:async';
 
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
+import 'package:glp_runtime/runtime/body_kernels.dart'
+    show deepDeref, reachableKey;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/saved_state.dart';
+import 'package:glp_runtime/runtime/seam_declarations.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
@@ -113,6 +115,18 @@ class MadContext {
   /// The number of presences delivered onto a nearby stream, so that a host
   /// delivering them as they arrive can tell that a run is to follow.
   int presencesDelivered = 0;
+
+  /// Where the reaches of the reachable declaration go, where set: to the
+  /// host, which delivers each in an event cycle of its own by
+  /// [deliverReach], as it does a presence ([presenceSink]).  [declaration] is
+  /// the reachable declaration that stood when the layer reported the
+  /// session, and is checked when the reach is delivered.  Where it is not
+  /// set, a reach is delivered as the layer reports it.
+  void Function(Term reach, int declaration)? reachSink;
+
+  /// The number of reaches delivered onto the reachable stream, so that a
+  /// host delivering them as they arrive can tell that a run is to follow.
+  int reachesDelivered = 0;
 
   /// Optional trace sink for MAD infrastructure output.
   /// When set, MAD debug output goes through this callback instead of print().
@@ -713,6 +727,14 @@ class MadContext {
     _trace('[MAD $agentId] declarePlace($place, $radiusMetres): stream '
         'writer=$streamWriterAddr');
 
+    _askLayerForPlace(network, place, radiusMetres, declaration);
+  }
+
+  /// Give [network] the place [place] of radius [radiusMetres], the standing
+  /// declaration of number [declaration], and put a refusal on that
+  /// declaration's stream.
+  void _askLayerForPlace(GlpNetwork network, String place,
+      double radiusMetres, int declaration) {
     // The layer answers asynchronously; the stream exists either way. On a
     // refusal E receives `unobservable`, the declaration stands, and
     // `observable` follows if the layer later begins reporting (Definition Seam
@@ -770,6 +792,53 @@ class MadContext {
     }
   }
 
+  /// Make to the layer every declaration the restored state holds standing,
+  /// in the order they were made, before any goal of the agent is reduced:
+  /// "The layer starts empty at every launch, and at a restart the runtime
+  /// makes every declaration the store holds to it again before any goal of
+  /// the agent is reduced" (IGLP 0c77e47, Implementation Notes,
+  /// "Persistence"); the program does not declare again.  A peer, an
+  /// address, a rendezvous server and a trust level go to the layer function
+  /// behind each; a place goes to [GlpNetwork.declarePlace] for its standing
+  /// declaration, whose stream a refusal is put on, as [declarePlace] does.
+  /// A nearby declaration calls no layer function: its stream is fed by what
+  /// the new layer reports.  A layer function the layer does not have is
+  /// traced and the rest are made.  Does nothing where no layer is bound.
+  /// Returns the declarations made.
+  List<StandingDeclaration> declareStandingToLayer() {
+    final network = this.network;
+    if (network == null) return const [];
+    final made = <StandingDeclaration>[];
+    for (final d in runtime.seamDeclarations.standing.toList()) {
+      final a = d.args;
+      try {
+        switch (d.kind) {
+          case SeamDeclarationKind.peer:
+            network.putKnownPeer(PubKey.fromHex(a[0]));
+          case SeamDeclarationKind.address:
+            network.putPeerAddress(PubKey.fromHex(a[0]), a[1]);
+          case SeamDeclarationKind.rendezvous:
+            network.putRendezvousServer(PubKey.fromHex(a[0]), a[1]);
+          case SeamDeclarationKind.trust:
+            network.setTrustLevel(ProximityUnderlay.values.byName(a[0]),
+                TrustLevel.values.byName(a[1]));
+          case SeamDeclarationKind.place:
+            final declaration = runtime.placeStreams.standing(a[0]);
+            if (declaration == null) continue;
+            _installPlaceEventHandler(network);
+            _askLayerForPlace(
+                network, a[0], double.parse(a[1]), declaration);
+        }
+        made.add(d);
+        _trace('[MAD $agentId] restart: $d made to the layer again');
+      } on UnsupportedError catch (e) {
+        _trace('[MAD $agentId] restart: $d not made to the layer: '
+            '${e.message}');
+      }
+    }
+    return made;
+  }
+
   /// Route the layer's place events onto the streams of the places a
   /// restarted agent declared, as [declarePlace] routes them.
   void resumePlaceEvents() {
@@ -799,11 +868,18 @@ class MadContext {
     final sessions = _peerSessions.putIfAbsent(pk.hex, () => {});
     sessions.remove(underlay); // the latest report last
     sessions[underlay] = application;
+    if (underlay == Underlay.wan && !_wanSessions.containsKey(pk.hex)) {
+      _wanSessions[pk.hex] = pk;
+      _reach(_presenceTerm('connected', pk));
+    }
   }
 
   /// The layer reported [pk] no longer reachable over [underlay].  Called by
   /// the host that binds the network, from the layer's `onPeerDisconnected`.
   void peerDisconnected(PubKey pk, Underlay underlay) {
+    if (underlay == Underlay.wan && _wanSessions.remove(pk.hex) != null) {
+      _reach(_presenceTerm('lost', pk));
+    }
     final sessions = _peerSessions[pk.hex];
     if (sessions == null) return;
     sessions.remove(underlay);
@@ -874,7 +950,7 @@ class MadContext {
     _presence(underlay, _presenceTerm('gone', pk));
   }
 
-  /// `seen(K)` or `gone(K)`, K the key of [pk] as a program names the agent:
+  /// `seen(K)`, `gone(K)`, `connected(K)` or `lost(K)`, K the key of [pk] as a program names the agent:
   /// its key, 64 lowercase hex characters, over a real network, and in a
   /// simulation the readable name standing for it, as the seam names the
   /// sender of a message (IGLP, Remark "Agent Names"; Implementation Notes,
@@ -929,6 +1005,76 @@ class MadContext {
     runtime.nearbyStreams.deliver(underlay.name, presence);
     presencesDelivered++;
     _trace('[MAD $agentId] nearby over ${underlay.name}: $presence');
+  }
+
+  // ===========================================================================
+  // AGENTS REACHABLE (Definition Seam Predicates: reachable(S))
+  // ===========================================================================
+  //
+  // GLP-Spec cb9df43, appendix-guards, "Networking seam": "reachable(S)
+  // assigns S a stream of the agents the networking layer connects to over
+  // the WAN: connected(K) when the layer has a session with the agent of key
+  // K over the WAN, beginning with every agent it has one with when it is
+  // declared, and lost(K) when that session ends.  A further declaration
+  // supersedes the earlier one and closes its stream, and remove(reachable)
+  // ends the declaration and closes its stream."  IGLP 0c77e47, after
+  // Definition "Seam Predicates": a reach is bridged below the madGLP layer,
+  // the stream fed serializer-fashion and closed as a place's.
+  //
+  // The layer reports a session over the WAN by onPeerConnected(pk, wan,
+  // application?) and its end by onPeerDisconnected(pk, wan) (GNA api.tex,
+  // Section 2.3).  The runtime keeps the agents with which the layer has a
+  // session over the WAN, so a declaration is given connected for every one
+  // when it is made.  What the layer reports is the layer's and is reported
+  // again after a restart, so the record is not part of the agent's saved
+  // state; the declaration and its stream are ([GlpRuntime.reachableStreams]).
+  // In the simulation the router reports the PAN throughout, so the stream
+  // carries nothing (IGLP 0c77e47, "Simulation realisation").
+
+  /// The agents with which the layer has a session over the WAN, as
+  /// reported and not since ended, by key hex, in order of report.
+  final Map<String, PubKey> _wanSessions = {};
+
+  /// A reach the layer reported: to the host's [reachSink] where it is set,
+  /// delivered at once where it is not; where no reachable declaration
+  /// stands, nothing.
+  void _reach(Term reach) {
+    final declaration = runtime.reachableStreams.standing(reachableKey);
+    if (declaration == null) return;
+    final sink = reachSink;
+    if (sink != null) {
+      sink(reach, declaration);
+    } else {
+      deliverReach(reach, declaration: declaration);
+    }
+  }
+
+  /// Declare a watch on the agents reachable over the WAN, its stream growing
+  /// from [streamWriterAddr], the writer of the `S` of
+  /// `declare(reachable(S))`; a declaration already standing is superseded
+  /// and its stream closed.  The stream is given `connected(K)` at once for
+  /// every agent with which the layer has a session over the WAN.
+  void declareReachable(HeapCell streamWriterAddr) {
+    runtime.reachableStreams.declare(reachableKey, streamWriterAddr);
+    _trace('[MAD $agentId] declare reachable: stream writer=$streamWriterAddr');
+    for (final pk in _wanSessions.values) {
+      runtime.reachableStreams
+          .deliver(reachableKey, _presenceTerm('connected', pk));
+    }
+  }
+
+  /// Deliver [reach] on the reachable stream, serializer-fashion; a reach
+  /// answering a [declaration] that no longer stands, removed or superseded,
+  /// is dropped.
+  void deliverReach(Term reach, {required int declaration}) {
+    if (!runtime.reachableStreams.isStanding(reachableKey, declaration)) {
+      _trace('[MAD $agentId] reach $reach for a reachable declaration that '
+          'no longer stands --- dropped');
+      return;
+    }
+    runtime.reachableStreams.deliver(reachableKey, reach);
+    reachesDelivered++;
+    _trace('[MAD $agentId] reachable: $reach');
   }
 
   /// The layer's session with [pk] as reported, or null where it has none:
