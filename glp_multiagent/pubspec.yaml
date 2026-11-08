@@ -28,6 +28,12 @@ dependencies:
   redux: ^5.0.0
   cryptography: ^2.7.0
   sodium_libs: ^3.4.0
+  # The layer's core, whose diagnostics a debuggable build reports through its
+  # assignable debugPrint, and the native strings the device's model is read
+  # with (lib/debuglog/).
+  grassroots_networking_core:
+    path: ../networking/core
+  ffi: ^2.1.0
 
 dev_dependencies:
   flutter_test:
@@ -39,9 +45,8 @@ dev_dependencies:
   flutter_lints: ^4.0.0
 
   # The runtime's host over GNA's headless layer, through the adapter, GNA's
-  # backend glue (test/agent_runtime_headless_test.dart).
-  grassroots_networking_core:
-    path: ../networking/core
+  # backend glue (test/agent_runtime_headless_test.dart), takes the layer's
+  # core, a dependency above.
   sodium: ^3.4.6
 
 flutter:
@@ -56,6 +61,9 @@ flutter:
   # directory named here and not those of its subdirectories, which is why the
   # tree is not named here directory by directory: that list drifted from the
   # tree (GLP, 2026-10-04 13:21 UTC).
+  # build.txt names GLP's commit the bundle was built from, which a
+  # debuggable build reports (lib/debuglog/device.dart).
   assets:
     - assets/glp/manifest.txt
+    - assets/glp/build.txt
     - assets/glp/bundle/

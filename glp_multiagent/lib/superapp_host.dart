@@ -66,6 +66,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'isolate_protocol.dart' show runtimeTermOf, screenTermOf;
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
+import 'ui_runtime/term.dart' show GTerm;
 
 /// The entry the person's first act names on a phone: superapp/5 of
 /// `programs/social/graph/core` (core's CoreAct
@@ -99,13 +100,33 @@ class SuperAppHost {
   /// System", "Boot").
   final List<({String key, String address})> rendezvousServers;
 
+  /// The person's first act at the agent's first start, given the agent's
+  /// key; null, and it is the act that starts the Grassroots App,
+  /// `superapp(Me, [])`.  A scripted build's is its scripted person's,
+  /// `sg_init(Me, Mode, Ks)` (scripted_person.dart).
+  final rt.Term Function(String key)? firstAct;
+
   /// The image of the program's display declarations.
   final Manifest manifest;
 
   /// The person's screen: the bridge, and what the agent tells the person.
   /// The person's grants on it go to the agent, each an act of the person.
   late final UiRuntime ui = UiRuntime(
-      manifest: manifest, onSend: (cmd) => act(runtimeTermOf(cmd)));
+      manifest: manifest,
+      onSend: (cmd) {
+        onAct?.call(cmd);
+        act(runtimeTermOf(cmd));
+      });
+
+  /// Each act of the person on the screen, as the bridge sends it, before it
+  /// is handed to the agent; null, and none is told.  A debuggable build
+  /// reports it (lib/debuglog/app_reporting.dart).
+  void Function(GTerm cmd)? onAct;
+
+  /// Each term the agent sends its person, as [UiRuntime.handle] is handed
+  /// it ([AgentRuntime.onUserOutput]); null, and none is told.  A debuggable
+  /// build reports it (lib/debuglog/app_reporting.dart).
+  void Function(rt.Term term)? onUserOutput;
 
   /// The store that keeps the agent's local state across the termination of
   /// the app; null, and every start is a first start.
@@ -139,6 +160,7 @@ class SuperAppHost {
     required this.manifest,
     this.entry = superappEntry,
     this.rendezvousServers = const [],
+    this.firstAct,
     this.stateStore,
   }) : agent = AgentRuntime(
           agentId: agentId,
@@ -164,17 +186,21 @@ class SuperAppHost {
   /// program's compilation nor the program the store keeps (AgentRuntime's
   /// restore).
   Future<void> start() async {
-    agent.onUserOutput = (term) => ui.handle(screenTermOf(term));
+    agent.onUserOutput = (term) {
+      onUserOutput?.call(term);
+      ui.handle(screenTermOf(term));
+    };
     agent.onOutput = (line) => onOutput?.call(line);
     final log = onLog;
     if (log != null) agent.onLog = log;
     await agent.initialize();
     if (agent.firstStart) {
-      await act(rt.StructTerm(entry, [
-        rt.ConstTerm(key),
-        rt.ConstTerm(rt.nil),
-        if (entry == superappEntry) _servers(),
-      ]));
+      await act(firstAct?.call(key) ??
+          rt.StructTerm(entry, [
+            rt.ConstTerm(key),
+            rt.ConstTerm(rt.nil),
+            if (entry == superappEntry) _servers(),
+          ]));
     }
   }
 
