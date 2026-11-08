@@ -171,6 +171,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
             : net.network,
         keyPair: net.keyPair,
         manifest: superappManifest,
+        services: readServices(glp.coreDir),
         firstAct: script?.firstAct,
         stateStore: store,
       );

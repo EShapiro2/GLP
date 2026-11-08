@@ -59,6 +59,11 @@ for t in $TREES; do
     stage "$f"
   done < <(cd "$SRC" && find "$t" -type f \( -name '*.glp' -o -name '*.vglp' \) | sort)
 done
+# The services the Grassroots App is configured with, which its first act
+# names (GSA paper, Appendix "The Operating System", "Boot", 1d430b6: "the
+# configuration is a file of the repository the app reads when it is built"),
+# beside the program; SuperAppHost reads it (readServices).
+stage social/graph/core/services.json
 # A .vglp is compiled with the dispatcher's generic source, programs/vglp/dispatcher.glp,
 # and its part typed over the type of a position, programs/vglp/views.glp.
 if [ -n "$(find "$DST" -name '*.vglp')" ]; then

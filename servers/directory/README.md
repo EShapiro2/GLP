@@ -26,11 +26,11 @@ The package depends on the glue package (`networking/glue`) for the adapter the 
 ## Run
 
     build/directory/bundle/bin/directory_server --identity gds-identity.json --port 9518 \
-      --public-address 203.0.113.7:9518 --outbound-queue-file gds-queue.json \
+      --public-address 203.0.113.7:9518 --outbound-queue-file gds-queue.json --state-file gds-state \
       --program <GLP>/programs/examples/rendezvous/gds_agent.glp \
       --root-self <GLP>/programs/self.glp [--rendezvous <key-hex>@<ip:port> ...]
 
-`--identity` is the directory's key pair, a JSON file `{"seed": <hex>}` created on first run; `--port` and `--public-address` its server address, the UDP port and the static public `ip:port`; `--outbound-queue-file` the layer's fair-delivery queue; `--rendezvous` a rendezvous server its layer declares, as many as given.  It prints `READY <udp-port> <key-hex> <base>/directory` once listening.  A person's app is configured with the directory's key and address (GSA, Appendix A, Boot).
+`--identity` is the directory's key pair, a JSON file `{"seed": <hex>}` created on first run; `--port` and `--public-address` its server address, the UDP port and the static public `ip:port`; `--outbound-queue-file` the layer's fair-delivery queue; `--state-file` where the agent's local state is kept across a restart, as IGLP's Definition Restart requires, in the files `gds-state`, `gds-state.key` and `gds-state.program`; `--rendezvous` a rendezvous server its layer declares, as many as given.  It prints `READY <udp-port> <key-hex> <base>/directory` once listening.  A person's app is configured with the directory's key and address (GSA, Appendix A, Boot).
 
 The web side takes the environment: `HOST` (default 127.0.0.1), `PORT` (default 8090), `BASE_URL` (the address people reach, for the mail's link; default `http://HOST:PORT`), `DATA` (the store, default `directory.json`), and the relay: `SMTP_HOST`, `SMTP_PORT` (default 587, STARTTLS), `SMTP_SSL` (`true` for TLS from the start, port 465), `SMTP_USER`, `SMTP_PASSWORD_FILE` (a file holding the password, outside the repository) and `MAIL_FROM` (default `directory@peoplesweb.org`).
 

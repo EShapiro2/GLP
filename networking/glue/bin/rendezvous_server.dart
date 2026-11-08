@@ -27,13 +27,20 @@
 /// Run:
 ///   rendezvous_server --identity rv-identity.json --port 9516 \
 ///     --public-address 203.0.113.7:9516 --outbound-queue-file rv-queue.json \
+///     --state-file rv-state \
 ///     --program <GLP>/programs/examples/rendezvous/rv_agent.glp \
 ///     --root-self <GLP>/programs/self.glp
 ///
 /// `--identity` is the key pair, a JSON file `{"seed": <hex>}` created with a
 /// fresh seed on first run; `--outbound-queue-file` the file that keeps the
 /// layer's fair-delivery queue, so that it survives the termination of the
-/// server (GNA Section 2.11).  The agent is told nothing at boot: it admits a
+/// server (GNA Section 2.11); `--state-file` where the agent's local state is
+/// kept across a restart, the files `<state-file>`, `.key` and `.program`
+/// (IGLP, Definition "Restart": "the local state s_p of p at restart is its
+/// local state at termination"; Implementation Notes, "Persistence": "the
+/// runtime keeps it by a store the host gives it, beside the layer's queue"),
+/// so that a restart keeps the registrations and the requests awaiting their
+/// match, and the names the agent gave out.  The agent is told nothing at boot: it admits a
 /// request by the keys that sign it, each request carrying the other
 /// friend's signature over their pair, and reads no source identity, so an
 /// update of the Grassroots App leaves the signatures friends hold good (GSA,
@@ -52,6 +59,7 @@ import 'dart:typed_data';
 
 import 'package:args/args.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:grassroots_networking_core/src/headless/identity_file.dart';
@@ -71,6 +79,10 @@ Future<void> main(List<String> argv) async {
         mandatory: true,
         help: "The layer's fair-delivery queue: a JSON file, so that the "
             'queue survives the termination of the server (GNA Section 2.11)')
+    ..addOption('state-file',
+        mandatory: true,
+        help: "Where the agent's local state is kept across a restart (IGLP, "
+            'Definition Restart)')
     ..addOption('program',
         mandatory: true,
         help: 'The rendezvous agent: programs/examples/rendezvous/rv_agent.glp')
@@ -118,6 +130,7 @@ Future<void> main(List<String> argv) async {
     rootSelfGlpPath: args['root-self'] as String,
     keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
     network: network,
+    stateStore: FileAgentStateStore(args['state-file'] as String),
   );
   // The transcript marks each element sent to the person with `< `.
   agent.onOutput = (line) {

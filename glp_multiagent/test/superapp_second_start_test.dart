@@ -6,7 +6,7 @@
 /// restart resumes from the state the store holds").
 ///
 /// At the first start the app sends the act that starts the Grassroots App,
-/// `superapp(Me, [])`, and the person acts on home; the app terminates.  At
+/// `superapp(Me, [], [])`, and the person acts on home; the app terminates.  At
 /// the second start, from the same store and under the same key, the app sends
 /// no first act: the agent goes on from the state the store holds, and the
 /// runtime grants refresh in the person's place, on which the dispatcher has

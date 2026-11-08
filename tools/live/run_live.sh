@@ -2,7 +2,8 @@
 # run_live.sh --- the live test suite of the services installed on
 # peoplesweb.org (GSA #2's task for GNA, Code_inbox.md 2026-11-08 12:51 UTC),
 # run from the Mac against the live VPS.  It reads the VPS by SSH and changes
-# nothing there.
+# nothing there, but that part 2 restarts the directory's unit once (check
+# 2.9, the listings kept across a restart).
 #
 #   bash tools/live/run_live.sh [part ...]
 #
@@ -15,7 +16,11 @@
 #            machine, each a madGLP agent over its own headless layer with a
 #            fresh key (bin/live_rv.dart); registration and redemption are
 #            sent only where the running agent has them
-#   2 3      the directory (GDS) and the mail route (directory_mail_check.py)
+#   2 3      the directory (GDS) and the mail route (directory_mail_check.py);
+#            part 2's flow, 2.2 to 2.10, by three persons on this machine
+#            through the directory's agent and the rendezvous server
+#            (bin/live_gds.dart), each verification link read from the
+#            directory's journal
 #   4static  every file the site serves; every listed program downloads
 #   4render  every contract's page rendered by headless Chrome, its JS run
 #   4live-1 ... 4live-7
@@ -88,6 +93,31 @@ part_1() {
 part_23() {
   python3 -I "$HERE/directory_mail_check.py" "$BASE" "$VPS" "$1" ${MAIL_TO:+--mail-to "$MAIL_TO"} \
     | tee "$OUT/part-$1.txt"
+  [ "$1" = 2 ] && grep -q '^RESULT 2.0-deployed PASS' "$OUT/part-2.txt" && part_2flow
+}
+
+# Part 2's flow (bin/live_gds.dart): the directory's key from its journal's
+# READY line, its address from /etc/glp/directory.env, the rendezvous
+# server's key from part vps.
+part_2flow() {
+  local f="$OUT/part-2.txt"
+  [ -s "$OUT/part-vps.txt" ] || part_vps > /dev/null
+  rvkey=$(sed -n 's/^RESULT 0-rv-key INFO server key //p' "$OUT/part-vps.txt")
+  dirkey=$(ssh_vps "journalctl -u directory --no-pager | sed -n 's/.*READY [0-9]* \([0-9a-f]*\) .*/\1/p' | tail -1")
+  diraddr=$(ssh_vps "sed -n 's/^GDS_PUBLIC_ADDRESS=//p' /etc/glp/directory.env")
+  if [ -z "$dirkey" ] || [ -z "$diraddr" ]; then
+    echo "RESULT 2.2-flow FAIL the directory's agent is not running: key '$dirkey' (its journal's READY line), address '$diraddr' (/etc/glp/directory.env)" | tee -a "$f"
+    return
+  fi
+  (cd "$HERE" && bash "$RUN" live-pub flutter pub get > "$OUT/pub-get.txt" 2>&1)
+  (cd "$HERE" && bash "$RUN" live-gds "$FLUTTER_DART" run bin/live_gds.dart \
+      --base "$BASE" --dir-key "$dirkey" --dir-address "$diraddr" \
+      --rv-key "$rvkey" --rv-address "$RV_ADDR" --glp-root "$GLP/programs" \
+      --log-cmd "ssh -o BatchMode=yes -o ConnectTimeout=10 $VPS journalctl -u directory --no-pager --since -2h" \
+      --restart-cmd "ssh -o BatchMode=yes -o ConnectTimeout=10 $VPS systemctl restart directory" \
+      > "$OUT/raw-part-2.txt" 2>&1)
+  grep -E '^(RESULT|INFO) ' "$OUT/raw-part-2.txt" | tee -a "$f"
+  grep -q '^RESULT 2\.2' "$OUT/raw-part-2.txt" || echo "RESULT 2.2-flow FAIL live_gds.dart printed no result; see $OUT/raw-part-2.txt" | tee -a "$f"
 }
 
 part_4() {

@@ -75,15 +75,33 @@ void main() {
   //                           naming F and carrying Sig, F's signature
   //   available(Rv, F, Sig)   send Rv an availability notice for F, carrying
   //                           Sig, F's signature
+  //   invite(Rv, RvAddr, Serial, Expiry)
+  //                           sign invitation(Me, Rv, RvAddr, Serial, Expiry),
+  //                           register it with Rv and report link(L)
+  //   register_again(Rv, L)   register the link L with Rv once more
+  //   redeem_link(Rv, L)      sign redeem(Me, L) and redeem it at Rv
   //
-  // On the server's reply: punch(Addr), declare Addr as F's address, punch
-  // toward it and report punched(F, Addr); rejected, report rejected(F).
+  // On the answer to a registration: punch(K, Addr), K the recipient who
+  // redeemed it, declare Addr as K's address, punch toward it and report
+  // invitee_punched(K, Addr); rejected, report register_rejected.  On the
+  // answer to a redemption: punch(K, Addr), K the inviter, declare K a peer at
+  // Addr, punch and report inviter_punched(K, Addr); rejected, report
+  // redeem_rejected.
+  //
+  // On the server's reply: punch(K, Addr), K being F, the friend named,
+  // declare Addr as F's address, punch toward it and report punched(F, Addr)
+  // (GNA Section 6: "relays to each the key and the address of the other");
+  // punch naming another key, report other(F, K); rejected, report
+  // rejected(F).
   const friendProgram = r'''
 FriendAct ::= attest(Key)
             ; reconnect(Key, Key, SignedTerm)
-            ; available(Key, Key, SignedTerm).
+            ; available(Key, Key, SignedTerm)
+            ; invite(Key, String, Integer, Integer)
+            ; register_again(Key, SignedTerm)
+            ; redeem_link(Key, SignedTerm).
 FriendActs ::= [] ; [FriendAct | FriendActs].
-SignalReply ::= punch(String) ; rejected.
+SignalReply ::= punch(Key, String) ; rejected.
 
 exported procedure agent(Channel(FriendActs, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
@@ -101,7 +119,41 @@ acts(Me, [available(Rv, F, Sig) | In]) :- ground(Me?), ground(F?) |
     send_to_net([msg(Rv?, available(Me?, F?, Sig?, Reply))]),
     on_reply(F?, Reply?),
     acts(Me?, In?).
+acts(Me, [invite(Rv, RvAddr, Serial, Expiry) | In]) :- ground(Me?) |
+    sign(invitation(Me?, Rv?, RvAddr?, Serial?, Expiry?), Me?, L),
+    registered(Me?, Rv?, L?),
+    acts(Me?, In?).
+acts(Me, [register_again(Rv, L) | In]) :- ground(Me?) |
+    send_to_net([msg(Rv?, register(Me?, L?, Reply))]),
+    on_registered(Reply?),
+    acts(Me?, In?).
+acts(Me, [redeem_link(Rv, L) | In]) :- ground(Me?) |
+    sign(redeem(Me?, L?), Me?, S),
+    send_to_net([msg(Rv?, redeem(Me?, S?, Reply))]),
+    on_redeemed(Reply?),
+    acts(Me?, In?).
 acts(_, []).
+
+procedure registered(Key?, Key?, SignedTerm?).
+registered(Me, Rv, L) :- ground(L?) |
+    send_to_net([msg(Rv?, register(Me?, L?, Reply))]),
+    send_to_user([link(L?)]),
+    on_registered(Reply?).
+
+procedure on_registered(SignalReply?).
+on_registered(punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([invitee_punched(K?, Addr?)]).
+on_registered(rejected) :- send_to_user([register_rejected]).
+
+procedure on_redeemed(SignalReply?).
+on_redeemed(punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(peer(K?)),
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([inviter_punched(K?, Addr?)]).
+on_redeemed(rejected) :- send_to_user([redeem_rejected]).
 
 procedure attest_pair(Key?, Key?).
 attest_pair(K, F) :- ground(K?), ground(F?), K? @< F? |
@@ -122,11 +174,58 @@ report_graph(F, Sig, signed(_, Graph, _)) :-
 report_graph(F, _, unsigned) :- send_to_user([unsigned(F?)]).
 
 procedure on_reply(Key?, SignalReply?).
-on_reply(F, punch(Addr)) :- ground(F?), ground(Addr?) |
-    declare(address(F?, Addr?)),
+on_reply(F, punch(K, Addr)) :- ground(F?), K? =?= F?, ground(Addr?) |
+    declare(address(K?, Addr?)),
     punch_udp(Addr?),
-    send_to_user([punched(F?, Addr?)]).
+    send_to_user([punched(K?, Addr?)]).
+on_reply(F, punch(K, _)) :- otherwise | send_to_user([other(F?, K?)]).
 on_reply(F, rejected) :- send_to_user([rejected(F?)]).
+''';
+
+  // A scripted directory (GNA Section 7, "The messages"; GDS:2): on
+  // list(A, Signed, Supply, Reply), where signature/2 reports Signed signed by
+  // A over listing(A, Email, Name, Visibility), it answers verify, sends no
+  // mail, asks on Supply for two links, more(2), and no more, and reports listed(A, Email,
+  // Name, Visibility); a listing not so signed it answers rejected, closing
+  // Supply, and reports unsigned; on supply(A, Links) it reports supplied(A,
+  // Links); unlist it answers unlisted.
+  const directoryProgram = r'''
+SupplyAsk ::= more(Integer).
+ListReply ::= verify ; listed ; rejected.
+UnlistReply ::= unlisted ; rejected.
+Visibility ::= listed ; unlisted.
+DirName ::= String ; none.
+DirMsg ::= list(Key, SignedTerm, Stream(SupplyAsk)?, ListReply?)
+         ; supply(Key, List(SignedTerm))
+         ; unlist(Key, SignedTerm, UnlistReply?).
+DirNet ::= [] ; [NetMsg(DirMsg) | DirNet].
+DirReport ::= listed(Key, String, DirName, Visibility) ; unsigned ; supplied(Key, List(SignedTerm)).
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(DirNet, Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(N, [])) :- dir(N?).
+
+procedure dir(DirNet?).
+dir([msg(_, list(A, S, Supply?, Reply?)) | Ms]) :- ground(A?), ground(S?) |
+    signature(S?, Sig),
+    on_listing(A?, Sig?, Supply, Reply),
+    dir(Ms?).
+dir([msg(_, supply(A, Links)) | Ms]) :- ground(A?), ground(Links?) |
+    report(supplied(A?, Links?)),
+    dir(Ms?).
+dir([msg(_, unlist(_, _, R?)) | Ms]) :- answered(R), dir(Ms?).
+dir([]).
+
+procedure on_listing(Key?, Signature?, Stream(SupplyAsk), ListReply).
+on_listing(A, signed(K, _, listing(A1, E, N, V)), [more(2)], verify) :-
+    ground(A?), K? =?= A?, A1? =?= A?, ground(E?), ground(N?), ground(V?) |
+    report(listed(A?, E?, N?, V?)).
+on_listing(_, _, [], rejected) :- otherwise | report(unsigned).
+
+procedure answered(UnlistReply).
+answered(unlisted).
+
+procedure report(DirReport?).
+report(R) :- ground(R?) | send_to_user([R?]).
 ''';
 
   // A later version of the friends' program: the same, with one procedure
@@ -139,10 +238,12 @@ friend_version(2).
   late Directory dir;
   late String friendPath;
   late String laterFriendPath;
+  late String directoryPath;
   late String serverExecutable;
   final glpRoot = Directory('../../programs').absolute.path;
   final rootSelfGlpPath = '$glpRoot/self.glp';
   final rvAgentPath = '$glpRoot/examples/rendezvous/rv_agent.glp';
+  final coreDir = '$glpRoot/social/graph/core';
 
   setUpAll(() async {
     dir = Directory('../../programs/tests').createTempSync('glp_rendezvous_');
@@ -151,6 +252,9 @@ friend_version(2).
     final later = Directory('${dir.path}/later')..createSync();
     laterFriendPath = File('${later.path}/friend.glp').absolute.path;
     File(laterFriendPath).writeAsStringSync(laterFriendProgram);
+    final directory = Directory('${dir.path}/directory')..createSync();
+    directoryPath = File('${directory.path}/directory.glp').absolute.path;
+    File(directoryPath).writeAsStringSync(directoryProgram);
 
     // The entrypoint, built to a native executable.
     final out = Directory.systemTemp.createTempSync('rendezvous_server_');
@@ -176,13 +280,35 @@ friend_version(2).
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
       );
 
-  /// The server, a process of its own, and two friends, each a madGLP agent
-  /// over its own headless layer, which is declared the server, holding each
-  /// other's signature over their pair; each friend's layer started.  B runs
-  /// [bProgram], by default the friends' program, A's.
-  Future<_World> standUp(int rvFill, int aFill, int bFill,
-      {String? bProgram}) async {
-    // The server's port, and its key pair as an identity file.
+  /// A phone running the Grassroots App's operating system,
+  /// programs/social/graph/core, each a madGLP agent over its own headless
+  /// layer, not yet started and given no first act.
+  Future<_Friend> osPhone(int fill, String id) async {
+    final identity = await identityFromSeed(fill);
+    final layer = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
+      identity: identity,
+      sodium: sodium!,
+    );
+    addTearDown(layer.dispose);
+    final key = glp.PubKey.fromList(identity.publicKey);
+    final agent = AgentRuntime(
+      agentId: id,
+      program: coreDir,
+      rootSelfGlpPath: rootSelfGlpPath,
+      keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
+      network: HeadlessGlpNetwork(layer),
+    );
+    addTearDown(agent.dispose);
+    final f = _Friend(key, layer, agent);
+    agent.onUserOutput = f.say;
+    agent.onOutput = f.transcript.add;
+    await agent.initialize();
+    return f;
+  }
+
+  /// The server's port, its key, and its key pair as an identity file.
+  Future<_Server> serverIdentity(int rvFill) async {
     final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     final rvPort = probe.port;
     probe.close();
@@ -192,6 +318,77 @@ friend_version(2).
     final rvKey = glp.PubKey.fromList((await GrassrootsIdentity.create(
             keyPair: await Ed25519().newKeyPairFromSeed(rvSeed)))
         .publicKey);
+    return (
+      rvKey: rvKey,
+      rvPort: rvPort,
+      identityPath: rvIdentityFile.path,
+      rvFill: rvFill
+    );
+  }
+
+  /// The servers launched, by the fill of their seed, each with its last run.
+  final launched = <int, ({_Server srv, _Run run})>{};
+
+  /// The server, a process of its own, started and listening, its state kept
+  /// in a file of its own across a restart; the process and what it says.
+  Future<_Run> startServer(_Server srv) async {
+    final (:rvKey, :rvPort, :identityPath, :rvFill) = srv;
+    final server = await Process.start(serverExecutable, [
+      '--identity',
+      identityPath,
+      '--port',
+      '$rvPort',
+      '--public-address',
+      '127.0.0.1:$rvPort',
+      '--outbound-queue-file',
+      '${dir.path}/rv-$rvFill-queue.json',
+      '--state-file',
+      '${dir.path}/rv-$rvFill-state',
+      '--program',
+      rvAgentPath,
+      '--root-self',
+      rootSelfGlpPath,
+    ]);
+    addTearDown(() async {
+      server.kill(ProcessSignal.sigterm);
+      await server.exitCode;
+    });
+    final serverLines = <String>[];
+    final serverLine = StreamController<String>.broadcast();
+    final serverErr = StringBuffer();
+    server.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((l) {
+      serverLines.add(l);
+      serverLine.add(l);
+    });
+    server.stderr.transform(utf8.decoder).listen(serverErr.write);
+    addTearDown(() => printOnFailure('the server said '
+        '${serverLines.join(' | ')}; stderr: $serverErr'));
+    final ready = (await _line(
+            serverLines, serverLine.stream, (l) => l.startsWith('READY ')))
+        .split(' ');
+    expect(ready, ['READY', '$rvPort', rvKey.hex],
+        reason: 'the server listens on its port, named by its key');
+    final run = (process: server, lines: serverLines, more: serverLine.stream);
+    launched[rvFill] = (srv: srv, run: run);
+    return run;
+  }
+
+  /// The server, a process of its own, started and listening; what it says,
+  /// line by line.
+  Future<List<String>> launch(_Server srv) async =>
+      (await startServer(srv)).lines;
+
+  /// The server, a process of its own, and two friends, each a madGLP agent
+  /// over its own headless layer, which is declared the server, holding each
+  /// other's signature over their pair; each friend's layer started.  B runs
+  /// [bProgram], by default the friends' program, A's.
+  Future<_World> standUp(int rvFill, int aFill, int bFill,
+      {String? bProgram}) async {
+    final srv = await serverIdentity(rvFill);
+    final (:rvKey, :rvPort, identityPath: _, rvFill: _) = srv;
 
     // The two friends, each a madGLP agent over its own headless layer
     // declaring the server.
@@ -240,42 +437,7 @@ friend_version(2).
     }
 
     // The server, a process of its own.
-    final server = await Process.start(serverExecutable, [
-      '--identity',
-      rvIdentityFile.path,
-      '--port',
-      '$rvPort',
-      '--public-address',
-      '127.0.0.1:$rvPort',
-      '--outbound-queue-file',
-      '${dir.path}/rv-$rvFill-queue.json',
-      '--program',
-      rvAgentPath,
-      '--root-self',
-      rootSelfGlpPath,
-    ]);
-    addTearDown(() async {
-      server.kill(ProcessSignal.sigterm);
-      await server.exitCode;
-    });
-    final serverLines = <String>[];
-    final serverLine = StreamController<String>.broadcast();
-    final serverErr = StringBuffer();
-    server.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .listen((l) {
-      serverLines.add(l);
-      serverLine.add(l);
-    });
-    server.stderr.transform(utf8.decoder).listen(serverErr.write);
-    addTearDown(() => printOnFailure('the server said '
-        '${serverLines.join(' | ')}; stderr: $serverErr'));
-    final ready = (await _line(
-            serverLines, serverLine.stream, (l) => l.startsWith('READY ')))
-        .split(' ');
-    expect(ready, ['READY', '$rvPort', rvKey.hex],
-        reason: 'the server listens on its port, named by its key');
+    final serverLines = await launch(srv);
 
     // The friends' layers start, and each holds a session with the server.
     expect(await a.layer.start(), isTrue);
@@ -444,7 +606,250 @@ friend_version(2).
     expect(b.said.whereType<rt.StructTerm>().map((t) => t.functor),
         isNot(contains('rejected')));
   }, timeout: Timeout.none);
+
+  // GRV:2 and GRV:3 over the WAN on today's core (GNA Section 6, "Invitation
+  // links"; GSA paper, Section 4.2, "Legacy online connections", and Appendix
+  // "The Operating System"): two phones, each the Grassroots App's operating
+  // system, programs/social/graph/core, started by its first act
+  // link_phone(Me, [], Services) (core's self.glp: the operating system on
+  // the layer, os_phone/8, with a person who answers yes on each card and
+  // whose acts are home's requests on the person's grants).  Alice's names
+  // the server, which her operating system declares to its layer; Bob's names
+  // none.  Alice invites by link: her operating system makes the link, signs
+  // it, registers it with the server and tells her it, invitation(Link), as
+  // text.  Bob opens the text: his operating system verifies the inviter's
+  // signature and the expiry, declares Alice a peer and the server the link
+  // names, and redeems it, signed by him; the server answers each with the
+  // other's key and address, each declares the other at it and punches, and
+  // Bob's cold call is a request to connect, which Alice's person answers
+  // yes, so the two are friends: each is told connected(other).
+  test(
+      'a link made by invite_link on one phone running the operating system '
+      'and opened on another is redeemed at the server, both punch, and the '
+      'two befriend', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final srv = await serverIdentity(0x7b);
+    final rvAddress = '127.0.0.1:${srv.rvPort}';
+
+    final alice = await osPhone(0x3d, 'alice');
+    final bob = await osPhone(0x4e, 'bob');
+    final serverLines = await launch(srv);
+    expect(await alice.layer.start(), isTrue);
+    expect(await bob.layer.start(), isTrue);
+
+    // The first acts: Alice's names the server, Bob's none.
+    await alice.agent.injectUserInput(_struct('link_phone', [
+      _const(alice.key.hex),
+      _nil,
+      _list([
+        _struct('rendezvous', [_const(srv.rvKey.hex), _const(rvAddress)])
+      ]),
+    ]));
+    await bob.agent.injectUserInput(
+        _struct('link_phone', [_const(bob.key.hex), _nil, _nil]));
+
+    // Alice invites by link, and is told the link, as text.
+    await alice.agent.injectUserInput(_grant(_const('invite_link')));
+    final invitation = await alice.toldOne('invitation');
+    final link = invitation.args[0];
+    expect(_value(link), matches(RegExp(r'^[0-9a-f]+$')),
+        reason: 'a signed term is text, the hex of the signed content');
+
+    // Bob opens it.
+    await bob.agent.injectUserInput(_grant(_struct('open_link', [link])));
+
+    // Each is told the other a friend: the link redeemed, the two punched,
+    // Bob's cold call a request to connect, and Alice's person's yes.
+    final toAlice = await alice.toldOne('connected');
+    final toBob = await bob.toldOne('connected');
+    expect(_value(toAlice.args[0]), bob.key.hex);
+    expect(_value(toBob.args[0]), alice.key.hex);
+
+    // Each declared the other at the address the server observes for it.
+    expect(alice.layer.store.state.knownPeers.known[bob.key.hex],
+        startsWith('127.0.0.1:'));
+    expect(bob.layer.store.state.knownPeers.known[alice.key.hex],
+        startsWith('127.0.0.1:'));
+    // Bob declared the server the link names, and both held a session with
+    // it.
+    expect(serverLines, contains('CONNECTED ${alice.key.hex}'));
+    expect(serverLines, contains('CONNECTED ${bob.key.hex}'));
+    for (final p in [alice, bob]) {
+      expect(p.told.map((c) => c.functor), isNot(contains('rejected')),
+          reason: '${p.agent.agentId} was told ${p.told}');
+    }
+  }, timeout: Timeout.none);
+
+  // IGLP, Definition "Restart" ("the local state s_p of p at restart is its
+  // local state at termination"), for the rendezvous agent (GNA Section 6,
+  // "Invitation links"): A registers a link with the server; the server
+  // refuses the same serial registered again, an answer that leaves the
+  // server only from a state its store holds (IGLP, Implementation Notes,
+  // "Persistence"), so the registration is saved.  The server stops and
+  // starts again from its state file, at its address and under its key; once
+  // both friends' layers hold a session with it again, B redeems the link,
+  // which the restarted server finds registered and unused: each is told the
+  // other's key and address.
+  test(
+      'a registration survives a restart of the server: the server, '
+      'restarted from its state file, redeems the link registered before',
+      () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final (:rvKey, :a, :b, sigA: _, sigB: _, serverLines: _) =
+        await standUp(0x79, 0x35, 0x46);
+    final (:srv, :run) = launched[0x79]!;
+    final rvAddress = '127.0.0.1:${srv.rvPort}';
+    final expiry = DateTime.now().millisecondsSinceEpoch + 3600 * 1000;
+
+    await a.agent.injectUserInput(_struct('invite',
+        [_const(rvKey.hex), _const(rvAddress), rt.ConstTerm(1), rt.ConstTerm(expiry)]));
+    final link = (await a.saidOne('link')).args[0];
+    await a.agent.injectUserInput(
+        _struct('register_again', [_const(rvKey.hex), link]));
+    expect(await a.saidAtom('register_rejected'), isNotNull,
+        reason: 'the serial is registered, and the state that holds it saved');
+
+    // The server stops, and starts again from its state file.
+    run.process.kill(ProcessSignal.sigterm);
+    await run.process.exitCode;
+    final again = await startServer(srv);
+    await _line(again.lines, again.more, (l) => l == 'CONNECTED ${a.key.hex}');
+    await _line(again.lines, again.more, (l) => l == 'CONNECTED ${b.key.hex}');
+
+    await b.agent.injectUserInput(
+        _struct('redeem_link', [_const(rvKey.hex), link]));
+    final toB = await b.saidOne('inviter_punched');
+    final toA = await a.saidOne('invitee_punched');
+    expect(_value(toB.args[0]), a.key.hex);
+    expect(_loopback(_value(toB.args[1]), a.layer.boundPort!), isTrue,
+        reason: _value(toB.args[1]));
+    expect(_value(toA.args[0]), b.key.hex);
+    expect(_loopback(_value(toA.args[1]), b.layer.boundPort!), isTrue,
+        reason: _value(toA.args[1]));
+  }, timeout: Timeout.none);
+
+  // GDS:2 and GDS:4 on the app's side over the WAN (GNA Section 7, "The
+  // messages"): a scripted directory, a madGLP agent over a headless layer
+  // marked to answer any key at an address of its own, as a rendezvous
+  // server's is ("Hosting": "A directory is hosted as a rendezvous server
+  // is"), and two phones running the operating system.  Alice's first act
+  // names the server and the directory, its services.  Alice lists herself, List with her
+  // email address and name: her operating system declares the directory,
+  // signs listing(A, Email, Name, listed) and sends list(A, Signed, Supply,
+  // Reply); the directory answers verify, which she is told, verify(Email),
+  // and asks for two links, more(2); her operating system makes two links,
+  // registers each with the server and supplies them, supply(A, [L1, L2]).
+  // Bob, who looked her up, opens a link the directory holds of hers: it is
+  // redeemed at the server, and the two befriend.
+  test(
+      'a person lists herself with a scripted directory, is told verify, '
+      'supplies the two links it asks for, and one of them, opened on another '
+      'phone, is redeemed and the two befriend', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final srv = await serverIdentity(0x7a);
+    final rvAddress = '127.0.0.1:${srv.rvPort}';
+
+    // The directory: its port, its layer marked to answer any key, and its
+    // scripted program.
+    final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final dirPort = probe.port;
+    probe.close();
+    final dirAddress = '127.0.0.1:$dirPort';
+    final dirIdentity = await identityFromSeed(0x6c);
+    final dirLayer = HeadlessGrassrootsNetwork(
+      identity: dirIdentity,
+      serverAddress:
+          ServerAddress(listenPort: dirPort, publicAddress: dirAddress),
+      rendezvousServer: true,
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(dirLayer.dispose);
+    final dirKey = glp.PubKey.fromList(dirIdentity.publicKey);
+    final dirAgent = AgentRuntime(
+      agentId: 'directory',
+      program: directoryPath,
+      rootSelfGlpPath: rootSelfGlpPath,
+      keyPair: (pub: dirKey, priv: Uint8List.fromList(dirIdentity.privateKey)),
+      network: HeadlessGlpNetwork(dirLayer),
+    );
+    addTearDown(dirAgent.dispose);
+    final directory = _Friend(dirKey, dirLayer, dirAgent);
+    dirAgent.onUserOutput = directory.say;
+    dirAgent.onOutput = directory.transcript.add;
+    await dirAgent.initialize();
+
+    final alice = await osPhone(0x3f, 'alice');
+    final bob = await osPhone(0x4f, 'bob');
+    await launch(srv);
+    expect(await dirLayer.start(), isTrue);
+    expect(await alice.layer.start(), isTrue);
+    expect(await bob.layer.start(), isTrue);
+
+    await alice.agent.injectUserInput(_struct('link_phone', [
+      _const(alice.key.hex),
+      _nil,
+      _list([
+        _struct('rendezvous', [_const(srv.rvKey.hex), _const(rvAddress)]),
+        _struct('directory', [_const(dirKey.hex), _const(dirAddress)]),
+      ]),
+    ]));
+    await bob.agent.injectUserInput(
+        _struct('link_phone', [_const(bob.key.hex), _nil, _nil]));
+
+    // Alice lists herself, by her email address and her name.
+    await alice.agent.injectUserInput(_grant(
+        _struct('list', [_const('alice@example.org'), _const('Alice')])));
+
+    // The directory holds her signed listing and answers verify, which she is
+    // told.
+    final listed = await directory.saidOne('listed');
+    expect(_value(listed.args[0]), alice.key.hex);
+    expect(_value(listed.args[1]), 'alice@example.org');
+    expect(_value(listed.args[2]), 'Alice');
+    expect(_value(listed.args[3]), 'listed');
+    final verify = await alice.toldOne('verify');
+    expect(_value(verify.args[0]), 'alice@example.org');
+
+    // It asked for two links, and she supplied two.
+    final supplied = await directory.saidOne('supplied');
+    expect(_value(supplied.args[0]), alice.key.hex);
+    final links = _items(supplied.args[1]);
+    expect(links, hasLength(2));
+
+    // Bob, who looked her up, opens one of them: it is redeemed, and the two
+    // befriend.
+    await bob.agent.injectUserInput(_grant(_struct('open_link', [links[0]])));
+    final toAlice = await alice.toldOne('connected');
+    final toBob = await bob.toldOne('connected');
+    expect(_value(toAlice.args[0]), bob.key.hex);
+    expect(_value(toBob.args[0]), alice.key.hex);
+    for (final p in [alice, bob]) {
+      expect(p.told.map((c) => c.functor), isNot(contains('rejected')),
+          reason: '${p.agent.agentId} was told ${p.told}');
+    }
+  }, timeout: Timeout.none);
 }
+
+/// The server's port, its key, its identity file and the fill of its seed.
+/// A run of the server: its process, what it has said and what it says next.
+typedef _Run = ({Process process, List<String> lines, Stream<String> more});
+
+typedef _Server = ({
+  glp.PubKey rvKey,
+  int rvPort,
+  String identityPath,
+  int rvFill,
+});
 
 /// Completes once [a] and [b] each hold the other reachable: checked now and
 /// after every reachability event of either layer, whose callbacks are
@@ -511,8 +916,46 @@ class _Friend {
     _said.add(t);
   }
 
+  /// What the operating system told its person: the content of each notice,
+  /// msg(agent, person, Content), that it sent.
+  Iterable<rt.StructTerm> get told => said
+      .whereType<rt.StructTerm>()
+      .where((t) => t.functor == 'msg' && t.args.length == 3)
+      .map((t) => t.args[2])
+      .whereType<rt.StructTerm>();
+
+  /// The content of the first notice msg(agent, person, Content) this agent
+  /// sent its person whose functor is [functor], once it has sent it.
+  Future<rt.StructTerm> toldOne(String functor) async {
+    rt.StructTerm? content(rt.Term t) {
+      if (t is rt.StructTerm && t.functor == 'msg' && t.args.length == 3) {
+        final c = t.args[2];
+        if (c is rt.StructTerm && c.functor == functor) return c;
+      }
+      return null;
+    }
+
+    for (final t in said) {
+      final c = content(t);
+      if (c != null) return c;
+    }
+    printOnFailure('${agent.agentId} waits to be told $functor');
+    return content(await _said.stream.firstWhere((t) => content(t) != null))!;
+  }
+
   /// The first element this agent sent its person whose functor is
   /// [functor], once it has sent it.
+  /// The first constant [name] this agent sent its person, once it has sent
+  /// it.
+  Future<rt.Term> saidAtom(String name) async {
+    bool named(rt.Term t) => t is rt.ConstTerm && t.value == name;
+    for (final t in said) {
+      if (named(t)) return t;
+    }
+    printOnFailure('${agent.agentId} waits for $name');
+    return _said.stream.firstWhere(named);
+  }
+
   Future<rt.StructTerm> saidOne(String functor) async {
     bool named(rt.Term t) => t is rt.StructTerm && t.functor == functor;
     for (final t in said) {
@@ -527,6 +970,30 @@ rt.Term _const(String value) => rt.ConstTerm(value);
 
 rt.Term _struct(String functor, List<rt.Term> args) =>
     rt.StructTerm(functor, args);
+
+/// The empty list.
+final rt.Term _nil = rt.ConstTerm(rt.nil);
+
+/// The list of [items].
+rt.Term _list(List<rt.Term> items) =>
+    items.reversed.fold(_nil, (tail, head) => rt.StructTerm('.', [head, tail]));
+
+/// The elements of the list term [list].
+List<rt.Term> _items(rt.Term list) {
+  final items = <rt.Term>[];
+  var t = list;
+  while (t is rt.StructTerm && t.functor == '.' && t.args.length == 2) {
+    items.add(t.args[0]);
+    t = t.args[1];
+  }
+  return items;
+}
+
+/// A grant of the person's request [request] on home's request menu, as the
+/// person's grants carry it, input(N, Path, Request): link_phone reads the
+/// request (core's link_acts/3).
+rt.Term _grant(rt.Term request) =>
+    rt.StructTerm('input', [rt.ConstTerm(1), _nil, request]);
 
 /// The text of a constant the agent sent.
 String _value(rt.Term t) => (t as rt.ConstTerm).value.toString();

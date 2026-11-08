@@ -32,12 +32,16 @@ imported procedure core#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 %% exported (TGLP, "Cross-module type checking").
 ActorNoticeContent ::= befriend(Key)
                      ; befriend_intro(Key, Key)
-                     ; connected(Constant)
+                     ; invitation(SignedTerm)
+                     ; verify(String)
+                     ; listed(String)
+                     ; connected(Key)
                      ; rejected
                      ; rejected(Constant)
                      ; unfriended(Constant)
                      ; received(Key, Constant)
-                     ; not_a_friend(Key).
+                     ; not_a_friend(Key)
+                     ; nearby(List(Key)).
 ActorNotice ::= msg(Constant, Constant, ActorNoticeContent).
 imported procedure core#scripted_home(Key?, AgentToUserStream?, Stream(ActorNotice), UserInStream?, UserInStream).
 
