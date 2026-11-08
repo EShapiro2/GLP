@@ -70,7 +70,7 @@ print(json.dumps(d))' "$PW" "$mode" "$known" > "$W/defines.json")
 
 cd "$APP"
 bash tool/sync_glp_assets.sh
-flutter build ios --debug -t "$entry" --dart-define-from-file="$W/defines.json"
+flutter build ios --profile -t "$entry" --dart-define-from-file="$W/defines.json"
 
 RUNNER="$APP/build/ios/iphoneos/Runner.app"
 [ -d "$RUNNER" ] || die "no $RUNNER after the build"
