@@ -13,10 +13,11 @@ miniapp(Id, Ui, ch(Down, Up?), _) :-
     platform # agent(Id?, NetIn?, NetOut, Thread, Asks),
     platform # dispatch(Asks?, Ui?, MCh),
     to_person(MCh?, Thread?),
-    from_sg(Down?, SgEvents, Up),
+    from_sg(Down?, SgEvents, Closed),
     from_agent(NetOut?, AgentEvents),
     merge(SgEvents?, AgentEvents?, Events),
-    router(Events?, [], [], NetIn).
+    route_net(Events?, [], [], [], NetIn, Invites),
+    upward(Closed?, Invites?, Up).
 
 %% The program's output to its person, the thread, on the dispatcher's channel to the program, which draws it as construct 0 (vGLP, "The canonical compilation").
 procedure to_person(Channel(Stream(_), Stream(Output))?, Stream(Output)?).
@@ -26,33 +27,80 @@ to_person(ch(_, O?), O).
 %% The network over the conversations
 %% =============================================================================
 
-%% The social graph's stream: each conversation, as it opens.  A held end is passed over: the platform forwards no variable of a conversation, so the mini-app makes no warm call, and its stream up to the social graph closes when the social graph's does.
+%% The social graph's stream: each conversation, as it opens, and each friend the program asked to invite who declined, lacks the program or is unknown, declined(K) (GSA paper, Section 3, "Distribution with an invitation").  A held end is passed over: the platform forwards no variable of a conversation.  Closed closes when the social graph's stream does, and with it the stream up to the social graph (upward/3).
 procedure from_sg(Stream(SgToApp(Net))?, Stream(NetEvent), Stream(AppToSg)).
 from_sg([conversation(K, Ch) | Down], [opened(K?, Ch?) | Es?], Up?) :-
     from_sg(Down?, Es, Up).
 from_sg([held(_, _) | Down], Es?, Up?) :-
     from_sg(Down?, Es, Up).
+from_sg([declined(K) | Down], [declined(K?) | Es?], Up?) :-
+    from_sg(Down?, Es, Up).
 from_sg([], [], []).
+
+%% upward(Closed, Asks, Up): the router's requests up the social-graph channel, each as it comes, until the social graph's stream closes, which closes the stream up to it (GSA paper, Section 3, "What the Grassroots App grants a program": over the channel to the social graph "the program asks the social graph to invite a friend").
+procedure upward(Stream(AppToSg)?, Stream(AppToSg)?, Stream(AppToSg)).
+upward([], _, []).
+upward(C, [A | As], [A? | Up?]) :- upward(C?, As?, Up).
+upward(C, [], C?).
 
 %% The agent's network output, each message as it is sent.
 procedure from_agent(Stream(Net)?, Stream(NetEvent)).
 from_agent([M | Ms], [sent(M?) | Es?]) :- from_agent(Ms?, Es).
 from_agent([], []).
 
-%% router(Events, Routes, Held, In): a conversation opened joins its incoming stream to the agent's input In, sends on it the messages held for its peer, in the order sent, and becomes the peer's route; a message the agent sent goes on the route to its recipient, and is held, in order, while no conversation with the recipient is open, the network delivering every message the agent sends (vGLP, Section 5.4, "Communicate is the agent goal's reading of a message the network streams carried to it").
-exported procedure router(Stream(NetEvent)?, Routes?, List(Net)?, Stream(Net)).
-router([opened(K, ch(I, O?)) | Es], Rs, Hs, In?) :-
+%% route_net(Events, Routes, Held, Asked, In, Asks): a conversation opened joins its incoming stream to the agent's input In, sends on it the messages held for its peer, in the order sent, and becomes the peer's route; a message the agent sent goes on the route to its recipient, and is held, in order, while no conversation with the recipient is open, the network delivering every message the agent sends (vGLP, Section 5.4, "Communicate is the agent goal's reading of a message the network streams carried to it").  The first message held for a peer asks, on Asks, for the invitation of that peer, once: Asked holds the peers asked for; the peer declined, lacking the program or unknown, the messages held for it are dropped and it is asked for again by the next (GSA paper, Section 3, "Distribution with an invitation": "the program's first message to a friend it has no conversation with is its request to invite him, which it hands to the Grassroots App over its social-graph channel, naming Bob, and the message waits until the conversation opens").
+procedure route_net(Stream(NetEvent)?, Routes?, List(Net)?, List(Key)?, Stream(Net), Stream(AppToSg)).
+route_net([opened(K, ch(I, O?)) | Es], Rs, Hs, As, In?, Up?) :-
     ground(K?), ground(Hs?) |
     merge(I?, In1?, In),
     flush(K?, Hs?, O, T?, Hs1),
-    router(Es?, [route(K?, T) | Rs?], Hs1?, In1).
-router([sent(msg(Q, C)) | Es], Rs, Hs, In?) :-
+    route_net(Es?, [route(K?, T) | Rs?], Hs1?, As?, In1, Up).
+route_net([sent(msg(Q, C)) | Es], Rs, Hs, As, In?, Up?) :-
     ground(Q?), ground(C?) |
     send(Q?, msg(Q?, C?), Rs?, Rs1, S),
-    hold(S?, Hs?, Hs1),
-    router(Es?, Rs1?, Hs1?, In).
-router([], Rs, _, []) :-
+    hold_ask(S?, Q?, Hs?, Hs1, As?, As1, Up, Up1?),
+    route_net(Es?, Rs1?, Hs1?, As1?, In, Up1).
+route_net([declined(K) | Es], Rs, Hs, As, In?, Up?) :-
+    ground(K?), ground(Hs?), ground(As?) |
+    drop_held(K?, Hs?, Hs1),
+    drop_key(K?, As?, As1),
+    route_net(Es?, Rs?, Hs1?, As1?, In, Up).
+route_net([], Rs, _, _, [], []) :-
     close_routes(Rs?).
+
+%% router(Events, Routes, Held, In): the routing alone, its requests read and passed over, for a play of the router by itself (../gsg/plays.glp, play_held).
+exported procedure router(Stream(NetEvent)?, Routes?, List(Net)?, Stream(Net)).
+router(Es, Rs, Hs, In?) :-
+    route_net(Es?, Rs?, Hs?, [], In, Asks),
+    pass_asks(Asks?).
+
+procedure pass_asks(Stream(AppToSg)?).
+pass_asks([_ | As]) :- pass_asks(As?).
+pass_asks([]).
+
+%% hold_ask(S, Q, Hs, Hs1, As, As1, Up, Up1): a message that went is done; a message held is appended to Hs, and the invitation of Q asked for on Up where Q has not been asked for before.
+procedure hold_ask(Sending?, Key?, List(Net)?, List(Net), List(Key)?, List(Key), Stream(AppToSg), Stream(AppToSg)?).
+hold_ask(went, _, Hs, Hs?, As, As?, U?, U).
+hold_ask(held(M), Q, Hs, Hs1?, As, As1?, U?, V) :-
+    append_net(Hs?, M?, Hs1),
+    asked(Q?, As?, As1, U, V?).
+
+%% drop_held(K, Hs, Hs1): the messages held for K dropped, the others kept in order; drop_key(K, As, As1): K no longer among the peers asked for, so that a later message to K asks again (GSA paper, Section 3, "Distribution with an invitation"; GSA #2, 2026-11-07 21:58 UTC, Udi approving).
+procedure drop_held(Key?, List(Net)?, List(Net)).
+drop_held(K, [msg(Q, C) | Hs], Hs1?) :- K? =?= Q?, ground(C?) | drop_held(K?, Hs?, Hs1).
+drop_held(K, [M | Hs], [M? | Hs1?]) :- otherwise | drop_held(K?, Hs?, Hs1).
+drop_held(_, [], []).
+
+procedure drop_key(Key?, List(Key)?, List(Key)).
+drop_key(K, [Q | Qs], Qs1?) :- K? =?= Q? | drop_key(K?, Qs?, Qs1).
+drop_key(K, [Q | Qs], [Q? | Qs1?]) :- otherwise | drop_key(K?, Qs?, Qs1).
+drop_key(_, [], []).
+
+%% asked(Q, As, As1, Up, Up1): Q among the peers asked for, or invite(Q) on Up and Q added.
+procedure asked(Key?, List(Key)?, List(Key), Stream(AppToSg), Stream(AppToSg)?).
+asked(Q, [], [Q?], [invite(Q?) | U?], U) :- ground(Q?) | true.
+asked(Q, [K | Ks], [K? | Ks?], U?, U) :- Q? =?= K? | true.
+asked(Q, [K | Ks], [K? | Ks1?], U?, V) :- otherwise | asked(Q?, Ks?, Ks1, U, V?).
 
 %% send(Q, M, Rs, Rs1, S): M on the route to Q, the newest first.
 procedure send(Key?, Net?, Routes?, Routes, Sending).

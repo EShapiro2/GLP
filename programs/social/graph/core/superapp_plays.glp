@@ -613,20 +613,17 @@ procedure root_end(RootChannel(Opaque)).
 root_end(E?) :- new_channel(E, _) | true.
 
 %% =============================================================================
-%% The warm call on three smartphones (../../superapp3_boot.glp): alice, bob
+%% A held link on three smartphones (../../superapp3_boot.glp): alice, bob
 %% and carol, carol a friend of both, alice and bob not friends.  alice
 %% invites carol to the mini-app and carol invites bob; alice's execution,
 %% greeted by carol, sends her probe(W), the end of a fresh variable, which
 %% carol's execution forwards to bob's; bob's execution assigns it, bob's
 %% runtime holds the assignment --- the end reached bob under alice's name from
-%% carol --- and reports the held link; bob's mini-app asks for a warm call;
-%% bob's social graph asks carol for an introduction to alice, which carol's
-%% person allows; alice's and bob's persons accept it and befriend; bob's
-%% social graph sends alice warm_call(ping, Name); alice's person having
-%% consented, alice invites bob, bob joins, the handshake opens their root
-%% channel, bob's social graph releases the held end, and the value reaches
-%% alice, whose execution reports got(hello_from_bob).  Every volition is the
-%% person's, given here in advance.  Nothing closes: the harness settles.
+%% carol --- and reports the held link, which bob's mini-app reports to bob;
+%% the link stays held, nothing sent on it, for bob to be asked whether to know
+%% alice (GSA paper, Section 5.4, "Whom the Grassroots App knows"), which the
+%% rebuilt core asks.  Every volition is the person's, given here in advance.
+%% Nothing closes: the harness settles.
 %% =============================================================================
 exported procedure sg_init(Key?, Constant?, List(Key)?, NetInStream?).
 sg_init(Me, invite, [Q], NetIn) :-
@@ -739,11 +736,11 @@ sg_init(Me, both_consent, [Q], NetIn) :-
     miniapp_person_run(CS?, Me?, onlooker, [Q?], CssnPerson?, Seen),
     send_to_user(Seen?).
 
-%% The warm call: each person's screen is the mini-app's scripted person's,
+%% The held link: each person's screen is the mini-app's scripted person's,
 %% under its role watch, every item to the person.  The anchor's peers are
-%% the friend she invites and the holder whose warm call she accepts; the
-%% holder's, the friend he connects to and the anchor; the friend's, the
-%% anchor who invites her and the holder she invites.
+%% the friend she invites and the holder; the holder's, the friend he connects
+%% to and the anchor; the friend's, the anchor who invites her and the holder
+%% she invites.
 sg_init(Me, warm_anchor, [F, H], NetIn) :-
     ground(Me?), ground(F?), ground(H?) |
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -780,14 +777,12 @@ sg_init(Me, warm_friend, [A, H], NetIn) :-
 %% A mode or a list of peers no clause above takes starts nothing.
 sg_init(_, _, _, _) :- otherwise | true.
 
-%% The anchor's person, Me: install; consent in advance to a warm call from
-%% the holder H; cold-call the friend F, invite F once connected; consent on
-%% its card to F's introduction to H.
+%% The anchor's person, Me: install; cold-call the friend F, invite F once
+%% connected.
 procedure alice_warm(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 alice_warm(Me, F, H, C, CK, CSig, Ui, Outs,
            [msg(person, Me?, trust(CK?)),
             msg(person, Me?, install(ping, C?, CSig?, Ui?)),
-            msg(person, Me?, accept_warm_call(H?)),
             msg(person, Me?, connect(F?)) | Cmds?]) :-
     ground(Me?), ground(F?), ground(H?) |
     alice_warm_run(Me?, F?, H?, Outs?, Cmds).
@@ -809,16 +804,13 @@ alice_warm_run(Me, F, H, [msg(agent, person, befriend_intro(I, O)) | Outs], Cmds
 alice_warm_run(Me, F, H, [_ | Outs], Cmds?) :- otherwise | alice_warm_run(Me?, F?, H?, Outs?, Cmds).
 alice_warm_run(_, _, _, [], []).
 
-%% The holder's person, Me: install; consent in advance to the friend F's and
-%% the anchor A's invitations and to a warm call with A; cold-call F; consent
-%% on its card to F's introduction to A.
+%% The holder's person, Me: install; consent in advance to the friend F's
+%% invitation; cold-call F.
 procedure bob_warm(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 bob_warm(Me, F, A, C, CK, CSig, Ui, Outs,
          [msg(person, Me?, trust(CK?)),
           msg(person, Me?, install(ping, C?, CSig?, Ui?)),
           msg(person, Me?, accept_invite(ping, F?)),
-          msg(person, Me?, accept_invite(ping, A?)),
-          msg(person, Me?, accept_warm_call(A?)),
           msg(person, Me?, connect(F?)) | Cmds?]) :-
     ground(Me?), ground(F?), ground(A?) |
     bob_warm_run(F?, A?, Outs?, Cmds).
@@ -836,14 +828,13 @@ bob_warm_run(F, A, [_ | Outs], Cmds?) :- otherwise | bob_warm_run(F?, A?, Outs?,
 bob_warm_run(_, _, [], []).
 
 %% The friend's person, Me: install; consent in advance to the anchor A's
-%% invitation and allow the introduction of the holder H to A; consent on
-%% their cards to both cold calls; invite H once connected.
+%% invitation; consent on their cards to both cold calls; invite H once
+%% connected.
 procedure carol_warm(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 carol_warm(Me, A, H, C, CK, CSig, Ui, Outs,
            [msg(person, Me?, trust(CK?)),
             msg(person, Me?, install(ping, C?, CSig?, Ui?)),
-            msg(person, Me?, accept_invite(ping, A?)),
-            msg(person, Me?, allow_intro(H?, A?)) | Cmds?]) :-
+            msg(person, Me?, accept_invite(ping, A?)) | Cmds?]) :-
     ground(Me?), ground(A?), ground(H?) |
     carol_warm_run(Me?, A?, H?, Outs?, Cmds).
 

@@ -2487,11 +2487,11 @@ check "SG unfriend_absent no-op succeeds" "succeeds\|suspended" "$g_uf_abs"
 # introduction proceeds only where both introduced parties have a friend output
 # entry.  The test is a procedure over the outputs list and GLP admits no
 # procedure in a guard (Section 6.3), so it is a body goal and the clause
-# dispatches on its answers.  Both sites are covered: the person-posted
-# introduce/2, and request_intro over the friend channel, which until
-# 2026-09-18 looked up the anchor and not the requester.  Where either party is
-# not a friend nothing is done beyond not introducing --- the paper says no
-# more, so the code decides no more.
+# dispatches on its answers.  The site is the person-posted introduce/2 (the
+# warm call's request_intro is gone with the warm call, GLP #13, Code_inbox.md
+# 2026-11-07 22:09 UTC).  Where either party is not a friend nothing is done
+# beyond not introducing --- the paper says no more, so the code decides no
+# more.
 echo "--- Introduction: both parties must be friends (play_introduce_*) ---"
 
 g_intro=$("$REPL_RUN" <<HEREDOC
@@ -2500,9 +2500,6 @@ play_introduce_both(alice, bob, carol).
 play_introduce_one(alice, bob, carol).
 play_introduce_other(alice, bob, carol).
 play_introduce_neither(alice, bob, carol, dave).
-play_request_intro_both(alice, bob, carol).
-play_request_intro_stranger(alice, bob, carol).
-play_request_intro_no_anchor(alice, bob, carol).
 :quit
 HEREDOC
 2>&1)
@@ -2511,10 +2508,6 @@ check "SG introduce: both friends --- the intro reaches Q" "intro_sent(to_carol,
 check "SG introduce: only P a friend --- nothing on P's channel" "no_intro(to_bob)" "$g_intro"
 check "SG introduce: only Q a friend --- nothing on Q's channel" "no_intro(to_carol)" "$g_intro"
 check "SG introduce: neither a friend --- nothing on any channel" "no_intro(to_dave)" "$g_intro"
-check "SG request_intro: requester and anchor both friends --- introduced to the requester" "intro_sent(req_to_bob, alice, bob, carol)" "$g_intro"
-check "SG request_intro: requester and anchor both friends --- introduced to the anchor" "intro_sent(req_to_carol, alice, carol, bob)" "$g_intro"
-check "SG request_intro: the requester is no friend --- not introduced" "no_intro(req_to_carol)" "$g_intro"
-check "SG request_intro: the anchor is no friend --- not introduced" "no_intro(req_to_bob)" "$g_intro"
 check_not "SG introduce: no failed play" "→ failed" "$g_intro"
 
 echo ""
@@ -7584,38 +7577,30 @@ check "SG super-app on two smartphones: alice's execution opened" "\[alice\] ope
 check "SG super-app on two smartphones: bob greeted" "\[bob\] greeted(alice)" "$sg_boot"
 check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" "$sg_boot"
 
-# The warm call on three smartphones (paper Section 5.2), END TO END: the three
-# conversations open, alice's execution sends carol the end of a fresh
-# variable, carol's forwards it to bob's, bob's assigns it, bob's runtime holds
-# the assignment and reports the held link, bob's mini-app asks for a warm
-# call, bob's social graph asks carol to introduce him to the anchor, carol's
-# person consents, alice's and bob's persons each consent on home's card of
-# the introduction (home.vglp, respond_intro), alice and bob befriend, each end authorises the links its
-# own person's volition covers, and the value reaches alice's execution.
-# A held link is authorised at BOTH of its ends, and the traffic one
-# authorisation lets through is itself held at the other, so the reports come
-# in rounds and every one must be answered (IGLP, 2026-09-09).  A global name
-# does not cross a link as a term, which is why the request for an
-# introduction names the anchor by the constant the person consented to;
-# programs/tests/linkprobes/linkprobes.md holds the two-agent programs that fence
-# the runtime behaviour in.
+# A held link on three smartphones (GSA paper, Section 5.4, "Whom the
+# Grassroots App knows"): the three conversations open, alice's execution sends
+# carol the end of a fresh variable, carol's forwards it to bob's, bob's
+# assigns it, bob's runtime holds the assignment and reports the held link,
+# and bob's mini-app reports it to bob.  The link stays held, nothing sent on
+# it, for bob to be asked whether to know alice, which the rebuilt core asks;
+# so the value does not reach alice's execution.  The warm call that released
+# it is gone (GLP #13, Code_inbox.md 2026-11-07 22:09 UTC, Udi approving
+# 22:08 UTC).  programs/tests/linkprobes/linkprobes.md holds the two-agent
+# programs that fence the runtime behaviour in.
 sg_warm=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
 :boot $GLP_DIR/programs/social/superapp3_boot.glp $SG_CORE
 :quit
 HEREDOC
 2>&1)
-check "SG warm call on three smartphones: the boot settles" "Boot settled: 3 agents" "$sg_warm"
-check "SG warm call: alice and carol converse" "\[carol\] greeted(alice)" "$sg_warm"
-check "SG warm call: carol and bob converse" "\[bob\] greeted(carol)" "$sg_warm"
-check "SG warm call: alice's execution sends carol the probe's end" "\[alice\] probed(carol)" "$sg_warm"
-check "SG warm call: carol's execution forwards it to bob" "\[carol\] forwarded(bob)" "$sg_warm"
-check "SG warm call: bob's execution assigns it" "\[bob\] answered" "$sg_warm"
-check "SG warm call: bob's runtime holds the link and reports it" "\[bob\] held_link(carol)" "$sg_warm"
-check "SG warm call: carol introduces bob to alice" "\[bob\] sg(intro_from(carol, alice))" "$sg_warm"
-check "SG warm call: and alice to bob" "\[alice\] sg(intro_from(carol, bob))" "$sg_warm"
-check "SG warm call: alice and bob befriend" "\[alice\] sg(connected(bob))" "$sg_warm"
-check "SG warm call: the held value reaches alice's execution" "\[alice\] got(hello_from_bob)" "$sg_warm"
+check "SG held link on three smartphones: the boot settles" "Boot settled: 3 agents" "$sg_warm"
+check "SG held link: alice and carol converse" "\[carol\] greeted(alice)" "$sg_warm"
+check "SG held link: carol and bob converse" "\[bob\] greeted(carol)" "$sg_warm"
+check "SG held link: alice's execution sends carol the probe's end" "\[alice\] probed(carol)" "$sg_warm"
+check "SG held link: carol's execution forwards it to bob" "\[carol\] forwarded(bob)" "$sg_warm"
+check "SG held link: bob's execution assigns it" "\[bob\] answered" "$sg_warm"
+check "SG held link: bob's runtime holds the link and reports it" "\[bob\] held_link(carol)" "$sg_warm"
+check_not "SG held link: the held value does not reach alice's execution" "\[alice\] got(" "$sg_warm"
 
 # The registry's return from running to idle (paper Section 3, "Activation and
 # joining"): the super-app records whether a mini-app is running, and an

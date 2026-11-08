@@ -76,7 +76,7 @@ Seen      ::= Output ; menu(Key, List(Key)) ; gave(Asked, YesNo) ; did(Request).
 Watch     ::= seen(Key, Seen).
 
 %% The network of the platform over the conversations (miniapp.glp), as in programs/apps/gsg/self.glp.
-NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net).
+NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net) ; declined(Key).
 Route     ::= route(Key, Stream(Net)?).
 Routes    ::= [] ; [Route | Routes].
 Sending   ::= went ; held(Net).

@@ -56,7 +56,7 @@ Steps     ::= [] ; [Step | Steps].
 Holes     ::= [] ; [Key? | Holes].
 
 %% The network of the platform over the conversations (miniapp.glp), as in ../gsg/self.glp.
-NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net).
+NetEvent  ::= opened(Key, RootChannel(Net)) ; sent(Net) ; declined(Key).
 Route     ::= route(Key, Stream(Net)?).
 Routes    ::= [] ; [Route | Routes].
 Sending   ::= went ; held(Net).
