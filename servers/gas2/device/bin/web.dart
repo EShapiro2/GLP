@@ -45,10 +45,18 @@ class Person {
   final PageServer page;
   final RelayGlpNetwork relay;
   DateTime seen = DateTime.now();
+  String from = ''; // the live build its tree was copied from
   Person(this.host, this.page, this.relay);
 }
 
 final running = <String, Person>{}; // by the token's hash
+
+/// The live build, as a person's tree records it.
+String liveStamp() {
+  final live = tree();
+  final f = File('$live/gas2_apps.json');
+  return '$live ${f.existsSync() ? f.statSync().modified.toIso8601String() : ''}';
+}
 final opening = <String, Future<Person>>{};
 
 /// The device tree to copy for a person opened now: TREE, or the GAS2 site's live build's.
@@ -74,7 +82,7 @@ Future<Person> open(String h) async {
   // changed only mini-apps keeps it.
   final own = Directory('$dir/tree');
   final live = tree(), stamp = File('$dir/tree.from');
-  final from = '$live ${File('$live/gas2_apps.json').statSync().modified.toIso8601String()}';
+  final from = liveStamp();
   if (!File('${own.path}/gas2_apps.json').existsSync() || !stamp.existsSync() || stamp.readAsStringSync() != from) {
     if (own.existsSync()) own.deleteSync(recursive: true);
     await copyTree(Directory(live), own);
@@ -103,7 +111,7 @@ Future<Person> open(String h) async {
         stderr.writeln('reset: $dir: $e');
       }
     };
-  final p = Person(host, page, relay);
+  final p = Person(host, page, relay)..from = from;
   relay.onCarrier = host.carried;
   relay.setOn(true);
   unawaited(host.start());
@@ -201,7 +209,8 @@ Future<void> _main() async {
   Timer.periodic(const Duration(minutes: 1), (_) {
     final now = DateTime.now();
     for (final h in [...running.keys]) {
-      if (now.difference(running[h]!.seen) > idle) close(h);
+      // idle, or on a tree a newer build replaced: closed, and opened again at the next request
+      if (now.difference(running[h]!.seen) > idle || running[h]!.from != liveStamp()) close(h);
     }
   });
   stdout.writeln('GAS2 web: http://${server.address.host}:$port/  (tree ${tree()})');
