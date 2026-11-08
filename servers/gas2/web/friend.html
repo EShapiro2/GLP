@@ -20,10 +20,10 @@
   <div class="box">
     <div class="key" id="k"></div>
     <p>
-      <button class="btn alt" onclick="navigator.clipboard.writeText(K).then(() => this.textContent = 'Copied ✓')">Copy the key</button>
+      <button class="btn alt" onclick="navigator.clipboard.writeText(A ? location.href : K).then(() => this.textContent = 'Copied ✓')" id="copy">Copy the key</button>
       <a class="btn" id="web" href="#">Add them on GAS on the web</a>
     </p>
-    <p class="small muted">In the GAS app: Friends, Add a friend, paste the key. They are asked, and once they say yes you are friends.</p>
+    <p class="small muted" id="how">In the GAS app: Friends, Add a friend, paste the key. They are asked, and once they say yes you are friends.</p>
   </div>
   <p class="small muted">No GAS yet? <a href="./#get">Get the app</a>, or use it <a href="../gasweb/">on the web</a>.</p>
 </main>
@@ -31,7 +31,20 @@
 const K = (new URLSearchParams(location.search).get('k') || '').toLowerCase();
 const ok = /^[0-9a-f]{64}$/.test(K);
 document.getElementById('k').textContent = ok ? K : 'This link carries no key.';
-document.getElementById('web').href = ok ? '../gasweb/?friend=' + K : '../gasweb/';
+// with a mini-app (&app=): an invitation to play it with them, which GAS sets up in one tap
+const A = (new URLSearchParams(location.search).get('app') || '').replace(/[^a-z0-9_]/g, '');
+const N = (new URLSearchParams(location.search).get('n') || '').slice(0, 40);
+document.getElementById('web').href = ok ? '../gasweb/?friend=' + K + (A ? '&app=' + A : '') + (N ? '&n=' + encodeURIComponent(N) : '') : '../gasweb/';
+if (ok && A) {
+  document.getElementById('copy').textContent = 'Copy the link';
+  document.getElementById('how').textContent = 'In the GAS app: Friends, Add a friend, paste this link. GAS asks you once, then does the steps.';
+  fetch('apps/' + A + '.json').then(r => r.json()).then(j => {
+    const t = (j.title || A).replace(/^Grassroots /, '');
+    document.querySelector('h1').textContent = 'Play ' + t + ' with a friend';
+    document.querySelector('main p').textContent = (N || 'A friend') + ' invites you to ' + (j.title || A) + ' on GAS. One tap, and GAS makes you friends, adds the mini-app and does the steps its contract asks for first.';
+    document.getElementById('web').textContent = 'Join them on GAS on the web';
+  }).catch(() => {});
+}
 </script>
 <script src="gas2.js"></script>
 <script>nav('');</script>

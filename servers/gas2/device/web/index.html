@@ -115,6 +115,12 @@ header .dot { width: 30px; height: 30px; }
 .coin .dot { width: 40px; height: 40px; font-size: 16px; }
 .coin .amt { font: 800 24px/1.1 var(--head); }
 .plain { border: 2px dashed var(--line); border-radius: var(--r); padding: 0 8px; }
+.plan .steps { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 8px 0 4px; font-size: 13px; color: var(--soft); }
+.plan .steps .ok { color: var(--ok); font-weight: 600; }
+.tog { width: 46px; height: 28px; border-radius: 99px; border: 0; background: var(--line); position: relative; cursor: pointer; flex: none; padding: 0; }
+.tog span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .15s; }
+.tog.on { background: var(--ok); }
+.tog.on span { left: 21px; }
 /* the rack turns around */
 main { transition: transform .23s ease-in, opacity .23s; transform-origin: 50% 30%; }
 main.turn { transform: perspective(1200px) rotateY(90deg); opacity: .3; }
@@ -183,17 +189,19 @@ async function api(path, opts = {}) {
 async function act(j, said) { if (said) toast(said); await api('api/act', {method: 'POST', body: JSON.stringify(j)}); }
 
 // opened with ?add=<link> (the app maker) or ?friend=<key> (a friend's QR): done once ready
-let toAdd = q.get('add'), toFriend = q.get('friend');
+let toAdd = q.get('add'), toFriend = q.get('friend'), toApp = (q.get('app') || '').replace(/[^a-z0-9_]/g, '');
+// the name the friend gave themselves, for this device to call them by until the person renames them
+if (toFriend && q.get('n') && !names[toFriend]) { names[toFriend] = q.get('n').slice(0, 40); store.set('gas2names', names); }
 async function poll() {
   let v = -1;
   for (;;) {
     try {
       const r = await api('api/state' + (v >= 0 ? '?since=' + v : '?') + (hood || DEBUG ? '&debug' : ''));
-      S = await r.json(); v = S.version; draw();
+      S = await r.json(); v = S.version; draw(); runPlans();
       if ((toAdd || toFriend) && S.status === 'ready') {
         const l = toAdd, k = toFriend; toAdd = toFriend = null; history.replaceState(null, '', location.pathname);
         if (l) addMade(l);
-        if (k && /^[0-9a-f]{64}$/.test(k) && k !== S.me) addKey(k);
+        if (k && /^[0-9a-f]{64}$/.test(k) && k !== S.me) offerOrAdd(k, toApp);
       }
     } catch (e) { await new Promise(r => setTimeout(r, 2000)); }
   }
@@ -291,7 +299,19 @@ function drawHome() {
   const step = (n, done, html) => `<div class="step"><span class="n ${done ? 'done' : ''}">${done ? '✓' : n}</span><div class="grow">${html}</div></div>`;
   let h = '';
   // what others ask of this person comes first
-  for (const k of S.friendRequests) h += `<div class="ask"><div class="who">Friend request</div><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b> wants to be your friend</span></div><div class="acts" style="margin-top:10px"><button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true},'Friends with ${esc(nm(k))}')">Yes</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false},'Declined')">No</button></div></div>`;
+  for (const o of offers) {
+    const a = S.apps.find(x => x.app === o.app), t = a.title.replace(/^Grassroots /, '');
+    h += `<div class="ask"><div class="who">An invitation</div><div class="item">${dot(o.peer)}<span class="grow"><b>${esc(nm(o.peer))}</b> invites you to play <b>${esc(t)}</b></span></div>
+      <div class="small muted" style="margin-top:6px">One tap: you become friends, add ${esc(t)}, join each other in it, and do the steps its contract asks for first. ${esc(nm(o.peer))} is asked once.</div>
+      <div class="acts" style="margin-top:10px"><button class="b ok" onclick="startPlan('${o.peer}','${o.app}')">Yes, play</button><button class="b alt" onclick="offers=offers.filter(x=>x.peer!=='${o.peer}');addKey('${o.peer}')">Only be friends</button><button class="b alt" onclick="offers=offers.filter(x=>x.peer!=='${o.peer}');draw()">No</button></div></div>`;
+  }
+  const lk = ui.steps ? linkFor() : null;
+  for (const k of S.friendRequests) {
+    if (plans.some(p => p.peer === k)) continue;
+    const la = lk && S.apps.find(x => x.app === lk.app);
+    h += `<div class="ask"><div class="who">Friend request</div><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b> wants to be your friend${la ? `, perhaps from your link to ${esc(la.title.replace(/^Grassroots /, ''))}` : ''}</span></div><div class="acts" style="margin-top:10px">${la ? `<button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true});startPlan('${k}','${la.app}',true)">Yes, and play ${esc(la.title.replace(/^Grassroots /, ''))}</button><button class="b alt" onclick="act({op:'friend',key:'${k}',yes:true},'Friends with ${esc(nm(k))}')">Only be friends</button>` : `<button class="b ok" onclick="act({op:'friend',key:'${k}',yes:true},'Friends with ${esc(nm(k))}')">Yes</button>`}<button class="b alt" onclick="act({op:'friend',key:'${k}',yes:false},'Declined')">No</button></div></div>`;
+  }
+  if (ui.steps) for (const p of plans.filter(p => !p.doneAt)) h += planHtml(p);
   for (const [by, k] of S.introRequests) h += `<div class="ask"><div class="who">Introduction</div><div class="item">${dot(k)}<span class="grow"><b>${esc(nm(by))}</b> introduces you to <b>${esc(nm(k))}</b></span></div><div class="acts" style="margin-top:10px"><button class="b ok" onclick="act({op:'intro',key:'${k}',yes:true},'Friends with ${esc(nm(k))}')">Yes</button><button class="b alt" onclick="act({op:'intro',key:'${k}',yes:false},'Declined')">No</button></div></div>`;
 
   h += `<h2><span class="grow">Friends</span><button class="link" onclick="go('__friend')">Add a friend</button></h2><div class="card">`;
@@ -359,9 +379,11 @@ function drawYou() {
   bar('You', back || 'home');
   let h = `<div class="card" style="text-align:center;padding:18px 14px"><span class="dot" style="width:64px;height:64px;font-size:26px;margin:0 auto 10px;background:hsl(${hue(S.me)},55%,52%)">${esc((myName || '?').slice(0, 1).toUpperCase())}</span>
     <input id="myname" placeholder="Your name" value="${esc(myName)}" style="text-align:center;font-size:17px;font-weight:600" onchange="setMyName(this.value)" onkeydown="if(event.key==='Enter')this.blur()">
-    <div class="small muted" style="margin-top:6px">Your name stays on this device: your friends see your key, and name you themselves.</div></div>
+    <div class="small muted" style="margin-top:6px">Your name stays on this device, and goes with the invitation links you send; your friends can rename you.</div></div>
     <h2>Your key</h2><div class="card"><div class="mono">${esc(S.me)}</div><div class="acts" style="margin-top:10px"><button class="b alt" onclick="copyText('${S.me}','Your key is copied')">Copy</button><button class="b alt" onclick="go('__friend')">Show my code</button></div>
     <div class="small muted" style="margin-top:8px">${S.hosted ? 'It is kept on talmonlab\'s server, which runs your super-app (GAS on the web).' : 'It is kept on this device only.'}</div></div>`;
+  const tg = (k, title, sub) => `<div class="row"><span class="grow"><b>${title}</b><span class="sub small muted" style="display:block">${sub}</span></span><button class="tog ${ui[k] ? 'on' : ''}" onclick="setUi('${k}',${!ui[k]})" aria-label="${title}"><span></span></button></div>`;
+  h += `<h2>How GAS looks and works</h2><div class="card">${tg('views', 'Friendly views', 'Conversations, balances and lists, read off each contract. Off: the plain view, the contract\'s own words.')}${tg('steps', 'Do the steps for me', 'One tap to play with a friend: GAS does the steps the contract asks for first, and says yes to their acts that take nothing from you, for a while.')}</div>`;
   h += `<h2>Start over</h2><div class="card">${over ? `<div class="small" style="margin-bottom:8px">This deletes your key, your friends and your mini-apps here. It cannot be undone.</div><div class="acts"><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button></div>` : `<div class="row"><span class="grow small muted">A new key, and nothing kept</span><button class="b alt" onclick="over=true;draw()">Start over</button></div>`}</div>`;
   $('#main').innerHTML = h;
 }
@@ -369,12 +391,13 @@ function setMyName(v) { myName = v.trim(); store.set('gas2myname', myName); draw
 
 
 // what every view of a mini-app reads: its draws, its buttons, its proposals' shapes
-function appCtx(a) {
+function appCtx(a, shown = true) {
   const r = readApp(a);
   const menu = r.req ? menuOf(r.req.w) : [];
   const props = ((a.shapes || {}).Proposal || []).filter(p => p[0] === 'ctor');
-  window._acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: [], reqs: [], forbs: [], same: [], roles: []}));
-  window._req = r.req; window._props = props; window._app = a.app;
+  // the screen's forms read these: set only for the mini-app on the screen
+  if (shown) { window._acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: [], reqs: [], forbs: [], same: [], roles: []}));
+    window._req = r.req; window._props = props; window._app = a.app; }
   return {r, menu, props, L: lensOf(a, menu, props)};
 }
 
@@ -389,7 +412,7 @@ function drawApp(a) {
   if (!a.installed) h += `<div class="card"><div class="row"><span class="grow">${a.preparing ? 'Preparing: your device certifies it under your key…' : 'Not added yet.'}</span>${a.preparing ? '' : `<button class="b" onclick="install('${a.app}')">Add</button>`}</div></div>`;
   if (pane === 'rules') h += rulesHtml(a);
   else if (pane === 'people') h += peopleHtml(a);
-  else if (a.installed) h += (joined.length ? '' : peopleHtml(a)) + playHtml(a, c);
+  else if (a.installed) h += (ui.steps ? plans.filter(p => p.app === a.app).map(planHtml).join('') : '') + (joined.length ? '' : peopleHtml(a)) + (ui.views ? playHtml(a, c) : plainHtml(a, r, c.menu, c.props));
   $('#main').innerHTML = h;
 }
 
@@ -402,7 +425,14 @@ function peopleHtml(a) {
   }
   if (!S.friends.length) h += `<div class="empty">Add a friend first.</div>`;
   else h += `<div class="small muted" style="padding-top:6px">One of you taps Invite, the other Accept; both need ${esc(a.title)} added.</div>`;
-  return h + `</div>`;
+  h += `</div>`;
+  if (ui.steps) {
+    h += `<div class="card"><div class="row" style="border:0"><span class="grow"><b>Invite by a link</b><span class="sub small muted" style="display:block">Whoever opens it taps once, and you play ${esc(a.title.replace(/^Grassroots /, ''))} together.</span></span><button class="b" onclick="shareInvite('${a.app}')">Send</button></div>`;
+    const free = S.friends.filter(k => !plans.some(p => p.peer === k && p.app === a.app));
+    if (free.length) h += free.map(k => `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b></span><button class="b alt" onclick="startPlan('${k}','${a.app}')">Play together</button></div>`).join('');
+    h += `</div>`;
+  }
+  return h;
 }
 
 // --- views read off the contract ---------------------------------------------------
@@ -573,7 +603,7 @@ function threadsHtml(a, c, cs, pred) {
   const list = Object.values(cs).filter(cv => cv.pred === pred || (!cv.pred && c.L.lens[pred].by === cv.writer?.m.act))
     .sort((x, y) => ((y.msgs.at(-1) || {}).t || 0) - ((x.msgs.at(-1) || {}).t || 0));
   let h = `<div class="card chats">`;
-  if (!list.length) h += `<div class="empty">No conversation yet.${c.L.writers.length ? ' Start one below, or from a person in another tab.' : ''}</div>`;
+  if (!list.length) h += `<div class="empty" style="padding:8px 14px">No conversation yet.${ui.steps ? ` <button class="link" onclick="pane='people';draw()">Play with a friend</button>` : c.L.writers.length ? ' Start one below.' : ''}</div>`;
   for (const cv of list) {
     const m = cv.msgs.at(-1) || {}, who = (cv.keyVals || []).find(k => isKey(k.v))?.v || Object.values(cv.vals || {}).find(v => isKey(v) && v !== S.me);
     h += `<div class="chat" onclick='openConv(${esc(JSON.stringify(cv.id))})'>${who ? dot(who) : '<span class="dot" style="background:var(--soft)">#</span>'}<span class="grow"><b>${esc(cv.title || 'You')}</b><span class="sub">${m.mine ? (TICK[m.st]?.[0] || '✓✓') + ' ' : ''}${esc(m.text || '')}</span></span><span class="small muted">${esc(hhmm(m.t))}</span></div>`;
@@ -638,6 +668,146 @@ async function sendConv() {
   await grant(window._app, window._req.id, p, {propose: {f: m.act, a: args}});
   setTimeout(draw, 16000); // its tick, once it is no longer being sent
 }
+
+// --- the steps, done for the person: one tap to play with a friend ---------------
+// A plan is the person's one decision, "play this mini-app with this friend": the device
+// then does what the super-app and the contract ask first, each an ordinary act of theirs.
+// What the contract asks is read off its schemas: the goal, an act that writes in a
+// conversation with the friend, needs atoms the person may not hold yet; an act that adds
+// one, at the proposer's role, is proposed first, and so on back (establish, acquaint,
+// befriend, in GSN).  For a while after the person's tap, the device says yes for them to
+// the friend's asks in that mini-app, for acts that take nothing from them.
+let ui = store.get('gas2ui', {views: true, steps: true});
+function setUi(k, v) { ui[k] = v; store.set('gas2ui', ui); draw(); }
+let plans = store.get('gas2plans', []);   // {peer, app, t, host, did: {step: ms}}
+let offers = [];                           // links opened, waiting for the person's tap: {peer, app}
+const savePlans = () => store.set('gas2plans', plans);
+const WINDOW = 20 * 60 * 1000;
+function startPlan(peer, app, host) {
+  plans = plans.filter(p => !(p.peer === peer && p.app === app));
+  plans.push({peer, app, t: Date.now(), host: !!host, did: {}});
+  savePlans(); offers = offers.filter(o => !(o.peer === peer && o.app === app)); draw();
+}
+// the place of each argument of an act: its roles, then its parameters
+function placeOf(sc, g) {
+  const roles = sc.a[1] || [], params = sc.a[2] || [];
+  const r = F(g, 'role'); if (r) return r[0];
+  if (g && g.f) { const j = params.findIndex(q => q && q.f && jeq(q.a[0], g.a[0])); if (j >= 0) return roles.length + j + 1; }
+  return null;
+}
+const schemaOf = (a, name) => ((a.shapes || {}).schemas || []).find(sc => sc.a[0] === name);
+// the acts the person proposes, in order, so that the goal's requirements hold; each {m, vals}
+function chainTo(a, menu, atoms, goal, vals, depth = 0, seen = new Set()) {
+  if (depth > 6) return [];
+  const out = [];
+  const reqs = goal.reqs || [];
+  for (const [pred, as] of reqs) {
+    if (holdsReq(atoms, pred, as || [], vals)) continue;
+    // an act that adds pred at its proposer's role, its places filled from what the requirement names
+    for (const m of menu) {
+      const sc = schemaOf(a, m.act); if (!sc) continue;
+      const st = []; (function w(x) { if (Array.isArray(x)) x.forEach(w); else if (x && x.f) { if (x.f === 'rs') st.push(x); else x.a.forEach(w); } })(sc);
+      const mine = st[(m.by || 1) - 1]; if (!mine) continue;
+      const add = findAtoms(mine.a[1]).find(x => x.a[0] === pred); if (!add) continue;
+      const v = {[m.by || 1]: S.me};
+      (as || []).forEach((z, j) => { const at = F(z, 'at'), p = placeOf(sc, (add.a[1] || [])[j]); if (at && p) v[p] = vals[at[0]]; });
+      const kinds = argKinds(m.act, menu._props || []) || [];
+      if (kinds.some((t, j) => v[j + 1] === undefined)) continue;   // a place nothing names: not for the device to choose
+      const key = m.act + JSON.stringify(v); if (seen.has(key)) continue; seen.add(key);
+      out.push(...chainTo(a, menu, atoms, m, v, depth + 1, seen), {m, vals: v});
+      break;
+    }
+  }
+  return out;
+}
+// what the plan does next, and how far it got: [{label, done}]
+function planSteps(p) {
+  const a = S.apps.find(x => x.app === p.app); if (!a) return {steps: [{label: 'the mini-app is not on this device', done: false}], a: null};
+  const steps = [
+    {label: 'friends', done: S.friends.includes(p.peer)},
+    {label: 'added ' + a.title.replace(/^Grassroots /, ''), done: !!a.installed},
+    {label: 'joined each other', done: (a.invited || []).includes(p.peer) || (a.accepted || []).includes(p.peer)},
+  ];
+  const c = a.installed ? appCtx(a, false) : null, last = c && c.r.last;
+  steps.push({label: 'started', done: !!last});
+  let chain = [], goal = null;
+  if (last) {
+    const atoms = last[1] || [];
+    const w = c.L.writers.find(({m}) => { const k = argKinds(m.act, c.props) || []; return k.filter(t => t === 'Peer' || t === 'Key').length === 2; });
+    if (w) {
+      goal = w;
+      const v = {[w.m.by || 1]: S.me}; const k = argKinds(w.m.act, c.props);
+      k.forEach((t, j) => { if (v[j + 1] === undefined && (t === 'Peer' || t === 'Key')) v[j + 1] = p.peer; });
+      c.menu._props = c.props;
+      chain = p.host ? [] : chainTo(a, c.menu, atoms, w.m, v);
+      for (const s of chain) steps.push({label: s.m.label.toLowerCase(), done: false, act: s});
+      steps.push({label: 'ready to ' + w.m.label.toLowerCase(), done: !!fillFrom(c.L, w.m, [{v: p.peer, t: 'Peer'}], atoms), goal: {w, v}});
+    }
+    // the person's own setup, an act of one role the conversation needs (establish)
+    if (p.host) for (const m of c.menu) { const sc = schemaOf(a, m.act); if (sc && (sc.a[1] || []).length === 1 && (m.forbs || []).length && !m.fields.length && m.reqs.length === 0 && m.forbs.every(([pr, as]) => !holdsReq(atoms, pr, as || [], {}))) steps.push({label: m.label.toLowerCase(), done: false, act: {m, vals: {[m.by || 1]: S.me}}}); }
+  }
+  return {steps, a, c};
+}
+// the device does the next step of each plan; asks of the friend answered for a while
+let planBusy = false;
+async function runPlans() {
+  if (planBusy || !S || S.status !== 'ready' || !ui.steps) return;
+  planBusy = true;
+  try {
+    const now = Date.now(), once = (p, k, ms = 60000) => { if (p.did[k] && now - p.did[k] < ms) return false; p.did[k] = now; savePlans(); return true; };
+    plans = plans.filter(p => now - p.t < 24 * 3600 * 1000 && !(p.doneAt && now - p.doneAt > 3600 * 1000));
+    for (const p of plans) {
+      const {steps, a, c} = planSteps(p); if (!a) continue;
+      if (!p.doneAt && steps.at(-1)?.goal && steps.at(-1).done) { p.doneAt = now; savePlans(); }
+      if (!S.friends.includes(p.peer)) {
+        if (S.friendRequests.includes(p.peer)) { if (once(p, 'yes')) await act({op: 'friend', key: p.peer, yes: true}); }
+        else if (!p.host && once(p, 'friend', 120000)) await api('api/add', {method: 'POST', body: JSON.stringify({key: p.peer})});
+        continue;
+      }
+      if (!a.installed) { if (!a.preparing && once(p, 'install', 120000)) await act({op: 'install', app: p.app}); continue; }
+      if (!(a.accepted || []).includes(p.peer) && once(p, 'accept', 600000)) await act({op: 'accept', app: p.app, key: p.peer});
+      if (!p.host && !(a.invited || []).includes(p.peer) && once(p, 'invite', 600000)) await act({op: 'invite', app: p.app, key: p.peer});
+      if (!c || !c.r.last || !c.r.req) continue;
+      // the friend's asks, for acts that take nothing from the person
+      if (now - p.t < WINDOW) for (const d of c.r.asks) {
+        const ap = F(F(d.v, 'approval_w')[0], 'approval'), who = (F(ap[0], 'hello') || F(ap[0], 'attempt') || [])[0];
+        const name = F(ap[0], 'hello') ? F(ap[0], 'hello')[1]?.f : (() => { const k = (F(ap[0], 'attempt') || [])[3]; return typeof k === 'string' ? k : k?.f === 'one' ? (typeof k.a[0] === 'string' ? k.a[0] : k.a[0]?.f) : k?.f; })();
+        if (who !== p.peer || !name || !takesNothing(a, c.menu, name) || !once(p, 'yes' + d.id, 30000)) continue;
+        await grant(a.app, d.id, F(ap[2], 'input')[0], 'yes');
+      }
+      const next = steps.find(s => s.act && !s.done);
+      if (next && once(p, 'act ' + next.label, 45000)) {
+        const m = next.act.m, kinds = argKinds(m.act, c.props);
+        const args = kinds.map((t, j) => next.act.vals[j + 1]);
+        if (!args.some(x => x === undefined) && !(c.r.last[3] || []).some(q => jeq(q, {f: m.act, a: args}))) await grant(a.app, c.r.req.id, F(F(c.r.req.v, 'request_r')[0], 'input')[0], {propose: {f: m.act, a: args}});
+      }
+    }
+  } catch (e) {} finally { planBusy = false; }
+}
+// an act that takes nothing from whoever is asked: no role but its proposer's loses an atom
+function takesNothing(a, menu, name) {
+  const sc = schemaOf(a, name); if (!sc) return false;
+  const m = menu.find(x => x.act === name), by = (m && m.by) || 1;
+  const st = []; (function w(x) { if (Array.isArray(x)) x.forEach(w); else if (x && x.f) { if (x.f === 'rs') st.push(x); else x.a.forEach(w); } })(sc);
+  return st.every((rs, k) => k + 1 === by || !(rs.a[2] || []).length);
+}
+// a plan's line: who, what, how far
+function planHtml(p) {
+  const {steps, a} = planSteps(p);
+  const done = steps.every(s => s.done) || steps.at(-1)?.done;
+  const ready = steps.find(s => s.goal && s.done);
+  return `<div class="card plan"><div class="row" style="border:0;padding:0">${dot(p.peer)}<span class="grow"><b>${esc(a ? a.title.replace(/^Grassroots /, '') : p.app)}</b> with <b>${esc(nm(p.peer))}</b></span>${ready ? `<button class="b" onclick="go('${p.app}');openConv(${esc(JSON.stringify(convId(ready.goal.w.m.act, ready.goal.v, ready.goal.w.m.fields.find(f => f.kind === 'text').i)))})">Open</button>` : ''}<button class="link" onclick="plans=plans.filter(x=>x!==plans[${plans.indexOf(p)}]);savePlans();draw()">✕</button></div>
+    <div class="steps">${steps.map(s => `<span class="${s.done ? 'ok' : ''}">${s.done ? '✓' : '·'} ${esc(s.label)}</span>`).join('')}</div>${done ? '' : `<div class="small muted">${p.host ? 'Saying yes for you to ' + esc(nm(p.peer)) + "'s acts that take nothing from you, for 20 minutes." : 'Doing the steps; ' + esc(nm(p.peer)) + ' is asked once.'}</div>`}</div>`;
+}
+// the link to send: a friend opens it, taps once, and plays this mini-app with you
+function inviteLink(app) { return SITE + 'friend.html?k=' + S.me + '&app=' + app + (myName ? '&n=' + encodeURIComponent(myName) : ''); }
+function shareInvite(app) {
+  const l = store.get('gas2links', []).filter(x => Date.now() - x.t < 7 * 24 * 3600 * 1000 && x.app !== app);
+  l.push({app, t: Date.now()}); store.set('gas2links', l);
+  share(inviteLink(app));
+}
+// a friend request while a link of the person's is out: likely from it
+function linkFor() { const l = store.get('gas2links', []).filter(x => Date.now() - x.t < 7 * 24 * 3600 * 1000); return l.at(-1); }
 
 // the plain view: the state as the contract's words, everything listed
 function plainHtml(a, r, menu, props) {
@@ -914,6 +1084,11 @@ function addPasted() {
   const k = (/[0-9a-f]{64}/i.exec(v) || [''])[0].toLowerCase();
   if (!k) return toast('That is not a key');
   if (k === S.me) return toast('That is your own key');
+  offerOrAdd(k, ((/[?&]app=([a-z0-9_]+)/.exec(v) || [])[1] || ''));
+}
+// a link with a mini-app: one tap plays it with them (the steps, done for the person); else a friend request
+function offerOrAdd(k, app) {
+  if (app && ui.steps && S.apps.some(a => a.app === app)) { offers = offers.filter(o => o.peer !== k).concat([{peer: k, app}]); go(null); return; }
   addKey(k);
 }
 function addMade(link) {
@@ -936,6 +1111,7 @@ async function startOver() {
 }
 
 poll();
+setInterval(runPlans, 5000);
 </script>
 </body>
 </html>
