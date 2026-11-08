@@ -551,9 +551,6 @@ programs/social/graph/core/agent.glp	open-decl	invite_check/4
 programs/social/graph/core/agent.glp	open-decl	may_release/5
 programs/social/graph/core/agent.glp	open-decl	mr_anchor/6
 programs/social/graph/core/agent.glp	open-decl	mr_intro/6
-programs/social/graph/core/agent.glp	open-decl	mr_warm/6
-programs/social/graph/core/agent.glp	open-decl	take_warm_consent_for/4
-programs/social/graph/core/agent.glp	open-decl	twc_step/6
 programs/social/graph/core/agent.glp	open-decl	undertaking_check/3
 programs/social/graph/core/home.glp	open-type	Drawn
 programs/social/graph/core/self.glp	open-decl	answering/4

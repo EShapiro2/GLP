@@ -73,4 +73,7 @@ sg_conversations([conversation(K, Ch) | Down], [conversation(K?, Ch?) | Convs?],
     sg_conversations(Down?, Convs, Up).
 sg_conversations([held(_, _) | Down], Convs?, Up?) :-
     sg_conversations(Down?, Convs, Up).
+%% A friend asked to be invited who declined: this program asks none, so nothing is held for it.
+sg_conversations([declined(_) | Down], Convs?, Up?) :-
+    sg_conversations(Down?, Convs, Up).
 sg_conversations([], [], []).
