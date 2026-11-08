@@ -34,9 +34,13 @@ HomeIntroRequest  ::= from(Key, Key, Decision?).
 HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
 HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeRequest.
 
-%% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
-%% with the person's public key, the stream of the person's acts and the
-%% stream from the network, and nothing else.  It runs agent/4 with the
+%% The super-app (GSA paper, Section 4.1 and Appendix "The Operating System"),
+%% the entry the person's first act names (Appendix, "Boot": "the person's
+%% first act names the entry, with the person's key and the keys of the
+%% persons the person knows, none at a first start"), superapp(Key, Known)
+%% below: with the person's public key, the keys of the persons the person
+%% knows, the stream of the person's acts and the stream from the network,
+%% and nothing else.  It runs agent/4 with the
 %% operating system's Nearby around it (place.glp, os_phone/6: the place, GPE,
 %% and the agents nearby the layer reports), with the
 %% super-app's own person interface (home/3) and its dispatcher between the
@@ -54,10 +58,10 @@ imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure place#os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
-exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
-superapp(Id, Grants, NetIn) :-
-    ground(Id?) |
-    place # os_phone(Id?, [], In?, NetIn?, Outs, NetOut),
+exported procedure superapp(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
+superapp(Id, Known, Grants, NetIn) :-
+    ground(Id?), ground(Known?) |
+    place # os_phone(Id?, Known?, In?, NetIn?, Outs, NetOut),
     calendar(Dates),
     date_msgs(Id?, Dates?, DateMsgs),
     merge(Cmds?, DateMsgs?, In),
@@ -73,7 +77,7 @@ superapp(Id, Grants, NetIn) :-
 %% the pending value of a befriending or an introduction holds the agent's
 %% consent writer, which home's card answers, and which one reader alone may
 %% hold; until it is answered the message is not ground, so a copy of it
-%% would wait for the very answer it carries the card for.  superapp/3 above
+%% would wait for the very answer it carries the card for.  superapp/4 above
 %% and superapp_ui/4 (home_ui.glp) reach it by scope.
 procedure split_out(AgentToUserStream?, Stream(Output), AgentToUserStream).
 split_out([M | Ms], [N? | Ns?], [M1? | Seen?]) :- notice(M?, N, M1), split_out(Ms?, Ns, Seen).
@@ -204,7 +208,7 @@ hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).
 %% next one at the start of its day (GSG paper, Section 3, "What the super-app
 %% grants a mini-app": "a calendar, a stream of dates the super-app writes
 %% from the smartphone's clock, one a day"; GB appendix-derivation.tex: "on a
-%% device the clock writes it").  superapp/3 gives each to the agent, which
+%% device the clock writes it").  superapp/4 gives each to the agent, which
 %% writes it on the calendar of every mini-app installed; a play gives the
 %% agent its dates from its script instead.
 procedure calendar(Stream(Integer)).
@@ -353,12 +357,15 @@ play_sovereign(P, Q, A?, B?) :- superapp_plays # play_sovereign(P?, Q?, A, B).
 %% appendix-guards.tex, "Identity and signature").  The first act carries the
 %% entry's arguments: the person's key and the keys of the peers the person
 %% knows ("An agent learns the keys of its peers from its person"), and, for
-%% a boot's phone, the person's part in its script: superapp_ui/4 (the
-%% super-app with a live person), sg_init/4 (the boots of programs/social), and
+%% a boot's phone, the person's part in its script: superapp/4 (the
+%% super-app on a phone, its person live and its network the layer's),
+%% superapp_ui/4 (the super-app with a live person and its peers scripted in
+%% one heap, for demonstration), sg_init/4 (the boots of programs/social), and
 %% the smartphone of each app's boot (programs/apps).  The person's acts after
 %% the first are the grants of the super-app's person channel, which
-%% superapp_ui/4 reads; a boot's person closes the stream after the first act.
-CoreAct ::= superapp_ui(Key, List(Key))
+%% superapp/4 and superapp_ui/4 read; a boot's person closes the stream after the first act.
+CoreAct ::= superapp(Key, List(Key))
+          ; superapp_ui(Key, List(Key))
           ; sg_init(Key, Constant, List(Key))
           ; gsg_phone(Constant, Key, List(Key))
           ; gsn_phone(Constant, Key, List(Key))
@@ -392,6 +399,8 @@ agent(ch(In, []), ch(N, [])) :- self_key(_), core_start(In?, N?).
 
 %% The entry the person's first act names, on the network input.
 procedure core_start(CoreIn?, NetInStream?).
+core_start([superapp(P, Qs) | Gs], N) :-
+    person_grants(Gs?, Grants), superapp(P?, Qs?, Grants?, N?).
 core_start([superapp_ui(P, Qs) | Gs], N) :-
     person_grants(Gs?, Grants), superapp_ui(P?, Qs?, Grants?, N?).
 core_start([sg_init(P, M, Qs) | _], N) :- sg_init(P?, M?, Qs?, N?).

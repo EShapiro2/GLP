@@ -41,7 +41,7 @@
 %% informs; the consent is asked by this card only (GSG, 2026-10-14 09:24
 %% UTC, item 1).
 %%
-%% What the super-app tells the person is not a question: superapp/3
+%% What the super-app tells the person is not a question: superapp/4
 %% (self.glp) sends it to the person on the program's own end of the person
 %% channel, which the dispatcher merges with the constructs' draws.
 %%

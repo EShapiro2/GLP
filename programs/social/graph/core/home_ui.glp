@@ -1,6 +1,6 @@
 %% home_ui.glp --- the super-app with a LIVE person.
 %%
-%% superapp(Id, Grants, NetIn), the super-app (GSG paper, Section 5.1), is
+%% superapp(Id, Known, Grants, NetIn), the super-app (GSG paper, Section 5.1), is
 %% defined in self.glp, the entry of the super-app's contract.
 %%
 %% superapp_ui(Id, Peers, Grants, NetIn) is the same super-app as a play: the
@@ -23,12 +23,12 @@
 %% Each peer is scripted and shares the network with the person through a
 %% chain of route_to/4 (self.glp's), one for each agent by its key, so the
 %% person's Connect and Invite have someone to reach.  home/3 and its
-%% dispatcher are imported at the types of home.glp's exports, as superapp/3
+%% dispatcher are imported at the types of home.glp's exports, as superapp/4
 %% imports them (self.glp, HomeQuestion).  No clause here names a peer by an
 %% atom (IGLP, Remark "Agent Names").
 %%
 %% superapp_ui/4 is the harness of the app, not part of the super-app's
-%% contract; superapp/3 is the super-app.
+%% contract; superapp/4 is the super-app.
 
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
