@@ -21,7 +21,7 @@ Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer
            ; message(Peer, Peer, Speech) ; create(Peer, Speech) ; join(Peer, Peer, Speech)
            ; leave(Peer, Peer, Speech) ; remove(Peer, Peer, Speech) ; close(Peer, Speech)
            ; post_own(Peer, Speech, Speech) ; post(Peer, Peer, Speech, Speech).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

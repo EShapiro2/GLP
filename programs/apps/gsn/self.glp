@@ -63,7 +63,7 @@ post_own(Peer, Speech, Speech)
 ;
 post(Peer, Peer, Speech, Speech)
 .
-Request   ::= propose(Proposal) ; refresh.
+Request   ::= propose(Proposal).
 YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote      ::= yes ; no(Reason).

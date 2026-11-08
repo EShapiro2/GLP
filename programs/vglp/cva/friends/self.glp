@@ -31,7 +31,7 @@
 
 Class    ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
 Proposal ::= befriend(Peer, Peer) ; greet(Peer, Peer) ; cheer(Peer).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

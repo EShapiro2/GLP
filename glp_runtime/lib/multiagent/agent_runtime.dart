@@ -27,9 +27,9 @@
 /// "Networking Seam", One interface: "A simulation realisation of the same
 /// interface backs the tests and plays, so transport integration is a backend
 /// swap").  Over a given network the agent is named by its key (IGLP, Remark
-/// "Agent Names": "Over a real network, the name of an agent p is its public
-/// key, held by the networking layer"), presented as 64 lowercase hex
-/// characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
+/// "Agent Names": "An agent p is its public key, which the runtime makes and
+/// supplies to the networking layer ... and has no other name"), presented as
+/// 64 lowercase hex characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
 /// simulation's network itself, always.
 ///
 /// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved, by its `acknowledge(messageId)` ([GlpNetwork.acknowledge]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
@@ -131,13 +131,15 @@ class AgentRuntime {
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerLost;
 
-  /// This agent's Ed25519 key pair.  Provided by the coordinator, or made when
+  /// This agent's Ed25519 key pair.  Provided by the coordinator or the
+  /// application, or, where it is not, read from [stateStore], or made when
   /// the host spawns the agent, before anything is compiled or sent, from the
   /// SHA-256 of the clock, the device's hardware identifiers and the persona's
-  /// name, [agentId], combined by exclusive or (IGLP, Implementation Notes,
-  /// "Boot").  Over a given network it is the layer's, which holds
-  /// it (IGLP, The contract: "an agent's identity is its public key, held with
-  /// its private key by the networking layer"), and must be provided.
+  /// name, [agentId], combined by exclusive or, and saved in [stateStore]
+  /// (IGLP, Implementation Notes, "Boot").  Over a given network it must be
+  /// provided, the layer having been instantiated with it (IGLP, The
+  /// contract: "the runtime supplies the key pair to the layer when it
+  /// instantiates it, the layer keeping it unchanged for its lifetime").
   final ({PubKey pub, Uint8List priv})? keyPair;
 
   /// The shared identifier–key directory of the simulation. Provided by the
@@ -216,10 +218,11 @@ class AgentRuntime {
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
-    // The person's key is the layer's: the engine holds it from construction,
-    // so the certificate its compiler writes, self_key/1 and sign/3 are under
-    // the key the agent is named by.  The layer gives out its public key and
-    // keeps the private half, so the host is given the pair as well.
+    // The layer was instantiated with the agent's key pair (IGLP, The
+    // contract), and gives out only its public key, so the host is given the
+    // pair as well: the engine holds it from construction, so the certificate
+    // its compiler writes, self_key/1 and sign/3 are under the key the agent
+    // is named by.
     final kp = keyPair;
     if (kp == null) {
       throw ArgumentError('agent $agentId runs over a given network, whose '
@@ -336,16 +339,20 @@ class AgentRuntime {
   /// Start the agent: where its [stateStore] holds a saved state, go on from it (IGLP, Definition "Restart": "the local state s_p of p at restart is its local state at termination"; Implementation Notes, "Persistence": "a restart resumes from the state the store holds"), the restart's cycle handing to the layer the messages that state holds undelivered ([_Resume]); otherwise boot it, the initial start being its first event cycle.
   Future<void> initialize() async {
     _log('INIT: Starting');
-    // The agent's key pair: provided by the coordinator, or made now, at the
-    // agent's spawn, before anything is compiled or sent, from the SHA-256 of
-    // the clock, the device's hardware identifiers and the persona's name
-    // (IGLP, Implementation Notes, "Boot").  The engine holds it as the
-    // person's identity from construction --- so the certificate its compiler
-    // writes, self_key/1 and sign/3 are all under it --- and the networking
-    // layer below is given the same pair.
-    _kp = keyPair ?? PersonIdentity.forPersona(agentId).keyPair;
+    // The agent's key pair: provided, or the one its store keeps, or made
+    // now, at the agent's spawn, before anything is compiled or sent, from the
+    // SHA-256 of the clock, the device's hardware identifiers and the persona's
+    // name, and kept (IGLP, Implementation Notes, "Boot").  The engine holds it
+    // as the person's identity from construction --- so the certificate its
+    // compiler writes, self_key/1 and sign/3 are all under it --- and the
+    // networking layer below is given the same pair.
+    final store = stateStore;
+    _kp = keyPair ??
+        (store != null
+            ? await keptKeyPair(store, agentId)
+            : PersonIdentity.forPersona(agentId).keyPair);
 
-    final saved = await stateStore?.load();
+    final saved = await store?.load();
     _setUp();
     if (saved != null) {
       _restore(saved);
@@ -355,6 +362,21 @@ class AgentRuntime {
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
       _output('[INIT] Restored the agent\'s saved state');
       await _submit(const _Resume());
+      // The person's screen is not part of the local state: at a restart the
+      // runtime grants refresh, an Input addressed to no construct, in the
+      // person's place, once, and the dispatcher has every construct draw
+      // again what it last drew, so the screen is drawn from the restored
+      // state (IGLP 7a25ff8, madglp-spec.tex, the paragraph after Definition
+      // "Restart"; vGLP d433f71, Section 6.3: "Input(T) ::= input(Integer,
+      // Path, T) ; refresh", "a gesture grants refresh, as does the runtime
+      // when it restarts the agent from its saved state").  The runtime keeps
+      // no draw.  It grants it where it holds the person writer, the person
+      // being the person; a person scripted in GLP holds it in the runtime's
+      // place.
+      if (person == null && _userInput != null) {
+        _log('USER_INPUT: refresh, granted at the restart');
+        await _submit(_Input(refreshGrant));
+      }
       _initialized = true;
       updateStats();
       return;
@@ -534,8 +556,8 @@ class AgentRuntime {
     if (!bytesEqual(r.agentKey, _kp!.pub.bytes)) {
       throw StateError('the saved state is of the agent of key '
           '${PubKey(r.agentKey).hex}, and this agent runs under '
-          '${_kp!.pub.hex}: an agent has one key, which survives the '
-          'termination with the layer, and the host is given it');
+          '${_kp!.pub.hex}: an agent has one key, which its store keeps '
+          'across the termination');
     }
     final image = codeImageFromProgram(engine.combinedProgram);
     final identity = _codeIdentity(image);
@@ -1182,6 +1204,11 @@ final class _Message extends _AgentEvent {
   @override
   String toString() => 'a message from $from';
 }
+
+/// The grant `refresh`, an Input addressed to no construct, which the runtime
+/// grants in the person's place at a restart (IGLP 7a25ff8, after Definition
+/// "Restart"; vGLP d433f71, Section 6.3).
+final rt.Term refreshGrant = rt.ConstTerm('refresh');
 
 /// The person's act.
 final class _Input extends _AgentEvent {

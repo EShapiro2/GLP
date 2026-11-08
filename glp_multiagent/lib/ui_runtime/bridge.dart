@@ -253,6 +253,13 @@ class Bridge {
     return false;
   }
 
+  /// The grant `refresh`, an Input addressed to no construct, which a gesture
+  /// grants: on it the dispatcher has every construct draw again what it last
+  /// drew, so the screen is redrawn whole (vGLP d433f71, Section 6.3:
+  /// "Input(T) ::= input(Integer, Path, T) ; refresh", "a gesture grants
+  /// refresh").
+  void refresh() => onGrant(const GAtom('refresh'));
+
   /// The person's raw input [raw] at the question at position [path] of
   /// construct [id], granted as `input(Id, P, R)`.  A construct no longer
   /// open takes no grant: its widget is gone from the screen.

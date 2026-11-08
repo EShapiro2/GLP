@@ -134,9 +134,11 @@ Spawn(Q, T) ::= spawn(Integer, Q, Inputs(T), Stream(Draw(T))?).
 
 %% dispatch(Asks?, PersonCh?, MCh, Spawns): the dispatcher of one agent
 %% whose program writes nothing to its person, its output end anonymous;
-%% dispatch(Asks?, PersonCh?, MIn, ODs?, Spawns), of one whose program does,
-%% ODs the draws of its output, the thread of construct 0, which the
-%% compiled program draws (vGLP 169b008, Definition "Canonical
+%% dispatch(Asks?, PersonCh?, MIn, ODs?, G0s, Spawns), of one whose program
+%% does, ODs the draws of its output, the thread of construct 0, which the
+%% compiled program draws, and G0s the stream on which the dispatcher passes
+%% construct 0 each refresh, as it passes every construct process its grants
+%% (route 0) (vGLP 169b008, Definition "Canonical
 %% Compilation": "the dispatcher draws that output as a thread whose
 %% elements are drawn by the widget of Output"; the output thread drawn at
 %% dispatch start with the identifier 0 and the questions numbered from 1,
@@ -161,12 +163,12 @@ dispatch(Asks, ch(PIn, POut?), ch(MIn?, _), Ss?) :-
     serve(Es?, COut, POut, [], [], 1, Ss).
 
 exported procedure(Q, T) dispatch(Stream(Ask(Q))?, PersonChannel(T)?,
-    Stream(Input(T)), Stream(Draw(T))?, Stream(Spawn(Q, T))).
-dispatch(Asks, ch(PIn, POut?), MIn?, ODs, Ss?) :-
+    Stream(Input(T)), Stream(Draw(T))?, Inputs(T), Stream(Spawn(Q, T))).
+dispatch(Asks, ch(PIn, POut?), MIn?, ODs, G0s?, Ss?) :-
     split_grants(PIn?, Inputs, MIn),
     merge_draws(ODs?, DOut?, POut),
     fair(ask, Asks?, Inputs?, COut?, Es),
-    serve(Es?, COut, DOut, [], [], 1, Ss).
+    serve(Es?, COut, DOut, [route(0, G0s)], [], 1, Ss).
 
 %% merge_draws(ODs?, Ds?, POut): the draws of the output thread merged with
 %% the constructs' draws onto the person channel, which never ends: merge/3
@@ -182,12 +184,16 @@ merge_draws_([X | Xs], Ys, [X? | Zs?]) :- merge_draws(Ys?, Xs?, Zs).
 merge_draws_(Xs, [Y | Ys], [Y? | Zs?]) :- merge_draws_(Xs?, Ys?, Zs).
 merge_draws_(Xs, [], Xs?).
 
-%% split_grants(Grants?, Inputs, Others): the person's grants to a construct;
-%% the program's person input, Others, is never written, every term on the
-%% person channel being a grant input(Id, P, R) of the root's Input(T), so
-%% that passing the others on is idle (vGLP, Section 6.3).
+%% split_grants(Grants?, Inputs, Others): the person's grants, each
+%% input(Id, P, R) to a construct and each refresh, which serve passes to
+%% every construct; the program's person input, Others, is never written,
+%% every term on the person channel being a grant of the root's Input(T),
+%% input(Id, P, R) or refresh, so that passing the others on is idle (vGLP,
+%% Section 6.3: "Input(T) ::= input(Integer, Path, T) ; refresh").
 procedure(T) split_grants(PersonIn(T)?, Inputs(T), Stream(Input(T))).
 split_grants([input(Id, P, R) | Gs], [input(Id?, P?, R?) | Is?], Ms?) :-
+    split_grants(Gs?, Is, Ms).
+split_grants([refresh | Gs], [refresh | Is?], Ms?) :-
     split_grants(Gs?, Is, Ms).
 
 %% fair(Turn?, Asks?, Grants?, Draws?, Es): the asks, the grants and the
@@ -219,7 +225,11 @@ fair(draw, As, [I | Is], Ds, Es?) :- Es = [I? | Es1?], fair(draw, As?, Is?, Ds?,
 %% the writer of its draws, merged into the constructs' draws by CInto; route
 %% each grant, whole, by identifier; pass the constructs' draws on to the
 %% person, and move a construct's route, once it has withdrawn, from the live
-%% routes to Deads.  Es never ends, and neither does DOut.
+%% routes to Deads.  On a refresh, pass it to every live construct, construct
+%% 0 among them where the program has an output, each of which draws again
+%% what it last drew (vGLP d433f71, Section 6.3: "on refresh it has every
+%% construct process, and construct 0, draw again what it last drew, so the
+%% screen is redrawn whole").  Es never ends, and neither does DOut.
 procedure(Q, T) serve(Events(Q, T)?, Stream(Draw(T)), PersonOut(T),
     Routes(T)?, Deads(T)?, Integer?, Stream(Spawn(Q, T))).
 serve([ask(_, Q) | Es], CInto?, DOut?, Rs, Xs, N,
@@ -230,6 +240,9 @@ serve([ask(_, Q) | Es], CInto?, DOut?, Rs, Xs, N,
     serve(Es?, CInto1, DOut, [route(N?, Gs) | Rs?], Xs?, N1?, Ss).
 serve([input(Id, P, R) | Es], CInto?, DOut?, Rs, Xs, N, Ss?) :-
     route_grant(input(Id?, P?, R?), Rs?, Rs1),
+    serve(Es?, CInto, DOut, Rs1?, Xs?, N?, Ss).
+serve([refresh | Es], CInto?, DOut?, Rs, Xs, N, Ss?) :-
+    refresh_routes(Rs?, Rs1),
     serve(Es?, CInto, DOut, Rs1?, Xs?, N?, Ss).
 serve([draw(Id, W, V) | Es], CInto?, [draw(Id?, W?, V?) | DOut?], Rs, Xs, N,
       Ss?) :-
@@ -250,6 +263,13 @@ route_grant(G, [route(Id1, Gs?) | Rs], [route(Id1?, Gs) | Rs1?]) :-
     otherwise |
     route_grant(G?, Rs?, Rs1).
 route_grant(_, [], []).
+
+%% refresh_routes(Routes?, Routes1): send refresh on the grant stream of
+%% every live construct.
+procedure(T) refresh_routes(Routes(T)?, Routes(T)).
+refresh_routes([route(Id, [refresh | Gs1?]) | Rs], [route(Id?, Gs1) | Rs1?]) :-
+    refresh_routes(Rs?, Rs1).
+refresh_routes([], []).
 
 %% remove_route(Id?, Routes?, Routes1, Deads?, Deads1): move the route of
 %% construct Id from the live routes to the dead, its grant writer with it.

@@ -102,6 +102,45 @@ play_pick(D?, Log?) :-
     responder # dispatch(Asks?, ch(Gs?, Ds), _),
     person(Ds?, [go], Gs, Log).
 
+%% The person sees respond's card and grants refresh, an Input addressed to
+%% no construct, on which the dispatcher has every construct, and construct 0,
+%% draw again what it last drew (vGLP d433f71, Section 6.3: "Input(T) ::=
+%% input(Integer, Path, T) ; refresh", "on refresh it has every construct
+%% process, and construct 0, draw again what it last drew, so the screen is
+%% redrawn whole"), and then answers it yes: the card and the output are each
+%% drawn twice, the refresh answering nothing.
+%% The log of play_refresh: each construct drawn, by its identifier, each
+%% time it is drawn, and each withdrawn.
+RLog ::= drawn(Integer) ; withdrawn(Integer).
+
+exported procedure play_refresh(Stream(Decision), Stream(RLog)).
+play_refresh(D?, Log?) :-
+    responder # respond(offer(bob), D, Asks),
+    responder # dispatch(Asks?, ch(Gs?, Ds), _),
+    person_refresh(Ds?, Gs, Log).
+
+%% person_refresh(Ds?, Gs, Log): at the first draw of a card with the
+%% person's position marked input(Q), grant refresh and then yes at Q; log
+%% every draw and withdrawal.
+procedure person_refresh(PersonOut(Drawn)?, PersonIn(Drawn), Stream(RLog)).
+person_refresh([draw(Id, _, card_w(card(_, input(Q)))) | Ds],
+       [refresh, input(Id?, Q?, yes) | Gs?], [drawn(Id?) | Log?]) :-
+    ground(Id?), ground(Q?) |
+    watching_ids(Ds?, Gs, Log).
+person_refresh([draw(Id, _, _) | Ds], Gs?, [drawn(Id?) | Log?]) :-
+    otherwise |
+    person_refresh(Ds?, Gs, Log).
+person_refresh([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    person_refresh(Ds?, Gs, Log).
+
+%% watching_ids(Ds?, Gs, Log): grant nothing more; log every draw and
+%% withdrawal.
+procedure watching_ids(PersonOut(Drawn)?, PersonIn(Drawn), Stream(RLog)).
+watching_ids([draw(Id, _, _) | Ds], Gs?, [drawn(Id?) | Log?]) :-
+    watching_ids(Ds?, Gs, Log).
+watching_ids([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    watching_ids(Ds?, Gs, Log).
+
 %% person(Ds?, Rs?, Gs, Log): at the first draw of a card with the person's
 %% position marked input(Q), grant each of Rs in turn at Q, and log every
 %% draw and withdrawal.

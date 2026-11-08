@@ -24,6 +24,17 @@
 /// in the isolate that holds the layer, since the layer's transports are the
 /// platform's and answer in the isolate that registered them.
 ///
+/// The agent's local state survives the termination of the app, kept by the
+/// store the app gives it ([stateStore]; IGLP, Definition "Restart" and
+/// Implementation Notes, "Persistence": "the runtime keeps it by a store the
+/// host gives it ... and a restart resumes from the state the store holds").
+/// At a restart the app sends no first act: the agent goes on from the state
+/// the store holds, and the runtime grants refresh in the person's place, on
+/// which the dispatcher has every construct draw again what it last drew, so
+/// the screen is drawn from the restored state (IGLP 7a25ff8, the paragraph
+/// after Definition "Restart"; vGLP d433f71, Section 6.3).  Until 2026-11-08
+/// the app gave none, and every launch was a first start.
+///
 /// The person sees what the program draws and nothing else (GSA paper,
 /// Appendix "The Operating System", "The person"): each term the program sends
 /// the person by send_to_user/1 is handed whole to the [UiRuntime], whose
@@ -36,6 +47,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
@@ -76,6 +88,10 @@ class SuperAppHost {
   late final UiRuntime ui = UiRuntime(
       manifest: manifest, onSend: (cmd) => act(runtimeTermOf(cmd)));
 
+  /// The store that keeps the agent's local state across the termination of
+  /// the app; null, and every start is a first start.
+  final AgentStateStore? stateStore;
+
   /// The agent.
   final AgentRuntime agent;
 
@@ -98,12 +114,14 @@ class SuperAppHost {
     required this.keyPair,
     required this.manifest,
     this.entry = superappEntry,
+    this.stateStore,
   }) : agent = AgentRuntime(
           agentId: agentId,
           program: program,
           rootSelfGlpPath: rootSelfGlpPath,
           keyPair: keyPair,
           network: network,
+          stateStore: stateStore,
         );
 
   /// The agent's key, as 64 lowercase hex characters: its name.
@@ -111,8 +129,12 @@ class SuperAppHost {
 
   /// Start the agent: compile the program, post the initial goal, and, at
   /// the agent's first start, send on the person channel the act that starts
-  /// the Grassroots App, `superapp(Me, [])`.  The person's grants go to the
-  /// agent as they come, each an act of the person.
+  /// the Grassroots App, `superapp(Me, [])`; at a restart, go on from the
+  /// state the [stateStore] holds, the runtime granting refresh in the
+  /// person's place ([AgentRuntime.initialize]).  The person's grants go to
+  /// the agent as they come, each an act of the person.  Throws where the
+  /// saved state cannot be restored: another agent's, or another program's
+  /// (AgentRuntime's restore).
   Future<void> start() async {
     agent.onUserOutput = (term) => ui.handle(screenTermOf(term));
     agent.onOutput = (line) => onOutput?.call(line);

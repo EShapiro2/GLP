@@ -19,6 +19,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'glp_sources.dart';
 import 'manifests/superapp_ui.dart';
@@ -79,6 +81,12 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
       final glp = await resolveGlpPaths();
       final net = await PhoneNetwork.open(persona: _persona);
       _net = net;
+      // The agent's local state is kept across the termination of the app by
+      // a store in the app's own directory, which the person does not see
+      // (IGLP, Implementation Notes, "Persistence": "a store the host gives
+      // it"): a launch after the first goes on from it.
+      final support = await getApplicationSupportDirectory();
+      final store = FileAgentStateStore('${support.path}/agents/$_persona.state');
       final host = SuperAppHost(
         agentId: _persona,
         program: glp.coreDir,
@@ -86,6 +94,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
         network: net.network,
         keyPair: net.keyPair,
         manifest: superappManifest,
+        stateStore: store,
       );
       host.ui.onChange = () {
         if (mounted) setState(() {});

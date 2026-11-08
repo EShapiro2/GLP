@@ -251,8 +251,11 @@ run(_).
       expect(c.source, contains('procedure run_t_r(Integer?, Widget?, '
           'Stream(View_t_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), '
           'Stream(Draw(Drawn))).'));
+      // On refresh the construct draws again what it last drew, the view V
+      // it holds (vGLP d433f71, Section 6.3, "The construct process").
       expect(c.source, contains('procedure run_t_r_more(Integer?, Widget?, '
-          'Stream(View_t_r)?, Done?, Stream(Draw(Drawn))).'));
+          'View_t_r?, Stream(View_t_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), '
+          'Stream(Draw(Drawn))).'));
       expect(c.source, contains('constructs_1([spawn(Id, Q, Gs, Ds?) | Ss]) '
           ':- construct_1(Id?, Q?, Gs?, Ds), constructs_1(Ss?).'));
       expect(c.source, contains('construct_1(Id, t_r(X?), Gs, Ds?) :- '));
@@ -325,9 +328,26 @@ procedure (T?)*p.
       // The first view drawn before the grants reach the question.
       expect(
           s,
-          contains('run_card_w(Id, W, [V | Vs], Done, Gs, Gs?, '
+          contains('run_card_w(Id, W, [V | Vs], Done, Gs, Gs1?, '
               '[draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | '
-              'run_card_w_more(Id?, W?, Vs?, Done?, Ds).'));
+              'run_card_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).'));
+      // A refresh draws the last view again and reaches no question; a grant
+      // input(Id, P, R) goes on to the questions (vGLP d433f71, Section 6.3).
+      expect(
+          s,
+          contains('run_card_w_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, '
+              '[draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | '
+              'run_card_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).'));
+      expect(
+          s,
+          contains('run_card_w_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], '
+              '[input(I?, P?, R?) | Gs1?], Ds?) :- '
+              'run_card_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).'));
+      expect(
+          s,
+          contains('run_card_w_last(Id, W, V, Done, [refresh | Gs], Gs1?, '
+              '[draw(Id?, W?, card_w(V?)) | Ds?]) :- ground(W?), ground(V?) | '
+              'run_card_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).'));
     });
 
     test('binds the question with the term the person\'s input forms, by '
@@ -354,12 +374,12 @@ procedure (T?)*p.
           contains('procedure answer_yesNo(Path?, YesNo, Inputs(Drawn)?, '
               'Inputs(Drawn), Done).'));
       // A grant for another position goes on through take_N's refused
-      // clause, rebuilt whole (C).
+      // clause, whole (C), as would any other Input.
       expect(
           s,
-          contains('answer_yesNo(P, X?, [input(Id, P1, R) | Gs], Gs1?, '
+          contains('answer_yesNo(P, X?, [G | Gs], Gs1?, '
               'Done?) :- otherwise | take_yesNo(refused, P?, X, '
-              'input(Id?, P1?, R?), Gs?, Gs1, Done).'));
+              'G?, Gs?, Gs1, Done).'));
     });
   });
 
@@ -2389,8 +2409,14 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
       expect(
           c.source,
           contains("dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, "
-              "PCh?, MIn, ODs?, Ss), output(thread(menu(["));
-      expect(c.source, contains('MOut?, ODs), constructs(Ss?).'));
+              "PCh?, MIn, ODs?, G0s, Ss), output(thread(menu(["));
+      // Construct 0 takes its grants, route 0, and draws again on refresh
+      // what it last drew (vGLP d433f71, Section 6.3).
+      expect(c.source, contains('MOut?, G0s?, ODs), constructs(Ss?).'));
+      expect(c.source, contains('[route(0, G0s)], [], 1, Ss)'));
+      expect(c.source,
+          contains('output_more(W, Ms, Es, [refresh | Gs], Ds?) :- '
+              'output_draw(W?, Ms?, Es?, Gs?, Ds).'));
       expect(c.source, contains('[draw(0, W?, output([])) | Ds?]'));
       expect(c.source, contains('[draw(0, W?, output(Es?)) | Ds?]'));
       expect(c.source, contains('merge_draws(ODs?, DOut?, POut)'));
@@ -2433,7 +2459,7 @@ Output =::= said_line.
       const d = "menu([form(said, [field('Peer', shown)]), shown])";
       expect(c.widgets['Output'], 'thread(named(said_line, $d))');
       expect(c.source,
-          contains('output(thread(named(said_line, $d)), MOut?, ODs)'));
+          contains('output(thread(named(said_line, $d)), MOut?, G0s?, ODs)'));
     });
 
     test('a declared Stream(Output): construct 0 drawn by named(W, D), D the '
@@ -2444,7 +2470,8 @@ Stream(Output) =::= last_state.
 ''');
       const d = "thread(menu([form(said, [field('Peer', shown)]), shown]))";
       expect(c.widgets['Output'], 'named(last_state, $d)');
-      expect(c.source, contains('output(named(last_state, $d), MOut?, ODs)'));
+      expect(c.source,
+          contains('output(named(last_state, $d), MOut?, G0s?, ODs)'));
     });
 
     test('an Output with a position the person writes is refused, naming it',

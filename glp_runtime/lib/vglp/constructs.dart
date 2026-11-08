@@ -606,8 +606,8 @@ class _Generator {
       ..writeln(out == null
           ? '$d(Asks, PCh, MCh?) :- $d(Asks?, PCh?, MCh, Ss), $cs(Ss?).'
           : '$d(Asks, PCh, ch(MIn?, MOut)) :- '
-              '$d(Asks?, PCh?, MIn, ODs?, Ss), '
-              '$out($outputWidget, MOut?, ODs), $cs(Ss?).')
+              '$d(Asks?, PCh?, MIn, ODs?, G0s, Ss), '
+              '$out($outputWidget, MOut?, G0s?, ODs), $cs(Ss?).')
       ..writeln()
       // constructs/1: the construct process of each spawn.
       ..writeln('procedure$p $cs(Stream(${gen.spawnType}($qt, ${gen.drawn}))?).')
@@ -681,76 +681,127 @@ class _Generator {
   /// construct Id with its widget W, under the functor f of its ask,
   /// draw(Id, W, f(V)) (vGLP, Section 6.3, "The construct process": "with V
   /// under the functor t of its ask"), and only then hand its questions
-  /// their grants, Gs1 the grants Gs: "On a grant input(Id, Pos, R) for a
-  /// question W it holds and has drawn" (ibid.), a question being drawn
-  /// first once the output of the question is written whole ("A construct
-  /// process has the bridge draw the widget of T once every reader in the
-  /// output it holds is assigned", ibid.).  A grant that comes before the
-  /// draw waits for it, and binds nothing until then.  Then run_f_more/5 draws
-  /// each view after it.  Views that end with none drawn, which no construct
-  /// process writes, pass the grants on and wait to withdraw, the clause
-  /// covering the stream's [].  Its views are of [view] where the compiler prints
-  /// that type ([_rootView]).
+  /// their grants, Gs1 the grants input(Id, P, R) of Gs: "On a grant
+  /// input(Id, Pos, R) for a question W it holds and has drawn" (ibid.), a
+  /// question being drawn first once the output of the question is written
+  /// whole ("A construct process has the bridge draw the widget of T once
+  /// every reader in the output it holds is assigned", ibid.).  A grant that
+  /// comes before the draw waits for it, and binds nothing until then.  Then
+  /// run_f_more/8 draws each view after it.  Views that end with none drawn,
+  /// which no construct process writes, pass the grants on and wait to
+  /// withdraw, the clause covering the stream's [].  Its views are of [view]
+  /// where the compiler prints that type ([_rootView]).
   ///
-  /// run_f_more(Id?, W?, Views?, Done?, Ds): draw each view V as it arrives;
-  /// withdraw when Done is bound, every question the construct holds
-  /// answered and no question still to come, and on nothing else; once the
-  /// views end, wait to withdraw (run_end/3).
+  /// run_f_more(Id?, W?, V?, Views?, Done?, Gs?, Gs1, Ds): V the view last
+  /// drawn; draw each view after it as it arrives; on a refresh draw V again,
+  /// "On refresh, which the dispatcher passes to every construct process, it
+  /// draws again what it last drew" (vGLP d433f71, Section 6.3, "The
+  /// construct process"); pass each grant input(Id, P, R) on to the
+  /// questions, Gs1, a refresh reaching none of them; withdraw when Done is
+  /// bound, every question the construct holds answered and no question
+  /// still to come, and on nothing else.  Once the views end, run_f_last/7
+  /// holds the last view on screen, drawing it again on a refresh, until it
+  /// withdraws.  run_f_grants(Gs?, Gs1) passes the grants of a construct
+  /// that drew nothing on to its questions, and no refresh.
   String _runFor(String f, String view) {
     final known = _runs[f];
     if (known != null) return known;
     final r = gen.run(f);
     final more = gen.run('${f}_more');
+    final last = gen.run('${f}_last');
+    final grants = gen.run('${f}_grants');
     _runs[f] = r;
     final vs = 'Stream($view)?';
     final gs = gen.inputsType;
+    final ds = 'Stream(${gen.drawType})';
+    final dn = gen.doneType;
     _out
       ..writeln('procedure $r(Integer?, $widgetTypeName?, $vs, '
-          '${gen.doneType}?, $gs?, $gs, Stream(${gen.drawType})).')
-      ..writeln('$r(Id, W, [V | Vs], Done, Gs, Gs?, '
+          '$dn?, $gs?, $gs, $ds).')
+      ..writeln('$r(Id, W, [V | Vs], Done, Gs, Gs1?, '
           '[draw(Id?, W?, $f(V?)) | Ds?]) :- '
-          'ground(W?), ground(V?) | $more(Id?, W?, Vs?, Done?, Ds).')
-      ..writeln('$r(Id, _, [], Done, Gs, Gs?, Ds?) :- '
-          '${gen.runEnd}(Id?, Done?, Ds).')
+          'ground(W?), ground(V?) | '
+          '$more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).')
+      ..writeln('$r(Id, _, [], Done, Gs, Gs1?, Ds?) :- '
+          '$grants(Gs?, Gs1), ${gen.runEnd}(Id?, Done?, Ds).')
       ..writeln()
-      ..writeln('procedure $more(Integer?, $widgetTypeName?, $vs, '
-          '${gen.doneType}?, Stream(${gen.drawType})).')
-      ..writeln('$more(Id, _, _, done, [withdraw(Id?)]).')
-      ..writeln('$more(Id, W, [V | Vs], Done, [draw(Id?, W?, $f(V?)) | Ds?]) '
-          ':- ground(W?), ground(V?) | $more(Id?, W?, Vs?, Done?, Ds).')
-      ..writeln('$more(Id, _, [], Done, Ds?) :- '
-          '${gen.runEnd}(Id?, Done?, Ds).')
+      ..writeln('procedure $more(Integer?, $widgetTypeName?, $view?, $vs, '
+          '$dn?, $gs?, $gs, $ds).')
+      ..writeln('$more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).')
+      ..writeln('$more(Id, W, _, [V | Vs], Done, Gs, Gs1?, '
+          '[draw(Id?, W?, $f(V?)) | Ds?]) :- ground(W?), ground(V?) | '
+          '$more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).')
+      ..writeln('$more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, '
+          '[draw(Id?, W?, $f(V?)) | Ds?]) :- ground(W?), ground(V?) | '
+          '$more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).')
+      ..writeln('$more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], '
+          '[input(I?, P?, R?) | Gs1?], Ds?) :- '
+          '$more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).')
+      ..writeln('$more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- '
+          '$last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).')
+      ..writeln()
+      ..writeln('procedure $last(Integer?, $widgetTypeName?, $view?, '
+          '$dn?, $gs?, $gs, $ds).')
+      ..writeln('$last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).')
+      ..writeln('$last(Id, W, V, Done, [refresh | Gs], Gs1?, '
+          '[draw(Id?, W?, $f(V?)) | Ds?]) :- ground(W?), ground(V?) | '
+          '$last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).')
+      ..writeln('$last(Id, W, V, Done, [input(I, P, R) | Gs], '
+          '[input(I?, P?, R?) | Gs1?], Ds?) :- '
+          '$last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).')
+      ..writeln()
+      ..writeln('procedure $grants($gs?, $gs).')
+      ..writeln('$grants([input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?]) :- '
+          '$grants(Gs?, Gs1).')
+      ..writeln('$grants([refresh | Gs], Gs1?) :- $grants(Gs?, Gs1).')
       ..writeln();
     return r;
   }
 
-  /// output(W?, Out?, Draws): the program's output to its person, drawn as
-  /// the construct 0 by its widget W, a thread, its value the elements so far
-  /// under the functor output: drawn at once with no element, and again as
-  /// each element arrives whole.  It holds no question and never withdraws
-  /// while the output stream stands open (vGLP 169b008, Definition
-  /// "Canonical Compilation"; Definition "Construct Process").
+  /// output(W?, Out?, Gs?, Draws): the program's output to its person, drawn
+  /// as the construct 0 by its widget W, a thread, its value the elements so
+  /// far under the functor output: drawn at once with no element, and again
+  /// as each element arrives whole.  It holds no question and never
+  /// withdraws (vGLP 169b008, Definition "Canonical Compilation"; Definition
+  /// "Construct Process").  Gs are the grants the dispatcher routes to
+  /// construct 0: on each refresh it draws again what it last drew, "on
+  /// refresh its last element is drawn again" (vGLP d433f71, Section 6.3, "The
+  /// construct process"), also once the output has ended, its last draw
+  /// staying on screen; a grant input(Id, P, R) for construct 0 answers no
+  /// question, construct 0 holding none.
   String _outputDrawing() {
     final o = gen.output('output');
     final more = gen.output('output_more');
     final draw = gen.output('output_draw');
     final add = gen.output('output_add');
+    final end = gen.output('output_end');
     const ms = 'Stream($outputTypeName)';
     const es = 'List($outputTypeName)';
     final ds = 'Stream(${gen.drawType})';
+    final gs = gen.inputsType;
     _out
-      ..writeln('procedure $o($widgetTypeName?, $ms?, $ds).')
-      ..writeln('$o(W, Ms, [draw(0, W?, output([])) | Ds?]) :- '
-          'ground(W?) | $more(W?, Ms?, [], Ds).')
+      ..writeln('procedure $o($widgetTypeName?, $ms?, $gs?, $ds).')
+      ..writeln('$o(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- '
+          'ground(W?) | $more(W?, Ms?, [], Gs?, Ds).')
       ..writeln()
-      ..writeln('procedure $more($widgetTypeName?, $ms?, $es?, $ds).')
-      ..writeln('$more(W, [M | Ms], Es, Ds?) :- ground(M?), ground(Es?) | '
-          '$add(Es?, M?, Es1), $draw(W?, Ms?, Es1?, Ds).')
-      ..writeln('$more(_, [], _, []).')
+      ..writeln('procedure $more($widgetTypeName?, $ms?, $es?, $gs?, $ds).')
+      ..writeln('$more(W, [M | Ms], Es, Gs, Ds?) :- ground(M?), ground(Es?) | '
+          '$add(Es?, M?, Es1), $draw(W?, Ms?, Es1?, Gs?, Ds).')
+      ..writeln('$more(W, Ms, Es, [refresh | Gs], Ds?) :- '
+          '$draw(W?, Ms?, Es?, Gs?, Ds).')
+      ..writeln('$more(W, Ms, Es, [input(_, _, _) | Gs], Ds?) :- '
+          '$more(W?, Ms?, Es?, Gs?, Ds).')
+      ..writeln('$more(W, [], Es, Gs, Ds?) :- $end(W?, Es?, Gs?, Ds).')
       ..writeln()
-      ..writeln('procedure $draw($widgetTypeName?, $ms?, $es?, $ds).')
-      ..writeln('$draw(W, Ms, Es, [draw(0, W?, output(Es?)) | Ds?]) :- '
-          'ground(W?), ground(Es?) | $more(W?, Ms?, Es?, Ds).')
+      ..writeln('procedure $draw($widgetTypeName?, $ms?, $es?, $gs?, $ds).')
+      ..writeln('$draw(W, Ms, Es, Gs, [draw(0, W?, output(Es?)) | Ds?]) :- '
+          'ground(W?), ground(Es?) | $more(W?, Ms?, Es?, Gs?, Ds).')
+      ..writeln()
+      ..writeln('procedure $end($widgetTypeName?, $es?, $gs?, $ds).')
+      ..writeln('$end(W, Es, [refresh | Gs], [draw(0, W?, output(Es?)) | Ds?]) '
+          ':- ground(W?), ground(Es?) | $end(W?, Es?, Gs?, Ds).')
+      ..writeln('$end(W, Es, [input(_, _, _) | Gs], Ds?) :- '
+          '$end(W?, Es?, Gs?, Ds).')
       ..writeln()
       ..writeln('procedure $add($es?, $outputTypeName?, $es).')
       ..writeln('$add([E | Es], M, [E? | Es1?]) :- $add(Es?, M?, Es1).')
@@ -1726,7 +1777,9 @@ class _Generator {
   /// UTC, item 3, and 21:13 UTC, Q1).  The grant reaches it whole,
   /// input(Id, P1, R); it guards on P1 being its own P and forms the term
   /// from R, and a grant for another position goes on through take_N's
-  /// refused clause, rebuilt whole (2026-10-04 09:05 UTC, C).
+  /// refused clause, whole (2026-10-04 09:05 UTC, C).  A refresh, an Input
+  /// too (vGLP d433f71, Section 6.3), never reaches a question, run_f_more
+  /// taking it, and would go on the same way.
   ///
   /// A list the person writes is ended by the person: the grant of its end
   /// button, [listEnd], for its position binds the rest of the list to [],
@@ -1777,9 +1830,9 @@ class _Generator {
       ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?$vsOut, Done?) :- '
           'P1? =?= P?, ground(R?) | $form(R?, F), '
           '$take(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1$vs, Done).')
-      ..writeln('$name(P, X?, [input(Id, P1, R) | Gs], Gs1?$vsOut, Done?) :- '
+      ..writeln('$name(P, X?, [G | Gs], Gs1?$vsOut, Done?) :- '
           'otherwise | '
-          '$take(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1$vs, Done).')
+          '$take(refused, P?, X, G?, Gs?, Gs1$vs, Done).')
       ..writeln()
       ..writeln('procedure$p $take($formed(${(e ?? n).typeKey})?, $pt?, $t, '
           '${gen.inputType}?, $gs?, $gs$vsType, $done).');
