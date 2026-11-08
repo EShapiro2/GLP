@@ -65,7 +65,7 @@ atom_of(g(merged, [s(V1), s(V2)]), shown(merged(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(create, [svar(n)], [rs(guarded, [atom(leads, [svar(n)])], [], [], [atom(leads, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(leads, [svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), lschema(merge, [svar(n1), svar(n2)], [rs(guarded, [atom(merged, [svar(n2), svar(n1)])], [atom(leads, [svar(n2)])], [atom(leads, [svar(n1)])], []), rs(unguarded, [atom(merged, [svar(n2), svar(n1)])], [], [atom(member, [role(1), svar(n1)])], []), rs(unguarded, [atom(member, [role(1), svar(n1)])], [atom(member, [role(1), svar(n2)])], [], [])], [listing(2, 1, listed, [svar(n1)]), listing(3, 1, listed, [svar(n2)])])])
+contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(create, [svar(n)], [rs(guarded, [atom(leads, [svar(n)])], [], [], [atom(leads, [svar(n)])])]), schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(leads, [svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]), lschema(merge, [svar(n1), svar(n2)], [rs(guarded, [atom(merged, [svar(n2), svar(n1)])], [atom(leads, [svar(n2)])], [atom(leads, [svar(n1)])], []), rs(unguarded, [atom(merged, [svar(n2), svar(n1)])], [], [atom(member, [role(1), svar(n1)])], []), rs(unguarded, [atom(member, [role(1), svar(n1)])], [atom(member, [role(1), svar(n2)])], [], [])], [listing(2, 1, listed, [svar(n1)], fcons(true), [], []), listing(3, 1, listed, [svar(n2)], fcons(true), [], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -75,12 +75,29 @@ schema_entry(create, schema(create, [svar(n)], [rs(guarded, [atom(leads, [svar(n
 .
 schema_entry(join, schema(join, [svar(n)], [rs(guarded, [atom(listed, [role(2), svar(n)])], [], [atom(leads, [svar(n)]), atom(friend, [role(2)])], []), rs(guarded, [atom(member, [role(1), svar(n)])], [], [atom(friend, [role(1)])], [atom(member, [role(1), svar(n)])])]))
 .
-schema_entry(merge, lschema(merge, [svar(n1), svar(n2)], [rs(guarded, [atom(merged, [svar(n2), svar(n1)])], [atom(leads, [svar(n2)])], [atom(leads, [svar(n1)])], []), rs(unguarded, [atom(merged, [svar(n2), svar(n1)])], [], [atom(member, [role(1), svar(n1)])], []), rs(unguarded, [atom(member, [role(1), svar(n1)])], [atom(member, [role(1), svar(n2)])], [], [])], [listing(2, 1, listed, [svar(n1)]), listing(3, 1, listed, [svar(n2)])]))
+schema_entry(merge, lschema(merge, [svar(n1), svar(n2)], [rs(guarded, [atom(merged, [svar(n2), svar(n1)])], [atom(leads, [svar(n2)])], [atom(leads, [svar(n1)])], []), rs(unguarded, [atom(merged, [svar(n2), svar(n1)])], [], [atom(member, [role(1), svar(n1)])], []), rs(unguarded, [atom(member, [role(1), svar(n1)])], [atom(member, [role(1), svar(n2)])], [], [])], [listing(2, 1, listed, [svar(n1)], fcons(true), [], []), listing(3, 1, listed, [svar(n2)], fcons(true), [], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
 schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
+
+procedure schema_forms(Constant?, SForms).
+schema_forms(_, []) :- otherwise | true.
+
+procedure schema_base(Constant?, Integer).
+schema_base(befriend, 1)
+.
+schema_base(create, 1)
+.
+schema_base(join, 1)
+.
+schema_base(merge, 1)
+.
+schema_base(_, 1) :- otherwise | true.
+
+procedure schema_locals(Constant?, Locals).
+schema_locals(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
 reflexive_preds([])
@@ -99,7 +116,7 @@ binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(sv
 .
 binding_of(merge(V1, V2, V3, V4, V5), merge, B?)
 :-
-listed_binding(merge, [b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))], [V2?, V3?], B)
+listed_binding(merge, [b(role(1), p(V1?)), b(svar(n1), s(V4?)), b(svar(n2), s(V5?))], [ppl(V2?), ppl(V3?)], B)
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -252,7 +269,7 @@ Approval  ::= approval(Asking, List(Word), YesNo?).
 %% After its sentence and the values of the fields, the approval question shows the atoms the act requires of the proposer whose predicates the tabs list, held(A, K), the atom A with K its copies under the attempt's binding (vGLP e22e2ad, Section 5.4, "The contract's words": "and the atoms the act requires of the proposer whose predicates the tabs list, as the tabs draw them --- in a swap, the coins the proposer gives"; "The compilation": the approval question's term carries those atoms); each atom a word of its own, so that no list is under another, as Definition "Volitional Procedure, Interactive Type" requires of the output.
 Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
 %% The question of a guarding role beyond the proposer's, q(R, G, Words), R the person in that role and G the role of the proposer (sentence_of; GSC, Section 2, its first paragraph); and what sentence_of gives the agent: asked(G, Words), the role of the proposer, 0 where no question is put to the agent, and the words.
-RoleAsk   ::= q(Peer, Integer, List(Word)).
+RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
 Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
@@ -267,12 +284,17 @@ MeetPeer  ::= peer(Peer) ; nopeer.
 %% A name term <u>.y_1...y_n, nterm(N): N is own(I), <pi_I>, or own_var(X), <x>, followed by ext(N, Y) for each y; "a name term <u>.y_1...y_n is the community name of the person bound to u followed by the speech acts bound to y_1, ..., y_n, as <a>.n names the group n led by a" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications"; GSC, Appendix D).
 Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
 %% A cleared atom (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "A schema may mark an atom it deletes as cleared, with the wildcard * among its arguments or as the speech act of a name term: the act deletes every atom of the state that it matches, and requires none"), written among the deleted atoms of a role as programs/gsc writes it (GSC 327e035, Definition "Speech-act schema"): any is the wildcard as an argument, and ext_any(N) the name term N.*, the wildcard as its speech act.
-            ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any.
-NTerm     ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm).
+            ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any
+%% inst(K, J, X), the variable X its quantifier binds at the J-th instance of the K-th conjunct of a schema whose instances the attempt names, which stands for X in its conditional literals, the binding sending it to the value that instance gives X (instances, cond_specs).
+            ; inst(Integer, Integer, Var).
+%% own_iv(V) and ext_iv(N, V) are <x> and N.y with x or y a variable a conjunct's quantifier binds, V its inst(K, J, X) at the J-th instance (cond_specs).
+NTerm     ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm)
+            ; own_iv(Var) ; ext_iv(NTerm, Var).
 Vars      ::= [] ; [Var | Vars].
 %% An atom a schema adds or deletes may carry a multiplicity, times(K, A), K a number or a numeric variable, for that many copies of A (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications").
 %% rest(K, J, A) is the copies of K.A a role requires beyond the J copies of A it deletes, among the atoms it keeps, as programs/gsc writes it (GSC 1c13524, def:numbers; vGLP 4aa7e60, Section 5.4, "Act schemas as local specifications": "an atom it requires, adds or deletes may carry a multiplicity ..., an atom required with a multiplicity k and deleted with none having k copies required and one deleted"), so K - J copies of A, J being 1 for an atom deleted with no multiplicity.
-SAtom     ::= atom(Constant, Vars) ; times(Var, SAtom) ; rest(Var, Var, SAtom).
+%% opt(A) is a conditional literal a conjunct deletes, at an instance or a person of a listed role, among the deleted atoms of its role: it is subtracted from the state, which need not hold it, so it is deleted and not required (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications": "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct ... included, which d_p need not hold"; GSC, Definition "Denotation"; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (i)).
+SAtom     ::= atom(Constant, Vars) ; times(Var, SAtom) ; rest(Var, Var, SAtom) ; opt(SAtom).
 SAtoms    ::= [] ; [SAtom | SAtoms].
 Guard     ::= guarded ; unguarded.
 RoleSpec  ::= rs(Guard, SAtoms, SAtoms, SAtoms, SAtoms).
@@ -280,19 +302,41 @@ RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 %% A schema's second argument is its variables, in the order of its head (GSC 0228e79, Definition "Act schema"; programs/gsc/README.md, "Writing a contract").
 Schema    ::= schema(Constant, Vars, RoleSpecs) ; lschema(Constant, Vars, RoleSpecs, Listings).
 %% A schema with listed roles pi[rho(*, u_2, ..., u_r)], lschema(Name, Vars, Roles, Listings): each listed role written as a party role of its atoms, and listing(I, Base, Rho, Args) in Listings, in the order of the roles, I its index, Base the index of its base, an agent role, Rho the predicate rho and Args its arguments u_2, ..., u_r; "A listed role ... has as its people at a schema-binding the persons q with rho(q, u_2, ..., u_r), so bound, in the state of the person in pi", and "the listed roles of a schema have one base" (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").  A schema-binding of it with the lists L_1, ..., L_m of the people of its listed roles, in the order of the roles, is carried as a schema-binding of its roles, each listed role's place bound to the base person and its atoms at none; of one role more for each person of each list, of that listed role's atoms, the roles after its own, the people of L_1 first; and of an entry b(role(-I), p(Q)) for each person Q of the list of the listed role of index I, which names its people (bound_spec, listed_binding, copies_of): "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles: the set of transactions it determines with L in those roles" (ibid.).
-Listing   ::= listing(Integer, Integer, Constant, Vars).
+%% A listed role bound by a quantifier carries its quantifier's condition Phi, which the base evaluates at each person its anchor lists, and its conjunct's conditional literals at other roles, CAdd and CDel, each hm(J, M) the atom M at the role J for each person of the role, the listed role's index in M standing for that person (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds; the instances of a conjunct with a listed role give the people of the role, one for each instance, and the instances of a conjunct with conditional literals give the atoms each adds or deletes"); a listed role of listed/3 has the condition true and none.
+%% A conjunct with conditional literals at a role other than the one holding its anchor, binding no listed role, is local to its base, "the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): instances(K, Base, X, A, Phi, CAdd, CDel), the K-th such conjunct of its schema, after its listed roles in Listings, Base the index of the role holding its anchor A, X the agent variable its quantifier binds, Phi its condition and CAdd and CDel its conditional literals, each hm(J, M) the atom M at the role J for each instance, X in M standing for that instance.  A schema-binding with the list L of its instances, in the order of identifiers, carries an entry b(inst(K, J), p(Q)) for the J-th person Q of L, and its conditional literals are added at their roles once for each, inst(K, J) standing in them for X (bound_spec, listed_binding, insts_of): "each schema-binding determines a part [t]_j of a class for each list L of instances, one list for each conjunct local to the base of the schema and not to one role" (ibid.).
+Listing   ::= listing(Integer, Integer, Constant, Vars, Form, HMults, HMults)
+            ; instances(Integer, Integer, Vars, SAtom, Form, HMults, HMults).
+HMult     ::= hm(Integer, SAtom).
+%% A conjunct binding no listed role whose conditional literals are all at the role holding its anchor is local to that role, "the machine of the person in that role evaluates it in its own state" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"): local(Base, Xs, A, Phi, CAdd, CDel), Base the index of that role, Xs the variables its literals name, A its anchor, Phi its condition and CAdd and CDel its conditional literals; schema_locals(Name, Locals), which the compiler prints from the contract, gives a schema's in conjunct order, and the role finds the instances in its own state and applies its literals at each (local_effect).
+Local     ::= local(Integer, Vars, SAtom, Form, HMults, HMults).
+Locals    ::= [] ; [Local | Locals].
+HMults    ::= [] ; [HMult | HMults].
 Listings  ::= [] ; [Listing | Listings].
 PeerLists ::= [] ; [Peers | PeerLists].
-ListTuples ::= [] ; [PeerLists | ListTuples].
+%% An instance of a conjunct is an assignment of the variables Xs its quantifier binds, the values in the order of Xs (vGLP 9ee6f87, Section 5.4: "an instance of it in a state is an assignment of the variables it binds"); a list of them, in the order of terms.
+Insts     ::= [] ; [Vals | Insts].
+InstsList ::= [] ; [Insts | InstsList].
+%% The list of a listing: the people of a listed role, ppl(L), or the instances of a conjunct, ins(L).
+LList     ::= ppl(Peers) ; ins(Insts).
+LLists    ::= [] ; [LList | LLists].
+ListTuples ::= [] ; [LLists | ListTuples].
 Schemas   ::= [] ; [Schema | Schemas].
 Preds     ::= [] ; [Constant | Preds].
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): an argument of an atom may be a number or a numeric variable, num(X), the number X where X is a number and the variable X otherwise; a schema may carry a constraint on its numeric variables, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"), as programs/gsc writes it: true, and(C1, C2), eq, le, lt, ge and gt of two expressions (X = Y, X =< Y, X < Y, X >= Y, X > Y), succ(X, Y) (Y = X + 1) and or(C1, C2); an expression is a numeric argument, plus(X, Y), minus(X, Y) or mul(X, Y).  The values are whole numbers, Integer, the realisation's type (GSC, ibid.: "Which types the values have --- numbers, strings, dates --- is the realisation's").  schema_numeric(Name, numeric(C, Ls, R)), which the compiler prints from the contract, gives a schema's constraint C, its variables local to a role, Ls, and the role whose local variables the constraint names, at(I), or every where it names none: "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks" (ibid.).
 %% A constraint is "a decidable condition on the values its binding assigns, in the relations their types provide --- linear arithmetic on its numeric variables, and signed(u, y) and unsigned(u, y), that the person bound to u signed the speech act bound to y or did not --- which is evaluated when the schema is bound" (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications"): signed(U, Y) and unsigned(U, Y), U a role or an agent variable and Y a speech-act variable, as programs/gsc writes them (GSC 10fcc92, def:numbers).
-Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; signed(Var, Var) ; unsigned(Var, Var).
-Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr).
+%% A constraint may also hold not(C), implies(C1, C2) and ne(X, Y), X != Y, as programs/gsc writes them (GSC c8c5ead, def:numbers); eq and ne compare two agents, two speech acts or two community names as they compare two numbers ("eq and ne also compare two agent variables, two speech-act variables or two name terms", ibid.).
+Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
+%% An expression may also be a function the value types provide, fn(min, [X, Y]) or fn(floor, [X]), the count of the instances of a quantifier, cardinality(Xs, H, A, Phi), or the sum of a numeric term over them, sum(Xs, H, A, Phi, U), A the anchor held by H, as programs/gsc writes them (GSC 67a7da0, def:numbers): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
+Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr).
+Exprs     ::= [] ; [Expr | Exprs].
 CRole     ::= every ; at(Integer).
+%% A safe formula of a schema's body (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc writes it: fa(H, M) the atom M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi) and fcons(C), a constraint.  schema_forms(Name, Forms), which the compiler prints from the contract, gives each with the role it is local to, sform(at(I), F), or sform(every, F), every role checking it: "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (ibid.).
+Form      ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
+Forms     ::= [] ; [Form | Forms].
+SForm     ::= sform(CRole, Form).
+SForms    ::= [] ; [SForm | SForms].
 Numeric   ::= numeric(Constraint, Vars, CRole).
-NumRes    ::= num_is(Integer) ; no_num.
+NumRes    ::= num_is(Number) ; no_num.
 LNorm     ::= norm(Binding) ; badnorm.
 
 %% A machine state is a multiset of ground atoms, a list; an atom's arguments
@@ -302,7 +346,8 @@ LNorm     ::= norm(Binding) ; badnorm.
 %% Under a binding the wildcard of a cleared atom is itself, any, and N.* the community name of N followed by it, dot_any(C) (GSC 327e035, Definition "Binding": beta(*) := *): the image of a cleared atom, which matches the atoms of a state obtained from it by replacing each wildcard by an argument, a speech act where the wildcard is in a name term (ibid.).
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 %% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
-Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; lv(Constant, Constant) ; any.
+%% A value is a whole number, n(K), or a real, r(X), "a value, a whole number, a real or a string, or a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"); arithmetic on them is on numbers, a result with a real among its operands a real.
+Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
@@ -329,7 +374,8 @@ Delta     ::= delta(Peer, GAtoms, GAtoms).
 Deltas    ::= [] ; [Delta | Deltas].
 Mate      ::= mate(Constant, Binding, Peers, Peer).
 Mates     ::= [] ; [Mate | Mates].
-Opener    ::= opener(Peer) ; guarded_part.
+%% A guarded part with no opener has its proposers, proposed(O), guards of it: "it designates for each guarded part [t]_j with no opener a nonempty set O([t]_j) of its guards, its proposers" (vGLP 9ee6f87, Definition "Local Specification"), the persons in the base of the schema-bindings that determine it ("where the base of the schema is a guarding role, its proposer is the person in the base", Section 5.4, "Speech-act schemas as local specifications"; schema_base, printed from the contract); only a proposer requests the part to its own machine and proposes it, and the other guards are asked (Definitions "Attempt" and "Proposing").
+Opener    ::= opener(Peer) ; proposed(Peers).
 Part      ::= pt(Class, Peers, Opener).
 Parts     ::= [] ; [Part | Parts].
 Info      ::= ci(Class, Deltas, Peers, Parts, Mates).
@@ -405,6 +451,7 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
+%% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
 agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
     tabs(Ts),
@@ -453,7 +500,7 @@ await(At, yes, _, [answered(At?, yes)]).
 await(At, no, _, [answered(At?, no)]).
 await(_, _, close, []).
 
-%% The approval question an arriving hello from Q asks: the clause of the acquaintance part N that hello carries, with its pragma, showing Q and taking yes or no; the person's yes is their request propose(N), which the agent goal reads as any request, and their no does nothing (vGLP, Section 5.4, "The compilation").
+%% The approval question an arriving hello from Q asks: the clause of the acquaintance part N that hello carries, with its pragma, showing Q and taking yes or no; the person's yes is their will for the acquaintance, held as their request propose(N), and their no does nothing (vGLP 0b51a60, Section 5.4, "The compilation": "the person's yes is their will for the acquaintance with Q, which the agent goal holds, and by which it answers yes, without asking again, the approval question that the start of the proposer's attempt raises; on their no it does nothing").
 procedure (Approval)*greet(Peer?, Proposal?, List(Word)?, Stream(Trigger)).
 (approval(hello(Q?, N?), Ws?, YN))*greet(Q, N, Ws, Out?) :- ground(Q?), ground(N?) |
     await_greet(N?, YN?, Out).
@@ -502,7 +549,7 @@ step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     meet_hello(Mp?, N?, St?, Out, Out1?, Thr, Thr1?, St0),
     request_cond(N?, St0?, Cd, St1),
     dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr1, Out1, Ow, Approvals?, H?, St1?).
-%% The person's yes to the question an arriving hello asks, their request propose(N), read as any request, its hello sent back; no next request question is asked on it, being no answer to one (vGLP, Section 5.4, "The compilation": "the person's yes is their request propose(N) with Q, which the agent goal reads as any request"; the agent goal asks a request question "when it starts and the next when it reads the answer to the last").
+%% The person's yes to the question an arriving hello asks, their will for the acquaintance, held as their request propose(N), read as any request: the approval by which the agent answers yes, without asking again, the approval question the start of the proposer's attempt raises, and the Discover it holds, the hello sent back, the second of the two (vGLP 0b51a60, Section 5.4, "The compilation": "the person's yes is their will for the acquaintance with Q, which the agent goal holds, and by which it answers yes, without asking again, the approval question that the start of the proposer's attempt raises; on their no it does nothing"; "Discover is the sending of the second of the two hellos"); no next request question is asked on it, being no answer to one (the agent goal asks a request question "when it starts and the next when it reads the answer to the last").
 step(greeted(N), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     ground(N?), ground(St?) |
     st_app(St?, Ap0),
@@ -744,7 +791,8 @@ request_cond1(cls(I), N, C, St, Cd?, St?) :- ground(I?), ground(N?), ground(C?),
 %% The candidate Request of the part Pr that the request name names, where its condition holds: for a guarded part with no opener, the Request of {[t]} to the agent itself, one(C0), C0 the term that names the class at the agent, where it is free for [t], ready for the part named N, which it guards, and has no request of {[t]} pending (vGLP, Section 5.4, "The compilation": "the Request of {[t]} to itself for each class [t] of a guarded part with no opener named N that it guards and is ready for"); for a guarded part with an opener, the Request of rho_N to the opener, where the agent is a guard of the part and not its opener, is free for every class of rho_N, its state is in the domain of its effect in the part, rho_N is not pending at it, and the opener is known.  With the candidates, rq(Cs, Busy, Ready): Busy, whether the agent, a guard of the part and not its opener, is not free for a class of its Request, and Ready, whether it is ready for the part, which it guards or opens.
 procedure request_cands(PartRes?, Info?, Proposal?, Class?, St?, RQ).
 request_cands(nopart, _, _, _, _, rq([], no, no)).
-request_cands(part(pt(_, G, guarded_part)), I, _, C, St, rq(Cs?, Bz?, RdN?)) :- ground(G?), ground(I?), ground(C?), ground(St?) |
+%% The request of a guard of a guarded part with no opener to its own machine is its approval, which stands until the transaction is taken or refused: a proposer of the part proposes it (guarding_parts), and any other guard, whose yes to the question of a hello is its will, held as its request (vGLP 0b51a60, Section 5.4, "The compilation": "the person's yes is their will for the acquaintance with Q, which the agent goal holds, and by which it answers yes, without asking again, the approval question that the start of the proposer's attempt raises; on their no it does nothing"), votes on its attempt without asking its person ("a guard whose approval stands votes without asking its person", Section 3.2, "The protocol").
+request_cands(part(pt(_, G, proposed(_))), I, _, C, St, rq(Cs?, Bz?, RdN?)) :- ground(G?), ground(I?), ground(C?), ground(St?) |
     st_id(St?, Id),
     mem(Id?, G?, Gd),
     free_i(I?, St?, Fr),
@@ -868,7 +916,7 @@ opener_parts([pt(T, G, opener(_))|Ps], Q, Ms, N, Id, B?) :-
     ground(T?), ground(G?), ground(Q?), ground(Ms?), ground(N?) |
     part_named(Ms?, T?, G?, Q?, N?, Id?, B1),
     opener_parts1(B1?, Ps?, Q?, Ms?, N?, Id?, B).
-opener_parts([pt(_, _, guarded_part)|Ps], Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
+opener_parts([pt(_, _, proposed(_))|Ps], Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
 procedure opener_parts1(YesNo?, Parts?, Peers?, Mates?, Proposal?, Peer?, YesNo).
 opener_parts1(yes, _, _, _, _, _, yes).
 opener_parts1(no, Ps, Q, Ms, N, Id, B?) :- opener_parts(Ps?, Q?, Ms?, N?, Id?, B).
@@ -1002,7 +1050,11 @@ dispatch_propose(pdrop, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St
 procedure ask_of(List(RoleAsk)?, Peer?, Asked).
 ask_of([], _, asked(0, [])).
 ask_of([q(P, G, Ws)|_], Me, asked(G?, Ws?)) :- P? =?= Me? | true.
+ask_of([ql(L, G, Ws)|Qs], Me, A?) :- ground(L?), ground(Me?) | mem(Me?, L?, In), ask_list(In?, G?, Ws?, Qs?, Me?, A).
 ask_of([_|Qs], Me, A?) :- otherwise | ask_of(Qs?, Me?, A).
+procedure ask_list(YesNo?, Integer?, List(Word)?, List(RoleAsk)?, Peer?, Asked).
+ask_list(yes, G, Ws, _, _, asked(G?, Ws?)).
+ask_list(no, _, _, Qs, Me, A?) :- ask_of(Qs?, Me?, A).
 
 %% The words of the question put to the agent Me on the part C: its sentence and the values of the fields, as sentence_of gives them, and then the atoms the act requires of the proposer whose predicates the tabs list, under the binding C names, one word held(A, K) for each atom with K its copies (vGLP e22e2ad, Section 5.4, "The contract's words").  A variable local to the proposer's role is bound by no schema-binding (ibid., "Speech-act schemas as local specifications"), so an atom naming one is under no binding of the attempt, no Atom shows it (atom_of), and it is left out; so is an atom of a reflexive predicate naming the proposer, which no state holds and no tab lists.
 procedure question_words(Class?, Peer?, List(Word)).
@@ -1012,16 +1064,22 @@ question_words(C, Me, Ws?) :- ground(C?), ground(Me?) |
 procedure held_words(Asked?, Class?, List(Word)).
 held_words(asked(0, Ws), _, Ws?).
 held_words(asked(G, Ws), C, Rs?) :- G? > 0, ground(C?) |
-    term_spec(C?, _, Sp, Bn),
-    held_at(G?, Sp?, Bn?, Ws?, Rs).
-procedure held_at(Integer?, RoleSpecs?, Binding?, List(Word)?, List(Word)).
-held_at(G, Sp, Bn, Ws, Rs?) :- integer(G?), ground(Sp?), ground(Bn?) |
+    term_spec(C?, Nm, Sp, Bn),
+    held_at(G?, Nm?, Sp?, Bn?, Ws?, Rs).
+%% The anchors of the conjuncts whose base is the proposer's role count among the atoms it requires: "the anchor of the conjunct counts as an atom its holder requires" (GSC, Definition "Speech-act schema"), shown where a tab lists their predicate, by the same rule, at each person of a listed role and at each instance the attempt names, an anchor naming a variable its instance does not bind left out, as an atom naming a local variable is (vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, line 9; base_anchors).
+procedure held_at(Integer?, Constant?, RoleSpecs?, Binding?, List(Word)?, List(Word)).
+held_at(G, Nm, Sp, Bn, Ws, Rs?) :- integer(G?), ground(Nm?), ground(Sp?), ground(Bn?) |
     nth_spec(Sp?, G?, R),
     rs_req(R?, Q),
     tabs(Ts),
     tab_preds(Ts?, Ps),
     tabbed_atoms(Q?, Ps?, Q1),
-    img_atoms(Q1?, Bn?, Gs),
+    img_atoms(Q1?, Bn?, Gs0),
+    base_anchors(Nm?, G?, Bn?, An0),
+    tabs(Ts1),
+    tab_preds(Ts1?, Ps1),
+    tabbed_g(An0?, Ps1?, An),
+    app(Gs0?, An?, Gs),
     reflexive_preds(Rf),
     role_person(G?, Bn?, P),
     unreflexive(Gs?, Rf?, P?, Gs1),
@@ -1047,6 +1105,7 @@ procedure satom_pred(SAtom?, Constant).
 satom_pred(atom(P, _), P?).
 satom_pred(times(_, A), P?) :- satom_pred(A?, P).
 satom_pred(rest(_, _, A), P?) :- satom_pred(A?, P).
+satom_pred(opt(A), P?) :- satom_pred(A?, P).
 procedure in_preds(Constant?, Preds?, YesNo).
 in_preds(_, [], no).
 in_preds(P, [Q|_], yes) :- ground(P?), ground(Q?), P? =?= Q? | true.
@@ -1077,6 +1136,37 @@ held_copies([B|Bs], A, K, K1?, Cs?) :- ground(B?), ground(A?), integer(K?), B? =
     K2 := K? + 1,
     held_copies(Bs?, A?, K2?, K1, Cs).
 held_copies([B|Bs], A, K, K1?, [B?|Cs?]) :- otherwise | held_copies(Bs?, A?, K?, K1, Cs).
+%% The anchors at the person in the role G of the binding Bn of the schema Nm: of each listed role whose base G is, its anchor at each person of its list; of each conjunct whose instances the attempt names and whose base G is, its anchor at each instance, where the instance binds every variable of it.
+procedure base_anchors(Constant?, Integer?, Binding?, GAtoms).
+base_anchors(Nm, G, Bn, As?) :- schema_entry(Nm?, E), base_anchors1(E?, G?, Bn?, As).
+procedure base_anchors1(Schema?, Integer?, Binding?, GAtoms).
+base_anchors1(schema(_, _, _), _, _, []).
+base_anchors1(lschema(_, _, _, Lsts), G, Bn, As?) :- lst_anchors(Lsts?, G?, Bn?, As).
+procedure lst_anchors(Listings?, Integer?, Binding?, GAtoms).
+lst_anchors([], _, _, []).
+lst_anchors([listing(I, Bi, Rho, Args, _, _, _)|Ls], G, Bn, As?) :- integer(G?), Bi? =:= G?, ground(Bn?), ground(Args?) |
+    copies_of(Bn?, I?, Qs),
+    img_args(Args?, Bn?, Vs),
+    rho_atoms(Qs?, Rho?, Vs?, A1),
+    lst_anchors(Ls?, G?, Bn?, A2),
+    app(A1?, A2?, As).
+lst_anchors([instances(K, Bi, Xs, A, _, _, _)|Ls], G, Bn, As?) :- integer(G?), integer(K?), Bi? =:= G?, ground(Bn?), ground(Xs?), ground(A?) |
+    insts_of(Bn?, K?, Xs?, L),
+    anchor_atoms(L?, Xs?, A?, Bn?, A0),
+    bound_gatoms(A0?, A1),
+    lst_anchors(Ls?, G?, Bn?, A2),
+    app(A1?, A2?, As).
+lst_anchors([_|Ls], G, Bn, As?) :- otherwise | lst_anchors(Ls?, G?, Bn?, As).
+procedure rho_atoms(List(Peer)?, Constant?, Vals?, GAtoms).
+rho_atoms([], _, _, []).
+rho_atoms([Q|Qs], Rho, Vs, [g(Rho?, [p(Q?)|Vs?])|As?]) :- ground(Q?), ground(Rho?), ground(Vs?) | rho_atoms(Qs?, Rho?, Vs?, As).
+%% The ground atoms whose predicates Ps holds.
+procedure tabbed_g(GAtoms?, Preds?, GAtoms).
+tabbed_g([], _, []).
+tabbed_g([g(F, Vs)|Gs], Ps, R?) :- ground(F?), ground(Vs?), ground(Ps?) |
+    in_preds(F?, Ps?, B),
+    tabbed_g(Gs?, Ps?, R1),
+    keep_g(B?, g(F?, Vs?), R1?, R).
 
 %% --- Discover: the hellos ---------------------------------------------------
 %% A peer is known once hello has been sent to it and received from it.  On the request propose(N), N the request name of an acquaintance part with a peer Q, the agent goal, besides what it does on any request, sends Q hello carrying N and records Q as sent to, unless Q is known or already sent to (meet_hello).  On an arriving hello from Q it records Q as received from and, unless it has sent Q a hello, asks its person the approval question of the clause of N, with its pragma, by a goal that shows Q and takes yes or no: the person's yes is their request propose(N) with Q, which the agent goal reads as any request, and on their no it does nothing (greet_unless).  Where a peer becomes known the agent goal writes the new view on the output (vGLP, Section 5.4, "The compilation").  A contract with no guarded part has no acquaintance part, and its agents send no hello.
@@ -1692,7 +1782,7 @@ opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) |
     same(O?, Id?, B1),
     mem(F?, G?, B2),
     and(B1?, B2?, B).
-opens_for(part(pt(_, _, guarded_part)), _, _, no).
+opens_for(part(pt(_, _, proposed(_))), _, _, no).
 opens_for(nopart, _, _, no).
 
 %% Vote on an attempt: a question pending at the agent, its answer y recorded,
@@ -2046,16 +2136,18 @@ opened1([], Nm, [R|Rs], Id, Sh, Cs?) :- ground(Nm?), ground(R?), ground(Id?), gr
     rs_req(R?, Q),
     match_all(Q?, Sh?, [b(role(1), p(Id?))], Bs0),
     schema_numeric(Nm?, N),
-    num_extend(N?, Bs0?, Bs),
+    num_extend(N?, Bs0?, Sh?, Bs),
     opened2(Bs?, Nm?, [R?|Rs?], Id?, Sh?, Cs).
 %% A variable of a deleted or added atom that the atoms the first role requires do not name is given its values by the constraint once those are bound (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"; con_extend); the schema-binding is taken where each of its numeric variables is bound to a number (nums_bound), its first role's required atoms are in the state and its forbidden ones not, and the constraint, where it is local to the first role or to every role, holds.
-procedure num_extend(Numeric?, Bindings?, Bindings).
-num_extend(numeric(C, _, _), Bs, R?) :- ground(C?) | extend_each(Bs?, C?, R).
-procedure extend_each(Bindings?, Constraint?, Bindings).
-extend_each([], _, []).
-extend_each([B|Bs], C, R?) :- ground(C?) |
-    con_extend(C?, B?, R1),
-    extend_each(Bs?, C?, R2),
+procedure num_extend(Numeric?, Bindings?, GAtoms?, Bindings).
+num_extend(numeric(C, _, _), Bs, Sh, R?) :- ground(C?) | extend_each(Bs?, C?, Sh?, R).
+%% Each binding extended by the constraint, its counts and sums taken in the state Sh under the binding (con_counted).
+procedure extend_each(Bindings?, Constraint?, GAtoms?, Bindings).
+extend_each([], _, _, []).
+extend_each([B|Bs], C, Sh, R?) :- ground(C?), ground(B?), ground(Sh?) |
+    con_counted(C?, B?, Sh?, C1),
+    con_extend(C1?, B?, R1),
+    extend_each(Bs?, C?, Sh?, R2),
     app(R1?, R2?, R).
 procedure opened2(Bindings?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
 opened2([], _, _, _, _, []).
@@ -2063,10 +2155,14 @@ opened2([B|Bs], Nm, Rs, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(Rs?), gr
     first_spec(Rs?, R1),
     cand_ok([R1?], B?, Sh?, Ok1),
     con_at(Nm?, B?, Id?, Con),
-    con_holds(Con?, B?, Ok2),
+    con_counted(Con?, B?, Sh?, Con1),
+    con_holds(Con1?, B?, Ok2),
     nums_bound(Nm?, B?, Ok3),
+    forms_at(Nm?, B?, Id?, Fs),
+    forms_hold(Fs?, B?, Sh?, Ok4),
     and(Ok1?, Ok2?, Ok12),
-    and(Ok12?, Ok3?, Ok),
+    and(Ok12?, Ok3?, Ok123),
+    and(Ok123?, Ok4?, Ok),
     opened3(Ok?, Nm?, B?, Id?, Sh?, C1),
     opened2(Bs?, Nm?, Rs?, Id?, Sh?, C2),
     app(C1?, C2?, Cs).
@@ -2467,30 +2563,51 @@ keep_known_pair(yes, P, Ps, [P?|Ps?]).
 keep_known_pair(no, _, Ps, Ps?).
 procedure iota_pairs(Class?, Peer?, Pairs).
 iota_pairs(P, Id, Ps?) :- ground(P?), ground(Id?) |
-    term_spec(P?, _, Rs, Bn),
-    iota_rs(Rs?, Bn?, Id?, Ps0),
+    term_spec(P?, Nm, Rs, Bn),
+    iota_rs(Nm?, Rs?, Bn?, Id?, Ps0),
     dedup(Ps0?, Ps).
-procedure iota_rs(RoleSpecs?, Binding?, Peer?, Pairs).
-iota_rs(Rs, Bn, Id, Ps?) :- ground(Rs?), ground(Bn?) |
+procedure iota_rs(Constant?, RoleSpecs?, Binding?, Peer?, Pairs).
+iota_rs(Nm, Rs, Bn, Id, Ps?) :- ground(Rs?), ground(Bn?) |
     rs_len(Rs?, K),
-    iota_from(1, K?, Rs?, Bn?, Id?, Ps).
-procedure iota_from(Integer?, Integer?, RoleSpecs?, Binding?, Peer?, Pairs).
-iota_from(I, K, _, _, _, []) :- I? > K? | true.
-iota_from(I, K, Rs, Bn, Id, Ps?) :- I? =< K?, ground(Rs?), ground(Bn?), ground(Id?) |
+    iota_from(1, K?, Nm?, Rs?, Bn?, Id?, Ps).
+procedure iota_from(Integer?, Integer?, Constant?, RoleSpecs?, Binding?, Peer?, Pairs).
+iota_from(I, K, _, _, _, _, []) :- I? > K? | true.
+iota_from(I, K, Nm, Rs, Bn, Id, Ps?) :- I? =< K?, ground(Nm?), ground(Rs?), ground(Bn?), ground(Id?) |
     role_person(I?, Bn?, P),
     same(P?, Id?, Mine),
-    iota_role(Mine?, I?, K?, Rs?, Bn?, Id?, Ps1),
+    iota_role(Mine?, I?, K?, Nm?, Rs?, Bn?, Id?, Ps1),
     I1 := I? + 1,
-    iota_from(I1?, K?, Rs?, Bn?, Id?, Ps2),
+    iota_from(I1?, K?, Nm?, Rs?, Bn?, Id?, Ps2),
     app(Ps1?, Ps2?, Ps).
-procedure iota_role(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, Peer?, Pairs).
-iota_role(no, _, _, _, _, _, []).
-iota_role(yes, I, K, Rs, Bn, Id, Ps?) :- integer(I?), ground(Rs?), ground(Bn?) |
+%% The agents an atom the role requires names: those bound to its agent variables, and, for the base of a conjunct whose instances the attempt names, those its instances bind, the anchor of a conjunct counting as an atom its holder requires (GSC, Definition "Speech-act schema"): "a schema-binding in which p's role requires an atom naming an agent c bound to a variable of the schema or of an instance of the part and the person q in another role gains an atom naming c" (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC: "so Alice introduces Bob and Dave at the commit").
+procedure iota_role(YesNo?, Integer?, Integer?, Constant?, RoleSpecs?, Binding?, Peer?, Pairs).
+iota_role(no, _, _, _, _, _, _, []).
+iota_role(yes, I, K, Nm, Rs, Bn, Id, Ps?) :- integer(I?), ground(Rs?), ground(Bn?) |
     nth_spec(Rs?, I?, R),
     rs_req(R?, Q),
     atoms_vars(Q?, Vs),
-    var_agents(Vs?, Bn?, Cs),
+    var_agents(Vs?, Bn?, Cs0),
+    inst_agents(Nm?, I?, Bn?, Cs1),
+    app(Cs0?, Cs1?, Cs2),
+    dedup(Cs2?, Cs),
     iota_gainers(1, K?, I?, Rs?, Bn?, Id?, Cs?, Ps).
+%% The agents the instances of each conjunct whose base is the role I bind, b(inst(K, J, pvar(X)), p(C)) of the binding.
+procedure inst_agents(Constant?, Integer?, Binding?, Peers).
+inst_agents(Nm, I, Bn, Cs?) :- schema_entry(Nm?, E), inst_agents1(E?, I?, Bn?, Cs).
+procedure inst_agents1(Schema?, Integer?, Binding?, Peers).
+inst_agents1(schema(_, _, _), _, _, []).
+inst_agents1(lschema(_, _, _, Lsts), I, Bn, Cs?) :- base_agents(Lsts?, I?, Bn?, Cs).
+procedure base_agents(Listings?, Integer?, Binding?, Peers).
+base_agents([], _, _, []).
+base_agents([instances(K, Bi, _, _, _, _, _)|Ls], I, Bn, Cs?) :- integer(I?), Bi? =:= I?, ground(Bn?) |
+    inst_peers(Bn?, K?, C1),
+    base_agents(Ls?, I?, Bn?, C2),
+    app(C1?, C2?, Cs).
+base_agents([_|Ls], I, Bn, Cs?) :- otherwise | base_agents(Ls?, I?, Bn?, Cs).
+procedure inst_peers(Binding?, Integer?, Peers).
+inst_peers([], _, []).
+inst_peers([b(inst(K1, _, pvar(_)), p(C))|Bs], K, [C?|Cs?]) :- K1? =:= K? | inst_peers(Bs?, K?, Cs).
+inst_peers([_|Bs], K, Cs?) :- otherwise | inst_peers(Bs?, K?, Cs).
 %% The persons the agent variables among Vs are bound to.
 procedure var_agents(Vars?, Binding?, Peers).
 var_agents([], _, []).
@@ -2555,6 +2672,7 @@ val_names(p(Q), C, B?) :- same(Q?, C?, B).
 val_names(s(speech(_, Q)), C, B?) :- same(Q?, C?, B).
 val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
+val_names(r(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 procedure cname_base(CName?, Peer).
@@ -3105,15 +3223,17 @@ precedes(_, _, no) :- otherwise | true.
 %% The guarded parts of a class with no opener whose guard set holds the agent, each named by its term; and the unguarded parts whose opener is the agent (vGLP f0acbc1, Definition "Attempt": "The initiator is the opener o([t]_j) of [t]_j if [t]_j has one, and a guard of [t]_j if not"; Section 3.2, "The protocol": "A part with an opener is proposed by its opener, an unguarded one whenever the opener can carry out its effect, and a guarded one on a request of its guard, which the attempt names ... A guarded part with no opener is proposed by one of its guards whose approval stands").  A guarded part with an opener its opener proposes on a request it holds (held_cands).
 procedure guarding_parts(Parts?, Peer?, Classes).
 guarding_parts([], _, []).
-guarding_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
-    mem(Id?, G?, B1),
-    no_opener(Op?, B2),
-    and(B1?, B2?, B),
+guarding_parts([pt(T, _, Op)|Ps], Id, R?) :- ground(Id?) |
+    proposes_op(Op?, Id?, B),
     guarding_parts(Ps?, Id?, R1),
     keep_class(B?, T?, R1?, R).
+%% Whether the agent is a proposer of a part with no opener (vGLP 9ee6f87, Definition "Proposing": "if [t]_j is guarded and has no opener, p is a proposer of [t]_j").
+procedure proposes_op(Opener?, Peer?, YesNo).
+proposes_op(proposed(Ob), Id, B?) :- mem(Id?, Ob?, B).
+proposes_op(opener(_), _, no).
 procedure no_opener(Opener?, YesNo).
 no_opener(opener(_), no).
-no_opener(guarded_part, yes).
+no_opener(proposed(_), yes).
 procedure opening_parts(Parts?, Peer?, Classes).
 opening_parts([], _, []).
 opening_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
@@ -3125,7 +3245,7 @@ opening_parts([pt(T, G, Op)|Ps], Id, R?) :- ground(Id?) |
     keep_class(B?, T?, R1?, R).
 procedure is_opener(Opener?, Peer?, YesNo).
 is_opener(opener(P), Id, B?) :- same(P?, Id?, B).
-is_opener(guarded_part, _, no).
+is_opener(proposed(_), _, no).
 procedure all_in(Peers?, Peers?, YesNo).
 all_in([], _, yes).
 all_in([P|Ps], Q, B?) :- ground(Q?) | mem(P?, Q?, B1), all_in1(B1?, Ps?, Q?, B).
@@ -3156,7 +3276,7 @@ part_dom1(Nm, Rs, Bn, Id, S, B?) :- ground(Nm?), ground(Bn?), ground(Id?), groun
 procedure hat(Preds?, Peer?, GAtoms?, GAtoms).
 hat([], _, S, S?).
 hat([P|Ps], Id, S, [g(P?, [p(Id?)])|R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).
-%% The reason of a vote unable of the compiled program, unable(Lacks, Has): "the atoms the schema requires at the voter that its state lacks and those it forbids that its state has" (vGLP f0acbc1, Section 5.4, "Act schemas"), as the contract writes them, the atoms of the reflexive predicates naming the voter holding there; and, for the person in the base of a listed role, who "lists in d_p exactly the people of that role in L" (Section 5.4, "Act schemas as local specifications"), the listing atoms of the people of the role its state lacks, and those of others it has.
+%% The reason of a vote unable of the compiled program, unable(Lacks, Has): "the atoms the schema requires at the voter that its state lacks and those it forbids that its state has" (vGLP f0acbc1, Section 5.4, "Act schemas"), as the contract writes them, the atoms of the reflexive predicates naming the voter holding there; and, for the person in the base of a listed role, who "lists in d_p exactly the people of that role in L" (Section 5.4, "Act schemas as local specifications"), the listing atoms of the people of the role its state lacks, and those of others it has; and, for the person in the base of a conjunct whose instances the attempt names, the anchors of the instances of the list its state lacks, and those of the instances it has beyond the list (gaps_of).
 procedure unable_reason(Class?, Peer?, GAtoms?, Reason).
 unable_reason(P, Id, S, unable(L?, H?)) :- ground(P?), ground(S?) |
     term_spec(P?, Nm, Rs, Bn),
@@ -3183,11 +3303,21 @@ unable_at(RsP, B0, Sh, L?, H?) :- ground(RsP?), ground(B0?), ground(Sh?) |
 procedure first_or(Bindings?, Binding?, Binding).
 first_or([B|_], _, B?).
 first_or([], B, B?).
+%% The atoms each role at the voter requires that its state lacks: two roles bound to one person "are carried out together, the atoms at both required ... joined, with the greater multiplicity" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), so each role's are taken against the state, as cand_ok takes them, and not the sum of both.
+procedure lacks_of(RoleSpecs?, Binding?, GAtoms?, GAtoms).
+lacks_of([], _, _, []).
+lacks_of([R|Rs], Bn, Sh, L?) :- ground(R?), ground(Bn?), ground(Sh?) |
+    rs_req(R?, Q),
+    img_atoms(Q?, Bn?, G),
+    ms_diff(G?, Sh?, L1),
+    lacks_of(Rs?, Bn?, Sh?, L2),
+    ms_max(L1?, L2?, L).
+%% The multiset of the greater multiplicity of each atom of two.
+procedure ms_max(GAtoms?, GAtoms?, GAtoms).
+ms_max(L1, L2, L?) :- ground(L1?), ground(L2?) | ms_diff(L2?, L1?, D), app(L1?, D?, L).
 procedure unable_at1(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms).
 unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
-    reqs_of(RsP?, Q),
-    img_atoms(Q?, Bn?, G),
-    ms_diff(G?, Sh?, L),
+    lacks_of(RsP?, Bn?, Sh?, L),
     forbs_of(RsP?, F),
     img_atoms(F?, Bn?, Fg),
     held_in(Fg?, Sh?, H0),
@@ -3208,18 +3338,71 @@ listing_gaps1(schema(_, _, _), _, _, _, [], []).
 listing_gaps1(lschema(_, _, _, Lsts), Bn, Id, S, L?, H?) :- gaps_of(Lsts?, Bn?, Id?, S?, L, H).
 procedure gaps_of(Listings?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
 gaps_of([], _, _, _, [], []).
-gaps_of([listing(I, Bi, Rho, As)|Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) |
+gaps_of([listing(I, Bi, Rho, As, Phi, _, _)|Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) |
     role_person(Bi?, Bn?, P),
     same(P?, Id?, Base),
-    gaps_one(Base?, I?, Rho?, As?, Bn?, S?, L1, H1),
+    gaps_one(Base?, I?, Rho?, As?, Phi?, Bn?, S?, L1, H1),
     gaps_of(Lsts?, Bn?, Id?, S?, L2, H2),
     app(L1?, L2?, L),
     app(H1?, H2?, H).
-procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, GAtoms, GAtoms).
-gaps_one(no, _, _, _, _, _, [], []).
-gaps_one(yes, I, Rho, As, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?) |
+%% For the person in the base of a conjunct whose instances the attempt names, the anchors of the instances of the attempt its state lacks, or at which the condition fails, and those of the instances it has that the attempt does not name.
+gaps_of([instances(K, Bi, Xs, A, Phi, _, _)|Lsts], Bn, Id, S, L?, H?) :- ground(Bn?), ground(S?) |
+    role_person(Bi?, Bn?, P),
+    same(P?, Id?, Base),
+    igaps_one(Base?, K?, Xs?, A?, Phi?, Bn?, S?, L1, H1),
+    gaps_of(Lsts?, Bn?, Id?, S?, L2, H2),
+    app(L1?, L2?, L),
+    app(H1?, H2?, H).
+procedure igaps_one(YesNo?, Integer?, Vars?, SAtom?, Form?, Binding?, GAtoms?, GAtoms, GAtoms).
+igaps_one(no, _, _, _, _, _, _, [], []).
+%% An instance being restricted to the variables its literals name, the anchor of one it lacks is shown where the instance binds every variable of the anchor, and those it has beyond the list are the anchors its state holds at which they are found.
+igaps_one(yes, K, Xs, A, Phi, Bn, S, L?, H?) :- ground(Xs?), ground(A?), ground(Phi?), ground(Bn?), ground(S?), integer(K?) |
+    insts_of(Bn?, K?, Xs?, Want),
+    inst_at(Xs?, A?, Phi?, Bn?, S?, Have),
+    igaps_two(Want?, Have?, Xs?, A?, Phi?, Bn?, S?, L, H).
+procedure igaps_two(Insts?, Insts?, Vars?, SAtom?, Form?, Binding?, GAtoms?, GAtoms, GAtoms).
+igaps_two(Want, Have, Xs, A, Phi, Bn, S, L?, H?) :- ground(Want?), ground(Have?), ground(Xs?), ground(A?), ground(Phi?), ground(Bn?), ground(S?) |
+    insts_minus(Want?, Have?, Lp),
+    insts_minus(Have?, Want?, Hp),
+    anchor_atoms(Lp?, Xs?, A?, Bn?, L0),
+    bound_gatoms(L0?, L),
+    match_into(A?, S?, Bn?, Bs0),
+    phi_binds(Bs0?, Phi?, S?, Bs),
+    beyond_anchors(Bs?, Xs?, Hp?, A?, H0),
+    dedup(H0?, H).
+procedure beyond_anchors(Bindings?, Vars?, Insts?, SAtom?, GAtoms).
+beyond_anchors([], _, _, _, []).
+beyond_anchors([B|Bs], Xs, Hp, A, H?) :- ground(B?), ground(Xs?), ground(Hp?), ground(A?) |
+    vals_of(Xs?, B?, Vs, _),
+    mem(Vs?, Hp?, In),
+    img_atom(A?, B?, G),
+    beyond_anchors(Bs?, Xs?, Hp?, A?, H1),
+    keep_g(In?, G?, H1?, H).
+procedure bound_gatoms(GAtoms?, GAtoms).
+bound_gatoms([], []).
+bound_gatoms([g(F, Vs)|Gs], R?) :- ground(F?), ground(Vs?) |
+    mem(p(unbound), Vs?, U),
+    neg(U?, Keep),
+    bound_gatoms(Gs?, R1),
+    keep_g(Keep?, g(F?, Vs?), R1?, R).
+procedure insts_minus(Insts?, Insts?, Insts).
+insts_minus([], _, []).
+insts_minus([I|Is], Js, R?) :- ground(I?), ground(Js?) |
+    mem(I?, Js?, In),
+    insts_minus(Is?, Js?, R1),
+    neg(In?, Out),
+    keep_inst(Out?, I?, R1?, R).
+procedure anchor_atoms(Insts?, Vars?, SAtom?, Binding?, GAtoms).
+anchor_atoms([], _, _, _, []).
+anchor_atoms([I|Is], Xs, A, Bn, [G?|Gs?]) :- ground(I?), ground(Xs?), ground(A?), ground(Bn?) |
+    inst_bind(Xs?, I?, Bn?, B1),
+    img_atom(A?, B1?, G),
+    anchor_atoms(Is?, Xs?, A?, Bn?, Gs).
+procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, GAtoms, GAtoms).
+gaps_one(no, _, _, _, _, _, _, [], []).
+gaps_one(yes, I, Rho, As, Phi, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?), integer(I?) |
     copies_of(Bn?, I?, Want),
-    list_at(Rho?, As?, Bn?, S?, Have),
+    list_at(I?, Rho?, As?, Phi?, Bn?, S?, Have),
     img_args(As?, Bn?, Vs),
     gaps_two(Want?, Have?, Rho?, Vs?, L, H).
 procedure gaps_two(Peers?, Peers?, Constant?, Vals?, GAtoms, GAtoms).
@@ -3265,13 +3448,22 @@ same_part1(Q, N1, B1, N2, B2, B?) :- ground(N1?), ground(B1?), ground(N2?), grou
     same_bpart(Q?, N1?, B1?, G1?, N2?, B2?, G2?, B).
 %% The same, of two schema-bindings with the people they mark.
 procedure same_bpart(Peers?, Constant?, Binding?, Peers?, Constant?, Binding?, Peers?, YesNo).
-same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(B1?), ground(B2?) |
+same_bpart(Q, N1, B1, G1, N2, B2, G2, B?) :- ground(N1?), ground(N2?), ground(B1?), ground(B2?) |
     same(G1?, G2?, E1),
     bound_spec(N1?, B1?, Rs1),
     bound_spec(N2?, B2?, Rs2),
     reflexive_preds(Rf),
     same_doms(Q?, Rs1?, B1?, Rs2?, B2?, Rf?, E2),
-    and(E1?, E2?, B).
+    same_forms(N1?, N2?, E3),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, B).
+%% Two schema-bindings require the same safe formulas where they are of one schema, or of two with none: a safe formula is part of the domain, "the safe formulas and the conjuncts local to p's role holding at d_p under that binding" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), and two schemas with formulas are taken to determine distinct parts.
+procedure same_forms(Constant?, Constant?, YesNo).
+same_forms(N1, N2, yes) :- N1? =?= N2? | true.
+same_forms(N1, N2, B?) :- otherwise | schema_forms(N1?, F1), schema_forms(N2?, F2), no_forms(F1?, F2?, B).
+procedure no_forms(SForms?, SForms?, YesNo).
+no_forms([], [], yes).
+no_forms(_, _, no) :- otherwise | true.
 %% The people in the marked roles of a schema-binding, a set, in the order of identifiers.
 procedure marked_people(Constant?, Binding?, Peers).
 marked_people(Nm, B, G?) :- ground(B?) |
@@ -3318,20 +3510,82 @@ dom_bindings(Nm, Rs, B, Id, Sh, Bs?) :- ground(Nm?), ground(Rs?), ground(B?), gr
     specs_at(Rs?, 1, B?, Id?, RsP),
     unlocal(B?, B0),
     con_at(Nm?, B?, Id?, Con),
-    dom_bindings1(RsP?, B0?, Sh?, Con?, Bs).
-procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Bindings).
-dom_bindings1(RsP, B0, Sh, Con, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) |
+    forms_at(Nm?, B?, Id?, Fs),
+    dom_bindings1(RsP?, B0?, Sh?, Con?, Fs?, Bs).
+procedure dom_bindings1(RoleSpecs?, Binding?, GAtoms?, Constraint?, Forms?, Bindings).
+dom_bindings1(RsP, B0, Sh, Con, Fs, Bs?) :- ground(RsP?), ground(Sh?), ground(Con?) |
     reqs_of(RsP?, Q),
-    match_all(Q?, Sh?, B0?, Cs),
-    dom_keep(Cs?, RsP?, Sh?, Con?, Bs).
-procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Bindings).
-dom_keep([], _, _, _, []).
-dom_keep([B|Bs], RsP, Sh, Con, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?) |
+    match_all(Q?, Sh?, B0?, Cs0),
+    extend_each(Cs0?, Con?, Sh?, Cs1),
+    dedup(Cs1?, Cs),
+    dom_keep(Cs?, RsP?, Sh?, Con?, Fs?, Bs).
+%% Each binding under which the required atoms are in the state, the forbidden ones not, the constraint holds where it is local to a role sent to Id, and the safe formulas local to such a role hold in the state (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "the safe formulas and the conjuncts local to p's role holding at d_p under that binding").
+procedure dom_keep(Bindings?, RoleSpecs?, GAtoms?, Constraint?, Forms?, Bindings).
+dom_keep([], _, _, _, _, []).
+dom_keep([B|Bs], RsP, Sh, Con, Fs, R?) :- ground(B?), ground(RsP?), ground(Sh?), ground(Con?), ground(Fs?) |
     cand_ok(RsP?, B?, Sh?, O1),
-    con_holds(Con?, B?, O2),
-    and(O1?, O2?, Ok),
-    dom_keep(Bs?, RsP?, Sh?, Con?, R1),
+    con_counted(Con?, B?, Sh?, Con1),
+    con_holds(Con1?, B?, O2),
+    forms_hold(Fs?, B?, Sh?, O3),
+    and(O1?, O2?, O12),
+    and(O12?, O3?, Ok),
+    dom_keep(Bs?, RsP?, Sh?, Con?, Fs?, R1),
     keep_binding(Ok?, B?, R1?, R).
+%% The safe formulas the agent Id evaluates for the schema-binding B: those local to every role, and those local to a role sent to Id (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "the machine of the person in that role evaluates it in its own state").
+procedure forms_at(Constant?, Binding?, Peer?, Forms).
+forms_at(Nm, B, Id, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), forms_at1(Sf?, B?, Id?, Fs).
+procedure forms_at1(SForms?, Binding?, Peer?, Forms).
+forms_at1([], _, _, []).
+forms_at1([sform(every, F)|Sf], B, Id, [F?|Fs?]) :- forms_at1(Sf?, B?, Id?, Fs).
+forms_at1([sform(at(I), F)|Sf], B, Id, Fs?) :- ground(B?), ground(Id?) |
+    role_person(I?, B?, P),
+    same(P?, Id?, Me),
+    forms_at1(Sf?, B?, Id?, Fs1),
+    keep_form(Me?, F?, Fs1?, Fs).
+procedure keep_form(YesNo?, Form?, Forms?, Forms).
+keep_form(yes, F, Fs, [F?|Fs?]).
+keep_form(no, _, Fs, Fs?).
+%% Whether each safe formula holds in the state Sh under the binding B: an atom where its copies are in Sh; not, and and or as they read; exists Xs (A and Phi) where some binding extending B under which A is in Sh has Phi hold; forall Xs (A and Phi -> Psi) where every such binding under which Phi holds has every formula of Psi hold; and a constraint where it holds under B (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"; "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds").
+procedure forms_hold(Forms?, Binding?, GAtoms?, YesNo).
+forms_hold([], _, _, yes).
+forms_hold([F|Fs], B, Sh, R?) :- ground(B?), ground(Sh?) |
+    form_holds(F?, B?, Sh?, R1),
+    forms_hold1(R1?, Fs?, B?, Sh?, R).
+procedure forms_hold1(YesNo?, Forms?, Binding?, GAtoms?, YesNo).
+forms_hold1(no, _, _, _, no).
+forms_hold1(yes, Fs, B, Sh, R?) :- forms_hold(Fs?, B?, Sh?, R).
+procedure form_holds(Form?, Binding?, GAtoms?, YesNo).
+form_holds(fa(_, M), B, Sh, R?) :- ground(B?), ground(M?) | atom_bound(M?, B?, Bd), fa_holds(Bd?, M?, B?, Sh?, R).
+form_holds(fnot(F), B, Sh, R?) :- form_holds(F?, B?, Sh?, R1), neg(R1?, R).
+form_holds(fand(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), and(R1?, R2?, R).
+form_holds(for(F, G), B, Sh, R?) :- ground(B?), ground(Sh?) | form_holds(F?, B?, Sh?, R1), form_holds(G?, B?, Sh?, R2), or(R1?, R2?, R).
+form_holds(fexists(_, _, A, F), B, Sh, R?) :- ground(Sh?), ground(F?) | match_into(A?, Sh?, B?, Bs), some_holds(Bs?, F?, Sh?, R).
+form_holds(fforall(_, _, A, F, Gs), B, Sh, R?) :- ground(Sh?), ground(F?), ground(Gs?) | match_into(A?, Sh?, B?, Bs), all_hold(Bs?, F?, Gs?, Sh?, R).
+form_holds(fcons(C), B, Sh, R?) :- ground(B?) | con_counted(C?, B?, Sh?, C1), con_holds(C1?, B?, R).
+%% An atom of a formula holds where its copies are in the state; one with a variable the binding leaves free, which a local formula never has, does not.
+procedure fa_holds(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
+fa_holds(yes, M, B, Sh, R?) :- img_one(M?, B?, G), ms_sub(G?, Sh?, R).
+fa_holds(no, _, _, _, no).
+procedure some_holds(Bindings?, Form?, GAtoms?, YesNo).
+some_holds([], _, _, no).
+some_holds([B|Bs], F, Sh, R?) :- ground(F?), ground(Sh?) |
+    form_holds(F?, B?, Sh?, R1),
+    some_holds1(R1?, Bs?, F?, Sh?, R).
+procedure some_holds1(YesNo?, Bindings?, Form?, GAtoms?, YesNo).
+some_holds1(yes, _, _, _, yes).
+some_holds1(no, Bs, F, Sh, R?) :- some_holds(Bs?, F?, Sh?, R).
+procedure all_hold(Bindings?, Form?, Forms?, GAtoms?, YesNo).
+all_hold([], _, _, _, yes).
+all_hold([B|Bs], F, Gs, Sh, R?) :- ground(B?), ground(F?), ground(Gs?), ground(Sh?) |
+    form_holds(F?, B?, Sh?, C),
+    concl_holds(C?, Gs?, B?, Sh?, R1),
+    all_hold1(R1?, Bs?, F?, Gs?, Sh?, R).
+procedure concl_holds(YesNo?, Forms?, Binding?, GAtoms?, YesNo).
+concl_holds(no, _, _, _, yes).
+concl_holds(yes, Gs, B, Sh, R?) :- forms_hold(Gs?, B?, Sh?, R).
+procedure all_hold1(YesNo?, Bindings?, Form?, Forms?, GAtoms?, YesNo).
+all_hold1(no, _, _, _, _, no).
+all_hold1(yes, Bs, F, Gs, Sh, R?) :- all_hold(Bs?, F?, Gs?, Sh?, R).
 procedure reqs_of(RoleSpecs?, SAtoms).
 reqs_of([], []).
 reqs_of([R|Rs], Q?) :- ground(R?) | rs_req(R?, Q1), reqs_of(Rs?, Q2), app(Q1?, Q2?, Q).
@@ -3374,23 +3628,66 @@ apply_part(P, Id, S, S1?) :- ground(P?), ground(Id?), ground(S?) |
     reflexive_preds(Rf),
     hat(Rf?, Id?, S?, Sh),
     dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs),
-    term_spec(P?, _, Rs2, Bn2),
-    apply_with(Bs?, Rs2?, Bn2?, Id?, S?, S1).
-procedure apply_with(Bindings?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms).
-apply_with([B|_], Rs, _, Id, S, S1?) :- ground(Rs?), ground(B?), ground(Id?) |
+    term_spec(P?, Nm2, Rs2, Bn2),
+    reflexive_preds(Rf2),
+    hat(Rf2?, Id?, S?, Sh2),
+    apply_with(Bs?, Nm2?, Rs2?, Bn2?, Id?, S?, Sh2?, S1).
+%% The atoms of the conjuncts local to the roles sent to the agent are deleted with the schema-binding's, from d_p, and added with its added ones (local_effect).
+procedure apply_with(Bindings?, Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms?, GAtoms).
+apply_with([B|_], Nm, Rs, _, Id, S, Sh, S1?) :- ground(Rs?), ground(B?), ground(Id?) |
     specs_at(Rs?, 1, B?, Id?, RsP),
     joins(RsP?, B?, D, A),
-    clear_split(D?, Dp, Ks),
+    local_effect(Nm?, B?, Id?, Sh?, Dl, Al),
+    clear_split(D?, Dp0, Ks),
+    app(Dp0?, Dl?, Dp),
     ms_diff(S?, Dp?, S0a),
     clear_out(S0a?, Ks?, S0),
-    app(A?, S0?, S1).
-apply_with([], Rs, Bn, Id, S, S1?) :- ground(Rs?), ground(Bn?), ground(Id?) |
+    app(Al?, S0?, S0b),
+    app(A?, S0b?, S1).
+apply_with([], Nm, Rs, Bn, Id, S, Sh, S1?) :- ground(Rs?), ground(Bn?), ground(Id?) |
     specs_at(Rs?, 1, Bn?, Id?, RsP),
     joins(RsP?, Bn?, D, A),
-    clear_split(D?, Dp, Ks),
+    local_effect(Nm?, Bn?, Id?, Sh?, Dl, Al),
+    clear_split(D?, Dp0, Ks),
+    app(Dp0?, Dl?, Dp),
     ms_diff(S?, Dp?, S0a),
     clear_out(S0a?, Ks?, S0),
-    app(A?, S0?, S1).
+    app(Al?, S0?, S0b),
+    app(A?, S0b?, S1).
+%% The atoms the conjuncts of the schema Nm local to a role sent to the agent Id delete and add there under the binding B: for each, the instances in the state Sh, with the atoms of the reflexive predicates naming Id, of its anchor and its condition, restricted to the variables its literals name, without repetition, and the image of each of its conditional literals at each (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications": "the instances of a conjunct with conditional literals give the atoms each adds or deletes"; "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct, in L or, for a conjunct local to p's role, in d_p, included, which d_p need not hold, ... plus the added ones, likewise"; vGLP #24, Code_inbox.md, 2026-11-07 18:52 UTC, (ii): "the role finds the instances in its own state and applies its literals at each").
+procedure local_effect(Constant?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+local_effect(Nm, B, Id, Sh, D?, A?) :- ground(Nm?) |
+    schema_locals(Nm?, Lc),
+    local_apply(Lc?, B?, Id?, Sh?, D, A).
+procedure local_apply(Locals?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
+local_apply([], _, _, _, [], []).
+local_apply([local(Bi, Xs, An, Phi, CA, CD)|Ls], B, Id, Sh, D?, A?) :- ground(B?), ground(Id?), ground(Sh?) |
+    role_person(Bi?, B?, P),
+    same(P?, Id?, Mine),
+    local_one(Mine?, Xs?, An?, Phi?, CA?, CD?, B?, Sh?, D1, A1),
+    local_apply(Ls?, B?, Id?, Sh?, D2, A2),
+    app(D1?, D2?, D),
+    app(A1?, A2?, A).
+procedure local_one(YesNo?, Vars?, SAtom?, Form?, HMults?, HMults?, Binding?, GAtoms?, GAtoms, GAtoms).
+local_one(no, _, _, _, _, _, _, _, [], []).
+local_one(yes, Xs, An, Phi, CA, CD, B, Sh, D?, A?) :- ground(Xs?), ground(An?), ground(B?), ground(Sh?) |
+    inst_at(Xs?, An?, Phi?, B?, Sh?, L),
+    hm_atoms_of(CA?, Ma),
+    hm_atoms_of(CD?, Md),
+    local_two(L?, Xs?, Ma?, Md?, B?, D, A).
+procedure local_two(Insts?, Vars?, SAtoms?, SAtoms?, Binding?, GAtoms, GAtoms).
+local_two(L, Xs, Ma, Md, B, D?, A?) :- ground(L?), ground(Xs?), ground(B?) |
+    local_atoms(L?, Xs?, Ma?, B?, A0),
+    local_atoms(L?, Xs?, Md?, B?, D0),
+    dedup(A0?, A),
+    dedup(D0?, D).
+procedure local_atoms(Insts?, Vars?, SAtoms?, Binding?, GAtoms).
+local_atoms([], _, _, _, []).
+local_atoms([I|Is], Xs, Ms, B, Gs?) :- ground(I?), ground(Xs?), ground(Ms?), ground(B?) |
+    inst_bind(Xs?, I?, B?, B1),
+    img_atoms(Ms?, B1?, G1),
+    local_atoms(Is?, Xs?, Ms?, B?, G2),
+    app(G1?, G2?, Gs).
 %% The atoms a schema-binding deletes at an agent, the join of those of its roles there, split into those it deletes as they are, Dp, and the images of its cleared atoms, which carry the wildcard, Ks: the effect deletes the first, and then every atom of the state that an image of a cleared atom matches, whatever its multiplicity: "yielding d_p less the deleted atoms, less every atom of d_p that a cleared atom matches, plus the added ones" (vGLP f8127b1, Section 5.4, "Act schemas as local specifications"; GSC 327e035, Definition "Compilation", K_p every atom of d_p, with its multiplicity, that matches a cleared atom).
 procedure clear_split(GAtoms?, GAtoms, GAtoms).
 clear_split([], [], []).
@@ -3691,6 +3988,7 @@ procedure names_role(SAtoms?, Integer?, YesNo).
 names_role([], _, no).
 names_role([times(_, A)|As], J, R?) :- names_role([A?|As?], J?, R).
 names_role([rest(_, _, A)|As], J, R?) :- names_role([A?|As?], J?, R).
+names_role([opt(A)|As], J, R?) :- names_role([A?|As?], J?, R).
 names_role([atom(_, Vs)|As], J, R?) :- integer(J?), ground(Vs?) |
     flat_names(Vs?, Fs),
     mem(role(J?), Fs?, R1),
@@ -3741,12 +4039,15 @@ adm_var(sgn(_, _), _, _, _, yes).
 adm_var(num(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
 adm_var(any, _, _, _, yes).
+%% A variable a conjunct's quantifier binds takes its values at the base's state, no new speech act.
+adm_var(inst(_, _, _), _, _, _, yes).
 procedure adm_var1(YesNo?, Found?, Peers?, YesNo).
 adm_var1(yes, _, _, yes).
 adm_var1(no, found(s(speech(_, P))), Gp, R?) :- mem(P?, Gp?, R).
 adm_var1(no, found(p(_)), _, no).
 adm_var1(no, found(c(_)), _, no).
 adm_var1(no, found(n(_)), _, no).
+adm_var1(no, found(r(_)), _, no).
 adm_var1(no, found(lv(_, _)), _, no).
 adm_var1(no, free, _, no).
 adm_var1(no, found(any), _, no).
@@ -3758,6 +4059,7 @@ atoms_vars([], []).
 atoms_vars([atom(_, Vs)|As], R?) :- flat_names(Vs?, Ws), atoms_vars(As?, R1), app(Ws?, R1?, R).
 atoms_vars([times(V, A)|As], [V?|R?]) :- atoms_vars([A?|As?], R).
 atoms_vars([rest(V, J, A)|As], [V?, J?|R?]) :- atoms_vars([A?|As?], R).
+atoms_vars([opt(A)|As], R?) :- atoms_vars([A?|As?], R).
 procedure guard_roles(RoleSpecs?, Integer?, Ints).
 guard_roles([], _, []).
 guard_roles([rs(guarded, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) |
@@ -3794,7 +4096,8 @@ mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), gro
     deltas_peers(Ps?, Q1),
     sort_peers(Q1?, Q2),
     subsets(Q2?, Ls),
-    tuples(Lsts?, Ls?, Ts),
+    list_choices(Lsts?, Ls?, Ps?, Cs),
+    tuples_of(Cs?, Ts),
     listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
@@ -3807,12 +4110,13 @@ on_base([B|Bs], Lsts, R?) :- ground(B?), ground(Lsts?) |
 %% Whether each listed role's place is sent to its base person.
 procedure on_bases(Listings?, Binding?, YesNo).
 on_bases([], _, yes).
-on_bases([listing(I, Bi, _, _)|Lsts], B, E?) :- ground(B?) |
+on_bases([listing(I, Bi, _, _, _, _, _)|Lsts], B, E?) :- ground(B?) |
     role_person(I?, B?, P),
     role_person(Bi?, B?, Q),
     same(P?, Q?, E1),
     on_bases(Lsts?, B?, E2),
     and(E1?, E2?, E).
+on_bases([instances(_, _, _, _, _, _, _)|Lsts], B, E?) :- on_bases(Lsts?, B?, E).
 procedure keep_binding(YesNo?, Binding?, Bindings?, Bindings).
 keep_binding(yes, B, R, [B?|R?]).
 keep_binding(no, _, R, R?).
@@ -3826,19 +4130,72 @@ subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
 procedure with_first(PeerLists?, Peer?, PeerLists).
 with_first([], _, []).
 with_first([L|Ls], P, [[P?|L?]|R?]) :- ground(P?) | with_first(Ls?, P?, R).
-%% Each choice of one list of Ls for each listed role of Lsts, in the order of the roles.
-procedure tuples(Listings?, PeerLists?, ListTuples).
-tuples([], _, [[]]).
-tuples([_|Lsts], Ls, R?) :- ground(Ls?) |
-    tuples(Lsts?, Ls?, R1),
+%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants, Ls; the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
+procedure list_choices(Listings?, PeerLists?, Deltas?, ListTuples).
+list_choices([], _, _, []).
+list_choices([listing(_, _, _, _, _, _, _)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ls?) |
+    wrap_ppl(Ls?, Ws),
+    list_choices(Lsts?, Ls?, Ps?, Cs).
+list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
+    inst_cands(CA?, CD?, Xs?, Ps?, Q0),
+    sort_insts(Q0?, Q1),
+    dedup(Q1?, Q2),
+    isubsets(Q2?, Is),
+    wrap_ins(Is?, Ws),
+    list_choices(Lsts?, Ls?, Ps?, Cs).
+procedure wrap_ppl(PeerLists?, LLists).
+wrap_ppl([], []).
+wrap_ppl([L|Ls], [ppl(L?)|Ws?]) :- wrap_ppl(Ls?, Ws).
+procedure wrap_ins(InstsList?, LLists).
+wrap_ins([], []).
+wrap_ins([L|Ls], [ins(L?)|Ws?]) :- wrap_ins(Ls?, Ws).
+procedure isubsets(Insts?, InstsList).
+isubsets([], [[]]).
+isubsets([I|Is], R?) :- ground(I?), ground(Is?) |
+    isubsets(Is?, S1),
+    iwith_first(S1?, I?, S2),
+    isubsets(Is?, S3),
+    app(S2?, S3?, R).
+procedure iwith_first(InstsList?, Vals?, InstsList).
+iwith_first([], _, []).
+iwith_first([L|Ls], I, [[I?|L?]|R?]) :- ground(I?) | iwith_first(Ls?, I?, R).
+procedure inst_cands(HMults?, HMults?, Vars?, Deltas?, Insts).
+inst_cands([H|Hs], _, Xs, Ps, Q?) :- ground(H?), ground(Hs?), ground(Xs?), ground(Ps?) |
+    hm_atoms_of([H?|Hs?], Ms),
+    side_atoms(Ps?, add, Gs),
+    match_all(Ms?, Gs?, [], Bs),
+    inst_vals(Bs?, Xs?, Q).
+inst_cands([], [H|Hs], Xs, Ps, Q?) :- ground(H?), ground(Hs?), ground(Xs?), ground(Ps?) |
+    hm_atoms_of([H?|Hs?], Ms),
+    side_atoms(Ps?, del, Gs),
+    match_all(Ms?, Gs?, [], Bs),
+    inst_vals(Bs?, Xs?, Q).
+inst_cands([], [], _, _, []).
+procedure hm_atoms_of(HMults?, SAtoms).
+hm_atoms_of([], []).
+hm_atoms_of([hm(_, M)|Hs], [M?|Ms?]) :- hm_atoms_of(Hs?, Ms).
+procedure side_atoms(Deltas?, Constant?, GAtoms).
+side_atoms([], _, []).
+side_atoms([delta(_, Dl, Ad)|Ds], W, Gs?) :- ground(W?) |
+    delta_side(W?, Dl?, Ad?, G1),
+    side_atoms(Ds?, W?, G2),
+    app(G1?, G2?, Gs).
+procedure delta_side(Constant?, GAtoms?, GAtoms?, GAtoms).
+delta_side(add, _, Ad, Ad?).
+delta_side(del, Dl, _, Dl?).
+%% Each choice of one list of each of the choices Cs, in their order.
+procedure tuples_of(ListTuples?, ListTuples).
+tuples_of([], [[]]).
+tuples_of([Ls|Cs], R?) :- ground(Ls?) |
+    tuples_of(Cs?, R1),
     prepend_each(Ls?, R1?, R).
-procedure prepend_each(PeerLists?, ListTuples?, ListTuples).
+procedure prepend_each(LLists?, ListTuples?, ListTuples).
 prepend_each([], _, []).
 prepend_each([L|Ls], Ts, R?) :- ground(L?), ground(Ts?) |
     with_head(Ts?, L?, R1),
     prepend_each(Ls?, Ts?, R2),
     app(R1?, R2?, R).
-procedure with_head(ListTuples?, Peers?, ListTuples).
+procedure with_head(ListTuples?, LList?, ListTuples).
 with_head([], _, []).
 with_head([T|Ts], L, [[L?|T?]|R?]) :- ground(L?) | with_head(Ts?, L?, R).
 procedure listed_mates(ListTuples?, Bindings?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
@@ -3992,6 +4349,7 @@ is_lv(p(_), no).
 is_lv(s(_), no).
 is_lv(c(_), no).
 is_lv(n(_), no).
+is_lv(r(_), no).
 is_lv(any, no).
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
 locals_put([], _, B, B?).
@@ -4045,7 +4403,8 @@ parts_of1(no, mate(N, B, G, F), Ms, All, Q, Id, Seen, [pt(T?, G?, Op?)|Pts?]) :-
     class_of(N?, B?, Id?, T),
     part_firsts(All?, mate(N?, B?, G?, F?), Q?, Fs),
     part_gfirsts(All?, mate(N?, B?, G?, F?), Q?, G?, Fo),
-    part_opener(G?, Fs?, Fo?, Op),
+    part_bases(All?, G?, Ob),
+    part_opener(G?, Fs?, Fo?, Ob?, Op),
     parts_of(Ms?, All?, Q?, Id?, [mate(N?, B?, G?, F?)|Seen?], Pts).
 procedure part_seen(Mates?, Mate?, Peers?, YesNo).
 part_seen([], _, _, no).
@@ -4080,20 +4439,32 @@ opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
 procedure opens_guarded1(Schema?, YesNo).
 opens_guarded1(schema(_, _, _), no).
 opens_guarded1(lschema(_, _, _, []), no).
-opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _)|_]), B?) :- ground(Rs?), integer(Bi?) |
+opens_guarded1(lschema(_, _, Rs, [listing(_, Bi, _, _, _, _, _)|_]), B?) :- ground(Rs?), integer(Bi?) |
+    nth_spec(Rs?, Bi?, R),
+    spec_unguarded(R?, B).
+opens_guarded1(lschema(_, _, Rs, [instances(_, Bi, _, _, _, _, _)|_]), B?) :- ground(Rs?), integer(Bi?) |
     nth_spec(Rs?, Bi?, R),
     spec_unguarded(R?, B).
 procedure spec_unguarded(RoleSpec?, YesNo).
 spec_unguarded(rs(unguarded, _, _, _, _), yes).
 spec_unguarded(rs(guarded, _, _, _, _), no).
 %% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
-procedure part_opener(Peers?, Peers?, Peers?, Opener).
-part_opener([], Fs, _, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Op).
-part_opener([_|_], _, Fo, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Op).
-%% A schema-binding is of its own part, so the people of an unguarded part are never none; a guarded part none of whose schema-bindings opens it has no opener, guarded_part.
-procedure least_opener(Peers?, Opener).
-least_opener([P|_], opener(P?)).
-least_opener([], guarded_part).
+procedure part_opener(Peers?, Peers?, Peers?, Peers?, Opener).
+part_opener([], Fs, _, Ob, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Ob?, Op).
+part_opener([_|_], _, Fo, Ob, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Ob?, Op).
+%% A schema-binding is of its own part, so the people of an unguarded part are never none; a guarded part none of whose schema-bindings opens it has no opener, and its proposers, the persons in the base of the schema-bindings that determine it, proposed(Ob).
+procedure least_opener(Peers?, Peers?, Opener).
+least_opener([P|_], _, opener(P?)).
+least_opener([], Ob, proposed(Ob1?)) :- sort_peers(Ob?, Ob0), dedup(Ob0?, Ob1).
+%% The proposers of a guarded part with no opener: the persons in the base of the schemas of the schema-bindings of the class, All, that are guards of the part, G (schema_base, printed from the contract): "where the base of the schema is a guarding role, its proposer is the person in the base" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), and "the guarded parts with no opener of a class that one participant guards have the same proposers" (Definition "Local Specification"), so a person in the base of a schema-binding of the class proposes every such part it guards, as either party of an acquaintance does.
+procedure part_bases(Mates?, Peers?, Peers).
+part_bases([], _, []).
+part_bases([mate(N, B, _, _)|Ms], G, Ob?) :- ground(N?), ground(B?), ground(G?) |
+    schema_base(N?, Bi),
+    role_person(Bi?, B?, P),
+    mem(P?, G?, In),
+    part_bases(Ms?, G?, Ob1),
+    keep_peer(In?, P?, Ob1?, Ob).
 %% Whether two schema-bindings of a class, each with the people it marks, determine one part.
 procedure same_mpart(Peers?, Mate?, Mate?, YesNo).
 same_mpart(Q, mate(N1, B1, G1, _), mate(N2, B2, G2, _), B?) :-
@@ -4271,6 +4642,7 @@ cimg_one(times(V, A), B, Cs?) :- ground(B?) |
     num_of(V?, B?, K),
     cimg_one(A?, B?, C1),
     copies(K?, C1?, Cs).
+cimg_one(opt(A), B, Cs?) :- cimg_one(A?, B?, Cs).
 cimg_one(rest(V, J, A), B, Cs?) :- ground(B?) |
     num_of(V?, B?, K),
     num_of(J?, B?, I),
@@ -4316,31 +4688,108 @@ bound_spec1(schema(_, _, Rs), _, Rs?).
 bound_spec1(lschema(_, _, Rs, Lsts), B, Rs1?) :- ground(Rs?), ground(B?), ground(Lsts?) |
     lists_of(Lsts?, B?, Ls),
     spec_for(Rs?, Lsts?, Ls?, Rs1).
-%% The lists of the people of a schema-binding's listed roles, in the order of the roles.
-procedure lists_of(Listings?, Binding?, PeerLists).
+%% The lists of a schema-binding's listings: the people of each listed role, in the order of the roles, and the instances of each conjunct whose instances the attempt names.
+procedure lists_of(Listings?, Binding?, LLists).
 lists_of([], _, []).
-lists_of([listing(I, _, _, _)|Lsts], B, [L?|Ls?]) :- ground(B?) |
+lists_of([listing(I, _, _, _, _, _, _)|Lsts], B, [ppl(L?)|Ls?]) :- ground(B?) |
     copies_of(B?, I?, L),
     lists_of(Lsts?, B?, Ls).
-%% The roles of the schema, each listed role's place blanked, and then, for each listed role in the order of the roles, a copy of it for each person of its list.
-procedure spec_for(RoleSpecs?, Listings?, PeerLists?, RoleSpecs).
-spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?) |
+lists_of([instances(K, _, Xs, _, _, _, _)|Lsts], B, [ins(L?)|Ls?]) :- ground(B?) |
+    insts_of(B?, K?, Xs?, L),
+    lists_of(Lsts?, B?, Ls).
+%% The roles of the schema, each listed role's place blanked, and then, for each listed role in the order of the roles, a copy of it for each person of its list, the role of index K + 1 the first, K the number of the schema's roles, each copy naming itself where the listed role names its own index; and the conditional literals of each listed role's conjunct, added at their roles once for each person of the list, the listed role's index in them standing for that person's copy (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct ... included, ... plus the added ones, likewise").
+procedure spec_for(RoleSpecs?, Listings?, LLists?, RoleSpecs).
+spec_for(Rs, Lsts, Ls, Rs1?) :- ground(Rs?), ground(Lsts?), ground(Ls?) |
+    rs_len(Rs?, K),
+    K1 := K? + 1,
     blank_listed(Lsts?, Rs?, Rs0),
-    listed_copies(Lsts?, Ls?, Rs?, Cs),
-    app(Rs0?, Cs?, Rs1).
+    listed_copies(Lsts?, Ls?, Rs?, K1?, Cs),
+    cond_specs(Lsts?, Ls?, K1?, Rs0?, Rs0c),
+    app(Rs0c?, Cs?, Rs1).
+procedure cond_specs(Listings?, LLists?, Integer?, RoleSpecs?, RoleSpecs).
+cond_specs([], _, _, Rs, Rs?).
+cond_specs([_|_], [], _, Rs, Rs?).
+cond_specs([listing(I, _, _, _, _, CA, CD)|Lsts], [ppl(L)|Ls], J, Rs, Rs2?) :- ground(L?), integer(I?), integer(J?), ground(CA?), ground(CD?) |
+    cond_people(L?, I?, J?, CA?, CD?, Rs?, Rs1, J1),
+    cond_specs(Lsts?, Ls?, J1?, Rs1?, Rs2).
+%% The conditional literals of a conjunct whose instances the attempt names, added at their roles once for each instance of its list, inst(K, J, X) standing for each variable X its quantifier binds at the J-th (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "yielding d_p less the deleted atoms, those of the conditional literals at each instance of their conjunct, in L ..., included, ... plus the added ones, likewise").
+cond_specs([instances(K, _, Xs, _, _, CA, CD)|Lsts], [ins(L)|Ls], J, Rs, Rs2?) :- ground(L?), integer(K?), ground(Xs?), ground(CA?), ground(CD?) |
+    cond_insts(L?, K?, Xs?, 1, CA?, CD?, Rs?, Rs1),
+    cond_specs(Lsts?, Ls?, J?, Rs1?, Rs2).
+procedure cond_insts(Insts?, Integer?, Vars?, Integer?, HMults?, HMults?, RoleSpecs?, RoleSpecs).
+cond_insts([], _, _, _, _, _, Rs, Rs?).
+cond_insts([_|Ps], K, Xs, J, CA, CD, Rs, Rs3?) :- integer(K?), ground(Xs?), integer(J?), ground(CA?), ground(CD?) |
+    inst_add(CA?, K?, J?, Xs?, add, Rs?, Rs1),
+    inst_add(CD?, K?, J?, Xs?, del, Rs1?, Rs2),
+    J1 := J? + 1,
+    cond_insts(Ps?, K?, Xs?, J1?, CA?, CD?, Rs2?, Rs3).
+procedure inst_add(HMults?, Integer?, Integer?, Vars?, Constant?, RoleSpecs?, RoleSpecs).
+inst_add([], _, _, _, _, Rs, Rs?).
+inst_add([hm(R, M)|Hs], K, J, Xs, W, Rs, Rs2?) :- integer(K?), integer(J?), ground(Xs?), ground(W?) |
+    ren_atom(M?, K?, J?, Xs?, M1),
+    add_to_role(Rs?, R?, 1, W?, M1?, Rs1),
+    inst_add(Hs?, K?, J?, Xs?, W?, Rs1?, Rs2).
+%% An atom with each variable X of Xs written inst(K, J, X), in a name term too.
+procedure ren_atom(SAtom?, Integer?, Integer?, Vars?, SAtom).
+ren_atom(atom(P, Vs), K, J, Xs, atom(P?, Vs1?)) :- ren_vars(Vs?, K?, J?, Xs?, Vs1).
+ren_atom(times(N, M), K, J, Xs, times(N1?, M1?)) :- integer(K?), integer(J?), ground(Xs?) | ren_var(N?, K?, J?, Xs?, N1), ren_atom(M?, K?, J?, Xs?, M1).
+ren_atom(rest(N, I, M), K, J, Xs, rest(N1?, I1?, M1?)) :- integer(K?), integer(J?), ground(Xs?) | ren_var(N?, K?, J?, Xs?, N1), ren_var(I?, K?, J?, Xs?, I1), ren_atom(M?, K?, J?, Xs?, M1).
+ren_atom(opt(M), K, J, Xs, opt(M1?)) :- ren_atom(M?, K?, J?, Xs?, M1).
+procedure ren_vars(Vars?, Integer?, Integer?, Vars?, Vars).
+ren_vars([], _, _, _, []).
+ren_vars([U|Us], K, J, Xs, [U1?|Us1?]) :- integer(K?), integer(J?), ground(Xs?) | ren_var(U?, K?, J?, Xs?, U1), ren_vars(Us?, K?, J?, Xs?, Us1).
+procedure ren_var(Var?, Integer?, Integer?, Vars?, Var).
+ren_var(nterm(N), K, J, Xs, nterm(N1?)) :- ren_nt(N?, K?, J?, Xs?, N1).
+ren_var(U, K, J, Xs, V?) :- otherwise, ground(U?), integer(K?), integer(J?), ground(Xs?) | mem(U?, Xs?, In), ren_if(In?, U?, K?, J?, V).
+procedure ren_if(YesNo?, Var?, Integer?, Integer?, Var).
+ren_if(yes, U, K, J, inst(K?, J?, U?)).
+ren_if(no, U, _, _, U?).
+procedure ren_nt(NTerm?, Integer?, Integer?, Vars?, NTerm).
+ren_nt(own_var(X), K, J, Xs, N?) :- ground(X?), integer(K?), integer(J?), ground(Xs?) | mem(pvar(X?), Xs?, In), ren_own(In?, X?, K?, J?, N).
+ren_nt(ext(N, Y), K, J, Xs, N2?) :- ground(Y?), integer(K?), integer(J?), ground(Xs?) | ren_nt(N?, K?, J?, Xs?, N1), mem(svar(Y?), Xs?, In), ren_ext(In?, N1?, Y?, K?, J?, N2).
+ren_nt(ext_any(N), K, J, Xs, ext_any(N1?)) :- ren_nt(N?, K?, J?, Xs?, N1).
+ren_nt(ext_iv(N, V), K, J, Xs, ext_iv(N1?, V?)) :- ren_nt(N?, K?, J?, Xs?, N1).
+ren_nt(N, _, _, _, N?) :- otherwise | true.
+procedure ren_own(YesNo?, Constant?, Integer?, Integer?, NTerm).
+ren_own(yes, X, K, J, own_iv(inst(K?, J?, pvar(X?)))).
+ren_own(no, X, _, _, own_var(X?)).
+procedure ren_ext(YesNo?, NTerm?, Constant?, Integer?, Integer?, NTerm).
+ren_ext(yes, N, Y, K, J, ext_iv(N?, inst(K?, J?, svar(Y?)))).
+ren_ext(no, N, Y, _, _, ext(N?, Y?)).
+procedure cond_people(Peers?, Integer?, Integer?, HMults?, HMults?, RoleSpecs?, RoleSpecs, Integer).
+cond_people([], _, J, _, _, Rs, Rs?, J?).
+cond_people([_|Ps], I, J, CA, CD, Rs, Rs3?, J2?) :- integer(I?), integer(J?), ground(CA?), ground(CD?) |
+    cond_add(CA?, I?, J?, add, Rs?, Rs1),
+    cond_add(CD?, I?, J?, del, Rs1?, Rs2),
+    J1 := J? + 1,
+    cond_people(Ps?, I?, J1?, CA?, CD?, Rs2?, Rs3, J2).
+procedure cond_add(HMults?, Integer?, Integer?, Constant?, RoleSpecs?, RoleSpecs).
+cond_add([], _, _, _, Rs, Rs?).
+cond_add([hm(R, M)|Hs], I, J, W, Rs, Rs2?) :- integer(I?), integer(J?), ground(W?) |
+    renum_atom(M?, I?, J?, M1),
+    add_to_role(Rs?, R?, 1, W?, M1?, Rs1),
+    cond_add(Hs?, I?, J?, W?, Rs1?, Rs2).
+procedure add_to_role(RoleSpecs?, Integer?, Integer?, Constant?, SAtom?, RoleSpecs).
+add_to_role([], _, _, _, _, []).
+add_to_role([rs(G, A, D, K, F)|Rs], R, I, add, M, [rs(G?, [M?|A?], D?, K?, F?)|Rs?]) :- R? =:= I? | true.
+add_to_role([rs(G, A, D, K, F)|Rs], R, I, del, M, [rs(G?, A?, [opt(M?)|D?], K?, F?)|Rs?]) :- R? =:= I? | true.
+add_to_role([X|Rs], R, I, W, M, [X?|Rs1?]) :- otherwise, integer(I?) | I1 := I? + 1, add_to_role(Rs?, R?, I1?, W?, M?, Rs1).
 procedure blank_listed(Listings?, RoleSpecs?, RoleSpecs).
 blank_listed([], Rs, Rs?).
-blank_listed([listing(I, _, _, _)|Lsts], Rs, Rs2?) :-
+blank_listed([listing(I, _, _, _, _, _, _)|Lsts], Rs, Rs2?) :-
     blank_at(Rs?, I?, 1, Rs1),
     blank_listed(Lsts?, Rs1?, Rs2).
-procedure listed_copies(Listings?, PeerLists?, RoleSpecs?, RoleSpecs).
-listed_copies([], _, _, []).
-listed_copies([listing(I, _, _, _)|Lsts], [L|Ls], Rs, Cs?) :- ground(Rs?) |
+blank_listed([instances(_, _, _, _, _, _, _)|Lsts], Rs, Rs1?) :- blank_listed(Lsts?, Rs?, Rs1).
+procedure listed_copies(Listings?, LLists?, RoleSpecs?, Integer?, RoleSpecs).
+listed_copies([], _, _, _, []).
+listed_copies([listing(I, _, _, _, _, _, _)|Lsts], [ppl(L)|Ls], Rs, J, Cs?) :- ground(Rs?), integer(I?) |
     nth_spec(Rs?, I?, R),
-    spec_copies(L?, R?, C1),
-    listed_copies(Lsts?, Ls?, Rs?, C2),
+    spec_copies(L?, R?, I?, J?, C1, J1),
+    listed_copies(Lsts?, Ls?, Rs?, J1?, C2),
     app(C1?, C2?, Cs).
-listed_copies([_|_], [], _, []).
+%% The instances of a conjunct are no participants: they have no role.
+listed_copies([instances(_, _, _, _, _, _, _)|Lsts], [_|Ls], Rs, J, Cs?) :- listed_copies(Lsts?, Ls?, Rs?, J?, Cs).
+listed_copies([_|_], [], _, _, []).
 procedure blank_at(RoleSpecs?, Integer?, Integer?, RoleSpecs).
 blank_at([], _, _, []).
 blank_at([R|Rs], I, J, [X?|Xs?]) :- integer(I?), integer(J?) |
@@ -4350,9 +4799,40 @@ blank_at([R|Rs], I, J, [X?|Xs?]) :- integer(I?), integer(J?) |
 procedure blank_one(Integer?, Integer?, RoleSpec?, RoleSpec).
 blank_one(I, J, _, rs(unguarded, [], [], [], [])) :- I? =:= J? | true.
 blank_one(_, _, R, R?) :- otherwise | true.
-procedure spec_copies(Peers?, RoleSpec?, RoleSpecs).
-spec_copies([], _, []).
-spec_copies([_|Ps], R, [R?|Rs?]) :- ground(R?) | spec_copies(Ps?, R?, Rs).
+procedure spec_copies(Peers?, RoleSpec?, Integer?, Integer?, RoleSpecs, Integer).
+spec_copies([], _, _, J, [], J?).
+spec_copies([_|Ps], R, I, J, [R1?|Rs?], J2?) :- ground(R?), integer(I?), integer(J?) |
+    renum_spec(R?, I?, J?, R1),
+    J1 := J? + 1,
+    spec_copies(Ps?, R?, I?, J1?, Rs, J2).
+%% A role specification, an atom and its arguments with the index I of a role written J: the copy J of the listed role I names itself where the listed role names its own index.
+procedure renum_spec(RoleSpec?, Integer?, Integer?, RoleSpec).
+renum_spec(rs(G, A, D, K, F), I, J, rs(G?, A1?, D1?, K1?, F1?)) :- integer(I?), integer(J?) |
+    renum_atoms(A?, I?, J?, A1),
+    renum_atoms(D?, I?, J?, D1),
+    renum_atoms(K?, I?, J?, K1),
+    renum_atoms(F?, I?, J?, F1).
+procedure renum_atoms(SAtoms?, Integer?, Integer?, SAtoms).
+renum_atoms([], _, _, []).
+renum_atoms([M|Ms], I, J, [M1?|Ms1?]) :- integer(I?), integer(J?) | renum_atom(M?, I?, J?, M1), renum_atoms(Ms?, I?, J?, Ms1).
+procedure renum_atom(SAtom?, Integer?, Integer?, SAtom).
+renum_atom(atom(P, Vs), I, J, atom(P?, Vs1?)) :- renum_vars(Vs?, I?, J?, Vs1).
+renum_atom(times(V, M), I, J, times(V1?, M1?)) :- integer(I?), integer(J?) | renum_var(V?, I?, J?, V1), renum_atom(M?, I?, J?, M1).
+renum_atom(rest(V, W, M), I, J, rest(V1?, W1?, M1?)) :- integer(I?), integer(J?) | renum_var(V?, I?, J?, V1), renum_var(W?, I?, J?, W1), renum_atom(M?, I?, J?, M1).
+renum_atom(opt(M), I, J, opt(M1?)) :- renum_atom(M?, I?, J?, M1).
+procedure renum_vars(Vars?, Integer?, Integer?, Vars).
+renum_vars([], _, _, []).
+renum_vars([V|Vs], I, J, [V1?|Vs1?]) :- integer(I?), integer(J?) | renum_var(V?, I?, J?, V1), renum_vars(Vs?, I?, J?, Vs1).
+procedure renum_var(Var?, Integer?, Integer?, Var).
+renum_var(role(K), I, J, role(J?)) :- K? =:= I? | true.
+renum_var(sgn(Y, K), I, J, sgn(Y?, J?)) :- K? =:= I? | true.
+renum_var(nterm(N), I, J, nterm(N1?)) :- renum_nt(N?, I?, J?, N1).
+renum_var(V, _, _, V?) :- otherwise | true.
+procedure renum_nt(NTerm?, Integer?, Integer?, NTerm).
+renum_nt(own(K), I, J, own(J?)) :- K? =:= I? | true.
+renum_nt(ext(N, Y), I, J, ext(N1?, Y?)) :- renum_nt(N?, I?, J?, N1).
+renum_nt(ext_any(N), I, J, ext_any(N1?)) :- renum_nt(N?, I?, J?, N1).
+renum_nt(N, _, _, N?) :- otherwise | true.
 %% The people of the listed role of index I at a schema-binding B, those B binds to role(-I), in the order of identifiers, its place in the class term (class_of).
 procedure copies_of(Binding?, Integer?, List(Peer)).
 copies_of(B, I, L?) :- ground(B?), integer(I?) |
@@ -4365,9 +4845,9 @@ neg_people([], _, []).
 neg_people([b(role(J), p(Q))|Bs], NI, [Q?|Ps?]) :- J? =:= NI? | neg_people(Bs?, NI?, Ps).
 neg_people([_|Bs], NI, Ps?) :- otherwise | neg_people(Bs?, NI?, Ps).
 %% The binding of a class term of a schema with listed roles: the binding B0 of its other roles and its variables; each listed role's place bound to the base person; and, for the lists Ls of the people of the listed roles, in the order of the roles, a role after the schema's own for each person of each list, in the order of identifiers, and the entries naming the people of each listed role (tuple_binds).
-procedure listed_binding(Constant?, Binding?, PeerLists?, Binding).
+procedure listed_binding(Constant?, Binding?, LLists?, Binding).
 listed_binding(Nm, B0, Ls, B?) :- schema_entry(Nm?, E), listed_binding1(E?, B0?, Ls?, B).
-procedure listed_binding1(Schema?, Binding?, PeerLists?, Binding).
+procedure listed_binding1(Schema?, Binding?, LLists?, Binding).
 listed_binding1(schema(_, _, _), B0, _, B0?).
 listed_binding1(lschema(_, _, Rs, Lsts), B0, Ls, B?) :- ground(Rs?), ground(B0?), ground(Lsts?) |
     rs_len(Rs?, K),
@@ -4380,25 +4860,48 @@ listed_binding1(lschema(_, _, Rs, Lsts), B0, Ls, B?) :- ground(Rs?), ground(B0?)
 %% Each listed role's place bound to its base person.
 procedure base_binds(Listings?, Binding?, Binding).
 base_binds([], _, []).
-base_binds([listing(I, Bi, _, _)|Lsts], B0, [b(role(I?), p(P?))|Bs?]) :- ground(B0?) |
+base_binds([listing(I, Bi, _, _, _, _, _)|Lsts], B0, [b(role(I?), p(P?))|Bs?]) :- ground(B0?) |
     role_person(Bi?, B0?, P),
     base_binds(Lsts?, B0?, Bs).
-procedure sorted_lists(PeerLists?, PeerLists).
+base_binds([instances(_, _, _, _, _, _, _)|Lsts], B0, Bs?) :- base_binds(Lsts?, B0?, Bs).
+procedure sorted_lists(LLists?, LLists).
 sorted_lists([], []).
-sorted_lists([L|Ls], [L1?|Ls1?]) :-
+sorted_lists([ppl(L)|Ls], [ppl(L1?)|Ls1?]) :-
     sort_peers(L?, L0),
     dedup(L0?, L1),
     sorted_lists(Ls?, Ls1).
+sorted_lists([ins(L)|Ls], [ins(L1?)|Ls1?]) :-
+    sort_insts(L?, L0),
+    dedup(L0?, L1),
+    sorted_lists(Ls?, Ls1).
+%% Instances in the order of their texts, one text per term (term_to_string/2), @< comparing constants alone: a list of instances is one term for one set of them.
+procedure sort_insts(Insts?, Insts).
+sort_insts([], []).
+sort_insts([I|Is], S?) :- sort_insts(Is?, S1), insert_inst(I?, S1?, S).
+procedure insert_inst(Vals?, Insts?, Insts).
+insert_inst(I, [], [I?]).
+insert_inst(I, [J|Js], R?) :- ground(I?), ground(J?) |
+    term_to_string(I?, Si),
+    term_to_string(J?, Sj),
+    insert_inst1(Si?, Sj?, I?, J?, Js?, R).
+procedure insert_inst1(String?, String?, Vals?, Vals?, Insts?, Insts).
+insert_inst1(Si, Sj, I, J, Js, [I?, J?|Js?]) :- Si? @< Sj? | true.
+insert_inst1(_, _, I, J, Js, [J?|R?]) :- otherwise | insert_inst(I?, Js?, R).
 %% For the lists Ls of the people of the listed roles Lsts, in the order of the roles: the roles of index J, J+1, ..., one for each person of each list, the first list first, and the entries b(role(-I), p(Q)) naming the people Q of the listed role of index I.
-procedure tuple_binds(Listings?, PeerLists?, Integer?, Binding).
+procedure tuple_binds(Listings?, LLists?, Integer?, Binding).
 tuple_binds([], _, _, []).
-tuple_binds([listing(I, _, _, _)|Lsts], [L|Ls], J, Bs?) :- ground(L?), integer(I?) |
+tuple_binds([listing(I, _, _, _, _, _, _)|Lsts], [ppl(L)|Ls], J, Bs?) :- ground(L?), integer(I?) |
     copy_binds(L?, J?, Cs, J1),
     NI := 0 - I?,
     neg_binds(L?, NI?, Ns),
     tuple_binds(Lsts?, Ls?, J1?, Bs1),
     app(Ns?, Bs1?, Bs2),
     app(Cs?, Bs2?, Bs).
+%% The instances L of the K-th conjunct: an entry b(inst(K, J, X), V) for each variable X its quantifier binds, V the value the J-th instance of L gives it.
+tuple_binds([instances(K, _, Xs, _, _, _, _)|Lsts], [ins(L)|Ls], J, Bs?) :- ground(L?), integer(K?), ground(Xs?) |
+    inst_binds(L?, K?, Xs?, 1, Is),
+    tuple_binds(Lsts?, Ls?, J?, Bs1),
+    app(Is?, Bs1?, Bs).
 tuple_binds([_|_], [], _, []).
 procedure copy_binds(Peers?, Integer?, Binding, Integer).
 copy_binds([], J, [], J?).
@@ -4406,23 +4909,118 @@ copy_binds([Q|Qs], J, [b(role(J?), p(Q?))|Bs?], J2?) :- integer(J?) | J1 := J? +
 procedure neg_binds(Peers?, Integer?, Binding).
 neg_binds([], _, []).
 neg_binds([Q|Qs], NI, [b(role(NI?), p(Q?))|Bs?]) :- integer(NI?) | neg_binds(Qs?, NI?, Bs).
+%% The instances of the K-th conjunct of the schema Nm a binding carries (insts_of), the variables its quantifier binds read from its listing; class_of reads it.
+procedure inst_list(Constant?, Binding?, Integer?, Insts).
+inst_list(Nm, B, K, L?) :- schema_entry(Nm?, E), inst_list1(E?, B?, K?, L).
+procedure inst_list1(Schema?, Binding?, Integer?, Insts).
+inst_list1(schema(_, _, _), _, _, []).
+inst_list1(lschema(_, _, _, Lsts), B, K, L?) :- ground(Lsts?), integer(K?) |
+    inst_xs(Lsts?, K?, Xs),
+    insts_of(B?, K?, Xs?, L).
+procedure inst_xs(Listings?, Integer?, Vars).
+inst_xs([], _, []).
+inst_xs([instances(K1, _, Xs, _, _, _, _)|_], K, Xs?) :- K1? =:= K? | true.
+inst_xs([_|Ls], K, Xs?) :- otherwise | inst_xs(Ls?, K?, Xs).
+procedure inst_binds(Insts?, Integer?, Vars?, Integer?, Binding).
+inst_binds([], _, _, _, []).
+inst_binds([I|Is], K, Xs, J, Bs?) :- integer(K?), ground(Xs?), integer(J?) |
+    inst_entries(Xs?, I?, K?, J?, B1),
+    J1 := J? + 1,
+    inst_binds(Is?, K?, Xs?, J1?, B2),
+    app(B1?, B2?, Bs).
+procedure inst_entries(Vars?, Vals?, Integer?, Integer?, Binding).
+inst_entries([], _, _, _, []).
+inst_entries([_|_], [], _, _, []).
+inst_entries([X|Xs], [V|Vs], K, J, [b(inst(K?, J?, X?), V?)|Bs?]) :- integer(K?), integer(J?) | inst_entries(Xs?, Vs?, K?, J?, Bs).
+%% The instances of the K-th conjunct a binding carries: for each J of its entries b(inst(K, J, X), V), the values it gives the variables Xs, in their order; in the order of terms, its place in the class term (class_of).
+procedure insts_of(Binding?, Integer?, Vars?, Insts).
+insts_of(B, K, Xs, L?) :- ground(B?), integer(K?), ground(Xs?) |
+    inst_js(B?, K?, Js0),
+    dedup(Js0?, Js),
+    inst_vals_at(Js?, B?, K?, Xs?, L0),
+    sort_insts(L0?, L1),
+    dedup(L1?, L).
+procedure inst_js(Binding?, Integer?, Ints).
+inst_js([], _, []).
+inst_js([b(inst(K1, J, _), _)|Bs], K, [J?|Js?]) :- K1? =:= K? | inst_js(Bs?, K?, Js).
+inst_js([_|Bs], K, Js?) :- otherwise | inst_js(Bs?, K?, Js).
+procedure inst_vals_at(Ints?, Binding?, Integer?, Vars?, Insts).
+inst_vals_at([], _, _, _, []).
+inst_vals_at([J|Js], B, K, Xs, [I?|Is?]) :- ground(B?), integer(K?), ground(Xs?), integer(J?) |
+    inst_lookup(Xs?, B?, K?, J?, I),
+    inst_vals_at(Js?, B?, K?, Xs?, Is).
+procedure inst_lookup(Vars?, Binding?, Integer?, Integer?, Vals).
+inst_lookup([], _, _, _, []).
+inst_lookup([X|Xs], B, K, J, [V?|Vs?]) :- ground(B?), integer(K?), integer(J?) |
+    lookup(inst(K?, J?, X?), B?, F),
+    img_val(F?, V),
+    inst_lookup(Xs?, B?, K?, J?, Vs).
 %% The people of each listed role at the state S of its base person, in the order of the roles: the persons q with rho(q, u_2, ..., u_r) in S, u_2, ..., u_r as the binding B0 binds them, in the order of identifiers (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
-procedure listed_people(Constant?, Binding?, GAtoms?, PeerLists).
+procedure listed_people(Constant?, Binding?, GAtoms?, LLists).
 listed_people(Nm, B0, S, Ls?) :- schema_entry(Nm?, E), listed_people1(E?, B0?, S?, Ls).
-procedure listed_people1(Schema?, Binding?, GAtoms?, PeerLists).
+procedure listed_people1(Schema?, Binding?, GAtoms?, LLists).
 listed_people1(schema(_, _, _), _, _, []).
 listed_people1(lschema(_, _, _, Lsts), B0, S, Ls?) :- lists_at(Lsts?, B0?, S?, Ls).
-procedure lists_at(Listings?, Binding?, GAtoms?, PeerLists).
+procedure lists_at(Listings?, Binding?, GAtoms?, LLists).
 lists_at([], _, _, []).
-lists_at([listing(_, _, Rho, As)|Lsts], B0, S, [L?|Ls?]) :- ground(B0?), ground(S?) |
-    list_at(Rho?, As?, B0?, S?, L),
+lists_at([listing(I, _, Rho, As, Phi, _, _)|Lsts], B0, S, [ppl(L?)|Ls?]) :- ground(B0?), ground(S?) |
+    list_at(I?, Rho?, As?, Phi?, B0?, S?, L),
     lists_at(Lsts?, B0?, S?, Ls).
-procedure list_at(Constant?, Vars?, Binding?, GAtoms?, List(Peer)).
-list_at(Rho, As, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) |
+lists_at([instances(_, _, Xs, A, Phi, _, _)|Lsts], B0, S, [ins(L?)|Ls?]) :- ground(B0?), ground(S?) |
+    inst_at(Xs?, A?, Phi?, B0?, S?, L),
+    lists_at(Lsts?, B0?, S?, Ls).
+%% The instances of a conjunct at the state S of its base person under the binding B0, each restricted to the variables Xs its literals name, without repetition, in the order of terms: the assignments of the variables its quantifier binds under which S holds its anchor A and its condition Phi holds (vGLP fe12932, Section 5.4, "Speech-act schemas as local specifications": "A quantifier of a schema is evaluated at the person holding its anchor: an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds"; "the attempt names them, each restricted to the variables the conjunct's literals name and without repetition").  Every variable the quantifier binds is an argument of its anchor, so each binding matching A gives each a value, under which Phi is evaluated before the instance is restricted.
+procedure inst_at(Vars?, SAtom?, Form?, Binding?, GAtoms?, Insts).
+inst_at(Xs, A, Phi, B0, S, L?) :- ground(Xs?), ground(A?), ground(B0?), ground(S?) |
+    match_into(A?, S?, B0?, Bs0),
+    phi_binds(Bs0?, Phi?, S?, Bs),
+    inst_vals(Bs?, Xs?, Is1),
+    sort_insts(Is1?, Is2),
+    dedup(Is2?, L).
+procedure phi_binds(Bindings?, Form?, GAtoms?, Bindings).
+phi_binds([], _, _, []).
+phi_binds([B|Bs], Phi, S, R?) :- ground(B?), ground(Phi?), ground(S?) |
+    form_holds(Phi?, B?, S?, H),
+    phi_binds(Bs?, Phi?, S?, R1),
+    keep_binding(H?, B?, R1?, R).
+%% The values each binding of Bs gives the variables Xs, where it gives each one.
+procedure inst_vals(Bindings?, Vars?, Insts).
+inst_vals([], _, []).
+inst_vals([B|Bs], Xs, Is?) :- ground(B?), ground(Xs?) |
+    vals_of(Xs?, B?, Vs, All),
+    inst_vals(Bs?, Xs?, Is1),
+    keep_inst(All?, Vs?, Is1?, Is).
+procedure vals_of(Vars?, Binding?, Vals, YesNo).
+vals_of([], _, [], yes).
+vals_of([X|Xs], B, Vs?, All?) :- ground(B?) |
+    lookup(X?, B?, F),
+    vals_of(Xs?, B?, Vs1, All1),
+    found_val(F?, Vs1?, All1?, Vs, All).
+procedure found_val(Found?, Vals?, YesNo?, Vals, YesNo).
+found_val(found(V), Vs, A, [V?|Vs?], A?).
+found_val(free, Vs, _, Vs?, no).
+procedure keep_inst(YesNo?, Vals?, Insts?, Insts).
+keep_inst(yes, V, Is, [V?|Is?]).
+keep_inst(no, _, Is, Is?).
+%% The binding B0 with the variables Xs given the values of an instance.
+procedure inst_bind(Vars?, Vals?, Binding?, Binding).
+inst_bind([], _, B0, B0?).
+inst_bind([_|_], [], B0, B0?).
+inst_bind([X|Xs], [V|Vs], B0, [b(X?, V?)|B?]) :- inst_bind(Xs?, Vs?, B0?, B).
+%% The people of the listed role of index I at the state S of its base person under the binding B0: the persons q with rho(q, u_2, ..., u_r) in S at which the condition Phi of its quantifier holds, q in the role, in the order of identifiers.
+procedure list_at(Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, List(Peer)).
+list_at(I, Rho, As, Phi, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) |
     img_args(As?, B0?, Vs),
     listing_in(S?, Rho?, Vs?, Ps0),
-    sort_peers(Ps0?, Ps1),
+    phi_people(Ps0?, I?, Phi?, B0?, S?, Ps00),
+    sort_peers(Ps00?, Ps1),
     dedup(Ps1?, L).
+procedure phi_people(Peers?, Integer?, Form?, Binding?, GAtoms?, Peers).
+phi_people([], _, _, _, _, []).
+phi_people([Q|Qs], I, Phi, B0, S, R?) :- ground(Q?), integer(I?), ground(Phi?), ground(B0?), ground(S?) |
+    form_holds(Phi?, [b(role(I?), p(Q?))|B0?], S?, H),
+    phi_people(Qs?, I?, Phi?, B0?, S?, R1),
+    keep_peer(H?, Q?, R1?, R).
 procedure listing_in(GAtoms?, Constant?, Vals?, Peers).
 listing_in([], _, _, []).
 listing_in([g(F, [p(Q)|Xs])|Gs], Rho, Vs, Ps?) :- ground(F?), ground(Xs?), ground(Rho?), ground(Vs?) |
@@ -4447,16 +5045,28 @@ listing_ok1(schema(_, _, _), _, _, _, yes).
 listing_ok1(lschema(_, _, _, Lsts), B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 procedure listings_ok(Listings?, Binding?, Peer?, GAtoms?, YesNo).
 listings_ok([], _, _, _, yes).
-listings_ok([listing(I, Bi, Rho, As)|Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) |
+listings_ok([listing(I, Bi, Rho, As, Phi, _, _)|Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) |
     role_person(Bi?, B?, P),
     same(P?, Id?, Base),
-    listing_one(Base?, I?, Rho?, As?, B?, S?, Ok1),
+    listing_one(Base?, I?, Rho?, As?, Phi?, B?, S?, Ok1),
     listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
-procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Binding?, GAtoms?, YesNo).
-listing_one(no, _, _, _, _, _, yes).
-listing_one(yes, I, Rho, As, B, S, Ok?) :- ground(B?) |
+%% For the person p in the base of a conjunct whose instances the attempt names, "the instances in d_p of each conjunct of which p's role is the base, and that is not local to one role, being exactly those in L" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
+listings_ok([instances(K, Bi, Xs, A, Phi, _, _)|Lsts], B, Id, S, Ok?) :- ground(B?), ground(Id?), ground(S?) |
+    role_person(Bi?, B?, P),
+    same(P?, Id?, Base),
+    inst_one(Base?, K?, Xs?, A?, Phi?, B?, S?, Ok1),
+    listings_ok1(Ok1?, Lsts?, B?, Id?, S?, Ok).
+procedure inst_one(YesNo?, Integer?, Vars?, SAtom?, Form?, Binding?, GAtoms?, YesNo).
+inst_one(no, _, _, _, _, _, _, yes).
+inst_one(yes, K, Xs, A, Phi, B, S, Ok?) :- ground(B?), integer(K?), ground(Xs?) |
+    insts_of(B?, K?, Xs?, L),
+    inst_at(Xs?, A?, Phi?, B?, S?, L1),
+    same(L?, L1?, Ok).
+procedure listing_one(YesNo?, Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, YesNo).
+listing_one(no, _, _, _, _, _, _, yes).
+listing_one(yes, I, Rho, As, Phi, B, S, Ok?) :- ground(B?), integer(I?) |
     copies_of(B?, I?, L),
-    list_at(Rho?, As?, B?, S?, L1),
+    list_at(I?, Rho?, As?, Phi?, B?, S?, L1),
     same(L?, L1?, Ok).
 procedure listings_ok1(YesNo?, Listings?, Binding?, Peer?, GAtoms?, YesNo).
 listings_ok1(no, _, _, _, _, no).
@@ -4501,6 +5111,8 @@ procedure s_cleared(SAtom?, YesNo).
 s_cleared(atom(_, Vs), C?) :- vars_wild(Vs?, C).
 s_cleared(times(_, A), C?) :- s_cleared(A?, C).
 s_cleared(rest(_, _, A), C?) :- s_cleared(A?, C).
+%% A conditional literal deleted is not required, the state need not hold it (opt).
+s_cleared(opt(_), yes).
 procedure vars_wild(Vars?, YesNo).
 vars_wild([], no).
 vars_wild([any|_], yes).
@@ -4512,6 +5124,8 @@ vars_wild1(no, Vs, C?) :- vars_wild(Vs?, C).
 procedure snt_wild(NTerm?, YesNo).
 snt_wild(own(_), no).
 snt_wild(own_var(_), no).
+snt_wild(own_iv(_), no).
+snt_wild(ext_iv(N, _), C?) :- snt_wild(N?, C).
 snt_wild(ext(N, _), C?) :- snt_wild(N?, C).
 snt_wild(ext_any(_), yes).
 procedure rs_forb(RoleSpec?, SAtoms).
@@ -4524,6 +5138,7 @@ found_peer(found(p(P)), P?).
 found_peer(found(s(_)), unbound).
 found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
+found_peer(found(r(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -4544,6 +5159,7 @@ img_one(times(V, A), B, Gs?) :- ground(B?) |
     num_of(V?, B?, K),
     img_one(A?, B?, G1),
     copies(K?, G1?, Gs).
+img_one(opt(A), B, Gs?) :- img_one(A?, B?, Gs).
 img_one(rest(V, J, A), B, Gs?) :- ground(B?) |
     num_of(V?, B?, K),
     num_of(J?, B?, I),
@@ -4565,6 +5181,7 @@ procedure img_atom(SAtom?, Binding?, GAtom).
 img_atom(atom(P, Vs), B, g(P?, Xs?)) :- img_args(Vs?, B?, Xs).
 img_atom(times(_, A), B, G?) :- img_atom(A?, B?, G).
 img_atom(rest(_, _, A), B, G?) :- img_atom(A?, B?, G).
+img_atom(opt(A), B, G?) :- img_atom(A?, B?, G).
 procedure img_args(Vars?, Binding?, Vals).
 img_args([], _, []).
 img_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
@@ -4586,6 +5203,10 @@ img_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?) |
 procedure nt_img(NTerm?, Binding?, CName).
 nt_img(own(I), B, community(P?)) :- role_person(I?, B?, P).
 nt_img(own_var(X), B, community(P?)) :- val_peer(pvar(X?), B?, unbound, P).
+nt_img(own_iv(V), B, community(P?)) :- val_peer(V?, B?, unbound, P).
+nt_img(ext_iv(N, V), B, dot(C?, S?)) :- ground(B?) |
+    nt_img(N?, B?, C),
+    val_speech(V?, B?, unbound, S).
 nt_img(ext_any(N), B, dot_any(C?)) :- nt_img(N?, B?, C).
 nt_img(ext(N, Y), B, dot(C?, S?)) :- ground(B?) |
     nt_img(N?, B?, C),
@@ -4594,6 +5215,8 @@ nt_img(ext(N, Y), B, dot(C?, S?)) :- ground(B?) |
 procedure nt_vars(NTerm?, Vars).
 nt_vars(own(I), [role(I?)]).
 nt_vars(own_var(X), [pvar(X?)]).
+nt_vars(own_iv(V), [V?]).
+nt_vars(ext_iv(N, V), Vs?) :- nt_vars(N?, Vs0), app(Vs0?, [V?], Vs).
 nt_vars(ext(N, Y), Vs?) :- nt_vars(N?, Vs0), app(Vs0?, [svar(Y?)], Vs).
 %% The wildcard of N.* is no variable.
 nt_vars(ext_any(N), Vs?) :- nt_vars(N?, Vs).
@@ -4618,9 +5241,10 @@ procedure atom_bound(SAtom?, Binding?, YesNo).
 atom_bound(atom(_, Vs), B, R?) :- vars_bound(Vs?, B?, R).
 atom_bound(times(_, A), B, R?) :- atom_bound(A?, B?, R).
 atom_bound(rest(_, _, A), B, R?) :- atom_bound(A?, B?, R).
+atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
-vars_bound([num(X)|Vs], B, R?) :- integer(X?) | vars_bound(Vs?, B?, R).
+vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),
@@ -4649,6 +5273,7 @@ procedure match_into(SAtom?, GAtoms?, Binding?, Bindings).
 match_into(times(V, A), Gs, B, R?) :- ground(V?), ground(A?), ground(Gs?), ground(B?) |
     match_into(A?, Gs?, B?, Bs),
     count_bind(Bs?, V?, A?, Gs?, R).
+match_into(opt(A), Gs, B, R?) :- match_into(A?, Gs?, B?, R).
 match_into(rest(V, _, A), Gs, B, R?) :- ground(V?), ground(A?), ground(Gs?), ground(B?) |
     match_into(A?, Gs?, B?, Bs),
     count_bind(Bs?, V?, A?, Gs?, R).
@@ -4677,7 +5302,7 @@ match_args([sgn(Y, I)|Vs], [X|Xs], B, R?) :- ground(Y?), ground(I?), ground(X?),
 match_args([nterm(N)|Vs], [X|Xs], B, R?) :- ground(N?), ground(X?), ground(B?) |
     name_parts(N?, X?, Ps),
     match_name(Ps?, Vs?, Xs?, B?, R).
-match_args([num(X)|Vs], [Y|Ys], B, R?) :- integer(X?), ground(Y?), ground(B?) |
+match_args([num(X)|Vs], [Y|Ys], B, R?) :- number(X?), ground(Y?), ground(B?) |
     lit_val(X?, Y?, E),
     lit_then(E?, Vs?, Ys?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of the image of a cleared atom, and nothing else, binding nothing: the deleted atoms of a class carry the images of the cleared atoms of its schema-bindings (joins), and a schema-binding found by matching them has the same cleared atoms.
@@ -4689,8 +5314,9 @@ match_args([V|Vs], [X|Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B
     kind_ok(V?, X?, K),
     match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
 %% A number in an atom of a schema matches that number.
-procedure lit_val(Integer?, Val?, YesNo).
+procedure lit_val(Number?, Val?, YesNo).
 lit_val(X, n(K), yes) :- X? =:= K? | true.
+lit_val(X, r(K), yes) :- X? =:= K? | true.
 lit_val(_, _, no) :- otherwise | true.
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
@@ -4719,15 +5345,21 @@ name_parts(N, c(C), Ps?) :- nt_parts(N?, C?, Ps).
 name_parts(_, p(_), noparts).
 name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
+name_parts(_, r(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 procedure nt_parts(NTerm?, CName?, NameParts).
 nt_parts(own(I), community(P), parts([role(I?)], [p(P?)])).
 nt_parts(own_var(X), community(P), parts([pvar(X?)], [p(P?)])).
+nt_parts(own_iv(V), community(P), parts([V?], [p(P?)])).
+nt_parts(ext_iv(N, V), dot(C, S), Ps?) :- nt_parts(N?, C?, Ps0), nt_more_v(Ps0?, V?, S?, Ps).
 nt_parts(ext(N, Y), dot(C, S), Ps?) :- nt_parts(N?, C?, Ps0), nt_more(Ps0?, Y?, S?, Ps).
 %% N.* matches the image of N.*, dot_any(C), its wildcard binding nothing.
 nt_parts(ext_any(N), dot_any(C), Ps?) :- nt_parts(N?, C?, Ps).
 nt_parts(_, _, noparts) :- otherwise | true.
+procedure nt_more_v(NameParts?, Var?, Speech?, NameParts).
+nt_more_v(parts(Vs, Xs), V, S, parts(Vs1?, Xs1?)) :- app(Vs?, [V?], Vs1), app(Xs?, [s(S?)], Xs1).
+nt_more_v(noparts, _, _, noparts).
 procedure nt_more(NameParts?, Constant?, Speech?, NameParts).
 nt_more(parts(Vs, Xs), Y, S, parts(Vs1?, Xs1?)) :- app(Vs?, [svar(Y?)], Vs1), app(Xs?, [s(S?)], Xs1).
 nt_more(noparts, _, _, noparts).
@@ -4740,6 +5372,7 @@ sgn_parts(s(speech(utterance(_), _)), unsigned).
 sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
+sgn_parts(r(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
@@ -4769,18 +5402,25 @@ kind_ok(pvar(_), c(_), no).
 kind_ok(svar(_), c(_), no).
 %% A numeric variable matches a number, an agent variable a person and a speech-act variable a speech act; and each matches lv(S, X), which a schema-binding gives a variable local to a role (local_norm), a variable not local to a role so matched being no schema-binding of the class (lv_wrong); and nothing else matches either.
 kind_ok(num(_), n(_), yes).
+kind_ok(num(_), r(_), yes).
 kind_ok(num(_), lv(_, _), yes).
 kind_ok(num(_), p(_), no).
 kind_ok(num(_), s(_), no).
 kind_ok(num(_), c(_), no).
 kind_ok(role(_), n(_), no).
+kind_ok(role(_), r(_), no).
 kind_ok(role(_), lv(_, _), no).
 kind_ok(pvar(_), n(_), no).
+kind_ok(pvar(_), r(_), no).
 kind_ok(pvar(_), lv(_, _), yes).
 kind_ok(svar(_), n(_), no).
+kind_ok(svar(_), r(_), no).
 kind_ok(svar(_), lv(_, _), yes).
 kind_ok(sgn(_, _), n(_), no).
+kind_ok(sgn(_, _), r(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
+%% A variable a conjunct's quantifier binds, at an instance, matches as the variable does (inst_binds).
+kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.
 kind_ok(any, _, no).
 kind_ok(V, any, no) :- ground(V?) | true.
@@ -4794,6 +5434,7 @@ val_peer1(found(p(P)), _, P?).
 val_peer1(found(s(_)), D, D?).
 val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
+val_peer1(found(r(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -4804,6 +5445,7 @@ val_speech1(found(s(S)), _, S?).
 val_speech1(found(p(_)), D, speech(utterance(none), D?)).
 val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
+val_speech1(found(r(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -4814,10 +5456,11 @@ val_speech1(found(any), D, speech(utterance(none), D?)).
 
 %% The number a binding gives a numeric argument: the number itself, n(K) bound to the variable, or none.
 procedure num_of(Var?, Binding?, NumRes).
-num_of(num(X), _, num_is(N?)) :- integer(X?) | N := X?.
+num_of(num(X), _, num_is(N?)) :- number(X?) | N := X?.
 num_of(V, B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), num_found(F?, R).
 procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
+num_found(found(r(K)), num_is(K?)).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -4828,13 +5471,22 @@ num_found(found(any), no_num).
 procedure val_num(Var?, Binding?, Integer).
 val_num(V, B, K?) :- num_of(V?, B?, R), num_val(R?, K).
 procedure num_val(NumRes?, Integer).
-num_val(num_is(K), K?).
-num_val(no_num, 0).
+num_val(num_is(K), I?) :- integer(K?) | I := integer(K?).
+num_val(_, 0) :- otherwise | true.
+%% The real of a real variable of a class term, written in the term (class_of), a whole number found there taken as a real; 0.0 where none is bound.
+procedure val_real(Var?, Binding?, Real).
+val_real(V, B, K?) :- ground(B?) | lookup(V?, B?, F), real_found(F?, K).
+procedure real_found(Found?, Real).
+real_found(found(r(K)), K?).
+real_found(_, 0.0) :- otherwise | true.
 %% Whether the constraint holds under the binding, every number it names bound: and(C1, C2), C1 and C2; eq(X, Y), X = Y; le(X, Y), X =< Y; lt(X, Y), X < Y; ge(X, Y), X >= Y; gt(X, Y), X > Y; succ(X, Y), Y = X + 1; or(C1, C2), C1 or C2, X and Y the values of the expressions under the binding.  A number not bound makes a comparison false.
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
 con_holds(and(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), and(R1?, R2?, R).
-con_holds(eq(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_eq(A?, C?, R).
+con_holds(eq(X, Y), B, R?) :- ground(B?), ground(X?), ground(Y?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), eq_vals(A?, C?, X?, Y?, B?, R).
+con_holds(ne(X, Y), B, R?) :- ground(B?), ground(X?), ground(Y?) | con_holds(eq(X?, Y?), B?, R1), ne_vals(R1?, X?, Y?, B?, R).
+con_holds(not(C), B, R?) :- con_holds(C?, B?, R1), neg(R1?, R).
+con_holds(implies(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), neg(R1?, N1), or(N1?, R2?, R).
 con_holds(le(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_le(A?, C?, R).
 con_holds(lt(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_gt(C?, A?, R).
 con_holds(ge(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_le(C?, A?, R).
@@ -4844,6 +5496,44 @@ con_holds(or(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C
 %% A signing condition, evaluated at the binding: signed(U, Y) holds where the person the binding gives U is the signer of the speech act it gives Y or of a speech act inside it, and unsigned(U, Y) where that person is not (GSC 10fcc92, def:numbers: "signed(u, y) holding when beta(u) is the signer of beta(y) or of a speech act inside it and unsigned(u, y) otherwise"; vGLP dd37d2a, Section 5.4).  A person or a speech act not bound makes either false, as a number not bound makes a comparison false.
 con_holds(signed(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, yes, R).
 con_holds(unsigned(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, no, R).
+%% Two expressions are equal where both are numbers and equal, or neither is and they are one person, one speech act or one community name under the binding ("eq and ne also compare two agent variables, two speech-act variables or two name terms", GSC c8c5ead, def:numbers); a variable the binding leaves free makes either false, as a number not bound makes a comparison false.
+procedure eq_vals(NumRes?, NumRes?, Expr?, Expr?, Binding?, YesNo).
+eq_vals(num_is(A), num_is(C), _, _, _, R?) :- num_eq(num_is(A?), num_is(C?), R).
+eq_vals(no_num, no_num, X, Y, B, R?) :- ground(B?) | expr_term(X?, B?, U), expr_term(Y?, B?, V), same_term(U?, V?, R).
+eq_vals(_, _, _, _, _, no) :- otherwise | true.
+procedure ne_vals(YesNo?, Expr?, Expr?, Binding?, YesNo).
+ne_vals(yes, _, _, _, no).
+ne_vals(no, X, Y, B, R?) :- ground(B?) | expr_bound(X?, B?, R1), expr_bound(Y?, B?, R2), and(R1?, R2?, R).
+%% The value of an expression that names no number: a person, a speech act or a community name, found(V), or free where the binding leaves it free.
+procedure expr_term(Expr?, Binding?, Found).
+expr_term(nterm(N), B, found(c(C?))) :- ground(B?), ground(N?) | nt_vars(N?, Vs), vars_bound(Vs?, B?, Bd), nt_term(Bd?, N?, B?, C).
+expr_term(E, B, F?) :- otherwise | expr_term1(E?, B?, F).
+procedure expr_term1(Expr?, Binding?, Found).
+expr_term1(role(I), B, F?) :- lookup(role(I?), B?, F).
+expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
+expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
+expr_term1(_, _, free) :- otherwise | true.
+procedure nt_term(YesNo?, NTerm?, Binding?, CName).
+nt_term(yes, N, B, C?) :- nt_img(N?, B?, C).
+nt_term(no, _, _, dot_any(community(unbound))).
+procedure same_term(Found?, Found?, YesNo).
+same_term(found(U), found(V), R?) :- ground(U?), ground(V?) | bound_val(U?, BU), bound_val(V?, BV), and(BU?, BV?, Bb), same_if(Bb?, U?, V?, R).
+same_term(_, _, no) :- otherwise | true.
+procedure same_if(YesNo?, Val?, Val?, YesNo).
+same_if(yes, U, V, R?) :- same(U?, V?, R).
+same_if(no, _, _, no).
+procedure bound_val(Val?, YesNo).
+bound_val(lv(_, _), no).
+bound_val(any, no).
+bound_val(c(dot_any(_)), no).
+bound_val(_, yes) :- otherwise | true.
+%% Whether an expression has a value under the binding, a number or a term.
+procedure expr_bound(Expr?, Binding?, YesNo).
+expr_bound(E, B, R?) :- ground(E?), ground(B?) | expr_val(E?, B?, N), expr_term(E?, B?, T), has_value(N?, T?, R).
+procedure has_value(NumRes?, Found?, YesNo).
+has_value(num_is(_), _, yes).
+has_value(no_num, found(V), R?) :- bound_val(V?, R).
+has_value(no_num, free, no).
 procedure signing(Found?, Found?, YesNo?, YesNo).
 signing(found(p(P)), found(s(S)), W, R?) :- ground(S?) | signed_by(P?, S?, G), same(G?, W?, R).
 signing(_, _, _, no) :- otherwise | true.
@@ -4858,6 +5548,12 @@ expr_val(plus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?
 expr_val(minus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(minus, A?, C?, R).
 expr_val(mul(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(mul, A?, C?, R).
 expr_val(num(X), B, R?) :- ground(B?) | num_of(num(X?), B?, R).
+%% min and floor, the functions of the value types the paper names (vGLP 9ee6f87, Section 5.4); a count or a sum not taken in a state, which con_counted replaces by its value, has none.
+expr_val(fn(min, [X, Y]), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(min, A?, C?, R).
+expr_val(fn(floor, [X]), B, R?) :- expr_val(X?, B?, A), num_floor(A?, R).
+expr_val(fn(_, _), _, no_num) :- otherwise | true.
+expr_val(cardinality(_, _, _, _), _, no_num).
+expr_val(sum(_, _, _, _, _), _, no_num).
 expr_val(role(_), _, no_num).
 expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
@@ -4865,11 +5561,18 @@ expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 %% The wildcard of a cleared atom is in no constraint (GSC 327e035); the clause covers the type.
 expr_val(any, _, no_num).
+expr_val(inst(_, _, _), _, no_num).
 procedure num_op(Constant?, NumRes?, NumRes?, NumRes).
-num_op(plus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := A? + C?.
-num_op(minus, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := A? - C?.
-num_op(mul, num_is(A), num_is(C), num_is(K?)) :- integer(A?), integer(C?) | K := A? * C?.
+num_op(plus, num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?) | K := A? + C?.
+num_op(minus, num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?) | K := A? - C?.
+num_op(mul, num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?) | K := A? * C?.
+num_op(min, num_is(A), num_is(C), num_is(A?)) :- number(A?), number(C?), A? =< C? | true.
+num_op(min, num_is(A), num_is(C), num_is(C?)) :- number(A?), number(C?), A? > C? | true.
 num_op(_, _, _, no_num) :- otherwise | true.
+procedure num_floor(NumRes?, NumRes).
+num_floor(num_is(A), num_is(A?)) :- integer(A?) | true.
+num_floor(num_is(A), num_is(K?)) :- real(A?) | K := floor(A?).
+num_floor(_, no_num) :- otherwise | true.
 procedure num_eq(NumRes?, NumRes?, YesNo).
 num_eq(num_is(A), num_is(C), yes) :- A? =:= C? | true.
 num_eq(_, _, no) :- otherwise | true.
@@ -4880,7 +5583,7 @@ procedure num_le(NumRes?, NumRes?, YesNo).
 num_le(num_is(A), num_is(C), yes) :- A? =< C? | true.
 num_le(_, _, no) :- otherwise | true.
 procedure num_succ(NumRes?, NumRes?, YesNo).
-num_succ(num_is(A), num_is(C), R?) :- integer(A?), integer(C?) | A1 := A? + 1, same_int(A1?, C?, R).
+num_succ(num_is(A), num_is(C), R?) :- integer(A?), integer(C?) | A1 := integer(A?) + 1, C1 := integer(C?), same_int(A1?, C1?, R).
 num_succ(_, _, no) :- otherwise | true.
 %% The constraint the agent Id checks for the schema-binding B: "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): the constraint where it is local to every role, or to a role sent to Id, and true otherwise.
 procedure con_at(Constant?, Binding?, Peer?, Constraint).
@@ -4896,6 +5599,57 @@ con_at0(numeric(C, _, at(I)), B, Id, C1?) :- ground(B?) |
 procedure con_if(YesNo?, Constraint?, Constraint).
 con_if(yes, C, C?).
 con_if(no, _, true).
+%% The constraint with each count and each sum replaced by its value in the state Sh under the binding B: the count of the instances of its anchor A at which its condition Phi holds, an instance being an assignment of the variables it binds under which Sh holds A, each counted as many times as Sh holds that copy of A (match_into gives one binding for each copy); the sum of the numeric term U over them likewise (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds"; "the count and the sum of the instances of a quantifier, each instance counted as many times as its anchor's multiplicity").  A count or a sum is local to the role holding its anchor (local.glp, con_counts), so Sh is the state of the person in that role.
+procedure con_counted(Constraint?, Binding?, GAtoms?, Constraint).
+con_counted(true, _, _, true).
+con_counted(and(C1, C2), B, Sh, and(D1?, D2?)) :- ground(B?), ground(Sh?) | con_counted(C1?, B?, Sh?, D1), con_counted(C2?, B?, Sh?, D2).
+con_counted(or(C1, C2), B, Sh, or(D1?, D2?)) :- ground(B?), ground(Sh?) | con_counted(C1?, B?, Sh?, D1), con_counted(C2?, B?, Sh?, D2).
+con_counted(implies(C1, C2), B, Sh, implies(D1?, D2?)) :- ground(B?), ground(Sh?) | con_counted(C1?, B?, Sh?, D1), con_counted(C2?, B?, Sh?, D2).
+con_counted(not(C), B, Sh, not(D?)) :- con_counted(C?, B?, Sh?, D).
+con_counted(eq(X, Y), B, Sh, eq(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(ne(X, Y), B, Sh, ne(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(le(X, Y), B, Sh, le(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(lt(X, Y), B, Sh, lt(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(ge(X, Y), B, Sh, ge(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(gt(X, Y), B, Sh, gt(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+con_counted(succ(X, Y), _, _, succ(X?, Y?)).
+con_counted(signed(X, Y), _, _, signed(X?, Y?)).
+con_counted(unsigned(X, Y), _, _, unsigned(X?, Y?)).
+procedure expr_counted(Expr?, Binding?, GAtoms?, Expr).
+expr_counted(plus(X, Y), B, Sh, plus(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+expr_counted(minus(X, Y), B, Sh, minus(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+expr_counted(mul(X, Y), B, Sh, mul(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
+expr_counted(fn(F, Es), B, Sh, fn(F?, Ds?)) :- exprs_counted(Es?, B?, Sh?, Ds).
+expr_counted(cardinality(_, _, A, F), B, Sh, num(K?)) :- ground(A?), ground(F?), ground(B?), ground(Sh?) |
+    match_into(A?, Sh?, B?, Bs),
+    count_holding(Bs?, F?, Sh?, 0, K).
+expr_counted(sum(_, _, A, F, U), B, Sh, num(K?)) :- ground(A?), ground(F?), ground(U?), ground(B?), ground(Sh?) |
+    match_into(A?, Sh?, B?, Bs),
+    sum_holding(Bs?, F?, U?, Sh?, 0, K).
+expr_counted(E, _, _, E?) :- otherwise | true.
+procedure exprs_counted(Exprs?, Binding?, GAtoms?, Exprs).
+exprs_counted([], _, _, []).
+exprs_counted([E|Es], B, Sh, [D?|Ds?]) :- ground(B?), ground(Sh?) | expr_counted(E?, B?, Sh?, D), exprs_counted(Es?, B?, Sh?, Ds).
+procedure count_holding(Bindings?, Form?, GAtoms?, Integer?, Integer).
+count_holding([], _, _, K, K?).
+count_holding([B|Bs], F, Sh, K0, K?) :- ground(F?), ground(Sh?), integer(K0?) |
+    form_holds(F?, B?, Sh?, H),
+    count_add(H?, K0?, K1),
+    count_holding(Bs?, F?, Sh?, K1?, K).
+procedure count_add(YesNo?, Integer?, Integer).
+count_add(yes, K0, K?) :- K := K0? + 1.
+count_add(no, K0, K0?).
+procedure sum_holding(Bindings?, Form?, Expr?, GAtoms?, Number?, Number).
+sum_holding([], _, _, _, K, K?).
+sum_holding([B|Bs], F, U, Sh, K0, K?) :- ground(B?), ground(F?), ground(U?), ground(Sh?), number(K0?) |
+    form_holds(F?, B?, Sh?, H),
+    expr_counted(U?, B?, Sh?, U1),
+    expr_val(U1?, B?, V),
+    sum_add(H?, V?, K0?, K1),
+    sum_holding(Bs?, F?, U?, Sh?, K1?, K).
+procedure sum_add(YesNo?, NumRes?, Number?, Number).
+sum_add(yes, num_is(V), K0, K?) :- number(V?), number(K0?) | K := K0? + V?.
+sum_add(_, _, K0, K0?) :- otherwise | true.
 %% Whether the schema-binding B can hold its constraint: where the constraint names no variable local to a role, every number it names is bound by B, and it holds under B or the schema-binding determines no transaction; where it names some, a state binds them, and that is asked of the state (dom_bindings).
 procedure con_live(Constant?, Binding?, YesNo).
 con_live(Nm, B, V?) :- ground(Nm?) | schema_numeric(Nm?, N), con_live1(N?, B?, V).
@@ -4938,6 +5692,9 @@ con_ext1(succ(X, Y), B, Bs?) :- ground(B?), ground(X?), ground(Y?) |
     succ_ext(A?, C?, X?, Y?, B?, Bs).
 con_ext1(signed(_, _), B, [B?]).
 con_ext1(unsigned(_, _), B, [B?]).
+con_ext1(not(_), B, [B?]).
+con_ext1(implies(_, _), B, [B?]).
+con_ext1(ne(_, _), B, [B?]).
 con_ext1(or(C1, C2), B, Bs?) :- ground(B?) |
     con_ext1(C1?, B?, Bs1),
     con_ext1(C2?, B?, Bs2),
@@ -4959,8 +5716,9 @@ eq_ext1([V], X, Y, B, Bs?) :- ground(V?), ground(X?), ground(Y?), ground(B?) |
 eq_ext1(_, _, _, B, [B?]) :- otherwise | true.
 procedure eq_solve(NumRes?, NumRes?, Var?, Binding?, Bindings).
 eq_solve(num_is(D0), num_is(D1), V, B, Bs?) :- integer(D0?), integer(D1?) |
-    C := D1? - D0?,
-    eq_solve1(C?, D0?, V?, B?, Bs).
+    C := integer(D1?) - integer(D0?),
+    D := integer(D0?),
+    eq_solve1(C?, D?, V?, B?, Bs).
 eq_solve(_, _, _, B, [B?]) :- otherwise | true.
 procedure eq_solve1(Integer?, Integer?, Var?, Binding?, Bindings).
 eq_solve1(C, D0, V, B, [[b(V?, n(K?))|B?]]) :- C? =\= 0, D0? mod C? =:= 0 | K := (0 - D0?) // C?.
@@ -4970,7 +5728,7 @@ procedure expr_free(Expr?, Binding?, Vars?, Vars).
 expr_free(plus(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
 expr_free(minus(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
 expr_free(mul(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
-expr_free(num(X), _, F0, F0?) :- integer(X?) | true.
+expr_free(num(X), _, F0, F0?) :- number(X?) | true.
 expr_free(num(X), B, F0, F?) :- otherwise, ground(X?), ground(B?), ground(F0?) |
     num_of(num(X?), B?, R),
     leaf_free1(R?, num(X?), F0?, F).
@@ -4980,6 +5738,13 @@ expr_free(svar(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).
+expr_free(inst(_, _, _), _, F0, F0?).
+expr_free(fn(_, Es), B, F0, F?) :- ground(B?) | exprs_free(Es?, B?, F0?, F).
+expr_free(cardinality(_, _, _, _), _, F0, F0?).
+expr_free(sum(_, _, _, _, _), _, F0, F0?).
+procedure exprs_free(Exprs?, Binding?, Vars?, Vars).
+exprs_free([], _, F0, F0?).
+exprs_free([E|Es], B, F0, F?) :- ground(B?) | expr_free(E?, B?, F0?, F1), exprs_free(Es?, B?, F1?, F).
 procedure leaf_free1(NumRes?, Var?, Vars?, Vars).
 leaf_free1(num_is(_), _, F0, F0?).
 leaf_free1(no_num, V, F0, F?) :- ground(V?), ground(F0?) | var_in(V?, F0?, In), add_var(In?, V?, F0?, F).
@@ -4991,8 +5756,8 @@ procedure add_var(YesNo?, Var?, Vars?, Vars).
 add_var(yes, _, F0, F0?).
 add_var(no, V, F0, [V?|F0?]).
 procedure succ_ext(NumRes?, NumRes?, Var?, Var?, Binding?, Bindings).
-succ_ext(num_is(A), no_num, _, Y, B, [[b(Y?, n(A1?))|B?]]) :- integer(A?) | A1 := A? + 1.
-succ_ext(no_num, num_is(C), X, _, B, [[b(X?, n(C1?))|B?]]) :- integer(C?) | C1 := C? - 1.
+succ_ext(num_is(A), no_num, _, Y, B, [[b(Y?, n(A1?))|B?]]) :- integer(A?) | A1 := integer(A?) + 1.
+succ_ext(no_num, num_is(C), X, _, B, [[b(X?, n(C1?))|B?]]) :- integer(C?) | C1 := integer(C?) - 1.
 succ_ext(_, _, _, _, B, [B?]) :- otherwise | true.
 %% Whether the binding binds a number to every numeric variable of the schema's head, its variables local to a role apart, which the compiler leaves out of it.
 procedure nums_bound(Constant?, Binding?, YesNo).

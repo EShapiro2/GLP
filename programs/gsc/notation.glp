@@ -82,7 +82,9 @@ c_arg(svar(X), _, T, [X?|T?]).
 c_arg(nterm(S), Ns, T, R?) :- c_nt(S?, Ns?, T?, R).
 c_arg(sgn(X, J), Ns, T, ['sgn(', X?, ', '|R?]) :- c_name(J?, Ns?, [')'|T?], R).
 c_arg(num(X), _, T, [X?|T?]).
+c_arg(real(X), _, T, [X?|T?]).
 c_arg(any, _, T, ['_'|T?]).
+c_arg(item_of(Y), Ns, T, ['item('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 
 % The arguments, each after a comma.
 procedure c_rest(Args?, NameOfs?, RChunks?, RChunks).
@@ -335,6 +337,7 @@ c_constraint(signed(U, Y), Ns, T, ['signed('|R?]) :- ground(Ns?) |
 c_constraint(unsigned(U, Y), Ns, T, ['unsigned('|R?]) :- ground(Ns?) |
     c_arg(Y?, Ns?, [')'|T?], R1),
     c_arg(U?, Ns?, [', '|R1?], R).
+c_constraint(program(X), Ns, T, ['program('|R?]) :- c_expr(X?, Ns?, [')'|T?], R).
 
 procedure c_cmp(Expr?, Constant?, Expr?, NameOfs?, RChunks?, RChunks).
 c_cmp(X, Op, Y, Ns, T, R?) :- ground(Ns?) |
@@ -360,12 +363,15 @@ c_expr(sum(Xs, H, A, F, U), Ns, T, ['sum('|R?]) :- ground(Ns?) |
     c_anchored(H?, A?, F?, Ns?, [', '|R2?], R1),
     c_xs_sep(Xs?, Ns?, R1?, R).
 c_expr(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
+c_expr(real(X), Ns, T, R?) :- c_arg(real(X?), Ns?, T?, R).
 c_expr(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_expr(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
 c_expr(svar(X), Ns, T, R?) :- c_arg(svar(X?), Ns?, T?, R).
 c_expr(nterm(N), Ns, T, R?) :- c_arg(nterm(N?), Ns?, T?, R).
 c_expr(sgn(Y, J), Ns, T, R?) :- c_arg(sgn(Y?, J?), Ns?, T?, R).
 c_expr(any, Ns, T, R?) :- c_arg(any, Ns?, T?, R).
+c_expr(author_of(Y), Ns, T, ['author('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
+c_expr(item_of(Y), Ns, T, ['item('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 
 procedure c_exprs(Exprs?, NameOfs?, RChunks?, RChunks).
 c_exprs([], _, T, T?).
@@ -382,12 +388,15 @@ c_operand(fn(N, Xs), Ns, T, R?) :- c_expr(fn(N?, Xs?), Ns?, T?, R).
 c_operand(cardinality(Xs, H, A, F), Ns, T, R?) :- c_expr(cardinality(Xs?, H?, A?, F?), Ns?, T?, R).
 c_operand(sum(Xs, H, A, F, U), Ns, T, R?) :- c_expr(sum(Xs?, H?, A?, F?, U?), Ns?, T?, R).
 c_operand(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
+c_operand(real(X), Ns, T, R?) :- c_arg(real(X?), Ns?, T?, R).
 c_operand(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_operand(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
 c_operand(svar(X), Ns, T, R?) :- c_arg(svar(X?), Ns?, T?, R).
 c_operand(nterm(N), Ns, T, R?) :- c_arg(nterm(N?), Ns?, T?, R).
 c_operand(sgn(Y, J), Ns, T, R?) :- c_arg(sgn(Y?, J?), Ns?, T?, R).
 c_operand(any, Ns, T, R?) :- c_arg(any, Ns?, T?, R).
+c_operand(author_of(Y), Ns, T, R?) :- c_expr(author_of(Y?), Ns?, T?, R).
+c_operand(item_of(Y), Ns, T, R?) :- c_expr(item_of(Y?), Ns?, T?, R).
 
 % --- A schema (def:schema, def:numbers) -------------------------------------
 % tau: H <- on a line, then B, gamma guarded by G on the next, indented.

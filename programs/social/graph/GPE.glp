@@ -1,0 +1,58 @@
+%% ---------------------------------------------------------------------------
+%% GPE.glp --- the Grassroots Physical Encounters contract, GSA's, extending GKK, in the clause
+%% syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GPE.txt
+%% beside this file: open_place and close_place are GPE:1, Open Place; encounter GPE:2, Encounter,
+%% guarded by both, each one's consent given by their app while their place is open (the
+%% implementation pragma), which the operating system puts to the platform when the layer reports a
+%% phone nearby whose keys were exchanged under open trust (GNA).  GKK's three schemas come first.  open(Alice) says that Alice declared the place she
+%% is in open; being nearby is the layer's report and no atom.  Written by GSA #2 Cowork,
+%% 2026-11-07, for GSC's checker.
+%% ---------------------------------------------------------------------------
+
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant) ; item_of(Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SQLit       ::= SMult ; not(SMult).
+SQLits      ::= [] ; [SQLit | SQLits].
+SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
+SLits       ::= [] ; [SLit | SLits].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; author_of(Constant) ; item_of(Constant).
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr).
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+Contract    ::= [] ; [Schema | Contract].
+
+% contract_named(gpe, C): the contract, GPE (Coordination Appendix C).
+procedure contract_named(Constant?, Contract).
+contract_named(gpe,
+   [sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))], true, ['Alice']),
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+    sas(open_place, ['Alice'], [],
+       [atom(open, ['Alice'])],
+       [atom(identity, ['Alice']), not(atom(open, ['Alice']))], true, ['Alice']),
+    sas(close_place, ['Alice'], [],
+       [not(atom(open, ['Alice']))],
+       [atom(identity, ['Alice']), atom(open, ['Alice'])], true, ['Alice']),
+    sas(encounter, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(open, ['Alice']), not(atom(knows, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(open, ['Bob']), not(atom(knows, ['Bob', 'Alice']))],
+       true, ['Alice', 'Bob'])]).

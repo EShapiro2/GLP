@@ -56,7 +56,7 @@
 
 imported procedure unobstructed#intro_result_env(NContract?, Preds?, Preds?, Faults).
 imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
-imported procedure prov#traceable(Contract?, Preds).
+imported procedure prov#traceable_c(Contract?, Constraints?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
 imported procedure volition#volition_faults(Contract?, NContract?, Preds?, Faults).
 imported procedure wards#wards(Contract?, Preds?, Wards).
@@ -78,7 +78,8 @@ untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 
 procedure check_contract(Contract?, NContract?, Preds?, Preds?, Verdict).
 check_contract(C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?) |
-    prov # traceable(C?, E),
+    ncontract_constraints(NC?, Cns),
+    prov # traceable_c(C?, Cns?, E),
     contract_verdict(C?, NC?, Rf?, Ev?, E?, V).
 
 % E is read by two conjuncts, so it is taken ground in a head of its own.
@@ -491,10 +492,18 @@ head_schema1(Nm, H, Bd, Os, R?) :- ground(Nm?), ground(H?), ground(Bd?), ground(
 procedure head_schema(NSchema?, Faults).
 head_schema(S, R?) :- ground(S?) |
     nsch_name(S?, Nm),
-    nsch_vars(S?, H),
+    nsch_vars(S?, H0),
+    head_untyped(H0?, H),
     nsch_bound(S?, Bd),
     nsch_occ_vars(S?, Os),
     head_schema1(Nm?, H?, Bd?, Os?, R).
+
+% A value variable's type is its head's, real(X) or num(X) (self.glp, Arg),
+% and its atoms write num(X) of either, so the head is compared as num(X).
+procedure head_untyped(Args?, Args).
+head_untyped([], []).
+head_untyped([real(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
+head_untyped([A|As], [A?|R?]) :- otherwise | head_untyped(As?, R).
 
 procedure head_schemas(NContract?, Faults).
 head_schemas([], []).
@@ -773,6 +782,22 @@ signing_faults(gt(_, _), _, _, T, T?).
 signing_faults(succ(_, _), _, _, T, T?).
 signing_faults(signed(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
 signing_faults(unsigned(U, Y), Rs, Nm, T, R?) :- sign_cond_faults(U?, Y?, Rs?, Nm?, T?, R).
+signing_faults(program(X), _, Nm, T, R?) :- utter_fault(X?, Nm?, T?, R).
+
+% author(y) and item(y) are of a speech-act variable y of the schema
+% (def:numbers: "the author author(y), the first signer of y", "the item
+% item(y), the utterance under the signatures of y"), and so is the item a
+% condition program(X) is on: each other y is a fault
+% signing_not_speech_act(Schema, Y).  A condition on what is no item is
+% constraint_not_numeric (constraint_args).
+procedure utter_fault(Expr?, Constant?, Faults?, Faults).
+utter_fault(author_of(Y), Nm, T, R?) :- ground(Y?), ground(Nm?), ground(T?) |
+    sign_speech_act(Y?, B),
+    sign_speech_act_fault(B?, Y?, Nm?, T?, R).
+utter_fault(item_of(Y), Nm, T, R?) :- ground(Y?), ground(Nm?), ground(T?) |
+    sign_speech_act(Y?, B),
+    sign_speech_act_fault(B?, Y?, Nm?, T?, R).
+utter_fault(_, _, T, T?) :- otherwise | true.
 
 % u = v and u != v, of two agent variables, each an agent role of the schema
 % or an agent variable, of two speech-act variables, or of two name terms
@@ -785,7 +810,16 @@ agent_cmp_faults(X, Y, Rs, Nm, T, R?) :- ground(X?), ground(Y?), ground(Rs?), gr
 procedure agent_cmp1(Ans?, Expr?, Expr?, NRoleSpecs?, Constant?, Faults?, Faults).
 agent_cmp1(no, _, _, _, _, T, T?).
 agent_cmp1(yes, X, Y, Rs, Nm, T, R?) :- ground(X?), ground(Y?), ground(Rs?), ground(Nm?), ground(T?) |
-    exprs_args([X?, Y?], [], As),
+    cmp_side_faults(Y?, Rs?, Nm?, T?, R1),
+    cmp_side_faults(X?, Rs?, Nm?, R1?, R).
+
+% A side of u = v: author(y) or item(y), asking y be a speech-act variable
+% (utter_fault), or an argument of the kind name_eq found.
+procedure cmp_side_faults(Expr?, NRoleSpecs?, Constant?, Faults?, Faults).
+cmp_side_faults(author_of(Y), _, Nm, T, R?) :- utter_fault(author_of(Y?), Nm?, T?, R).
+cmp_side_faults(item_of(Y), _, Nm, T, R?) :- utter_fault(item_of(Y?), Nm?, T?, R).
+cmp_side_faults(X, Rs, Nm, T, R?) :- otherwise, ground(X?), ground(Rs?), ground(Nm?), ground(T?) |
+    exprs_args([X?], [], As),
     cmp_args_faults(As?, Rs?, Nm?, T?, R).
 
 procedure cmp_args_faults(Args?, NRoleSpecs?, Constant?, Faults?, Faults).
@@ -817,9 +851,129 @@ num_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     num_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
+% --- the items among the arguments of atoms (def:numbers, GSC 4401dd6) ------
+% "an argument of an atom may be a value or a value variable, or the item
+% item(y) of a speech-act variable y of the schema that an agent role
+% requires, the utterance under the signatures of y, which names no agent"
+% (def:numbers).  Each item item_of(Y) among the arguments of an atom of the
+% schema as written -- an atom a role adds, deletes, clears, requires or
+% forbids, an atom of a quantified conjunct or of a safe formula, and the
+% anchor of a cardinality or a sum -- whose Y is not svar(Y) is a fault
+% signing_not_speech_act(Schema, Y), as of an item in a constraint
+% (utter_fault), and each whose speech-act variable y occurs in no atom an
+% agent role requires (def:schema: "An agent role requires the atoms of B it
+% holds") a fault item_argument(Schema, Y); a variable the head does not
+% list is not_in_head (head_schema).  An item in a constraint is asked
+% nothing more (signing_faults).  Each item is asked once.
+
+% The arguments of the atoms of a formula, its constraints left out.
+procedure form_atom_args(Form?, Args?, Args).
+form_atom_args(fa(_, M), T, R?) :- ground(M?), ground(T?) |
+    plain_mult(M?, A),
+    atoms_args([A?], T?, R).
+form_atom_args(fnot(F), T, R?) :- form_atom_args(F?, T?, R).
+form_atom_args(fand(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    forms_atom_args([A?, B?], T?, R).
+form_atom_args(for(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    forms_atom_args([A?, B?], T?, R).
+form_atom_args(fexists(_, _, atom(_, As), F), T, R?) :- ground(As?), ground(F?), ground(T?) |
+    form_atom_args(F?, T?, R1),
+    args_app(As?, R1?, R).
+form_atom_args(fforall(_, _, atom(_, As), F, G), T, R?) :-
+    ground(As?), ground(F?), ground(G?), ground(T?) |
+    forms_atom_args([F?|G?], T?, R1),
+    args_app(As?, R1?, R).
+form_atom_args(fcons(_), T, T?).
+
+procedure forms_atom_args(Forms?, Args?, Args).
+forms_atom_args([], T, T?).
+forms_atom_args([F|Fs], T, R?) :- ground(F?), ground(Fs?), ground(T?) |
+    forms_atom_args(Fs?, T?, R1),
+    form_atom_args(F?, R1?, R).
+
+% The anchors of the conjuncts, and their formulas.
+procedure conj_atom_args(Conjuncts?, Args?, Args).
+conj_atom_args([], T, T?).
+conj_atom_args([conjunct(_, _, atom(_, As), Phi, _, _, L)|Cs], T, R?) :-
+    ground(As?), ground(Phi?), ground(L?), ground(Cs?), ground(T?) |
+    conj_atom_args(Cs?, T?, R1),
+    forms_atom_args([Phi?|L?], R1?, R2),
+    args_app(As?, R2?, R).
+
+% The items among arguments.
+procedure args_items(Args?, Args?, Args).
+args_items([], T, T?).
+args_items([item_of(Y)|As], T, [item_of(Y?)|R?]) :- args_items(As?, T?, R).
+args_items([_|As], T, R?) :- otherwise | args_items(As?, T?, R).
+
+% Some agent role requires an atom with the speech-act variable Y among its
+% arguments (req_occurs).
+procedure agent_requires(RoleSpecs?, Arg?, Ans).
+agent_requires([], _, no).
+agent_requires([RS|Rs], Y, R?) :- ground(RS?), ground(Rs?), ground(Y?) |
+    is_party_role(RS?, P),
+    req_occurs(RS?, Y?, Q),
+    both_yes(P?, Q?, A),
+    agent_requires1(A?, Rs?, Y?, R).
+
+procedure agent_requires1(Ans?, RoleSpecs?, Arg?, Ans).
+agent_requires1(yes, _, _, yes).
+agent_requires1(no, Rs, Y, R?) :- ground(Rs?), ground(Y?) | agent_requires(Rs?, Y?, R).
+
+procedure item_fault(Arg?, RoleSpecs?, Constant?, Faults?, Faults).
+item_fault(svar(Y), Rs, Nm, T, R?) :- ground(Y?), ground(Rs?), ground(Nm?), ground(T?) |
+    agent_requires(Rs?, svar(Y?), A),
+    item_req_fault(A?, Y?, Nm?, T?, R).
+item_fault(Y, _, Nm, T, [signing_not_speech_act(Nm?, Y?)|T?]) :-
+    otherwise, ground(Y?), ground(Nm?), ground(T?) | true.
+
+procedure item_req_fault(Ans?, Constant?, Constant?, Faults?, Faults).
+item_req_fault(yes, _, _, T, T?).
+item_req_fault(no, Y, Nm, T, [item_argument(Nm?, Y?)|T?]).
+
+procedure items_faults(Args?, RoleSpecs?, Constant?, Faults).
+items_faults([], _, _, []).
+items_faults([item_of(Y)|Is], Rs, Nm, R?) :- ground(Y?), ground(Is?), ground(Rs?), ground(Nm?) |
+    items_faults(Is?, Rs?, Nm?, R1),
+    item_fault(Y?, Rs?, Nm?, R1?, R).
+items_faults([_|Is], Rs, Nm, R?) :- otherwise, ground(Is?), ground(Rs?), ground(Nm?) |
+    items_faults(Is?, Rs?, Nm?, R).
+
+procedure item_schema(NSchema?, Faults).
+item_schema(NSc, R?) :- ground(NSc?) |
+    nsch_name(NSc?, Nm),
+    plain_schema(NSc?, Sc),
+    nsch_anchored(NSc?, An),
+    item_schema1(Nm?, Sc?, An?, R).
+
+procedure item_schema1(Constant?, Schema?, Forms?, Faults).
+item_schema1(Nm, Sc, An, R?) :- ground(Nm?), ground(Sc?), ground(An?) |
+    sch_roles(Sc?, Rs),
+    sch_conjs(Sc?, Cj),
+    sch_forms(Sc?, Fs),
+    item_schema2(Nm?, Rs?, Cj?, Fs?, An?, R).
+
+% Rs is read twice, so it is taken ground in a head of its own.
+procedure item_schema2(Constant?, RoleSpecs?, Conjuncts?, Forms?, Forms?, Faults).
+item_schema2(Nm, Rs, Cj, Fs, An, R?) :- ground(Nm?), ground(Rs?), ground(Cj?), ground(Fs?), ground(An?) |
+    rolespecs_args(Rs?, [], A2),
+    conj_atom_args(Cj?, A2?, A3),
+    forms_atom_args(Fs?, A3?, A4),
+    forms_atom_args(An?, A4?, A5),
+    args_items(A5?, [], Is0),
+    args_dedup(Is0?, Is),
+    items_faults(Is?, Rs?, Nm?, R).
+
+procedure item_schemas(NContract?, Faults).
+item_schemas([], []).
+item_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    item_schema(S?, F1),
+    item_schemas(Ss?, F2),
+    faults_app(F1?, F2?, R).
+
 % A malformed contract is refused; a contract that is not is decided by
 % def:syntactically-grassroots.  The faults are given in the order: the
-% head, the numbers, the name terms, the listed roles, the form of a schema,
+% head, the numbers, the items, the name terms, the listed roles, the form of a schema,
 % the reflexive predicates, the signed terms.  The head and the numbers are
 % decided on the contract as written, the rest on its plain form (self.glp,
 % plain_decl), and so are traceable provenance and volition;
@@ -848,7 +1002,9 @@ check_ndecl(NC, Rf, Ev, V?) :- ground(NC?), ground(Rf?), ground(Ev?) |
     plain_contract(NC?, C),
     head_schemas(NC?, MH),
     num_schemas(NC?, MN),
-    faults_app(MH?, MN?, MHN),
+    item_schemas(NC?, MI),
+    faults_app(MN?, MI?, MNI),
+    faults_app(MH?, MNI?, MHN),
     check_decl(C?, NC?, Rf?, Ev?, MHN?, V).
 
 exported procedure check(NDeclared?, Verdict).
@@ -879,8 +1035,8 @@ check_variant(Nm, B, V?) :- ground(Nm?), ground(B?) |
 
 % The predicates of traceable provenance, for inspection: the largest set
 % having it (def:grounded).
-procedure traceable_in(Contract?, Preds).
-traceable_in(C, E?) :- ground(C?) | prov # traceable(C?, E).
+procedure traceable_in(Contract?, Constraints?, Preds).
+traceable_in(C, Cns, E?) :- ground(C?), ground(Cns?) | prov # traceable_c(C?, Cns?, E).
 
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- ground(Nm?) |
@@ -890,12 +1046,16 @@ traceable_of(Nm, E?) :- ground(Nm?) |
 exported procedure traceable_preds(NDeclared?, Preds).
 traceable_preds(D, E?) :- ground(D?) |
     plain_decl(D?, PD),
-    traceable_pd(PD?, E).
+    ndecl_schemas(D?, NC),
+    ncontract_constraints(NC?, Cns),
+    traceable_pd(PD?, Cns?, E).
 
-procedure traceable_pd(Declared?, Preds).
-traceable_pd(D, E?) :- ground(D?) |
+% Each schema's constraint is read with its body (def:grounded, GSC 7324ec7),
+% so the constraints of the contract as written go beside its plain form.
+procedure traceable_pd(Declared?, Constraints?, Preds).
+traceable_pd(D, Cns, E?) :- ground(D?), ground(Cns?) |
     decl_schemas(D?, C),
-    traceable_in(C?, E).
+    traceable_in(C?, Cns?, E).
 
 exported procedure traceable_variant(Constant?, WContract?, Preds).
 traceable_variant(Nm, B, E?) :- ground(Nm?), ground(B?) |

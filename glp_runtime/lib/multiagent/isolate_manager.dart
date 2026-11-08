@@ -108,8 +108,36 @@ class Deliver extends IsolateMessage {
   String toString() => 'Deliver(from=$fromId, id=$messageId, ${payload.length}B)';
 }
 
-/// An agent reports that it has finished one unit of work — a `Start` or a
-/// `Deliver` — having drained its queue and flushed everything the drain
+/// Router → agent: what the layer reports of a peer, its discovery, its
+/// connection, or its disconnection, over [underlay], the PAN throughout
+/// (IGLP, Implementation Notes, "Networking Seam", The contract: "the layer
+/// reports peer discovery, connection, disconnection, and reachability";
+/// "Simulation realisation": "the harness cuts and restores" the adjacency
+/// relation, "the reported underlay is the PAN throughout").  The peer is
+/// named by its id in the directory.  One unit of work, answered with
+/// [AgentIdle].  Until 2026-11-07 no connectivity event reached an agent
+/// isolate, and peer_app/2 answered `none` for every peer under `:boot`.
+///
+/// A connection carries the [application] the session with the peer is
+/// attested with: the app the harness names ([IsolateManager.boot]), "The
+/// router ... reports every peer attested with the app the harness names, its
+/// developer, name and version" (IGLP 4a9ad28, "Simulation realisation");
+/// null, the session unattested, where the harness names none.
+class PeerConnectivity extends IsolateMessage {
+  final String peerId;
+  final Underlay underlay;
+  final ConnectivityEvent event;
+  final Application? application;
+
+  PeerConnectivity(this.peerId, this.underlay, this.event, [this.application]);
+
+  @override
+  String toString() => 'PeerConnectivity($peerId, ${underlay.name}, '
+      '${event.name}${application == null ? '' : ', $application'})';
+}
+
+/// An agent reports that it has finished one unit of work — a `Start`, a
+/// `Deliver` or a [PeerConnectivity] — having drained its queue and flushed everything the drain
 /// produced. It is sent after the flush, so the traffic that work generated is
 /// already on its way to the manager when this arrives: a port delivers in
 /// order, so the manager never sees an agent idle while its own output is still
@@ -388,8 +416,15 @@ class IsolateManager {
 
   /// Boot all agents from configuration.
   ///
+  /// [application] is the app the harness names: the router reports every
+  /// peer connected attested with it, its developer, name and version (IGLP
+  /// 4a9ad28, "Simulation realisation"), so peer_app/2 assigns app(D, N, V).
+  /// Where the harness names none, a connection is reported unattested.
+  ///
   /// Returns when all agents are ready (but not yet started).
-  Future<void> boot(BootConfig config, {TraceConfig traceConfig = TraceConfig.off}) async {
+  Future<void> boot(BootConfig config,
+      {TraceConfig traceConfig = TraceConfig.off,
+      Application? application}) async {
     _traceConfig = traceConfig;
     final readyCompleter = Completer<void>();
     _booting = readyCompleter;
@@ -440,6 +475,26 @@ class IsolateManager {
       _noteWorkSent(toId);
       _delivered.update((fromId, toId), (n) => n + 1, ifAbsent: () => 1);
       port.send(Deliver(fromId, payload, messageId));
+    };
+
+    // The router reports each agent's connections and disconnections to its
+    // isolate, as the layer does (IGLP, Implementation Notes, "Networking
+    // Seam", The contract: "the layer reports peer discovery, connection,
+    // disconnection, and reachability"): every adjacent pair connected once
+    // every agent is ready ([SimulationRouter.bootComplete]), and a pair the
+    // harness cuts and restores ([cut], [restore]).  Each report is one unit
+    // of work handed to the agent, so a settle waits until it is recorded.
+    // A connection is reported attested with the app the harness names,
+    // [application] (IGLP 4a9ad28, "Simulation realisation"), unattested
+    // where it names none.
+    router.onConnectivity = (toId, peerPk, underlay, event) {
+      final port = _agentPorts[toId];
+      if (port == null) return; // not ready: no isolate to report to yet
+      final peerId = router.directory.idOf(peerPk);
+      if (peerId == null) return; // the router reports only agents it holds
+      _noteWorkSent(toId);
+      port.send(PeerConnectivity(peerId, underlay, event,
+          event == ConnectivityEvent.connected ? application : null));
     };
 
     // Single listener for all messages
@@ -503,6 +558,12 @@ class IsolateManager {
     } finally {
       _booting = null;
     }
+
+    // Every agent is ready: "The adjacency relation is total by default,
+    // every agent a PAN peer of every other" (IGLP, "Simulation
+    // realisation"), so each agent is told of every peer adjacent to it,
+    // discovered and connected, before the run starts.
+    router.bootComplete();
   }
 
   /// Harness control: visible disconnection of a pair (IGLP app:in-networking,
@@ -664,7 +725,7 @@ void _agentIsolateEntry(AgentConfig config) async {
   config.mainPort.send(Ready(agentId, receivePort.sendPort));
 
   await _eventLoop(
-      receivePort, config, network, directory, runEvent, log);
+      receivePort, config, ctx, network, directory, runEvent, log);
 }
 
 /// The agent's engine, in madGLP mode, holding the agent's key pair, made at
@@ -816,8 +877,11 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
         config.mainPort.send(RouterKnownPeer(agentId, pk, known)),
   );
   final GlpNetwork network = simulation;
-  // Back the seam predicates (IGLP Definition Seam Predicates).
+  // Back the seam predicates (IGLP Definition Seam Predicates), peer_app/2
+  // by what the layer reports of each peer's session.
   ctx.network = network;
+  network.onPeerConnected = ctx.peerConnected;
+  network.onPeerDisconnected = ctx.peerDisconnected;
 
   // A destination, in a global name or in a message, is a key or a readable
   // name standing for one, and the seam resolves both to the one agent (IGLP
@@ -902,10 +966,12 @@ void _wireTracing(
 }
 
 /// The agent's event loop over [receivePort]: [Start], and the simulation
-/// router's [Deliver]s, each one unit of work, answered with [AgentIdle].
+/// router's [Deliver]s and [PeerConnectivity] reports, each one unit of work,
+/// answered with [AgentIdle].
 Future<void> _eventLoop(
     ReceivePort receivePort,
     AgentConfig config,
+    MadContext ctx,
     GlpNetwork network,
     NetworkDirectory directory,
     Future<void> Function() runEvent,
@@ -940,6 +1006,39 @@ Future<void> _eventLoop(
       // is acknowledged to the layer (IGLP, Implementation Notes,
       // "Persistence"; GNA, Section 2.9, acknowledge(messageId)).
       network.acknowledge(msg.messageId);
+      config.mainPort.send(AgentIdle(agentId));
+
+    } else if (msg is PeerConnectivity) {
+      // What the layer reports of a peer, surfaced through the network's
+      // callbacks as the layer surfaces it, and so recorded for peer_app/2
+      // ([MadContext.peerConnected], [MadContext.peerDisconnected]).  A
+      // connection carries the app the harness names, the session attested
+      // with it, or null, unattested, where the harness names none (IGLP
+      // 4a9ad28, "Simulation realisation": the router "reports every peer
+      // attested with the app the harness names, its developer, name and
+      // version"), as AgentRuntime.onConnectivityEvent reports it.  Until
+      // 2026-11-07 every connection was reported unattested.  A connection is also
+      // when a message the layer refused is sent again, where M_p holds one
+      // (IGLP, The contract: "on a refusal, keeps the message and sends it
+      // again with the agent's next Sends, or when the layer reports a peer
+      // connected").
+      final peerPk = directory.pkOf(msg.peerId);
+      if (peerPk == null) {
+        print('[$agentId] ERROR: connectivity report about unknown '
+            '${msg.peerId}');  // Always print errors
+      } else {
+        log('Peer ${msg.peerId} ${msg.event.name} over ${msg.underlay.name}');
+        switch (msg.event) {
+          case ConnectivityEvent.connected:
+            network.onPeerConnected?.call(peerPk, msg.underlay, msg.application);
+            if (ctx.mp.hasSendable) await runEvent();
+          case ConnectivityEvent.disconnected:
+            network.onPeerDisconnected?.call(peerPk, msg.underlay);
+          case ConnectivityEvent.discovered:
+            network.onPeerDiscovered?.call(
+                peerPk, ProximityUnderlay.values.byName(msg.underlay.name));
+        }
+      }
       config.mainPort.send(AgentIdle(agentId));
     }
     } catch (e, st) {

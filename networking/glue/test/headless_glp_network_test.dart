@@ -103,7 +103,7 @@ void main() {
       final events = <String>[];
       const attested =
         Application(developer: 'TEAM', name: 'app.grassroots', version: 1);
-      Object? applicationSeen;
+      glp.Application? applicationSeen;
       network.onPeerConnected = (pk, underlay, application) {
         applicationSeen = application;
         events.add('connected ${pk.hex} $underlay');
@@ -123,8 +123,11 @@ void main() {
         'received ${peer.hex} [1, 2, 3] m-1 ${glp.Underlay.wan}',
         'disconnected ${peer.hex} ${glp.Underlay.wan}',
       ]);
-      expect(identical(applicationSeen, attested), isTrue,
-          reason: 'the attested application, as the layer reports it');
+      expect(applicationSeen,
+          const glp.Application(
+              developer: 'TEAM', name: 'app.grassroots', version: 1),
+          reason: 'the attested application, its developer, its name and its '
+              'version number, as the runtime holds it (GNA §2.3)');
 
       network.onPeerConnected = null;
       network.onPeerDisconnected = null;

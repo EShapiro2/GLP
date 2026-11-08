@@ -17,9 +17,10 @@
 /// Every function the layer has passes straight through, and nothing is
 /// interpreted: a key travels as its 32 bytes, an underlay, a trust level and
 /// a place event by their names, which the two sides share; the attested
-/// application of `onPeerConnected` travels as the layer reports it, or null
-/// for an unattested identity (GNA §2.3), since "the runtime relies on none
-/// of it" (IGLP, The contract).
+/// application of `onPeerConnected` travels as its developer, its name and
+/// its version number, which the two sides share, or null for an unattested
+/// identity (GNA §2.3); the runtime records it for `peer_app/2` (GLP-Spec
+/// appendix-guards, "Networking seam", 5fab8ac).
 ///
 /// Every function of the API passes straight through (GNA, 2026-10-11, Task
 /// C): `getPeers` answers the agents on the proximity underlays, and
@@ -45,6 +46,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/models/underlay_api.dart';
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
@@ -61,6 +63,13 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
   static glp.PubKey _key(Uint8List bytes) => glp.PubKey.fromList(bytes);
 
   static glp.Underlay _underlay(Underlay u) => glp.Underlay.values.byName(u.name);
+
+  /// The attested application as the runtime holds it: its developer, its
+  /// name and its version number; null, an unattested identity, as null.
+  static glp.Application? _application(Application? a) => a == null
+      ? null
+      : glp.Application(
+          developer: a.developer, name: a.name, version: a.version);
 
   static Never _absent(String function, String underlay) =>
       throw UnsupportedError('$function: the layer (GrassrootsNetwork) runs '
@@ -91,22 +100,25 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
 
   // --- Connection and reachability ---
 
-  void Function(glp.PubKey pk, glp.Underlay underlay, Object? application)?
+  void Function(
+          glp.PubKey pk, glp.Underlay underlay, glp.Application? application)?
       _onPeerConnected;
 
   @override
-  void Function(glp.PubKey pk, glp.Underlay underlay, Object? application)?
+  void Function(
+          glp.PubKey pk, glp.Underlay underlay, glp.Application? application)?
       get onPeerConnected => _onPeerConnected;
 
   @override
   set onPeerConnected(
-      void Function(glp.PubKey pk, glp.Underlay underlay, Object? application)?
+      void Function(
+          glp.PubKey pk, glp.Underlay underlay, glp.Application? application)?
           cb) {
     _onPeerConnected = cb;
     layer.onPeerConnected = cb == null
         ? null
         : (pk, underlay, application) =>
-            cb(_key(pk), _underlay(underlay), application);
+            cb(_key(pk), _underlay(underlay), _application(application));
   }
 
   void Function(glp.PubKey pk, glp.Underlay underlay)? _onPeerDisconnected;

@@ -1052,10 +1052,12 @@ void appsScreens(Screens screens) {
     const friends = 'speech(utterance(friends), alice)';
     const friendsGroup = 'dot(community(alice), $friends)';
 
-    // Three tabs, the lists of GKK's, GSG's and GSN's pragmas: Contacts, Friends and Groups.
+    // Five tabs, the lists of GKK's, GSG's and GSN's pragmas: Contacts, Friends, Groups, Messages, "Messages: the messages Alice received.", and Posts, "Posts: the posts Alice received in her groups." (programs/gsc/GSN.txt at GLP 1aab4307), the predicates received and received_in.
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(alice, 'member', 'Groups'), findsOneWidget);
+    expect(run.listNamed(alice, 'received', 'Messages'), findsOneWidget);
+    expect(run.listNamed(alice, 'received_in', 'Posts'), findsOneWidget);
 
     // Identity, acquaintance and friendship, as in GSG's app.
     await run.join(alice);
@@ -1069,7 +1071,12 @@ void appsScreens(Screens screens) {
     await run.type(alice, run.control(alice, 'field:message:bob:3'), 'Hi Bob');
     await run.tap(alice, run.control(alice, 'send:message:bob'));
     expect(bob.questions('approval'), isEmpty);
-    expect(bob.atoms, contains("received(speech(utterance('Hi Bob'), alice), alice)"));
+    const hiBob = "received(speech(utterance('Hi Bob'), alice), alice)";
+    expect(bob.atoms, contains(hiBob));
+    // Bob's Messages tab lists the message, the atom received(x, a) of his state.
+    await run.list(bob, 'received');
+    expect(run.control(bob, 'atom:$hiBob'), findsOneWidget);
+    expect(run.texts(bob), contains('Hi Bob'));
 
     // (a) Bob's Friends tab: the atom of the list, friend(alice), by her name (vGLP, Section 5.4: "The tab lists the atoms of that predicate in the state").
     await run.list(bob, 'friend');
@@ -1092,7 +1099,7 @@ void appsScreens(Screens screens) {
         alice, run.control(alice, 'pick:join:$friendsGroup:bob'));
     await run.tap(alice, run.control(alice, 'send:join:$friendsGroup'));
 
-    // (b) Bob's first tab, badged: GSN's question "Alice asks you to join their group.", the group's name, friends, under it, and yes and no at its top.
+    // (b) Bob's first tab, badged: GSN's question "Alice asks you to join her group.", the group's name, friends, under it, and yes and no at its top.
     final a = bob.approval;
     expect(formatTerm(a.view), contains(', join(alice, bob, $friends), none), '));
     expect(
@@ -1102,7 +1109,7 @@ void appsScreens(Screens screens) {
         findsOneWidget);
     await run.list(bob, 'knows');
     await run.top(bob);
-    const asks = 'Alice asks you to join their group.';
+    const asks = 'Alice asks you to join her group.';
     // The group's name, a speech act of Alice's, is drawn with its signer: "A speech act, in a row, a question or a field, is drawn with its signers" (vGLP 516a0a2, Section 6.2).
     // Then the atoms the act requires of the proposer whose predicates the tabs list: the group Alice leads (vGLP e22e2ad, Section 5.4, "The contract's words"), and her friend.
     expect(run.textsOf(bob, a), [
@@ -1132,6 +1139,14 @@ void appsScreens(Screens screens) {
     expect(alice.atoms, contains('posted($hiAll, $friends)'));
     expect(alice.atoms, contains('delivered($hiAll, bob, $friends)'));
     expect(bob.atoms, contains('received_in($hiAll, alice, $friends)'));
+    // Bob's Posts tab lists the post delivered to him, the atom received_in(x, a, n) of his state; Alice's lists none, the leader receiving no delivery.
+    await run.list(bob, 'received_in');
+    expect(run.control(bob, 'atom:received_in($hiAll, alice, $friends)'),
+        findsOneWidget);
+    expect(run.texts(bob), contains('Hi all'));
+    await run.list(alice, 'received_in');
+    expect(run.texts(alice), isNot(contains('Hi all')));
+    await run.list(bob, 'member');
 
     // (c) Bob's view of the group: the atom of his list, the group's name and its leader, and the buttons of the ways it binds, Leave among them.
     await run.top(bob);

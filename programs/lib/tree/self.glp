@@ -1,0 +1,36 @@
+%% programs/lib/tree: the library tree.glp, and tree_test.glp, its tests.  The
+%% directory is a program so that the tests load with the library, and its
+%% entry points are the tests: tree's procedures and types are visible to them
+%% unqualified.  A program uses the library by exposing lib#tree#tree.
+-expose(tree).
+
+%% A test's verdict: ok if every check held, and bad otherwise.
+Result ::= ok ; bad.
+
+imported procedure tree_test#test_insert(Integer?, Integer?, Result).
+exported procedure test_insert(Integer?, Integer?, Result).
+test_insert(N, Seed, R?) :- tree_test # test_insert(N?, Seed?, R).
+
+imported procedure tree_test#test_ascending(Integer?, Result).
+exported procedure test_ascending(Integer?, Result).
+test_ascending(N, R?) :- tree_test # test_ascending(N?, R).
+
+imported procedure tree_test#test_descending(Integer?, Result).
+exported procedure test_descending(Integer?, Result).
+test_descending(N, R?) :- tree_test # test_descending(N?, R).
+
+imported procedure tree_test#test_from_list(Integer?, Integer?, Result).
+exported procedure test_from_list(Integer?, Integer?, Result).
+test_from_list(N, Seed, R?) :- tree_test # test_from_list(N?, Seed?, R).
+
+imported procedure tree_test#test_member(Integer?, Integer?, Result).
+exported procedure test_member(Integer?, Integer?, Result).
+test_member(N, Seed, R?) :- tree_test # test_member(N?, Seed?, R).
+
+imported procedure tree_test#test_kth(Integer?, Integer?, Result).
+exported procedure test_kth(Integer?, Integer?, Result).
+test_kth(N, Seed, R?) :- tree_test # test_kth(N?, Seed?, R).
+
+imported procedure tree_test#test_union(Integer?, Integer?, Integer?, Result).
+exported procedure test_union(Integer?, Integer?, Integer?, Result).
+test_union(N, Seed1, Seed2, R?) :- tree_test # test_union(N?, Seed1?, Seed2?, R).

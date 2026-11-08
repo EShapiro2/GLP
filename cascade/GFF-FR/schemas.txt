@@ -1,0 +1,46 @@
+Environment predicates: redundancy
+
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+
+befriend: friend(Alice, Bob), pointer(Alice, Bob, Bob), friend(Bob, Alice), pointer(Bob, Alice, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
+
+unfriend: not friend(Alice, Bob), not pointer(Alice, Bob, Bob), not friend(Bob, Alice), not pointer(Bob, Alice, Alice) <-
+    identity(Alice), friend(Alice, Bob), pointer(Alice, Bob, Bob), identity(Bob), friend(Bob, Alice), pointer(Bob, Alice, Alice) guarded by Alice
+
+point_friend: points_to(Alice, Bob) <-
+    identity(Alice), friend(Alice, Bob), not points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+point_transitive: points_to(Alice, Carol) <-
+    identity(Alice), knows(Alice, Carol), points_to(Alice, Bob), identity(Bob), points_to(Bob, Carol) guarded by Alice
+
+unpoint: not points_to(Alice, Bob) <-
+    identity(Alice), points_to(Alice, Bob), identity(Bob) guarded by Alice
+
+follow_friend: pointer(Alice, Bob, Dave) <-
+    identity(Alice), friend(Alice, Bob), not pointer(Alice, Bob, Dave), identity(Bob), pointer(Bob, Carol, Dave) guarded by Alice
+
+follow_transitive: pointer(Alice, Carol, Dave) <-
+    identity(Alice), knows(Alice, Carol), pointer(Alice, Bob, Dave), not pointer(Alice, Carol, Dave), identity(Bob), pointer(Bob, Carol, Dave), identity(Carol), knows(Carol, Alice), not (friend(Alice, Carol) and Carol = Dave) guarded by Alice
+
+follow_transitive_friend: pointer(Alice, Carol, Dave) <-
+    identity(Alice), knows(Alice, Carol), friend(Alice, Bob), not pointer(Alice, Carol, Dave), identity(Bob), pointer(Bob, Carol, Dave), identity(Carol), knows(Carol, Alice), not (friend(Alice, Carol) and Carol = Dave) guarded by Alice
+
+unfollow: not pointer(Alice, Bob, Dave) <-
+    identity(Alice), pointer(Alice, Bob, Dave), identity(Bob), not (friend(Alice, Bob) and Bob = Dave) guarded by Alice
+
+post: item(Alice, x, Alice) <-
+    identity(Alice), not item(Alice, x, Alice) guarded by Alice
+
+deliver: item(Alice, x, Carol), received(Alice, x, Carol, Bob) <-
+    identity(Bob), knows(Bob, Alice), item(Bob, x, Carol), identity(Alice), pointer(Alice, Bob, Carol), not item(Alice, x, Carol)
+
+redundant_follow: pointer(Alice, Bob, Carol) <-
+    identity(Alice), friend(Alice, Bob), pointer(Alice, c, Carol), redundancy(Alice, dd), not pointer(Alice, Bob, Carol), identity(Bob), pointer(Bob, e, Carol), cardinality(f, pointer(Alice, f, Carol)) < dd

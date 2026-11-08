@@ -1,0 +1,26 @@
+# systemd unit for GAS, the GLP app store, at peoplesweb.org (servers/peoplesweb).
+# Deployed to /etc/systemd/system/peoplesweb.service.
+# Runs as the system user `glp`, which owns the clone at /srv/glp (the build
+# writes into it: servers/peoplesweb/build and programs/vglp/cva/web_worlds,
+# both gitignored) and whose home holds the Dart package cache.  Caddy, in
+# front (deploy/Caddyfile), serves the static site from /var/www/peoplesweb.org
+# and proxies /api here; deploy/sweep.sh keeps both current hourly
+# (deploy/peoplesweb-sweep.timer).  dart and python3 are found on systemd's
+# default PATH (/usr/bin), where their packages put them.
+[Unit]
+Description=GAS, the GLP app store, at peoplesweb.org
+After=network.target
+
+[Service]
+User=glp
+Group=glp
+WorkingDirectory=/srv/glp/servers/peoplesweb
+Environment=HOST=127.0.0.1 PORT=8080 MAX_WORLDS=3
+ExecStart=/srv/glp/servers/peoplesweb/run.sh
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/srv/glp /var/lib/glp
+
+[Install]
+WantedBy=multi-user.target

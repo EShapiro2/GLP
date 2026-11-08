@@ -132,7 +132,7 @@ c_
 knows
 }
 (
-c
+Carol
 )
 \}
 ,\\
@@ -153,7 +153,7 @@ knows
 knows
 }
 (
-c
+Carol
 )
  \in c_
 {
@@ -204,6 +204,15 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+pointer
+}
+(
+\Bob
+,
+\Bob
+)
 \}
 , \qquad 
 c'_
@@ -221,6 +230,15 @@ c_
 friend
 }
 (
+\Alice
+)
+,
+\mathit{
+pointer
+}
+(
+\Alice
+,
 \Alice
 )
 \}
@@ -310,6 +328,15 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+pointer
+}
+(
+\Bob
+,
+\Bob
+)
 \}
 , \qquad 
 c'_
@@ -329,6 +356,15 @@ friend
 (
 \Alice
 )
+,
+\mathit{
+pointer
+}
+(
+\Alice
+,
+\Alice
+)
 \}
 ,\\
 &
@@ -341,6 +377,15 @@ identity
 friend
 }
 (
+\Bob
+)
+,
+\mathit{
+pointer
+}
+(
+\Bob
+,
 \Bob
 )
  \in c_
@@ -356,6 +401,15 @@ identity
 friend
 }
 (
+\Alice
+)
+,
+\mathit{
+pointer
+}
+(
+\Alice
+,
 \Alice
 )
  \in c_
@@ -465,7 +519,7 @@ c_
 points_to
 }
 (
-c
+Carol
 )
 \}
 , \qquad 
@@ -489,7 +543,7 @@ identity
 knows
 }
 (
-c
+Carol
 )
 ,
 \mathit{
@@ -511,7 +565,7 @@ identity
 points_to
 }
 (
-c
+Carol
 )
  \in c_
 {
@@ -588,87 +642,6 @@ identity
 \}
 \end{align*}
 \iffalse
-follow_own
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-lpoints_to
-}
-(
-\Bob
-,
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-lpoints_to
-}
-(
-\Bob
-,
-\Bob
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
 follow_friend
 \fi
 \begin{align*}
@@ -685,7 +658,7 @@ c_
  \uplus 
 \{
 \mathit{
-lpoints_to
+pointer
 }
 (
 \Bob
@@ -726,7 +699,7 @@ identity
 }
 ,
 \mathit{
-lpoints_to
+pointer
 }
 (
 Carol
@@ -741,7 +714,7 @@ Dave
 &
 \text{provided } 
 \mathit{
-lpoints_to
+pointer
 }
 (
 \Bob
@@ -775,7 +748,7 @@ c_
  \uplus 
 \{
 \mathit{
-lpoints_to
+pointer
 }
 (
 Carol
@@ -783,7 +756,8 @@ Carol
 Dave
 )
 \}
-, \qquad 
+,\\
+&
 c'_
 {
 \Bob
@@ -808,7 +782,7 @@ Carol
 )
 ,
 \mathit{
-lpoints_to
+pointer
 }
 (
 \Bob
@@ -825,7 +799,7 @@ identity
 }
 ,
 \mathit{
-lpoints_to
+pointer
 }
 (
 Carol
@@ -840,7 +814,7 @@ Dave
 &
 \text{provided } 
 \mathit{
-lpoints_to
+pointer
 }
 (
 Carol
@@ -851,6 +825,140 @@ Dave
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\neg 
+(
+\mathit{
+friend
+}
+(
+\Alice
+,
+Carol
+)
+\land
+Carol
+=
+Dave
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+follow_transitive_friend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+pointer
+}
+(
+Carol
+,
+Dave
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+pointer
+}
+(
+Carol
+,
+Dave
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+pointer
+}
+(
+Carol
+,
+Dave
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\neg 
+(
+\mathit{
+friend
+}
+(
+\Alice
+,
+Carol
+)
+\land
+Carol
+=
+Dave
+)
 ,\\
 &
 \text{guarded by } \{
@@ -874,7 +982,7 @@ c_
  \setminus 
 \{
 \mathit{
-lpoints_to
+pointer
 }
 (
 \Bob
@@ -882,7 +990,8 @@ lpoints_to
 Dave
 )
 \}
-, \qquad 
+,\\
+&
 c'_
 {
 \Bob
@@ -900,7 +1009,7 @@ identity
 }
 ,
 \mathit{
-lpoints_to
+pointer
 }
 (
 \Bob
@@ -919,6 +1028,24 @@ identity
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+\neg 
+(
+\mathit{
+friend
+}
+(
+\Alice
+,
+\Bob
+)
+\land
+\Bob
+=
+Dave
+)
 ,\\
 &
 \text{guarded by } \{

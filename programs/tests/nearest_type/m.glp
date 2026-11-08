@@ -1,0 +1,14 @@
+%% The module's own Peers, which may be empty, shadows the enclosing one.
+Peers     ::= [] ; [Integer | Peers].
+PeerLists ::= [] ; [Peers | PeerLists].
+
+exported procedure size(Integer).
+size(N?) :- app([[]], [[1], [2, 3]], R), len(R?, N).
+
+procedure len(PeerLists?, Integer).
+len([], 0).
+len([_ | Xs], N?) :- len(Xs?, M), N := M? + 1.
+
+procedure(X) app(Stream(X)?, Stream(X)?, Stream(X)).
+app([], Ys, Ys?).
+app([X | Xs], Ys, [X? | Zs?]) :- app(Xs?, Ys?, Zs).

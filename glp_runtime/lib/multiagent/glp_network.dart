@@ -117,6 +117,50 @@ class PubKey {
 /// every standing declaration.
 enum PlaceEvent { entered, exited, unobservable, observable }
 
+/// The attested application: what `onPeerConnected` carries for a peer whose
+/// identity is attested (GNA api.tex, Section 2.3, `onPeerConnected(pk,
+/// underlay, application?)`: "for an attested identity, the attested
+/// application: its developer, its name and its version number; null for an
+/// unattested identity").  The runtime records it for `peer_app/2`, which
+/// assigns it as `app(D, N, V)` (GLP-Spec appendix-guards, "Networking seam",
+/// 5fab8ac; IGLP, Definition "Seam Predicates", 4a334c2).  The layer's own
+/// class of the same name and fields is GNA's (networking/core,
+/// session/application.dart); the glue maps one to the other, as it maps an
+/// underlay by its name.
+class Application {
+  const Application({
+    required this.developer,
+    required this.name,
+    required this.version,
+  });
+
+  /// The developer: on Android the SHA-256 digest of the developer's signing
+  /// certificate, in lowercase hex; on iOS the developer's team identifier
+  /// (GNA, Section 2.6).
+  final String developer;
+
+  /// The application's name: on Android the package; on iOS the bundle
+  /// identifier.
+  final String name;
+
+  /// The version number the application signed in the session's digest.
+  final int version;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Application &&
+          other.developer == developer &&
+          other.name == name &&
+          other.version == version;
+
+  @override
+  int get hashCode => Object.hash(developer, name, version);
+
+  @override
+  String toString() => 'Application($developer, $name, $version)';
+}
+
 /// A nearby agent found by proximity discovery: its key, known once ANNOUNCE
 /// has run, and the proximity underlay it was found on — what
 /// `onPeerDiscovered(pk, underlay)` reports of it (GNA, "Concepts and
@@ -160,17 +204,20 @@ abstract class GlpNetwork {
 
   // --- Connection and reachability (GNA, "Connection and Reachability") ---
 
-  /// `onPeerConnected(pk, underlay, identity?)`: fires when a peer becomes
-  /// reachable, with its key, the [Underlay] over which it connected, and its
-  /// attested application identity, null where the peer's platform provides
-  /// no attestation.  The identity is carried as the layer reports it: "What
-  /// the layer attests of a peer and its session is the API's to specify; the
-  /// runtime relies on none of it here" (IGLP, The contract).
-  void Function(PubKey pk, Underlay underlay, Object? identity)?
+  /// `onPeerConnected(pk, underlay, application?)`: fires when a peer becomes
+  /// reachable, with its key, the [Underlay] over which it connected, and,
+  /// for an attested identity, the attested [Application], its developer, its
+  /// name and its version number; null for an unattested identity (GNA
+  /// api.tex, Section 2.3).  The runtime records the application of each
+  /// peer's session for `peer_app/2` ([MadContext.peerConnected]); until
+  /// 2026-11-07 it carried an `Object?` and relied on none of it.
+  void Function(PubKey pk, Underlay underlay, Application? application)?
       onPeerConnected;
 
   /// `onPeerDisconnected(pk, underlay)`: fires when a peer is no longer
-  /// reachable over [Underlay] `underlay`.
+  /// reachable over [Underlay] `underlay`.  A peer reported disconnected over
+  /// every underlay it was reported connected over has no session, and
+  /// `peer_app/2` assigns `none` for it ([MadContext.peerDisconnected]).
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
 
   /// `isPeerReachable(pk) → bool`: whether [pk] is currently reachable via any
@@ -301,5 +348,5 @@ abstract class GlpNetwork {
 
   // --- The seam predicates ---
   //
-  // These functions are the layer functions behind the four networking seam predicates (IGLP, Definition "Seam Predicates", 3b736bb; GLP-Spec appendix-guards, "Networking seam", 1ce0263; GNA 776016c, Section 5): [observedPeerAddress] behind `peer_address/2`; [punchUdp] behind `punch_udp/1`; behind `declare/1`, [putKnownPeer] for `peer(P)`, [putPeerAddress] for `address(P, A)`, [putRendezvousServer] for `rendezvous(P, A)`, [setTrustLevel] for `trust(U, L)`, and [declarePlace] and [onPlaceEvent] for `place(P, R, E)`; and behind `remove/1`, [removeKnownPeer] for `peer(P)`, [removeRendezvousServer] for `rendezvous(P)` and [removePlace] for `place(P)`.  GLP code decides who acts, when, and whether; each function performs only the mechanism.  Until 2026-11-03 seven predicates stood behind them, `place_declare/3`, `place_remove/1`, `trust_declare/2`, `peer_declare/1` and `address_declare/2` in place of `declare/1` and `remove/1`.
+  // These functions are the layer functions behind the five networking seam predicates (IGLP, Definition "Seam Predicates", 3b736bb, peer_app/2 since 4a334c2; GLP-Spec appendix-guards, "Networking seam", 1ce0263, peer_app/2 since 5fab8ac; GNA 776016c, Section 5): [observedPeerAddress] behind `peer_address/2`; [onPeerConnected] and [onPeerDisconnected], recorded by the runtime, behind `peer_app/2`; [punchUdp] behind `punch_udp/1`; behind `declare/1`, [putKnownPeer] for `peer(P)`, [putPeerAddress] for `address(P, A)`, [putRendezvousServer] for `rendezvous(P, A)`, [setTrustLevel] for `trust(U, L)`, and [declarePlace] and [onPlaceEvent] for `place(P, R, E)`; and behind `remove/1`, [removeKnownPeer] for `peer(P)`, [removeRendezvousServer] for `rendezvous(P)` and [removePlace] for `place(P)`.  GLP code decides who acts, when, and whether; each function performs only the mechanism.  Until 2026-11-03 seven predicates stood behind them, `place_declare/3`, `place_remove/1`, `trust_declare/2`, `peer_declare/1` and `address_declare/2` in place of `declare/1` and `remove/1`.
 }

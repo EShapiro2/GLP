@@ -253,7 +253,7 @@ contract_named(gra, environment([now, location, rider, driver],
         atom(busy, ['Bob'])],
        and(gt(num(t), plus(num(t0), num(mx))), and(eq(plus(num(a1), num(a2)), num(f)), and(eq(plus(num(c1), num(c2)), num(k)), and(ge(num(a1), num(0)), and(ge(num(a2), num(0)), and(ge(num(c1), num(0)), ge(num(c2), num(0)))))))),
        ['Alice']),
-%% GRA:7, Withdrawing: Alice withdraws their open call before the bidding period ends.
+%% GRA:7, Withdrawing: Alice withdraws her open call before the bidding period ends.
     sas(withdraw, ['Alice'], [r, x, y, e, mx, m, t],
        [not(atom(open, ['Alice', r, num(x), num(y), num(e), num(mx), num(m)])),
         not(atom(calling, ['Alice']))],

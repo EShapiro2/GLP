@@ -1,9 +1,9 @@
 # A run of the cascade on GDO-L
 
-- Contract: `GDO-L` (`gdo_l` to the checker), its owner's two files `programs/gff/GDO-L.txt` and `programs/gff/GDO-L.glp`, copied here as they stood at `3ffb24c5`.
-- The paper: `https://github.com/EShapiro2/GFF-Grassroots-Feeds-and-Followers.git` at `3604c9b8`, for the paper's own record.
-- The tools: this repository at `3ffb24c5` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-06 17:58 UTC by `cascade.sh gdo_l`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GDO-L` (`gdo_l` to the checker), its owner's two files `programs/gff/GDO-L.txt` and `programs/gff/GDO-L.glp`, copied here as they stood at `18d47b0c`.
+- The paper: `https://github.com/EShapiro2/GFF-Grassroots-Feeds-and-Followers.git` at `b6ea2eab`, for the paper's own record.
+- The tools: this repository at `18d47b0c` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-07 20:39 UTC by `cascade.sh gdo_l`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
@@ -12,7 +12,10 @@
 | `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
 | `verdict.txt` | the checker's verdict: `syntactically_grassroots` |
 | `vmat.tex` | the VMAT form, 12 displays, one per schema |
-| `platform.vglp` | the CVA compiler's refusal, and no platform.glp and no run |
+| `platform.vglp` | the canonical CVA platform, as printed |
+| `platform.glp` | the platform compiled to GLP, as emitted |
+| `interface.glp` | the platform's interface in sGLP's term form, as programs/sglp/cva/interface.sh prints it |
+| (no run) | vGLP keeps no plays for gdo_l |
 
 What the tools refused or lacked:
-- platform: %% not compiled(gdo_l)
+- run: vGLP keeps no plays for gdo_l

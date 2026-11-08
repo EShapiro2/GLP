@@ -128,13 +128,59 @@ void main() {
           pk, Underlay.pan, ConnectivityEvent.disconnected);
 
       // The callbacks carry GNA's parameters: discovery the proximity
-      // underlay, a connection the underlay and the attested identity --- none
-      // in the simulation --- and a disconnection the underlay.
+      // underlay, a connection the underlay and the attested identity --- the
+      // app the harness names, here none --- and a disconnection the underlay.
       expect(events, [
         'discovered:ProximityUnderlay.pan',
         'connected:Underlay.pan:null',
         'disconnected:Underlay.pan'
       ]);
+    });
+
+    test('a connected peer\'s session is attested with the app the harness '
+        'names, for peer_app/2; a disconnected one has none; a restored one '
+        'is attested again', () async {
+      // GLP-Spec appendix-guards, "Networking seam" (5fab8ac); IGLP 4a9ad28,
+      // "Simulation realisation": the router "reports every peer attested
+      // with the app the harness names, its developer, name and version".
+      const app =
+          Application(developer: 'TEAM', name: 'app.grassroots', version: 7);
+      final agent = AgentRuntime(
+        agentId: 'a',
+        program: play,
+        rootSelfGlpPath: root,
+      );
+      await agent.initialize();
+      final pk = generateKeyPair().pub;
+      final reported = <Application?>[];
+      agent.onPeerConnected = (p, u, application) => reported.add(application);
+      expect(agent.ctx!.peerSession(pk), isNull);
+      agent.onConnectivityEvent(pk, Underlay.pan, ConnectivityEvent.connected,
+          application: app);
+      expect(agent.ctx!.peerSession(pk), isNotNull);
+      expect(agent.ctx!.peerSession(pk)!.application, app);
+      agent.onConnectivityEvent(
+          pk, Underlay.pan, ConnectivityEvent.disconnected);
+      expect(agent.ctx!.peerSession(pk), isNull);
+      agent.onConnectivityEvent(pk, Underlay.pan, ConnectivityEvent.connected,
+          application: app);
+      expect(agent.ctx!.peerSession(pk)!.application, app);
+      expect(reported, [app, app],
+          reason: 'the host is handed the app as the layer hands it');
+    });
+
+    test('where the harness names no app, a connected peer\'s session is '
+        'unattested', () async {
+      final agent = AgentRuntime(
+        agentId: 'a',
+        program: play,
+        rootSelfGlpPath: root,
+      );
+      await agent.initialize();
+      final pk = generateKeyPair().pub;
+      agent.onConnectivityEvent(pk, Underlay.pan, ConnectivityEvent.connected);
+      expect(agent.ctx!.peerSession(pk), isNotNull);
+      expect(agent.ctx!.peerSession(pk)!.application, isNull);
     });
   });
 }

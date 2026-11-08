@@ -28,7 +28,13 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// from the layer by `peer_address/2`, and relays to each the address it
 /// observes for the other, whereupon each declares it (`declare(address(P, A))`)
 /// and punches toward it (`punch_udp/1`).  A request whose signature is the
-/// requester's own is refused.  And, item 3 of GNA's task of 2026-10-09,
+/// requester's own is refused.  The server is told nothing at boot and
+/// admits by key, reading no source identity (GSA, "Distribution and
+/// Activation", "Reconnection": "The rendezvous agent checks keys, so an
+/// update of the Grassroots App leaves the signatures friends hold good"):
+/// two friends whose signatures were made under two different programs, as
+/// under two versions of the Grassroots App, are matched all the same (the
+/// third test).  And, item 3 of GNA's task of 2026-10-09,
 /// the same after one friend changes address, the two reconnecting (the
 /// second test, whose comment says what the loopback can and cannot show).
 ///
@@ -123,8 +129,16 @@ on_reply(F, punch(Addr)) :- ground(F?), ground(Addr?) |
 on_reply(F, rejected) :- send_to_user([rejected(F?)]).
 ''';
 
+  // A later version of the friends' program: the same, with one procedure
+  // more, so that its source identity differs.
+  const laterFriendProgram = '''$friendProgram
+procedure friend_version(Integer).
+friend_version(2).
+''';
+
   late Directory dir;
   late String friendPath;
+  late String laterFriendPath;
   late String serverExecutable;
   final glpRoot = Directory('../../programs').absolute.path;
   final rootSelfGlpPath = '$glpRoot/self.glp';
@@ -134,6 +148,9 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     dir = Directory('../../programs/tests').createTempSync('glp_rendezvous_');
     friendPath = File('${dir.path}/friend.glp').absolute.path;
     File(friendPath).writeAsStringSync(friendProgram);
+    final later = Directory('${dir.path}/later')..createSync();
+    laterFriendPath = File('${later.path}/friend.glp').absolute.path;
+    File(laterFriendPath).writeAsStringSync(laterFriendProgram);
 
     // The entrypoint, built to a native executable.
     final out = Directory.systemTemp.createTempSync('rendezvous_server_');
@@ -161,9 +178,10 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
 
   /// The server, a process of its own, and two friends, each a madGLP agent
   /// over its own headless layer, which is declared the server, holding each
-  /// other's
-  /// signature over their pair; each friend's layer started.
-  Future<_World> standUp(int rvFill, int aFill, int bFill) async {
+  /// other's signature over their pair; each friend's layer started.  B runs
+  /// [bProgram], by default the friends' program, A's.
+  Future<_World> standUp(int rvFill, int aFill, int bFill,
+      {String? bProgram}) async {
     // The server's port, and its key pair as an identity file.
     final probe = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     final rvPort = probe.port;
@@ -177,7 +195,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
 
     // The two friends, each a madGLP agent over its own headless layer
     // declaring the server.
-    Future<_Friend> friend(int fill, String id) async {
+    Future<_Friend> friend(int fill, String id, String program) async {
       final identity = await identityFromSeed(fill);
       final layer = HeadlessGrassrootsNetwork(
         outboundQueueStore: MemoryOutboundQueueStore(),
@@ -189,7 +207,7 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       final key = glp.PubKey.fromList(identity.publicKey);
       final agent = AgentRuntime(
         agentId: id,
-        program: friendPath,
+        program: program,
         rootSelfGlpPath: rootSelfGlpPath,
         keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
         network: HeadlessGlpNetwork(layer),
@@ -202,8 +220,8 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       return f;
     }
 
-    final a = await friend(aFill, 'a');
-    final b = await friend(bFill, 'b');
+    final a = await friend(aFill, 'a', friendPath);
+    final b = await friend(bFill, 'b', bProgram ?? friendPath);
 
     // Each signs the pair and the signatures change hands, as on befriending.
     await a.agent.injectUserInput(_struct('attest', [_const(b.key.hex)]));
@@ -212,9 +230,14 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     final fromB = await b.saidOne('attestation');
     final sigA = fromA.args[1];
     final sigB = fromB.args[1];
-    final graph = _value(fromA.args[2]);
-    expect(_value(fromB.args[2]), graph,
-        reason: 'both signed under the one program, the social graph');
+    final graphA = _value(fromA.args[2]);
+    final graphB = _value(fromB.args[2]);
+    if (bProgram == null) {
+      expect(graphB, graphA, reason: 'both signed under the one program');
+    } else {
+      expect(graphB, isNot(graphA),
+          reason: 'B signed under another program, a later version');
+    }
 
     // The server, a process of its own.
     final server = await Process.start(serverExecutable, [
@@ -226,8 +249,6 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
       '127.0.0.1:$rvPort',
       '--outbound-queue-file',
       '${dir.path}/rv-$rvFill-queue.json',
-      '--graph',
-      graph,
       '--program',
       rvAgentPath,
       '--root-self',
@@ -386,6 +407,42 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
     expect(_loopback(b.layer.wan.observedPeerAddress(a.key.bytes)!, newPort),
         isTrue);
     expect(serverLines, contains('CONNECTED ${a.key.hex}'));
+  }, timeout: Timeout.none);
+
+  // GSA, "Distribution and Activation", "Reconnection": the rendezvous agent
+  // checks that each request is signed by the key it names and that the two
+  // signatures are the two friends' over their pair, and checks keys and no
+  // program identity.  B runs a later version of the friends' program, so
+  // the two signatures were made under two programs; both requests are
+  // admitted, and each friend is told the address of the other.
+  test(
+      'two friends whose signatures over their pair were made under two '
+      'different programs, as under two versions of the Grassroots App, are '
+      'matched by their keys', () async {
+    if (sodiumUnavailable != null) {
+      markTestSkipped(sodiumUnavailable!);
+      return;
+    }
+    final (:rvKey, :a, :b, :sigA, :sigB, serverLines: _) =
+        await standUp(0x7c, 0x3e, 0x4f, bProgram: laterFriendPath);
+
+    await a.agent.injectUserInput(
+        _struct('reconnect', [_const(rvKey.hex), _const(b.key.hex), sigB]));
+    await b.agent.injectUserInput(
+        _struct('available', [_const(rvKey.hex), _const(a.key.hex), sigA]));
+
+    final punchedA = await a.saidOne('punched');
+    final punchedB = await b.saidOne('punched');
+    expect(_value(punchedA.args[0]), b.key.hex);
+    expect(_loopback(_value(punchedA.args[1]), b.layer.boundPort!), isTrue,
+        reason: _value(punchedA.args[1]));
+    expect(_value(punchedB.args[0]), a.key.hex);
+    expect(_loopback(_value(punchedB.args[1]), a.layer.boundPort!), isTrue,
+        reason: _value(punchedB.args[1]));
+    expect(a.said.whereType<rt.StructTerm>().map((t) => t.functor),
+        isNot(contains('rejected')));
+    expect(b.said.whereType<rt.StructTerm>().map((t) => t.functor),
+        isNot(contains('rejected')));
   }, timeout: Timeout.none);
 }
 

@@ -867,6 +867,31 @@ class _TermVariables {
   final Set<HeapCell> readers = <HeapCell>{};
   bool writer = false;
   bool mutualRef = false;
+
+  /// The structures the walk examined, a structure carrying the ground mark
+  /// counted once and its arguments not examined.
+  int structures = 0;
+}
+
+/// Called, where set, with the number of structures each ground test
+/// examined ([_TermVariables.structures]): by the ground instruction (0x41)
+/// and by ground/1 of the generic guard call.  For tests of the ground mark;
+/// null otherwise.
+void Function(int structures)? groundTestObserver;
+
+/// A structure being walked by [_termVariables]: [args], its arguments, the
+/// next to examine at [next]; [struct], the structure to mark, null for a
+/// tentative structure, which is never marked; [ground], whether every
+/// argument examined so far is ground on the heap's bindings; and
+/// [tentative], whether the walk reached the structure through a tentative
+/// binding (σ̂), so that its parent is not ground on the heap's bindings.
+final class _WalkFrame {
+  final List<Object?> args;
+  final StructTerm? struct;
+  final bool tentative;
+  int next = 0;
+  bool ground = true;
+  _WalkFrame(this.args, this.struct, this.tentative);
 }
 
 /// The unbound variables of [term], a guard argument --- a clause variable's
@@ -875,45 +900,90 @@ class _TermVariables {
 /// writer as a writer's.  Until 2026-10-02 the collectors of ground (0x41) and
 /// no_readers (0x44) looked a reader's address up in σ̂, whose keys are
 /// writers, and so missed what the head had tentatively bound its writer to.
-_TermVariables _termVariables(RunnerContext cx, Object? term) {
+///
+/// The ground mark (IGLP appendix-implementation-notes.tex, "Ground mark"):
+/// a structure carrying it is ground, and its arguments are not examined.
+/// With [mark], as a ground test calls it, the walk marks every structure it
+/// finds ground on the heap's bindings: its arguments are examined after it,
+/// so it is marked when its last argument is done.  A structure is not marked
+/// when the walk met in it an unbound variable, a mutual reference, a global
+/// name, a binding of σ̂, which the clause may yet abandon, or a variable or
+/// a structure the walk had met before, whose groundness it does not keep.
+_TermVariables _termVariables(RunnerContext cx, Object? term,
+    {bool mark = false}) {
   final heap = cx.rt.heap;
   final out = _TermVariables();
-  // A bare int is a variable's address at the top only: inside a tentative
-  // structure it is a constant.
-  final pending = <Object?>[term is HeapCell ? VarRef(term) : term];
   final visited = <HeapCell>{};
   final seenStructs = Set<Object>.identity();
-  while (pending.isNotEmpty) {
-    final t = pending.removeLast();
-    if (t is VarRef) {
-      final addr = t.addr;
-      if (!visited.add(addr)) continue;
-      if (heap.isReader(addr)) {
-        final w = heap.tryWriterForReader(addr);
-        if (w != null && cx.sigmaHat.containsKey(w)) {
-          pending.add(cx.sigmaHat[w]);
-        } else if (heap.isReaderBound(addr)) {
-          pending.add(heap.getReaderValue(addr));
+  final frames = <_WalkFrame>[];
+
+  // Examines [t], an argument of the structure of frames.last or the term at
+  // the top: whether it is ground on the heap's bindings.  A structure is
+  // pushed as a frame and examined after, and its frame reports to its parent
+  // when it is done.
+  bool examine(Object? t) {
+    var tentative = false;
+    while (true) {
+      if (t is VarRef) {
+        final addr = t.addr;
+        if (!visited.add(addr)) return false;
+        if (heap.isReader(addr)) {
+          final w = heap.tryWriterForReader(addr);
+          if (w != null && cx.sigmaHat.containsKey(w)) {
+            t = cx.sigmaHat[w];
+            tentative = true;
+          } else if (heap.isReaderBound(addr)) {
+            t = heap.getReaderValue(addr);
+          } else {
+            out.readers.add(addr);
+            return false;
+          }
+        } else if (heap.isWriter(addr)) {
+          if (cx.sigmaHat.containsKey(addr)) {
+            t = cx.sigmaHat[addr];
+            tentative = true;
+          } else if (heap.isFullyBound(addr)) {
+            t = heap.getValue(addr);
+          } else {
+            out.writer = true;
+            return false;
+          }
+        } else if (heap.isValue(addr)) {
+          t = heap.getValue(addr);
         } else {
-          out.readers.add(addr);
+          return false;
         }
-      } else if (heap.isWriter(addr)) {
-        if (cx.sigmaHat.containsKey(addr)) {
-          pending.add(cx.sigmaHat[addr]);
-        } else if (heap.isFullyBound(addr)) {
-          pending.add(heap.getValue(addr));
-        } else {
-          out.writer = true;
-        }
-      } else if (heap.isValue(addr)) {
-        pending.add(heap.getValue(addr));
+      } else if (t is StructTerm) {
+        out.structures++;
+        if (t.groundMark) return !tentative;
+        if (!seenStructs.add(t)) return false;
+        frames.add(_WalkFrame(t.args, t, tentative));
+        return true;
+      } else if (t is _TentativeStruct) {
+        if (seenStructs.add(t)) frames.add(_WalkFrame(t.args, null, true));
+        return false;
+      } else if (t is MutualRefTerm) {
+        out.mutualRef = true;
+        return false;
+      } else {
+        return !tentative && t is! GlobalNameTerm && t is! HeapCell;
       }
-    } else if (t is StructTerm) {
-      if (seenStructs.add(t)) pending.addAll(t.args);
-    } else if (t is _TentativeStruct) {
-      if (seenStructs.add(t)) pending.addAll(t.args);
-    } else if (t is MutualRefTerm) {
-      out.mutualRef = true;
+    }
+  }
+
+  // A bare int is a variable's address at the top only: inside a tentative
+  // structure it is a constant.
+  examine(term is HeapCell ? VarRef(term) : term);
+  while (frames.isNotEmpty) {
+    final f = frames.last;
+    if (f.next < f.args.length) {
+      if (!examine(f.args[f.next++])) f.ground = false;
+    } else {
+      frames.removeLast();
+      if (mark && f.ground) f.struct?.groundMark = true;
+      if ((!f.ground || f.tentative) && frames.isNotEmpty) {
+        frames.last.ground = false;
+      }
     }
   }
   return out;
@@ -923,9 +993,11 @@ _TermVariables _termVariables(RunnerContext cx, Object? term) {
 /// ([OpExecutors.execGuard]), decided as the ground instruction (0x41) decides
 /// a variable: an unbound writer or a mutual reference fails it, no readers
 /// substitution grounding either; unbound readers leave it undecided
-/// ([_undecidedMember]); with none, it succeeds.
+/// ([_undecidedMember]); with none, it succeeds.  It marks what it finds
+/// ground ([_termVariables]).
 GuardResult _groundGuard(RunnerContext cx, Object? arg) {
-  final vars = _termVariables(cx, _equalityOperand(arg));
+  final vars = _termVariables(cx, _equalityOperand(arg), mark: true);
+  groundTestObserver?.call(vars.structures);
   if (vars.writer || vars.mutualRef) return GuardResult.failure;
   if (vars.readers.isNotEmpty) return _undecidedMember(cx, vars.readers);
   return GuardResult.success;
@@ -2652,7 +2724,9 @@ mixin OpExecutors {
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
-    final vars = _termVariables(cx, _guardReaderOperand(cx, value));
+    final vars =
+        _termVariables(cx, _guardReaderOperand(cx, value), mark: true);
+    groundTestObserver?.call(vars.structures);
     // A mutual reference is not ground (TGLP typed-glp.tex): until 2026-10-02
     // the instruction passed it by as a constant, and ground(M?) succeeded
     // where M? =?= M? fails.
@@ -4199,7 +4273,8 @@ mixin OpExecutors {
       // given the term (Definition "GLP Goal/Clause Reduction": the body
       // under the writer mgu); until 2026-10-12 it was refused here.
       final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-      cx.rt.heap.bindVariableStruct(writerAddr, value.functor, value.args);
+      cx.rt.heap.bindVariableStruct(writerAddr, value.functor, value.args,
+          groundMark: value.groundMark);
       cx.argSlots[argSlot] = VarRef(readerAddr);
     } else if (value is ConstTerm) {
       // A constant the head gave the variable, in either mode, as a

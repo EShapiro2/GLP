@@ -84,7 +84,7 @@ certified(M, CK?, CSig?) :-
     module(M?) |
     decompose_module(M?, CK, Src, _),
     self_key(K),
-    sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
 
 %% =============================================================================
 %% play_invite(A, B, AliceUi, BobUi): alice, A, installs the mini-app, befriends bob and invites him;
@@ -497,6 +497,58 @@ play_forged_cert(Me, Installed?) :-
                   [], [user_output(Out), net_output(NetOut)]),
     hold_person(Person?), sink(Out?), sink(NetOut?).
 
+%% =============================================================================
+%% play_verdict(Me, Kind, Installed): Me installs pingapp's certified artefact
+%% under a creator's certification, signed over its source identity, whose
+%% verdict is the one Kind names, each as the checker prints it
+%% (programs/gsc/check.glp): with_wards, syntactically_grassroots_with_wards,
+%% cascade/GAI's verdict; wards, grassroots_with_wards, of the same terms;
+%% not_grassroots, the verdict on a contract with no introductory act;
+%% malformed, the verdict on a contract with a schema not formed as a schema
+%% is; and word, the word grassroots, which the checker never prints.  The
+%% super-app installs a program whose verdict certifies its contract (GSA
+%% paper, Section 3, "A grassroots program is compiled from its contract").
+%% Expected: Installed = [ping] for with_wards and wards, [] for
+%% not_grassroots, malformed and word; → succeeds.
+%% =============================================================================
+exported procedure play_verdict(Key?, Constant?, Stream(Constant)).
+play_verdict(Me, Kind, Installed?) :-
+    ground(Me?) |
+    load_file("pingapp.glpw", C),
+    verdict_cert(Kind?, C?, CSig),
+    new_channel(Ui, Person),
+    agent # agent(Me?, [msg(person, Me?, install(ping, C?, CSig?, Ui?)),
+                        msg(person, Me?, installed(Installed))],
+                  [], [user_output(Out), net_output(NetOut)]),
+    hold_person(Person?), sink(Out?), sink(NetOut?).
+
+procedure verdict_cert(Constant?, Content?, String).
+verdict_cert(with_wards, M, CSig?) :-
+    module(M?) |
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_acquaint, ward(1, agent, 3), free(2)), relay(agents_acquaint, ward(1, agent, 3), ward(2, agent, 4))], [retired])), K?, CSig).
+verdict_cert(wards, M, CSig?) :-
+    module(M?) |
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots_with_wards(acquaint, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_acquaint, ward(1, agent, 3), free(2)), relay(agents_acquaint, ward(1, agent, 3), ward(2, agent, 4))], [retired])), K?, CSig).
+verdict_cert(not_grassroots, M, CSig?) :-
+    module(M?) |
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], not_grassroots([no_introductory_act])), K?, CSig).
+verdict_cert(malformed, M, CSig?) :-
+    module(M?) |
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], malformed([not_in_head(s, svar(x))])), K?, CSig).
+verdict_cert(word, M, CSig?) :-
+    module(M?) |
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+
 %% play_forged_invite(A, B, Out): bob's super-app, B, receives from alice, A, an invitation
 %% that is not a signed term, with one end of a root channel, and then a
 %% text.
@@ -844,6 +896,58 @@ play_coins(A, B, ScreenA?, ScreenB?) :-
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_coins_person(B?, A?, C?, CSig?, AppEndB?, BobOut?, BobIn),
     miniapp_person_run(C?, B?, bob, [A?], PersonEndB?, ScreenB).
+
+%% =============================================================================
+%% play_activate(A, B, ScreenA, ScreenB): activation without an invitation,
+%% and a later invitation to the running execution (GSA paper, Section 3, "A
+%% grassroots program instance" and "Activation and joining").  alice, A,
+%% installs the currency and activates it, with no invitation and no peer;
+%% her execution's scripted person, under the role mint, mints 3, and once her
+%% screen has shown the mint and her holdings she connects to bob, B, and
+%% invites him.  bob installs the currency and consents in advance, and the
+%% handshake opens their conversation; at alice the registry records the
+%% currency running, so the root channel goes to the execution she activated
+%% alone, whose screen then shows the conversation opened, on the person
+%% channel that execution holds since her activation.  bob's scripted person,
+%% under a role with no script, reports his screen.
+%% Expected: ScreenA = [minted(3), holdings([lot(alice, 3)]), opened(bob) |
+%% _], ScreenB = [opened(alice) | _], → suspended.
+%% =============================================================================
+exported procedure play_activate(Key?, Key?, Stream(Opaque), Stream(Opaque)).
+play_activate(A, B, ScreenA?, ScreenB?) :-
+    ground(A?), ground(B?) |
+    crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    load_file("currency.glpw", C),
+    certified(C?, _, CSig),
+    new_channel(AppEndA, PersonEndA),
+    new_channel(AppEndB, PersonEndB),
+    agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    miniapp_person_run(C?, A?, mint, [B?], PersonEndA?, ShownA),
+    tee(ShownA?, ScreenA, SeenA),
+    alice_alone_person(A?, B?, C?, CSig?, AppEndA?, AliceOut?, SeenA?, AliceIn),
+    agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_coins_person(B?, A?, C?, CSig?, AppEndB?, BobOut?, BobIn),
+    miniapp_person_run(C?, B?, watch, [A?], PersonEndB?, ScreenB).
+
+%% alice's person in play_activate: install the currency and activate it,
+%% alone; then, once her execution's screen has shown two items, connect to
+%% Q and, once connected, invite Q.  The screen's items are counted, never
+%% inspected.
+procedure alice_alone_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_alone_person(Me, Q, C, CSig, AppEnd, Outs, Seen,
+                   [msg(person, Me?, install(currency, C?, CSig?, AppEnd?)),
+                    msg(person, Me?, activate(currency)) | Cmds?]) :-
+    ground(Me?), ground(Q?) |
+    alice_after_two(Me?, Q?, Outs?, Seen?, Cmds).
+
+procedure alice_after_two(Key?, Key?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_after_two(Me, Q, Outs, [_, _ | Seen], [msg(person, Me?, connect(Q?)) | Cmds?]) :-
+    ground(Q?) |
+    sink(Seen?),
+    alice_coins_run(Me?, Q?, Outs?, Cmds).
+%% The screen closed before two items: her person stream closes.
+alice_after_two(_, _, _, [_], []).
+alice_after_two(_, _, _, [], []).
 
 %% The installers of play_coins: each installs the currency with its end of
 %% its person channel; the play writes no date, the currency keeping none.

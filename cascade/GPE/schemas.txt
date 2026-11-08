@@ -1,0 +1,17 @@
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+
+open_place: open(Alice) <-
+    identity(Alice), not open(Alice) guarded by Alice
+
+close_place: not open(Alice) <-
+    identity(Alice), open(Alice) guarded by Alice
+
+encounter: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), open(Alice), not knows(Alice, Bob), identity(Bob), open(Bob), not knows(Bob, Alice)

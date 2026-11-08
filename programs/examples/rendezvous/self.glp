@@ -12,10 +12,14 @@
 SignalReply ::= punch(String) ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
-            ; available(Key, Key, SignedTerm, SignalReply?).
+            ; available(Key, Key, SignedTerm, SignalReply?)
+            ; register(Key, SignedTerm, SignalReply?)
+            ; redeem(Key, SignedTerm, SignalReply?).
 
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
-               ; ready(Key, Key, String, SignalReply?).
+               ; ready(Key, Key, String, SignalReply?)
+               ; invited(Key, Integer, SignalReply?)
+               ; used(Key, Integer, Integer).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 %% Friend-mediated rendezvous (fmrv) — a friend already reachable over BLE
@@ -115,10 +119,10 @@ exported procedure test13_dispatch_refuses(SignalReply, SignalReply,
 test13_dispatch_refuses(R1?, R2?, R3?, R4?) :-
     rv_agent_test # test13_dispatch_refuses(R1, R2, R3, R4).
 
-imported procedure rv_agent_test#test14_other_program_rejected(SignalReply).
-exported procedure test14_other_program_rejected(SignalReply).
-test14_other_program_rejected(R?) :-
-    rv_agent_test # test14_other_program_rejected(R).
+imported procedure rv_agent_test#test14_own_signature_rejected(SignalReply).
+exported procedure test14_own_signature_rejected(SignalReply).
+test14_own_signature_rejected(R?) :-
+    rv_agent_test # test14_own_signature_rejected(R).
 
 imported procedure rv_agent_test#test15_match_on_none(SignalReply, PendingList).
 exported procedure test15_match_on_none(SignalReply, PendingList).
@@ -171,6 +175,109 @@ exported procedure test22_available_admitted_no_layer(Signature, SignalReply,
                                                       SignalReply).
 test22_available_admitted_no_layer(S?, RB?, RA?) :-
     rv_agent_test # test22_available_admitted_no_layer(S, RB, RA).
+
+imported procedure rv_agent_test#test23_admitted_under_any_program(
+    SignalReply, SignalReply).
+exported procedure test23_admitted_under_any_program(SignalReply,
+                                                     SignalReply).
+test23_admitted_under_any_program(RA?, RB?) :-
+    rv_agent_test # test23_admitted_under_any_program(RA, RB).
+
+imported procedure rv_agent_test#test24_refused(SignalReply, SignalReply,
+                                                SignalReply, SignalReply,
+                                                SignalReply, SignalReply,
+                                                SignalReply, SignalReply).
+exported procedure test24_refused(SignalReply, SignalReply, SignalReply,
+                                  SignalReply, SignalReply, SignalReply,
+                                  SignalReply, SignalReply).
+test24_refused(R1?, R2?, R3?, R4?, R5?, R6?, R7?, R8?) :-
+    rv_agent_test # test24_refused(R1, R2, R3, R4, R5, R6, R7, R8).
+
+imported procedure rv_agent_test#test25_server_admits_by_key(SignalReply,
+                                                             SignalReply).
+exported procedure test25_server_admits_by_key(SignalReply, SignalReply).
+test25_server_admits_by_key(RA?, RR?) :-
+    rv_agent_test # test25_server_admits_by_key(RA, RR).
+
+imported procedure rv_agent_test#test26_register(SignalReply, PendingList).
+exported procedure test26_register(SignalReply, PendingList).
+test26_register(X1?, X2?) :-
+    rv_agent_test # test26_register(X1, X2).
+
+imported procedure rv_agent_test#test27_register_refused(SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+exported procedure test27_register_refused(SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+test27_register_refused(X1?, X2?, X3?, X4?, X5?) :-
+    rv_agent_test # test27_register_refused(X1, X2, X3, X4, X5).
+
+imported procedure rv_agent_test#test28_register_once(SignalReply, SignalReply, SignalReply, SignalReply, PendingList, PendingList, PendingList).
+exported procedure test28_register_once(SignalReply, SignalReply, SignalReply, SignalReply, PendingList, PendingList, PendingList).
+test28_register_once(X1?, X2?, X3?, X4?, X5?, X6?, X7?) :-
+    rv_agent_test # test28_register_once(X1, X2, X3, X4, X5, X6, X7).
+
+imported procedure rv_agent_test#test29_redeem(SignalReply, SignalReply, PendingList).
+exported procedure test29_redeem(SignalReply, SignalReply, PendingList).
+test29_redeem(X1?, X2?, X3?) :-
+    rv_agent_test # test29_redeem(X1, X2, X3).
+
+imported procedure rv_agent_test#test30_redeem_no_address(SignalReply, SignalReply, SignalReply, PendingList).
+exported procedure test30_redeem_no_address(SignalReply, SignalReply, SignalReply, PendingList).
+test30_redeem_no_address(X1?, X2?, X3?, X4?) :-
+    rv_agent_test # test30_redeem_no_address(X1, X2, X3, X4).
+
+imported procedure rv_agent_test#test31_redeem_unregistered(SignalReply, SignalReply, SignalReply, SignalReply, PendingList, PendingList).
+exported procedure test31_redeem_unregistered(SignalReply, SignalReply, SignalReply, SignalReply, PendingList, PendingList).
+test31_redeem_unregistered(X1?, X2?, X3?, X4?, X5?, X6?) :-
+    rv_agent_test # test31_redeem_unregistered(X1, X2, X3, X4, X5, X6).
+
+imported procedure rv_agent_test#test32_redeem_used(SignalReply, PendingList).
+exported procedure test32_redeem_used(SignalReply, PendingList).
+test32_redeem_used(X1?, X2?) :-
+    rv_agent_test # test32_redeem_used(X1, X2).
+
+imported procedure rv_agent_test#test33_redeem_twice(SignalReply, SignalReply, SignalReply, PendingList).
+exported procedure test33_redeem_twice(SignalReply, SignalReply, SignalReply, PendingList).
+test33_redeem_twice(X1?, X2?, X3?, X4?) :-
+    rv_agent_test # test33_redeem_twice(X1, X2, X3, X4).
+
+imported procedure rv_agent_test#test34_redeem_refused(SignalReply, SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+exported procedure test34_redeem_refused(SignalReply, SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+test34_redeem_refused(X1?, X2?, X3?, X4?, X5?, X6?) :-
+    rv_agent_test # test34_redeem_refused(X1, X2, X3, X4, X5, X6).
+
+imported procedure rv_agent_test#test35_redeem_admitted_no_layer(SignalReply, SignalReply, PendingList).
+exported procedure test35_redeem_admitted_no_layer(SignalReply, SignalReply, PendingList).
+test35_redeem_admitted_no_layer(X1?, X2?, X3?) :-
+    rv_agent_test # test35_redeem_admitted_no_layer(X1, X2, X3).
+
+imported procedure rv_agent_test#test36_link_through_agent(Signature, SignalReply, SignalReply).
+exported procedure test36_link_through_agent(Signature, SignalReply, SignalReply).
+test36_link_through_agent(X1?, X2?, X3?) :-
+    rv_agent_test # test36_link_through_agent(X1, X2, X3).
+
+imported procedure rv_agent_test#test37_expired_link_through_agent(SignalReply, SignalReply).
+exported procedure test37_expired_link_through_agent(SignalReply, SignalReply).
+test37_expired_link_through_agent(X1?, X2?) :-
+    rv_agent_test # test37_expired_link_through_agent(X1, X2).
+
+imported procedure rv_agent_test#test38_redeem_other_server(SignalReply, SignalReply, PendingList).
+exported procedure test38_redeem_other_server(SignalReply, SignalReply, PendingList).
+test38_redeem_other_server(X1?, X2?, X3?) :-
+    rv_agent_test # test38_redeem_other_server(X1, X2, X3).
+
+imported procedure rv_agent_test#test39_server_own_key(SignalReply, SignalReply, SignalReply, SignalReply).
+exported procedure test39_server_own_key(SignalReply, SignalReply, SignalReply, SignalReply).
+test39_server_own_key(X1?, X2?, X3?, X4?) :-
+    rv_agent_test # test39_server_own_key(X1, X2, X3, X4).
+
+imported procedure rv_agent_test#test40_prune_used(SignalReply, PendingList, PendingList).
+exported procedure test40_prune_used(SignalReply, PendingList, PendingList).
+test40_prune_used(X1?, X2?, X3?) :-
+    rv_agent_test # test40_prune_used(X1, X2, X3).
+
+imported procedure rv_agent_test#test41_used_dropped_through_agent(SignalReply, SignalReply).
+exported procedure test41_used_dropped_through_agent(SignalReply, SignalReply).
+test41_used_dropped_through_agent(X1?, X2?) :-
+    rv_agent_test # test41_used_dropped_through_agent(X1, X2).
 
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test

@@ -59,9 +59,11 @@ for t in $TREES; do
     stage "$f"
   done < <(cd "$SRC" && find "$t" -type f \( -name '*.glp' -o -name '*.vglp' \) | sort)
 done
-# A .vglp is compiled with the dispatcher's generic source, programs/vglp/dispatcher.glp.
+# A .vglp is compiled with the dispatcher's generic source, programs/vglp/dispatcher.glp,
+# and its part typed over the type of a position, programs/vglp/views.glp.
 if [ -n "$(find "$DST" -name '*.vglp')" ]; then
   stage vglp/dispatcher.glp
+  stage vglp/views.glp
 fi
 
 # The certified mini-apps the super-app installs reach the phone as artefacts,

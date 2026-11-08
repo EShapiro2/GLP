@@ -42,6 +42,14 @@ class StructTerm implements Term {
   final List<Term> args;
   StructTerm(this.functor, this.args);
 
+  /// The ground mark (IGLP appendix-implementation-notes.tex, "Ground mark"):
+  /// set when a ground test finds this structure ground on the heap's
+  /// bindings, a list cell or a compound term, after which a ground test of it
+  /// succeeds at once.  A term that is ground stays ground, every variable
+  /// being assigned once, so the mark is never cleared.  A copy of the term,
+  /// as a message to another isolate makes, starts unmarked.
+  bool groundMark = false;
+
   /// `functor(arg,...)`, each argument as its own toString gives it.  The
   /// text is written with a stack of its own, a frame for each structure
   /// being written, piece by piece in the order `'$functor(${args.join(",")})'`

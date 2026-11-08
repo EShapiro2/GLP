@@ -1,0 +1,2 @@
+%% not compiled, having no pragmas(grv)
+%% it passes the checks, its verdict, local and effective, and has no pragmas, the words its app shows: the compiler prints a platform only from a contract with pragmas, and refuses one with none (vGLP, Section 5.4, "The contract's words").

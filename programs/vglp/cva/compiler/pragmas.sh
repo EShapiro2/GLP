@@ -5,6 +5,8 @@
 #
 # prints pragmas(Lists, Acts) or no_pragmas on one line, each string as its GLP source text inside a quoted name, since the compiler writes a word as it is, the reader reading the double-quoted string back as the word.  The lines after "Pragmas" up to the first that names a clause are lists, one for each tab, "Name: what it lists", list(Name, Words); every other line is a clause's, in GSC's form, its proposer, its buttons and fields, and its indented lines (README.md beside this file, 1), each act act(Schema, Button, Fields, Sentence, Tab, Proposer), Sentence said(Questions) or none, a question's words text(S) or person(I), I the rank among the schema's persons of the role the name bears, by the names the schema term gives its roles (GSC 25b6b3c, Section 2), Proposer by([G]).  A contract extended is found beside the contract, or else under programs/ by its NAME.txt.  Exits 1, naming the line, on a pragma it cannot read or a clause it cannot find, and on every line it refuses, each named with the variable its fields leave unnamed or the field beyond them; 2 on a bad argument.  With PRAGMAS_LINES set it prints on the standard error each button line and the variables its fields name by the rule, or why it is refused, replaced or gone.
 
+# A NAME.txt may carry two kinds of pragmas under their headings, "Interface pragmas" and "Implementation pragmas", "Pragmas" alone meaning the interface ones (GSC, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69): the interface pragmas are read as above, and the implementation pragmas are skipped, no paper yet saying what form they take in the app's code.
+
 set -u
 [ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
 PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -45,8 +47,7 @@ sub var_tokens {
     return map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($t =~ /(\x27(?:[^\x27\\]|\\.)*\x27|\b[A-Za-z_]\w*\b)(?!\s*\()/g);
 }
 sub local_vars {
-    my (@args) = @_;
-    my $roles = $args[-1];
+    my ($roles) = @_;
     $roles =~ s/^\[//; $roles =~ s/\]$//;
     my (%at, %elsewhere);
     my $r = 0;
@@ -67,18 +68,20 @@ sub local_vars {
 my (@snames, %svars, %preds, %locals);
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
-    while ($term =~ /\b([nc]?schema)\(/g) {
+    while ($term =~ /\b([ncq]?schema)\(/g) {
         my $kw = $1;
         my $open = pos($term) - 1;
         my ($body, $end) = inside($term, $open);
         pos($term) = $open + 1;
         my @args = top_args($body);
         # A schema whose head names its roles, schema(Name, Names, Vars, Roles), cschema(Name, Names, Vars, Reaches, Roles) or nschema(Name, Names, Vars, Constraint, Roles) (programs/gsc/README.md), carries its variables third.
-        my $named = ($kw eq "schema" && @args == 4) || ($kw ne "schema" && @args == 5);
+        # A schema with quantifiers, qschema(Name, Names, Vars, Bound, Constraint, Roles, Conjuncts, Forms), or with no Names (programs/gsc/self.glp), carries its roles sixth, or fifth, and not last.
+        my $named = ($kw eq "schema" && @args == 4) || ($kw eq "qschema" && @args == 8) || ($kw ne "schema" && $kw ne "qschema" && @args == 5);
         my ($n, $a) = @args[0, $named ? 2 : 1];
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
-        my %local = map { $_ => 1 } local_vars(@args);
+        my $rarg = $kw eq "qschema" ? $args[$named ? 5 : 4] : $args[-1];
+        my %local = map { $_ => 1 } local_vars($rarg);
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
         $locals{$n} = { map { $_ => 1 } grep { $local{$_} } @hv };
@@ -124,14 +127,18 @@ sub tstr {   # a term written back, to compare arguments
     return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
 }
 # Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); its head, $head{S}, the variables after its roles; and the names of its roles, $rnames{S}, where its head names them (GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do").
-my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered, @lines_out, @faults);
+my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered, @lines_out, @faults, %cons);
 sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
-    if ($t->[0] =~ /^[nc]?schema$/ && @{ $t->[1][0] } == 1) {
+    if ($t->[0] =~ /^[ncq]?schema$/ && @{ $t->[1][0] } == 1) {
         my $n = $t->[1][0][0];
         return if exists $roles{$n};
-        my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($t->[0] ne "schema" && @{ $t->[1] } == 5);
+        my $q = $t->[0] eq "qschema";
+        my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($q && @{ $t->[1] } == 8) || (!$q && $t->[0] ne "schema" && @{ $t->[1] } == 5);
+        # The constraint of an nschema or a qschema, which a field does not name a variable it determines (field_keys3).
+        $cons{$n} = $t->[1][$named ? 4 : 3] if $q;
+        $cons{$n} = $t->[1][$named ? 3 : 2] if $t->[0] eq "nschema";
         $head{$n} = $t->[1][$named ? 2 : 1][1];
         # A name is the role name, or one(Name, Other), the role Name possibly the person of the role Other (GSC 316d875, Section 2), read as Name.
         if ($named) { $rnames{$n} = [ map { my $e = $_->[0] eq "one" ? $_->[1][0] : $_; (my $x = $e->[0]) =~ s/^\x27|\x27$//g; $x } @{ $t->[1][1][1] } ] }
@@ -147,10 +154,11 @@ sub find_schemas {
             }
         }
         my @rs;
-        for my $r (@{ $t->[1][-1][1] }) {
+        my $rterm = $q ? $t->[1][$named ? 5 : 4] : $t->[1][-1];
+        for my $r (@{ $rterm->[1] }) {
             my ($kind, $g, @c) = $r->[0] eq "crs" ? @{ $r->[1] } : (undef, @{ $r->[1] });
             push @rs, { guarded => ($g->[0] eq "unguarded" ? 0 : 1),
-                        listed => ((defined $kind && $kind->[0] eq "listed") ? 1 : 0),
+                        listed => ((defined $kind && ($kind->[0] eq "listed" || $kind->[0] eq "qlisted")) ? 1 : 0),
                         comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ],
                         # The same lists as parsed terms, an atom with a multiplicity, times(K, A), read as its atom A, its multiplicity K not an argument of it (GSC, Appendix "Numbers": "a multiplicity k.phi is k copies of phi").
                         atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ] };
@@ -161,6 +169,39 @@ sub find_schemas {
     find_schemas($_) for @{ $t->[1] };
 }
 if (defined $term && $term ne "") { $tsrc = $term; find_schemas(tparse()) }
+# A variable the constraint determines from the variables local to one role and those the schema-binding binds, that only that role’s atoms name, is local to that role, and is no place of the request: "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer’s state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"), as local.glp’s det_locals decides it: an equality conjunct of the constraint whose one variable not local, of a coefficient not 0, is of the head.
+sub con_conjs { my ($c) = @_; return () if !ref $c || @$c == 1; return (con_conjs($c->[1][0]), con_conjs($c->[1][1])) if $c->[0] eq "and"; return ($c) }
+for my $n (keys %cons) {
+    next unless $roles{$n};
+    my (%role_of, %named_at);
+    my $r = 0;
+    for my $rs (@{ $roles{$n} }) {
+        $r++;
+        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { $named_at{$_}{$r} = 1 for atom_keys($a) } }
+    }
+    for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
+    my $more = 1;
+    while ($more) { $more = 0;
+    for my $c (con_conjs($cons{$n})) {
+        next unless $c->[0] eq "eq";
+        my %vs = map { $_ => 1 } (expr_nvars($c->[1][0]), expr_nvars($c->[1][1]));
+        my @nl = grep { !$role_of{$_} } keys %vs;
+        my %lr = map { $role_of{$_} => 1 } grep { $role_of{$_} } keys %vs;
+        next unless @nl == 1 && keys %lr == 1;
+        my ($v) = @nl; my ($i) = keys %lr;
+        next unless lin_coef(["minus", [$c->[1][0], $c->[1][1]]], $v) != 0;
+        my @at = keys %{ $named_at{$v} || {} };
+        next unless @at == 1 && $at[0] == $i;
+        (my $vn = $v) =~ s/^v//;
+        next unless grep { $_ eq $vn } @{ $svars{$n} || [] };
+        next if $locals{$n}{$vn};
+        $locals{$n}{$vn} = 1;
+        $role_of{$v} = $i;
+        $svars{$n} = [ grep { $_ ne $vn } @{ $svars{$n} } ];
+        $more = 1;
+    }
+    }
+}
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
 my %named_by_button;
@@ -186,6 +227,10 @@ sub find_txt {
     for my $g (glob("$programs/*/$name.txt"), glob("$programs/*/*/$name.txt")) { return $g }
     return undef;
 }
+# The headings of the pragmas (GSC, Section 2, its first paragraph, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69; GSC #13, Code_inbox.md, 2026-11-07 19:29 UTC, 2): a NAME.txt may carry "Interface pragmas" and "Implementation pragmas", "Pragmas" alone meaning the interface ones.  The interface pragmas are read as the pragmas were; the implementation pragmas are skipped, no paper yet saying what form they take in the app\x27s code.
+sub iface_head { my ($x) = @_; return $x eq "Pragmas" || $x eq "Interface pragmas" }
+sub impl_head { my ($x) = @_; return $x eq "Implementation pragmas" }
+sub any_head { my ($x) = @_; return iface_head($x) || impl_head($x) }
 sub read_txt {
     my ($f) = @_;
     open(my $h, "<", $f) or die "pragmas.sh: cannot read $f\n";
@@ -244,7 +289,7 @@ sub visit {
     push @order, $f;
 }
 my @own = read_txt($top);
-unless (grep { $_ eq "Pragmas" } @own) { print "no_pragmas\n"; exit 0 }
+unless (grep { iface_head($_) } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
 my (@tabs, @lists, @acts);
 # The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
@@ -253,14 +298,14 @@ for my $f (@order) {
     my $declared = 0;
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
-        last if $x =~ /^\d+\./ || $x eq "Pragmas";
+        last if $x =~ /^\d+\./ || any_head($x);
         next unless $x =~ /^(.*?)\s+(?:is|are)\s+(?:a\s+)?persons?\.(?:\s|$)/;
         $declared = 1;
         $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
     }
     next if $declared;
     for my $x (read_txt($f)) {
-        last if $x eq "Pragmas";
+        last if any_head($x);
         next unless $x =~ /^\d+\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?[^.]+\.\s+(.*)$/;
         for my $sen (split /(?<=[.!?;:])\s+/, $1) {
             my @w = ($sen =~ /([A-Za-z]+)/g);
@@ -274,20 +319,22 @@ my (%xclause, %xbody);
 for my $f (reverse @order) {
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
-        last if $x eq "Pragmas";
+        last if any_head($x);
         if ($x =~ /^(\d+)\.\s+(?:[\x{25A0}\x{25C6}\x{25CB}]\s+)?([^.]+)\.\s*(.*)$/) {
             next if exists $xclause{$2};
             $xclause{$2} = $1; $xbody{$2} = $3;
         }
     }
 }
-# The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below).
+# The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below): an interface heading, "Pragmas" or "Interface pragmas", is the line "Pragmas", and an implementation heading and every line after it up to the next interface heading are skipped (iface_head, impl_head).
 sub joined {
     my ($f) = @_;
-    my (@m, $aft);
+    my (@m, $aft, $impl);
     for my $x (read_txt($f)) {
+        if (impl_head($x)) { $impl = 1; next }
+        if (iface_head($x)) { $impl = 0; $aft = 1; push @m, "Pragmas"; next }
+        next if $impl;
         if ($aft && $x =~ /^\s+\S/ && @m && $m[-1] ne "Pragmas") { $m[-1] .= "\x01" . $x; next }
-        $aft = 1 if $x eq "Pragmas";
         push @m, $x;
     }
     return @m;
@@ -507,10 +554,13 @@ for my $f (@order) {
                                 @av == 1 or die "pragmas.sh: $f: the pragma \"$title\" names $x, whom no role of $S bears, and $S has " . scalar(@av) . " agent variables\n";
                                 return $av[0] + 1;
                             };
+                            # A listed role is asked by its name, each person of its list (vGLP 9ee6f87, Section 5.4, “Speech-act schemas as local specifications”: the guard set of a part is the people in its guarding roles, “those in a listed guarding role being those of L”), its place the role’s own.
+                            my %lpl;
+                            for my $j (1 .. scalar @{ $roles{$S} }) { $lpl{ $rnames{$S}[$j - 1] } //= $j if $roles{$S}[$j - 1]{listed} && defined $rnames{$S}[$j - 1] }
                             my %q;
                             for my $x (@{ $pr->{asked} }) {
-                                exists $rk{ $x->[0] } or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], whom no role of $S bears\n";
-                                my $place = $pp[ $rk{ $x->[0] } - 1 ];
+                                exists $rk{ $x->[0] } || exists $lpl{ $x->[0] } or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], whom no role of $S bears\n";
+                                my $place = exists $rk{ $x->[0] } ? $pp[ $rk{ $x->[0] } - 1 ] : $lpl{ $x->[0] };
                                 grep { $_ == $place } @g or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0], who is in no guarding role of $S\n";
                                 !exists $q{$place} or die "pragmas.sh: $f: the pragma \"$title\" asks $x->[0] twice\n";
                                 $q{$place} = "[" . join(", ", map { $_->[0] eq "text" ? "text(" . q_string($_->[1]) . ")" : "person(" . $rank->($_->[1]) . ")" } @{ $x->[1] }) . "]";
@@ -573,7 +623,7 @@ sub field_slots {
         (my $vn = $v->[1][0][0] // "") =~ s/^\x27|\x27$//g;
         next if $locals{$S} && $locals{$S}{$vn};
         $i++;
-        next unless $v->[0] =~ /^(pvar|svar|num)$/;
+        next unless $v->[0] =~ /^(pvar|svar|num|real)$/;
         push @sl, [$v->[0], $i, $vn];
     }
     return @sl;
@@ -585,7 +635,7 @@ sub atom_keys {
     my ($fn, $as) = @$t;
     return ("r$as->[0][0]") if ($fn eq "role" || $fn eq "own") && @$as == 1 && $as->[0][0] =~ /^\d+$/;
     my $uq = sub { (my $x = $_[0]) =~ s/^\x27|\x27$//g; return $x };
-    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|own_var)$/ && @$as == 1;
+    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|real|own_var)$/ && @$as == 1;
     return (atom_keys($as->[0]), "v" . $uq->($as->[1][0])) if $fn eq "ext" && @$as == 2;
     return map { atom_keys($_) } @$as;
 }
@@ -600,14 +650,67 @@ sub bound_keys {
     return %b;
 }
 # The variables of the act S proposed at its role pl that a field names: "A field is for a variable of the schema that those atoms do not bind --- a text, a number, a new name, a person the proposer’s state does not name --- and the fields of a line name these variables, of the acts its button names together, in the schemas’ order" (vGLP 40f8444, Section 5.4, "The contract’s words"): the places of its request a field may name (field_slots) that the atoms it requires at pl do not bind, a variable local to a role being bound by that role and named by no request (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it").
+# A variable the constraint determines from those the atoms bind and the other fields is no field: "A field is for a variable of the schema that those atoms do not bind and the constraint does not determine from the variables they bind and the other fields" (vGLP bcb2726, Section 5.4, "The contract’s words"), as GCC’s cmint’s i1, which i, bound by the issued count the treasurer holds, and the field k give; the slots are taken in the order of the request, a variable being determined from the bound ones and the fields before it.
 sub field_keys3 {
     my ($S, $pl) = @_;
     my %b = bound_keys($S, $pl);
     my %fills = map { $_ => 1 } @{ $svars{$S} };
-    return grep {
+    my @out;
+    for (field_slots($S)) {
         my $k = $_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]";
-        !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] })
-    } field_slots($S);
+        next unless !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] });
+        if ($_->[0] eq "num" && $cons{$S}) {
+            my %known = (%b, map { ($_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]") => 1 } @out);
+            my %d = map { $_ => 1 } det_closure($cons{$S}, \%known);
+            next if $d{$k};
+        }
+        push @out, $_;
+    }
+    return @out;
+}
+# The numeric variables a constraint gives finitely many values once those of %$known are bound, taken again with each it gives, as local.glp’s con_det and determined decide it: succ(X, Y) gives Y once X is bound and X once Y is; eq(X, Y) its one numeric variable not bound, where its coefficient in X - Y is not 0; and(C1, C2) what either gives; or(C1, C2) what both give; the rest give none.
+sub nvar_key { my ($e) = @_; return undef unless @$e == 2 && $e->[0] eq "num"; my $x = $e->[1][0][0]; return undef if $x =~ /^-?\d+$/; $x =~ s/^\x27|\x27$//g; return "v$x" }
+sub expr_nvars { my ($e) = @_; return () if @$e == 1; my $v = nvar_key($e); return ($v) if defined $v; return () if $e->[0] eq "num"; return map { expr_nvars($_) } @{ $e->[1] } if $e->[0] =~ /^(plus|minus|mul)$/; return () }
+sub const_of { my ($e) = @_; return 0 if @$e == 1; return $e->[1][0][0] + 0 if $e->[0] eq "num" && $e->[1][0][0] =~ /^-?\d+$/; my ($a, $b) = @{ $e->[1] }; return const_of($a) + const_of($b) if $e->[0] eq "plus"; return const_of($a) - const_of($b) if $e->[0] eq "minus"; return const_of($a) * const_of($b) if $e->[0] eq "mul"; return 0 }
+sub lin_coef {
+    my ($e, $v) = @_;
+    return 0 if @$e == 1;
+    if ($e->[0] eq "num") { my $k = nvar_key($e); return (defined $k && $k eq $v) ? 1 : 0 }
+    my ($a, $b) = @{ $e->[1] };
+    return lin_coef($a, $v) + lin_coef($b, $v) if $e->[0] eq "plus";
+    return lin_coef($a, $v) - lin_coef($b, $v) if $e->[0] eq "minus";
+    return (expr_nvars($a) ? lin_coef($a, $v) * const_of($b) : const_of($a) * lin_coef($b, $v)) if $e->[0] eq "mul";
+    return 0;
+}
+sub con_det1 {
+    my ($c, $known) = @_;
+    return () if @$c == 1;
+    my ($f, $as) = @$c;
+    return (con_det1($as->[0], $known), con_det1($as->[1], $known)) if $f eq "and";
+    if ($f eq "or") { my %d2 = map { $_ => 1 } con_det1($as->[1], $known); return grep { $d2{$_} } con_det1($as->[0], $known) }
+    if ($f eq "eq") {
+        my %u; $u{$_} = 1 for grep { !$known->{$_} } (expr_nvars($as->[0]), expr_nvars($as->[1]));
+        my @u = keys %u;
+        return () unless @u == 1;
+        return lin_coef(["minus", [$as->[0], $as->[1]]], $u[0]) != 0 ? @u : ();
+    }
+    if ($f eq "succ") {
+        my ($x, $y) = map { nvar_key($_) } @$as;
+        my $bx = !defined $x || $known->{$x}; my $by = !defined $y || $known->{$y};
+        return ($y) if $bx && !$by;
+        return ($x) if $by && !$bx;
+    }
+    return ();
+}
+sub det_closure {
+    my ($c, $known) = @_;
+    my %k = %$known; my %d;
+    while (1) {
+        my @n = grep { !$k{$_} } con_det1($c, \%k);
+        last unless @n;
+        $k{$_} = $d{$_} = 1 for @n;
+    }
+    return keys %d;
 }
 # A variable by the name the schema gives it: a role by its name, as Bob, and any other by its own.
 sub var_name { my ($sl) = @_; (my $n = $sl->[2]) =~ s/^@//; return $n }

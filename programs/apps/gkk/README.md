@@ -4,11 +4,7 @@ The app of GKK, Grassroots Keys and Knowledge, the base mini-app of the grassroo
 
 ## The contract
 
-GKK is GSC's contract, the base contract every contract extends (Coordination Appendix C); its clauses are `programs/gsc/GKK.txt`, as GSC's paper, Section 2.1, has them, and its act schemas `programs/gsc/GKK.glp`:
-
-1. *Identity.*  Alice may establish their identity once by choosing a unique key pair.  They make themselves known by the public key, sign their acts with the private key, and are accountable for every act signed with it.
-2. *Acquaintance.*  Alice and Bob may come to know each other by an act of both.
-3. *Introduction.*  If Alice and Bob know each other and Alice knows Carol, then Alice can make Carol known to Bob, with Bob's consent.
+GKK is GSC's contract, the base contract every contract extends (Coordination Appendix C); its clauses are `programs/gsc/GKK.txt`, as GSC's paper, Section 2.1, has them, and its act schemas `programs/gsc/GKK.glp`.
 
 GKK:1 is the schema `establish(p?)`, which adds `identity` at the person, and every role of the other two schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every view shows, its first argument, and the request form reads off the last view drawn (vGLP, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"), a class of one participant, taken at once.  GKK:2 is `acquaint(p?, q?)`, guarded by both, adding `knows` of the other at each; GKK:3 is `introduce(p?, q? ; c)`, guarded by both, `c` the person introduced, who takes no part: `p` requires `knows(q)` and `knows(c)`, `q` requires `knows(p)` and gains `knows(c)`.  The checker's verdict is `syntactically_grassroots`, with acquaint its introductory act (`programs/gsc`, `intro_acts/2`).
 

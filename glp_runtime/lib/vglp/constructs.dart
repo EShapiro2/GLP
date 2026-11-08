@@ -21,23 +21,20 @@
 // structure, each position written by the program or by the person, a `?` in
 // a type definition exchanging the two (TGLP's moded types):
 //
-//   - a position the program writes is shown as the program writes it, and
-//     each widget position the program has not yet written whole --- the
-//     root, a field, an element of any stream, the thread's included --- is
-//     shown pending(P), P its position, until written whole, and shown again
-//     once it is; a stream the program writes is shown as its elements so
-//     far, its unwritten tail not shown, a thread; so the questions beside a
-//     position not yet written are offered at once, and a pending position
-//     and a stream's unwritten tail pass the grants after them on (vGLP
-//     118e04d, Definition "Construct Process": "each widget position the
-//     program has not yet written whole --- the root, a field, an element of
-//     any stream, the thread's included --- drawn as pending, and a stream's
-//     unwritten tail not drawn, so that the questions beside it are offered
-//     at once"; vGLP #8 Cowork, 2026-10-11 22:51 UTC, Udi approved).  Whether
-//     a position is written when it is drawn is decided by the first clause
-//     that can reduce (GLP-Spec, Definition "cGLP Transition System",
-//     Reduce): the written position's clause where it is, the pending clause
-//     after it where it is not;
+//   - the output the program writes into the variable is drawn once written
+//     whole, with its questions: "A construct process has the bridge draw
+//     the widget of T once every reader in the output it holds is assigned,
+//     with that output and its questions" (vGLP, Section 6.3, "The construct
+//     process"; Definition "Reduce and Communicate in vmaGLP", Communicate
+//     delivering an assignment once the term it assigns has no reader); a
+//     stream or a list the program writes is written whole once closed; no
+//     position of it is drawn pending, "pending(Pos) at each widget position
+//     not yet written whole" being drawn only "as output arrives inside the
+//     person's answers" (ibid.), a position the construct of a type with one
+//     is refused (WHAT IS NOT BUILT, below).  A question is answered only
+//     once drawn ("On a grant input(Id, Pos, R) for a question W it holds
+//     and has drawn", ibid.): the grants reach the questions after the
+//     first draw (run_f/7);
 //   - a position the person writes is a QUESTION, shown as input(P), P its
 //     position: the path of argument indices from the root of the
 //     interactive variable's term to it, [] the root, a stream the person
@@ -57,8 +54,13 @@
 //     or list inside it, is input([]), of its view type, T ; input(Path)
 //     ("V is of the view type of T: T with the type S of each position the
 //     person writes replaced by S ; input(Path)", vGLP e22e2ad, Section 6.3,
-//     "The construct process"); every other drawn value is typed _, the
-//     views being built by procedures typed at _;
+//     "The construct process"); every other drawn value is of the view type
+//     the compilation forms for its node, a position the person writes
+//     Questioned(S), S ; input(Path), one the program writes holding no
+//     question its type S, a stream or a list of positions holding one the
+//     list of its elements' views, and a structure holding a question the
+//     union of its alternatives' views (_presentView, _openView;
+//     programs/vglp/views.glp);
 //   - the grants routed to the construct arrive whole, input(Id, P, R), each
 //     naming its question by P, which the bridge sends back from the view; a
 //     construct may hold two questions of one type, and each takes only the
@@ -83,7 +85,10 @@
 //     Compilation", at c994328).
 //
 // THE FORMING CLAUSES form a term of a question's type from the person's
-// input, which is typed at _: a constant by matching it, a primitive by its
+// input, which is of T, the type of the person channel, where the type
+// formed is a question's, and of the type formed where it is a position of
+// one (_resolveFormed); a primitive's former, in views.glp, is typed over
+// the input's type: a constant by matching it, a primitive by its
 // guard (string/1, integer/1, ...), a structure argument by argument, the
 // children's results joined.  Their result carries the term, Formed(T) ::=
 // formed(T) ; refused, so every clause writes what it holds (vGLP #5 Cowork,
@@ -117,8 +122,8 @@
 // unions, and Stream or List as the whole type or as an argument of a tuple,
 // never under another Stream or List, and a Stream only at a position the
 // person writes; a named type in it is recursive only if it has no mode
-// inversion, and it has no type parameter at a position the person
-// writes").  Refused, each naming the type, over the whole interactive type,
+// inversion, and it has no type parameter" (vGLP 2f1dc92, which dropped "at
+// a position the person writes")).  Refused, each naming the type, over the whole interactive type,
 // a structure the program writes included, one holding no question too
 // (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2; vGLP #8 Cowork,
 // 2026-10-11 15:47 UTC, items 1 and 3; _checkInteractive): a stream or a
@@ -151,7 +156,7 @@
 // type whole: its forming clauses form the answer from the raw input by
 // recursion on the type's definition, form_N calling form_N again where the
 // definition names the type again (_former).  The program writes it whole:
-// it holds no question, and is drawn once written whole (shown/3).  Its
+// it holds no question, and is drawn once written whole.  Its
 // widget is finite by a reference back to itself: rec(T, W) binds the name
 // T of a recursive type to its widget W, within which ref(T) is T again,
 // and a field of a form drawn by either is "a field of a recursive type
@@ -161,15 +166,18 @@
 //
 // A STREAM OR A LIST THE PROGRAM WRITES WHOSE ELEMENTS HOLD QUESTIONS (vGLP
 // #8 Cowork, 2026-10-11 15:47 UTC, item 2, Task D): each element presented
-// as it arrives, at its own position, its questions answered as any grant;
-// its widget thread(W), W the element type's, its views the elements' views
-// so far, each pending until written, the unwritten tail not shown
+// at its own position, its questions answered as any grant; its widget
+// thread(W), W the element type's, its views the elements' views, drawn
+// once the list is written whole, closed and each element written whole
 // (_presentSeq).
 //
 // WHAT IS NOT BUILT, each a compile error naming the type: a position the
-// program writes inside one the person writes (the Answer transition leaves
-// it to the program, and the construct has no output to show for it yet,
-// _checkPersonWritable); a difference list.
+// program writes inside one the person writes (_checkPersonWritable), which
+// vGLP, Section 6.3, "The construct process", builds --- the answer holding
+// a fresh writer there, the construct holding its reader and drawing the
+// position pending(Pos), Pending(S), until written whole --- and which this
+// compilation does not yet build (reported, vGLP #24 6(i)); a difference
+// list.
 // A position the person writes of type Real is built, formed by real/1 and
 // drawn as a number field (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6;
 // Definition "Widget Declaration, Default Widget" at c2e8b57: "a number
@@ -262,14 +270,17 @@ class GenericNames {
   /// A procedure name fresh against the program's, for the drawing of the
   /// program's output.
   final String Function(String stem) output;
-  final String shown;
-  final String thread;
   final String consViews;
   final String allDone;
   final String path;
   final Map<_Leaf, String> _leafFormers;
   final String formedType;
   final String doneType;
+
+  /// The view of a position the person writes: Questioned(S), S ;
+  /// input(Path) (programs/vglp/views.glp; vGLP, Section 6.3, "The construct
+  /// process": "V is of the view type of T").
+  final String questionedType;
   /// The type of what the person channel carries, T, the union the
   /// compilation forms; and the types at T the construct processes name:
   /// Draw(T), Input(T), Inputs(T), Path and PersonChannel(T) as applied.
@@ -290,8 +301,6 @@ class GenericNames {
       required this.runEnd,
       required this.view,
       required this.output,
-      required this.shown,
-      required this.thread,
       required this.consViews,
       required this.allDone,
       required this.path,
@@ -303,6 +312,7 @@ class GenericNames {
       required String formModule,
       required this.formedType,
       required this.doneType,
+      required this.questionedType,
       required this.drawn,
       required this.inputsType,
       required this.spawnType,
@@ -321,8 +331,6 @@ class GenericNames {
   /// compilation emits of the generic source.
   static const used = [
     'run_end',
-    'shown',
-    'thread',
     'cons_views',
     'all_done',
     'path',
@@ -546,6 +554,18 @@ class _Generator {
   /// The drawing procedure of each ask functor, run_f/5.
   final _runs = <String, String>{};
 
+  /// The view type of each ask functor's construct, the type of the values
+  /// it draws under the functor (vGLP, Section 6.3, "The construct process":
+  /// "V is of the view type of T"), and the view types formed, by node.
+  final _rootViews = <String, String>{};
+  final _viewMemo = <String, String>{};
+
+  /// A former's argument, the person's raw input or a position of it, marked
+  /// by the type it forms: the type of the person channel, T, where the type
+  /// is one of the grants' raw inputs, whose answer_N hands it R of T, and
+  /// the type itself where it is only a position of one ([_resolveFormed]).
+  static const _formedMark = '\u0001';
+
   _Generator(this.gen, this.resolve, this.sourceDeclared, this.fresh,
       this.questionType, this.constructName)
       : declared = sourceDeclared;
@@ -610,7 +630,18 @@ class _Generator {
         widgets[t.written] = w;
         hook.writeln(_constructClause(t, root, w));
         // The views its construct draws, each under the functor of its ask,
-        // typed _ (the head comment, "The drawn value under each functor").
+        // are of its view type, run_f's (vGLP, Section 6.3, "The construct
+        // process"); in T they stay typed _, since every GLP module that
+        // imports the dispatcher writes T again by hand, with f(_), and an
+        // import agrees with its export only where their types are equal
+        // (TGLP modules.tex, "Cross-module type checking").  The paper has
+        // the compilation write the types it forms into each such module
+        // (vGLP, Section 6.3, "The canonical compilation": "the compilation
+        // writes into each module that imports a compiled procedure or the
+        // dispatcher the types it forms for them, among them the type of the
+        // asks, the view types and the parameter of the person channel"),
+        // which is not built: until it is, T's alternative of each ask
+        // functor is f(_).
         drawnAlts.add('${t.functor}(_)');
       } finally {
         declared = sourceDeclared;
@@ -634,28 +665,61 @@ class _Generator {
         : '';
     final drawnDef =
         '${gen.drawn} ::= ${drawnAlts.join(' ; ')}.\n$endDefs\n';
-    return ConstructProcesses('$drawnDef$hook$_out', widgets);
+    return ConstructProcesses(
+        _resolveFormed('$drawnDef$hook$_out'), widgets);
   }
 
-  /// run_f(Id?, W?, Views?, Done?, Ds): draw each view V of construct Id
-  /// with its widget W as it arrives, under the functor f of its ask,
-  /// draw(Id, W, f(V)) (vGLP, Definition "Construct Process": "with V under
-  /// the functor t of its ask"); withdraw when Done is bound, every question
-  /// the construct holds answered and no question still to come, and on
-  /// nothing else; once the views end, wait to withdraw (run_end/3).  Its
-  /// views are of [view] where the compiler prints that type ([_rootView]).
-  String _runFor(String f, [String view = '_']) {
+  /// Each former's argument marked by the type it forms ([_formedMark]): T,
+  /// the type of the person channel, where that type is one of the grants'
+  /// raw inputs, which the union T holds (_rUnion), and the type itself
+  /// otherwise.
+  String _resolveFormed(String text) => text.replaceAllMapped(
+      RegExp('$_formedMark([^$_formedMark]*)$_formedMark'),
+      (m) => _rTypes.containsKey(m[1]) ? gen.drawn : m[1]!);
+
+  /// run_f(Id?, W?, Views?, Done?, Gs?, Gs1, Ds): draw the first view V of
+  /// construct Id with its widget W, under the functor f of its ask,
+  /// draw(Id, W, f(V)) (vGLP, Section 6.3, "The construct process": "with V
+  /// under the functor t of its ask"), and only then hand its questions
+  /// their grants, Gs1 the grants Gs: "On a grant input(Id, Pos, R) for a
+  /// question W it holds and has drawn" (ibid.), a question being drawn
+  /// first once the output of the question is written whole ("A construct
+  /// process has the bridge draw the widget of T once every reader in the
+  /// output it holds is assigned", ibid.).  A grant that comes before the
+  /// draw waits for it, and binds nothing until then.  Then run_f_more/5 draws
+  /// each view after it.  Views that end with none drawn, which no construct
+  /// process writes, pass the grants on and wait to withdraw, the clause
+  /// covering the stream's [].  Its views are of [view] where the compiler prints
+  /// that type ([_rootView]).
+  ///
+  /// run_f_more(Id?, W?, Views?, Done?, Ds): draw each view V as it arrives;
+  /// withdraw when Done is bound, every question the construct holds
+  /// answered and no question still to come, and on nothing else; once the
+  /// views end, wait to withdraw (run_end/3).
+  String _runFor(String f, String view) {
     final known = _runs[f];
     if (known != null) return known;
     final r = gen.run(f);
+    final more = gen.run('${f}_more');
     _runs[f] = r;
+    final vs = 'Stream($view)?';
+    final gs = gen.inputsType;
     _out
-      ..writeln('procedure $r(Integer?, $widgetTypeName?, Stream($view)?, '
+      ..writeln('procedure $r(Integer?, $widgetTypeName?, $vs, '
+          '${gen.doneType}?, $gs?, $gs, Stream(${gen.drawType})).')
+      ..writeln('$r(Id, W, [V | Vs], Done, Gs, Gs?, '
+          '[draw(Id?, W?, $f(V?)) | Ds?]) :- '
+          'ground(W?), ground(V?) | $more(Id?, W?, Vs?, Done?, Ds).')
+      ..writeln('$r(Id, _, [], Done, Gs, Gs?, Ds?) :- '
+          '${gen.runEnd}(Id?, Done?, Ds).')
+      ..writeln()
+      ..writeln('procedure $more(Integer?, $widgetTypeName?, $vs, '
           '${gen.doneType}?, Stream(${gen.drawType})).')
-      ..writeln('$r(Id, _, _, done, [withdraw(Id?)]).')
-      ..writeln('$r(Id, W, [V | Vs], Done, [draw(Id?, W?, $f(V?)) | Ds?]) :- '
-          'ground(W?), ground(V?) | $r(Id?, W?, Vs?, Done?, Ds).')
-      ..writeln('$r(Id, _, [], Done, Ds?) :- ${gen.runEnd}(Id?, Done?, Ds).')
+      ..writeln('$more(Id, _, _, done, [withdraw(Id?)]).')
+      ..writeln('$more(Id, W, [V | Vs], Done, [draw(Id?, W?, $f(V?)) | Ds?]) '
+          ':- ground(W?), ground(V?) | $more(Id?, W?, Vs?, Done?, Ds).')
+      ..writeln('$more(Id, _, [], Done, Ds?) :- '
+          '${gen.runEnd}(Id?, Done?, Ds).')
       ..writeln();
     return r;
   }
@@ -922,25 +986,31 @@ class _Generator {
       if (_holdsNested(root)) {
         // The form's answer leaves its streams and lists open, each a
         // question of its own drawn under it: the view after the answer.
+        final v = _rootViews[f] = _qView(root);
         return '$constructName(Id, $f(X?), Gs, Ds?) :- '
-            '$answer([], X, Gs?, _, Vs, Done), '
-            '${_runFor(f)}(Id?, $w, [input([]) | Vs?], Done?, Ds).';
+            '$answer([], X, Gs1?, _, Vs, Done), '
+            '${_runFor(f, v)}(Id?, $w, [input([]) | Vs?], Done?, Gs?, Gs1, '
+            'Ds).';
       }
+      final v = _rootViews[f] = _rootView(f, root);
       return '$constructName(Id, $f(X?), Gs, Ds?) :- '
-          '$answer([], X, Gs?, _, Done), '
-          '${_runFor(f, _rootView(f, root))}(Id?, $w, [input([])], Done?, Ds).';
+          '$answer([], X, Gs1?, _, Done), '
+          '${_runFor(f, v)}(Id?, $w, [input([])], Done?, Gs?, Gs1, Ds).';
     }
     if (!_hasQuestion(root)) {
       // A type the person writes nowhere holds no question, so its construct
       // has every question it holds answered at once, and withdraws (Definition
       // "Construct, Submission, Complete Widget": a construct is presented
       // while its question is open).
+      // It draws nothing; its functor in T is of its type.
+      _rootViews[f] = root.typeKey;
       return '$constructName(Id, $f(_), _, [withdraw(Id?)]).';
     }
     final present = _present(root, t);
+    final v = _rootViews[f] = _presentView(root);
     return '$constructName(Id, $f(X), Gs, Ds?) :- '
-        '$present([], X?, Gs?, _, Vs, Done), '
-        '${_runFor(f)}(Id?, $w, Vs?, Done?, Ds).';
+        '$present([], X?, Gs1?, _, Vs, Done), '
+        '${_runFor(f, v)}(Id?, $w, Vs?, Done?, Gs?, Gs1, Ds).';
   }
 
   /// The view type of the construct of [f], whose root [root] the person
@@ -953,6 +1023,104 @@ class _Generator {
     final v = gen.view(f);
     _out.writeln('$v ::= ${root.typeKey} ; input(${gen.pathType}).');
     return v;
+  }
+
+  // --- view types -------------------------------------------------------------
+
+  /// The view type of a construct's positions (vGLP, Section 6.3, "The
+  /// construct process": "V is of the view type of T: T with the type S of
+  /// each position the person writes replaced by S ; input(Path), and of
+  /// each position the program writes inside the person's answers by S ;
+  /// pending(Path), so no value drawn is typed by a wildcard"), as the
+  /// construct draws them: a position the person writes Questioned(S); a
+  /// position the program writes holding no question S itself, drawn once
+  /// written whole, as the output of the question is ("A construct process
+  /// has the bridge draw the widget of T once every reader in the output it
+  /// holds is assigned", ibid.; Definition "Reduce and Communicate in
+  /// vmaGLP"); and a position the program writes holding a question its own
+  /// view type, [_presentView].  A position the program writes inside the
+  /// person's answers, Pending(S), is not built: the construct of a type
+  /// with one is refused ([_checkPersonWritable]).
+
+  /// The view of [k], a child of a structure or a stream, as its parent's
+  /// clause draws it.
+  String _childView(_Node k) {
+    if (k.person) return _qView(k);
+    if (!_hasQuestion(k)) return k.typeKey;
+    return _presentView(k);
+  }
+
+  /// The view of a question [k]: S ; input(Path), S its type, or, where its
+  /// answer leaves a stream or a list open under it, the answer's view
+  /// ([_openView]).
+  String _qView(_Node k) => '${gen.questionedType}('
+      '${_holdsNested(k) ? _openView(k) : k.typeKey})';
+
+  /// The view of the answer of [n], a question holding a stream or a list
+  /// inside a form the person writes: the term answered, each such position
+  /// drawn input(Q) (open_N), a type formed for [n].
+  String _openView(_Node n) {
+    final key = 'open:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final ref = '${gen.view('open_${_typeStem(n.type)}')}${_declParams(n)}';
+    _viewMemo[key] = ref;
+    final alts = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _StructAlt) {
+        final kids = _children(n, a);
+        alts.add(_apply(a, [
+          for (final k in kids)
+            _isNestedSeq(n, k)
+                ? '${gen.questionedType}(${k.typeKey})'
+                : _holdsNested(k)
+                    ? _openView(k)
+                    : k.typeKey
+        ]));
+      } else {
+        alts.add(_plainAlt(n, a));
+      }
+    }
+    _out.writeln('$ref ::= ${alts.join(' ; ')}.');
+    return ref;
+  }
+
+  /// The view of [n], a position the program writes holding a question, as
+  /// present_N draws it once written whole: each alternative holding a
+  /// question with its arguments' views, each other alternative as written;
+  /// a stream or a list the list of its elements' views.
+  String _presentView(_Node n) {
+    final key = 'present:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final seq = _seqOf(n);
+    if (seq != null) {
+      final e = n.child(seq.elem);
+      final r = 'List(${e.person ? _qView(e) : _presentView(e)})';
+      return _viewMemo[key] = r;
+    }
+    final ref = '${gen.view(_typeStem(n.type))}${_declParams(n)}';
+    _viewMemo[key] = ref;
+    final alts = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _StructAlt && _children(n, a).any(_hasQuestion)) {
+        alts.add(_apply(a, [for (final k in _children(n, a)) _childView(k)]));
+      } else {
+        alts.add(_plainAlt(n, a));
+      }
+    }
+    _out.writeln('$ref ::= ${alts.join(' ; ')}.');
+    return ref;
+  }
+
+  /// An alternative of [n] as a view holds it whole, each argument of its
+  /// type with no mode: the person or the program writes it whole before it
+  /// is drawn.
+  String _plainAlt(_Node n, _Alt a) {
+    if (a is _StructAlt || a is _ConsAlt) {
+      return _apply(a, [for (final k in _children(n, a)) k.typeKey]);
+    }
+    return _altText(a);
   }
 
   // --- types ------------------------------------------------------------------
@@ -1191,9 +1359,8 @@ class _Generator {
   /// built, tuples and unions, and Stream or List as the whole type or as an
   /// argument of a tuple, never under another Stream or List, and a Stream
   /// only at a position the person writes; a named type in it is recursive
-  /// only if it has no mode inversion, and it has no type parameter at a
-  /// position the person writes" (vGLP 092c9fe, Definition "Volitional
-  /// Procedure, Interactive Type").  Each is refused over the whole
+  /// only if it has no mode inversion, and it has no type parameter" (vGLP
+  /// 2f1dc92, Definition "Volitional Procedure, Interactive Type").  Each is refused over the whole
   /// interactive type, a structure the program writes included, one holding
   /// no question too (vGLP #7 Cowork, 2026-10-11 14:31 UTC, items 1 and 2;
   /// vGLP #8 Cowork, 2026-10-11 15:47 UTC, item 1: "The flat refusals hold
@@ -1277,12 +1444,13 @@ class _Generator {
         }
       }
       for (final a in _nodeAlts(n)) {
-        if (a is _LeafAlt && a.leaf == _Leaf.param && n.person) {
+        // "it has no type parameter" (vGLP 2f1dc92), at a position either
+        // writes.
+        if (a is _LeafAlt && a.leaf == _Leaf.param) {
           throw CompileError(
-              'The interactive type ${it.written} is refused: the person '
+              'The interactive type ${it.written} is refused: ${who(n)} '
               'writes a position of type ${a.name}, a type parameter, and an '
-              'interactive type has "no type parameter at a position the '
-              'person writes" ($_definition)',
+              'interactive type "has no type parameter" ($_definition)',
               it.line, it.column, phase: 'analyzer');
         }
         if (a is _LeafAlt && a.leaf == _Leaf.any) {
@@ -1479,12 +1647,26 @@ class _Generator {
     return alts.length == 1 && _isKey(alts.single, s);
   }
 
-  /// Whether the view of [n] can change once drawn: a position the program
-  /// writes, drawn pending until it is written whole and drawn again once it
-  /// is, a stream again as each cell and each element is written (vGLP
-  /// 118e04d, Definition "Construct Process"); or one the person writes whose
-  /// answer leaves a stream or list open under it.
-  bool _multi(_Node n) => n.person ? _holdsNested(n) : true;
+  /// Whether the view of [n] can change once drawn: one the person writes
+  /// whose answer leaves a stream or a list open under it, drawn again once
+  /// answered; one the program writes holding such a question, drawn again
+  /// as that question is.  A position the program writes is drawn once
+  /// written whole, and again only as the questions in it are drawn again
+  /// (vGLP, Section 6.3, "The construct process").
+  bool _multi(_Node n) {
+    if (n.person) return _holdsNested(n);
+    if (!_hasQuestion(n)) return false;
+    final memo = _multiMemo[n.key];
+    if (memo != null) return memo;
+    _multiMemo[n.key] = false; // least fixpoint through recursive types
+    final seq = _seqOf(n);
+    final result = seq != null
+        ? _multi(n.child(seq.elem))
+        : _nodeAlts(n).any((a) => _children(n, a).any(_multi));
+    return _multiMemo[n.key] = result;
+  }
+
+  final _multiMemo = <String, bool>{};
 
   // --- names --------------------------------------------------------------------
 
@@ -1581,7 +1763,7 @@ class _Generator {
     final nested = _holdsNested(n);
     final vs = nested ? ', Vs' : '';
     final vsOut = nested ? ', Vs?' : '';
-    final vsType = nested ? ', Stream(_)' : '';
+    final vsType = nested ? ', Stream(${_qView(n)})' : '';
     final form = _former(e ?? n);
     _rTypes.putIfAbsent((e ?? n).typeKey, () => e ?? n);
     if (seq != null && seq.list) _rListEnd = true;
@@ -1682,8 +1864,8 @@ class _Generator {
           '${acc.gsIn}?, ${_apply(a, views)}, $doneHead) :- '
           '$g0${acc.goals.join(', ')}.');
     }
-    _out.writeln('procedure$p $name($t?, ${gen.pathType}?, $t, $gs?, $gs, _, '
-        '${gen.doneType}).');
+    _out.writeln('procedure$p $name($t?, ${gen.pathType}?, $t, $gs?, $gs, '
+        '${_openView(n)}, ${gen.doneType}).');
     for (final c in clauses) {
       _out.writeln(c);
     }
@@ -1760,7 +1942,8 @@ class _Generator {
             'F = formed(R?).');
       }
     }
-    _out.writeln('procedure$p $name(_?, $formed($t)).');
+    _out.writeln('procedure$p $name($_formedMark$t$_formedMark?, '
+        '$formed($t)).');
     for (final l in [...lines, ...leaves]) {
       _out.writeln(l);
     }
@@ -1815,16 +1998,18 @@ class _Generator {
   /// position, the grants they do not take passed on in Gs1, Done once every
   /// one is answered.  The grants never close (Inputs).
   ///
-  /// X not yet written when it is drawn --- no alternative's clause can
-  /// reduce, the last clause can --- it is drawn pending(P), and present_N_wait
-  /// passes the grants on, none being for a question of it, until X is
-  /// written, and then presents it as present_N does (vGLP 118e04d,
-  /// Definition "Construct Process": "each widget position the program has
-  /// not yet written whole --- the root, a field, ... --- drawn as pending
-  /// ... so that the questions beside it are offered at once"; "on a grant
-  /// for a path at which it holds no question, it binds nothing").  An
-  /// alternative holding no question is one widget position, drawn pending
-  /// until written whole ([_presentStruct]).
+  /// Its first view is drawn once X is written whole, every position the
+  /// program writes in it written: "A construct process has the bridge draw
+  /// the widget of T once every reader in the output it holds is assigned,
+  /// with that output and its questions" (vGLP, Section 6.3, "The construct
+  /// process"; Definition "Reduce and Communicate in vmaGLP": Communicate
+  /// delivers an assignment once the term it assigns, its readers replaced
+  /// by what is assigned to them, has no reader).  So present_N suspends on
+  /// X until it is written, each alternative's clause waiting for the
+  /// positions the program writes in it ([_presentStruct]), and the views of
+  /// a structure are combined once each argument has its first; no position
+  /// is drawn pending.  The grants reach the questions only once the first
+  /// view is drawn (run_f/7, [_runFor]).
   String _present(_Node n, InteractiveType it) {
     final name = _name('present', n);
     if (!_emitted.add('present:${n.typeKey}')) return name;
@@ -1844,57 +2029,25 @@ class _Generator {
     final p = _declParams(n);
     final done = gen.doneType;
     final gs = gen.inputsType;
-    final wait = _name('present', n, 'wait');
     final clauses = <String>[];
-    // present_N_wait's clauses: X once written, each alternative's as
-    // present_N takes it.
-    final forwards = <String>[];
     final later = <void Function()>[];
-    String forward(String head, String term, [String guard = '']) =>
-        '$wait(P, $head, Gs, Gs1?, Vs?, Done?) :- $guard'
-        '$name(P?, $term, Gs?, Gs1, Vs, Done).';
     for (final a in _nodeAlts(n)) {
       if (a is _ConstAlt) {
         final c = constantSource(a.value);
         clauses.add('$name(_, $c, Gs, Gs?, [$c], done).');
-        forwards.add(forward(c, c));
       } else if (a is _NilAlt) {
         clauses.add('$name(_, [], Gs, Gs?, [[]], done).');
-        forwards.add(forward('[]', '[]'));
       } else if (a is _LeafAlt) {
         final g = _guard(a.leaf);
         clauses.add('$name(_, X, Gs, Gs?, [X?], done) :- $g(X?) | true.');
-        forwards.add(forward('X', 'X?', '$g(X?) | '));
       } else {
         clauses.add(_presentStruct(n, a, name, later, it));
-        // The alternative's term as present_N's clause reads it, each
-        // position the person writes a writer the construct holds.
-        final kids = _children(n, a);
-        final hs = [
-          for (var i = 0; i < kids.length; i++)
-            kids[i].person ? 'H${i + 1}?' : 'H${i + 1}'
-        ];
-        final ts = [
-          for (var i = 0; i < kids.length; i++)
-            kids[i].person ? 'H${i + 1}' : 'H${i + 1}?'
-        ];
-        forwards.add(forward(_apply(a, hs), _apply(a, ts)));
       }
     }
-    clauses.add('$name(P, X, Gs, Gs1?, [pending(P?) | Vs?], Done?) :- '
-        'ground(P?) | $wait(P?, X?, Gs?, Gs1, Vs, Done).');
-    forwards.add('$wait(P, X, [G | Gs], [G? | Gs1?], Vs?, Done?) :- '
-        '$wait(P?, X?, Gs?, Gs1, Vs, Done).');
+    final view = _presentView(n);
     _out.writeln('procedure$p $name(${gen.pathType}?, $t?, '
-        '$gs?, $gs, Stream(_), $done).');
+        '$gs?, $gs, Stream($view), $done).');
     for (final c in clauses) {
-      _out.writeln(c);
-    }
-    _out
-      ..writeln()
-      ..writeln('procedure$p $wait(${gen.pathType}?, $t?, $gs?, $gs, '
-          'Stream(_), $done).');
-    for (final c in forwards) {
       _out.writeln(c);
     }
     _out.writeln();
@@ -1915,8 +2068,7 @@ class _Generator {
   /// "a writer presented inside the program's output"; Definition "Construct
   /// Process": "as the program's output arrives on a reader it holds, each
   /// writer inside it at a position the person writes is added to its
-  /// questions ... It has the bridge draw the widget of T with the output so
-  /// far, again as more arrives").
+  /// questions").
   ///
   /// The element of a list cell at position P is at P with 1 at its end, and
   /// the cell's tail at P with 2 at its end, the path of argument indices
@@ -1924,29 +2076,22 @@ class _Generator {
   /// appendix-lp.tex, Definition "Logic Programs Syntax"): so the k-th
   /// element is at P with k - 1 2s and then 1 at its end, and its questions
   /// below it.  Each
-  /// element is presented as it arrives, at its own position --- by its
-  /// present_N where the program writes it, by its answer_N where the
-  /// element is itself a question --- and its questions take their grants
-  /// as any question does, the grants an element does not take passed on to
-  /// those after it.  The views are the elements' views so far, in the
-  /// stream's order, again as each cell and each element is drawn again
-  /// (cons_views/3 in programs/vglp/dispatcher.glp), as thread/3 shows a
-  /// stream the program writes that holds no question: an element the
-  /// program has not yet written whole drawn pending by its present_N, and
-  /// the stream's unwritten tail not drawn, the stream shown as its elements
-  /// so far, [] where it has none; the unwritten tail passes the grants on
-  /// until it is written (vGLP 118e04d, Definition "Construct Process":
-  /// "each widget position the program has not yet written whole --- ... an
-  /// element of any stream ... --- drawn as pending, and a stream's
-  /// unwritten tail not drawn, so that the questions beside it are offered
-  /// at once").  Whether the tail is written when it is drawn is decided by
-  /// the first clause that can reduce (GLP-Spec, Definition "cGLP Transition
-  /// System", Reduce).  Done once the stream is closed and every element's
-  /// questions are answered; a stream never closed keeps its construct, "no
-  /// reader at a position whose output may hold one" never holding.
+  /// element is presented at its own position --- by its present_N where
+  /// the program writes it, by its answer_N where the element is itself a
+  /// question --- and its questions take their grants as any question does,
+  /// the grants an element does not take passed on to those after it.  The
+  /// views are the elements' views, in the list's order, again as an
+  /// element is drawn again (cons_views/3 in programs/vglp/views.glp).  It
+  /// is drawn once written whole, closed and each element written whole:
+  /// "A construct process has the bridge draw the widget of T once every
+  /// reader in the output it holds is assigned" (vGLP, Section 6.3, "The
+  /// construct process"), and an unwritten tail is such a reader; only the
+  /// output, construct 0, "is drawn element by element as it arrives, its
+  /// unwritten tail not drawn" (ibid.).  So the first view of the list is
+  /// formed once its [] is, the tail's first view, and each element's first.
+  /// Done once every element's questions are answered.
   void _presentSeq(_Node n, TypeExpr elem, String name, InteractiveType it) {
     final e = n.child(elem);
-    final tail = _name('present', n, 'tail');
     final cell = _name('present', n, 'cell');
     final t = n.typeKey;
     final p = _declParams(n);
@@ -1984,25 +2129,13 @@ class _Generator {
         '${_present(e, it)}(Q1?, X?, Gs?, Gs1, V1, D1)',
       ];
     }
-    // The views are lists of the elements' views, Stream(Stream(_)), as
-    // thread/3's are.
-    const vs = 'Stream(Stream(_))';
+    // The views are lists of the elements' views.
+    final vs = 'Stream(${_presentView(n)})';
     _out
       ..writeln('procedure$p $name($pt?, $t?, $gs?, $gs, $vs, $done).')
       ..writeln('$name(P, [$inCell | Xs], Gs, Gs1?, Vs?, Done?) :- '
           '$cell(P?, $toCell, Xs?, Gs?, Gs1, Vs, Done).')
       ..writeln('$name(_, [], Gs, Gs?, [[]], done).')
-      ..writeln('$name(P, Xs, Gs, Gs1?, [[] | Vs?], Done?) :- '
-          '$tail(P?, Xs?, Gs?, Gs1, Vs, Done).')
-      ..writeln()
-      // The stream drawn with no element yet, as its tail is written; until
-      // it is, the grants pass on.
-      ..writeln('procedure$p $tail($pt?, $t?, $gs?, $gs, $vs, $done).')
-      ..writeln('$tail(P, [$inCell | Xs], Gs, Gs1?, Vs?, Done?) :- '
-          '$cell(P?, $toCell, Xs?, Gs?, Gs1, Vs, Done).')
-      ..writeln('$tail(_, [], Gs, Gs?, [], done).')
-      ..writeln('$tail(P, Xs, [G | Gs], [G? | Gs1?], Vs?, Done?) :- '
-          '$tail(P?, Xs?, Gs?, Gs1, Vs, Done).')
       ..writeln()
       // The list cell [X | Xs] at P: its element at P with 1 at its end, its
       // tail at P with 2 at its end.
@@ -2016,30 +2149,35 @@ class _Generator {
       ..writeln();
   }
 
-  /// present_N's clause of the structure alternative [a] of node [n].  An
-  /// alternative holding no question is one widget position, its widget
-  /// shown ([_altWidget]): drawn pending until it is written whole, by
-  /// shown/3.
+  /// present_N's clause of the structure alternative [a] of node [n], drawn
+  /// once written whole ([_present]): the clause waits, ground(H?), for each
+  /// argument the program writes that holds no question, and a structure
+  /// holding no question is one value, drawn as it is written.
   String _presentStruct(_Node n, _Alt a, String name,
       List<void Function()> later, InteractiveType it) {
     final kids = _children(n, a);
     if (!kids.any(_hasQuestion)) {
       final hs = [for (var i = 0; i < kids.length; i++) 'H${i + 1}'];
-      return '$name(P, ${_apply(a, hs)}, Gs, Gs?, Vs?, done) :- '
-          '${gen.shown}(P?, ${_apply(a, [for (final h in hs) '$h?'])}, Vs).';
+      final ground = [for (final h in hs) 'ground($h?)'].join(', ');
+      return '$name(_, ${_apply(a, hs)}, Gs, Gs?, '
+          '[${_apply(a, [for (final h in hs) '$h?'])}], done)'
+          '${hs.isEmpty ? '' : ' :- $ground | true'}.';
     }
     final head = <String>[];
     final views = <String>[];
     // The position of the argument i of this alternative is the node's own,
     // P, with i at its end: a question's is read twice, for its mark in the
-    // view and for its answer_N, and a position the program writes once, for
-    // its present_N, its shown/3 or its thread/3, each drawing it pending
-    // until it is written.  P is ground, so where it is read more than once
-    // the clause guards on it.
+    // view and for its answer_N, and a position the program writes holding a
+    // question once, for its present_N; one the program writes holding no
+    // question is drawn as it is written, its position not read.  P is
+    // ground, so where it is read more than once the clause guards on it.
     final acc = _Arguments();
-    // A structure of questions alone, none holding a stream or a list, has
-    // one view; any other is drawn again as its arguments are.
-    final direct = kids.every((k) => k.person && !_holdsNested(k));
+    // A structure of questions, none holding a stream or a list, and of
+    // positions the program writes holding none, has one view; any other is
+    // drawn again as its arguments are.
+    final direct = kids.every((k) => k.person
+        ? !_holdsNested(k)
+        : !_hasQuestion(k));
     for (var i = 0; i < kids.length; i++) {
       final k = kids[i];
       final h = 'H${i + 1}';
@@ -2068,17 +2206,11 @@ class _Generator {
                 ? '[input($m?) | $w?]'
                 : '[input($m?)]');
       } else if (!_hasQuestion(k)) {
-        // A field the program writes holding no question: shown, or a
-        // thread where it is a stream, pending until written whole, a
-        // stream's unwritten tail not drawn.
+        // A field the program writes holding no question, a stream or a
+        // list among them: drawn as it is written, once written whole.
         head.add(h);
-        final q = 'Q$idx';
-        final shows = _streamElement(k) != null ? gen.thread : gen.shown;
-        acc.goals
-          ..add('${gen.path}(P?, $idx, $q)')
-          ..add('$shows($q?, $h?, V$idx)');
-        acc.pathReads += 1;
-        views.add('V$idx?');
+        acc.guards.add('ground($h?)');
+        views.add(direct ? '$h?' : '[$h?]');
       } else {
         head.add(h);
         final gsOut = acc.nextGs();
@@ -2110,8 +2242,7 @@ class _Generator {
         ? (acc.guards.isEmpty ? '' : ' :- $g0' 'true')
         : ' :- $g0${acc.goals.join(', ')}';
     // An alternative holding a question reads its position, for the
-    // question's mark or for the present_N, shown/3 or thread/3 of the
-    // argument holding it.
+    // question's mark or for the present_N of the argument holding it.
     final at = acc.pathReads == 0 ? '_' : 'P';
     return '$name($at, $pattern, Gs, $gsHead, $vsHead, $doneHead)$body.';
   }
@@ -2124,7 +2255,9 @@ class _Generator {
     if (!_emitted.add('start:${n.typeKey}:$suffix')) return start;
     final p = _declParams(n);
     final k = kids.length;
-    final streams = List.filled(k, 'Stream(_)?').join(', ');
+    final views = [for (final c in kids) _childView(c)];
+    final streams = [for (final v in views) 'Stream($v)?'].join(', ');
+    final out = 'Stream(${_presentView(n)})';
     final vs = [for (var i = 0; i < k; i++) 'V${i + 1}'];
     final vr = [for (var i = 0; i < k; i++) 'V${i + 1}?'];
     final ground = [for (var i = 0; i < k; i++) 'ground(V${i + 1}?)'].join(', ');
@@ -2138,7 +2271,7 @@ class _Generator {
     ];
     if (!multi.contains(true)) {
       _out
-        ..writeln('procedure$p $start($streams, Stream(_)).')
+        ..writeln('procedure$p $start($streams, $out).')
         ..writeln('$start(${[for (final v in vs) '[$v | _]'].join(', ')}, '
             '[${_apply(a, vr)}]).');
       closed.forEach(_out.writeln);
@@ -2149,15 +2282,15 @@ class _Generator {
     final ss = [for (var i = 0; i < k; i++) 'S${i + 1}'];
     final sr = [for (var i = 0; i < k; i++) 'S${i + 1}?'];
     _out
-      ..writeln('procedure$p $start($streams, Stream(_)).')
+      ..writeln('procedure$p $start($streams, $out).')
       ..writeln('$start(${[for (var i = 0; i < k; i++) '[${vs[i]} | ${ss[i]}]'].join(', ')}, '
           '[${_apply(a, vr)} | Vs?]) :- $ground | '
           '$comb(${vr.join(', ')}, ${sr.join(', ')}, Vs).');
     closed.forEach(_out.writeln);
     _out
       ..writeln()
-      ..writeln('procedure$p $comb(${List.filled(k, '_?').join(', ')}, '
-          '$streams, Stream(_)).');
+      ..writeln('procedure$p $comb(${[for (final v in views) '$v?'].join(', ')}, '
+          '$streams, $out).');
     for (var i = 0; i < k; i++) {
       if (!multi[i]) continue;
       final olds = [
@@ -2370,9 +2503,9 @@ class _Generator {
         throw StateError('The type _ where the person writes, which '
             '_checkInteractive refuses');
       case _Leaf.param:
-        // "no type parameter at a position the person writes" (vGLP,
-        // Definition "Volitional Procedure, Interactive Type"): refused
-        // before its widget is drawn (_checkInteractive).
+        // "it has no type parameter" (vGLP 2f1dc92, Definition "Volitional
+        // Procedure, Interactive Type"): refused before its widget is drawn
+        // (_checkInteractive).
         throw StateError('A type parameter where the person writes, which '
             '_checkInteractive refuses');
     }

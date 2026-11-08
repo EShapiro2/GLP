@@ -15,8 +15,14 @@
 % term among its arguments.  The atoms psi are those required at an agent
 % role, =(i) u -(i), a cleared atom requiring none (def:schema, GSC 327e035),
 % and, of a conditional atom or a listed role's, the anchor of its conjunct
-% (def:schema, GSC 5e014fd); a condition of the body is read by none of this
-% (def:schema, GSC c8c5ead).
+% (def:schema, GSC 5e014fd).  A base, or a speech-act variable, may also be
+% named by a safe formula of the body through E (def:grounded, GSC cd0f73e),
+% "the body ... read as one conjunction, of its literals, its safe formulas
+% and its constraint" (def:grounded, GSC 7324ec7): body_names below gives
+% what that conjunction names, and the bases and the speech-act variables it
+% names count as those of a psi.  The plain form of a contract drops its
+% constraints (self.glp, plain_schema), so each schema's constraint is passed
+% beside it, the contract's constraints in the order of its schemas.
 % ---------------------------------------------------------------------------
 
 % ---------------------------------------------------------------------------
@@ -162,6 +168,10 @@ prov_c1(svar(_), _, _, _, yes).
 % A value is no agent role, no agent variable and no name term, so the
 % definition asks nothing of it (the appendix "Values in Speech-Act Schemas").
 prov_c1(num(_), _, _, _, yes).
+% Nor of an item, an utterance, which names no agent (the appendix, GSC
+% 4401dd6: "A value, and an utterance, is no agent role, no agent variable and
+% no name term, so it has no base").
+prov_c1(item_of(_), _, _, _, yes).
 prov_c1(A, RB, RBs, QBs, R?) :-
     otherwise, ground(A?), ground(RB?), ground(RBs?), ground(QBs?) |
     arg_base(A?, B),
@@ -273,42 +283,54 @@ anchored_cx(A, pctx(RBs, QBs, QSV, SV), E, pctx(RBs?, QB1?, QSV1?, SV1?)) :-
     filter_svars(As2?, S2),
     args_app(S2?, SV?, SV1).
 
-procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans).
-prov_pred1(no, _, _, _, no).
-prov_pred1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
-    prov_pred(Pd?, Ss?, E?, R).
+procedure prov_pred1(Ans?, Constant?, Contract?, Constraints?, Preds?, Ans).
+prov_pred1(no, _, _, _, _, no).
+prov_pred1(yes, Pd, Ss, Cns, E, R?) :- ground(Pd?), ground(Ss?), ground(Cns?), ground(E?) |
+    prov_pred(Pd?, Ss?, Cns?, E?, R).
 
-procedure prov_pred(Constant?, Contract?, Preds?, Ans).
-prov_pred(_, [], _, yes).
-prov_pred(Pd, [S|Ss], E, R?) :-
-    ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
+% Each schema with its constraint, Cns the contract's constraints in the
+% order of its schemas; a schema past the end of Cns has none.
+procedure prov_pred(Constant?, Contract?, Constraints?, Preds?, Ans).
+prov_pred(_, [], _, _, yes).
+prov_pred(Pd, [S|Ss], [Cn|Cns], E, R?) :-
+    ground(S?), ground(Ss?), ground(Cn?), ground(Cns?), ground(Pd?), ground(E?) |
     sch_roles(S?, Rs),
     sch_conjs(S?, Cj),
-    prov_pred_w(Rs?, Cj?, Pd?, Ss?, E?, R).
+    sch_forms(S?, Fs),
+    prov_pred_w(Rs?, Cj?, Fs?, Cn?, Pd?, Ss?, Cns?, E?, R).
+prov_pred(Pd, [S|Ss], [], E, R?) :-
+    ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
+    prov_pred(Pd?, [S?|Ss?], [true], E?, R).
 
-procedure prov_pred_w(RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
-prov_pred_w(Rs, Cj, Pd, Ss, E, R?) :-
-    ground(Rs?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
+procedure prov_pred_w(RoleSpecs?, Conjuncts?, Forms?, Constraint?, Constant?, Contract?, Constraints?, Preds?, Ans).
+prov_pred_w(Rs, Cj, Fs, Cn, Pd, Ss, Cns, E, R?) :-
+    ground(Rs?), ground(Cj?), ground(Fs?), ground(Cn?), ground(Pd?), ground(Ss?), ground(Cns?), ground(E?) |
     agent_roles(Rs?, Ws),
-    prov_pred_roles(Rs?, Ws?, Cj?, Pd?, Ss?, E?, R).
+    body_names(Rs?, Fs?, Cn?, E?, N),
+    prov_pred_roles(Rs?, Ws?, N?, Cj?, Pd?, Ss?, Cns?, E?, R).
 
-% Ws are the agent roles of the schema.
-procedure prov_pred_roles(RoleSpecs?, RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
-prov_pred_roles(Rs, Ws, Cj, Pd, Ss, E, R?) :-
-    ground(Rs?), ground(Ws?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
+% Ws are the agent roles of the schema, and N what its body, read as one
+% conjunction, names through E: the bases among N join those of the psi,
+% and the speech-act variables among N theirs (def:grounded, GSC cd0f73e and
+% 7324ec7).
+procedure prov_pred_roles(RoleSpecs?, RoleSpecs?, Bases?, Conjuncts?, Constant?, Contract?, Constraints?, Preds?, Ans).
+prov_pred_roles(Rs, Ws, N, Cj, Pd, Ss, Cns, E, R?) :-
+    ground(Rs?), ground(Ws?), ground(N?), ground(Cj?), ground(Pd?), ground(Ss?), ground(Cns?), ground(E?) |
     role_bases(Rs?, 1, RBs),
-    req_bases(Ws?, E?, [], QBs),
-    req_phi_svars(Ws?, E?, QSV),
+    req_bases(Ws?, E?, N?, QBs),
+    req_phi_svars(Ws?, E?, QSV0),
+    named_svars(N?, NS),
+    args_app(NS?, QSV0?, QSV),
     req_svars(Rs?, SV),
-    prov_pred_cx(pctx(RBs?, QBs?, QSV?, SV?), Rs?, Cj?, Pd?, Ss?, E?, R).
+    prov_pred_cx(pctx(RBs?, QBs?, QSV?, SV?), Rs?, Cj?, Pd?, Ss?, Cns?, E?, R).
 
-procedure prov_pred_cx(PCtx?, RoleSpecs?, Conjuncts?, Constant?, Contract?, Preds?, Ans).
-prov_pred_cx(Cx, Rs, Cj, Pd, Ss, E, R?) :-
-    ground(Cx?), ground(Rs?), ground(Cj?), ground(Pd?), ground(Ss?), ground(E?) |
+procedure prov_pred_cx(PCtx?, RoleSpecs?, Conjuncts?, Constant?, Contract?, Constraints?, Preds?, Ans).
+prov_pred_cx(Cx, Rs, Cj, Pd, Ss, Cns, E, R?) :-
+    ground(Cx?), ground(Rs?), ground(Cj?), ground(Pd?), ground(Ss?), ground(Cns?), ground(E?) |
     prov_roles(Rs?, 1, Pd?, Cx?, E?, A1),
     prov_conjs(Cj?, Pd?, Cx?, E?, A2),
     both_yes(A1?, A2?, A),
-    prov_pred1(A?, Pd?, Ss?, E?, R).
+    prov_pred1(A?, Pd?, Ss?, Cns?, E?, R).
 
 % "A conditional atom added at an agent role is read the same way
 % (Definition Speech-act schema), the anchor of its conjunct counting as an
@@ -340,36 +362,319 @@ prov_hms1(yes, Ms, Pd, Cx, R?) :- prov_hms(Ms?, Pd?, Cx?, R).
 % The fixpoint
 % ---------------------------------------------------------------------------
 
-procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds).
-tp_filter1(yes, P, Ps, C, E, [P?|R?]) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
-    tp_filter(Ps?, C?, E?, R).
-tp_filter1(no, _, Ps, C, E, R?) :- ground(Ps?), ground(C?), ground(E?) |
-    tp_filter(Ps?, C?, E?, R).
+procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Constraints?, Preds?, Preds).
+tp_filter1(yes, P, Ps, C, Cns, E, [P?|R?]) :- ground(P?), ground(Ps?), ground(C?), ground(Cns?), ground(E?) |
+    tp_filter(Ps?, C?, Cns?, E?, R).
+tp_filter1(no, _, Ps, C, Cns, E, R?) :- ground(Ps?), ground(C?), ground(Cns?), ground(E?) |
+    tp_filter(Ps?, C?, Cns?, E?, R).
 
-procedure tp_filter(Preds?, Contract?, Preds?, Preds).
-tp_filter([], _, _, []).
-tp_filter([P|Ps], C, E, R?) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
-    prov_pred(P?, C?, E?, A),
-    tp_filter1(A?, P?, Ps?, C?, E?, R).
+procedure tp_filter(Preds?, Contract?, Constraints?, Preds?, Preds).
+tp_filter([], _, _, _, []).
+tp_filter([P|Ps], C, Cns, E, R?) :- ground(P?), ground(Ps?), ground(C?), ground(Cns?), ground(E?) |
+    prov_pred(P?, C?, Cns?, E?, A),
+    tp_filter1(A?, P?, Ps?, C?, Cns?, E?, R).
 
-procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Preds).
-tp_loop2(L1, L2, E1, _, E1?) :- L1? =:= L2? | true.
-tp_loop2(_, _, E1, C, R?) :- otherwise, ground(E1?), ground(C?) |
-    tp_loop(C?, E1?, R).
+procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Constraints?, Preds).
+tp_loop2(L1, L2, E1, _, _, E1?) :- L1? =:= L2? | true.
+tp_loop2(_, _, E1, C, Cns, R?) :- otherwise, ground(E1?), ground(C?), ground(Cns?) |
+    tp_loop(C?, Cns?, E1?, R).
 
-procedure tp_loop1(Preds?, Preds?, Contract?, Preds).
-tp_loop1(E1, E, C, R?) :- ground(E1?), ground(E?), ground(C?) |
+procedure tp_loop1(Preds?, Preds?, Contract?, Constraints?, Preds).
+tp_loop1(E1, E, C, Cns, R?) :- ground(E1?), ground(E?), ground(C?), ground(Cns?) |
     preds_len(E1?, L1),
     preds_len(E?, L2),
-    tp_loop2(L1?, L2?, E1?, C?, R).
+    tp_loop2(L1?, L2?, E1?, C?, Cns?, R).
 
-procedure tp_loop(Contract?, Preds?, Preds).
-tp_loop(C, E, R?) :- ground(C?), ground(E?) |
-    tp_filter(E?, C?, E?, E1),
-    tp_loop1(E1?, E?, C?, R).
+procedure tp_loop(Contract?, Constraints?, Preds?, Preds).
+tp_loop(C, Cns, E, R?) :- ground(C?), ground(Cns?), ground(E?) |
+    tp_filter(E?, C?, Cns?, E?, E1),
+    tp_loop1(E1?, E?, C?, Cns?, R).
 
-% The largest set of predicates of the contract having traceable provenance.
+% The largest set of predicates of the contract having traceable provenance,
+% its schemas taken with no constraint.
 exported procedure traceable(Contract?, Preds).
 traceable(C, E?) :- ground(C?) |
+    traceable_c(C?, [], E).
+
+% The same, Cns the constraints of the contract's schemas, in their order,
+% each read with its schema's body (def:grounded, GSC 7324ec7: "for this the
+% body is read as one conjunction, of its literals, its safe formulas and its
+% constraint").
+exported procedure traceable_c(Contract?, Constraints?, Preds).
+traceable_c(C, Cns, E?) :- ground(C?), ground(Cns?) |
     all_preds(C?, P0),
-    tp_loop(C?, P0?, E).
+    tp_loop(C?, Cns?, P0?, E).
+
+% ---------------------------------------------------------------------------
+% What a safe formula of the body names through E (def:grounded, GSC cd0f73e)
+% ---------------------------------------------------------------------------
+% "A safe formula names a base, or a speech-act variable, through E if it is
+% an atom of Phi_E held by an agent role an argument of which has that base,
+% or has the variable among its arguments or in a name term among them; a
+% conjunction one conjunct of which names it, or one conjunct of which is the
+% constraint u = v and another names the base of v, the base of u being the
+% one named; a disjunction both disjuncts of which name it; or exists xs (A
+% and phi) with A and phi naming it and xs not binding it" (def:grounded).
+% The definition reads, since GSC 7324ec7, "one conjunct of which is the
+% constraint u = v, of two agent variables, two speech-act variables or two
+% name terms, and another names v, or its base, u, or its base, being then
+% named ...; for this the body is read as one conjunction, of its literals,
+% its safe formulas and its constraint".
+% What a formula names is a list of Bases: b_role(I) and b_pvar(X) the bases
+% of an agent role and an agent variable, and b_svar(Y) the speech-act
+% variable Y.  A negation, a universal quantifier and a constraint alone
+% name nothing.  A conjunction is read with its nested conjunctions as one,
+% fand and the and of a constraint alike, and u = v of the conjunction is
+% applied until nothing more is named: of two agent variables, an agent role
+% among them, or two name terms, the base of u is named where that of v is;
+% of two speech-act variables, u is named where v is.  The body of a schema
+% is one conjunction (body_names): the atoms its agent roles require, its
+% safe formulas and its constraint.
+
+% What the body of a schema names: the conjunction of the atoms each agent
+% role requires, =(i) u -(i), its safe formulas and its constraint Cn.
+procedure body_names(RoleSpecs?, Forms?, Constraint?, Preds?, Bases).
+body_names(Rs, Fs, Cn, E, R?) :- ground(Rs?), ground(Fs?), ground(Cn?), ground(E?) |
+    conj_flat(fcons(Cn?), [], T0),
+    forms_flat(Fs?, T0?, T1),
+    body_names0(T1?, Rs?, E?, R).
+
+procedure body_names0(Forms?, RoleSpecs?, Preds?, Bases).
+body_names0(T, Rs, E, R?) :- ground(T?), ground(Rs?), ground(E?) |
+    has_eq(T?, Q),
+    body_names1(Q?, T?, Rs?, E?, R).
+
+% The atoms the agent roles require are psi already (def:grounded), so they
+% are read into the conjunction only where a conjunct u = v of it may carry
+% what they name to another variable; a body of literals alone names nothing
+% more than its psi.
+procedure body_names1(Ans?, Forms?, RoleSpecs?, Preds?, Bases).
+body_names1(no, [], _, _, []).
+body_names1(no, [F|Fs], Rs, E, R?) :- ground(F?), ground(Fs?), ground(Rs?), ground(E?) |
+    conj_names([F?|Fs?], Rs?, E?, R).
+body_names1(yes, T, Rs, E, R?) :- ground(T?), ground(Rs?), ground(E?) |
+    body_lits(Rs?, 1, T?, Cs),
+    conj_names(Cs?, Rs?, E?, R).
+
+% Whether a conjunct of a conjunction is u = v.
+procedure has_eq(Forms?, Ans).
+has_eq([], no).
+has_eq([fcons(eq(_, _))|_], yes).
+has_eq([_|Fs], R?) :- otherwise | has_eq(Fs?, R).
+
+% The conjuncts of the safe formulas of a body, before T.
+procedure forms_flat(Forms?, Forms?, Forms).
+forms_flat([], T, T?).
+forms_flat([F|Fs], T, R?) :- ground(F?), ground(Fs?), ground(T?) |
+    forms_flat(Fs?, T?, T1),
+    conj_flat(F?, T1?, R).
+
+% The atoms the agent roles of a schema require, each fa(role(I), A), before
+% T; a listed role's literals are in the conclusion of a universal
+% quantifier, which names nothing.
+procedure body_lits(RoleSpecs?, Integer?, Forms?, Forms).
+body_lits([], _, T, T?).
+body_lits([rs(G, P, M, K, N)|Rs], I, T, R?) :-
+    ground(G?), ground(P?), ground(M?), ground(K?), ground(N?), ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    body_lits(Rs?, I1?, T?, T1),
+    rs_req(rs(G?, P?, M?, K?, N?), Req),
+    held_forms(Req?, I?, T1?, R).
+body_lits([crs(_, _, _, _, _, _)|Rs], I, T, R?) :- ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    body_lits(Rs?, I1?, T?, R).
+
+procedure held_forms(Atoms?, Integer?, Forms?, Forms).
+held_forms([], _, T, T?).
+held_forms([A|As], I, T, [fa(role(I?), A?)|R?]) :- integer(I?) | held_forms(As?, I?, T?, R).
+
+% What the safe formulas of a body name, each read alone.
+procedure forms_names(Forms?, RoleSpecs?, Preds?, Bases?, Bases).
+forms_names([], _, _, T, T?).
+forms_names([F|Fs], Rs, E, T, R?) :-
+    ground(F?), ground(Fs?), ground(Rs?), ground(E?), ground(T?) |
+    form_names(F?, Rs?, E?, N),
+    forms_names(Fs?, Rs?, E?, T?, R1),
+    bases_app(N?, R1?, R).
+
+procedure form_names(Form?, RoleSpecs?, Preds?, Bases).
+form_names(fa(role(I), M), Rs, E, R?) :-
+    integer(I?), ground(M?), ground(Rs?), ground(E?) |
+    plain_mult(M?, A),
+    held_agent_role(I?, Rs?, Ag),
+    fa_names(Ag?, I?, A?, E?, R).
+form_names(fand(X, Y), Rs, E, R?) :-
+    ground(X?), ground(Y?), ground(Rs?), ground(E?) |
+    conj_flat(fand(X?, Y?), [], Cs),
+    conj_names(Cs?, Rs?, E?, R).
+form_names(fcons(and(X, Y)), Rs, E, R?) :-
+    ground(X?), ground(Y?), ground(Rs?), ground(E?) |
+    conj_flat(fcons(and(X?, Y?)), [], Cs),
+    conj_names(Cs?, Rs?, E?, R).
+form_names(for(X, Y), Rs, E, R?) :-
+    ground(X?), ground(Y?), ground(Rs?), ground(E?) |
+    form_names(X?, Rs?, E?, N1),
+    form_names(Y?, Rs?, E?, N2),
+    bases_inter(N1?, N2?, R).
+form_names(fexists(Xs, H, A, F), Rs, E, R?) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(Rs?), ground(E?) |
+    conj_flat(F?, [], Cs),
+    conj_names([fa(H?, A?)|Cs?], Rs?, E?, N),
+    bound_bases(Xs?, [], Bd),
+    bases_minus(N?, Bd?, R).
+form_names(_, _, _, []) :- otherwise | true.
+
+% Whether role I of a schema is an agent role.
+procedure held_agent_role(Integer?, RoleSpecs?, Ans).
+held_agent_role(I, Rs, R?) :- integer(I?), I? > 0, ground(Rs?) |
+    roles_len(Rs?, L),
+    held_agent_role1(I?, L?, Rs?, R).
+held_agent_role(_, _, no) :- otherwise | true.
+
+procedure held_agent_role1(Integer?, Integer?, RoleSpecs?, Ans).
+held_agent_role1(I, L, Rs, R?) :- I? =< L?, ground(Rs?) |
+    nth_rs(Rs?, I?, RS),
+    is_party_role(RS?, R).
+held_agent_role1(_, _, _, no) :- otherwise | true.
+
+% An atom of Phi_E held by the agent role I: the bases of its arguments, its
+% holder among them, and the speech-act variables among them or in a name
+% term among them.
+procedure fa_names(Ans?, Integer?, Atom?, Preds?, Bases).
+fa_names(no, _, _, _, []).
+fa_names(yes, I, atom(Q, As), E, R?) :-
+    integer(I?), ground(Q?), ground(As?), ground(E?) |
+    pred_member(Q?, E?, M),
+    fa_names1(M?, [role(I?)|As?], R).
+
+procedure fa_names1(Ans?, Args?, Bases).
+fa_names1(no, _, []).
+fa_names1(yes, As, R?) :- ground(As?) |
+    filter_svars(As?, Ys),
+    svar_bases(Ys?, Sb),
+    args_bases(As?, Sb?, R).
+
+procedure svar_bases(Args?, Bases).
+svar_bases([], []).
+svar_bases([svar(Y)|As], [b_svar(Y?)|R?]) :- svar_bases(As?, R).
+svar_bases([_|As], R?) :- otherwise | svar_bases(As?, R).
+
+% The speech-act variables a list of what is named holds.
+procedure named_svars(Bases?, Args).
+named_svars([], []).
+named_svars([b_svar(Y)|Bs], [svar(Y?)|R?]) :- named_svars(Bs?, R).
+named_svars([_|Bs], R?) :- otherwise | named_svars(Bs?, R).
+
+% The conjuncts of a conjunction, its nested conjunctions opened, before T.
+procedure conj_flat(Form?, Forms?, Forms).
+conj_flat(fand(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    conj_flat(Y?, T?, T1),
+    conj_flat(X?, T1?, R).
+conj_flat(fcons(and(X, Y)), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    conj_flat(fcons(Y?), T?, T1),
+    conj_flat(fcons(X?), T1?, R).
+conj_flat(F, T, [F?|T?]) :- otherwise | true.
+
+% What a conjunction names: what one conjunct of it names, closed under its
+% conjuncts u = v.
+procedure conj_names(Forms?, RoleSpecs?, Preds?, Bases).
+conj_names(Cs, Rs, E, R?) :- ground(Cs?), ground(Rs?), ground(E?) |
+    forms_names(Cs?, Rs?, E?, [], N0),
+    eq_close(Cs?, N0?, R).
+
+procedure eq_close(Forms?, Bases?, Bases).
+eq_close(Cs, N, R?) :- ground(Cs?), ground(N?) |
+    eq_pass(Cs?, N?, N1, no, Ch),
+    eq_close1(Ch?, Cs?, N1?, R).
+
+procedure eq_close1(Ans?, Forms?, Bases?, Bases).
+eq_close1(no, _, N, N?).
+eq_close1(yes, Cs, N, R?) :- eq_close(Cs?, N?, R).
+
+% One pass over the conjuncts u = v: the base of u is named where that of v
+% is, and the base of v where that of u is, u = v being v = u.
+procedure eq_pass(Forms?, Bases?, Bases, Ans?, Ans).
+eq_pass([], N, N?, C, C?).
+eq_pass([fcons(eq(U, V))|Cs], N, R?, C, Ch?) :-
+    ground(U?), ground(V?), ground(N?), ground(Cs?) |
+    eq_base(U?, BU),
+    eq_base(V?, BV),
+    eq_both(BU?, BV?, N?, N2, C?, C2),
+    eq_pass(Cs?, N2?, R, C2?, Ch).
+eq_pass([_|Cs], N, R?, C, Ch?) :- otherwise | eq_pass(Cs?, N?, R, C?, Ch).
+
+procedure eq_both(Base?, Base?, Bases?, Bases, Ans?, Ans).
+eq_both(BU, BV, N, R?, C, Ch?) :- ground(BU?), ground(BV?) |
+    eq_step(BU?, BV?, N?, N1, C?, C1),
+    eq_step(BV?, BU?, N1?, R, C1?, Ch).
+
+% What a side of u = v names where it is named: the base of an agent role, an
+% agent variable or a name term, and a speech-act variable itself; b_any,
+% nothing, for anything else.
+procedure eq_base(Expr?, Base).
+eq_base(role(I), b_role(I?)).
+eq_base(pvar(X), b_pvar(X?)).
+eq_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
+eq_base(svar(Y), b_svar(Y?)).
+eq_base(_, b_any) :- otherwise | true.
+
+% u = v of two of a kind: two bases, or two speech-act variables
+% (def:grounded; def:numbers admits u = v of no other pair).
+procedure eq_kin(Base?, Base?, Ans).
+eq_kin(b_svar(_), b_svar(_), yes).
+eq_kin(BU, BV, R?) :- otherwise, ground(BU?), ground(BV?) |
+    has_base(BU?, H1),
+    has_base(BV?, H2),
+    both_yes(H1?, H2?, R).
+
+% BU named, where BV is and BU is not yet, both bases.
+procedure eq_step(Base?, Base?, Bases?, Bases, Ans?, Ans).
+eq_step(BU, BV, N, R?, C, Ch?) :- ground(BU?), ground(BV?), ground(N?) |
+    eq_kin(BU?, BV?, H),
+    base_member(N?, BV?, M1),
+    base_member(N?, BU?, M2),
+    flip(M2?, M3),
+    both_yes(H?, M1?, X),
+    both_yes(X?, M3?, Add),
+    eq_add(Add?, BU?, N?, R, C?, Ch).
+
+procedure eq_add(Ans?, Base?, Bases?, Bases, Ans?, Ans).
+eq_add(no, _, N, N?, C, C?).
+eq_add(yes, B, N, [B?|N?], _, yes).
+
+procedure has_base(Base?, Ans).
+has_base(b_role(_), yes).
+has_base(b_pvar(_), yes).
+has_base(_, no) :- otherwise | true.
+
+% What a quantifier binds, as Bases: a bound name binds the agent variable and
+% the speech-act variable of that name, and a bound role its base.
+procedure bound_bases(Args?, Bases?, Bases).
+bound_bases([], T, T?).
+bound_bases([role(I)|Xs], T, [b_role(I?)|R?]) :- bound_bases(Xs?, T?, R).
+bound_bases([pvar(X)|Xs], T, [b_pvar(X?), b_svar(X?)|R?]) :- ground(X?) | bound_bases(Xs?, T?, R).
+bound_bases([svar(X)|Xs], T, [b_pvar(X?), b_svar(X?)|R?]) :- ground(X?) | bound_bases(Xs?, T?, R).
+bound_bases([num(X)|Xs], T, [b_pvar(X?), b_svar(X?)|R?]) :- ground(X?) | bound_bases(Xs?, T?, R).
+bound_bases([_|Xs], T, R?) :- otherwise | bound_bases(Xs?, T?, R).
+
+% The members of the first list not in the second.
+procedure bases_minus(Bases?, Bases?, Bases).
+bases_minus([], _, []).
+bases_minus([B|Bs], D, R?) :- ground(B?), ground(Bs?), ground(D?) |
+    base_member(D?, B?, M),
+    bases_keep(M?, B?, Bs?, D?, R).
+
+procedure bases_keep(Ans?, Base?, Bases?, Bases?, Bases).
+bases_keep(yes, _, Bs, D, R?) :- bases_minus(Bs?, D?, R).
+bases_keep(no, B, Bs, D, [B?|R?]) :- bases_minus(Bs?, D?, R).
+
+% The members of the first list in the second.
+procedure bases_inter(Bases?, Bases?, Bases).
+bases_inter([], _, []).
+bases_inter([B|Bs], D, R?) :- ground(B?), ground(Bs?), ground(D?) |
+    base_member(D?, B?, M),
+    bases_inter1(M?, B?, Bs?, D?, R).
+
+procedure bases_inter1(Ans?, Base?, Bases?, Bases?, Bases).
+bases_inter1(yes, B, Bs, D, [B?|R?]) :- bases_inter(Bs?, D?, R).
+bases_inter1(no, _, Bs, D, R?) :- bases_inter(Bs?, D?, R).

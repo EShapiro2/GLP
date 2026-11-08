@@ -1,0 +1,1667 @@
+% ---------------------------------------------------------------------------
+% Restriction by its syntactic approximations (GSC, Section "Relations among
+% Contracts", sections/07b-relations.tex): Definition Stronger body
+% (def:stronger) and Proposition Syntactic restrictions (prop:syntactic),
+% its clauses (a) to (c).
+%
+% Restriction is undecidable (prop:undecidable), and the proposition gives
+% three syntactic conditions that imply it, each strengthening a body.
+% Whether one body is stronger than another is undecidable in general; "the
+% checker decides it where the stronger body holds every literal and every
+% safe formula of the weaker and its constraint implies the weaker's, a
+% sufficient condition" (Section 8, after def:stronger).  stronger/3 decides
+% that condition: a schema tau' has a body stronger than tau's where they
+% have the same head, every role of tau is a role of tau' and every variable
+% of tau a role or a variable of tau', tau' requires at each role of tau
+% every atom tau requires there and forbids every atom tau forbids there,
+% each safe formula of tau's body is one of tau''s, the speech-act variables
+% and name terms occurring in the atoms the two require at their roles are
+% the same, and tau''s constraint implies tau's.
+%
+% The two schemas are matched by the names their clauses give their roles
+% (Section 2: "the schemas naming their roles as the clauses do"; a listed
+% role by the variable its quantifier binds), a role a schema names not
+% being matched by its place; an agent variable of tau that is a role of
+% tau' is read as that role (def:stronger: "every variable of tau a role or
+% a variable of tau'").  The paper does not say how one constraint is
+% decided to imply another: the checker takes each conjunct of the weaker's
+% constraint as implied where it is a conjunct of the stronger's, or where
+% it is linear and no values satisfy the stronger's with its negation,
+% decided by linear.glp as def:numbers has the checker decide the
+% implication on deleted multiplicities, a value variable written num(X)
+% ranging over the whole numbers, real(X) over the reals, and one used as a
+% multiplicity over the positive whole numbers; otherwise it is not decided,
+% and the body is not shown stronger.
+%
+% restricts/3 decides whether a contract C' is obtained from C by a
+% sequence of the steps of prop:syntactic: (a) replacing a schema with a
+% guarding agent role by one with its name and guards and a stronger body,
+% every role it adds an agent role that is a reading role, or deleting such
+% a schema; (b) adding a schema with no guarding role, with the head and the
+% roles of a schema of C and a stronger body; (c) replacing a schema with no
+% guarding agent role by one with its name, roles and guards and a stronger
+% body, which restricts only under an invariant of the contract that no
+% syntactic condition decides, so the verdict names each such schema.  A
+% schema of C' is matched to C's by its name.  The steps are taken in the
+% order: the replacements, in the order of C', the additions, and the
+% deletions; the proposition asks that the two contracts of every step be
+% syntactically grassroots, Sigma' a subset of Sigma, and that C and C' have
+% simple unguarded classes for (a) and (c), which the checker decides by the
+% sufficient condition the paper gives (Section 8, before prop:syntactic).
+% ---------------------------------------------------------------------------
+
+imported procedure linear#cons_cd(Constraint?, VEnv?, Ans?, Cd).
+imported procedure linear#dnf_and(DNF?, DNF?, DNF).
+imported procedure linear#sat_prod(Conj?, DNFs?, Ans).
+imported procedure prov#all_preds(Contract?, Preds).
+
+% ---------------------------------------------------------------------------
+% A schema with the names of its roles
+% ---------------------------------------------------------------------------
+
+procedure ws_nd(WSchema?, ND).
+ws_nd(S, D?) :- ground(S?) |
+    unnamed_s(S?, NS),
+    wsch_rnames(S?, Ns),
+    ws_nd1(NS?, Ns?, D).
+
+procedure ws_nd1(NSchema?, NameOfs?, ND).
+ws_nd1(NS, Ns, nd(N?, Ns?, NS?)) :- ground(NS?) | nsch_name(NS?, N).
+
+procedure ws_nds(WContract?, NDs).
+ws_nds([], []).
+ws_nds([S|Ss], [D?|R?]) :- ground(S?), ground(Ss?) |
+    ws_nd(S?, D),
+    ws_nds(Ss?, R).
+
+% Whether two names of roles are one name, one(N, Other) standing for N.
+procedure rname_eq(RName?, RName?, Ans).
+rname_eq(one(A, _), one(B, _), yes) :- A? =?= B? | true.
+rname_eq(one(A, _), B, yes) :- A? =?= B? | true.
+rname_eq(A, one(B, _), yes) :- A? =?= B? | true.
+rname_eq(A, B, yes) :- A? =?= B? | true.
+rname_eq(_, _, no) :- otherwise | true.
+
+% The name of role I, dflt where its schema names it not.
+procedure name_at(NameOfs?, Integer?, NameOf).
+name_at([], _, dflt).
+name_at([N|_], I, N?) :- I? =:= 1 | true.
+name_at([_|Ns], I, R?) :- I? > 1, integer(I?), ground(Ns?) |
+    I1 := I? - 1,
+    name_at(Ns?, I1?, R).
+
+% The index of the role named X, from I, 0 where none is.
+procedure find_name(NameOfs?, RName?, Integer?, Integer).
+find_name([], _, _, 0).
+find_name([nm(R)|Ns], X, I, J?) :- ground(R?), ground(X?), integer(I?), ground(Ns?) |
+    rname_eq(R?, X?, A),
+    find_name1(A?, X?, I?, Ns?, J).
+find_name([dflt|Ns], X, I, J?) :- ground(X?), integer(I?), ground(Ns?) |
+    I1 := I? + 1,
+    find_name(Ns?, X?, I1?, J).
+
+procedure find_name1(Ans?, RName?, Integer?, NameOfs?, Integer).
+find_name1(yes, _, I, _, I?).
+find_name1(no, X, I, Ns, J?) :- ground(X?), integer(I?), ground(Ns?) |
+    I1 := I? + 1,
+    find_name(Ns?, X?, I1?, J).
+
+% ---------------------------------------------------------------------------
+% The roles of tau read as those of tau'
+% ---------------------------------------------------------------------------
+% rm(I, J): role I of tau is role J of tau', J 0 where it is no role of it;
+% pm(X, J): the agent variable X of tau is role J of tau'.
+
+% The role of tau' that role I of tau, named N, is.
+procedure role_target(NameOf?, NameOfs?, Integer?, Integer?, Integer).
+role_target(nm(R), Ns, _, _, J?) :- ground(R?), ground(Ns?) |
+    find_name(Ns?, R?, 1, J).
+role_target(dflt, _, I, K, I?) :- I? =< K? | true.
+role_target(dflt, _, I, K, 0) :- I? > K? | true.
+
+procedure role_map(NRoleSpecs?, NameOfs?, NameOfs?, Integer?, Integer?, RMs).
+role_map([], _, _, _, _, []).
+role_map([_|Rs], NB, NR, K, I, [rm(I?, J?)|R?]) :-
+    ground(Rs?), ground(NB?), ground(NR?), integer(K?), integer(I?) |
+    name_at(NB?, I?, N),
+    role_target(N?, NR?, I?, K?, J),
+    I1 := I? + 1,
+    role_map(Rs?, NB?, NR?, K?, I1?, R).
+
+% An agent variable of tau named as an agent role of tau' is that role; a
+% listed role is named by the variable its quantifier binds, which is no
+% variable of its schema (def:schema), so no variable of tau is it by name.
+procedure var_map(Args?, NameOfs?, NRoleSpecs?, RMs?, RMs).
+var_map([], _, _, T, T?).
+var_map([pvar(X)|Vs], NR, RsR, T, R?) :- ground(X?), ground(Vs?), ground(NR?), ground(RsR?), ground(T?) |
+    find_name(NR?, X?, 1, J0),
+    agent_at(J0?, RsR?, J),
+    var_map(Vs?, NR?, RsR?, T?, R1),
+    var_map1(J?, X?, R1?, R).
+var_map([_|Vs], NR, RsR, T, R?) :- otherwise, ground(Vs?), ground(NR?), ground(RsR?), ground(T?) |
+    var_map(Vs?, NR?, RsR?, T?, R).
+
+% J where role J is an agent role, 0 otherwise.
+procedure agent_at(Integer?, NRoleSpecs?, Integer).
+agent_at(J, _, 0) :- J? < 1 | true.
+agent_at(J, Rs, R?) :- J? > 0, ground(Rs?) |
+    nth_nrs(Rs?, J?, RS),
+    agent_at1(RS?, J?, R).
+
+procedure agent_at1(NRoleSpec?, Integer?, Integer).
+agent_at1(rs(_, _, _, _, _), J, J?).
+agent_at1(crs(_, _, _, _, _, _), _, 0).
+
+procedure var_map1(Integer?, Constant?, RMs?, RMs).
+var_map1(0, _, T, T?).
+var_map1(J, X, T, [pm(X?, J?)|T?]) :- J? > 0 | true.
+
+procedure rm_lookup(RMs?, Integer?, Integer).
+rm_lookup([], _, 0).
+rm_lookup([rm(I, J)|_], K, J?) :- I? =:= K? | true.
+rm_lookup([_|Ms], K, R?) :- otherwise, integer(K?) | rm_lookup(Ms?, K?, R).
+
+procedure pm_lookup(RMs?, Constant?, Integer).
+pm_lookup([], _, 0).
+pm_lookup([pm(X, J)|_], Y, J?) :- X? =?= Y? | true.
+pm_lookup([_|Ms], Y, R?) :- otherwise, ground(Y?) | pm_lookup(Ms?, Y?, R).
+
+% --- the variables of tau read as those of tau' ---------------------------
+% A schema's variables are universally quantified (Section 2: "contract
+% variables are universally quantified per clause"), so two schemas that
+% differ by the names of their variables are one schema.  vm(U, V) reads the
+% variable U of tau, an agent variable that is no role of tau', a speech-act
+% variable or a value variable, as the variable V of tau' of its kind, one to
+% one.  The map is found from the atoms: each atom tau adds, deletes, clears,
+% requires or forbids at a role, its roles read as tau''s, is matched with
+% the first atom of the same predicate at the role of tau' it is that agrees
+% with the map so far, and extends it; an atom matched by none leaves it as
+% it is, and the comparison then names the difference.  The search takes the
+% first match, so a body shown stronger is one, and one not shown may be
+% stronger by another reading of its variables; a variable a quantifier
+% binds is read by its name.
+
+% M0 reads the roles of tau as tau''s, and M is M0 with the variables read
+% so far: an atom is read by M0 alone, its variables still tau''s own.
+procedure vm_roles(NRoleSpecs?, NRoleSpecs?, RMs?, RMs?, Integer?, RMs).
+vm_roles([], _, _, M, _, M?).
+vm_roles([RS|Rs], RsR, M0, M, I, R?) :- ground(RS?), ground(Rs?), ground(RsR?), ground(M0?), ground(M?), integer(I?) |
+    rm_lookup(M0?, I?, J),
+    nth_nrs(RsR?, J?, RR),
+    rn_role(RS?, M0?, RB),
+    vm_role(RB?, RR?, M?, M1),
+    I1 := I? + 1,
+    vm_roles(Rs?, RsR?, M0?, M1?, I1?, R).
+
+procedure vm_role(NRoleSpec?, NRoleSpec?, RMs?, RMs).
+vm_role(RB, RR, M, R?) :- ground(RB?), ground(RR?), ground(M?) |
+    nrs_add(RB?, AB), nrs_add(RR?, AR),
+    nrs_marked_del(RB?, DB), nrs_marked_del(RR?, DR),
+    nrs_req(RB?, QB), nrs_req(RR?, QR),
+    nrs_forb(RB?, NB), nrs_forb(RR?, NR),
+    vm_mults(AB?, AR?, M?, M1),
+    vm_mults(DB?, DR?, M1?, M2),
+    vm_mults(QB?, QR?, M2?, M3),
+    vm_mults(NB?, NR?, M3?, R).
+
+% Each atom of Xs with the first of Ys it can be read as.
+procedure vm_mults(Mults?, Mults?, RMs?, RMs).
+vm_mults([], _, M, M?).
+vm_mults([X|Xs], Ys, M, R?) :- ground(X?), ground(Xs?), ground(Ys?), ground(M?) |
+    vm_first(Ys?, X?, M?, M1),
+    vm_mults(Xs?, Ys?, M1?, R).
+
+procedure vm_first(Mults?, Mult?, RMs?, RMs).
+vm_first([], _, M, M?).
+vm_first([Y|Ys], X, M, R?) :- ground(Y?), ground(Ys?), ground(X?), ground(M?) |
+    vm_mult(X?, Y?, M?, A),
+    vm_first1(A?, Ys?, X?, M?, R).
+
+procedure vm_first1(VMR?, Mults?, Mult?, RMs?, RMs).
+vm_first1(vmr(M1), _, _, _, M1?).
+vm_first1(vm_clash, Ys, X, M, R?) :- vm_first(Ys?, X?, M?, R).
+
+procedure vm_mult(Mult?, Mult?, RMs?, VMR).
+vm_mult(atom(P, As), atom(Q, Bs), M, R?) :- P? =?= Q?, ground(As?), ground(Bs?), ground(M?) |
+    vm_args(As?, Bs?, M?, R).
+vm_mult(times(K, A), times(L, B), M, R?) :- ground(K?), ground(A?), ground(L?), ground(B?), ground(M?) |
+    vm_arg(K?, L?, M?, R1),
+    vm_then_atom(R1?, A?, B?, R).
+vm_mult(X, Y, M, vmr(M?)) :- otherwise, X? =?= Y? | true.
+vm_mult(_, _, _, vm_clash) :- otherwise | true.
+
+procedure vm_then_atom(VMR?, Atom?, Atom?, VMR).
+vm_then_atom(vm_clash, _, _, vm_clash).
+vm_then_atom(vmr(M), atom(P, As), atom(Q, Bs), R?) :- P? =?= Q?, ground(As?), ground(Bs?), ground(M?) |
+    vm_args(As?, Bs?, M?, R).
+vm_then_atom(vmr(_), _, _, vm_clash) :- otherwise | true.
+
+procedure vm_args(Args?, Args?, RMs?, VMR).
+vm_args([], [], M, vmr(M?)).
+vm_args([A|As], [B|Bs], M, R?) :- ground(A?), ground(As?), ground(B?), ground(Bs?), ground(M?) |
+    vm_arg(A?, B?, M?, R1),
+    vm_args1(R1?, As?, Bs?, R).
+vm_args(_, _, _, vm_clash) :- otherwise | true.
+
+procedure vm_args1(VMR?, Args?, Args?, VMR).
+vm_args1(vm_clash, _, _, vm_clash).
+vm_args1(vmr(M), As, Bs, R?) :- vm_args(As?, Bs?, M?, R).
+
+% One argument of tau, its roles read as tau''s, against one of tau'.
+procedure vm_arg(Arg?, Arg?, RMs?, VMR).
+vm_arg(pvar(X), B, M, R?) :- ground(X?), ground(B?), ground(M?) | vm_var(pvar(X?), B?, M?, R).
+vm_arg(svar(Y), B, M, R?) :- ground(Y?), ground(B?), ground(M?) | vm_var(svar(Y?), B?, M?, R).
+vm_arg(num(X), B, M, R?) :- ground(X?), ground(B?), ground(M?), number(X?) | vm_same(num(X?), B?, M?, R).
+vm_arg(num(X), B, M, R?) :- otherwise, ground(X?), ground(B?), ground(M?) | vm_var(num(X?), B?, M?, R).
+vm_arg(nterm(S), nterm(T), M, R?) :- ground(S?), ground(T?), ground(M?) | vm_nt(S?, T?, M?, R).
+vm_arg(item_of(Y), item_of(Z), M, R?) :- ground(Y?), ground(Z?), ground(M?) | vm_arg(Y?, Z?, M?, R).
+vm_arg(A, B, M, R?) :- otherwise, ground(A?), ground(B?), ground(M?) | vm_same(A?, B?, M?, R).
+
+procedure vm_same(Arg?, Arg?, RMs?, VMR).
+vm_same(A, B, M, vmr(M?)) :- A? =?= B? | true.
+vm_same(_, _, _, vm_clash) :- otherwise | true.
+
+procedure vm_nt(NameTerm?, NameTerm?, RMs?, VMR).
+vm_nt(ext(S, Y), ext(T, Z), M, R?) :- ground(S?), ground(T?), ground(Y?), ground(Z?), ground(M?) |
+    vm_var(svar(Y?), svar(Z?), M?, R1),
+    vm_nt1(R1?, S?, T?, R).
+vm_nt(ext_any(S), ext_any(T), M, R?) :- ground(S?), ground(T?), ground(M?) | vm_nt(S?, T?, M?, R).
+vm_nt(own_var(X), own_var(Y), M, R?) :- ground(X?), ground(Y?), ground(M?) | vm_var(pvar(X?), pvar(Y?), M?, R).
+vm_nt(S, T, M, vmr(M?)) :- otherwise, S? =?= T? | true.
+vm_nt(_, _, _, vm_clash) :- otherwise | true.
+
+procedure vm_nt1(VMR?, NameTerm?, NameTerm?, VMR).
+vm_nt1(vm_clash, _, _, vm_clash).
+vm_nt1(vmr(M), S, T, R?) :- vm_nt(S?, T?, M?, R).
+
+% The variable U of tau read as B: as the map has it, or, where the map has
+% it not and B is a variable of its kind no other variable is read as, so.
+procedure vm_var(Arg?, Arg?, RMs?, VMR).
+vm_var(U, B, M, R?) :- ground(U?), ground(B?), ground(M?) |
+    vm_find(M?, U?, F),
+    vm_var1(F?, U?, B?, M?, R).
+
+procedure vm_var1(VFoundA?, Arg?, Arg?, RMs?, VMR).
+vm_var1(va_found(V), _, B, M, vmr(M?)) :- V? =?= B? | true.
+vm_var1(va_found(_), _, _, _, vm_clash) :- otherwise | true.
+vm_var1(va_none, U, B, M, R?) :- ground(U?), ground(B?), ground(M?) |
+    vm_kind(U?, B?, M?, K),
+    vm_used(M?, B?, Us),
+    flip(Us?, Free),
+    both_yes(K?, Free?, A),
+    vm_add(A?, U?, B?, M?, R).
+
+procedure vm_add(Ans?, Arg?, Arg?, RMs?, VMR).
+vm_add(yes, U, B, M, vmr([vm(U?, B?)|M?])).
+vm_add(no, _, _, _, vm_clash).
+
+% A variable of tau is read as a variable of tau' of its kind, or an agent
+% variable as a role of tau' that no role of tau is (def:stronger: "every
+% variable of tau a role or a variable of tau'").
+procedure vm_kind(Arg?, Arg?, RMs?, Ans).
+vm_kind(pvar(_), pvar(_), _, yes).
+vm_kind(pvar(_), role(J), M, R?) :- integer(J?), ground(M?) |
+    rm_target(M?, J?, T),
+    flip(T?, R).
+vm_kind(svar(_), svar(_), _, yes).
+vm_kind(num(_), num(Y), _, yes) :- otherwise, ground(Y?) | true.
+vm_kind(_, _, _, no) :- otherwise | true.
+
+procedure vm_find(RMs?, Arg?, VFoundA).
+vm_find([], _, va_none).
+vm_find([vm(U, V)|_], A, va_found(V?)) :- U? =?= A? | true.
+vm_find([_|Ms], A, R?) :- otherwise, ground(A?) | vm_find(Ms?, A?, R).
+
+procedure vm_used(RMs?, Arg?, Ans).
+vm_used([], _, no).
+vm_used([vm(_, V)|_], B, yes) :- V? =?= B? | true.
+vm_used([_|Ms], B, R?) :- otherwise, ground(B?) | vm_used(Ms?, B?, R).
+
+% A variable as the map reads it.
+procedure vm_read(RMs?, Arg?, Arg).
+vm_read(M, A, R?) :- ground(M?), ground(A?) |
+    vm_find(M?, A?, F),
+    vm_read1(F?, A?, R).
+
+procedure vm_read1(VFoundA?, Arg?, Arg).
+vm_read1(va_found(V), _, V?).
+vm_read1(va_none, A, A?).
+
+% --- renaming --------------------------------------------------------------
+
+procedure rn_arg(Arg?, RMs?, Arg).
+rn_arg(role(I), M, role(J?)) :- integer(I?), ground(M?) | rm_lookup(M?, I?, J).
+rn_arg(pvar(X), M, R?) :- ground(X?), ground(M?) |
+    pm_lookup(M?, X?, J),
+    rn_pvar(J?, X?, R0),
+    vm_read(M?, R0?, R).
+rn_arg(nterm(S), M, nterm(R?)) :- ground(S?), ground(M?) | rn_nt(S?, M?, R).
+rn_arg(sgn(Y, I), M, sgn(Y?, J?)) :- integer(I?), ground(M?) | rm_lookup(M?, I?, J).
+rn_arg(svar(Y), M, R?) :- ground(Y?), ground(M?) | vm_read(M?, svar(Y?), R).
+rn_arg(num(X), M, R?) :- ground(X?), ground(M?) | vm_read(M?, num(X?), R).
+rn_arg(real(X), M, real(R?)) :- ground(X?), ground(M?) |
+    vm_read(M?, num(X?), A),
+    num_name(A?, X?, R).
+rn_arg(any, _, any).
+rn_arg(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+
+% The name of a value argument, the variable's own where it is no num(X).
+procedure num_name(Arg?, Constant?, Constant).
+num_name(num(Y), _, Y?).
+num_name(_, X, X?) :- otherwise | true.
+
+procedure rn_pvar(Integer?, Constant?, Arg).
+rn_pvar(J, _, role(J?)) :- J? > 0 | true.
+rn_pvar(J, X, pvar(X?)) :- J? =:= 0 | true.
+
+procedure rn_nt(NameTerm?, RMs?, NameTerm).
+rn_nt(own(I), M, own(J?)) :- integer(I?), ground(M?) | rm_lookup(M?, I?, J).
+rn_nt(own_var(X), M, R?) :- ground(X?), ground(M?) |
+    pm_lookup(M?, X?, J),
+    rn_own(J?, X?, R).
+rn_nt(ext(S, Y), M, ext(R?, Z?)) :- ground(S?), ground(Y?), ground(M?) |
+    rn_nt(S?, M?, R),
+    vm_read(M?, svar(Y?), A),
+    svar_name(A?, Y?, Z).
+rn_nt(ext_any(S), M, ext_any(R?)) :- ground(S?), ground(M?) | rn_nt(S?, M?, R).
+
+procedure svar_name(Arg?, Constant?, Constant).
+svar_name(svar(Z), _, Z?).
+svar_name(_, Y, Y?) :- otherwise | true.
+
+procedure rn_own(Integer?, Constant?, NameTerm).
+rn_own(J, _, own(J?)) :- J? > 0 | true.
+rn_own(J, X, own_var(X?)) :- J? =:= 0 | true.
+
+procedure rn_args(Args?, RMs?, Args).
+rn_args([], _, []).
+rn_args([A|As], M, [B?|Bs?]) :- ground(A?), ground(As?), ground(M?) |
+    rn_arg(A?, M?, B),
+    rn_args(As?, M?, Bs).
+
+procedure rn_atom(Atom?, RMs?, Atom).
+rn_atom(atom(P, As), M, atom(P?, R?)) :- ground(As?), ground(M?) | rn_args(As?, M?, R).
+
+procedure rn_mult(Mult?, RMs?, Mult).
+rn_mult(atom(P, As), M, atom(P?, R?)) :- ground(As?), ground(M?) | rn_args(As?, M?, R).
+rn_mult(times(K, A), M, times(K1?, A1?)) :- ground(K?), ground(A?), ground(M?) |
+    rn_arg(K?, M?, K1),
+    rn_atom(A?, M?, A1).
+rn_mult(rest(K, J, A), M, rest(K1?, J1?, A1?)) :- ground(K?), ground(J?), ground(A?), ground(M?) |
+    rn_expr(K?, M?, K1),
+    rn_expr(J?, M?, J1),
+    rn_atom(A?, M?, A1).
+
+procedure rn_mults(Mults?, RMs?, Mults).
+rn_mults([], _, []).
+rn_mults([A|As], M, [B?|Bs?]) :- ground(A?), ground(As?), ground(M?) |
+    rn_mult(A?, M?, B),
+    rn_mults(As?, M?, Bs).
+
+procedure rn_expr(Expr?, RMs?, Expr).
+rn_expr(role(I), M, role(J?)) :- integer(I?), ground(M?) | rm_lookup(M?, I?, J).
+rn_expr(pvar(X), M, R?) :- ground(X?), ground(M?) |
+    rn_arg(pvar(X?), M?, A),
+    arg_expr(A?, R).
+rn_expr(nterm(S), M, nterm(R?)) :- ground(S?), ground(M?) | rn_nt(S?, M?, R).
+rn_expr(sgn(Y, I), M, sgn(Y?, J?)) :- integer(I?), ground(M?) | rm_lookup(M?, I?, J).
+rn_expr(svar(Y), M, R?) :- ground(Y?), ground(M?) |
+    rn_arg(svar(Y?), M?, A),
+    arg_expr(A?, R).
+rn_expr(num(X), M, R?) :- ground(X?), ground(M?) |
+    rn_arg(num(X?), M?, A),
+    arg_expr(A?, R).
+rn_expr(real(X), M, R?) :- ground(X?), ground(M?) |
+    rn_arg(real(X?), M?, A),
+    arg_expr(A?, R).
+rn_expr(any, _, any).
+rn_expr(author_of(Y), M, author_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_expr(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_expr(plus(X, Y), M, plus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1),
+    rn_expr(Y?, M?, Y1).
+rn_expr(minus(X, Y), M, minus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1),
+    rn_expr(Y?, M?, Y1).
+rn_expr(mul(X, Y), M, mul(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1),
+    rn_expr(Y?, M?, Y1).
+rn_expr(fn(N, Xs), M, fn(N?, Xs1?)) :- ground(Xs?), ground(M?) | rn_exprs(Xs?, M?, Xs1).
+rn_expr(cardinality(Xs, H, A, F), M, cardinality(Xs1?, H1?, A1?, F1?)) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(M?) |
+    rn_args(Xs?, M?, Xs1),
+    rn_arg(H?, M?, H1),
+    rn_atom(A?, M?, A1),
+    rn_form(F?, M?, F1).
+rn_expr(sum(Xs, H, A, F, U), M, sum(Xs1?, H1?, A1?, F1?, U1?)) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(U?), ground(M?) |
+    rn_args(Xs?, M?, Xs1),
+    rn_arg(H?, M?, H1),
+    rn_atom(A?, M?, A1),
+    rn_form(F?, M?, F1),
+    rn_expr(U?, M?, U1).
+
+% An argument as an expression.
+procedure arg_expr(Arg?, Expr).
+arg_expr(role(I), role(I?)).
+arg_expr(pvar(X), pvar(X?)).
+arg_expr(svar(Y), svar(Y?)).
+arg_expr(nterm(S), nterm(S?)).
+arg_expr(sgn(Y, I), sgn(Y?, I?)).
+arg_expr(num(X), num(X?)).
+arg_expr(real(X), real(X?)).
+arg_expr(any, any).
+arg_expr(item_of(Y), item_of(Y?)).
+
+procedure rn_exprs(Exprs?, RMs?, Exprs).
+rn_exprs([], _, []).
+rn_exprs([X|Xs], M, [Y?|Ys?]) :- ground(X?), ground(Xs?), ground(M?) |
+    rn_expr(X?, M?, Y),
+    rn_exprs(Xs?, M?, Ys).
+
+procedure rn_cons(Constraint?, RMs?, Constraint).
+rn_cons(true, _, true).
+rn_cons(and(A, B), M, and(A1?, B1?)) :- ground(A?), ground(B?), ground(M?) |
+    rn_cons(A?, M?, A1), rn_cons(B?, M?, B1).
+rn_cons(or(A, B), M, or(A1?, B1?)) :- ground(A?), ground(B?), ground(M?) |
+    rn_cons(A?, M?, A1), rn_cons(B?, M?, B1).
+rn_cons(implies(A, B), M, implies(A1?, B1?)) :- ground(A?), ground(B?), ground(M?) |
+    rn_cons(A?, M?, A1), rn_cons(B?, M?, B1).
+rn_cons(not(A), M, not(A1?)) :- ground(A?), ground(M?) | rn_cons(A?, M?, A1).
+rn_cons(eq(X, Y), M, eq(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1), rn_expr(Y?, M?, Y1).
+rn_cons(ne(X, Y), M, ne(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1), rn_expr(Y?, M?, Y1).
+rn_cons(le(X, Y), M, le(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1), rn_expr(Y?, M?, Y1).
+rn_cons(lt(X, Y), M, lt(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1), rn_expr(Y?, M?, Y1).
+rn_cons(ge(X, Y), M, ge(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1), rn_expr(Y?, M?, Y1).
+rn_cons(gt(X, Y), M, gt(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_expr(X?, M?, X1), rn_expr(Y?, M?, Y1).
+rn_cons(succ(X, Y), M, succ(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_arg(X?, M?, X1), rn_arg(Y?, M?, Y1).
+rn_cons(signed(X, Y), M, signed(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_arg(X?, M?, X1), rn_arg(Y?, M?, Y1).
+rn_cons(unsigned(X, Y), M, unsigned(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
+    rn_arg(X?, M?, X1), rn_arg(Y?, M?, Y1).
+rn_cons(rel(N, Xs), M, rel(N?, Xs1?)) :- ground(Xs?), ground(M?) | rn_exprs(Xs?, M?, Xs1).
+rn_cons(program(X), M, program(X1?)) :- ground(X?), ground(M?) | rn_expr(X?, M?, X1).
+
+procedure rn_form(Form?, RMs?, Form).
+rn_form(fa(H, A), M, fa(H1?, A1?)) :- ground(H?), ground(A?), ground(M?) |
+    rn_arg(H?, M?, H1), rn_mult(A?, M?, A1).
+rn_form(fnot(F), M, fnot(F1?)) :- ground(F?), ground(M?) | rn_form(F?, M?, F1).
+rn_form(fand(F, G), M, fand(F1?, G1?)) :- ground(F?), ground(G?), ground(M?) |
+    rn_form(F?, M?, F1), rn_form(G?, M?, G1).
+rn_form(for(F, G), M, for(F1?, G1?)) :- ground(F?), ground(G?), ground(M?) |
+    rn_form(F?, M?, F1), rn_form(G?, M?, G1).
+rn_form(fexists(Xs, H, A, F), M, fexists(Xs1?, H1?, A1?, F1?)) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(M?) |
+    rn_args(Xs?, M?, Xs1),
+    rn_arg(H?, M?, H1),
+    rn_atom(A?, M?, A1),
+    rn_form(F?, M?, F1).
+rn_form(fforall(Xs, H, A, F, Ps), M, fforall(Xs1?, H1?, A1?, F1?, Ps1?)) :-
+    ground(Xs?), ground(H?), ground(A?), ground(F?), ground(Ps?), ground(M?) |
+    rn_args(Xs?, M?, Xs1),
+    rn_arg(H?, M?, H1),
+    rn_atom(A?, M?, A1),
+    rn_form(F?, M?, F1),
+    rn_forms(Ps?, M?, Ps1).
+rn_form(fcons(C), M, fcons(C1?)) :- ground(C?), ground(M?) | rn_cons(C?, M?, C1).
+
+procedure rn_forms(Forms?, RMs?, Forms).
+rn_forms([], _, []).
+rn_forms([F|Fs], M, [G?|Gs?]) :- ground(F?), ground(Fs?), ground(M?) |
+    rn_form(F?, M?, G),
+    rn_forms(Fs?, M?, Gs).
+
+procedure rn_hms(HMults?, RMs?, HMults).
+rn_hms([], _, []).
+rn_hms([hm(J, A)|Hs], M, [hm(J1?, A1?)|R?]) :- integer(J?), ground(A?), ground(Hs?), ground(M?) |
+    rm_lookup(M?, J?, J1),
+    rn_mult(A?, M?, A1),
+    rn_hms(Hs?, M?, R).
+
+procedure rn_conjs(Conjuncts?, RMs?, Conjuncts).
+rn_conjs([], _, []).
+rn_conjs([conjunct(Xs, I, A, F, P, D, L)|Cs], M, [conjunct(Xs1?, I1?, A1?, F1?, P1?, D1?, L1?)|R?]) :-
+    ground(Xs?), integer(I?), ground(A?), ground(F?), ground(P?), ground(D?), ground(L?), ground(Cs?), ground(M?) |
+    rn_args(Xs?, M?, Xs1),
+    rm_lookup(M?, I?, I1),
+    rn_atom(A?, M?, A1),
+    rn_form(F?, M?, F1),
+    rn_hms(P?, M?, P1),
+    rn_hms(D?, M?, D1),
+    rn_forms(L?, M?, L1),
+    rn_conjs(Cs?, M?, R).
+
+procedure rn_kind(RoleKind?, RMs?, RoleKind).
+rn_kind(listed(I, P, As), M, listed(J?, P?, As1?)) :- integer(I?), ground(As?), ground(M?) |
+    rm_lookup(M?, I?, J),
+    rn_args(As?, M?, As1).
+rn_kind(qlisted(I, P, As, Xs), M, qlisted(J?, P?, As1?, Xs1?)) :- integer(I?), ground(As?), ground(Xs?), ground(M?) |
+    rm_lookup(M?, I?, J),
+    rn_args(As?, M?, As1),
+    rn_args(Xs?, M?, Xs1).
+
+procedure rn_role(NRoleSpec?, RMs?, NRoleSpec).
+rn_role(rs(G, P, D, K, N), M, rs(G?, P1?, D1?, K1?, N1?)) :-
+    ground(P?), ground(D?), ground(K?), ground(N?), ground(M?) |
+    rn_mults(P?, M?, P1), rn_mults(D?, M?, D1), rn_mults(K?, M?, K1), rn_mults(N?, M?, N1).
+rn_role(crs(Kd, G, P, D, K, N), M, crs(Kd1?, G?, P1?, D1?, K1?, N1?)) :-
+    ground(Kd?), ground(P?), ground(D?), ground(K?), ground(N?), ground(M?) |
+    rn_kind(Kd?, M?, Kd1),
+    rn_mults(P?, M?, P1), rn_mults(D?, M?, D1), rn_mults(K?, M?, K1), rn_mults(N?, M?, N1).
+
+% ---------------------------------------------------------------------------
+% Multisets, compared syntactically
+% ---------------------------------------------------------------------------
+
+% The members of the first not matched, copy for copy, in the second.
+procedure ms_missing(Mults?, Mults?, Mults).
+ms_missing([], _, []).
+ms_missing([X|Xs], Ys, R?) :- ground(X?), ground(Xs?), ground(Ys?) |
+    ms_take(Ys?, X?, F, Ys1),
+    ms_missing1(F?, X?, Xs?, Ys1?, R).
+
+procedure ms_missing1(Ans?, Mult?, Mults?, Mults?, Mults).
+ms_missing1(yes, _, Xs, Ys, R?) :- ms_missing(Xs?, Ys?, R).
+ms_missing1(no, X, Xs, Ys, [X?|R?]) :- ms_missing(Xs?, Ys?, R).
+
+% Ys less its first member equal to X, and whether there was one.
+procedure ms_take(Mults?, Mult?, Ans, Mults).
+ms_take([], _, no, []).
+ms_take([Y|Ys], X, yes, Ys?) :- Y? =?= X? | true.
+ms_take([Y|Ys], X, F?, [Y?|R?]) :- otherwise, ground(X?) | ms_take(Ys?, X?, F, R).
+
+procedure ms_same(Mults?, Mults?, Ans).
+ms_same(Xs, Ys, R?) :- ground(Xs?), ground(Ys?) |
+    ms_missing(Xs?, Ys?, A),
+    ms_missing(Ys?, Xs?, B),
+    ms_empty2(A?, B?, R).
+
+procedure ms_empty2(Mults?, Mults?, Ans).
+ms_empty2([], [], yes).
+ms_empty2(_, _, no) :- otherwise | true.
+
+procedure cj_missing(Conjuncts?, Conjuncts?, Conjuncts).
+cj_missing([], _, []).
+cj_missing([X|Xs], Ys, R?) :- ground(X?), ground(Xs?), ground(Ys?) |
+    cj_take(Ys?, X?, F, Ys1),
+    cj_missing1(F?, X?, Xs?, Ys1?, R).
+
+procedure cj_missing1(Ans?, Conjunct?, Conjuncts?, Conjuncts?, Conjuncts).
+cj_missing1(yes, _, Xs, Ys, R?) :- cj_missing(Xs?, Ys?, R).
+cj_missing1(no, X, Xs, Ys, [X?|R?]) :- cj_missing(Xs?, Ys?, R).
+
+procedure cj_take(Conjuncts?, Conjunct?, Ans, Conjuncts).
+cj_take([], _, no, []).
+cj_take([Y|Ys], X, yes, Ys?) :- Y? =?= X? | true.
+cj_take([Y|Ys], X, F?, [Y?|R?]) :- otherwise, ground(X?) | cj_take(Ys?, X?, F, R).
+
+procedure form_member(Forms?, Form?, Ans).
+form_member([], _, no).
+form_member([F|_], G, yes) :- F? =?= G? | true.
+form_member([_|Fs], G, R?) :- otherwise, ground(G?) | form_member(Fs?, G?, R).
+
+procedure cons_member(Constraints?, Constraint?, Ans).
+cons_member([], _, no).
+cons_member([C|_], D, yes) :- C? =?= D? | true.
+cons_member([_|Cs], D, R?) :- otherwise, ground(D?) | cons_member(Cs?, D?, R).
+
+% The conjuncts of a formula, its nested conjunctions opened, before T.
+procedure form_flat(Form?, Forms?, Forms).
+form_flat(fand(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    form_flat(Y?, T?, T1),
+    form_flat(X?, T1?, R).
+form_flat(F, T, [F?|T?]) :- otherwise | true.
+
+procedure forms_flat(Forms?, Forms?, Forms).
+forms_flat([], T, T?).
+forms_flat([F|Fs], T, R?) :- ground(F?), ground(Fs?), ground(T?) |
+    forms_flat(Fs?, T?, T1),
+    form_flat(F?, T1?, R).
+
+% The conjuncts of a constraint, true dropped, before T.
+procedure cons_flat(Constraint?, Constraints?, Constraints).
+cons_flat(true, T, T?).
+cons_flat(and(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) |
+    cons_flat(Y?, T?, T1),
+    cons_flat(X?, T1?, R).
+cons_flat(C, T, [C?|T?]) :- otherwise | true.
+
+% ---------------------------------------------------------------------------
+% def:stronger, by the checker's sufficient condition
+% ---------------------------------------------------------------------------
+% A fault, of the schema tau of the weaker body, its roles numbered as in
+% tau: role_missing(I), role I of tau no role of tau'; role_kind(I), role I
+% an agent role in one and a listed role in the other, or listed by another
+% anchor; head_differs(I), the atoms role I adds, deletes or clears differ;
+% conjuncts_differ, the quantified conjuncts of the heads differ;
+% not_required(I, A) and not_forbidden(I, A), an atom tau requires, or
+% forbids, at role I that tau' does not; formula_missing(F), a safe formula
+% of tau's body none of tau''s; constraint_not_implied(C), a conjunct of
+% tau's constraint tau''s is not shown to imply; variable_missing(V), a
+% variable of tau neither a role nor a variable of tau'; carried_differ, the
+% speech-act variables and name terms of the atoms required at the roles
+% differ.  extra_role(J) is role J of tau', no role of tau, a fault of
+% prop:syntactic and of the Lemma Stronger body where it is not an agent
+% role that is a reading role.
+
+% stronger(Tau', Tau, SB): whether the body of Tau' is shown stronger than
+% that of Tau (def:stronger), each a schema as written, with its names.
+procedure stronger_nd(ND?, ND?, SB).
+stronger_nd(nd(_, NR, SR), nd(_, NB, SB0), R?) :- ground(NR?), ground(SR?), ground(NB?), ground(SB0?) |
+    nsch_roles(SR?, RsR),
+    nsch_roles(SB0?, RsB),
+    nsch_vars(SB0?, VB),
+    stronger_nd1(NR?, SR?, NB?, SB0?, RsR?, RsB?, VB?, R).
+
+procedure stronger_nd1(NameOfs?, NSchema?, NameOfs?, NSchema?, NRoleSpecs?, NRoleSpecs?, Args?, SB).
+stronger_nd1(NR, SR, NB, SB0, RsR, RsB, VB, R?) :-
+    ground(NR?), ground(SR?), ground(NB?), ground(SB0?), ground(RsR?), ground(RsB?), ground(VB?) |
+    rs_count(RsR?, KR),
+    role_map(RsB?, NB?, NR?, KR?, 1, M0),
+    var_map(VB?, NR?, RsR?, M0?, M),
+    stronger_nd2(SR?, SB0?, RsR?, M?, R).
+
+procedure stronger_nd2(NSchema?, NSchema?, NRoleSpecs?, RMs?, SB).
+stronger_nd2(SR, SB0, RsR, M0, R?) :- ground(SR?), ground(SB0?), ground(RsR?), ground(M0?) |
+    nsch_roles(SB0?, RsB),
+    vm_roles(RsB?, RsR?, M0?, M0?, 1, M),
+    stronger_nd3(SR?, SB0?, RsR?, M?, R).
+
+procedure stronger_nd3(NSchema?, NSchema?, NRoleSpecs?, RMs?, SB).
+stronger_nd3(SR, SB0, RsR, M, R?) :- ground(SR?), ground(SB0?), ground(RsR?), ground(M?) |
+    sb_faults(SR?, SB0?, M?, F0),
+    nsch_vars(SB0?, VB),
+    clash_faults(VB?, M?, C),
+    sbf_app(C?, F0?, F),
+    rm_extras(M?, RsR?, 1, X),
+    sb_verdict(F?, X?, R).
+
+% A variable of tau the map reads as itself, and as which it reads another
+% variable of tau, would be read as two: variable_clash(V), the map being
+% one to one.
+procedure clash_faults(Args?, RMs?, SBFaults).
+clash_faults([], _, []).
+clash_faults([V|Vs], M, R?) :- ground(V?), ground(Vs?), ground(M?) |
+    clash_key(V?, K),
+    clash_one(K?, M?, A),
+    clash_faults(Vs?, M?, R1),
+    clash_fault(A?, V?, R1?, R).
+
+procedure clash_key(Arg?, Arg).
+clash_key(real(X), num(X?)).
+clash_key(A, A?) :- otherwise | true.
+
+procedure clash_one(Arg?, RMs?, Ans).
+clash_one(pvar(X), M, R?) :- ground(X?), ground(M?) |
+    pm_lookup(M?, X?, J),
+    clash_one1(J?, pvar(X?), M?, R).
+clash_one(K, M, R?) :- otherwise, ground(K?), ground(M?) | clash_one1(0, K?, M?, R).
+
+procedure clash_one1(Integer?, Arg?, RMs?, Ans).
+clash_one1(J, _, _, no) :- J? > 0 | true.
+clash_one1(J, K, M, R?) :- J? =:= 0, ground(K?), ground(M?) |
+    vm_find(M?, K?, F),
+    clash_one2(F?, K?, M?, R).
+
+procedure clash_one2(VFoundA?, Arg?, RMs?, Ans).
+clash_one2(va_found(_), _, _, no).
+clash_one2(va_none, K, M, R?) :- vm_used(M?, K?, R).
+
+procedure clash_fault(Ans?, Arg?, SBFaults?, SBFaults).
+clash_fault(no, _, T, T?).
+clash_fault(yes, V, T, [variable_clash(V?)|T?]).
+
+procedure sb_verdict(SBFaults?, SBFaults?, SB).
+sb_verdict([], [], stronger).
+sb_verdict(F, X, not_stronger(R?)) :- otherwise, ground(F?), ground(X?) | sbf_app(F?, X?, R).
+
+procedure sbf_app(SBFaults?, SBFaults?, SBFaults).
+sbf_app([], T, T?).
+sbf_app([F|Fs], T, [F?|R?]) :- sbf_app(Fs?, T?, R).
+
+procedure rs_count(NRoleSpecs?, Integer).
+rs_count([], 0).
+rs_count([_|Rs], N?) :- rs_count(Rs?, M), N := M? + 1.
+
+procedure nth_nrs(NRoleSpecs?, Integer?, NRoleSpec).
+nth_nrs([], _, rs(unguarded, [], [], [], [])).
+nth_nrs(_, I, rs(unguarded, [], [], [], [])) :- I? < 1 | true.
+nth_nrs([X|_], I, X?) :- I? =:= 1 | true.
+nth_nrs([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
+    I1 := I? - 1,
+    nth_nrs(Xs?, I1?, R).
+
+% Whether J is a target of the map.
+procedure rm_target(RMs?, Integer?, Ans).
+rm_target([], _, no).
+rm_target([rm(_, J)|_], K, yes) :- J? =:= K? | true.
+rm_target([_|Ms], K, R?) :- otherwise, integer(K?) | rm_target(Ms?, K?, R).
+
+% The roles of tau' no role of tau is, each extra_role(J) where it is not an
+% agent role that is a reading role (def:schema: not a guarding role, adding
+% and deleting nothing).
+procedure rm_extras(RMs?, NRoleSpecs?, Integer?, SBFaults).
+rm_extras(_, [], _, []).
+rm_extras(M, [RS|Rs], J, R?) :- ground(M?), ground(RS?), ground(Rs?), integer(J?) |
+    rm_target(M?, J?, T),
+    agent_reading(RS?, A),
+    J1 := J? + 1,
+    rm_extras(M?, Rs?, J1?, R1),
+    rm_extra1(T?, A?, J?, R1?, R).
+
+procedure rm_extra1(Ans?, Ans?, Integer?, SBFaults?, SBFaults).
+rm_extra1(yes, _, _, T, T?).
+rm_extra1(no, yes, _, T, T?).
+rm_extra1(no, no, J, T, [extra_role(J?)|T?]).
+
+procedure agent_reading(NRoleSpec?, Ans).
+agent_reading(rs(unguarded, [], [], _, _), yes).
+agent_reading(_, no) :- otherwise | true.
+
+% Whether role J of tau' is no role of tau.
+procedure extra_of(RMs?, Integer?, Ans).
+extra_of(M, J, R?) :- ground(M?), integer(J?) | rm_target(M?, J?, T), flip(T?, R).
+
+% The faults of def:stronger, but extra roles.
+procedure sb_faults(NSchema?, NSchema?, RMs?, SBFaults).
+sb_faults(SR, SB0, M, F?) :- ground(SR?), ground(SB0?), ground(M?) |
+    nsch_roles(SR?, RsR),
+    nsch_roles(SB0?, RsB),
+    nsch_conjs(SR?, CjR),
+    nsch_conjs(SB0?, CjB0),
+    nsch_forms(SR?, FsR0),
+    nsch_forms(SB0?, FsB0),
+    nsch_constraint(SR?, CR),
+    nsch_constraint(SB0?, CB0),
+    nsch_vars(SR?, VR),
+    nsch_vars(SB0?, VB0),
+    num_ctx(SR?, NC),
+    sb_faults1(sbp(RsR?, RsB?, CjR?, CjB0?, FsR0?, FsB0?, CR?, CB0?, VR?, VB0?, NC?), M?, F).
+
+procedure sb_faults1(SBParts?, RMs?, SBFaults).
+sb_faults1(sbp(RsR, RsB, CjR, CjB0, FsR0, FsB0, CR, CB0, VR, VB0, NC), M, F?) :-
+    ground(RsR?), ground(RsB?), ground(CjR?), ground(CjB0?), ground(FsR0?), ground(FsB0?),
+    ground(CR?), ground(CB0?), ground(VR?), ground(VB0?), ground(NC?), ground(M?) |
+    roles_faults(RsB?, RsR?, M?, 1, F1),
+    rn_conjs(CjB0?, M?, CjB),
+    conjs_fault(CjB?, CjR?, F2),
+    rn_forms(FsB0?, M?, FsB1),
+    forms_flat(FsR0?, [], FsR),
+    forms_flat(FsB1?, [], FsB),
+    forms_faults(FsB?, FsR?, RsR?, F3),
+    rn_cons(CB0?, M?, CB),
+    cons_flat(CB?, [], CBs),
+    nc_pw(NC?, Pw),
+    impl_env(VR?, Pw?, Env, Bn),
+    cons_part(CBs?, CR?, Env?, Bn?, F4),
+    rn_args(VB0?, M?, VB),
+    vars_faults(VB?, VR?, F5),
+    carried(RsR?, CaR),
+    roles_rn(RsB?, M?, RsB1),
+    carried(RsB1?, CaB),
+    carried_fault(CaB?, CaR?, F6),
+    sbf_app(F5?, F6?, F56),
+    sbf_app(F4?, F56?, F46),
+    sbf_app(F3?, F46?, F36),
+    sbf_app(F2?, F36?, F26),
+    sbf_app(F1?, F26?, F).
+
+procedure nc_pw(NumCtx?, Args).
+nc_pw(nc(_, Pw), Pw?).
+
+procedure roles_rn(NRoleSpecs?, RMs?, NRoleSpecs).
+roles_rn([], _, []).
+roles_rn([RS|Rs], M, [R1?|R?]) :- ground(RS?), ground(Rs?), ground(M?) |
+    rn_role(RS?, M?, R1),
+    roles_rn(Rs?, M?, R).
+
+procedure conjs_fault(Conjuncts?, Conjuncts?, SBFaults).
+conjs_fault(CjB, CjR, F?) :- ground(CjB?), ground(CjR?) |
+    cj_missing(CjB?, CjR?, CjM1),
+    cj_missing(CjR?, CjB?, CjM2),
+    conj_fault(CjM1?, CjM2?, F).
+
+procedure cons_part(Constraints?, Constraint?, VEnv?, Conj?, SBFaults).
+cons_part(CBs, CR, Env, Bn, F?) :- ground(CBs?), ground(CR?), ground(Env?), ground(Bn?) |
+    cons_flat(CR?, [], CRs),
+    cons_faults(CBs?, CRs?, CR?, Env?, Bn?, F).
+
+procedure conj_fault(Conjuncts?, Conjuncts?, SBFaults).
+conj_fault([], [], []).
+conj_fault(_, _, [conjuncts_differ]) :- otherwise | true.
+
+% Each role I of tau against the role of tau' it is.
+procedure roles_faults(NRoleSpecs?, NRoleSpecs?, RMs?, Integer?, SBFaults).
+roles_faults([], _, _, _, []).
+roles_faults([RS|Rs], RsR, M, I, F?) :- ground(RS?), ground(Rs?), ground(RsR?), ground(M?), integer(I?) |
+    rm_lookup(M?, I?, J),
+    role_faults(J?, RS?, RsR?, M?, I?, F1),
+    I1 := I? + 1,
+    roles_faults(Rs?, RsR?, M?, I1?, F2),
+    sbf_app(F1?, F2?, F).
+
+procedure role_faults(Integer?, NRoleSpec?, NRoleSpecs?, RMs?, Integer?, SBFaults).
+role_faults(J, _, _, _, I, [role_missing(I?)]) :- J? =:= 0 | true.
+role_faults(J, RS, RsR, M, I, F?) :- J? > 0, ground(RS?), ground(RsR?), ground(M?), integer(I?) |
+    rn_role(RS?, M?, RB),
+    nth_nrs(RsR?, J?, RR),
+    role_faults1(RB?, RR?, I?, F).
+
+procedure role_faults1(NRoleSpec?, NRoleSpec?, Integer?, SBFaults).
+role_faults1(RB, RR, I, F?) :- ground(RB?), ground(RR?), integer(I?) |
+    same_kind(RB?, RR?, K),
+    kind_fault(K?, I?, F1),
+    nrs_add(RB?, AB), nrs_add(RR?, AR),
+    nrs_marked_del(RB?, DB), nrs_marked_del(RR?, DR),
+    ms_same(AB?, AR?, H1),
+    ms_same(DB?, DR?, H2),
+    both_yes(H1?, H2?, H),
+    head_fault(H?, I?, F2),
+    nrs_req(RB?, QB), nrs_req(RR?, QR),
+    ms_missing(QB?, QR?, QM),
+    req_faults(QM?, I?, F3),
+    nrs_forb(RB?, NB), nrs_forb(RR?, NR),
+    ms_missing(NB?, NR?, NM),
+    forb_faults(NM?, I?, F4),
+    sbf_app(F3?, F4?, F34),
+    sbf_app(F2?, F34?, F24),
+    sbf_app(F1?, F24?, F).
+
+procedure same_kind(NRoleSpec?, NRoleSpec?, Ans).
+same_kind(rs(_, _, _, _, _), rs(_, _, _, _, _), yes).
+same_kind(crs(K1, _, _, _, _, _), crs(K2, _, _, _, _, _), yes) :- K1? =?= K2? | true.
+same_kind(_, _, no) :- otherwise | true.
+
+procedure kind_fault(Ans?, Integer?, SBFaults).
+kind_fault(yes, _, []).
+kind_fault(no, I, [role_kind(I?)]).
+
+procedure head_fault(Ans?, Integer?, SBFaults).
+head_fault(yes, _, []).
+head_fault(no, I, [head_differs(I?)]).
+
+procedure req_faults(Mults?, Integer?, SBFaults).
+req_faults([], _, []).
+req_faults([A|As], I, [not_required(I?, A?)|R?]) :- req_faults(As?, I?, R).
+
+procedure forb_faults(Mults?, Integer?, SBFaults).
+forb_faults([], _, []).
+forb_faults([A|As], I, [not_forbidden(I?, A?)|R?]) :- forb_faults(As?, I?, R).
+
+% Each conjunct of a safe formula of tau's body is one of tau''s, or an atom
+% held by an agent role of tau' that it requires (a literal of its body).
+procedure forms_faults(Forms?, Forms?, NRoleSpecs?, SBFaults).
+forms_faults([], _, _, []).
+forms_faults([F|Fs], FsR, RsR, R?) :- ground(F?), ground(Fs?), ground(FsR?), ground(RsR?) |
+    form_member(FsR?, F?, A),
+    form_lit(F?, RsR?, B),
+    or_yes(A?, B?, C),
+    forms_faults(Fs?, FsR?, RsR?, R1),
+    form_fault(C?, F?, R1?, R).
+
+procedure form_fault(Ans?, Form?, SBFaults?, SBFaults).
+form_fault(yes, _, T, T?).
+form_fault(no, F, T, [formula_missing(F?)|T?]).
+
+procedure form_lit(Form?, NRoleSpecs?, Ans).
+form_lit(fa(role(J), A), RsR, R?) :- integer(J?), ground(A?), ground(RsR?) |
+    nth_nrs(RsR?, J?, RS),
+    nrs_req(RS?, Q),
+    ms_take(Q?, A?, R, _).
+form_lit(_, _, no) :- otherwise | true.
+
+% --- the constraint --------------------------------------------------------
+% Each conjunct C of tau's constraint is implied by tau''s, CR: C is a
+% conjunct of CR, or no values satisfy CR and the negation of C, CR read by
+% linear.glp as it reads a constraint (an equality of names, a signing
+% condition and a relation of a type read as true, which keeps the answer
+% sound) and the negation of C read whole.
+procedure cons_faults(Constraints?, Constraints?, Constraint?, VEnv?, Conj?, SBFaults).
+cons_faults([], _, _, _, _, []).
+cons_faults([C|Cs], CRs, CR, Env, Bn, R?) :-
+    ground(C?), ground(Cs?), ground(CRs?), ground(CR?), ground(Env?), ground(Bn?) |
+    cons_member(CRs?, C?, A),
+    cons_implied(A?, C?, CR?, Env?, Bn?, B),
+    cons_faults(Cs?, CRs?, CR?, Env?, Bn?, R1),
+    cons_fault(B?, C?, R1?, R).
+
+procedure cons_fault(Ans?, Constraint?, SBFaults?, SBFaults).
+cons_fault(yes, _, T, T?).
+cons_fault(no, C, T, [constraint_not_implied(C?)|T?]).
+
+procedure cons_implied(Ans?, Constraint?, Constraint?, VEnv?, Conj?, Ans).
+cons_implied(yes, _, _, _, _, yes).
+cons_implied(no, C, CR, Env, Bn, R?) :- ground(C?), ground(CR?), ground(Env?), ground(Bn?) |
+    linear # cons_cd(CR?, Env?, yes, Cd1),
+    linear # cons_cd(C?, Env?, no, Cd2),
+    cd_dnf(Cd1?, D1),
+    cons_implied1(Cd2?, D1?, Bn?, R).
+
+procedure cd_dnf(Cd?, DNF).
+cd_dnf(cd(D, _), D?).
+
+procedure cons_implied1(Cd?, DNF?, Conj?, Ans).
+cons_implied1(cd(_, no), _, _, no).
+cons_implied1(cd(D2, yes), D1, Bn, R?) :- ground(D2?), ground(D1?), ground(Bn?) |
+    linear # dnf_and(D1?, D2?, D),
+    linear # sat_prod(Bn?, [D?], S),
+    flip(S?, R).
+
+% The value variables of tau' as linear.glp's variables: num(X) over the
+% whole numbers, real(X) over the rationals, and one used as a multiplicity
+% over the positive whole numbers, its bound in Bn (def:binding-numbers).
+procedure impl_env(Args?, Args?, VEnv, Conj).
+impl_env([], _, [], []).
+impl_env([num(X)|Vs], Pw, [vb(X?, z(iv(X?)))|E?], B?) :- ground(X?), ground(Vs?), ground(Pw?) |
+    args_member(Pw?, num(X?), M),
+    impl_env(Vs?, Pw?, E, B1),
+    impl_bound(M?, X?, B1?, B).
+impl_env([real(X)|Vs], Pw, [vb(X?, V?)|E?], B?) :- ground(X?), ground(Vs?), ground(Pw?) |
+    args_member(Pw?, num(X?), M),
+    impl_real(M?, X?, V),
+    impl_env(Vs?, Pw?, E, B1),
+    impl_bound(M?, X?, B1?, B).
+impl_env([_|Vs], Pw, E?, B?) :- otherwise, ground(Vs?), ground(Pw?) | impl_env(Vs?, Pw?, E, B).
+
+procedure impl_real(Ans?, Constant?, Var).
+impl_real(yes, X, z(iv(X?))).
+impl_real(no, X, q(iv(X?))).
+
+procedure impl_bound(Ans?, Constant?, Conj?, Conj).
+impl_bound(no, _, T, T?).
+impl_bound(yes, X, T, [geq(lin([t(z(iv(X?)), 1)], -1))|T?]).
+
+% --- the variables, and what the required atoms carry ----------------------
+
+procedure vars_faults(Args?, Args?, SBFaults).
+vars_faults([], _, []).
+vars_faults([role(_)|Vs], VR, R?) :- ground(Vs?), ground(VR?) | vars_faults(Vs?, VR?, R).
+vars_faults([V|Vs], VR, R?) :- otherwise, ground(V?), ground(Vs?), ground(VR?) |
+    args_member(VR?, V?, A),
+    vars_faults(Vs?, VR?, R1),
+    var_fault(A?, V?, R1?, R).
+
+procedure var_fault(Ans?, Arg?, SBFaults?, SBFaults).
+var_fault(yes, _, T, T?).
+var_fault(no, V, T, [variable_missing(V?)|T?]).
+
+% The speech-act variables and the name terms occurring in the atoms the
+% roles require, each once.
+procedure carried(NRoleSpecs?, Args).
+carried(Rs, R?) :- ground(Rs?) |
+    carried_rs(Rs?, [], As),
+    args_dedup(As?, R).
+
+procedure carried_rs(NRoleSpecs?, Args?, Args).
+carried_rs([], T, T?).
+carried_rs([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_req(RS?, Q),
+    carried_rs(Rs?, T?, T1),
+    carried_ms(Q?, T1?, R).
+
+procedure carried_ms(Mults?, Args?, Args).
+carried_ms([], T, T?).
+carried_ms([M|Ms], T, R?) :- ground(M?), ground(Ms?), ground(T?) |
+    plain_mult(M?, A),
+    atom_args(A?, As),
+    carried_ms(Ms?, T?, T1),
+    carried_args(As?, T1?, R).
+
+procedure carried_args(Args?, Args?, Args).
+carried_args([], T, T?).
+carried_args([svar(Y)|As], T, [svar(Y?)|R?]) :- ground(As?), ground(T?) | carried_args(As?, T?, R).
+carried_args([nterm(S)|As], T, [nterm(S?)|R?]) :- ground(S?), ground(As?), ground(T?) |
+    carried_args(As?, T?, R1),
+    carried_nt(S?, R1?, R).
+carried_args([sgn(Y, _)|As], T, [svar(Y?)|R?]) :- ground(As?), ground(T?) | carried_args(As?, T?, R).
+carried_args([_|As], T, R?) :- otherwise, ground(As?), ground(T?) | carried_args(As?, T?, R).
+
+procedure carried_nt(NameTerm?, Args?, Args).
+carried_nt(ext(S, Y), T, [svar(Y?)|R?]) :- ground(S?), ground(T?) | carried_nt(S?, T?, R).
+carried_nt(ext_any(S), T, R?) :- ground(S?), ground(T?) | carried_nt(S?, T?, R).
+carried_nt(_, T, T?) :- otherwise | true.
+
+procedure carried_fault(Args?, Args?, SBFaults).
+carried_fault(B, R, F?) :- ground(B?), ground(R?) |
+    args_missing(B?, R?, M1),
+    args_missing(R?, B?, M2),
+    carried_fault1(M1?, M2?, F).
+
+procedure carried_fault1(Args?, Args?, SBFaults).
+carried_fault1([], [], []).
+carried_fault1(_, _, [carried_differ]) :- otherwise | true.
+
+procedure args_missing(Args?, Args?, Args).
+args_missing([], _, []).
+args_missing([A|As], Bs, R?) :- ground(A?), ground(As?), ground(Bs?) |
+    args_member(Bs?, A?, M),
+    args_missing(As?, Bs?, R1),
+    args_missing1(M?, A?, R1?, R).
+
+procedure args_missing1(Ans?, Arg?, Args?, Args).
+args_missing1(yes, _, T, T?).
+args_missing1(no, A, T, [A?|T?]).
+
+% ---------------------------------------------------------------------------
+% The shape of a replacement: its guards and its roles (prop:syntactic)
+% ---------------------------------------------------------------------------
+
+% Whether a schema has a guarding agent role, and a guarding role at all.
+procedure has_guarding_agent(NRoleSpecs?, Ans).
+has_guarding_agent([], no).
+has_guarding_agent([rs(guarded, _, _, _, _)|_], yes).
+has_guarding_agent([_|Rs], R?) :- otherwise | has_guarding_agent(Rs?, R).
+
+procedure has_guarding(NRoleSpecs?, Ans).
+has_guarding([], no).
+has_guarding([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    nrs_guard(RS?, G),
+    has_guarding1(G?, Rs?, R).
+
+procedure has_guarding1(Guard?, NRoleSpecs?, Ans).
+has_guarding1(guarded, _, yes).
+has_guarding1(unguarded, Rs, R?) :- has_guarding(Rs?, R).
+
+% Whether each role of tau guards exactly where the role of tau' it is does.
+procedure same_guards(RMs?, NRoleSpecs?, NRoleSpecs?, Integer?, Ans).
+same_guards(_, [], _, _, yes).
+same_guards(M, [RS|Rs], RsR, I, R?) :- ground(M?), ground(RS?), ground(Rs?), ground(RsR?), integer(I?) |
+    rm_lookup(M?, I?, J),
+    nth_nrs(RsR?, J?, RR),
+    nrs_guard(RS?, G1),
+    nrs_guard(RR?, G2),
+    same_guard(G1?, G2?, A),
+    I1 := I? + 1,
+    same_guards(M?, Rs?, RsR?, I1?, B),
+    both_yes(A?, B?, R).
+
+procedure same_guard(Guard?, Guard?, Ans).
+same_guard(guarded, guarded, yes).
+same_guard(unguarded, unguarded, yes).
+same_guard(_, _, no) :- otherwise | true.
+
+% The map of tau's roles into tau''s, as stronger_nd makes it.
+procedure nd_map(ND?, ND?, RMs).
+nd_map(nd(_, NR, SR), nd(_, NB, SB0), M?) :- ground(NR?), ground(SR?), ground(NB?), ground(SB0?) |
+    nsch_roles(SR?, RsR),
+    nsch_roles(SB0?, RsB),
+    rs_count(RsR?, KR),
+    role_map(RsB?, NB?, NR?, KR?, 1, M).
+
+% shape(ExtraFree, Guards): whether tau' has no role tau has not, and whether
+% the guards are the same, each role of tau guarding where the role of tau'
+% it is guards and every role tau' adds guarding nothing.
+procedure nd_shape(ND?, ND?, Shape).
+nd_shape(DR, DB, S?) :- ground(DR?), ground(DB?) |
+    nd_map(DR?, DB?, M),
+    nd_roles(DR?, RsR),
+    nd_roles(DB?, RsB),
+    nd_shape1(M?, RsR?, RsB?, S).
+
+procedure nd_shape1(RMs?, NRoleSpecs?, NRoleSpecs?, Shape).
+nd_shape1(M, RsR, RsB, shape(X?, G?)) :- ground(M?), ground(RsR?), ground(RsB?) |
+    rs_count(RsR?, KR),
+    rs_count(RsB?, KB),
+    rm_all_targets(M?, KR?, X0),
+    rs_count_eq(KR?, KB?, X1),
+    both_yes(X0?, X1?, X),
+    same_guards(M?, RsB?, RsR?, 1, G).
+
+procedure rs_count_eq(Integer?, Integer?, Ans).
+rs_count_eq(A, B, yes) :- A? =:= B? | true.
+rs_count_eq(_, _, no) :- otherwise | true.
+
+% Whether every role 1..K of tau' is a target of the map.
+procedure rm_all_targets(RMs?, Integer?, Ans).
+rm_all_targets(_, K, yes) :- K? =:= 0 | true.
+rm_all_targets(M, K, R?) :- K? > 0, ground(M?), integer(K?) |
+    rm_target(M?, K?, A),
+    K1 := K? - 1,
+    rm_all_targets(M?, K1?, B),
+    both_yes(A?, B?, R).
+
+procedure nd_roles(ND?, NRoleSpecs).
+nd_roles(nd(_, _, S), R?) :- ground(S?) | nsch_roles(S?, R).
+
+procedure nd_name(ND?, Constant).
+nd_name(nd(N, _, _), N?).
+
+% ---------------------------------------------------------------------------
+% Simple unguarded classes, by the paper's sufficient condition (Section 8,
+% before prop:syntactic): "each schema with no guarding agent role has an
+% atom it adds or deletes at an agent role, the only atom with its predicate
+% that a schema of the contract adds, deletes or clears, among whose
+% arguments, or in name terms among them, every agent role and every
+% variable of the schema occurs".  The holder of the atom is its first
+% argument (Section 3.2), so it occurs.  The names of the schemas that fail
+% it.
+% ---------------------------------------------------------------------------
+
+procedure su_fails(NContract?, Constants).
+su_fails(C, R?) :- ground(C?) |
+    changed_preds(C?, [], Ps),
+    su_fails1(C?, Ps?, R).
+
+procedure su_fails1(NContract?, Preds?, Constants).
+su_fails1([], _, []).
+su_fails1([S|Ss], Ps, R?) :- ground(S?), ground(Ss?), ground(Ps?) |
+    nsch_roles(S?, Rs),
+    has_guarding_agent(Rs?, G),
+    su_schema(G?, S?, Ps?, A),
+    su_fails1(Ss?, Ps?, R1),
+    su_keep(A?, S?, R1?, R).
+
+procedure su_keep(Ans?, NSchema?, Constants?, Constants).
+su_keep(yes, _, T, T?).
+su_keep(no, S, T, [N?|T?]) :- ground(S?) | nsch_name(S?, N).
+
+procedure su_schema(Ans?, NSchema?, Preds?, Ans).
+su_schema(yes, _, _, yes).
+su_schema(no, S, Ps, R?) :- ground(S?), ground(Ps?) |
+    nsch_roles(S?, Rs),
+    nsch_vars(S?, Vs),
+    su_schema1(Rs?, Vs?, Ps?, R).
+
+procedure su_schema1(NRoleSpecs?, Args?, Preds?, Ans).
+su_schema1(Rs, Vs, Ps, R?) :- ground(Rs?), ground(Vs?), ground(Ps?) |
+    agent_idx(Rs?, 1, Is),
+    su_roles(Rs?, 1, Is?, Vs?, Ps?, R).
+
+procedure agent_idx(NRoleSpecs?, Integer?, Args).
+agent_idx([], _, []).
+agent_idx([rs(_, _, _, _, _)|Rs], I, [role(I?)|R?]) :- integer(I?) |
+    I1 := I? + 1,
+    agent_idx(Rs?, I1?, R).
+agent_idx([crs(_, _, _, _, _, _)|Rs], I, R?) :- integer(I?) |
+    I1 := I? + 1,
+    agent_idx(Rs?, I1?, R).
+
+procedure su_roles(NRoleSpecs?, Integer?, Args?, Args?, Preds?, Ans).
+su_roles([], _, _, _, _, no).
+su_roles([rs(G, P, D, K, N)|Rs], I, Is, Vs, Ps, R?) :-
+    ground(G?), ground(P?), ground(D?), ground(K?), ground(N?), ground(Rs?), integer(I?), ground(Is?), ground(Vs?), ground(Ps?) |
+    nrs_del(rs(G?, P?, D?, K?, N?), D1),
+    mults_app(P?, D1?, As),
+    su_atoms(As?, I?, Is?, Vs?, Ps?, A),
+    I1 := I? + 1,
+    su_roles1(A?, Rs?, I1?, Is?, Vs?, Ps?, R).
+su_roles([crs(_, _, _, _, _, _)|Rs], I, Is, Vs, Ps, R?) :- ground(Rs?), integer(I?), ground(Is?), ground(Vs?), ground(Ps?) |
+    I1 := I? + 1,
+    su_roles(Rs?, I1?, Is?, Vs?, Ps?, R).
+
+procedure su_roles1(Ans?, NRoleSpecs?, Integer?, Args?, Args?, Preds?, Ans).
+su_roles1(yes, _, _, _, _, _, yes).
+su_roles1(no, Rs, I, Is, Vs, Ps, R?) :- su_roles(Rs?, I?, Is?, Vs?, Ps?, R).
+
+procedure su_atoms(Mults?, Integer?, Args?, Args?, Preds?, Ans).
+su_atoms([], _, _, _, _, no).
+su_atoms([M|Ms], I, Is, Vs, Ps, R?) :- ground(M?), ground(Ms?), integer(I?), ground(Is?), ground(Vs?), ground(Ps?) |
+    plain_mult(M?, At),
+    su_atom(At?, Ps?, I?, Is?, Vs?, A),
+    su_atoms1(A?, Ms?, I?, Is?, Vs?, Ps?, R).
+
+procedure su_atom(Atom?, Preds?, Integer?, Args?, Args?, Ans).
+su_atom(atom(P, As), Ps, I, Is, Vs, A?) :- ground(P?), ground(As?), ground(Ps?), integer(I?), ground(Is?), ground(Vs?) |
+    pred_count(Ps?, P?, 0, N),
+    once(N?, A1),
+    occ_args([role(I?)|As?], [], Oc),
+    su_cover(Oc?, Is?, Vs?, A2),
+    both_yes(A1?, A2?, A).
+
+% Whether every agent role Is and every variable Vs is among Oc.
+procedure su_cover(Args?, Args?, Args?, Ans).
+su_cover(Oc, Is, Vs, R?) :- ground(Oc?), ground(Is?), ground(Vs?) |
+    args_missing(Is?, Oc?, Mi),
+    args_missing(Vs?, Oc?, Mv),
+    none2(Mi?, Mv?, R).
+
+procedure atom_args(Atom?, Args).
+atom_args(atom(_, As), As?).
+
+procedure atom_pred(Atom?, Constant).
+atom_pred(atom(P, _), P?).
+
+procedure su_atoms1(Ans?, Mults?, Integer?, Args?, Args?, Preds?, Ans).
+su_atoms1(yes, _, _, _, _, _, yes).
+su_atoms1(no, Ms, I, Is, Vs, Ps, R?) :- su_atoms(Ms?, I?, Is?, Vs?, Ps?, R).
+
+procedure once(Integer?, Ans).
+once(N, yes) :- N? =:= 1 | true.
+once(_, no) :- otherwise | true.
+
+procedure none2(Args?, Args?, Ans).
+none2([], [], yes).
+none2(_, _, no) :- otherwise | true.
+
+procedure pred_count(Preds?, Constant?, Integer?, Integer).
+pred_count([], _, N, N?).
+pred_count([Q|Qs], P, N, R?) :- Q? =?= P?, integer(N?) | N1 := N? + 1, pred_count(Qs?, P?, N1?, R).
+pred_count([_|Qs], P, N, R?) :- otherwise, integer(N?) | pred_count(Qs?, P?, N?, R).
+
+% What occurs among arguments, or in name terms among them.
+procedure occ_args(Args?, Args?, Args).
+occ_args([], T, T?).
+occ_args([nterm(S)|As], T, R?) :- ground(S?), ground(As?), ground(T?) |
+    occ_args(As?, T?, T1),
+    occ_nt(S?, T1?, R).
+occ_args([sgn(Y, I)|As], T, [svar(Y?), role(I?)|R?]) :- ground(As?), ground(T?) | occ_args(As?, T?, R).
+occ_args([A|As], T, [A?|R?]) :- otherwise, ground(As?), ground(T?) | occ_args(As?, T?, R).
+
+procedure occ_nt(NameTerm?, Args?, Args).
+occ_nt(own(I), T, [role(I?)|T?]).
+occ_nt(own_var(X), T, [pvar(X?)|T?]).
+occ_nt(ext(S, Y), T, [svar(Y?)|R?]) :- ground(S?), ground(T?) | occ_nt(S?, T?, R).
+occ_nt(ext_any(S), T, R?) :- ground(S?), ground(T?) | occ_nt(S?, T?, R).
+
+% The predicates of every atom a schema of the contract adds, deletes or
+% clears, once for each such atom, a conditional one among them.
+procedure changed_preds(NContract?, Preds?, Preds).
+changed_preds([], T, T?).
+changed_preds([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
+    nsch_roles(S?, Rs),
+    nsch_conjs(S?, Cj),
+    changed_preds(Ss?, T?, T1),
+    roles_changed(Rs?, T1?, T2),
+    conjs_changed(Cj?, T2?, R).
+
+procedure roles_changed(NRoleSpecs?, Preds?, Preds).
+roles_changed([], T, T?).
+roles_changed([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_add(RS?, P),
+    nrs_marked_del(RS?, D),
+    roles_changed(Rs?, T?, T1),
+    mults_preds(P?, T1?, T2),
+    mults_preds(D?, T2?, R).
+
+procedure conjs_changed(Conjuncts?, Preds?, Preds).
+conjs_changed([], T, T?).
+conjs_changed([conjunct(_, _, _, _, P, D, _)|Cs], T, R?) :- ground(P?), ground(D?), ground(Cs?), ground(T?) |
+    conjs_changed(Cs?, T?, T1),
+    hms_preds(P?, T1?, T2),
+    hms_preds(D?, T2?, R).
+
+procedure hms_preds(HMults?, Preds?, Preds).
+hms_preds([], T, T?).
+hms_preds([hm(_, M)|Hs], T, [P?|R?]) :- ground(M?), ground(Hs?), ground(T?) |
+    plain_mult(M?, A),
+    atom_pred(A?, P),
+    hms_preds(Hs?, T?, R).
+
+procedure mults_preds(Mults?, Preds?, Preds).
+mults_preds([], T, T?).
+mults_preds([M|Ms], T, [P?|R?]) :- ground(M?), ground(Ms?), ground(T?) |
+    plain_mult(M?, A),
+    atom_pred(A?, P),
+    mults_preds(Ms?, T?, R).
+
+% ---------------------------------------------------------------------------
+% prop:syntactic
+% ---------------------------------------------------------------------------
+
+% A contract as written: its schemas, and how they are wrapped.
+procedure decl_parts(WDeclared?, Wrap, WContract).
+decl_parts([], w_list, []).
+decl_parts([S|Ss], w_list, [S?|Ss?]).
+decl_parts(reflexive(Rf, Ss), w_refl(Rf?), Ss?).
+decl_parts(environment(Ev, B), W?, Ss?) :- ground(B?) | decl_env(Ev?, B?, W, Ss).
+
+procedure decl_env(Preds?, WBody?, Wrap, WContract).
+decl_env(Ev, [], w_env(Ev?), []).
+decl_env(Ev, [S|Ss], w_env(Ev?), [S?|Ss?]).
+decl_env(Ev, reflexive(Rf, Ss), w_env_refl(Ev?, Rf?), Ss?).
+
+procedure rewrap(Wrap?, WContract?, WDeclared).
+rewrap(w_list, Ss, Ss?).
+rewrap(w_refl(Rf), Ss, reflexive(Rf?, Ss?)).
+rewrap(w_env(Ev), Ss, environment(Ev?, Ss?)).
+rewrap(w_env_refl(Ev, Rf), Ss, environment(Ev?, reflexive(Rf?, Ss?))).
+
+% The schema of a list by its name, or none.
+procedure nd_find(NDs?, Constant?, NDFound).
+nd_find([], _, nd_none).
+nd_find([nd(N, Ns, S)|_], X, nd_found(nd(N?, Ns?, S?))) :- N? =?= X? | true.
+nd_find([_|Ds], X, R?) :- otherwise, ground(X?) | nd_find(Ds?, X?, R).
+
+procedure ws_find(WContract?, Constant?, WFound).
+ws_find([], _, ws_none).
+ws_find([S|Ss], X, R?) :- ground(S?), ground(Ss?), ground(X?) |
+    ws_nd(S?, D),
+    nd_name(D?, N),
+    ws_find1(N?, X?, S?, Ss?, R).
+
+procedure ws_find1(Constant?, Constant?, WSchema?, WContract?, WFound).
+ws_find1(N, X, S, _, ws_found(S?)) :- N? =?= X? | true.
+ws_find1(_, X, _, Ss, R?) :- otherwise, ground(X?) | ws_find(Ss?, X?, R).
+
+% Each schema of C' classified against C: kept, a step of (a), (b) or (c),
+% or a fault.  DBs are the schemas of C; Cur the schemas of C with those C'
+% replaces replaced, against which an added schema is put to (b).
+procedure classify(NDs?, NDs?, NDs?, RSteps, RFaults).
+classify([], _, _, [], []).
+classify([D|Ds], DBs, Cur, S?, F?) :- ground(D?), ground(Ds?), ground(DBs?), ground(Cur?) |
+    nd_name(D?, N),
+    nd_find(DBs?, N?, B),
+    classify1(B?, D?, Cur?, S1, F1),
+    classify(Ds?, DBs?, Cur?, S2, F2),
+    steps_app(S1?, S2?, S),
+    rfaults_app(F1?, F2?, F).
+
+procedure classify1(NDFound?, ND?, NDs?, RSteps, RFaults).
+classify1(nd_found(DB), DR, _, S?, F?) :- ground(DB?), ground(DR?) |
+    same_nd(DR?, DB?, Same),
+    replaced(Same?, DR?, DB?, S, F).
+classify1(nd_none, DR, Cur, S?, F?) :- ground(DR?), ground(Cur?) |
+    nd_roles(DR?, Rs),
+    has_guarding(Rs?, G),
+    added(G?, DR?, Cur?, S, F).
+
+% Two schemas with one name are the same where their forms as written and
+% the names of their roles are.
+procedure same_nd(ND?, ND?, Ans).
+same_nd(nd(_, N1, S1), nd(_, N2, S2), yes) :- N1? =?= N2?, S1? =?= S2? | true.
+same_nd(_, _, no) :- otherwise | true.
+
+procedure replaced(Ans?, ND?, ND?, RSteps, RFaults).
+replaced(yes, DR, _, [kept(N?)], []) :- ground(DR?) | nd_name(DR?, N).
+replaced(no, DR, DB, S?, F?) :- ground(DR?), ground(DB?) |
+    nd_roles(DB?, RsB),
+    has_guarding_agent(RsB?, G),
+    stronger_nd(DR?, DB?, SB),
+    nd_shape(DR?, DB?, Sh),
+    nd_name(DR?, N),
+    replaced1(G?, SB?, Sh?, N?, S, F).
+
+% (a): a schema with a guarding agent role replaced by one with its name and
+% guards and a stronger body, every role it adds an agent role that is a
+% reading role (stronger_nd's extra_role).  (c): one with no guarding agent
+% role replaced by one with its name, roles and guards and a stronger body.
+procedure replaced1(Ans?, SB?, Shape?, Constant?, RSteps, RFaults).
+replaced1(yes, stronger, shape(_, yes), N, [replaced_a(N?)], []).
+replaced1(yes, stronger, shape(_, no), N, [], [guards_differ(N?)]).
+replaced1(yes, not_stronger(Fs), _, N, [], [body_not_stronger(N?, Fs?)]).
+replaced1(no, stronger, shape(yes, yes), N, [replaced_c(N?)], []).
+replaced1(no, stronger, shape(no, _), N, [], [roles_differ(N?)]).
+replaced1(no, stronger, shape(yes, no), N, [], [guards_differ(N?)]).
+replaced1(no, not_stronger(Fs), _, N, [], [body_not_stronger(N?, Fs?)]).
+
+% (b): a schema with no guarding role, with the head and the roles of a
+% schema of the contract it is added to and a stronger body.
+procedure added(Ans?, ND?, NDs?, RSteps, RFaults).
+added(yes, DR, _, [], [added_guarded(N?)]) :- ground(DR?) | nd_name(DR?, N).
+added(no, DR, Cur, S?, F?) :- ground(DR?), ground(Cur?) |
+    nd_name(DR?, N),
+    added_of(Cur?, DR?, Of),
+    added1(Of?, N?, S, F).
+
+procedure added1(OfFound?, Constant?, RSteps, RFaults).
+added1(of(B), N, [added_b(N?, B?)], []).
+added1(no_of, N, [], [no_schema_of(N?)]).
+
+procedure added_of(NDs?, ND?, OfFound).
+added_of([], _, no_of).
+added_of([DB|Ds], DR, R?) :- ground(DB?), ground(Ds?), ground(DR?) |
+    stronger_nd(DR?, DB?, SB),
+    nd_shape(DR?, DB?, Sh),
+    added_of1(SB?, Sh?, DB?, Ds?, DR?, R).
+
+procedure added_of1(SB?, Shape?, ND?, NDs?, ND?, OfFound).
+added_of1(stronger, shape(yes, _), DB, _, _, of(N?)) :- ground(DB?) | nd_name(DB?, N).
+added_of1(_, _, _, Ds, DR, R?) :- otherwise | added_of(Ds?, DR?, R).
+
+% Each schema of C that C' has not: deleted by (a) where it has a guarding
+% agent role.
+procedure deleted(NDs?, NDs?, RSteps, RFaults).
+deleted([], _, [], []).
+deleted([DB|Ds], DRs, S?, F?) :- ground(DB?), ground(Ds?), ground(DRs?) |
+    nd_name(DB?, N),
+    nd_find(DRs?, N?, X),
+    nd_roles(DB?, Rs),
+    has_guarding_agent(Rs?, G),
+    deleted1(X?, G?, N?, S1, F1),
+    deleted(Ds?, DRs?, S2, F2),
+    steps_app(S1?, S2?, S),
+    rfaults_app(F1?, F2?, F).
+
+procedure deleted1(NDFound?, Ans?, Constant?, RSteps, RFaults).
+deleted1(nd_found(_), _, _, [], []).
+deleted1(nd_none, yes, N, [deleted_a(N?)], []).
+deleted1(nd_none, no, N, [], [deleted_unguarded(N?)]).
+
+procedure steps_app(RSteps?, RSteps?, RSteps).
+steps_app([], T, T?).
+steps_app([X|Xs], T, [X?|R?]) :- steps_app(Xs?, T?, R).
+
+procedure rfaults_app(RFaults?, RFaults?, RFaults).
+rfaults_app([], T, T?).
+rfaults_app([X|Xs], T, [X?|R?]) :- rfaults_app(Xs?, T?, R).
+
+% The schemas of C with those of C' of the same name in their places.
+procedure current(WContract?, WContract?, WContract).
+current([], _, []).
+current([S|Ss], SR, [S1?|R?]) :- ground(S?), ground(Ss?), ground(SR?) |
+    ws_nd(S?, D),
+    nd_name(D?, N),
+    ws_find(SR?, N?, F),
+    current1(F?, S?, S1),
+    current(Ss?, SR?, R).
+
+procedure current1(WFound?, WSchema?, WSchema).
+current1(ws_found(S), _, S?).
+current1(ws_none, S, S?).
+
+% --- the sequence of steps ---------------------------------------------------
+% From C, each replacement in the order of C', then each addition, then each
+% deletion: the contracts between, each with the step that makes it.
+
+procedure apply_step(RStep?, WContract?, WContract?, WContract).
+apply_step(replaced_a(N), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
+    ws_find(SR?, N?, F), ws_replace(C?, N?, F?, R).
+apply_step(replaced_c(N), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
+    ws_find(SR?, N?, F), ws_replace(C?, N?, F?, R).
+apply_step(added_b(N, _), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
+    ws_find(SR?, N?, F), ws_append(C?, F?, R).
+apply_step(deleted_a(N), C, _, R?) :- ground(N?), ground(C?) | ws_delete(C?, N?, R).
+apply_step(kept(_), C, _, C?).
+
+procedure ws_replace(WContract?, Constant?, WFound?, WContract).
+ws_replace([], _, _, []).
+ws_replace([S|Ss], N, F, [S1?|R?]) :- ground(S?), ground(Ss?), ground(N?), ground(F?) |
+    ws_nd(S?, D),
+    nd_name(D?, M),
+    ws_replace1(M?, N?, S?, F?, S1),
+    ws_replace(Ss?, N?, F?, R).
+
+procedure ws_replace1(Constant?, Constant?, WSchema?, WFound?, WSchema).
+ws_replace1(M, N, _, ws_found(T), T?) :- M? =?= N? | true.
+ws_replace1(_, _, S, _, S?) :- otherwise | true.
+
+procedure ws_append(WContract?, WFound?, WContract).
+ws_append([], ws_found(T), [T?]).
+ws_append([], ws_none, []).
+ws_append([S|Ss], F, [S?|R?]) :- ws_append(Ss?, F?, R).
+
+procedure ws_delete(WContract?, Constant?, WContract).
+ws_delete([], _, []).
+ws_delete([S|Ss], N, R?) :- ground(S?), ground(Ss?), ground(N?) |
+    ws_nd(S?, D),
+    nd_name(D?, M),
+    ws_delete1(M?, N?, S?, Ss?, R).
+
+procedure ws_delete1(Constant?, Constant?, WSchema?, WContract?, WContract).
+ws_delete1(M, N, _, Ss, R?) :- M? =?= N? | ws_delete(Ss?, N?, R).
+ws_delete1(_, N, S, Ss, [S?|R?]) :- otherwise | ws_delete(Ss?, N?, R).
+
+% The steps in their order: replacements, additions, deletions.
+procedure steps_order(RSteps?, RSteps).
+steps_order(S, R?) :- ground(S?) |
+    steps_of(S?, rep, A),
+    steps_of(S?, add, B),
+    steps_of(S?, del, C),
+    steps_app(B?, C?, BC),
+    steps_app(A?, BC?, R).
+
+procedure steps_of(RSteps?, Constant?, RSteps).
+steps_of([], _, []).
+steps_of([X|Xs], K, R?) :- ground(X?), ground(Xs?), ground(K?) |
+    step_kind(X?, K1),
+    steps_of(Xs?, K?, R1),
+    steps_of1(K1?, K?, X?, R1?, R).
+
+procedure steps_of1(Constant?, Constant?, RStep?, RSteps?, RSteps).
+steps_of1(K1, K, X, T, [X?|T?]) :- K1? =?= K? | true.
+steps_of1(_, _, _, T, T?) :- otherwise | true.
+
+procedure step_kind(RStep?, Constant).
+step_kind(kept(_), kept).
+step_kind(replaced_a(_), rep).
+step_kind(replaced_c(_), rep).
+step_kind(added_b(_, _), add).
+step_kind(deleted_a(_), del).
+
+% Each step taken from C in turn: the contract after it is syntactically
+% grassroots, and where the step is of (a) or (c) the contracts before and
+% after it have simple unguarded classes.
+procedure run_steps(RSteps?, WContract?, WContract?, Wrap?, RFaults).
+run_steps([], _, _, _, []).
+run_steps([X|Xs], C, SR, W, F?) :- ground(X?), ground(Xs?), ground(C?), ground(SR?), ground(W?) |
+    apply_step(X?, C?, SR?, C1),
+    run_steps1(X?, C?, C1?, Xs?, SR?, W?, F).
+
+procedure run_steps1(RStep?, WContract?, WContract?, RSteps?, WContract?, Wrap?, RFaults).
+run_steps1(X, C, C1, Xs, SR, W, F?) :- ground(X?), ground(C?), ground(C1?), ground(Xs?), ground(SR?), ground(W?) |
+    rewrap(W?, C1?, D1),
+    check(D1?, V),
+    step_sg(V?, X?, F1),
+    step_su(X?, C?, C1?, F2),
+    run_steps(Xs?, C1?, SR?, W?, F3),
+    rfaults_app(F2?, F3?, F23),
+    rfaults_app(F1?, F23?, F).
+
+procedure step_sg(Verdict?, RStep?, RFaults).
+step_sg(syntactically_grassroots, _, []).
+step_sg(V, X, [step_not_sg(X?, V?)]) :- otherwise | true.
+
+procedure step_su(RStep?, WContract?, WContract?, RFaults).
+step_su(replaced_a(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
+step_su(replaced_c(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
+step_su(deleted_a(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
+step_su(added_b(_, _), _, _, []).
+step_su(kept(_), _, _, []).
+
+procedure su_pair(WContract?, WContract?, RFaults).
+su_pair(C, C1, F?) :- ground(C?), ground(C1?) |
+    unnamed_c(C?, N),
+    unnamed_c(C1?, N1),
+    su_fails(N?, A),
+    su_fails(N1?, B),
+    su_faults(A?, F1),
+    su_faults(B?, F2),
+    rfaults_app(F1?, F2?, F).
+
+procedure su_faults(Constants?, RFaults).
+su_faults([], []).
+su_faults([N|Ns], [no_simple_unguarded(N?)|R?]) :- su_faults(Ns?, R).
+
+% The predicates of a contract as written.
+procedure decl_preds(WDeclared?, Preds).
+decl_preds(D, R?) :- ground(D?) |
+    unnamed(D?, ND),
+    plain_decl(ND?, PD),
+    decl_schemas(PD?, C),
+    prov # all_preds(C?, R).
+
+procedure preds_missing(Preds?, Preds?, Preds).
+preds_missing([], _, []).
+preds_missing([P|Ps], Qs, R?) :- ground(P?), ground(Ps?), ground(Qs?) |
+    pred_member(P?, Qs?, M),
+    preds_missing(Ps?, Qs?, R1),
+    preds_missing1(M?, P?, R1?, R).
+
+procedure preds_missing1(Ans?, Constant?, Preds?, Preds).
+preds_missing1(yes, _, T, T?).
+preds_missing1(no, P, T, [P?|T?]).
+
+% restricts(C', C, V): whether C' restricts C by prop:syntactic.
+exported procedure restricts(WDeclared?, WDeclared?, RVerdict).
+restricts(DR, DB, V?) :- ground(DR?), ground(DB?) |
+    check(DR?, VR),
+    check(DB?, VB),
+    decl_preds(DR?, PR),
+    decl_preds(DB?, PB),
+    decl_parts(DR?, _, SR),
+    decl_parts(DB?, W, SB),
+    restricts0(rp(VR?, VB?, PR?, PB?, SR?, SB?, W?), V).
+
+procedure restricts0(RParts?, RVerdict).
+restricts0(rp(VR, VB, PR, PB, SR, SB, W), V?) :-
+    ground(VR?), ground(VB?), ground(PR?), ground(PB?), ground(SR?), ground(SB?), ground(W?) |
+    preds_missing(PR?, PB?, PM),
+    ws_nds(SR?, NR),
+    ws_nds(SB?, NB),
+    current(SB?, SR?, Cur0),
+    restricts_c(NR?, NB?, Cur0?, rp(VR?, VB?, PM?, [], SR?, SB?, W?), V).
+
+procedure restricts_c(NDs?, NDs?, WContract?, RParts?, RVerdict).
+restricts_c(NR, NB, Cur0, rp(VR, VB, PM, _, SR, SB, W), V?) :-
+    ground(NR?), ground(NB?), ground(Cur0?), ground(VR?), ground(VB?), ground(PM?), ground(SR?), ground(SB?), ground(W?) |
+    ws_nds(Cur0?, Cur),
+    classify(NR?, NB?, Cur?, S1, F1),
+    deleted(NB?, NR?, S2, F2),
+    steps_app(S1?, S2?, S),
+    rfaults_app(F1?, F2?, F12),
+    base_faults(VR?, VB?, PM?, F0),
+    rfaults_app(F0?, F12?, F),
+    restricts1(F?, S?, SB?, SR?, W?, V).
+
+procedure base_faults(Verdict?, Verdict?, Preds?, RFaults).
+base_faults(VR, VB, PM, F?) :- ground(VR?), ground(VB?), ground(PM?) |
+    sg_fault(VR?, restriction, F1),
+    sg_fault(VB?, base, F2),
+    pm_fault(PM?, F3),
+    rfaults_app(F2?, F3?, F23),
+    rfaults_app(F1?, F23?, F).
+
+procedure sg_fault(Verdict?, Constant?, RFaults).
+sg_fault(syntactically_grassroots, _, []).
+sg_fault(V, W, [not_sg(W?, V?)]) :- otherwise | true.
+
+procedure pm_fault(Preds?, RFaults).
+pm_fault([], []).
+pm_fault([P|Ps], [preds_not_in_base([P?|Ps?])]).
+
+procedure restricts1(RFaults?, RSteps?, WContract?, WContract?, Wrap?, RVerdict).
+restricts1([F|Fs], _, _, _, _, not_shown([F?|Fs?])).
+restricts1([], S, SB, SR, W, V?) :- ground(S?), ground(SB?), ground(SR?), ground(W?) |
+    steps_order(S?, S1),
+    run_steps(S1?, SB?, SR?, W?, F),
+    restricts2(F?, S?, V).
+
+procedure restricts2(RFaults?, RSteps?, RVerdict).
+restricts2([F|Fs], _, not_shown([F?|Fs?])).
+restricts2([], S, V?) :- ground(S?) |
+    c_steps(S?, Cs),
+    restricts3(Cs?, S?, V).
+
+procedure restricts3(Constants?, RSteps?, RVerdict).
+restricts3([], S, restriction(S?)).
+restricts3([C|Cs], S, restriction_given_invariant(S?, [C?|Cs?])).
+
+procedure c_steps(RSteps?, Constants).
+c_steps([], []).
+c_steps([replaced_c(N)|Xs], [N?|R?]) :- c_steps(Xs?, R).
+c_steps([_|Xs], R?) :- otherwise | c_steps(Xs?, R).
+
+% stronger_body(Tau', Tau, SB): whether the body of Tau' is shown stronger
+% than that of Tau (def:stronger), each a schema as its owner writes it.
+exported procedure stronger_body(WSchema?, WSchema?, SB).
+stronger_body(SR, SB0, R?) :- ground(SR?), ground(SB0?) |
+    ws_nd(SR?, DR),
+    ws_nd(SB0?, DB),
+    stronger_nd(DR?, DB?, R).

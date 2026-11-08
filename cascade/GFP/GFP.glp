@@ -1,0 +1,59 @@
+%% ---------------------------------------------------------------------------
+%% GFP.glp --- Grassroots Forwarding with Provenance, GSC's, extending GSG, in the clause syntax
+%% of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GFP.txt
+%% beside this file: sign is GFP:1, Signing, and forward GFP:2, Forwarding; GKK's and GSG's
+%% schemas come first, every role but establish's requiring identity.  sgn(x, 'Alice') is the
+%% speech act x signed over by the agent in the role Alice (GSC, Section 3.2, signed terms).
+%% ---------------------------------------------------------------------------
+
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SQLit       ::= SMult ; not(SMult).
+SQLits      ::= [] ; [SQLit | SQLits].
+SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
+SLits       ::= [] ; [SLit | SLits].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr).
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg).
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+Contract    ::= [] ; [Schema | Contract].
+
+% contract_named(gfp, C): the contract, GFP (Coordination Appendix C).
+procedure contract_named(Constant?, Contract).
+contract_named(gfp,
+   [sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))], true, ['Alice']),
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
+       true, ['Alice', 'Bob']),
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+    sas(sign, ['Alice'], [x],
+       [atom(item, ['Alice', x])],
+       [atom(identity, ['Alice']), not(atom(item, ['Alice', x]))], true, ['Alice']),
+    sas(forward, ['Alice', 'Bob'], [x],
+       [atom(item, ['Bob', sgn(x, 'Alice')])],
+       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob'])], true, ['Alice'])]).

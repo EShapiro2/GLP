@@ -1,0 +1,21 @@
+% GAS: Grassroots App Store --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GSA (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GSA/main_SGSG.tex, prints it in its box in the section on the store and cites a clause as GAS:1.
+% Paper: GSA, The Grassroots Super-App and App Store, in preparation
+% Extends: GPD, Grassroots Programs Dissemination, GSA's (programs/social/graph), and through it GSG and GKK.  It cites their clauses whole and restates none.
+% Defines: store, defined in the box after the declaration, a contract being self-contained.  Program and developer are defined with GPD; Alice, Bob and Carol are variables naming distinct persons.
+% Last changed: 2026-11-07, Listing undertaken, Carol signing the program she lists (Udi, 2026-11-07); the schemas rewritten on GFP the same evening; Udi's edits in Overleaf (GSA 01d37e5): Listing attested, of a program developed by Bob, as long as Carol trusts Bob; Installation from a Store with no condition on the owner's trust; GPD the contract it extends; written by GSA #1 Cowork at Udi's word: a store is a separate contract; listing only, and a program is installed from a store as long as the store's owner trusts its developer (Udi, 2026-11-07); a draft for Udi's approval and GSC's checker.
+% Schemas: GAS.glp beside this file, GPD's sixteen and five over the predicates store, listed, trusts_store, item and installed, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+GAS: Grassroots App Store
+GAS extends GPD.
+Alice, Bob and Carol are persons.  A store is a list of programs its owner keeps under a name of their own.
+1. ■ Store.  Carol may set up a store under a name of her own.
+2. ○ Listing.  Carol may list in her store a program developed by Bob, after adding her signature to its signatures, as long as she trusts Bob as a developer.
+3. ■ Store Trust.  Alice may trust Carol's store, Carol being known to her, and may withdraw her trust.
+4. ■ Installation from a Store.  Alice may install a program listed in a store she trusts.
+Interface pragmas
+Stores: the stores Alice trusts.
+Listings: the programs listed in Alice's store.
+Store: Carol [Open store] <name>
+Listing: Carol [List]
+Store Trust: Alice [Trust store] <store> [Distrust store] <store>
+Installation from a Store: Alice [Install]

@@ -72,6 +72,12 @@ Signature ::= signed(Key, Hash, _) ; unsigned.
 % matching, as it does a Signature.
 PeerAddress ::= address(String) ; none.
 
+% What peer_app/2 assigns (GLP-Spec appendix-guards, "Networking seam", 5fab8ac):
+% app(D, N, V), the developer D, the name N and the version number V of the app
+% attested in the networking layer's session with the peer, unattested where
+% that session is unattested, or none where the layer has no session with it.
+App ::= app(String, String, Integer) ; unattested ; none.
+
 % What declare/1 and remove/1 take (GLP-Spec appendix-guards, "Networking seam", 1ce0263): a declaration to the networking layer or the platform, of a peer the program knows, the address at which a peer is reached, a rendezvous server, a proximity underlay's cold-call trust level or a place with the stream of its events; and the end of a declaration.
 Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String)
       ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?).
@@ -252,11 +258,14 @@ FormWord ::= say(String) ; at(Integer).
 % it the mini-app, on its person's consent, asks for a warm call: an
 % introduction, by the friend that passed it the end, to the anchor the name
 % carries (GSG paper, Section "Distribution and Activation", "Contact between
-% two participants").
+% two participants"); and, for a message to a peer it has no route to, it asks
+% for an invitation of that peer to the program, invite(Key) (GSA paper,
+% Section 3, "Distribution with an invitation"; GLP #13, Udi approving,
+% 2026-11-07).
 RootChannel(T) ::= ch(Stream(T), Stream(T)?).
 Conversation(T) ::= conversation(Key, RootChannel(T)).
 SgToApp(T) ::= Conversation(T) ; held(GlobalName, Key).
-AppToSg ::= warm_call(GlobalName, Key).
+AppToSg ::= warm_call(GlobalName, Key) ; invite(Key).
 SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 
 % =============================================================================
@@ -386,6 +395,7 @@ procedure '_close_mutual_reference'(MutualRef?).
 procedure(X) '_send'(X?, GlobalName?, Key?).
 procedure '_authorise_link'(_?, _?).
 procedure '_peer_address'(Key?, PeerAddress).
+procedure '_peer_app'(Key?, App).
 procedure '_punch_udp'(String?).
 procedure '_declare'(Declaration?).
 procedure '_remove'(Removal?).
@@ -953,14 +963,22 @@ procedure authorise_link(GlobalName?, Answer?).
 authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
-% NETWORKING SEAM (peer_address/2, punch_udp/1, declare/1, remove/1)
+% NETWORKING SEAM (peer_address/2, peer_app/2, punch_udp/1, declare/1, remove/1)
 % =============================================================================
-% GLP-Spec's appendix-guards lists the four among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263): peer_address(Key?, PeerAddress), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types Declaration, Removal, Underlay, TrustLevel and PlaceEvent above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb), and their kernels '_peer_address', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
+% GLP-Spec's appendix-guards lists the five among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263; peer_app/2 since 5fab8ac): peer_address(Key?, PeerAddress), peer_app(Key?, App), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types App, Declaration, Removal, Underlay, TrustLevel and PlaceEvent above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb; peer_app/2 since 4a334c2), and their kernels '_peer_address', '_peer_app', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
 
 %% peer_address/2 - assign A address(S), S the address at which the layer
 %% observes peer P, or none where it observes no address for P.
 procedure peer_address(Key?, PeerAddress).
 peer_address(P, A?) :- ground(P?) | '_peer_address'(P?, A).
+
+%% peer_app/2 - assign A app(D, N, V), the developer D, the name N and the
+%% version number V of the app attested in the layer's session with peer P,
+%% unattested where that session is unattested, or none where the layer has no
+%% session with P.  The kernel reads what the layer reported with
+%% onPeerConnected (GNA api.tex, Section 2.3).
+procedure peer_app(Key?, App).
+peer_app(P, A?) :- ground(P?) | '_peer_app'(P?, A).
 
 %% punch_udp/1 - open a path to address A; assigns nothing.
 procedure punch_udp(String?).

@@ -1,6 +1,10 @@
-/// Tests for the four networking seam kernels — '_peer_address'/2,
-/// '_punch_udp'/1, '_declare'/1 and '_remove'/1 — and the declared place's
-/// event stream.
+/// Tests for the five networking seam kernels — '_peer_address'/2,
+/// '_peer_app'/2, '_punch_udp'/1, '_declare'/1 and '_remove'/1 — and the
+/// declared place's event stream.  peer_app assigns app(D, N, V), the
+/// developer, the name and the version number of the app attested in the
+/// layer's session with a peer, unattested where that session is unattested,
+/// or none where the layer has no session with it (GLP-Spec 5fab8ac, IGLP
+/// 4a334c2).
 ///
 /// Covers IGLP Definition "Seam Predicates" (3b736bb) and GLP-Spec
 /// appendix-guards, "Networking seam" (1ce0263): peer_address assigns
@@ -161,6 +165,9 @@ class _SeamNetwork extends GlpNetwork {
   @override
   String? networkIdentity() => throw UnimplementedError();
 }
+
+/// What `_output` shows of app('TEAM', 'app.grassroots', 7).
+const String _appTeam7 = 'app(TEAM, app.grassroots, 7)';
 
 /// A MadContext over a bare runtime, with [network] bound.
 ({MadContext ctx, GlpRuntime rt, _SeamNetwork network}) _agentContext() {
@@ -630,6 +637,152 @@ go :- declare(address('${_hex(1)}', '203.0.113.7:41234')),
           reason: 'an address is not a declaration of the peer');
     });
 
+    // What peer_app/2 assigns, emitted whole: app(D, N, V), unattested or none
+    // (GLP-Spec appendix-guards, "Networking seam", 5fab8ac; IGLP, Definition
+    // "Seam Predicates", 4a334c2).  The kernel reads what the layer reported
+    // with onPeerConnected (GNA api.tex, Section 2.3), which the host records
+    // in the agent's MadContext; here the test records it as the host does.
+    const emitApp = '''
+procedure emit(App?).
+emit(A) :- ground(A?) | send_to_user([A?]).
+''';
+
+    Future<List<String>> peerApp(
+        void Function(MadContext ctx, PubKey pk) reports, String peer) async {
+      final out = <String>[];
+      final engine = _engine(out, _SeamNetwork());
+      reports(engine.madContext!, PubKey.fromHex(peer));
+      engine.loadSource('''
+${emitApp}procedure go.
+go :- peer_app('$peer', A), emit(A?).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue,
+          reason: 'app(D, N, V), unattested and none are values');
+      return out;
+    }
+
+    test('peer_app assigns app(D, N, V), the app attested in the session',
+        () async {
+      expect(
+          await peerApp(
+              (ctx, pk) => ctx.peerConnected(
+                  pk,
+                  Underlay.wan,
+                  const Application(
+                      developer: 'TEAM', name: 'app.grassroots', version: 7)),
+              _hex(1)),
+          [_appTeam7]);
+    });
+
+    test("peer_app's version number is an Integer, matched as one", () async {
+      final out = <String>[];
+      final engine = _engine(out, _SeamNetwork());
+      engine.madContext!.peerConnected(
+          PubKey.fromHex(_hex(1)),
+          Underlay.wan,
+          const Application(
+              developer: 'TEAM', name: 'app.grassroots', version: 7));
+      engine.loadSource('''
+procedure check(App?).
+check(app(D, N, 7)) :- string(D?), string(N?) | send_to_user([seven]).
+check(unattested) :- send_to_user([unattested]).
+check(none) :- send_to_user([none]).
+procedure go.
+go :- peer_app('${_hex(1)}', A), check(A?).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue);
+      expect(out, ['seven']);
+    });
+
+    test('peer_app assigns unattested where the session is unattested',
+        () async {
+      expect(
+          await peerApp(
+              (ctx, pk) => ctx.peerConnected(pk, Underlay.wan, null), _hex(1)),
+          ['unattested']);
+    });
+
+    test('peer_app assigns none where the layer has no session with the peer',
+        () async {
+      // Never reported connected.
+      expect(await peerApp((ctx, pk) {}, _hex(1)), ['none']);
+      // Another peer's session is not this one's.
+      expect(
+          await peerApp(
+              (ctx, pk) => ctx.peerConnected(
+                  PubKey.fromHex(_hex(2)), Underlay.wan, null),
+              _hex(1)),
+          ['none']);
+      // Reported disconnected over every underlay it was connected over.
+      expect(
+          await peerApp((ctx, pk) {
+            ctx.peerConnected(pk, Underlay.pan, null);
+            ctx.peerConnected(pk, Underlay.wan, null);
+            ctx.peerDisconnected(pk, Underlay.pan);
+            ctx.peerDisconnected(pk, Underlay.wan);
+          }, _hex(1)),
+          ['none']);
+    });
+
+    test('peer_app: a session stands while the peer is connected over any '
+        'underlay, and answers the application reported last', () async {
+      expect(
+          await peerApp((ctx, pk) {
+            ctx.peerConnected(pk, Underlay.pan, null);
+            ctx.peerConnected(
+                pk,
+                Underlay.wan,
+                const Application(
+                    developer: 'TEAM', name: 'app.grassroots', version: 7));
+            ctx.peerDisconnected(pk, Underlay.pan);
+          }, _hex(1)),
+          [_appTeam7]);
+      expect(
+          await peerApp((ctx, pk) {
+            ctx.peerConnected(
+                pk,
+                Underlay.wan,
+                const Application(
+                    developer: 'TEAM', name: 'app.grassroots', version: 7));
+            ctx.peerConnected(pk, Underlay.pan, null);
+          }, _hex(1)),
+          ['unattested']);
+    });
+
+    test('peer_app/2 is typed: Key?, App; App ::= app(String, String, '
+        'Integer) ; unattested ; none', () {
+      final root = Parser(
+              Lexer(File('../programs/self.glp').readAsStringSync()).tokenize())
+          .parseModule();
+      String decl(String name, int arity) => root.procDeclarations
+          .singleWhere((d) => d.name == name && d.arity == arity)
+          .toString();
+      expect(decl('peer_app', 2), 'procedure peer_app(Key?, App).');
+      expect(decl('_peer_app', 2), 'procedure _peer_app(Key?, App).');
+      final app = root.typeDefs.singleWhere((t) => t.name == 'App');
+      expect(app.alternatives.map((a) => '$a'),
+          ['app(String, String, Integer)', 'unattested', 'none']);
+
+      final engine = _engine(<String>[], _SeamNetwork());
+      Matcher refused(String why) => throwsA(isA<CompileError>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('Type checking failed'), contains(why))));
+      expect(() => engine.loadSource('''
+procedure take(PeerAddress?).
+take(none).
+procedure go.
+go :- peer_app('${_hex(1)}', A), take(A?).
+'''), refused('writer type App is not a subtype of PeerAddress'));
+      expect(() => engine.loadSource('''
+procedure go.
+go :- peer_app(7, _).
+'''), refused('(peer_app) is not well-typed'),
+          reason: 'an Integer is no Key');
+    });
+
     test('a peer name that is no key aborts, and the layer is not reached',
         () async {
       for (final goal in [
@@ -795,6 +948,23 @@ more([]) :- send_to_user([closed]).
           engine.loadSource('''
 ${emitAddress}procedure go.
 go :- peer_address('$peer', A), emit(A?).
+''');
+          final result = await engine.runGoal('go');
+          expect(result.succeeded, isTrue, reason: '$peer: none is a value');
+          expect(out, ['none'], reason: peer);
+        }
+      });
+
+      test('$where: peer_app assigns none, for any peer: a layer that observes '
+          'nothing has no session with any peer', () async {
+        for (final peer in [_hex(1), 'bob']) {
+          final out = <String>[];
+          final engine = _unboundEngine(out, mad: mad);
+          engine.loadSource('''
+procedure emit(App?).
+emit(A) :- ground(A?) | send_to_user([A?]).
+procedure go.
+go :- peer_app('$peer', A), emit(A?).
 ''');
           final result = await engine.runGoal('go');
           expect(result.succeeded, isTrue, reason: '$peer: none is a value');

@@ -1,0 +1,104 @@
+%% views.glp --- the generic part of the construct processes of the canonical
+%% compilation that is typed over the type of a position: the views of a
+%% list's cells, and the forming of the primitive positions of an answer
+%% (vGLP, Section 6.3, "The construct process").
+%%
+%% The compilation emits it, with dispatcher.glp beside it, into every compiled
+%% program, under names fresh against the program's (glp_runtime/lib/vglp/
+%% dispatcher.dart).  Its procedures serve every type, and are typed over it,
+%% "parametrised where a procedure serves every type, as the dispatcher's are"
+%% (vGLP #24 Cowork, Code_inbox.md, 2026-11-07 15:28 UTC, red 2): each tests or
+%% draws a term of its type parameter, so each is well typed at the types the
+%% construct processes call it at, and this file, which calls none of them, is
+%% not a program by itself (TGLP, parameterized-types.tex,
+%% sec:abstract-parameters); dispatcher.glp, which loads and type-checks by
+%% itself, holds the rest.
+
+%% The view of a position the person writes: "V is of the view type of T: T
+%% with the type S of each position the person writes replaced by S ;
+%% input(Path), and of each position the program writes inside the person's
+%% answers by S ; pending(Path), so no value drawn is typed by a wildcard"
+%% (vGLP, Section 6.3, "The construct process").  A position the person
+%% writes is drawn input(P), Questioned(S).  The output of a question is drawn
+%% once written whole, "once every reader in the output it holds is
+%% assigned" (ibid.; vGLP, Definition "Reduce and Communicate in vmaGLP"), so
+%% a position the program writes outside the person's answers is drawn as it
+%% is written, S, and none is drawn pending; Pending(S) ::= S ; pending(Path)
+%% types the positions the program writes inside the person's answers, which
+%% the compilation does not build (glp_runtime/lib/vglp/constructs.dart,
+%% _checkPersonWritable), so it is not defined here.
+Questioned(S) ::= S ; input(Path).
+
+%% cons_views(Es?, Ts?, Views): the views of a list cell from the views of
+%% its element, Es, and those of its tail, Ts, each the list of the tail's
+%% elements: [E | T], again each time either is drawn again.  An element and
+%% a tail are each drawn before their views close, but each is a stream,
+%% whose [] the procedure covers.
+procedure(V) cons_views(Stream(V)?, Stream(List(V))?, Stream(List(V))).
+cons_views([E | Es], [T | Ts], [[E? | T?] | Vs?]) :-
+    ground(E?), ground(T?) |
+    cons_more(E?, T?, Es?, Ts?, Vs).
+cons_views([], _, []).
+cons_views(_, [], []).
+
+procedure(V) cons_more(V?, List(V)?, Stream(V)?, Stream(List(V))?,
+    Stream(List(V))).
+cons_more(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :-
+    ground(E?), ground(T?) |
+    cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :-
+    ground(E?), ground(T?) |
+    cons_more(E?, T?, Es?, Ts?, Vs).
+cons_more(_, _, [], [], []).
+
+%% ---------------------------------------------------------------------------
+%% Forming the primitive positions of an answer
+%% ---------------------------------------------------------------------------
+
+%% form_T(R?, F): F is formed(X), X the person's input R as a term of type
+%% T, or refused where R is not one.  R is of the program's T, the type of
+%% its person channel, "the union of both", the values drawn and the grants'
+%% raw inputs (vGLP, Section 6.3, "The construct process"), or of a type of a
+%% position inside it; so these, which serve every type, are typed over the
+%% type R is of, as the dispatcher's procedures are over T.  The forming clauses of the program's own
+%% types are the compilation's; these are the primitive ones they call.  The
+%% term is written in the body, F = formed(R?): the guard narrows R? to T only
+%% in the body (TGLP typed-glp.tex, "Type checking of guards": "the
+%% occurrence has that meet as its type in the body"; vGLP #5 Cowork,
+%% 2026-10-03 21:13 UTC, Q2).
+procedure(T) form_string(T?, Formed(String)).
+form_string(R, F?) :-
+    string(R?) | F = formed(R?).
+form_string(_, refused) :-
+    otherwise | true.
+
+procedure(T) form_integer(T?, Formed(Integer)).
+form_integer(R, F?) :-
+    integer(R?) | F = formed(R?).
+form_integer(_, refused) :-
+    otherwise | true.
+
+procedure(T) form_number(T?, Formed(Number)).
+form_number(R, F?) :-
+    number(R?) | F = formed(R?).
+form_number(_, refused) :-
+    otherwise | true.
+
+%% By the guard real/1 (GLP-Spec 12be29b; on gap at 2af93777).
+procedure(T) form_real(T?, Formed(Real)).
+form_real(R, F?) :-
+    real(R?) | F = formed(R?).
+form_real(_, refused) :-
+    otherwise | true.
+
+procedure(T) form_constant(T?, Formed(Constant)).
+form_constant(R, F?) :-
+    constant(R?) | F = formed(R?).
+form_constant(_, refused) :-
+    otherwise | true.
+
+procedure(T) form_module(T?, Formed(Module)).
+form_module(R, F?) :-
+    module(R?) | F = formed(R?).
+form_module(_, refused) :-
+    otherwise | true.

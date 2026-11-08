@@ -125,7 +125,7 @@ class AgentRuntime {
   /// parameters of [GlpNetwork]'s (GNA, "Connection and Reachability" and
   /// "Concepts and Principles", Discovery). The coordinator forwards router
   /// events via [onConnectivityEvent].
-  void Function(PubKey pk, Underlay underlay, Object? identity)?
+  void Function(PubKey pk, Underlay underlay, Application? application)?
       onPeerConnected;
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
@@ -257,16 +257,22 @@ class AgentRuntime {
     return pk;
   }
 
-  /// Forward a router connectivity event to this client's callbacks.  The
-  /// simulation attests nothing, so a connection carries no identity; a
-  /// discovery is over a proximity underlay, the PAN throughout (IGLP,
-  /// "Simulation realisation").
+  /// Forward a router connectivity event to this client's callbacks.  A
+  /// connection is attested with [application], the app the harness names
+  /// (IGLP 4a9ad28, "Simulation realisation": the router "reports every peer
+  /// attested with the app the harness names, its developer, name and
+  /// version"), so peer_app/2 assigns app(D, N, V); where the harness names
+  /// none the connection is unattested.  A discovery is over a proximity
+  /// underlay, the PAN throughout (IGLP, "Simulation realisation").
   void onConnectivityEvent(
-      PubKey peer, Underlay underlay, ConnectivityEvent event) {
+      PubKey peer, Underlay underlay, ConnectivityEvent event,
+      {Application? application}) {
     switch (event) {
       case ConnectivityEvent.connected:
-        onPeerConnected?.call(peer, underlay, null);
+        _ctx?.peerConnected(peer, underlay, application);
+        onPeerConnected?.call(peer, underlay, application);
       case ConnectivityEvent.disconnected:
+        _ctx?.peerDisconnected(peer, underlay);
         onPeerDisconnected?.call(peer, underlay);
       case ConnectivityEvent.discovered:
         onPeerDiscovered?.call(
@@ -294,6 +300,11 @@ class AgentRuntime {
   void _log(String message) {
     onLog?.call(_tag, message);
   }
+
+  /// Whether the run is traced: only where its trace is read, by [onLog].
+  /// The trace writes every goal reduced as text, which costs most of a run's
+  /// time; an agent no one logs runs untraced.
+  bool get _tracing => onLog != null;
 
   void _output(String text) {
     onOutput?.call(text);
@@ -831,17 +842,21 @@ class AgentRuntime {
           .catchError((Object _) {}));
     };
 
-    // Connectivity, surfaced as the layer reports it, its attested identity
-    // with it.  A connection the layer reports is also when a message it
-    // refused is sent again, where M_p holds one ([_Retry]).
-    network.onPeerConnected = (pk, underlay, identity) {
-      onPeerConnected?.call(pk, underlay, identity);
+    // Connectivity, surfaced as the layer reports it, its attested
+    // application with it, and recorded for peer_app/2 ([MadContext.
+    // peerConnected]).  A connection the layer reports is also when a message
+    // it refused is sent again, where M_p holds one ([_Retry]).
+    network.onPeerConnected = (pk, underlay, application) {
+      _ctx?.peerConnected(pk, underlay, application);
+      onPeerConnected?.call(pk, underlay, application);
       if (_ctx?.mp.hasSendable ?? false) {
         unawaited(_submit(const _Retry()).catchError((Object _) {}));
       }
     };
-    network.onPeerDisconnected =
-        (pk, underlay) => onPeerDisconnected?.call(pk, underlay);
+    network.onPeerDisconnected = (pk, underlay) {
+      _ctx?.peerDisconnected(pk, underlay);
+      onPeerDisconnected?.call(pk, underlay);
+    };
     network.onPeerDiscovered =
         (pk, underlay) => onPeerDiscovered?.call(pk, underlay);
   }
@@ -997,7 +1012,7 @@ class AgentRuntime {
     if (!_runStarts()) return null;
     try {
       final result = _scheduler!.drainToQuiescence(
-          maxCycles: maxCycles ?? maxQuiescenceCycles, debug: true);
+          maxCycles: maxCycles ?? maxQuiescenceCycles, debug: _tracing);
       return _runDone(result, 0);
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');
@@ -1013,7 +1028,7 @@ class AgentRuntime {
       final result = await _scheduler!.drainAndSend(() {
         messagesFlushed += _ctx!.flushMessages();
         return _ctx!.answered();
-      }, maxCycles: maxQuiescenceCycles, debug: true);
+      }, maxCycles: maxQuiescenceCycles, debug: _tracing);
       return _runDone(result, messagesFlushed);
     } catch (e, st) {
       _log('RUN ERROR: $e\n$st');

@@ -11,6 +11,7 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show NetworkDirectory, SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/boot_loader.dart' show BootLoader;
+import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/multiagent/isolate_manager.dart'
     show IsolateManager;
@@ -31,7 +32,7 @@ void main() async {
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit, :mad, :boot, :deliveries');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :mad, :app, :boot, :deliveries');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.
@@ -45,6 +46,12 @@ void main() async {
   // Whether a boot prints the messages delivered between its agents
   // (:deliveries).
   var showDeliveries = false;
+
+  // The app the harness names for a boot (:app): the router reports every
+  // peer connected attested with it, so peer_app/2 assigns app(D, N, V) (IGLP
+  // 4a9ad28, "Simulation realisation").  Null until :app names one, and a
+  // connection is then reported unattested.
+  Application? bootApplication;
 
   while (true) {
     stdout.write('GLP> ');
@@ -177,7 +184,7 @@ void main() async {
           config.programDir = dir;
         }
         final manager = IsolateManager();
-        await manager.boot(config);
+        await manager.boot(config, application: bootApplication);
         manager.start();
         await manager.settle();
         await manager.shutdown();
@@ -241,6 +248,40 @@ void main() async {
         return network.send(pk, Uint8List.fromList(message.payload));
       };
       print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
+      continue;
+    }
+
+    if (trimmed == ':app' || trimmed.startsWith(':app ')) {
+      // :app <developer> <name> <version> --- name the app every :boot after
+      // it reports each connected peer attested with: "The router ... reports
+      // every peer attested with the app the harness names, its developer,
+      // name and version" (IGLP 4a9ad28, Implementation Notes, "Simulation
+      // realisation"), so peer_app/2 assigns app(Developer, Name, Version).
+      // :app none names none, and a connection is reported unattested, as it
+      // is before any :app; :app alone shows the app named.
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length == 1) {
+        final a = bootApplication;
+        print(a == null
+            ? 'No app named: a :boot reports every peer unattested'
+            : 'App named: app(${a.developer}, ${a.name}, ${a.version})');
+        continue;
+      }
+      if (parts.length == 2 && parts[1] == 'none') {
+        bootApplication = null;
+        print('No app named: a :boot reports every peer unattested');
+        continue;
+      }
+      final version = parts.length == 4 ? int.tryParse(parts[3]) : null;
+      if (version == null) {
+        print('Usage: :app <developer> <name> <version>, the version an '
+            'integer; or :app none');
+        continue;
+      }
+      bootApplication =
+          Application(developer: parts[1], name: parts[2], version: version);
+      print('App named: app(${parts[1]}, ${parts[2]}, $version): a :boot '
+          'reports every peer attested with it');
       continue;
     }
 
@@ -417,6 +458,7 @@ void _printHelp() {
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
   print('  :boot <f>_boot.glp     Run a multi-agent boot program (one isolate per agent)');
+  print('  :app <d> <n> <v>       Name the app a :boot reports every peer attested with (:app none: unattested)');
   print('  :deliveries            Toggle printing, after a boot, the messages delivered between each pair of agents');
   print('  :artefact <dir> [<to>] Write a program directory\'s certified artefact (<to>/<name>.glpw)');
   print('');

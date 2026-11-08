@@ -1,0 +1,91 @@
+%% ---------------------------------------------------------------------------
+%% GRV.glp --- the Grassroots Rendezvous contract, GNA's (a paper of the GSA project), extending GSG,
+%% in the clause syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses
+%% are in GRV.txt beside this file: open_server is GRV:1, Server; register GRV:2, Registration;
+%% redeem GRV:3, Redemption; present and match GRV:4, Reconnection, one clause in two schemas, each
+%% friend presenting and the server matching the two.  GKK's and GSG's schemas come first.  A link's
+%% serial s and expiry e are values (GSC, the appendix Values); the link itself, the term Alice
+%% signs, travels outside the contract and the server's operating system checks its signature and
+%% its expiry by the implementation pragmas.  server(Carol) says that Carol set up a rendezvous
+%% server; registered(Carol, Alice, s, e) that Alice registered with it a link with serial s and
+%% expiry e, and registered_with(Alice, Carol, s) the same at Alice; used(Carol, Alice, s) that the
+%% link was spent; redeemed(Bob, Alice, s) at Bob that he presented it; waiting(Carol, Alice, Bob)
+%% that Alice asked the server to reconnect her with her friend Bob.  A friend's signature over the
+%% friendship (GRV:4) is, in the schema, the atom friend(Alice, Bob) the attested Grassroots App of
+%% Alice requires at her role.  Bob knows the server, knows(Bob, Carol), by GKK:2, the server
+%% answering anyone.  Written by GSA #2 Cowork, 2026-11-07, a draft for Udi's approval and GSC's
+%% checker.
+%% ---------------------------------------------------------------------------
+
+SNT         ::= own(Constant) ; ext(SNT, Constant).
+SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+              ; sgn(Constant, Constant) ; item_of(Constant).
+SArgs       ::= [] ; [SArg | SArgs].
+SAtom       ::= atom(Constant, SArgs).
+SMult       ::= SAtom ; times(SArg, SAtom).
+SQLit       ::= SMult ; not(SMult).
+SQLits      ::= [] ; [SQLit | SQLits].
+SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
+SLits       ::= [] ; [SLit | SLits].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; author_of(Constant) ; item_of(Constant).
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr).
+RName       ::= Constant ; one(Constant, Constant).
+Names       ::= [] ; [RName | Names].
+PNames      ::= [] ; [Constant | PNames].
+Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+Contract    ::= [] ; [Schema | Contract].
+
+% contract_named(grv, C): the contract, GRV (Coordination Appendix C).
+procedure contract_named(Constant?, Contract).
+contract_named(grv,
+   [sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice'])],
+       [not(atom(identity, ['Alice']))], true, ['Alice']),
+    sas(acquaint, ['Alice', 'Bob'], [],
+       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+    sas(befriend, ['Alice', 'Bob'], [],
+       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
+       true, ['Alice', 'Bob']),
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+    sas(open_server, ['Carol'], [],
+       [atom(server, ['Carol'])],
+       [atom(identity, ['Carol']), not(atom(server, ['Carol']))], true, ['Carol']),
+    sas(register, ['Alice', 'Carol'], [s, e],
+       [atom(registered_with, ['Alice', 'Carol', num(s)]),
+        atom(registered, ['Carol', 'Alice', num(s), num(e)])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']),
+        not(atom(registered_with, ['Alice', 'Carol', num(s)])),
+        atom(identity, ['Carol']), atom(server, ['Carol']),
+        not(atom(registered, ['Carol', 'Alice', num(s), '_'])), not(atom(used, ['Carol', 'Alice', num(s)]))],
+       true, ['Alice']),
+    sas(redeem, ['Bob', 'Carol'], [a, s, e],
+       [atom(redeemed, ['Bob', a, num(s)]),
+        atom(used, ['Carol', a, num(s)]), not(atom(registered, ['Carol', a, num(s), num(e)]))],
+       [atom(identity, ['Bob']), atom(knows, ['Bob', 'Carol']),
+        atom(identity, ['Carol']), atom(server, ['Carol']), atom(registered, ['Carol', a, num(s), num(e)])],
+       true, ['Bob']),
+    sas(present, ['Alice', 'Carol'], ['Bob'],
+       [atom(waiting, ['Carol', 'Alice', 'Bob'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Carol']), atom(server, ['Carol']), not(atom(waiting, ['Carol', 'Alice', 'Bob']))],
+       true, ['Alice']),
+    sas(match, ['Carol'], [a, b],
+       [not(atom(waiting, ['Carol', a, b])), not(atom(waiting, ['Carol', b, a])), atom(matched, ['Carol', a, b])],
+       [atom(identity, ['Carol']), atom(server, ['Carol']),
+        atom(waiting, ['Carol', a, b]), atom(waiting, ['Carol', b, a])],
+       true, [])]).

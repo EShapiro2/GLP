@@ -10,7 +10,7 @@
 /// from any key (GNA Section 2.7); it runs the WAN alone, with no
 /// attestation, no location service and no rendezvous servers of its own.
 /// The agent is `programs/examples/rendezvous/rv_agent.glp`, booted on its
-/// entry `rv_server/3` by the runtime's own host, `AgentRuntime`, over the
+/// entry `rv_server/2` by the runtime's own host, `AgentRuntime`, over the
 /// layer through the adapter, [HeadlessGlpNetwork], as the glue's tests host
 /// theirs.  What the agent coordinates and how is the agent's GLP (GNA
 /// Section 6); the layer supplies the observed addresses behind
@@ -27,17 +27,18 @@
 /// Run:
 ///   rendezvous_server --identity rv-identity.json --port 9516 \
 ///     --public-address 203.0.113.7:9516 --outbound-queue-file rv-queue.json \
-///     --graph <hash> \
 ///     --program <GLP>/programs/examples/rendezvous/rv_agent.glp \
 ///     --root-self <GLP>/programs/self.glp
 ///
 /// `--identity` is the key pair, a JSON file `{"seed": <hex>}` created with a
 /// fresh seed on first run; `--outbound-queue-file` the file that keeps the
 /// layer's fair-delivery queue, so that it survives the termination of the
-/// server (GNA Section 2.11); `--graph` is the social graph's source identity,
-/// the Hash `signature/2` reports for a signature made under the social
-/// graph, which the agent admits a reconnection attestation under and no
-/// other (rv_agent.glp, "Capability verification").
+/// server (GNA Section 2.11).  The agent is told nothing at boot: it admits a
+/// request by the keys that sign it, each request carrying the other
+/// friend's signature over their pair, and reads no source identity, so an
+/// update of the Grassroots App leaves the signatures friends hold good (GSA,
+/// "Distribution and Activation", "Reconnection"; rv_agent.glp, "Admission
+/// by key").
 ///
 /// Prints `READY <port> <key-hex>` once listening, then `OUT <term>` for each
 /// element the agent sends its person and `CONNECTED <key-hex>` and
@@ -52,7 +53,6 @@ import 'dart:typed_data';
 import 'package:args/args.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
-import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 import 'package:grassroots_networking_core/src/headless/identity_file.dart';
 import 'package:grassroots_networking_glue/headless_glp_network.dart';
@@ -71,10 +71,6 @@ Future<void> main(List<String> argv) async {
         mandatory: true,
         help: "The layer's fair-delivery queue: a JSON file, so that the "
             'queue survives the termination of the server (GNA Section 2.11)')
-    ..addOption('graph',
-        mandatory: true,
-        help: "The social graph's source identity, the Hash under which the "
-            'agent admits a reconnection attestation')
     ..addOption('program',
         mandatory: true,
         help: 'The rendezvous agent: programs/examples/rendezvous/rv_agent.glp')
@@ -137,9 +133,8 @@ Future<void> main(List<String> argv) async {
   await agent.initialize();
   // The agent is started from agent(ch(_?,_),ch(_?,_)), every agent's initial
   // goal (IGLP, Implementation Notes, "Boot": "a deployed agent is spawned by
-  // its application with the same initial goal"); its person's first act is
-  // the social graph's source identity, the one it admits attestations under.
-  await agent.injectUserInput(rt.ConstTerm(args['graph'] as String));
+  // its application with the same initial goal"), which initialize() posts;
+  // it is told nothing by its person, and runs on its network input.
   if (!await layer.start()) {
     stderr.writeln('could not bind UDP port $port');
     exit(1);
