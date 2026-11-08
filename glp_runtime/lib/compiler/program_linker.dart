@@ -37,6 +37,7 @@ import '../vglp/canonical.dart'
         extractWidgetDeclarations,
         volitionalRecord;
 import '../vglp/program_compilation.dart';
+import '../vglp/type_walk.dart' show mapTypeRefs;
 
 /// A discovered module in the program tree.
 class DiscoveredModule {
@@ -249,6 +250,7 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   // procedure — `send_net` and the rest of social/graph/routing.
   _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
       program: program, layers: layers);
+  _writeCompiledTypes(modules);
   _attachVolitionalRecords(modules, program);
   _rootLast(modules);
   return modules;
@@ -748,6 +750,66 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
 /// sources compile and run.
 ///
 /// A source in the paper's syntax, or one that reaches a question, compiles by
+/// The types the compilation forms, written into each module that imports a
+/// compiled procedure or the dispatcher: "Every module of [M] type-checks as
+/// GLP with no type written by hand: the compilation writes into each module
+/// that imports a compiled procedure or the dispatcher the types it forms for
+/// them, among them the type of the asks, the view types and the parameter
+/// of the person channel" (vGLP ac8c281, Section 6.3, "The canonical
+/// compilation"; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC, item 1).  For
+/// each declaration `imported procedure M#p(...)` of a module whose qualifier
+/// M is a compiled module beside it, the definitions of that module of the
+/// types the declaration names, and of those they name, are written into the
+/// importing module, each in place of a definition of its name there: a copy
+/// written by hand gives way to the compilation's.
+void _writeCompiledTypes(List<DiscoveredModule> modules) {
+  final compiled = {
+    for (final m in modules)
+      if (m.filePath.endsWith('.vglp')) ppath.normalize(m.filePath): m
+  };
+  if (compiled.isEmpty) return;
+  void named(TypeExpr t, List<String> out) {
+    mapTypeRefs(t, (ref) {
+      out.add(ref.name);
+      for (final a in ref.typeArgs) {
+        named(a, out);
+      }
+      return ref;
+    });
+  }
+
+  for (final m in modules) {
+    if (m.filePath.endsWith('.vglp')) continue;
+    final dir = ppath.dirname(m.filePath);
+    final want = <String, TypeDef>{};
+    for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
+      final q = d.modulePath;
+      if (!d.imported || q == null) continue;
+      final c = compiled[ppath.normalize(
+          ppath.join(dir, '${q.replaceAll('#', ppath.separator)}.vglp'))];
+      if (c == null) continue;
+      final defs = {for (final td in c.ast.typeDefs) td.name: td};
+      final todo = <String>[];
+      for (final t in d.argTypes) {
+        named(t, todo);
+      }
+      while (todo.isNotEmpty) {
+        final n = todo.removeLast();
+        final td = defs[n];
+        if (td == null || want.containsKey(n)) continue;
+        want[n] = td;
+        for (final alt in td.alternatives) {
+          named(alt, todo);
+        }
+      }
+    }
+    if (want.isEmpty) continue;
+    m.ast.typeDefs
+      ..removeWhere((td) => want.containsKey(td.name))
+      ..addAll(want.values);
+  }
+}
+
 /// the canonical compilation; any other is refused (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,

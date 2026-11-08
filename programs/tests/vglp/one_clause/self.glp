@@ -37,17 +37,6 @@
 %% for the declarations of the procedures imported from its compiled module;
 %% type identity is structural, and the module's own shadow these within it.
 
-Peer     ::= Constant.
-Name     ::= Constant.
-Offer    ::= offer(Peer).
-YesNo    ::= yes ; no.
-Decision ::= decided(YesNo, Peer) ; greeted(Name, Peer) ; picked(Constant).
-Card     ::= card(Peer, YesNo?).
-Greeting ::= greeting(Peer, Name?).
-Choice   ::= choice(Peer, Constant?).
-Question ::= card_w(Card) ; greeting_w(Greeting) ; choice_w(Choice).
-Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= card_w(_) ; greeting_w(_) ; choice_w(_) ; output(List(Output)) ; YesNo ; Name.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): the decisions.

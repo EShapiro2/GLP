@@ -24,22 +24,6 @@
 %% The types of widgets.vglp and those its compilation adds, written again
 %% for the declarations of the procedures imported from its compiled module.
 
-Peer     ::= Constant.
-Date     ::= Integer.
-Ok       ::= ok.
-YesNo    ::= yes ; no.
-Pay      ::= pay(Peer, Integer).
-Request  ::= send(Peer, Integer) ; post(String).
-Card     ::= card(Peer, YesNo?).
-Choice   ::= choose(List(Peer), Peer?).
-Feed     ::= feed(List(String), YesNo?).
-Question ::= ok_r(Ok?) ; yesNo_r(YesNo?) ; string_r(String?)
-           ; integer_r(Integer?) ; real_r(Real?) ; date_r(Date?)
-           ; peer_r(Peer?) ; pay_r(Pay?) ; request_r(Request?)
-           ; card_w(Card) ; choice_w(Choice) ; feed_w(Feed)
-           ; stream_string_r(Stream(String)?).
-Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= ok_r(_) ; yesNo_r(_) ; string_r(_) ; integer_r(_) ; real_r(_) ; date_r(_) ; peer_r(_) ; pay_r(_) ; request_r(_) ; card_w(_) ; choice_w(_) ; feed_w(_) ; stream_string_r(_) ; output(List(Output)) ; Ok ; YesNo ; Peer ; Pay ; Request.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(Q, X), Q the

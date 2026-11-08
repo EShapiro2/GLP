@@ -75,34 +75,6 @@
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
-           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
-           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Request  ::= propose(Proposal).
-YesNo    ::= yes ; no.
-Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote     ::= yes ; no(Reason).
-Decision ::= commit ; abort(Peer, Reason) ; yield.
-Rho      ::= one(Class) ; rho(Proposal).
-Names    ::= none ; request(Rho, Integer).
-Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
-Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
-Net      ::= msg(Peer, Content).
-Atom     ::= identity ; knows(Peer) ; coin(Peer).
-Approved ::= Proposal.
-Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
-Asking   ::= Attempt ; hello(Peer, Proposal).
-Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
-Question ::= request_r(Request?) ; approval_w(Approval).
-Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
-Ask(Q)   ::= ask(Constant, Q).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
