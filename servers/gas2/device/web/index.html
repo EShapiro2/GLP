@@ -89,6 +89,32 @@ input, select { font: inherit; padding: 9px 10px; border: 1px solid var(--line);
 .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--card); padding: 9px 16px; border-radius: 99px; font-size: 14px; z-index: 9; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.on { opacity: .95; }
 .via { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--accent2); color: var(--soft); font-size: 12px; margin-left: 4px; vertical-align: 1px; }
+/* the views read off the contract: tabs, conversations, balances */
+.tabs { display: flex; gap: 6px; overflow-x: auto; margin: 12px 0 2px; scrollbar-width: none; }
+.tabs button { border: 0; background: var(--card); color: var(--soft); font: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 99px; cursor: pointer; white-space: nowrap; box-shadow: var(--shadow); }
+.tabs button.on { background: var(--accent); color: var(--onaccent); }
+.tabs .n { font-size: 11.5px; opacity: .75; }
+button.b.sm { font-size: 12.5px; padding: 5px 11px; }
+.chats { padding: 4px 0; max-height: calc(100vh - 260px); overflow: auto; }
+.chat { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.chat:last-child { border-bottom: 0; }
+.chat .dot { width: 42px; height: 42px; font-size: 17px; }
+.chat .sub { display: block; font-size: 13.5px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubbles { height: calc(100vh - 128px); height: calc(100dvh - 128px); overflow-y: auto; padding: 10px 2px 6px; display: flex; flex-direction: column; gap: 4px; }
+.bub { max-width: 78%; align-self: flex-start; background: var(--card); padding: 7px 10px 5px; border-radius: 16px 16px 16px 5px; box-shadow: 0 1px 2px rgba(0,0,0,.08); word-wrap: break-word; white-space: pre-wrap; }
+.bub.me { align-self: flex-end; background: var(--accent); color: var(--onaccent); border-radius: 16px 16px 5px 16px; }
+.bub .by { font-size: 12px; font-weight: 700; }
+.bub .meta { font-size: 10.5px; opacity: .7; margin-left: 8px; float: right; margin-top: 6px; white-space: nowrap; }
+.bub .bad { color: var(--no); font-weight: 800; }
+.day { align-self: center; font-size: 11.5px; color: var(--soft); background: var(--card); padding: 2px 10px; border-radius: 99px; margin: 8px 0 4px; }
+.composer { position: sticky; bottom: 0; display: flex; gap: 8px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 30%); }
+.composer input { border-radius: 99px; padding: 10px 14px; }
+header .dot { width: 30px; height: 30px; }
+.bal { display: grid; gap: 10px; margin-top: 10px; }
+.coin { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: var(--r); padding: 12px 14px; box-shadow: var(--shadow); }
+.coin .dot { width: 40px; height: 40px; font-size: 16px; }
+.coin .amt { font: 800 24px/1.1 var(--head); }
+.plain { border: 2px dashed var(--line); border-radius: var(--r); padding: 0 8px; }
 /* the rack turns around */
 main { transition: transform .23s ease-in, opacity .23s; transform-origin: 50% 30%; }
 main.turn { transform: perspective(1200px) rotateY(90deg); opacity: .3; }
@@ -118,7 +144,7 @@ const store = {
 let back = null; // where Settings returns to
 // the settings button: into Settings, and out again to where the person was
 function gearClick() { hood = false; if (open === '__you') go(back); else { back = open; go('__you'); } }
-let S = null, open = null, form = null, pane = 'play', naming = null, over = false;
+let S = null, open = null, form = null, pane = 'play', naming = null, over = false, conv = null, tab = {};
 let names = store.get('gas2names', {});
 let myName = store.get('gas2myname', '');
 // the person's look, and whether they see under the hood: this page's alone
@@ -202,7 +228,8 @@ function menuOf(w) {
     const t = parseTerm(n[0]);
     return (F(t, 'social_menu')[0] || []).map(b => {
       const [label, acts] = F(b, 'button');
-      return acts.map(a => { const x = F(a, 'act'); return {label, act: x[0], roles: x[2] || [], reqs: (x[3] || []).map(r => F(r, 'req')).filter(Boolean),
+      return acts.map(a => { const x = F(a, 'act'); return {label, act: x[0], by: x[1], roles: x[2] || [], reqs: (x[3] || []).map(r => F(r, 'req')).filter(Boolean),
+        forbs: (x[3] || []).map(r => F(r, 'forb')).filter(Boolean), same: (x[6] || []).map(z => F(z, 'same')).filter(Boolean),
         fields: (x[5] || []).map(f => ({i: F(f, 'field')[0], label: F(f, 'field')[1], kind: F(f, 'field')[2]}))}; });
     }).flat();
   } catch (e) { return []; }
@@ -341,23 +368,279 @@ function drawYou() {
 function setMyName(v) { myName = v.trim(); store.set('gas2myname', myName); draw(); }
 
 
-function drawApp(a) {
-  bar(a.title, a.installed || a.preparing ? 'home' : '__browse');
+// what every view of a mini-app reads: its draws, its buttons, its proposals' shapes
+function appCtx(a) {
   const r = readApp(a);
   const menu = r.req ? menuOf(r.req.w) : [];
   const props = ((a.shapes || {}).Proposal || []).filter(p => p[0] === 'ctor');
-  const panes = [['play', 'Play'], ['rules', 'Rules']];
-  if (!panes.some(p => p[0] === pane)) pane = 'play';
-  let h = `<div class="seg">${panes.map(([k, n]) => `<button class="${pane === k ? 'on' : ''}" onclick="pane='${k}';form=null;draw()">${n}${k === 'play' && r.asks.length ? ' •' : ''}</button>`).join('')}</div>`;
-  if (!a.installed) h += `<div class="card"><div class="row"><span class="grow">${a.preparing ? 'Preparing: your device certifies it under your key…' : 'Not added yet.'}</span>${a.preparing ? '' : `<button class="b" onclick="install('${a.app}')">Add</button>`}</div></div>`;
-  if (pane === 'rules') h += rulesHtml(a);
-  else if (a.installed) h += playHtml(a, r, menu, props);
-  $('#main').innerHTML = h;
-  window._acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: []}));
+  window._acts = menu.length ? menu : props.map(p => ({label: p[1], act: p[1], fields: [], reqs: [], forbs: [], same: [], roles: []}));
   window._req = r.req; window._props = props; window._app = a.app;
+  return {r, menu, props, L: lensOf(a, menu, props)};
 }
 
-function playHtml(a, r, menu, props) {
+function drawApp(a) {
+  const c = appCtx(a), {r} = c;
+  if (conv && a.installed && r.last) { drawConv(a, c); return; }
+  bar(a.title, a.installed || a.preparing ? 'home' : '__browse');
+  const joined = [...new Set([...(a.invited || []), ...(a.accepted || [])])];
+  const panes = [['play', 'Play'], ['people', 'People'], ['rules', 'Rules']];
+  if (!panes.some(p => p[0] === pane)) pane = 'play';
+  let h = `<div class="seg">${panes.map(([k, n]) => `<button class="${pane === k ? 'on' : ''}" onclick="pane='${k}';form=null;draw()">${n}${k === 'play' && r.asks.length ? ' •' : ''}${k === 'people' && joined.length ? ' ' + joined.length : ''}</button>`).join('')}</div>`;
+  if (!a.installed) h += `<div class="card"><div class="row"><span class="grow">${a.preparing ? 'Preparing: your device certifies it under your key…' : 'Not added yet.'}</span>${a.preparing ? '' : `<button class="b" onclick="install('${a.app}')">Add</button>`}</div></div>`;
+  if (pane === 'rules') h += rulesHtml(a);
+  else if (pane === 'people') h += peopleHtml(a);
+  else if (a.installed) h += (joined.length ? '' : peopleHtml(a)) + playHtml(a, c);
+  $('#main').innerHTML = h;
+}
+
+// who this person plays the mini-app with
+function peopleHtml(a) {
+  let h = `<h2><span class="grow">Play with</span>${S.friends.length ? '' : `<button class="link" onclick="go('__friend')">Add a friend</button>`}</h2><div class="card">`;
+  for (const k of S.friends) {
+    const inv = (a.invited || []).includes(k), acc = (a.accepted || []).includes(k);
+    h += `<div class="row">${dot(k)}<span class="grow"><b>${esc(nm(k))}</b> ${via((S.lastVia || {})[k])}</span><button class="b ${inv ? 'ok' : 'alt'}" onclick="act({op:'invite',app:'${a.app}',key:'${k}'},'Invited ${esc(nm(k))}')">${inv ? 'Invited ✓' : 'Invite'}</button><button class="b ${acc ? 'ok' : 'alt'}" onclick="act({op:'accept',app:'${a.app}',key:'${k}'},'Accepted ${esc(nm(k))}')">${acc ? 'Accepted ✓' : 'Accept'}</button></div>`;
+  }
+  if (!S.friends.length) h += `<div class="empty">Add a friend first.</div>`;
+  else h += `<div class="small muted" style="padding-top:6px">One of you taps Invite, the other Accept; both need ${esc(a.title)} added.</div>`;
+  return h + `</div>`;
+}
+
+// --- views read off the contract ---------------------------------------------------
+// Nothing below names a contract.  What a person holds is shown by what the contract
+// says of it: an atom some act adds with a text the person typed, from another person,
+// is a conversation (its text a bubble, its other arguments the conversation it is in);
+// an atom the pragmas count is a balance; any other atom a list.  An act with one text
+// field whose other places a conversation fills writes in it.  An act whose requirements
+// bind a place from an atom is offered beside that atom.  The plain view, at the back
+// (</>), shows the same state as the contract's words, to check that nothing is lost.
+const jeq = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+// the atoms anywhere in a schema (under not, times, forall), and the names inside a term
+function findAtoms(x, o = []) { if (Array.isArray(x)) x.forEach(y => findAtoms(y, o)); else if (x && x.f) { if (x.f === 'atom') o.push(x); else x.a.forEach(y => findAtoms(y, o)); } return o; }
+function namesIn(x, o = []) { if (Array.isArray(x)) x.forEach(y => namesIn(y, o)); else if (x && x.f) x.a.forEach(y => namesIn(y, o)); else if (typeof x === 'string') o.push(x); return o; }
+// the words of a text: a Speech, speech(Utterance, Peer), or a string
+function said(t) {
+  if (t && t.f === 'speech') { const by = t.a[1]; let u = t.a[0]; while (u && u.f === 'speech') u = u.a[0]; const w = F(u, 'utterance'); return {text: w ? String(w[0]) : termText(u), by}; }
+  return {text: typeof t === 'string' ? t : termText(t), by: null};
+}
+const textType = t => t === 'Speech';
+function lensOf(a, menu, props) {
+  const sh = a.shapes || {}, schemas = sh.schemas || [];
+  const types = Object.fromEntries((sh.atoms || []).map(x => [x[0], x[1]]));
+  // the types a person types into: those of the buttons' text fields
+  const typed = new Set(menu.flatMap(m => m.fields.filter(f => f.kind === 'text').map(f => (argKinds(m.act, props) || [])[f.i - 1])).filter(Boolean));
+  // the atoms a button binds a place from: who and what a person picks
+  const keyAtoms = new Set(menu.flatMap(m => m.reqs.filter(q => (q[1] || []).length).map(q => q[0])));
+  const lens = {};
+  for (const sc of schemas) {
+    const keyVars = new Set(findAtoms(sc).filter(x => keyAtoms.has(x.a[0])).flatMap(x => namesIn(x.a[1])));
+    const states = []; (function w(x) { if (Array.isArray(x)) x.forEach(w); else if (x && x.f) { if (x.f === 'rs') states.push(x); else x.a.forEach(w); } })(sc);
+    for (const st of states) for (const x of findAtoms(st.a[1])) {
+      const pred = x.a[0], ts = types[pred] || [], args = x.a[1] || [];
+      if (lens[pred] || keyAtoms.has(pred)) continue;
+      const kinds = args.map((g, i) => g && g.f === 'role' ? 'who' : (typed.has(ts[i]) && namesIn(g).every(v => !keyVars.has(v))) ? 'text' : 'key');
+      if (kinds.includes('text')) lens[pred] = {kind: 'thread', by: sc.a[0], kinds, types: ts};
+    }
+  }
+  // the acts that write in a conversation: one text field
+  const writers = menu.map((m, i) => ({m, i})).filter(({m}) => m.fields.filter(f => f.kind === 'text').length === 1);
+  return {lens, types, keyAtoms, writers, props};
+}
+// does the person hold an atom the act requires, its places filled by vals
+function holdsReq(atoms, pred, as, vals) {
+  if (!as.length) return atoms.some(x => x === pred || (x && x.f === pred));
+  return atoms.some(x => x && x.f === pred && as.every((z, j) => {
+    const at = F(z, 'at'), g = F(z, 'grp');
+    if (at) return vals[at[0]] === undefined || jeq(x.a[j], vals[at[0]]);
+    if (g) return (vals[g[0]] === undefined || jeq(F(F(x.a[j], 'dot')?.[0], 'community')?.[0], vals[g[0]])) && (vals[g[1]] === undefined || jeq(F(x.a[j], 'dot')?.[1], vals[g[1]]));
+    return true;
+  }));
+}
+// an act's places filled from a conversation's values: the person proposes; a value that
+// is the person goes to them; each other value to the next place of its type; the text
+// field left to type.  null if a value is left over, a place is left empty, or the
+// person holds not what the act requires.
+function fillFrom(L, m, keyVals, atoms) {
+  const kinds = argKinds(m.act, L.props) || [], tf = m.fields.find(f => f.kind === 'text');
+  if (!tf) return null;
+  const vals = {[m.by || 1]: S.me}, left = keyVals.filter(k => !jeq(k.v, S.me));
+  for (let p = 1; p <= kinds.length; p++) {
+    if (vals[p] !== undefined || p === tf.i) continue;
+    const j = left.findIndex(k => k.t === kinds[p - 1]);
+    if (j < 0) return null;
+    vals[p] = left[j].v; left.splice(j, 1);
+  }
+  if (left.length) return null;
+  if (!m.reqs.every(([pred, as]) => holdsReq(atoms, pred, as || [], vals))) return null;
+  if (m.forbs.some(([pred, as]) => !(as || []).some(z => (F(z, 'at') || [])[0] === tf.i) && holdsReq(atoms, pred, as || [], vals))) return null;
+  return vals;
+}
+const convId = (act, vals, text) => JSON.stringify([act, Object.entries(vals).filter(([p]) => +p !== text).sort((x, y) => x[0] - y[0])]);
+const valText = v => isKey(v) ? nm(v) : said(v).text;
+const hhmm = t => { if (!t) return ''; const d = new Date(t), n = new Date(); return d.toDateString() === n.toDateString() ? d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}) : d.toLocaleDateString([], {day: 'numeric', month: 'short'}); };
+// the conversations: from what the person holds, and from what they sent
+function convsOf(a, c) {
+  const {r, L} = c, last = r.last || [], atoms = last[1] || [], pend = last[3] || [], seen = a.seen || {};
+  const refused = r.notices.filter(n => F(n, 'refused')).map(n => F(n, 'refused')[0]);
+  const cs = {};
+  const conv = (id, o) => cs[id] || (cs[id] = Object.assign({id, msgs: [], pred: null}, o));
+  for (const x of atoms) {
+    const l = x && L.lens[x.f]; if (!l) continue;
+    const ti = l.kinds.indexOf('text'), keyVals = x.a.map((v, i) => ({v, t: l.types[i], k: l.kinds[i]})).filter(k => k.k !== 'text');
+    const w = said(x.a[ti]), from = (keyVals.find(k => k.k === 'who') || {}).v;
+    let id = null, wr = null, vals = null;
+    for (const cand of L.writers) { vals = fillFrom(L, cand.m, keyVals, atoms); if (vals) { wr = cand; break; } }
+    id = wr ? convId(wr.m.act, vals, wr.m.fields.find(f => f.kind === 'text').i) : JSON.stringify([x.f, keyVals.map(k => k.v)]);
+    const cv = conv(id, {writer: wr, vals, title: keyVals.map(k => valText(k.v)).join(' · '), keyVals, pred: x.f});
+    cv.pred = cv.pred || x.f;
+    cv.msgs.push({text: w.text, by: w.by || from, t: seen[JSON.stringify(x)] || 0, mine: (w.by || from) === S.me, held: true});
+  }
+  for (const e of a.mine || []) {
+    const wr = L.writers.find(w => w.m.act === e.p.f); if (!wr) continue;
+    const tf = wr.m.fields.find(f => f.kind === 'text').i, vals = {};
+    e.p.a.forEach((v, j) => vals[j + 1] = v);
+    const id = convId(e.p.f, vals, tf), text = said(e.p.a[tf - 1]).text;
+    const others = Object.entries(vals).filter(([p]) => +p !== tf && +p !== (wr.m.by || 1)).map(([, v]) => v);
+    const cv = conv(id, {writer: wr, vals, title: others.map(valText).join(' · ')});
+    if (cv.msgs.some(m => m.held && m.mine && m.text === text)) continue;
+    const st = refused.some(p => jeq(p, e.p)) ? 'no' : pend.some(p => jeq(p, e.p)) ? 'wait' : Date.now() - e.t < 15000 ? 'send' : 'done';
+    cv.msgs.push({text, by: S.me, t: e.t, mine: true, st});
+  }
+  for (const cv of Object.values(cs)) cv.msgs.sort((x, y) => x.t - y.t);
+  return cs;
+}
+const TICK = {send: ['🕓', 'sending'], wait: ['✓', 'proposed, waiting for the others'], done: ['✓✓', 'done'], no: ['!', 'refused']};
+
+function playHtml(a, c) {
+  const {r, menu, props, L} = c, {asks, last, notices, req} = r;
+  let h = '';
+  for (const d of asks) {
+    const ap = F(F(d.v, 'approval_w')[0], 'approval');
+    const p = F(ap[2], 'input')[0];
+    const ws = ap[1] && ap[1].length ? words(ap[1]) : esc(termText(F(ap[0], 'hello') ? F(ap[0], 'hello')[1] : (F(ap[0], 'attempt') || [])[3]));
+    h += `<div class="ask"><div class="who">Asks you</div>${ws}<div class="acts" style="margin-top:10px"><button class="b ok" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'yes','Yes, sent')">Yes</button><button class="b alt" onclick="grant('${a.app}',${d.id},${JSON.stringify(p)},'no','No, sent')">No</button></div></div>`;
+  }
+  if (!last) return h + `<div class="card"><div class="empty">${esc(a.title)} starts once a friend joins you in it.</div></div>`;
+  const atoms = last[1] || [], pend = last[3] || [], tabs = last[4] || [];
+  const cs = convsOf(a, c);
+  // the tabs the pragmas name, one at a time
+  const tl = tabs.map(t => F(t, 'tab'));
+  if (tl.length) {
+    const cur = tl.some(t => t[1] === tab[a.app]) ? tab[a.app] : tl[0][1];
+    h += `<div class="tabs">${tl.map(([name, pred]) => { const n = pred === cur ? '' : (L.lens[pred] ? Object.values(cs).filter(cv => cv.pred === pred).length : new Set(atoms.filter(x => x && x.f === pred).map(x => JSON.stringify(x))).size);
+      return `<button class="${pred === cur ? 'on' : ''}" onclick="tab['${a.app}']='${pred}';form=null;draw()">${esc(name)}${n ? ` <span class="n">${n}</span>` : ''}</button>`; }).join('')}</div>`;
+    const [name, pred, how] = tl.find(t => t[1] === cur);
+    h += L.lens[pred] ? threadsHtml(a, c, cs, pred) : how === 'counted' ? balanceHtml(a, c, pred) : listHtml(a, c, pred);
+  }
+  // what no tab shows, so that nothing is hidden
+  const rest = atoms.filter(x => x && !tl.some(t => t[1] === x.f));
+  if (rest.length) h += `<h2>Also</h2><div class="card"><div class="items">${[...new Set(rest.map(x => termText(x)))].map(t => `<div class="item"><span>✓ ${esc(t)}</span></div>`).join('')}</div></div>`;
+  if (pend.length) h += `<div class="card"><div class="small muted">Waiting for the others to answer</div>${pend.map(x => `<div class="note">${esc(termText(x))}…</div>`).join('')}</div>`;
+  for (const n of notices) h += `<div class="note">${esc(termText(n))}</div>`;
+  if (req) {
+    h += `<h2>Do</h2><div class="card"><div class="acts">`;
+    window._acts.forEach((m, i) => { h += `<button class="b ${form && form.i === i ? '' : 'alt'}" onclick="pick(${i})">${esc(m.label)}</button>`; });
+    h += `</div>`;
+    if (form) h += formHtml(window._acts[form.i], props, last, form.pre);
+    h += `</div>`;
+  }
+  return h;
+}
+
+// the acts offered beside an atom: those whose requirements bind a place from it
+function rowActs(c, x) {
+  const out = [];
+  window._acts.forEach((m, i) => {
+    for (const [pred, as] of m.reqs || []) {
+      if (pred !== x.f || !(as || []).length) continue;
+      const pre = {};
+      (as || []).forEach((z, j) => { const at = F(z, 'at'), g = F(z, 'grp'); if (at) pre[at[0]] = x.a[j]; if (g) { pre[g[0]] = F(F(x.a[j], 'dot')?.[0], 'community')?.[0]; pre[g[1]] = F(x.a[j], 'dot')?.[1]; } });
+      // not offered where it would make the person play two roles the act keeps apart
+      if (Object.entries(pre).some(([p, v]) => +p === (m.by || 1) || (v === S.me && (m.roles || []).includes(+p) && !(m.same || []).some(q => q.includes(+p))))) continue;
+      out.push({m, i, pre});
+      break;
+    }
+  });
+  return out;
+}
+function rowButtons(a, c, x) {
+  return rowActs(c, x).map(({m, i, pre}) => {
+    const w = c.L.writers.find(w => w.i === i);
+    const go = w ? `openConv(${esc(JSON.stringify(convId(m.act, Object.assign({[m.by || 1]: S.me}, pre), m.fields.find(f => f.kind === 'text').i)))})` : `pick(${i},${esc(JSON.stringify(pre))})`;
+    return `<button class="b alt sm" onclick="${go}">${esc(m.label)}</button>`;
+  }).join('');
+}
+function threadsHtml(a, c, cs, pred) {
+  const list = Object.values(cs).filter(cv => cv.pred === pred || (!cv.pred && c.L.lens[pred].by === cv.writer?.m.act))
+    .sort((x, y) => ((y.msgs.at(-1) || {}).t || 0) - ((x.msgs.at(-1) || {}).t || 0));
+  let h = `<div class="card chats">`;
+  if (!list.length) h += `<div class="empty">No conversation yet.${c.L.writers.length ? ' Start one below, or from a person in another tab.' : ''}</div>`;
+  for (const cv of list) {
+    const m = cv.msgs.at(-1) || {}, who = (cv.keyVals || []).find(k => isKey(k.v))?.v || Object.values(cv.vals || {}).find(v => isKey(v) && v !== S.me);
+    h += `<div class="chat" onclick='openConv(${esc(JSON.stringify(cv.id))})'>${who ? dot(who) : '<span class="dot" style="background:var(--soft)">#</span>'}<span class="grow"><b>${esc(cv.title || 'You')}</b><span class="sub">${m.mine ? (TICK[m.st]?.[0] || '✓✓') + ' ' : ''}${esc(m.text || '')}</span></span><span class="small muted">${esc(hhmm(m.t))}</span></div>`;
+  }
+  return h + `</div>`;
+}
+function balanceHtml(a, c, pred) {
+  const xs = (c.r.last[1] || []).filter(x => x && x.f === pred), n = {};
+  for (const x of xs) { const k = JSON.stringify(x.a); n[k] = (n[k] || 0) + 1; }
+  let h = `<div class="bal">`;
+  for (const [k, cnt] of Object.entries(n)) { const args = JSON.parse(k), x = {f: pred, a: args};
+    h += `<div class="coin">${isKey(args[0]) ? dot(args[0]) : ''}<div class="grow"><div class="amt">${cnt}</div><div class="small muted">${esc(pred.replace(/_/g, ' '))} · ${esc(args.map(valText).join(' · '))}</div></div><div class="acts">${rowButtons(a, c, x)}</div></div>`; }
+  if (!xs.length) h += `<div class="card"><div class="empty">None yet.</div></div>`;
+  return h + `</div>`;
+}
+function listHtml(a, c, pred) {
+  const xs = (c.r.last[1] || []).filter(x => x && x.f === pred);
+  let h = `<div class="card">`;
+  for (const k of new Set(xs.map(x => JSON.stringify(x.a)))) { const args = JSON.parse(k), x = {f: pred, a: args}, who = args.find(isKey) || F(F(args[0], 'dot')?.[0], 'community')?.[0];
+    const label = args.map(v => F(v, 'dot') ? valText(F(v, 'dot')[1]) + ' · ' + nm(F(F(v, 'dot')[0], 'community')?.[0]) : valText(v)).join(' · ');
+    h += `<div class="row">${who ? dot(who) : ''}<span class="grow"><b>${esc(label || pred)}</b></span><span class="acts">${rowButtons(a, c, x)}</span></div>`; }
+  if (!xs.length) h += `<div class="empty">None yet.</div>`;
+  return h + `</div>`;
+}
+function openConv(id) { conv = id; form = null; draw(); }
+// a conversation: its bubbles, and the act that writes in it
+function drawConv(a, c) {
+  const cs = convsOf(a, c);
+  let cv = cs[conv];
+  if (!cv) { // opened from a person, nothing said yet
+    const [act, vs] = JSON.parse(conv), wr = c.L.writers.find(w => w.m.act === act);
+    const vals = Object.fromEntries(vs), tf = wr && wr.m.fields.find(f => f.kind === 'text').i;
+    cv = {id: conv, msgs: [], writer: wr, vals, title: Object.entries(vals).filter(([p]) => +p !== (wr?.m.by || 1)).map(([, v]) => valText(v)).join(' · ')};
+  }
+  const who = (cv.keyVals || []).find(k => isKey(k.v))?.v || Object.values(cv.vals || {}).find(v => isKey(v) && v !== S.me);
+  $('#hd').innerHTML = `<button class="back" onclick="conv=null;draw()">‹</button>${who ? dot(who) : ''}<b>${esc(cv.title || a.title)}</b><span class="st">${esc(a.title.replace(/^Grassroots /, ''))}</span>
+    <button class="hood" title="The back: the cables (Tab)" onclick="flip()">&lt;/&gt;</button><button class="gear" title="You" onclick="gearClick()">${esc((myName || '☺').slice(0, 1).toUpperCase())}</button>`;
+  let h = `<div class="bubbles" id="bubbles">`;
+  let day = '';
+  for (const m of cv.msgs) {
+    const d = m.t ? new Date(m.t).toDateString() : ''; if (d && d !== day) { day = d; h += `<div class="day">${esc(new Date(m.t).toLocaleDateString([], {weekday: 'short', day: 'numeric', month: 'short'}))}</div>`; }
+    const tk = m.mine ? (m.held ? TICK.done : TICK[m.st] || TICK.done) : null;
+    h += `<div class="bub ${m.mine ? 'me' : ''}">${!m.mine && m.by && who !== m.by ? `<div class="by" style="color:hsl(${hue(m.by)},55%,42%)">${esc(nm(m.by))}</div>` : ''}${esc(m.text)}<span class="meta">${esc(hhmm(m.t))}${tk ? ` <span title="${tk[1]}" class="${m.st === 'no' ? 'bad' : ''}">${tk[0]}</span>` : ''}</span></div>`;
+  }
+  if (!cv.msgs.length) h += `<div class="empty" style="text-align:center;padding:30px 0">Nothing said yet.</div>`;
+  h += `</div>`;
+  const tf = cv.writer && cv.writer.m.fields.find(f => f.kind === 'text');
+  if (cv.writer && c.r.req) h += `<div class="composer"><input id="msg" placeholder="${esc(tf.label[0].toUpperCase() + tf.label.slice(1))}" autocomplete="off" onkeydown="if(event.key==='Enter')sendConv()"><button class="b" onclick="sendConv()">${esc(cv.writer.m.label)}</button></div>`;
+  else h += `<div class="composer small muted">${cv.writer ? 'Waiting for the mini-app…' : 'Nothing in the contract writes here: it is read only.'}</div>`;
+  $('#main').innerHTML = h;
+  window._conv = cv;
+  const b = document.getElementById('bubbles'); if (b) b.scrollTop = b.scrollHeight;
+}
+async function sendConv() {
+  const cv = window._conv, e = document.getElementById('msg'), v = (e?.value || '').trim();
+  if (!v || !cv?.writer) return;
+  const m = cv.writer.m, kinds = argKinds(m.act, window._props), tf = m.fields.find(f => f.kind === 'text').i;
+  const args = kinds.map((t, j) => j + 1 === tf ? (textType(t) ? {f: 'speech', a: [{f: 'utterance', a: [v]}, S.me]} : v) : cv.vals[j + 1]);
+  if (args.some(x => x === undefined)) return toast('Something is missing to send this');
+  e.value = '';
+  const p = F(F(window._req.v, 'request_r')[0], 'input')[0];
+  await grant(window._app, window._req.id, p, {propose: {f: m.act, a: args}});
+  setTimeout(draw, 16000); // its tick, once it is no longer being sent
+}
+
+// the plain view: the state as the contract's words, everything listed
+function plainHtml(a, r, menu, props) {
   const {asks, last, notices, req} = r;
   let h = '';
   // who this person plays with: first, as nothing happens without it
@@ -501,31 +784,60 @@ function drawBack() {
     ${heads.map(([x, yy, t]) => `<text x="${x}" y="${yy}" font-size="11" fill="#6e6e73" letter-spacing=".08em">${t}</text>`).join('')}
     ${g}${cables}${jacks}</svg>`;
   let h = `<div class="backpanel">${svg}<div class="small muted" style="padding:2px 6px 8px">A cable from a mini-app to a friend: you invited them, or took their invitation. Tab, or &lt;/&gt;, turns the rack around again.</div></div>`;
-  if (a) h += hoodHtml(a, readApp(a));
+  if (a) h += hoodHtml(a);
   const ws = S.wires || [];
   h += `<h2>Messages, and their carrier</h2><div class="card" style="max-height:300px;overflow:auto">${ws.length ? ws.slice(0, 40).map(w => `<div class="row" style="padding:5px 0"><span class="mono muted" style="width:62px">${new Date(w.t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'})}</span><span>${w.out ? '↑ to' : '↓ from'}</span>${dot(w.key).replace('class="dot"', 'class="dot" style="width:22px;height:22px;font-size:11px;background:hsl(' + hue(w.key) + ',55%,52%)"')}<span class="grow">${esc(nm(w.key))}</span>${via(w.via)}<span class="small muted">${esc((VIA[w.via] || [0, w.via])[1])}</span></div>`).join('') : '<div class="empty">No message yet.</div>'}</div>`;
   h += `<h2>Signals</h2><div class="card"><div class="small">Status: ${esc(S.status)} · acts waiting: ${esc(JSON.stringify(S.pending || []))} s · state version ${S.version}</div><pre>${esc((S.log || []).join('\n'))}</pre></div>`;
   $('#main').innerHTML = h;
 }
 
-function hoodHtml(a, r) {
-  return `<div class="card"><div class="row"><span class="grow">Contract</span><b>${esc(a.id)}</b> <a class="small" href="${SITE}contract.html?c=${encodeURIComponent(a.id)}" target="_blank">on the site</a></div><div class="row"><span class="grow">Mini-app</span><span class="mono">${esc(a.app)}</span></div><div class="row"><span class="grow">Version (its files)</span><span class="mono">${esc(a.version)}</span></div>
+function hoodHtml(a) {
+  const c = appCtx(a), r = c.r, L = c.L;
+  const tabs = r.last ? (r.last[4] || []).map(t => F(t, 'tab')) : [];
+  const lensRow = ([name, pred, how]) => {
+    const l = L.lens[pred];
+    const what = l ? `a conversation: ${l.kinds.map((k, i) => k === 'text' ? '<b>text</b>' : k === 'who' ? 'from' : 'in').join(', ')} (added by ${esc(l.by)})` : how === 'counted' ? 'a balance (the pragmas count it)' : 'a list';
+    const binds = window._acts.filter(m => (m.reqs || []).some(q => q[0] === pred && (q[1] || []).length)).map(m => m.label);
+    return `<div class="row"><span class="grow"><b>${esc(name)}</b> <span class="mono">${esc(pred)}</span><span class="sub small muted" style="display:block">${what}${binds.length ? ' · beside it: ' + esc(binds.join(', ')) : ''}</span></span></div>`;
+  };
+  return `<h2>What the main view reads off the contract</h2><div class="card">${tabs.length ? tabs.map(lensRow).join('') : '<div class="empty">No view yet.</div>'}
+    <div class="row"><span class="grow small muted">Writes in a conversation: ${esc(L.writers.map(w => w.m.label).join(', ') || 'nothing')}. Atoms no tab shows are under Also; every act is under Do.</span></div></div>
+    <h2>The plain view</h2><div class="plain">${a.installed ? plainHtml(a, r, c.menu, c.props) : '<div class="card"><div class="empty">Not added.</div></div>'}</div>
+    <div class="card"><div class="row"><span class="grow">Contract</span><b>${esc(a.id)}</b> <a class="small" href="${SITE}contract.html?c=${encodeURIComponent(a.id)}" target="_blank">on the site</a></div><div class="row"><span class="grow">Mini-app</span><span class="mono">${esc(a.app)}</span></div><div class="row"><span class="grow">Version (its files)</span><span class="mono">${esc(a.version)}</span></div>
     <div class="small muted" style="margin-top:6px">The person you play with needs the same version.</div></div>
     <h2>The view, raw</h2><div class="card"><pre>${esc(JSON.stringify(r.last, null, 1))}</pre></div>
     <h2>Every draw</h2><div class="card"><pre>${esc(JSON.stringify(r.draws, null, 1))}</pre></div>`;
 }
 
-function pick(i) { form = form && form.i === i ? null : {i}; draw(); }
+function pick(i, pre) { form = form && form.i === i && !pre ? null : {i, pre}; if (pre) { conv = null; } draw(); if (pre) document.querySelector('.form')?.scrollIntoView({block: 'center'}); }
 const argKinds = (act, props) => (props.find(x => x[1] === act) || [0, 0, []])[2];
 
-function formHtml(m, props, last) {
+function formHtml(m, props, last, pre = {}) {
   const kinds = argKinds(m.act, props), atoms = last[1] || [];
   const people = [...new Set([...(last[2] || []), ...S.friends])].filter(k => k !== S.me);
-  const sel = (i, label, ks) => `<label>${esc(label)}<select id="arg${i}">${ks.length ? ks.map(k => `<option value="${esc(k)}">${esc(termText(k))}</option>`).join('') : '<option value="">(none yet)</option>'}</select></label>`;
+  pre = pre || {};
+  const sel = (i, label, ks) => { if (pre[i] !== undefined && !ks.some(k => jeq(k, pre[i]))) ks = [pre[i], ...ks];
+    window._choices[i] = ks;
+    return `<label>${esc(label)}<select id="arg${i}">${ks.length ? ks.map((k, n) => `<option value="${n}" ${jeq(k, pre[i]) ? 'selected' : ''}>${esc(termText(k))}</option>`).join('') : '<option value="">(none yet)</option>'}</select></label>`; };
+  window._choices = {};
   let h = `<div class="form">`;
+  // a group the act requires the proposer to be in, grp(J, K): its owner at J, its name at K, picked as one
+  const grps = (m.reqs || []).flatMap(([pred, as]) => (as || []).map((z, j) => [pred, j, F(z, 'grp')]).filter(g => g[2]));
+  const inGrp = i => grps.find(g => g[2][0] === i || g[2][1] === i);
   kinds.forEach((t, j) => {
     const i = j + 1;
-    if (i === 1) return;
+    if (i === (m.by || 1)) return;
+    const g = inGrp(i);
+    if (g) {
+      const own = g[2][0] === (m.by || 1);
+      if (i !== (own ? g[2][1] : g[2][0])) return;
+      const cs = [...new Set(atoms.filter(x => x && x.f === g[0]).map(x => JSON.stringify(x.a[g[1]])))].map(x => JSON.parse(x))
+        .map(c => [F(F(c, 'dot')?.[0], 'community')?.[0], F(c, 'dot')?.[1]]).filter(c => c[0] !== undefined && (!own || c[0] === S.me));
+      const pv = pre[g[2][1]] !== undefined ? [own ? S.me : pre[g[2][0]], pre[g[2][1]]] : null;
+      window._choices['g' + g[2][0]] = cs;
+      h += `<label>${esc(g[0].replace(/_/g, ' '))}<select id="grp${g[2][0]}">${cs.length ? cs.map((c, n) => `<option value="${n}" ${pv && jeq(c, pv) ? 'selected' : ''}>${esc(valText(c[1]) + ' · ' + nm(c[0]))}</option>`).join('') : '<option value="">(none yet)</option>'}</select></label>`;
+      return;
+    }
     const f = m.fields.find(x => x.i === i);
     // an argument the act requires the proposer to hold: chosen from what they hold
     const req = (m.reqs || []).find(r => (r[1] || []).some(z => (F(z, 'at') || [])[0] === i));
@@ -545,10 +857,15 @@ function formHtml(m, props, last) {
 
 async function propose() {
   const m = window._acts[form.i], kinds = argKinds(m.act, window._props);
+  const grps = (m.reqs || []).flatMap(([pred, as]) => (as || []).map(z => F(z, 'grp')).filter(Boolean));
   const args = kinds.map((t, j) => {
     const i = j + 1;
-    if (i === 1) return S.me;
-    const v = document.getElementById('arg' + i)?.value ?? '';
+    if (i === (m.by || 1)) return S.me;
+    const g = grps.find(g => g[0] === i || g[1] === i);
+    if (g) { const el = document.getElementById('grp' + g[0]), c = (window._choices || {})['g' + g[0]]; if (!el || el.value === '' || !c) return ''; return c[+el.value][g[0] === i ? 0 : 1]; }
+    const el = document.getElementById('arg' + i);
+    if (el && el.tagName === 'SELECT') { const k = (window._choices || {})[i]; return el.value === '' || !k ? '' : k[+el.value]; }
+    const v = el?.value ?? '';
     if (t === 'Integer') return parseInt(v || '0', 10);
     if (t === 'Speech') return {f: 'speech', a: [{f: 'utterance', a: [v]}, S.me]};
     return v;
@@ -562,7 +879,7 @@ async function grant(app, id, path, value, said) { await act({op: 'grant', app, 
 
 // a mini-app's page, at its rules (from the list of all of them)
 function details(app) { go(app); pane = S.apps.find(a => a.app === app)?.installed ? 'play' : 'rules'; draw(); }
-function go(where) { open = where; form = null; pane = 'play'; over = false; naming = null; draw(); window.scrollTo(0, 0); }
+function go(where) { open = where; form = null; pane = 'play'; over = false; naming = null; conv = null; draw(); window.scrollTo(0, 0); }
 function install(app) { act({op: 'install', app}, 'Adding: your device certifies it'); }
 // </>: the rack turns around, as in a studio's rack: the back shows the cables
 function flip() {

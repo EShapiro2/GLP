@@ -369,8 +369,93 @@ digit("9", 9).
 """
 
 
-def write_app(glp, app, cid, title, vglp):
-    """Write the mini-app's directory programs/apps/<app>; its path."""
+def parse_term(s):
+    """A GLP term as the REPL prints it, as JSON the way the device writes terms: a
+    compound {"f", "a"}, a list, a number, and an atom, a quoted atom or a string as text."""
+    i = 0
+
+    def ws():
+        nonlocal i
+        while i < len(s) and s[i].isspace():
+            i += 1
+
+    def term():
+        nonlocal i
+        ws()
+        c = s[i]
+        if c == '[':
+            i += 1
+            xs = []
+            ws()
+            if s[i] == ']':
+                i += 1
+                return xs
+            while True:
+                xs.append(term())
+                ws()
+                if s[i] == ',':
+                    i += 1
+                    continue
+                if s[i] == '|':  # a list's tail, which the REPL prints only for open lists
+                    i += 1
+                    term()
+                    ws()
+                if s[i] == ']':
+                    i += 1
+                    return xs
+                raise ValueError(f'list at {i}')
+        if c in '\'"':
+            q, i, o = c, i + 1, ''
+            while s[i] != q:
+                if s[i] == '\\':
+                    i += 1
+                o += s[i]
+                i += 1
+            i += 1
+            name = o
+        else:
+            m = re.compile(r'-?\d+|[A-Za-z_][A-Za-z0-9_]*').match(s, i)
+            if not m:
+                raise ValueError(f'term at {i}: {s[i:i + 20]!r}')
+            i = m.end()
+            if re.fullmatch(r'-?\d+', m.group(0)):
+                return int(m.group(0))
+            name = m.group(0)
+        ws()
+        if i < len(s) and s[i] == '(':
+            i += 1
+            a = []
+            while True:
+                a.append(term())
+                ws()
+                if s[i] == ',':
+                    i += 1
+                    continue
+                if s[i] == ')':
+                    i += 1
+                    break
+                raise ValueError(f'args at {i}')
+            return {'f': name, 'a': a}
+        return name
+
+    t = term()
+    return t
+
+
+def atom_shapes(vglp):
+    """The platform's Atom, each alternative with its arguments' types: what a person holds."""
+    defs = type_defs(vglp)
+    body = defs.get('Atom', '').split('::=', 1)[-1].strip().rstrip('.')
+    out = []
+    for a in [x.strip() for x in re.split(r';(?![^(]*\))', body) if x.strip()]:
+        m = re.fullmatch(r'([a-z_][a-z0-9_]*)\((.*)\)', a, re.S)
+        out.append([m.group(1), [x.strip() for x in m.group(2).split(',')]] if m else [a, []])
+    return out
+
+
+def write_app(glp, app, cid, title, vglp, read=None):
+    """Write the mini-app's directory programs/apps/<app>; its path.  read: the contract's
+    schemas as GSC's reader reads them, which shapes.json carries for the device's views."""
     src = glp.path('programs', 'apps', 'gsg')
     d = glp.path('programs', 'apps', app)
     os.makedirs(d, exist_ok=True)
@@ -385,7 +470,14 @@ def write_app(glp, app, cid, title, vglp):
     w('person.glp', person_glp(rd(src, 'person.glp'), proposals(vglp), vglp))
     _, shapes = live_glp(vglp)
     import json
-    w('shapes.json', json.dumps({'Proposal': shapes.get('Proposal', []), 'types': shapes}, indent=1))
+    sch = []
+    if read:
+        try:
+            sch = parse_term(read)
+        except (ValueError, IndexError):
+            sch = []
+    w('shapes.json', json.dumps({'Proposal': shapes.get('Proposal', []), 'types': shapes,
+                                 'atoms': atom_shapes(vglp), 'schemas': sch}, indent=1))
     return d
 
 

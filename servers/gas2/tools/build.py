@@ -246,7 +246,7 @@ def main(root, out):
             with open(os.path.join(out, 'platforms', f'{n}.vglp'), 'w', encoding='utf-8', newline='\n') as f:
                 f.write(r['platform'])
             app = f'gas2_{low}'
-            d = M.write_app(g, app, n, c['title'], r['platform'])
+            d = M.write_app(g, app, n, c['title'], r['platform'], r.get('read'))
             e['app'] = app
             e['acts'] = M.proposals(r['platform'])
             gas2_apps.append((n, app, d, e))

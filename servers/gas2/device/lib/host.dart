@@ -39,7 +39,31 @@ class MiniApp {
   bool preparing = false; // being certified, for its install
   final Set<String> invited = {}, accepted = {}; // the friends invited to it, whose invitations taken
   final Map<int, Object?> draws = {}; // construct id -> draw(Id, W, V) as JSON
+  // What the person proposed, each {t: ms, p: {f, a}}, and when each atom they hold was
+  // first drawn, {atom as JSON: ms}: the page's times and its record of what was sent,
+  // which the platform keeps nowhere else (an act adds nothing at its proposer).
+  final List<Map<String, Object?>> mine = [];
+  final Map<String, int> seen = {};
   MiniApp(this.app, this.id, this.title, this.shapes);
+
+  /// The atoms of the view a draw of construct 0 holds, stamped when first seen.
+  void stamp(Object? v) {
+    if (v is! Map || v['f'] != 'output') return;
+    final outs = (v['a'] as List).first;
+    if (outs is! List) return;
+    Map? view;
+    for (final o in outs) {
+      if (o is Map && o['f'] == 'view') view = o;
+    }
+    if (view == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final held = <String, int>{};
+    for (final x in ((view['a'] as List)[1] as List? ?? const [])) {
+      final k = jsonEncode(x);
+      held[k] = seen[k] ?? held[k] ?? now;
+    }
+    seen..clear()..addAll(held);
+  }
 }
 
 class SuperHost {
@@ -352,6 +376,8 @@ class SuperHost {
     for (final m in apps) {
       m.n = null;
       m.draws.clear();
+      m.mine.clear();
+      m.seen.clear();
       m.invited.clear();
       m.accepted.clear();
     }
@@ -411,6 +437,7 @@ class SuperHost {
           final da = d['a'] as List;
           if (d['f'] == 'draw') {
             m.draws[da[0] as int] = {'w': da[1], 'v': da[2]};
+            if (da[0] == 0) m.stamp(da[2]);
           } else if (d['f'] == 'withdraw') {
             m.draws.remove(da[0] as int);
           }
@@ -516,6 +543,11 @@ class SuperHost {
     for (final t in toks) {
       await _inject(_in(7, [n], _c('connect', [t])));
     }
+    if (value is Map && value['propose'] is Map) {
+      m.mine.add({'t': DateTime.now().millisecondsSinceEpoch, 'p': value['propose']});
+      if (m.mine.length > 400) m.mine.removeRange(0, m.mine.length - 400);
+      _changed();
+    }
   }
 
   static List<String> _int(int n) => [...n.toString().split(''), '.'];
@@ -567,6 +599,8 @@ class SuperHost {
               'invited': m.invited.toList(),
               'accepted': m.accepted.toList(),
               'draws': {for (final e in m.draws.entries) '${e.key}': e.value},
+              'mine': m.mine,
+              'seen': m.seen,
               'shapes': m.shapes,
               'about': m.about,
             }
@@ -645,6 +679,8 @@ class _Store implements AgentStateStore {
         m.draws..clear()..addAll({for (final e in (a['draws'] as Map).entries) int.parse(e.key as String): e.value});
         m.invited.addAll(((a['invited'] as List?) ?? []).cast<String>());
         m.accepted.addAll(((a['accepted'] as List?) ?? []).cast<String>());
+        m.mine..clear()..addAll([for (final x in (a['mine'] as List?) ?? const []) (x as Map).cast<String, Object?>()]);
+        m.seen..clear()..addAll(((a['seen'] as Map?) ?? const {}).map((k, v) => MapEntry(k as String, v as int)));
       }
       loaded = true;
       return Uint8List.sublistView(b, 8 + n);
@@ -674,7 +710,7 @@ class _Store implements AgentStateStore {
       'notes': host.notes,
       'apps': {
         for (final m in host.apps)
-          m.app: {'n': m.n, 'draws': m.draws.map((k, v) => MapEntry('$k', v)), 'invited': m.invited.toList(), 'accepted': m.accepted.toList()}
+          m.app: {'n': m.n, 'draws': m.draws.map((k, v) => MapEntry('$k', v)), 'invited': m.invited.toList(), 'accepted': m.accepted.toList(), 'mine': m.mine, 'seen': m.seen}
       },
     }));
     final head = ByteData(8)

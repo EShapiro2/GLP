@@ -63,7 +63,7 @@ def make(root, job):
     res['schemas'] = list(B.schemas_of(r.get('read') or r['term'] or ''))
     low = cid.lower().replace('-', '_')
     app = f'gas2m_{low}_{key[:6]}'
-    ad = M.write_app(g, app, cid, title, r['platform'])
+    ad = M.write_app(g, app, cid, title, r['platform'], r.get('read'))
     res['acts'] = M.proposals(r['platform'])
     a, why = g.artefact(ad, tempfile.mkdtemp(prefix='gas2make-'))
     if not a:
