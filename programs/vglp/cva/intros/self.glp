@@ -46,6 +46,10 @@
 %%                         at q  +credit(x)
 %%   cite(p, q ; x)     :  at p  item(x), knows(q), not cited(x, q), +cited(x, q)    author(x) = q
 %%                         at q  +cites(x)
+%%   arrive(p?)         :  at p  not here, +here
+%%   leave(p?)          :  at p  -here
+%%   greet(p?, q?)      :  at p  here, knows(q), not greeted(q), +greeted(q)
+%%                         at q  here, knows(p), not greeted(p), +greeted(p)
 %%
 %% q is peek's reading role, "a non-guarding role that adds and deletes
 %% nothing, admitted where a guarding role requires an atom naming it: its
@@ -63,6 +67,13 @@
 %% signer, the author and the item of a speech act, its last signer, its first
 %% signer and its utterance" (vGLP 27bae5d, Section 5.4, "Speech-act schemas as
 %% local specifications"), local to every role.
+%% greet stands on here (contracts.glp, its pragmas, standing(greet, here)):
+%% "a person's request of the act that adds the atom is also their standing
+%% request of every class of the standing act's parts that they propose, and
+%% their request of the act that deletes it withdraws it; the standing act has
+%% no button, every guarding role of it proposes it, and its persons are asked
+%% nothing" (vGLP d433f71, Section 5.4, "The contract's words"): arrive makes
+%% the standing request and leave withdraws it.
 %%
 %% Section VG of test/run_all_tests.sh runs trio/7 on three scripts each, carol's empty:
 %%
@@ -88,15 +99,15 @@ Speech   ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 Class    ::= acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; open(Peer) ; peek(Peer, Peer)
            ; post(Peer, Speech) ; send(Peer, Peer, Speech) ; credit(Peer, Peer, Speech)
-           ; cite(Peer, Peer, Speech).
+           ; cite(Peer, Peer, Speech) ; arrive(Peer) ; leave(Peer) ; greet(Peer, Peer).
 Proposal ::= acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; open(Peer) ; peek(Peer, Peer)
-           ; post(Peer, Speech).
+           ; post(Peer, Speech) ; arrive(Peer) ; leave(Peer) ; greet(Peer, Peer).
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
 Decision ::= commit ; abort(Peer, Reason) ; yield.
-Rho      ::= one(Class) ; rho(Proposal).
+Rho      ::= one(Class) ; rho(Proposal) ; std(Constant).
 Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
@@ -104,7 +115,8 @@ Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
 Atom     ::= knows(Peer) ; open ; seen(Peer) ; item(Speech) ; sent(Speech, Peer) ; got(Speech)
-           ; credited(Speech, Peer) ; credit(Speech) ; cited(Speech, Peer) ; cites(Speech).
+           ; credited(Speech, Peer) ; credit(Speech) ; cited(Speech, Peer) ; cites(Speech)
+           ; here ; greeted(Peer).
 Approved ::= Proposal.
 Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).

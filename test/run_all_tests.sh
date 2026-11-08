@@ -5394,6 +5394,53 @@ check "CVA author: alice's machine cites to bob b, whose first signer, its autho
 check_not "CVA author: ... and not a, whose author is alice" "cite(alice, bob, speech(utterance(a), alice))" "$cva_author"
 check "CVA author: ... bob holds cites(b)" "B = \[.*view(bob, \[cites(speech(speech(utterance(b), bob), alice))" "$cva_author"
 check "CVA author: ... the run suspends" "→ suspended" "$cva_author"
+# Standing requests (vGLP d433f71, Section 5.4, "The contract's words": "A pragma may declare a guarded act standing on an atom its guarding roles require: a person's request of the act that adds the atom is also their standing request (Definition Local) of every class of the standing act's parts that they propose, and their request of the act that deletes it withdraws it; the standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals"; Definition "Proposing", Stand and Withdraw; vGLP #24, Code_inbox.md, 2026-11-08 08:12 UTC, item 2).  The declaration's term, standing(Schema, Predicate), is the compiler's, vGLP's own contracts giving it (contracts.glp, pragmas_named/2), no paper yet giving the form of its line in a NAME.txt.  intros' greet(p, q), guarded by both, requiring here and knows of the other at each, stands on here: arrive makes the standing request and leave withdraws it.
+check "CVA standing: the platform prints greet standing on here" "^schema_standing(greet, on(here))\$" "$cva_signing_text"
+check "CVA standing: ... arrive making the standing request" "^stand_act(arrive, makes(greet))\$" "$cva_signing_text"
+check "CVA standing: ... leave withdrawing it" "^stand_act(leave, withdraws(greet))\$" "$cva_signing_text"
+cva_standing=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(arrive(A2?))), wait(holds(greeted(bob)))], [approval(acquaint(alice, bob), yes), wait(known(alice)), own([B1], propose(arrive(B1?))), wait(holds(greeted(alice)))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA standing: alice and bob each arrive, a standing request of every greet they propose; a greet commits, its guards asked nothing" "outcome(attempt([a-z]*, [0-9]*, [0-9]*, greet([a-z]*, [a-z]*), none), commit)" "$cva_standing"
+check_not "CVA standing: ... neither person asked about greet" "gave(greet\|gave(attempt([a-z]*, [0-9]*, [0-9]*, greet" "$cva_standing"
+check "CVA standing: ... alice holds greeted(bob)" "A = \[.*view(alice, \[greeted(bob), here, knows(bob)\]" "$cva_standing"
+check "CVA standing: ... bob holds greeted(alice)" "B = \[.*view(bob, \[greeted(alice), here, knows(alice)\]" "$cva_standing"
+check "CVA standing: ... and the run suspends, the standing approval of the class committed having ceased" "→ suspended" "$cva_standing"
+# Withdraw: alice arrives, a standing request, and leaves, which withdraws it; bob arrives after.  No greet commits, alice not here, and the run suspends.
+cva_withdraw=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(arrive(A2?))), wait(holds(here)), own([A3], propose(leave(A3?)))], [approval(acquaint(alice, bob), yes), wait(known(alice)), own([B1], propose(arrive(B1?))), wait(holds(here))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check_not "CVA standing: alice withdraws by leaving before bob arrives: no greet commits" "outcome(attempt([a-z]*, [0-9]*, [0-9]*, greet([a-z]*, [a-z]*), none), commit)" "$cva_withdraw"
+check "CVA standing: ... alice holds knows(bob) alone" "A = \[.*view(alice, \[knows(bob)\], \[bob\], \[\], \[tab('Contacts', knows)\]) | " "$cva_withdraw"
+check "CVA standing: ... and the run suspends" "→ suspended" "$cva_withdraw"
+# The compiler's checks of a standing declaration (cvac.glp, standing_faults): a schema of the contract (st_none), guarded (st_unguarded), each of whose guarding roles requires an atom of the predicate and atoms naming every other role and variable, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification") (st_unnamed, GPE's Encounter as its schema stands, Alice's atoms naming no Bob); and a schema declared standing needs no button (st_ok).
+cva_stfx="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(open, []), atom(knows, [role(2)])], []), rs(guarded, [atom(greeted, [role(1)])], [], [atom(open, []), atom(knows, [role(1)])], [])])"
+cva_stmeet="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(meet, [], [rs(guarded, [atom(met, [role(2)])], [], [atom(open, [])], []), rs(guarded, [atom(met, [role(1)])], [], [atom(open, [])], [])])"
+cva_stwave="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(wave, [], [rs(unguarded, [atom(waved, [])], [], [atom(open, [])], [atom(waved, [])])])"
+cva_stp="[list('\"Open\"', [open])], [act(open, '\"Open\"', [], none, '\"Open\"', by([1]))]"
+cva_standing_fx=$("$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 100000000
+compile(st_ok, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(greet, open)])).
+compile(st_none, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(nope, open)])).
+compile(st_unnamed, [$cva_stmeet], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(meet, open)])).
+compile(st_unguarded, [$cva_stwave], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(wave, open)])).
+:quit
+HEREDOC
+2>&1)
+check "CVA standing: a guarded schema declared standing, its roles naming each other, compiled with no button (st_ok)" "the canonical CVA platform of the contract(st_ok)" "$cva_standing_fx"
+check_not "CVA standing: ... and not refused (st_ok)" "not compiled(st_ok)" "$cva_standing_fx"
+check "CVA standing: a declaration naming no schema, refused (st_none)" "a standing declaration names no schema of the contract" "$cva_standing_fx"
+check "CVA standing: a schema whose guarding roles name not each other, its standing parts not computable from a role's state, refused (st_unnamed)" "its standing parts are not computable from that role" "$cva_standing_fx"
+check "CVA standing: a schema with no guarding role, refused (st_unguarded)" "a standing declaration names a schema with no guarding role" "$cva_standing_fx"
 
 # GB's mint_bond, advance and redeem_bc (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3: "GB: d, k and r by the request; t local to the issuer's role, its date; mint_bond's gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").  vGLP's contract bonds (programs/vglp/cva/contracts.glp): GB's three schemas as programs/currencies/bonds/GB.glp writes them, with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, which gives a person their first date, date(0), GB naming no act that does (Code #12 to Currencies, 2026-10-20 22:23 UTC).  advance, unguarded, its t local to its role and t1 given by succ, is opened by a dated person's machine whenever it can, so the run does not suspend and is stopped at the REPL's :limit (bonds/self.glp).  A request of mint_bond whose guard is not ready is dropped with the notice refused(N, p, unable), and a request of redeem_bc proposes the redeem part, the part it names, guarded by the bearer, never the swap part its class holds (vGLP 1423679, Section 5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, items 4 and 7): the bond maturing at 1000000 refused by the issuer's machine, le(d, t) failing, and the one maturing at 10 redeemed.
 cva_bonds_load=$("$REPL_RUN" <<HEREDOC
