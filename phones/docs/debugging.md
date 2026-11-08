@@ -14,9 +14,9 @@ The service is debugging infrastructure, not a grassroots platform and not GLP: 
 
 1. Where: `servers/debuglog`, a systemd unit on the VPS, behind Caddy at `https://peoplesweb.org/log`; the files under `/var/lib/glp/debuglog/`.
 
-2. What it receives: `POST /log/<phone>/<run>`, a batch of events as JSON lines, with a bearer token that the debug build carries and the VPS holds in `/etc/glp/debuglog.env`; `<phone>` is the agent's public key in hex and `<run>` the launch's identifier (below).  The service stamps each batch with its arrival time, appends it to `<phone>/<run>.jsonl` and answers 204; it never reads the events.  Every event carries the phone's own time in Unix milliseconds, so the arrival stamp shows the skew between the phones' clocks and the server's.
+2. What it receives: `POST /log/<phone>/<run>`, a batch of events as JSON lines, with the password the debug build holds and the VPS keeps in `/etc/glp/debuglog.env`; `<phone>` is the agent's public key in hex and `<run>` the launch's identifier (below).  The service stamps each batch with its arrival time, appends it to `<phone>/<run>.jsonl` and answers 204; it never reads the events.  Every event carries the phone's own time in Unix milliseconds, so the arrival stamp shows the skew between the phones' clocks and the server's.
 
-3. What it serves: `GET /log/` lists the phones and their runs with their first and last event; `GET /log/<phone>/<run>` returns the file; `GET /log/<phone>/<run>?follow` streams it as it grows.  Reading takes the same token.  A Mac session reads a run with `curl`, and `tools/follow.sh <phone> <run>` writes it under `tmp/phones/logs/` as it arrives, which is where a Cowork session reads it.
+3. What it serves: `GET /log/` lists the phones and their runs with their first and last event; `GET /log/<phone>/<run>` returns the file; `GET /log/<phone>/<run>?follow` streams it as it grows.  Reading takes the same password.  A Mac session reads a run with `curl`, and `tools/follow.sh <phone> <run>` writes it under `tmp/phones/logs/` as it arrives, which is where a Cowork session reads it.
 
 4. Retention: runs are kept thirty days and then dropped by the hourly sweep; the files are never in git.
 
@@ -24,7 +24,7 @@ The service is debugging infrastructure, not a grassroots platform and not GLP: 
 
 ## The phone side
 
-1. The debug build: a Dart define, `GLP_DEBUGLOG=<token>`, turns the reporting on at build time; a build without it has no reporter, no token and no network traffic to the service.  `tools/build.sh` (below) passes it.
+1. The debug build: a Dart define, `GLP_DEBUGLOG=<password>`, turns the reporting on at build time; a build without it has no reporter, no password and no traffic to the service.  `tools/build.sh` (below) passes it.
 
 2. The run: at each launch the app draws a run identifier, the launch time in Unix milliseconds, and reports first the build (GLP main's hash, the app's version number from the bundle), the device (its model and operating-system version) and the agent's key.
 
@@ -43,7 +43,7 @@ The service is debugging infrastructure, not a grassroots platform and not GLP: 
 
 A Claude Code session on the Mac, in `/Users/udi/Grassroots/GLP/phones`, does the device work: it builds, installs, starts the follower and runs the play with Udi.  Its tools are in `tools/`:
 
-- `build.sh <udid>`: a debug build signed for the phone, with `GLP_DEBUGLOG` from `/Users/udi/Grassroots/.debuglog-token`, as an `.ipa`; installs it with `ideviceinstaller`, the path that worked on 2026-11-08 where Xcode's and `devicectl`'s installs hung (`tmp/phones/STATE.md`).
+- `build.sh <udid>`: a debug build signed for the phone, with `GLP_DEBUGLOG` from `/Users/udi/Grassroots/.debuglog-password`, as an `.ipa`; installs it with `ideviceinstaller`, the path that worked on 2026-11-08 where Xcode's and `devicectl`'s installs hung (`tmp/phones/STATE.md`).
 - `devices.sh`: `xcrun devicectl list devices` and `devicectl device info apps` for each, so the session checks the phones itself before telling Udi anything.
 - `follow.sh <phone> <run>`: the follower, into `tmp/phones/logs/`.
 - `check.py <play> <log>...`: the checker, below.
@@ -63,7 +63,7 @@ A play's expectations are what the papers say happens, GSA's Appendix "The Opera
 ## Who does what
 
 - Code builds `servers/debuglog`, the reporter in the app and `tools/build.sh`, on Phones' tasks in `Code_inbox.md`, `To: Code, for Phones`; the reporter's events are the ones listed above, and the glue's and the runtime's callbacks are where it reads them, with no change to the agent or the layer.
-- The Server session deploys the service, the route and the token.
+- The Server session deploys the service, the route and the password.
 - Phones writes the plays and `check.py`'s expectations, runs the plays with Udi and the Mac session, keeps `STATE.md`, and reports faults.
 - Udi: the two phones, Developer Mode on both, a network without client isolation, and the Apple developer account when Apple answers; until then the free team signs one phone per build.
 
@@ -75,7 +75,7 @@ A play's expectations are what the papers say happens, GSA's Appendix "The Opera
 
 ## For Udi's approval
 
-1. The service takes a bearer token and nothing else: a debug build is not attested and the events are not secret; a leaked token costs the service junk, which the sweep drops.
+1. The debug build holds a password, and the service accepts a log only with it.  If the password leaks, a stranger can write logs to the service, and the sweep deletes them after thirty days.
 2. Thirty days' retention.
 3. The Mac session reads the logs with `curl`; no page is built for them.
 
