@@ -10,13 +10,18 @@
 /// bob by picking him, bob answers yes on his card, both are told
 /// `connected(K)`, and alice closes the place.  Each phone's reporter holds
 /// the runtime's lines, the layer's discovery and trust levels, and the
-/// notices the scripted person was shown.  The waits are on events, with no
-/// clock.
+/// notices the scripted person was shown.
+///
+/// A scripted phone keeps its agent's state across launches in a store of its
+/// own; its scripted person acts at a launch with no saved state, and takes
+/// no act at a launch that restores one ("The scripted build", item 4).  The
+/// waits are on events, with no clock.
 library;
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/debuglog/app_reporting.dart';
@@ -25,11 +30,55 @@ import 'package:glp_multiagent/manifests/superapp_ui.dart';
 import 'package:glp_multiagent/scripted_person.dart';
 import 'package:glp_multiagent/superapp_host.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show generateKeyPair;
 
 import 'helpers/air.dart';
 import 'programs_dir.dart';
+
+/// The store of a launch that is terminated as a phone's app is: once
+/// [terminate] is called it takes no save, and [terminate] completes once
+/// every save begun before it is written, so that the next launch reads what
+/// this one saved and nothing writes the file after.  A save begun after
+/// termination never completes, as in a process that has ended: the
+/// terminated agent takes no further cycle.  (A save that failed would be
+/// taken again at once, the runtime going back to the state saved before it,
+/// and would loop.)
+class _Launched implements AgentStateStore {
+  final FileAgentStateStore store;
+  final Set<Future<void>> _writing = {};
+  bool _terminated = false;
+
+  _Launched(String path) : store = FileAgentStateStore(path);
+
+  Future<void> _write(Future<void> Function() save) {
+    if (_terminated) return Completer<void>().future;
+    final f = save();
+    _writing.add(f);
+    return f.whenComplete(() => _writing.remove(f));
+  }
+
+  Future<void> terminate() async {
+    _terminated = true;
+    await Future.wait([for (final f in _writing) f.catchError((Object _) {})]);
+  }
+
+  @override
+  Future<Uint8List?> load() => store.load();
+  @override
+  Future<void> save(Uint8List state) => _write(() => store.save(state));
+  @override
+  Future<AgentKeyPair?> loadKeyPair() => store.loadKeyPair();
+  @override
+  Future<void> saveKeyPair(AgentKeyPair keyPair) =>
+      _write(() => store.saveKeyPair(keyPair));
+  @override
+  Future<Uint8List?> loadProgram() => store.loadProgram();
+  @override
+  Future<void> saveProgram(Uint8List program) =>
+      _write(() => store.saveProgram(program));
+}
 
 /// One phone of the scripted build: its host, its layer, its reporter, and
 /// the notices its scripted person was shown.
@@ -40,6 +89,9 @@ class _Phone {
   final DebugReporter reporter;
   final List<String> notices = [];
   final List<String> errors = [];
+
+  /// The agent's transcript.
+  final List<String> lines = [];
   final List<(bool Function(), Completer<void>)> _waits = [];
 
   _Phone(this.name, this.host, this.net, this.reporter) {
@@ -51,6 +103,7 @@ class _Phone {
       _changed();
     };
     host.onOutput = (line) {
+      lines.add(line);
       reporter.runtimeOutput(line);
       if (line.startsWith('[ERROR]')) {
         errors.add(line);
@@ -187,5 +240,70 @@ void main() {
           p.net.declared.length,
           reason: '${p.name}: every trust level as set');
     }
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('a scripted phone keeps its agent\'s state: its scripted person acts '
+      'at the launch with no saved state and takes no act at the launch '
+      'that restores it', () async {
+    final programs = programsDir();
+    final tmp = Directory.systemTemp.createTempSync('glp_scripted_state_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final air = Air();
+
+    Future<(_Phone, _Launched)> launch(
+        String name, String mode, AirKeyPair kp) async {
+      final net = AirNetwork(kp, air);
+      final store =
+          _Launched('${tmp.path}/$name/agents/person-$mode.state');
+      final reporter = await DebugReporter.open(
+        dir: Directory('${tmp.path}/$name-log'),
+        password: 'p',
+        base: 'http://127.0.0.1:9/log',
+        period: const Duration(hours: 1),
+      );
+      addTearDown(reporter.close);
+      final host = SuperAppHost(
+        agentId: name,
+        program: '$programs/social/graph/core',
+        rootSelfGlpPath: '$programs/self.glp',
+        network: ReportingGlpNetwork(net, reporter),
+        keyPair: kp,
+        manifest: superappManifest,
+        firstAct: ScriptedPerson(mode).firstAct,
+        stateStore: store,
+      );
+      addTearDown(host.dispose);
+      return (_Phone(name, host, net, reporter), store);
+    }
+
+    final aliceKey = generateKeyPair();
+    final (alice, aliceStore) =
+        await launch('alice', 'encounter_befriend', aliceKey);
+    final (bob, _) = await launch('bob', 'encounter', generateKeyPair());
+    await alice.host.start();
+    await bob.host.start();
+    expect(alice.host.agent.firstStart, isTrue);
+    expect(alice.lines.where((l) => l.startsWith('> sg_init(')), hasLength(1),
+        reason: 'the scripted person\'s first act, at the launch with no '
+            'saved state');
+    await alice.until(() => alice.shown('connected', bob.key));
+    await alice.until(() => alice.net.declared.length >= 6);
+    expect(alice.errors, isEmpty);
+
+    // Alice's app is terminated: her phone leaves the air, and her store
+    // takes no save after what is being written.
+    alice.net.leave();
+    await aliceStore.terminate();
+    alice.host.dispose();
+
+    // The next launch, from the same store and under the same key.
+    final (again, _) = await launch('alice', 'encounter_befriend', aliceKey);
+    await again.host.start();
+    expect(again.host.agent.firstStart, isFalse);
+    expect(again.lines, contains('[INIT] Restored the agent\'s saved state'));
+    expect(again.lines.where((l) => l.startsWith('> ')), isEmpty,
+        reason: 'the scripted person takes no act at a launch that restores '
+            'the state');
+    expect(again.errors, isEmpty);
   }, timeout: const Timeout(Duration(minutes: 3)));
 }

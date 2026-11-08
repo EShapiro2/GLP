@@ -10,7 +10,9 @@ The scripted build is `glp_multiagent/lib/main_scripted.dart` and `lib/scripted_
 
 The reporter: branch `Cloud-reporter`, off main 05462f3.  The reporter is `glp_multiagent/lib/debuglog/`, wired in `glp_multiagent/lib/main_superapp.dart`; its tests are `glp_multiagent/test/debuglog_reporter_test.dart` and `debuglog_screen_test.dart`.  The other files the branch touches are `superapp_host.dart` (two hooks), `phone_network.dart` (the store's middleware), `pubspec.yaml` and `tool/sync_glp_assets.sh` (the build's commit in the assets).
 
-Code #26's third task (19:40 UTC), on branch `Cloud-reporter2`: the layer's diagnostics include Flutter's `debugPrint`, which `networking/lib` prints by, beside the core's (`reportLayerDiagnostics` in `lib/debuglog/app_reporting.dart`).  The branch is on the reporter's tip d08bd52, since Code's merge of it, main 9f67e841, was not on GitHub when the task came.
+Code #26's third task (19:40 UTC), on branch `Cloud-reporter2`: the layer's diagnostics include Flutter's `debugPrint`, which `networking/lib` prints by, beside the core's (`reportLayerDiagnostics` in `lib/debuglog/app_reporting.dart`).  The branch began on the reporter's tip d08bd52, since Code's merge of it, main 9f67e841, was not on GitHub when the task came; main is merged into it since.
+
+Code #26's fourth task (20:30 UTC), on `Cloud-reporter2` after main was merged into it: each change of the app's lifecycle is reported (`reportLifecycle`), and `scripted_build_test.dart` holds that a scripted phone's person acts at a launch with no saved state and takes none at a launch that restores it.
 
 ## Environment
 

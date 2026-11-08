@@ -101,6 +101,17 @@ void Function() reportLayerDiagnostics(DebugReporter reporter) {
   };
 }
 
+/// Each change of the app's lifecycle, to the foreground, the background and
+/// back, reported by the state it changes to (`resumed`, `inactive`,
+/// `hidden`, `paused`, `detached`), and what is buffered posted at once
+/// (debugging.md, "The phone side", item 3, `app`).  Dispose of the listener
+/// with the app.
+AppLifecycleListener reportLifecycle(DebugReporter reporter) =>
+    AppLifecycleListener(onStateChange: (AppLifecycleState state) {
+      reporter.event(Source.app, 'lifecycle', {'state': state.name});
+      reporter.flush();
+    });
+
 /// The store's middleware that reports every action the layer's store
 /// reduces, by its type and, where the action prints more than its type, its
 /// print, and hands it on unchanged.

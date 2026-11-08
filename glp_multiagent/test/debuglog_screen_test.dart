@@ -3,8 +3,8 @@
 /// item 3, `screen`): each construct by its identifier with the texts it
 /// draws, in order, a field with what is typed into it, as the screenshot
 /// harness reads a construct's texts; reported when it changes, and not when
-/// it does not; and the person's act on a construct, with the texts that
-/// construct showed.
+/// it does not; the person's act on a construct, with the texts that
+/// construct showed; and each change of the app's lifecycle (item 3, `app`).
 library;
 
 import 'dart:convert';
@@ -88,6 +88,41 @@ void main() {
     expect(act['act'], 'input(3, [1], yes)');
     expect(act['texts'], ['Befriend', 'Bob']);
 
+    await tester.runAsync(reporter.close);
+  });
+
+  testWidgets('each change of the app\'s lifecycle, to the background and '
+      'back, is reported', (tester) async {
+    final tmp = Directory.systemTemp.createTempSync('glp_debuglog_life_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final reporter = (await tester.runAsync(() => DebugReporter.open(
+          dir: Directory('${tmp.path}/debuglog'),
+          password: 'p',
+          base: 'http://127.0.0.1:9/log',
+          period: const Duration(hours: 1),
+        )))!;
+    final listener = reportLifecycle(reporter);
+    addTearDown(listener.dispose);
+    await tester.pumpWidget(const SizedBox());
+
+    for (final s in const [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(s);
+    }
+    final lines = File('${tmp.path}/debuglog/${reporter.run}.jsonl')
+        .readAsLinesSync()
+        .map((l) => jsonDecode(l) as Map<String, dynamic>)
+        .where((e) => e['kind'] == 'lifecycle')
+        .toList();
+    expect(lines.every((e) => e['source'] == 'app'), isTrue);
+    expect([for (final e in lines) e['state']],
+        ['inactive', 'hidden', 'paused', 'hidden', 'inactive', 'resumed']);
     await tester.runAsync(reporter.close);
   });
 }
