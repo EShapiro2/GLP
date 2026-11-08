@@ -9,7 +9,7 @@ GDS: Grassroots Directory Service
 GDS extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, arXiv).
 Alice, Bob and Carol are persons, Dora a ward.  A directory is a ward operated by a machine with a page every person can read.  A listing is an email address of Alice's that the directory verified, with a name of her choosing if she gives one, and a stock of invitation links of hers.
 1. ■ Directory.  Carol may create a directory, Dora, as her ward.
-2. ■ Listing.  Alice may list herself with Dora, listed or unlisted, giving her invitation links, and add to them; she may unlist herself.
+2. ■ Listing.  Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, listed or unlisted, giving her invitation links, and add to them; she may unlist herself.
 3. ■ Lookup.  Anyone may look a listed person up on Dora's page, and an unlisted person up by their email address and name.
 4. ■ Contact.  Dora gives whoever looked Alice up one of Alice's invitation links, once each.
 Interface pragmas
