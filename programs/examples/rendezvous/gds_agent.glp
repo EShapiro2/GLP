@@ -204,16 +204,17 @@ exported procedure admit_list(Integer?, Key?, Signature?, Stream(DirAsk), DirLis
 %% A signed listing(A, Email, Name, Visibility) naming A, Name a string or
 %% none, Visibility listed or unlisted: the request waits on the host's mail,
 %% and the host is given the listing.  One clause for each Name and
-%% Visibility.
+%% Visibility.  none is itself a string constant, so the clauses of a name
+%% exclude it.
 admit_list(N, A, signed(K, _, listing(A1, Email, Name, listed)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
            [listing(N?, A?, Email?, name(Name?), listed) | Reports1?], Reports1) :-
-    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?), Name? =?\= none |
     N1 := N? + 1.
 admit_list(N, A, signed(K, _, listing(A1, Email, Name, unlisted)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
            [listing(N?, A?, Email?, name(Name?), unlisted) | Reports1?], Reports1) :-
-    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?), Name? =?\= none |
     N1 := N? + 1.
 admit_list(N, A, signed(K, _, listing(A1, Email, none, listed)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],

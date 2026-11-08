@@ -315,6 +315,21 @@ void main() {
     expect(links.single.text, isNot(forged));
   }, timeout: Timeout.none);
 
+  test('a person listed with no name is shown on the page by email address', () async {
+    if (sodiumUnavailable != null) return markTestSkipped(sodiumUnavailable!);
+    final tmp = Directory.systemTemp.createTempSync('gds_store_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final d = await directory(0x72, File('${tmp.path}/d.json'));
+    final a = await app(0x73, d);
+    await a.act('list_unnamed', [d.agent.key.hex, 'nn@example.org', 'listed']);
+    expect(_arg(await a.next('replied')), 'verify');
+    expect(await get(mailedLink(d)), contains('is verified and listed'));
+    final l = d.store.byKey(a.key.hex)!;
+    expect(l.name, isNull, reason: 'none is no name');
+    expect(l.shown, 'nn@example.org');
+    expect(await get('${d.base}/directory'), contains('<button>nn@example.org</button>'));
+  }, timeout: Timeout.none);
+
   test('an unlisted person is not on the page and is found by email address and name', () async {
     if (sodiumUnavailable != null) return markTestSkipped(sodiumUnavailable!);
     final tmp = Directory.systemTemp.createTempSync('gds_store_');
