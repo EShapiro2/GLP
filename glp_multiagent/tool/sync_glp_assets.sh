@@ -101,4 +101,14 @@ for a in pingapp currency denominated dated gsg gsn; do
     || { echo "sync_glp_assets: $a.glpw was not written" >&2; exit 1; }
 done
 
-echo "Synced GLP assets from $SRC -> $OUT ($n files)"
+# The build's name, which a debuggable build reports at each launch
+# (lib/debuglog/device.dart; GLP/phones/docs/debugging.md, "The phone side",
+# item 2): GLP's commit the bundle was built from, with "-dirty" where the
+# working tree differs from it.
+commit=$(git rev-parse HEAD 2>/dev/null || echo unknown)
+if [ "$commit" != unknown ] && ! git diff --quiet HEAD -- 2>/dev/null; then
+  commit="$commit-dirty"
+fi
+printf '%s\n' "$commit" > "$OUT/build.txt"
+
+echo "Synced GLP assets from $SRC -> $OUT ($n files, build $commit)"

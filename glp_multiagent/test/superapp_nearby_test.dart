@@ -36,7 +36,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/superapp_ui.dart';
@@ -44,127 +43,17 @@ import 'package:glp_multiagent/superapp_host.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
-import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show generateKeyPair;
 
+import 'helpers/air.dart';
 import 'programs_dir.dart';
-
-typedef _KeyPair = ({PubKey pub, Uint8List priv});
-
-/// Carries payloads between the [_PhoneNetwork]s joined to it, by key, each
-/// delivery in a later turn of the event loop, as a layer delivers; and
-/// tells two phones of each other once both have opened the trust of a
-/// proximity underlay.
-class _Air {
-  final Map<String, _PhoneNetwork> _at = {};
-  int _next = 0;
-
-  /// The pairs told of each other, per underlay: `<underlay> <hex> <hex>`.
-  final Set<String> _met = {};
-
-  void carry(PubKey from, PubKey to, Uint8List payload) {
-    final id = 'm${_next++}';
-    Timer.run(() =>
-        _at[to.hex]?.onMessageReceived?.call(from, payload, id, Underlay.pan));
-  }
-
-  /// [n]'s trust on [u] changed: every pair now open at both is told of
-  /// each other, once.
-  void trustChanged(_PhoneNetwork n, ProximityUnderlay u) {
-    for (final o in _at.values) {
-      if (identical(o, n)) continue;
-      if (n.trust[u] != TrustLevel.open || o.trust[u] != TrustLevel.open) {
-        continue;
-      }
-      final pair = ([n.keyPair.pub.hex, o.keyPair.pub.hex]..sort()).join(' ');
-      if (!_met.add('${u.name} $pair')) continue;
-      Timer.run(() {
-        n.onPeerDiscovered?.call(o.keyPair.pub, u);
-        o.onPeerDiscovered?.call(n.keyPair.pub, u);
-      });
-    }
-  }
-}
-
-/// A [GlpNetwork] in the [_Air], instantiated with its key pair, both
-/// proximity underlays Closed until the program declares them open.
-class _PhoneNetwork extends GlpNetwork {
-  final _KeyPair keyPair;
-  final _Air air;
-  final Map<ProximityUnderlay, TrustLevel> trust = {
-    for (final u in ProximityUnderlay.values) u: TrustLevel.closed,
-  };
-
-  /// Each trust declaration, in order: `<underlay> <level>`.
-  final List<String> declared = [];
-
-  /// The known peers the program declared, `declare(peer(K))`, by key hex.
-  final Set<String> known = {};
-
-  _PhoneNetwork(this.keyPair, this.air) {
-    air._at[keyPair.pub.hex] = this;
-  }
-
-  @override
-  PubKey getIdentity() => keyPair.pub;
-
-  @override
-  Future<void> send(PubKey pk, Uint8List payload) {
-    air.carry(keyPair.pub, pk, payload);
-    return Future.value();
-  }
-
-  @override
-  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {
-    declared.add('${underlay.name} ${level.name}');
-    trust[underlay] = level;
-    air.trustChanged(this, underlay);
-  }
-
-  @override
-  void acknowledge(String messageId) {}
-  @override
-  void putKnownPeer(PubKey pk) => known.add(pk.hex);
-  @override
-  void removeKnownPeer(PubKey pk) => known.remove(pk.hex);
-  @override
-  bool isPeerReachable(PubKey pk) => air._at.containsKey(pk.hex);
-  @override
-  List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.pan];
-  @override
-  Uint8List sign(Uint8List message) => throw UnimplementedError();
-  @override
-  bool verify(PubKey signer, Uint8List message, Uint8List signature) =>
-      throw UnimplementedError();
-  @override
-  List<DiscoveredPeer> getPeers() => const [];
-  @override
-  String? getPublicAddress() => null;
-  @override
-  String? networkIdentity() => null;
-  @override
-  void putPeerAddress(PubKey pk, String address) {}
-  @override
-  String? observedPeerAddress(PubKey pk) => null;
-  @override
-  void punchUdp(String address) {}
-  @override
-  void putRendezvousServer(PubKey pk, String address) {}
-  @override
-  void removeRendezvousServer(PubKey pk) {}
-  @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
-      Future.value(false);
-  @override
-  Future<void> removePlace(String place) => Future.value();
-}
 
 /// One phone: the app's host, its network, and what its person sees.
 class _Phone {
   final String name;
   final SuperAppHost host;
-  final _PhoneNetwork net;
+  final AirNetwork net;
   final List<String> errors = [];
   final List<(bool Function(), Completer<void>)> _waits = [];
 
@@ -304,12 +193,12 @@ GList? _questionIn(GTerm v) {
 
 void main() {
   final programs = programsDir();
-  final air = _Air();
+  final air = Air();
   final phones = <_Phone>[];
 
   Future<_Phone> phone(String name) async {
     final kp = generateKeyPair();
-    final net = _PhoneNetwork(kp, air);
+    final net = AirNetwork(kp, air);
     final host = SuperAppHost(
       agentId: name,
       program: '$programs/social/graph/core',
