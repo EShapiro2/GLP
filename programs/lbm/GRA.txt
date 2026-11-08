@@ -7,7 +7,7 @@
 % Schemas: GRA.glp beside this file, in the clause syntax of GSC's paper, Section 3.2, GDO's eight and GRA's eleven, with the environment predicates now, location, rider and driver, which the platform keeps current and no schema adds or deletes (GSC, Appendix Values in Speech-Act Schemas).  Call is three schemas: call_open, Alice's call; call, its delivery to a person Alice points to; forward_call, its delivery by them to a person they point to.  Bid is two, bid and bid_fwd.  Award is two, award and close.  calling and busy, of arity zero, say that a person has an open call and that they have a ride.  The terms are a value, and what GRA leaves to the terms, the bidder, the fare, the deposit and the parts released, are free values of the schemas, which GRA-SS restricts.
 GRA: Grassroots Ride Auction
 GRA extends GDO-LB.
-Alice is a rider, Bob a driver and Carol a person.  A person can be either a rider or a driver but not both.  A person has a location.
+Alice is a rider, Bob a driver and Carol a person.  A person can be either a rider or a driver but not both.
 1. ■ Call.  Alice, who has no open call and no ride, may call for bids on a ride from the persons Alice points to and the persons they point to, stating the pickup point, the destination, the bidding period and the terms.
 2. ■ Bid.  Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
 3. ■ Award.  When the bidding period ends, Alice awards the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set, and Alice's fare and the deposit the terms set for Bob are then locked; if the terms select no bidder, the call is closed.
