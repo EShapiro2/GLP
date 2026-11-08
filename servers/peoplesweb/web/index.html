@@ -374,8 +374,12 @@ function drawGlobe(){
     n.onclick = () => { if (!DRAGGED) go(c.id); };
     n.onmouseenter = e => { clearTimeout(hideT);
       const P = c.paper || {};
+      // arXiv, followed by Updated where the paper's source is ahead of its
+      // latest arXiv version (Udi, 2026-11-08); else the PDF, with the date
+      // of its source's last change.
       const link = P.arxiv ? `<a href="https://arxiv.org/abs/${P.arxiv}" target="_blank" rel="noopener">arXiv:${P.arxiv}</a>`
-        : P.pdf ? `<a href="${P.pdf}" target="_blank" rel="noopener">PDF</a>${P.state ? `, ${esc(P.state)}` : ''}`
+          + (P.updated ? ` · <a href="${P.updated}" target="_blank" rel="noopener">Updated</a>${P.updated_on ? ` (${esc(P.updated_on)})` : ''}` : '')
+        : P.pdf ? `<a href="${P.pdf}" target="_blank" rel="noopener">PDF</a>${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}${P.state ? `, ${esc(P.state)}` : ''}`
         : esc(P.state || '');
       const cite = P.title ? `<div class="cite"><i>${esc(P.title)}</i>${P.authors ? `. ${esc(P.authors)}` : ''}.${link ? ` ${link}` : ''}</div>`
         : link ? `<div class="cite">${link}</div>` : '';

@@ -1,0 +1,7 @@
+name: debuglog_server
+description: The debugging log service of the Grassroots App on phones (GLP/phones/docs/debugging.md, "The log service") - receives the debug builds' events, stamps and keeps them per phone and run, and serves them.
+publish_to: none
+environment:
+  sdk: ^3.9.4
+dev_dependencies:
+  test: ^1.25.0
