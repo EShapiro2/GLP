@@ -6,7 +6,10 @@ CompilerKey ::= Key.
 Friend ::= Key.
 AppName ::= String.
 Artefact ::= String.
-Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; open_place ; close_place.
+Link ::= String.
+Email ::= String.
+Name ::= String.
+Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; open_place ; close_place ; invite_link ; open_link(Link) ; list(Email, Name) ; list_unlisted(Email, Name) ; unlist.
 FriendRequest ::= from(Friend, Decision?).
 Introducer ::= Key.
 Other ::= Key.
@@ -76,6 +79,11 @@ serve([install(App, Name) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), grou
 serve([invite(App, Friend) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Friend?) | invite_act(App?, Friend?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 serve([open_place | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(open_place, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 serve([close_place | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(close_place, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([invite_link | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(invite_link, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([open_link(L) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(L?) | place_act(open_link(L?), Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([list(E, N) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(E?), ground(N?) | place_act(list(E?, N?), Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([list_unlisted(E, N) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(E?), ground(N?) | place_act(list_unlisted(E?, N?), Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([unlist | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(unlist, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 
 procedure trust_act(String?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 trust_act(Key, Id, Cd, Reqs, Outs, [msg(person, Id?, trust(Key?)) | Cmds?], D?) :- ground(Key?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
@@ -176,7 +184,7 @@ form_string(_, refused) :- otherwise | true.
 Drawn ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; Befriend ; Request.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
-dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(thread(form(msg, [field('Constant', shown), field('Constant', shown), field('NoticeContent', menu([form(befriend, [field('Key', shown)]), form(befriend_intro, [field('Key', shown), field('Key', shown)]), form(connected, [field('Key', shown)]), shown, form(rejected, [field('Constant', shown)]), form(unfriended, [field('Constant', shown)]), form(received, [field('Key', shown), field('Constant', shown)]), form(not_a_friend, [field('Key', shown)]), form(nearby, [field('List(Key)', thread)])]))])), MOut?, G0s?, ODs), constructs(Ss?).
+dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(thread(form(msg, [field('Constant', shown), field('Constant', shown), field('NoticeContent', menu([form(befriend, [field('Key', shown)]), form(befriend_intro, [field('Key', shown), field('Key', shown)]), form(invitation, [field('SignedTerm', shown)]), form(verify, [field('String', shown)]), form(connected, [field('Key', shown)]), shown, form(rejected, [field('Constant', shown)]), form(unfriended, [field('Constant', shown)]), form(received, [field('Key', shown), field('Constant', shown)]), form(not_a_friend, [field('Key', shown)]), form(nearby, [field('List(Key)', thread)])]))])), MOut?, G0s?, ODs), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question, Drawn))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
@@ -186,7 +194,7 @@ procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, friendRequest_w(X), Gs, Ds?) :- present_friendRequest([], X?, Gs1?, _, Vs, Done), run_friendRequest_w(Id?, form(from, [field('Friend', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, introRequest_w(X), Gs, Ds?) :- present_introRequest([], X?, Gs1?, _, Vs, Done), run_introRequest_w(Id?, form(from, [field('Introducer', shown), field('Other', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, nearbyPerson_w(X), Gs, Ds?) :- present_nearbyPerson([], X?, Gs1?, _, Vs, Done), run_nearbyPerson_w(Id?, form(nearby, [field('Friend', shown), field('Befriend', button(befriend))]), Vs?, Done?, Gs?, Gs1, Ds).
-construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), button(open_place), button(close_place)])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), button(open_place), button(close_place), button(invite_link), form(open_link, [field('Link', text)]), form(list, [field('Email', text), field('Name', text)]), form(list_unlisted, [field('Email', text), field('Name', text)]), button(unlist)])), [input([])], Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).
@@ -319,12 +327,31 @@ join_request_invite_2(formed(X1), formed(X2), formed(invite(X1?, X2?))).
 join_request_invite_2(refused, _, refused).
 join_request_invite_2(_, refused, refused).
 
+procedure join_request_open_link_1(Formed(Link)?, Formed(Request)).
+join_request_open_link_1(formed(X1), formed(open_link(X1?))).
+join_request_open_link_1(refused, refused).
+
+procedure join_request_list_2(Formed(Email)?, Formed(Name)?, Formed(Request)).
+join_request_list_2(formed(X1), formed(X2), formed(list(X1?, X2?))).
+join_request_list_2(refused, _, refused).
+join_request_list_2(_, refused, refused).
+
+procedure join_request_list_unlisted_2(Formed(Email)?, Formed(Name)?, Formed(Request)).
+join_request_list_unlisted_2(formed(X1), formed(X2), formed(list_unlisted(X1?, X2?))).
+join_request_list_unlisted_2(refused, _, refused).
+join_request_list_unlisted_2(_, refused, refused).
+
 procedure form_request(Drawn?, Formed(Request)).
 form_request(trust(R1), F?) :- form_string(R1?, F1), join_request_trust_1(F1?, F).
 form_request(install(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_install_2(F1?, F2?, F).
 form_request(invite(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_invite_2(F1?, F2?, F).
 form_request(open_place, formed(open_place)).
 form_request(close_place, formed(close_place)).
+form_request(invite_link, formed(invite_link)).
+form_request(open_link(R1), F?) :- form_string(R1?, F1), join_request_open_link_1(F1?, F).
+form_request(list(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_list_2(F1?, F2?, F).
+form_request(list_unlisted(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_list_unlisted_2(F1?, F2?, F).
+form_request(unlist, formed(unlist)).
 form_request(_, refused) :- otherwise | true.
 
 procedure answer_stream_request(Path?, Stream(Request), Inputs(Drawn)?, Inputs(Drawn), Done).

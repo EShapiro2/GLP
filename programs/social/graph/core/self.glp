@@ -28,7 +28,7 @@
 %% structurally (TGLP, "Cross-module type checking").  HomeDrawn is home.glp's
 %% Drawn, the type its person channel carries.  Ask(Q) is ../self.glp's, as
 %% home.glp's own, and the person channel's types the root's.
-HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; open_place ; close_place.
+HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; open_place ; close_place ; invite_link ; open_link(String) ; list(String, String) ; list_unlisted(String, String) ; unlist.
 HomeFriendRequest ::= from(Key, Decision?).
 HomeIntroRequest  ::= from(Key, Key, Decision?).
 HomeNearbyPerson  ::= nearby(Key, HomeBefriend?).
@@ -36,15 +36,37 @@ HomeBefriend      ::= befriend.
 HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; nearbyPerson_w(HomeNearbyPerson) ; stream_request_r(Stream(HomeRequest)?).
 HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeBefriend ; HomeRequest.
 
+%% A rendezvous server the person's first act names, by its key and its
+%% address (GSA paper, Appendix "The Operating System", "Boot"), and the
+%% person's acts on invitation links, which the operating system takes
+%% (links.glp): Invite by link, and the opening of a link the person was
+%% sent, its text.
+RvServer ::= rendezvous(Key, String).
+LinkAct  ::= invite_link ; open_link(SignedTerm)
+           ; list(String, String, Visibility) ; unlist ; more(Integer).
+
+%% A directory the operating system lists its person with, by its key and its
+%% address, or none (GNA Section 7; core/links.glp); a listing's visibility
+%% and the name it carries, a string or none (GNA Section 7: "Name a string
+%% or none and Visibility listed or unlisted").
+Directory  ::= directory(Key, String) ; none.
+Visibility ::= listed ; unlisted.
+DirName    ::= String ; none.
+
 %% The super-app (GSA paper, Section 4.1 and Appendix "The Operating System"),
 %% the entry the person's first act names (Appendix, "Boot": "the person's
-%% first act names the entry, with the person's key and the keys of the
-%% persons the person knows, none at a first start"), superapp(Key, Known)
-%% below: with the person's public key, the keys of the persons the person
-%% knows, the stream of the person's acts and the stream from the network,
-%% and nothing else.  It runs agent/4 with the
-%% operating system's Nearby around it (place.glp, os_phone/6: the place, GPE,
-%% and the agents nearby the layer reports), with the
+%% first act names the entry, with the person's key, the keys of the persons
+%% the person knows, none at a first start, and the rendezvous servers the
+%% app is configured with, each by key and address"), superapp(Key, Known,
+%% Servers) below: with the person's public key, the keys of the persons the
+%% person knows, the rendezvous servers, each rendezvous(Key, Address), the
+%% stream of the person's acts and the stream from the network, and nothing
+%% else.  It runs agent/4 with the
+%% operating system's Nearby and its invitation links around it (place.glp,
+%% os_phone/8: the place, GPE, and the agents nearby the layer reports;
+%% links.glp, Invite by link and the opening of a link, and List, List
+%% unlisted and Unlist with a directory, none here: GSA's Appendix "The
+%% Operating System", "Boot", names no directory in the first act), with the
 %% super-app's own person interface (home/3) and its dispatcher between the
 %% person and the agent, and sends what the agent tells the person to the
 %% person and its messages to the network.  The person's acts are the grants of the person
@@ -59,11 +81,11 @@ HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_)
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-imported procedure place#os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
-exported procedure superapp(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
-superapp(Id, Known, Grants, NetIn) :-
-    ground(Id?), ground(Known?) |
-    place # os_phone(Id?, Known?, In?, NetIn?, Outs, NetOut),
+imported procedure place#os_phone(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
+exported procedure superapp(Key?, List(Key)?, List(RvServer)?, PersonIn(HomeDrawn)?, NetInStream?).
+superapp(Id, Known, Servers, Grants, NetIn) :-
+    ground(Id?), ground(Known?), ground(Servers?) |
+    place # os_phone(Id?, Known?, Servers?, none, In?, NetIn?, Outs, NetOut),
     calendar(Dates),
     date_msgs(Id?, Dates?, DateMsgs),
     merge(Cmds?, DateMsgs?, In),
@@ -73,6 +95,42 @@ superapp(Id, Known, Grants, NetIn) :-
     home # dispatch(Asks?, ch(Grants?, Draws), MCh),
     show_notices(MCh?, Shown?),
     send_to_user(Draws?).
+
+%% link_phone(Id, Known, Servers, Dir, Grants, NetIn): the operating system on
+%% the layer (place.glp, os_phone/8), with the rendezvous servers Servers and
+%% the directory Dir, directory(Key, Address) or none, and a
+%% scripted person on home (picking_home/6, picking none): yes on each card
+%% of a request to connect or an introduction, and, as the person's acts,
+%% the requests Invite by link, the opening of a link, List, List unlisted
+%% and Unlist as they come on the person's grants, input(_, _, Request);
+%% every notice goes to the person, the link made among them,
+%% invitation(Link).  It is the play of GRV:2 and GRV:3 over the WAN
+%% (networking/glue/test/rendezvous_server_test.dart): one phone invites by
+%% link, the person reading the link off the notice, and another opens it.
+procedure link_phone(Key?, List(Key)?, List(RvServer)?, Directory?, Grants?, NetInStream?).
+link_phone(Id, Known, Servers, Dir, Grants, NetIn) :-
+    ground(Id?), ground(Known?), ground(Servers?), ground(Dir?) |
+    place # os_phone(Id?, Known?, Servers?, Dir?, In?, NetIn?, Out, NetOut),
+    send_to_net(NetOut?),
+    picking_home(Id?, none, Out?, Notices, Script?, In),
+    send_to_user(Notices?),
+    link_acts(Id?, Grants?, Script).
+
+%% link_acts(Id, Grants, Acts): the person's requests on invitation links,
+%% each the act it puts on the person's stream; any other grant is not read.
+procedure link_acts(Key?, Grants?, UserInStream).
+link_acts(Id, [input(_, _, invite_link) | Gs], [msg(person, Id?, invite_link) | As?]) :-
+    ground(Id?) | link_acts(Id?, Gs?, As).
+link_acts(Id, [input(_, _, open_link(L)) | Gs], [msg(person, Id?, open_link(L?)) | As?]) :-
+    ground(Id?), ground(L?) | link_acts(Id?, Gs?, As).
+link_acts(Id, [input(_, _, list(E, N)) | Gs], [msg(person, Id?, list(E?, N?)) | As?]) :-
+    ground(Id?), ground(E?), ground(N?) | link_acts(Id?, Gs?, As).
+link_acts(Id, [input(_, _, list_unlisted(E, N)) | Gs], [msg(person, Id?, list_unlisted(E?, N?)) | As?]) :-
+    ground(Id?), ground(E?), ground(N?) | link_acts(Id?, Gs?, As).
+link_acts(Id, [input(_, _, unlist) | Gs], [msg(person, Id?, unlist) | As?]) :-
+    ground(Id?) | link_acts(Id?, Gs?, As).
+link_acts(Id, [_ | Gs], As?) :- otherwise | link_acts(Id?, Gs?, As).
+link_acts(_, [], []).
 
 %% What the agent tells the person, split: each message whole to the person
 %% interface, and its notice to the person.  A message is never copied whole:
@@ -188,6 +246,8 @@ answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 Notice ::= msg(Constant, Constant, NoticeContent).
 NoticeContent ::= befriend(Key)
                 ; befriend_intro(Key, Key)
+                ; invitation(SignedTerm)
+                ; verify(String)
                 ; connected(Key)
                 ; rejected
                 ; rejected(Constant)
@@ -228,6 +288,10 @@ notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, no
     ground(A?), ground(P?), ground(K?) | true.
 notice(msg(A, P, nearby(Ks)), msg(A?, P?, nearby(Ks?)), msg(A?, P?, nearby(Ks?))) :-
     ground(A?), ground(P?), ground(Ks?) | true.
+notice(msg(A, P, invitation(L)), msg(A?, P?, invitation(L?)), msg(A?, P?, invitation(L?))) :-
+    ground(A?), ground(P?), ground(L?) | true.
+notice(msg(A, P, verify(E)), msg(A?, P?, verify(E?)), msg(A?, P?, verify(E?))) :-
+    ground(A?), ground(P?), ground(E?) | true.
 
 %% The person's end of a mini-app's person channel that no screen shows ---
 %% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play
@@ -314,6 +378,54 @@ exported procedure play_not_a_friend(Key?, Key?, Stream(AgentContent), Stream(Ag
 play_not_a_friend(P, Q, A?, B?) :- superapp_plays # play_not_a_friend(P?, Q?, A, B).
 
 
+%% The plays of the operating system's invitation links (links.glp) under
+%% the plain REPL, one key the inviter and the recipient both, and no layer
+%% bound, the seam doing nothing (IGLP, "One interface"): play_links/6 runs
+%% the links process on the person's acts Acts with the servers Ss and the
+%% directory D;
+%% play_link_open/2 makes a link by Invite by link and opens it, the
+%% redemption sent; play_link_expired/1 opens a link whose expiry has passed.
+imported procedure links#links(Key?, List(RvServer)?, Directory?, Integer?, Stream(LinkAct)?, AgentToUserStream, NetOutStream, UserInStream).
+exported procedure play_links(List(RvServer)?, Directory?, Stream(LinkAct)?, AgentToUserStream, NetOutStream, UserInStream).
+play_links(Ss, D, Acts, Out?, Net?, Cmds?) :-
+    self_key(K),
+    links # links(K?, Ss?, D?, 0, Acts?, Out, Net, Cmds).
+
+exported procedure play_link_open(AgentToUserStream, NetOutStream).
+play_link_open(Out?, Net?) :-
+    self_key(K),
+    links # links(K?, [rendezvous(rv, rv_addr)], none, 0, [invite_link], O1, _, _),
+    link_told(O1?, L),
+    open_made(L?, Out, Net).
+
+exported procedure play_link_expired(AgentToUserStream).
+play_link_expired(Out?) :-
+    self_key(K),
+    now(T),
+    E := T? - 1,
+    expired_link(K?, E?, L),
+    open_made(L?, Out, _).
+
+%% The link the person is told, invitation(L); where the person is told none,
+%% the empty text, which signature/2 reports unsigned.
+procedure link_told(AgentToUserStream?, SignedTerm).
+link_told([msg(_, _, invitation(L)) | _], L?).
+link_told([_ | Ms], L?) :- otherwise | link_told(Ms?, L).
+link_told([], "").
+
+%% The link L opened by the person of this REPL's key, no server named.
+procedure open_made(SignedTerm?, AgentToUserStream, NetOutStream).
+open_made(L, Out?, Net?) :-
+    ground(L?) |
+    self_key(K),
+    links # links(K?, [], none, 0, [open_link(L?)], Out, Net, _).
+
+%% A link of serial 1 to the server rv, signed by K, expiring at E.
+procedure expired_link(Key?, Integer?, SignedTerm).
+expired_link(K, E, L?) :-
+    ground(K?), integer(E?) |
+    sign(invitation(K?, rv, rv_addr, 1, E?), K?, L).
+
 imported procedure superapp_plays#play_invite_timed(Key?, Key?, Integer).
 exported procedure play_invite_timed(Key?, Key?, Integer).
 play_invite_timed(P, Q, Ms?) :- superapp_plays # play_invite_timed(P?, Q?, Ms).
@@ -392,16 +504,21 @@ play_sovereign(P, Q, A?, B?) :- superapp_plays # play_sovereign(P?, Q?, A, B).
 %% makes the agent's key, before which nothing is sent on the network (GLP-Spec
 %% appendix-guards.tex, "Identity and signature").  The first act carries the
 %% entry's arguments: the person's key and the keys of the peers the person
-%% knows ("An agent learns the keys of its peers from its person"), and, for
-%% a boot's phone, the person's part in its script: superapp/4 (the
-%% super-app on a phone, its person live and its network the layer's),
-%% superapp_ui/4 (the super-app with a live person and its peers scripted in
-%% one heap, for demonstration), sg_init/4 (the boots of programs/social), and
-%% the smartphone of each app's boot (programs/apps).  The person's acts after
-%% the first are the grants of the super-app's person channel, which
-%% superapp/4 and superapp_ui/4 read; a boot's person closes the stream after the first act.
-CoreAct ::= superapp(Key, List(Key))
+%% knows ("An agent learns the keys of its peers from its person"), on a
+%% phone the rendezvous servers the app is configured with (GSA paper,
+%% Appendix "The Operating System", "Boot"), and, for a boot's phone, the
+%% person's part in its script: superapp/5 (the super-app on a phone, its
+%% person live and its network the layer's), superapp_ui/4 (the super-app
+%% with a live person and its peers scripted in one heap, for demonstration),
+%% link_phone/5 (the operating system on the layer with a scripted person,
+%% for the tests of invitation links over the WAN), sg_init/4 (the boots of
+%% programs/social), and the smartphone of each app's boot (programs/apps).
+%% The person's acts after the first are the grants of the super-app's
+%% person channel, which superapp/5, superapp_ui/4 and link_phone/5 read; a
+%% boot's person closes the stream after the first act.
+CoreAct ::= superapp(Key, List(Key), List(RvServer))
           ; superapp_ui(Key, List(Key))
+          ; link_phone(Key, List(Key), List(RvServer), Directory)
           ; sg_init(Key, Constant, List(Key))
           ; gsg_phone(Constant, Key, List(Key))
           ; gsn_phone(Constant, Key, List(Key))
@@ -435,8 +552,10 @@ agent(ch(In, []), ch(N, [])) :- self_key(_), core_start(In?, N?).
 
 %% The entry the person's first act names, on the network input.
 procedure core_start(CoreIn?, NetInStream?).
-core_start([superapp(P, Qs) | Gs], N) :-
-    person_grants(Gs?, Grants), superapp(P?, Qs?, Grants?, N?).
+core_start([superapp(P, Qs, Ss) | Gs], N) :-
+    person_grants(Gs?, Grants), superapp(P?, Qs?, Ss?, Grants?, N?).
+core_start([link_phone(P, Qs, Ss, D) | Gs], N) :-
+    link_phone(P?, Qs?, Ss?, D?, Gs?, N?).
 core_start([superapp_ui(P, Qs) | Gs], N) :-
     person_grants(Gs?, Grants), superapp_ui(P?, Qs?, Grants?, N?).
 core_start([sg_init(P, M, Qs) | _], N) :-

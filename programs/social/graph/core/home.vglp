@@ -76,9 +76,13 @@ CompilerKey ::= Key.
 Friend      ::= Key.
 AppName     ::= String.
 Artefact    ::= String.
+Link        ::= String.
+Email       ::= String.
+Name        ::= String.
 
 %% A request: one alternative per request clause of serve --- trust, install,
-%% invite, Open place and Close place --- with the arguments its clause reads.
+%% invite, Open place, Close place, Invite by link, the opening of a link,
+%% List, List unlisted and Unlist --- with the arguments its clause reads.
 %% No request connects with a person by a key typed: no act of the paper
 %% takes one, a person coming to be known by an encounter, a link or an
 %% introduction, and befriended by picking them in Nearby (befriend_card/3;
@@ -87,7 +91,12 @@ Request ::= trust(CompilerKey)
           ; install(AppName, Artefact)
           ; invite(AppName, Friend)
           ; open_place
-          ; close_place.
+          ; close_place
+          ; invite_link
+          ; open_link(Link)
+          ; list(Email, Name)
+          ; list_unlisted(Email, Name)
+          ; unlist.
 
 %% The card of a friend who asks to connect: the friend, which the program
 %% writes for the person to see, and the person's answer, yes or no.
@@ -263,6 +272,33 @@ serve([open_place | Reqs], Id, Cd, Outs, Cmds?) :-
 serve([close_place | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?) |
     place_act(close_place, Id?, Cd?, Reqs?, Outs?, Cmds).
+
+%% Invite by link (GRV:2; GNA, Section 6, the box GRV, its interface pragma
+%% Registration, "Alice [Invite by link]"): the operating system makes a link,
+%% registers it and tells the person it as text (links.glp).  The opening of
+%% a link the person was sent, its text (GDS's implementation pragma Contact:
+%% "the link is given as text, to open in a Grassroots App, which redeems
+%% it"): the operating system redeems it (GRV:3).
+serve([invite_link | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?) |
+    place_act(invite_link, Id?, Cd?, Reqs?, Outs?, Cmds).
+serve([open_link(L) | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?), ground(L?) |
+    place_act(open_link(L?), Id?, Cd?, Reqs?, Outs?, Cmds).
+
+%% List, List unlisted and Unlist (GDS:2; GNA, Section 7, the box GDS, its
+%% interface pragma Listing, "Alice [List] <email> <name> [List unlisted]
+%% <email> <name> [Unlist]"): the operating system lists the person with its
+%% directory, and unlists them (links.glp).
+serve([list(E, N) | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?), ground(E?), ground(N?) |
+    place_act(list(E?, N?), Id?, Cd?, Reqs?, Outs?, Cmds).
+serve([list_unlisted(E, N) | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?), ground(E?), ground(N?) |
+    place_act(list_unlisted(E?, N?), Id?, Cd?, Reqs?, Outs?, Cmds).
+serve([unlist | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?) |
+    place_act(unlist, Id?, Cd?, Reqs?, Outs?, Cmds).
 
 %% The willed acts, each the command it puts on the person's stream.
 procedure trust_act(String?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).

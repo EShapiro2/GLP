@@ -9,7 +9,7 @@
 %% SHARED TYPES
 %% =============================================================================
 
-SignalReply ::= punch(String) ; rejected.
+SignalReply ::= punch(Key, String) ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
             ; available(Key, Key, SignedTerm, SignalReply?)

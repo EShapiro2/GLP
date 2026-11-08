@@ -1,0 +1,218 @@
+%% links.glp --- the operating system's invitation links: the person's act Invite by link (GRV:2) and the redemption of a link the person opens (GRV:3), around today's social-graph agent (agent.glp, agent/4), beside the place (place.glp).
+%%
+%% The specification is GNA's Section 6, "Invitation links" (GNA 2ce8e10), GSA's Section 4.2, "Legacy online connections", and GSA's Appendix "The Operating System", "Boot" and "Nearby" (GSA 963fcbf).  The operating system, not the agent, calls the seam: agent/4 must hold a certificate to serve in the plays as its own certified mini-app, and a program that calls the seam is refused one (agent.glp, the comment on Reconnection).
+%%
+%% Invite by link.  The person's act invite_link (GRV's interface pragma Registration: "Alice [Invite by link]").  The operating system makes the link, the term invitation(I, Rv, RvAddr, Serial, Expiry) signed by the person's key with sign/3: I the person's key, Rv and RvAddr the key and the address of the first rendezvous server the person's first act names (Appendix, "Boot": "the rendezvous servers the app is configured with, each by key and address"), Serial a whole number used once, and Expiry an hour after now/1 (GRV's implementation pragma Registration).  It registers the link with that server, register(I, Link, Reply), as a cold call to the server's key, and tells the person the link, invitation(Link), the link being a signed term and so text (root self.glp, SignedTerm ::= String), which the person sends over any channel they have (GSA, Section 4.2: "hands the link to its person as text").  The server answers the registration when the link is redeemed, punch(R, AddrR), the recipient's key and the address at which it observes the recipient (GNA Section 6: "answers each with punch(Key, Address)"); the operating system declares R a peer at that address, declare(peer(R)) and declare(address(R, AddrR)), and punches towards it, punch_udp(AddrR) ("each declares the other a peer at that address to its layer and punches").  The recipient's cold call that follows reaches the agent as any request to connect (GSA, Section 4.2), so the befriending is the two persons' decision.  A rejected registration is told the person, rejected(invite_link); so is an Invite by link with no rendezvous server named.
+%%
+%% The serial.  "a serial the inviter keeps, a whole number used once" (GNA Section 6).  The operating system takes the clock, now/1 in milliseconds, as the serial, or one more than the last serial where the clock has not passed it, so that no serial is used twice while the app runs, and a serial of a link made before a restart is not made again after it.
+%%
+%% Listing with a directory (GDS:2; GNA Section 7, "The messages", 2ce8e10).  The person's acts list(Email, Name) and list_unlisted(Email, Name), and unlist (GDS's interface pragma Listing: "Alice [List] <email> <name> [List unlisted] <email> <name> [Unlist]"), reach this process as list(Email, Name, listed), list(Email, Name, unlisted) and unlist.  With a directory, directory(D, DAddr), the operating system declares it a peer at its address, declare(peer(D)) and declare(address(D, DAddr)), and lists the person, list(A, Signed, Supply, Reply), Signed the term listing(A, Email, Name, Visibility) signed by the person's key, Name none where the person gave the empty name ("Name a string or none"); the directory answers Reply with verify, a mail sent to the address, told the person as verify(Email), or rejected, told as rejected(list); and it asks for links on Supply, more(N), which join this process's acts, each answered by N links of the person's, made and registered with the first rendezvous server as Invite by link's are, each expiring a day after it is made (GDS's implementation pragma Listing, Contact: "a link given to Dora expires a day after it is made"), and sent to the directory as supply(A, Links).  unlist(A, Signed, Reply), Signed the term unlist(A) signed by the person's key, ends the listing; rejected is told the person, rejected(unlist).  Where the operating system has no directory, or no rendezvous server, List and Unlist are refused and told.
+%%
+%% Opening a link.  The person's act open_link(Link), Link the text the person was sent (GDS's implementation pragma Contact: "the link is given as text, to open in a Grassroots App, which redeems it").  The operating system takes the link apart with signature/2 and admits it where it is signed by the inviter it names and now/1 is before its expiry (GNA Section 6: "The recipient's agent verifies the inviter's signature and the expiry, declares the inviter a peer, and redeems the link at the rendezvous agent named in it"): it declares the inviter a peer, declare(peer(I)), and the server the link names, declare(rendezvous(Rv, RvAddr)), over which the session to it is opened, and redeems it, redeem(Me, Signed, Reply), Signed the term redeem(Me, Link) signed by the person's key, as a cold call to the server's key.  On punch(I, AddrI) it declares the inviter's address, declare(address(I, AddrI)), punches towards it, and makes the cold call, the person's connect(I) to the agent ("the two establish their session, and the recipient's first message is a cold call").  A link not admitted, or a redemption refused, is told the person, rejected(open_link).
+
+%% =============================================================================
+%% The links process
+%% =============================================================================
+
+%% links(Id, Servers, Dir, Last, Acts, Out, Net, Cmds): the person of key Id, with the rendezvous servers Servers the first act named, the directory Dir, directory(D, DAddr) or none, the last serial Last; the person's acts on links and the directory's asks for links, Acts; what the person is told, Out; the cold calls to the servers and the directory, Net; and the cold calls the person's opening of a link makes, Cmds, to the agent.
+exported procedure links(Key?, List(RvServer)?, Directory?, Integer?, Stream(LinkAct)?, AgentToUserStream, NetOutStream, UserInStream).
+
+%% Invite by link, with a rendezvous server named: a fresh serial, the link made, registered and told.
+links(Id, [rendezvous(Rv, RvAddr) | Ss], Dir, Last, [invite_link | Acts], Out?, Net?, Cmds?) :-
+    ground(Id?), ground(Rv?), ground(RvAddr?), ground(Ss?), ground(Dir?), integer(Last?) |
+    now(T),
+    next_serial(T?, Last?, S),
+    invite(Id?, Rv?, RvAddr?, S?, T?, Out1, Net1),
+    merge(Out1?, Out2?, Out),
+    merge(Net1?, Net2?, Net),
+    links(Id?, [rendezvous(Rv?, RvAddr?) | Ss?], Dir?, S?, Acts?, Out2, Net2, Cmds).
+
+%% Invite by link with no rendezvous server named: refused, and told.
+links(Id, [], Dir, Last, [invite_link | Acts], [msg(agent, person, rejected(invite_link)) | Out?], Net?, Cmds?) :-
+    links(Id?, [], Dir?, Last?, Acts?, Out, Net, Cmds).
+
+%% Opening a link: taken apart, at the clock, and redeemed where admitted.
+links(Id, Ss, Dir, Last, [open_link(Link) | Acts], Out?, Net?, Cmds?) :-
+    ground(Id?), ground(Link?) |
+    signature(Link?, Sig),
+    now(T),
+    open(Id?, Link?, Sig?, T?, Out1, Net1, Cmds1),
+    merge(Out1?, Out2?, Out),
+    merge(Net1?, Net2?, Net),
+    merge(Cmds1?, Cmds2?, Cmds),
+    links(Id?, Ss?, Dir?, Last?, Acts?, Out2, Net2, Cmds2).
+
+%% List or List unlisted, with a directory and a rendezvous server: the directory declared, the listing signed and sent, its answer awaited, and the directory's asks for links joining the acts.
+links(Id, [S1 | Ss], directory(D, DAddr), Last, [list(E, N, V) | Acts], Out?, Net?, Cmds?) :-
+    ground(Id?), ground(S1?), ground(Ss?), ground(D?), ground(DAddr?), ground(E?), ground(N?), ground(V?) |
+    declare(peer(D?)),
+    declare(address(D?, DAddr?)),
+    name_given(N?, Nm),
+    self_key(K),
+    sign(listing(Id?, E?, Nm?, V?), K?, Signed),
+    list_to(D?, Id?, Signed?, Supply, Reply, Net1),
+    asks(Supply?, More),
+    merge(Acts?, More?, Acts1),
+    merge(Net1?, Net2?, Net),
+    links_listed(Id?, E?, Reply?, Out1),
+    merge(Out1?, Out2?, Out),
+    links(Id?, [S1? | Ss?], directory(D?, DAddr?), Last?, Acts1?, Out2, Net2, Cmds).
+
+%% The directory asks for N links: N links of the person's made, each expiring a day after it is made, registered with the first rendezvous server, and sent to the directory.
+links(Id, [rendezvous(Rv, RvAddr) | Ss], directory(D, DAddr), Last, [more(N) | Acts], Out?, Net?, Cmds?) :-
+    ground(Id?), ground(Rv?), ground(RvAddr?), ground(Ss?), ground(D?), ground(DAddr?), integer(Last?), integer(N?) |
+    now(T),
+    day_links(N?, Id?, Rv?, RvAddr?, Last?, T?, Links, Last1, Out1, Net1, Net3?),
+    supply_to(D?, Id?, Links?, Net3),
+    merge(Net1?, Net2?, Net),
+    merge(Out1?, Out2?, Out),
+    links(Id?, [rendezvous(Rv?, RvAddr?) | Ss?], directory(D?, DAddr?), Last1?, Acts?, Out2, Net2, Cmds).
+
+%% Unlist, with a directory: unlist(A) signed and sent.
+links(Id, Ss, directory(D, DAddr), Last, [unlist | Acts], Out?, Net?, Cmds?) :-
+    ground(Id?), ground(D?), ground(DAddr?) |
+    self_key(K),
+    sign(unlist(Id?), K?, Signed),
+    unlist_to(D?, Id?, Signed?, Reply, Net1),
+    unlisted(Reply?, Out1),
+    merge(Net1?, Net2?, Net),
+    merge(Out1?, Out2?, Out),
+    links(Id?, Ss?, directory(D?, DAddr?), Last?, Acts?, Out2, Net2, Cmds).
+
+%% List, List unlisted or Unlist with no directory, or List with no rendezvous server: refused, and told.  An ask for links with no rendezvous server to register them with: no link is made.
+links(Id, Ss, Dir, Last, [list(_, _, _) | Acts], [msg(agent, person, rejected(list)) | Out?], Net?, Cmds?) :-
+    otherwise |
+    links(Id?, Ss?, Dir?, Last?, Acts?, Out, Net, Cmds).
+links(Id, Ss, Dir, Last, [unlist | Acts], [msg(agent, person, rejected(unlist)) | Out?], Net?, Cmds?) :-
+    otherwise |
+    links(Id?, Ss?, Dir?, Last?, Acts?, Out, Net, Cmds).
+links(Id, Ss, Dir, Last, [more(_) | Acts], Out?, Net?, Cmds?) :-
+    otherwise |
+    links(Id?, Ss?, Dir?, Last?, Acts?, Out, Net, Cmds).
+
+links(_, _, _, _, [], [], [], []).
+
+%% next_serial(T, Last, S): S is the clock T where T is past Last, and one more than Last otherwise.
+procedure next_serial(Integer?, Integer?, Integer).
+next_serial(T, L, T?) :- integer(T?), integer(L?), T? > L? | true.
+next_serial(T, L, S?) :- integer(T?), integer(L?), T? =< L? | S := L? + 1.
+
+%% =============================================================================
+%% Invite by link
+%% =============================================================================
+
+%% invite(Id, Rv, RvAddr, S, T, Out, Net): the link of serial S made at T, expiring an hour later, signed by the person's key.
+procedure invite(Key?, Key?, String?, Integer?, Integer?, AgentToUserStream, NetOutStream).
+invite(Id, Rv, RvAddr, S, T, Out?, Net?) :-
+    ground(Id?), ground(Rv?), ground(RvAddr?), integer(S?), integer(T?) |
+    E := T? + 3600000,
+    self_key(K),
+    sign(invitation(Id?, Rv?, RvAddr?, S?, E?), K?, Link),
+    register(Id?, Rv?, Link?, Out, Net).
+
+%% register(Id, Rv, Link, Out, Net): the link registered with the server and told the person; the server's answer awaited.
+procedure register(Key?, Key?, SignedTerm?, AgentToUserStream, NetOutStream).
+register(Id, Rv, Link, [msg(agent, person, invitation(Link?)) | Out?], [msg(Rv?, register(Id?, Link?, Reply))]) :-
+    ground(Id?), ground(Rv?), ground(Link?) |
+    registered(Reply?, Out).
+
+%% registered(Reply, Out): the server's answer to the registration.  The recipient's key and address: declared a peer at that address, and punched towards.  rejected: told the person.
+procedure registered(RvReply?, AgentToUserStream).
+registered(punch(R, AddrR), []) :-
+    ground(R?), ground(AddrR?) |
+    declare(peer(R?)),
+    declare(address(R?, AddrR?)),
+    punch_udp(AddrR?).
+registered(rejected, [msg(agent, person, rejected(invite_link))]).
+
+%% =============================================================================
+%% Opening a link
+%% =============================================================================
+
+%% open(Id, Link, Sig, T, Out, Net, Cmds): the link Link, which signature/2 reports as Sig, opened at T.  Signed by the inviter it names and not expired: the inviter declared a peer, the server the link names declared, and the link redeemed under the person's key.
+procedure open(Key?, SignedTerm?, Signature?, Integer?, AgentToUserStream, NetOutStream, UserInStream).
+open(Id, Link, signed(K, _, invitation(I, Rv, RvAddr, _, E)), T, Out?, [msg(Rv?, redeem(Id?, Signed?, Reply))], Cmds?) :-
+    ground(Id?), ground(Link?), ground(K?), K? =?= I?, ground(Rv?), ground(RvAddr?), integer(E?), integer(T?), T? < E? |
+    declare(peer(K?)),
+    declare(rendezvous(Rv?, RvAddr?)),
+    self_key(Me),
+    sign(redeem(Id?, Link?), Me?, Signed),
+    redeemed(Id?, K?, Reply?, Out, Cmds).
+%% unsigned, signed by another than the inviter it names, another term, or expired: refused, and told.
+open(_, _, _, _, [msg(agent, person, rejected(open_link))], [], []) :-
+    otherwise | true.
+
+%% redeemed(Id, I, Reply, Out, Cmds): the server's answer to the redemption.  The inviter's key and address: the address declared, punched towards, and the cold call made, the person's connect(I).  Another key, or rejected: told the person.
+procedure redeemed(Key?, Key?, RvReply?, AgentToUserStream, UserInStream).
+redeemed(Id, I, punch(K, AddrI), [], [msg(person, Id?, connect(I?))]) :-
+    ground(Id?), ground(I?), ground(K?), K? =?= I?, ground(AddrI?) |
+    declare(address(I?, AddrI?)),
+    punch_udp(AddrI?).
+redeemed(_, _, _, [msg(agent, person, rejected(open_link))], []) :-
+    otherwise | true.
+
+%% =============================================================================
+%% Listing with a directory
+%% =============================================================================
+
+%% name_given(N, Nm): the name the person gave, or none where the person gave the empty name (GNA Section 7: "Name a string or none").
+procedure name_given(String?, DirName).
+name_given("", none).
+name_given(N, N?) :- otherwise | true.
+
+%% list_to(D, Id, Signed, Supply, Reply, Net): the listing sent to the directory D, once signed; the directory writes its asks on Supply and its answer on Reply.
+procedure list_to(Key?, Key?, SignedTerm?, Stream(SupplyAsk), ListReply, NetOutStream).
+list_to(D, Id, Signed, Supply?, Reply?, [msg(D?, list(Id?, Signed?, Supply, Reply))]) :-
+    ground(D?), ground(Id?), ground(Signed?) | true.
+
+%% links_listed(Id, E, Reply, Out): the directory's answer to the listing: a mail sent to the address, told the person verify(E); rejected, told rejected(list).
+procedure links_listed(Key?, String?, ListReply?, AgentToUserStream).
+links_listed(_, E, verify, [msg(agent, person, verify(E?))]).
+links_listed(_, _, rejected, [msg(agent, person, rejected(list))]).
+
+%% asks(Supply, More): each of the directory's asks, more(N), an act of this process.
+procedure asks(Stream(SupplyAsk)?, Stream(LinkAct)).
+asks([more(N) | As], [more(N?) | Ms?]) :- asks(As?, Ms).
+asks([], []).
+
+%% day_links(N, Id, Rv, RvAddr, Last, T, Links, Last1, Out, Net, Net0): N links made at T, each of a fresh serial after Last, expiring a day after T, registered with the server Rv, the registrations on Net in order and then Net0, so that the links are sent to the directory after they are registered; Last1 the last serial used.
+procedure day_links(Integer?, Key?, Key?, String?, Integer?, Integer?, List(SignedTerm), Integer, AgentToUserStream, NetOutStream, NetOutStream?).
+day_links(N, Id, Rv, RvAddr, Last, T, [L? | Ls?], Last1?, Out?, Net?, Net0) :-
+    integer(N?), N? > 0, ground(Id?), ground(Rv?), ground(RvAddr?), integer(Last?), integer(T?) |
+    next_serial(T?, Last?, S),
+    N1 := N? - 1,
+    day_link(Id?, Rv?, RvAddr?, S?, T?, L, Out1, Net, Net1?),
+    day_links(N1?, Id?, Rv?, RvAddr?, S?, T?, Ls, Last1, Out2, Net1, Net0?),
+    merge(Out1?, Out2?, Out).
+day_links(N, _, _, _, Last, _, [], Last?, [], Net0?, Net0) :-
+    integer(N?), N? =< 0 | true.
+
+%% day_link(Id, Rv, RvAddr, S, T, L, Out, Net, Net0): the link of serial S made at T, expiring a day later, signed by the person's key, and registered with the server, the registration on Net and then Net0; its registration's answer awaited as Invite by link's is.
+procedure day_link(Key?, Key?, String?, Integer?, Integer?, SignedTerm, AgentToUserStream, NetOutStream, NetOutStream?).
+day_link(Id, Rv, RvAddr, S, T, L?, Out?, Net?, Net0) :-
+    ground(Id?), ground(Rv?), ground(RvAddr?), integer(S?), integer(T?) |
+    E := T? + 86400000,
+    self_key(K),
+    sign(invitation(Id?, Rv?, RvAddr?, S?, E?), K?, L1),
+    register_quiet(Id?, Rv?, L1?, L, Out, Net, Net0?).
+
+%% register_quiet(Id, Rv, Link, L, Out, Net, Net0): the link registered with the server, on Net and then Net0, and passed on as L, the person told nothing of it.
+procedure register_quiet(Key?, Key?, SignedTerm?, SignedTerm, AgentToUserStream, NetOutStream, NetOutStream?).
+register_quiet(Id, Rv, Link, Link?, Out?, [msg(Rv?, register(Id?, Link?, Reply)) | Net0?], Net0) :-
+    ground(Id?), ground(Rv?), ground(Link?) |
+    registered(Reply?, Out).
+
+%% supply_to(D, Id, Links, Net): the links sent to the directory, once made.
+procedure supply_to(Key?, Key?, List(SignedTerm)?, NetOutStream).
+supply_to(D, Id, Links, [msg(D?, supply(Id?, Links?))]) :-
+    ground(D?), ground(Id?), ground(Links?) | true.
+
+%% unlist_to(D, Id, Signed, Reply, Net): the unlisting sent to the directory, once signed.
+procedure unlist_to(Key?, Key?, SignedTerm?, ListReply, NetOutStream).
+unlist_to(D, Id, Signed, Reply?, [msg(D?, unlist(Id?, Signed?, Reply))]) :-
+    ground(D?), ground(Id?), ground(Signed?) | true.
+
+%% unlisted(Reply, Out): rejected, told the person rejected(unlist); the listing ended, nothing.
+procedure unlisted(ListReply?, AgentToUserStream).
+unlisted(rejected, [msg(agent, person, rejected(unlist))]).
+unlisted(verify, []).

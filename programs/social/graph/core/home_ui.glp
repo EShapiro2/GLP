@@ -20,7 +20,7 @@
 %%
 %% Behind the screen is the real super-app: the person's commands go to
 %% agent/4 with the operating system's Nearby around it (place.glp,
-%% os_agent/8), which installs, invites and befriends as it does in every
+%% os_agent/10, with no rendezvous server and no directory, the heap having no network), which installs, invites and befriends as it does in every
 %% play.  The play gives the operating system its own presences, as a play
 %% in one heap does (place.glp): each peer the person knows is seen nearby
 %% over the PAN, so home shows them in Nearby, each on a card with the button
@@ -40,12 +40,12 @@
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-imported procedure place#os_agent(Key?, List(Key)?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
+imported procedure place#os_agent(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
 
 exported procedure superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp_ui(Id, Peers, Grants, _) :-
     ground(Id?), ground(Peers?) |
-    place # os_agent(Id?, Peers?, Cmds?, NetIn?, Pan?, [], Outs, NetOut),
+    place # os_agent(Id?, Peers?, [], none, Cmds?, NetIn?, Pan?, [], Outs, NetOut),
     seen_all(Peers?, Pan),
     split_out(Outs?, Shown, Seen),
     home # home(Id?, Seen?, Cmds, Asks),

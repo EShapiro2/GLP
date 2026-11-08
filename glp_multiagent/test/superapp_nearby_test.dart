@@ -3,7 +3,8 @@
 /// its agent over a network in this process, and its person acting on the
 /// constructs home draws, as on a phone.  Not the boot form: no person is
 /// scripted in GLP; each agent starts from every agent's initial goal, and
-/// the application's first act, `superapp(Me, [])`, starts superapp/4 (GSA
+/// the application's first act, `superapp(Me, [], [])`, no peer known and no
+/// rendezvous server configured, starts superapp/5 (GSA
 /// paper, Appendix "The Operating System", "Boot"; IGLP, Implementation
 /// Notes, "Boot").
 ///
@@ -332,8 +333,9 @@ void main() {
 
   late _Phone alice, bob;
 
-  test('two phones: the first act superapp(Me, []) starts the Grassroots App, '
-      'and home is drawn with Open place and Close place', () async {
+  test('two phones: the first act superapp(Me, [], []) starts the Grassroots '
+      'App, and home is drawn with Open place, Close place, Invite by link and '
+      'the opening of a link', () async {
     alice = await phone('alice');
     bob = await phone('bob');
     for (final p in [alice, bob]) {
@@ -342,7 +344,17 @@ void main() {
       // or an introduction, and befriended by picking them in Nearby (GSA #2,
       // 2026-11-08 08:07 UTC, item 2).
       expect(w, isNot(contains('form(connect,')));
-      expect(w, endsWith('button(open_place), button(close_place)]))'));
+      // Invite by link (GRV's interface pragma Registration) a button, and
+      // the opening of a link a form with the link's text (GDS's
+      // implementation pragma Contact), and List, List unlisted and Unlist
+      // (GDS's interface pragma Listing).
+      expect(
+          w,
+          endsWith('button(open_place), button(close_place), '
+              "button(invite_link), form(open_link, [field('Link', text)]), "
+              "form(list, [field('Email', text), field('Name', text)]), "
+              "form(list_unlisted, [field('Email', text), field('Name', text)]), "
+              'button(unlist)]))'));
       await p.host.idle;
       expect(p.net.declared, ['pan closed', 'lan closed'],
           reason: 'both trusts are declared closed at start, and stay so '
