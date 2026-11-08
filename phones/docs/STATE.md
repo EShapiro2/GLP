@@ -1,4 +1,4 @@
-# Phones --- state, 2026-11-08 19:20 UTC (Phones #1 Cowork)
+# Phones --- state, 2026-11-08 20:30 UTC (Phones #1 Cowork)
 
 Taken over from `tmp/phones/STATE.md` (Code #25B Phones, 13:57 UTC) and Code #25's handover (Code_inbox.md, 13:36 and 13:38 UTC).
 
@@ -19,6 +19,8 @@ The free team signs one phone per build; the paid account waits on Apple Develop
 
 - 2026-11-08 18:41 UTC, the scripted befriending on two simulators on one Mac (Phones Mac, 18:47 UTC): not met.  1. The layer drops an mDNS presence resolved under Closed LAN trust and does not contact it when the trust turns Open: Code's, Cloud #8 replaying the presences (Code to GSA, 18:48 UTC).  2. Two simulators on one Mac see each other at 127.0.0.1, and loopback is not a local network (GNA, Implementation Notes, "The local network"), so two simulators on one Mac do not run a LAN play.
 - 2026-11-08 19:05--19:11 UTC, `p1-two-phones-ble` by hand, Wi-Fi off (Phones Mac, 19:12 UTC): steps 1 to 6 met; step 7 failed: after a restart the agent makes no declaration to the layer, so the friends do not reconnect; to GSA and GLP, Blocking: yes (18:39 UTC).  The 11 Pro has no cellular path, so its log reaches the service only when it has Wi-Fi.
+
+- 2026-11-08 20:06--20:10 UTC, `p1-two-phones-ble` step 8 (Phones Mac, 20:11 UTC): met; the 16 Pro's layer kept the Bluetooth session through a minute in the background.  Not tested: a message waiting while in the background.
 
 ## Next
 
