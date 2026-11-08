@@ -1492,7 +1492,7 @@ PubKey? _peerKey(GlpNetwork network, String name) {
   return PubKey.fromHex(name);
 }
 
-/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E, and `nearby(U, S)` through [MadContext.declareNearby], which grows S from what the layer reports, `onPeerDiscovered`, `onPeerConnected` and `onPeerDisconnected`, and calls no layer function (GLP-Spec 210cee1; IGLP b20951d).  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
+/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E, `nearby(U, S)` through [MadContext.declareNearby], which grows S from what the layer reports, `onPeerDiscovered` and `onPeerLost`, and calls no layer function (GLP-Spec 210cee1; IGLP b20951d), and `reachable(S)` through [MadContext.declareReachable], which grows S from what the layer reports, `onPeerConnected` and `onPeerDisconnected` over the WAN, and calls no layer function (GLP-Spec cb9df43; IGLP 0c77e47).  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
 BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
   const who = "'_declare'/1";
   if (args.length != 1) {
@@ -1514,13 +1514,15 @@ BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
       return _declarePlace(rt, a);
     case 'nearby/2':
       return _declareNearby(rt, a);
+    case 'reachable/1':
+      return _declareReachable(rt, a);
   }
   return kernelAbort('[ABORT] $who: argument (D) must be a Declaration --- '
-      'peer(P), address(P, A), rendezvous(P, A), trust(U, L), place(P, R, E) '
-      'or nearby(U, S) --- got $d');
+      'peer(P), address(P, A), rendezvous(P, A), trust(U, L), place(P, R, E), '
+      'nearby(U, S) or reachable(S) --- got $d');
 }
 
-/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream, and `nearby(U)`, which closes the stream of the nearby declaration on U (GLP-Spec 210cee1).  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
+/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream, `nearby(U)`, which closes the stream of the nearby declaration on U (GLP-Spec 210cee1), and `reachable`, which closes the stream of the reachable declaration (GLP-Spec cb9df43).  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
 BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
   const who = "'_remove'/1";
   if (args.length != 1) {
@@ -1528,7 +1530,11 @@ BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
   }
   final r = _deref(rt, args[0]);
   final a = r is StructTerm ? r.args : const <Term>[];
-  final form = r is StructTerm ? '${r.functor}/${a.length}' : null;
+  final form = r is StructTerm
+      ? '${r.functor}/${a.length}'
+      : _groundString(rt, r) == 'reachable'
+          ? 'reachable/0'
+          : null;
   switch (form) {
     case 'peer/1':
       return _removePeer(rt, a);
@@ -1538,9 +1544,11 @@ BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
       return _removePlace(rt, a);
     case 'nearby/1':
       return _removeNearby(rt, a);
+    case 'reachable/0':
+      return _removeReachable(rt);
   }
   return kernelAbort('[ABORT] $who: argument (R) must be a Removal --- '
-      'peer(P), rendezvous(P), place(P) or nearby(U) --- got $r');
+      'peer(P), rendezvous(P), place(P), nearby(U) or reachable --- got $r');
 }
 
 /// Call the layer function [call] with the layer bound to [rt] and the key a ground [arg] names in it, for the alternative [what] of [who].  It returns having done nothing where no layer is bound; an [arg] that is not a ground constant, or that names no peer, is a violated precondition, and so an abort.
@@ -1723,6 +1731,33 @@ BodyKernelResult _removeNearby(GlpRuntime rt, List<Term> a) {
   rt.nearbyStreams.close(underlay.name);
   return BodyKernelResult.success;
 }
+
+/// `declare(reachable(S))`: assign S a stream of the agents the layer connects to over the WAN, `connected(K)` when the layer has a session with the agent of key K over the WAN, beginning with every agent it has one with when it is declared, and `lost(K)` when that session ends; a further declaration supersedes the earlier one and closes its stream (GLP-Spec cb9df43, appendix-guards, "Networking seam"; IGLP 0c77e47, Definition "Seam Predicates" and the paragraph after it).  The stream is fed and closed as a place's, by the runtime's bookkeeping ([GlpRuntime.reachableStreams]); what feeds it is what the layer reports, `onPeerConnected` and `onPeerDisconnected` over the WAN ([MadContext.declareReachable]).
+///
+/// Where no layer is bound the declaration stands all the same, and its stream carries nothing (IGLP 0c77e47, Implementation Notes, "One interface": "a nearby or reachable declaration stands and its stream carries nothing").
+BodyKernelResult _declareReachable(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'reachable(S)';
+  final stream = _deref(rt, a[0]);
+  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
+    return kernelAbort('[ABORT] $who: $what: the stream (S) must be a writer');
+  }
+  final ctx = rt.madContext;
+  if (ctx is MadContext) {
+    ctx.declareReachable(stream.addr);
+  } else {
+    rt.reachableStreams.declare(reachableKey, stream.addr);
+  }
+  return BodyKernelResult.success;
+}
+
+/// `remove(reachable)`: end the reachable declaration, closing its stream, its tail assigned `[]`; does nothing where none stands (GLP-Spec cb9df43, appendix-guards, "Networking seam").  The closing is the runtime's, layer or none.
+BodyKernelResult _removeReachable(GlpRuntime rt) {
+  rt.reachableStreams.close(reachableKey);
+  return BodyKernelResult.success;
+}
+
+/// The one key of [GlpRuntime.reachableStreams]: an agent has at most one reachable declaration standing.
+const String reachableKey = 'wan';
 
 /// `remove(peer(P))`: take P, and any address recorded for it, off the layer's known peers, `removeKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA, "Known Peers").
 BodyKernelResult _removePeer(GlpRuntime rt, List<Term> a) {

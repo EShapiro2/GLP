@@ -533,6 +533,12 @@ class AgentRuntime {
         _submit(_Presence(underlay, presence, declaration))
             .catchError((Object _) {}));
 
+    // A reach on the reachable stream likewise (IGLP 0c77e47, after
+    // Definition "Seam Predicates": "A place event and a presence or a reach
+    // on a nearby or reachable stream are bridged below the madGLP layer").
+    _ctx!.reachSink = (reach, declaration) => unawaited(
+        _submit(_Reach(reach, declaration)).catchError((Object _) {}));
+
     _output('[INIT] Loaded GLP program');
   }
 
@@ -1047,6 +1053,8 @@ class AgentRuntime {
         _ctx!.deliverPlaceEvent(place, event, declaration: declaration);
       case _Presence(:final underlay, :final presence, :final declaration):
         _ctx!.deliverPresence(underlay, presence, declaration: declaration);
+      case _Reach(:final reach, :final declaration):
+        _ctx!.deliverReach(reach, declaration: declaration);
     }
     return true;
   }
@@ -1470,6 +1478,17 @@ final class _Presence extends _AgentEvent {
   const _Presence(this.underlay, this.presence, this.declaration);
   @override
   String toString() => 'the presence $presence over ${underlay.name}';
+}
+
+/// A reach the layer reports for the reachable declaration that stood when it
+/// was reported, [declaration]: `connected(K)` or `lost(K)` (GLP-Spec
+/// cb9df43, "Networking seam").
+final class _Reach extends _AgentEvent {
+  final rt.Term reach;
+  final int declaration;
+  const _Reach(this.reach, this.declaration);
+  @override
+  String toString() => 'the reach $reach';
 }
 
 /// A restart's refusal of an update (IGLP 61f3283, madglp-spec.tex,

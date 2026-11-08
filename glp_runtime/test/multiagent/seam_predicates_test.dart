@@ -1014,14 +1014,17 @@ go :- $goal.
         'trust(Underlay, TrustLevel)',
         'place(Constant, Number, Stream(PlaceEvent)?)',
         'nearby(Underlay, Stream(Presence)?)',
+        'reachable(Stream(Reach)?)',
       ]);
       expect(alternatives('Removal'), [
         'peer(Key)',
         'rendezvous(Key)',
         'place(Constant)',
         'nearby(Underlay)',
+        'reachable',
       ]);
       expect(alternatives('Presence'), ['seen(Key)', 'gone(Key)']);
+      expect(alternatives('Reach'), ['connected(Key)', 'lost(Key)']);
       expect(alternatives('Underlay'), ['pan', 'lan']);
       expect(alternatives('TrustLevel'), ['open', 'closed']);
       expect(alternatives('PlaceEvent'),

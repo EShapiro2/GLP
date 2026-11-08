@@ -130,6 +130,13 @@ class GlpRuntime {
   /// whether a networking layer is bound or none is.
   late final PlaceStreams nearbyStreams = PlaceStreams(this);
 
+  /// The reachable declaration and its stream, under the one key `wan`: the
+  /// runtime's bookkeeping behind declare(reachable(S)) and remove(reachable),
+  /// fed and closed as a place's stream (GLP-Spec cb9df43, appendix-guards,
+  /// "Networking seam"; IGLP 0c77e47, Definition "Seam Predicates" and the
+  /// paragraph after it), kept whether a networking layer is bound or none is.
+  late final PlaceStreams reachableStreams = PlaceStreams(this);
+
   /// The declarations made to the networking layer that stand, kept so that
   /// a restart makes each to the new layer again (seam_declarations.dart;
   /// IGLP 0c77e47, Implementation Notes, "Persistence").
@@ -460,6 +467,7 @@ class GlpRuntime {
     }
     placeStreams.saveState(w);
     nearbyStreams.saveState(w);
+    reachableStreams.saveState(w);
     seamDeclarations.saveState(w);
   }
 
@@ -524,6 +532,7 @@ class GlpRuntime {
     }
     placeStreams.restoreState(r);
     nearbyStreams.restoreState(r);
+    reachableStreams.restoreState(r);
     seamDeclarations.restoreState(r);
   }
 
