@@ -68,13 +68,17 @@ Future<Person> open(String h) async {
   final j = jsonDecode(File('$data/users/$h.json').readAsStringSync()) as Map;
   final kp = (pub: PubKey.fromHex(j['publicKey'] as String), priv: Uint8List.fromList(base64Decode(j['privateKey'] as String)));
   final dir = '$data/people/${kp.pub.hex}';
-  // A person keeps the tree they started on: their saved state indexes its code, and the
-  // site's builds of GLP's main, hourly, would leave it behind.  Mini-apps installed later
-  // are the site's current ones (SuperHost.site).
+  // A person runs the site's live tree, copied once per build: this program's runtime is
+  // the one that build was made for (the site builds the fork's main, which carries both).
+  // A state saved under other code is set aside by the host (coreVersion); a build that
+  // changed only mini-apps keeps it.
   final own = Directory('$dir/tree');
-  if (!File('${own.path}/gas2_apps.json').existsSync()) {
+  final live = tree(), stamp = File('$dir/tree.from');
+  final from = '$live ${File('$live/gas2_apps.json').statSync().modified.toIso8601String()}';
+  if (!File('${own.path}/gas2_apps.json').existsSync() || !stamp.existsSync() || stamp.readAsStringSync() != from) {
     if (own.existsSync()) own.deleteSync(recursive: true);
-    await copyTree(Directory(tree()), own);
+    await copyTree(Directory(live), own);
+    stamp.writeAsStringSync(from);
   }
   final relay = RelayGlpNetwork(
     inner: OfflineGlpNetwork(sodium: sodium, me: kp.pub, privateKey: kp.priv),
