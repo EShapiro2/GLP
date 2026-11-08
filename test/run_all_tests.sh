@@ -7030,6 +7030,8 @@ test38_redeem_other_server(RI38, RR38, P38).
 test39_server_own_key(RI3910, RR3910, RI3911, RR3911).
 test40_prune_used(RI40, P401, P402).
 test41_used_dropped_through_agent(RD41, RK41).
+test42_redeem_not_signed_by_recipient(RI42, R421, R422).
+test43_redeemer_refused(R431, R432, R433, R434, R435, RI43, P43).
 :quit
 HEREDOC
 2>&1)
@@ -7274,8 +7276,7 @@ rv_36=$(_rv_answer 51)
 check "RV agent test36 succeeds" "^→ succeeds$" "$rv_36"
 check "RV agent test36: the link made by sign/3 verifies as the inviter's, carrying its key, the server, the serial and the expiry" "^S36 = signed($rv_key, $rv_key, invitation(\1, rv, rv_addr, 7, [0-9]*))$" "$rv_36"
 check "RV agent test36: through the agent, the link's serial is registered as unused" "^examples/rendezvous/rv_agent:register_serial($rv_tkey, 7, RI36, \[\], \[invited(\1, 7, RI36)\]) :- true$" "$rv_36"
-check "RV agent test36: through the agent, the redemption reads the recipient's address" "^:peer_address(bob, none) :- true$" "$rv_36"
-check "RV agent test36: through the agent, the redemption reads both addresses" "^2$" "$(_rv_pa "$rv_36")"
+check "RV agent test36: through the agent, the redemption signed by its recipient reads both addresses, the REPL's one key being the inviter's and the recipient's" "^2$" "$(printf '%s\n' "$rv_36" | grep -c "^:peer_address($rv_tkey, none) :- true\$")"
 check "RV agent test36: no address observed, the redemption is refused" "^RR36 = rejected$" "$rv_36"
 check "RV agent test36: the inviter is told nothing" "^RI36 = <unbound>$" "$rv_36"
 rv_37=$(_rv_answer 52)
@@ -7292,7 +7293,7 @@ check "RV agent test38: the serial is left unused" "^P38 = \[invited(alice, 7, X
 rv_39=$(_rv_answer 54)
 check "RV agent test39 succeeds" "^→ succeeds$" "$rv_39"
 check "RV agent test39: through rv_server/2, only the link naming the server's own key reaches the layer" "^2$" "$(_rv_pa "$rv_39")"
-check "RV agent test39: the redemption of the link naming the server reads the recipient's address once" "^1$" "$(printf '%s\n' "$rv_39" | grep -c '^:peer_address(bob, none) :- true$')"
+check "RV agent test39: the redemption of the link naming the server reads the inviter's and the recipient's address, the REPL's one key" "^2$" "$(printf '%s\n' "$rv_39" | grep -c "^:peer_address($rv_tkey, none) :- true\$")"
 check "RV agent test39: the link naming the server, no address observed, is refused" "^RR3910 = rejected$" "$rv_39"
 check "RV agent test39: the link naming another server is refused" "^RR3911 = rejected$" "$rv_39"
 check "RV agent test39: the inviter of the link naming the server is told nothing" "^RI3910 = <unbound>$" "$rv_39"
@@ -7306,6 +7307,26 @@ rv_41=$(_rv_answer 56)
 check "RV agent test41 succeeds" "^→ succeeds$" "$rv_41"
 check "RV agent test41: through the agent, a used serial past its link's expiry is dropped and the serial registered again" "^RD41 = <unbound>$" "$rv_41"
 check "RV agent test41: through the agent, a used serial before its link's expiry is kept and the registration refused" "^RK41 = rejected$" "$rv_41"
+# Tests 42 and 43: the redemption is the term redeem(R, Link) signed by R
+# (GNA Section 6, "Invitation links", 0147658): one signed by another than
+# the recipient it names, or the link presented bare, is refused before the
+# layer is asked, and admit_redeemer/7 refuses every form but R's signature
+# over redeem(R, Link).
+rv_42=$(_rv_answer 57)
+check "RV agent test42 succeeds" "^→ succeeds$" "$rv_42"
+check "RV agent test42: a redemption not signed by its recipient, or the link presented bare, does not reach the layer" "^0$" "$(_rv_pa "$rv_42")"
+check "RV agent test42: a redemption signed by another than its recipient is refused" "^R421 = rejected$" "$rv_42"
+check "RV agent test42: the link presented bare, the form before GNA 0147658, is refused" "^R422 = rejected$" "$rv_42"
+check "RV agent test42: the inviter is told nothing" "^RI42 = <unbound>$" "$rv_42"
+rv_43=$(_rv_answer 58)
+check "RV agent test43 succeeds" "^→ succeeds$" "$rv_43"
+check "RV agent test43: no refused redemption reaches the layer" "^0$" "$(_rv_pa "$rv_43")"
+check "RV agent test43: unsigned is refused" "^R431 = rejected$" "$rv_43"
+check "RV agent test43: signed by another than the recipient is refused" "^R432 = rejected$" "$rv_43"
+check "RV agent test43: naming another recipient is refused" "^R433 = rejected$" "$rv_43"
+check "RV agent test43: another term is refused" "^R434 = rejected$" "$rv_43"
+check "RV agent test43: a redemption whose link is no signed term is refused" "^R435 = rejected$" "$rv_43"
+check "RV agent test43: the serial is left unused" "^P43 = \[invited(alice, 7, X[0-9]*)\]$" "$rv_43"
 
 # rv_server/2, the entry the rendezvous server boots the agent on
 # (networking/glue/bin/rendezvous_server.dart): the module loaded as the

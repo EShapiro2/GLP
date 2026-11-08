@@ -72,9 +72,11 @@
 %%      the inviter, and I has not registered that serial before; else
 %%      ReplyI = rejected.  An admitted registration waits as
 %%      invited(I_pk, Serial, ReplyI) on the pending list.
-%%   2. The recipient R redeems the link:  redeem(R_pk, Link, ReplyR)
-%%      admitted where signature/2 reports Link signed by the inviter it
-%%      names, the link names this agent, its Rv being the agent's own key,
+%%   2. The recipient R redeems the link:  redeem(R_pk, Signed, ReplyR),
+%%      Signed the term redeem(R_pk, Link) signed by R with sign/3, a signed
+%%      term being ground (GNA 0147658), admitted where signature/2 reports
+%%      Signed signed by R over redeem(R_pk, Link), and Link signed by the
+%%      inviter it names, the link names this agent, its Rv being the agent's own key,
 %%      Id of rv_server/2, and now/1 is before its expiry; the agent then
 %%      reads the address at which the layer observes each of I and R by
 %%      peer_address/2, refusing where it observes none, and accepts only
@@ -127,8 +129,9 @@ SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
               %% the address of the recipient who redeems it, punch(AddrR),
               %% or rejected
             ; redeem(Key, SignedTerm, SignalReply?).
-              %% redeem(R_pk, Link, ReplyR) — the recipient R redeems the
-              %% link Link; ReplyR is punch(AddrI), or rejected
+              %% redeem(R_pk, Signed, ReplyR) — the recipient R redeems a
+              %% link: Signed is redeem(R_pk, Link) signed by R; ReplyR is
+              %% punch(AddrI), or rejected
 
 %% Pending entries awaiting a match
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
@@ -225,13 +228,15 @@ rv_request(_, register(I, Link, ReplyI?), T, Pending, Pending1?) :-
     signature(Link?, S),
     admit_register(I?, S?, ReplyI, Pending0?, Pending1).
 
-%% The recipient R redeems the link it was sent; admit_redeem/7 dispatches
-%% on what signature/2 reports, on the agent's own key Id and on the clock.
-rv_request(Id, redeem(R, Link, ReplyR?), T, Pending, Pending1?) :-
+%% The recipient R redeems the link it was sent, presenting Signed, the
+%% term redeem(R, Link) signed by R; admit_redeemer/7 dispatches on what
+%% signature/2 reports for it, and admit_redeem/7 on what it reports for the
+%% link, on the agent's own key Id and on the clock.
+rv_request(Id, redeem(R, Signed, ReplyR?), T, Pending, Pending1?) :-
     integer(T?) |
     prune_used(T?, Pending?, Pending0),
-    signature(Link?, S),
-    admit_redeem(Id?, R?, S?, T?, ReplyR, Pending0?, Pending1).
+    signature(Signed?, SR),
+    admit_redeemer(Id?, R?, SR?, T?, ReplyR, Pending0?, Pending1).
 
 %% =============================================================================
 %% prune_used: drop the used serials whose links have expired
@@ -365,8 +370,33 @@ register_serial(I, S, ReplyI?, [P|Ps], [P?|Ps1?]) :-
 register_serial(I, S, ReplyI?, [], [invited(I?, S?, ReplyI)]).
 
 %% =============================================================================
-%% admit_redeem: dispatch on what signature/2 reports for a redemption, and
-%% on the clock
+%% admit_redeemer: dispatch on what signature/2 reports for a redemption
+%% =============================================================================
+
+%% admit_redeemer(Id, R, SR, T, ReplyR, Pending, Pending1): the redemption
+%% by R at time T, signature/2 reporting SR for the signed term it carries
+%% (GNA Section 6, "Invitation links": "Signed the term redeem(R, Link)
+%% signed with its own key ... the redemption is signed by R").
+exported procedure admit_redeemer(Key?, Key?, Signature?, Integer?,
+                                  SignalReply, PendingList?, PendingList).
+
+%% R signed redeem(R, Link): admitted, under whatever program R signed it,
+%% and the link it carries is taken apart in turn, admit_redeem/7
+%% dispatching on what signature/2 reports for it.  The guard grounds R.
+admit_redeemer(Id, R, signed(K, _, redeem(R1, Link)), T, ReplyR?, Pending,
+               Pending1?) :-
+    K? =?= R?, R1? =?= R?, integer(T?) |
+    signature(Link?, S),
+    admit_redeem(Id?, R?, S?, T?, ReplyR, Pending?, Pending1).
+
+%% unsigned, signed by another than the recipient it names, another term:
+%% refused, and nothing is changed.
+admit_redeemer(_, _, _, _, rejected, Pending, Pending?) :-
+    otherwise | true.
+
+%% =============================================================================
+%% admit_redeem: dispatch on what signature/2 reports for the redeemed link,
+%% and on the clock
 %% =============================================================================
 
 %% admit_redeem(Id, R, S, T, ReplyR, Pending, Pending1): the redemption by R

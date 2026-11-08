@@ -278,6 +278,14 @@ imported procedure rv_agent_test#test41_used_dropped_through_agent(SignalReply, 
 exported procedure test41_used_dropped_through_agent(SignalReply, SignalReply).
 test41_used_dropped_through_agent(X1?, X2?) :-
     rv_agent_test # test41_used_dropped_through_agent(X1, X2).
+imported procedure rv_agent_test#test42_redeem_not_signed_by_recipient(SignalReply, SignalReply, SignalReply).
+exported procedure test42_redeem_not_signed_by_recipient(SignalReply, SignalReply, SignalReply).
+test42_redeem_not_signed_by_recipient(X1?, X2?, X3?) :-
+    rv_agent_test # test42_redeem_not_signed_by_recipient(X1, X2, X3).
+imported procedure rv_agent_test#test43_redeemer_refused(SignalReply, SignalReply, SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+exported procedure test43_redeemer_refused(SignalReply, SignalReply, SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+test43_redeemer_refused(X1?, X2?, X3?, X4?, X5?, X6?, X7?) :-
+    rv_agent_test # test43_redeemer_refused(X1, X2, X3, X4, X5, X6, X7).
 
 %% =============================================================================
 %% ENTRY POINTS — rv_client_test
