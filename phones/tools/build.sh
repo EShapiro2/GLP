@@ -1,28 +1,46 @@
 #!/bin/bash
-# build.sh <udid>: a debug build of the Grassroots App for one phone, its
-# reporter on (GLP/phones/docs/debugging.md, "The phone side", 1, and "The
-# Mac"), installed by ideviceinstaller, the path that worked on 2026-11-08
-# where Xcode's and devicectl's installs hung.
+# build.sh <udid> [<mode> [<known>]]: a debug build of the Grassroots App for
+# one phone, its reporter on (GLP/phones/docs/debugging.md, "The phone side",
+# 1, and "The Mac"), installed by ideviceinstaller, the path that worked on
+# 2026-11-08 where Xcode's and devicectl's installs hung.
 #
-# It syncs the GLP assets, builds lib/main_superapp.dart with the Dart define
-# GLP_DEBUGLOG, the password in /Users/udi/Grassroots/.debuglog-password, and
+# With <mode>, the scripted build ("The scripted build"): its person is the
+# scripted person <mode> of programs/social/graph/core/superapp_plays.glp,
+# encounter_befriend, encounter, befriend_known or encounter_introduce, the
+# Dart define GLP_PERSON; <known>, the keys the person knows at the start, in
+# hex, separated by commas, the define GLP_KNOWN, none where it is not given.
+# It builds lib/main_scripted.dart in place of lib/main_superapp.dart, and
+# names the .ipa with the mode.
+#
+# It syncs the GLP assets, builds the entry with the Dart define GLP_DEBUGLOG,
+# the password in /Users/udi/Grassroots/.debuglog-password, and
 # Flutter signs the build with the team of the Xcode project
-# (ios/Runner.xcodeproj).  The define is given in a file of mode 600, deleted
-# after, so the password is on no command line.  It then checks that the
+# (ios/Runner.xcodeproj).  The defines are given in a file of mode 600,
+# deleted after, so the password is on no command line.  It then checks that the
 # profile signing the build lists the phone, zips Runner.app as
-# Payload/Runner.app into /Users/udi/Grassroots/tmp/phones/GrassApp-debug-<sha>.ipa
-# and installs it.
+# Payload/Runner.app into /Users/udi/Grassroots/tmp/phones/GrassApp-debug-<sha>.ipa,
+# GrassApp-<mode>-<sha>.ipa for a scripted build, and installs it.
 #
 # The profile lists a phone only once the team has registered it: connect the
 # phone and run, once, `flutter run -d <udid> -t lib/main_superapp.dart` from
 # glp_multiagent, which registers it; the free team signs one phone per build.
 # GRASSROOTS (default /Users/udi/Grassroots) changes where it reads and writes.
 set -euo pipefail
-if [ $# -ne 1 ]; then
-    echo "usage: build.sh <udid>   (devices.sh lists them)" >&2
+if [ $# -lt 1 ] || [ $# -gt 3 ]; then
+    echo "usage: build.sh <udid> [<mode> [<known>]]   (devices.sh lists the phones)" >&2
     exit 2
 fi
 udid=$1
+mode=${2:-}
+known=${3:-}
+[ -z "$known" ] || [ -n "$mode" ] || { echo "build.sh: <known> needs a <mode>" >&2; exit 2; }
+if [ -n "$mode" ]; then
+    entry=lib/main_scripted.dart
+    kind=$mode
+else
+    entry=lib/main_superapp.dart
+    kind=debug
+fi
 G=${GRASSROOTS:-/Users/udi/Grassroots}
 HERE=$(cd "$(dirname "$0")" && pwd)
 GLP=$(cd "$HERE/../.." && pwd)
@@ -37,14 +55,22 @@ sha=$(git -C "$GLP" rev-parse --short=8 HEAD)
 [ -z "$(git -C "$GLP" status --porcelain -- glp_multiagent glp_runtime networking programs)" ] || sha="$sha-dirty"
 OUT="$G/tmp/phones"
 mkdir -p "$OUT"
-IPA="$OUT/GrassApp-debug-$sha.ipa"
+IPA="$OUT/GrassApp-$kind-$sha.ipa"
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
-(umask 077 && python3 -I -c 'import json, sys; print(json.dumps({"GLP_DEBUGLOG": open(sys.argv[1]).read().strip()}))' "$PW" > "$W/defines.json")
+# The defines: the password, and for a scripted build the mode and the keys
+# known; the app refuses a mode no play runs and a key that is not one.
+(umask 077 && python3 -I -c '
+import json, sys
+d = {"GLP_DEBUGLOG": open(sys.argv[1]).read().strip()}
+if sys.argv[2]:
+    d["GLP_PERSON"] = sys.argv[2]
+    d["GLP_KNOWN"] = sys.argv[3]
+print(json.dumps(d))' "$PW" "$mode" "$known" > "$W/defines.json")
 
 cd "$APP"
 bash tool/sync_glp_assets.sh
-flutter build ios --debug -t lib/main_superapp.dart --dart-define-from-file="$W/defines.json"
+flutter build ios --debug -t "$entry" --dart-define-from-file="$W/defines.json"
 
 RUNNER="$APP/build/ios/iphoneos/Runner.app"
 [ -d "$RUNNER" ] || die "no $RUNNER after the build"

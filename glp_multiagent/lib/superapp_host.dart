@@ -88,6 +88,12 @@ class SuperAppHost {
   /// The entry the person's first act names ([superappEntry]).
   final String entry;
 
+  /// The person's first act at the agent's first start, given the agent's
+  /// key; null, and it is the act that starts the Grassroots App,
+  /// `superapp(Me, [])`.  A scripted build's is its scripted person's,
+  /// `sg_init(Me, Mode, Ks)` (scripted_person.dart).
+  final rt.Term Function(String key)? firstAct;
+
   /// The image of the program's display declarations.
   final Manifest manifest;
 
@@ -141,6 +147,7 @@ class SuperAppHost {
     required this.keyPair,
     required this.manifest,
     this.entry = superappEntry,
+    this.firstAct,
     this.stateStore,
   }) : agent = AgentRuntime(
           agentId: agentId,
@@ -175,7 +182,8 @@ class SuperAppHost {
     if (log != null) agent.onLog = log;
     await agent.initialize();
     if (agent.firstStart) {
-      await act(rt.StructTerm(entry, [rt.ConstTerm(key), rt.ConstTerm(rt.nil)]));
+      await act(firstAct?.call(key) ??
+          rt.StructTerm(entry, [rt.ConstTerm(key), rt.ConstTerm(rt.nil)]));
     }
   }
 

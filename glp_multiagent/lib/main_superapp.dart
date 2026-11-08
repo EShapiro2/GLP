@@ -19,6 +19,9 @@
 /// (GLP/phones/docs/debugging.md, "The phone side"; lib/debuglog/); a build
 /// without it reaches none of that code, [debugLogOn] being a constant.
 ///
+/// A scripted build runs the same app with a scripted person in place of the
+/// person on the screen ([GrassrootsApp.script]; main_scripted.dart).
+///
 /// The demonstration with scripted peers in one heap, `superapp_ui/4`, is
 /// `main_superapp_ui.dart`.
 library;
@@ -31,6 +34,7 @@ import 'debuglog/app_reporting.dart';
 import 'glp_sources.dart';
 import 'manifests/superapp_ui.dart';
 import 'phone_network.dart';
+import 'scripted_person.dart';
 import 'superapp_host.dart';
 import 'ui_runtime/agent_surface.dart';
 
@@ -44,7 +48,12 @@ void main() {
 }
 
 class GrassrootsApp extends StatelessWidget {
-  const GrassrootsApp({super.key});
+  const GrassrootsApp({super.key, this.script});
+
+  /// A scripted build's person, made when the app starts, where a fault in
+  /// the build's defines is the app's to report; null, and the person is on
+  /// the screen.
+  final ScriptedPerson Function()? script;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -54,12 +63,15 @@ class GrassrootsApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
           useMaterial3: true,
         ),
-        home: const GrassrootsScreen(),
+        home: GrassrootsScreen(script: script),
       );
 }
 
 class GrassrootsScreen extends StatefulWidget {
-  const GrassrootsScreen({super.key});
+  const GrassrootsScreen({super.key, this.script});
+
+  /// [GrassrootsApp.script].
+  final ScriptedPerson Function()? script;
   @override
   State<GrassrootsScreen> createState() => _GrassrootsScreenState();
 }
@@ -127,6 +139,12 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
       }
     }
     try {
+      final make = widget.script;
+      final script = make?.call();
+      if (debugLogOn && script != null) {
+        _reporter?.event('app', 'script',
+            {'mode': script.mode, 'known': script.known});
+      }
       final glp = await resolveGlpPaths();
       final reporter = debugLogOn ? _reporter : null;
       final net = await PhoneNetwork.open(
@@ -139,9 +157,11 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
       // The agent's local state is kept across the termination of the app by
       // a store in the app's own directory, which the person does not see
       // (IGLP, Implementation Notes, "Persistence": "a store the host gives
-      // it"): a launch after the first goes on from it.
+      // it"): a launch after the first goes on from it.  A scripted build
+      // keeps its agent's state apart, one store for each scripted person.
       final support = await getApplicationSupportDirectory();
-      final store = FileAgentStateStore('${support.path}/agents/$_persona.state');
+      final kept = script == null ? _persona : '$_persona-${script.mode}';
+      final store = FileAgentStateStore('${support.path}/agents/$kept.state');
       final host = SuperAppHost(
         agentId: _persona,
         program: glp.coreDir,
@@ -151,6 +171,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
             : net.network,
         keyPair: net.keyPair,
         manifest: superappManifest,
+        firstAct: script?.firstAct,
         stateStore: store,
       );
       if (debugLogOn) {
