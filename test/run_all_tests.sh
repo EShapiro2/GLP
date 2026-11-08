@@ -7502,8 +7502,9 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # 3; vGLP, Definitions "Volitional Procedure, ..." and "Canonical
 # Compilation"): home/3 asks the person once for the stream of their
 # requests, and the dispatcher draws its construct on the person channel, the
-# default widget of a stream of a union of tuples, a menu of the three forms
-# and the buttons Open place and Close place kept open, no form taking a key
+# default widget of a stream of a union of tuples, a menu of the three forms,
+# the buttons Open place, Close place and Invite by link, and the form opening
+# a link, kept open, no form taking a key
 # typed (GSA #2, 2026-11-08 08:07 UTC, item 2); the persons known, seen
 # nearby, are told the person, nearby([bob]), on the same channel, merged
 # with the draws, and home draws a card for each with the button befriend,
@@ -7529,7 +7530,7 @@ play_home(alice, befriend, [msg(agent, person, nearby([bob])), msg(agent, person
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of three acts and the buttons Open place and Close place (GPE:1), drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place)\])), stream_request_r(input(\[\])))" "$sg_home"
+check "SG super-app home: the request form, a menu of three acts, the buttons Open place and Close place (GPE:1) and Invite by link (GRV:2), and the form opening a link, drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place), button(invite_link), form(open_link, \[field(Link, text)\])\])), stream_request_r(input(\[\])))" "$sg_home"
 check_not "SG super-app home: no connect form, a person befriended by picking them in Nearby" "form(connect," "$sg_home"
 check "SG super-app home: the person known, seen nearby, is shown on the person channel, nearby([bob])" "^draw(0, thread(.*), output(\[msg(agent, person, nearby(\[bob\]))\]))$" "$sg_home"
 check "SG super-app home: home draws bob's card in Nearby with the button befriend" "^draw(2, form(nearby, \[field(Friend, shown), field(Befriend, button(befriend))\]), nearbyPerson_w(nearby(bob, input(\[2\]))))$" "$sg_home"
@@ -7541,6 +7542,37 @@ check "SG super-app home: no on the introduction's card is reject_intro, the pen
 check "SG super-app home: each person nearby whom the person knows gets a card with befriend, once, and a friend none (GSA paper, Appendix 'Nearby': the person befriends one by picking them there)" "LB = \[nearby(bob), nearby(dave) | " "$sg_home"
 check "SG super-app home: picking befriend on a card is the person's request to befriend that person, no key typed" "CB = \[msg(person, alice, connect(bob)), msg(person, alice, connect(dave))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
+
+# The operating system's invitation links (core/links.glp; GNA Section 6,
+# "Invitation links", 2ce8e10; GSA paper, Section 4.2, "Legacy online
+# connections", and Appendix "The Operating System", 963fcbf), under the
+# plain REPL: one key the inviter and the recipient both, no layer bound, the
+# seam doing nothing.  Invite by link with a rendezvous server named: the
+# person is told the link as text, invitation(L), and it is registered with
+# the server, register(K, L, Reply), the reply awaiting the redemption; with
+# none named, refused and told, rejected(invite_link).  A text that is not a
+# link, and a link whose expiry has passed: refused and told,
+# rejected(open_link).  A link made and opened: redeemed at the server the
+# link names, redeem(K, Signed, Reply), the reply awaiting the server.  The
+# two phones over the WAN, the server a process, are NET's
+# (networking/glue/test/rendezvous_server_test.dart).
+sg_links=$("$REPL_RUN" <<HEREDOC
+$SG_CORE
+play_links([rendezvous(rv, rv_addr)], [invite_link], O1, N1, C1).
+play_links([], [invite_link], O2, N2, C2).
+play_links([], [open_link(nonsense)], O3, N3, C3).
+play_link_open(O4, N4).
+play_link_expired(O5).
+:quit
+HEREDOC
+2>&1)
+check "SG links: Invite by link tells the person the link, as text" "O1 = \[msg(agent, person, invitation('\{0,1\}[0-9a-f]*'\{0,1\}))" "$sg_links"
+check "SG links: Invite by link registers the link with the server the first act names" "^N1 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
+check "SG links: Invite by link with no server named is refused and told" "O2 = \[msg(agent, person, rejected(invite_link))\]$" "$sg_links"
+check "SG links: a text that is not a link is refused and told" "O3 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
+check "SG links: a link made and opened is redeemed at the server it names" "^N4 = \[msg(rv, redeem('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
+check "SG links: a link whose expiry has passed is refused and told" "O5 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
+check_not "SG links: no failed goal" "→ failed" "$sg_links"
 
 # The child-safe platform hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation
