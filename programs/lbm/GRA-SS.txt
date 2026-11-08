@@ -1,15 +1,15 @@
 % GRA-SS: Grassroots Ride Auction, Second-Score Restriction --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GRH (Udi, 2026-11-06, to GRH #1).  The paper, /Users/udi/Grassroots/GRH/main_GRH.tex, prints it in its box in Section The Ride, sections/ride.tex, and cites a clause as GRA-SS:1.
 % Paper: GRH, Grassroots Ride-Hailing, in preparation
-% Restricts: GRA, Grassroots Ride Auction, GRH's (programs/lbm), in the terms of GSC's paper, Section 8: each of its clauses is a clause of GRA or of GDO with a condition added, and each schema it adds has the name, the head and the guard of the GRA schema it replaces and a stronger body.
+% Restricts: GRA, Grassroots Ride Auction, GRH's (programs/lbm), in the terms of GSC's paper, Section 8: each of its clauses is a clause of GRA or of GDO-LB with a condition added, and each schema it adds has the name, the head and the guard of the GRA schema it replaces and a stronger body.
 % Defines: the terms of a call, the score of a bid, an admissible bid.
-% Last changed: 2026-11-06, renamed GRA-SS, Second-Score Restriction, from GRA-SI, Second-Score Instance, since it restricts GRA (Udi, to GRH #1); written by GRH #1 Cowork from the Second-Score Instance that GRA's box held, the clauses as Udi approved them that day.
+% Last changed: 2026-11-08, by GRH #2 Cowork: GRA-SS:1 restricts GDO-LB:2, GRA extending GDO-LB (Udi, 2026-11-08); GRA-SS.glp holds GDO-LB's pointing schemas.  2026-11-06, renamed GRA-SS, Second-Score Restriction, from GRA-SI, Second-Score Instance, since it restricts GRA (Udi, to GRH #1); written by GRH #1 Cowork from the Second-Score Instance that GRA's box held, the clauses as Udi approved them that day.
 % Schemas: GRA-SS.glp beside this file, GRA's nineteen with point_transitive, award, close, arrive and cancel restricted; it uses constructs GRH asked GSC for (GSC_inbox.md, 2026-11-06 07:59 UTC), which its header lists.
 % Pragmas: GRA's, GRA-SS having GRA's acts.
 GRA-SS: Grassroots Ride Auction, Second-Score Restriction
 GRA-SS restricts GRA.
 Alice is a rider, Bob a driver and Carol a person.  The terms of a call state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0.  A pickup delay is measured from the award, at time t₀.  A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises.  Its score is W(τ) − p, and it is admissible iff τ ≤ T and its score is at least 0.
-1. ■ Transitive pointing.  GDO:2, where Carol is a driver.
+1. ■ Transitive pointing.  GDO-LB:2, where Carol is a driver.
 2. ■ Award.  GRA:3, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible.  They set the fare P = W(τ) − s₂, where τ is that bid's pickup delay and s₂ is the highest score among the other admissible bids, or 0 if there is none, and they set the deposit D.
 3. ■ Arriving.  GRA:5, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
 4. ■ Cancelling.  GRA:6, where the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
