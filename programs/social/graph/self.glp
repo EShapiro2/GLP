@@ -77,14 +77,19 @@ UserContent ::= connect(Key)
               %% a warm call with an agent (as holder, or as its anchor); the
               %% person consents to introduce a requester to an anchor.
               ; accept_warm_call(Key)
-              ; allow_intro(Key, Key).
+              ; allow_intro(Key, Key)
+              %% GPE:1, Open Place: the person declares the place they are in
+              %% open, and closes it (GSA paper, Section 4, the box GPE; the
+              %% operating system's Nearby, core/place.glp).
+              ; open_place
+              ; close_place.
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content)).
 %% befriend and befriend_intro carry the pending value, which the person's
 %% answer passes back as it came.
 AgentContent ::= befriend(Key, PendingValue)
                ; befriend_intro(Key, Key, PendingValue)
-               ; connected(Constant)
+               ; connected(Key)
                ; rejected
                ; rejected(Constant)
                ; unfriended(Constant)
@@ -92,13 +97,21 @@ AgentContent ::= befriend(Key, PendingValue)
                %% A message the person addressed to someone who is not their
                %% friend is not sent, and the agent tells the person so
                %% (Section 5.1).
-               ; not_a_friend(Key).
+               ; not_a_friend(Key)
+               %% Nearby: the persons nearby whom the person knows, in the
+               %% order of their keys (GPE's interface pragma Nearby; the
+               %% operating system's Nearby, core/place.glp).
+               ; nearby(List(Key)).
 
 %% Network content (2-arg cold-call: msg(Dest, Content)): the caller, the
 %% caller's consent, bound before sending, and the callee's consent, for the
 %% callee to write --- by the callee's role, the smaller identity proposing.
 NetColdCall ::= befriend_propose(Key, AcceptorConsent, ProposerConsent(FriendChannel)?)
-              ; befriend_accept(Key, ProposerConsent(FriendChannel), AcceptorConsent?).
+              ; befriend_accept(Key, ProposerConsent(FriendChannel), AcceptorConsent?)
+              %% GPE:2, Encounter, guarded by both: the proposer and the
+              %% callee's consent, for the callee's operating system to write,
+              %% yes while its place is open (core/place.glp).
+              ; encounter(Key, Decision?).
 
 %% Friend-to-friend content (3-arg: msg(From, To, Content)).  An introduction
 %% from a mutual friend carries the other party, the recipient's own consent,
