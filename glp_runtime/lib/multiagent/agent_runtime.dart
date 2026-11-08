@@ -362,6 +362,21 @@ class AgentRuntime {
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
       _output('[INIT] Restored the agent\'s saved state');
       await _submit(const _Resume());
+      // The person's screen is not part of the local state: at a restart the
+      // runtime grants refresh, an Input addressed to no construct, in the
+      // person's place, once, and the dispatcher has every construct draw
+      // again what it last drew, so the screen is drawn from the restored
+      // state (IGLP 7a25ff8, madglp-spec.tex, the paragraph after Definition
+      // "Restart"; vGLP d433f71, Section 6.3: "Input(T) ::= input(Integer,
+      // Path, T) ; refresh", "a gesture grants refresh, as does the runtime
+      // when it restarts the agent from its saved state").  The runtime keeps
+      // no draw.  It grants it where it holds the person writer, the person
+      // being the person; a person scripted in GLP holds it in the runtime's
+      // place.
+      if (person == null && _userInput != null) {
+        _log('USER_INPUT: refresh, granted at the restart');
+        await _submit(_Input(refreshGrant));
+      }
       _initialized = true;
       updateStats();
       return;
@@ -1189,6 +1204,11 @@ final class _Message extends _AgentEvent {
   @override
   String toString() => 'a message from $from';
 }
+
+/// The grant `refresh`, an Input addressed to no construct, which the runtime
+/// grants in the person's place at a restart (IGLP 7a25ff8, after Definition
+/// "Restart"; vGLP d433f71, Section 6.3).
+final rt.Term refreshGrant = rt.ConstTerm('refresh');
 
 /// The person's act.
 final class _Input extends _AgentEvent {

@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'construct_family.dart';
 import 'manifest.dart';
 import 'runtime.dart';
+import 'tab_screen.dart' show PersonRefresh;
 import 'term.dart';
 
 class AgentSurface extends StatefulWidget {
@@ -255,7 +256,12 @@ class _AgentSurfaceState extends State<AgentSurface> {
   // [formatTerm] is kept for a row's identity, its key, whose term the store
   // holds (ActivityStore.termOf), not for what the person reads.
 
-  Widget _screenPanel(Panel p) {
+  // The panel under the person's refresh, a gesture its widgets may draw,
+  // which grants refresh on the person channel (vGLP d433f71, Section 6.3).
+  Widget _screenPanel(Panel p) => PersonRefresh(
+      refresh: _r.bridge.refresh, child: _screenPanelBody(p));
+
+  Widget _screenPanelBody(Panel p) {
     final cards = _r.inbox.where((c) => c.panel.id == p.id).toList();
     // The last value drawn on construct 0, with which every declared widget
     // is drawn (construct_family.dart, [NamedWidgetBuilder]); this panel is

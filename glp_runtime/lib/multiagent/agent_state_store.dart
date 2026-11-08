@@ -85,6 +85,9 @@ class FileAgentStateStore implements AgentStateStore {
   @override
   Future<void> save(Uint8List state) async {
     final next = File('$path.next');
+    // The directory the application names may not exist before the agent's
+    // first save, as on a phone at its first launch.
+    await next.parent.create(recursive: true);
     await next.writeAsBytes(state, flush: true);
     await next.rename(path);
   }

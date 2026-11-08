@@ -18,6 +18,20 @@ import 'construct_family.dart';
 import 'named_widgets.dart';
 import 'term.dart';
 
+/// The person's gesture that grants `refresh` on the person channel, an Input addressed to no construct, on which the dispatcher has every construct draw again what it last drew ([Bridge.refresh]; vGLP d433f71, Section 6.3).  A screen of the bridge's constructs gives it to the widgets drawn on it; a widget the construct family draws a refresh in reads it here.
+class PersonRefresh extends InheritedWidget {
+  final VoidCallback refresh;
+
+  const PersonRefresh({super.key, required this.refresh, required super.child});
+
+  /// The gesture [context] is drawn under; null where no screen gives one.
+  static PersonRefresh? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<PersonRefresh>();
+
+  @override
+  bool updateShouldNotify(PersonRefresh old) => refresh != old.refresh;
+}
+
 /// The tab a widget is drawn in: the list it draws, the person's own key, and the fields the screen holds.
 class TabPlace extends InheritedWidget {
   /// The predicate of the list the tab draws, one of those the view names (named_widgets.dart, `SocialState.lists`).

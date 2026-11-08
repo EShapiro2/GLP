@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/named_widgets.dart';
+import 'package:glp_multiagent/ui_runtime/tab_screen.dart' show PersonRefresh;
 import 'package:glp_multiagent/ui_runtime/term.dart';
 
 import 'fixture_term.dart';
@@ -24,12 +25,12 @@ import 'fixture_term.dart';
 /// The widget of the request question, `named(W, D)`: `W` the declared widget
 /// whole, its buttons (programs/vglp/cva/compiler/README.md, 6;
 /// glp_runtime/lib/vglp/canonical.dart, `DeclaredWidget.drawnAs`), and `D` the
-/// default widget of `Request ::= propose(Proposal) ; refresh`, a menu of the
-/// form `propose`, over [proposals], and the constant `refresh`.
+/// default widget of `Request ::= propose(Proposal)`, a menu of the form
+/// `propose`, over [proposals] (vGLP d433f71: the request type has no
+/// alternative refresh).
 String _requestWidget(String buttons, String proposals) =>
     "named('social_menu([${buttons.replaceAll("'", r"\'")}])', "
-    "menu([form(propose, [field('Proposal', menu([$proposals]))]), "
-    "button(refresh)]))";
+    "menu([form(propose, [field('Proposal', menu([$proposals]))])]))";
 
 /// Two proposals: establish, its button Establish, where the state lacks
 /// identity; and befriend, with no button.
@@ -98,13 +99,16 @@ class _Screen {
     final c = bridge.construct(1)!;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: ConstructView(
-            key: UniqueKey(),
-            construct: c,
-            family: ConstructFamily.standard,
-            output: output == null ? null : fixtureTerm(output),
-            grant: (p, r) => bridge.grant(c.id, p, r),
+        body: PersonRefresh(
+          refresh: bridge.refresh,
+          child: SingleChildScrollView(
+            child: ConstructView(
+              key: UniqueKey(),
+              construct: c,
+              family: ConstructFamily.standard,
+              output: output == null ? null : fixtureTerm(output),
+              grant: (p, r) => bridge.grant(c.id, p, r),
+            ),
           ),
         ),
       ),
@@ -374,15 +378,16 @@ void main() {
   });
 
   testWidgets(
-      'the request refresh: an icon with no word, granting refresh at the '
-      'question\'s position (vGLP e22e2ad, Section 6.2)', (tester) async {
+      'refresh: an icon with no word, granting refresh on the person '
+      'channel, addressed to no construct (vGLP d433f71, Sections 6.2 and '
+      '6.3)', (tester) async {
     final s = _Screen(tester);
     await s.draw('input([])', output: '[$_aliceView]');
     final icon = find.byKey(socialKey(1, 'refresh'));
     expect(icon, findsOneWidget);
     expect(find.descendant(of: icon, matching: find.byType(Text)), findsNothing);
     await _tap(tester, 'refresh');
-    expect(s.grants, ['input(1, [], refresh)']);
+    expect(s.grants, ['refresh']);
   });
 
   test('heldLine: an atom as its tab draws it, with its count where the tab '
