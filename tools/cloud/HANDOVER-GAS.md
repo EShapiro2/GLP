@@ -15,13 +15,18 @@ All pushed; Code merges.  Reported to Code at 2026-11-08 17:36 UTC and after.
 3. 9cb3ca31: `glp_multiagent/lib/superapp_host.dart` sends the servers in the first act.  IGLP's Dart, for Code to route.
 4. d3fdf43b, d80a4447: GDS:2 on the app's side (GNA 5040fb6, Section 7): List, List unlisted, Unlist, the supply of day-long links.
 5. 999e82ba: home's Introduce card (GKK's pragma Introduction) and Bob's card in GKK's words; the nearby3 play introduces by the button.
+6. 68c86849: play_ui_boot.glp's notice type brought to core's (graph_scenario_test).
+7. 7217962c: the site's favicon.ico, linked from each page and copied by build.py.
+8. c4f4d744: the services in the first act, superapp(Key, Known, Services) (GSA 1d430b6); `programs/social/graph/core/services.json`, the live rendezvous server and no directory yet, synced into the assets and read by SuperAppHost; refusals with their reasons, rejected(no_directory) and rejected(no_rendezvous_server).
 
 Tests: `networking/glue/test/rendezvous_server_test.dart` (5, two phones running core over loopback with the server as a process, and a scripted directory); Section SG's link, directory and Introduce checks; RV.
 
 ## Open
 
-- The directory's key and address in the super-app's first act: GSA's Boot names none, so `superapp/5` passes `none` and List is refused there.  Waits on GSA.
-- The app's configuration of the live rendezvous server: its key is in no file of the repository.  GSA's deployment.
+- The directory's key goes into `services.json` when Code deploys its agent (servers/directory, 162.35.126.126:9518); until then List is refused, rejected(no_directory).
+- A Nearby card stays on screen when its person becomes a friend from the other side, and refresh redraws it: vGLP gives a program no way to withdraw a question.  Reported to Code 2026-11-08 as a vGLP gap, with a recommendation.
+- The refused update told the person (GSA a11bdcd): neither GSA nor IGLP says how the refusal reaches the GLP program, or what the app's own version is to it.  Reported to Code 2026-11-08 as a gap, with a recommendation.
+- The re-declaration at restart is the runtime's (IGLP 0c77e47), Cloud #10's, not this role's.
 - Reconnection (GRV:4) waits on GLP's `reachable(Events)` stream; nothing is built for it.
 - Home offers Introduce for every two friends: GKK:3 conditions on Alice knowing both, and Alice cannot know whether her two friends know each other.
 - `glp_multiagent/test/superapp_screen_test.dart` does not run in a Linux container: it loads fonts from `/System/Library`.
