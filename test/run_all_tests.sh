@@ -23,7 +23,7 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
-#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core, flutter test in servers/directory
 #   DL - the debugging log service of the phones (servers/debuglog): dart test there
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
@@ -9518,11 +9518,15 @@ if _section NET; then
 # since it depends on the Flutter package and has flutter_test and no
 # package:test, so `dart test` refuses it; and the pure-Dart core in
 # networking/core by `dart test`.  Each runs from its own directory, as
-# networking/README.md says.  The conventions are Section Q's: each runner's
+# networking/README.md says.  With them, since 2026-11-08 (Cloud #8), the
+# directory of GNA's Section 7, servers/directory, by `flutter test`, since
+# it depends on the glue and so on Flutter, which the Dart on the Mac's path
+# cannot resolve: its agent over the headless layer against a scripted app
+# over the loopback, and its store and page.  The conventions are Section Q's: each runner's
 # raw output and json report kept in the run's directory, SUITE_RUN_DIR
-# (net_flutter, net_glue and net_core, each .txt and .json), each failing test
-# printed as a FAIL
-# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# (net_flutter, net_glue, net_core and net_directory, each .txt and .json),
+# each failing test printed as a FAIL
+# line "<package directory>/test/<file>: <test name>" and counted, the passed
 # count added to the totals, a missing runner a hard failure, and a runner that
 # exits non-zero naming no failing test a hard failure, since it did not run its
 # tests.  The section has no known-red list: a red test fails it.
@@ -9531,16 +9535,15 @@ echo ""
 
 NET_RAW_DIR="$SUITE_RUN_DIR"
 mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
-echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, each .txt and .json)"
+echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, net_directory, each .txt and .json)"
 NET_PASSED=0
 NET_FAILED=0
 
-# _net_run <name> <directory under networking/> <runner>: runs the runner's
-# tests in that directory and adds to NET_PASSED and NET_FAILED.
+# _net_run <name> <directory from the repository root> <runner>: runs the
+# runner's tests in that directory and adds to NET_PASSED and NET_FAILED.
 _net_run() {
-    local name="$1" sub="$2" runner="$3"
-    local dir="$GLP_DIR/networking${sub:+/$sub}"
-    local rel="networking${sub:+/$sub}"
+    local name="$1" rel="$2" runner="$3"
+    local dir="$GLP_DIR/$rel"
     local raw="$NET_RAW_DIR/net_$name.txt"
     local result status clean passed fails dnf
     if ! command -v "$runner" >/dev/null 2>&1; then
@@ -9592,9 +9595,10 @@ _net_run() {
     NET_PASSED=$((NET_PASSED + passed))
 }
 
-_net_run flutter "" flutter
-_net_run glue glue flutter
-_net_run core core dart
+_net_run flutter networking flutter
+_net_run glue networking/glue flutter
+_net_run core networking/core dart
+_net_run directory servers/directory flutter
 
 PASS=$((PASS + NET_PASSED))
 FAIL=$((FAIL + NET_FAILED))
