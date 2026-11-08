@@ -197,6 +197,25 @@ const String _appTeam7 = 'app(TEAM, app.grassroots, 7)';
   return (events: events, closed: closed);
 }
 
+/// The presences on the nearby stream growing from [addr], each as the
+/// program sees it, `seen(K)` or `gone(K)`, and whether it is closed.
+({List<String> presences, bool closed}) _presences(
+    GlpRuntime rt, HeapCell addr) {
+  final presences = <String>[];
+  Object? cell = rt.heap.derefAddr(addr);
+  while (cell is StructTerm && cell.functor == '.') {
+    final head = cell.args[0];
+    if (head is StructTerm && head.args.length == 1) {
+      final k = head.args[0];
+      presences.add('${head.functor}(${k is ConstTerm ? k.value : k})');
+    }
+    final tail = cell.args[1];
+    cell = tail is VarRef ? rt.heap.derefAddr(tail.addr) : tail;
+  }
+  final closed = cell is ConstTerm && (cell.value == nil || cell.value == null);
+  return (presences: presences, closed: closed);
+}
+
 /// A 64-character hex public key, distinct per [seed].
 String _hex(int seed) =>
     List.generate(32, (i) => ((seed + i) & 0xff).toRadixString(16).padLeft(2, '0'))
@@ -362,6 +381,167 @@ void main() {
       expect(second.events, isEmpty,
           reason: "the first declaration's refusal is not the second's");
       expect(second.closed, isFalse);
+    });
+  });
+
+  // GLP-Spec 210cee1, appendix-guards, "Networking seam": "nearby(U, S)
+  // assigns S a stream of the agents nearby over the proximity underlay U:
+  // seen(K) when the layer discovers on U an agent of key K that it
+  // recognises or, under open trust, contacts, and gone(K) when that agent can
+  // no longer be reached over U.  A further declaration on the same underlay
+  // supersedes the earlier one and closes its stream, and remove(nearby(U))
+  // ends the declaration and closes its stream."  IGLP b20951d, Definition
+  // "Seam Predicates" and the paragraph after it: fed and closed as a place's
+  // stream.  The layer reports discovery by onPeerDiscovered(pk) on the
+  // underlay's sub-object, once per identity, a return by the session it
+  // establishes again, onPeerConnected(pk, underlay), and the loss by
+  // onPeerDisconnected(pk, underlay) (GNA api.tex and proximity.tex).
+  group('nearby stream (Definition Seam Predicates)', () {
+    PubKey key(int seed) => PubKey.fromHex(_hex(seed));
+
+    test('seen when the layer discovers an agent on the underlay, gone when it '
+        'can no longer be reached over it', () {
+      final a = _agentContext();
+      final (w, _) = a.rt.heap.allocateVariable();
+      a.ctx.declareNearby(ProximityUnderlay.pan, w);
+
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      a.ctx.peerConnected(key(1), Underlay.pan, null);
+      a.ctx.peerDisconnected(key(1), Underlay.pan);
+      a.ctx.peerConnected(key(1), Underlay.pan, null);
+
+      final s = _presences(a.rt, w);
+      expect(s.presences, [
+        'seen(${_hex(1)})',
+        'gone(${_hex(1)})',
+        'seen(${_hex(1)})',
+      ], reason: 'a discovery and the session that follows it are one seen; '
+          'a return after it was lost is the session established again');
+      expect(s.closed, isFalse);
+    });
+
+    test('a declaration is given seen for every agent already nearby', () {
+      final a = _agentContext();
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      a.ctx.peerConnected(key(2), Underlay.pan, null);
+      a.ctx.peerConnected(key(3), Underlay.pan, null);
+      a.ctx.peerDisconnected(key(3), Underlay.pan);
+
+      final (w, _) = a.rt.heap.allocateVariable();
+      a.ctx.declareNearby(ProximityUnderlay.pan, w);
+      expect(_presences(a.rt, w).presences,
+          ['seen(${_hex(1)})', 'seen(${_hex(2)})']);
+    });
+
+    test('each proximity underlay is its own, and the WAN is none', () {
+      final a = _agentContext();
+      final (pan, _) = a.rt.heap.allocateVariable();
+      final (lan, _) = a.rt.heap.allocateVariable();
+      a.ctx.declareNearby(ProximityUnderlay.pan, pan);
+      a.ctx.declareNearby(ProximityUnderlay.lan, lan);
+
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.lan);
+      a.ctx.peerConnected(key(2), Underlay.wan, null);
+      a.ctx.peerConnected(key(1), Underlay.pan, null);
+      a.ctx.peerDisconnected(key(1), Underlay.lan);
+
+      expect(_presences(a.rt, pan).presences, ['seen(${_hex(1)})']);
+      expect(_presences(a.rt, lan).presences,
+          ['seen(${_hex(1)})', 'gone(${_hex(1)})'],
+          reason: 'gone over the LAN, while the agent stays reachable over '
+              'the PAN');
+    });
+
+    test('a further declaration on the same underlay supersedes the earlier '
+        'one and closes its stream', () {
+      final a = _agentContext();
+      final (w1, _) = a.rt.heap.allocateVariable();
+      final (w2, _) = a.rt.heap.allocateVariable();
+      a.ctx.declareNearby(ProximityUnderlay.pan, w1);
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      a.ctx.declareNearby(ProximityUnderlay.pan, w2);
+      a.ctx.peerDisconnected(key(1), Underlay.pan);
+
+      final first = _presences(a.rt, w1);
+      expect(first.presences, ['seen(${_hex(1)})']);
+      expect(first.closed, isTrue);
+      final second = _presences(a.rt, w2);
+      expect(second.presences, ['seen(${_hex(1)})', 'gone(${_hex(1)})'],
+          reason: 'the further declaration is given seen for the agent '
+              'nearby when it is made');
+      expect(second.closed, isFalse);
+    });
+
+    test('a presence for a declaration that no longer stands is dropped', () {
+      final a = _agentContext();
+      final held = <(ProximityUnderlay, Term, int)>[];
+      a.ctx.presenceSink = (u, p, d) => held.add((u, p, d));
+      final (w1, _) = a.rt.heap.allocateVariable();
+      final (w2, _) = a.rt.heap.allocateVariable();
+      a.ctx.declareNearby(ProximityUnderlay.pan, w1);
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      a.ctx.declareNearby(ProximityUnderlay.pan, w2);
+      for (final (u, p, d) in held) {
+        a.ctx.deliverPresence(u, p, declaration: d);
+      }
+      expect(_presences(a.rt, w1).presences, isEmpty,
+          reason: "the host's cycle came after the declaration it answers "
+              'was superseded');
+      expect(_presences(a.rt, w2).presences, ['seen(${_hex(1)})']);
+    });
+
+    test('nothing is reported where no nearby declaration stands', () {
+      final a = _agentContext();
+      final held = <Term>[];
+      a.ctx.presenceSink = (u, p, d) => held.add(p);
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      a.ctx.peerDisconnected(key(1), Underlay.pan);
+      expect(held, isEmpty);
+    });
+
+    test('declare(nearby(U, S)) through its GLP wrapper: seen, gone, and '
+        'remove(nearby(U)) closes the stream', () async {
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      final ctx = engine.madContext!;
+      ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      engine.loadSource('''
+procedure watch(Stream(Presence)?).
+watch([P|S]) :- ground(P?) | send_to_user([P?]), watch(S?).
+watch([]) :- send_to_user([closed]).
+procedure go.
+go :- declare(nearby(pan, S)), watch(S?).
+procedure stop.
+stop :- remove(nearby(pan)), remove(nearby(lan)).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.suspended, isTrue,
+          reason: 'the stream stays open until remove(nearby(pan))');
+      expect(out, ['seen(${_hex(1)})']);
+      ctx.peerDisconnected(key(1), Underlay.pan);
+      await engine.runGoal('stop');
+      expect(out, ['seen(${_hex(1)})', 'gone(${_hex(1)})', 'closed'],
+          reason: 'remove(nearby(lan)), with none standing, does nothing');
+      expect(engine.runtime.nearbyStreams.isDeclared('pan'), isFalse);
+    });
+
+    test("a further declaration through the wrapper closes the first stream",
+        () async {
+      final out = <String>[];
+      final engine = _engine(out, _SeamNetwork());
+      engine.loadSource('''
+procedure watch(Constant?, Stream(Presence)?).
+watch(N, [P|S]) :- ground(P?) | send_to_user([N?]), watch(N?, S?).
+watch(N, []) :- send_to_user([closed(N?)]).
+procedure go.
+go :- declare(nearby(pan, S1)), watch(first, S1?), declare(nearby(pan, S2)),
+    watch(second, S2?).
+''');
+      final result = await engine.runGoal('go');
+      expect(out, ['closed(first)']);
+      expect(result.suspended, isTrue,
+          reason: 'the second is the standing declaration');
     });
   });
 
@@ -828,9 +1008,15 @@ go :- $goal.
         'rendezvous(Key, String)',
         'trust(Underlay, TrustLevel)',
         'place(Constant, Number, Stream(PlaceEvent)?)',
+        'nearby(Underlay, Stream(Presence)?)',
       ]);
-      expect(alternatives('Removal'),
-          ['peer(Key)', 'rendezvous(Key)', 'place(Constant)']);
+      expect(alternatives('Removal'), [
+        'peer(Key)',
+        'rendezvous(Key)',
+        'place(Constant)',
+        'nearby(Underlay)',
+      ]);
+      expect(alternatives('Presence'), ['seen(Key)', 'gone(Key)']);
       expect(alternatives('Underlay'), ['pan', 'lan']);
       expect(alternatives('TrustLevel'), ['open', 'closed']);
       expect(alternatives('PlaceEvent'),
@@ -859,15 +1045,22 @@ go :- $goal.
         'declare(trust(pan, open))',
         'declare(trust(lan, closed))',
         'declare(place(home, 100, E)), watch(E?)',
+        'declare(nearby(pan, S)), nearby(S?)',
+        'declare(nearby(lan, S)), nearby(S?)',
         "remove(peer('$k'))",
         "remove(rendezvous('$k'))",
         'remove(place(home))',
+        'remove(nearby(pan))',
+        'remove(nearby(lan))',
       ]) {
         final engine = _engine(<String>[], _SeamNetwork());
         expect(() => engine.loadSource('''
 procedure watch(Stream(PlaceEvent)?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
 watch([]).
+procedure nearby(Stream(Presence)?).
+nearby([P|_]) :- ground(P?) | send_to_user([P?]).
+nearby([]).
 procedure go.
 go :- $goal.
 '''), returnsNormally, reason: goal);
@@ -896,6 +1089,10 @@ go :- $goal.
         ('remove(place(home, 100))', 'place/2 is no Removal'),
         ("remove(rendezvous('$k', '198.51.100.9:7000'))",
             'rendezvous/2 is no Removal'),
+        ('declare(nearby(wan, _))', 'wan is no Underlay'),
+        ('declare(nearby(pan))', 'nearby/1 is no Declaration'),
+        ('remove(nearby(wifi))', 'wifi is no Underlay'),
+        ('remove(nearby(pan, _))', 'nearby/2 is no Removal'),
       ]) {
         final engine = _engine(<String>[], _SeamNetwork());
         final name = goal.substring(0, goal.indexOf('('));
@@ -1082,6 +1279,29 @@ more2([]) :- send_to_user([second(closed)]).
             reason: 'both streams are closed: the first superseded, the '
                 'second removed');
         expect(engine.runtime.placeStreams.isDeclared('home'), isFalse);
+      });
+
+      test('$where: declare(nearby(U, S)) stands, carries nothing, and is '
+          'closed by its removal or a further declaration', () async {
+        final out = <String>[];
+        final engine = _unboundEngine(out, mad: mad);
+        engine.loadSource('''
+procedure watch(Constant?, Stream(Presence)?).
+watch(N, [P|S]) :- ground(P?) | send_to_user([seen(N?)]), watch(N?, S?).
+watch(N, []) :- send_to_user([closed(N?)]).
+procedure go.
+go :- declare(nearby(pan, S1)), watch(first, S1?), declare(nearby(pan, S2)),
+    watch(second, S2?), declare(nearby(lan, S3)), watch(third, S3?),
+    remove(nearby(lan)).
+''');
+        final result = await engine.runGoal('go');
+        expect(out.toSet(), {'closed(first)', 'closed(third)'},
+            reason: 'a layer that observes nothing discovers no agent; the '
+                'closing is the runtime\'s');
+        expect(result.suspended, isTrue,
+            reason: 'the second declaration stands, its stream open');
+        expect(engine.runtime.nearbyStreams.isDeclared('pan'), isTrue);
+        expect(engine.runtime.nearbyStreams.isDeclared('lan'), isFalse);
       });
 
       test('$where: declare(trust(U, L)) returns having done nothing', () async {

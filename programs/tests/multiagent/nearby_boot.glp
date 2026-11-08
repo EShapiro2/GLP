@@ -1,0 +1,41 @@
+%% nearby_boot.glp --- declare(nearby(pan, S)) under :boot.
+%
+% GLP-Spec 210cee1, appendix-guards, "Networking seam": nearby(U, S) assigns
+% S a stream of the agents nearby over the proximity underlay U, seen(K) when
+% the layer discovers on U an agent of key K that it recognises or, under open
+% trust, contacts, and gone(K) when that agent can no longer be reached over
+% U; remove(nearby(U)) ends the declaration and closes its stream.  IGLP
+% b20951d, Implementation Notes, "Simulation realisation": "A nearby
+% declaration on the PAN is given seen for every agent adjacent to the
+% declaring one"; the adjacency relation is total by default, so bob is
+% adjacent to alice from the boot.  Alice declares a watch on the PAN at her
+% start, tells her person the first presence it carries, then removes the
+% declaration and tells her person that the stream is closed.  Section MB,
+% MB8, runs it.
+
+procedure boot.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+
+NbMsg ::= poke.
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(NbMsg)), Stream(NetMsg(NbMsg)))?).
+agent(ch(In, []), ch(_, [])) :- start(In?).
+
+procedure start(Stream(Constant)?).
+start([alice | _]) :- declare(nearby(pan, S)), watch(S?).
+start([bob | _]).
+start([]).
+
+%% The first presence goes to the person, and the declaration is removed;
+%% the stream's closing goes to the person too.
+procedure watch(Stream(Presence)?).
+watch([P | S]) :- ground(P?) | send_to_user([P?]), remove(nearby(pan)), closing(S?).
+watch([]) :- send_to_user([closed]).
+
+procedure closing(Stream(Presence)?).
+closing([_ | S]) :- closing(S?).
+closing([]) :- send_to_user([closed]).
+
+%% The person at each agent tells it its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).

@@ -882,6 +882,12 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   ctx.network = network;
   network.onPeerConnected = ctx.peerConnected;
   network.onPeerDisconnected = ctx.peerDisconnected;
+  // And the nearby declarations by what the layer reports of each peer's
+  // discovery, connection and disconnection over the PAN: "A nearby
+  // declaration on the PAN is given seen for every agent adjacent to the
+  // declaring one, and gone when the harness cuts the adjacency" (IGLP
+  // b20951d, "Simulation realisation").
+  network.onPeerDiscovered = ctx.peerDiscovered;
 
   // A destination, in a global name or in a message, is a key or a readable
   // name standing for one, and the seam resolves both to the one agent (IGLP
@@ -1028,16 +1034,23 @@ Future<void> _eventLoop(
             '${msg.peerId}');  // Always print errors
       } else {
         log('Peer ${msg.peerId} ${msg.event.name} over ${msg.underlay.name}');
+        // A presence the report puts on a nearby stream is followed by a run,
+        // as a place event is (IGLP b20951d, after Definition "Seam
+        // Predicates": a presence on a nearby stream is bridged below the
+        // madGLP layer, reactivating whatever suspended on its reader).
+        final presences = ctx.presencesDelivered;
+        var run = false;
         switch (msg.event) {
           case ConnectivityEvent.connected:
             network.onPeerConnected?.call(peerPk, msg.underlay, msg.application);
-            if (ctx.mp.hasSendable) await runEvent();
+            run = ctx.mp.hasSendable;
           case ConnectivityEvent.disconnected:
             network.onPeerDisconnected?.call(peerPk, msg.underlay);
           case ConnectivityEvent.discovered:
             network.onPeerDiscovered?.call(
                 peerPk, ProximityUnderlay.values.byName(msg.underlay.name));
         }
+        if (run || ctx.presencesDelivered != presences) await runEvent();
       }
       config.mainPort.send(AgentIdle(agentId));
     }
