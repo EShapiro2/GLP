@@ -38,6 +38,14 @@ void main() {
       expect(owners[typeKey('Box', 1)], 'tests/type_arity');
     });
 
+    test("the program's type definitions hold both Box types", () {
+      final modules = discoverProgram(dir, rootSelfGlpPath: rootSelf);
+      final defs = programTypeDefs(modules, rootDir: dir);
+      expect(defs[typeKey('Box', 0)]!.alternatives.single.toString(),
+          contains('box'));
+      expect(defs[typeKey('Box', 1)]!.typeParams, hasLength(1));
+    });
+
     test('the program loads and runs, box/1 and box/2 each at its own Box',
         () async {
       final engine = GlpEngine(rootSelfGlpPath: rootSelf);

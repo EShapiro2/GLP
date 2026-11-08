@@ -20,8 +20,10 @@
 %% The monitor is exposed to the subtree: the harnesses spawn it.  sglp.glp,
 %% the units of a horizon (Span, span/2), the slot (Slot, fill/2) and the term
 %% form (SglpTerms, terms_length/2), is exposed to the subtree: the
-%% transformation, the printed modules and the harnesses share it, and the
-%% root exposes it too, for a simulation outside programs/sglp.
+%% transformation, the printed modules and the harnesses share it.  Every
+%% simulation lives in this subtree, an owner's among them (sGLP #11,
+%% Code_inbox 2026-11-07 21:21 UTC, Udi approving), and the root exposes
+%% neither (GLP #13, 21:07 and 21:19 UTC).
 %% A run of the social graph is a call of social_graph/4, or of social_graph/6
 %% for another mix, with this directory loaded (social_graph/run.sh); a run of
 %% coins among friends is a call of coins/7 (coins/run.sh).
