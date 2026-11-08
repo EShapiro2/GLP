@@ -6,7 +6,8 @@
 
 | App | Entry point | Build target |
 |---|---|---|
-| The Grassroots Super-App (`programs/social/graph/core`) | `lib/main.dart`, which runs `lib/main_superapp.dart` | default |
+| The Grassroots App (`programs/social/graph/core`, `superapp/4`), over the real network | `lib/main.dart`, which runs `lib/main_superapp.dart` | default |
+| The demonstration, scripted peers in one heap (`superapp_ui/4`) | `lib/main_superapp_ui.dart` | `--target=lib/main_superapp_ui.dart` |
 | CSSN group plays (REPL subprocess) | `lib/main_cssg.dart` | `--target=lib/main_cssg.dart` |
 
 The two madGLP multi-isolate apps, `lib/main_sg_mad.dart` and
@@ -113,9 +114,15 @@ dart test test/multiagent/
 
 ## Architecture
 
-- **The Grassroots Super-App** (`main.dart`, running `main_superapp.dart`):
-  `runVglpApp` (`vglp_app.dart`) runs `programs/social/graph/core` at
-  `superapp_ui/3` in an agent isolate and renders it through `AgentSurface`.
+- **The Grassroots App** (`main.dart`, running `main_superapp.dart`): the
+  agent's key pair kept in the platform's secure store, GNA's layer over PAN and
+  LAN (`phone_network.dart`), and `SuperAppHost` (`superapp_host.dart`) running
+  `programs/social/graph/core` in the main isolate, which holds the layer, from
+  every agent's initial goal and the first act `superapp(Me, [])`, rendered
+  through `AgentSurface`.
+- **The demonstration** (`main_superapp_ui.dart`): `runVglpApp`
+  (`vglp_app.dart`) runs `programs/social/graph/core` at `superapp_ui/4` in an
+  agent isolate, its peers scripted, and renders it through `AgentSurface`.
 - **CSSN group plays** (`main_cssg.dart`): Spawns `glp_repl` subprocess, parses
   tagged output, routes to per-agent panels.
 
@@ -123,7 +130,9 @@ dart test test/multiagent/
 
 | File | Purpose |
 |---|---|
-| `lib/main.dart` | The default: the Grassroots Super-App, by `lib/main_superapp.dart` |
+| `lib/main.dart` | The default: the Grassroots App, by `lib/main_superapp.dart` |
+| `lib/main_superapp_ui.dart` | The demonstration, `superapp_ui/4` |
+| `lib/superapp_host.dart`, `lib/phone_network.dart` | The Grassroots App's host and its networking layer |
 | `lib/main_cssg.dart` | CSSN group plays via REPL subprocess |
 | `lib/isolate_protocol.dart` | Isolate protocol: message types, lifecycle, entry point |
 | `lib/mad_router.dart` | `IsolateRouter` — cross-isolate MAD message routing |

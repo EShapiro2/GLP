@@ -1,0 +1,92 @@
+/// The networking layer of the Grassroots App on a phone: GNA's layer,
+/// instantiated once for the agent, running the PAN over Bluetooth and the LAN
+/// over the local network, and the runtime's network interface over it, GNA's
+/// glue ([GrassrootsGlpNetwork]).
+///
+/// The key pair (GNA, Section "Identity": "The key pair is generated and
+/// persisted above the networking layer and is supplied to the layer's
+/// constructor when it is instantiated"; IGLP, Implementation Notes, "Boot":
+/// the runtime "makes the agent's key pair from a seed drawn from outside the
+/// program --- the SHA-256 of the clock, the device's hardware identifiers and
+/// the persona's name ... --- and keeps it across restarts ... so the key pair
+/// is made once, at the agent's first start"; "a deployed agent is spawned by
+/// its application with ... its key made the same way"): read from the
+/// platform's secure store, where the layer's embedding keeps it
+/// ([IdentityStore]), or, at the first start, made from that seed
+/// ([PersonIdentity.forPersona]) and kept there.
+///
+/// The layer (GNA, Section "Instantiation"): the key pair, the underlays it
+/// runs, PAN and LAN, and the platform's attestation, the native producer
+/// where the app registers one, and otherwise a platform with no attestation,
+/// whose peers report it unattested (GNA, Section "Session Establishment",
+/// Attestation).  The trust of both proximity underlays is Closed until the
+/// operating system declares it open, on GPE:1 (GNA, "Trust levels": "both
+/// levels default to Closed"; GSA paper, Appendix "The Operating System",
+/// "Nearby").
+library;
+
+import 'dart:typed_data';
+
+import 'package:cryptography/cryptography.dart' show Ed25519;
+import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:grassroots_networking/grassroots_networking.dart';
+import 'package:grassroots_networking_glue/grassroots_glp_network.dart';
+import 'package:redux/redux.dart';
+import 'package:sodium_libs/sodium_libs_sumo.dart';
+
+/// The layer on the phone, the runtime's interface over it, and the key pair
+/// they hold.
+class PhoneNetwork {
+  final GrassrootsNetwork layer;
+  final glp.GlpNetwork network;
+  final ({glp.PubKey pub, Uint8List priv}) keyPair;
+
+  /// Whether the layer brought up a transport, Bluetooth or the local
+  /// network ([GrassrootsNetwork.initialize]).
+  final bool transports;
+
+  const PhoneNetwork._(this.layer, this.network, this.keyPair, this.transports);
+
+  /// Instantiate the layer for the agent of [persona], with the agent's key
+  /// pair, and start it.
+  static Future<PhoneNetwork> open({required String persona}) async {
+    final sodium = await SodiumSumoInit.init();
+    final identity = await _identity(persona);
+    final layer = GrassrootsNetwork(
+      identity: identity,
+      underlays: const {Underlay.pan, Underlay.lan},
+      platformAttestation: NativePlatformAttestation(
+          verifier: const AttestationVerifier(allowAppAttestDevelopment: true)),
+      store: Store<AppState>(appReducer, initialState: const AppState()),
+      sodium: sodium,
+    );
+    final network = GrassrootsGlpNetwork(layer);
+    final transports = await layer.initialize();
+    if (transports) await layer.start();
+    return PhoneNetwork._(
+      layer,
+      network,
+      (
+        pub: glp.PubKey.fromList(identity.publicKey),
+        priv: Uint8List.fromList(identity.privateKey),
+      ),
+      transports,
+    );
+  }
+
+  /// The agent's key pair: the one kept, or, at the first start, one made
+  /// from the seed of the clock, the device and [persona], and kept.
+  static Future<GrassrootsIdentity> _identity(String persona) async {
+    final kept = await IdentityStore.getIdentity();
+    if (kept != null) return kept;
+    final seed =
+        Uint8List.sublistView(PersonIdentity.forPersona(persona).priv, 0, 32);
+    final identity = await GrassrootsIdentity.create(
+        keyPair: await Ed25519().newKeyPairFromSeed(seed));
+    await IdentityStore.putIdentity(identity);
+    return identity;
+  }
+
+  Future<void> dispose() => layer.dispose();
+}

@@ -1,4 +1,4 @@
-/// The Grassroots Super-App started as main_superapp.dart starts it: the agent
+/// The demonstration started as main_superapp_ui.dart starts it: the agent
 /// from agent(ch(_?,_),ch(_?,_)), every agent's initial goal, which
 /// programs/social/graph/core's agent/2 answers, and, at the agent's first
 /// start, the application's act on the person channel that starts the

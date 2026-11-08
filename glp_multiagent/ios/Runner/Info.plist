@@ -26,11 +26,20 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Find devices running Grassroots within Bluetooth range and communicate with them directly, with no network and no server.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Let devices running Grassroots within Bluetooth range find this device and connect to it, with no network and no server.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>GrassApp needs local network access to discover and message peers on the same network</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_grassroots._udp</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

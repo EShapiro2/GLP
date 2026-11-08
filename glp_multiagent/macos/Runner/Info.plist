@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Find devices running Grassroots within Bluetooth range and communicate with them directly, with no network and no server.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Find devices running Grassroots on your local network and communicate with them directly, with no server.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
