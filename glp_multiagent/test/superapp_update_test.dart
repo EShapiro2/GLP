@@ -232,8 +232,11 @@ void main() {
             'restored under the new version');
     second.request(const GAtom('close_place'));
     await second.host.idle;
+    // The layer starts empty at every launch, and at the restart the
+    // runtime made the trust levels standing, open, to it again before any
+    // goal was reduced (IGLP 0c77e47, Implementation Notes, "Persistence").
     expect((second.host.network as _Alone).declared,
-        ['pan closed', 'lan closed']);
+        ['pan open', 'lan open', 'pan closed', 'lan closed']);
     final seen2 = second.screen();
     expect(second.errors, isEmpty);
     second.host.dispose();
@@ -259,7 +262,10 @@ void main() {
     // from the restored state.
     third.request(const GAtom('open_place'));
     await third.host.idle;
-    expect((third.host.network as _Alone).declared, ['pan open', 'lan open']);
+    // The trust levels standing at the termination, closed, are made to the
+    // new layer at the restart, before the person's act.
+    expect((third.host.network as _Alone).declared,
+        ['pan closed', 'lan closed', 'pan open', 'lan open']);
     expect(third.errors, isEmpty);
     third.host.dispose();
   }, timeout: const Timeout(Duration(minutes: 5)));
