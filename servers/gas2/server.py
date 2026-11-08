@@ -94,7 +94,7 @@ def prepare(clone):
         git(['-c', 'core.autocrlf=false', 'clone', '--depth', '1', '-b', BRANCH, UPSTREAM, clone])
         git(['-C', clone, 'config', 'core.autocrlf', 'false'])
     else:
-        git(['-C', clone, 'fetch', '--depth', '1', 'origin', BRANCH])
+        git(['-C', clone, 'fetch', '--depth', '1', UPSTREAM, BRANCH])  # UPSTREAM, which may have changed since the clone
         git(['-C', clone, 'reset', '--hard', 'FETCH_HEAD'])
     git(['-C', clone, 'clean', '-fdq', '--', 'programs'])
     g = Glp(clone)
