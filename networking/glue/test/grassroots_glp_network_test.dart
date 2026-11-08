@@ -210,6 +210,8 @@ void main() {
         events.add('received ${sender.hex} $payload $messageId $underlay');
     network.onPeerDiscovered =
         (pk, underlay) => events.add('discovered ${pk.hex} $underlay');
+    network.onPeerLost =
+        (pk, underlay) => events.add('lost ${pk.hex} $underlay');
     network.onConnectivityStatusChanged =
         (oldAddress, newAddress) => events.add('address $oldAddress $newAddress');
     network.onNetworkChanged =
@@ -217,6 +219,7 @@ void main() {
 
     layer.lan!.onPeerDiscovered!(peer.bytes);
     layer.onPeerConnected!(peer.bytes, Underlay.pan, attested);
+    layer.pan!.onPeerLost!(peer.bytes);
     layer.onMessageReceived!(
         peer.bytes, Uint8List.fromList([1, 2, 3]), 'm-1', Underlay.lan);
     layer.onPeerDisconnected!(peer.bytes, Underlay.wan);
@@ -226,6 +229,7 @@ void main() {
     expect(events, [
       'discovered ${peer.hex} ${glp.ProximityUnderlay.lan}',
       'connected ${peer.hex} ${glp.Underlay.pan}',
+      'lost ${peer.hex} ${glp.ProximityUnderlay.pan}',
       'received ${peer.hex} [1, 2, 3] m-1 ${glp.Underlay.lan}',
       'disconnected ${peer.hex} ${glp.Underlay.wan}',
       'address null 203.0.113.7:9600',

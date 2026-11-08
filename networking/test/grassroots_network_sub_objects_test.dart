@@ -97,7 +97,7 @@ void main() {
         reason: 'one sub-object for the layer\'s lifetime');
   });
 
-  test('getPeers, onPeerDiscovered and setTrustLevel act on their own underlay',
+  test('getPeers, onPeerDiscovered, onPeerLost and setTrustLevel act on their own underlay',
       () async {
     final layer = await layerFor(const {Underlay.pan, Underlay.lan, Underlay.wan});
     final pan = layer.pan!;
@@ -131,6 +131,14 @@ void main() {
     lan.onPeerDiscovered!(Uint8List(32));
     expect(seen, ['lan']);
     expect(pan.onPeerDiscovered, isNotNull);
+
+    // And its own loss callback, onPeerLost (GNA cfbfeac §3.1).
+    final lost = <String>[];
+    pan.onPeerLost = (_) => lost.add('pan');
+    lan.onPeerLost = (_) => lost.add('lan');
+    pan.onPeerLost!(Uint8List(32));
+    expect(lost, ['pan']);
+    expect(lan.onPeerLost, isNotNull);
   });
 
   test('each function of the WAN is reached through wan', () async {

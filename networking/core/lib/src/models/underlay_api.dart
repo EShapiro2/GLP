@@ -36,6 +36,14 @@ abstract interface class ProximityApi {
   /// on this underlay (GNA §3.1).
   abstract void Function(Uint8List pk)? onPeerDiscovered;
 
+  /// `onPeerLost(pk)`: callback when an agent reported discovered on this
+  /// underlay is no longer discovered on it: "its presence is no longer
+  /// observed and it holds no session on the underlay" (GNA cfbfeac §3.1).
+  /// With [onPeerDiscovered] it is behind the stream of
+  /// `declare(nearby(Underlay, Events))`, `gone(K)` (GNA §5, "The layer
+  /// functions").  An agent lost and found again is discovered again.
+  abstract void Function(Uint8List pk)? onPeerLost;
+
   /// `setTrustLevel(level)`: set the cold-call trust level of this underlay
   /// to Open or Closed (GNA §2.7, §3.1); it is Closed until set.
   Future<void> setTrustLevel(ColdCallTrustLevel level);
