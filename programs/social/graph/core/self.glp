@@ -28,7 +28,7 @@
 %% structurally (TGLP, "Cross-module type checking").  HomeDrawn is home.glp's
 %% Drawn, the type its person channel carries.  Ask(Q) is ../self.glp's, as
 %% home.glp's own, and the person channel's types the root's.
-HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key).
+HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key) ; open_place ; close_place.
 HomeFriendRequest ::= from(Key, Decision?).
 HomeIntroRequest  ::= from(Key, Key, Decision?).
 HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
@@ -36,10 +36,12 @@ HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(
 
 %% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
 %% with the person's public key, the stream of the person's acts and the
-%% stream from the network, and nothing else.  It runs agent/4, with the
+%% stream from the network, and nothing else.  It runs agent/4 with the
+%% operating system's Nearby around it (place.glp, os_phone/6: the place, GPE,
+%% and the agents nearby the layer reports), with the
 %% super-app's own person interface (home/3) and its dispatcher between the
-%% person and the agent, and sends the two streams of the outputs list to the
-%% person and to the network.  The person's acts are the grants of the person
+%% person and the agent, and sends what the agent tells the person to the
+%% person and its messages to the network.  The person's acts are the grants of the person
 %% channel (vGLP, Definition "Person Channel, Person Writer, GLP with Persons,
 %% Grant"), ch(Grants?, Draws), which the dispatcher reads: home's asks go to
 %% it, and it draws the constructs of home's questions.  What the agent tells
@@ -51,10 +53,11 @@ HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure place#os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
 exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp(Id, Grants, NetIn) :-
     ground(Id?) |
-    agent # agent(Id?, In?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    place # os_phone(Id?, [], In?, NetIn?, Outs, NetOut),
     calendar(Dates),
     date_msgs(Id?, Dates?, DateMsgs),
     merge(Cmds?, DateMsgs?, In),
@@ -145,12 +148,13 @@ answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 Notice ::= msg(Constant, Constant, NoticeContent).
 NoticeContent ::= befriend(Key)
                 ; befriend_intro(Key, Key)
-                ; connected(Constant)
+                ; connected(Key)
                 ; rejected
                 ; rejected(Constant)
                 ; unfriended(Constant)
                 ; received(Key, Constant)
-                ; not_a_friend(Key).
+                ; not_a_friend(Key)
+                ; nearby(List(Key)).
 Output ::= Notice.
 
 %% The notices, onto the program's output to the person; the person's input
@@ -182,6 +186,8 @@ notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?)), msg(A?, P?, rec
     ground(A?), ground(P?), ground(K?), ground(C?) | true.
 notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, not_a_friend(K?))) :-
     ground(A?), ground(P?), ground(K?) | true.
+notice(msg(A, P, nearby(Ks)), msg(A?, P?, nearby(Ks?)), msg(A?, P?, nearby(Ks?))) :-
+    ground(A?), ground(P?), ground(Ks?) | true.
 
 %% The person's end of a mini-app's person channel that no screen shows ---
 %% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play

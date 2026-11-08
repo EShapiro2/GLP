@@ -7499,7 +7499,7 @@ play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), stream_request_r(input(\[\])))" "$sg_home"
+check "SG super-app home: the request form, a menu of the four acts and the buttons Open place and Close place (GPE:1), drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\]), button(open_place), button(close_place)\])), stream_request_r(input(\[\])))" "$sg_home"
 check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), output(\[msg(agent, person, connected(bob))\]))$" "$sg_home"
 check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "L = \[card(bob) | " "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
@@ -7732,6 +7732,43 @@ check "SG child-safe platform on two smartphones: alice is connected to bob" "\[
 check "SG child-safe platform on two smartphones: bob is connected to alice" "\[bob\] connected(alice)" "$sg_cssn"
 check "SG child-safe platform on two smartphones: alice's message reaches bob" "\[bob\] received(alice, hello)" "$sg_cssn"
 rm -f "$SG_CORE"/*.glpw
+
+# Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The
+# Operating System", "Nearby"; programs/social/graph/GPE.txt): the social
+# graph with the operating system's Nearby around it (graph/core/place.glp,
+# os_phone/6), which declares to the layer a watch on the agents nearby over
+# the PAN and the LAN, declare(nearby(U, S)).  Two smartphones that do not
+# know each other both open the place (GPE:1); each is nearby the other, so
+# they come to know each other by the encounter (GPE:2), each operating
+# system giving its person's consent while the place is open, no question
+# asked; home shows each the other as nearby; alice befriends bob (GSG:1),
+# bob consents on his card, and they are friends.  Then three: alice and bob
+# know each other at the start and befriend, alice never opening the place;
+# bob and carol open it and come to know each other by the encounter, carol's
+# put to alice refused, her place closed; carol befriends bob, and bob
+# introduces her to alice (GKK:3), and the two are friends.  Each person's
+# lines as a set, the isolates ordering them otherwise from run to run, and
+# the order where one notice causes the next.
+sg_nearby=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/social/nearby_boot.glp $SG_CORE
+:boot $GLP_DIR/programs/social/nearby3_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG nearby on two smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$sg_nearby"
+check "SG nearby on three smartphones: the boot settles" "Boot settled: 3 agents (alice, bob, carol)" "$sg_nearby"
+check_not "SG nearby: no event stopped at the cap" "did not quiesce" "$sg_nearby"
+check_not "SG nearby: no failed play" "→ failed" "$sg_nearby"
+sg_nearby2=$(echo "$sg_nearby" | awk '/Boot settled: 2 agents/ { exit } { print }')
+sg_nearby3=$(echo "$sg_nearby" | awk 'f { print } /Boot settled: 2 agents/ { f = 1 }')
+boot_same "SG nearby on two smartphones: alice knows bob by the encounter, home shows him nearby, and she befriends him" "[msg(agent, person, connected(bob)), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted alice "$sg_nearby2")"
+boot_same "SG nearby on two smartphones: bob knows alice by the encounter, home shows her nearby, and he consents on his card" "[msg(agent, person, befriend(alice)), msg(agent, person, connected(alice)), msg(agent, person, nearby([alice]))]" "$(boot_person_sorted bob "$sg_nearby2")"
+check "SG nearby on two smartphones: alice befriends bob once home shows him nearby" "nearby(\[bob\])), msg(agent, person, connected(bob))" "$(boot_person alice "$sg_nearby2")"
+boot_same "SG nearby on three smartphones: alice, who knew bob, befriends him and is introduced to carol" "[msg(agent, person, befriend_intro(bob, carol)), msg(agent, person, connected(bob)), msg(agent, person, connected(carol)), msg(agent, person, nearby([bob, carol])), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted alice "$sg_nearby3")"
+boot_same "SG nearby on three smartphones: bob knows carol by the encounter and befriends both" "[msg(agent, person, befriend(alice)), msg(agent, person, befriend(carol)), msg(agent, person, connected(alice)), msg(agent, person, connected(carol)), msg(agent, person, nearby([alice, carol])), msg(agent, person, nearby([alice]))]" "$(boot_person_sorted bob "$sg_nearby3")"
+boot_same "SG nearby on three smartphones: carol knows bob by the encounter, befriends him, and is introduced to alice" "[msg(agent, person, befriend_intro(bob, alice)), msg(agent, person, connected(alice)), msg(agent, person, connected(bob)), msg(agent, person, nearby([alice, bob])), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted carol "$sg_nearby3")"
+check "SG nearby on three smartphones: carol knows alice by the introduction, not by an encounter" "nearby(\[bob\])), msg(agent, person, connected(bob)), msg(agent, person, befriend_intro(bob, alice)), msg(agent, person, connected(alice)), msg(agent, person, nearby(\[alice, bob\]))" "$(boot_person carol "$sg_nearby3")"
+check "SG nearby on three smartphones: alice knows carol by the introduction" "connected(carol)), msg(agent, person, nearby(\[bob, carol\]))" "$(boot_person alice "$sg_nearby3")"
 
 sg_budget=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/social/graph/budget

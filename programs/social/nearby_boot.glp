@@ -1,0 +1,18 @@
+%% nearby_boot.glp --- two smartphones come to know each other by a physical encounter and befriend (GSA paper, Section 4, the box GPE; Appendix "The Operating System", "Nearby"): under the boot harness, one isolate per person, each with its own key pair, running the social graph of graph/core with the operating system's Nearby around it (graph/core/place.glp, os_phone/6), which declares to the layer a watch on the agents nearby over the PAN and the LAN.  Neither knows the other at the start.  Both open the place (GPE:1); each is nearby the other, so the two operating systems put the encounter (GPE:2) and each gives its person's consent, asking nothing, the place being open; home shows each the other as nearby, nearby(Ks); alice befriends bob (GSG:1), bob consents on his card, and they are friends; alice closes the place.  The program is graph/core, named as :boot's second argument:
+%%   :boot programs/social/nearby_boot.glp programs/social/graph/core
+%% Expected on the persons' screens: [alice] nearby([bob]), [alice] connected(bob), [bob] nearby([alice]), [bob] befriend(alice), [bob] connected(alice).
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, encounter_befriend, [], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, encounter, [], ch(_?, _))@bob.
+
+%% The person scripted at each agent tells it the entry, sg_init/4, with its own key, its mode and the keys of the persons it knows, none here (IGLP, Implementation Notes, "Boot"; Remark "Agent Names"), and reads nothing.
+SayAct ::= sg_init(Key, Constant, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Key?, Constant?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(P, M, Qs, ch(_, [sg_init(P?, M?, Qs?)])).
