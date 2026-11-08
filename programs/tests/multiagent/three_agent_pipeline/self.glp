@@ -22,7 +22,10 @@ consumer_init(Id, In) :- agents # consumer_init(Id?, In?).
 PersonSays ::= init(Constant, Key, List(Key)).
 
 exported procedure(X) agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+%% The agent opens its PAN at its start: the boot harness sets no trust level
+%% at spawn (IGLP 45fabfc, "Simulation realisation"), and the agents of the
+%% boot contact one another by cold call.
+agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
 
 %% The agent's program, by the role its person tells it, with its own key and its peers' keys, keys(Me, Ps).
 procedure(X) start(Stream(PersonSays)?, Stream(NetMsg(X))?).

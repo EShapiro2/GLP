@@ -1,20 +1,25 @@
 /// declare(nearby(pan, S)) under the isolate simulation, the path of the
-/// REPL's `:boot`: the router reports each agent's discoveries, connections
-/// and disconnections to its isolate, which feeds them to the nearby
-/// declarations, so a declaration on the PAN is given seen(K) for every agent
-/// adjacent to the declaring one, gone(K) when the harness cuts the
-/// adjacency, and seen(K) again when it restores it.
+/// REPL's `:boot`: the router reports each agent's discoveries and losses
+/// to its isolate, onPeerDiscovered and onPeerLost (GNA cfbfeac, Section
+/// 3.1), which feeds them to the nearby declarations, so a declaration on
+/// the PAN is given seen(K) for an adjacent agent the declaring agent
+/// declared a peer, and for any other adjacent agent once the PAN trust
+/// levels of both are open, gone(K) when the harness cuts the adjacency, and
+/// seen(K) again when it restores it.
 ///
 /// GLP-Spec 210cee1, appendix-guards, "Networking seam": "nearby(U, S)
 /// assigns S a stream of the agents nearby over the proximity underlay U:
 /// seen(K) when the layer discovers on U an agent of key K that it recognises
 /// or, under open trust, contacts, and gone(K) when that agent can no longer
-/// be reached over U".  IGLP b20951d, Implementation Notes, "Simulation
+/// be reached over U".  IGLP 45fabfc, Implementation Notes, "Simulation
 /// realisation": "The adjacency relation is total by default, every agent a
 /// PAN peer of every other, and the harness cuts and restores it"; "A nearby
-/// declaration on the PAN is given seen for every agent adjacent to the
-/// declaring one, and gone when the harness cuts the adjacency".  In the
-/// simulation an agent is named by the readable name standing for its key.
+/// declaration on the PAN is given seen for an adjacent agent the declaring
+/// agent has declared a peer, and for any other adjacent agent once the PAN
+/// trust levels of both are open, at the moment the second opens; it is
+/// given gone when the harness cuts the adjacency.  The harness sets no
+/// trust level at spawn."  In the simulation an agent is named by the
+/// readable name standing for its key.
 ///
 /// Each presence is an event of its own, followed by a run, so alice tells
 /// her person each one in the phase the harness has settled, on no clock.
@@ -37,9 +42,9 @@ exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(S
 agent(ch(In, []), ch(_, [])) :- start(In?).
 
 procedure start(Stream(Constant)?).
-start([alice | _]) :- declare(nearby(pan, S)), watch(S?).
-start([bob | _]).
-start([carol | _]).
+start([alice | _]) :- declare(peer(bob)), declare(trust(pan, open)), declare(nearby(pan, S)), watch(S?).
+start([bob | _]) :- declare(nearby(pan, S)), watch(S?).
+start([carol | _]) :- declare(trust(pan, open)).
 start([]).
 
 procedure watch(Stream(Presence)?).
@@ -58,9 +63,10 @@ void main() {
   setUp(() => manager = IsolateManager());
   tearDown(() async => manager.shutdown());
 
-  test('a nearby declaration on the PAN is given seen for every adjacent '
-      'agent, gone when the harness cuts the adjacency, and seen again when '
-      'it restores it', () async {
+  test('a nearby declaration on the PAN is given seen for an adjacent agent '
+      'declared a peer and for one whose PAN is open as the declaring '
+      "agent's is, gone when the harness cuts the adjacency, and seen again "
+      'when it restores it', () async {
     final config = BootLoader().load(_boot);
     config.rootSelfGlpPath = _rootSelf;
 
@@ -68,10 +74,9 @@ void main() {
     manager.start();
     await manager.settle();
     expect(manager.outputOf('alice').toSet(), {'seen(bob)', 'seen(carol)'},
-        reason: 'the adjacency is total from the boot');
+        reason: 'bob a peer alice declared, carol open as alice is');
     expect(manager.outputOf('alice'), hasLength(2),
-        reason: 'a discovery and the connection that follows it are one '
-            'seen');
+        reason: 'a discovery is one seen, and a connection none');
 
     manager.cut('alice', 'bob');
     await manager.settle();
@@ -87,7 +92,8 @@ void main() {
         reason: 'a cut between two other agents is no presence of alice\'s');
 
     expect(manager.outputOf('bob'), isEmpty,
-        reason: 'bob declares nothing');
+        reason: 'bob declares no peer and his trust stays Closed, which the '
+            'harness sets at spawn, so his declaration is given no seen');
     expect(manager.faults, isEmpty);
   }, timeout: Timeout.none);
 }

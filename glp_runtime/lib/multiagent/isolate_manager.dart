@@ -441,17 +441,16 @@ class IsolateManager {
     // identifiers and the persona's name, the agent's name p in the boot
     // clause, combined by exclusive or; it is the key the networking layer
     // holds for the agent (IGLP, Implementation Notes, "Boot"), here the
-    // router's directory and the agent's client.  The boot harness sets the
-    // PAN level Open, the underlay of every simulated encounter; an agent's
-    // own trust declaration sets its levels after ([RouterTrust]).
+    // router's directory and the agent's client.  "The harness sets no trust
+    // level at spawn" (IGLP 45fabfc, "Simulation realisation"): both levels
+    // are Closed until the agent declares one ([RouterTrust]).  Until
+    // 2026-11-08 the harness set the PAN level Open at every spawn.
     final keyPairs = <String, PersonIdentity>{};
     for (final directive in config.directives) {
       final identity = PersonIdentity.forPersona(directive.agentId);
       keyPairs[directive.agentId] = identity;
       _keys[directive.agentId] = identity.pub;
       router.register(directive.agentId, identity.pub);
-      router.setTrustLevel(
-          directive.agentId, ProximityUnderlay.pan, TrustLevel.open);
       _log('${directive.agentId} spawned with key ${identity.pub.hex}');
     }
     //
@@ -583,8 +582,9 @@ class IsolateManager {
       _simulation('releaseDelivery').releaseDelivery(a, b);
 
   /// The cold-call trust level of [underlay] the router holds for [agentId] and
-  /// enforces on the first contacts it routes to it: the boot harness's, or
-  /// the one the agent declared with declare(trust(U, L)).  The simulation's only.
+  /// enforces on the first contacts it routes to it: the one the agent
+  /// declared with declare(trust(U, L)), Closed until it declares one.  The
+  /// simulation's only.
   TrustLevel trustLevelOf(String agentId, ProximityUnderlay underlay) =>
       _simulation('trustLevelOf').trustLevelOf(agentId, underlay);
 
@@ -883,11 +883,15 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   network.onPeerConnected = ctx.peerConnected;
   network.onPeerDisconnected = ctx.peerDisconnected;
   // And the nearby declarations by what the layer reports of each peer's
-  // discovery, connection and disconnection over the PAN: "A nearby
-  // declaration on the PAN is given seen for every agent adjacent to the
-  // declaring one, and gone when the harness cuts the adjacency" (IGLP
-  // b20951d, "Simulation realisation").
+  // discovery and loss over the PAN, onPeerDiscovered and onPeerLost (GNA
+  // cfbfeac, Section 3.1): "A nearby declaration on the PAN is given seen for
+  // an adjacent agent the declaring agent has declared a peer, and for any
+  // other adjacent agent once the PAN trust levels of both are open, at the
+  // moment the second opens; it is given gone when the harness cuts the
+  // adjacency" (IGLP 45fabfc, "Simulation realisation"), which the router
+  // decides ([SimulationRouter]).
   network.onPeerDiscovered = ctx.peerDiscovered;
+  network.onPeerLost = ctx.peerLost;
 
   // A destination, in a global name or in a message, is a key or a readable
   // name standing for one, and the seam resolves both to the one agent (IGLP
@@ -1048,6 +1052,9 @@ Future<void> _eventLoop(
             network.onPeerDisconnected?.call(peerPk, msg.underlay);
           case ConnectivityEvent.discovered:
             network.onPeerDiscovered?.call(
+                peerPk, ProximityUnderlay.values.byName(msg.underlay.name));
+          case ConnectivityEvent.lost:
+            network.onPeerLost?.call(
                 peerPk, ProximityUnderlay.values.byName(msg.underlay.name));
         }
         if (run || ctx.presencesDelivered != presences) await runEvent();

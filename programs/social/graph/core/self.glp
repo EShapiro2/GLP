@@ -439,18 +439,43 @@ core_start([superapp(P, Qs) | Gs], N) :-
     person_grants(Gs?, Grants), superapp(P?, Qs?, Grants?, N?).
 core_start([superapp_ui(P, Qs) | Gs], N) :-
     person_grants(Gs?, Grants), superapp_ui(P?, Qs?, Grants?, N?).
-core_start([sg_init(P, M, Qs) | _], N) :- sg_init(P?, M?, Qs?, N?).
-core_start([gsg_phone(R, P, Qs) | _], N) :- gsg_phone # gsg_phone(R?, P?, Qs?, N?).
-core_start([gsn_phone(R, P, Qs) | _], N) :- gsn_phone # gsn_phone(R?, P?, Qs?, N?).
-core_start([gkk_phone(R, P, Qs) | _], N) :- gkk_phone # gkk_phone(R?, P?, Qs?, N?).
-core_start([gsnp_phone(R, P, Qs) | _], N) :- gsnp_phone # gsnp_phone(R?, P?, Qs?, N?).
-core_start([gai_phone(R, P, Qs) | _], N) :- gai_phone # gai_phone(R?, P?, Qs?, N?).
-core_start([gc_phone(R, P, Qs) | _], N) :- gc_phone # gc_phone(R?, P?, Qs?, N?).
-core_start([gb_phone(R, P, Qs) | _], N) :- gb_phone # gb_phone(R?, P?, Qs?, N?).
-core_start([coins_phone(R, P, Qs) | _], N) :- coins_phone # coins_phone(R?, P?, Qs?, N?).
-core_start([dated_phone(R, P, Qs) | _], N) :- dated_phone # dated_phone(R?, P?, Qs?, N?).
-core_start([sovereign_phone(R, P, Qs) | _], N) :- sovereign_phone # sovereign_phone(R?, P?, Qs?, N?).
+core_start([sg_init(P, M, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), sg_init(P?, M?, Qs?, N?).
+core_start([gsg_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gsg_phone # gsg_phone(R?, P?, Qs?, N?).
+core_start([gsn_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gsn_phone # gsn_phone(R?, P?, Qs?, N?).
+core_start([gkk_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gkk_phone # gkk_phone(R?, P?, Qs?, N?).
+core_start([gsnp_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gsnp_phone # gsnp_phone(R?, P?, Qs?, N?).
+core_start([gai_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gai_phone # gai_phone(R?, P?, Qs?, N?).
+core_start([gc_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gc_phone # gc_phone(R?, P?, Qs?, N?).
+core_start([gb_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gb_phone # gb_phone(R?, P?, Qs?, N?).
+core_start([coins_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), coins_phone # coins_phone(R?, P?, Qs?, N?).
+core_start([dated_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), dated_phone # dated_phone(R?, P?, Qs?, N?).
+core_start([sovereign_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), sovereign_phone # sovereign_phone(R?, P?, Qs?, N?).
 core_start([], _).
+
+%% known_peers(Qs): each person the person knows, named by the first act,
+%% declared to the layer as a known peer, declare(peer(Q)), so that the layer
+%% recognises them wherever they are (GSA paper, Appendix "The Operating
+%% System", "Nearby": "The operating system declares to the layer, as a known
+%% peer, every person its person knows"; GLP-Spec appendix-guards,
+%% "Networking seam": "peer(P) gives the networking layer the public key P of
+%% a peer the program knows").  The boots' smartphones run the agent without
+%% the place (os_phone/6, which declares them itself), and from 2026-11-08 the
+%% boot harness opens no trust at spawn (IGLP 45fabfc, "Simulation
+%% realisation"), so a person known is answered by being declared.
+procedure known_peers(List(Key)?).
+known_peers([Q | Qs]) :- ground(Q?) | declare(peer(Q?)), known_peers(Qs?).
+known_peers([]).
 
 %% The person's grants after the first act, onto the super-app's person
 %% channel, which never closes (vGLP, Section 6.3): where the person's stream

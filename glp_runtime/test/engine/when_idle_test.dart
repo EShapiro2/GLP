@@ -45,7 +45,7 @@ final Map<String, String> _madFiles = {};
 
 String _agentClause(String id) => '''
 exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(_, []), ch(N, [])) :- ${id}_init($id, N?).
+agent(ch(_, []), ch(N, [])) :- declare(trust(pan, open)), ${id}_init($id, N?).
 ''';
 
 const String _mad = r'''
@@ -283,7 +283,7 @@ void main() {
         () async {
       // a's start is the only event a has: b sends nothing back.
       final config = BootLoader().load(
-          'procedure boot.\nboot :- agent(ch(_?, _), ch(_?, _))@a, say(a, ch(_?, _))@a, agent(ch(_?, _), ch(_?, _))@b, say(b, ch(_?, _))@b.\nexported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).\nagent(ch(In, []), ch(N, [])) :- start(In?, N?).\nprocedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).\nstart([a | _], N) :- a_init(a, N?).\nstart([b | _], N) :- b_init(b, N?).\nstart(_, _) :- otherwise | true.\nexported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).\nsay(P, ch(_, [P?])).\n$_mad');
+          'procedure boot.\nboot :- agent(ch(_?, _), ch(_?, _))@a, say(a, ch(_?, _))@a, agent(ch(_?, _), ch(_?, _))@b, say(b, ch(_?, _))@b.\nexported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).\nagent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).\nprocedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).\nstart([a | _], N) :- a_init(a, N?).\nstart([b | _], N) :- b_init(b, N?).\nstart(_, _) :- otherwise | true.\nexported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).\nsay(P, ch(_, [P?])).\n$_mad');
       config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
       final manager = IsolateManager();
       try {

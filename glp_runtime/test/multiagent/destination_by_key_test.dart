@@ -36,7 +36,7 @@ boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch
 KeyMsg ::= key(Key) ; ask(Done?).
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(KeyMsg)), Stream(NetMsg(KeyMsg)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
 procedure start(Stream(Constant)?, Stream(NetMsg(KeyMsg))?).
 start([P | _], N) :- agent_init(P?, N?).
 start([], _).

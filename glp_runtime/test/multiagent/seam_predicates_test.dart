@@ -393,9 +393,10 @@ void main() {
   // ends the declaration and closes its stream."  IGLP b20951d, Definition
   // "Seam Predicates" and the paragraph after it: fed and closed as a place's
   // stream.  The layer reports discovery by onPeerDiscovered(pk) on the
-  // underlay's sub-object, once per identity, a return by the session it
-  // establishes again, onPeerConnected(pk, underlay), and the loss by
-  // onPeerDisconnected(pk, underlay) (GNA api.tex and proximity.tex).
+  // underlay's sub-object and the loss by onPeerLost(pk) (GNA cfbfeac,
+  // Section 3.1: "onPeerDiscovered and onPeerLost behind the stream of
+  // declare(nearby(Underlay, Events))"); a session's connection and
+  // disconnection are peer_app/2's and no presence.
   group('nearby stream (Definition Seam Predicates)', () {
     PubKey key(int seed) => PubKey.fromHex(_hex(seed));
 
@@ -407,25 +408,29 @@ void main() {
 
       a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
       a.ctx.peerConnected(key(1), Underlay.pan, null);
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
       a.ctx.peerDisconnected(key(1), Underlay.pan);
+      a.ctx.peerLost(key(1), ProximityUnderlay.pan);
       a.ctx.peerConnected(key(1), Underlay.pan, null);
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
 
       final s = _presences(a.rt, w);
       expect(s.presences, [
         'seen(${_hex(1)})',
         'gone(${_hex(1)})',
         'seen(${_hex(1)})',
-      ], reason: 'a discovery and the session that follows it are one seen; '
-          'a return after it was lost is the session established again');
+      ], reason: 'a discovery is a seen, once until the loss, a loss a gone; '
+          'a session, its connection and its disconnection, is no presence');
       expect(s.closed, isFalse);
     });
 
     test('a declaration is given seen for every agent already nearby', () {
       final a = _agentContext();
       a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
-      a.ctx.peerConnected(key(2), Underlay.pan, null);
-      a.ctx.peerConnected(key(3), Underlay.pan, null);
-      a.ctx.peerDisconnected(key(3), Underlay.pan);
+      a.ctx.peerDiscovered(key(2), ProximityUnderlay.pan);
+      a.ctx.peerDiscovered(key(3), ProximityUnderlay.pan);
+      a.ctx.peerLost(key(3), ProximityUnderlay.pan);
+      a.ctx.peerConnected(key(4), Underlay.pan, null);
 
       final (w, _) = a.rt.heap.allocateVariable();
       a.ctx.declareNearby(ProximityUnderlay.pan, w);
@@ -442,13 +447,13 @@ void main() {
 
       a.ctx.peerDiscovered(key(1), ProximityUnderlay.lan);
       a.ctx.peerConnected(key(2), Underlay.wan, null);
-      a.ctx.peerConnected(key(1), Underlay.pan, null);
-      a.ctx.peerDisconnected(key(1), Underlay.lan);
+      a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
+      a.ctx.peerLost(key(1), ProximityUnderlay.lan);
 
       expect(_presences(a.rt, pan).presences, ['seen(${_hex(1)})']);
       expect(_presences(a.rt, lan).presences,
           ['seen(${_hex(1)})', 'gone(${_hex(1)})'],
-          reason: 'gone over the LAN, while the agent stays reachable over '
+          reason: 'gone over the LAN, while the agent stays discovered on '
               'the PAN');
     });
 
@@ -460,7 +465,7 @@ void main() {
       a.ctx.declareNearby(ProximityUnderlay.pan, w1);
       a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
       a.ctx.declareNearby(ProximityUnderlay.pan, w2);
-      a.ctx.peerDisconnected(key(1), Underlay.pan);
+      a.ctx.peerLost(key(1), ProximityUnderlay.pan);
 
       final first = _presences(a.rt, w1);
       expect(first.presences, ['seen(${_hex(1)})']);
@@ -495,7 +500,7 @@ void main() {
       final held = <Term>[];
       a.ctx.presenceSink = (u, p, d) => held.add(p);
       a.ctx.peerDiscovered(key(1), ProximityUnderlay.pan);
-      a.ctx.peerDisconnected(key(1), Underlay.pan);
+      a.ctx.peerLost(key(1), ProximityUnderlay.pan);
       expect(held, isEmpty);
     });
 
@@ -519,7 +524,7 @@ stop :- remove(nearby(pan)), remove(nearby(lan)).
       expect(result.suspended, isTrue,
           reason: 'the stream stays open until remove(nearby(pan))');
       expect(out, ['seen(${_hex(1)})']);
-      ctx.peerDisconnected(key(1), Underlay.pan);
+      ctx.peerLost(key(1), ProximityUnderlay.pan);
       await engine.runGoal('stop');
       expect(out, ['seen(${_hex(1)})', 'gone(${_hex(1)})', 'closed'],
           reason: 'remove(nearby(lan)), with none standing, does nothing');

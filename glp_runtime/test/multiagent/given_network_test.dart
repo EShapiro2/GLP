@@ -477,14 +477,15 @@ void main() {
     });
 
     test('a nearby declaration is fed from what the layer reports: seen on '
-        'discovery, gone on disconnection over the underlay, seen on the '
-        'session again; each followed by a run', () async {
+        'discovery, gone on the loss, seen on discovery again; a session is '
+        'no presence; each followed by a run', () async {
       // GLP-Spec 210cee1, "Networking seam": "seen(K) when the layer
       // discovers on U an agent of key K that it recognises or, under open
       // trust, contacts, and gone(K) when that agent can no longer be reached
-      // over U"; GNA: onPeerDiscovered(pk) on the underlay's sub-object, once
-      // per identity, and onPeerConnected and onPeerDisconnected with the
-      // underlay.  Over a given network K is the key.
+      // over U"; GNA cfbfeac, Section 3.1: onPeerDiscovered(pk) and
+      // onPeerLost(pk) on the underlay's sub-object, "behind the stream of
+      // declare(nearby(Underlay, Events))".  Over a given network K is the
+      // key.
       final wire = _Wire();
       final kp = generateKeyPair();
       final network = _WireNetwork(kp, wire);
@@ -507,12 +508,13 @@ void main() {
 
       network.onPeerDiscovered!(peer, ProximityUnderlay.pan);
       expect(await next(1), '< seen(${peer.hex})');
-      network.onPeerConnected!(peer, Underlay.pan, null); // the same seen
+      network.onPeerConnected!(peer, Underlay.pan, null); // no presence
       network.onPeerConnected!(other, Underlay.wan, null); // no proximity
       network.onPeerDiscovered!(other, ProximityUnderlay.lan); // another stream
-      network.onPeerDisconnected!(peer, Underlay.pan);
+      network.onPeerDisconnected!(peer, Underlay.pan); // no presence
+      network.onPeerLost!(peer, ProximityUnderlay.pan);
       expect(await next(2), '< gone(${peer.hex})');
-      network.onPeerConnected!(peer, Underlay.pan, null);
+      network.onPeerDiscovered!(peer, ProximityUnderlay.pan);
       expect(await next(3), '< seen(${peer.hex})');
       expect([for (final l in out) if (l.startsWith('< ')) l], [
         '< seen(${peer.hex})',

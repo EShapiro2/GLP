@@ -9,7 +9,10 @@ alice_init(Id, In) :- agents # alice_init(Id?, In?).
 StartAct ::= alice_init(Key).
 
 exported procedure(X) agent(Channel(Stream(StartAct), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
+%% The agent opens its PAN at its start: the boot harness sets no trust level
+%% at spawn (IGLP 45fabfc, "Simulation realisation"), and the agents of the
+%% boot contact one another by cold call.
+agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
 
 %% The entry the person's first act names, on the network input.
 procedure(X) start(Stream(StartAct)?, Stream(NetMsg(X))?).

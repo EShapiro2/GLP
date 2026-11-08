@@ -50,7 +50,7 @@ exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
 say(P, ch(_, [P?])).
 
 procedure agent_init(Constant?, Stream(NetMsg(PaMsg))?).
-agent_init(alice, In) :- probe(In?).
+agent_init(alice, In) :- declare(trust(pan, open)), probe(In?).
 agent_init(bob, _).
 agent_init(_, _) :- otherwise | send_to_net([msg(alice, poke)]).
 

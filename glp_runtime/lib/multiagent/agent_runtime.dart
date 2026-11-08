@@ -129,6 +129,7 @@ class AgentRuntime {
       onPeerConnected;
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
+  void Function(PubKey pk, ProximityUnderlay underlay)? onPeerLost;
 
   /// This agent's Ed25519 key pair.  Provided by the coordinator, or made when
   /// the host spawns the agent, before anything is compiled or sent, from the
@@ -264,12 +265,11 @@ class AgentRuntime {
   /// version"), so peer_app/2 assigns app(D, N, V); where the harness names
   /// none the connection is unattested.  A discovery is over a proximity
   /// underlay, the PAN throughout (IGLP, "Simulation realisation").  Each is
-  /// recorded for the nearby declarations ([MadContext.peerDiscovered],
-  /// [MadContext.peerConnected], [MadContext.peerDisconnected]): "A nearby
-  /// declaration on the PAN is given seen for every agent adjacent to the
-  /// declaring one, and gone when the harness cuts the adjacency" (IGLP
-  /// b20951d, "Simulation realisation"), each presence an event cycle of its
-  /// own ([MadContext.presenceSink]).
+  /// A discovery and a loss are recorded for the nearby declarations
+  /// ([MadContext.peerDiscovered], [MadContext.peerLost]; GNA cfbfeac,
+  /// Section 3.1, onPeerDiscovered and onPeerLost), as the router decides
+  /// them (IGLP 45fabfc, "Simulation realisation"), each presence an event
+  /// cycle of its own ([MadContext.presenceSink]).
   void onConnectivityEvent(
       PubKey peer, Underlay underlay, ConnectivityEvent event,
       {Application? application}) {
@@ -284,6 +284,10 @@ class AgentRuntime {
         final proximity = ProximityUnderlay.values.byName(underlay.name);
         _ctx?.peerDiscovered(peer, proximity);
         onPeerDiscovered?.call(peer, proximity);
+      case ConnectivityEvent.lost:
+        final proximity = ProximityUnderlay.values.byName(underlay.name);
+        _ctx?.peerLost(peer, proximity);
+        onPeerLost?.call(peer, proximity);
     }
   }
 
@@ -874,15 +878,20 @@ class AgentRuntime {
       _ctx?.peerDisconnected(pk, underlay);
       onPeerDisconnected?.call(pk, underlay);
     };
-    // A discovery is recorded for the nearby declarations, as a connection
-    // and a disconnection are by [MadContext.peerConnected] and
-    // [MadContext.peerDisconnected]: seen(K) when the layer discovers on U an
-    // agent of key K, and gone(K) when it can no longer be reached over U
-    // (GLP-Spec 210cee1, "Networking seam"; GNA, onPeerDiscovered and the
-    // session).
+    // A discovery and a loss are recorded for the nearby declarations:
+    // seen(K) when the layer discovers on U an agent of key K, and gone(K)
+    // when it can no longer be reached over U (GLP-Spec 210cee1, "Networking
+    // seam"), the layer's onPeerDiscovered and onPeerLost on U (GNA cfbfeac,
+    // Section 3.1: "onPeerDiscovered and onPeerLost behind the stream of
+    // declare(nearby(Underlay, Events))").  Until 2026-11-08 a connection
+    // and a disconnection fed them too.
     network.onPeerDiscovered = (pk, underlay) {
       _ctx?.peerDiscovered(pk, underlay);
       onPeerDiscovered?.call(pk, underlay);
+    };
+    network.onPeerLost = (pk, underlay) {
+      _ctx?.peerLost(pk, underlay);
+      onPeerLost?.call(pk, underlay);
     };
   }
 

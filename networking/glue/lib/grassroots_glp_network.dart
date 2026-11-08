@@ -217,6 +217,11 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
     }
   }
 
+  /// `onPeerLost(pk, underlay)` (GNA cfbfeac, Section 3.1): held; the layer's
+  /// sub-objects carry no onPeerLost yet.
+  @override
+  void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)? onPeerLost;
+
   /// `declare(trust(pan|lan, Level))`: that sub-object's `setTrustLevel`;
   /// for an underlay the layer does not run it finds no sub-object, and does
   /// nothing (GNA §2.2).
