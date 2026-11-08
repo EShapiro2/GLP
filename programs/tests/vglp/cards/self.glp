@@ -28,9 +28,9 @@ YesNo    ::= yes ; no.
 Card     ::= card(Integer, YesNo?).
 Panel    ::= panel(List(Card)).
 Question ::= panel_w(Panel) ; list_card_w(List(Card))
-           ; stream_yesNo_w(Stream(YesNo?)).
+           ; list_yesNo_w(List(YesNo?)).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= panel_w(_) ; list_card_w(_) ; stream_yesNo_w(_) ; output(List(Output)) ; YesNo.
+Drawn    ::= panel_w(_) ; list_card_w(_) ; list_yesNo_w(_) ; output(List(Output)) ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).

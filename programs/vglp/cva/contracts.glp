@@ -288,7 +288,8 @@ Constraint ::= true ; and(Constraint, Constraint)
              ; signed(Arg, Arg) ; unsigned(Arg, Arg).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
-             ; sum(Args, Arg, Atom, Form, Expr).
+             ; sum(Args, Arg, Atom, Form, Expr)
+             ; author_of(Arg) ; item_of(Arg).
 Exprs      ::= [] ; [Expr | Exprs].
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
@@ -374,7 +375,10 @@ PLists     ::= [] ; [PList | PLists].
 PAct       ::= act(Constant, String, Strings, Said, String, Proposer).
 Proposer   ::= by(Ints).
 PActs      ::= [] ; [PAct | PActs].
-Pragmas    ::= pragmas(PLists, PActs).
+%% A standing declaration, standing(Schema, Predicate) (vGLP d433f71, Section 5.4, "The contract's words"; compiler/self.glp).
+PStand     ::= standing(Constant, Constant).
+PStands    ::= [] ; [PStand | PStands].
+Pragmas    ::= pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands).
 
 procedure pragmas_named(Constant?, Pragmas).
 pragmas_named(nudge, pragmas([list('"Friends"', [friend])],
@@ -454,7 +458,10 @@ pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
      act(introduce, '"Introduce"', ['""', '""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
      act(open, '"Open"', [], none, '"Contacts"', by([1])),
      act(peek, '"Peek"', [], none, '"Contacts"', by([1])),
-     act(post, '"Post"', [], none, '"Contacts"', by([1]))])).
+     act(post, '"Post"', [], none, '"Contacts"', by([1])),
+     act(arrive, '"Arrive"', [], none, '"Contacts"', by([1])),
+     act(leave, '"Leave"', [], none, '"Contacts"', by([1]))],
+    [standing(greet, here)])).
 pragmas_named(days, pragmas([list('"Dates"', [date])],
     [act(dawn, '"Dawn"', [], none, '"Dates"', by([1]))])).
 pragmas_named(linear, pragmas([list('"Levels"', [level])],
@@ -734,7 +741,17 @@ intros([schema(acquaint, [],
            rs(unguarded, [atom(got, [svar(x)])], [], [], [])]),
         nschema(credit, [svar(x)], signed(role(2), svar(x)),
           [rs(unguarded, [atom(credited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(credited, [svar(x), role(2)])]),
-           rs(unguarded, [atom(credit, [svar(x)])], [], [], [])])]).
+           rs(unguarded, [atom(credit, [svar(x)])], [], [], [])]),
+        nschema(cite, [svar(x)], eq(author_of(svar(x)), role(2)),
+          [rs(unguarded, [atom(cited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(cited, [svar(x), role(2)])]),
+           rs(unguarded, [atom(cites, [svar(x)])], [], [], [])]),
+        schema(arrive, [],
+          [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]),
+        schema(leave, [],
+          [rs(guarded, [], [atom(here, [])], [], [])]),
+        schema(greet, [],
+          [rs(guarded, [atom(greeted, [role(2)])], [], [atom(here, []), atom(knows, [role(2)])], [atom(greeted, [role(2)])]),
+           rs(guarded, [atom(greeted, [role(1)])], [], [atom(here, []), atom(knows, [role(1)])], [atom(greeted, [role(1)])])])]).
 
 procedure days(Contract).
 days([schema(dawn, [],

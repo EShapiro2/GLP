@@ -4185,6 +4185,26 @@ check "CVA pragmas: ... the inherited button that stands, with its question, rea
 check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
 check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
 check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# The line saying what a contract is written from, with several relations, each with the contracts after it (GSC, Section 8, Relations among Contracts: amends, extends, instantiates, implements and restricts; GAI.txt, "GAI extends GnW and amends GFP (...)."; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC): XR extends XB2 and amends XC2, and has the pragmas of both with its own (two); XS implements XC2 (implements); XQ's "copies" is no relation, and the name read is refused (norel).
+cva_pr2=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XB2' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pr2/XB2.txt"
+printf '%s\n' '% Extends: nothing.' 'XC2' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' > "$cva_pr2/XC2.txt"
+printf '%s\n' 'XR' 'XR extends XB2 and amends XC2 (GSC, From Grassroots Contract to Grassroots App).' 'Alice and Bob are persons.' '1. ■ Waving. Alice may wave.' 'Pragmas' 'Waves: the waves of Alice.' 'Waving: Alice [Wave]' > "$cva_pr2/XR.txt"
+printf '%s\n' 'XS' 'XS implements XC2.' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Mints: the coins Alice minted.' > "$cva_pr2/XS.txt"
+printf '%s\n' 'XQ' 'XQ extends XB2 and copies XC2.' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' > "$cva_pr2/XQ.txt"
+cva_pr2_wave="schema(wave, ['Alice'], [], [rs(guarded, [atom(wave, [])], [], [], [])])"
+cva_pr2_two=$(bash "$CVA/compiler/pragmas.sh" "$cva_pr2/XR.txt" "[$cva_px_bef, $cva_px_mint, $cva_pr2_wave]" 2>&1; echo "exit $?")
+cva_pr2_impl=$(bash "$CVA/compiler/pragmas.sh" "$cva_pr2/XS.txt" "[$cva_px_mint]" 2>&1; echo "exit $?")
+cva_pr2_norel=$(bash "$CVA/compiler/pragmas.sh" "$cva_pr2/XQ.txt" "[$cva_px_mint]" 2>&1; echo "exit $?")
+rm -rf "$cva_pr2"
+check "CVA pragmas: two relations on one line, extends and amends, the pragmas of both contracts read: XB2's [Befriend] (two)" "act('befriend', '\"Befriend\"', \[\], said(" "$cva_pr2_two"
+check "CVA pragmas: ... XC2's [Mint] (two)" "act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pr2_two"
+check "CVA pragmas: ... XR's own [Wave] (two)" "act('wave', '\"Wave\"', \[\], none, '\"Waves\"', by(\[1\]))" "$cva_pr2_two"
+check "CVA pragmas: ... and pragmas.sh exits 0 (two)" "^exit 0$" "$cva_pr2_two"
+check "CVA pragmas: implements read as a relation, XC2's [Mint] read (implements)" "act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pr2_impl"
+check "CVA pragmas: ... and pragmas.sh exits 0 (implements)" "^exit 0$" "$cva_pr2_impl"
+check "CVA pragmas: a word that is no relation, refused, the name read named (norel)" 'names no contract at "copies XC2"' "$cva_pr2_norel"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (norel)" "^exit 0$" "$cva_pr2_norel"
 # Two kinds of pragmas (GSC, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69; GSC #13, Code_inbox.md, 2026-11-07 19:29 UTC, 2): "Interface pragmas" read as "Pragmas" are, and "Implementation pragmas", and every line after it to the next interface heading, skipped, no paper yet saying what form they take in the app's code (XI); and "Pragmas" alone the interface ones (XP).
 cva_ph=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XI' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Interface pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' 'Implementation pragmas' 'Minting: before minting, the app checks the amount.' > "$cva_ph/XI.txt"
@@ -4340,6 +4360,8 @@ compile(q_inst_none, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs
 compile(q_inst_del, [qschema(s, ['Alice', 'Bob'], [], [pvar('Dave')], true, [rs(guarded, [], [], [], []), rs(guarded, [atom(in, [])], [], [], [])], [conjunct([pvar('Dave')], 1, atom(member, [pvar('Dave')]), fcons(true), [], [hm(2, atom(seen, [pvar('Dave')]))], [fnot(fa(role(2), atom(seen, [pvar('Dave')])))])], [])], syntactically_grassroots).
 compile(q_real_det, [nschema(halve, [real(v), real(h)], eq(mul(num(2), num(h)), num(v)), [rs(guarded, [atom(half, [num(h)])], [atom(poured, [num(v)])], [], [])])], syntactically_grassroots).
 compile(q_author, [nschema(sign, [svar(y)], eq(author_of(svar(y)), role(1)), [rs(guarded, [atom(item, [svar(y)])], [], [], [])])], syntactically_grassroots).
+compile(q_item, [nschema(echo, [svar(y), svar(z)], eq(item_of(svar(y)), item_of(svar(z))), [rs(guarded, [atom(echo, [svar(y), svar(z)])], [], [atom(item, [svar(y)]), atom(item, [svar(z)])], [])])], syntactically_grassroots).
+compile(q_program, [nschema(load, [svar(y)], program(item_of(svar(y))), [rs(guarded, [atom(loaded, [svar(y)])], [], [atom(item, [svar(y)])], [])])], syntactically_grassroots).
 compile(q_real, [schema(pour, [real(v)], [rs(guarded, [atom(poured, [num(v)])], [], [], [])])], syntactically_grassroots).
 compile(q_read, [qschema(s, ['Alice', 'Bob'], [], [pvar('Bob')], true, [rs(guarded, [atom(polled, [])], [], [], [atom(polled, [])]), crs(qlisted(1, admitted, [role(2)], [role(2)]), unguarded, [], [], [atom(in, [])], [])], [], [fforall([role(2)], role(1), atom(admitted, [role(2)]), fcons(true), [fa(role(2), atom(in, []))])])], syntactically_grassroots).
 :quit
@@ -4366,10 +4388,14 @@ check "CVA compiler: ... the class term naming the people of the listed role, th
 check "CVA compiler: a real variable, real(v) among the schema's variables, taken, passing the checks (q_real; vGLP fb40cff, Section 5.4)" "%% not compiled, having no pragmas(q_real)" "$cva_q"
 check "CVA compiler: a real variable the constraint determines, refused with the reason, GLP typing arithmetic on reals Number (q_real_det)" "%% not compiled(q_real_det)" "$cva_q"
 check "CVA compiler: ... the reason (q_real_det)" "it has a real variable the constraint determines, which the compiler does not carry" "$cva_q"
-check "CVA compiler: the author of a speech act in a constraint, GSC's author_of (GSC 65a26da), read and refused with the reason, vGLP's Section 5.4 naming no author, item or program condition (q_author)" "%% not compiled(q_author)" "$cva_q"
-check "CVA compiler: ... the reason (q_author)" "the author, the item or a program condition of a speech act among them, which vGLP Section 5.4 does not name" "$cva_q"
+check "CVA compiler: the author of a speech act in a constraint, GSC's author_of (GSC 65a26da), taken, passing the checks, vGLP's Section 5.4 naming the author and the item of a speech act (vGLP 27bae5d) (q_author)" "%% not compiled, having no pragmas(q_author)" "$cva_q"
+check_not "CVA compiler: ... and not refused (q_author)" "%% not compiled(q_author)" "$cva_q"
+check "CVA compiler: the item of a speech act in a constraint, eq(item_of(y), item_of(z)), taken, passing the checks (q_item)" "%% not compiled, having no pragmas(q_item)" "$cva_q"
+check_not "CVA compiler: ... and not refused (q_item)" "%% not compiled(q_item)" "$cva_q"
+check "CVA compiler: a program condition of a speech act in a constraint, refused with the reason, vGLP's Section 5.4 naming a program among the values and not how the runtime recognises one (q_program)" "%% not compiled(q_program)" "$cva_q"
+check "CVA compiler: ... the reason (q_program)" "a program condition of a speech act among them, which vGLP Section 5.4 does not name" "$cva_q"
 check "CVA compiler: a listed reading role, its base guarding, passing the checks (q_read)" "%% not compiled, having no pragmas(q_read)" "$cva_q"
-check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card, q_inst, q_inst_by, q_inst_local, q_inst_sgn, q_inst_none, q_inst_del, q_inst_base, q_guard, q_real_det, q_author, q_real, q_read)" "not well-typed\|→ failed" "$cva_q"
+check_not "CVA compiler: no qschema contract left unread (q_local, q_nowhere, q_conjunct, q_card, q_inst, q_inst_by, q_inst_local, q_inst_sgn, q_inst_none, q_inst_del, q_inst_base, q_guard, q_real_det, q_author, q_item, q_program, q_real, q_read)" "not well-typed\|→ failed" "$cva_q"
 
 # Counts, sums, min and floor, and environment predicates (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3 and 4): vGLP's counts, its agent run with no person and given at deployment cap(3) and the weights wt(4) and wt(2), which it holds from startup and its first view shows; fill, whose constraint counts the copies of tok its state holds, is taken until it holds three; and heavy, whose constraint sums the weights against min(2 floor(3), 100) = 6, is taken; with the weights wt(4) and wt(1), whose sum is 5, it is not.
 cva_cnt_dir="$GLP_DIR/programs/tests/vg_counts_$$"
@@ -5352,8 +5378,70 @@ HEREDOC
 check "CVA signing conditions: alice's machine sends bob a, which bob did not sign, unsigned(bob, a) holding at the binding" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, send(alice, bob, speech(utterance(a), alice)), none), commit))" "$cva_signing"
 check "CVA signing conditions: ... and credits bob b, which bob signed inside it, signed(bob, b) holding at the binding" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, credit(alice, bob, speech(speech(utterance(b), bob), alice)), none), commit))" "$cva_signing"
 check_not "CVA signing conditions: ... and neither sends b, which bob signed, nor credits a, which he did not" "send(alice, bob, speech(speech(utterance(b), bob), alice))\|credit(alice, bob, speech(utterance(a), alice))" "$cva_signing"
-check "CVA signing conditions: ... bob holds got(a) and credit(b)" "B = \[.*view(bob, \[credit(speech(speech(utterance(b), bob), alice)), got(speech(utterance(a), alice)), knows(alice)\], \[alice\], \[\], \[tab('Contacts', knows)\]) | " "$cva_signing"
+check "CVA signing conditions: ... bob holds credit(b), cite of the same contract committing beside it" "B = \[.*view(bob, \[[^]]*credit(speech(speech(utterance(b), bob), alice))[^]]*knows(alice)\], \[alice\], \[\], \[tab('Contacts', knows)\]) | " "$cva_signing"
+check "CVA signing conditions: ... and got(a)" "B = \[.*view(bob, \[[^]]*got(speech(utterance(a), alice))[^]]*knows(alice)\], \[alice\], \[\], \[tab('Contacts', knows)\]) | " "$cva_signing"
 check "CVA signing conditions: ... the run suspends, none of alice's own transactions holding" "→ suspended" "$cva_signing"
+# The author of a speech act in a constraint, evaluated at the binding (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; GSC 65a26da, def:numbers, "the author author(y), the first signer of y"): intros' cite(p, q ; x), unguarded, author(x) = q, opened by alice on the items she posts, a signed by her, its author alice, and b signed by bob and again by her, its author bob.
+check "CVA author: cite's constraint printed as the contract writes it, local to every role" "^schema_numeric(cite, numeric(eq(author_of(svar(x)), role(2)), \[\], every))\$" "$cva_signing_text"
+check "CVA author: the printed expression type takes the author and the item of a speech act" "^Expr      ::= .* ; author_of(Var) ; item_of(Var).\$" "$cva_signing_text"
+cva_author=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2, A3], propose(post(A2?, speech(utterance(a), A3?)))), own([A4, A5], propose(post(A4?, speech(speech(utterance(b), bob), A5?)))), wait(holds(cited(speech(speech(utterance(b), bob), alice), bob)))], [approval(acquaint(alice, bob), yes), wait(holds(cites(speech(speech(utterance(b), bob), alice))))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA author: alice's machine cites to bob b, whose first signer, its author, is bob, author(b) = bob holding at the binding" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, cite(alice, bob, speech(speech(utterance(b), bob), alice)), none), commit))" "$cva_author"
+check_not "CVA author: ... and not a, whose author is alice" "cite(alice, bob, speech(utterance(a), alice))" "$cva_author"
+check "CVA author: ... bob holds cites(b)" "B = \[.*view(bob, \[cites(speech(speech(utterance(b), bob), alice))" "$cva_author"
+check "CVA author: ... the run suspends" "→ suspended" "$cva_author"
+# Standing requests (vGLP d433f71, Section 5.4, "The contract's words": "A pragma may declare a guarded act standing on an atom its guarding roles require: a person's request of the act that adds the atom is also their standing request (Definition Local) of every class of the standing act's parts that they propose, and their request of the act that deletes it withdraws it; the standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals"; Definition "Proposing", Stand and Withdraw; vGLP #24, Code_inbox.md, 2026-11-08 08:12 UTC, item 2).  The declaration's term, standing(Schema, Predicate), is the compiler's, vGLP's own contracts giving it (contracts.glp, pragmas_named/2), no paper yet giving the form of its line in a NAME.txt.  intros' greet(p, q), guarded by both, requiring here and knows of the other at each, stands on here: arrive makes the standing request and leave withdraws it.
+check "CVA standing: the platform prints greet standing on here" "^schema_standing(greet, on(here))\$" "$cva_signing_text"
+check "CVA standing: ... arrive making the standing request" "^stand_act(arrive, makes(greet))\$" "$cva_signing_text"
+check "CVA standing: ... leave withdrawing it" "^stand_act(leave, withdraws(greet))\$" "$cva_signing_text"
+cva_standing=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(arrive(A2?))), wait(holds(greeted(bob)))], [approval(acquaint(alice, bob), yes), wait(known(alice)), own([B1], propose(arrive(B1?))), wait(holds(greeted(alice)))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA standing: alice and bob each arrive, a standing request of every greet they propose; a greet commits, its guards asked nothing" "outcome(attempt([a-z]*, [0-9]*, [0-9]*, greet([a-z]*, [a-z]*), none), commit)" "$cva_standing"
+check_not "CVA standing: ... neither person asked about greet" "gave(greet\|gave(attempt([a-z]*, [0-9]*, [0-9]*, greet" "$cva_standing"
+check "CVA standing: ... alice holds greeted(bob)" "A = \[.*view(alice, \[greeted(bob), here, knows(bob)\]" "$cva_standing"
+check "CVA standing: ... bob holds greeted(alice)" "B = \[.*view(bob, \[greeted(alice), here, knows(alice)\]" "$cva_standing"
+check "CVA standing: ... and the run suspends, the standing approval of the class committed having ceased" "→ suspended" "$cva_standing"
+# Withdraw: alice arrives, a standing request, and leaves, which withdraws it; bob arrives after.  No greet commits, alice not here, and the run suspends.
+cva_withdraw=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(arrive(A2?))), wait(holds(here)), own([A3], propose(leave(A3?)))], [approval(acquaint(alice, bob), yes), wait(known(alice)), own([B1], propose(arrive(B1?))), wait(holds(here))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check_not "CVA standing: alice withdraws by leaving before bob arrives: no greet commits" "outcome(attempt([a-z]*, [0-9]*, [0-9]*, greet([a-z]*, [a-z]*), none), commit)" "$cva_withdraw"
+check "CVA standing: ... alice holds knows(bob) alone" "A = \[.*view(alice, \[knows(bob)\], \[bob\], \[\], \[tab('Contacts', knows)\]) | " "$cva_withdraw"
+check "CVA standing: ... and the run suspends" "→ suspended" "$cva_withdraw"
+# The compiler's checks of a standing declaration (cvac.glp, standing_faults): a schema of the contract (st_none), guarded (st_unguarded), each of whose guarding roles requires an atom of the predicate and atoms naming every other role and variable, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification") (st_unnamed, GPE's Encounter as its schema stands, Alice's atoms naming no Bob); and a schema declared standing needs no button (st_ok).
+cva_stfx="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(open, []), atom(knows, [role(2)])], []), rs(guarded, [atom(greeted, [role(1)])], [], [atom(open, []), atom(knows, [role(1)])], [])])"
+cva_stmeet="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(meet, [], [rs(guarded, [atom(met, [role(2)])], [], [atom(open, [])], []), rs(guarded, [atom(met, [role(1)])], [], [atom(open, [])], [])])"
+cva_stwave="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(wave, [], [rs(unguarded, [atom(waved, [])], [], [atom(open, [])], [atom(waved, [])])])"
+cva_stp="[list('\"Open\"', [open])], [act(open, '\"Open\"', [], none, '\"Open\"', by([1]))]"
+cva_standing_fx=$("$REPL_RUN" <<HEREDOC
+$CVA/compiler/
+:limit 100000000
+compile(st_ok, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(greet, open)])).
+compile(st_none, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(nope, open)])).
+compile(st_unnamed, [$cva_stmeet], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(meet, open)])).
+compile(st_unguarded, [$cva_stwave], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(wave, open)])).
+:quit
+HEREDOC
+2>&1)
+check "CVA standing: a guarded schema declared standing, its roles naming each other, compiled with no button (st_ok)" "the canonical CVA platform of the contract(st_ok)" "$cva_standing_fx"
+check_not "CVA standing: ... and not refused (st_ok)" "not compiled(st_ok)" "$cva_standing_fx"
+check "CVA standing: a declaration naming no schema, refused (st_none)" "a standing declaration names no schema of the contract" "$cva_standing_fx"
+check "CVA standing: a schema whose guarding roles name not each other, its standing parts not computable from a role's state, refused (st_unnamed)" "its standing parts are not computable from that role" "$cva_standing_fx"
+check "CVA standing: a schema with no guarding role, refused (st_unguarded)" "a standing declaration names a schema with no guarding role" "$cva_standing_fx"
 
 # GB's mint_bond, advance and redeem_bc (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3: "GB: d, k and r by the request; t local to the issuer's role, its date; mint_bond's gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").  vGLP's contract bonds (programs/vglp/cva/contracts.glp): GB's three schemas as programs/currencies/bonds/GB.glp writes them, with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, which gives a person their first date, date(0), GB naming no act that does (Code #12 to Currencies, 2026-10-20 22:23 UTC).  advance, unguarded, its t local to its role and t1 given by succ, is opened by a dated person's machine whenever it can, so the run does not suspend and is stopped at the REPL's :limit (bonds/self.glp).  A request of mint_bond whose guard is not ready is dropped with the notice refused(N, p, unable), and a request of redeem_bc proposes the redeem part, the part it names, guarded by the bearer, never the swap part its class holds (vGLP 1423679, Section 5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, items 4 and 7): the bond maturing at 1000000 refused by the issuer's machine, le(d, t) failing, and the one maturing at 10 redeemed.
 cva_bonds_load=$("$REPL_RUN" <<HEREDOC

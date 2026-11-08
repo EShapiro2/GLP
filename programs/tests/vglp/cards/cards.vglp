@@ -19,8 +19,11 @@
 %%   Panel           two cards in a list the program writes at once, each
 %%                   answered as its own question
 %%   List(Card)      a list of three cards, drawn once written whole
-%%   Stream(YesNo?)  a stream the program writes whose elements are
-%%                   themselves questions
+%%   List(YesNo?)    a list the program writes whose elements are
+%%                   themselves questions, a list and not a stream: an
+%%                   interactive type has "a Stream only at a position the
+%%                   person writes" (vGLP 27bae5d, Definition "Volitional
+%%                   Procedure, Interactive Type")
 %%
 %% The output of a question is drawn once written whole, "once every reader
 %% in the output it holds is assigned" (vGLP, Section 6.3, "The construct
@@ -66,7 +69,7 @@ procedure (List(Card))*cards(Stream(Output)).
     merge(O1?, O2?, O12), merge(O12?, O3?, Out).
 
 %% The stream of two questions, each element the person's to write.
-procedure (Stream(YesNo?))*ballot(Stream(Output)).
+procedure (List(YesNo?))*ballot(Stream(Output)).
 ([A1, A2])*ballot(Out?) :-
     answered(1, A1?, O1), answered(2, A2?, O2), merge(O1?, O2?, Out).
 

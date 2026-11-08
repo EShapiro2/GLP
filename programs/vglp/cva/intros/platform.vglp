@@ -25,6 +25,14 @@ post(Peer, Speech)
 send(Peer, Peer, Speech)
 ;
 credit(Peer, Peer, Speech)
+;
+cite(Peer, Peer, Speech)
+;
+arrive(Peer)
+;
+leave(Peer)
+;
+greet(Peer, Peer)
 .
 
 Proposal ::=
@@ -37,13 +45,19 @@ open(Peer)
 peek(Peer, Peer)
 ;
 post(Peer, Speech)
+;
+arrive(Peer)
+;
+leave(Peer)
+;
+greet(Peer, Peer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Acquaint", [act(acquaint, 1, [1, 2], [], [], [], [], [])]), button("Introduce", [act(introduce, 1, [1, 2], [req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [field(3, "Person", agent)], [], [])]), button("Open", [act(open, 1, [1], [forb(open, [])], [], [], [], [])]), button("Peek", [act(peek, 1, [1, 2], [req(knows, [at(2)]), forb(seen, [at(2)])], [2], [], [], [])]), button("Post", [act(post, 1, [1], [], [], [], [], [])])])
+Request? =::= social_menu([button("Acquaint", [act(acquaint, 1, [1, 2], [], [], [], [], [])]), button("Introduce", [act(introduce, 1, [1, 2], [req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [field(3, "Person", agent)], [], [])]), button("Open", [act(open, 1, [1], [forb(open, [])], [], [], [], [])]), button("Peek", [act(peek, 1, [1, 2], [req(knows, [at(2)]), forb(seen, [at(2)])], [2], [], [], [])]), button("Post", [act(post, 1, [1], [], [], [], [], [])]), button("Arrive", [act(arrive, 1, [1], [forb(here, [])], [], [], [], [])]), button("Leave", [act(leave, 1, [1], [req(here, [])], [], [], [], [])])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
@@ -63,6 +77,14 @@ got(Speech)
 credited(Speech, Peer)
 ;
 credit(Speech)
+;
+cited(Speech, Peer)
+;
+cites(Speech)
+;
+here
+;
+greeted(Peer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -82,10 +104,18 @@ atom_of(g(credited, [s(V1), p(V2)]), shown(credited(V1?, V2?)))
 .
 atom_of(g(credit, [s(V1)]), shown(credit(V1?)))
 .
+atom_of(g(cited, [s(V1), p(V2)]), shown(cited(V1?, V2?)))
+.
+atom_of(g(cites, [s(V1)]), shown(cites(V1?)))
+.
+atom_of(g(here, []), shown(here))
+.
+atom_of(g(greeted, [p(V1)]), shown(greeted(V1?)))
+.
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], []), rs(guarded, [atom(knows, [role(1)])], [], [], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(knows, [role(1)])], [])]), schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(peek, [], [rs(guarded, [atom(seen, [role(2)])], [], [atom(knows, [role(2)])], [atom(seen, [role(2)])]), rs(unguarded, [], [], [atom(open, [])], [])]), schema(post, [svar(x)], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]), schema(send, [svar(x)], [rs(unguarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(sent, [svar(x), role(2)])]), rs(unguarded, [atom(got, [svar(x)])], [], [], [])]), schema(credit, [svar(x)], [rs(unguarded, [atom(credited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(credited, [svar(x), role(2)])]), rs(unguarded, [atom(credit, [svar(x)])], [], [], [])])])
+contract_schemas([schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], []), rs(guarded, [atom(knows, [role(1)])], [], [], [])]), schema(introduce, [pvar(c)], [rs(guarded, [], [], [atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(knows, [role(1)])], [])]), schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(peek, [], [rs(guarded, [atom(seen, [role(2)])], [], [atom(knows, [role(2)])], [atom(seen, [role(2)])]), rs(unguarded, [], [], [atom(open, [])], [])]), schema(post, [svar(x)], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]), schema(send, [svar(x)], [rs(unguarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(sent, [svar(x), role(2)])]), rs(unguarded, [atom(got, [svar(x)])], [], [], [])]), schema(credit, [svar(x)], [rs(unguarded, [atom(credited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(credited, [svar(x), role(2)])]), rs(unguarded, [atom(credit, [svar(x)])], [], [], [])]), schema(cite, [svar(x)], [rs(unguarded, [atom(cited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(cited, [svar(x), role(2)])]), rs(unguarded, [atom(cites, [svar(x)])], [], [], [])]), schema(arrive, [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]), schema(leave, [], [rs(guarded, [], [atom(here, [])], [], [])]), schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(here, []), atom(knows, [role(2)])], [atom(greeted, [role(2)])]), rs(guarded, [atom(greeted, [role(1)])], [], [atom(here, []), atom(knows, [role(1)])], [atom(greeted, [role(1)])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -103,12 +133,22 @@ schema_entry(send, schema(send, [svar(x)], [rs(unguarded, [atom(sent, [svar(x), 
 .
 schema_entry(credit, schema(credit, [svar(x)], [rs(unguarded, [atom(credited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(credited, [svar(x), role(2)])]), rs(unguarded, [atom(credit, [svar(x)])], [], [], [])]))
 .
+schema_entry(cite, schema(cite, [svar(x)], [rs(unguarded, [atom(cited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(cited, [svar(x), role(2)])]), rs(unguarded, [atom(cites, [svar(x)])], [], [], [])]))
+.
+schema_entry(arrive, schema(arrive, [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]))
+.
+schema_entry(leave, schema(leave, [], [rs(guarded, [], [atom(here, [])], [], [])]))
+.
+schema_entry(greet, schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(here, []), atom(knows, [role(2)])], [atom(greeted, [role(2)])]), rs(guarded, [atom(greeted, [role(1)])], [], [atom(here, []), atom(knows, [role(1)])], [atom(greeted, [role(1)])])]))
+.
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
 schema_numeric(send, numeric(unsigned(role(2), svar(x)), [], every))
 .
 schema_numeric(credit, numeric(signed(role(2), svar(x)), [], every))
+.
+schema_numeric(cite, numeric(eq(author_of(svar(x)), role(2)), [], every))
 .
 schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
 
@@ -130,7 +170,27 @@ schema_base(send, 1)
 .
 schema_base(credit, 1)
 .
+schema_base(cite, 1)
+.
+schema_base(arrive, 1)
+.
+schema_base(leave, 1)
+.
+schema_base(greet, 1)
+.
 schema_base(_, 1) :- otherwise | true.
+
+procedure schema_standing(Constant?, StandOn).
+schema_standing(greet, on(here))
+.
+schema_standing(_, none) :- otherwise | true.
+
+procedure stand_act(Constant?, StandAct).
+stand_act(arrive, makes(greet))
+.
+stand_act(leave, withdraws(greet))
+.
+stand_act(_, plain) :- otherwise | true.
 
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
@@ -157,6 +217,14 @@ binding_of(post(V1, V2), post, [b(role(1), p(V1?)), b(svar(x), s(V2?))])
 binding_of(send(V1, V2, V3), send, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
 .
 binding_of(credit(V1, V2, V3), credit, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
+.
+binding_of(cite(V1, V2, V3), cite, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(x), s(V3?))])
+.
+binding_of(arrive(V1), arrive, [b(role(1), p(V1?))])
+.
+binding_of(leave(V1), leave, [b(role(1), p(V1?))])
+.
+binding_of(greet(V1, V2), greet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -234,6 +302,44 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar(x), B?, D?, V3)
 .
+class_of(cite, B, D, cite(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar(x), B?, D?, V3)
+.
+class_of(arrive, B, D, arrive(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+.
+class_of(leave, B, D, leave(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+.
+class_of(greet, B, D, greet(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+.
 
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(acquaint(V1, V2), _, acquaint(V1?, V2?))
@@ -246,6 +352,12 @@ name_class(peek(V1, V2), _, peek(V1?, V2?))
 .
 name_class(post(V1, V2), _, post(V1?, V2?))
 .
+name_class(arrive(V1), _, arrive(V1?))
+.
+name_class(leave(V1), _, leave(V1?))
+.
+name_class(greet(V1, V2), _, greet(V1?, V2?))
+.
 
 procedure request_name(Class?, PName).
 request_name(acquaint(V1, V2), pname(acquaint(V1?, V2?)))
@@ -257,6 +369,12 @@ request_name(open(V1), pname(open(V1?)))
 request_name(peek(V1, V2), pname(peek(V1?, V2?)))
 .
 request_name(post(V1, V2), pname(post(V1?, V2?)))
+.
+request_name(arrive(V1), pname(arrive(V1?)))
+.
+request_name(leave(V1), pname(leave(V1?)))
+.
+request_name(greet(V1, V2), pname(greet(V1?, V2?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -324,7 +442,7 @@ YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote      ::= yes ; no(Reason).
 Decision  ::= commit ; abort(Peer, Reason) ; yield.
-Rho       ::= one(Class) ; rho(Proposal).
+Rho       ::= one(Class) ; rho(Proposal) ; std(Constant).
 Names     ::= none ; request(Rho, Integer).
 Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
@@ -397,7 +515,7 @@ Preds     ::= [] ; [Constant | Preds].
 %% A constraint may also hold not(C), implies(C1, C2) and ne(X, Y), X != Y, as programs/gsc writes them (GSC c8c5ead, def:numbers); eq and ne compare two agents, two speech acts or two community names as they compare two numbers ("eq and ne also compare two agent variables, two speech-act variables or two name terms", ibid.).
 Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
 %% An expression may also be a function the value types provide, fn(min, [X, Y]) or fn(floor, [X]), the count of the instances of a quantifier, cardinality(Xs, H, A, Phi), or the sum of a numeric term over them, sum(Xs, H, A, Phi, U), A the anchor held by H, as programs/gsc writes them (GSC 67a7da0, def:numbers): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
-Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr).
+Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var) ; item_of(Var).
 Exprs     ::= [] ; [Expr | Exprs].
 CRole     ::= every ; at(Integer).
 %% A safe formula of a schema's body (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc writes it: fa(H, M) the atom M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi) and fcons(C), a constraint.  schema_forms(Name, Forms), which the compiler prints from the contract, gives each with the role it is local to, sform(at(I), F), or sform(every, F), every role checking it: "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (ibid.).
@@ -417,7 +535,8 @@ LNorm     ::= norm(Binding) ; badnorm.
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 %% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
 %% A value is a whole number, n(K), or a real, r(X), "a value, a whole number, a real or a string, or a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"); arithmetic on them is on numbers, a result with a real among its operands a real.
-Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; lv(Constant, Constant) ; any.
+%% The item of a speech act, i(U), its utterance under its signatures (vGLP 27bae5d, Section 5.4).
+Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
@@ -446,6 +565,9 @@ Mate      ::= mate(Constant, Binding, Peers, Peer).
 Mates     ::= [] ; [Mate | Mates].
 %% A guarded part with no opener has its proposers, proposed(O), guards of it: "it designates for each guarded part [t]_j with no opener a nonempty set O([t]_j) of its guards, its proposers" (vGLP 9ee6f87, Definition "Local Specification"), the persons in the base of the schema-bindings that determine it ("where the base of the schema is a guarding role, its proposer is the person in the base", Section 5.4, "Speech-act schemas as local specifications"; schema_base, printed from the contract); only a proposer requests the part to its own machine and proposes it, and the other guards are asked (Definitions "Attempt" and "Proposing").
 Opener    ::= opener(Peer) ; proposed(Peers).
+%% A standing schema, schema_standing(S, on(P)), the guarded act S standing on the atom of P its guarding roles require, every guarding role of it proposing it; and what a schema does to that atom, stand_act(M, A): makes(S), its request also the standing request of every class of S that the agent proposes, withdraws(S), its request withdrawing it, or plain (vGLP d433f71, Section 5.4, "The contract's words").
+StandOn   ::= on(Constant) ; none.
+StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 Part      ::= pt(Class, Peers, Opener).
 Parts     ::= [] ; [Part | Parts].
 Info      ::= ci(Class, Deltas, Peers, Parts, Mates).
@@ -462,7 +584,9 @@ Lock      ::= unlocked ; held(Attempt).
 Rec       ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo)
             ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt)
             ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer)
-            ; ended(Attempt) ; introduced(Peer, Peer).
+            ; ended(Attempt) ; introduced(Peer, Peer)
+%% A standing request, standing(std(S), K), of every class of the standing schema S that the agent proposes, and the end of its standing approval of a class C committed since, ceased(std(S), K, C) (vGLP d433f71, Definition "Cargo, App State, Question, Approval, Free, Ready": "its standing requests standing(rho, k), standing approvals of each class of rho no attempt of which has been committed at p since ... and a standing approval is ended only by Withdraw").
+            ; standing(Rho, Integer) ; ceased(Rho, Integer, Class).
 Recs      ::= [] ; [Rec | Recs].
 App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= deferred(Net).
@@ -766,6 +890,8 @@ approvals1([_|Rs], R, Acc, As?) :- otherwise | approvals1(Rs?, R?, Acc?, As).
 procedure rho_name(Rho?, PName).
 rho_name(one(C), Pn?) :- request_name(C?, Pn).
 rho_name(rho(N), pname(N?)).
+%% A standing request is recorded standing(std(S), K), never requested(Rho, K); the clause covers the type.
+rho_name(std(_), nopname).
 procedure keep_pname(YesNo?, PName?, List(Approved)?, List(Approved)).
 keep_pname(no, pname(N), Acc, [N?|Acc?]).
 keep_pname(_, _, Acc, Acc?) :- otherwise | true.
@@ -836,7 +962,94 @@ pend_triggers([_|_], [recheck]).
 %% --- Request, on the request propose(N) ------------------------------------
 %% On the answer propose(N) to a request question, N the request name of a guarded part, the dispatch takes, among the Request of {[t]} to the agent itself for each class [t] of a guarded part with no opener named N that it guards and is ready for, where it is free for [t] and no such request is pending at it, and the Request of rho_N to the opener of the guarded parts with an opener named N, where the agent is free for every class of rho_N, guards one of those parts it is ready for, and rho_N is not pending at it, the one it has taken least recently, where there is one, and drops the request otherwise; the message of the Request carries N for rho_N (vGLP f0acbc1, Section 5.4, "Triggers" and "The compilation"; Definition "Proposing", Request).  The part named N at the agent is the part of the class term that N names at its state (name_class: for a schema with listed roles, with the people its state lists at the place of each), and its class is the class [t] of the Request; for rho_N, the agent's precondition is the same in every part named N, the agent not being the base of its listed roles, whose opener lists their people.  A Request to another agent sends request(rho(N), K), so that agent is known.  The Request is the agent's person's approval of each class of the request, pending until ended (Definition "Cargo, App State, Question, Approval, Free, Ready").
 procedure request_cond(Proposal?, St?, RCond, St).
-request_cond(N, St, Cd?, St2?) :- ground(N?), ground(St?) |
+request_cond(N, St, Cd?, St3?) :- ground(N?), ground(St?) |
+    request_cond_r(N?, St?, Cd0, St1),
+    st_ms(St?, S),
+    name_class(N?, S?, C),
+    binding_of(C?, Nm, _),
+    stand_act(Nm?, A),
+    stand_step(A?, N?, Cd0?, St1?, Cd, St3).
+%% Stand and Withdraw, on the request of an act a pragma declares as making or withdrawing a standing request (vGLP d433f71, Section 5.4, "The compilation": "where the request is of an act a pragma declares as making a standing request, the dispatch takes also the Stand of that standing request, and where of an act declared as withdrawing it, the Withdraw; where the agent is not free for a class of such a Request or Stand, it holds the request and puts it up again after every dispatch").  Stand std(S), by the agent: precondition, it is free for every class of std(S), its lock unlocked and no question of a class of S pending, and no standing approval of std(S) pending; effect, its number one more, K, and standing(std(S), K) recorded.  Withdraw std(S): precondition, standing(std(S), K) pending and the lock not an attempt of a class of S; effect, ended(std(S), K) recorded (Definition "Proposing", Stand and Withdraw).
+procedure stand_step(StandAct?, Proposal?, RCond?, St?, RCond, St).
+stand_step(plain, _, Cd, St, Cd?, St?).
+stand_step(makes(S), N, Cd, St, Cd1?, St1?) :- ground(S?), ground(St?) |
+    st_app(St?, Ap),
+    stand_cond(S?, Ap?, Sc),
+    stand_take(Sc?, S?, N?, Cd?, St?, Cd1, St1).
+stand_step(withdraws(S), _, Cd, St, Cd?, St1?) :- ground(S?), ground(St?) |
+    st_app(St?, Ap),
+    withdraw_app(S?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+StandCond ::= go ; already ; busy.
+procedure stand_cond(Constant?, App?, StandCond).
+stand_cond(S, app(_, _, L, R), Sc?) :- ground(S?), ground(R?) |
+    standing_live(R?, S?, R?, Sk),
+    question_of_schema(R?, S?, R?, Q),
+    stand_cond1(Sk?, L?, Q?, Sc).
+procedure stand_cond1(StandK?, Lock?, YesNo?, StandCond).
+stand_cond1(at(_), _, _, already).
+stand_cond1(nostand, unlocked, no, go).
+stand_cond1(nostand, held(_), _, busy).
+stand_cond1(nostand, unlocked, yes, busy).
+procedure stand_take(StandCond?, Constant?, Proposal?, RCond?, St?, RCond, St).
+stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?) |
+    st_app(St?, Ap),
+    stand_app(S?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
+stand_take(already, _, _, Cd, St, Cd?, St?).
+stand_take(busy, _, N, _, St, rhold(N?), St?).
+procedure stand_app(Constant?, App?, App).
+stand_app(S, app(Ms, K, L, R), app(Ms?, K1?, L?, [standing(std(S?), K2?)|R?])) :- integer(K?) |
+    K1 := K? + 1,
+    K2 := K? + 1.
+procedure withdraw_app(Constant?, App?, App).
+withdraw_app(S, app(Ms, K, L, R), Ap?) :- ground(S?), ground(R?), ground(L?) |
+    standing_live(R?, S?, R?, Sk),
+    lock_of_schema(L?, S?, Ls),
+    withdraw_app1(Sk?, Ls?, S?, app(Ms?, K?, L?, R?), Ap).
+procedure withdraw_app1(StandK?, YesNo?, Constant?, App?, App).
+withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])).
+withdraw_app1(at(_), yes, _, Ap, Ap?).
+withdraw_app1(nostand, _, _, Ap, Ap?).
+%% The standing request std(S) pending in the record, at(K), standing(std(S), K) recorded and not ended, or nostand.
+StandK    ::= at(Integer) ; nostand.
+procedure standing_live(Recs?, Constant?, Recs?, StandK).
+standing_live([], _, _, nostand).
+standing_live([standing(std(S1), K)|Rs], S, R, Sk?) :- ground(S1?), ground(S?), integer(K?), ground(R?), S1? =?= S? |
+    mem(ended(std(S?), K?), R?, Done),
+    standing_live1(Done?, K?, Rs?, S?, R?, Sk).
+standing_live([_|Rs], S, R, Sk?) :- otherwise | standing_live(Rs?, S?, R?, Sk).
+procedure standing_live1(YesNo?, Integer?, Recs?, Constant?, Recs?, StandK).
+standing_live1(no, K, _, _, _, at(K?)).
+standing_live1(yes, _, Rs, S, R, Sk?) :- standing_live(Rs?, S?, R?, Sk).
+%% Whether a question of a class of the schema S is pending in the record: asked(At) recorded, At of a schema-binding of S, with no vote on it and not closed.
+procedure question_of_schema(Recs?, Constant?, Recs?, YesNo).
+question_of_schema([], _, _, no).
+question_of_schema([asked(At)|Rs], S, R, B?) :- ground(At?), ground(S?), ground(R?) |
+    attempt_class(At?, C),
+    binding_of(C?, Nm, _),
+    same(Nm?, S?, Of),
+    mem(voted(At?, yes), R?, Vy),
+    mem(voted(At?, no), R?, Vn),
+    mem(closed(At?), R?, Cl),
+    or(Vy?, Vn?, V),
+    or(V?, Cl?, Gone),
+    neg(Gone?, Open),
+    and(Of?, Open?, B1),
+    question_of_schema1(B1?, Rs?, S?, R?, B).
+question_of_schema([_|Rs], S, R, B?) :- otherwise | question_of_schema(Rs?, S?, R?, B).
+procedure question_of_schema1(YesNo?, Recs?, Constant?, Recs?, YesNo).
+question_of_schema1(yes, _, _, _, yes).
+question_of_schema1(no, Rs, S, R, B?) :- question_of_schema(Rs?, S?, R?, B).
+%% Whether the lock holds an attempt of a class of the schema S.
+procedure lock_of_schema(Lock?, Constant?, YesNo).
+lock_of_schema(unlocked, _, no).
+lock_of_schema(held(At), S, B?) :- ground(At?) |
+    attempt_class(At?, C),
+    binding_of(C?, Nm, _),
+    same(Nm?, S?, B).
+procedure request_cond_r(Proposal?, St?, RCond, St).
+request_cond_r(N, St, Cd?, St2?) :- ground(N?), ground(St?) |
     st_ms(St?, S),
     name_class(N?, S?, C),
     request_cond0(C?, N?, St?, Cd, St2).
@@ -1762,7 +1975,64 @@ approval_classes1([answered(At, yes)|Rs], R, St, Acc, Is?, St2?) :- ground(At?),
     attempt_class(At?, C),
     approval_class(Done?, C?, any_part, St?, Acc?, Acc1, St1),
     approval_classes1(Rs?, R?, St1?, Acc1?, Is, St2).
+approval_classes1([standing(std(S), K)|Rs], R, St, Acc, Is?, St2?) :- ground(S?), ground(R?), integer(K?) |
+    mem(ended(std(S?), K?), R?, Done),
+    standing_classes(Done?, S?, K?, R?, St?, Acc?, Acc1, St1),
+    approval_classes1(Rs?, R?, St1?, Acc1?, Is, St2).
 approval_classes1([_|Rs], R, St, Acc, Is?, St1?) :- otherwise | approval_classes1(Rs?, R?, St?, Acc?, Is, St1).
+%% The classes of a standing approval the agent proposes: "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (vGLP d433f71, Definition "Effective Local Specification"): the schema-bindings of the standing schema S that send one of its guarding roles to the agent and meet that role's requirements in its state, each guarding role proposing it (Section 5.4, "The contract's words"), the atoms each requires naming every role and variable (cvac.glp, standing_faults); each class not ceased, every part of it the agent guards and is ready for put up as for an answer yes.
+procedure standing_classes(YesNo?, Constant?, Integer?, Recs?, St?, Apprs?, Apprs, St).
+standing_classes(yes, _, _, _, St, Acc, Acc?, St?).
+standing_classes(no, S, K, R, St, Acc, Acc1?, St1?) :- ground(St?) |
+    st_id(St?, Id),
+    st_ms(St?, Ms),
+    standing_classes1(Id?, Ms?, S?, K?, R?, St?, Acc?, Acc1, St1).
+procedure standing_classes1(Peer?, GAtoms?, Constant?, Integer?, Recs?, St?, Apprs?, Apprs, St).
+standing_classes1(Id, Ms, S, K, R, St, Acc, Acc1?, St1?) :- ground(Id?), ground(Ms?), ground(S?) |
+    reflexive_preds(Rf),
+    hat(Rf?, Id?, Ms?, Sh),
+    schema_entry(S?, E),
+    stood(E?, Id?, Sh?, Cs),
+    standing_fold(Cs?, S?, K?, R?, St?, Acc?, Acc1, St1).
+procedure stood(Schema?, Peer?, GAtoms?, Stream(Class)).
+stood(schema(Nm, _, Rs), Id, Sh, Cs?) :- ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) |
+    guard_roles(Rs?, 1, Gs),
+    stood1(Gs?, Nm?, Rs?, Id?, Sh?, Cs).
+%% A standing schema of another form, which the compiler refuses, has none (cvac.glp, standing_faults); the clause covers the type.
+stood(_, _, _, []) :- otherwise | true.
+procedure stood1(Ints?, Constant?, RoleSpecs?, Peer?, GAtoms?, Stream(Class)).
+stood1([], _, _, _, _, []).
+stood1([G|Gs], Nm, Rs, Id, Sh, Cs?) :- integer(G?), ground(Nm?), ground(Rs?), ground(Id?), ground(Sh?) |
+    nth_spec(Rs?, G?, R),
+    stood1a(R?, G?, Nm?, Id?, Sh?, C1),
+    stood1(Gs?, Nm?, Rs?, Id?, Sh?, C2),
+    app(C1?, C2?, Cs).
+procedure stood1a(RoleSpec?, Integer?, Constant?, Peer?, GAtoms?, Stream(Class)).
+stood1a(R, G, Nm, Id, Sh, Cs?) :- ground(R?), ground(Id?), ground(Sh?) |
+    rs_req(R?, Q),
+    match_all(Q?, Sh?, [b(role(G?), p(Id?))], Bs),
+    stood2(Bs?, Nm?, R?, Id?, Sh?, Cs).
+procedure stood2(Bindings?, Constant?, RoleSpec?, Peer?, GAtoms?, Stream(Class)).
+stood2([], _, _, _, _, []).
+stood2([B|Bs], Nm, R, Id, Sh, Cs?) :- ground(B?), ground(Nm?), ground(R?), ground(Id?), ground(Sh?) |
+    cand_ok([R?], B?, Sh?, Ok),
+    stood3(Ok?, Nm?, B?, Id?, C1),
+    stood2(Bs?, Nm?, R?, Id?, Sh?, C2),
+    app(C1?, C2?, Cs).
+procedure stood3(YesNo?, Constant?, Binding?, Peer?, Stream(Class)).
+stood3(no, _, _, _, []).
+stood3(yes, Nm, B, Id, [C?]) :- class_of(Nm?, B?, Id?, C).
+procedure standing_fold(Stream(Class)?, Constant?, Integer?, Recs?, St?, Apprs?, Apprs, St).
+standing_fold([], _, _, _, St, Acc, Acc?, St?).
+standing_fold([C|Cs], S, K, R, St, Acc, Acc1?, St2?) :- ground(C?), ground(S?), integer(K?), ground(R?) |
+    st_class(C?, St?, Cr, St1),
+    standing_open(Cr?, S?, K?, R?, Acc?, Acc0),
+    standing_fold(Cs?, S?, K?, R?, St1?, Acc0?, Acc1, St2).
+procedure standing_open(ClassRes?, Constant?, Integer?, Recs?, Apprs?, Apprs).
+standing_open(nocls, _, _, _, Acc, Acc?).
+standing_open(cls(I), S, K, R, Acc, Acc1?) :- ground(I?) |
+    ceased_for(R?, std(S?), K?, I?, Cd),
+    open_class(Cd?, cls(I?), any_part, Acc?, Acc1).
 %% The class of an approval, computed only where the approval has not ended.
 procedure approval_class(YesNo?, Class?, PartsOf?, St?, Apprs?, Apprs, St).
 approval_class(yes, _, _, St, Acc, Acc?, St?).
@@ -1826,6 +2096,8 @@ held_cands1([held(F, rho(N), K)|Hs], V, St, Cs?, St2?) :- ground(N?), ground(V?)
     held_cands1(Hs?, V?, St1?, Cs2, St2),
     app(Cs1?, Cs2?, Cs).
 held_cands1([held(_, one(_), _)|Hs], V, St, Cs?, St1?) :- held_cands1(Hs?, V?, St?, Cs, St1).
+%% A standing request is sent to no agent, so none is held; the clause covers the type.
+held_cands1([held(_, std(_), _)|Hs], V, St, Cs?, St1?) :- held_cands1(Hs?, V?, St?, Cs, St1).
 procedure held_cand0(Class?, Peer?, Proposal?, Integer?, V?, St?, Cands, St).
 held_cand0(C, F, N, K, V, St, Cs?, St1?) :- ground(C?), ground(N?) |
     st_class(C?, St?, Cr, St1),
@@ -2356,7 +2628,8 @@ propose_go(yes, I, At, Id, app(S, _, L, R), [], app(S1?, K?, L?, R2?)) :-
     attempt_k(At?, K),
     attempt_class(At?, P),
     apply_part(P?, Id?, S?, S1),
-    end_approvals(I?, Id?, [closed(At?), voted(At?, yes)|R?], R2, _).
+    end_approvals(I?, Id?, [closed(At?), voted(At?, yes)|R?], R20, _),
+    cease_standing(I?, Id?, R20?, R2).
 propose_go(no, I, At, Id, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
     ground(At?), ground(I?) |
     attempt_k(At?, K),
@@ -2736,6 +3009,7 @@ val_names(s(speech(_, Q)), C, B?) :- same(Q?, C?, B).
 val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(r(_), _, no).
+val_names(i(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 procedure cname_base(CName?, Peer).
@@ -2749,7 +3023,8 @@ commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :-
     apply_part(P?, Id?, S?, S1),
     info_q(I?, Q),
     tell(Q?, Id?, outcome(At?, commit), Ss),
-    end_approvals(I?, Id?, [closed(At?)|R?], R1, _).
+    end_approvals(I?, Id?, [closed(At?)|R?], R10, _),
+    cease_standing(I?, Id?, R10?, R1).
 
 %% Yield, at the initiator, on yield(At): nothing more where the attempt is
 %% closed or a yes of every other participant is recorded; otherwise the lock
@@ -2857,7 +3132,8 @@ outcome_app(I, At, commit, Id, _, _, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)
     attempt_class(At?, P),
     apply_part(P?, Id?, S?, S1),
     release(L?, At?, L1),
-    end_approvals(I?, Id?, [closed(At?)|R?], R1, _).
+    end_approvals(I?, Id?, [closed(At?)|R?], R10, _),
+    cease_standing(I?, Id?, R10?, R1).
 outcome_app(I, At, abort(Q, D), Id, Mi, Ed, app(S, K, L, R), Ns?, app(S?, K?, L1?, R1?)) :-
     ground(At?), ground(D?) |
     release(L?, At?, L1),
@@ -2900,9 +3176,42 @@ end_approvals(I, Id, R, R1?, En?) :- ground(R?) |
     pending_approvals(R?, I?, Id?, R?, Es),
     end_all(Es?, R?, R1, En).
 procedure approval_of(Info?, Peer?, Recs?, YesNo).
-approval_of(I, Id, R, B?) :- ground(R?) |
+approval_of(I, Id, R, B?) :- ground(R?), ground(I?), ground(Id?) |
     pending_approvals(R?, I?, Id?, R?, Es),
-    some_rec(Es?, B).
+    standing_of_class(R?, I?, Id?, R?, Cs),
+    app(Es?, Cs?, Es2),
+    some_rec(Es2?, B).
+%% standing_of_class(Rs, I, Id, R, Cs): for each standing approval of the class I in Rs pending in the record R, a standing request of a class of I not withdrawn, ended(Rho, K) not recorded, and no attempt of I committed since, ceased(Rho, K, C) recorded of no term C of I, the record of its ceasing for I, ceased(Rho, K, C), C the term of I (vGLP d433f71, Definition "Cargo, App State, Question, Approval, Free, Ready": "its standing requests standing(rho, k), standing approvals of each class of rho no attempt of which has been committed at p since ... and a standing approval is ended only by Withdraw").
+procedure standing_of_class(Recs?, Info?, Peer?, Recs?, Recs).
+standing_of_class([], _, _, _, []).
+standing_of_class([standing(Rr, K)|Rs], I, Id, R, Cs?) :- ground(Rr?), ground(I?), ground(Id?), ground(R?), integer(K?) |
+    mem(ended(Rr?, K?), R?, Done),
+    neg(Done?, Open),
+    rho_of_class(Rr?, I?, Id?, Of),
+    ceased_for(R?, Rr?, K?, I?, Cd),
+    neg(Cd?, Live),
+    and(Open?, Of?, B0),
+    and(B0?, Live?, B),
+    info_term(I?, C),
+    standing_of_class(Rs?, I?, Id?, R?, Cs1),
+    keep_rec(B?, ceased(Rr?, K?, C?), Cs1?, Cs).
+standing_of_class([_|Rs], I, Id, R, Cs?) :- otherwise | standing_of_class(Rs?, I?, Id?, R?, Cs).
+procedure ceased_for(Recs?, Rho?, Integer?, Info?, YesNo).
+ceased_for([], _, _, _, no).
+ceased_for([ceased(Rr1, K1, C)|Rs], Rr, K, I, B?) :- ground(Rr1?), ground(Rr?), ground(C?), ground(I?), Rr1? =?= Rr?, K1? =:= K? |
+    term_of_class(C?, I?, B1),
+    ceased_more(B1?, Rs?, Rr?, K?, I?, B).
+ceased_for([_|Rs], Rr, K, I, B?) :- otherwise | ceased_for(Rs?, Rr?, K?, I?, B).
+procedure ceased_more(YesNo?, Recs?, Rho?, Integer?, Info?, YesNo).
+ceased_more(yes, _, _, _, _, yes).
+ceased_more(no, Rs, Rr, K, I, B?) :- ceased_for(Rs?, Rr?, K?, I?, B).
+procedure info_term(Info?, Class).
+info_term(ci(C, _, _, _, _), C?).
+%% A commit of an attempt of the class I ends each standing approval of I pending at the agent, and no standing request: "standing approvals of each class of rho no attempt of which has been committed at p since" (ibid.).
+procedure cease_standing(Info?, Peer?, Recs?, Recs).
+cease_standing(I, Id, R, R1?) :- ground(R?) |
+    standing_of_class(R?, I?, Id?, R?, Cs),
+    app(Cs?, R?, R1).
 %% pending_approvals(Rs, I, Id, R, Es): for each approval of the class I in Rs pending in the record R, the record of its end, ended(Rho, K) or ended(At).
 procedure pending_approvals(Recs?, Info?, Peer?, Recs?, Recs).
 pending_approvals([], _, _, _, []).
@@ -2934,6 +3243,14 @@ some_rec([_|_], yes).
 procedure rho_of_class(Rho?, Info?, Peer?, YesNo).
 rho_of_class(one(C), I, _, B?) :- term_of_class(C?, I?, B).
 rho_of_class(rho(N), I, Id, B?) :- in_rho(I?, N?, Id?, B).
+rho_of_class(std(S), I, _, B?) :- info_schema(I?, S?, B).
+%% Whether a schema-binding of the class I is of the schema S: a class of a standing request std(S) is a class of S's parts.
+procedure info_schema(Info?, Constant?, YesNo).
+info_schema(ci(_, _, _, _, Ms), S, B?) :- mates_schema(Ms?, S?, B).
+procedure mates_schema(Mates?, Constant?, YesNo).
+mates_schema([], _, no).
+mates_schema([mate(N, _, _, _)|_], S, yes) :- N? =?= S? | true.
+mates_schema([_|Ms], S, B?) :- otherwise | mates_schema(Ms?, S?, B).
 %% The requests the agent holds of a class of which the class I is one, deleted; the one an attempt names, request(Rho, K), deleted; and none for an attempt naming none.
 procedure drop_held_class(Helds?, Info?, Peer?, Helds).
 drop_held_class([], _, _, []).
@@ -3072,6 +3389,9 @@ spent_rec(ended(A), _, _, Tr, F?, Tr1?) :- ground(A?) |
     fate_of(Cd?, F).
 spent_rec(requested(Rr, K), _, Ea, Tr, F?, Tr?) :- mem(ended(Rr?, K?), Ea?, B), fate_of(B?, F).
 spent_rec(ended(_, _), _, _, Tr, move, Tr?).
+%% A standing request and the ceasing of its approvals leave it once it is withdrawn.
+spent_rec(standing(Rr, K), _, Ea, Tr, F?, Tr?) :- mem(ended(Rr?, K?), Ea?, B), fate_of(B?, F).
+spent_rec(ceased(Rr, K, _), _, Ea, Tr, F?, Tr?) :- mem(ended(Rr?, K?), Ea?, B), fate_of(B?, F).
 spent_rec(introduced(_, _), _, _, Tr, intro, Tr?).
 procedure in_closed(Attempt?, Attempts?, Fate).
 in_closed(A, Cl, F?) :- mem(A?, Cl?, B), fate_of(B?, F).
@@ -4413,6 +4733,7 @@ is_lv(s(_), no).
 is_lv(c(_), no).
 is_lv(n(_), no).
 is_lv(r(_), no).
+is_lv(i(_), no).
 is_lv(any, no).
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
 locals_put([], _, B, B?).
@@ -4523,11 +4844,19 @@ least_opener([], Ob, proposed(Ob1?)) :- sort_peers(Ob?, Ob0), dedup(Ob0?, Ob1).
 procedure part_bases(Mates?, Peers?, Peers).
 part_bases([], _, []).
 part_bases([mate(N, B, _, _)|Ms], G, Ob?) :- ground(N?), ground(B?), ground(G?) |
+    schema_standing(N?, Sd),
+    part_bases1(Sd?, N?, B?, G?, Ms?, Ob).
+%% Of a standing schema every guarding role proposes the part, "every guarding role of it proposes it" (vGLP d433f71, Section 5.4, "The contract's words"): its proposers are its guards.
+procedure part_bases1(StandOn?, Constant?, Binding?, Peers?, Mates?, Peers).
+part_bases1(none, N, B, G, Ms, Ob?) :- ground(G?) |
     schema_base(N?, Bi),
     role_person(Bi?, B?, P),
     mem(P?, G?, In),
     part_bases(Ms?, G?, Ob1),
     keep_peer(In?, P?, Ob1?, Ob).
+part_bases1(on(_), _, _, G, Ms, Ob?) :- ground(G?) |
+    part_bases(Ms?, G?, Ob1),
+    app(G?, Ob1?, Ob).
 %% Whether two schema-bindings of a class, each with the people it marks, determine one part.
 procedure same_mpart(Peers?, Mate?, Mate?, YesNo).
 same_mpart(Q, mate(N1, B1, G1, _), mate(N2, B2, G2, _), B?) :-
@@ -5202,6 +5531,7 @@ found_peer(found(s(_)), unbound).
 found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(r(_)), unbound).
+found_peer(found(i(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -5409,6 +5739,7 @@ name_parts(_, p(_), noparts).
 name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, r(_), noparts).
+name_parts(_, i(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 procedure nt_parts(NTerm?, CName?, NameParts).
@@ -5436,6 +5767,7 @@ sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(r(_), unsigned).
+sgn_parts(i(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
@@ -5498,6 +5830,7 @@ val_peer1(found(s(_)), D, D?).
 val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(r(_)), D, D?).
+val_peer1(found(i(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -5509,6 +5842,7 @@ val_speech1(found(p(_)), D, speech(utterance(none), D?)).
 val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(r(_)), D, speech(utterance(none), D?)).
+val_speech1(found(i(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -5524,6 +5858,7 @@ num_of(V, B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), num_found(F?, R).
 procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
 num_found(found(r(K)), num_is(K?)).
+num_found(found(i(_)), no_num).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -5575,7 +5910,22 @@ procedure expr_term1(Expr?, Binding?, Found).
 expr_term1(role(I), B, F?) :- lookup(role(I?), B?, F).
 expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
 expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
+%% The author of a speech act, its first signer, and its item, its utterance under its signatures: "the signer, the author and the item of a speech act, its last signer, its first signer and its utterance" (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications").
+expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
+expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+procedure author_found(Found?, Found).
+author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
+author_found(_, free) :- otherwise | true.
+procedure first_signer(Speech?, Peer).
+first_signer(speech(utterance(_), P), P?).
+first_signer(speech(speech(U, Q), _), P?) :- first_signer(speech(U?, Q?), P).
+procedure item_found(Found?, Found).
+item_found(found(s(S)), found(i(U?))) :- ground(S?) | utterance_of(S?, U).
+item_found(_, free) :- otherwise | true.
+procedure utterance_of(Speech?, Utterance).
+utterance_of(speech(utterance(T), _), utterance(T?)).
+utterance_of(speech(speech(U, Q), _), V?) :- utterance_of(speech(U?, Q?), V).
 procedure nt_term(YesNo?, NTerm?, Binding?, CName).
 nt_term(yes, N, B, C?) :- nt_img(N?, B?, C).
 nt_term(no, _, _, dot_any(community(unbound))).
@@ -5620,6 +5970,8 @@ expr_val(sum(_, _, _, _, _), _, no_num).
 expr_val(role(_), _, no_num).
 expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
+expr_val(author_of(_), _, no_num).
+expr_val(item_of(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 %% The wildcard of a cleared atom is in no constraint (GSC 327e035); the clause covers the type.
@@ -5798,6 +6150,8 @@ expr_free(num(X), B, F0, F?) :- otherwise, ground(X?), ground(B?), ground(F0?) |
 expr_free(role(_), _, F0, F0?).
 expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
+expr_free(author_of(_), _, F0, F0?).
+expr_free(item_of(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).

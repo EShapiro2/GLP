@@ -242,17 +242,25 @@ sub q_atom {   # a GLP quoted name holding the text $s
 sub q_string { # a quoted name holding the GLP source of the string $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return q_atom("\"$s\"");
 }
-# The contracts a contract names on the line saying what it is written from, the first after its title and before its names declaration, "<NAME> <relation> <OTHER> (...)." or with no parentheses, the relation one of extends, amends, restricts and instantiates, several contracts joined by "and" (style guide 36; GSC, Section 8; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1); nothing where the contract has no such line.  A name is read whole with a hyphened part, as GDO-L.
+# The contracts a contract names on the line saying what it is written from, the first after its title and before its names declaration, "<NAME> <relation> <OTHER> (...)." or with no parentheses, the relation one of GSC\x27s five, amends, extends, instantiates, implements and restricts (GSC, Section 8, Relations among Contracts, Definitions Amendment, extension, instantiation and Implementation, restriction), several contracts joined by "and", and several relations joined by "and", each with the contracts after it, as "GAI extends GnW and amends GFP (...)." (GAI.txt; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC) (style guide 36; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1); nothing where the contract has no such line.  A name is read whole with a hyphened part, as GDO-L.
 sub relation_names {
     my ($f, @l) = @_;
     my @body = grep { !/^%/ && /\S/ } @l;
     return () unless @body >= 2;
     my $nm = qr/[A-Z][A-Za-z0-9]*(?:-[A-Z][A-Za-z0-9]*)*/;
-    return () unless $body[1] =~ /^$nm\s+(?:extends|amends|restricts|instantiates)\s+(.*?)\.\s*$/;
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts)/;
+    return () unless $body[1] =~ /^$nm\s+($rel\s+.*?)\.\s*$/;
     my $of = $1;
     $of =~ s/\s*\([^()]*\)//g;
-    my @names = split /\s*,\s*(?:and\s+)?|\s+and\s+/, $of;
-    for my $n (@names) { $n =~ /^$nm$/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$n\"\n" }
+    # Each relation with the contracts after it, up to the next relation: "extends GnW and amends GFP" is extends GnW, amends GFP.
+    my @names;
+    for my $part (split /(?:\s*,\s*|\s+)(?:and\s+)?(?=$rel\s)/, $of) {
+        $part =~ s/^$rel\s+// or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no relation at \"$part\"\n";
+        for my $n (split /\s*,\s*(?:and\s+)?|\s+and\s+/, $part) {
+            $n =~ /^$nm$/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$n\"\n";
+            push @names, $n;
+        }
+    }
     return @names;
 }
 sub visit {
