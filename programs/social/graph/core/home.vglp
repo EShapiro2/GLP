@@ -35,11 +35,25 @@
 %%
 %% respond_intro is the same for an introduction (GSG paper, Section 5.2:
 %% each agent presents the introduction to its person; the friendship forms
-%% on mutual consent): one goal per introduction, its card showing the
-%% introducer and the other party, and decide_intro reads the person's
-%% answer with a clause per answer.  The agent's notice of the introduction
-%% informs; the consent is asked by this card only (GSG, 2026-10-14 09:24
-%% UTC, item 1).
+%% on mutual consent): one goal per introduction, its card asking the
+%% person in GKK's words, its pragma Introduction, "Bob: Alice asks to
+%% introduce Carol to you." (programs/gsc/GKK.txt), the introducer and the
+%% other party filled in, and decide_intro reads the person's answer with a
+%% clause per answer.  The card is drawn by the widget the compiled platforms
+%% draw their approval question by, approval_sentence, whose words are
+%% text(S) and person(K) (vGLP, Section 6.2, "The words a platform shows").
+%% The agent's notice of the introduction informs; the consent is asked by
+%% this card only (GSG, 2026-10-14 09:24 UTC, item 1).
+%%
+%% introduce_card is a volitional procedure whose interactive type, a card,
+%% is in writer mode, as befriend_card's is: one goal per two friends of the
+%% person's, each card the two, for the person to see, and the button
+%% introduce (GKK's pragma Introduction, "Alice [Introduce]"); picking it is
+%% the person's act of GKK:3, introduce(K, P), the friend made later
+%% introduced to the one made earlier ("If Alice and Bob know each other and
+%% Alice knows Carol, then Alice can make Carol known to Bob, with Bob's
+%% consent").  home offers a card for each two friends once, as each friend
+%% is made, from what the super-app tells the person, connected(K).
 %%
 %% befriend_card is a volitional procedure whose interactive type, a card,
 %% is in writer mode, as respond_friend's is: one goal per person nearby whom
@@ -102,12 +116,24 @@ Request ::= trust(CompilerKey)
 %% writes for the person to see, and the person's answer, yes or no.
 FriendRequest ::= from(Friend, Decision?).
 
-%% The card of an introduction: the introducer and the other party, which the
+%% The card of an introduction: the introducer and the other party, intro(I,
+%% O), the words GKK's pragma Introduction puts to the person, which the
 %% program writes for the person to see, and the person's answer, yes or no.
-%% Each is an agent's name, its key (GSG, 2026-10-14 11:38 UTC, (a)).
+%% Each party is an agent's name, its key (GSG, 2026-10-14 11:38 UTC, (a)).
+%% It is drawn by the widget approval_sentence, as a compiled platform's
+%% approval question is.
 Introducer ::= Key.
 Other      ::= Key.
-IntroRequest ::= from(Introducer, Other, Decision?).
+Word       ::= text(String) ; person(Key).
+IntroParties ::= intro(Introducer, Other).
+IntroRequest ::= approval(IntroParties, List(Word), Decision?).
+IntroRequest =::= approval_sentence.
+
+%% The card of two friends of the person's: the two, which the program writes
+%% for the person to see, and the button introduce, which the person picks
+%% (GKK's pragma Introduction, "Alice [Introduce]").
+Introduce    ::= introduce.
+Introduction ::= introduction(Friend, Other, Introduce?).
 
 %% The card of a person nearby whom the person knows: the person, which the
 %% program writes for the person to see, and the button befriend, which the
@@ -140,9 +166,9 @@ decide_friend(no, Id, From, P, [msg(person, Id?, decision(no, From?, P?))]).
 %% The pending value of the introduction is passed back as it came.
 procedure (IntroRequest)*respond_intro(Key?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 
-%% Show the person the introducer and the other party, and pass their answer
-%% on.
-(from(From?, Other?, Answer))*respond_intro(Id, From, Other, P, Cmds?) :-
+%% Ask the person in GKK's words, the introducer and the other party filled
+%% in, and pass their answer on.
+(approval(intro(From?, Other?), [person(From?), text(" asks to introduce "), person(Other?), text(" to you.")], Answer))*respond_intro(Id, From, Other, P, Cmds?) :-
     ground(Id?), ground(From?), ground(Other?) |
     decide_intro(Answer?, Id?, Other?, P?, Cmds).
 
@@ -165,6 +191,56 @@ procedure (NearbyPerson)*befriend_card(Key?, Key?, Stream(UserInMsg)).
 
 procedure befriend_pick(Befriend?, Key?, Key?, Stream(UserInMsg)).
 befriend_pick(befriend, Id, K, [msg(person, Id?, connect(K?))]).
+
+%% =============================================================================
+%% Introducing two friends by picking them.
+%% =============================================================================
+
+%% Show the person two friends of theirs, and, on introduce, introduce the
+%% later to the earlier: the person's act of GKK:3.
+procedure (Introduction)*introduce_card(Key?, Key?, Key?, Stream(UserInMsg)).
+(introduction(P?, K?, I))*introduce_card(Id, P, K, Cmds?) :-
+    ground(Id?), ground(P?), ground(K?) |
+    introduce_pick(I?, Id?, P?, K?, Cmds).
+
+procedure introduce_pick(Introduce?, Key?, Key?, Key?, Stream(UserInMsg)).
+introduce_pick(introduce, Id, P, K, [msg(person, Id?, introduce(K?, P?))]).
+
+%% introductions(Id, Fr, Ks, Cmds): for each friend made, K of Ks, not one of
+%% the friends Fr made before, a card for K with each of Fr.
+procedure introductions(Key?, List(Key)?, Stream(Key)?, Stream(UserInMsg)).
+introductions(Id, Fr, [K | Ks], Cmds?) :-
+    ground(Id?), ground(Fr?), ground(K?) |
+    in_keys(K?, Fr?, D),
+    introductions_one(D?, Id?, Fr?, K?, Ks?, Cmds).
+introductions(_, _, [], []).
+
+procedure introductions_one(Decision?, Key?, List(Key)?, Key?, Stream(Key)?, Stream(UserInMsg)).
+introductions_one(yes, Id, Fr, _, Ks, Cmds?) :-
+    introductions(Id?, Fr?, Ks?, Cmds).
+introductions_one(no, Id, Fr, K, Ks, Cmds?) :-
+    ground(Id?), ground(Fr?), ground(K?) |
+    pair_cards(Id?, Fr?, K?, C1),
+    introductions(Id?, [K? | Fr?], Ks?, C2),
+    merge(C1?, C2?, Cmds).
+
+%% pair_cards(Id, Fr, K, Cmds): a card for K with each of Fr.
+procedure pair_cards(Key?, List(Key)?, Key?, Stream(UserInMsg)).
+pair_cards(Id, [P | Ps], K, Cmds?) :-
+    ground(Id?), ground(P?), ground(K?) |
+    introduce_card(Id?, P?, K?, C1),
+    pair_cards(Id?, Ps?, K?, C2),
+    merge(C1?, C2?, Cmds).
+pair_cards(_, [], _, []).
+
+%% friends_told(Outs, Outs1, Ks): what the super-app tells the person, passed
+%% on whole, each friend it tells of, connected(K), on Ks as well.
+procedure friends_told(AgentToUserStream?, AgentToUserStream, Stream(Key)).
+friends_told([msg(A, P, connected(K)) | Ms], [msg(A?, P?, connected(K?)) | Out?], [K? | Ks?]) :-
+    ground(K?) | friends_told(Ms?, Out, Ks).
+friends_told([M | Ms], [M? | Out?], Ks?) :-
+    otherwise | friends_told(Ms?, Out, Ks).
+friends_told([], [], []).
 
 %% offer(Ks, Id, Cd, Cd1, Cmds): a card for each of the persons Ks not in Cd,
 %% the persons offered or friends, Cd1 being Cd with them.
@@ -202,7 +278,11 @@ exported procedure (Stream(Request)?)*home(Key?, AgentToUserStream?, Stream(User
 
 %% Ask the person for their requests, once, and serve them.
 (Reqs)*home(Id, Outs, Cmds?) :-
-    serve(Reqs?, Id?, [], Outs?, Cmds).
+    ground(Id?) |
+    friends_told(Outs?, Outs1, Friends),
+    serve(Reqs?, Id?, [], Outs1?, Cmds1),
+    introductions(Id?, [], Friends?, Cmds2),
+    merge(Cmds1?, Cmds2?, Cmds).
 
 %% serve(Reqs, Id, Cd, Outs, Cmds): home, with the rest of the person's
 %% requests, Cd the persons nearby offered a card or friends.

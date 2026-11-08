@@ -30,11 +30,15 @@
 %% home.glp's own, and the person channel's types the root's.
 HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; open_place ; close_place ; invite_link ; open_link(String) ; list(String, String) ; list_unlisted(String, String) ; unlist.
 HomeFriendRequest ::= from(Key, Decision?).
-HomeIntroRequest  ::= from(Key, Key, Decision?).
+HomeWord          ::= text(String) ; person(Key).
+HomeIntroRequest  ::= approval(HomeIntroParties, List(HomeWord), Decision?).
+HomeIntroParties  ::= intro(Key, Key).
+HomeIntroduce     ::= introduce.
+HomeIntroduction  ::= introduction(Key, Key, HomeIntroduce?).
 HomeNearbyPerson  ::= nearby(Key, HomeBefriend?).
 HomeBefriend      ::= befriend.
-HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; nearbyPerson_w(HomeNearbyPerson) ; stream_request_r(Stream(HomeRequest)?).
-HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeBefriend ; HomeRequest.
+HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; nearbyPerson_w(HomeNearbyPerson) ; introduction_w(HomeIntroduction) ; stream_request_r(Stream(HomeRequest)?).
+HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; introduction_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeBefriend ; HomeIntroduce ; HomeRequest.
 
 %% A rendezvous server the person's first act names, by its key and its
 %% address (GSA paper, Appendix "The Operating System", "Boot"), and the
@@ -173,7 +177,7 @@ hold_output(ch(_, [])).
 procedure yes_person(_?, PersonIn(HomeDrawn)).
 yes_person([draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
-yes_person([draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+yes_person([draw(N, _, introRequest_w(approval(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
 
@@ -184,8 +188,10 @@ yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
 %% Pick first the person picks befriend on the first card of a person nearby
 %% that home draws, and on none after it; under none on none.  The person
 %% answers yes on each card of a friend's request to connect and of an
-%% introduction, as yes_person/2 does.
-PickMode ::= first ; none.
+%% introduction, as yes_person/2 does.  Under Pick introduce the person picks
+%% introduce on the first card of two friends that home draws (GKK's pragma
+%% Introduction, "Alice [Introduce]"), and on none after it.
+PickMode ::= first ; none ; introduce.
 exported procedure picking_home(Key?, PickMode?, AgentToUserStream?, Stream(Output), UserInStream?, UserInStream).
 picking_home(Id, Pick, Out, Notices?, ScriptCmds, In?) :-
     ground(Id?) |
@@ -202,16 +208,19 @@ picking_home(Id, Pick, Out, Notices?, ScriptCmds, In?) :-
 procedure picking_person(PickMode?, PersonOut(HomeDrawn)?, PersonIn(HomeDrawn)).
 picking_person(P, [draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
-picking_person(P, [draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+picking_person(P, [draw(N, _, introRequest_w(approval(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
 picking_person(first, [draw(N, _, nearbyPerson_w(nearby(_, input(Q)))) | Ds], [input(N?, Q?, befriend) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(none, Ds?, Gs).
+picking_person(introduce, [draw(N, _, introduction_w(introduction(_, _, input(Q)))) | Ds], [input(N?, Q?, introduce) | Gs?]) :-
     ground(N?), ground(Q?) | picking_person(none, Ds?, Gs).
 picking_person(P, [_ | Ds], Gs?) :- otherwise | picking_person(P?, Ds?, Gs).
 
 %% play_home(Id?, Answer?, Notices?, Cmds, Log): home/4 on the agent's notices,
 %% with its dispatcher, and a person who answers each card, a friend's request
 %% to connect or an introduction, with Answer once it is drawn, or, where
-%% Answer is befriend, picks befriend on each card of a person nearby, logging
+%% Answer is befriend, picks befriend on each card of a person nearby, or,
+%% where Answer is introduce, introduce on each card of two friends, logging
 %% the card it answered; the commands home writes to the agent come out on Cmds.
 %% The person grants only on a card drawn: the dispatcher takes the asks, the
 %% grants and the draws in turn (programs/vglp/dispatcher.glp, fair/5), and a
@@ -226,10 +235,12 @@ play_home(Id, Ans, Notices, Cmds?, Log?) :-
 procedure answering(HomeDrawn?, _?, PersonIn(HomeDrawn), Stream(_)).
 answering(A, [draw(N, _, friendRequest_w(from(F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(F?) | Log?]) :-
     ground(A?), ground(N?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
-answering(A, [draw(N, _, introRequest_w(from(I, F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
+answering(A, [draw(N, _, introRequest_w(approval(intro(I, F), _, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
     ground(A?), ground(N?), ground(I?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
 answering(befriend, [draw(N, _, nearbyPerson_w(nearby(F, input(Q)))) | Ds], [input(N?, Q?, befriend) | Gs?], [nearby(F?) | Log?]) :-
     ground(N?), ground(F?), ground(Q?) | answering(befriend, Ds?, Gs, Log).
+answering(introduce, [draw(N, _, introduction_w(introduction(P, K, input(Q)))) | Ds], [input(N?, Q?, introduce) | Gs?], [introduction(P?, K?) | Log?]) :-
+    ground(N?), ground(P?), ground(K?), ground(Q?) | answering(introduce, Ds?, Gs, Log).
 answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 
 %% The super-app's output to its person, of the reserved type Output: "A
@@ -241,7 +252,7 @@ answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 %% befriending dropped, its consent asked by home's own card,
 %% FriendRequest ::= from(Friend, Decision?), and nowhere else (GSG,
 %% 2026-10-13 20:16 UTC, Udi: yes); befriend_intro likewise, its consent
-%% asked by home's card IntroRequest ::= from(Introducer, Other, Decision?)
+%% asked by home's card IntroRequest ::= approval(intro(Introducer, Other), Words, Decision?)
 %% (GSG, 2026-10-14 09:24 UTC, item 1).
 Notice ::= msg(Constant, Constant, NoticeContent).
 NoticeContent ::= befriend(Key)
