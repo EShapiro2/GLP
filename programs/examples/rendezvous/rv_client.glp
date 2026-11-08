@@ -13,14 +13,16 @@
 %%     agent S.  When B detects that A went silent, B sends an available
 %%     cold-call to A's RV agent S (which B learned while connected).
 %%   - Both sides converge on the same RV agent S (A's own), which matches
-%%     them and binds each one's reply variable to `punch(Addr)`, Addr the
-%%     address S observes for the other: A's to B's address, B's to A's.
+%%     them and binds each one's reply variable to `punch(Key, Addr)`, the
+%%     key of the other and the address S observes for it: A's to B's key
+%%     and address, B's to A's (GNA Section 6).
 %%
 %% This module provides the client-side building blocks used by a real
 %% agent loop:
 %%   make_reconnect/5 — build a reconnect cold-call message + reply
 %%   make_available/5 — build an available cold-call message + reply
-%%   handle_reply/1   — dispatch on reply: punch(Addr) → punch_udp(Addr)
+%%   handle_reply/1   — dispatch on reply: punch(Key, Addr) → declare the
+%%                      peer at the address, then punch_udp(Addr)
 %%
 %% Note: neither cold-call carries its sender's address.  The RV agent
 %% discovers each one's current address from the networking layer via
@@ -49,7 +51,7 @@
 %% =============================================================================
 
 %% Reply carried back from the RV agent via the shared reply variable
-SignalReply ::= punch(String) ; rejected.
+SignalReply ::= punch(Key, String) ; rejected.
 
 %% Messages sent to the RV agent as cold-calls
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
@@ -76,8 +78,8 @@ SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
 %%   agent takes apart with signature/2 before coordinating.  The RV agent
 %%   will read A's current address from the networking layer.
 %%   Reply is the paired reader that A uses to observe the RV agent's
-%%   response: punch(AddrB) means bob is waiting and A should hole-punch
-%%   to AddrB; rejected means the request was refused: the attestation
+%%   response: punch(B, AddrB) means bob is waiting and A should
+%%   hole-punch to AddrB; rejected means the request was refused: the attestation
 %%   unsigned, or not B's signature over the pair under the social graph,
 %%   or no address observed for A.
 
@@ -98,7 +100,7 @@ make_reconnect(A, B, Sig,
 %%   signature over the same pair, which A gave B on befriending; the RV
 %%   agent verifies it as it verifies the reconnect request.
 %%   Reply is the paired reader that B uses to observe the RV agent's
-%%   response: punch(AddrA) means A is reconnecting and B should
+%%   response: punch(A, AddrA) means A is reconnecting and B should
 %%   hole-punch to AddrA; rejected means the request was refused, as a
 %%   reconnect is.
 
@@ -113,11 +115,17 @@ make_available(B, A, Sig,
 %% =============================================================================
 %%
 %% When the reply variable is bound by the RV agent, the agent should:
-%%   punch(Addr) → call punch_udp(Addr) to initiate UDP hole-punch to the
-%%                 other party's address; both parties get one, so both
-%%                 punch, and the deterministic initiator connects
-%%   rejected    → the request was refused; give up
+%%   punch(K, Addr) → declare K a peer at Addr to its layer, declare(peer(K))
+%%                    and declare(address(K, Addr)), and call punch_udp(Addr)
+%%                    to initiate UDP hole-punch to it; both parties get one,
+%%                    so both punch, and the deterministic initiator connects
+%%                    (GNA Section 6: "each declares the other a peer at that
+%%                    address to its layer and punches")
+%%   rejected       → the request was refused; give up
 
 exported procedure handle_reply(SignalReply?).
-handle_reply(punch(Addr)) :- ground(Addr?) | punch_udp(Addr?).
+handle_reply(punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(peer(K?)),
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?).
 handle_reply(rejected).

@@ -76,14 +76,17 @@ void main() {
   //   available(Rv, F, Sig)   send Rv an availability notice for F, carrying
   //                           Sig, F's signature
   //
-  // On the server's reply: punch(Addr), declare Addr as F's address, punch
-  // toward it and report punched(F, Addr); rejected, report rejected(F).
+  // On the server's reply: punch(K, Addr), K being F, the friend named,
+  // declare Addr as F's address, punch toward it and report punched(F, Addr)
+  // (GNA Section 6: "relays to each the key and the address of the other");
+  // punch naming another key, report other(F, K); rejected, report
+  // rejected(F).
   const friendProgram = r'''
 FriendAct ::= attest(Key)
             ; reconnect(Key, Key, SignedTerm)
             ; available(Key, Key, SignedTerm).
 FriendActs ::= [] ; [FriendAct | FriendActs].
-SignalReply ::= punch(String) ; rejected.
+SignalReply ::= punch(Key, String) ; rejected.
 
 exported procedure agent(Channel(FriendActs, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
@@ -122,10 +125,11 @@ report_graph(F, Sig, signed(_, Graph, _)) :-
 report_graph(F, _, unsigned) :- send_to_user([unsigned(F?)]).
 
 procedure on_reply(Key?, SignalReply?).
-on_reply(F, punch(Addr)) :- ground(F?), ground(Addr?) |
-    declare(address(F?, Addr?)),
+on_reply(F, punch(K, Addr)) :- ground(F?), K? =?= F?, ground(Addr?) |
+    declare(address(K?, Addr?)),
     punch_udp(Addr?),
-    send_to_user([punched(F?, Addr?)]).
+    send_to_user([punched(K?, Addr?)]).
+on_reply(F, punch(K, _)) :- otherwise | send_to_user([other(F?, K?)]).
 on_reply(F, rejected) :- send_to_user([rejected(F?)]).
 ''';
 
