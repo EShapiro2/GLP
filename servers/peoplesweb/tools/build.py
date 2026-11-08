@@ -26,7 +26,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import paper_of  # noqa: E402
+from papers import load_state, paper_of  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
           ('platform', 'platform.vglp'), ('glp', 'platform.glp')]
@@ -164,8 +164,14 @@ for n in compiled:
 
 
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
-pd = os.path.join(HERE, 'web', 'papers')
-served = {f[:-4] for f in os.listdir(pd)} if os.path.isdir(pd) else set()
+# The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
+# the server, with its state.json, or else the ones built by hand in
+# web/papers.
+pd = os.environ.get('PAPERS_DIR') or os.path.join(HERE, 'web', 'papers')
+if not os.path.isdir(pd):
+    pd = os.path.join(HERE, 'web', 'papers')
+served = {f[:-4] for f in os.listdir(pd) if f.endswith('.pdf')} if os.path.isdir(pd) else set()
+paper_state = load_state(pd)
 byid = dict(cat)
 
 
@@ -200,7 +206,7 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
     c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
-    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served)
+    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -229,7 +235,8 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f in os.listdir(pd):
-        shutil.copy(os.path.join(pd, f), os.path.join(WWW, 'papers', f))
+        if f.endswith('.pdf'):
+            shutil.copy(os.path.join(pd, f), os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
