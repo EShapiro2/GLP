@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GAS · the GLP app store · peoplesweb.org</title>
+<title>GAS · the Grassroots App Store · peoplesweb.org</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -167,7 +167,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 </head>
 <body>
 <header><div class="hin">
-  <div class="logo" id="home"><span class="mark"></span>GAS · the GLP app store</div>
+  <div class="logo" id="home"><span class="mark"></span>GAS · the Grassroots App Store</div>
   <div class="search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search" autocomplete="off"></div>
 </div></header>
 <main>
@@ -305,9 +305,9 @@ function drawGlobe(){
   // dashed shaft, instantiates a dotted one, each with the same head.
   const ends = (p, q, pad0, pad1) => { const dx = q[0]-p[0], dy = q[1]-p[1], Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln;
     return [p[0]+ux*pad0, p[1]+uy*pad0, q[0]-ux*pad1, q[1]-uy*pad1, ux, uy]; };
-  const cross = (p, q, w, fill, pad0, pad1) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), mx = (ax+bx)/2 - ux*4*k, my = (ay+by)/2 - uy*4*k;
+  const cross = (p, q, w, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), mx = (ax+bx)/2 - ux*4*kz, my = (ay+by)/2 - uy*4*kz;
     return `<line x1="${(mx-uy*w).toFixed(1)}" y1="${(my+ux*w).toFixed(1)}" x2="${(mx+uy*w).toFixed(1)}" y2="${(my-ux*w).toFixed(1)}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`; };
-  const stroked = (p, q, dash, fill, pad0, pad1) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*k, hw = 6.5*k, cx = bx-ux*hl, cy = by-uy*hl;
+  const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
   const fs = Math.max(10, 11*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
@@ -343,6 +343,18 @@ function drawGlobe(){
       <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
       <text x="${X.toFixed(1)}" y="${(Y + 0.36*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${c.id}</text></g>`;
   });
+  // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
+  const KEY = ['extends', 'restricts', 'amends', 'implements', 'instantiates'].map(r => [r, r]);
+  const kk = 1, kc = '#5f6b78', kx = 24, ky = GH - 22 - 24*KEY.length;
+  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
+  KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
+    s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
+      : r === 'amends' ? taper(p, q, 2.2*kk, 2.2*kk, 9*kk, 6.5*kk, kc, 0, 0) + cross(p, q, 6*kk, kc, 0, 0, kk)
+      : r === 'implements' ? stroked(p, q, `${7*kk} ${4*kk}`, kc, 0, 0, kk)
+      : r === 'instantiates' ? stroked(p, q, `0.1 ${4.5*kk}`, kc, 0, 0, kk)
+      : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
+    s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });
+  s += `</g>`;
   const g = $('#graph'); g.setAttribute('viewBox', `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
