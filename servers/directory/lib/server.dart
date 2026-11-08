@@ -4,8 +4,8 @@
 // unlisted person by email address and name (GDS:3), the link given to
 // whoever looked a person up (GDS:4), as text to open in a Grassroots App,
 // and the verification mail's link (GDS:2).  The person's own acts, List,
-// List unlisted and Unlist, are their app's, through the directory's agent;
-// the forms here serve a person with no app at hand only to verify.
+// List unlisted and Unlist, are their app's, through the directory's agent
+// (agent.dart), which calls [DirectoryService.list] for the mail.
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,10 +20,12 @@ class DirectoryService {
   final String base;
   DirectoryService(this.store, this.mailer, this.base);
 
-  /// GDS:2's verification: the mail with its link.  Called on the person's
-  /// List or List unlisted; refused as the store refuses.
-  Future<String?> list(String email, {String? name, bool listed = true}) async {
-    final r = store.request(email, name: name, listed: listed);
+  /// GDS:2's verification: the mail with its link.  Called by the
+  /// directory's agent on the person's List or List unlisted, [key] the
+  /// person's; refused as the store refuses.  Returns null where the mail was
+  /// sent, and the reason otherwise.
+  Future<String?> list(String key, String email, {String? name, bool listed = true}) async {
+    final r = store.request(key, email, name: name, listed: listed);
     switch (r) {
       case Refused(:final reason):
         return reason;

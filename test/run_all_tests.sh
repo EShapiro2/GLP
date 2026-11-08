@@ -23,7 +23,8 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
-#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core, flutter test in servers/directory
+#   DL - the debugging log service of the phones (servers/debuglog): dart test there
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -66,7 +67,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET DL"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -9517,11 +9518,15 @@ if _section NET; then
 # since it depends on the Flutter package and has flutter_test and no
 # package:test, so `dart test` refuses it; and the pure-Dart core in
 # networking/core by `dart test`.  Each runs from its own directory, as
-# networking/README.md says.  The conventions are Section Q's: each runner's
+# networking/README.md says.  With them, since 2026-11-08 (Cloud #8), the
+# directory of GNA's Section 7, servers/directory, by `flutter test`, since
+# it depends on the glue and so on Flutter, which the Dart on the Mac's path
+# cannot resolve: its agent over the headless layer against a scripted app
+# over the loopback, and its store and page.  The conventions are Section Q's: each runner's
 # raw output and json report kept in the run's directory, SUITE_RUN_DIR
-# (net_flutter, net_glue and net_core, each .txt and .json), each failing test
-# printed as a FAIL
-# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# (net_flutter, net_glue, net_core and net_directory, each .txt and .json),
+# each failing test printed as a FAIL
+# line "<package directory>/test/<file>: <test name>" and counted, the passed
 # count added to the totals, a missing runner a hard failure, and a runner that
 # exits non-zero naming no failing test a hard failure, since it did not run its
 # tests.  The section has no known-red list: a red test fails it.
@@ -9530,16 +9535,15 @@ echo ""
 
 NET_RAW_DIR="$SUITE_RUN_DIR"
 mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
-echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, each .txt and .json)"
+echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, net_directory, each .txt and .json)"
 NET_PASSED=0
 NET_FAILED=0
 
-# _net_run <name> <directory under networking/> <runner>: runs the runner's
-# tests in that directory and adds to NET_PASSED and NET_FAILED.
+# _net_run <name> <directory from the repository root> <runner>: runs the
+# runner's tests in that directory and adds to NET_PASSED and NET_FAILED.
 _net_run() {
-    local name="$1" sub="$2" runner="$3"
-    local dir="$GLP_DIR/networking${sub:+/$sub}"
-    local rel="networking${sub:+/$sub}"
+    local name="$1" rel="$2" runner="$3"
+    local dir="$GLP_DIR/$rel"
     local raw="$NET_RAW_DIR/net_$name.txt"
     local result status clean passed fails dnf
     if ! command -v "$runner" >/dev/null 2>&1; then
@@ -9591,9 +9595,10 @@ _net_run() {
     NET_PASSED=$((NET_PASSED + passed))
 }
 
-_net_run flutter "" flutter
-_net_run glue glue flutter
-_net_run core core dart
+_net_run flutter networking flutter
+_net_run glue networking/glue flutter
+_net_run core networking/core dart
+_net_run directory servers/directory flutter
 
 PASS=$((PASS + NET_PASSED))
 FAIL=$((FAIL + NET_FAILED))
@@ -9604,6 +9609,73 @@ fi
 echo ""
 
 fi  # Section NET
+
+if _section DL; then
+# =============================================================================
+# Section DL: the debugging log service of the phones (servers/debuglog)
+# =============================================================================
+#
+# GLP/phones/docs/debugging.md, "The log service": `dart test` in
+# servers/debuglog, as Section NET runs networking/core: under the watchdog,
+# the raw output and json report in the run's directory (dl.txt and dl.json),
+# each failing test a FAIL line "servers/debuglog/test/<file>: <test name>",
+# a missing dart or a run that exits non-zero naming no failing test a hard
+# failure.  No known-red list: a red test fails it.
+echo "=== Section DL: the debugging log service (servers/debuglog) ==="
+echo ""
+DL_RAW_DIR="$SUITE_RUN_DIR"
+mkdir -p "$DL_RAW_DIR" 2>/dev/null || true
+DL_REL="servers/debuglog"
+DL_RAW="$DL_RAW_DIR/dl.txt"
+DL_JSON="$DL_RAW_DIR/dl.json"
+echo "  (raw output and json report in $DL_RAW_DIR: dl.txt and dl.json)"
+DL_PASSED=0
+DL_FAILED=0
+if ! command -v dart >/dev/null 2>&1; then
+    echo "  FAIL: dart is not on PATH, so $DL_REL/test/ cannot run"
+    DL_FAILED=1
+else
+    _q_run "$GLP_DIR/$DL_REL" "$DL_JSON" "$DL_RAW" "$DL_REL/" dart test
+    dl_status=$Q_RUN_STATUS
+    if [ "$Q_RUN_DNF" = 1 ]; then
+        _q_report_dnf "dart test in $DL_REL"
+        DL_FAILED=$((DL_FAILED + Q_DNF_COUNT))
+    fi
+    dl_clean=$(sed 's/\x1b\[[0-9;]*m//g' "$DL_RAW" 2>/dev/null | tr '\r' '\n') || dl_clean=""
+    DL_PASSED=$(printf '%s' "$dl_clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    DL_PASSED=${DL_PASSED:-0}
+    dl_fails=$(printf '%s' "$dl_clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$DL_REL/test/|$DL_REL/test/|; s|^test/|$DL_REL/test/|" \
+        | sort -u) || true
+    dl_loads=$(_q_load_failures "$DL_JSON" "$DL_REL/") || true
+    if [ -n "$dl_loads" ]; then
+        dl_fails=$(printf '%s\n%s' "$dl_fails" "$dl_loads" | sed '/^$/d' | sort -u)
+    fi
+    if [ "$dl_status" -ne 0 ] && [ -z "$dl_fails" ] && [ "$Q_RUN_DNF" = 0 ]; then
+        echo "  FAIL: dart test exited $dl_status in $DL_REL naming no failing test, so $DL_REL/test/ did not run"
+        printf '%s\n' "$dl_clean" | tail -5 | sed 's/^/        /'
+        DL_FAILED=$((DL_FAILED + 1))
+    fi
+    if [ -n "$dl_fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            DL_FAILED=$((DL_FAILED + 1))
+        done <<< "$dl_fails"
+    fi
+    echo "  $DL_REL: $DL_PASSED passed (dart test; output in $DL_RAW)"
+fi
+PASS=$((PASS + DL_PASSED))
+FAIL=$((FAIL + DL_FAILED))
+if [ $DL_FAILED -eq 0 ]; then
+    echo "  PASS: All $DL_PASSED debugging log service tests passed"
+fi
+
+echo ""
+
+fi  # Section DL
 
 # =============================================================================
 # SUMMARY

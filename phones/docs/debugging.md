@@ -60,6 +60,15 @@ A play is a file in `plays/`, `<name>.md`, with two parts.
 
 A play's expectations are what the papers say happens, GSA's Appendix "The Operating System" and GNA's layer: a failed expectation is a fault either in the code, reported to Code, or in the paper, reported to GSA; the play is never changed to pass.
 
+## The scripted build
+
+Taken up by Phones from Code's proposal to GSA (Code #26, GSA_inbox.md 2026-11-08 15:44 UTC), Udi approving (16:33 UTC).  A second debug build of the app whose person is a scripted person, the one the simulation runs, so that a play on phones runs with no tap and is judged from the logs alone.
+
+1. The person: the scripted persons of `programs/social/graph/core/superapp_plays.glp`, as `encounter_befriend` and `befriend_known`, run by the runtime at the person's channel, as under `:boot` (IGLP, Implementation Notes, "Boot": a scripted person is a program the runtime runs at the person's channel); the agent, core and the layer are the release build's, unchanged.
+2. The build: a Dart define, `GLP_PERSON=<mode>`, chooses the scripted person at build time, with the reporter on; a build without it has the person on the screen.  The entry is IGLP's Dart, beside `main_superapp.dart`; `tools/build.sh <udid> <mode>` builds it.
+3. The plays: each play of `plays/` names the mode that runs it on each device; a play run with scripted persons is judged by the same expectations as one run by hand, the `screen` events then recording what the scripted person saw and did.
+4. Udi's part is to open the app on each device and give it a network; a play run by hand stays for what a script cannot test: the permission prompts, the screens as a person sees them, and the app in the background.
+
 ## Who does what
 
 - Code builds `servers/debuglog`, the reporter in the app and `tools/build.sh`, on Phones' tasks in `Code_inbox.md`, `To: Code, for Phones`; the reporter's events are the ones listed above, and the glue's and the runtime's callbacks are where it reads them, with no change to the agent or the layer.
