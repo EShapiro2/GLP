@@ -24,6 +24,7 @@
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
 #   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
+#   DL - the debugging log service of the phones (servers/debuglog): dart test there
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -66,7 +67,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET DL"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -9604,6 +9605,73 @@ fi
 echo ""
 
 fi  # Section NET
+
+if _section DL; then
+# =============================================================================
+# Section DL: the debugging log service of the phones (servers/debuglog)
+# =============================================================================
+#
+# GLP/phones/docs/debugging.md, "The log service": `dart test` in
+# servers/debuglog, as Section NET runs networking/core: under the watchdog,
+# the raw output and json report in the run's directory (dl.txt and dl.json),
+# each failing test a FAIL line "servers/debuglog/test/<file>: <test name>",
+# a missing dart or a run that exits non-zero naming no failing test a hard
+# failure.  No known-red list: a red test fails it.
+echo "=== Section DL: the debugging log service (servers/debuglog) ==="
+echo ""
+DL_RAW_DIR="$SUITE_RUN_DIR"
+mkdir -p "$DL_RAW_DIR" 2>/dev/null || true
+DL_REL="servers/debuglog"
+DL_RAW="$DL_RAW_DIR/dl.txt"
+DL_JSON="$DL_RAW_DIR/dl.json"
+echo "  (raw output and json report in $DL_RAW_DIR: dl.txt and dl.json)"
+DL_PASSED=0
+DL_FAILED=0
+if ! command -v dart >/dev/null 2>&1; then
+    echo "  FAIL: dart is not on PATH, so $DL_REL/test/ cannot run"
+    DL_FAILED=1
+else
+    _q_run "$GLP_DIR/$DL_REL" "$DL_JSON" "$DL_RAW" "$DL_REL/" dart test
+    dl_status=$Q_RUN_STATUS
+    if [ "$Q_RUN_DNF" = 1 ]; then
+        _q_report_dnf "dart test in $DL_REL"
+        DL_FAILED=$((DL_FAILED + Q_DNF_COUNT))
+    fi
+    dl_clean=$(sed 's/\x1b\[[0-9;]*m//g' "$DL_RAW" 2>/dev/null | tr '\r' '\n') || dl_clean=""
+    DL_PASSED=$(printf '%s' "$dl_clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    DL_PASSED=${DL_PASSED:-0}
+    dl_fails=$(printf '%s' "$dl_clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$DL_REL/test/|$DL_REL/test/|; s|^test/|$DL_REL/test/|" \
+        | sort -u) || true
+    dl_loads=$(_q_load_failures "$DL_JSON" "$DL_REL/") || true
+    if [ -n "$dl_loads" ]; then
+        dl_fails=$(printf '%s\n%s' "$dl_fails" "$dl_loads" | sed '/^$/d' | sort -u)
+    fi
+    if [ "$dl_status" -ne 0 ] && [ -z "$dl_fails" ] && [ "$Q_RUN_DNF" = 0 ]; then
+        echo "  FAIL: dart test exited $dl_status in $DL_REL naming no failing test, so $DL_REL/test/ did not run"
+        printf '%s\n' "$dl_clean" | tail -5 | sed 's/^/        /'
+        DL_FAILED=$((DL_FAILED + 1))
+    fi
+    if [ -n "$dl_fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            DL_FAILED=$((DL_FAILED + 1))
+        done <<< "$dl_fails"
+    fi
+    echo "  $DL_REL: $DL_PASSED passed (dart test; output in $DL_RAW)"
+fi
+PASS=$((PASS + DL_PASSED))
+FAIL=$((FAIL + DL_FAILED))
+if [ $DL_FAILED -eq 0 ]; then
+    echo "  PASS: All $DL_PASSED debugging log service tests passed"
+fi
+
+echo ""
+
+fi  # Section DL
 
 # =============================================================================
 # SUMMARY
