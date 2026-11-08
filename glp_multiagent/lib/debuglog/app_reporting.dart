@@ -4,9 +4,9 @@
 /// the agent or the layer --- the host's callbacks for the runtime
 /// ([reportHost]), the glue's callbacks for the layer ([ReportingGlpNetwork]),
 /// a middleware on the store the app gives the layer for the actions it
-/// reduces ([layerActions]), the core's assignable `debugPrint` for its
-/// diagnostics, and the bridge's screen, read as text after each change
-/// ([ScreenReporter]).
+/// reduces ([layerActions]), the two assignable `debugPrint`s the layer's
+/// diagnostics are printed by ([reportLayerDiagnostics]), and the bridge's
+/// screen, read as text after each change ([ScreenReporter]).
 library;
 
 import 'dart:io' show Directory;
@@ -45,7 +45,7 @@ Future<DebugReporter?> startDebugReporter() async {
       syslog: (m) => syslog(m),
     );
     reportLaunch(reporter, await buildCommit(), deviceFacts());
-    reportCoreDiagnostics(reporter);
+    reportLayerDiagnostics(reporter);
     final framework = FlutterError.onError;
     FlutterError.onError = (details) {
       reporter.event(Source.app, 'exception', {
@@ -70,15 +70,47 @@ void reportLaunch(
   reporter.event(Source.app, 'device', device);
 }
 
-/// The layer's own diagnostics, the `debugPrint` lines of networking/core,
-/// reported, and still printed as before.
-void reportCoreDiagnostics(DebugReporter reporter) {
-  final printed = core.debugPrint;
+/// The layer's own diagnostics, every `debugPrint` line of networking/core,
+/// of the Flutter package networking/lib (`[lan]`, `[ble]`, `[local-host]`)
+/// and of the glue networking/glue (debugging.md, "The phone side", item 3),
+/// reported, and still printed as before.  The core prints by its own
+/// assignable `debugPrint` (networking/core, compat.dart), the Flutter
+/// package by Flutter's, and the glue, which prints nothing today, would
+/// print by one of the two; each line is reported with the one it was
+/// printed by, `core` or `flutter`.  Flutter's `debugPrint` is the whole
+/// app's, so a line of the framework or of the app comes with the layer's.
+/// The reporter's own failures go to its [DebugReporter.syslog], which
+/// [startDebugReporter] takes as Flutter's `debugPrint` was before this, so
+/// that none is reported.  Returns what puts the two back as they were.
+void Function() reportLayerDiagnostics(DebugReporter reporter) {
+  final coreWas = core.debugPrint;
+  final flutterWas = flutter.debugPrint;
   core.debugPrint = (String? message, {int? wrapWidth}) {
-    printed(message, wrapWidth: wrapWidth);
-    reporter.event(Source.layer, 'diagnostic', {'line': message ?? ''});
+    coreWas(message, wrapWidth: wrapWidth);
+    reporter.event(Source.layer, 'diagnostic',
+        {'printer': 'core', 'line': message ?? ''});
+  };
+  flutter.debugPrint = (String? message, {int? wrapWidth}) {
+    flutterWas(message, wrapWidth: wrapWidth);
+    reporter.event(Source.layer, 'diagnostic',
+        {'printer': 'flutter', 'line': message ?? ''});
+  };
+  return () {
+    core.debugPrint = coreWas;
+    flutter.debugPrint = flutterWas;
   };
 }
+
+/// Each change of the app's lifecycle, to the foreground, the background and
+/// back, reported by the state it changes to (`resumed`, `inactive`,
+/// `hidden`, `paused`, `detached`), and what is buffered posted at once
+/// (debugging.md, "The phone side", item 3, `app`).  Dispose of the listener
+/// with the app.
+AppLifecycleListener reportLifecycle(DebugReporter reporter) =>
+    AppLifecycleListener(onStateChange: (AppLifecycleState state) {
+      reporter.event(Source.app, 'lifecycle', {'state': state.name});
+      reporter.flush();
+    });
 
 /// The store's middleware that reports every action the layer's store
 /// reduces, by its type and, where the action prints more than its type, its

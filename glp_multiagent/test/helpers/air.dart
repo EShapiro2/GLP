@@ -73,6 +73,14 @@ class AirNetwork extends GlpNetwork {
     air._at[keyPair.pub.hex] = this;
   }
 
+  /// This phone leaves the air, as a phone whose app is terminated: nothing
+  /// is delivered to it after, and a phone of the same key may join.
+  void leave() {
+    if (identical(air._at[keyPair.pub.hex], this)) {
+      air._at.remove(keyPair.pub.hex);
+    }
+  }
+
   @override
   PubKey getIdentity() => keyPair.pub;
 
