@@ -139,15 +139,16 @@ on_reply(F, rejected) :- send_to_user([rejected(F?)]).
   // mail, asks on Supply for two links, more(2), and no more, and reports listed(A, Email,
   // Name, Visibility); a listing not so signed it answers rejected, closing
   // Supply, and reports unsigned; on supply(A, Links) it reports supplied(A,
-  // Links); unlist it answers verify.
+  // Links); unlist it answers unlisted.
   const directoryProgram = r'''
 SupplyAsk ::= more(Integer).
-ListReply ::= verify ; rejected.
+ListReply ::= verify ; listed ; rejected.
+UnlistReply ::= unlisted ; rejected.
 Visibility ::= listed ; unlisted.
 DirName ::= String ; none.
 DirMsg ::= list(Key, SignedTerm, Stream(SupplyAsk)?, ListReply?)
          ; supply(Key, List(SignedTerm))
-         ; unlist(Key, SignedTerm, ListReply?).
+         ; unlist(Key, SignedTerm, UnlistReply?).
 DirNet ::= [] ; [NetMsg(DirMsg) | DirNet].
 DirReport ::= listed(Key, String, DirName, Visibility) ; unsigned ; supplied(Key, List(SignedTerm)).
 
@@ -171,8 +172,8 @@ on_listing(A, signed(K, _, listing(A1, E, N, V)), [more(2)], verify) :-
     report(listed(A?, E?, N?, V?)).
 on_listing(_, _, [], rejected) :- otherwise | report(unsigned).
 
-procedure answered(ListReply).
-answered(verify).
+procedure answered(UnlistReply).
+answered(unlisted).
 
 procedure report(DirReport?).
 report(R) :- ground(R?) | send_to_user([R?]).

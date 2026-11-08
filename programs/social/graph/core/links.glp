@@ -6,7 +6,7 @@
 %%
 %% The serial.  "a serial the inviter keeps, a whole number used once" (GNA Section 6).  The operating system takes the clock, now/1 in milliseconds, as the serial, or one more than the last serial where the clock has not passed it, so that no serial is used twice while the app runs, and a serial of a link made before a restart is not made again after it.
 %%
-%% Listing with a directory (GDS:2; GNA Section 7, "The messages", 2ce8e10).  The person's acts list(Email, Name) and list_unlisted(Email, Name), and unlist (GDS's interface pragma Listing: "Alice [List] <email> <name> [List unlisted] <email> <name> [Unlist]"), reach this process as list(Email, Name, listed), list(Email, Name, unlisted) and unlist.  With a directory, directory(D, DAddr), the operating system declares it a peer at its address, declare(peer(D)) and declare(address(D, DAddr)), and lists the person, list(A, Signed, Supply, Reply), Signed the term listing(A, Email, Name, Visibility) signed by the person's key, Name none where the person gave the empty name ("Name a string or none"); the directory answers Reply with verify, a mail sent to the address, told the person as verify(Email), or rejected, told as rejected(list); and it asks for links on Supply, more(N), which join this process's acts, each answered by N links of the person's, made and registered with the first rendezvous server as Invite by link's are, each expiring a day after it is made (GDS's implementation pragma Listing, Contact: "a link given to Dora expires a day after it is made"), and sent to the directory as supply(A, Links).  unlist(A, Signed, Reply), Signed the term unlist(A) signed by the person's key, ends the listing; rejected is told the person, rejected(unlist).  Where the operating system has no directory, or no rendezvous server, List and Unlist are refused and told.
+%% Listing with a directory (GDS:2; GNA Section 7, "The messages", 2ce8e10).  The person's acts list(Email, Name) and list_unlisted(Email, Name), and unlist (GDS's interface pragma Listing: "Alice [List] <email> <name> [List unlisted] <email> <name> [Unlist]"), reach this process as list(Email, Name, listed), list(Email, Name, unlisted) and unlist.  With a directory, directory(D, DAddr), the operating system declares it a peer at its address, declare(peer(D)) and declare(address(D, DAddr)), and lists the person, list(A, Signed, Supply, Reply), Signed the term listing(A, Email, Name, Visibility) signed by the person's key, Name none where the person gave the empty name ("Name a string or none"); the directory answers Reply with verify, a mail sent to the address, told the person as verify(Email), with listed, the address already verified for the person and the listing replaced with no mail, told as listed(Email), or rejected, told as rejected(list) (GNA 5040fb6); and it asks for links on Supply, more(N), which join this process's acts, each answered by N links of the person's, made and registered with the first rendezvous server as Invite by link's are, each expiring a day after it is made (GDS's implementation pragma Listing, Contact: "a link given to Dora expires a day after it is made"), and sent to the directory as supply(A, Links).  unlist(A, Signed, Reply), Signed the term unlist(A) signed by the person's key, ends the listing, answered unlisted, or rejected, told the person rejected(unlist).  Where the operating system has no directory, or no rendezvous server, List and Unlist are refused and told.
 %%
 %% Opening a link.  The person's act open_link(Link), Link the text the person was sent (GDS's implementation pragma Contact: "the link is given as text, to open in a Grassroots App, which redeems it").  The operating system takes the link apart with signature/2 and admits it where it is signed by the inviter it names and now/1 is before its expiry (GNA Section 6: "The recipient's agent verifies the inviter's signature and the expiry, declares the inviter a peer, and redeems the link at the rendezvous agent named in it"): it declares the inviter a peer, declare(peer(I)), and the server the link names, declare(rendezvous(Rv, RvAddr)), over which the session to it is opened, and redeems it, redeem(Me, Signed, Reply), Signed the term redeem(Me, Link) signed by the person's key, as a cold call to the server's key.  On punch(I, AddrI) it declares the inviter's address, declare(address(I, AddrI)), punches towards it, and makes the cold call, the person's connect(I) to the agent ("the two establish their session, and the recipient's first message is a cold call").  A link not admitted, or a redemption refused, is told the person, rejected(open_link).
 
@@ -165,9 +165,10 @@ procedure list_to(Key?, Key?, SignedTerm?, Stream(SupplyAsk), ListReply, NetOutS
 list_to(D, Id, Signed, Supply?, Reply?, [msg(D?, list(Id?, Signed?, Supply, Reply))]) :-
     ground(D?), ground(Id?), ground(Signed?) | true.
 
-%% links_listed(Id, E, Reply, Out): the directory's answer to the listing: a mail sent to the address, told the person verify(E); rejected, told rejected(list).
+%% links_listed(Id, E, Reply, Out): the directory's answer to the listing: a mail sent to the address, told the person verify(E); the address already verified, the listing replaced, told listed(E); rejected, told rejected(list).
 procedure links_listed(Key?, String?, ListReply?, AgentToUserStream).
 links_listed(_, E, verify, [msg(agent, person, verify(E?))]).
+links_listed(_, E, listed, [msg(agent, person, listed(E?))]).
 links_listed(_, _, rejected, [msg(agent, person, rejected(list))]).
 
 %% asks(Supply, More): each of the directory's asks, more(N), an act of this process.
@@ -208,11 +209,11 @@ supply_to(D, Id, Links, [msg(D?, supply(Id?, Links?))]) :-
     ground(D?), ground(Id?), ground(Links?) | true.
 
 %% unlist_to(D, Id, Signed, Reply, Net): the unlisting sent to the directory, once signed.
-procedure unlist_to(Key?, Key?, SignedTerm?, ListReply, NetOutStream).
+procedure unlist_to(Key?, Key?, SignedTerm?, UnlistReply, NetOutStream).
 unlist_to(D, Id, Signed, Reply?, [msg(D?, unlist(Id?, Signed?, Reply))]) :-
     ground(D?), ground(Id?), ground(Signed?) | true.
 
-%% unlisted(Reply, Out): rejected, told the person rejected(unlist); the listing ended, nothing.
-procedure unlisted(ListReply?, AgentToUserStream).
+%% unlisted(Reply, Out): the listing ended, unlisted, nothing told; rejected, told the person rejected(unlist).
+procedure unlisted(UnlistReply?, AgentToUserStream).
+unlisted(unlisted, []).
 unlisted(rejected, [msg(agent, person, rejected(unlist))]).
-unlisted(verify, []).

@@ -248,6 +248,7 @@ NoticeContent ::= befriend(Key)
                 ; befriend_intro(Key, Key)
                 ; invitation(SignedTerm)
                 ; verify(String)
+                ; listed(String)
                 ; connected(Key)
                 ; rejected
                 ; rejected(Constant)
@@ -291,6 +292,8 @@ notice(msg(A, P, nearby(Ks)), msg(A?, P?, nearby(Ks?)), msg(A?, P?, nearby(Ks?))
 notice(msg(A, P, invitation(L)), msg(A?, P?, invitation(L?)), msg(A?, P?, invitation(L?))) :-
     ground(A?), ground(P?), ground(L?) | true.
 notice(msg(A, P, verify(E)), msg(A?, P?, verify(E?)), msg(A?, P?, verify(E?))) :-
+    ground(A?), ground(P?), ground(E?) | true.
+notice(msg(A, P, listed(E)), msg(A?, P?, listed(E?)), msg(A?, P?, listed(E?))) :-
     ground(A?), ground(P?), ground(E?) | true.
 
 %% The person's end of a mini-app's person channel that no screen shows ---
