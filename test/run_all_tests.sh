@@ -7503,8 +7503,8 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # Compilation"): home/3 asks the person once for the stream of their
 # requests, and the dispatcher draws its construct on the person channel, the
 # default widget of a stream of a union of tuples, a menu of the three forms,
-# the buttons Open place, Close place and Invite by link, and the form opening
-# a link, kept open, no form taking a key
+# the buttons Open place, Close place and Invite by link, the form opening a
+# link, and List, List unlisted and Unlist, kept open, no form taking a key
 # typed (GSA #2, 2026-11-08 08:07 UTC, item 2); the persons known, seen
 # nearby, are told the person, nearby([bob]), on the same channel, merged
 # with the draws, and home draws a card for each with the button befriend,
@@ -7530,7 +7530,7 @@ play_home(alice, befriend, [msg(agent, person, nearby([bob])), msg(agent, person
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of three acts, the buttons Open place and Close place (GPE:1) and Invite by link (GRV:2), and the form opening a link, drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place), button(invite_link), form(open_link, \[field(Link, text)\])\])), stream_request_r(input(\[\])))" "$sg_home"
+check "SG super-app home: the request form, a menu of three acts, the buttons Open place and Close place (GPE:1) and Invite by link (GRV:2), the form opening a link, and List, List unlisted and Unlist (GDS:2), drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place), button(invite_link), form(open_link, \[field(Link, text)\]), form(list, \[field(Email, text), field(Name, text)\]), form(list_unlisted, \[field(Email, text), field(Name, text)\]), button(unlist)\])), stream_request_r(input(\[\])))" "$sg_home"
 check_not "SG super-app home: no connect form, a person befriended by picking them in Nearby" "form(connect," "$sg_home"
 check "SG super-app home: the person known, seen nearby, is shown on the person channel, nearby([bob])" "^draw(0, thread(.*), output(\[msg(agent, person, nearby(\[bob\]))\]))$" "$sg_home"
 check "SG super-app home: home draws bob's card in Nearby with the button befriend" "^draw(2, form(nearby, \[field(Friend, shown), field(Befriend, button(befriend))\]), nearbyPerson_w(nearby(bob, input(\[2\]))))$" "$sg_home"
@@ -7558,9 +7558,9 @@ check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
 # (networking/glue/test/rendezvous_server_test.dart).
 sg_links=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
-play_links([rendezvous(rv, rv_addr)], [invite_link], O1, N1, C1).
-play_links([], [invite_link], O2, N2, C2).
-play_links([], [open_link(nonsense)], O3, N3, C3).
+play_links([rendezvous(rv, rv_addr)], none, [invite_link], O1, N1, C1).
+play_links([], none, [invite_link], O2, N2, C2).
+play_links([], none, [open_link(nonsense)], O3, N3, C3).
 play_link_open(O4, N4).
 play_link_expired(O5).
 :quit
@@ -7573,6 +7573,37 @@ check "SG links: a text that is not a link is refused and told" "O3 = \[msg(agen
 check "SG links: a link made and opened is redeemed at the server it names" "^N4 = \[msg(rv, redeem('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
 check "SG links: a link whose expiry has passed is refused and told" "O5 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
 check_not "SG links: no failed goal" "→ failed" "$sg_links"
+
+# The person's listing with a directory (core/links.glp; GNA Section 7, "The
+# messages", 2ce8e10), under the plain REPL: List with a directory and a
+# rendezvous server sends list(A, Signed, Supply, Reply) to the directory,
+# Supply and Reply for it to write; with no directory, refused and told,
+# rejected(list), as List with no rendezvous server is.  The directory's ask
+# more(2) is answered by two links, each registered with the server, and
+# then supply(A, [L1, L2]) to the directory; more(0) by supply(A, []).
+# Unlist with a directory sends unlist(A, Signed, Reply); with none, refused
+# and told, rejected(unlist).  The scripted directory over the WAN is NET's
+# (networking/glue/test/rendezvous_server_test.dart).
+sg_dir=$("$REPL_RUN" <<HEREDOC
+$SG_CORE
+play_links([rendezvous(rv, rv_addr)], directory(dir, dir_addr), [list("alice@example.org", "Alice", listed)], O1, N1, C1).
+play_links([rendezvous(rv, rv_addr)], none, [list("alice@example.org", "", unlisted)], O2, N2, C2).
+play_links([], directory(dir, dir_addr), [list("alice@example.org", "Alice", listed)], O6, N6, C6).
+play_links([rendezvous(rv, rv_addr)], directory(dir, dir_addr), [more(2)], O3, N3, C3).
+play_links([rendezvous(rv, rv_addr)], directory(dir, dir_addr), [more(0)], O7, N7, C7).
+play_links([], directory(dir, dir_addr), [unlist], O4, N4, C4).
+play_links([], none, [unlist], O5, N5, C5).
+:quit
+HEREDOC
+2>&1)
+check "SG directory: List sends the signed listing to the directory, its asks and answer for it to write" "^N1 = \[msg(dir, list('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*, X[0-9]*)) | X[0-9]*\]$" "$sg_dir"
+check "SG directory: List with no directory is refused and told" "O2 = \[msg(agent, person, rejected(list))\]$" "$sg_dir"
+check "SG directory: List with no rendezvous server is refused and told" "O6 = \[msg(agent, person, rejected(list))\]$" "$sg_dir"
+check "SG directory: more(2) registers two links with the server and then supplies them to the directory" "^N3 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*)), msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*)), msg(dir, supply('\{0,1\}[0-9a-f]*'\{0,1\}, \['\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}\]))\]$" "$sg_dir"
+check "SG directory: more(0) supplies no link" "^N7 = \[msg(dir, supply('\{0,1\}[0-9a-f]*'\{0,1\}, \[\]))\]$" "$sg_dir"
+check "SG directory: Unlist sends the signed unlisting to the directory" "^N4 = \[msg(dir, unlist('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_dir"
+check "SG directory: Unlist with no directory is refused and told" "O5 = \[msg(agent, person, rejected(unlist))\]$" "$sg_dir"
+check_not "SG directory: no failed goal" "→ failed" "$sg_dir"
 
 # The child-safe platform hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation

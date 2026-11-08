@@ -4,12 +4,12 @@
 %%
 %% Home shows Nearby, the persons nearby whom the person knows (GPE's interface pragma Nearby): the operating system tells the person nearby(Ks), Ks those persons in the order of their keys, whenever the list changes.  Home draws a card for each with the button befriend, and the person befriends one by picking them there (Appendix, "Nearby"; home.vglp, befriend_card/3): GSG:1 as the agent does it today, connect(K).
 %%
-%% The layer's streams of the agents nearby are taken in os_phone/7; a play in one heap gives os_agent/9 its own.
+%% The layer's streams of the agents nearby are taken in os_phone/8; a play in one heap gives os_agent/10 its own.
 %%
-%% The rendezvous servers the person's first act names (GSA paper, Appendix "The Operating System", "Boot": "the rendezvous servers the app is configured with, each by key and address") are declared to the layer at start, declare(rendezvous(K, A)) (Appendix, "Nearby": "At start the operating system declares its rendezvous servers"), and the person's acts on invitation links, Invite by link and the opening of a link, go to the links process (links.glp), with the servers.
+%% The rendezvous servers the person's first act names (GSA paper, Appendix "The Operating System", "Boot": "the rendezvous servers the app is configured with, each by key and address") are declared to the layer at start, declare(rendezvous(K, A)) (Appendix, "Nearby": "At start the operating system declares its rendezvous servers"), and the person's acts on invitation links, Invite by link and the opening of a link, and on a directory, List, List unlisted and Unlist, go to the links process (links.glp), with the servers and the directory, directory(Key, Address) or none (GNA Section 7).
 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-imported procedure links#links(Key?, List(RvServer)?, Integer?, Stream(LinkAct)?, AgentToUserStream, NetOutStream, UserInStream).
+imported procedure links#links(Key?, List(RvServer)?, Directory?, Integer?, Stream(LinkAct)?, AgentToUserStream, NetOutStream, UserInStream).
 
 %% An agent nearby, by the proximity underlay over which the layer reports it.
 Near ::= near(Underlay, Key).
@@ -27,13 +27,13 @@ PlaceState ::= st(TrustLevel, List(Key), List(Near), List(Key), List(Key)).
 %% The agent with the operating system's Nearby around it
 %% =============================================================================
 
-%% os_agent(Id, Known, Servers, UserIn, NetIn, Pan, Lan, Out, NetOut): the agent of the person of key Id, who knows the persons Known at the start, with the rendezvous servers Servers; the person's acts on UserIn, the network on NetIn, the layer's presences over the PAN and the LAN on Pan and Lan; what the person is told on Out, the messages to the network on NetOut.  The acts on the place and the encounters go to the place, the acts on invitation links to the links process, whose cold call on opening a link joins the agent's input; everything else to the agent, as it does today.
-exported procedure os_agent(Key?, List(Key)?, List(RvServer)?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
-os_agent(Id, Known, Servers, UserIn, NetIn, Pan, Lan, Out?, NetOut?) :-
-    ground(Id?), ground(Known?), ground(Servers?) |
+%% os_agent(Id, Known, Servers, Dir, UserIn, NetIn, Pan, Lan, Out, NetOut): the agent of the person of key Id, who knows the persons Known at the start, with the rendezvous servers Servers and the directory Dir; the person's acts on UserIn, the network on NetIn, the layer's presences over the PAN and the LAN on Pan and Lan; what the person is told on Out, the messages to the network on NetOut.  The acts on the place and the encounters go to the place, the acts on invitation links to the links process, whose cold call on opening a link joins the agent's input; everything else to the agent, as it does today.
+exported procedure os_agent(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
+os_agent(Id, Known, Servers, Dir, UserIn, NetIn, Pan, Lan, Out?, NetOut?) :-
+    ground(Id?), ground(Known?), ground(Servers?), ground(Dir?) |
     split_acts(Id?, UserIn?, AIn, Acts, LActs),
     split_net(NetIn?, ANet, Asks),
-    links # links(Id?, Servers?, 0, LActs?, LOut, LNet, LCmds),
+    links # links(Id?, Servers?, Dir?, 0, LActs?, LOut, LNet, LCmds),
     merge(AIn?, LCmds?, AIn1),
     agent # agent(Id?, AIn1?, ANet?, [user_output(AOut), net_output(ANetOut)]),
     peek(AOut?, AOut1, Friends),
@@ -47,17 +47,17 @@ os_agent(Id, Known, Servers, UserIn, NetIn, Pan, Lan, Out?, NetOut?) :-
     merge(ANetOut?, PNet?, NetOut0),
     merge(NetOut0?, LNet?, NetOut).
 
-%% os_phone(Id, Known, Servers, UserIn, NetIn, Out, NetOut): os_agent/9 on a phone, the presences the layer's: at start the operating system declares the trust of the two proximity underlays closed, declare(trust(pan, closed)) and declare(trust(lan, closed)), and to the layer a watch on the agents nearby over each, declare(nearby(pan, S)) and declare(nearby(lan, S)) (GLP-Spec appendix-guards, "Networking seam", 210cee1; GSA paper, Appendix "The Operating System", "Nearby": "At start the operating system declares the trust of pan and of lan closed and, for each of the two, nearby(Underlay, Events) to the layer, and reads the stream from then on").
-%% With the servers: os_phone(Id, Known, Servers, UserIn, NetIn, Out, NetOut), each of Servers declared to the layer at start, declare(rendezvous(K, A)) (Appendix, "Nearby": "At start the operating system declares its rendezvous servers").
-exported procedure os_phone(Key?, List(Key)?, List(RvServer)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
-os_phone(Id, Known, Servers, UserIn, NetIn, Out?, NetOut?) :-
-    ground(Id?), ground(Known?), ground(Servers?) |
+%% os_phone(Id, Known, Servers, Dir, UserIn, NetIn, Out, NetOut): os_agent/10 on a phone, the presences the layer's: at start the operating system declares the trust of the two proximity underlays closed, declare(trust(pan, closed)) and declare(trust(lan, closed)), and to the layer a watch on the agents nearby over each, declare(nearby(pan, S)) and declare(nearby(lan, S)) (GLP-Spec appendix-guards, "Networking seam", 210cee1; GSA paper, Appendix "The Operating System", "Nearby": "At start the operating system declares the trust of pan and of lan closed and, for each of the two, nearby(Underlay, Events) to the layer, and reads the stream from then on").
+%% With the servers and the directory: os_phone(Id, Known, Servers, Dir, UserIn, NetIn, Out, NetOut), each of Servers declared to the layer at start, declare(rendezvous(K, A)) (Appendix, "Nearby": "At start the operating system declares its rendezvous servers").
+exported procedure os_phone(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
+os_phone(Id, Known, Servers, Dir, UserIn, NetIn, Out?, NetOut?) :-
+    ground(Id?), ground(Known?), ground(Servers?), ground(Dir?) |
     declare_servers(Servers?),
     declare_peers(Known?, Done),
     closed_after(Done?),
     declare(nearby(pan, Pan)),
     declare(nearby(lan, Lan)),
-    os_agent(Id?, Known?, Servers?, UserIn?, NetIn?, Pan?, Lan?, Out, NetOut).
+    os_agent(Id?, Known?, Servers?, Dir?, UserIn?, NetIn?, Pan?, Lan?, Out, NetOut).
 
 %% declare_servers(Servers): each rendezvous server declared to the layer, by its key and address.
 procedure declare_servers(List(RvServer)?).
@@ -72,7 +72,7 @@ declare_servers([]).
 %% =============================================================================
 
 %% The person's acts Open place and Close place go to the place; every other act to the agent, and the person's yes to an introduction to a person, accept_intro(Other, P), to the place as well, know(Other): her yes to the act is her yes to knowing them (GSA paper, Section 4.2, "Whom the Grassroots App knows": "Acquaintance by GKK:2 and introduction by GKK:3 are the cases in which that consent is a clause's: Alice's yes to the act is her yes to knowing the agent"), so the layer recognises the other from then on.
-%% The person's acts on invitation links, Invite by link and the opening of a link, go to the links process (links.glp).
+%% The person's acts on invitation links, Invite by link and the opening of a link, and on a directory, List, List unlisted and Unlist, go to the links process (links.glp), List as list(Email, Name, listed) and List unlisted as list(Email, Name, unlisted).
 procedure split_acts(Key?, UserInStream?, UserInStream, Stream(PlaceAct), Stream(LinkAct)).
 split_acts(Id, [msg(person, I, open_place) | Ms], As?, [open | Ps?], Ls?) :-
     Id? =?= I? | split_acts(Id?, Ms?, As, Ps, Ls).
@@ -83,6 +83,12 @@ split_acts(Id, [msg(person, I, accept_intro(O, P)) | Ms], [msg(person, I?, accep
 split_acts(Id, [msg(person, I, invite_link) | Ms], As?, Ps?, [invite_link | Ls?]) :-
     Id? =?= I? | split_acts(Id?, Ms?, As, Ps, Ls).
 split_acts(Id, [msg(person, I, open_link(L)) | Ms], As?, Ps?, [open_link(L?) | Ls?]) :-
+    Id? =?= I? | split_acts(Id?, Ms?, As, Ps, Ls).
+split_acts(Id, [msg(person, I, list(E, N)) | Ms], As?, Ps?, [list(E?, N?, listed) | Ls?]) :-
+    Id? =?= I? | split_acts(Id?, Ms?, As, Ps, Ls).
+split_acts(Id, [msg(person, I, list_unlisted(E, N)) | Ms], As?, Ps?, [list(E?, N?, unlisted) | Ls?]) :-
+    Id? =?= I? | split_acts(Id?, Ms?, As, Ps, Ls).
+split_acts(Id, [msg(person, I, unlist) | Ms], As?, Ps?, [unlist | Ls?]) :-
     Id? =?= I? | split_acts(Id?, Ms?, As, Ps, Ls).
 split_acts(Id, [M | Ms], [M? | As?], Ps?, Ls?) :-
     otherwise | split_acts(Id?, Ms?, As, Ps, Ls).
