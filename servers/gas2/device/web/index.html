@@ -377,7 +377,7 @@ function drawBrowseRows() {
 
 function drawFriend() {
   bar('Add a friend', 'home');
-  const link = SITE + 'friend.html?k=' + S.me;
+  const link = SITE + 'friend.html?k=' + S.me + (myName ? '&n=' + encodeURIComponent(myName) : '');
   let qr = '';
   try { const c = qrcode(0, 'M'); c.addData(link); c.make(); qr = c.createSvgTag({cellSize: 4, margin: 0, scalable: true}); } catch (e) {}
   let h = `<div class="card"><h3>Your code</h3><div class="small muted">Your friend scans it with their camera, or you send them the link.</div><div class="qr">${qr}</div>
@@ -1122,6 +1122,9 @@ function addPasted() {
   const k = (/[0-9a-f]{64}/i.exec(v) || [''])[0].toLowerCase();
   if (!k) return toast('That is not a key');
   if (k === S.me) return toast('That is your own key');
+  // a link carries the name its sender gave themselves: theirs until the person renames them
+  const n = (/[?&]n=([^&#]+)/.exec(v) || [])[1];
+  if (n && !names[k]) { try { names[k] = decodeURIComponent(n).slice(0, 40); store.set('gas2names', names); } catch (e) {} }
   offerOrAdd(k, ((/[?&]app=([a-z0-9_]+)/.exec(v) || [])[1] || ''));
 }
 // a link with a mini-app: one tap plays it with them (the steps, done for the person); else a friend request
