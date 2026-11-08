@@ -57,7 +57,7 @@ Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
              ; sum(Args, Arg, Atom, Form, Expr)
              ; author_of(Arg) ; item_of(Arg).
-%% author_of(Y), item_of(Y) and program(E), the author and the item of the speech act bound to Y and a condition on an utterance its type provides, as programs/gsc/self.glp writes them (GSC 65a26da, def:numbers): vGLP's Section 5.4 (fe12932) names none of them among the relations and functions a constraint is over, so the compiler refuses a contract that holds one, with the reason (cvac.glp, con_beyond).
+%% author_of(Y), item_of(Y) and program(E), the author and the item of the speech act bound to Y and a condition on an utterance its type provides, as programs/gsc/self.glp writes them (GSC 65a26da, def:numbers): the compiler takes the author and the item (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- ...; the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 20:36 item 1), and refuses a contract that holds a program condition, with the reason (cvac.glp, con_beyond).
 Exprs      ::= [] ; [Expr | Exprs].
 Constraints ::= [] ; [Constraint | Constraints].
 %% A safe formula (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc/self.glp writes it: fa(H, M) the atom or multiplicity M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi), Psi a list, and fcons(C) a constraint.
@@ -326,7 +326,7 @@ con_args(not(C), A?) :- con_args(C?, A).
 con_args(implies(C1, C2), A?) :- con_args(C1?, A1), con_args(C2?, A2), app(A1?, A2?, A).
 con_args(ne(X, Y), A?) :- exprs_args(X?, Y?, A).
 con_args(rel(_, Es), A?) :- exprl_args(Es?, A).
-%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
+%% A program condition of a speech act is refused before this is read (cvac.glp, con_beyond); the clause covers the type.
 con_args(program(_), []).
 procedure exprs_args(Expr?, Expr?, Args).
 exprs_args(X, Y, A?) :- expr_args(X?, A1), expr_args(Y?, A2), app(A1?, A2?, A).
@@ -350,9 +350,9 @@ expr_args(ilist(_, _), []).
 expr_args(fn(_, Es), A?) :- exprl_args(Es?, A).
 expr_args(cardinality(_, _, _, _), []).
 expr_args(sum(_, _, _, _, _), []).
-%% The author, the item and a program condition of a speech act are refused before this is read (cvac.glp, con_beyond); the clause covers the type.
-expr_args(author_of(_), []).
-expr_args(item_of(_), []).
+%% The author and the item of a speech act name its speech-act variable (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- ...; the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 20:36 item 1).
+expr_args(author_of(Y), A?) :- expr_args(Y?, A).
+expr_args(item_of(Y), A?) :- expr_args(Y?, A).
 procedure exprl_args(Exprs?, Args).
 exprl_args([], []).
 exprl_args([E|Es], A?) :- expr_args(E?, A1), exprl_args(Es?, A2), app(A1?, A2?, A).

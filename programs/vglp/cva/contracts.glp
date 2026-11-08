@@ -288,7 +288,8 @@ Constraint ::= true ; and(Constraint, Constraint)
              ; signed(Arg, Arg) ; unsigned(Arg, Arg).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
-             ; sum(Args, Arg, Atom, Form, Expr).
+             ; sum(Args, Arg, Atom, Form, Expr)
+             ; author_of(Arg) ; item_of(Arg).
 Exprs      ::= [] ; [Expr | Exprs].
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
@@ -734,7 +735,10 @@ intros([schema(acquaint, [],
            rs(unguarded, [atom(got, [svar(x)])], [], [], [])]),
         nschema(credit, [svar(x)], signed(role(2), svar(x)),
           [rs(unguarded, [atom(credited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(credited, [svar(x), role(2)])]),
-           rs(unguarded, [atom(credit, [svar(x)])], [], [], [])])]).
+           rs(unguarded, [atom(credit, [svar(x)])], [], [], [])]),
+        nschema(cite, [svar(x)], eq(author_of(svar(x)), role(2)),
+          [rs(unguarded, [atom(cited, [svar(x), role(2)])], [], [atom(item, [svar(x)]), atom(knows, [role(2)])], [atom(cited, [svar(x), role(2)])]),
+           rs(unguarded, [atom(cites, [svar(x)])], [], [], [])])]).
 
 procedure days(Contract).
 days([schema(dawn, [],
