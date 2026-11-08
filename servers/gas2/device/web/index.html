@@ -121,6 +121,10 @@ header .dot { width: 30px; height: 30px; }
 .tog span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .15s; }
 .tog.on { background: var(--ok); }
 .tog.on span { left: 21px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { font-size: 12.5px; background: var(--card); border-radius: 99px; padding: 3px 10px; color: var(--soft); }
+.card.danger .big { width: 40px; height: 40px; border-radius: 12px; background: #fdecee; color: var(--no); display: grid; place-items: center; font-size: 22px; font-weight: 700; flex: none; }
+.card.danger .confirm { margin-top: 12px; padding: 12px; border-radius: 12px; background: #fdecee; display: grid; gap: 10px; }
 /* the rack turns around */
 main { transition: transform .23s ease-in, opacity .23s; transform-origin: 50% 30%; }
 main.turn { transform: perspective(1200px) rotateY(90deg); opacity: .3; }
@@ -245,9 +249,18 @@ function menuOf(w) {
 
 // the sentence the contract's pragmas put to a person, its persons by name
 function words(ws) {
-  return (ws || []).map(w => F(w, 'person') ? '<b>' + esc(nm(F(w, 'person')[0])) + '</b>' : F(w, 'text') ? esc(F(w, 'text')[0])
-    : F(w, 'named') ? esc(F(w, 'named')[0]) + ' ' + esc(nm(F(w, 'named')[1])) : F(w, 'valued') ? esc(F(w, 'valued')[0]) + ' ' + esc(F(w, 'valued')[1]) : esc(JSON.stringify(w))).join('');
+  const held = [];
+  const out = (ws || []).map(w => F(w, 'person') ? '<b>' + esc(nm(F(w, 'person')[0])) + '</b>' : F(w, 'text') ? esc(F(w, 'text')[0])
+    : F(w, 'named') ? esc(F(w, 'named')[0]) + ' ' + esc(nm(F(w, 'named')[1])) : F(w, 'valued') ? esc(F(w, 'valued')[0]) + ' ' + esc(F(w, 'valued')[1])
+    : F(w, 'held') ? (held.push(F(w, 'held')), '') : esc(termText(w))).join('');
+  // what the act rests on, that the person holds: shown as what it is
+  return out + (held.length ? `<div class="chips"><span class="small muted">It rests on</span>${held.map(([x]) => `<span class="chip">${esc(atomText(x))}</span>`).join('')}</div>` : '');
 }
+// an atom for people: its name, then its values, a key as the person's name, a text as its words,
+// a group as its name and whose it is
+function cname(v) { const d = F(v, 'dot'), c = F(v, 'community'); return d ? valText(d[1]) + (F(d[0], 'community') ? ' · ' + nm(F(d[0], 'community')[0]) : ' in ' + cname(d[0])) : c ? nm(c[0]) + "'s" : valText(v); }
+function atomText(x) { if (typeof x === 'string') return x.replace(/_/g, ' '); if (!x || !x.f) return termText(x);
+  return x.f.replace(/_/g, ' ') + (x.a.length ? ': ' + x.a.map(v => F(v, 'dot') || F(v, 'community') ? cname(v) : valText(v)).join(' · ') : ''); }
 
 const isKey = t => typeof t === 'string' && t.length === 64 && /^[0-9a-f]+$/.test(t);
 // a term for people (fancy), or as the contract writes it (clean)
@@ -384,7 +397,8 @@ function drawYou() {
     <div class="small muted" style="margin-top:8px">${S.hosted ? 'It is kept on talmonlab\'s server, which runs your super-app (GAS on the web).' : 'It is kept on this device only.'}</div></div>`;
   const tg = (k, title, sub) => `<div class="row"><span class="grow"><b>${title}</b><span class="sub small muted" style="display:block">${sub}</span></span><button class="tog ${ui[k] ? 'on' : ''}" onclick="setUi('${k}',${!ui[k]})" aria-label="${title}"><span></span></button></div>`;
   h += `<h2>How GAS looks and works</h2><div class="card">${tg('views', 'Friendly views', 'Conversations, balances and lists, read off each contract. Off: the plain view, the contract\'s own words.')}${tg('steps', 'Do the steps for me', 'One tap to play with a friend: GAS does the steps the contract asks for first, and says yes to their acts that take nothing from you, for a while.')}</div>`;
-  h += `<h2>Start over</h2><div class="card">${over ? `<div class="small" style="margin-bottom:8px">This deletes your key, your friends and your mini-apps here. It cannot be undone.</div><div class="acts"><button class="b alt" onclick="over=false;draw()">Cancel</button><button class="b no" onclick="startOver()">Delete and start over</button></div>` : `<div class="row"><span class="grow small muted">A new key, and nothing kept</span><button class="b alt" onclick="over=true;draw()">Start over</button></div>`}</div>`;
+  h += `<div class="card danger"><div class="row" style="border:0;padding:0"><span class="big">↺</span><span class="grow"><b>Start over</b><span class="sub small muted" style="display:block">A new key, a new you: your friends, mini-apps and what you hold here are gone.</span></span>${over ? '' : `<button class="b alt" onclick="over=true;draw()">Start over</button>`}</div>
+    ${over ? `<div class="confirm"><div class="small">This cannot be undone. Your friends will see a new person if you add them again.</div><div class="acts"><button class="b alt" onclick="over=false;draw()">Keep me</button><button class="b no" onclick="startOver()">Delete and start over</button></div></div>` : ''}</div>`;
   $('#main').innerHTML = h;
 }
 function setMyName(v) { myName = v.trim(); store.set('gas2myname', myName); draw(); }
@@ -472,7 +486,9 @@ function lensOf(a, menu, props) {
     }
   }
   // the acts that write in a conversation: one text field
-  const writers = menu.map((m, i) => ({m, i})).filter(({m}) => m.fields.filter(f => f.kind === 'text').length === 1);
+  // ... and adds, to someone, an atom that is a conversation's (Create, which names a group, does not)
+  const writes = name => { const sc = schemas.find(x => x.a[0] === name); return !sc || findAtoms(sc).some(x => lens[x.a[0]]); };
+  const writers = menu.map((m, i) => ({m, i})).filter(({m}) => m.fields.filter(f => f.kind === 'text').length === 1 && writes(m.act));
   return {lens, types, keyAtoms, writers, props};
 }
 // does the person hold an atom the act requires, its places filled by vals
@@ -520,8 +536,8 @@ function convsOf(a, c) {
     let id = null, wr = null, vals = null;
     for (const cand of L.writers) { vals = fillFrom(L, cand.m, keyVals, atoms); if (vals) { wr = cand; break; } }
     id = wr ? convId(wr.m.act, vals, wr.m.fields.find(f => f.kind === 'text').i) : JSON.stringify([x.f, keyVals.map(k => k.v)]);
-    const cv = conv(id, {writer: wr, vals, title: keyVals.map(k => valText(k.v)).join(' · '), keyVals, pred: x.f});
-    cv.pred = cv.pred || x.f;
+    const cv = conv(id, {writer: wr, vals, keyVals, pred: x.f, atoms: []});
+    cv.pred = cv.pred || x.f; (cv.atoms = cv.atoms || []).push(JSON.stringify(x));
     cv.msgs.push({text: w.text, by: w.by || from, t: seen[JSON.stringify(x)] || 0, mine: (w.by || from) === S.me, held: true});
   }
   for (const e of a.mine || []) {
@@ -530,13 +546,26 @@ function convsOf(a, c) {
     e.p.a.forEach((v, j) => vals[j + 1] = v);
     const id = convId(e.p.f, vals, tf), text = said(e.p.a[tf - 1]).text;
     const others = Object.entries(vals).filter(([p]) => +p !== tf && +p !== (wr.m.by || 1)).map(([, v]) => v);
-    const cv = conv(id, {writer: wr, vals, title: others.map(valText).join(' · ')});
+    const cv = conv(id, {writer: wr, vals});
     if (cv.msgs.some(m => m.held && m.mine && m.text === text)) continue;
     const st = refused.some(p => jeq(p, e.p)) ? 'no' : pend.some(p => jeq(p, e.p)) ? 'wait' : Date.now() - e.t < 15000 ? 'send' : 'done';
     cv.msgs.push({text, by: S.me, t: e.t, mine: true, st});
   }
-  for (const cv of Object.values(cs)) cv.msgs.sort((x, y) => x.t - y.t);
+  for (const cv of Object.values(cs)) { cv.msgs.sort((x, y) => x.t - y.t); cv.title = convTitle(cv); }
   return cs;
+}
+// a conversation's other values: a text (a group's name) first, then the people who are not the person
+function convVals(cv) {
+  const vs = cv.keyVals ? cv.keyVals.map(k => k.v) : Object.entries(cv.vals || {}).filter(([p]) => +p !== (cv.writer?.m.by || 1) && +p !== cv.writer?.m.fields.find(f => f.kind === 'text')?.i).map(([, v]) => v);
+  return [...vs.filter(v => !isKey(v)), ...vs.filter(v => isKey(v) && v !== S.me)];
+}
+const convTitle = cv => { const vs = convVals(cv); return vs.length ? vs.map(v => isKey(v) ? nm(v) : valText(v)).join(' · ') : 'You'; };
+const convGroup = cv => convVals(cv).some(v => !isKey(v));
+function convFace(cv, big) {
+  const vs = convVals(cv), k = vs.find(isKey);
+  if (!convGroup(cv)) return k ? dot(k) : `<span class="dot" style="background:var(--soft)">·</span>`;
+  const t = valText(vs.find(v => !isKey(v)));
+  return `<span class="dot" style="background:hsl(${hue(k || S.me)},45%,46%);border-radius:30%">${esc((t || '#').slice(0, 1).toUpperCase())}</span>`;
 }
 const TICK = {send: ['🕓', 'sending'], wait: ['✓', 'proposed, waiting for the others'], done: ['✓✓', 'done'], no: ['!', 'refused']};
 
@@ -554,15 +583,21 @@ function playHtml(a, c) {
   const cs = convsOf(a, c);
   // the tabs the pragmas name, one at a time
   const tl = tabs.map(t => F(t, 'tab'));
-  if (tl.length) {
-    const cur = tl.some(t => t[1] === tab[a.app]) ? tab[a.app] : tl[0][1];
-    h += `<div class="tabs">${tl.map(([name, pred]) => { const n = pred === cur ? '' : (L.lens[pred] ? Object.values(cs).filter(cv => cv.pred === pred).length : new Set(atoms.filter(x => x && x.f === pred).map(x => JSON.stringify(x))).size);
+  // the conversations, wherever their atoms are, one list: the tabs that hold them, as one tab
+  const shown = Object.values(cs).filter(cv => cv.writer || tl.some(t => t[1] === cv.pred));
+  const used = new Set(shown.flatMap(cv => cv.atoms || []));
+  const ttabs = tl.filter(t => L.lens[t[1]]);
+  const vt = []; for (const t of tl) { if (L.lens[t[1]]) { if (!vt.some(x => x[1] === '__chats')) vt.push([ttabs.map(x => x[0]).join(' · '), '__chats']); } else vt.push(t); }
+  if (!ttabs.length && shown.length) vt.unshift(['Conversations', '__chats']);
+  if (vt.length) {
+    const cur = vt.some(t => t[1] === tab[a.app]) ? tab[a.app] : (vt.find(t => t[1] === '__chats') || vt[0])[1];
+    h += `<div class="tabs">${vt.map(([name, pred]) => { const n = pred === cur ? '' : pred === '__chats' ? shown.length : new Set(atoms.filter(x => x && x.f === pred).map(x => JSON.stringify(x))).size;
       return `<button class="${pred === cur ? 'on' : ''}" onclick="tab['${a.app}']='${pred}';form=null;draw()">${esc(name)}${n ? ` <span class="n">${n}</span>` : ''}</button>`; }).join('')}</div>`;
-    const [name, pred, how] = tl.find(t => t[1] === cur);
-    h += L.lens[pred] ? threadsHtml(a, c, cs, pred) : how === 'counted' ? balanceHtml(a, c, pred) : listHtml(a, c, pred);
+    const [name, pred, how] = vt.find(t => t[1] === cur);
+    h += pred === '__chats' ? threadsHtml(a, c, shown) : how === 'counted' ? balanceHtml(a, c, pred) : listHtml(a, c, pred);
   }
-  // what no tab shows, so that nothing is hidden
-  const rest = atoms.filter(x => x && !tl.some(t => t[1] === x.f));
+  // what no tab and no conversation shows, so that nothing is hidden
+  const rest = atoms.filter(x => x && !tl.some(t => t[1] === x.f) && !used.has(JSON.stringify(x)));
   if (rest.length) h += `<h2>Also</h2><div class="card"><div class="items">${[...new Set(rest.map(x => termText(x)))].map(t => `<div class="item"><span>✓ ${esc(t)}</span></div>`).join('')}</div></div>`;
   if (pend.length) h += `<div class="card"><div class="small muted">Waiting for the others to answer</div>${pend.map(x => `<div class="note">${esc(termText(x))}…</div>`).join('')}</div>`;
   for (const n of notices) h += `<div class="note">${esc(termText(n))}</div>`;
@@ -586,6 +621,9 @@ function rowActs(c, x) {
       (as || []).forEach((z, j) => { const at = F(z, 'at'), g = F(z, 'grp'); if (at) pre[at[0]] = x.a[j]; if (g) { pre[g[0]] = F(F(x.a[j], 'dot')?.[0], 'community')?.[0]; pre[g[1]] = F(x.a[j], 'dot')?.[1]; } });
       // not offered where it would make the person play two roles the act keeps apart
       if (Object.entries(pre).some(([p, v]) => +p === (m.by || 1) || (v === S.me && (m.roles || []).includes(+p) && !(m.same || []).some(q => q.includes(+p))))) continue;
+      // nor where the person holds what it forbids (Befriend a friend)
+      const atoms = (c.r.last || [])[1] || [], v = Object.assign({[m.by || 1]: S.me}, pre);
+      if ((m.forbs || []).some(([fp, fa]) => (fa || []).every(z => { const at = F(z, 'at'); return !at || v[at[0]] !== undefined; }) && holdsReq(atoms, fp, fa || [], v))) continue;
       out.push({m, i, pre});
       break;
     }
@@ -599,14 +637,13 @@ function rowButtons(a, c, x) {
     return `<button class="b alt sm" onclick="${go}">${esc(m.label)}</button>`;
   }).join('');
 }
-function threadsHtml(a, c, cs, pred) {
-  const list = Object.values(cs).filter(cv => cv.pred === pred || (!cv.pred && c.L.lens[pred].by === cv.writer?.m.act))
-    .sort((x, y) => ((y.msgs.at(-1) || {}).t || 0) - ((x.msgs.at(-1) || {}).t || 0));
+function threadsHtml(a, c, shown) {
+  const list = shown.slice().sort((x, y) => ((y.msgs.at(-1) || {}).t || 0) - ((x.msgs.at(-1) || {}).t || 0));
   let h = `<div class="card chats">`;
   if (!list.length) h += `<div class="empty" style="padding:8px 14px">No conversation yet.${ui.steps ? ` <button class="link" onclick="pane='people';draw()">Play with a friend</button>` : c.L.writers.length ? ' Start one below.' : ''}</div>`;
   for (const cv of list) {
-    const m = cv.msgs.at(-1) || {}, who = (cv.keyVals || []).find(k => isKey(k.v))?.v || Object.values(cv.vals || {}).find(v => isKey(v) && v !== S.me);
-    h += `<div class="chat" onclick='openConv(${esc(JSON.stringify(cv.id))})'>${who ? dot(who) : '<span class="dot" style="background:var(--soft)">#</span>'}<span class="grow"><b>${esc(cv.title || 'You')}</b><span class="sub">${m.mine ? (TICK[m.st]?.[0] || '✓✓') + ' ' : ''}${esc(m.text || '')}</span></span><span class="small muted">${esc(hhmm(m.t))}</span></div>`;
+    const m = cv.msgs.at(-1) || {};
+    h += `<div class="chat" onclick='openConv(${esc(JSON.stringify(cv.id))})'>${convFace(cv)}<span class="grow"><b>${esc(cv.title || 'You')}</b><span class="sub">${m.mine ? (TICK[m.st]?.[0] || '✓✓') + ' ' : ''}${esc(m.text || '')}</span></span><span class="small muted">${esc(hhmm(m.t))}</span></div>`;
   }
   return h + `</div>`;
 }
@@ -638,8 +675,9 @@ function drawConv(a, c) {
     const vals = Object.fromEntries(vs), tf = wr && wr.m.fields.find(f => f.kind === 'text').i;
     cv = {id: conv, msgs: [], writer: wr, vals, title: Object.entries(vals).filter(([p]) => +p !== (wr?.m.by || 1)).map(([, v]) => valText(v)).join(' · ')};
   }
-  const who = (cv.keyVals || []).find(k => isKey(k.v))?.v || Object.values(cv.vals || {}).find(v => isKey(v) && v !== S.me);
-  $('#hd').innerHTML = `<button class="back" onclick="conv=null;draw()">‹</button>${who ? dot(who) : ''}<b>${esc(cv.title || a.title)}</b><span class="st">${esc(a.title.replace(/^Grassroots /, ''))}</span>
+  cv.title = cv.title || convTitle(cv);
+  const who = convGroup(cv) ? null : convVals(cv).find(isKey);
+  $('#hd').innerHTML = `<button class="back" onclick="conv=null;draw()">‹</button>${convFace(cv)}<b>${esc(cv.title || a.title)}</b><span class="st">${esc(a.title.replace(/^Grassroots /, ''))}</span>
     <button class="hood" title="The back: the cables (Tab)" onclick="flip()">&lt;/&gt;</button><button class="gear" title="You" onclick="gearClick()">${esc((myName || '☺').slice(0, 1).toUpperCase())}</button>`;
   let h = `<div class="bubbles" id="bubbles">`;
   let day = '';
