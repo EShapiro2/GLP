@@ -1,17 +1,19 @@
 % GRV: Grassroots Rendezvous --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GNA, a paper of the GSA project (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GRV:1.
 % Paper: GNA, GLP Networking API Specification, in preparation
-% Extends: GSG, Grassroots Social Graph, GSC's, and through it GKK.  It cites their clauses whole and restates none.
-% Defines: rendezvous server and invitation link, defined in the box after the declaration, a contract being self-contained.  Person, knowing a person and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
-% Last changed: 2026-11-07, written by GSA #2 Cowork at Udi's word that what a rendezvous server does is specified as a contract (Udi, 2026-11-07 22:34 UTC, approving the box in GNA's Section 6, GNA 2e5b9b6); the name GRV, Grassroots Rendezvous, his approval the same evening.
-% Schemas: GRV.glp beside this file, GKK's and GSG's five and six over server, registered, used, redeemed and waiting, with the values serial and expiry, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Extends: GnW, Guardians 'n' Wards, GAI's (programs/gai/GnW.txt), the server a ward of its owner, and through it GSG and GKK.  GnW is to drop the confinement of a ward to whom its guardian knows (Udi, 2026-11-08 07:09 UTC; proposed to GAI 07:10 UTC), which GRV rests on.  GDR, the directory, extends GRV (GDR.txt beside this file).
+% Defines: rendezvous server and invitation link, defined in the box after the declaration.  Person, knowing a person, friend, ward and guardian are defined with GKK, GSG and GnW.
+% Last changed: 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDR (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
+% Schemas: GRV.glp beside this file is the contract of 2026-11-07, extending GSG, certified (cascade/GRV/2026-11-07); it is rewritten on GnW's schemas once GAI amends them.
 GRV: Grassroots Rendezvous
-GRV extends GSG (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-Alice, Bob and Carol are persons.  A rendezvous server is a machine of Carol's at an address every person can reach.  An invitation link is a term Alice signs, naming Alice, a rendezvous server, a serial and an expiry.
-1. ■ Server.  Carol may set up a rendezvous server.
-2. ■ Registration.  Alice may register with Carol's server an invitation link she signed that names the server, with a serial she has not registered with it before.
-3. ■ Redemption.  Bob may present to Carol's server an invitation link registered with it that has not expired; the server then gives Alice Bob's address and Bob Alice's, and the link is spent.
-4. ■ Reconnection.  Alice and Bob, who are friends, may each present to Carol's server the other's signature over their friendship; the server then gives each the address of the other.
+GRV extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, arXiv).
+Alice, Bob and Carol are persons, Dave a ward.  A rendezvous server is a ward operated by a machine at an address every person can reach.  An invitation link is a term Alice signs, naming Alice, a rendezvous server, a serial and an expiry.
+1. ■ Server.  Carol may create a rendezvous server, Dave, as her ward.
+2. ■ Registration.  Alice may register with Dave an invitation link she signed that names Dave, with a serial she has not registered with Dave before.
+3. ■ Redemption.  Bob may present to Dave an invitation link registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+4. ■ Reconnection.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship; Dave then gives each the address of the other.
+Interface pragmas
+Registration: Alice [Invite by link]
 Implementation pragmas
 Redemption, Reconnection: the address of a person is the one at which the server's networking layer observes them, read by peer_address/2; a person given an address punches towards it by punch_udp/1, and the smaller key initiates.
 Registration: an invitation link expires an hour after it is made.

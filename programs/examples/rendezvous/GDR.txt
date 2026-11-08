@@ -1,0 +1,20 @@
+% GDR: Grassroots Directory --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GNA, a paper of the GSA project (Udi, 2026-11-08).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GDR:1.
+% Paper: GNA, GLP Networking API Specification, in preparation
+% Extends: GRV, Grassroots Rendezvous (GRV.txt beside this file), and through it GnW, GSG and GKK.
+% Defines: directory and listing, defined in the box after the declaration.  Rendezvous server and invitation link are defined with GRV.
+% Last changed: 2026-11-08, written by GSA #2 Cowork from Udi's design (2026-11-08 07:06 UTC: a page at <address>/directory, listed by a verified email and possibly a name, unlisted people retrieved by email and name) and his decision that the directory is a ward of its own that talks to the rendezvous server (07:12 UTC).
+% Schemas: GDR.glp, to be written on GRV's once GnW is amended.
+GDR: Grassroots Directory
+GDR extends GRV (GNA, GLP Networking API Specification, in preparation).
+Alice, Bob and Carol are persons, Dave and Dora wards.  A directory is a ward operated by a machine with a page every person can read, for a rendezvous server.  A listing is an email address of Alice's that the directory verified, with a name of her choosing if she gives one.
+1. ■ Directory.  Carol may create a directory, Dora, as her ward, for a rendezvous server Dave.
+2. ■ Listing.  Alice may list herself with Dora, listed or unlisted, and may unlist herself.
+3. ■ Lookup.  Anyone may look a listed person up on Dora's page, and an unlisted person up by their email address and name.
+4. ■ Contact.  Dora may register with Dave, for whoever looked Alice up, an invitation link of Alice's that Dora signs, which Dave accepts as Alice's while she is listed with Dora, and give it to them.
+Interface pragmas
+Listing: Alice [List] <email> <name> [List unlisted] <email> <name> [Unlist]
+Implementation pragmas
+Listing: the directory verifies an email address by sending it a message with a link, which Alice opens.
+Lookup: the directory's page is at <address>/directory; a listed person is shown by name where they gave one and by email address otherwise, and a click on one is a lookup.
+Contact: the link is given to the one who looked Alice up as text, to open in their Grassroots App, which redeems it (GRV:3); it expires an hour after it is made.
