@@ -140,7 +140,7 @@ install(M, Me, App, File, N, Es, Ps, Rs, [msg(person, Me?, install(App?, M?, CSi
     module(M?), ground(N?), ground(App?) |
     decompose_module(M?, CK, Src, _),
     self_key(K),
-    sign(creator_cert(Src?, [], grassroots), K?, CSig),
+    sign(creator_cert(Src?, [], syntactically_grassroots), K?, CSig),
     new_channel(AppEnd, PersonEnd),
     miniapp_person_run(M?, Me?, live, T?, PersonEnd?, Screen),
     tag(N?, App?, Screen?, Out),

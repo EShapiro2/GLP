@@ -422,5 +422,5 @@ if __name__ == '__main__':
     os.makedirs(MADE, exist_ok=True)
     threading.Thread(target=maker, daemon=True).start()
     srv = ThreadingHTTPServer(('127.0.0.1' if os.environ.get('HOST') is None else os.environ['HOST'], PORT), Handler)
-    log(f'GAS2 on port {PORT}, following {UPSTREAM} {BRANCH}, data in {DATA}')
+    log(f'GAS on port {PORT}, following {UPSTREAM} {BRANCH}, data in {DATA}')
     srv.serve_forever()

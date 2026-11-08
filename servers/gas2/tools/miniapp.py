@@ -109,7 +109,18 @@ miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role
 '''
 
 
-def self_glp(cid, title, vglp):
+def router_types(tail, ref):
+    """SELF_TAIL with the router's types as the app whose miniapp.glp is copied
+    writes them in its self.glp (ref), which change with that entry: NetEvent
+    gained declined(Key) with the invitations (GLP bfc9d1d)."""
+    for name in ('NetEvent', 'Route', 'Routes', 'Sending'):
+        m = re.search(rf'^{name}\s+::=.*$', ref, re.M)
+        if m:
+            tail = re.sub(rf'^{name}\s+::=.*$', lambda _: m.group(0), tail, count=1, flags=re.M)
+    return tail
+
+
+def self_glp(cid, title, vglp, ref=''):
     head = (f'%% ---------------------------------------------------------------------------\n'
             f'%% {cid}, {title}, as a mini-app of the Grassroots Super-App, made by GAS2 from the\n'
             f'%% contract\'s canonical platform, platform.vglp, as the apps of programs/apps are made:\n'
@@ -117,7 +128,7 @@ def self_glp(cid, title, vglp):
             f'%% exports.  It calls nothing that reaches the network or the person, so the\n'
             f'%% REPL\'s :artefact certifies it.\n'
             f'%% ---------------------------------------------------------------------------\n\n')
-    return head + '\n'.join(platform_types(vglp)) + '\n\n' + SELF_TAIL
+    return head + '\n'.join(platform_types(vglp)) + '\n\n' + router_types(SELF_TAIL, ref)
 
 
 def script_block(acts):
@@ -368,8 +379,9 @@ def write_app(glp, app, cid, title, vglp):
     w('platform.vglp', vglp)
     # a platform that requires the day reads the calendar the super-app grants: GB's file
     dated = re.search(r'^exported procedure agent\(Peer\?, Stream\(Net\)\?, Stream\(Net\), Stream\(Output\), Stream\(Integer\)\?\)', vglp, re.M)
-    w('miniapp.glp', rd(glp.path('programs', 'apps', 'gb') if dated else src, 'miniapp.glp'))
-    w('self.glp', self_glp(cid, title, vglp))
+    entry = glp.path('programs', 'apps', 'gb') if dated else src
+    w('miniapp.glp', rd(entry, 'miniapp.glp'))
+    w('self.glp', self_glp(cid, title, vglp, rd(entry, 'self.glp')))
     w('person.glp', person_glp(rd(src, 'person.glp'), proposals(vglp), vglp))
     _, shapes = live_glp(vglp)
     import json
@@ -497,9 +509,9 @@ say(R, Me, Ps, ch(_, [{app}_phone(R?, Me?, Ps?)])).
 def write_phone(glp, app, cid, acts, verdict):
     core = glp.path('programs', 'social', 'graph', 'core')
     with open(os.path.join(core, f'{app}_phone.glp'), 'w', encoding='utf-8', newline='\n') as f:
-        # the super-app installs a mini-app whose creator certifies it grassroots (core/agent.glp, cert_check/4)
+        # the super-app installs a mini-app whose creator certifies the checker's verdict (core/agent.glp, cert_check/4)
         f.write(PHONE.format(app=app, cid=cid, acts=', '.join(acts),
-                             verdict='grassroots' if verdict == 'syntactically_grassroots' else verdict))
+                             verdict=verdict))
     boot = glp.path('programs', 'apps', f'{app}_boot.glp')
     with open(boot, 'w', encoding='utf-8', newline='\n') as f:
         f.write(BOOT.format(app=app, cid=cid))
