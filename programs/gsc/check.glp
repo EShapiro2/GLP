@@ -57,6 +57,7 @@
 imported procedure unobstructed#intro_result_env(NContract?, Preds?, Preds?, Faults).
 imported procedure unobstructed#intro_acts(NContract?, Preds?, IntroActs).
 imported procedure prov#traceable_c(Contract?, Constraints?, Preds).
+imported procedure prov#traceable_env(Contract?, Constraints?, Preds?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
 imported procedure volition#volition_faults(Contract?, NContract?, Preds?, Faults).
 imported procedure wards#wards(Contract?, Preds?, Wards).
@@ -71,7 +72,9 @@ verdict([], syntactically_grassroots).
 verdict([F|Fs], not_grassroots([F?|Fs?])).
 
 % The second conjunct of def:syntactically-grassroots: every predicate of the
-% contract is in the largest set having traceable provenance.
+% contract other than its environment predicates is in the largest set having
+% traceable provenance (GSC a380dab: "the set of predicates occurring in it
+% other than its environment predicates has traceable provenance").
 procedure untraceable_faults(Preds?, Faults).
 untraceable_faults([], []).
 untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
@@ -79,7 +82,7 @@ untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 procedure check_contract(Contract?, NContract?, Preds?, Preds?, Verdict).
 check_contract(C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?) |
     ncontract_constraints(NC?, Cns),
-    prov # traceable_c(C?, Cns?, E),
+    prov # traceable_env(C?, Cns?, Ev?, E),
     contract_verdict(C?, NC?, Rf?, Ev?, E?, V).
 
 % E is read by two conjuncts, so it is taken ground in a head of its own.
@@ -88,7 +91,8 @@ check_contract(C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), groun
 procedure contract_verdict(Contract?, NContract?, Preds?, Preds?, Preds?, Verdict).
 contract_verdict(C, NC, Rf, Ev, E, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?), ground(E?) |
     prov # all_preds(C?, Ps),
-    preds_diff(Ps?, E?, Missing),
+    preds_diff(Ps?, Ev?, Ps1),
+    preds_diff(Ps1?, E?, Missing),
     untraceable_faults(Missing?, FT),
     unobstructed # intro_result_env(NC?, Rf?, Ev?, F1),
     volition # volition_faults(C?, NC?, E?, F2),

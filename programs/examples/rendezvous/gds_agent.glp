@@ -12,8 +12,8 @@
 %% The messages (GNA Section 7, "The messages"), each a cold call over the WAN
 %% from a person's Grassroots App:
 %%   list(A, Signed, Supply, Reply)   Signed the term listing(A, Email, Name,
-%%       Visibility) signed by A, Name a string or none, Visibility listed or
-%%       unlisted.  Admitted where signature/2 reports it signed by A over a
+%%       Visibility) signed by A, Name name(S), S a string, or none,
+%%       Visibility listed or unlisted.  Admitted where signature/2 reports it signed by A over a
 %%       listing naming A; the host then sends the verification mail, and
 %%       Reply = verify, or, the host refusing (one mail per address per hour),
 %%       Reply = rejected and Supply closed.  Refused at once, Reply =
@@ -201,20 +201,19 @@ gds_event(host(ask(A, K)), N, N?, Ps, Ps?, Ss, Ss1?, Reports?, Reports) :-
 %% request N of A, signature/2 reporting S for the listing it carries.
 exported procedure admit_list(Integer?, Key?, Signature?, Stream(DirAsk), DirListReply, Integer, DirPendings?, DirPendings, Stream(DirReport), Stream(DirReport)?).
 
-%% A signed listing(A, Email, Name, Visibility) naming A, Name a string or
-%% none, Visibility listed or unlisted: the request waits on the host's mail,
-%% and the host is given the listing.  One clause for each Name and
-%% Visibility.  none is itself a string constant, so the clauses of a name
-%% exclude it.
-admit_list(N, A, signed(K, _, listing(A1, Email, Name, listed)), Supply?, Reply?, N1?, Ps,
+%% A signed listing(A, Email, Name, Visibility) naming A, Name name(S), S a
+%% string, or none, Visibility listed or unlisted: the request waits on the
+%% host's mail, and the host is given the listing.  One clause for each Name
+%% and Visibility.
+admit_list(N, A, signed(K, _, listing(A1, Email, name(Name), listed)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
            [listing(N?, A?, Email?, name(Name?), listed) | Reports1?], Reports1) :-
-    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?), Name? =?\= none |
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
     N1 := N? + 1.
-admit_list(N, A, signed(K, _, listing(A1, Email, Name, unlisted)), Supply?, Reply?, N1?, Ps,
+admit_list(N, A, signed(K, _, listing(A1, Email, name(Name), unlisted)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
            [listing(N?, A?, Email?, name(Name?), unlisted) | Reports1?], Reports1) :-
-    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?), Name? =?\= none |
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
     N1 := N? + 1.
 admit_list(N, A, signed(K, _, listing(A1, Email, none, listed)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
