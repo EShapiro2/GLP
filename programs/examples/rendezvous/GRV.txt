@@ -1,9 +1,9 @@
 % GRV: Grassroots Rendezvous --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GNA, a paper of the GSA project (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GRV:1.
 % Paper: GNA, GLP Networking API Specification, in preparation
-% Extends: GnW, Guardians 'n' Wards, GAI's (programs/gai/GnW.txt), the server a ward of its owner, and through it GSG and GKK.  GnW is to drop the confinement of a ward to whom its guardian knows (Udi, 2026-11-08 07:09 UTC; proposed to GAI 07:10 UTC), which GRV rests on.  GDR, the directory, extends GRV (GDR.txt beside this file).
+% Extends: GnW, Guardians 'n' Wards, GAI's (programs/gai/GnW.txt), the server a ward of its owner, and through it GSG and GKK.  GnW is to drop the confinement of a ward to whom its guardian knows (Udi, 2026-11-08 07:09 UTC; proposed to GAI 07:10 UTC), which GRV rests on.  GDS, the directory service, is a separate ward's contract (GDS.txt beside this file).
 % Defines: rendezvous server and invitation link, defined in the box after the declaration.  Person, knowing a person, friend, ward and guardian are defined with GKK, GSG and GnW.
-% Last changed: 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDR (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
+% Last changed: 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDS (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
 % Schemas: GRV.glp beside this file is the contract of 2026-11-07, extending GSG, certified (cascade/GRV/2026-11-07); it is rewritten on GnW's schemas once GAI amends them.
 GRV: Grassroots Rendezvous
 GRV extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, arXiv).
