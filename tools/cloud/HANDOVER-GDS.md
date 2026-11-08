@@ -8,7 +8,7 @@ GDS, the Grassroots Directory Service: the directory's agent and its server, `se
 
 ## State
 
-The branches and their commits are in Cloud #8's reports in `Code_inbox.md`.  Every message of GNA Section 7 is built, the answers to unlist and to a re-listing among them (GNA main 5040fb6).  The agent keeps its local state across a restart in the host's state file (IGLP, Definition Restart), and takes the runtime's `refresh` at a restart.  Nothing is open.
+The branches and their commits are in Cloud #8's reports in `Code_inbox.md`: `Cloud-gds2` (GNA 5040fb6: unlist's answer, the re-listing, the agent's state kept across a restart), `Cloud-lanreplay` (networking: an instance resolved under Closed LAN trust contacted once Open is set), `Cloud-rvstate` (the rendezvous server's state file and `networking/glue/deploy/rendezvous.service`) and `Cloud-livegds` (the live suite's part 2 flow, `tools/live/bin/live_gds.dart`, and a listing with no name not taken as the name none).  The live run against the VPS is Phones Mac's, since a Cloud cannot reach the VPS.  Nothing is open.
 
 ## Environment
 
