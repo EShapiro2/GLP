@@ -29,7 +29,7 @@ block(Peer, Integer)
 arm(Peer)
 .
 
-Request ::= propose(Proposal) ; refresh.
+Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
@@ -408,13 +408,12 @@ agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
         st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
 
 %% A request question: its question, of the request type Request?, takes the
-%% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part and the alternative refresh (vGLP e22e2ad, Section 5.4, "The compilation"), so that every agent, a contract with no guarded part having the alternative refresh alone, asks a request question when it starts and the next when it reads the answer to the last.
+%% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.
 procedure (Request?)*request(Stream(Trigger)).
 (R)*request(Out?) :-
     await_request(R?, Out).
 procedure await_request(Request?, Stream(Trigger)).
 await_request(propose(C), [req(propose(C?))]).
-await_request(refresh, [req(refresh)]).
 
 %% The next request question, asked on reading the answer to the last, its
 %% answers joining the agent goal's input.
@@ -478,12 +477,6 @@ then_read(no, write_own).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?,
     Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
-%% On the answer refresh the agent goal writes its view again and asks the next request question: "a person asks for it to redraw their screen, and the runtime gives it when it restarts the agent from its saved state, the screen not being part of that state" (vGLP e22e2ad, Section 5.4, "The compilation"); the app state does not change, and under the platform mapping it is a stutter (Appendix, the proof of Theorem "Compilation of the Canonical Platform").
-step(req(refresh), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?) |
-    st_app(St?, Ap0),
-    ask_next(Ans, Ans1?),
-    show_view(yes, St?, Thr, Thr1?),
-    next(Th?, no, Ap0?, Ls?, In?, Ans1, Thr1, Out, Ow, Approvals?, H?, St?).
 step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     ground(N?), ground(St?) |
     st_app(St?, Ap0),

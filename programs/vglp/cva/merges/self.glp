@@ -12,7 +12,7 @@ Class    ::= befriend(Peer, Peer) ; create(Peer, Speech) ; join(Peer, Peer, Spee
            ; merge(Peer, List(Peer), List(Peer), Speech, Speech).
 Proposal ::= befriend(Peer, Peer) ; create(Peer, Speech) ; join(Peer, Peer, Speech)
            ; merge(Peer, Speech, Speech).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

@@ -43,7 +43,7 @@
 
 Class    ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer).
 Proposal ::= mint(Peer) ; swap(Peer, Peer, Peer, Peer) ; pay(Peer, Peer).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

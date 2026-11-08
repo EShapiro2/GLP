@@ -143,7 +143,12 @@ Done ::= done.
 % Writer, GLP with Persons, Grant"; vGLP 2026-10-14 09:29, 21:48 and 22:32
 % UTC): the mini-app's end reads the person's grants, input(Id, P, R), Id the
 % construct, P the path of the position in it the grant writes, R the person's
-% input, and writes what the mini-app draws for its person, draw(Id, W, V), W
+% input, or refresh, an Input addressed to no construct, which a gesture grants
+% and the runtime grants in the person's place when it restarts the agent from
+% its saved state, on which the dispatcher has every construct draw again what
+% it last drew (vGLP d433f71, Section 6.3: "Input(T) ::= input(Integer, Path,
+% T) ; refresh."; IGLP 7a25ff8, the paragraph after Definition "Restart"),
+% and writes what the mini-app draws for its person, draw(Id, W, V), W
 % the widget, of type Widget, and V at T, and withdraw(Id); nothing merged, a
 % program's output reaching the person as the elements of the output thread,
 % construct 0.  Neither stream ends: the person and the program stay
@@ -152,7 +157,7 @@ Done ::= done.
 PersonChannel(T) ::= Channel(PersonIn(T), PersonOut(T)).
 PersonIn(T) ::= [Input(T) | PersonIn(T)].
 PersonOut(T) ::= [Draw(T) | PersonOut(T)].
-Input(T) ::= input(Integer, Path, T).
+Input(T) ::= input(Integer, Path, T) ; refresh.
 Path ::= [] ; [Integer | Path].
 Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 

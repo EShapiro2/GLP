@@ -62,7 +62,7 @@ Class    ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; step(P
            ; claim(Peer, Peer, Integer) ; mint(Peer, Integer) ; spend(Peer, Integer) ; burn(Peer, Integer, Integer).
 Proposal ::= befriend(Peer, Peer) ; start(Peer) ; refuel(Peer, Integer) ; claim(Peer, Peer, Integer)
            ; mint(Peer, Integer) ; spend(Peer, Integer) ; burn(Peer, Integer, Integer).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

@@ -3732,6 +3732,20 @@ check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
 check "One-clause: the answer reaches its clause" "D = \[decided(yes, bob)\]" "$vg_answer"
 check "One-clause: the card is drawn, the offering peer shown and the person's position marked, and withdraws once answered" "L = \[drawn(0, thread(.*), \[\]), $VG_CARD" "$vg_answer"
 
+# A refresh, an Input addressed to no construct, on which the dispatcher has
+# every construct, and construct 0, draw again what it last drew (vGLP
+# d433f71, Section 6.3: "Input(T) ::= input(Integer, Path, T) ; refresh"; IGLP
+# 7a25ff8, after Definition "Restart": the runtime grants it at a restart).
+vg_refresh=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_refresh(D, L).
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: refresh, no failed goal" "ERROR" "$vg_refresh"
+check "One-clause: refresh answers nothing, the answer after it reaching its clause" "D = \[decided(yes, bob)\]" "$vg_refresh"
+check "One-clause: on refresh construct 0 and the card draw again what they last drew, and the card withdraws once answered" "L = \[drawn(0), drawn(1), drawn(0), drawn(1), withdrawn(1) |" "$vg_refresh"
+
 vg_decline=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
 play_decline(D, L).
@@ -4594,7 +4608,8 @@ play_refresh(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA refresh: a person's refresh redraws the last view, written twice, and the next request question is asked, on which she proposes acquaint (vGLP e22e2ad, Section 5.4, \"The compilation\")" "A = \[.*view(alice, \[identity\], \[\], \[\], \[[^]]*\]), view(alice, \[identity\], \[\], \[\], \[[^]]*\]), .*view(alice, \[knows(bob), identity\]" "$cva_sg_refresh"
+check "CVA refresh: a person's refresh, a grant addressed to no construct, on which the dispatcher has every construct and construct 0 draw again what they last drew, the agent writing no view on it, its last view written once; the request question still open, she proposes acquaint (vGLP d433f71, Sections 5.4 and 6.3)" "A = \[.*view(alice, \[identity\], \[\], \[\], \[[^]]*\]), view(alice, \[identity\], \[\], \[acquaint(alice, bob)\], .*view(alice, \[knows(bob), identity\]" "$cva_sg_refresh"
+check_not "CVA refresh: ... no failed goal" "ERROR" "$cva_sg_refresh"
 check_not "CVA refresh: ... no message sent for it, a stutter" "sent(alice, bob, refresh\|attempt(alice, [0-9]*, [0-9]*, refresh" "$cva_sg_refresh"
 # What the loop above does not check of the currency's platform: the request question asked with the agent's own key, when the agent starts and on reading each answer; a peer becoming known at the second hello of an exchange; and nothing on the output but the views and the notices.
 cva_agent=$(cat "$CVA/currency/platform.vglp")
@@ -4624,14 +4639,14 @@ check "CVA plays: alice establishes her identity by the key her request question
 # nudge's nudge is unguarded and not proposed; gnudge's g is a guarded part of
 # a class whose other part, nudge's, is unguarded, and is proposed (vGLP #15,
 # Code_inbox.md, 2026-10-19 10:50 UTC, item 4).  A contract with no guarded
-# part has the request refresh alone and no clause on the request
-# propose([t]_j) (vGLP e22e2ad, Section 5.4, "The compilation": "of a type with
-# the alternative propose(N) for the request name N of each guarded part and
-# the alternative refresh").
+# part has no request: no request type, no request question and no clause on
+# the request propose([t]_j) (vGLP d433f71, Section 5.4, "The compilation": "a
+# type with the alternative propose(N) for the request name N of each guarded
+# part"; the request type loses refresh, a refresh being a grant, Section 6.3).
 cva_proposal() { # cva_proposal <platform.vglp>: the alternatives of Proposal, one line
     awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
 }
-check "CVA request type: the social graph's, propose(Proposal) and refresh alone: the request known(Q) goes, a meeting with a peer whose key the person has being the cold call (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1; vGLP e22e2ad, Section 5.4, \"The compilation\")" "^Request ::= propose(Proposal) ; refresh\.$" "$(cat "$CVA/social_graph/platform.vglp")"
+check "CVA request type: the social graph's, propose(Proposal) alone, no refresh (vGLP d433f71, Section 6.3): the request known(Q) goes, a meeting with a peer whose key the person has being the cold call (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1; vGLP e22e2ad, Section 5.4, \"The compilation\")" "^Request ::= propose(Proposal)\.$" "$(cat "$CVA/social_graph/platform.vglp")"
 check_not "CVA request type: ... no request known(Q) in any platform" "^Request ::=.*known(" "$(cat "$CVA"/*/platform.vglp)"
 check "CVA request type: the social graph proposes establish, acquaint, introduce, befriend and unfriend, GKK's and GSG's" "^establish(Peer) acquaint(Peer, Peer) introduce(Peer, Peer, Peer) befriend(Peer, Peer) unfriend(Peer, Peer) $" "$(cva_proposal "$CVA/social_graph/platform.vglp")"
 check "CVA request type: nudge proposes befriend, not the unguarded nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/nudge/platform.vglp")"
@@ -4645,9 +4660,11 @@ compile(ung, [schema(u, [], [rs(unguarded, [atom(b, [])], [atom(a, [])], [], [])
 HEREDOC
 2>&1)
 check "CVA request type: a contract with no guarded class, compiled" "%% the canonical CVA platform of the contract(ung)" "$cva_ung"
-check "CVA request type: ... the request refresh alone, no part being guarded" "^Request ::= refresh\.$" "$cva_ung"
-check "CVA request type: ... drawn by social_menu with no button" "^Request? =::= social_menu(\[\])\.$" "$cva_ung"
-check "CVA request type: ... its request question asked when the agent starts" "request(Rq)" "$cva_ung"
+check_not "CVA request type: ... no request type, no part being guarded" "^Request ::=" "$cva_ung"
+check_not "CVA request type: ... and no widget declaration for a request question" "^Request? =::=" "$cva_ung"
+check_not "CVA request type: ... and no request question asked" "request(Rq)\|ask_next" "$cva_ung"
+check "CVA request type: ... its agent reading the arriving messages, its approvals' answers and its own triggers" "^    merge(\[\], Nt?, M1),$" "$cva_ung"
+check_not "CVA request type: ... no request refresh in any platform" "^Request ::=.*refresh" "$(cat "$CVA"/*/platform.vglp)"
 check_not "CVA request type: ... no Proposal, and no clause on the request propose([t])" "^Proposal ::=\|step(req(propose\|await_request(propose" "$cva_ung"
 
 cva_sg_menu=$("$REPL_RUN" <<HEREDOC
