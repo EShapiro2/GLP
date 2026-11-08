@@ -550,7 +550,7 @@ friend_version(2).
   // links"; GSA paper, Section 4.2, "Legacy online connections", and Appendix
   // "The Operating System"): two phones, each the Grassroots App's operating
   // system, programs/social/graph/core, started by its first act
-  // link_phone(Me, [], Servers, none) (core's self.glp: the operating system on
+  // link_phone(Me, [], Services) (core's self.glp: the operating system on
   // the layer, os_phone/8, with a person who answers yes on each card and
   // whose acts are home's requests on the person's grants).  Alice's names
   // the server, which her operating system declares to its layer; Bob's names
@@ -586,10 +586,9 @@ friend_version(2).
       _list([
         _struct('rendezvous', [_const(srv.rvKey.hex), _const(rvAddress)])
       ]),
-      _const('none'),
     ]));
-    await bob.agent.injectUserInput(_struct(
-        'link_phone', [_const(bob.key.hex), _nil, _nil, _const('none')]));
+    await bob.agent.injectUserInput(
+        _struct('link_phone', [_const(bob.key.hex), _nil, _nil]));
 
     // Alice invites by link, and is told the link, as text.
     await alice.agent.injectUserInput(_grant(_const('invite_link')));
@@ -628,7 +627,7 @@ friend_version(2).
   // marked to answer any key at an address of its own, as a rendezvous
   // server's is ("Hosting": "A directory is hosted as a rendezvous server
   // is"), and two phones running the operating system.  Alice's first act
-  // names the server and the directory.  Alice lists herself, List with her
+  // names the server and the directory, its services.  Alice lists herself, List with her
   // email address and name: her operating system declares the directory,
   // signs listing(A, Email, Name, listed) and sends list(A, Signed, Supply,
   // Reply); the directory answers verify, which she is told, verify(Email),
@@ -688,12 +687,12 @@ friend_version(2).
       _const(alice.key.hex),
       _nil,
       _list([
-        _struct('rendezvous', [_const(srv.rvKey.hex), _const(rvAddress)])
+        _struct('rendezvous', [_const(srv.rvKey.hex), _const(rvAddress)]),
+        _struct('directory', [_const(dirKey.hex), _const(dirAddress)]),
       ]),
-      _struct('directory', [_const(dirKey.hex), _const(dirAddress)]),
     ]));
-    await bob.agent.injectUserInput(_struct(
-        'link_phone', [_const(bob.key.hex), _nil, _nil, _const('none')]));
+    await bob.agent.injectUserInput(
+        _struct('link_phone', [_const(bob.key.hex), _nil, _nil]));
 
     // Alice lists herself, by her email address and her name.
     await alice.agent.injectUserInput(_grant(

@@ -14,12 +14,16 @@
 /// keys of the peers the person knows, none at a first start"; GSA paper,
 /// Appendix "The Operating System", "Boot", 963fcbf: "and the rendezvous
 /// servers the app is configured with, each by key and address").  The act
-/// is `superapp(Me, [], Servers)`, Servers the list of
-/// `rendezvous(Key, Address)` the host is given ([rendezvousServers]), which
-/// core's agent/2 starts as superapp/5: the social graph with the operating
-/// system's Nearby and its invitation links around it (place.glp,
-/// os_phone/7; links.glp) and home, the Grassroots App's own person
-/// interface, on the person channel.  Another entry, `superapp_ui`, the
+/// is `superapp(Me, [], Services)`, Services the list of
+/// `rendezvous(Key, Address)` and `directory(Key, Address)` the host is
+/// given ([services]; GSA paper, Appendix "Boot", 1d430b6: "the services the
+/// app is configured with, its rendezvous servers and its directory, each by
+/// key and address"), read from `services.json` beside the program
+/// ([readServices]), which core's agent/2 starts as superapp/5: the social
+/// graph with the operating system's Nearby, its invitation links and its
+/// listing with the directory around it (place.glp, os_phone/8; links.glp)
+/// and home, the Grassroots App's own person interface, on the person
+/// channel.  Another entry, `superapp_ui`, the
 /// demonstration in one heap, has no network and takes `superapp_ui(Me, [])`.
 ///
 /// The agent runs over the [GlpNetwork] it is given ([AgentRuntime]; IGLP,
@@ -56,6 +60,8 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
@@ -69,7 +75,7 @@ import 'ui_runtime/runtime.dart';
 
 /// The entry the person's first act names on a phone: superapp/5 of
 /// `programs/social/graph/core` (core's CoreAct
-/// `superapp(Key, List(Key), List(RvServer))`).
+/// `superapp(Key, List(Key), List(Service))`).
 const String superappEntry = 'superapp';
 
 /// One agent of the Grassroots App, its person live, over a given network.
@@ -93,11 +99,11 @@ class SuperAppHost {
   /// The entry the person's first act names ([superappEntry]).
   final String entry;
 
-  /// The rendezvous servers the app is configured with, each by its key, 64
-  /// lowercase hex characters, and its address, `ip:port`, which the first
-  /// act of [superappEntry] names (GSA paper, Appendix "The Operating
-  /// System", "Boot").
-  final List<({String key, String address})> rendezvousServers;
+  /// The services the app is configured with, which the first act of
+  /// [superappEntry] names (GSA paper, Appendix "The Operating System",
+  /// "Boot"): each a rendezvous server or the directory, by its key, 64
+  /// lowercase hex characters, and its address, `ip:port` ([readServices]).
+  final List<Service> services;
 
   /// The image of the program's display declarations.
   final Manifest manifest;
@@ -138,7 +144,7 @@ class SuperAppHost {
     required this.keyPair,
     required this.manifest,
     this.entry = superappEntry,
-    this.rendezvousServers = const [],
+    this.services = const [],
     this.stateStore,
   }) : agent = AgentRuntime(
           agentId: agentId,
@@ -154,7 +160,7 @@ class SuperAppHost {
 
   /// Start the agent: compile the program, post the initial goal, and, at
   /// the agent's first start, send on the person channel the act that starts
-  /// the Grassroots App, `superapp(Me, [], Servers)`; at a restart, go on from the
+  /// the Grassroots App, `superapp(Me, [], Services)`; at a restart, go on from the
   /// state the [stateStore] holds, the runtime granting refresh in the
   /// person's place ([AgentRuntime.initialize]).  The person's grants go to
   /// the agent as they come, each an act of the person.  A restart under a
@@ -173,7 +179,7 @@ class SuperAppHost {
       await act(rt.StructTerm(entry, [
         rt.ConstTerm(key),
         rt.ConstTerm(rt.nil),
-        if (entry == superappEntry) _servers(),
+        if (entry == superappEntry) _services(),
       ]));
     }
   }
@@ -189,16 +195,42 @@ class SuperAppHost {
 
   void dispose() => agent.dispose();
 
-  /// [rendezvousServers] as the list term the first act carries, each
-  /// `rendezvous(Key, Address)`.
-  rt.Term _servers() {
+  /// [services] as the list term the first act carries, each
+  /// `rendezvous(Key, Address)` or `directory(Key, Address)`.
+  rt.Term _services() {
     rt.Term list = rt.ConstTerm(rt.nil);
-    for (final s in rendezvousServers.reversed) {
+    for (final s in services.reversed) {
       list = rt.StructTerm('.', [
-        rt.StructTerm('rendezvous', [rt.ConstTerm(s.key), rt.ConstTerm(s.address)]),
+        rt.StructTerm(s.kind.name, [rt.ConstTerm(s.key), rt.ConstTerm(s.address)]),
         list,
       ]);
     }
     return list;
   }
+}
+
+/// The kind of a service the app is configured with.
+enum ServiceKind { rendezvous, directory }
+
+/// A service the app is configured with: its kind, its key and its address.
+typedef Service = ({ServiceKind kind, String key, String address});
+
+/// The services `services.json` in [coreDir] names, the app's configuration
+/// (GSA paper, Appendix "The Operating System", "Boot", 1d430b6: "the
+/// configuration is a file of the repository the app reads when it is
+/// built"): `{"rendezvous": [{"key": K, "address": A}, ...], "directory":
+/// {"key": K, "address": A}}`, the rendezvous servers in their order and then
+/// the directory, where the file names one.  No file, no service.
+List<Service> readServices(String coreDir) {
+  final file = File('$coreDir/services.json');
+  if (!file.existsSync()) return const [];
+  final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+  Service one(ServiceKind kind, Map<String, dynamic> s) =>
+      (kind: kind, key: s['key'] as String, address: s['address'] as String);
+  return [
+    for (final s in (json['rendezvous'] as List<dynamic>? ?? const []))
+      one(ServiceKind.rendezvous, s as Map<String, dynamic>),
+    if (json['directory'] case final Map<String, dynamic> d)
+      one(ServiceKind.directory, d),
+  ];
 }

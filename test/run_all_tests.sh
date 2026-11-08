@@ -7554,7 +7554,7 @@ check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
 # seam doing nothing.  Invite by link with a rendezvous server named: the
 # person is told the link as text, invitation(L), and it is registered with
 # the server, register(K, L, Reply), the reply awaiting the redemption; with
-# none named, refused and told, rejected(invite_link).  A text that is not a
+# none named, refused and told the reason, rejected(no_rendezvous_server).  A text that is not a
 # link, and a link whose expiry has passed: refused and told,
 # rejected(open_link).  A link made and opened: redeemed at the server the
 # link names, redeem(K, Signed, Reply), the reply awaiting the server.  The
@@ -7572,7 +7572,7 @@ HEREDOC
 2>&1)
 check "SG links: Invite by link tells the person the link, as text" "O1 = \[msg(agent, person, invitation('\{0,1\}[0-9a-f]*'\{0,1\}))" "$sg_links"
 check "SG links: Invite by link registers the link with the server the first act names" "^N1 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
-check "SG links: Invite by link with no server named is refused and told" "O2 = \[msg(agent, person, rejected(invite_link))\]$" "$sg_links"
+check "SG links: Invite by link with no server named is refused and told the reason" "O2 = \[msg(agent, person, rejected(no_rendezvous_server))\]$" "$sg_links"
 check "SG links: a text that is not a link is refused and told" "O3 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
 check "SG links: a link made and opened is redeemed at the server it names" "^N4 = \[msg(rv, redeem('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
 check "SG links: a link whose expiry has passed is refused and told" "O5 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
@@ -7581,12 +7581,13 @@ check_not "SG links: no failed goal" "→ failed" "$sg_links"
 # The person's listing with a directory (core/links.glp; GNA Section 7, "The
 # messages", 2ce8e10), under the plain REPL: List with a directory and a
 # rendezvous server sends list(A, Signed, Supply, Reply) to the directory,
-# Supply and Reply for it to write; with no directory, refused and told,
-# rejected(list), as List with no rendezvous server is.  The directory's ask
+# Supply and Reply for it to write; with no directory, refused and told the
+# reason, rejected(no_directory), and with no rendezvous server,
+# rejected(no_rendezvous_server).  The directory's ask
 # more(2) is answered by two links, each registered with the server, and
 # then supply(A, [L1, L2]) to the directory; more(0) by supply(A, []).
 # Unlist with a directory sends unlist(A, Signed, Reply); with none, refused
-# and told, rejected(unlist).  The scripted directory over the WAN is NET's
+# and told the reason, rejected(no_directory).  The scripted directory over the WAN is NET's
 # (networking/glue/test/rendezvous_server_test.dart).
 sg_dir=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
@@ -7601,12 +7602,12 @@ play_links([], none, [unlist], O5, N5, C5).
 HEREDOC
 2>&1)
 check "SG directory: List sends the signed listing to the directory, its asks and answer for it to write" "^N1 = \[msg(dir, list('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*, X[0-9]*)) | X[0-9]*\]$" "$sg_dir"
-check "SG directory: List with no directory is refused and told" "O2 = \[msg(agent, person, rejected(list))\]$" "$sg_dir"
-check "SG directory: List with no rendezvous server is refused and told" "O6 = \[msg(agent, person, rejected(list))\]$" "$sg_dir"
+check "SG directory: List with no directory is refused and told the reason" "O2 = \[msg(agent, person, rejected(no_directory))\]$" "$sg_dir"
+check "SG directory: List with no rendezvous server is refused and told the reason" "O6 = \[msg(agent, person, rejected(no_rendezvous_server))\]$" "$sg_dir"
 check "SG directory: more(2) registers two links with the server and then supplies them to the directory" "^N3 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*)), msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*)), msg(dir, supply('\{0,1\}[0-9a-f]*'\{0,1\}, \['\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}\]))\]$" "$sg_dir"
 check "SG directory: more(0) supplies no link" "^N7 = \[msg(dir, supply('\{0,1\}[0-9a-f]*'\{0,1\}, \[\]))\]$" "$sg_dir"
 check "SG directory: Unlist sends the signed unlisting to the directory" "^N4 = \[msg(dir, unlist('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_dir"
-check "SG directory: Unlist with no directory is refused and told" "O5 = \[msg(agent, person, rejected(unlist))\]$" "$sg_dir"
+check "SG directory: Unlist with no directory is refused and told the reason" "O5 = \[msg(agent, person, rejected(no_directory))\]$" "$sg_dir"
 check_not "SG directory: no failed goal" "→ failed" "$sg_dir"
 
 # The child-safe platform hosted, in its own session: a play that has run the

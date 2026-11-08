@@ -94,6 +94,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
         network: net.network,
         keyPair: net.keyPair,
         manifest: superappManifest,
+        services: readServices(glp.coreDir),
         stateStore: store,
       );
       host.ui.onChange = () {
