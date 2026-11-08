@@ -799,15 +799,11 @@ class MadContext {
     final sessions = _peerSessions.putIfAbsent(pk.hex, () => {});
     sessions.remove(underlay); // the latest report last
     sessions[underlay] = application;
-    final proximity = _proximity(underlay);
-    if (proximity != null) _appeared(pk, proximity);
   }
 
   /// The layer reported [pk] no longer reachable over [underlay].  Called by
   /// the host that binds the network, from the layer's `onPeerDisconnected`.
   void peerDisconnected(PubKey pk, Underlay underlay) {
-    final proximity = _proximity(underlay);
-    if (proximity != null) _vanished(pk, proximity);
     final sessions = _peerSessions[pk.hex];
     if (sessions == null) return;
     sessions.remove(underlay);
@@ -829,16 +825,17 @@ class MadContext {
   // layer, the stream fed serializer-fashion and closed as a place's.
   //
   // The layer discovers a nearby agent, recognised or, under open trust,
-  // contacted, by onPeerDiscovered(pk) on that underlay's sub-object, once per
-  // identity, and a return after it was lost by the session it establishes
-  // again over that underlay, onPeerConnected(pk, underlay); it reports the
-  // agent no longer reachable over the underlay by onPeerDisconnected(pk,
-  // underlay) (GNA, api.tex, "Connection and Reachability"; proximity.tex,
-  // "Concepts and Principles", Contact and identity and Discovery).  The
-  // runtime keeps, per proximity underlay, the agents so reported nearby and
-  // not since gone, so a discovery and the session that follows it are one
-  // seen, and a declaration is given seen for every agent nearby when it is
-  // made.  What the layer reports is the layer's and is reported again after
+  // contacted, by onPeerDiscovered(pk) on that underlay's sub-object, and
+  // reports it no longer discovered there, its presence no longer observed
+  // and no session held on the underlay, by onPeerLost(pk) (GNA cfbfeac,
+  // proximity.tex, "Concepts and Principles", Discovery; system-predicates
+  // .tex: "onPeerDiscovered and onPeerLost behind the stream of
+  // declare(nearby(Underlay, Events))").  A session's connection and
+  // disconnection are peer_app/2's, and no presence: until 2026-11-08 a
+  // connection over a proximity underlay was a seen, and a disconnection a
+  // gone.  The runtime keeps, per proximity underlay, the agents so reported
+  // nearby and not since lost, so a declaration is given seen for every
+  // agent nearby when it is made.  What the layer reports is the layer's and is reported again after
   // a restart, so the record is not part of the agent's saved state; the
   // declarations and their streams are ([GlpRuntime.nearbyStreams]).
 
@@ -848,18 +845,17 @@ class MadContext {
     for (final u in ProximityUnderlay.values) u: <String, PubKey>{},
   };
 
-  /// The proximity underlay [underlay] is, or null for the WAN.
-  static ProximityUnderlay? _proximity(Underlay underlay) => switch (underlay) {
-        Underlay.pan => ProximityUnderlay.pan,
-        Underlay.lan => ProximityUnderlay.lan,
-        Underlay.wan => null,
-      };
-
   /// The layer reported [pk] discovered over the proximity underlay
   /// [underlay], `onPeerDiscovered(pk)` on its sub-object.  Called by the host
   /// that binds the network.
   void peerDiscovered(PubKey pk, ProximityUnderlay underlay) =>
       _appeared(pk, underlay);
+
+  /// The layer reported [pk] lost over the proximity underlay [underlay],
+  /// `onPeerLost(pk)` on its sub-object.  Called by the host that binds the
+  /// network.
+  void peerLost(PubKey pk, ProximityUnderlay underlay) =>
+      _vanished(pk, underlay);
 
   /// Whether the layer has reported [pk] nearby over [underlay] and not since
   /// gone.

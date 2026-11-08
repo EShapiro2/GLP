@@ -32,7 +32,7 @@
 # parameters constants; an alternative that is a term keeps its functor,
 # a list [] and [X | T] are themselves.  The lines are a GLP module: the
 # declaration exported procedure interface(SglpTerms), SglpTerms the term
-# form's type, which the root exposes.  Exits 0 when the .vglp holds a type
+# form's type, which programs/sglp/self.glp exposes.  Exits 0 when the .vglp holds a type
 # definition and a volitional declaration whose asking clause the .glp
 # holds, 1 otherwise, 2 on a bad argument.
 

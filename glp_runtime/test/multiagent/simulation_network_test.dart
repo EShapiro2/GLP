@@ -112,6 +112,94 @@ void main() {
     });
   });
 
+  // IGLP 45fabfc, Implementation Notes, "Simulation realisation": "A nearby
+  // declaration on the PAN is given seen for an adjacent agent the declaring
+  // agent has declared a peer, and for any other adjacent agent once the PAN
+  // trust levels of both are open, at the moment the second opens; it is
+  // given gone when the harness cuts the adjacency.  The harness sets no
+  // trust level at spawn."  The router reports the discovery and the loss,
+  // onPeerDiscovered and onPeerLost (GNA cfbfeac, Section 3.1).
+  group('Discovery (IGLP 45fabfc)', () {
+    SimulationRouter closedRouter(List<_Conn> conn) {
+      final r = SimulationRouter();
+      for (final id in ['alice', 'bob', 'carol']) {
+        r.register(id, generateKeyPair().pub);
+      }
+      r.onConnectivity = (toId, peerPk, underlay, event) =>
+          conn.add(_Conn(toId, peerPk, underlay, event));
+      return r;
+    }
+
+    List<String> events(SimulationRouter r, List<_Conn> conn,
+            ConnectivityEvent e) =>
+        [
+          for (final c in conn)
+            if (c.event == e) '${c.toId}>${r.directory.idOf(c.peerPk)}'
+        ];
+
+    test('registered agents are Closed, and nothing is discovered at boot',
+        () {
+      final conn = <_Conn>[];
+      final r = closedRouter(conn);
+      for (final id in ['alice', 'bob', 'carol']) {
+        expect(r.trustLevelOf(id, ProximityUnderlay.pan), TrustLevel.closed);
+      }
+      r.bootComplete();
+      expect(events(r, conn, ConnectivityEvent.connected).length, 6);
+      expect(events(r, conn, ConnectivityEvent.discovered), isEmpty);
+    });
+
+    test('an agent discovers an adjacent agent it declared a peer, and only '
+        'it discovers', () {
+      final conn = <_Conn>[];
+      final r = closedRouter(conn)..bootComplete();
+      r.putKnownPeer('alice', r.directory.pkOf('bob')!);
+      expect(events(r, conn, ConnectivityEvent.discovered), ['alice>bob']);
+      r.putKnownPeer('alice', r.directory.pkOf('bob')!); // once
+      expect(events(r, conn, ConnectivityEvent.discovered), ['alice>bob']);
+    });
+
+    test('a peer declared before the boot is complete is discovered at it',
+        () {
+      final conn = <_Conn>[];
+      final r = closedRouter(conn);
+      r.putKnownPeer('bob', r.directory.pkOf('carol')!);
+      expect(events(r, conn, ConnectivityEvent.discovered), isEmpty);
+      r.bootComplete();
+      expect(events(r, conn, ConnectivityEvent.discovered), ['bob>carol']);
+    });
+
+    test('two agents discover each other at the moment the second opens its '
+        'PAN; a Closed third discovers nothing', () {
+      final conn = <_Conn>[];
+      final r = closedRouter(conn)..bootComplete();
+      r.setTrustLevel('alice', ProximityUnderlay.pan, TrustLevel.open);
+      expect(events(r, conn, ConnectivityEvent.discovered), isEmpty);
+      r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.open);
+      expect(events(r, conn, ConnectivityEvent.discovered), isEmpty,
+          reason: 'the LAN level governs no encounter of the simulation');
+      r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
+      expect(events(r, conn, ConnectivityEvent.discovered)..sort(),
+          ['alice>bob', 'bob>alice']);
+    });
+
+    test('a cut loses each discovered agent; a restore discovers it again',
+        () {
+      final conn = <_Conn>[];
+      final r = closedRouter(conn)..bootComplete();
+      r.putKnownPeer('alice', r.directory.pkOf('bob')!);
+      r.cut('alice', 'bob');
+      expect(events(r, conn, ConnectivityEvent.lost), ['alice>bob'],
+          reason: 'bob never discovered alice, so he loses nothing');
+      r.putKnownPeer('bob', r.directory.pkOf('alice')!);
+      expect(events(r, conn, ConnectivityEvent.discovered), ['alice>bob'],
+          reason: 'a cut pair is not adjacent');
+      r.restore('alice', 'bob');
+      expect(events(r, conn, ConnectivityEvent.discovered),
+          ['alice>bob', 'alice>bob', 'bob>alice']);
+    });
+  });
+
   group('Trust (§7.4)', () {
     test('Closed receiver drops a cold-call from an unknown agent', () {
       final delivered = <_Delivered>[];
@@ -155,6 +243,35 @@ void main() {
           reason: "carol is not in bob's known-peer set");
     });
 
+    // Not answered is not lost: the sender's layer keeps a message saved for
+    // delivery until a session with the peer exists (GNA, Sections 2.9 and
+    // 2.11), and the receiver answers once it declares the sender a peer,
+    // opens its PAN, or contacts the sender.
+    test('a first contact not answered is kept, in order, and routed once the '
+        'receiver answers its sender', () {
+      final delivered = <_Delivered>[];
+      final r = _router(delivered, []);
+      for (final id in ['alice', 'bob', 'carol']) {
+        r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.closed);
+      }
+      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([2]));
+      r.routeSend('carol', 'bob', _bytes([3]));
+      r.routeSend('alice', 'carol', _bytes([4]));
+      expect(delivered, isEmpty);
+      r.putKnownPeer('bob', r.directory.pkOf('alice')!);
+      expect(delivered.map((d) => d.payload[0]), [1, 2],
+          reason: "bob declares alice a peer: her two, in order; carol's "
+              'still waits');
+      r.routeSend('bob', 'carol', _bytes([5]));
+      expect(delivered.map((d) => d.payload[0]), [1, 2, 3, 5],
+          reason: 'bob contacts carol: hers is answered, and his to her is '
+              'answered too, carol having contacted him');
+      r.setTrustLevel('carol', ProximityUnderlay.pan, TrustLevel.open);
+      expect(delivered.map((d) => d.payload[0]), [1, 2, 3, 5, 4],
+          reason: "carol opens: alice's first contact to her is answered");
+    });
+
     test('Closed receiver accepts once it has contacted the sender', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
@@ -195,9 +312,12 @@ void main() {
       expect(delivered, isEmpty, reason: 'PAN closed: not answered');
 
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
+      expect(delivered.map((d) => d.payload[0]), [1],
+          reason: "PAN open: alice's first contact, kept while unanswered, "
+              'is answered');
       r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.closed);
       r.routeSend('carol', 'bob', _bytes([2]));
-      expect(delivered.map((d) => d.payload[0]), [2],
+      expect(delivered.map((d) => d.payload[0]), [1, 2],
           reason: 'PAN open: answered, the LAN level governing no PAN '
               'encounter');
     });
@@ -225,7 +345,9 @@ void main() {
 
       bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
       r.routeSend('alice', 'bob', _bytes([2]));
-      expect(delivered.map((d) => d.payload[0]), [2]);
+      expect(delivered.map((d) => d.payload[0]), [1, 2],
+          reason: 'the first contact not answered is kept, and answered, in '
+              'order, once bob opens');
     });
 
     test('putKnownPeer and removeKnownPeer reach the router, which answers '

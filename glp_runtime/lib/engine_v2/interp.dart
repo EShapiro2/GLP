@@ -50,6 +50,15 @@ import 'package:glp_runtime/wire/instruction_codec.dart';
 /// [CodeImage] for direct byte execution: how the engine runs a compiled
 /// program through the byte loop (GlpEngine._post).
 CodeImage codeImageFromProgram(BytecodeProgram prog,
+        {String moduleName = 'main'}) =>
+    CodeImage.fromArtefactBytes(
+        codeArtefactFromProgram(prog, moduleName: moduleName));
+
+/// The §cf artefact's bytes of an object [BytecodeProgram], which
+/// [codeImageFromProgram] loads: the code an agent's goals run, as the store
+/// keeps it (IGLP, Implementation Notes, "Persistence": "the compiled program
+/// it runs").
+Uint8List codeArtefactFromProgram(BytecodeProgram prog,
     {String moduleName = 'main'}) {
   final artefact = Artefact.fromCompiled(
     ops: prog.ops.cast<Object>(),
@@ -59,7 +68,7 @@ CodeImage codeImageFromProgram(BytecodeProgram prog,
     typeDefsText: '',
     exports: const [],
   );
-  return CodeImage.fromArtefactBytes(artefact.toBytes());
+  return artefact.toBytes();
 }
 
 /// Executes a [CodeImage] directly over its code bytes, calling [OpExecutors]

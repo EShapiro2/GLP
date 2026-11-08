@@ -30,7 +30,7 @@
 
 Class    ::= start(Peer) ; refuel(Peer, Integer) ; climb(Peer) ; mark(Peer).
 Proposal ::= start(Peer) ; refuel(Peer, Integer).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

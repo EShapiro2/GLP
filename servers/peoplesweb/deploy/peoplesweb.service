@@ -1,4 +1,4 @@
-# systemd unit for GAS, the GLP app store, at peoplesweb.org (servers/peoplesweb).
+# systemd unit for GAS, the Grassroots App Store, at peoplesweb.org (servers/peoplesweb).
 # Deployed to /etc/systemd/system/peoplesweb.service.
 # Runs as the system user `glp`, which owns the clone at /srv/glp (the build
 # writes into it: servers/peoplesweb/build and programs/vglp/cva/web_worlds,
@@ -8,7 +8,7 @@
 # (deploy/peoplesweb-sweep.timer).  dart and python3 are found on systemd's
 # default PATH (/usr/bin), where their packages put them.
 [Unit]
-Description=GAS, the GLP app store, at peoplesweb.org
+Description=GAS, the Grassroots App Store, at peoplesweb.org
 After=network.target
 
 [Service]

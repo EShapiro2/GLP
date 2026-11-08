@@ -262,7 +262,7 @@ agent(Id, [msg(person, Id1, activate(App))|UserIn], NetIn, Outs,
     activate_app(App?, Id?, Apps?, Apps1, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
-%% Today's date, from the device's clock (superapp/3) or a play's script:
+%% Today's date, from the device's clock (superapp/4) or a play's script:
 %% written on the calendar of every mini-app installed, one date a day (GSG
 %% paper, Section 3: "a calendar, a stream of dates the super-app writes from
 %% the smartphone's clock, one a day").

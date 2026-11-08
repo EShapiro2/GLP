@@ -25,3 +25,6 @@ glp_runtime/bin/glp_repl_exe
 ## Session and generated trees
 .claude/
 glp_multiagent/assets/glp/
+
+## A run of sGLP's harness of a canonical platform, while it lasts (programs/sglp/cva/run.sh)
+programs/sglp/runs/

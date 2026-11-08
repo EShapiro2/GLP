@@ -1,0 +1,10 @@
+%% Box(Integer) is hide/self.glp's Box(X), two/2, which hides the enclosing
+%% self.glp's box/1 (../self.glp).  run(N): N = 3 + 4 = 7.
+exported procedure run(Integer).
+run(N?) :- two(B), sum(B?, N).
+
+procedure two(Box(Integer)).
+two(two(3, 4)).
+
+procedure sum(Box(Integer)?, Integer).
+sum(two(X, Y), Z?) :- Z := X? + Y?.

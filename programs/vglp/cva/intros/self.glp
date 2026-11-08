@@ -83,7 +83,7 @@ Class    ::= acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; open(Peer) ; p
            ; post(Peer, Speech) ; send(Peer, Peer, Speech) ; credit(Peer, Peer, Speech).
 Proposal ::= acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; open(Peer) ; peek(Peer, Peer)
            ; post(Peer, Speech).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

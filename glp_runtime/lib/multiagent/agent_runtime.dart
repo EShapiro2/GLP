@@ -27,12 +27,12 @@
 /// "Networking Seam", One interface: "A simulation realisation of the same
 /// interface backs the tests and plays, so transport integration is a backend
 /// swap").  Over a given network the agent is named by its key (IGLP, Remark
-/// "Agent Names": "Over a real network, the name of an agent p is its public
-/// key, held by the networking layer"), presented as 64 lowercase hex
-/// characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
+/// "Agent Names": "An agent p is its public key, which the runtime makes and
+/// supplies to the networking layer ... and has no other name"), presented as
+/// 64 lowercase hex characters, as self_key/1 presents it.  Until 2026-10-12 the host built the
 /// simulation's network itself, always.
 ///
-/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved, by its `acknowledge(messageId)` ([GlpNetwork.acknowledge]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.
+/// Termination and restart (IGLP, Definition "Restart", madglp-spec.tex; Implementation Notes, "Persistence"): where the host is given an [AgentStateStore], the agent's local state survives the termination of its application, kept by the store, and "a message is handed to the layer, and a delivered message acknowledged to the layer, only from a state the store holds, and a restart resumes from the state the store holds".  The agent is event-driven (Implementation Notes, "Event-driven execution"): each event --- the initial start, a message the layer delivers, the person's act, a place event --- is one cycle, which applies the event, reduces to quiescence, saves the local state with the cycle's outgoing messages undelivered in M_p, and only then hands them to the layer; the cycles are taken one at a time, in order of arrival.  At restart the agent goes on from the state the store holds, with no entry goal posted, and hands to the layer the messages that state holds undelivered.  A cycle whose save fails goes back to the state saved before it and applies the event again.  The layer is told that a message is delivered once the cycle that applied it is saved, by its `acknowledge(messageId)` ([GlpNetwork.acknowledge]).  Until 2026-10-23 the runtime saved nothing (Code #13 to GNA, 2026-10-20 23:56 UTC), and until 2026-10-24 a cycle handed its messages to the layer before its save.  The store keeps the compiled program the agent runs, and a restart may load a new version of it: the state is restored under the new version when every procedure called by a goal of the resolvent is defined in it with the same type identity, and otherwise the update is refused and the agent restarts under the version it terminated under (IGLP 61f3283, Termination and Restart; [StoredProgram]).  Until 2026-11-08 a state saved under other code than the program compiled to was refused, and the restart threw.
 library;
 
 import 'dart:async';
@@ -40,21 +40,23 @@ import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' as crypto;
-
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
 import 'package:glp_runtime/engine_v2/interp.dart'
-    show ByteRunner, codeImageFromProgram;
+    show ByteRunner, codeArtefactFromProgram;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart' show formatGroundTerm;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/runtime/saved_state.dart';
+import 'package:glp_runtime/runtime/machine_state.dart' show GoalId, GoalRef;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
-import 'package:glp_runtime/wire/codec.dart' show WireWriter, bytesEqual;
+import 'package:glp_runtime/wire/codec.dart' show bytesEqual;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
+import 'package:glp_runtime/multiagent/stored_program.dart';
+import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
+    show TypeIdentityTables;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart' show OutboundMessage;
 import 'package:glp_runtime/multiagent/glp_network.dart';
@@ -129,14 +131,17 @@ class AgentRuntime {
       onPeerConnected;
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
+  void Function(PubKey pk, ProximityUnderlay underlay)? onPeerLost;
 
-  /// This agent's Ed25519 key pair.  Provided by the coordinator, or made when
+  /// This agent's Ed25519 key pair.  Provided by the coordinator or the
+  /// application, or, where it is not, read from [stateStore], or made when
   /// the host spawns the agent, before anything is compiled or sent, from the
   /// SHA-256 of the clock, the device's hardware identifiers and the persona's
-  /// name, [agentId], combined by exclusive or (IGLP, Implementation Notes,
-  /// "Boot").  Over a given network it is the layer's, which holds
-  /// it (IGLP, The contract: "an agent's identity is its public key, held with
-  /// its private key by the networking layer"), and must be provided.
+  /// name, [agentId], combined by exclusive or, and saved in [stateStore]
+  /// (IGLP, Implementation Notes, "Boot").  Over a given network it must be
+  /// provided, the layer having been instantiated with it (IGLP, The
+  /// contract: "the runtime supplies the key pair to the layer when it
+  /// instantiates it, the layer keeping it unchanged for its lifetime").
   final ({PubKey pub, Uint8List priv})? keyPair;
 
   /// The shared identifier–key directory of the simulation. Provided by the
@@ -167,6 +172,20 @@ class AgentRuntime {
   /// The identity of the code the agent's goals run, which a saved state is
   /// held to at restart: its program counters index this code.
   Uint8List? _programIdentity;
+
+  /// The code the agent's goals run ([_image]), as the bytes of its artefact
+  /// ([_code]), and the program's module value, which its goals carry and
+  /// `self_module` returns: [program]'s compilation, or, after a refused
+  /// update, the program the agent terminated under, which its store keeps
+  /// ([_runningStored]).
+  CodeImage? _image;
+  Uint8List? _code;
+  rt.ModuleTerm? _appModule;
+
+  /// The program the store keeps, which the agent runs where a restart
+  /// refused an update to [program]'s compilation; null where the agent runs
+  /// that compilation.
+  StoredProgram? _runningStored;
 
   /// The state last saved, which a cycle whose save fails goes back to.  Null until the first is saved.
   Uint8List? _lastSaved;
@@ -215,10 +234,11 @@ class AgentRuntime {
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
-    // The person's key is the layer's: the engine holds it from construction,
-    // so the certificate its compiler writes, self_key/1 and sign/3 are under
-    // the key the agent is named by.  The layer gives out its public key and
-    // keeps the private half, so the host is given the pair as well.
+    // The layer was instantiated with the agent's key pair (IGLP, The
+    // contract), and gives out only its public key, so the host is given the
+    // pair as well: the engine holds it from construction, so the certificate
+    // its compiler writes, self_key/1 and sign/3 are under the key the agent
+    // is named by.
     final kp = keyPair;
     if (kp == null) {
       throw ArgumentError('agent $agentId runs over a given network, whose '
@@ -264,12 +284,11 @@ class AgentRuntime {
   /// version"), so peer_app/2 assigns app(D, N, V); where the harness names
   /// none the connection is unattested.  A discovery is over a proximity
   /// underlay, the PAN throughout (IGLP, "Simulation realisation").  Each is
-  /// recorded for the nearby declarations ([MadContext.peerDiscovered],
-  /// [MadContext.peerConnected], [MadContext.peerDisconnected]): "A nearby
-  /// declaration on the PAN is given seen for every agent adjacent to the
-  /// declaring one, and gone when the harness cuts the adjacency" (IGLP
-  /// b20951d, "Simulation realisation"), each presence an event cycle of its
-  /// own ([MadContext.presenceSink]).
+  /// A discovery and a loss are recorded for the nearby declarations
+  /// ([MadContext.peerDiscovered], [MadContext.peerLost]; GNA cfbfeac,
+  /// Section 3.1, onPeerDiscovered and onPeerLost), as the router decides
+  /// them (IGLP 45fabfc, "Simulation realisation"), each presence an event
+  /// cycle of its own ([MadContext.presenceSink]).
   void onConnectivityEvent(
       PubKey peer, Underlay underlay, ConnectivityEvent event,
       {Application? application}) {
@@ -284,6 +303,10 @@ class AgentRuntime {
         final proximity = ProximityUnderlay.values.byName(underlay.name);
         _ctx?.peerDiscovered(peer, proximity);
         onPeerDiscovered?.call(peer, proximity);
+      case ConnectivityEvent.lost:
+        final proximity = ProximityUnderlay.values.byName(underlay.name);
+        _ctx?.peerLost(peer, proximity);
+        onPeerLost?.call(peer, proximity);
     }
   }
 
@@ -299,6 +322,22 @@ class AgentRuntime {
   /// program").
   bool get firstStart => _firstStart;
   bool _firstStart = false;
+
+  /// Where [initialize] restored the agent's state under a new version of its
+  /// program: "A restart may load a new version of the agent's program ...
+  /// The local state is then restored under the new version when every
+  /// procedure called by a goal of the resolvent is defined in the new
+  /// version with the same type identity" (IGLP 61f3283, madglp-spec.tex,
+  /// Termination and Restart).
+  bool get updated => _updated;
+  bool _updated = false;
+
+  /// Where [initialize] refused an update, the refusal: "otherwise the update
+  /// is refused, and the agent restarts under the version it terminated
+  /// under" (IGLP 61f3283, Termination and Restart).  The agent then runs the
+  /// program its store keeps.  Null where no update was refused.
+  UpdateRefusal? get updateRefusal => _updateRefusal;
+  UpdateRefusal? _updateRefusal;
   GlpRuntime? get runtime => _runtime;
   MadContext? get ctx => _ctx;
 
@@ -332,29 +371,51 @@ class AgentRuntime {
   /// Start the agent: where its [stateStore] holds a saved state, go on from it (IGLP, Definition "Restart": "the local state s_p of p at restart is its local state at termination"; Implementation Notes, "Persistence": "a restart resumes from the state the store holds"), the restart's cycle handing to the layer the messages that state holds undelivered ([_Resume]); otherwise boot it, the initial start being its first event cycle.
   Future<void> initialize() async {
     _log('INIT: Starting');
-    // The agent's key pair: provided by the coordinator, or made now, at the
-    // agent's spawn, before anything is compiled or sent, from the SHA-256 of
-    // the clock, the device's hardware identifiers and the persona's name
-    // (IGLP, Implementation Notes, "Boot").  The engine holds it as the
-    // person's identity from construction --- so the certificate its compiler
-    // writes, self_key/1 and sign/3 are all under it --- and the networking
-    // layer below is given the same pair.
-    _kp = keyPair ?? PersonIdentity.forPersona(agentId).keyPair;
+    // The agent's key pair: provided, or the one its store keeps, or made
+    // now, at the agent's spawn, before anything is compiled or sent, from the
+    // SHA-256 of the clock, the device's hardware identifiers and the persona's
+    // name, and kept (IGLP, Implementation Notes, "Boot").  The engine holds it
+    // as the person's identity from construction --- so the certificate its
+    // compiler writes, self_key/1 and sign/3 are all under it --- and the
+    // networking layer below is given the same pair.
+    final store = stateStore;
+    _kp = keyPair ??
+        (store != null
+            ? await keptKeyPair(store, agentId)
+            : PersonIdentity.forPersona(agentId).keyPair);
 
-    final saved = await stateStore?.load();
+    final saved = await store?.load();
     _setUp();
     if (saved != null) {
-      _restore(saved);
-      _lastSaved = saved;
+      await _restoreSaved(store!, saved);
       _acceptedSinceSave.clear();
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
       _output('[INIT] Restored the agent\'s saved state');
       await _submit(const _Resume());
+      // The person's screen is not part of the local state: at a restart the
+      // runtime grants refresh, an Input addressed to no construct, in the
+      // person's place, once, and the dispatcher has every construct draw
+      // again what it last drew, so the screen is drawn from the restored
+      // state (IGLP 7a25ff8, madglp-spec.tex, the paragraph after Definition
+      // "Restart"; vGLP d433f71, Section 6.3: "Input(T) ::= input(Integer,
+      // Path, T) ; refresh", "a gesture grants refresh, as does the runtime
+      // when it restarts the agent from its saved state").  The runtime keeps
+      // no draw.  It grants it where it holds the person writer, the person
+      // being the person; a person scripted in GLP holds it in the runtime's
+      // place.
+      if (person == null && _userInput != null) {
+        _log('USER_INPUT: refresh, granted at the restart');
+        await _submit(_Input(refreshGrant));
+      }
       _initialized = true;
       updateStats();
       return;
     }
+    // The store keeps the compiled program the agent runs (IGLP 61f3283,
+    // "Persistence"), the version a later restart refusing an update
+    // restarts it under.
+    if (store != null) await _keepProgram(store);
     await _submit(const _Boot());
     _firstStart = true;
     _initialized = true;
@@ -363,8 +424,12 @@ class AgentRuntime {
 
   /// Make the engine, load the agent's one program into it, and bind the
   /// network: everything of the agent but its local state, which the boot
-  /// creates ([_boot]) or a saved state restores ([_restore]).
-  void _setUp() {
+  /// creates ([_boot]) or a saved state restores ([_restore]).  Given
+  /// [stored], the program the store keeps, the agent runs it in place of
+  /// [program]'s compilation, and nothing is compiled: the version it
+  /// terminated under, where a restart refused an update (IGLP 61f3283,
+  /// Termination and Restart).
+  void _setUp({StoredProgram? stored}) {
     final selfName = name; // its key over a given network ([name])
     final kp = _kp!;
     _output('[INIT] Creating MadContext...');
@@ -388,23 +453,38 @@ class AgentRuntime {
     // Notes, "The scope a boot source is checked in"): until 2026-10-07 it
     // was, and on this fresh engine that scope holds the chain without the
     // procedures it exposes (programs/tests/post_goal/exposed).
-    if (FileSystemEntity.isDirectorySync(program)) {
-      _log('INIT: Loading program from $program');
-      engine.loadProgram(program);
-      _log('INIT: Program loaded via program linking ($program)');
+    if (stored != null) {
+      _code = stored.code;
+      _image = stored.image;
+      _appModule = stored.module;
+      _log('INIT: running the program the store keeps, the version the agent '
+          'terminated under, in place of $program\'s compilation');
     } else {
-      engine.loadFile(program);
-      _log('INIT: Program loaded from the module $program');
+      if (FileSystemEntity.isDirectorySync(program)) {
+        _log('INIT: Loading program from $program');
+        engine.loadProgram(program);
+        _log('INIT: Program loaded via program linking ($program)');
+      } else {
+        engine.loadFile(program);
+        _log('INIT: Program loaded from the module $program');
+      }
+      final boot = bootSource;
+      if (boot != null) {
+        final path = bootPath;
+        engine.loadSource(boot,
+            filename: 'program',
+            scope: path != null ? engine.scopeFor(path) : engine.scope);
+        _log('INIT: the boot source loaded on top'
+            '${path != null ? ', in the scope of $path' : ''}');
+      }
+      // The code the goals run, the program and the root linked as one
+      // ([GlpEngine.combinedProgram]), as the engine's posting call runs it.
+      _code = codeArtefactFromProgram(engine.combinedProgram);
+      _image = CodeImage.fromArtefactBytes(_code!);
+      _appModule = engine.appModule;
     }
-    final boot = bootSource;
-    if (boot != null) {
-      final path = bootPath;
-      engine.loadSource(boot,
-          filename: 'program',
-          scope: path != null ? engine.scopeFor(path) : engine.scope);
-      _log('INIT: the boot source loaded on top'
-          '${path != null ? ', in the scope of $path' : ''}');
-    }
+    _runningStored = stored;
+    _programIdentity = codeIdentityOf(_image!);
 
     _runtime = engine.runtime;
     _ctx = engine.madContext;
@@ -507,22 +587,210 @@ class AgentRuntime {
     if (main is! ByteRunner) {
       throw StateError('the entry goal was posted on no code image');
     }
-    _programIdentity = _codeIdentity(main.image);
+    if (!bytesEqual(codeIdentityOf(main.image), _programIdentity!)) {
+      throw StateError('the entry goal was posted on other code than the '
+          'program compiles to');
+    }
 
     _output('[GOAL] Started agent(ch(_?,_),ch(_?,_)) at $selfName'
         '${person == null ? '' : ', its person ${person!.functor}'}');
     _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
   }
 
-  /// Go on from the saved state [bytes]: the code compiled again by
-  /// [_setUp], held to the identity the state was saved under; the local
-  /// state read back into the engine's runtime and context; the host's ends
-  /// of the person's and the network's input streams; and a runner for each
-  /// module a goal runs.  Throws where the state is another agent's, of
-  /// another key, or of another program.
-  void _restore(Uint8List bytes) {
-    final engine = _engine!;
-    final r = StateReader(bytes);
+  /// Go on from the saved state [bytes], which the store holds, under the
+  /// program [initialize] compiled, or the program the store keeps (IGLP
+  /// 61f3283, madglp-spec.tex, Termination and Restart; Implementation Notes,
+  /// "Persistence").  A state saved under the code [program] compiles to is
+  /// restored under it.  A state saved under other code is saved under the
+  /// version the store keeps, and the restart loads a new version: "The local
+  /// state is then restored under the new version when every procedure called
+  /// by a goal of the resolvent is defined in the new version with the same
+  /// type identity; otherwise the update is refused, and the agent restarts
+  /// under the version it terminated under."  So the state is restored under
+  /// the kept version, and its goals' procedures are compared
+  /// ([_compareVersions]); where each is defined in the new version with the
+  /// same type identity, the state is restored again under the new version,
+  /// each goal's program counter the entry of its procedure there, the state
+  /// saved, and then the new version kept; otherwise the agent runs the kept
+  /// version, and [updateRefusal] says why.  The program is kept after the
+  /// state, so that a termination between the two saves leaves a state the
+  /// next restart restores under the code [program] compiles to.  Throws
+  /// where the state is another agent's, of another key, or saved under code
+  /// that is neither [program]'s compilation nor the program the store keeps.
+  Future<void> _restoreSaved(AgentStateStore store, Uint8List saved) async {
+    final savedUnder = StateReader(saved).programIdentity;
+    final keptBytes = await store.loadProgram();
+    final kept =
+        keptBytes == null ? null : StoredProgram.fromBytes(keptBytes);
+    if (bytesEqual(savedUnder, _programIdentity!)) {
+      _restore(saved);
+      _lastSaved = saved;
+      if (kept == null || !bytesEqual(kept.identity, _programIdentity!)) {
+        await _keepProgram(store);
+      }
+      return;
+    }
+    if (kept == null || !bytesEqual(kept.identity, savedUnder)) {
+      throw StateError('the saved state is of another program than $program '
+          'compiles to, and the store keeps no compiled program it was saved '
+          'under: the program counters of its goals index code the agent '
+          'does not have');
+    }
+
+    // An update: the new version, compiled by [_setUp], set aside; the state
+    // restored under the version it was saved under.
+    final newImage = _image!;
+    final newModule = _appModule;
+    _log('INIT: the saved state is of the version the store keeps, and '
+        '$program compiles to a new version');
+    _setUp(stored: kept);
+    _restore(saved);
+    final programs = _runtime!.goalPrograms;
+    final (:refused, :entries) = _compareVersions(
+        kept, newImage, newModule, _runtime!.resolventGoals, programs);
+    if (refused.isNotEmpty) {
+      _updateRefusal = UpdateRefusal(refused);
+      _lastSaved = saved;
+      _log('INIT: the update is refused: $_updateRefusal');
+      _output('[INIT] The update is refused, and the agent restarts under the '
+          'version it terminated under: $_updateRefusal');
+      return;
+    }
+
+    // Restored again under the new version, each goal of the program at the
+    // entry of its procedure there; a goal of a module launched by run/3 runs
+    // that module's code, which the update leaves as it is.
+    final savedApp = kept.module;
+    _setUp();
+    _restore(saved,
+        savedUnder: savedUnder,
+        savedAppModule: savedApp == null
+            ? null
+            : Artefact.compiledIdentityOf(
+                (savedApp.artefact as Artefact).toBytes()),
+        programCounter: (goal, pc) {
+          if (goal == null) return pc; // a disarmed record is never woken
+          final key = programs[goal];
+          if (key is String && key.startsWith('module:')) return pc;
+          final entry = entries[pc];
+          if (entry == null) {
+            throw StateError('goal $goal is at $pc, the entry of no procedure '
+                'compared');
+          }
+          return entry;
+        });
+    _updated = true;
+    _log('INIT: the state is restored under the new version');
+    _output('[INIT] The agent\'s program is updated');
+    await _saveUntilKept(store, _snapshot, (e) {
+      _log('SAVE FAILED: $e; the state restored under the new version is '
+          'saved again');
+    });
+    await _keepProgram(store);
+  }
+
+  /// The procedures the goals of the resolvent [goals] call in [kept], the
+  /// version a state was saved under, compared with the new version, the code
+  /// [newImage] and the module [newModule] (IGLP 61f3283, Termination and
+  /// Restart: "every procedure called by a goal of the resolvent is defined
+  /// in the new version with the same type identity").  A goal's procedure is
+  /// the one whose entry its program counter is, named as the code names it
+  /// (`name/arity`, a module's procedure under the name the linking gave
+  /// it); its type identity is the program's tables' (TGLP, "Type Identity";
+  /// [TypeIdentityTables.procedureIdentity]).  A goal of a module launched by
+  /// run/3 ([programs]) runs that module's code and is not compared.
+  /// [refused] says, for each procedure that fails the condition, why;
+  /// [entries] maps the entry of each procedure of [kept] to its entry in
+  /// [newImage], where it is defined there.
+  static ({List<String> refused, Map<int, int> entries}) _compareVersions(
+      StoredProgram kept,
+      CodeImage newImage,
+      rt.ModuleTerm? newModule,
+      Iterable<GoalRef> goals,
+      Map<GoalId, Object?> programs) {
+    // A signature may name more than one compiled procedure (CodeImage
+    // keeps the first for a call by name): the n-th of one version is the
+    // n-th of the other.
+    Map<(String, int), int> bySignature(CodeImage image) {
+      final seen = <String, int>{};
+      return {
+        for (final sym in image.symbols)
+          if (sym.compiled)
+            (sym.signature, seen[sym.signature] = (seen[sym.signature] ?? 0) + 1):
+                sym.codeOffset,
+      };
+    }
+
+    final oldEntries = bySignature(kept.image);
+    final newEntries = bySignature(newImage);
+    final procedureAt = {
+      for (final MapEntry(:key, :value) in oldEntries.entries) value: key,
+    };
+    final entries = <int, int>{
+      for (final MapEntry(:key, :value) in oldEntries.entries)
+        if (newEntries[key] case final to?) value: to,
+    };
+    final oldTables = kept.tables;
+    final newTables = newModule?.declaredTypes;
+    final refused = <String, String>{};
+    for (final goal in goals) {
+      final key = programs[goal.id];
+      if (key is String && key.startsWith('module:')) continue;
+      final procedure = procedureAt[goal.pc];
+      if (procedure == null) {
+        refused['goal ${goal.id}'] = 'goal ${goal.id} is at ${goal.pc}, the '
+            'entry of no procedure of the version it terminated under';
+        continue;
+      }
+      final (signature, _) = procedure;
+      if (refused.containsKey(signature)) continue;
+      if (!entries.containsKey(goal.pc)) {
+        refused[signature] = '$signature is not defined in the new version';
+        continue;
+      }
+      final before = oldTables?.procedureIdentity(signature);
+      final after = newTables is TypeIdentityTables
+          ? newTables.procedureIdentity(signature)
+          : null;
+      if (before == null) {
+        refused[signature] =
+            '$signature has no type identity in the version it terminated '
+            'under';
+      } else if (after == null) {
+        refused[signature] =
+            '$signature has no type identity in the new version';
+      } else if (before != after) {
+        refused[signature] = '$signature is defined in the new version with '
+            'another type identity';
+      }
+    }
+    return (refused: refused.values.toList(), entries: entries);
+  }
+
+  /// Keep in [store] the compiled program the agent runs ([StoredProgram];
+  /// IGLP 61f3283, Implementation Notes, "Persistence": "the agent's key
+  /// pair, the compiled program it runs").
+  Future<void> _keepProgram(AgentStateStore store) async {
+    await store.saveProgram(
+        StoredProgram.compiled(_code!, _appModule).toBytes());
+    _log('INIT: the store keeps the compiled program the agent runs');
+  }
+
+  /// Go on from the saved state [bytes] under the program [_setUp] set up:
+  /// the state held to the code it was saved under, [savedUnder], which is
+  /// the code the agent runs unless the state is restored under a new
+  /// version ([_restoreSaved]), each goal's program counter then mapped by
+  /// [programCounter] and the saved module value of the program, of compiled
+  /// identity [savedAppModule], standing for the new one; the local state
+  /// read back into the engine's runtime and context; the host's ends of the
+  /// person's and the network's input streams; and a runner for each module a
+  /// goal runs.  Throws where the state is another agent's, of another key,
+  /// or of other code.
+  void _restore(Uint8List bytes,
+      {Uint8List? savedUnder,
+      Uint8List? savedAppModule,
+      int Function(int? goal, int pc)? programCounter}) {
+    final r = StateReader(bytes, programCounter: programCounter);
     if (r.agentName != name) {
       throw StateError('the saved state is agent ${r.agentName}\'s, and this '
           'agent is $name');
@@ -530,17 +798,14 @@ class AgentRuntime {
     if (!bytesEqual(r.agentKey, _kp!.pub.bytes)) {
       throw StateError('the saved state is of the agent of key '
           '${PubKey(r.agentKey).hex}, and this agent runs under '
-          '${_kp!.pub.hex}: an agent has one key, which survives the '
-          'termination with the layer, and the host is given it');
+          '${_kp!.pub.hex}: an agent has one key, which its store keeps '
+          'across the termination');
     }
-    final image = codeImageFromProgram(engine.combinedProgram);
-    final identity = _codeIdentity(image);
-    if (!bytesEqual(r.programIdentity, identity)) {
-      throw StateError('the saved state is of another program than $program '
-          'compiles to: the program counters of its goals index other code');
+    if (!bytesEqual(r.programIdentity, savedUnder ?? _programIdentity!)) {
+      throw StateError('the saved state is of other code than the agent '
+          'runs: the program counters of its goals index other code');
     }
-    _programIdentity = identity;
-    r.readTables(appModule: engine.appModule);
+    r.readTables(appModule: _appModule, savedAppModule: savedAppModule);
     _runtime!.restoreState(r);
     _ctx!.restoreState(r);
     final userWriter = r.optCell();
@@ -552,8 +817,9 @@ class AgentRuntime {
         userWriter == null ? null : InputInjector(heap, 'UserIn', userWriter);
     _netInput =
         netWriter == null ? null : InputInjector(heap, 'NetIn', netWriter);
-    _scheduler = Scheduler(rt: _runtime!, runners: {'main': ByteRunner(image)})
-      ..traceSink = (line) => _log('GLP: $line');
+    _scheduler =
+        Scheduler(rt: _runtime!, runners: {'main': ByteRunner(_image!)})
+          ..traceSink = (line) => _log('GLP: $line');
 
     // A goal launched by run/3 runs the code of the module it was launched
     // on, by its compiled identity (module_kernels.dart): made again from the
@@ -572,24 +838,6 @@ class AgentRuntime {
               (module.artefact as Artefact).toBytes())));
     }
     _ctx!.resumePlaceEvents();
-  }
-
-  /// The identity of a code image: SHA-256 over its instruction-set version,
-  /// its symbols and its code, which the goals' program counters index.
-  static Uint8List _codeIdentity(CodeImage image) {
-    final w = WireWriter()
-      ..string(image.isaVersion)
-      ..string(image.moduleName)
-      ..clen(image.symbols.length);
-    for (final sym in image.symbols) {
-      w
-        ..string(sym.signature)
-        ..u8(sym.compiled ? 1 : 0)
-        ..clen(sym.codeOffset)
-        ..clen(sym.codeLength);
-    }
-    w.bytes(image.code);
-    return Uint8List.fromList(crypto.sha256.convert(w.toBytes()).bytes);
   }
 
   // =========================================================================
@@ -721,7 +969,7 @@ class AgentRuntime {
 
   /// Go back to the state saved before the step in progress: the engine made again and the state read back, or, before any state was saved, a fresh engine for the boot.  Where the messages that state holds undelivered have been handed to the layer since it was saved, they are taken out of M_p, so that none is handed over twice.
   void _rollBack() {
-    _setUp();
+    _setUp(stored: _runningStored);
     final saved = _lastSaved;
     if (saved == null) return;
     _restore(saved);
@@ -799,7 +1047,7 @@ class AgentRuntime {
       programIdentity: _programIdentity!,
       agentName: name,
       agentKey: _kp!.pub.bytes,
-      appModule: _engine!.appModule,
+      appModule: _appModule,
     );
     _runtime!.saveState(w);
     _ctx!.saveState(w);
@@ -874,15 +1122,20 @@ class AgentRuntime {
       _ctx?.peerDisconnected(pk, underlay);
       onPeerDisconnected?.call(pk, underlay);
     };
-    // A discovery is recorded for the nearby declarations, as a connection
-    // and a disconnection are by [MadContext.peerConnected] and
-    // [MadContext.peerDisconnected]: seen(K) when the layer discovers on U an
-    // agent of key K, and gone(K) when it can no longer be reached over U
-    // (GLP-Spec 210cee1, "Networking seam"; GNA, onPeerDiscovered and the
-    // session).
+    // A discovery and a loss are recorded for the nearby declarations:
+    // seen(K) when the layer discovers on U an agent of key K, and gone(K)
+    // when it can no longer be reached over U (GLP-Spec 210cee1, "Networking
+    // seam"), the layer's onPeerDiscovered and onPeerLost on U (GNA cfbfeac,
+    // Section 3.1: "onPeerDiscovered and onPeerLost behind the stream of
+    // declare(nearby(Underlay, Events))").  Until 2026-11-08 a connection
+    // and a disconnection fed them too.
     network.onPeerDiscovered = (pk, underlay) {
       _ctx?.peerDiscovered(pk, underlay);
       onPeerDiscovered?.call(pk, underlay);
+    };
+    network.onPeerLost = (pk, underlay) {
+      _ctx?.peerLost(pk, underlay);
+      onPeerLost?.call(pk, underlay);
     };
   }
 
@@ -1174,6 +1427,11 @@ final class _Message extends _AgentEvent {
   String toString() => 'a message from $from';
 }
 
+/// The grant `refresh`, an Input addressed to no construct, which the runtime
+/// grants in the person's place at a restart (IGLP 7a25ff8, after Definition
+/// "Restart"; vGLP d433f71, Section 6.3).
+final rt.Term refreshGrant = rt.ConstTerm('refresh');
+
 /// The person's act.
 final class _Input extends _AgentEvent {
   final rt.Term act;
@@ -1202,4 +1460,16 @@ final class _Presence extends _AgentEvent {
   const _Presence(this.underlay, this.presence, this.declaration);
   @override
   String toString() => 'the presence $presence over ${underlay.name}';
+}
+
+/// A restart's refusal of an update (IGLP 61f3283, madglp-spec.tex,
+/// Termination and Restart: "otherwise the update is refused, and the agent
+/// restarts under the version it terminated under"): for each procedure a
+/// goal of the resolvent calls that the new version does not define with the
+/// same type identity, why.
+class UpdateRefusal {
+  final List<String> reasons;
+  const UpdateRefusal(this.reasons);
+  @override
+  String toString() => reasons.join('; ');
 }

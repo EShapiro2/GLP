@@ -35,7 +35,7 @@
 /// other function of the API the layer has (GNA, 2026-10-11, Task C), and
 /// passes straight through, the WAN functions to the layer's `wan`
 /// sub-object.  A callback the layer has no event for --- onPeerDiscovered,
-/// onPlaceEvent --- is held and never fires.
+/// onPeerLost, onPlaceEvent --- is held and never fires.
 library;
 
 import 'dart:async';
@@ -184,6 +184,9 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   @override
   void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?
       onPeerDiscovered;
+
+  @override
+  void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)? onPeerLost;
 
   /// `declare(trust(U, L))`: the profile runs no proximity underlay, so the
   /// declaration finds no sub-object and does nothing (GNA §2.2).

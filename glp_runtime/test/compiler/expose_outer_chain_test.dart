@@ -100,24 +100,23 @@ void main() {
 
   test("the program's type definitions by name are those its entry module's "
       'scope resolves', () {
-    // programs/sglp/self.glp, on the chain of the root's exposed sglp
-    // modules, is a module of the program and defines Draw; the root defines
-    // Draw(T), and the entry module, app/self.glp, sees the root's.
+    // The root defines Draw(T), and the entry module, app/self.glp, sees it,
+    // a type named by its name and its number of parameters, Draw/1 (GLP #13,
+    // Code_inbox 2026-11-07 23:40 UTC, item 1; a 0-ary Draw beside it is
+    // test/compiler/type_arity_test.dart's).  The root exposes nothing of
+    // programs/sglp since 2026-11-08 (GLP #13, 21:07 and 21:19 UTC), so no
+    // module of sGLP is a module of the program.
     final dir = Directory('$fixture/app').absolute.path;
     final modules = discover(dir);
-    expect(
-        modules.any((m) =>
-            m.moduleName == 'sglp' &&
-            m.ast.typeDefs.any((t) => t.name == 'Draw' && t.typeParams.isEmpty)),
-        isTrue);
+    expect(modules.where((m) => m.moduleName.startsWith('sglp')), isEmpty);
     final defs = programTypeDefs(modules, rootDir: dir);
-    expect(defs['Draw']!.typeParams, hasLength(1));
+    expect(defs['Draw/1']!.typeParams, hasLength(1));
     // A type lifted from a self.glp outside the tree is the program's:
     // own_scope's Level, which lib/self.glp defines.
     final own =
         Directory('../programs/tests/expose/own_scope/app').absolute.path;
     final ownDefs = programTypeDefs(discover(own), rootDir: own);
-    expect(ownDefs['Level']!.alternatives, hasLength(2));
+    expect(ownDefs['Level/0']!.alternatives, hasLength(2));
   });
 
   test("neg/, calling double/2, is refused: lib/self.glp is not on its "

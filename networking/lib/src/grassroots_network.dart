@@ -305,13 +305,28 @@ class GrassrootsNetwork {
   /// sets are retained — an unreachable peer holds no entry.
   final Map<String, Set<Underlay>> _lastKnownUnderlays = {};
 
-  /// Pubkeys (hex) already surfaced via [ProximityApi.onPeerDiscovered] this session.
-  /// Discovery is the identity-learned event on a proximity underlay — the
-  /// first accepted ANNOUNCE carrying a nearby peer's public key, over the PAN
-  /// or from a LAN source — which precedes the Noise session and therefore
-  /// [onPeerConnected]. Fired once per identity; a peer going out of range
-  /// and returning is a re-*connect*, not a re-discover.
-  final Set<String> _discoveredPubkeyHexes = {};
+  /// The agents surfaced via [ProximityApi.onPeerDiscovered] on each
+  /// proximity underlay and not since surfaced via [ProximityApi.onPeerLost],
+  /// by pubkey hex.  Discovery is the identity-learned event on a proximity
+  /// underlay — the first accepted ANNOUNCE carrying a nearby peer's public
+  /// key, over the PAN or from a LAN source, or a session over it — which
+  /// precedes the Noise session and therefore [onPeerConnected].  Fired once
+  /// per identity and underlay until the agent is lost there: "Callback when
+  /// an agent reported discovered on this underlay is no longer discovered on
+  /// it: its presence is no longer observed and it holds no session on the
+  /// underlay" (GNA cfbfeac §3.1, onPeerLost); a peer lost and returning is
+  /// discovered again.  Until 2026-11-08 discovery fired once per identity
+  /// for the layer's life, and there was no onPeerLost.
+  final Map<ProximityUnderlay, Set<String>> _discoveredOn = {
+    for (final u in ProximityUnderlay.values) u: <String>{},
+  };
+
+  /// The discovered agents whose presence or session on each proximity
+  /// underlay the last store tick observed, by pubkey hex
+  /// ([processProximityLoss]).
+  final Map<ProximityUnderlay, Set<String>> _presentOn = {
+    for (final u in ProximityUnderlay.values) u: <String>{},
+  };
 
   /// Permission handler
   final PermissionHandler _permissions = PermissionHandler();
@@ -841,6 +856,12 @@ class GrassrootsNetwork {
         store.dispatch(action);
       }
       _processReachabilityTransitions(state.peers);
+      processProximityLoss(
+        peersState: state.peers,
+        discoveredOn: _discoveredOn,
+        presentOn: _presentOn,
+        onLost: (pk, underlay) => _proximity(underlay)?.onPeerLost?.call(pk),
+      );
     });
   }
 
@@ -3020,7 +3041,7 @@ class GrassrootsNetwork {
     final pubkeyHex = _pubkeyToHex(pubkey);
     if (discoveredOn != null &&
         !_isRendezvousPubkeyHex(pubkeyHex) &&
-        _discoveredPubkeyHexes.add(pubkeyHex)) {
+        _discoveredOn[discoveredOn]!.add(pubkeyHex)) {
       _proximity(discoveredOn)?.onPeerDiscovered?.call(pubkey);
     }
     // The handshake is followed by the mutual attestation exchange, and
@@ -3979,7 +4000,7 @@ class GrassrootsNetwork {
         };
         if (discoveredOn != null &&
             !_isRendezvousPubkeyHex(pubkeyHex) &&
-            _discoveredPubkeyHexes.add(pubkeyHex)) {
+            _discoveredOn[discoveredOn]!.add(pubkeyHex)) {
           _proximity(discoveredOn)?.onPeerDiscovered?.call(data.publicKey);
         }
       }
@@ -4773,6 +4794,9 @@ class _GrassrootsProximity implements ProximityApi {
   void Function(Uint8List pk)? onPeerDiscovered;
 
   @override
+  void Function(Uint8List pk)? onPeerLost;
+
+  @override
   Future<void> setTrustLevel(ColdCallTrustLevel level) =>
       _layer._setTrustLevel(underlay, level);
 }
@@ -4896,6 +4920,59 @@ void processReachabilityTransitions({
     ]);
     for (final u in underlays) {
       cb(pubkey, u);
+    }
+  }
+}
+
+/// Whether [peer]'s presence or session on the proximity underlay
+/// [underlay] is observed: a session on it, or, on the PAN, a BLE path to
+/// the peer, the link its advertisement was answered on; on the LAN the
+/// layer observes no presence apart from the session, an mDNS instance
+/// carrying no removal it reports.
+@visibleForTesting
+bool observedOn(PeerState peer, ProximityUnderlay underlay) =>
+    switch (underlay) {
+      ProximityUnderlay.pan =>
+        peer.reachableUnderlays.contains(Underlay.pan) || peer.hasBleConnection,
+      ProximityUnderlay.lan => peer.reachableUnderlays.contains(Underlay.lan),
+    };
+
+/// Fire `onPeerLost(pk)` on each proximity underlay for every agent reported
+/// discovered there that is no longer discovered on it: "Callback when an
+/// agent reported discovered on this underlay is no longer discovered on it:
+/// its presence is no longer observed and it holds no session on the
+/// underlay" (GNA cfbfeac §3.1).  An agent is lost where an earlier tick
+/// observed its presence or session on the underlay ([observedOn]) and this
+/// one observes neither, or where its entry left the store; a discovered
+/// agent whose presence was never observed beyond the ANNOUNCE that
+/// discovered it is lost only when its entry leaves the store.  A lost agent
+/// leaves [discoveredOn], so it is discovered again on its return.  The only
+/// side effects are calling [onLost] and mutating the two maps in place.
+@visibleForTesting
+void processProximityLoss({
+  required PeersState peersState,
+  required Map<ProximityUnderlay, Set<String>> discoveredOn,
+  required Map<ProximityUnderlay, Set<String>> presentOn,
+  required void Function(Uint8List pk, ProximityUnderlay underlay)? onLost,
+}) {
+  for (final underlay in ProximityUnderlay.values) {
+    final discovered = discoveredOn[underlay]!;
+    final present = presentOn[underlay]!;
+    for (final hex in discovered.toList()) {
+      final peer = peersState.peers[hex];
+      if (peer != null && observedOn(peer, underlay)) {
+        present.add(hex);
+        continue;
+      }
+      if (peer != null && !present.contains(hex)) continue; // never observed
+      discovered.remove(hex);
+      present.remove(hex);
+      final pk = peer?.publicKey ??
+          Uint8List.fromList([
+            for (var i = 0; i < hex.length; i += 2)
+              int.parse(hex.substring(i, i + 2), radix: 16)
+          ]);
+      onLost?.call(pk, underlay);
     }
   }
 }

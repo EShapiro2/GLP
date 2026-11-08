@@ -28,18 +28,26 @@
 %% structurally (TGLP, "Cross-module type checking").  HomeDrawn is home.glp's
 %% Drawn, the type its person channel carries.  Ask(Q) is ../self.glp's, as
 %% home.glp's own, and the person channel's types the root's.
-HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key).
+HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; open_place ; close_place.
 HomeFriendRequest ::= from(Key, Decision?).
 HomeIntroRequest  ::= from(Key, Key, Decision?).
-HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
-HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeRequest.
+HomeNearbyPerson  ::= nearby(Key, HomeBefriend?).
+HomeBefriend      ::= befriend.
+HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; nearbyPerson_w(HomeNearbyPerson) ; stream_request_r(Stream(HomeRequest)?).
+HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeBefriend ; HomeRequest.
 
-%% The super-app (GSG paper, Section 5.1): the one goal the runtime posts,
-%% with the person's public key, the stream of the person's acts and the
-%% stream from the network, and nothing else.  It runs agent/4, with the
+%% The super-app (GSA paper, Section 4.1 and Appendix "The Operating System"),
+%% the entry the person's first act names (Appendix, "Boot": "the person's
+%% first act names the entry, with the person's key and the keys of the
+%% persons the person knows, none at a first start"), superapp(Key, Known)
+%% below: with the person's public key, the keys of the persons the person
+%% knows, the stream of the person's acts and the stream from the network,
+%% and nothing else.  It runs agent/4 with the
+%% operating system's Nearby around it (place.glp, os_phone/6: the place, GPE,
+%% and the agents nearby the layer reports), with the
 %% super-app's own person interface (home/3) and its dispatcher between the
-%% person and the agent, and sends the two streams of the outputs list to the
-%% person and to the network.  The person's acts are the grants of the person
+%% person and the agent, and sends what the agent tells the person to the
+%% person and its messages to the network.  The person's acts are the grants of the person
 %% channel (vGLP, Definition "Person Channel, Person Writer, GLP with Persons,
 %% Grant"), ch(Grants?, Draws), which the dispatcher reads: home's asks go to
 %% it, and it draws the constructs of home's questions.  What the agent tells
@@ -51,10 +59,11 @@ HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-exported procedure superapp(Key?, PersonIn(HomeDrawn)?, NetInStream?).
-superapp(Id, Grants, NetIn) :-
-    ground(Id?) |
-    agent # agent(Id?, In?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+imported procedure place#os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
+exported procedure superapp(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
+superapp(Id, Known, Grants, NetIn) :-
+    ground(Id?), ground(Known?) |
+    place # os_phone(Id?, Known?, In?, NetIn?, Outs, NetOut),
     calendar(Dates),
     date_msgs(Id?, Dates?, DateMsgs),
     merge(Cmds?, DateMsgs?, In),
@@ -70,7 +79,7 @@ superapp(Id, Grants, NetIn) :-
 %% the pending value of a befriending or an introduction holds the agent's
 %% consent writer, which home's card answers, and which one reader alone may
 %% hold; until it is answered the message is not ground, so a copy of it
-%% would wait for the very answer it carries the card for.  superapp/3 above
+%% would wait for the very answer it carries the card for.  superapp/4 above
 %% and superapp_ui/4 (home_ui.glp) reach it by scope.
 procedure split_out(AgentToUserStream?, Stream(Output), AgentToUserStream).
 split_out([M | Ms], [N? | Ns?], [M1? | Seen?]) :- notice(M?, N, M1), split_out(Ms?, Ns, Seen).
@@ -110,10 +119,42 @@ yes_person([draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
 
+%% scripted_home/5 with a person who also befriends by picking a person in
+%% Nearby (GSA paper, Appendix "The Operating System", "Nearby": "the person
+%% befriends one by picking them there"; home.vglp, befriend_card/3), for the
+%% plays of physical encounters (superapp_plays.glp, nearby_phone/4): under
+%% Pick first the person picks befriend on the first card of a person nearby
+%% that home draws, and on none after it; under none on none.  The person
+%% answers yes on each card of a friend's request to connect and of an
+%% introduction, as yes_person/2 does.
+PickMode ::= first ; none.
+exported procedure picking_home(Key?, PickMode?, AgentToUserStream?, Stream(Output), UserInStream?, UserInStream).
+picking_home(Id, Pick, Out, Notices?, ScriptCmds, In?) :-
+    ground(Id?) |
+    split_out(Out?, Notices, Seen),
+    home # home(Id?, Seen?, Home, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    hold_output(MCh?),
+    picking_person(Pick?, Draws?, Grants),
+    merge(ScriptCmds?, Home?, In).
+
+%% The person: yes on each card of a friend's request or an introduction;
+%% befriend on the first card of a person nearby, under first.  The person
+%% channel never closes, so the person holds its grant writer for good.
+procedure picking_person(PickMode?, PersonOut(HomeDrawn)?, PersonIn(HomeDrawn)).
+picking_person(P, [draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
+picking_person(P, [draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
+picking_person(first, [draw(N, _, nearbyPerson_w(nearby(_, input(Q)))) | Ds], [input(N?, Q?, befriend) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(none, Ds?, Gs).
+picking_person(P, [_ | Ds], Gs?) :- otherwise | picking_person(P?, Ds?, Gs).
+
 %% play_home(Id?, Answer?, Notices?, Cmds, Log): home/4 on the agent's notices,
 %% with its dispatcher, and a person who answers each card, a friend's request
-%% to connect or an introduction, with Answer once it is drawn, logging the
-%% card it answered; the commands home writes to the agent come out on Cmds.
+%% to connect or an introduction, with Answer once it is drawn, or, where
+%% Answer is befriend, picks befriend on each card of a person nearby, logging
+%% the card it answered; the commands home writes to the agent come out on Cmds.
 %% The person grants only on a card drawn: the dispatcher takes the asks, the
 %% grants and the draws in turn (programs/vglp/dispatcher.glp, fair/5), and a
 %% grant for a construct not yet asked reaches none.
@@ -129,6 +170,8 @@ answering(A, [draw(N, _, friendRequest_w(from(F, input(Q)))) | Ds], [input(N?, Q
     ground(A?), ground(N?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
 answering(A, [draw(N, _, introRequest_w(from(I, F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
     ground(A?), ground(N?), ground(I?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
+answering(befriend, [draw(N, _, nearbyPerson_w(nearby(F, input(Q)))) | Ds], [input(N?, Q?, befriend) | Gs?], [nearby(F?) | Log?]) :-
+    ground(N?), ground(F?), ground(Q?) | answering(befriend, Ds?, Gs, Log).
 answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 
 %% The super-app's output to its person, of the reserved type Output: "A
@@ -145,12 +188,13 @@ answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 Notice ::= msg(Constant, Constant, NoticeContent).
 NoticeContent ::= befriend(Key)
                 ; befriend_intro(Key, Key)
-                ; connected(Constant)
+                ; connected(Key)
                 ; rejected
                 ; rejected(Constant)
                 ; unfriended(Constant)
                 ; received(Key, Constant)
-                ; not_a_friend(Key).
+                ; not_a_friend(Key)
+                ; nearby(List(Key)).
 Output ::= Notice.
 
 %% The notices, onto the program's output to the person; the person's input
@@ -182,6 +226,8 @@ notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?)), msg(A?, P?, rec
     ground(A?), ground(P?), ground(K?), ground(C?) | true.
 notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, not_a_friend(K?))) :-
     ground(A?), ground(P?), ground(K?) | true.
+notice(msg(A, P, nearby(Ks)), msg(A?, P?, nearby(Ks?)), msg(A?, P?, nearby(Ks?))) :-
+    ground(A?), ground(P?), ground(Ks?) | true.
 
 %% The person's end of a mini-app's person channel that no screen shows ---
 %% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play
@@ -198,7 +244,7 @@ hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).
 %% next one at the start of its day (GSG paper, Section 3, "What the super-app
 %% grants a mini-app": "a calendar, a stream of dates the super-app writes
 %% from the smartphone's clock, one a day"; GB appendix-derivation.tex: "on a
-%% device the clock writes it").  superapp/3 gives each to the agent, which
+%% device the clock writes it").  superapp/4 gives each to the agent, which
 %% writes it on the calendar of every mini-app installed; a play gives the
 %% agent its dates from its script instead.
 procedure calendar(Stream(Integer)).
@@ -347,12 +393,15 @@ play_sovereign(P, Q, A?, B?) :- superapp_plays # play_sovereign(P?, Q?, A, B).
 %% appendix-guards.tex, "Identity and signature").  The first act carries the
 %% entry's arguments: the person's key and the keys of the peers the person
 %% knows ("An agent learns the keys of its peers from its person"), and, for
-%% a boot's phone, the person's part in its script: superapp_ui/4 (the
-%% super-app with a live person), sg_init/4 (the boots of programs/social), and
+%% a boot's phone, the person's part in its script: superapp/4 (the
+%% super-app on a phone, its person live and its network the layer's),
+%% superapp_ui/4 (the super-app with a live person and its peers scripted in
+%% one heap, for demonstration), sg_init/4 (the boots of programs/social), and
 %% the smartphone of each app's boot (programs/apps).  The person's acts after
 %% the first are the grants of the super-app's person channel, which
-%% superapp_ui/4 reads; a boot's person closes the stream after the first act.
-CoreAct ::= superapp_ui(Key, List(Key))
+%% superapp/4 and superapp_ui/4 read; a boot's person closes the stream after the first act.
+CoreAct ::= superapp(Key, List(Key))
+          ; superapp_ui(Key, List(Key))
           ; sg_init(Key, Constant, List(Key))
           ; gsg_phone(Constant, Key, List(Key))
           ; gsn_phone(Constant, Key, List(Key))
@@ -386,20 +435,47 @@ agent(ch(In, []), ch(N, [])) :- self_key(_), core_start(In?, N?).
 
 %% The entry the person's first act names, on the network input.
 procedure core_start(CoreIn?, NetInStream?).
+core_start([superapp(P, Qs) | Gs], N) :-
+    person_grants(Gs?, Grants), superapp(P?, Qs?, Grants?, N?).
 core_start([superapp_ui(P, Qs) | Gs], N) :-
     person_grants(Gs?, Grants), superapp_ui(P?, Qs?, Grants?, N?).
-core_start([sg_init(P, M, Qs) | _], N) :- sg_init(P?, M?, Qs?, N?).
-core_start([gsg_phone(R, P, Qs) | _], N) :- gsg_phone # gsg_phone(R?, P?, Qs?, N?).
-core_start([gsn_phone(R, P, Qs) | _], N) :- gsn_phone # gsn_phone(R?, P?, Qs?, N?).
-core_start([gkk_phone(R, P, Qs) | _], N) :- gkk_phone # gkk_phone(R?, P?, Qs?, N?).
-core_start([gsnp_phone(R, P, Qs) | _], N) :- gsnp_phone # gsnp_phone(R?, P?, Qs?, N?).
-core_start([gai_phone(R, P, Qs) | _], N) :- gai_phone # gai_phone(R?, P?, Qs?, N?).
-core_start([gc_phone(R, P, Qs) | _], N) :- gc_phone # gc_phone(R?, P?, Qs?, N?).
-core_start([gb_phone(R, P, Qs) | _], N) :- gb_phone # gb_phone(R?, P?, Qs?, N?).
-core_start([coins_phone(R, P, Qs) | _], N) :- coins_phone # coins_phone(R?, P?, Qs?, N?).
-core_start([dated_phone(R, P, Qs) | _], N) :- dated_phone # dated_phone(R?, P?, Qs?, N?).
-core_start([sovereign_phone(R, P, Qs) | _], N) :- sovereign_phone # sovereign_phone(R?, P?, Qs?, N?).
+core_start([sg_init(P, M, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), sg_init(P?, M?, Qs?, N?).
+core_start([gsg_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gsg_phone # gsg_phone(R?, P?, Qs?, N?).
+core_start([gsn_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gsn_phone # gsn_phone(R?, P?, Qs?, N?).
+core_start([gkk_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gkk_phone # gkk_phone(R?, P?, Qs?, N?).
+core_start([gsnp_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gsnp_phone # gsnp_phone(R?, P?, Qs?, N?).
+core_start([gai_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gai_phone # gai_phone(R?, P?, Qs?, N?).
+core_start([gc_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gc_phone # gc_phone(R?, P?, Qs?, N?).
+core_start([gb_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), gb_phone # gb_phone(R?, P?, Qs?, N?).
+core_start([coins_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), coins_phone # coins_phone(R?, P?, Qs?, N?).
+core_start([dated_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), dated_phone # dated_phone(R?, P?, Qs?, N?).
+core_start([sovereign_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), sovereign_phone # sovereign_phone(R?, P?, Qs?, N?).
 core_start([], _).
+
+%% known_peers(Qs): each person the person knows, named by the first act,
+%% declared to the layer as a known peer, declare(peer(Q)), so that the layer
+%% recognises them wherever they are (GSA paper, Appendix "The Operating
+%% System", "Nearby": "The operating system declares to the layer, as a known
+%% peer, every person its person knows"; GLP-Spec appendix-guards,
+%% "Networking seam": "peer(P) gives the networking layer the public key P of
+%% a peer the program knows").  The boots' smartphones run the agent without
+%% the place (os_phone/6, which declares them itself), and from 2026-11-08 the
+%% boot harness opens no trust at spawn (IGLP 45fabfc, "Simulation
+%% realisation"), so a person known is answered by being declared.
+procedure known_peers(List(Key)?).
+known_peers([Q | Qs]) :- ground(Q?) | declare(peer(Q?)), known_peers(Qs?).
+known_peers([]).
 
 %% The person's grants after the first act, onto the super-app's person
 %% channel, which never closes (vGLP, Section 6.3): where the person's stream

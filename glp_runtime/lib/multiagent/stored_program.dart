@@ -1,0 +1,211 @@
+/// The compiled program an agent runs, as its store keeps it beside the key
+/// pair (IGLP 61f3283, Implementation Notes, "Persistence": "the agent's key
+/// pair, the compiled program it runs, the resolvent ..."), so that a restart
+/// that refuses an update restarts the agent under the version it terminated
+/// under (IGLP 61f3283, madglp-spec.tex, Termination and Restart: "otherwise
+/// the update is refused, and the agent restarts under the version it
+/// terminated under").
+///
+/// What the agent runs is three things, each kept:
+///
+///   - The code its goals run, whose byte offsets their program counters are:
+///     the program and the root linked as one, a §cf artefact (IGLP, Code
+///     Format, "Program Artefact"; `codeArtefactFromProgram`).  Its identity
+///     ([codeIdentityOf]) is the one a saved state is held to.
+///   - Its own module value, the artefact `self_module` returns and every goal
+///     of the program carries (IGLP, Implementation Notes, "Self-Module"),
+///     with its name and its directory, where `load_file/2` resolves a name.
+///   - The type scope the module's type-identity tables are built from
+///     ([TypeIdentityTables.source]; wire/type_scope_codec.dart), which the
+///     goals read through `find_type/2` and `find_type/3`, and from which the
+///     tables are built again by the construction that built them.
+///
+/// The format: the magic `GLPP`, a version byte, the code's artefact bytes,
+/// then a flag and, where the program has a module value, its artefact bytes,
+/// its name, its directory or none, its type scope or none, and its opaque
+/// entries.
+library;
+
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart' as crypto;
+
+import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
+import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
+import 'package:glp_runtime/runtime/module_hierarchy.dart' show primitiveScope;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/codec.dart';
+import 'package:glp_runtime/wire/type_scope_codec.dart';
+
+/// The four magic bytes, `GLPP`, and the format version.
+const List<int> storedProgramMagic = [0x47, 0x4C, 0x50, 0x50];
+const int storedProgramVersion = 1;
+
+/// The identity of a code image: SHA-256 over its instruction-set version,
+/// its name, its symbols and its code, which the goals' program counters
+/// index.  A saved state names the code it was saved under by it.
+Uint8List codeIdentityOf(CodeImage image) {
+  final w = WireWriter()
+    ..string(image.isaVersion)
+    ..string(image.moduleName)
+    ..clen(image.symbols.length);
+  for (final sym in image.symbols) {
+    w
+      ..string(sym.signature)
+      ..u8(sym.compiled ? 1 : 0)
+      ..clen(sym.codeOffset)
+      ..clen(sym.codeLength);
+  }
+  w.bytes(image.code);
+  return Uint8List.fromList(crypto.sha256.convert(w.toBytes()).bytes);
+}
+
+/// A compiled program an agent runs: its code, and its module value with the
+/// scope of its tables.
+class StoredProgram {
+  /// The artefact bytes of the code the goals run.
+  final Uint8List code;
+
+  /// The code, loaded for direct byte execution.
+  late final CodeImage image = CodeImage.fromArtefactBytes(code);
+
+  /// [image]'s identity ([codeIdentityOf]).
+  late final Uint8List identity = codeIdentityOf(image);
+
+  final Uint8List? _moduleArtefact;
+  final String _moduleName;
+  final String? _moduleDirectory;
+  final ast.Module? _typeScope;
+  final Map<String, OpaqueEntry> _opaque;
+
+  StoredProgram._(this.code, this._moduleArtefact, this._moduleName,
+      this._moduleDirectory, this._typeScope, this._opaque);
+
+  /// The program an engine compiled: [code] the bytes of its code
+  /// (`codeArtefactFromProgram`), and [module] its module value, whose tables
+  /// carry the scope they were built from.  Throws where they carry none:
+  /// tables derived from an interface say nothing of a scope, and a compiled
+  /// program's goals read its scope.
+  factory StoredProgram.compiled(Uint8List code, rt.ModuleTerm? module) {
+    if (module == null) {
+      return StoredProgram._(code, null, '', null, null, const {});
+    }
+    final tables = module.declaredTypes;
+    ast.Module? scope;
+    var opaque = const <String, OpaqueEntry>{};
+    if (tables != null) {
+      if (tables is! TypeIdentityTables || tables.source == null) {
+        throw StateError('the module ${module.name} carries type-identity '
+            'tables built from no scope, and the store keeps the scope of a '
+            'compiled program');
+      }
+      scope = tables.source;
+      opaque = tables.opaque;
+    }
+    return StoredProgram._(code, (module.artefact as Artefact).toBytes(),
+        module.name, module.directory, scope, opaque);
+  }
+
+  /// The program the store keeps as [bytes] ([toBytes]).
+  factory StoredProgram.fromBytes(Uint8List bytes) {
+    final r = WireReader(bytes);
+    for (final b in storedProgramMagic) {
+      if (r.u8() != b) {
+        throw WireFormatException('no stored program (bad magic)');
+      }
+    }
+    final version = r.u8();
+    if (version != storedProgramVersion) {
+      throw WireFormatException('stored program version $version; this '
+          'runtime reads $storedProgramVersion');
+    }
+    final code = r.bytes();
+    if (r.u8() == 0) {
+      _end(r);
+      return StoredProgram._(code, null, '', null, null, const {});
+    }
+    final artefact = r.bytes();
+    final name = r.string();
+    final directory = r.u8() == 1 ? r.string() : null;
+    final scope = r.u8() == 1 ? readTypeScope(r) : null;
+    final opaque = <String, OpaqueEntry>{};
+    for (var i = r.clen(); i > 0; i--) {
+      final key = r.string();
+      final entry = r.string();
+      opaque[key] = OpaqueEntry(
+          entry: entry, types: [for (var j = r.clen(); j > 0; j--) r.string()]);
+    }
+    _end(r);
+    return StoredProgram._(code, artefact, name, directory, scope, opaque);
+  }
+
+  static void _end(WireReader r) {
+    if (!r.atEnd) {
+      throw WireFormatException('the stored program has bytes past its end');
+    }
+  }
+
+  Uint8List toBytes() {
+    final w = WireWriter();
+    for (final b in storedProgramMagic) {
+      w.u8(b);
+    }
+    w
+      ..u8(storedProgramVersion)
+      ..bytes(code);
+    final artefact = _moduleArtefact;
+    if (artefact == null) {
+      w.u8(0);
+      return w.toBytes();
+    }
+    w
+      ..u8(1)
+      ..bytes(artefact)
+      ..string(_moduleName);
+    final directory = _moduleDirectory;
+    w.u8(directory == null ? 0 : 1);
+    if (directory != null) w.string(directory);
+    final scope = _typeScope;
+    w.u8(scope == null ? 0 : 1);
+    if (scope != null) writeTypeScope(w, scope);
+    w.clen(_opaque.length);
+    for (final MapEntry(:key, :value) in _opaque.entries) {
+      w
+        ..string(key)
+        ..string(value.entry)
+        ..clen(value.types.length);
+      for (final t in value.types) {
+        w.string(t);
+      }
+    }
+    return w.toBytes();
+  }
+
+  /// The program's module value, its tables built again from its scope by
+  /// the construction that built them ([typeIdentityTablesForModule], over
+  /// the language primitives, as [linkedTypeIdentityTables] builds them);
+  /// null where the program has none.
+  late final rt.ModuleTerm? module = _module();
+
+  rt.ModuleTerm? _module() {
+    final artefact = _moduleArtefact;
+    if (artefact == null) return null;
+    final scope = _typeScope;
+    TypeIdentityTables? tables;
+    if (scope != null) {
+      tables = typeIdentityTablesForModule(scope,
+          ancestorScope: primitiveScope());
+      if (_opaque.isNotEmpty) tables = tables.withOpaque(_opaque);
+    }
+    return rt.ModuleTerm(Artefact.fromBytes(artefact),
+        name: _moduleName, declaredTypes: tables, directory: _moduleDirectory);
+  }
+
+  /// The type-identity tables of the program, where its module carries them.
+  TypeIdentityTables? get tables {
+    final t = module?.declaredTypes;
+    return t is TypeIdentityTables ? t : null;
+  }
+}

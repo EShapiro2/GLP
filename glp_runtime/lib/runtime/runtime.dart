@@ -526,6 +526,19 @@ class GlpRuntime {
           if (g.hasProgram) g.id: g.program,
       });
 
+  /// The goals of the resolvent, each with its program counter, the entry of
+  /// the procedure it calls: the queue A and the suspended goals S, a goal
+  /// waiting on a timer or on when_idle among them (IGLP, Definition "Restart"
+  /// and Termination and Restart, "every procedure called by a goal of the
+  /// resolvent").  A goal may be listed more than once.
+  Iterable<GoalRef> get resolventGoals sync* {
+    yield* gq.items;
+    for (final goals in suspended.values) {
+      yield* goals;
+    }
+    yield* _suspendedOn.keys;
+  }
+
   /// Remove a goal from every entry of [suspended] it is in: those of the
   /// readers it waits on, which [_suspendedOn] holds.
   void _removeFromSuspended(GoalRef goal) {

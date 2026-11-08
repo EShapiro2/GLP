@@ -14,7 +14,7 @@
 #   bash programs/sglp/transform.sh --source <src> [--check]
 #                                              print <src>/profiles.glp and <src>/population.glp
 #                                              from the sGLP source in <src>, a directory
-#                                              outside programs/sglp, or with --check compare
+#                                              of its own under programs/sglp, or with --check compare
 #   bash programs/sglp/transform.sh --interface <iface> --source <file> --out <dir> [--check]
 #                                              print <dir>/profiles.glp and <dir>/population.glp
 #                                              from an owner's sGLP source <file> over a
@@ -45,17 +45,20 @@
 # byte for byte the file in place; 1 otherwise, the faults or the differing
 # files named; 2 on a bad argument.
 #
-# With --source <src> it transforms a program whose directory is outside
-# programs/sglp, as CSSN's simulation (Integration's ruling of 2026-10-16 10:52
-# UTC, item 1, with sGLP's agreement of 2026-10-15 21:28 UTC): the sGLP source
+# With --source <src> it transforms a program whose directory is one of its
+# own, not one of the examples' (Integration's ruling of 2026-10-16 10:52 UTC,
+# item 1, with sGLP's agreement of 2026-10-15 21:28 UTC), under programs/sglp,
+# where a simulation of another project's platform lives (sGLP, Udi approving,
+# Code_inbox 2026-11-07 21:21 UTC), as programs/sglp/tests/outside: the sGLP source
 # is <src>'s one file *_sglp.glp, in the term form (README.md, "The term
 # form"), holding the declaration exported procedure source(SglpTerms,
 # SglpTerms) and the unit clause source(V, S) and nothing else but comments; in
 # the same REPL session it calls transform_terms(V, S, Part) for Part profiles
 # and population, V and S the clause's arguments as written, and writes the two
 # parts to <src>, or with --check compares them with those in <src>.  The
-# printed modules call the monitor and name sglp.glp's Span and Slot, which the
-# root programs/self.glp exposes, as it exposes sglp.glp's span/2 to the harness.
+# printed modules call the monitor and name sglp.glp's Span and Slot, which
+# programs/sglp/self.glp exposes to its subtree, <src> among it, as it exposes
+# sglp.glp's span/2 to the harness (TGLP modules.tex, "The -expose directive").
 #
 # With --interface <iface> --source <file> --out <dir> it transforms an owner's
 # sGLP source over a canonical CVA platform (sGLP's task of 2026-10-18 20:50

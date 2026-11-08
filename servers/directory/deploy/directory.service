@@ -1,0 +1,30 @@
+# systemd unit for GDS, the Grassroots Directory Service (GNA Section 7),
+# servers/directory.  Deployed to /etc/systemd/system/directory.service.
+# Runs as the system user `glp` the executable built from the clone at
+# /srv/glp into /srv/directory (README, "The server"): the directory's agent
+# on the headless layer under the directory's own key, at UDP port 9518 and
+# the public address GDS_PUBLIC_ADDRESS, and the web server for its page.
+# Its key, its layer's queue and the store of listings are in /var/lib/glp,
+# outside the clone, so a sweep leaves them be.
+# Caddy, in front (servers/peoplesweb/deploy/Caddyfile), proxies
+# peoplesweb.org/directory to the page.  /etc/glp/directory.env gives
+# GDS_PUBLIC_ADDRESS and the SMTP relay; without SMTP_HOST the verification
+# mails are written to the journal and not sent.
+[Unit]
+Description=GDS, the Grassroots Directory Service, at peoplesweb.org/directory
+After=network.target
+
+[Service]
+User=glp
+Group=glp
+WorkingDirectory=/var/lib/glp
+Environment=HOST=127.0.0.1 PORT=8090 BASE_URL=https://peoplesweb.org DATA=/var/lib/glp/directory.json
+EnvironmentFile=/etc/glp/directory.env
+ExecStart=/srv/directory/bundle/bin/directory_server --identity /var/lib/glp/gds-identity.json --port 9518 --public-address ${GDS_PUBLIC_ADDRESS} --outbound-queue-file /var/lib/glp/gds-queue.json --program /srv/glp/programs/examples/rendezvous/gds_agent.glp --root-self /srv/glp/programs/self.glp
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/var/lib/glp
+
+[Install]
+WantedBy=multi-user.target

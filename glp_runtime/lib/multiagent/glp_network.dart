@@ -273,6 +273,15 @@ abstract class GlpNetwork {
   /// found, with the proximity underlay of discovery.
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
 
+  /// `onPeerLost(pk, underlay)`: fires when an agent reported discovered on
+  /// the proximity underlay [underlay] is no longer discovered on it: "its
+  /// presence is no longer observed and it holds no session on the underlay"
+  /// (GNA cfbfeac, Section 3.1, Discovery).  With [onPeerDiscovered] it is
+  /// behind the stream of `declare(nearby(Underlay, Events))`, `gone(K)`
+  /// (GNA, "The layer functions").  Until 2026-11-08 the interface had none,
+  /// and `gone(K)` was fed from [onPeerDisconnected].
+  void Function(PubKey pk, ProximityUnderlay underlay)? onPeerLost;
+
   /// `setTrustLevel(underlay, level)`: set the cold-call trust level of
   /// proximity underlay [underlay] to [level]; "both levels default to
   /// Closed" (GNA, Trust levels).  Backs `declare(trust(U, L))`.

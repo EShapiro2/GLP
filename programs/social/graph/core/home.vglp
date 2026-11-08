@@ -5,9 +5,9 @@
 %% its questions and the dispatcher --- is home.glp beside this file (glpc
 %% :emit); the compiled module is not edited.
 %%
-%% The four acts are those of GSG paper Section 3: trusting a compiler's key,
-%% installing a certified mini-app, inviting a friend to it, and connecting
-%% with a person.  What the acts produce is the very command stream the
+%% The requests are acts of GSG paper Section 3: trusting a compiler's key,
+%% installing a certified mini-app and inviting a friend to it; befriending
+%% a person is picking them in Nearby, on their card (befriend_card/3); Open place and Close place are GPE:1 (GSA paper, Section 4).  What the acts produce is the very command stream the
 %% super-app's agent reads (agent.glp, agent/4's person input), so the
 %% person's volitions reach the same agent whether they are willed through
 %% the constructs of these questions or written by a play's script.
@@ -41,7 +41,19 @@
 %% informs; the consent is asked by this card only (GSG, 2026-10-14 09:24
 %% UTC, item 1).
 %%
-%% What the super-app tells the person is not a question: superapp/3
+%% befriend_card is a volitional procedure whose interactive type, a card,
+%% is in writer mode, as respond_friend's is: one goal per person nearby whom
+%% the person knows and who is not a friend, each card the person, for the
+%% person to see, and the button befriend; picking it is the person's
+%% request to befriend that person, connect(K), so the person befriends by
+%% picking a person in Nearby and types no key (GSA paper, Appendix "The
+%% Operating System", "Nearby": "the persons nearby the person knows are in
+%% the platform's view, and the person befriends one by picking them there";
+%% GSG's pragma Friendship, "Alice [Befriend]"; GPE's interface pragma
+%% Nearby).  serve offers each person once, Cd the persons offered or friends:
+%% a person whose card stands, or who is a friend, is offered no second card.
+%%
+%% What the super-app tells the person is not a question: superapp/4
 %% (self.glp) sends it to the person on the program's own end of the person
 %% channel, which the dispatcher merges with the constructs' draws.
 %%
@@ -66,11 +78,16 @@ AppName     ::= String.
 Artefact    ::= String.
 
 %% A request: one alternative per request clause of serve --- trust, install,
-%% invite and connect --- with the arguments its clause reads.
+%% invite, Open place and Close place --- with the arguments its clause reads.
+%% No request connects with a person by a key typed: no act of the paper
+%% takes one, a person coming to be known by an encounter, a link or an
+%% introduction, and befriended by picking them in Nearby (befriend_card/3;
+%% GSA #2, 2026-11-08 08:07 UTC, item 2).
 Request ::= trust(CompilerKey)
           ; install(AppName, Artefact)
           ; invite(AppName, Friend)
-          ; connect(Friend).
+          ; open_place
+          ; close_place.
 
 %% The card of a friend who asks to connect: the friend, which the program
 %% writes for the person to see, and the person's answer, yes or no.
@@ -82,6 +99,12 @@ FriendRequest ::= from(Friend, Decision?).
 Introducer ::= Key.
 Other      ::= Key.
 IntroRequest ::= from(Introducer, Other, Decision?).
+
+%% The card of a person nearby whom the person knows: the person, which the
+%% program writes for the person to see, and the button befriend, which the
+%% person picks (GSG's pragma Friendship, "Alice [Befriend]").
+Befriend     ::= befriend.
+NearbyPerson ::= nearby(Friend, Befriend?).
 
 %% =============================================================================
 %% The person's answer to a friend who asks to connect.
@@ -121,6 +144,44 @@ decide_intro(yes, Id, Other, P, [msg(person, Id?, accept_intro(Other?, P?))]).
 decide_intro(no, Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
 
 %% =============================================================================
+%% Befriending a person nearby by picking them.
+%% =============================================================================
+
+%% Show the person a person nearby whom they know, and, on befriend, ask to
+%% befriend them: the person's request to connect, GSG:1.
+procedure (NearbyPerson)*befriend_card(Key?, Key?, Stream(UserInMsg)).
+(nearby(K?, B))*befriend_card(Id, K, Cmds?) :-
+    ground(Id?), ground(K?) |
+    befriend_pick(B?, Id?, K?, Cmds).
+
+procedure befriend_pick(Befriend?, Key?, Key?, Stream(UserInMsg)).
+befriend_pick(befriend, Id, K, [msg(person, Id?, connect(K?))]).
+
+%% offer(Ks, Id, Cd, Cd1, Cmds): a card for each of the persons Ks not in Cd,
+%% the persons offered or friends, Cd1 being Cd with them.
+procedure offer(List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg)).
+offer([K | Ks], Id, Cd, Cd1?, Cmds?) :-
+    ground(K?), ground(Cd?) |
+    in_keys(K?, Cd?, D),
+    offer_one(D?, K?, Ks?, Id?, Cd?, Cd1, Cmds).
+offer([], _, Cd, Cd?, []).
+
+procedure offer_one(Decision?, Key?, List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg)).
+offer_one(yes, _, Ks, Id, Cd, Cd1?, Cmds?) :-
+    offer(Ks?, Id?, Cd?, Cd1, Cmds).
+offer_one(no, K, Ks, Id, Cd, Cd1?, Cmds?) :-
+    ground(K?), ground(Id?) |
+    befriend_card(Id?, K?, C1),
+    offer(Ks?, Id?, [K? | Cd?], Cd1, C2),
+    merge(C1?, C2?, Cmds).
+
+%% in_keys(K, Ks, D): yes where K is one of Ks, no otherwise.
+procedure in_keys(Key?, List(Key)?, Decision).
+in_keys(K, [K1 | _], yes) :- K? =?= K1? | true.
+in_keys(K, [_ | Ks], D?) :- otherwise | in_keys(K?, Ks?, D).
+in_keys(_, [], no).
+
+%% =============================================================================
 %% The person's own acts on their super-app
 %% =============================================================================
 
@@ -132,69 +193,89 @@ exported procedure (Stream(Request)?)*home(Key?, AgentToUserStream?, Stream(User
 
 %% Ask the person for their requests, once, and serve them.
 (Reqs)*home(Id, Outs, Cmds?) :-
-    serve(Reqs?, Id?, Outs?, Cmds).
+    serve(Reqs?, Id?, [], Outs?, Cmds).
 
-%% serve(Reqs, Id, Outs, Cmds): home, with the rest of the person's requests.
-procedure serve(Stream(Request)?, Key?, AgentToUserStream?, Stream(UserInMsg)).
+%% serve(Reqs, Id, Cd, Outs, Cmds): home, with the rest of the person's
+%% requests, Cd the persons nearby offered a card or friends.
+procedure serve(Stream(Request)?, Key?, List(Key)?, AgentToUserStream?, Stream(UserInMsg)).
 
 %% A friend asks to connect: the person answers on a card of their own.
-serve(Reqs, Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?) :-
+serve(Reqs, Id, Cd, [msg(agent, person, befriend(From, P)) | Outs], Cmds?) :-
     ground(Id?), ground(From?) |
     respond_friend(Id?, From?, P?, Answer),
     merge(Answer?, Cmds1?, Cmds),
-    serve(Reqs?, Id?, Outs?, Cmds1).
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds1).
 
 %% A friend introduces the person to another: the person answers on a card of
 %% their own.
-serve(Reqs, Id, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?) :-
+serve(Reqs, Id, Cd, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?) :-
     ground(Id?), ground(From?), ground(Other?) |
     respond_intro(Id?, From?, Other?, P?, Answer),
     merge(Answer?, Cmds1?, Cmds),
-    serve(Reqs?, Id?, Outs?, Cmds1).
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds1).
+
+%% The persons nearby whom the person knows (GPE's interface pragma Nearby):
+%% a card with befriend for each not offered before and not a friend.
+serve(Reqs, Id, Cd, [msg(agent, person, nearby(Ks)) | Outs], Cmds?) :-
+    ground(Id?), ground(Ks?), ground(Cd?) |
+    offer(Ks?, Id?, Cd?, Cd1, Picks),
+    merge(Picks?, Cmds1?, Cmds),
+    serve(Reqs?, Id?, Cd1?, Outs?, Cmds1).
+
+%% A friend: offered no card from now on.
+serve(Reqs, Id, Cd, [msg(agent, person, connected(K)) | Outs], Cmds?) :-
+    ground(Id?), ground(K?), ground(Cd?) |
+    serve(Reqs?, Id?, [K? | Cd?], Outs?, Cmds).
 
 %% Anything else the super-app says is the person's to see, not an ask.
-serve(Reqs, Id, [_ | Outs], Cmds?) :-
+serve(Reqs, Id, Cd, [_ | Outs], Cmds?) :-
     ground(Id?), otherwise |
-    serve(Reqs?, Id?, Outs?, Cmds).
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
-serve(_, _, [], []).
+serve(_, _, _, [], []).
 
 %% Trust a compiler's key: what its certificate signs is then installable.
-serve([trust(Key) | Reqs], Id, Outs, Cmds?) :-
+serve([trust(Key) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(Key?) |
-    trust_act(Key?, Id?, Reqs?, Outs?, Cmds).
+    trust_act(Key?, Id?, Cd?, Reqs?, Outs?, Cmds).
 
 %% Install a certified mini-app: the artefact beside this program is read, its
 %% creator's certification signed over its source identity, and the mini-app
 %% installed under the name the person gives it, with its end of the person
 %% channel on which it will show its person its own screen.
-serve([install(App, Name) | Reqs], Id, Outs, Cmds?) :-
+serve([install(App, Name) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(App?), ground(Name?) |
     load_file(Name?, C),
-    install_act(C?, App?, Id?, Reqs?, Outs?, Cmds).
+    install_act(C?, App?, Id?, Cd?, Reqs?, Outs?, Cmds).
 
 %% Invite a friend to a mini-app installed here.
-serve([invite(App, Friend) | Reqs], Id, Outs, Cmds?) :-
+serve([invite(App, Friend) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(App?), ground(Friend?) |
-    invite_act(App?, Friend?, Id?, Reqs?, Outs?, Cmds).
+    invite_act(App?, Friend?, Id?, Cd?, Reqs?, Outs?, Cmds).
 
-%% Ask a person to connect: the cold call of the social graph.
-serve([connect(Friend) | Reqs], Id, Outs, Cmds?) :-
-    ground(Id?), ground(Friend?) |
-    connect_act(Friend?, Id?, Reqs?, Outs?, Cmds).
+%% Open place and Close place (GPE:1; GSA paper, Section 4, the box GPE, its
+%% interface pragma Open Place, "Alice [Open place] [Close place]"): the
+%% operating system declares the trust of Bluetooth and of the local network
+%% open while the place is open (place.glp).
+serve([open_place | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?) |
+    place_act(open_place, Id?, Cd?, Reqs?, Outs?, Cmds).
+serve([close_place | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?) |
+    place_act(close_place, Id?, Cd?, Reqs?, Outs?, Cmds).
 
 %% The willed acts, each the command it puts on the person's stream.
-procedure trust_act(String?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
-trust_act(Key, Id, Reqs, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :-
-    ground(Key?) | serve(Reqs?, Id?, Outs?, Cmds).
+procedure trust_act(String?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
+trust_act(Key, Id, Cd, Reqs, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :-
+    ground(Key?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
-procedure invite_act(Constant?, Key?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
-invite_act(App, Friend, Id, Reqs, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
-    ground(App?), ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds).
+procedure invite_act(Constant?, Key?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
+invite_act(App, Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
+    ground(App?), ground(Friend?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
-procedure connect_act(Key?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
-connect_act(Friend, Id, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :-
-    ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds).
+procedure place_act(UserContent?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
+place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?]) :-
+    ground(Id?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
 %% install_act(Content, App, Id, Reqs, Outs, Cmds): a certified artefact is
 %% installed under the person's name for it, with the mini-app's end of a
@@ -202,16 +283,16 @@ connect_act(Friend, Id, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]
 %% mini-app's types (GSG paper, Section 3, "What the super-app grants a
 %% mini-app"); anything else is not installed, and the person's stream
 %% carries on.
-procedure install_act(Content?, Constant?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
-install_act(M, App, Id, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?]) :-
+procedure install_act(Content?, Constant?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
+install_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?]) :-
     module(M?) |
     creator_certification(M?, CSig),
     new_channel(Ui, Person),
     hold_person(Person?),
-    serve(Reqs?, Id?, Outs?, Cmds).
-install_act(S, _, Id, Reqs, Outs, Cmds?) :-
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds).
+install_act(S, _, Id, Cd, Reqs, Outs, Cmds?) :-
     string(S?) |
-    serve(Reqs?, Id?, Outs?, Cmds).
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
 %% The creator's certification, signed here over the mini-app's source identity
 %% and the acts of its contract, as the super-app's plays sign it.

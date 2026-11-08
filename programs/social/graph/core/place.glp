@@ -1,0 +1,310 @@
+%% place.glp --- the operating system's Nearby (GSA paper, Appendix "The Operating System", paragraph "Nearby"; the contract GPE, programs/social/graph/GPE.txt, with its implementation pragmas), around today's social-graph agent (agent.glp, agent/4).
+%%
+%% At start the operating system declares the trust of pan and of lan closed, and the nearby streams of the two (GSA paper, Appendix "The Operating System", "Nearby": "At start the operating system declares the trust of pan and of lan closed and, for each of the two, nearby(Underlay, Events) to the layer"), so that Nearby shows the persons known while the place is closed.  The person's acts Open place and Close place are GPE:1: on Open place the operating system declares the trust of pan and of lan open, and on Close place closed (GPE's implementation pragma Open Place; GLP-Spec appendix-guards, "Networking seam", declare(trust(U, L))).  The layer reports the agents nearby over each proximity underlay, seen(K) and gone(K) (GLP-Spec appendix-guards, "Networking seam", nearby(U, S)); the operating system keeps the agents nearby, by underlay and key.  An agent nearby whose key the person does not know, seen while the place is open or nearby when it opens, is a phone whose person opened the place too, and the operating system with the smaller key, by GLP's standard order of terms (@<), puts GPE:2, Encounter, to it (Appendix, "Nearby": "the operating system with the smaller key puts GPE:2 to the platform"): the encounter is guarded by both, so it asks the other for its consent, and the other's operating system gives its person's consent while its place is open and refuses it while closed (GPE's implementation pragma Encounter: "while the place is open gives its person's consent to each encounter, asking nothing"; Appendix, "Nearby": "answers its approval question yes, the place being open").  On the other's yes, or on its own yes to the other's, the two know each other.  A person befriended (GSG:1) or introduced (GKK:3) is known too: the agent tells its person connected(K) when a friend channel is made, and the operating system reads it.  Every person the person knows --- at the start, by an encounter, a befriending or an introduction --- is declared to the layer as a known peer, declare(peer(K)), once, so that the layer recognises them wherever they are (Appendix, "Nearby"; GLP-Spec appendix-guards, "Networking seam": "peer(P) gives the layer the public key P of a peer the program knows").
+%%
+%% Home shows Nearby, the persons nearby whom the person knows (GPE's interface pragma Nearby): the operating system tells the person nearby(Ks), Ks those persons in the order of their keys, whenever the list changes.  Home draws a card for each with the button befriend, and the person befriends one by picking them there (Appendix, "Nearby"; home.vglp, befriend_card/3): GSG:1 as the agent does it today, connect(K).
+%%
+%% The layer's streams of the agents nearby are taken in os_phone/6; a play in one heap gives os_agent/8 its own.
+
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+
+%% An agent nearby, by the proximity underlay over which the layer reports it.
+Near ::= near(Underlay, Key).
+
+%% A presence, with the underlay on which the layer reported it.
+OnPresence ::= on(Underlay, Presence).
+
+%% The person's acts on the place, Open place and Close place (GPE:1), the person's yes to an introduction to a person (GKK:3), and the answer to an encounter this operating system put to another, injected (await_met/4).
+PlaceAct ::= open ; close ; know(Key) ; met(Key, Decision).
+
+%% The place's state: the trust the operating system declared, open while the place is open; the persons the person knows, in the order of their keys; the agents nearby; the persons asked to an encounter whose answer has not come; and the persons nearby last shown.
+PlaceState ::= st(TrustLevel, List(Key), List(Near), List(Key), List(Key)).
+
+%% =============================================================================
+%% The agent with the operating system's Nearby around it
+%% =============================================================================
+
+%% os_agent(Id, Known, UserIn, NetIn, Pan, Lan, Out, NetOut): the agent of the person of key Id, who knows the persons Known at the start; the person's acts on UserIn, the network on NetIn, the layer's presences over the PAN and the LAN on Pan and Lan; what the person is told on Out, the messages to the network on NetOut.  The acts on the place and the encounters go to the place; everything else to the agent, as it does today.
+exported procedure os_agent(Key?, List(Key)?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
+os_agent(Id, Known, UserIn, NetIn, Pan, Lan, Out?, NetOut?) :-
+    ground(Id?), ground(Known?) |
+    split_acts(Id?, UserIn?, AIn, Acts),
+    split_net(NetIn?, ANet, Asks),
+    agent # agent(Id?, AIn?, ANet?, [user_output(AOut), net_output(ANetOut)]),
+    peek(AOut?, AOut1, Friends),
+    on(pan, Pan?, OnPan),
+    on(lan, Lan?, OnLan),
+    merge(OnPan?, OnLan?, Pres),
+    sort_keys(Known?, Known1),
+    place(Id?, st(closed, Known1?, [], [], []), Acts?, Asks?, Friends?, Pres?, POut, PNet),
+    merge(AOut1?, POut?, Out),
+    merge(ANetOut?, PNet?, NetOut).
+
+%% os_phone(Id, Known, UserIn, NetIn, Out, NetOut): os_agent/8 on a phone, the presences the layer's: at start the operating system declares the trust of the two proximity underlays closed, declare(trust(pan, closed)) and declare(trust(lan, closed)), and to the layer a watch on the agents nearby over each, declare(nearby(pan, S)) and declare(nearby(lan, S)) (GLP-Spec appendix-guards, "Networking seam", 210cee1; GSA paper, Appendix "The Operating System", "Nearby": "At start the operating system declares the trust of pan and of lan closed and, for each of the two, nearby(Underlay, Events) to the layer, and reads the stream from then on").
+exported procedure os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
+os_phone(Id, Known, UserIn, NetIn, Out?, NetOut?) :-
+    ground(Id?), ground(Known?) |
+    declare_peers(Known?, Done),
+    closed_after(Done?),
+    declare(nearby(pan, Pan)),
+    declare(nearby(lan, Lan)),
+    os_agent(Id?, Known?, UserIn?, NetIn?, Pan?, Lan?, Out, NetOut).
+
+%% =============================================================================
+%% Splitting the person's acts and the network
+%% =============================================================================
+
+%% The person's acts Open place and Close place go to the place; every other act to the agent, and the person's yes to an introduction to a person, accept_intro(Other, P), to the place as well, know(Other): her yes to the act is her yes to knowing them (GSA paper, Section 4.2, "Whom the Grassroots App knows": "Acquaintance by GKK:2 and introduction by GKK:3 are the cases in which that consent is a clause's: Alice's yes to the act is her yes to knowing the agent"), so the layer recognises the other from then on.
+procedure split_acts(Key?, UserInStream?, UserInStream, Stream(PlaceAct)).
+split_acts(Id, [msg(person, I, open_place) | Ms], As?, [open | Ps?]) :-
+    Id? =?= I? | split_acts(Id?, Ms?, As, Ps).
+split_acts(Id, [msg(person, I, close_place) | Ms], As?, [close | Ps?]) :-
+    Id? =?= I? | split_acts(Id?, Ms?, As, Ps).
+split_acts(Id, [msg(person, I, accept_intro(O, P)) | Ms], [msg(person, I?, accept_intro(O?, P?)) | As?], [know(O?) | Ps?]) :-
+    Id? =?= I?, ground(O?) | split_acts(Id?, Ms?, As, Ps).
+split_acts(Id, [M | Ms], [M? | As?], Ps?) :-
+    otherwise | split_acts(Id?, Ms?, As, Ps).
+split_acts(_, [], [], []).
+
+%% An encounter put to this agent goes to the place; every other message to the agent.
+procedure split_net(NetInStream?, NetInStream, NetInStream).
+split_net([msg(I, encounter(F, D?)) | Ms], As?, [msg(I?, encounter(F?, D)) | Ps?]) :-
+    split_net(Ms?, As, Ps).
+split_net([M | Ms], [M? | As?], Ps?) :-
+    otherwise | split_net(Ms?, As, Ps).
+split_net([], [], []).
+
+%% What the agent tells its person, passed on whole; each friend it tells of, connected(K), to the place as well.
+procedure peek(AgentToUserStream?, AgentToUserStream, Stream(Key)).
+peek([msg(A, P, connected(K)) | Ms], [msg(A?, P?, connected(K?)) | Out?], [K? | Ks?]) :-
+    ground(K?) | peek(Ms?, Out, Ks).
+peek([M | Ms], [M? | Out?], Ks?) :-
+    otherwise | peek(Ms?, Out, Ks).
+peek([], [], []).
+
+%% Each presence with its underlay.
+procedure on(Underlay?, Stream(Presence)?, Stream(OnPresence)).
+on(U, [P | Ps], [on(U?, P?) | Os?]) :- on(U?, Ps?, Os).
+on(_, [], []).
+
+%% =============================================================================
+%% The place
+%% =============================================================================
+
+%% place(Id, St, Acts, Asks, Friends, Pres, Out, Net): the person's acts on the place and the answers to its encounters, the encounters put to it, the friends the agent made, and the layer's presences; what it tells the person, and its messages to the network.
+procedure place(Key?, PlaceState?, Stream(PlaceAct)?, NetInStream?, Stream(Key)?, Stream(OnPresence)?, AgentToUserStream, NetOutStream).
+
+%% Open place (GPE:1): the trust of pan and of lan declared open, and an encounter put to each agent nearby whom the person does not know.
+place(Id, st(closed, Kn, Nr, As, Sh), [open | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    ground(Id?), ground(Kn?), ground(Nr?), ground(As?), ground(Sh?) |
+    declare(trust(pan, open)),
+    declare(trust(lan, open)),
+    strangers(Id?, Nr?, Kn?, As?, Ks),
+    proposing(Ks?, Id?, st(open, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+%% Close place (GPE:1): the trust of pan and of lan declared closed.
+place(Id, st(open, Kn, Nr, As, Sh), [close | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    declare(trust(pan, closed)),
+    declare(trust(lan, closed)),
+    place(Id?, st(closed, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+%% Opening an open place, or closing a closed one, changes nothing.
+place(Id, st(open, Kn, Nr, As, Sh), [open | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    place(Id?, st(open, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+place(Id, st(closed, Kn, Nr, As, Sh), [close | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    place(Id?, st(closed, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% The person said yes to an introduction to K (GKK:3): she knows K.
+place(Id, st(T, Kn, Nr, As, Sh), [know(K) | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    ground(K?) |
+    know(K?, Kn?, Kn1),
+    viewing(Id?, st(T?, Kn1?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% The other consented to the encounter this operating system put to it (GPE:2 commits): the two know each other.
+place(Id, st(T, Kn, Nr, As, Sh), [met(K, yes) | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    ground(K?) |
+    remove_key(K?, As?, As1),
+    know(K?, Kn?, Kn1),
+    viewing(Id?, st(T?, Kn1?, Nr?, As1?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+%% The other refused: its place was not open.  Where it opens, its operating system puts the encounter to this one.
+place(Id, st(T, Kn, Nr, As, Sh), [met(K, no) | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    ground(K?) |
+    remove_key(K?, As?, As1),
+    place(Id?, st(T?, Kn?, Nr?, As1?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% An encounter put to this agent, its place open: the operating system gives the person's consent, asking nothing, and the two know each other.
+place(Id, st(open, Kn, Nr, As, Sh), Acts, [msg(_, encounter(From, yes)) | Asks], Fr, Pres, Out?, Net?) :-
+    ground(From?) |
+    know(From?, Kn?, Kn1),
+    viewing(Id?, st(open, Kn1?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+%% Its place closed: the consent is refused, so that the other does not wait on an answer that will not come.
+place(Id, st(closed, Kn, Nr, As, Sh), Acts, [msg(_, encounter(_, no)) | Asks], Fr, Pres, Out?, Net?) :-
+    place(Id?, st(closed, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% A friend the agent made, by befriending or by an introduction: the person knows them.
+place(Id, st(T, Kn, Nr, As, Sh), Acts, Asks, [K | Fr], Pres, Out?, Net?) :-
+    ground(K?) |
+    know(K?, Kn?, Kn1),
+    viewing(Id?, st(T?, Kn1?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% An agent seen nearby: kept, and, where the place is open and the person does not know it, an encounter put to it.
+place(Id, st(T, Kn, Nr, As, Sh), Acts, Asks, Fr, [on(U, seen(K)) | Pres], Out?, Net?) :-
+    ground(Id?), ground(T?), ground(K?), ground(Kn?), ground(As?) |
+    add_near(U?, K?, Nr?, Nr1),
+    encounter_to(T?, Id?, K?, Kn?, As?, Ks),
+    proposing(Ks?, Id?, st(T?, Kn?, Nr1?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+%% An agent gone: no longer nearby over that underlay.
+place(Id, st(T, Kn, Nr, As, Sh), Acts, Asks, Fr, [on(U, gone(K)) | Pres], Out?, Net?) :-
+    del_near(U?, K?, Nr?, Nr1),
+    viewing(Id?, st(T?, Kn?, Nr1?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% The person's acts end, and with them the Grassroots App: the place tells nothing more and sends nothing more.
+place(_, _, [], _, _, _, [], []).
+
+%% proposing(Ks, Id, St, ...): an encounter put to each of Ks, the reader of its consent awaited on the place's own acts (await_met/4), and the place goes on.
+procedure proposing(List(Key)?, Key?, PlaceState?, Stream(PlaceAct)?, NetInStream?, Stream(Key)?, Stream(OnPresence)?, AgentToUserStream, NetOutStream).
+proposing([K | Ks], Id, st(T, Kn, Nr, As, Sh), Acts, Asks, Fr, Pres, Out?, [msg(K?, encounter(Id?, D)) | Net?]) :-
+    ground(K?), ground(Id?) |
+    await_met(K?, D?, Acts?, Acts1),
+    proposing(Ks?, Id?, st(T?, Kn?, Nr?, [K? | As?], Sh?), Acts1?, Asks?, Fr?, Pres?, Out, Net).
+proposing([], Id, St, Acts, Asks, Fr, Pres, Out?, Net?) :-
+    viewing(Id?, St?, Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% viewing(Id, St, ...): where the persons nearby whom the person knows are not those last shown, the person is told them, nearby(Ks); the place goes on.
+procedure viewing(Key?, PlaceState?, Stream(PlaceAct)?, NetInStream?, Stream(Key)?, Stream(OnPresence)?, AgentToUserStream, NetOutStream).
+viewing(Id, st(T, Kn, Nr, As, Sh), Acts, Asks, Fr, Pres, Out?, Net?) :-
+    ground(Kn?), ground(Nr?), ground(Sh?) |
+    view_of(Kn?, Nr?, V),
+    show(V?, Sh?, Id?, st(T?, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+procedure show(List(Key)?, List(Key)?, Key?, PlaceState?, Stream(PlaceAct)?, NetInStream?, Stream(Key)?, Stream(OnPresence)?, AgentToUserStream, NetOutStream).
+show(V, Sh, Id, St, Acts, Asks, Fr, Pres, Out?, Net?) :-
+    V? =?= Sh? |
+    place(Id?, St?, Acts?, Asks?, Fr?, Pres?, Out, Net).
+show(V, _, Id, st(T, Kn, Nr, As, _), Acts, Asks, Fr, Pres, [msg(agent, person, nearby(V?)) | Out?], Net?) :-
+    otherwise, ground(V?) |
+    place(Id?, st(T?, Kn?, Nr?, As?, V?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
+%% await_met(K, D, Acts, Acts1): the other's consent to the encounter put to K, injected into the place's acts once it is known, met(K, D).
+procedure await_met(Key?, Decision?, Stream(PlaceAct)?, Stream(PlaceAct)).
+await_met(K, yes, As, [met(K?, yes) | As?]).
+await_met(K, no, As, [met(K?, no) | As?]).
+await_met(K, D, [A | As], [A? | As1?]) :- await_met(K?, D?, As?, As1).
+await_met(_, _, [], []).
+
+%% =============================================================================
+%% The lists
+%% =============================================================================
+
+%% encounter_to(T, Id, K, Kn, As, Ks): [K] where the place is open and K is greater than this agent's key, not known and not asked; [] otherwise.
+procedure encounter_to(TrustLevel?, Key?, Key?, List(Key)?, List(Key)?, List(Key)).
+encounter_to(open, Id, K, Kn, As, Ks?) :-
+    ground(Kn?), ground(As?) |
+    strangers(Id?, [near(pan, K?)], Kn?, As?, Ks).
+encounter_to(closed, _, _, _, _, []).
+
+%% strangers(Id, Nr, Kn, As, Ks): the keys of the agents nearby, Nr, that are greater than Id, by GLP's standard order of terms, not known, Kn, and not asked, As, each once: of two strangers nearby each other, the one with the smaller key puts the encounter (Appendix, "Nearby").
+procedure strangers(Key?, List(Near)?, List(Key)?, List(Key)?, List(Key)).
+strangers(Id, [near(_, K) | Ns], Kn, As, Ks?) :-
+    ground(Id?), ground(K?), ground(Kn?), ground(As?) |
+    in_keys(K?, Kn?, D1),
+    in_keys(K?, As?, D2),
+    stranger(D1?, D2?, Id?, K?, Ns?, Kn?, As?, Ks).
+strangers(_, [], _, _, []).
+
+procedure stranger(Decision?, Decision?, Key?, Key?, List(Near)?, List(Key)?, List(Key)?, List(Key)).
+stranger(no, no, Id, K, Ns, Kn, As, [K? | Ks?]) :-
+    Id? @< K?, ground(K?) |
+    strangers(Id?, Ns?, Kn?, [K? | As?], Ks).
+stranger(_, _, Id, _, Ns, Kn, As, Ks?) :-
+    otherwise |
+    strangers(Id?, Ns?, Kn?, As?, Ks).
+
+%% view_of(Kn, Nr, V): the persons known, Kn, that are nearby, Nr, in the order of Kn.
+procedure view_of(List(Key)?, List(Near)?, List(Key)).
+view_of([K | Ks], Nr, V?) :-
+    ground(K?), ground(Nr?) |
+    is_near(K?, Nr?, D),
+    view_step(D?, K?, Ks?, Nr?, V).
+view_of([], _, []).
+
+procedure view_step(Decision?, Key?, List(Key)?, List(Near)?, List(Key)).
+view_step(yes, K, Ks, Nr, [K? | V?]) :- view_of(Ks?, Nr?, V).
+view_step(no, _, Ks, Nr, V?) :- view_of(Ks?, Nr?, V).
+
+procedure is_near(Key?, List(Near)?, Decision).
+is_near(K, [near(_, K1) | _], yes) :- K? =?= K1? | true.
+is_near(K, [_ | Ns], D?) :- otherwise | is_near(K?, Ns?, D).
+is_near(_, [], no).
+
+procedure in_keys(Key?, List(Key)?, Decision).
+in_keys(K, [K1 | _], yes) :- K? =?= K1? | true.
+in_keys(K, [_ | Ks], D?) :- otherwise | in_keys(K?, Ks?, D).
+in_keys(_, [], no).
+
+%% know(K, Kn, Kn1): K among the persons the person knows, Kn1, in the order of their keys; a person not known before is declared to the layer as a known peer, declare(peer(K)) (Appendix, "Nearby": "The operating system declares to the layer, as a known peer, every person its person knows").
+procedure know(Key?, List(Key)?, List(Key)).
+know(K, Kn, Kn1?) :-
+    ground(K?), ground(Kn?) |
+    in_keys(K?, Kn?, D),
+    know_step(D?, K?, Kn?, Kn1).
+
+procedure know_step(Decision?, Key?, List(Key)?, List(Key)).
+know_step(yes, _, Kn, Kn?).
+know_step(no, K, Kn, Kn1?) :-
+    ground(K?) |
+    declare(peer(K?)),
+    insert_key(K?, Kn?, Kn1).
+
+%% declare_peers(Ks, Done): each of the persons known at the start, Ks, declared to the layer as a known peer, and then Done (the root's Done).
+procedure declare_peers(List(Key)?, Done).
+declare_peers([K | Ks], Done?) :-
+    ground(K?) |
+    declare(peer(K?)),
+    declare_peers(Ks?, Done).
+declare_peers([], done).
+
+%% closed_after(Done): once the persons known at the start are declared, the trust of pan and of lan declared closed, so that no message of a person known is refused in between.
+procedure closed_after(Done?).
+closed_after(done) :-
+    declare(trust(pan, closed)),
+    declare(trust(lan, closed)).
+
+%% insert_key(K, Ks, Ks1): K in the keys Ks, kept in their order, once.
+procedure insert_key(Key?, List(Key)?, List(Key)).
+insert_key(K, [K1 | Ks], [K1? | Ks?]) :- K? =?= K1? | true.
+insert_key(K, [K1 | Ks], [K?, K1? | Ks?]) :- K? @< K1? | true.
+insert_key(K, [K1 | Ks], [K1? | Ks1?]) :- otherwise | insert_key(K?, Ks?, Ks1).
+insert_key(K, [], [K?]).
+
+procedure sort_keys(List(Key)?, List(Key)).
+sort_keys(Ks, S?) :- sort_into(Ks?, [], S).
+
+procedure sort_into(List(Key)?, List(Key)?, List(Key)).
+sort_into([K | Ks], Acc, S?) :- insert_key(K?, Acc?, Acc1), sort_into(Ks?, Acc1?, S).
+sort_into([], Acc, Acc?).
+
+procedure remove_key(Key?, List(Key)?, List(Key)).
+remove_key(K, [K1 | Ks], Ks?) :- K? =?= K1? | true.
+remove_key(K, [K1 | Ks], [K1? | Ks1?]) :- otherwise | remove_key(K?, Ks?, Ks1).
+remove_key(_, [], []).
+
+%% add_near(U, K, Nr, Nr1): K nearby over U, once.
+procedure add_near(Underlay?, Key?, List(Near)?, List(Near)).
+add_near(U, K, Nr, Nr1?) :-
+    ground(U?), ground(K?), ground(Nr?) |
+    is_near_on(U?, K?, Nr?, D),
+    add_near_step(D?, U?, K?, Nr?, Nr1).
+
+procedure add_near_step(Decision?, Underlay?, Key?, List(Near)?, List(Near)).
+add_near_step(yes, _, _, Nr, Nr?).
+add_near_step(no, U, K, Nr, [near(U?, K?) | Nr?]).
+
+procedure is_near_on(Underlay?, Key?, List(Near)?, Decision).
+is_near_on(U, K, [near(U1, K1) | _], yes) :- U? =?= U1?, K? =?= K1? | true.
+is_near_on(U, K, [_ | Ns], D?) :- otherwise | is_near_on(U?, K?, Ns?, D).
+is_near_on(_, _, [], no).
+
+%% del_near(U, K, Nr, Nr1): K no longer nearby over U.
+procedure del_near(Underlay?, Key?, List(Near)?, List(Near)).
+del_near(U, K, [near(U1, K1) | Ns], Ns?) :- U? =?= U1?, K? =?= K1? | true.
+del_near(U, K, [N | Ns], [N? | Ns1?]) :- otherwise | del_near(U?, K?, Ns?, Ns1).
+del_near(_, _, [], []).

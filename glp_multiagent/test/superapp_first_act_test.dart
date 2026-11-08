@@ -1,4 +1,4 @@
-/// The Grassroots Super-App started as main_superapp.dart starts it: the agent
+/// The demonstration started as main_superapp_ui.dart starts it: the agent
 /// from agent(ch(_?,_),ch(_?,_)), every agent's initial goal, which
 /// programs/social/graph/core's agent/2 answers, and, at the agent's first
 /// start, the application's act on the person channel that starts the
@@ -40,7 +40,7 @@ void main() {
     // Home's request form, drawn on the person channel.
     bool drawnHome() => agents.notes['alice']!.any((t) {
           final s = formatTerm(t);
-          return s.contains('stream_request_r') && s.contains('connect');
+          return s.contains('stream_request_r') && s.contains('open_place');
         });
     await agents.until('home drawn', drawnHome);
     expect(drawnHome(), isTrue);

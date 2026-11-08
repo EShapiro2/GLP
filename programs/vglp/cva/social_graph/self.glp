@@ -46,7 +46,7 @@ Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
            ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).
@@ -74,10 +74,10 @@ imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-%% play_refresh: alice establishes her identity and, once she sees it, asks for her screen to be redrawn: "On the answer refresh the agent goal writes its view again and asks the next request question" (vGLP e22e2ad, Section 5.4, "The compilation").  She then proposes acquaint, the next request question being open.
+%% play_refresh: alice establishes her identity and, once she sees it, grants refresh, an Input addressed to no construct, on which the dispatcher has every construct, and construct 0, draw again what it last drew, so the screen is redrawn whole, the agent writing nothing on it (vGLP d433f71, Section 6.3; Section 5.4, "The compilation": the request type has no alternative refresh).  She then proposes acquaint, the request question still open.
 exported procedure play_refresh(Stream(_), Stream(_), Stream(Sent(Cargo))).
 play_refresh(LA?, LB?, N?) :-
-    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), req(refresh),
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)), refresh,
           own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(alice, bob), yes)],
          LA, LB, N).

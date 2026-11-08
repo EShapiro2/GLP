@@ -2,8 +2,8 @@
 %% declaration of poll_sglp.glp, one agent, its initial goal polls/3 of
 %% poll.glp with K asks, and its person process (population.glp, person/8)
 %% reading polls/3's ask stream in the dispatcher's place (sGLP's paper,
-%% Section 3, Definition "Simulation Program"); the monitor, which the root
-%% programs/self.glp exposes, with the run's seed and the horizon in seconds;
+%% Section 3, Definition "Simulation Program"); the monitor, which
+%% programs/sglp/self.glp exposes, with the run's seed and the horizon in seconds;
 %% and the log's sink, send_to_user/1, which prints each entry on its own line
 %% and the monitor's clock last.
 

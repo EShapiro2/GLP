@@ -76,7 +76,7 @@ Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; dawn(Peer) ; mint_coin(Pee
            ; mint_bond(Peer, Integer, Integer)
            ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
            ; redeem_bc(Peer, Peer, Integer, Peer).
-Request  ::= propose(Proposal) ; refresh.
+Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
 Vote     ::= yes ; no(Reason).

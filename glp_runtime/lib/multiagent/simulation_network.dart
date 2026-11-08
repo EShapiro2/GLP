@@ -83,8 +83,11 @@ class NetworkDirectory {
   );
 }
 
-/// A connectivity event the router emits to a client.
-enum ConnectivityEvent { connected, disconnected, discovered }
+/// A connectivity event the router emits to a client: a session's
+/// connection and disconnection, and an agent's discovery and loss on a
+/// proximity underlay, `onPeerDiscovered(pk)` and `onPeerLost(pk)` (GNA
+/// cfbfeac, Section 3.1, Discovery).
+enum ConnectivityEvent { connected, disconnected, discovered, lost }
 
 /// A message queued in the router (while cut or held), preserving direction.
 class _PendingDelivery {
@@ -115,8 +118,25 @@ class SimulationRouter {
   /// level); both levels default to Closed" (GLP-Networking-API, Trust
   /// levels).  An agent's layer sets its own when the agent declares one with
   /// declare(trust(U, L)) ([SimulationNetworkClient.setTrustLevel] forwards it
-  /// here), and the boot harness sets the PAN level Open for the plays.
+  /// here); "The harness sets no trust level at spawn" (IGLP 45fabfc,
+  /// "Simulation realisation").  Until 2026-11-08 the boot harness set the
+  /// PAN level Open at every spawn.
   final Map<String, Map<ProximityUnderlay, TrustLevel>> _trust = {};
+
+  /// Whether every agent of the boot is ready ([bootComplete]): before it no
+  /// agent has an isolate to report a discovery to.
+  bool _booted = false;
+
+  /// The agents each agent has been reported discovered on the PAN and not
+  /// since lost, as `a>b`, b discovered by a.  "A nearby declaration on the
+  /// PAN is given seen for an adjacent agent the declaring agent has declared
+  /// a peer, and for any other adjacent agent once the PAN trust levels of
+  /// both are open, at the moment the second opens; it is given gone when the
+  /// harness cuts the adjacency" (IGLP 45fabfc, "Simulation realisation"):
+  /// the router reports discovery, `onPeerDiscovered(pk)`, at the moment the
+  /// condition comes to hold, and loss, `onPeerLost(pk)`, when the harness
+  /// cuts the pair (GNA cfbfeac, Section 3.1).
+  final Set<String> _discovered = {};
 
   /// Per-agent set of ids this agent has contacted (sent to). Used for the
   /// Closed first-contact rule.
@@ -136,6 +156,21 @@ class SimulationRouter {
 
   /// Directed queues of deferred deliveries, keyed by `from>to`.
   final Map<String, List<_PendingDelivery>> _queues = {};
+
+  /// Directed queues of first contacts the receiver has not answered, keyed
+  /// by `from>to`: "under closed, first contact from an agent not declared a
+  /// peer is not answered" (IGLP, "Simulation realisation").  Not answered is
+  /// not lost: the sender's layer keeps a message it has saved for delivery
+  /// and delivers it once a session with the peer exists (GNA, Section 2.9,
+  /// send: "completes once the message is saved for delivery"; Section 2.11,
+  /// fair message delivery), and the receiver comes to answer the sender when
+  /// it declares it a peer, opens its PAN, or contacts it itself.  So a
+  /// message a Closed receiver does not answer waits here, in order, and is
+  /// routed when the receiver answers its sender ([_answer]).  Until
+  /// 2026-11-08 it was dropped, so a first contact that reached the router
+  /// before the receiver's declaration was lost, and the boot harness set
+  /// every agent's PAN Open at its spawn.
+  final Map<String, List<_PendingDelivery>> _unanswered = {};
 
   int _nextMessageId = 1;
 
@@ -167,6 +202,18 @@ class SimulationRouter {
   /// Definition "Seam Predicates"), or what the boot harness sets.
   void setTrustLevel(String id, ProximityUnderlay underlay, TrustLevel level) {
     _trust.putIfAbsent(id, _closed)[underlay] = level;
+    // The PAN opened at [id]: every adjacent agent whose PAN is open too is
+    // discovered by each, at the moment the second opens.
+    if (underlay == ProximityUnderlay.pan && level == TrustLevel.open) {
+      for (final other in directory.ids.toList()) {
+        _discover(id, other);
+        _discover(other, id);
+      }
+      // Open, [id] answers every first contact it left unanswered.
+      for (final other in directory.ids.toList()) {
+        _answer(other, id);
+      }
+    }
   }
 
   /// Agent [id]'s cold-call trust level of [underlay]; Closed for an agent the
@@ -180,6 +227,14 @@ class SimulationRouter {
   /// putKnownPeer(pk) (GNA, "Known Peers").
   void putKnownPeer(String id, PubKey pk) {
     _known.putIfAbsent(id, () => <String>{}).add(pk.hex);
+    // A peer [id] declared, adjacent, is discovered by [id] (IGLP 45fabfc).
+    final other = directory.idOf(pk);
+    if (other != null) {
+      _discover(id, other);
+      // A declared peer is answered: its first contacts [id] left
+      // unanswered are routed.
+      _answer(other, id);
+    }
   }
 
   /// Remove [pk] from agent [id]'s known-peer set: what its layer does on
@@ -211,18 +266,59 @@ class SimulationRouter {
     _adjacentPairs.add(_pair(a, b));
   }
 
-  /// Fire the post-boot connectivity: every ordered adjacent pair connects and
-  /// is discovered, once all agents have booted.
+  /// Fire the post-boot connectivity: every ordered adjacent pair connects,
+  /// once all agents have booted, and each agent discovers each adjacent
+  /// agent the discovery condition already holds of ([_discover]).  Until
+  /// 2026-11-08 every adjacent pair was discovered here too, whatever its
+  /// trust and its known peers.
   void bootComplete() {
+    _booted = true;
     final ids = directory.ids.toList();
     for (final a in ids) {
       for (final b in ids) {
         if (a == b || !isAdjacent(a, b)) continue;
         final pkB = directory.pkOf(b)!;
-        onConnectivity?.call(a, pkB, Underlay.pan, ConnectivityEvent.discovered);
         onConnectivity?.call(a, pkB, Underlay.pan, ConnectivityEvent.connected);
       }
     }
+    for (final a in ids) {
+      for (final b in ids) {
+        _discover(a, b);
+      }
+    }
+  }
+
+  /// Whether [a] discovers [b] on the PAN: [b] adjacent to [a] and the pair
+  /// not cut, and [a] has declared [b] a peer, or the PAN trust levels of
+  /// both are open (IGLP 45fabfc, "Simulation realisation").
+  bool _discoverable(String a, String b) {
+    if (a == b || !isAdjacent(a, b) || _cutPairs.contains(_pair(a, b))) {
+      return false;
+    }
+    final pkB = directory.pkOf(b);
+    if (pkB == null) return false;
+    return isKnownPeer(a, pkB) ||
+        (trustLevelOf(a, ProximityUnderlay.pan) == TrustLevel.open &&
+            trustLevelOf(b, ProximityUnderlay.pan) == TrustLevel.open);
+  }
+
+  /// Report [b] discovered to [a] on the PAN, once, where the condition
+  /// holds and the boot is complete.
+  void _discover(String a, String b) {
+    if (!_booted || _discovered.contains('$a>$b') || !_discoverable(a, b)) {
+      return;
+    }
+    _discovered.add('$a>$b');
+    onConnectivity?.call(
+        a, directory.pkOf(b)!, Underlay.pan, ConnectivityEvent.discovered);
+  }
+
+  /// Report [b] lost to [a] on the PAN, where [a] discovered it.
+  void _lose(String a, String b) {
+    if (!_discovered.remove('$a>$b')) return;
+    final pkB = directory.pkOf(b);
+    if (pkB == null) return;
+    onConnectivity?.call(a, pkB, Underlay.pan, ConnectivityEvent.lost);
   }
 
   // --- Harness controls ---
@@ -232,6 +328,9 @@ class SimulationRouter {
   void cut(String a, String b) {
     _cutPairs.add(_pair(a, b));
     _emitBoth(a, b, ConnectivityEvent.disconnected);
+    // "gone when the harness cuts the adjacency" (IGLP 45fabfc).
+    _lose(a, b);
+    _lose(b, a);
   }
 
   /// Reverse [cut]: fires connect on both sides and flushes queued messages in
@@ -239,6 +338,9 @@ class SimulationRouter {
   void restore(String a, String b) {
     _cutPairs.remove(_pair(a, b));
     _emitBoth(a, b, ConnectivityEvent.connected);
+    // Adjacent again: each discovers the other where the condition holds.
+    _discover(a, b);
+    _discover(b, a);
     _flush(a, b, reverse: false);
   }
 
@@ -275,6 +377,9 @@ class SimulationRouter {
   /// and hold policy. Assigns a fresh messageId.
   void routeSend(String fromId, String toId, Uint8List payload) {
     _contacted.putIfAbsent(fromId, () => <String>{}).add(toId);
+    // [fromId] contacts [toId]: it answers [toId]'s first contacts it left
+    // unanswered, before this send is routed.
+    _answer(toId, fromId);
 
     final fromPk = directory.pkOf(fromId);
     final toPk = directory.pkOf(toId);
@@ -282,8 +387,8 @@ class SimulationRouter {
 
     if (!isAdjacent(fromId, toId)) return; // unreachable: drop
 
-    // The Closed first-contact rule --- a Closed agent receives no first contact
-    // from an agent it has never contacted --- under the level of the
+    // The Closed first-contact rule --- a Closed agent answers no first
+    // contact from an agent it has never contacted --- under the level of the
     // underlay the encounter is on.  Every encounter here is a PAN one (IGLP
     // appendix-implementation-notes.tex, Simulation realisation: "every agent a
     // PAN peer of every other", "the reported underlay is the PAN
@@ -295,13 +400,48 @@ class SimulationRouter {
     // closed, first contact from an agent not declared a peer is not
     // answered" (IGLP, "Simulation realisation"); until 2026-10-11 the
     // interface had no putKnownPeer and the router no known-peer set.
-    if (trustLevelOf(toId, ProximityUnderlay.pan) == TrustLevel.closed &&
-        !(_contacted[toId]?.contains(fromId) ?? false) &&
-        !isKnownPeer(toId, fromPk)) {
+    final messageId = '${_nextMessageId++}';
+    // A first contact the receiver does not answer waits until it does, as
+    // do the sender's later messages to it, in order ([_unanswered]).
+    if (!_answers(toId, fromId) ||
+        (_unanswered['$fromId>$toId']?.isNotEmpty ?? false)) {
+      _unanswered
+          .putIfAbsent('$fromId>$toId', () => [])
+          .add(_PendingDelivery(fromId, toId, payload, messageId));
       return;
     }
+    _route(_PendingDelivery(fromId, toId, payload, messageId));
+  }
 
-    final messageId = '${_nextMessageId++}';
+  /// Whether [toId] answers a contact from [fromId] on the PAN: its PAN is
+  /// Open, or it has contacted [fromId], or it has declared [fromId] a peer.
+  bool _answers(String toId, String fromId) {
+    final fromPk = directory.pkOf(fromId);
+    if (fromPk == null) return false;
+    return trustLevelOf(toId, ProximityUnderlay.pan) == TrustLevel.open ||
+        (_contacted[toId]?.contains(fromId) ?? false) ||
+        isKnownPeer(toId, fromPk);
+  }
+
+  /// Route the first contacts [fromId] made to [toId] that [toId] left
+  /// unanswered, in order, where [toId] now answers [fromId].
+  void _answer(String fromId, String toId) {
+    final key = '$fromId>$toId';
+    final waiting = _unanswered[key];
+    if (waiting == null || !_answers(toId, fromId)) return;
+    _unanswered.remove(key);
+    for (final p in waiting) {
+      _route(p);
+    }
+  }
+
+  /// A message answered: queued where its pair is cut or held, delivered
+  /// otherwise.
+  void _route(_PendingDelivery p) {
+    final fromId = p.fromId, toId = p.toId, payload = p.payload;
+    final messageId = p.messageId;
+    final fromPk = directory.pkOf(fromId);
+    if (fromPk == null) return;
     final pairKey = _pair(fromId, toId);
 
     if (_cutPairs.contains(pairKey) || _heldPairs.contains(pairKey)) {

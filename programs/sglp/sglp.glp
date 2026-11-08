@@ -3,8 +3,9 @@
 %% at sGLP 2a15405; sGLP's answers of 2026-10-16 11:25 and 12:32 UTC): the
 %% units of a horizon, the slot in which a rated goal receives the writer of
 %% its answer, and the term form.  programs/sglp/self.glp exposes it to the
-%% subtree, and the root programs/self.glp beside sglp#monitor, for a
-%% simulation outside programs/sglp (transform.sh --source).  An exposed
+%% subtree, where every simulation lives, an owner's among them (sGLP #11,
+%% Code_inbox 2026-11-07 21:21 UTC, Udi approving); the root programs/self.glp
+%% exposed it too until 2026-11-08 (GLP #13, 21:07 and 21:19 UTC).  An exposed
 %% module lifts its exported procedures and the types their signatures carry
 %% (TGLP modules.tex, "The -expose directive"), so each type here is carried
 %% by a procedure exported here: Span by span/2, Slot by fill/2, SglpTerms by

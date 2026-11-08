@@ -33,8 +33,8 @@
 /// runtime's interface keeps the underlay parameter of `setTrustLevel`, which
 /// `declare(trust(U, L))` takes, so this glue maps `declare(trust(pan|lan, Level))`
 /// to that sub-object's `setTrustLevel(Level)`; `getPeers` gathers both
-/// proximity sub-objects' peers, and `onPeerDiscovered` the discoveries of
-/// both.  A trust declaration for an underlay the layer does not run finds
+/// proximity sub-objects' peers, `onPeerDiscovered` the discoveries of
+/// both, and `onPeerLost` the losses of both.  A trust declaration for an underlay the layer does not run finds
 /// no sub-object and does nothing (GNA §2.2).  Any other function of an
 /// underlay the layer does not run finds no sub-object and throws
 /// [UnsupportedError], as the runtime's interface has a realisation do for a
@@ -213,6 +213,25 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
     _onPeerDiscovered = cb;
     for (final underlay in glp.ProximityUnderlay.values) {
       _proximity(underlay)?.onPeerDiscovered =
+          cb == null ? null : (pk) => cb(_key(pk), underlay);
+    }
+  }
+
+  void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)? _onPeerLost;
+
+  /// `onPeerLost(pk)` of both proximity sub-objects, each with its underlay
+  /// (GNA cfbfeac, Section 3.1: "onPeerDiscovered and onPeerLost behind the
+  /// stream of declare(nearby(Underlay, Events))"), as [onPeerDiscovered].
+  @override
+  void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)?
+      get onPeerLost => _onPeerLost;
+
+  @override
+  set onPeerLost(
+      void Function(glp.PubKey pk, glp.ProximityUnderlay underlay)? cb) {
+    _onPeerLost = cb;
+    for (final underlay in glp.ProximityUnderlay.values) {
+      _proximity(underlay)?.onPeerLost =
           cb == null ? null : (pk) => cb(_key(pk), underlay);
     }
   }

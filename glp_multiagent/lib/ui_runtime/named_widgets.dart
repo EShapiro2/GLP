@@ -1164,7 +1164,10 @@ class SocialAsk {
   final GList? at;
   final RequestOffers offers;
   final void Function(GTerm path, GTerm raw) grant;
-  const SocialAsk(this.me, this.at, this.offers, this.grant);
+
+  /// The person's refresh, a grant addressed to no construct ([PersonRefresh]); null where the screen gives none.
+  final VoidCallback? onRefresh;
+  const SocialAsk(this.me, this.at, this.offers, this.grant, [this.onRefresh]);
 
   /// Whether the question is open and its type offers [f] of arity [n].
   bool can(String f, int n) => at != null && offers.has(f, n);
@@ -1172,8 +1175,8 @@ class SocialAsk {
   /// Answer the question with the request `propose(P)`, as the default widget of the request type grants it: the form `propose` holding the form of `P`.
   void propose(GTerm p) => grant(at!, GStruct('propose', [p]));
 
-  /// Answer the question with the request `refresh`: "a person asks for it to redraw their screen" (vGLP e22e2ad, Section 5.4, "The compilation").
-  void refresh() => grant(at!, const GAtom('refresh'));
+  /// Grant `refresh` on the person channel, addressed to no construct: the request type has no alternative refresh, and on the grant the dispatcher has every construct draw again what it last drew (vGLP d433f71, Sections 5.4 and 6.3).
+  void refresh() => onRefresh?.call();
 
   /// A speech act of the text [text], signed by the person: "speech(utterance(S), P) is the text S by P" (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 4), as the default widget of Speech forms it from its fields, a text field and a peer field.
   GTerm say(String text) => GStruct('speech', [
@@ -1227,7 +1230,8 @@ Widget socialMenu(
     ask: state == null
         ? null
         : SocialAsk(
-            state.me, questionAt(view), RequestOffers.of(construct.widget), grant),
+            state.me, questionAt(view), RequestOffers.of(construct.widget), grant,
+            PersonRefresh.maybeOf(context)?.refresh),
   );
 }
 
@@ -1291,7 +1295,7 @@ class _SocialTabState extends State<SocialTab> {
     return _worded(context, s);
   }
 
-  /// The person's name, and the request `refresh`, "drawn as the construct family chooses, by a gesture or an icon, with no word" (vGLP e22e2ad, Section 6.2): an icon, where the question is open.
+  /// The person's name, and the refresh, "a gesture or an icon, as the construct family chooses, with no word" (vGLP d433f71, Section 6.2): an icon, where the screen gives the person's refresh ([PersonRefresh]), granting refresh whether or not the request question is open.
   Widget _name(BuildContext context, GTerm me, {VoidCallback? refresh}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
@@ -1350,7 +1354,7 @@ class _SocialTabState extends State<SocialTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (first && ask != null)
-          _name(context, ask.me, refresh: ask.at == null ? null : ask.refresh),
+          _name(context, ask.me, refresh: ask.onRefresh == null ? null : ask.refresh),
         if (first)
           for (var i = s.notices.length - 1; i >= 0; i--)
             _wordedNotice(s.notices[i], i, o),

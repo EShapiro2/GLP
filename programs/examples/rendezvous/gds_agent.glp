@@ -1,0 +1,324 @@
+%% gds_agent.glp - the directory's agent
+%%
+%% The agent of a directory, GNA Section 7, "Grassroots Directory Service",
+%% the contract GDS (GDS.txt beside this file), written by hand from the
+%% contract and the section as rv_agent.glp is from GRV.  It runs on the
+%% headless layer under the directory's own key, hosted by servers/directory
+%% (bin/directory_server.dart), which holds the listings and their links in its
+%% store, sends the verification mail and serves the page (GNA Section 7,
+%% "Hosting": "a headless layer under its own key ... with a web server for its
+%% page and a mail server for its verification messages").
+%%
+%% The messages (GNA Section 7, "The messages"), each a cold call over the WAN
+%% from a person's Grassroots App:
+%%   list(A, Signed, Supply, Reply)   Signed the term listing(A, Email, Name,
+%%       Visibility) signed by A, Name a string or none, Visibility listed or
+%%       unlisted.  Admitted where signature/2 reports it signed by A over a
+%%       listing naming A; the host then sends the verification mail, and
+%%       Reply = verify, or, the host refusing (one mail per address per hour),
+%%       Reply = rejected and Supply closed.  Refused at once, Reply =
+%%       rejected, where the signature is not A's over such a term.
+%%       Once the mail's link is opened, the directory asks A's app for links
+%%       on Supply, more(N): the host says how many, ask(A, N), and the agent
+%%       writes more(N) on the Supply of A's latest list.  A person has one
+%%       listing ("Alice may list herself"), so A's latest list takes the
+%%       place of the one before, whose Supply is closed.
+%%   supply(A, Links)   links of A's, each an invitation link registered with
+%%       A's rendezvous server (GRV:2).  The agent keeps a link only where
+%%       signature/2 reports it signed by A over invitation(A, Rv, RvAddr,
+%%       Serial, Expiry), and gives the host the links kept, each with its
+%%       expiry; the host keeps the unexpired ones in A's buffer.
+%%   unlist(A, Signed, Reply)   Signed the term unlist(A) signed by A: admitted
+%%       where signature/2 reports it so; the listing ends and the agent closes
+%%       A's Supply.  The answer Reply: GNA Section 7 names none, and it waits
+%%       on GNA (Cloud #8 to Code, 2026-11-08 15:50 UTC, point 1); the agent
+%%       holds Reply unassigned meanwhile, in its pending list.
+%%
+%% The agent and its host, over the person channel: the host's commands come
+%% in on the person stream, the agent's reports go out by send_to_user/1 in
+%% the order the agent makes them.
+%%   to the host:   listing(N, A, Email, Name, Visibility), N the agent's
+%%                  number for the list request, Name name(S) or none;
+%%                  links(A, Links), Links a list of link(Signed, Expiry);
+%%                  unlisting(A).
+%%   from the host: mailed(N), the mail of request N sent; refused(N), not
+%%                  sent; ask(A, K), ask A's app for K links.
+%%
+%% System predicates (root self.glp): signature/2, send_to_user/1, merge/3.
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% The directory's answer to a list request.
+DirListReply ::= verify ; rejected.
+
+%% What the directory asks of a listed person's app on the Supply stream.
+DirAsk ::= more(Integer).
+
+%% The answer to an unlist request: GNA Section 7 names none (above), and the
+%% agent assigns none; the type stands until GNA names the answers.
+DirUnlistReply ::= rejected.
+
+%% Invitation links as a supply carries them, each a signed term.
+DirLinkList ::= [] ; [SignedTerm | DirLinkList].
+
+%% The messages an app sends the directory.
+DirMsg ::= list(Key, SignedTerm, Stream(DirAsk)?, DirListReply?)
+         ; supply(Key, DirLinkList)
+         ; unlist(Key, SignedTerm, DirUnlistReply?).
+
+%% A message as it arrives on the agent's network input: msg(Q, M), Q the
+%% directory's own key, to which the sender addressed it.
+DirNetMsg ::= msg(Key, DirMsg).
+DirNetIn ::= [] ; [DirNetMsg | DirNetIn].
+
+%% The host's commands.
+DirCmd ::= mailed(Integer) ; refused(Integer) ; ask(Key, Integer).
+DirCmds ::= [] ; [DirCmd | DirCmds].
+
+%% The agent's reports to the host.
+DirName ::= name(String) ; none.
+DirVisibility ::= listed ; unlisted.
+DirLink ::= link(SignedTerm, Integer).
+DirLinks ::= [] ; [DirLink | DirLinks].
+DirReport ::= listing(Integer, Key, String, DirName, DirVisibility)
+            ; links(Key, DirLinks)
+            ; unlisting(Key).
+
+%% One stream of what the agent acts on: a message from the network or a
+%% command of the host.
+DirEvent ::= net(DirMsg) ; host(DirCmd).
+
+%% A list request awaiting the host's mail: its number, the requester and the
+%% writers of its Supply and its Reply; and the Reply of an unlist request,
+%% held unassigned (above).
+DirPending ::= pending(Integer, Key, Stream(DirAsk)?, DirListReply?)
+             ; held(DirUnlistReply?).
+DirPendings ::= [] ; [DirPending | DirPendings].
+
+%% A person's latest list whose mail was sent: the writer of its Supply.
+DirSession ::= session(Key, Stream(DirAsk)?).
+DirSessions ::= [] ; [DirSession | DirSessions].
+
+%% The host's answer to a list request.
+DirAnswer ::= mailed ; refused.
+
+%% =============================================================================
+%% THE ENTRY
+%% =============================================================================
+
+%% Every agent's initial goal, agent(ch(_?,_), ch(_?,_)) (IGLP, Implementation
+%% Notes, "Boot"): the person stream carries the host's commands, and the
+%% agent reports to the host by send_to_user/1, so it closes the person
+%% channel's output; it answers on the reply variables the messages carry, so
+%% it closes the network output too.
+exported procedure agent(Channel(DirCmds, Stream(Constant))?, Channel(DirNetIn, Stream(NetMsg(Constant)))?).
+agent(ch(Cmds, []), ch(Net, [])) :- gds_server(Cmds?, Net?).
+
+%% gds_server(Cmds, Net): the host's commands and the network input, merged
+%% into one stream of events, and the reports to the host.
+exported procedure gds_server(DirCmds?, DirNetIn?).
+gds_server(Cmds, Net) :-
+    tag_host(Cmds?, H),
+    tag_net(Net?, N),
+    merge(H?, N?, Events),
+    send_to_user(Reports?),
+    gds_loop(Events?, 1, [], [], Reports).
+
+procedure tag_host(DirCmds?, Stream(DirEvent)).
+tag_host([C | Cs], [host(C?) | Es?]) :- tag_host(Cs?, Es).
+tag_host([], []).
+
+procedure tag_net(DirNetIn?, Stream(DirEvent)).
+tag_net([msg(_, M) | Ms], [net(M?) | Es?]) :- tag_net(Ms?, Es).
+tag_net([], []).
+
+%% =============================================================================
+%% MAIN LOOP
+%% =============================================================================
+
+%% gds_loop(Events, N, Pendings, Sessions, Reports): N the number the next list
+%% request gets.  The loop ends with its events, the stores abandoned.
+exported procedure gds_loop(Stream(DirEvent)?, Integer?, DirPendings?, DirSessions?, Stream(DirReport)).
+gds_loop([E | Es], N, Ps, Ss, Reports?) :-
+    gds_event(E?, N?, N1, Ps?, Ps1, Ss?, Ss1, Reports, Reports1?),
+    gds_loop(Es?, N1?, Ps1?, Ss1?, Reports1).
+gds_loop([], _, _, _, []).
+
+%% gds_event(E, N, N1, Ps, Ps1, Ss, Ss1, Reports, Reports1): the event E, the
+%% reports it makes written on Reports, followed by Reports1.
+exported procedure gds_event(DirEvent?, Integer?, Integer, DirPendings?, DirPendings, DirSessions?, DirSessions, Stream(DirReport), Stream(DirReport)?).
+
+%% A list request: signature/2 takes the listing apart, and admit_list/10
+%% dispatches on what it reports.
+gds_event(net(list(A, Signed, Supply?, Reply?)), N, N1?, Ps, Ps1?, Ss, Ss?, Reports?, Reports1) :-
+    signature(Signed?, S),
+    admit_list(N?, A?, S?, Supply, Reply, N1, Ps?, Ps1, Reports, Reports1?).
+
+%% A supply of links: each kept where it is A's, and reported to the host.
+gds_event(net(supply(A, Links)), N, N?, Ps, Ps?, Ss, Ss?, [links(A?, Kept?) | Reports1?], Reports1) :-
+    string(A?) |
+    check_links(A?, Links?, Kept).
+
+%% An unlist request: signature/2 takes it apart, and admit_unlist/6
+%% dispatches on what it reports.  Its Reply is held, unassigned (above).
+gds_event(net(unlist(A, Signed, Reply?)), N, N?, Ps, [held(Reply) | Ps?], Ss, Ss1?, Reports?, Reports1) :-
+    signature(Signed?, S),
+    admit_unlist(A?, S?, Ss?, Ss1, Reports, Reports1?).
+
+%% The host sent the mail of request M: its Reply is verify, and its Supply
+%% becomes the requester's session.
+gds_event(host(mailed(M)), N, N?, Ps, Ps1?, Ss, Ss1?, Reports?, Reports) :-
+    answer(M?, mailed, Ps?, Ps1, Ss?, Ss1).
+
+%% The host did not send it: its Reply is rejected and its Supply closed.
+gds_event(host(refused(M)), N, N?, Ps, Ps1?, Ss, Ss1?, Reports?, Reports) :-
+    answer(M?, refused, Ps?, Ps1, Ss?, Ss1).
+
+%% The host asks A's app for K links, on the Supply of A's session.
+gds_event(host(ask(A, K)), N, N?, Ps, Ps?, Ss, Ss1?, Reports?, Reports) :-
+    ask_session(A?, K?, Ss?, Ss1).
+
+%% =============================================================================
+%% admit_list: dispatch on what signature/2 reports for a list request
+%% =============================================================================
+
+%% admit_list(N, A, S, Supply, Reply, N1, Ps, Ps1, Reports, Reports1): the list
+%% request N of A, signature/2 reporting S for the listing it carries.
+exported procedure admit_list(Integer?, Key?, Signature?, Stream(DirAsk), DirListReply, Integer, DirPendings?, DirPendings, Stream(DirReport), Stream(DirReport)?).
+
+%% A signed listing(A, Email, Name, Visibility) naming A, Name a string or
+%% none, Visibility listed or unlisted: the request waits on the host's mail,
+%% and the host is given the listing.  One clause for each Name and
+%% Visibility.
+admit_list(N, A, signed(K, _, listing(A1, Email, Name, listed)), Supply?, Reply?, N1?, Ps,
+           [pending(N?, A?, Supply, Reply) | Ps?],
+           [listing(N?, A?, Email?, name(Name?), listed) | Reports1?], Reports1) :-
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
+    N1 := N? + 1.
+admit_list(N, A, signed(K, _, listing(A1, Email, Name, unlisted)), Supply?, Reply?, N1?, Ps,
+           [pending(N?, A?, Supply, Reply) | Ps?],
+           [listing(N?, A?, Email?, name(Name?), unlisted) | Reports1?], Reports1) :-
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
+    N1 := N? + 1.
+admit_list(N, A, signed(K, _, listing(A1, Email, none, listed)), Supply?, Reply?, N1?, Ps,
+           [pending(N?, A?, Supply, Reply) | Ps?],
+           [listing(N?, A?, Email?, none, listed) | Reports1?], Reports1) :-
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?) |
+    N1 := N? + 1.
+admit_list(N, A, signed(K, _, listing(A1, Email, none, unlisted)), Supply?, Reply?, N1?, Ps,
+           [pending(N?, A?, Supply, Reply) | Ps?],
+           [listing(N?, A?, Email?, none, unlisted) | Reports1?], Reports1) :-
+    integer(N?), K? =?= A?, A1? =?= A?, string(Email?) |
+    N1 := N? + 1.
+
+%% unsigned, another signer, another term, or a listing naming another key:
+%% refused, the Supply closed, and nothing reported.
+admit_list(N, _, _, [], rejected, N?, Ps, Ps?, Reports?, Reports) :-
+    otherwise | true.
+
+%% =============================================================================
+%% answer: the host's answer to list request M
+%% =============================================================================
+
+exported procedure answer(Integer?, DirAnswer?, DirPendings?, DirPendings, DirSessions?, DirSessions).
+
+%% The request found: settled by the answer, and taken off the pending list.
+answer(M, Ans, [pending(M1, A, Supply?, Reply?) | Ps], Ps?, Ss, Ss1?) :-
+    M? =?= M1? |
+    settle(Ans?, A?, Supply, Reply, Ss?, Ss1).
+
+%% Another request: kept, and the search goes on.
+answer(M, Ans, [P | Ps], [P? | Ps1?], Ss, Ss1?) :-
+    otherwise |
+    answer(M?, Ans?, Ps?, Ps1, Ss?, Ss1).
+
+%% Not found: nothing changes.
+answer(_, _, [], [], Ss, Ss?).
+
+%% settle(Ans, A, Supply, Reply, Ss, Ss1): the mail sent, Reply is verify and
+%% A's session is this Supply, in place of A's earlier one; not sent, Reply is
+%% rejected and the Supply closed.
+procedure settle(DirAnswer?, Key?, Stream(DirAsk), DirListReply, DirSessions?, DirSessions).
+settle(mailed, A, Supply?, verify, Ss, Ss1?) :-
+    put_session(A?, Supply, Ss?, Ss1).
+settle(refused, _, [], rejected, Ss, Ss?).
+
+%% =============================================================================
+%% Sessions: one for each person, the Supply of their latest list
+%% =============================================================================
+
+%% put_session(A, Supply, Ss, Ss1): Ss1 is Ss with A's session, if any, closed
+%% and taken off, and session(A, Supply) put first.
+exported procedure put_session(Key?, Stream(DirAsk), DirSessions?, DirSessions).
+put_session(A, Supply?, Ss, [session(A?, Supply) | Ss1?]) :-
+    string(A?) |
+    drop_session(A?, Ss?, Ss1).
+
+%% drop_session(A, Ss, Ss1): Ss1 is Ss without A's session, whose Supply is
+%% closed.
+exported procedure drop_session(Key?, DirSessions?, DirSessions).
+drop_session(A, [session(A1, Supply?) | Ss], Ss?) :-
+    A? =?= A1? |
+    close_asks(Supply).
+drop_session(A, [S | Ss], [S? | Ss1?]) :-
+    otherwise |
+    drop_session(A?, Ss?, Ss1).
+drop_session(_, [], []).
+
+procedure close_asks(Stream(DirAsk)).
+close_asks([]).
+
+%% ask_session(A, K, Ss, Ss1): more(K) written on the Supply of A's session;
+%% nothing where A has none.
+exported procedure ask_session(Key?, Integer?, DirSessions?, DirSessions).
+ask_session(A, K, [session(A1, Supply?) | Ss], [session(A1?, Supply1) | Ss?]) :-
+    A? =?= A1? |
+    ask_more(K?, Supply, Supply1?).
+ask_session(A, K, [S | Ss], [S? | Ss1?]) :-
+    otherwise |
+    ask_session(A?, K?, Ss?, Ss1).
+ask_session(_, _, [], []).
+
+%% ask_more(K, Supply, Supply1): more(K) written on Supply, followed by Supply1.
+procedure ask_more(Integer?, Stream(DirAsk), Stream(DirAsk)?).
+ask_more(K, [more(K?) | Supply1?], Supply1).
+
+%% =============================================================================
+%% check_links: the links of a supply that are A's
+%% =============================================================================
+
+%% check_links(A, Links, Kept): Kept the links of Links that signature/2
+%% reports signed by A over invitation(A, Rv, RvAddr, Serial, Expiry), each
+%% with its expiry.
+exported procedure check_links(Key?, DirLinkList?, DirLinks).
+check_links(A, [L | Ls], Kept?) :-
+    string(A?), string(L?) |
+    signature(L?, S),
+    keep_link(A?, L?, S?, Kept, Kept1?),
+    check_links(A?, Ls?, Kept1).
+check_links(_, [], []).
+
+%% keep_link(A, L, S, Kept, Kept1): link(L, Expiry) written on Kept, followed
+%% by Kept1, where S reports L signed by A over an invitation naming A; Kept
+%% is Kept1 otherwise.
+procedure keep_link(Key?, SignedTerm?, Signature?, DirLinks, DirLinks?).
+keep_link(A, L, signed(K, _, invitation(I, _, _, _, E)), [link(L?, E?) | Kept1?], Kept1) :-
+    K? =?= A?, I? =?= A?, integer(E?) | true.
+keep_link(_, _, _, Kept1?, Kept1) :-
+    otherwise | true.
+
+%% =============================================================================
+%% admit_unlist: dispatch on what signature/2 reports for an unlist request
+%% =============================================================================
+
+%% admit_unlist(A, S, Ss, Ss1, Reports, Reports1): A signed unlist(A): A's
+%% session is closed and taken off, and the host told; otherwise nothing
+%% changes.
+exported procedure admit_unlist(Key?, Signature?, DirSessions?, DirSessions, Stream(DirReport), Stream(DirReport)?).
+admit_unlist(A, signed(K, _, unlist(A1)), Ss, Ss1?, [unlisting(A?) | Reports1?], Reports1) :-
+    K? =?= A?, A1? =?= A? |
+    drop_session(A?, Ss?, Ss1).
+admit_unlist(_, _, Ss, Ss?, Reports?, Reports) :-
+    otherwise | true.

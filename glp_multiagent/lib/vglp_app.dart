@@ -10,8 +10,8 @@
 /// image of its display declarations, and the vocabulary between them is the
 /// canonical compilation's, the same for every compiled vGLP program.
 ///
-/// The entry beside this file, `main_superapp.dart`, is the Grassroots
-/// Super-App; another program is another manifest and another entry, and no
+/// The entry beside this file, `main_superapp_ui.dart`, is the Grassroots
+/// App's demonstration, its peers scripted; another program is another manifest and another entry, and no
 /// change here.  The coins and sovereign mini-apps have no entry of their
 /// own: each runs as an agent, started by its agent/2 (IGLP, Implementation
 /// Notes, "Boot"), and under the super-app.

@@ -41,8 +41,12 @@ String canonicalPrint({
 }) {
   final lines = <String>[];
 
-  // (i) Type definitions, lexicographically by name.
-  final tds = [...typeDefs]..sort((a, b) => a.name.compareTo(b.name));
+  // (i) Type definitions, lexicographically by name, then by the number of
+  // parameters, a type being named by the two ([typeKey]).
+  final tds = [...typeDefs]..sort((a, b) {
+      final c = a.name.compareTo(b.name);
+      return c != 0 ? c : a.typeParams.length.compareTo(b.typeParams.length);
+    });
   for (final td in tds) {
     lines.add(_printTypeDef(td));
   }
@@ -172,7 +176,8 @@ String entryTemplateDeclarationText(ProcDecl entry, ProcDecl template) {
 ///
 /// Reachability is the transitive closure over the exported declarations'
 /// argument types: a type named in an export, every type named in that type's
-/// alternatives, and so on. A name with no definition in [typeDefs] contributes
+/// alternatives, and so on, each type taken by its name and its number of
+/// parameters ([typeKey]), the key of [typeDefs]. A name with no definition in [typeDefs] contributes
 /// nothing: the primitive types (`Integer`, `Real`, `String`, `Module`,
 /// `MutualRef`), which are the language's and built into every runtime, and a
 /// parameterized definition's own parameters.  The root `self.glp`'s types
@@ -192,25 +197,30 @@ String interfaceTypeDefsText({
 
   final reached = <String, TypeDef>{};
   while (pending.isNotEmpty) {
-    final name = pending.removeLast();
-    if (reached.containsKey(name)) continue;
-    final td = typeDefs[name];
+    final key = pending.removeLast();
+    if (reached.containsKey(key)) continue;
+    final td = typeDefs[key];
     if (td == null) continue; // a primitive type or a parameter
-    reached[name] = td;
+    reached[key] = td;
     for (final alt in td.alternatives) {
       _collectTypeNames(alt, pending);
     }
   }
 
   if (reached.isEmpty) return '';
-  final names = reached.keys.toList()..sort();
-  return '${names.map((n) => _printTypeDef(reached[n]!)).join('\n')}\n';
+  final tds = reached.values.toList()
+    ..sort((a, b) {
+      final c = a.name.compareTo(b.name);
+      return c != 0 ? c : a.typeParams.length.compareTo(b.typeParams.length);
+    });
+  return '${tds.map(_printTypeDef).join('\n')}\n';
 }
 
-/// Append every named type referenced anywhere in [expr] to [out].
+/// Append every named type referenced anywhere in [expr] to [out], by its name
+/// and its number of arguments ([typeKey]).
 void _collectTypeNames(TypeExpr expr, List<String> out) {
   if (expr is TypeRef) {
-    out.add(expr.name);
+    out.add(typeKey(expr.name, expr.typeArgs.length));
     for (final a in expr.typeArgs) {
       _collectTypeNames(a, out);
     }

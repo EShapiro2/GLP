@@ -24,10 +24,18 @@
 #   <seed>          the run's seed;
 #   <log>           the log, written as the run goes.
 #
-# It assembles the run's directory, programs/tests/sglp_cva_run_<pid>/, a
-# directory of its own whose scope is the root's (the root exposes the monitor
-# and programs/sglp/sglp.glp): self.glp and harness.glp from the .in files,
-# platform.glp, profiles.glp and population.glp; and removes it at the end.
+# It assembles the run's directory, programs/sglp/runs/cva_<pid>/, a
+# directory of its own under programs/sglp, since a simulation of another
+# project's platform lives under programs/sglp (sGLP, Udi approving, Code_inbox
+# 2026-11-07 21:21 UTC), so that its chain of self.glp files reaches
+# programs/sglp/self.glp, which exposes the monitor and sglp.glp to its subtree
+# (TGLP modules.tex, "The -expose directive"): self.glp and harness.glp from
+# the .in files, platform.glp, profiles.glp and population.glp; and removes it
+# at the end.  programs/sglp/runs/ is gitignored, and holds a run's directory
+# only while the run lasts: a .glp under programs/sglp is a module of
+# programs/sglp while it is there (TGLP modules.tex, Compilation, first step),
+# so a directory a run left behind, its process gone, is removed before the
+# run starts.
 # The population's draw is computed first, in a REPL session of its own, so
 # that the run's machine and its log are the same with it as without, by
 # draw(Keys, Seed, D) (harness.glp.in), and written beside the log, to <log>
@@ -85,7 +93,12 @@ else
 fi
 
 WORK=$(mktemp -d)
-RUNDIR="$GLP_DIR/programs/tests/sglp_cva_run_$$"
+RUNS="$GLP_DIR/programs/sglp/runs"
+for d in "$RUNS"/cva_*; do
+    [ -d "$d" ] || continue
+    kill -0 "${d##*_}" 2>/dev/null || rm -rf "$d"
+done
+RUNDIR="$RUNS/cva_$$"
 trap 'rm -rf "$WORK" "$RUNDIR"' EXIT
 mkdir -p "$RUNDIR" || exit 2
 cp "$HERE/self.glp.in" "$RUNDIR/self.glp" && cp "$HERE/harness.glp.in" "$RUNDIR/harness.glp" &&

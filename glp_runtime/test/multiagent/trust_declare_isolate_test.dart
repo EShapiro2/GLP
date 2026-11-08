@@ -25,7 +25,7 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Two agents: bob declares PAN closed and LAN open, alice declares nothing.
+/// Two agents: bob declares PAN open and LAN open, alice declares nothing.
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
@@ -39,7 +39,7 @@ exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
 say(P, ch(_, [P?])).
 
 procedure agent_init(_?, _?).
-agent_init(bob, _) :- declare(trust(pan, closed)), declare(trust(lan, open)).
+agent_init(bob, _) :- declare(trust(pan, open)), declare(trust(lan, open)).
 agent_init(alice, _).
 ''';
 
@@ -59,23 +59,25 @@ void main() {
     await manager.boot(config);
     // Before the agents run: bob's key, made at his spawn (IGLP,
     // Implementation Notes, "Boot": "When the runtime spawns an agent, before
-    // anything is compiled or sent, it makes the agent's key pair"), the boot
-    // harness's PAN level Open for the plays, and LAN Closed, as no level is
-    // set for it.
+    // anything is compiled or sent, it makes the agent's key pair"), and
+    // both levels Closed: "The harness sets no trust level at spawn" (IGLP
+    // 45fabfc, "Simulation realisation"); until 2026-11-08 it set the PAN
+    // level Open for the plays.
     expect(manager.keyOf('bob'), isNotNull);
-    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.open);
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed);
     expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 
     manager.start();
     await manager.settle();
 
     expect(manager.faults, isEmpty);
-    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed,
-        reason: 'bob declared pan closed');
+    expect(manager.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.open,
+        reason: 'bob declared pan open');
     expect(manager.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.open,
         reason: 'bob declared lan open, the two underlays independently');
-    expect(manager.trustLevelOf('alice', ProximityUnderlay.pan), TrustLevel.open,
-        reason: 'alice declared nothing: the boot level stands');
+    expect(manager.trustLevelOf('alice', ProximityUnderlay.pan),
+        TrustLevel.closed,
+        reason: 'alice declared nothing: Closed, as at her spawn');
     expect(manager.trustLevelOf('alice', ProximityUnderlay.lan),
         TrustLevel.closed);
   }, timeout: Timeout.none);

@@ -43,6 +43,8 @@ imported procedure rv_agent#admit_register(Key?, Signature?, SignalReply,
                                             PendingList?, PendingList).
 imported procedure rv_agent#register_serial(Key?, Integer?, SignalReply,
                                              PendingList?, PendingList).
+imported procedure rv_agent#admit_redeemer(Key?, Key?, Signature?, Integer?,
+    SignalReply, PendingList?, PendingList).
 imported procedure rv_agent#admit_redeem(Key?, Key?, Signature?, Integer?,
                                           SignalReply,
                                           PendingList?, PendingList).
@@ -729,10 +731,12 @@ test35_redeem_admitted_no_layer(ReplyI?, ReplyR?, Pending1?) :-
 %%
 %% This test program stands in for the social graph: it signs, under the
 %% person's own key K, a link to rv expiring an hour after now/1, and the
-%% agent, given register(K, Link, ReplyI) and redeem(bob, Link, ReplyR),
-%% registers its serial and admits the redemption, reading the two
-%% addresses through peer_address/2, none with no layer bound, so bob is
-%% refused there and K told nothing.  Report is what signature/2 reports
+%% redemption of it, redeem(K, Link), the REPL holding one key, so K is the
+%% inviter and the recipient both; the agent, given register(K, Link,
+%% ReplyI) and redeem(K, Signed, ReplyR), registers its serial and admits
+%% the redemption, reading the two addresses through peer_address/2, none
+%% with no layer bound, so the recipient is refused there and the inviter
+%% told nothing.  Report is what signature/2 reports
 %% for the link.  Posted under :trace, the suite finds the two
 %% peer_address/2 calls.
 
@@ -743,13 +747,20 @@ test36_link_through_agent(Report?, ReplyI?, ReplyR?) :-
     now(T),
     Expiry := T? + 3600000,
     sign_link(K?, 7, Expiry?, Link),
-    present_link(K?, bob, Link?, Report, ReplyI, ReplyR).
+    present_link(K?, K?, Link?, Report, ReplyI, ReplyR).
 
 %% The inviter I signs the link with serial S and expiry E under its own key.
 procedure sign_link(Key?, Integer?, Integer?, SignedTerm).
 sign_link(I, S, E, Link?) :-
     ground(I?), integer(S?), integer(E?) |
     sign(invitation(I?, rv, rv_addr, S?, E?), I?, Link).
+
+%% The recipient R signs its redemption of Link under its own key (GNA
+%% Section 6, "Invitation links", 0147658).
+procedure sign_redeem(Key?, SignedTerm?, SignedTerm).
+sign_redeem(R, Link, Signed?) :-
+    ground(R?), ground(Link?) |
+    sign(redeem(R?, Link?), R?, Signed).
 
 %% I registers the link and R redeems it, in that order, on the agent's
 %% input.
@@ -758,12 +769,20 @@ procedure present_link(Key?, Key?, SignedTerm?, Signature, SignalReply,
 present_link(I, R, Link, Report?, ReplyI?, ReplyR?) :-
     ground(I?), ground(R?), ground(Link?) |
     signature(Link?, Report),
+    sign_redeem(R?, Link?, Signed),
+    present_signed(I?, R?, Link?, Signed?, ReplyI, ReplyR).
+
+procedure present_signed(Key?, Key?, SignedTerm?, SignedTerm?, SignalReply,
+                         SignalReply).
+present_signed(I, R, Link, Signed, ReplyI?, ReplyR?) :-
+    ground(I?), ground(R?), ground(Link?), ground(Signed?) |
     rv_agent # rv_agent(rv, [register(I?, Link?, ReplyI),
-                         redeem(R?, Link?, ReplyR)], []).
+                         redeem(R?, Signed?, ReplyR)], []).
 
 %% Expected: Report = signed(K, H, invitation(K, rv, rv_addr, 7, E));
 %%           ReplyR = rejected, ReplyI unbound;
-%%           peer_address(K, none) and peer_address(bob, none) called
+%%           peer_address(K, none) called twice, for the inviter and the
+%%           recipient
 
 %% =============================================================================
 %% Test 37: an expired link made by sign/3, through the agent
@@ -780,7 +799,7 @@ test37_expired_link_through_agent(ReplyI?, ReplyR?) :-
     now(T),
     Expiry := T? - 1,
     sign_link(K?, 8, Expiry?, Link),
-    present_link(K?, bob, Link?, _, ReplyI, ReplyR).
+    present_link(K?, K?, Link?, _, ReplyI, ReplyR).
 
 %% Expected: ReplyR = rejected, ReplyI unbound; no peer_address/2 call
 
@@ -810,11 +829,12 @@ test38_redeem_other_server(ReplyI?, ReplyR?, Pending1?) :-
 %%
 %% rv_server/2 is booted with its own key rv and given, under the person's
 %% own key K, two links made by sign/3, each registered and redeemed: serial
-%% 10 naming rv and serial 11 naming other_rv.  The registration does not
-%% read Rv, so both are registered; the redemption of 10 is admitted and
-%% reads the two addresses, none with no layer bound, and is refused there;
-%% the redemption of 11 is refused without reading one.  Posted under
-%% :trace, the suite finds two peer_address/2 calls, bob's one of them.
+%% 10 naming rv and serial 11 naming other_rv, each redeemed by K, signed.
+%% The registration does not read Rv, so both are registered; the
+%% redemption of 10 is admitted and reads the two addresses, none with no
+%% layer bound, and is refused there; the redemption of 11 is refused
+%% without reading one.  Posted under :trace, the suite finds two
+%% peer_address/2 calls, both K's.
 
 exported procedure test39_server_own_key(SignalReply, SignalReply,
                                          SignalReply, SignalReply).
@@ -837,22 +857,24 @@ present_two_links(I, E, ReplyI10?, ReplyR10?, ReplyI11?, ReplyR11?) :-
     ground(I?), integer(E?) |
     sign_link_to(I?, rv, 10, E?, L10),
     sign_link_to(I?, other_rv, 11, E?, L11),
-    present_to_server_links(I?, L10?, L11?, ReplyI10, ReplyR10, ReplyI11,
-                            ReplyR11).
+    sign_redeem(I?, L10?, S10),
+    sign_redeem(I?, L11?, S11),
+    present_to_server_links(I?, L10?, L11?, S10?, S11?, ReplyI10, ReplyR10,
+                            ReplyI11, ReplyR11).
 
-procedure present_to_server_links(Key?, SignedTerm?, SignedTerm?, SignalReply,
-                                  SignalReply, SignalReply, SignalReply).
-present_to_server_links(I, L10, L11, ReplyI10?, ReplyR10?, ReplyI11?,
-                        ReplyR11?) :-
-    ground(I?), ground(L10?), ground(L11?) |
+procedure present_to_server_links(Key?, SignedTerm?, SignedTerm?, SignedTerm?,
+                                  SignedTerm?, SignalReply, SignalReply,
+                                  SignalReply, SignalReply).
+present_to_server_links(I, L10, L11, S10, S11, ReplyI10?, ReplyR10?,
+                        ReplyI11?, ReplyR11?) :-
+    ground(I?), ground(L10?), ground(L11?), ground(S10?), ground(S11?) |
     rv_agent # rv_server(rv, [msg(rv, register(I?, L10?, ReplyI10)),
-                              msg(rv, redeem(bob, L10?, ReplyR10)),
+                              msg(rv, redeem(I?, S10?, ReplyR10)),
                               msg(rv, register(I?, L11?, ReplyI11)),
-                              msg(rv, redeem(bob, L11?, ReplyR11))]).
+                              msg(rv, redeem(I?, S11?, ReplyR11))]).
 
 %% Expected: ReplyR10 = ReplyR11 = rejected, ReplyI10 and ReplyI11 unbound;
-%%           peer_address(K, none) and peer_address(bob, none) called once
-%%           each, for serial 10 alone
+%%           peer_address(K, none) called twice, for serial 10 alone
 
 %% =============================================================================
 %% Test 40: used serials are dropped at their links' expiry
@@ -902,3 +924,69 @@ present_used(I, Link, E, Dropped?, Kept?) :-
     rv_agent # rv_agent(rv, [register(I?, Link?, Kept)], [used(I?, 9, E?)]).
 
 %% Expected: Dropped unbound (registered again), Kept = rejected
+
+%% =============================================================================
+%% Test 42: through the agent, a redemption not signed by its recipient is
+%% refused
+%% =============================================================================
+%%
+%% K registers a link of serial 12, and two redemptions of it are presented:
+%% one naming bob as the recipient but signed by K, and one carrying the
+%% link itself, signed by K over the invitation, not over redeem(R, Link),
+%% the form before GNA 0147658.  Both are refused before the layer is
+%% asked, and the serial stays unused.  Posted under :trace, the suite finds
+%% no peer_address/2 call.
+
+exported procedure test42_redeem_not_signed_by_recipient(SignalReply,
+    SignalReply, SignalReply).
+test42_redeem_not_signed_by_recipient(ReplyI?, R1?, R2?) :-
+    self_key(K),
+    now(T),
+    Expiry := T? + 3600000,
+    sign_link(K?, 12, Expiry?, Link),
+    present_unsigned_redeems(K?, Link?, ReplyI, R1, R2).
+
+procedure present_unsigned_redeems(Key?, SignedTerm?, SignalReply,
+                                   SignalReply, SignalReply).
+present_unsigned_redeems(I, Link, ReplyI?, R1?, R2?) :-
+    ground(I?), ground(Link?) |
+    sign(redeem(bob, Link?), I?, ByOther),
+    present_redeems(I?, Link?, ByOther?, ReplyI, R1, R2).
+
+procedure present_redeems(Key?, SignedTerm?, SignedTerm?, SignalReply,
+                          SignalReply, SignalReply).
+present_redeems(I, Link, ByOther, ReplyI?, R1?, R2?) :-
+    ground(I?), ground(Link?), ground(ByOther?) |
+    rv_agent # rv_agent(rv, [register(I?, Link?, ReplyI),
+                         redeem(bob, ByOther?, R1),
+                         redeem(I?, Link?, R2)], []).
+
+%% Expected: R1 = R2 = rejected, ReplyI unbound; no peer_address/2 call
+
+%% =============================================================================
+%% Test 43: admit_redeemer/7, the dispatch on what signature/2 reports for a
+%% redemption
+%% =============================================================================
+%%
+%% Given its forms directly: unsigned; redeem(bob, L) signed by alice;
+%% redeem(alice, L) signed by bob, the recipient bob; another term signed by
+%% bob; and redeem(bob, nolink) signed by bob, nolink no signed term, which
+%% signature/2 reports unsigned, so admit_redeem/7 refuses it.  Every one is
+%% refused before the layer is asked, and the pending list is unchanged.
+
+exported procedure test43_redeemer_refused(SignalReply, SignalReply,
+    SignalReply, SignalReply, SignalReply, SignalReply, PendingList).
+test43_redeemer_refused(R1?, R2?, R3?, R4?, R5?, ReplyI?, P5?) :-
+    rv_agent # admit_redeemer(rv, bob, unsigned, 999, R1,
+        [invited(alice, 7, ReplyI)], P1),
+    rv_agent # admit_redeemer(rv, bob, signed(alice, h, redeem(bob, nolink)),
+        999, R2, P1?, P2),
+    rv_agent # admit_redeemer(rv, bob, signed(bob, h, redeem(alice, nolink)),
+        999, R3, P2?, P3),
+    rv_agent # admit_redeemer(rv, bob, signed(bob, h, attest(alice, bob)),
+        999, R4, P3?, P4),
+    rv_agent # admit_redeemer(rv, bob, signed(bob, h, redeem(bob, nolink)),
+        999, R5, P4?, P5).
+
+%% Expected: R1 = R2 = R3 = R4 = R5 = rejected, ReplyI unbound,
+%%           P5 = [invited(alice, 7, ReplyI)]; no peer_address/2 call

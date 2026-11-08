@@ -106,7 +106,7 @@ Future<void> _shot(WidgetTester tester, String path) async {
 }
 
 void main() {
-  testWidgets('the super-app: trust, install, connect, invite', (tester) async {
+  testWidgets('the super-app: trust, install, befriend in Nearby, invite', (tester) async {
     await _loadFonts();
     tester.view.physicalSize = const Size(420, 860);
     tester.view.devicePixelRatio = 1.0;
@@ -171,14 +171,18 @@ void main() {
     // The person interface asks its question as soon as it runs, before the
     // person has done anything: the stream of her requests, one construct,
     // drawn as the default widget of Stream(Request)? --- an input box of a
-    // menu of the four forms of Request ::= trust(CompilerKey) ;
-    // install(AppName, Artefact) ; invite(AppName, Friend) ; connect(Friend),
-    // each field labelled by the name of its declared type, a Key a peer
-    // field and a String a text field.
+    // menu of the five alternatives of Request ::= trust(CompilerKey) ;
+    // install(AppName, Artefact) ; invite(AppName, Friend) ; open_place ;
+    // close_place, the three forms each field labelled by the name of its
+    // declared type, a Key a peer field and a String a text field, and the
+    // two constants, Open place and Close place (GPE:1), a button each.  No
+    // form connects with a person by a key typed: a person is befriended by
+    // picking them in Nearby (GSA #2, 2026-11-08 08:07 UTC, item 2).
     const requestForm = "input_box(menu([form(trust, [field('CompilerKey', peer)]), "
         "form(install, [field('AppName', text), field('Artefact', text)]), "
         "form(invite, [field('AppName', text), field('Friend', peer)]), "
-        "form(connect, [field('Friend', peer)])]))";
+        "button(open_place), "
+        "button(close_place)]))";
     // What the super-app tells its person reaches her only as the thread of
     // construct 0, each notice by the widget of the reserved type Output ::=
     // Notice; the questions are numbered from 1 (vGLP 169b008, Definition
@@ -197,8 +201,17 @@ void main() {
       ];
     }
 
-    expect(questions().map((c) => formatTerm(c.widget)), [requestForm]);
-    final form = questions().single;
+    // The persons the person knows, seen nearby (superapp_ui/4: bob), each on
+    // a card of Nearby with the button befriend (home.vglp, befriend_card/3).
+    const nearbyCard =
+        "form(nearby, [field('Friend', shown), field('Befriend', button(befriend))])";
+    expect(questions().map((c) => formatTerm(c.widget)),
+        unorderedEquals([requestForm, nearbyCard]));
+    final form = questions()
+        .singleWhere((c) => formatTerm(c.widget) == requestForm);
+    final card = questions()
+        .singleWhere((c) => formatTerm(c.widget) == nearbyCard);
+    expect(notices(), contains('nearby([bob])'));
     expect(formatTerm(form.view), 'input([])');
 
     await tester.pumpWidget(_phoneApp(AgentSurface(agentId: 'alice', runtime: r)));
@@ -243,12 +256,14 @@ void main() {
       await settle();
     }
 
-    // The form offers the four acts of the person's own super-app, a menu of
-    // their forms, and only those: the alternatives of Request.
-    for (final label in ['trust', 'install', 'invite', 'connect']) {
+    // The form offers the five acts of the person's own super-app, a menu of
+    // their forms and buttons, and only those: the alternatives of Request.
+    for (final label in [
+      'trust', 'install', 'invite', 'open_place', 'close_place'
+    ]) {
       expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget);
     }
-    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(4));
+    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(5));
     await _shot(tester, '/private/tmp/superapp-forms.png');
 
     // --- Trust the compiler that certified the mini-app: its key, a Key and
@@ -264,10 +279,15 @@ void main() {
       [2]: ('text', 'currency.glpw'),
     }, formShot: '/private/tmp/superapp-install-form.png');
 
-    // --- Connect to bob; his script consents, and the friends view fills. ---
-    await request('connect', {
-      [1]: ('peer', 'bob')
-    });
+    // --- Befriend bob by picking him in Nearby, no key typed; his script
+    // consents, and the friends view fills. ----------------------------------
+    final befriend = find.descendant(
+        of: find.byKey(constructKey(card.id)),
+        matching: find.byKey(nodeKey(card.id, 'button', const [2])));
+    await show(befriend);
+    await tester.tap(befriend);
+    await tester.pumpAndSettle();
+    await settle();
     expect(notices(), contains('connected(bob)'));
     expect(r.store.lists, isEmpty);
     await _shot(tester, '/private/tmp/superapp-connected.png');

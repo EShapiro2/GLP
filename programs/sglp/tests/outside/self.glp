@@ -1,9 +1,12 @@
-%% An sGLP program outside programs/sglp, transformed there by
-%% programs/sglp/transform.sh --source (Integration's ruling of 2026-10-16
-%% 10:52 UTC, item 1): one question, Poll, in writer mode, the program writing
-%% the poll's number and the person its answer; one person, agreeable; and a
-%% run of a few asks.  The printed modules call the monitor, which the root
-%% programs/self.glp exposes, as CSSN's simulation does.
+%% An sGLP program in a directory of its own, not one of the examples',
+%% transformed by programs/sglp/transform.sh --source (Integration's ruling of
+%% 2026-10-16 10:52 UTC, item 1), as an owner's simulation is; under
+%% programs/sglp, where a simulation of another project's platform lives
+%% (sGLP #11, Code_inbox 2026-11-07 21:21 UTC, Udi approving; it was
+%% programs/tests/sglp_outside until 2026-11-08): one question, Poll, in writer
+%% mode, the program writing the poll's number and the person its answer; one
+%% person, agreeable; and a run of a few asks.  The printed modules call the
+%% monitor, which programs/sglp/self.glp exposes to its subtree.
 %%
 %%   poll.glp       the compiled program, by hand, as vGLP's Definition
 %%                  "Canonical Compilation" compiles
@@ -12,7 +15,7 @@
 %%                  and polls/2, which asks K polls;
 %%   poll_sglp.glp  the sGLP source in the term form (programs/sglp/README.md);
 %%   profiles.glp and population.glp  printed from poll_sglp.glp by
-%%                  bash programs/sglp/transform.sh --source programs/tests/sglp_outside,
+%%                  bash programs/sglp/transform.sh --source programs/sglp/tests/outside,
 %%                  and not edited;
 %%   harness.glp    the run, by hand: the monitor, the log's sink, the one
 %%                  agent's initial goal and its person process.

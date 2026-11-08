@@ -23,7 +23,8 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
-#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core, flutter test in servers/directory
+#   DL - the debugging log service of the phones (servers/debuglog): dart test there
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -66,7 +67,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET DL"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -1167,19 +1168,6 @@ $GLP_DIR/programs/tests/expose_collide/leaf.glp
 HEREDOC
 2>&1)
 check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
-
-# The root self.glp exposes sglp#monitor, the root being the only common
-# ancestor of programs/cssn and programs/sglp (modules.tex §-expose): a program
-# outside programs/sglp calls monitor/4 by name, with the types it carries.
-a26f_mon=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/tests/expose_root_monitor/run.glp
-clock(T).
-released(K).
-:quit
-HEREDOC
-2>&1)
-check "root -expose(sglp#monitor): time request answered (T = 0)" "T = 0" "$a26f_mon"
-check "root -expose(sglp#monitor): rated request released (K = go)" "K = go" "$a26f_mon"
 
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
@@ -3745,6 +3733,20 @@ check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
 check "One-clause: the answer reaches its clause" "D = \[decided(yes, bob)\]" "$vg_answer"
 check "One-clause: the card is drawn, the offering peer shown and the person's position marked, and withdraws once answered" "L = \[drawn(0, thread(.*), \[\]), $VG_CARD" "$vg_answer"
 
+# A refresh, an Input addressed to no construct, on which the dispatcher has
+# every construct, and construct 0, draw again what it last drew (vGLP
+# d433f71, Section 6.3: "Input(T) ::= input(Integer, Path, T) ; refresh"; IGLP
+# 7a25ff8, after Definition "Restart": the runtime grants it at a restart).
+vg_refresh=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_refresh(D, L).
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: refresh, no failed goal" "ERROR" "$vg_refresh"
+check "One-clause: refresh answers nothing, the answer after it reaching its clause" "D = \[decided(yes, bob)\]" "$vg_refresh"
+check "One-clause: on refresh construct 0 and the card draw again what they last drew, and the card withdraws once answered" "L = \[drawn(0), drawn(1), drawn(0), drawn(1), withdrawn(1) |" "$vg_refresh"
+
 vg_decline=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
 play_decline(D, L).
@@ -4607,7 +4609,8 @@ play_refresh(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA refresh: a person's refresh redraws the last view, written twice, and the next request question is asked, on which she proposes acquaint (vGLP e22e2ad, Section 5.4, \"The compilation\")" "A = \[.*view(alice, \[identity\], \[\], \[\], \[[^]]*\]), view(alice, \[identity\], \[\], \[\], \[[^]]*\]), .*view(alice, \[knows(bob), identity\]" "$cva_sg_refresh"
+check "CVA refresh: a person's refresh, a grant addressed to no construct, on which the dispatcher has every construct and construct 0 draw again what they last drew, the agent writing no view on it, its last view written once; the request question still open, she proposes acquaint (vGLP d433f71, Sections 5.4 and 6.3)" "A = \[.*view(alice, \[identity\], \[\], \[\], \[[^]]*\]), view(alice, \[identity\], \[\], \[acquaint(alice, bob)\], .*view(alice, \[knows(bob), identity\]" "$cva_sg_refresh"
+check_not "CVA refresh: ... no failed goal" "ERROR" "$cva_sg_refresh"
 check_not "CVA refresh: ... no message sent for it, a stutter" "sent(alice, bob, refresh\|attempt(alice, [0-9]*, [0-9]*, refresh" "$cva_sg_refresh"
 # What the loop above does not check of the currency's platform: the request question asked with the agent's own key, when the agent starts and on reading each answer; a peer becoming known at the second hello of an exchange; and nothing on the output but the views and the notices.
 cva_agent=$(cat "$CVA/currency/platform.vglp")
@@ -4637,14 +4640,14 @@ check "CVA plays: alice establishes her identity by the key her request question
 # nudge's nudge is unguarded and not proposed; gnudge's g is a guarded part of
 # a class whose other part, nudge's, is unguarded, and is proposed (vGLP #15,
 # Code_inbox.md, 2026-10-19 10:50 UTC, item 4).  A contract with no guarded
-# part has the request refresh alone and no clause on the request
-# propose([t]_j) (vGLP e22e2ad, Section 5.4, "The compilation": "of a type with
-# the alternative propose(N) for the request name N of each guarded part and
-# the alternative refresh").
+# part has no request: no request type, no request question and no clause on
+# the request propose([t]_j) (vGLP d433f71, Section 5.4, "The compilation": "a
+# type with the alternative propose(N) for the request name N of each guarded
+# part"; the request type loses refresh, a refresh being a grant, Section 6.3).
 cva_proposal() { # cva_proposal <platform.vglp>: the alternatives of Proposal, one line
     awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
 }
-check "CVA request type: the social graph's, propose(Proposal) and refresh alone: the request known(Q) goes, a meeting with a peer whose key the person has being the cold call (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1; vGLP e22e2ad, Section 5.4, \"The compilation\")" "^Request ::= propose(Proposal) ; refresh\.$" "$(cat "$CVA/social_graph/platform.vglp")"
+check "CVA request type: the social graph's, propose(Proposal) alone, no refresh (vGLP d433f71, Section 6.3): the request known(Q) goes, a meeting with a peer whose key the person has being the cold call (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 1; vGLP e22e2ad, Section 5.4, \"The compilation\")" "^Request ::= propose(Proposal)\.$" "$(cat "$CVA/social_graph/platform.vglp")"
 check_not "CVA request type: ... no request known(Q) in any platform" "^Request ::=.*known(" "$(cat "$CVA"/*/platform.vglp)"
 check "CVA request type: the social graph proposes establish, acquaint, introduce, befriend and unfriend, GKK's and GSG's" "^establish(Peer) acquaint(Peer, Peer) introduce(Peer, Peer, Peer) befriend(Peer, Peer) unfriend(Peer, Peer) $" "$(cva_proposal "$CVA/social_graph/platform.vglp")"
 check "CVA request type: nudge proposes befriend, not the unguarded nudge" "^befriend(Peer, Peer) $" "$(cva_proposal "$CVA/nudge/platform.vglp")"
@@ -4658,9 +4661,11 @@ compile(ung, [schema(u, [], [rs(unguarded, [atom(b, [])], [atom(a, [])], [], [])
 HEREDOC
 2>&1)
 check "CVA request type: a contract with no guarded class, compiled" "%% the canonical CVA platform of the contract(ung)" "$cva_ung"
-check "CVA request type: ... the request refresh alone, no part being guarded" "^Request ::= refresh\.$" "$cva_ung"
-check "CVA request type: ... drawn by social_menu with no button" "^Request? =::= social_menu(\[\])\.$" "$cva_ung"
-check "CVA request type: ... its request question asked when the agent starts" "request(Rq)" "$cva_ung"
+check_not "CVA request type: ... no request type, no part being guarded" "^Request ::=" "$cva_ung"
+check_not "CVA request type: ... and no widget declaration for a request question" "^Request? =::=" "$cva_ung"
+check_not "CVA request type: ... and no request question asked" "request(Rq)\|ask_next" "$cva_ung"
+check "CVA request type: ... its agent reading the arriving messages, its approvals' answers and its own triggers" "^    merge(\[\], Nt?, M1),$" "$cva_ung"
+check_not "CVA request type: ... no request refresh in any platform" "^Request ::=.*refresh" "$(cat "$CVA"/*/platform.vglp)"
 check_not "CVA request type: ... no Proposal, and no clause on the request propose([t])" "^Proposal ::=\|step(req(propose\|await_request(propose" "$cva_ung"
 
 cva_sg_menu=$("$REPL_RUN" <<HEREDOC
@@ -6825,14 +6830,14 @@ check "MB7 peer_app assigns the app the harness names for a connected peer" "\[a
 check "MB7 with no app named, peer_app assigns unattested for a connected peer" "\[alice\] unattested$" "$mb7"
 check_not "MB7 no failed goal" "→ failed" "$mb7"
 
-# MB8: declare(nearby(pan, S)) under :boot (GLP-Spec 210cee1, appendix-guards, "Networking seam": nearby(U, S) assigns S a stream of the agents nearby over the proximity underlay U, seen(K) and gone(K), and remove(nearby(U)) ends the declaration and closes its stream; IGLP b20951d, Implementation Notes, "Simulation realisation": "A nearby declaration on the PAN is given seen for every agent adjacent to the declaring one").  The adjacency is total from the boot, so alice's declaration at her start is given seen(bob); she tells her person, removes the declaration, and tells her person the stream is closed.
+# MB8: declare(nearby(pan, S)) under :boot (GLP-Spec 210cee1, appendix-guards, "Networking seam": nearby(U, S) assigns S a stream of the agents nearby over the proximity underlay U, seen(K) and gone(K), and remove(nearby(U)) ends the declaration and closes its stream; IGLP 45fabfc, Implementation Notes, "Simulation realisation": "A nearby declaration on the PAN is given seen for an adjacent agent the declaring agent has declared a peer, and for any other adjacent agent once the PAN trust levels of both are open"; "The harness sets no trust level at spawn").  The adjacency is total from the boot and alice declares bob a peer, so her declaration at her start is given seen(bob); she tells her person, removes the declaration, and tells her person the stream is closed.
 mb8=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/multiagent/nearby_boot.glp
 :quit
 HEREDOC
 2>&1)
 check "MB8 nearby: the boot settles with two agents" "Boot settled: 2 agents" "$mb8"
-check "MB8 nearby: a declaration on the PAN is given seen for the adjacent agent" "\[alice\] seen(bob)$" "$mb8"
+check "MB8 nearby: a declaration on the PAN is given seen for the adjacent agent declared a peer" "\[alice\] seen(bob)$" "$mb8"
 check "MB8 nearby: remove(nearby(pan)) closes the stream" "\[alice\] closed$" "$mb8"
 check_not "MB8 nearby: nothing is gone while the adjacency stands" "\[alice\] gone(" "$mb8"
 check_not "MB8 no failed goal" "→ failed" "$mb8"
@@ -7043,6 +7048,8 @@ test38_redeem_other_server(RI38, RR38, P38).
 test39_server_own_key(RI3910, RR3910, RI3911, RR3911).
 test40_prune_used(RI40, P401, P402).
 test41_used_dropped_through_agent(RD41, RK41).
+test42_redeem_not_signed_by_recipient(RI42, R421, R422).
+test43_redeemer_refused(R431, R432, R433, R434, R435, RI43, P43).
 :quit
 HEREDOC
 2>&1)
@@ -7287,8 +7294,7 @@ rv_36=$(_rv_answer 51)
 check "RV agent test36 succeeds" "^→ succeeds$" "$rv_36"
 check "RV agent test36: the link made by sign/3 verifies as the inviter's, carrying its key, the server, the serial and the expiry" "^S36 = signed($rv_key, $rv_key, invitation(\1, rv, rv_addr, 7, [0-9]*))$" "$rv_36"
 check "RV agent test36: through the agent, the link's serial is registered as unused" "^examples/rendezvous/rv_agent:register_serial($rv_tkey, 7, RI36, \[\], \[invited(\1, 7, RI36)\]) :- true$" "$rv_36"
-check "RV agent test36: through the agent, the redemption reads the recipient's address" "^:peer_address(bob, none) :- true$" "$rv_36"
-check "RV agent test36: through the agent, the redemption reads both addresses" "^2$" "$(_rv_pa "$rv_36")"
+check "RV agent test36: through the agent, the redemption signed by its recipient reads both addresses, the REPL's one key being the inviter's and the recipient's" "^2$" "$(printf '%s\n' "$rv_36" | grep -c "^:peer_address($rv_tkey, none) :- true\$")"
 check "RV agent test36: no address observed, the redemption is refused" "^RR36 = rejected$" "$rv_36"
 check "RV agent test36: the inviter is told nothing" "^RI36 = <unbound>$" "$rv_36"
 rv_37=$(_rv_answer 52)
@@ -7305,7 +7311,7 @@ check "RV agent test38: the serial is left unused" "^P38 = \[invited(alice, 7, X
 rv_39=$(_rv_answer 54)
 check "RV agent test39 succeeds" "^→ succeeds$" "$rv_39"
 check "RV agent test39: through rv_server/2, only the link naming the server's own key reaches the layer" "^2$" "$(_rv_pa "$rv_39")"
-check "RV agent test39: the redemption of the link naming the server reads the recipient's address once" "^1$" "$(printf '%s\n' "$rv_39" | grep -c '^:peer_address(bob, none) :- true$')"
+check "RV agent test39: the redemption of the link naming the server reads the inviter's and the recipient's address, the REPL's one key" "^2$" "$(printf '%s\n' "$rv_39" | grep -c "^:peer_address($rv_tkey, none) :- true\$")"
 check "RV agent test39: the link naming the server, no address observed, is refused" "^RR3910 = rejected$" "$rv_39"
 check "RV agent test39: the link naming another server is refused" "^RR3911 = rejected$" "$rv_39"
 check "RV agent test39: the inviter of the link naming the server is told nothing" "^RI3910 = <unbound>$" "$rv_39"
@@ -7319,6 +7325,26 @@ rv_41=$(_rv_answer 56)
 check "RV agent test41 succeeds" "^→ succeeds$" "$rv_41"
 check "RV agent test41: through the agent, a used serial past its link's expiry is dropped and the serial registered again" "^RD41 = <unbound>$" "$rv_41"
 check "RV agent test41: through the agent, a used serial before its link's expiry is kept and the registration refused" "^RK41 = rejected$" "$rv_41"
+# Tests 42 and 43: the redemption is the term redeem(R, Link) signed by R
+# (GNA Section 6, "Invitation links", 0147658): one signed by another than
+# the recipient it names, or the link presented bare, is refused before the
+# layer is asked, and admit_redeemer/7 refuses every form but R's signature
+# over redeem(R, Link).
+rv_42=$(_rv_answer 57)
+check "RV agent test42 succeeds" "^→ succeeds$" "$rv_42"
+check "RV agent test42: a redemption not signed by its recipient, or the link presented bare, does not reach the layer" "^0$" "$(_rv_pa "$rv_42")"
+check "RV agent test42: a redemption signed by another than its recipient is refused" "^R421 = rejected$" "$rv_42"
+check "RV agent test42: the link presented bare, the form before GNA 0147658, is refused" "^R422 = rejected$" "$rv_42"
+check "RV agent test42: the inviter is told nothing" "^RI42 = <unbound>$" "$rv_42"
+rv_43=$(_rv_answer 58)
+check "RV agent test43 succeeds" "^→ succeeds$" "$rv_43"
+check "RV agent test43: no refused redemption reaches the layer" "^0$" "$(_rv_pa "$rv_43")"
+check "RV agent test43: unsigned is refused" "^R431 = rejected$" "$rv_43"
+check "RV agent test43: signed by another than the recipient is refused" "^R432 = rejected$" "$rv_43"
+check "RV agent test43: naming another recipient is refused" "^R433 = rejected$" "$rv_43"
+check "RV agent test43: another term is refused" "^R434 = rejected$" "$rv_43"
+check "RV agent test43: a redemption whose link is no signed term is refused" "^R435 = rejected$" "$rv_43"
+check "RV agent test43: the serial is left unused" "^P43 = \[invited(alice, 7, X[0-9]*)\]$" "$rv_43"
 
 # rv_server/2, the entry the rendezvous server boots the agent on
 # (networking/glue/bin/rendezvous_server.dart): the module loaded as the
@@ -7477,10 +7503,14 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # 3; vGLP, Definitions "Volitional Procedure, ..." and "Canonical
 # Compilation"): home/3 asks the person once for the stream of their
 # requests, and the dispatcher draws its construct on the person channel, the
-# default widget of a stream of a union of tuples, a menu of the four forms
-# kept open; a Connect granted on it reaches the agent, whose notice
-# connected(bob) arrives on the same channel, merged with the draws
-# (superapp_ui/4, alice with a scripted peer for each key she knows, here bob).  A friend's request to connect
+# default widget of a stream of a union of tuples, a menu of the three forms
+# and the buttons Open place and Close place kept open, no form taking a key
+# typed (GSA #2, 2026-11-08 08:07 UTC, item 2); the persons known, seen
+# nearby, are told the person, nearby([bob]), on the same channel, merged
+# with the draws, and home draws a card for each with the button befriend,
+# which the person picks to befriend them (superapp_ui/4, alice with a
+# scripted peer for each key she knows, here bob, seen nearby; GSA paper,
+# Appendix "The Operating System", "Nearby").  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
 # with its dispatcher and a scripted person who grants on the card once it is
@@ -7492,20 +7522,25 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-superapp_ui(alice, [bob], [input(1, [], connect(bob)) | G?], []).
+superapp_ui(alice, [bob], G?, []).
 play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
+play_home(alice, befriend, [msg(agent, person, nearby([bob])), msg(agent, person, connected(carol)), msg(agent, person, nearby([bob, carol])), msg(agent, person, nearby([bob, carol, dave]))], CB, LB).
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of the four acts, drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\])\])), stream_request_r(input(\[\])))" "$sg_home"
-check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), output(\[msg(agent, person, connected(bob))\]))$" "$sg_home"
+check "SG super-app home: the request form, a menu of three acts and the buttons Open place and Close place (GPE:1), drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place)\])), stream_request_r(input(\[\])))" "$sg_home"
+check_not "SG super-app home: no connect form, a person befriended by picking them in Nearby" "form(connect," "$sg_home"
+check "SG super-app home: the person known, seen nearby, is shown on the person channel, nearby([bob])" "^draw(0, thread(.*), output(\[msg(agent, person, nearby(\[bob\]))\]))$" "$sg_home"
+check "SG super-app home: home draws bob's card in Nearby with the button befriend" "^draw(2, form(nearby, \[field(Friend, shown), field(Befriend, button(befriend))\]), nearbyPerson_w(nearby(bob, input(\[2\]))))$" "$sg_home"
 check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "L = \[card(bob) | " "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
 check "SG super-app home: an introduction raises respond_intro's card, the introducer and the other party shown" "LI = \[card(carol, bob) | " "$sg_home"
 check "SG super-app home: yes on the introduction's card is accept_intro, the pending value passed back" "CI = \[msg(person, alice, accept_intro(bob, error))\]" "$sg_home"
 check "SG super-app home: no on the introduction's card is reject_intro, the pending value passed back" "CN = \[msg(person, alice, reject_intro(bob, error))\]" "$sg_home"
+check "SG super-app home: each person nearby whom the person knows gets a card with befriend, once, and a friend none (GSA paper, Appendix 'Nearby': the person befriends one by picking them there)" "LB = \[nearby(bob), nearby(dave) | " "$sg_home"
+check "SG super-app home: picking befriend on a card is the person's request to befriend that person, no key typed" "CB = \[msg(person, alice, connect(bob)), msg(person, alice, connect(dave))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
 
 # The child-safe platform hosted, in its own session: a play that has run the
@@ -7732,6 +7767,47 @@ check "SG child-safe platform on two smartphones: alice is connected to bob" "\[
 check "SG child-safe platform on two smartphones: bob is connected to alice" "\[bob\] connected(alice)" "$sg_cssn"
 check "SG child-safe platform on two smartphones: alice's message reaches bob" "\[bob\] received(alice, hello)" "$sg_cssn"
 rm -f "$SG_CORE"/*.glpw
+
+# Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The
+# Operating System", "Nearby"; programs/social/graph/GPE.txt): the social
+# graph with the operating system's Nearby around it (graph/core/place.glp,
+# os_phone/6), which declares to the layer a watch on the agents nearby over
+# the PAN and the LAN, declare(nearby(U, S)).  Two smartphones that do not
+# know each other both open the place (GPE:1); each is nearby the other, so
+# they come to know each other by the encounter (GPE:2), each operating
+# system giving its person's consent while the place is open, no question
+# asked, the one with the smaller key putting it; home shows each the other
+# as nearby; alice befriends bob (GSG:1) by picking him on his card in
+# Nearby, no key typed, bob consents on his card, and they are friends.  Both
+# trusts are declared closed at start, and every person known is declared to
+# the layer a known peer.  Then three: alice and bob know each other at the
+# start and befriend, alice picking bob in Nearby and never opening the
+# place; bob and carol open it and come to know each other by the encounter;
+# carol befriends bob by picking him, and bob introduces her to alice
+# (GKK:3): each knows the other on her yes to the introduction, and the two
+# are friends.  Each person's
+# lines as a set, the isolates ordering them otherwise from run to run, and
+# the order where one notice causes the next.
+sg_nearby=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/social/nearby_boot.glp $SG_CORE
+:boot $GLP_DIR/programs/social/nearby3_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG nearby on two smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$sg_nearby"
+check "SG nearby on three smartphones: the boot settles" "Boot settled: 3 agents (alice, bob, carol)" "$sg_nearby"
+check_not "SG nearby: no event stopped at the cap" "did not quiesce" "$sg_nearby"
+check_not "SG nearby: no failed play" "→ failed" "$sg_nearby"
+sg_nearby2=$(echo "$sg_nearby" | awk '/Boot settled: 2 agents/ { exit } { print }')
+sg_nearby3=$(echo "$sg_nearby" | awk 'f { print } /Boot settled: 2 agents/ { f = 1 }')
+boot_same "SG nearby on two smartphones: alice knows bob by the encounter, home shows him nearby, and she befriends him by picking him" "[msg(agent, person, connected(bob)), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted alice "$sg_nearby2")"
+boot_same "SG nearby on two smartphones: bob knows alice by the encounter, home shows her nearby, and he consents on his card" "[msg(agent, person, befriend(alice)), msg(agent, person, connected(alice)), msg(agent, person, nearby([alice]))]" "$(boot_person_sorted bob "$sg_nearby2")"
+check "SG nearby on two smartphones: alice befriends bob once home shows him nearby" "nearby(\[bob\])), msg(agent, person, connected(bob))" "$(boot_person alice "$sg_nearby2")"
+boot_same "SG nearby on three smartphones: alice, who knew bob, befriends him and is introduced to carol" "[msg(agent, person, befriend_intro(bob, carol)), msg(agent, person, connected(bob)), msg(agent, person, connected(carol)), msg(agent, person, nearby([bob, carol])), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted alice "$sg_nearby3")"
+boot_same "SG nearby on three smartphones: bob knows carol by the encounter and befriends both" "[msg(agent, person, befriend(alice)), msg(agent, person, befriend(carol)), msg(agent, person, connected(alice)), msg(agent, person, connected(carol)), msg(agent, person, nearby([alice, carol])), msg(agent, person, nearby([alice]))]" "$(boot_person_sorted bob "$sg_nearby3")"
+boot_same "SG nearby on three smartphones: carol knows bob by the encounter, befriends him, and is introduced to alice" "[msg(agent, person, befriend_intro(bob, alice)), msg(agent, person, connected(alice)), msg(agent, person, connected(bob)), msg(agent, person, nearby([alice, bob])), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted carol "$sg_nearby3")"
+check "SG nearby on three smartphones: carol knows alice by the introduction, not by an encounter" "nearby(\[bob\])), msg(agent, person, connected(bob)), msg(agent, person, befriend_intro(bob, alice)), .*nearby(\[alice, bob\]))" "$(boot_person carol "$sg_nearby3")"
+check "SG nearby on three smartphones: alice knows carol by the introduction" "befriend_intro(bob, carol)), .*nearby(\[bob, carol\]))" "$(boot_person alice "$sg_nearby3")"
 
 sg_budget=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/social/graph/budget
@@ -8970,18 +9046,20 @@ else
     fi
 fi
 
-# A simulation outside programs/sglp (Integration's ruling of 2026-10-16 10:52
-# UTC, item 1; sGLP's answers of 11:25 and 12:32 UTC): programs/tests/sglp_outside
-# is transformed by transform.sh --source, its printed modules as printed, and it
-# loads and runs with the monitor and sglp.glp exposed from the root
-# programs/self.glp (TGLP modules.tex, "The -expose directive").
-sglp_out_tx=$(bash "$GLP_DIR/programs/sglp/transform.sh" --source "$GLP_DIR/programs/tests/sglp_outside" --check 2>&1; echo "exit $?")
+# A simulation in a directory of its own (Integration's ruling of 2026-10-16
+# 10:52 UTC, item 1; sGLP's answers of 11:25 and 12:32 UTC), under programs/sglp
+# since 2026-11-08 (sGLP #11, Code_inbox 2026-11-07 21:21 UTC, Udi approving):
+# programs/sglp/tests/outside is transformed by transform.sh --source, its
+# printed modules as printed, and it loads and runs with the monitor and
+# sglp.glp that programs/sglp/self.glp exposes (TGLP modules.tex, "The -expose
+# directive").
+sglp_out_tx=$(bash "$GLP_DIR/programs/sglp/transform.sh" --source "$GLP_DIR/programs/sglp/tests/outside" --check 2>&1; echo "exit $?")
 check "sglp outside: transform.sh --source --check, profiles.glp as printed" "^profiles.glp: as printed$" "$sglp_out_tx"
 check "sglp outside: transform.sh --source --check, population.glp as printed" "^population.glp: as printed$" "$sglp_out_tx"
 check "sglp outside: transform.sh --source --check exits 0" "^exit 0$" "$sglp_out_tx"
 sglp_out_run=$("$REPL_RUN" <<HEREDOC
 :limit 1000000000000
-$GLP_DIR/programs/tests/sglp_outside
+$GLP_DIR/programs/sglp/tests/outside
 poll_run(5, As).
 :quit
 HEREDOC
@@ -9440,11 +9518,15 @@ if _section NET; then
 # since it depends on the Flutter package and has flutter_test and no
 # package:test, so `dart test` refuses it; and the pure-Dart core in
 # networking/core by `dart test`.  Each runs from its own directory, as
-# networking/README.md says.  The conventions are Section Q's: each runner's
+# networking/README.md says.  With them, since 2026-11-08 (Cloud #8), the
+# directory of GNA's Section 7, servers/directory, by `flutter test`, since
+# it depends on the glue and so on Flutter, which the Dart on the Mac's path
+# cannot resolve: its agent over the headless layer against a scripted app
+# over the loopback, and its store and page.  The conventions are Section Q's: each runner's
 # raw output and json report kept in the run's directory, SUITE_RUN_DIR
-# (net_flutter, net_glue and net_core, each .txt and .json), each failing test
-# printed as a FAIL
-# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# (net_flutter, net_glue, net_core and net_directory, each .txt and .json),
+# each failing test printed as a FAIL
+# line "<package directory>/test/<file>: <test name>" and counted, the passed
 # count added to the totals, a missing runner a hard failure, and a runner that
 # exits non-zero naming no failing test a hard failure, since it did not run its
 # tests.  The section has no known-red list: a red test fails it.
@@ -9453,16 +9535,15 @@ echo ""
 
 NET_RAW_DIR="$SUITE_RUN_DIR"
 mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
-echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, each .txt and .json)"
+echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, net_directory, each .txt and .json)"
 NET_PASSED=0
 NET_FAILED=0
 
-# _net_run <name> <directory under networking/> <runner>: runs the runner's
-# tests in that directory and adds to NET_PASSED and NET_FAILED.
+# _net_run <name> <directory from the repository root> <runner>: runs the
+# runner's tests in that directory and adds to NET_PASSED and NET_FAILED.
 _net_run() {
-    local name="$1" sub="$2" runner="$3"
-    local dir="$GLP_DIR/networking${sub:+/$sub}"
-    local rel="networking${sub:+/$sub}"
+    local name="$1" rel="$2" runner="$3"
+    local dir="$GLP_DIR/$rel"
     local raw="$NET_RAW_DIR/net_$name.txt"
     local result status clean passed fails dnf
     if ! command -v "$runner" >/dev/null 2>&1; then
@@ -9514,9 +9595,10 @@ _net_run() {
     NET_PASSED=$((NET_PASSED + passed))
 }
 
-_net_run flutter "" flutter
-_net_run glue glue flutter
-_net_run core core dart
+_net_run flutter networking flutter
+_net_run glue networking/glue flutter
+_net_run core networking/core dart
+_net_run directory servers/directory flutter
 
 PASS=$((PASS + NET_PASSED))
 FAIL=$((FAIL + NET_FAILED))
@@ -9527,6 +9609,73 @@ fi
 echo ""
 
 fi  # Section NET
+
+if _section DL; then
+# =============================================================================
+# Section DL: the debugging log service of the phones (servers/debuglog)
+# =============================================================================
+#
+# GLP/phones/docs/debugging.md, "The log service": `dart test` in
+# servers/debuglog, as Section NET runs networking/core: under the watchdog,
+# the raw output and json report in the run's directory (dl.txt and dl.json),
+# each failing test a FAIL line "servers/debuglog/test/<file>: <test name>",
+# a missing dart or a run that exits non-zero naming no failing test a hard
+# failure.  No known-red list: a red test fails it.
+echo "=== Section DL: the debugging log service (servers/debuglog) ==="
+echo ""
+DL_RAW_DIR="$SUITE_RUN_DIR"
+mkdir -p "$DL_RAW_DIR" 2>/dev/null || true
+DL_REL="servers/debuglog"
+DL_RAW="$DL_RAW_DIR/dl.txt"
+DL_JSON="$DL_RAW_DIR/dl.json"
+echo "  (raw output and json report in $DL_RAW_DIR: dl.txt and dl.json)"
+DL_PASSED=0
+DL_FAILED=0
+if ! command -v dart >/dev/null 2>&1; then
+    echo "  FAIL: dart is not on PATH, so $DL_REL/test/ cannot run"
+    DL_FAILED=1
+else
+    _q_run "$GLP_DIR/$DL_REL" "$DL_JSON" "$DL_RAW" "$DL_REL/" dart test
+    dl_status=$Q_RUN_STATUS
+    if [ "$Q_RUN_DNF" = 1 ]; then
+        _q_report_dnf "dart test in $DL_REL"
+        DL_FAILED=$((DL_FAILED + Q_DNF_COUNT))
+    fi
+    dl_clean=$(sed 's/\x1b\[[0-9;]*m//g' "$DL_RAW" 2>/dev/null | tr '\r' '\n') || dl_clean=""
+    DL_PASSED=$(printf '%s' "$dl_clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    DL_PASSED=${DL_PASSED:-0}
+    dl_fails=$(printf '%s' "$dl_clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$DL_REL/test/|$DL_REL/test/|; s|^test/|$DL_REL/test/|" \
+        | sort -u) || true
+    dl_loads=$(_q_load_failures "$DL_JSON" "$DL_REL/") || true
+    if [ -n "$dl_loads" ]; then
+        dl_fails=$(printf '%s\n%s' "$dl_fails" "$dl_loads" | sed '/^$/d' | sort -u)
+    fi
+    if [ "$dl_status" -ne 0 ] && [ -z "$dl_fails" ] && [ "$Q_RUN_DNF" = 0 ]; then
+        echo "  FAIL: dart test exited $dl_status in $DL_REL naming no failing test, so $DL_REL/test/ did not run"
+        printf '%s\n' "$dl_clean" | tail -5 | sed 's/^/        /'
+        DL_FAILED=$((DL_FAILED + 1))
+    fi
+    if [ -n "$dl_fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            DL_FAILED=$((DL_FAILED + 1))
+        done <<< "$dl_fails"
+    fi
+    echo "  $DL_REL: $DL_PASSED passed (dart test; output in $DL_RAW)"
+fi
+PASS=$((PASS + DL_PASSED))
+FAIL=$((FAIL + DL_FAILED))
+if [ $DL_FAILED -eq 0 ]; then
+    echo "  PASS: All $DL_PASSED debugging log service tests passed"
+fi
+
+echo ""
+
+fi  # Section DL
 
 # =============================================================================
 # SUMMARY

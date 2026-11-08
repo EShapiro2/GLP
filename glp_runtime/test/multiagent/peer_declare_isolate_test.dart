@@ -34,7 +34,9 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Bob closes his PAN and reports each caller he hears; alice tells dave her
+/// The harness sets no trust level at spawn (IGLP 45fabfc, "Simulation
+/// realisation"), so dave, alice and carol open their PANs at their start,
+/// and bob, Closed, declares his closed.  Bob reports each caller he hears; alice tells dave her
 /// key, dave hands it to bob, who declares it by declare(peer(K)), and dave then
 /// relays the go to alice and carol, who each call bob.  Bob declares alice by
 /// the key self_key/1 assigns her, made at her spawn (IGLP, Implementation
@@ -59,10 +61,10 @@ procedure agent_init(Constant?, Stream(NetMsg(PdMsg))?).
 agent_init(bob, In) :-
     declare(trust(pan, closed)),
     send_to_net([msg(dave, ready)]), bob_in(In?).
-agent_init(dave, In) :- dave_key(In?).
+agent_init(dave, In) :- declare(trust(pan, open)), dave_key(In?).
 agent_init(alice, In) :-
-    self_key(K), send_to_net([msg(dave, key(K?))]), called(alice, In?).
-agent_init(carol, In) :- called(carol, In?).
+    declare(trust(pan, open)), self_key(K), send_to_net([msg(dave, key(K?))]), called(alice, In?).
+agent_init(carol, In) :- declare(trust(pan, open)), called(carol, In?).
 
 procedure bob_in(Stream(NetMsg(PdMsg))?).
 bob_in([msg(bob, declare(K)) | In]) :- ground(K?) |

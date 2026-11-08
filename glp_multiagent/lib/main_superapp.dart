@@ -1,36 +1,150 @@
-/// The Grassroots Super-App on a live person's screen — the person's own acts
-/// on their super-app, the interface derived from the program.
+/// The Grassroots App on a phone: the person's own agent over the real
+/// network, Bluetooth, the local network and the Internet (GSA paper, Section 2 and
+/// Appendix "The Operating System").
 ///
-/// `programs/social/graph/core`, until 2026-11-03 at `superapp_ui/3`, the
-/// bridge entry of `programs/social/graph/core/home_ui.glp`: alice's social-graph agent with
-/// the person interface of `home.vglp` on the person channel of vGLP's
-/// Definition "Person Channel, Person Writer, GLP with Persons, Grant", and a
-/// scripted bob across a crossbar so that Connect and Invite have someone to
-/// reach.  Nothing on this screen is written here: the bridge draws the
-/// constructs the compiled program's dispatcher draws, each the default
-/// widget of its interactive type, and returns alice's input as grants;
-/// [superappManifest] views what the super-app tells her; and the shell is
-/// [runVglpApp].
+/// The app makes or reads the agent's key pair and instantiates the
+/// networking layer with it, PAN, LAN and WAN (phone_network.dart); the agent runs
+/// `programs/social/graph/core` from every agent's initial goal, and at its
+/// first start the app sends on the person channel the act that starts the
+/// Grassroots App, `superapp(Me, [])` (superapp_host.dart; GSA paper,
+/// Appendix, "Boot"; IGLP, Implementation Notes, "Boot").  The person sees
+/// home, the Grassroots App's own person interface, as the bridge draws the
+/// constructs of its questions, and the thread of what the agent tells them:
+/// opening the place (GPE:1), the persons nearby they come to know by an
+/// encounter (GPE:2), and befriending (GSG:1) by picking a person nearby on
+/// home's card for them, no key typed.
 ///
-/// The agent is started from agent(ch(_?,_),ch(_?,_)), every agent's initial
-/// goal (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP,
-/// Implementation Notes, "Boot"), which the program's agent/2, its
-/// owner's, answers; until 2026-11-03 the runtime started it at `superapp_ui/3`.
-/// At the agent's first start the application sends on the person channel the
-/// act that starts the super-app, `superapp_ui(Me, [])`, Me the agent's key
-/// and no peer yet, later peers coming by acquaintance (IGLP b014a9e,
-/// Implementation Notes, "Boot"); core's agent/2 starts superapp_ui/4 on it,
-/// and the person's acts after it are the grants of the super-app's person
-/// channel.
+/// The demonstration with scripted peers in one heap, `superapp_ui/4`, is
+/// `main_superapp_ui.dart`.
 library;
 
-import 'manifests/superapp_ui.dart';
-import 'vglp_app.dart';
+import 'package:flutter/material.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
+import 'package:path_provider/path_provider.dart';
 
-void main() => runVglpApp(VglpProgram(
-      title: 'Apps',
-      person: 'alice',
-      directory: (glp) => glp.coreDir,
-      manifest: superappManifest,
-      entry: 'superapp_ui',
-    ));
+import 'glp_sources.dart';
+import 'manifests/superapp_ui.dart';
+import 'phone_network.dart';
+import 'superapp_host.dart';
+import 'ui_runtime/agent_surface.dart';
+
+/// The persona's name in the seed of the agent's key pair, made once at the
+/// first start (IGLP, Implementation Notes, "Boot").
+const String _persona = 'person';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const GrassrootsApp());
+}
+
+class GrassrootsApp extends StatelessWidget {
+  const GrassrootsApp({super.key});
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Grassroots',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+          useMaterial3: true,
+        ),
+        home: const GrassrootsScreen(),
+      );
+}
+
+class GrassrootsScreen extends StatefulWidget {
+  const GrassrootsScreen({super.key});
+  @override
+  State<GrassrootsScreen> createState() => _GrassrootsScreenState();
+}
+
+class _GrassrootsScreenState extends State<GrassrootsScreen> {
+  PhoneNetwork? _net;
+  SuperAppHost? _host;
+  String _status = 'Starting…';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+  }
+
+  @override
+  void dispose() {
+    _host?.dispose();
+    _net?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    try {
+      final glp = await resolveGlpPaths();
+      final net = await PhoneNetwork.open(persona: _persona);
+      _net = net;
+      // The agent's local state is kept across the termination of the app by
+      // a store in the app's own directory, which the person does not see
+      // (IGLP, Implementation Notes, "Persistence": "a store the host gives
+      // it"): a launch after the first goes on from it.
+      final support = await getApplicationSupportDirectory();
+      final store = FileAgentStateStore('${support.path}/agents/$_persona.state');
+      final host = SuperAppHost(
+        agentId: _persona,
+        program: glp.coreDir,
+        rootSelfGlpPath: glp.rootSelfGlp,
+        network: net.network,
+        keyPair: net.keyPair,
+        manifest: superappManifest,
+        stateStore: store,
+      );
+      host.ui.onChange = () {
+        if (mounted) setState(() {});
+      };
+      host.onOutput = (line) {
+        if (line.startsWith('[ERROR]') && mounted) {
+          setState(() => _status = line);
+        }
+      };
+      setState(() {
+        _host = host;
+        _status = net.transports
+            ? 'Ready'
+            : 'Ready, with neither Bluetooth nor the local network';
+      });
+      await host.start();
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) setState(() => _status = 'Error: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final host = _host;
+    // The person sees what the program draws (GSA paper, Appendix "The
+    // Operating System", "The person"); the app shows its own line only
+    // while the agent is not running, or where the layer or the agent fails.
+    return Scaffold(
+      body: SafeArea(
+        child: host == null
+            ? Center(
+                child: Text(_status,
+                    style: const TextStyle(color: Colors.grey)))
+            : Column(
+                children: [
+                  if (_status != 'Ready')
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      child: Text(_status,
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey)),
+                    ),
+                  Expanded(
+                    child: AgentSurface(agentId: _persona, runtime: host.ui),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}

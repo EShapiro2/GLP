@@ -18,7 +18,10 @@
 %% Request?, taking one request (vGLP 12f629d, Section 5.4, "The compilation"); the program's output, construct 0, on which the agent goal writes its view, view(Me, S, K, A, Ts), its own key Me, the machine state S of its app state, the contract's atoms, the persons K it knows and the approvals A its person made that are pending, when it starts and whenever any changes, drawn element by element, which it logs (vGLP, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(P, Q, D), P the part of the refused attempt, Q its refuser and D the reason, declined or unable(Lacks, Has), or when a request of its person is dropped, the agent ready for no part it names, refused(P, Q, unable) (vGLP, Section 5.4, "The compilation"); the approval questions Start raises; and the approval question an arriving hello asks of a meeting.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation"), and the plays pace the persons on what their screens show: the last view, the notices after it, the request question open and the approval questions drawn.
 %%
 %% The person's script is a list of steps: req(R) grants the request R on the
-%% request question open, once one is drawn; own(Ks, R) grants R likewise,
+%% request question open, once one is drawn; refresh grants refresh, an Input
+%% addressed to no construct, on which the dispatcher has every construct, and
+%% construct 0, draw again what it last drew (vGLP d433f71, Section 6.3);
+%% own(Ks, R) grants R likewise,
 %% once the person has written into each of the holes Ks the agent's own key,
 %% which the last view drawn shows, R reading the holes wherever it names the agent:
 %% a person proposing a class that names its agent names it by the key it
@@ -40,7 +43,7 @@ Peer       ::= Key.
 Carried(X, R) ::= hello(Peer, R) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
 Msg(X, R)  ::= msg(Peer, Carried(X, R)).
 Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
-Step(T)    ::= req(T) ; own(Holes, T) ; look ; wait(_) ; approval(_, T).
+Step(T)    ::= req(T) ; own(Holes, T) ; look ; wait(_) ; approval(_, T) ; refresh.
 Holes      ::= [] ; [Peer? | Holes].
 Steps(T)   ::= [] ; [Step(T) | Steps(T)].
 Sess       ::= nosess ; sess(Integer, Path).
@@ -160,6 +163,8 @@ advance(ps(sess(Id, P), T, Cs, [req(R)|Ss]), [input(Id?, P?, R?)|Gs?], Gs1, St1?
     ground(Id?), ground(P?) |
     advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R)|Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?)|Ss?]), Log1?, Log1).
+advance(ps(Se, T, Cs, [refresh|Ss]), [refresh|Gs?], Gs1, St1?, Log?, Log1) :-
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 %% The agent's own key, which the request form reads off the view, is the first argument of every view, the first of them written when the agent starts, so the person reads it off the first view drawn on construct 0; with none drawn yet, the step waits (vGLP 12f629d, Section 5.4, "The compilation"; Section 6.2).
 advance(ps(sess(Id, P), [view(Me, S, K, A, Ts)|Vs], Cs, [own(Ks, R)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?), ground(Me?) |

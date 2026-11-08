@@ -9,7 +9,8 @@ own GLP program and uses its own execution backend and agent topology.
 
 | Entry point | App | Agents | Backend | Status |
 |---|---|---|---|---|
-| `lib/main.dart` | The Grassroots Super-App (`programs/social/graph/core`), the phone app's default; it runs `lib/main_superapp.dart` | alice, with a scripted bob | `runVglpApp` (`lib/vglp_app.dart`) | Working |
+| `lib/main.dart` | The Grassroots App (`programs/social/graph/core` at `superapp/4`), the phone app's default; it runs `lib/main_superapp.dart` | the person, over the real network, Bluetooth and the local network | `SuperAppHost` (`lib/superapp_host.dart`) over GNA's layer (`lib/phone_network.dart`) | Working in one process (`test/superapp_nearby_test.dart`); not yet run on two phones |
+| `lib/main_superapp_ui.dart` | The demonstration (`programs/social/graph/core` at `superapp_ui/4`) | alice, with a scripted bob in one heap | `runVglpApp` (`lib/vglp_app.dart`) | Working |
 
 `main_sg_mad.dart`, `main_cssg_mad.dart` and `main_cssg_mad_modules.dart` were
 retired on 2026-08-01: each named a program directory that no longer exists

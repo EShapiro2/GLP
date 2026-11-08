@@ -1,4 +1,4 @@
-"""Build GAS, the GLP app store, at peoplesweb.org, from this repository: build/www and the live worlds.
+"""Build GAS, the Grassroots App Store, at peoplesweb.org, from this repository: build/www and the live worlds.
 
 Usage (from servers/peoplesweb):  python3 -I tools/build.py
 
@@ -26,7 +26,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import paper_of  # noqa: E402
+from papers import load_state, paper_of  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
           ('platform', 'platform.vglp'), ('glp', 'platform.glp')]
@@ -107,22 +107,31 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
     owners[m.group(1)] = m.group(2)
 
 
-def extends_of(c):
-    """The contracts a contract builds on directly: those named in the first sentence of its
-    % Extends or % Restricts line, less those it reaches only 'through' another."""
+RELATIONS = ('extends', 'restricts', 'amends', 'implements', 'instantiates')
+
+
+def extends_of(c, lines):
+    """The relation a contract states and the contracts it relates to: the box's own first line, 'NAME amends GSN and GFP (cite).' (style guide, 36; GSC, Section 8), wherever it stands among the text's lines, or failing it the same sentence in a % line (DGC's); failing both, the % Extends or % Restricts line, its first sentence, less the contracts named only 'through' another."""
+    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS) + r') ([^.(]+)')
+    for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
+        m = rel.search(l)
+        if m:
+            c['relation'] = m.group(1)
+            names = re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", m.group(2))
+            return [t for t in dict.fromkeys(names) if t in texts and t != c['id']]
     line = next((l for l in c['meta'] if l.startswith('% Extends:') or l.startswith('% Restricts:')), '% Extends:')
     c['relation'] = 'restricts' if line.startswith('% Restricts:') else 'extends'
     first = re.split(r'\.\s{2}', line.split(':', 1)[1].strip())[0]
     named = []
     for part in first.split(';'):   # each part names some contracts, then perhaps 'through it' their own
         # a name followed by 's is an owner (GAI's), not a contract extended
-        named += re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b(?!['\u2019]s)", re.split(r'\bthrough\b', part)[0])
+        named += re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b(?!['\u2019]s)", re.split(r'\bthrough\b|\bfactored\b', part)[0])
     return [t for t in dict.fromkeys(named) if t in texts and t != c['id']]
 
 
 cat = {n: contract_text(p) for n, p in texts.items()}
 for c in cat.values():
-    c['extends'] = extends_of(c)
+    c['extends'] = extends_of(c, read(texts[c['id']]).split('\n'))
     own = next((l for l in c['meta'] if l.startswith('% Owner:')), '% Owner: ')
     c['owner'] = re.sub(r'[^A-Za-z].*$', '', own[len('% Owner:'):].strip()) or owners.get(c['id'], '')
     c['source'] = 'example' if c['meta'] and re.search(r'an (example|experimental) contract', c['meta'][0]) else 'paper'
@@ -155,8 +164,14 @@ for n in compiled:
 
 
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
-pd = os.path.join(HERE, 'web', 'papers')
-served = {f[:-4] for f in os.listdir(pd)} if os.path.isdir(pd) else set()
+# The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
+# the server, with its state.json, or else the ones built by hand in
+# web/papers.
+pd = os.environ.get('PAPERS_DIR') or os.path.join(HERE, 'web', 'papers')
+if not os.path.isdir(pd):
+    pd = os.path.join(HERE, 'web', 'papers')
+served = {f[:-4] for f in os.listdir(pd) if f.endswith('.pdf')} if os.path.isdir(pd) else set()
+paper_state = load_state(pd)
 byid = dict(cat)
 
 
@@ -191,7 +206,7 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
     c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
-    c['paper'] = paper_of(n, c['owner'], served)
+    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -220,7 +235,8 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f in os.listdir(pd):
-        shutil.copy(os.path.join(pd, f), os.path.join(WWW, 'papers', f))
+        if f.endswith('.pdf'):
+            shutil.copy(os.path.join(pd, f), os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
