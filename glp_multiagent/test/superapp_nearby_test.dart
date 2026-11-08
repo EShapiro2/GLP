@@ -346,11 +346,15 @@ void main() {
       expect(w, isNot(contains('form(connect,')));
       // Invite by link (GRV's interface pragma Registration) a button, and
       // the opening of a link a form with the link's text (GDS's
-      // implementation pragma Contact).
+      // implementation pragma Contact), and List, List unlisted and Unlist
+      // (GDS's interface pragma Listing).
       expect(
           w,
           endsWith('button(open_place), button(close_place), '
-              "button(invite_link), form(open_link, [field('Link', text)])]))"));
+              "button(invite_link), form(open_link, [field('Link', text)]), "
+              "form(list, [field('Email', text), field('Name', text)]), "
+              "form(list_unlisted, [field('Email', text), field('Name', text)]), "
+              'button(unlist)]))'));
       await p.host.idle;
       expect(p.net.declared, ['pan closed', 'lan closed'],
           reason: 'both trusts are declared closed at start, and stay so '

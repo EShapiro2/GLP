@@ -177,7 +177,9 @@ void main() {
     // declared type, a Key a peer field and a String a text field, and the
     // two constants, Open place and Close place (GPE:1), a button each, Invite
     // by link (GRV:2) a button, and the opening of a link a form with the
-    // link's text (GDS's implementation pragma Contact).  No
+    // link's text (GDS's implementation pragma Contact), and List and List
+    // unlisted forms with the email address and the name, and Unlist a
+    // button (GDS's interface pragma Listing).  No
     // form connects with a person by a key typed: a person is befriended by
     // picking them in Nearby (GSA #2, 2026-11-08 08:07 UTC, item 2).
     const requestForm = "input_box(menu([form(trust, [field('CompilerKey', peer)]), "
@@ -186,7 +188,10 @@ void main() {
         "button(open_place), "
         "button(close_place), "
         "button(invite_link), "
-        "form(open_link, [field('Link', text)])]))";
+        "form(open_link, [field('Link', text)]), "
+        "form(list, [field('Email', text), field('Name', text)]), "
+        "form(list_unlisted, [field('Email', text), field('Name', text)]), "
+        "button(unlist)]))";
     // What the super-app tells its person reaches her only as the thread of
     // construct 0, each notice by the widget of the reserved type Output ::=
     // Notice; the questions are numbered from 1 (vGLP 169b008, Definition
