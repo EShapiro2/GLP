@@ -14,12 +14,15 @@ import 'package:glp_multiagent/superapp_host.dart';
 
 void main() {
   test('the repository\'s configuration names the live rendezvous server and '
-      'no directory yet', () {
+      'the live directory', () {
     final services = readServices('../programs/social/graph/core');
-    expect(services, hasLength(1));
-    expect(services.single.kind, ServiceKind.rendezvous);
-    expect(services.single.key, matches(RegExp(r'^[0-9a-f]{64}$')));
-    expect(services.single.address, '162.35.126.126:9516');
+    expect([for (final s in services) (s.kind, s.address)], [
+      (ServiceKind.rendezvous, '162.35.126.126:9516'),
+      (ServiceKind.directory, '162.35.126.126:9518'),
+    ]);
+    for (final s in services) {
+      expect(s.key, matches(RegExp(r'^[0-9a-f]{64}$')));
+    }
   });
 
   test('a configuration with a directory names it after the rendezvous '
