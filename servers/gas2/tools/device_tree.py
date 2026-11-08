@@ -6,7 +6,7 @@ GLP's own app, with GAS2's mini-apps and its device harness.
 
 The output holds programs/: the root self.glp, every self.glp between the root and
 programs/social/graph, every .glp of that tree and every .vglp no .glp stands for,
-vglp/dispatcher.glp, each of GAS2's mini-apps (programs/apps/gas2_*), and
+vglp/dispatcher.glp and views.glp, each of GAS2's mini-apps (programs/apps/gas2_*), and
 gas2_apps.json, which names them.  core/self.glp gets the three lines that start the
 device harness (miniapp.patch_device)."""
 import json
@@ -54,7 +54,11 @@ def device_tree(root, out, apps=None):
                 rel = os.path.relpath(os.path.join(dp, f), src)
                 if f.endswith('.glp') or (f.endswith('.vglp') and not os.path.exists(os.path.join(dp, f[:-5] + '.glp'))):
                     stage(src, dst, rel)
-    stage(src, dst, os.path.join('vglp', 'dispatcher.glp'))
+    # The dispatcher's generic source: dispatcher.glp, and views.glp beside it
+    # since GLP b411d33 (glp_runtime/lib/vglp/dispatcher.dart, DispatcherSource).
+    for f in ('dispatcher.glp', 'views.glp'):
+        if os.path.exists(os.path.join(src, 'vglp', f)):
+            stage(src, dst, os.path.join('vglp', f))
     if apps is None:
         apps = [(a, a[5:].upper(), a[5:].upper()) for a in sorted(os.listdir(os.path.join(src, 'apps')))
                 if a.startswith('gas2_') and os.path.isdir(os.path.join(src, 'apps', a))]
