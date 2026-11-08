@@ -77,7 +77,19 @@ UserContent ::= connect(Key)
               %% open, and closes it (GSA paper, Section 4, the box GPE; the
               %% operating system's Nearby, core/place.glp).
               ; open_place
-              ; close_place.
+              ; close_place
+              %% GRV:2, Invite by link, and GRV:3 at the recipient, the
+              %% opening of a link the person was sent, its text (GNA,
+              %% Section 6, the box GRV; the operating system's invitation
+              %% links, core/links.glp).
+              ; invite_link
+              ; open_link(SignedTerm)
+              %% GDS:2, Listing: List, List unlisted and Unlist, the email
+              %% address and the name the person gives (GNA, Section 7, the
+              %% box GDS; core/links.glp).
+              ; list(String, String)
+              ; list_unlisted(String, String)
+              ; unlist.
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content)).
 %% befriend and befriend_intro carry the pending value, which the person's
@@ -96,7 +108,14 @@ AgentContent ::= befriend(Key, PendingValue)
                %% Nearby: the persons nearby whom the person knows, in the
                %% order of their keys (GPE's interface pragma Nearby; the
                %% operating system's Nearby, core/place.glp).
-               ; nearby(List(Key)).
+               ; nearby(List(Key))
+               %% Invite by link: the link the operating system made and
+               %% registered, as text, for the person to send (GSA paper,
+               %% Section 4.2, "Legacy online connections"; core/links.glp).
+               ; invitation(SignedTerm)
+               %% List: the directory sent a verification mail to the address
+               %% (GNA Section 7: "verify, a mail sent to the address").
+               ; verify(String).
 
 %% Network content (2-arg cold-call: msg(Dest, Content)): the caller, the
 %% caller's consent, bound before sending, and the callee's consent, for the
@@ -106,7 +125,33 @@ NetColdCall ::= befriend_propose(Key, AcceptorConsent, ProposerConsent(FriendCha
               %% GPE:2, Encounter, guarded by both: the proposer and the
               %% callee's consent, for the callee's operating system to write,
               %% yes while its place is open (core/place.glp).
-              ; encounter(Key, Decision?).
+              ; encounter(Key, Decision?)
+              %% GRV:2 and GRV:3, the cold calls to a rendezvous server (GNA
+              %% Section 6, "Invitation links"; core/links.glp): the inviter
+              %% registers its link, register(I, Link, Reply); the recipient
+              %% redeems it, redeem(R, Signed, Reply), Signed the term
+              %% redeem(R, Link) signed by R; the server answers each with the
+              %% other's key and address, or rejected.
+              ; register(Key, SignedTerm, RvReply?)
+              ; redeem(Key, SignedTerm, RvReply?)
+              %% GDS:2, the cold calls to a directory (GNA Section 7, "The
+              %% messages"; core/links.glp): the person lists, list(A, Signed,
+              %% Supply, Reply), Signed the term listing(A, Email, Name,
+              %% Visibility) signed by A, the directory answering verify or
+              %% rejected and asking for links on Supply; the app supplies
+              %% them, supply(A, Links); the person unlists, unlist(A,
+              %% Signed, Reply), Signed the term unlist(A) signed by A.
+              ; list(Key, SignedTerm, Stream(SupplyAsk)?, ListReply?)
+              ; supply(Key, List(SignedTerm))
+              ; unlist(Key, SignedTerm, ListReply?).
+
+%% The rendezvous server's answer (GNA Section 6: "answers each with
+%% punch(Key, Address), the key and the address of the other").
+RvReply ::= punch(Key, String) ; rejected.
+
+%% A directory's answer to a listing, and its ask for links (GNA Section 7).
+ListReply ::= verify ; rejected.
+SupplyAsk ::= more(Integer).
 
 %% Friend-to-friend content (3-arg: msg(From, To, Content)).  An introduction
 %% from a mutual friend carries the other party, the recipient's own consent,

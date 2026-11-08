@@ -3,7 +3,7 @@
 %% Load rv_agent.glp first, then this file, then invoke test goals.
 
 %% Local type redeclarations (structural identity allows sharing across modules)
-SignalReply ::= punch(String) ; rejected.
+SignalReply ::= punch(Key, String) ; rejected.
 
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
                ; ready(Key, Key, String, SignalReply?)
@@ -48,11 +48,11 @@ imported procedure rv_agent#admit_redeemer(Key?, Key?, Signature?, Integer?,
 imported procedure rv_agent#admit_redeem(Key?, Key?, Signature?, Integer?,
                                           SignalReply,
                                           PendingList?, PendingList).
-imported procedure rv_agent#redeem_addresses(Key?, Integer?, Integer?,
+imported procedure rv_agent#redeem_addresses(Key?, Key?, Integer?, Integer?,
                                               PeerAddress?, PeerAddress?,
                                               SignalReply,
                                               PendingList?, PendingList).
-imported procedure rv_agent#find_invited(Key?, Integer?, Integer?, String?,
+imported procedure rv_agent#find_invited(Key?, Key?, Integer?, Integer?, String?,
                                           String?, SignalReply,
                                           PendingList?, PendingList).
 imported procedure rv_agent#prune_used(Integer?, PendingList?, PendingList).
@@ -93,7 +93,7 @@ test3_match_find_ready(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # find_ready(alice, bob, addr_a, ReplyA,
                            [ready(bob, alice, addr_b, ReplyB)], Pending1).
 
-%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(bob, addr_b), ReplyB = punch(alice, addr_a), Pending1 = []
 
 %% =============================================================================
 %% Test 4: B arrives after A is waiting → match, both told to punch
@@ -104,7 +104,7 @@ test4_match_find_needs(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # find_needs(alice, bob, addr_b, ReplyB,
                            [needs(alice, bob, addr_a, ReplyA)], Pending1).
 
-%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(bob, addr_b), ReplyB = punch(alice, addr_a), Pending1 = []
 
 %% =============================================================================
 %% Test 5: find_ready with non-matching ready entry → pass-through, store needs
@@ -128,7 +128,7 @@ test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
                            [ready(carol, dave, addr_c, _),
                             ready(bob, alice, addr_b, ReplyB)], Pending1).
 
-%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a),
+%% Expected: ReplyA = punch(bob, addr_b), ReplyB = punch(alice, addr_a),
 %%           Pending1 = [ready(carol, dave, addr_c, _)]
 
 %% =============================================================================
@@ -295,7 +295,7 @@ test16_match_on_address(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # match_reconnect(alice, bob, address(addr_a), ReplyA,
                                 [ready(bob, alice, addr_b, ReplyB)], Pending1).
 
-%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(bob, addr_b), ReplyB = punch(alice, addr_a), Pending1 = []
 
 %% =============================================================================
 %% Test 17: admit_available refuses every Signature but A's over the pair
@@ -378,7 +378,7 @@ test21_match_available_on_address(ReplyA?, ReplyB?, Pending1?) :-
     rv_agent # match_available(bob, alice, address(addr_b), ReplyB,
                                 [needs(alice, bob, addr_a, ReplyA)], Pending1).
 
-%% Expected: ReplyA = punch(addr_b), ReplyB = punch(addr_a), Pending1 = []
+%% Expected: ReplyA = punch(bob, addr_b), ReplyB = punch(alice, addr_a), Pending1 = []
 
 %% =============================================================================
 %% Test 22: the admitting path under the plain REPL
@@ -602,11 +602,11 @@ test28_register_once(R0?, R1?, R2?, R3?, P1?, P2?, P3?) :-
 
 exported procedure test29_redeem(SignalReply, SignalReply, PendingList).
 test29_redeem(ReplyI?, ReplyR?, Pending1?) :-
-    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a),
+    rv_agent # redeem_addresses(alice, bob, 7, 1000, address(addr_a),
         address(addr_b), ReplyR, [ready(carol, dave, addr_c, _), invited(alice, 7, ReplyI)],
         Pending1).
 
-%% Expected: ReplyI = punch(addr_b), ReplyR = punch(addr_a),
+%% Expected: ReplyI = punch(bob, addr_b), ReplyR = punch(alice, addr_a),
 %%           Pending1 = [ready(carol, dave, addr_c, _), used(alice, 7, 1000)]
 
 %% =============================================================================
@@ -619,9 +619,9 @@ test29_redeem(ReplyI?, ReplyR?, Pending1?) :-
 exported procedure test30_redeem_no_address(SignalReply, SignalReply,
                                             SignalReply, PendingList).
 test30_redeem_no_address(ReplyI?, R1?, R2?, P2?) :-
-    rv_agent # redeem_addresses(alice, 7, 1000, none, address(addr_b), R1,
+    rv_agent # redeem_addresses(alice, bob, 7, 1000, none, address(addr_b), R1,
         [invited(alice, 7, ReplyI)], P1),
-    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a), none, R2,
+    rv_agent # redeem_addresses(alice, bob, 7, 1000, address(addr_a), none, R2,
         P1?, P2).
 
 %% Expected: R1 = R2 = rejected, ReplyI unbound, P2 = [invited(alice, 7, _)]
@@ -637,9 +637,9 @@ exported procedure test31_redeem_unregistered(SignalReply, SignalReply,
                                               SignalReply, SignalReply,
                                               PendingList, PendingList).
 test31_redeem_unregistered(R1?, R2?, RA?, RC?, P1?, P2?) :-
-    rv_agent # find_invited(alice, 8, 1000, addr_a, addr_b, R1,
+    rv_agent # find_invited(alice, bob, 8, 1000, addr_a, addr_b, R1,
         [invited(alice, 7, RA)], P1),
-    rv_agent # find_invited(alice, 7, 1000, addr_a, addr_b, R2,
+    rv_agent # find_invited(alice, bob, 7, 1000, addr_a, addr_b, R2,
         [invited(carol, 7, RC)], P2).
 
 %% Expected: R1 = R2 = rejected, RA and RC unbound,
@@ -651,7 +651,7 @@ test31_redeem_unregistered(R1?, R2?, RA?, RC?, P1?, P2?) :-
 
 exported procedure test32_redeem_used(SignalReply, PendingList).
 test32_redeem_used(R?, P1?) :-
-    rv_agent # find_invited(alice, 7, 1000, addr_a, addr_b, R,
+    rv_agent # find_invited(alice, bob, 7, 1000, addr_a, addr_b, R,
         [used(alice, 7, 1000)], P1).
 
 %% Expected: R = rejected, P1 = [used(alice, 7, 1000)]
@@ -666,12 +666,12 @@ test32_redeem_used(R?, P1?) :-
 exported procedure test33_redeem_twice(SignalReply, SignalReply, SignalReply,
                                        PendingList).
 test33_redeem_twice(ReplyI?, R1?, R2?, P2?) :-
-    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a),
+    rv_agent # redeem_addresses(alice, bob, 7, 1000, address(addr_a),
         address(addr_b), R1, [invited(alice, 7, ReplyI)], P1),
-    rv_agent # redeem_addresses(alice, 7, 1000, address(addr_a),
+    rv_agent # redeem_addresses(alice, carol, 7, 1000, address(addr_a),
         address(addr_c), R2, P1?, P2).
 
-%% Expected: ReplyI = punch(addr_b), R1 = punch(addr_a), R2 = rejected,
+%% Expected: ReplyI = punch(bob, addr_b), R1 = punch(alice, addr_a), R2 = rejected,
 %%           P2 = [used(alice, 7, 1000)]
 
 %% =============================================================================
