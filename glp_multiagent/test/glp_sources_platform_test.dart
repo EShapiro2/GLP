@@ -129,6 +129,11 @@ void main() {
       expected.add('programs/vglp/dispatcher.glp');
       expected.add('programs/vglp/views.glp');
     }
+    // The services the app is configured with, beside the program (GSA
+    // paper, Appendix "The Operating System", "Boot": "the configuration is
+    // a file of the repository the app reads when it is built"), which the
+    // asset sync stages and SuperAppHost reads.
+    expected.add('programs/social/graph/core/services.json');
     final sources = bundled.keys.where((p) => !p.endsWith('.glpw')).toSet();
     expect(sources, contains('programs/social/graph/ui/self.glp'));
     expect(sources.difference(expected), isEmpty,
