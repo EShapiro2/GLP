@@ -1,4 +1,4 @@
-# GAS, the GLP app store, at peoplesweb.org
+# GAS, the Grassroots App Store, at peoplesweb.org
 
 A site that shows the grassroots contracts of this repository, how the cascade turns each into code, and a live app for each compiled contract: four persons, Alice, Bob, Carol and Dave, each running the contract's canonical platform as an agent of madGLP in an isolate of its own, their messages carried between the isolates as the simulation's network carries them.  There are no GAS phones: a person runs a contract on their phone through the Grassroots Super-App (the GSG paper), and this site is the store's window and its live demonstration.
 

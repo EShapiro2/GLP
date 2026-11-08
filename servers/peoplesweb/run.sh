@@ -1,5 +1,5 @@
 #!/bin/sh
-# GAS, the GLP app store, at peoplesweb.org: build the worlds and the site from
+# GAS, the Grassroots App Store, at peoplesweb.org: build the worlds and the site from
 # cascade/ and programs/ (half a second), get the Dart packages, and serve.
 # Run from any directory, in a clone of this repository, with Python 3 and
 # Dart on the PATH; PORT, HOST and MAX_WORLDS as in README.md.  After a git

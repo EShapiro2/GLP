@@ -1,4 +1,4 @@
-"""Build GAS, the GLP app store, at peoplesweb.org, from this repository: build/www and the live worlds.
+"""Build GAS, the Grassroots App Store, at peoplesweb.org, from this repository: build/www and the live worlds.
 
 Usage (from servers/peoplesweb):  python3 -I tools/build.py
 

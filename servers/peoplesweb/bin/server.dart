@@ -1,4 +1,4 @@
-// GAS, the GLP app store, at peoplesweb.org: the live server.  It serves the
+// GAS, the Grassroots App Store, at peoplesweb.org: the live server.  It serves the
 // site (build/www; on the server Caddy serves the same tree and proxies /api
 // here, deploy/Caddyfile) and, for each contract, the compiled canonical
 // platform in a live harness (programs/vglp/cva/web_worlds/live_<c>, written
