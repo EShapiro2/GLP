@@ -228,12 +228,12 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-help
 
 /* ---------- the globe ---------- */
 // The contracts on a sphere (agreed with Udi, 2026-11-07): GKK at the north
-// pole, a ring per depth, longitudes grouped by subtree so a family holds
+// pole, a ring per depth, the fullest on the equator, longitudes grouped by subtree so a family holds
 // together; each contract an ellipse painted on the surface, its name
 // horizontal; extends widens from a point to its tip, restricts narrows to
 // one, amends keeps one width and is barred, implements is dashed and
 // instantiates dotted; drag turns the globe, the wheel zooms, the far side is hidden.
-const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {};
+const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [];
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
   const ps = C[id].extends.filter(p => C[p]);
@@ -241,6 +241,15 @@ function depthOf(id){
 }
 function layout(){
   D.contracts.forEach(c => depthOf(c.id));
+  // The rings' colatitudes: the ring with the most contracts on the equator
+  // (Udi, 2026-11-08), the rings above it evenly from the pole, those below
+  // it evenly as seen in the first view, tilted by V.tilt, down to near the
+  // globe's bottom edge, so the rings that face away are not run together.
+  const maxd0 = MAXD(), cnt = d => D.contracts.filter(c => DEPTH[c.id] === d).length;
+  let dm = 1; for (let d = 1; d <= maxd0; d++) if (cnt(d) > cnt(dm)) dm = d;
+  const deg = Math.PI/180, north = 90*deg / (dm + 0.6), c0 = Math.cos(90*deg + V.tilt), c1 = -0.93;
+  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : d <= dm ? north * (d + 0.6)
+    : Math.min(90*deg + north * (d - dm), Math.acos(c0 + (c1 - c0) * (d - dm) / (maxd0 - dm)) - V.tilt);
   D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
   const leaves = id => (KIDS[id] || []).reduce((n, k) => n + leaves(k), 0) || 1;
   (function place(id, lo, hi){
@@ -251,20 +260,22 @@ function layout(){
   })('GKK', -80 * Math.PI/180, 80 * Math.PI/180);
   // Spread each ring so no two names overlap, measured as seen from the
   // front (x = R sin phi), neighbours pushed apart in order and kept on the
-  // visible half; a ring too full for one row sets alternate names a little
-  // above and below it, and then only names on the same row need the room.
-  const maxd = MAXD(), um = Math.sin(84 * Math.PI/180), w = id => 0.33*11*id.length + 0.8*11;
+  // visible half short of its edge, where a name would be squashed; a ring
+  // too full for one row sets alternate names on a second row, toward the
+  // wider gap beside it, and then only names on the same row need the room.
+  const maxd = MAXD(), um = Math.sin(72 * Math.PI/180), w = id => 0.33*11*id.length + 0.8*11;
   for (let d = 1; d <= maxd; d++){
     const ring = D.contracts.map(c => c.id).filter(id => DEPTH[id] === d).sort((a, b) => PHI[a] - PHI[b]);
-    const R = 265 * Math.sin(Math.PI * (d + 0.6) / (maxd + 2.8));
+    const R = 265 * Math.sin(RING[d]);
     const full = (a, b) => (w(a) + w(b) + 10) / R;
     const two = ring.reduce((n, id) => n + 2*w(id) + 10, 0) > 1.6 * um * R;
-    if (two) ring.forEach((id, i) => LAT[id] = i % 2 ? 0.22 : -0.22);
+    const up = RING[d] - RING[d-1], down = d < maxd ? RING[d+1] - RING[d] : up;
+    if (two) ring.forEach((id, i) => LAT[id] = i % 2 ? 0 : up >= down ? -0.42 * up : 0.42 * down);
     const u = ring.map(id => Math.sin(PHI[id]));
     const pairs = [];
     for (let i = 1; i < ring.length; i++) pairs.push([i-1, i, two ? 0.3 * full(ring[i-1], ring[i]) : full(ring[i-1], ring[i])]);
     if (two) for (let i = 2; i < ring.length; i++) pairs.push([i-2, i, full(ring[i-2], ring[i])]);
-    for (let it = 0; it < 600; it++){
+    for (let it = 0; it < 20000; it++){
       let moved = false;
       for (const [a, b, g] of pairs){ const need = g - (u[b] - u[a]); if (need > 1e-4){ u[a] -= need/2; u[b] += need/2; moved = true; } }
       for (let i = 0; i < u.length; i++) u[i] = Math.max(-um, Math.min(um, u[i]));
@@ -278,14 +289,14 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 const GW = 1120, GH = 640, CX = GW/2, CY = GH/2 + 12;
 function drawGlobe(){
   const S = 265 * V.zoom, al = V.tilt, maxd = MAXD();
-  const th = id => DEPTH[id] === 0 ? 0 : Math.PI * (DEPTH[id] + 0.6 + (LAT[id] || 0)) / (maxd + 2.8);
+  const th = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
   const proj = (t, ph) => { ph -= V.phi0;
     const x = Math.sin(t)*Math.sin(ph), y = Math.cos(t), z = Math.sin(t)*Math.cos(ph);
     return [CX + S*x, CY - S*(y*Math.cos(al) - z*Math.sin(al)), y*Math.sin(al) + z*Math.cos(al)]; };
   const pos = {}; D.contracts.forEach(c => pos[c.id] = proj(th(c.id), PHI[c.id]));
   let s = `<circle cx="${CX}" cy="${CY}" r="${S}" fill="#eef3f8" stroke="#b9c6d4"/>`;
   for (let d = 0; d <= maxd; d++){
-    const t = Math.PI * (d + 0.6) / (maxd + 2.8); let run = [];
+    const t = RING[d]; let run = [];
     for (let i = -180; i <= 180; i++){
       const [X, Y, Z] = proj(t, i*Math.PI/180);
       if (Z > 0 && X > -80 && X < GW+80 && Y > -80 && Y < GH+80) run.push(`${X.toFixed(1)},${Y.toFixed(1)}`);
