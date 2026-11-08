@@ -1,9 +1,9 @@
 /// The Grassroots App on a phone: the person's own agent over the real
-/// network, Bluetooth and the local network (GSA paper, Section 2 and
+/// network, Bluetooth, the local network and the Internet (GSA paper, Section 2 and
 /// Appendix "The Operating System").
 ///
 /// The app makes or reads the agent's key pair and instantiates the
-/// networking layer with it, PAN and LAN (phone_network.dart); the agent runs
+/// networking layer with it, PAN, LAN and WAN (phone_network.dart); the agent runs
 /// `programs/social/graph/core` from every agent's initial goal, and at its
 /// first start the app sends on the person channel the act that starts the
 /// Grassroots App, `superapp(Me, [])` (superapp_host.dart; GSA paper,
@@ -11,7 +11,8 @@
 /// home, the Grassroots App's own person interface, as the bridge draws the
 /// constructs of its questions, and the thread of what the agent tells them:
 /// opening the place (GPE:1), the persons nearby they come to know by an
-/// encounter (GPE:2), and befriending (GSG:1).
+/// encounter (GPE:2), and befriending (GSG:1) by picking a person nearby on
+/// home's card for them, no key typed.
 ///
 /// The demonstration with scripted peers in one heap, `superapp_ui/4`, is
 /// `main_superapp_ui.dart`.

@@ -19,8 +19,8 @@
 ///
 /// The agent runs over the [GlpNetwork] it is given ([AgentRuntime]; IGLP,
 /// Implementation Notes, "Networking Seam", One interface: "transport
-/// integration is a backend swap"): on a phone GNA's glue over the layer, PAN
-/// and LAN (phone_network.dart); in a test a network in one process.  It runs
+/// integration is a backend swap"): on a phone GNA's glue over the layer, PAN,
+/// LAN and WAN (phone_network.dart); in a test a network in one process.  It runs
 /// in the isolate that holds the layer, since the layer's transports are the
 /// platform's and answer in the isolate that registered them.
 ///

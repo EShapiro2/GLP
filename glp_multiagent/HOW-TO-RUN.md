@@ -115,8 +115,8 @@ dart test test/multiagent/
 ## Architecture
 
 - **The Grassroots App** (`main.dart`, running `main_superapp.dart`): the
-  agent's key pair kept in the platform's secure store, GNA's layer over PAN and
-  LAN (`phone_network.dart`), and `SuperAppHost` (`superapp_host.dart`) running
+  agent's key pair kept in the platform's secure store, GNA's layer over PAN,
+  LAN and WAN (`phone_network.dart`), and `SuperAppHost` (`superapp_host.dart`) running
   `programs/social/graph/core` in the main isolate, which holds the layer, from
   every agent's initial goal and the first act `superapp(Me, [])`, rendered
   through `AgentSurface`.

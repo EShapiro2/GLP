@@ -19,12 +19,18 @@
 /// `declare(trust(lan, open))` (GSA paper, Appendix, "Nearby").
 ///
 /// What each person does and sees, as nearby_boot.glp and nearby3_boot.glp
-/// have it under :boot: both open the place; each is nearby the other and the
-/// two operating systems put the encounter, GPE:2, and consent while the place
-/// is open; home shows each the other, `nearby([K])`; alice befriends bob,
-/// GSG:1, `connect(K)`, bob says yes on his card, and both are told
-/// `connected(K)`.  With three, carol opens her place after alice and bob are
-/// friends, and meets both.
+/// have it under :boot: at start each operating system declares both trusts
+/// closed (GSA paper, Appendix, "Nearby": "At start the operating system
+/// declares the trust of pan and of lan closed"); both open the place; each is
+/// nearby the other and the operating system with the smaller key puts the
+/// encounter, GPE:2, each consenting while the place is open; each declares
+/// the other to the layer a known peer ("The operating system declares to the
+/// layer, as a known peer, every person its person knows"); home shows each
+/// the other, `nearby([K])`, with a card for them and the button befriend;
+/// alice befriends bob, GSG:1, by picking befriend on his card, no key typed
+/// ("the person befriends one by picking them there"), bob says yes on his
+/// card, and both are told `connected(K)`.  With three, carol opens her place
+/// after alice and bob are friends, and meets both.
 library;
 
 import 'dart:async';
@@ -92,6 +98,9 @@ class _PhoneNetwork extends GlpNetwork {
   /// Each trust declaration, in order: `<underlay> <level>`.
   final List<String> declared = [];
 
+  /// The known peers the program declared, `declare(peer(K))`, by key hex.
+  final Set<String> known = {};
+
   _PhoneNetwork(this.keyPair, this.air) {
     air._at[keyPair.pub.hex] = this;
   }
@@ -115,9 +124,9 @@ class _PhoneNetwork extends GlpNetwork {
   @override
   void acknowledge(String messageId) {}
   @override
-  void putKnownPeer(PubKey pk) {}
+  void putKnownPeer(PubKey pk) => known.add(pk.hex);
   @override
-  void removeKnownPeer(PubKey pk) {}
+  void removeKnownPeer(PubKey pk) => known.remove(pk.hex);
   @override
   bool isPeerReachable(PubKey pk) => air._at.containsKey(pk.hex);
   @override
@@ -223,10 +232,15 @@ class _Phone {
     ui.bridge.grant(f.id, questionAt(f.view)!, r);
   }
 
-  /// A friend's request to connect, the card home draws, where one is open.
+  /// A friend's request to connect, the card home draws, where one is open:
+  /// `form(from, ...)`, the friend and the buttons yes and no.
   OpenConstruct? card() {
     for (final c in ui.bridge.constructs) {
-      if (c.id != 0 && c != form() && _questionIn(c.view) != null) return c;
+      if (c.id != 0 &&
+          formatTerm(c.widget).startsWith('form(from,') &&
+          _questionIn(c.view) != null) {
+        return c;
+      }
     }
     return null;
   }
@@ -235,6 +249,28 @@ class _Phone {
   void yes() {
     final c = card()!;
     ui.bridge.grant(c.id, _questionIn(c.view)!, const GAtom('yes'));
+  }
+
+  /// The card home draws of a person nearby whom the person knows, the
+  /// person of key [key], where one is open: `form(nearby, ...)`, the person
+  /// and the button befriend (home.vglp, befriend_card/3).
+  OpenConstruct? nearbyCard(String key) {
+    for (final c in ui.bridge.constructs) {
+      if (c.id != 0 &&
+          formatTerm(c.widget).startsWith('form(nearby,') &&
+          _plain(c.view).contains(key) &&
+          _questionIn(c.view) != null) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  /// Befriend on the card of the person of key [key]: the person picks them
+  /// in Nearby, and types no key.
+  void befriend(String key) {
+    final c = nearbyCard(key)!;
+    ui.bridge.grant(c.id, _questionIn(c.view)!, const GAtom('befriend'));
   }
 }
 
@@ -304,8 +340,10 @@ void main() {
       final w = formatTerm(p.form()!.widget);
       expect(w, contains('form(connect, [field(\'Friend\', peer)])'));
       expect(w, endsWith('button(open_place), button(close_place)]))'));
-      expect(p.net.declared, isEmpty,
-          reason: 'the trust stays Closed until the place is opened');
+      await p.host.idle;
+      expect(p.net.declared, ['pan closed', 'lan closed'],
+          reason: 'both trusts are declared closed at start, and stay so '
+              'until the place is opened');
     }
   }, timeout: const Timeout(Duration(minutes: 3)));
 
@@ -316,14 +354,21 @@ void main() {
     await alice.until(() => alice.notices().contains('nearby([${bob.key}])'));
     await bob.until(() => bob.notices().contains('nearby([${alice.key}])'));
     for (final p in [alice, bob]) {
-      expect(p.net.declared, containsAll(['pan open', 'lan open']));
+      expect(p.net.declared,
+          ['pan closed', 'lan closed', 'pan open', 'lan open']);
       expect(p.errors, isEmpty);
     }
+    // Each knows the other now, and declared them a known peer.
+    expect(alice.net.known, contains(bob.key));
+    expect(bob.net.known, contains(alice.key));
   }, timeout: const Timeout(Duration(minutes: 3)));
 
-  test('alice befriends bob (GSG:1), bob says yes on his card, and both are '
-      'told they are friends', () async {
-    alice.request(GStruct('connect', [GAtom(bob.key)]));
+  test('alice befriends bob (GSG:1) by picking him in Nearby, no key typed; '
+      'bob says yes on his card, and both are told they are friends', () async {
+    await alice.until(() => alice.nearbyCard(bob.key) != null);
+    expect(formatTerm(alice.nearbyCard(bob.key)!.widget),
+        "form(nearby, [field('Friend', shown), field('Befriend', button(befriend))])");
+    alice.befriend(bob.key);
     await bob.until(() => bob.card() != null);
     bob.yes();
     await alice.until(() => alice.notices().contains('connected(${bob.key})'));
@@ -351,8 +396,10 @@ void main() {
       'declared closed again', () async {
     alice.request(const GAtom('close_place'));
     await alice.host.idle;
-    expect(alice.net.declared,
-        ['pan open', 'lan open', 'pan closed', 'lan closed']);
+    expect(alice.net.declared, [
+      'pan closed', 'lan closed', 'pan open', 'lan open', 'pan closed',
+      'lan closed'
+    ]);
     expect(alice.errors, isEmpty);
   }, timeout: const Timeout(Duration(minutes: 3)));
 }

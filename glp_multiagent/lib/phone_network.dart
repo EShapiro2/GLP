@@ -1,7 +1,19 @@
 /// The networking layer of the Grassroots App on a phone: GNA's layer,
-/// instantiated once for the agent, running the PAN over Bluetooth and the LAN
-/// over the local network, and the runtime's network interface over it, GNA's
-/// glue ([GrassrootsGlpNetwork]).
+/// instantiated once for the agent, running the PAN over Bluetooth, the LAN
+/// over the local network and the WAN over the Internet, and the runtime's
+/// network interface over it, GNA's glue ([GrassrootsGlpNetwork]).  The WAN is
+/// run for the rendezvous server and reconnection over the Internet (GSA #2
+/// Cowork, Code_inbox.md 2026-11-08 07:11 UTC: "the phone's layer runs the WAN
+/// too").  The WAN has no trust level: the layer connects over it only to
+/// known peers and declared rendezvous servers, and answers inbound WAN
+/// contact only from a key in the known-peer set (GNA, Section "Networking
+/// API": "a trust level on the WAN cannot be written"; Section "Session
+/// Establishment": "on the WAN except on a rendezvous server, it answers an
+/// IK first message only from a key in the known-peer set"), which the
+/// operating system fills with every person its person knows (GSA paper,
+/// Appendix "The Operating System", "Nearby"; place.glp, declare(peer(K))).
+/// A test build accepts development attestations (GSA #2 Cowork, the same
+/// mail: "a test build accepts development attestations").
 ///
 /// The key pair (GNA, Section "Identity": "The key pair is generated and
 /// persisted above the networking layer and is supplied to the layer's
@@ -16,7 +28,7 @@
 /// ([PersonIdentity.forPersona]) and kept there.
 ///
 /// The layer (GNA, Section "Instantiation"): the key pair, the underlays it
-/// runs, PAN and LAN, and the platform's attestation, the native producer
+/// runs, PAN, LAN and WAN, and the platform's attestation, the native producer
 /// where the app registers one, and otherwise a platform with no attestation,
 /// whose peers report it unattested (GNA, Section "Session Establishment",
 /// Attestation).  The trust of both proximity underlays is Closed until the
@@ -55,7 +67,7 @@ class PhoneNetwork {
     final identity = await _identity(persona);
     final layer = GrassrootsNetwork(
       identity: identity,
-      underlays: const {Underlay.pan, Underlay.lan},
+      underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
       platformAttestation: NativePlatformAttestation(
           verifier: const AttestationVerifier(allowAppAttestDevelopment: true)),
       store: Store<AppState>(appReducer, initialState: const AppState()),
