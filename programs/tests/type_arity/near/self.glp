@@ -1,0 +1,8 @@
+%% A 0-ary Box, nearer to m.glp than the enclosing Box(X), which it does not
+%% hide: m.glp names Box(Integer), the enclosing one, and Box, this one
+%% (../self.glp).
+Box ::= box(Integer, Integer).
+
+imported procedure m#run(Integer).
+exported procedure run(Integer).
+run(N?) :- m # run(N).

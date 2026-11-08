@@ -1168,19 +1168,6 @@ HEREDOC
 2>&1)
 check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
 
-# The root self.glp exposes sglp#monitor, the root being the only common
-# ancestor of programs/cssn and programs/sglp (modules.tex §-expose): a program
-# outside programs/sglp calls monitor/4 by name, with the types it carries.
-a26f_mon=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/tests/expose_root_monitor/run.glp
-clock(T).
-released(K).
-:quit
-HEREDOC
-2>&1)
-check "root -expose(sglp#monitor): time request answered (T = 0)" "T = 0" "$a26f_mon"
-check "root -expose(sglp#monitor): rated request released (K = go)" "K = go" "$a26f_mon"
-
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
 a29=$("$REPL_RUN" <<HEREDOC
@@ -9007,18 +8994,20 @@ else
     fi
 fi
 
-# A simulation outside programs/sglp (Integration's ruling of 2026-10-16 10:52
-# UTC, item 1; sGLP's answers of 11:25 and 12:32 UTC): programs/tests/sglp_outside
-# is transformed by transform.sh --source, its printed modules as printed, and it
-# loads and runs with the monitor and sglp.glp exposed from the root
-# programs/self.glp (TGLP modules.tex, "The -expose directive").
-sglp_out_tx=$(bash "$GLP_DIR/programs/sglp/transform.sh" --source "$GLP_DIR/programs/tests/sglp_outside" --check 2>&1; echo "exit $?")
+# A simulation in a directory of its own (Integration's ruling of 2026-10-16
+# 10:52 UTC, item 1; sGLP's answers of 11:25 and 12:32 UTC), under programs/sglp
+# since 2026-11-08 (sGLP #11, Code_inbox 2026-11-07 21:21 UTC, Udi approving):
+# programs/sglp/tests/outside is transformed by transform.sh --source, its
+# printed modules as printed, and it loads and runs with the monitor and
+# sglp.glp that programs/sglp/self.glp exposes (TGLP modules.tex, "The -expose
+# directive").
+sglp_out_tx=$(bash "$GLP_DIR/programs/sglp/transform.sh" --source "$GLP_DIR/programs/sglp/tests/outside" --check 2>&1; echo "exit $?")
 check "sglp outside: transform.sh --source --check, profiles.glp as printed" "^profiles.glp: as printed$" "$sglp_out_tx"
 check "sglp outside: transform.sh --source --check, population.glp as printed" "^population.glp: as printed$" "$sglp_out_tx"
 check "sglp outside: transform.sh --source --check exits 0" "^exit 0$" "$sglp_out_tx"
 sglp_out_run=$("$REPL_RUN" <<HEREDOC
 :limit 1000000000000
-$GLP_DIR/programs/tests/sglp_outside
+$GLP_DIR/programs/sglp/tests/outside
 poll_run(5, As).
 :quit
 HEREDOC

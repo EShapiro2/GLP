@@ -1666,7 +1666,8 @@ TypeIdentityTables linkedTypeIdentityTables(
   return tables.withOpaque(opaque);
 }
 
-/// The type definitions of the program by their names in the source, the
+/// The type definitions of the program by their names in the source and their
+/// numbers of parameters ([typeKey]), the
 /// map the source identity's canonical print and an artefact's interface
 /// table are built over (glp_engine.dart, `_moduleValueOf`;
 /// wire/flattening.dart, [flattenProject]): each name the entry module's
@@ -1709,7 +1710,7 @@ Map<String, TypeDef> programTypeDefs(List<DiscoveredModule> modules,
       final owner = byName[e.value];
       if (owner == null) continue;
       for (final td in owner.ast.typeDefs) {
-        if (td.name == e.key) {
+        if (typeKey(td.name, td.typeParams.length) == e.key) {
           out[e.key] = td;
           break;
         }
@@ -1718,7 +1719,7 @@ Map<String, TypeDef> programTypeDefs(List<DiscoveredModule> modules,
   }
   for (final mod in modules) {
     for (final td in mod.ast.typeDefs) {
-      out.putIfAbsent(td.name, () => td);
+      out.putIfAbsent(typeKey(td.name, td.typeParams.length), () => td);
     }
   }
   return out;
@@ -1739,7 +1740,8 @@ Map<String, TypeDef> programTypeDefs(List<DiscoveredModule> modules,
 /// name defined by no module of the program --- a primitive type, or a
 /// definition's own parameter --- contributes nothing.  Each name reached is
 /// printed as [typeDefs] names it where its definition there is one reached,
-/// and as the first definition reached of that name otherwise.  Until
+/// and as the first definition reached of that name otherwise, a name taken
+/// here and in [typeDefs] with its number of parameters ([typeKey]).  Until
 /// 2026-11-07 every type definition of every module of the program was
 /// printed, and a type the program does not reach changed its h(M).
 Map<String, TypeDef> reachableTypeDefs(List<DiscoveredModule> modules,
@@ -1762,7 +1764,7 @@ Map<String, TypeDef> reachableTypeDefs(List<DiscoveredModule> modules,
   final pending = <String>[];
   void collect(TypeExpr e) {
     if (e is TypeRef) {
-      pending.add('${e.name}/${e.typeArgs.length}');
+      pending.add(typeKey(e.name, e.typeArgs.length));
       for (final a in e.typeArgs) {
         collect(a);
       }
@@ -1794,7 +1796,8 @@ Map<String, TypeDef> reachableTypeDefs(List<DiscoveredModule> modules,
     final def = renamed[key];
     if (def == null) continue;
     final (r, source) = def;
-    (reached[source.name] ??= []).add(source);
+    (reached[typeKey(source.name, source.typeParams.length)] ??= [])
+        .add(source);
     for (final alt in r.alternatives) {
       collect(alt);
     }
@@ -1949,7 +1952,7 @@ Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
     final o = owners[mod.filePath];
     if (o == null) continue;
     for (final td in _renamedTypeDefs(mod, o)) {
-      renamed.putIfAbsent(td.name, () => td);
+      renamed.putIfAbsent(typeKey(td.name, td.typeParams.length), () => td);
     }
   }
   final bareNames = <String>{
@@ -1981,12 +1984,15 @@ Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
   if (pairs.isEmpty) return const {};
 
   // The qualified names the declarations reach, through the renamed
-  // definitions, and their spellings.
-  final reached = <String>{};
+  // definitions, each with its number of parameters ([typeKey]), and their
+  // spellings, one a name.
+  final reached = <String, String>{};
   void reach(TypeExpr t) {
     if (t is TypeRef) {
-      if (t.name.contains(':') && reached.add(t.name)) {
-        final td = renamed[t.name];
+      final key = typeKey(t.name, t.typeArgs.length);
+      if (t.name.contains(':') && !reached.containsKey(key)) {
+        reached[key] = t.name;
+        final td = renamed[key];
         if (td != null) td.alternatives.forEach(reach);
       }
       t.typeArgs.forEach(reach);
@@ -2007,7 +2013,7 @@ Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
   }
   final spelt = <String, String>{};
   final used = <String>{...bareNames};
-  for (final q in reached.toList()..sort()) {
+  for (final q in reached.values.toSet().toList()..sort()) {
     final colon = q.lastIndexOf(':');
     final scope = q.substring(0, colon).replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
     var name = '${q.substring(colon + 1)}__$scope';
@@ -2039,14 +2045,14 @@ Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
       d.name, [for (final a in d.argTypes) spell(a)], d.line, d.column,
       typeParams: d.typeParams, exported: d.exported);
   final defs = <String, TypeDef>{
-    for (final q in reached)
-      if (renamed[q] != null)
-        spelt[q]!: TypeDef(
-            spelt[q]!,
-            [for (final a in renamed[q]!.alternatives) spell(a)],
-            renamed[q]!.line,
-            renamed[q]!.column,
-            typeParams: renamed[q]!.typeParams),
+    for (final e in reached.entries)
+      if (renamed[e.key] case final td?)
+        typeKey(spelt[e.value]!, td.typeParams.length): TypeDef(
+            spelt[e.value]!,
+            [for (final a in td.alternatives) spell(a)],
+            td.line,
+            td.column,
+            typeParams: td.typeParams),
   };
   return {
     for (final e in pairs.entries)
@@ -3216,7 +3222,8 @@ Clause _makeAliasClause(String name, int arity, String targetName,
   return Clause(head, body: body, line: 0, column: 0);
 }
 
-/// The module defining each type name visible to [mod], by the scope order of
+/// The module defining each type visible to [mod], keyed by its name and its
+/// number of parameters ([typeKey]), by the scope order of
 /// modules.tex §Scope construction, walked from the root down, a nearer
 /// definition over a farther one: at each directory of the module's chain,
 /// the types what that directory's `self.glp` `-expose`s carries, "as if
@@ -3229,7 +3236,15 @@ Clause _makeAliasClause(String name, int arity, String targetName,
 /// winning (programs/tests/expose/lift_shadows).
 ///
 /// This is step 4 of §Compilation for types: "every type reference is resolved
-/// the same way, to the renamed type of the nearest scope defining it".
+/// the same way, to the renamed type of the nearest scope defining it".  A
+/// type is named by its name and its number of parameters, as a procedure is
+/// by its name and arity, and a reference resolves to the nearest scope
+/// defining a type of that name and that number of parameters (GLP #13,
+/// Code_inbox 2026-11-07 23:40 UTC, item 1, Udi approving): so a nearer 0-ary
+/// `T` does not hide an outer `T(X)`, and a nearer `T(X)` does
+/// (programs/tests/type_arity).  Until 2026-11-08 the map was keyed by name
+/// alone, and programs/sglp/self.glp's 0-ary `Draw` took every reference to
+/// the root's `Draw(T)` in its subtree.
 Map<String, String> _visibleTypeOwners(
     DiscoveredModule mod, List<DiscoveredModule> modules) {
   final owners = <String, String>{};
@@ -3277,33 +3292,39 @@ Map<String, String> _visibleTypeOwners(
         if (t.contains(':') || t.contains('<')) continue;
         final origin = lift.scope.typeOrigins[t];
         if (origin != null) {
-          owners[t] = origin;
+          owners[typeKey(t, 0)] = origin;
         } else {
-          owners.putIfAbsent(t, () => em.moduleName);
+          owners.putIfAbsent(typeKey(t, 0), () => em.moduleName);
         }
       }
-      for (final t in lift.scope.typeTemplates.keys) {
-        final origin = lift.templateOrigins[t];
+      for (final e in lift.scope.typeTemplates.entries) {
+        final key = typeKey(e.key, e.value.typeParams.length);
+        final origin = lift.templateOrigins[e.key];
         if (origin != null) {
-          owners[t] = origin;
+          owners[key] = origin;
         } else {
-          owners.putIfAbsent(t, () => em.moduleName);
+          owners.putIfAbsent(key, () => em.moduleName);
         }
       }
     }
     for (final s in chain) {
       if (_normPath(File(s.filePath).parent.path) != dir) continue;
       for (final td in s.ast.typeDefs) {
-        owners[td.name] = s.moduleName;
+        owners[typeKey(td.name, td.typeParams.length)] = s.moduleName;
       }
     }
   }
 
   for (final td in mod.ast.typeDefs) {
-    owners[td.name] = mod.moduleName;
+    owners[typeKey(td.name, td.typeParams.length)] = mod.moduleName;
   }
   return owners;
 }
+
+/// The key a type is named by: its name and its number of parameters,
+/// `Draw/0` and `Draw/1` two types, as `p/1` and `p/2` are two procedures
+/// ([_visibleTypeOwners]).
+String typeKey(String name, int parameters) => '$name/$parameters';
 
 /// The `self.glp` modules of [modules] whose directory is [mod]'s or above it
 /// --- the ancestor scopes of [mod] among the program's modules (modules.tex,
@@ -3348,7 +3369,8 @@ List<DiscoveredModule> _ancestorSelfGlps(
 bool isSelfGlpFile(String path) => ppath.basename(path) == 'self.glp';
 
 /// [_visibleTypeOwners] for every module of the program, keyed by file path
-/// — the one key that is unique whatever two files are named.
+/// — the one key that is unique whatever two files are named --- each map
+/// keyed by a type's name and number of parameters ([typeKey]).
 Map<String, Map<String, String>> typeOwnersByModule(
     List<DiscoveredModule> modules) {
   final byFile = <String, Map<String, String>>{};
@@ -3385,15 +3407,18 @@ List<TypeExpr> renameDeclTypes(ProcDecl decl, Map<String, String> owners) => [
         _renameTypeExpr(t, owners, decl.typeParams.toSet())
     ];
 
-/// Resolve every type name in [expr] against [owners], leaving a type parameter
-/// and a name no module defines (root-scope, primitive, system) bare.
+/// Resolve every type name in [expr] against [owners], by its name and its
+/// number of arguments ([typeKey]), leaving a type parameter and a name no
+/// module defines (root-scope, primitive, system) bare.
 TypeExpr _renameTypeExpr(
     TypeExpr expr, Map<String, String> owners, Set<String> typeParams) {
   if (expr is TypeRef) {
     final args = [
       for (final a in expr.typeArgs) _renameTypeExpr(a, owners, typeParams)
     ];
-    final owner = typeParams.contains(expr.name) ? null : owners[expr.name];
+    final owner = typeParams.contains(expr.name)
+        ? null
+        : owners[typeKey(expr.name, expr.typeArgs.length)];
     return TypeRef(owner == null ? expr.name : '$owner:${expr.name}',
         expr.line, expr.column,
         isInput: expr.isInput, typeArgs: args);

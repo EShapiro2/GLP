@@ -1346,7 +1346,8 @@ class GlpEngine {
     String? directory,
     String? singleModulePath,
   }) {
-    // Each name the one the entry module's scope resolves ([programTypeDefs]).
+    // Each name the one the entry module's scope resolves ([programTypeDefs]),
+    // a type named by its name and its number of parameters ([typeKey]).
     final typeDefs = <String, TypeDef>{};
     if (directory != null) {
       typeDefs.addAll(programTypeDefs(modules,
@@ -1354,7 +1355,7 @@ class GlpEngine {
     }
     for (final mod in modules) {
       for (final td in mod.ast.typeDefs) {
-        typeDefs.putIfAbsent(td.name, () => td);
+        typeDefs.putIfAbsent(typeKey(td.name, td.typeParams.length), () => td);
       }
     }
     // h(M) prints the type definitions the reachable procedures' declarations

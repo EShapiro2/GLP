@@ -12,8 +12,9 @@
 #   bash programs/sglp/cva/record.sh --check <record>
 #
 # <NAME> is the contract's name and <sglp> the owner's <NAME>_sglp.glp,
-# programs/<owner>/<NAME>_sglp.glp, in the form transform.sh --interface
-# reads.  --cascade names the platform: a tag of the cascade's record,
+# programs/sglp/<owner>/<NAME>_sglp.glp, never under programs/<owner>
+# (Coordination's to_all, 2026-11-07 22:13 UTC), in the form transform.sh
+# --interface reads.  --cascade names the platform: a tag of the cascade's record,
 # cascade/<NAME>/<date>, whose platform.glp and interface.glp git holds; or a
 # directory holding the two, which a test names.  The run is the run
 # declaration's, its agents (census where it names a census), horizon and

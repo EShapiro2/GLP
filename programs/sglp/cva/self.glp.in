@@ -1,5 +1,7 @@
 %% A run of a canonical CVA platform under sGLP: the directory programs/sglp/cva/run.sh
-%% assembles for one run, under programs/tests/, its scope the root's.  This
+%% assembles for one run, programs/sglp/runs/cva_<pid>/, its chain of self.glp
+%% files reaching programs/sglp/self.glp, which exposes the monitor and
+%% sglp.glp to its subtree (TGLP, modules.tex, "The -expose directive").  This
 %% file and harness.glp are programs/sglp/cva/self.glp.in and harness.glp.in,
 %% the harness of every canonical CVA platform (sGLP's task of 2026-10-18 20:50
 %% UTC, item 2); platform.glp is the platform's canonical compilation, the one
