@@ -7,7 +7,7 @@
 %% Load rv_agent.glp, rv_client.glp, then this file.
 
 %% Local type redeclarations (structural identity allows sharing)
-SignalReply ::= punch(String) ; rejected.
+SignalReply ::= punch(Key, String) ; rejected.
 
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
             ; available(Key, Key, SignedTerm, SignalReply?)
@@ -123,17 +123,18 @@ test6_bad_signature(ReplyA?, ReplyB?) :-
     rv_agent # rv_agent(rv, [MsgA?, MsgB?], []).
 
 %% =============================================================================
-%% Test 7: handle_reply dispatches punch(Addr) to punch_udp
+%% Test 7: handle_reply dispatches punch(Key, Addr) to declare and punch_udp
 %% =============================================================================
 %%
 %% The punch arm is unreachable through the RV agent under the plain REPL,
 %% where no test presents an attestation signed under the social graph, so
-%% it is exercised on a literal reply.  The guard is ground(Addr?) and
-%% punch_udp is the root's, which under the plain REPL, no networking layer
-%% bound, returns having done nothing (IGLP, "One interface").
+%% it is exercised on a literal reply.  The guard grounds the key and the
+%% address; declare/1 and punch_udp/1 are the root's, which under the plain
+%% REPL, no networking layer bound, return having done nothing (IGLP, "One
+%% interface").
 
 exported procedure test7_handle_reply_punch.
 test7_handle_reply_punch :-
-    rv_client # handle_reply(punch(stub_addr_alice)).
+    rv_client # handle_reply(punch(alice, stub_addr_alice)).
 
 %% Expected: succeeds

@@ -28,7 +28,7 @@
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
-imported procedure place#os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
+imported procedure place#os_phone(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
 
 %% The network between the two agents of a play, A and B: their network
 %% outputs merged, and each message delivered to the agent its destination
@@ -778,7 +778,7 @@ sg_init(Me, warm_friend, [A, H], NetIn) :-
 %% Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The
 %% Operating System", "Nearby"; ../../nearby_boot.glp, ../../nearby3_boot.glp):
 %% the social graph's agent with the operating system's Nearby around it,
-%% os_phone/6 (place.glp), the layer's agents nearby declared on the PAN and
+%% os_phone/8 (place.glp), with no rendezvous server and no directory, the layer's agents nearby declared on the PAN and
 %% the LAN, Ks the persons the person knows at the start; home on the agent's
 %% notices, answering yes on every card of a request and an introduction,
 %% and befriending by picking a person on home's card of a person nearby,
@@ -803,7 +803,7 @@ sg_init(_, _, _, _) :- otherwise | true.
 procedure nearby_phone(Key?, Constant?, List(Key)?, NetInStream?).
 nearby_phone(Me, Mode, Ks, NetIn) :-
     ground(Me?), ground(Ks?) |
-    place # os_phone(Me?, Ks?, In?, NetIn?, Out, NetOut),
+    place # os_phone(Me?, Ks?, [], none, In?, NetIn?, Out, NetOut),
     send_to_net(NetOut?),
     pick_mode(Mode?, Pick),
     picking_home(Me?, Pick?, Out?, Notices, Script?, In),
