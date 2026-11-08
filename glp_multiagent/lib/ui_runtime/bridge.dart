@@ -69,6 +69,46 @@ const String pendingCtor = 'pending';
 /// (`glp_runtime/lib/vglp/constructs.dart`, `listEnd`).
 const GTerm listEnd = GList([GAtom('end')]);
 
+/// The raw input a form grants at a position the program writes inside the
+/// person's answer, `hole`: no value of the type the program writes is the
+/// person's to give, and the construct process puts a fresh writer in its
+/// place, "a fresh writer at a position the program writes, which the form
+/// shows and does not edit" (vGLP, Proposition "Default Widgets", its proof;
+/// `glp_runtime/lib/vglp/constructs.dart`, skel_N and fill_N).
+const GTerm holeMark = GAtom('hole');
+
+/// Whether [w] is the widget of a value the program writes: "a value the
+/// program writes: shown and not edited" (vGLP, Definition "Default
+/// Widget") --- `shown`, a thread, or a form, a menu or a recursive type all
+/// of whose parts are such.  A field of a form the person writes with such a
+/// widget is a position the program writes inside the person's answer, the
+/// compilation drawing each position the person writes by a widget that takes
+/// input.
+bool programWrites(GTerm w, [Map<String, GTerm> recs = const {}]) {
+  final (kind, ws) = ctorArgs(w);
+  switch (kind) {
+    case 'shown' || 'thread':
+      return true;
+    case labelCtor when ws.length == 2:
+      return programWrites(ws[1], recs);
+    case namedCtor when ws.length == 2:
+      return programWrites(ws[1], recs);
+    case recCtor when ws.length == 2:
+      return programWrites(ws[1], recs);
+    case refCtor when ws.length == 1:
+      // Within the recursive type being decided, whose other parts decide.
+      return true;
+    case 'form' when ws.length == 2 && ws[1] is GList:
+      return (ws[1] as GList).items.every((e) {
+        final (ek, es) = ctorArgs(e);
+        return ek == 'field' && es.length == 2 && programWrites(es[1], recs);
+      });
+    case 'menu' when ws.length == 1 && ws[0] is GList:
+      return (ws[0] as GList).items.every((a) => programWrites(a, recs));
+  }
+  return false;
+}
+
 /// The widget of a recursive type, finite by a reference back to itself:
 /// `rec(T, W)` binds the name `T` of the type to its widget `W`, within
 /// which `ref(T)` is `T` again.  "A named type in it is recursive only if it

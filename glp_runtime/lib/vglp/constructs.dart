@@ -135,10 +135,10 @@
 // or in one it reaches; a position the person writes of a type parameter,
 // which has no widget; and a position of the type _, whoever writes it,
 // none of the Definition's building blocks (vGLP #8 Cowork, 2026-10-11
-// 17:24 UTC, Q2).  So the compilation emits no form('.', ...).  The
-// Definition's "a Stream only at a position the person writes" (vGLP
-// 56d898f) is not checked here: Code #9 routed it to the owners of the
-// programs it reaches (Code_inbox.md, 2026-10-16 13:57 UTC).
+// 17:24 UTC, Q2).  So the compilation emits no form('.', ...).  And a
+// Stream the program writes: "a Stream only at a position the person writes"
+// (vGLP 27bae5d; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 19:39 item
+// 3), a List the program writes admitted.
 //
 // RECURSIVE TYPES (vGLP 092c9fe, Definition "Volitional Procedure,
 // Interactive Type", "a named type in it is recursive only if it has no
@@ -171,12 +171,21 @@
 // once the list is written whole, closed and each element written whole
 // (_presentSeq).
 //
-// WHAT IS NOT BUILT, each a compile error naming the type: a position the
-// program writes inside one the person writes (_checkPersonWritable), which
-// vGLP, Section 6.3, "The construct process", builds --- the answer holding
-// a fresh writer there, the construct holding its reader and drawing the
-// position pending(Pos), Pending(S), until written whole --- and which this
-// compilation does not yet build (reported, vGLP #24 6(i)); a difference
+// A POSITION THE PROGRAM WRITES INSIDE ONE THE PERSON WRITES (vGLP, Section
+// 6.3, "The construct process"; Definition "Answer"; the chat of Section 3,
+// Line ::= line(String, Status?)): the answer holds a fresh writer there, the
+// construct holds its reader and draws the position pending(Pos) until it is
+// written whole, and as written after (fill_N, pend_N; the section
+// "positions the program writes inside the person's answers" below); the
+// form shows it and does not edit it, its field drawn by the widget of a
+// value the program writes, shown, and the bridge granting hole there, the
+// raw input of such a question of its skeleton type (skel_N).
+//
+// WHAT IS NOT BUILT, each a compile error naming the type
+// (_checkPersonWritable): a position the program writes inside the person's
+// answer holding a question; an answer holding both such a position and a
+// stream or a list of its own; such a position in a stream or a list inside
+// a form, or in an answer inside the program's output; and a difference
 // list.
 // A position the person writes of type Real is built, formed by real/1 and
 // drawn as a number field (vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6;
@@ -1032,7 +1041,21 @@ class _Generator {
   String _constructClause(InteractiveType t, _Node root, String w) {
     final f = t.functor;
     if (root.person) {
-      _checkPersonWritable(root, t);
+      _checkPersonWritable(root, t, root: true);
+      if (_seqWritten(root)) {
+        // A stream the person writes whose element holds a position the
+        // program writes: drawn as its elements answered and its open tail.
+        final v = _rootViews[f] = _seqView(root);
+        return '$constructName(Id, $f(X?), Gs, Ds?) :- '
+            '${_answerSeqWritten(root)}([], [], X, Gs1?, _, Vs, Done), '
+            '${_runFor(f, v)}(Id?, $w, Vs?, Done?, Gs?, Gs1, Ds).';
+      }
+      if (_holdsWritten(root)) {
+        final v = _rootViews[f] = _personView(root);
+        return '$constructName(Id, $f(X?), Gs, Ds?) :- '
+            '${_answer(root)}([], X, Gs1?, _, Vs, Done), '
+            '${_runFor(f, v)}(Id?, $w, [input([]) | Vs?], Done?, Gs?, Gs1, Ds).';
+      }
       final answer = _answer(root);
       if (_holdsNested(root)) {
         // The form's answer leaves its streams and lists open, each a
@@ -1090,8 +1113,8 @@ class _Generator {
   /// holds is assigned", ibid.; Definition "Reduce and Communicate in
   /// vmaGLP"); and a position the program writes holding a question its own
   /// view type, [_presentView].  A position the program writes inside the
-  /// person's answers, Pending(S), is not built: the construct of a type
-  /// with one is refused ([_checkPersonWritable]).
+  /// person's answers is S ; pending(Path) ([_pendingView]), the answer
+  /// holding it its own view type ([_writtenView]).
 
   /// The view of [k], a child of a structure or a stream, as its parent's
   /// clause draws it.
@@ -1380,28 +1403,56 @@ class _Generator {
     return _questionMemo[n.key] = result;
   }
 
-  /// Whether a position the person writes contains one the program writes.
-  bool _hasProgramInside(_Node n, Set<String> seen) {
-    if (!n.person) return true;
-    if (!seen.add(n.key)) return false;
-    for (final a in _nodeAlts(n)) {
-      for (final c in _children(n, a)) {
-        if (_hasProgramInside(c, seen)) return true;
+  /// The positions the program writes inside the person's answers that the
+  /// construct builds (fill_N): each holding no question, in an answer
+  /// holding no stream or list of its own, at the root of the interactive
+  /// variable or in the element of a stream or a list the person writes
+  /// there.  Any other is refused, naming the type: not built.  [root] is
+  /// whether [n] is the root.
+  void _checkPersonWritable(_Node n, InteractiveType t, {bool root = false}) {
+    void refuse(String what) => throw CompileError(
+        'The construct of the interactive type ${t.written} is not built: '
+        'the person writes ${n.typeKey}, $what',
+        t.line, t.column, phase: 'analyzer');
+    if (!root && (_holdsWritten(n) || _seqWritten(n))) {
+      refuse('and a position of it is written by the program, which an '
+          'answer inside the program\'s output does not carry');
+    }
+    final seen = <String>{};
+    void walk(_Node m, bool top) {
+      if (!m.person || !seen.add(m.key)) return;
+      final seq = _personSeq(m);
+      if (seq != null) {
+        final e = m.child(seq.elem);
+        if (!e.person) {
+          refuse('and the element of ${m.typeKey} is written by the program');
+        }
+        if (!top && _holdsWritten(e)) {
+          refuse('and a stream or a list in it, ${m.typeKey}, holds a '
+              'position the program writes, which an answer left open '
+              'inside a form does not carry');
+        }
+        walk(e, top);
+        return;
+      }
+      if (_holdsWritten(m) && _holdsNested(m)) {
+        refuse('and ${m.typeKey} holds both a position the program writes '
+            'and a stream or a list of its own');
+      }
+      for (final a in _nodeAlts(m)) {
+        for (final c in _children(m, a)) {
+          if (_isWritten(m, c)) {
+            if (_hasQuestion(c)) {
+              refuse('and a position of it the program writes, '
+                  '${c.typeKey}, holds a question');
+            }
+          } else {
+            walk(c, false);
+          }
+        }
       }
     }
-    return false;
-  }
-
-  /// The construct forms every position the person writes: none is written by
-  /// the program.
-  void _checkPersonWritable(_Node n, InteractiveType t) {
-    if (_hasProgramInside(n, {})) {
-      throw CompileError(
-          'The construct of the interactive type ${t.written} is not built: '
-          'the person writes ${n.typeKey}, and a position of it is written by '
-          'the program, which the construct can neither form nor show',
-          t.line, t.column, phase: 'analyzer');
-    }
+    walk(n, true);
   }
 
   /// Refuse the interactive type [it], whose root is [root], where it is
@@ -1458,6 +1509,8 @@ class _Generator {
         'under another Stream or List"';
     const noInversion = 'a named type in an interactive type "is recursive '
         'only if it has no mode inversion"';
+    const personStream = 'an interactive type has "a Stream only at a '
+        'position the person writes"';
     Never refuse(String what, String rule) => throw CompileError(
         'The interactive type ${it.written} is refused: $what, and $rule '
         '($_definition)',
@@ -1480,6 +1533,14 @@ class _Generator {
               '${elem.typeKey} ${identical(elem, n) ? 'is' : 'holds'} a '
               'stream or a list${holds(n)}',
               notUnder);
+        }
+        // "a Stream only at a position the person writes" (vGLP 27bae5d,
+        // Definition "Volitional Procedure, Interactive Type"; vGLP #24,
+        // Code_inbox.md, 2026-11-07 22:27 UTC, 19:39 item 3): a stream the
+        // program writes is refused, a list it writes admitted.
+        if (!seq.list && !n.person) {
+          refuse('the program writes ${n.typeKey}, a Stream${holds(n)}',
+              personStream);
         }
         final e = n.child(seq.elem);
         walk(e, (n, e));
@@ -1814,11 +1875,19 @@ class _Generator {
     final seq = _personSeq(n);
     final e = seq == null ? null : n.child(seq.elem);
     final nested = _holdsNested(n);
-    final vs = nested ? ', Vs' : '';
-    final vsOut = nested ? ', Vs?' : '';
-    final vsType = nested ? ', Stream(${_qView(n)})' : '';
+    // An answer holding a position the program writes is drawn again as
+    // that position is written (fill_N).
+    final written = _holdsWritten(n);
+    final fill = written ? _fill(n) : null;
+    final vs = nested || written ? ', Vs' : '';
+    final vsOut = nested || written ? ', Vs?' : '';
+    final vsType = nested
+        ? ', Stream(${_qView(n)})'
+        : written
+            ? ', Stream(${_personView(n)})'
+            : '';
     final form = _former(e ?? n);
-    _rTypes.putIfAbsent((e ?? n).typeKey, () => e ?? n);
+    _rTypes.putIfAbsent(_formedKey(e ?? n), () => e ?? n);
     if (seq != null && seq.list) _rListEnd = true;
     final open = nested ? _open(n) : null;
     _out.writeln('procedure$p $name($pt?, $t, $gs?, $gs$vsType, $done).');
@@ -1834,7 +1903,7 @@ class _Generator {
           'otherwise | '
           '$take(refused, P?, X, G?, Gs?, Gs1$vs, Done).')
       ..writeln()
-      ..writeln('procedure$p $take($formed(${(e ?? n).typeKey})?, $pt?, $t, '
+      ..writeln('procedure$p $take($formed(${_formedKey(e ?? n)})?, $pt?, $t, '
           '${gen.inputType}?, $gs?, $gs$vsType, $done).');
     if (e != null) {
       _out.writeln('$take(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- '
@@ -1842,6 +1911,13 @@ class _Generator {
     } else if (nested) {
       _out.writeln('$take(formed(V), P, X?, _, Gs, Gs1?, [W?], Done?) :- '
           '$open(V?, P?, X, Gs?, Gs1, W, Done).');
+    } else if (written) {
+      // "it withdraws once it holds no question and no reader at a position
+      // whose output may hold one" (vGLP, Section 6.3, "The construct
+      // process"): a position the program writes inside the answer holds no
+      // question, so the answer is done at once.
+      _out.writeln('$take(formed(V), P, X?, _, Gs, Gs?, Vs?, done) :- '
+          '$fill(V?, P?, X, Vs).');
     } else {
       _out.writeln('$take(formed(V), _, V?, _, Gs, Gs?, done).');
     }
@@ -1929,6 +2005,433 @@ class _Generator {
     return name;
   }
 
+  // --- positions the program writes inside the person's answers ---------------
+  //
+  // vGLP, Definition "Answer": "t a term of the type of X, ground but for
+  // variables of V_p occurring nowhere in the configuration: a reader Y_i? at
+  // each position the person writes of type Stream(T') or List(T') ... and a
+  // writer W_j at each outermost position the program writes"; Section 6.3,
+  // "The construct process": "u is a term of type T' with R at the positions
+  // the person writes and with fresh variables where Answer has them ... it
+  // holds the readers of the new variables at the positions the program
+  // writes"; "A construct process has the bridge draw the widget of T ...
+  // again as output arrives inside the person's answers, each position there
+  // not yet written whole drawn as pending"; "V is of the view type of T: T
+  // with the type S of each position the person writes replaced by S ;
+  // input(Path), and of each position the program writes inside the person's
+  // answers by S ; pending(Path)"; Proposition "Default Widgets", its proof:
+  // "a fresh writer at a position the program writes, which the form shows
+  // and does not edit; the form forms the tuple".  The chat of Section 3,
+  // Line ::= line(String, Status?), is the case (vGLP 27bae5d,
+  // sections/parts/vglp-chat.tex; vGLP #24, Code_inbox.md, 2026-11-07 22:27
+  // UTC, 19:39 item 1).
+  //
+  // The former forms the person's positions and holds hole, a constant, at
+  // each position the program writes (skel_N, the skeleton of the answer),
+  // the bridge granting hole there, the raw input of such a question being of
+  // its skeleton type, since no value of the type the program writes is the
+  // person's to give; fill_N puts a
+  // fresh writer at each hole, the answer, and keeps its reader, drawing the
+  // position pending(Q) until it is written whole and then as written
+  // (pend_N), the views of the answer combined as each position is
+  // (comb_N).  A stream the person writes whose element holds such a
+  // position is drawn as the elements answered, each so, then input(P) at
+  // its tail, the question still open (ans_N).  Not built, each a compile
+  // error: a position the program writes holding a question inside an
+  // answer; an answer holding both such a position and a stream or a list of
+  // its own; a stream or a list inside a form, or inside the program's
+  // output, whose answers hold such a position.
+
+  /// Whether [k], a child of [n], is a position the program writes inside
+  /// one the person writes.
+  bool _isWritten(_Node n, _Node k) => n.person && !k.person;
+
+  final _writtenMemo = <String, bool>{};
+
+  /// Whether [n], a position the person writes that is not a stream or a
+  /// list, holds a position the program writes, in an argument or below one
+  /// the person writes.
+  bool _holdsWritten(_Node n) {
+    if (!n.person || _personSeq(n) != null) return false;
+    final memo = _writtenMemo[n.key];
+    if (memo != null) return memo;
+    _writtenMemo[n.key] = false; // least fixpoint through recursive types
+    var result = false;
+    for (final a in _nodeAlts(n)) {
+      if (a is! _StructAlt) continue;
+      for (final c in _children(n, a)) {
+        if (_isWritten(n, c) || (!_isNestedSeq(n, c) && _holdsWritten(c))) {
+          result = true;
+        }
+      }
+    }
+    return _writtenMemo[n.key] = result;
+  }
+
+  /// Whether [n] is a stream or a list the person writes whose element holds
+  /// a position the program writes.
+  bool _seqWritten(_Node n) {
+    final seq = _personSeq(n);
+    if (seq == null) return false;
+    final e = n.child(seq.elem);
+    return e.person && _holdsWritten(e);
+  }
+
+  /// The type a former of [c] forms: its skeleton where it holds a position
+  /// the program writes, and its own type otherwise.
+  String _formedKey(_Node c) => _holdsWritten(c) ? _skel(c) : c.typeKey;
+
+  String? _holeType;
+
+  /// The type of the hole a skeleton holds where the program writes.
+  String _hole() {
+    final h = _holeType;
+    if (h != null) return h;
+    final t = _holeType = gen.view('hole');
+    _out.writeln('$t ::= hole.');
+    return t;
+  }
+
+  /// skel_N: the type of [n] with hole at each position the program writes.
+  String _skel(_Node n) {
+    final key = 'skel:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final ref = gen.view('skel_${_typeStem(n.type)}');
+    _viewMemo[key] = ref;
+    final alts = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _StructAlt) {
+        alts.add(_apply(a, [
+          for (final k in _children(n, a))
+            _isWritten(n, k)
+                ? _hole()
+                : _isNestedSeq(n, k)
+                    ? k.typeKey
+                    : _formedKey(k)
+        ]));
+      } else {
+        alts.add(_plainAlt(n, a));
+      }
+    }
+    _out.writeln('$ref ::= ${alts.join(' ; ')}.');
+    return ref;
+  }
+
+  /// The view type of [n], a position the person writes holding one the
+  /// program writes: its alternatives with S ; input(Path) at each position
+  /// the person writes and S ; pending(Path) at each the program writes.
+  String _writtenView(_Node n) {
+    final key = 'written:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final ref = gen.view('written_${_typeStem(n.type)}');
+    _viewMemo[key] = ref;
+    final alts = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _StructAlt) {
+        alts.add(_apply(a, [
+          for (final k in _children(n, a))
+            _isWritten(n, k) ? _pendingView(k) : _personView(k)
+        ]));
+      } else {
+        alts.add(_plainAlt(n, a));
+      }
+    }
+    _out.writeln('$ref ::= ${alts.join(' ; ')}.');
+    return ref;
+  }
+
+  /// The view of a position the person writes inside such an answer:
+  /// Questioned(S), S its own view where it holds a position the program
+  /// writes.
+  String _personView(_Node k) => '${gen.questionedType}('
+      '${_holdsWritten(k) ? _writtenView(k) : k.typeKey})';
+
+  /// The view of a position the program writes inside the person's answer:
+  /// S ; pending(Path).
+  String _pendingView(_Node k) {
+    final key = 'pending:${k.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final ref = gen.view('pending_${_typeStem(k.type)}');
+    _viewMemo[key] = ref;
+    _out.writeln('$ref ::= ${k.typeKey} ; pending(${gen.pathType}).');
+    return ref;
+  }
+
+  /// pend_N(W?, Q?, Vs): the reader W of a position [k] the program writes
+  /// inside the person's answer, at Q: drawn pending(Q), and again as
+  /// written once written whole.
+  String _pend(_Node k) {
+    final name = _name('pend', k);
+    if (!_emitted.add('pend:${k.key}')) return name;
+    final one = _name('pend', k, 'whole');
+    final v = _pendingView(k);
+    _out
+      ..writeln('procedure $name(${k.typeKey}?, ${gen.pathType}?, '
+          'Stream($v)).')
+      ..writeln('$name(W, Q, [pending(Q?) | Vs?]) :- $one(W?, Vs).')
+      ..writeln()
+      ..writeln('procedure $one(${k.typeKey}?, Stream($v)).')
+      ..writeln('$one(W, [W?]) :- ground(W?) | true.')
+      ..writeln();
+    return name;
+  }
+
+  /// fill_N(V?, P?, X, Vs): X the answer of node [n] at P, from V, the
+  /// skeleton the former formed: V with a fresh writer at each hole, whose
+  /// reader pend_N holds, and each argument holding such a position filled
+  /// likewise; Vs its views, drawn again as each such position is written.
+  String _fill(_Node n) {
+    final name = _name('fill', n);
+    if (!_emitted.add('fill:${n.key}')) return name;
+    final view = _personView(n);
+    final clauses = <String>[];
+    for (final a in _nodeAlts(n)) {
+      if (a is _ConstAlt) {
+        final c = constantSource(a.value);
+        clauses.add('$name($c, _, $c, [$c]).');
+        continue;
+      }
+      if (a is _NilAlt) {
+        clauses.add('$name([], _, [], [[]]).');
+        continue;
+      }
+      if (a is _LeafAlt) {
+        clauses.add('$name(V, _, X?, Vs?) :- ${_guard(a.leaf)}(V?) | '
+            'X = V?, Vs = [V?].');
+        continue;
+      }
+      if (a is! _StructAlt) continue;
+      final kids = _children(n, a);
+      final head = <String>[], xs = <String>[], goals = <String>[];
+      final guards = <String>[], streams = <String>[], plain = <String>[];
+      final slots = <String>[];
+      var pathReads = 0;
+      for (var i = 0; i < kids.length; i++) {
+        final k = kids[i];
+        final idx = i + 1;
+        if (_isWritten(n, k)) {
+          head.add('hole');
+          xs.add('W$idx');
+          goals
+            ..add('${gen.path}(P?, $idx, Q$idx)')
+            ..add('${_pend(k)}(W$idx?, Q$idx?, S$idx)');
+          pathReads++;
+          streams.add('S$idx?');
+          slots.add('s');
+        } else if (_holdsWritten(k)) {
+          head.add('H$idx');
+          xs.add('X$idx?');
+          goals
+            ..add('${gen.path}(P?, $idx, Q$idx)')
+            ..add('${_fill(k)}(H$idx?, Q$idx?, X$idx, S$idx)');
+          pathReads++;
+          streams.add('S$idx?');
+          slots.add('s');
+        } else {
+          head.add('H$idx');
+          xs.add('H$idx?');
+          guards.add('ground(H$idx?)');
+          plain.add('H$idx?');
+          slots.add('h');
+        }
+      }
+      if (streams.isEmpty) {
+        // An alternative holding no such position is its own view.
+        clauses.add('$name(${_apply(a, head)}, _, ${_apply(a, xs)}, '
+            '[${_apply(a, xs)}])${guards.isEmpty ? '.' : ' :- ${guards.join(', ')} | true.'}');
+        continue;
+      }
+      if (pathReads > 1) guards.insert(0, 'ground(P?)');
+      goals.add('${_comb(n, a, kids, slots)}('
+          '${[...streams, ...plain].join(', ')}, Vs)');
+      final g = guards.isEmpty ? '' : '${guards.join(', ')} | ';
+      clauses.add('$name(${_apply(a, head)}, P, ${_apply(a, xs)}, Vs?) :- '
+          '$g${goals.join(', ')}.');
+    }
+    _out.writeln('procedure $name(${_formedKey(n)}?, ${gen.pathType}?, '
+        '${n.typeKey}, Stream($view)).');
+    for (final c in clauses) {
+      _out.writeln(c);
+    }
+    _out.writeln();
+    return name;
+  }
+
+  /// comb_N(S1?, ..., Sm?, H1?, ..., Vs): the views of alternative [a] of
+  /// [n] from the views of its arguments that change, S1 ... Sm, each a
+  /// stream, and the values of those that do not, H1 ...: the first once
+  /// each has its first, and again as any is drawn again; done when each
+  /// stream is.  [slots] says, argument by argument, which is which.
+  String _comb(_Node n, _Alt a, List<_Node> kids, List<String> slots) {
+    final suffix = _altSuffix(n, a);
+    final name = _name('comb', n, suffix);
+    if (!_emitted.add('comb:${n.key}:$suffix')) return name;
+    final more = _name('comb', n, '${suffix}_more');
+    final view = _personView(n);
+    final sIdx = [for (var i = 0; i < kids.length; i++) if (slots[i] == 's') i];
+    final hIdx = [for (var i = 0; i < kids.length; i++) if (slots[i] == 'h') i];
+    String elemType(int i) => _isWritten(n, kids[i])
+        ? _pendingView(kids[i])
+        : _personView(kids[i]);
+    final sTypes = [for (final i in sIdx) 'Stream(${elemType(i)})?'];
+    final aTypes = [for (final i in sIdx) '${elemType(i)}?'];
+    final hTypes = [for (final i in hIdx) '${kids[i].typeKey}?'];
+    String viewOf(Map<int, String> at) =>
+        _apply(a, [for (var i = 0; i < kids.length; i++) '${at[i]}?']);
+    final aNames = {for (final i in sIdx) i: 'A${i + 1}'};
+    final hNames = {for (final i in hIdx) i: 'H${i + 1}'};
+    final hGuards = [for (final i in hIdx) 'ground(H${i + 1}?)'];
+    final aGuards = [for (final i in sIdx) 'ground(A${i + 1}?)'];
+    // The first view, once each stream has its first.
+    final firstHead = [
+      for (final i in sIdx) '[A${i + 1} | S${i + 1}]',
+      for (final i in hIdx) 'H${i + 1}',
+      '[${viewOf({...aNames, ...hNames})} | Vs?]',
+    ];
+    final moreArgs = [
+      for (final i in sIdx) 'A${i + 1}?',
+      for (final i in sIdx) 'S${i + 1}?',
+      for (final i in hIdx) 'H${i + 1}?',
+    ];
+    _out
+      ..writeln('procedure $name(${[...sTypes, ...hTypes, 'Stream($view)'].join(', ')}).')
+      ..writeln('$name(${firstHead.join(', ')}) :- '
+          '${[...aGuards, ...hGuards].join(', ')} | '
+          '$more(${[...moreArgs, 'Vs'].join(', ')}).');
+    // A stream that ends before its first view: none is drawn.
+    for (final j in sIdx) {
+      _out.writeln('$name(${[
+        for (final i in sIdx) i == j ? '[]' : '_',
+        for (final _ in hIdx) '_',
+        '[]',
+      ].join(', ')}).');
+    }
+    _out
+      ..writeln()
+      ..writeln('procedure $more(${[...aTypes, ...sTypes, ...hTypes, 'Stream($view)'].join(', ')}).');
+    // Again as any stream is drawn again, the others' last views kept.
+    for (final j in sIdx) {
+      final at = {...aNames, ...hNames, j: 'B${j + 1}'};
+      final h = [
+        for (final i in sIdx) i == j ? '_' : 'A${i + 1}',
+        for (final i in sIdx) i == j ? '[B${j + 1} | S${i + 1}]' : 'S${i + 1}',
+        for (final i in hIdx) 'H${i + 1}',
+        '[${viewOf(at)} | Vs?]',
+      ];
+      final args = [
+        for (final i in sIdx) i == j ? 'B${j + 1}?' : 'A${i + 1}?',
+        for (final i in sIdx) 'S${i + 1}?',
+        for (final i in hIdx) 'H${i + 1}?',
+        'Vs',
+      ];
+      final gs = [
+        for (final i in sIdx) i == j ? 'ground(B${j + 1}?)' : 'ground(A${i + 1}?)',
+        ...hGuards,
+      ];
+      _out.writeln('$more(${h.join(', ')}) :- ${gs.join(', ')} | '
+          '$more(${args.join(', ')}).');
+    }
+    // Done when each stream is.
+    _out
+      ..writeln('$more(${[
+        for (final _ in sIdx) '_',
+        for (final _ in sIdx) '[]',
+        for (final _ in hIdx) '_',
+        '[]',
+      ].join(', ')}).')
+      ..writeln();
+    return name;
+  }
+
+  /// The view type of a stream or a list [n] the person writes whose
+  /// element holds a position the program writes: the elements answered,
+  /// each by its view, then input(Path) at the tail, the question still
+  /// open, and [] once a list is ended.
+  String _seqView(_Node n) {
+    final key = 'seq:${n.key}';
+    final memo = _viewMemo[key];
+    if (memo != null) return memo;
+    final seq = _personSeq(n)!;
+    final e = n.child(seq.elem);
+    final ref = gen.view('answered_${_typeStem(n.type)}');
+    _viewMemo[key] = ref;
+    _out.writeln('$ref ::= input(${gen.pathType})'
+        '${seq.list ? ' ; []' : ''} ; [${_personView(e)} | $ref].');
+    return ref;
+  }
+
+  /// ans_N(P?, C?, X, Gs?, Gs1, Vs, Done): the question X of a stream or a
+  /// list [n] the person writes whose element holds a position the program
+  /// writes, at P, whose grants name P, its next cell at C: drawn input(P)
+  /// at once; each element answered from a grant, filled (fill_N) at C with
+  /// 1 at its end, the tail at C with 2 at its end a question again; the
+  /// views the elements' and the tail's, combined (scons_N); a list ended by
+  /// the end button, [] its last view, and Done.
+  String _answerSeqWritten(_Node n) {
+    final name = _name('ans', n);
+    if (!_emitted.add('ans:${n.key}')) return name;
+    final seq = _personSeq(n)!;
+    final e = n.child(seq.elem);
+    final one = _name('ans', n, 'one');
+    final take = _name('ans', n, 'take');
+    final cons = _name('ans', n, 'cons');
+    final consMore = _name('ans', n, 'cons_more');
+    final t = n.typeKey;
+    final pt = gen.pathType;
+    final gs = gen.inputsType;
+    final done = gen.doneType;
+    final sv = _seqView(n);
+    final ev = _personView(e);
+    final form = _former(e);
+    final fill = _fill(e);
+    _rTypes.putIfAbsent(_formedKey(e), () => e);
+    if (seq.list) _rListEnd = true;
+    _out
+      ..writeln('procedure $name($pt?, $pt?, $t, $gs?, $gs, Stream($sv), $done).')
+      ..writeln('$name(P, C, X?, Gs, Gs1?, [input(P?) | Vs?], Done?) :- '
+          'ground(P?) | $one(P?, C?, X, Gs?, Gs1, Vs, Done).')
+      ..writeln()
+      ..writeln('procedure $one($pt?, $pt?, $t, $gs?, $gs, Stream($sv), $done).');
+    if (seq.list) {
+      _out.writeln('$one(P, _, [], [input(_, P1, $listEnd) | Gs], Gs?, [[]], '
+          'done) :- P1? =?= P? | true.');
+    }
+    _out
+      ..writeln('$one(P, C, X?, [input(Id, P1, R) | Gs], Gs1?, Vs?, Done?) :- '
+          'P1? =?= P?, ground(R?) | $form(R?, F), '
+          '$take(F?, P?, C?, X, input(Id?, P1?, R?), Gs?, Gs1, Vs, Done).')
+      ..writeln('$one(P, C, X?, [G | Gs], Gs1?, Vs?, Done?) :- otherwise | '
+          '$take(refused, P?, C?, X, G?, Gs?, Gs1, Vs, Done).')
+      ..writeln()
+      ..writeln('procedure $take(${gen.formedType}(${_formedKey(e)})?, $pt?, '
+          '$pt?, $t, ${gen.inputType}?, $gs?, $gs, Stream($sv), $done).')
+      ..writeln('$take(formed(V), P, C, [X1? | X2?], _, Gs, Gs1?, Vs?, Done?) :- '
+          'ground(C?) | ${gen.path}(C?, 1, C1), ${gen.path}(C?, 2, C2), '
+          '$fill(V?, C1?, X1, Es), '
+          '$name(P?, C2?, X2, Gs?, Gs1, Ts, Done), $cons(Es?, Ts?, Vs).')
+      ..writeln('$take(refused, P, C, X?, G, Gs, [G? | Gs1?], Vs?, Done?) :- '
+          '$one(P?, C?, X, Gs?, Gs1, Vs, Done).')
+      ..writeln()
+      ..writeln('procedure $cons(Stream($ev)?, Stream($sv)?, Stream($sv)).')
+      ..writeln('$cons([E | Es], [T | Ts], [[E? | T?] | Vs?]) :- '
+          'ground(E?), ground(T?) | $consMore(E?, T?, Es?, Ts?, Vs).')
+      ..writeln('$cons([], _, []).')
+      ..writeln('$cons(_, [], []).')
+      ..writeln()
+      ..writeln('procedure $consMore($ev?, $sv?, Stream($ev)?, Stream($sv)?, '
+          'Stream($sv)).')
+      ..writeln('$consMore(_, T, [E | Es], Ts, [[E? | T?] | Vs?]) :- '
+          'ground(E?), ground(T?) | $consMore(E?, T?, Es?, Ts?, Vs).')
+      ..writeln('$consMore(E, _, Es, [T | Ts], [[E? | T?] | Vs?]) :- '
+          'ground(E?), ground(T?) | $consMore(E?, T?, Es?, Ts?, Vs).')
+      ..writeln('$consMore(_, _, [], [], []).')
+      ..writeln();
+    return name;
+  }
+
   /// form_N(R?, F): F formed(X), X the person's input R as a term of node
   /// [n]'s type; or F refused.  A primitive type's is the generic one.  A
   /// constant or nil alternative forms itself; a structure or cons
@@ -1953,7 +2456,6 @@ class _Generator {
     }
     final name = _name('form', n);
     if (!_emitted.add('form:${n.typeKey}')) return name;
-    final t = n.typeKey;
     final p = _declParams(n);
     final formed = gen.formedType;
     final alts = _nodeAlts(n);
@@ -1969,18 +2471,21 @@ class _Generator {
         // A stream or a list inside the form is not formed from the input:
         // it holds [] in the term formed, and the answer a fresh variable
         // there, a question of its own (open_N).
+        // A position the program writes is not formed either: it holds
+        // hole in the skeleton formed, and the answer a fresh writer there
+        // (fill_N).
         final kids = _children(n, a);
         final k = kids.length;
         final own = [
           for (var i = 0; i < k; i++)
-            if (!_isNestedSeq(n, kids[i])) i
+            if (!_isNestedSeq(n, kids[i]) && !_isWritten(n, kids[i])) i
         ];
         final rs = [
           for (var i = 0; i < k; i++) own.contains(i) ? 'R${i + 1}' : '_'
         ];
         if (own.isEmpty) {
           lines.add('$name(${_apply(a, rs)}, '
-              'formed(${_apply(a, List.filled(k, '[]'))})).');
+              'formed(${_apply(a, [for (final c in kids) _isWritten(n, c) ? 'hole' : '[]'])})).');
           continue;
         }
         final calls = [
@@ -1995,8 +2500,8 @@ class _Generator {
             'F = formed(R?).');
       }
     }
-    _out.writeln('procedure$p $name($_formedMark$t$_formedMark?, '
-        '$formed($t)).');
+    _out.writeln('procedure$p $name($_formedMark${_formedKey(n)}$_formedMark?, '
+        '$formed(${_formedKey(n)})).');
     for (final l in [...lines, ...leaves]) {
       _out.writeln(l);
     }
@@ -2020,16 +2525,21 @@ class _Generator {
     final formed = gen.formedType;
     final own = [
       for (final c in kids)
-        if (!_isNestedSeq(n, c)) c
+        if (!_isNestedSeq(n, c) && !_isWritten(n, c)) c
     ];
     final k = own.length;
-    final ins = [for (final c in own) '$formed(${c.typeKey})?'];
+    final ins = [for (final c in own) '$formed(${_formedKey(c)})?'];
     var j = 0;
     final args = [
-      for (final c in kids) _isNestedSeq(n, c) ? '[]' : 'X${++j}?'
+      for (final c in kids)
+        _isNestedSeq(n, c)
+            ? '[]'
+            : _isWritten(n, c)
+                ? 'hole'
+                : 'X${++j}?'
     ];
     _out
-      ..writeln('procedure$p $name(${ins.join(', ')}, $formed(${n.typeKey})).')
+      ..writeln('procedure$p $name(${ins.join(', ')}, $formed(${_formedKey(n)})).')
       ..writeln('$name(${[for (var i = 0; i < k; i++) 'formed(X${i + 1})'].join(', ')}, '
           'formed(${_apply(a, args)})).');
     for (var i = 0; i < k; i++) {

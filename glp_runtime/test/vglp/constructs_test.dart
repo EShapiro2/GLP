@@ -551,13 +551,13 @@ procedure (Val)*show(YesNo).
     test('a stream the program writes beside one the person writes: a thread '
         'drawn once written whole, closed, and an input box', () {
       final s = compile('''
-Board ::= board(Stream(Integer), Stream(String)?).
+Board ::= board(List(Integer), Stream(String)?).
 procedure (Board)*game(Stream(String)).
 (board([1, 2, 3], Moves))*game(Moves?).
 ''').source;
       expect(
           s,
-          contains("form(board, [field('Stream(Integer)', thread), "
+          contains("form(board, [field('List(Integer)', thread), "
               "field('Stream(String)', input_box(text))])"));
       // The thread drawn once written whole, closed: "once every reader in
       // the output it holds is assigned" (vGLP, Section 6.3, "The construct
@@ -569,7 +569,7 @@ procedure (Board)*game(Stream(String)).
               '[board(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | '
               'path(P?, 2, M2), path(P?, 2, Q2), '
               'answer_stream_string(Q2?, H2, Gs?, Gs1, D2).'));
-      expect(s, contains('View_board ::= board(Stream(Integer), '
+      expect(s, contains('View_board ::= board(List(Integer), '
           'Questioned(Stream(String))).'));
       expect(s, isNot(contains('thread(P')));
       expect(s, isNot(contains('comb_board')));
@@ -582,7 +582,7 @@ procedure (Board)*game(Stream(String)).
         'back: a picker', () {
       final s = compile('''
 Peer ::= Constant.
-Peers ::= Stream(Peer).
+Peers ::= List(Peer).
 Pick ::= pick(Peers, Peer?).
 procedure (Pick)*choose(Peer).
 (pick([bob, carol], P))*choose(P?).
@@ -1165,7 +1165,7 @@ procedure (Menu)*choose(YesNo).
       // A stream under a stream.
       const nested = '''
 YesNo ::= yes ; no.
-Feed ::= feed(Stream(Stream(String)), YesNo?).
+Feed ::= feed(List(Stream(String)), YesNo?).
 procedure (Feed)*see(YesNo).
 (feed([["a"]], A))*see(A?).
 ''';
@@ -1174,7 +1174,7 @@ procedure (Feed)*see(YesNo).
           () => compile(nested),
           refusedAt(
               'The interactive type Feed is refused: the program writes '
-              'Stream(Stream(String)), whose element Stream(String) is a '
+              'List(Stream(String)), whose element Stream(String) is a '
               'stream or a list, and an interactive type has a Stream or a '
               'List "never under another Stream or List" (vGLP, Definition',
               l3,
@@ -1255,7 +1255,7 @@ procedure (Menu)*ask(Peers?, Wallet?, Request).
       final tmp = Directory.systemTemp.createTempSync('vglp_scope_');
       addTearDown(() => tmp.deleteSync(recursive: true));
       final self = File('${tmp.path}/self.glp')
-        ..writeAsStringSync('Offer ::= offer(Integer, Stream(Integer)).\n');
+        ..writeAsStringSync('Offer ::= offer(Integer, List(Integer)).\n');
       final inScope = buildAncestorScope(
           chain: [self.path],
           rootSelfGlpPath: File('$_programs/self.glp').absolute.path);
@@ -1270,7 +1270,7 @@ procedure (Card)*see(Offer?, YesNo).
       expect(
           c.widgets['Card'],
           "form(card, [field('Offer', form(offer, [field('Integer', shown), "
-          "field('Stream(Integer)', thread)])), "
+          "field('List(Integer)', thread)])), "
           "field('YesNo', buttons([yes, no]))])");
     });
 
@@ -1338,13 +1338,13 @@ procedure (Note)*tell(Integer?).
       final (l2, c2) = at(note, 'procedure');
       expect(() => compile(note),
           refusedAt('The interactive type Note $why', l2, c2));
-      // The element of a stream the program writes.
+      // The element of a list the program writes.
       const thread = '''
-procedure (Stream(_))*tell(Stream(_)?).
+procedure (List(_))*tell(List(_)?).
 (Xs?)*tell(Xs).
 ''';
       expect(() => compile(thread),
-          refusedAt('The interactive type Stream(_) $why', 1, 1));
+          refusedAt('The interactive type List(_) $why', 1, 1));
     });
 
     test('a type parameter in an interactive type is refused outright, at a '
@@ -1609,7 +1609,7 @@ procedure (Tree?)*plant(Tree).
     });
 
     test('a Stream or a List under another, reached through a recursive '
-        'type, is refused as ever; a Stream the program writes whose '
+        'type, is refused as ever; a List the program writes whose '
         'elements are questions is admitted as ever, no named type of the '
         'recursion clause (Task D)', () {
       const forum = '''
@@ -1645,12 +1645,12 @@ procedure (Card)*see(YesNo).
               c2));
       final ballot = compile('''
 YesNo ::= yes ; no.
-procedure (Stream(YesNo?))*ballots.
+procedure (List(YesNo?))*ballots.
 (Bs?)*ballots :- none(Bs).
-procedure none(Stream(YesNo?)).
+procedure none(List(YesNo?)).
 none([]).
 ''');
-      expect(ballot.widgets['Stream(YesNo?)'], 'thread(buttons([yes, no]))');
+      expect(ballot.widgets['List(YesNo?)'], 'thread(buttons([yes, no]))');
     });
   });
 
@@ -1692,13 +1692,16 @@ procedure (Roll?)*call(Roll).
               ':- P1? =?= P? | true.'));
     });
 
+    // The program's is an alias of a List: an interactive type has "a
+    // Stream only at a position the person writes" (vGLP 27bae5d).
     test('a field of a form the person writes, a question of its own; and '
         'one the program writes, a thread', () {
       final c = compile('''
 Lines ::= Stream(String).
+Notes ::= List(String).
 YesNo ::= yes ; no.
 Post ::= post(String, Lines).
-Feed ::= feed(Lines, YesNo?).
+Feed ::= feed(Notes, YesNo?).
 procedure (Post?)*post(Post).
 (P)*post(P?).
 procedure (Feed)*feed(YesNo).
@@ -1707,7 +1710,7 @@ procedure (Feed)*feed(YesNo).
       expect(c.widgets['Post?'],
           "form(post, [field('String', text), question('Lines', input_box(text))])");
       expect(c.widgets['Feed'],
-          "form(feed, [field('Lines', thread), field('YesNo', buttons([yes, no]))])");
+          "form(feed, [field('Notes', thread), field('YesNo', buttons([yes, no]))])");
     });
   });
 
@@ -1856,7 +1859,7 @@ procedure (Tag?)*tag(Tag).
 YesNo ::= yes ; no.
 Coin ::= coin(Key, Integer).
 Lot ::= lot(Key, Integer).
-Offer ::= offer(Key, Lot, Stream(Coin)).
+Offer ::= offer(Key, Lot, List(Coin)).
 Card ::= card(Offer, YesNo?).
 procedure (Card)*see(Offer?, YesNo).
 (card(O?, A))*see(O, A?).
@@ -1865,7 +1868,7 @@ procedure (Card)*see(Offer?, YesNo).
           c.widgets['Card'],
           "form(card, [field('Offer', form(offer, [field('Key', shown), "
           "field('Lot', form(lot, [field('Key', shown), field('Integer', "
-          "shown)])), field('Stream(Coin)', thread(form(coin, "
+          "shown)])), field('List(Coin)', thread(form(coin, "
           "[field('Key', shown), field('Integer', shown)])))])), "
           "field('YesNo', buttons([yes, no]))])");
     });
@@ -1935,7 +1938,7 @@ Peer ::= Constant.
 Date ::= Integer.
 YesNo ::= yes ; no.
 Pay ::= pay(Peer, Integer, Date, Real).
-Offer ::= offer(Peer, Stream(Integer), YesNo?).
+Offer ::= offer(Peer, List(Integer), YesNo?).
 procedure (Pay?)*pay(Pay).
 (P)*pay(P?).
 procedure (Offer)*offer(YesNo).
@@ -1949,7 +1952,7 @@ procedure (Offer)*offer(YesNo).
           "field('Date', number), field('Real', number)])");
       expect(
           c.widgets['Offer'],
-          "form(offer, [field('Peer', shown), field('Stream(Integer)', "
+          "form(offer, [field('Peer', shown), field('List(Integer)', "
           "thread), field('YesNo', buttons([yes, no]))])");
     });
   });
@@ -1998,14 +2001,156 @@ procedure (Choice?)*pick(String).
     });
   });
 
-  group('what is not built', () {
-    test('a position the program writes inside one the person writes', () {
-      expect(() => compile('''
+  // vGLP, Definition "Answer" ("a writer W_j at each outermost position the
+  // program writes"); Section 6.3, "The construct process" ("it holds the
+  // readers of the new variables at the positions the program writes"; "again
+  // as output arrives inside the person's answers, each position there not
+  // yet written whole drawn as pending"; the view type, "S ; pending(Path)");
+  // Proposition "Default Widgets", its proof ("a fresh writer at a position
+  // the program writes, which the form shows and does not edit"); vGLP #24,
+  // Code_inbox.md, 2026-11-07 22:27 UTC, 19:39 item 1.
+  group('a position the program writes inside one the person writes', () {
+    const order = '''
 Reply ::= done.
 Order ::= order(Integer, Reply?).
 procedure (Order?)*order(Order).
 (O)*order(O?).
-'''), refused('a position of it is written by the program'));
+''';
+    test('the form shows it and does not edit it: a field drawn shown', () {
+      expect(compile(order).source,
+          contains("form(order, [field('Integer', number), "
+              "field('Reply', shown)])"));
+    });
+
+    test('the former forms a skeleton, hole where the program writes, the '
+        'raw input of the question of its type', () {
+      final s = compile(order).source;
+      expect(s, contains('View_hole ::= hole.'));
+      expect(s, contains('View_skel_order ::= order(Integer, View_hole).'));
+      expect(s, contains('form_order(order(R1, _), F?) :- '));
+      expect(s, contains('join_order_order_2(formed(X1), '
+          'formed(order(X1?, hole))).'));
+      expect(s, matches(RegExp(r'Drawn ::= [^\n]*View_skel_order')));
+    });
+
+    test('the answer holds a fresh writer there, whose reader the construct '
+        'holds, drawn pending until written whole and as written after', () {
+      final s = compile(order).source;
+      expect(s, contains('View_pending_reply ::= Reply ; pending(Path).'));
+      expect(s, contains('View_written_order ::= order(Questioned(Integer), '
+          'View_pending_reply).'));
+      expect(s, contains('fill_order(order(H1, hole), P, order(H1?, W2), '
+          'Vs?) :- ground(H1?) | path(P?, 2, Q2), pend_reply(W2?, Q2?, S2), '
+          'comb_order_order_2(S2?, H1?, Vs).'));
+      expect(s, contains('pend_reply(W, Q, [pending(Q?) | Vs?]) :- '
+          'pend_reply_whole(W?, Vs).'));
+      expect(s, contains('pend_reply_whole(W, [W?]) :- ground(W?) | true.'));
+      expect(s, contains('take_order(formed(V), P, X?, _, Gs, Gs?, Vs?, '
+          'done) :- fill_order(V?, P?, X, Vs).'));
+      expect(s, contains('answer_order([], X, Gs1?, _, Vs, Done)'));
+      expect(s, contains('[input([]) | Vs?], Done?, Gs?, Gs1, Ds)'));
+    });
+
+    test('a stream the person writes whose element holds one, the chat of '
+        'Section 3: drawn as its elements answered, then its open tail', () {
+      final s = compile('''
+Peer ::= Key.
+Status ::= sent.
+Line ::= line(String, Status?).
+Msg ::= msg(Peer, String).
+procedure (Stream(Line)?)*chat(Peer?, Stream(Msg)).
+(Ls)*chat(Peer, Out?) :- ground(Peer?) |
+    send_all(Peer?, Ls?, Out).
+
+procedure send_all(Peer?, Stream(Line)?, Stream(Msg)).
+send_all(Peer, [line(Text, sent)|Ls], [msg(Peer?, Text?)|Out?]) :-
+    ground(Peer?) | send_all(Peer?, Ls?, Out).
+send_all(_, [], []).
+''').source;
+      expect(s, contains('View_answered_stream_line ::= input(Path) ; '
+          '[Questioned(View_written_line) | View_answered_stream_line].'));
+      expect(s, contains("input_box(form(line, [field('String', text), "
+          "field('Status', shown)]))"));
+      expect(s, contains('ans_stream_line([], [], X, Gs1?, _, Vs, Done)'));
+      expect(s, contains('ans_stream_line(P, C, X?, Gs, Gs1?, '
+          '[input(P?) | Vs?], Done?) :- ground(P?) | '));
+      expect(s, contains('ans_stream_line_take(formed(V), P, C, [X1? | X2?], '
+          '_, Gs, Gs1?, Vs?, Done?) :- ground(C?) | path(C?, 1, C1), '
+          'path(C?, 2, C2), fill_line(V?, C1?, X1, Es), '
+          'ans_stream_line(P?, C2?, X2, Gs?, Gs1, Ts, Done), '
+          'ans_stream_line_cons(Es?, Ts?, Vs).'));
+    });
+  });
+
+  // vGLP 27bae5d, Definition "Volitional Procedure, Interactive Type": "a
+  // Stream only at a position the person writes" (vGLP #24, Code_inbox.md,
+  // 2026-11-07 22:27 UTC, 19:39 item 3).
+  group('a Stream only at a position the person writes', () {
+    test('a Stream the program writes is refused, the clause quoted', () {
+      const feed = '''
+YesNo ::= yes ; no.
+Feed ::= feed(Stream(String), YesNo?).
+procedure (Feed)*feed(YesNo).
+(feed(["a"], A))*feed(A?).
+''';
+      final (l, c) = at(feed, 'procedure');
+      expect(
+          () => compile(feed),
+          refusedAt(
+              'The interactive type Feed is refused: the program writes '
+              'Stream(String), a Stream, and an interactive type has "a '
+              'Stream only at a position the person writes" (vGLP, '
+              'Definition "Volitional Procedure, Interactive Type")',
+              l,
+              c));
+    });
+
+    test('a List the program writes is admitted, and a Stream the person '
+        'writes', () {
+      final c = compile('''
+YesNo ::= yes ; no.
+Feed ::= feed(List(String), Stream(String)?).
+procedure (Feed)*feed(Stream(String)).
+(feed(["a"], Ls))*feed(Ls?).
+''');
+      expect(c.widgets['Feed'],
+          "form(feed, [field('List(String)', thread), "
+          "field('Stream(String)', input_box(text))])");
+    });
+  });
+
+  group('what is not built', () {
+    test('a position the program writes inside the person\'s answer that '
+        'holds a question', () {
+      expect(() => compile('''
+Box ::= box(Integer?).
+Order ::= order(Integer, Box?).
+procedure (Order?)*order(Order).
+(O)*order(O?).
+'''), refused('holds a question'));
+    });
+
+    test('an answer holding both a position the program writes and a stream '
+        'of its own', () {
+      expect(() => compile('''
+Reply ::= done.
+Order ::= order(Stream(String), Reply?).
+procedure (Order?)*order(Order).
+(O)*order(O?).
+'''), refused('holds both a position the program writes and a stream or a '
+          'list of its own'));
+    });
+
+    test('an answer inside the program\'s output holding a position the '
+        'program writes', () {
+      expect(() => compile('''
+Peer ::= Constant.
+Reply ::= done.
+Order ::= order(Integer, Reply?).
+Card ::= card(Peer, Order?).
+procedure (Card)*ask(Peer?).
+(card(P, _))*ask(P).
+'''), refused('which an answer inside the program\'s output does not carry'));
     });
 
     test('a position the person writes of a type parameter: refused '
@@ -2040,20 +2185,20 @@ procedure(X) (Box(X)?)*take(X).
       final c = compile('''
 YesNo ::= yes ; no.
 Card ::= card(Integer, YesNo?).
-procedure (Stream(Card))*cards.
+procedure (List(Card))*cards.
 (Cs?)*cards :- deal(Cs).
-procedure deal(Stream(Card)).
+procedure deal(List(Card)).
 deal([]).
 ''');
       const card = "form(card, [field('Integer', shown), field('YesNo', "
           'buttons([yes, no]))])';
-      expect(c.widgets['Stream(Card)'], 'thread($card)');
+      expect(c.widgets['List(Card)'], 'thread($card)');
       final s = c.source;
       expect(
           s,
-          contains('construct(Id, stream_card_w(X), Gs, Ds?) :- '
-              'present_stream_card([], X?, Gs1?, _, Vs, Done), '
-              'run_stream_card_w(Id?, thread($card), Vs?, Done?, Gs?, Gs1, '
+          contains('construct(Id, list_card_w(X), Gs, Ds?) :- '
+              'present_list_card([], X?, Gs1?, _, Vs, Done), '
+              'run_list_card_w(Id?, thread($card), Vs?, Done?, Gs?, Gs1, '
               'Ds).'));
       // The views, the elements': a cell as it is written; [] for the
       // stream closed.  An unwritten tail is not drawn as [], nor are the
@@ -2062,21 +2207,21 @@ deal([]).
       // the output it holds is assigned").
       expect(
           s,
-          contains('present_stream_card(P, [X | Xs], Gs, Gs1?, Vs?, Done?) :- '
-              'present_stream_card_cell(P?, X?, Xs?, Gs?, Gs1, Vs, Done).'));
+          contains('present_list_card(P, [X | Xs], Gs, Gs1?, Vs?, Done?) :- '
+              'present_list_card_cell(P?, X?, Xs?, Gs?, Gs1, Vs, Done).'));
       expect(s,
-          contains('present_stream_card(_, [], Gs, Gs?, [[]], done).'));
-      expect(s, isNot(contains('present_stream_card_tail')));
+          contains('present_list_card(_, [], Gs, Gs?, [[]], done).'));
+      expect(s, isNot(contains('present_list_card_tail')));
       expect(s, isNot(contains('[[] | Vs?]')));
       // Each element presented at P with 1 at its end, its tail at P with
       // 2, the grants it does not take passed on to those after it, and the
       // cell drawn again as its element's view or its tail's changes.
       expect(
           s,
-          contains('present_stream_card_cell(P, X, Xs, Gs, Gs2?, Vs?, Done?) '
+          contains('present_list_card_cell(P, X, Xs, Gs, Gs2?, Vs?, Done?) '
               ':- ground(P?) | path(P?, 1, Q1), '
               'present_card(Q1?, X?, Gs?, Gs1, V1, D1), path(P?, 2, Q2), '
-              'present_stream_card(Q2?, Xs?, Gs1?, Gs2, V2, D2), '
+              'present_list_card(Q2?, Xs?, Gs1?, Gs2, V2, D2), '
               'cons_views(V1?, V2?, Vs), all_done([D1?, D2?], Done).'));
       expect(s, isNot(contains('ref(')));
       expect(s, isNot(contains('append_one')));
@@ -2107,21 +2252,21 @@ procedure (Panel)*show(YesNo, YesNo).
         'its writer, marked input(P) in the view and answered there', () {
       final c = compile('''
 YesNo ::= yes ; no.
-procedure (Stream(YesNo?))*ballot(YesNo, YesNo).
+procedure (List(YesNo?))*ballot(YesNo, YesNo).
 ([A1, A2])*ballot(A1?, A2?).
 ''');
-      expect(c.widgets['Stream(YesNo?)'], 'thread(buttons([yes, no]))');
+      expect(c.widgets['List(YesNo?)'], 'thread(buttons([yes, no]))');
       expect(
           c.source,
-          contains('present_stream_yesNo(P, [X? | Xs], Gs, Gs1?, Vs?, '
-              'Done?) :- present_stream_yesNo_cell(P?, X, Xs?, Gs?, Gs1, Vs, '
+          contains('present_list_yesNo(P, [X? | Xs], Gs, Gs1?, Vs?, '
+              'Done?) :- present_list_yesNo_cell(P?, X, Xs?, Gs?, Gs1, Vs, '
               'Done).'));
       expect(
           c.source,
-          contains('present_stream_yesNo_cell(P, X?, Xs, Gs, Gs2?, Vs?, '
+          contains('present_list_yesNo_cell(P, X?, Xs, Gs, Gs2?, Vs?, '
               'Done?) :- ground(P?) | path(P?, 1, M1), '
               'path(P?, 1, Q1), answer_yesNo(Q1?, X, Gs?, Gs1, D1), '
-              'path(P?, 2, Q2), present_stream_yesNo(Q2?, Xs?, Gs1?, Gs2, V2, '
+              'path(P?, 2, Q2), present_list_yesNo(Q2?, Xs?, Gs1?, Gs2, V2, '
               'D2), cons_views([input(M1?)], V2?, Vs), all_done([D1?, D2?], '
               'Done).'));
     });
@@ -2131,17 +2276,17 @@ procedure (Stream(YesNo?))*ballot(YesNo, YesNo).
       const src = '''
 YesNo ::= yes ; no.
 Ballot ::= ballot(Stream(YesNo?)).
-procedure (Stream(Ballot))*ballots.
+procedure (List(Ballot))*ballots.
 (Bs?)*ballots :- none(Bs).
-procedure none(Stream(Ballot)).
+procedure none(List(Ballot)).
 none([]).
 ''';
-      final (l, c) = at(src, 'procedure (Stream');
+      final (l, c) = at(src, 'procedure (List');
       expect(
           () => compile(src),
           refusedAt(
-              'The interactive type Stream(Ballot) is refused: the program '
-              'writes Stream(Ballot), whose element Ballot holds a stream or '
+              'The interactive type List(Ballot) is refused: the program '
+              'writes List(Ballot), whose element Ballot holds a stream or '
               'a list, holding a question, and an interactive type has a '
               'Stream or a List "never under another Stream or List"',
               l,

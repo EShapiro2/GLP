@@ -324,6 +324,105 @@ void main() {
     });
   });
 
+  // The chat of Section 3 (vGLP 27bae5d, sections/parts/vglp-chat.tex):
+  // Line ::= line(String, Status?), the status a position the program writes
+  // inside the person's answer: "the person's answer hands the program its
+  // writer (Answer, Definition "Answer"), and send_all writes sent into it ...
+  // so the line the person typed shows as pending until it is sent and as sent
+  // after"; Section 6.3, "The construct process": drawn "again as output
+  // arrives inside the person's answers, each position there not yet written
+  // whole drawn as pending" (vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC,
+  // 19:39 item 1).  The person grants two lines, hole at each status, the
+  // raw input of a question holding a position the program writes being its
+  // skeleton (glp_runtime/lib/vglp/constructs.dart, skel_N); the play logs
+  // every draw.  The program is written under programs/tests/vglp/ for the
+  // run and removed after, as the Real question's is.
+  group('a position the program writes inside the person\'s answer: the chat '
+      'of Section 3', () {
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('../programs/tests/vglp/status_fixture_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      File('${fixture.path}/chat.vglp').writeAsStringSync('''
+Peer ::= Key.
+Status ::= sent.
+Line ::= line(String, Status?).
+Msg ::= msg(Peer, String).
+exported procedure (Stream(Line)?)*chat(Peer?, Stream(Msg)).
+(Ls)*chat(Peer, Out?) :- ground(Peer?) |
+    send_all(Peer?, Ls?, Out).
+
+procedure send_all(Peer?, Stream(Line)?, Stream(Msg)).
+send_all(Peer, [line(Text, sent)|Ls], [msg(Peer?, Text?)|Out?]) :-
+    ground(Peer?) | send_all(Peer?, Ls?, Out).
+send_all(_, [], []).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+Peer      ::= Key.
+Status    ::= sent.
+Line      ::= line(String, Status?).
+Msg       ::= msg(Peer, String).
+Question  ::= stream_line_r(Stream(Line)?).
+Ask(Q)    ::= ask(Constant, Q).
+View_hole ::= hole.
+View_skel_line ::= line(String, View_hole).
+Drawn     ::= stream_line_r(_) ; View_skel_line.
+
+imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
+imported procedure chat#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
+
+exported procedure play_chat(Stream(Msg), Stream(_)).
+play_chat(Out?, Log?) :-
+    chat # chat(bob, Out, Asks),
+    chat # dispatch(Asks?, ch(Gs?, Ds), _),
+    chatting_person(Ds?, Gs, Log).
+
+procedure chatting_person(_?, PersonIn(Drawn), Stream(_)).
+chatting_person([draw(Id, W, stream_line_r(input(Q))) | Ds],
+                [input(Id?, Q?, line("hi", hole)),
+                 input(Id?, Q?, line("yo", hole)) | Gs?],
+                [drawn(Id?, W?, input(Q?)) | Log?]) :-
+    ground(Id?), ground(W?), ground(Q?) |
+    watching(Ds?, Gs, Log).
+
+procedure watching(_?, PersonIn(Drawn), Stream(_)).
+watching([draw(Id, _, stream_line_r(V)) | Ds], Gs?, [drawn(Id?, V?) | Log?]) :-
+    ground(Id?), ground(V?) |
+    watching(Ds?, Gs, Log).
+watching([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
+    ground(Id?) |
+    watching(Ds?, Gs, Log).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    test('each line is drawn pending until the program writes sent into it, '
+        'and sent after; the stream stays open, its tail input([])', () async {
+      final engine = GlpEngine(rootSelfGlpPath: _root);
+      expect(engine.loadProgram(fixture.absolute.path), isTrue);
+      final r = _Run(await engine.runGoal('play_chat(Out, Log)'), engine);
+      expect(r.status, isNot(ExecutionStatus.failed), reason: '${r.error}');
+      expect(r['Out'], '[msg(bob, hi), msg(bob, yo) | _]');
+      final log = r['Log'];
+      expect(log, startsWith('[drawn(1, input_box(form(line, '
+          '[field(String, text), field(Status, shown)])), input([])), '));
+      // The first line pending, its status at [1, 2], then sent.
+      expect(log, contains('drawn(1, [line(hi, pending([1, 2])) | input([])])'));
+      expect(log, contains('drawn(1, [line(hi, sent) | input([])])'));
+      // The second line at [2, 1], its status at [2, 1, 2].
+      expect(log, contains('line(yo, pending([2, 1, 2]))'));
+      expect(log, contains('drawn(1, [line(hi, sent), line(yo, sent) | '
+          'input([])])'));
+      expect(log, isNot(contains('withdrawn(1)')));
+      expect(log.indexOf('line(hi, pending'),
+          lessThan(log.indexOf('line(hi, sent)')));
+    });
+  });
+
   group('a question the person writes of type Real (item 6)', () {
     // vGLP #5 Cowork, 2026-10-03 08:16 UTC, item 6: formed by real/1, its
     // default widget the number field (Definition "Widget Declaration,

@@ -36,8 +36,8 @@ YesNo   ::= yes ; no.
 Pay     ::= pay(Peer, Integer).
 Request ::= send(Peer, Integer) ; post(String).
 Card    ::= card(Peer, YesNo?).
-Choice  ::= choose(Stream(Peer), Peer?).
-Feed    ::= feed(Stream(String), YesNo?).
+Choice  ::= choose(List(Peer), Peer?).
+Feed    ::= feed(List(String), YesNo?).
 
 %% ---------------------------------------------------------------------------
 %% The agents
@@ -102,12 +102,12 @@ procedure (Card)*card_q(Peer?, Stream(Output)).
 (card(P?, A))*card_q(P, Out?) :- ground(P?) | answered(P?, A?, Out).
 
 %% The picker offers the peers the program lists.
-procedure (Choice)*pick_q(Stream(Peer)?, Stream(Output)).
+procedure (Choice)*pick_q(List(Peer)?, Stream(Output)).
 (choose(Ps?, C))*pick_q(Ps, Out?) :- answered(pick, C?, Out).
 
 %% The thread shows the lines the program writes, and the person answers yes
 %% or no.
-procedure (Feed)*feed_q(Stream(String)?, Stream(Output)).
+procedure (Feed)*feed_q(List(String)?, Stream(Output)).
 (feed(Ls?, A))*feed_q(Ls, Out?) :- answered(feed, A?, Out).
 
 %% The input box takes one line per submission, and each line is answered.

@@ -31,8 +31,8 @@ YesNo    ::= yes ; no.
 Pay      ::= pay(Peer, Integer).
 Request  ::= send(Peer, Integer) ; post(String).
 Card     ::= card(Peer, YesNo?).
-Choice   ::= choose(Stream(Peer), Peer?).
-Feed     ::= feed(Stream(String), YesNo?).
+Choice   ::= choose(List(Peer), Peer?).
+Feed     ::= feed(List(String), YesNo?).
 Question ::= ok_r(Ok?) ; yesNo_r(YesNo?) ; string_r(String?)
            ; integer_r(Integer?) ; real_r(Real?) ; date_r(Date?)
            ; peer_r(Peer?) ; pay_r(Pay?) ; request_r(Request?)

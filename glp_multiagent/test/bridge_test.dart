@@ -191,6 +191,11 @@ class _Person {
   }
 }
 
+/// The text [t] inside the [kind] widget at [at] of construct [c].
+Finder text(OpenConstruct c, String kind, List<int> at, String t) =>
+    find.descendant(
+        of: find.byKey(nodeKey(c.id, kind, at)), matching: find.text(t));
+
 void main() {
   testWidgets(
       'the default widgets of the constant and primitive types: each drawn as '
@@ -305,7 +310,7 @@ void main() {
     final menu = p.the("menu([form(send, [field('Peer', peer), field('Integer', "
         "number)]), form(post, [field('String', text)])])");
     final picker = p.the('picker');
-    final feed = p.the("form(feed, [field('Stream(String)', thread), "
+    final feed = p.the("form(feed, [field('List(String)', thread), "
         "field('YesNo', buttons([yes, no]))])");
     final box = p.the('input_box(text)');
     expect(p.questions, hasLength(5));
@@ -556,6 +561,114 @@ void main() {
   // the questions beside it are offered at once").  The fixture is
   // programs/tests/vglp/pending: the program writes what it leaves unwritten
   // from the person's word, peer(P) or word(W).
+  // The chat of Section 3 (vGLP 27bae5d, sections/parts/vglp-chat.tex):
+  // Line ::= line(String, Status?), the status a position the program writes
+  // inside the person's answer.  The form "shows and does not edit" it
+  // (vGLP, Proposition "Default Widgets", its proof), the bridge granting
+  // hole there (bridge.dart, holeMark); the construct draws each line
+  // answered, "each position there not yet written whole drawn as pending"
+  // (Section 6.3, "The construct process"), then the open tail, its box
+  // (vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 19:39 item 1).  The
+  // fixture is written under programs/tests/vglp/ for the run and removed
+  // after, its agent's declarations those of the compiled module it imports.
+  group('a position the program writes inside the person\'s answer', () {
+    const box = "input_box(form(line, [field('String', text), "
+        "field('Status', shown)]))";
+    late Directory fixture;
+    setUp(() {
+      fixture = Directory('${programsDir()}/tests/vglp/status_bridge_${pid}_'
+          '${DateTime.now().microsecondsSinceEpoch}')
+        ..createSync();
+      File('${fixture.path}/chat.vglp').writeAsStringSync('''
+Peer ::= Key.
+Status ::= sent.
+Line ::= line(String, Status?).
+Msg ::= msg(Peer, String).
+exported procedure (Stream(Line)?)*chat(Peer?, Stream(Msg)).
+(Ls)*chat(Peer, Out?) :- ground(Peer?) |
+    send_all(Peer?, Ls?, Out).
+
+procedure send_all(Peer?, Stream(Line)?, Stream(Msg)).
+send_all(Peer, [line(Text, sent)|Ls], [msg(Peer?, Text?)|Out?]) :-
+    ground(Peer?) | send_all(Peer?, Ls?, Out).
+send_all(_, [], []).
+''');
+      File('${fixture.path}/self.glp').writeAsStringSync('''
+Peer      ::= Key.
+Status    ::= sent.
+Line      ::= line(String, Status?).
+Msg       ::= msg(Peer, String).
+Question  ::= stream_line_r(Stream(Line)?).
+Ask(Q)    ::= ask(Constant, Q).
+View_hole ::= hole.
+View_skel_line ::= line(String, View_hole).
+Drawn     ::= stream_line_r(_) ; View_skel_line.
+
+imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
+imported procedure chat#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
+
+Said      ::= Input(Drawn).
+Saids     ::= [Said | Saids].
+Selected  ::= [Constant | Saids].
+
+exported procedure agent(Channel(Selected, Stream(Constant))?,
+    Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch([E | Gs], []), ch(N, [])) :- start(E?, Gs?, N?).
+
+procedure start(Constant?, Saids?, Stream(NetMsg(Constant))?).
+start(chat_init, Gs, N) :- chat_init(bob, Gs?, N?).
+
+procedure chat_init(Constant?, Saids?, Stream(NetMsg(Constant))?).
+chat_init(_, Us, _) :-
+    grants(Us?, Gs),
+    chat # chat(bob, Out, Asks),
+    chat # dispatch(Asks?, ch(Gs?, Ds), _),
+    send_to_user(Ds?),
+    sent(Out?).
+
+procedure grants(Saids?, PersonIn(Drawn)).
+grants([input(Id, P, R) | Us], [input(Id?, P?, R?) | Gs?]) :-
+    grants(Us?, Gs).
+grants([refresh | Us], [refresh | Gs?]) :- grants(Us?, Gs).
+
+procedure sent(Stream(Msg)?).
+sent([_ | Ms]) :- sent(Ms?).
+sent([]).
+''');
+    });
+    tearDown(() {
+      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+    });
+
+    testWidgets(
+        'the status field is shown and not edited, hole granted there; each '
+        'line answered is drawn pending and then sent, above the open box',
+        (tester) async {
+      final dir = fixture.path.substring(fixture.path.lastIndexOf('/') + 1);
+      final p = await _Person.boot(tester, 'chat_init', dir: dir);
+      final c = p.the(box);
+      expect(formatTerm(c.view), 'input([])');
+      // The form's status field: drawn pending, no editor in it.
+      expect(find.byKey(nodeKey(c.id, 'pending', [2])), findsOneWidget);
+      await p.type(c, 'text', [1], 'hi');
+      await p.submit(c);
+      expect(p.grants.last, 'input(${c.id}, [], line(hi, hole))');
+      final carried = [for (final t in p._carried) formatTerm(t)];
+      expect(carried.any((t) => t.contains('pending([1, 2])')), isTrue,
+          reason: 'the line drawn pending before it was sent: $carried');
+      expect(text(c, 'shown', [1, 2], 'sent'), findsOneWidget);
+      expect(text(c, 'shown', [1, 1], 'hi'), findsOneWidget);
+      // The box again, at its tail, for the next line.
+      await p.type(c, 'text', [1], 'yo');
+      await p.submit(c);
+      expect(p.grants.last, 'input(${c.id}, [], line(yo, hole))');
+      expect(text(c, 'shown', [2, 1, 2], 'sent'), findsOneWidget);
+      expect(text(c, 'shown', [2, 1, 1], 'yo'), findsOneWidget);
+      p.open(c);
+    });
+  });
+
   group('a position the program has not yet written whole is drawn pending',
       () {
     const card = "form(card, [field('Peer', shown), "

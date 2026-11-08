@@ -330,6 +330,32 @@ class _ConstructViewState extends State<ConstructView> {
         return _shown(ws[1], v, at, recs1, displayText(ws[0]));
       case namedCtor when ws.length == 2:
         return _named(w, v, at, (d) => _shown(d, v, at, recs1));
+      case 'input_box' || 'input_list'
+          when ws.length == 1 && v is GStruct && v.functor == '.':
+        // A stream or a list the person writes whose element holds a
+        // position the program writes: the elements answered, each drawn by
+        // the element's widget, a position not yet written whole pending,
+        // then the tail, its box where it is still a question (vGLP, Section
+        // 6.3, "The construct process": drawn "again as output arrives inside
+        // the person's answers, each position there not yet written whole
+        // drawn as pending"; the chat of Section 3).  The k-th element is at
+        // the stream's position with k - 1 2s and then 1 at its end.
+        final items = <Widget>[];
+        GTerm rest = v;
+        var cell = at;
+        while (rest is GStruct && rest.functor == '.' && rest.args.length == 2) {
+          items.add(_node(ws[0], rest.args[0], [...cell, 1], recs1));
+          rest = rest.args[1];
+          cell = [...cell, 2];
+        }
+        if (questionAt(rest) != null) items.add(_node(w, rest, cell, recs1));
+        return _keyed(
+            kind,
+            at,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items,
+            ));
       case 'shown' when ws.isEmpty:
         return _keyed('shown', at, Text(displayText(v)));
       case 'thread' when ws.isEmpty:
@@ -620,6 +646,14 @@ class _ConstructViewState extends State<ConstructView> {
     if (u == null) return _undrawable(w, at);
     final (w1, recs1) = u;
     w = w1;
+    if (programWrites(w, recs1)) {
+      // A position the program writes inside the person's answer: "a fresh
+      // writer at a position the program writes, which the form shows and
+      // does not edit" (vGLP, Proposition "Default Widgets", its proof); it
+      // is drawn pending, the program not having written it.
+      return _labelled(label,
+          _pending(w, GList([for (final i in at) GInt(i)])));
+    }
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
@@ -737,6 +771,10 @@ class _ConstructViewState extends State<ConstructView> {
     if (u == null) return null;
     final (w1, recs1) = u;
     w = w1;
+    // A position the program writes: hole, the raw input holding it there,
+    // the construct process putting a fresh writer in its place
+    // (glp_runtime/lib/vglp/constructs.dart, skel_N and fill_N).
+    if (programWrites(w, recs1)) return holeMark;
     final (kind, ws) = ctorArgs(w);
     final k = pathText(at);
     switch (kind) {
