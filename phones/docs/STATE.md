@@ -4,8 +4,8 @@ Taken over from `tmp/phones/STATE.md` (Code #25B Phones, 13:57 UTC) and Code #25
 
 ## Devices
 
-- 11 Pro: UDID `00008030-000275600A12802E`, iOS 17.4.1; GrassApp at GLP main 8031c235 installed 13:08 UTC by `ideviceinstaller`, developer trusted, opened; signed for it by the free team G374822FDT.
-- 16 Pro: UDID `00008140-001C38C83A12801C`, iOS 26.6.1; GrassApp at GLP main 8031c235 since 14:45 UTC (Code #26).
+- 11 Pro: UDID `00008030-000275600A12802E`, iOS 17.4.1, phone key `33ac34ed...`; the reporter build since 18:12 UTC (Code #26).
+- 16 Pro: UDID `00008140-001C38C83A12801C`, iOS 26.6.1, phone key `6c2c1695...`; the reporter build since 18:10 UTC (Code #26).
 - The Mac as an agent: a team-signed debug build with the Keychain entitlement starts but shows no window (Code #25, 13:38 UTC); the entitlement edit is not in the tree.
 
 ## Signing
