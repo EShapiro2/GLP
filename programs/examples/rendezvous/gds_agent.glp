@@ -17,7 +17,12 @@
 %%       listing naming A; the host then sends the verification mail, and
 %%       Reply = verify, or, the host refusing (one mail per address per hour),
 %%       Reply = rejected and Supply closed.  Refused at once, Reply =
-%%       rejected, where the signature is not A's over such a term.
+%%       rejected, where the signature is not A's over such a term.  A list
+%%       for an address the host already holds verified for A is answered
+%%       Reply = listed, with no mail: the host takes its name and visibility,
+%%       its Supply takes the place of the earlier one, and the host asks on
+%%       it at once for the buffer; this is how an app reconnects after a
+%%       restart of either.
 %%       Once the mail's link is opened, the directory asks A's app for links
 %%       on Supply, more(N): the host says how many, ask(A, N), and the agent
 %%       writes more(N) on the Supply of A's latest list.  A person has one
@@ -29,10 +34,8 @@
 %%       Serial, Expiry), and gives the host the links kept, each with its
 %%       expiry; the host keeps the unexpired ones in A's buffer.
 %%   unlist(A, Signed, Reply)   Signed the term unlist(A) signed by A: admitted
-%%       where signature/2 reports it so; the listing ends and the agent closes
-%%       A's Supply.  The answer Reply: GNA Section 7 names none, and it waits
-%%       on GNA (Cloud #8 to Code, 2026-11-08 15:50 UTC, point 1); the agent
-%%       holds Reply unassigned meanwhile, in its pending list.
+%%       where signature/2 reports it so; the listing ends, the agent closes
+%%       A's Supply, and Reply = unlisted; Reply = rejected otherwise.
 %%
 %% The agent and its host, over the person channel: the host's commands come
 %% in on the person stream, the agent's reports go out by send_to_user/1 in
@@ -41,8 +44,13 @@
 %%                  number for the list request, Name name(S) or none;
 %%                  links(A, Links), Links a list of link(Signed, Expiry);
 %%                  unlisting(A).
-%%   from the host: mailed(N), the mail of request N sent; refused(N), not
-%%                  sent; ask(A, K), ask A's app for K links.
+%%   from the host: mailed(N), the mail of request N sent; listed(N), its
+%%                  address already verified for its requester, no mail sent;
+%%                  refused(N), not sent; ask(A, K), ask A's app for K links.
+%%   and refresh, which the runtime grants in the person's place at a
+%%   restart (IGLP, Section "Termination and Restart"), the agent's state
+%%   restored from the host's store; the agent draws nothing, and it changes
+%%   nothing.
 %%
 %% System predicates (root self.glp): signature/2, send_to_user/1, merge/3.
 
@@ -51,14 +59,13 @@
 %% =============================================================================
 
 %% The directory's answer to a list request.
-DirListReply ::= verify ; rejected.
+DirListReply ::= verify ; listed ; rejected.
 
 %% What the directory asks of a listed person's app on the Supply stream.
 DirAsk ::= more(Integer).
 
-%% The answer to an unlist request: GNA Section 7 names none (above), and the
-%% agent assigns none; the type stands until GNA names the answers.
-DirUnlistReply ::= rejected.
+%% The directory's answer to an unlist request.
+DirUnlistReply ::= unlisted ; rejected.
 
 %% Invitation links as a supply carries them, each a signed term.
 DirLinkList ::= [] ; [SignedTerm | DirLinkList].
@@ -74,7 +81,7 @@ DirNetMsg ::= msg(Key, DirMsg).
 DirNetIn ::= [] ; [DirNetMsg | DirNetIn].
 
 %% The host's commands.
-DirCmd ::= mailed(Integer) ; refused(Integer) ; ask(Key, Integer).
+DirCmd ::= mailed(Integer) ; listed(Integer) ; refused(Integer) ; ask(Key, Integer) ; refresh.
 DirCmds ::= [] ; [DirCmd | DirCmds].
 
 %% The agent's reports to the host.
@@ -91,10 +98,8 @@ DirReport ::= listing(Integer, Key, String, DirName, DirVisibility)
 DirEvent ::= net(DirMsg) ; host(DirCmd).
 
 %% A list request awaiting the host's mail: its number, the requester and the
-%% writers of its Supply and its Reply; and the Reply of an unlist request,
-%% held unassigned (above).
-DirPending ::= pending(Integer, Key, Stream(DirAsk)?, DirListReply?)
-             ; held(DirUnlistReply?).
+%% writers of its Supply and its Reply.
+DirPending ::= pending(Integer, Key, Stream(DirAsk)?, DirListReply?).
 DirPendings ::= [] ; [DirPending | DirPendings].
 
 %% A person's latest list whose mail was sent: the writer of its Supply.
@@ -102,7 +107,7 @@ DirSession ::= session(Key, Stream(DirAsk)?).
 DirSessions ::= [] ; [DirSession | DirSessions].
 
 %% The host's answer to a list request.
-DirAnswer ::= mailed ; refused.
+DirAnswer ::= mailed ; listed ; refused.
 
 %% =============================================================================
 %% THE ENTRY
@@ -161,20 +166,28 @@ gds_event(net(supply(A, Links)), N, N?, Ps, Ps?, Ss, Ss?, [links(A?, Kept?) | Re
     string(A?) |
     check_links(A?, Links?, Kept).
 
-%% An unlist request: signature/2 takes it apart, and admit_unlist/6
-%% dispatches on what it reports.  Its Reply is held, unassigned (above).
-gds_event(net(unlist(A, Signed, Reply?)), N, N?, Ps, [held(Reply) | Ps?], Ss, Ss1?, Reports?, Reports1) :-
+%% An unlist request: signature/2 takes it apart, and admit_unlist/7
+%% dispatches on what it reports.
+gds_event(net(unlist(A, Signed, Reply?)), N, N?, Ps, Ps?, Ss, Ss1?, Reports?, Reports1) :-
     signature(Signed?, S),
-    admit_unlist(A?, S?, Ss?, Ss1, Reports, Reports1?).
+    admit_unlist(A?, S?, Reply, Ss?, Ss1, Reports, Reports1?).
 
 %% The host sent the mail of request M: its Reply is verify, and its Supply
 %% becomes the requester's session.
 gds_event(host(mailed(M)), N, N?, Ps, Ps1?, Ss, Ss1?, Reports?, Reports) :-
     answer(M?, mailed, Ps?, Ps1, Ss?, Ss1).
 
+%% The host holds its address verified for its requester: its Reply is
+%% listed, and its Supply becomes the requester's session.
+gds_event(host(listed(M)), N, N?, Ps, Ps1?, Ss, Ss1?, Reports?, Reports) :-
+    answer(M?, listed, Ps?, Ps1, Ss?, Ss1).
+
 %% The host did not send it: its Reply is rejected and its Supply closed.
 gds_event(host(refused(M)), N, N?, Ps, Ps1?, Ss, Ss1?, Reports?, Reports) :-
     answer(M?, refused, Ps?, Ps1, Ss?, Ss1).
+
+%% The runtime's refresh at a restart: nothing changes.
+gds_event(host(refresh), N, N?, Ps, Ps?, Ss, Ss?, Reports?, Reports).
 
 %% The host asks A's app for K links, on the Supply of A's session.
 gds_event(host(ask(A, K)), N, N?, Ps, Ps?, Ss, Ss1?, Reports?, Reports) :-
@@ -237,11 +250,14 @@ answer(M, Ans, [P | Ps], [P? | Ps1?], Ss, Ss1?) :-
 %% Not found: nothing changes.
 answer(_, _, [], [], Ss, Ss?).
 
-%% settle(Ans, A, Supply, Reply, Ss, Ss1): the mail sent, Reply is verify and
-%% A's session is this Supply, in place of A's earlier one; not sent, Reply is
-%% rejected and the Supply closed.
+%% settle(Ans, A, Supply, Reply, Ss, Ss1): the mail sent, Reply is verify, and
+%% the address already verified, Reply is listed; either way A's session is
+%% this Supply, in place of A's earlier one.  Not sent, Reply is rejected and
+%% the Supply closed.
 procedure settle(DirAnswer?, Key?, Stream(DirAsk), DirListReply, DirSessions?, DirSessions).
 settle(mailed, A, Supply?, verify, Ss, Ss1?) :-
+    put_session(A?, Supply, Ss?, Ss1).
+settle(listed, A, Supply?, listed, Ss, Ss1?) :-
     put_session(A?, Supply, Ss?, Ss1).
 settle(refused, _, [], rejected, Ss, Ss?).
 
@@ -313,12 +329,12 @@ keep_link(_, _, _, Kept1?, Kept1) :-
 %% admit_unlist: dispatch on what signature/2 reports for an unlist request
 %% =============================================================================
 
-%% admit_unlist(A, S, Ss, Ss1, Reports, Reports1): A signed unlist(A): A's
-%% session is closed and taken off, and the host told; otherwise nothing
-%% changes.
-exported procedure admit_unlist(Key?, Signature?, DirSessions?, DirSessions, Stream(DirReport), Stream(DirReport)?).
-admit_unlist(A, signed(K, _, unlist(A1)), Ss, Ss1?, [unlisting(A?) | Reports1?], Reports1) :-
+%% admit_unlist(A, S, Reply, Ss, Ss1, Reports, Reports1): A signed unlist(A):
+%% A's session is closed and taken off, the host told, and Reply is unlisted;
+%% otherwise Reply is rejected and nothing changes.
+exported procedure admit_unlist(Key?, Signature?, DirUnlistReply, DirSessions?, DirSessions, Stream(DirReport), Stream(DirReport)?).
+admit_unlist(A, signed(K, _, unlist(A1)), unlisted, Ss, Ss1?, [unlisting(A?) | Reports1?], Reports1) :-
     K? =?= A?, A1? =?= A? |
     drop_session(A?, Ss?, Ss1).
-admit_unlist(_, _, Ss, Ss?, Reports?, Reports) :-
+admit_unlist(_, _, rejected, Ss, Ss?, Reports?, Reports) :-
     otherwise | true.

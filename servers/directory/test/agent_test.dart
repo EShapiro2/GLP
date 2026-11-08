@@ -24,6 +24,7 @@ import 'package:directory_server/mail.dart';
 import 'package:directory_server/server.dart';
 import 'package:directory_server/store.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
@@ -44,10 +45,12 @@ import 'package:test/test.dart';
 //   give(D, Link)                    supply D a link made elsewhere
 //   mint(Rv, Serial, Expiry)         sign an invitation and tell the test
 //   unlist(D)                        sign unlist(Me) and unlist
+//   unlist_as(D, Other)              sign unlist(Other), and unlist
 //
 // It tells the test replied(R) for the directory's answer to a list,
 // asked(N) for each more(N) on the Supply stream, closed when the stream
-// closes, and minted(L) for a link it minted.
+// closes, minted(L) for a link it minted, and unlist_replied(R) for the
+// directory's answer to an unlist.
 const appProgram = r'''
 AppVis ::= listed ; unlisted.
 AppAct ::= list_named(Key, String, String, AppVis)
@@ -56,16 +59,17 @@ AppAct ::= list_named(Key, String, String, AppVis)
          ; supply(Key, Key, Integer, Integer)
          ; give(Key, SignedTerm)
          ; mint(Key, Integer, Integer)
-         ; unlist(Key).
+         ; unlist(Key)
+         ; unlist_as(Key, Key).
 AppActs ::= [] ; [AppAct | AppActs].
 AppAsk ::= more(Integer).
-AppListReply ::= verify ; rejected.
-AppUnlistReply ::= rejected.
+AppListReply ::= verify ; listed ; rejected.
+AppUnlistReply ::= unlisted ; rejected.
 AppLinks ::= [] ; [SignedTerm | AppLinks].
 AppMsg ::= list(Key, SignedTerm, Stream(AppAsk)?, AppListReply?)
          ; supply(Key, AppLinks)
          ; unlist(Key, SignedTerm, AppUnlistReply?).
-AppSay ::= replied(AppListReply) ; asked(Integer) ; closed ; minted(SignedTerm) ; unlist_answered.
+AppSay ::= replied(AppListReply) ; asked(Integer) ; closed ; minted(SignedTerm) ; unlist_replied(AppUnlistReply).
 
 exported procedure agent(Channel(AppActs, Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
@@ -105,10 +109,16 @@ acts(Me, [unlist(D) | In]) :- ground(Me?) |
     send_to_net([msg(D?, unlist(Me?, S?, Reply))]),
     on_unlist(Reply?),
     acts(Me?, In?).
+acts(Me, [unlist_as(D, Other) | In]) :- ground(Me?) |
+    sign(unlist(Other?), Me?, S),
+    send_to_net([msg(D?, unlist(Me?, S?, Reply))]),
+    on_unlist(Reply?),
+    acts(Me?, In?).
 acts(_, []).
 
 procedure on_reply(AppListReply?).
 on_reply(verify) :- send_to_user([replied(verify)]).
+on_reply(listed) :- send_to_user([replied(listed)]).
 on_reply(rejected) :- send_to_user([replied(rejected)]).
 
 procedure on_asks(Stream(AppAsk)?).
@@ -116,7 +126,8 @@ on_asks([more(N) | As]) :- send_to_user([asked(N?)]), on_asks(As?).
 on_asks([]) :- send_to_user([closed]).
 
 procedure on_unlist(AppUnlistReply?).
-on_unlist(rejected) :- send_to_user([unlist_answered]).
+on_unlist(unlisted) :- send_to_user([unlist_replied(unlisted)]).
+on_unlist(rejected) :- send_to_user([unlist_replied(rejected)]).
 ''';
 
 void main() {
@@ -156,10 +167,11 @@ void main() {
     return p;
   }
 
-  /// The directory: its agent over its layer, and its page, over one store
-  /// in [data], the mail logged.
-  Future<_Directory> directory(int fill, File data) async {
-    final port = await freePort();
+  /// The directory: its agent over its layer at UDP [udp], a free port by
+  /// default, and its page, over one store in [data], the mail logged.
+  Future<_Directory> directory(int fill, File data, {int? udp}) async {
+    final state = FileAgentStateStore('${data.path}.agent');
+    final port = udp ?? await freePort();
     final mail = LogMailer();
     final web = await HttpServer.bind('127.0.0.1', 0);
     final base = 'http://127.0.0.1:${web.port}';
@@ -172,6 +184,7 @@ void main() {
       port: port,
       publicAddress: '127.0.0.1:$port',
       queue: MemoryOutboundQueueStore(),
+      state: state,
       program: gdsAgent,
       rootSelf: rootSelf,
     );
@@ -207,6 +220,7 @@ void main() {
     agent.onUserOutput = a.say;
     agent.onOutput = a.transcript.add;
     addTearDown(() => printOnFailure('app-$fill said ${a.said.join(' | ')}'));
+    addTearDown(() => printOnFailure('app-$fill transcript ${a.transcript.join(' | ')}'));
     await agent.initialize();
     expect(await layer.start(), isTrue);
     return a;
@@ -285,8 +299,8 @@ void main() {
     expect(d.mail.sent, isEmpty);
 
     await listAndVerify(d, a);
-    await a.act('list_unnamed', [d.agent.key.hex, 'al@example.org', 'unlisted']);
-    expect(_arg(await a.nth('replied', 2)), 'rejected', reason: 'one verification mail per address per hour');
+    await b.act('list_named', [d.agent.key.hex, 'al@example.org', 'Bo', 'listed']);
+    expect(_arg(await b.next('replied')), 'rejected', reason: "one verification mail per address per hour: B asks for A's address within the hour");
     expect(d.mail.sent.length, 1);
 
     await b.act('mint', ['rv', 7, now() + day]);
@@ -337,14 +351,19 @@ void main() {
     expect(_arg(await a.nth('asked', 1)), 2, reason: 'the ask on the later Supply');
   }, timeout: Timeout.none);
 
-  test('unlist ends the listing and closes the Supply stream', () async {
+  test('unlist ends the listing, closes the Supply stream and answers unlisted; an unlist signed for another is rejected', () async {
     if (sodiumUnavailable != null) return markTestSkipped(sodiumUnavailable!);
     final tmp = Directory.systemTemp.createTempSync('gds_store_');
     addTearDown(() => tmp.deleteSync(recursive: true));
     final d = await directory(0x68, File('${tmp.path}/d.json'));
     final a = await app(0x69, d);
+    final b = await app(0x6f, d);
     await listAndVerify(d, a);
+    await b.act('unlist_as', [d.agent.key.hex, a.key.hex]);
+    expect(_arg(await b.next('unlist_replied')), 'rejected', reason: "B signed A's unlist");
+    expect(d.store.byKey(a.key.hex), isNotNull);
     await a.act('unlist', [d.agent.key.hex]);
+    expect(_arg(await a.next('unlist_replied')), 'unlisted');
     expect(await a.next('closed'), isNotNull);
     await _until(() => d.store.byKey(a.key.hex) == null);
     expect(d.store.listed(), isEmpty);
@@ -368,6 +387,7 @@ void main() {
       '--port', '$udp',
       '--public-address', '127.0.0.1:$udp',
       '--outbound-queue-file', '${tmp.path}/q.json',
+      '--state-file', '${tmp.path}/state',
       '--program', gdsAgent,
       '--root-self', rootSelf,
     ], environment: {'PORT': '$webPort', 'DATA': '${tmp.path}/d.json'});
@@ -426,12 +446,50 @@ void main() {
     await _until(() => d.store.byKey(a.key.hex)!.links.length == 1);
     final link = d.store.byKey(a.key.hex)!.links.single.text;
     await d.stop();
+    // The app's layer finds the directory gone, silent two heartbeats.
+    await _until(() => !a.layer.isPeerReachable(d.agent.key.bytes), seconds: 90);
 
-    final d2 = await directory(0x6a, data);
+    final d2 = await directory(0x6a, data, udp: d.udp);
+    // ... and reaches it again once it is back, at its address and under its
+    // key, as the app's layer reconnects to a declared server.
+    await _until(() => a.layer.isPeerReachable(d2.agent.key.bytes), seconds: 90);
     expect(d2.agent.key.hex, d.agent.key.hex, reason: 'the same key');
-    expect(d2.store.byKey(a.key.hex)!.wanted, 0, reason: 'what was asked for ended with the Supply stream');
     expect(await get('${d2.base}/directory'), contains('Al'));
+
+    // The agent's state is restored with its sessions: a lookup's ask
+    // reaches the app on the Supply of its list before the restart.
     expect(await post('${d2.base}/directory/lookup', {'id': d2.store.listed().single.id}), contains(link));
+    expect(_arg(await a.nth('asked', 1)), 2, reason: 'the ask for the link taken, on the Supply kept across the restart');
+
+    // The app lists again, as it does on reconnecting: answered listed, with
+    // no mail; the earlier Supply is closed, and what was asked and not
+    // supplied is asked again on the new one.
+    await a.act('list_named', [d2.agent.key.hex, 'al@example.org', 'Al', 'listed']);
+    expect(_arg(await a.nth('replied', 1)), 'listed');
+    expect(d2.mail.sent, isEmpty);
+    expect(await a.next('closed'), isNotNull);
+    expect(_arg(await a.nth('asked', 2)), 2, reason: 'the two asked and not supplied, asked again on the new Supply');
+  }, timeout: Timeout.none);
+
+  test('a list for an address already verified for the person is answered listed with no mail: its name and visibility replace the earlier, its Supply the earlier Supply, and the buffer is asked on it at once', () async {
+    if (sodiumUnavailable != null) return markTestSkipped(sodiumUnavailable!);
+    final tmp = Directory.systemTemp.createTempSync('gds_store_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final d = await directory(0x70, File('${tmp.path}/d.json'));
+    final a = await app(0x71, d);
+    await listAndVerify(d, a);
+    await a.act('list_named', [d.agent.key.hex, 'al@example.org', 'Alice', 'unlisted']);
+    expect(_arg(await a.nth('replied', 1)), 'listed');
+    expect(d.mail.sent, hasLength(1), reason: 'no second mail');
+    expect(await a.next('closed'), isNotNull, reason: 'the earlier Supply is closed');
+    expect(_arg(await a.nth('asked', 1)), 1, reason: 'the link asked for and not supplied, asked again on the new Supply');
+    final l = d.store.byKey(a.key.hex)!;
+    expect((l.name, l.listed), ('Alice', false));
+    expect(await get('${d.base}/directory'), isNot(contains('Alice')));
+    await a.act('supply', [d.agent.key.hex, 'rv', 1, now() + day]);
+    await _until(() => d.store.byKey(a.key.hex)!.links.length == 1);
+    final link = d.store.byKey(a.key.hex)!.links.single.text;
+    expect(await post('${d.base}/directory/find', {'email': 'al@example.org', 'name': 'Alice'}), contains(link), reason: 'found by the name that replaced the earlier');
   }, timeout: Timeout.none);
 }
 
@@ -450,9 +508,9 @@ String _dartExecutable() {
 /// The first argument of a term the app said.
 Object? _arg(rt.Term t) => ((t as rt.StructTerm).args[0] as rt.ConstTerm).value;
 
-/// Completes once [holds] holds, checked every 50 ms, within 30 s.
-Future<void> _until(bool Function() holds) async {
-  final end = DateTime.now().add(const Duration(seconds: 30));
+/// Completes once [holds] holds, checked every 50 ms, within [seconds].
+Future<void> _until(bool Function() holds, {int seconds = 30}) async {
+  final end = DateTime.now().add(Duration(seconds: seconds));
   while (!holds()) {
     if (DateTime.now().isAfter(end)) fail('timed out waiting');
     await Future<void>.delayed(const Duration(milliseconds: 50));

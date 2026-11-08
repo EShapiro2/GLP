@@ -17,12 +17,13 @@
 // Between the two, over the agent's person channel (gds_agent.glp, "The
 // agent and its host"): the agent reports listing(N, A, Email, Name,
 // Visibility), links(A, Links) and unlisting(A); the host answers a listing
-// with mailed(N) or refused(N), and asks for links with ask(A, K) whenever
+// with mailed(N), listed(N) or refused(N), and asks for links with ask(A, K) whenever
 // the store says how many to ask for.
 import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
@@ -53,15 +54,18 @@ class DirectoryAgent {
 
   /// Builds the layer and the agent and starts them: [identity] the
   /// directory's key pair, [port] and [publicAddress] its server address,
-  /// [queueFile] the layer's fair-delivery queue, [program] gds_agent.glp and
-  /// [rootSelf] the root self.glp.  Returns null where the UDP port cannot be
-  /// bound.
+  /// [queue] the layer's fair-delivery queue, [state] where the agent's local
+  /// state is kept across a restart (IGLP, Definition "Restart": "the local
+  /// state s_p of p at restart is its local state at termination"), [program]
+  /// gds_agent.glp and [rootSelf] the root self.glp.  Returns null where the
+  /// UDP port cannot be bound.
   static Future<DirectoryAgent?> start({
     required DirectoryService service,
     required GrassrootsIdentity identity,
     required int port,
     required String publicAddress,
     required OutboundQueueStore queue,
+    required AgentStateStore state,
     required String program,
     required String rootSelf,
     List<RendezvousServerEntry> rendezvous = const [],
@@ -81,6 +85,7 @@ class DirectoryAgent {
       rootSelfGlpPath: rootSelf,
       keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
       network: HeadlessGlpNetwork(layer),
+      stateStore: state,
     );
     final d = DirectoryAgent._(service, layer, agent, key);
     agent.onUserOutput = d._report;
@@ -130,10 +135,18 @@ class DirectoryAgent {
     }
   }
 
-  /// GDS:2's verification mail for list request [n] of [person]: mailed(N)
-  /// once it is sent, refused(N) where the store refuses it or it cannot be
-  /// sent.
+  /// List request [n] of [person]: listed(N) where the store holds the
+  /// address verified for them already, no mail sent, followed by the asks on
+  /// the new Supply (GNA Section 7); otherwise GDS:2's verification mail,
+  /// mailed(N) once it is sent, refused(N) where the store refuses it or it
+  /// cannot be sent.
   Future<void> _listing(int n, String person, String email, rt.Term name, String visibility) async {
+    if (store.relist(person, email, name: _name(name), listed: visibility == 'listed')) {
+      onLine?.call('listing $n of $person, $email: listed again');
+      _input(rt.StructTerm('listed', [rt.ConstTerm(n)]));
+      store.reask(person);
+      return;
+    }
     String? refusal;
     try {
       refusal = await service.list(person, email, name: _name(name), listed: visibility == 'listed');
