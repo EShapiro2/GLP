@@ -6832,6 +6832,18 @@ check "MB7 peer_app assigns the app the harness names for a connected peer" "\[a
 check "MB7 with no app named, peer_app assigns unattested for a connected peer" "\[alice\] unattested$" "$mb7"
 check_not "MB7 no failed goal" "→ failed" "$mb7"
 
+# MB8: declare(nearby(pan, S)) under :boot (GLP-Spec 210cee1, appendix-guards, "Networking seam": nearby(U, S) assigns S a stream of the agents nearby over the proximity underlay U, seen(K) and gone(K), and remove(nearby(U)) ends the declaration and closes its stream; IGLP b20951d, Implementation Notes, "Simulation realisation": "A nearby declaration on the PAN is given seen for every agent adjacent to the declaring one").  The adjacency is total from the boot, so alice's declaration at her start is given seen(bob); she tells her person, removes the declaration, and tells her person the stream is closed.
+mb8=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/multiagent/nearby_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "MB8 nearby: the boot settles with two agents" "Boot settled: 2 agents" "$mb8"
+check "MB8 nearby: a declaration on the PAN is given seen for the adjacent agent" "\[alice\] seen(bob)$" "$mb8"
+check "MB8 nearby: remove(nearby(pan)) closes the stream" "\[alice\] closed$" "$mb8"
+check_not "MB8 nearby: nothing is gone while the adjacency stands" "\[alice\] gone(" "$mb8"
+check_not "MB8 no failed goal" "→ failed" "$mb8"
+
 echo ""
 fi  # Section MB
 

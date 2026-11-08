@@ -25,6 +25,7 @@ import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/runtime/terms.dart' show ConstTerm, StructTerm;
@@ -75,6 +76,18 @@ agent(ch(_, []), ch(_, [])) :- declare(place(home, 50, E)), watch(E?).
 
 procedure watch(_?).
 watch([E|_]) :- ground(E?) | send_to_user([E?]).
+''';
+
+/// An agent that declares a watch on the agents nearby over the PAN and
+/// tells its person each presence (GLP-Spec 210cee1, "Networking seam":
+/// nearby(U, S), Presence ::= seen(Key) ; gone(Key)).
+const String _watcher = r'''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :- declare(nearby(pan, S)), watch(S?).
+
+procedure watch(Stream(Presence)?).
+watch([P|S]) :- ground(P?) | send_to_user([P?]), watch(S?).
+watch([]) :- send_to_user([closed]).
 ''';
 
 typedef _KeyPair = ({PubKey pub, Uint8List priv});
@@ -231,6 +244,7 @@ void main() {
   late String play;
   late String symbolic;
   late String placer;
+  late String watcher;
 
   setUpAll(() {
     // Written under the root, programs/ (TGLP modules.tex, "Scope
@@ -243,6 +257,8 @@ void main() {
     File(symbolic).writeAsStringSync(_symbolic);
     placer = '${dir.path}/placer.glp';
     File(placer).writeAsStringSync(_placer);
+    watcher = '${dir.path}/watcher.glp';
+    File(watcher).writeAsStringSync(_watcher);
     root = File('../programs/self.glp').absolute.path;
   });
   tearDownAll(() => dir.deleteSync(recursive: true));
@@ -458,6 +474,97 @@ void main() {
       // goal suspended on the place's stream, with no other event.
       network.onPlaceEvent!('home', PlaceEvent.entered);
       expect(await out.lineWhere((l) => l.startsWith('< ')), '< entered');
+    });
+
+    test('a nearby declaration is fed from what the layer reports: seen on '
+        'discovery, gone on disconnection over the underlay, seen on the '
+        'session again; each followed by a run', () async {
+      // GLP-Spec 210cee1, "Networking seam": "seen(K) when the layer
+      // discovers on U an agent of key K that it recognises or, under open
+      // trust, contacts, and gone(K) when that agent can no longer be reached
+      // over U"; GNA: onPeerDiscovered(pk) on the underlay's sub-object, once
+      // per identity, and onPeerConnected and onPeerDisconnected with the
+      // underlay.  Over a given network K is the key.
+      final wire = _Wire();
+      final kp = generateKeyPair();
+      final network = _WireNetwork(kp, wire);
+      final agent = AgentRuntime(
+        agentId: 'watcher',
+        program: watcher,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: network,
+      );
+      final out = _Lines();
+      agent.onOutput = out.add;
+      await agent.initialize();
+      final peer = generateKeyPair().pub;
+      final other = generateKeyPair().pub;
+      Future<String> next(int n) async {
+        var count = 0;
+        return out.lineWhere((l) => l.startsWith('< ') && ++count == n);
+      }
+
+      network.onPeerDiscovered!(peer, ProximityUnderlay.pan);
+      expect(await next(1), '< seen(${peer.hex})');
+      network.onPeerConnected!(peer, Underlay.pan, null); // the same seen
+      network.onPeerConnected!(other, Underlay.wan, null); // no proximity
+      network.onPeerDiscovered!(other, ProximityUnderlay.lan); // another stream
+      network.onPeerDisconnected!(peer, Underlay.pan);
+      expect(await next(2), '< gone(${peer.hex})');
+      network.onPeerConnected!(peer, Underlay.pan, null);
+      expect(await next(3), '< seen(${peer.hex})');
+      expect([for (final l in out) if (l.startsWith('< ')) l], [
+        '< seen(${peer.hex})',
+        '< gone(${peer.hex})',
+        '< seen(${peer.hex})',
+      ]);
+    });
+
+    test('a nearby declaration survives a restart from the saved state, and '
+        'its stream is fed by the layer instantiated again', () async {
+      // IGLP, Implementation Notes, "Persistence": the store keeps the
+      // places and trust levels declared, and a restart resumes from it; a
+      // nearby declaration's stream is fed and closed as a place's (IGLP
+      // b20951d), and is kept with them.  What the layer reports is the
+      // layer's, and is reported again by the layer the restart instantiates.
+      final kp = generateKeyPair();
+      final store = MemoryAgentStateStore();
+      final first = _WireNetwork(kp, _Wire());
+      final agent = AgentRuntime(
+        agentId: 'watcher',
+        program: watcher,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: first,
+        stateStore: store,
+      );
+      final out = _Lines();
+      agent.onOutput = out.add;
+      await agent.initialize();
+      final peer = generateKeyPair().pub;
+      first.onPeerDiscovered!(peer, ProximityUnderlay.pan);
+      expect(await out.lineWhere((l) => l.startsWith('< ')),
+          '< seen(${peer.hex})');
+
+      final second = _WireNetwork(kp, _Wire());
+      final again = AgentRuntime(
+        agentId: 'watcher',
+        program: watcher,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: second,
+        stateStore: store,
+      );
+      final out2 = _Lines();
+      again.onOutput = out2.add;
+      await again.initialize();
+      expect(again.firstStart, isFalse);
+      expect(again.runtime!.nearbyStreams.isDeclared('pan'), isTrue);
+      final other = generateKeyPair().pub;
+      second.onPeerDiscovered!(other, ProximityUnderlay.pan);
+      expect(await out2.lineWhere((l) => l.startsWith('< ')),
+          '< seen(${other.hex})');
     });
 
     test("the layer's onPeerConnected and onPeerDisconnected are recorded for "

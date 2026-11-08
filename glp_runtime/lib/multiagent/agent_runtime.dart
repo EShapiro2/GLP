@@ -263,7 +263,13 @@ class AgentRuntime {
   /// attested with the app the harness names, its developer, name and
   /// version"), so peer_app/2 assigns app(D, N, V); where the harness names
   /// none the connection is unattested.  A discovery is over a proximity
-  /// underlay, the PAN throughout (IGLP, "Simulation realisation").
+  /// underlay, the PAN throughout (IGLP, "Simulation realisation").  Each is
+  /// recorded for the nearby declarations ([MadContext.peerDiscovered],
+  /// [MadContext.peerConnected], [MadContext.peerDisconnected]): "A nearby
+  /// declaration on the PAN is given seen for every agent adjacent to the
+  /// declaring one, and gone when the harness cuts the adjacency" (IGLP
+  /// b20951d, "Simulation realisation"), each presence an event cycle of its
+  /// own ([MadContext.presenceSink]).
   void onConnectivityEvent(
       PubKey peer, Underlay underlay, ConnectivityEvent event,
       {Application? application}) {
@@ -275,8 +281,9 @@ class AgentRuntime {
         _ctx?.peerDisconnected(peer, underlay);
         onPeerDisconnected?.call(peer, underlay);
       case ConnectivityEvent.discovered:
-        onPeerDiscovered?.call(
-            peer, ProximityUnderlay.values.byName(underlay.name));
+        final proximity = ProximityUnderlay.values.byName(underlay.name);
+        _ctx?.peerDiscovered(peer, proximity);
+        onPeerDiscovered?.call(peer, proximity);
     }
   }
 
@@ -426,6 +433,14 @@ class AgentRuntime {
     // delivers it onto the place's stream, reduces, saves and sends ([_cycle]).
     _ctx!.placeEventSink = (place, event, declaration) => unawaited(
         _submit(_PlaceEvent(place, event, declaration))
+            .catchError((Object _) {}));
+
+    // A presence on a nearby stream likewise: its cycle delivers it onto the
+    // stream, reduces, saves and sends (IGLP b20951d, after Definition "Seam
+    // Predicates": "A place event and a presence on a nearby stream are
+    // bridged below the madGLP layer").
+    _ctx!.presenceSink = (underlay, presence, declaration) => unawaited(
+        _submit(_Presence(underlay, presence, declaration))
             .catchError((Object _) {}));
 
     _output('[INIT] Loaded GLP program');
@@ -772,6 +787,8 @@ class AgentRuntime {
         }
       case _PlaceEvent(:final place, :final event, :final declaration):
         _ctx!.deliverPlaceEvent(place, event, declaration: declaration);
+      case _Presence(:final underlay, :final presence, :final declaration):
+        _ctx!.deliverPresence(underlay, presence, declaration: declaration);
     }
     return true;
   }
@@ -857,8 +874,16 @@ class AgentRuntime {
       _ctx?.peerDisconnected(pk, underlay);
       onPeerDisconnected?.call(pk, underlay);
     };
-    network.onPeerDiscovered =
-        (pk, underlay) => onPeerDiscovered?.call(pk, underlay);
+    // A discovery is recorded for the nearby declarations, as a connection
+    // and a disconnection are by [MadContext.peerConnected] and
+    // [MadContext.peerDisconnected]: seen(K) when the layer discovers on U an
+    // agent of key K, and gone(K) when it can no longer be reached over U
+    // (GLP-Spec 210cee1, "Networking seam"; GNA, onPeerDiscovered and the
+    // session).
+    network.onPeerDiscovered = (pk, underlay) {
+      _ctx?.peerDiscovered(pk, underlay);
+      onPeerDiscovered?.call(pk, underlay);
+    };
   }
 
   /// Build and bind the simulation's network, where the host was given none:
@@ -1111,7 +1136,7 @@ class AgentRuntime {
 /// An event of the agent: what one cycle applies (IGLP, Implementation Notes,
 /// "Event-driven execution": "an event is the initial start, an incoming
 /// assignment message, the person's input on the UI channel, or a place event
-/// from the networking layer"), and the restart.  Each is data, so a cycle
+/// from the networking layer"), a presence on a nearby stream, and the restart.  Each is data, so a cycle
 /// whose save failed is taken again on an engine made again.
 sealed class _AgentEvent {
   const _AgentEvent();
@@ -1165,4 +1190,16 @@ final class _PlaceEvent extends _AgentEvent {
   const _PlaceEvent(this.place, this.event, this.declaration);
   @override
   String toString() => 'the place event ${event.name} of $place';
+}
+
+/// A presence the layer reports for the nearby declaration on [underlay] that
+/// stood when it was reported, [declaration]: `seen(K)` or `gone(K)` (GLP-Spec
+/// 210cee1, "Networking seam").
+final class _Presence extends _AgentEvent {
+  final ProximityUnderlay underlay;
+  final rt.Term presence;
+  final int declaration;
+  const _Presence(this.underlay, this.presence, this.declaration);
+  @override
+  String toString() => 'the presence $presence over ${underlay.name}';
 }
