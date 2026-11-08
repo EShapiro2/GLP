@@ -13,6 +13,7 @@ import 'package:glp_runtime/runtime/body_kernels.dart' show deepDeref;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/saved_state.dart';
+import 'package:glp_runtime/runtime/seam_declarations.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
@@ -713,6 +714,14 @@ class MadContext {
     _trace('[MAD $agentId] declarePlace($place, $radiusMetres): stream '
         'writer=$streamWriterAddr');
 
+    _askLayerForPlace(network, place, radiusMetres, declaration);
+  }
+
+  /// Give [network] the place [place] of radius [radiusMetres], the standing
+  /// declaration of number [declaration], and put a refusal on that
+  /// declaration's stream.
+  void _askLayerForPlace(GlpNetwork network, String place,
+      double radiusMetres, int declaration) {
     // The layer answers asynchronously; the stream exists either way. On a
     // refusal E receives `unobservable`, the declaration stands, and
     // `observable` follows if the layer later begins reporting (Definition Seam
@@ -768,6 +777,53 @@ class MadContext {
     } else {
       deliverPlaceEvent(place, event, declaration: declaration);
     }
+  }
+
+  /// Make to the layer every declaration the restored state holds standing,
+  /// in the order they were made, before any goal of the agent is reduced:
+  /// "The layer starts empty at every launch, and at a restart the runtime
+  /// makes every declaration the store holds to it again before any goal of
+  /// the agent is reduced" (IGLP 0c77e47, Implementation Notes,
+  /// "Persistence"); the program does not declare again.  A peer, an
+  /// address, a rendezvous server and a trust level go to the layer function
+  /// behind each; a place goes to [GlpNetwork.declarePlace] for its standing
+  /// declaration, whose stream a refusal is put on, as [declarePlace] does.
+  /// A nearby declaration calls no layer function: its stream is fed by what
+  /// the new layer reports.  A layer function the layer does not have is
+  /// traced and the rest are made.  Does nothing where no layer is bound.
+  /// Returns the declarations made.
+  List<StandingDeclaration> declareStandingToLayer() {
+    final network = this.network;
+    if (network == null) return const [];
+    final made = <StandingDeclaration>[];
+    for (final d in runtime.seamDeclarations.standing.toList()) {
+      final a = d.args;
+      try {
+        switch (d.kind) {
+          case SeamDeclarationKind.peer:
+            network.putKnownPeer(PubKey.fromHex(a[0]));
+          case SeamDeclarationKind.address:
+            network.putPeerAddress(PubKey.fromHex(a[0]), a[1]);
+          case SeamDeclarationKind.rendezvous:
+            network.putRendezvousServer(PubKey.fromHex(a[0]), a[1]);
+          case SeamDeclarationKind.trust:
+            network.setTrustLevel(ProximityUnderlay.values.byName(a[0]),
+                TrustLevel.values.byName(a[1]));
+          case SeamDeclarationKind.place:
+            final declaration = runtime.placeStreams.standing(a[0]);
+            if (declaration == null) continue;
+            _installPlaceEventHandler(network);
+            _askLayerForPlace(
+                network, a[0], double.parse(a[1]), declaration);
+        }
+        made.add(d);
+        _trace('[MAD $agentId] restart: $d made to the layer again');
+      } on UnsupportedError catch (e) {
+        _trace('[MAD $agentId] restart: $d not made to the layer: '
+            '${e.message}');
+      }
+    }
+    return made;
   }
 
   /// Route the layer's place events onto the streams of the places a

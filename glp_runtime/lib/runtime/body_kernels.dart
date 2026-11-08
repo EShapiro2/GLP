@@ -1575,7 +1575,10 @@ BodyKernelResult _layerCall(String who, String what, void Function() call) {
 BodyKernelResult _declarePeer(GlpRuntime rt, List<Term> a) {
   const who = "'_declare'/1", what = 'peer(P)';
   return _peerCall(rt, who, what, a[0],
-      (network, pk) => network.putKnownPeer(pk));
+      (network, pk) {
+    network.putKnownPeer(pk);
+    rt.seamDeclarations.peer(pk.hex);
+  });
 }
 
 /// `declare(address(P, A))`: give the layer the address A at which peer P is reached, `putPeerAddress(pk, address)` ("address(P, A) gives the layer the address A at which peer P is reached").  The layer records it with the known peer (GNA, Section 4.2); the simulation realisation takes it to no effect, "the effect of an address or a rendezvous declaration" not being provided ("Simulation realisation").
@@ -1587,7 +1590,10 @@ BodyKernelResult _declareAddress(GlpRuntime rt, List<Term> a) {
         'constant, got ${_deref(rt, a[1])}');
   }
   return _peerCall(rt, who, what, a[0],
-      (network, pk) => network.putPeerAddress(pk, address));
+      (network, pk) {
+    network.putPeerAddress(pk, address);
+    rt.seamDeclarations.address(pk.hex, address);
+  });
 }
 
 /// `declare(rendezvous(P, A))`: give the layer a rendezvous server, the agent of key P at address A, or replace its address, `putRendezvousServer(pk, address)` (GLP-Spec appendix-guards, "Networking seam"; GNA 776016c, Section 4.2, "Declare server": "behind declare(rendezvous(Key, Address))").  The simulation realisation takes it to no effect ("Simulation realisation").
@@ -1599,7 +1605,10 @@ BodyKernelResult _declareRendezvous(GlpRuntime rt, List<Term> a) {
         'constant, got ${_deref(rt, a[1])}');
   }
   return _peerCall(rt, who, what, a[0],
-      (network, pk) => network.putRendezvousServer(pk, address));
+      (network, pk) {
+    network.putRendezvousServer(pk, address);
+    rt.seamDeclarations.rendezvous(pk.hex, address);
+  });
 }
 
 /// `declare(trust(U, L))`: set the cold-call trust level of proximity underlay U, pan or lan, to L, open or closed, `setTrustLevel(underlay, level)` (GLP-Spec appendix-guards, "Proximity trust": "Both underlays stand at closed until declared, a later declaration of an underlay replaces the level then standing, and the two are declared independently").  An underlay or level the layer does not have is a violated precondition, and so an abort.
@@ -1625,8 +1634,10 @@ BodyKernelResult _declareTrust(GlpRuntime rt, List<Term> a) {
   }
   final seam = _seamLayer(rt);
   if (seam == null) return BodyKernelResult.success;
-  return _layerCall(
-      who, what, () => seam.network.setTrustLevel(underlay, level));
+  return _layerCall(who, what, () {
+    seam.network.setTrustLevel(underlay, level);
+    rt.seamDeclarations.trust(underlay.name, level.name);
+  });
 }
 
 /// The name the layer is given for the place a ground constant [arg] names: the constant's printed form, as [formatTerm] prints it, `home` for home and `7` for 7 (IGLP 0e1c9e0, Implementation Notes, "The contract": "The runtime gives the layer a place's name, a constant, as its printed form"; GLP-Spec appendix-guards, "Networking seam": `place(Constant, Number, Stream(PlaceEvent)?)`).  The printed form reads back as the constant, so two constants are two places, 7 and '7' among them.  Null where [arg] is not a ground constant.  Until 2026-11-03 the name was taken only from an atom or a string, and declare(place(7, 100, E)) checked and then aborted.
@@ -1661,10 +1672,13 @@ BodyKernelResult _declarePlace(GlpRuntime rt, List<Term> a) {
   if (seam == null) {
     rt.placeStreams.declare(place, stream.addr);
     rt.placeStreams.deliver(place, ConstTerm('unobservable'));
+    rt.seamDeclarations.place(place, radius);
     return BodyKernelResult.success;
   }
-  return _layerCall(who, what,
-      () => seam.ctx.declarePlace(place, radius.toDouble(), stream.addr));
+  return _layerCall(who, what, () {
+    seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
+    rt.seamDeclarations.place(place, radius);
+  });
 }
 
 /// The proximity underlay a ground constant [arg] names, `pan` or `lan`, or null where it names neither.
@@ -1714,14 +1728,20 @@ BodyKernelResult _removeNearby(GlpRuntime rt, List<Term> a) {
 BodyKernelResult _removePeer(GlpRuntime rt, List<Term> a) {
   const who = "'_remove'/1", what = 'peer(P)';
   return _peerCall(rt, who, what, a[0],
-      (network, pk) => network.removeKnownPeer(pk));
+      (network, pk) {
+    network.removeKnownPeer(pk);
+    rt.seamDeclarations.removePeer(pk.hex);
+  });
 }
 
 /// `remove(rendezvous(P))`: take the rendezvous server of key P off and end the layer's session with it, a key not declared doing nothing, `removeRendezvousServer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA 776016c, Section 4.2, "Remove server": "behind remove(rendezvous(Key))").
 BodyKernelResult _removeRendezvous(GlpRuntime rt, List<Term> a) {
   const who = "'_remove'/1", what = 'rendezvous(P)';
   return _peerCall(rt, who, what, a[0],
-      (network, pk) => network.removeRendezvousServer(pk));
+      (network, pk) {
+    network.removeRendezvousServer(pk);
+    rt.seamDeclarations.removeRendezvous(pk.hex);
+  });
 }
 
 /// `remove(place(P))`: end the declaration of place P, closing its stream; does nothing where P is not declared.  Where no layer is bound it closes the stream all the same, the runtime's bookkeeping, and tells no layer ("One interface", 6ba0329; GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
@@ -1732,6 +1752,7 @@ BodyKernelResult _removePlace(GlpRuntime rt, List<Term> a) {
     return kernelAbort('[ABORT] $who: $what: the place (P) must be a ground '
         'constant, got ${_deref(rt, a[0])}');
   }
+  rt.seamDeclarations.removePlace(place);
   final seam = _seamLayer(rt);
   if (seam == null) {
     rt.placeStreams.close(place);
