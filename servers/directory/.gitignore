@@ -1,3 +1,4 @@
 directory.json
 directory.json.tmp
 build/
+.flutter-plugins-dependencies
