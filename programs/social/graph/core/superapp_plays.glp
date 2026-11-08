@@ -780,13 +780,17 @@ sg_init(Me, warm_friend, [A, H], NetIn) :-
 %% the social graph's agent with the operating system's Nearby around it,
 %% os_phone/6 (place.glp), the layer's agents nearby declared on the PAN and
 %% the LAN, Ks the persons the person knows at the start; home on the agent's
-%% notices, answering yes on every card (scripted_home/5), and the person's
-%% script by Mode on the notices; every notice goes to the person, printed by
-%% the harness as [agent] term.  Under encounter_befriend the person opens
-%% the place, befriends the first person nearby she comes to know, and closes
-%% the place once they are friends; under encounter the person opens the place
-%% and answers the cards; under befriend_known the person befriends the one
-%% person she knows, and never opens the place; under encounter_introduce the
+%% notices, answering yes on every card of a request and an introduction,
+%% and befriending by picking a person on home's card of a person nearby,
+%% the first, or none, by Mode (picking_home/6); and the person's script by
+%% Mode on the notices; every notice goes to the person, printed by the
+%% harness as [agent] term.  No key is typed: a person is befriended only by
+%% picking them in Nearby (GSA paper, Appendix "The Operating System",
+%% "Nearby").  Under encounter_befriend the person opens the place, picks the
+%% first person nearby she comes to know, and closes the place once they are
+%% friends; under encounter the person opens the place and answers the cards;
+%% under befriend_known the person picks the one person she knows, nearby, and
+%% never opens the place; under encounter_introduce the
 %% person opens the place and, friends with the person she knew and with a
 %% newcomer, introduces the newcomer to her (GKK:3).
 sg_init(Me, encounter_befriend, Ks, NetIn) :- nearby_phone(Me?, encounter_befriend, Ks?, NetIn?).
@@ -801,37 +805,39 @@ nearby_phone(Me, Mode, Ks, NetIn) :-
     ground(Me?), ground(Ks?) |
     place # os_phone(Me?, Ks?, In?, NetIn?, Out, NetOut),
     send_to_net(NetOut?),
-    scripted_home(Me?, Out?, Notices, Script?, In),
+    pick_mode(Mode?, Pick),
+    picking_home(Me?, Pick?, Out?, Notices, Script?, In),
     tee(Notices?, Shown, Seen),
     send_to_user(Shown?),
     nearby_person(Mode?, Me?, Ks?, Seen?, Script).
+
+%% Who picks a person in Nearby to befriend: the first card, under
+%% encounter_befriend and befriend_known; none otherwise.
+procedure pick_mode(Constant?, PickMode).
+pick_mode(encounter_befriend, first).
+pick_mode(befriend_known, first).
+pick_mode(_, none) :- otherwise | true.
 
 %% nearby_person(Mode, Me, Ks, Notices, Cmds): the person's script by Mode,
 %% on what the agent tells the person.
 procedure nearby_person(Constant?, Key?, List(Key)?, Stream(Output)?, UserInStream).
 nearby_person(encounter_befriend, Me, _, Ns, [msg(person, Me?, open_place) | Cs?]) :-
-    ground(Me?) | befriend_first(Me?, Ns?, Cs).
+    ground(Me?) | close_on_friend(Me?, Ns?, Cs).
 nearby_person(encounter, Me, _, Ns, [msg(person, Me?, open_place) | Cs?]) :-
     ground(Me?) | idle_person(Ns?, Cs).
-nearby_person(befriend_known, Me, [K | _], Ns, [msg(person, Me?, connect(K?)) | Cs?]) :-
-    ground(Me?), ground(K?) | idle_person(Ns?, Cs).
+nearby_person(befriend_known, Me, _, Ns, Cs?) :-
+    ground(Me?) | idle_person(Ns?, Cs).
 nearby_person(encounter_introduce, Me, [K | _], Ns, [msg(person, Me?, open_place) | Cs?]) :-
     ground(Me?), ground(K?) | introducing(Me?, K?, none, Ns?, Cs).
 nearby_person(_, _, _, Ns, Cs?) :- otherwise | idle_person(Ns?, Cs).
 
-%% The first person nearby she knows, befriended (GSG:1); the place closed
-%% once they are friends.
-procedure befriend_first(Key?, Stream(Output)?, UserInStream).
-befriend_first(Me, [msg(agent, person, nearby([K | _])) | Ns], [msg(person, Me?, connect(K?)) | Cs?]) :-
-    ground(Me?), ground(K?) | close_on_friend(Me?, K?, Ns?, Cs).
-befriend_first(Me, [_ | Ns], Cs?) :- otherwise | befriend_first(Me?, Ns?, Cs).
-befriend_first(_, [], []).
-
-procedure close_on_friend(Key?, Key?, Stream(Output)?, UserInStream).
-close_on_friend(Me, K, [msg(agent, person, connected(X)) | Ns], [msg(person, Me?, close_place) | Cs?]) :-
-    X? =?= K?, ground(Me?) | idle_person(Ns?, Cs).
-close_on_friend(Me, K, [_ | Ns], Cs?) :- otherwise | close_on_friend(Me?, K?, Ns?, Cs).
-close_on_friend(_, _, [], []).
+%% The place closed once the person she picked is a friend, the first friend
+%% she makes.
+procedure close_on_friend(Key?, Stream(Output)?, UserInStream).
+close_on_friend(Me, [msg(agent, person, connected(_)) | Ns], [msg(person, Me?, close_place) | Cs?]) :-
+    ground(Me?) | idle_person(Ns?, Cs).
+close_on_friend(Me, [_ | Ns], Cs?) :- otherwise | close_on_friend(Me?, Ns?, Cs).
+close_on_friend(_, [], []).
 
 %% The introducer: friends with the person she knew, K, and with a newcomer,
 %% in either order, she introduces the newcomer to K.  W is none, k (K is a

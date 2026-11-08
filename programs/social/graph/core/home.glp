@@ -11,8 +11,10 @@ FriendRequest ::= from(Friend, Decision?).
 Introducer ::= Key.
 Other ::= Key.
 IntroRequest ::= from(Introducer, Other, Decision?).
+Befriend ::= befriend.
+NearbyPerson ::= nearby(Friend, Befriend?).
 
-Question ::= friendRequest_w(FriendRequest) ; introRequest_w(IntroRequest) ; stream_request_r(Stream(Request)?).
+Question ::= friendRequest_w(FriendRequest) ; introRequest_w(IntroRequest) ; nearbyPerson_w(NearbyPerson) ; stream_request_r(Stream(Request)?).
 
 procedure respond_friend(Key?, Key?, PendingValue?, Stream(UserInMsg), Stream(Ask(Question))).
 respond_friend(S1, S2, S3, S4?, [ask('FriendRequest', friendRequest_w(X?)) | D?]) :- respond_friend1(S1?, S2?, S3?, S4, X, D).
@@ -34,39 +36,63 @@ procedure decide_intro(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 decide_intro(yes, Id, Other, P, [msg(person, Id?, accept_intro(Other?, P?))]).
 decide_intro(no, Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
 
+procedure befriend_card(Key?, Key?, Stream(UserInMsg), Stream(Ask(Question))).
+befriend_card(S1, S2, S3?, [ask('NearbyPerson', nearbyPerson_w(X?)) | D?]) :- befriend_card1(S1?, S2?, S3, X, D).
+
+procedure befriend_card1(Key?, Key?, Stream(UserInMsg), NearbyPerson, Stream(Ask(Question))).
+befriend_card1(Id, K, Cmds?, nearby(K?, B), []) :- ground(Id?), ground(K?) | befriend_pick(B?, Id?, K?, Cmds).
+
+procedure befriend_pick(Befriend?, Key?, Key?, Stream(UserInMsg)).
+befriend_pick(befriend, Id, K, [msg(person, Id?, connect(K?))]).
+
+procedure offer(List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg), Stream(Ask(Question))).
+offer([K | Ks], Id, Cd, Cd1?, Cmds?, D1?) :- ground(K?), ground(Cd?) | in_keys(K?, Cd?, D), offer_one(D?, K?, Ks?, Id?, Cd?, Cd1, Cmds, D1).
+offer([], _, Cd, Cd?, [], []).
+
+procedure offer_one(Decision?, Key?, List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg), Stream(Ask(Question))).
+offer_one(yes, _, Ks, Id, Cd, Cd1?, Cmds?, D?) :- offer(Ks?, Id?, Cd?, Cd1, Cmds, D).
+offer_one(no, K, Ks, Id, Cd, Cd1?, Cmds?, D?) :- ground(K?), ground(Id?) | befriend_card(Id?, K?, C1, D1), offer(Ks?, Id?, [K? | Cd?], Cd1, C2, D2), merge(C1?, C2?, Cmds), merge(D1?, D2?, D).
+
+procedure in_keys(Key?, List(Key)?, Decision).
+in_keys(K, [K1 | _], yes) :- (K? =?= K1?) | true.
+in_keys(K, [_ | Ks], D?) :- otherwise | in_keys(K?, Ks?, D).
+in_keys(_, [], no).
+
 exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 home(S1, S2, S3?, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- home1(S1?, S2?, S3, X?, D).
 
 exported procedure home1(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Request)?, Stream(Ask(Question))).
-home1(Id, Outs, Cmds?, Reqs, D?) :- serve(Reqs?, Id?, Outs?, Cmds, D).
+home1(Id, Outs, Cmds?, Reqs, D?) :- serve(Reqs?, Id?, [], Outs?, Cmds, D).
 
-procedure serve(Stream(Request)?, Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-serve(Reqs, Id, [msg(agent, person, befriend(From, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?) | respond_friend(Id?, From?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
-serve(Reqs, Id, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?), ground(Other?) | respond_intro(Id?, From?, Other?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
-serve(Reqs, Id, [_ | Outs], Cmds?, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, Outs?, Cmds, D).
-serve(_, _, [], [], []).
-serve([trust(Key) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(Key?) | trust_act(Key?, Id?, Reqs?, Outs?, Cmds, D).
-serve([install(App, Name) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Name?) | load_file(Name?, C), install_act(C?, App?, Id?, Reqs?, Outs?, Cmds, D).
-serve([invite(App, Friend) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Friend?) | invite_act(App?, Friend?, Id?, Reqs?, Outs?, Cmds, D).
-serve([connect(Friend) | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?), ground(Friend?) | connect_act(Friend?, Id?, Reqs?, Outs?, Cmds, D).
-serve([open_place | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?) | place_act(open_place, Id?, Reqs?, Outs?, Cmds, D).
-serve([close_place | Reqs], Id, Outs, Cmds?, D?) :- ground(Id?) | place_act(close_place, Id?, Reqs?, Outs?, Cmds, D).
+procedure serve(Stream(Request)?, Key?, List(Key)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+serve(Reqs, Id, Cd, [msg(agent, person, befriend(From, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?) | respond_friend(Id?, From?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Cd?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
+serve(Reqs, Id, Cd, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?), ground(Other?) | respond_intro(Id?, From?, Other?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Cd?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
+serve(Reqs, Id, Cd, [msg(agent, person, nearby(Ks)) | Outs], Cmds?, D?) :- ground(Id?), ground(Ks?), ground(Cd?) | offer(Ks?, Id?, Cd?, Cd1, Picks, D1), merge(Picks?, Cmds1?, Cmds), serve(Reqs?, Id?, Cd1?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
+serve(Reqs, Id, Cd, [msg(agent, person, connected(K)) | Outs], Cmds?, D?) :- ground(Id?), ground(K?), ground(Cd?) | serve(Reqs?, Id?, [K? | Cd?], Outs?, Cmds, D).
+serve(Reqs, Id, Cd, [_ | Outs], Cmds?, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
+serve(_, _, _, [], [], []).
+serve([trust(Key) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(Key?) | trust_act(Key?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([install(App, Name) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Name?) | load_file(Name?, C), install_act(C?, App?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([invite(App, Friend) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Friend?) | invite_act(App?, Friend?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([connect(Friend) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(Friend?) | connect_act(Friend?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([open_place | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(open_place, Id?, Cd?, Reqs?, Outs?, Cmds, D).
+serve([close_place | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(close_place, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 
-procedure trust_act(String?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-trust_act(Key, Id, Reqs, Outs, [msg(person, Id?, trust(Key?)) | Cmds?], D?) :- ground(Key?) | serve(Reqs?, Id?, Outs?, Cmds, D).
+procedure trust_act(String?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+trust_act(Key, Id, Cd, Reqs, Outs, [msg(person, Id?, trust(Key?)) | Cmds?], D?) :- ground(Key?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
-procedure invite_act(Constant?, Key?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-invite_act(App, Friend, Id, Reqs, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?], D?) :- ground(App?), ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds, D).
+procedure invite_act(Constant?, Key?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+invite_act(App, Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?], D?) :- ground(App?), ground(Friend?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
-procedure place_act(UserContent?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-place_act(A, Id, Reqs, Outs, [msg(person, Id?, A?) | Cmds?], D?) :- ground(Id?) | serve(Reqs?, Id?, Outs?, Cmds, D).
+procedure place_act(UserContent?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?], D?) :- ground(Id?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
-procedure connect_act(Key?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-connect_act(Friend, Id, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?], D?) :- ground(Friend?) | serve(Reqs?, Id?, Outs?, Cmds, D).
+procedure connect_act(Key?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+connect_act(Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?], D?) :- ground(Friend?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
-procedure install_act(Content?, Constant?, Key?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-install_act(M, App, Id, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?], D?) :- module(M?) | creator_certification(M?, CSig), new_channel(Ui, Person), hold_person(Person?), serve(Reqs?, Id?, Outs?, Cmds, D).
-install_act(S, _, Id, Reqs, Outs, Cmds?, D?) :- string(S?) | serve(Reqs?, Id?, Outs?, Cmds, D).
+procedure install_act(Content?, Constant?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+install_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?], D?) :- module(M?) | creator_certification(M?, CSig), new_channel(Ui, Person), hold_person(Person?), serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
+install_act(S, _, Id, Cd, Reqs, Outs, Cmds?, D?) :- string(S?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
 procedure creator_certification(Module?, String).
 creator_certification(M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
@@ -145,7 +171,7 @@ form_string(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-Drawn ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; Request.
+Drawn ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; Befriend ; Request.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, Ss), output(thread(form(msg, [field('Constant', shown), field('Constant', shown), field('NoticeContent', menu([form(befriend, [field('Key', shown)]), form(befriend_intro, [field('Key', shown), field('Key', shown)]), form(connected, [field('Key', shown)]), shown, form(rejected, [field('Constant', shown)]), form(unfriended, [field('Constant', shown)]), form(received, [field('Key', shown), field('Constant', shown)]), form(not_a_friend, [field('Key', shown)]), form(nearby, [field('List(Key)', thread)])]))])), MOut?, ODs), constructs(Ss?).
@@ -157,6 +183,7 @@ constructs([]).
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, friendRequest_w(X), Gs, Ds?) :- present_friendRequest([], X?, Gs1?, _, Vs, Done), run_friendRequest_w(Id?, form(from, [field('Friend', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, introRequest_w(X), Gs, Ds?) :- present_introRequest([], X?, Gs1?, _, Vs, Done), run_introRequest_w(Id?, form(from, [field('Introducer', shown), field('Other', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, nearbyPerson_w(X), Gs, Ds?) :- present_nearbyPerson([], X?, Gs1?, _, Vs, Done), run_nearbyPerson_w(Id?, form(nearby, [field('Friend', shown), field('Befriend', button(befriend))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), form(connect, [field('Friend', peer)]), button(open_place), button(close_place)])), [input([])], Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget?, Stream(Output)?, Stream(Draw(Drawn))).
@@ -211,6 +238,31 @@ procedure run_introRequest_w_more(Integer?, Widget?, Stream(View_introRequest)?,
 run_introRequest_w_more(Id, _, _, done, [withdraw(Id?)]).
 run_introRequest_w_more(Id, W, [V | Vs], Done, [draw(Id?, W?, introRequest_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_introRequest_w_more(Id?, W?, Vs?, Done?, Ds).
 run_introRequest_w_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure form_befriend(Drawn?, Formed(Befriend)).
+form_befriend(befriend, formed(befriend)).
+form_befriend(_, refused) :- otherwise | true.
+
+procedure answer_befriend(Path?, Befriend, Inputs(Drawn)?, Inputs(Drawn), Done).
+answer_befriend(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_befriend(R?, F), take_befriend(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+answer_befriend(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- otherwise | take_befriend(refused, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
+
+procedure take_befriend(Formed(Befriend)?, Path?, Befriend, Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
+take_befriend(formed(V), _, V?, _, Gs, Gs?, done).
+take_befriend(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_befriend(P?, X, Gs?, Gs1, Done).
+
+View_nearbyPerson ::= nearby(Friend, Questioned(Befriend)).
+procedure present_nearbyPerson(Path?, NearbyPerson?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_nearbyPerson), Done).
+present_nearbyPerson(P, nearby(H1, H2?), Gs, Gs1?, [nearby(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), answer_befriend(Q2?, H2, Gs?, Gs1, D2).
+
+procedure run_nearbyPerson_w(Integer?, Widget?, Stream(View_nearbyPerson)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+run_nearbyPerson_w(Id, W, [V | Vs], Done, Gs, Gs?, [draw(Id?, W?, nearbyPerson_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_nearbyPerson_w_more(Id?, W?, Vs?, Done?, Ds).
+run_nearbyPerson_w(Id, _, [], Done, Gs, Gs?, Ds?) :- run_end(Id?, Done?, Ds).
+
+procedure run_nearbyPerson_w_more(Integer?, Widget?, Stream(View_nearbyPerson)?, Done?, Stream(Draw(Drawn))).
+run_nearbyPerson_w_more(Id, _, _, done, [withdraw(Id?)]).
+run_nearbyPerson_w_more(Id, W, [V | Vs], Done, [draw(Id?, W?, nearbyPerson_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_nearbyPerson_w_more(Id?, W?, Vs?, Done?, Ds).
+run_nearbyPerson_w_more(Id, _, [], Done, Ds?) :- run_end(Id?, Done?, Ds).
 
 procedure join_request_trust_1(Formed(CompilerKey)?, Formed(Request)).
 join_request_trust_1(formed(X1), formed(trust(X1?))).

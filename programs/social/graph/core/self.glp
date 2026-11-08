@@ -31,8 +31,10 @@
 HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key) ; open_place ; close_place.
 HomeFriendRequest ::= from(Key, Decision?).
 HomeIntroRequest  ::= from(Key, Key, Decision?).
-HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; stream_request_r(Stream(HomeRequest)?).
-HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeRequest.
+HomeNearbyPerson  ::= nearby(Key, HomeBefriend?).
+HomeBefriend      ::= befriend.
+HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; nearbyPerson_w(HomeNearbyPerson) ; stream_request_r(Stream(HomeRequest)?).
+HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeBefriend ; HomeRequest.
 
 %% The super-app (GSA paper, Section 4.1 and Appendix "The Operating System"),
 %% the entry the person's first act names (Appendix, "Boot": "the person's
@@ -117,10 +119,42 @@ yes_person([draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([_ | Ds], Gs?) :- otherwise | yes_person(Ds?, Gs).
 
+%% scripted_home/5 with a person who also befriends by picking a person in
+%% Nearby (GSA paper, Appendix "The Operating System", "Nearby": "the person
+%% befriends one by picking them there"; home.vglp, befriend_card/3), for the
+%% plays of physical encounters (superapp_plays.glp, nearby_phone/4): under
+%% Pick first the person picks befriend on the first card of a person nearby
+%% that home draws, and on none after it; under none on none.  The person
+%% answers yes on each card of a friend's request to connect and of an
+%% introduction, as yes_person/2 does.
+PickMode ::= first ; none.
+exported procedure picking_home(Key?, PickMode?, AgentToUserStream?, Stream(Output), UserInStream?, UserInStream).
+picking_home(Id, Pick, Out, Notices?, ScriptCmds, In?) :-
+    ground(Id?) |
+    split_out(Out?, Notices, Seen),
+    home # home(Id?, Seen?, Home, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    hold_output(MCh?),
+    picking_person(Pick?, Draws?, Grants),
+    merge(ScriptCmds?, Home?, In).
+
+%% The person: yes on each card of a friend's request or an introduction;
+%% befriend on the first card of a person nearby, under first.  The person
+%% channel never closes, so the person holds its grant writer for good.
+procedure picking_person(PickMode?, PersonOut(HomeDrawn)?, PersonIn(HomeDrawn)).
+picking_person(P, [draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
+picking_person(P, [draw(N, _, introRequest_w(from(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
+picking_person(first, [draw(N, _, nearbyPerson_w(nearby(_, input(Q)))) | Ds], [input(N?, Q?, befriend) | Gs?]) :-
+    ground(N?), ground(Q?) | picking_person(none, Ds?, Gs).
+picking_person(P, [_ | Ds], Gs?) :- otherwise | picking_person(P?, Ds?, Gs).
+
 %% play_home(Id?, Answer?, Notices?, Cmds, Log): home/4 on the agent's notices,
 %% with its dispatcher, and a person who answers each card, a friend's request
-%% to connect or an introduction, with Answer once it is drawn, logging the
-%% card it answered; the commands home writes to the agent come out on Cmds.
+%% to connect or an introduction, with Answer once it is drawn, or, where
+%% Answer is befriend, picks befriend on each card of a person nearby, logging
+%% the card it answered; the commands home writes to the agent come out on Cmds.
 %% The person grants only on a card drawn: the dispatcher takes the asks, the
 %% grants and the draws in turn (programs/vglp/dispatcher.glp, fair/5), and a
 %% grant for a construct not yet asked reaches none.
@@ -136,6 +170,8 @@ answering(A, [draw(N, _, friendRequest_w(from(F, input(Q)))) | Ds], [input(N?, Q
     ground(A?), ground(N?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
 answering(A, [draw(N, _, introRequest_w(from(I, F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
     ground(A?), ground(N?), ground(I?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
+answering(befriend, [draw(N, _, nearbyPerson_w(nearby(F, input(Q)))) | Ds], [input(N?, Q?, befriend) | Gs?], [nearby(F?) | Log?]) :-
+    ground(N?), ground(F?), ground(Q?) | answering(befriend, Ds?, Gs, Log).
 answering(A, [_ | Ds], Gs?, Log?) :- otherwise | answering(A?, Ds?, Gs, Log).
 
 %% The super-app's output to its person, of the reserved type Output: "A

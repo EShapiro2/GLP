@@ -1,8 +1,8 @@
 %% place.glp --- the operating system's Nearby (GSA paper, Appendix "The Operating System", paragraph "Nearby"; the contract GPE, programs/social/graph/GPE.txt, with its implementation pragmas), around today's social-graph agent (agent.glp, agent/4).
 %%
-%% The person's acts Open place and Close place are GPE:1: on Open place the operating system declares the trust of pan and of lan open, and on Close place closed (GPE's implementation pragma Open Place; GLP-Spec appendix-guards, "Networking seam", declare(trust(U, L))).  The layer reports the agents nearby over each proximity underlay, seen(K) and gone(K) (GLP-Spec appendix-guards, "Networking seam", nearby(U, S)); the operating system keeps the agents nearby, by underlay and key.  An agent nearby whose key the person does not know, seen while the place is open or nearby when it opens, is a phone whose person opened the place too, and the operating system puts GPE:2, Encounter, to it: the encounter is guarded by both, so it asks the other for its consent, and the other's operating system gives its person's consent while its place is open and refuses it while closed (GPE's implementation pragma Encounter: "while the place is open gives its person's consent to each encounter, asking nothing"; Appendix, "Nearby": "answers its approval question yes, the place being open").  On the other's yes, or on its own yes to the other's, the two know each other.  A person befriended (GSG:1) or introduced (GKK:3) is known too: the agent tells its person connected(K) when a friend channel is made, and the operating system reads it.
+%% At start the operating system declares the trust of pan and of lan closed, and the nearby streams of the two (GSA paper, Appendix "The Operating System", "Nearby": "At start the operating system declares the trust of pan and of lan closed and, for each of the two, nearby(Underlay, Events) to the layer"), so that Nearby shows the persons known while the place is closed.  The person's acts Open place and Close place are GPE:1: on Open place the operating system declares the trust of pan and of lan open, and on Close place closed (GPE's implementation pragma Open Place; GLP-Spec appendix-guards, "Networking seam", declare(trust(U, L))).  The layer reports the agents nearby over each proximity underlay, seen(K) and gone(K) (GLP-Spec appendix-guards, "Networking seam", nearby(U, S)); the operating system keeps the agents nearby, by underlay and key.  An agent nearby whose key the person does not know, seen while the place is open or nearby when it opens, is a phone whose person opened the place too, and the operating system with the smaller key, by GLP's standard order of terms (@<), puts GPE:2, Encounter, to it (Appendix, "Nearby": "the operating system with the smaller key puts GPE:2 to the platform"): the encounter is guarded by both, so it asks the other for its consent, and the other's operating system gives its person's consent while its place is open and refuses it while closed (GPE's implementation pragma Encounter: "while the place is open gives its person's consent to each encounter, asking nothing"; Appendix, "Nearby": "answers its approval question yes, the place being open").  On the other's yes, or on its own yes to the other's, the two know each other.  A person befriended (GSG:1) or introduced (GKK:3) is known too: the agent tells its person connected(K) when a friend channel is made, and the operating system reads it.  Every person the person knows --- at the start, by an encounter, a befriending or an introduction --- is declared to the layer as a known peer, declare(peer(K)), once, so that the layer recognises them wherever they are (Appendix, "Nearby"; GLP-Spec appendix-guards, "Networking seam": "peer(P) gives the layer the public key P of a peer the program knows").
 %%
-%% Home shows Nearby, the persons nearby whom the person knows (GPE's interface pragma Nearby): the operating system tells the person nearby(Ks), Ks those persons in the order of their keys, whenever the list changes.  Befriending a person nearby is GSG:1 as the agent does it today, connect(K).
+%% Home shows Nearby, the persons nearby whom the person knows (GPE's interface pragma Nearby): the operating system tells the person nearby(Ks), Ks those persons in the order of their keys, whenever the list changes.  Home draws a card for each with the button befriend, and the person befriends one by picking them there (Appendix, "Nearby"; home.vglp, befriend_card/3): GSG:1 as the agent does it today, connect(K).
 %%
 %% The layer's streams of the agents nearby are taken in os_phone/6; a play in one heap gives os_agent/8 its own.
 
@@ -14,8 +14,8 @@ Near ::= near(Underlay, Key).
 %% A presence, with the underlay on which the layer reported it.
 OnPresence ::= on(Underlay, Presence).
 
-%% The person's acts on the place, Open place and Close place (GPE:1), and the answer to an encounter this operating system put to another, injected (await_met/4).
-PlaceAct ::= open ; close ; met(Key, Decision).
+%% The person's acts on the place, Open place and Close place (GPE:1), the person's yes to an introduction to a person (GKK:3), and the answer to an encounter this operating system put to another, injected (await_met/4).
+PlaceAct ::= open ; close ; know(Key) ; met(Key, Decision).
 
 %% The place's state: the trust the operating system declared, open while the place is open; the persons the person knows, in the order of their keys; the agents nearby; the persons asked to an encounter whose answer has not come; and the persons nearby last shown.
 PlaceState ::= st(TrustLevel, List(Key), List(Near), List(Key), List(Key)).
@@ -40,10 +40,12 @@ os_agent(Id, Known, UserIn, NetIn, Pan, Lan, Out?, NetOut?) :-
     merge(AOut1?, POut?, Out),
     merge(ANetOut?, PNet?, NetOut).
 
-%% os_phone(Id, Known, UserIn, NetIn, Out, NetOut): os_agent/8 on a phone, the presences the layer's: the operating system declares to the layer a watch on the agents nearby over each of the two proximity underlays, declare(nearby(pan, S)) and declare(nearby(lan, S)) (GLP-Spec appendix-guards, "Networking seam", 210cee1; GSA paper, Appendix "The Operating System", "Nearby": "for each of the two it declares nearby(Underlay, Events) to the layer and reads the stream").
+%% os_phone(Id, Known, UserIn, NetIn, Out, NetOut): os_agent/8 on a phone, the presences the layer's: at start the operating system declares the trust of the two proximity underlays closed, declare(trust(pan, closed)) and declare(trust(lan, closed)), and to the layer a watch on the agents nearby over each, declare(nearby(pan, S)) and declare(nearby(lan, S)) (GLP-Spec appendix-guards, "Networking seam", 210cee1; GSA paper, Appendix "The Operating System", "Nearby": "At start the operating system declares the trust of pan and of lan closed and, for each of the two, nearby(Underlay, Events) to the layer, and reads the stream from then on").
 exported procedure os_phone(Key?, List(Key)?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
 os_phone(Id, Known, UserIn, NetIn, Out?, NetOut?) :-
     ground(Id?), ground(Known?) |
+    declare_peers(Known?, Done),
+    closed_after(Done?),
     declare(nearby(pan, Pan)),
     declare(nearby(lan, Lan)),
     os_agent(Id?, Known?, UserIn?, NetIn?, Pan?, Lan?, Out, NetOut).
@@ -52,12 +54,14 @@ os_phone(Id, Known, UserIn, NetIn, Out?, NetOut?) :-
 %% Splitting the person's acts and the network
 %% =============================================================================
 
-%% The person's acts Open place and Close place go to the place; every other act to the agent.
+%% The person's acts Open place and Close place go to the place; every other act to the agent, and the person's yes to an introduction to a person, accept_intro(Other, P), to the place as well, know(Other): her yes to the act is her yes to knowing them (GSA paper, Section 4.2, "Whom the Grassroots App knows": "Acquaintance by GKK:2 and introduction by GKK:3 are the cases in which that consent is a clause's: Alice's yes to the act is her yes to knowing the agent"), so the layer recognises the other from then on.
 procedure split_acts(Key?, UserInStream?, UserInStream, Stream(PlaceAct)).
 split_acts(Id, [msg(person, I, open_place) | Ms], As?, [open | Ps?]) :-
     Id? =?= I? | split_acts(Id?, Ms?, As, Ps).
 split_acts(Id, [msg(person, I, close_place) | Ms], As?, [close | Ps?]) :-
     Id? =?= I? | split_acts(Id?, Ms?, As, Ps).
+split_acts(Id, [msg(person, I, accept_intro(O, P)) | Ms], [msg(person, I?, accept_intro(O?, P?)) | As?], [know(O?) | Ps?]) :-
+    Id? =?= I?, ground(O?) | split_acts(Id?, Ms?, As, Ps).
 split_acts(Id, [M | Ms], [M? | As?], Ps?) :-
     otherwise | split_acts(Id?, Ms?, As, Ps).
 split_acts(_, [], [], []).
@@ -108,11 +112,17 @@ place(Id, st(open, Kn, Nr, As, Sh), [open | Acts], Asks, Fr, Pres, Out?, Net?) :
 place(Id, st(closed, Kn, Nr, As, Sh), [close | Acts], Asks, Fr, Pres, Out?, Net?) :-
     place(Id?, st(closed, Kn?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
 
+%% The person said yes to an introduction to K (GKK:3): she knows K.
+place(Id, st(T, Kn, Nr, As, Sh), [know(K) | Acts], Asks, Fr, Pres, Out?, Net?) :-
+    ground(K?) |
+    know(K?, Kn?, Kn1),
+    viewing(Id?, st(T?, Kn1?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
+
 %% The other consented to the encounter this operating system put to it (GPE:2 commits): the two know each other.
 place(Id, st(T, Kn, Nr, As, Sh), [met(K, yes) | Acts], Asks, Fr, Pres, Out?, Net?) :-
     ground(K?) |
     remove_key(K?, As?, As1),
-    insert_key(K?, Kn?, Kn1),
+    know(K?, Kn?, Kn1),
     viewing(Id?, st(T?, Kn1?, Nr?, As1?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
 %% The other refused: its place was not open.  Where it opens, its operating system puts the encounter to this one.
 place(Id, st(T, Kn, Nr, As, Sh), [met(K, no) | Acts], Asks, Fr, Pres, Out?, Net?) :-
@@ -123,7 +133,7 @@ place(Id, st(T, Kn, Nr, As, Sh), [met(K, no) | Acts], Asks, Fr, Pres, Out?, Net?
 %% An encounter put to this agent, its place open: the operating system gives the person's consent, asking nothing, and the two know each other.
 place(Id, st(open, Kn, Nr, As, Sh), Acts, [msg(_, encounter(From, yes)) | Asks], Fr, Pres, Out?, Net?) :-
     ground(From?) |
-    insert_key(From?, Kn?, Kn1),
+    know(From?, Kn?, Kn1),
     viewing(Id?, st(open, Kn1?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
 %% Its place closed: the consent is refused, so that the other does not wait on an answer that will not come.
 place(Id, st(closed, Kn, Nr, As, Sh), Acts, [msg(_, encounter(_, no)) | Asks], Fr, Pres, Out?, Net?) :-
@@ -132,7 +142,7 @@ place(Id, st(closed, Kn, Nr, As, Sh), Acts, [msg(_, encounter(_, no)) | Asks], F
 %% A friend the agent made, by befriending or by an introduction: the person knows them.
 place(Id, st(T, Kn, Nr, As, Sh), Acts, Asks, [K | Fr], Pres, Out?, Net?) :-
     ground(K?) |
-    insert_key(K?, Kn?, Kn1),
+    know(K?, Kn?, Kn1),
     viewing(Id?, st(T?, Kn1?, Nr?, As?, Sh?), Acts?, Asks?, Fr?, Pres?, Out, Net).
 
 %% An agent seen nearby: kept, and, where the place is open and the person does not know it, an encounter put to it.
@@ -184,14 +194,14 @@ await_met(_, _, [], []).
 %% The lists
 %% =============================================================================
 
-%% encounter_to(T, Id, K, Kn, As, Ks): [K] where the place is open and K is not this agent, not known and not asked; [] otherwise.
+%% encounter_to(T, Id, K, Kn, As, Ks): [K] where the place is open and K is greater than this agent's key, not known and not asked; [] otherwise.
 procedure encounter_to(TrustLevel?, Key?, Key?, List(Key)?, List(Key)?, List(Key)).
 encounter_to(open, Id, K, Kn, As, Ks?) :-
     ground(Kn?), ground(As?) |
     strangers(Id?, [near(pan, K?)], Kn?, As?, Ks).
 encounter_to(closed, _, _, _, _, []).
 
-%% strangers(Id, Nr, Kn, As, Ks): the keys of the agents nearby, Nr, that are not Id, not known, Kn, and not asked, As, each once.
+%% strangers(Id, Nr, Kn, As, Ks): the keys of the agents nearby, Nr, that are greater than Id, by GLP's standard order of terms, not known, Kn, and not asked, As, each once: of two strangers nearby each other, the one with the smaller key puts the encounter (Appendix, "Nearby").
 procedure strangers(Key?, List(Near)?, List(Key)?, List(Key)?, List(Key)).
 strangers(Id, [near(_, K) | Ns], Kn, As, Ks?) :-
     ground(Id?), ground(K?), ground(Kn?), ground(As?) |
@@ -202,7 +212,7 @@ strangers(_, [], _, _, []).
 
 procedure stranger(Decision?, Decision?, Key?, Key?, List(Near)?, List(Key)?, List(Key)?, List(Key)).
 stranger(no, no, Id, K, Ns, Kn, As, [K? | Ks?]) :-
-    Id? =?\= K?, ground(K?) |
+    Id? @< K?, ground(K?) |
     strangers(Id?, Ns?, Kn?, [K? | As?], Ks).
 stranger(_, _, Id, _, Ns, Kn, As, Ks?) :-
     otherwise |
@@ -229,6 +239,34 @@ procedure in_keys(Key?, List(Key)?, Decision).
 in_keys(K, [K1 | _], yes) :- K? =?= K1? | true.
 in_keys(K, [_ | Ks], D?) :- otherwise | in_keys(K?, Ks?, D).
 in_keys(_, [], no).
+
+%% know(K, Kn, Kn1): K among the persons the person knows, Kn1, in the order of their keys; a person not known before is declared to the layer as a known peer, declare(peer(K)) (Appendix, "Nearby": "The operating system declares to the layer, as a known peer, every person its person knows").
+procedure know(Key?, List(Key)?, List(Key)).
+know(K, Kn, Kn1?) :-
+    ground(K?), ground(Kn?) |
+    in_keys(K?, Kn?, D),
+    know_step(D?, K?, Kn?, Kn1).
+
+procedure know_step(Decision?, Key?, List(Key)?, List(Key)).
+know_step(yes, _, Kn, Kn?).
+know_step(no, K, Kn, Kn1?) :-
+    ground(K?) |
+    declare(peer(K?)),
+    insert_key(K?, Kn?, Kn1).
+
+%% declare_peers(Ks, Done): each of the persons known at the start, Ks, declared to the layer as a known peer, and then Done (the root's Done).
+procedure declare_peers(List(Key)?, Done).
+declare_peers([K | Ks], Done?) :-
+    ground(K?) |
+    declare(peer(K?)),
+    declare_peers(Ks?, Done).
+declare_peers([], done).
+
+%% closed_after(Done): once the persons known at the start are declared, the trust of pan and of lan declared closed, so that no message of a person known is refused in between.
+procedure closed_after(Done?).
+closed_after(done) :-
+    declare(trust(pan, closed)),
+    declare(trust(lan, closed)).
 
 %% insert_key(K, Ks, Ks1): K in the keys Ks, kept in their order, once.
 procedure insert_key(Key?, List(Key)?, List(Key)).
