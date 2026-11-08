@@ -10,7 +10,7 @@
 %% judges the answers against the paper.
 %%
 %% Acts (the test injects each as the person's act):
-%%   list_named(Tag, D, Email, Name, Vis)   sign listing(Me, Email, Name, Vis)
+%%   list_named(Tag, D, Email, Name, Vis)   sign listing(Me, Email, name(Name), Vis)
 %%                                          and send D list(Me, Signed,
 %%                                          Supply, Reply)
 %%   list_unnamed(Tag, D, Email, Vis)       the same, the name none
@@ -73,7 +73,7 @@ agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
 
 procedure acts(Key?, Stream(GdsAct)?).
 acts(Me, [list_named(Tag, D, Email, Name, Vis) | In]) :- ground(Me?) |
-    sign(listing(Me?, Email?, Name?, Vis?), Me?, Signed),
+    sign(listing(Me?, Email?, name(Name?), Vis?), Me?, Signed),
     send_list(Tag?, D?, Me?, Signed?),
     acts(Me?, In?).
 acts(Me, [list_unnamed(Tag, D, Email, Vis) | In]) :- ground(Me?) |
