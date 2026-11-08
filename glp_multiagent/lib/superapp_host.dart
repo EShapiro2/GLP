@@ -33,7 +33,14 @@
 /// which the dispatcher has every construct draw again what it last drew, so
 /// the screen is drawn from the restored state (IGLP 7a25ff8, the paragraph
 /// after Definition "Restart"; vGLP d433f71, Section 6.3).  Until 2026-11-08
-/// the app gave none, and every launch was a first start.
+/// the app gave none, and every launch was a first start.  An update of the
+/// app is a restart under a new version of the program: the state is restored
+/// under it when every procedure a goal of the resolvent calls is defined in
+/// it with the same type identity, and otherwise the update is refused and
+/// the agent restarts under the version it terminated under, which the store
+/// keeps (IGLP 61f3283, madglp-spec.tex, Termination and Restart;
+/// Implementation Notes, "Persistence"), the host holding the refusal
+/// ([updateRefusal]) for the app to say so.
 ///
 /// The person sees what the program draws and nothing else (GSA paper,
 /// Appendix "The Operating System", "The person"): each term the program sends
@@ -102,6 +109,11 @@ class SuperAppHost {
   /// untraced.
   void Function(String tag, String message)? onLog;
 
+  /// Where the start refused an update of the app, the refusal: the agent
+  /// runs the version it terminated under, which the store keeps (IGLP
+  /// 61f3283, Termination and Restart).  Null where none was refused.
+  UpdateRefusal? get updateRefusal => agent.updateRefusal;
+
   /// The person's acts not yet handed to the agent, in order: an act is an
   /// event of the agent, and its events are taken one at a time.
   Future<void> _acts = Future.value();
@@ -132,9 +144,12 @@ class SuperAppHost {
   /// the Grassroots App, `superapp(Me, [])`; at a restart, go on from the
   /// state the [stateStore] holds, the runtime granting refresh in the
   /// person's place ([AgentRuntime.initialize]).  The person's grants go to
-  /// the agent as they come, each an act of the person.  Throws where the
-  /// saved state cannot be restored: another agent's, or another program's
-  /// (AgentRuntime's restore).
+  /// the agent as they come, each an act of the person.  A restart under a
+  /// new version of the program restores the state under it or refuses the
+  /// update ([updateRefusal]).  Throws where the saved state cannot be
+  /// restored: another agent's, or saved under code that is neither the
+  /// program's compilation nor the program the store keeps (AgentRuntime's
+  /// restore).
   Future<void> start() async {
     agent.onUserOutput = (term) => ui.handle(screenTermOf(term));
     agent.onOutput = (line) => onOutput?.call(line);

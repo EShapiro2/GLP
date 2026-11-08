@@ -437,7 +437,16 @@ class StateReader {
   late final List<ModuleTerm> _modules;
   late final List<MutualRefTerm> _mutualRefs;
 
-  StateReader(Uint8List bytes) : _in = _In(bytes) {
+  /// Where the state is restored under another version of the program than
+  /// the one it was saved under (IGLP 61f3283, Termination and Restart: "The
+  /// local state is then restored under the new version"), the program
+  /// counter in the new version's code of a goal [goalId] whose program
+  /// counter in the code the state was saved under is [pc], applied to every
+  /// goal and suspension record read; a disarmed record's [goalId] is null.
+  /// Null where the state is restored under the code it was saved under.
+  final int Function(int? goalId, int pc)? programCounter;
+
+  StateReader(Uint8List bytes, {this.programCounter}) : _in = _In(bytes) {
     for (final b in savedStateMagic) {
       if (_in.u8() != b) {
         throw SavedStateFormatException('no saved agent state (bad magic)');
@@ -457,8 +466,12 @@ class StateReader {
   /// engine's module constant of the agent's program, which stands for the
   /// saved one; any other module constant is made again from its artefact's
   /// bytes.  Throws where the saved program's compiled identity is not
-  /// [appModule]'s.
-  void readTables({required ModuleTerm? appModule}) {
+  /// [savedAppModule]'s, which is [appModule]'s unless the state is restored
+  /// under a new version of the program ([programCounter]): then it is the
+  /// identity of the version the state was saved under, and [appModule], the
+  /// new version's, stands for it (IGLP 61f3283, Termination and Restart).
+  void readTables(
+      {required ModuleTerm? appModule, Uint8List? savedAppModule}) {
     final moduleCount = _in.uint();
     _modules = [];
     for (var i = 0; i < moduleCount; i++) {
@@ -469,9 +482,11 @@ class StateReader {
           throw StateError('the saved state holds the agent\'s program as a '
               'value, and the restarted engine has none');
         }
-        if (!_equal(Artefact.compiledIdentityOf(bytes),
-            Artefact.compiledIdentityOf(
-                (appModule.artefact as Artefact).toBytes()))) {
+        if (!_equal(
+            Artefact.compiledIdentityOf(bytes),
+            savedAppModule ??
+                Artefact.compiledIdentityOf(
+                    (appModule.artefact as Artefact).toBytes()))) {
           throw StateError('the saved state holds another compilation of the '
               'agent\'s program than the restarted engine compiled');
         }
@@ -486,8 +501,9 @@ class StateReader {
     _records = [];
     for (var i = 0; i < recordCount; i++) {
       final g = _in.uint();
+      final goal = g == 0 ? null : g - 1;
       final pc = _in.uint();
-      _records.add(SuspensionRecord(g == 0 ? null : g - 1, pc));
+      _records.add(SuspensionRecord(goal, _pc(goal, pc)));
     }
 
     final refCount = _in.uint();
@@ -639,7 +655,15 @@ class StateReader {
   HeapCell cell() => _cellOf(_in.uint());
   HeapCell? optCell() => boolean() ? cell() : null;
   Term term() => _term();
-  GoalRef goalRef() => GoalRef(_in.uint(), _in.uint());
+  GoalRef goalRef() {
+    final id = _in.uint();
+    return GoalRef(id, _pc(id, _in.uint()));
+  }
+
+  int _pc(int? goal, int pc) {
+    final map = programCounter;
+    return map == null ? pc : map(goal, pc);
+  }
 
   ModuleTerm? module() {
     if (!boolean()) return null;

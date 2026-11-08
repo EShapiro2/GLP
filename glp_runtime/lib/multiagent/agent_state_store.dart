@@ -16,6 +16,14 @@
 /// modules compiled for the agent certified under it (Implementation Notes,
 /// "Boot"), so the store keeps it apart from the state, and [keptKeyPair]
 /// makes it once.
+///
+/// The store keeps the compiled program the agent runs beside the key pair
+/// (IGLP 61f3283, "Persistence": "the agent's key pair, the compiled program
+/// it runs, the resolvent ..."; [StoredProgram]): a restart may load a new
+/// version of the program, and where the update is refused the agent
+/// restarts under the version it terminated under (Termination and Restart),
+/// which the store holds.  The program is kept apart from the state too, as
+/// it changes only at an update, and the state is saved in every cycle.
 library;
 
 import 'dart:io';
@@ -61,19 +69,46 @@ abstract class AgentStateStore {
   /// Save the agent's [keyPair].  Completes once it is kept; completes with
   /// an error where it is not.
   Future<void> saveKeyPair(AgentKeyPair keyPair);
+
+  /// The compiled program the agent runs, as last saved ([StoredProgram]'s
+  /// bytes), or null where none was.
+  Future<Uint8List?> loadProgram();
+
+  /// Save [program] in place of the program saved before it.  Completes once
+  /// it is kept; completes with an error where it is not, and then the
+  /// program saved before it stands.
+  Future<void> saveProgram(Uint8List program);
 }
 
-/// A store in one file, which the embedding application names, and the key
+/// A store in one file, which the embedding application names, the key
 /// pair's file beside it, `<path>.key`, holding the 32-byte seed from which
-/// the pair is made again.  A save writes a file beside it and renames it over
-/// the file, so a termination during the save leaves the state saved before
-/// it.
+/// the pair is made again, and the program's, `<path>.program`.  A save writes
+/// a file beside it and renames it over the file, so a termination during the
+/// save leaves the file saved before it.
 class FileAgentStateStore implements AgentStateStore {
   final String path;
 
   FileAgentStateStore(this.path);
 
   File get _keyFile => File('$path.key');
+
+  File get _programFile => File('$path.program');
+
+  @override
+  Future<Uint8List?> loadProgram() async {
+    final f = _programFile;
+    if (!await f.exists()) return null;
+    return f.readAsBytes();
+  }
+
+  @override
+  Future<void> saveProgram(Uint8List program) async {
+    final f = _programFile;
+    await f.parent.create(recursive: true);
+    final next = File('${f.path}.next');
+    await next.writeAsBytes(program, flush: true);
+    await next.rename(f.path);
+  }
 
   @override
   Future<Uint8List?> load() async {
@@ -127,6 +162,20 @@ class MemoryAgentStateStore implements AgentStateStore {
   int saves = 0;
 
   AgentKeyPair? _keyPair;
+
+  Uint8List? _program;
+
+  /// The number of programs saved.
+  int programSaves = 0;
+
+  @override
+  Future<Uint8List?> loadProgram() async => _program;
+
+  @override
+  Future<void> saveProgram(Uint8List program) async {
+    _program = Uint8List.fromList(program);
+    programSaves++;
+  }
 
   @override
   Future<AgentKeyPair?> loadKeyPair() async => _keyPair;

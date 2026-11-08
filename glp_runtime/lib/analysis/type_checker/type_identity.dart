@@ -1239,6 +1239,15 @@ class TypeIdentityTables {
   final TypeEnvironment Function()? _scope;
   TypeEnvironment? _scopeBuilt;
 
+  /// The module these tables were built from by [typeIdentityTablesForModule]
+  /// --- its type definitions and its procedure declarations, its clauses
+  /// aside --- from which that construction builds them again; null for
+  /// tables derived from an interface.  The store keeps it with the compiled
+  /// program the agent runs (IGLP, Implementation Notes, "Persistence"), so
+  /// that the program the agent terminated under runs with its own tables
+  /// after an update is refused (IGLP, Termination and Restart).
+  final ast.Module? source;
+
   TypeIdentityTables({
     required this.declared,
     required this.exported,
@@ -1246,6 +1255,7 @@ class TypeIdentityTables {
     required this.unresolved,
     this.opaque = const {},
     TypeEnvironment Function()? scope,
+    this.source,
   }) : _scope = scope;
 
   /// These tables with [opaque] recorded beside them.
@@ -1257,7 +1267,41 @@ class TypeIdentityTables {
         unresolved: unresolved,
         opaque: opaque,
         scope: _scope,
+        source: source,
       );
+
+  /// The type identity of the procedure [key] of this scope as it stands for
+  /// every instance of it, which a restart under a new version of the
+  /// program compares (IGLP, Termination and Restart: "every procedure called
+  /// by a goal of the resolvent is defined in the new version with the same
+  /// type identity"); null where it has none.  A monomorphic declaration's is
+  /// its identity in [declared].  A parameterised declaration D "has no
+  /// automaton of its own; it has an identity at each opaque instance" (TGLP,
+  /// Implementation Notes): its identity here is that of D⟨l_1, ..., l_k⟩, at
+  /// labels distinct from one another ([procedureInstanceLabels]).  Two
+  /// declarations have the same identity at every opaque instance exactly when
+  /// they have it at distinct labels: an instance at any labels is the one at
+  /// distinct labels with the labels identified, and equal automata stay
+  /// equal under it.  A parameterised declaration with no opaque instance, a
+  /// parameter occurring as an alternative of a type definition (Definition
+  /// "Type Identity of a Type, Opaque Instance"), has none, as an undeclared,
+  /// an unresolved or an imported one has none.
+  String? procedureIdentity(String key) {
+    final identity = declared[key];
+    if (identity != null) return identity;
+    if (!parametric.contains(key)) return null;
+    final build = _scope;
+    if (build == null) return null;
+    final scope = _scopeBuilt ??= build();
+    final template = scope.paramProcDecls[key];
+    if (template == null) return null;
+    try {
+      return opaqueInstanceIdentityHex(template,
+          procedureInstanceLabels(template.typeParams.length), scope);
+    } on OpaqueAlternativeError {
+      return null;
+    }
+  }
 
   /// The type identity of the opaque instance at [labels] of the
   /// parameterised declaration of [nameArity] in this scope: what
@@ -1373,8 +1417,16 @@ TypeIdentityTables typeIdentityTablesForModule(ast.Module module,
           for (final td in module.typeDefs)
             if (td.isParameterized) td.name: td,
         }),
+    source: module,
   );
 }
+
+/// The labels of the opaque instance at which a parameterised declaration of
+/// [k] type parameters has its identity as a procedure
+/// ([TypeIdentityTables.procedureIdentity]): [k] labels, distinct from one
+/// another, the same for every program.
+List<String> procedureInstanceLabels(int k) =>
+    [for (var i = 1; i <= k; i++) 'parameter$i'];
 
 // =============================================================================
 // The exported table, derived from an artefact's interface text
