@@ -1,0 +1,165 @@
+%% rv_live_client.glp - the client of the live rendezvous tests
+%%
+%% The agent each of the two test persons runs off the VPS, against the live
+%% rendezvous server at 162.35.126.126:9516 (GNA Section 6, "Rendezvous
+%% Server"; tools/live/bin/live_rv.dart drives it).  It is the smallest
+%% stand-in for the operating system's part, as the friends' program of
+%% networking/glue/test/rendezvous_server_test.dart is: it signs what it is
+%% told to sign, sends the request it is told to send, reports every reply
+%% to its person tagged with the number the test gave, and on punch declares
+%% the peer's address to its layer, where it knows the peer's key, and
+%% punches towards it.  It judges nothing: the test judges the replies
+%% against the paper.
+%%
+%% Acts (the test injects each as the person's act):
+%%   attest(F)                          sign attest(PkA, PkB), the smaller key
+%%                                      first, and report attestation(F, Sig)
+%%   reconnect(Tag, Rv, F, Sig)         send Rv reconnect(Me, F, Sig, Reply)
+%%   available(Tag, Rv, F, Sig)         send Rv available(Me, F, Sig, Reply)
+%%   make_link(Tag, Rv, RvAddr, Serial, Offset)
+%%                                      sign invitation(Me, Rv, RvAddr,
+%%                                      Serial, now + Offset) and report
+%%                                      link(Tag, Link)
+%%   forge_link(Tag, I, Rv, RvAddr, Serial, Offset)
+%%                                      the same, naming I as the inviter but
+%%                                      signed under this agent's own key
+%%   register(Tag, Rv, Link)            send Rv register(Me, Link, Reply)
+%%   redeem(Tag, Rv, I, Link)           sign redeem(Me, Link) and send Rv
+%%                                      redeem(Me, Signed, Reply); I is the
+%%                                      inviter, whose address a punch carries
+%%   redeem_as(Tag, Rv, R, Link)        sign redeem(R, Link) under this
+%%                                      agent's own key, R another's, and
+%%                                      send Rv redeem(R, Signed, Reply)
+%%
+%% Replies: punch(Address), the form the agent answers today, or
+%% punch(Key, Address), the form GNA Section 6 gives at 2ce8e10; or rejected.
+%% Each is reported as reply(Tag, Reply).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+SignalReply ::= punch(String) ; punch(Key, String) ; rejected.
+
+SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
+            ; available(Key, Key, SignedTerm, SignalReply?)
+            ; register(Key, SignedTerm, SignalReply?)
+            ; redeem(Key, SignedTerm, SignalReply?).
+
+LiveAct ::= attest(Key)
+          ; reconnect(Integer, Key, Key, SignedTerm)
+          ; available(Integer, Key, Key, SignedTerm)
+          ; make_link(Integer, Key, String, Integer, Integer)
+          ; forge_link(Integer, Key, Key, String, Integer, Integer)
+          ; register(Integer, Key, SignedTerm)
+          ; redeem(Integer, Key, Key, SignedTerm)
+          ; redeem_as(Integer, Key, Key, SignedTerm).
+
+LiveOut ::= attestation(Key, SignedTerm)
+          ; link(Integer, SignedTerm)
+          ; reply(Integer, SignalReply).
+
+%% The terms this agent signs.
+Attest ::= attest(Key, Key).
+Invitation ::= invitation(Key, Key, String, Integer, Integer).
+Redeem ::= redeem(Key, SignedTerm).
+
+%% =============================================================================
+%% THE AGENT
+%% =============================================================================
+
+exported procedure agent(Channel(Stream(LiveAct), Stream(LiveOut))?,
+                         Channel(Stream(NetMsg(SignalMsg)), Stream(NetMsg(SignalMsg)))?).
+agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
+
+procedure acts(Key?, Stream(LiveAct)?).
+acts(Me, [attest(F) | In]) :- ground(Me?), ground(F?) |
+    attest_pair(Me?, F?),
+    acts(Me?, In?).
+acts(Me, [reconnect(Tag, Rv, F, Sig) | In]) :- ground(Me?), ground(F?) |
+    send_to_net([msg(Rv?, reconnect(Me?, F?, Sig?, Reply))]),
+    on_reply(Tag?, F?, Reply?),
+    acts(Me?, In?).
+acts(Me, [available(Tag, Rv, F, Sig) | In]) :- ground(Me?), ground(F?) |
+    send_to_net([msg(Rv?, available(Me?, F?, Sig?, Reply))]),
+    on_reply(Tag?, F?, Reply?),
+    acts(Me?, In?).
+acts(Me, [make_link(Tag, Rv, RvAddr, Serial, Offset) | In]) :- ground(Me?) |
+    sign_link(Tag?, Me?, Me?, Rv?, RvAddr?, Serial?, Offset?),
+    acts(Me?, In?).
+acts(Me, [forge_link(Tag, I, Rv, RvAddr, Serial, Offset) | In]) :- ground(Me?) |
+    sign_link(Tag?, Me?, I?, Rv?, RvAddr?, Serial?, Offset?),
+    acts(Me?, In?).
+acts(Me, [register(Tag, Rv, Link) | In]) :- ground(Me?) |
+    send_to_net([msg(Rv?, register(Me?, Link?, Reply))]),
+    on_register(Tag?, Reply?),
+    acts(Me?, In?).
+acts(Me, [redeem(Tag, Rv, I, Link) | In]) :- ground(Me?), ground(Link?) |
+    sign(redeem(Me?, Link?), Me?, Signed),
+    send_redeem(Rv?, Me?, Signed?, Reply),
+    on_reply(Tag?, I?, Reply?),
+    acts(Me?, In?).
+acts(Me, [redeem_as(Tag, Rv, R, Link) | In]) :- ground(Me?), ground(R?), ground(Link?) |
+    sign(redeem(R?, Link?), Me?, Signed),
+    send_redeem(Rv?, R?, Signed?, Reply),
+    on_register(Tag?, Reply?),
+    acts(Me?, In?).
+acts(_, []).
+
+%% attest_pair(Me, F): the one pair, the smaller key first, signed by Me.
+procedure attest_pair(Key?, Key?).
+attest_pair(K, F) :- ground(K?), ground(F?), K? @< F? |
+    sign(attest(K?, F?), K?, Sig),
+    report_attestation(F?, Sig?).
+attest_pair(K, F) :- ground(K?), ground(F?), F? @< K? |
+    sign(attest(F?, K?), K?, Sig),
+    report_attestation(F?, Sig?).
+
+procedure report_attestation(Key?, SignedTerm?).
+report_attestation(F, Sig) :- ground(Sig?) |
+    send_to_user([attestation(F?, Sig?)]).
+
+%% sign_link(Tag, Signer, I, Rv, RvAddr, Serial, Offset): the link naming I
+%% as the inviter, expiring Offset milliseconds from now, signed by Signer.
+procedure sign_link(Integer?, Key?, Key?, Key?, String?, Integer?, Integer?).
+sign_link(Tag, Signer, I, Rv, RvAddr, Serial, Offset) :-
+    ground(I?), ground(Rv?), ground(RvAddr?), integer(Serial?), integer(Offset?) |
+    now(T),
+    Expiry := T? + Offset?,
+    sign(invitation(I?, Rv?, RvAddr?, Serial?, Expiry?), Signer?, Link),
+    report_link(Tag?, Link?).
+
+procedure report_link(Integer?, SignedTerm?).
+report_link(Tag, Link) :- ground(Link?) |
+    send_to_user([link(Tag?, Link?)]).
+
+procedure send_redeem(Key?, Key?, SignedTerm?, SignalReply).
+send_redeem(Rv, R, Signed, Reply?) :- ground(Signed?) |
+    send_to_net([msg(Rv?, redeem(R?, Signed?, Reply))]).
+
+%% on_reply(Tag, F, Reply): F the peer's key, known to the sender.  On a
+%% punch the address is declared as F's and punched towards.
+procedure on_reply(Integer?, Key?, SignalReply?).
+on_reply(Tag, F, punch(Addr)) :- ground(F?), ground(Addr?) |
+    declare(address(F?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([reply(Tag?, punch(Addr?))]).
+on_reply(Tag, _, punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([reply(Tag?, punch(K?, Addr?))]).
+on_reply(Tag, _, rejected) :-
+    send_to_user([reply(Tag?, rejected)]).
+
+%% on_register(Tag, Reply): the peer's key unknown to the sender; a punch
+%% carrying it is declared, one carrying the address alone is punched to.
+procedure on_register(Integer?, SignalReply?).
+on_register(Tag, punch(Addr)) :- ground(Addr?) |
+    punch_udp(Addr?),
+    send_to_user([reply(Tag?, punch(Addr?))]).
+on_register(Tag, punch(K, Addr)) :- ground(K?), ground(Addr?) |
+    declare(address(K?, Addr?)),
+    punch_udp(Addr?),
+    send_to_user([reply(Tag?, punch(K?, Addr?))]).
+on_register(Tag, rejected) :-
+    send_to_user([reply(Tag?, rejected)]).
