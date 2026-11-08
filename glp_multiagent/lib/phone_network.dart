@@ -61,8 +61,12 @@ class PhoneNetwork {
   const PhoneNetwork._(this.layer, this.network, this.keyPair, this.transports);
 
   /// Instantiate the layer for the agent of [persona], with the agent's key
-  /// pair, and start it.
-  static Future<PhoneNetwork> open({required String persona}) async {
+  /// pair, and start it.  The store the layer reduces its actions in runs
+  /// [middleware] on each action before it is reduced: in a debuggable build
+  /// the reporter's (lib/debuglog/app_reporting.dart), and none otherwise.
+  static Future<PhoneNetwork> open(
+      {required String persona,
+      List<Middleware<AppState>> middleware = const []}) async {
     final sodium = await SodiumSumoInit.init();
     final identity = await _identity(persona);
     final layer = GrassrootsNetwork(
@@ -70,7 +74,8 @@ class PhoneNetwork {
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
       platformAttestation: NativePlatformAttestation(
           verifier: const AttestationVerifier(allowAppAttestDevelopment: true)),
-      store: Store<AppState>(appReducer, initialState: const AppState()),
+      store: Store<AppState>(appReducer,
+          initialState: const AppState(), middleware: middleware),
       sodium: sodium,
     );
     final network = GrassrootsGlpNetwork(layer);

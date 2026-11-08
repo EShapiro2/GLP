@@ -61,6 +61,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'isolate_protocol.dart' show runtimeTermOf, screenTermOf;
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
+import 'ui_runtime/term.dart' show GTerm;
 
 /// The entry the person's first act names on a phone: superapp/4 of
 /// `programs/social/graph/core` (core's CoreAct `superapp(Key, List(Key))`).
@@ -93,7 +94,21 @@ class SuperAppHost {
   /// The person's screen: the bridge, and what the agent tells the person.
   /// The person's grants on it go to the agent, each an act of the person.
   late final UiRuntime ui = UiRuntime(
-      manifest: manifest, onSend: (cmd) => act(runtimeTermOf(cmd)));
+      manifest: manifest,
+      onSend: (cmd) {
+        onAct?.call(cmd);
+        act(runtimeTermOf(cmd));
+      });
+
+  /// Each act of the person on the screen, as the bridge sends it, before it
+  /// is handed to the agent; null, and none is told.  A debuggable build
+  /// reports it (lib/debuglog/app_reporting.dart).
+  void Function(GTerm cmd)? onAct;
+
+  /// Each term the agent sends its person, as [UiRuntime.handle] is handed
+  /// it ([AgentRuntime.onUserOutput]); null, and none is told.  A debuggable
+  /// build reports it (lib/debuglog/app_reporting.dart).
+  void Function(rt.Term term)? onUserOutput;
 
   /// The store that keeps the agent's local state across the termination of
   /// the app; null, and every start is a first start.
@@ -151,7 +166,10 @@ class SuperAppHost {
   /// program's compilation nor the program the store keeps (AgentRuntime's
   /// restore).
   Future<void> start() async {
-    agent.onUserOutput = (term) => ui.handle(screenTermOf(term));
+    agent.onUserOutput = (term) {
+      onUserOutput?.call(term);
+      ui.handle(screenTermOf(term));
+    };
     agent.onOutput = (line) => onOutput?.call(line);
     final log = onLog;
     if (log != null) agent.onLog = log;
