@@ -5,5 +5,12 @@ environment:
   sdk: ^3.9.4
 dependencies:
   mailer: ^6.4.1
+  args: ^2.4.0
+  glp_runtime:
+    path: ../../glp_runtime
+  grassroots_networking_core:
+    path: ../../networking/core
+  grassroots_networking_glue:
+    path: ../../networking/glue
 dev_dependencies:
   test: ^1.25.0
