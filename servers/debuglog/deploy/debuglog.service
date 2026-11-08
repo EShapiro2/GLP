@@ -1,0 +1,29 @@
+# systemd unit for the debugging log service of the Grassroots App on phones
+# (GLP/phones/docs/debugging.md, "The log service"), servers/debuglog.
+# Deployed to /etc/systemd/system/debuglog.service.  Runs as the system user
+# `glp`, which owns the clone at /srv/glp; the runs are under
+# /var/lib/glp/debuglog, outside the clone, and the hourly sweep
+# (servers/peoplesweb/deploy/sweep.sh) deletes those whose last event is more
+# than thirty days old.  Caddy, in front (servers/peoplesweb/deploy/Caddyfile),
+# proxies peoplesweb.org/log here.  The password is DEBUGLOG_PASSWORD in
+# /etc/glp/debuglog.env (see README, "The server"); without it the service
+# does not start.
+[Unit]
+Description=The debugging log service of the Grassroots App, at peoplesweb.org/log
+After=network.target
+
+[Service]
+User=glp
+Group=glp
+WorkingDirectory=/srv/glp/servers/debuglog
+Environment=HOST=127.0.0.1 PORT=8095 DATA=/var/lib/glp/debuglog
+EnvironmentFile=/etc/glp/debuglog.env
+ExecStartPre=/usr/bin/dart pub get
+ExecStart=/usr/bin/dart run bin/debuglog_server.dart
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/srv/glp /var/lib/glp
+
+[Install]
+WantedBy=multi-user.target

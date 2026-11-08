@@ -23,7 +23,8 @@
 #   GF - Grassroots federation records, transactions and platform (GFWC)
 #   APPS - The apps of the contracts (programs/apps), mini-apps compiled down the cascade: GKK's, GSG's, GSN's, GSNP's, GAI's, GC's and GB's
 #   TY - The tight typing discipline: no untyped procedure and no open type off test/OPEN_TYPES
-#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core
+#   NET - networking's own tests (GNA): flutter test in networking/ and networking/glue, dart test in networking/core, flutter test in servers/directory
+#   DL - the debugging log service of the phones (servers/debuglog): dart test there
 #
 # Every section runs unless GLP_SECTIONS names a subset ("Section selection"
 # below); test/run_fast.sh runs the fast tier.
@@ -66,7 +67,7 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET DL"
 FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
@@ -7151,18 +7152,18 @@ check "RV agent test1: A first, its needs entry is stored" "^P1 = \[needs(alice,
 check "RV agent test2 succeeds" "^→ succeeds$" "$(_rv_answer 2)"
 check "RV agent test2: B first, its ready entry is stored with B's address" "^P2 = \[ready(bob, alice, addr_b, X[0-9]*)\]$" "$(_rv_answer 2)"
 check "RV agent test3 succeeds" "^→ succeeds$" "$(_rv_answer 3)"
-check "RV agent test3: A after B, A punches to B's address" "^RA3 = punch(addr_b)$" "$(_rv_answer 3)"
-check "RV agent test3: A after B, B punches to A's address" "^RB3 = punch(addr_a)$" "$(_rv_answer 3)"
+check "RV agent test3: A after B, A punches to B's key and address" "^RA3 = punch(bob, addr_b)$" "$(_rv_answer 3)"
+check "RV agent test3: A after B, B punches to A's key and address" "^RB3 = punch(alice, addr_a)$" "$(_rv_answer 3)"
 check "RV agent test3: A after B, nothing left pending" "^P3 = \[\]$" "$(_rv_answer 3)"
 check "RV agent test4 succeeds" "^→ succeeds$" "$(_rv_answer 4)"
-check "RV agent test4: B after A, A punches to B's address" "^RA4 = punch(addr_b)$" "$(_rv_answer 4)"
-check "RV agent test4: B after A, B punches to A's address" "^RB4 = punch(addr_a)$" "$(_rv_answer 4)"
+check "RV agent test4: B after A, A punches to B's key and address" "^RA4 = punch(bob, addr_b)$" "$(_rv_answer 4)"
+check "RV agent test4: B after A, B punches to A's key and address" "^RB4 = punch(alice, addr_a)$" "$(_rv_answer 4)"
 check "RV agent test4: B after A, nothing left pending" "^P4 = \[\]$" "$(_rv_answer 4)"
 check "RV agent test5 succeeds" "^→ succeeds$" "$(_rv_answer 5)"
 check "RV agent test5: another pair's entry passes, A's needs is stored after it" "^P5 = \[ready(carol, dave, addr_c, X[0-9]*), needs(alice, bob, addr_a, X[0-9]*)\]$" "$(_rv_answer 5)"
 check "RV agent test6 succeeds" "^→ succeeds$" "$(_rv_answer 6)"
-check "RV agent test6: past another pair's entry, A punches to B's address" "^RA6 = punch(addr_b)$" "$(_rv_answer 6)"
-check "RV agent test6: past another pair's entry, B punches to A's address" "^RB6 = punch(addr_a)$" "$(_rv_answer 6)"
+check "RV agent test6: past another pair's entry, A punches to B's key and address" "^RA6 = punch(bob, addr_b)$" "$(_rv_answer 6)"
+check "RV agent test6: past another pair's entry, B punches to A's key and address" "^RB6 = punch(alice, addr_a)$" "$(_rv_answer 6)"
 check "RV agent test6: the other pair's entry is left pending" "^P6 = \[ready(carol, dave, addr_c, X[0-9]*)\]$" "$(_rv_answer 6)"
 check "RV agent test7: the agent terminates on the empty stream" "^→ succeeds$" "$(_rv_answer 7)"
 check "RV agent test7: an unsigned reconnect is rejected" "^R7 = rejected$" "$(_rv_answer 7)"
@@ -7192,8 +7193,8 @@ check "RV agent test15 succeeds" "^→ succeeds$" "$(_rv_answer 15)"
 check "RV agent test15: the layer observes no address for A, the reconnect is rejected" "^R15 = rejected$" "$(_rv_answer 15)"
 check "RV agent test15: the layer observes no address for A, B's entry is left pending" "^P15 = \[ready(bob, alice, addr_b, X[0-9]*)\]$" "$(_rv_answer 15)"
 check "RV agent test16 succeeds" "^→ succeeds$" "$(_rv_answer 16)"
-check "RV agent test16: the layer observes A's address, A punches to B's address" "^RA16 = punch(addr_b)$" "$(_rv_answer 16)"
-check "RV agent test16: the layer observes A's address, B punches to it" "^RB16 = punch(addr_a)$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, A punches to B's key and address" "^RA16 = punch(bob, addr_b)$" "$(_rv_answer 16)"
+check "RV agent test16: the layer observes A's address, B punches to it" "^RB16 = punch(alice, addr_a)$" "$(_rv_answer 16)"
 check "RV agent test16: the layer observes A's address, nothing left pending" "^P16 = \[\]$" "$(_rv_answer 16)"
 check "RV agent test17 succeeds" "^→ succeeds$" "$(_rv_answer 17)"
 check "RV agent test17: an unsigned available is refused" "^R171 = rejected$" "$(_rv_answer 17)"
@@ -7209,8 +7210,8 @@ check "RV agent test20 succeeds" "^→ succeeds$" "$(_rv_answer 20)"
 check "RV agent test20: the layer observes no address for B, the available is rejected" "^RB20 = rejected$" "$(_rv_answer 20)"
 check "RV agent test20: the layer observes no address for B, A's entry is left pending" "^P20 = \[needs(alice, bob, addr_a, X[0-9]*)\]$" "$(_rv_answer 20)"
 check "RV agent test21 succeeds" "^→ succeeds$" "$(_rv_answer 21)"
-check "RV agent test21: the layer observes B's address, A punches to it" "^RA21 = punch(addr_b)$" "$(_rv_answer 21)"
-check "RV agent test21: the layer observes B's address, B punches to A's address" "^RB21 = punch(addr_a)$" "$(_rv_answer 21)"
+check "RV agent test21: the layer observes B's address, A punches to it" "^RA21 = punch(bob, addr_b)$" "$(_rv_answer 21)"
+check "RV agent test21: the layer observes B's address, B punches to A's key and address" "^RB21 = punch(alice, addr_a)$" "$(_rv_answer 21)"
 check "RV agent test21: the layer observes B's address, nothing left pending" "^P21 = \[\]$" "$(_rv_answer 21)"
 
 # rv_client_test.glp
@@ -7230,7 +7231,7 @@ check "RV client test5: both rejected replies take handle_reply's rejected arm" 
 check "RV client test6 succeeds" "^→ succeeds$" "$(_rv_answer 27)"
 check "RV client test6: a bad signature is rejected" "^CA6 = rejected$" "$(_rv_answer 27)"
 check "RV client test6: B's unsigned available is rejected" "^CB6 = rejected$" "$(_rv_answer 27)"
-check "RV client test7: handle_reply dispatches punch(Addr) to punch_udp" "^→ succeeds$" "$(_rv_answer 28)"
+check "RV client test7: handle_reply dispatches punch(Key, Addr) to declare and punch_udp" "^→ succeeds$" "$(_rv_answer 28)"
 
 # friend_mediated_rendezvous_test.glp
 check "RV fmrv test1: an addr_update is consumed" "^→ succeeds$" "$(_rv_answer 29)"
@@ -7334,8 +7335,8 @@ check "RV agent test28: another serial of the inviter is registered" "^R283 = <u
 check "RV agent test28: the other serial is entered after the used one" "^P283 = \[used(alice, 7, 1000), invited(alice, 8, X[0-9]*)\]$" "$rv_28"
 rv_29=$(_rv_answer 44)
 check "RV agent test29 succeeds" "^→ succeeds$" "$rv_29"
-check "RV agent test29: a valid redemption, the inviter told the recipient's address" "^RI29 = punch(addr_b)$" "$rv_29"
-check "RV agent test29: a valid redemption, the recipient told the inviter's address" "^RR29 = punch(addr_a)$" "$rv_29"
+check "RV agent test29: a valid redemption, the inviter told the recipient's key and address" "^RI29 = punch(bob, addr_b)$" "$rv_29"
+check "RV agent test29: a valid redemption, the recipient told the inviter's key and address" "^RR29 = punch(alice, addr_a)$" "$rv_29"
 check "RV agent test29: the serial is marked used, the other pair's entry left pending" "^P29 = \[ready(carol, dave, addr_c, X[0-9]*), used(alice, 7, 1000)\]$" "$rv_29"
 rv_30=$(_rv_answer 45)
 check "RV agent test30 succeeds" "^→ succeeds$" "$rv_30"
@@ -7357,8 +7358,8 @@ check "RV agent test32: a used serial is refused" "^R32 = rejected$" "$rv_32"
 check "RV agent test32: the used entry is left as it was" "^P32 = \[used(alice, 7, 1000)\]$" "$rv_32"
 rv_33=$(_rv_answer 48)
 check "RV agent test33 succeeds" "^→ succeeds$" "$rv_33"
-check "RV agent test33: the first redemption, the inviter told the recipient's address" "^RI33 = punch(addr_b)$" "$rv_33"
-check "RV agent test33: the first redemption, the recipient told the inviter's address" "^R331 = punch(addr_a)$" "$rv_33"
+check "RV agent test33: the first redemption, the inviter told the recipient's key and address" "^RI33 = punch(bob, addr_b)$" "$rv_33"
+check "RV agent test33: the first redemption, the recipient told the inviter's key and address" "^R331 = punch(alice, addr_a)$" "$rv_33"
 check "RV agent test33: a second redemption of the link is refused" "^R332 = rejected$" "$rv_33"
 check "RV agent test33: the serial stays used" "^P33 = \[used(alice, 7, 1000)\]$" "$rv_33"
 rv_34=$(_rv_answer 49)
@@ -7590,8 +7591,9 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # 3; vGLP, Definitions "Volitional Procedure, ..." and "Canonical
 # Compilation"): home/3 asks the person once for the stream of their
 # requests, and the dispatcher draws its construct on the person channel, the
-# default widget of a stream of a union of tuples, a menu of the three forms
-# and the buttons Open place and Close place kept open, no form taking a key
+# default widget of a stream of a union of tuples, a menu of the three forms,
+# the buttons Open place, Close place and Invite by link, the form opening a
+# link, and List, List unlisted and Unlist, kept open, no form taking a key
 # typed (GSA #2, 2026-11-08 08:07 UTC, item 2); the persons known, seen
 # nearby, are told the person, nearby([bob]), on the same channel, merged
 # with the draws, and home draws a card for each with the button befriend,
@@ -7614,10 +7616,11 @@ play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
 play_home(alice, befriend, [msg(agent, person, nearby([bob])), msg(agent, person, connected(carol)), msg(agent, person, nearby([bob, carol])), msg(agent, person, nearby([bob, carol, dave]))], CB, LB).
+play_home(bob, introduce, [msg(agent, person, connected(alice)), msg(agent, person, connected(carol))], CX, LX).
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of three acts and the buttons Open place and Close place (GPE:1), drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place)\])), stream_request_r(input(\[\])))" "$sg_home"
+check "SG super-app home: the request form, a menu of three acts, the buttons Open place and Close place (GPE:1) and Invite by link (GRV:2), the form opening a link, and List, List unlisted and Unlist (GDS:2), drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place), button(invite_link), form(open_link, \[field(Link, text)\]), form(list, \[field(Email, text), field(Name, text)\]), form(list_unlisted, \[field(Email, text), field(Name, text)\]), button(unlist)\])), stream_request_r(input(\[\])))" "$sg_home"
 check_not "SG super-app home: no connect form, a person befriended by picking them in Nearby" "form(connect," "$sg_home"
 check "SG super-app home: the person known, seen nearby, is shown on the person channel, nearby([bob])" "^draw(0, thread(.*), output(\[msg(agent, person, nearby(\[bob\]))\]))$" "$sg_home"
 check "SG super-app home: home draws bob's card in Nearby with the button befriend" "^draw(2, form(nearby, \[field(Friend, shown), field(Befriend, button(befriend))\]), nearbyPerson_w(nearby(bob, input(\[2\]))))$" "$sg_home"
@@ -7628,7 +7631,72 @@ check "SG super-app home: yes on the introduction's card is accept_intro, the pe
 check "SG super-app home: no on the introduction's card is reject_intro, the pending value passed back" "CN = \[msg(person, alice, reject_intro(bob, error))\]" "$sg_home"
 check "SG super-app home: each person nearby whom the person knows gets a card with befriend, once, and a friend none (GSA paper, Appendix 'Nearby': the person befriends one by picking them there)" "LB = \[nearby(bob), nearby(dave) | " "$sg_home"
 check "SG super-app home: picking befriend on a card is the person's request to befriend that person, no key typed" "CB = \[msg(person, alice, connect(bob)), msg(person, alice, connect(dave))\]" "$sg_home"
+check "SG super-app home: two friends, home draws a card of the two with the button introduce (GKK's pragma Introduction, Alice [Introduce])" "LX = \[introduction(alice, carol) | " "$sg_home"
+check "SG super-app home: picking introduce is the person's act of GKK:3, the later friend introduced to the earlier" "CX = \[msg(person, bob, introduce(carol, alice))\]" "$sg_home"
 check_not "SG super-app home: no failed goal" "→ failed" "$sg_home"
+
+# The operating system's invitation links (core/links.glp; GNA Section 6,
+# "Invitation links", 2ce8e10; GSA paper, Section 4.2, "Legacy online
+# connections", and Appendix "The Operating System", 963fcbf), under the
+# plain REPL: one key the inviter and the recipient both, no layer bound, the
+# seam doing nothing.  Invite by link with a rendezvous server named: the
+# person is told the link as text, invitation(L), and it is registered with
+# the server, register(K, L, Reply), the reply awaiting the redemption; with
+# none named, refused and told the reason, rejected(no_rendezvous_server).  A text that is not a
+# link, and a link whose expiry has passed: refused and told,
+# rejected(open_link).  A link made and opened: redeemed at the server the
+# link names, redeem(K, Signed, Reply), the reply awaiting the server.  The
+# two phones over the WAN, the server a process, are NET's
+# (networking/glue/test/rendezvous_server_test.dart).
+sg_links=$("$REPL_RUN" <<HEREDOC
+$SG_CORE
+play_links([rendezvous(rv, rv_addr)], none, [invite_link], O1, N1, C1).
+play_links([], none, [invite_link], O2, N2, C2).
+play_links([], none, [open_link(nonsense)], O3, N3, C3).
+play_link_open(O4, N4).
+play_link_expired(O5).
+:quit
+HEREDOC
+2>&1)
+check "SG links: Invite by link tells the person the link, as text" "O1 = \[msg(agent, person, invitation('\{0,1\}[0-9a-f]*'\{0,1\}))" "$sg_links"
+check "SG links: Invite by link registers the link with the server the first act names" "^N1 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
+check "SG links: Invite by link with no server named is refused and told the reason" "O2 = \[msg(agent, person, rejected(no_rendezvous_server))\]$" "$sg_links"
+check "SG links: a text that is not a link is refused and told" "O3 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
+check "SG links: a link made and opened is redeemed at the server it names" "^N4 = \[msg(rv, redeem('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
+check "SG links: a link whose expiry has passed is refused and told" "O5 = \[msg(agent, person, rejected(open_link))\]$" "$sg_links"
+check_not "SG links: no failed goal" "→ failed" "$sg_links"
+
+# The person's listing with a directory (core/links.glp; GNA Section 7, "The
+# messages", 2ce8e10), under the plain REPL: List with a directory and a
+# rendezvous server sends list(A, Signed, Supply, Reply) to the directory,
+# Supply and Reply for it to write; with no directory, refused and told the
+# reason, rejected(no_directory), and with no rendezvous server,
+# rejected(no_rendezvous_server).  The directory's ask
+# more(2) is answered by two links, each registered with the server, and
+# then supply(A, [L1, L2]) to the directory; more(0) by supply(A, []).
+# Unlist with a directory sends unlist(A, Signed, Reply); with none, refused
+# and told the reason, rejected(no_directory).  The scripted directory over the WAN is NET's
+# (networking/glue/test/rendezvous_server_test.dart).
+sg_dir=$("$REPL_RUN" <<HEREDOC
+$SG_CORE
+play_links([rendezvous(rv, rv_addr)], directory(dir, dir_addr), [list("alice@example.org", "Alice", listed)], O1, N1, C1).
+play_links([rendezvous(rv, rv_addr)], none, [list("alice@example.org", "", unlisted)], O2, N2, C2).
+play_links([], directory(dir, dir_addr), [list("alice@example.org", "Alice", listed)], O6, N6, C6).
+play_links([rendezvous(rv, rv_addr)], directory(dir, dir_addr), [more(2)], O3, N3, C3).
+play_links([rendezvous(rv, rv_addr)], directory(dir, dir_addr), [more(0)], O7, N7, C7).
+play_links([], directory(dir, dir_addr), [unlist], O4, N4, C4).
+play_links([], none, [unlist], O5, N5, C5).
+:quit
+HEREDOC
+2>&1)
+check "SG directory: List sends the signed listing to the directory, its asks and answer for it to write" "^N1 = \[msg(dir, list('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*, X[0-9]*)) | X[0-9]*\]$" "$sg_dir"
+check "SG directory: List with no directory is refused and told the reason" "O2 = \[msg(agent, person, rejected(no_directory))\]$" "$sg_dir"
+check "SG directory: List with no rendezvous server is refused and told the reason" "O6 = \[msg(agent, person, rejected(no_rendezvous_server))\]$" "$sg_dir"
+check "SG directory: more(2) registers two links with the server and then supplies them to the directory" "^N3 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*)), msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*)), msg(dir, supply('\{0,1\}[0-9a-f]*'\{0,1\}, \['\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}\]))\]$" "$sg_dir"
+check "SG directory: more(0) supplies no link" "^N7 = \[msg(dir, supply('\{0,1\}[0-9a-f]*'\{0,1\}, \[\]))\]$" "$sg_dir"
+check "SG directory: Unlist sends the signed unlisting to the directory" "^N4 = \[msg(dir, unlist('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_dir"
+check "SG directory: Unlist with no directory is refused and told the reason" "O5 = \[msg(agent, person, rejected(no_directory))\]$" "$sg_dir"
+check_not "SG directory: no failed goal" "→ failed" "$sg_dir"
 
 # The child-safe platform hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation
@@ -9605,11 +9673,15 @@ if _section NET; then
 # since it depends on the Flutter package and has flutter_test and no
 # package:test, so `dart test` refuses it; and the pure-Dart core in
 # networking/core by `dart test`.  Each runs from its own directory, as
-# networking/README.md says.  The conventions are Section Q's: each runner's
+# networking/README.md says.  With them, since 2026-11-08 (Cloud #8), the
+# directory of GNA's Section 7, servers/directory, by `flutter test`, since
+# it depends on the glue and so on Flutter, which the Dart on the Mac's path
+# cannot resolve: its agent over the headless layer against a scripted app
+# over the loopback, and its store and page.  The conventions are Section Q's: each runner's
 # raw output and json report kept in the run's directory, SUITE_RUN_DIR
-# (net_flutter, net_glue and net_core, each .txt and .json), each failing test
-# printed as a FAIL
-# line "networking/<package>/test/<file>: <test name>" and counted, the passed
+# (net_flutter, net_glue, net_core and net_directory, each .txt and .json),
+# each failing test printed as a FAIL
+# line "<package directory>/test/<file>: <test name>" and counted, the passed
 # count added to the totals, a missing runner a hard failure, and a runner that
 # exits non-zero naming no failing test a hard failure, since it did not run its
 # tests.  The section has no known-red list: a red test fails it.
@@ -9618,16 +9690,15 @@ echo ""
 
 NET_RAW_DIR="$SUITE_RUN_DIR"
 mkdir -p "$NET_RAW_DIR" 2>/dev/null || true
-echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, each .txt and .json)"
+echo "  (raw output and json reports in $NET_RAW_DIR: net_flutter, net_glue, net_core, net_directory, each .txt and .json)"
 NET_PASSED=0
 NET_FAILED=0
 
-# _net_run <name> <directory under networking/> <runner>: runs the runner's
-# tests in that directory and adds to NET_PASSED and NET_FAILED.
+# _net_run <name> <directory from the repository root> <runner>: runs the
+# runner's tests in that directory and adds to NET_PASSED and NET_FAILED.
 _net_run() {
-    local name="$1" sub="$2" runner="$3"
-    local dir="$GLP_DIR/networking${sub:+/$sub}"
-    local rel="networking${sub:+/$sub}"
+    local name="$1" rel="$2" runner="$3"
+    local dir="$GLP_DIR/$rel"
     local raw="$NET_RAW_DIR/net_$name.txt"
     local result status clean passed fails dnf
     if ! command -v "$runner" >/dev/null 2>&1; then
@@ -9679,9 +9750,10 @@ _net_run() {
     NET_PASSED=$((NET_PASSED + passed))
 }
 
-_net_run flutter "" flutter
-_net_run glue glue flutter
-_net_run core core dart
+_net_run flutter networking flutter
+_net_run glue networking/glue flutter
+_net_run core networking/core dart
+_net_run directory servers/directory flutter
 
 PASS=$((PASS + NET_PASSED))
 FAIL=$((FAIL + NET_FAILED))
@@ -9692,6 +9764,73 @@ fi
 echo ""
 
 fi  # Section NET
+
+if _section DL; then
+# =============================================================================
+# Section DL: the debugging log service of the phones (servers/debuglog)
+# =============================================================================
+#
+# GLP/phones/docs/debugging.md, "The log service": `dart test` in
+# servers/debuglog, as Section NET runs networking/core: under the watchdog,
+# the raw output and json report in the run's directory (dl.txt and dl.json),
+# each failing test a FAIL line "servers/debuglog/test/<file>: <test name>",
+# a missing dart or a run that exits non-zero naming no failing test a hard
+# failure.  No known-red list: a red test fails it.
+echo "=== Section DL: the debugging log service (servers/debuglog) ==="
+echo ""
+DL_RAW_DIR="$SUITE_RUN_DIR"
+mkdir -p "$DL_RAW_DIR" 2>/dev/null || true
+DL_REL="servers/debuglog"
+DL_RAW="$DL_RAW_DIR/dl.txt"
+DL_JSON="$DL_RAW_DIR/dl.json"
+echo "  (raw output and json report in $DL_RAW_DIR: dl.txt and dl.json)"
+DL_PASSED=0
+DL_FAILED=0
+if ! command -v dart >/dev/null 2>&1; then
+    echo "  FAIL: dart is not on PATH, so $DL_REL/test/ cannot run"
+    DL_FAILED=1
+else
+    _q_run "$GLP_DIR/$DL_REL" "$DL_JSON" "$DL_RAW" "$DL_REL/" dart test
+    dl_status=$Q_RUN_STATUS
+    if [ "$Q_RUN_DNF" = 1 ]; then
+        _q_report_dnf "dart test in $DL_REL"
+        DL_FAILED=$((DL_FAILED + Q_DNF_COUNT))
+    fi
+    dl_clean=$(sed 's/\x1b\[[0-9;]*m//g' "$DL_RAW" 2>/dev/null | tr '\r' '\n') || dl_clean=""
+    DL_PASSED=$(printf '%s' "$dl_clean" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    DL_PASSED=${DL_PASSED:-0}
+    dl_fails=$(printf '%s' "$dl_clean" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed "s|^.*/$DL_REL/test/|$DL_REL/test/|; s|^test/|$DL_REL/test/|" \
+        | sort -u) || true
+    dl_loads=$(_q_load_failures "$DL_JSON" "$DL_REL/") || true
+    if [ -n "$dl_loads" ]; then
+        dl_fails=$(printf '%s\n%s' "$dl_fails" "$dl_loads" | sed '/^$/d' | sort -u)
+    fi
+    if [ "$dl_status" -ne 0 ] && [ -z "$dl_fails" ] && [ "$Q_RUN_DNF" = 0 ]; then
+        echo "  FAIL: dart test exited $dl_status in $DL_REL naming no failing test, so $DL_REL/test/ did not run"
+        printf '%s\n' "$dl_clean" | tail -5 | sed 's/^/        /'
+        DL_FAILED=$((DL_FAILED + 1))
+    fi
+    if [ -n "$dl_fails" ]; then
+        while IFS= read -r failure; do
+            [ -z "$failure" ] && continue
+            echo "  FAIL: $failure"
+            DL_FAILED=$((DL_FAILED + 1))
+        done <<< "$dl_fails"
+    fi
+    echo "  $DL_REL: $DL_PASSED passed (dart test; output in $DL_RAW)"
+fi
+PASS=$((PASS + DL_PASSED))
+FAIL=$((FAIL + DL_FAILED))
+if [ $DL_FAILED -eq 0 ]; then
+    echo "  PASS: All $DL_PASSED debugging log service tests passed"
+fi
+
+echo ""
+
+fi  # Section DL
 
 # =============================================================================
 # SUMMARY

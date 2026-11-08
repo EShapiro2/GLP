@@ -30,9 +30,9 @@ The service is debugging infrastructure, not a grassroots platform and not GLP: 
 
 3. The events, one JSON object a line, each with its time in Unix milliseconds, a source and a kind:
    - `runtime`: every line of `AgentRuntime.onOutput`, `onLog` and `onUserOutput` (`glp_runtime/lib/multiagent/agent_runtime.dart`), which already carry the messages sent and received, the `[INIT]` and `[ERROR]` lines and the person's channel;
-   - `layer`: every action the networking layer's store reduces (`AppState`, GNA Implementation Notes, "State") and every callback of the glue, `onPeerDiscovered`, `onPeerLost`, `onPeerConnected` with the attested application or `null`, `onPeerDisconnected`, `onMessageReceived` with the message's size and underlay, `onConnectivityStatusChanged`, `onNetworkChanged` and `onPlaceEvent`, the trust levels as set, and the layer's own diagnostics, today's `debugPrint` lines of `networking/core`;
+   - `layer`: every action the networking layer's store reduces (`AppState`, GNA Implementation Notes, "State") and every callback of the glue, `onPeerDiscovered`, `onPeerLost`, `onPeerConnected` with the attested application or `null`, `onPeerDisconnected`, `onMessageReceived` with the message's size and underlay, `onConnectivityStatusChanged`, `onNetworkChanged` and `onPlaceEvent`, the trust levels as set, and the layer's own diagnostics, every `debugPrint` line of `networking/core`, of the Flutter package `networking/lib` (`[lan]`, `[ble]`, `[local-host]`) and of the glue `networking/glue`;
    - `screen`: each screen the bridge draws, as the text of its thread and the forms and cards it shows (`ui_runtime`), whenever it changes, and each act the person takes on it, the button and the fields as filled;
-   - `app`: the app's own state line and every exception it catches (`main_superapp.dart`, `_status`).
+   - `app`: the app's own state line, every exception it catches (`main_superapp.dart`, `_status`), and each change of the app's lifecycle, to the foreground, the background and back.
    A key in an event is the full hex key; the service's reader shortens it.
 
 4. Buffer and flush: the reporter keeps the events in a file in the app's support directory and posts a batch every two seconds, or at once on an `[ERROR]`, over whatever path the phone has, cellular included; so a Bluetooth test with Wi-Fi off still streams, and a phone with no path at all posts the whole buffer when it has one.  The buffer is kept across the termination of the app and posted at the next launch under the run it belongs to.  The reporter posts over plain HTTPS with `dart:io`, not over the networking layer, which is what is debugged.
@@ -59,6 +59,16 @@ A play is a file in `plays/`, `<name>.md`, with two parts.
 `check.py` reads the logs of a run and prints, step by step, met, failed or not reached, with the first event that failed and the time it took; a play is green when every expectation is met on every phone.  The first plays are Udi's priorities (GSA, `docs/integration.md`, 2026-11-07 22:54 UTC): `p1-two-phones-ble`, `p1-two-phones-lan`, `p1-three-phones`, then `p2-install-invite-gsn`, then `p3-rendezvous-wan`.
 
 A play's expectations are what the papers say happens, GSA's Appendix "The Operating System" and GNA's layer: a failed expectation is a fault either in the code, reported to Code, or in the paper, reported to GSA; the play is never changed to pass.
+
+## The scripted build
+
+Taken up by Phones from Code's proposal to GSA (Code #26, GSA_inbox.md 2026-11-08 15:44 UTC), Udi approving (16:33 UTC).  A second debug build of the app whose person is a scripted person, the one the simulation runs, so that a play on phones runs with no tap and is judged from the logs alone.
+
+1. The person: the scripted persons of `programs/social/graph/core/superapp_plays.glp`, as `encounter_befriend` and `befriend_known`, run by the runtime at the person's channel, as under `:boot` (IGLP, Implementation Notes, "Boot": a scripted person is a program the runtime runs at the person's channel); the agent, core and the layer are the release build's, unchanged.
+2. The build: a Dart define, `GLP_PERSON=<mode>`, chooses the scripted person at build time, with the reporter on; a build without it has the person on the screen.  The entry is IGLP's Dart, beside `main_superapp.dart`; `tools/build.sh <udid> <mode>` builds it.
+3. The plays: each play of `plays/` names the mode that runs it on each device; a play run with scripted persons is judged by the same expectations as one run by hand, the `screen` events then recording what the scripted person saw and did.
+4. State: a scripted build keeps its agent's state across launches, as the release build does, in a file of its own, `agents/person-<mode>.state`; its scripted person acts at a launch with no saved state, and at a launch that restores one takes no act, so that a restart tests the restore as a play's step 7 has it.  A play from scratch deletes the app with its data first.
+5. Udi's part is to open the app on each device and give it a network; a play run by hand stays for what a script cannot test: the permission prompts, the screens as a person sees them, and the app in the background.
 
 ## Who does what
 

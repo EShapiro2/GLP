@@ -13,9 +13,10 @@ since the Mac's network answers no DNS query sent to a name server directly
 Part 2 runs its checks of the page once the directory answers at
 <base-url>/directory; the flow of a listing --- List, the verification mail and
 its link, the supply of links, the lookups, the redemption at the rendezvous
-server, Unlist, a restart, the mail rate --- runs through the directory's agent,
-which takes the person's acts and the links from the app (GNA Section 7, "The
-messages"), and is PENDING until the agent is built and deployed.
+server, Unlist, a restart, the mail rate --- runs through the directory's agent
+(GNA Section 7, "The messages"), and is bin/live_gds.dart's, which
+run_live.sh runs once the directory is deployed; here it is PENDING while the
+directory is not.
 
 Part 3 checks the route a verification mail takes off the VPS: the relay the
 directory is configured with (/etc/glp/directory.env, whose presence and
@@ -81,7 +82,7 @@ FLOW = [
     ('2.7-link-redeemed', 'the link handed out and redeemed at the rendezvous server (GRV:3)'),
     ('2.8-unlist', 'Unlist: the listing and its links gone, Supply closed'),
     ('2.9-restart', 'the listings and links kept across a restart, the buffer asked again '
-                    'when the app next connects'),
+                    'when the app lists again'),
     ('2.10-mail-rate', 'at most one verification mail per address per hour'),
 ]
 
@@ -110,12 +111,9 @@ def part2():
         s, b = http(f'{BASE}/directory/verify?t=00')
         result('2.1-verify-forged', 'PASS' if 'not one the directory sent' in b else 'FAIL',
                f'a verification link the directory did not send: {s}')
-    for i, what in FLOW:
-        result(i, 'PENDING',
-               f'{what}: runs through the directory\'s agent, which takes List, '
-               f'List unlisted, Unlist and the links from the app (GNA Section 7, '
-               f'"The messages", 2ce8e10) and is not yet built'
-               + ('' if deployed else ', and the directory is not deployed'))
+    if not deployed:
+        for i, what in FLOW:
+            result(i, 'PENDING', f'{what}: the directory is not deployed')
 
 
 # ---------------------------------------------------------------- part 3
@@ -174,8 +172,7 @@ def part3():
     if MAIL_TO and relay:
         result('3.10-mail-sent', 'PENDING',
                f'a verification mail to {MAIL_TO} is sent by a List of that address '
-               f'through the directory\'s agent, not yet built; then its recipient '
-               f'confirms it arrived')
+               f'through the directory\'s agent; its recipient confirms it arrived')
     else:
         result('3.10-mail-sent', 'PENDING',
                'a verification mail sent and received: waits on '

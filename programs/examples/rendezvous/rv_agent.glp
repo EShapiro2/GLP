@@ -20,8 +20,9 @@
 %%      available(B_pk, A_pk, SigA, ReplyB)
 %%   3. The RV agent reads each one's address from the networking layer via
 %%      peer_address(Pk?, PeerAddress) --- address(Addr), or none, on which
-%%      it refuses --- matches the two requests, and tells each to punch to
-%%      the other's address via its Reply: A gets punch(AddrB), B punch(AddrA)
+%%      it refuses --- matches the two requests, and tells each the key and
+%%      the address of the other via its Reply: A gets punch(B_pk, AddrB),
+%%      B punch(A_pk, AddrA) (GNA Section 6, "Reconnection")
 %%
 %% Admission by key (GSA, Section "The Secure Grassroots Social Graph",
 %% "Distribution and Activation", paragraph "Reconnection": "the rendezvous
@@ -82,9 +83,12 @@
 %%      peer_address/2, refusing where it observes none, and accepts only
 %%      where the serial is registered for I and unused, which it marks used,
 %%      used(I_pk, Serial, Expiry), so that a link admits one first contact.
-%%   3. The relay: ReplyI = punch(AddrR), ReplyR = punch(AddrI).  Each calls
-%%      punch_udp/1 towards the other, and the deterministic initiator, the
-%%      endpoint with the smaller key, connects (GNA, "IP connection").
+%%   3. The relay: ReplyI = punch(R_pk, AddrR), ReplyR = punch(I_pk, AddrI),
+%%      the key and the address of the other (GNA Section 6, "Invitation
+%%      links": "answers each with punch(Key, Address)").  Each declares the
+%%      other a peer at that address and calls punch_udp/1 towards it, and
+%%      the deterministic initiator, the endpoint with the smaller key,
+%%      connects (GNA, "IP connection").
 %%   A refused redemption changes nothing: the serial stays unused and I
 %%   waits.  An unredeemed registration waits until its serial is redeemed;
 %%   a used serial is kept until its link's expiry and then dropped: the
@@ -112,9 +116,10 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Reply sent back to agents via their reply variable: the address to punch
-%% to, or rejected
-SignalReply ::= punch(String) ; rejected.
+%% Reply sent back to agents via their reply variable: the key and the
+%% address of the other party, to declare and punch to, or rejected (GNA
+%% Section 6)
+SignalReply ::= punch(Key, String) ; rejected.
 
 %% Messages arriving via cold-call on the agent's input stream
 SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
@@ -126,12 +131,12 @@ SignalMsg ::= reconnect(Key, Key, SignedTerm, SignalReply?)
             ; register(Key, SignedTerm, SignalReply?)
               %% register(I_pk, Link, ReplyI) — the inviter I registers the
               %% serial of its invitation link Link as unused; ReplyI is
-              %% the address of the recipient who redeems it, punch(AddrR),
-              %% or rejected
+              %% the key and the address of the recipient who redeems it,
+              %% punch(R_pk, AddrR), or rejected
             ; redeem(Key, SignedTerm, SignalReply?).
               %% redeem(R_pk, Signed, ReplyR) — the recipient R redeems a
               %% link: Signed is redeem(R_pk, Link) signed by R; ReplyR is
-              %% punch(AddrI), or rejected
+              %% punch(I_pk, AddrI), or rejected
 
 %% Pending entries awaiting a match
 PendingEntry ::= needs(Key, Key, String, SignalReply?)
@@ -415,7 +420,7 @@ admit_redeem(Id, R, signed(K, _, invitation(I, Rv, _, Serial, Expiry)), T,
     T? < Expiry? |
     peer_address(I?, PeerAddressI),
     peer_address(R?, PeerAddressR),
-    redeem_addresses(I?, Serial?, Expiry?, PeerAddressI?, PeerAddressR?,
+    redeem_addresses(I?, R?, Serial?, Expiry?, PeerAddressI?, PeerAddressR?,
                      ReplyR, Pending?, Pending1).
 
 %% unsigned, a link signed by another than the inviter it names, a link
@@ -428,21 +433,22 @@ admit_redeem(_, _, _, _, rejected, Pending, Pending?) :-
 %% redeem_addresses: dispatch on what peer_address/2 reports for the two
 %% =============================================================================
 
-%% redeem_addresses(I, Serial, Expiry, PeerAddressI, PeerAddressR, ReplyR,
-%% Pending, Pending1): Expiry the link's, kept with the serial once used.
-exported procedure redeem_addresses(Key?, Integer?, Integer?, PeerAddress?,
-                                    PeerAddress?, SignalReply, PendingList?,
-                                    PendingList).
+%% redeem_addresses(I, R, Serial, Expiry, PeerAddressI, PeerAddressR, ReplyR,
+%% Pending, Pending1): I the inviter, R the recipient, Expiry the link's,
+%% kept with the serial once used.
+exported procedure redeem_addresses(Key?, Key?, Integer?, Integer?,
+                                    PeerAddress?, PeerAddress?, SignalReply,
+                                    PendingList?, PendingList).
 
 %% The layer observes both: look for the serial, registered for the inviter
 %% and unused.
-redeem_addresses(I, S, E, address(AddrI), address(AddrR), ReplyR?,
+redeem_addresses(I, R, S, E, address(AddrI), address(AddrR), ReplyR?,
                  Pending, Pending1?) :-
-    find_invited(I?, S?, E?, AddrI?, AddrR?, ReplyR, Pending?, Pending1).
+    find_invited(I?, R?, S?, E?, AddrI?, AddrR?, ReplyR, Pending?, Pending1).
 
 %% The layer observes no address for one of the two: there is none to relay,
 %% so the redemption is refused and the serial is left as it was.
-redeem_addresses(_, _, _, _, _, rejected, Pending, Pending?) :-
+redeem_addresses(_, _, _, _, _, _, rejected, Pending, Pending?) :-
     otherwise | true.
 
 %% =============================================================================
@@ -450,25 +456,27 @@ redeem_addresses(_, _, _, _, _, rejected, Pending, Pending?) :-
 %% registered for the inviter and unused
 %% =============================================================================
 
-%% find_invited(I, Serial, Expiry, AddrI, AddrR, ReplyR, Pending, Pending1).
-exported procedure find_invited(Key?, Integer?, Integer?, String?, String?,
-                                SignalReply, PendingList?, PendingList).
+%% find_invited(I, R, Serial, Expiry, AddrI, AddrR, ReplyR, Pending,
+%% Pending1).
+exported procedure find_invited(Key?, Key?, Integer?, Integer?, String?,
+                                String?, SignalReply, PendingList?,
+                                PendingList).
 
 %% Registered and unused: marked used until the link's expiry E, and each is
-%% told the address the RV agent observes for the other --- the inviter the
-%% recipient's, the recipient the inviter's.
-find_invited(I, S, E, AddrI, AddrR, ReplyR?, [invited(I2, S2, ReplyI?)|Ps],
-             [used(I2?, S2?, E?)|Ps?]) :-
+%% told the key of the other and the address the RV agent observes for it ---
+%% the inviter the recipient's, the recipient the inviter's.
+find_invited(I, R, S, E, AddrI, AddrR, ReplyR?,
+             [invited(I2, S2, ReplyI?)|Ps], [used(I2?, S2?, E?)|Ps?]) :-
     I? =?= I2?, S? =?= S2? |
-    complete_rendezvous(AddrI?, AddrR?, ReplyI, ReplyR).
+    complete_rendezvous(I?, AddrI?, R?, AddrR?, ReplyI, ReplyR).
 
 %% Another entry, a used serial among them: kept, and the search goes on.
-find_invited(I, S, E, AddrI, AddrR, ReplyR?, [P|Ps], [P?|Ps1?]) :-
+find_invited(I, R, S, E, AddrI, AddrR, ReplyR?, [P|Ps], [P?|Ps1?]) :-
     otherwise |
-    find_invited(I?, S?, E?, AddrI?, AddrR?, ReplyR, Ps?, Ps1).
+    find_invited(I?, R?, S?, E?, AddrI?, AddrR?, ReplyR, Ps?, Ps1).
 
 %% Not registered for the inviter, or used: refused.
-find_invited(_, _, _, _, _, rejected, [], []).
+find_invited(_, _, _, _, _, _, rejected, [], []).
 
 %% =============================================================================
 %% match_reconnect: dispatch on what peer_address/2 reports for A
@@ -510,7 +518,7 @@ exported procedure find_ready(Key?, Key?, String?, SignalReply,
 %% Match found: B was waiting — assign replies
 find_ready(A, B, AddrA, ReplyA?, [ready(B2, A2, AddrB, ReplyB?)|Ps], Ps?) :-
     A? =?= A2?, B? =?= B2? |
-    complete_rendezvous(AddrA?, AddrB?, ReplyA, ReplyB).
+    complete_rendezvous(A?, AddrA?, B?, AddrB?, ReplyA, ReplyB).
 
 %% No match at this entry, keep searching
 find_ready(A, B, AddrA, ReplyA?, [P|Ps], [P?|Ps1?]) :-
@@ -531,7 +539,7 @@ exported procedure find_needs(Key?, Key?, String?, SignalReply,
 %% Match found: A was waiting — assign replies
 find_needs(A, B, AddrB, ReplyB?, [needs(A2, B2, AddrA, ReplyA?)|Ps], Ps?) :-
     A? =?= A2?, B? =?= B2? |
-    complete_rendezvous(AddrA?, AddrB?, ReplyA, ReplyB).
+    complete_rendezvous(A?, AddrA?, B?, AddrB?, ReplyA, ReplyB).
 
 %% No match at this entry, keep searching
 find_needs(A, B, AddrB, ReplyB?, [P|Ps], [P?|Ps1?]) :-
@@ -542,11 +550,13 @@ find_needs(A, B, AddrB, ReplyB?, [P|Ps], [P?|Ps1?]) :-
 find_needs(A, B, AddrB, ReplyB?, [], [ready(B?, A?, AddrB?, ReplyB)]).
 
 %% =============================================================================
-%% complete_rendezvous: Both sides matched — relay to each the address
-%% observed for the other
+%% complete_rendezvous: Both sides matched — relay to each the key of the
+%% other and the address observed for it
 %% =============================================================================
 
-%% complete_rendezvous(AddrA, AddrB, ReplyA, ReplyB): A is told to punch to
-%% B's address and B to A's.
-procedure complete_rendezvous(String?, String?, SignalReply, SignalReply).
-complete_rendezvous(AddrA, AddrB, punch(AddrB?), punch(AddrA?)).
+%% complete_rendezvous(A, AddrA, B, AddrB, ReplyA, ReplyB): A is told B's key
+%% and address, and B A's (GNA Section 6: "relays to each the key and the
+%% address of the other").
+procedure complete_rendezvous(Key?, String?, Key?, String?, SignalReply,
+                              SignalReply).
+complete_rendezvous(A, AddrA, B, AddrB, punch(B?, AddrB?), punch(A?, AddrA?)).

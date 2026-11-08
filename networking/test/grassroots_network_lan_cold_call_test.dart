@@ -144,6 +144,24 @@ void main() {
             'unknown key');
   });
 
+  test('an instance resolved under Closed is contacted once Open is set',
+      timeout: Timeout.none, () async {
+    final network = await startNode(await identityFromSeed(0x75));
+    await network.lan!.setTrustLevel(ColdCallTrustLevel.closed);
+
+    final (address, dialed) = await instance();
+    network.debugResolveLanInstance(unmatchedToken, address);
+    await settle();
+    expect(network.debugUdpPeerIdForAddress(address), isNull,
+        reason: 'Closed ignores the unmatched instance');
+
+    // GLP opens the place: the instance resolved a moment ago is contacted
+    // now, not at its token's next rotation.
+    await network.lan!.setTrustLevel(ColdCallTrustLevel.open);
+    await dialed;
+    expect(network.debugUdpPeerIdForAddress(address), equals(address));
+  });
+
   test('a second resolution of the same instance does not dial twice',
       timeout: Timeout.none, () async {
     final network = await startNode(await identityFromSeed(0x73));

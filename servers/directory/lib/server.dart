@@ -4,8 +4,8 @@
 // unlisted person by email address and name (GDS:3), the link given to
 // whoever looked a person up (GDS:4), as text to open in a Grassroots App,
 // and the verification mail's link (GDS:2).  The person's own acts, List,
-// List unlisted and Unlist, are their app's, through the directory's agent;
-// the forms here serve a person with no app at hand only to verify.
+// List unlisted and Unlist, are their app's, through the directory's agent
+// (agent.dart), which calls [DirectoryService.list] for the mail.
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,10 +20,18 @@ class DirectoryService {
   final String base;
   DirectoryService(this.store, this.mailer, this.base);
 
-  /// GDS:2's verification: the mail with its link.  Called on the person's
-  /// List or List unlisted; refused as the store refuses.
-  Future<String?> list(String email, {String? name, bool listed = true}) async {
-    final r = store.request(email, name: name, listed: listed);
+  /// Called with a line for the server's log for each verification mail
+  /// sent, `mailed <address>: <link>`, so that the live suite, which reads
+  /// the log on the VPS, can open the link of a mail it made the directory
+  /// send to an address that receives none (tools/live/bin/live_gds.dart).
+  void Function(String line)? onLog;
+
+  /// GDS:2's verification: the mail with its link.  Called by the
+  /// directory's agent on the person's List or List unlisted, [key] the
+  /// person's; refused as the store refuses.  Returns null where the mail was
+  /// sent, and the reason otherwise.
+  Future<String?> list(String key, String email, {String? name, bool listed = true}) async {
+    final r = store.request(key, email, name: name, listed: listed);
     switch (r) {
       case Refused(:final reason):
         return reason;
@@ -32,6 +40,7 @@ class DirectoryService {
             'Someone, we hope you, asked to be ${listed ? 'listed' : 'found by email address and name'} in the Grassroots Directory at $base/directory under this address${name == null || name.isEmpty ? '' : ', with the name $name'}.\n\n'
             'To confirm, open this link:\n$base/directory/verify?t=$token\n\n'
             'If it was not you, ignore this mail; nothing is listed until the link is opened.\n');
+        onLog?.call('mailed $email: $base/directory/verify?t=$token');
         return null;
     }
   }

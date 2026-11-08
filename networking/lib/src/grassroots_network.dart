@@ -1982,7 +1982,10 @@ class GrassrootsNetwork {
   /// entries older than two slots are pruned. Kept so a key supplied
   /// *after* its instance resolved (GLP calling [putKnownPeer] while mDNS
   /// is already up) is still recognized — [_rematchLanInstances] replays
-  /// the cache whenever the known set grows.
+  /// the cache whenever the known set grows — and so an instance resolved
+  /// under Closed trust is contacted once GLP sets the LAN level Open
+  /// ([_setTrustLevel]; spec §Cold-Call Trust Levels: "under Open the agent
+  /// contacts or answers unmatched presences on that underlay").
   final Map<String, ({String address, DateTime at})> _lanResolvedInstances =
       {};
 
@@ -2168,6 +2171,16 @@ class GrassrootsNetwork {
   ) async {
     if (store.state.settings.trustLevelOf(underlay) == level) return;
     store.dispatch(SetColdCallTrustLevelAction(underlay, level));
+    // An instance resolved while the LAN level was Closed was ignored and
+    // kept; under Open it is contacted now, not at its token's next
+    // rotation, up to a slot later.
+    if (underlay == ProximityUnderlay.lan &&
+        level == ColdCallTrustLevel.open) {
+      final cutoff =
+          DateTime.now().subtract(GrassrootsIdentity.bleSlotDuration * 2);
+      _lanResolvedInstances.removeWhere((_, entry) => entry.at.isBefore(cutoff));
+      _rematchLanInstances();
+    }
   }
 
   // ===== Hole punching =====
