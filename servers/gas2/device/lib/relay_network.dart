@@ -439,7 +439,7 @@ class RelayGlpNetwork implements GlpNetwork {
   @override
   void removeKnownPeer(PubKey pk) => inner.removeKnownPeer(pk);
   @override
-  void Function(PubKey pk, Underlay underlay, Object? identity)? onPeerConnected;
+  void Function(PubKey pk, Underlay underlay, Application? application)? onPeerConnected;
   @override
   void Function(PubKey pk, Underlay underlay)? onPeerDisconnected;
   @override
