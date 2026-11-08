@@ -11,15 +11,16 @@ Three modes, each printing one line per check,
            whole and its line count held to the count data.js lists; each
            live contract's menu, specs/<id>.json; each paper's PDF or arXiv
            page.
-  render   every contract's page, index.html#<ID>, and every live
-           demonstration's page, app.html?c=<id>, rendered by headless
-           Chrome, which runs the page's JavaScript: no uncaught error and
-           no resource that fails to load in the console, and the page
-           draws the contract's title.
+  render   every contract's page, index.html#<ID>, rendered by headless
+           Chrome over the DevTools protocol (render.mjs), which runs the
+           page's JavaScript: no uncaught exception, no console error and no
+           failed request, and the page draws the contract's title and rules.
   live     the live demonstrations named, or all: each world started through
            the API the app page calls, /api/<id>/state, until its status is
-           ready and every person has drawn a menu, at most three at a time
-           (the server's MAX_WORLDS) and four minutes each.
+           ready and every person has drawn a menu; then its page,
+           app.html?c=<id>, rendered until it shows Ready with the four
+           persons and their actions, with no error.  At most three at a
+           time (the server's MAX_WORLDS), four minutes each; no act is made.
 
 Usage: site_check.py <base-url> static|render|live [contract ...]
 """
@@ -222,6 +223,8 @@ def live():
             out.append((f'4.5-live-{c["id"]}', 'FAIL', f'{url}: no state in {secs}s'))
         else:
             st = last.get('status')
+            if isinstance(st, str) and len(st) > 700:
+                st = f'{st[:300]} ... {st[-400:]}'
             drawn = {p: len(v) for p, v in last.get('persons', {}).items()}
             ok = st in ('ready', 'working') and drawn and all(n > 0 for n in drawn.values())
             out.append((f'4.5-live-{c["id"]}', 'PASS' if ok else 'FAIL',

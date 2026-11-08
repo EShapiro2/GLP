@@ -18,8 +18,9 @@
 #   2 3      the directory (GDS) and the mail route (directory_mail_check.py)
 #   4static  every file the site serves; every listed program downloads
 #   4render  every contract's page rendered by headless Chrome, its JS run
-#   4live-a 4live-b 4live-c
-#            the live demonstrations, a third each: each world started and
+#   4live-1 ... 4live-7
+#            the live demonstrations, three each (the server's MAX_WORLDS, so
+#            a part is one round, about five minutes): each world started and
 #            its app page rendered until Ready
 #   summary  the counts over the part files
 #
@@ -38,14 +39,14 @@ FLUTTER_DART="$(dirname "$(readlink -f "$(command -v flutter)")")/cache/dart-sdk
 mkdir -p "$OUT"
 ssh_vps() { ssh -o BatchMode=yes -o ConnectTimeout=10 "$VPS" "$@"; }
 
-# The live demonstrations in three parts, from data.js.
-live_third() {
+# The live demonstrations, the Nth three of them, from data.js.
+live_group() {
   curl -s "$BASE/data.js" | python3 -I -c '
 import sys, json
 t = sys.stdin.read(); d = json.loads(t[t.index("=") + 1:].strip().rstrip(";"))
 ids = [c["id"] for c in d["contracts"] if c.get("live")]
-k = "abc".index(sys.argv[1]); n = -(-len(ids) // 3)
-print(" ".join(ids[k * n:(k + 1) * n]))' "$1"
+k = int(sys.argv[1]) - 1
+print(" ".join(ids[3 * k:3 * k + 3]))' "$1"
 }
 
 part_vps() {
@@ -78,9 +79,9 @@ part_1() {
   (cd "$HERE" && bash "$RUN" live-pub flutter pub get > "$OUT/pub-get.txt" 2>&1)
   (cd "$HERE" && bash "$RUN" live-rv "$FLUTTER_DART" run bin/live_rv.dart \
       --server-key "$key" --server-address "$RV_ADDR" --glp-root "$GLP/programs" $reg \
-      > "$OUT/part-1-raw.txt" 2>&1)
-  grep -E '^(RESULT|INFO) ' "$OUT/part-1-raw.txt" > "$f"
-  grep -q '^RESULT' "$f" || echo "RESULT 1-run FAIL live_rv.dart printed no result; see $OUT/part-1-raw.txt" >> "$f"
+      > "$OUT/raw-part-1.txt" 2>&1)
+  grep -E '^(RESULT|INFO) ' "$OUT/raw-part-1.txt" > "$f"
+  grep -q '^RESULT' "$f" || echo "RESULT 1-run FAIL live_rv.dart printed no result; see $OUT/raw-part-1.txt" >> "$f"
   cat "$f"
 }
 
@@ -93,8 +94,9 @@ part_4() {
   case "$1" in
     static) python3 -I "$HERE/site_check.py" "$BASE" static | tee "$OUT/part-4static.txt" ;;
     render) python3 -I "$HERE/site_check.py" "$BASE" render | tee "$OUT/part-4render.txt" ;;
-    live-?) python3 -I "$HERE/site_check.py" "$BASE" live $(live_third "${1#live-}") \
-              | tee "$OUT/part-4$1.txt" ;;
+    live-*) g=$(live_group "${1#live-}")
+            if [ -z "$g" ]; then echo "no live demonstrations in group ${1#live-}"; return; fi
+            python3 -I "$HERE/site_check.py" "$BASE" live $g | tee "$OUT/part-4$1.txt" ;;
   esac
 }
 
@@ -103,7 +105,7 @@ summary() {
   echo "FAIL:"; cat "$OUT"/part-*.txt 2>/dev/null | grep '^RESULT [^ ]* FAIL' | cut -c1-220
 }
 
-[ $# -eq 0 ] && set -- vps 1 2 3 4static 4render 4live-a 4live-b 4live-c summary
+[ $# -eq 0 ] && set -- vps 1 2 3 4static 4render 4live-1 4live-2 4live-3 4live-4 4live-5 4live-6 4live-7 summary
 for p in "$@"; do
   echo "== part $p  $(date -u '+%F %T') UTC"
   case "$p" in
@@ -112,7 +114,7 @@ for p in "$@"; do
     2|3) part_23 "$p" ;;
     4static) part_4 static ;;
     4render) part_4 render ;;
-    4live-a|4live-b|4live-c) part_4 "live-${p#4live-}" ;;
+    4live-[1-9]) part_4 "live-${p#4live-}" ;;
     summary) summary ;;
     *) echo "unknown part $p" >&2; exit 64 ;;
   esac
