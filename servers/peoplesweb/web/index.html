@@ -191,8 +191,11 @@ D.contracts.forEach(c => C[c.id] = c);
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 const FAM = {identity: ['#5b8def', '#3a64c4', 'Identity'], social: ['#34c3ae', '#169482', 'Social'],
-  care: ['#a98be3', '#7552c4', 'Care'], money: ['#f6c25a', '#e0911c', 'Money'], mobility: ['#f79a78', '#dc5d3c', 'Mobility'], governance: ['#7b8cff', '#4a54d6', 'Governance'], sharing: ['#f78fb3', '#d6407c', 'Sharing']};
-const grad = c => `linear-gradient(160deg, ${FAM[c.family][0]}, ${FAM[c.family][1]})`;
+  care: ['#a98be3', '#7552c4', 'Care'], money: ['#f6c25a', '#e0911c', 'Money'], mobility: ['#f79a78', '#dc5d3c', 'Mobility'], governance: ['#7b8cff', '#4a54d6', 'Governance'], sharing: ['#f78fb3', '#d6407c', 'Sharing'], os: ['#9aa3ad', '#5f6b78', 'Operating System'], network: ['#7fb3d5', '#3f7fa8', 'Network'], other: ['#b0b0b8', '#7a7a85', 'Other']};
+// A family the table does not name is drawn as other, so a contract added to the
+// repository never stops the page.
+const famOf = c => FAM[c.family] ? c.family : 'other';
+const grad = c => `linear-gradient(160deg, ${FAM[famOf(c)][0]}, ${FAM[famOf(c)][1]})`;
 // Served by a live server (Render, the lab server, localhost): the app is next to this page.
 // Served as a static copy (GitHub Pages, a local file): the app is on Render.
 const LIVE = '';
@@ -280,7 +283,7 @@ function drawGlobe(){
     if (pos[p][2] < 0.02 || pos[c.id][2] < 0.02) return;
     const [px, py] = pos[p], [qx, qy] = pos[c.id];
     const Ln = Math.hypot(qx-px, qy-py) || 1, ux = (qx-px)/Ln, uy = (qy-py)/Ln;
-    const col = FAM[c.family][1], p0 = pad(p, ux, uy), p1 = pad(c.id, ux, uy);
+    const col = FAM[famOf(c)][1], p0 = pad(p, ux, uy), p1 = pad(c.id, ux, uy);
     s += c.relation === 'restricts'
       ? taper(pos[p], pos[c.id], 4.2*k, 0.4*k, 7*k, 2.8*k, col, p0, p1)
       : taper(pos[p], pos[c.id], 0.4*k, 4.2*k, 10*k, 7.5*k, col, p0, p1);
@@ -299,7 +302,7 @@ function drawGlobe(){
     const nx2 = (Cn[0]-Cp[0])/dn*ry*fn, ny2 = (Cn[1]-Cp[1])/dn*ry*fn;
     const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, ry*Math.cos(al)].map(x => x.toFixed(2)).join(' ')
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
-    const col = FAM[c.family];
+    const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
       <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
       <text x="${X.toFixed(1)}" y="${(Y + 0.36*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${c.id}</text></g>`;
@@ -343,7 +346,7 @@ function globeNav(){
     V.zoom = Math.max(0.8, Math.min(3.2, V.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
     drawGlobe(); }, {passive: false});
 }
-const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']]];
+const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']], ['Operating System', ['os']], ['Network', ['network']], ['Other', ['other']]];
 const OPEN = new Set();
 function drawShelves(){
   $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.filter(c => c.live).length} contracts, each with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
@@ -439,7 +442,7 @@ function page(c, hood){
 
 function hoodHtml(c){
   const own = c.schemas.filter(s => s.from === c.id), inh = c.schemas.filter(s => s.from !== c.id);
-  const L = c.layers, col = FAM[c.family][1];
+  const L = c.layers, col = FAM[famOf(c)][1];
   const n = i => `<span class="num" style="background:${col}">${i}</span>`;
   const codeLayer = (i, key, title, sum) => L[key] ? `<div class="card layer">${n(i)}<h3>${title}${Q(key)}</h3>
       <p class="sum">${sum}</p><details data-file="${L[key].file}"><summary>Show the code · ${L[key].lines.toLocaleString()} lines</summary><div class="code">Loading…</div></details></div>` : '';

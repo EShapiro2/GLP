@@ -1492,7 +1492,7 @@ PubKey? _peerKey(GlpNetwork network, String name) {
   return PubKey.fromHex(name);
 }
 
-/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], and `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E.  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
+/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E, and `nearby(U, S)` through [MadContext.declareNearby], which grows S from what the layer reports, `onPeerDiscovered`, `onPeerConnected` and `onPeerDisconnected`, and calls no layer function (GLP-Spec 210cee1; IGLP b20951d).  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
 BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
   const who = "'_declare'/1";
   if (args.length != 1) {
@@ -1512,13 +1512,15 @@ BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
       return _declareTrust(rt, a);
     case 'place/3':
       return _declarePlace(rt, a);
+    case 'nearby/2':
+      return _declareNearby(rt, a);
   }
   return kernelAbort('[ABORT] $who: argument (D) must be a Declaration --- '
-      'peer(P), address(P, A), rendezvous(P, A), trust(U, L) or place(P, R, E) '
-      '--- got $d');
+      'peer(P), address(P, A), rendezvous(P, A), trust(U, L), place(P, R, E) '
+      'or nearby(U, S) --- got $d');
 }
 
-/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], and `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream.  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
+/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream, and `nearby(U)`, which closes the stream of the nearby declaration on U (GLP-Spec 210cee1).  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
 BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
   const who = "'_remove'/1";
   if (args.length != 1) {
@@ -1534,9 +1536,11 @@ BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
       return _removeRendezvous(rt, a);
     case 'place/1':
       return _removePlace(rt, a);
+    case 'nearby/1':
+      return _removeNearby(rt, a);
   }
   return kernelAbort('[ABORT] $who: argument (R) must be a Removal --- '
-      'peer(P), rendezvous(P) or place(P) --- got $r');
+      'peer(P), rendezvous(P), place(P) or nearby(U) --- got $r');
 }
 
 /// Call the layer function [call] with the layer bound to [rt] and the key a ground [arg] names in it, for the alternative [what] of [who].  It returns having done nothing where no layer is bound; an [arg] that is not a ground constant, or that names no peer, is a violated precondition, and so an abort.
@@ -1661,6 +1665,49 @@ BodyKernelResult _declarePlace(GlpRuntime rt, List<Term> a) {
   }
   return _layerCall(who, what,
       () => seam.ctx.declarePlace(place, radius.toDouble(), stream.addr));
+}
+
+/// The proximity underlay a ground constant [arg] names, `pan` or `lan`, or null where it names neither.
+ProximityUnderlay? _proximityUnderlay(GlpRuntime rt, Object? arg) =>
+    switch (_groundString(rt, arg)) {
+      'pan' => ProximityUnderlay.pan,
+      'lan' => ProximityUnderlay.lan,
+      _ => null,
+    };
+
+/// `declare(nearby(U, S))`: assign S a stream of the agents nearby over the proximity underlay U, `seen(K)` when the layer discovers on U an agent of key K that it recognises or, under open trust, contacts, and `gone(K)` when that agent can no longer be reached over U; a further declaration on the same underlay supersedes the earlier one and closes its stream (GLP-Spec 210cee1, appendix-guards, "Networking seam"; IGLP b20951d, Definition "Seam Predicates" and the paragraph after it).  The stream is fed and closed as a place's, by the runtime's bookkeeping ([GlpRuntime.nearbyStreams]); what feeds it is what the layer reports ([MadContext.declareNearby]).
+///
+/// Where no layer is bound the declaration stands in the runtime's bookkeeping all the same, so its removal or a further declaration closes the stream, and nothing is reported on it: a layer that observes nothing discovers no agent (IGLP, Implementation Notes, "One interface", which states this of a place's stream).
+BodyKernelResult _declareNearby(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'nearby(U, S)';
+  final underlay = _proximityUnderlay(rt, a[0]);
+  if (underlay == null) {
+    return kernelAbort('[ABORT] $who: $what: the underlay (U) must be pan or '
+        'lan, got ${_deref(rt, a[0])}');
+  }
+  final stream = _deref(rt, a[1]);
+  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
+    return kernelAbort('[ABORT] $who: $what: the stream (S) must be a writer');
+  }
+  final ctx = rt.madContext;
+  if (ctx is MadContext) {
+    ctx.declareNearby(underlay, stream.addr);
+  } else {
+    rt.nearbyStreams.declare(underlay.name, stream.addr);
+  }
+  return BodyKernelResult.success;
+}
+
+/// `remove(nearby(U))`: end the nearby declaration on U, closing its stream, its tail assigned `[]`; does nothing where none stands (GLP-Spec 210cee1, appendix-guards, "Networking seam").  The closing is the runtime's, layer or none.
+BodyKernelResult _removeNearby(GlpRuntime rt, List<Term> a) {
+  const who = "'_remove'/1", what = 'nearby(U)';
+  final underlay = _proximityUnderlay(rt, a[0]);
+  if (underlay == null) {
+    return kernelAbort('[ABORT] $who: $what: the underlay (U) must be pan or '
+        'lan, got ${_deref(rt, a[0])}');
+  }
+  rt.nearbyStreams.close(underlay.name);
+  return BodyKernelResult.success;
 }
 
 /// `remove(peer(P))`: take P, and any address recorded for it, off the layer's known peers, `removeKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA, "Known Peers").

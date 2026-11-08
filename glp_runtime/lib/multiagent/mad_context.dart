@@ -19,6 +19,8 @@ import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
 import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
@@ -98,6 +100,19 @@ class MadContext {
   /// delivered.  Where it is not set, an event is delivered as it arrives.
   void Function(String place, PlaceEvent event, int? declaration)?
       placeEventSink;
+
+  /// Where the presences of a nearby declaration go, where set: to the host,
+  /// which delivers each in an event cycle of its own by [deliverPresence],
+  /// as it does a place event ([placeEventSink]).  [declaration] is the
+  /// nearby declaration on [underlay] that stood when the layer reported it,
+  /// and is checked when the presence is delivered.  Where it is not set, a
+  /// presence is delivered as the layer reports it.
+  void Function(ProximityUnderlay underlay, Term presence, int declaration)?
+      presenceSink;
+
+  /// The number of presences delivered onto a nearby stream, so that a host
+  /// delivering them as they arrive can tell that a run is to follow.
+  int presencesDelivered = 0;
 
   /// Optional trace sink for MAD infrastructure output.
   /// When set, MAD debug output goes through this callback instead of print().
@@ -784,15 +799,140 @@ class MadContext {
     final sessions = _peerSessions.putIfAbsent(pk.hex, () => {});
     sessions.remove(underlay); // the latest report last
     sessions[underlay] = application;
+    final proximity = _proximity(underlay);
+    if (proximity != null) _appeared(pk, proximity);
   }
 
   /// The layer reported [pk] no longer reachable over [underlay].  Called by
   /// the host that binds the network, from the layer's `onPeerDisconnected`.
   void peerDisconnected(PubKey pk, Underlay underlay) {
+    final proximity = _proximity(underlay);
+    if (proximity != null) _vanished(pk, proximity);
     final sessions = _peerSessions[pk.hex];
     if (sessions == null) return;
     sessions.remove(underlay);
     if (sessions.isEmpty) _peerSessions.remove(pk.hex);
+  }
+
+  // ===========================================================================
+  // AGENTS NEARBY (Definition Seam Predicates: nearby(U, S))
+  // ===========================================================================
+  //
+  // GLP-Spec 210cee1, appendix-guards, "Networking seam": "nearby(U, S)
+  // assigns S a stream of the agents nearby over the proximity underlay U:
+  // seen(K) when the layer discovers on U an agent of key K that it
+  // recognises or, under open trust, contacts, and gone(K) when that agent can
+  // no longer be reached over U.  A further declaration on the same underlay
+  // supersedes the earlier one and closes its stream, and remove(nearby(U))
+  // ends the declaration and closes its stream."  IGLP b20951d, after
+  // Definition "Seam Predicates": a presence is bridged below the madGLP
+  // layer, the stream fed serializer-fashion and closed as a place's.
+  //
+  // The layer discovers a nearby agent, recognised or, under open trust,
+  // contacted, by onPeerDiscovered(pk) on that underlay's sub-object, once per
+  // identity, and a return after it was lost by the session it establishes
+  // again over that underlay, onPeerConnected(pk, underlay); it reports the
+  // agent no longer reachable over the underlay by onPeerDisconnected(pk,
+  // underlay) (GNA, api.tex, "Connection and Reachability"; proximity.tex,
+  // "Concepts and Principles", Contact and identity and Discovery).  The
+  // runtime keeps, per proximity underlay, the agents so reported nearby and
+  // not since gone, so a discovery and the session that follows it are one
+  // seen, and a declaration is given seen for every agent nearby when it is
+  // made.  What the layer reports is the layer's and is reported again after
+  // a restart, so the record is not part of the agent's saved state; the
+  // declarations and their streams are ([GlpRuntime.nearbyStreams]).
+
+  /// The agents the layer has reported nearby over each proximity underlay
+  /// and not since gone, by key hex, in order of report.
+  final Map<ProximityUnderlay, Map<String, PubKey>> _nearby = {
+    for (final u in ProximityUnderlay.values) u: <String, PubKey>{},
+  };
+
+  /// The proximity underlay [underlay] is, or null for the WAN.
+  static ProximityUnderlay? _proximity(Underlay underlay) => switch (underlay) {
+        Underlay.pan => ProximityUnderlay.pan,
+        Underlay.lan => ProximityUnderlay.lan,
+        Underlay.wan => null,
+      };
+
+  /// The layer reported [pk] discovered over the proximity underlay
+  /// [underlay], `onPeerDiscovered(pk)` on its sub-object.  Called by the host
+  /// that binds the network.
+  void peerDiscovered(PubKey pk, ProximityUnderlay underlay) =>
+      _appeared(pk, underlay);
+
+  /// Whether the layer has reported [pk] nearby over [underlay] and not since
+  /// gone.
+  bool isNearby(PubKey pk, ProximityUnderlay underlay) =>
+      _nearby[underlay]!.containsKey(pk.hex);
+
+  void _appeared(PubKey pk, ProximityUnderlay underlay) {
+    final nearby = _nearby[underlay]!;
+    if (nearby.containsKey(pk.hex)) return; // already seen and not gone
+    nearby[pk.hex] = pk;
+    _presence(underlay, _presenceTerm('seen', pk));
+  }
+
+  void _vanished(PubKey pk, ProximityUnderlay underlay) {
+    if (_nearby[underlay]!.remove(pk.hex) == null) return; // never seen
+    _presence(underlay, _presenceTerm('gone', pk));
+  }
+
+  /// `seen(K)` or `gone(K)`, K the key of [pk] as a program names the agent:
+  /// its key, 64 lowercase hex characters, over a real network, and in a
+  /// simulation the readable name standing for it, as the seam names the
+  /// sender of a message (IGLP, Remark "Agent Names"; Implementation Notes,
+  /// "Simulation realisation": "a readable name stands for a key").
+  Term _presenceTerm(String functor, PubKey pk) {
+    final network = this.network;
+    final name = network is SimulationNetworkClient
+        ? network.directory.idOf(pk) ?? pk.hex
+        : pk.hex;
+    return StructTerm(functor, [ConstTerm(name)]);
+  }
+
+  /// A presence the layer reported on [underlay]: to the host's
+  /// [presenceSink] where it is set, delivered at once where it is not; where
+  /// no nearby declaration on [underlay] stands, nothing.
+  void _presence(ProximityUnderlay underlay, Term presence) {
+    final declaration = runtime.nearbyStreams.standing(underlay.name);
+    if (declaration == null) return;
+    final sink = presenceSink;
+    if (sink != null) {
+      sink(underlay, presence, declaration);
+    } else {
+      deliverPresence(underlay, presence, declaration: declaration);
+    }
+  }
+
+  /// Declare a watch on the agents nearby over [underlay], its stream growing
+  /// from [streamWriterAddr], the writer of the `S` of
+  /// `declare(nearby(U, S))`; a declaration on [underlay] already standing is
+  /// superseded and its stream closed.  The stream is given `seen(K)` at once
+  /// for every agent the layer has reported nearby over [underlay] and not
+  /// since gone.
+  void declareNearby(ProximityUnderlay underlay, HeapCell streamWriterAddr) {
+    runtime.nearbyStreams.declare(underlay.name, streamWriterAddr);
+    _trace('[MAD $agentId] declare nearby over ${underlay.name}: stream '
+        'writer=$streamWriterAddr');
+    for (final pk in _nearby[underlay]!.values) {
+      runtime.nearbyStreams.deliver(underlay.name, _presenceTerm('seen', pk));
+    }
+  }
+
+  /// Deliver [presence] on [underlay]'s nearby stream, serializer-fashion; a
+  /// presence answering a [declaration] that no longer stands, removed or
+  /// superseded, is dropped.
+  void deliverPresence(ProximityUnderlay underlay, Term presence,
+      {required int declaration}) {
+    if (!runtime.nearbyStreams.isStanding(underlay.name, declaration)) {
+      _trace('[MAD $agentId] presence $presence over ${underlay.name} for a '
+          'nearby declaration that no longer stands --- dropped');
+      return;
+    }
+    runtime.nearbyStreams.deliver(underlay.name, presence);
+    presencesDelivered++;
+    _trace('[MAD $agentId] nearby over ${underlay.name}: $presence');
   }
 
   /// The layer's session with [pk] as reported, or null where it has none:

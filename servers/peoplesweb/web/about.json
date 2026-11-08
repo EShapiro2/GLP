@@ -128,5 +128,30 @@
   "📰",
   "social",
   ""
+ ],
+ "GFP": [
+  "✍️",
+  "social",
+  "Forwarding items with provenance: whoever passes an item on signs it."
+ ],
+ "GPD": [
+  "📦",
+  "os",
+  "Programs passed from friend to friend: publishing, trusting developers, installing and inviting."
+ ],
+ "GAS": [
+  "🏪",
+  "os",
+  "The app store: a developer whose agent runs on a server and offers the programs it holds."
+ ],
+ "GRV": [
+  "🛰️",
+  "network",
+  "Rendezvous: friends far apart find each other again through a rendezvous server."
+ ],
+ "GPE": [
+  "📶",
+  "network",
+  "Meeting in person: phones near each other, over Bluetooth or the local network, become friends."
  ]
 }

@@ -6,10 +6,9 @@
 %% its goal, and afterwards only what arrives on them (GSG paper, Section 3,
 %% "What the super-app grants a mini-app"): its end of the person channel, on
 %% which it shows its person what it draws; its channel to the social graph,
-%% on which the social graph hands it, at each invitation and each warm call,
-%% one end of a root channel to the execution of the same mini-app at a
-%% friend, and reports a held link, and on which the mini-app asks for a warm
-%% call (Section 5.4); and the calendar, which it keeps no dates for and
+%% on which the social graph hands it, at each invitation, one end of a root
+%% channel to the execution of the same mini-app at a friend, and reports a
+%% held link (Section 5.4); and the calendar, which it keeps no dates for and
 %% ignores.  On each conversation the execution reports to its person that it
 %% opened, greets the other over the root channel, and reports the greeting
 %% it receives.  What it reports reaches the person as its output thread,
@@ -22,16 +21,16 @@
 %% predicate reaching the network or the person, so the program is
 %% certified.
 %%
-%% THE RELAY, for the warm call: the execution at alice, once greeted by carol,
+%% THE RELAY, for a held link: the execution at alice, once greeted by carol,
 %% sends carol probe(W), the writer end of a fresh variable, and waits on W?;
 %% the execution at carol forwards probe(W) on its conversation with bob (or
 %% holds it until that conversation opens); the execution at bob assigns W.
 %% The end reached bob under alice's name from carol, so bob's runtime holds
 %% the assignment and reports pending_link(Name, carol) to bob's super-app,
-%% which reports it here as held(Name, carol); the mini-app asks its social
-%% graph for a warm call to the anchor through carol, warm_call(Name, carol)
-%% (GSG, 2026-10-14 11:36 UTC, items 2 and 3), and, the warm call done,
-%% alice's execution reads the value and reports got(V).
+%% which reports it here as held(Name, carol); the mini-app reports it to its
+%% person, and the link stays held, for the person to be asked whether to know
+%% alice (GSA paper, Section 5.4, "Whom the Grassroots App knows"); released,
+%% alice's execution would read the value and report got(V).
 
 exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
 miniapp(Id, ch(Gs, Draws?), ch(Down, Up?), _) :-
@@ -85,9 +84,9 @@ loop(Id, [conversation(F, ch(In, Out?)) | Down], Ev, [opened(F?) | Ui?], Up?, Co
     open_out(F?, Id?, Held?, Held1, Out, Out2?),
     loop(Id?, Down?, Ev1?, Ui, Up, [conv(F?, Out2) | Convs?], Held1?).
 
-%% The social graph reports a held link: ask it for a warm call to the anchor
-%% through the friend that forwarded the end.
-loop(Id, [held(Name, Via) | Down], Ev, [held_link(Via?) | Ui?], [warm_call(Name?, Via?) | Up?], Convs, Held) :-
+%% The social graph reports a held link: report it to the person, the link
+%% held for the person to be asked (Section 5.4).
+loop(Id, [held(_, Via) | Down], Ev, [held_link(Via?) | Ui?], Up?, Convs, Held) :-
     ground(Via?) |
     loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
 

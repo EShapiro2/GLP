@@ -20,6 +20,14 @@
 /// appendix-implementation-notes.tex, "One interface").  Until 2026-10-12 the
 /// bookkeeping was MadContext's alone, kept where a layer was bound, and a
 /// stream declared with none was never closed.
+///
+/// A nearby declaration's stream is kept by a second instance,
+/// [GlpRuntime.nearbyStreams], keyed by the proximity underlay's name, `pan`
+/// or `lan`: "A place event and a presence on a nearby stream are bridged
+/// below the madGLP layer ... A further declaration on the same underlay
+/// supersedes the earlier one; each closes the stream, as for a place" (IGLP
+/// b20951d, madglp-spec.tex, Definition "Seam Predicates" and the paragraph
+/// after it; GLP-Spec 210cee1, appendix-guards, "Networking seam").
 library;
 
 import 'heap_fcp.dart' show HeapCell;
@@ -48,6 +56,11 @@ class PlaceStreams {
 
   /// The places whose declarations stand.
   Iterable<String> get places => _tails.keys;
+
+  /// The number of [place]'s standing declaration, as [declare] numbered it,
+  /// or null where none stands.
+  int? standing(String place) =>
+      _tails.containsKey(place) ? _declarations[place] : null;
 
   /// Whether [declaration], as [declare] numbered it, is [place]'s standing one.
   bool isStanding(String place, int declaration) =>

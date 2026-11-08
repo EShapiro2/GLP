@@ -121,6 +121,14 @@ class GlpRuntime {
   /// whether a networking layer is bound or none is.
   late final PlaceStreams placeStreams = PlaceStreams(this);
 
+  /// The nearby declarations and their presence streams, by proximity
+  /// underlay name, `pan` or `lan`: the runtime's bookkeeping behind
+  /// declare(nearby(U, S)) and remove(nearby(U)), fed and closed as a place's
+  /// stream (GLP-Spec 210cee1, appendix-guards, "Networking seam"; IGLP
+  /// b20951d, Definition "Seam Predicates" and the paragraph after it), kept
+  /// whether a networking layer is bound or none is.
+  late final PlaceStreams nearbyStreams = PlaceStreams(this);
+
   /// The machine's simulated clock and its queue of pending tokens (GLP-Spec
   /// appendix-guards.tex at 5fd9a15, "Simulated time": "The clock is of one
   /// machine, as when_idle is"), behind '_start_clock', '_rated' and
@@ -445,6 +453,7 @@ class GlpRuntime {
       w.cell(pair.reader);
     }
     placeStreams.saveState(w);
+    nearbyStreams.saveState(w);
   }
 
   /// Read back what [saveState] wrote, into this runtime, fresh from its
@@ -507,6 +516,7 @@ class GlpRuntime {
       _idleWaits[id] = (writer: writer, reader: r.cell());
     }
     placeStreams.restoreState(r);
+    nearbyStreams.restoreState(r);
   }
 
   /// The goals held, by id, and the program key each runs: what a restarted

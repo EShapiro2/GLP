@@ -107,7 +107,10 @@ let PERSONS = ['alice','bob','carol','dave'];
 let NAMES = {};
 const PHONES = () => PERSONS;
 const col = p => ['alice','bob','carol','dave'].includes(p) ? `var(--${p})` : `hsl(${parseInt(String(p).slice(0, 6), 16) % 360} 60% 55%)`;
-const FAM = {identity: ['#5b8def', '#3a64c4'], social: ['#34c3ae', '#169482'], care: ['#a98be3', '#7552c4'], money: ['#f6c25a', '#e0911c'], mobility: ['#f79a78', '#dc5d3c'], governance: ['#7b8cff', '#4a54d6'], sharing: ['#f78fb3', '#d6407c']};
+const FAM = {identity: ['#5b8def', '#3a64c4'], social: ['#34c3ae', '#169482'], care: ['#a98be3', '#7552c4'], money: ['#f6c25a', '#e0911c'], mobility: ['#f79a78', '#dc5d3c'], governance: ['#7b8cff', '#4a54d6'], sharing: ['#f78fb3', '#d6407c'], os: ['#9aa3ad', '#5f6b78'], network: ['#7fb3d5', '#3f7fa8'], other: ['#b0b0b8', '#7a7a85']};
+// A family the table does not name is drawn as other, so a contract added to the
+// repository never stops the page.
+const famOf = c => FAM[c.family] ? c.family : 'other';
 const META = (window.DATA ? window.DATA.contracts : []).find(c => c.id.toLowerCase() === C);
 let SPEC = null, ST = null, VER = -1, SEL = 'alice';
 const ui = new Proxy({}, {get: (o, p) => (o[p] = o[p] || {tab: null, form: null})});
@@ -423,7 +426,7 @@ if (META){
   document.title = `${META.label || META.title} · live`;
   $('#title').textContent = META.label || META.title;
   $('#ticon').textContent = META.icon;
-  $('#ticon').style.background = `linear-gradient(160deg, ${FAM[META.family][0]}, ${FAM[META.family][1]})`;
+  $('#ticon').style.background = `linear-gradient(160deg, ${FAM[famOf(META)][0]}, ${FAM[famOf(META)][1]})`;
   $('#about').href = './#' + META.id;
 }
 fetch(`specs/${C}.json`).then(r => { if (!r.ok) throw 0; return r.json(); }).then(s => {
@@ -432,7 +435,7 @@ fetch(`specs/${C}.json`).then(r => { if (!r.ok) throw 0; return r.json(); }).the
   if (m && m.icon){
     $('#title').textContent = m.label || m.title; document.title = `${m.label || m.title} · live`;
     $('#ticon').textContent = m.icon;
-    if (FAM[m.family]) $('#ticon').style.background = `linear-gradient(160deg, ${FAM[m.family][0]}, ${FAM[m.family][1]})`;
+    if (FAM[famOf(m)]) $('#ticon').style.background = `linear-gradient(160deg, ${FAM[famOf(m)][0]}, ${FAM[famOf(m)][1]})`;
   } else if (!META) $('#title').textContent = `${s.id}: ${s.title}`;
   poll();
 }).catch(() => {

@@ -14,4 +14,4 @@ close_place: not open(Alice) <-
     identity(Alice), open(Alice) guarded by Alice
 
 encounter: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), open(Alice), not knows(Alice, Bob), identity(Bob), open(Bob), not knows(Bob, Alice)
+    identity(Alice), open(Alice), not knows(Alice, Bob), identity(Bob), open(Bob), not knows(Bob, Alice) guarded by Alice, Bob

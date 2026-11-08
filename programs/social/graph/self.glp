@@ -72,12 +72,7 @@ UserContent ::= connect(Key)
               %% bundled compiler's, trusted by installing the super-app.
               ; trust(String)
               %% installed: the names of the mini-apps installed, for a play.
-              ; installed(Stream(Constant)?)
-              %% The warm call's volitions (Section 5.2): the person consents to
-              %% a warm call with an agent (as holder, or as its anchor); the
-              %% person consents to introduce a requester to an anchor.
-              ; accept_warm_call(Key)
-              ; allow_intro(Key, Key).
+              ; installed(Stream(Constant)?).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content)).
 %% befriend and befriend_intro carry the pending value, which the person's
@@ -121,17 +116,7 @@ FriendContent ::= text(Constant)
                 ; invite(String, String, RootChannel(Opaque))
                 ; join(String, Constant, String)
                 ; decline(String)
-                ; root(String, Constant, String)
-                %% The warm call (Section 5.2): the holder asks the forwarding
-                %% friend for an introduction to the anchor; over the friend
-                %% channel that results, warm_call(App) to the anchor.  The
-                %% call carries the mini-app and not the held link's name: a
-                %% global name is encoded as a variable in a message and does
-                %% not cross as data (IGLP, madglp-spec, Global Variable
-                %% Names), and the anchor identifies the call by the friend it
-                %% comes from, which is who its person consented to.
-                ; request_intro(Key)
-                ; warm_call(Constant).
+                ; root(String, Constant, String).
 
 %% Friend messages and channels
 FriendMsg     ::= msg(Key, Key, FriendContent).
@@ -147,9 +132,7 @@ NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 %% host state the social graph keeps for it.
 %% =============================================================================
 
-%% The warm call's bookkeeping (core/agent.glp): a warm call waiting for the
-%% person's consent, and a friend found among the outputs.
-WarmWait  ::= none ; wait(Constant, GlobalName, Key).
+%% A friend found among the outputs (core/agent.glp).
 AnchorFriend ::= none ; found(Key).
 
 %% Answers of the host's lookups and checks: an installed mini-app's module;
@@ -197,21 +180,11 @@ Pending      ::= invited(Constant, Key, String, RootChannel(Opaque))
                ; offered(Key, String, String, RootChannel(Opaque))
                ; consented(String, Key, Constant)
                ; joining(Constant, Key, String, RootChannel(Opaque))
-               %% The warm call (Section 5.2), at the holder: the warm call
-               %% under way (mini-app, held name), or waiting for the person's
-               %% consent (mini-app, name, forwarding friend); the person's
-               %% consent to a warm call with an agent; at the anchor: a warm
-               %% call accepted, its handshake pending (name, caller); at the
-               %% forwarding friend: the person's consent to introduce a
-               %% requester to an anchor, or a request (requester, name)
-               %% waiting for it.  A name is never taken apart into an agent:
-               %% its anchor is only ever compared with an agent at hand.
-               ; warm(Constant, GlobalName)
-               ; warm_wait(Constant, GlobalName, Key)
-               ; warm_consent(Key)
-               ; warm_ok(Key)
-               ; intro_consent(Constant, Constant)
-               ; intro_wait(Constant, Constant)
+               %% The release of held links (Section 5.2): an introduction the
+               %% person accepted, kept, which releases the links it brings;
+               %% who introduced an agent; and a held link reported, kept until
+               %% a volition releases it.  A name is never taken apart into an
+               %% agent: its anchor is only ever compared with an agent at hand.
                ; intro_ok(Key)
                ; intro_via(Key, Key)
                ; held(GlobalName, Constant).
@@ -222,9 +195,6 @@ Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 %% compilation home.glp): an ask on its ask stream, and the person's grants on
 %% its person channel, which never close.
 Ask(Q)   ::= ask(Constant, Q).
-
-%% The person's consent to a warm call, and the anchor it names.
-WarmConsent ::= no ; yes(Key).
 
 %% Output list — one constructor per output kind, each typed at exactly what it
 %% carries. Replaces the former output(Constant, OutputStream?) whose union
@@ -333,17 +303,6 @@ imported procedure boot#play_introduce_neither(Key?, Key?, Key?, Key?).
 exported procedure play_introduce_neither(Key?, Key?, Key?, Key?).
 play_introduce_neither(A, B, C, D) :- boot # play_introduce_neither(A?, B?, C?, D?).
 
-imported procedure boot#play_request_intro_both(Key?, Key?, Key?).
-exported procedure play_request_intro_both(Key?, Key?, Key?).
-play_request_intro_both(A, B, C) :- boot # play_request_intro_both(A?, B?, C?).
-
-imported procedure boot#play_request_intro_stranger(Key?, Key?, Key?).
-exported procedure play_request_intro_stranger(Key?, Key?, Key?).
-play_request_intro_stranger(A, B, C) :- boot # play_request_intro_stranger(A?, B?, C?).
-
-imported procedure boot#play_request_intro_no_anchor(Key?, Key?, Key?).
-exported procedure play_request_intro_no_anchor(Key?, Key?, Key?).
-play_request_intro_no_anchor(A, B, C) :- boot # play_request_intro_no_anchor(A?, B?, C?).
 
 %% The keys a person tells their agent in their first act, their own and
 %% those of the peers they know (IGLP, Implementation Notes, "Boot": "An
