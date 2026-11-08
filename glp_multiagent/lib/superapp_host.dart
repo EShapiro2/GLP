@@ -11,11 +11,16 @@
 /// same initial goal and its key made the same way, the person being the
 /// person.  At the agent's first start the application sends on the person
 /// channel the act that starts its program, with the agent's own key and the
-/// keys of the peers the person knows, none at a first start").  The act is
-/// `superapp(Me, [])`, which core's agent/2 starts as superapp/4: the social
-/// graph with the operating system's Nearby around it (place.glp, os_phone/6)
-/// and home, the Grassroots App's own person interface, on the person
-/// channel.
+/// keys of the peers the person knows, none at a first start"; GSA paper,
+/// Appendix "The Operating System", "Boot", 963fcbf: "and the rendezvous
+/// servers the app is configured with, each by key and address").  The act
+/// is `superapp(Me, [], Servers)`, Servers the list of
+/// `rendezvous(Key, Address)` the host is given ([rendezvousServers]), which
+/// core's agent/2 starts as superapp/5: the social graph with the operating
+/// system's Nearby and its invitation links around it (place.glp,
+/// os_phone/7; links.glp) and home, the Grassroots App's own person
+/// interface, on the person channel.  Another entry, `superapp_ui`, the
+/// demonstration in one heap, has no network and takes `superapp_ui(Me, [])`.
 ///
 /// The agent runs over the [GlpNetwork] it is given ([AgentRuntime]; IGLP,
 /// Implementation Notes, "Networking Seam", One interface: "transport
@@ -62,8 +67,9 @@ import 'isolate_protocol.dart' show runtimeTermOf, screenTermOf;
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
 
-/// The entry the person's first act names on a phone: superapp/4 of
-/// `programs/social/graph/core` (core's CoreAct `superapp(Key, List(Key))`).
+/// The entry the person's first act names on a phone: superapp/5 of
+/// `programs/social/graph/core` (core's CoreAct
+/// `superapp(Key, List(Key), List(RvServer))`).
 const String superappEntry = 'superapp';
 
 /// One agent of the Grassroots App, its person live, over a given network.
@@ -86,6 +92,12 @@ class SuperAppHost {
 
   /// The entry the person's first act names ([superappEntry]).
   final String entry;
+
+  /// The rendezvous servers the app is configured with, each by its key, 64
+  /// lowercase hex characters, and its address, `ip:port`, which the first
+  /// act of [superappEntry] names (GSA paper, Appendix "The Operating
+  /// System", "Boot").
+  final List<({String key, String address})> rendezvousServers;
 
   /// The image of the program's display declarations.
   final Manifest manifest;
@@ -126,6 +138,7 @@ class SuperAppHost {
     required this.keyPair,
     required this.manifest,
     this.entry = superappEntry,
+    this.rendezvousServers = const [],
     this.stateStore,
   }) : agent = AgentRuntime(
           agentId: agentId,
@@ -141,7 +154,7 @@ class SuperAppHost {
 
   /// Start the agent: compile the program, post the initial goal, and, at
   /// the agent's first start, send on the person channel the act that starts
-  /// the Grassroots App, `superapp(Me, [])`; at a restart, go on from the
+  /// the Grassroots App, `superapp(Me, [], Servers)`; at a restart, go on from the
   /// state the [stateStore] holds, the runtime granting refresh in the
   /// person's place ([AgentRuntime.initialize]).  The person's grants go to
   /// the agent as they come, each an act of the person.  A restart under a
@@ -157,7 +170,11 @@ class SuperAppHost {
     if (log != null) agent.onLog = log;
     await agent.initialize();
     if (agent.firstStart) {
-      await act(rt.StructTerm(entry, [rt.ConstTerm(key), rt.ConstTerm(rt.nil)]));
+      await act(rt.StructTerm(entry, [
+        rt.ConstTerm(key),
+        rt.ConstTerm(rt.nil),
+        if (entry == superappEntry) _servers(),
+      ]));
     }
   }
 
@@ -171,4 +188,17 @@ class SuperAppHost {
   Future<void> get idle => _acts;
 
   void dispose() => agent.dispose();
+
+  /// [rendezvousServers] as the list term the first act carries, each
+  /// `rendezvous(Key, Address)`.
+  rt.Term _servers() {
+    rt.Term list = rt.ConstTerm(rt.nil);
+    for (final s in rendezvousServers.reversed) {
+      list = rt.StructTerm('.', [
+        rt.StructTerm('rendezvous', [rt.ConstTerm(s.key), rt.ConstTerm(s.address)]),
+        list,
+      ]);
+    }
+    return list;
+  }
 }
