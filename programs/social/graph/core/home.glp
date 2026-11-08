@@ -6,7 +6,7 @@ CompilerKey ::= Key.
 Friend ::= Key.
 AppName ::= String.
 Artefact ::= String.
-Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; connect(Friend) ; open_place ; close_place.
+Request ::= trust(CompilerKey) ; install(AppName, Artefact) ; invite(AppName, Friend) ; open_place ; close_place.
 FriendRequest ::= from(Friend, Decision?).
 Introducer ::= Key.
 Other ::= Key.
@@ -74,7 +74,6 @@ serve(_, _, _, [], [], []).
 serve([trust(Key) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(Key?) | trust_act(Key?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 serve([install(App, Name) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Name?) | load_file(Name?, C), install_act(C?, App?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 serve([invite(App, Friend) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(App?), ground(Friend?) | invite_act(App?, Friend?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
-serve([connect(Friend) | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?), ground(Friend?) | connect_act(Friend?, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 serve([open_place | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(open_place, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 serve([close_place | Reqs], Id, Cd, Outs, Cmds?, D?) :- ground(Id?) | place_act(close_place, Id?, Cd?, Reqs?, Outs?, Cmds, D).
 
@@ -86,9 +85,6 @@ invite_act(App, Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, invite(App?, Frien
 
 procedure place_act(UserContent?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?], D?) :- ground(Id?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
-
-procedure connect_act(Key?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-connect_act(Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?], D?) :- ground(Friend?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
 procedure install_act(Content?, Constant?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 install_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?], D?) :- module(M?) | creator_certification(M?, CSig), new_channel(Ui, Person), hold_person(Person?), serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
@@ -184,7 +180,7 @@ procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, friendRequest_w(X), Gs, Ds?) :- present_friendRequest([], X?, Gs1?, _, Vs, Done), run_friendRequest_w(Id?, form(from, [field('Friend', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, introRequest_w(X), Gs, Ds?) :- present_introRequest([], X?, Gs1?, _, Vs, Done), run_introRequest_w(Id?, form(from, [field('Introducer', shown), field('Other', shown), field('Decision', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, nearbyPerson_w(X), Gs, Ds?) :- present_nearbyPerson([], X?, Gs1?, _, Vs, Done), run_nearbyPerson_w(Id?, form(nearby, [field('Friend', shown), field('Befriend', button(befriend))]), Vs?, Done?, Gs?, Gs1, Ds).
-construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), form(connect, [field('Friend', peer)]), button(open_place), button(close_place)])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(trust, [field('CompilerKey', peer)]), form(install, [field('AppName', text), field('Artefact', text)]), form(invite, [field('AppName', text), field('Friend', peer)]), button(open_place), button(close_place)])), [input([])], Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget?, Stream(Output)?, Stream(Draw(Drawn))).
 output(W, Ms, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Ds).
@@ -278,15 +274,10 @@ join_request_invite_2(formed(X1), formed(X2), formed(invite(X1?, X2?))).
 join_request_invite_2(refused, _, refused).
 join_request_invite_2(_, refused, refused).
 
-procedure join_request_connect_1(Formed(Friend)?, Formed(Request)).
-join_request_connect_1(formed(X1), formed(connect(X1?))).
-join_request_connect_1(refused, refused).
-
 procedure form_request(Drawn?, Formed(Request)).
 form_request(trust(R1), F?) :- form_string(R1?, F1), join_request_trust_1(F1?, F).
 form_request(install(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_install_2(F1?, F2?, F).
 form_request(invite(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_request_invite_2(F1?, F2?, F).
-form_request(connect(R1), F?) :- form_string(R1?, F1), join_request_connect_1(F1?, F).
 form_request(open_place, formed(open_place)).
 form_request(close_place, formed(close_place)).
 form_request(_, refused) :- otherwise | true.

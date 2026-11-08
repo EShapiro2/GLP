@@ -7464,10 +7464,14 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 # 3; vGLP, Definitions "Volitional Procedure, ..." and "Canonical
 # Compilation"): home/3 asks the person once for the stream of their
 # requests, and the dispatcher draws its construct on the person channel, the
-# default widget of a stream of a union of tuples, a menu of the four forms
-# kept open; a Connect granted on it reaches the agent, whose notice
-# connected(bob) arrives on the same channel, merged with the draws
-# (superapp_ui/4, alice with a scripted peer for each key she knows, here bob).  A friend's request to connect
+# default widget of a stream of a union of tuples, a menu of the three forms
+# and the buttons Open place and Close place kept open, no form taking a key
+# typed (GSA #2, 2026-11-08 08:07 UTC, item 2); the persons known, seen
+# nearby, are told the person, nearby([bob]), on the same channel, merged
+# with the draws, and home draws a card for each with the button befriend,
+# which the person picks to befriend them (superapp_ui/4, alice with a
+# scripted peer for each key she knows, here bob, seen nearby; GSA paper,
+# Appendix "The Operating System", "Nearby").  A friend's request to connect
 # raises respond_friend's card, the friend shown, and the person's yes on it
 # is their decision, with the pending value passed back as it came (home.glp
 # with its dispatcher and a scripted person who grants on the card once it is
@@ -7479,7 +7483,7 @@ check "SG super-app: a send between the acceptance and the conveyance is told no
 sg_home=$("$REPL_RUN" <<HEREDOC
 $SG_CORE
 :limit 5000000
-superapp_ui(alice, [bob], [input(1, [], connect(bob)) | G?], []).
+superapp_ui(alice, [bob], G?, []).
 play_home(alice, yes, [msg(agent, person, befriend(bob, error))], C, L).
 play_home(alice, yes, [msg(agent, person, befriend_intro(carol, bob, error))], CI, LI).
 play_home(alice, no, [msg(agent, person, befriend_intro(carol, bob, error))], CN, LN).
@@ -7487,8 +7491,10 @@ play_home(alice, befriend, [msg(agent, person, nearby([bob])), msg(agent, person
 :quit
 HEREDOC
 2>&1)
-check "SG super-app home: the request form, a menu of the four acts and the buttons Open place and Close place (GPE:1), drawn on the person channel" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), form(connect, \[field(Friend, peer)\]), button(open_place), button(close_place)\])), stream_request_r(input(\[\])))" "$sg_home"
-check "SG super-app home: a Connect granted reaches the agent, and connected(bob) is shown on the person channel" "^draw(0, thread(.*), output(\[msg(agent, person, connected(bob))\]))$" "$sg_home"
+check "SG super-app home: the request form, a menu of three acts and the buttons Open place and Close place (GPE:1), drawn on the person channel, no form taking a key typed" "draw(1, input_box(menu(\[form(trust, \[field(CompilerKey, peer)\]), form(install, \[field(AppName, text), field(Artefact, text)\]), form(invite, \[field(AppName, text), field(Friend, peer)\]), button(open_place), button(close_place)\])), stream_request_r(input(\[\])))" "$sg_home"
+check_not "SG super-app home: no connect form, a person befriended by picking them in Nearby" "form(connect," "$sg_home"
+check "SG super-app home: the person known, seen nearby, is shown on the person channel, nearby([bob])" "^draw(0, thread(.*), output(\[msg(agent, person, nearby(\[bob\]))\]))$" "$sg_home"
+check "SG super-app home: home draws bob's card in Nearby with the button befriend" "^draw(2, form(nearby, \[field(Friend, shown), field(Befriend, button(befriend))\]), nearbyPerson_w(nearby(bob, input(\[2\]))))$" "$sg_home"
 check "SG super-app home: a friend's request to connect raises respond_friend's card, the friend shown" "L = \[card(bob) | " "$sg_home"
 check "SG super-app home: yes on the card is the person's decision, the pending value passed back" "C = \[msg(person, alice, decision(yes, bob, error))\]" "$sg_home"
 check "SG super-app home: an introduction raises respond_intro's card, the introducer and the other party shown" "LI = \[card(carol, bob) | " "$sg_home"

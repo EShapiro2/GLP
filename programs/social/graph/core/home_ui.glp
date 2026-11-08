@@ -19,10 +19,17 @@
 %% and from nothing else.
 %%
 %% Behind the screen is the real super-app: the person's commands go to
-%% agent/4, which installs, invites and befriends as it does in every play.
-%% Each peer is scripted and shares the network with the person through a
-%% chain of route_to/4 (self.glp's), one for each agent by its key, so the
-%% person's Connect and Invite have someone to reach.  home/3 and its
+%% agent/4 with the operating system's Nearby around it (place.glp,
+%% os_agent/8), which installs, invites and befriends as it does in every
+%% play.  The play gives the operating system its own presences, as a play
+%% in one heap does (place.glp): each peer the person knows is seen nearby
+%% over the PAN, so home shows them in Nearby, each on a card with the button
+%% befriend, and the person befriends one by picking them there, no key
+%% typed (GSA paper, Appendix "The Operating System", "Nearby"; GSA #2,
+%% 2026-11-08 08:07 UTC, item 2).  Each peer is scripted and shares the
+%% network with the person through a chain of route_to/4 (self.glp's), one
+%% for each agent by its key, so the person's befriending and Invite have
+%% someone to reach.  home/3 and its
 %% dispatcher are imported at the types of home.glp's exports, as superapp/4
 %% imports them (self.glp, HomeQuestion).  No clause here names a peer by an
 %% atom (IGLP, Remark "Agent Names").
@@ -33,11 +40,13 @@
 imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
 imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure place#os_agent(Key?, List(Key)?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
 
 exported procedure superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
 superapp_ui(Id, Peers, Grants, _) :-
-    ground(Id?) |
-    agent # agent(Id?, Cmds?, NetIn?, [user_output(Outs), net_output(NetOut)]),
+    ground(Id?), ground(Peers?) |
+    place # os_agent(Id?, Peers?, Cmds?, NetIn?, Pan?, [], Outs, NetOut),
+    seen_all(Peers?, Pan),
     split_out(Outs?, Shown, Seen),
     home # home(Id?, Seen?, Cmds, Asks),
     home # dispatch(Asks?, ch(Grants?, Draws), MCh),
@@ -46,6 +55,11 @@ superapp_ui(Id, Peers, Grants, _) :-
     merge(NetOut?, PeersOut?, All),
     route_to(Id?, All?, NetIn, ToPeers),
     scripted_peers(Peers?, ToPeers?, PeersOut).
+
+%% Each peer the person knows, seen nearby over the PAN.
+procedure seen_all(List(Key)?, Stream(Presence)).
+seen_all([P | Ps], [seen(P?) | S?]) :- seen_all(Ps?, S).
+seen_all([], []).
 
 %% Each peer, scripted on its super-app's person interface (scripted_home/5,
 %% self.glp's), on the network messages addressed to it, the rest going on to
@@ -63,7 +77,7 @@ scripted_peers([], _, []).
 
 %% A peer: he consents on his card to the person's request to connect, and,
 %% told of it, accepts whatever mini-app the person invites him to, so the
-%% person's Connect and Invite have someone to reach.
+%% person's befriending and Invite have someone to reach.
 procedure peer_answers(Key?, Stream(Output)?, UserInStream).
 peer_answers(Me, [msg(agent, person, befriend(From)) | Outs],
              [msg(person, Me?, accept_invite(ping, From?)) | Cmds?]) :-

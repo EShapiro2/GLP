@@ -28,7 +28,7 @@
 %% structurally (TGLP, "Cross-module type checking").  HomeDrawn is home.glp's
 %% Drawn, the type its person channel carries.  Ask(Q) is ../self.glp's, as
 %% home.glp's own, and the person channel's types the root's.
-HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; connect(Key) ; open_place ; close_place.
+HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; open_place ; close_place.
 HomeFriendRequest ::= from(Key, Decision?).
 HomeIntroRequest  ::= from(Key, Key, Decision?).
 HomeNearbyPerson  ::= nearby(Key, HomeBefriend?).

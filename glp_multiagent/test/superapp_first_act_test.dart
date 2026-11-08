@@ -40,7 +40,7 @@ void main() {
     // Home's request form, drawn on the person channel.
     bool drawnHome() => agents.notes['alice']!.any((t) {
           final s = formatTerm(t);
-          return s.contains('stream_request_r') && s.contains('connect');
+          return s.contains('stream_request_r') && s.contains('open_place');
         });
     await agents.until('home drawn', drawnHome);
     expect(drawnHome(), isTrue);

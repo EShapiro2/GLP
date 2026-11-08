@@ -5,9 +5,9 @@
 %% its questions and the dispatcher --- is home.glp beside this file (glpc
 %% :emit); the compiled module is not edited.
 %%
-%% The four acts are those of GSG paper Section 3: trusting a compiler's key,
-%% installing a certified mini-app, inviting a friend to it, and connecting
-%% with a person; Open place and Close place are GPE:1 (GSA paper, Section 4).  What the acts produce is the very command stream the
+%% The requests are acts of GSG paper Section 3: trusting a compiler's key,
+%% installing a certified mini-app and inviting a friend to it; befriending
+%% a person is picking them in Nearby, on their card (befriend_card/3); Open place and Close place are GPE:1 (GSA paper, Section 4).  What the acts produce is the very command stream the
 %% super-app's agent reads (agent.glp, agent/4's person input), so the
 %% person's volitions reach the same agent whether they are willed through
 %% the constructs of these questions or written by a play's script.
@@ -78,11 +78,14 @@ AppName     ::= String.
 Artefact    ::= String.
 
 %% A request: one alternative per request clause of serve --- trust, install,
-%% invite and connect --- with the arguments its clause reads.
+%% invite, Open place and Close place --- with the arguments its clause reads.
+%% No request connects with a person by a key typed: no act of the paper
+%% takes one, a person coming to be known by an encounter, a link or an
+%% introduction, and befriended by picking them in Nearby (befriend_card/3;
+%% GSA #2, 2026-11-08 08:07 UTC, item 2).
 Request ::= trust(CompilerKey)
           ; install(AppName, Artefact)
           ; invite(AppName, Friend)
-          ; connect(Friend)
           ; open_place
           ; close_place.
 
@@ -250,11 +253,6 @@ serve([invite(App, Friend) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(App?), ground(Friend?) |
     invite_act(App?, Friend?, Id?, Cd?, Reqs?, Outs?, Cmds).
 
-%% Ask a person to connect: the cold call of the social graph.
-serve([connect(Friend) | Reqs], Id, Cd, Outs, Cmds?) :-
-    ground(Id?), ground(Friend?) |
-    connect_act(Friend?, Id?, Cd?, Reqs?, Outs?, Cmds).
-
 %% Open place and Close place (GPE:1; GSA paper, Section 4, the box GPE, its
 %% interface pragma Open Place, "Alice [Open place] [Close place]"): the
 %% operating system declares the trust of Bluetooth and of the local network
@@ -278,10 +276,6 @@ invite_act(App, Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, invite(App?, Frien
 procedure place_act(UserContent?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
 place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?]) :-
     ground(Id?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds).
-
-procedure connect_act(Key?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
-connect_act(Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :-
-    ground(Friend?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
 %% install_act(Content, App, Id, Reqs, Outs, Cmds): a certified artefact is
 %% installed under the person's name for it, with the mini-app's end of a

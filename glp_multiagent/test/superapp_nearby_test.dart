@@ -338,7 +338,10 @@ void main() {
     bob = await phone('bob');
     for (final p in [alice, bob]) {
       final w = formatTerm(p.form()!.widget);
-      expect(w, contains('form(connect, [field(\'Friend\', peer)])'));
+      // No form takes a key typed: a person is known by an encounter, a link
+      // or an introduction, and befriended by picking them in Nearby (GSA #2,
+      // 2026-11-08 08:07 UTC, item 2).
+      expect(w, isNot(contains('form(connect,')));
       expect(w, endsWith('button(open_place), button(close_place)]))'));
       await p.host.idle;
       expect(p.net.declared, ['pan closed', 'lan closed'],
