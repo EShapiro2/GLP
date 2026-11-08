@@ -25,7 +25,7 @@ BY_DIR = {
     'GFF': {'title': 'Grassroots Feeds and Followers', 'authors': '', 'pdf': 'GFF'},
     'GSA': {'title': 'The Grassroots Super-App and App Store', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro',
             'pdf': 'GSA', 'state': 'uploaded to arXiv, number not yet announced'},
-    'GNA': {'title': 'GLP Networking API Specification', 'authors': 'Dan Bachar and Ehud Shapiro', 'pdf': 'GNA'},
+    'GNA': {'title': 'GLP Networking API and Services', 'authors': 'Dan Bachar and Ehud Shapiro', 'pdf': 'GNA'},
 }
 
 # Where each paper's source is: its repository under EShapiro2 on GitHub, the

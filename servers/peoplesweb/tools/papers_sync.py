@@ -41,7 +41,7 @@ ARXIV_FILE = os.environ.get('ARXIV_FILE')
 
 
 def run(cmd, cwd=None, timeout=900):
-    return subprocess.run(cmd, cwd=cwd, timeout=timeout, capture_output=True, text=True)
+    return subprocess.run(cmd, cwd=cwd, timeout=timeout, capture_output=True, text=True, errors='replace')
 
 
 def git_auth():
