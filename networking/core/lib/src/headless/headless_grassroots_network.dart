@@ -395,6 +395,31 @@ class HeadlessGrassrootsNetwork {
         : observedAddressString(remote.ip, remote.port);
   }
 
+  /// Record the address at which the layer observes a known peer's
+  /// authenticated session as that peer's recorded WAN address (spec
+  /// `docs/GLP_Networking_API/sections/ip.tex` §Connectivity and Address: "the
+  /// latest, whether GLP supplied it or the layer observed it, replaces the
+  /// earlier"). Recorded through the path [_putPeerAddress] uses, so it is
+  /// persisted the same way. Only a key already in the known set is recorded
+  /// (never created here). This profile runs no LAN, so every IP session is WAN.
+  void _recordObservedWanAddress(Uint8List pubkey) {
+    final pubkeyHex = _hex(pubkey);
+    if (!store.state.knownPeers.known.containsKey(pubkeyHex)) return;
+    final observed = _observedPeerAddress(pubkey);
+    final parsed = observed == null ? null : parseAddressString(observed);
+    if (parsed == null) return;
+    final address = parsed.toAddressString();
+    if (store.state.knownPeers.known[pubkeyHex] == address) return;
+    store.dispatch(AssociateUdpAddressAction(
+      publicKey: pubkey,
+      address: address,
+    ));
+    store.dispatch(KnownPeerAddressUpdatedAction(
+      pubkeyHex: pubkeyHex,
+      udpAddress: address,
+    ));
+  }
+
   /// Detached Ed25519 signature over [message] under the agent's key (spec
   /// §The Seam, Signatures, `sign(bytes)`).
   Uint8List sign(Uint8List message) => _protocolHandler.signBytes(message);
@@ -1065,6 +1090,7 @@ class HeadlessGrassrootsNetwork {
 
     _messageRouter.onUdpPeerIdentified = (senderPubkey, udpPeerId) {
       _udpService?.mapIncomingConnectionToPubkey(udpPeerId, _hex(senderPubkey));
+      _recordObservedWanAddress(senderPubkey);
     };
 
     // The ANNOUNCE a session carried, the heartbeat: liveness traffic, as
@@ -1574,7 +1600,9 @@ class HeadlessGrassrootsNetwork {
       underlay: Underlay.wan,
       attestation: attestation,
     ));
-    if (_reachablePeers.add(_hex(pubkey))) {
+    final connected = _reachablePeers.add(_hex(pubkey));
+    _recordObservedWanAddress(pubkey);
+    if (connected) {
       onPeerConnected?.call(pubkey, Underlay.wan, attestation.application);
     }
     if (rendezvousServer) _reflectAddressTo(pubkey);

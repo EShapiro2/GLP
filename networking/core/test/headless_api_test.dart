@@ -116,6 +116,49 @@ void main() {
     expect(a.wan.observedPeerAddress(stranger.publicKey), isNull);
   }, timeout: Timeout.none);
 
+  String hexOf(Uint8List bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+  test(
+      'a known peer on an authenticated session has the address it is '
+      'observed at recorded as its address', () async {
+    skipWithoutSodium();
+    if (sodiumUnavailable != null) return;
+    final a = await node(0xa7);
+    final b = await node(0xa8);
+    await connect(a, b);
+
+    // Spec ip.tex §Connectivity and Address: the observed address is recorded.
+    expect(
+      b.store.state.knownPeers.known[hexOf(a.identity.publicKey)],
+      '127.0.0.1:${a.boundPort}',
+    );
+  }, timeout: Timeout.none);
+
+  test(
+      'authenticated traffic from a known peer re-records the address it is '
+      'observed at, replacing a stale one', () async {
+    skipWithoutSodium();
+    if (sodiumUnavailable != null) return;
+    final a = await node(0xa9);
+    final b = await node(0xaa);
+    await connect(a, b);
+    final aHex = hexOf(a.identity.publicKey);
+    final observed = '127.0.0.1:${a.boundPort}';
+
+    b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:9');
+    expect(b.store.state.knownPeers.known[aHex], '127.0.0.1:9');
+
+    final received = Completer<void>();
+    b.onMessageReceived = (sender, payload, messageId, underlay) {
+      if (!received.isCompleted) received.complete();
+    };
+    await a.send(b.identity.publicKey, Uint8List.fromList([2]));
+    await received.future;
+
+    expect(b.store.state.knownPeers.known[aHex], observed);
+  }, timeout: Timeout.none);
+
   test('punchUdp sends punch datagrams toward the address', () async {
     skipWithoutSodium();
     if (sodiumUnavailable != null) return;
