@@ -164,6 +164,10 @@ PeersState peersReducer(PeersState state, dynamic action) {
     final now = DateTime.now();
 
     final isBle = action.transport == PeerTransport.bleDirect;
+    // Only traffic authenticated under the session refreshes a staleness
+    // clock (decision 44): a clear ANNOUNCE, signed but replayable, records
+    // the peer and refreshes none.
+    final seen = action.underSession ? now : null;
 
     if (existing == null) {
       // New peer — identity beacon only; addresses arrive via putPeerAddress.
@@ -176,9 +180,9 @@ PeersState peersReducer(PeersState state, dynamic action) {
         lastSeen: now,
         bleCentralDeviceId: action.bleCentralDeviceId,
         blePeripheralDeviceId: action.blePeripheralDeviceId,
-        lastBleSeen: isBle ? now : null,
-        lastLanSeen: action.transport == PeerTransport.lan ? now : null,
-        lastWanSeen: action.transport == PeerTransport.wan ? now : null,
+        lastBleSeen: isBle ? seen : null,
+        lastLanSeen: action.transport == PeerTransport.lan ? seen : null,
+        lastWanSeen: action.transport == PeerTransport.wan ? seen : null,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = newPeer,
@@ -195,16 +199,18 @@ PeersState peersReducer(PeersState state, dynamic action) {
         transport: action.transport,
         rssi: action.rssi,
         protocolVersion: action.protocolVersion,
-        lastSeen: now,
+        lastSeen: seen ?? existing.lastSeen,
         bleCentralDeviceId:
             action.bleCentralDeviceId ?? existing.bleCentralDeviceId,
         blePeripheralDeviceId:
             action.blePeripheralDeviceId ?? existing.blePeripheralDeviceId,
-        lastBleSeen: isBle ? now : existing.lastBleSeen,
-        lastLanSeen:
-            action.transport == PeerTransport.lan ? now : existing.lastLanSeen,
-        lastWanSeen:
-            action.transport == PeerTransport.wan ? now : existing.lastWanSeen,
+        lastBleSeen: isBle ? seen ?? existing.lastBleSeen : existing.lastBleSeen,
+        lastLanSeen: action.transport == PeerTransport.lan
+            ? seen ?? existing.lastLanSeen
+            : existing.lastLanSeen,
+        lastWanSeen: action.transport == PeerTransport.wan
+            ? seen ?? existing.lastWanSeen
+            : existing.lastWanSeen,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,

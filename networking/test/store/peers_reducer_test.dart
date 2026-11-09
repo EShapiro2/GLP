@@ -357,10 +357,82 @@ void main() {
   // =========================================================================
 
   group('PeerAnnounceReceivedAction', () {
+    // Decision 44: only traffic authenticated under the session refreshes a
+    // staleness clock; a clear ANNOUNCE, signed but replayable, refreshes
+    // none.
+    PeersState knownAt(Uint8List pubkey, DateTime at) =>
+        PeersState.initial.copyWith(peers: {
+          _pubkeyHex(pubkey): PeerState(
+            publicKey: pubkey,
+            connectionState: PeerConnectionState.connected,
+            transport: PeerTransport.bleDirect,
+            lastSeen: at,
+            lastBleSeen: at,
+          ),
+        });
+
+    test('a clear ANNOUNCE records a new peer without starting its PAN clock',
+        () {
+      final pubkey = _testPubkey(1);
+      final result = peersReducer(
+        PeersState.initial,
+        PeerAnnounceReceivedAction(
+          underSession: false,
+          publicKey: pubkey,
+          protocolVersion: 2,
+          transport: PeerTransport.bleDirect,
+          bleCentralDeviceId: 'ble-central-1',
+        ),
+      );
+
+      final peer = result.peers[_pubkeyHex(pubkey)]!;
+      expect(peer.bleCentralDeviceId, 'ble-central-1');
+      expect(peer.lastBleSeen, isNull);
+    });
+
+    test("a clear ANNOUNCE leaves a known peer's clocks where they were", () {
+      final pubkey = _testPubkey(1);
+      final before = DateTime.fromMillisecondsSinceEpoch(1000);
+
+      final result = peersReducer(
+        knownAt(pubkey, before),
+        PeerAnnounceReceivedAction(
+          underSession: false,
+          publicKey: pubkey,
+          protocolVersion: 2,
+          transport: PeerTransport.bleDirect,
+        ),
+      );
+
+      final peer = result.peers[_pubkeyHex(pubkey)]!;
+      expect(peer.lastBleSeen, before);
+      expect(peer.lastSeen, before);
+    });
+
+    test("an ANNOUNCE under the session refreshes the peer's PAN clock", () {
+      final pubkey = _testPubkey(1);
+      final before = DateTime.fromMillisecondsSinceEpoch(1000);
+
+      final result = peersReducer(
+        knownAt(pubkey, before),
+        PeerAnnounceReceivedAction(
+          underSession: true,
+          publicKey: pubkey,
+          protocolVersion: 2,
+          transport: PeerTransport.bleDirect,
+        ),
+      );
+
+      final peer = result.peers[_pubkeyHex(pubkey)]!;
+      expect(peer.lastBleSeen!.isAfter(before), isTrue);
+      expect(peer.lastSeen!.isAfter(before), isTrue);
+    });
+
     test('creates new peer with central BLE device ID', () {
       final pubkey = _testPubkey(1);
       const state = PeersState.initial;
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 2,
         rssi: -55,
@@ -389,6 +461,7 @@ void main() {
       final pubkey = _testPubkey(1);
       const state = PeersState.initial;
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -60,
@@ -415,6 +488,7 @@ void main() {
         var state = peersReducer(
           PeersState.initial,
           PeerAnnounceReceivedAction(
+            underSession: true,
             publicKey: pubkey,
             protocolVersion: 1,
             rssi: -55,
@@ -430,6 +504,7 @@ void main() {
         state = peersReducer(
           state,
           PeerAnnounceReceivedAction(
+            underSession: true,
             publicKey: pubkey,
             protocolVersion: 1,
             rssi: -50,
@@ -462,6 +537,7 @@ void main() {
         },
       );
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 3,
         rssi: -40,
@@ -500,6 +576,7 @@ void main() {
       final result = peersReducer(
         initial,
         PeerAnnounceReceivedAction(
+          underSession: true,
           publicKey: pubkey,
           protocolVersion: 3,
           rssi: -40,
@@ -519,6 +596,7 @@ void main() {
     test('sets connectionState to connected', () {
       final pubkey = _testPubkey(2);
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -60,
@@ -544,6 +622,7 @@ void main() {
         },
       );
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -40,
@@ -561,6 +640,7 @@ void main() {
     test('a WAN ANNOUNCE records lastWanSeen alone', () {
       final pubkey = _testPubkey(3);
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -42,
@@ -577,6 +657,7 @@ void main() {
     test('a LAN ANNOUNCE records lastLanSeen alone', () {
       final pubkey = _testPubkey(7);
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 1,
         transport: PeerTransport.lan,
@@ -605,6 +686,7 @@ void main() {
         },
       );
       final action = PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -55,

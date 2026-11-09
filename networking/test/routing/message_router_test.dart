@@ -536,6 +536,7 @@ void main() {
         stubSession();
 
         store.dispatch(PeerAnnounceReceivedAction(
+          underSession: true,
           publicKey: otherPubkey,
           protocolVersion: ProtocolHandler.protocolVersion,
           rssi: -44,

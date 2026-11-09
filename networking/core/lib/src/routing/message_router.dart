@@ -518,6 +518,7 @@ class MessageRouter {
     store.dispatch(PeerAnnounceReceivedAction(
       publicKey: pubkey,
       protocolVersion: data.protocolVersion,
+      underSession: inSession,
       rssi: effectiveRssi,
       transport: transport,
       bleCentralDeviceId: centralId,

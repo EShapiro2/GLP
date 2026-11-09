@@ -621,6 +621,7 @@ void main() {
       // ANNOUNCE identifies the peer and binds the central attachment to the
       // old MAC's path.
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: peerIdentity.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -677,6 +678,7 @@ void main() {
         canSend: true,
       ));
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: peerIdentity.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -799,6 +801,7 @@ void main() {
       // the pubkey. The transport is supposed to then trigger the reverse
       // leg against an advertising MAC we already know works.
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: peerIdentity.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1088,6 +1091,7 @@ void main() {
         canSend: true,
       ));
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: peer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1218,6 +1222,7 @@ void main() {
         canSend: true,
       ));
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: iosPeer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1342,6 +1347,7 @@ void main() {
       // transport's live path mirror synchronously.
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: androidPeer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1446,6 +1452,7 @@ void main() {
       ));
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: iosPeer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1509,6 +1516,7 @@ void main() {
       ));
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: iosPeer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1585,6 +1593,7 @@ void main() {
       ));
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: iosPeer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
@@ -1655,6 +1664,7 @@ void main() {
       ));
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: iosPeer.publicKey,
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
