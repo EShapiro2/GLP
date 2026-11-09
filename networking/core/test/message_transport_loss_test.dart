@@ -139,7 +139,7 @@ void main() {
         sender.sendMessage(peer, id, Uint8List.fromList(List.filled(500, 1)));
     // No per-fragment acks arrive; a delivery ACK settles the message.
     Timer(const Duration(milliseconds: 20),
-        () => sender.handleMessageAck(id));
+        () => sender.handleMessageAck(peer, id));
     expect(await done, isTrue);
   }, timeout: Timeout.none);
 

@@ -778,7 +778,7 @@ void main() {
       router.onFragmentAckRequested = (transport, peerId, messageId, index) =>
           Timer.run(() => sender.handleFragmentAck(peerHex, messageId, index));
       router.onAckRequested = (transport, peerId, messageId) =>
-          Timer.run(() => sender.handleMessageAck(messageId));
+          Timer.run(() => sender.handleMessageAck(peerHex, messageId));
 
       // GATT writes toward the receiver; fragment 2's first write is lost.
       final writes = <int, int>{};
@@ -882,10 +882,11 @@ void main() {
       Fragment decode(GrassrootsPacket p) =>
           FragmentHandler.decodeFragment(p.payload, type: p.type);
 
-      expect(handler.addFragment(decode(attestation.fragments[0])), isNull);
+      final senderHex = 'aa' * 32;
+      expect(handler.addFragment(decode(attestation.fragments[0]), senderHex: senderHex), isNull);
       // The payload's second fragment shares the id and the count: dropped.
-      expect(handler.addFragment(decode(payload.fragments[1])), isNull);
-      final done = handler.addFragment(decode(attestation.fragments[1]));
+      expect(handler.addFragment(decode(payload.fragments[1]), senderHex: senderHex), isNull);
+      final done = handler.addFragment(decode(attestation.fragments[1]), senderHex: senderHex);
       expect(done, isNotNull);
       expect(done!.type, PacketType.attestationFragment);
       expect(done.payload, List.generate(300, (i) => i % 256));

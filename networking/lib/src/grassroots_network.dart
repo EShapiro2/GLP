@@ -3922,14 +3922,23 @@ class GrassrootsNetwork {
       onMessageReceived?.call(senderPubkey, payload, messageId, underlay);
     };
 
-    // ACK received (delivery confirmation)
-    _messageRouter.onAckReceived = (messageId) {
+    // ACK received (delivery confirmation). It settles an outbound message
+    // only when it comes from the recipient the message was sent to.
+    _messageRouter.onAckReceived = (senderPubkey, messageId) {
+      final senderHex = _pubkeyToHex(senderPubkey);
+      final sentToOther = _persistedQueue.entries.any((entry) =>
+          entry.messageId == messageId && entry.recipientHex != senderHex);
+      if (sentToOther) {
+        debugPrint('ACK for message $messageId from $senderHex, which is not '
+            'its recipient: ignored');
+        return;
+      }
       debugPrint('ACK received for message $messageId');
       store.dispatch(MessageDeliveredAction(messageId: messageId));
       _clearAckPending(messageId);
       unawaited(_persistedQueue.remove(messageId));
-      _udpMessageSender.handleMessageAck(messageId);
-      _bleMessageSender.handleMessageAck(messageId);
+      _udpMessageSender.handleMessageAck(senderHex, messageId);
+      _bleMessageSender.handleMessageAck(senderHex, messageId);
     };
 
     // Per-fragment ACK: settle the sender-side retransmit slot (spec
@@ -3971,10 +3980,26 @@ class GrassrootsNetwork {
       }
     };
 
-    // Read receipt received
-    _messageRouter.onReadReceiptReceived = (messageId) {
-      debugPrint('Read receipt received for message $messageId');
-      store.dispatch(MessageReadAction(messageId: messageId));
+    // Read receipt received. The reader names the message by the id it was
+    // delivered under, the layer-assigned MessageRouter.deliveryIdOf of our
+    // public key and our wire id (F07); resolve it to our wire id among our
+    // outgoing messages to that reader, and mark that one read.
+    _messageRouter.onReadReceiptReceived = (senderPubkey, messageId) {
+      final readerHex = _pubkeyToHex(senderPubkey);
+      final wireId = store.state.messages.outgoingMessages.values
+              .where((m) => m.recipientPubkeyHex == readerHex)
+              .map((m) => m.messageId)
+              .where((wire) =>
+                  MessageRouter.deliveryIdOf(identity.publicKey, wire) ==
+                  messageId)
+              .firstOrNull;
+      if (wireId == null) {
+        debugPrint('Read receipt for $messageId from $readerHex names no '
+            'message sent to it: ignored');
+        return;
+      }
+      debugPrint('Read receipt received for message $wireId');
+      store.dispatch(MessageReadAction(messageId: wireId));
     };
 
     // Map incoming UDP connections from any verified packet's sender: a

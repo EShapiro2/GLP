@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:cryptography/dart.dart' show DartSha256;
 import 'package:redux/redux.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
@@ -60,12 +62,28 @@ class MessageRouter {
   /// drops a message only once its recipient keeps it.  When it fails, the
   /// message is neither delivered nor acknowledged, and the sender's
   /// retransmission delivers it later.  Absent, the message is delivered and
-  /// acknowledged at once.
+  /// acknowledged at once.  The id is the layer-assigned one of [deliveryIdOf].
   Future<void> Function(String id, Uint8List senderPubkey, Uint8List payload,
       PeerTransport transport)? keepDelivered;
 
-  /// Called when an ACK is received (delivery confirmation)
-  void Function(String messageId)? onAckReceived;
+  /// The layer-assigned id a message from [senderPubkey] is delivered under
+  /// (GNA §2.9): the first 32 hex characters of SHA-256 over the sender's
+  /// public key and the wire messageId. A re-send of the same message maps to
+  /// the same id, and two senders using the same wire id map to different ones.
+  static String deliveryIdOf(Uint8List senderPubkey, String messageId) {
+    final digest = const DartSha256()
+        .hashSync(
+            Uint8List.fromList([...senderPubkey, ...utf8.encode(messageId)]))
+        .bytes;
+    return digest
+        .sublist(0, 16)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+  }
+
+  /// Called when an ACK is received from [senderPubkey], the peer that
+  /// delivered it (delivery confirmation).
+  void Function(Uint8List senderPubkey, String messageId)? onAckReceived;
 
   /// Called when a per-fragment acknowledgment arrives (spec §Message
   /// Transport) — the coordinator settles the sender-side retransmit slot.
@@ -74,11 +92,13 @@ class MessageRouter {
 
   /// Called when an inbound fragment needs its per-fragment acknowledgment
   /// sent back.
-  void Function(PeerTransport transport, String? peerId, String messageId,
-      int index)? onFragmentAckRequested;
+  void Function(
+          PeerTransport transport, String? peerId, String messageId, int index)?
+      onFragmentAckRequested;
 
   /// Called when a read receipt is received
-  void Function(String messageId)? onReadReceiptReceived;
+  void Function(Uint8List senderPubkey, String messageId)?
+      onReadReceiptReceived;
 
   /// Called when a peer ANNOUNCE is processed (new or updated peer).
   /// [udpPeerId] is the transport-level peer identifier (tempKey for incoming
@@ -279,8 +299,7 @@ class MessageRouter {
     }
 
     if (!packet.type.isSessionEncrypted) {
-      debugPrint(
-          'Dropping unauthenticated clear ${packet.type.name} packet');
+      debugPrint('Dropping unauthenticated clear ${packet.type.name} packet');
       return;
     }
 
@@ -345,9 +364,9 @@ class MessageRouter {
       case PacketType.fragmentAck:
         _handleFragmentAck(packet, senderPubkey, transport);
       case PacketType.ack:
-        _handleAck(packet);
+        _handleAck(packet, senderPubkey);
       case PacketType.readReceipt:
-        _handleReadReceipt(packet);
+        _handleReadReceipt(packet, senderPubkey);
       case PacketType.signaling:
         _handleSignaling(
           packet,
@@ -479,8 +498,7 @@ class MessageRouter {
       ));
     }
 
-    debugPrint(
-        'Peer ${isNew ? "connected" : "updated"}: '
+    debugPrint('Peer ${isNew ? "connected" : "updated"}: '
         '${data.pubkeyHex.substring(0, 8)}... via ${transport.name}');
 
     onPeerAnnounced?.call(data, transport,
@@ -524,7 +542,8 @@ class MessageRouter {
       fragment.index,
     );
 
-    final reassembled = fragmentHandler.addFragment(fragment);
+    final reassembled = fragmentHandler.addFragment(fragment,
+        senderHex: _pubkeyToHex(senderPubkey));
     if (reassembled == null) return;
 
     // Reassembly produced the original message's payload bytes; the
@@ -578,14 +597,16 @@ class MessageRouter {
       return;
     }
 
+    final deliveryId = deliveryIdOf(senderPubkey, messageId);
     final keep = keepDelivered;
     if (keep == null) {
-      _deliverAndAcknowledge(messageId, body, senderPubkey, transport, peerId);
+      _deliverAndAcknowledge(
+          messageId, deliveryId, body, senderPubkey, transport, peerId);
       return;
     }
-    unawaited(keep(messageId, senderPubkey, body, transport).then(
+    unawaited(keep(deliveryId, senderPubkey, body, transport).then(
       (_) => _deliverAndAcknowledge(
-          messageId, body, senderPubkey, transport, peerId),
+          messageId, deliveryId, body, senderPubkey, transport, peerId),
       onError: (Object e) {
         debugPrint('Message $messageId not kept, so neither delivered nor '
             'acknowledged; its sender sends it again: $e');
@@ -593,14 +614,17 @@ class MessageRouter {
     ));
   }
 
+  /// Delivers [body] under [deliveryId] and acknowledges it to its sender
+  /// under the wire [messageId] (the whole-message ACK carries the wire id).
   void _deliverAndAcknowledge(
     String messageId,
+    String deliveryId,
     Uint8List body,
     Uint8List senderPubkey,
     PeerTransport transport,
     String? peerId,
   ) {
-    onMessageReceived?.call(messageId, senderPubkey, body, transport);
+    onMessageReceived?.call(deliveryId, senderPubkey, body, transport);
 
     // Send ACK back to confirm delivery. The sender waits for this to
     // mark the message as "delivered" (2 checkmarks). Works over both
@@ -608,7 +632,7 @@ class MessageRouter {
     onAckRequested?.call(transport, peerId, messageId);
   }
 
-  void _handleAck(GrassrootsPacket packet) {
+  void _handleAck(GrassrootsPacket packet, Uint8List senderPubkey) {
     if (packet.payload.isEmpty) return;
     try {
       final messageId = String.fromCharCodes(packet.payload);
@@ -618,7 +642,7 @@ class MessageRouter {
             'Ignoring ACK with invalid message ID length: ${messageId.length}');
         return;
       }
-      onAckReceived?.call(messageId);
+      onAckReceived?.call(senderPubkey, messageId);
     } catch (e) {
       debugPrint('Failed to decode ACK payload: $e');
     }
@@ -638,7 +662,7 @@ class MessageRouter {
     );
   }
 
-  void _handleReadReceipt(GrassrootsPacket packet) {
+  void _handleReadReceipt(GrassrootsPacket packet, Uint8List senderPubkey) {
     if (packet.payload.isEmpty) return;
     try {
       final messageId = String.fromCharCodes(packet.payload);
@@ -647,7 +671,7 @@ class MessageRouter {
             'Ignoring read receipt with invalid message ID length: ${messageId.length}');
         return;
       }
-      onReadReceiptReceived?.call(messageId);
+      onReadReceiptReceived?.call(senderPubkey, messageId);
     } catch (e) {
       debugPrint('Failed to decode read receipt payload: $e');
     }

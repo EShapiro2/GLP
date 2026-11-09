@@ -139,23 +139,24 @@ class MessageTransportSender {
     _pump(lane);
   }
 
-  /// A whole-message acknowledgment arrived (delivery receipt): everything
-  /// still outstanding for that message is settled — the receiver has it.
-  void handleMessageAck(String messageId) {
-    for (final lane in _lanes.values) {
-      final message = lane.messageById(messageId);
-      if (message == null) continue;
-      for (final inFlight in message.inFlight.values) {
-        inFlight.timer?.cancel();
-        lane.slotsInUse--;
-      }
-      message.inFlight.clear();
-      message.pending.clear();
-      message.complete(true);
-      lane.messages.remove(message);
-      _pump(lane);
-      return;
+  /// A whole-message acknowledgment arrived from [peerHex], the peer the
+  /// message was sent to (delivery receipt): everything still outstanding for
+  /// that message is settled — the receiver has it. An acknowledgment from any
+  /// other peer settles nothing.
+  void handleMessageAck(String peerHex, String messageId) {
+    final lane = _lanes[peerHex];
+    if (lane == null) return;
+    final message = lane.messageById(messageId);
+    if (message == null) return;
+    for (final inFlight in message.inFlight.values) {
+      inFlight.timer?.cancel();
+      lane.slotsInUse--;
     }
+    message.inFlight.clear();
+    message.pending.clear();
+    message.complete(true);
+    lane.messages.remove(message);
+    _pump(lane);
   }
 
   /// A message's attempts ran out toward [peerHex]: fail every message to it

@@ -87,8 +87,8 @@ class DeliveredQueueEntry {
   /// The sender's public key, 64 hex characters.
   final String senderHex;
 
-  /// The `messageId` the message was delivered under, and is delivered under
-  /// again.
+  /// The layer-assigned id the message was delivered under (GNA §2.9), and is
+  /// delivered under again.
   final String messageId;
 
   /// The byte payload delivered.
