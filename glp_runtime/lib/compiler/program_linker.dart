@@ -264,9 +264,9 @@ List<DiscoveredModule> discoverProgram(String rootDir,
         program: program, layers: layers);
     final written = _writeCompiledTypes(modules);
     if (written.isNotEmpty) {
-      // Each module with a self.glp written into on its chain, the
-      // compiled modules among them, gets its scope again, the self.glp
-      // read whole with the types written into it.
+      // Each module with a self.glp written into, or read leniently until
+      // now, on its chain, the compiled modules among them, gets its scope
+      // again, the self.glp read whole with the types written into it.
       for (final m in modules) {
         if (!m.filePath.startsWith(root.absolute.path) &&
             !m.filePath.startsWith(root.path)) {
@@ -295,11 +295,26 @@ List<DiscoveredModule> discoverProgram(String rootDir,
 /// Section 6.3; [SelfGlpReading]): one that imports a procedure of a compiled
 /// module committed beside its source --- `imported procedure M#p(...)`, M.glp
 /// of its directory or below opening with the compiler's header --- gets that
-/// module's types its declarations name from the start; one that imports a
-/// procedure of a `.vglp` source with no `.glp` beside it, which the loader
-/// compiles, waits for the compilation ([SelfGlpReading.pending]).
-SelfGlpReading _selfGlpReadingOf(Iterable<String> selfPaths) {
+/// module's types its declarations name from the start; where
+/// [belowCompiled], one with a compiled module in its directory or below ---
+/// a `.vglp` source the loader compiles, or a module committed beside its
+/// source --- waits for the compilation ([SelfGlpReading.pending]), since the
+/// compilation may write its types into it, directly or through a module of
+/// its directory that imports them ([_writeCompiledTypes]), which a program's
+/// discovery does and a single module's cannot.
+SelfGlpReading _selfGlpReadingOf(Iterable<String> selfPaths,
+    {bool belowCompiled = true}) {
   final reading = SelfGlpReading(<String>{});
+  // The compiled modules below the outermost directories of [selfPaths],
+  // listed once.
+  final compiledBelow = <String>[];
+  if (belowCompiled) {
+    final dirs = {for (final p in selfPaths) _normPath(File(p).parent.path)};
+    for (final d in dirs) {
+      if (dirs.any((o) => o != d && ppath.isWithin(o, d))) continue;
+      compiledBelow.addAll(_compiledModulesBelow(d));
+    }
+  }
   for (final path in selfPaths) {
     final Module m;
     try {
@@ -308,14 +323,17 @@ SelfGlpReading _selfGlpReadingOf(Iterable<String> selfPaths) {
       continue;
     }
     final dir = File(path).parent.path;
+    final dirNorm = _normPath(dir);
+    if (compiledBelow
+        .any((c) => ppath.isWithin(dirNorm, c))) {
+      reading.pending.add(SelfGlpReading.key(path));
+    }
     for (final d in [...m.procDeclarations, ...m.paramProcDecls]) {
       final q = d.modulePath;
       if (!d.imported || q == null) continue;
       final stem = ppath.join(dir, q.replaceAll('#', ppath.separator));
       final glp = File('$stem.glp');
-      if (File('$stem.vglp').existsSync() && !glp.existsSync()) {
-        reading.pending.add(SelfGlpReading.key(path));
-      } else if (glp.existsSync() &&
+      if (glp.existsSync() &&
           glp.readAsStringSync().startsWith(compiledHeader)) {
         final Module c;
         try {
@@ -330,25 +348,60 @@ SelfGlpReading _selfGlpReadingOf(Iterable<String> selfPaths) {
   return reading;
 }
 
+/// The compiled modules in the directory [dir] or below, by their normalised
+/// paths: each `.vglp` source the loader compiles --- no self.vglp, and no
+/// `.glp` beside it --- and each `.glp` committed beside its source, its
+/// first line the compiler's header.
+List<String> _compiledModulesBelow(String dir) {
+  final d = Directory(dir);
+  if (!d.existsSync()) return const [];
+  final out = <String>[];
+  for (final f in _listFiles(d)) {
+    if (f.path.endsWith('.vglp')) {
+      if (ppath.basename(f.path) == selfVglp) continue;
+      final stem = f.path.substring(0, f.path.length - '.vglp'.length);
+      if (!File('$stem.glp').existsSync()) out.add(_normPath(f.path));
+    } else if (f.path.endsWith('.glp') &&
+        ppath.basename(f.path) != 'self.glp' &&
+        _isCompiledSelfGlp(f.path)) {
+      out.add(_normPath(f.path));
+    }
+  }
+  return out;
+}
+
+/// The names of the types the declaration [d] names, at every depth.
+List<String> _namesIn(ProcDecl d) {
+  final out = <String>[];
+  for (final t in d.argTypes) {
+    _typeNames(t, out);
+  }
+  return out;
+}
+
+void _typeNames(TypeExpr t, List<String> out) {
+  mapTypeRefs(t, (ref) {
+    out.add(ref.name);
+    for (final a in ref.typeArgs) {
+      _typeNames(a, out);
+    }
+    return ref;
+  });
+}
+
 /// The definitions of [compiled]'s types that the declaration [d] names, and
 /// of those they name.
-List<TypeDef> _typesNamed(ProcDecl d, Module compiled) {
-  void named(TypeExpr t, List<String> out) {
-    mapTypeRefs(t, (ref) {
-      out.add(ref.name);
-      for (final a in ref.typeArgs) {
-        named(a, out);
-      }
-      return ref;
-    });
-  }
+List<TypeDef> _typesNamed(ProcDecl d, Module compiled) =>
+    _typesClosed(_namesIn(d), compiled);
+
+/// The definitions of [compiled]'s types among [names], and of those they
+/// name, at every depth; a name [compiled] does not define is passed over.
+List<TypeDef> _typesClosed(Iterable<String> names, Module compiled) {
+  void named(TypeExpr t, List<String> out) => _typeNames(t, out);
 
   final defs = {for (final td in compiled.typeDefs) td.name: td};
   final want = <String, TypeDef>{};
-  final todo = <String>[];
-  for (final t in d.argTypes) {
-    named(t, todo);
-  }
+  final todo = <String>[...names];
   while (todo.isNotEmpty) {
     final n = todo.removeLast();
     final td = defs[n];
@@ -908,55 +961,122 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
   }
 }
 
-/// The types the compilation forms, written into each module that imports a
-/// compiled procedure or the dispatcher: "Every module of [M] type-checks as
-/// GLP with no type written by hand: the compilation writes into each module
-/// that imports a compiled procedure or the dispatcher the types it forms for
-/// them, among them the type of the asks, the view types and the parameter
-/// of the person channel" (vGLP 2f08466, Section 6.3, "The canonical
-/// compilation"; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC, item 1).  For
-/// each declaration `imported procedure M#p(...)` of a module whose qualifier
-/// M is a compiled module of its directory or below, the definitions of that
-/// module of the types the declaration names, and of those they name, are
-/// written into the importing module, each in place of a definition of its
-/// name there: a copy written by hand gives way to the compilation's.  A
-/// `self.glp` written into is recorded in [selfGlpReading], so that every
-/// scope reads it with the types; the paths of those are returned.
-Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
-  final compiled = {
-    for (final m in modules)
-      if (m.filePath.endsWith('.vglp')) ppath.normalize(m.filePath): m
-  };
-  final writtenSelf = <String>{};
-  if (compiled.isEmpty) return writtenSelf;
+/// A type definition written into a module by the compilation, with the
+/// compiled module it is taken from ([_writeCompiledTypes]).
+class _WrittenType {
+  final TypeDef def;
+  final DiscoveredModule from;
+  _WrittenType(this.def, this.from);
+}
 
+/// The types the compilation forms, written into the modules that import
+/// them: "Every module of [M] type-checks as GLP with no type written by
+/// hand: the compilation writes into each module that imports a compiled
+/// procedure, the dispatcher, or a procedure whose declaration names a type
+/// the compilation forms, the types it forms for them, the linker so writing
+/// them, among them the type of the asks, the view types and the parameter
+/// of the person channel" (vGLP e1d1b8a, Section 6.3, "The canonical
+/// compilation"; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC, item 1).
+///
+/// A compiled module --- one the loader compiled from a `.vglp` source, or
+/// one committed beside its source, its first line the compiler's header ---
+/// carries its types.  For each declaration `imported procedure M#p(...)` of
+/// any other module, M a module of its directory or below: where M is
+/// compiled, the definitions in M of the types the declaration names, and of
+/// those they name, are written into the importing module; where M is not,
+/// but types were written into M, the types the declaration names among them
+/// are written into the importing module with those they name, each taken
+/// from the compiled module it was written into M from.  So a module that
+/// imports a procedure whose declaration names a formed type gets it however
+/// far from the compiled module the import stands, the writing being repeated
+/// until no module gains a type.  Each type written takes the place of a
+/// definition of its name in the module: a copy written by hand gives way to
+/// the compilation's.  A `self.glp` written into is recorded in
+/// [selfGlpReading], so that every scope reads it with the types.  Returned:
+/// the `self.glp` files whose scopes are to be built again, those written
+/// into and those read leniently until now ([SelfGlpReading.pending]), the
+/// latter read whole from here on.
+Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
+  final reading = selfGlpReading;
+  final rebuild = <String>{...?reading?.pending};
+  reading?.pending.clear();
+
+  // The compiled modules, by the path of their source with no extension.
+  final compiled = <String, DiscoveredModule>{};
   for (final m in modules) {
-    if (m.filePath.endsWith('.vglp')) continue;
-    final dir = ppath.dirname(m.filePath);
-    final want = <String, TypeDef>{};
-    for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
-      final q = d.modulePath;
-      if (!d.imported || q == null) continue;
-      final c = compiled[ppath.normalize(
-          ppath.join(dir, '${q.replaceAll('#', ppath.separator)}.vglp'))];
-      if (c == null) continue;
-      for (final td in _typesNamed(d, c.ast)) {
-        want[td.name] = td;
-      }
-    }
-    if (want.isEmpty) continue;
-    m.ast.typeDefs
-      ..removeWhere((td) => want.containsKey(td.name))
-      ..addAll(want.values);
-    if (m.isSelfGlp) {
-      final key = SelfGlpReading.key(m.filePath);
-      selfGlpReading
-        ?..write(m.filePath, want.values)
-        ..pending.remove(key);
-      writtenSelf.add(key);
+    if (m.filePath.endsWith('.vglp')) {
+      compiled[ppath.normalize(ppath.withoutExtension(m.filePath))] = m;
+    } else if (!m.isSelfGlp && _isCompiledSelfGlp(m.filePath)) {
+      compiled[ppath.normalize(ppath.withoutExtension(m.filePath))] = m;
     }
   }
-  return writtenSelf;
+  if (compiled.isEmpty) return rebuild;
+  final isCompiled = compiled.values.toSet();
+  final byPath = {for (final m in modules) ppath.normalize(m.filePath): m};
+
+  // What is written into each module, by type name; a compiled module's own
+  // types count as written into it, each from itself.
+  final written = <DiscoveredModule, Map<String, _WrittenType>>{
+    for (final c in isCompiled)
+      c: {for (final td in c.ast.typeDefs) td.name: _WrittenType(td, c)}
+  };
+
+  // The module an import's qualifier M names, from the importer's directory:
+  // the compiled module of its source, the module M.glp, or the self.glp of
+  // the directory M.
+  DiscoveredModule? target(DiscoveredModule m, String q) {
+    final stem = ppath.normalize(ppath.join(
+        ppath.dirname(m.filePath), q.replaceAll('#', ppath.separator)));
+    return compiled[stem] ??
+        byPath['$stem.glp'] ??
+        byPath[ppath.join(stem, 'self.glp')];
+  }
+
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final m in modules) {
+      if (isCompiled.contains(m)) continue;
+      for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
+        final q = d.modulePath;
+        if (!d.imported || q == null) continue;
+        final t = target(m, q);
+        if (t == null || identical(t, m)) continue;
+        final have = written[t];
+        if (have == null || have.isEmpty) continue;
+        // The types the declaration names that were written into t, by the
+        // compiled module each comes from, and their closures there.
+        final seeds = <DiscoveredModule, List<String>>{};
+        for (final n in _namesIn(d)) {
+          final w = have[n];
+          if (w != null) seeds.putIfAbsent(w.from, () => []).add(n);
+        }
+        if (seeds.isEmpty) continue;
+        final into = written.putIfAbsent(m, () => {});
+        for (final e in seeds.entries) {
+          for (final td in _typesClosed(e.value, e.key.ast)) {
+            if (into.containsKey(td.name)) continue;
+            into[td.name] = _WrittenType(td, e.key);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  for (final e in written.entries) {
+    final m = e.key;
+    if (isCompiled.contains(m) || e.value.isEmpty) continue;
+    final defs = [for (final w in e.value.values) w.def];
+    m.ast.typeDefs
+      ..removeWhere((td) => e.value.containsKey(td.name))
+      ..addAll(defs);
+    if (m.isSelfGlp) {
+      reading?.write(m.filePath, defs);
+      rebuild.add(SelfGlpReading.key(m.filePath));
+    }
+  }
+  return rebuild;
 }
 
 /// The scope a `.vglp` source is compiled in: its ancestor chain, with the
@@ -1002,7 +1122,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
   final dir0 = File(filePath).parent.absolute.path;
-  selfGlpReading = _selfGlpReadingOf({
+  final selfPaths = <String>[
     if (File(filePath).existsSync())
       ...discoverSelfChain(
           targetFile: File(filePath).absolute.path,
@@ -1010,15 +1130,65 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
           programsDir: programsDir0),
     if (File(ppath.join(dir0, 'self.glp')).existsSync())
       ppath.join(dir0, 'self.glp'),
-  });
+  ];
+  selfGlpReading = _selfGlpReadingOf(selfPaths, belowCompiled: false);
   try {
-    final modules = _discoverSingleModule(filePath,
-        rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
-    _writeReadTypes(modules);
-    return modules;
+    List<DiscoveredModule> discover() {
+      final modules = _discoverSingleModule(filePath,
+          rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
+      _writeReadTypes(modules);
+      return modules;
+    }
+
+    try {
+      return discover();
+    } on UndefinedDeclarationTypeError {
+      // A self.glp of the chain may be a module the compilation writes
+      // types into, directly or through a module of its directory (vGLP,
+      // Section 6.3; _writeCompiledTypes), and so name a type no scope
+      // defines until the program of its directory is discovered: discover
+      // that program, read its self.glp files as the compilation wrote them,
+      // and discover the module again; where no compiled module is below the
+      // chain, or the types are still undefined, the refusal stands.
+      if (!_readCompiledTypesOfChain(selfPaths,
+          rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope)) {
+        rethrow;
+      }
+      return discover();
+    }
   } finally {
     selfGlpReading = outer;
   }
+}
+
+/// The types the compilation writes into the `self.glp` files at [selfPaths]
+/// (vGLP, Section 6.3), read into [selfGlpReading] from a discovery of the
+/// program of the outermost of them, the root excepted, with a compiled
+/// module in its directory or below; false where there is none.
+bool _readCompiledTypesOfChain(List<String> selfPaths,
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
+  final reading = selfGlpReading;
+  if (reading == null) return false;
+  final rootKey =
+      rootSelfGlpPath == null ? null : SelfGlpReading.key(rootSelfGlpPath);
+  final keys = {for (final p in selfPaths) SelfGlpReading.key(p)};
+  for (final p in selfPaths) {
+    if (SelfGlpReading.key(p) == rootKey) continue;
+    final dir = File(p).parent.absolute.path;
+    if (_compiledModulesBelow(dir).isEmpty) continue;
+    final program = discoverProgram(dir,
+        rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
+    var any = false;
+    for (final m in program) {
+      if (!m.isSelfGlp || !keys.contains(SelfGlpReading.key(m.filePath))) {
+        continue;
+      }
+      reading.write(m.filePath, m.ast.typeDefs);
+      any = true;
+    }
+    return any;
+  }
+  return false;
 }
 
 /// The types [selfGlpReading] has written into a `self.glp`, written into its

@@ -1,33 +1,19 @@
 # Cloud, role vGLP: handover
 
-Written by Cloud #9, 2026-11-08.  The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud; the role's inbox is `mail/Cloud-vGLP_inbox.md`, its tasks Code #26's entry of 2026-11-08 15:27 UTC there.  This file points to the commits and the mail and copies neither.
+Written by Cloud #14, 2026-11-09.  The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud; the role's inbox is `mail/Cloud-vGLP_inbox.md`.  Cloud #9's handover of the role is in git (0a67370a); this file points to the commits and the mail and copies neither.
 
 ## Environment
 
-- The container had Flutter with Dart 3.13.7 at `/home/user/sdk/flutter`; export `/home/user/sdk/flutter/bin` and `/home/user/sdk/flutter/bin/cache/dart-sdk/bin` in every shell.  `bin/glpc` rebuilds the REPL on the first run after a Dart change.
-- Repositories added by `add_repo`: `Grassroots-Project-Overview` (push), `VEUI-Volition-Elicitation-Rationalizing-the-GLP-Smartphone-User-Interface` (vGLP's paper), `Jurix-Formal-Grassroots-Social-Contracts` (GSC's paper).
-- Never edit `test/run_all_tests.sh` while it runs: bash reads it as it goes.  Run a copy beside it, `test/.run_copy.sh`, and delete it after.
-- A Flutter run rewrites `glp_multiagent/analysis_options.yaml`; restore it and never commit it.
-- A program under test whose play must import a compiled module writes the drawn type with `f(_)`, so it is written by the Dart test under `programs/tests/vglp/` for the run and removed after (elicitation_test and bridge_test do so), keeping the tree clear of Section TY.
+- A fresh container has no Dart: `git clone --depth 1 -b stable https://github.com/flutter/flutter.git /home/user/sdk/flutter` and one `flutter --version` give Flutter 3.47.9 with Dart 3.13.7, which `glp_multiagent`'s dependency tree needs; export `/home/user/sdk/flutter/bin` and `/home/user/sdk/flutter/bin/cache/dart-sdk/bin` in every shell, and `export DART=dart` for `test/run_all_tests.sh`.  `bin/glpc` rebuilds the REPL on the first run after a Dart change; never run two of them, or the suite and one of them, while a rebuild is due, since both write `bin/glp_repl_exe`.
+- Repositories added by `add_repo`, owner `EShapiro2`: `Grassroots-Project-Overview` (push), `Grassroots-docs`, `VEUI-Volition-Elicitation-Rationalizing-the-GLP-Smartphone-User-Interface` (vGLP's paper), `Jurix-Formal-Grassroots-Social-Contracts` (GSC's), and, for the manifests of the records re-made, `GC-Grassroots-Currencies`, `GCC-Grassroots-Commmunity-Currencies`, `SGC-Sovereign-Grassroots-Currencies` and `GSG-Grassroots-Social-Graph`, each linked at `/Users/udi/Grassroots/<dir>` (GSC, GC, GCC, SGC, GSA), where `cascade.sh` looks for a paper.
+- Never edit `test/run_all_tests.sh` while it runs; a Flutter run rewrites `glp_multiagent/analysis_options.yaml`, which is restored and never committed (Cloud #9).
 
-## The three tasks, branch Cloud-vglp
+## Cloud-vglp2, the open types the compilation prints: done, reported
 
-The commits and the report are in `Code_inbox.md`, `From: Cloud #9`.
+Code #27's task, `Cloud-vGLP_inbox.md`, 2026-11-09 16:09 UTC, finishing Cloud #7's and Cloud #11's work (0a67370a).  The report, with the commits and each run's totals line, is in `Code_inbox.md`, `From: Cloud #14`.  What it built: vGLP e1d1b8a, Section 6.3, in `glp_runtime/lib/compiler/program_linker.dart` --- the linker writes the types the compilation forms into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names one of them, however far from the compiled module the import stands (`_writeCompiledTypes`, a fixpoint over the imports), a `self.glp` with a compiled module below it read leniently until the types are written (`_selfGlpReadingOf`, `SelfGlpReading.pending`), and a single module loaded alone in such a directory getting them from a discovery of the directory's program (`discoverSingleModule`); the hand copies of Question, Drawn and Ask(Q) deleted from the `self.glp` of the eight apps and of the currencies' coins, bonds and sovereign, their entries off `test/OPEN_TYPES`.
 
-1. pragmas.sh and `amends`, and the author and item of a speech act: done.
-2. Program positions inside the person's answers, and a Stream only where the person writes: done.
-3. Standing requests: see the report; what is built and what waits on a paper is named there.
+Left as they were, each said in the report: `programs/cssn/self.glp` (CSSN's platform.vglp is stale and the reader refuses it, so the compilation cannot form its types; the deletion waits for CSSN's re-print); `programs/tests/linker_tree/self.glp` (IGLP's fixture: its person.glp names Drawn through the ancestor's hand copy and imports nothing, so the rule of 6.3 does not reach it); `programs/social/graph/core/self.glp` (GSA's HomeDrawn, a copy under another name, which the linker cannot write by name); the committed compiled modules of the currencies and of linker_tree, printed with the open Drawn by the compiler of their day, which stand until their owners re-emit them.
 
-## Task 4, branch Cloud-vglp2: in flight, does not load
+## Next: Cloud-vglp3 (item 3 of the same task)
 
-Code #26's entry of 2026-11-08 20:20 UTC in `Cloud-vGLP_inbox.md`: the open types the compilation prints (Section TY's 12 reds), vGLP ac8c281, 6.3.  Branch Cloud-vglp2 off Cloud-vglp, `origin/main` merged (1efba6e).  The work-in-progress commit after it is not for merge: every directory it edits fails to load.
-
-What is in it:
-
-- `program_linker.dart`, `_writeCompiledTypes`, called after `_addVglpModules`: into each module that imports a compiled procedure or the dispatcher it writes the types the imported declarations name, closed over the compiled module's type definitions, replacing a copy of the same name.
-- `constructs.dart`: Drawn written precisely, `f(View_f)` in place of `f(_)`.
-- The hand copies of those types deleted from the `self.glp` of `programs/tests/vglp/*` and `programs/vglp/cva/*` (vGLP's own).  Other owners' importers (`programs/apps/*`, social/graph/core, currencies, cssn, linker_tree) are untouched, to be listed for Code to route.
-
-The blocker: an importer `self.glp` is also an ancestor of the `.vglp` it imports from, and its scope is checked at discovery (`mergeSelfGlpFileIntoScope`, `module_hierarchy.dart`; the chain loop in `program_linker.dart` building `_vglpScope`), before the compiled module exists, so `undefined type "Ask" in the declaration of inputs/2`.  Three ways out, the first the right one: compile the `.vglp` and write its types before the importer's scope is checked; defer the declaration check of an importer; or delete only the types the compilation forms (the asks, the views, Drawn, Questioned) and keep the source types (6.3: "the types it forms for them").
-
-Also open: the precise Drawn refuses the stream fixture's play granting `stream_string_r(7)`; a play granting a malformed answer needs a term of the type that forms none.  Then: re-print the platforms (`programs/vglp/cva/compile.sh`, `programs/apps/compile.sh`), re-make the cascade records `cascade.sh` can, type `play_refresh/3` in `programs/vglp/cva/social_graph/self.glp`, delete the cleared entries of `test/OPEN_TYPES`, run VG, TY, APPS, CAS and `dart test` (vglp), report.
+vGLP 1d84a35 and GSC 1a8e31c (`Cloud-vGLP_inbox.md`, 2026-11-08 20:28 and 20:30 UTC).  Main has: point 2, a raw input with a hole at each program-written position (`glp_runtime/lib/vglp/constructs.dart`, the skeleton types `skel_N` and `hole`); point 3, the standing line read by pragmas.sh as standing(S, Start, Stop) (4581d5a).  Main lacks: point 1, an inherited tab standing while the contract has the predicate it lists (`programs/vglp/cva/compiler/cvac.glp`, `tab_terms`, which prints `tab(Name, none)` for a tab naming no predicate of the contract); point 4, Ready and Readied and Propose's precondition under standing approvals (`programs/vglp/cva/compiler/text.glp`: the records `readied(Attempt)` and `ready(Attempt, Peer)`, the cargo `ready(Attempt)`, Ready an own transaction, Readied on the message).  Both are edits of vGLP's compiler, which Cloud #12 edits on Cloud-itemof at the same time: name the file to Code first.

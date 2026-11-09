@@ -81,21 +81,13 @@ cascade/GFF/platform.glp	open-decl	thread_cell/4
 cascade/GFF/platform.glp	open-decl	thread_tail/3
 cascade/GFF/platform.glp	open-type	Drawn
 programs/apps/gai/miniapp.glp	open-decl	to_person/2
-programs/apps/gai/self.glp	open-type	Drawn
 programs/apps/gb/miniapp.glp	open-decl	to_person/2
-programs/apps/gb/self.glp	open-type	Drawn
 programs/apps/gc/miniapp.glp	open-decl	to_person/2
-programs/apps/gc/self.glp	open-type	Drawn
 programs/apps/gff/miniapp.glp	open-decl	to_person/2
-programs/apps/gff/self.glp	open-type	Drawn
 programs/apps/gkk/miniapp.glp	open-decl	to_person/2
-programs/apps/gkk/self.glp	open-type	Drawn
 programs/apps/gsg/miniapp.glp	open-decl	to_person/2
-programs/apps/gsg/self.glp	open-type	Drawn
 programs/apps/gsn/miniapp.glp	open-decl	to_person/2
-programs/apps/gsn/self.glp	open-type	Drawn
 programs/apps/gsnp/miniapp.glp	open-decl	to_person/2
-programs/apps/gsnp/self.glp	open-type	Drawn
 programs/book/constants/gates.glp	open-decl	reduce/2
 programs/book/meta/debugging/runtime_control_meta.glp	open-decl	reduce/2
 programs/book/meta/debugging/runtime_control_meta.glp	open-decl	run/4
@@ -219,7 +211,6 @@ programs/currencies/bonds/dated/person.glp	open-type	OpenOffer
 programs/currencies/bonds/dated/plays.glp	open-decl	person#person/7
 programs/currencies/bonds/dated/self.glp	open-decl	person#person/7
 programs/currencies/bonds/dated/self.glp	open-decl	person/7
-programs/currencies/bonds/self.glp	open-type	Drawn
 programs/currencies/bonds/self.glp	open-type	Event
 programs/currencies/bonds/village.glp	open-decl	dated#person/7
 programs/currencies/coins/currency/coins_agent.glp	open-type	Drawn
@@ -233,7 +224,6 @@ programs/currencies/coins/currency/plays.glp	open-decl	person#person/5
 programs/currencies/coins/currency/self.glp	open-decl	person#person/5
 programs/currencies/coins/currency/self.glp	open-decl	person/5
 programs/currencies/coins/play_ui.glp	open-decl	currency#person/5
-programs/currencies/coins/self.glp	open-type	Drawn
 programs/currencies/coins/self.glp	open-type	Event
 programs/currencies/coins/village.glp	open-decl	currency#person/5
 programs/currencies/coins/village.glp	open-decl	tee/3
@@ -252,7 +242,6 @@ programs/currencies/sovereign/denominated/self.glp	open-decl	person#person/7
 programs/currencies/sovereign/denominated/self.glp	open-decl	person/7
 programs/currencies/sovereign/denominated/sovereign_agent.glp	open-type	Drawn
 programs/currencies/sovereign/play_ui.glp	open-decl	denominated#person/7
-programs/currencies/sovereign/self.glp	open-type	Drawn
 programs/currencies/sovereign/self.glp	open-type	Event
 programs/currencies/sovereign/village.glp	open-decl	denominated#person/7
 programs/lib/lookup/lookup.glp	open-decl	lookup/3

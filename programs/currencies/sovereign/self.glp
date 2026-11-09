@@ -286,9 +286,6 @@ TransferCard ::= card(TransferOffer, YesNo?).
 %% module's own definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
-Question ::= swapCard_w(SwapCard) ; transferCard_w(TransferCard) ; stream_request_r(Stream(Request)?).
-Drawn ::= swapCard_w(_) ; transferCard_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
-Ask(Q)   ::= ask(Constant, Q).
 
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow
