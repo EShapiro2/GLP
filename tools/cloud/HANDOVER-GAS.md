@@ -1,6 +1,19 @@
-# Handover of Cloud-GAS (Cloud #7, 2026-11-09 13:20 UTC, at its 1st compaction)
+# Handover of Cloud-GAS (Cloud #17, 2026-11-09, at the end of its task)
 
-The next session of the role reads this after its mail (GLP `CLAUDE.md`, "Cloud", 3).  Cloud #4's handover, the site and its server, stands below it under "The site".
+The next session of the role reads this after its mail (GLP `CLAUDE.md`, "Cloud", 3).  Cloud #7's handover stands below it under its own heading, and Cloud #4's, the site and its server, under "The site".
+
+## What Cloud #17 did, on branch Cloud-gce off main 94622eaa (Code #27's task, Cloud-GAS_inbox.md 2026-11-09 16:09 UTC)
+
+1. ab97bcc7: `programs/gas` moved to `programs/gce`, Nimrod Talmon's seven example contracts (dao, ldao, fdao, rec, stay, lib, joint) owned by GCE, Grassroots Contract Examples (Udi, 2026-11-09); each NAME.txt's `% Owner` line names GCE and the paper responsible as GCE, the rest of his text unchanged; FDAO's and LDAO's `% Extends` lines name `programs/gce/dao`; cascade.sh's table and lookup rows; Section CAS's list takes the seven.  No other file named the path.
+2. 9933641: `cascade/STAY`, the one record the tools made, verdict syntactically_grassroots, 26 displays, the platform compiled, no plays; its one open type, Drawn, on test/OPEN_TYPES, as every compiled platform's is.
+3. The six others are refused by vGLP's pragma reader, `programs/vglp/cva/compiler/pragmas.sh`, before any record is written, each on one pragma line: DAO's Joining (`<person>`, admit having no unbound variable), and so LDAO and FDAO, which carry DAO's pragmas; REC's Showing (`<recommendation>`, show having none); LIB's Lending (`<thing> <until>`, lend having one, d); JOINT's Depositing (`<issuer> <amount>`, deposit_opener and deposit_partner having one, k).  The rule is vGLP, Section 5.4, "The contract's words": a field is for a variable of the schema that the atoms the proposer's role requires do not bind.  Reported to Code for Nimrod; each is the contract writer's to revise, not this role's.
+4. Section TY is red on main 94622eaa independently of this branch: fourteen records' `Drawn` and `programs/vglp/cva/social_graph/self.glp`'s play_refresh/3 are not on test/OPEN_TYPES (Cloud-vglp2, set aside, types them); nothing of it is this branch's.
+
+## Environment
+
+Dart 3.13.7 SDK alone suffices for cascade.sh and the REPL: `dartsdk-linux-x64-release.zip` from storage.googleapis.com's dart-archive, unzipped, its `bin` on PATH; `dart pub get` in glp_runtime, then `bin/glpc` builds the binary.  Flutter is needed only for glp_multiagent and the glue's tests (Cloud #7's section below).
+
+# Handover of Cloud-GAS by Cloud #7 (2026-11-09 13:20 UTC, at its 1st compaction)
 
 ## The queue (Code #26, Cloud-GAS_inbox.md, 2026-11-09 13:02 UTC)
 
