@@ -2,12 +2,14 @@
 /// [PlaceGeofenceBackend] asks of iOS and Android.
 ///
 /// Spec `docs/GLP_Networking_API/sections/system-predicates.tex` §System
-/// Predicates. GLP cannot reach the platform's location service, so the layer
-/// registers a circular region around the device's current location under a
-/// name GLP supplies, and reports the crossings the platform observes. What
-/// crosses the seam is the declaration and its stream, and nothing else: GLP
-/// supplies a name and a radius, and there is no call here that returns a
-/// position.
+/// Predicates, and §Geofencing. GLP cannot reach the platform's location
+/// service, so the layer registers a circular region about a centre under a
+/// name GLP supplies, and reports the crossings the platform observes.  The
+/// centre is the one the runtime gives, kept from the place's first
+/// declaration, or the device's current location where it gives none, and the
+/// native side answers with the centre it registered, which the runtime keeps
+/// (GNA a1cb804).  GLP supplies a name and a radius and receives no position:
+/// the centre crosses the seam to the runtime and reaches no program.
 ///
 /// The layer's own behaviour — supersession, release, which crossings are
 /// reported — is [PlaceRegistry]'s, above this. What is here is the platform
@@ -132,25 +134,47 @@ class PlatformPlaceGeofenceBackend implements PlaceGeofenceBackend {
   }
 
   @override
-  Future<bool> register(String registrationId, double radiusMetres) async {
-    if (_disposed) return false;
+  Future<PlaceCentre?> register(
+      String registrationId, PlaceCentre? centre, double radiusMetres) async {
+    if (_disposed) return null;
     _listen();
     try {
-      final registered = await _methods.invokeMethod<bool>('register', {
+      // The native side answers with the centre it registered, as a map of
+      // `latitude` and `longitude` in degrees, and with null where the
+      // platform refuses.
+      final registered =
+          await _methods.invokeMethod<Map<Object?, Object?>>('register', {
         'registrationId': registrationId,
         'radiusMetres': radiusMetres,
+        if (centre != null) 'latitude': centre.latitude,
+        if (centre != null) 'longitude': centre.longitude,
       });
-      return registered ?? false;
+      return _centreFrom(registered);
     } on MissingPluginException {
       // No native binding under this embedding — the platform refuses, which
       // is what a declaration with nothing behind it must report.
       debugPrint('[place] No platform geofencing on this embedding');
-      return false;
+      return null;
     } on PlatformException catch (e) {
       debugPrint('[place] Registration of $registrationId refused: ${e.code} '
           '${e.message}');
-      return false;
+      return null;
     }
+  }
+
+  /// The centre a native answer names, or null where it names none or is
+  /// malformed, which is a refusal: a registration about a centre the layer
+  /// cannot name is one the runtime could not declare again.
+  PlaceCentre? _centreFrom(Map<Object?, Object?>? answer) {
+    if (answer == null) return null;
+    final latitude = answer['latitude'];
+    final longitude = answer['longitude'];
+    if (latitude is! num || longitude is! num) {
+      debugPrint('[place] Ignoring malformed registration answer: $answer');
+      return null;
+    }
+    return PlaceCentre(
+        latitude: latitude.toDouble(), longitude: longitude.toDouble());
   }
 
   @override

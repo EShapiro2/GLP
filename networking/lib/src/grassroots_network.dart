@@ -2450,20 +2450,25 @@ class GrassrootsNetwork {
 
   // ===== Places =====
 
-  /// Register a geofence of [radiusMetres] around the device's **current**
-  /// location under [place]. Spec
-  /// `docs/GLP_Networking_API/sections/system-predicates.tex`:
-  /// `declarePlace(place, radius)`.
+  /// Register a geofence of [radiusMetres] about [centre], or about the
+  /// device's current location where [centre] is null, under [place]. Spec
+  /// `docs/GLP_Networking_API/sections/system-predicates.tex` and
+  /// §Geofencing: `declarePlace(place, centre, radius)`, "the runtime giving
+  /// the device's location at the agent's first declaration of the place and
+  /// the same centre at a restart".
   ///
-  /// Returns false when the platform refuses, in which case [place] is left
-  /// undeclared. A further declaration under the same name replaces the first.
-  /// GLP supplies a name and a radius and receives no coordinates: there is no
-  /// call here that returns a position.
+  /// Returns the centre registered, the device's location where [centre] was
+  /// null, which the runtime keeps; null when the platform refuses, in which
+  /// case [place] is left undeclared. A further declaration under the same
+  /// name replaces the first.  GLP supplies a name and a radius and receives
+  /// no coordinates: the centre crosses the seam to the runtime and reaches no
+  /// program.
   ///
   /// Platforms bound how many geofences an application may register, so a place
   /// no longer wanted is passed to [removePlace] rather than left in place;
   /// [dispose] releases whatever is still declared.
-  Future<bool> declarePlace(String place, double radiusMetres) {
+  Future<PlaceCentre?> declarePlace(
+      String place, PlaceCentre? centre, double radiusMetres) {
     final places = _places;
     if (places == null) {
       throw StateError(
@@ -2471,7 +2476,7 @@ class GrassrootsNetwork {
         'GrassrootsNetwork',
       );
     }
-    return places.declarePlace(place, radiusMetres);
+    return places.declarePlace(place, centre, radiusMetres);
   }
 
   /// End the declaration of [place]: the geofence is unregistered with the

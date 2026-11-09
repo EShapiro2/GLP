@@ -1704,7 +1704,7 @@ String? _placeName(GlpRuntime rt, Object? arg) {
   return null;
 }
 
-/// `declare(place(P, R, E))`: declare place P of radius R about this agent's location at the time of the call, and grow this agent's own event stream for P from E's writer.  The stream is fed serializer-fashion and closes only on `remove(place(P))` or a superseding declaration (IGLP, madglp-spec.tex, after Definition "Seam Predicates").
+/// `declare(place(P, R, E))`: declare place P of radius R about this agent's location at the time of the call, and grow this agent's own event stream for P from E's writer.  The layer answers with the centre it registered P about, which the runtime keeps with the standing declaration and declares P about again at a restart ([MadContext.keepPlaceCentre]; IGLP 96cd44a, Implementation Notes, "Persistence"); no program reads it.  The stream is fed serializer-fashion and closes only on `remove(place(P))` or a superseding declaration (IGLP, madglp-spec.tex, after Definition "Seam Predicates").
 ///
 /// Where no layer is bound, E is assigned `[unobservable | E']` and nothing more is reported ("One interface", 6ba0329): no event and no `observable` ever follows.  The declaration stands in the runtime's bookkeeping ([GlpRuntime.placeStreams]) as it does with a layer, so its removal or a further declaration closes the stream, E' assigned `[]` (GLP, 2026-10-11 12:59 UTC, "23:12" (a)).
 BodyKernelResult _declarePlace(GlpRuntime rt, List<Term> a) {

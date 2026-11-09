@@ -8,7 +8,11 @@ import 'package:test/test.dart';
 /// registration — including one the layer has already ended, which is the race
 /// the spec requires be dropped.
 class FakeGeofenceBackend implements PlaceGeofenceBackend {
-  final List<({String registrationId, double radiusMetres})> registered = [];
+  final List<({String registrationId, PlaceCentre? centre, double radiusMetres})>
+      registered = [];
+
+  /// The device's location, which a registration about no centre is about.
+  PlaceCentre here = const PlaceCentre(latitude: 32.11, longitude: 34.80);
   final List<String> unregistered = [];
   final Set<String> live = {};
 
@@ -29,11 +33,16 @@ class FakeGeofenceBackend implements PlaceGeofenceBackend {
   Stream<bool> get observability => _observability.stream;
 
   @override
-  Future<bool> register(String registrationId, double radiusMetres) async {
-    if (!accepts) return false;
-    registered.add((registrationId: registrationId, radiusMetres: radiusMetres));
+  Future<PlaceCentre?> register(
+      String registrationId, PlaceCentre? centre, double radiusMetres) async {
+    if (!accepts) return null;
+    registered.add((
+      registrationId: registrationId,
+      centre: centre,
+      radiusMetres: radiusMetres
+    ));
     live.add(registrationId);
-    return true;
+    return centre ?? here;
   }
 
   @override
@@ -78,34 +87,50 @@ void main() {
   Future<void> settle() => Future<void>.delayed(Duration.zero);
 
   group('declarePlace', () {
-    test('registers a geofence of the given radius', () async {
-      expect(await registry.declarePlace('home', 100), isTrue);
+    test('registers a geofence of the given radius about the device\'s '
+        'location where no centre is given, and returns that location', () async {
+      // Spec §Geofencing: "the centre is the device's location when the agent
+      // first declares the place"; declarePlace "returns the centre it
+      // registered, the device's location where centre is null".
+      expect(await registry.declarePlace('home', null, 100), backend.here);
       expect(backend.registered, hasLength(1));
       expect(backend.registered.single.radiusMetres, 100);
+      expect(backend.registered.single.centre, isNull);
       expect(registry.isDeclared('home'), isTrue);
       expect(registry.declaredPlaces, ['home']);
     });
 
+    test('registers a geofence about the centre given, and returns it',
+        () async {
+      // Spec §Geofencing: the runtime gives the kept centre "again when it
+      // declares the place again at a restart".
+      const kept = PlaceCentre(latitude: 51.5, longitude: -0.12);
+      expect(await registry.declarePlace('home', kept, 100), kept);
+      expect(backend.registered.single.centre, kept);
+      expect(registry.isDeclared('home'), isTrue);
+    });
+
     test('a refused registration leaves the place undeclared', () async {
       backend.accepts = false;
-      expect(await registry.declarePlace('home', 100), isFalse);
+      expect(await registry.declarePlace('home', null, 100), isNull);
       expect(registry.isDeclared('home'), isFalse);
       expect(registry.declaredPlaces, isEmpty);
     });
 
     test('rejects a radius that is not a positive number of metres', () async {
-      expect(() => registry.declarePlace('home', 0), throwsArgumentError);
-      expect(() => registry.declarePlace('home', -5), throwsArgumentError);
-      expect(() => registry.declarePlace('home', double.nan),
+      expect(() => registry.declarePlace('home', null, 0), throwsArgumentError);
+      expect(
+          () => registry.declarePlace('home', null, -5), throwsArgumentError);
+      expect(() => registry.declarePlace('home', null, double.nan),
           throwsArgumentError);
-      expect(() => registry.declarePlace('home', double.infinity),
+      expect(() => registry.declarePlace('home', null, double.infinity),
           throwsArgumentError);
       expect(backend.registered, isEmpty);
     });
 
     test('distinct places are registered independently', () async {
-      await registry.declarePlace('home', 100);
-      await registry.declarePlace('office', 250);
+      await registry.declarePlace('home', null, 100);
+      await registry.declarePlace('office', null, 250);
       expect(registry.declaredPlaces, containsAll(['home', 'office']));
       expect(backend.live, hasLength(2));
     });
@@ -113,7 +138,7 @@ void main() {
 
   group('crossings', () {
     test('entry and exit of a declared place are reported', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final id = backend.lastRegistrationId;
 
       backend.report(id, PlaceCrossing.entered);
@@ -140,9 +165,9 @@ void main() {
   /// the platform stops it for every declaration at once.
   group('observability', () {
     test('a change reaches every standing declaration', () async {
-      await registry.declarePlace('home', 100);
-      await registry.declarePlace('office', 250);
-      await registry.declarePlace('gym', 50);
+      await registry.declarePlace('home', null, 100);
+      await registry.declarePlace('office', null, 250);
+      await registry.declarePlace('gym', null, 50);
 
       backend.reportObservability(false);
       await settle();
@@ -167,7 +192,7 @@ void main() {
     });
 
     test('a repeated report of the same state emits nothing', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
 
       backend.reportObservability(true);
       await settle();
@@ -182,7 +207,7 @@ void main() {
     });
 
     test('crossings are dropped while unobservable', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final id = backend.lastRegistrationId;
 
       backend.reportObservability(false);
@@ -197,7 +222,7 @@ void main() {
     });
 
     test('nothing is replayed when reporting resumes', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final id = backend.lastRegistrationId;
 
       backend.reportObservability(false);
@@ -228,7 +253,7 @@ void main() {
       await settle();
       events.clear();
 
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
 
       expect(events, [('home', PlaceEvent.unobservable)],
           reason: 'a program must never take silence on a fresh stream for '
@@ -242,8 +267,8 @@ void main() {
     });
 
     test('a removed place receives neither kind', () async {
-      await registry.declarePlace('home', 100);
-      await registry.declarePlace('office', 250);
+      await registry.declarePlace('home', null, 100);
+      await registry.declarePlace('office', null, 250);
       await registry.removePlace('home');
       events.clear();
 
@@ -266,7 +291,7 @@ void main() {
 
   group('removePlace', () {
     test('unregisters the geofence and ends the declaration', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final id = backend.lastRegistrationId;
 
       await registry.removePlace('home');
@@ -283,7 +308,7 @@ void main() {
     });
 
     test('a crossing reported for a removed place is dropped', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final id = backend.lastRegistrationId;
       await registry.removePlace('home');
 
@@ -296,10 +321,10 @@ void main() {
 
     test('a removed place can be declared again, as a new registration',
         () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final first = backend.lastRegistrationId;
       await registry.removePlace('home');
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final second = backend.lastRegistrationId;
 
       expect(second, isNot(first));
@@ -315,9 +340,9 @@ void main() {
 
   group('supersession', () {
     test('a further declaration replaces the first', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final first = backend.lastRegistrationId;
-      await registry.declarePlace('home', 250);
+      await registry.declarePlace('home', null, 250);
       final second = backend.lastRegistrationId;
 
       expect(second, isNot(first));
@@ -329,9 +354,9 @@ void main() {
     });
 
     test('a crossing of the superseded registration is dropped', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final first = backend.lastRegistrationId;
-      await registry.declarePlace('home', 250);
+      await registry.declarePlace('home', null, 250);
 
       backend.report(first, PlaceCrossing.exited);
       await settle();
@@ -340,8 +365,8 @@ void main() {
     });
 
     test('the replacement reports its own crossings', () async {
-      await registry.declarePlace('home', 100);
-      await registry.declarePlace('home', 250);
+      await registry.declarePlace('home', null, 100);
+      await registry.declarePlace('home', null, 250);
       final second = backend.lastRegistrationId;
 
       backend.report(second, PlaceCrossing.entered);
@@ -353,8 +378,8 @@ void main() {
 
   group('release', () {
     test('dispose unregisters every standing declaration', () async {
-      await registry.declarePlace('home', 100);
-      await registry.declarePlace('office', 250);
+      await registry.declarePlace('home', null, 100);
+      await registry.declarePlace('office', null, 250);
 
       await registry.dispose();
 
@@ -365,7 +390,7 @@ void main() {
     });
 
     test('dispose is idempotent', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       await registry.dispose();
       await registry.dispose();
       expect(backend.unregistered, hasLength(1));
@@ -373,11 +398,11 @@ void main() {
 
     test('declaring after dispose is an error', () async {
       await registry.dispose();
-      expect(() => registry.declarePlace('home', 100), throwsStateError);
+      expect(() => registry.declarePlace('home', null, 100), throwsStateError);
     });
 
     test('a crossing after dispose is dropped', () async {
-      await registry.declarePlace('home', 100);
+      await registry.declarePlace('home', null, 100);
       final id = backend.lastRegistrationId;
       await registry.dispose();
 

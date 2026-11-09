@@ -117,6 +117,40 @@ class PubKey {
 /// every standing declaration.
 enum PlaceEvent { entered, exited, unobservable, observable }
 
+/// The centre of a declared place: the location the layer registered its
+/// geofence about, as latitude and longitude in degrees, which is how the
+/// platforms' geofencing takes a centre (GNA a1cb804, Section "Geofencing":
+/// "a circle of a given radius in metres about a centre ... the centre is the
+/// device's location when the agent first declares the place, which the
+/// runtime keeps and gives again when it declares the place again at a
+/// restart").  The runtime keeps it with the place's standing declaration
+/// ([SeamDeclarations.placeCentre]) and does not read it otherwise.  The
+/// layer's own class of the same name and fields is GNA's (networking/core,
+/// places/place_registry.dart); the glue maps one to the other, as it maps an
+/// application.
+class PlaceCentre {
+  const PlaceCentre({required this.latitude, required this.longitude});
+
+  /// Degrees north of the equator, negative south of it.
+  final double latitude;
+
+  /// Degrees east of the prime meridian, negative west of it.
+  final double longitude;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlaceCentre &&
+          other.latitude == latitude &&
+          other.longitude == longitude;
+
+  @override
+  int get hashCode => Object.hash(latitude, longitude);
+
+  @override
+  String toString() => 'PlaceCentre($latitude, $longitude)';
+}
+
 /// The attested application: what `onPeerConnected` carries for a peer whose
 /// identity is attested (GNA api.tex, Section 2.3, `onPeerConnected(pk,
 /// underlay, application?)`: "for an attested identity, the attested
@@ -332,16 +366,28 @@ abstract class GlpNetwork {
 
   // --- Places (GNA, "The Seam", place functions) ---
 
-  /// `declarePlace(place, radius)`: declare [place] — the region of
-  /// [radiusMetres] about this device's location at the time of the call —
-  /// and report its crossings through [onPlaceEvent].  Backs
-  /// `declare(place(P, R, E))`, [place] being the printed form of the
-  /// constant P, `7` for 7 (IGLP, Implementation Notes, "The contract").
-  ///
-  /// Returns false when the platform refuses, leaving the place undeclared. A
-  /// further declaration under the same name supersedes the first. GLP supplies
-  /// a name and a radius and receives no coordinates.
-  Future<bool> declarePlace(String place, double radiusMetres);
+  /// `declarePlace(place, centre, radius)`: declare [place] — the region of
+  /// [radiusMetres] metres about [centre], or about this device's location at
+  /// the time of the call where [centre] is null — and report its crossings
+  /// through [onPlaceEvent].  Returns the centre the layer registered, the
+  /// device's location where [centre] was null, which the runtime keeps and
+  /// gives again when it declares the place again at a restart; null where
+  /// the platform refuses, leaving the place undeclared (GNA a1cb804, Section
+  /// "Geofencing", and "System Predicates": "the runtime giving the device's
+  /// location at the agent's first declaration of the place and the same
+  /// centre at a restart"; IGLP 96cd44a, Implementation Notes, "Persistence":
+  /// the store keeps "the places with the centre each was declared about",
+  /// and a restart makes "each place about the centre the store holds for
+  /// it").  Backs `declare(place(P, R, E))`, [place] being the printed form
+  /// of the constant P, `7` for 7 (IGLP, Implementation Notes, "The
+  /// contract").  A further declaration under the same name supersedes the
+  /// first.  GLP supplies a name and a radius and receives no coordinates:
+  /// the centre crosses the seam between the runtime and the layer and
+  /// reaches no program.  Until 2026-11-09 the layer took a name and a radius
+  /// and returned whether it registered, so a place made again at a restart
+  /// was centred where the device then was.
+  Future<PlaceCentre?> declarePlace(
+      String place, PlaceCentre? centre, double radiusMetres);
 
   /// `removePlace(place)`: end the declaration of [place].  Backs
   /// `remove(place(P))`.  Removing a place that is not declared does nothing.

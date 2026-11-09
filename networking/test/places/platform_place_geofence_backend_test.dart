@@ -19,15 +19,22 @@ void main() {
   late List<MethodCall> calls;
   late MockStreamHandlerEventSink crossingSink;
   late MockStreamHandlerEventSink observabilitySink;
-  bool? registerAnswer;
+  /// The native side's answer to `register`: the centre registered, as a map
+  /// of latitude and longitude, or null for a refusal.
+  Map<String, Object?>? registerAnswer;
   Object? registerThrows;
+
+  /// The device's location, which the native side answers for a registration
+  /// about no centre.
+  const here = {'latitude': 32.11, 'longitude': 34.80};
+  const hereCentre = PlaceCentre(latitude: 32.11, longitude: 34.80);
 
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   setUp(() {
     calls = [];
-    registerAnswer = true;
+    registerAnswer = here;
     registerThrows = null;
 
     messenger.setMockMethodCallHandler(placeGeofenceMethodChannel,
@@ -60,21 +67,42 @@ void main() {
     messenger.setMockStreamHandler(placeGeofenceObservabilityChannel, null);
   });
 
-  test('register passes the registration and the radius, and returns the '
-      'platform\'s answer', () async {
+  test('register passes the registration and the radius, and the centre '
+      'where one is given, and returns the centre the platform registered',
+      () async {
+    // Spec §Geofencing: declarePlace "returns the centre it registered, the
+    // device's location where centre is null".
     final backend = PlatformPlaceGeofenceBackend();
     addTearDown(backend.dispose);
 
-    expect(await backend.register('place-0', 150), isTrue);
+    expect(await backend.register('place-0', null, 150), hereCentre);
     expect(calls.single.method, 'register');
     expect(calls.single.arguments, {
       'registrationId': 'place-0',
       'radiusMetres': 150.0,
+    }, reason: 'no centre given, none is passed: the device\'s location');
+
+    const kept = PlaceCentre(latitude: 51.5, longitude: -0.12);
+    registerAnswer = {'latitude': 51.5, 'longitude': -0.12};
+    expect(await backend.register('place-1', kept, 50), kept);
+    expect(calls.last.arguments, {
+      'registrationId': 'place-1',
+      'radiusMetres': 50.0,
+      'latitude': 51.5,
+      'longitude': -0.12,
     });
 
-    registerAnswer = false;
-    expect(await backend.register('place-1', 50), isFalse,
+    registerAnswer = null;
+    expect(await backend.register('place-2', null, 50), isNull,
         reason: 'a platform refusal is a refusal, not an exception');
+  });
+
+  test('a malformed answer to register is a refusal', () async {
+    final backend = PlatformPlaceGeofenceBackend();
+    addTearDown(backend.dispose);
+
+    registerAnswer = {'latitude': 'north'};
+    expect(await backend.register('place-0', null, 150), isNull);
   });
 
   test('a platform exception on register is a refusal', () async {
@@ -82,7 +110,7 @@ void main() {
     addTearDown(backend.dispose);
 
     registerThrows = PlatformException(code: 'bad-arguments');
-    expect(await backend.register('place-0', 150), isFalse);
+    expect(await backend.register('place-0', null, 150), isNull);
   });
 
   test('an embedding with no native binding refuses every registration',
@@ -93,14 +121,14 @@ void main() {
 
     // This is the headless and unit-test case: the three place functions are
     // present, nothing is behind them, and a declaration is refused.
-    expect(await backend.register('place-0', 150), isFalse);
+    expect(await backend.register('place-0', null, 150), isNull);
   });
 
   test('unregister names the registration', () async {
     final backend = PlatformPlaceGeofenceBackend();
     addTearDown(backend.dispose);
 
-    await backend.register('place-0', 150);
+    await backend.register('place-0', null, 150);
     await backend.unregister('place-0');
 
     expect(calls.last.method, 'unregister');
@@ -172,13 +200,13 @@ void main() {
     final backend = PlatformPlaceGeofenceBackend();
 
     backend.crossings.listen((_) {});
-    await backend.register('place-0', 150);
+    await backend.register('place-0', null, 150);
     await backend.dispose();
 
     expect(calls.last.method, 'dispose',
         reason: 'nothing is left registered once the layer is done with it');
     // Disposed twice is harmless, and registration after disposal is refused.
     await backend.dispose();
-    expect(await backend.register('place-1', 150), isFalse);
+    expect(await backend.register('place-1', null, 150), isNull);
   });
 }

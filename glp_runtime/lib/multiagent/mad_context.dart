@@ -727,34 +727,68 @@ class MadContext {
     _trace('[MAD $agentId] declarePlace($place, $radiusMetres): stream '
         'writer=$streamWriterAddr');
 
-    _askLayerForPlace(network, place, radiusMetres, declaration);
+    _askLayerForPlace(network, place, null, radiusMetres, declaration);
   }
 
-  /// Give [network] the place [place] of radius [radiusMetres], the standing
-  /// declaration of number [declaration], and put a refusal on that
+  /// Give [network] the place [place] of radius [radiusMetres] about
+  /// [centre] --- the one the store kept for it, at a restart; null at the
+  /// program's declaration, the device's location at the time of the call
+  /// --- for the standing declaration of number [declaration]; keep the centre
+  /// the layer answers with ([keepPlaceCentre]), and put a refusal on that
   /// declaration's stream.
   void _askLayerForPlace(GlpNetwork network, String place,
-      double radiusMetres, int declaration) {
+      PlaceCentre? centre, double radiusMetres, int declaration) {
     // The layer answers asynchronously; the stream exists either way. On a
     // refusal E receives `unobservable`, the declaration stands, and
     // `observable` follows if the layer later begins reporting (Definition Seam
     // Predicates). A refusal is the layer watching nothing, which is what
     // `unobservable` says; the stream is not closed, since a refusal is neither
     // of the two closing cases.
-    network.declarePlace(place, radiusMetres).then(
-      (declared) {
-        if (declared) return;
-        _trace('[MAD $agentId] declarePlace($place): refused by the platform '
-            '— unobservable');
+    network.declarePlace(place, centre, radiusMetres).then(
+      (registered) {
         // Answers can arrive after remove(place(P)) or after a superseding
         // declaration, whose stream is the successor's, not this one's: the
-        // declaration answered goes with the event, and is checked when it
-        // is delivered.
-        _placeEvent(place, PlaceEvent.unobservable, declaration);
+        // declaration answered goes with the answer, and is checked when it
+        // is delivered or kept.
+        if (registered == null) {
+          _trace('[MAD $agentId] declarePlace($place): refused by the '
+              'platform — unobservable');
+          _placeEvent(place, PlaceEvent.unobservable, declaration);
+          return;
+        }
+        _trace('[MAD $agentId] declarePlace($place): registered about '
+            '$registered');
+        final sink = placeCentreSink;
+        if (sink != null) {
+          sink(place, registered, declaration);
+        } else {
+          keepPlaceCentre(place, registered, declaration);
+        }
       },
       onError: (Object e) => _trace(
           '[MAD $agentId] declarePlace($place): layer failed: $e'),
     );
+  }
+
+  /// Where set, the host's: the centre the layer registered a place about,
+  /// in answer to the declaration of the given number, delivered as an event
+  /// of the agent's own, whose cycle keeps it with the place's standing
+  /// declaration and saves the state ([AgentRuntime]); where null, it is kept
+  /// at once.
+  void Function(String place, PlaceCentre centre, int declaration)?
+      placeCentreSink;
+
+  /// Keep [centre], the one the layer registered [place] about in answer to
+  /// its declaration of number [declaration], with the place's standing
+  /// declaration, so that a restart declares the place again about it (IGLP
+  /// 96cd44a, Implementation Notes, "Persistence": the store keeps "the
+  /// places with the centre each was declared about").  Dropped where that
+  /// declaration no longer stands, the place removed or declared again
+  /// since.  Returns whether the record changed.
+  bool keepPlaceCentre(String place, PlaceCentre centre, int declaration) {
+    if (!runtime.placeStreams.isStanding(place, declaration)) return false;
+    return runtime.seamDeclarations
+        .placeCentre(place, centre.latitude, centre.longitude);
   }
 
   /// End the declaration of [place], closing its stream. Does nothing where
@@ -800,7 +834,11 @@ class MadContext {
   /// "Persistence"); the program does not declare again.  A peer, an
   /// address, a rendezvous server and a trust level go to the layer function
   /// behind each; a place goes to [GlpNetwork.declarePlace] for its standing
-  /// declaration, whose stream a refusal is put on, as [declarePlace] does.
+  /// declaration, about the centre the store kept for it, where the layer
+  /// had answered with one before the state was saved, and about the device's
+  /// location otherwise ("each place about the centre the store holds for
+  /// it", IGLP 96cd44a), its stream a refusal is put on, as [declarePlace]
+  /// does.
   /// A nearby declaration calls no layer function: its stream is fed by what
   /// the new layer reports.  A layer function the layer does not have is
   /// traced and the rest are made.  Does nothing where no layer is bound.
@@ -826,8 +864,13 @@ class MadContext {
             final declaration = runtime.placeStreams.standing(a[0]);
             if (declaration == null) continue;
             _installPlaceEventHandler(network);
+            final centre = a.length >= 4
+                ? PlaceCentre(
+                    latitude: double.parse(a[2]),
+                    longitude: double.parse(a[3]))
+                : null;
             _askLayerForPlace(
-                network, a[0], double.parse(a[1]), declaration);
+                network, a[0], centre, double.parse(a[1]), declaration);
         }
         made.add(d);
         _trace('[MAD $agentId] restart: $d made to the layer again');

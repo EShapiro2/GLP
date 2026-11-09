@@ -544,6 +544,16 @@ class AgentRuntime {
         _submit(_PlaceEvent(place, event, declaration))
             .catchError((Object _) {}));
 
+    // The centre the layer registered a place about is an event of its own
+    // likewise: its cycle keeps the centre with the place's standing
+    // declaration and saves the state, so that the store holds "the places
+    // with the centre each was declared about" and a restart makes "each
+    // place about the centre the store holds for it" (IGLP 96cd44a,
+    // Implementation Notes, "Persistence").
+    _ctx!.placeCentreSink = (place, centre, declaration) => unawaited(
+        _submit(_PlaceCentre(place, centre, declaration))
+            .catchError((Object _) {}));
+
     // A presence on a nearby stream likewise: its cycle delivers it onto the
     // stream, reduces, saves and sends (IGLP b20951d, after Definition "Seam
     // Predicates": "A place event and a presence on a nearby stream are
@@ -1086,6 +1096,10 @@ class AgentRuntime {
         }
       case _PlaceEvent(:final place, :final event, :final declaration):
         _ctx!.deliverPlaceEvent(place, event, declaration: declaration);
+      case _PlaceCentre(:final place, :final centre, :final declaration):
+        if (_ctx!.keepPlaceCentre(place, centre, declaration)) {
+          _log('PLACE: $place kept about $centre');
+        }
       case _Presence(:final underlay, :final presence, :final declaration):
         _ctx!.deliverPresence(underlay, presence, declaration: declaration);
       case _Reach(:final reach, :final declaration):
@@ -1446,6 +1460,7 @@ class AgentRuntime {
     final ctx = _ctx;
     if (ctx != null) {
       ctx.placeEventSink = null;
+      ctx.placeCentreSink = null;
       ctx.presenceSink = null;
       ctx.reachSink = null;
     }
@@ -1522,6 +1537,17 @@ final class _PlaceEvent extends _AgentEvent {
 /// A presence the layer reports for the nearby declaration on [underlay] that
 /// stood when it was reported, [declaration]: `seen(K)` or `gone(K)` (GLP-Spec
 /// 210cee1, "Networking seam").
+/// The centre the layer registered [place] about, answering the declaration
+/// of number [declaration] ([MadContext.placeCentreSink]).
+final class _PlaceCentre extends _AgentEvent {
+  final String place;
+  final PlaceCentre centre;
+  final int declaration;
+  const _PlaceCentre(this.place, this.centre, this.declaration);
+  @override
+  String toString() => 'the centre $centre of $place';
+}
+
 final class _Presence extends _AgentEvent {
   final ProximityUnderlay underlay;
   final rt.Term presence;

@@ -251,7 +251,8 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   // --- Places (no location service on a headless server) ---
 
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
+  Future<glp.PlaceCentre?> declarePlace(
+          String place, glp.PlaceCentre? centre, double radiusMetres) =>
       _absent('declarePlace', 'a headless server has no location service');
 
   @override
