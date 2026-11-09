@@ -31,11 +31,13 @@ boot :-
 %% The scripted person
 %% =============================================================================
 
-%% The person at the agent's person channel: the person's first act names the entry, gkk_agent; the caller then names the agent Q to call, and each person then reads what the mini-app draws and acts on it.
+%% The person at the agent's person channel: the person's first act names the entry, gkk_agent; the caller then names the agent Q to call, and each person then reads what the mini-app draws and acts on it.  Each person opens the agent's PAN at its start, since the boot harness sets no trust level at spawn and a Closed agent answers no first contact from an agent it has not declared a peer (IGLP, Implementation Notes, "Simulation realisation"): bob's, so that alice's cold call is answered, as the other test boots open theirs.
 exported procedure ma_person(MaRole?, Channel(MaOuts, MaPIns)?).
 ma_person(caller(Q), ch(Ds, [gkk_agent, call(Q?) | Gs?])) :-
+    declare(trust(pan, open)),
     see(Ds?, Gs, pst(caller, nosess, noview, nopeer, establish)).
 ma_person(callee, ch(Ds, [gkk_agent | Gs?])) :-
+    declare(trust(pan, open)),
     see(Ds?, Gs, pst(callee, nosess, noview, nopeer, establish)).
 
 %% What the mini-app draws (programs/apps/gkk/person.glp, the header): the program's output, construct 0, its views, each view(Id, S, K, A, Ts) carrying the agent's own key Id (vGLP 12f629d, Section 5.4, "The compilation"); a request question, drawn bare, request_r(input(P)); an approval question; and anything else, passed over.  And what the agent tells the person: the key of the agent the person named.
