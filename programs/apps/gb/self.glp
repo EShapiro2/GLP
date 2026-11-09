@@ -14,7 +14,7 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint_coin(Peer, Integer)
+mint(Peer, Integer)
 ;
 mint_bond(Peer, Integer, Integer)
 ;
@@ -22,7 +22,7 @@ first_date(Peer, Integer)
 ;
 advance(Peer, Integer)
 ;
-swap_cc(Peer, Peer, Peer, Integer, Peer, Integer)
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
 swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
 ;
@@ -32,7 +32,7 @@ swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
 ;
 pay(Peer, Peer, Integer)
 ;
-redeem_cc(Peer, Peer, Peer)
+redeem(Peer, Peer, Peer)
 ;
 redeem_cb(Peer, Peer, Peer, Integer)
 ;
@@ -59,11 +59,11 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint_coin(Peer, Integer)
+mint(Peer, Integer)
 ;
 mint_bond(Peer, Integer, Integer)
 ;
-swap_cc(Peer, Peer, Peer, Integer, Peer, Integer)
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
 swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
 ;
@@ -73,7 +73,7 @@ swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
 ;
 pay(Peer, Peer, Integer)
 ;
-redeem_cc(Peer, Peer, Peer)
+redeem(Peer, Peer, Peer)
 ;
 redeem_cb(Peer, Peer, Peer, Integer)
 ;

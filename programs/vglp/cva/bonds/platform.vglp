@@ -18,7 +18,7 @@ acquaint(Peer, Peer)
 ;
 dawn(Peer)
 ;
-mint_coin(Peer, Integer)
+mint(Peer, Integer)
 ;
 mint_bond(Peer, Integer, Integer)
 ;
@@ -36,7 +36,7 @@ acquaint(Peer, Peer)
 ;
 dawn(Peer)
 ;
-mint_coin(Peer, Integer)
+mint(Peer, Integer)
 ;
 mint_bond(Peer, Integer, Integer)
 ;
@@ -49,7 +49,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [], [], [])]), button("Dawn", [act(dawn, 1, [1], [req(identity, []), forb(dated, [])], [], [], [], [])]), button("Mint coin", [act(mint_coin, 1, [1], [req(identity, [])], [], [], [], [])]), button("Mint bond", [act(mint_bond, 1, [1], [req(identity, []), req(date, [any])], [], [field(2, "Date", number), field(3, "Amount", number)], [], [])]), button("Swap cb", [act(swap_cb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(3, "Issuer", agent), field(4, "Amount", number), field(5, "Bond issuer", agent), field(6, "Date", number), field(7, "Bonds", number)], [], [])]), button("Redeem bc", [act(redeem_bc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(3, "Date", number), field(4, "Redeemer", agent)], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [], [], [])]), button("Dawn", [act(dawn, 1, [1], [req(identity, []), forb(dated, [])], [], [], [], [])]), button("Mint", [act(mint, 1, [1], [req(identity, [])], [], [], [], [])]), button("Mint bond", [act(mint_bond, 1, [1], [req(identity, []), req(date, [any])], [], [field(2, "Date", number), field(3, "Amount", number)], [], [])]), button("Swap cb", [act(swap_cb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(3, "Issuer", agent), field(4, "Amount", number), field(5, "Bond issuer", agent), field(6, "Date", number), field(7, "Bonds", number)], [], [])]), button("Redeem bc", [act(redeem_bc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(3, "Date", number), field(4, "Redeemer", agent)], [], [])])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
@@ -83,7 +83,7 @@ atom_of(g(bond, [p(V1), n(V2)]), shown(bond(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(dawn, [], [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [atom(identity, [])], [atom(dated, [])])]), schema(mint_coin, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(mint_bond, [num(d), num(k)], [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]), schema(advance, [num(t1)], [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]), schema(swap_cb, [pvar(u), num(k), pvar(v), num(d1), num(k1)], [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem_bc, [num(d), pvar(r)], [rs(guarded, [atom(coin, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(dawn, [], [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [atom(identity, [])], [atom(dated, [])])]), schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(mint_bond, [num(d), num(k)], [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]), schema(advance, [num(t1)], [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]), schema(swap_cb, [pvar(u), num(k), pvar(v), num(d1), num(k1)], [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)]))], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem_bc, [num(d), pvar(r)], [rs(guarded, [atom(coin, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -93,7 +93,7 @@ schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])
 .
 schema_entry(dawn, schema(dawn, [], [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [atom(identity, [])], [atom(dated, [])])]))
 .
-schema_entry(mint_coin, schema(mint_coin, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]))
+schema_entry(mint, schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]))
 .
 schema_entry(mint_bond, schema(mint_bond, [num(d), num(k)], [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]))
 .
@@ -124,7 +124,7 @@ schema_base(acquaint, 1)
 .
 schema_base(dawn, 1)
 .
-schema_base(mint_coin, 1)
+schema_base(mint, 1)
 .
 schema_base(mint_bond, 1)
 .
@@ -154,7 +154,7 @@ binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(dawn(V1), dawn, [b(role(1), p(V1?))])
 .
-binding_of(mint_coin(V1, V2), mint_coin, [b(role(1), p(V1?)), b(num(k), n(V2?))])
+binding_of(mint(V1, V2), mint, [b(role(1), p(V1?)), b(num(k), n(V2?))])
 .
 binding_of(mint_bond(V1, V2, V3), mint_bond, [b(role(1), p(V1?)), b(num(d), n(V2?)), b(num(k), n(V3?)), b(num(t), lv(mint_bond, t))])
 .
@@ -192,7 +192,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 .
-class_of(mint_coin, B, D, mint_coin(V1?, V2?))
+class_of(mint, B, D, mint(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -266,7 +266,7 @@ name_class(acquaint(V1, V2), _, acquaint(V1?, V2?))
 .
 name_class(dawn(V1), _, dawn(V1?))
 .
-name_class(mint_coin(V1, V2), _, mint_coin(V1?, V2?))
+name_class(mint(V1, V2), _, mint(V1?, V2?))
 .
 name_class(mint_bond(V1, V2, V3), _, mint_bond(V1?, V2?, V3?))
 .
@@ -282,7 +282,7 @@ request_name(acquaint(V1, V2), pname(acquaint(V1?, V2?)))
 .
 request_name(dawn(V1), pname(dawn(V1?)))
 .
-request_name(mint_coin(V1, V2), pname(mint_coin(V1?, V2?)))
+request_name(mint(V1, V2), pname(mint(V1?, V2?)))
 .
 request_name(mint_bond(V1, V2, V3), pname(mint_bond(V1?, V2?, V3?)))
 .
