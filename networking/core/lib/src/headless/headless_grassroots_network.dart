@@ -566,6 +566,9 @@ class HeadlessGrassrootsNetwork {
   /// when the transport's disconnect event arrives.
   void removeKnownPeer(Uint8List pubkey) {
     store.dispatch(KnownPeerRemovedAction(_hex(pubkey)));
+    // Clear the peer's recorded address too (an empty address clears it), so
+    // neither a send nor a re-supplied key dials it again.
+    store.dispatch(AssociateUdpAddressAction(publicKey: pubkey, address: ''));
     _endSession(pubkey);
   }
 
