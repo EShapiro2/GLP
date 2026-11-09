@@ -13,8 +13,11 @@ cascade/<NAME>/platform.vglp as cascade.sh records it, gets
 
 and build/www/data.js holds every contract's text, owner, the contracts it
 extends, its schemas and verdict, from cascade/<NAME>/ and the NAME.txt files
-under programs/, with each contract's owner and paper (tools/papers.py).  The pages are web/*.html, copied as they are; web/about.json
-holds the site's own line, icon and family for each contract.  build/ and
+under programs/, with each contract's owner and paper (tools/papers.py), and
+the families' names and colours.  The pages are web/*.html, copied as they
+are; web/about.json holds the site's own line for each contract, and
+programs/apps/look.json, which the app's asset sync reads too, each contract's
+icon and family and each family's name and colours.  build/ and
 programs/vglp/cva/web_worlds/ are generated, gitignored, and this script rebuilds them whole.
 """
 import json, os, re, shutil, subprocess, sys
@@ -218,6 +221,7 @@ for n in compiled:
 
 
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
+look = json.loads(read(os.path.join(GLP, 'programs', 'apps', 'look.json')))
 # The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
 # the server, with its state.json, or else the ones built by hand in
 # web/papers.
@@ -257,8 +261,8 @@ contracts = []
 for n in sorted(set(compiled) | set(cat)):
     c = dict(cat[n])
     d = os.path.join(GLP, 'cascade', n)
-    _a = about.get(n, ['📄', 'other', ''])
-    c['icon'], c['family'], c['about'] = _a[0], _a[1], _a[2] or c['title'] + '.'
+    _l = look['contracts'].get(n, {'icon': '📄', 'family': 'other'})
+    c['icon'], c['family'], c['about'] = _l['icon'], _l['family'], about.get(n) or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
     # Labels" (Udi, 2026-11-07).
@@ -305,5 +309,5 @@ if served:
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

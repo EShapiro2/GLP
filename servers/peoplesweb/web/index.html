@@ -212,8 +212,9 @@ const D = window.DATA, C = {};
 D.contracts.forEach(c => C[c.id] = c);
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-const FAM = {identity: ['#5b8def', '#3a64c4', 'Identity'], social: ['#34c3ae', '#169482', 'Social'],
-  care: ['#a98be3', '#7552c4', 'Care'], money: ['#f6c25a', '#e0911c', 'Money'], mobility: ['#f79a78', '#dc5d3c', 'Mobility'], governance: ['#7b8cff', '#4a54d6', 'Governance'], sharing: ['#f78fb3', '#d6407c', 'Sharing'], os: ['#9aa3ad', '#5f6b78', 'Operating System'], network: ['#7fb3d5', '#3f7fa8', 'Network'], other: ['#b0b0b8', '#7a7a85', 'Other']};
+// The families' colours and names, from programs/apps/look.json, as the build
+// gives them: [light, dark, name].
+const FAM = Object.fromEntries(Object.entries(D.families).map(([k, f]) => [k, [f.colours[0], f.colours[1], f.name]]));
 // A family the table does not name is drawn as other, so a contract added to the
 // repository never stops the page.
 const famOf = c => FAM[c.family] ? c.family : 'other';

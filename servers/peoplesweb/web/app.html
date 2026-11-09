@@ -120,7 +120,9 @@ let PERSONS = ['alice','bob','carol','dave'];
 let NAMES = {};
 const PHONES = () => PERSONS;
 const col = p => ['alice','bob','carol','dave'].includes(p) ? `var(--${p})` : `hsl(${parseInt(String(p).slice(0, 6), 16) % 360} 60% 55%)`;
-const FAM = {identity: ['#5b8def', '#3a64c4'], social: ['#34c3ae', '#169482'], care: ['#a98be3', '#7552c4'], money: ['#f6c25a', '#e0911c'], mobility: ['#f79a78', '#dc5d3c'], governance: ['#7b8cff', '#4a54d6'], sharing: ['#f78fb3', '#d6407c'], os: ['#9aa3ad', '#5f6b78'], network: ['#7fb3d5', '#3f7fa8'], other: ['#b0b0b8', '#7a7a85']};
+// The families' colours, from programs/apps/look.json, as the build gives them:
+// [light, dark].
+const FAM = Object.fromEntries(Object.entries((window.DATA || {families: {}}).families).map(([k, f]) => [k, f.colours]));
 // A family the table does not name is drawn as other, so a contract added to the
 // repository never stops the page.
 const famOf = c => FAM[c.family] ? c.family : 'other';
