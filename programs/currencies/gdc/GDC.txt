@@ -3,12 +3,13 @@
 % Paper: GCC, Grassroots Community Currencies, in preparation
 % Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 and GC:1 to GC:5 whole and restates none.
 % Defines: denomination, an identifier of a fiat currency; a denominated coin, a coin issued as its issuer's debt of one unit of its denomination, the clause DGC:8 reduced to coins (SGC, Section 2.1).
-% Last changed: 2026-11-06, clause 3, Pricing, answering Ohad's comment that GC:5 does not say how a denominated coin is priced (Udi approving).  2026-11-04, written by Currencies #15 Cowork; clause 2 is DGC:8 reduced to coins, SGC's text.
+% Last changed: 2026-11-09, the relation 'GDC extends GC.' alone on the box's first line (Udi, 2026-11-09, to Currencies #17; the style guide, 36).  2026-11-06, clause 3, Pricing, answering Ohad's comment that GC:5 does not say how a denominated coin is priced (Udi approving).  2026-11-04, written by Currencies #15 Cowork; clause 2 is DGC:8 reduced to coins, SGC's text.
 % Pragmas: GDC carries Swap, Payment and Redemption lines of its own, since [Swap], [Pay] and [Redeem] realise GC's schema and its denominated twins and the fields name the union of their variables in head order (Code #23, 2026-11-04 19:32 UTC); the given lot's variables are u, f, k and the wanted lot's v, f1, k1 in every twin, so the fields read left to right.
 % Pragmas (2026-11-06): the fields of a line are the variables of its acts that the atoms the proposer's role requires do not bind, in the schemas' order (vGLP's paper at 40f8444, Section 5.4; Code #23, 2026-11-05 11:39 and 14:05 UTC); what the proposer's state binds, the row fills.  Rewritten so by Currencies #15.
 % Schemas: GDC.glp beside this file, in GSC's clause syntax, sas/7 (Currencies #16, 2026-11-06, as GCC.glp writes them): GC's seven and a twin of GC's swap, pay and redeem with a denominated coin for a coin, lot by lot, over GC's predicates and dcoin, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GDC: Grassroots Denominated Coins
-Alice and Bob are persons.  GDC extends GC.  Dollar names one denomination, and a Dollar-denominated Alice-coin is an Alice-coin issued as Alice's debt of one Dollar.
+GDC extends GC.
+Alice and Bob are persons.  Dollar names one denomination, and a Dollar-denominated Alice-coin is an Alice-coin issued as Alice's debt of one Dollar.
 1. ■ Minting.  Alice may decide to issue Alice-coins denominated by a fiat currency.
 2. ○ Denomination.  A Dollar-denominated Alice-coin is Alice's debt of one Dollar, due now; Alice redeems it on presentation at face value, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 3. ○ Pricing.  Alice accepts Dollar-denominated Alice-coins in payment for their offerings at one Dollar each.

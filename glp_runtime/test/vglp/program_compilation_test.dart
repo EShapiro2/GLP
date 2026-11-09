@@ -12,8 +12,18 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
+import 'package:glp_runtime/vglp/canonical.dart' show extractWidgetDeclarations;
 
 const _programs = '../programs';
+
+/// The text of a vGLP source as the compiler lexes it, its widget
+/// declarations T =::= W set aside, GLP's lexer having no token =::=
+/// (canonical.dart, extractWidgetDeclarations).  A module may carry its own:
+/// "Widget declarations are scoped as type declarations are: a declaration at
+/// the root holds for every program, one in a module holds in that module"
+/// (vGLP, Definition "Widget Declaration").
+String _lexed(File file) =>
+    extractWidgetDeclarations(file.readAsStringSync()).stripped;
 
 void main() {
   // The root self.glp, the root of the scope :emit compiles in.
@@ -60,12 +70,22 @@ void main() {
       test('$path parses as vGLP and holds a volitional procedure', () {
         final file = File('$_programs/$path');
         expect(file.existsSync(), isTrue, reason: '$path is not on disc');
-        final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+        final m = Parser(Lexer(_lexed(file)).tokenize(), vglp: true)
             .parseModule();
         expect(m.volitionalDeclarations, isNotEmpty);
         expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
       });
     }
+
+    // home.vglp declares the widget of its introduction's card in the
+    // module, which holds there (vGLP, Definition "Widget Declaration"):
+    // GKK's words drawn by approval_sentence.
+    test('social/graph/core/home.vglp declares the widget of its '
+        'introduction\'s card, approval_sentence', () {
+      final w = extractWidgetDeclarations(
+          File('$_programs/social/graph/core/home.vglp').readAsStringSync());
+      expect(w.byModedType.values, contains('approval_sentence'));
+    });
   });
 
   group('the linker_tree fixture\'s sources', () {
@@ -83,7 +103,7 @@ void main() {
       test('$path parses as vGLP and holds a volitional procedure', () {
         final file = File('$_programs/$path');
         expect(file.existsSync(), isTrue, reason: '$path is not on disc');
-        final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+        final m = Parser(Lexer(_lexed(file)).tokenize(), vglp: true)
             .parseModule();
         expect(m.volitionalDeclarations, isNotEmpty);
         expect(m.procedures.where((p) => p.isVolitional), isNotEmpty);
@@ -99,7 +119,7 @@ void main() {
         'self.vglp', () {
       final file = File('$_programs/$agents/parent.vglp');
       expect(file.existsSync(), isTrue);
-      final m = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+      final m = Parser(Lexer(_lexed(file)).tokenize(), vglp: true)
           .parseModule();
       expect(m.procedures, isNotEmpty);
       expect(

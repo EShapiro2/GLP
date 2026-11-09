@@ -9,7 +9,7 @@ acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
 introduce: knows(Bob, c) <-
     identity(Alice), knows(Alice, Bob), knows(Alice, c), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
 
-mint_coin: k.coin(Alice, Alice) <-
+mint: k.coin(Alice, Alice) <-
     identity(Alice) guarded by Alice
 
 mint_bond: k.bond(Alice, Alice, d) <-
@@ -21,7 +21,7 @@ first_date: date(Alice, d), dated(Alice) <-
 advance: date(Alice, t1), not date(Alice, t) <-
     identity(Alice), today(Alice, d), date(Alice, t), t1 = t + 1, t1 <= d
 
-swap_cc: k1.coin(Alice, v), knows(Alice, v), not k.coin(Alice, u), k.coin(Bob, u), knows(Bob, u), not k1.coin(Bob, v) <-
+swap: k1.coin(Alice, v), knows(Alice, v), not k.coin(Alice, u), k.coin(Bob, u), knows(Bob, u), not k1.coin(Bob, v) <-
     identity(Alice), knows(Alice, Bob), k.coin(Alice, u), identity(Bob), knows(Bob, Alice), k1.coin(Bob, v) guarded by Alice, Bob
 
 swap_cb: k1.bond(Alice, v, d1), knows(Alice, v), not k.coin(Alice, u), k.coin(Bob, u), knows(Bob, u), not k1.bond(Bob, v, d1) <-
@@ -36,7 +36,7 @@ swap_bb: k1.bond(Alice, v, d1), knows(Alice, v), not k.bond(Alice, u, d), k.bond
 pay: not k.coin(Alice, Bob), k.coin(Bob, Bob) <-
     identity(Alice), knows(Alice, Bob), k.coin(Alice, Bob), identity(Bob) guarded by Alice
 
-redeem_cc: coin(Alice, r), knows(Alice, r), not coin(Alice, Bob), coin(Bob, Bob), not coin(Bob, r) <-
+redeem: coin(Alice, r), knows(Alice, r), not coin(Alice, Bob), coin(Bob, Bob), not coin(Bob, r) <-
     identity(Alice), knows(Alice, Bob), coin(Alice, Bob), identity(Bob), coin(Bob, r) guarded by Alice
 
 redeem_cb: bond(Alice, r, d1), knows(Alice, r), not coin(Alice, Bob), coin(Bob, Bob), not bond(Bob, r, d1) <-
