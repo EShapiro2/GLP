@@ -27,6 +27,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
 from papers import FOUNDATIONAL, load_state, paper_of  # noqa: E402
+import certify  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
           ('platform', 'platform.vglp'), ('glp', 'platform.glp')]
@@ -170,9 +171,17 @@ def extends_of(c, lines):
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
         m = rel.search(l)
         if m:
-            c['relation'] = m.group(1)
-            names = re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", m.group(2))
-            return [t for t in dict.fromkeys(names) if t in texts and t != c['id']]
+            # Each contract named takes the relation written before it: 'GAI
+            # extends GnW and amends GFP' is two relations, one to each.
+            c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
+            for part in re.split(r'\b(' + '|'.join(RELATIONS) + r')\b', m.group(2)):
+                if part in RELATIONS:
+                    cur = part
+                    continue
+                for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part):
+                    if t in texts and t != c['id']:
+                        c['rels'].setdefault(t, cur)
+            return list(c['rels'])
     line = next((l for l in c['meta'] if l.startswith('% Extends:') or l.startswith('% Restricts:')), '% Extends:')
     c['relation'] = 'restricts' if line.startswith('% Restricts:') else 'extends'
     first = re.split(r'\.\s{2}', line.split(':', 1)[1].strip())[0]
@@ -180,7 +189,9 @@ def extends_of(c, lines):
     for part in first.split(';'):   # each part names some contracts, then perhaps 'through it' their own
         # a name followed by 's is an owner (GAI's), not a contract extended
         named += re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b(?!['\u2019]s)", re.split(r'\bthrough\b|\bfactored\b', part)[0])
-    return [t for t in dict.fromkeys(named) if t in texts and t != c['id']]
+    found = [t for t in dict.fromkeys(named) if t in texts and t != c['id']]
+    c['rels'] = {t: c['relation'] for t in found}
+    return found
 
 
 cat = {n: contract_text(p) for n, p in texts.items()}
@@ -295,6 +306,22 @@ for c in contracts:
         for a in ancestors(c['id']):
             if a in shown and any(x['name'] == s['name'] for x in next(k for k in contracts if k['id'] == a)['schemas']):
                 s['from'] = a
+
+# The relations each contract states, checked against the schemas (GSC,
+# Section 8), and each app of programs/apps as a certified artefact, both
+# through the REPL and cached (tools/certify.py); CERTIFY=0 skips both, for a
+# quick build of the pages alone.
+if os.environ.get('CERTIFY', '1') != '0':
+    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {})} for c in contracts])
+    arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
+else:
+    checks, arts = {}, {}
+for c in contracts:
+    c['checks'] = checks.get(c['id'], [])
+    a = arts.get(c['id'].lower().replace('-', '_'))
+    c['artefact'] = ({'file': 'artefacts/' + a['file'], 'key': a['key']} if a and 'file' in a else {'why': a['why']} if a else None)
+with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
+    json.dump({c['id']: c['checks'] for c in contracts if c['checks']}, f, ensure_ascii=False, indent=1)
 
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):

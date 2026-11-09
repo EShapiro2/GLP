@@ -63,6 +63,12 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 #tip .cite i{color:#fff}
 .refs{padding:6px 20px}.refs .cite{padding:12px 0;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.5}.refs .cite:last-child{border-bottom:0}
 .refs a{color:var(--blue)}.why{color:var(--mute);font-size:14px;margin:10px 2px 0}
+.strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:18px 0 4px}.strip .st{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:13.5px;font-weight:600;background:var(--card);border:1px solid var(--line)}
+.strip .st.ok{color:#1c7c3f;border-color:#bfe5cc;background:#eefaf2}.strip .st.no{color:var(--mute)}.strip .st.stop{color:#a35b00;border-color:#f3d39a;background:#fff7e8}.strip .ar{color:var(--faint)}
+.stopwhy{color:var(--mute);font-size:13.5px;margin:4px 2px 0}
+.rels .rel{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.5}.rels .rel:last-child{border-bottom:0}
+.rels .mk{flex:none;width:22px;text-align:center;font-weight:700}.rels .agrees .mk{color:#1c7c3f}.rels .given .mk{color:#1c7c3f}.rels .disagrees .mk{color:#c0392b}.rels .open .mk{color:var(--mute)}
+.rels .disagrees b{color:#c0392b}.rels .why{color:var(--mute);font-size:13.5px;margin:2px 0 0}
 .sub2{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.sub2 h4{margin:0 0 4px;font-size:15px}
 .rule{font-size:13.5px;line-height:1.7;margin:6px 0 2px;padding:0 14px}.schema .rule:last-child{padding-bottom:10px}.rule b{font-weight:600;margin-right:4px}
 #tip a{color:#8ec6ff;text-decoration:underline}
@@ -383,11 +389,12 @@ function drawGlobe(){
     const [px, py] = pos[p], [qx, qy] = pos[c.id];
     const Ln = Math.hypot(qx-px, qy-py) || 1, ux = (qx-px)/Ln, uy = (qy-py)/Ln;
     const col = FAM[famOf(c)][1], p0 = pad(p, ux, uy), p1 = pad(c.id, ux, uy);
-    s += c.relation === 'restricts' ? taper(pos[p], pos[c.id], 4.2*k, 0.4*k, 7*k, 2.8*k, col, p0, p1)
-      : c.relation === 'amends' ? taper(pos[p], pos[c.id], 2.2*k, 2.2*k, 9*k, 6.5*k, col, p0, p1)
+    const rel = (c.rels && c.rels[p]) || c.relation;
+    s += rel === 'restricts' ? taper(pos[p], pos[c.id], 4.2*k, 0.4*k, 7*k, 2.8*k, col, p0, p1)
+      : rel === 'amends' ? taper(pos[p], pos[c.id], 2.2*k, 2.2*k, 9*k, 6.5*k, col, p0, p1)
           + cross(pos[p], pos[c.id], 6*k, col, p0, p1)
-      : c.relation === 'implements' ? stroked(pos[p], pos[c.id], `${7*k} ${4*k}`, col, p0, p1)
-      : c.relation === 'instantiates' ? stroked(pos[p], pos[c.id], `${0.1} ${4.5*k}`, col, p0, p1)
+      : rel === 'implements' ? stroked(pos[p], pos[c.id], `${7*k} ${4*k}`, col, p0, p1)
+      : rel === 'instantiates' ? stroked(pos[p], pos[c.id], `${0.1} ${4.5*k}`, col, p0, p1)
       : taper(pos[p], pos[c.id], 0.4*k, 4.2*k, 10*k, 7.5*k, col, p0, p1);
   }));
   D.contracts.forEach(c => {
@@ -575,6 +582,7 @@ function page(c, hood){
       <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
       <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
     </div>
+    ${stripHtml(c)}
     <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2></div>
       <div class="card rules">
       ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
@@ -582,8 +590,8 @@ function page(c, hood){
       <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
       </div>
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
-      ${c.live ? '' : `<p class="why">No app yet. ${esc(notWhy(c))}</p>`}
     </div>
+    ${relsHtml(c)}
     <div class="sec"><div class="sh"><h2>References</h2></div>
       <div class="card refs">${citeHtml(c.paper || {}) || '<div class="cite">No paper yet.</div>'}</div>
       <button class="hoodbar${hood ? ' on' : ''}" id="hoodbtn"><span class="hi">⚙︎</span><span><b>Under the hood</b><small>From the English text to the code the app runs, layer by layer</small></span><span class="chev">›</span></button>
@@ -613,6 +621,7 @@ function hoodHtml(c){
     <div class="card layer">${n(4)}<h3>The App${Q('app')}</h3>
       <p class="sum">${c.live ? 'Four people, each with an agent running the platform compiled from the contract, live.' : 'No app yet. ' + esc(notWhy(c))}</p>
       ${c.live ? `<div style="margin:10px 0"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div>` : ''}
+      ${artHtml(c)}
       ${codeLayer('vmat', 'The transactions', 'Each act as an atomic, volition-guarded transaction among its parties.')}
       ${codeLayer('platform', 'The platform, in vGLP', "What each person's agent runs: the transactions and the protocol that carries them out.")}
       ${codeLayer('glp', 'The platform, in GLP', 'The same, compiled to the language the agents execute.')}
@@ -628,6 +637,40 @@ function hoodHtml(c){
     catch (e){ d.querySelector('.code').innerHTML = `Not available here: <a href="${gh}" target="_blank" rel="noopener">open it on GitHub ↗</a>`; }
   }));
 }
+// How far the contract got down the cascade, from cascade/<NAME>/ (GSA,
+// 2026-11-09, after Nimrod Talmon): its speech-act schemas, the grassroots
+// check, the platform printed from them, the platform compiled to GLP, and its
+// app running on the site; and why it stopped where it stopped.
+function stripHtml(c){
+  const steps = [['Schemas', c.schemas.length > 0], ['Checked', /^syntactically_grassroots/.test(c.verdict || '')],
+    ['Platform', !!(c.layers && c.layers.platform && c.live)], ['Compiled', !!(c.layers && c.layers.glp)], ['Running', !!c.live]];
+  const stop = steps.findIndex(s => !s[1]);
+  const why = stop < 0 ? '' : !c.record ? 'Not yet run through the cascade.'
+    : stop === 0 ? 'The record holds no speech-act schemas.'
+    : stop === 1 ? `The grassroots check: ${c.verdict || 'no verdict'}.`
+    : stop === 2 ? notWhy(c)
+    : stop === 3 ? 'No GLP was printed from the platform.' : 'The app does not run on the site.';
+  return `<div class="strip">${steps.map(([n, ok], i) => `${i ? '<span class="ar">→</span>' : ''}<span class="st ${ok ? 'ok' : i === stop ? 'stop' : 'no'}">${ok ? '✓' : i === stop ? '■' : '·'} ${n}</span>`).join('')}</div>`
+    + (why ? `<p class="stopwhy">Stopped at ${steps[stop][0].toLowerCase()}: ${esc(why)}</p>` : '');
+}
+// Each relation the contract's box states, checked against the schemas by
+// GSC's Section 8 (GSA, 2026-11-09): agrees, agrees given an invariant,
+// disagrees, or not checked, with the reason.
+function relsHtml(c){
+  if (!c.checks || !c.checks.length) return '';
+  const mk = {agrees: '✓', given: '✓', disagrees: '✗', open: '–'};
+  const say = {agrees: 'agrees with its schemas', given: 'agrees, given an invariant', disagrees: 'disagrees with its schemas', open: 'not checked'};
+  return `<div class="sec"><div class="sh"><h2>Relations</h2></div><div class="card refs rels">${c.checks.map(r =>
+    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} <a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
+}
+// The app as a certified artefact, the .glpw the Grassroots App installs.
+function artHtml(c){
+  const a = c.artefact;
+  if (!a) return '';
+  return a.file ? `<p class="sum" style="margin-top:6px"><a href="${a.file}" download>Download the certified app (${esc(a.file.split('/').pop())})</a>, the form the Grassroots App installs; certificate ${esc(a.key.slice(0, 12))}…</p>`
+    : `<p class="sum" style="margin-top:6px">No certified app: ${esc(a.why.split('\n').pop().slice(0, 300))}</p>`;
+}
+
 function schemaHtml(s, open){
   if (s.form === 'rule'){
     const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
