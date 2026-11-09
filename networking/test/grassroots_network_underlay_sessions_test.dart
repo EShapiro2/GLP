@@ -422,4 +422,35 @@ void main() {
     expect(PunchPacket.isPunch(first), isFalse,
         reason: 'the layer must not punch before the handshake on its own');
   }, timeout: Timeout.none);
+
+  test(
+      'removeKnownPeer ends the live LAN and WAN sessions at once: the peer is '
+      'unreachable on both underlays before the call returns, and '
+      'onPeerDisconnected reports each underlay that was up', () async {
+    final linked = await linkedOverLanAndWan(0xcb, 0xcc);
+    if (linked == null) return;
+    final dialer = linked.dialer;
+    final calleePk = linked.calleeId.publicKey;
+    expect(dialer.peerUnderlays(calleePk), [Underlay.lan, Underlay.wan]);
+
+    final bothReported = Completer<void>();
+    dialer.onPeerDisconnected = (pk, underlay) {
+      if (hex(pk) != hex(calleePk)) return;
+      linked.dialerDisconnects.add(underlay);
+      if (linked.dialerDisconnects.length == 2 && !bothReported.isCompleted) {
+        bothReported.complete();
+      }
+    };
+
+    dialer.removeKnownPeer(calleePk);
+
+    expect(dialer.peerUnderlays(calleePk), isEmpty,
+        reason: 'the sessions end in the call, not when the stores settle');
+    expect(dialer.isPeerReachable(calleePk), isFalse);
+    expect(dialer.store.state.knownPeers.isKnown(hex(calleePk)), isFalse);
+
+    await bothReported.future;
+    expect(linked.dialerDisconnects, unorderedEquals([Underlay.lan, Underlay.wan]),
+        reason: 'one disconnect per underlay that was up');
+  }, timeout: Timeout.none);
 }

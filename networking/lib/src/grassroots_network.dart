@@ -1073,13 +1073,36 @@ class GrassrootsNetwork {
   }
 
   /// Withdraw a peer's key from the known set. The layer stops recognizing
-  /// it in Closed mode, drops its scan filters and dial-book entry, and no
-  /// longer reconnects to it.
+  /// it in Closed mode, drops its scan filters and dial-book entry, no
+  /// longer reconnects to it, and ends its live sessions now.
   void removeKnownPeer(Uint8List pubkey) {
     store.dispatch(KnownPeerRemovedAction(_pubkeyToHex(pubkey)));
     // Clear the peer's recorded address too (an empty address clears it), so
     // neither a send nor a re-supplied key dials it again.
     store.dispatch(AssociateUdpAddressAction(publicKey: pubkey, address: ''));
+    _endLiveSessions(pubkey);
+  }
+
+  /// End every live session with [pubkey] now: its PAN leg (both GATT legs),
+  /// its LAN session and its WAN session with their paths. The messages each
+  /// carries fail on its lane and return to the sender's queue; reachability
+  /// drops per underlay as the store reports the sessions ended.
+  void _endLiveSessions(Uint8List pubkey) {
+    final hex = _pubkeyToHex(pubkey);
+    _bleMessageSender.abandonPeer(hex);
+    for (final session in ipSessions) {
+      _messageSenderFor(session).abandonPeer(hex);
+    }
+    final peer = _peersState.getPeerByPubkeyHex(hex);
+    if (peer != null) {
+      final key = _handshakePairKey(PeerTransport.bleDirect, pubkey);
+      _handshakeRetransmits.remove(key)?.cancel();
+      _attestationDeadlines.remove(key)?.timer.cancel();
+      _attestedOn.remove(key);
+      _noiseSessions.reset(PeerTransport.bleDirect, pubkey);
+      _disconnectStaleBle(peer);
+    }
+    _endUdpSession(pubkey, 'its key was removed');
   }
 
   // ===== Signing primitives =====
