@@ -26,7 +26,7 @@ interface([
   type('Net', [msg('Peer', 'Content')]),
   type('Asking', ['Attempt', hello('Peer', 'Proposal')]),
   type('Approval', [approval('Asking', 'List'('Word'), dual('YesNo'))]),
-  type('Word', [text('String'), person('Peer'), named('String', 'Peer'), valued('String', 'Integer'), held('Atom', 'Integer')]),
+  type('Word', [text('String'), person('Peer'), named('String', 'Peer'), valued('String', 'Number'), held('Atom', 'Integer')]),
   type('RoleAsk', [q('Peer', 'Integer', 'List'('Word')), ql('List'('Peer'), 'Integer', 'List'('Word'))]),
   type('Asked', [asked('Integer', 'List'('Word'))]),
   type('Close', [close]),
