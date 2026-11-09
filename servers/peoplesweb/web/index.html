@@ -34,7 +34,8 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .sh span{color:var(--mute);font-size:14px}
 .card{background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
 #mapcard{position:relative;overflow:hidden;padding:6px}
-#graph{display:block;width:100%;height:auto}
+#graph{display:block;width:100%;height:auto;touch-action:none;-webkit-user-select:none;user-select:none}
+#tip .open{display:inline-block;margin-top:10px;color:#8ec5ff;font-weight:600}
 .node{cursor:pointer}
 .node rect.bg{filter:drop-shadow(0 3px 6px rgba(0,0,0,.12));transition:transform .15s}
 .node:hover rect.bg{filter:drop-shadow(0 6px 12px rgba(0,0,0,.18)) brightness(1.05)}
@@ -157,7 +158,9 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
-@media (max-width:640px){.app .pill.ghost{display:none}.shelf{grid-template-columns:minmax(0,1fr);padding:6px 16px}.prod .icon{width:96px;height:96px;font-size:48px;border-radius:22px}
+@media (max-width:640px){.hin{padding:10px 16px;gap:10px}.logo{font-size:14.5px;white-space:nowrap}.logo .the{display:none}.search input{width:96px}
+  #tip{max-width:none}
+  .app .pill.ghost{display:none}.shelf{grid-template-columns:minmax(0,1fr);padding:6px 16px}.prod .icon{width:96px;height:96px;font-size:48px;border-radius:22px}
   .tog{padding:14px 16px}.tog .minis{display:none}.tog .cnt{margin-left:auto}
   .stats{display:grid;grid-template-columns:repeat(3,1fr);row-gap:12px}.stat{min-width:0}.stat:nth-child(3){border-right:none}
   .sh{flex-wrap:wrap;gap:2px 12px}
@@ -172,7 +175,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 </head>
 <body>
 <header><div class="hin">
-  <div class="logo" id="home"><span class="mark"></span>GAS · the Grassroots App Store</div>
+  <div class="logo" id="home"><span class="mark"></span>GAS ·<span class="the">&nbsp;the</span>&nbsp;Grassroots App Store</div>
   <div class="search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search" autocomplete="off"></div>
 </div></header>
 <main>
@@ -182,7 +185,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
       <a class="btn blue" href="how.html" style="margin:-10px 0 26px">How it works&nbsp;→</a>
     </div>
-    <div class="sh"><h2>Grassroots Contracts</h2><span>drag to turn, scroll to zoom</span></div>
+    <div class="sh"><h2>Grassroots Contracts</h2><span id="hint">drag to turn, scroll to zoom</span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
     <div id="shelves"></div>
     <div class="sh"><h2>Foundational Papers</h2></div>
@@ -293,7 +296,7 @@ function layout(){
   // visible half short of its edge, where a name would be squashed; a ring
   // too full for one row sets alternate names on a second row, toward the
   // wider gap beside it, and then only names on the same row need the room.
-  const maxd = MAXD(), um = Math.sin(72 * Math.PI/180), w = id => 0.33*11*id.length + 0.8*11;
+  const maxd = MAXD(), um = Math.sin(72 * Math.PI/180), w = id => 0.33*FS0()*id.length + 0.8*FS0();
   for (let d = 1; d <= maxd; d++){
     const ring = D.contracts.map(c => c.id).filter(id => DEPTH[id] === d).sort((a, b) => PHI[a] - PHI[b]);
     const R = 265 * Math.sin(RING[d]);
@@ -316,6 +319,11 @@ function layout(){
 }
 const MAXD = () => Math.max(...Object.values(DEPTH));
 const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
+// A phone: the card narrower than 640 pixels.  The view is then cropped to the
+// globe, the names drawn larger so they can be read and tapped, and the key
+// set below the globe (Udi, 2026-11-09).
+const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
+const FS0 = () => NARROW() ? 16 : 11;
 const GW = 1120, GH = 640, CX = GW/2, CY = GH/2 + 12;
 function drawGlobe(){
   const S = 265 * V.zoom, al = V.tilt, maxd = MAXD();
@@ -351,7 +359,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(10, 11*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
+  const fs = Math.max(NARROW() ? 15 : 10, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
   const pad = (id, ux, uy) => 1/Math.sqrt((ux/rx(id))**2 + (uy/ry)**2) + 2;
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
     if (pos[p][2] < 0.02 || pos[c.id][2] < 0.02) return;
@@ -386,7 +394,7 @@ function drawGlobe(){
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
   const KEY = ['extends', 'restricts', 'amends', 'implements', 'instantiates'].map(r => [r, r]);
-  const kk = 1, kc = '#5f6b78', kx = 24, ky = GH - 22 - 24*KEY.length;
+  const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? 662 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
     s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
@@ -396,44 +404,74 @@ function drawGlobe(){
       : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
     s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });
   s += `</g>`;
-  const g = $('#graph'); g.setAttribute('viewBox', `0 0 ${GW} ${GH}`); g.innerHTML = s;
+  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} 0 600 790` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
+  const show = (c, e) => {
+    const r = wrap.getBoundingClientRect(), touch = LASTPT !== 'mouse';
+    tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${citeHtml(c.paper || {})}`
+      + (touch ? `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)} ›</a>` : '');
+    tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
+    if (NARROW()){ tip.style.left = '8px'; tip.style.right = '8px'; }
+    else { tip.style.right = ''; tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px'; }
+    tip.style.top = Math.min(e.clientY - r.top + 14, r.height - 40) + 'px';
+    TIPID = c.id;
+    const o = tip.querySelector('[data-tipgo]'); if (o) o.onclick = () => go(o.dataset.tipgo);
+  };
+  HIDETIP = () => { tip.style.opacity = 0; tip.style.pointerEvents = 'none'; TIPID = null; };
   g.querySelectorAll('.node').forEach(n => {
     const c = C[n.dataset.id];
-    n.onclick = () => { if (!DRAGGED) go(c.id); };
-    n.onmouseenter = e => { clearTimeout(hideT);
-      const P = c.paper || {};
-      // arXiv, followed by Updated where the paper's source is ahead of its
-      // latest arXiv version (Udi, 2026-11-08); else the paper's state, In
-      // preparation, as the link to its PDF, with the date of its source's
-      // last change (Udi, 2026-11-09).
-      const cite = citeHtml(c.paper || {});
-      const r = wrap.getBoundingClientRect();
-      tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${cite}`;
-      tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
-      tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px';
-      tip.style.top = (e.clientY - r.top + 14) + 'px'; };
-    n.onmouseleave = () => { hideT = setTimeout(() => { tip.style.opacity = 0; tip.style.pointerEvents = 'none'; }, 350); };
+    // A click opens the contract; on a touch screen the first tap shows its
+    // balloon, whose links can then be followed, and a second tap opens it.
+    n.onclick = e => { if (DRAGGED) return;
+      if (LASTPT !== 'mouse' && TIPID !== c.id){ clearTimeout(hideT); show(c, e); return; }
+      go(c.id); };
+    n.onmouseenter = e => { if (LASTPT !== 'mouse') return; clearTimeout(hideT); show(c, e); };
+    n.onmouseleave = () => { if (LASTPT !== 'mouse') return; hideT = setTimeout(HIDETIP, 350); };
   });
   tip.onmouseenter = () => clearTimeout(hideT);
-  tip.onmouseleave = () => { tip.style.opacity = 0; tip.style.pointerEvents = 'none'; };
+  tip.onmouseleave = () => { if (LASTPT === 'mouse') HIDETIP(); };
 }
-let DRAGGED = false;
+let DRAGGED = false, LASTPT = 'mouse', TIPID = null, HIDETIP = () => {};
 function globeNav(){
-  const g = $('#graph');
-  let drag = null;
-  g.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false; g.setPointerCapture(e.pointerId); });
-  g.addEventListener('pointermove', e => { if (!drag) return;
+  const g = $('#graph'), pts = new Map();
+  let drag = null, pinch = null;
+  const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; };
+  g.addEventListener('pointerdown', e => {
+    LASTPT = e.pointerType || 'mouse';
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2){ pinch = [dist(), V.zoom]; drag = null; DRAGGED = true; return; }
+    drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false;
+    if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); });
+  g.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pts.size === 2){
+      V.zoom = Math.max(0.8, Math.min(3.2, pinch[1] * dist() / pinch[0])); drawGlobe(); return; }
+    if (!drag) return;
     const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
-    if (Math.abs(dx) + Math.abs(dy) > 3) DRAGGED = true;
+    if (Math.abs(dx) + Math.abs(dy) > (LASTPT === 'mouse' ? 3 : 8)) DRAGGED = true;
+    if (!DRAGGED) return;
     V.phi0 = drag[2] - dx / (140 * V.zoom);
     V.tilt = Math.max(-1.2, Math.min(1.4, drag[3] + dy / 220));
     drawGlobe(); });
-  g.addEventListener('pointerup', () => drag = null);
+  const up = e => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (!DRAGGED && e.type === 'pointerup' && !e.target.closest('.node')) HIDETIP();
+    drag = null; };
+  g.addEventListener('pointerup', up);
+  g.addEventListener('pointercancel', up);
   g.addEventListener('wheel', e => { e.preventDefault();
     V.zoom = Math.max(0.8, Math.min(3.2, V.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
     drawGlobe(); }, {passive: false});
+  if (matchMedia('(pointer: coarse)').matches) $('#hint').textContent = 'drag to turn, pinch to zoom, tap a contract';
+  // Crossing between a phone's width and a wider one lays the rings out again
+  // for the names' size there.
+  let was = NARROW();
+  addEventListener('resize', () => { if (NARROW() !== was){ was = NARROW();
+    for (const k in PHI) delete PHI[k]; for (const k in LAT) delete LAT[k]; for (const k in KIDS) delete KIDS[k];
+    layout(); } drawGlobe(); });
 }
 const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']], ['Operating System', ['os']], ['Network', ['network']], ['Other', ['other']]];
 const OPEN = new Set();
