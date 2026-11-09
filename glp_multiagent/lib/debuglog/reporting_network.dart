@@ -256,8 +256,9 @@ class ReportingGlpNetwork implements GlpNetwork {
   void punchUdp(String address) => network.punchUdp(address);
 
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
-      network.declarePlace(place, radiusMetres);
+  Future<PlaceCentre?> declarePlace(
+          String place, PlaceCentre? centre, double radiusMetres) =>
+      network.declarePlace(place, centre, radiusMetres);
 
   @override
   Future<void> removePlace(String place) => network.removePlace(place);

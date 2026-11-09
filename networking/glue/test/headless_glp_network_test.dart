@@ -235,7 +235,8 @@ void main() {
           () => network.setTrustLevel(
               glp.ProximityUnderlay.lan, glp.TrustLevel.closed),
           returnsNormally);
-      expect(() => network.declarePlace('home', 50), throwsUnsupportedError);
+      expect(() => network.declarePlace('home', null, 50),
+          throwsUnsupportedError);
       expect(() => network.removePlace('home'), throwsUnsupportedError);
     });
 

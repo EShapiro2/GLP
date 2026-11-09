@@ -35,10 +35,16 @@ class _FakeGeofenceBackend implements PlaceGeofenceBackend {
   @override
   Stream<bool> get observability => _observability.stream;
 
+  /// The centre each registration was asked about, in order: null for the
+  /// device's location.
+  final List<PlaceCentre?> centres = [];
+
   @override
-  Future<bool> register(String registrationId, double radiusMetres) async {
+  Future<PlaceCentre?> register(
+      String registrationId, PlaceCentre? centre, double radiusMetres) async {
     lastRegistrationId = registrationId;
-    return true;
+    centres.add(centre);
+    return centre ?? const PlaceCentre(latitude: 32.11, longitude: 34.80);
   }
 
   @override
@@ -301,7 +307,18 @@ void main() {
     final events = <(String, glp.PlaceEvent)>[];
     network.onPlaceEvent = (place, event) => events.add((place, event));
 
-    expect(await network.declarePlace('market', 150), isTrue);
+    // The runtime's centre and the layer's are mapped one to the other (GNA
+    // a1cb804, "Geofencing": declarePlace(place, centre, radius) "returns the
+    // centre it registered, the device's location where centre is null").
+    expect(await network.declarePlace('market', null, 150),
+        const glp.PlaceCentre(latitude: 32.11, longitude: 34.80));
+    expect(backend.centres, [null]);
+    expect(
+        await network.declarePlace(
+            'market', const glp.PlaceCentre(latitude: 51.5, longitude: -0.12), 150),
+        const glp.PlaceCentre(latitude: 51.5, longitude: -0.12));
+    expect(backend.centres.last,
+        const PlaceCentre(latitude: 51.5, longitude: -0.12));
     backend.report(backend.lastRegistrationId!, PlaceCrossing.entered);
     await Future<void>.delayed(Duration.zero);
     expect(events, [('market', glp.PlaceEvent.entered)]);

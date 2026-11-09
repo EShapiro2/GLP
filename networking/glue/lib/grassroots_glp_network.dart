@@ -49,6 +49,8 @@ import 'package:glp_runtime/multiagent/glp_network.dart' as glp;
 import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/models/underlay_api.dart';
+import 'package:grassroots_networking_core/src/places/place_registry.dart'
+    show PlaceCentre;
 import 'package:grassroots_networking_core/src/store/settings_state.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
@@ -304,9 +306,24 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
 
   // --- Places ---
 
+  /// `declarePlace(place, centre, radius)`: the layer's (GNA a1cb804, Section
+  /// "Geofencing"), behind `declare(place(P, R, E))`; the runtime's centre and
+  /// the layer's are mapped one to the other, as an application is.
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
-      layer.declarePlace(place, radiusMetres);
+  Future<glp.PlaceCentre?> declarePlace(
+      String place, glp.PlaceCentre? centre, double radiusMetres) async {
+    final registered = await layer.declarePlace(
+        place,
+        centre == null
+            ? null
+            : PlaceCentre(
+                latitude: centre.latitude, longitude: centre.longitude),
+        radiusMetres);
+    return registered == null
+        ? null
+        : glp.PlaceCentre(
+            latitude: registered.latitude, longitude: registered.longitude);
+  }
 
   @override
   Future<void> removePlace(String place) => layer.removePlace(place);

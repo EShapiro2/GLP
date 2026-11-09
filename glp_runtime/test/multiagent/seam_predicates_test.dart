@@ -93,6 +93,14 @@ class _SeamNetwork extends GlpNetwork {
   /// Whether the platform accepts a declaration.
   bool accepts = true;
 
+  /// The device's location, which the layer registers a place about where
+  /// the runtime gives no centre, and answers with.
+  PlaceCentre here = const PlaceCentre(latitude: 32.11, longitude: 34.80);
+
+  /// The centres the runtime gave with each declaration, in order: null at a
+  /// program's declaration, the kept one at a restart.
+  final List<PlaceCentre?> centresGiven = [];
+
   /// Fired synchronously from [declarePlace], modelling a device already inside
   /// the region at the time of the call.
   PlaceEvent? onDeclare;
@@ -125,11 +133,13 @@ class _SeamNetwork extends GlpNetwork {
   void removeRendezvousServer(PubKey pk) => serversRemoved.add(pk.hex);
 
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) {
+  Future<PlaceCentre?> declarePlace(
+      String place, PlaceCentre? centre, double radiusMetres) {
     declared.add((place, radiusMetres));
+    centresGiven.add(centre);
     final at = onDeclare;
     if (at != null) fire(place, at);
-    return Future.value(accepts);
+    return Future.value(accepts ? (centre ?? here) : null);
   }
 
   @override
@@ -328,6 +338,62 @@ void main() {
       final s = _stream(a.rt, w);
       expect(s.events, isEmpty);
       expect(s.closed, isTrue);
+    });
+
+    test('the centre the layer registers a place about is kept with the '
+        'standing declaration, and a restart declares the place about it',
+        () async {
+      // GNA a1cb804, "Geofencing": "the centre is the device's location when
+      // the agent first declares the place, which the runtime keeps and gives
+      // again when it declares the place again at a restart"; IGLP 96cd44a,
+      // "Persistence": the store keeps "the places with the centre each was
+      // declared about", and a restart makes "each place about the centre the
+      // store holds for it".
+      final a = _agentContext();
+      final (w, _) = a.rt.heap.allocateVariable();
+
+      a.ctx.declarePlace('home', 100.0, w);
+      a.rt.seamDeclarations.place('home', 100.0);
+      expect(a.network.centresGiven, [null],
+          reason: 'the program\'s declaration is about the device\'s location');
+      expect([for (final d in a.rt.seamDeclarations.standing) '$d'],
+          ['place(home, 100.0)'],
+          reason: 'no centre until the layer answers');
+      await Future<void>.delayed(Duration.zero);
+      expect([for (final d in a.rt.seamDeclarations.standing) '$d'],
+          ['place(home, 100.0, 32.11, 34.8)']);
+
+      // The layer of the next launch is told the kept centre.
+      final again = _SeamNetwork()
+        ..here = const PlaceCentre(latitude: 0, longitude: 0);
+      a.ctx.network = again;
+      a.ctx.declareStandingToLayer();
+      expect(again.centresGiven,
+          [const PlaceCentre(latitude: 32.11, longitude: 34.80)]);
+      await Future<void>.delayed(Duration.zero);
+      expect([for (final d in a.rt.seamDeclarations.standing) '$d'],
+          ['place(home, 100.0, 32.11, 34.8)'],
+          reason: 'the layer answers with the centre it was given');
+    });
+
+    test('a centre answering a superseded declaration is dropped, and a '
+        'refusal keeps none', () async {
+      final a = _agentContext();
+      final (w1, _) = a.rt.heap.allocateVariable();
+      final (w2, _) = a.rt.heap.allocateVariable();
+
+      a.ctx.declarePlace('home', 100.0, w1);
+      a.rt.seamDeclarations.place('home', 100.0);
+      a.network.accepts = false;
+      a.ctx.declarePlace('home', 200.0, w2);
+      a.rt.seamDeclarations.place('home', 200.0);
+      await Future<void>.delayed(Duration.zero);
+
+      expect([for (final d in a.rt.seamDeclarations.standing) '$d'],
+          ['place(home, 200.0)'],
+          reason: 'the first answer is the superseded declaration\'s, and the '
+              'second declaration was refused');
+      expect(_stream(a.rt, w2).events, ['unobservable']);
     });
 
     test('a refused declaration carries unobservable and stands', () async {
@@ -1392,7 +1458,7 @@ go :- declare(rendezvous('${_hex(3)}', '198.51.100.9:7000')),
       final c = client();
       var fired = 0;
       c.onPlaceEvent = (_, __) => fired++;
-      expect(() => c.declarePlace('home', 100.0), throwsUnsupportedError);
+      expect(() => c.declarePlace('home', null, 100.0), throwsUnsupportedError);
       expect(() => c.removePlace('home'), throwsUnsupportedError);
       expect(fired, 0);
     });

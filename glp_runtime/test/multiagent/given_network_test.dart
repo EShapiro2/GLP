@@ -190,10 +190,15 @@ class _WireNetwork extends GlpNetwork {
   @override
   void acknowledge(String messageId) => acknowledged.add(messageId);
 
+  /// The device's location, which the layer registers a place about where
+  /// the runtime gives no centre.
+  static const here = PlaceCentre(latitude: 51.5, longitude: -0.12);
+
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) {
+  Future<PlaceCentre?> declarePlace(
+      String place, PlaceCentre? centre, double radiusMetres) {
     declared.add(place);
-    return Future.value(true);
+    return Future.value(centre ?? here);
   }
 
   @override
@@ -257,9 +262,12 @@ class _RecordingNetwork extends _WireNetwork {
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) =>
       log.add('layer: setTrustLevel(${underlay.name}, ${level.name})');
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) {
-    log.add('layer: declarePlace($place, $radiusMetres)');
-    return super.declarePlace(place, radiusMetres);
+  Future<PlaceCentre?> declarePlace(
+      String place, PlaceCentre? centre, double radiusMetres) {
+    final about =
+        centre == null ? 'null' : '${centre.latitude},${centre.longitude}';
+    log.add('layer: declarePlace($place, $about, $radiusMetres)');
+    return super.declarePlace(place, centre, radiusMetres);
   }
 }
 
@@ -668,6 +676,16 @@ void main() {
         network: first,
         stateStore: store,
       );
+      // The layer answers the place's declaration with the centre it
+      // registered, the device's location, which the runtime keeps in a cycle
+      // of its own and saves (IGLP 96cd44a, "Persistence": "the places with
+      // the centre each was declared about"); the test waits on that cycle.
+      final kept = Completer<void>();
+      agent.onLog = (_, m) {
+        if (m.startsWith('PLACE: home kept about') && !kept.isCompleted) {
+          kept.complete();
+        }
+      };
       await agent.initialize();
       final made = [
         'layer: putKnownPeer(${declaredPeer.hex})',
@@ -675,10 +693,12 @@ void main() {
         'layer: putRendezvousServer(${declaredServer.hex}, 192.0.2.2:4000)',
         'layer: setTrustLevel(pan, open)',
         'layer: setTrustLevel(lan, closed)',
-        'layer: declarePlace(home, 50.0)',
+        'layer: declarePlace(home, null, 50.0)',
       ];
       expect(firstLog, unorderedEquals(made),
-          reason: 'the first start makes each declaration once');
+          reason: 'the first start makes each declaration once, the place '
+              'about the device\'s location');
+      await kept.future;
 
       final log = <String>[];
       final second = _RecordingNetwork(kp, _Wire(), log);
@@ -698,11 +718,16 @@ void main() {
       again.onOutput = out.add;
       await again.initialize();
       expect(again.firstStart, isFalse);
-      expect(log.where((l) => l.startsWith('layer: ')).toList(),
-          [for (final l in firstLog) l],
+      expect(log.where((l) => l.startsWith('layer: ')).toList(), [
+        for (final l in firstLog)
+          l == 'layer: declarePlace(home, null, 50.0)'
+              ? 'layer: declarePlace(home, 51.5,-0.12, 50.0)'
+              : l
+      ],
           reason: 'every standing declaration is made to the new layer again, '
-              'in the order the first start made them, and the program '
-              'makes none');
+              'in the order the first start made them, the place about the '
+              'centre the store kept for it (GNA a1cb804, "Geofencing": "the '
+              'same centre at a restart"), and the program makes none');
 
       // The restored goal waits on the place's stream; the new layer's
       // report reaches it, and is the first reduction after the restart.
@@ -743,6 +768,26 @@ void main() {
         'trust(pan, closed)',
         'address(b, w)',
       ]);
+      // The centre the layer answers with is kept with the place, in place:
+      // a centre is no further declaration (IGLP 96cd44a, "Persistence").
+      expect(r.placeCentre('home', 32.11, 34.8), isTrue);
+      expect(r.placeCentre('home', 32.11, 34.8), isFalse,
+          reason: 'the same centre again changes nothing');
+      expect(r.placeCentre('work', 1, 2), isFalse,
+          reason: 'no declaration of work stands');
+      expect([for (final d in r.standing) '$d'], [
+        'peer(b)',
+        'place(home, 50, 32.11, 34.8)',
+        'trust(pan, closed)',
+        'address(b, w)',
+      ]);
+      r.place('home', 60);
+      expect([for (final d in r.standing) '$d'], [
+        'peer(b)',
+        'trust(pan, closed)',
+        'address(b, w)',
+        'place(home, 60)',
+      ], reason: 'a further declaration of the place is about no centre yet');
     });
 
     test('a reachable declaration begins with every agent the layer has a '

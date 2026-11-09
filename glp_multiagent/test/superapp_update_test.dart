@@ -87,8 +87,9 @@ class _Alone extends GlpNetwork {
   @override
   void removeRendezvousServer(PubKey pk) {}
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
-      Future.value(false);
+  Future<PlaceCentre?> declarePlace(
+          String place, PlaceCentre? centre, double radiusMetres) =>
+      Future.value(null);
   @override
   Future<void> removePlace(String place) => Future.value();
 }

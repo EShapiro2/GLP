@@ -28,9 +28,13 @@ import io.flutter.plugin.common.MethodChannel
  * The Android half of the place predicates (spec §System Predicates).
  *
  * GLP supplies a name and a radius; the layer registers a circular geofence
- * around the device's current location and reports the crossings the platform
- * observes. No coordinate ever crosses back: the channel carries a
- * registration identifier and `entered`/`exited`, and nothing else.
+ * about the centre the runtime gives --- the one kept from the place's first
+ * declaration, at a restart --- or about the device's current location where
+ * it gives none, answers with the centre it registered, which the runtime
+ * keeps (spec §Geofencing, GNA a1cb804), and reports the crossings the
+ * platform observes. The crossing channel carries a registration identifier
+ * and `entered`/`exited`, and nothing else; the centre reaches the runtime and
+ * no program.
  *
  * Location is foreground-only, by a standing decision of this project: the
  * manifest declares no ACCESS_BACKGROUND_LOCATION, so the admissible
@@ -67,9 +71,17 @@ class PlaceGeofencePlugin(
     /** Whether the application currently holds the foreground. */
     private var isActive = true
 
+    /** A registration waiting on the runtime permission prompt; `centre` is
+     * the one the runtime gave, null for the device's location. */
+    private data class Pending(
+        val registrationId: String,
+        val radiusMetres: Double,
+        val centre: Pair<Double, Double>?,
+        val result: MethodChannel.Result,
+    )
+
     /** Registrations waiting on the runtime permission prompt. */
-    private val pending =
-        mutableListOf<Triple<String, Double, MethodChannel.Result>>()
+    private val pending = mutableListOf<Pending>()
     private var awaitingPermission = false
 
     private val crossingReceiver = object : BroadcastReceiver() {
@@ -147,7 +159,12 @@ class PlaceGeofencePlugin(
                     )
                     return
                 }
-                register(registrationId, radius, result)
+                val latitude = call.argument<Double>("latitude")
+                val longitude = call.argument<Double>("longitude")
+                val centre =
+                    if (latitude != null && longitude != null) Pair(latitude, longitude)
+                    else null
+                register(registrationId, radius, centre, result)
             }
 
             "unregister" -> {
@@ -171,57 +188,71 @@ class PlaceGeofencePlugin(
         }
     }
 
+    /**
+     * Register a geofence of [radiusMetres] about [centre], the one the
+     * runtime gave, or about the device's current location where it gave
+     * none; answer with the centre registered, and with null where the
+     * platform refuses.
+     */
     private fun register(
         registrationId: String,
         radiusMetres: Double,
+        centre: Pair<Double, Double>?,
         result: MethodChannel.Result,
     ) {
         if (!radiusMetres.isFinite() || radiusMetres <= 0) {
-            result.success(false)
+            result.success(null)
             return
         }
         if (!hasLocationPermission()) {
             if (permissionRefused) {
                 Log.i(TAG, "Location permission withheld; refusing $registrationId")
-                result.success(false)
+                result.success(null)
                 return
             }
             // Hold the registration until the user has answered, as iOS does:
             // refusing a first declaration merely because nobody had asked yet
             // would make the seam unusable.
-            pending.add(Triple(registrationId, radiusMetres, result))
+            pending.add(Pending(registrationId, radiusMetres, centre, result))
             requestPermissionIfNeeded()
             return
         }
         if (standing.size >= GEOFENCE_LIMIT) {
             Log.i(TAG, "Android registers at most $GEOFENCE_LIMIT geofences; " +
                 "refusing $registrationId")
-            result.success(false)
+            result.success(null)
             return
         }
 
-        // A geofence is centred on the device's current location, so a fix is
-        // needed before one can be registered; without one the platform
-        // refuses, which is what the layer above is told.
+        if (centre != null) {
+            // The centre is the runtime's: no fix is needed to register.
+            addGeofence(registrationId, radiusMetres, centre.first, centre.second, result)
+            return
+        }
+
+        // A geofence about the device's current location needs a fix before
+        // it can be registered; without one the platform refuses, which is
+        // what the layer above is told.
         currentLocation { fix ->
             if (fix == null) {
                 Log.i(TAG, "No location fix; refusing $registrationId")
-                result.success(false)
+                result.success(null)
                 return@currentLocation
             }
-            addGeofence(registrationId, radiusMetres, fix, result)
+            addGeofence(registrationId, radiusMetres, fix.latitude, fix.longitude, result)
         }
     }
 
     private fun addGeofence(
         registrationId: String,
         radiusMetres: Double,
-        fix: Location,
+        latitude: Double,
+        longitude: Double,
         result: MethodChannel.Result,
     ) {
         val geofence = Geofence.Builder()
             .setRequestId(registrationId)
-            .setCircularRegion(fix.latitude, fix.longitude, radiusMetres.toFloat())
+            .setCircularRegion(latitude, longitude, radiusMetres.toFloat())
             .setExpirationDuration(Geofence.NEVER_EXPIRE)
             .setTransitionTypes(
                 Geofence.GEOFENCE_TRANSITION_ENTER or
@@ -230,9 +261,11 @@ class PlaceGeofencePlugin(
             .build()
 
         val request = GeofencingRequest.Builder()
-            // No initial trigger: the geofence is centred where the device is,
-            // so it would fire ENTER at once, and being already inside is not
-            // a crossing.
+            // No initial trigger: being already inside at registration is not
+            // a crossing, whether the geofence is centred where the device is
+            // or about the centre the runtime kept; a crossing that occurred
+            // while the application was not running was unobservable, and is
+            // lost (spec §Geofencing).
             .setInitialTrigger(0)
             .addGeofence(geofence)
             .build()
@@ -241,15 +274,15 @@ class PlaceGeofencePlugin(
             geofencing.addGeofences(request, geofencePendingIntent)
                 .addOnSuccessListener {
                     standing.add(registrationId)
-                    result.success(true)
+                    result.success(mapOf("latitude" to latitude, "longitude" to longitude))
                 }
                 .addOnFailureListener { error ->
                     Log.w(TAG, "Platform refused $registrationId: ${error.message}")
-                    result.success(false)
+                    result.success(null)
                 }
         } catch (e: SecurityException) {
             Log.w(TAG, "Location permission withdrawn mid-registration: ${e.message}")
-            result.success(false)
+            result.success(null)
         }
     }
 
@@ -276,7 +309,7 @@ class PlaceGeofencePlugin(
     /** Release the plugin itself, with everything standing. */
     fun detach() {
         releaseEverything()
-        for ((_, _, result) in pending) result.success(false)
+        for (entry in pending) entry.result.success(null)
         pending.clear()
         methodChannel.setMethodCallHandler(null)
         crossingChannel.setStreamHandler(null)
@@ -375,12 +408,12 @@ class PlaceGeofencePlugin(
         val waiting = pending.toList()
         pending.clear()
         if (hasLocationPermission()) {
-            for ((registrationId, radius, result) in waiting) {
-                register(registrationId, radius, result)
+            for (entry in waiting) {
+                register(entry.registrationId, entry.radiusMetres, entry.centre, entry.result)
             }
         } else {
             permissionRefused = true
-            for ((_, _, result) in waiting) result.success(false)
+            for (entry in waiting) entry.result.success(null)
         }
     }
 

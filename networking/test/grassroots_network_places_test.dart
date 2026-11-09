@@ -29,11 +29,20 @@ class _FakeGeofenceBackend implements PlaceGeofenceBackend {
   @override
   Stream<bool> get observability => _observability.stream;
 
+  /// The device's location, which a registration about no centre is about.
+  static const here = PlaceCentre(latitude: 32.11, longitude: 34.80);
+
+  /// The centre each registration was asked about, in order: null for the
+  /// device's location.
+  final List<PlaceCentre?> centres = [];
+
   @override
-  Future<bool> register(String registrationId, double radiusMetres) async {
+  Future<PlaceCentre?> register(
+      String registrationId, PlaceCentre? centre, double radiusMetres) async {
     live.add(registrationId);
     lastRegistrationId = registrationId;
-    return true;
+    centres.add(centre);
+    return centre ?? here;
   }
 
   @override
@@ -55,10 +64,12 @@ class _FakeGeofenceBackend implements PlaceGeofenceBackend {
   void reportObservability(bool observable) => _observability.add(observable);
 }
 
-/// The place functions on the layer's API surface (spec §System Predicates):
-/// `declarePlace(place, radius)`, `removePlace(place)`, `onPlaceEvent(cb)`.
-/// GLP supplies a name and a radius and receives no coordinates — there is no
-/// call here that returns a position.
+/// The place functions on the layer's API surface (spec §System Predicates
+/// and §Geofencing): `declarePlace(place, centre, radius)`, which returns the
+/// centre registered, the device's location where `centre` is null;
+/// `removePlace(place)`; `onPlaceEvent(cb)`.  GLP supplies a name and a
+/// radius and receives no coordinates: the centre crosses the seam to the
+/// runtime, which keeps it and gives it again at a restart.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -102,7 +113,11 @@ void main() {
     final events = <(String, PlaceEvent)>[];
     network.onPlaceEvent = (place, event) => events.add((place, event));
 
-    expect(await network.declarePlace('market', 150), isTrue);
+    expect(await network.declarePlace('market', null, 150),
+        _FakeGeofenceBackend.here,
+        reason: 'declared about no centre, the place is about the device\'s '
+            'location, which is returned');
+    expect(backend.centres, [null]);
     expect(network.declaredPlaces, ['market']);
 
     final id = backend.lastRegistrationId!;
@@ -122,6 +137,20 @@ void main() {
     await network.dispose();
   });
 
+  test('a place declared about a given centre is registered about it, and '
+      'the centre is returned', () async {
+    // Spec §Geofencing: the runtime gives "the same centre at a restart".
+    final backend = _FakeGeofenceBackend();
+    final network = await buildNetwork(backend: backend);
+    const kept = PlaceCentre(latitude: 51.5, longitude: -0.12);
+
+    expect(await network.declarePlace('market', kept, 150), kept);
+    expect(backend.centres, [kept]);
+    expect(network.declaredPlaces, ['market']);
+
+    await network.dispose();
+  });
+
   test('the layer reports unobservable and observable through onPlaceEvent',
       () async {
     final backend = _FakeGeofenceBackend();
@@ -130,7 +159,7 @@ void main() {
     final events = <(String, PlaceEvent)>[];
     network.onPlaceEvent = (place, event) => events.add((place, event));
 
-    await network.declarePlace('market', 150);
+    await network.declarePlace('market', null, 150);
     final id = backend.lastRegistrationId!;
 
     // The platform stops reporting — the application lost the foreground, or
@@ -159,8 +188,8 @@ void main() {
     final backend = _FakeGeofenceBackend();
     final network = await buildNetwork(backend: backend);
 
-    await network.declarePlace('home', 100);
-    await network.declarePlace('office', 250);
+    await network.declarePlace('home', null, 100);
+    await network.declarePlace('office', null, 250);
     expect(backend.live, hasLength(2));
 
     await network.dispose();
@@ -172,7 +201,7 @@ void main() {
   test('the place functions need a platform geofencing binding', () async {
     final network = await buildNetwork();
 
-    expect(() => network.declarePlace('home', 100), throwsStateError);
+    expect(() => network.declarePlace('home', null, 100), throwsStateError);
     expect(() => network.removePlace('home'), throwsStateError);
     expect(() => network.onPlaceEvent = (_, __) {}, throwsStateError);
     expect(network.declaredPlaces, isEmpty);

@@ -1,11 +1,17 @@
 /// Place declarations: the layer half of the place predicates.
 ///
 /// Spec `docs/GLP_Networking_API/sections/system-predicates.tex` §System
-/// Predicates. GLP cannot reach the platform's location service, so the layer
-/// registers a circular geofence around the device's current location under a
-/// name GLP supplies, and reports the crossings the platform observes. GLP
-/// supplies a name and a radius and receives no coordinates: it learns of the
-/// device's location only that it entered or left a place it declared itself.
+/// Predicates, and §Geofencing. GLP cannot reach the platform's location
+/// service, so the layer registers a circular geofence about a centre under a
+/// name GLP supplies, and reports the crossings the platform observes.  The
+/// centre is the device's location when the agent first declares the place,
+/// which the runtime keeps and gives again when it declares the place again
+/// at a restart: `declarePlace(place, centre, radius)` registers about
+/// `centre`, or about the device's location where it is null, and returns the
+/// centre it registered (GNA a1cb804).  GLP supplies a name and a radius and
+/// receives no coordinates: the centre crosses the seam to the runtime, which
+/// keeps it, and reaches no program; a program learns of the device's
+/// location only that it entered or left a place it declared itself.
 ///
 /// Registering `declare(place(P, R, E))` and `remove(place(P))` as GLP system predicates
 /// is not the layer's — that is the GLP runtime's, above this seam. What the
@@ -93,20 +99,54 @@ class PlaceCrossingReport {
   String toString() => 'PlaceCrossingReport($registrationId, ${crossing.name})';
 }
 
+/// The centre of a place: the location its geofence is registered about, as
+/// latitude and longitude in degrees, which is how the platforms' geofencing
+/// takes a centre (spec §Geofencing: "a circle of a given radius in metres
+/// about a centre").  The GLP runtime's class of the same name and fields is
+/// IGLP's (glp_runtime, multiagent/glp_network.dart); the glue maps one to the
+/// other.
+@immutable
+class PlaceCentre {
+  const PlaceCentre({required this.latitude, required this.longitude});
+
+  /// Degrees north of the equator, negative south of it.
+  final double latitude;
+
+  /// Degrees east of the prime meridian, negative west of it.
+  final double longitude;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlaceCentre &&
+          runtimeType == other.runtimeType &&
+          latitude == other.latitude &&
+          longitude == other.longitude;
+
+  @override
+  int get hashCode => Object.hash(latitude, longitude);
+
+  @override
+  String toString() => 'PlaceCentre($latitude, $longitude)';
+}
+
 /// The platform's geofencing, as the layer needs it.
 ///
-/// Registering a geofence needs the device's current location, which only the
-/// platform has; this is the whole of what the layer asks of it. Kept as an
-/// interface because the platform binding is a plugin dependency and a
-/// user-facing location permission, and because the layer's own behaviour —
-/// supersession, release, and which crossings are reported — is decided here,
-/// not there.
+/// Registering a geofence about the device's current location needs that
+/// location, which only the platform has; this is the whole of what the layer
+/// asks of it. Kept as an interface because the platform binding is a plugin
+/// dependency and a user-facing location permission, and because the layer's
+/// own behaviour — supersession, release, and which crossings are reported —
+/// is decided here, not there.
 abstract class PlaceGeofenceBackend {
-  /// Register a circular geofence of [radiusMetres] around the device's
-  /// current location, under [registrationId]. Returns false when the platform
-  /// refuses — no location fix, permission withheld, or the platform's cap on
-  /// registered geofences reached.
-  Future<bool> register(String registrationId, double radiusMetres);
+  /// Register a circular geofence of [radiusMetres] about [centre], or about
+  /// the device's current location where [centre] is null, under
+  /// [registrationId]. Returns the centre registered, the device's location
+  /// where [centre] was null; null when the platform refuses — no location
+  /// fix, permission withheld, or the platform's cap on registered geofences
+  /// reached.
+  Future<PlaceCentre?> register(
+      String registrationId, PlaceCentre? centre, double radiusMetres);
 
   /// Unregister [registrationId]. Unregistering one that is not registered
   /// does nothing.
@@ -166,15 +206,18 @@ class PlaceRegistry {
   /// Whether [place] is currently declared.
   bool isDeclared(String place) => _registrationOf.containsKey(place);
 
-  /// Register a geofence of [radiusMetres] around the device's current
-  /// location under [place]. Returns false when the platform refuses, in which
-  /// case [place] is left undeclared.
+  /// Register a geofence of [radiusMetres] about [centre], or about the
+  /// device's current location where [centre] is null, under [place]. Returns
+  /// the centre registered, the device's location where [centre] was null,
+  /// which the runtime keeps and gives again at a restart (spec §Geofencing);
+  /// null when the platform refuses, in which case [place] is left undeclared.
   ///
   /// A further declaration under the same name replaces the first: the earlier
   /// registration is unregistered before the new one is made, so the platform's
   /// cap on registered geofences is never pushed past by a replacement, and
   /// crossings of the earlier one are dropped from that moment.
-  Future<bool> declarePlace(String place, double radiusMetres) async {
+  Future<PlaceCentre?> declarePlace(
+      String place, PlaceCentre? centre, double radiusMetres) async {
     if (_disposed) {
       throw StateError('declarePlace on a disposed PlaceRegistry');
     }
@@ -189,10 +232,11 @@ class PlaceRegistry {
     await _releaseDeclaration(place);
 
     final registrationId = 'place-${_nextRegistrationId++}';
-    final registered = await _backend.register(registrationId, radiusMetres);
-    if (!registered) {
+    final registered =
+        await _backend.register(registrationId, centre, radiusMetres);
+    if (registered == null) {
       debugPrint('[place] Platform refused the geofence for "$place"');
-      return false;
+      return null;
     }
 
     _registrationOf[place] = registrationId;
@@ -204,7 +248,7 @@ class PlaceRegistry {
     if (!_observable) {
       onPlaceEvent?.call(place, PlaceEvent.unobservable);
     }
-    return true;
+    return registered;
   }
 
   /// End the declaration of [place]: the geofence is unregistered with the

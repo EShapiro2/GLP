@@ -5,9 +5,13 @@ import UIKit
 /// The iOS half of the place predicates (spec §System Predicates).
 ///
 /// GLP supplies a name and a radius; the layer registers a circular region
-/// around the device's current location and reports the crossings the platform
-/// observes. No coordinate ever crosses back: the channel carries a
-/// registration identifier and `entered`/`exited`, and nothing else.
+/// about the centre the runtime gives --- the one kept from the place's first
+/// declaration, at a restart --- or about the device's current location where
+/// it gives none, answers with the centre it registered, which the runtime
+/// keeps (spec §Geofencing, GNA a1cb804), and reports the crossings the
+/// platform observes. The crossing channel carries a registration identifier
+/// and `entered`/`exited`, and nothing else; the centre reaches the runtime
+/// and no program.
 ///
 /// Authorization is When In Use, by a standing decision of this project: the
 /// layer asks for no background location. Region monitoring proper
@@ -22,7 +26,10 @@ import UIKit
 /// emitted once, on a change, whichever path saw it first. That state is also
 /// what makes registration silent: a region centred on the device's current
 /// location is entered by construction, and being already inside is not a
-/// crossing.
+/// crossing. A region registered about a given centre is seeded from the
+/// current fix where there is one, and from the first fix otherwise, silently
+/// either way: a crossing that occurred while the application was not running
+/// was unobservable, and is lost (spec §Geofencing).
 class PlaceGeofencePlugin: NSObject {
   private let locationManager = CLLocationManager()
 
@@ -33,8 +40,10 @@ class PlaceGeofencePlugin: NSObject {
   /// The regions standing, by registration identifier.
   private var regions: [String: CLCircularRegion] = [:]
 
-  /// Whether the device was last seen inside each standing region. A region is
-  /// seeded `true` at registration, since it is centred where the device is.
+  /// Whether the device was last seen inside each standing region. A region
+  /// centred where the device is is seeded `true` at registration; one
+  /// registered about a given centre with no fix at hand has no entry until
+  /// the first fix seeds it.
   private var isInside: [String: Bool] = [:]
 
   private var crossingSink: FlutterEventSink?
@@ -44,8 +53,10 @@ class PlaceGeofencePlugin: NSObject {
   /// observable only while it does, which is what the layer above is told.
   private var isActive = true
 
-  /// Registrations waiting on a location fix or on the authorization prompt.
+  /// Registrations waiting on a location fix or on the authorization prompt;
+  /// `centre` is the one the runtime gave, nil for the device's location.
   private var pending: [(registrationId: String, radius: CLLocationDistance,
+                         centre: CLLocationCoordinate2D?,
                          result: FlutterResult)] = []
   private var awaitingFix = false
 
@@ -129,7 +140,15 @@ class PlaceGeofencePlugin: NSObject {
           details: nil))
         return
       }
-      register(registrationId: registrationId, radius: radius, result: result)
+      var centre: CLLocationCoordinate2D? = nil
+      if let latitude = args["latitude"] as? Double,
+        let longitude = args["longitude"] as? Double
+      {
+        centre = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+      }
+      register(
+        registrationId: registrationId, radius: radius, centre: centre,
+        result: result)
 
     case "unregister":
       guard let args = call.arguments as? [String: Any],
@@ -152,47 +171,60 @@ class PlaceGeofencePlugin: NSObject {
     }
   }
 
+  /// Register a region of `radius` about `centre`, the one the runtime gave,
+  /// or about the device's current location where it gave none; answer with
+  /// the centre registered, and with nil where the platform refuses.
   private func register(
     registrationId: String, radius: CLLocationDistance,
-    result: @escaping FlutterResult
+    centre: CLLocationCoordinate2D?, result: @escaping FlutterResult
   ) {
     guard radius.isFinite, radius > 0 else {
-      result(false)
+      result(nil)
       return
     }
     guard regions.count < PlaceGeofencePlugin.regionLimit else {
       NSLog("[place] iOS monitors at most %d regions; refusing %@",
             PlaceGeofencePlugin.regionLimit, registrationId)
-      result(false)
+      result(nil)
       return
     }
 
     switch authorizationStatus {
     case .notDetermined:
-      pending.append((registrationId, radius, result))
+      pending.append((registrationId, radius, centre, result))
       locationManager.requestWhenInUseAuthorization()
       return
     case .restricted, .denied:
-      result(false)
+      result(nil)
       return
     case .authorizedWhenInUse, .authorizedAlways:
       break
     @unknown default:
-      result(false)
+      result(nil)
+      return
+    }
+
+    if let given = centre {
+      // The centre is the runtime's; a fix is not needed to register, and the
+      // inside/outside state is seeded from the fix at hand, if any.
+      finishRegistration(
+        registrationId: registrationId, radius: radius, centre: given,
+        inside: locationManager.location.map { given.region(radius).contains($0.coordinate) },
+        result: result)
       return
     }
 
     if let fix = locationManager.location {
       finishRegistration(
         registrationId: registrationId, radius: radius,
-        centre: fix.coordinate, result: result)
+        centre: fix.coordinate, inside: true, result: result)
       return
     }
 
     // No fix yet: ask for one and answer when it arrives. A registration is
     // centred on the device's current location, and there is no honest answer
     // without one.
-    pending.append((registrationId, radius, result))
+    pending.append((registrationId, radius, nil, result))
     requestFixIfNeeded()
   }
 
@@ -202,9 +234,14 @@ class PlaceGeofencePlugin: NSObject {
     locationManager.requestLocation()
   }
 
+  /// Register the region and answer with its centre. `inside` seeds whether
+  /// the device is in it: true for a region centred where the device is, the
+  /// fix's answer for a given centre, and nil where there is no fix yet, the
+  /// first fix then seeding it silently.
   private func finishRegistration(
     registrationId: String, radius: CLLocationDistance,
-    centre: CLLocationCoordinate2D, result: @escaping FlutterResult
+    centre: CLLocationCoordinate2D, inside: Bool?,
+    result: @escaping FlutterResult
   ) {
     let capped = min(radius, locationManager.maximumRegionMonitoringDistance)
     let region = CLCircularRegion(
@@ -213,9 +250,8 @@ class PlaceGeofencePlugin: NSObject {
     region.notifyOnExit = true
 
     regions[registrationId] = region
-    // Centred where the device is, so it starts inside — and that is not a
-    // crossing.
-    isInside[registrationId] = true
+    // Being already inside at registration is not a crossing.
+    isInside[registrationId] = inside
 
     if CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) {
       locationManager.startMonitoring(for: region)
@@ -223,7 +259,7 @@ class PlaceGeofencePlugin: NSObject {
     if !regions.isEmpty {
       locationManager.startUpdatingLocation()
     }
-    result(true)
+    result(["latitude": centre.latitude, "longitude": centre.longitude])
   }
 
   private func unregister(_ registrationId: String) {
@@ -250,7 +286,7 @@ class PlaceGeofencePlugin: NSObject {
     }
     regions.removeAll()
     isInside.removeAll()
-    for entry in pending { entry.result(false) }
+    for entry in pending { entry.result(nil) }
     pending.removeAll()
     locationManager.stopUpdatingLocation()
   }
@@ -286,10 +322,17 @@ class PlaceGeofencePlugin: NSObject {
 
   // MARK: - Crossings
 
-  /// Report a crossing of [registrationId], if it is a change.
-  private func report(registrationId: String, inside: Bool) {
+  /// Report a crossing of [registrationId], if it is a change. Where the
+  /// region's state is not yet known --- registered about a given centre with
+  /// no fix at hand --- a fix seeds it silently (`seeding`), while the system's
+  /// own report of a crossing is one and is reported.
+  private func report(registrationId: String, inside: Bool, seeding: Bool = false) {
     guard regions[registrationId] != nil else { return }
     guard isObservable else { return }
+    if isInside[registrationId] == nil && seeding {
+      isInside[registrationId] = inside
+      return
+    }
     guard isInside[registrationId] != inside else { return }
     isInside[registrationId] = inside
     crossingSink?([
@@ -326,7 +369,7 @@ extension PlaceGeofencePlugin: CLLocationManagerDelegate {
     default:
       let waiting = pending
       pending.removeAll()
-      for entry in waiting { entry.result(false) }
+      for entry in waiting { entry.result(nil) }
     }
   }
 
@@ -339,9 +382,17 @@ extension PlaceGeofencePlugin: CLLocationManagerDelegate {
     let waiting = pending
     pending.removeAll()
     for entry in waiting {
-      finishRegistration(
-        registrationId: entry.registrationId, radius: entry.radius,
-        centre: fix.coordinate, result: entry.result)
+      if let given = entry.centre {
+        finishRegistration(
+          registrationId: entry.registrationId, radius: entry.radius,
+          centre: given,
+          inside: given.region(entry.radius).contains(fix.coordinate),
+          result: entry.result)
+      } else {
+        finishRegistration(
+          registrationId: entry.registrationId, radius: entry.radius,
+          centre: fix.coordinate, inside: true, result: entry.result)
+      }
     }
 
     // The crossings the layer can guarantee under When In Use: the same
@@ -350,7 +401,7 @@ extension PlaceGeofencePlugin: CLLocationManagerDelegate {
     for (registrationId, region) in regions {
       report(
         registrationId: registrationId,
-        inside: region.contains(fix.coordinate))
+        inside: region.contains(fix.coordinate), seeding: true)
     }
   }
 
@@ -361,7 +412,17 @@ extension PlaceGeofencePlugin: CLLocationManagerDelegate {
     awaitingFix = false
     let waiting = pending
     pending.removeAll()
-    for entry in waiting { entry.result(false) }
+    for entry in waiting {
+      if let given = entry.centre {
+        // The runtime's centre needs no fix: the region is registered, its
+        // state seeded by the first fix.
+        finishRegistration(
+          registrationId: entry.registrationId, radius: entry.radius,
+          centre: given, inside: nil, result: entry.result)
+      } else {
+        entry.result(nil)
+      }
+    }
   }
 
   func locationManager(
@@ -384,6 +445,16 @@ extension PlaceGeofencePlugin: CLLocationManagerDelegate {
     // declaration stands — the foreground path watches the same region.
     NSLog("[place] System region monitoring unavailable for %@: %@",
           region?.identifier ?? "<none>", error.localizedDescription)
+  }
+}
+
+// MARK: - Geometry
+
+extension CLLocationCoordinate2D {
+  /// The circular region of `radius` about this coordinate, for a containment
+  /// test; not the one registered.
+  fileprivate func region(_ radius: CLLocationDistance) -> CLCircularRegion {
+    CLCircularRegion(center: self, radius: radius, identifier: "")
   }
 }
 

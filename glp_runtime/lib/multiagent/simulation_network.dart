@@ -661,7 +661,8 @@ class SimulationNetworkClient extends GlpNetwork {
   // declaration and its removal"; [onPlaceEvent] never fires) ---
 
   @override
-  Future<bool> declarePlace(String place, double radiusMetres) =>
+  Future<PlaceCentre?> declarePlace(
+          String place, PlaceCentre? centre, double radiusMetres) =>
       throw UnsupportedError('a place declaration is not provided in SimulationNetwork');
 
   @override
