@@ -16,8 +16,10 @@ extends, its schemas and verdict, from cascade/<NAME>/ and the NAME.txt files
 under programs/, with each contract's owner and paper (tools/papers.py), and
 the families' names and colours.  The pages are web/*.html, copied as they
 are; web/about.json holds the site's own line for each contract, and
-programs/apps/look.json, which the app's asset sync reads too, each contract's
-icon and family and each family's name and colours.  build/ and
+programs/apps/look.json, which the app's asset sync reads too, each family's
+name and colours, and each contract's icon and family until its owner writes
+them in the line its interface pragmas open with, 'Look: <icon>, <family>'
+(GSC's Section 2), which the build takes in its place.  build/ and
 programs/vglp/cva/web_worlds/ are generated, gitignored, and this script rebuilds them whole.
 """
 import json, os, re, shutil, subprocess, sys
@@ -257,12 +259,27 @@ def nearest(cid):
     return list(dict.fromkeys(out))
 
 
+def look_line(pragmas):
+    """The look a contract's interface pragmas open with, 'Look: <icon>,
+    <family>' (GSC's Section 2, 34bc713), as (icon, family); None where the
+    first line is not it."""
+    for l in pragmas:
+        if l.strip() in ('Interface pragmas', 'Implementation pragmas'):
+            continue
+        m = re.match(r'Look:\s*(.+?),\s*([\w-]+)\s*$', l.strip())
+        return (m.group(1), m.group(2)) if m else None
+    return None
+
+
 contracts = []
 for n in sorted(set(compiled) | set(cat)):
     c = dict(cat[n])
     d = os.path.join(GLP, 'cascade', n)
+    # The icon and family the contract's Look line names, where its owner
+    # wrote one, and else look.json's, which holds them until then.
     _l = look['contracts'].get(n, {'icon': '📄', 'family': 'other'})
-    c['icon'], c['family'], c['about'] = _l['icon'], _l['family'], about.get(n) or c['title'] + '.'
+    _icon, _family = look_line(c.get('pragmas', [])) or (_l['icon'], _l['family'])
+    c['icon'], c['family'], c['about'] = _icon, _family, about.get(n) or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
     # Labels" (Udi, 2026-11-07).

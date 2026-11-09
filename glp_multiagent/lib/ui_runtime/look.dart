@@ -3,8 +3,10 @@
 /// asset sync both read (GSA #2, 2026-11-09, Udi approving: "each contract's
 /// colour and icon come from the contract ... the families' colours are one
 /// file in the repository beside the contracts, programs/apps/look.json").
-/// Until GSC gives the pragma line that names a contract's icon and family,
-/// the file holds them too.
+/// A contract's icon and family are the line its interface pragmas open
+/// with, 'Look: <icon>, <family>' (GSC's Section 2, 34bc713), which vGLP's
+/// compiler is to carry to the app; until it does, and for a contract whose
+/// owner has not written the line, the file holds them too.
 library;
 
 import 'dart:convert';
