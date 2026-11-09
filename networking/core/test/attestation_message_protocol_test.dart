@@ -682,20 +682,16 @@ void main() {
       final relay = await _LossyRelay.start(service.boundPort!);
       addTearDown(relay.close);
 
-      // The service's acknowledgments of the caller's attestation — its
-      // fragment's and the whole message's, the first of each the service
-      // sends — are lost, so the caller sends it again and the service,
-      // which has it, receives it twice.
+      // The service's acknowledgment of the caller's attestation — of its
+      // one fragment, the last one, the first fragment acknowledgment
+      // the service sends — is lost, so the caller sends the fragment again
+      // and the service, which has it, receives it twice.
       var fragmentAckLost = false;
-      var messageAckLost = false;
       relay.dropTowardCaller = (datagram) {
         if (datagram.isEmpty) return false;
         if (!fragmentAckLost &&
             datagram.first == PacketType.secureFragmentAck.value) {
           return fragmentAckLost = true;
-        }
-        if (!messageAckLost && datagram.first == PacketType.secureAck.value) {
-          return messageAckLost = true;
         }
         return false;
       };
@@ -714,7 +710,7 @@ void main() {
       // What does not happen after it: no second verification.
       await Future<void>.delayed(const Duration(seconds: 1));
 
-      expect(relay.droppedTowardCaller, 2);
+      expect(relay.droppedTowardCaller, 1);
       expect(relay.attestationFragmentsSeen, greaterThanOrEqualTo(2),
           reason: 'the attestation reached the service twice');
       expect(serviceAttestation.verifications, 1,
@@ -774,11 +770,14 @@ void main() {
         sessions.add(handshakeHash);
       };
       router.onMessageReceived = (_, __, body, ___) => payloads.add(body);
-      // The receiver's acknowledgments return over the link.
-      router.onFragmentAckRequested = (transport, peerId, messageId, index) =>
-          Timer.run(() => sender.handleFragmentAck(peerHex, messageId, index));
-      router.onAckRequested = (transport, peerId, messageId) =>
-          Timer.run(() => sender.handleMessageAck(peerHex, messageId));
+      // The receiver's acknowledgments return over the link: every
+      // fragment's, the last one's once the coordinator has the
+      // attestation. Their acknowledgment alone settles the message.
+      final acknowledgedAfterJudged = <int, bool>{};
+      router.onFragmentAckRequested = (transport, peerId, messageId, index) {
+        acknowledgedAfterJudged[index] = attestations.isNotEmpty;
+        Timer.run(() => sender.handleFragmentAck(peerHex, messageId, index));
+      };
 
       // GATT writes toward the receiver; fragment 2's first write is lost.
       final writes = <int, int>{};
@@ -807,6 +806,10 @@ void main() {
           );
 
       expect(delivered, isTrue);
+      expect(acknowledgedAfterJudged.values.where((after) => after),
+          hasLength(1),
+          reason: 'the last fragment, and it alone, is acknowledged '
+              'once the coordinator has the attestation');
       expect(writes.length, fragments);
       expect(writes[2], 2, reason: 'the lost fragment was written again');
       expect(attestations, hasLength(1));
@@ -884,15 +887,21 @@ void main() {
 
       final senderHex = 'aa' * 32;
       expect(handler.addFragment(decode(attestation.fragments[0]), senderHex: senderHex), isNull);
-      // The payload's second fragment shares the id and the count: dropped.
+      // The payload's second fragment shares the id and the count, not the
+      // type: another attempt, which replaces the attestation's buffer, so
+      // its chunk never joins the attestation.
       expect(handler.addFragment(decode(payload.fragments[1]), senderHex: senderHex), isNull);
-      final done = handler.addFragment(decode(attestation.fragments[1]), senderHex: senderHex);
+      // The attestation's fragments, arriving again, replace it back; the
+      // payload's chunk is gone with its buffer, and the attestation
+      // completes from its own two fragments.
+      expect(handler.addFragment(decode(attestation.fragments[1]), senderHex: senderHex), isNull);
+      final done = handler.addFragment(decode(attestation.fragments[0]), senderHex: senderHex);
       expect(done, isNotNull);
       expect(done!.type, PacketType.attestationFragment);
       expect(done.payload, List.generate(300, (i) => i % 256));
       expect(
         () => FragmentHandler.decodeFragment(attestation.fragments[0].payload,
-            type: PacketType.ack),
+            type: PacketType.fragmentAck),
         throwsArgumentError,
       );
     });

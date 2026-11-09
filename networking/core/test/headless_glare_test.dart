@@ -21,7 +21,9 @@ import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 /// A dialer built from the core internals and the headless layer each start
 /// IK toward the other, the dialer holding its first message back until the
 /// layer's arrives, so that the two cross; in both key orderings. Each run
-/// must converge: session established, payload delivered, ACK returned.
+/// must converge: session established, payload delivered, and the
+/// acknowledgment of its one fragment — the last one, sent once the
+/// layer has saved the message — returned.
 ///
 /// Needs a native libsodium (`brew install libsodium` / `apt-get install
 /// libsodium23`, or LIBSODIUM_PATH) — the suite self-skips when absent.
@@ -195,7 +197,9 @@ class _CrossingDialer {
         return null;
       }
     };
-    router.onAckReceived = (_, messageId) {
+    // The payload is one fragment, so its acknowledgment is the last
+    // fragment's, which settles the message.
+    router.onFragmentAckReceived = (_, messageId, index, transport) {
       ackedMessageIds.add(messageId);
       _acks.putIfAbsent(messageId, Completer<void>.new);
       if (!_acks[messageId]!.isCompleted) _acks[messageId]!.complete();
@@ -204,7 +208,7 @@ class _CrossingDialer {
 
   final Map<String, Completer<void>> _acks = {};
 
-  /// Completes once the acknowledgement of [messageId] has arrived.
+  /// Completes once a fragment acknowledgement of [messageId] has arrived.
   Future<void> untilAcked(String messageId) =>
       _acks.putIfAbsent(messageId, Completer<void>.new).future;
 

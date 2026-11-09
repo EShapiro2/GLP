@@ -12,9 +12,11 @@ typedef PacketSender = Future<bool> Function(
 
 /// The sending half of the shared message transport (spec §Message
 /// Transport): a message is split into self-contained fragments sized to
-/// the carrier; the receiver acknowledges fragments; the sender retransmits
+/// the carrier; the receiver acknowledges fragments, a message's last one
+/// only once it has reassembled and saved the message; the sender retransmits
 /// unacknowledged fragments with backoff, under a bounded send window per
-/// peer.  No order is kept across messages — window slots are filled
+/// peer, and a message whose fragments are all acknowledged is settled (GNA,
+/// 2026-11-08): it is never sent again.  No order is kept across messages — window slots are filled
 /// round-robin across a peer's active messages, so a lost fragment delays
 /// only its own message.
 ///
@@ -77,9 +79,10 @@ class MessageTransportSender {
   bool _disposed = false;
 
   /// Send [payload] as [messageId] to [peerHex]. Completes true when every
-  /// fragment has been acknowledged (or the whole message was), false when
-  /// a fragment exhausted its retransmissions, the peer was abandoned, or
-  /// [isCurrent] said the message no longer belongs on the wire.
+  /// fragment has been acknowledged — the message settled, its recipient
+  /// having saved it — false when a fragment exhausted its retransmissions,
+  /// the peer was abandoned, or [isCurrent] said the message no longer
+  /// belongs on the wire.
   ///
   /// [fragmentType] is what the fragments travel as: a `send` payload's
   /// [PacketType.fragment], or [PacketType.attestationFragment] for the
@@ -102,9 +105,9 @@ class MessageTransportSender {
   }) {
     if (_disposed) return Future.value(false);
     final lane = _lanes.putIfAbsent(peerHex, () => _PeerLane(peerHex));
-    // A retry can race the original (e.g. the coordinator's ACK watchdog
-    // re-queues while the engine is still retransmitting): join the
-    // in-flight message instead of transmitting it twice.
+    // A retry can race the original (e.g. a queue drain re-sends while the
+    // engine is still retransmitting): join the in-flight message instead of
+    // transmitting it twice.
     final existing = lane.messageById(messageId);
     if (existing != null) return existing.completer.future;
     final fragmented = _fragmenter.fragment(
@@ -128,39 +131,23 @@ class MessageTransportSender {
   bool hasOutstanding(String peerHex) =>
       _lanes[peerHex]?.messages.isNotEmpty ?? false;
 
-  /// A per-fragment acknowledgment arrived.
+  /// A per-fragment acknowledgment arrived from [peerHex], the
+  /// session-authenticated peer that sent it: it acts on that peer's lane
+  /// alone, so an acknowledgment settles only a message sent to the peer it
+  /// comes from. The last one completes the message true.
   void handleFragmentAck(String peerHex, String messageId, int index) {
     final lane = _lanes[peerHex];
     if (lane == null) return;
     final message = lane.messageById(messageId);
     if (message == null) return;
+    // Only a fragment this attempt has sent and not yet seen acknowledged is
+    // settled: an acknowledgment of one not yet sent is a stale one, of an
+    // earlier attempt at the message, and marks nothing done.
     final inFlight = message.inFlight.remove(index);
-    if (inFlight != null) {
-      inFlight.timer?.cancel();
-      lane.slotsInUse--;
-    }
-    message.pending.remove(index);
+    if (inFlight == null) return;
+    inFlight.timer?.cancel();
+    lane.slotsInUse--;
     _completeIfDone(lane, message);
-    _pump(lane);
-  }
-
-  /// A whole-message acknowledgment arrived from [peerHex], the peer the
-  /// message was sent to (delivery receipt): everything still outstanding for
-  /// that message is settled — the receiver has it. An acknowledgment from any
-  /// other peer settles nothing.
-  void handleMessageAck(String peerHex, String messageId) {
-    final lane = _lanes[peerHex];
-    if (lane == null) return;
-    final message = lane.messageById(messageId);
-    if (message == null) return;
-    for (final inFlight in message.inFlight.values) {
-      inFlight.timer?.cancel();
-      lane.slotsInUse--;
-    }
-    message.inFlight.clear();
-    message.pending.clear();
-    message.complete(true);
-    lane.messages.remove(message);
     _pump(lane);
   }
 

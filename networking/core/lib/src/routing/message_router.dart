@@ -40,11 +40,29 @@ import '../platform/compat.dart';
 /// acknowledgment, possibly over another underlay, may deliver a message
 /// multiple times, and madGLP dedupes repeated deliveries"; §Networking
 /// Assumptions: "Every message passed to send() is eventually delivered to
-/// the recipient at least once"): a message is delivered every time it is
-/// reassembled, and acknowledged every time. There is no duplicate filter
-/// (GNA, 2026-10-11, Task B): the Bloom filter that was one took a fresh
-/// message for a duplicate about 1% of the time near its capacity, and
-/// dropped it.
+/// the recipient at least once"). The receiver acknowledges each fragment,
+/// and a message whose fragments are all acknowledged is settled at its
+/// sender (GNA, 2026-11-08): every fragment is acknowledged on arrival except
+/// a fixed one, the last by index ([FragmentHandler.heldIndex]), which is
+/// acknowledged only once the whole message is reassembled, saved
+/// ([keepDelivered]) and delivered, whatever order the fragments arrive in.
+/// A receiver that lost its buffer therefore never acknowledges that fragment
+/// alone: the sender retransmits it until it gives up, and sends the whole
+/// message again.  No fragment is acknowledged that was not stored.
+///
+/// A message is delivered every time it is reassembled and saved, except
+/// that a fragment of a message saved recently is acknowledged at once and
+/// the message not delivered again: one released less than
+/// [FragmentHandler.reassemblyTimeout] ago ([FragmentHandler.wasReleased]),
+/// payload or attestation, or a payload kept, the runtime not having
+/// acknowledged it yet ([isKeptDelivered]).  Its sender retransmits such a
+/// fragment when the acknowledgment of the last one was lost, and without it
+/// would retransmit until it gave up.  Neither is a duplicate filter in the
+/// sense of GNA, 2026-10-11, Task B, whose Bloom filter took a fresh message
+/// for a duplicate about 1% of the time near its capacity and dropped it:
+/// both are exact records of messages already saved, keyed on the
+/// authenticated sender and the wire messageId, and bounded, so a fresh
+/// message is never taken for one, and at least once holds.
 class MessageRouter {
   final Store<AppState> store;
   final ProtocolHandler protocolHandler;
@@ -56,16 +74,32 @@ class MessageRouter {
   void Function(String id, Uint8List senderPubkey, Uint8List payload,
       PeerTransport transport)? onMessageReceived;
 
-  /// Called before a reassembled payload is delivered and acknowledged: the
-  /// coordinator keeps the message until the runtime acknowledges it (GNA
-  /// §2.9, `acknowledge(messageId)`), and the router delivers it and
-  /// acknowledges it to its sender once this completes, so that the sender
-  /// drops a message only once its recipient keeps it.  When it fails, the
-  /// message is neither delivered nor acknowledged, and the sender's
-  /// retransmission delivers it later.  Absent, the message is delivered and
-  /// acknowledged at once.  The id is the layer-assigned one of [deliveryIdOf].
+  /// Called before a reassembled payload is delivered and its last fragment
+  /// acknowledged: the coordinator keeps the message until the runtime
+  /// acknowledges it (GNA §2.9, `acknowledge(messageId)`), and the router
+  /// delivers it and acknowledges its last fragment once this completes, so
+  /// that the sender settles a message only once its recipient keeps it.
+  /// When it fails, the message is neither delivered nor its last fragment
+  /// acknowledged, and its reassembly buffer is kept: the sender's
+  /// retransmission of that fragment returns the message again and the save
+  /// is retried.  Absent, the message is delivered and acknowledged at
+  /// once.  The id is the layer-assigned one of [deliveryIdOf].
   Future<void> Function(String id, Uint8List senderPubkey, Uint8List payload,
       PeerTransport transport)? keepDelivered;
+
+  /// Whether the message delivered under [id] (the layer-assigned one of
+  /// [deliveryIdOf]) is kept: saved by [keepDelivered] and not yet
+  /// acknowledged by the runtime.  A fragment of such a message, which its
+  /// sender retransmits when the acknowledgment of the last fragment was
+  /// lost, is acknowledged at once and the message is not delivered
+  /// again: it was delivered when it was kept, and the kept messages are
+  /// delivered again at restart.  Absent, no message counts as kept.
+  bool Function(String id)? isKeptDelivered;
+
+  /// The messages whose save [keepDelivered] is under way, by sender (hex)
+  /// and wire messageId: the last fragment of one, retransmitted meanwhile,
+  /// waits for that save to acknowledge it.
+  final Set<({String senderHex, String messageId})> _saving = {};
 
   /// The layer-assigned id a message from [senderPubkey] is delivered under
   /// (GNA §2.9): the first 32 hex characters of SHA-256 over the sender's
@@ -82,17 +116,17 @@ class MessageRouter {
         .join();
   }
 
-  /// Called when an ACK is received from [senderPubkey], the peer that
-  /// delivered it (delivery confirmation).
-  void Function(Uint8List senderPubkey, String messageId)? onAckReceived;
-
-  /// Called when a per-fragment acknowledgment arrives (spec §Message
-  /// Transport) — the coordinator settles the sender-side retransmit slot.
+  /// Called when a per-fragment acknowledgment arrives from [senderPubkey],
+  /// the session-authenticated peer that sent it (spec §Message Transport):
+  /// the coordinator settles the retransmit slot on that peer's lane of the
+  /// session it arrived on, and a message whose fragments are all
+  /// acknowledged is settled.
   void Function(Uint8List senderPubkey, String messageId, int index,
       PeerTransport transport)? onFragmentAckReceived;
 
   /// Called when an inbound fragment needs its per-fragment acknowledgment
-  /// sent back.
+  /// sent back: at once for every fragment but the last of its message, and
+  /// for that one once the message is reassembled, saved and delivered.
   void Function(
           PeerTransport transport, String? peerId, String messageId, int index)?
       onFragmentAckRequested;
@@ -104,10 +138,6 @@ class MessageRouter {
   /// clear one of a first contact under Open trust (GNA §2.5).
   void Function(AnnounceData data, PeerTransport transport,
       {String? udpPeerId, bool inSession})? onPeerAnnounced;
-
-  /// Called when a message needs an ACK sent back to the sender
-  void Function(PeerTransport transport, String? peerId, String messageId)?
-      onAckRequested;
 
   /// Called when a signaling packet is received.
   /// The coordinator acts on what a rendezvous server sends.
@@ -123,7 +153,7 @@ class MessageRouter {
   /// Called when a peer's platform attestation arrives (spec §Session
   /// Establishment): the reassembled message of the attestation exchange,
   /// which rides the Message Protocol as `send` payloads do — its fragments
-  /// acknowledged, the message de-duplicated and acknowledged whole — and is
+  /// acknowledged, the last one once this has been called — and is
   /// told from a payload by its fragment type alone. It rides the session, so
   /// the sender is session-authenticated.
   ///
@@ -369,8 +399,6 @@ class MessageRouter {
         );
       case PacketType.fragmentAck:
         _handleFragmentAck(packet, senderPubkey, transport);
-      case PacketType.ack:
-        _handleAck(packet, senderPubkey);
       case PacketType.signaling:
         _handleSignaling(
           packet,
@@ -381,7 +409,6 @@ class MessageRouter {
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
-      case PacketType.secureAck:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -536,22 +563,59 @@ class MessageRouter {
       return;
     }
 
-    // Acknowledge every fragment, duplicates included — the sender's
-    // retransmit stops only on the ACK (spec §Message Transport).
-    onFragmentAckRequested?.call(
-      transport,
-      peerId,
-      fragment.messageId,
-      fragment.index,
-    );
+    void acknowledge() => onFragmentAckRequested?.call(
+          transport,
+          peerId,
+          fragment.messageId,
+          fragment.index,
+        );
 
-    final reassembled = fragmentHandler.addFragment(fragment,
-        senderHex: _pubkeyToHex(senderPubkey));
+    final senderHex = _pubkeyToHex(senderPubkey);
+    final key = (senderHex: senderHex, messageId: fragment.messageId);
+
+    // A fragment of a message saved and released lately, payload or
+    // attestation: its sender retransmits because the acknowledgment of the
+    // last fragment was lost. Acknowledged at once, so the sender settles;
+    // not delivered again.
+    if (fragmentHandler.wasReleased(
+        senderHex: senderHex,
+        messageId: fragment.messageId,
+        type: fragment.type)) {
+      acknowledge();
+      return;
+    }
+
+    // A fragment of a payload already saved and not yet acknowledged by the
+    // runtime: its sender retransmits because the acknowledgment of the last
+    // fragment was lost. Acknowledged at once, so the sender settles; not
+    // delivered again (see [isKeptDelivered]).
+    final isKept = isKeptDelivered;
+    if (isKept != null &&
+        fragment.type == PacketType.fragment &&
+        !_saving.contains(key) &&
+        isKept(deliveryIdOf(senderPubkey, fragment.messageId))) {
+      acknowledge();
+      return;
+    }
+
+    // Every fragment but the last is acknowledged on arrival, duplicates
+    // included — the sender's retransmit stops only on the acknowledgment
+    // (spec §Message Transport). The fragment handler stores every fragment
+    // (one of another attempt at the message replaces the stale buffer), so
+    // no fragment is acknowledged that was not stored.
+    final held = fragment.index == FragmentHandler.heldIndex(fragment.count);
+    final reassembled =
+        fragmentHandler.addFragment(fragment, senderHex: senderHex);
+    if (!held) acknowledge();
     if (reassembled == null) return;
 
+    // The message is complete; a save of it already under way acknowledges
+    // the last fragment.
+    if (!_saving.add(key)) return;
+
     // Reassembly produced the original message's payload bytes; the
-    // messageId travelled in the fragment payloads. Route through the same
-    // delivery pipeline as single-packet messages.
+    // messageId travelled in the fragment payloads. The last fragment is
+    // acknowledged once the message is saved and delivered.
     _deliverMessage(
       reassembled.messageId,
       reassembled.payload,
@@ -560,6 +624,7 @@ class MessageRouter {
       transport: transport,
       handshakeHash: handshakeHash,
       peerId: peerId,
+      heldIndex: FragmentHandler.heldIndex(fragment.count),
     );
   }
 
@@ -579,6 +644,9 @@ class MessageRouter {
     onFragmentAckReceived?.call(senderPubkey, messageId, index, transport);
   }
 
+  /// Delivers a reassembled message, and then acknowledges its last fragment
+  /// ([heldIndex]): a payload once [keepDelivered] has saved it, an
+  /// attestation once the coordinator has it.
   void _deliverMessage(
     String messageId,
     Uint8List body, {
@@ -586,69 +654,63 @@ class MessageRouter {
     required Uint8List senderPubkey,
     required PeerTransport transport,
     required Uint8List handshakeHash,
+    required int heldIndex,
     String? peerId,
   }) {
-    // Delivered every time it is reassembled: a re-send after a lost
-    // acknowledgment is delivered again (at least once, spec §Message
-    // Protocol), and acknowledged again below so the sender stops. The
-    // attestation exchange rides the same protocol as payloads and goes to
-    // the coordinator, never to the application; a second attestation on a
-    // session already attested is the coordinator's to ignore.
+    final senderHex = _pubkeyToHex(senderPubkey);
+
+    // The message is through: its buffer goes, and its last fragment is
+    // acknowledged, under the wire messageId, on the session the completing
+    // fragment arrived on (BLE: peerId = bleDeviceId; UDP: peerId =
+    // udpPeerId).
+    void settle() {
+      fragmentHandler.release(
+          senderHex: senderHex, messageId: messageId, type: type);
+      _saving.remove((senderHex: senderHex, messageId: messageId));
+      onFragmentAckRequested?.call(transport, peerId, messageId, heldIndex);
+    }
+
+    // The attestation exchange rides the same protocol as payloads and goes
+    // to the coordinator, never to the application; a second attestation on
+    // a session already attested is the coordinator's to ignore.
     if (type == PacketType.attestationFragment) {
-      onAttestationReceived?.call(senderPubkey, body, transport, handshakeHash);
-      onAckRequested?.call(transport, peerId, messageId);
+      try {
+        onAttestationReceived?.call(
+            senderPubkey, body, transport, handshakeHash);
+      } finally {
+        settle();
+      }
       return;
     }
 
+    // Delivered every time it is reassembled and saved: a re-send of a
+    // message no longer kept is delivered again (at least once, spec
+    // §Message Protocol).
     final deliveryId = deliveryIdOf(senderPubkey, messageId);
+    void deliverAndSettle() {
+      try {
+        onMessageReceived?.call(deliveryId, senderPubkey, body, transport);
+      } finally {
+        settle();
+      }
+    }
+
     final keep = keepDelivered;
     if (keep == null) {
-      _deliverAndAcknowledge(
-          messageId, deliveryId, body, senderPubkey, transport, peerId);
+      deliverAndSettle();
       return;
     }
     unawaited(keep(deliveryId, senderPubkey, body, transport).then(
-      (_) => _deliverAndAcknowledge(
-          messageId, deliveryId, body, senderPubkey, transport, peerId),
+      (_) => deliverAndSettle(),
       onError: (Object e) {
+        // Neither delivered nor acknowledged, the buffer kept: the sender's
+        // retransmission of the last fragment retries the save.
+        _saving.remove((senderHex: senderHex, messageId: messageId));
         debugPrint('Message $messageId not kept, so neither delivered nor '
-            'acknowledged; its sender sends it again: $e');
+            'its last fragment acknowledged; its sender sends that fragment '
+            'again: $e');
       },
     ));
-  }
-
-  /// Delivers [body] under [deliveryId] and acknowledges it to its sender
-  /// under the wire [messageId] (the whole-message ACK carries the wire id).
-  void _deliverAndAcknowledge(
-    String messageId,
-    String deliveryId,
-    Uint8List body,
-    Uint8List senderPubkey,
-    PeerTransport transport,
-    String? peerId,
-  ) {
-    onMessageReceived?.call(deliveryId, senderPubkey, body, transport);
-
-    // Send ACK back to confirm delivery. The sender waits for this to
-    // mark the message as "delivered" (2 checkmarks). Works over both
-    // BLE (peerId = bleDeviceId) and UDP (peerId = udpPeerId).
-    onAckRequested?.call(transport, peerId, messageId);
-  }
-
-  void _handleAck(GrassrootsPacket packet, Uint8List senderPubkey) {
-    if (packet.payload.isEmpty) return;
-    try {
-      final messageId = String.fromCharCodes(packet.payload);
-      // Validate: message IDs are short alphanumeric strings (UUID v4 prefix)
-      if (messageId.length > 36) {
-        debugPrint(
-            'Ignoring ACK with invalid message ID length: ${messageId.length}');
-        return;
-      }
-      onAckReceived?.call(senderPubkey, messageId);
-    } catch (e) {
-      debugPrint('Failed to decode ACK payload: $e');
-    }
   }
 
   void _handleSignaling(

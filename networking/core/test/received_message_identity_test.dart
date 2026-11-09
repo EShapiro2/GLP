@@ -11,8 +11,8 @@ import 'package:grassroots_networking_core/src/routing/message_router.dart';
 /// F07: a received message is identified by its sender and the sender's wire
 /// messageId together, never by the wire messageId alone (spec api.tex:188-189,
 /// GNA §2.9). Two senders may use the same wire id; their fragments must not
-/// merge, their deliveries must not share an id, and an ACK from one peer must
-/// not settle a message sent to another.
+/// merge, their deliveries must not share an id, and a fragment
+/// acknowledgment from one peer must not settle a message sent to another.
 void main() {
   const maxChunk = 100;
   const wireId = '00000000-0000-4000-8000-0000000000f7';
@@ -65,7 +65,9 @@ void main() {
         isNot(id));
   });
 
-  test('an ACK from a peer other than the recipient settles nothing', () async {
+  test(
+      'fragment acknowledgments from a peer other than the recipient settle '
+      'nothing', () async {
     late MessageTransportSender sender;
     sender = MessageTransportSender(
       maxChunk: maxChunk,
@@ -74,18 +76,26 @@ void main() {
     );
     addTearDown(sender.dispose);
 
+    // 500 bytes in fragments of 100, all in flight within the window.
+    const fragments = 5;
     final done = sender.sendMessage(
         alice, wireId, Uint8List.fromList(List.filled(500, 1)));
     var settled = false;
     unawaited(done.then((_) => settled = true));
 
-    // The wrong peer acknowledges the message: it must stay outstanding.
-    sender.handleMessageAck(bob, wireId);
+    // The wrong peer acknowledges every fragment: the message stays
+    // outstanding on the recipient's lane.
+    for (var i = 0; i < fragments; i++) {
+      sender.handleFragmentAck(bob, wireId, i);
+    }
     await Future<void>.value(); // flush microtasks; nothing has settled
     expect(settled, isFalse);
+    expect(sender.hasOutstanding(alice), isTrue);
 
-    // The recipient acknowledges it: it settles.
-    sender.handleMessageAck(alice, wireId);
+    // The recipient acknowledges every fragment: it settles.
+    for (var i = 0; i < fragments; i++) {
+      sender.handleFragmentAck(alice, wireId, i);
+    }
     expect(await done, isTrue);
   }, timeout: Timeout.none);
 }

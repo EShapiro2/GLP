@@ -385,6 +385,68 @@ void main() {
         MessageStatus.read);
   }, timeout: Timeout.none);
 
+  test(
+      'a message of several fragments is settled once every fragment is '
+      'acknowledged: delivered (two checkmarks), removed from the saved queue '
+      'and the in-memory one, with no whole-message acknowledgment, and not '
+      'sent again (GNA, 2026-11-08)', () async {
+    final senderId = await identityFromSeed(0x9c);
+    final recipientId = await identityFromSeed(0x9d);
+
+    final sender = await startNode(senderId);
+    var senderDisposed = false;
+    final recipient = await startNode(recipientId);
+    addTearDown(() async {
+      if (!senderDisposed) await sender.dispose();
+      await recipient.dispose();
+    });
+    final received = <String>[];
+    final barrier = Completer<void>();
+    recipient.onMessageReceived = (s, payload, id, u) {
+      if (payload.length == 1) {
+        if (!barrier.isCompleted) barrier.complete();
+        return;
+      }
+      received.add(id);
+    };
+    recipient.putKnownPeer(senderId.publicKey);
+    recipient.wan!
+        .putPeerAddress(senderId.publicKey, await listeningAddress(sender));
+    sender.putKnownPeer(recipientId.publicKey);
+    sender.wan!
+        .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
+
+    // Three fragments over UDP.
+    final payload = Uint8List.fromList(List.generate(3000, (i) => i % 247));
+    final wireId = await sender.send(recipientId.publicKey, payload);
+    await stateWhere(
+        sender.store,
+        (s) =>
+            s.messages.outgoingMessages[wireId]?.status ==
+            MessageStatus.delivered);
+    expect(sender.queuedMessageCountForPeer(recipientId.publicKey), 0,
+        reason: 'settled, it is not held to be sent again');
+    for (final underlay in [Underlay.lan, Underlay.wan]) {
+      expect(sender.debugIpLaneHolds(underlay, recipientId.publicKey), isFalse,
+          reason: 'no lane carries it any more');
+    }
+
+    // A message after it: by its delivery, the first has been delivered once.
+    await sender.send(recipientId.publicKey, Uint8List.fromList([1]));
+    await barrier.future;
+    expect(received, [MessageRouter.deliveryIdOf(senderId.publicKey, wireId!)]);
+    await stateWhere(
+        sender.store,
+        (s) => s.messages.outgoingMessages.values
+            .every((m) => m.status == MessageStatus.delivered));
+
+    // The disposal waits for every save of the queue begun so far.
+    await sender.dispose();
+    senderDisposed = true;
+    expect(await savedQueue(senderId), isEmpty,
+        reason: 'a settled message is removed from the saved queue');
+  }, timeout: Timeout.none);
+
   test("each agent's queue is its own", () async {
     final aId = await identityFromSeed(0x93);
     final bId = await identityFromSeed(0x94);

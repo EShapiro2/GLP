@@ -958,8 +958,13 @@ class HeadlessGrassrootsNetwork {
     unawaited(
       _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
         if (ok) {
-          // Acknowledged: the recipient has it (spec §Message Protocol).
+          // Every fragment acknowledged by the recipient, the last one only
+          // once it had reassembled and saved the message: the message is
+          // settled (GNA, 2026-11-08), and never sent again. The lane is the
+          // recipient's, so only its acknowledgments got here.
+          debugPrint('[headless] $messageId settled');
           unawaited(_persistedQueue.remove(messageId));
+          _outboundQueue[hex]?.removeWhere((e) => e.messageId == messageId);
           return;
         }
         // Still outstanding, so back to the queue, also when the layer has
@@ -1109,8 +1114,9 @@ class HeadlessGrassrootsNetwork {
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 
   void _setupRouterCallbacks() {
-    // A message is kept before it is delivered and acknowledged to its
-    // sender, until the runtime acknowledges it (GNA §2.9, §2.11).
+    // A message is kept before it is delivered and its last fragment
+    // acknowledged to its sender, until the runtime acknowledges it (GNA
+    // §2.9, §2.11).
     _messageRouter.keepDelivered =
         (messageId, senderPubkey, payload, arrivalTransport) =>
             _persistedQueue.keep(DeliveredQueueEntry(
@@ -1119,6 +1125,7 @@ class HeadlessGrassrootsNetwork {
               payload: payload,
               underlay: Underlay.wan,
             ));
+    _messageRouter.isKeptDelivered = (id) => _persistedQueue.isKept(id);
     _messageRouter.onMessageReceived =
         (messageId, senderPubkey, payload, arrivalTransport) {
       onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
@@ -1243,25 +1250,8 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
-    _messageRouter.onAckRequested = (transport, peerId, messageId) async {
-      final identified =
-          peerId == null ? null : UdpTransportService.parsePathId(peerId);
-      if (peerId == null || identified == null) return;
-      final recipientPubkey = _bytes(identified.pubkeyHex);
-      final bytes = await _sessionPacketBytes(
-        _protocolHandler.createAckPacket(messageId: messageId),
-        recipientPubkey,
-      );
-      if (bytes != null) {
-        await _udpService?.sendToPeer(peerId, bytes);
-      }
-    };
-
-    _messageRouter.onAckReceived = (senderPubkey, messageId) {
-      debugPrint('[headless] ACK received for $messageId');
-      _udpMessageSender.handleMessageAck(_hex(senderPubkey), messageId);
-    };
-
+    // A fragment acknowledgment acts on the lane of the peer it comes from
+    // alone: it settles only a message sent to that peer.
     _messageRouter.onFragmentAckReceived =
         (senderPubkey, messageId, index, transport) {
       _udpMessageSender.handleFragmentAck(

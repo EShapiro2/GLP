@@ -83,7 +83,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     final existing = state.outgoingMessages[action.messageId];
     if (existing == null) return state;
 
-    // `sent → queued` is legitimate (BLE-disconnect or ack-timeout re-queue);
+    // `sent → queued` is legitimate (a re-queue after a failed attempt);
     // `delivered/read/failed → queued` is a regression and gets dropped.
     if (_isTerminalForRegression(existing.status)) {
       return state;
@@ -102,9 +102,8 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     final existing = state.outgoingMessages[action.messageId];
 
     if (existing != null) {
-      // If the ACK won the race with `_markSentAndTrackForAck` (rare but
-      // possible for fragmented BLE sends or hot-restart edge cases), don't
-      // walk the status back from delivered/read to sent.
+      // A message already delivered or read (another attempt settled it, or
+      // a read receipt came first) is not walked back to sent.
       if (_isTerminalForRegression(existing.status)) {
         return state;
       }

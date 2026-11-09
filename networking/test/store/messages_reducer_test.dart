@@ -309,11 +309,11 @@ void main() {
     // Once a message reaches `delivered`, `read`, or `failed`, no earlier
     // transition (sending / queued / sent) is allowed to walk the status
     // back. This defends against three real races:
-    //   - ACK arrives before `_markSentAndTrackForAck` registers the entry,
-    //     so `MessageDeliveredAction` lands first and `MessageSentAction`
-    //     follows.
-    //   - Watchdog/disconnect re-queues a message that's already delivered
-    //     (timer fired then ACK landed), dispatching `MessageQueuedAction`.
+    //   - Two attempts of one message settle one after the other (a drain
+    //     joins the attempt in flight), so a `MessageSentAction` follows the
+    //     first attempt's `MessageDeliveredAction`.
+    //   - A failed attempt re-queues a message another attempt has already
+    //     settled, dispatching `MessageQueuedAction`.
     //   - Drain dispatches `MessageSendingAction` for an already-delivered
     //     queue entry it hasn't yet trimmed.
 
