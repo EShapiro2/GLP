@@ -51,7 +51,7 @@ ListTuples ::= [] ; [LLists | ListTuples].
 Schemas ::= [] ; [Schema | Schemas].
 Preds ::= [] ; [Constant | Preds].
 Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
-Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr).
+Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var) ; item_of(Var).
 Exprs ::= [] ; [Expr | Exprs].
 CRole ::= every ; at(Integer).
 Form ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
@@ -62,7 +62,7 @@ Numeric ::= numeric(Constraint, Vars, CRole).
 NumRes ::= num_is(Number) ; no_num.
 LNorm ::= norm(Binding) ; badnorm.
 CName ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; lv(Constant, Constant) ; any.
+Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals ::= [] ; [Val | Vals].
 GAtom ::= g(Constant, Vals).
@@ -1540,6 +1540,7 @@ val_names(s(speech(_, Q)), C, B?) :- same(Q?, C?, B).
 val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(r(_), _, no).
+val_names(i(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 
@@ -2642,6 +2643,7 @@ is_lv(s(_), no).
 is_lv(c(_), no).
 is_lv(n(_), no).
 is_lv(r(_), no).
+is_lv(i(_), no).
 is_lv(any, no).
 
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
@@ -3228,6 +3230,7 @@ found_peer(found(s(_)), unbound).
 found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(r(_)), unbound).
+found_peer(found(i(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -3381,6 +3384,7 @@ name_parts(_, p(_), noparts).
 name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, r(_), noparts).
+name_parts(_, i(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 
@@ -3412,6 +3416,7 @@ sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(r(_), unsigned).
+sgn_parts(i(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 
@@ -3470,6 +3475,7 @@ val_peer1(found(s(_)), D, D?).
 val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(r(_)), D, D?).
+val_peer1(found(i(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -3483,6 +3489,7 @@ val_speech1(found(p(_)), D, speech(utterance(none), D?)).
 val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(r(_)), D, speech(utterance(none), D?)).
+val_speech1(found(i(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -3494,6 +3501,7 @@ num_of(V, B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), num_found(F?, R).
 procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
 num_found(found(r(K)), num_is(K?)).
+num_found(found(i(_)), no_num).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -3548,7 +3556,25 @@ procedure expr_term1(Expr?, Binding?, Found).
 expr_term1(role(I), B, F?) :- lookup(role(I?), B?, F).
 expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
 expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
+expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
+expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+
+procedure author_found(Found?, Found).
+author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
+author_found(_, free) :- otherwise | true.
+
+procedure first_signer(Speech?, Peer).
+first_signer(speech(utterance(_), P), P?).
+first_signer(speech(speech(U, Q), _), P?) :- first_signer(speech(U?, Q?), P).
+
+procedure item_found(Found?, Found).
+item_found(found(s(S)), found(i(U?))) :- ground(S?) | utterance_of(S?, U).
+item_found(_, free) :- otherwise | true.
+
+procedure utterance_of(Speech?, Utterance).
+utterance_of(speech(utterance(T), _), utterance(T?)).
+utterance_of(speech(speech(U, Q), _), V?) :- utterance_of(speech(U?, Q?), V).
 
 procedure nt_term(YesNo?, NTerm?, Binding?, CName).
 nt_term(yes, N, B, C?) :- nt_img(N?, B?, C).
@@ -3598,6 +3624,8 @@ expr_val(sum(_, _, _, _, _), _, no_num).
 expr_val(role(_), _, no_num).
 expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
+expr_val(author_of(_), _, no_num).
+expr_val(item_of(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 expr_val(any, _, no_num).
@@ -3759,6 +3787,8 @@ expr_free(num(X), B, F0, F?) :- otherwise, ground(X?), ground(B?), ground(F0?) |
 expr_free(role(_), _, F0, F0?).
 expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
+expr_free(author_of(_), _, F0, F0?).
+expr_free(item_of(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).
@@ -4110,7 +4140,7 @@ form_string(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-Drawn ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
+Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)]), form(redundancy, [field('Integer', shown)])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)]), form(redundancy, [field('Integer', shown)])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)]), form(redundancy, [field('Integer', shown)])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
