@@ -10,7 +10,10 @@
 %% (TGLP modules.tex, "The -expose directive"), so each type here is carried
 %% by a procedure exported here: Span by span/2, Slot by fill/2, SglpTerms by
 %% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform.glp,
-%% "The question shown whole").
+%% "The question shown whole").  length/2 and length/3, ordinary GLP, are
+%% exported here too, since the transformation, the printed modules of
+%% tests/census and tests/screen and the examples' one_of call them (sGLP #11,
+%% Code_inbox 2026-11-09 14:53 UTC, Udi approving).
 
 %% The units of a horizon and of a rate (Appendix B): second, minute, hour,
 %% day, week and year; the horizon of a run declaration, `until <number>
@@ -109,3 +112,15 @@ terms_length(Ts, N?) :- terms_length(Ts?, 0, N).
 procedure terms_length(SglpTerms?, Integer?, Integer).
 terms_length([], A, A?).
 terms_length([_|Ts], A, N?) :- A1 := A? + 1, terms_length(Ts?, A1?, N).
+
+%% length(Xs?, N): N is the number of elements of Xs, counted by length/3 in
+%% an accumulator, tail-recursively, so that a list of n elements leaves no n
+%% additions suspended at once, each waiting on the count of the rest, as the
+%% count it replaces did (sGLP's code task of 2026-10-02 20:58 UTC, S2).
+exported procedure(X) length(Stream(X)?, Integer).
+length(Xs, N?) :- length(Xs?, 0, N).
+
+%% length(Xs?, A?, N): N is A plus the number of elements of Xs.
+exported procedure(X) length(Stream(X)?, Integer?, Integer).
+length([], A, A?).
+length([_|Xs], A, N?) :- A1 := A? + 1, length(Xs?, A1?, N).
