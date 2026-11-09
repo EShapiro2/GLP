@@ -1,0 +1,53 @@
+% GNM: Network Marketplace --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.4 and cites a clause as GNM:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: GNM.glp beside this file.
+GNM: Network Marketplace
+GNM extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
+A seller is a provider and a buyer a customer.  A listing names a good, its price in Orga-coins and how it is delivered; its terms say what is released to whom on cancellation.
+Alice and Bob are persons, Orga a marketplace.
+1. ■ Listing.  Bob, a seller, may post a listing to the buyers he points to, and a buyer may pass it to the buyers they point to; Bob may withdraw it.
+2. ■ Order.  Alice, a buyer, and Bob may jointly order the good; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
+3. ◆ Delivery.  Alice may attest that the good was delivered to her, and the payment and the deposit are then released to Bob.
+4. ■ Cancelling.  Alice or Bob may cancel the order before delivery, and the payment and the deposit are released to Alice and to Bob as the terms say.
+5. ■ Dispute.  Alice or Bob may raise a dispute over the payment and the deposit before they are released (GNO:4).
+6. ◆ Review.  After delivery, Alice may attest a review of the good, which Bob's listing carries.
+Pragmas
+Look: 🛒, network
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Stake: Orga [Set stake] <coins>
+Arbitration: Alice [Raise dispute] <arbiter>
+  Bob [Raise dispute] <arbiter>
+  Carol [Decide] <to customer> <to provider>
+Listings: the listings Alice received, and her orders.
+Listing: Bob [List] <price> <terms>
+  Alice [Pass on]
+  Bob [Withdraw]
+Order: Alice [Order] <payment> <deposit>
+  Bob: Alice asks to order your good.
+Delivery: Alice [Delivered]
+Cancelling: Alice [Cancel] <to Alice> <to Bob>
+  Bob [Cancel] <to Alice> <to Bob>
+Review: Alice [Review] <review>
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

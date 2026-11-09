@@ -1,0 +1,53 @@
+% GNL: Network Lodging --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.3 and cites a clause as GNL:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: GNL.glp beside this file.
+GNL: Network Lodging
+GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
+A host is a provider and a traveller a customer.  A listing names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
+Alice and Bob are persons, Orga a lodging organisation.
+1. ■ Listing.  Bob, a host, may post a listing to the travellers he points to, and a traveller may pass it to the travellers they point to; Bob may withdraw it.
+2. ■ Booking.  Alice, a traveller, and Bob may jointly book nights of his listing; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
+3. ■ Check-in and checkout.  The check-in is recorded when Alice and Bob are both at the place on the first night, and the checkout when Alice leaves it after the last; the payment and the deposit are then released to Bob.
+4. ■ Cancelling.  Alice or Bob may cancel a booking before the first night, and the payment and the deposit are released to Alice and to Bob as the terms say; if no check-in is recorded on the first night while Alice is at the place, she may cancel and both are released to her.
+5. ■ Dispute.  Alice, checked in, or Bob may raise a dispute over the payment and the deposit before checkout (GNO:4).
+6. ◆ Review.  After checkout, Alice may attest a review of the stay, which Bob's listing carries.
+Pragmas
+Look: 🏠, network
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Stake: Orga [Set stake] <coins>
+Arbitration: Alice [Raise dispute] <arbiter>
+  Bob [Raise dispute] <arbiter>
+  Carol [Decide] <to customer> <to provider>
+Listings: the listings Alice received, and her bookings.
+Listing: Bob [List] <place> <first night> <last night> <price a night> <terms>
+  Alice [Pass on]
+  Bob [Withdraw]
+Booking: Alice [Book] <payment> <deposit>
+  Bob: Alice asks to book your place.
+Cancelling: Alice [Cancel] <to Alice> <to Bob>
+  Bob [Cancel] <to Alice> <to Bob>
+  Alice [No show]
+Review: Alice [Review] <review>
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

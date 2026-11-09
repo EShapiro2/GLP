@@ -1,0 +1,39 @@
+% GCoop: Grassroots Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as GCoop:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: GCoop.glp beside this file.
+GCoop: Grassroots Cooperative
+GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A cooperative is an organisation with two roles, member, held by every participant, and board member; the members decide by a majority of the members, one member one vote, and the board members jointly decide the acts the members delegate to the board.
+Alice and Bob are persons, Orga a cooperative.
+1. ■ Founding.  Alice may found Orga and become its first member.
+2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and the members; his membership ends by an act of Bob or of the other members.
+3. ■ Board.  The members may elect a member to the board, and remove one from it.
+Pragmas
+Look: 🌱, cooperative
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Membership: Bob [Join cooperative]
+  Orga: Bob asks to become a member.
+Board: Orga [Elect to board]
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

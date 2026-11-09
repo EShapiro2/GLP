@@ -1,0 +1,40 @@
+% WC: Workers' Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.1 and cites a clause as WC:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GCoop, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: WC.glp beside this file.
+WC: Workers' Cooperative
+WC instantiates the bylaws of GCoop and restricts it.
+A workers' cooperative is a cooperative whose members work for Orga.  Orga's surplus is the Dollar-denominated coins it holds above the coins it owes.
+Alice and Bob are persons, Orga a workers' cooperative.
+1. ■ Pay.  Orga may pay Bob, a member, Dollar-denominated coins for his work, as the members decide.
+2. ■ Distribution.  The members may decide to distribute Orga's surplus, which Orga then pays to the members equally.
+Pragmas
+Look: 🛠️, cooperative
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Membership: Bob [Join cooperative]
+  Orga: Bob asks to become a member.
+Board: Orga [Elect to board]
+Pay: Orga [Pay member] <amount>
+Distribution: Orga [Distribute] <coins each>
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

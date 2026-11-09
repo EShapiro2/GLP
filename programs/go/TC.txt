@@ -1,0 +1,45 @@
+% TC: Trading Company --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.2 and cites a clause as TC:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GCorp, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: TC.glp beside this file.
+TC: Trading Company
+TC instantiates the bylaws of GCorp and restricts it.
+A trading company is a corporation with three roles, buyer, keeper and seller; its officers jointly appoint and remove officers.  A good is a thing Orga buys and sells; Orga holds a good from its receipt by a keeper until its release.
+Alice, Bob, Carol, Dave and Eve are persons, Orga a trading company.
+1. ■ Founding.  Alice may found Orga and become its first buyer, keeper and seller.
+2. ■ Officers.  The officers may appoint a participant a buyer, a keeper or a seller, and remove one.
+3. ■ Purchase.  Alice, a buyer, and Dave, who know each other, may jointly decide that Orga pays Dave coins for a good Dave delivers to Orga.
+4. ◆ Receipt.  Bob, a keeper, may record the receipt of a good Orga bought, and Orga then holds it.
+5. ■ Sale.  Carol, a seller, and Eve, who know each other, may jointly decide that Eve pays Orga coins for a good Orga holds, which is then sold to Eve and Orga holds it no more.
+6. ○ Keeping.  Bob, a keeper, keeps every good Orga holds, and releases a good sold to Eve to Eve.
+Pragmas
+Look: 📦, corporation
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Goods: the goods Orga bought, holds and sold.
+Purchase: Alice [Buy] <supplier> <amount> <good>
+  Dave: Alice offers to buy a good from you.
+Receipt: Bob [Record receipt]
+Sale: Carol [Sell] <buyer> <amount>
+  Eve: Carol offers you a good.
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

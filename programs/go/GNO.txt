@@ -1,0 +1,41 @@
+% GNO: Grassroots Network Organisation --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6, Grassroots Network Organisations and cites a clause as GNO:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GBCC, restricting it.
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: GNO.glp beside this file.
+GNO: Grassroots Network Organisation
+GNO restricts GBCC.
+A network organisation is a backed community currency, Orga, with four roles: treasurer, as GBCC; provider, held by Bob while his stake, the Orga-coins he holds, is at least S, a number of Orga-coins the treasurers set; customer, held by whoever accepts Orga-coins; and arbiter.  A treasurer is a provider.  A dispute is over Orga-coins locked between a provider and a customer by an act of the organisation.
+Alice, Bob and Carol are persons, Orga a network organisation.
+1. ■ Stake.  The treasurers may set S.
+2. ■ Treasurers.  GBCC:1, where Bob is a provider.
+3. ■ Arbiters.  The treasurers may appoint Carol an arbiter, and remove one.
+4. ■ Arbitration.  Alice or Bob may raise a dispute to an arbiter, Carol, who then decides the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+Pragmas
+Look: 🕸️, network
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Stake: Orga [Set stake] <coins>
+Arbitration: Alice [Raise dispute] <arbiter>
+  Bob [Raise dispute] <arbiter>
+  Carol [Decide] <to customer> <to provider>
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

@@ -1,0 +1,48 @@
+% SCB: Sovereign Central Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.5 and cites a clause as SCB:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GBank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: SCB.glp beside this file.
+SCB: Sovereign Central Bank
+SCB instantiates the bylaws of GBank and restricts it.
+A central bank is an organisation that is the sovereign of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar.  It has two roles, governor and committee member; the governors jointly decide the acts of the bank, and the committee members, the monetary policy committee, set by a majority the policy rate for each term, the return over that term at which the bank lends its coins against bonds.  A participant who holds no role is a counterparty.
+Gov is an organisation, Bob a person, Orga a central bank.
+1. ■ Founding.  Gov may found Orga as the sovereign of the Dollar, naming its first governors and committee members.
+2. ■ Counterparties.  Bob becomes a counterparty of Orga and ceases to be one by an act of Bob and the governors.
+3. ■ Officers.  Gov may appoint a participant a governor or a committee member, and remove one.
+4. ■ Policy rate.  The committee members may set the policy rate for a term.
+5. ■ Lending.  Bob, a counterparty, and Orga may jointly decide to swap Orga-coins for Bob-bonds of a term, of face value the coins times one plus the policy rate for that term.
+6. ■ Open market.  Bob, a counterparty, and Orga may jointly decide to swap coins and bonds they hold.
+7. ○ Authority.  Gov founds Orga and appoints and removes its officers as the law of the Dollar provides.
+Pragmas
+Look: 🏛️, bank
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Founding: Gov [Found central bank] <organisation> <bylaws> <denomination> <person>
+  Alice: Gov asks you to be the first governor.
+Counterparties: Bob [Become counterparty]
+  Orga: Bob asks to become a counterparty.
+Officers: Gov [Appoint] <role> [Remove] <role>
+Policy rate: Orga [Set policy rate] <term> <rate>
+Lending: Bob [Borrow] <amount> <term>
+  Orga: Bob asks to borrow against bonds.
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).

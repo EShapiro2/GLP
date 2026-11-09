@@ -1,0 +1,41 @@
+% MCS: Mutual Credit Society --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.1 and cites a clause as MCS:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Extends: GBank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Schemas: MCS.glp beside this file.
+MCS: Mutual Credit Society
+MCS instantiates the bylaws of GBank and restricts it.
+A mutual credit society is a bank with one role, member, held by every participant, whose acts are decided by all its members jointly.  A member can be in the red by their coins in circulation less the other persons' coins they hold.
+Alice and Bob are persons, Orga a mutual credit society.
+1. ■ Founding.  Alice may found Orga and become its first member.
+2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and of the members of Orga; his membership ends by an act of Bob or of the other members.
+3. ■ Redemption.  Bob, a member, may redeem an Alice-coin he holds, Alice a member, against an Orga-coin.
+4. ■ Credit limit.  A member can be in the red by at most 1000 coins.
+5. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other, and whichever of the two is left holding coins of the other redeems them against any other coins held by the other, if there are any.
+Pragmas
+Look: 🤝, bank
+Organisations: the organisations Alice participates in, and her roles in each.
+Founding: Alice [Found] <organisation> <bylaws> <role>
+Acts of the organisation: Bob [Propose] <act>
+  Bob [Vote]
+Participation: Bob [Join]
+  Orga: Bob asks to participate.
+  Bob [Leave]
+  Orga [Expel]
+Officers: Orga [Appoint] <role>
+  Orga [Dismiss] <role>
+Amendment: Orga [Amend] <bylaws>
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Membership: Bob [Join society]
+  Orga: Bob asks to become a member.
+Redemption: Bob [Redeem against Orga-coin] <member>
+Implementation pragmas
+Decision: Orga stands on the act x describes once it holds decided(Orga, x).
