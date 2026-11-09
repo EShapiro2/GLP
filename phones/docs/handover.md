@@ -7,7 +7,7 @@ Phones #1 ran from 2026-11-08 14:57 UTC to 2026-11-09 15:01 UTC, not compacted; 
 1. `/Users/udi/Grassroots/claude.md`, then the style guide and `claudese.md`, in full.  Your first line to Udi is your name, `Phones #2 Cowork`.
 2. `GLP/phones/CLAUDE.md`, then `docs/STATE.md`, `docs/debugging.md`, `docs/contributors.md` and `plays/`.
 3. Phones has no paper: GSA's paper (`/Users/udi/Grassroots/GSA`) and GNA's (`/Users/udi/Grassroots/GNA`) are its specification; read both end to end.
-4. Mail: `bash $HOME/mnt/Grassroots/Coordination/bin/mail-read Phones "Phones #2 Cowork"`, read whole into a file; Phones #1's last receipt is 2026-11-09 13:40 UTC, so the entries since are unread by Phones.  Then the GitHub issues and pull requests on `EShapiro2/GLP` (`phones/CLAUDE.md`, the last rule).
+4. Mail: `bash $HOME/mnt/Grassroots/Coordination/bin/mail-read Phones "Phones #2 Cowork"`, read whole into a file; Phones #1's last receipt is 2026-11-09 15:02 UTC, and nothing after it was unread then.  Then the GitHub issues and pull requests on `EShapiro2/GLP` (`phones/CLAUDE.md`, the last rule).
 
 ## What stands
 
