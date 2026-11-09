@@ -1,6 +1,6 @@
 % LDAO: Liquid DAO --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
-% Extends: DAO, Grassroots DAO (programs/gas/dao), and through it GKK.  It cites their clauses whole and restates none.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: DAO, Grassroots DAO (programs/gce/dao), and through it GKK.  It cites their clauses whole and restates none.
 % Defines: delegate, delegation; my_delegate(c, <a>.n) at the member, a the steward, delegation(m, c, n) at the steward; a vote counted through a delegate is recorded as the member's own, yes_vote or no_vote, with its ballots, and followed(x, o, b, c, n) at the steward names the delegate c whose vote b followed.
 % Schemas: LDAO.glp beside this file, written by tools/contracts.py.
 LDAO: Liquid DAO

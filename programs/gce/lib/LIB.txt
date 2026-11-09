@@ -1,5 +1,5 @@
 % LIB: Grassroots Library --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
 % Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), for its calendar.  Through it it extends GKK; it cites their clauses whole and restates none.
 % Defines: thing, shelf, lent out, borrowed; a day is a day of GB's calendar.
 % Schemas: LIB.glp beside this file, written by tools/contracts.py.
