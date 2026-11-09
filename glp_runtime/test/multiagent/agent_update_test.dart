@@ -17,6 +17,7 @@
 @Timeout.none
 library;
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -92,6 +93,43 @@ serve([go | In], _) :- send_to_user([went]), serve(In?, gone).
 serve([refresh | In], gone) :- send_to_user([drawn(four)]), serve(In?, gone).
 serve([refresh | In], none) :- send_to_user([drawn(none)]), serve(In?, none).
 serve([], _).
+''';
+
+/// A version whose person's read has the agent read note.txt in its
+/// program's directory with load_file/2 and show its text.
+const String _l1 = r'''
+Act ::= read ; refresh.
+Shown ::= note(String).
+
+exported procedure agent(Channel(Stream(Act), Stream(Shown))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- serve(In?, one).
+
+procedure serve(Stream(Act)?, Constant?).
+serve([read | In], S) :- load_file("note.txt", C), show(C?), serve(In?, S?).
+serve([refresh | In], S) :- serve(In?, S?).
+serve([], _).
+
+procedure show(Content?).
+show(C) :- string(C?) | send_to_user([note(C?)]).
+''';
+
+/// A new version that changes serve/2's type, which the restart refuses, and
+/// its code, which reads another file.
+const String _l2 = r'''
+Act ::= read ; refresh.
+Shown ::= note(String).
+Mark ::= one ; two.
+
+exported procedure agent(Channel(Stream(Act), Stream(Shown))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- serve(In?, one).
+
+procedure serve(Stream(Act)?, Mark?).
+serve([read | In], S) :- load_file("note2.txt", C), show(C?), serve(In?, S?).
+serve([refresh | In], S) :- serve(In?, S?).
+serve([], _).
+
+procedure show(Content?).
+show(C) :- string(C?) | send_to_user([note(C?)]).
 ''';
 
 void main() {
@@ -237,6 +275,42 @@ void main() {
     expect(a3.runtime!.selfApps!.installed, app(3));
     expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(2),
         reason: 'the store keeps the version the agent runs');
+  });
+
+  test('the store keeps the files of the program\'s directory with the '
+      'program, and after a refused update load_file/2 reads those, not the '
+      'new version\'s', () async {
+    // IGLP 96cd44a, Implementation Notes, "Persistence": the store keeps "the
+    // compiled program it runs with the files of its directory, which
+    // load_file/2 reads"; "An update": "otherwise the agent runs the compiled
+    // program the store holds, and load_file/2 reads the files the store
+    // holds with it".
+    final note = File('${dir.path}/note.txt');
+    final store = MemoryAgentStateStore();
+    note.writeAsStringSync('first');
+    final (a1, out1) = await launch(_l1, store);
+    await a1.injectUserInput(ConstTerm('read'));
+    expect(out1, ['< note(first)']);
+    final kept = StoredProgram.fromBytes((await store.loadProgram())!);
+    expect(utf8.decode(kept.files['note.txt']!), 'first');
+    expect(kept.files.keys, contains('app.glp'));
+
+    // The new version is installed with its own note.txt; the update is
+    // refused, and the agent reads the note kept with the program it runs.
+    note.writeAsStringSync('second');
+    final (a2, out2) = await launch(_l2, store);
+    expect(a2.updateRefusal, isNotNull);
+    await a2.injectUserInput(ConstTerm('read'));
+    expect(out2, ['< note(first)']);
+
+    // A restart under the version the store keeps, which is no update, reads
+    // the directory.
+    final (a3, out3) = await launch(_l1, store);
+    expect(a3.updated, isFalse);
+    expect(a3.updateRefusal, isNull);
+    await a3.injectUserInput(ConstTerm('read'));
+    expect(out3, ['< note(second)']);
+    note.deleteSync();
   });
 
   test('self_app(R, I) assigns app(D, N, V) of the two apps the runtime '
