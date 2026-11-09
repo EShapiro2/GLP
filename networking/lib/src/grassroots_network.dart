@@ -822,9 +822,6 @@ class GrassrootsNetwork {
     Application? application,
   )? onPeerConnected;
 
-  /// Called when an existing peer sends an ANNOUNCE update.
-  void Function(PeerState peer)? onPeerUpdated;
-
   /// Called when a peer is no longer reachable over a given underlay. Fires
   /// per underlay: losing one of two live underlays fires here for the one
   /// that dropped while the peer stays reachable over the other. Receives the
@@ -1273,13 +1270,6 @@ class GrassrootsNetwork {
   /// Whether [pubkey] holds a Noise session on either IP underlay.
   bool _hasIpSession(Uint8List pubkey) => ipSessions
       .any((session) => _noiseSessions.hasSession(session, pubkey));
-
-  /// Our public UDP address, as a rendezvous server observed it.
-  ///
-  /// Null until the first rendezvous connection reflects one — the agent
-  /// cannot observe its own public address, and asks no external service for
-  /// it (spec §Connectivity and Address).
-  String? get udpAddress => _publicAddress;
 
   /// Whether currently scanning for BLE devices
   bool get isScanning => _bleService?.isScanning ?? false;
@@ -2392,15 +2382,6 @@ class GrassrootsNetwork {
     return true;
   }
 
-  /// Apply a debug change to which BLE roles this device runs.
-  /// Dispatches a Redux action and restarts the BLE transport so the new
-  /// mode takes effect immediately.
-  Future<void> setBleRoleMode(BleRoleMode mode) async {
-    if (store.state.settings.bleRoleMode == mode) return;
-    store.dispatch(SetBleRoleModeAction(mode));
-    await _bleService?.applyRoleModeChange();
-  }
-
   /// Set the cold-call trust level of [underlay] to Open or Closed (GNA
   /// §2.7, §3.1), behind [ProximityApi.setTrustLevel] on that underlay's
   /// sub-object. Until set, both levels are Closed.
@@ -2883,7 +2864,7 @@ class GrassrootsNetwork {
 
   // ===== ACK-pending tracker =====
   //
-  // `sendToPeer` (BLE) and `_sendPacketViaUdp` return success the moment the
+  // `sendToPeer` (BLE) and the UDP send return success the moment the
   // OS accepts the bytes — they cannot tell whether the recipient actually
   // got them. Two failure modes leak through:
   //
@@ -3092,105 +3073,6 @@ class GrassrootsNetwork {
   @visibleForTesting
   String? debugUdpPeerIdForAddress(String address) =>
       _udpService?.peerIdForAddress(address);
-
-  /// Send a read receipt to the original sender of a message.
-  /// Call this when the user has read/viewed a message.
-  /// Returns true if the read receipt was sent successfully.
-  Future<bool> sendReadReceipt({
-    required String messageId,
-    required Uint8List senderPubkey,
-  }) async {
-    final peer = _peersState.getPeerByPubkey(senderPubkey);
-
-    // Create read receipt packet at coordinator level. Signing happens after
-    // session encryption, if available.
-    final packet = _protocolHandler.createReadReceiptPacket(
-      messageId: messageId,
-    );
-
-    // Try BLE first
-    if (_bleAvailable && _bleService != null) {
-      final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
-      if (peer != null && bleDeviceId != null) {
-        final bytes = await _packetBytesForTransport(
-          packet: packet,
-          transport: PeerTransport.bleDirect,
-          recipientPubkey: senderPubkey,
-          peerId: bleDeviceId,
-        );
-        if (bytes != null &&
-            await _bleService!.sendToPeer(bleDeviceId, bytes)) {
-          return true;
-        }
-      }
-    }
-
-    // Fall back to UDP
-    if (_udpAvailable && _udpService != null) {
-      final udpCandidates = _udpCandidatesForPeer(peer);
-      if (peer != null && udpCandidates.isNotEmpty) {
-        if (await _sendPacketViaUdp(
-          pubkeyHex: peer.pubkeyHex,
-          udpAddress: peer.udpAddress ?? udpCandidates.first,
-          packet: packet,
-          recipientPubkey: senderPubkey,
-        )) {
-          return true;
-        }
-      }
-    }
-
-    debugPrint('No transport available to send read receipt');
-    return false;
-  }
-
-  /// Broadcast a message to every peer over each underlay it is reachable
-  /// over: as `send`, never into a session whose attestation exchange has not
-  /// completed (GNA, 2026-10-11, Task A).
-  Future<void> broadcast(Uint8List payload) async {
-    // Broadcast as individually encrypted unicast packets, one Noise session
-    // per peer per transport medium.
-    if (_bleAvailable && _bleService != null) {
-      try {
-        for (final peerId in _bleService!.connectedPeerIds) {
-          final pubkey = _bleService!.getPubkeyForPeerId(peerId);
-          if (pubkey == null) continue;
-          final peer = _peersState.getPeerByPubkey(pubkey);
-          if (peer == null ||
-              !peer.reachableUnderlays.contains(Underlay.pan)) {
-            continue;
-          }
-          await _bleMessageSender.sendMessage(
-            _pubkeyToHex(pubkey),
-            _uuid.v4(),
-            payload,
-          );
-        }
-      } catch (e) {
-        debugPrint('BLE broadcast failed: $e');
-      }
-    }
-
-    if (_udpAvailable && _udpService != null) {
-      try {
-        for (final peer in _peersState.peersList) {
-          for (final session in ipSessions) {
-            if (!_udpService!.hasPath(session, peer.pubkeyHex) ||
-                !peer.reachableUnderlays.contains(session.underlay)) {
-              continue;
-            }
-            await _messageSenderFor(session).sendMessage(
-              peer.pubkeyHex,
-              _uuid.v4(),
-              payload,
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint('UDP broadcast failed: $e');
-      }
-    }
-  }
 
   // ===== Local Host Addresses =====
 
@@ -3836,34 +3718,6 @@ class GrassrootsNetwork {
 
   // ===== UDP Connect-on-Demand =====
 
-  Future<bool> _sendPacketViaUdp({
-    required String pubkeyHex,
-    required String udpAddress,
-    required GrassrootsPacket packet,
-    required Uint8List recipientPubkey,
-  }) async {
-    final udp = _udpService;
-    if (udp == null) return false;
-
-    // A standing path, the LAN's before the WAN's; else the path to the
-    // recorded address, on the session it falls under.
-    final session =
-        ipSessions.where((s) => udp.hasPath(s, pubkeyHex)).firstOrNull ??
-            await _ensureUdpConnection(pubkeyHex, udpAddress);
-    if (session == null) return false;
-    final pathId = UdpTransportService.pathId(session, pubkeyHex);
-
-    final bytes = await _packetBytesForTransport(
-      packet: packet,
-      transport: session,
-      recipientPubkey: recipientPubkey,
-      peerId: pathId,
-    );
-    if (bytes == null) return false;
-
-    return await _udpService?.sendToPeer(pathId, bytes) ?? false;
-  }
-
   /// Open a path to [pubkeyHex] at the best remote candidate of its recorded
   /// address and [udpAddress], and answer the IP session it belongs to — the
   /// one its address falls under (decision 8) — or null when none opened.  A
@@ -4138,28 +3992,6 @@ class GrassrootsNetwork {
       }
     };
 
-    // Read receipt received. The reader names the message by the id it was
-    // delivered under, the layer-assigned MessageRouter.deliveryIdOf of our
-    // public key and our wire id (F07); resolve it to our wire id among our
-    // outgoing messages to that reader, and mark that one read.
-    _messageRouter.onReadReceiptReceived = (senderPubkey, messageId) {
-      final readerHex = _pubkeyToHex(senderPubkey);
-      final wireId = store.state.messages.outgoingMessages.values
-              .where((m) => m.recipientPubkeyHex == readerHex)
-              .map((m) => m.messageId)
-              .where((wire) =>
-                  MessageRouter.deliveryIdOf(identity.publicKey, wire) ==
-                  messageId)
-              .firstOrNull;
-      if (wireId == null) {
-        debugPrint('Read receipt for $messageId from $readerHex names no '
-            'message sent to it: ignored');
-        return;
-      }
-      debugPrint('Read receipt received for message $wireId');
-      store.dispatch(MessageReadAction(messageId: wireId));
-    };
-
     // Map incoming UDP connections from any verified packet's sender: a
     // verified ANNOUNCE, or a packet a session decrypted.
     _messageRouter.onUdpPeerIdentified = (senderPubkey, udpPeerId) {
@@ -4271,7 +4103,7 @@ class GrassrootsNetwork {
 
     // Peer ANNOUNCE processed
     _messageRouter.onPeerAnnounced = (data, transport,
-        {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+        {String? udpPeerId, bool inSession = false}) {
       final pubkeyHex = _pubkeyToHex(data.publicKey);
       // ANNOUNCE is identity beacon and heartbeat only (spec §ANNOUNCE and
       // Liveness): it carries no addresses, so nothing is registered from it.
@@ -4317,15 +4149,6 @@ class GrassrootsNetwork {
             _discoveredOn[discoveredOn]!.add(pubkeyHex)) {
           _proximity(discoveredOn)?.onPeerDiscovered?.call(data.publicKey);
         }
-      }
-
-      // onPeerConnected is driven by the reachability subscriber (it fires once
-      // the peer is reachable = an authenticated Noise session exists). We still
-      // fire onPeerUpdated on subsequent ANNOUNCEs for callers that want every
-      // update regardless of reachability transitions.
-      final peerState = store.state.peers.getPeerByPubkey(data.publicKey);
-      if (peerState != null && !isNew) {
-        onPeerUpdated?.call(peerState);
       }
 
       _drainQueuedMessagesForPeer(data.publicKey);
@@ -4883,9 +4706,6 @@ class GrassrootsNetwork {
   /// Perform a periodic scan for new BLE devices
   Future<void> _periodicScan() async {
     if (!_bleAvailable) return;
-    if (store.state.settings.bleRoleMode == BleRoleMode.peripheralOnly) {
-      return;
-    }
     try {
       store.dispatch(BleScanningChangedAction(true));
       await _bleService!.scan(timeout: config.scanDuration);

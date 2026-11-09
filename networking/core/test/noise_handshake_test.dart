@@ -192,7 +192,7 @@ void main() {
     };
     final announced = <(String, bool)>[];
     router.onPeerAnnounced =
-        (data, t, {bool isNew = false, String? udpPeerId, bool inSession = false}) =>
+        (data, t, {String? udpPeerId, bool inSession = false}) =>
             announced.add((hexOf(data.publicKey), inSession));
 
     await router.processPacket(

@@ -8,9 +8,11 @@ import 'package:redux/redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
+import 'package:grassroots_networking/app_payload.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking/src/store/outbound_queue_preferences.dart';
 import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
+import 'package:grassroots_networking_core/src/models/block.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
@@ -327,10 +329,12 @@ void main() {
   }, timeout: Timeout.none);
 
   test(
-      'a read receipt names the message by the id it was delivered under, and '
-      'marks the outgoing message it answers read (F07, GNA §2.9)', () async {
+      'an application payload names the message it reads: the reader answers '
+      'a chat payload with a receipt naming the chat id the sender put in it, '
+      'and the sender marks that outgoing message read (GNA §2.9)', () async {
     final senderId = await identityFromSeed(0x9a);
     final recipientId = await identityFromSeed(0x9b);
+    const chatId = '6f1c2b9e-0d4a-4c1e-8f3a-2b7d9e5c1a40';
 
     final read = Completer<MessageReadAction>();
     final sender = await startNode(senderId, onAction: (action) {
@@ -341,9 +345,22 @@ void main() {
     addTearDown(sender.dispose);
     final recipient = await startNode(recipientId);
     addTearDown(recipient.dispose);
-    final delivered = Completer<String>();
+
+    // The reader's side of the demo app: a chat payload is answered with a
+    // receipt that names the id the sender gave the message.
     recipient.onMessageReceived = (s, payload, id, u) {
-      if (!delivered.isCompleted) delivered.complete(id);
+      final decoded = AppPayload.decode(payload);
+      if (decoded is ChatPayload) {
+        unawaited(recipient.send(senderId.publicKey,
+            ReadReceiptPayload(messageId: decoded.messageId).encode()));
+      }
+    };
+    // The sender's side: a receipt marks the outgoing message it names read.
+    sender.onMessageReceived = (s, payload, id, u) {
+      final decoded = AppPayload.decode(payload);
+      if (decoded is ReadReceiptPayload) {
+        sender.store.dispatch(MessageReadAction(messageId: decoded.messageId));
+      }
     };
     recipient.putKnownPeer(senderId.publicKey);
     recipient.wan!
@@ -353,18 +370,18 @@ void main() {
         .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
 
     final wireId = await sender.send(
-        recipientId.publicKey, Uint8List.fromList(utf8.encode('read me')));
-    final deliveryId = await delivered.future;
-    expect(deliveryId, isNot(wireId));
-    expect(deliveryId, MessageRouter.deliveryIdOf(senderId.publicKey, wireId!));
+      recipientId.publicKey,
+      ChatPayload(
+        messageId: chatId,
+        block: TextSayBlock(content: 'read me'),
+      ).encode(),
+      messageId: chatId,
+    );
+    expect(wireId, chatId);
 
-    expect(
-        await recipient.sendReadReceipt(
-            messageId: deliveryId, senderPubkey: senderId.publicKey),
-        isTrue);
     final action = await read.future;
-    expect(action.messageId, wireId);
-    expect(sender.store.state.messages.outgoingMessages[wireId]?.status,
+    expect(action.messageId, chatId);
+    expect(sender.store.state.messages.outgoingMessages[chatId]?.status,
         MessageStatus.read);
   }, timeout: Timeout.none);
 

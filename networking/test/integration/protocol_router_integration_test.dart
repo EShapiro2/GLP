@@ -117,7 +117,7 @@ void main() {
       AnnounceData? receivedAnnounce;
       PeerTransport? receivedTransport;
       bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (data, transport, {String? udpPeerId, bool inSession = false}) {
         receivedAnnounce = data;
         receivedTransport = transport;
       };
@@ -159,7 +159,7 @@ void main() {
 
       bool announced = false;
       bobRouter.onPeerAnnounced =
-          (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (_, __, {String? udpPeerId, bool inSession = false}) {
         announced = true;
       };
 
@@ -233,29 +233,6 @@ void main() {
     });
   });
 
-  group('BLE READ_RECEIPT roundtrip', () {
-    test('Alice sends read receipt, Bob receives message ID', () async {
-      const messageId = 'msg-12345678';
-
-      final packet = aliceProtocol.createReadReceiptPacket(
-        messageId: messageId,
-      );
-
-      String? receivedMessageId;
-      bobRouter.onReadReceiptReceived = (_, id) {
-        receivedMessageId = id;
-      };
-
-      await bobRouter.processPacket(
-        seal(packet),
-        transport: PeerTransport.bleDirect,
-        rssi: -70,
-      );
-
-      expect(receivedMessageId, equals(messageId));
-    });
-  });
-
   group('UDP ANNOUNCE roundtrip', () {
     test('Alice creates UDP ANNOUNCE, Bob receives and decodes it', () async {
       final announcePayload = aliceProtocol.createAnnouncePayload();
@@ -269,7 +246,7 @@ void main() {
       AnnounceData? receivedAnnounce;
       PeerTransport? receivedTransport;
       bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (data, transport, {String? udpPeerId, bool inSession = false}) {
         receivedAnnounce = data;
         receivedTransport = transport;
       };
@@ -347,29 +324,6 @@ void main() {
     });
   });
 
-  group('UDP READ_RECEIPT roundtrip', () {
-    test('Alice sends read receipt via UDP, Bob receives it', () async {
-      const messageId = 'rcpt1234';
-
-      final packet = aliceProtocol.createReadReceiptPacket(
-        messageId: messageId,
-      );
-
-      String? receivedMessageId;
-      bobRouter.onReadReceiptReceived = (_, id) {
-        receivedMessageId = id;
-      };
-
-      await bobRouter.processPacket(
-        seal(packet),
-        transport: PeerTransport.wan,
-        udpPeerId: 'peer-alice-id',
-      );
-
-      expect(receivedMessageId, equals(messageId));
-    });
-  });
-
   // GNA, 2026-10-11, Task B: no duplicate filter; delivery is at least once.
   group('BLE delivery at least once across multiple packets', () {
     test('the same message sent twice is delivered twice', () async {
@@ -404,7 +358,7 @@ void main() {
 
       int announceCount = 0;
       bobRouter.onPeerAnnounced =
-          (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (_, __, {String? udpPeerId, bool inSession = false}) {
         announceCount++;
       };
 

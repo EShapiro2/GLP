@@ -581,15 +581,6 @@ class UdpTransportService extends TransportService {
     }
   }
 
-  @override
-  Future<void> broadcast(Uint8List data, {Set<String>? excludePeerIds}) async {
-    for (final peerId in _peerPaths.keys.toList()) {
-      if (_isTemp(peerId)) continue; // unidentified paths
-      if (excludePeerIds != null && excludePeerIds.contains(peerId)) continue;
-      await sendToPeer(peerId, data);
-    }
-  }
-
   void _handleDatagram(Datagram datagram) {
     final data = datagram.data;
     // Punch packets open NAT mappings; nothing to route.

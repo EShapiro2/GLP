@@ -129,7 +129,6 @@ void main() {
 
     expect(node.wan!.getPublicAddress(), isNull,
         reason: 'the layer must invent no public address of its own');
-    expect(node.udpAddress, isNull);
     expect(node.store.state.transports.publicAddress, isNull);
     expect(node.store.state.transports.publicIp, isNull);
     expect(node.store.state.transports.isWellConnected, isFalse);

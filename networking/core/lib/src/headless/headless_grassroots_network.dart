@@ -1148,7 +1148,7 @@ class HeadlessGrassrootsNetwork {
     // The ANNOUNCE a session carried, the heartbeat: liveness traffic, as
     // every packet its session decrypts is.
     _messageRouter.onPeerAnnounced = (data, transport,
-        {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+        {String? udpPeerId, bool inSession = false}) {
       _lastHeard[_hex(data.publicKey)] = DateTime.now();
     };
 

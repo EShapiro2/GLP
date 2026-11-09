@@ -302,71 +302,42 @@ class BleTransportService extends TransportService {
     _starting = true;
     _stopped = false;
 
-    final mode = store.state.settings.bleRoleMode;
-    final shouldAdvertise = mode != BleRoleMode.centralOnly;
-    final shouldScan = mode != BleRoleMode.peripheralOnly;
-    debugPrint('BLE start: roleMode=$mode '
-        'advertise=$shouldAdvertise scan=$shouldScan');
-
     // Advertising and scanning are independent; failure in one must not
     // prevent the other. Track whether at least one succeeded — if both
     // fail (e.g. adapter still off), stay in `ready` so the next
     // adapter-on event re-invokes `start()`.
     var anyStarted = false;
     try {
-      if (shouldAdvertise) {
-        try {
-          final slot = GrassrootsIdentity.currentBleSlot();
-          await _ble.startAdvertising(
-            // The rotating current-slot beacon — a discovery/recognition hint.
-            serviceUuid:
-                GrassrootsIdentity.deriveServiceUuidForSlot(
-                    identity.publicKey, slot),
-            characteristicUuid: _grassrootsCharacteristicUuid,
-            // The stable data plane: beacon rotation never rebuilds the GATT
-            // service or drops live peripheral links.
-            gattServiceUuid: _grassrootsGattServiceUuid,
-            bondless: true,
-          );
-          _advertisedSlot = slot;
-          anyStarted = true;
-          _armSlotRotation();
-        } catch (e) {
-          debugPrint('Failed to start advertising: $e');
-        }
-      } else {
-        // Make sure we aren't lingering as an advertiser from a previous
-        // mode — explicitly tear down, including the slot-rotation timer,
-        // which would otherwise resurrect advertising at the next 15-min
-        // boundary (mirrors the scan-watchdog cancel in the scan branch).
-        _slotRotationTimer?.cancel();
-        _slotRotationTimer = null;
-        _advertisedSlot = null;
-        try {
-          await _ble.stopAdvertising();
-        } catch (_) {}
+      try {
+        final slot = GrassrootsIdentity.currentBleSlot();
+        await _ble.startAdvertising(
+          // The rotating current-slot beacon — a discovery/recognition hint.
+          serviceUuid:
+              GrassrootsIdentity.deriveServiceUuidForSlot(
+                  identity.publicKey, slot),
+          characteristicUuid: _grassrootsCharacteristicUuid,
+          // The stable data plane: beacon rotation never rebuilds the GATT
+          // service or drops live peripheral links.
+          gattServiceUuid: _grassrootsGattServiceUuid,
+          bondless: true,
+        );
+        _advertisedSlot = slot;
+        anyStarted = true;
+        _armSlotRotation();
+      } catch (e) {
+        debugPrint('Failed to start advertising: $e');
       }
 
-      if (shouldScan) {
-        try {
-          await _startContinuousScan();
-          anyStarted = true;
-          _lastAdvertisementAt = DateTime.now();
-          _armScanWatchdog();
-        } catch (e) {
-          debugPrint('Failed to start scanning: $e');
-        }
-        // The slot-rotation timer also refilters the scan per slot, and a
-        // central-only device never reaches the advertising branch that arms it.
-        _armSlotRotation();
-      } else {
-        _scanWatchdog?.cancel();
-        _scanWatchdog = null;
-        _appliedScanUuids = null;
-        try {
-          await _ble.stopScan();
-        } catch (_) {}
+      try {
+        await _startContinuousScan();
+        anyStarted = true;
+        _lastAdvertisementAt = DateTime.now();
+        _armScanWatchdog();
+      } catch (e) {
+        debugPrint('Failed to start scanning: $e');
       }
+      // The slot-rotation timer also refilters the scan per slot.
+      _armSlotRotation();
 
       if (anyStarted) {
         _setState(TransportState.active);
@@ -392,9 +363,6 @@ class BleTransportService extends TransportService {
   @visibleForTesting
   Future<void> checkScanLiveness({DateTime? now}) async {
     if (_stopped) return;
-    if (store.state.settings.bleRoleMode == BleRoleMode.peripheralOnly) {
-      return;
-    }
     final t = now ?? DateTime.now();
     if (t.difference(_lastAdvertisementAt) < scanSilenceRestart) return;
 
@@ -411,27 +379,6 @@ class BleTransportService extends TransportService {
     }
   }
 
-  /// Apply a runtime role-mode change. Stops the current scan/advertise and
-  /// restarts under the new mode. Existing live paths are left untouched —
-  /// the plugin's path stream will tear them down naturally if the OS
-  /// disconnects them.
-  Future<void> applyRoleModeChange() async {
-    if (state != TransportState.active && state != TransportState.ready) {
-      return;
-    }
-    debugPrint('BLE role mode changed → restarting transport');
-    try {
-      await _ble.stopScan();
-    } catch (_) {}
-    try {
-      await _ble.stopAdvertising();
-    } catch (_) {}
-    if (state == TransportState.active) {
-      _setState(TransportState.ready);
-    }
-    await start();
-  }
-
   /// Arm the slot-rotation check: every [_slotRotationCheckInterval], if the
   /// 15-minute BLE slot advanced past [_advertisedSlot], re-advertise the new
   /// current-slot beacon. The GATT service UUID and characteristic stay fixed,
@@ -444,10 +391,8 @@ class BleTransportService extends TransportService {
       if (_stopped) return;
       final slot = GrassrootsIdentity.currentBleSlot();
       // Re-advertise only while advertising: _advertisedSlot is null when we
-      // are not advertising, and a central-only device never advertises (the
-      // mode guard keeps a stray tick from violating that invariant).
+      // are not advertising.
       if (_advertisedSlot != null &&
-          store.state.settings.bleRoleMode != BleRoleMode.centralOnly &&
           slot != _advertisedSlot) {
         final beacon =
             GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, slot);
@@ -490,7 +435,7 @@ class BleTransportService extends TransportService {
   /// Start the continuous scan with the current filter and record the filter
   /// applied.
   Future<void> _startContinuousScan() async {
-    if (_stopped || _isPeripheralOnly) return;
+    if (_stopped) return;
     final uuids = _scanServiceUuids();
     await _ble.startScan(
       serviceUuidPrefix: GrassrootsIdentity.grassrootsUuidPrefix,
@@ -503,7 +448,7 @@ class BleTransportService extends TransportService {
       // but also gives us fresh chances to retry a missing reverse leg.
       allowDuplicates: true,
     );
-    if (_stopped || _isPeripheralOnly) {
+    if (_stopped) {
       // The lifecycle or role changed while the scan was starting: the scan we
       // just began is not wanted, and must not be recorded as applied.
       try {
@@ -513,9 +458,6 @@ class BleTransportService extends TransportService {
     }
     _appliedScanUuids = uuids;
   }
-
-  bool get _isPeripheralOnly =>
-      store.state.settings.bleRoleMode == BleRoleMode.peripheralOnly;
 
   /// Restart the continuous scan when the filter the current store implies
   /// (known peers' slot UUIDs under Closed trust) differs from the one
@@ -530,7 +472,6 @@ class BleTransportService extends TransportService {
     _scanRefreshInFlight = true;
     try {
       while (!_stopped &&
-          !_isPeripheralOnly &&
           _appliedScanUuids != null &&
           !listEquals(_scanServiceUuids(), _appliedScanUuids)) {
         try {
@@ -577,9 +518,6 @@ class BleTransportService extends TransportService {
 
   /// Trigger a finite scan window. The plugin handles the timeout natively.
   Future<void> scan({Duration? timeout}) async {
-    if (store.state.settings.bleRoleMode == BleRoleMode.peripheralOnly) {
-      return;
-    }
     final t = timeout ?? const Duration(seconds: 10);
     try {
       await _ble.startScan(
@@ -607,26 +545,6 @@ class BleTransportService extends TransportService {
     } catch (e) {
       debugPrint('send() failed for $peerId: $e');
       return false;
-    }
-  }
-
-  @override
-  Future<void> broadcast(Uint8List data, {Set<String>? excludePeerIds}) async {
-    // Sort by RSSI descending so the strongest signals get the data first.
-    // Paths without a known RSSI (peripheral-role on iOS/Android, where the
-    // OS doesn't expose remote signal strength) sort last via a very-weak
-    // fallback so they still receive the broadcast.
-    final ready = _readyPaths.toList()
-      ..sort((a, b) => (b.rssi ?? -100).compareTo(a.rssi ?? -100));
-    for (final path in ready) {
-      if (excludePeerIds != null && excludePeerIds.contains(path.pathId)) {
-        continue;
-      }
-      try {
-        await _ble.send(path.pathId, data);
-      } catch (e) {
-        debugPrint('broadcast send() failed for ${path.pathId}: $e');
-      }
     }
   }
 
@@ -951,7 +869,6 @@ class BleTransportService extends TransportService {
       // iPhones advertise no marker, so this self-damps — we never trade a
       // working link away unless the peer is provably there to rebuild it.
       if (defaultTargetPlatform != TargetPlatform.iOS &&
-          store.state.settings.bleRoleMode == BleRoleMode.auto &&
           !_hasLivePeripheralPathForServiceUuid(serviceUuid)) {
         final centralId = _liveCentralPathIdForServiceUuid(serviceUuid);
         if (centralId != null && !_reformingCentralPathIds.contains(centralId)) {
@@ -1127,8 +1044,6 @@ class BleTransportService extends TransportService {
     String serviceUuid,
     DiscoveredPeerState? existing,
   ) {
-    if (store.state.settings.bleRoleMode != BleRoleMode.auto) return true;
-
     final peerIsIos = _isIosPeerServiceUuid(serviceUuid);
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       if (!peerIsIos) {
@@ -1321,7 +1236,6 @@ class BleTransportService extends TransportService {
   /// identity arrives, or from `_onAdvertisement` when a fresh advertising
   /// MAC for this peer lands.
   void _maybeDialReverseCentralAfterPeripheralReady(ble.BlePath path) {
-    if (store.state.settings.bleRoleMode != BleRoleMode.auto) return;
     if (path.role != ble.BleRole.peripheral || !_isReady(path)) return;
 
     final pubkey = getPubkeyForPeerId(path.pathId);
@@ -1373,7 +1287,6 @@ class BleTransportService extends TransportService {
   ///   - `_onAdvertisement` (when a fresh advertising MAC appears for a
   ///     peer we have peripheral-only).
   void _maybeDialReverseCentralForPubkey(Uint8List pubkey) {
-    if (store.state.settings.bleRoleMode != BleRoleMode.auto) return;
     // On iOS, only toward iOS peers: the reverse leg toward a non-iOS peer
     // is the measured-broken second link, owned by the non-iOS side (see
     // [_shouldOpenCentralLeg]). Toward iOS peers we attempt it — dual-role

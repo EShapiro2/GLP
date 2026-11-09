@@ -31,16 +31,12 @@ class SettingsScreen extends StatefulWidget {
   final Future<void> Function(NetworkPreferences preferences)
       onPreferencesChanged;
 
-  /// Debug-only: switch which BLE roles the local device runs.
-  final Future<void> Function(BleRoleMode mode)? onBleRoleModeChanged;
-
   const SettingsScreen({
     super.key,
     required this.store,
     this.onSettingsChanged,
     required this.preferences,
     required this.onPreferencesChanged,
-    this.onBleRoleModeChanged,
   });
 
   @override
@@ -143,10 +139,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (value) => _onUnderlayChanged(Underlay.pan, value),
             priority: 1,
           ),
-
-          // Debug: BLE role mode (auto / central-only / peripheral-only).
-          if (_runsPan && widget.onBleRoleModeChanged != null)
-            _buildBleRoleModeSelector(),
 
           // LAN
           _buildTransportTile(
@@ -357,72 +349,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           activeColor: const Color(0xFFE8A33C),
         ),
         onTap: available ? () => onChanged(!value) : null,
-      ),
-    );
-  }
-
-  Widget _buildBleRoleModeSelector() {
-    final mode = widget.store.state.settings.bleRoleMode;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.bug_report_outlined,
-                  size: 16, color: Colors.orange),
-              const SizedBox(width: 6),
-              Text(
-                'BLE role (debug)',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange[700],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            switch (mode) {
-              BleRoleMode.auto =>
-                'Scan + advertise. Paths form as each BLE stack allows.',
-              BleRoleMode.centralOnly =>
-                'Scan only — peers cannot dial us; we only get central paths.',
-              BleRoleMode.peripheralOnly =>
-                'Advertise only — we never dial; peers reach us as peripheral.',
-            },
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<BleRoleMode>(
-            segments: const [
-              ButtonSegment(
-                value: BleRoleMode.auto,
-                label: Text('Auto'),
-                icon: Icon(Icons.swap_horiz),
-              ),
-              ButtonSegment(
-                value: BleRoleMode.centralOnly,
-                label: Text('Central'),
-                icon: Icon(Icons.arrow_outward),
-              ),
-              ButtonSegment(
-                value: BleRoleMode.peripheralOnly,
-                label: Text('Peripheral'),
-                icon: Icon(Icons.arrow_downward),
-              ),
-            ],
-            selected: {mode},
-            onSelectionChanged: (selection) async {
-              if (selection.isEmpty) return;
-              final next = selection.first;
-              await widget.onBleRoleModeChanged?.call(next);
-              widget.onSettingsChanged?.call();
-            },
-          ),
-        ],
       ),
     );
   }

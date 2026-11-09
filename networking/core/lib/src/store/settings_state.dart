@@ -1,26 +1,6 @@
 import '../models/underlay.dart';
 import '../platform/compat.dart';
 
-/// Debug knob: which BLE roles this device should run.
-///
-/// In production both roles are always on (`auto`) so peer discovery is
-/// symmetric. The other modes exist so a developer can deterministically
-/// produce asymmetric topologies for testing — e.g. force one device to be
-/// peripheral-only and confirm the consumer falls back to the peripheral
-/// path for outbound sends.
-enum BleRoleMode {
-  /// Scan AND advertise (default; produces both central and peripheral paths).
-  auto,
-
-  /// Scan only — never advertise. Peers won't dial us, so we'll only ever
-  /// have `central:*` paths.
-  centralOnly,
-
-  /// Advertise only — never scan. We won't dial peers, so we'll only ever
-  /// have `peripheral:*` paths.
-  peripheralOnly,
-}
-
 /// Policy for unsolicited proximity contact from peers that do not already
 /// have an accepted relationship with us, held per [ProximityUnderlay]. Spec
 /// §Trust levels.
@@ -44,9 +24,6 @@ enum ColdCallTrustLevel {
 /// toggled and edited on a running layer.
 @immutable
 class SettingsState {
-  /// Which BLE roles this device should run. Default `auto`.
-  final BleRoleMode bleRoleMode;
-
   /// The cold-call trust level of each proximity underlay (spec §Trust
   /// levels). Both default to Closed, and GLP sets one underlay's level with
   /// `setTrustLevel(underlay, level)`.
@@ -58,7 +35,6 @@ class SettingsState {
   final Map<ProximityUnderlay, ColdCallTrustLevel> coldCallTrustLevels;
 
   const SettingsState({
-    this.bleRoleMode = BleRoleMode.auto,
     this.coldCallTrustLevels = closedOnEveryUnderlay,
   });
 
@@ -81,11 +57,9 @@ class SettingsState {
       trustLevelOf(underlay) == ColdCallTrustLevel.open;
 
   SettingsState copyWith({
-    BleRoleMode? bleRoleMode,
     Map<ProximityUnderlay, ColdCallTrustLevel>? coldCallTrustLevels,
   }) {
     return SettingsState(
-      bleRoleMode: bleRoleMode ?? this.bleRoleMode,
       coldCallTrustLevels: coldCallTrustLevels ?? this.coldCallTrustLevels,
     );
   }
@@ -100,38 +74,27 @@ class SettingsState {
       );
 
   Map<String, dynamic> toJson() => {
-        'bleRoleMode': bleRoleMode.name,
         'coldCallTrustLevels': {
           for (final entry in coldCallTrustLevels.entries)
             entry.key.name: entry.value.name,
         },
       };
 
-  /// Decode a persisted blob: exactly a BLE role mode and a trust level per
-  /// proximity underlay, and nothing else (no tolerant decoder:
-  /// GNA, Appendix, Rules of the Code, "No legacy or compatibility code").
+  /// Decode a persisted blob: exactly a trust level per proximity underlay,
+  /// and nothing else (no tolerant decoder: GNA, Appendix, Rules of the Code,
+  /// "No legacy or compatibility code").
   ///
-  /// A blob that lacks either, carries any other key, or names no
-  /// [BleRoleMode] is malformed: it throws, and the caller discards it whole
-  /// and falls back to the default.  A blob written before 2026-10-12, which
-  /// carried the transport toggles and the rendezvous servers, is such a blob.
+  /// A blob that carries any other key, lacks the trust levels, or names no
+  /// [ColdCallTrustLevel] is malformed: it throws, and the caller discards it
+  /// whole and falls back to the default. A blob written before the BLE role
+  /// mode was removed carries `bleRoleMode`, and is such a blob.
   factory SettingsState.fromJson(Map<String, dynamic> json) {
-    const keys = {'bleRoleMode', 'coldCallTrustLevels'};
+    const keys = {'coldCallTrustLevels'};
     final unknown = json.keys.where((key) => !keys.contains(key)).toList();
     if (unknown.isNotEmpty) {
       throw FormatException('settings: unknown keys $unknown');
     }
-    final roleModeName = json['bleRoleMode'];
-    final bleRoleMode = BleRoleMode.values.firstWhere(
-      (mode) => mode.name == roleModeName,
-      orElse: () => throw FormatException(
-        'settings: bleRoleMode must be one of '
-        '${BleRoleMode.values.map((m) => m.name).join(', ')}, '
-        'got $roleModeName',
-      ),
-    );
     return SettingsState(
-      bleRoleMode: bleRoleMode,
       coldCallTrustLevels:
           _decodeColdCallTrustLevels(json['coldCallTrustLevels']),
     );
@@ -142,21 +105,15 @@ class SettingsState {
       identical(this, other) ||
       other is SettingsState &&
           runtimeType == other.runtimeType &&
-          bleRoleMode == other.bleRoleMode &&
           mapEquals(coldCallTrustLevels, other.coldCallTrustLevels);
 
   @override
-  int get hashCode => Object.hash(
-        bleRoleMode,
-        Object.hashAll([
-          for (final underlay in ProximityUnderlay.values)
-            trustLevelOf(underlay),
-        ]),
-      );
+  int get hashCode => Object.hashAll([
+        for (final underlay in ProximityUnderlay.values) trustLevelOf(underlay),
+      ]);
 
   @override
-  String toString() => 'SettingsState(bleRoleMode: ${bleRoleMode.name}, '
-      'trust: ${{
+  String toString() => 'SettingsState(trust: ${{
         for (final u in ProximityUnderlay.values) u.name: trustLevelOf(u).name,
       }})';
 }

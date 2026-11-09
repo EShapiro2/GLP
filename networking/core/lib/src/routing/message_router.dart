@@ -97,17 +97,13 @@ class MessageRouter {
           PeerTransport transport, String? peerId, String messageId, int index)?
       onFragmentAckRequested;
 
-  /// Called when a read receipt is received
-  void Function(Uint8List senderPubkey, String messageId)?
-      onReadReceiptReceived;
-
   /// Called when a peer ANNOUNCE is processed (new or updated peer).
   /// [udpPeerId] is the transport-level peer identifier (tempKey for incoming
   /// UDP connections) so the coordinator can map it to the peer's pubkey.
   /// [inSession] tells the ANNOUNCE a session carried, the heartbeat, from the
   /// clear one of a first contact under Open trust (GNA §2.5).
   void Function(AnnounceData data, PeerTransport transport,
-      {bool isNew, String? udpPeerId, bool inSession})? onPeerAnnounced;
+      {String? udpPeerId, bool inSession})? onPeerAnnounced;
 
   /// Called when a message needs an ACK sent back to the sender
   void Function(PeerTransport transport, String? peerId, String messageId)?
@@ -325,8 +321,8 @@ class MessageRouter {
             UdpTransportService.pathId(transport, _pubkeyToHex(senderPubkey));
       }
       // Any session-authenticated packet over UDP counts as liveness traffic
-      // for that peer's session on this underlay, even if it is an ACK, read
-      // receipt, or retransmission.
+      // for that peer's session on this underlay, even if it is an ACK or a
+      // retransmission.
       store.dispatch(PeerIpSeenAction(senderPubkey, transport.underlay));
     }
     // Any session-authenticated packet over BLE refreshes the stale sweep's
@@ -375,8 +371,6 @@ class MessageRouter {
         _handleFragmentAck(packet, senderPubkey, transport);
       case PacketType.ack:
         _handleAck(packet, senderPubkey);
-      case PacketType.readReceipt:
-        _handleReadReceipt(packet, senderPubkey);
       case PacketType.signaling:
         _handleSignaling(
           packet,
@@ -388,7 +382,6 @@ class MessageRouter {
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -512,7 +505,7 @@ class MessageRouter {
         '${data.pubkeyHex.substring(0, 8)}... via ${transport.name}');
 
     onPeerAnnounced?.call(data, transport,
-        isNew: isNew, udpPeerId: udpPeerId, inSession: inSession);
+        udpPeerId: udpPeerId, inSession: inSession);
   }
 
   void _handleFragment(
@@ -670,21 +663,6 @@ class MessageRouter {
       observedIp: observedIp,
       observedPort: observedPort,
     );
-  }
-
-  void _handleReadReceipt(GrassrootsPacket packet, Uint8List senderPubkey) {
-    if (packet.payload.isEmpty) return;
-    try {
-      final messageId = String.fromCharCodes(packet.payload);
-      if (messageId.length > 36) {
-        debugPrint(
-            'Ignoring read receipt with invalid message ID length: ${messageId.length}');
-        return;
-      }
-      onReadReceiptReceived?.call(senderPubkey, messageId);
-    } catch (e) {
-      debugPrint('Failed to decode read receipt payload: $e');
-    }
   }
 
   // ===== Helpers =====

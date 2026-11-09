@@ -12,6 +12,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'dart:async';
 import 'chat_screen.dart';
+import 'app_payload.dart';
 import 'chat_models.dart';
 import 'display_name_store.dart';
 import 'network_preferences.dart';
@@ -320,7 +321,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   bool get _udpAvailable => appStore.state.transports.udpState.isUsable;
 
   /// Get our UDP address for friend communication
-  String? get _myUdpAddress => _grassroots?.udpAddress;
+  String? get _myUdpAddress => _grassroots?.wan?.getPublicAddress();
 
   /// Get nearby peers from Redux store (BLE-connected peers in physical proximity).
   /// For the "Nearby" section - only peers reachable via Bluetooth.
@@ -563,14 +564,20 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     final senderHex = ChatMessage.pubkeyToHex(senderPubkey);
     final myHex = ChatMessage.pubkeyToHex(_identity!.publicKey);
 
-    final block = Block.tryDeserialize(payload);
-
-    if (block != null) {
-      await _handleBlock(
-          block, senderHex, myHex, messageId, senderPubkey, underlay);
-    } else {
-      debugPrint(
-          '📨 Failed to parse block (${payload.length} bytes from $senderHex) - dropping');
+    switch (AppPayload.decode(payload)) {
+      case BlockPayload(:final block):
+        await _handleBlock(
+            block, senderHex, myHex, messageId, senderPubkey, underlay);
+      case ChatPayload(messageId: final chatId, :final block):
+        await _handleBlock(
+            block, senderHex, myHex, chatId, senderPubkey, underlay);
+      case ReadReceiptPayload(messageId: final readId):
+        if (receiptMarksRead(appStore.state.messages, readId, senderHex)) {
+          appStore.dispatch(MessageReadAction(messageId: readId));
+        }
+      case null:
+        debugPrint(
+            '📨 Failed to parse payload (${payload.length} bytes from $senderHex) - dropping');
     }
   }
 
@@ -759,7 +766,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
 
     // Send the revoke message so they remove us too
     final block = FriendshipRevokeBlock();
-    await _grassroots!.send(pubkey, block.serialize());
+    await _grassroots!.send(pubkey, BlockPayload(block).encode());
 
     // Withdraw their key from the layer's known set
     _grassroots!.removeKnownPeer(pubkey);
@@ -872,8 +879,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     );
 
     // Send via Grassroots
-    final messageId =
-        await _grassroots!.send(peer.publicKey, block.serialize());
+    final messageId = await _grassroots!
+        .send(peer.publicKey, BlockPayload(block).encode());
     if (messageId == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -932,8 +939,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     final block = FriendshipAcceptBlock();
 
     // Send via Grassroots (works over BLE)
-    final messageId =
-        await _grassroots!.send(peer.publicKey, block.serialize());
+    final messageId = await _grassroots!
+        .send(peer.publicKey, BlockPayload(block).encode());
     if (messageId == null) {
       debugPrint('⚠️ Failed to send friendship accept to ${peer.displayName}');
     }
@@ -2246,9 +2253,6 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
           },
           preferences: _preferences,
           onPreferencesChanged: _applyPreferences,
-          onBleRoleModeChanged: _grassroots == null
-              ? null
-              : (mode) => _grassroots!.setBleRoleMode(mode),
         ),
       ),
     );

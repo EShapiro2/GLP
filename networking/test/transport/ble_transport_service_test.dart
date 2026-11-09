@@ -889,23 +889,6 @@ void main() {
       expect(advFails && scanFails, true);
     });
 
-    test('peripheral-only mode never starts scanning', () async {
-      store.dispatch(SetBleRoleModeAction(BleRoleMode.peripheralOnly));
-      hostApi.calls.clear();
-      hostApi.scanRequests.clear();
-
-      await transport.start();
-      expect(hostApi.calls.where((c) => c.startsWith('startAdvertising:')),
-          hasLength(1));
-      expect(hostApi.calls, contains('stopScan'));
-      expect(hostApi.calls.where((c) => c.startsWith('startScan:')), isEmpty);
-      expect(hostApi.scanRequests, isEmpty);
-
-      await transport.scan();
-      expect(hostApi.calls.where((c) => c.startsWith('startScan:')), isEmpty);
-      expect(hostApi.scanRequests, isEmpty);
-    });
-
     test('scans by Grassroots prefix and allows duplicate advertisements',
         () async {
       hostApi.calls.clear();
@@ -1154,25 +1137,6 @@ void main() {
               'first-moves anyway so the handshake cannot deadlock.');
     });
 
-    test(
-        'central-only mode dials even as the non-initiator (gate is auto-only)',
-        () async {
-      final (hostApi, callbacks, store, _) =
-          await build(await _makeHighIdentity());
-      store.dispatch(SetBleRoleModeAction(BleRoleMode.centralOnly));
-
-      callbacks.pushAdvertisement(BleAdvertisement(
-        remoteId: 'PEER',
-        serviceUuids: [lowPeerUuid],
-        rssi: -55,
-        connectable: true,
-      ));
-      await Future<void>.delayed(Duration.zero);
-
-      expect(hostApi.calls.where((c) => c == 'connect:PEER'), hasLength(1),
-          reason: 'A central-only device never advertises, so it can never be '
-              'dialed — it must always first-move regardless of the tie-break.');
-    });
   });
 
   group('BleTransportService — iOS first-link asymmetry (grs-ios marker)', () {
@@ -1784,14 +1748,6 @@ void main() {
               'restart per window.');
     });
 
-    test('never restarts in peripheral-only mode', () async {
-      store.dispatch(SetBleRoleModeAction(BleRoleMode.peripheralOnly));
-      await transport.checkScanLiveness(
-          now: DateTime.now().add(const Duration(minutes: 5)));
-      expect(hostApi.calls.where((c) => c.startsWith('startScan:')), isEmpty,
-          reason: 'Peripheral-only devices do not scan; the watchdog must '
-              'not start one.');
-    });
   });
 
   group('BleTransportService — exact-UUID scan for known peers', () {

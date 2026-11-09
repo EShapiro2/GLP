@@ -189,7 +189,7 @@ void main() {
       test('drops ANNOUNCE with a tampered payload byte', () async {
         bool announced = false;
         router.onPeerAnnounced =
-            (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) =>
+            (_, __, {String? udpPeerId, bool inSession = false}) =>
                 announced = true;
 
         final payload = otherAnnouncePayload();
@@ -217,7 +217,6 @@ void main() {
           PacketType.fragment,
           PacketType.fragmentAck,
           PacketType.ack,
-          PacketType.readReceipt,
           PacketType.signaling,
         ];
 
@@ -226,7 +225,6 @@ void main() {
           bool decryptCalled = false;
           router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
           router.onAckReceived = (_, __) => anyCalled = true;
-          router.onReadReceiptReceived = (_, __) => anyCalled = true;
           router.onAckRequested = (_, __, ___) => anyCalled = true;
           router.onSignalingReceived =
               (_, __, {String? observedIp, int? observedPort}) =>
@@ -395,7 +393,7 @@ void main() {
         AnnounceData? receivedData;
         PeerTransport? receivedTransport;
         router.onPeerAnnounced =
-            (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+            (data, transport, {String? udpPeerId, bool inSession = false}) {
           receivedData = data;
           receivedTransport = transport;
         };
@@ -419,7 +417,7 @@ void main() {
 
         int announceCount = 0;
         router.onPeerAnnounced =
-            (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) => announceCount++;
+            (_, __, {String? udpPeerId, bool inSession = false}) => announceCount++;
 
         await router.processPacket(
           p,
@@ -819,53 +817,6 @@ void main() {
     });
 
     // =========================================================================
-    // Packet Processing - ReadReceipt
-    // =========================================================================
-
-    group('processPacket - readReceipt', () {
-      test('routes read receipt to onReadReceiptReceived callback', () async {
-        stubSession();
-
-        String? receivedMessageId;
-        router.onReadReceiptReceived = (_, id) => receivedMessageId = id;
-
-        const messageId = 'msg-to-read';
-        final p = securePacket(
-          type: PacketType.readReceipt,
-          payload: Uint8List.fromList(messageId.codeUnits),
-        );
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.bleDirect,
-          rssi: -60,
-        );
-
-        expect(receivedMessageId, equals(messageId));
-      });
-
-      test('ignores read receipt with empty payload', () async {
-        stubSession();
-
-        String? receivedMessageId;
-        router.onReadReceiptReceived = (_, id) => receivedMessageId = id;
-
-        final p = securePacket(
-          type: PacketType.readReceipt,
-          payload: Uint8List(0),
-        );
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.bleDirect,
-          rssi: -60,
-        );
-
-        expect(receivedMessageId, isNull);
-      });
-    });
-
-    // =========================================================================
     // UDP Packet Processing - ANNOUNCE
     // =========================================================================
 
@@ -948,7 +899,7 @@ void main() {
       test('fires onPeerAnnounced callback with UDP transport', () async {
         PeerTransport? receivedTransport;
         router.onPeerAnnounced =
-            (_, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+            (_, transport, {String? udpPeerId, bool inSession = false}) {
           receivedTransport = transport;
         };
 
@@ -1187,33 +1138,6 @@ void main() {
           p,
           transport: PeerTransport.wan,
           udpPeerId: 'peer-abc',
-        );
-
-        expect(receivedId, equals(messageId));
-      });
-    });
-
-    // =========================================================================
-    // UDP Packet Processing - ReadReceipt
-    // =========================================================================
-
-    group('processPacket (UDP) - ReadReceipt', () {
-      test('delivers read receipt via onReadReceiptReceived', () async {
-        stubSession();
-
-        String? receivedId;
-        router.onReadReceiptReceived = (_, id) => receivedId = id;
-
-        const messageId = 'rr-msg-1';
-        final p = securePacket(
-          type: PacketType.readReceipt,
-          payload: Uint8List.fromList(messageId.codeUnits),
-        );
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.wan,
-          udpPeerId: 'peer-def',
         );
 
         expect(receivedId, equals(messageId));
