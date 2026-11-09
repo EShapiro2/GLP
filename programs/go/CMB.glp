@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% CMB.glp --- CMB, the contract's speech-act schemas, GO's (Udi, 2026-11-09, to GO #3), in the clause syntax of GSC's paper, Section 3.2, sas(Name, Names, Vars, Head, Body, Constraint, Guards), as programs/gsc/README.md reads it; the clauses are in CMB.txt beside this file.
 %% Extends GBank, instantiating its bylaws and restricting it.  The term holds every schema of what it extends, restated, GKK's and GSG's for persons as GO writes them, an organisation being a ward marked org, its guards forbidding retired, the leaving mark.
-%% 45 schemas.  This term is the one source of the schemas; a run of the cascade prints their notation from it.  Written by GO #3 Cowork, 2026-11-09, by GO/tools/gen.py; the problems found in writing them are GO/docs/schemas-problems.md.
+%% 45 schemas.  This term is the one source of the schemas; a run of the cascade prints their notation from it.  Written by GO #3 Cowork, 2026-11-09, by GO/docs/tools/gen.py; the problems found in writing them are GO/docs/schemas-problems.md.
 %% Environment predicates: today.
 %% ---------------------------------------------------------------------------
 
