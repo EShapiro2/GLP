@@ -3015,6 +3015,7 @@ class GrassrootsNetwork {
     store.dispatch(PeerAnnounceReceivedAction(
       publicKey: pubkey,
       protocolVersion: ProtocolHandler.protocolVersion,
+      underSession: true,
       transport: transport,
       bleCentralDeviceId: centralId,
       blePeripheralDeviceId: peripheralId,

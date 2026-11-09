@@ -430,11 +430,13 @@ void main() {
         udpPeerId: 'peer-alice-udp',
       );
 
-      // Peer is now seen over UDP too; ANNOUNCE carries no address, so the
-      // dial book stays empty until putPeerAddress supplies one.
+      // A clear ANNOUNCE, outside any session, refreshes no staleness clock
+      // (decision 44), so the WAN clock is not started; ANNOUNCE carries no
+      // address, so the dial book stays empty until putPeerAddress supplies
+      // one.
       peer = bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peer, isNotNull);
-      expect(peer!.lastWanSeen, isNotNull);
+      expect(peer!.lastWanSeen, isNull);
       expect(peer.lastLanSeen, isNull);
       expect(peer.udpAddress, isNull);
     });

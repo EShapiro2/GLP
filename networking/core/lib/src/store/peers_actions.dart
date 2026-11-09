@@ -106,9 +106,17 @@ class PeerAnnounceReceivedAction extends PeerAction {
   /// BLE device ID from our peripheral role (they connected to us)
   final String? blePeripheralDeviceId;
 
+  /// Whether the identity arrived authenticated under the peer's session (a
+  /// completed handshake, or an ANNOUNCE inside the session), which refreshes
+  /// the staleness clock of [transport]'s underlay; false for a clear
+  /// ANNOUNCE before the handshake of an Open first contact, signed but
+  /// replayable, which refreshes none (decision 44).
+  final bool underSession;
+
   PeerAnnounceReceivedAction({
     required this.publicKey,
     required this.protocolVersion,
+    required this.underSession,
     this.rssi,
     this.transport = PeerTransport.bleDirect,
     this.bleCentralDeviceId,

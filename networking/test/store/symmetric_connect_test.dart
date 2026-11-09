@@ -32,6 +32,7 @@ void main() {
       state = peersReducer(state, BleDeviceConnectingAction(pathId));
       state = peersReducer(state, BleDeviceConnectedAction(pathId));
       state = peersReducer(state, PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pk,
         protocolVersion: 1,
         rssi: -55,
@@ -53,6 +54,7 @@ void main() {
 
       var state = PeersState.initial;
       state = peersReducer(state, PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pk,
         protocolVersion: 1,
         rssi: -50,
@@ -76,6 +78,7 @@ void main() {
       aView = peersReducer(aView, BleDeviceConnectingAction(aPath));
       aView = peersReducer(aView, BleDeviceConnectedAction(aPath));
       aView = peersReducer(aView, PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey(20),
         protocolVersion: 1,
         rssi: -55,
@@ -86,6 +89,7 @@ void main() {
       var bView = PeersState.initial;
       const bPath = 'peripheral:A-MAC';
       bView = peersReducer(bView, PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pubkey(10),
         protocolVersion: 1,
         rssi: -55,
@@ -106,6 +110,7 @@ void main() {
       var state = PeersState.initial;
       // Establish a peer with both a central and peripheral path.
       state = peersReducer(state, PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pk,
         protocolVersion: 1,
         rssi: -50,
@@ -132,6 +137,7 @@ void main() {
       final pk = pubkey(4);
       var state = PeersState.initial;
       state = peersReducer(state, PeerAnnounceReceivedAction(
+        underSession: true,
         publicKey: pk,
         protocolVersion: 1,
         rssi: -50,
