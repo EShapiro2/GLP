@@ -4,55 +4,31 @@ import 'dart:typed_data';
 
 import '../platform/compat.dart';
 
-/// A UDP hole-punch packet.
+/// A UDP hole-punch datagram.
 ///
-/// Format: `[magic(4)] [senderPubkey(32)]` = 36 bytes total.
+/// Format: `[magic(4)]` = 4 bytes total, the magic alone and no payload.
 ///
-/// The magic bytes identify this as a Grassroots punch packet so receivers
-/// can distinguish it from the layer's packets and other UDP traffic.
-///
-/// Punch packets serve one purpose: to create a NAT mapping. The receiver doesn't need to process them — the act of sending opens our NAT.
+/// The magic bytes identify this as a Grassroots punch datagram so receivers
+/// can distinguish it from the layer's packets and other UDP traffic. A punch
+/// carries no key: its only purpose is to create a NAT mapping, and the peer
+/// is identified by the Noise handshake that follows.
 class PunchPacket {
   /// Magic bytes: "GRPU" (Grassroots Punch UDP)
   static const List<int> magic = [0x47, 0x52, 0x50, 0x55];
 
-  /// Expected total packet size
-  static const int packetSize = 4 + 32;
+  /// Expected total datagram size: the magic alone.
+  static const int packetSize = 4;
 
-  /// The sender's Ed25519 public key (32 bytes)
-  final Uint8List senderPubkey;
+  /// The wire form of a punch datagram.
+  static Uint8List serialize() => Uint8List.fromList(magic);
 
-  PunchPacket._(this.senderPubkey);
-
-  /// Create a punch packet with our public key.
-  factory PunchPacket.create(Uint8List senderPubkey) {
-    assert(senderPubkey.length == 32);
-    return PunchPacket._(Uint8List.fromList(senderPubkey));
-  }
-
-  /// Serialize to wire format.
-  Uint8List serialize() {
-    final bytes = Uint8List(packetSize);
-    bytes.setRange(0, 4, magic);
-    bytes.setRange(4, 36, senderPubkey);
-    return bytes;
-  }
-
-  /// Try to parse a received datagram as a punch packet.
-  ///
-  /// Returns null if the data doesn't have the correct magic or is too short.
-  static PunchPacket? tryParse(Uint8List data) {
-    if (data.length < packetSize) return null;
-
-    // Check magic
-    if (data[0] != magic[0] ||
-        data[1] != magic[1] ||
-        data[2] != magic[2] ||
-        data[3] != magic[3]) {
-      return null;
+  /// Whether a received datagram is a punch: exactly the magic.
+  static bool isPunch(Uint8List data) {
+    if (data.length != packetSize) return false;
+    for (var i = 0; i < packetSize; i++) {
+      if (data[i] != magic[i]) return false;
     }
-
-    return PunchPacket._(Uint8List.fromList(data.sublist(4, 36)));
+    return true;
   }
 }
 
@@ -84,21 +60,15 @@ class HolePunchService {
   /// The raw UDP socket punch packets are sent from.
   final RawDatagramSocket socket;
 
-  /// Our public key, included in punch packets so the peer can identify us.
-  final Uint8List senderPubkey;
-
   /// Whether this service has been disposed.
   bool _disposed = false;
 
-  /// Cached serialized punch packet (same for all targets).
-  late final Uint8List _punchBytes;
+  /// Serialized punch packet (same for all targets).
+  final Uint8List _punchBytes = PunchPacket.serialize();
 
   HolePunchService({
     required this.socket,
-    required this.senderPubkey,
-  }) {
-    _punchBytes = PunchPacket.create(senderPubkey).serialize();
-  }
+  });
 
   /// Send punch packets for a fixed duration, fire-and-forget: the socket is
   /// the one a [UdpTransportService] reads, which drops punch packets on

@@ -10,7 +10,6 @@ import 'package:test/test.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'helpers/event_waits.dart';
-import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 
 /// The headless profile brought to the API's list for the WAN underlay (GNA,
 /// 2026-10-11, Task C): `sign`, `verify`, `observedPeerAddress`, `punchUdp`,
@@ -116,6 +115,49 @@ void main() {
     expect(a.wan.observedPeerAddress(stranger.publicKey), isNull);
   }, timeout: Timeout.none);
 
+  String hexOf(Uint8List bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+  test(
+      'a known peer on an authenticated session has the address it is '
+      'observed at recorded as its address', () async {
+    skipWithoutSodium();
+    if (sodiumUnavailable != null) return;
+    final a = await node(0xa7);
+    final b = await node(0xa8);
+    await connect(a, b);
+
+    // Spec ip.tex §Connectivity and Address: the observed address is recorded.
+    expect(
+      b.store.state.knownPeers.known[hexOf(a.identity.publicKey)],
+      '127.0.0.1:${a.boundPort}',
+    );
+  }, timeout: Timeout.none);
+
+  test(
+      'authenticated traffic from a known peer re-records the address it is '
+      'observed at, replacing a stale one', () async {
+    skipWithoutSodium();
+    if (sodiumUnavailable != null) return;
+    final a = await node(0xa9);
+    final b = await node(0xaa);
+    await connect(a, b);
+    final aHex = hexOf(a.identity.publicKey);
+    final observed = '127.0.0.1:${a.boundPort}';
+
+    b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:9');
+    expect(b.store.state.knownPeers.known[aHex], '127.0.0.1:9');
+
+    final received = Completer<void>();
+    b.onMessageReceived = (sender, payload, messageId, underlay) {
+      if (!received.isCompleted) received.complete();
+    };
+    await a.send(b.identity.publicKey, Uint8List.fromList([2]));
+    await received.future;
+
+    expect(b.store.state.knownPeers.known[aHex], observed);
+  }, timeout: Timeout.none);
+
   test('punchUdp sends punch datagrams toward the address', () async {
     skipWithoutSodium();
     if (sodiumUnavailable != null) return;
@@ -123,18 +165,25 @@ void main() {
     final target =
         await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(target.close);
-    final punched = Completer<PunchPacket>();
+    // A punch datagram is the GRPU magic alone: it carries no key.
+    final punched = Completer<Uint8List>();
     target.listen((event) {
       if (event != RawSocketEvent.read) return;
       final datagram = target.receive();
-      final packet =
-          datagram == null ? null : PunchPacket.tryParse(datagram.data);
-      if (packet != null && !punched.isCompleted) punched.complete(packet);
+      if (datagram == null || punched.isCompleted) return;
+      final data = datagram.data;
+      if (data.length >= 4 &&
+          data[0] == 0x47 &&
+          data[1] == 0x52 &&
+          data[2] == 0x50 &&
+          data[3] == 0x55) {
+        punched.complete(data);
+      }
     });
 
     a.wan.punchUdp('127.0.0.1:${target.port}');
-    final packet = await punched.future;
-    expect(packet.senderPubkey, a.identity.publicKey);
+    final data = await punched.future;
+    expect(data, orderedEquals([0x47, 0x52, 0x50, 0x55]));
     expect(() => a.wan.punchUdp('nowhere'), throwsArgumentError);
   }, timeout: Timeout.none);
 

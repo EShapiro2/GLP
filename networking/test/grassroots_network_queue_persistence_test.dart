@@ -121,6 +121,13 @@ void main() {
       Uint8List.fromList(utf8.encode('queued before termination')),
     );
     expect(messageId, isNotNull);
+    // The delivery attempt runs after send has returned: the hold is awaited
+    // on the store's queued status.
+    await stateWhere(
+        first.store,
+        (s) =>
+            s.messages.outgoingMessages[messageId]?.status ==
+            MessageStatus.queued);
     expect(first.queuedMessageCount, 1);
     final saved = await savedQueue(senderId);
     expect(saved.map((e) => e.messageId), [messageId],

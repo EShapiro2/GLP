@@ -499,13 +499,7 @@ class UdpTransportService extends TransportService {
   void _handleDatagram(Datagram datagram) {
     final data = datagram.data;
     // Punch packets open NAT mappings; nothing to route.
-    if (data.length == PunchPacket.packetSize &&
-        data[0] == PunchPacket.magic[0] &&
-        data[1] == PunchPacket.magic[1] &&
-        data[2] == PunchPacket.magic[2] &&
-        data[3] == PunchPacket.magic[3]) {
-      return;
-    }
+    if (PunchPacket.isPunch(data)) return;
     if (data.length < GrassrootsPacket.headerSize) return;
 
     final address = AddressInfo(datagram.address, datagram.port);
