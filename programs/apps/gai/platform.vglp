@@ -691,7 +691,7 @@ Net       ::= msg(Peer, Content).
 Asking    ::= Attempt ; hello(Peer, Proposal).
 %% The approval question of a contract with pragmas carries the sentence the contract puts to the guarding role, which the platform writes, its roles and variables filled in from the binding of the attempt it asks about, each word text(S), as the contract writes it, or person(P), a person the sentence names (vGLP, Section 6.2, "The words a platform shows": "A sentence put to a guarding role names the roles and the variables of the attempt, so the platform writes it into the approval question, and its widget draws it as it draws any output of the program"; Section 5.4, "The contract's words").
 Approval  ::= approval(Asking, List(Word), YesNo?).
-Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number).
 %% The question of a guarding role beyond the proposer's, q(R, Words), R the person in that role (sentence_of; GSC, Section 2, its first paragraph).
 RoleAsk   ::= q(Peer, List(Word)).
 Menu      ::= menu(Key, List(Key), Request?).
