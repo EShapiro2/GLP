@@ -657,7 +657,17 @@ class AgentRuntime {
     final keptBytes = await store.loadProgram();
     final kept =
         keptBytes == null ? null : StoredProgram.fromBytes(keptBytes);
-    if (bytesEqual(savedUnder, _programIdentity!)) {
+    // The same program is the same code and the same module: a new version
+    // that changes a type and not the code has the code's identity and
+    // another module, and is an update, compared by type identity (IGLP,
+    // Implementation Notes, "An update").  Until 2026-11-09 the code's
+    // identity alone was compared, and such a version took the path of the
+    // program the state was saved under, whose restore then threw on the
+    // module (Cloud #10, Code_inbox 2026-11-09 14:39 UTC, point 3).
+    final sameModule = kept == null ||
+        !bytesEqual(kept.identity, savedUnder) ||
+        _sameAppModule(kept.module, _appModule);
+    if (bytesEqual(savedUnder, _programIdentity!) && sameModule) {
       _restore(saved);
       if (kept == null || !bytesEqual(kept.identity, _programIdentity!)) {
         await _keepProgram(store);
@@ -719,6 +729,16 @@ class AgentRuntime {
     // state saved under the version the store keeps is restored under it
     // again at the next restart, where this save failed ([_save]).
     if (await _save(store)) await _keepProgram(store);
+  }
+
+  /// Whether [kept], the module value of the program the store keeps, is
+  /// [current], the one the program compiles to: their compiled identities
+  /// are equal, or neither is.
+  static bool _sameAppModule(rt.ModuleTerm? kept, rt.ModuleTerm? current) {
+    if (kept == null || current == null) return kept == current;
+    return bytesEqual(
+        Artefact.compiledIdentityOf((kept.artefact as Artefact).toBytes()),
+        Artefact.compiledIdentityOf((current.artefact as Artefact).toBytes()));
   }
 
   /// The procedures the goals of the resolvent [goals] call in [kept], the

@@ -95,6 +95,40 @@ serve([refresh | In], none) :- send_to_user([drawn(none)]), serve(In?, none).
 serve([], _).
 ''';
 
+/// The first version with serve/2's second argument a State: a type changed,
+/// a goal of the resolvent calling serve/2, and the code the same.
+const String _t2 = r'''
+Act ::= go ; refresh.
+Shown ::= went ; drawn(Constant).
+State ::= none ; gone.
+
+exported procedure agent(Channel(Stream(Act), Stream(Shown))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- serve(In?, none).
+
+procedure serve(Stream(Act)?, State?).
+serve([go | In], _) :- send_to_user([went]), serve(In?, gone).
+serve([refresh | In], gone) :- send_to_user([drawn(gone)]), serve(In?, gone).
+serve([refresh | In], none) :- send_to_user([drawn(none)]), serve(In?, none).
+serve([], _).
+''';
+
+/// The first version with Shown gaining an alternative: agent/2's type
+/// changed, which no goal of the resolvent calls, serve/2's kept, and the
+/// code the same.
+const String _t3 = r'''
+Act ::= go ; refresh.
+Shown ::= went ; drawn(Constant) ; more.
+
+exported procedure agent(Channel(Stream(Act), Stream(Shown))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- serve(In?, none).
+
+procedure serve(Stream(Act)?, Constant?).
+serve([go | In], _) :- send_to_user([went]), serve(In?, gone).
+serve([refresh | In], gone) :- send_to_user([drawn(gone)]), serve(In?, gone).
+serve([refresh | In], none) :- send_to_user([drawn(none)]), serve(In?, none).
+serve([], _).
+''';
+
 /// A version whose person's read has the agent read note.txt in its
 /// program's directory with load_file/2 and show its text.
 const String _l1 = r'''
@@ -275,6 +309,35 @@ void main() {
     expect(a3.runtime!.selfApps!.installed, app(3));
     expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(2),
         reason: 'the store keeps the version the agent runs');
+  });
+
+  test('a new version that changes a type and not the code is an update, '
+      'compared by type identity: refused where a goal of the resolvent calls '
+      'the procedure whose type changed, taken where none does', () async {
+    // IGLP, Implementation Notes, "An update": each goal's procedure "must be
+    // defined there with the same type identity".  Until 2026-11-09 the
+    // runtime compared the code alone, so a version of the same code took the
+    // path of the program the state was saved under, and its restore threw.
+    final store = MemoryAgentStateStore();
+    final (a1, out1) = await launch(_v1, store);
+    await a1.injectUserInput(ConstTerm('go'));
+    expect(out1, ['< went']);
+    final first = await keptIdentity(store);
+
+    final (a2, out2) = await launch(_t2, store);
+    expect(a2.updateRefusal, isNotNull);
+    expect(a2.updateRefusal!.reasons.join('; '),
+        allOf(contains('serve/2'), contains('another type identity')));
+    expect(out2, ['< drawn(gone)'],
+        reason: 'the version the agent terminated under draws');
+    expect(bytesEqual(await keptIdentity(store), first), isTrue);
+
+    final (a3, out3) = await launch(_t3, store);
+    expect(a3.updateRefusal, isNull);
+    expect(a3.updated, isTrue);
+    expect(out3, ['< drawn(gone)']);
+    await a3.injectUserInput(ConstTerm('refresh'));
+    expect(out3, ['< drawn(gone)', '< drawn(gone)']);
   });
 
   test('the store keeps the files of the program\'s directory with the '
