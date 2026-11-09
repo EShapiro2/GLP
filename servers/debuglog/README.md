@@ -11,9 +11,9 @@ Every request carries the password as the header `Authorization: Bearer <passwor
 - `GET /log/<phone>/<run>`: the run's file; `?from=<byte offset>` starts there.
 - `GET /log/<phone>/<run>?follow`: the file, then what is appended to it, for as long as the reader stays; a run not yet begun is waited for.  With `from`, a follower that reconnects asks only for what it has not got; `phones/tools/follow.sh` does so.
 
-With curl, the password in `/Users/udi/Grassroots/.debuglog-password`:
+The password is in the repository, `phones/tools/debuglog-password`, and is not secret (`phones/docs/debugging.md`, "For Udi's approval", 1).  With curl, from the repository's root:
 
-    curl -sS -H "Authorization: Bearer $(cat /Users/udi/Grassroots/.debuglog-password)" https://peoplesweb.org/log/
+    curl -sS -H "Authorization: Bearer $(cat phones/tools/debuglog-password)" https://peoplesweb.org/log/
 
 ## Build and run
 
@@ -36,17 +36,15 @@ With Dart, from this directory:
 
 ## The server
 
-On the peoplesweb VPS, as root, the clone at /srv/glp as for peoplesweb.  The password is made once, on the VPS, and kept in `/etc/glp/debuglog.env`, readable by root alone, which systemd reads before it starts the service as `glp`:
+On the peoplesweb VPS, as root, the clone at /srv/glp as for peoplesweb.  The service takes the repository's password from `/etc/glp/debuglog.env`, which systemd reads before it starts the service as `glp`:
 
     mkdir -p /etc/glp /var/lib/glp && chown glp:glp /var/lib/glp
-    (umask 077 && printf 'DEBUGLOG_PASSWORD=%s\n' "$(openssl rand -hex 24)" > /etc/glp/debuglog.env)
+    printf 'DEBUGLOG_PASSWORD=%s\n' "$(tr -d '\r\n' < /srv/glp/phones/tools/debuglog-password)" > /etc/glp/debuglog.env
     cp /srv/glp/servers/debuglog/deploy/debuglog.service /etc/systemd/system/
     systemctl daemon-reload && systemctl enable --now debuglog
     cp /srv/glp/servers/peoplesweb/deploy/Caddyfile /etc/caddy/Caddyfile
     systemctl reload caddy
 
-The Mac takes the same password into `/Users/udi/Grassroots/.debuglog-password`, mode 600, which `phones/tools/build.sh` builds into the debug app and `phones/tools/follow.sh` reads with:
+`phones/tools/build.sh` and `build_sim.sh` build the same password into the debug app, and `phones/tools/follow.sh` reads with it.
 
-    ssh root@162.35.126.126 "sed -n 's/^DEBUGLOG_PASSWORD=//p' /etc/glp/debuglog.env" > /Users/udi/Grassroots/.debuglog-password && chmod 600 /Users/udi/Grassroots/.debuglog-password
-
-A new password is made by the same line on the VPS, `systemctl restart debuglog`, the line on the Mac, and a new debug build on every phone.  The sweep deletes runs whose last event is more than thirty days old; the runs are never in git.
+A new password is a commit of `phones/tools/debuglog-password`, the `printf` line above and `systemctl restart debuglog` on the VPS after the sweep has pulled it, and a new debug build on every phone.  The sweep deletes runs whose last event is more than thirty days old; the runs are never in git.

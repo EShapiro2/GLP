@@ -4,9 +4,13 @@
 # itself before telling Udi anything.  It prints `xcrun devicectl list
 # devices`, then, for each iPhone that is not unavailable, its name, its UDID
 # (the argument of build.sh) and the app's line from `xcrun devicectl device
-# info apps`, or that it has none.
+# info apps`, or that it has none; the app is GLP_BUNDLE_ID, by default the
+# Xcode project's (common.sh).
 set -u
-APP_ID=com.eshapiro.grassapp
+ME=devices.sh
+HERE=$(cd "$(dirname "$0")" && pwd)
+. "$HERE/common.sh"
+APP_ID=$BUNDLE_ID
 command -v xcrun >/dev/null || { echo "devices.sh: no xcrun; this runs on the Mac" >&2; exit 2; }
 xcrun devicectl list devices
 J=$(mktemp -d)

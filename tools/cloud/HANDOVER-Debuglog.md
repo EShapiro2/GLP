@@ -1,17 +1,21 @@
-# Handover of Cloud-Debuglog (Cloud #5, 2026-11-08)
+# Handover of Cloud-Debuglog (Cloud #5, 2026-11-08, brought up to date 2026-11-09)
 
-The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud.  The task is Code #26's in `Cloud-Debuglog_inbox.md`, 2026-11-08 15:27 UTC; the specification `phones/docs/debugging.md`; the report Cloud #5's in `Code_inbox.md` the same day.  This file points to them and copies neither.
+The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud.  The tasks are Code #26's in `Cloud-Debuglog_inbox.md`, 2026-11-08 15:27 UTC and 21:08 UTC; the specification `phones/docs/debugging.md`; the reports Cloud #5's in `Code_inbox.md`.  This file points to them and copies neither.
 
-## Done, on branch Cloud-debuglog
+## Done
+
+On branch Cloud-debuglog, merged on main 710f7c17:
 
 - `servers/debuglog`: the service, its tests and its README, which says what it answers and how it is deployed; Section DL of `test/run_all_tests.sh`.
 - `servers/peoplesweb/deploy/Caddyfile` and `sweep.sh`: the route `/log*` and the thirty days' retention.
 - `phones/tools/`: `build.sh`, `devices.sh`, `follow.sh`, each with its use in its head comment.
 
+On branch Cloud-buildsh, on Phones' report of a build iOS refused and on contributors building with their own team: `build.sh` cleans before every build, checks the profile's team, the app's identifier and every framework's platform and team before it installs, and installs under a time limit; `build_sim.sh` builds for the simulator in a clone of its own; `common.sh` holds what they share, with GLP_TEAM and GLP_BUNDLE_ID; the Runner target's identifier is the build setting GLP_BUNDLE_ID; the tools read the repository's password.
+
 ## Open
 
-- Code deploys the service on the VPS from main once merged (the README's "The server"), and puts the password on the Mac.
-- `devices.sh` and `build.sh` ran only against stand-ins for `xcrun`, `flutter`, `security` and `ideviceinstaller`: the first run on the Mac is their test.  `debugging.md`'s question 3 for Code, whether a debug build installs through `ideviceinstaller`, is answered by that run.
+- Code deploys the service on the VPS from main, as the README's "The server" says, once Udi permits it.
+- `devices.sh`, `build.sh` and `build_sim.sh` ran here only against stand-ins for `xcrun`, `flutter`, `security`, `codesign` and `ideviceinstaller`; the Mac's runs are their test.
 - The Reporter (Cloud-Reporter) posts to the interface the README gives.
 
 ## Environment
