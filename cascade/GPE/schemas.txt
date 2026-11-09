@@ -1,3 +1,5 @@
+Environment predicates: nearby
+
 establish: identity(Alice) <-
     not identity(Alice) guarded by Alice
 
@@ -14,4 +16,4 @@ close_place: not open(Alice) <-
     identity(Alice), open(Alice) guarded by Alice
 
 encounter: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), open(Alice), not knows(Alice, Bob), identity(Bob), open(Bob), not knows(Bob, Alice) guarded by Alice, Bob
+    identity(Alice), open(Alice), nearby(Alice, Bob), not knows(Alice, Bob), identity(Bob), open(Bob), nearby(Bob, Alice), not knows(Bob, Alice) guarded by Alice, Bob

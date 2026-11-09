@@ -11,8 +11,10 @@ Alice and Bob are persons.  A person is nearby Alice when her phone reaches thei
 1. ■ Open Place.  Alice may declare the place she is in open, and may close it.
 2. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, may know each other.
 Interface pragmas
-Nearby: the persons nearby whom Alice knows.
+Look: 📶, network
+Nearby: the persons nearby.
 Open Place: Alice [Open place] [Close place]
 Implementation pragmas
 Open Place: while the place is open Alice's app sets the trust of Bluetooth and of the local network open, and closed otherwise (GNA).
-Encounter: the two phones exchange keys (GNA, open trust); the app reads from the networking layer the phones nearby, as each appears and goes, and while the place is open gives its person's consent to each encounter, asking nothing.
+Nearby: an environment predicate, nearby(Alice, Bob), the persons the networking layer reports nearby, which Alice's app keeps current.
+Encounter: Alice stands on [Open place] until [Close place]; the two phones exchange keys (GNA, open trust).
