@@ -48,6 +48,10 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 #tip b{display:block;font-size:15.5px;margin-bottom:3px}
 #tip .cite{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.18);font-size:13px;color:#d9d9de}
 #tip .cite i{color:#fff}
+.refs{padding:6px 20px}.refs .cite{padding:12px 0;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.5}.refs .cite:last-child{border-bottom:0}
+.refs a{color:var(--blue)}.why{color:var(--mute);font-size:14px;margin:10px 2px 0}
+.sub2{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.sub2 h4{margin:0 0 4px;font-size:15px}
+.rule{font-size:13.5px;line-height:1.7;margin:6px 0 2px;padding:0 14px}.schema .rule:last-child{padding-bottom:10px}.rule b{font-weight:600;margin-right:4px}
 #tip a{color:#8ec6ff;text-decoration:underline}
 .grp{margin-top:12px}
 .tog{display:flex;align-items:center;gap:14px;width:100%;border:none;text-align:left;cursor:pointer;padding:14px 18px;background:var(--card);border-radius:20px;box-shadow:var(--shadow);transition:box-shadow .15s}
@@ -178,9 +182,11 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
       <a class="btn blue" href="how.html" style="margin:-10px 0 26px">How it works&nbsp;→</a>
     </div>
-    <div id="shelves"></div>
-    <div class="sh"><h2>How they fit together</h2><span>a widening arrow extends, a narrowing one restricts · drag to turn, scroll to zoom</span></div>
+    <div class="sh"><h2>Grassroots Contracts</h2><span>drag to turn, scroll to zoom</span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
+    <div id="shelves"></div>
+    <div class="sh"><h2>Foundational Papers</h2></div>
+    <div class="card refs" id="found"></div>
   </section>
   <section id="view"></section>
 </main>
@@ -204,7 +210,11 @@ const appUrl = c => `${LIVE}app.html?c=${c.id.toLowerCase()}`;
 const icon = (c, cls = '') => `<div class="icon ${cls}" style="background:${grad(c)}">${c.icon}</div>`;
 const openBtn = (c, cls = 'pill') => c.live
   ? `<a class="${cls}" href="${appUrl(c)}" target="_blank" rel="noopener" data-stop="1">Open</a>`
-  : `<span class="${cls} off" title="Not compiled yet">Soon</span>`;
+  : `<span class="${cls} off" title="${esc(notWhy(c))}">Not compiled</span>`;
+// Why a contract has no app, in a sentence: the compiler's reasons where the
+// cascade ran on it, else that it has not.
+const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refused it: ' + c.notCompiled.join('; ')
+  : c.record ? 'The compiler printed no platform for it.' : 'Not yet run through the cascade.';
 
 /* ---------- help ---------- */
 const HELP = {
@@ -212,7 +222,7 @@ const HELP = {
     <p><b>■ Enforced</b>: the app makes it so; nobody can break it.<br><b>◆ Attested</b>: you state it is true, and sign it.<br><b>○ Undertaken</b>: a promise you make; the app cannot check it.</p>
     <p>A contract builds on the ones it extends: everything they allow is allowed here too.</p>`],
   hood: ['Under the hood', `<p>Nobody writes the app by hand. A chain of programs, the <i>cascade</i>, translates the English contract step by step into the code each person's device runs. Each layer is generated from the one above it.</p>`],
-  acts: ['Speech acts', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
+  acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
     <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
     <p>Small letters (x, n, k, …) are values chosen when acting. <code>&lt;Alice&gt;.n</code> is a name n in Alice's own namespace, such as her group; <code>Alice[listed(*, n)]</code> is everyone Alice lists for n; <code>k.coin(u)</code> is k coins of u.</p>`],
   check: ['The grassroots check', `<p>A program checks that the contract can grow from the bottom up: some act can start everything from nothing; every fact a person holds traces back to an act that created it; and every act is joined to a person who wants it.</p>`],
@@ -226,6 +236,25 @@ $('#popx').onclick = () => $('#pop').style.display = 'none';
 $('#pop').onclick = e => { if (e.target.id === 'pop') $('#pop').style.display = 'none'; };
 const Q = k => `<button class="q" data-help="${k}" title="What is this?">?</button>`;
 document.addEventListener('click', e => { const b = e.target.closest('[data-help]'); if (b){ e.stopPropagation(); help(b.dataset.help); } }, true);
+
+/* ---------- citations ---------- */
+// A paper's full citation: the title, the authors, then arXiv followed by
+// Updated where the paper's source is ahead of its latest arXiv version
+// (Udi, 2026-11-08); else the paper's state, In preparation, as the link to
+// its PDF, with the date of its source's last change (Udi, 2026-11-09).  The
+// balloon on the globe, the contract page's References and the Foundational
+// Papers all show it.
+function citeHtml(P){
+  const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+  const a = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+  const link = P.arxiv ? a(`https://arxiv.org/abs/${P.arxiv}`, `arXiv:${P.arxiv}`)
+      + (P.updated ? ` · ${a(P.updated, 'Updated')}${P.updated_on ? ` (${esc(P.updated_on)})` : ''}` : '')
+      + (P.venue ? `; ${esc(P.venue)}` : '')
+    : P.pdf ? `${a(P.pdf, esc(cap(P.state || 'PDF')))}${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}`
+    : esc(cap(P.state || ''));
+  return P.title ? `<div class="cite"><i>${esc(P.title)}</i>${P.authors ? `. ${esc(P.authors)}` : ''}.${link ? ` ${link}` : ''}</div>`
+    : link ? `<div class="cite">${link}</div>` : '';
+}
 
 /* ---------- the globe ---------- */
 // The contracts on a sphere (agreed with Udi, 2026-11-07): GKK at the north
@@ -379,13 +408,7 @@ function drawGlobe(){
       // latest arXiv version (Udi, 2026-11-08); else the paper's state, In
       // preparation, as the link to its PDF, with the date of its source's
       // last change (Udi, 2026-11-09).
-      const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
-      const link = P.arxiv ? `<a href="https://arxiv.org/abs/${P.arxiv}" target="_blank" rel="noopener">arXiv:${P.arxiv}</a>`
-          + (P.updated ? ` · <a href="${P.updated}" target="_blank" rel="noopener">Updated</a>${P.updated_on ? ` (${esc(P.updated_on)})` : ''}` : '')
-        : P.pdf ? `<a href="${P.pdf}" target="_blank" rel="noopener">${esc(cap(P.state || 'PDF'))}</a>${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}`
-        : esc(P.state || '');
-      const cite = P.title ? `<div class="cite"><i>${esc(P.title)}</i>${P.authors ? `. ${esc(P.authors)}` : ''}.${link ? ` ${link}` : ''}</div>`
-        : link ? `<div class="cite">${link}</div>` : '';
+      const cite = citeHtml(c.paper || {});
       const r = wrap.getBoundingClientRect();
       tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${cite}`;
       tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
@@ -415,7 +438,7 @@ function globeNav(){
 const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']], ['Operating System', ['os']], ['Network', ['network']], ['Other', ['other']]];
 const OPEN = new Set();
 function drawShelves(){
-  $('#shelves').innerHTML = `<div class="sh"><h2>Contracts</h2><span>${D.contracts.length} contracts, ${D.contracts.filter(c => c.live).length} with a live app</span></div>` + GROUPS.map(([title, fams], i) => {
+  $('#shelves').innerHTML = GROUPS.map(([title, fams], i) => {
     const cs = D.contracts.filter(c => fams.includes(famOf(c)));
     if (!cs.length) return '';
     return `<div class="grp${OPEN.has(i) ? ' open' : ''}" data-g="${i}"><button class="tog" aria-expanded="${OPEN.has(i)}"><h2>${title}</h2>
@@ -498,6 +521,10 @@ function page(c, hood){
       <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
       </div>
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
+      ${c.live ? '' : `<p class="why">No app yet. ${esc(notWhy(c))}</p>`}
+    </div>
+    <div class="sec"><div class="sh"><h2>References</h2></div>
+      <div class="card refs">${citeHtml(c.paper || {}) || '<div class="cite">No paper yet.</div>'}</div>
       <button class="hoodbar${hood ? ' on' : ''}" id="hoodbtn"><span class="hi">⚙︎</span><span><b>Under the hood</b><small>From the English text to the code the app runs, layer by layer</small></span><span class="chev">›</span></button>
     </div>
     <div id="hood" class="sec"></div>`;
@@ -510,23 +537,25 @@ function hoodHtml(c){
   const own = c.schemas.filter(s => s.from === c.id), inh = c.schemas.filter(s => s.from !== c.id);
   const L = c.layers, col = FAM[famOf(c)][1];
   const n = i => `<span class="num" style="background:${col}">${i}</span>`;
-  const codeLayer = (i, key, title, sum) => L[key] ? `<div class="card layer">${n(i)}<h3>${title}${Q(key)}</h3>
+  const codeLayer = (key, title, sum) => L[key] ? `<div class="sub2"><h4>${title}${Q(key)}</h4>
       <p class="sum">${sum}</p><details data-file="${L[key].file}"><summary>Show the code · ${L[key].lines.toLocaleString()} lines</summary><div class="code">Loading…</div></details></div>` : '';
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
-    <div class="card layer">${n(1)}<h3>The contract, in English${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.join(' and ') : ''}, above.</p></div>
-    <div class="card layer">${n(2)}<h3>Speech acts${Q('acts')}</h3>
+    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
       <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => s.from))].join(', ')}` : ''}.</p>
       ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
       ${inh.length ? `<p class="more" id="mt">Show the ${inh.length} inherited acts</p><div id="inh" style="display:none">${inh.map(s => schemaHtml(s, false)).join('')}</div>` : ''}
     </div>
-    <div class="card layer">${n(3)}<h3>Grassroots check${Q('check')}</h3><p class="sum">The checker's verdict on the speech acts:</p><span class="verdict">${esc(c.verdict)}</span></div>
-    ${codeLayer(4, 'vmat', 'Transactions', 'Each act as an atomic, volition-guarded transaction among its parties.')}
-    ${codeLayer(5, 'platform', 'Platform, in vGLP', "What each person's agent runs: the transactions and the protocol that carries them out.")}
-    ${codeLayer(6, 'glp', 'Platform, in GLP', 'The same, compiled to the language the agents execute.')}
-    <div class="card layer">${n(7)}<h3>The app${Q('app')}</h3><p class="sum">Four people, each with an agent running the compiled platform, live.</p>
-      ${c.live ? `<div style="margin-top:10px"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div>` : ''}</div>
+    <div class="card layer">${n(3)}<h3>Grassroots Check${Q('check')}</h3><p class="sum">The checker's verdict on the speech-act schemas:</p><span class="verdict">${esc(c.verdict || 'not checked')}</span></div>
+    <div class="card layer">${n(4)}<h3>The App${Q('app')}</h3>
+      <p class="sum">${c.live ? 'Four people, each with an agent running the platform compiled from the contract, live.' : 'No app yet. ' + esc(notWhy(c))}</p>
+      ${c.live ? `<div style="margin:10px 0"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div>` : ''}
+      ${codeLayer('vmat', 'The transactions', 'Each act as an atomic, volition-guarded transaction among its parties.')}
+      ${codeLayer('platform', 'The platform, in vGLP', "What each person's agent runs: the transactions and the protocol that carries them out.")}
+      ${codeLayer('glp', 'The platform, in GLP', 'The same, compiled to the language the agents execute.')}
+    </div>
     </div>
     <p class="small">The layers come from a run of the cascade on the GLP repository at ${esc(D.glpCommit[0].slice(0, 8))} (${esc(D.glpCommit[1])}); the code may lag the text above.</p>`;
   const mt = $('#mt'); if (mt) mt.onclick = () => { const d = $('#inh'), o = d.style.display === 'none'; d.style.display = o ? '' : 'none'; mt.textContent = (o ? 'Hide' : 'Show') + ` the ${inh.length} inherited acts`; };
@@ -539,6 +568,15 @@ function hoodHtml(c){
   }));
 }
 function schemaHtml(s, open){
+  if (s.form === 'rule'){
+    const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
+    const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
+    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${s.from}</span></summary>
+      <div class="say">${esc(who)}</div>
+      ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
+      ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
+      ${s.needs.length ? `<div class="rule"><b>Needs</b>${at(s.needs, 'need')}</div>` : ''}</details>`;
+  }
   const willing = s.parties.filter(p => p.endsWith('?')).map(p => p.slice(0, -1));
   const say = `${s.parties.length === 1 ? 'One person' : s.parties.length + ' roles'}; ${willing.length ? 'needs the will of ' + willing.join(' and ') : 'nobody is asked'}${s.vars.length ? '; values: ' + s.vars.join(', ') : ''}${s.constraint ? '; only if ' + s.constraint : ''}.`;
   const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
@@ -548,6 +586,7 @@ function schemaHtml(s, open){
     ${s.roles.map(r => `<tr><td class="r">${esc(r.role)}</td><td data-k="Needs · must not have">${at(r.need,'need')}${at(r.not,'not')}</td><td data-k="Gets">${at(r.add,'add')}</td><td data-k="Loses">${at(r.del,'del')}</td></tr>`).join('')}</table></details>`;
 }
 
+$('#found').innerHTML = (D.foundational || []).map(citeHtml).join('');
 layout(); drawGlobe(); globeNav(); drawShelves(); route();
 window.addEventListener('resize', () => { if ($('#top').style.display !== 'none') drawShelves(); });
 </script>

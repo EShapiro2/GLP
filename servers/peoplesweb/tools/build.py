@@ -26,7 +26,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import load_state, paper_of  # noqa: E402
+from papers import FOUNDATIONAL, load_state, paper_of  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
           ('platform', 'platform.vglp'), ('glp', 'platform.glp')]
@@ -49,9 +49,63 @@ def split_top(s):
     return out
 
 
+def not_compiled(text):
+    """The compiler's reasons for printing no platform, as cascade.sh writes
+    them into platform.vglp: each reason once, with the speech acts it names
+    on the '%% the schema...(name...)' line after it."""
+    reasons, last = {}, None
+    for l in text.split('\n'):
+        if not l.startswith('%% ') or l.startswith('%% not compiled'):
+            continue
+        l = l[3:].strip()
+        m = re.match(r'^the schema[^(]*\(([a-z_0-9]+)', l)
+        if m and last is not None:
+            if m.group(1) not in reasons[last]:
+                reasons[last].append(m.group(1))
+            continue
+        m = re.match(r'^(.*?):\s*\(([a-z_0-9]+)\)\s*$', l)
+        last = (m.group(1) if m else l).rstrip(':').strip()
+        reasons.setdefault(last, [])
+        if m and m.group(2) not in reasons[last]:
+            reasons[last].append(m.group(2))
+    return [r + (f" ({', '.join(ns)})" if ns else '') for r, ns in reasons.items()]
+
+
+def parse_rules(text):
+    """schemas.txt in the form cascade.sh prints since 2026-11: each speech act
+    'name: heads <-' and, indented, its body, ending 'guarded by Alice, Bob'
+    where it is guarded.  A head 'not A' removes A; every other head adds."""
+    header, out, cur = [], [], None
+    for line in text.split('\n'):
+        if not line.strip():
+            cur = None
+            continue
+        m = re.match(r'^([a-z_0-9]+): (.*?)\s*<-\s*$', line)
+        if m:
+            heads = split_top(m.group(2))
+            cur = {'name': m.group(1), 'head': f"{m.group(1)}: {m.group(2)}", 'form': 'rule',
+                   'adds': [h for h in heads if not h.startswith('not ')],
+                   'removes': [h[4:] for h in heads if h.startswith('not ')],
+                   'body': '', 'needs': [], 'guarded': []}
+            out.append(cur)
+        elif cur is not None and line.startswith(' '):
+            cur['body'] += ' ' + line.strip()
+            body, _, g = cur['body'].strip().rpartition(' guarded by ')
+            if not body:
+                body, g = cur['body'].strip(), ''
+            cur['needs'] = split_top(body)
+            cur['guarded'] = [x.strip() for x in g.split(',') if x.strip()]
+        else:
+            header.append(line.strip())
+    return header, out
+
+
 def parse_schemas(path):
-    """schemas.txt, as cascade.sh prints it, into heads and roles."""
+    """schemas.txt, as cascade.sh prints it, into heads and roles: the form
+    by roles of the records before 2026-11, or the form by rules since."""
     if not os.path.exists(path): return [], []
+    if re.search(r'^[a-z_0-9]+: .*<-\s*$', read(path), re.M):
+        return parse_rules(read(path))
     header, out, cur = [], [], None
     for line in read(path).split('\n'):
         if not line.strip(): continue
@@ -67,7 +121,7 @@ def parse_schemas(path):
         elif re.match(r'^[a-z_0-9]+\(', line):
             m = re.match(r'^([a-z_0-9]+)\((.*?)\)(?: \| (.*?))? :$', line)
             roles, _, vars_ = m.group(2).partition(';')
-            cur = {'name': m.group(1), 'head': line[:-2], 'constraint': m.group(3) or '',
+            cur = {'name': m.group(1), 'head': line[:-2], 'constraint': m.group(3) or '', 'form': 'roles',
                    'parties': split_top(roles), 'vars': [x.strip() for x in vars_.split(',') if x.strip()],
                    'roles': []}
             out.append(cur)
@@ -218,6 +272,12 @@ for n in sorted(set(compiled) | set(cat)):
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
+    # Why a contract with a record has no app: the compiler's reasons, as
+    # cascade.sh writes them into platform.vglp in place of a platform; a
+    # contract with no record has not been through the cascade.
+    c['record'] = os.path.isdir(d)
+    pv = os.path.join(d, 'platform.vglp')
+    c['notCompiled'] = [] if c['live'] or not os.path.exists(pv) else not_compiled(read(pv))
     for k, f in LAYERS:
         if os.path.exists(os.path.join(d, f)):
             os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
@@ -245,5 +305,5 @@ if served:
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
