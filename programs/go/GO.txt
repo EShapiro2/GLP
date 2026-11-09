@@ -6,12 +6,12 @@
 % Schemas: GO.glp beside this file.
 GO: Grassroots Organisation
 GO extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, in preparation).
-An organisation is a ward with participants, which include its guardians, referred to as its officers, each with a role.  The state of the ward holds its bylaws and its register, recording the participants and the officers in each role.  The bylaws define the roles of the organisation, each with its powers and the acts by which a participant is appointed to it and removed from it, and name for each act of the organisation the officers who decide it and the rule by which they decide it jointly, including admitting and removing a participant.
+An organisation is a ward with participants, which include its guardians, referred to as its officers, each with a role.  The state of the ward holds its bylaws and its register, recording the participants and the officers in each role.  The bylaws define the roles of the organisation, each with its powers and the acts by which a participant is appointed to it and removed from it, and name for each act of the organisation the officers and/or persons who decide it and the rule by which they decide it jointly, including admitting and removing a participant, and appointing an officer when there is none.
 Alice and Bob are persons, Orga a ward.
 1. ■ Founding.  Alice, or an organisation with Alice, may create an organisation, Orga, as a ward, choosing its bylaws, with Alice its first officer.
-2. ■ Acts of the organisation.  An officer may propose an act of Orga, and the officers the bylaws name for it may vote on it; Orga may take the act once their votes decide it according to the bylaws.
-3. ■ Participation.  Bob becomes a participant of Orga by an act of Bob and Orga; his participation ends by an act of Bob or of Orga.
-4. ■ Officers.  A participant may be appointed to a role, and removed from it, by an act of Orga, and is a guardian of Orga while they hold a role.
+2. ■ Acts of the organisation.  An officer, or a person the bylaws name, may propose an act of Orga, and the officers and/or persons the bylaws name for it may vote on it; Orga may take the act once their votes decide it according to the bylaws.
+3. ■ Participation.  Bob becomes a participant of Orga by an act of Bob and Orga; his participation ends by an act of Bob or of Orga, and with it every role he holds.
+4. ■ Officers.  A participant may be appointed to a role by an act of Orga and the participant, or removed from it by an act of Orga or of the participant, and is a guardian of Orga while they hold a role.
 5. ■ Amendment.  The bylaws may be amended by an act of Orga.
 6. ○ Accountability.  Orga is accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga is accountable for it with Orga.
 Pragmas
@@ -20,12 +20,16 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Implementation pragmas
 Decision: Orga stands on the act x describes once it holds decided(Orga, x).

@@ -14,19 +14,23 @@ Alice and Bob are persons, Orga a community bank.
 4. ■ Credit line.  The directors may set Bob's credit line.
 5. ■ Credit.  Bob may swap Bob-coins he holds for Orga-coins, as long as the Bob-coins Orga holds do not exceed his credit line.
 6. ○ Community currency.  A member shall accept Orga-coins in payment for their offerings at the prices they post.
-7. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other, and whichever of the two is left holding coins of the other redeems them against any other coins held by the other, if there are any.
+7. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other.
 Pragmas
 Look: 🏘️, bank
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.

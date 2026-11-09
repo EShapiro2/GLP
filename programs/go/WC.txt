@@ -6,22 +6,26 @@
 % Schemas: WC.glp beside this file.
 WC: Workers' Cooperative
 WC instantiates the bylaws of GCoop and restricts it.
-A workers' cooperative is a cooperative whose members work for Orga.  Orga's surplus is the Dollar-denominated coins it holds above the coins it owes.
+A workers' cooperative is a cooperative whose members work for Orga.
 Alice and Bob are persons, Orga a workers' cooperative.
 1. ■ Pay.  Orga may pay Bob, a member, Dollar-denominated coins for his work, as the members decide.
-2. ■ Distribution.  The members may decide to distribute Orga's surplus, which Orga then pays to the members equally.
+2. ■ Distribution.  The members may decide to distribute Dollar-denominated coins Orga holds, which Orga then pays to the members equally.
 Pragmas
 Look: 🛠️, cooperative
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.

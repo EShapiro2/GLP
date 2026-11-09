@@ -6,12 +6,12 @@
 % Schemas: SC.glp beside this file.
 SC: Shareholding Corporation
 SC instantiates the bylaws of GCorp and restricts it.
-Share is a denomination, and a share of Orga is an Orga-coin denominated in Share.  A shareholding corporation is a corporation with two roles, shareholder, held by every participant who holds a share of Orga, and director; the shareholders decide by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
+Share is a denomination, and a share of Orga is an Orga-coin denominated in Share.  A shareholding corporation is a corporation with two roles, shareholder, held by every person who holds a share of Orga, and director; the shareholders decide by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
 Alice and Bob are persons, Orga a shareholding corporation.
 1. ■ Founding.  Alice may found Orga, which issues a number of shares to her, and become its first director.
-2. ■ Shares.  Orga may issue shares by a decision of the shareholders; Bob becomes a participant of Orga when he accepts its shares, and a shareholder while he holds one.
+2. ■ Shares.  Orga may issue shares by a decision of the shareholders; Bob is a shareholder while he holds one.
 3. ■ Directors.  The shareholders may elect a participant a director, and remove a director.
-4. ■ Dividend.  The directors may decide a dividend, a number of Dollars a share, which Orga pays to each shareholder in Dollar-denominated coins for the shares they hold.
+4. ■ Dividend.  The directors may decide a dividend, a number of Dollars a share, a shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
 5. ■ Redemption.  DGC:6, for a coin of a denomination other than Share.
 Pragmas
 Look: 📈, corporation
@@ -19,12 +19,16 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
@@ -36,8 +40,8 @@ Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
 Shares: the shares Alice holds.
 Shares: Orga [Issue shares] <amount>
-  Bob [Accept shares] <limit>
 Dividend: Orga [Declare dividend] <Dollars a share>
+  Bob [Claim dividend]
 Votes: Bob [Vote shares]
 Implementation pragmas
 Decision: Orga stands on the act x describes once it holds decided(Orga, x).

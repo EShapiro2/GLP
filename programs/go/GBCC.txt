@@ -5,7 +5,7 @@
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: GBCC.glp beside this file.
 GBCC: Grassroots Backed Community Currency
-GBCC restricts CC.
+GBCC extends CC and restricts it.
 f is a fraction, 0 ≤ f < 1.  Orga's account is a bank account in Dollars, held in Orga's name by its treasurers.  A treasurer, Alice, is backed when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 Alice and Bob are persons, Orga a community currency.
 1. ■ Treasurers.  CC:2, only if every treasurer stays backed.
@@ -18,12 +18,16 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.

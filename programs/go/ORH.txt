@@ -5,7 +5,7 @@
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: ORH.glp beside this file.
 ORH: Ride-Hailing Organisation
-ORH extends GNO and GRA (GRH, Grassroots Ride-Hailing, in preparation).
+ORH extends GNO and amends GRA (GRH, Grassroots Ride-Hailing, in preparation).
 A driver is a provider and a rider a customer.
 Alice and Bob are persons, Orga a ride-hailing organisation.
 1. ■ Driving.  GRA, where Bob bids and drives as a driver while his stake is at least S, the fare and the deposit in Orga-coins, and the deposit locked on top of his stake.
@@ -16,12 +16,16 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.

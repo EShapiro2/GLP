@@ -5,7 +5,7 @@
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: GNO.glp beside this file.
 GNO: Grassroots Network Organisation
-GNO restricts GBCC.
+GNO extends GBCC and restricts it.
 A network organisation is a backed community currency, Orga, with four roles: treasurer, as GBCC; provider, held by Bob while his stake, the Orga-coins he holds, is at least S, a number of Orga-coins the treasurers set; customer, held by whoever accepts Orga-coins; and arbiter.  A treasurer is a provider.  A dispute is over Orga-coins locked between a provider and a customer by an act of the organisation.
 Alice, Bob and Carol are persons, Orga a network organisation.
 1. ■ Stake.  The treasurers may set S.
@@ -18,12 +18,16 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.

@@ -12,19 +12,24 @@ Alice, Bob and Carol are persons, Orga a commercial bank.
 2. ■ Customers.  Bob becomes a customer of Orga and ceases to be one by an act of Bob and the directors.
 3. ■ Officers.  The directors may appoint a participant a director or a loan officer, and remove one.
 4. ■ Deposit.  Bob, a customer, may swap Dollar-denominated coins he holds for Orga-coins.
-5. ■ Loan.  Bob, a customer, and Carol, a loan officer, for a loan within Carol's lending limit, or the directors, for a loan above it, may jointly decide to swap Orga-coins for Bob-bonds.
+5. ■ Loan.  Bob, a customer, and Carol, a loan officer, for a loan within Carol's lending limit, or the directors, for any loan, may jointly decide to swap Orga-coins for Bob-bonds.
+6. ■ Lending limit.  The directors may set the lending limit of Carol, a loan officer.
 Pragmas
 Look: 🏦, bank
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.

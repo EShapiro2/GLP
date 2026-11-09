@@ -6,23 +6,27 @@
 % Schemas: GAN.glp beside this file.
 GAN: Grassroots Ad Network
 GAN extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
-An advertiser is a provider and a member a customer.  A member's profile is in their state and nowhere else.  An ad names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, and the most one member may earn from it.
+An advertiser is a provider and a member a customer.  A member's profile is in their state and nowhere else.  An ad names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its budget, the most it pays in all.
 Alice and Bob are persons, Orga an ad network.
-1. ■ Posting.  Bob, an advertiser, may post an ad to the members he points to, and a member may pass it to the members they point to.
+1. ■ Posting.  Bob, an advertiser, may post an ad to the members he points to, its budget locked on top of his stake, and a member may pass it to the members they point to.
 2. ■ Showing.  Alice, a member, is shown an ad she received if it is for her profile.
-3. ◆ Viewing and clicking.  Alice may attest that she viewed, or clicked, an ad shown to her, and Bob then pays her its coins for the view or the click from his stake, up to the most one member may earn from it.
+3. ◆ Viewing and clicking.  Alice may attest that she viewed, or clicked, an ad shown to her, and the ad's budget then pays her its coins for the view or the click, up to the most one member may earn from it.
 Pragmas
 Look: 📣, network
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
@@ -38,6 +42,7 @@ Arbitration: Alice [Raise dispute] <arbiter>
   Carol [Decide] <to customer> <to provider>
 Ads: the ads shown to Alice.
 Profile: Alice [Set profile] <profile>
+Budget: Bob [Fund ad] <budget>
 Posting: Bob [Post ad] <profile> <per view> <per click> <most per member>
   Alice [Pass on]
 Viewing and clicking: Alice [Viewed] [Clicked]

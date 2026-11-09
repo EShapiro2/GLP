@@ -5,26 +5,30 @@
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: MCS.glp beside this file.
 MCS: Mutual Credit Society
-MCS instantiates the bylaws of GBank and restricts it.
+MCS instantiates the bylaws of GBank and amends it.
 A mutual credit society is a bank with one role, member, held by every participant, whose acts are decided by all its members jointly.  A member can be in the red by their coins in circulation less the other persons' coins they hold.
 Alice and Bob are persons, Orga a mutual credit society.
 1. ■ Founding.  Alice may found Orga and become its first member.
 2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and of the members of Orga; his membership ends by an act of Bob or of the other members.
 3. ■ Redemption.  Bob, a member, may redeem an Alice-coin he holds, Alice a member, against an Orga-coin.
 4. ■ Credit limit.  A member can be in the red by at most 1000 coins.
-5. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other, and whichever of the two is left holding coins of the other redeems them against any other coins held by the other, if there are any.
+5. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other.
 Pragmas
 Look: 🤝, bank
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
+  Bob [Propose as named] <act>
+  Bob [Vote as named] <credential>
 Participation: Bob [Join]
   Orga: Bob asks to participate.
   Bob [Leave]
   Orga [Expel]
 Officers: Orga [Appoint] <role>
+  Bob: Orga asks you to take a role.
   Orga [Dismiss] <role>
+  Bob [Resign role] <role>
 Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
