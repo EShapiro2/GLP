@@ -26,7 +26,7 @@ The free team signs one phone per build; the paid account waits on Apple Develop
 - 2026-11-09 11:29--11:38 UTC, `p1-two-phones-lan`: not run to its end: the venue's Wi-Fi put the phones on two subnets, and on a Personal Hotspot neither resolved the other.  The replay of presences resolved under Closed trust works.  Two network faults with Code (11:36, 11:38 UTC); a lost path recovered with no restart on Cloud-netroam (13:29 UTC).
 - 2026-11-09 11:40--11:45 UTC, `p1-two-phones-ble`: steps 1 to 7 met; after a restart each agent declared its friend and both trusts and reconnected over Bluetooth within 6 s.  With step 8 of 2026-11-08, the Bluetooth play is met whole.
 - 2026-11-09 12:39--12:49 UTC, GDS: List, the verification mail, the supply of links, a lookup on the directory's page, the link opened in the other phone and redeemed at GRV, and Unlist: met.  A session over the Internet is not yet tested: no punch has made one.
-- 2026-11-09 14:25--14:32 UTC: Dan filed 18 issues labelled `phones`, #10 to #27, faults of the networking code against GNA found by an audit, with one pull request each, #28 to #44 and #4's range; sent to Code.
+- 2026-11-09 14:25--14:32 UTC: Dan filed 18 issues labelled `phones`, #10 to #27, faults of the networking code against GNA found by an audit, and seventeen pull requests, #28 to #44, each closing one of #10 to #26; #27 has none yet; sent to Code.
 
 ## Next
 
