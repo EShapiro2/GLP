@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% GNL.glp --- GNL, the contract's speech-act schemas, GO's (Udi, 2026-11-09, to GO #3), in the clause syntax of GSC's paper, Section 3.2, sas(Name, Names, Vars, Head, Body, Constraint, Guards), as programs/gsc/README.md reads it; the clauses are in GNL.txt beside this file.
-%% Extends GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).  The term holds every schema of what it extends, restated, GKK's and GSG's for persons as GO writes them, an organisation being a ward marked org, its guards forbidding retired, the leaving mark.
-%% 67 schemas.  This term is the one source of the schemas; a run of the cascade prints their notation from it.  Written by GO #3 Cowork, 2026-11-09, by GO/docs/tools/gen.py; the problems found in writing them are GO/docs/schemas-problems.md.
+%% Extends GNO, GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and REC, Recommendations (programs/gce).  The term holds every schema of what it extends, restated, GKK's and GSG's for persons as GO writes them, an organisation being a ward marked org, its guards forbidding retired, the leaving mark.
+%% 69 schemas.  This term is the one source of the schemas; a run of the cascade prints their notation from it.  Written by GO #3 Cowork, 2026-11-09, by GO/docs/tools/gen.py; the problems found in writing them are GO/docs/schemas-problems.md.
 %% Environment predicates: today, fraction, now, location.
 %% ---------------------------------------------------------------------------
 
@@ -856,10 +856,12 @@ contract_named(gnl, environment([today, fraction, now, location],
        [times(num(a), atom(coin, ['Alice', 'Orga', num(f)])),
         atom(identity, ['Alice']),
         not(atom(retired, ['Alice'])),
+        atom(knows, ['Alice', 'Bob']),
         atom(listing, ['Alice', l, 'Bob', 'Orga', num(f), num(pl), num(n1), num(n2), num(pr), num(tm)]),
         times(num(c), atom(coin, ['Bob', 'Orga', num(f)])),
         atom(identity, ['Bob']),
         not(atom(retired, ['Bob'])),
+        atom(knows, ['Bob', 'Alice']),
         atom(listed, ['Bob', l]),
         not(atom(withdrawn, ['Bob', l])),
         atom(identity, ['Orga']),
@@ -951,18 +953,47 @@ contract_named(gnl, environment([today, fraction, now, location],
         not(atom(disputed, ['Orga', z, '_']))],
        and(and(le(num(n1), num(t)), lt(num(t), plus(num(n1), num(1)))), eq(num(x), plus(num(a), num(c)))),
        ['Alice']),
-%% GNL:6, Review, attested: after checkout, Alice attests a review w of the stay, which Bob's listing carries.
-    sas(gnl_review, ['Alice', 'Bob', 'Orga'], [z, l, w],
-       [atom(reviewed, ['Alice', z]),
-        atom(review, ['Bob', l, w, 'Alice'])],
+%% GNL:6, Review: REC:1, where Alice recommends Bob for the stay, z, after checkout.
+    sas(recommend, ['Alice', 'Bob', 'Orga'], [s, z, l],
+       [atom(recommended, ['Alice', 'Bob', s]),
+        atom(endorsement, ['Bob', 'Alice', s])],
        [atom(identity, ['Alice']),
+        not(atom(org, ['Alice'])),
         not(atom(retired, ['Alice'])),
+        atom(knows, ['Alice', 'Bob']),
+        not(atom(recommended, ['Alice', 'Bob', s])),
+        not(atom(withdrew, ['Alice', 'Bob', s])),
+        atom(identity, ['Bob']),
         atom(deal, ['Alice', z, l]),
         atom(knows, ['Alice', 'Orga']),
-        not(atom(reviewed, ['Alice', z])),
-        atom(identity, ['Bob']),
         atom(deal, ['Bob', z, l]),
         atom(identity, ['Orga']),
         atom(checked_out, ['Orga', z, '_'])],
+       eq(s, z),
+       ['Alice']),
+%% REC:2, Showing: Bob shows a recommendation of him by Alice for s to Carol, whom he knows, once; Carol sees who recommended Bob and for what.
+    sas(show, ['Bob', 'Carol', 'Alice'], ['Alice', s],
+       [atom(shown, ['Bob', 'Carol', 'Alice', s]),
+        atom(vouched, ['Carol', 'Alice', s])],
+       [atom(identity, ['Bob']),
+        not(atom(retired, ['Bob'])),
+        atom(endorsement, ['Bob', 'Alice', s]),
+        atom(knows, ['Bob', 'Carol']),
+        not(atom(shown, ['Bob', 'Carol', 'Alice', s])),
+        atom(identity, ['Carol'])],
+       true,
+       ['Bob']),
+%% REC:3, Withdrawing: Alice withdraws her recommendation of Bob for s; it is gone from Bob and from everyone Bob showed it to, Carol a listed role, and Alice may not make it again.
+    sas(withdraw_recommendation, ['Alice', 'Bob', 'Carol'], [s],
+       [atom(withdrew, ['Alice', 'Bob', s]),
+        not(atom(recommended, ['Alice', 'Bob', s])),
+        not(atom(endorsement, ['Bob', 'Alice', s])),
+        forall(['Carol'], atom(shown, ['Bob', 'Carol', 'Alice', s]), true, [not(atom(vouched, ['Carol', 'Alice', s]))])],
+       [atom(identity, ['Alice']),
+        not(atom(retired, ['Alice'])),
+        atom(recommended, ['Alice', 'Bob', s]),
+        atom(identity, ['Bob']),
+        atom(endorsement, ['Bob', 'Alice', s]),
+        forall(['Carol'], atom(shown, ['Bob', 'Carol', 'Alice', s]), true, and(atom(identity, ['Carol']), atom(vouched, ['Carol', 'Alice', s])))],
        true,
        ['Alice'])])).

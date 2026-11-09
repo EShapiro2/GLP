@@ -1,19 +1,19 @@
 % GNG: Network Gig Work --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.5 and cites a clause as GNG:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Extends: GNO, GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and REC, Recommendations (programs/gce).
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: GNG.glp beside this file.
 GNG: Network Gig Work
-GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
+GNG extends GNO, GDO (GRH, Grassroots Ride-Hailing, in preparation) and REC.
 A worker is a provider and a client a customer.  A job names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
 Alice and Bob are persons, Orga a gig-work organisation.
 1. ■ Job.  Alice, a client, may post a job to the workers she points to, and a worker may pass it to the workers they point to; Alice may withdraw it.
-2. ■ Engagement.  Alice and Bob, a worker, may jointly engage Bob for the job; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
+2. ■ Engagement.  Alice and Bob, a worker, who know each other, may jointly engage Bob for the job; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ◆ Delivery.  Bob may attest that he delivered the work to Alice.
 4. ■ Acceptance.  Alice may accept delivered work, and the payment and the deposit are then released to Bob; she may reject it, raising a dispute (GNO:4).
 5. ■ Cancelling.  Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are released to Alice and to Bob as the terms say; if no delivery is attested by the deadline, Alice may cancel and both are released to her.
-6. ◆ Review.  After acceptance, Alice may attest a review of the work, which Bob carries as a worker.
+6. ◆ Review.  REC:1, where Alice recommends Bob for the work after acceptance.
 Pragmas
 Look: 🧰, network
 Organisations: the organisations Alice participates in, and her roles in each.
@@ -54,6 +54,8 @@ Acceptance: Alice [Accept work] [Reject work] <arbiter>
 Cancelling: Alice [Cancel] <to Alice> <to Bob>
   Bob [Cancel] <to Alice> <to Bob>
   Alice [Deadline passed]
-Review: Alice [Review] <review>
+Recommending: Alice [Recommend]
+Showing: Bob [Show] <recommendation>
+Withdrawing: Alice [Withdraw recommendation]
 Implementation pragmas
 Decision: Orga stands on the act x describes once it holds decided(Orga, x).

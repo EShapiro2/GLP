@@ -1,19 +1,19 @@
 % GNL: Network Lodging --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.3 and cites a clause as GNL:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Extends: GNO, GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and REC, Recommendations (programs/gce).
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: GNL.glp beside this file.
 GNL: Network Lodging
-GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
+GNL extends GNO, GDO (GRH, Grassroots Ride-Hailing, in preparation) and REC.
 A host is a provider and a traveller a customer.  A listing names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
 Alice and Bob are persons, Orga a lodging organisation.
 1. ■ Listing.  Bob, a host, may post a listing to the travellers he points to, and a traveller may pass it to the travellers they point to; Bob may withdraw it.
-2. ■ Booking.  Alice, a traveller, and Bob may jointly book nights of his listing; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
+2. ■ Booking.  Alice, a traveller, and Bob, who know each other, may jointly book nights of his listing; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ■ Check-in and checkout.  The check-in is recorded when Alice and Bob are both at the place on the first night, and the checkout when Alice leaves it after the last; the payment and the deposit are then released to Bob.
 4. ■ Cancelling.  Alice or Bob may cancel a booking before the first night, and the payment and the deposit are released to Alice and to Bob as the terms say; if no check-in is recorded on the first night while Alice is at the place, she may cancel and both are released to her.
 5. ■ Dispute.  Alice, checked in, or Bob may raise a dispute over the payment and the deposit before checkout (GNO:4).
-6. ◆ Review.  After checkout, Alice may attest a review of the stay, which Bob's listing carries.
+6. ◆ Review.  REC:1, where Alice recommends Bob for the stay after checkout.
 Pragmas
 Look: 🏠, network
 Organisations: the organisations Alice participates in, and her roles in each.
@@ -52,6 +52,8 @@ Booking: Alice [Book] <payment> <deposit>
 Cancelling: Alice [Cancel] <to Alice> <to Bob>
   Bob [Cancel] <to Alice> <to Bob>
   Alice [No show]
-Review: Alice [Review] <review>
+Recommending: Alice [Recommend]
+Showing: Bob [Show] <recommendation>
+Withdrawing: Alice [Withdraw recommendation]
 Implementation pragmas
 Decision: Orga stands on the act x describes once it holds decided(Orga, x).
