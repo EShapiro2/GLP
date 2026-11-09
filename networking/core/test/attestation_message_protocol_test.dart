@@ -333,7 +333,7 @@ void main() {
       await caller.dispose();
       await service.dispose();
     });
-    service.putKnownPeer(caller.identity.publicKey);
+    service.putKnownPeer(caller.getIdentity());
     expect(await service.start(), isTrue);
     expect(await caller.start(), isTrue);
     return (service, caller);
@@ -346,9 +346,9 @@ void main() {
     HeadlessGrassrootsNetwork service,
     int port,
   ) async {
-    caller.wan.putPeerAddress(service.identity.publicKey, '127.0.0.1:$port');
+    caller.wan.putPeerAddress(service.getIdentity(), '127.0.0.1:$port');
     await caller.send(
-      service.identity.publicKey,
+      service.getIdentity(),
       Uint8List.fromList(utf8.encode('hello')),
     );
   }
@@ -377,7 +377,7 @@ void main() {
       // exceeds the carrier's datagram limit and was refused; as a message it
       // needs more than one fragment.
       final payload =
-          await _exchangePayload(_AndroidProducer(), caller.identity.publicKey);
+          await _exchangePayload(_AndroidProducer(), caller.getIdentity());
       expect(
         GrassrootsPacket(type: PacketType.attestationFragment, payload: payload)
             .serialize()
@@ -415,7 +415,7 @@ void main() {
           await pair(_AppAttestProducer(), _AppAttestProducer(), 0x73);
 
       final payload = await _exchangePayload(
-          _AppAttestProducer(), caller.identity.publicKey);
+          _AppAttestProducer(), caller.getIdentity());
       expect(payload.length, greaterThan(4096));
       expect(payload.length, greaterThan(3 * FragmentHandler.udpMaxChunk),
           reason: 'four fragments or more');
@@ -472,7 +472,7 @@ void main() {
       // The chain needs two fragments; the service had both, so the lost one
       // came again.
       final fragments = ((await _exchangePayload(
-                      _AndroidProducer(), caller.identity.publicKey))
+                      _AndroidProducer(), caller.getIdentity()))
                   .length /
               FragmentHandler.udpMaxChunk)
           .ceil();
@@ -521,7 +521,7 @@ void main() {
         await callerDisconnected.future,
         Underlay.wan,
       );
-      expect(caller.isPeerReachable(service.identity.publicKey), isFalse);
+      expect(caller.isPeerReachable(service.getIdentity()), isFalse);
       expect(relay.attestationFragmentsSeen, greaterThan(2),
           reason: 'the fragments were retransmitted before giving up');
       expect(serviceConnected, isFalse,
@@ -629,7 +629,7 @@ void main() {
       // half of the exchange; nothing on the wire is lost.
       final (service, caller) =
           await pair(const NoPlatformAttestation(), _SilentProducer(), 0x85);
-      final callerHex = caller.identity.publicKey
+      final callerHex = caller.getIdentity()
           .map((b) => b.toRadixString(16).padLeft(2, '0'))
           .join();
       var serviceConnected = false;
@@ -720,7 +720,7 @@ void main() {
       expect(serviceAttestation.verifications, 1,
           reason: 'the second attestation was ignored, not judged again');
       expect(serviceConnects, 1);
-      expect(service.isPeerReachable(caller.identity.publicKey), isTrue,
+      expect(service.isPeerReachable(caller.getIdentity()), isTrue,
           reason: 'and the session it already attested stands');
     }, timeout: Timeout.none);
   });

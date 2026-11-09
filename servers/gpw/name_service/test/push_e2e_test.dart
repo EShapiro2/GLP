@@ -95,8 +95,8 @@ void main() {
       }
     };
     expect(await phone.start(), isTrue);
-    phone.wan.putPeerAddress(serviceNet.identity.publicKey, address);
-    await phone.send(serviceNet.identity.publicKey,
+    phone.wan.putPeerAddress(serviceNet.getIdentity(), address);
+    await phone.send(serviceNet.getIdentity(),
         Uint8List.fromList(buildAreaPush(area, 'me.$zone')));
 
     final result = await ack.future.timeout(const Duration(seconds: 20));
@@ -122,8 +122,8 @@ void main() {
     var strangerLinked = false;
     stranger.onPeerConnected = (_, __, ___) => strangerLinked = true;
     expect(await stranger.start(), isTrue);
-    stranger.wan.putPeerAddress(serviceNet.identity.publicKey, address);
-    await stranger.send(serviceNet.identity.publicKey,
+    stranger.wan.putPeerAddress(serviceNet.getIdentity(), address);
+    await stranger.send(serviceNet.getIdentity(),
         Uint8List.fromList(utf8.encode('{"format":"gpw/area-push/1"}')));
     await Future<void>.delayed(const Duration(seconds: 3));
     expect(strangerLinked, isFalse);

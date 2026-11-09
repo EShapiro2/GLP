@@ -116,17 +116,18 @@ class ServerAddress {
 /// ([MemoryOutboundQueueStore]), which lasts as long as the process.
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
-    required this.identity,
+    required GrassrootsIdentity identity,
     this.attestation = const NoPlatformAttestation(),
     this.serverAddress,
     this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
     required OutboundQueueStore outboundQueueStore,
-  }) : _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+  }) : _identity = identity,
+       _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
     _persistedQueue = PersistentOutboundQueue(
       store: outboundQueueStore,
-      ownerHex: _hex(identity.publicKey),
+      ownerHex: _hex(_identity.publicKey),
     );
     _restoreOutboundQueue();
     // GNA §2.2: a rendezvous server is one having a server address.
@@ -135,9 +136,9 @@ class HeadlessGrassrootsNetwork {
           'a rendezvous server has a server address, and none was given');
     }
     store = Store<AppState>(appReducer, initialState: const AppState());
-    _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
+    _protocolHandler = ProtocolHandler(identity: _identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
-    _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
+    _noiseSessions = NoiseSessionManager(identity: _identity, sodium: sodium);
     _messageRouter = MessageRouter(
       store: store,
       protocolHandler: _protocolHandler,
@@ -153,7 +154,7 @@ class HeadlessGrassrootsNetwork {
     });
   }
 
-  final GrassrootsIdentity identity;
+  final GrassrootsIdentity _identity;
   final SodiumSumo sodium;
 
   /// The rendezvous servers GLP declared, by public key hex (GNA §4.2: "The
@@ -382,7 +383,7 @@ class HeadlessGrassrootsNetwork {
   String? _reflectedAddress;
 
   /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
-  Uint8List getIdentity() => identity.publicKey;
+  Uint8List getIdentity() => _identity.publicKey;
 
   /// The underlays [pubkey] is reachable over (spec §Connection and
   /// Reachability, `peerUnderlays(pk)`): [Underlay.wan], this profile's one,
@@ -697,7 +698,7 @@ class HeadlessGrassrootsNetwork {
     await _persistedQueue.restored;
     if (_udpService != null) return true;
     final udp = UdpTransportService(
-      identity: identity,
+      identity: _identity,
       store: store,
       protocolHandler: _protocolHandler,
       // The WAN alone (decision 18): every path is a WAN session's.
@@ -728,7 +729,7 @@ class HeadlessGrassrootsNetwork {
     wan.onConnectivityStatusChanged?.call(null, _publicAddress());
     await _refreshLocalNetwork();
     debugPrint('[headless] listening on UDP port $boundPort '
-        '(${_hex(identity.publicKey).substring(0, 8)}…)');
+        '(${_hex(_identity.publicKey).substring(0, 8)}…)');
     _holdRendezvousSessions();
     return true;
   }
@@ -1539,15 +1540,15 @@ class HeadlessGrassrootsNetwork {
     // version number (GNA §2.6).
     AttestationEvidence? evidence;
     try {
-      final offered = await attestation.attestationFor(identity.publicKey);
+      final offered = await attestation.attestationFor(_identity.publicKey);
       final version =
           offered == null ? null : await attestation.applicationVersion();
       final signature = version == null
           ? null
           : await attestation.signSessionDigest(
-              identityPublicKey: identity.publicKey,
+              identityPublicKey: _identity.publicKey,
               digest: attestationDigest(
-                identityPublicKey: identity.publicKey,
+                identityPublicKey: _identity.publicKey,
                 version: version,
                 handshakeHash: handshakeHash,
               ),

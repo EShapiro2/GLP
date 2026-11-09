@@ -65,9 +65,9 @@ void main() {
     HeadlessGrassrootsNetwork a,
     HeadlessGrassrootsNetwork b,
   ) async {
-    b.putKnownPeer(a.identity.publicKey);
-    a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
-    await a.send(b.identity.publicKey, Uint8List.fromList([1]));
+    b.putKnownPeer(a.getIdentity());
+    a.wan.putPeerAddress(b.getIdentity(), '127.0.0.1:${b.boundPort}');
+    await a.send(b.getIdentity(), Uint8List.fromList([1]));
     await untilBothReachable(a, b);
   }
 
@@ -128,11 +128,11 @@ void main() {
     final stranger = await identityFromSeed(0xa5);
     await connect(a, b);
 
-    expect(a.peerUnderlays(b.identity.publicKey), [Underlay.wan]);
-    expect(b.peerUnderlays(a.identity.publicKey), [Underlay.wan]);
-    expect(a.wan.observedPeerAddress(b.identity.publicKey),
+    expect(a.peerUnderlays(b.getIdentity()), [Underlay.wan]);
+    expect(b.peerUnderlays(a.getIdentity()), [Underlay.wan]);
+    expect(a.wan.observedPeerAddress(b.getIdentity()),
         '127.0.0.1:${b.boundPort}');
-    expect(b.wan.observedPeerAddress(a.identity.publicKey),
+    expect(b.wan.observedPeerAddress(a.getIdentity()),
         '127.0.0.1:${a.boundPort}',
         reason: 'the address the layer observes, which no one supplied');
 
@@ -154,7 +154,7 @@ void main() {
 
     // Spec ip.tex §Connectivity and Address: the observed address is recorded.
     expect(
-      b.store.state.knownPeers.known[hexOf(a.identity.publicKey)],
+      b.store.state.knownPeers.known[hexOf(a.getIdentity())],
       '127.0.0.1:${a.boundPort}',
     );
   }, timeout: Timeout.none);
@@ -167,17 +167,17 @@ void main() {
     final a = await node(0xa9);
     final b = await node(0xaa);
     await connect(a, b);
-    final aHex = hexOf(a.identity.publicKey);
+    final aHex = hexOf(a.getIdentity());
     final observed = '127.0.0.1:${a.boundPort}';
 
-    b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:9');
+    b.wan.putPeerAddress(a.getIdentity(), '127.0.0.1:9');
     expect(b.store.state.knownPeers.known[aHex], '127.0.0.1:9');
 
     final received = Completer<void>();
     b.onMessageReceived = (sender, payload, messageId, underlay) {
       if (!received.isCompleted) received.complete();
     };
-    await a.send(b.identity.publicKey, Uint8List.fromList([2]));
+    await a.send(b.getIdentity(), Uint8List.fromList([2]));
     await received.future;
 
     expect(b.store.state.knownPeers.known[aHex], observed);
@@ -258,8 +258,8 @@ void main() {
       HeadlessGrassrootsNetwork receiver,
     ) async {
       caller.wan.putPeerAddress(
-          receiver.identity.publicKey, '127.0.0.1:${receiver.boundPort}');
-      await caller.send(receiver.identity.publicKey, Uint8List.fromList([9]));
+          receiver.getIdentity(), '127.0.0.1:${receiver.boundPort}');
+      await caller.send(receiver.getIdentity(), Uint8List.fromList([9]));
     }
 
     /// [caller] dials [receiver], and [receiver] answers: both sides report
@@ -280,10 +280,10 @@ void main() {
       await dial(stranger, receiver);
       await Future<void>.delayed(const Duration(seconds: 6));
       expect(
-          receiver.isPeerReachable(stranger.identity.publicKey) &&
-              stranger.isPeerReachable(receiver.identity.publicKey),
+          receiver.isPeerReachable(stranger.getIdentity()) &&
+              stranger.isPeerReachable(receiver.getIdentity()),
           isFalse);
-      expect(receiver.isPeerReachable(stranger.identity.publicKey), isFalse);
+      expect(receiver.isPeerReachable(stranger.getIdentity()), isFalse);
     });
 
     test('a key given by putKnownPeer is answered', () async {
@@ -291,9 +291,9 @@ void main() {
       if (sodiumUnavailable != null) return;
       final receiver = await node(0xc3);
       final caller = await node(0xc4);
-      receiver.putKnownPeer(caller.identity.publicKey);
+      receiver.putKnownPeer(caller.getIdentity());
       await answered(caller, receiver);
-      expect(receiver.peerUnderlays(caller.identity.publicKey), [Underlay.wan]);
+      expect(receiver.peerUnderlays(caller.getIdentity()), [Underlay.wan]);
     }, timeout: Timeout.none);
 
     test('a layer marked as a rendezvous server answers both', () async {
@@ -305,13 +305,13 @@ void main() {
           rendezvousServer: true);
       final stranger = await node(0xc6);
       final known = await node(0xc7);
-      server.putKnownPeer(known.identity.publicKey);
+      server.putKnownPeer(known.getIdentity());
       // An unknown key, and a key given by putKnownPeer.
       await answered(stranger, server);
       await answered(known, server);
       expect(
           server.store.state.knownPeers.known
-              .containsKey(_hex(stranger.identity.publicKey)),
+              .containsKey(_hex(stranger.getIdentity())),
           isFalse,
           reason: 'the stranger is answered as a rendezvous server answers, '
               'not by becoming known');

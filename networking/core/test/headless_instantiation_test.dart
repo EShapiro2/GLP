@@ -99,15 +99,15 @@ void main() {
     Future<void> dial(HeadlessGrassrootsNetwork layer,
         HeadlessGrassrootsNetwork caller, Completer<void> received) async {
       layer.onMessageReceived = (sender, payload, _, underlay) {
-        if (_hex(sender) == _hex(caller.identity.publicKey) &&
+        if (_hex(sender) == _hex(caller.getIdentity()) &&
             underlay == Underlay.wan &&
             !received.isCompleted) {
           received.complete();
         }
       };
       caller.wan.putPeerAddress(
-          layer.identity.publicKey, '127.0.0.1:${layer.boundPort}');
-      await caller.send(layer.identity.publicKey, Uint8List.fromList([7]));
+          layer.getIdentity(), '127.0.0.1:${layer.boundPort}');
+      await caller.send(layer.getIdentity(), Uint8List.fromList([7]));
     }
 
     /// [caller] dials [layer] with a payload; whether, once [layer] receives
@@ -117,8 +117,8 @@ void main() {
       final received = Completer<void>();
       await dial(layer, caller, received);
       await received.future;
-      return layer.isPeerReachable(caller.identity.publicKey) &&
-          caller.isPeerReachable(layer.identity.publicKey);
+      return layer.isPeerReachable(caller.getIdentity()) &&
+          caller.isPeerReachable(layer.getIdentity());
     }
 
     test(
@@ -150,10 +150,10 @@ void main() {
       expect(await stranger.start(), isTrue);
 
       expect(await sessionCompletes(server, stranger), isTrue);
-      expect(server.peerUnderlays(stranger.identity.publicKey), [Underlay.wan]);
+      expect(server.peerUnderlays(stranger.getIdentity()), [Underlay.wan]);
       expect(
           server.store.state.knownPeers.known
-              .containsKey(_hex(stranger.identity.publicKey)),
+              .containsKey(_hex(stranger.getIdentity())),
           isFalse,
           reason: 'answered as a rendezvous server answers, not as a known '
               'peer');
@@ -187,8 +187,8 @@ void main() {
       await dial(server, stranger, received);
       await Future<void>.delayed(const Duration(seconds: 6));
       expect(received.isCompleted, isFalse);
-      expect(server.isPeerReachable(stranger.identity.publicKey), isFalse);
-      expect(stranger.isPeerReachable(server.identity.publicKey), isFalse);
+      expect(server.isPeerReachable(stranger.getIdentity()), isFalse);
+      expect(stranger.isPeerReachable(server.getIdentity()), isFalse);
     });
 
     test('marked without a server address, the constructor refuses it',
@@ -305,7 +305,7 @@ void main() {
 
     final address = await reflected.future;
     expect(address,
-        server.wan.observedPeerAddress(agent.identity.publicKey),
+        server.wan.observedPeerAddress(agent.getIdentity()),
         reason: 'the address the server observes the agent at');
     expect(address, endsWith(':${agent.boundPort}'));
     expect(agent.wan.getPublicAddress(), address);

@@ -272,7 +272,7 @@ Set<String> computeStaleBlePeerPubkeys({
 /// ```
 class GrassrootsNetwork {
   /// Our identity (from GSG layer)
-  final GrassrootsIdentity identity;
+  final GrassrootsIdentity _identity;
 
   /// Configuration
   final GrassrootsNetworkConfig config;
@@ -849,21 +849,21 @@ class GrassrootsNetwork {
   /// Instantiate the layer with everything it needs to run (spec
   /// §Instantiation: "The layer is created once per agent, with everything it
   /// needs to run; nothing in it changes for the layer's lifetime"): the key
-  /// pair ([identity]), the [underlays] it runs, the platform attestation or
+  /// pair (`identity`), the [underlays] it runs, the platform attestation or
   /// none, and the platform geofencing or none.  A server's listen port and
   /// static public address are the headless profile's alone (GNA, 2026-10-11,
   /// Q4).  The Redux [store], [sodium], the host-address reader and the
   /// store of the fair-delivery queue are implementation arguments; the
   /// queue's store is the application's SharedPreferences unless another is
   /// given ([SharedPreferencesOutboundQueueStore]), and the queue persisted
-  /// there for [identity] is read back and replayed (GNA §2.11).
+  /// there for this layer's identity is read back and replayed (GNA §2.11).
   ///
   /// To change the underlays, an embedding disposes the layer and
   /// instantiates another; there are no toggles.  The rendezvous servers are
   /// not given here: GLP declares and removes them while the layer runs, on
   /// the [wan] sub-object (GNA §4.2).
   GrassrootsNetwork({
-    required this.identity,
+    required GrassrootsIdentity identity,
     required Set<Underlay> underlays,
     PlatformAttestation? platformAttestation,
     PlaceGeofenceBackend? placeGeofenceBackend,
@@ -873,7 +873,8 @@ class GrassrootsNetwork {
     LocalHostAddressReader? localHostAddressReader,
     Future<LocalNetwork> Function()? localNetworkReader,
     OutboundQueueStore? outboundQueueStore,
-  })  : underlays = Set.unmodifiable(underlays),
+  })  : _identity = identity,
+        underlays = Set.unmodifiable(underlays),
         _readLocalHostAddresses =
             localHostAddressReader ?? readLocalHostAddresses,
         _readLocalNetwork = localNetworkReader ?? readLocalNetwork,
@@ -881,9 +882,9 @@ class GrassrootsNetwork {
         _places = placeGeofenceBackend == null
             ? null
             : PlaceRegistry(backend: placeGeofenceBackend) {
-    _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
+    _protocolHandler = ProtocolHandler(identity: _identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
-    _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
+    _noiseSessions = NoiseSessionManager(identity: _identity, sodium: sodium);
     _messageRouter = MessageRouter(
       store: store,
       protocolHandler: _protocolHandler,
@@ -892,7 +893,7 @@ class GrassrootsNetwork {
     _setupRouterCallbacks();
     _persistedQueue = PersistentOutboundQueue(
       store: outboundQueueStore ?? const SharedPreferencesOutboundQueueStore(),
-      ownerHex: _pubkeyToHex(identity.publicKey),
+      ownerHex: _pubkeyToHex(_identity.publicKey),
     );
     _restoreOutboundQueue();
 
@@ -937,7 +938,10 @@ class GrassrootsNetwork {
   /// The agent's own public key — its globally unique identity. Spec
   /// `docs/GLP_Networking_API/sections/api.tex` §Identity: `getIdentity() ->
   /// PubKey`. The private key is held internally and never returned here.
-  Uint8List getIdentity() => identity.publicKey;
+  /// The agent's own public key — its globally unique identity. Spec
+  /// `docs/GLP_Networking_API/sections/api.tex` §Identity: `getIdentity() ->
+  /// PubKey`. The private key is held internally and never returned here.
+  Uint8List getIdentity() => _identity.publicKey;
 
   /// The nearby Grassroots agents on [underlay] (GNA §3.1, Discovery,
   /// `getPeers() → List<Peer>`), behind [ProximityApi.getPeers]: the peers
@@ -1354,7 +1358,7 @@ class GrassrootsNetwork {
       // The advertisement carries the recognition token and no name (GNA
       // §3.1): the identity is the key pair (§2.1).
       _bleService = BleTransportService(
-        identity: identity,
+        identity: _identity,
         store: store,
       );
 
@@ -1394,7 +1398,7 @@ class GrassrootsNetwork {
 
       // Create UDP transport service
       _udpService = UdpTransportService(
-        identity: identity,
+        identity: _identity,
         store: store,
         protocolHandler: _protocolHandler,
         sessionOf: _ipSessionFor,
@@ -2138,7 +2142,7 @@ class GrassrootsNetwork {
       debugPrint('[lan] no bound UDP port; LAN discovery not started');
       return;
     }
-    final lan = LanDiscoveryService(identity: identity)
+    final lan = LanDiscoveryService(identity: _identity)
       ..onInstanceResolved = _onLanInstanceResolved;
     _lanDiscovery = lan;
     debugLanDiscoveryStarts++;
@@ -2232,7 +2236,7 @@ class GrassrootsNetwork {
     if (session != null && (_udpService?.hasPath(session, pubkeyHex) ?? false)) {
       return;
     }
-    final myHex = _pubkeyToHex(identity.publicKey);
+    final myHex = _pubkeyToHex(_identity.publicKey);
     if (myHex.compareTo(pubkeyHex) < 0) {
       unawaited(_dialLanMatch(pubkeyHex, parsed));
     } else {
@@ -3355,15 +3359,16 @@ class GrassrootsNetwork {
     // number (GNA §2.6).
     AttestationEvidence? evidence;
     try {
-      final attestation = await _attestation.attestationFor(identity.publicKey);
+      final attestation =
+          await _attestation.attestationFor(_identity.publicKey);
       final version =
           attestation == null ? null : await _attestation.applicationVersion();
       final signature = version == null
           ? null
           : await _attestation.signSessionDigest(
-              identityPublicKey: identity.publicKey,
+              identityPublicKey: _identity.publicKey,
               digest: attestationDigest(
-                identityPublicKey: identity.publicKey,
+                identityPublicKey: _identity.publicKey,
                 version: version,
                 handshakeHash: handshakeHash,
               ),
@@ -4650,7 +4655,7 @@ class GrassrootsNetwork {
     final cutoff =
         DateTime.now().subtract(GrassrootsIdentity.bleSlotDuration * 2);
     final known = store.state.knownPeers.known.keys.map(_hexToBytes).toList();
-    final myHex = _pubkeyToHex(identity.publicKey);
+    final myHex = _pubkeyToHex(_identity.publicKey);
     final dials = <Future<void>>[];
     for (final entry in _lanResolvedInstances.entries) {
       if (entry.value.at.isBefore(cutoff)) continue;

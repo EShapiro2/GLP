@@ -173,10 +173,10 @@ void main() {
     final caller = await node(0x51);
     final callee = await node(0x52);
     final relay = await relayTo(callee);
-    callee.putKnownPeer(caller.identity.publicKey);
-    caller.wan.putPeerAddress(callee.identity.publicKey, relay.address);
+    callee.putKnownPeer(caller.getIdentity());
+    caller.wan.putPeerAddress(callee.getIdentity(), relay.address);
 
-    await caller.send(callee.identity.publicKey, Uint8List.fromList([1]));
+    await caller.send(callee.getIdentity(), Uint8List.fromList([1]));
     await untilBothReachable(caller, callee);
     // ANNOUNCE is sent inside the session.
     await relay.carriedWhere(() =>
@@ -197,15 +197,15 @@ void main() {
     final stranger = await node(0x53);
     final callee = await node(0x54);
     final relay = await relayTo(callee);
-    stranger.wan.putPeerAddress(callee.identity.publicKey, relay.address);
+    stranger.wan.putPeerAddress(callee.getIdentity(), relay.address);
 
-    await stranger.send(callee.identity.publicKey, Uint8List.fromList([2]));
+    await stranger.send(callee.getIdentity(), Uint8List.fromList([2]));
     await Future<void>.delayed(const Duration(seconds: 4));
     expect(relay.kinds(fromCaller: true), contains(ik1));
     expect(relay.types(fromCaller: false), isEmpty,
         reason: 'the callee sends nothing to a key it does not know');
-    expect(callee.isPeerReachable(stranger.identity.publicKey), isFalse);
-    expect(stranger.isPeerReachable(callee.identity.publicKey), isFalse);
+    expect(callee.isPeerReachable(stranger.getIdentity()), isFalse);
+    expect(stranger.isPeerReachable(callee.getIdentity()), isFalse);
   });
 
   /// Send [payload] as one datagram to [layer] from a socket of our own, and
@@ -230,7 +230,7 @@ void main() {
     final knownId = await identityFromSeed(0x56);
     callee.putKnownPeer(knownId.publicKey);
     final xx1 = (await NoiseSessionManager(identity: knownId, sodium: sodium!)
-        .startHandshake(PeerTransport.wan, callee.identity.publicKey,
+        .startHandshake(PeerTransport.wan, callee.getIdentity(),
             pattern: NoisePattern.xx))!;
     final datagram =
         GrassrootsPacket(type: PacketType.noiseHandshake, payload: xx1)
@@ -264,9 +264,9 @@ void main() {
         rendezvousServer: true);
     final relay = await relayTo(server);
     final client = await node(0x5a);
-    client.wan.putPeerAddress(server.identity.publicKey, relay.address);
+    client.wan.putPeerAddress(server.getIdentity(), relay.address);
 
-    await client.send(server.identity.publicKey, Uint8List.fromList([3]));
+    await client.send(server.getIdentity(), Uint8List.fromList([3]));
     await untilBothReachable(client, server);
     expect(relay.kinds(fromCaller: true).toSet(), {ik1});
     expect(relay.kinds(fromCaller: false).toSet(), {ik2});
@@ -284,7 +284,7 @@ void main() {
         rendezvousServer: true);
     final relay = await relayTo(server);
     final client = await node(0x5c, rendezvousServers: [
-      RendezvousServer(relay.address, server.identity.publicKey),
+      RendezvousServer(relay.address, server.getIdentity()),
     ]);
     await untilBothReachable(client, server);
     expect(relay.kinds(fromCaller: true).toSet(), {ik1});
@@ -298,8 +298,8 @@ void main() {
     final caller = await node(0x5d);
     final callee = await node(0x5e);
     final relay = await relayTo(callee);
-    callee.putKnownPeer(caller.identity.publicKey);
-    caller.wan.putPeerAddress(callee.identity.publicKey, relay.address);
+    callee.putKnownPeer(caller.getIdentity());
+    caller.wan.putPeerAddress(callee.getIdentity(), relay.address);
 
     // The caller's attestation fragments are lost until the callee has sent
     // message 2 again.
@@ -308,7 +308,7 @@ void main() {
         d.type == PacketType.secureAttestationFragment.value &&
         relay.kinds(fromCaller: false).where((k) => k == ik2).length < 2;
 
-    await caller.send(callee.identity.publicKey, Uint8List.fromList([4]));
+    await caller.send(callee.getIdentity(), Uint8List.fromList([4]));
     await untilBothReachable(caller, callee);
     final sent = relay.kinds(fromCaller: false).where((k) => k == ik2).length;
     expect(sent, greaterThan(1),
@@ -351,7 +351,7 @@ void main() {
 
     // This version's IK message 1 bearing version 6 is refused too.
     final ik = (await NoiseSessionManager(identity: v6Id, sodium: sodium!)
-        .startHandshake(PeerTransport.wan, callee.identity.publicKey,
+        .startHandshake(PeerTransport.wan, callee.getIdentity(),
             pattern: NoisePattern.ik))!;
     final relabelled = Uint8List.fromList(ik)..setRange(0, 2, [0, 6]);
     expect(
