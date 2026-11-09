@@ -180,6 +180,95 @@ void main() {
         ['connected $serverHex wan null', 'disconnected $serverHex wan']);
   }, timeout: Timeout.none);
 
+  test(
+      'ending the last rendezvous session clears the public address it '
+      'reflected and reports the loss, once', () async {
+    if (skipped()) return;
+    final (server, _, _) = await rendezvousServer(0xb1);
+    final (layer, _) = await agent(0xb2);
+    final changes = <(String?, String?)>[];
+    final learned =
+        untilAddressChanges(layer, changes, () => changes.isNotEmpty);
+    layer.wan.putRendezvousServer(
+        server.identity.publicKey, '127.0.0.1:${server.boundPort}');
+    await learned;
+    final address = changes.single.$2!;
+    expect(changes.single, (null, address),
+        reason: 'the first reflected address is reported from none');
+    expect(layer.wan.getPublicAddress(), address);
+
+    // The server's session is the only rendezvous session: ending it loses
+    // the address.
+    final lost = untilAddressChanges(layer, changes, () => changes.length == 2);
+    layer.wan.removeRendezvousServer(server.identity.publicKey);
+    await lost;
+    expect(changes, [(null, address), (address, null)],
+        reason: 'the loss is reported once');
+    expect(layer.wan.getPublicAddress(), isNull);
+  }, timeout: Timeout.none);
+
+  test(
+      'with two rendezvous sessions, ending one reports nothing and ending '
+      'the last reports the loss', () async {
+    if (skipped()) return;
+    final (first, _, _) = await rendezvousServer(0xb3);
+    final (second, _, _) = await rendezvousServer(0xb4);
+    final (layer, _) = await agent(0xb5);
+    final firstKey = first.identity.publicKey;
+    final secondKey = second.identity.publicKey;
+    final changes = <(String?, String?)>[];
+    final learned =
+        untilAddressChanges(layer, changes, () => changes.isNotEmpty);
+    layer.wan.putRendezvousServer(firstKey, '127.0.0.1:${first.boundPort}');
+    layer.wan.putRendezvousServer(secondKey, '127.0.0.1:${second.boundPort}');
+    await until(
+        [layer],
+        () =>
+            layer.isPeerReachable(firstKey) &&
+            layer.isPeerReachable(secondKey));
+    await learned;
+    final address = changes.single.$2!;
+
+    // The second session still stands: nothing is reported.
+    layer.wan.removeRendezvousServer(firstKey);
+    expect(changes.single, (null, address));
+    expect(layer.wan.getPublicAddress(), address);
+    expect(layer.isPeerReachable(secondKey), isTrue);
+
+    final lost = untilAddressChanges(layer, changes, () => changes.length == 2);
+    layer.wan.removeRendezvousServer(secondKey);
+    await lost;
+    expect(changes, [(null, address), (address, null)]);
+    expect(layer.wan.getPublicAddress(), isNull);
+  }, timeout: Timeout.none);
+
+  test(
+      'a rendezvous session that reflects an address after a loss reports it '
+      'as a first address', () async {
+    if (skipped()) return;
+    final (server, _, _) = await rendezvousServer(0xb6);
+    final (layer, _) = await agent(0xb7);
+    final serverKey = server.identity.publicKey;
+    final changes = <(String?, String?)>[];
+    final learned =
+        untilAddressChanges(layer, changes, () => changes.isNotEmpty);
+    layer.wan.putRendezvousServer(serverKey, '127.0.0.1:${server.boundPort}');
+    await learned;
+    final address = changes.single.$2!;
+    final lost = untilAddressChanges(layer, changes, () => changes.length == 2);
+    layer.wan.removeRendezvousServer(serverKey);
+    await lost;
+    expect(layer.wan.getPublicAddress(), isNull);
+
+    // Declared again: the server reflects the address once more.
+    final relearned =
+        untilAddressChanges(layer, changes, () => changes.length == 3);
+    layer.wan.putRendezvousServer(serverKey, '127.0.0.1:${server.boundPort}');
+    await relearned;
+    expect(changes, [(null, address), (address, null), (null, address)]);
+    expect(layer.wan.getPublicAddress(), address);
+  }, timeout: Timeout.none);
+
   test('a declaration with an unparseable address is refused', () async {
     if (skipped()) return;
     final (layer, _) = await agent(0xa8);
@@ -189,6 +278,21 @@ void main() {
     expect(() => layer.wan.putRendezvousServer(Uint8List(31), '127.0.0.1:1'),
         throwsArgumentError);
   });
+}
+
+/// Records each change of [layer]'s public address into [changes], and
+/// completes once [holds] is true, checked after each change (no clock).
+Future<void> untilAddressChanges(
+  HeadlessGrassrootsNetwork layer,
+  List<(String?, String?)> changes,
+  bool Function() holds,
+) {
+  final done = Completer<void>();
+  layer.wan.onConnectivityStatusChanged = (oldAddress, newAddress) {
+    changes.add((oldAddress, newAddress));
+    if (!done.isCompleted && holds()) done.complete();
+  };
+  return done.future;
 }
 
 String _hex(Uint8List bytes) =>

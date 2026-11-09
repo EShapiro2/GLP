@@ -503,6 +503,31 @@ class HeadlessGrassrootsNetwork {
     wan.onConnectivityStatusChanged?.call(previous, reflected);
   }
 
+  /// Whether a session with a declared rendezvous server stands.
+  bool _rendezvousSessionStands() {
+    for (final server in _rendezvousServers.values) {
+      if (_noiseSessions.hasSession(PeerTransport.wan, server.publicKey)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// The address a reflection gave is lost with the last live session with a
+  /// declared rendezvous server: this profile has no platform connectivity
+  /// event, so the teardown of that session is the fact it observes. Called
+  /// after a session ends, with [standing] whether a rendezvous session stood
+  /// before it ended; while one stays live nothing is reported.
+  void _onRendezvousSessionsEnded(bool standing) {
+    if (!standing || _rendezvousSessionStands()) return;
+    final previous = _reflectedAddress;
+    if (previous == null) return;
+    _reflectedAddress = null;
+    debugPrint('[headless][reflect] public address $previous lost with its '
+        'last rendezvous session');
+    wan.onConnectivityStatusChanged?.call(previous, null);
+  }
+
   /// On a rendezvous server: reflect to [pubkey] the address its session is
   /// observed at, so that an agent learns its public address from the server
   /// (spec §Rendezvous Server, "Address observation"; §Connectivity and
@@ -582,6 +607,7 @@ class HeadlessGrassrootsNetwork {
   /// arrives.
   void _endSession(Uint8List pubkey) {
     final hex = _hex(pubkey);
+    final standing = _rendezvousSessionStands();
     _handshakeRetransmits.remove(hex)?.cancel();
     _attestationDeadlines.remove(hex)?.timer.cancel();
     _attestedOn.remove(hex);
@@ -596,6 +622,7 @@ class HeadlessGrassrootsNetwork {
     if (_reachablePeers.remove(hex)) {
       onPeerDisconnected?.call(pubkey, Underlay.wan);
     }
+    _onRendezvousSessionsEnded(standing);
   }
 
   /// Declare the rendezvous server holding [pubkey] at [address] (GNA §4.2,
@@ -630,8 +657,11 @@ class HeadlessGrassrootsNetwork {
   /// declared does nothing.  The heartbeat dials it no more.  Behind
   /// [WanApi.removeRendezvousServer].
   void _removeRendezvousServer(Uint8List pubkey) {
-    if (_rendezvousServers.remove(_hex(pubkey)) == null) return;
+    if (!_rendezvousServers.containsKey(_hex(pubkey))) return;
+    // The session ends while the server is still declared, so that its
+    // teardown counts as a rendezvous session's end (see _endSession).
     _endSession(pubkey);
+    _rendezvousServers.remove(_hex(pubkey));
   }
 
   /// Inform the layer of a peer's current public `ip:port` (spec
@@ -837,10 +867,12 @@ class HeadlessGrassrootsNetwork {
     _holePunchServices.clear();
     await _connectionSub?.cancel();
     _connectionSub = null;
+    final standing = _rendezvousSessionStands();
     _noiseSessions.resetTransport(PeerTransport.wan);
     for (final hex in _reachablePeers.toList()) {
       onPeerDisconnected?.call(_bytes(hex), Underlay.wan);
     }
+    _onRendezvousSessionsEnded(standing);
     _reachablePeers.clear();
     _lastHeard.clear();
     _attestedOn.clear();
@@ -1323,10 +1355,12 @@ class HeadlessGrassrootsNetwork {
         final identified = UdpTransportService.parsePathId(event.peerId);
         if (identified != null) {
           final pubkey = _bytes(identified.pubkeyHex);
+          final standing = _rendezvousSessionStands();
           _noiseSessions.reset(PeerTransport.wan, pubkey);
           if (_reachablePeers.remove(identified.pubkeyHex)) {
             onPeerDisconnected?.call(pubkey, Underlay.wan);
           }
+          _onRendezvousSessionsEnded(standing);
         }
       }
     });
@@ -1565,6 +1599,7 @@ class HeadlessGrassrootsNetwork {
   /// or ours undeliverable on it. The disconnect event drops reachability
   /// where the peer had it.
   void _tearDownSession(Uint8List pubkey) {
+    final standing = _rendezvousSessionStands();
     _attestedOn.remove(_hex(pubkey));
     _noiseSessions.reset(PeerTransport.wan, pubkey);
     store.dispatch(PeerIpSessionChangedAction(
@@ -1573,6 +1608,7 @@ class HeadlessGrassrootsNetwork {
       connected: false,
     ));
     unawaited(_udpService?.disconnectFromPeer(_path(pubkey)));
+    _onRendezvousSessionsEnded(standing);
   }
 
   /// A peer's attestation arrived on the session whose handshake hash is
