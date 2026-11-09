@@ -367,4 +367,36 @@ void main() {
     expect(everLive, isFalse,
         reason: 'a UDP path with no session is no authenticated connection');
   }, timeout: Timeout.none);
+
+  test(
+      'a message whose attempts are exhausted on a live session tears that '
+      'session down, feeding onPeerDisconnected, and the message stays queued',
+      () async {
+    final (server, _, _) = await headlessServer(0xa1);
+    final (node, events) = await startBare(await identityFromSeed(0xa2));
+    final serverPk = server.identity.publicKey;
+    node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
+    await reachability(node, serverPk);
+
+    // The server goes silent: no acknowledgment can come for the message.
+    await server.stop();
+    final sent = node.send(serverPk, Uint8List.fromList([7]));
+    expect(node.isPeerReachable(serverPk), isTrue,
+        reason: 'the session stands before the exhaustion');
+    node.debugExhaustUdpAttempts(serverPk);
+    // Reported at once, where the silence sweep would take two announce
+    // intervals.
+    expect(node.isPeerReachable(serverPk), isFalse,
+        reason: 'exhaustion tears the session down');
+
+    await reachability(node, serverPk, reachable: false);
+    expect(events, contains('disconnected ${hex(serverPk)} wan'));
+    await sent;
+    // send returns once the message is saved and the failed attempt queues it
+    // afterwards: the hold is awaited on the store.
+    await stateWhere(
+        node.store, (_) => node.queuedMessageCountForPeer(serverPk) == 1);
+    expect(node.queuedMessageCountForPeer(serverPk), 1,
+        reason: 'the exhausted message is kept for the next path');
+  }, timeout: Timeout.none);
 }

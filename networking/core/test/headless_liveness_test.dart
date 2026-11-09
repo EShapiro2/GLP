@@ -36,9 +36,10 @@ void main() {
     }
   });
 
-  Future<HeadlessGrassrootsNetwork> node(int fill) async {
+  Future<HeadlessGrassrootsNetwork> node(int fill,
+      {OutboundQueueStore? queueStore}) async {
     final layer = HeadlessGrassrootsNetwork(
-      outboundQueueStore: MemoryOutboundQueueStore(),
+      outboundQueueStore: queueStore ?? MemoryOutboundQueueStore(),
       identity: await GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
@@ -145,6 +146,44 @@ void main() {
     expect(clock.elapsed,
         greaterThan(HeadlessGrassrootsNetwork.heartbeatInterval),
         reason: 'not before the silence has lasted');
+  }, timeout: Timeout.none);
+
+  test(
+      'a message whose attempts are exhausted on a live session tears that '
+      'session down, feeding onPeerDisconnected, and the message stays queued',
+      () async {
+    if (skip()) return;
+    final queue = MemoryOutboundQueueStore();
+    final a = await node(0xd1, queueStore: queue);
+    final b = await node(0xd2);
+    final atA = <String>[];
+    a.onPeerDisconnected = (pk, u) => atA.add('down');
+    await connect(a, b);
+
+    // b goes silent: no acknowledgment can come for the message.
+    await b.stop();
+    final messageId =
+        await a.send(b.identity.publicKey, Uint8List.fromList([9]));
+    expect(messageId, isNotNull);
+    final live = () =>
+        a.store.state.peers.getPeerByPubkey(b.identity.publicKey)
+            ?.hasLiveUdpConnection;
+    expect(live(), isTrue, reason: 'the session stands before the exhaustion');
+    a.debugExhaustAttempts(b.identity.publicKey);
+    // The teardown is in the store at once, where the silence sweep would take
+    // two heartbeat intervals.
+    expect(live(), isFalse, reason: 'exhaustion tears the session down');
+
+    await until([a], () => atA.contains('down'));
+    expect(a.isPeerReachable(b.identity.publicKey), isFalse);
+    final ownerHex = a.identity.publicKey
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+    expect(a.debugQueuedMessageIds(b.identity.publicKey), contains(messageId),
+        reason: 'the exhausted message is back in the replay queue');
+    final queued = await queue.load(ownerHex);
+    expect(queued.map((e) => e.messageId), contains(messageId),
+        reason: 'and kept in the persisted queue');
   }, timeout: Timeout.none);
 
   test('a live idle session is kept by the heartbeat\'s ANNOUNCE', () async {
