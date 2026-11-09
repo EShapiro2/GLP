@@ -1126,7 +1126,7 @@ check "the canonical platform of the social graph compiled to GLP, its agent/5 t
 bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
 st=$?
 [ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/GSG/interface.glp" &&
-    grep -q "^  type('Request', \[propose('Proposal'), refresh\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Request', \[propose('Proposal')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Approval', \[approval('Asking', 'List'('Word'), dual('YesNo'))\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Output', \[view('Key', 'List'('Atom'), 'List'('Key'), 'List'('Approved'), 'List'('Tab')), refused('Approved', 'Key', 'Reason')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Key', \['String'\]),$" "$CVA/interface.glp" &&
@@ -1136,7 +1136,7 @@ st=$?
     grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, greet(" "$CVA/interface.glp" &&
     grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 3),$" "$CVA/interface.glp" &&
     [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
-check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal) or refresh, Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP e22e2ad, \"The compilation\")" $?
+check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, \"The compilation\")" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
 bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
 st=$?
