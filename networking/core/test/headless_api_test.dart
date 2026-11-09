@@ -75,6 +75,31 @@ void main() {
     if (sodiumUnavailable != null) markTestSkipped(sodiumUnavailable!);
   }
 
+  test('removeKnownPeer clears the recorded address, not resurrected by a re-supply',
+      () async {
+    skipWithoutSodium();
+    if (sodiumUnavailable != null) return;
+    final layer = await node(0x61, start: false);
+    final peer = await identityFromSeed(0x62);
+    final peerHex =
+        peer.publicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+    layer.wan.putPeerAddress(peer.publicKey, '203.0.113.5:4001');
+    expect(layer.store.state.peers.getPeerByPubkeyHex(peerHex)?.udpAddress,
+        equals('203.0.113.5:4001'));
+
+    layer.removeKnownPeer(peer.publicKey);
+
+    expect(layer.store.state.knownPeers.addressOf(peerHex), isNull);
+    expect(layer.store.state.peers.getPeerByPubkeyHex(peerHex)?.udpAddress,
+        isNull);
+
+    layer.putKnownPeer(peer.publicKey);
+    expect(layer.store.state.knownPeers.addressOf(peerHex), isNull);
+    expect(layer.store.state.peers.getPeerByPubkeyHex(peerHex)?.udpAddress,
+        isNull);
+  });
+
   test('sign and verify are the layer\'s, under its key', () async {
     skipWithoutSodium();
     if (sodiumUnavailable != null) return;

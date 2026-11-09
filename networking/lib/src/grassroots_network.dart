@@ -1038,6 +1038,9 @@ class GrassrootsNetwork {
   /// longer reconnects to it.
   void removeKnownPeer(Uint8List pubkey) {
     store.dispatch(KnownPeerRemovedAction(_pubkeyToHex(pubkey)));
+    // Clear the peer's recorded address too (an empty address clears it), so
+    // neither a send nor a re-supplied key dials it again.
+    store.dispatch(AssociateUdpAddressAction(publicKey: pubkey, address: ''));
   }
 
   // ===== Signing primitives =====
