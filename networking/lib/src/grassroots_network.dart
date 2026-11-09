@@ -938,6 +938,39 @@ class GrassrootsNetwork {
         : observedAddressString(remote.ip, remote.port);
   }
 
+  /// Record the address at which the layer observes a known peer's
+  /// authenticated WAN session as that peer's recorded WAN address (spec
+  /// `docs/GLP_Networking_API/sections/ip.tex` §Connectivity and Address: "the
+  /// latest, whether GLP supplied it or the layer observed it, replaces the
+  /// earlier"). Recorded through the path [_putPeerAddress] uses, so it is
+  /// persisted the same way. Only a key already in the known set is recorded
+  /// (never created here), and only a WAN session: a LAN contact is never the
+  /// WAN address.
+  ///
+  /// Nothing is recorded before the first read of the local network
+  /// ([_localNetworkRead]): until then [_ipUnderlayFor] classifies every
+  /// address as WAN, so a LAN session would be recorded as the WAN address.
+  void _recordObservedWanAddress(Uint8List pubkey) {
+    if (!_localNetworkRead) return;
+    final pubkeyHex = _pubkeyToHex(pubkey);
+    if (!store.state.knownPeers.known.containsKey(pubkeyHex)) return;
+    if (!_noiseSessions.hasSession(PeerTransport.udp, pubkey)) return;
+    if (_udpUnderlayOf(pubkey) != Underlay.wan) return;
+    final observed = _observedPeerAddress(pubkey);
+    final parsed = observed == null ? null : parseAddressString(observed);
+    if (parsed == null) return;
+    final address = parsed.toAddressString();
+    if (store.state.knownPeers.known[pubkeyHex] == address) return;
+    store.dispatch(AssociateUdpAddressAction(
+      publicKey: pubkey,
+      address: address,
+    ));
+    store.dispatch(KnownPeerAddressUpdatedAction(
+      pubkeyHex: pubkeyHex,
+      udpAddress: address,
+    ));
+  }
+
   /// Feed the networking layer a peer's current public `ip:port`, learned at
   /// the GLP level (from a rendezvous agent or a BLE-adjacent friend). The
   /// layer records it in its dial book for [send] and reconnection, creating a
@@ -1730,6 +1763,11 @@ class GrassrootsNetwork {
     return results.any((result) => result);
   }
 
+  /// Whether the attached local network has been read at least once. The
+  /// store cannot tell an unread network from a read one with none attached:
+  /// both are [LocalNetwork.none].
+  bool _localNetworkRead = false;
+
   /// Read the attached local network and, if it differs from the held one,
   /// record it and tell the runtime.
   ///
@@ -1751,6 +1789,7 @@ class GrassrootsNetwork {
   /// connection type reports, restart nothing here.
   Future<void> _refreshLocalNetwork() async {
     final network = await _readLocalNetwork();
+    _localNetworkRead = true;
     final previous = store.state.localNetwork.network;
     if (network == previous) return;
 
@@ -3089,6 +3128,7 @@ class GrassrootsNetwork {
             connected: true,
           ),
         );
+        _recordObservedWanAddress(pubkey);
         break;
       case PeerTransport.bleDirect:
         store.dispatch(PeerBleAuthenticatedAction(pubkey));
@@ -3912,6 +3952,7 @@ class GrassrootsNetwork {
       final pubkeyHex =
           senderPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
       _udpService?.mapIncomingConnectionToPubkey(udpPeerId, pubkeyHex);
+      _recordObservedWanAddress(senderPubkey);
     };
 
     _messageRouter.onNoiseHandshakeReceived =

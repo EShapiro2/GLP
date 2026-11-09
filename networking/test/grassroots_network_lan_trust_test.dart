@@ -321,6 +321,7 @@ void main() {
         List<Underlay> reachable,
         List<ProximityUnderlay> nearby,
         String? observed,
+        String? recorded,
         String callerAddress,
       })> receiverReportOfKnownCaller({
     required int seed,
@@ -407,6 +408,8 @@ void main() {
       ],
       // A layer running no WAN has no wan sub-object, and observes no address.
       observed: receiver.wan?.observedPeerAddress(callerId.publicKey),
+      // The recorded WAN address of the caller in the receiver's known set.
+      recorded: receiverStore.state.knownPeers.known[callerHex],
       callerAddress: callerAddress!,
     );
   }
@@ -442,6 +445,29 @@ void main() {
     // GNA, 2026-10-11, Task C: a WAN peer is not nearby, and is observed.
     expect(report.nearby, isEmpty);
     expect(report.observed, report.callerAddress);
+  }, timeout: Timeout.none);
+
+  test(
+      'a known peer on a WAN session has the address it is observed at '
+      'recorded as its WAN address', () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x7b,
+      receiverLocalNetwork: elsewhereIsLocal,
+    );
+    expect(report.connected, [Underlay.wan]);
+    // Spec ip.tex §Connectivity and Address: the observed address replaces the
+    // earlier recorded one, and is recorded the same way GLP's is.
+    expect(report.recorded, report.callerAddress);
+  }, timeout: Timeout.none);
+
+  test('a known peer on a LAN session is never recorded as its WAN address',
+      () async {
+    final report = await receiverReportOfKnownCaller(
+      seed: 0x7d,
+      receiverLocalNetwork: loopbackIsLocal,
+    );
+    expect(report.connected, [Underlay.lan]);
+    expect(report.recorded, isNull);
   }, timeout: Timeout.none);
 
   // GNA, 2026-10-11, Q1: "an IP session's underlay is lan when LAN runs and
