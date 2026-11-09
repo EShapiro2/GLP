@@ -1,0 +1,17 @@
+% FDAO: Funded DAO --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: DAO, Grassroots DAO (programs/gas/dao), and GB, Grassroots Bonds, Currencies' (programs/currencies/bonds).  Through them it extends GKK; it cites their clauses whole and restates none.
+% Defines: treasury, the DAO's coins, k.dao_coin(u, n) at its steward; grant.
+% Schemas: FDAO.glp beside this file, written by tools/contracts.py.
+FDAO: Funded DAO
+Alice and Bob are persons.  FDAO extends DAO and GB.
+1. ■ Funding.  A member of a DAO may give it coins they hold; its steward, who is not asked, keeps them apart as the DAO's, and they leave the DAO only as grants.
+2. ■ Granting.  The steward may pay the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer; the proposer is not asked.
+3. ○ Amount.  The steward grants a passed proposal the amount it asks for, as far as the DAO's coins allow.
+Pragmas
+Treasury: the dao coins Alice keeps.
+Grants: the granted ones Alice paid.
+Funding: Bob [Fund] <issuer> <amount>
+  Alice [Fund own] <issuer> <amount>
+Granting: Alice [Grant] <proposal> <issuer> <amount>
+  Alice [Grant own] <proposal> <issuer> <amount>

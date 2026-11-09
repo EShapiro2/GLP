@@ -1,4 +1,4 @@
-# Phones --- state, 2026-11-08 20:30 UTC (Phones #1 Cowork)
+# Phones --- state, 2026-11-09 14:45 UTC (Phones #1 Cowork)
 
 Taken over from `tmp/phones/STATE.md` (Code #25B Phones, 13:57 UTC) and Code #25's handover (Code_inbox.md, 13:36 and 13:38 UTC).
 
@@ -21,6 +21,12 @@ The free team signs one phone per build; the paid account waits on Apple Develop
 - 2026-11-08 19:05--19:11 UTC, `p1-two-phones-ble` by hand, Wi-Fi off (Phones Mac, 19:12 UTC): steps 1 to 6 met; step 7 failed: after a restart the agent makes no declaration to the layer, so the friends do not reconnect; to GSA and GLP, Blocking: yes (18:39 UTC).  The 11 Pro has no cellular path, so its log reaches the service only when it has Wi-Fi.
 
 - 2026-11-08 20:06--20:10 UTC, `p1-two-phones-ble` step 8 (Phones Mac, 20:11 UTC): met; the 16 Pro's layer kept the Bluetooth session through a minute in the background.  Not tested: a message waiting while in the background.
+
+- 2026-11-08 20:51--20:59 UTC, invite by link over the Internet, GRV (Phones Mac, 21:01 UTC): the link made, registered and redeemed, GRV answering both with `punch(Key, Address)`; no session formed between a phone on cellular and one behind the venue's NAT.
+- 2026-11-09 11:29--11:38 UTC, `p1-two-phones-lan`: not run to its end: the venue's Wi-Fi put the phones on two subnets, and on a Personal Hotspot neither resolved the other.  The replay of presences resolved under Closed trust works.  Two network faults with Code (11:36, 11:38 UTC); a lost path recovered with no restart on Cloud-netroam (13:29 UTC).
+- 2026-11-09 11:40--11:45 UTC, `p1-two-phones-ble`: steps 1 to 7 met; after a restart each agent declared its friend and both trusts and reconnected over Bluetooth within 6 s.  With step 8 of 2026-11-08, the Bluetooth play is met whole.
+- 2026-11-09 12:39--12:49 UTC, GDS: List, the verification mail, the supply of links, a lookup on the directory's page, the link opened in the other phone and redeemed at GRV, and Unlist: met.  A session over the Internet is not yet tested: no punch has made one.
+- 2026-11-09 14:25--14:32 UTC: Dan filed 18 issues labelled `phones`, #10 to #27, faults of the networking code against GNA found by an audit, and seventeen pull requests, #28 to #44, each closing one of #10 to #26; #27 has none yet; sent to Code.
 
 ## Next
 

@@ -33,6 +33,7 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
+import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/runtime/module_hierarchy.dart' show primitiveScope;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
@@ -41,7 +42,12 @@ import 'package:glp_runtime/wire/type_scope_codec.dart';
 
 /// The four magic bytes, `GLPP`, and the format version.
 const List<int> storedProgramMagic = [0x47, 0x4C, 0x50, 0x50];
-const int storedProgramVersion = 1;
+/// Version 2 (2026-11-09) writes after the code the app whose program it is,
+/// its developer, its name and its version number, or none, which
+/// `self_app/2` gives after a refused update (GLP-Spec cce13ce,
+/// appendix-guards, "Networking seam"; IGLP 59c40e2); a version-1 program is
+/// not read.
+const int storedProgramVersion = 2;
 
 /// The identity of a code image: SHA-256 over its instruction-set version,
 /// its name, its symbols and its code, which the goals' program counters
@@ -74,23 +80,30 @@ class StoredProgram {
   /// [image]'s identity ([codeIdentityOf]).
   late final Uint8List identity = codeIdentityOf(image);
 
+  /// The app whose program this is, as the host gave it when the program was
+  /// kept: its developer, its name and its version number; null where the
+  /// host gave none.
+  final Application? app;
+
   final Uint8List? _moduleArtefact;
   final String _moduleName;
   final String? _moduleDirectory;
   final ast.Module? _typeScope;
   final Map<String, OpaqueEntry> _opaque;
 
-  StoredProgram._(this.code, this._moduleArtefact, this._moduleName,
-      this._moduleDirectory, this._typeScope, this._opaque);
+  StoredProgram._(this.code, this.app, this._moduleArtefact,
+      this._moduleName, this._moduleDirectory, this._typeScope, this._opaque);
 
   /// The program an engine compiled: [code] the bytes of its code
   /// (`codeArtefactFromProgram`), and [module] its module value, whose tables
   /// carry the scope they were built from.  Throws where they carry none:
   /// tables derived from an interface say nothing of a scope, and a compiled
-  /// program's goals read its scope.
-  factory StoredProgram.compiled(Uint8List code, rt.ModuleTerm? module) {
+  /// program's goals read its scope.  [app] is the app whose program it is,
+  /// as the host gives it.
+  factory StoredProgram.compiled(Uint8List code, rt.ModuleTerm? module,
+      {Application? app}) {
     if (module == null) {
-      return StoredProgram._(code, null, '', null, null, const {});
+      return StoredProgram._(code, app, null, '', null, null, const {});
     }
     final tables = module.declaredTypes;
     ast.Module? scope;
@@ -104,7 +117,7 @@ class StoredProgram {
       scope = tables.source;
       opaque = tables.opaque;
     }
-    return StoredProgram._(code, (module.artefact as Artefact).toBytes(),
+    return StoredProgram._(code, app, (module.artefact as Artefact).toBytes(),
         module.name, module.directory, scope, opaque);
   }
 
@@ -122,9 +135,15 @@ class StoredProgram {
           'runtime reads $storedProgramVersion');
     }
     final code = r.bytes();
+    final app = r.u8() == 1
+        ? Application(
+            developer: r.string(),
+            name: r.string(),
+            version: int.parse(r.string()))
+        : null;
     if (r.u8() == 0) {
       _end(r);
-      return StoredProgram._(code, null, '', null, null, const {});
+      return StoredProgram._(code, app, null, '', null, null, const {});
     }
     final artefact = r.bytes();
     final name = r.string();
@@ -138,7 +157,8 @@ class StoredProgram {
           entry: entry, types: [for (var j = r.clen(); j > 0; j--) r.string()]);
     }
     _end(r);
-    return StoredProgram._(code, artefact, name, directory, scope, opaque);
+    return StoredProgram._(
+        code, app, artefact, name, directory, scope, opaque);
   }
 
   static void _end(WireReader r) {
@@ -155,6 +175,14 @@ class StoredProgram {
     w
       ..u8(storedProgramVersion)
       ..bytes(code);
+    final app = this.app;
+    w.u8(app == null ? 0 : 1);
+    if (app != null) {
+      w
+        ..string(app.developer)
+        ..string(app.name)
+        ..string('${app.version}');
+    }
     final artefact = _moduleArtefact;
     if (artefact == null) {
       w.u8(0);

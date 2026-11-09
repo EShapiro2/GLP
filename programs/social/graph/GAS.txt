@@ -13,11 +13,14 @@ Alice, Bob and Carol are persons, Dave a ward.  A store is a ward operated by a 
 3. ■ Store Trust.  Alice may trust Dave, Carol being known to her, and may withdraw her trust.
 4. ■ Installation from a Store.  Alice may install a program listed in a store she trusts.
 Interface pragmas
+Look: 🏪, os
 Stores: the stores Alice trusts.
 Listings: the programs listed in Carol's store.
 Store: Carol [Open store] <name>
+  Dave: Carol asks to be your guardian.
 Listing: Carol [List] [Delist]
-Store Trust: Alice [Trust store] <store> [Distrust store] <store>
+  Dave: Carol asks you to list or delist a program.
+Store Trust: Alice [Trust store] [Distrust store]
 Installation from a Store: Alice [Install]
 Implementation pragmas
 Store: the store's page shows its key, its owner and its listings, each program with its contract, the checker's verdict and the artefacts of its cascade; Dave answers anyone who asks for a listed program.

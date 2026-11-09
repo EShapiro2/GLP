@@ -1,0 +1,115 @@
+%% ---------------------------------------------------------------------------
+%% STAY.glp --- Grassroots Stays (Nimrod Talmon with Claude, 2026-10-31), in the
+%% term form programs/gsc reads.  The clauses are in STAY.txt beside this
+%% file.  STAY extends GB, so the term holds their schemas first,
+%% as their own files give them, and then STAY's own; tools/contracts.py in
+%% the grassroots-contracts repository (github.com/nimrodtalmon/grassroots-contracts)
+%% writes it.
+%% ---------------------------------------------------------------------------
+
+NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+             ; ext(NameTerm, Constant).
+Arg        ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+             ; sgn(Constant, Integer) ; num(Constant).
+Args       ::= [] ; [Arg | Args].
+Atom       ::= atom(Constant, Args).
+Atoms      ::= [] ; [Atom | Atoms].
+Mult       ::= Atom ; times(Arg, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Guard      ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+             ; listed(Integer, Constant, Args).
+RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
+Constraint ::= true ; and(Constraint, Constraint)
+             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
+Reach      ::= reach(NameTerm, Constant, NameTerm).
+Reaches    ::= [] ; [Reach | Reaches].
+Names      ::= [] ; [Constant | Names].
+Schema     ::= schema(Constant, Names, Args, RoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, RoleSpecs)
+             ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract   ::= [] ; [Schema | Contract].
+Preds      ::= [] ; [Constant | Preds].
+Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
+
+%% contract_named(stay, C): the contract, STAY.
+procedure contract_named(Constant?, Declared).
+contract_named(stay, environment([today],
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(mint_coin, ['Alice'], [num(k)],
+       [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]),
+    nschema(mint_bond, ['Alice'], [num(d), num(k), num(t)], gt(num(d), num(t)),
+       [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]),
+    schema(first_date, ['Alice'], [num(d)],
+       [rs(unguarded, [atom(date, [num(d)]), atom(dated, [])], [], [atom(identity, []), atom(today, [num(d)])], [atom(dated, [])])]),
+    nschema(advance, ['Alice'], [num(t), num(t1), num(d)], and(succ(num(t), num(t1)), le(num(t1), num(d))),
+       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, []), atom(today, [num(d)])], [])]),
+    schema(swap_cc, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_cb, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(d1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_bc, ['Alice', 'Bob'], [pvar(u), num(d), num(k), pvar(v), num(k1)],
+       [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(swap_bb, ['Alice', 'Bob'], [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
+       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(pay, ['Alice', 'Bob'], [num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]),
+    schema(redeem_cc, ['Alice', 'Bob'], [pvar(r)],
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]),
+    schema(redeem_cb, ['Alice', 'Bob'], [pvar(r), num(d1)],
+       [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, [])], [])]),
+    nschema(redeem_bc, ['Alice', 'Bob'], [num(d), pvar(r), num(t)], le(num(d), num(t)),
+       [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])]),
+    nschema(redeem_bb, ['Alice', 'Bob'], [num(d), pvar(r), num(d1), num(t)], le(num(d), num(t)),
+       [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, []), atom(date, [num(t)])], [])]),
+    schema(deposit_c, ['Alice', 'Carol'], [pvar(u), num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(deposit_b, ['Alice', 'Carol'], [pvar(u), num(d), num(k)],
+       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(release_c, ['Carol', 'Bob'], [pvar(u), num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(release_b, ['Carol', 'Bob'], [pvar(u), num(d), num(k)],
+       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(return_c, ['Carol', 'Alice'], [pvar(u), num(k)],
+       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+    schema(return_b, ['Carol', 'Alice'], [pvar(u), num(d), num(k)],
+       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% STAY:1, Hosting.
+    schema(list_place, ['Alice'], [svar(x)],
+       [rs(guarded, [atom(place, [svar(x)])], [], [atom(identity, [])], [atom(place, [svar(x)])])]),
+%% STAY:2, Booking: Bob pays k Alice-coins for the night d, later than Alice's date t.
+    nschema(book, ['Bob', 'Alice'], [svar(x), num(d), num(k), num(t)], gt(num(d), num(t)),
+       [rs(guarded, [atom(stay, [svar(x), role(2), num(d)])], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []),
+        rs(guarded, [atom(booked, [svar(x), num(d)]), atom(guest, [role(1), svar(x), num(d), num(k)])], [], [atom(identity, []), atom(place, [svar(x)]), atom(date, [num(t)])], [atom(booked, [svar(x), num(d)])])]),
+%% STAY:3, Cancelling, before the night: Bob is paid back the price k, in Alice-coins.
+    nschema(cancel, ['Alice', 'Bob'], [svar(x), num(d), num(k), num(t)], gt(num(d), num(t)),
+       [rs(guarded, [], [atom(booked, [svar(x), num(d)]), atom(guest, [role(2), svar(x), num(d), num(k)])], [atom(identity, []), atom(date, [num(t)])], []),
+        rs(unguarded, [times(num(k), atom(coin, [role(1)]))], [atom(stay, [svar(x), role(1), num(d)])], [atom(identity, [])], [])]),
+%% STAY:4, Reviewing, after the night, once.
+    nschema(review, ['Bob', 'Alice'], [svar(x), num(d), svar(r), num(t)], le(num(d), num(t)),
+       [rs(guarded, [atom(reviewed, [svar(x), role(2), num(d)])], [], [atom(identity, []), atom(stay, [svar(x), role(2), num(d)]), atom(date, [num(t)])], [atom(reviewed, [svar(x), role(2), num(d)])]),
+        rs(unguarded, [atom(review, [svar(x), role(1), svar(r)])], [], [atom(identity, [])], [])])])).

@@ -3,15 +3,15 @@
 # form; sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6,
 # Section 4 and Section 5) through the REPL, its log and its friendship graph.
 #
-#   bash programs/sglp/social_graph/run.sh <agents> <until> <seed> <log>
+#   bash programs/sglp/examples/social_graph/run.sh <agents> <until> <seed> <log>
 #       [<graph> [<hom> [<wary>]]]
 #
-#   bash programs/sglp/social_graph/run.sh 100 '1 year' 20260927 \
+#   bash programs/sglp/examples/social_graph/run.sh 100 '1 year' 20260927 \
 #       /Users/udi/Grassroots/tmp/sg.log /Users/udi/Grassroots/tmp/sg.graph
-#   bash programs/sglp/social_graph/run.sh 100 '1 year' 20260927 \
+#   bash programs/sglp/examples/social_graph/run.sh 100 '1 year' 20260927 \
 #       /Users/udi/Grassroots/tmp/sg.log /Users/udi/Grassroots/tmp/sg.graph 0 100
 #
-# loads programs/sglp and calls social_graph(<agents>, <count>, <unit>, <seed>),
+# loads programs/sglp/examples and calls social_graph(<agents>, <count>, <unit>, <seed>),
 # <until> being "<count> <unit>", the unit singular or plural: the run
 # declaration's population (harness.glp) with <agents> agents, an even number of at
 # least 6, until <until> of simulated time from seed <seed>.  Given <hom>, and <wary>
@@ -50,7 +50,7 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SGLP="$(cd "$HERE/.." && pwd)"
-GLP_DIR="$(cd "$HERE/../../.." && pwd)"
+GLP_DIR="$(cd "$HERE/../../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
 if [ $# -lt 4 ] || [ $# -gt 7 ]; then
@@ -170,7 +170,7 @@ if [ -n "$GRAPH" ]; then
     {
         echo "# The friendship graph of a run of the sGLP social graph"
         echo "# (sGLP d2f64b6, Definition \"Friendship Graph of a Run\"),"
-        echo "# programs/sglp/social_graph: $N agents until $UNTIL seed $SEED, the mix"
+        echo "# programs/sglp/examples/social_graph: $N agents until $UNTIL seed $SEED, the mix"
         echo "# homophile for K =< $HOM and wary for K =< $WARY, K of 1..100;"
         echo "# $AT."
         echo "# Agents are numbered 1..$N as in the run, 1..$((N / 2)) of one sex and the rest"

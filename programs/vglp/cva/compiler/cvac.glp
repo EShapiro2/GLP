@@ -1598,7 +1598,7 @@ worded_acts(words(pragmas(_, As, _), _, _), As?).
 %% The standing declarations of a contract carrying pragmas.
 procedure worded_stands(Worded?, PStands).
 worded_stands(words(pragmas(_, _, Ss), _, _), Ss?).
-%% The standing tables of the platform (vGLP d433f71, Section 5.4, "The contract's words": "A pragma may declare a guarded act standing on an atom its guarding roles require: a person's request of the act that adds the atom is also their standing request (Definition Local) of every class of the standing act's parts that they propose, and their request of the act that deletes it withdraws it"): schema_standing(S, on(P)) for a schema declared standing on P, and none for every other; stand_act(M, makes(S)) for a schema M that adds an atom of P at one of its roles, and withdraws(S) for one that deletes one, plain for every other.
+%% The standing tables of the platform (vGLP 7c631b1, Section 5.4, "The contract's words"): schema_standing(S, on(A)) for each standing schema S, A the act whose request makes the standing request, and none for every other; stand_act(M, makes(S)) for the act M whose request makes it, stand_act(M, withdraws(S)) for the act whose request withdraws it, and plain for every other.
 procedure standing_lines(Contract?, PStands?, Lines).
 standing_lines(_, [], []).
 standing_lines(C, [S0|Ss0], ['', 'procedure schema_standing(Constant?, StandOn).'|L?]) :- ground(C?), ground(S0?), ground(Ss0?) |
@@ -1610,14 +1610,14 @@ standing_lines1(C, Ss, L?) :- ground(C?), ground(Ss?) |
     lapp(L1?, ['schema_standing(_, none) :- otherwise | true.', '', 'procedure stand_act(Constant?, StandAct).'|L2?], L).
 procedure standing_on_lines(PStands?, Lines).
 standing_on_lines([], []).
-standing_on_lines([standing(S, P)|Ss], [T?, '.'|L?]) :- ground(S?), ground(P?) |
-    T0 =.. [schema_standing, S?, on(P?)],
+standing_on_lines([standing(S, A, _)|Ss], [T?, '.'|L?]) :- ground(S?), ground(A?) |
+    T0 =.. [schema_standing, S?, on(A?)],
     term_to_string(T0?, T),
     standing_on_lines(Ss?, L).
 procedure stand_act_lines(Contract?, PStands?, Lines).
 stand_act_lines([], _, ['stand_act(_, plain) :- otherwise | true.']).
 stand_act_lines([schema(M, _, Rs)|Cs], Ss, L?) :- ground(M?), ground(Rs?), ground(Ss?) |
-    stand_act_of(Ss?, Rs?, A),
+    stand_act_of(Ss?, M?, A),
     stand_act_line(A?, M?, L1),
     stand_act_lines(Cs?, Ss?, L2),
     lapp(L1?, L2?, L).
@@ -1628,26 +1628,20 @@ stand_act_line(makes(S), M, [T?, '.']) :- ground(S?), ground(M?) |
     T0 =.. [stand_act, M?, makes(S?)], term_to_string(T0?, T).
 stand_act_line(withdraws(S), M, [T?, '.']) :- ground(S?), ground(M?) |
     T0 =.. [stand_act, M?, withdraws(S?)], term_to_string(T0?, T).
-%% What a schema's role specifications do to the atoms a standing declaration stands on: the first declaration whose predicate one of its roles adds, makes, or deletes, withdraws.
-procedure stand_act_of(PStands?, RoleSpecs?, StandAct).
+%% What a schema's request does to a standing declaration (vGLP 7c631b1, Section 5.4, "The contract's words": "the person's request of the act of the first button is also their standing request ... of every class of the clause's acts that they propose, and their request of the act of the second withdraws it"): the first declaration whose first act it is, makes, or whose second, withdraws.
+procedure stand_act_of(PStands?, Constant?, StandAct).
 stand_act_of([], _, plain).
-stand_act_of([standing(S, P)|Ss], Rs, A?) :- ground(S?), ground(P?), ground(Rs?) |
-    roles_change(Rs?, P?, Ad, De),
-    stand_act_of1(Ad?, De?, S?, Ss?, Rs?, A).
-procedure stand_act_of1(YesNo?, YesNo?, Constant?, PStands?, RoleSpecs?, StandAct).
+stand_act_of([standing(S, A, W)|Ss], M, R?) :- ground(S?), ground(A?), ground(W?), ground(M?) |
+    same_act(M?, A?, Ad),
+    same_act(M?, W?, De),
+    stand_act_of1(Ad?, De?, S?, Ss?, M?, R).
+procedure stand_act_of1(YesNo?, YesNo?, Constant?, PStands?, Constant?, StandAct).
 stand_act_of1(yes, _, S, _, _, makes(S?)).
 stand_act_of1(no, yes, S, _, _, withdraws(S?)).
-stand_act_of1(no, no, _, Ss, Rs, A?) :- stand_act_of(Ss?, Rs?, A).
-%% Whether some role adds, and whether some role deletes, an atom of P.
-procedure roles_change(RoleSpecs?, Constant?, YesNo, YesNo).
-roles_change([], _, no, no).
-roles_change([R|Rs], P, Ad?, De?) :- ground(R?), ground(P?) |
-    rs_lists(R?, A0, D0, _, _),
-    has_pred(P?, A0?, A1),
-    has_pred(P?, D0?, D1),
-    roles_change(Rs?, P?, A2, D2),
-    or(A1?, A2?, Ad),
-    or(D1?, D2?, De).
+stand_act_of1(no, no, _, Ss, M, R?) :- stand_act_of(Ss?, M?, R).
+procedure same_act(Constant?, Constant?, YesNo).
+same_act(X, Y, yes) :- X? =?= Y? | true.
+same_act(_, _, no) :- otherwise | true.
 procedure base_lines(Contract?, PActs?, Lxs?, Lines).
 base_lines(C, As, Lx, ['', 'procedure schema_base(Constant?, Integer).'|L?]) :- ground(C?), ground(As?), ground(Lx?) | base_lines1(C?, As?, Lx?, L).
 %% The base of the conjuncts of a schema local to their base, its listed roles' and those of its conjuncts whose instances the attempt names, which have one (q_lines, local.glp).
@@ -1843,55 +1837,64 @@ word_faults(words(pragmas(Ls, As, Ss), _, Lx), C, Nt, Ps, F?) :- ground(Ls?), gr
 %% The schemas the standing declarations name: "the standing act has no button" (vGLP d433f71, Section 5.4, "The contract's words"), so a guarded schema declared standing is named although no button names it.
 procedure stand_names(PStands?, Preds).
 stand_names([], []).
-stand_names([standing(S, _)|Ss], [S?|Ns?]) :- stand_names(Ss?, Ns).
-%% A standing declaration, standing(S, P), is of a guarded schema S of the contract, each of whose guarding roles requires an atom of P, "a guarded act standing on an atom its guarding roles require" (vGLP d433f71, Section 5.4, "The contract's words"); and, "every guarding role of it" proposing it, the atoms each guarding role requires name every other role and every variable of S, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification").  A standing schema of another form, with a constraint, a quantifier or a listed role, is refused, the compiler not carrying it.
+stand_names([standing(S, _, _)|Ss], [S?|Ns?]) :- stand_names(Ss?, Ns).
+%% A standing declaration, standing(S, A, W), is of a guarded schema S of the contract, its acts made standing by the request of the act A and withdrawn by that of the act W, both acts of the contract (vGLP 7c631b1, Section 5.4, "The contract's words": "An implementation pragma may make the acts of a clause standing ... the person's request of the act of the first button is also their standing request (Definition Local) of every class of the clause's acts that they propose, and their request of the act of the second withdraws it; a standing act has no button, every guarding role of it proposes it"); and, "every guarding role of it" proposing it, the atoms each guarding role requires name every other role and every variable of S, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification").  A standing schema of another form, with a constraint, a quantifier or a listed role, is refused, the compiler not carrying it.
 procedure standing_faults(PStands?, Contract?, Lines).
 standing_faults([], _, []).
-standing_faults([standing(S, P)|Ss], C, F?) :- ground(S?), ground(P?), ground(C?) |
+standing_faults([standing(S, A, W)|Ss], C, F?) :- ground(S?), ground(A?), ground(W?), ground(C?) |
     find_schema(S?, C?, Sf),
-    standing_fault(Sf?, S?, P?, F1),
+    standing_fault(Sf?, S?, F1),
+    find_schema(A?, C?, Af),
+    stand_act_fault(Af?, A?, F3),
+    find_schema(W?, C?, Wf),
+    stand_act_fault(Wf?, W?, F4),
     standing_faults(Ss?, C?, F2),
-    lapp(F1?, F2?, F).
-procedure standing_fault(SFound?, Constant?, Constant?, Lines).
-standing_fault(nosfound, S, _, [L?]) :- ground(S?) |
+    lapp(F3?, F4?, F34),
+    lapp(F1?, F34?, F12),
+    lapp(F12?, F2?, F).
+%% The two acts of a standing declaration, its first making the standing request and its second withdrawing it, are acts of the contract (vGLP 7c631b1, Section 5.4, "The contract's words").
+procedure stand_act_fault(SFound?, Constant?, Lines).
+stand_act_fault(nosfound, A, [L?]) :- ground(A?) |
+    said('%% a standing declaration names, as the act that makes or withdraws the standing request, no schema of the contract that the compiler carries standing, one with no constraint, quantifier or listed role:', A?, L).
+stand_act_fault(sfound(_, _), _, []).
+procedure standing_fault(SFound?, Constant?, Lines).
+standing_fault(nosfound, S, [L?]) :- ground(S?) |
     said('%% a standing declaration names no schema of the contract that the compiler carries standing, one with no constraint, quantifier or listed role:', S?, L).
-standing_fault(sfound(Hd, Rs), S, P, L?) :- ground(Hd?), ground(Rs?), ground(S?), ground(P?) |
+standing_fault(sfound(Hd, Rs), S, L?) :- ground(Hd?), ground(Rs?), ground(S?) |
     guard_roles(Rs?, 1, Gs),
     rs_count(Rs?, K),
     role_args(1, K?, All),
     named_args(Hd?, Vs),
     app(All?, Vs?, Need),
-    standing_fault0(Gs?, Rs?, P?, Need?, S?, L).
-procedure standing_fault0(Ints?, RoleSpecs?, Constant?, Args?, Constant?, Lines).
-standing_fault0(Gs, Rs, P, Need, S, L?) :- ground(Gs?) |
-    standing_roles(Gs?, Rs?, P?, Need?, Ok),
+    standing_fault0(Gs?, Rs?, Need?, S?, L).
+procedure standing_fault0(Ints?, RoleSpecs?, Args?, Constant?, Lines).
+standing_fault0(Gs, Rs, Need, S, L?) :- ground(Gs?) |
+    standing_roles(Gs?, Rs?, Need?, Ok),
     standing_fault1(Gs?, Ok?, S?, L).
 procedure standing_fault1(Ints?, YesNo?, Constant?, Lines).
 standing_fault1([], _, S, [L?]) :- ground(S?) |
-    said('%% a standing declaration names a schema with no guarding role, "a guarded act standing on an atom its guarding roles require" (vGLP, Section 5.4, "The contract\'s words"):', S?, L).
+    said('%% a standing declaration names a schema with no guarding role, "a standing act has no button, every guarding role of it proposes it" (vGLP, Section 5.4, "The contract\'s words"):', S?, L).
 standing_fault1([_|_], yes, _, []).
 standing_fault1([_|_], no, S, [L?]) :- ground(S?) |
-    said('%% a standing declaration names a schema a guarding role of which requires no atom of its predicate, or requires atoms that do not name every other role and every variable of it, so that its standing parts are not computable from that role\'s state (vGLP, Section 5.4, "The contract\'s words"; Definition "Effective Local Specification"):', S?, L).
+    said('%% a standing declaration names a schema a guarding role of which requires atoms that do not name every other role and every variable of it, so that its standing parts are not computable from that role\'s state (vGLP, Section 5.4, "The contract\'s words"; Definition "Effective Local Specification"):', S?, L).
 %% Whether each guarding role I requires an atom of P, and its required atoms, with I, name every role and variable in Need.
-procedure standing_roles(Ints?, RoleSpecs?, Constant?, Args?, YesNo).
-standing_roles([], _, _, _, yes).
-standing_roles([I|Is], Rs, P, Need, B?) :- integer(I?), ground(Rs?), ground(P?), ground(Need?) |
+procedure standing_roles(Ints?, RoleSpecs?, Args?, YesNo).
+standing_roles([], _, _, yes).
+standing_roles([I|Is], Rs, Need, B?) :- integer(I?), ground(Rs?), ground(Need?) |
     nth_spec(I?, Rs?, R),
     rs_lists(R?, _, M0, K0, _),
     uncleared(M0?, M),
     app(K0?, M?, K),
-    standing_role(K?, I?, P?, Need?, B1),
-    standing_roles1(B1?, Is?, Rs?, P?, Need?, B).
-procedure standing_role(Atoms?, Integer?, Constant?, Args?, YesNo).
-standing_role(K, I, P, Need, B?) :- ground(K?) |
-    has_pred(P?, K?, Hp),
+    standing_role(K?, I?, Need?, B1),
+    standing_roles1(B1?, Is?, Rs?, Need?, B).
+procedure standing_role(Atoms?, Integer?, Args?, YesNo).
+standing_role(K, I, Need, B?) :- ground(K?) |
     atoms_args(K?, A0),
     named_args([role(I?)|A0?], A),
-    all_in(Need?, A?, Nm),
-    and(Hp?, Nm?, B).
-procedure standing_roles1(YesNo?, Ints?, RoleSpecs?, Constant?, Args?, YesNo).
-standing_roles1(no, _, _, _, _, no).
-standing_roles1(yes, Is, Rs, P, Need, B?) :- standing_roles(Is?, Rs?, P?, Need?, B).
+    all_in(Need?, A?, B).
+procedure standing_roles1(YesNo?, Ints?, RoleSpecs?, Args?, YesNo).
+standing_roles1(no, _, _, _, no).
+standing_roles1(yes, Is, Rs, Need, B?) :- standing_roles(Is?, Rs?, Need?, B).
 procedure nth_spec(Integer?, RoleSpecs?, RoleSpec).
 nth_spec(I, [R|_], R?) :- I? =:= 1 | true.
 nth_spec(I, [_|Rs], R?) :- I? > 1 | I1 := I? - 1, nth_spec(I1?, Rs?, R).

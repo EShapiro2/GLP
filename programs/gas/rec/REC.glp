@@ -1,0 +1,60 @@
+%% ---------------------------------------------------------------------------
+%% REC.glp --- Recommendations (Nimrod Talmon with Claude, 2026-10-31), in the
+%% term form programs/gsc reads.  The clauses are in REC.txt beside this
+%% file.  REC extends GKK, so the term holds their schemas first,
+%% as their own files give them, and then REC's own; tools/contracts.py in
+%% the grassroots-contracts repository (github.com/nimrodtalmon/grassroots-contracts)
+%% writes it.
+%% ---------------------------------------------------------------------------
+
+NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+             ; ext(NameTerm, Constant).
+Arg        ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+             ; sgn(Constant, Integer) ; num(Constant).
+Args       ::= [] ; [Arg | Args].
+Atom       ::= atom(Constant, Args).
+Atoms      ::= [] ; [Atom | Atoms].
+Mult       ::= Atom ; times(Arg, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Guard      ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+             ; listed(Integer, Constant, Args).
+RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
+Constraint ::= true ; and(Constraint, Constraint)
+             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
+Reach      ::= reach(NameTerm, Constant, NameTerm).
+Reaches    ::= [] ; [Reach | Reaches].
+Names      ::= [] ; [Constant | Names].
+Schema     ::= schema(Constant, Names, Args, RoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, RoleSpecs)
+             ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract   ::= [] ; [Schema | Contract].
+Preds      ::= [] ; [Constant | Preds].
+Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
+
+%% contract_named(rec, C): the contract, REC.
+procedure contract_named(Constant?, Declared).
+contract_named(rec,
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% REC:1, Recommending: Alice recommends Bob for s.
+    schema(recommend, ['Alice', 'Bob'], [svar(s)],
+       [rs(guarded, [atom(recommended, [role(2), svar(s)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(recommended, [role(2), svar(s)]), atom(withdrew, [role(2), svar(s)])]),
+        rs(unguarded, [atom(endorsement, [role(1), svar(s)])], [], [atom(identity, [])], [])]),
+%% REC:2, Showing: Bob shows Carol that a recommends Bob for s.
+    schema(show, ['Bob', 'Carol'], [pvar(a), svar(s)],
+       [rs(guarded, [atom(shown, [role(2), pvar(a), svar(s)])], [], [atom(identity, []), atom(endorsement, [pvar(a), svar(s)]), atom(knows, [role(2)])], [atom(shown, [role(2), pvar(a), svar(s)])]),
+        rs(unguarded, [atom(vouched, [role(1), pvar(a), svar(s)])], [], [atom(identity, [])], [])]),
+%% REC:3, Withdrawing: from Bob and from every person Carol whom Bob showed it to; withdrew(b, s) keeps Alice from making it again.  Bob comes first, the base of the listed role Carol, which the compiler to the canonical platform requires of a listed role whose base does not guard (vGLP, Section 5.4).
+    cschema(withdraw_recommendation, ['Bob', 'Alice', 'Carol'], [svar(s)], [],
+       [rs(unguarded, [], [atom(endorsement, [role(2), svar(s)])], [atom(identity, [])], []),
+        rs(guarded, [atom(withdrew, [role(1), svar(s)])], [atom(recommended, [role(1), svar(s)])], [atom(identity, [])], []),
+        crs(listed(1, shown, [role(2), svar(s)]), unguarded, [], [atom(vouched, [role(1), role(2), svar(s)])], [atom(identity, [])], [])])]).

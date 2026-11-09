@@ -345,8 +345,18 @@ WSchema    ::= schema(Constant, Args, NRoleSpecs)
              ; nschema(Constant, Names, Args, Constraint, NRoleSpecs)
              ; qschema(Constant, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
              ; qschema(Constant, Names, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
-             ; sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+             ; SSchema.
 WContract  ::= [] ; [WSchema | WContract].
+% The clause syntax's own types, which every contract's NAME.glp declares its
+% term by and declares no copy of (GSC #13, 2026-11-09, by claude.md's rule
+% against duplicating content): a schema sas(Name, Names, Vars, Head, Body,
+% Constraint, Guards), a contract the list of its schemas, and a contract
+% declared with its reflexive or its environment predicates.  A contract
+% under programs/gsc sees them by its directory's self.glp.
+SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+SContract  ::= [] ; [SSchema | SContract].
+SDeclared  ::= SContract ; reflexive(Preds, SContract)
+             ; environment(Preds, SContract).
 WBody      ::= WContract ; reflexive(Preds, WContract).
 WDeclared  ::= WBody ; environment(Preds, WBody).
 

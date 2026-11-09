@@ -1,0 +1,138 @@
+%% programs/sglp/examples: the examples of sGLP in GLP, the Grassroots Social
+%% Graph, social_graph/, and coins among friends, coins/, each its sGLP source,
+%% its vGLP program and the program's canonical compilation, the printed
+%% profiles and population, its harness and its run script; and what the two
+%% share, below (sGLP #11, Code_inbox 2026-11-09 10:22 UTC, Udi approving:
+%% programs/sglp/self.glp keeps its two exposes, monitor and sglp, and the
+%% examples and their shared definitions are here).
+%%
+%% A run of the social graph is a call of social_graph/4, or of social_graph/6
+%% for another mix, with this directory loaded (social_graph/run.sh); a run of
+%% coins among friends is a call of coins/7 (coins/run.sh).
+
+%% The examples' sGLP sources, which the transformation reads
+%% (../transform.glp, whose qualifier names a child of its own directory, this
+%% one).
+imported procedure social_graph#source(SglpTerms, SglpTerms).
+exported procedure social_graph_source(SglpTerms, SglpTerms).
+social_graph_source(V?, S?) :- social_graph # source(V, S).
+imported procedure coins#source(SglpTerms, SglpTerms).
+exported procedure coins_source(SglpTerms, SglpTerms).
+coins_source(V?, S?) :- coins # source(V, S).
+
+%% one_of and nth, ordinary GLP, shared by the examples' profiles (the social
+%% graph's, moved from social_graph/graph.glp for coins among friends, sGLP's
+%% code task of 2026-10-02 15:24 UTC, item 2); one_of counts by length/2, which
+%% ../self.glp holds, the transformation and the tests' sources calling it too.  one_of and the
+%% nth it calls take a non-empty list, of the type [X | List(X)], and each has
+%% a clause for every list of that type, as TGLP's Definition "Instantiation"
+%% requires of every input path (sGLP's paper, Appendix B, at f1640df; sGLP's
+%% answer of 2026-10-14 11:40 UTC, 1), an anonymous reader being permitted in
+%% no clause (GLP-Spec 297db75, Remark "Anonymous Variables").
+
+%% A non-empty list, the type [X | List(X)], named, a procedure declaration's
+%% argument being a type's name.
+NonEmpty(X) ::= [X | List(X)].
+
+%% one_of(Xs?, S?, X): X is drawn uniformly from Xs by random from the seed S.
+procedure(X) one_of(NonEmpty(X)?, Integer?, X).
+one_of(Xs, S, X?) :- ground(Xs?) |
+    length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
+
+%% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1, the last
+%% where K is past the end; one_of draws K of 1..the length of Xs.
+procedure(X) nth(Integer?, NonEmpty(X)?, X).
+nth(_, [X], X?).
+nth(1, [X, _|_], X?).
+nth(K, [_, Y|Ys], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, [Y?|Ys?], X).
+
+%% social_graph(Agents?, Count?, Unit?, Seed?): the social graph's run with
+%% Agents agents until Count Units from seed Seed, with the run declaration's
+%% mix, homophile 0.6 and wary 0.7, its thresholds read from the declaration
+%% the population prints (social_graph/population.glp, declaration/6).
+%% social_graph(Agents?, Count?, Unit?, Seed?, Hom?, Wary?): the same run with
+%% the mix given by Hom and Wary, integers 0..100: an agent is homophile for its
+%% first draw K =< Hom and wary for its second K =< Wary, K of 1..100, so 0 is
+%% none and 100 is all (sGLP's code task of 2026-10-02 15:23 UTC, item 1).
+imported procedure social_graph#run(Integer?, Number?, Span?, Integer?,
+                                    Integer?, Integer?).
+imported procedure social_graph#declaration(Integer, Number, Span, Integer,
+                                            Integer, Integer).
+exported procedure social_graph(Integer?, Number?, Span?, Integer?).
+social_graph(N, C, U, Seed) :-
+    social_graph # declaration(_, _, _, _, Hom, Wary),
+    social_graph # run(N?, C?, U?, Seed?, Hom?, Wary?).
+exported procedure social_graph(Integer?, Number?, Span?, Integer?, Integer?,
+                                Integer?).
+social_graph(N, C, U, Seed, Hom, Wary) :-
+    social_graph # run(N?, C?, U?, Seed?, Hom?, Wary?).
+
+%% The population's draw: how many agents of each profile in each dimension,
+%% and each agent's profiles, agents 1..N in order.  Approach and Response are
+%% the profiles of the social graph's two dimensions, and Spending and Credit
+%% those of coins among friends', as the draws report them: the types the
+%% population prints for the dimensions, Dimension1 and Dimension2 in each
+%% example's population.glp, structurally, and named here, where the reports'
+%% types are declared.
+Approach ::= homophile ; indifferent.
+Response ::= wary ; sociable.
+Spending ::= spender ; saver.
+Credit   ::= cautious ; generous.
+
+Draw    ::= draw(Integer, Integer, Integer, Integer, Drawn).
+Drawn   ::= [] ; [AgentIs | Drawn].
+AgentIs ::= agent(Integer, Approach, Response).
+
+%% social_graph_draw(Agents?, Seed?, Hom?, Wary?, D): D is draw(Homophile,
+%% Indifferent, Wary, Sociable, As), the numbers of agents of each profile in
+%% the run of social_graph/6 with those arguments, and As the list of
+%% agent(A, Approach, Response), each agent's profiles, A of 1..Agents in
+%% order, computed without running it, the counts those of As
+%% (social_graph/harness.glp; sGLP's code tasks of 2026-10-02 15:44 UTC and
+%% 2026-10-03 08:58 UTC).
+imported procedure social_graph#draw(Integer?, Integer?, Integer?, Integer?,
+                                     Draw).
+exported procedure social_graph_draw(Integer?, Integer?, Integer?, Integer?,
+                                     Draw).
+social_graph_draw(N, Seed, Hom, Wary, D?) :-
+    social_graph # draw(N?, Seed?, Hom?, Wary?, D).
+
+%% coins(Agents?, Friends?, Count?, Unit?, Seed?, Spend?, Cred?): coins among
+%% friends with Agents agents until Count Units from seed Seed (coins/harness.glp;
+%% sGLP's code task of 2026-10-02 15:24 UTC, item 3): agent a's friends are the
+%% a-th list of Friends, in increasing order; an agent is a spender for its
+%% first draw K =< Spend and cautious for its second K =< Cred, K of 1..100, so
+%% the run declaration's mix is 50 and 50.
+%% Peer and Peers are the children's, social_graph/self.glp's and
+%% coins/self.glp's, structurally, defined here so that coins/7's declaration
+%% names a type in its scope, a module seeing its ancestors' types and not its
+%% children's (TGLP, "Declaration parameters" and Definition "Root, Scope";
+%% sGLP's code task of 2026-10-03 21:09 UTC).
+Peer  ::= Constant.
+Peers ::= [Peer | List(Peer)].
+
+imported procedure coins#run(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
+                             Integer?, Integer?).
+exported procedure coins(Integer?, Stream(Peers)?, Number?, Span?, Integer?,
+                         Integer?, Integer?).
+coins(N, Fss, C, U, Seed, Spend, Cred) :-
+    coins # run(N?, Fss?, C?, U?, Seed?, Spend?, Cred?).
+
+%% The population's draw of coins among friends: how many agents of each
+%% profile in each dimension, and each agent's profiles, agents 1..N in order.
+CoinsDraw    ::= draw(Integer, Integer, Integer, Integer, CoinsDrawn).
+CoinsDrawn   ::= [] ; [CoinsAgentIs | CoinsDrawn].
+CoinsAgentIs ::= agent(Integer, Spending, Credit).
+
+%% coins_draw(Agents?, Seed?, Spend?, Cred?, D): D is draw(Spender, Saver,
+%% Generous, Cautious, As), the numbers of agents of each profile in the run of
+%% coins/7 with those arguments, whatever its friends, and As the list of
+%% agent(A, Spending, Credit), each agent's profiles, A of 1..Agents in order,
+%% computed without running it, the counts those of As (coins/harness.glp;
+%% sGLP's code task of 2026-10-03 09:45 UTC).
+imported procedure coins#draw(Integer?, Integer?, Integer?, Integer?,
+                              CoinsDraw).
+exported procedure coins_draw(Integer?, Integer?, Integer?, Integer?,
+                              CoinsDraw).
+coins_draw(N, Seed, Spend, Cred, D?) :-
+    coins # draw(N?, Seed?, Spend?, Cred?, D).

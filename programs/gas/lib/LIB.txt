@@ -1,0 +1,19 @@
+% LIB: Grassroots Library --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), for its calendar.  Through it it extends GKK; it cites their clauses whole and restates none.
+% Defines: thing, shelf, lent out, borrowed; a day is a day of GB's calendar.
+% Schemas: LIB.glp beside this file, written by tools/contracts.py.
+LIB: Grassroots Library
+Alice and Bob are persons.  LIB extends GB.
+1. ◆ Shelving.  Alice may put a thing of their own on their shelf, under a name they have not used before.
+2. ■ Lending.  Alice and Bob, who know each other, may jointly decide that Alice lends Bob a thing from Alice's shelf until a day later than Alice's date; it leaves the shelf, and Bob holds it but cannot lend it on.
+3. ■ Returning.  Bob may return a borrowed thing at any time; Alice is not asked, and it goes back on Alice's shelf.
+4. ○ On time.  Bob returns a borrowed thing by the agreed day.
+Pragmas
+Shelf: the things Alice has.
+Lent: the things lent out by Alice.
+Borrowed: what Alice borrowed.
+Shelving: Alice [Shelve] <thing>
+Lending: Alice [Lend] <thing> <until>
+  Bob: Alice offers to lend you a thing.
+Returning: Bob [Give back]

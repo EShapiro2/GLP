@@ -1536,7 +1536,7 @@ class _SocialTabState extends State<SocialTab> {
           Row(children: [
             CircleAvatar(
               radius: 14,
-              backgroundColor: Colors.green.shade100,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               child: Text(title.isEmpty ? '' : title[0],
                   style: const TextStyle(fontSize: 12)),
             ),

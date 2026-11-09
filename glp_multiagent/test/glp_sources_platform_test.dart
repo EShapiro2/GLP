@@ -134,6 +134,18 @@ void main() {
     // a file of the repository the app reads when it is built"), which the
     // asset sync stages and SuperAppHost reads.
     expected.add('programs/social/graph/core/services.json');
+    // The look of each app, which the asset sync stages where the site's
+    // build reads it (lib/ui_runtime/look.dart): the families' colours,
+    // every contract's NAME.txt, a .txt with a "% Owner:" line, and the
+    // site's about.json beside programs/.
+    expected.add('programs/apps/look.json');
+    for (final f in Directory(programs).listSync(recursive: true).whereType<File>()) {
+      if (f.path.endsWith('.txt') &&
+          f.readAsLinesSync().any((l) => l.startsWith('% Owner:'))) {
+        expected.add(rel(f.path));
+      }
+    }
+    expected.add('servers/peoplesweb/web/about.json');
     final sources = bundled.keys.where((p) => !p.endsWith('.glpw')).toSet();
     expect(sources, contains('programs/social/graph/ui/self.glp'));
     expect(sources.difference(expected), isEmpty,

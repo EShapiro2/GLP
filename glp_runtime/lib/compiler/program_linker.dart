@@ -44,9 +44,9 @@ class DiscoveredModule {
   final String filePath;
 
   /// The module's name: its path from the root ([modulePathName]; TGLP
-  /// modules.tex, Compilation, third step) --- `sglp/coins` for
-  /// `programs/sglp/coins/self.glp`, `sglp/coins/coins` for
-  /// `programs/sglp/coins/coins.glp`.  Every procedure `p/n` and type `T` of the
+  /// modules.tex, Compilation, third step) --- `sglp/examples/coins` for
+  /// `programs/sglp/examples/coins/self.glp`, `sglp/examples/coins/coins` for
+  /// `programs/sglp/examples/coins/coins.glp`.  Every procedure `p/n` and type `T` of the
   /// module is renamed `<moduleName>:p/n` and `<moduleName>:T`, and the
   /// linker's registry is keyed by it.  Until 2026-10-02 it was the file's name
   /// (a `self.glp`'s, its directory's last segment), so two modules of one name

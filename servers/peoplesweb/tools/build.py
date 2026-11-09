@@ -13,8 +13,13 @@ cascade/<NAME>/platform.vglp as cascade.sh records it, gets
 
 and build/www/data.js holds every contract's text, owner, the contracts it
 extends, its schemas and verdict, from cascade/<NAME>/ and the NAME.txt files
-under programs/, with each contract's owner and paper (tools/papers.py).  The pages are web/*.html, copied as they are; web/about.json
-holds the site's own line, icon and family for each contract.  build/ and
+under programs/, with each contract's owner and paper (tools/papers.py), and
+the families' names and colours.  The pages are web/*.html, copied as they
+are.  A contract's icon and family are the line its interface pragmas open
+with, 'Look: <icon>, <family>' (GSC's Section 2), and web/about.json's until
+its owner writes that line; web/about.json holds the site's own line for each
+contract; and programs/apps/look.json each family's name and colours, which
+the app's asset sync reads too.  build/ and
 programs/vglp/cva/web_worlds/ are generated, gitignored, and this script rebuilds them whole.
 """
 import json, os, re, shutil, subprocess, sys
@@ -136,13 +141,17 @@ def contract_text(path):
     meta = [l for l in lines if l.startswith('%')]
     body = [l for l in lines if l.strip() and not l.startswith('%')]
     name, title = body[0].split(': ', 1)
-    end = body.index('Pragmas') if 'Pragmas' in body else len(body)
+    # The pragmas follow the clauses under 'Pragmas', or under 'Interface
+    # pragmas' and 'Implementation pragmas', their two kinds (GSC's Section 2;
+    # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
+    heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
+    end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
     clauses = []
     for l in body[2:end]:
         m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
         if m: clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
     return {'id': name, 'title': title, 'preamble': body[1], 'clauses': clauses,
-            'pragmas': body[end + 1:], 'meta': meta}
+            'pragmas': [l for l in body[end:] if l.strip() != 'Pragmas'], 'meta': meta}
 
 
 # Every contract's text, wherever its owner keeps it: programs/**/NAME.txt.
@@ -218,6 +227,7 @@ for n in compiled:
 
 
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
+look = json.loads(read(os.path.join(GLP, 'programs', 'apps', 'look.json')))
 # The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
 # the server, with its state.json, or else the ones built by hand in
 # web/papers.
@@ -253,12 +263,27 @@ def nearest(cid):
     return list(dict.fromkeys(out))
 
 
+def look_line(pragmas):
+    """The look a contract's interface pragmas open with, 'Look: <icon>,
+    <family>' (GSC's Section 2, 34bc713), as (icon, family); None where the
+    first line is not it."""
+    for l in pragmas:
+        if l.strip() in ('Interface pragmas', 'Implementation pragmas'):
+            continue
+        m = re.match(r'Look:\s*(.+?),\s*([\w-]+)\s*$', l.strip())
+        return (m.group(1), m.group(2)) if m else None
+    return None
+
+
 contracts = []
 for n in sorted(set(compiled) | set(cat)):
     c = dict(cat[n])
     d = os.path.join(GLP, 'cascade', n)
+    # The icon and family the contract's Look line names, where its owner
+    # wrote one, and else about.json's, which holds them until then.
     _a = about.get(n, ['📄', 'other', ''])
-    c['icon'], c['family'], c['about'] = _a[0], _a[1], _a[2] or c['title'] + '.'
+    _icon, _family = look_line(c.get('pragmas', [])) or (_a[0], _a[1])
+    c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
     # Labels" (Udi, 2026-11-07).
@@ -305,5 +330,5 @@ if served:
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

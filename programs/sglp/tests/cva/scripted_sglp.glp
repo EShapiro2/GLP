@@ -31,10 +31,10 @@
 %%       until 1 day seed 20260927.
 %%
 %% A request question is of the request type, Request?, and takes one request,
-%% propose(Proposal) or refresh, and an approval question shows the attempt or
+%% propose(Proposal), and an approval question shows the attempt or
 %% the hello it asks about, the words it shows and the answer, approval(Asking,
 %% List(Word), YesNo?), as the canonical platform of the GSG record prints them
-%% (cascade/GSG/interface.glp; vGLP e22e2ad, "The compilation"); Request? is in
+%% (cascade/GSG/interface.glp; vGLP d433f71, "The compilation"); Request? is in
 %% reader mode, so its person procedure is declared with its dual, Request
 %% (Section 3, Definition "Dual, Person Procedure, Person Declaration").  The
 %% scripted person, at each request question, by a draw, proposes establishing

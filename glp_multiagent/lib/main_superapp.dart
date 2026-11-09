@@ -37,6 +37,7 @@ import 'phone_network.dart';
 import 'scripted_person.dart';
 import 'superapp_host.dart';
 import 'ui_runtime/agent_surface.dart';
+import 'ui_runtime/look.dart';
 
 /// The persona's name in the seed of the agent's key pair, made once at the
 /// first start (IGLP, Implementation Notes, "Boot").
@@ -59,10 +60,7 @@ class GrassrootsApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
         title: 'Grassroots',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-          useMaterial3: true,
-        ),
+        theme: ThemeData(useMaterial3: true),
         home: GrassrootsScreen(script: script),
       );
 }
@@ -90,6 +88,9 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
 
   /// The person's screen, which a debuggable build reads as text.
   final GlobalKey _surface = GlobalKey();
+
+  /// The look of the Grassroots App's contract, once read; null until then.
+  ContractLook? _look;
 
   /// The app's own line, reported in a debuggable build.
   void _setStatus(String status) {
@@ -145,6 +146,14 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
             {'mode': script.mode, 'known': script.known});
       }
       final glp = await resolveGlpPaths();
+      // The look the person's screen is drawn in, its contract's
+      // ([superappContract]); a fault in reading it leaves the screen in the
+      // plain theme and is reported, and the agent starts all the same.
+      try {
+        _look = (await Looks.read(glp.rootSelfGlp)).of(superappContract);
+      } catch (e, stack) {
+        _caught(e, stack);
+      }
       final reporter = debugLogOn ? _reporter : null;
       final net = await PhoneNetwork.open(
           persona: _persona,
@@ -230,7 +239,14 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
                   Expanded(
                     child: KeyedSubtree(
                       key: _surface,
-                      child: AgentSurface(agentId: _persona, runtime: host.ui),
+                      child: _look == null
+                          ? AgentSurface(agentId: _persona, runtime: host.ui)
+                          : Theme(
+                              data: _look!.theme(),
+                              child: AgentSurface(
+                                  agentId: _persona,
+                                  runtime: host.ui,
+                                  icon: _look!.icon)),
                     ),
                   ),
                 ],

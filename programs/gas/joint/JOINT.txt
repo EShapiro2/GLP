@@ -1,0 +1,18 @@
+% JOINT: Joint Accounts --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK.  It cites their clauses whole and restates none.
+% Defines: joint account, named by its opener as a group by its leader; k.joint(u, <a>.n) at both partners.
+% Schemas: JOINT.glp beside this file, written by tools/contracts.py.
+JOINT: Joint Accounts
+Alice and Bob are persons.  JOINT extends GC.
+1. ■ Opening.  Alice and Bob, who know each other, may jointly open a joint account, under a name of Alice's not already used for one.
+2. ■ Depositing.  Either of them may move coins they hold into their joint account; the other is not asked.
+3. ■ Withdrawing.  Coins leave a joint account only by an act of both, to either of them.
+Pragmas
+Joint: the joint money Alice shares.
+Accounts: the accounts Alice shares.
+Opening: Alice [Open account] <name>
+  Bob: Alice asks to open a joint account with you.
+Depositing: Alice [Deposit] <issuer> <amount>
+Withdrawing: Alice [Withdraw] <issuer> <amount>
+  Bob: Alice asks to withdraw from your joint account.

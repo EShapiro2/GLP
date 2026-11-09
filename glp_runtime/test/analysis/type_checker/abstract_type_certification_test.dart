@@ -165,13 +165,21 @@ go(X, Out?) :- fwd2(X?, Out).
     });
   });
 
-  group("sGLP's length/3 and nth/3 (programs/sglp/self.glp)", () {
-    final scope = mergeSelfGlpFileIntoScope(
+  // length/3 is programs/sglp/self.glp's, and nth/3 programs/sglp/examples/
+  // self.glp's, whose chain runs through it (sGLP's layout, sGLP #11,
+  // Code_inbox 2026-11-09 10:22 UTC): each is read in the scope of its own
+  // self.glp, the examples' merged onto the parent's as the chain has it.
+  group("sGLP's length/3 (programs/sglp/self.glp) and nth/3 "
+      "(programs/sglp/examples/self.glp)", () {
+    final sglp = mergeSelfGlpFileIntoScope(
         rootScope(_root), File('../programs/sglp/self.glp').absolute.path,
         root: _programs);
-    for (final key in ['length/3', 'nth/3']) {
+    final examples = mergeSelfGlpFileIntoScope(
+        sglp, File('../programs/sglp/examples/self.glp').absolute.path,
+        root: _programs);
+    for (final (key, scope) in [('length/3', sglp), ('nth/3', examples)]) {
       test('$key is parametrically well-typed', () {
-        // Defined with clauses by sglp/self.glp's own layer, so the answer is
+        // Defined with clauses by its self.glp's own layer, so the answer is
         // its certification and not the default for a key outside the scope.
         expect(scope.paramProcDecls.containsKey(key), isTrue);
         expect(scope.scopeLayers[key]?.clauses[key], isNotEmpty);

@@ -24,10 +24,12 @@
 library;
 
 import 'manifests/superapp_ui.dart';
+import 'ui_runtime/look.dart';
 import 'vglp_app.dart';
 
 void main() => runVglpApp(VglpProgram(
       title: 'Apps',
+      contract: superappContract,
       person: 'alice',
       directory: (glp) => glp.coreDir,
       manifest: superappManifest,

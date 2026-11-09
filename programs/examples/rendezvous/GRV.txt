@@ -13,6 +13,7 @@ Alice, Bob and Carol are persons, Dave a ward.  A rendezvous server is a ward op
 3. ■ Redemption.  Bob may present to Dave an invitation link registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
 4. ■ Reconnection.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship; Dave then gives each the address of the other.
 Interface pragmas
+Look: 🛰️, network
 Registration: Alice [Invite by link]
 Implementation pragmas
 Redemption, Reconnection: the address of a person is the one at which the server's networking layer observes them, read by peer_address/2; a person given an address punches towards it by punch_udp/1, and the smaller key initiates.

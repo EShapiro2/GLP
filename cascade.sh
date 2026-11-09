@@ -10,6 +10,13 @@
 #   bash cascade.sh <contract> --record   run, write, and commit the record as one
 #                                         commit tagged cascade/<NAME>/<date>
 #                                         (a later run the same day: <date>-2, -3, ...)
+#   bash cascade.sh <contract> <contract> ... [--check | --record]
+#                                         the same on the composition of the
+#                                         contracts, recorded in
+#                                         cascade/<NAME>+<NAME>/ (vGLP 7c631b1,
+#                                         Section 5.4, "The contract's words":
+#                                         "The compiler takes one contract or
+#                                         several"; compose.sh beside pragmas.sh)
 #
 # A contract's name and its owner are Udi's rulings, Coordination Appendix C,
 # never read off a directory's name (Udi, 2026-10-18): a letter acronym NAME,
@@ -54,6 +61,13 @@
 #   gd          GD    GGGA        programs/ggga             ---
 #   gd_s        GD-S  GGGA        programs/ggga             ---
 #   gdo_l       GDO-L GFF         programs/gff              ---
+#   dao         DAO   (to rule)   programs/gas/dao          ---
+#   ldao        LDAO  (to rule)   programs/gas/ldao         ---
+#   fdao        FDAO  (to rule)   programs/gas/fdao         ---
+#   rec         REC   (to rule)   programs/gas/rec          ---
+#   stay        STAY  (to rule)   programs/gas/stay         ---
+#   lib         LIB   (to rule)   programs/gas/lib          ---
+#   joint       JOINT (to rule)   programs/gas/joint        ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -116,15 +130,20 @@ set -u
 GLP_DIR="$(cd "$(dirname "$0")" && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
-usage() { echo "usage: cascade.sh <contract> [--check | --record]" >&2; exit 2; }
-[ $# -ge 1 ] && [ $# -le 2 ] || usage
-NAME="$1"
-MODE="${2:-write}"
-case "$MODE" in write|--check|--record) ;; *) usage ;; esac
+usage() { echo "usage: cascade.sh <contract> [<contract> ...] [--check | --record]" >&2; exit 2; }
+[ $# -ge 1 ] || usage
+MODE=write
+case "${!#}" in --check|--record) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
+[ $# -ge 1 ] || usage
+NAMES=("$@")
 
+# lookup <contract>: its NAME.txt and NAME.glp's name, FILE, its owner's
+# directory, OWNER, its paper, PAPER, and its plays, PLAYDIR, PLAYAT and
+# PLAYLIMIT.
+lookup() {
 PLAYAT=""          # the owner's plays, a directory of the repository, where it keeps them
 PLAYLIMIT=600000   # the reductions the plays' REPL session may take
-case "$NAME" in
+case "$1" in
     gfp)  FILE=GFP;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, extends GSG (GSC #13, 2026-11-07)
     gpd)  FILE=GPD;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GFP (GSA #2, 2026-11-07)
     gas)  FILE=GAS;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GPD (GSA #2, 2026-11-07)
@@ -158,18 +177,45 @@ case "$NAME" in
     gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
     gd_s) FILE=GD-S; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
     gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
-    *) echo "cascade.sh: no contract named $NAME; the names are gkk gfp gpd gas grv gpe gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc" >&2; exit 2 ;;
+    dao) FILE=DAO;  OWNER="programs/gas/dao";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; owner for Udi to rule)
+    ldao) FILE=LDAO; OWNER="programs/gas/ldao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO (pull request 9; owner for Udi to rule)
+    fdao) FILE=FDAO; OWNER="programs/gas/fdao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO and GB (pull request 9; owner for Udi to rule)
+    rec) FILE=REC;  OWNER="programs/gas/rec";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; owner for Udi to rule)
+    stay) FILE=STAY; OWNER="programs/gas/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; owner for Udi to rule)
+    lib) FILE=LIB;  OWNER="programs/gas/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; owner for Udi to rule)
+    joint) FILE=JOINT; OWNER="programs/gas/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; owner for Udi to rule)
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
 esac
-SRC="$GLP_DIR/$OWNER"
-REC="$GLP_DIR/cascade/$FILE"
-PLAYS=""; [ -n "$PLAYDIR" ] && PLAYS="$GLP_DIR/programs/vglp/cva/$PLAYDIR"
-[ -n "$PLAYAT" ] && PLAYS="$GLP_DIR/$PLAYAT"
-# The contract, NAME.txt; NAME.md where the owner has not yet converted it.
-CTXT="$FILE.txt"
-[ -f "$SRC/$CTXT" ] || CTXT="$FILE.md"   # TRANSITION: NAME.md until its owner converts it
-for f in "$CTXT" "$FILE.glp"; do
-    [ -f "$SRC/$f" ] || { echo "cascade.sh: $OWNER/$f is missing; the contract is its owner's two files, $FILE.txt and $FILE.glp" >&2; exit 2; }
+}
+# Each contract named: its files, NAME.txt (NAME.md where the owner has not
+# yet converted it) and NAME.glp.
+FILES=(); OWNERS=(); PAPERS=(); SRCS=(); CTXTS=()
+for n in "${NAMES[@]}"; do
+    lookup "$n"
+    SRC="$GLP_DIR/$OWNER"
+    CTXT="$FILE.txt"
+    [ -f "$SRC/$CTXT" ] || CTXT="$FILE.md"   # TRANSITION: NAME.md until its owner converts it
+    for f in "$CTXT" "$FILE.glp"; do
+        [ -f "$SRC/$f" ] || { echo "cascade.sh: $OWNER/$f is missing; the contract is its owner's two files, $FILE.txt and $FILE.glp" >&2; exit 2; }
+    done
+    FILES+=("$FILE"); OWNERS+=("$OWNER"); PAPERS+=("$PAPER"); SRCS+=("$SRC"); CTXTS+=("$CTXT")
 done
+# Several contracts are their composition (vGLP 7c631b1, Section 5.4, "The
+# contract's words": "The compiler takes one contract or several: of several it
+# prints the platform of their composition, the union of their schemas and of
+# their pragmas, which extends each"), recorded under the names joined by +,
+# as cascade/GSN+GC, and named to the checker and the compiler by theirs joined
+# by _, as gsn_gc; vGLP keeps no plays for a composition.
+if [ ${#NAMES[@]} -eq 1 ]; then
+    NAME="${NAMES[0]}"
+    PLAYS=""; [ -n "$PLAYDIR" ] && PLAYS="$GLP_DIR/programs/vglp/cva/$PLAYDIR"
+    [ -n "$PLAYAT" ] && PLAYS="$GLP_DIR/$PLAYAT"
+else
+    NAME=$(IFS=_; echo "${NAMES[*]}")
+    FILE=$(IFS=+; echo "${FILES[*]}")
+    PLAYS=""
+fi
+REC="$GLP_DIR/cascade/$FILE"
 
 WORK=$(mktemp -d)
 EMIT="$GLP_DIR/programs/tests/cascade_emit/$NAME"
@@ -188,13 +234,15 @@ STATUS=0
 NOTE=()
 
 # 1. The contract, as it stands.
-cp "$SRC/$CTXT" "$OUT/$CTXT"
-cp "$SRC/$FILE.glp" "$OUT/$FILE.glp"
-printf '%s\ncontract_named(%s, C).\n:quit\n' "$SRC/$FILE.glp" "$NAME" > "$WORK/c.in"
+# read_contract <name> <directory> <NAME>: the contract's term, CT, its
+# reading, RD, and its introduction predicate, INTRO.
+read_contract() {
+local n="$1" src="$2" f="$3"
+printf '%s\ncontract_named(%s, C).\n:quit\n' "$src/$f.glp" "$n" > "$WORK/c.in"
 repl "$WORK/c.in" "$WORK/c.out"
 CT=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
 if [ -z "$CT" ]; then
-    say "$FILE.glp prints no contract_named($NAME, C)"
+    say "$f.glp prints no contract_named($n, C)"
     grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
     exit 1
 fi
@@ -208,11 +256,39 @@ if [ -z "$RD" ]; then
     exit 1
 fi
 INTRO=no_introduction
-if grep -q "^introduction_named($NAME," "$SRC/$FILE.glp"; then
-    printf '%s\nintroduction_named(%s, I).\n:quit\n' "$SRC/$FILE.glp" "$NAME" > "$WORK/i.in"
+if grep -q "^introduction_named($n," "$src/$f.glp"; then
+    printf '%s\nintroduction_named(%s, I).\n:quit\n' "$src/$f.glp" "$n" > "$WORK/i.in"
     repl "$WORK/i.in" "$WORK/i.out"
     IT=$(grep -E '^I = ' "$WORK/i.out" | head -1 | sed -e 's/^I = //')
     [ -n "$IT" ] && INTRO="$IT"
+fi
+}
+if [ ${#NAMES[@]} -eq 1 ]; then
+    cp "$SRC/$CTXT" "$OUT/$CTXT"
+    cp "$SRC/$FILE.glp" "$OUT/$FILE.glp"
+    read_contract "$NAME" "$SRC" "$FILE"
+else
+    # The composition: each contract read, with its pragmas, as when it is
+    # compiled alone, and composed by programs/vglp/cva/compiler/compose.sh.
+    COMP=()
+    for i in "${!NAMES[@]}"; do
+        cp "${SRCS[i]}/${CTXTS[i]}" "$OUT/${CTXTS[i]}"
+        cp "${SRCS[i]}/${FILES[i]}.glp" "$OUT/${FILES[i]}.glp"
+        read_contract "${NAMES[i]}" "${SRCS[i]}" "${FILES[i]}"
+        P=no_pragmas
+        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "$RD" 2> "$WORK/pr.err"); then
+            say "the pragmas of ${FILES[i]} were not read: $(head -1 "$WORK/pr.err")"
+            exit 1
+        fi
+        COMP+=("${FILES[i]}" "$RD" "$P" "$INTRO")
+    done
+    if ! bash "$GLP_DIR/programs/vglp/cva/compiler/compose.sh" "${COMP[@]}" > "$WORK/compose.out" 2> "$WORK/compose.err"; then
+        say "the composition was refused: $(head -1 "$WORK/compose.err")"
+        exit 1
+    fi
+    RD=$(sed -n 1p "$WORK/compose.out"); PR=$(sed -n 2p "$WORK/compose.out"); INTRO=$(sed -n 3p "$WORK/compose.out")
+    CT="$RD"
+    say "composition of ${FILES[*]}: $(printf '%s' "$RD" | grep -oE '\b[cnq]?schema\(' | wc -l | tr -d ' ') schemas"
 fi
 
 # 2. The schemas in GSC's notation, printed from the term by programs/gsc: a
@@ -269,10 +345,12 @@ fi
 
 # 5. The canonical platform, from programs/vglp/cva/compiler, with the
 # contract's words, its pragmas.
-PR=no_pragmas
-if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
-    say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
-    exit 1
+if [ ${#NAMES[@]} -eq 1 ]; then
+    PR=no_pragmas
+    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
+        say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
+        exit 1
+    fi
 fi
 printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
@@ -357,24 +435,34 @@ fi
 
 # The manifest.
 GLP_COMMIT=$(git -C "$GLP_DIR" rev-parse --short=8 HEAD 2>/dev/null || echo unknown)
-if [ -d "$PAPER/.git" ]; then
-    PAPER_URL=$(git -C "$PAPER" config --get remote.origin.url 2>/dev/null || echo unknown)
-    PAPER_COMMIT=$(git -C "$PAPER" rev-parse --short=8 HEAD 2>/dev/null || echo unknown)
-else
-    PAPER_URL="$PAPER (not on this machine)"; PAPER_COMMIT=unknown
-fi
+paper_line() {   # paper_line <paper directory>: its remote and its commit
+    if [ -d "$1/.git" ]; then
+        echo "\`$(git -C "$1" config --get remote.origin.url 2>/dev/null || echo unknown)\` at \`$(git -C "$1" rev-parse --short=8 HEAD 2>/dev/null || echo unknown)\`"
+    else
+        echo "\`$1 (not on this machine)\` at \`unknown\`"
+    fi
+}
 {
     echo "# A run of the cascade on $FILE"
     echo ""
-    echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$CTXT\` and \`$OWNER/$FILE.glp\`, copied here as they stood at \`$GLP_COMMIT\`."
-    echo "- The paper: \`$PAPER_URL\` at \`$PAPER_COMMIT\`, for the paper's own record."
+    if [ ${#NAMES[@]} -eq 1 ]; then
+        echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$CTXT\` and \`$OWNER/$FILE.glp\`, copied here as they stood at \`$GLP_COMMIT\`."
+        echo "- The paper: $(paper_line "$PAPER"), for the paper's own record."
+    else
+        echo "- Contract: the composition of ${FILES[*]} (\`$NAME\` to the checker), the union of their schemas and of their pragmas (vGLP, Section 5.4, \"The contract's words\"), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at \`$GLP_COMMIT\`:"
+        for i in "${!NAMES[@]}"; do
+            echo "  - \`${FILES[i]}\`: \`${OWNERS[i]}/${CTXTS[i]}\` and \`${OWNERS[i]}/${FILES[i]}.glp\`; the paper $(paper_line "${PAPERS[i]}")."
+        done
+    fi
     echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP)${PLAYS:+, ${PLAYS#$GLP_DIR/} (the plays with scripted persons)}."
-    echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh $NAME\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
+    echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh ${NAMES[*]}\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
     echo ""
     echo "| Artefact | What it holds |"
     echo "|---|---|"
-    echo "| \`$CTXT\` | the contract |"
-    echo "| \`$FILE.glp\` | the act schemas, as terms |"
+    for i in "${!NAMES[@]}"; do
+        echo "| \`${CTXTS[i]}\` | the contract${FILES[1]:+ ${FILES[i]}} |"
+        echo "| \`${FILES[i]}.glp\` | the act schemas${FILES[1]:+ of ${FILES[i]}}, as terms |"
+    done
     echo "| \`schemas.txt\` | the act schemas in GSC's notation, printed from the terms |"
     echo "| \`verdict.txt\` | the checker's verdict: \`$VT\` |"
     if grep -q '^% not compiled' "$OUT/vmat.tex"; then
