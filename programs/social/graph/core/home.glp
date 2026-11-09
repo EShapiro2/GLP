@@ -20,6 +20,9 @@ Introduce ::= introduce.
 Introduction ::= introduction(Friend, Other, Introduce?).
 Befriend ::= befriend.
 NearbyPerson ::= nearby(Friend, Befriend?).
+CardClose ::= closed.
+NearbyEvent ::= seen(List(Key)) ; friend(Key).
+OpenCard ::= open(Key, CardClose?).
 
 Question ::= friendRequest_w(FriendRequest) ; introRequest_w(IntroRequest) ; nearbyPerson_w(NearbyPerson) ; introduction_w(Introduction) ; stream_request_r(Stream(Request)?).
 
@@ -43,14 +46,15 @@ procedure decide_intro(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 decide_intro(yes, Id, Other, P, [msg(person, Id?, accept_intro(Other?, P?))]).
 decide_intro(no, Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
 
-procedure befriend_card(Key?, Key?, Stream(UserInMsg), Stream(Ask(Question))).
-befriend_card(S1, S2, S3?, [ask('NearbyPerson', nearbyPerson_w(X?)) | D?]) :- befriend_card1(S1?, S2?, S3, X, D).
+procedure befriend_card(Key?, Key?, CardClose?, Stream(UserInMsg), Stream(Ask(Question))).
+befriend_card(S1, S2, S3, S4?, [ask('NearbyPerson', nearbyPerson_w(X?)) | D?]) :- befriend_card1(S1?, S2?, S3?, S4, X, D).
 
-procedure befriend_card1(Key?, Key?, Stream(UserInMsg), NearbyPerson, Stream(Ask(Question))).
-befriend_card1(Id, K, Cmds?, nearby(K?, B), []) :- ground(Id?), ground(K?) | befriend_pick(B?, Id?, K?, Cmds).
+procedure befriend_card1(Key?, Key?, CardClose?, Stream(UserInMsg), NearbyPerson, Stream(Ask(Question))).
+befriend_card1(Id, K, Close, Cmds?, nearby(K?, B), []) :- ground(Id?), ground(K?) | befriend_pick(B?, Id?, K?, Close?, Cmds).
 
-procedure befriend_pick(Befriend?, Key?, Key?, Stream(UserInMsg)).
-befriend_pick(befriend, Id, K, [msg(person, Id?, connect(K?))]).
+procedure befriend_pick(Befriend?, Key?, Key?, CardClose?, Stream(UserInMsg)).
+befriend_pick(befriend, Id, K, _, [msg(person, Id?, connect(K?))]).
+befriend_pick(_, _, _, closed, []).
 
 procedure introduce_card(Key?, Key?, Key?, Stream(UserInMsg), Stream(Ask(Question))).
 introduce_card(S1, S2, S3, S4?, [ask('Introduction', introduction_w(X?)) | D?]) :- introduce_card1(S1?, S2?, S3?, S4, X, D).
@@ -73,18 +77,32 @@ procedure pair_cards(Key?, List(Key)?, Key?, Stream(UserInMsg), Stream(Ask(Quest
 pair_cards(Id, [P | Ps], K, Cmds?, D?) :- ground(Id?), ground(P?), ground(K?) | introduce_card(Id?, P?, K?, C1, D1), pair_cards(Id?, Ps?, K?, C2, D2), merge(C1?, C2?, Cmds), merge(D1?, D2?, D).
 pair_cards(_, [], _, [], []).
 
-procedure friends_told(AgentToUserStream?, AgentToUserStream, Stream(Key)).
-friends_told([msg(A, P, connected(K)) | Ms], [msg(A?, P?, connected(K?)) | Out?], [K? | Ks?]) :- ground(K?) | friends_told(Ms?, Out, Ks).
-friends_told([M | Ms], [M? | Out?], Ks?) :- otherwise | friends_told(Ms?, Out, Ks).
-friends_told([], [], []).
+procedure friends_told(AgentToUserStream?, AgentToUserStream, Stream(Key), Stream(NearbyEvent)).
+friends_told([msg(A, P, connected(K)) | Ms], [msg(A?, P?, connected(K?)) | Out?], [K? | Ks?], [friend(K?) | Es?]) :- ground(K?) | friends_told(Ms?, Out, Ks, Es).
+friends_told([msg(_, _, nearby(Ns)) | Ms], Out?, Ks?, [seen(Ns?) | Es?]) :- friends_told(Ms?, Out, Ks, Es).
+friends_told([M | Ms], [M? | Out?], Ks?, Es?) :- otherwise | friends_told(Ms?, Out, Ks, Es).
+friends_told([], [], [], []).
 
-procedure offer(List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg), Stream(Ask(Question))).
-offer([K | Ks], Id, Cd, Cd1?, Cmds?, D1?) :- ground(K?), ground(Cd?) | in_keys(K?, Cd?, D), offer_one(D?, K?, Ks?, Id?, Cd?, Cd1, Cmds, D1).
-offer([], _, Cd, Cd?, [], []).
+procedure nearby_cards(Key?, List(Key)?, List(OpenCard)?, Stream(NearbyEvent)?, Stream(UserInMsg), Stream(Ask(Question))).
+nearby_cards(Id, Of, Op, [seen(Ks) | Es], Cmds?, D?) :- ground(Id?), ground(Of?), ground(Ks?) | offer(Ks?, Id?, Of?, Of1, Op?, Op1, Picks, D1), merge(Picks?, Cmds1?, Cmds), nearby_cards(Id?, Of1?, Op1?, Es?, Cmds1, D2), merge(D1?, D2?, D).
+nearby_cards(Id, Of, Op, [friend(K) | Es], Cmds?, D?) :- ground(K?), ground(Of?) | close_card(K?, Op?, Op1), nearby_cards(Id?, [K? | Of?], Op1?, Es?, Cmds, D).
+nearby_cards(_, _, _, [], [], []).
 
-procedure offer_one(Decision?, Key?, List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg), Stream(Ask(Question))).
-offer_one(yes, _, Ks, Id, Cd, Cd1?, Cmds?, D?) :- offer(Ks?, Id?, Cd?, Cd1, Cmds, D).
-offer_one(no, K, Ks, Id, Cd, Cd1?, Cmds?, D?) :- ground(K?), ground(Id?) | befriend_card(Id?, K?, C1, D1), offer(Ks?, Id?, [K? | Cd?], Cd1, C2, D2), merge(C1?, C2?, Cmds), merge(D1?, D2?, D).
+procedure close_card(Key?, List(OpenCard)?, List(OpenCard)).
+close_card(K, [open(K1, C?) | Os], Os?) :- (K? =?= K1?) | closing(C).
+close_card(K, [O | Os], [O? | Os1?]) :- otherwise | close_card(K?, Os?, Os1).
+close_card(_, [], []).
+
+procedure closing(CardClose).
+closing(closed).
+
+procedure offer(List(Key)?, Key?, List(Key)?, List(Key), List(OpenCard)?, List(OpenCard), Stream(UserInMsg), Stream(Ask(Question))).
+offer([K | Ks], Id, Cd, Cd1?, Op, Op1?, Cmds?, D1?) :- ground(K?), ground(Cd?) | in_keys(K?, Cd?, D), offer_one(D?, K?, Ks?, Id?, Cd?, Cd1, Op?, Op1, Cmds, D1).
+offer([], _, Cd, Cd?, Op, Op?, [], []).
+
+procedure offer_one(Decision?, Key?, List(Key)?, Key?, List(Key)?, List(Key), List(OpenCard)?, List(OpenCard), Stream(UserInMsg), Stream(Ask(Question))).
+offer_one(yes, _, Ks, Id, Cd, Cd1?, Op, Op1?, Cmds?, D?) :- offer(Ks?, Id?, Cd?, Cd1, Op?, Op1, Cmds, D).
+offer_one(no, K, Ks, Id, Cd, Cd1?, Op, Op1?, Cmds?, D?) :- ground(K?), ground(Id?) | befriend_card(Id?, K?, Close?, C1, D1), offer(Ks?, Id?, [K? | Cd?], Cd1, [open(K?, Close) | Op?], Op1, C2, D2), merge(C1?, C2?, Cmds), merge(D1?, D2?, D).
 
 procedure in_keys(Key?, List(Key)?, Decision).
 in_keys(K, [K1 | _], yes) :- (K? =?= K1?) | true.
@@ -95,12 +113,11 @@ exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(
 home(S1, S2, S3?, [ask('Stream(Request)?', stream_request_r(X)) | D?]) :- home1(S1?, S2?, S3, X?, D).
 
 exported procedure home1(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Request)?, Stream(Ask(Question))).
-home1(Id, Outs, Cmds?, Reqs, D?) :- ground(Id?) | friends_told(Outs?, Outs1, Friends), serve(Reqs?, Id?, [], Outs1?, Cmds1, D1), introductions(Id?, [], Friends?, Cmds2, D2), merge(Cmds1?, Cmds2?, Cmds), merge(D1?, D2?, D).
+home1(Id, Outs, Cmds?, Reqs, D?) :- ground(Id?) | friends_told(Outs?, Outs1, Friends, Seen), serve(Reqs?, Id?, [], Outs1?, Cmds1, D1), introductions(Id?, [], Friends?, Cmds2, D2), nearby_cards(Id?, [], [], Seen?, Cmds3, D3), merge(Cmds1?, Cmds2?, Cmds4), merge(Cmds4?, Cmds3?, Cmds), merge(D1?, D2?, D4), merge(D4?, D3?, D).
 
 procedure serve(Stream(Request)?, Key?, List(Key)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
 serve(Reqs, Id, Cd, [msg(agent, person, befriend(From, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?) | respond_friend(Id?, From?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Cd?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
 serve(Reqs, Id, Cd, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?, D?) :- ground(Id?), ground(From?), ground(Other?) | respond_intro(Id?, From?, Other?, P?, Answer, D1), merge(Answer?, Cmds1?, Cmds), serve(Reqs?, Id?, Cd?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
-serve(Reqs, Id, Cd, [msg(agent, person, nearby(Ks)) | Outs], Cmds?, D?) :- ground(Id?), ground(Ks?), ground(Cd?) | offer(Ks?, Id?, Cd?, Cd1, Picks, D1), merge(Picks?, Cmds1?, Cmds), serve(Reqs?, Id?, Cd1?, Outs?, Cmds1, D2), merge(D1?, D2?, D).
 serve(Reqs, Id, Cd, [msg(agent, person, connected(K)) | Outs], Cmds?, D?) :- ground(Id?), ground(K?), ground(Cd?) | serve(Reqs?, Id?, [K? | Cd?], Outs?, Cmds, D).
 serve(Reqs, Id, Cd, [_ | Outs], Cmds?, D?) :- ground(Id?), otherwise | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 serve(_, _, _, [], [], []).
@@ -255,6 +272,7 @@ form_decision(_, refused) :- otherwise | true.
 procedure answer_decision(Path?, Decision, Inputs(Drawn)?, Inputs(Drawn), Done).
 answer_decision(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_decision(R?, F), take_decision(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
 answer_decision(P, X?, [G | Gs], Gs1?, Done?) :- otherwise | take_decision(refused, P?, X, G?, Gs?, Gs1, Done).
+answer_decision(_, X, Gs, Gs?, done) :- widowed(X) | true.
 
 procedure take_decision(Formed(Decision)?, Path?, Decision, Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
 take_decision(formed(V), _, V?, _, Gs, Gs?, done).
@@ -315,6 +333,7 @@ form_befriend(_, refused) :- otherwise | true.
 procedure answer_befriend(Path?, Befriend, Inputs(Drawn)?, Inputs(Drawn), Done).
 answer_befriend(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_befriend(R?, F), take_befriend(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
 answer_befriend(P, X?, [G | Gs], Gs1?, Done?) :- otherwise | take_befriend(refused, P?, X, G?, Gs?, Gs1, Done).
+answer_befriend(_, X, Gs, Gs?, done) :- widowed(X) | true.
 
 procedure take_befriend(Formed(Befriend)?, Path?, Befriend, Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
 take_befriend(formed(V), _, V?, _, Gs, Gs?, done).
@@ -351,6 +370,7 @@ form_introduce(_, refused) :- otherwise | true.
 procedure answer_introduce(Path?, Introduce, Inputs(Drawn)?, Inputs(Drawn), Done).
 answer_introduce(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_introduce(R?, F), take_introduce(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
 answer_introduce(P, X?, [G | Gs], Gs1?, Done?) :- otherwise | take_introduce(refused, P?, X, G?, Gs?, Gs1, Done).
+answer_introduce(_, X, Gs, Gs?, done) :- widowed(X) | true.
 
 procedure take_introduce(Formed(Introduce)?, Path?, Introduce, Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
 take_introduce(formed(V), _, V?, _, Gs, Gs?, done).
@@ -424,6 +444,7 @@ form_request(_, refused) :- otherwise | true.
 procedure answer_stream_request(Path?, Stream(Request), Inputs(Drawn)?, Inputs(Drawn), Done).
 answer_stream_request(P, X?, [input(Id, P1, R) | Gs], Gs1?, Done?) :- P1? =?= P?, ground(R?) | form_request(R?, F), take_stream_request(F?, P?, X, input(Id?, P1?, R?), Gs?, Gs1, Done).
 answer_stream_request(P, X?, [G | Gs], Gs1?, Done?) :- otherwise | take_stream_request(refused, P?, X, G?, Gs?, Gs1, Done).
+answer_stream_request(_, X, Gs, Gs?, done) :- widowed(X) | true.
 
 procedure take_stream_request(Formed(Request)?, Path?, Stream(Request), Input(Drawn)?, Inputs(Drawn)?, Inputs(Drawn), Done).
 take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stream_request(P?, X1, Gs?, Gs1, Done).

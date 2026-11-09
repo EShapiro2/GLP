@@ -76,9 +76,13 @@
 //     [] of it; a question whose grants never come stays open, its goal
 //     suspended, as the semantics has it (vGLP #5 Cowork, 2026-10-03 08:16
 //     UTC, item 3, and 21:13 UTC, Q1);
-//   - it withdraws when every question it holds is answered and none is
-//     still to come, and on nothing else (run_f/5, f its ask's functor,
-//     each drawn view under f): "The construct process withdraws when
+//   - it withdraws when every question it holds is answered or closed and
+//     none is still to come, and on nothing else (run_f/5, f its ask's
+//     functor, each drawn view under f): "The construct process withdraws
+//     when every question it holds is answered or closed ... A question
+//     whose reader the program drops is closed, and the construct process
+//     takes it off the screen" (vGLP 7c631b1; answer_N's widowed clause);
+//     until 7c631b1 the paper read "The construct process withdraws when
 //     every question it holds is answered.  A reader the program drops leaves
 //     its construct on screen, showing what the program writes into it"
 //     (sections/elicitation.tex, the paragraph before Definition "Canonical
@@ -1902,6 +1906,17 @@ class _Generator {
       ..writeln('$name(P, X?, [G | Gs], Gs1?$vsOut, Done?) :- '
           'otherwise | '
           '$take(refused, P?, X, G?, Gs?, Gs1$vs, Done).')
+      // A question whose reader the program drops is closed: "A question
+      // whose reader the program drops is closed, and the construct process
+      // takes it off the screen: GLP's guard widowed(W) succeeds on a writer
+      // W whose reader has been dropped and occurs nowhere in the agent's
+      // state" (vGLP 7c631b1, Section 6.3; GLP-Spec aeed242).  It is done,
+      // and every grant goes on, a grant for its position reaching no
+      // question: "A closed question asks nothing more of the person, and
+      // cannot be answered" (Section 6.1).  After the otherwise clause, so
+      // that a grant for another position goes on while the reader occurs.
+      ..writeln('$name(_, X, Gs, Gs?${nested || written ? ', []' : ''}, done) :- '
+          'widowed(X) | true.')
       ..writeln()
       ..writeln('procedure$p $take($formed(${_formedKey(e ?? n)})?, $pt?, $t, '
           '${gen.inputType}?, $gs?, $gs$vsType, $done).');

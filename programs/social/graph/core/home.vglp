@@ -64,8 +64,10 @@
 %% Operating System", "Nearby": "the persons nearby the person knows are in
 %% the platform's view, and the person befriends one by picking them there";
 %% GSG's pragma Friendship, "Alice [Befriend]"; GPE's interface pragma
-%% Nearby).  serve offers each person once, Cd the persons offered or friends:
-%% a person whose card stands, or who is a friend, is offered no second card.
+%% Nearby).  nearby_cards offers each person once, Of the persons offered or
+%% friends: a person whose card stands, or who is a friend, is offered no
+%% second card; and it closes a person's card once they are a friend,
+%% befriended from the other side, the card's reader dropped (vGLP 7c631b1).
 %%
 %% What the super-app tells the person is not a question: superapp/4
 %% (self.glp) sends it to the person on the program's own end of the person
@@ -183,14 +185,21 @@ decide_intro(no, Id, Other, P, [msg(person, Id?, reject_intro(Other?, P?))]).
 %% =============================================================================
 
 %% Show the person a person nearby whom they know, and, on befriend, ask to
-%% befriend them: the person's request to connect, GSG:1.
-procedure (NearbyPerson)*befriend_card(Key?, Key?, Stream(UserInMsg)).
-(nearby(K?, B))*befriend_card(Id, K, Cmds?) :-
+%% befriend them: the person's request to connect, GSG:1.  The card is closed
+%% once the person is a friend, befriended from the other side: its reader
+%% dropped, the question is closed and the construct takes it off the screen
+%% (vGLP 7c631b1, Section 6.1: a question "closes when its reader no longer
+%% occurs, the program having dropped the reader by the anonymous variable
+%% at an input position"; Section 6.3).
+CardClose ::= closed.
+procedure (NearbyPerson)*befriend_card(Key?, Key?, CardClose?, Stream(UserInMsg)).
+(nearby(K?, B))*befriend_card(Id, K, Close, Cmds?) :-
     ground(Id?), ground(K?) |
-    befriend_pick(B?, Id?, K?, Cmds).
+    befriend_pick(B?, Id?, K?, Close?, Cmds).
 
-procedure befriend_pick(Befriend?, Key?, Key?, Stream(UserInMsg)).
-befriend_pick(befriend, Id, K, [msg(person, Id?, connect(K?))]).
+procedure befriend_pick(Befriend?, Key?, Key?, CardClose?, Stream(UserInMsg)).
+befriend_pick(befriend, Id, K, _, [msg(person, Id?, connect(K?))]).
+befriend_pick(_, _, _, closed, []).
 
 %% =============================================================================
 %% Introducing two friends by picking them.
@@ -233,31 +242,65 @@ pair_cards(Id, [P | Ps], K, Cmds?) :-
     merge(C1?, C2?, Cmds).
 pair_cards(_, [], _, []).
 
-%% friends_told(Outs, Outs1, Ks): what the super-app tells the person, passed
-%% on whole, each friend it tells of, connected(K), on Ks as well.
-procedure friends_told(AgentToUserStream?, AgentToUserStream, Stream(Key)).
-friends_told([msg(A, P, connected(K)) | Ms], [msg(A?, P?, connected(K?)) | Out?], [K? | Ks?]) :-
-    ground(K?) | friends_told(Ms?, Out, Ks).
-friends_told([M | Ms], [M? | Out?], Ks?) :-
-    otherwise | friends_told(Ms?, Out, Ks).
-friends_told([], [], []).
+%% friends_told(Outs, Outs1, Ks, Es): what the super-app tells the person,
+%% passed on whole to serve, but the persons nearby; each friend it tells of,
+%% connected(K), on Ks as well, for the introductions; and the persons nearby,
+%% nearby(Ks), and each friend, on Es, for the Nearby cards.
+NearbyEvent ::= seen(List(Key)) ; friend(Key).
+procedure friends_told(AgentToUserStream?, AgentToUserStream, Stream(Key), Stream(NearbyEvent)).
+friends_told([msg(A, P, connected(K)) | Ms], [msg(A?, P?, connected(K?)) | Out?], [K? | Ks?], [friend(K?) | Es?]) :-
+    ground(K?) | friends_told(Ms?, Out, Ks, Es).
+friends_told([msg(_, _, nearby(Ns)) | Ms], Out?, Ks?, [seen(Ns?) | Es?]) :-
+    friends_told(Ms?, Out, Ks, Es).
+friends_told([M | Ms], [M? | Out?], Ks?, Es?) :-
+    otherwise | friends_told(Ms?, Out, Ks, Es).
+friends_told([], [], [], []).
 
-%% offer(Ks, Id, Cd, Cd1, Cmds): a card for each of the persons Ks not in Cd,
-%% the persons offered or friends, Cd1 being Cd with them.
-procedure offer(List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg)).
-offer([K | Ks], Id, Cd, Cd1?, Cmds?) :-
+%% nearby_cards(Id, Of, Op, Es, Cmds): the Nearby cards (GPE's interface
+%% pragma Nearby), a card with befriend for each person nearby whom the person
+%% knows, not offered before and not a friend; Of the persons offered or
+%% friends, Op the cards open, each with the writer that closes it.  A friend
+%% is offered no card from then on, and the card offered them is closed.
+OpenCard ::= open(Key, CardClose?).
+procedure nearby_cards(Key?, List(Key)?, List(OpenCard)?, Stream(NearbyEvent)?, Stream(UserInMsg)).
+nearby_cards(Id, Of, Op, [seen(Ks) | Es], Cmds?) :-
+    ground(Id?), ground(Of?), ground(Ks?) |
+    offer(Ks?, Id?, Of?, Of1, Op?, Op1, Picks),
+    merge(Picks?, Cmds1?, Cmds),
+    nearby_cards(Id?, Of1?, Op1?, Es?, Cmds1).
+nearby_cards(Id, Of, Op, [friend(K) | Es], Cmds?) :-
+    ground(K?), ground(Of?) |
+    close_card(K?, Op?, Op1),
+    nearby_cards(Id?, [K? | Of?], Op1?, Es?, Cmds).
+nearby_cards(_, _, _, [], []).
+
+%% close_card(K, Op, Op1): the open card of K, if any, closed, and taken off
+%% the cards open.
+procedure close_card(Key?, List(OpenCard)?, List(OpenCard)).
+close_card(K, [open(K1, C?) | Os], Os?) :- K? =?= K1? | closing(C).
+close_card(K, [O | Os], [O? | Os1?]) :- otherwise | close_card(K?, Os?, Os1).
+close_card(_, [], []).
+
+procedure closing(CardClose).
+closing(closed).
+
+%% offer(Ks, Id, Of, Of1, Op, Op1, Cmds): a card for each of the persons Ks
+%% not in Of, the persons offered or friends, Of1 being Of with them, and Op1
+%% Op with each card offered, open.
+procedure offer(List(Key)?, Key?, List(Key)?, List(Key), List(OpenCard)?, List(OpenCard), Stream(UserInMsg)).
+offer([K | Ks], Id, Cd, Cd1?, Op, Op1?, Cmds?) :-
     ground(K?), ground(Cd?) |
     in_keys(K?, Cd?, D),
-    offer_one(D?, K?, Ks?, Id?, Cd?, Cd1, Cmds).
-offer([], _, Cd, Cd?, []).
+    offer_one(D?, K?, Ks?, Id?, Cd?, Cd1, Op?, Op1, Cmds).
+offer([], _, Cd, Cd?, Op, Op?, []).
 
-procedure offer_one(Decision?, Key?, List(Key)?, Key?, List(Key)?, List(Key), Stream(UserInMsg)).
-offer_one(yes, _, Ks, Id, Cd, Cd1?, Cmds?) :-
-    offer(Ks?, Id?, Cd?, Cd1, Cmds).
-offer_one(no, K, Ks, Id, Cd, Cd1?, Cmds?) :-
+procedure offer_one(Decision?, Key?, List(Key)?, Key?, List(Key)?, List(Key), List(OpenCard)?, List(OpenCard), Stream(UserInMsg)).
+offer_one(yes, _, Ks, Id, Cd, Cd1?, Op, Op1?, Cmds?) :-
+    offer(Ks?, Id?, Cd?, Cd1, Op?, Op1, Cmds).
+offer_one(no, K, Ks, Id, Cd, Cd1?, Op, Op1?, Cmds?) :-
     ground(K?), ground(Id?) |
-    befriend_card(Id?, K?, C1),
-    offer(Ks?, Id?, [K? | Cd?], Cd1, C2),
+    befriend_card(Id?, K?, Close?, C1),
+    offer(Ks?, Id?, [K? | Cd?], Cd1, [open(K?, Close) | Op?], Op1, C2),
     merge(C1?, C2?, Cmds).
 
 %% in_keys(K, Ks, D): yes where K is one of Ks, no otherwise.
@@ -279,13 +322,16 @@ exported procedure (Stream(Request)?)*home(Key?, AgentToUserStream?, Stream(User
 %% Ask the person for their requests, once, and serve them.
 (Reqs)*home(Id, Outs, Cmds?) :-
     ground(Id?) |
-    friends_told(Outs?, Outs1, Friends),
+    friends_told(Outs?, Outs1, Friends, Seen),
     serve(Reqs?, Id?, [], Outs1?, Cmds1),
     introductions(Id?, [], Friends?, Cmds2),
-    merge(Cmds1?, Cmds2?, Cmds).
+    nearby_cards(Id?, [], [], Seen?, Cmds3),
+    merge(Cmds1?, Cmds2?, Cmds4),
+    merge(Cmds4?, Cmds3?, Cmds).
 
 %% serve(Reqs, Id, Cd, Outs, Cmds): home, with the rest of the person's
-%% requests, Cd the persons nearby offered a card or friends.
+%% requests, Cd the friends it was told of; the persons nearby are
+%% nearby_cards'.
 procedure serve(Stream(Request)?, Key?, List(Key)?, AgentToUserStream?, Stream(UserInMsg)).
 
 %% A friend asks to connect: the person answers on a card of their own.
@@ -302,14 +348,6 @@ serve(Reqs, Id, Cd, [msg(agent, person, befriend_intro(From, Other, P)) | Outs],
     respond_intro(Id?, From?, Other?, P?, Answer),
     merge(Answer?, Cmds1?, Cmds),
     serve(Reqs?, Id?, Cd?, Outs?, Cmds1).
-
-%% The persons nearby whom the person knows (GPE's interface pragma Nearby):
-%% a card with befriend for each not offered before and not a friend.
-serve(Reqs, Id, Cd, [msg(agent, person, nearby(Ks)) | Outs], Cmds?) :-
-    ground(Id?), ground(Ks?), ground(Cd?) |
-    offer(Ks?, Id?, Cd?, Cd1, Picks),
-    merge(Picks?, Cmds1?, Cmds),
-    serve(Reqs?, Id?, Cd1?, Outs?, Cmds1).
 
 %% A friend: offered no card from now on.
 serve(Reqs, Id, Cd, [msg(agent, person, connected(K)) | Outs], Cmds?) :-
