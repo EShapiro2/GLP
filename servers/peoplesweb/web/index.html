@@ -448,17 +448,21 @@ let DRAGGED = false, LASTPT = 'mouse', TIPID = null, HIDETIP = () => {};
 function globeNav(){
   const g = $('#graph'), pts = new Map();
   let drag = null, pinch = null;
-  const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; };
+  const dist = () => { const [a, b] = [...pts.values()].slice(-2); return Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; };
   g.addEventListener('pointerdown', e => {
     LASTPT = e.pointerType || 'mouse';
+    // A first finger down starts a new gesture: a finger whose lifting was
+    // never seen (lifted off the globe, or the gesture taken by the browser)
+    // is forgotten, or the next pinch would count three fingers.
+    if (e.isPrimary){ pts.clear(); pinch = null; }
     pts.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pts.size === 2){ pinch = [dist(), V.zoom]; drag = null; DRAGGED = true; return; }
+    if (pts.size >= 2){ pinch = [dist(), V.zoom]; drag = null; DRAGGED = true; return; }
     drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false;
     if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); });
   g.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return;
     pts.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pinch && pts.size === 2){
+    if (pinch && pts.size >= 2){
       V.zoom = Math.max(0.8, Math.min(3.2, pinch[1] * dist() / pinch[0])); drawGlobe(); return; }
     if (!drag) return;
     const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
@@ -470,10 +474,11 @@ function globeNav(){
   const up = e => {
     pts.delete(e.pointerId);
     if (pts.size < 2) pinch = null;
-    if (!DRAGGED && e.type === 'pointerup' && !e.target.closest('.node')) HIDETIP();
+    if (!DRAGGED && e.type === 'pointerup' && g.contains(e.target) && !e.target.closest('.node')) HIDETIP();
     drag = null; };
-  g.addEventListener('pointerup', up);
-  g.addEventListener('pointercancel', up);
+  // A finger is lifted wherever it is, on the globe or off it.
+  addEventListener('pointerup', up);
+  addEventListener('pointercancel', up);
   g.addEventListener('wheel', e => { e.preventDefault();
     V.zoom = Math.max(0.8, Math.min(3.2, V.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
     drawGlobe(); }, {passive: false});
