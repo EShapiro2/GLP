@@ -1313,7 +1313,7 @@ void appsScreens(Screens screens) {
       'asked to lend, two Alice-coins for three Bob-bonds maturing at day 5; '
       'Alice redeems a matured Bob-bond against an Alice-coin Bob holds; and '
       'Carol, the escrow agent, asked to accept Alice\'s deposit', (tester) async {
-    // GB's app (programs/apps/gb), compiled down the cascade from GB.glp (programs/currencies/bonds/GB.glp) and its pragmas, GB.txt, the tasks of Currencies (Code_inbox.md, 2026-10-20 19:57 and 20:27 UTC, 2026-10-23 22:31 UTC, point 4): each establishes their identity (GKK:1) and gets the first day as their date, from the calendar (GB:2, first_date); Alice comes to know Bob and Carol, Acquaint (GKK:2); (a) Alice mints bonds maturing at day 10 (GB:1); Alice asks Bob for a loan, her coins for his bonds of larger face value maturing later, and (b) Bob is asked and answers yes (GB:3); Bob's date advances to day 5, the calendar giving the day (GB:2, advance); (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:5); and (d) Carol, the escrow agent, is asked to accept Alice's deposit of two Alice-coins, and answers yes (GB:7).
+    // GB's app (programs/apps/gb), compiled down the cascade from GB.glp (programs/currencies/bonds/GB.glp) and its pragmas, GB.txt, the tasks of Currencies (Code_inbox.md, 2026-10-20 19:57 and 20:27 UTC, 2026-10-23 22:31 UTC, point 4): each establishes their identity (GKK:1) and gets the first day as their date, from the calendar (GB:2, first_date); Alice comes to know Bob and Carol, Acquaint (GKK:2); (a) Alice mints bonds maturing at day 10 (GB:1); Alice asks Bob for a loan, her coins for his bonds of larger face value maturing later, and (b) Bob is asked and answers yes (GB:3); Bob's date advances to day 5, the calendar giving the day (GB:2, advance); (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:4); and (d) Carol, the escrow agent, is asked to accept Alice's deposit of two Alice-coins, and answers yes (GB:5).
     final run = await _Run.start(tester, screens, 'gb',
         chain: const ['alice', 'bob', 'carol'],
         pairs: const [('alice', 'bob'), ('alice', 'carol')],
@@ -1394,7 +1394,7 @@ void appsScreens(Screens screens) {
     await run.day('bob', 5);
     expect(bob.atoms, contains('date(5)'));
 
-    // (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:5): on her Bonds tab, Redeem, GB's "[Redeem] <maturity given> <issuer wanted> <maturity wanted>", beside her Bob-bonds, maturity given 5 and issuer wanted alice, the maturity wanted left empty for a coin; which proposes redeem_bc(alice, bob, 5, alice); Bob is not asked.
+    // (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:4): on her Bonds tab, Redeem, GB's "[Redeem] <maturity given> <issuer wanted> <maturity wanted>", beside her Bob-bonds, maturity given 5 and issuer wanted alice, the maturity wanted left empty for a coin; which proposes redeem_bc(alice, bob, 5, alice); Bob is not asked.
     await run.list(alice, 'bond');
     const bobBond = 'bond(bob, 5)';
     await run.tap(alice, run.control(alice, 'act:redeem:$bobBond'));
@@ -1406,7 +1406,7 @@ void appsScreens(Screens screens) {
     expect(alice.atoms.where((x) => x == 'bond(bob, 5)'), hasLength(2));
     expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(4));
 
-    // Alice deposits two Alice-coins with Carol (GB:7): Deposit, GB's "[Deposit] <issuer> <maturity> <amount>", beside Carol in her Contacts, alice, none, 2; which proposes deposit_c(alice, carol, alice, 2).
+    // Alice deposits two Alice-coins with Carol (GB:5): Deposit, GB's "[Deposit] <issuer> <maturity> <amount>", beside Carol in her Contacts, alice, none, 2; which proposes deposit_c(alice, carol, alice, 2).
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:deposit:carol'));
     await run.tap(alice, run.control(alice, 'pick:deposit:carol:alice'));

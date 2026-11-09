@@ -23,7 +23,7 @@ coins_source(V?, S?) :- coins # source(V, S).
 %% one_of and nth, ordinary GLP, shared by the examples' profiles (the social
 %% graph's, moved from social_graph/graph.glp for coins among friends, sGLP's
 %% code task of 2026-10-02 15:24 UTC, item 2); one_of counts by length/2, which
-%% ../self.glp holds, the transformation and the tests' sources calling it too.  one_of and the
+%% ../sglp.glp exports and ../self.glp exposes, the transformation and the tests' sources calling it too.  one_of and the
 %% nth it calls take a non-empty list, of the type [X | List(X)], and each has
 %% a clause for every list of that type, as TGLP's Definition "Instantiation"
 %% requires of every input path (sGLP's paper, Appendix B, at f1640df; sGLP's

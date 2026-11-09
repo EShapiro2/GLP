@@ -1,5 +1,5 @@
 % STAY: Grassroots Stays --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
 % Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds).  Through it it extends GKK; it cites their clauses whole and restates none.
 % Defines: place; stay, stay(x, a, d) at the guest; guest, guest(b, x, d, k) at the host, k the price; review; a night is a day of GB's calendar.
 % Schemas: STAY.glp beside this file, written by tools/contracts.py.

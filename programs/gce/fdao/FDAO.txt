@@ -1,6 +1,6 @@
 % FDAO: Funded DAO --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
-% Extends: DAO, Grassroots DAO (programs/gas/dao), and GB, Grassroots Bonds, Currencies' (programs/currencies/bonds).  Through them it extends GKK; it cites their clauses whole and restates none.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: DAO, Grassroots DAO (programs/gce/dao), and GB, Grassroots Bonds, Currencies' (programs/currencies/bonds).  Through them it extends GKK; it cites their clauses whole and restates none.
 % Defines: treasury, the DAO's coins, k.dao_coin(u, n) at its steward; grant.
 % Schemas: FDAO.glp beside this file, written by tools/contracts.py.
 FDAO: Funded DAO
