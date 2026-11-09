@@ -26,6 +26,7 @@
 /// `main_superapp_ui.dart`.
 library;
 
+import 'app_identity.dart' show installedApp;
 import 'package:flutter/material.dart';
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:path_provider/path_provider.dart';
@@ -161,6 +162,9 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
       final support = await getApplicationSupportDirectory();
       final kept = script == null ? _persona : '$_persona-${script.mode}';
       final store = FileAgentStateStore('${support.path}/agents/$kept.state');
+      // The app installed, as the platform names it, which the runtime keeps
+      // with the program and self_app/2 assigns (app_identity.dart).
+      final installed = await installedApp();
       final host = SuperAppHost(
         agentId: _persona,
         program: glp.coreDir,
@@ -173,6 +177,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
         services: readServices(glp.coreDir),
         firstAct: script?.firstAct,
         stateStore: store,
+        installedApp: installed,
       );
       if (debugLogOn) {
         final screen = _screen;
@@ -196,7 +201,14 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
             ? 'Ready'
             : 'Ready, with neither Bluetooth nor the local network');
       });
-      await host.start();
+      try {
+        await host.start();
+      } finally {
+        // The layer attests the version of the app whose program the agent
+        // runs, which the runtime decided at its start (IGLP, Implementation
+        // Notes, "The contract"); no session was attested before it.
+        await net.attestation.give(host.agent.runningApp);
+      }
       if (mounted) setState(() {});
       _screenChanged();
     } catch (e, stack) {
