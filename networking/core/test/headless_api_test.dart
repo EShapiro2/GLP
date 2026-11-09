@@ -10,7 +10,6 @@ import 'package:test/test.dart';
 import 'package:grassroots_networking_core/grassroots_networking_core.dart';
 
 import 'helpers/event_waits.dart';
-import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 
 /// The headless profile brought to the API's list for the WAN underlay (GNA,
 /// 2026-10-11, Task C): `sign`, `verify`, `observedPeerAddress`, `punchUdp`,
@@ -166,18 +165,25 @@ void main() {
     final target =
         await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(target.close);
-    final punched = Completer<PunchPacket>();
+    // A punch datagram is the GRPU magic alone: it carries no key.
+    final punched = Completer<Uint8List>();
     target.listen((event) {
       if (event != RawSocketEvent.read) return;
       final datagram = target.receive();
-      final packet =
-          datagram == null ? null : PunchPacket.tryParse(datagram.data);
-      if (packet != null && !punched.isCompleted) punched.complete(packet);
+      if (datagram == null || punched.isCompleted) return;
+      final data = datagram.data;
+      if (data.length >= 4 &&
+          data[0] == 0x47 &&
+          data[1] == 0x52 &&
+          data[2] == 0x50 &&
+          data[3] == 0x55) {
+        punched.complete(data);
+      }
     });
 
     a.wan.punchUdp('127.0.0.1:${target.port}');
-    final packet = await punched.future;
-    expect(packet.senderPubkey, a.identity.publicKey);
+    final data = await punched.future;
+    expect(data, orderedEquals([0x47, 0x52, 0x50, 0x55]));
     expect(() => a.wan.punchUdp('nowhere'), throwsArgumentError);
   }, timeout: Timeout.none);
 

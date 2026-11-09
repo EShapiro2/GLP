@@ -663,10 +663,7 @@ class HeadlessGrassrootsNetwork {
     _setupUdpCallbacks(udp);
     await udp.start();
     for (final entry in udp.rawSocketsByType.entries) {
-      _holePunchServices[entry.key] = HolePunchService(
-        socket: entry.value,
-        senderPubkey: identity.publicKey,
-      );
+      _holePunchServices[entry.key] = HolePunchService(socket: entry.value);
     }
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
       _announceOnLiveSessions();

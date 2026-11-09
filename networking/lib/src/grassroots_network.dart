@@ -1349,10 +1349,7 @@ class GrassrootsNetwork {
           _udpService!.rawSocketsByType.entries.map(
             (entry) => MapEntry(
               entry.key,
-              HolePunchService(
-                socket: entry.value,
-                senderPubkey: identity.publicKey,
-              ),
+              HolePunchService(socket: entry.value),
             ),
           ),
         );
