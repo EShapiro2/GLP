@@ -298,7 +298,7 @@ for c in contracts:
 
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
-    if f.endswith(('.html', '.png', '.ico')):
+    if f.endswith(('.html', '.png', '.ico', '.jpg')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
