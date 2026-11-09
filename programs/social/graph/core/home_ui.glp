@@ -31,18 +31,18 @@
 %% for each agent by its key, so the person's befriending and Invite have
 %% someone to reach.  home/3 and its
 %% dispatcher are imported at the types of home.glp's exports, as superapp/4
-%% imports them (self.glp, HomeQuestion).  No clause here names a peer by an
+%% imports them, the linker writing home.glp's types into each importer (vGLP, Section 6.3).  No clause here names a peer by an
 %% atom (IGLP, Remark "Agent Names").
 %%
 %% superapp_ui/4 is the harness of the app, not part of the super-app's
 %% contract; superapp/4 is the super-app.
 
-imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
+imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure place#os_agent(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
 
-exported procedure superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
+exported procedure superapp_ui(Key?, List(Key)?, PersonIn(Drawn)?, NetInStream?).
 superapp_ui(Id, Peers, Grants, _) :-
     ground(Id?), ground(Peers?) |
     place # os_agent(Id?, Peers?, [], none, Cmds?, NetIn?, Pan?, [], Outs, NetOut),

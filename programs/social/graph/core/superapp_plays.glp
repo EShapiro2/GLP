@@ -26,8 +26,8 @@
 %% persons' scripts take them as arguments.
 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
-imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
+imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 imported procedure place#os_phone(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
 
 %% The network between the two agents of a play, A and B: their network

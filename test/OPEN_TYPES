@@ -505,7 +505,6 @@ programs/social/graph/core/self.glp	open-decl	hold_output/1
 programs/social/graph/core/self.glp	open-decl	play_home/5
 programs/social/graph/core/self.glp	open-decl	show_notices/2
 programs/social/graph/core/self.glp	open-decl	yes_person/2
-programs/social/graph/core/self.glp	open-type	HomeDrawn
 programs/tests/agent_roundtrip/channel.glp	open-decl	receive/3
 programs/tests/agent_roundtrip/channel.glp	open-decl	send/3
 programs/tests/agent_roundtrip/play_madglp/agents.glp	open-decl	actor/2

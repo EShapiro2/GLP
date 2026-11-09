@@ -18,27 +18,7 @@
 %% keys from its person (IGLP, Implementation Notes, "Boot"), and a play or a
 %% boot is given them by the goal that starts it.
 
-%% The questions of the super-app's own person interface (home.vglp), as its
-%% compilation home.glp carries them (vGLP, Definition "Canonical
-%% Compilation"): the union of home's questions, of which the asks on its ask
-%% stream are made, written here again under core's own names, since
-%% ../self.glp's Question and Request are the currency's.  Types are not
-%% exported: a caller declares what it passes in its own scope, and the
-%% imported declarations below carry exactly the types of home.glp's exports,
-%% structurally (TGLP, "Cross-module type checking").  HomeDrawn is home.glp's
-%% Drawn, the type its person channel carries.  Ask(Q) is ../self.glp's, as
-%% home.glp's own, and the person channel's types the root's.
-HomeRequest       ::= trust(Key) ; install(String, String) ; invite(String, Key) ; open_place ; close_place ; invite_link ; open_link(String) ; list(String, String) ; list_unlisted(String, String) ; unlist.
-HomeFriendRequest ::= from(Key, Decision?).
-HomeWord          ::= text(String) ; person(Key).
-HomeIntroRequest  ::= approval(HomeIntroParties, List(HomeWord), Decision?).
-HomeIntroParties  ::= intro(Key, Key).
-HomeIntroduce     ::= introduce.
-HomeIntroduction  ::= introduction(Key, Key, HomeIntroduce?).
-HomeNearbyPerson  ::= nearby(Key, HomeBefriend?).
-HomeBefriend      ::= befriend.
-HomeQuestion      ::= friendRequest_w(HomeFriendRequest) ; introRequest_w(HomeIntroRequest) ; nearbyPerson_w(HomeNearbyPerson) ; introduction_w(HomeIntroduction) ; stream_request_r(Stream(HomeRequest)?).
-HomeDrawn         ::= friendRequest_w(_) ; introRequest_w(_) ; nearbyPerson_w(_) ; introduction_w(_) ; stream_request_r(_) ; output(List(Output)) ; Decision ; HomeBefriend ; HomeIntroduce ; HomeRequest.
+%% The types of the super-app's own person interface (home.vglp), as its compilation home.glp forms them (vGLP, Definition "Canonical Compilation"): Question, the union of home's questions, of which the asks on its ask stream are made, and Drawn, the type its person channel carries.  They are written into this module, with the types they name, by the linker, from the imported declarations below that name them (vGLP, Section 6.3), so no copy of them is written here; Ask(Q) is the root's, as home.glp's own, and the person channel's types the root's.
 
 %% A rendezvous server the person's first act names, by its key and its
 %% address (GSA paper, Appendix "The Operating System", "Boot"), and the
@@ -89,11 +69,11 @@ DirName    ::= name(String) ; none.
 %% currency does with its screen; home reads the same stream, each message
 %% whole, for a friend's request to connect and an introduction.  The draws leave by send_to_user/1, and the network
 %% stream by send_to_net/1.
-imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(HomeQuestion))).
-imported procedure home#dispatch(Stream(Ask(HomeQuestion))?, PersonChannel(HomeDrawn)?, Channel(Stream(Input(HomeDrawn)), Stream(Output))).
+imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
+imported procedure home#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure place#os_phone(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
-exported procedure superapp(Key?, List(Key)?, List(Service)?, PersonIn(HomeDrawn)?, NetInStream?).
+exported procedure superapp(Key?, List(Key)?, List(Service)?, PersonIn(Drawn)?, NetInStream?).
 superapp(Id, Known, Services, Grants, NetIn) :-
     ground(Id?), ground(Known?), ground(Services?) |
     servers_of(Services?, Servers),
@@ -199,7 +179,7 @@ hold_output(ch(_, [])).
 %% introduction, at the path of its decision, once the card is drawn with it.
 %% The person channel never closes, so the person holds its grant writer for
 %% good.
-procedure yes_person(_?, PersonIn(HomeDrawn)).
+procedure yes_person(_?, PersonIn(Drawn)).
 yes_person([draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([draw(N, _, introRequest_w(approval(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
@@ -230,7 +210,7 @@ picking_home(Id, Pick, Out, Notices?, ScriptCmds, In?) :-
 %% The person: yes on each card of a friend's request or an introduction;
 %% befriend on the first card of a person nearby, under first.  The person
 %% channel never closes, so the person holds its grant writer for good.
-procedure picking_person(PickMode?, PersonOut(HomeDrawn)?, PersonIn(HomeDrawn)).
+procedure picking_person(PickMode?, PersonOut(Drawn)?, PersonIn(Drawn)).
 picking_person(P, [draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | picking_person(P?, Ds?, Gs).
 picking_person(P, [draw(N, _, introRequest_w(approval(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
@@ -250,14 +230,14 @@ picking_person(P, [_ | Ds], Gs?) :- otherwise | picking_person(P?, Ds?, Gs).
 %% The person grants only on a card drawn: the dispatcher takes the asks, the
 %% grants and the draws in turn (programs/vglp/dispatcher.glp, fair/5), and a
 %% grant for a construct not yet asked reaches none.
-exported procedure play_home(Key?, HomeDrawn?, AgentToUserStream?, Stream(UserInMsg), Stream(_)).
+exported procedure play_home(Key?, Drawn?, AgentToUserStream?, Stream(UserInMsg), Stream(_)).
 play_home(Id, Ans, Notices, Cmds?, Log?) :-
     ground(Id?) |
     home # home(Id?, Notices?, Cmds, Asks),
     home # dispatch(Asks?, ch(Grants?, Draws), _),
     answering(Ans?, Draws?, Grants, Log).
 
-procedure answering(HomeDrawn?, _?, PersonIn(HomeDrawn), Stream(_)).
+procedure answering(Drawn?, _?, PersonIn(Drawn), Stream(_)).
 answering(A, [draw(N, _, friendRequest_w(from(F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(F?) | Log?]) :-
     ground(A?), ground(N?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
 answering(A, [draw(N, _, introRequest_w(approval(intro(I, F), _, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
@@ -390,8 +370,8 @@ route_to(_, [], [], []).
 
 %% The super-app as a play, the person with a scripted peer for each key the
 %% person knows: what the Flutter agent runtime starts (home_ui.glp).
-imported procedure home_ui#superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
-exported procedure superapp_ui(Key?, List(Key)?, PersonIn(HomeDrawn)?, NetInStream?).
+imported procedure home_ui#superapp_ui(Key?, List(Key)?, PersonIn(Drawn)?, NetInStream?).
+exported procedure superapp_ui(Key?, List(Key)?, PersonIn(Drawn)?, NetInStream?).
 superapp_ui(Id, Peers, Grants, NetIn) :- home_ui # superapp_ui(Id?, Peers?, Grants?, NetIn?).
 
 %% The plays of superapp_plays.glp, each given the keys of its two agents,
@@ -570,7 +550,7 @@ CoreAct ::= superapp(Key, List(Key), List(Service))
           ; dated_phone(Constant, Key, List(Key))
           ; sovereign_phone(Constant, Key, List(Key)).
 CoreIn  ::= [] ; [CoreAct | Grants].
-Grants  ::= [] ; [Input(HomeDrawn) | Grants].
+Grants  ::= [] ; [Input(Drawn) | Grants].
 
 %% The smartphones of the apps' boots (programs/apps/<app>_boot.glp) and of
 %% the currencies' plays' boots (programs/currencies/<program>_<play>_boot.glp),
@@ -639,9 +619,9 @@ known_peers([]).
 %% channel, which never closes (vGLP, Section 6.3): where the person's stream
 %% closes, no grant comes again, and the channel's grants are held for good,
 %% on a fresh channel nothing writes, as hold_person/1 holds a person channel.
-procedure person_grants(Grants?, PersonIn(HomeDrawn)).
+procedure person_grants(Grants?, PersonIn(Drawn)).
 person_grants([G | Gs], [G? | Ps?]) :- person_grants(Gs?, Ps).
 person_grants([], Ps?) :- new_channel(A, B), hold_grants(A?, B?, Ps).
 
-procedure hold_grants(Channel(PersonOut(HomeDrawn), PersonIn(HomeDrawn))?, Channel(PersonIn(HomeDrawn), PersonOut(HomeDrawn))?, PersonIn(HomeDrawn)).
+procedure hold_grants(Channel(PersonOut(Drawn), PersonIn(Drawn))?, Channel(PersonIn(Drawn), PersonOut(Drawn))?, PersonIn(Drawn)).
 hold_grants(ch([_ | Ds], Gs?), B, Ps?) :- hold_grants(ch(Ds?, Gs), B?, Ps).
