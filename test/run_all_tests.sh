@@ -4321,7 +4321,9 @@ check "CVA pragmas: ... the act's fields name l at its third place, d no place o
 # wards and wards_leaving (a verdict grassroots with wards compiles, A, with
 # no leaving mark and with one, GSC's Appendix F), signed (a signed term in
 # an added atom, the speech act bound to y signed by the person in role i,
-# compiles, B), deadfree (a schema requiring and forbidding an atom of a
+# compiles, B), itemarg (the item of a speech act, item_of(x), as an argument
+# of an atom required, forbidden and added, passes the checks, vGLP e1d1b8a),
+# deadfree (a schema requiring and forbidding an atom of a
 # variable of no deleted or added atom, not effective, vGLP c0bea08), sibling
 # (CSSN's child role and adult role at one person, two classes),
 # sibling_noclash (the adult role not forbidding child, one class, all marking
@@ -4336,6 +4338,7 @@ compile(chain3, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], [
 compile(wards, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, 2), free(2))], [])).
 compile(wards_leaving, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, 2), free(2))], [retired])).
 compile(signed, [schema(fwd, [svar(x)], [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots).
+compile(itemarg, [schema(inst, [svar(x)], [rs(guarded, [atom(installed, [item_of(svar(x))])], [], [atom(item, [svar(x)])], [atom(installed, [item_of(svar(x))])])])], syntactically_grassroots).
 compile(deadfree, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [pvar(x)], [rs(guarded, [atom(z, [])], [], [atom(q, [pvar(x)])], [atom(q, [pvar(x)])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
 compile(localagent, [schema(lpf, [pvar(l), pvar(d)], [rs(guarded, [atom(lp, [role(2), pvar(l)])], [], [atom(friend, [role(2)])], [atom(lp, [role(2), pvar(l)])]), rs(unguarded, [], [], [atom(lp, [pvar(d), pvar(l)])], [])])], syntactically_grassroots).
 compile(sibling, reflexive([friend], [schema(csib, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(parenting, [role(2)])], [atom(child, [])])]), schema(cab, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(parent, [role(3)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, []), atom(friend, [role(1)])]), rs(guarded, [atom(approval, [])], [], [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])], [atom(child, [])])])]), syntactically_grassroots).
@@ -4354,6 +4357,7 @@ check "CVA compiler: ... and the third joining them, one class, its parts guarde
 check "CVA compiler: a contract grassroots with wards passes the checks (wards)" "%% not compiled, having no pragmas(wards)" "$cva_classes"
 check "CVA compiler: ... and one with a leaving mark, the verdict's fifth argument (GSC, Appendix F, Definition \"Leaving mark\"), passing the checks (wards_leaving)" "%% not compiled, having no pragmas(wards_leaving)" "$cva_classes"
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, passes the checks (signed)" "%% not compiled, having no pragmas(signed)" "$cva_classes"
+check "CVA compiler: the item of a speech act as an argument of an atom, item_of(x), required, forbidden and added, its variable bound by an atom the role requires, passes the checks (itemarg; vGLP e1d1b8a, Section 5.4: an argument of an atom may be \"the signer, the author or the item of a speech act\")" "%% not compiled, having no pragmas(itemarg)" "$cva_classes"
 check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"
 check "CVA compiler: ... the schema and the variable named" "%% the schema and the variable(s2, pvar(x))" "$cva_classes"
 # Every variable local to a role (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role, as the person d where Bob's role requires that Bob point to someone with a label"; the effectiveness condition's "but a variable local to a role"): GDO-L's lpoint_friend, its agent variable d only in lp(d, l) required at Bob's role, passes the checks (localagent).
