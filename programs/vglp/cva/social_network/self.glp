@@ -9,12 +9,16 @@
 %% ---------------------------------------------------------------------------
 
 
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_network(Stream(_), Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_network(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_network(LA?, LB?, LC?, LD?, N?) :-
     quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
              own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
@@ -63,8 +67,8 @@ play_network(LA?, LB?, LC?, LD?, N?) :-
 
 %% alice, bob, carol and dave, each with its dispatcher and scripted person,
 %% their networks joined.
-procedure quartet(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_),
-    Stream(_), Stream(_), Stream(Sent(Cargo))).
+procedure quartet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), MA),

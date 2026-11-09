@@ -42,6 +42,9 @@
 
 Speech   ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+SgSteps  ::= Steps(Drawn, Class, Atom, Approved, Reason).
+SgLog    ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
@@ -49,17 +52,14 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% play_refresh: alice establishes her identity and, once she sees it, grants refresh, an Input addressed to no construct, on which the dispatcher has every construct, and construct 0, draw again what it last drew, so the screen is redrawn whole, the agent writing nothing on it (vGLP d433f71, Section 6.3; Section 5.4, "The compilation": the request type has no alternative refresh).  She then proposes acquaint, the request question still open.
-%% Its persons' logs are of the type L of what the scripted person logs on
-%% this platform, a parameter of the declaration (docs/typed-glp-manual.md,
-%% section 18: no open type).
-exported procedure(L) play_refresh(Stream(L), Stream(L), Stream(Sent(Cargo))).
+exported procedure play_refresh(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 play_refresh(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)), refresh,
           own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(alice, bob), yes)],
          LA, LB, N).
 
-exported procedure play_befriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_befriend(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 play_befriend(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob)))],
@@ -67,7 +67,7 @@ play_befriend(LA?, LB?, N?) :-
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
-exported procedure play_unfriend(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_unfriend(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 play_unfriend(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
@@ -85,7 +85,7 @@ play_unfriend(LA?, LB?, N?) :-
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
-exported procedure play_refused(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_refused(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 play_refused(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)), own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
           own([A2], propose(befriend(A2?, bob))),
@@ -96,7 +96,7 @@ play_refused(LA?, LB?, N?) :-
           approval(befriend(alice, bob), yes)],
          LA, LB, N).
 
-exported procedure play_menu(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_menu(Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 play_menu(LA?, LB?, N?) :-
     pair([look, own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([M1], propose(acquaint(M1?, bob))), wait(holds(knows(bob))),
@@ -109,7 +109,7 @@ play_menu(LA?, LB?, N?) :-
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
-procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+procedure pair(SgSteps?, SgSteps?, Stream(SgLog), Stream(SgLog), Stream(Sent(Cargo))).
 pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), MA),

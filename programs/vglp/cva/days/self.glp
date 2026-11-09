@@ -24,12 +24,16 @@
 %% ---------------------------------------------------------------------------
 
 
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Integer)?, Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_days(Stream(_)).
+exported procedure play_days(Stream(ScriptLog)).
 play_days(LA?) :-
     platform # agent(alice, [], _, TA, [1|Cal?], AsA),
     platform # dispatch(AsA?, ch(GA?, DA), MA),

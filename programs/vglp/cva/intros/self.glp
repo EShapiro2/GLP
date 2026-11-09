@@ -96,12 +96,16 @@
 %% ---------------------------------------------------------------------------
 
 
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_intros(Stream(_), Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_intros(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_intros(LA?, LB?, LC?, N?) :-
     trio([own([A1], propose(acquaint(A1?, bob))),
           wait(holds(knows(bob))),
@@ -119,7 +123,7 @@ play_intros(LA?, LB?, LC?, N?) :-
 %% alice, bob and carol, each with its dispatcher and scripted person, their
 %% networks joined; exported, so that Section VG of test/run_all_tests.sh runs
 %% the scripts of the reading role and of the signing conditions on it, below.
-exported procedure trio(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(_),
+exported procedure trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
     Stream(Sent(Cargo))).
 trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),

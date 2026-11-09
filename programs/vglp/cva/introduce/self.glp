@@ -22,12 +22,17 @@
 %% ---------------------------------------------------------------------------
 
 
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class or an attempt, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+Asked       ::= Class ; Attempt.
+ScriptSteps ::= Steps(Drawn, Asked, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Asked, Drawn, Atom, Approved, Reason, Tab).
+
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_introduce(Stream(_), Stream(_), Stream(_),
+exported procedure play_introduce(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
     Stream(Sent(Cargo))).
 play_introduce(LA?, LB?, LC?, N?) :-
     trio([own([A1], propose(befriend(A1?, bob))),
@@ -48,7 +53,7 @@ play_introduce(LA?, LB?, LC?, N?) :-
 
 %% alice, bob and carol, each with its dispatcher and scripted person, their
 %% networks joined.
-procedure trio(Steps(Drawn)?, Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(_),
+procedure trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
     Stream(Sent(Cargo))).
 trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),

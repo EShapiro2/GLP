@@ -17,12 +17,16 @@
 %% ---------------------------------------------------------------------------
 
 
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_gnudge(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_gnudge(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_gnudge(LA?, LB?, N?) :-
     pair([own([A1], propose(befriend(A1?, bob)))],
          [approval(befriend(alice, bob), yes)],
@@ -30,7 +34,7 @@ play_gnudge(LA?, LB?, N?) :-
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
-procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), MA),
