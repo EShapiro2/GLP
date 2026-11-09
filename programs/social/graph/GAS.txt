@@ -19,6 +19,7 @@ Listings: the programs listed in Carol's store.
 Store: Carol [Open store] <name>
   Dave: Carol asks to be your guardian.
 Listing: Carol [List] [Delist]
+  Dave: Carol asks you to list or delist a program.
 Store Trust: Alice [Trust store] <store> [Distrust store] <store>
 Installation from a Store: Alice [Install]
 Implementation pragmas
