@@ -488,10 +488,10 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
         );
 
-        expect(receivedTransport, equals(PeerTransport.udp));
+        expect(receivedTransport, equals(PeerTransport.wan));
       });
 
       test('drops a fragment whose payload lacks the fragment header',
@@ -604,7 +604,7 @@ void main() {
         await router.processPacket(p,
             transport: PeerTransport.bleDirect, rssi: -60);
         await router.processPacket(p,
-            transport: PeerTransport.udp, rssi: -60);
+            transport: PeerTransport.wan, rssi: -60);
 
         final deliveryId = MessageRouter.deliveryIdOf(otherPubkey, messageId);
         expect(deliveries, [deliveryId, deliveryId]);
@@ -630,7 +630,7 @@ void main() {
               messageId: messageId,
               body: Uint8List.fromList([i & 0xff]),
             ),
-            transport: PeerTransport.udp,
+            transport: PeerTransport.wan,
           );
         }
 
@@ -718,7 +718,7 @@ void main() {
           body: Uint8List.fromList([7]),
         );
 
-        await router.processPacket(p, transport: PeerTransport.udp);
+        await router.processPacket(p, transport: PeerTransport.wan);
         expect(delivered, isEmpty);
         expect(fragmentAcks, isEmpty,
             reason: 'unacknowledged, so the sender retransmits');
@@ -727,7 +727,7 @@ void main() {
             reason: 'asked of the session that decrypted it');
 
         attested = true;
-        await router.processPacket(p, transport: PeerTransport.udp);
+        await router.processPacket(p, transport: PeerTransport.wan);
         expect(delivered, [MessageRouter.deliveryIdOf(otherPubkey, messageId)]);
         expect(fragmentAcks, [messageId]);
         expect(acks, [messageId]);
@@ -755,7 +755,7 @@ void main() {
               chunk: Uint8List.fromList([9, 9]),
             ),
           ),
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
         );
 
         expect(judged, hasLength(1));
@@ -875,13 +875,13 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-123',
         );
 
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(peer!.transport, equals(PeerTransport.udp));
+        expect(peer!.transport, equals(PeerTransport.wan));
       });
 
       test('identifies UDP connection with the verified announce pubkey',
@@ -897,7 +897,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'temp-key-1',
         );
 
@@ -915,7 +915,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-123',
         );
 
@@ -936,7 +936,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'fallback-peer-id',
         );
 
@@ -956,11 +956,11 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-456',
         );
 
-        expect(receivedTransport, equals(PeerTransport.udp));
+        expect(receivedTransport, equals(PeerTransport.wan));
       });
     });
 
@@ -987,7 +987,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-789',
         );
 
@@ -1009,13 +1009,15 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-seen-test',
         );
 
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(peer!.lastUdpSeen, isNotNull);
+        expect(peer!.lastWanSeen, isNotNull);
+        expect(peer.lastLanSeen, isNull,
+            reason: 'a packet on the WAN session refreshes the WAN clock alone');
         expect(peer.lastSeen, isNotNull);
       });
 
@@ -1040,15 +1042,16 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-ack-test',
         );
 
-        expect(ackTransport, equals(PeerTransport.udp));
+        expect(ackTransport, equals(PeerTransport.wan));
         expect(
           ackPeerId,
           equals(
-            otherPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+            'wan/'
+            '${otherPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}',
           ),
         );
         expect(ackMessageId, equals(messageId));
@@ -1182,7 +1185,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-abc',
         );
 
@@ -1209,7 +1212,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-def',
         );
 

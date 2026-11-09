@@ -1512,10 +1512,10 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
 
   // ===== AROUND TAB =====
   Widget _buildAroundTab() {
-    // Contacts (known peers) with a live UDP connection.
+    // Contacts (known peers) with a live UDP session, on the LAN or the WAN.
     final onlineFriends = appStore.state.peers.peersList
         .where((p) =>
-            p.hasLiveUdpConnection &&
+            (p.lanAuthenticated || p.wanAuthenticated) &&
             appStore.state.knownPeers.isKnown(p.pubkeyHex))
         .toList();
 

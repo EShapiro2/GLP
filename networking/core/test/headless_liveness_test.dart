@@ -167,7 +167,7 @@ void main() {
     expect(messageId, isNotNull);
     final live = () =>
         a.store.state.peers.getPeerByPubkey(b.identity.publicKey)
-            ?.hasLiveUdpConnection;
+            ?.wanAuthenticated;
     expect(live(), isTrue, reason: 'the session stands before the exhaustion');
     a.debugExhaustAttempts(b.identity.publicKey);
     // The teardown is in the store at once, where the silence sweep would take

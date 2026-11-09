@@ -73,7 +73,7 @@ void main() {
     }
 
     await completeHandshake(PeerTransport.bleDirect);
-    await completeHandshake(PeerTransport.udp);
+    await completeHandshake(PeerTransport.wan);
 
     final clear = GrassrootsPacket(
       type: PacketType.fragment,
@@ -87,7 +87,7 @@ void main() {
     );
     final udpEncrypted = await aliceSessions.encryptPacket(
       clear,
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
       remotePubkey: bob.publicKey,
     );
 
@@ -105,7 +105,7 @@ void main() {
     );
     final (udpDecrypted, udpSender, udpHash) = await bobSessions.decryptPacket(
       udpEncrypted,
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
       remotePubkey: alice.publicKey,
     );
 
@@ -121,7 +121,7 @@ void main() {
     expect(bleHash,
         bobSessions.handshakeHashFor(PeerTransport.bleDirect, alice.publicKey));
     expect(udpHash,
-        bobSessions.handshakeHashFor(PeerTransport.udp, alice.publicKey));
+        bobSessions.handshakeHashFor(PeerTransport.wan, alice.publicKey));
     expect(bleHash, isNot(equals(udpHash)));
   });
 
@@ -136,7 +136,7 @@ void main() {
     final mallorySessions =
         NoiseSessionManager(identity: mallory, sodium: sodium);
 
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
 
     // Alice initiates an XX handshake she believes is with Bob, whose key
     // an ANNOUNCE claimed (GNA §2.6).

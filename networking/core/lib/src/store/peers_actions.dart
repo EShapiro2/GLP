@@ -134,15 +134,20 @@ class PeerBleDisconnectedAction extends PeerAction {
   PeerBleDisconnectedAction(this.publicKey, {this.role});
 }
 
-/// A peer's Noise session over UDP was established or torn down. Updates [PeerState.hasLiveUdpConnection].
-class PeerUdpConnectionChangedAction extends PeerAction {
+/// A peer's Noise session on the IP [underlay] — [Underlay.lan] or
+/// [Underlay.wan] — was established or torn down. Updates
+/// [PeerState.lanAuthenticated] or [PeerState.wanAuthenticated], and clears
+/// that session's attestation; the other sessions are untouched.
+class PeerIpSessionChangedAction extends PeerAction {
   final String pubkeyHex;
+  final Underlay underlay;
   final bool connected;
 
-  PeerUdpConnectionChangedAction({
+  PeerIpSessionChangedAction({
     required this.pubkeyHex,
+    required this.underlay,
     required this.connected,
-  });
+  }) : assert(underlay != Underlay.pan);
 }
 
 /// A BLE Noise session with a peer completed authentication.
@@ -160,9 +165,8 @@ class PeerBleAuthenticatedAction extends PeerAction {
 /// session's underlay: "A peer becomes reachable over an underlay when its
 /// session on that underlay is established, authenticated, and attested."
 ///
-/// [underlay] is the session's: [Underlay.pan] for the GATT session, and for
-/// the UDP session [Underlay.lan] or [Underlay.wan] as the layer classified
-/// the peer's address against the agent's own local prefixes.
+/// [underlay] is the session's: [Underlay.pan] for the GATT session,
+/// [Underlay.lan] for the LAN session and [Underlay.wan] for the WAN session.
 ///
 /// A failed verification produces no action of this kind — it tears the
 /// session down instead.
@@ -178,13 +182,18 @@ class PeerAttestedAction extends PeerAction {
   });
 }
 
-/// A verified UDP packet was received from a peer.
+/// A verified packet was received from a peer on its session on the IP
+/// [underlay] — [Underlay.lan] or [Underlay.wan].
 ///
-/// Updates UDP-specific freshness so a silent UDP session can be aged out even when the peer is still nearby over BLE.
-class PeerUdpSeenAction extends PeerAction {
+/// Refreshes that session's staleness clock alone, so a silent session is aged
+/// out even while the peer is live on another underlay (spec §ANNOUNCE and
+/// Liveness: "independently per underlay").
+class PeerIpSeenAction extends PeerAction {
   final Uint8List publicKey;
+  final Underlay underlay;
 
-  PeerUdpSeenAction(this.publicKey);
+  PeerIpSeenAction(this.publicKey, this.underlay)
+      : assert(underlay != Underlay.pan);
 }
 
 /// A session-authenticated packet was received over BLE from a peer.
@@ -197,11 +206,14 @@ class PeerBleSeenAction extends PeerAction {
   PeerBleSeenAction(this.publicKey);
 }
 
-/// Mark peer as disconnected from UDP
-class PeerUdpDisconnectedAction extends PeerAction {
+/// Mark peer as disconnected on its session on the IP [underlay] —
+/// [Underlay.lan] or [Underlay.wan].
+class PeerIpDisconnectedAction extends PeerAction {
   final Uint8List publicKey;
+  final Underlay underlay;
 
-  PeerUdpDisconnectedAction(this.publicKey);
+  PeerIpDisconnectedAction(this.publicKey, this.underlay)
+      : assert(underlay != Underlay.pan);
 }
 
 /// Mark peer as fully disconnected

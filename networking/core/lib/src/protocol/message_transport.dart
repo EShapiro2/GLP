@@ -123,6 +123,11 @@ class MessageTransportSender {
     return message.completer.future;
   }
 
+  /// Whether any message to [peerHex] is still outstanding on its lane: not
+  /// yet acknowledged, failed or abandoned.
+  bool hasOutstanding(String peerHex) =>
+      _lanes[peerHex]?.messages.isNotEmpty ?? false;
+
   /// A per-fragment acknowledgment arrived.
   void handleFragmentAck(String peerHex, String messageId, int index) {
     final lane = _lanes[peerHex];

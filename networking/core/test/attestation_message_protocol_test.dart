@@ -640,7 +640,7 @@ void main() {
       bool sessionStands() =>
           service.store.state.peers
               .getPeerByPubkeyHex(callerHex)
-              ?.hasLiveUdpConnection ??
+              ?.wanAuthenticated ??
           false;
 
       final clock = Stopwatch()..start();

@@ -344,8 +344,8 @@ void main() {
         if (hex(pk) == hex(silentPk)) connects.add(underlay);
       },
       onState: (state) {
-        if (state.peers.getPeerByPubkey(silentPk)?.hasLiveUdpConnection ??
-            false) {
+        final peer = state.peers.getPeerByPubkey(silentPk);
+        if (peer != null && (peer.lanAuthenticated || peer.wanAuthenticated)) {
           everLive = true;
         }
       },
@@ -413,7 +413,7 @@ void main() {
     await server.stop();
     await lost.future;
     expect(node.isPeerReachable(serverPk), isFalse);
-    expect(node.debugHasUdpSession(serverPk), isFalse,
+    expect(node.debugHasIpSession(serverPk), isFalse,
         reason: 'the stale session ended with its path, not left standing');
 
     // The server is back at its address: the sweep dials it again.
@@ -521,7 +521,7 @@ void main() {
     await server.stop();
     expect(await server.start(), isTrue);
     await lost.future;
-    expect(node.debugHasUdpSession(serverPk), isFalse);
+    expect(node.debugHasIpSession(serverPk), isFalse);
 
     // The sweep reaches it again under a new session, which it reports.
     await sessions[1].future;
@@ -544,7 +544,7 @@ void main() {
     final sent = node.send(serverPk, Uint8List.fromList([7]));
     expect(node.isPeerReachable(serverPk), isTrue,
         reason: 'the session stands before the exhaustion');
-    node.debugExhaustUdpAttempts(serverPk);
+    node.debugExhaustIpAttempts(Underlay.wan, serverPk);
     // Reported at once, where the silence sweep would take two announce
     // intervals.
     expect(node.isPeerReachable(serverPk), isFalse,

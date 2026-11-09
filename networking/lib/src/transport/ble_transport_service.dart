@@ -689,7 +689,7 @@ class BleTransportService extends TransportService {
     }
   }
 
-  @override
+  /// The GATT leg's peer id for a public key (if known).
   String? getPeerIdForPubkey(Uint8List pubkey) {
     final peer = _peersState.getPeerByPubkey(pubkey);
     if (peer == null) return null;
