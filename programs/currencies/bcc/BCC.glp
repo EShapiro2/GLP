@@ -32,6 +32,7 @@ PNames      ::= [] ; [Constant | PNames].
 Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
 Contract    ::= [] ; [Schema | Contract].
 Preds       ::= [] ; [Constant | Preds].
+Declared    ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
 
 %% contract_named(bcc, C): the contract, BCC (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
