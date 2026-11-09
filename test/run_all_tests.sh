@@ -5456,6 +5456,37 @@ HEREDOC
 check_not "CVA standing: alice withdraws by leaving before bob arrives: no greet commits" "outcome(attempt([a-z]*, [0-9]*, [0-9]*, greet([a-z]*, [a-z]*), none), commit)" "$cva_withdraw"
 check "CVA standing: ... alice holds knows(bob) alone" "A = \[.*view(alice, \[knows(bob)\], \[bob\], \[\], \[tab('Contacts', knows)\]) | " "$cva_withdraw"
 check "CVA standing: ... and the run suspends" "→ suspended" "$cva_withdraw"
+# Ready and Readied (vGLP 1d84a35, Definition "Proposing": "where every approval of [t] pending at p is standing, moreover s in dom(f), and, where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)"; Ready, "by a participant p != i of an attempt alpha of [t]_j ... p has recorded voted(alpha, no) and neither answered(alpha, no) nor readied(alpha), and s in dom(f): p records readied(alpha) and adds message(p, i, ready(alpha))"; Readied, the initiator recording ready(alpha, q)).  The platform prints them, and two plays run them.  No show: alice arrives, a standing request of greet, bob, known to her, never arrives; her machine proposes greet(alice, bob) once, bob's refuses it as unable, lacking here, and under her standing approval alone she proposes it no more, waiting for his ready; the run suspends.  Ready: bob arrives only after refusing, his arrival waiting on carol's acquaintance, which alice starts once she has arrived; once here, his machine, having refused alice's attempt as unable, tells her ready(alpha), and a greet of the two commits, each person asked nothing.
+check "CVA ready: the platform prints the cargo ready(Attempt)" "^            ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).$" "$cva_signing_text"
+check "CVA ready: ... the records readied, ready and unable" "^            ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer)$" "$cva_signing_text"
+check "CVA ready: ... Ready as an own transaction, its effect recording readied(At) and telling the initiator ready(At)" "^ready_effect(At, St, \[to(P?, ready(At?))\], St1?) :- ground(At?), ground(St?) |$" "$cva_signing_text"
+check "CVA ready: ... Readied on the message, recording ready(At, F)" "^    add_rec(ready(At?, F?), Ap?, Ap1),$" "$cva_signing_text"
+check "CVA ready: ... and under standing approvals alone the parts proposed are those the agent is ready for whose last refusal as unable has its ready, none refused at once" "^    readied_parts(Rs?, I?, R?, Rs1),$" "$cva_signing_text"
+cva_noshow=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 20000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(arrive(A2?))), wait(holds(here))], [approval(acquaint(alice, bob), yes), wait(known(alice))], [], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA ready, no show: alice's machine proposes greet(alice, bob) and bob's refuses it as unable, lacking here" "sent(bob, alice, vote(attempt(alice, [0-9]*, [0-9]*, greet(alice, bob), none), no(unable(\[here\], \[\]))))" "$cva_noshow"
+check_not "CVA ready, no show: ... and, under her standing approval alone, she proposes it no more" "start(attempt(alice, [0-9]*, [0-9]*, greet(alice, bob), none)))[^|]*start(attempt(alice, [0-9]*, [0-9]*, greet(alice, bob), none)))" "$cva_noshow"
+check_not "CVA ready, no show: ... no greet commits" "greet([a-z]*, [a-z]*), none), commit)" "$cva_noshow"
+check "CVA ready, no show: ... and the run suspends, not stopped at the limit" "→ suspended" "$cva_noshow"
+cva_ready=$("$REPL_RUN" <<HEREDOC
+$CVA/intros/
+:limit 30000000
+trio([own([A1], propose(acquaint(A1?, bob))), wait(holds(knows(bob))), own([A2], propose(arrive(A2?))), wait(holds(here)), own([A3], propose(acquaint(A3?, carol))), wait(holds(greeted(bob)))], [approval(acquaint(alice, bob), yes), approval(acquaint(carol, bob), yes), wait(known(carol)), own([B1], propose(arrive(B1?))), wait(holds(greeted(alice)))], [approval(acquaint(alice, carol), yes), wait(known(alice)), own([C1], propose(acquaint(C1?, bob)))], A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA ready: bob's machine refuses alice's greet as unable, bob not here" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, greet(alice, bob), none), abort(bob, unable(\[here\], \[\]))))" "$cva_ready"
+check "CVA ready: ... and once bob is here tells her ready" "sent(bob, alice, ready(attempt(alice, [0-9]*, [0-9]*, greet(alice, bob), none)))" "$cva_ready"
+check "CVA ready: ... a greet of alice and bob commits" "greet(alice, bob), none), commit)" "$cva_ready"
+check_not "CVA ready: ... bob refuses alice's greet as unable once" "greet(alice, bob), none), abort(bob, unable[^|]*greet(alice, bob), none), abort(bob, unable" "$cva_ready"
+check_not "CVA ready: ... neither person asked about greet" "gave(greet\|gave(attempt([a-z]*, [0-9]*, [0-9]*, greet" "$cva_ready"
+check "CVA ready: ... alice holds greeted(bob)" "A = \[.*view(alice, \[greeted(bob), here, knows(carol), knows(bob)\]" "$cva_ready"
+check "CVA ready: ... and the run suspends" "→ suspended" "$cva_ready"
 # The compiler's checks of a standing declaration (cvac.glp, standing_faults): a schema of the contract (st_none), guarded (st_unguarded), its two acts schemas of the contract (st_noact), each of whose guarding roles requires atoms naming every other role and variable, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification") (st_unnamed, GPE's Encounter as its schema stands, Alice's atoms naming no Bob); and a schema declared standing needs no button (st_ok).
 cva_stfx="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(close, [], [rs(guarded, [], [atom(open, [])], [atom(open, [])], [])]), schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(open, []), atom(knows, [role(2)])], []), rs(guarded, [atom(greeted, [role(1)])], [], [atom(open, []), atom(knows, [role(1)])], [])])"
 cva_stmeet="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(close, [], [rs(guarded, [], [atom(open, [])], [atom(open, [])], [])]), schema(meet, [], [rs(guarded, [atom(met, [role(2)])], [], [atom(open, [])], []), rs(guarded, [atom(met, [role(1)])], [], [atom(open, [])], [])])"
