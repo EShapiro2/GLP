@@ -1,26 +1,19 @@
-# Cloud-Reporter handover, Cloud #6, 2026-11-08
+# Cloud-Reporter handover, Cloud #6, 2026-11-09
 
-The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud.  The task is Code #26's, `Cloud-Reporter_inbox.md`, 2026-11-08 15:27 UTC; the specification is `phones/docs/debugging.md`, "The phone side", items 1 to 5.  The report to Code, with the commit and the totals, is in `Code_inbox.md`, From: Cloud #6.
+The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud.  Every task and every report is in the mail: Cloud #6's tasks in `Cloud-Reporter_inbox.md`, its reports in `Code_inbox.md`, From: Cloud #6.
 
-## Where the work is
+## Done and reported
 
-Two tasks of Code #26, both on branch `Cloud-reporter`: the reporter (`Cloud-Reporter_inbox.md`, 15:27 UTC) and the scripted build (16:38 UTC, `phones/docs/debugging.md`, "The scripted build").
+The reporter, the scripted build, the network lines and the lifecycle (Cloud-reporter, Cloud-reporter2); Currencies' Lists (Cloud-currencies ccda3ced); sGLP's check (xviii) (Cloud-sglp18); sGLP's layout (Cloud-sglplayout); the nth/3 test (Cloud-sglpnth); GB's renames (Cloud-currencies 435f59d4); the review of Dan's pull requests #34 to #39, this branch, Cloud-prs, today's main with his stack to #39 merged in.
 
-The scripted build is `glp_multiagent/lib/main_scripted.dart` and `lib/scripted_person.dart`, the host's optional first act in `superapp_host.dart`, the app's optional scripted person in `main_superapp.dart`, and `phones/tools/build.sh <udid> [<mode> [<known>]]`; its test is `glp_multiagent/test/scripted_build_test.dart`, over the simulated layer that `test/helpers/air.dart` now holds for it and for `superapp_nearby_test.dart`.
+## Left, in Code's order
 
-The reporter: branch `Cloud-reporter`, off main 05462f3.  The reporter is `glp_multiagent/lib/debuglog/`, wired in `glp_multiagent/lib/main_superapp.dart`; its tests are `glp_multiagent/test/debuglog_reporter_test.dart` and `debuglog_screen_test.dart`.  The other files the branch touches are `superapp_host.dart` (two hooks), `phone_network.dart` (the store's middleware), `pubspec.yaml` and `tool/sync_glp_assets.sh` (the build's commit in the assets).
-
-Code #26's third task (19:40 UTC), on branch `Cloud-reporter2`: the layer's diagnostics include Flutter's `debugPrint`, which `networking/lib` prints by, beside the core's (`reportLayerDiagnostics` in `lib/debuglog/app_reporting.dart`).  The branch began on the reporter's tip d08bd52, since Code's merge of it, main 9f67e841, was not on GitHub when the task came; main is merged into it since.
-
-Code #26's fourth task (20:30 UTC), on `Cloud-reporter2` after main was merged into it: each change of the app's lifecycle is reported (`reportLifecycle`), and `scripted_build_test.dart` holds that a scripted phone's person acts at a launch with no saved state and takes none at a launch that restores it.
+1. sGLP's two moves (Cloud-Reporter_inbox.md, 14:54 UTC), branch Cloud-sglptransform off main.  Move 1, length/2 and length/3 into sglp.glp, exported, is plain.  Move 2, the transformation into programs/sglp/transform/, meets two points to raise with sGLP before coding: transform.glp reaches the examples' and the tests' sources by the qualifiers examples# and tests#, and from programs/sglp/transform/ those are siblings, which a qualifier cannot name; and every printed module and every simulation record holds the line "Printed by programs/sglp/transform.glp", which the move changes, so each record's check would fail.
+2. GB's old clause numbers (Cloud-Reporter_inbox.md, 15:05 UTC), branch Cloud-gbnumbers off main: the mapping and the places are in that mail.
 
 ## Environment
 
-- Flutter 3.x with Dart 3.13.7 is at `/home/user/sdk/flutter`; put its `bin` and `bin/cache/dart-sdk/bin` on `PATH`.  It warns that it runs as root, and runs.
-- `flutter test` in `glp_multiagent` needs `bash tool/sync_glp_assets.sh` first, or the asset bundle fails to build.
-- `flutter pub get` rewrites `glp_multiagent/analysis_options.yaml`; that change is the tool's and is not committed.
-- `Grassroots-Overview` attached to a session is a paper repository, not the mail; the mail is `Grassroots-Project-Overview`, added by `add_repo`.
-
-## Open
-
-The points Code is to decide are in the report; nothing is queued for the role after them.
+- Flutter with Dart 3.13.7 is at `/home/user/sdk/flutter`; put its `bin` and `bin/cache/dart-sdk/bin` on `PATH`.
+- networking's Flutter tests need libsodium: `apt-get install -y libsodium-dev`.  The container has no IPv6: the hole-punch tests, #38's new test, and six tests of #37 that skip themselves need it.
+- `flutter test` in `glp_multiagent` needs `bash tool/sync_glp_assets.sh` first; `flutter pub get` rewrites `analysis_options.yaml`, which is not committed.
+- `Grassroots-Overview` is a paper repository; the mail is `Grassroots-Project-Overview`.  GNA's paper is `GLP-Networking-API`.
