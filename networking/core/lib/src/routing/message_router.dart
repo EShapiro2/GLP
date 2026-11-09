@@ -325,6 +325,12 @@ class MessageRouter {
       // for that peer, even if it is an ACK, read receipt, or retransmission.
       store.dispatch(PeerUdpSeenAction(senderPubkey));
     }
+    // Any session-authenticated packet over BLE refreshes the stale sweep's
+    // clock for that peer, not only ANNOUNCE. Unauthenticated packets never
+    // reach this point.
+    if (transport == PeerTransport.bleDirect) {
+      store.dispatch(PeerBleSeenAction(senderPubkey));
+    }
 
     // Refresh per-packet RSSI on every BLE packet from a known peer.
     // The plugin emits `payload.rssi` as null when the OS doesn't expose a
