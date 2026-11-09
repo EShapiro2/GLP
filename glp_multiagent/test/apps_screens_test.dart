@@ -1337,10 +1337,10 @@ void appsScreens(Screens screens) {
     await run.meetByKey(alice, bob);
     await run.meetByKey(alice, carol);
 
-    // Alice mints five Alice-coins (GB:1): on her Coins tab, the tab of GB, Mint coin, GB's "[Mint coin] <amount>".
+    // Alice mints five Alice-coins (GC:1, GB extending GC): on her Coins tab, the tab of GB, Mint, GB's "[Mint] <amount>".
     await run.list(alice, 'knows');
-    await run.type(alice, run.control(alice, 'field:mint_coin::2'), '5');
-    await run.tap(alice, run.control(alice, 'send:mint_coin:'));
+    await run.type(alice, run.control(alice, 'field:mint::2'), '5');
+    await run.tap(alice, run.control(alice, 'send:mint:'));
     expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(5));
 
     // (a) Alice mints three Alice-bonds maturing at day 10 (GB:1), later than her date, day 1: Mint bond, GB's "[Mint bond] <maturity> <amount>", which proposes mint_bond(alice, 10, 3).
@@ -1359,7 +1359,7 @@ void appsScreens(Screens screens) {
     await run.tap(bob, run.control(bob, 'send:mint_bond:'));
     expect(bob.atoms.where((x) => x == 'bond(bob, 5)'), hasLength(4));
 
-    // Alice asks Bob for a loan (GB:3): Swap, GB's "[Swap]", one button for the four schemas swap_cc to swap_bb, beside Bob in her Contacts, its fields GB's "<issuer given> <maturity given> <amount given> <issuer wanted> <maturity wanted> <amount wanted>": alice, none, 2, bob, 5, 3, the maturity given left empty for a coin; which proposes swap_cb(alice, bob, alice, 2, bob, 5, 3).
+    // Alice asks Bob for a loan (GB:3): Swap, GB's "[Swap]", one button for the four schemas swap to swap_bb, beside Bob in her Contacts, its fields GB's "<issuer given> <maturity given> <amount given> <issuer wanted> <maturity wanted> <amount wanted>": alice, none, 2, bob, 5, 3, the maturity given left empty for a coin; which proposes swap_cb(alice, bob, alice, 2, bob, 5, 3).
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:swap:bob'));
     // A picker of the values the ways bind, the coins and the bonds she holds; the fields of the acts of the value picked, each name once, the request of the act whose fields are filled.
