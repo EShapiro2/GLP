@@ -2429,19 +2429,24 @@ class GrassrootsNetwork {
       ),
     );
 
-    if (await _trySendMessageNow(
+    // Delivery runs after the save and is not awaited: the outcome reaches the
+    // store as the message's status (sent, queued), so `send` completes once
+    // the message is saved (api.tex, Send payload).
+    void queueInMemory() => _queueOutboundMessage(
+          recipientPubkey: recipientPubkey,
+          payload: payload,
+          messageId: messageId!,
+        );
+    unawaited(_trySendMessageNow(
       recipientPubkey: recipientPubkey,
       payload: payload,
       messageId: messageId,
-    )) {
-      return messageId;
-    }
-
-    _queueOutboundMessage(
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      messageId: messageId,
-    );
+    ).then((sent) {
+      if (!sent) queueInMemory();
+    }, onError: (Object error, StackTrace stack) {
+      debugPrint('[send] Delivery of $messageId failed: $error; queued again');
+      queueInMemory();
+    }));
     return messageId;
   }
 
