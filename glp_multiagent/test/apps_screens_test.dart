@@ -606,14 +606,15 @@ class _Run {
       find.descendant(
           of: find.byKey(listTabKey(pred)), matching: find.text(name)));
 
-  /// [p] taps the button [label] of their open approval question.
+  /// [p] taps the button [label] of their open approval question.  The button is found by a predicate under the question's construct, and not by `find.widgetWithText` nested in `find.descendant`: a finder's result is a lazy iterable (flutter_test, `FinderResult`), and a nested descendant finder asks `contains` of it for every candidate, each re-walking the whole element tree, so the nested form cost 2 to 24 s an evaluation here, 6 evaluations a tap, and GC's village market 21 minutes; this form costs 3 ms, and the test 30 s (Cloud #15, 2026-11-09, Code's task of 16:48 UTC).
   Future<void> answer(_Person p, String label) => tap(
       p,
-      on(
-          p,
-          find.descendant(
-              of: find.byKey(constructKey(p.approval.id)),
-              matching: find.widgetWithText(ElevatedButton, label))));
+      find.descendant(
+          of: on(p, find.byKey(constructKey(p.approval.id))),
+          matching: find.byWidgetPredicate((w) =>
+              w is ElevatedButton &&
+              w.child is Text &&
+              (w.child! as Text).data == label)));
 
   /// [p] establishes their identity (GKK:1): Join; on an app whose contract carries pragmas, Establish, GKK's "[Establish]", on the tab of GKK, Contacts.
   Future<void> join(_Person p) async {
