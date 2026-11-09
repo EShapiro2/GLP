@@ -21,8 +21,13 @@ On main at 7283bc77.
 
 Code #26's task of 2026-11-08 22:09 UTC, Cloud #6's two findings: `AgentRuntime.dispose` ends the launch, and a failed save is reported once and leaves the event loop free: 850892c6.
 
+## Queued, in Code #26's order of 2026-11-09 12:11 UTC
+
+1. The guard widowed/1, Blocking for the phones' Nearby card (Cloud-Runtime_inbox, 12:03 UTC, item 1).
+2. The seam predicate self_app/2, and the layer attesting the version the agent runs (08:10 UTC).
+3. The store keeps the program's files and each place's centre (12:03 UTC, item 2; IGLP 96cd44a), which decides Cloud-runtime's task 3.
+
 ## Open
 
-1. Task 3 of Cloud-runtime, load_file/2 after a refused update, waits on IGLP's answer, which Code sent.
-2. The points of the reports in Code_inbox.md, Cloud #10, 2026-11-08 21:09 UTC and 2026-11-09: a place made again at a restart being centred where the device is at the restart, and IGLP's Persistence saying what the runtime does when a save fails.
-3. `apps_screens_test` hangs in this container on main as on the branches; leave it out of a package run, and say so.
+1. IGLP's Persistence says nothing of what the runtime does when a save fails; the report of Cloud-runtime2 recommends a sentence.
+2. `apps_screens_test` hangs in this container on main as on the branches; leave it out of a package run, and say so.
