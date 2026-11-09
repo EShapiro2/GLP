@@ -155,6 +155,7 @@ const Set<String> builtinProcedures = {
   // Networking seam (Definition Seam Predicates)
   '_peer_address/2',
   '_peer_app/2',
+  '_self_app/2',
   '_punch_udp/1',
   '_declare/1',
   '_remove/1',

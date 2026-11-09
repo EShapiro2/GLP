@@ -21,7 +21,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
+import 'package:glp_runtime/runtime/body_kernels.dart' show formatTerm;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/stored_program.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -108,7 +111,7 @@ void main() {
   /// One launch of the application with [version] its program, over [store]:
   /// the agent, and what it drew.
   Future<(AgentRuntime, List<String>)> launch(
-      String version, AgentStateStore store) async {
+      String version, AgentStateStore store, {Application? installed}) async {
     File(file).writeAsStringSync(version);
     final drawn = <String>[];
     final agent = AgentRuntime(
@@ -116,6 +119,7 @@ void main() {
       program: file,
       rootSelfGlpPath: root,
       stateStore: store,
+      installedApp: installed,
     );
     agent.onOutput = (line) {
       if (line.startsWith('< ') || line.startsWith('[ERROR]')) {
@@ -196,6 +200,61 @@ void main() {
     expect(out6, ['< drawn(four)']);
     await a6.injectUserInput(ConstTerm('go'));
     expect(out6, ['< drawn(four)', '< went']);
+  });
+
+  test('self_app/2: the app whose program the agent runs is the installed '
+      'app, and after a refused update the app the store keeps with the '
+      'program it runs; the installed app is the one the host gives',
+      () async {
+    // GLP-Spec cce13ce, appendix-guards, "Networking seam": "self_app(R, I)
+    // assigns R app(D, N, V) for the app whose program the agent runs, the
+    // app the networking layer attests to the agent's peers, and I the same
+    // for the app installed on the device; the two differ after an update the
+    // runtime refused".  IGLP 59c40e2, Implementation Notes, "The contract":
+    // the version the layer attests is "the one the runtime gives it, that
+    // of the program the agent runs".
+    Application app(int v) =>
+        Application(developer: 'TEAM', name: 'app.grassroots', version: v);
+    final store = MemoryAgentStateStore();
+
+    final (a1, _) = await launch(_v1, store, installed: app(1));
+    expect(a1.runningApp, app(1));
+    expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(1),
+        reason: 'the store keeps the app with the program');
+
+    // An update the runtime takes: the program the agent runs is the
+    // installed app's.
+    final (a2, _) = await launch(_v2, store, installed: app(2));
+    expect(a2.updated, isTrue);
+    expect(a2.runningApp, app(2));
+    expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(2));
+
+    // An update the runtime refuses: the agent runs the program the store
+    // keeps, version 2, while version 3 is installed.
+    final (a3, _) = await launch(_v3, store, installed: app(3));
+    expect(a3.updateRefusal, isNotNull);
+    expect(a3.runningApp, app(2));
+    expect(a3.runtime!.selfApps!.installed, app(3));
+    expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(2),
+        reason: 'the store keeps the version the agent runs');
+  });
+
+  test('self_app(R, I) assigns app(D, N, V) of the two apps the runtime '
+      'holds, and none where the host gave none', () async {
+    final engine = GlpEngine(rootSelfGlpPath: root);
+    var result = await engine.runGoal('self_app(R, I)');
+    expect('${result.bindings['R']}', contains('none'));
+    expect('${result.bindings['I']}', contains('none'));
+
+    engine.runtime.selfApps = (
+      running: const Application(
+          developer: 'TEAM', name: 'app.grassroots', version: 2),
+      installed: const Application(
+          developer: 'TEAM', name: 'app.grassroots', version: 3),
+    );
+    result = await engine.runGoal('self_app(R, I)');
+    expect(formatTerm(result.bindings['R']!), "app('TEAM', 'app.grassroots', 2)");
+    expect(formatTerm(result.bindings['I']!), "app('TEAM', 'app.grassroots', 3)");
   });
 
   test('a file store keeps the program beside the state and the key pair, and '

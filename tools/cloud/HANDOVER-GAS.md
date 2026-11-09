@@ -1,12 +1,23 @@
-# Handover of Cloud-GAS (Cloud #7, 2026-11-08)
+# Handover of Cloud-GAS (Cloud #7, 2026-11-09 13:20 UTC, at its 1st compaction)
 
 The next session of the role reads this after its mail (GLP `CLAUDE.md`, "Cloud", 3).  Cloud #4's handover, the site and its server, stands below it under "The site".
+
+## The queue (Code #26, Cloud-GAS_inbox.md, 2026-11-09 13:02 UTC)
+
+On branch `Cloud-phonehome` off main 32bc81fb (main merged in at 096303c7, nothing of its own yet), each task its own commit, each reported as pushed.  The open-types work, Cloud-vglp2, is set aside: "phones come first" (Udi).
+
+1. **Closing a question**: done on `Cloud-close` at dcb82d7d (pushed): `_answer` in `glp_runtime/lib/vglp/constructs.dart` adds `$name(_, X, Gs, Gs?[, []], done) :- widowed(X) | true.` after the otherwise clause (vGLP 7c631b1, 6.1 and 6.3); home's Nearby cards in `nearby_cards`, `close_card`, `CardClose`.  The checker refuses the clause ("Variable mode mismatch") until Cloud #10's `widowed/1` (GLP-Spec aeed242) lands in the engine and the checker; Code says when.  Then merge main, test (VG, SG) and report.
+2. **Composition, not begun in code.**  vGLP's compiler takes one contract or several and of several prints the platform of their composition, the union of their schemas and pragmas, which extends each (vGLP act-schemas-local 1a02877; GSC Section 8); what two inherit from one contract is taken once; a schema, tab or button of one name two write differently is refused (vGLP 5.4); `cascade.sh` takes several contracts for one record.  The plan: `cascade.sh` takes several names and forms one record (its directory name to be chosen and reported, such as `cascade/GSN+GC`); a GLP procedure in `programs/vglp/cva/compiler` composes the `contract_named` terms and the introductions, the union, an identical schema taken once, one name with different text refused; the pragmas through `pragmas.sh` (find_txt at 223, `relation_names` at 245, `visit` building `@order`) as of a contract whose relation line is "extends A and B", with the refusal of a tab or button of one name written differently; tested on GSN and GC, which both extend GKK, since GPE, GPD and GAS do not yet compile alone.
+3. **Home printed by the composition** of GPE, GSG, GPD and GAS, run by core's OS on the phones in place of the hand-written home.  Waits on task 2 and on the faults reported to Code at 13:17 UTC: GAS's verdict malformed, `not_in_vars(distrust_store, trusts_store)`, and its Store pragma naming no person in guarding role 2 of open_store (GSA's; GSA #2's d107fb83 on main may have answered it, check); GPD's: the compiler's Arg lacks `item_of(Arg)`, which GSC's reader writes (`programs/gsc/self.glp:69` against `programs/vglp/cva/compiler/self.glp:29`; vGLP's).
+4. **GSC's standing line**: `pragmas.sh` reads "Encounter: Alice stands on [Open place] until [Close place]" into `standing(Schema, Predicate)`; GPE.txt has it on main 2ae63194.  Not begun.
+
+Set aside: Cloud-vglp2 (dd91e783, 27044d39, 30dbe7e5, pushed): the compiled types read into every scope, 33 OPEN_TYPES entries cleared, play_refresh typed, 17 cascade records re-made; left are GAI, CSSN, GFF and GSNP's records, the apps' compiled modules re-printed, and APPS.  Cloud-introfix 415f7b3c: the program-compilation test's lexer reads `=::=`.
 
 ## The role
 
 GAS: the site at https://peoplesweb.org, its server, and the operating system's side of GRV and GDS (GLP `CLAUDE.md`, "Cloud", 1).  Inbox `Cloud-GAS_inbox.md`, read with `bash bin/mail-read Cloud-GAS "Cloud #N"`; report to Code in `Code_inbox.md`.
 
-## What Cloud #7 did, on branch Cloud-p3
+## What Cloud #7 did before, on branch Cloud-p3 (merged)
 
 All pushed; Code merges.  Reported to Code at 2026-11-08 17:36 UTC and after.
 

@@ -782,6 +782,37 @@ for my $S (sort keys %covered) {
 }
 # Each button line and what the rule gives it, on the standard error, where PRAGMAS_LINES is set.
 print STDERR map { /^\x03(\d+)$/ ? map { "$_\n" } @{ $line_of[$1] // [] } : "$_\n" } @lines_out, @dup_out if $ENV{PRAGMAS_LINES};
+# The standing lines of the implementation pragmas, of the contract and of every contract it extends (GSC 1a8e31c, Section 2: "An implementation pragma may declare that a person\x27s act stands for every act of a clause that the person guards: \x60\x60Encounter: Alice stands on [Open place] until [Close place]\x27\x27 says that Alice\x27s act Open place is her standing request of every act of Encounter she guards, so that she is asked nothing, and that her act Close place withdraws it"; vGLP 7c631b1, Section 5.4, "The contract\x27s words"): "<Clause>: <Name> stands on [<Start>] until [<Stop>]", read as standing(S, A, W) for each schema S of the clause, the schemas bearing its title as a button bears its name, A the schema of the button [<Start>] and W that of [<Stop>]; what follows on the line, after a semicolon, is how the app realises it, which no term carries.
+my (@stands, %stand_seen);
+for my $f (@order) {
+    my $impl = 0;
+    for my $x (read_txt($f)) {
+        if (impl_head($x)) { $impl = 1; next }
+        if (iface_head($x)) { $impl = 0; next }
+        next unless $impl && $x =~ /\bstands on\b/;
+        unless ($x =~ /^([^:]+?):\s+(\S.*?)\s+stands on \[([^\]]+)\] until \[([^\]]+)\](?:\s*[;.].*)?\s*$/) {
+            push @faults, "pragmas.sh: $f: the standing line \"$x\" is not \"<Clause>: <Name> stands on [<Start>] until [<Stop>]\"\n";
+            next;
+        }
+        my ($title, $b1, $b2) = ($1, $3, $4);
+        my @sn = map { (my $n = lc $_) =~ s/\s+/_/g; $n } ($title, $b1, $b2);
+        my @cl = realising($sn[0]);
+        my ($start) = realising($sn[1]);
+        my ($stop) = realising($sn[2]);
+        if (@snames) {
+            my %is = map { $_ => 1 } @snames;
+            my @miss = grep { !$is{$_} } (@cl, $start, $stop);
+            if (@miss) {
+                push @faults, "pragmas.sh: $f: the standing line \"$x\" names " . join(", ", @miss) . ", no schema of the contract\n";
+                next;
+            }
+        }
+        for my $S (@cl) {
+            my $t = "standing(" . q_atom($S) . ", " . q_atom($start) . ", " . q_atom($stop) . ")";
+            push @stands, $t unless $stand_seen{$t}++;
+        }
+    }
+}
 if (@faults) { print STDERR @faults; exit 1 }
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "])\n";
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "]" . (@stands ? ", [" . join(", ", @stands) . "]" : "") . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}"
