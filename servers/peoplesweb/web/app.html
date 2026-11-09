@@ -121,8 +121,8 @@ let NAMES = {};
 const PHONES = () => PERSONS;
 const col = p => ['alice','bob','carol','dave'].includes(p) ? `var(--${p})` : `hsl(${parseInt(String(p).slice(0, 6), 16) % 360} 60% 55%)`;
 // The families' colours, from programs/apps/look.json, as the build gives them:
-// [light, dark].
-const FAM = Object.fromEntries(Object.entries((window.DATA || {families: {}}).families).map(([k, f]) => [k, f.colours]));
+// [from, to].
+const FAM = Object.fromEntries(Object.entries((window.DATA || {families: {}}).families).map(([k, f]) => [k, [f.from, f.to]]));
 // A family the table does not name is drawn as other, so a contract added to the
 // repository never stops the page.
 const famOf = c => FAM[c.family] ? c.family : 'other';

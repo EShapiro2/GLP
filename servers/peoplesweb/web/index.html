@@ -213,8 +213,8 @@ D.contracts.forEach(c => C[c.id] = c);
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 // The families' colours and names, from programs/apps/look.json, as the build
-// gives them: [light, dark, name].
-const FAM = Object.fromEntries(Object.entries(D.families).map(([k, f]) => [k, [f.colours[0], f.colours[1], f.name]]));
+// gives them: [from, to, name].
+const FAM = Object.fromEntries(Object.entries(D.families).map(([k, f]) => [k, [f.from, f.to, f.name]]));
 // A family the table does not name is drawn as other, so a contract added to the
 // repository never stops the page.
 const famOf = c => FAM[c.family] ? c.family : 'other';
