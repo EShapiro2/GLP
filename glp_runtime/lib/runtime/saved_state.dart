@@ -54,9 +54,15 @@ class SavedStateFormatException implements Exception {
 /// 16:40 UTC, item 9); a version-2 state is not read.  Version 4
 /// (2026-11-07) writes the nearby declarations after the places, each with its
 /// stream's tail writer (GLP-Spec 210cee1, "Networking seam": nearby(U, S));
-/// a version-3 state is not read.
+/// a version-3 state is not read.  Version 5 (2026-11-08) writes the
+/// declarations made to the networking layer that stand after the nearby
+/// declarations, so that a restart makes each to the new layer again (IGLP
+/// 0c77e47, Implementation Notes, "Persistence"); a version-4 state is not
+/// read.  Version 6 (2026-11-08) writes the reachable declaration after the
+/// nearby declarations, with its stream's tail writer (GLP-Spec cb9df43,
+/// "Networking seam": reachable(S)); a version-5 state is not read.
 const List<int> savedStateMagic = [0x47, 0x4C, 0x50, 0x53];
-const int savedStateVersion = 4;
+const int savedStateVersion = 6;
 
 // Term tags.
 const int _tVar = 0;

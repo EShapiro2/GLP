@@ -1043,6 +1043,7 @@ Future<void> _eventLoop(
         // Predicates": a presence on a nearby stream is bridged below the
         // madGLP layer, reactivating whatever suspended on its reader).
         final presences = ctx.presencesDelivered;
+        final reaches = ctx.reachesDelivered;
         var run = false;
         switch (msg.event) {
           case ConnectivityEvent.connected:
@@ -1057,7 +1058,11 @@ Future<void> _eventLoop(
             network.onPeerLost?.call(
                 peerPk, ProximityUnderlay.values.byName(msg.underlay.name));
         }
-        if (run || ctx.presencesDelivered != presences) await runEvent();
+        if (run ||
+            ctx.presencesDelivered != presences ||
+            ctx.reachesDelivered != reaches) {
+          await runEvent();
+        }
       }
       config.mainPort.send(AgentIdle(agentId));
     }

@@ -24,10 +24,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/seam_declarations.dart';
 import 'package:glp_runtime/runtime/terms.dart' show ConstTerm, StructTerm;
 
 /// The agents' one program: GNA's adapter test's, each agent started from
@@ -87,6 +89,41 @@ agent(ch(_, []), ch(_, [])) :- declare(nearby(pan, S)), watch(S?).
 
 procedure watch(Stream(Presence)?).
 watch([P|S]) :- ground(P?) | send_to_user([P?]), watch(S?).
+watch([]) :- send_to_user([closed]).
+''';
+
+/// An agent that makes a declaration of each kind a layer function takes ---
+/// a peer, its address, a rendezvous server, both underlays' trust levels and
+/// a place --- and tells its person each event of the place (GLP-Spec
+/// appendix-guards, "Networking seam"; IGLP 0c77e47, Definition "Seam
+/// Predicates").  PEER and SERVER are replaced by keys.
+const String _declarer = r'''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :-
+    declare(peer("PEER")), declare(address("PEER", "192.0.2.1:4000")),
+    declare(rendezvous("SERVER", "192.0.2.2:4000")),
+    declare(trust(pan, open)), declare(trust(lan, closed)),
+    declare(place(home, 50, E)), watch(E?).
+
+procedure watch(Stream(PlaceEvent)?).
+watch([E | S]) :- ground(E?) | send_to_user([E?]), watch(S?).
+watch([]).
+''';
+
+/// An agent that declares a watch on the agents reachable over the WAN when
+/// its person says `watch`, and tells its person each reach (GLP-Spec
+/// cb9df43, "Networking seam": reachable(S), Reach ::= connected(Key) ;
+/// lost(Key)).
+const String _reacher = r'''
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- go(In?).
+
+procedure go(Stream(Constant)?).
+go([watch | _]) :- declare(reachable(S)), watch(S?).
+go([]).
+
+procedure watch(Stream(Reach)?).
+watch([R | S]) :- ground(R?) | send_to_user([R?]), watch(S?).
 watch([]) :- send_to_user([closed]).
 ''';
 
@@ -197,6 +234,35 @@ class _WireNetwork extends GlpNetwork {
   void removeRendezvousServer(PubKey pk) {}
 }
 
+/// A [_WireNetwork] that writes each declaration it is given into [log], as
+/// `layer: <function>(<arguments>)`, so a test can see what the layer was
+/// told and in what order with what the agent did.
+class _RecordingNetwork extends _WireNetwork {
+  final List<String> log;
+
+  _RecordingNetwork(super.keyPair, super.wire, this.log);
+
+  @override
+  void putKnownPeer(PubKey pk) => log.add('layer: putKnownPeer(${pk.hex})');
+  @override
+  void removeKnownPeer(PubKey pk) =>
+      log.add('layer: removeKnownPeer(${pk.hex})');
+  @override
+  void putPeerAddress(PubKey pk, String address) =>
+      log.add('layer: putPeerAddress(${pk.hex}, $address)');
+  @override
+  void putRendezvousServer(PubKey pk, String address) =>
+      log.add('layer: putRendezvousServer(${pk.hex}, $address)');
+  @override
+  void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) =>
+      log.add('layer: setTrustLevel(${underlay.name}, ${level.name})');
+  @override
+  Future<bool> declarePlace(String place, double radiusMetres) {
+    log.add('layer: declarePlace($place, $radiusMetres)');
+    return super.declarePlace(place, radiusMetres);
+  }
+}
+
 /// An agent's transcript, AgentRuntime.onOutput's lines, or the messageIds a
 /// layer is told are acknowledged, which a test waits on one by one: on the
 /// event, a line's arrival, and on no clock.  Until
@@ -245,6 +311,10 @@ void main() {
   late String symbolic;
   late String placer;
   late String watcher;
+  late String declarer;
+  late String reacher;
+  final declaredPeer = generateKeyPair().pub;
+  final declaredServer = generateKeyPair().pub;
 
   setUpAll(() {
     // Written under the root, programs/ (TGLP modules.tex, "Scope
@@ -259,6 +329,12 @@ void main() {
     File(placer).writeAsStringSync(_placer);
     watcher = '${dir.path}/watcher.glp';
     File(watcher).writeAsStringSync(_watcher);
+    reacher = '${dir.path}/reacher.glp';
+    File(reacher).writeAsStringSync(_reacher);
+    declarer = '${dir.path}/declarer.glp';
+    File(declarer).writeAsStringSync(_declarer
+        .replaceAll('PEER', declaredPeer.hex)
+        .replaceAll('SERVER', declaredServer.hex));
     root = File('../programs/self.glp').absolute.path;
   });
   tearDownAll(() => dir.deleteSync(recursive: true));
@@ -569,6 +645,192 @@ void main() {
           '< seen(${other.hex})');
     });
 
+    test('at a restart from the saved state every standing declaration is '
+        'made to the new layer, in the order made, before any goal of the '
+        'agent is reduced; the program does not declare again', () async {
+      // IGLP 0c77e47, Implementation Notes, "Persistence": the store keeps
+      // "every declaration standing --- the peers, the addresses, the
+      // rendezvous servers, the trust levels, the places, the nearby and
+      // reachable declarations"; "The layer starts empty at every launch,
+      // and at a restart the runtime makes every declaration the store holds
+      // to it again before any goal of the agent is reduced".  Seen on two
+      // phones until 2026-11-08: after a restart the layer, a new process,
+      // knew no peer, trust level or nearby stream.
+      final kp = generateKeyPair();
+      final store = MemoryAgentStateStore();
+      final firstLog = <String>[];
+      final first = _RecordingNetwork(kp, _Wire(), firstLog);
+      final agent = AgentRuntime(
+        agentId: 'declarer',
+        program: declarer,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: first,
+        stateStore: store,
+      );
+      await agent.initialize();
+      final made = [
+        'layer: putKnownPeer(${declaredPeer.hex})',
+        'layer: putPeerAddress(${declaredPeer.hex}, 192.0.2.1:4000)',
+        'layer: putRendezvousServer(${declaredServer.hex}, 192.0.2.2:4000)',
+        'layer: setTrustLevel(pan, open)',
+        'layer: setTrustLevel(lan, closed)',
+        'layer: declarePlace(home, 50.0)',
+      ];
+      expect(firstLog, unorderedEquals(made),
+          reason: 'the first start makes each declaration once');
+
+      final log = <String>[];
+      final second = _RecordingNetwork(kp, _Wire(), log);
+      final again = AgentRuntime(
+        agentId: 'declarer',
+        program: declarer,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: second,
+        stateStore: store,
+      );
+      // Each goal reduced is traced, `GLP: ...`, once onLog is set.
+      again.onLog = (_, m) {
+        if (m.startsWith('GLP: ')) log.add('reduced');
+      };
+      final out = _Lines();
+      again.onOutput = out.add;
+      await again.initialize();
+      expect(again.firstStart, isFalse);
+      expect(log.where((l) => l.startsWith('layer: ')).toList(),
+          [for (final l in firstLog) l],
+          reason: 'every standing declaration is made to the new layer again, '
+              'in the order the first start made them, and the program '
+              'makes none');
+
+      // The restored goal waits on the place's stream; the new layer's
+      // report reaches it, and is the first reduction after the restart.
+      second.onPlaceEvent!('home', PlaceEvent.entered);
+      expect(await out.lineWhere((l) => l.startsWith('< ')), '< entered');
+      final firstReduction = log.indexOf('reduced');
+      expect(firstReduction, greaterThan(0));
+      expect(log.sublist(firstReduction).where((l) => l.startsWith('layer: ')),
+          isEmpty,
+          reason: 'every declaration is made before any goal is reduced');
+    });
+
+    test('the standing record takes off what a removal removes, and a '
+        'further declaration replaces the one standing and goes last',
+        () async {
+      // GLP-Spec appendix-guards, "Networking seam": remove(peer(P)) "takes
+      // P, and any address recorded for it, off the layer's known peers";
+      // remove(rendezvous(P)) takes the server off; a later trust
+      // declaration of an underlay replaces the level then standing; a
+      // further declaration of the same place supersedes the earlier one.
+      final r = SeamDeclarations()
+        ..peer('a')
+        ..address('a', 'x')
+        ..peer('b')
+        ..address('b', 'y')
+        ..rendezvous('s', 'z')
+        ..trust('pan', 'open')
+        ..place('home', 50)
+        ..trust('pan', 'closed')
+        ..removePeer('a')
+        ..removeRendezvous('s')
+        ..place('work', 10)
+        ..removePlace('work')
+        ..address('b', 'w');
+      expect([for (final d in r.standing) '$d'], [
+        'peer(b)',
+        'place(home, 50)',
+        'trust(pan, closed)',
+        'address(b, w)',
+      ]);
+    });
+
+    test('a reachable declaration begins with every agent the layer has a '
+        'session with over the WAN, and is fed connected and lost from what '
+        'the layer reports over the WAN, each followed by a run', () async {
+      // GLP-Spec cb9df43, "Networking seam": "reachable(S) assigns S a
+      // stream of the agents the networking layer connects to over the WAN:
+      // connected(K) when the layer has a session with the agent of key K
+      // over the WAN, beginning with every agent it has one with when it is
+      // declared, and lost(K) when that session ends."  GNA api.tex, Section
+      // 2.3: onPeerConnected(pk, underlay, application?) and
+      // onPeerDisconnected(pk, underlay).
+      final kp = generateKeyPair();
+      final network = _WireNetwork(kp, _Wire());
+      final agent = AgentRuntime(
+        agentId: 'reacher',
+        program: reacher,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: network,
+      );
+      final out = _Lines();
+      agent.onOutput = out.add;
+      await agent.initialize();
+      final a = generateKeyPair().pub;
+      final b = generateKeyPair().pub;
+      final c = generateKeyPair().pub;
+      Future<String> next(int n) async {
+        var count = 0;
+        return out.lineWhere((l) => l.startsWith('< ') && ++count == n);
+      }
+
+      network.onPeerConnected!(a, Underlay.wan, null); // before the declaration
+      network.onPeerConnected!(b, Underlay.pan, null); // not over the WAN
+      await agent.injectUserInput(ConstTerm('watch'));
+      expect(await next(1), '< connected(${a.hex})');
+      network.onPeerConnected!(a, Underlay.wan, null); // already connected
+      network.onPeerConnected!(c, Underlay.wan, null);
+      expect(await next(2), '< connected(${c.hex})');
+      network.onPeerDisconnected!(b, Underlay.pan); // not over the WAN
+      network.onPeerDisconnected!(a, Underlay.wan);
+      expect(await next(3), '< lost(${a.hex})');
+      expect([for (final l in out) if (l.startsWith('< ')) l], [
+        '< connected(${a.hex})',
+        '< connected(${c.hex})',
+        '< lost(${a.hex})',
+      ]);
+    });
+
+    test('a reachable declaration survives a restart, and is fed by the '
+        'layer instantiated again', () async {
+      // IGLP 0c77e47, Implementation Notes, "Persistence": the store keeps
+      // "the nearby and reachable declarations"; the sessions are the
+      // layer's, reported again by the new layer.
+      final kp = generateKeyPair();
+      final store = MemoryAgentStateStore();
+      final agent = AgentRuntime(
+        agentId: 'reacher',
+        program: reacher,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: _WireNetwork(kp, _Wire()),
+        stateStore: store,
+      );
+      await agent.initialize();
+      await agent.injectUserInput(ConstTerm('watch'));
+      expect(agent.runtime!.reachableStreams.isDeclared('wan'), isTrue);
+
+      final second = _WireNetwork(kp, _Wire());
+      final again = AgentRuntime(
+        agentId: 'reacher',
+        program: reacher,
+        rootSelfGlpPath: root,
+        keyPair: kp,
+        network: second,
+        stateStore: store,
+      );
+      final out = _Lines();
+      again.onOutput = out.add;
+      await again.initialize();
+      expect(again.firstStart, isFalse);
+      expect(again.runtime!.reachableStreams.isDeclared('wan'), isTrue);
+      final peer = generateKeyPair().pub;
+      second.onPeerConnected!(peer, Underlay.wan, null);
+      expect(await out.lineWhere((l) => l.startsWith('< ')),
+          '< connected(${peer.hex})');
+    });
+
     test("the layer's onPeerConnected and onPeerDisconnected are recorded for "
         'peer_app/2, and still reach the host', () async {
       // GLP-Spec appendix-guards, "Networking seam" (5fab8ac): peer_app(P, A)
@@ -655,6 +917,28 @@ void main() {
   });
 
   group('AgentRuntime over the simulation', () {
+    test('a reachable declaration stands and its stream carries nothing: the '
+        'router reports the PAN throughout', () async {
+      // IGLP 0c77e47, Implementation Notes, "Simulation realisation": "Not
+      // provided: the WAN underlay and the rendezvous server, so ... a
+      // reachable declaration's stream, which carries nothing"; "the
+      // reported underlay is the PAN throughout".
+      final agent = AgentRuntime(
+        agentId: 'reacher',
+        program: reacher,
+        rootSelfGlpPath: root,
+      );
+      final out = _Lines();
+      agent.onOutput = out.add;
+      await agent.initialize();
+      await agent.injectUserInput(ConstTerm('watch'));
+      expect(agent.runtime!.reachableStreams.isDeclared('wan'), isTrue);
+      agent.onConnectivityEvent(
+          generateKeyPair().pub, Underlay.pan, ConnectivityEvent.connected);
+      await agent.injectUserInput(ConstTerm('watch')); // a cycle after it
+      expect([for (final l in out) if (l.startsWith('< ')) l], isEmpty);
+    });
+
     test('an unknown sender is a fault: its message is dropped and reported, '
         'not received from \'?\'', () async {
       final agent = AgentRuntime(
@@ -677,6 +961,37 @@ void main() {
       expect(logs.where((l) => l.startsWith('MAD_ERROR') && !l.contains('dropped')),
           isEmpty,
           reason: 'the message is not received, so nothing decodes it');
+    });
+  });
+
+  group('with no layer bound', () {
+    test('a reachable declaration stands, its stream carries nothing, and '
+        'remove(reachable) closes it', () async {
+      // IGLP 0c77e47, Implementation Notes, "One interface": "Where no layer
+      // is bound at all --- the REPL, a test run without the simulation ---
+      // ... a nearby or reachable declaration stands and its stream carries
+      // nothing"; GLP-Spec cb9df43, "Networking seam": "remove(reachable)
+      // ends the declaration and closes its stream".
+      final out = <String>[];
+      final engine = GlpEngine(rootSelfGlpPath: root);
+      engine.runtime.outputCallback = out.add;
+      expect(
+          engine.loadSource('''
+procedure watched.
+watched :- declare(reachable(S)), watch(S?).
+procedure watch(Stream(Reach)?).
+watch([R | S]) :- ground(R?) | send_to_user([R?]), watch(S?).
+watch([]) :- send_to_user([closed]).
+procedure ended.
+ended :- remove(reachable).
+''', filename: '${dir.path}/no_layer.glp'),
+          isTrue);
+      expect((await engine.runGoal('watched')).failed, isFalse);
+      expect(engine.runtime.reachableStreams.isDeclared('wan'), isTrue);
+      expect(out, isEmpty);
+      expect((await engine.runGoal('ended')).failed, isFalse);
+      expect(engine.runtime.reachableStreams.isDeclared('wan'), isFalse);
+      expect(out, ['closed']);
     });
   });
 

@@ -194,7 +194,7 @@ SupplyAsk ::= more(Integer).
 ListReply ::= verify ; listed ; rejected.
 UnlistReply ::= unlisted ; rejected.
 Visibility ::= listed ; unlisted.
-DirName ::= String ; none.
+DirName ::= name(String) ; none.
 DirMsg ::= list(Key, SignedTerm, Stream(SupplyAsk)?, ListReply?)
          ; supply(Key, List(SignedTerm))
          ; unlist(Key, SignedTerm, UnlistReply?).
@@ -815,7 +815,8 @@ friend_version(2).
     final listed = await directory.saidOne('listed');
     expect(_value(listed.args[0]), alice.key.hex);
     expect(_value(listed.args[1]), 'alice@example.org');
-    expect(_value(listed.args[2]), 'Alice');
+    final name = listed.args[2] as rt.StructTerm;
+    expect((name.functor, _value(name.args.single)), ('name', 'Alice'));
     expect(_value(listed.args[3]), 'listed');
     final verify = await alice.toldOne('verify');
     expect(_value(verify.args[0]), 'alice@example.org');

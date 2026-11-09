@@ -4,7 +4,7 @@
 % Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), and through it GC and GKK.  DGC amends GB (GSC, Section 8): it deletes GB's schemas over coins and bonds and adds them with the denomination as an argument, and the acceptances; clauses 1, 3, 5, 6 and 7 are GC's with a bond in place of a coin where the act allows one, 2 and 9 are GB's, and 4 and 8 are its own (SGC, Section 2.1).
 % Defines: denomination, an identifier of a fiat currency; a denominated coin and bond, a debt of one unit of its denomination due now or at its date; acceptance of named coins in payment.
 % Last changed: 2026-11-04, written by Currencies #15 Cowork from SGC's Section 2.1 as it stands, each clause with its modality from SGC's Appendix A; the pragmas are Currencies #15's, in GSC's form, GB's with the denomination and the acceptance added.  SGC's clauses are the paper's text of 2026-10-13; the five it shares with GC and GB are to be brought to their current text, with knowing the other party and GB:7's wording, when SGC is next revised (Udi, 2026-11-04: GCC first).
-% Pragmas (2026-11-07): Payment has a button for each of its three acts, pay, payout and spend, the compiler refusing a guarded schema with no button (vGLP, Section 5.4; Code #25, 2026-11-07 15:53 UTC); added by Currencies #17 Cowork.  (2026-11-06): the fields of a line are the variables of its acts that the atoms the proposer's role requires do not bind, in the schemas' order (vGLP's paper at 40f8444, Section 5.4; Code #23, 2026-11-05 11:39 and 14:05 UTC); what the proposer's state binds, the row fills.  Rewritten so by Currencies #15.
+% Pragmas (2026-11-07): Payment has a button for each of its three acts, pay, payout and spend, spend with a field for Bob, whom no atom Alice's role requires names (Code #25, 2026-11-07 19:41 UTC), the compiler refusing a guarded schema with no button (vGLP, Section 5.4; Code #25, 2026-11-07 15:53 UTC); added by Currencies #17 Cowork.  (2026-11-06): the fields of a line are the variables of its acts that the atoms the proposer's role requires do not bind, in the schemas' order (vGLP's paper at 40f8444, Section 5.4; Code #23, 2026-11-05 11:39 and 14:05 UTC); what the proposer's state binds, the row fills.  Rewritten so by Currencies #15.
 % Schemas: DGC.glp beside this file, GB's with the denomination as the argument after the issuer of every coin and bond, and accept, payout and spend (SGC, Appendix A), the term from which a run of the cascade prints schemas.txt (cascade.sh).
 DGC: Denominated Grassroots Currencies
 Alice, Bob and Carol are persons.  Dollar names one denomination, and an Alice Dollar-denominated coin or bond, Alice-coin and Alice-bond for short, is one issued by Alice.
@@ -24,7 +24,7 @@ Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <m
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <amount>
+Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
 Escrow: Alice [Deposit] <amount>
   Carol: Alice asks to deposit coins or bonds with you.

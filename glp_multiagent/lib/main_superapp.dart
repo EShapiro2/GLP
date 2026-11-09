@@ -134,8 +134,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
       if (reporter != null) {
         _reporter = reporter;
         _screen = ScreenReporter(reporter);
-        _lifecycle = AppLifecycleListener(
-            onStateChange: (_) => reporter.flush());
+        _lifecycle = reportLifecycle(reporter);
       }
     }
     try {

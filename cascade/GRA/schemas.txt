@@ -1,4 +1,4 @@
-Environment predicates: now, location, rider, driver
+Environment predicates: now, location, degree, threshold, rider, driver
 
 establish: identity(Alice) <-
     not identity(Alice) guarded by Alice
@@ -16,13 +16,13 @@ unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
     identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
 point_friend: points_to(Alice, Bob) <-
-    identity(Alice), friend(Alice, Bob), not points_to(Alice, Bob), identity(Bob) guarded by Alice
+    identity(Alice), friend(Alice, Bob), location(Alice, xa), degree(Alice, dd), threshold(Alice, ee), not points_to(Alice, Bob), identity(Bob), location(Bob, xb), ((cardinality(c3, points_to(Alice, c3)) < dd and forall c (friend(Alice, c), not points_to(Alice, c) -> forall xc (location(c, xc) -> dist(xa, xb) <= dist(xa, xc)))) or exists c2 (points_to(Alice, c2), exists x2 (location(c2, x2), dist(xa, x2) - dist(xa, xb) > ee))) guarded by Alice
 
 point_transitive: points_to(Alice, Carol) <-
-    identity(Alice), knows(Alice, Carol), points_to(Alice, Bob), not points_to(Alice, Carol), identity(Bob), points_to(Bob, Carol) guarded by Alice
+    identity(Alice), knows(Alice, Carol), points_to(Alice, Bob), location(Alice, xa), threshold(Alice, ee), not points_to(Alice, Carol), identity(Bob), points_to(Bob, Carol), location(Carol, xc), exists c (points_to(Alice, c), exists x2 (location(c, x2), dist(xa, x2) - dist(xa, xc) > ee)) guarded by Alice
 
 unpoint: not points_to(Alice, Bob) <-
-    identity(Alice), points_to(Alice, Bob), identity(Bob) guarded by Alice
+    identity(Alice), location(Alice, xa), degree(Alice, dd), points_to(Alice, Bob), identity(Bob), location(Bob, xb), forall c (points_to(Alice, c) -> forall xc (location(c, xc) -> dist(xa, xc) <= dist(xa, xb))), cardinality(c3, points_to(Alice, c3)) > dd guarded by Alice
 
 call_open: open(Alice, r, x, y, e, mx, m), calling(Alice) <-
     identity(Alice), rider(Alice), not calling(Alice), not busy(Alice) guarded by Alice

@@ -8,7 +8,8 @@
 /// the person, from the Grassroots App's agent on the app's own host over a
 /// network in this process; the batch posted every two seconds; the batch
 /// posted at once on an `[ERROR]` line; the buffer kept across a restart of
-/// the reporter and posted under its own run; and, in a build without
+/// the reporter and posted under its own run; the layer's diagnostics, the
+/// debugPrint lines of networking/core and of networking/lib; and, in a build without
 /// `GLP_DEBUGLOG`, no reporter and nothing sent.  Each wait is on the post it
 /// waits for, with no clock.
 library;
@@ -18,6 +19,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' as flutter show debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/debuglog/app_reporting.dart';
 import 'package:glp_multiagent/debuglog/reporter.dart';
@@ -26,6 +28,8 @@ import 'package:glp_multiagent/superapp_host.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:grassroots_networking_core/grassroots_networking_core.dart'
+    as core show debugPrint;
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show generateKeyPair;
 
@@ -308,6 +312,48 @@ void main() {
     expect(now.kinds, ['app/key']);
     expect(File('${tmp.path}/debuglog/${first.run}.jsonl').existsSync(), isFalse,
         reason: 'a run posted whole is deleted');
+  });
+
+  test('the layer\'s diagnostics: a debugPrint line of networking/core and '
+      'of the Flutter package networking/lib, [lan], [ble] and [local-host], '
+      'each reaching the service; the reporter\'s own failures are not '
+      'reported', () async {
+    // The syslog is Flutter's debugPrint as it was before the redirect, as
+    // startDebugReporter takes it.
+    final printed = flutter.debugPrint;
+    final failures = <String>[];
+    final r = await open(syslog: (m) {
+      failures.add(m);
+      printed(m);
+    });
+    addTearDown(r.close);
+    final restore = reportLayerDiagnostics(r);
+    addTearDown(restore);
+    r.setPhone(key);
+    await service.post(0);
+    core.debugPrint('[transport] the core\'s line');
+    flutter.debugPrint('[lan] discovery started (port 4242)');
+    flutter.debugPrint('[ble] scanning');
+    flutter.debugPrint('[local-host] 192.168.1.7');
+    await r.flush();
+    final p = await service.post(1);
+    expect(
+        [for (final e in p.events) '${e['source']}/${e['kind']} ${e['printer']} ${e['line']}'],
+        [
+          'layer/diagnostic core [transport] the core\'s line',
+          'layer/diagnostic flutter [lan] discovery started (port 4242)',
+          'layer/diagnostic flutter [ble] scanning',
+          'layer/diagnostic flutter [local-host] 192.168.1.7',
+        ]);
+    expect(p.path, '/log/$key/${r.run}');
+
+    // A post the service refuses goes to the syslog, and is not reported.
+    service.status = HttpStatus.serviceUnavailable;
+    r.event(Source.app, 'status', {'line': 'Ready'});
+    await r.flush();
+    expect(failures, isNotEmpty);
+    final buffered = File('${tmp.path}/debuglog/${r.run}.jsonl').readAsStringSync();
+    expect(buffered.contains('debuglog:'), isFalse);
   });
 
   test('a build without GLP_DEBUGLOG has no reporter and sends nothing',

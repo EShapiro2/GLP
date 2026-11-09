@@ -43,7 +43,7 @@ The service is debugging infrastructure, not a grassroots platform and not GLP: 
 
 A Claude Code session on the Mac, in `/Users/udi/Grassroots/GLP/phones`, does the device work: it builds, installs, starts the follower and runs the play with Udi.  Its tools are in `tools/`:
 
-- `build.sh <udid>`: a debug build signed for the phone, with `GLP_DEBUGLOG` from `/Users/udi/Grassroots/.debuglog-password`, as an `.ipa`; installs it with `ideviceinstaller`, the path that worked on 2026-11-08 where Xcode's and `devicectl`'s installs hung (`tmp/phones/STATE.md`).
+- `build.sh <udid>`: a debug build signed for the phone, with `GLP_DEBUGLOG` from `phones/tools/debuglog-password`, as an `.ipa`; installs it with `ideviceinstaller`, the path that worked on 2026-11-08 where Xcode's and `devicectl`'s installs hung (`tmp/phones/STATE.md`).
 - `devices.sh`: `xcrun devicectl list devices` and `devicectl device info apps` for each, so the session checks the phones itself before telling Udi anything.
 - `follow.sh <phone> <run>`: the follower, into `tmp/phones/logs/`.
 - `check.py <play> <log>...`: the checker, below.
@@ -85,7 +85,7 @@ Taken up by Phones from Code's proposal to GSA (Code #26, GSA_inbox.md 2026-11-0
 
 ## For Udi's approval
 
-1. The debug build holds a password, and the service accepts a log only with it.  If the password leaks, a stranger can write logs to the service, and the sweep deletes them after thirty days.
+1. The debug build holds a password, and the service accepts a log only with it.  The password is not secret (Udi, 2026-11-09): it is in the repository, `phones/tools/debuglog-password`, and keeps out only a passing stranger; whatever a stranger writes, the sweep deletes after thirty days.
 2. Thirty days' retention.
 3. The Mac session reads the logs with `curl`; no page is built for them.
 

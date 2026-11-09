@@ -58,11 +58,11 @@ LinkAct  ::= invite_link ; open_link(SignedTerm)
 
 %% A directory the operating system lists its person with, by its key and its
 %% address, or none (GNA Section 7; core/links.glp); a listing's visibility
-%% and the name it carries, a string or none (GNA Section 7: "Name a string
-%% or none and Visibility listed or unlisted").
+%% and the name it carries, name(S) or none (GNA 5e276e4, Section 7: "Name
+%% either name(S), S a string, or none and Visibility listed or unlisted").
 Directory  ::= directory(Key, String) ; none.
 Visibility ::= listed ; unlisted.
-DirName    ::= String ; none.
+DirName    ::= name(String) ; none.
 
 %% The super-app (GSA paper, Section 4.1 and Appendix "The Operating System"),
 %% the entry the person's first act names (Appendix, "Boot": "the person's

@@ -1,9 +1,9 @@
 # A run of the cascade on GDO
 
-- Contract: `GDO` (`gdo` to the checker), its owner's two files `programs/lbm/GDO.txt` and `programs/lbm/GDO.glp`, copied here as they stood at `1ced7140`.
+- Contract: `GDO` (`gdo` to the checker), its owner's two files `programs/lbm/GDO.txt` and `programs/lbm/GDO.glp`, copied here as they stood at `90dc4236`.
 - The paper: `git@github.com:EShapiro2/GRH-Grassroots-Ride-Hailing.git` at `a16c0aa7`, for the paper's own record.
-- The tools: this repository at `1ced7140` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-08 11:24 UTC by `cascade.sh gdo`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `90dc4236` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-08 22:11 UTC by `cascade.sh gdo`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

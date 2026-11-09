@@ -405,6 +405,20 @@ traceable_c(C, Cns, E?) :- ground(C?), ground(Cns?) |
     all_preds(C?, P0),
     tp_loop(C?, Cns?, P0?, E).
 
+% The same, for a contract naming the environment predicates Ev, which have
+% no traceable provenance (GSC a380dab, def:grounded: "A predicate other than
+% an environment predicate (Appendix app:numbers) has traceable provenance in
+% C if it belongs to such a set"; the appendix: "Provenance traces through
+% none of its atoms, Volition takes no edge of a role graph from one"): the
+% largest set is sought among the other predicates, so that no atom of an
+% environment predicate names a base in Provenance or gives an edge in
+% Volition (volition.glp reads E).
+exported procedure traceable_env(Contract?, Constraints?, Preds?, Preds).
+traceable_env(C, Cns, Ev, E?) :- ground(C?), ground(Cns?), ground(Ev?) |
+    all_preds(C?, P0),
+    preds_diff(P0?, Ev?, P1),
+    tp_loop(C?, Cns?, P1?, E).
+
 % ---------------------------------------------------------------------------
 % What a safe formula of the body names through E (def:grounded, GSC cd0f73e)
 % ---------------------------------------------------------------------------

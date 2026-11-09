@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% GRA.glp --- the grassroots ride auction's contract, GRH's (Coordination Appendix C; Udi, 2026-11-05; LBM's until then), in the clause syntax of GSC's paper, Section 3.2, sas(Name, Names, Vars, Head, Body, Constraint, Guards), as programs/gsc/README.md reads it.  GRA extends GDO (GDO.glp beside this file), so the term holds GDO's eight schemas, GKK's and GSG's written as GSG.glp writes them; the clauses are in GRA.txt.
+%% GRA.glp --- the grassroots ride auction's contract, GRH's (Coordination Appendix C; Udi, 2026-11-05; LBM's until then), in the clause syntax of GSC's paper, Section 3.2, sas(Name, Names, Vars, Head, Body, Constraint, Guards), as programs/gsc/README.md reads it.  GRA extends GDO-LB (GDO-LB.glp beside this file; Udi, 2026-11-08, to GRH #2), so the term holds GDO-LB's eight schemas, its three pointing schemas with their conditions and the environment predicates degree and threshold, GKK's and GSG's written as GSG.glp writes them; the clauses are in GRA.txt.
 %%
 %% Environment predicates (GSC, Appendix Values in Speech-Act Schemas), which the platform keeps current and no schema adds or deletes: now(t), the time; location(x), the person's location; and rider and driver, of arity zero, the person's kind, from the declaration "Alice is a rider, Bob a driver and Carol a person.  A person can be either a rider or a driver but not both.", which the platform holds from the person's start, one of the two.
 %%
@@ -16,27 +16,28 @@ SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
 SArgs       ::= [] ; [SArg | SArgs].
 SAtom       ::= atom(Constant, SArgs).
 SMult       ::= SAtom ; times(SArg, SAtom).
-SQLit       ::= SMult ; not(SMult).
-SQLits      ::= [] ; [SQLit | SQLits].
-SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
-SLits       ::= [] ; [SLit | SLits].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr).
-SConstraint ::= true ; and(SConstraint, SConstraint)
-              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
+SHeads      ::= [] ; [SHead | SHeads].
+SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
+SExprs      ::= [] ; [SExpr | SExprs].
+SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
+              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
               ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; or(SConstraint, SConstraint)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg).
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
+              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
+SConds      ::= [] ; [SCond | SConds].
 RName       ::= Constant ; one(Constant, Constant).
 Names       ::= [] ; [RName | Names].
 PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
 Contract    ::= [] ; [Schema | Contract].
 Preds       ::= [] ; [Constant | Preds].
 Declared    ::= Contract ; environment(Preds, Contract).
 
 %% contract_named(gra, C): the contract, GRA (Coordination Appendix C).
 procedure contract_named(Constant?, Declared).
-contract_named(gra, environment([now, location, rider, driver],
+contract_named(gra, environment([now, location, degree, threshold, rider, driver],
    [
 %% GKK:1, Identity.
     sas(establish, ['Alice'], [],
@@ -84,33 +85,46 @@ contract_named(gra, environment([now, location, rider, driver],
         atom(friend, ['Bob', 'Alice'])],
        true,
        ['Alice']),
-%% GDO:1, Pointing to friend; Bob a reading role.
-    sas(point_friend, ['Alice', 'Bob'], [],
+%% GDO-LB:1, Pointing to friend: GDO:1, only if Alice points to fewer than d persons and Bob is the closest of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person Alice points to; Bob is a reading role.
+    sas(point_friend, ['Alice', 'Bob', 'c', 'c2', 'c3'], [xa, xb, dd, ee],
        [atom(points_to, ['Alice', 'Bob'])],
        [atom(identity, ['Alice']),
         atom(friend, ['Alice', 'Bob']),
         not(atom(points_to, ['Alice', 'Bob'])),
-        atom(identity, ['Bob'])],
+        atom(location, ['Alice', num(xa)]),
+        atom(degree, ['Alice', num(dd)]),
+        atom(threshold, ['Alice', num(ee)]),
+        atom(identity, ['Bob']),
+        atom(location, ['Bob', num(xb)]),
+        or(and(lt(cardinality([c3], atom(points_to, ['Alice', c3]), true), num(dd)), forall([c], atom(friend, ['Alice', c]), not(atom(points_to, ['Alice', c])), forall([xc], atom(location, [c, num(xc)]), true, le(fn(dist, [num(xa), num(xb)]), fn(dist, [num(xa), num(xc)]))))), exists([c2], atom(points_to, ['Alice', c2]), exists([x2], atom(location, [c2, num(x2)]), gt(minus(fn(dist, [num(xa), num(x2)]), fn(dist, [num(xa), num(xb)])), num(ee)))))],
        true,
        ['Alice']),
-%% GDO:2, Transitive pointing; Bob a reading role, Carol an agent variable.
-    sas(point_transitive, ['Alice', 'Bob', 'Carol'], ['Carol'],
+%% GDO-LB:2, Transitive pointing: GDO:2, only if Carol is closer to Alice by more than e than some person Alice points to; Bob and Carol are reading roles.
+    sas(point_transitive, ['Alice', 'Bob', 'Carol', 'c'], [xa, xc, ee],
        [atom(points_to, ['Alice', 'Carol'])],
        [atom(identity, ['Alice']),
         atom(knows, ['Alice', 'Carol']),
         atom(points_to, ['Alice', 'Bob']),
         not(atom(points_to, ['Alice', 'Carol'])),
+        atom(location, ['Alice', num(xa)]),
+        atom(threshold, ['Alice', num(ee)]),
         atom(identity, ['Bob']),
-        atom(points_to, ['Bob', 'Carol'])],
+        atom(points_to, ['Bob', 'Carol']),
+        atom(location, ['Carol', num(xc)]),
+        exists([c], atom(points_to, ['Alice', c]), exists([x2], atom(location, [c, num(x2)]), gt(minus(fn(dist, [num(xa), num(x2)]), fn(dist, [num(xa), num(xc)])), num(ee))))],
        true,
        ['Alice']),
-%% GDO:3, Ceasing to point; Bob a reading role.
-    sas(unpoint, ['Alice', 'Bob'], [],
+%% GDO-LB:3, Ceasing to point: GDO:3, only if Alice points to more than d persons, Bob the furthest from Alice among them; Bob is a reading role.
+    sas(unpoint, ['Alice', 'Bob', 'c', 'c3'], [xa, xb, dd],
        [not(atom(points_to, ['Alice', 'Bob']))],
        [atom(identity, ['Alice']),
         atom(points_to, ['Alice', 'Bob']),
-        atom(identity, ['Bob'])],
-       true,
+        atom(location, ['Alice', num(xa)]),
+        atom(degree, ['Alice', num(dd)]),
+        atom(identity, ['Bob']),
+        atom(location, ['Bob', num(xb)]),
+        forall([c], atom(points_to, ['Alice', c]), true, forall([xc], atom(location, [c, num(xc)]), true, le(fn(dist, [num(xa), num(xc)]), fn(dist, [num(xa), num(xb)]))))],
+       gt(cardinality([c3], atom(points_to, ['Alice', c3]), true), num(dd)),
        ['Alice']),
 %% GRA:1, Call: Alice, a rider who has no open call and no ride, calls for bids on ride r.
     sas(call_open, ['Alice'], [r, x, y, e, mx, m],

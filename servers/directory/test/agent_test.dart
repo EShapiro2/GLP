@@ -36,7 +36,7 @@ import 'package:test/test.dart';
 // "Scope construction": "A program lies at or below the root"), in a
 // directory of the test's own under programs/tests.
 //
-//   list_named(D, Email, Name, Vis)  sign listing(Me, Email, Name, Vis) and
+//   list_named(D, Email, Name, Vis)  sign listing(Me, Email, name(Name), Vis) and
 //                                    list with the directory D
 //   list_unnamed(D, Email, Vis)      the same, Name none
 //   list_as(D, Other, Email)         sign a listing naming Other, and list
@@ -76,7 +76,7 @@ agent(ch(In, []), ch(_, [])) :- self_key(Me), acts(Me?, In?).
 
 procedure acts(Key?, AppActs?).
 acts(Me, [list_named(D, Email, Name, Vis) | In]) :- ground(Me?) |
-    sign(listing(Me?, Email?, Name?, Vis?), Me?, S),
+    sign(listing(Me?, Email?, name(Name?), Vis?), Me?, S),
     send_to_net([msg(D?, list(Me?, S?, Supply, Reply))]),
     on_reply(Reply?),
     on_asks(Supply?),
@@ -328,6 +328,14 @@ void main() {
     expect(l.name, isNull, reason: 'none is no name');
     expect(l.shown, 'nn@example.org');
     expect(await get('${d.base}/directory'), contains('<button>nn@example.org</button>'));
+
+    // A person who names themselves none is named so: name('none'), not
+    // none (GNA 5e276e4, Section 7).
+    final b = await app(0x74, d);
+    await b.act('list_named', [d.agent.key.hex, 'nm@example.org', 'none', 'listed']);
+    expect(_arg(await b.next('replied')), 'verify');
+    expect(await get(mailedLink(d)), contains('is verified and listed'));
+    expect(d.store.byKey(b.key.hex)!.shown, 'none');
   }, timeout: Timeout.none);
 
   test('an unlisted person is not on the page and is found by email address and name', () async {
