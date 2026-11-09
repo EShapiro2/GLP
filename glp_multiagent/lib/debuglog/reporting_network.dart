@@ -48,7 +48,8 @@ class ReportingGlpNetwork implements GlpNetwork {
   List<Underlay> peerUnderlays(PubKey pk) => network.peerUnderlays(pk);
 
   @override
-  Future<void> send(PubKey pk, Uint8List payload) => network.send(pk, payload);
+  Future<String> send(PubKey pk, Uint8List payload) =>
+      network.send(pk, payload);
 
   @override
   void acknowledge(String messageId) => network.acknowledge(messageId);
@@ -108,28 +109,30 @@ class ReportingGlpNetwork implements GlpNetwork {
   }
 
   void Function(PubKey sender, Uint8List payload, String messageId,
-      Underlay underlay)? _onMessageReceived;
+      String senderMessageId, Underlay underlay)? _onMessageReceived;
 
   @override
   void Function(PubKey sender, Uint8List payload, String messageId,
-      Underlay underlay)? get onMessageReceived => _onMessageReceived;
+          String senderMessageId, Underlay underlay)?
+      get onMessageReceived => _onMessageReceived;
 
   @override
   set onMessageReceived(
       void Function(PubKey sender, Uint8List payload, String messageId,
-              Underlay underlay)?
+              String senderMessageId, Underlay underlay)?
           cb) {
     _onMessageReceived = cb;
     network.onMessageReceived = cb == null
         ? null
-        : (sender, payload, messageId, underlay) {
+        : (sender, payload, messageId, senderMessageId, underlay) {
             _report('onMessageReceived', {
               'peer': sender.hex,
               'size': payload.length,
               'messageId': messageId,
+              'senderMessageId': senderMessageId,
               'underlay': underlay.name,
             });
-            cb(sender, payload, messageId, underlay);
+            cb(sender, payload, messageId, senderMessageId, underlay);
           };
   }
 

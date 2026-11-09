@@ -14,11 +14,12 @@ enum PacketType {
   fragment(0x03),
 
   /// Per-fragment acknowledgment: messageId + fragment index. Drives the
-  /// sender's retransmit-with-backoff.
+  /// sender's retransmit-with-backoff, and settles a message once every one
+  /// of its fragments is acknowledged: a message's last fragment by index is
+  /// acknowledged only once the receiver has reassembled and saved the
+  /// message.
   fragmentAck(0x04),
 
-  /// Whole-message delivery acknowledgment (dedup re-ACKed)
-  ack(0x06),
 
   /// Signaling between an agent and a rendezvous server (the reflected
   /// address)
@@ -33,8 +34,6 @@ enum PacketType {
   /// Session-encrypted per-fragment acknowledgment.
   secureFragmentAck(0x0D),
 
-  /// Session-encrypted delivery acknowledgment.
-  secureAck(0x0F),
 
   /// Session-encrypted signaling packet.
   secureSignaling(0x12),
@@ -42,8 +41,8 @@ enum PacketType {
   /// A fragment of the attestation exchange (spec §Session Establishment):
   /// each side sends its attestation and per-session signature "as a message
   /// of the Message Protocol ... after handshake message 3", so it travels as
-  /// a `send` payload does — fragmented, acknowledged by [fragmentAck] and
-  /// [ack], retransmitted (§Message Protocol). The layout is [fragment]'s;
+  /// a `send` payload does — fragmented, acknowledged by [fragmentAck],
+  /// retransmitted (§Message Protocol). The layout is [fragment]'s;
   /// this type alone tells the receiver that the reassembled message is the
   /// peer's attestation and not a payload. Never sent in clear, so only
   /// [secureAttestationFragment] appears on the wire.
@@ -78,7 +77,6 @@ extension PacketTypeSessionSecurity on PacketType {
     switch (this) {
       case PacketType.fragment:
       case PacketType.fragmentAck:
-      case PacketType.ack:
       case PacketType.signaling:
       case PacketType.attestationFragment:
         return true;
@@ -86,7 +84,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
-      case PacketType.secureAck:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -104,7 +101,6 @@ extension PacketTypeSessionSecurity on PacketType {
     switch (this) {
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
-      case PacketType.secureAck:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -112,7 +108,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.announce:
       case PacketType.fragment:
       case PacketType.fragmentAck:
-      case PacketType.ack:
       case PacketType.signaling:
       case PacketType.attestationFragment:
       case PacketType.noiseHandshake:
@@ -126,8 +121,6 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.secureFragment;
       case PacketType.fragmentAck:
         return PacketType.secureFragmentAck;
-      case PacketType.ack:
-        return PacketType.secureAck;
       case PacketType.signaling:
         return PacketType.secureSignaling;
       case PacketType.attestationFragment:
@@ -137,7 +130,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
-      case PacketType.secureAck:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -151,8 +143,6 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.fragment;
       case PacketType.secureFragmentAck:
         return PacketType.fragmentAck;
-      case PacketType.secureAck:
-        return PacketType.ack;
       case PacketType.secureSignaling:
         return PacketType.signaling;
       case PacketType.secureAttestationFragment:
@@ -162,7 +152,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.announce:
       case PacketType.fragment:
       case PacketType.fragmentAck:
-      case PacketType.ack:
       case PacketType.signaling:
       case PacketType.attestationFragment:
       case PacketType.noiseHandshake:

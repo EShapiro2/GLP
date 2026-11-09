@@ -228,7 +228,7 @@ void main() async {
         selfId: agent,
         directory: directory,
         keyPair: engine.identity.keyPair,
-        sendToRouter: (toId, payload) => dropped(toId),
+        sendToRouter: (toId, payload, senderMessageId) => dropped(toId),
       );
       engine.madContext!.network = network;
       // The Sends (IGLP, Definition madGLP Send) place each message of the
@@ -245,7 +245,10 @@ void main() async {
           dropped(destination);
           return null;
         }
-        return network.send(pk, Uint8List.fromList(message.payload));
+        // The layer's id for the message is of no use to the runtime.
+        return network
+            .send(pk, Uint8List.fromList(message.payload))
+            .then((_) {});
       };
       print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
       continue;

@@ -51,13 +51,15 @@ class Ready extends IsolateMessage {
 class Start extends IsolateMessage {}
 
 /// Agent → router: an outbound send. The wire carries opaque payload bytes
-/// only, no MessageType (IGLP app:in-networking, The contract; Payloads).
+/// only, no MessageType (IGLP app:in-networking, The contract; Payloads), and
+/// the id the agent's `send` returned for the message.
 class RouterSend extends IsolateMessage {
   final String fromId;
   final String toId;
   final List<int> payload;
+  final String senderMessageId;
 
-  RouterSend(this.fromId, this.toId, this.payload);
+  RouterSend(this.fromId, this.toId, this.payload, this.senderMessageId);
 
   @override
   String toString() => 'RouterSend($fromId->$toId, ${payload.length}B)';
@@ -95,14 +97,16 @@ class RouterKnownPeer extends IsolateMessage {
   String toString() => 'RouterKnownPeer($agentId, $pk, $known)';
 }
 
-/// Router → agent: a delivered message, with the authenticated sender id and the
-/// router-assigned messageId.
+/// Router → agent: a delivered message, with the authenticated sender id, the
+/// router-assigned messageId, and the senderMessageId the sender's `send`
+/// returned.
 class Deliver extends IsolateMessage {
   final String fromId;
   final List<int> payload;
   final String messageId;
+  final String senderMessageId;
 
-  Deliver(this.fromId, this.payload, this.messageId);
+  Deliver(this.fromId, this.payload, this.messageId, this.senderMessageId);
 
   @override
   String toString() => 'Deliver(from=$fromId, id=$messageId, ${payload.length}B)';
@@ -459,7 +463,7 @@ class IsolateManager {
     // names by the key the router authenticated; a key it names no agent by
     // is a fault --- the layer authenticates every sender --- and the message
     // is dropped and reported (GLP #3 Cowork, 2026-10-11 12:59 UTC, "01:05").
-    router.onDeliver = (toId, fromPk, payload, messageId, t) {
+    router.onDeliver = (toId, fromPk, payload, messageId, senderMessageId, t) {
       final port = _agentPorts[toId];
       if (port == null) {
         print('[IsolateManager] WARNING: Unknown destination $toId');
@@ -473,7 +477,7 @@ class IsolateManager {
       }
       _noteWorkSent(toId);
       _delivered.update((fromId, toId), (n) => n + 1, ifAbsent: () => 1);
-      port.send(Deliver(fromId, payload, messageId));
+      port.send(Deliver(fromId, payload, messageId, senderMessageId));
     };
 
     // The router reports each agent's connections and disconnections to its
@@ -639,7 +643,8 @@ class IsolateManager {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
         print('[${msg.fromId}] → send to ${msg.toId}');
       }
-      router.routeSend(msg.fromId, msg.toId, Uint8List.fromList(msg.payload));
+      router.routeSend(msg.fromId, msg.toId, Uint8List.fromList(msg.payload),
+          msg.senderMessageId);
 
     } else if (msg is RouterTrust) {
       _log('${msg.agentId} sets trust ${msg.underlay.name} ${msg.level.name}');
@@ -866,8 +871,8 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
     selfId: agentId,
     directory: directory,
     keyPair: config.keyPair,
-    sendToRouter: (toId, payload) =>
-        config.mainPort.send(RouterSend(agentId, toId, payload)),
+    sendToRouter: (toId, payload, senderMessageId) => config.mainPort
+        .send(RouterSend(agentId, toId, payload, senderMessageId)),
     // The agent's trust declarations and known peers reach the router,
     // which enforces them, over the same port as its sends, so that a send
     // after a declaration is routed under it.
@@ -907,7 +912,8 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
       return null;
     }
     log('Sending to $destId (${msg.payload.length}B)');
-    return network.send(pk, Uint8List.fromList(msg.payload));
+    // The layer's id for the message is of no use to the runtime.
+    return network.send(pk, Uint8List.fromList(msg.payload)).then((_) {});
   };
 
   // Incoming: dispatch on the message kind byte (value/request/
@@ -916,7 +922,8 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   // key it names no agent by is a fault --- the layer authenticates every
   // sender --- and the message is dropped and reported (GLP #3 Cowork,
   // 2026-10-11 12:59 UTC, "01:05").
-  network.onMessageReceived = (senderPk, payload, messageId, underlay) {
+  network.onMessageReceived =
+      (senderPk, payload, messageId, senderMessageId, underlay) {
     final fromId = directory.idOf(senderPk);
     if (fromId == null) {
       print('[$agentId] ERROR: a message from ${senderPk.hex}, a key the '
@@ -1004,6 +1011,7 @@ Future<void> _eventLoop(
           senderPk,
           Uint8List.fromList(msg.payload),
           msg.messageId,
+          msg.senderMessageId,
           Underlay.pan,
         );
       } else {

@@ -212,8 +212,10 @@ void main() {
     };
     network.onPeerDisconnected =
         (pk, underlay) => events.add('disconnected ${pk.hex} $underlay');
-    network.onMessageReceived = (sender, payload, messageId, underlay) =>
-        events.add('received ${sender.hex} $payload $messageId $underlay');
+    network.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) => events.add(
+            'received ${sender.hex} $payload $messageId $senderMessageId '
+            '$underlay');
     network.onPeerDiscovered =
         (pk, underlay) => events.add('discovered ${pk.hex} $underlay');
     network.onPeerLost =
@@ -227,7 +229,7 @@ void main() {
     layer.onPeerConnected!(peer.bytes, Underlay.pan, attested);
     layer.pan!.onPeerLost!(peer.bytes);
     layer.onMessageReceived!(
-        peer.bytes, Uint8List.fromList([1, 2, 3]), 'm-1', Underlay.lan);
+        peer.bytes, Uint8List.fromList([1, 2, 3]), 'm-1', 'w-1', Underlay.lan);
     layer.onPeerDisconnected!(peer.bytes, Underlay.wan);
     layer.wan!.onConnectivityStatusChanged!(null, '203.0.113.7:9600');
     layer.wan!.onNetworkChanged!('n-1', null);
@@ -236,7 +238,7 @@ void main() {
       'discovered ${peer.hex} ${glp.ProximityUnderlay.lan}',
       'connected ${peer.hex} ${glp.Underlay.pan}',
       'lost ${peer.hex} ${glp.ProximityUnderlay.pan}',
-      'received ${peer.hex} [1, 2, 3] m-1 ${glp.Underlay.lan}',
+      'received ${peer.hex} [1, 2, 3] m-1 w-1 ${glp.Underlay.lan}',
       'disconnected ${peer.hex} ${glp.Underlay.wan}',
       'address null 203.0.113.7:9600',
       'network n-1 null',
@@ -278,17 +280,21 @@ void main() {
   });
 
   test(
-      "send awaits the layer's save of the queue, and a save that fails "
-      "fails the glue's send (GNA §2.11)", () async {
+      "send awaits the layer's save of the queue and returns the layer's id "
+      "for the message, and a save that fails fails the glue's send (GNA "
+      "§2.11)", () async {
     final peer = glp.PubKey.fromList((await identity()).publicKey);
     final store = MemoryOutboundQueueStore();
     final self = await identity();
     final saving = await layerFor(self, queueStore: store);
-    await GrassrootsGlpNetwork(saving).send(peer, Uint8List.fromList([1]));
+    final id =
+        await GrassrootsGlpNetwork(saving).send(peer, Uint8List.fromList([1]));
     expect(
-        (await store.load(_hex(self.publicKey))).map((e) => e.recipientHex),
-        [peer.hex],
-        reason: "the message is saved once the glue's send completes");
+        (await store.load(_hex(self.publicKey)))
+            .map((e) => (e.recipientHex, e.messageId)),
+        [(peer.hex, id)],
+        reason: "the message is saved once the glue's send completes, under "
+            "the id the glue's send returns");
     await saving.dispose();
 
     final failing =
@@ -397,6 +403,7 @@ declared :- send_to_user([running]).
       DeliveredQueueEntry(
         senderHex: senderKey.hex,
         messageId: 'm-kept',
+        senderMessageId: 'w-kept',
         payload: Uint8List.fromList([4, 2]),
         underlay: Underlay.lan,
       ),
@@ -404,11 +411,12 @@ declared :- send_to_user([running]).
     final layer = await layerFor(self, queueStore: store);
     final network = GrassrootsGlpNetwork(layer);
     final delivered =
-        Completer<(glp.PubKey, List<int>, String, glp.Underlay)>();
-    network.onMessageReceived = (s, payload, id, u) =>
-        delivered.complete((s, payload, id, u));
-    final (s, payload, id, u) = await delivered.future;
-    expect((s, id, u), (senderKey, 'm-kept', glp.Underlay.lan));
+        Completer<(glp.PubKey, List<int>, String, String, glp.Underlay)>();
+    network.onMessageReceived = (s, payload, id, senderMessageId, u) =>
+        delivered.complete((s, payload, id, senderMessageId, u));
+    final (s, payload, id, senderMessageId, u) = await delivered.future;
+    expect((s, id, senderMessageId, u),
+        (senderKey, 'm-kept', 'w-kept', glp.Underlay.lan));
     expect(payload, [4, 2]);
 
     network.acknowledge(id);

@@ -8,8 +8,9 @@
 ///   through injected sinks, so it is unit-testable in-process and reusable by
 ///   `IsolateManager` (which wires the sinks to isolate ports).
 /// - [SimulationNetworkClient] (agent isolate): implements [GlpNetwork] over the
-///   isolate ports; forwards [send] to the router and surfaces deliveries as
-///   [onMessageReceived].
+///   isolate ports; names each message it sends, forwards [send] to the router
+///   and surfaces deliveries as [onMessageReceived], with the name its sender
+///   gave the message as `senderMessageId`.
 ///
 /// Keys are real Ed25519, generated synchronously with `ed25519_edwards`
 /// (`cryptography` is async-only and cannot back the synchronous `sign`/`verify`
@@ -96,7 +97,11 @@ class _PendingDelivery {
   final Uint8List payload;
   final String messageId;
 
-  _PendingDelivery(this.fromId, this.toId, this.payload, this.messageId);
+  /// The id the sender's `send` returned for the message.
+  final String senderMessageId;
+
+  _PendingDelivery(this.fromId, this.toId, this.payload, this.messageId,
+      this.senderMessageId);
 }
 
 /// The simulation router (main isolate).
@@ -176,9 +181,10 @@ class SimulationRouter {
 
   // --- Injected sinks (set by the owner) ---
 
-  /// Deliver an inbound message to agent [toId].
+  /// Deliver an inbound message to agent [toId], under the router-assigned
+  /// messageId, with the senderMessageId its sender's `send` returned.
   void Function(String toId, PubKey fromPk, Uint8List payload, String messageId,
-      Underlay underlay)? onDeliver;
+      String senderMessageId, Underlay underlay)? onDeliver;
 
   /// Emit a connectivity event to agent [toId] about peer [peerPk].
   void Function(String toId, PubKey peerPk, Underlay underlay,
@@ -374,8 +380,10 @@ class SimulationRouter {
   // --- Send / routing ---
 
   /// Route a payload from [fromId] to [toId], applying trust, adjacency, cut,
-  /// and hold policy. Assigns a fresh messageId.
-  void routeSend(String fromId, String toId, Uint8List payload) {
+  /// and hold policy. Assigns a fresh messageId; [senderMessageId] is the id
+  /// the sender's `send` returned, delivered with the message.
+  void routeSend(String fromId, String toId, Uint8List payload,
+      String senderMessageId) {
     _contacted.putIfAbsent(fromId, () => <String>{}).add(toId);
     // [fromId] contacts [toId]: it answers [toId]'s first contacts it left
     // unanswered, before this send is routed.
@@ -407,10 +415,12 @@ class SimulationRouter {
         (_unanswered['$fromId>$toId']?.isNotEmpty ?? false)) {
       _unanswered
           .putIfAbsent('$fromId>$toId', () => [])
-          .add(_PendingDelivery(fromId, toId, payload, messageId));
+          .add(_PendingDelivery(
+              fromId, toId, payload, messageId, senderMessageId));
       return;
     }
-    _route(_PendingDelivery(fromId, toId, payload, messageId));
+    _route(
+        _PendingDelivery(fromId, toId, payload, messageId, senderMessageId));
   }
 
   /// Whether [toId] answers a contact from [fromId] on the PAN: its PAN is
@@ -445,13 +455,12 @@ class SimulationRouter {
     final pairKey = _pair(fromId, toId);
 
     if (_cutPairs.contains(pairKey) || _heldPairs.contains(pairKey)) {
-      _queues
-          .putIfAbsent('$fromId>$toId', () => [])
-          .add(_PendingDelivery(fromId, toId, payload, messageId));
+      _queues.putIfAbsent('$fromId>$toId', () => []).add(p);
       return;
     }
 
-    onDeliver?.call(toId, fromPk, payload, messageId, Underlay.pan);
+    onDeliver?.call(
+        toId, fromPk, payload, messageId, p.senderMessageId, Underlay.pan);
   }
 
   /// Flush both directed queues of the pair {a, b}, skipping any still cut or
@@ -470,7 +479,8 @@ class SimulationRouter {
         }
         final fromPk = directory.pkOf(p.fromId);
         if (fromPk == null) continue;
-        onDeliver?.call(p.toId, fromPk, p.payload, p.messageId, Underlay.pan);
+        onDeliver?.call(p.toId, fromPk, p.payload, p.messageId,
+            p.senderMessageId, Underlay.pan);
       }
     }
   }
@@ -498,8 +508,9 @@ class SimulationNetworkClient extends GlpNetwork {
   /// 64-byte `ed25519_edwards` private key [sign] signs under.
   final ({PubKey pub, Uint8List priv}) keyPair;
 
-  /// Forwards an outgoing send to the router.
-  final void Function(String toId, Uint8List payload) sendToRouter;
+  /// Forwards an outgoing send to the router, with the id [send] gave it.
+  final void Function(String toId, Uint8List payload, String senderMessageId)
+      sendToRouter;
 
   /// Forwards this agent's trust declaration to the router, which enforces it
   /// ([SimulationRouter.setTrustLevel]); null where no router routes this
@@ -525,6 +536,9 @@ class SimulationNetworkClient extends GlpNetwork {
 
   /// The known-peer set, by key hex.
   final Set<String> _known = {};
+
+  /// The number of messages [send] has named, which names the next.
+  int _sent = 0;
 
   SimulationNetworkClient({
     required this.selfId,
@@ -571,15 +585,19 @@ class SimulationNetworkClient extends GlpNetwork {
 
   /// The router queues what it cannot deliver yet and keeps no store, so the
   /// message is taken as soon as it is handed over, and a send is refused only
-  /// to a key the directory names no agent by.
+  /// to a key the directory names no agent by.  The id it returns is this
+  /// agent's id and the number of messages it sent before, unique among the
+  /// messages of the simulation, and the recipient receives it as
+  /// `senderMessageId`.
   @override
-  Future<void> send(PubKey pk, Uint8List payload) {
+  Future<String> send(PubKey pk, Uint8List payload) {
     final toId = directory.idOf(pk);
     if (toId == null) {
       return Future.error(ArgumentError('send to unknown peer $pk'));
     }
-    sendToRouter(toId, payload);
-    return Future.value();
+    final senderMessageId = '$selfId:${_sent++}';
+    sendToRouter(toId, payload, senderMessageId);
+    return Future.value(senderMessageId);
   }
 
   /// `acknowledge(messageId)` (GNA, Section 2.9): handed to [acknowledgeToRouter].  The router hands a message to the agent once, and keeps no delivered message across a restart, the simulation having no restart of its layer; so there is nothing for the acknowledgement to release here, and whoever delivered the message is told of it.

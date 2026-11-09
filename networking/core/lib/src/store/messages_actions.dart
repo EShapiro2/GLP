@@ -154,7 +154,8 @@ class SaveChatMessageAction extends MessageAction {
   final bool isOutgoing;
   final DateTime timestamp;
 
-  /// Message ID for tracking delivery/read status (outgoing only)
+  /// The id the sender's `send` returned for the message (see
+  /// [ChatMessageState.messageId]).
   final String? messageId;
 
   /// Message type (text, friend request, etc.)

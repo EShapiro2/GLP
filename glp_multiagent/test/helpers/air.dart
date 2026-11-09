@@ -27,10 +27,16 @@ class Air {
   /// The pairs told of each other, per underlay: `<underlay> <hex> <hex>`.
   final Set<String> _met = {};
 
-  void carry(PubKey from, PubKey to, Uint8List payload) {
-    final id = 'm${_next++}';
-    Timer.run(() =>
-        _at[to.hex]?.onMessageReceived?.call(from, payload, id, Underlay.pan));
+  /// Carry [payload], and return the id the sender's `send` gives it, which
+  /// the recipient receives as its senderMessageId.
+  String carry(PubKey from, PubKey to, Uint8List payload) {
+    final n = _next++;
+    final id = 'm$n';
+    final sent = 's$n';
+    Timer.run(() => _at[to.hex]
+        ?.onMessageReceived
+        ?.call(from, payload, id, sent, Underlay.pan));
+    return sent;
   }
 
   /// [n]'s trust on [u] changed: every pair now open at both is told of
@@ -85,10 +91,8 @@ class AirNetwork extends GlpNetwork {
   PubKey getIdentity() => keyPair.pub;
 
   @override
-  Future<void> send(PubKey pk, Uint8List payload) {
-    air.carry(keyPair.pub, pk, payload);
-    return Future.value();
-  }
+  Future<String> send(PubKey pk, Uint8List payload) =>
+      Future.value(air.carry(keyPair.pub, pk, payload));
 
   @override
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {

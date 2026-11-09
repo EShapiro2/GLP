@@ -57,14 +57,28 @@ void main() {
 
     test('round-trips an empty payload', () {
       final bytes = GrassrootsPacket(
-        type: PacketType.ack,
+        type: PacketType.fragmentAck,
         payload: Uint8List(0),
       ).serialize();
 
       expect(bytes.length, equals(5));
       final decoded = GrassrootsPacket.deserialize(bytes);
-      expect(decoded.type, equals(PacketType.ack));
+      expect(decoded.type, equals(PacketType.fragmentAck));
       expect(decoded.payload, isEmpty);
+    });
+
+    test(
+        'rejects the retired whole-message ACK types, clear (0x06) and '
+        'session-encrypted (0x0F): a message whose fragments are all '
+        'acknowledged is settled (GNA, 2026-11-08)', () {
+      for (final retired in [0x06, 0x0F]) {
+        expect(
+          () => GrassrootsPacket.deserialize(
+              Uint8List.fromList([retired, 0, 0, 0, 0])),
+          throwsArgumentError,
+          reason: '0x${retired.toRadixString(16)} is no packet type',
+        );
+      }
     });
 
     test('rejects a buffer shorter than the header', () {

@@ -192,7 +192,7 @@ void main() {
       String? receivedId;
       Uint8List? receivedPayload;
       Uint8List? receivedSender;
-      bobRouter.onMessageReceived = (id, sender, payload, _) {
+      bobRouter.onMessageReceived = (id, __, sender, payload, _) {
         receivedId = id;
         receivedSender = sender;
         receivedPayload = payload;
@@ -217,7 +217,7 @@ void main() {
       );
 
       bool messageReceived = false;
-      bobRouter.onMessageReceived = (_, __, ___, ____) {
+      bobRouter.onMessageReceived = (_, _____, __, ___, ____) {
         messageReceived = true;
       };
 
@@ -284,7 +284,7 @@ void main() {
       String? receivedId;
       Uint8List? receivedPayload;
       Uint8List? receivedSender;
-      bobRouter.onMessageReceived = (id, sender, payload, _) {
+      bobRouter.onMessageReceived = (id, __, sender, payload, _) {
         receivedId = id;
         receivedSender = sender;
         receivedPayload = payload;
@@ -303,15 +303,21 @@ void main() {
     });
   });
 
-  group('UDP ACK roundtrip', () {
-    test('Alice sends ACK, Bob receives message ID', () async {
-      const messageId = 'ack12345';
+  group('UDP fragment ACK roundtrip', () {
+    test(
+        'Alice acknowledges a fragment, Bob receives its message ID, index, '
+        'sender and session', () async {
+      const messageId = '44444444-4444-4444-8444-444444444444';
 
-      final packet = aliceProtocol.createAckPacket(messageId: messageId);
+      final packet = GrassrootsPacket(
+        type: PacketType.fragmentAck,
+        payload:
+            FragmentHandler.encodeFragmentAck(messageId: messageId, index: 2),
+      );
 
-      String? receivedMessageId;
-      bobRouter.onAckReceived = (_, id) {
-        receivedMessageId = id;
+      (Uint8List, String, int, PeerTransport)? received;
+      bobRouter.onFragmentAckReceived = (sender, id, index, transport) {
+        received = (sender, id, index, transport);
       };
 
       await bobRouter.processPacket(
@@ -320,20 +326,31 @@ void main() {
         udpPeerId: 'peer-alice-id',
       );
 
-      expect(receivedMessageId, equals(messageId));
+      expect(received, isNotNull);
+      expect(received!.$1, equals(aliceIdentity.publicKey));
+      expect(received!.$2, equals(messageId));
+      expect(received!.$3, equals(2));
+      expect(received!.$4, equals(PeerTransport.wan));
     });
   });
 
   // GNA, 2026-10-11, Task B: no duplicate filter; delivery is at least once.
+  // A re-send within reassemblyTimeout of the message's release is
+  // acknowledged and not delivered again (GNA, 2026-11-08); one after it is
+  // delivered again (test/routing/message_router_test.dart).
   group('BLE delivery at least once across multiple packets', () {
-    test('the same message sent twice is delivered twice', () async {
+    test(
+        'the same message sent twice is delivered once while its release is '
+        'recorded, and acknowledged each time', () async {
       final messagePayload = Uint8List.fromList([1, 2, 3]);
       final packet = oneFragmentMessage(messageId: '44444444-4444-4444-4444-444444444444', body: messagePayload);
 
       int receiveCount = 0;
-      bobRouter.onMessageReceived = (_, __, ___, ____) {
+      bobRouter.onMessageReceived = (_, _____, __, ___, ____) {
         receiveCount++;
       };
+      int ackCount = 0;
+      bobRouter.onFragmentAckRequested = (_, __, ___, ____) => ackCount++;
 
       await bobRouter.processPacket(
         seal(packet),
@@ -346,7 +363,8 @@ void main() {
         rssi: -50,
       );
 
-      expect(receiveCount, equals(2));
+      expect(receiveCount, equals(1));
+      expect(ackCount, equals(2));
     });
 
     test('ANNOUNCE is always processed even if seen before', () async {
@@ -465,7 +483,7 @@ void main() {
       final aliceMsg = oneFragmentMessage(messageId: '55555555-5555-5555-5555-555555555555', body: helloPayload);
 
       Uint8List? bobReceived;
-      bobRouter.onMessageReceived = (_, __, payload, ___) {
+      bobRouter.onMessageReceived = (_, ____, __, payload, ___) {
         bobReceived = payload;
       };
       await bobRouter.processPacket(
@@ -480,7 +498,7 @@ void main() {
       final bobMsg = oneFragmentMessage(messageId: '66666666-6666-6666-6666-666666666666', body: replyPayload);
 
       Uint8List? aliceReceived;
-      aliceRouter.onMessageReceived = (_, __, payload, ___) {
+      aliceRouter.onMessageReceived = (_, ____, __, payload, ___) {
         aliceReceived = payload;
       };
       await aliceRouter.processPacket(

@@ -116,7 +116,7 @@ class NoiseHandshakeResult {
 /// message, with the initiator's Ed25519 key as that message's encrypted
 /// payload, and checks that the one is the image of the other.
 ///
-/// Every handshake envelope opens with the protocol version (version 8, a
+/// Every handshake envelope opens with the protocol version (version 9, a
 /// peer on another version refused at the handshake), and both
 /// ends mix it into the handshake hash as the prologue.  The XX envelopes
 /// carry the sender's identity claim in clear, message 1 signed over the

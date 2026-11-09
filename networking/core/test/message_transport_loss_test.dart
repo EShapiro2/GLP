@@ -124,22 +124,95 @@ void main() {
     expect(aCompleted, isTrue);
   }, timeout: Timeout.none);
 
-  test('a whole-message ack settles all outstanding fragments', () async {
+  test(
+      'a message settles once every fragment is acknowledged, and not '
+      'before: there is no whole-message acknowledgment (GNA, 2026-11-08)',
+      () async {
+    const id = '00000000-0000-4000-8000-00000000000c';
+    const last = 4; // 500 bytes in fragments of 100
     late MessageTransportSender sender;
+    final lastSent = Completer<void>();
     sender = MessageTransportSender(
       maxChunk: maxChunk,
       windowPerPeer: 4,
       initialBackoff: const Duration(seconds: 30), // never fires in the test
-      sendPacket: (peerHex, packet) async => true, // nothing acks fragments
+      // The receiver acknowledges every fragment but the last, which waits
+      // for its save.
+      sendPacket: (peerHex, packet) async {
+        final index = FragmentHandler.decodeFragment(packet.payload).index;
+        if (index == last) {
+          lastSent.complete();
+        } else {
+          Timer.run(() => sender.handleFragmentAck(peer, id, index));
+        }
+        return true;
+      },
     );
     addTearDown(sender.dispose);
 
-    const id = '00000000-0000-4000-8000-00000000000c';
-    final done =
-        sender.sendMessage(peer, id, Uint8List.fromList(List.filled(500, 1)));
-    // No per-fragment acks arrive; a delivery ACK settles the message.
-    Timer(const Duration(milliseconds: 20),
-        () => sender.handleMessageAck(peer, id));
+    var settled = false;
+    final done = sender
+        .sendMessage(peer, id, Uint8List.fromList(List.filled(500, 1)))
+        .then((ok) {
+      settled = true;
+      return ok;
+    });
+    // The last fragment goes out only once acknowledgments of the others have
+    // freed the window.
+    await lastSent.future;
+    expect(settled, isFalse);
+    expect(sender.hasOutstanding(peer), isTrue,
+        reason: 'a fragment is unacknowledged, so the message is not settled');
+
+    sender.handleFragmentAck(peer, id, last);
+    expect(await done, isTrue);
+    expect(sender.hasOutstanding(peer), isFalse);
+  }, timeout: Timeout.none);
+
+  test(
+      'an acknowledgment of a fragment not yet sent, stale from an earlier '
+      'attempt at the message, marks nothing done: the fragment is still '
+      'sent, and the message settles only on its own acknowledgment',
+      () async {
+    const id = '00000000-0000-4000-8000-00000000000e';
+    late MessageTransportSender sender;
+    final sent = <int>[];
+    final lastSent = Completer<void>();
+    sender = MessageTransportSender(
+      maxChunk: maxChunk,
+      windowPerPeer: 1, // one fragment in flight: the others wait unsent
+      initialBackoff: const Duration(seconds: 30), // never fires in the test
+      sendPacket: (peerHex, packet) async {
+        final index = FragmentHandler.decodeFragment(packet.payload).index;
+        sent.add(index);
+        if (index == 2) {
+          lastSent.complete();
+        } else {
+          Timer.run(() => sender.handleFragmentAck(peer, id, index));
+        }
+        return true;
+      },
+    );
+    addTearDown(sender.dispose);
+
+    var settled = false;
+    final done = sender
+        .sendMessage(peer, id, Uint8List.fromList(List.filled(300, 1)))
+        .then((ok) {
+      settled = true;
+      return ok;
+    });
+    // Fragment 0 is in flight, 1 and 2 unsent: an acknowledgment of 2 from
+    // an earlier attempt arrives.
+    expect(sent, [0]);
+    sender.handleFragmentAck(peer, id, 2);
+
+    await lastSent.future;
+    expect(sent, [0, 1, 2], reason: 'fragment 2 is sent all the same');
+    expect(settled, isFalse);
+    expect(sender.hasOutstanding(peer), isTrue);
+
+    sender.handleFragmentAck(peer, id, 2);
     expect(await done, isTrue);
   }, timeout: Timeout.none);
 

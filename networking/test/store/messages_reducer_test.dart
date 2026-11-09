@@ -309,11 +309,11 @@ void main() {
     // Once a message reaches `delivered`, `read`, or `failed`, no earlier
     // transition (sending / queued / sent) is allowed to walk the status
     // back. This defends against three real races:
-    //   - ACK arrives before `_markSentAndTrackForAck` registers the entry,
-    //     so `MessageDeliveredAction` lands first and `MessageSentAction`
-    //     follows.
-    //   - Watchdog/disconnect re-queues a message that's already delivered
-    //     (timer fired then ACK landed), dispatching `MessageQueuedAction`.
+    //   - Two attempts of one message settle one after the other (a drain
+    //     joins the attempt in flight), so a `MessageSentAction` follows the
+    //     first attempt's `MessageDeliveredAction`.
+    //   - A failed attempt re-queues a message another attempt has already
+    //     settled, dispatching `MessageQueuedAction`.
     //   - Drain dispatches `MessageSendingAction` for an already-delivered
     //     queue entry it hasn't yet trimmed.
 
@@ -851,6 +851,70 @@ void main() {
       expect(newState.conversations.containsKey('new-r'), isTrue);
       expect(newState.unreadCounts.containsKey('old-r'), isFalse);
       expect(newState.unreadCounts['new-r'], 1);
+    });
+  });
+
+  group('DeleteConversationAction', () {
+    test(
+        'prunes the delivery records of the peer: those of the messages sent '
+        'to it and of the messages it sent, and no other peer\'s', () {
+      final peer = Uint8List.fromList(List.filled(32, 0xAA));
+      final other = Uint8List.fromList(List.filled(32, 0xCC));
+      final peerHex = 'aa' * 32;
+      final myHex = 'bb' * 32;
+      final actions = <MessageAction>[
+        SaveChatMessageAction(
+          senderPubkeyHex: myHex,
+          recipientPubkeyHex: peerHex,
+          content: 'out',
+          isOutgoing: true,
+          messageId: 'out-peer',
+        ),
+        MessageSendingAction(
+          messageId: 'out-peer',
+          underlay: Underlay.wan,
+          recipientPubkey: peer,
+          payloadSize: 3,
+        ),
+        // An incoming message is named in the conversation by the id its
+        // sender's send returned, and its record is kept under the id the
+        // layer delivered it under.
+        SaveChatMessageAction(
+          senderPubkeyHex: peerHex,
+          recipientPubkeyHex: myHex,
+          content: 'in',
+          isOutgoing: false,
+          messageId: 'sent-by-peer',
+        ),
+        MessageReceivedAction(
+          messageId: 'in-peer',
+          underlay: Underlay.wan,
+          senderPubkey: peer,
+          payloadSize: 2,
+        ),
+        MessageSendingAction(
+          messageId: 'out-other',
+          underlay: Underlay.wan,
+          recipientPubkey: other,
+          payloadSize: 1,
+        ),
+        MessageReceivedAction(
+          messageId: 'in-other',
+          underlay: Underlay.wan,
+          senderPubkey: other,
+          payloadSize: 1,
+        ),
+      ];
+      final state = actions.fold(MessagesState.initial, messagesReducer);
+      expect(state.outgoingMessages.keys,
+          unorderedEquals(['out-peer', 'out-other']));
+      expect(state.incomingMessages.keys,
+          unorderedEquals(['in-peer', 'in-other']));
+
+      final after = messagesReducer(state, DeleteConversationAction(peerHex));
+      expect(after.conversations.containsKey(peerHex), isFalse);
+      expect(after.outgoingMessages.keys, ['out-other']);
+      expect(after.incomingMessages.keys, ['in-other']);
     });
   });
 
