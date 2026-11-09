@@ -1162,7 +1162,8 @@ class AgentRuntime {
     };
 
     // Incoming: the Receive transaction, from the sender the layer authenticated, then a run, and the Sends it makes, after the save where there is a store: the message's event cycle ([_cycle]), taken once the code that delivered the message has returned, since a layer may deliver from inside a call the runtime made of it, and a transaction or a run is never started inside another.  A place event the layer reports is a cycle of its own likewise ([MadContext.placeEventSink], set by [_setUp]).
-    network.onMessageReceived = (sender, payload, messageId, underlay) {
+    network.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       _log('MAD_RECV from ${sender.hex} over ${underlay.name} '
           '(${payload.length} bytes)');
       unawaited(_submit(_Message(sender.hex, payload, messageId))
@@ -1214,7 +1215,7 @@ class AgentRuntime {
       selfId: selfName,
       directory: directory,
       keyPair: kp,
-      sendToRouter: (toId, payload) =>
+      sendToRouter: (toId, payload, senderMessageId) =>
           _sendMadPayload(toId, Uint8List.fromList(payload)),
       acknowledgeToRouter: (messageId) => onDelivered?.call(messageId),
     );
@@ -1238,9 +1239,10 @@ class AgentRuntime {
     // sender --- and the message is dropped and reported (GLP #3 Cowork,
     // 2026-10-11 12:59 UTC, "01:05").  Until 2026-10-12 such a sender was
     // named '?', and the message received.
-    network.onMessageReceived = (senderPk, payload, messageId, underlay) =>
-        unawaited(_receiveSimulated(senderPk, payload, messageId)
-            .catchError((Object _) {}));
+    network.onMessageReceived =
+        (senderPk, payload, messageId, senderMessageId, underlay) =>
+            unawaited(_receiveSimulated(senderPk, payload, messageId)
+                .catchError((Object _) {}));
   }
 
   /// A message the simulation delivers, from the agent the directory names by

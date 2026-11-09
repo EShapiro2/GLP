@@ -98,7 +98,7 @@ void main() {
     /// receives it.
     Future<void> dial(HeadlessGrassrootsNetwork layer,
         HeadlessGrassrootsNetwork caller, Completer<void> received) async {
-      layer.onMessageReceived = (sender, payload, _, underlay) {
+      layer.onMessageReceived = (sender, payload, _, __, underlay) {
         if (_hex(sender) == _hex(caller.getIdentity()) &&
             underlay == Underlay.wan &&
             !received.isCompleted) {

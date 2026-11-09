@@ -112,7 +112,8 @@ void main() {
     );
     addTearDown(recipient.dispose);
     final received = <(String, String, String)>[];
-    recipient.onMessageReceived = (sender, payload, id, underlay) =>
+    recipient.onMessageReceived =
+        (sender, payload, id, senderMessageId, underlay) =>
         received.add((_hex(sender), utf8.decode(payload), id));
     recipient.putKnownPeer(senderId.publicKey);
     expect(await recipient.start(), isTrue);
@@ -161,7 +162,8 @@ void main() {
     });
     final received = <String>[];
     recipient.onMessageReceived =
-        (s, payload, id, u) => received.add(utf8.decode(payload));
+        (s, payload, id, senderMessageId, u) =>
+            received.add(utf8.decode(payload));
     recipient.putKnownPeer(senderId.publicKey);
     expect(await recipient.start(), isTrue);
     expect(await sender.start(), isTrue);
@@ -181,8 +183,126 @@ void main() {
   }, timeout: Timeout.none);
 
   test(
+      'a message its recipient fails to save stays saved at its sender: its '
+      'last fragment goes unacknowledged until the save, retried on its '
+      'retransmission, succeeds, and the message is settled then '
+      '(GNA, 2026-11-08)', () async {
+    if (skip()) return;
+    final senderId = await identityFromSeed(0x69);
+    final recipientId = await identityFromSeed(0x6a);
+    final senderHex = _hex(senderId.publicKey);
+    final senderStore = WatchedQueueStore(MemoryOutboundQueueStore());
+    final recipientStore = _KeepRefusedOnceStore();
+    final sender = HeadlessGrassrootsNetwork(
+      identity: senderId,
+      sodium: sodium!,
+      outboundQueueStore: senderStore,
+    );
+    final recipient = HeadlessGrassrootsNetwork(
+      identity: recipientId,
+      sodium: sodium!,
+      outboundQueueStore: recipientStore,
+    );
+    addTearDown(() async {
+      await sender.dispose();
+      await recipient.dispose();
+    });
+    final received = <String>[];
+    final firstReceived = Completer<void>();
+    recipient.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      received.add(id);
+      if (!firstReceived.isCompleted) firstReceived.complete();
+    };
+    recipient.putKnownPeer(senderId.publicKey);
+    expect(await recipient.start(), isTrue);
+    expect(await sender.start(), isTrue);
+    sender.wan.putPeerAddress(
+        recipientId.publicKey, '127.0.0.1:${recipient.boundPort}');
+
+    // Three fragments over UDP.
+    final payload = Uint8List.fromList(List.generate(3000, (i) => i % 251));
+    final id = await sender.send(recipientId.publicKey, payload);
+    final delivered = _deliveryId(senderId, id!);
+
+    // The first save is refused; the second, begun when the sender
+    // retransmits the last fragment, is held until the test lets it
+    // through. The acknowledgment of that fragment is sent only after a save
+    // completes, so until then the message stays saved at its sender.
+    await recipientStore.refused.future;
+    await recipientStore.retried.future;
+    expect((await senderStore.load(senderHex)).map((e) => e.messageId), [id],
+        reason: 'its last fragment unacknowledged, the message is not '
+            'settled');
+    expect(received, isEmpty, reason: 'nor delivered before it is saved');
+
+    recipientStore.release.complete();
+    await firstReceived.future;
+    await senderStore.untilSaved(senderHex, (entries) => entries.isEmpty);
+    expect(received, [delivered]);
+    expect(recipientStore.savedIds, [delivered],
+        reason: 'the retried save kept it');
+    expect(sender.debugQueuedMessageIds(recipientId.publicKey), isEmpty,
+        reason: 'settled, it is not held for the heartbeat to send again');
+  }, timeout: Timeout.none);
+
+  test(
+      'a message of several fragments is settled once every fragment is '
+      'acknowledged: removed from the saved queue and the replay queue, with '
+      'no whole-message acknowledgment, and not sent again (GNA, 2026-11-08)',
+      () async {
+    if (skip()) return;
+    final senderId = await identityFromSeed(0x6b);
+    final recipientId = await identityFromSeed(0x6c);
+    final senderHex = _hex(senderId.publicKey);
+    final senderStore = WatchedQueueStore(MemoryOutboundQueueStore());
+    final sender = HeadlessGrassrootsNetwork(
+      identity: senderId,
+      sodium: sodium!,
+      outboundQueueStore: senderStore,
+    );
+    final recipient = HeadlessGrassrootsNetwork(
+      identity: recipientId,
+      sodium: sodium!,
+      outboundQueueStore: MemoryOutboundQueueStore(),
+    );
+    addTearDown(() async {
+      await sender.dispose();
+      await recipient.dispose();
+    });
+    final received = <String>[];
+    final barrier = Completer<void>();
+    recipient.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      if (payload.length == 1) {
+        if (!barrier.isCompleted) barrier.complete();
+        return;
+      }
+      received.add(id);
+    };
+    recipient.putKnownPeer(senderId.publicKey);
+    expect(await recipient.start(), isTrue);
+    expect(await sender.start(), isTrue);
+    sender.wan.putPeerAddress(
+        recipientId.publicKey, '127.0.0.1:${recipient.boundPort}');
+
+    final payload = Uint8List.fromList(List.generate(3000, (i) => i % 253));
+    expect(payload.length, greaterThan(2 * FragmentHandler.udpMaxChunk),
+        reason: 'three fragments');
+    final id = await sender.send(recipientId.publicKey, payload);
+    await senderStore.untilSaved(senderHex, (entries) => entries.isEmpty);
+    expect(sender.debugQueuedMessageIds(recipientId.publicKey), isEmpty,
+        reason: 'settled: nothing is left for the heartbeat to send again');
+
+    // A message after it, on the same session: by its delivery, the first
+    // has been delivered once.
+    await sender.send(recipientId.publicKey, Uint8List.fromList([1]));
+    await barrier.future;
+    expect(received, [_deliveryId(senderId, id!)]);
+  }, timeout: Timeout.none);
+
+  test(
       'a message delivered and not acknowledged is delivered again after a '
-      'restart of the layer, and one acknowledged is not (GNA §2.9, §2.11)',
+      'restart of the layer, and one acknowledged is not (GNA §2.9, §2.11); '
+      'each delivery names the id the sender\'s send returned',
       () async {
     if (skip()) return;
     final dir = await tempDir();
@@ -204,10 +324,10 @@ void main() {
     );
     final first = recipientLayer();
     addTearDown(sender.dispose);
-    final both = Completer<Map<String, String>>();
-    final received = <String, String>{};
-    first.onMessageReceived = (s, payload, id, u) {
-      received[utf8.decode(payload)] = id;
+    final both = Completer<Map<String, (String, String)>>();
+    final received = <String, (String, String)>{};
+    first.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      received[utf8.decode(payload)] = (id, senderMessageId);
       if (received.length == 2 && !both.isCompleted) both.complete(received);
     };
     first.putKnownPeer(senderId.publicKey);
@@ -223,9 +343,12 @@ void main() {
     final ids = await both.future;
     final keptDelivery = _deliveryId(senderId, keptId!);
     final ackedDelivery = _deliveryId(senderId, ackedId!);
-    expect(ids, {'kept': keptDelivery, 'acked': ackedDelivery},
+    expect(ids, {
+      'kept': (keptDelivery, keptId),
+      'acked': (ackedDelivery, ackedId),
+    },
         reason: 'each is delivered under the layer-assigned id of its sender '
-            'and wire id');
+            'and wire id, with the id its sender\'s send returned');
     expect(
         (await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex))
             .map((e) => e.messageId)
@@ -247,17 +370,18 @@ void main() {
     // unacknowledged message again, as it was delivered, and nothing else.
     final second = recipientLayer();
     addTearDown(second.dispose);
-    final again = <(String, String, String, Underlay)>[];
+    final again = <(String, String, String, String, Underlay)>[];
     final firstAgain = Completer<void>();
-    second.onMessageReceived = (s, payload, id, u) {
-      again.add((_hex(s), utf8.decode(payload), id, u));
+    second.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      again.add((_hex(s), utf8.decode(payload), id, senderMessageId, u));
       if (!firstAgain.isCompleted) firstAgain.complete();
     };
     // The kept messages are delivered again in one turn of the event loop,
     // which ends before the wait on the first of them resumes.
     await firstAgain.future;
-    expect(again,
-        [(_hex(senderId.publicKey), 'kept', keptDelivery, Underlay.wan)]);
+    expect(again, [
+      (_hex(senderId.publicKey), 'kept', keptDelivery, keptId, Underlay.wan)
+    ]);
 
     // Acknowledged now, it is not delivered at the next restart.
     await second.acknowledge(keptDelivery);
@@ -330,6 +454,7 @@ void main() {
       final delivered = DeliveredQueueEntry(
           senderHex: recipient,
           messageId: 'd',
+          senderMessageId: 'w',
           payload: Uint8List.fromList([2, 3]),
           underlay: Underlay.lan);
       await store.save(owner, [sent]);
@@ -384,7 +509,12 @@ void main() {
         'owner': owner,
         'messages': [],
         'delivered': [
-          {'sender': recipient, 'messageId': 'd', 'payload': 'AQ=='},
+          {
+            'sender': recipient,
+            'messageId': 'd',
+            'senderMessageId': 'w',
+            'payload': 'AQ==',
+          },
         ],
       }));
       expect(() => FileOutboundQueueStore(path).loadDelivered(owner),
@@ -410,6 +540,54 @@ void main() {
           throwsFormatException);
     });
   });
+}
+
+/// A store whose first save of the delivered messages is refused, and whose
+/// second is held until [release]: the recipient fails to keep a message,
+/// then keeps it when its sender retransmits.
+class _KeepRefusedOnceStore implements OutboundQueueStore {
+  /// Completes when the first save is refused.
+  final Completer<void> refused = Completer<void>();
+
+  /// Completes when the second save begins.
+  final Completer<void> retried = Completer<void>();
+
+  /// Lets the second save through.
+  final Completer<void> release = Completer<void>();
+
+  /// The ids of the messages the saves that went through held.
+  List<String> savedIds = [];
+
+  int _saves = 0;
+  final MemoryOutboundQueueStore _inner = MemoryOutboundQueueStore();
+
+  @override
+  Future<List<OutboundQueueEntry>> load(String ownerHex) =>
+      _inner.load(ownerHex);
+
+  @override
+  Future<void> save(String ownerHex, List<OutboundQueueEntry> entries) =>
+      _inner.save(ownerHex, entries);
+
+  @override
+  Future<List<DeliveredQueueEntry>> loadDelivered(String ownerHex) =>
+      _inner.loadDelivered(ownerHex);
+
+  @override
+  Future<void> saveDelivered(
+      String ownerHex, List<DeliveredQueueEntry> entries) async {
+    _saves++;
+    if (_saves == 1) {
+      refused.complete();
+      throw StateError('the delivered messages cannot be saved');
+    }
+    if (_saves == 2) {
+      retried.complete();
+      await release.future;
+    }
+    await _inner.saveDelivered(ownerHex, entries);
+    savedIds = [for (final entry in entries) entry.messageId];
+  }
 }
 
 /// The id a message from [sender] with wire id [wireId] is delivered under.

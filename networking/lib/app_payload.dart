@@ -5,13 +5,13 @@ import 'package:grassroots_networking/grassroots_networking.dart';
 
 /// The payloads the demo app hands to `send`.
 ///
-/// Every payload is one kind byte and its body. A chat block carries the id
-/// the sender gave the message, so the reader can name that message back in a
-/// read receipt; the layer knows nothing of either.
+/// Every payload is one kind byte and its body. A block, chat message or
+/// friendship block, carries no id: its reader learns the id the sender's
+/// `send` returned for it as the `senderMessageId` it is delivered with, and
+/// names that message back by it in a read receipt.
 ///
 ///   block:         [0x01][Block bytes]
-///   chat:          [0x02][36-byte message id][Block bytes]
-///   read receipt:  [0x03][36-byte message id]
+///   read receipt:  [0x02][36-byte message id]
 sealed class AppPayload {
   const AppPayload();
 
@@ -25,14 +25,6 @@ sealed class AppPayload {
       case _blockKind:
         final block = Block.tryDeserialize(body);
         return block == null ? null : BlockPayload(block);
-      case _chatKind:
-        if (body.length < _idLength) return null;
-        final block = Block.tryDeserialize(body.sublist(_idLength));
-        if (block == null) return null;
-        return ChatPayload(
-          messageId: latin1.decode(body.sublist(0, _idLength)),
-          block: block,
-        );
       case _readReceiptKind:
         if (body.length != _idLength) return null;
         return ReadReceiptPayload(
@@ -45,13 +37,12 @@ sealed class AppPayload {
 }
 
 const int _blockKind = 0x01;
-const int _chatKind = 0x02;
-const int _readReceiptKind = 0x03;
+const int _readReceiptKind = 0x02;
 
 /// A UUID as its 36 ASCII characters.
 const int _idLength = 36;
 
-/// A block that is not a chat message: a friendship block.
+/// A block: a chat message or a friendship block.
 class BlockPayload extends AppPayload {
   final Block block;
 
@@ -61,20 +52,8 @@ class BlockPayload extends AppPayload {
   Uint8List encode() => _join(_blockKind, const [], block.serialize());
 }
 
-/// A chat block with the id the sender gave its message.
-class ChatPayload extends AppPayload {
-  final String messageId;
-  final Block block;
-
-  ChatPayload({required this.messageId, required this.block})
-      : assert(messageId.length == _idLength);
-
-  @override
-  Uint8List encode() =>
-      _join(_chatKind, ascii.encode(messageId), block.serialize());
-}
-
-/// The reader's acknowledgement that it has read the chat message named.
+/// The reader's acknowledgement that it has read the chat message named by
+/// the id its sender's `send` returned.
 class ReadReceiptPayload extends AppPayload {
   final String messageId;
 

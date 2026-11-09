@@ -68,7 +68,7 @@ class PushService {
     );
     final service = PushService._(network, writer);
     network.onMessageReceived =
-        (senderPk, payload, messageId, underlay) async {
+        (senderPk, payload, messageId, senderMessageId, underlay) async {
       final result =
           await writer.applyPush(b64url(senderPk), payload);
       await network.send(

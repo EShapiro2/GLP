@@ -160,7 +160,7 @@ class _SeamNetwork extends GlpNetwork {
   @override
   List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.wan];
   @override
-  Future<void> send(PubKey pk, Uint8List payload) => Future.value();
+  Future<String> send(PubKey pk, Uint8List payload) => Future.value('s');
   @override
   void acknowledge(String messageId) {}
   @override
@@ -1444,7 +1444,7 @@ go :- declare(rendezvous('${_hex(3)}', '198.51.100.9:7000')),
           selfId: 'alice',
           directory: NetworkDirectory(),
           keyPair: generateKeyPair(),
-          sendToRouter: (_, __) {},
+          sendToRouter: (_, _, _) {},
         );
 
     test('observedPeerAddress and punchUdp throw', () {
@@ -1479,7 +1479,7 @@ go :- declare(rendezvous('${_hex(3)}', '198.51.100.9:7000')),
         selfId: 'alice',
         directory: directory,
         keyPair: generateKeyPair(),
-        sendToRouter: (toId, payload) {},
+        sendToRouter: (toId, payload, senderMessageId) {},
         knownPeerToRouter: (pk, known) => toRouter.add((pk.hex, known)),
       );
       final out = <String>[];
@@ -1519,7 +1519,7 @@ go :- declare(peer(zed)).
         selfId: 'alice',
         directory: NetworkDirectory(),
         keyPair: generateKeyPair(),
-        sendToRouter: (_, __) {},
+        sendToRouter: (_, _, _) {},
         acknowledgeToRouter: told.add,
       );
       c.acknowledge('7');

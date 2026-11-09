@@ -427,9 +427,11 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       store: appStore,
       sodium: appSodium,
     );
+    // The conversation names a message by the id its sender's send
+    // returned, which both ends know: an incoming one by its senderMessageId.
     grassroots.onMessageReceived =
-        (senderPubkey, payload, messageId, underlay) {
-      _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
+        (senderPubkey, payload, messageId, senderMessageId, underlay) {
+      _handleIncomingMessage(senderMessageId, senderPubkey, payload, underlay);
     };
     for (final server in _preferences.rendezvousServers) {
       grassroots.wan?.putRendezvousServer(server.publicKey, server.address);
@@ -559,18 +561,17 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     return result;
   }
 
-  Future<void> _handleIncomingMessage(String messageId, Uint8List senderPubkey,
-      Uint8List payload, Underlay underlay) async {
+  /// A message from [senderPubkey], named by the id its sender's `send`
+  /// returned, [senderMessageId].
+  Future<void> _handleIncomingMessage(String senderMessageId,
+      Uint8List senderPubkey, Uint8List payload, Underlay underlay) async {
     final senderHex = ChatMessage.pubkeyToHex(senderPubkey);
     final myHex = ChatMessage.pubkeyToHex(_identity!.publicKey);
 
     switch (AppPayload.decode(payload)) {
       case BlockPayload(:final block):
         await _handleBlock(
-            block, senderHex, myHex, messageId, senderPubkey, underlay);
-      case ChatPayload(messageId: final chatId, :final block):
-        await _handleBlock(
-            block, senderHex, myHex, chatId, senderPubkey, underlay);
+            block, senderHex, myHex, senderMessageId, senderPubkey, underlay);
       case ReadReceiptPayload(messageId: final readId):
         if (receiptMarksRead(appStore.state.messages, readId, senderHex)) {
           appStore.dispatch(MessageReadAction(messageId: readId));
@@ -614,14 +615,15 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         debugPrint(
             'Hansdling FriendshipOfferBlock from $senderName ($senderHex)');
         final offerBlock = block as FriendshipOfferBlock;
-        await _handleFriendshipOffer(senderHex, myHex, offerBlock, senderName);
+        await _handleFriendshipOffer(
+            senderHex, myHex, offerBlock, senderName, messageId);
 
       case BlockType.friendshipAccept:
         debugPrint(
             'Handling FriendshipAcceptBlock from $senderName ($senderHex)');
         final acceptBlock = block as FriendshipAcceptBlock;
         await _handleFriendshipAccept(
-            senderHex, myHex, acceptBlock, senderName);
+            senderHex, myHex, acceptBlock, senderName, messageId);
 
       case BlockType.friendshipRevoke:
         debugPrint(
@@ -688,6 +690,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     String myHex,
     FriendshipOfferBlock block,
     String senderName,
+    String messageId,
   ) async {
     final pubkey = ChatMessage.hexToPubkey(senderHex);
     final alreadyContact = _isContact(senderHex);
@@ -703,6 +706,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         recipientPubkeyHex: myHex,
         content: 'Wants to be friends too — you are now friends',
         isOutgoing: false,
+        messageId: messageId,
         messageType: ChatMessageType.friendRequestAccepted.index,
       ));
       return;
@@ -714,6 +718,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       recipientPubkeyHex: myHex,
       content: block.message ?? 'Wants to be friends',
       isOutgoing: false,
+      messageId: messageId,
       messageType: ChatMessageType.friendRequestReceived.index,
     ));
 
@@ -727,6 +732,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     String myHex,
     FriendshipAcceptBlock block,
     String senderName,
+    String messageId,
   ) async {
     debugPrint('🤝 _handleFriendshipAccept from $senderName ($senderHex)');
 
@@ -741,6 +747,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       recipientPubkeyHex: myHex,
       content: 'Accepted your friend request',
       isOutgoing: false,
+      messageId: messageId,
       messageType: ChatMessageType.friendRequestAccepted.index,
     ));
     debugPrint('🤝 Chat message saved');

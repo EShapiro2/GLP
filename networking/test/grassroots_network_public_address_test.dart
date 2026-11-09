@@ -169,7 +169,8 @@ void main() {
 
     final delivered = <String>[];
     final firstDelivered = Completer<void>();
-    callee.onMessageReceived = (senderPk, payload, messageId, underlay) {
+    callee.onMessageReceived =
+        (senderPk, payload, messageId, senderMessageId, underlay) {
       delivered.add(utf8.decode(payload));
       if (!firstDelivered.isCompleted) firstDelivered.complete();
     };

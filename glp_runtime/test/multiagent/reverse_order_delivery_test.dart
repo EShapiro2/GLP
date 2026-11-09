@@ -39,9 +39,9 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
   // Seam glue: alice's outbound payloads route through the router; the router
   // delivers to bob, where they are deserialized and handed to handleMadAssignment.
   ctxAlice.onMessageReady = (destId, msg) {
-    router.routeSend('alice', destId, Uint8List.fromList(msg.payload));
+    router.routeSend('alice', destId, Uint8List.fromList(msg.payload), 'w');
   };
-  router.onDeliver = (toId, fromPk, payload, messageId, t) {
+  router.onDeliver = (toId, fromPk, payload, messageId, senderMessageId, t) {
     final (:name, :value, :serial) =
         PayloadCodec.deserializeValuePayload(payload);
     ctxBob.handleMadAssignment(

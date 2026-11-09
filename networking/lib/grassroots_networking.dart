@@ -29,7 +29,8 @@
 /// grassroots.wan?.putRendezvousServer(serverKey, '203.0.113.7:9514');
 /// 
 /// // Set up callbacks
-/// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
+/// grassroots.onMessageReceived =
+///     (sender, payload, messageId, senderMessageId, underlay) {
 ///   // Handle incoming GSG block
 /// };
 /// 

@@ -80,6 +80,7 @@ class DeliveredQueueEntry {
   DeliveredQueueEntry({
     required this.senderHex,
     required this.messageId,
+    required this.senderMessageId,
     required Uint8List payload,
     required this.underlay,
   }) : payload = Uint8List.fromList(payload);
@@ -91,6 +92,11 @@ class DeliveredQueueEntry {
   /// delivered under again.
   final String messageId;
 
+  /// The id the sender's `send` returned for the message, its wire
+  /// messageId, which a delivery after a restart reports again as
+  /// `senderMessageId`.
+  final String senderMessageId;
+
   /// The byte payload delivered.
   final Uint8List payload;
 
@@ -101,6 +107,7 @@ class DeliveredQueueEntry {
   Map<String, Object?> toJson() => {
         'sender': senderHex,
         'messageId': messageId,
+        'senderMessageId': senderMessageId,
         'payload': base64Encode(payload),
         'underlay': underlay.name,
       };
@@ -116,6 +123,7 @@ class DeliveredQueueEntry {
     }
     final sender = json['sender'];
     final messageId = json['messageId'];
+    final senderMessageId = json['senderMessageId'];
     final payload = json['payload'];
     final underlay = json['underlay'];
     if (sender is! String || !OutboundQueueEntry._isKeyHex(sender)) {
@@ -123,6 +131,10 @@ class DeliveredQueueEntry {
     }
     if (messageId is! String || messageId.isEmpty) {
       throw FormatException('a kept message has no message id: $messageId');
+    }
+    if (senderMessageId is! String || senderMessageId.isEmpty) {
+      throw FormatException(
+          'a kept message has no sender message id: $senderMessageId');
     }
     if (payload is! String) {
       throw const FormatException('a kept message has no payload');
@@ -134,6 +146,7 @@ class DeliveredQueueEntry {
     return DeliveredQueueEntry(
       senderHex: sender,
       messageId: messageId,
+      senderMessageId: senderMessageId,
       payload: base64Decode(payload),
       underlay: named.single,
     );
@@ -396,14 +409,25 @@ class PersistentOutboundQueue {
     await _save().catchError((Object _) {});
   }
 
+  /// Whether the message delivered under [messageId] is kept and the runtime
+  /// has not acknowledged it.  A message whose [keep] failed is not.
+  bool isKept(String messageId) => _delivered.containsKey(messageId);
+
   /// Keep [entry], a message about to be delivered, until the runtime
   /// acknowledges it (GNA §2.9); completes once the delivered messages
-  /// holding it are saved, and fails if the save fails.  A message kept
-  /// already, delivered again after a re-send, is kept once.
+  /// holding it are saved, and fails if the save fails, the message then not
+  /// kept ([isKept]), so that the sender's retransmission saves it again.  A
+  /// message kept already, delivered again after a re-send, is kept once.
   Future<void> keep(DeliveredQueueEntry entry) async {
     await restored;
+    final wasKept = _delivered.containsKey(entry.messageId);
     _delivered[entry.messageId] = entry;
-    await _saveDelivered();
+    try {
+      await _saveDelivered();
+    } catch (_) {
+      if (!wasKept) _delivered.remove(entry.messageId);
+      rethrow;
+    }
   }
 
   /// The runtime acknowledged [messageId] (GNA §2.9): drop it and save.  A

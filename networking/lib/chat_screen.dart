@@ -10,7 +10,6 @@ import 'package:redux/redux.dart';
 import 'app_payload.dart';
 import 'chat_models.dart';
 import 'package:logger/logger.dart';
-import 'package:uuid/uuid.dart';
 
 /// Chat screen for a conversation with a specific peer
 class ChatScreen extends StatefulWidget {
@@ -238,21 +237,45 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _showScrollDownButton = !atBottom);
   }
 
-  static const _uuid = Uuid();
+  /// Hand chat [block] to the layer, and return the id `send` gave it, under
+  /// which the layer reports its status and its reader names it in a read
+  /// receipt; null when `send` refused it (invalid input).
+  Future<String?> _sendChat(Uint8List recipientPubkey, Block block) =>
+      widget.grassroots.send(recipientPubkey, BlockPayload(block).encode());
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    _messageController.clear();
+    // `send` returns once the message is saved, a few milliseconds, and the
+    // message is saved to the conversation then, under the id `send` gave
+    // it; the layer reports its status (sending → sent → delivered) under
+    // that id, which the status icon follows.
+    final block = TextSayBlock(content: text);
+    debugPrint("Sending '$text' to peer ${widget.peer.displayName}");
+    String? messageId;
+    try {
+      messageId = await _sendChat(widget.peer.publicKey, block);
+    } catch (e, st) {
+      // The save failed: the text stays in the field for another try.
+      _log.e('Failed to send message', error: e, stackTrace: st);
+    }
+    if (messageId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Could not send to ${widget.peer.displayName}; try again.'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+    // Cleared only once the message is saved, and only if the field still
+    // holds what was sent.
+    if (_messageController.text.trim() == text) _messageController.clear();
 
-    // Generate message ID upfront so we can show the message immediately
-    // Full UUID — messageId is encoded as a 16-byte packet id on the wire,
-// and as a 36-char string in the FRAGMENT_START header. An 8-char prefix
-// would corrupt either format.
-    final messageId = _uuid.v4();
-
-    // Save to conversation immediately so the message appears in the UI
     widget.store.dispatch(SaveChatMessageAction(
       senderPubkeyHex: _myHex,
       recipientPubkeyHex: _peerHex,
@@ -261,17 +284,7 @@ class _ChatScreenState extends State<ChatScreen> {
       messageId: messageId,
     ));
 
-    _scrollToBottom();
-
-    // Send in the background — status updates (sending → sent/delivered/failed)
-    // will be dispatched by GrassrootsNetwork.send() and reflected via the status icon
-    final block = TextSayBlock(content: text);
-    debugPrint("Sending '$text' to peer ${widget.peer.displayName}");
-    widget.grassroots.send(
-      widget.peer.publicKey,
-      ChatPayload(messageId: messageId, block: block).encode(),
-      messageId: messageId,
-    );
+    if (mounted) _scrollToBottom();
   }
 
   /// Open a small bottom sheet to pick an image source (camera or gallery)
@@ -366,43 +379,30 @@ class _ChatScreenState extends State<ChatScreen> {
       final mediaFile = await writeMediaFile(compressed, mime);
       debugPrint('[picture-send] wrote ${mediaFile.path}');
 
-      // Full UUID — messageId is encoded as a 16-byte packet id on the wire,
-// and as a 36-char string in the FRAGMENT_START header. An 8-char prefix
-// would corrupt either format.
-      final messageId = _uuid.v4();
-
-      widget.store.dispatch(SaveChatMessageAction(
-        senderPubkeyHex: _myHex,
-        recipientPubkeyHex: _peerHex,
-        content: '',
-        isOutgoing: true,
-        messageId: messageId,
-        messageType: ChatMessageType.picture.index,
-        mediaPath: mediaFile.path,
-        mediaMime: mime,
-        viewOnce: viewOnce,
-      ));
-      _scrollToBottom();
-
       final block = PictureSayBlock(
         viewOnce: viewOnce,
         mime: mime,
         imageBytes: compressed,
       );
-      final wireBytes =
-          ChatPayload(messageId: messageId, block: block).encode();
-      debugPrint('[picture-send] block serialized: ${wireBytes.length} bytes; '
-          'dispatching to grassroots.send for peer ${widget.peer.displayName}');
+      debugPrint('[picture-send] dispatching to grassroots.send for peer '
+          '${widget.peer.displayName}');
 
-      final sentMessageId = await widget.grassroots
-          .send(widget.peer.publicKey, wireBytes, messageId: messageId);
+      final String? sentMessageId;
+      try {
+        sentMessageId = await _sendChat(widget.peer.publicKey, block);
+      } catch (_) {
+        // No conversation entry will name the file.
+        unawaited(deleteMediaFile(mediaFile.path));
+        rethrow;
+      }
 
       if (sentMessageId == null) {
-        // send() returns null only for invalid input; offline peers are queued
-        // by GrassrootsNetwork and retain a clock-style status until reachable.
+        unawaited(deleteMediaFile(mediaFile.path));
+        // send() returns null only for invalid input, and the layer then
+        // tracks no status for it; offline peers are queued by
+        // GrassrootsNetwork and retain a clock-style status until reachable.
         debugPrint(
             '[picture-send] grassroots.send returned null for ${widget.peer.displayName}');
-        widget.store.dispatch(MessageFailedAction(messageId: messageId));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -415,6 +415,18 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       } else {
         debugPrint('[picture-send] sent ok, messageId=$sentMessageId');
+        widget.store.dispatch(SaveChatMessageAction(
+          senderPubkeyHex: _myHex,
+          recipientPubkeyHex: _peerHex,
+          content: '',
+          isOutgoing: true,
+          messageId: sentMessageId,
+          messageType: ChatMessageType.picture.index,
+          mediaPath: mediaFile.path,
+          mediaMime: mime,
+          viewOnce: viewOnce,
+        ));
+        if (mounted) _scrollToBottom();
       }
     } catch (e, st) {
       _log.e('Failed to send picture', error: e, stackTrace: st);
@@ -491,15 +503,8 @@ class _ChatScreenState extends State<ChatScreen> {
         peers: peers,
         onForward: (peer) async {
           Navigator.pop(context);
-          final forwardId = _uuid.v4();
-          final forwardedMessageId = await widget.grassroots.send(
-            peer.publicKey,
-            ChatPayload(
-              messageId: forwardId,
-              block: TextSayBlock(content: message.content),
-            ).encode(),
-            messageId: forwardId,
-          );
+          final forwardedMessageId = await _sendChat(
+              peer.publicKey, TextSayBlock(content: message.content));
 
           if (forwardedMessageId == null) {
             if (!mounted) return;
@@ -801,28 +806,13 @@ class _ChatScreenState extends State<ChatScreen> {
     debugPrint(
         "Resending '${message.content}' to peer ${widget.peer.displayName}");
 
-    final existingMessageId = message.messageId;
-    if (existingMessageId == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot resend message without message ID'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
     // Send via Grassroots using SayBlock. Picture resend is not yet wired —
     // for now resend treats the message as text. (The bubble's resend affordance
     // is only shown for failed messages, and pictures over BLE rarely fail
-    // partway because fragmentation is in-process.)
+    // partway because fragmentation is in-process.) The layer gives the block
+    // sent again an id of its own.
     final block = TextSayBlock(content: message.content);
-    final messageId = await widget.grassroots.send(
-      widget.peer.publicKey,
-      ChatPayload(messageId: existingMessageId, block: block).encode(),
-      messageId: existingMessageId,
-    );
+    final messageId = await _sendChat(widget.peer.publicKey, block);
 
     if (!mounted) return;
 

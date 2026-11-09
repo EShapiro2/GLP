@@ -61,7 +61,8 @@ void main() {
       serverKey: await SigningKey.generate(),
       registrar: LayerRegistrar(serviceNet),
     );
-    serviceNet.onMessageReceived = (senderPk, payload, messageId, _) async {
+    serviceNet.onMessageReceived =
+        (senderPk, payload, messageId, senderMessageId, _) async {
       final result = await writer.applyPush(b64url(senderPk), payload);
       await serviceNet.send(senderPk,
           Uint8List.fromList(utf8.encode(jsonEncode(result.toJson()))));
@@ -88,7 +89,8 @@ void main() {
       await serviceNet.dispose();
     });
     final ack = Completer<Map>();
-    phone.onMessageReceived = (senderPk, payload, messageId, _) {
+    phone.onMessageReceived =
+        (senderPk, payload, messageId, senderMessageId, _) {
       final m = jsonDecode(utf8.decode(payload)) as Map;
       if (m['format'] == 'gpw/push-ack/1' && !ack.isCompleted) {
         ack.complete(m);

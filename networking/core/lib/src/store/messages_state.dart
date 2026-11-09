@@ -130,7 +130,10 @@ class ChatMessageState {
   /// For friendship messages: the UDP address involved
   final String? udpAddress;
 
-  /// Message ID for tracking delivery/read status (outgoing messages only)
+  /// The id the sender's `send` returned for the message: for an outgoing
+  /// one, the id under which the layer reports its delivery status; for an
+  /// incoming one, the `senderMessageId` it was delivered with, which its
+  /// read receipt names.
   final String? messageId;
 
   /// Absolute path to the on-disk media file for picture messages. Null for

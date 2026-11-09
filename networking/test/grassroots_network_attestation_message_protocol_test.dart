@@ -335,7 +335,7 @@ void main() {
     final calleeEvents = <String>[];
     final helloReceived = Completer<void>();
     callee.onPeerConnected = (_, __, ___) => calleeEvents.add('connected');
-    callee.onMessageReceived = (_, payload, __, ___) {
+    callee.onMessageReceived = (_, payload, __, ____, ___) {
       calleeEvents.add('received ${utf8.decode(payload)}');
       if (utf8.decode(payload) == 'hello' && !helloReceived.isCompleted) {
         helloReceived.complete();
@@ -416,7 +416,7 @@ void main() {
     final helloReceived = Completer<void>();
     final secondReceived = Completer<void>();
     final callerConnects = Completer<void>();
-    callee.onMessageReceived = (_, payload, __, ___) {
+    callee.onMessageReceived = (_, payload, __, ____, ___) {
       final text = utf8.decode(payload);
       if (text == 'hello' && !helloReceived.isCompleted) {
         helloReceived.complete();
