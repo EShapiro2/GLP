@@ -1,6 +1,7 @@
 @TestOn('vm')
 library;
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer_testing.dart';
@@ -10,7 +11,7 @@ import 'package:grassroots_networking_core/src/store/app_state.dart';
 import 'package:grassroots_networking_core/src/store/peers_actions.dart'
     show BleDeviceRemovedAction, PeerAnnounceReceivedAction;
 import 'package:grassroots_networking_core/src/store/known_peers_actions.dart'
-    show KnownPeerPutAction;
+    show KnownPeerPutAction, KnownPeerRemovedAction;
 import 'package:grassroots_networking_core/src/models/peer.dart' show PeerTransport;
 import 'package:grassroots_networking_core/src/store/reducers.dart';
 import 'package:grassroots_networking_core/src/store/settings_actions.dart';
@@ -28,6 +29,13 @@ import 'package:redux/redux.dart';
 class _RecordingHostApi implements GrassrootsBluetoothLayerHostApi {
   final List<String> calls = [];
   final List<BleScanRequest> scanRequests = [];
+
+  /// Invoked for every scan request, so a test can wait on the scan it
+  /// expects instead of polling for it.
+  void Function(BleScanRequest request)? onScan;
+
+  /// When non-null, each scan request waits on this before completing.
+  Completer<void>? startScanGate;
 
   @override
   Future<void> initialize(BleInitializeOptions options) async {
@@ -54,6 +62,9 @@ class _RecordingHostApi implements GrassrootsBluetoothLayerHostApi {
   Future<void> startScan(BleScanRequest request) async {
     scanRequests.add(request);
     calls.add('startScan:${request.serviceUuidPrefix}');
+    onScan?.call(request);
+    // When set, the scan does not complete until the test completes this.
+    await startScanGate?.future;
   }
 
   @override
@@ -878,23 +889,6 @@ void main() {
       expect(advFails && scanFails, true);
     });
 
-    test('peripheral-only mode never starts scanning', () async {
-      store.dispatch(SetBleRoleModeAction(BleRoleMode.peripheralOnly));
-      hostApi.calls.clear();
-      hostApi.scanRequests.clear();
-
-      await transport.start();
-      expect(hostApi.calls.where((c) => c.startsWith('startAdvertising:')),
-          hasLength(1));
-      expect(hostApi.calls, contains('stopScan'));
-      expect(hostApi.calls.where((c) => c.startsWith('startScan:')), isEmpty);
-      expect(hostApi.scanRequests, isEmpty);
-
-      await transport.scan();
-      expect(hostApi.calls.where((c) => c.startsWith('startScan:')), isEmpty);
-      expect(hostApi.scanRequests, isEmpty);
-    });
-
     test('scans by Grassroots prefix and allows duplicate advertisements',
         () async {
       hostApi.calls.clear();
@@ -1143,25 +1137,6 @@ void main() {
               'first-moves anyway so the handshake cannot deadlock.');
     });
 
-    test(
-        'central-only mode dials even as the non-initiator (gate is auto-only)',
-        () async {
-      final (hostApi, callbacks, store, _) =
-          await build(await _makeHighIdentity());
-      store.dispatch(SetBleRoleModeAction(BleRoleMode.centralOnly));
-
-      callbacks.pushAdvertisement(BleAdvertisement(
-        remoteId: 'PEER',
-        serviceUuids: [lowPeerUuid],
-        rssi: -55,
-        connectable: true,
-      ));
-      await Future<void>.delayed(Duration.zero);
-
-      expect(hostApi.calls.where((c) => c == 'connect:PEER'), hasLength(1),
-          reason: 'A central-only device never advertises, so it can never be '
-              'dialed — it must always first-move regardless of the tie-break.');
-    });
   });
 
   group('BleTransportService — iOS first-link asymmetry (grs-ios marker)', () {
@@ -1773,13 +1748,151 @@ void main() {
               'restart per window.');
     });
 
-    test('never restarts in peripheral-only mode', () async {
-      store.dispatch(SetBleRoleModeAction(BleRoleMode.peripheralOnly));
-      await transport.checkScanLiveness(
-          now: DateTime.now().add(const Duration(minutes: 5)));
-      expect(hostApi.calls.where((c) => c.startsWith('startScan:')), isEmpty,
-          reason: 'Peripheral-only devices do not scan; the watchdog must '
-              'not start one.');
+  });
+
+  group('BleTransportService — exact-UUID scan for known peers', () {
+    late _RecordingHostApi hostApi;
+    late FakeGrassrootsBluetoothCallbacks callbacks;
+    late Store<AppState> store;
+    late BleTransportService transport;
+
+    setUp(() async {
+      hostApi = _RecordingHostApi();
+      callbacks = FakeGrassrootsBluetoothCallbacks();
+      final ble =
+          GrassrootsBluetooth.test(hostApi: hostApi, callbacks: callbacks);
+      // Default trust level: closed.
+      store = Store<AppState>(appReducer, initialState: AppState.initial);
+      transport = BleTransportService(
+        identity: await _makeIdentity(),
+        store: store,
+        grassrootsBluetooth: ble,
+      );
+      await transport.initialize();
+    });
+
+    tearDown(() async {
+      hostApi.onScan = null;
+      await transport.dispose();
+    });
+
+    void putKnownPeer(GrassrootsIdentity peer) {
+      store.dispatch(KnownPeerPutAction(_pubkeyHex(peer)));
+    }
+
+    test(
+        'closed trust scans for a known peer\'s recognition UUIDs, '
+        'keeping the prefix', () async {
+      final friend = await _makeHighIdentity();
+      putKnownPeer(friend);
+      hostApi.scanRequests.clear();
+
+      await transport.start();
+
+      final request = hostApi.scanRequests.single;
+      expect(request.serviceUuidPrefix,
+          equals(GrassrootsIdentity.grassrootsUuidPrefix));
+      expect(
+          request.serviceUuids,
+          unorderedEquals(
+              GrassrootsIdentity.candidateServiceUuids(friend.publicKey)),
+          reason: 'The OS filter must report only the beacons of known peers '
+              '(previous, current and next slot), so a backgrounded friend '
+              'is found by its exact UUID.');
+    });
+
+    test('a friend added while scanning restarts the scan with its UUIDs',
+        () async {
+      await transport.start();
+      hostApi.scanRequests.clear();
+      final restarted = Completer<BleScanRequest>();
+      hostApi.onScan = (request) {
+        if (!restarted.isCompleted) restarted.complete(request);
+      };
+
+      final friend = await _makeHighIdentity();
+      putKnownPeer(friend);
+      final request = await restarted.future;
+
+      expect(
+          request.serviceUuids,
+          unorderedEquals(
+              GrassrootsIdentity.candidateServiceUuids(friend.publicKey)));
+    }, timeout: Timeout.none);
+
+    test('switching to open trust restarts the scan prefix-only', () async {
+      final friend = await _makeHighIdentity();
+      putKnownPeer(friend);
+      await transport.start();
+      hostApi.scanRequests.clear();
+      final restarted = Completer<BleScanRequest>();
+      hostApi.onScan = (request) {
+        if (!restarted.isCompleted) restarted.complete(request);
+      };
+
+      store.dispatch(SetColdCallTrustLevelAction(
+          ProximityUnderlay.pan, ColdCallTrustLevel.open));
+      final request = await restarted.future;
+
+      expect(request.serviceUuids, isEmpty,
+          reason: 'Open trust keeps the prefix-only scan.');
+      expect(request.serviceUuidPrefix,
+          equals(GrassrootsIdentity.grassrootsUuidPrefix));
+    }, timeout: Timeout.none);
+
+    test('removing a known peer narrows the scan filter', () async {
+      final keep = await _makeHighIdentity();
+      final drop = await _makeHighIdentity();
+      putKnownPeer(keep);
+      putKnownPeer(drop);
+      await transport.start();
+      hostApi.scanRequests.clear();
+      final restarted = Completer<BleScanRequest>();
+      hostApi.onScan = (request) {
+        if (!restarted.isCompleted) restarted.complete(request);
+      };
+
+      store.dispatch(KnownPeerRemovedAction(_pubkeyHex(drop)));
+      final request = await restarted.future;
+
+      expect(
+          request.serviceUuids,
+          unorderedEquals(
+              GrassrootsIdentity.candidateServiceUuids(keep.publicKey)),
+          reason: 'A removed friend\'s beacons must no longer pass the filter.');
+    }, timeout: Timeout.none);
+
+    test('many store changes during a pending scan restart cause one restart',
+        () async {
+      await transport.start();
+      hostApi.scanRequests.clear();
+      final gate = Completer<void>();
+      hostApi.startScanGate = gate;
+      final started = Completer<BleScanRequest>();
+      hostApi.onScan = (request) {
+        if (!started.isCompleted) started.complete(request);
+      };
+
+      // Adding a friend changes the filter, so a restart begins and blocks
+      // on the gate inside the fake plugin.
+      final friend = await _makeHighIdentity();
+      putKnownPeer(friend);
+      await started.future;
+
+      // Unrelated store changes (the LAN trust level does not feed the BLE
+      // filter) arrive while that restart is pending.
+      for (var i = 0; i < 5; i++) {
+        store.dispatch(SetColdCallTrustLevelAction(
+            ProximityUnderlay.lan,
+            i.isEven ? ColdCallTrustLevel.open : ColdCallTrustLevel.closed));
+      }
+      gate.complete();
+      await pumpEventQueue();
+
+      expect(hostApi.scanRequests, hasLength(1),
+          reason: 'The filter the pending restart applies already matches the '
+              'store, so the burst of changes must not restart the scan '
+              'again (Android stops scans after repeated starts).');
     });
   });
 }

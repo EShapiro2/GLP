@@ -65,7 +65,7 @@ void main() {
     // Service side: pusher registered, stranger not. Unsolicited inbound IP
     // contact is governed by no trust level — the known-peer set is the whole
     // of what the service will answer.
-    service.putKnownPeer(pusher.identity.publicKey);
+    service.putKnownPeer(pusher.getIdentity());
 
     final delivered = <(Uint8List sender, String payload)>[];
     final firstDelivered = Completer<void>();
@@ -87,13 +87,13 @@ void main() {
     // dials, establishes the session, delivers.
     final pusherLinked = Completer<void>();
     pusher.onPeerConnected = (pk, underlay, _) {
-      expect(_hex(pk), _hex(service.identity.publicKey));
+      expect(_hex(pk), _hex(service.getIdentity()));
       expect(underlay, Underlay.wan);
       if (!pusherLinked.isCompleted) pusherLinked.complete();
     };
-    pusher.wan.putPeerAddress(service.identity.publicKey, address);
+    pusher.wan.putPeerAddress(service.getIdentity(), address);
     final messageId = await pusher.send(
-      service.identity.publicKey,
+      service.getIdentity(),
       Uint8List.fromList(utf8.encode('gpw/area-push/1 payload')),
     );
     expect(messageId, isNotNull);
@@ -102,18 +102,18 @@ void main() {
     // Delivery follows the session.
     await firstDelivered.future;
     expect(delivered, hasLength(1));
-    expect(_hex(delivered.single.$1), _hex(pusher.identity.publicKey));
+    expect(_hex(delivered.single.$1), _hex(pusher.getIdentity()));
     expect(delivered.single.$2, 'gpw/area-push/1 payload');
-    expect(serviceConnected, contains(_hex(pusher.identity.publicKey)));
-    expect(service.isPeerReachable(pusher.identity.publicKey), isTrue);
+    expect(serviceConnected, contains(_hex(pusher.getIdentity())));
+    expect(service.isPeerReachable(pusher.getIdentity()), isTrue);
 
     // Stranger: same sequence, unregistered key — the service answers no
     // IK first message from it (GNA §2.6); no session, no delivery.
     var strangerLinked = false;
     stranger.onPeerConnected = (_, __, ___) => strangerLinked = true;
-    stranger.wan.putPeerAddress(service.identity.publicKey, address);
+    stranger.wan.putPeerAddress(service.getIdentity(), address);
     final strangerMessage = await stranger.send(
-      service.identity.publicKey,
+      service.getIdentity(),
       Uint8List.fromList(utf8.encode('stranger payload')),
     );
     expect(strangerMessage, isNotNull); // queued, never delivered
@@ -121,15 +121,15 @@ void main() {
     expect(strangerLinked, isFalse,
         reason: 'unregistered key must not complete a session under Closed');
     expect(
-      service.isPeerReachable(stranger.identity.publicKey),
+      service.isPeerReachable(stranger.getIdentity()),
       isFalse,
     );
     expect(delivered, hasLength(1),
         reason: 'stranger payload must not be delivered');
 
     // Revocation: removeKnownPeer withdraws the pusher.
-    service.removeKnownPeer(pusher.identity.publicKey);
-    expect(service.isPeerReachable(pusher.identity.publicKey), isFalse);
+    service.removeKnownPeer(pusher.getIdentity());
+    expect(service.isPeerReachable(pusher.getIdentity()), isFalse);
   }, timeout: Timeout.none);
 
   test('a pre-registered initiator is admitted', () async {
@@ -154,7 +154,7 @@ void main() {
     // No trust level governs unsolicited inbound IP contact, so a caller the
     // service must answer is registered first — there is no level that would
     // admit it otherwise.
-    service.putKnownPeer(caller.identity.publicKey);
+    service.putKnownPeer(caller.getIdentity());
     final delivered = Completer<String>();
     service.onMessageReceived = (sender, payload, messageId, underlay) {
       if (!delivered.isCompleted) delivered.complete(utf8.decode(payload));
@@ -162,11 +162,11 @@ void main() {
     expect(await service.start(), isTrue);
     expect(await caller.start(), isTrue);
     caller.wan.putPeerAddress(
-      service.identity.publicKey,
+      service.getIdentity(),
       '127.0.0.1:${service.boundPort}',
     );
     await caller.send(
-      service.identity.publicKey,
+      service.getIdentity(),
       Uint8List.fromList(utf8.encode('registered call')),
     );
     expect(await delivered.future, 'registered call');

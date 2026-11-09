@@ -8,12 +8,16 @@ import 'package:redux/redux.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
+import 'package:grassroots_networking/app_payload.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking/src/store/outbound_queue_preferences.dart';
 import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
+import 'package:grassroots_networking_core/src/models/block.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
+import 'package:grassroots_networking_core/src/routing/message_router.dart';
+import 'package:grassroots_networking_core/src/store/messages_actions.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/event_waits.dart';
@@ -121,6 +125,13 @@ void main() {
       Uint8List.fromList(utf8.encode('queued before termination')),
     );
     expect(messageId, isNotNull);
+    // The delivery attempt runs after send has returned: the hold is awaited
+    // on the store's queued status.
+    await stateWhere(
+        first.store,
+        (s) =>
+            s.messages.outgoingMessages[messageId]?.status ==
+            MessageStatus.queued);
     expect(first.queuedMessageCount, 1);
     final saved = await savedQueue(senderId);
     expect(saved.map((e) => e.messageId), [messageId],
@@ -167,8 +178,13 @@ void main() {
     await firstReceived.future;
     expect(received, isNotEmpty,
         reason: 'the restored queue is delivered once the peer is reachable');
-    expect(received.first,
-        (hex(senderId.publicKey), 'queued before termination', messageId));
+    expect(
+        received.first,
+        (
+          hex(senderId.publicKey),
+          'queued before termination',
+          MessageRouter.deliveryIdOf(senderId.publicKey, messageId!)
+        ));
     expect(
         received.every((r) => r.$2 == 'queued before termination'), isTrue,
         reason: 'a duplicate is allowed; nothing else is delivered');
@@ -226,8 +242,13 @@ void main() {
     expect(received, isNotEmpty,
         reason: 'the heartbeat dials the unreachable known peer, and its '
             'reachability drains the restored queue');
-    expect(received.first,
-        (hex(senderId.publicKey), 'restored and swept', messageId));
+    expect(
+        received.first,
+        (
+          hex(senderId.publicKey),
+          'restored and swept',
+          MessageRouter.deliveryIdOf(senderId.publicKey, messageId!)
+        ));
   }, timeout: Timeout.none);
 
   test(
@@ -271,16 +292,20 @@ void main() {
         recipientId.publicKey, Uint8List.fromList(utf8.encode('kept')));
     final ackedId = await sender.send(
         recipientId.publicKey, Uint8List.fromList(utf8.encode('acked')));
-    expect(await both.future, {'kept': keptId, 'acked': ackedId});
+    final keptDelivery =
+        MessageRouter.deliveryIdOf(senderId.publicKey, keptId!);
+    final ackedDelivery =
+        MessageRouter.deliveryIdOf(senderId.publicKey, ackedId!);
+    expect(await both.future, {'kept': keptDelivery, 'acked': ackedDelivery});
 
     // The runtime acknowledges one of the two; then the layer terminates.
-    await first.acknowledge(ackedId!);
+    await first.acknowledge(ackedDelivery);
     await first.dispose();
     const store = SharedPreferencesOutboundQueueStore();
     expect(
         (await store.loadDelivered(hex(recipientId.publicKey)))
             .map((e) => e.messageId),
-        [keptId],
+        [keptDelivery],
         reason: 'an acknowledged message is kept no longer');
 
     // The restart: a layer with the same identity and store delivers the
@@ -295,12 +320,69 @@ void main() {
     // The kept messages are delivered again in one turn of the event loop,
     // which ends before the wait on the first of them resumes.
     await firstAgain.future;
-    expect(again, [(hex(senderId.publicKey), 'kept', keptId)]);
+    expect(again, [(hex(senderId.publicKey), 'kept', keptDelivery)]);
 
-    await second.acknowledge(keptId!);
+    await second.acknowledge(keptDelivery);
     await second.dispose();
     expect(await store.loadDelivered(hex(recipientId.publicKey)), isEmpty,
         reason: 'acknowledged, it is not delivered at the next restart');
+  }, timeout: Timeout.none);
+
+  test(
+      'an application payload names the message it reads: the reader answers '
+      'a chat payload with a receipt naming the chat id the sender put in it, '
+      'and the sender marks that outgoing message read (GNA §2.9)', () async {
+    final senderId = await identityFromSeed(0x9a);
+    final recipientId = await identityFromSeed(0x9b);
+    const chatId = '6f1c2b9e-0d4a-4c1e-8f3a-2b7d9e5c1a40';
+
+    final read = Completer<MessageReadAction>();
+    final sender = await startNode(senderId, onAction: (action) {
+      if (action is MessageReadAction && !read.isCompleted) {
+        read.complete(action);
+      }
+    });
+    addTearDown(sender.dispose);
+    final recipient = await startNode(recipientId);
+    addTearDown(recipient.dispose);
+
+    // The reader's side of the demo app: a chat payload is answered with a
+    // receipt that names the id the sender gave the message.
+    recipient.onMessageReceived = (s, payload, id, u) {
+      final decoded = AppPayload.decode(payload);
+      if (decoded is ChatPayload) {
+        unawaited(recipient.send(senderId.publicKey,
+            ReadReceiptPayload(messageId: decoded.messageId).encode()));
+      }
+    };
+    // The sender's side: a receipt marks the outgoing message it names read.
+    sender.onMessageReceived = (s, payload, id, u) {
+      final decoded = AppPayload.decode(payload);
+      if (decoded is ReadReceiptPayload) {
+        sender.store.dispatch(MessageReadAction(messageId: decoded.messageId));
+      }
+    };
+    recipient.putKnownPeer(senderId.publicKey);
+    recipient.wan!
+        .putPeerAddress(senderId.publicKey, await listeningAddress(sender));
+    sender.putKnownPeer(recipientId.publicKey);
+    sender.wan!
+        .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
+
+    final wireId = await sender.send(
+      recipientId.publicKey,
+      ChatPayload(
+        messageId: chatId,
+        block: TextSayBlock(content: 'read me'),
+      ).encode(),
+      messageId: chatId,
+    );
+    expect(wireId, chatId);
+
+    final action = await read.future;
+    expect(action.messageId, chatId);
+    expect(sender.store.state.messages.outgoingMessages[chatId]?.status,
+        MessageStatus.read);
   }, timeout: Timeout.none);
 
   test("each agent's queue is its own", () async {

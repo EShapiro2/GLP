@@ -171,7 +171,7 @@ void main() {
         () async {
       final (server, serverSaw, serverReported) = await headlessServer(0x95);
       final (node, events) = await startBare(await identityFromSeed(0x96));
-      final serverPk = server.identity.publicKey;
+      final serverPk = server.getIdentity();
       expect(node.isPeerReachable(serverPk), isFalse);
 
       node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
@@ -182,16 +182,16 @@ void main() {
       expect(events, ['connected ${hex(serverPk)} wan null'],
           reason: 'reported over the WAN, unattested (GNA §6, "Unattested")');
       expect(node.peerUnderlays(serverPk), [Underlay.wan]);
-      expect(await serverReported, hex(node.identity.publicKey),
+      expect(await serverReported, hex(node.getIdentity()),
           reason: 'the server reports the node once its own session and '
               'attestation exchange have completed (GNA §2.6)');
-      expect(serverSaw, [hex(node.identity.publicKey)]);
+      expect(serverSaw, [hex(node.getIdentity())]);
     }, timeout: Timeout.none);
 
     test('a second declaration replaces its address', () async {
       final (server, _, _) = await headlessServer(0x97);
       final (node, events) = await startBare(await identityFromSeed(0x98));
-      final serverPk = server.identity.publicKey;
+      final serverPk = server.getIdentity();
 
       // Declared first where nothing answers: no session comes.
       node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${await deadPort()}');
@@ -214,7 +214,7 @@ void main() {
         'removing a key not declared does nothing', () async {
       final (server, serverSaw, _) = await headlessServer(0x99);
       final (node, events) = await startBare(await identityFromSeed(0x9a));
-      final serverPk = server.identity.publicKey;
+      final serverPk = server.getIdentity();
       node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
       await reachability(node, serverPk);
       expect(node.isPeerReachable(serverPk), isTrue);
@@ -237,7 +237,7 @@ void main() {
       // no second session.
       await Future<void>.delayed(const Duration(seconds: 8));
       expect(node.isPeerReachable(serverPk), isFalse);
-      expect(serverSaw, [hex(node.identity.publicKey)],
+      expect(serverSaw, [hex(node.getIdentity())],
           reason: 'the server saw the one session, and no other after it');
       expect(events, [
         'connected ${hex(serverPk)} wan null',
@@ -270,7 +270,7 @@ void main() {
       }
     };
     expect(await server.start(), isTrue);
-    final serverPk = server.identity.publicKey;
+    final serverPk = server.getIdentity();
 
     final connects = <(Underlay, Application?)>[];
     final serverConnects = Completer<void>();
@@ -344,8 +344,8 @@ void main() {
         if (hex(pk) == hex(silentPk)) connects.add(underlay);
       },
       onState: (state) {
-        if (state.peers.getPeerByPubkey(silentPk)?.hasLiveUdpConnection ??
-            false) {
+        final peer = state.peers.getPeerByPubkey(silentPk);
+        if (peer != null && (peer.lanAuthenticated || peer.wanAuthenticated)) {
           everLive = true;
         }
       },
@@ -390,7 +390,7 @@ void main() {
     );
     addTearDown(server.dispose);
     expect(await server.start(), isTrue);
-    final serverPk = server.identity.publicKey;
+    final serverPk = server.getIdentity();
 
     final connected = <Completer<void>>[Completer<void>(), Completer<void>()];
     var connects = 0;
@@ -413,7 +413,7 @@ void main() {
     await server.stop();
     await lost.future;
     expect(node.isPeerReachable(serverPk), isFalse);
-    expect(node.debugHasUdpSession(serverPk), isFalse,
+    expect(node.debugHasIpSession(serverPk), isFalse,
         reason: 'the stale session ended with its path, not left standing');
 
     // The server is back at its address: the sweep dials it again.
@@ -433,7 +433,7 @@ void main() {
       'UDP transport and LAN discovery, and the rendezvous session is held '
       'again', () async {
     final (server, serverSaw, _) = await headlessServer(0x9e);
-    final serverPk = server.identity.publicKey;
+    final serverPk = server.getIdentity();
     var network =
         localNetworkFromPrefixes([localPrefixOf(InternetAddress('192.168.7.5'))]);
     final node = GrassrootsNetwork(
@@ -474,7 +474,7 @@ void main() {
     expect(node.isPeerReachable(serverPk), isTrue);
     expect(node.debugLanDiscoveryStarts, greaterThan(lanStarts),
         reason: 'LAN discovery started again on the new network');
-    expect(serverSaw.where((k) => k == hex(node.identity.publicKey)),
+    expect(serverSaw.where((k) => k == hex(node.getIdentity())),
         hasLength(2),
         reason: 'the server saw a second session from the node');
   }, timeout: Timeout.none);
@@ -506,7 +506,7 @@ void main() {
       sessions[seen++].complete();
     };
     expect(await server.start(), isTrue);
-    final serverPk = server.identity.publicKey;
+    final serverPk = server.getIdentity();
 
     final (node, _) = await startBare(nodeId);
     final lost = Completer<void>();
@@ -521,11 +521,43 @@ void main() {
     await server.stop();
     expect(await server.start(), isTrue);
     await lost.future;
-    expect(node.debugHasUdpSession(serverPk), isFalse);
+    expect(node.debugHasIpSession(serverPk), isFalse);
 
     // The sweep reaches it again under a new session, which it reports.
     await sessions[1].future;
     await stateWhere(node.store, (_) => node.isPeerReachable(serverPk));
     expect(node.isPeerReachable(serverPk), isTrue);
+  }, timeout: Timeout.none);
+
+  test(
+      'a message whose attempts are exhausted on a live session tears that '
+      'session down, feeding onPeerDisconnected, and the message stays queued',
+      () async {
+    final (server, _, _) = await headlessServer(0xa1);
+    final (node, events) = await startBare(await identityFromSeed(0xa2));
+    final serverPk = server.getIdentity();
+    node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
+    await reachability(node, serverPk);
+
+    // The server goes silent: no acknowledgment can come for the message.
+    await server.stop();
+    final sent = node.send(serverPk, Uint8List.fromList([7]));
+    expect(node.isPeerReachable(serverPk), isTrue,
+        reason: 'the session stands before the exhaustion');
+    node.debugExhaustIpAttempts(Underlay.wan, serverPk);
+    // Reported at once, where the silence sweep would take two announce
+    // intervals.
+    expect(node.isPeerReachable(serverPk), isFalse,
+        reason: 'exhaustion tears the session down');
+
+    await reachability(node, serverPk, reachable: false);
+    expect(events, contains('disconnected ${hex(serverPk)} wan'));
+    await sent;
+    // send returns once the message is saved and the failed attempt queues it
+    // afterwards: the hold is awaited on the store.
+    await stateWhere(
+        node.store, (_) => node.queuedMessageCountForPeer(serverPk) == 1);
+    expect(node.queuedMessageCountForPeer(serverPk), 1,
+        reason: 'the exhausted message is kept for the next path');
   }, timeout: Timeout.none);
 }

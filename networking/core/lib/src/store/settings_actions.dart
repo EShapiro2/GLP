@@ -15,13 +15,6 @@ class HydrateSettingsAction extends SettingsAction {
   HydrateSettingsAction(this.settings);
 }
 
-/// Set the BLE role mode (debug knob — see [BleRoleMode]).
-class SetBleRoleModeAction extends SettingsAction {
-  final BleRoleMode mode;
-
-  SetBleRoleModeAction(this.mode);
-}
-
 /// Set the cold-call trust level of one proximity underlay, leaving every
 /// other underlay's untouched (spec §Trust levels — the two levels are
 /// independent).

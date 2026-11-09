@@ -127,7 +127,7 @@ void main() {
     // The restored queue is delivered once the peer is reachable.
     await until([recipient], () => received.isNotEmpty);
     expect(received.first,
-        (senderHex, 'queued before termination', messageId));
+        (senderHex, 'queued before termination', _deliveryId(senderId, messageId!)));
     expect(
         received.every((r) => r.$2 == 'queued before termination'), isTrue,
         reason: 'a duplicate is allowed; nothing else is delivered');
@@ -221,21 +221,24 @@ void main() {
     final ackedId = await sender.send(
         recipientId.publicKey, Uint8List.fromList(utf8.encode('acked')));
     final ids = await both.future;
-    expect(ids, {'kept': keptId, 'acked': ackedId},
-        reason: 'each is delivered under the id its sender gave it');
+    final keptDelivery = _deliveryId(senderId, keptId!);
+    final ackedDelivery = _deliveryId(senderId, ackedId!);
+    expect(ids, {'kept': keptDelivery, 'acked': ackedDelivery},
+        reason: 'each is delivered under the layer-assigned id of its sender '
+            'and wire id');
     expect(
         (await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex))
             .map((e) => e.messageId)
             .toSet(),
-        {keptId, ackedId},
+        {keptDelivery, ackedDelivery},
         reason: 'a message is kept before it is delivered');
 
     // The runtime acknowledges one of the two; then the layer terminates.
-    await first.acknowledge(ackedId!);
+    await first.acknowledge(ackedDelivery);
     await first.dispose();
     final kept =
         await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex);
-    expect(kept.map((e) => e.messageId), [keptId],
+    expect(kept.map((e) => e.messageId), [keptDelivery],
         reason: 'an acknowledged message is kept no longer');
     expect(kept.single.senderHex, _hex(senderId.publicKey));
     expect(kept.single.underlay, Underlay.wan);
@@ -253,10 +256,11 @@ void main() {
     // The kept messages are delivered again in one turn of the event loop,
     // which ends before the wait on the first of them resumes.
     await firstAgain.future;
-    expect(again, [(_hex(senderId.publicKey), 'kept', keptId, Underlay.wan)]);
+    expect(again,
+        [(_hex(senderId.publicKey), 'kept', keptDelivery, Underlay.wan)]);
 
     // Acknowledged now, it is not delivered at the next restart.
-    await second.acknowledge(keptId!);
+    await second.acknowledge(keptDelivery);
     await second.dispose();
     expect(
         await FileOutboundQueueStore(queueFile).loadDelivered(recipientHex),
@@ -407,6 +411,10 @@ void main() {
     });
   });
 }
+
+/// The id a message from [sender] with wire id [wireId] is delivered under.
+String _deliveryId(GrassrootsIdentity sender, String wireId) =>
+    MessageRouter.deliveryIdOf(sender.publicKey, wireId);
 
 String _hex(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

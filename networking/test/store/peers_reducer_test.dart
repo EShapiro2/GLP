@@ -465,7 +465,7 @@ void main() {
         publicKey: pubkey,
         protocolVersion: 3,
         rssi: -40,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
       );
 
       final result = peersReducer(initial, action);
@@ -473,7 +473,7 @@ void main() {
       final peer = result.peers[hex]!;
       expect(peer.protocolVersion, 3);
       expect(peer.rssi, -40);
-      expect(peer.transport, PeerTransport.udp);
+      expect(peer.transport, PeerTransport.wan);
       expect(peer.connectionState, PeerConnectionState.connected);
     });
 
@@ -487,12 +487,12 @@ void main() {
           hex: PeerState(
             publicKey: pubkey,
             connectionState: PeerConnectionState.disconnected,
-            transport: PeerTransport.udp,
+            transport: PeerTransport.wan,
             rssi: -90,
             protocolVersion: 1,
             udpAddress: udpAddress,
             lastDirectReachAt: directReachAt,
-            hasLiveUdpConnection: true,
+            wanAuthenticated: true,
           ),
         },
       );
@@ -503,7 +503,7 @@ void main() {
           publicKey: pubkey,
           protocolVersion: 3,
           rssi: -40,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
         ),
       );
 
@@ -512,7 +512,7 @@ void main() {
       expect(peer.rssi, -40);
       expect(peer.connectionState, PeerConnectionState.connected);
       expect(peer.udpAddress, udpAddress);
-      expect(peer.hasLiveUdpConnection, isTrue);
+      expect(peer.wanAuthenticated, isTrue);
       expect(peer.lastDirectReachAt, directReachAt);
     });
 
@@ -547,7 +547,7 @@ void main() {
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -40,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         // No BLE device IDs — should preserve existing
       );
 
@@ -558,22 +558,38 @@ void main() {
       expect(peer.blePeripheralDeviceId, 'peripheral-id');
     });
 
-    test('UDP ANNOUNCE records lastUdpSeen', () {
+    test('a WAN ANNOUNCE records lastWanSeen alone', () {
       final pubkey = _testPubkey(3);
       final action = PeerAnnounceReceivedAction(
         publicKey: pubkey,
         protocolVersion: 1,
         rssi: -42,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
       );
 
       final result = peersReducer(PeersState.initial, action);
 
       final peer = result.peers[_pubkeyHex(pubkey)]!;
-      expect(peer.lastUdpSeen, isNotNull);
+      expect(peer.lastWanSeen, isNotNull);
+      expect(peer.lastLanSeen, isNull);
     });
 
-    test('BLE ANNOUNCE preserves existing lastUdpSeen', () {
+    test('a LAN ANNOUNCE records lastLanSeen alone', () {
+      final pubkey = _testPubkey(7);
+      final action = PeerAnnounceReceivedAction(
+        publicKey: pubkey,
+        protocolVersion: 1,
+        transport: PeerTransport.lan,
+      );
+
+      final result = peersReducer(PeersState.initial, action);
+
+      final peer = result.peers[_pubkeyHex(pubkey)]!;
+      expect(peer.lastLanSeen, isNotNull);
+      expect(peer.lastWanSeen, isNull);
+    });
+
+    test('BLE ANNOUNCE preserves existing lastWanSeen', () {
       final pubkey = _testPubkey(4);
       final hex = _pubkeyHex(pubkey);
       final udpSeenAt = DateTime.now().subtract(const Duration(minutes: 1));
@@ -583,7 +599,7 @@ void main() {
             publicKey: pubkey,
             connectionState: PeerConnectionState.connected,
             lastSeen: udpSeenAt,
-            lastUdpSeen: udpSeenAt,
+            lastWanSeen: udpSeenAt,
             udpAddress: '[2001:db8::4]:4004',
           ),
         },
@@ -598,7 +614,7 @@ void main() {
 
       final result = peersReducer(initial, action);
 
-      expect(result.peers[hex]!.lastUdpSeen, equals(udpSeenAt));
+      expect(result.peers[hex]!.lastWanSeen, equals(udpSeenAt));
     });
 
     // The "preserve RV servers across ANNOUNCE updates" invariant moved with
@@ -752,7 +768,7 @@ void main() {
             connectionState: PeerConnectionState.connected,
             bleCentralDeviceId: 'central-1',
             udpAddress: '[2001:db8::1]:4001',
-            hasLiveUdpConnection: true,
+            wanAuthenticated: true,
           ),
         },
       );
@@ -763,22 +779,22 @@ void main() {
       final peer = result.peers[hex]!;
       // BLE is the only thing this action governs. Once both roles clear,
       // connectionState reflects "no live BLE", and UDP-derived state is
-      // left for `PeerUdpDisconnectedAction` / `PeerUdpConnectionChangedAction`
+      // left for `PeerIpDisconnectedAction` / `PeerIpSessionChangedAction`
       // to manage.
       expect(peer.connectionState, PeerConnectionState.disconnected);
       expect(peer.bleCentralDeviceId, isNull);
       expect(peer.blePeripheralDeviceId, isNull);
       // UDP fields untouched.
       expect(peer.udpAddress, '[2001:db8::1]:4001');
-      expect(peer.hasLiveUdpConnection, isTrue);
+      expect(peer.wanAuthenticated, isTrue);
     });
   });
 
   // =========================================================================
-  // PeerUdpDisconnectedAction
+  // PeerIpDisconnectedAction
   // =========================================================================
 
-  group('PeerUdpDisconnectedAction', () {
+  group('PeerIpDisconnectedAction', () {
     test('marks disconnected if no BLE device', () {
       final pubkey = _testPubkey(1);
       final hex = _pubkeyHex(pubkey);
@@ -791,7 +807,7 @@ void main() {
           ),
         },
       );
-      final action = PeerUdpDisconnectedAction(pubkey);
+      final action = PeerIpDisconnectedAction(pubkey, Underlay.wan);
 
       final result = peersReducer(initial, action);
 
@@ -814,7 +830,7 @@ void main() {
           ),
         },
       );
-      final action = PeerUdpDisconnectedAction(pubkey);
+      final action = PeerIpDisconnectedAction(pubkey, Underlay.wan);
 
       final result = peersReducer(initial, action);
 
@@ -837,7 +853,7 @@ void main() {
           ),
         },
       );
-      final action = PeerUdpDisconnectedAction(pubkey);
+      final action = PeerIpDisconnectedAction(pubkey, Underlay.wan);
 
       final result = peersReducer(initial, action);
 
@@ -845,14 +861,107 @@ void main() {
       // the last known location and the only way to attempt reconnection.
       expect(result.peers[hex]!.udpAddress, '[2001:db8::1]:4001');
     });
+
+    test(
+        'tears down the session on its underlay alone: the LAN session, its '
+        'attestation and its clock stand, and the peer stays connected and '
+        'reachable over the LAN', () {
+      final pubkey = _testPubkey(1);
+      final hex = _pubkeyHex(pubkey);
+      final lanSeen = DateTime.now().subtract(const Duration(seconds: 3));
+      final initial = PeersState(
+        peers: {
+          hex: PeerState(
+            publicKey: pubkey,
+            connectionState: PeerConnectionState.connected,
+            udpAddress: '[2001:db8::1]:4001',
+            lanAuthenticated: true,
+            wanAuthenticated: true,
+            lanAttestation: PeerAttestation.unattested,
+            wanAttestation: PeerAttestation.unattested,
+            lastLanSeen: lanSeen,
+          ),
+        },
+      );
+      expect(initial.peers[hex]!.reachableUnderlays,
+          {Underlay.lan, Underlay.wan});
+
+      final result =
+          peersReducer(initial, PeerIpDisconnectedAction(pubkey, Underlay.wan));
+
+      final peer = result.peers[hex]!;
+      expect(peer.wanAuthenticated, isFalse);
+      expect(peer.wanAttestation, isNull);
+      expect(peer.lanAuthenticated, isTrue);
+      expect(peer.lanAttestation, PeerAttestation.unattested);
+      expect(peer.lastLanSeen, lanSeen);
+      expect(peer.connectionState, PeerConnectionState.connected);
+      expect(peer.reachableUnderlays, {Underlay.lan});
+    });
   });
 
   // =========================================================================
-  // PeerUdpSeenAction
+  // PeerIpSessionChangedAction
   // =========================================================================
 
-  group('PeerUdpSeenAction', () {
-    test('updates lastSeen and lastUdpSeen for existing peer', () {
+  group('PeerIpSessionChangedAction', () {
+    test(
+        'a session on each IP underlay is its own: establishing the WAN '
+        'session leaves the attested LAN session as it is', () {
+      final pubkey = _testPubkey(8);
+      final hex = _pubkeyHex(pubkey);
+      final initial = PeersState(
+        peers: {
+          hex: PeerState(
+            publicKey: pubkey,
+            connectionState: PeerConnectionState.connected,
+            lanAuthenticated: true,
+            lanAttestation: PeerAttestation.unattested,
+          ),
+        },
+      );
+
+      var result = peersReducer(
+        initial,
+        PeerIpSessionChangedAction(
+            pubkeyHex: hex, underlay: Underlay.wan, connected: true),
+      );
+      var peer = result.peers[hex]!;
+      expect(peer.wanAuthenticated, isTrue);
+      expect(peer.wanAttestation, isNull,
+          reason: 'a fresh session is not attested yet');
+      expect(peer.lanAttestation, PeerAttestation.unattested);
+      expect(peer.reachableUnderlays, {Underlay.lan});
+
+      result = peersReducer(
+        result,
+        PeerAttestedAction(
+          publicKey: pubkey,
+          underlay: Underlay.wan,
+          attestation: PeerAttestation.unattested,
+        ),
+      );
+      peer = result.peers[hex]!;
+      expect(peer.reachableUnderlays, {Underlay.lan, Underlay.wan});
+
+      result = peersReducer(
+        result,
+        PeerIpSessionChangedAction(
+            pubkeyHex: hex, underlay: Underlay.lan, connected: false),
+      );
+      peer = result.peers[hex]!;
+      expect(peer.lanAuthenticated, isFalse);
+      expect(peer.lanAttestation, isNull);
+      expect(peer.reachableUnderlays, {Underlay.wan});
+    });
+  });
+
+  // =========================================================================
+  // PeerIpSeenAction
+  // =========================================================================
+
+  group('PeerIpSeenAction', () {
+    test('updates lastSeen and the clock of its underlay alone', () {
       final pubkey = _testPubkey(5);
       final hex = _pubkeyHex(pubkey);
       final initialSeenAt = DateTime.now().subtract(const Duration(minutes: 5));
@@ -862,24 +971,29 @@ void main() {
             publicKey: pubkey,
             connectionState: PeerConnectionState.connected,
             lastSeen: initialSeenAt,
-            lastUdpSeen: initialSeenAt,
+            lastLanSeen: initialSeenAt,
+            lastWanSeen: initialSeenAt,
           ),
         },
       );
 
-      final result = peersReducer(initial, PeerUdpSeenAction(pubkey));
+      final result =
+          peersReducer(initial, PeerIpSeenAction(pubkey, Underlay.wan));
 
       final peer = result.peers[hex]!;
       expect(peer.lastSeen, isNotNull);
-      expect(peer.lastUdpSeen, isNotNull);
+      expect(peer.lastWanSeen, isNotNull);
       expect(peer.lastSeen!.isAfter(initialSeenAt), isTrue);
-      expect(peer.lastUdpSeen!.isAfter(initialSeenAt), isTrue);
+      expect(peer.lastWanSeen!.isAfter(initialSeenAt), isTrue);
+      expect(peer.lastLanSeen, initialSeenAt,
+          reason: 'the LAN session keeps its own clock');
     });
 
     test('is a no-op for unknown peer', () {
       const state = PeersState.initial;
 
-      final result = peersReducer(state, PeerUdpSeenAction(_testPubkey(42)));
+      final result = peersReducer(
+          state, PeerIpSeenAction(_testPubkey(42), Underlay.lan));
 
       expect(result, same(state));
     });
@@ -1029,7 +1143,8 @@ void main() {
       expect(created.hasKnownAddress, isTrue);
       // A GLP-fed address is a dial-book hint only, never a live session.
       expect(created.isReachable, isFalse);
-      expect(created.hasLiveUdpConnection, isFalse);
+      expect(created.lanAuthenticated, isFalse);
+      expect(created.wanAuthenticated, isFalse);
       expect(created.connectionState, PeerConnectionState.disconnected);
     });
 
