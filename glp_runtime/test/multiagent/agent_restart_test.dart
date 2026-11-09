@@ -349,8 +349,9 @@ void main() {
   });
 
   test('over a store, a goal waiting on when_idle is re-tried after the '
-      'hand-over, each run saved before its messages are handed over; a save '
-      'that fails after a hand-over hands nothing over twice', () async {
+      'hand-over, each run saved before its messages are handed over; where '
+      'the save of a run fails, nothing is handed over from its state',
+      () async {
     /// `c` over [store], its outputs and its Sends recorded in the order
     /// they happen, each Send with the number of saves kept before it.
     Future<List<String>> run(MemoryAgentStateStore store) async {
@@ -382,22 +383,29 @@ void main() {
     ]);
     expect(store.saves, 3);
 
-    // The save of the run after the first hand-over fails: the agent goes
-    // back to the state saved before it, which holds the cold call
-    // undelivered, takes the cold call out of M_p, since it was handed over,
-    // and makes the run again.  Each message is handed over once.
+    // The save of the run after the first hand-over fails: the agent runs on
+    // its state in memory, and the cycle ends there, the second cold call
+    // kept undelivered in M_p and not handed over from a state the store does
+    // not hold (IGLP, Implementation Notes, "Persistence"); the run is not
+    // made again.
     final failing = _FailingStore({2});
     expect(await run(failing), [
       'send b after 1',
       'out sender',
-      'out sender',
-      'send b after 2',
-      'out waiter',
     ]);
+    expect(failing.saves, 1);
   });
 
-  test('a cycle whose save fails is not complete, and is run again from the '
-      'state saved before it', () async {
+  test('a cycle whose save fails leaves the agent running on its state in '
+      'memory, reported once; nothing is handed to the layer or acknowledged '
+      'until the next cycle that changes the state saves it', () async {
+    // IGLP, Implementation Notes, "Persistence": "a message is handed to the
+    // layer, and a delivered message acknowledged to the layer, only from a
+    // state the store holds, and a restart resumes from the state the store
+    // holds".  Code #26, Cloud-Runtime_inbox 2026-11-08 22:09 UTC: the
+    // runtime reports the failed save once on onLog as [ERROR], keeps the
+    // agent running on its state in memory, and tries the save again at the
+    // next cycle that changes the state, not at once.
     final storeB = MemoryAgentStateStore();
     final kpB = generateKeyPair();
     final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
@@ -410,21 +418,104 @@ void main() {
 
     storeB.failNextSaves = 1;
     await deliverTo('b', b);
-    expect(logs.where((l) => l.startsWith('SAVE FAILED')), hasLength(1));
-    expect(storeB.saves, savesBefore + 1,
-        reason: 'the cycle run again is saved');
-    expect(delivered['b'], hasLength(1),
-        reason: 'the layer is told once, after the save');
-    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull);
-    expect(b.ctx!.wp.serializerAppendedCount, 1,
-        reason: 'the cold call is appended once, the cycle having been run '
-            'again from the state saved before it');
+    expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1));
+    expect(storeB.saves, savesBefore, reason: 'the save failed');
+    expect(delivered['b'], isEmpty,
+        reason: 'the store does not hold the cold call applied');
+    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull,
+        reason: 'the agent runs on its state in memory');
+    expect(b.ctx!.wp.serializerAppendedCount, 1);
+    expect(queue.where((m) => m.from == 'b'), isEmpty,
+        reason: 'nothing is handed to the layer from a state not saved');
 
-    // The state saved is the state after the cycle: a restart from it holds
-    // the entry.
+    // A restart now would resume from the state the store holds, which has
+    // not applied the cold call.
+    final early = host('b', playB, storeB, kpB);
+    await early.initialize();
+    expect(early.ctx!.wp.findByRemote('a', 1), isNull);
+    early.dispose();
+
+    // The next cycle that changes the state saves it, and then the cold call
+    // and the value are acknowledged and b's acknowledgement handed over.
+    await a.injectUserInput(ConstTerm('go'));
+    await deliverTo('b', b);
+    expect(storeB.saves, greaterThan(savesBefore));
+    expect(delivered['b'], hasLength(2));
+    expect(out['b'], contains('< got(hello)'));
+    expect(queue.where((m) => m.from == 'b'), isNotEmpty);
+    expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1));
+
     final b2 = host('b', playB, storeB, kpB);
     await b2.initialize();
-    expect(b2.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(b2.ctx!.wp.serializerAppendedCount, 1,
+        reason: 'the state saved holds the cold call applied');
+  });
+
+  test('a store that refuses every save leaves the event loop free: the agent '
+      'runs on, the failure reported once, and a timer fires', () async {
+    // Cloud #6, Code_inbox 2026-11-08 21:13 UTC: a cycle whose save failed
+    // was taken again at once, with no bound, so a store that kept failing,
+    // as a full disc does, spun the event loop and the app hung.  IGLP,
+    // Implementation Notes, "Event-driven execution": the host event loop
+    // stays live, "so timers, I/O, and the UI stay live".
+    final storeB = MemoryAgentStateStore();
+    final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
+    final b = host('b', playB, storeB, generateKeyPair());
+    final logs = <String>[];
+    b.onLog = (_, m) => logs.add(m);
+    await a.initialize();
+    await b.initialize();
+    storeB.failNextSaves = 1 << 30;
+
+    final fired = Completer<void>();
+    Timer(Duration.zero, fired.complete);
+    final delivering = deliverTo('b', b);
+    await fired.future;
+    await delivering;
+    await a.injectUserInput(ConstTerm('go'));
+    await deliverTo('b', b);
+    expect(out['b'], contains('< got(hello)'),
+        reason: 'the agent runs on its state in memory');
+    expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1),
+        reason: 'reported once, not at every cycle');
+    expect(delivered['b'], isEmpty);
+    expect(queue.where((m) => m.from == 'b'), isEmpty);
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('a disposed agent takes no event and makes no save, and the next '
+      'launch from its store is the one agent that writes it', () async {
+    // IGLP, Implementation Notes, "Event-driven execution": "shutdown is the
+    // embedding application's"; Definition "Restart" and "Persistence": one
+    // agent and one store per launch.  Cloud #6, Code_inbox 2026-11-08 21:13
+    // UTC: dispose did nothing, and two launches in one process wrote one
+    // state file.
+    final storeA = MemoryAgentStateStore();
+    final kpA = generateKeyPair();
+    final a = host('a', playA, storeA, kpA);
+    final b = host('b', playB, MemoryAgentStateStore(), generateKeyPair());
+    await a.initialize();
+    await b.initialize();
+    final logs = <String>[];
+    a.onLog = (_, m) => logs.add(m);
+    final saves = storeA.saves;
+    final sent = queue.length;
+
+    a.dispose();
+    expect(a.disposed, isTrue);
+    await a.injectUserInput(ConstTerm('go'));
+    expect(storeA.saves, saves, reason: 'no save after the dispose');
+    expect(queue.length, sent, reason: 'nothing handed to the layer');
+    expect(out['a']!.where((l) => l == '> go'), isEmpty,
+        reason: 'the channel to the person is closed');
+    expect(logs.where((l) => l.contains('is not taken')), isNotEmpty);
+
+    // The next launch from the same store goes on from it, and saves in it.
+    final a2 = host('a', playA, storeA, kpA);
+    await a2.initialize();
+    expect(a2.firstStart, isFalse);
+    await a2.injectUserInput(ConstTerm('go'));
+    expect(storeA.saves, greaterThan(saves));
+    expect(a.disposed, isTrue);
   });
 
   test('a saved state is refused under another key', () async {
