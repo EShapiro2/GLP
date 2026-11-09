@@ -92,3 +92,23 @@ def paper_of(owner_line, served_pdfs=(), state=None):
             if st.get('changed'):
                 v['pdf_on'] = st['changed'][:10]
     return v
+
+
+# The foundational papers, those with no contract of their own (Udi,
+# 2026-11-09, choosing them), listed under Foundational Papers on the site;
+# titles, authors and arXiv identifiers as Bib-Grassroots has them.
+FOUNDATIONAL = [
+    {'title': 'GLP: A Grassroots, Multiagent, Concurrent, Logic Programming Language for AI', 'authors': 'Ehud Shapiro', 'arxiv': '2510.15747'},
+    {'title': 'Types for Grassroots Logic Programs', 'authors': 'Ehud Shapiro', 'arxiv': '2601.17957'},
+    {'title': 'Implementing Grassroots Logic Programs with Multiagent Transition Systems and AI', 'authors': 'Ehud Shapiro', 'arxiv': '2602.06934'},
+    {'title': 'Volition-Guarded Multiagent Atomic Transactions: Describing People and their Machines', 'authors': 'Andy Lewis-Pye and Ehud Shapiro', 'arxiv': '2604.25596'},
+    {'title': 'Volition Elicitation: Operational Semantics for People and Their Machines', 'authors': 'Idit Keidar and Ehud Shapiro', 'arxiv': '2607.14138'},
+    {'title': 'sGLP: Simulating People with Stochastic Agents', 'authors': 'Ehud Shapiro', 'arxiv': '2610.14738'},
+    {'title': 'Characterising Global Platforms: Centralised, Decentralised, Federated, and Grassroots', 'authors': 'Ehud Shapiro', 'arxiv': '2511.03286'},
+    {'title': 'Grassroots Platforms with Atomic Transactions: Social Graphs, Cryptocurrencies, and Democratic Federations', 'authors': 'Ehud Shapiro', 'arxiv': '2502.11299', 'venue': 'Theoretical Computer Science, 2026'},
+    {'title': 'Securing People and their Machines Against Major Faults', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro', 'arxiv': '2607.02304', 'venue': 'SSS 2026, to appear'},
+    {'title': 'Digital Speech Acts Retain Control of Copyright with People, Not Platforms', 'authors': 'James Golike and Ehud Shapiro', 'arxiv': '2606.19263'},
+    {'title': 'Grassroots Federation: Fair Democratic Governance at Scale', 'authors': 'Nimrod Talmon and Ehud Shapiro', 'arxiv': '2505.02208', 'venue': 'AAMAS 2026'},
+    {'title': 'Constitutional Consensus', 'authors': 'Idit Keidar, Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2505.19216'},
+    {'title': 'Constitutional Governance in Metric Spaces', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'arxiv': '2605.13362', 'venue': 'ADT 2026, to appear'},
+]
