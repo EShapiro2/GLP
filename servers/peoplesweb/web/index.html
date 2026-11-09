@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="GAS · the Grassroots App Store">
-<meta property="og:title" content="GAS · the Grassroots App Store">
+<meta property="og:site_name" content="The Grassroots App Store">
+<meta property="og:title" content="The Grassroots App Store">
 <meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
 <meta property="og:url" content="https://peoplesweb.org/">
 <meta property="og:image" content="https://peoplesweb.org/og.jpg">
@@ -15,7 +15,7 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots App Store">
 <meta name="twitter:card" content="summary_large_image">
-<title>GAS · the Grassroots App Store · peoplesweb.org</title>
+<title>The Grassroots App Store</title>
 <link rel="icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -170,7 +170,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
-@media (max-width:640px){.hin{padding:10px 16px;gap:10px}.logo{font-size:14.5px;white-space:nowrap}.logo .the{display:none}.search input{width:96px}
+@media (max-width:640px){.hin{padding:10px 16px;gap:10px}.logo{font-size:14.5px;white-space:nowrap}.search input{width:96px}
   #tip{max-width:none}
   .app .pill.ghost{display:none}.shelf{grid-template-columns:minmax(0,1fr);padding:6px 16px}.prod .icon{width:96px;height:96px;font-size:48px;border-radius:22px}
   .tog{padding:14px 16px}.tog .minis{display:none}.tog .cnt{margin-left:auto}
@@ -187,7 +187,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 </head>
 <body>
 <header><div class="hin">
-  <div class="logo" id="home"><span class="mark"></span>GAS ·<span class="the">&nbsp;the</span>&nbsp;Grassroots App Store</div>
+  <div class="logo" id="home"><span class="mark"></span>The Grassroots App Store</div>
   <div class="search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search" autocomplete="off"></div>
 </div></header>
 <main>
@@ -336,7 +336,12 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
 const FS0 = () => NARROW() ? 16 : 11;
-const GW = 1120, GH = 640, CX = GW/2, CY = GH/2 + 12;
+// The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
+// on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
+// view 600 wide; a zoom is relative to that.
+const GW = 1120, GH = 1130, CX = GW/2, CY = GH/2;
+const BASEZ = () => (NARROW() ? 290 : 548) / 265;
+const clampZ = z => Math.max(0.5 * BASEZ(), Math.min(2.5 * BASEZ(), z));
 function drawGlobe(){
   const S = 265 * V.zoom, al = V.tilt, maxd = MAXD();
   const th = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
@@ -406,7 +411,7 @@ function drawGlobe(){
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
   const KEY = ['extends', 'restricts', 'amends', 'implements', 'instantiates'].map(r => [r, r]);
-  const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? 662 : GH - 22 - 24*KEY.length;
+  const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
     s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
@@ -416,7 +421,7 @@ function drawGlobe(){
       : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
     s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });
   s += `</g>`;
-  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} 0 600 790` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
+  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 772` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
   const show = (c, e) => {
@@ -463,7 +468,7 @@ function globeNav(){
     if (!pts.has(e.pointerId)) return;
     pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && pts.size >= 2){
-      V.zoom = Math.max(0.8, Math.min(3.2, pinch[1] * dist() / pinch[0])); drawGlobe(); return; }
+      V.zoom = clampZ(pinch[1] * dist() / pinch[0]); drawGlobe(); return; }
     if (!drag) return;
     const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
     if (Math.abs(dx) + Math.abs(dy) > (LASTPT === 'mouse' ? 3 : 8)) DRAGGED = true;
@@ -480,7 +485,7 @@ function globeNav(){
   addEventListener('pointerup', up);
   addEventListener('pointercancel', up);
   g.addEventListener('wheel', e => { e.preventDefault();
-    V.zoom = Math.max(0.8, Math.min(3.2, V.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
+    V.zoom = clampZ(V.zoom * (e.deltaY < 0 ? 1.12 : 0.9));
     drawGlobe(); }, {passive: false});
   if (matchMedia('(pointer: coarse)').matches) $('#hint').textContent = 'drag to turn, pinch to zoom, tap a contract';
   // Crossing between a phone's width and a wider one lays the rings out again
@@ -488,6 +493,7 @@ function globeNav(){
   let was = NARROW();
   addEventListener('resize', () => { if (NARROW() !== was){ was = NARROW();
     for (const k in PHI) delete PHI[k]; for (const k in LAT) delete LAT[k]; for (const k in KIDS) delete KIDS[k];
+    V.zoom = BASEZ();
     layout(); } drawGlobe(); });
 }
 const GROUPS = [['Identity & social', ['identity', 'social']], ['Children & AI agents', ['care']], ['Money & trade', ['money']], ['Deciding together', ['governance']], ['Rides', ['mobility']], ['Operating System', ['os']], ['Network', ['network']], ['Other', ['other']]];
@@ -642,6 +648,7 @@ function schemaHtml(s, open){
 }
 
 $('#found').innerHTML = (D.foundational || []).map(citeHtml).join('');
+V.zoom = BASEZ();
 layout(); drawGlobe(); globeNav(); drawShelves(); route();
 window.addEventListener('resize', () => { if ($('#top').style.display !== 'none') drawShelves(); });
 </script>
