@@ -2075,7 +2075,7 @@ class GrassrootsNetwork {
   /// dialing directly — never into distribution — and the deterministic
   /// initiator (lexicographically smaller public key, as everywhere) dials;
   /// the other side waits for the inbound connection. The recognized key is
-  /// the expected one: [_connectToPeerViaUdp] runs Noise IK with it, which
+  /// the expected one: [_dialLanMatch] runs Noise IK with it, which
   /// only its holder can answer (GNA §2.6, §3.2).
   ///
   /// An unmatched instance is a cold call: under Open trust the layer contacts
@@ -2102,18 +2102,58 @@ class GrassrootsNetwork {
     }
     final canonical = parsed.toAddressString();
     debugPrint('[lan] recognized known peer $peerShort at $canonical');
-    store.dispatch(
-      AssociateUdpAddressAction(publicKey: matched, address: canonical),
-    );
     if (_udpService?.getPeerIdForPubkey(matched) != null) return;
     final myHex = _pubkeyToHex(identity.publicKey);
     if (myHex.compareTo(pubkeyHex) < 0) {
-      unawaited(_connectToPeerViaUdp(pubkeyHex, canonical));
+      unawaited(_dialLanMatch(pubkeyHex, parsed));
     } else {
       debugPrint(
         '[lan] deterministic initiator is $peerShort; waiting for its dial',
       );
     }
+  }
+
+  /// Dial a recognized LAN presence at the address its instance resolved to,
+  /// with the recognized key expected (Noise IK, GNA §2.6, §3.2).
+  ///
+  /// The address serves this path only. It is not recorded as the peer's
+  /// address: the recorded one is the peer's WAN address, which [send] and the
+  /// reconnection sweeps keep dialing once the LAN is left. Dialing through the
+  /// recorded address instead would let a WAN candidate win the pair selection
+  /// over the LAN one.
+  Future<void> _dialLanMatch(String pubkeyHex, AddressInfo parsed) async {
+    final udp = _udpService;
+    if (udp == null) return;
+    if (_ipUnderlayFor(parsed.ip) == null) {
+      debugPrint(
+        '[lan] ${parsed.toAddressString()} falls under no underlay this layer '
+        'runs; not dialing',
+      );
+      return;
+    }
+    if (_udpConnectInFlight.containsKey(pubkeyHex)) return;
+    final connectFuture = udp.connectToPeer(pubkeyHex, parsed.ip, parsed.port);
+    _udpConnectInFlight[pubkeyHex] = connectFuture;
+    bool opened;
+    try {
+      opened = await connectFuture;
+    } finally {
+      if (identical(_udpConnectInFlight[pubkeyHex], connectFuture)) {
+        _udpConnectInFlight.remove(pubkeyHex);
+      }
+    }
+    if (!opened) {
+      debugPrint(
+        '[lan] could not open a path to ${pubkeyHex.substring(0, 8)} at '
+        '${parsed.toAddressString()}',
+      );
+      return;
+    }
+    await _ensureNoiseSession(
+      transport: PeerTransport.udp,
+      recipientPubkey: _hexToBytes(pubkeyHex),
+      peerId: pubkeyHex,
+    );
   }
 
   /// Contact an unmatched LAN instance under Open trust.
@@ -2859,6 +2899,16 @@ class GrassrootsNetwork {
   @visibleForTesting
   void debugResolveLanInstance(String token, String address) =>
       _onLanInstanceResolved(token, address);
+
+  /// Run one heartbeat known-peer sweep and complete when its LAN redials have.
+  @visibleForTesting
+  Future<void> debugSweepKnownPeers() => _sweepKnownPeers();
+
+  /// Drop the UDP path to [pubkey], as a lost session does.
+  @visibleForTesting
+  Future<void> debugDropUdpPath(Uint8List pubkey) async {
+    await _udpService?.disconnectFromPeer(_pubkeyToHex(pubkey));
+  }
 
   /// The agent's own candidates for the local end of a dial — its interface
   /// addresses at the bound UDP port, plus the reflected public address if one
@@ -4580,14 +4630,47 @@ class GrassrootsNetwork {
   /// in flight is not repeated, and one that failed waits out its backoff
   /// ([_connectToPeerViaUdp]).  The session's attestation exchange makes the
   /// peer reachable, and that drains its queue.
-  void _sweepKnownPeers() {
-    if (_udpService == null || !_udpAvailable) return;
+  ///
+  /// A peer known only from its LAN instance has no recorded address, so the
+  /// dial book does not reach it; [_redialLanMatches] redials it from the
+  /// instance cache instead. Completes when those LAN dials have.
+  Future<void> _sweepKnownPeers() {
+    if (_udpService == null || !_udpAvailable) return Future.value();
     for (final entry in store.state.knownPeers.dialBook.entries) {
       final peer = _peersState.getPeerByPubkeyHex(entry.key);
       if (peer != null && peer.isReachable) continue;
       unawaited(
           _connectToPeerViaUdp(entry.key, peer?.udpAddress ?? entry.value));
     }
+    return _redialLanMatches();
+  }
+
+  /// Redial each unreachable known peer whose LAN instance resolved within the
+  /// cache window (two slots), by the deterministic initiator only, as
+  /// [_tryLanContact] does on resolution. Unmatched instances are not dialed
+  /// here: that would cold-call them on every tick.
+  Future<void> _redialLanMatches() async {
+    final udp = _udpService;
+    if (udp == null) return;
+    final cutoff =
+        DateTime.now().subtract(GrassrootsIdentity.bleSlotDuration * 2);
+    final known = store.state.knownPeers.known.keys.map(_hexToBytes).toList();
+    final myHex = _pubkeyToHex(identity.publicKey);
+    final dials = <Future<void>>[];
+    for (final entry in _lanResolvedInstances.entries) {
+      if (entry.value.at.isBefore(cutoff)) continue;
+      final matched = matchLanToken(entry.key, known);
+      if (matched == null) continue;
+      final pubkeyHex = _pubkeyToHex(matched);
+      final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
+      if (peer != null && peer.isReachable) continue;
+      if (udp.getPeerIdForPubkey(matched) != null) continue;
+      if (myHex.compareTo(pubkeyHex) >= 0) continue;
+      final parsed = parseAddressString(entry.value.address);
+      if (parsed == null) continue;
+      dials.add(_dialLanMatch(pubkeyHex, parsed));
+    }
+    await Future.wait(dials);
   }
 
   /// Start the periodic ANNOUNCE timer
@@ -4597,7 +4680,7 @@ class GrassrootsNetwork {
       _broadcastAnnounce();
       _broadcastAnnounceViaUdp();
       _holdRendezvousSessions();
-      _sweepKnownPeers();
+      unawaited(_sweepKnownPeers());
       _removeStalePeers();
       _drainQueuedMessagesForLivePeers();
       unawaited(_refreshLocalNetwork());

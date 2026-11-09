@@ -189,4 +189,68 @@ void main() {
 
     expect(network.debugUdpPeerIdForAddress('not-an-address'), isNull);
   });
+
+  test('a LAN match dials the LAN address without recording it as the WAN '
+      'address', timeout: Timeout.none, () async {
+    final a = await identityFromSeed(0x75);
+    final b = await identityFromSeed(0x76);
+    String hex(Uint8List key) =>
+        key.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+    // The deterministic initiator, the smaller key, is the one that dials.
+    final sorted = [a, b]
+      ..sort((x, y) => hex(x.publicKey).compareTo(hex(y.publicKey)));
+    final dialerId = sorted.first;
+    final peerId = sorted.last;
+
+    final dialer = await startNode(dialerId);
+    const wanAddress = '203.0.113.9:4500';
+    dialer.wan!.putPeerAddress(peerId.publicKey, wanAddress);
+    String? recorded() =>
+        dialer.store.state.peers.getPeerByPubkey(peerId.publicKey)?.udpAddress;
+    expect(recorded(), wanAddress);
+
+    final (lanAddress, dialed) = await instance();
+    dialer.debugResolveLanInstance(peerId.lanToken, lanAddress);
+    // The match is recognized synchronously; recording the LAN address would
+    // have replaced the WAN one here, before any dial.
+    expect(recorded(), wanAddress,
+        reason: 'a LAN match is not the peer\'s WAN address; it must not be '
+            'recorded in the dial book');
+    // The dial itself reaches the LAN address, the first datagram the peer's
+    // socket receives.
+    await dialed;
+    expect(recorded(), wanAddress);
+  });
+
+  test('a known LAN-only peer whose path drops is redialed by the next sweep',
+      timeout: Timeout.none, () async {
+    final a = await identityFromSeed(0x77);
+    final b = await identityFromSeed(0x78);
+    String hex(Uint8List key) =>
+        key.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
+    final sorted = [a, b]
+      ..sort((x, y) => hex(x.publicKey).compareTo(hex(y.publicKey)));
+    final dialerId = sorted.first;
+    final peerId = sorted.last;
+
+    final dialer = await startNode(dialerId);
+    // Known by key alone: the LAN instance is the only address there is.
+    dialer.putKnownPeer(peerId.publicKey);
+
+    final (lanAddress, dialed) = await instance();
+    dialer.debugResolveLanInstance(peerId.lanToken, lanAddress);
+    await dialed;
+
+    // The session drops: the path to the LAN address is gone.
+    await dialer.debugDropUdpPath(peerId.publicKey);
+    expect(dialer.debugUdpPeerIdForAddress(lanAddress), isNull);
+
+    // The heartbeat sweep redials the cached LAN instance, the dial's path
+    // is bound again to the peer's key before the sweep completes.
+    await dialer.debugSweepKnownPeers();
+    expect(dialer.debugUdpPeerIdForAddress(lanAddress),
+        equals(hex(peerId.publicKey)),
+        reason: 'the sweep must redial a LAN-only peer from its LAN instance, '
+            'since its recorded address is absent');
+  });
 }
