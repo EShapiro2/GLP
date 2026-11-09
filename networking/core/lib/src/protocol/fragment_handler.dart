@@ -57,9 +57,16 @@ class _ReassemblyState {
   final int count;
   final PacketType type;
   final Map<int, Uint8List> receivedChunks = {};
-  final DateTime startedAt = DateTime.now();
 
-  _ReassemblyState({required this.count, required this.type});
+  /// When a fragment of the message last arrived: the buffer is dropped only
+  /// after [FragmentHandler.reassemblyTimeout] of silence since then.
+  DateTime lastArrival;
+
+  _ReassemblyState({
+    required this.count,
+    required this.type,
+    required this.lastArrival,
+  });
 
   bool get isComplete => receivedChunks.length == count;
 
@@ -111,8 +118,16 @@ class FragmentHandler {
   /// rounded down.
   static const int udpMaxChunk = 1100;
 
-  /// Timeout for incomplete reassembly. Over a lossy carrier fragments
-  /// retransmit with backoff, so this must outlast the sender giving up.
+  /// How long a reassembly buffer survives with no fragment of its message
+  /// arriving. The clock restarts on every fragment's arrival, so a buffer is
+  /// never dropped while fragments still arrive, however long the message
+  /// takes. A sender retransmits each fragment with backoff for its attempt
+  /// window (about 30 s over IP, 12 s over GATT) and then fails the message,
+  /// which falls back to its queue and is sent whole again; this outlasts
+  /// that window, so a buffer is dropped only once its sender has given up.
+  /// Dropped earlier, the fragments that arrive afterwards would land in a
+  /// fresh buffer and be acknowledged, and the sender would settle a message
+  /// never reassembled.
   static const Duration reassemblyTimeout = Duration(minutes: 2);
 
   /// Messages currently being reassembled, keyed by the sender's public key
@@ -120,9 +135,22 @@ class FragmentHandler {
   final Map<({String senderHex, String messageId}), _ReassemblyState>
       _reassemblyBuffer = {};
 
+  /// The messages released after they were saved, by sender, messageId and
+  /// fragment type, with when each was released: kept for
+  /// [reassemblyTimeout], so that a fragment of one its sender retransmits —
+  /// the acknowledgment of its last fragment lost — is acknowledged at once
+  /// rather than held back in a fresh buffer ([wasReleased]). An exact record
+  /// keyed on the authenticated sender, bounded in time: it never takes a
+  /// fresh message for another.
+  final Map<({String senderHex, String messageId, PacketType type}), DateTime>
+      _released = {};
+
   Timer? _cleanupTimer;
 
-  FragmentHandler() {
+  /// The clock the buffers' silence is measured by; a test passes its own.
+  final DateTime Function() _now;
+
+  FragmentHandler({DateTime Function() now = DateTime.now}) : _now = now {
     _startCleanupTimer();
   }
 
@@ -231,32 +259,46 @@ class FragmentHandler {
 
   /// Store an incoming [fragment] sent by the peer whose public key (hex) is
   /// [senderHex]. Returns the reassembled message when this fragment
-  /// completes it, null otherwise (including duplicates).
+  /// completes it, or when the message is complete already and this is its
+  /// last fragment ([heldIndex]); null otherwise.
   ///
-  /// A message's fragments share one type: a fragment whose type differs
-  /// from the first one received for its sender and messageId is dropped, as
-  /// one whose count differs is, so a payload's chunk can never complete an
-  /// attestation or the reverse.
+  /// A completed message stays in the buffer until [release]: the receiver
+  /// acknowledges the last fragment only once it has saved the message, and
+  /// a save that fails leaves the buffer whole, so that the sender's
+  /// retransmission of that fragment returns the message again and the save
+  /// is retried.
+  ///
+  /// No fragment is dropped. A message's fragments share one count and one
+  /// type; a fragment whose count or type differs from its buffer's belongs
+  /// to another attempt at the message — sent again over another carrier, at
+  /// another chunk size — and replaces the stale buffer with one it starts.
+  /// So a payload's chunk can never complete an attestation or the reverse,
+  /// and no attempt's fragment is mixed into another's.
   ReassembledMessage? addFragment(Fragment fragment,
       {required String senderHex}) {
     final key = (senderHex: senderHex, messageId: fragment.messageId);
-    final state = _reassemblyBuffer.putIfAbsent(
-      key,
-      () => _ReassemblyState(count: fragment.count, type: fragment.type),
+    final arrival = _now();
+    var state = _reassemblyBuffer[key];
+    if (state != null &&
+        (state.count != fragment.count || state.type != fragment.type)) {
+      debugPrint('[fragment] ${fragment.messageId} arrives as '
+          '${fragment.count} ${fragment.type.name} fragment(s), its buffer '
+          'holds ${state.count} ${state.type.name}: another attempt, which '
+          'replaces it');
+      state = null;
+    }
+    state ??= _reassemblyBuffer[key] = _ReassemblyState(
+      count: fragment.count,
+      type: fragment.type,
+      lastArrival: arrival,
     );
-    if (state.count != fragment.count) {
-      debugPrint('[fragment] Count mismatch for ${fragment.messageId}: '
-          '${state.count} vs ${fragment.count}; dropping fragment');
-      return null;
+    state.lastArrival = arrival;
+    if (state.isComplete) {
+      if (fragment.index != heldIndex(fragment.count)) return null;
+    } else {
+      state.receivedChunks[fragment.index] = fragment.chunk;
+      if (!state.isComplete) return null;
     }
-    if (state.type != fragment.type) {
-      debugPrint('[fragment] Type mismatch for ${fragment.messageId}: '
-          '${state.type.name} vs ${fragment.type.name}; dropping fragment');
-      return null;
-    }
-    state.receivedChunks[fragment.index] = fragment.chunk;
-    if (!state.isComplete) return null;
-    _reassemblyBuffer.remove(key);
     return ReassembledMessage(
       messageId: fragment.messageId,
       payload: state.assemble(),
@@ -264,22 +306,72 @@ class FragmentHandler {
     );
   }
 
+  /// The index of the fragment of a [count]-fragment message whose
+  /// acknowledgment the receiver holds back until the message is
+  /// reassembled and saved: the last by index, whatever order the fragments
+  /// arrive in. Every other fragment is acknowledged on arrival. A fixed
+  /// fragment, so that a receiver that lost its buffer never acknowledges the
+  /// held fragment alone into a fresh one: the sender retransmits it until it
+  /// gives up, and sends the whole message again.
+  static int heldIndex(int count) => count - 1;
+
+  /// Drop the buffer of the message [messageId] from [senderHex], travelling
+  /// as [type], once the receiver has saved it (or, for a message not saved,
+  /// handled it), and record it as released for [reassemblyTimeout].
+  void release({
+    required String senderHex,
+    required String messageId,
+    required PacketType type,
+  }) {
+    _reassemblyBuffer.remove((senderHex: senderHex, messageId: messageId));
+    _released[(senderHex: senderHex, messageId: messageId, type: type)] =
+        _now();
+  }
+
+  /// Whether the message [messageId] from [senderHex], travelling as [type],
+  /// was released less than [reassemblyTimeout] ago: saved, so that a
+  /// fragment of it is acknowledged at once and the message not delivered
+  /// again.
+  bool wasReleased({
+    required String senderHex,
+    required String messageId,
+    required PacketType type,
+  }) =>
+      _released.containsKey(
+          (senderHex: senderHex, messageId: messageId, type: type));
+
   void _startCleanupTimer() {
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      final now = DateTime.now();
-      _reassemblyBuffer.removeWhere((key, state) {
-        final stale = now.difference(state.startedAt) > reassemblyTimeout;
-        if (stale) {
-          debugPrint('[fragment] Reassembly timed out for ${key.messageId} '
-              '(${state.receivedChunks.length}/${state.count})');
-        }
-        return stale;
-      });
+    _cleanupTimer = Timer.periodic(
+        const Duration(seconds: 30), (_) => _dropSilentBuffers());
+  }
+
+  /// Drop every buffer whose message has had no fragment arrive for longer
+  /// than [reassemblyTimeout], and every record of a message released longer
+  /// ago than that.
+  void _dropSilentBuffers() {
+    final now = _now();
+    _released
+        .removeWhere((_, releasedAt) => now.difference(releasedAt) >
+            reassemblyTimeout);
+    _reassemblyBuffer.removeWhere((key, state) {
+      final silent = now.difference(state.lastArrival) > reassemblyTimeout;
+      if (silent) {
+        debugPrint('[fragment] Reassembly timed out for ${key.messageId} '
+            '(${state.receivedChunks.length}/${state.count}): no fragment '
+            'for $reassemblyTimeout');
+      }
+      return silent;
     });
   }
+
+  /// The periodic sweep of silent buffers, as a test drives it with its own
+  /// clock.
+  @visibleForTesting
+  void debugDropSilentBuffers() => _dropSilentBuffers();
 
   void dispose() {
     _cleanupTimer?.cancel();
     _reassemblyBuffer.clear();
+    _released.clear();
   }
 }

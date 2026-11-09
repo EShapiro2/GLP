@@ -17,7 +17,9 @@ class _Delivered {
   final PubKey fromPk;
   final Uint8List payload;
   final String messageId;
-  _Delivered(this.toId, this.fromPk, this.payload, this.messageId);
+  final String senderMessageId;
+  _Delivered(this.toId, this.fromPk, this.payload, this.messageId,
+      this.senderMessageId);
 }
 
 /// A connectivity event recorded by the router's onConnectivity sink.
@@ -37,11 +39,13 @@ SimulationRouter _router(List<_Delivered> delivered, List<_Conn> conn) {
     r.register(id, generateKeyPair().pub);
     r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.open);
   }
-  r.onDeliver = (toId, fromPk, payload, messageId, underlay) {
+  r.onDeliver =
+      (toId, fromPk, payload, messageId, senderMessageId, underlay) {
     // "the reported underlay is the PAN throughout" (IGLP, Simulation
     // realisation).
     expect(underlay, Underlay.pan);
-    delivered.add(_Delivered(toId, fromPk, payload, messageId));
+    delivered
+        .add(_Delivered(toId, fromPk, payload, messageId, senderMessageId));
   };
   r.onConnectivity = (toId, peerPk, underlay, event) =>
       conn.add(_Conn(toId, peerPk, underlay, event));
@@ -74,7 +78,7 @@ void main() {
     test('delivers to an adjacent, open peer with a messageId', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.routeSend('alice', 'bob', _bytes([1, 2, 3]));
+      r.routeSend('alice', 'bob', _bytes([1, 2, 3]), 'w');
       expect(delivered.length, 1);
       expect(delivered[0].toId, 'bob');
       expect(delivered[0].fromPk, r.directory.pkOf('alice'));
@@ -85,14 +89,14 @@ void main() {
     test('drops sends to unknown peers and non-adjacent peers', () {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
-      r.routeSend('alice', 'stranger', _bytes([9])); // unknown
+      r.routeSend('alice', 'stranger', _bytes([9]), 'w'); // unknown
       expect(delivered, isEmpty);
 
       r.setPartialAdjacency(); // now nothing is adjacent unless declared
-      r.routeSend('alice', 'bob', _bytes([9]));
+      r.routeSend('alice', 'bob', _bytes([9]), 'w');
       expect(delivered, isEmpty);
       r.setAdjacent('alice', 'bob');
-      r.routeSend('alice', 'bob', _bytes([9]));
+      r.routeSend('alice', 'bob', _bytes([9]), 'w');
       expect(delivered.length, 1);
     });
 
@@ -205,7 +209,7 @@ void main() {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
-      r.routeSend('alice', 'bob', _bytes([1])); // alice never contacted by bob
+      r.routeSend('alice', 'bob', _bytes([1]), 'w'); // alice never contacted by bob
       expect(delivered, isEmpty);
     });
 
@@ -213,7 +217,7 @@ void main() {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
-      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
       expect(delivered.length, 1);
     });
 
@@ -228,17 +232,17 @@ void main() {
       final alicePk = r.directory.pkOf('alice')!;
       r.putKnownPeer('bob', alicePk);
       expect(r.isKnownPeer('bob', alicePk), isTrue);
-      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1],
           reason: 'alice is a known peer of bob: answered under Closed');
 
       r.removeKnownPeer('bob', alicePk);
       expect(r.isKnownPeer('bob', alicePk), isFalse);
-      r.routeSend('alice', 'bob', _bytes([2]));
+      r.routeSend('alice', 'bob', _bytes([2]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1],
           reason: 'removed: a first contact again, not answered');
 
-      r.routeSend('carol', 'bob', _bytes([3]));
+      r.routeSend('carol', 'bob', _bytes([3]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1],
           reason: "carol is not in bob's known-peer set");
     });
@@ -254,16 +258,16 @@ void main() {
       for (final id in ['alice', 'bob', 'carol']) {
         r.setTrustLevel(id, ProximityUnderlay.pan, TrustLevel.closed);
       }
-      r.routeSend('alice', 'bob', _bytes([1]));
-      r.routeSend('alice', 'bob', _bytes([2]));
-      r.routeSend('carol', 'bob', _bytes([3]));
-      r.routeSend('alice', 'carol', _bytes([4]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
+      r.routeSend('alice', 'bob', _bytes([2]), 'w');
+      r.routeSend('carol', 'bob', _bytes([3]), 'w');
+      r.routeSend('alice', 'carol', _bytes([4]), 'w');
       expect(delivered, isEmpty);
       r.putKnownPeer('bob', r.directory.pkOf('alice')!);
       expect(delivered.map((d) => d.payload[0]), [1, 2],
           reason: "bob declares alice a peer: her two, in order; carol's "
               'still waits');
-      r.routeSend('bob', 'carol', _bytes([5]));
+      r.routeSend('bob', 'carol', _bytes([5]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1, 2, 3, 5],
           reason: 'bob contacts carol: hers is answered, and his to her is '
               'answered too, carol having contacted him');
@@ -276,9 +280,9 @@ void main() {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
-      r.routeSend('bob', 'alice', _bytes([0])); // bob contacts alice first
+      r.routeSend('bob', 'alice', _bytes([0]), 'w'); // bob contacts alice first
       delivered.clear();
-      r.routeSend('alice', 'bob', _bytes([1])); // no longer first contact
+      r.routeSend('alice', 'bob', _bytes([1]), 'w'); // no longer first contact
       expect(delivered.length, 1);
     });
 
@@ -293,12 +297,13 @@ void main() {
       final r = SimulationRouter()
         ..register('alice', generateKeyPair().pub)
         ..register('bob', generateKeyPair().pub)
-        ..onDeliver = (toId, fromPk, payload, messageId, t) =>
-            delivered.add(_Delivered(toId, fromPk, payload, messageId));
+        ..onDeliver = (toId, fromPk, payload, messageId, senderMessageId, t) =>
+            delivered.add(_Delivered(
+                toId, fromPk, payload, messageId, senderMessageId));
       for (final u in ProximityUnderlay.values) {
         expect(r.trustLevelOf('bob', u), TrustLevel.closed);
       }
-      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
       expect(delivered, isEmpty, reason: 'a first contact Closed bob ignores');
     });
 
@@ -308,7 +313,7 @@ void main() {
       final r = _router(delivered, []);
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.closed);
       r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.open);
-      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
       expect(delivered, isEmpty, reason: 'PAN closed: not answered');
 
       r.setTrustLevel('bob', ProximityUnderlay.pan, TrustLevel.open);
@@ -316,7 +321,7 @@ void main() {
           reason: "PAN open: alice's first contact, kept while unanswered, "
               'is answered');
       r.setTrustLevel('bob', ProximityUnderlay.lan, TrustLevel.closed);
-      r.routeSend('carol', 'bob', _bytes([2]));
+      r.routeSend('carol', 'bob', _bytes([2]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1, 2],
           reason: 'PAN open: answered, the LAN level governing no PAN '
               'encounter');
@@ -331,7 +336,8 @@ void main() {
         selfId: 'bob',
         directory: r.directory,
         keyPair: generateKeyPair(),
-        sendToRouter: (toId, payload) => r.routeSend('bob', toId, payload),
+        sendToRouter: (toId, payload, senderMessageId) =>
+            r.routeSend('bob', toId, payload, senderMessageId),
         trustToRouter: (underlay, level) =>
             r.setTrustLevel('bob', underlay, level),
       );
@@ -340,11 +346,11 @@ void main() {
       expect(r.trustLevelOf('bob', ProximityUnderlay.pan), TrustLevel.closed);
       expect(r.trustLevelOf('bob', ProximityUnderlay.lan), TrustLevel.closed);
 
-      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
       expect(delivered, isEmpty, reason: 'the level bob declared is enforced');
 
       bob.setTrustLevel(ProximityUnderlay.pan, TrustLevel.open);
-      r.routeSend('alice', 'bob', _bytes([2]));
+      r.routeSend('alice', 'bob', _bytes([2]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1, 2],
           reason: 'the first contact not answered is kept, and answered, in '
               'order, once bob opens');
@@ -358,7 +364,8 @@ void main() {
         selfId: 'bob',
         directory: r.directory,
         keyPair: generateKeyPair(),
-        sendToRouter: (toId, payload) => r.routeSend('bob', toId, payload),
+        sendToRouter: (toId, payload, senderMessageId) =>
+            r.routeSend('bob', toId, payload, senderMessageId),
         trustToRouter: (underlay, level) =>
             r.setTrustLevel('bob', underlay, level),
         knownPeerToRouter: (pk, known) => known
@@ -371,13 +378,13 @@ void main() {
       bob.putKnownPeer(alicePk);
       expect(bob.isKnownPeer(alicePk), isTrue);
       expect(r.isKnownPeer('bob', alicePk), isTrue);
-      r.routeSend('alice', 'bob', _bytes([1]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1]);
 
       bob.removeKnownPeer(alicePk);
       expect(bob.isKnownPeer(alicePk), isFalse);
       expect(r.isKnownPeer('bob', alicePk), isFalse);
-      r.routeSend('alice', 'bob', _bytes([2]));
+      r.routeSend('alice', 'bob', _bytes([2]), 'w');
       expect(delivered.map((d) => d.payload[0]), [1]);
     });
   });
@@ -391,8 +398,8 @@ void main() {
       expect(
           conn.where((c) => c.event == ConnectivityEvent.disconnected).length,
           2);
-      r.routeSend('alice', 'bob', _bytes([1]));
-      r.routeSend('alice', 'bob', _bytes([2]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
+      r.routeSend('alice', 'bob', _bytes([2]), 'w');
       expect(delivered, isEmpty); // queued while cut
     });
 
@@ -402,8 +409,8 @@ void main() {
       final conn = <_Conn>[];
       final r = _router(delivered, conn);
       r.cut('alice', 'bob');
-      r.routeSend('alice', 'bob', _bytes([1]));
-      r.routeSend('alice', 'bob', _bytes([2]));
+      r.routeSend('alice', 'bob', _bytes([1]), 'w');
+      r.routeSend('alice', 'bob', _bytes([2]), 'w');
       conn.clear();
       r.restore('alice', 'bob');
       expect(
@@ -420,8 +427,8 @@ void main() {
       final r = _router(delivered, conn);
       r.holdDelivery('alice', 'bob');
       expect(conn, isEmpty); // invisible: no connectivity callbacks
-      r.routeSend('alice', 'bob', _bytes([1])); // carrier
-      r.routeSend('alice', 'bob', _bytes([2])); // assignment
+      r.routeSend('alice', 'bob', _bytes([1]), 'w'); // carrier
+      r.routeSend('alice', 'bob', _bytes([2]), 'w'); // assignment
       expect(delivered, isEmpty);
       r.releaseDelivery('alice', 'bob');
       // Reverse-order hook: later message delivered first.
@@ -430,19 +437,27 @@ void main() {
   });
 
   group('SimulationNetworkClient', () {
-    test('send forwards to the router and round-trips a delivery', () {
+    test(
+        'send forwards to the router and round-trips a delivery, which names '
+        'the id send returned', () async {
       final delivered = <_Delivered>[];
       final r = _router(delivered, []);
       final client = SimulationNetworkClient(
         selfId: 'alice',
         directory: r.directory,
         keyPair: generateKeyPair(),
-        sendToRouter: (toId, payload) => r.routeSend('alice', toId, payload),
+        sendToRouter: (toId, payload, senderMessageId) =>
+            r.routeSend('alice', toId, payload, senderMessageId),
       );
-      client.send(r.directory.pkOf('bob')!, _bytes([7, 7]));
+      final sent = await client.send(r.directory.pkOf('bob')!, _bytes([7, 7]));
       expect(delivered.length, 1);
       expect(delivered[0].toId, 'bob');
       expect(delivered[0].payload, [7, 7]);
+      expect(delivered[0].senderMessageId, sent,
+          reason: 'the recipient receives the id the sender\'s send returned');
+      final again = await client.send(r.directory.pkOf('bob')!, _bytes([8]));
+      expect(again, isNot(sent), reason: 'each message has its own id');
+      expect(delivered[1].senderMessageId, again);
     });
 
     test('real Ed25519 sign/verify round-trips; tamper and wrong key fail', () {
@@ -451,7 +466,7 @@ void main() {
         selfId: 'alice',
         directory: NetworkDirectory(),
         keyPair: kp,
-        sendToRouter: (_, __) {},
+        sendToRouter: (_, _, _) {},
       );
 
       final msg = _bytes([10, 20, 30, 40]);
@@ -476,7 +491,7 @@ void main() {
         selfId: 'alice',
         directory: r.directory,
         keyPair: kp,
-        sendToRouter: (_, __) {},
+        sendToRouter: (_, _, _) {},
       );
       expect(client.getIdentity(), kp.pub);
       final peerIds =
@@ -497,7 +512,7 @@ void main() {
         selfId: 'alice',
         directory: NetworkDirectory(),
         keyPair: generateKeyPair(),
-        sendToRouter: (_, __) {},
+        sendToRouter: (_, _, _) {},
       );
       expect(() => client.getPublicAddress(), throwsUnsupportedError);
       expect(() => client.networkIdentity(), throwsUnsupportedError);

@@ -70,7 +70,8 @@ void main() {
     final delivered = <(Uint8List sender, String payload)>[];
     final firstDelivered = Completer<void>();
     final serviceConnected = <String>[];
-    service.onMessageReceived = (sender, payload, messageId, underlay) {
+    service.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       delivered.add((sender, utf8.decode(payload)));
       if (!firstDelivered.isCompleted) firstDelivered.complete();
     };
@@ -156,7 +157,8 @@ void main() {
     // admit it otherwise.
     service.putKnownPeer(caller.getIdentity());
     final delivered = Completer<String>();
-    service.onMessageReceived = (sender, payload, messageId, underlay) {
+    service.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       if (!delivered.isCompleted) delivered.complete(utf8.decode(payload));
     };
     expect(await service.start(), isTrue);

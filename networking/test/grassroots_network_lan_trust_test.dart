@@ -404,7 +404,8 @@ void main() {
     receiver.onPeerConnected = (pk, underlay, application) {
       if (hexOf(pk) == callerHex) connected.add(underlay);
     };
-    receiver.onMessageReceived = (sender, payload, messageId, underlay) {
+    receiver.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       if (hexOf(sender) != callerHex) return;
       received.add(underlay);
       if (!firstReceived.isCompleted) firstReceived.complete();

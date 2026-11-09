@@ -142,7 +142,8 @@ class Agent {
       network.wan!.putRendezvousServer(pubkeyFromHex(anchorPk), anchorAddr);
     }
     final agent = Agent(identity, store, network);
-    network.onMessageReceived = (sender, payload, messageId, underlay) {
+    network.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       agent.messages.add((hexOf(sender), payload));
       note('onMessageReceived from ${hexOf(sender).substring(0, 8)} '
           '(${payload.length} bytes, $underlay)');

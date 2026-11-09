@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import '../models/identity.dart';
-import '../models/packet.dart';
 import 'package:sodium/sodium.dart';
 
 /// Exact length of an ANNOUNCE payload: pubkey(32) + version(2) + sig(64).
@@ -65,7 +63,19 @@ class ProtocolHandler {
   /// signature is over a digest this version does not compute, so a mixed
   /// pair would tear every session down at the exchange. Refused at the
   /// handshake instead.
-  static const int protocolVersion = 8;
+  ///
+  /// 9 since 2026-11-08, for the acknowledgment of a message's last fragment
+  /// only once the receiver has reassembled and saved the message, and no
+  /// whole-message acknowledgment (GNA, 2026-11-08: a message whose fragments
+  /// are all acknowledged is settled). The SHAPE changes — the ACK packet
+  /// types are gone, and this version drops them as unknown — and so does
+  /// the MEANING of the last fragment acknowledgment: a version-8 receiver
+  /// acknowledges every fragment before it saves the message, so a
+  /// version-9 sender would settle a message its recipient may lose; and a
+  /// version-8 sender, waiting for a whole-message acknowledgment a version-9
+  /// receiver never sends, would send every message again forever. Refused at
+  /// the handshake instead.
+  static const int protocolVersion = 9;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;
@@ -152,14 +162,6 @@ class ProtocolHandler {
     return AnnounceData(
       publicKey: Uint8List.fromList(pubkey),
       protocolVersion: version,
-    );
-  }
-
-  /// Create ACK packet (for delivery confirmation)
-  GrassrootsPacket createAckPacket({required String messageId}) {
-    return GrassrootsPacket(
-      type: PacketType.ack,
-      payload: utf8.encode(messageId),
     );
   }
 

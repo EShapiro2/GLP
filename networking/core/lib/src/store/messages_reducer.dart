@@ -83,7 +83,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     final existing = state.outgoingMessages[action.messageId];
     if (existing == null) return state;
 
-    // `sent → queued` is legitimate (BLE-disconnect or ack-timeout re-queue);
+    // `sent → queued` is legitimate (a re-queue after a failed attempt);
     // `delivered/read/failed → queued` is a regression and gets dropped.
     if (_isTerminalForRegression(existing.status)) {
       return state;
@@ -102,9 +102,8 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     final existing = state.outgoingMessages[action.messageId];
 
     if (existing != null) {
-      // If the ACK won the race with `_markSentAndTrackForAck` (rare but
-      // possible for fragmented BLE sends or hot-restart edge cases), don't
-      // walk the status back from delivered/read to sent.
+      // A message already delivered or read (another attempt settled it, or
+      // a read receipt came first) is not walked back to sent.
       if (_isTerminalForRegression(existing.status)) {
         return state;
       }
@@ -287,12 +286,9 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     // Drop the message thread + unread count. Outgoing/incoming delivery-status
     // records get pruned here too: with the chat history gone there is nothing
     // for those records to bind to, and they would otherwise leak forever.
-    final messageIdsToDrop = <String>{
-      for (final m in (state.conversations[action.peerHex] ??
-          const <ChatMessageState>[]))
-        if (m.messageId != null) m.messageId!,
-    };
-
+    // They are pruned by peer: the outgoing records of messages sent to it and
+    // the incoming records of messages it sent, whatever ids they are kept
+    // under.
     final newConversations = Map<String, List<ChatMessageState>>.from(
       state.conversations,
     )..remove(action.peerHex);
@@ -302,10 +298,10 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
 
     final newOutgoing =
         Map<String, OutgoingMessage>.from(state.outgoingMessages)
-          ..removeWhere((id, _) => messageIdsToDrop.contains(id));
+          ..removeWhere((_, m) => m.recipientPubkeyHex == action.peerHex);
     final newIncoming =
         Map<String, IncomingMessage>.from(state.incomingMessages)
-          ..removeWhere((id, _) => messageIdsToDrop.contains(id));
+          ..removeWhere((_, m) => m.senderPubkeyHex == action.peerHex);
 
     return state.copyWith(
       conversations: newConversations,

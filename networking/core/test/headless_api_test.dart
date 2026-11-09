@@ -174,7 +174,8 @@ void main() {
     expect(b.store.state.knownPeers.known[aHex], '127.0.0.1:9');
 
     final received = Completer<void>();
-    b.onMessageReceived = (sender, payload, messageId, underlay) {
+    b.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       if (!received.isCompleted) received.complete();
     };
     await a.send(b.getIdentity(), Uint8List.fromList([2]));

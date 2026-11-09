@@ -145,32 +145,44 @@ class GrassrootsGlpNetwork implements glp.GlpNetwork {
 
   // --- Point-to-point communication ---
 
-  /// `send(pubKey, payload)`: the layer's `send`, awaited, so that a save of
-  /// the queue that fails reaches the caller: the layer saves the message
-  /// before its `send` returns, so that the queue survives the termination
-  /// of the application (GNA §2.11).
+  /// `send(pubKey, payload) → messageId`: the layer's `send`, awaited, so
+  /// that a save of the queue that fails reaches the caller: the layer saves
+  /// the message before its `send` returns, so that the queue survives the
+  /// termination of the application (GNA §2.11).  Its value is the id the
+  /// layer gave the message, which the recipient receives as
+  /// `senderMessageId`.  The layer refuses a key that is not 32 bytes, with
+  /// no id, and that refusal is thrown as an [ArgumentError].
   @override
-  Future<void> send(glp.PubKey pk, Uint8List payload) async {
-    await layer.send(pk.bytes, payload);
+  Future<String> send(glp.PubKey pk, Uint8List payload) async {
+    final messageId = await layer.send(pk.bytes, payload);
+    if (messageId == null) {
+      throw ArgumentError.value(pk, 'pk', 'not a 32-byte public key');
+    }
+    return messageId;
   }
 
   void Function(glp.PubKey sender, Uint8List payload, String messageId,
-      glp.Underlay underlay)? _onMessageReceived;
+      String senderMessageId, glp.Underlay underlay)? _onMessageReceived;
 
   @override
   void Function(glp.PubKey sender, Uint8List payload, String messageId,
-      glp.Underlay underlay)? get onMessageReceived => _onMessageReceived;
+          String senderMessageId, glp.Underlay underlay)?
+      get onMessageReceived => _onMessageReceived;
 
   @override
   set onMessageReceived(
       void Function(glp.PubKey sender, Uint8List payload, String messageId,
-              glp.Underlay underlay)?
+              String senderMessageId, glp.Underlay underlay)?
           cb) {
     _onMessageReceived = cb;
     layer.onMessageReceived = cb == null
         ? null
-        : (sender, payload, messageId, underlay) =>
-            cb(_key(sender), payload, messageId, _underlay(underlay));
+        : (sender, payload, messageId, senderMessageId, underlay) => cb(
+            _key(sender),
+            payload,
+            messageId,
+            senderMessageId,
+            _underlay(underlay));
   }
 
   /// `acknowledge(messageId)` (GNA, Section 2.9): the layer's, which keeps a

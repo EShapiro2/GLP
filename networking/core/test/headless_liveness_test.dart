@@ -77,7 +77,7 @@ void main() {
     b.onPeerConnected = (pk, u, _) => atB.add('up');
     b.onPeerDisconnected = (pk, u) => atB.add('down');
     final got = <int>[];
-    b.onMessageReceived = (s, p, id, u) => got.add(p.first);
+    b.onMessageReceived = (s, p, id, senderMessageId, u) => got.add(p.first);
     await connect(a, b);
 
     final oldPort = a.boundPort;

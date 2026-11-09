@@ -51,31 +51,12 @@ class GrassrootsNetworkConfig {
   /// Interval for periodic BLE scanning (to discover new devices)
   final Duration scanInterval;
 
-  /// How long to wait for an end-to-end ACK after a message is sent before
-  /// treating it as lost and re-queueing it for the next drain. Covers two
-  /// failure modes that `sendToPeer` cannot detect synchronously:
-  ///
-  /// - **Stale-link writes.** When the remote turns BLE off, Android keeps
-  ///   the central GATT connection open until link-supervision times out
-  ///   (~20–30 s). Writes during that window get queued at the OS layer and
-  ///   the `_ble.send()` call returns success, but the bytes never leave the
-  ///   radio. Without a watchdog the message would sit in `MessageStatus.sent`
-  ///   forever.
-  /// - **UDP loss.** The socket acknowledges no datagram; an ACK is the
-  ///   only confirmation a message reached the recipient.
-  ///
-  /// Set high enough to tolerate slow links but low enough that the UI
-  /// doesn't feel broken. BLE in-air ACKs are normally sub-second; UDP
-  /// across the open Internet is typically <2 s.
-  final Duration ackTimeout;
-
   const GrassrootsNetworkConfig({
     this.autoConnect = true,
     this.autoStart = true,
     this.scanDuration,
     this.announceInterval = const Duration(seconds: 10),
     this.scanInterval = const Duration(seconds: 10),
-    this.ackTimeout = const Duration(seconds: 5),
   });
 }
 
@@ -106,38 +87,6 @@ class _QueuedOutboundMessage {
         queuedAt: queuedAt,
         attempts: attempts + 1,
       );
-}
-
-/// Tracks an outgoing message that left the device but has not yet been
-/// ACK'd. Drives both the ack-timeout watchdog and the BLE-disconnect
-/// re-queue: when either fires, we push the payload back onto
-/// [GrassrootsNetwork._outboundMessageQueue] so the next drain re-sends it.
-///
-/// Kept in plain memory rather than Redux because the payload bytes
-/// themselves live here — Redux only stores delivery metadata
-/// ([OutgoingMessage]). Lifecycle: created when `_trySendMessageNow`
-/// dispatches `MessageSentAction`, dropped on `MessageDeliveredAction`
-/// (ACK) or on re-queue (timeout / BLE disconnect).
-class _AckPendingMessage {
-  final String messageId;
-  final Uint8List recipientPubkey;
-  final Uint8List payload;
-
-  /// The BLE pathId the message was written to, or null if it went via UDP.
-  /// Used by the disconnect handler to find which pending messages were on
-  /// a path that just dropped.
-  final String? bleDeviceId;
-
-  /// Watchdog timer; null while paused (e.g. during re-queue or shutdown).
-  Timer? ackTimer;
-
-  _AckPendingMessage({
-    required this.messageId,
-    required Uint8List recipientPubkey,
-    required Uint8List payload,
-    required this.bleDeviceId,
-  })  : recipientPubkey = Uint8List.fromList(recipientPubkey),
-        payload = Uint8List.fromList(payload);
 }
 
 /// Actions that mirror a known peer's live UDP address (peers slice, which
@@ -250,7 +199,8 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   sodium: sodium,
 /// );
 ///
-/// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
+/// grassroots.onMessageReceived =
+///     (sender, payload, messageId, senderMessageId, underlay) {
 ///   // Handle incoming GSG block
 /// };
 ///
@@ -660,17 +610,11 @@ class GrassrootsNetwork {
   final Map<String, List<_QueuedOutboundMessage>> _outboundMessageQueue = {};
   final Set<String> _outboundQueueDrainsInProgress = {};
 
-  /// Messages that left the device but have not been ACK'd yet. Keyed by
-  /// `messageId`. The ack-timeout watchdog and the BLE-disconnect re-queue
-  /// path both consult this map; ACK handling drops the entry. See
-  /// [_AckPendingMessage] for the full rationale.
-  final Map<String, _AckPendingMessage> _ackPendingMessages = {};
-
-  /// Every message [send] accepted and its recipient has not yet
-  /// acknowledged — those in [_outboundMessageQueue] and those in
-  /// [_ackPendingMessages] — saved before [send] returns and dropped on the
-  /// recipient's ACK, so that the queue survives the termination of the
-  /// application (GNA §2.11).
+  /// Every message [send] accepted and not yet settled — those in
+  /// [_outboundMessageQueue] and those a message transport is carrying —
+  /// saved before [send] returns and dropped once the recipient has
+  /// acknowledged every fragment of it, so that the queue survives the
+  /// termination of the application (GNA §2.11).
   late final PersistentOutboundQueue _persistedQueue;
 
   /// Read the persisted queue back into [_outboundMessageQueue], each
@@ -713,10 +657,12 @@ class GrassrootsNetwork {
   // ===== Public callbacks =====
 
   /// Called for every incoming payload (spec §Point-to-Point Communication,
-  /// `onMessageReceived(sender, payload, messageId, underlay)`). Receives the
-  /// sender's public key, the byte payload, a layer-assigned `messageId`, and
-  /// the [Underlay] over which the message was delivered, taken from the
-  /// receive path.
+  /// `onMessageReceived(sender, payload, messageId, senderMessageId,
+  /// underlay)`). Receives the sender's public key, the byte payload, a
+  /// layer-assigned `messageId`, which [acknowledge] takes, the
+  /// `senderMessageId` the sender's [send] returned for the message, and the
+  /// [Underlay] over which the message was delivered, taken from the receive
+  /// path.
   ///
   /// Each message is kept before it is delivered, until [acknowledge] names
   /// it (GNA §2.9).  The messages the persisted queue holds unacknowledged
@@ -727,6 +673,7 @@ class GrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? get onMessageReceived => _onMessageReceived;
 
@@ -735,6 +682,7 @@ class GrassrootsNetwork {
         Uint8List sender,
         Uint8List payload,
         String messageId,
+        String senderMessageId,
         Underlay underlay,
       )? cb) {
     _onMessageReceived = cb;
@@ -745,6 +693,7 @@ class GrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? _onMessageReceived;
 
@@ -767,7 +716,7 @@ class GrassrootsNetwork {
     Timer.run(() {
       for (final entry in kept) {
         _onMessageReceived?.call(_hexToBytes(entry.senderHex), entry.payload,
-            entry.messageId, entry.underlay);
+            entry.messageId, entry.senderMessageId, entry.underlay);
       }
     });
   }
@@ -2525,31 +2474,31 @@ class GrassrootsNetwork {
   /// 1. Bluetooth (if peer is nearby and BLE is enabled)
   /// 2. UDP (if peer has UDP address and UDP is enabled)
   ///
-  /// Returns the message ID if the message was sent or queued, null only for
-  /// invalid input.
+  /// Returns the id the layer gave the message if it was sent or queued, null
+  /// only for invalid input; the recipient's [onMessageReceived] receives
+  /// this id as `senderMessageId`.
   /// The message status can be tracked via store.state.messages.
   ///
   /// Transport selection: tries BLE first (preferred for nearby peers),
   /// falls back to UDP; a peer reachable over neither is queued for.
-  /// Delivery is confirmed by an application-level ACK, not the transport write.
+  /// Delivery is confirmed by the recipient's acknowledgment of every
+  /// fragment, the last one sent only once the recipient has reassembled and
+  /// saved the message — not by the transport write.
   ///
   /// The message is saved in the persisted queue before this returns, and
-  /// dropped from it on the recipient's ACK, so that the queue survives the
+  /// dropped from it once it is settled, so that the queue survives the
   /// termination of the application (GNA §2.11); a save that fails is
   /// thrown.
-  Future<String?> send(
-    Uint8List recipientPubkey,
-    Uint8List payload, {
-    String? messageId,
-  }) async {
+  Future<String?> send(Uint8List recipientPubkey, Uint8List payload) async {
     if (recipientPubkey.length != 32) {
       debugPrint('Cannot send: recipient public key must be 32 bytes');
       return null;
     }
 
-    // Use provided message ID or generate one. Full UUID required — the
-    // MESSAGE payload carries it as a fixed 36-character prefix.
-    messageId ??= _uuid.v4();
+    // The layer names every message it sends, never the caller (api.tex,
+    // Send payload): a fresh full UUID, which the fragment header carries as
+    // a fixed 36-character id.
+    final messageId = _uuid.v4();
 
     await _persistedQueue.add(OutboundQueueEntry(
       recipientHex: _pubkeyToHex(recipientPubkey),
@@ -2573,7 +2522,7 @@ class GrassrootsNetwork {
     void queueInMemory() => _queueOutboundMessage(
           recipientPubkey: recipientPubkey,
           payload: payload,
-          messageId: messageId!,
+          messageId: messageId,
         );
     unawaited(_trySendMessageNow(
       recipientPubkey: recipientPubkey,
@@ -2623,14 +2572,12 @@ class GrassrootsNetwork {
       );
 
       if (success) {
-        _markSentAndTrackForAck(
+        _settleSentMessage(
           messageId: messageId,
           recipientPubkey: recipientPubkey,
-          payload: payload,
+          payloadSize: payload.length,
           underlay: Underlay.pan,
-          bleDeviceId: bleDeviceId,
         );
-        // Delivery confirmed by ACK, not BLE write success.
         return true;
       }
       debugPrint('BLE send failed, falling back to UDP...');
@@ -2653,12 +2600,11 @@ class GrassrootsNetwork {
         messageId,
         payload,
       )) {
-        _markSentAndTrackForAck(
+        _settleSentMessage(
           messageId: messageId,
           recipientPubkey: recipientPubkey,
-          payload: payload,
+          payloadSize: payload.length,
           underlay: session.underlay,
-          bleDeviceId: null,
         );
         return true;
       }
@@ -2794,11 +2740,8 @@ class GrassrootsNetwork {
           final queued = queue.first;
 
           // Skip messages whose Redux status is already past `sent` (i.e.
-          // delivered/read/failed). The race that gets us here: an ACK
-          // arrived after the watchdog timer fired and re-queued the
-          // message, so the message is both `delivered` in Redux AND
-          // present in the outbound queue. Re-sending would burn a round
-          // trip and trigger duplicate-drop on the recipient.
+          // delivered/read/failed): a message settled by another attempt
+          // while it sat in the queue is not sent again.
           final current =
               store.state.messages.outgoingMessages[queued.messageId];
           if (current != null &&
@@ -2841,7 +2784,8 @@ class GrassrootsNetwork {
             break;
           }
 
-          queue.removeAt(0);
+          // Settled, so already out of the queue ([_settleSentMessage]).
+          queue.removeWhere((m) => m.messageId == attemptCounted.messageId);
           debugPrint(
             '[queue] Sent queued message ${attemptCounted.messageId} to '
             '${pubkeyHex.substring(0, 8)} (${queue.length} remaining)',
@@ -2866,154 +2810,30 @@ class GrassrootsNetwork {
     }
   }
 
-  // ===== ACK-pending tracker =====
-  //
-  // `sendToPeer` (BLE) and the UDP send return success the moment the
-  // OS accepts the bytes — they cannot tell whether the recipient actually
-  // got them. Two failure modes leak through:
-  //
-  //   - **Stale link.** The remote turns BLE off; Android keeps the central
-  //     GATT connection "open" until link-supervision times out (~20–30 s).
-  //     Writes during that window queue at the OS layer and silently die.
-  //   - **UDP loss.** The socket acknowledges no datagram.
-  //
-  // For every successful send we register the messageId+payload in
-  // `_ackPendingMessages` along with a watchdog timer. The recipient's ACK
-  // cancels the timer; if it doesn't arrive, the timer fires and pushes the
-  // payload back onto the outbound queue for the next drain. The BLE
-  // disconnect listener also walks the map and re-queues anything that was
-  // in flight on the dropped path — that path it doesn't even need to wait
-  // for the timeout.
-  //
-  // Note: this is a watchdog in `GrassrootsNetwork` (the coordinator), not
-  // a reducer-side heuristic. Per GNA's Appendix, Rules of the Code, "State", reducers must only project
-  // transport-emitted facts; inference about "I haven't heard back" lives
-  // here and surfaces as an explicit `MessageQueuedAction` when it triggers.
-
-  /// Dispatches `MessageSentAction` and registers the message in
-  /// [_ackPendingMessages] with a fresh ack-timeout watchdog.
-  void _markSentAndTrackForAck({
+  /// A message to [recipientPubkey] is settled: every fragment of it was
+  /// acknowledged by the recipient over [underlay], the last one only once
+  /// the recipient had reassembled and saved it (GNA, 2026-11-08). Its status goes
+  /// to delivered (two checkmarks), and it leaves the persisted queue and
+  /// [_outboundMessageQueue]: it is never sent again. The sender lane is the
+  /// recipient's, so only its acknowledgments settle it.
+  void _settleSentMessage({
     required String messageId,
     required Uint8List recipientPubkey,
-    required Uint8List payload,
+    required int payloadSize,
     required Underlay underlay,
-    required String? bleDeviceId,
   }) {
     store.dispatch(
       MessageSentAction(
         messageId: messageId,
         underlay: underlay,
         recipientPubkey: recipientPubkey,
-        payloadSize: payload.length,
+        payloadSize: payloadSize,
       ),
     );
-    _trackAckPending(
-      messageId: messageId,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      bleDeviceId: bleDeviceId,
-    );
-  }
-
-  void _trackAckPending({
-    required String messageId,
-    required Uint8List recipientPubkey,
-    required Uint8List payload,
-    required String? bleDeviceId,
-  }) {
-    // Cancel any previous in-flight tracking for this messageId so a quick
-    // resend-after-drain doesn't leak two timers for the same id.
-    _ackPendingMessages.remove(messageId)?.ackTimer?.cancel();
-
-    final pending = _AckPendingMessage(
-      messageId: messageId,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      bleDeviceId: bleDeviceId,
-    );
-    pending.ackTimer = Timer(
-      config.ackTimeout,
-      () => _onAckTimedOut(messageId),
-    );
-    _ackPendingMessages[messageId] = pending;
-  }
-
-  /// ACK arrived for a message — drop the watchdog. Called from the ACK
-  /// handler after `MessageDeliveredAction` is dispatched.
-  void _clearAckPending(String messageId) {
-    _ackPendingMessages.remove(messageId)?.ackTimer?.cancel();
-  }
-
-  void _onAckTimedOut(String messageId) {
-    final pending = _ackPendingMessages.remove(messageId);
-    if (pending == null) return;
-    pending.ackTimer = null;
-
-    // Race guard: if the ACK arrived between `_clearAckPending` and the
-    // timer firing — or before `_markSentAndTrackForAck` even registered
-    // this entry, in which case `_clearAckPending` was a no-op — the
-    // message is already delivered in Redux. Re-queueing would silently
-    // burn a redundant retry.
-    final current = store.state.messages.outgoingMessages[messageId];
-    if (current != null &&
-        (current.status == MessageStatus.delivered ||
-            current.status == MessageStatus.read)) {
-      return;
-    }
-
-    debugPrint(
-      '[ack-timeout] No ACK for $messageId within '
-      '${config.ackTimeout.inMilliseconds}ms; re-queueing.',
-    );
-    _requeueAckPendingMessage(pending);
-  }
-
-  /// BLE path dropped — re-queue every message we sent on that path that
-  /// is still waiting for an ACK. The watchdog would catch them eventually,
-  /// but the disconnect is hard evidence the bytes never landed, so don't
-  /// make the user wait.
-  void _requeueMessagesOnBleDisconnect(String bleDeviceId) {
-    // Snapshot before mutating: re-queueing pushes into a different map but
-    // we also remove from `_ackPendingMessages`, and direct iteration would
-    // throw on concurrent modification.
-    final affected = _ackPendingMessages.values
-        .where((p) => p.bleDeviceId == bleDeviceId)
-        .toList(growable: false);
-    for (final pending in affected) {
-      _ackPendingMessages.remove(pending.messageId);
-      pending.ackTimer?.cancel();
-      pending.ackTimer = null;
-
-      // Skip re-queue if the ACK already landed (Redux says delivered/read).
-      // The disconnect fires after the link supervision detects the drop,
-      // which can be several seconds late on Android — plenty of room for
-      // an ACK to have arrived in the interim.
-      final current =
-          store.state.messages.outgoingMessages[pending.messageId];
-      if (current != null &&
-          (current.status == MessageStatus.delivered ||
-              current.status == MessageStatus.read)) {
-        continue;
-      }
-
-      debugPrint(
-        '[ble-disconnect] Re-queueing in-flight message '
-        '${pending.messageId} after $bleDeviceId dropped.',
-      );
-      _requeueAckPendingMessage(pending);
-    }
-  }
-
-  void _requeueAckPendingMessage(_AckPendingMessage pending) {
-    // Pushes back into `_outboundMessageQueue`, which also dispatches
-    // `MessageQueuedAction` (status `sent` → `queued`). The next drain
-    // trigger (ANNOUNCE / UDP connect / app resume / stale-peer tick) will
-    // attempt redelivery.
-    _queueOutboundMessage(
-      recipientPubkey: pending.recipientPubkey,
-      payload: pending.payload,
-      messageId: pending.messageId,
-    );
+    store.dispatch(MessageDeliveredAction(messageId: messageId));
+    unawaited(_persistedQueue.remove(messageId));
+    _outboundMessageQueue[_pubkeyToHex(recipientPubkey)]
+        ?.removeWhere((m) => m.messageId == messageId);
   }
 
   /// Signal that a message to [pubkey] exhausted its attempts on its session
@@ -3032,9 +2852,6 @@ class GrassrootsNetwork {
         0,
         (count, queue) => count + queue.length,
       );
-
-  @visibleForTesting
-  int get ackPendingMessageCount => _ackPendingMessages.length;
 
   /// Feed a resolved LAN instance as the mDNS browser would, so the contact
   /// path can be exercised without a live responder on the machine.
@@ -3914,22 +3731,24 @@ class GrassrootsNetwork {
 
   /// Set up MessageRouter callbacks to dispatch to Redux and application layer
   void _setupRouterCallbacks() {
-    // A message is kept before it is delivered and acknowledged to its
-    // sender, until the runtime acknowledges it (GNA §2.9, §2.11), with the
-    // underlay of the session it arrived on.
-    _messageRouter.keepDelivered =
-        (messageId, senderPubkey, payload, arrivalTransport) async {
+    // A message is kept before it is delivered and its last fragment
+    // acknowledged to its sender, until the runtime acknowledges it (GNA
+    // §2.9, §2.11), with the underlay of the session it arrived on.
+    _messageRouter.keepDelivered = (messageId, senderMessageId, senderPubkey,
+        payload, arrivalTransport) async {
       await _persistedQueue.keep(DeliveredQueueEntry(
         senderHex: _pubkeyToHex(senderPubkey),
         messageId: messageId,
+        senderMessageId: senderMessageId,
         payload: payload,
         underlay: arrivalTransport.underlay,
       ));
     };
+    _messageRouter.isKeptDelivered = (id) => _persistedQueue.isKept(id);
 
     // Message received from any transport
-    _messageRouter.onMessageReceived =
-        (messageId, senderPubkey, payload, arrivalTransport) {
+    _messageRouter.onMessageReceived = (messageId, senderMessageId,
+        senderPubkey, payload, arrivalTransport) {
       // The underlay of the session the message arrived on, from the receive
       // path (not inferred from the peer's preferred/active carrier).
       final underlay = arrivalTransport.underlay;
@@ -3942,31 +3761,14 @@ class GrassrootsNetwork {
           payloadSize: payload.length,
         ),
       );
-      onMessageReceived?.call(senderPubkey, payload, messageId, underlay);
-    };
-
-    // ACK received (delivery confirmation). It settles an outbound message
-    // only when it comes from the recipient the message was sent to.
-    _messageRouter.onAckReceived = (senderPubkey, messageId) {
-      final senderHex = _pubkeyToHex(senderPubkey);
-      final sentToOther = _persistedQueue.entries.any((entry) =>
-          entry.messageId == messageId && entry.recipientHex != senderHex);
-      if (sentToOther) {
-        debugPrint('ACK for message $messageId from $senderHex, which is not '
-            'its recipient: ignored');
-        return;
-      }
-      debugPrint('ACK received for message $messageId');
-      store.dispatch(MessageDeliveredAction(messageId: messageId));
-      _clearAckPending(messageId);
-      unawaited(_persistedQueue.remove(messageId));
-      _lanMessageSender.handleMessageAck(senderHex, messageId);
-      _wanMessageSender.handleMessageAck(senderHex, messageId);
-      _bleMessageSender.handleMessageAck(senderHex, messageId);
+      onMessageReceived?.call(
+          senderPubkey, payload, messageId, senderMessageId, underlay);
     };
 
     // Per-fragment ACK: settle the sender-side retransmit slot (spec
-    // §Message Transport).
+    // §Message Transport) on the sender's lane of the session it arrived on;
+    // the lane is the session-authenticated sender's, so an acknowledgment
+    // settles only a message sent to the peer it comes from.
     _messageRouter.onFragmentAckReceived =
         (senderPubkey, messageId, index, transport) {
       final sender = _messageSenderFor(transport);
@@ -4159,36 +3961,6 @@ class GrassrootsNetwork {
       _drainQueuedMessagesForPeer(data.publicKey);
     };
 
-    // ACK request (router asks us to send ACK back to sender)
-    _messageRouter.onAckRequested = (transport, peerId, messageId) async {
-      if (peerId == null) {
-        debugPrint('Cannot send ACK for $messageId: no peerId');
-        return;
-      }
-      final recipientPubkey = _pubkeyOfConnection(transport, peerId);
-      if (recipientPubkey == null) {
-        debugPrint('Cannot send ACK for $messageId: unknown recipient pubkey');
-        return;
-      }
-
-      final ackPacket = _protocolHandler.createAckPacket(
-        messageId: messageId,
-      );
-      final bytes = await _packetBytesForTransport(
-        packet: ackPacket,
-        transport: transport,
-        recipientPubkey: recipientPubkey,
-        peerId: peerId,
-      );
-      if (bytes == null) return;
-
-      if (transport.isIp) {
-        await _udpService?.sendToPeer(peerId, bytes);
-      } else {
-        await _bleService?.sendToPeer(peerId, bytes);
-      }
-    };
-
     // Signaling packet received from a rendezvous server.
     _messageRouter.onSignalingReceived =
         (senderPubkey, payload, {observedIp, observedPort}) =>
@@ -4339,7 +4111,6 @@ class GrassrootsNetwork {
       } else {
         debugPrint('BLE device disconnected: ${event.peerId}');
         _clearAnnouncedOn.remove('ble:${event.peerId}');
-        _requeueMessagesOnBleDisconnect(event.peerId);
       }
     });
   }
@@ -4559,10 +4330,6 @@ class GrassrootsNetwork {
     _outboundMessageQueue.clear();
     _outboundQueueDrainsInProgress.clear();
 
-    for (final pending in _ackPendingMessages.values) {
-      pending.ackTimer?.cancel();
-    }
-    _ackPendingMessages.clear();
     for (final deadline in _attestationDeadlines.values) {
       deadline.timer.cancel();
     }

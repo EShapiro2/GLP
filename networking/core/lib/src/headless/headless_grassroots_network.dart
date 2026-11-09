@@ -271,10 +271,11 @@ class HeadlessGrassrootsNetwork {
   // ===== Spec API surface =====
 
   /// Callback for incoming payloads (spec §Point-to-Point Communication,
-  /// `onMessageReceived(sender, payload, messageId, underlay)`): the sender's
-  /// public key, the byte payload, a layer-assigned `messageId`, and the
-  /// underlay over which the message was delivered — [Underlay.wan] in this
-  /// profile.
+  /// `onMessageReceived(sender, payload, messageId, senderMessageId,
+  /// underlay)`): the sender's public key, the byte payload, a layer-assigned
+  /// `messageId`, which [acknowledge] takes, the `senderMessageId` the
+  /// sender's [send] returned for the message, and the underlay over which
+  /// the message was delivered — [Underlay.wan] in this profile.
   ///
   /// Each message is kept before it is delivered, until [acknowledge] names
   /// it (GNA §2.9).  The messages the persisted queue holds unacknowledged
@@ -285,6 +286,7 @@ class HeadlessGrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? get onMessageReceived => _onMessageReceived;
 
@@ -293,6 +295,7 @@ class HeadlessGrassrootsNetwork {
         Uint8List sender,
         Uint8List payload,
         String messageId,
+        String senderMessageId,
         Underlay underlay,
       )? cb) {
     _onMessageReceived = cb;
@@ -303,6 +306,7 @@ class HeadlessGrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? _onMessageReceived;
 
@@ -324,9 +328,8 @@ class HeadlessGrassrootsNetwork {
         'message(s) again');
     Timer.run(() {
       for (final entry in kept) {
-        _onMessageReceived?.call(
-            _bytes(entry.senderHex), entry.payload, entry.messageId,
-            entry.underlay);
+        _onMessageReceived?.call(_bytes(entry.senderHex), entry.payload,
+            entry.messageId, entry.senderMessageId, entry.underlay);
       }
     });
   }
@@ -910,17 +913,15 @@ class HeadlessGrassrootsNetwork {
   /// completes. The message is saved in the persisted queue before this
   /// returns, and dropped from it once acknowledged, so that the queue
   /// survives the termination of the application (GNA §2.11); a save that
-  /// fails is thrown. Returns the message id, or null for invalid input.
-  Future<String?> send(
-    Uint8List recipientPubkey,
-    Uint8List payload, {
-    String? messageId,
-  }) async {
+  /// fails is thrown. Returns the id the layer gave the message, which the
+  /// recipient's [onMessageReceived] receives as `senderMessageId`, or null
+  /// for invalid input.
+  Future<String?> send(Uint8List recipientPubkey, Uint8List payload) async {
     if (recipientPubkey.length != 32) {
       debugPrint('[headless] Cannot send: recipient key must be 32 bytes');
       return null;
     }
-    messageId ??= _uuid.v4();
+    final messageId = _uuid.v4();
     await _persistedQueue.add(OutboundQueueEntry(
       recipientHex: _hex(recipientPubkey),
       messageId: messageId,
@@ -958,8 +959,13 @@ class HeadlessGrassrootsNetwork {
     unawaited(
       _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
         if (ok) {
-          // Acknowledged: the recipient has it (spec §Message Protocol).
+          // Every fragment acknowledged by the recipient, the last one only
+          // once it had reassembled and saved the message: the message is
+          // settled (GNA, 2026-11-08), and never sent again. The lane is the
+          // recipient's, so only its acknowledgments got here.
+          debugPrint('[headless] $messageId settled');
           unawaited(_persistedQueue.remove(messageId));
+          _outboundQueue[hex]?.removeWhere((e) => e.messageId == messageId);
           return;
         }
         // Still outstanding, so back to the queue, also when the layer has
@@ -1109,19 +1115,23 @@ class HeadlessGrassrootsNetwork {
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 
   void _setupRouterCallbacks() {
-    // A message is kept before it is delivered and acknowledged to its
-    // sender, until the runtime acknowledges it (GNA §2.9, §2.11).
-    _messageRouter.keepDelivered =
-        (messageId, senderPubkey, payload, arrivalTransport) =>
-            _persistedQueue.keep(DeliveredQueueEntry(
-              senderHex: _hex(senderPubkey),
-              messageId: messageId,
-              payload: payload,
-              underlay: Underlay.wan,
-            ));
-    _messageRouter.onMessageReceived =
-        (messageId, senderPubkey, payload, arrivalTransport) {
-      onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
+    // A message is kept before it is delivered and its last fragment
+    // acknowledged to its sender, until the runtime acknowledges it (GNA
+    // §2.9, §2.11).
+    _messageRouter.keepDelivered = (messageId, senderMessageId, senderPubkey,
+            payload, arrivalTransport) =>
+        _persistedQueue.keep(DeliveredQueueEntry(
+          senderHex: _hex(senderPubkey),
+          messageId: messageId,
+          senderMessageId: senderMessageId,
+          payload: payload,
+          underlay: Underlay.wan,
+        ));
+    _messageRouter.isKeptDelivered = (id) => _persistedQueue.isKept(id);
+    _messageRouter.onMessageReceived = (messageId, senderMessageId,
+        senderPubkey, payload, arrivalTransport) {
+      onMessageReceived?.call(
+          senderPubkey, payload, messageId, senderMessageId, Underlay.wan);
     };
 
     // A clear ANNOUNCE precedes only the XX handshake of a first contact
@@ -1243,25 +1253,8 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
-    _messageRouter.onAckRequested = (transport, peerId, messageId) async {
-      final identified =
-          peerId == null ? null : UdpTransportService.parsePathId(peerId);
-      if (peerId == null || identified == null) return;
-      final recipientPubkey = _bytes(identified.pubkeyHex);
-      final bytes = await _sessionPacketBytes(
-        _protocolHandler.createAckPacket(messageId: messageId),
-        recipientPubkey,
-      );
-      if (bytes != null) {
-        await _udpService?.sendToPeer(peerId, bytes);
-      }
-    };
-
-    _messageRouter.onAckReceived = (senderPubkey, messageId) {
-      debugPrint('[headless] ACK received for $messageId');
-      _udpMessageSender.handleMessageAck(_hex(senderPubkey), messageId);
-    };
-
+    // A fragment acknowledgment acts on the lane of the peer it comes from
+    // alone: it settles only a message sent to that peer.
     _messageRouter.onFragmentAckReceived =
         (senderPubkey, messageId, index, transport) {
       _udpMessageSender.handleFragmentAck(

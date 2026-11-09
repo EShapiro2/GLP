@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
-import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 
@@ -172,16 +171,6 @@ void main() {
       test('an ANNOUNCE carrying our protocol version is accepted', () {
         final decoded = handler.decodeAnnounce(handler.createAnnouncePayload());
         expect(decoded.protocolVersion, ProtocolHandler.protocolVersion);
-      });
-    });
-
-    group('createAckPacket', () {
-      test('creates ACK with message ID', () {
-        const messageId = 'ack-msg-1';
-        final packet = handler.createAckPacket(messageId: messageId);
-
-        expect(packet.type, equals(PacketType.ack));
-        expect(utf8.decode(packet.payload), equals(messageId));
       });
     });
 

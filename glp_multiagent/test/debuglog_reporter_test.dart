@@ -103,7 +103,7 @@ class _Alone extends GlpNetwork {
   @override
   PubKey getIdentity() => keyPair.pub;
   @override
-  Future<void> send(PubKey pk, Uint8List payload) => Future.value();
+  Future<String> send(PubKey pk, Uint8List payload) => Future.value('sent');
   @override
   void setTrustLevel(ProximityUnderlay underlay, TrustLevel level) {}
   @override

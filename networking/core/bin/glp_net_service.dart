@@ -92,7 +92,8 @@ Future<void> main(List<String> argv) async {
       print('Peer connected (${underlay.name}): ${_hex(pk)}');
   network.onPeerDisconnected = (pk, underlay) =>
       print('Peer disconnected (${underlay.name}): ${_hex(pk)}');
-  network.onMessageReceived = (sender, payload, messageId, underlay) {
+  network.onMessageReceived =
+      (sender, payload, messageId, senderMessageId, underlay) {
     String rendering;
     try {
       rendering = utf8.decode(payload);
