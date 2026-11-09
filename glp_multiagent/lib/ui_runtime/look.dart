@@ -15,10 +15,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-/// The contract whose look the Grassroots App takes: GAS, the Grassroots App
-/// Store, one of the four its home is compiled from (GSA, Appendix A), until
-/// GSA names the app's contract.
-const String superappContract = 'GAS';
+/// The contract whose look the Grassroots App takes: GSG's, the 🤝 icon of
+/// the family social (GSA #2, Code_inbox.md, 2026-11-09 14:50 UTC, Udi).
+const String superappContract = 'GSG';
 
 /// A family of contracts: its name and its two colours, from and to, the
 /// light and the dark end of its gradient on the site.
