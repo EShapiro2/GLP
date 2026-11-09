@@ -1,0 +1,65 @@
+#!/bin/bash
+# update_servers.sh --- bring the two network servers on the peoplesweb VPS, the
+# rendezvous server (GRV, unit rendezvous, UDP 9516) and the directory (GDS, unit
+# directory, UDP 9518), to the commit of main given, in one step (Code #27,
+# 2026-11-09, for the update to protocol 9, GNA's decisions 40 to 42: the layer
+# refuses protocol 8 at the handshake, so the servers and the phones move
+# together).  Run from the Mac by Udi; it changes the VPS.
+#
+#   bash tools/live/update_servers.sh <commit of main>          show what it would do
+#   bash tools/live/update_servers.sh <commit of main> --go     do it
+#
+# What it does on the VPS, as root:
+#   1. shows what runs now: the clone's commit, the two units, the two queues;
+#   2. pulls the clone at /srv/glp and checks it is at the commit given;
+#   3. stops the two units;
+#   4. moves each layer's queue file aside, into /var/lib/glp/queues-before-<commit>/:
+#      a kept message saved by protocol 8 has no senderMessageId, and a queue
+#      holding one is refused when read, so the server would not start (GNA's
+#      appendix, The queue).  The keys, the agents' state and the listings stay.
+#   5. installs the rendezvous unit from the clone (it carries --state-file) and
+#      the directory's, builds the directory's executable into /srv/directory;
+#   6. starts the two units and shows their state and last log lines.
+# Then, on the Mac: bash tools/live/run_live.sh vps 1 2
+set -euo pipefail
+COMMIT="${1:?the commit of main the servers are to run}"
+GO="${2:-}"
+VPS="${VPS:-root@162.35.126.126}"
+ssh -o ConnectTimeout=10 "$VPS" COMMIT="$COMMIT" GO="$GO" bash -s <<'REMOTE'
+set -euo pipefail
+export PATH=/opt/flutter/bin:$PATH
+say() { printf '\n== %s\n' "$*"; }
+say "now: clone $(git -C /srv/glp log -1 --format='%h %cd' --date=format:'%Y-%m-%d %H:%M')"
+systemctl is-active rendezvous directory || true
+for q in rv-queue.json gds-queue.json; do
+  f=/var/lib/glp/$q
+  if [ -f "$f" ]; then echo "$q: $(wc -c < "$f") bytes"; else echo "$q: none"; fi
+done
+if [ "$GO" != "--go" ]; then
+  say "dry run: nothing changed; add --go to update to $COMMIT"
+  exit 0
+fi
+say "pull the clone"
+sudo -u glp git -C /srv/glp pull -q --ff-only
+HEAD=$(git -C /srv/glp rev-parse HEAD)
+case "$HEAD" in "$COMMIT"*) echo "clone at $HEAD" ;; *) echo "the clone is at $HEAD, not $COMMIT: stopping, nothing restarted"; exit 1 ;; esac
+say "stop the two units"
+systemctl stop rendezvous directory
+say "move the queues aside"
+B=/var/lib/glp/queues-before-${COMMIT:0:8}
+mkdir -p "$B"
+for q in rv-queue.json gds-queue.json; do [ -f /var/lib/glp/$q ] && mv /var/lib/glp/$q "$B/" && echo "moved $q to $B"; done
+chown -R glp:glp "$B"
+say "install the units and build the directory"
+cp /srv/glp/networking/glue/deploy/rendezvous.service /etc/systemd/system/rendezvous.service
+cp /srv/glp/servers/directory/deploy/directory.service /etc/systemd/system/directory.service
+systemctl daemon-reload
+( cd /srv/glp/servers/directory && dart pub get >/dev/null && dart build cli -t bin/directory_server.dart -o /srv/directory )
+say "start the two units"
+systemctl start rendezvous directory
+sleep 20
+systemctl is-active rendezvous directory || true
+journalctl -u rendezvous --no-pager -n 8 --since -2min | cut -c1-200
+journalctl -u directory --no-pager -n 8 --since -2min | cut -c1-200
+say "done: the servers run $HEAD"
+REMOTE
