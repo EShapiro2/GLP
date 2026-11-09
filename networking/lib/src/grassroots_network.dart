@@ -1761,7 +1761,6 @@ class GrassrootsNetwork {
         final session = await _ensureUdpConnection(
           rendezvous.pubkeyHex,
           rendezvous.address,
-          isRendezvous: true,
         );
         final success = session != null &&
             await _ensureNoiseSession(
@@ -3763,7 +3762,6 @@ class GrassrootsNetwork {
     required String udpAddress,
     required GrassrootsPacket packet,
     required Uint8List recipientPubkey,
-    bool isRendezvous = false,
   }) async {
     final udp = _udpService;
     if (udp == null) return false;
@@ -3772,11 +3770,7 @@ class GrassrootsNetwork {
     // recorded address, on the session it falls under.
     final session =
         ipSessions.where((s) => udp.hasPath(s, pubkeyHex)).firstOrNull ??
-            await _ensureUdpConnection(
-              pubkeyHex,
-              udpAddress,
-              isRendezvous: isRendezvous,
-            );
+            await _ensureUdpConnection(pubkeyHex, udpAddress);
     if (session == null) return false;
     final pathId = UdpTransportService.pathId(session, pubkeyHex);
 
@@ -3798,9 +3792,8 @@ class GrassrootsNetwork {
   /// IP session neither satisfies nor blocks this one.
   Future<PeerTransport?> _ensureUdpConnection(
     String pubkeyHex,
-    String udpAddress, {
-    bool isRendezvous = false,
-  }) async {
+    String udpAddress,
+  ) async {
     final udp = _udpService;
     if (udp == null) return null;
     final peerShort = pubkeyHex.substring(0, 8);
@@ -3867,19 +3860,6 @@ class GrassrootsNetwork {
 
     late final Future<String?> connectFuture;
     connectFuture = () async {
-      // Hole-punch to open NAT mappings before the path is associated.
-      // Skip for peers with publicly routable addresses — punching is wasted
-      // when no NAT mapping is needed.
-      if (!isRendezvous &&
-          _holePunchServiceFor(addr.ip) != null &&
-          peer != null &&
-          !peer.hasPublicUdpAddress) {
-        debugPrint(
-          '[udp-send] Hole-punching to $selectedAddress before connecting...',
-        );
-        await _holePunchServiceFor(addr.ip)!.punch(addr.ip, addr.port);
-      }
-
       debugPrint('[udp-send] Associating $peerShort at $selectedAddress...');
       return udp.connectToPeer(pubkeyHex, addr.ip, addr.port);
     }();
