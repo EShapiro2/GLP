@@ -5626,6 +5626,36 @@ for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_pays
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done
+
+# The composition of contracts (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition, the union of their schemas and of their pragmas, which extends each ...; what two of them inherit from one contract is taken once, and a schema, a tab or a button of one name that two of them write differently is refused"), by programs/vglp/cva/compiler/compose.sh, on fixtures of its own: XA and XB both inherit establish, written with different variable names, and the tab Contacts and the button Establish; XA adds mint, XB burn; XC writes establish differently, XD the tab Contacts, XE the button Establish, XF another introduction predicate.
+cva_cm_est="schema(establish, ['Alice'], [pvar(c)], [rs(guarded, [atom(identity, [pvar(c)])], [], [], [atom(identity, [pvar(c)])])])"
+cva_cm_est2="schema(establish, ['Alice'], [pvar('Carol')], [rs(guarded, [atom(identity, [pvar('Carol')])], [], [], [atom(identity, [pvar('Carol')])])])"
+cva_cm_est3="schema(establish, ['Alice'], [pvar(c)], [rs(guarded, [atom(identity, [pvar(c)])], [], [], [])])"
+cva_cm_mint="schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])"
+cva_cm_burn="schema(burn, ['Alice'], [], [rs(guarded, [], [atom(coin, [role(1)])], [atom(coin, [role(1)])], [])])"
+cva_cm_tab="list('\"Contacts\"', ['identity'])"
+cva_cm_act="act('establish', '\"Establish\"', ['\"\"'], none, '\"Contacts\"', by([1]))"
+cva_cm_pa="pragmas([$cva_cm_tab, list('\"Coins\"', ['coin'])], [$cva_cm_act, act('mint', '\"Mint\"', ['\"\"', '\"amount\"'], none, '\"Coins\"', by([1]))])"
+cva_cm_pb="pragmas([$cva_cm_tab, list('\"Burnt\"', ['coin'])], [$cva_cm_act, act('burn', '\"Burn\"', [], none, '\"Burnt\"', by([1]))])"
+cva_cm_ok=$(bash "$CVA/compiler/compose.sh" XA "reflexive([knows], [$cva_cm_est, $cva_cm_mint])" "$cva_cm_pa" "introduction(knows)" XB "environment([today], [$cva_cm_est2, $cva_cm_burn])" "$cva_cm_pb" no_introduction 2>&1; echo "exit $?")
+cva_cm_schema=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XC "[$cva_cm_est3]" no_pragmas no_introduction 2>&1; echo "exit $?")
+cva_cm_tabx=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XD "[$cva_cm_est]" "pragmas([list('\"Contacts\"', ['knows'])], [])" no_introduction 2>&1; echo "exit $?")
+cva_cm_button=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XE "[$cva_cm_est]" "pragmas([], [act('establish', '\"Establish\"', [], none, '\"Contacts\"', by([1]))])" no_introduction 2>&1; echo "exit $?")
+cva_cm_intro=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est]" no_pragmas "introduction(knows)" XF "[$cva_cm_est]" no_pragmas "introduction(friend)" 2>&1; echo "exit $?")
+cva_cm_one=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est]" no_pragmas no_introduction 2>&1; echo "exit $?")
+check "CVA composition: the union of the schemas, establish inherited by both taken once, the first's, mint and burn added, the reflexive and the environment predicates kept (ok)" "^environment(\[today\], reflexive(\[knows\], \[$(printf '%s' "$cva_cm_est" | sed -e 's/[][]/\\&/g'), $(printf '%s' "$cva_cm_mint" | sed -e 's/[][]/\\&/g'), $(printf '%s' "$cva_cm_burn" | sed -e 's/[][]/\\&/g')\]))$" "$cva_cm_ok"
+check "CVA composition: ... the union of the pragmas, the tab Contacts and the button Establish both write taken once (ok)" "^pragmas(\[list('\"Contacts\"', \['identity'\]), list('\"Coins\"', \['coin'\]), list('\"Burnt\"', \['coin'\])\], \[act('establish', '\"Establish\"', \['\"\"'\], none, '\"Contacts\"', by(\[1\])), act('mint', .*, act('burn', '\"Burn\"', \[\], none, '\"Burnt\"', by(\[1\]))\])$" "$cva_cm_ok"
+check "CVA composition: ... the introduction predicate the one contract names (ok)" "^introduction(knows)$" "$cva_cm_ok"
+check "CVA composition: ... and compose.sh exits 0 (ok)" "^exit 0$" "$cva_cm_ok"
+check "CVA composition: a schema of one name two write differently refused (schema)" "the schema establish is written differently by XA and XC" "$cva_cm_schema"
+check "CVA composition: ... and compose.sh exits 1 (schema)" "^exit 1$" "$cva_cm_schema"
+check "CVA composition: a tab of one name two write differently refused (tab)" "the tab '\"Contacts\"' is written differently by XA and XD" "$cva_cm_tabx"
+check "CVA composition: ... and compose.sh exits 1 (tab)" "^exit 1$" "$cva_cm_tabx"
+check "CVA composition: a button of one name two write differently refused (button)" "the button '\"Establish\"' is written differently by XA and XE" "$cva_cm_button"
+check "CVA composition: ... and compose.sh exits 1 (button)" "^exit 1$" "$cva_cm_button"
+check "CVA composition: two introduction predicates refused (intro)" "XA and XF name different introduction predicates" "$cva_cm_intro"
+check "CVA composition: ... and compose.sh exits 1 (intro)" "^exit 1$" "$cva_cm_intro"
+check "CVA composition: one contract is no composition, refused as a bad argument (one)" "^exit 2$" "$cva_cm_one"
 echo ""
 
 
@@ -9162,6 +9192,17 @@ for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
+done
+# A composition of contracts, recorded in cascade/<NAME>+<NAME>/ (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition"; cascade.sh, several contracts): GSN and GC, both extending GKK.
+for cas_cs in "gsn gc"; do
+    cas_n=$(printf '%s' "$cas_cs" | tr a-z_ A-Z- | tr ' ' +)
+    cas_o="cascade/$cas_n"
+    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    cas_out=$(bash "$GLP_DIR/cascade.sh" $cas_cs --check 2>&1; echo "exit $?")
+    for cas_f in $(cd "$GLP_DIR/$cas_o" && ls | grep -vx manifest.md); do
+        check "cascade $cas_n: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
+    done
+    check "cascade $cas_n: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
 done
 
 echo ""
