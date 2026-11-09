@@ -7,71 +7,42 @@ import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart
 
 void main() {
   group('PunchPacket', () {
-    test('has correct magic bytes', () {
-      final pubkey = Uint8List(32);
-      for (int i = 0; i < 32; i++) pubkey[i] = i;
-
-      final packet = PunchPacket.create(pubkey);
-      final bytes = packet.serialize();
+    test('is the GRPU magic alone', () {
+      final bytes = PunchPacket.serialize();
 
       // Magic: "GRPU" (0x47, 0x52, 0x50, 0x55)
-      expect(bytes[0], equals(0x47));
-      expect(bytes[1], equals(0x52));
-      expect(bytes[2], equals(0x50));
-      expect(bytes[3], equals(0x55));
+      expect(bytes, orderedEquals([0x47, 0x52, 0x50, 0x55]));
+      expect(PunchPacket.packetSize, equals(4));
     });
 
-    test('contains sender pubkey', () {
-      final pubkey = Uint8List(32);
-      for (int i = 0; i < 32; i++) pubkey[i] = i + 10;
-
-      final packet = PunchPacket.create(pubkey);
-      final bytes = packet.serialize();
-
-      // Pubkey starts at offset 4
-      expect(bytes.sublist(4, 36), equals(pubkey));
+    test('isPunch accepts the serialized packet', () {
+      expect(PunchPacket.isPunch(PunchPacket.serialize()), isTrue);
     });
 
-    test('total size is 36 bytes (4 magic + 32 pubkey)', () {
-      final pubkey = Uint8List(32);
-      final packet = PunchPacket.create(pubkey);
-      expect(packet.serialize().length, equals(36));
+    test('isPunch rejects wrong magic', () {
+      expect(PunchPacket.isPunch(Uint8List.fromList([0xFF, 0x52, 0x50, 0x55])),
+          isFalse);
     });
 
-    test('deserialize valid packet', () {
-      final pubkey = Uint8List(32);
-      for (int i = 0; i < 32; i++) pubkey[i] = 0xAB;
-
-      final original = PunchPacket.create(pubkey);
-      final parsed = PunchPacket.tryParse(original.serialize());
-
-      expect(parsed, isNotNull);
-      expect(parsed!.senderPubkey, equals(pubkey));
+    test('isPunch rejects the magic followed by anything', () {
+      final withKey = Uint8List(36)
+        ..setRange(0, 4, [0x47, 0x52, 0x50, 0x55]);
+      expect(PunchPacket.isPunch(withKey), isFalse);
     });
 
-    test('tryParse returns null for wrong magic', () {
-      final bytes = Uint8List(36);
-      bytes[0] = 0xFF; // wrong magic
-      expect(PunchPacket.tryParse(bytes), isNull);
-    });
-
-    test('tryParse returns null for too-short data', () {
-      expect(PunchPacket.tryParse(Uint8List(10)), isNull);
-    });
-
-    test('tryParse returns null for empty data', () {
-      expect(PunchPacket.tryParse(Uint8List(0)), isNull);
+    test('isPunch rejects too-short and empty data', () {
+      expect(PunchPacket.isPunch(Uint8List(3)), isFalse);
+      expect(PunchPacket.isPunch(Uint8List(0)), isFalse);
     });
   });
 
   group('HolePunchService', () {
     late RawDatagramSocket socket;
     late HolePunchService service;
-    final senderPubkey = Uint8List(32)..fillRange(0, 32, 0xAA);
 
     setUp(() async {
       socket = await RawDatagramSocket.bind(InternetAddress.loopbackIPv6, 0);
-      service = HolePunchService(socket: socket, senderPubkey: senderPubkey);
+      service = HolePunchService(socket: socket);
     });
 
     tearDown(() {
@@ -105,11 +76,9 @@ void main() {
       expect(receivedPackets.length, greaterThanOrEqualTo(3));
       expect(receivedPackets.length, lessThanOrEqualTo(7));
 
-      // Each should be a valid punch packet
+      // Each is the bare GRPU magic, with no key in it
       for (final dg in receivedPackets) {
-        final parsed = PunchPacket.tryParse(dg.data);
-        expect(parsed, isNotNull);
-        expect(parsed!.senderPubkey, equals(senderPubkey));
+        expect(dg.data, orderedEquals([0x47, 0x52, 0x50, 0x55]));
       }
     });
 
