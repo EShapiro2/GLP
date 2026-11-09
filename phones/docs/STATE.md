@@ -1,12 +1,17 @@
-# Phones --- state, 2026-11-09 14:45 UTC (Phones #1 Cowork)
+# Phones --- state, 2026-11-09 22:48 UTC (Phones #2 Cowork)
 
 Taken over from `tmp/phones/STATE.md` (Code #25B Phones, 13:57 UTC) and Code #25's handover (Code_inbox.md, 13:36 and 13:38 UTC).
 
 ## Devices
 
-- 11 Pro: UDID `00008030-000275600A12802E`, iOS 17.4.1, phone key `33ac34ed...`; the reporter build since 18:12 UTC (Code #26).
-- 16 Pro: UDID `00008140-001C38C83A12801C`, iOS 26.6.1, phone key `6c2c1695...`; the reporter build since 18:10 UTC (Code #26).
+- 11 Pro: UDID `00008030-000275600A12802E`, iOS 17.4.1, phone key `33ac34ed...`; the reporter build of GLP 1ecdd1e8 since 2026-11-09 13:28 UTC.
+- 16 Pro: UDID `00008140-001C38C83A12801C`, iOS 26.6.1, phone key `6c2c1695...`; the reporter build of GLP 1ecdd1e8 since 2026-11-09 13:29 UTC.
+- Both phones are to be rebuilt from GLP main 8fa2d348, protocol 9, the app and its data deleted first, so each will have a new key (Code #27, Phones_inbox.md 20:09 UTC); the keys above stay as the names of their log runs.
 - The Mac as an agent: a team-signed debug build with the Keychain entitlement starts but shows no window (Code #25, 13:38 UTC); the entitlement edit is not in the tree.
+
+## Servers
+
+The rendezvous server, 162.35.126.126:9516, and the directory, :9518, run GLP main 8fa2d348 since 2026-11-09 20:08 UTC, protocol 9, the directory's old agent state and both queues moved aside (Code #27, 20:09 UTC); a phone on an earlier build cannot handshake with them.
 
 ## Signing
 
