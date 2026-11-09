@@ -2309,8 +2309,11 @@ SigBases ::= sb(Ans, Bases).
 % --- What an introduction with wards is made of (GAI, "Contracts with Wards")
 % guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of
 % def:guardianship; a party of a relay act (def:relay) is a ward role,
-% ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is
-% named with its two parties.  An introduction with wards
+% ward(Role, Mark, Guardian), Guardian its guardian role, guardian(Role), or
+% no_guardian, a ward role having at most one guardian role (GAI 6b64d3d,
+% def:relay, clause 1: "with at most one other role sigma of chi, its guardian
+% role"; GnW:3 and GnW:4, agent_acquaint and agents_acquaint, have none), or a
+% free role, free(Role); a relay act is named with its two parties.  An introduction with wards
 % (def:introduction-wards) names the introductory act unobstructed but for
 % the marks, the set of marks, the guardianship of each and the relay acts
 % found: for each mark one with a free role, and for each pair of marks, in
@@ -2318,7 +2321,8 @@ SigBases ::= sb(Ans, Bases).
 % of the contract (def:leaving), in the order of its marks.
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
-Party  ::= ward(Integer, Constant, Integer) ; free(Integer).
+Guardian ::= guardian(Integer) ; no_guardian.
+Party  ::= ward(Integer, Constant, Guardian) ; free(Integer).
 Parties ::= [] ; [Party | Parties].
 Relay  ::= relay(Constant, Party, Party).
 Relays ::= [] ; [Relay | Relays].
@@ -2340,7 +2344,7 @@ Leavings ::= [] ; [Leaving | Leavings].
 % and an introductory act unobstructed but for the marks with its predicate e.
 PredSets   ::= [] ; [Preds | PredSets].
 GuardLists ::= [] ; [Guardianships | GuardLists].
-RK   ::= rk_ward(Constant, Integer) ; rk_free ; rk_guard ; rk_other.
+RK   ::= rk_ward(Constant, Guardian) ; rk_free ; rk_guard ; rk_other.
 RKs  ::= [] ; [RK | RKs].
 Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
