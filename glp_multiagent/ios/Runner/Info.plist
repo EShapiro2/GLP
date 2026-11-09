@@ -34,6 +34,8 @@
 	<string>Let devices running Grassroots within Bluetooth range find this device and connect to it, with no network and no server.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>GrassApp needs local network access to discover and message peers on the same network</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Recognise the places you declare, so this app can tell when you enter or leave one. Your location is used on this device only and is never sent anywhere; while-in-use only, never in the background.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_grassroots._udp</string>

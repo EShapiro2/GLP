@@ -13,6 +13,19 @@ import UIKit
   /// duo went with programs/grassapp (2026-10-13).
   private var platformAttestation: PlatformAttestationPlugin?
 
+  /// The place predicates' platform half (GNA, api.tex, "Geofencing"): the
+  /// geofence behind `declare(place(P, R, E))`, registered about the centre
+  /// the runtime gives and reporting the crossings the platform observes.
+  /// The networking layer's own (networking/ios/Runner/PlaceGeofencePlugin.swift,
+  /// which this project compiles from there, as the attestation plugin),
+  /// registered as the layer's demo app registers it; Dart binds to it
+  /// through the layer's PlatformPlaceGeofenceBackend.  Held here because it
+  /// owns a CLLocationManager and the registrations standing with it;
+  /// releasing it releases them.  Until 2026-11-09 the file was neither
+  /// compiled nor registered, so the channel grassroots/places had no handler
+  /// on an iPhone and every place was refused.
+  private var placeGeofence: PlaceGeofencePlugin?
+
   /// The channel naming the app installed, its developer, its name and its
   /// version number, which the host gives the runtime for self_app/2
   /// (lib/app_identity.dart; GLP paper cce13ce, "Networking seam").
@@ -33,6 +46,11 @@ import UIKit
     {
       platformAttestation = PlatformAttestationPlugin(messenger: registrar.messenger())
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(
+      forPlugin: "PlaceGeofencePlugin")
+    {
+      placeGeofence = PlaceGeofencePlugin(messenger: registrar.messenger())
+    }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AppIdentity") {
       let channel = FlutterMethodChannel(
         name: "grassroots/app_identity", binaryMessenger: registrar.messenger())
@@ -45,6 +63,13 @@ import UIKit
       }
       appIdentity = channel
     }
+  }
+
+  override func applicationWillTerminate(_ application: UIApplication) {
+    // Nothing is left registered with the platform once the layer is done
+    // with it, and process death is one way of being done.
+    placeGeofence?.releaseEverything()
+    super.applicationWillTerminate(application)
   }
 
   /// The app installed, as the attestation names it to a peer (GNA, Section
