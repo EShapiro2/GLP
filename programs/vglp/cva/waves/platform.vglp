@@ -251,6 +251,8 @@ MeetPeer  ::= peer(Peer) ; nopeer.
 Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
 %% A cleared atom (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "A schema may mark an atom it deletes as cleared, with the wildcard * among its arguments or as the speech act of a name term: the act deletes every atom of the state that it matches, and requires none"), written among the deleted atoms of a role as programs/gsc writes it (GSC 327e035, Definition "Speech-act schema"): any is the wildcard as an argument, and ext_any(N) the name term N.*, the wildcard as its speech act.
             ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any
+%% item_of(V), the item of the speech act bound to V, its utterance under its signatures, an argument of an atom (vGLP e1d1b8a, Section 5.4).
+            ; item_of(Var)
 %% inst(K, J, X), the variable X its quantifier binds at the J-th instance of the K-th conjunct of a schema whose instances the attempt names, which stands for X in its conditional literals, the binding sending it to the value that instance gives X (instances, cond_specs).
             ; inst(Integer, Integer, Var).
 %% own_iv(V) and ext_iv(N, V) are <x> and N.y with x or y a variable a conjunct's quantifier binds, V its inst(K, J, X) at the J-th instance (cond_specs).
@@ -3996,6 +3998,8 @@ adm_var(nterm(_), _, _, _, yes).
 %% A signed term's speech-act variable occurs in an atom some role requires
 %% (GSC, Definition "Act schema"), so it asks nothing of the binding.
 adm_var(sgn(_, _), _, _, _, yes).
+%% An item names no agent, so admissibility does not concern it (GSC, the appendix on values).
+adm_var(item_of(_), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
@@ -4619,6 +4623,11 @@ cimg_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
     cimg_sgn(F?, P?, sgn(Y?, I?), X),
     cimg_args(Vs?, B?, Xs).
 cimg_args([num(X)|Vs], B, [cmp_val(n(N?))|Xs?]) :- integer(X?) | N := X?, cimg_args(Vs?, B?, Xs).
+cimg_args([item_of(V)|Vs], B, [X?|Xs?]) :- ground(B?), ground(V?) |
+    lookup(V?, B?, F),
+    item_found(F?, F1),
+    cimg_item(F1?, item_of(V?), X),
+    cimg_args(Vs?, B?, Xs).
 cimg_args([nterm(N)|Vs], B, [X?|Xs?]) :- ground(B?), ground(N?) |
     nt_vars(N?, Ws),
     vars_bound(Ws?, B?, Bd),
@@ -4637,6 +4646,9 @@ cimg_name(no, N, _, cmp_free(nterm(N?))).
 procedure cimg_sgn(Found?, Peer?, Var?, CVal).
 cimg_sgn(found(s(S)), P, _, cmp_val(s(speech(S?, P?)))).
 cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
+procedure cimg_item(Found?, Var?, CVal).
+cimg_item(found(i(U)), _, cmp_val(i(U?))).
+cimg_item(_, V, cmp_free(V?)) :- otherwise | true.
 
 %% ===========================================================================
 %% Atoms, bindings and matching
@@ -4789,6 +4801,7 @@ procedure renum_var(Var?, Integer?, Integer?, Var).
 renum_var(role(K), I, J, role(J?)) :- K? =:= I? | true.
 renum_var(sgn(Y, K), I, J, sgn(Y?, J?)) :- K? =:= I? | true.
 renum_var(nterm(N), I, J, nterm(N1?)) :- renum_nt(N?, I?, J?, N1).
+renum_var(item_of(V), I, J, item_of(V1?)) :- renum_var(V?, I?, J?, V1).
 renum_var(V, _, _, V?) :- otherwise | true.
 procedure renum_nt(NTerm?, Integer?, Integer?, NTerm).
 renum_nt(own(K), I, J, own(J?)) :- K? =:= I? | true.
@@ -5156,6 +5169,12 @@ img_args([nterm(N)|Vs], B, [c(C?)|Xs?]) :- ground(B?), ground(N?) |
     nt_img(N?, B?, C),
     img_args(Vs?, B?, Xs).
 img_args([num(X)|Vs], B, [n(N?)|Xs?]) :- integer(X?) | N := X?, img_args(Vs?, B?, Xs).
+%% The image of an item item_of(y): the utterance under the signatures of the speech act bound to y.
+img_args([item_of(V)|Vs], B, [X?|Xs?]) :- ground(B?), ground(V?) |
+    lookup(V?, B?, F),
+    item_found(F?, F1),
+    img_val(F1?, X),
+    img_args(Vs?, B?, Xs).
 %% The wildcard of a cleared atom is itself under a binding (GSC 327e035, Definition "Binding": beta(*) := *).
 img_args([any|Vs], B, [any|Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?) |
@@ -5208,6 +5227,8 @@ atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
 vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
+%% An item is bound where its variable is.
+vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),
@@ -5269,6 +5290,11 @@ match_args([num(X)|Vs], [Y|Ys], B, R?) :- number(X?), ground(Y?), ground(B?) |
     lit_val(X?, Y?, E),
     lit_then(E?, Vs?, Ys?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of the image of a cleared atom, and nothing else, binding nothing: the deleted atoms of a class carry the images of the cleared atoms of its schema-bindings (joins), and a schema-binding found by matching them has the same cleared atoms.
+%% An item item_of(y) matches the item of the speech act bound to y, and binds nothing: the atoms binding y come before it (vGLP e1d1b8a, Section 5.4).
+match_args([item_of(V)|Vs], [X|Xs], B, R?) :- ground(V?), ground(X?), ground(B?) |
+    lookup(V?, B?, F),
+    item_found(F?, F1),
+    item_then(F1?, X?, Vs?, Xs?, B?, R).
 match_args([any|Vs], [X|Xs], B, R?) :- ground(X?), ground(B?) |
     any_val(X?, E),
     lit_then(E?, Vs?, Xs?, B?, R).
@@ -5284,6 +5310,9 @@ lit_val(_, _, no) :- otherwise | true.
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
 any_val(_, no) :- otherwise | true.
+procedure item_then(Found?, Val?, Vars?, Vals?, Binding?, Match).
+item_then(found(W), X, Vs, Xs, B, R?) :- W? =?= X? | match_args(Vs?, Xs?, B?, R).
+item_then(_, _, _, _, _, nomatch) :- otherwise | true.
 procedure lit_then(YesNo?, Vars?, Vals?, Binding?, Match).
 lit_then(yes, Vs, Ys, B, R?) :- match_args(Vs?, Ys?, B?, R).
 lit_then(no, _, _, _, nomatch).
@@ -5387,6 +5416,8 @@ kind_ok(sgn(_, _), lv(_, _), no).
 %% A variable a conjunct's quantifier binds, at an instance, matches as the variable does (inst_binds).
 kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.
+%% An item is matched by match_args; the clause covers the type.
+kind_ok(item_of(_), _, no).
 kind_ok(any, _, no).
 kind_ok(V, any, no) :- ground(V?) | true.
 

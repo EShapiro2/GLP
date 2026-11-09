@@ -27,7 +27,8 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
 %% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String).
+            ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String)
+            ; item_of(Arg).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -309,6 +310,7 @@ is_nvar(real(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
+is_nvar(item_of(_), no).
 is_nvar(nterm(_), no).
 is_nvar(sgn(_, _), no).
 is_nvar(any, no).
