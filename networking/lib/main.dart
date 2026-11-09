@@ -952,12 +952,15 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       debugPrint('⚠️ Failed to send friendship accept to ${peer.displayName}');
     }
 
-    // Save as a chat message in Redux
+    // Save as a chat message in Redux, under the id `send` gave the accept,
+    // as every sent chat message is saved, so the layer's status reports for
+    // it name this entry.
     appStore.dispatch(SaveChatMessageAction(
       senderPubkeyHex: myHex,
       recipientPubkeyHex: peerHex,
       content: 'You accepted the friend request',
       isOutgoing: true,
+      messageId: messageId,
       messageType: ChatMessageType.friendRequestAcceptedByUs.index,
     ));
 
