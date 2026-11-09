@@ -59,8 +59,8 @@
 %% goals, and are typed with _ and _? where they do, as a meta-interpreter's
 %% are (docs/typed-glp-manual.md, 18.3).
 
-imported procedure social_graph#source(SglpTerms, SglpTerms).
-imported procedure coins#source(SglpTerms, SglpTerms).
+imported procedure examples#social_graph_source(SglpTerms, SglpTerms).
+imported procedure examples#coins_source(SglpTerms, SglpTerms).
 imported procedure tests#reader_source(SglpTerms, SglpTerms).
 imported procedure tests#delivery_source(SglpTerms, SglpTerms).
 imported procedure tests#receipt_source(SglpTerms, SglpTerms).
@@ -86,9 +86,9 @@ Ans   ::= yes ; no.
 %% transform end, which transform.sh drops.
 exported procedure transform(Constant?, Constant?).
 transform(Prog, Part) :- Prog? =?= social_graph |
-    social_graph # source(V, S), part(social_graph, Part?, V?, S?).
+    examples # social_graph_source(V, S), part(social_graph, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= coins |
-    coins # source(V, S), part(coins, Part?, V?, S?).
+    examples # coins_source(V, S), part(coins, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= reader |
     tests # reader_source(V, S), part(reader, Part?, V?, S?).
 transform(Prog, Part) :- Prog? =?= delivery |
