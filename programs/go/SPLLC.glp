@@ -3,6 +3,7 @@
 %% Extends GCorp, instantiating its bylaws and restricting it.  The term holds every schema of what it extends, restated, GKK's and GSG's for persons as GO writes them, an organisation being a ward marked org, its guards forbidding retired, the leaving mark.
 %% 44 schemas.  This term is the one source of the schemas; a run of the cascade prints their notation from it.  Written by GO #3 Cowork, 2026-11-09, by GO/docs/tools/gen.py; the problems found in writing them are GO/docs/schemas-problems.md.
 %% Environment predicates: today.
+%% Instantiates the parameter bylaws_p by the utterance bylaws_spllc (GSC, Section 8).
 %% ---------------------------------------------------------------------------
 
 SNT         ::= own(Constant) ; ext(SNT, Constant).
@@ -108,7 +109,7 @@ contract_named(spllc, environment([today],
        true,
        ['Alice']),
 %% SPLLC:1, Founding: Alice founds Orga, its bylaws those of a single-person limited-liability company, holding its sole office, the role 1.
-    sas(found, ['Alice', 'Orga'], [b],
+    sas(found, ['Alice', 'Orga'], [],
        [atom(founder_of, ['Alice', 'Orga']),
         atom(officer_of, ['Alice', 'Orga', num(1)]),
         atom(participates, ['Alice', 'Orga']),
@@ -117,7 +118,7 @@ contract_named(spllc, environment([today],
         atom(identity, ['Orga']),
         atom(org, ['Orga']),
         atom(founder, ['Orga', 'Alice']),
-        atom(bylaws, ['Orga', b]),
+        atom(bylaws, ['Orga', bylaws_spllc]),
         atom(officer, ['Orga', 'Alice', num(1)]),
         atom(participant, ['Orga', 'Alice']),
         atom(friend, ['Orga', 'Alice']),
@@ -125,10 +126,9 @@ contract_named(spllc, environment([today],
        [atom(identity, ['Alice']),
         not(atom(org, ['Alice'])),
         not(atom(retired, ['Alice'])),
-        atom(item, ['Alice', b]),
         not(atom(identity, ['Orga'])),
         not(atom(retired, ['Orga']))],
-       and(eq(author_of(b), 'Alice'), rel(bylaws_spllc, [item_of(b)])),
+       true,
        ['Alice', 'Orga']),
 %% GnW:3, Ward and person: Orga and Bob come to know each other by an act of both; a relay act with a ward role and a free role.
     sas(org_acquaint, ['Orga', 'Bob'], [],
@@ -202,7 +202,6 @@ contract_named(spllc, environment([today],
        [atom(identity, ['Orga']),
         atom(org, ['Orga']),
         not(atom(retired, ['Orga'])),
-        atom(officer, ['Orga', '_', '_']),
         atom(proposal, ['Orga', x]),
         atom(vote, ['Orga', 'Alice', x]),
         atom(officer, ['Orga', 'Alice', num(1)]),
@@ -260,7 +259,6 @@ contract_named(spllc, environment([today],
        [atom(identity, ['Orga']),
         atom(org, ['Orga']),
         not(atom(retired, ['Orga'])),
-        atom(officer, ['Orga', '_', '_']),
         atom(officer, ['Orga', 'Bob', num(r)]),
         atom(identity, ['Bob']),
         atom(officer_of, ['Bob', 'Orga', num(r)])],

@@ -10,7 +10,7 @@ A network organisation is a backed community currency, Orga, with four roles: tr
 Alice, Bob and Carol are persons, Orga a network organisation.
 1. ■ Stake.  The treasurers may set S.
 2. ■ Treasurers.  GBCC:1, where Bob is a provider.
-3. ■ Arbiters.  The treasurers may appoint Carol an arbiter, and remove one.
+3. ■ Arbiters.  The treasurers may appoint Carol an arbiter, and remove Carol.
 4. ■ Arbitration.  Alice or Bob may raise a dispute to an arbiter, Carol, who then decides the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
 Pragmas
 Look: 🕸️, network
