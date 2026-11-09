@@ -1,5 +1,10 @@
 import 'dart:async';
-import 'dart:io' show InternetAddress, InternetAddressType;
+import 'dart:io'
+    show
+        InternetAddress,
+        InternetAddressType,
+        RawDatagramSocket,
+        RawSocketEvent;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +18,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
+import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
 import 'helpers/event_waits.dart';
@@ -384,5 +390,36 @@ void main() {
         reason: 'an address on the local network is never the WAN address');
     expect(callee.store.state.knownPeers.known[hex(dialerId.publicKey)],
         wanAddress);
+  }, timeout: Timeout.none);
+
+  test(
+      'a dial to a peer at a non-public recorded address sends no hole punch '
+      'before the handshake: punching is GLP\'s alone, through punchUdp',
+      () async {
+    final dialer = await startNode(await identityFromSeed(0xd1));
+    final peerId = await identityFromSeed(0xd2);
+
+    // A bare socket standing for the peer's recorded address. The first
+    // datagram it receives is whatever the dial sends first: a punch, if the
+    // layer punches on its own, or the handshake.
+    final peerSocket = await RawDatagramSocket.bind(
+        InternetAddress.loopbackIPv6, 0);
+    addTearDown(peerSocket.close);
+    final firstDatagram = Completer<Uint8List>();
+    final sub = peerSocket.listen((event) {
+      if (event != RawSocketEvent.read || firstDatagram.isCompleted) return;
+      final datagram = peerSocket.receive();
+      if (datagram != null) firstDatagram.complete(datagram.data);
+    });
+    addTearDown(sub.cancel);
+
+    dialer.wan!.putPeerAddress(
+        peerId.publicKey, '[::1]:${peerSocket.port}');
+    // The dial never completes (nothing answers), so it is not awaited.
+    unawaited(dialer.send(peerId.publicKey, Uint8List.fromList([7])));
+
+    final first = await firstDatagram.future;
+    expect(PunchPacket.isPunch(first), isFalse,
+        reason: 'the layer must not punch before the handshake on its own');
   }, timeout: Timeout.none);
 }
