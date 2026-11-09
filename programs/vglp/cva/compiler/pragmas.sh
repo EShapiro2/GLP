@@ -335,13 +335,23 @@ for my $f (reverse @order) {
     }
 }
 # The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below): an interface heading, "Pragmas" or "Interface pragmas", is the line "Pragmas", and an implementation heading and every line after it up to the next interface heading are skipped (iface_head, impl_head).
+# The interface pragmas may open with the app\x27s look, "Look: <icon>, <family>" (GSC 34bc713, Section 2: "The interface pragmas may open with a line naming the app\x27s look, its icon and its family, as \x27Look: chat, social\x27, the colours of each family being one file of the repository beside the contracts"): read into $look{F} as [Icon, Family], and no tab.  A Look line anywhere else, or not of that form, is refused.  How the compiler carries the look into the platform no paper says yet (vGLP, Section 5.4, names none), so the term printed below does not hold it.
+my %look;
 sub joined {
     my ($f) = @_;
-    my (@m, $aft, $impl);
+    my (@m, $aft, $impl, $first);
     for my $x (read_txt($f)) {
         if (impl_head($x)) { $impl = 1; next }
-        if (iface_head($x)) { $impl = 0; $aft = 1; push @m, "Pragmas"; next }
+        if (iface_head($x)) { $impl = 0; $aft = 1; $first = 1; push @m, "Pragmas"; next }
         next if $impl;
+        if ($aft && $x =~ /^Look\s*:/) {
+            $x =~ /^Look:\s*(\S.*?),\s*([\w-]+)\s*$/ && $first
+                or die "pragmas.sh: $f: \"$x\": the look is the line the interface pragmas open with, \"Look: <icon>, <family>\" (GSC, Section 2)\n";
+            $look{$f} = [$1, $2];
+            $first = 0;
+            next;
+        }
+        $first = 0 if $aft && $x =~ /\S/;
         if ($aft && $x =~ /^\s+\S/ && @m && $m[-1] ne "Pragmas") { $m[-1] .= "\x01" . $x; next }
         push @m, $x;
     }
