@@ -527,6 +527,20 @@ class GrassrootsNetwork {
   /// listen on; the default is the platform's interface list.
   final LocalHostAddressReader _readLocalHostAddresses;
 
+  /// Reads the attached local network: the platform's reading
+  /// ([readLocalNetwork]), or a test's.
+  final Future<LocalNetwork> Function() _readLocalNetwork;
+
+  /// A restart of the UDP transport is queued behind [_transportUpdateLock]
+  /// and has not begun: a second cause of one, a new local network reported
+  /// with a new connection type, queues no second.
+  bool _udpRestartQueued = false;
+
+  /// How many times LAN discovery was started, for a test: mDNS does not run
+  /// under the test runner, so a start is what a test can see of it.
+  @visibleForTesting
+  int debugLanDiscoveryStarts = 0;
+
   /// Our public address (ip:port), as a rendezvous server observed it.
   ///
   /// Null until the first rendezvous connection reflects one (spec
@@ -812,10 +826,12 @@ class GrassrootsNetwork {
     required this.sodium,
     this.config = const GrassrootsNetworkConfig(),
     LocalHostAddressReader? localHostAddressReader,
+    Future<LocalNetwork> Function()? localNetworkReader,
     OutboundQueueStore? outboundQueueStore,
   })  : underlays = Set.unmodifiable(underlays),
         _readLocalHostAddresses =
             localHostAddressReader ?? readLocalHostAddresses,
+        _readLocalNetwork = localNetworkReader ?? readLocalNetwork,
         _attestation = platformAttestation ?? const NoPlatformAttestation(),
         _places = placeGeofenceBackend == null
             ? null
@@ -1723,8 +1739,18 @@ class GrassrootsNetwork {
   /// (before the event is filtered — the local network can change while the
   /// connection type does not), and on the heartbeat tick, which catches a
   /// change the platform reports through no event at all.
+  ///
+  /// A move from one local network to another, the connection type
+  /// unchanged (one Wi-Fi for another, a phone's hotspot among them),
+  /// restarts the UDP transport and LAN discovery as a change of type does:
+  /// the socket and every path on it belong to the network left, the sweep
+  /// re-dials the known peers and the declared rendezvous servers from the
+  /// new one (GNA ip.tex, "Address-change recovery"), and the LAN presence
+  /// and browsing are for the network the agent is on (GNA proximity.tex).
+  /// The first network read, and a loss of every network, which the
+  /// connection type reports, restart nothing here.
   Future<void> _refreshLocalNetwork() async {
-    final network = await readLocalNetwork();
+    final network = await _readLocalNetwork();
     final previous = store.state.localNetwork.network;
     if (network == previous) return;
 
@@ -1734,6 +1760,38 @@ class GrassrootsNetwork {
       '(prefixes: ${network.prefixes.join(', ')})',
     );
     wan?.onNetworkChanged?.call(previous.networkId, network.networkId);
+
+    if (previous.networkId != null &&
+        network.networkId != null &&
+        _runsIp &&
+        _started) {
+      debugPrint(
+        'Local network changed: ${previous.networkId} -> '
+        '${network.networkId} — restarting UDP transport',
+      );
+      _scheduleUdpRestart();
+    }
+  }
+
+  /// Read the local network now, as the heartbeat does, for a test.
+  @visibleForTesting
+  Future<void> debugRefreshLocalNetwork() => _refreshLocalNetwork();
+
+  /// Whether the layer holds a UDP session with [pubkey], for a test.
+  @visibleForTesting
+  bool debugHasUdpSession(Uint8List pubkey) =>
+      _noiseSessions.hasSession(PeerTransport.udp, pubkey);
+
+  /// Queue a restart of the UDP transport behind any transport update in
+  /// flight, unless one is queued and has not begun.
+  void _scheduleUdpRestart() {
+    if (_udpRestartQueued) return;
+    _udpRestartQueued = true;
+    final previous = _transportUpdateLock ?? Future.value();
+    _transportUpdateLock = previous.then((_) {
+      _udpRestartQueued = false;
+      return _restartUdpAfterNetworkChange();
+    });
   }
 
   void _seedConnectivityState() {
@@ -1850,10 +1908,7 @@ class GrassrootsNetwork {
     );
 
     // Serialize with other transport updates to prevent overlapping init/dispose
-    final previous = _transportUpdateLock ?? Future.value();
-    _transportUpdateLock = previous.then(
-      (_) => _restartUdpAfterNetworkChange(),
-    );
+    _scheduleUdpRestart();
   }
 
   /// Restart UDP transport after a network change.
@@ -1957,6 +2012,7 @@ class GrassrootsNetwork {
     final lan = LanDiscoveryService(identity: identity)
       ..onInstanceResolved = _onLanInstanceResolved;
     _lanDiscovery = lan;
+    debugLanDiscoveryStarts++;
     try {
       await lan.start(port: port);
     } catch (e) {
@@ -4738,6 +4794,12 @@ class GrassrootsNetwork {
           '[udp-stale] No UDP traffic from ${peer.displayName} for '
           '${staleThreshold.inSeconds}s; disconnecting stale session',
         );
+        // The session goes with its path, here and not on the path's
+        // disconnect event, which finds no peer once the stale peers are
+        // removed below: a session left standing would be announced into
+        // for ever, and the sweep would re-dial no rendezvous server whose
+        // session went stale (GNA ip.tex, "Address-change recovery").
+        _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
         store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
         unawaited(_udpService!.disconnectFromPeer(pubkeyHex));
       }
