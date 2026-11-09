@@ -509,12 +509,26 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
 /// name, and it is merged whole.  Null outside a discovery.
 SelfGlpReading? selfGlpReading;
 
-/// The `self.glp` files that import compiled procedures ([importers]) and the
-/// types written into each ([written]), by normalised absolute path.
+/// The `self.glp` files that import procedures of a `.vglp` source the
+/// linker compiles, whose types it has not yet written ([pending]), and the
+/// types written into each `self.glp` ([written]), by normalised absolute
+/// path: those of a compiled module committed beside its source from the
+/// start, and those of a source compiled at the load once it is compiled.
 class SelfGlpReading {
-  final Set<String> importers;
+  final Set<String> pending;
   final Map<String, List<TypeDef>> written = {};
-  SelfGlpReading(this.importers);
+  SelfGlpReading(this.pending);
+
+  /// [types] written into the `self.glp` at [path], each in place of one of
+  /// its name written before.
+  void write(String path, Iterable<TypeDef> types) {
+    final k = key(path);
+    final byName = {for (final t in written[k] ?? const <TypeDef>[]) t.name: t};
+    for (final t in types) {
+      byName[t.name] = t;
+    }
+    written[k] = byName.values.toList();
+  }
 
   /// [path] normalised, as [importers] and [written] key it.
   static String key(String path) =>
@@ -535,8 +549,7 @@ class SelfGlpReading {
 
   /// Whether [path] is merged without its declarations that name a type no
   /// scope defines yet.
-  bool lenient(String path) =>
-      importers.contains(key(path)) && !written.containsKey(key(path));
+  bool lenient(String path) => pending.contains(key(path));
 }
 
 /// Merge [module], the parsed `self.glp` at [path], into [env], read as
