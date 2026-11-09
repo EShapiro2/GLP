@@ -17,6 +17,7 @@ import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/session/application.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
+import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
 import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
@@ -366,5 +367,115 @@ void main() {
     expect(node.peerUnderlays(silentPk), isEmpty);
     expect(everLive, isFalse,
         reason: 'a UDP path with no session is no authenticated connection');
+  }, timeout: Timeout.none);
+
+  // GNA ip.tex, "Address-change recovery": "its established UDP paths break
+  // and their sessions are torn down by liveness ...  The heartbeat sweep
+  // therefore re-initiates connections to the known peers and the declared
+  // rendezvous servers; the rendezvous connection always succeeds".  The
+  // server goes silent past the stale threshold, two announce intervals, and
+  // comes back at its address: the node tore its session down with its path,
+  // so the sweep dials the server again and holds a session with it.
+  test(
+      'a rendezvous session gone stale is torn down with its path, and the '
+      'sweep dials the server again and holds a session with it', () async {
+    final port = await deadPort();
+    final server = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
+      identity: await identityFromSeed(0x9c),
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
+      rendezvousServer: true,
+      sodium: sodium,
+    );
+    addTearDown(server.dispose);
+    expect(await server.start(), isTrue);
+    final serverPk = server.identity.publicKey;
+
+    final connected = <Completer<void>>[Completer<void>(), Completer<void>()];
+    var connects = 0;
+    final lost = Completer<void>();
+    final node = await startNode(
+      await identityFromSeed(0x9d),
+      RendezvousServer('127.0.0.1:$port', serverPk),
+      onPeerConnected: (pk, underlay, application) {
+        if (hex(pk) != hex(serverPk) || connects >= connected.length) return;
+        connected[connects++].complete();
+      },
+    );
+    node.onPeerDisconnected = (pk, underlay) {
+      if (hex(pk) == hex(serverPk) && !lost.isCompleted) lost.complete();
+    };
+    await connected[0].future;
+
+    // The server falls silent: the node's liveness tears the session down
+    // with its path, so the node holds no session to announce into.
+    await server.stop();
+    await lost.future;
+    expect(node.isPeerReachable(serverPk), isFalse);
+    expect(node.debugHasUdpSession(serverPk), isFalse,
+        reason: 'the stale session ended with its path, not left standing');
+
+    // The server is back at its address: the sweep dials it again.
+    expect(await server.start(), isTrue);
+    await connected[1].future;
+    expect(node.isPeerReachable(serverPk), isTrue);
+  }, timeout: Timeout.none);
+
+  // GNA ip.tex, "Address-change recovery", and proximity.tex, the LAN
+  // presence and browsing being for the network the agent is on: a move to
+  // another local network, the connection type unchanged (one Wi-Fi for
+  // another), restarts the UDP transport and LAN discovery as a change of
+  // type does, and the node holds its session with the rendezvous server
+  // again from the new network.
+  test(
+      'a new local network with the connection type unchanged restarts the '
+      'UDP transport and LAN discovery, and the rendezvous session is held '
+      'again', () async {
+    final (server, serverSaw, _) = await headlessServer(0x9e);
+    final serverPk = server.identity.publicKey;
+    var network =
+        localNetworkFromPrefixes([localPrefixOf(InternetAddress('192.168.7.5'))]);
+    final node = GrassrootsNetwork(
+      identity: await identityFromSeed(0x9f),
+      underlays: const {Underlay.lan, Underlay.wan},
+      store: Store<AppState>(appReducer, initialState: const AppState()),
+      sodium: sodium,
+      localHostAddressReader: LoopbackHostReader().call,
+      localNetworkReader: () async => network,
+      config: const GrassrootsNetworkConfig(
+        announceInterval: Duration(seconds: 2),
+      ),
+    );
+    addTearDown(node.dispose);
+    final connected = <Completer<void>>[Completer<void>(), Completer<void>()];
+    var connects = 0;
+    node.onPeerConnected = (pk, underlay, application) {
+      if (hex(pk) != hex(serverPk) || connects >= connected.length) return;
+      connected[connects++].complete();
+    };
+    node.wan!.putRendezvousServer(serverPk, '127.0.0.1:${server.boundPort}');
+    expect(await node.initialize(), isTrue);
+    await node.start();
+    await connected[0].future;
+    await stateWhere(
+        node.store, (s) => s.localNetwork.networkId == network.networkId);
+    final lanStarts = node.debugLanDiscoveryStarts;
+
+    // The phone joins another Wi-Fi network: the connection type stays.
+    network =
+        localNetworkFromPrefixes([localPrefixOf(InternetAddress('172.20.10.2'))]);
+    await node.debugRefreshLocalNetwork();
+    expect(node.store.state.localNetwork.networkId, network.networkId);
+
+    // The transport restarted: the session is held again, and LAN
+    // discovery was started for the new network.
+    await connected[1].future;
+    expect(node.isPeerReachable(serverPk), isTrue);
+    expect(node.debugLanDiscoveryStarts, greaterThan(lanStarts),
+        reason: 'LAN discovery started again on the new network');
+    expect(serverSaw.where((k) => k == hex(node.identity.publicKey)),
+        hasLength(2),
+        reason: 'the server saw a second session from the node');
   }, timeout: Timeout.none);
 }
