@@ -159,6 +159,14 @@ class AgentRuntime {
   /// the layer the file of its queue.
   final AgentStateStore? stateStore;
 
+  /// The app installed on the device, its developer, its name and its version
+  /// number, as the host gives it; null where it gives none, as the
+  /// simulation does.  The store keeps it with the compiled program, and
+  /// `self_app/2` assigns it, and, as the app whose program the agent runs,
+  /// the one the store keeps where a restart refused an update (GLP-Spec
+  /// cce13ce, appendix-guards, "Networking seam"; IGLP 59c40e2).
+  final Application? installedApp;
+
   /// The simulation's coordinator is told that the message of [messageId] is acknowledged: the simulation's layer, which the host builds where it is given none, hands its `acknowledge(messageId)` here ([SimulationNetworkClient.acknowledgeToRouter]).  The runtime acknowledges a message once the cycle that applied it is saved, or, where there is no [stateStore], once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds"), by the layer's [GlpNetwork.acknowledge] (GNA, Section 2.9); over a given network the layer is told, and this is not called.  Until 2026-11-03 [GlpNetwork] had no `acknowledge`, and this was the runtime's one call, which a host was to bind to the layer's and none did.
   void Function(String messageId)? onDelivered;
 
@@ -231,6 +239,7 @@ class AgentRuntime {
     NetworkDirectory? directory,
     GlpNetwork? network,
     this.stateStore,
+    this.installedApp,
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
@@ -339,6 +348,14 @@ class AgentRuntime {
   UpdateRefusal? get updateRefusal => _updateRefusal;
   UpdateRefusal? _updateRefusal;
   GlpRuntime? get runtime => _runtime;
+
+  /// The app whose program the agent runs, which the layer attests to the
+  /// agent's peers: the installed app, or, where a restart refused an update,
+  /// the app the store keeps with the program the agent runs (IGLP 59c40e2,
+  /// Implementation Notes, "The contract": "the version it attests being the
+  /// one the runtime gives it, that of the program the agent runs").  Null
+  /// before [initialize], and where the host gave no app.
+  Application? get runningApp => _runtime?.selfApps?.running;
   MadContext? get ctx => _ctx;
 
   String get _tag => agentId.toUpperCase();
@@ -495,6 +512,10 @@ class AgentRuntime {
     _programIdentity = codeIdentityOf(_image!);
 
     _runtime = engine.runtime;
+    _runtime!.selfApps = (
+      running: stored != null ? stored.app : installedApp,
+      installed: installedApp,
+    );
     _ctx = engine.madContext;
     _log('INIT: MadContext created');
 
@@ -783,7 +804,8 @@ class AgentRuntime {
   /// pair, the compiled program it runs").
   Future<void> _keepProgram(AgentStateStore store) async {
     await store.saveProgram(
-        StoredProgram.compiled(_code!, _appModule).toBytes());
+        StoredProgram.compiled(_code!, _appModule, app: installedApp)
+            .toBytes());
     _log('INIT: the store keeps the compiled program the agent runs');
   }
 

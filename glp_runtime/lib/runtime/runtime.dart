@@ -8,6 +8,7 @@ import 'sim_clock.dart';
 import 'saved_state.dart';
 import 'terms.dart' show Term, ModuleTerm;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
@@ -141,6 +142,13 @@ class GlpRuntime {
   /// a restart makes each to the new layer again (seam_declarations.dart;
   /// IGLP 0c77e47, Implementation Notes, "Persistence").
   final SeamDeclarations seamDeclarations = SeamDeclarations();
+
+  /// The app whose program the agent runs and the app installed on the
+  /// device, as the host gives them, which `self_app/2` assigns (GLP-Spec
+  /// cce13ce, appendix-guards, "Networking seam"; IGLP 59c40e2, Definition
+  /// "Seam Predicates"); they differ after an update the runtime refused.
+  /// Null, or either null, where the host gives none.
+  ({Application? running, Application? installed})? selfApps;
 
   /// The machine's simulated clock and its queue of pending tokens (GLP-Spec
   /// appendix-guards.tex at 5fd9a15, "Simulated time": "The clock is of one
