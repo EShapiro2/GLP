@@ -406,6 +406,18 @@ class GrassrootsNetwork {
       if (bytes == null) return false;
       return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
     },
+    // A message's attempts ran out on the session: tear it down as the liveness
+    // sweep does for UDP, so reachability is reported. The message stays
+    // queued.
+    // A signal for a session already gone concerns nothing that stands.
+    onAttemptsExhausted: (peerHex) {
+      final peer = _peersState.getPeerByPubkeyHex(peerHex);
+      if (peer == null ||
+          _udpService?.getPeerIdForPubkey(peer.publicKey) == null) {
+        return;
+      }
+      _disconnectStaleUdp(peer);
+    },
   );
 
   /// The BLE carrier of the same transport: fragments ride GATT writes,
@@ -413,6 +425,16 @@ class GrassrootsNetwork {
   /// fires (spec §Message Transport).
   late final MessageTransportSender _bleMessageSender =
       MessageTransportSender.gatt(
+    // A message's attempts ran out on the BLE path: sever it as the liveness
+    // sweep does, so reachability is reported. The message stays queued.
+    onAttemptsExhausted: (peerHex) {
+      final peer = _peersState.getPeerByPubkeyHex(peerHex);
+      if (peer == null ||
+          _bleService?.getPeerIdForPubkey(peer.publicKey) == null) {
+        return;
+      }
+      _disconnectStaleBle(peer);
+    },
     sendPacket: (peerHex, packet) async {
       final service = _bleService;
       if (service == null) return false;
@@ -2865,6 +2887,13 @@ class GrassrootsNetwork {
     );
   }
 
+  /// Signal that a message to [pubkey] exhausted its attempts, as the UDP
+  /// sender does when a fragment runs out of retransmissions: the test seam for
+  /// the exhaustion teardown.
+  @visibleForTesting
+  void debugExhaustUdpAttempts(Uint8List pubkey) =>
+      _udpMessageSender.debugExhaust(_pubkeyToHex(pubkey));
+
   @visibleForTesting
   int queuedMessageCountForPeer(Uint8List pubkey) =>
       _outboundMessageQueue[_pubkeyToHex(pubkey)]?.length ?? 0;
@@ -4843,8 +4872,7 @@ class GrassrootsNetwork {
         // for ever, and the sweep would re-dial no rendezvous server whose
         // session went stale (GNA ip.tex, "Address-change recovery").
         _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
-        store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
-        unawaited(_udpService!.disconnectFromPeer(pubkeyHex));
+        _disconnectStaleUdp(peer);
       }
     }
 
@@ -4875,21 +4903,43 @@ class GrassrootsNetwork {
       // linked with (20s connecting-wedge on iOS, GATT-133 churn on
       // Android). Tearing the radio down first makes the recovery dial a
       // legitimate first link.
-      final centralId = peer.bleCentralDeviceId;
-      if (centralId != null) {
-        unawaited(_bleService?.disconnectDevice(centralId, forget: true));
-      }
-      final peripheralId = peer.blePeripheralDeviceId;
-      if (peripheralId != null) {
-        unawaited(_bleService?.disconnectDevice(peripheralId, forget: true));
-      }
-      // role: null clears both central and peripheral attachments.
-      store.dispatch(PeerBleDisconnectedAction(peer.publicKey));
+      _disconnectStaleBle(peer);
     }
 
     // Dispatch action to remove stale peers via Redux
     store.dispatch(StaleDiscoveredBlePeersRemovedAction(staleThreshold));
     store.dispatch(StalePeersRemovedAction(staleThreshold));
+  }
+
+  /// Tear down a silent UDP session: the liveness sweep's teardown, also taken
+  /// when a message's attempts are exhausted on it.
+  void _disconnectStaleUdp(PeerState peer) {
+    store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
+    unawaited(_udpService!.disconnectFromPeer(peer.pubkeyHex));
+  }
+
+  /// Tear down a silent BLE attachment: the liveness sweep's teardown, also
+  /// taken when a message's attempts are exhausted on the BLE path.
+  void _disconnectStaleBle(PeerState peer) {
+    // Redux is a strict projection of transport facts — so when we
+    // synthesize a disconnect, make it a fact: physically tear down any
+    // plugin paths still attached to this peer. An ANNOUNCE-quiet link is
+    // often still alive at the radio level; clearing only the Redux
+    // attachment blinds the identity-keyed dial guards, and the recovery
+    // dial then opens a doomed SECOND link to a device we are still
+    // linked with (20s connecting-wedge on iOS, GATT-133 churn on
+    // Android). Tearing the radio down first makes the recovery dial a
+    // legitimate first link.
+    final centralId = peer.bleCentralDeviceId;
+    if (centralId != null) {
+      unawaited(_bleService?.disconnectDevice(centralId, forget: true));
+    }
+    final peripheralId = peer.blePeripheralDeviceId;
+    if (peripheralId != null) {
+      unawaited(_bleService?.disconnectDevice(peripheralId, forget: true));
+    }
+    // role: null clears both central and peripheral attachments.
+    store.dispatch(PeerBleDisconnectedAction(peer.publicKey));
   }
 
 }
