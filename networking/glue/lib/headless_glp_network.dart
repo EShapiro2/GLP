@@ -72,7 +72,7 @@ class HeadlessGlpNetwork implements glp.GlpNetwork {
   // --- Identity ---
 
   @override
-  glp.PubKey getIdentity() => _key(layer.identity.publicKey);
+  glp.PubKey getIdentity() => _key(layer.getIdentity());
 
   // --- Known peers ---
 

@@ -1,5 +1,5 @@
 % REC: Recommendations --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
 % Defines: recommendation: recommended(b, s) at the recommender, endorsement(a, s) at the recommended, shown(c, a, s) at them for each person shown, vouched(b, a, s) at that person.
 % Schemas: REC.glp beside this file, written by tools/contracts.py.

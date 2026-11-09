@@ -165,21 +165,26 @@ go(X, Out?) :- fwd2(X?, Out).
     });
   });
 
-  // length/3 is programs/sglp/self.glp's, and nth/3 programs/sglp/examples/
-  // self.glp's, whose chain runs through it (sGLP's layout, sGLP #11,
-  // Code_inbox 2026-11-09 10:22 UTC): each is read in the scope of its own
-  // self.glp, the examples' merged onto the parent's as the chain has it.
-  group("sGLP's length/3 (programs/sglp/self.glp) and nth/3 "
+  // length/3 is programs/sglp/sglp.glp's, exported, which programs/sglp/
+  // self.glp exposes (sGLP #11, Code_inbox 2026-11-09 14:53 UTC), and nth/3
+  // programs/sglp/examples/self.glp's, whose chain runs through programs/sglp/
+  // self.glp (sGLP's layout, sGLP #11, Code_inbox 2026-11-09 10:22 UTC): each
+  // is read in the scope of its own module, sglp.glp merged onto the root's
+  // and the examples' self.glp onto the parent's as the chain has it.
+  group("sGLP's length/3 (programs/sglp/sglp.glp) and nth/3 "
       "(programs/sglp/examples/self.glp)", () {
     final sglp = mergeSelfGlpFileIntoScope(
+        rootScope(_root), File('../programs/sglp/sglp.glp').absolute.path,
+        root: _programs);
+    final sglpSelf = mergeSelfGlpFileIntoScope(
         rootScope(_root), File('../programs/sglp/self.glp').absolute.path,
         root: _programs);
     final examples = mergeSelfGlpFileIntoScope(
-        sglp, File('../programs/sglp/examples/self.glp').absolute.path,
+        sglpSelf, File('../programs/sglp/examples/self.glp').absolute.path,
         root: _programs);
     for (final (key, scope) in [('length/3', sglp), ('nth/3', examples)]) {
       test('$key is parametrically well-typed', () {
-        // Defined with clauses by its self.glp's own layer, so the answer is
+        // Defined with clauses by its module's own layer, so the answer is
         // its certification and not the default for a key outside the scope.
         expect(scope.paramProcDecls.containsKey(key), isTrue);
         expect(scope.scopeLayers[key]?.clauses[key], isNotEmpty);

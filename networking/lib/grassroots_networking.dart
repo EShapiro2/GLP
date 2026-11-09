@@ -44,7 +44,6 @@
 /// 
 /// // Send messages
 /// await grassroots.send(recipientPubkey, gsgBlockData);
-/// await grassroots.broadcast(gsgBlockData);
 /// ```
 /// 
 /// ## Architecture

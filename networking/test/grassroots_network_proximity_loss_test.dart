@@ -46,11 +46,10 @@ void main() {
   PeerState onLanSession(int seed) => PeerState(
         publicKey: pubkey(seed),
         connectionState: PeerConnectionState.connected,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.lan,
         udpAddress: '10.0.0.$seed:9514',
-        hasLiveUdpConnection: true,
-        udpAttestation: PeerAttestation.unattested,
-        udpUnderlay: Underlay.lan,
+        lanAuthenticated: true,
+        lanAttestation: PeerAttestation.unattested,
       );
 
   /// Neither a path nor a session on any underlay.

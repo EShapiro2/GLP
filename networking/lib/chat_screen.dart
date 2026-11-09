@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:grassroots_networking/grassroots_networking.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:redux/redux.dart';
+import 'app_payload.dart';
 import 'chat_models.dart';
 import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
@@ -180,13 +181,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final senderPubkey = widget.peer.publicKey;
 
     for (final message in messages) {
-      if (message.isOutgoing) continue;
+      if (message.isOutgoing || message.isFriendshipMessage) continue;
       final id = message.messageId;
       if (id == null) continue;
       if (!_sentReadReceiptIds.add(id)) continue;
-      widget.grassroots.sendReadReceipt(
-        messageId: id,
-        senderPubkey: senderPubkey,
+      widget.grassroots.send(
+        senderPubkey,
+        ReadReceiptPayload(messageId: id).encode(),
       );
     }
 
@@ -266,8 +267,11 @@ class _ChatScreenState extends State<ChatScreen> {
     // will be dispatched by GrassrootsNetwork.send() and reflected via the status icon
     final block = TextSayBlock(content: text);
     debugPrint("Sending '$text' to peer ${widget.peer.displayName}");
-    widget.grassroots
-        .send(widget.peer.publicKey, block.serialize(), messageId: messageId);
+    widget.grassroots.send(
+      widget.peer.publicKey,
+      ChatPayload(messageId: messageId, block: block).encode(),
+      messageId: messageId,
+    );
   }
 
   /// Open a small bottom sheet to pick an image source (camera or gallery)
@@ -385,7 +389,8 @@ class _ChatScreenState extends State<ChatScreen> {
         mime: mime,
         imageBytes: compressed,
       );
-      final wireBytes = block.serialize();
+      final wireBytes =
+          ChatPayload(messageId: messageId, block: block).encode();
       debugPrint('[picture-send] block serialized: ${wireBytes.length} bytes; '
           'dispatching to grassroots.send for peer ${widget.peer.displayName}');
 
@@ -449,6 +454,16 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _forwardMessage(ChatMessageState message) {
+    // A picture carries no text: forwarding one would send an empty message.
+    if (message.isPicture) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only text messages can be forwarded'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     // Show dialog to select a peer to forward to: every reachable peer, over
     // any underlay (getPeers answers the nearby ones alone).
     final peers = widget.grassroots.store.state.peers.peersList
@@ -476,9 +491,14 @@ class _ChatScreenState extends State<ChatScreen> {
         peers: peers,
         onForward: (peer) async {
           Navigator.pop(context);
+          final forwardId = _uuid.v4();
           final forwardedMessageId = await widget.grassroots.send(
             peer.publicKey,
-            Uint8List.fromList(message.content.codeUnits),
+            ChatPayload(
+              messageId: forwardId,
+              block: TextSayBlock(content: message.content),
+            ).encode(),
+            messageId: forwardId,
           );
 
           if (forwardedMessageId == null) {
@@ -800,7 +820,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final block = TextSayBlock(content: message.content);
     final messageId = await widget.grassroots.send(
       widget.peer.publicKey,
-      block.serialize(),
+      ChatPayload(messageId: existingMessageId, block: block).encode(),
       messageId: existingMessageId,
     );
 

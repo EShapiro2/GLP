@@ -129,7 +129,6 @@ void main() {
 
     expect(node.wan!.getPublicAddress(), isNull,
         reason: 'the layer must invent no public address of its own');
-    expect(node.udpAddress, isNull);
     expect(node.store.state.transports.publicAddress, isNull);
     expect(node.store.state.transports.publicIp, isNull);
     expect(node.store.state.transports.isWellConnected, isFalse);
@@ -228,14 +227,14 @@ void main() {
       },
       rendezvousServers: [
         RendezvousServer(
-            '127.0.0.1:${server.boundPort}', server.identity.publicKey),
+            '127.0.0.1:${server.boundPort}', server.getIdentity()),
       ],
     );
     addTearDown(node.dispose);
     await node.start();
 
     await reflected.future;
-    final observed = server.wan.observedPeerAddress(node.identity.publicKey);
+    final observed = server.wan.observedPeerAddress(node.getIdentity());
     expect(observed, isNotNull);
     expect(node.wan!.getPublicAddress(), observed,
         reason: 'the address the server observes, reflected');

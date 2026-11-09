@@ -1,5 +1,5 @@
 % JOINT: Joint Accounts --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
 % Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK.  It cites their clauses whole and restates none.
 % Defines: joint account, named by its opener as a group by its leader; k.joint(u, <a>.n) at both partners.
 % Schemas: JOINT.glp beside this file, written by tools/contracts.py.

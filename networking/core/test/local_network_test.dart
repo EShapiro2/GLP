@@ -106,19 +106,21 @@ void main() {
   group('readLocalNetwork', () {
     test('reads the machine\'s interfaces without throwing', () async {
       final network = await readLocalNetwork();
-      // A machine with no non-loopback interface yields no fingerprint; one
-      // with any interface yields a fingerprint and at least one prefix.
-      if (network.prefixes.isEmpty) {
-        expect(network.networkId, isNull);
-      } else {
-        expect(network.networkId, isNotNull);
-        expect(network.networkId, hasLength(32));
-      }
+      // Every machine has a loopback interface, and loopback is a local
+      // prefix, so the read yields a fingerprint and at least one prefix.
+      expect(network.prefixes, isNotEmpty);
+      expect(network.networkId, isNotNull);
+      expect(network.networkId, hasLength(32));
     });
 
-    test('excludes loopback', () async {
+    // GNA 582ef60, Implementation Notes: "Loopback and link-local addresses
+    // are included, the device itself and a self-assigned network being
+    // local, so two agents on one machine are LAN contact to each other".
+    // Until 582ef60 the appendix read "Loopback is excluded", and this test
+    // was 'excludes loopback'.
+    test('includes loopback', () async {
       final network = await readLocalNetwork();
-      expect(network.containsAddress(InternetAddress('127.0.0.1')), isFalse);
+      expect(network.containsAddress(InternetAddress('127.0.0.1')), isTrue);
     });
   });
 

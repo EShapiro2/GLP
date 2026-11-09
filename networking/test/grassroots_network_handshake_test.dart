@@ -284,7 +284,7 @@ void main() {
         ColdCallTrustLevel.closed);
 
     final xx1 = (await NoiseSessionManager(identity: knownId, sodium: sodium)
-        .startHandshake(PeerTransport.udp, calleeId.publicKey,
+        .startHandshake(PeerTransport.wan, calleeId.publicKey,
             pattern: NoisePattern.xx))!;
     final (xxAnswered, _) = await answered(
         callee,

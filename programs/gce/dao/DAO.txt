@@ -1,5 +1,5 @@
 % DAO: Grassroots DAO --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md: a group that decides by proposals and votes.
-% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
 % Defines: DAO, steward, member, proposal, vote.  A DAO is named by its steward, as a group by its leader (GSN).  Clause 6 is enforced: the steward's agent keeps the number of members and a tally of each proposal's votes, and the steward can decide a proposal only on a majority; every vote is delivered to every member.
 % Schemas: DAO.glp beside this file.

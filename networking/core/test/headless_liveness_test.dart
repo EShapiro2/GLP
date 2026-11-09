@@ -36,9 +36,10 @@ void main() {
     }
   });
 
-  Future<HeadlessGrassrootsNetwork> node(int fill) async {
+  Future<HeadlessGrassrootsNetwork> node(int fill,
+      {OutboundQueueStore? queueStore}) async {
     final layer = HeadlessGrassrootsNetwork(
-      outboundQueueStore: MemoryOutboundQueueStore(),
+      outboundQueueStore: queueStore ?? MemoryOutboundQueueStore(),
       identity: await GrassrootsIdentity.create(
         keyPair: await Ed25519()
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
@@ -53,9 +54,9 @@ void main() {
   /// [a] and [b] know each other, [a] with [b]'s address, and are connected.
   Future<void> connect(
       HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) async {
-    b.putKnownPeer(a.identity.publicKey);
-    a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
-    await a.send(b.identity.publicKey, Uint8List.fromList([1]));
+    b.putKnownPeer(a.getIdentity());
+    a.wan.putPeerAddress(b.getIdentity(), '127.0.0.1:${b.boundPort}');
+    await a.send(b.getIdentity(), Uint8List.fromList([1]));
     await untilBothReachable(a, b);
   }
 
@@ -85,14 +86,14 @@ void main() {
     expect(a.boundPort, isNot(oldPort), reason: 'the address changed');
 
     final clock = Stopwatch()..start();
-    await a.send(b.identity.publicKey, Uint8List.fromList([2]));
+    await a.send(b.getIdentity(), Uint8List.fromList([2]));
     await until([b], () => got.contains(2));
     expect(clock.elapsed,
         lessThan(HeadlessGrassrootsNetwork.heartbeatInterval * 2),
         reason: 'delivered inside the two intervals liveness waits');
     expect(atB, ['up', 'down', 'up'],
         reason: 'the stale session reset, then the fresh one attested');
-    expect(b.wan.observedPeerAddress(a.identity.publicKey),
+    expect(b.wan.observedPeerAddress(a.getIdentity()),
         '127.0.0.1:${a.boundPort}');
   }, timeout: Timeout.none);
 
@@ -106,7 +107,7 @@ void main() {
 
     await a.stop();
     expect(await a.start(), isTrue);
-    expect(a.isPeerReachable(b.identity.publicKey), isFalse);
+    expect(a.isPeerReachable(b.getIdentity()), isFalse);
 
     // Within a heartbeat interval or two.
     await untilBothReachable(a, b);
@@ -120,8 +121,8 @@ void main() {
       if (skip()) return;
       final a = await node(first);
       final b = await node(second);
-      a.wan.putPeerAddress(b.identity.publicKey, '127.0.0.1:${b.boundPort}');
-      b.wan.putPeerAddress(a.identity.publicKey, '127.0.0.1:${a.boundPort}');
+      a.wan.putPeerAddress(b.getIdentity(), '127.0.0.1:${b.boundPort}');
+      b.wan.putPeerAddress(a.getIdentity(), '127.0.0.1:${a.boundPort}');
       // Simultaneous reconnection settles on the deterministic initiator.
       await untilBothReachable(a, b);
     }, timeout: Timeout.none);
@@ -141,10 +142,48 @@ void main() {
     await b.stop();
     final clock = Stopwatch()..start();
     await until([a], () => atA.contains('down'));
-    expect(a.isPeerReachable(b.identity.publicKey), isFalse);
+    expect(a.isPeerReachable(b.getIdentity()), isFalse);
     expect(clock.elapsed,
         greaterThan(HeadlessGrassrootsNetwork.heartbeatInterval),
         reason: 'not before the silence has lasted');
+  }, timeout: Timeout.none);
+
+  test(
+      'a message whose attempts are exhausted on a live session tears that '
+      'session down, feeding onPeerDisconnected, and the message stays queued',
+      () async {
+    if (skip()) return;
+    final queue = MemoryOutboundQueueStore();
+    final a = await node(0xd1, queueStore: queue);
+    final b = await node(0xd2);
+    final atA = <String>[];
+    a.onPeerDisconnected = (pk, u) => atA.add('down');
+    await connect(a, b);
+
+    // b goes silent: no acknowledgment can come for the message.
+    await b.stop();
+    final messageId =
+        await a.send(b.getIdentity(), Uint8List.fromList([9]));
+    expect(messageId, isNotNull);
+    final live = () =>
+        a.store.state.peers.getPeerByPubkey(b.getIdentity())
+            ?.wanAuthenticated;
+    expect(live(), isTrue, reason: 'the session stands before the exhaustion');
+    a.debugExhaustAttempts(b.getIdentity());
+    // The teardown is in the store at once, where the silence sweep would take
+    // two heartbeat intervals.
+    expect(live(), isFalse, reason: 'exhaustion tears the session down');
+
+    await until([a], () => atA.contains('down'));
+    expect(a.isPeerReachable(b.getIdentity()), isFalse);
+    final ownerHex = a.getIdentity()
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+    expect(a.debugQueuedMessageIds(b.getIdentity()), contains(messageId),
+        reason: 'the exhausted message is back in the replay queue');
+    final queued = await queue.load(ownerHex);
+    expect(queued.map((e) => e.messageId), contains(messageId),
+        reason: 'and kept in the persisted queue');
   }, timeout: Timeout.none);
 
   test('a live idle session is kept by the heartbeat\'s ANNOUNCE', () async {
@@ -157,7 +196,7 @@ void main() {
     await connect(a, b);
     await Future<void>.delayed(HeadlessGrassrootsNetwork.heartbeatInterval * 4);
     expect(events, isEmpty);
-    expect(a.isPeerReachable(b.identity.publicKey), isTrue);
-    expect(b.isPeerReachable(a.identity.publicKey), isTrue);
+    expect(a.isPeerReachable(b.getIdentity()), isTrue);
+    expect(b.isPeerReachable(a.getIdentity()), isTrue);
   }, timeout: Timeout.none);
 }
