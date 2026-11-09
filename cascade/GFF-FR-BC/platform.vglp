@@ -595,7 +595,7 @@ Asking    ::= Attempt ; hello(Peer, Proposal).
 %% The approval question of a contract with pragmas carries the sentence the contract puts to the guarding role, which the platform writes, its roles and variables filled in from the binding of the attempt it asks about, each word text(S), as the contract writes it, or person(P), a person the sentence names (vGLP, Section 6.2, "The words a platform shows": "A sentence put to a guarding role names the roles and the variables of the attempt, so the platform writes it into the approval question, and its widget draws it as it draws any output of the program"; Section 5.4, "The contract's words").
 Approval  ::= approval(Asking, List(Word), YesNo?).
 %% After its sentence and the values of the fields, the approval question shows the atoms the act requires of the proposer whose predicates the tabs list, held(A, K), the atom A with K its copies under the attempt's binding (vGLP e22e2ad, Section 5.4, "The contract's words": "and the atoms the act requires of the proposer whose predicates the tabs list, as the tabs draw them --- in a swap, the coins the proposer gives"; "The compilation": the approval question's term carries those atoms); each atom a word of its own, so that no list is under another, as Definition "Volitional Procedure, Interactive Type" requires of the output.
-Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Integer) ; held(Atom, Integer).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number) ; held(Atom, Integer).
 %% The question of a guarding role beyond the proposer's, q(R, G, Words), R the person in that role and G the role of the proposer (sentence_of; GSC, Section 2, its first paragraph); and what sentence_of gives the agent: asked(G, Words), the role of the proposer, 0 where no question is put to the agent, and the words.
 RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
@@ -613,6 +613,8 @@ MeetPeer  ::= peer(Peer) ; nopeer.
 Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
 %% A cleared atom (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "A schema may mark an atom it deletes as cleared, with the wildcard * among its arguments or as the speech act of a name term: the act deletes every atom of the state that it matches, and requires none"), written among the deleted atoms of a role as programs/gsc writes it (GSC 327e035, Definition "Speech-act schema"): any is the wildcard as an argument, and ext_any(N) the name term N.*, the wildcard as its speech act.
             ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any
+%% item_of(V), the item of the speech act bound to V, its utterance under its signatures, an argument of an atom (vGLP e1d1b8a, Section 5.4).
+            ; item_of(Var)
 %% inst(K, J, X), the variable X its quantifier binds at the J-th instance of the K-th conjunct of a schema whose instances the attempt names, which stands for X in its conditional literals, the binding sending it to the value that instance gives X (instances, cond_specs).
             ; inst(Integer, Integer, Var).
 %% own_iv(V) and ext_iv(N, V) are <x> and N.y with x or y a variable a conjunct's quantifier binds, V its inst(K, J, X) at the J-th instance (cond_specs).
@@ -655,7 +657,7 @@ Preds     ::= [] ; [Constant | Preds].
 %% A constraint may also hold not(C), implies(C1, C2) and ne(X, Y), X != Y, as programs/gsc writes them (GSC c8c5ead, def:numbers); eq and ne compare two agents, two speech acts or two community names as they compare two numbers ("eq and ne also compare two agent variables, two speech-act variables or two name terms", ibid.).
 Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
 %% An expression may also be a function the value types provide, fn(min, [X, Y]) or fn(floor, [X]), the count of the instances of a quantifier, cardinality(Xs, H, A, Phi), or the sum of a numeric term over them, sum(Xs, H, A, Phi, U), A the anchor held by H, as programs/gsc writes them (GSC 67a7da0, def:numbers): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
-Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr).
+Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var) ; item_of(Var).
 Exprs     ::= [] ; [Expr | Exprs].
 CRole     ::= every ; at(Integer).
 %% A safe formula of a schema's body (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc writes it: fa(H, M) the atom M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi) and fcons(C), a constraint.  schema_forms(Name, Forms), which the compiler prints from the contract, gives each with the role it is local to, sform(at(I), F), or sform(every, F), every role checking it: "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (ibid.).
@@ -675,7 +677,8 @@ LNorm     ::= norm(Binding) ; badnorm.
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 %% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
 %% A value is a whole number, n(K), or a real, r(X), "a value, a whole number, a real or a string, or a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"); arithmetic on them is on numbers, a result with a real among its operands a real.
-Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; lv(Constant, Constant) ; any.
+%% The item of a speech act, i(U), its utterance under its signatures (vGLP 27bae5d, Section 5.4).
+Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any.
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
@@ -3001,6 +3004,7 @@ val_names(s(speech(_, Q)), C, B?) :- same(Q?, C?, B).
 val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(r(_), _, no).
+val_names(i(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 procedure cname_base(CName?, Peer).
@@ -4363,6 +4367,8 @@ adm_var(nterm(_), _, _, _, yes).
 %% A signed term's speech-act variable occurs in an atom some role requires
 %% (GSC, Definition "Act schema"), so it asks nothing of the binding.
 adm_var(sgn(_, _), _, _, _, yes).
+%% An item names no agent, so admissibility does not concern it (GSC, the appendix on values).
+adm_var(item_of(_), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
@@ -4678,6 +4684,7 @@ is_lv(s(_), no).
 is_lv(c(_), no).
 is_lv(n(_), no).
 is_lv(r(_), no).
+is_lv(i(_), no).
 is_lv(any, no).
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
 locals_put([], _, B, B?).
@@ -4985,6 +4992,11 @@ cimg_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
     cimg_sgn(F?, P?, sgn(Y?, I?), X),
     cimg_args(Vs?, B?, Xs).
 cimg_args([num(X)|Vs], B, [cmp_val(n(N?))|Xs?]) :- integer(X?) | N := X?, cimg_args(Vs?, B?, Xs).
+cimg_args([item_of(V)|Vs], B, [X?|Xs?]) :- ground(B?), ground(V?) |
+    lookup(V?, B?, F),
+    item_found(F?, F1),
+    cimg_item(F1?, item_of(V?), X),
+    cimg_args(Vs?, B?, Xs).
 cimg_args([nterm(N)|Vs], B, [X?|Xs?]) :- ground(B?), ground(N?) |
     nt_vars(N?, Ws),
     vars_bound(Ws?, B?, Bd),
@@ -5003,6 +5015,9 @@ cimg_name(no, N, _, cmp_free(nterm(N?))).
 procedure cimg_sgn(Found?, Peer?, Var?, CVal).
 cimg_sgn(found(s(S)), P, _, cmp_val(s(speech(S?, P?)))).
 cimg_sgn(_, _, V, cmp_free(V?)) :- otherwise | true.
+procedure cimg_item(Found?, Var?, CVal).
+cimg_item(found(i(U)), _, cmp_val(i(U?))).
+cimg_item(_, V, cmp_free(V?)) :- otherwise | true.
 
 %% ===========================================================================
 %% Atoms, bindings and matching
@@ -5155,6 +5170,7 @@ procedure renum_var(Var?, Integer?, Integer?, Var).
 renum_var(role(K), I, J, role(J?)) :- K? =:= I? | true.
 renum_var(sgn(Y, K), I, J, sgn(Y?, J?)) :- K? =:= I? | true.
 renum_var(nterm(N), I, J, nterm(N1?)) :- renum_nt(N?, I?, J?, N1).
+renum_var(item_of(V), I, J, item_of(V1?)) :- renum_var(V?, I?, J?, V1).
 renum_var(V, _, _, V?) :- otherwise | true.
 procedure renum_nt(NTerm?, Integer?, Integer?, NTerm).
 renum_nt(own(K), I, J, own(J?)) :- K? =:= I? | true.
@@ -5467,6 +5483,7 @@ found_peer(found(s(_)), unbound).
 found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(r(_)), unbound).
+found_peer(found(i(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -5521,6 +5538,12 @@ img_args([nterm(N)|Vs], B, [c(C?)|Xs?]) :- ground(B?), ground(N?) |
     nt_img(N?, B?, C),
     img_args(Vs?, B?, Xs).
 img_args([num(X)|Vs], B, [n(N?)|Xs?]) :- integer(X?) | N := X?, img_args(Vs?, B?, Xs).
+%% The image of an item item_of(y): the utterance under the signatures of the speech act bound to y.
+img_args([item_of(V)|Vs], B, [X?|Xs?]) :- ground(B?), ground(V?) |
+    lookup(V?, B?, F),
+    item_found(F?, F1),
+    img_val(F1?, X),
+    img_args(Vs?, B?, Xs).
 %% The wildcard of a cleared atom is itself under a binding (GSC 327e035, Definition "Binding": beta(*) := *).
 img_args([any|Vs], B, [any|Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([V|Vs], B, [X?|Xs?]) :- otherwise, ground(B?) |
@@ -5573,6 +5596,8 @@ atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
 vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
+%% An item is bound where its variable is.
+vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),
@@ -5634,6 +5659,11 @@ match_args([num(X)|Vs], [Y|Ys], B, R?) :- number(X?), ground(Y?), ground(B?) |
     lit_val(X?, Y?, E),
     lit_then(E?, Vs?, Ys?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of the image of a cleared atom, and nothing else, binding nothing: the deleted atoms of a class carry the images of the cleared atoms of its schema-bindings (joins), and a schema-binding found by matching them has the same cleared atoms.
+%% An item item_of(y) matches the item of the speech act bound to y, and binds nothing: the atoms binding y come before it (vGLP e1d1b8a, Section 5.4).
+match_args([item_of(V)|Vs], [X|Xs], B, R?) :- ground(V?), ground(X?), ground(B?) |
+    lookup(V?, B?, F),
+    item_found(F?, F1),
+    item_then(F1?, X?, Vs?, Xs?, B?, R).
 match_args([any|Vs], [X|Xs], B, R?) :- ground(X?), ground(B?) |
     any_val(X?, E),
     lit_then(E?, Vs?, Xs?, B?, R).
@@ -5649,6 +5679,9 @@ lit_val(_, _, no) :- otherwise | true.
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
 any_val(_, no) :- otherwise | true.
+procedure item_then(Found?, Val?, Vars?, Vals?, Binding?, Match).
+item_then(found(W), X, Vs, Xs, B, R?) :- W? =?= X? | match_args(Vs?, Xs?, B?, R).
+item_then(_, _, _, _, _, nomatch) :- otherwise | true.
 procedure lit_then(YesNo?, Vars?, Vals?, Binding?, Match).
 lit_then(yes, Vs, Ys, B, R?) :- match_args(Vs?, Ys?, B?, R).
 lit_then(no, _, _, _, nomatch).
@@ -5674,6 +5707,7 @@ name_parts(_, p(_), noparts).
 name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, r(_), noparts).
+name_parts(_, i(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 procedure nt_parts(NTerm?, CName?, NameParts).
@@ -5701,6 +5735,7 @@ sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(r(_), unsigned).
+sgn_parts(i(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
@@ -5750,6 +5785,8 @@ kind_ok(sgn(_, _), lv(_, _), no).
 %% A variable a conjunct's quantifier binds, at an instance, matches as the variable does (inst_binds).
 kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.
+%% An item is matched by match_args; the clause covers the type.
+kind_ok(item_of(_), _, no).
 kind_ok(any, _, no).
 kind_ok(V, any, no) :- ground(V?) | true.
 
@@ -5763,6 +5800,7 @@ val_peer1(found(s(_)), D, D?).
 val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(r(_)), D, D?).
+val_peer1(found(i(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -5774,6 +5812,7 @@ val_speech1(found(p(_)), D, speech(utterance(none), D?)).
 val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(r(_)), D, speech(utterance(none), D?)).
+val_speech1(found(i(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -5789,6 +5828,7 @@ num_of(V, B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), num_found(F?, R).
 procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
 num_found(found(r(K)), num_is(K?)).
+num_found(found(i(_)), no_num).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -5840,7 +5880,22 @@ procedure expr_term1(Expr?, Binding?, Found).
 expr_term1(role(I), B, F?) :- lookup(role(I?), B?, F).
 expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
 expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
+%% The author of a speech act, its first signer, and its item, its utterance under its signatures: "the signer, the author and the item of a speech act, its last signer, its first signer and its utterance" (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications").
+expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
+expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+procedure author_found(Found?, Found).
+author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
+author_found(_, free) :- otherwise | true.
+procedure first_signer(Speech?, Peer).
+first_signer(speech(utterance(_), P), P?).
+first_signer(speech(speech(U, Q), _), P?) :- first_signer(speech(U?, Q?), P).
+procedure item_found(Found?, Found).
+item_found(found(s(S)), found(i(U?))) :- ground(S?) | utterance_of(S?, U).
+item_found(_, free) :- otherwise | true.
+procedure utterance_of(Speech?, Utterance).
+utterance_of(speech(utterance(T), _), utterance(T?)).
+utterance_of(speech(speech(U, Q), _), V?) :- utterance_of(speech(U?, Q?), V).
 procedure nt_term(YesNo?, NTerm?, Binding?, CName).
 nt_term(yes, N, B, C?) :- nt_img(N?, B?, C).
 nt_term(no, _, _, dot_any(community(unbound))).
@@ -5885,6 +5940,8 @@ expr_val(sum(_, _, _, _, _), _, no_num).
 expr_val(role(_), _, no_num).
 expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
+expr_val(author_of(_), _, no_num).
+expr_val(item_of(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 %% The wildcard of a cleared atom is in no constraint (GSC 327e035); the clause covers the type.
@@ -6063,6 +6120,8 @@ expr_free(num(X), B, F0, F?) :- otherwise, ground(X?), ground(B?), ground(F0?) |
 expr_free(role(_), _, F0, F0?).
 expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
+expr_free(author_of(_), _, F0, F0?).
+expr_free(item_of(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).

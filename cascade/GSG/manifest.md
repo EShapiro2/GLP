@@ -1,9 +1,9 @@
 # A run of the cascade on GSG
 
-- Contract: `GSG` (`gsg` to the checker), its owner's two files `programs/gsc/GSG.txt` and `programs/gsc/GSG.glp`, copied here as they stood at `ce850c8a`.
+- Contract: `GSG` (`gsg` to the checker), its owner's two files `programs/gsc/GSG.txt` and `programs/gsc/GSG.glp`, copied here as they stood at `6acab862`.
 - The paper: `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `ce850c8a` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/social_graph (the plays with scripted persons).
-- Run on 2026-11-09 14:20 UTC by `cascade.sh gsg`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `6acab862` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/vglp/cva/social_graph (the plays with scripted persons).
+- Run on 2026-11-09 16:40 UTC by `cascade.sh gsg`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
