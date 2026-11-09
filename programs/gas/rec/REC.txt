@@ -1,0 +1,17 @@
+% REC: Recommendations --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GAS, the GLP app store.  The paper responsible: GAS (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
+% Defines: recommendation: recommended(b, s) at the recommender, endorsement(a, s) at the recommended, shown(c, a, s) at them for each person shown, vouched(b, a, s) at that person.
+% Schemas: REC.glp beside this file, written by tools/contracts.py.
+REC: Recommendations
+Alice, Bob and Carol are persons.  REC extends GKK.
+1. ◆ Recommending.  Alice may recommend Bob, whom they know, for something, a skill or a service, once for each thing; Bob is not asked and keeps the recommendation.
+2. ■ Showing.  Bob may show a recommendation they hold to Carol, whom they know, once; Carol then sees who recommended Bob and for what, but does not thereby come to know the recommender.
+3. ■ Withdrawing.  Alice may withdraw a recommendation; it is gone from Bob and from everyone Bob showed it to, and Alice may not make it again.
+Pragmas
+Given: the recommended people Alice vouches for.
+Received: the endorsements Alice holds.
+Seen: the vouched ones Alice saw.
+Recommending: Alice [Recommend] <for what>
+Showing: Bob [Show] <recommendation>
+Withdrawing: Alice [Withdraw recommendation]

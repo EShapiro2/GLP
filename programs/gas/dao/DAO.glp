@@ -1,0 +1,131 @@
+%% ---------------------------------------------------------------------------
+%% DAO.glp --- Grassroots DAO (Nimrod Talmon with Claude, 2026-10-31), in the
+%% term form programs/gsc reads.  The clauses are in DAO.txt beside this file;
+%% DAO extends GKK, so the term holds GKK's three schemas, then DAO's own.
+%%
+%% A DAO is named by its steward a and n, <a>.n, as GSN names a group; the
+%% steward lists every member, itself included, by listed(m, n).  proposal(x,
+%% o, n): the proposal x of o in n; the steward records each proposal and
+%% delivers it to every other member (sent marks it delivered).  A vote is
+%% yes_vote(x, o, m, <a>.n) or no_vote(x, o, m, <a>.n) at the steward,
+%% counted(x, o, m, n) forbidding a second; voted(x, o, n) at the voter marks
+%% their own vote; the steward delivers every vote to every other member
+%% (relayed marks it delivered).  DAO:6 is enforced by numbers the steward
+%% keeps: seats(n, m), the number of members, unseated(n) a member admitted and
+%% not yet counted; for_tally(x, o, n, t) and against_tally(x, o, n, t), twice
+%% the votes each way, each vote adding two ballots that tally_for and
+%% tally_against count, one at a time.  A decision is passed_proposal(x, o, n)
+%% or rejected_proposal(x, o, n), with decided(x, o, n), which forbids another
+%% decision and every later vote; pass needs a for tally above the seats, reject
+%% an against tally above them, every member counted; the steward tells every
+%% other member (told marks it delivered).
+%% ---------------------------------------------------------------------------
+
+NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+             ; ext(NameTerm, Constant).
+Arg        ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+             ; sgn(Constant, Integer) ; num(Constant).
+Args       ::= [] ; [Arg | Args].
+Atom       ::= atom(Constant, Args).
+Atoms      ::= [] ; [Atom | Atoms].
+Mult       ::= Atom ; times(Arg, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Guard      ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
+             ; listed(Integer, Constant, Args).
+RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
+             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
+RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
+Constraint ::= true ; and(Constraint, Constraint)
+             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
+Reach      ::= reach(NameTerm, Constant, NameTerm).
+Reaches    ::= [] ; [Reach | Reaches].
+Names      ::= [] ; [Constant | Names].
+Schema     ::= schema(Constant, Names, Args, RoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, RoleSpecs)
+             ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
+Contract   ::= [] ; [Schema | Contract].
+Preds      ::= [] ; [Constant | Preds].
+Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
+
+%% contract_named(dao, C): the contract, DAO.
+procedure contract_named(Constant?, Declared).
+contract_named(dao,
+%% GKK:1, Identity: act once, so establish forbids the identity it adds.
+   [schema(establish, ['Alice'], [],
+       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
+%% GKK:2, Acquaintance.
+    schema(acquaint, ['Alice', 'Bob'], [],
+       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+%% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
+    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
+       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
+        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+%% DAO:1, Founding: Alice is the steward and the first of its seats.
+    schema(found, ['Alice'], [svar(n)],
+       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(seats, [svar(n), num(1)])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))])])]),
+%% DAO:2, Joining: the steward admits Bob, whom they know, by an act of both; unseated(n) waits for the count of seats.
+    schema(admit, ['Alice', 'Bob'], [svar(n)],
+       [rs(guarded, [atom(listed, [role(2), svar(n)]), atom(unseated, [svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(knows, [role(2)])], []),
+        rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [atom(identity, [])], [atom(member, [nterm(ext(own(1), n))])])]),
+%% DAO:2 and DAO:6, the steward counts a new member among the seats; no one wills it.
+    nschema(seat, ['Alice'], [svar(n), num(m), num(m1)], succ(num(m), num(m1)),
+       [rs(unguarded, [atom(seats, [svar(n), num(m1)])], [atom(unseated, [svar(n)]), atom(seats, [svar(n), num(m)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+%% DAO:3, Proposing: Bob proposes x, once, and the steward Alice records it, its tallies at nought.
+    schema(propose, ['Bob', 'Alice'], [svar(x), svar(n)],
+       [rs(guarded, [], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))])], []),
+        rs(unguarded, [atom(proposal, [svar(x), role(1), nterm(ext(own(2), n))]), atom(for_tally, [svar(x), role(1), svar(n), num(0)]), atom(against_tally, [svar(x), role(1), svar(n), num(0)])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)])], [atom(proposal, [svar(x), role(1), nterm(ext(own(2), n))])])]),
+%% DAO:3, the steward proposes.
+    schema(propose_own, ['Alice'], [svar(x), svar(n)],
+       [rs(guarded, [atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))]), atom(for_tally, [svar(x), role(1), svar(n), num(0)]), atom(against_tally, [svar(x), role(1), svar(n), num(0)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))])])]),
+%% DAO:3, the steward delivers a proposal of o to Bob, another member,
+    schema(deliver_proposal, ['Alice', 'Bob'], [svar(x), pvar(o), svar(n)],
+       [rs(unguarded, [atom(sent, [role(2), svar(x), pvar(o), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(sent, [role(2), svar(x), pvar(o), svar(n)])]),
+        rs(unguarded, [atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+%% and a proposal of the steward's own.
+    schema(deliver_own_proposal, ['Alice', 'Bob'], [svar(x), svar(n)],
+       [rs(unguarded, [atom(sent, [role(2), svar(x), role(1), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(sent, [role(2), svar(x), role(1), svar(n)])]),
+        rs(unguarded, [atom(proposal, [svar(x), role(1), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+%% DAO:4, Voting for: Bob votes, once, and the steward Alice records the vote while the proposal is open, two for_ballot for its tally.
+    schema(vote_for, ['Bob', 'Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])]),
+        rs(unguarded, [atom(yes_vote, [svar(x), pvar(o), role(1), nterm(ext(own(2), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), times(num(2), atom(for_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(decided, [svar(x), pvar(o), nterm(ext(own(2), n))])])]),
+%% DAO:4, the steward votes for.
+    schema(vote_own_for, ['Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(yes_vote, [svar(x), pvar(o), role(1), nterm(ext(own(1), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), times(num(2), atom(for_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])])]),
+%% DAO:6, the steward adds a for_ballot to the tally, twice the votes for; no one wills it.
+    nschema(tally_for, ['Alice'], [svar(x), pvar(o), svar(n), num(a), num(a1)], succ(num(a), num(a1)),
+       [rs(unguarded, [atom(for_tally, [svar(x), pvar(o), svar(n), num(a1)])], [atom(for_ballot, [svar(x), pvar(o), svar(n)]), atom(for_tally, [svar(x), pvar(o), svar(n), num(a)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+%% DAO:4, the steward delivers each yes_vote to Bob, another member.
+    schema(deliver_yes_vote, ['Alice', 'Bob'], [svar(x), pvar(o), pvar(v), svar(n)],
+       [rs(unguarded, [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(yes_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])]),
+        rs(unguarded, [atom(yes_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+%% DAO:4, Voting against: Bob votes, once, and the steward Alice records the vote while the proposal is open, two against_ballot for its tally.
+    schema(vote_against, ['Bob', 'Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(voted, [svar(x), pvar(o), nterm(ext(own(2), n))])]),
+        rs(unguarded, [atom(no_vote, [svar(x), pvar(o), role(1), nterm(ext(own(2), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), times(num(2), atom(against_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(2), n))]), atom(listed, [role(2), svar(n)]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(2), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(decided, [svar(x), pvar(o), nterm(ext(own(2), n))])])]),
+%% DAO:4, the steward votes against.
+    schema(vote_own_against, ['Alice'], [svar(x), pvar(o), svar(n)],
+       [rs(guarded, [atom(no_vote, [svar(x), pvar(o), role(1), nterm(ext(own(1), n))]), atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), times(num(2), atom(against_ballot, [svar(x), pvar(o), svar(n)]))], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))])], [atom(counted, [svar(x), pvar(o), role(1), svar(n)]), atom(voted, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])])]),
+%% DAO:6, the steward adds a against_ballot to the tally, twice the votes against; no one wills it.
+    nschema(tally_against, ['Alice'], [svar(x), pvar(o), svar(n), num(a), num(a1)], succ(num(a), num(a1)),
+       [rs(unguarded, [atom(against_tally, [svar(x), pvar(o), svar(n), num(a1)])], [atom(against_ballot, [svar(x), pvar(o), svar(n)]), atom(against_tally, [svar(x), pvar(o), svar(n), num(a)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)])], [])]),
+%% DAO:4, the steward delivers each no_vote to Bob, another member.
+    schema(deliver_no_vote, ['Alice', 'Bob'], [svar(x), pvar(o), pvar(v), svar(n)],
+       [rs(unguarded, [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(no_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(relayed, [role(2), svar(x), pvar(o), pvar(v), svar(n)])]),
+        rs(unguarded, [atom(no_vote, [svar(x), pvar(o), pvar(v), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+%% DAO:5 and DAO:6, the steward decides, once, and only when the for tally, twice the votes for, exceeds the seats, every member counted.
+    nschema(pass, ['Alice'], [svar(x), pvar(o), svar(n), num(c), num(m)], gt(num(c), num(m)),
+       [rs(guarded, [atom(passed_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(for_tally, [svar(x), pvar(o), svar(n), num(c)]), atom(seats, [svar(n), num(m)])], [atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(unseated, [svar(n)])])]),
+%% DAO:5, and delivers the decision to Bob, another member.
+    schema(deliver_pass, ['Alice', 'Bob'], [svar(x), pvar(o), svar(n)],
+       [rs(unguarded, [atom(told, [role(2), svar(x), pvar(o), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(passed_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(told, [role(2), svar(x), pvar(o), svar(n)])]),
+        rs(unguarded, [atom(passed_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])]),
+%% DAO:5 and DAO:6, the steward decides, once, and only when the against tally, twice the votes against, exceeds the seats, every member counted.
+    nschema(reject, ['Alice'], [svar(x), pvar(o), svar(n), num(c), num(m)], gt(num(c), num(m)),
+       [rs(guarded, [atom(rejected_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(against_tally, [svar(x), pvar(o), svar(n), num(c)]), atom(seats, [svar(n), num(m)])], [atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(unseated, [svar(n)])])]),
+%% DAO:5, and delivers the decision to Bob, another member.
+    schema(deliver_reject, ['Alice', 'Bob'], [svar(x), pvar(o), svar(n)],
+       [rs(unguarded, [atom(told, [role(2), svar(x), pvar(o), svar(n)])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))]), atom(listed, [role(1), svar(n)]), atom(rejected_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(listed, [role(2), svar(n)])], [atom(told, [role(2), svar(x), pvar(o), svar(n)])]),
+        rs(unguarded, [atom(rejected_proposal, [svar(x), pvar(o), nterm(ext(own(1), n))]), atom(decided, [svar(x), pvar(o), nterm(ext(own(1), n))])], [], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])]).

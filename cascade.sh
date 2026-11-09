@@ -61,6 +61,13 @@
 #   gd          GD    GGGA        programs/ggga             ---
 #   gd_s        GD-S  GGGA        programs/ggga             ---
 #   gdo_l       GDO-L GFF         programs/gff              ---
+#   dao         DAO   (to rule)   programs/gas/dao          ---
+#   ldao        LDAO  (to rule)   programs/gas/ldao         ---
+#   fdao        FDAO  (to rule)   programs/gas/fdao         ---
+#   rec         REC   (to rule)   programs/gas/rec          ---
+#   stay        STAY  (to rule)   programs/gas/stay         ---
+#   lib         LIB   (to rule)   programs/gas/lib          ---
+#   joint       JOINT (to rule)   programs/gas/joint        ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -170,7 +177,14 @@ case "$1" in
     gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
     gd_s) FILE=GD-S; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
     gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc" >&2; exit 2 ;;
+    dao) FILE=DAO;  OWNER="programs/gas/dao";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; owner for Udi to rule)
+    ldao) FILE=LDAO; OWNER="programs/gas/ldao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO (pull request 9; owner for Udi to rule)
+    fdao) FILE=FDAO; OWNER="programs/gas/fdao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO and GB (pull request 9; owner for Udi to rule)
+    rec) FILE=REC;  OWNER="programs/gas/rec";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; owner for Udi to rule)
+    stay) FILE=STAY; OWNER="programs/gas/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; owner for Udi to rule)
+    lib) FILE=LIB;  OWNER="programs/gas/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; owner for Udi to rule)
+    joint) FILE=JOINT; OWNER="programs/gas/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; owner for Udi to rule)
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
