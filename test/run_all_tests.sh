@@ -4280,6 +4280,18 @@ check "CVA pragmas: a tab of an inherited tab's name replaces it, each tab once,
 check "CVA pragmas: ... the replaced tab named, with the last that replaces it (replace_tab)" "^XT: the tab Closed: replaced by the tab of XV of the same name$" "$cva_pt_one"
 check "CVA pragmas: ... through a contract between (replace_tab)" "^XT: the tab Led: replaced by the tab of XV of the same name$" "$cva_pt_one"
 check "CVA pragmas: ... and pragmas.sh exits 0 (replace_tab)" "^exit 0$" "$cva_pt_one"
+# An inherited tab stands while the contract has the predicate it lists (vGLP e1d1b8a, Section 5.4, "The contract's words": "an inherited tab standing while the contract has the predicate it lists, as an inherited button stands while the contract has an act it names"), as GSN's Messages and Posts are gone in GSNP: XW amends XT, whose Closed lists closed; compiled with create alone, Closed is gone and Led stands, and with close too, both stand (drop_tab).
+cva_pdt=$(mktemp -d)
+printf '%s\n' 'XT' 'Alice is a person.' '1. ■ Groups. Alice may create a group and close it.' 'Pragmas' 'Led: the groups Alice leads.' 'Closed: the groups Alice closed.' 'Groups: Alice [Create] <name> [Close]' > "$cva_pdt/XT.txt"
+printf '%s\n' 'XW' 'XW amends XT.' 'Alice is a person.' '1. ■ Keeping. Alice may keep a group.' 'Pragmas' 'Keeping: Alice [Create] <name>' > "$cva_pdt/XW.txt"
+cva_pdt_one=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pdt/XW.txt" "[$cva_pr_create]" 2>&1; echo "exit $?")
+cva_pdt_two=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_pdt/XW.txt" "[$cva_pr_create, $cva_pr_close]" 2>&1; echo "exit $?")
+rm -rf "$cva_pdt"
+check "CVA pragmas: an inherited tab whose predicate the contract lacks is gone, the tab whose predicate it has standing (drop_tab)" "^pragmas(\[list('\"Led\"', \['leads'\])\], " "$cva_pdt_one"
+check "CVA pragmas: ... the tab gone named (drop_tab)" "^XT: the tab Closed: gone, the contract having no predicate it lists$" "$cva_pdt_one"
+check "CVA pragmas: ... and pragmas.sh exits 0 (drop_tab)" "^exit 0$" "$cva_pdt_one"
+check "CVA pragmas: ... with the predicate in the contract the tab stands (drop_tab)" "^pragmas(\[list('\"Led\"', \['leads'\]), list('\"Closed\"', \['closed'\])\], " "$cva_pdt_two"
+check_not "CVA pragmas: ... and none is gone (drop_tab)" "gone, the contract having no predicate" "$cva_pdt_two"
 # The line saying what a contract is written from, the first after its title and before its names declaration, "<NAME> <relation> <NAME'> (...)." or with no parentheses, the relation one of extends, amends, restricts and instantiates, several contracts joined by "and" (style guide 36; GSC, Section 8; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1): pragmas.sh takes the contracts it names as those whose pragmas the contract has, and reads the % Extends line where the line is absent.
 cva_prel=$(mktemp -d)
 mkdir "$cva_prel/old" "$cva_prel/new" "$cva_prel/hy"

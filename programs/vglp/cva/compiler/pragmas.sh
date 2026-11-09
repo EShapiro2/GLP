@@ -463,6 +463,11 @@ for my $f (@order) {
                     }
                 }
             }
+            # An inherited tab stands while the contract has the predicate it lists: "an inherited tab standing while the contract has the predicate it lists, as an inherited button stands while the contract has an act it names" (vGLP e1d1b8a, Section 5.4, "The contract’s words"); one naming no predicate of the contract’s schemas is gone, as GSN’s Messages and Posts are in GSNP, and the first tab kept is the one the contract’s clause lines’ buttons go to.  A tab of the contract’s own that names none stands, naming none, so that the fault shows.
+            if (!@found && $f ne $top) {
+                push @lines_out, "$name: the tab $title: gone, the contract having no predicate it lists";
+                next;
+            }
             if (@found) { @w = @found; $tabpred{$_} = 1 for @found }
             else {
                 for my $w (@lw) {
