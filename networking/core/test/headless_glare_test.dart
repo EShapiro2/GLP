@@ -194,7 +194,7 @@ class _CrossingDialer {
         return null;
       }
     };
-    router.onAckReceived = (messageId) {
+    router.onAckReceived = (_, messageId) {
       ackedMessageIds.add(messageId);
       _acks.putIfAbsent(messageId, Completer<void>.new);
       if (!_acks[messageId]!.isCompleted) _acks[messageId]!.complete();

@@ -14,6 +14,8 @@ import 'package:grassroots_networking_core/src/headless/headless_grassroots_netw
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
+import 'package:grassroots_networking_core/src/routing/message_router.dart';
+import 'package:grassroots_networking_core/src/store/messages_actions.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/event_waits.dart';
@@ -174,8 +176,13 @@ void main() {
     await firstReceived.future;
     expect(received, isNotEmpty,
         reason: 'the restored queue is delivered once the peer is reachable');
-    expect(received.first,
-        (hex(senderId.publicKey), 'queued before termination', messageId));
+    expect(
+        received.first,
+        (
+          hex(senderId.publicKey),
+          'queued before termination',
+          MessageRouter.deliveryIdOf(senderId.publicKey, messageId!)
+        ));
     expect(
         received.every((r) => r.$2 == 'queued before termination'), isTrue,
         reason: 'a duplicate is allowed; nothing else is delivered');
@@ -233,8 +240,13 @@ void main() {
     expect(received, isNotEmpty,
         reason: 'the heartbeat dials the unreachable known peer, and its '
             'reachability drains the restored queue');
-    expect(received.first,
-        (hex(senderId.publicKey), 'restored and swept', messageId));
+    expect(
+        received.first,
+        (
+          hex(senderId.publicKey),
+          'restored and swept',
+          MessageRouter.deliveryIdOf(senderId.publicKey, messageId!)
+        ));
   }, timeout: Timeout.none);
 
   test(
@@ -278,16 +290,20 @@ void main() {
         recipientId.publicKey, Uint8List.fromList(utf8.encode('kept')));
     final ackedId = await sender.send(
         recipientId.publicKey, Uint8List.fromList(utf8.encode('acked')));
-    expect(await both.future, {'kept': keptId, 'acked': ackedId});
+    final keptDelivery =
+        MessageRouter.deliveryIdOf(senderId.publicKey, keptId!);
+    final ackedDelivery =
+        MessageRouter.deliveryIdOf(senderId.publicKey, ackedId!);
+    expect(await both.future, {'kept': keptDelivery, 'acked': ackedDelivery});
 
     // The runtime acknowledges one of the two; then the layer terminates.
-    await first.acknowledge(ackedId!);
+    await first.acknowledge(ackedDelivery);
     await first.dispose();
     const store = SharedPreferencesOutboundQueueStore();
     expect(
         (await store.loadDelivered(hex(recipientId.publicKey)))
             .map((e) => e.messageId),
-        [keptId],
+        [keptDelivery],
         reason: 'an acknowledged message is kept no longer');
 
     // The restart: a layer with the same identity and store delivers the
@@ -302,12 +318,54 @@ void main() {
     // The kept messages are delivered again in one turn of the event loop,
     // which ends before the wait on the first of them resumes.
     await firstAgain.future;
-    expect(again, [(hex(senderId.publicKey), 'kept', keptId)]);
+    expect(again, [(hex(senderId.publicKey), 'kept', keptDelivery)]);
 
-    await second.acknowledge(keptId!);
+    await second.acknowledge(keptDelivery);
     await second.dispose();
     expect(await store.loadDelivered(hex(recipientId.publicKey)), isEmpty,
         reason: 'acknowledged, it is not delivered at the next restart');
+  }, timeout: Timeout.none);
+
+  test(
+      'a read receipt names the message by the id it was delivered under, and '
+      'marks the outgoing message it answers read (F07, GNA §2.9)', () async {
+    final senderId = await identityFromSeed(0x9a);
+    final recipientId = await identityFromSeed(0x9b);
+
+    final read = Completer<MessageReadAction>();
+    final sender = await startNode(senderId, onAction: (action) {
+      if (action is MessageReadAction && !read.isCompleted) {
+        read.complete(action);
+      }
+    });
+    addTearDown(sender.dispose);
+    final recipient = await startNode(recipientId);
+    addTearDown(recipient.dispose);
+    final delivered = Completer<String>();
+    recipient.onMessageReceived = (s, payload, id, u) {
+      if (!delivered.isCompleted) delivered.complete(id);
+    };
+    recipient.putKnownPeer(senderId.publicKey);
+    recipient.wan!
+        .putPeerAddress(senderId.publicKey, await listeningAddress(sender));
+    sender.putKnownPeer(recipientId.publicKey);
+    sender.wan!
+        .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
+
+    final wireId = await sender.send(
+        recipientId.publicKey, Uint8List.fromList(utf8.encode('read me')));
+    final deliveryId = await delivered.future;
+    expect(deliveryId, isNot(wireId));
+    expect(deliveryId, MessageRouter.deliveryIdOf(senderId.publicKey, wireId!));
+
+    expect(
+        await recipient.sendReadReceipt(
+            messageId: deliveryId, senderPubkey: senderId.publicKey),
+        isTrue);
+    final action = await read.future;
+    expect(action.messageId, wireId);
+    expect(sender.store.state.messages.outgoingMessages[wireId]?.status,
+        MessageStatus.read);
   }, timeout: Timeout.none);
 
   test("each agent's queue is its own", () async {

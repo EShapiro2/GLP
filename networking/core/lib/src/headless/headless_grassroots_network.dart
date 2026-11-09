@@ -1208,9 +1208,9 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
-    _messageRouter.onAckReceived = (messageId) {
+    _messageRouter.onAckReceived = (senderPubkey, messageId) {
       debugPrint('[headless] ACK received for $messageId');
-      _udpMessageSender.handleMessageAck(messageId);
+      _udpMessageSender.handleMessageAck(_hex(senderPubkey), messageId);
     };
 
     _messageRouter.onFragmentAckReceived =
