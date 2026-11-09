@@ -55,10 +55,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart' show screenTermOf;
 import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/look.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'programs_dir.dart';
 
 /// One villager: its name, and the friends it holds a conversation with in
 /// `village.glp`'s `market/1`.
@@ -123,14 +125,9 @@ Widget _phone(Widget surface, {required double height, double? screen}) =>
             height: screen ?? height - 20,
             child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-                fontFamily: 'AppFont',
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-                elevatedButtonTheme: ElevatedButtonThemeData(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white))),
+            theme: Looks.readSync('${programsDir()}/self.glp')
+                .of('GC')
+                .theme(fontFamily: 'AppFont'),
             home: surface,
           ),
           ),

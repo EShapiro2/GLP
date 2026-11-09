@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'glp_sources.dart';
 import 'isolate_protocol.dart';
 import 'ui_runtime/agent_surface.dart';
+import 'ui_runtime/look.dart';
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
 
@@ -49,8 +50,13 @@ class VglpProgram {
   /// the program takes no first act.
   final String? entry;
 
+  /// The contract the program is compiled from, whose look it takes: its
+  /// icon and its family's colours (`programs/apps/look.json`, look.dart).
+  final String contract;
+
   const VglpProgram({
     required this.title,
+    required this.contract,
     required this.person,
     required this.directory,
     required this.manifest,
@@ -69,10 +75,7 @@ class VglpApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
         title: program.title,
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-          useMaterial3: true,
-        ),
+        theme: ThemeData(useMaterial3: true),
         home: VglpScreen(program),
       );
 }
@@ -109,8 +112,16 @@ class _VglpScreenState extends State<VglpScreen> {
     super.dispose();
   }
 
+  /// The look of the program's contract, once read; null until then.
+  ContractLook? _look;
+
   Future<void> _spawn() async {
     final glp = await resolveGlpPaths();
+    try {
+      _look = (await Looks.read(glp.rootSelfGlp)).of(_p.contract);
+    } catch (e) {
+      _status = 'Error: no look: $e';
+    }
     _ui = UiRuntime(
       manifest: _p.manifest,
       onSend: (cmd) => _commands?.send(UserInput(cmd)),
@@ -149,13 +160,20 @@ class _VglpScreenState extends State<VglpScreen> {
     }
   }
 
+  /// [w] in the theme of the program's contract, once its look is read.
+  Widget _looked(Widget w) {
+    final look = _look;
+    return look == null ? w : Theme(data: look.theme(), child: w);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ui = _ui;
     final body = ui == null
         ? Center(
             child: Text(_status, style: const TextStyle(color: Colors.grey)))
-        : AgentSurface(agentId: _p.person, runtime: ui);
+        : _looked(AgentSurface(
+            agentId: _p.person, runtime: ui, icon: _look?.icon));
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B33),
       body: Center(child: PhoneFrame(child: body)),

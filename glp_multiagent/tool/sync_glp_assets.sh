@@ -64,6 +64,10 @@ done
 # configuration is a file of the repository the app reads when it is built"),
 # beside the program; SuperAppHost reads it (readServices).
 stage social/graph/core/services.json
+# Each contract's icon and family and each family's colours, beside the
+# contracts, which the site's build reads too (GSA #2, 2026-11-09); the app
+# reads it under the root self.glp's directory (lib/ui_runtime/look.dart).
+stage apps/look.json
 # A .vglp is compiled with the dispatcher's generic source, programs/vglp/dispatcher.glp,
 # and its part typed over the type of a position, programs/vglp/views.glp.
 if [ -n "$(find "$DST" -name '*.vglp')" ]; then
