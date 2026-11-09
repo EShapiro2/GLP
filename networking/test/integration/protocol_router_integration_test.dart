@@ -192,7 +192,7 @@ void main() {
       String? receivedId;
       Uint8List? receivedPayload;
       Uint8List? receivedSender;
-      bobRouter.onMessageReceived = (id, sender, payload, _) {
+      bobRouter.onMessageReceived = (id, __, sender, payload, _) {
         receivedId = id;
         receivedSender = sender;
         receivedPayload = payload;
@@ -217,7 +217,7 @@ void main() {
       );
 
       bool messageReceived = false;
-      bobRouter.onMessageReceived = (_, __, ___, ____) {
+      bobRouter.onMessageReceived = (_, _____, __, ___, ____) {
         messageReceived = true;
       };
 
@@ -284,7 +284,7 @@ void main() {
       String? receivedId;
       Uint8List? receivedPayload;
       Uint8List? receivedSender;
-      bobRouter.onMessageReceived = (id, sender, payload, _) {
+      bobRouter.onMessageReceived = (id, __, sender, payload, _) {
         receivedId = id;
         receivedSender = sender;
         receivedPayload = payload;
@@ -346,7 +346,7 @@ void main() {
       final packet = oneFragmentMessage(messageId: '44444444-4444-4444-4444-444444444444', body: messagePayload);
 
       int receiveCount = 0;
-      bobRouter.onMessageReceived = (_, __, ___, ____) {
+      bobRouter.onMessageReceived = (_, _____, __, ___, ____) {
         receiveCount++;
       };
       int ackCount = 0;
@@ -483,7 +483,7 @@ void main() {
       final aliceMsg = oneFragmentMessage(messageId: '55555555-5555-5555-5555-555555555555', body: helloPayload);
 
       Uint8List? bobReceived;
-      bobRouter.onMessageReceived = (_, __, payload, ___) {
+      bobRouter.onMessageReceived = (_, ____, __, payload, ___) {
         bobReceived = payload;
       };
       await bobRouter.processPacket(
@@ -498,7 +498,7 @@ void main() {
       final bobMsg = oneFragmentMessage(messageId: '66666666-6666-6666-6666-666666666666', body: replyPayload);
 
       Uint8List? aliceReceived;
-      aliceRouter.onMessageReceived = (_, __, payload, ___) {
+      aliceRouter.onMessageReceived = (_, ____, __, payload, ___) {
         aliceReceived = payload;
       };
       await aliceRouter.processPacket(

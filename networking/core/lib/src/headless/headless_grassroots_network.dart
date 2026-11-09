@@ -271,10 +271,11 @@ class HeadlessGrassrootsNetwork {
   // ===== Spec API surface =====
 
   /// Callback for incoming payloads (spec §Point-to-Point Communication,
-  /// `onMessageReceived(sender, payload, messageId, underlay)`): the sender's
-  /// public key, the byte payload, a layer-assigned `messageId`, and the
-  /// underlay over which the message was delivered — [Underlay.wan] in this
-  /// profile.
+  /// `onMessageReceived(sender, payload, messageId, senderMessageId,
+  /// underlay)`): the sender's public key, the byte payload, a layer-assigned
+  /// `messageId`, which [acknowledge] takes, the `senderMessageId` the
+  /// sender's [send] returned for the message, and the underlay over which
+  /// the message was delivered — [Underlay.wan] in this profile.
   ///
   /// Each message is kept before it is delivered, until [acknowledge] names
   /// it (GNA §2.9).  The messages the persisted queue holds unacknowledged
@@ -285,6 +286,7 @@ class HeadlessGrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? get onMessageReceived => _onMessageReceived;
 
@@ -293,6 +295,7 @@ class HeadlessGrassrootsNetwork {
         Uint8List sender,
         Uint8List payload,
         String messageId,
+        String senderMessageId,
         Underlay underlay,
       )? cb) {
     _onMessageReceived = cb;
@@ -303,6 +306,7 @@ class HeadlessGrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? _onMessageReceived;
 
@@ -324,9 +328,8 @@ class HeadlessGrassrootsNetwork {
         'message(s) again');
     Timer.run(() {
       for (final entry in kept) {
-        _onMessageReceived?.call(
-            _bytes(entry.senderHex), entry.payload, entry.messageId,
-            entry.underlay);
+        _onMessageReceived?.call(_bytes(entry.senderHex), entry.payload,
+            entry.messageId, entry.senderMessageId, entry.underlay);
       }
     });
   }
@@ -910,8 +913,9 @@ class HeadlessGrassrootsNetwork {
   /// completes. The message is saved in the persisted queue before this
   /// returns, and dropped from it once acknowledged, so that the queue
   /// survives the termination of the application (GNA §2.11); a save that
-  /// fails is thrown. Returns the id the layer gave the message, or null for
-  /// invalid input.
+  /// fails is thrown. Returns the id the layer gave the message, which the
+  /// recipient's [onMessageReceived] receives as `senderMessageId`, or null
+  /// for invalid input.
   Future<String?> send(Uint8List recipientPubkey, Uint8List payload) async {
     if (recipientPubkey.length != 32) {
       debugPrint('[headless] Cannot send: recipient key must be 32 bytes');
@@ -1114,18 +1118,20 @@ class HeadlessGrassrootsNetwork {
     // A message is kept before it is delivered and its last fragment
     // acknowledged to its sender, until the runtime acknowledges it (GNA
     // §2.9, §2.11).
-    _messageRouter.keepDelivered =
-        (messageId, senderPubkey, payload, arrivalTransport) =>
-            _persistedQueue.keep(DeliveredQueueEntry(
-              senderHex: _hex(senderPubkey),
-              messageId: messageId,
-              payload: payload,
-              underlay: Underlay.wan,
-            ));
+    _messageRouter.keepDelivered = (messageId, senderMessageId, senderPubkey,
+            payload, arrivalTransport) =>
+        _persistedQueue.keep(DeliveredQueueEntry(
+          senderHex: _hex(senderPubkey),
+          messageId: messageId,
+          senderMessageId: senderMessageId,
+          payload: payload,
+          underlay: Underlay.wan,
+        ));
     _messageRouter.isKeptDelivered = (id) => _persistedQueue.isKept(id);
-    _messageRouter.onMessageReceived =
-        (messageId, senderPubkey, payload, arrivalTransport) {
-      onMessageReceived?.call(senderPubkey, payload, messageId, Underlay.wan);
+    _messageRouter.onMessageReceived = (messageId, senderMessageId,
+        senderPubkey, payload, arrivalTransport) {
+      onMessageReceived?.call(
+          senderPubkey, payload, messageId, senderMessageId, Underlay.wan);
     };
 
     // A clear ANNOUNCE precedes only the XX handshake of a first contact

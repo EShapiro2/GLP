@@ -78,9 +78,10 @@ Future<void> main(List<String> args) async {
   await agent.injectUserInput(rt.ConstTerm(firstAct));
   // The host installs its own onMessageReceived; report each delivery too.
   final deliver = network.onMessageReceived!;
-  network.onMessageReceived = (sender, payload, messageId, underlay) {
+  network.onMessageReceived =
+      (sender, payload, messageId, senderMessageId, underlay) {
     stdout.writeln('RECEIVED ${sender.hex} ${underlay.name}');
-    deliver(sender, payload, messageId, underlay);
+    deliver(sender, payload, messageId, senderMessageId, underlay);
   };
   if (!await layer.start()) {
     stderr.writeln('the layer bound no socket');

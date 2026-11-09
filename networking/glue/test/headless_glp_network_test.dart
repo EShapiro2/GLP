@@ -110,17 +110,20 @@ void main() {
       };
       network.onPeerDisconnected =
           (pk, underlay) => events.add('disconnected ${pk.hex} $underlay');
-      network.onMessageReceived = (sender, payload, messageId, underlay) =>
-          events.add('received ${sender.hex} $payload $messageId $underlay');
+      network.onMessageReceived =
+          (sender, payload, messageId, senderMessageId, underlay) => events.add(
+              'received ${sender.hex} $payload $messageId $senderMessageId '
+              '$underlay');
 
       layer.onPeerConnected!(peer.bytes, Underlay.wan, attested);
       layer.onMessageReceived!(
-          peer.bytes, Uint8List.fromList([1, 2, 3]), 'm-1', Underlay.wan);
+          peer.bytes, Uint8List.fromList([1, 2, 3]), 'm-1', 'w-1',
+          Underlay.wan);
       layer.onPeerDisconnected!(peer.bytes, Underlay.wan);
 
       expect(events, [
         'connected ${peer.hex} ${glp.Underlay.wan}',
-        'received ${peer.hex} [1, 2, 3] m-1 ${glp.Underlay.wan}',
+        'received ${peer.hex} [1, 2, 3] m-1 w-1 ${glp.Underlay.wan}',
         'disconnected ${peer.hex} ${glp.Underlay.wan}',
       ]);
       expect(applicationSeen,
@@ -180,8 +183,9 @@ void main() {
     });
 
     test(
-        "send awaits the layer's save of the queue, and a save that fails "
-        "fails the glue's send (GNA §2.11)", () async {
+        "send awaits the layer's save of the queue and returns the layer's "
+        "id for the message, and a save that fails fails the glue's send "
+        "(GNA §2.11)", () async {
       if (sodiumUnavailable != null) {
         markTestSkipped(sodiumUnavailable!);
         return;
@@ -193,12 +197,14 @@ void main() {
         outboundQueueStore: store,
       );
       addTearDown(saving.dispose);
-      await HeadlessGlpNetwork(saving).send(peer, Uint8List.fromList([1]));
+      final id =
+          await HeadlessGlpNetwork(saving).send(peer, Uint8List.fromList([1]));
       expect(
           (await store.load(_hex(saving.getIdentity())))
-              .map((e) => e.recipientHex),
-          [peer.hex],
-          reason: 'the message is saved once the glue\'s send completes');
+              .map((e) => (e.recipientHex, e.messageId)),
+          [(peer.hex, id)],
+          reason: 'the message is saved once the glue\'s send completes, '
+              'under the id the glue\'s send returns');
 
       final failing = HeadlessGrassrootsNetwork(
         identity: await identityFromSeed(seedOf(0x24)),
@@ -286,6 +292,7 @@ declared :- send_to_user([running]).
       DeliveredQueueEntry(
         senderHex: senderKey.hex,
         messageId: 'm-kept',
+        senderMessageId: 'w-kept',
         payload: Uint8List.fromList([4, 2]),
         underlay: Underlay.wan,
       ),
@@ -296,11 +303,13 @@ declared :- send_to_user([running]).
       sodium: sodium!,
     );
     final network = HeadlessGlpNetwork(layer);
-    final delivered = Completer<(glp.PubKey, List<int>, String, glp.Underlay)>();
-    network.onMessageReceived = (s, payload, id, u) =>
-        delivered.complete((s, payload, id, u));
-    final (s, payload, id, u) = await delivered.future;
-    expect((s, id, u), (senderKey, 'm-kept', glp.Underlay.wan));
+    final delivered =
+        Completer<(glp.PubKey, List<int>, String, String, glp.Underlay)>();
+    network.onMessageReceived = (s, payload, id, senderMessageId, u) =>
+        delivered.complete((s, payload, id, senderMessageId, u));
+    final (s, payload, id, senderMessageId, u) = await delivered.future;
+    expect((s, id, senderMessageId, u),
+        (senderKey, 'm-kept', 'w-kept', glp.Underlay.wan));
     expect(payload, [4, 2]);
 
     network.acknowledge(id);
@@ -611,9 +620,10 @@ answer(forty_two).
       await host.initialize();
       final receivedFrom = <String>[];
       final deliver = network.onMessageReceived!;
-      network.onMessageReceived = (sender, payload, messageId, underlay) {
+      network.onMessageReceived =
+          (sender, payload, messageId, senderMessageId, underlay) {
         receivedFrom.add(sender.hex);
-        deliver(sender, payload, messageId, underlay);
+        deliver(sender, payload, messageId, senderMessageId, underlay);
       };
       // The caller's person names the callee by its key.
       await host.injectUserInput(

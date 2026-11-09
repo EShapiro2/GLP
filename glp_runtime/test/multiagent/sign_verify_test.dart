@@ -55,7 +55,7 @@ GlpEngine _agent(String id, PersonIdentity identity, List<String> out) {
     selfId: id,
     directory: dir,
     keyPair: identity.keyPair,
-    sendToRouter: (_, __) {},
+    sendToRouter: (_, _, _) {},
   );
   engine.madContext!.network = client;
   return engine;

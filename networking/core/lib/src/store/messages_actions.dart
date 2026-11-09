@@ -154,14 +154,9 @@ class SaveChatMessageAction extends MessageAction {
   final bool isOutgoing;
   final DateTime timestamp;
 
-  /// The id the message goes by in the conversation (see
+  /// The id the sender's `send` returned for the message (see
   /// [ChatMessageState.messageId]).
   final String? messageId;
-
-  /// The id the layer delivered an incoming chat message under (see
-  /// [ChatMessageState.wireMessageId]); an outgoing one is linked by
-  /// [LinkWireMessageAction] once `send` returns.
-  final String? wireMessageId;
 
   /// Message type (text, friend request, etc.)
   final int messageType; // ChatMessageType.index
@@ -181,28 +176,12 @@ class SaveChatMessageAction extends MessageAction {
     required this.isOutgoing,
     DateTime? timestamp,
     this.messageId,
-    this.wireMessageId,
     this.messageType = 0, // ChatMessageType.text
     this.udpAddress,
     this.mediaPath,
     this.mediaMime,
     this.viewOnce = false,
   }) : timestamp = timestamp ?? DateTime.now();
-}
-
-/// Record the id the layer gave outgoing chat message [messageId], to
-/// [peerHex], when it was sent: [wireMessageId], the one `send` returned. A
-/// resend gives the message a new one, which replaces it.
-class LinkWireMessageAction extends MessageAction {
-  final String peerHex;
-  final String messageId;
-  final String wireMessageId;
-
-  LinkWireMessageAction({
-    required this.peerHex,
-    required this.messageId,
-    required this.wireMessageId,
-  });
 }
 
 /// Mark a view-once picture as viewed and clear its on-disk path. The caller

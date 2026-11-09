@@ -551,7 +551,7 @@ void main() {
       caller.onPeerConnected = (_, __, ___) =>
           callerConnectedAt ??= relay.clock.elapsed;
       final delivered = Completer<void>();
-      service.onMessageReceived = (_, payload, __, ___) {
+      service.onMessageReceived = (_, payload, __, ____, ___) {
         if (utf8.decode(payload) == 'hello' && !delivered.isCompleted) {
           delivered.complete();
         }
@@ -596,7 +596,7 @@ void main() {
         events.add('connected');
       };
       final delivered = Completer<void>();
-      service.onMessageReceived = (_, payload, __, ___) {
+      service.onMessageReceived = (_, payload, __, ____, ___) {
         events.add('received ${utf8.decode(payload)}');
         if (!delivered.isCompleted) delivered.complete();
       };
@@ -635,7 +635,7 @@ void main() {
       var serviceConnected = false;
       service.onPeerConnected = (_, __, ___) => serviceConnected = true;
       var delivered = false;
-      service.onMessageReceived = (_, __, ___, ____) => delivered = true;
+      service.onMessageReceived = (_, __, ___, _____, ____) => delivered = true;
 
       bool sessionStands() =>
           service.store.state.peers
@@ -699,7 +699,7 @@ void main() {
       var serviceConnects = 0;
       service.onPeerConnected = (_, __, ___) => serviceConnects++;
       final delivered = Completer<void>();
-      service.onMessageReceived = (_, payload, __, ___) {
+      service.onMessageReceived = (_, payload, __, ____, ___) {
         if (!delivered.isCompleted) delivered.complete();
       };
 
@@ -769,7 +769,7 @@ void main() {
         attestations.add((body, transport));
         sessions.add(handshakeHash);
       };
-      router.onMessageReceived = (_, __, body, ___) => payloads.add(body);
+      router.onMessageReceived = (_, ____, __, body, ___) => payloads.add(body);
       // The receiver's acknowledgments return over the link: every
       // fragment's, the last one's once the coordinator has the
       // attestation. Their acknowledgment alone settles the message.

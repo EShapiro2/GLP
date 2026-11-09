@@ -142,11 +142,17 @@ class _Wire {
   /// Each payload carried, as `<from-hex> > <to-hex>`.
   final List<String> carried = [];
 
-  void carry(PubKey from, PubKey to, Uint8List payload) {
+  /// Carry [payload], and return the id the sender's `send` gives it, which
+  /// the recipient receives as its senderMessageId.
+  String carry(PubKey from, PubKey to, Uint8List payload) {
     carried.add('${from.hex} > ${to.hex}');
-    final id = 'w${_next++}';
-    Timer.run(() =>
-        _at[to.hex]?.onMessageReceived?.call(from, payload, id, Underlay.wan));
+    final n = _next++;
+    final id = 'w$n';
+    final sent = 's$n';
+    Timer.run(() => _at[to.hex]
+        ?.onMessageReceived
+        ?.call(from, payload, id, sent, Underlay.wan));
+    return sent;
   }
 }
 
@@ -177,14 +183,13 @@ class _WireNetwork extends GlpNetwork {
   PubKey getIdentity() => keyPair.pub;
 
   @override
-  Future<void> send(PubKey pk, Uint8List payload) {
+  Future<String> send(PubKey pk, Uint8List payload) {
     if (refuse > 0) {
       refuse--;
       refused.add(pk.hex);
       return Future.error(StateError('the message could not be saved'));
     }
-    wire.carry(keyPair.pub, pk, payload);
-    return Future.value();
+    return Future.value(wire.carry(keyPair.pub, pk, payload));
   }
 
   @override
@@ -955,7 +960,7 @@ void main() {
 
       final stranger = generateKeyPair().pub;
       agent.ctx!.network!.onMessageReceived!(
-          stranger, Uint8List.fromList([0, 1, 2]), 'm', Underlay.pan);
+          stranger, Uint8List.fromList([0, 1, 2]), 'm', 's', Underlay.pan);
       expect(out, contains('[ERROR] a message from ${stranger.hex}, which '
           'names no agent, is dropped'));
       expect(logs.where((l) => l.startsWith('MAD_ERROR') && !l.contains('dropped')),

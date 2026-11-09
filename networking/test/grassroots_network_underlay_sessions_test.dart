@@ -263,7 +263,8 @@ void main() {
 
     // A send now rides the session that stands.
     final arrived = Completer<Underlay>();
-    linked.callee.onMessageReceived = (sender, payload, messageId, underlay) {
+    linked.callee.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       if (payload.length == 1 && payload[0] == 2 && !arrived.isCompleted) {
         arrived.complete(underlay);
       }
@@ -314,7 +315,8 @@ void main() {
     expect(dialer.peerUnderlays(calleePk), [Underlay.lan, Underlay.wan]);
 
     final arrived = Completer<Underlay>();
-    linked.callee.onMessageReceived = (sender, payload, messageId, underlay) {
+    linked.callee.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       if (payload.length == 1 && payload[0] == 3 && !arrived.isCompleted) {
         arrived.complete(underlay);
       }
@@ -375,7 +377,8 @@ void main() {
     // A packet on the WAN session is the occasion to record its observed
     // address; it arrives, and the recorded address stays.
     final arrived = Completer<void>();
-    callee.onMessageReceived = (sender, payload, messageId, underlay) {
+    callee.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       if (payload.length == 1 && payload[0] == 5 && !arrived.isCompleted) {
         arrived.complete();
       }

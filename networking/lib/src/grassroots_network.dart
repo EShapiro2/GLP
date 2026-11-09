@@ -199,7 +199,8 @@ Set<String> computeStaleBlePeerPubkeys({
 ///   sodium: sodium,
 /// );
 ///
-/// grassroots.onMessageReceived = (sender, payload, messageId, underlay) {
+/// grassroots.onMessageReceived =
+///     (sender, payload, messageId, senderMessageId, underlay) {
 ///   // Handle incoming GSG block
 /// };
 ///
@@ -656,10 +657,12 @@ class GrassrootsNetwork {
   // ===== Public callbacks =====
 
   /// Called for every incoming payload (spec §Point-to-Point Communication,
-  /// `onMessageReceived(sender, payload, messageId, underlay)`). Receives the
-  /// sender's public key, the byte payload, a layer-assigned `messageId`, and
-  /// the [Underlay] over which the message was delivered, taken from the
-  /// receive path.
+  /// `onMessageReceived(sender, payload, messageId, senderMessageId,
+  /// underlay)`). Receives the sender's public key, the byte payload, a
+  /// layer-assigned `messageId`, which [acknowledge] takes, the
+  /// `senderMessageId` the sender's [send] returned for the message, and the
+  /// [Underlay] over which the message was delivered, taken from the receive
+  /// path.
   ///
   /// Each message is kept before it is delivered, until [acknowledge] names
   /// it (GNA §2.9).  The messages the persisted queue holds unacknowledged
@@ -670,6 +673,7 @@ class GrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? get onMessageReceived => _onMessageReceived;
 
@@ -678,6 +682,7 @@ class GrassrootsNetwork {
         Uint8List sender,
         Uint8List payload,
         String messageId,
+        String senderMessageId,
         Underlay underlay,
       )? cb) {
     _onMessageReceived = cb;
@@ -688,6 +693,7 @@ class GrassrootsNetwork {
     Uint8List sender,
     Uint8List payload,
     String messageId,
+    String senderMessageId,
     Underlay underlay,
   )? _onMessageReceived;
 
@@ -710,7 +716,7 @@ class GrassrootsNetwork {
     Timer.run(() {
       for (final entry in kept) {
         _onMessageReceived?.call(_hexToBytes(entry.senderHex), entry.payload,
-            entry.messageId, entry.underlay);
+            entry.messageId, entry.senderMessageId, entry.underlay);
       }
     });
   }
@@ -2469,7 +2475,8 @@ class GrassrootsNetwork {
   /// 2. UDP (if peer has UDP address and UDP is enabled)
   ///
   /// Returns the id the layer gave the message if it was sent or queued, null
-  /// only for invalid input.
+  /// only for invalid input; the recipient's [onMessageReceived] receives
+  /// this id as `senderMessageId`.
   /// The message status can be tracked via store.state.messages.
   ///
   /// Transport selection: tries BLE first (preferred for nearby peers),
@@ -3727,11 +3734,12 @@ class GrassrootsNetwork {
     // A message is kept before it is delivered and its last fragment
     // acknowledged to its sender, until the runtime acknowledges it (GNA
     // §2.9, §2.11), with the underlay of the session it arrived on.
-    _messageRouter.keepDelivered =
-        (messageId, senderPubkey, payload, arrivalTransport) async {
+    _messageRouter.keepDelivered = (messageId, senderMessageId, senderPubkey,
+        payload, arrivalTransport) async {
       await _persistedQueue.keep(DeliveredQueueEntry(
         senderHex: _pubkeyToHex(senderPubkey),
         messageId: messageId,
+        senderMessageId: senderMessageId,
         payload: payload,
         underlay: arrivalTransport.underlay,
       ));
@@ -3739,8 +3747,8 @@ class GrassrootsNetwork {
     _messageRouter.isKeptDelivered = (id) => _persistedQueue.isKept(id);
 
     // Message received from any transport
-    _messageRouter.onMessageReceived =
-        (messageId, senderPubkey, payload, arrivalTransport) {
+    _messageRouter.onMessageReceived = (messageId, senderMessageId,
+        senderPubkey, payload, arrivalTransport) {
       // The underlay of the session the message arrived on, from the receive
       // path (not inferred from the peer's preferred/active carrier).
       final underlay = arrivalTransport.underlay;
@@ -3753,7 +3761,8 @@ class GrassrootsNetwork {
           payloadSize: payload.length,
         ),
       );
-      onMessageReceived?.call(senderPubkey, payload, messageId, underlay);
+      onMessageReceived?.call(
+          senderPubkey, payload, messageId, senderMessageId, underlay);
     };
 
     // Per-fragment ACK: settle the sender-side retransmit slot (spec

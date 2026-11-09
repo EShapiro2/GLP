@@ -68,11 +68,13 @@ class MessageRouter {
   final ProtocolHandler protocolHandler;
   final FragmentHandler fragmentHandler;
 
-  /// Called when a message is received. [transport] is the transport the packet
-  /// actually arrived on — authoritative, taken from the receive path rather
-  /// than inferred from peer state.
-  void Function(String id, Uint8List senderPubkey, Uint8List payload,
-      PeerTransport transport)? onMessageReceived;
+  /// Called when a message is received. [id] is the layer-assigned one of
+  /// [deliveryIdOf]; senderMessageId is the wire messageId, the id the
+  /// sender's `send` returned for the message. [transport] is the transport
+  /// the packet actually arrived on — authoritative, taken from the receive
+  /// path rather than inferred from peer state.
+  void Function(String id, String senderMessageId, Uint8List senderPubkey,
+      Uint8List payload, PeerTransport transport)? onMessageReceived;
 
   /// Called before a reassembled payload is delivered and its last fragment
   /// acknowledged: the coordinator keeps the message until the runtime
@@ -83,9 +85,11 @@ class MessageRouter {
   /// acknowledged, and its reassembly buffer is kept: the sender's
   /// retransmission of that fragment returns the message again and the save
   /// is retried.  Absent, the message is delivered and acknowledged at
-  /// once.  The id is the layer-assigned one of [deliveryIdOf].
-  Future<void> Function(String id, Uint8List senderPubkey, Uint8List payload,
-      PeerTransport transport)? keepDelivered;
+  /// once.  The id is the layer-assigned one of [deliveryIdOf], and
+  /// senderMessageId the wire messageId, as in [onMessageReceived].
+  Future<void> Function(String id, String senderMessageId,
+      Uint8List senderPubkey, Uint8List payload, PeerTransport transport)?
+      keepDelivered;
 
   /// Whether the message delivered under [id] (the layer-assigned one of
   /// [deliveryIdOf]) is kept: saved by [keepDelivered] and not yet
@@ -689,7 +693,8 @@ class MessageRouter {
     final deliveryId = deliveryIdOf(senderPubkey, messageId);
     void deliverAndSettle() {
       try {
-        onMessageReceived?.call(deliveryId, senderPubkey, body, transport);
+        onMessageReceived?.call(
+            deliveryId, messageId, senderPubkey, body, transport);
       } finally {
         settle();
       }
@@ -700,7 +705,7 @@ class MessageRouter {
       deliverAndSettle();
       return;
     }
-    unawaited(keep(deliveryId, senderPubkey, body, transport).then(
+    unawaited(keep(deliveryId, messageId, senderPubkey, body, transport).then(
       (_) => deliverAndSettle(),
       onError: (Object e) {
         // Neither delivered nor acknowledged, the buffer kept: the sender's

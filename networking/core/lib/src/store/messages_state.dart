@@ -130,16 +130,11 @@ class ChatMessageState {
   /// For friendship messages: the UDP address involved
   final String? udpAddress;
 
-  /// The id the message goes by in the conversation: for a chat message the
-  /// chat id its payload carries, which its read receipt names; for a
-  /// friendship message the layer's.
+  /// The id the sender's `send` returned for the message: for an outgoing
+  /// one, the id under which the layer reports its delivery status; for an
+  /// incoming one, the `senderMessageId` it was delivered with, which its
+  /// read receipt names.
   final String? messageId;
-
-  /// The id the layer gave a chat message, under which it keeps the
-  /// message's delivery record: for an outgoing one the id `send` returned,
-  /// null until `send` returns; for an incoming one the id it was delivered
-  /// under.
-  final String? wireMessageId;
 
   /// Absolute path to the on-disk media file for picture messages. Null for
   /// text/friendship messages, and also null after a view-once picture has
@@ -169,7 +164,6 @@ class ChatMessageState {
     this.messageType = ChatMessageType.text,
     this.udpAddress,
     this.messageId,
-    this.wireMessageId,
     this.mediaPath,
     this.mediaMime,
     this.viewOnce = false,
@@ -270,7 +264,6 @@ class ChatMessageState {
         'messageType': messageType.index,
         'udpAddress': udpAddress,
         'messageId': messageId,
-        'wireMessageId': wireMessageId,
         'mediaPath': mediaPath,
         'mediaMime': mediaMime,
         'viewOnce': viewOnce,
@@ -287,9 +280,6 @@ class ChatMessageState {
       messageType: ChatMessageType.values[json['messageType'] as int],
       udpAddress: json['udpAddress'] as String?,
       messageId: json['messageId'] as String?,
-      wireMessageId: json.containsKey('wireMessageId')
-          ? json['wireMessageId'] as String?
-          : throw const FormatException('chat message without wireMessageId'),
       mediaPath: json['mediaPath'] as String?,
       mediaMime: json['mediaMime'] as String?,
       viewOnce: (json['viewOnce'] as bool?) ?? false,
@@ -304,7 +294,6 @@ class ChatMessageState {
     String? content,
     bool? viewed,
     String? mediaPath,
-    String? wireMessageId,
     bool clearMediaPath = false,
   }) {
     return ChatMessageState(
@@ -316,7 +305,6 @@ class ChatMessageState {
       messageType: messageType,
       udpAddress: udpAddress,
       messageId: messageId,
-      wireMessageId: wireMessageId ?? this.wireMessageId,
       mediaPath: clearMediaPath ? null : (mediaPath ?? this.mediaPath),
       mediaMime: mediaMime,
       viewOnce: viewOnce,
@@ -334,7 +322,6 @@ class ChatMessageState {
           timestamp == other.timestamp &&
           messageType == other.messageType &&
           mediaPath == other.mediaPath &&
-          wireMessageId == other.wireMessageId &&
           viewed == other.viewed;
 
   @override
@@ -344,7 +331,6 @@ class ChatMessageState {
         timestamp,
         messageType,
         mediaPath,
-        wireMessageId,
         viewed,
       );
 }

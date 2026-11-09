@@ -167,7 +167,8 @@ void main() {
       test('drops clear fragment packets unconditionally', () async {
         bool anyCalled = false;
         bool decryptCalled = false;
-        router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
+        router.onMessageReceived =
+            (_, _____, __, ___, ____) => anyCalled = true;
         router.onFragmentAckRequested =
             (_, __, ___, ____) => anyCalled = true;
         router.decryptSessionPacket =
@@ -229,7 +230,8 @@ void main() {
         for (final type in clearAppTypes) {
           bool anyCalled = false;
           bool decryptCalled = false;
-          router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
+          router.onMessageReceived =
+              (_, _____, __, ___, ____) => anyCalled = true;
           router.onFragmentAckReceived =
               (_, __, ___, ____) => anyCalled = true;
           router.onFragmentAckRequested =
@@ -263,7 +265,7 @@ void main() {
           () async {
         bool messageReceived = false;
         router.onMessageReceived =
-            (_, __, ___, ____) => messageReceived = true;
+            (_, _____, __, ___, ____) => messageReceived = true;
         router.decryptSessionPacket =
             (packet, transport, {String? peerId}) async => null;
 
@@ -452,11 +454,14 @@ void main() {
         stubSession();
 
         String? receivedId;
+        String? receivedSenderMessageId;
         Uint8List? receivedPubkey;
         Uint8List? receivedPayload;
         PeerTransport? receivedTransport;
-        router.onMessageReceived = (id, pubkey, payload, transport) {
+        router.onMessageReceived =
+            (id, senderMessageId, pubkey, payload, transport) {
           receivedId = id;
+          receivedSenderMessageId = senderMessageId;
           receivedPubkey = pubkey;
           receivedPayload = payload;
           receivedTransport = transport;
@@ -474,6 +479,8 @@ void main() {
 
         expect(receivedId,
             equals(MessageRouter.deliveryIdOf(otherPubkey, messageId)));
+        // The sender's own id, the wire id its fragments carry.
+        expect(receivedSenderMessageId, equals(messageId));
         expect(receivedPubkey, equals(otherPubkey));
         expect(receivedPayload, equals(body));
         expect(receivedTransport, equals(PeerTransport.bleDirect));
@@ -483,7 +490,7 @@ void main() {
         stubSession();
 
         PeerTransport? receivedTransport;
-        router.onMessageReceived = (_, __, ___, transport) {
+        router.onMessageReceived = (_, ____, __, ___, transport) {
           receivedTransport = transport;
         };
 
@@ -505,7 +512,8 @@ void main() {
         stubSession();
 
         bool anyCalled = false;
-        router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
+        router.onMessageReceived =
+            (_, _____, __, ___, ____) => anyCalled = true;
         router.onFragmentAckRequested =
             (_, __, ___, ____) => anyCalled = true;
 
@@ -569,7 +577,7 @@ void main() {
         stubSession();
 
         int messageCount = 0;
-        router.onMessageReceived = (_, __, ___, ____) => messageCount++;
+        router.onMessageReceived = (_, _____, __, ___, ____) => messageCount++;
         int ackCount = 0;
         router.onFragmentAckRequested = (_, __, ___, ____) => ackCount++;
 
@@ -613,7 +621,7 @@ void main() {
         final deliveries = <String>[];
         final ackRequests = <String>[];
         router.onMessageReceived =
-            (messageId, __, ___, ____) => deliveries.add(messageId);
+            (messageId, _____, __, ___, ____) => deliveries.add(messageId);
         router.onFragmentAckRequested =
             (_, __, messageId, ___) => ackRequests.add(messageId);
 
@@ -641,7 +649,7 @@ void main() {
 
         final delivered = <String>{};
         router.onMessageReceived =
-            (messageId, __, ___, ____) => delivered.add(messageId);
+            (messageId, _____, __, ___, ____) => delivered.add(messageId);
 
         const count = 10000;
         for (var i = 0; i < count; i++) {
@@ -670,7 +678,7 @@ void main() {
 
         Uint8List? reassembledPayload;
         Uint8List? reassembledSender;
-        router.onMessageReceived = (_, sender, payload, ___) {
+        router.onMessageReceived = (_, ____, sender, payload, ___) {
           reassembledSender = sender;
           reassembledPayload = payload;
         };
@@ -749,14 +757,15 @@ void main() {
         final saveGate = Completer<void>();
         final saveBegun = Completer<String>();
         var saves = 0;
-        router.keepDelivered = (id, sender, payload, transport) {
+        router.keepDelivered =
+            (id, senderMessageId, sender, payload, transport) {
           saves++;
           events.add('save $id');
           saveBegun.complete(id);
           return saveGate.future;
         };
         router.onMessageReceived =
-            (id, _, payload, __) => events.add('delivered $id');
+            (id, ___, _, payload, __) => events.add('delivered $id');
         final lastAck = Completer<void>();
         router.onFragmentAckRequested = (_, __, id, index) {
           expect(id, messageId);
@@ -802,12 +811,12 @@ void main() {
           'acknowledged once the save has completed', () async {
         stubSession();
         final saveGate = Completer<void>();
-        router.keepDelivered = (_, __, ___, ____) => saveGate.future;
+        router.keepDelivered = (_, _____, __, ___, ____) => saveGate.future;
         final acked = Completer<int>();
         router.onFragmentAckRequested = (_, __, ___, index) =>
             acked.complete(index);
         final delivered = <String>[];
-        router.onMessageReceived = (id, _, __, ___) => delivered.add(id);
+        router.onMessageReceived = (id, ____, _, __, ___) => delivered.add(id);
 
         await router.processPacket(
           secureMessagePacket(
@@ -830,7 +839,7 @@ void main() {
         final firstSave = Completer<void>();
         final secondSaveBegun = Completer<void>();
         var saves = 0;
-        router.keepDelivered = (_, __, payload, ___) {
+        router.keepDelivered = (_, ____, __, payload, ___) {
           saves++;
           expect(payload, body, reason: 'reassembled whole each time');
           if (saves == 1) return firstSave.future;
@@ -838,7 +847,7 @@ void main() {
           return Future.value();
         };
         final delivered = <String>[];
-        router.onMessageReceived = (id, _, __, ___) => delivered.add(id);
+        router.onMessageReceived = (id, ____, _, __, ___) => delivered.add(id);
         final acks = <int>[];
         final lastAck = Completer<void>();
         router.onFragmentAckRequested = (_, __, ___, index) {
@@ -890,12 +899,13 @@ void main() {
                   stubSessionHash,
                 );
         final saved = <String>[];
-        spacedRouter.keepDelivered = (id, _, payload, __) async {
+        spacedRouter.keepDelivered = (id, ___, _, payload, __) async {
           expect(payload, body);
           saved.add(id);
         };
         final delivered = <String>[];
-        spacedRouter.onMessageReceived = (id, _, __, ___) => delivered.add(id);
+        spacedRouter.onMessageReceived =
+            (id, ____, _, __, ___) => delivered.add(id);
         final acks = <(String, int)>[];
         final lastAck = Completer<void>();
         spacedRouter.onFragmentAckRequested = (_, __, id, index) {
@@ -953,13 +963,13 @@ void main() {
           keptRouter() {
         final kept = <String>{};
         final saves = <int>[];
-        router.keepDelivered = (id, _, __, ___) async {
+        router.keepDelivered = (id, ____, _, __, ___) async {
           saves.add(saves.length + 1);
           kept.add(id);
         };
         router.isKeptDelivered = kept.contains;
         final delivered = <String>[];
-        router.onMessageReceived = (id, _, __, ___) => delivered.add(id);
+        router.onMessageReceived = (id, ____, _, __, ___) => delivered.add(id);
         final acks = <int>[];
         return (acks: acks, delivered: delivered, kept: kept, saves: saves);
       }
@@ -1045,7 +1055,7 @@ void main() {
         expect(attestationFragments, hasLength(3));
         final judged = <Uint8List>[];
         router.onAttestationReceived = (_, body, __, ___) => judged.add(body);
-        router.onMessageReceived = (_, __, ___, ____) =>
+        router.onMessageReceived = (_, _____, __, ___, ____) =>
             fail('the exchange never reaches the application');
         final acks = <int>[];
         router.onFragmentAckRequested = (_, __, ___, index) => acks.add(index);
@@ -1096,12 +1106,13 @@ void main() {
               otherPubkey,
               stubSessionHash,
             );
-        r.keepDelivered = (_, __, payload, ___) async {
+        r.keepDelivered = (_, ____, __, payload, ___) async {
           events?.add('save');
           await saveGate?.call();
           saved.add(payload);
         };
-        r.onMessageReceived = (_, __, ___, ____) => events?.add('delivered');
+        r.onMessageReceived =
+            (_, _____, __, ___, ____) => events?.add('delivered');
         r.onFragmentAckRequested = (transport, _, id, index) {
           events?.add('ack $index');
           acks.add((transport, index));
@@ -1265,7 +1276,7 @@ void main() {
         };
         final delivered = <String>[];
         final fragmentAcks = <String>[];
-        router.onMessageReceived = (id, _, __, ___) => delivered.add(id);
+        router.onMessageReceived = (id, ____, _, __, ___) => delivered.add(id);
         router.onFragmentAckRequested =
             (_, __, id, ___) => fragmentAcks.add(id);
 
@@ -1299,7 +1310,7 @@ void main() {
         final judged = <(Uint8List, Uint8List)>[];
         router.onAttestationReceived = (_, body, __, handshakeHash) =>
             judged.add((body, handshakeHash));
-        router.onMessageReceived = (_, __, ___, ____) =>
+        router.onMessageReceived = (_, _____, __, ___, ____) =>
             fail('the exchange never reaches the application');
 
         await router.processPacket(
@@ -1476,7 +1487,7 @@ void main() {
         String? receivedId;
         Uint8List? receivedPubkey;
         Uint8List? receivedPayload;
-        router.onMessageReceived = (id, pubkey, payload, _) {
+        router.onMessageReceived = (id, __, pubkey, payload, _) {
           receivedId = id;
           receivedPubkey = pubkey;
           receivedPayload = payload;
@@ -1531,7 +1542,7 @@ void main() {
         String? ackPeerId;
         String? ackMessageId;
         int? ackIndex;
-        router.onMessageReceived = (_, __, ___, ____) {};
+        router.onMessageReceived = (_, _____, __, ___, ____) {};
         router.onFragmentAckRequested = (transport, peerId, messageId, index) {
           ackTransport = transport;
           ackPeerId = peerId;
@@ -1571,7 +1582,7 @@ void main() {
         String? ackPeerId;
         String? ackMessageId;
         int? ackIndex;
-        router.onMessageReceived = (_, __, ___, ____) {};
+        router.onMessageReceived = (_, _____, __, ___, ____) {};
         router.onFragmentAckRequested = (transport, peerId, messageId, index) {
           ackTransport = transport;
           ackPeerId = peerId;

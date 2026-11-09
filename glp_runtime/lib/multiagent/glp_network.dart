@@ -230,24 +230,27 @@ abstract class GlpNetwork {
 
   // --- Point-to-point communication (GNA, "Point-to-Point Communication") ---
 
-  /// `send(pubKey, payload)`: send opaque [payload] bytes to peer [pk].  Order
-  /// is arbitrary; delivery is fair (GNA, "Networking Assumptions").  The
-  /// future is the layer's answer: it "completes once the message is saved for
-  /// delivery ..., and fails if the message cannot be saved" (GNA, Section
-  /// 2.9).  The runtime awaits it, and keeps a refused message and sends it
-  /// again later (IGLP b014a9e, Implementation Notes, "Networking Seam", The
-  /// contract: "the layer refuses to send a message it cannot save, and the
-  /// runtime waits for its answer and, on a refusal, keeps the message and
-  /// sends it again later").
-  Future<void> send(PubKey pk, Uint8List payload);
+  /// `send(pubKey, payload) → messageId`: send opaque [payload] bytes to peer
+  /// [pk].  Order is arbitrary; delivery is fair (GNA, "Networking
+  /// Assumptions").  The future is the layer's answer: it "completes once the
+  /// message is saved for delivery ..., and fails if the message cannot be
+  /// saved" (GNA, Section 2.9), and its value is the id the layer gave the
+  /// message, which the recipient's [onMessageReceived] receives as
+  /// `senderMessageId` (GNA, decision 42).  The runtime awaits it, and keeps
+  /// a refused message and sends it again later (IGLP b014a9e, Implementation
+  /// Notes, "Networking Seam", The contract: "the layer refuses to send a
+  /// message it cannot save, and the runtime waits for its answer and, on a
+  /// refusal, keeps the message and sends it again later").
+  Future<String> send(PubKey pk, Uint8List payload);
 
-  /// `onMessageReceived(sender, payload, messageId, underlay)`: fires on
-  /// delivery of an inbound message, with the authenticated sender's key, the
-  /// opaque payload, the layer-assigned messageId, and the [Underlay] over
-  /// which it was delivered.
-  void Function(
-          PubKey sender, Uint8List payload, String messageId, Underlay underlay)?
-      onMessageReceived;
+  /// `onMessageReceived(sender, payload, messageId, senderMessageId,
+  /// underlay)`: fires on delivery of an inbound message, with the
+  /// authenticated sender's key, the opaque payload, the layer-assigned
+  /// messageId that [acknowledge] takes, the senderMessageId the sender's
+  /// [send] returned for the message (GNA, decision 42), and the [Underlay]
+  /// over which it was delivered.
+  void Function(PubKey sender, Uint8List payload, String messageId,
+      String senderMessageId, Underlay underlay)? onMessageReceived;
 
   /// `acknowledge(messageId)`: "Confirm that the message delivered under messageId has been applied and saved by the runtime; the layer keeps a delivered message until it is acknowledged, and delivers it again at restart otherwise" (GNA 776016c, Section 2.9; Section 2.11, Fair message delivery).  The runtime calls it once the cycle that applied the message is saved, or, where the agent keeps no state, once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds").
   void acknowledge(String messageId);

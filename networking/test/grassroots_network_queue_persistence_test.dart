@@ -159,7 +159,8 @@ void main() {
     });
     final received = <(String, String, String)>[];
     final firstReceived = Completer<void>();
-    recipient.onMessageReceived = (sender, payload, id, underlay) {
+    recipient.onMessageReceived =
+        (sender, payload, id, senderMessageId, underlay) {
       received.add((hex(sender), utf8.decode(payload), id));
       if (!firstReceived.isCompleted) firstReceived.complete();
     };
@@ -221,7 +222,8 @@ void main() {
     recipient.putKnownPeer(senderId.publicKey);
     final received = <(String, String, String)>[];
     final firstReceived = Completer<void>();
-    recipient.onMessageReceived = (sender, payload, id, underlay) {
+    recipient.onMessageReceived =
+        (sender, payload, id, senderMessageId, underlay) {
       received.add((hex(sender), utf8.decode(payload), id));
       if (!firstReceived.isCompleted) firstReceived.complete();
     };
@@ -253,8 +255,8 @@ void main() {
 
   test(
       'a message delivered and not acknowledged is delivered again after a '
-      'restart of the layer, and one acknowledged is not (GNA §2.9, §2.11)',
-      () async {
+      'restart of the layer, and one acknowledged is not (GNA §2.9, §2.11); '
+      'each delivery names the id the sender\'s send returned', () async {
     final senderId = await identityFromSeed(0x9a);
     final recipientId = await identityFromSeed(0x9b);
 
@@ -276,10 +278,10 @@ void main() {
 
     // The recipient, keeping its queue in SharedPreferences, dials it.
     final first = await startNode(recipientId);
-    final both = Completer<Map<String, String>>();
-    final received = <String, String>{};
-    first.onMessageReceived = (s, payload, id, u) {
-      received[utf8.decode(payload)] = id;
+    final both = Completer<Map<String, (String, String)>>();
+    final received = <String, (String, String)>{};
+    first.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      received[utf8.decode(payload)] = (id, senderMessageId);
       if (received.length == 2 && !both.isCompleted) both.complete(received);
     };
     first.putKnownPeer(senderId.publicKey);
@@ -296,7 +298,12 @@ void main() {
         MessageRouter.deliveryIdOf(senderId.publicKey, keptId!);
     final ackedDelivery =
         MessageRouter.deliveryIdOf(senderId.publicKey, ackedId!);
-    expect(await both.future, {'kept': keptDelivery, 'acked': ackedDelivery});
+    expect(await both.future, {
+      'kept': (keptDelivery, keptId),
+      'acked': (ackedDelivery, ackedId),
+    },
+        reason: 'each is delivered under the layer-assigned id, with the id '
+            'its sender\'s send returned');
 
     // The runtime acknowledges one of the two; then the layer terminates.
     await first.acknowledge(ackedDelivery);
@@ -311,16 +318,16 @@ void main() {
     // The restart: a layer with the same identity and store delivers the
     // unacknowledged message again, as it was delivered, and nothing else.
     final second = await startNode(recipientId);
-    final again = <(String, String, String)>[];
+    final again = <(String, String, String, String)>[];
     final firstAgain = Completer<void>();
-    second.onMessageReceived = (s, payload, id, u) {
-      again.add((hex(s), utf8.decode(payload), id));
+    second.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      again.add((hex(s), utf8.decode(payload), id, senderMessageId));
       if (!firstAgain.isCompleted) firstAgain.complete();
     };
     // The kept messages are delivered again in one turn of the event loop,
     // which ends before the wait on the first of them resumes.
     await firstAgain.future;
-    expect(again, [(hex(senderId.publicKey), 'kept', keptDelivery)]);
+    expect(again, [(hex(senderId.publicKey), 'kept', keptDelivery, keptId)]);
 
     await second.acknowledge(keptDelivery);
     await second.dispose();
@@ -330,11 +337,11 @@ void main() {
 
   test(
       'an application payload names the message it reads: the reader answers '
-      'a chat payload with a receipt naming the chat id the sender put in it, '
-      'and the sender marks that outgoing message read (GNA §2.9)', () async {
+      'a chat block with a receipt naming the senderMessageId it was '
+      'delivered with, the id the sender\'s send returned, and the sender '
+      'marks that outgoing message read (GNA §2.9)', () async {
     final senderId = await identityFromSeed(0x9a);
     final recipientId = await identityFromSeed(0x9b);
-    const chatId = '6f1c2b9e-0d4a-4c1e-8f3a-2b7d9e5c1a40';
 
     final read = Completer<MessageReadAction>();
     final sender = await startNode(senderId, onAction: (action) {
@@ -346,25 +353,22 @@ void main() {
     final recipient = await startNode(recipientId);
     addTearDown(recipient.dispose);
 
-    // The reader's side of the demo app: a chat payload is answered with a
-    // receipt that names the id the sender gave the message.
-    recipient.onMessageReceived = (s, payload, id, u) {
-      final decoded = AppPayload.decode(payload);
-      if (decoded is ChatPayload) {
+    // The reader's side of the demo app: a chat block is answered with a
+    // receipt that names the id the sender's send gave the message.
+    recipient.onMessageReceived = (s, payload, id, senderMessageId, u) {
+      if (AppPayload.decode(payload) is BlockPayload) {
         unawaited(recipient.send(senderId.publicKey,
-            ReadReceiptPayload(messageId: decoded.messageId).encode()));
+            ReadReceiptPayload(messageId: senderMessageId).encode()));
       }
     };
-    // The sender's side: a receipt marks the outgoing message it names read,
-    // by the id the layer gave it.
-    sender.onMessageReceived = (s, payload, id, u) {
+    // The sender's side: a receipt from the peer a message was sent to marks
+    // the outgoing message it names read.
+    sender.onMessageReceived = (s, payload, id, senderMessageId, u) {
       final decoded = AppPayload.decode(payload);
-      if (decoded is ReadReceiptPayload) {
-        final wireId = receiptReadWireId(
-            sender.store.state.messages, decoded.messageId, hex(s));
-        if (wireId != null) {
-          sender.store.dispatch(MessageReadAction(messageId: wireId));
-        }
+      if (decoded is ReadReceiptPayload &&
+          receiptMarksRead(
+              sender.store.state.messages, decoded.messageId, hex(s))) {
+        sender.store.dispatch(MessageReadAction(messageId: decoded.messageId));
       }
     };
     recipient.putKnownPeer(senderId.publicKey);
@@ -374,33 +378,15 @@ void main() {
     sender.wan!
         .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
 
-    final recipientHex = hex(recipientId.publicKey);
-    sender.store.dispatch(SaveChatMessageAction(
-      senderPubkeyHex: hex(senderId.publicKey),
-      recipientPubkeyHex: recipientHex,
-      content: 'read me',
-      isOutgoing: true,
-      messageId: chatId,
-    ));
-    final wireId = await sender.send(
+    final sentId = await sender.send(
       recipientId.publicKey,
-      ChatPayload(
-        messageId: chatId,
-        block: TextSayBlock(content: 'read me'),
-      ).encode(),
+      BlockPayload(TextSayBlock(content: 'read me')).encode(),
     );
-    // The layer names the message itself, never after the chat id.
-    expect(wireId, isNotNull);
-    expect(wireId, isNot(chatId));
-    sender.store.dispatch(LinkWireMessageAction(
-      peerHex: recipientHex,
-      messageId: chatId,
-      wireMessageId: wireId!,
-    ));
+    expect(sentId, isNotNull);
 
     final action = await read.future;
-    expect(action.messageId, wireId);
-    expect(sender.store.state.messages.outgoingMessages[wireId]?.status,
+    expect(action.messageId, sentId);
+    expect(sender.store.state.messages.outgoingMessages[sentId]?.status,
         MessageStatus.read);
   }, timeout: Timeout.none);
 
@@ -421,7 +407,7 @@ void main() {
     });
     final received = <String>[];
     final barrier = Completer<void>();
-    recipient.onMessageReceived = (s, payload, id, u) {
+    recipient.onMessageReceived = (s, payload, id, senderMessageId, u) {
       if (payload.length == 1) {
         if (!barrier.isCompleted) barrier.complete();
         return;

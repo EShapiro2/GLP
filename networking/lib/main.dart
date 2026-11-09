@@ -184,14 +184,14 @@ void _mediaCleanupMiddleware(
   }
 
   if (action is MessageDeliveredAction) {
-    // Find the matching outgoing chat message, by the id the layer gave it,
-    // across all conversations. Pictures are infrequent; this scan is cheap
-    // relative to the actual message arrival.
-    final wireId = action.messageId;
+    // Find the matching outgoing chat message by messageId across all
+    // conversations. Pictures are infrequent; this scan is cheap relative to
+    // the actual message arrival.
+    final messageId = action.messageId;
     for (final entry in store.state.messages.conversations.entries) {
       final peerHex = entry.key;
       for (final msg in entry.value) {
-        if (msg.wireMessageId == wireId &&
+        if (msg.messageId == messageId &&
             msg.isOutgoing &&
             msg.viewOnce &&
             msg.mediaPath != null) {
@@ -199,7 +199,7 @@ void _mediaCleanupMiddleware(
           unawaited(deleteMediaFile(pathToDelete));
           store.dispatch(MarkPictureViewedAction(
             peerHex: peerHex,
-            messageId: msg.messageId!,
+            messageId: messageId,
           ));
           return;
         }
@@ -427,9 +427,11 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       store: appStore,
       sodium: appSodium,
     );
+    // The conversation names a message by the id its sender's send
+    // returned, which both ends know: an incoming one by its senderMessageId.
     grassroots.onMessageReceived =
-        (senderPubkey, payload, messageId, underlay) {
-      _handleIncomingMessage(messageId, senderPubkey, payload, underlay);
+        (senderPubkey, payload, messageId, senderMessageId, underlay) {
+      _handleIncomingMessage(senderMessageId, senderPubkey, payload, underlay);
     };
     for (final server in _preferences.rendezvousServers) {
       grassroots.wan?.putRendezvousServer(server.publicKey, server.address);
@@ -559,23 +561,20 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     return result;
   }
 
-  Future<void> _handleIncomingMessage(String messageId, Uint8List senderPubkey,
-      Uint8List payload, Underlay underlay) async {
+  /// A message from [senderPubkey], named by the id its sender's `send`
+  /// returned, [senderMessageId].
+  Future<void> _handleIncomingMessage(String senderMessageId,
+      Uint8List senderPubkey, Uint8List payload, Underlay underlay) async {
     final senderHex = ChatMessage.pubkeyToHex(senderPubkey);
     final myHex = ChatMessage.pubkeyToHex(_identity!.publicKey);
 
     switch (AppPayload.decode(payload)) {
       case BlockPayload(:final block):
-        await _handleBlock(block, senderHex, myHex, messageId, messageId,
-            senderPubkey, underlay);
-      case ChatPayload(messageId: final chatId, :final block):
         await _handleBlock(
-            block, senderHex, myHex, chatId, messageId, senderPubkey, underlay);
+            block, senderHex, myHex, senderMessageId, senderPubkey, underlay);
       case ReadReceiptPayload(messageId: final readId):
-        final wireId =
-            receiptReadWireId(appStore.state.messages, readId, senderHex);
-        if (wireId != null) {
-          appStore.dispatch(MessageReadAction(messageId: wireId));
+        if (receiptMarksRead(appStore.state.messages, readId, senderHex)) {
+          appStore.dispatch(MessageReadAction(messageId: readId));
         }
       case null:
         debugPrint(
@@ -588,7 +587,6 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       String senderHex,
       String myHex,
       String messageId,
-      String wireId,
       Uint8List senderPubkey,
       Underlay underlay) async {
     // Find sender name
@@ -604,27 +602,28 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         if (sayBlock is TextSayBlock) {
           debugPrint(
               '💬 [$transportName] Message from $senderName: "${sayBlock.content}"');
-          await _handleTextMessage(senderHex, myHex, sayBlock.content,
-              messageId, wireId, senderPubkey);
+          await _handleTextMessage(
+              senderHex, myHex, sayBlock.content, messageId, senderPubkey);
         } else if (sayBlock is PictureSayBlock) {
           debugPrint(
               '📷 [$transportName] Picture from $senderName (${sayBlock.imageBytes.length} bytes, viewOnce=${sayBlock.viewOnce})');
           await _handlePictureMessage(
-              senderHex, myHex, sayBlock, messageId, wireId, senderPubkey);
+              senderHex, myHex, sayBlock, messageId, senderPubkey);
         }
 
       case BlockType.friendshipOffer:
         debugPrint(
             'Hansdling FriendshipOfferBlock from $senderName ($senderHex)');
         final offerBlock = block as FriendshipOfferBlock;
-        await _handleFriendshipOffer(senderHex, myHex, offerBlock, senderName);
+        await _handleFriendshipOffer(
+            senderHex, myHex, offerBlock, senderName, messageId);
 
       case BlockType.friendshipAccept:
         debugPrint(
             'Handling FriendshipAcceptBlock from $senderName ($senderHex)');
         final acceptBlock = block as FriendshipAcceptBlock;
         await _handleFriendshipAccept(
-            senderHex, myHex, acceptBlock, senderName);
+            senderHex, myHex, acceptBlock, senderName, messageId);
 
       case BlockType.friendshipRevoke:
         debugPrint(
@@ -633,13 +632,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     }
   }
 
-  Future<void> _handleTextMessage(
-      String senderHex,
-      String myHex,
-      String content,
-      String messageId,
-      String wireId,
-      Uint8List senderPubkey) async {
+  Future<void> _handleTextMessage(String senderHex, String myHex,
+      String content, String messageId, Uint8List senderPubkey) async {
     // Save message to Redux store
     appStore.dispatch(SaveChatMessageAction(
       senderPubkeyHex: senderHex,
@@ -647,7 +641,6 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       content: content,
       isOutgoing: false,
       messageId: messageId,
-      wireMessageId: wireId,
     ));
     // Read receipt sent when user opens the chat (see ChatScreen._sendReadReceipts)
 
@@ -661,13 +654,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     await _showMessageNotification(senderHex, senderName, content);
   }
 
-  Future<void> _handlePictureMessage(
-      String senderHex,
-      String myHex,
-      PictureSayBlock block,
-      String messageId,
-      String wireId,
-      Uint8List senderPubkey) async {
+  Future<void> _handlePictureMessage(String senderHex, String myHex,
+      PictureSayBlock block, String messageId, Uint8List senderPubkey) async {
     // Persist the image bytes to disk under a SHA-256-named file. dedupes
     // identical images naturally.
     final file = await writeMediaFile(block.imageBytes, block.mime);
@@ -680,7 +668,6 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       content: '',
       isOutgoing: false,
       messageId: messageId,
-      wireMessageId: wireId,
       messageType: ChatMessageType.picture.index,
       mediaPath: file.path,
       mediaMime: block.mime,
@@ -703,6 +690,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     String myHex,
     FriendshipOfferBlock block,
     String senderName,
+    String messageId,
   ) async {
     final pubkey = ChatMessage.hexToPubkey(senderHex);
     final alreadyContact = _isContact(senderHex);
@@ -718,6 +706,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         recipientPubkeyHex: myHex,
         content: 'Wants to be friends too — you are now friends',
         isOutgoing: false,
+        messageId: messageId,
         messageType: ChatMessageType.friendRequestAccepted.index,
       ));
       return;
@@ -729,6 +718,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       recipientPubkeyHex: myHex,
       content: block.message ?? 'Wants to be friends',
       isOutgoing: false,
+      messageId: messageId,
       messageType: ChatMessageType.friendRequestReceived.index,
     ));
 
@@ -742,6 +732,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     String myHex,
     FriendshipAcceptBlock block,
     String senderName,
+    String messageId,
   ) async {
     debugPrint('🤝 _handleFriendshipAccept from $senderName ($senderHex)');
 
@@ -756,6 +747,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       recipientPubkeyHex: myHex,
       content: 'Accepted your friend request',
       isOutgoing: false,
+      messageId: messageId,
       messageType: ChatMessageType.friendRequestAccepted.index,
     ));
     debugPrint('🤝 Chat message saved');

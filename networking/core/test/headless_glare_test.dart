@@ -72,7 +72,8 @@ void main() {
 
     final delivered = <String>[];
     final firstDelivered = Completer<void>();
-    acceptor.onMessageReceived = (sender, payload, messageId, underlay) {
+    acceptor.onMessageReceived =
+        (sender, payload, messageId, senderMessageId, underlay) {
       expect(_hex(sender), _hex(dialerId.publicKey));
       delivered.add(utf8.decode(payload));
       if (!firstDelivered.isCompleted) firstDelivered.complete();
