@@ -7,15 +7,15 @@
 %%          asks to come to know bob, and then carol (GKK:2), each request's
 %%          hello asking the other; once her date is the first day, the play's
 %%          calendar giving it (GB:2), mints five Alice-coins and three
-%%          Alice-bonds maturing at day 10 (GB:1); once she holds them, asks
+%%          Alice-bonds maturing at day 10 (GC:1, GB:1); once she holds them, asks
 %%          bob for a loan, two of her Alice-coins for three of his Bob-bonds
 %%          maturing at day 5, swap_cb(alice, bob, alice, 2, bob, 5, 3)
 %%          (GB:3); once she holds the Bob-bonds and her date is day 5, which
 %%          the play writes on her calendar once bob's date is day 5, redeems
 %%          a matured Bob-bond against an Alice-coin bob holds,
-%%          redeem_bc(alice, bob, 5, alice) (GB:5); once she holds the
+%%          redeem_bc(alice, bob, 5, alice) (GB:4); once she holds the
 %%          Alice-coin, deposits two Alice-coins with carol,
-%%          deposit_c(alice, carol, alice, 2) (GB:7); looks again.
+%%          deposit_c(alice, carol, alice, 2) (GB:5); looks again.
 %%   bob    establishes his identity; once his date is the first day, mints
 %%          four Bob-bonds maturing at day 5 (GB:1); once he holds them,
 %%          answers yes to alice asking that they come to know each other, the question
