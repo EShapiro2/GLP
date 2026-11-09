@@ -1,34 +1,162 @@
 {
- "GKK": "Who you are and who you know: a key of your own, meeting people, introducing them.",
- "GSG": "Friends: become friends by agreeing, and end a friendship.",
- "GSN": "Messages and groups among friends.",
- "GnW": "Wards: agents a person creates and looks after, who act only through their guardians.",
- "GAI": "AI agents with an accountable developer and an accountable owner.",
- "GSNP": "Forwarding with provenance: every forward adds a signature you can see.",
- "CSSN": "A social network safe for children: parents, kids-only groups, coming of age.",
- "GC": "Personal currencies: everyone can issue their own coins.",
- "GB": "Bonds with maturity dates, and escrow, on top of coins.",
- "GFF": "Feeds and followers, delivered from friend to friend.",
- "AGORA": "Barter: make things, post them on a market wall, trade them.",
- "GDO": "Pointing: each person points to some of their friends, and to people those friends point to.",
- "DGC": "",
- "GDC": "",
- "GCC": "",
- "BCC": "",
- "GD": "",
- "GD-S": "",
- "GDO-L": "",
- "GDO-LB": "",
- "GRA": "",
- "GRA-SS": "",
- "GFF-I": "",
- "GFF-FR": "",
- "GFF-PS": "",
- "GFF-FR-BC": "",
- "GFP": "Forwarding items with provenance: whoever passes an item on signs it.",
- "GPD": "Programs passed from friend to friend: publishing, trusting developers, installing and inviting.",
- "GAS": "The app store: a developer whose agent runs on a server and offers the programs it holds.",
- "GRV": "Rendezvous: friends far apart find each other again through a rendezvous server.",
- "GPE": "Meeting in person: phones near each other, over Bluetooth or the local network, become friends.",
- "GDS": "A directory: find people by their email address, and get the link to reach them."
+ "GKK": [
+  "🔑",
+  "identity",
+  "Who you are and who you know: a key of your own, meeting people, introducing them."
+ ],
+ "GSG": [
+  "🤝",
+  "social",
+  "Friends: become friends by agreeing, and end a friendship."
+ ],
+ "GSN": [
+  "💬",
+  "social",
+  "Messages and groups among friends."
+ ],
+ "GnW": [
+  "🛡️",
+  "care",
+  "Wards: agents a person creates and looks after, who act only through their guardians."
+ ],
+ "GAI": [
+  "🤖",
+  "care",
+  "AI agents with an accountable developer and an accountable owner."
+ ],
+ "GSNP": [
+  "✍️",
+  "social",
+  "Forwarding with provenance: every forward adds a signature you can see."
+ ],
+ "CSSN": [
+  "🧒",
+  "care",
+  "A social network safe for children: parents, kids-only groups, coming of age."
+ ],
+ "GC": [
+  "🪙",
+  "money",
+  "Personal currencies: everyone can issue their own coins."
+ ],
+ "GB": [
+  "📜",
+  "money",
+  "Bonds with maturity dates, and escrow, on top of coins."
+ ],
+ "GFF": [
+  "📰",
+  "social",
+  "Feeds and followers, delivered from friend to friend."
+ ],
+ "AGORA": [
+  "🧺",
+  "money",
+  "Barter: make things, post them on a market wall, trade them."
+ ],
+ "GDO": [
+  "🧭",
+  "social",
+  "Pointing: each person points to some of their friends, and to people those friends point to."
+ ],
+ "DGC": [
+  "🪙",
+  "money",
+  ""
+ ],
+ "GDC": [
+  "🪙",
+  "money",
+  ""
+ ],
+ "GCC": [
+  "🪙",
+  "money",
+  ""
+ ],
+ "BCC": [
+  "🪙",
+  "money",
+  ""
+ ],
+ "GD": [
+  "🗳️",
+  "governance",
+  ""
+ ],
+ "GD-S": [
+  "🗳️",
+  "governance",
+  ""
+ ],
+ "GDO-L": [
+  "📡",
+  "social",
+  ""
+ ],
+ "GDO-LB": [
+  "📡",
+  "social",
+  ""
+ ],
+ "GRA": [
+  "🚗",
+  "mobility",
+  ""
+ ],
+ "GRA-SS": [
+  "🚗",
+  "mobility",
+  ""
+ ],
+ "GFF-I": [
+  "📰",
+  "social",
+  ""
+ ],
+ "GFF-FR": [
+  "📰",
+  "social",
+  ""
+ ],
+ "GFF-PS": [
+  "📰",
+  "social",
+  ""
+ ],
+ "GFF-FR-BC": [
+  "📰",
+  "social",
+  ""
+ ],
+ "GFP": [
+  "✍️",
+  "social",
+  "Forwarding items with provenance: whoever passes an item on signs it."
+ ],
+ "GPD": [
+  "📦",
+  "os",
+  "Programs passed from friend to friend: publishing, trusting developers, installing and inviting."
+ ],
+ "GAS": [
+  "🏪",
+  "os",
+  "The app store: a developer whose agent runs on a server and offers the programs it holds."
+ ],
+ "GRV": [
+  "🛰️",
+  "network",
+  "Rendezvous: friends far apart find each other again through a rendezvous server."
+ ],
+ "GPE": [
+  "📶",
+  "network",
+  "Meeting in person: phones near each other, over Bluetooth or the local network, become friends."
+ ],
+ "GDS": [
+  "📇",
+  "network",
+  "A directory: find people by their email address, and get the link to reach them."
+ ]
 }

@@ -80,7 +80,7 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
 %% issuer, redeem_same --- is not a transaction, and the screen says so.
 %% The holdings, each lot a field of its own (Udi, 2026-10-12: a field is
 %% named by its type; Currencies, 2026-10-14 08:48 UTC, item 3).
-Holdings ::= Stream(Lot).
+Holdings ::= List(Lot).
 %% The fields of the screen's messages, each named by what it is: a field is
 %% labelled by the name of its declared type, and the type is named for what
 %% the field is (Udi, 2026-10-12; Currencies, 2026-10-14 09:24 UTC,
@@ -104,7 +104,7 @@ ScreenContent ::= holdings(Holdings)
                 ; redeem_same(Friend)
                 ; lacking(Issuer, Amount)
                 ; no_conversation(Friend).
-Issuers ::= Stream(Issuer).
+Issuers ::= List(Issuer).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The type of the agent's output to its person, the reserved name Output:
@@ -132,7 +132,7 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Coin), SwapResponse?)
 Offer   ::= offer(From, Want, Offered).
 From    ::= Key.
 Want    ::= Lot.
-Offered ::= Stream(Coin).
+Offered ::= List(Coin).
 
 %% =============================================================================
 %% The agent's questions (vGLP, Definition "Guarded Clause, Volitional
@@ -253,21 +253,21 @@ count_coins([_|Cs], N, M?) :- N1 := N? + 1, count_coins(Cs?, N1?, M).
 count_coins([], N, N?).
 
 %% The holdings tallied by issuer, in order of first appearance.
-procedure tally(Stream(Coin)?, Stream(Lot)?, Stream(Lot)).
+procedure tally(Stream(Coin)?, List(Lot)?, List(Lot)).
 tally([coin(I, _)|Rest], Acc, Lots?) :-
     ground(I?) |
     tally_add(I?, Acc?, Acc1),
     tally(Rest?, Acc1?, Lots).
 tally([], Acc, Acc?).
 
-procedure tally_add(Key?, Stream(Lot)?, Stream(Lot)).
+procedure tally_add(Key?, List(Lot)?, List(Lot)).
 tally_add(I, [lot(I2, N)|Rest], [lot(I2?, N1?)|Rest?]) :- I? =?= I2? | N1 := N? + 1.
 tally_add(I, [L|Rest], [L?|Rest1?]) :- otherwise | tally_add(I?, Rest?, Rest1).
 tally_add(I, [], [lot(I?, 1)]).
 
 %% The issuers of the coins held, one each, the holder's own apart: what an
 %% issuer discloses to a bearer whose presentation it cannot fulfil as named.
-procedure menu_of(Key?, Stream(Coin)?, Stream(Key)?, Stream(Key)).
+procedure menu_of(Key?, Stream(Coin)?, List(Key)?, List(Key)).
 menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
     Id? =?= I? |
     menu_of(Id?, Rest?, Acc?, Menu).
@@ -277,7 +277,7 @@ menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
     menu_of(Id?, Rest?, Acc1?, Menu).
 menu_of(_, [], Acc, Acc?).
 
-procedure menu_add(Key?, Stream(Key)?, Stream(Key)).
+procedure menu_add(Key?, List(Key)?, List(Key)).
 menu_add(I, [I2|Rest], [I2?|Rest?]) :- I? =?= I2? | true.
 menu_add(I, [J|Rest], [J?|Rest1?]) :- otherwise | menu_add(I?, Rest?, Rest1).
 menu_add(I, [], [I?]).

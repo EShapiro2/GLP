@@ -13,6 +13,7 @@ Alice, Bob and Carol are persons, Dora a ward.  A directory is a ward operated b
 3. ■ Lookup.  Anyone may look a listed person up on Dora's page, and an unlisted person up by their email address and name.
 4. ■ Contact.  Dora gives whoever looked Alice up an invitation link of Alice's.
 Interface pragmas
+Look: 📇, network
 Listing: Alice [List] <email> <name> [List unlisted] <email> <name> [Unlist]
 Implementation pragmas
 Listing: the directory verifies an email address by sending it a message with a link, which Alice opens.

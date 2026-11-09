@@ -19,7 +19,7 @@
 #       releases have the mean and the variance of an exponential with rate
 #       4.5 per second, each within 10% (Section 2, Proposition "Time to the
 #       Next Release").
-# (iii) the social graph (social_graph/run.sh), 100 agents for 30 days: two runs
+# (iii) the social graph (examples/social_graph/run.sh), 100 agents for 30 days: two runs
 #       from seed 20260927 write byte-identical logs, and seeds 20260927 and 1
 #       write different ones (Section 4, "The run": every draw is from the
 #       run's seed).
@@ -75,7 +75,7 @@
 #       holdings 5, wallets 3, 2's ten of 1's coins not yet held, and months 5
 #       to 12 and the log at 88, 8 and 4; coins held at the yes would give 68,
 #       6 and 4 in month 4.
-# (ix)  coins among friends (coins/run.sh; the task of 15:24 UTC, items 1 to
+# (ix)  coins among friends (examples/coins/run.sh; the task of 15:24 UTC, items 1 to
 #       3), four agents for a week on the hand-made graph
 #       tests/circulation/four.graph at the paper's mix, 50 and 50: two runs
 #       from seed 20260927 write byte-identical logs and seed 1 a different
@@ -95,8 +95,8 @@
 #       Held above 20, which the cautious answer no and the generous yes, every
 #       such answer agreeing with its line.
 # (x)   the transformation (transform.glp, transform.sh; the task of 2026-10-03
-#       09:27 UTC): the printed modules in place, social_graph/profiles.glp and
-#       population.glp and coins/profiles.glp and population.glp, are what the
+#       09:27 UTC): the printed modules in place, examples/social_graph/profiles.glp and
+#       population.glp and examples/coins/profiles.glp and population.glp, are what the
 #       transformation prints from the sGLP sources, graph_sglp.glp and
 #       coins_sglp.glp, byte for byte (transform.sh --check); a source with a
 #       dimension whose probabilities do not sum to one is refused with that
@@ -273,7 +273,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-RUN="$HERE/social_graph/run.sh"
+RUN="$HERE/examples/social_graph/run.sh"
 PASS=0
 FAIL=0
 
@@ -372,7 +372,7 @@ echo "        mix 100 100: $M menus, other-sex share $O; $C approvals, yes share
 check "at 100 and 100, homophile and wary: under 0.1 of the menus pick the other sex, under 0.3 of the approvals are answered yes" $?
 
 echo "--- (vi) friendship.awk's months"
-awk -v n=100 -v months=12 -f "$HERE/social_graph/friendship.awk" "$WORK/y.log" > "$WORK/y.months" 2>&1
+awk -v n=100 -v months=12 -f "$HERE/examples/social_graph/friendship.awk" "$WORK/y.log" > "$WORK/y.months" 2>&1
 [ "$(grep -c '^month ' "$WORK/y.months")" -eq 12 ]
 check "twelve month lines" $?
 awk '
@@ -474,7 +474,7 @@ grep -q '^draw homophile 100 indifferent 0 wary 100 sociable 0$' "$WORK/m100-100
 check "at 100 and 100 the draw is every agent homophile and wary, in its counts and in every agent's line" $?
 
 echo "--- (viii) circulation.awk on a fixed four-agent log"
-awk -f "$HERE/coins/circulation.awk" "$HERE/tests/circulation/four.log" > "$WORK/four.out" 2>&1
+awk -f "$HERE/examples/coins/circulation.awk" "$HERE/tests/circulation/four.log" > "$WORK/four.out" 2>&1
 cmp -s "$WORK/four.out" "$HERE/tests/circulation/four.expected"
 st=$?
 check "circulation.awk on tests/circulation/four.log prints the months and totals computed by hand" $st
@@ -525,7 +525,7 @@ coins_log_errors() {
         }
         END { print bad + 0 }' "$1"
 }
-COINS="$HERE/coins/run.sh"
+COINS="$HERE/examples/coins/run.sh"
 G4="$HERE/tests/circulation/four.graph"
 for r in a b s1; do
     seed=20260927; [ "$r" = s1 ] && seed=1
@@ -1126,7 +1126,7 @@ check "the canonical platform of the social graph compiled to GLP, its agent/5 t
 bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
 st=$?
 [ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/GSG/interface.glp" &&
-    grep -q "^  type('Request', \[propose('Proposal'), refresh\]),$" "$CVA/interface.glp" &&
+    grep -q "^  type('Request', \[propose('Proposal')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Approval', \[approval('Asking', 'List'('Word'), dual('YesNo'))\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Output', \[view('Key', 'List'('Atom'), 'List'('Key'), 'List'('Approved'), 'List'('Tab')), refused('Approved', 'Key', 'Reason')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Key', \['String'\]),$" "$CVA/interface.glp" &&
@@ -1136,7 +1136,7 @@ st=$?
     grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, greet(" "$CVA/interface.glp" &&
     grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 3),$" "$CVA/interface.glp" &&
     [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
-check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal) or refresh, Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP e22e2ad, \"The compilation\")" $?
+check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, \"The compilation\")" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
 bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
 st=$?

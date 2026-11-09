@@ -5,10 +5,10 @@
 # and of 2026-10-03 09:45 UTC) through the REPL, on a friendship graph: its
 # log, its draw and its circulation.
 #
-#   bash programs/sglp/coins/run.sh <agents> <graph> <until> <seed> <log>
+#   bash programs/sglp/examples/coins/run.sh <agents> <graph> <until> <seed> <log>
 #       [<spender%> [<cautious%>]]
 #
-#   bash programs/sglp/coins/run.sh 100 \
+#   bash programs/sglp/examples/coins/run.sh 100 \
 #       /Users/udi/Grassroots/tmp/sglp-r-100y-20260927.graph '1 year' \
 #       20260927 /Users/udi/Grassroots/tmp/coins.log
 #
@@ -17,7 +17,7 @@
 # with an edge outside 1..<agents>, or with an agent of 1..<agents> on no
 # edge, whose friends would be the empty list on which one_of is never called
 # (Section 5; Appendix B).  Agent a's friends are the agents it shares an edge
-# with, in increasing order.  It loads programs/sglp and calls coins(<agents>,
+# with, in increasing order.  It loads programs/sglp/examples and calls coins(<agents>,
 # <friends>, <count>, <unit>, <seed>, <spender%>, <cautious%>), <until> being
 # "<count> <unit>", the unit singular or plural, and <friends> the agents'
 # friends lists in order: the run declaration's population (harness.glp) with
@@ -58,7 +58,7 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SGLP="$(cd "$HERE/.." && pwd)"
-GLP_DIR="$(cd "$HERE/../../.." && pwd)"
+GLP_DIR="$(cd "$HERE/../../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
 if [ $# -lt 5 ] || [ $# -gt 7 ]; then
