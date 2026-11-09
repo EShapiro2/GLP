@@ -2,7 +2,7 @@
 %%
 %% A boot defines no agent/2: the program it loads, programs/apps/gkk, answers the initial goal (its self.glp, agent/2), and the person goal's first act names the entry the program starts (IGLP, Implementation Notes, "Boot").  The boot clause names, at each agent, the person scripted in GLP, a second goal P@p, which the runtime runs on p's person channel in the person's place, its writes being the person's input; each person's first act is gkk_agent, the entry, the GKK mini-app as maGLP (programs/apps/gkk/maglp.glp).  Alice's person then writes call(bob): what the person writes may name any agent, and this is how an agent learns of an agent it has not met (GLP-Spec maglp.tex, after Definition "Multiagent GLP").  Alice's agent then makes a conversation and cold-calls bob with it, msg(bob, conv(Ka, Kb, Ch)) on its network output (the Cold-call transaction): Ka its key, Kb a writer for bob's key, and Ch bob's end of the conversation's root channel.  Bob's agent reads it on its network input, assigns Kb its key, and each agent runs the mini-app with its key and the conversation with the other, as the social graph hands a mini-app its conversations (programs/apps/gkk/miniapp.glp).  This file holds the boot clause and the scripted persons, and the types they use, written again from programs/apps/gkk/self.glp where the two share them.
 %%
-%% Each agent's key pair is made when the runtime spawns the agent, before anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity and signature"), and self_key/1 assigns its public key.  Each person establishes their identity by the key the request question shows (GKK:1, Identity); alice asks to know the person her agent knows over the conversation, bob, by his key (GKK:2, Acquaintance), and bob answers yes; each person then reports the person the agent knows, knows(Key).
+%% Each agent's key pair is made when the runtime spawns the agent, before anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity and signature"), and self_key/1 assigns its public key.  Each person establishes their identity by the agent's own key, which the agent's view shows (GKK:1, Identity); alice asks to know the person her agent knows over the conversation, bob, by his key (GKK:2, Acquaintance), and bob answers yes; each person then reports the person the agent knows, knows(Key).
 
 MaStart  ::= gkk_agent.
 MaIn     ::= call(Key) ; input(Integer, Path, Drawn).
@@ -13,8 +13,8 @@ MaOuts   ::= [MaOut | MaOuts].
 MaPeer   ::= nopeer ; peer(Key).
 MaRole   ::= caller(Key) ; callee.
 MaWho    ::= caller ; callee.
-MaSess   ::= nosess ; sess(Integer, Path, Key).
-MaView   ::= noview ; pview(YesNo, List(Atom), List(Key)).
+MaSess   ::= nosess ; sess(Integer, Path).
+MaView   ::= noview ; pview(Key, YesNo, List(Atom), List(Key)).
 MaStep   ::= establish ; acquaint ; await ; done.
 MaState  ::= pst(MaWho, MaSess, MaView, MaPeer, MaStep).
 MaFound  ::= found(Key) ; none.
@@ -38,16 +38,16 @@ ma_person(caller(Q), ch(Ds, [gkk_agent, call(Q?) | Gs?])) :-
 ma_person(callee, ch(Ds, [gkk_agent | Gs?])) :-
     see(Ds?, Gs, pst(callee, nosess, noview, nopeer, establish)).
 
-%% What the mini-app draws: the program's output, construct 0, its views; a request question, showing the agent's own key; an approval question; and anything else, passed over.  And what the agent tells the person: the key of the agent the person named.
+%% What the mini-app draws (programs/apps/gkk/person.glp, the header): the program's output, construct 0, its views, each view(Id, S, K, A, Ts) carrying the agent's own key Id (vGLP 12f629d, Section 5.4, "The compilation"); a request question, drawn bare, request_r(input(P)); an approval question; and anything else, passed over.  And what the agent tells the person: the key of the agent the person named.
 procedure see(MaOuts?, MaIns, MaState?).
 see([draw(0, _, output(T)) | Ds], Gs?, pst(W, Se, _, Pe, St)) :-
     ground(T?) |
     last_view(T?, noview, V),
     act(pst(W?, Se?, V?, Pe?, St?), Gs, Gs1?, S1),
     see(Ds?, Gs1, S1?).
-see([draw(Id, _, menu_w(menu(Me, _, input(P)))) | Ds], Gs?, pst(W, _, V, Pe, St)) :-
-    ground(Id?), ground(P?), ground(Me?) |
-    act(pst(W?, sess(Id?, P?, Me?), V?, Pe?, St?), Gs, Gs1?, S1),
+see([draw(Id, _, request_r(input(P))) | Ds], Gs?, pst(W, _, V, Pe, St)) :-
+    ground(Id?), ground(P?) |
+    act(pst(W?, sess(Id?, P?), V?, Pe?, St?), Gs, Gs1?, S1),
     see(Ds?, Gs1, S1?).
 see([called(_, Kq) | Ds], Gs?, pst(W, Se, V, _, St)) :-
     ground(Kq?) |
@@ -66,18 +66,18 @@ procedure approve(MaState?, Integer?, Path?, MaIns, MaIns?, MaState).
 approve(pst(callee, Se, V, Pe, St), Id, P, [input(Id?, P?, yes) | Gs1?], Gs1, pst(callee, Se?, V?, Pe?, St?)).
 approve(pst(caller, Se, V, Pe, St), _, _, Gs1?, Gs1, pst(caller, Se?, V?, Pe?, St?)).
 
-%% The person's next act: establish their identity by the key a request question shows; the caller then, once the view shows the identity and the agent has told them the key of the agent they named, asks to know that person, by that key; each then waits until the view shows a person known, and reports it.
+%% The person's next act, once a request question is open and a view is drawn: establish their identity by the agent's own key, which the view shows; the caller then, once the view shows the identity and the agent has told them the key of the agent they named, asks to know that person, by that key; each then waits until the view shows a person known, and reports it.
 procedure act(MaState?, MaIns, MaIns?, MaState).
-act(pst(caller, sess(Id, P, Me), V, Pe, establish), [input(Id?, P?, propose(establish(Me?))) | Gs1?], Gs1, pst(caller, nosess, V?, Pe?, acquaint)) :-
+act(pst(caller, sess(Id, P), pview(Me, I, S, K), Pe, establish), [input(Id?, P?, propose(establish(Me?))) | Gs1?], Gs1, pst(caller, nosess, pview(Me?, I?, S?, K?), Pe?, acquaint)) :-
     ground(Me?) | send_to_user([key(Me?)]).
-act(pst(callee, sess(Id, P, Me), V, Pe, establish), [input(Id?, P?, propose(establish(Me?))) | Gs1?], Gs1, pst(callee, nosess, V?, Pe?, await)) :-
+act(pst(callee, sess(Id, P), pview(Me, I, S, K), Pe, establish), [input(Id?, P?, propose(establish(Me?))) | Gs1?], Gs1, pst(callee, nosess, pview(Me?, I?, S?, K?), Pe?, await)) :-
     ground(Me?) | send_to_user([key(Me?)]).
-act(pst(caller, sess(Id, P, Me), pview(yes, S, K), peer(Q), acquaint), [input(Id?, P?, propose(acquaint(Me?, Q?))) | Gs1?], Gs1, pst(caller, nosess, pview(yes, S?, K?), peer(Q?), await)) :-
-    ground(Q?) | true.
-act(pst(W, Se, pview(I, S, K), Pe, await), Gs?, Gs1, S1?) :-
+act(pst(caller, sess(Id, P), pview(Me, yes, S, K), peer(Q), acquaint), [input(Id?, P?, propose(acquaint(Me?, Q?))) | Gs1?], Gs1, pst(caller, nosess, pview(Me?, yes, S?, K?), peer(Q?), await)) :-
+    ground(Me?), ground(Q?) | true.
+act(pst(W, Se, pview(Me, I, S, K), Pe, await), Gs?, Gs1, S1?) :-
     ground(S?) |
     known_peer(S?, F),
-    awaited(F?, pst(W?, Se?, pview(I?, S?, K?), Pe?, await), Gs, Gs1?, S1).
+    awaited(F?, pst(W?, Se?, pview(Me?, I?, S?, K?), Pe?, await), Gs, Gs1?, S1).
 act(S, Gs1?, Gs1, S?) :- otherwise | true.
 
 procedure awaited(MaFound?, MaState?, MaIns, MaIns?, MaState).
@@ -85,13 +85,13 @@ awaited(found(Q), pst(W, Se, V, Pe, _), Gs1?, Gs1, pst(W?, Se?, V?, Pe?, done)) 
     send_to_user([knows(Q?)]).
 awaited(none, S, Gs1?, Gs1, S?).
 
-%% The last view the agent wrote: whether its machine state holds the identity, the state, and the persons the agent knows.
+%% The last view the agent wrote: the agent's own key, whether its machine state holds the identity, the state, and the persons the agent knows.
 procedure last_view(List(Output)?, MaView?, MaView).
 last_view([], V, V?).
-last_view([view(S, K, _, _) | Xs], _, V?) :-
+last_view([view(Me, S, K, _, _) | Xs], _, V?) :-
     ground(S?) |
     has_atom(identity, S?, I),
-    last_view(Xs?, pview(I?, S?, K?), V).
+    last_view(Xs?, pview(Me?, I?, S?, K?), V).
 last_view([_ | Xs], V0, V?) :- otherwise | last_view(Xs?, V0?, V).
 
 procedure has_atom(Atom?, List(Atom)?, YesNo).
