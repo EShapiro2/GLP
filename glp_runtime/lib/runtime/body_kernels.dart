@@ -1296,6 +1296,19 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
         'module\'s directory: a name is relative to it, has no absolute form, '
         'and does not leave it');
   }
+  // After a refused update the agent runs the compiled program the store
+  // holds, and load_file/2 reads the files the store holds with it (IGLP
+  // 96cd44a, Implementation Notes, "An update"), by the same name.
+  final kept = (module as ModuleTerm).keptFiles;
+  if (kept != null) {
+    final bytes = kept[name];
+    if (bytes == null) {
+      return kernelAbort('[ABORT] _load_file/2: no file $name among the files '
+          'the store keeps with the program of directory $dir');
+    }
+    return _loadedContent(rt, args[1], bytes, name);
+  }
+
   final file = File('$dir/$name');
   if (!file.existsSync()) {
     return kernelAbort('[ABORT] _load_file/2: no file $name in the calling module\'s '
@@ -1314,14 +1327,21 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
         'module\'s directory: it leaves $dir');
   }
 
-  final bytes = file.readAsBytesSync();
+  return _loadedContent(rt, args[1], file.readAsBytesSync(), name);
+}
+
+/// Assign [content] what a file of [bytes] holds: the module where it is a
+/// certified compiled program, its certificate verified as the loader
+/// verifies it, and its text otherwise.
+BodyKernelResult _loadedContent(
+    GlpRuntime rt, Object? content, Uint8List bytes, String name) {
   final artefact = Artefact.certifiedFromBytes(bytes);
   if (artefact != null) {
     return bindResult(
-        rt, args[1], ModuleTerm(artefact, name: artefact.moduleName));
+        rt, content, ModuleTerm(artefact, name: artefact.moduleName));
   }
   return bindResult(
-      rt, args[1], ConstTerm(utf8.decode(bytes, allowMalformed: true)));
+      rt, content, ConstTerm(utf8.decode(bytes, allowMalformed: true)));
 }
 
 // =============================================================================

@@ -45,6 +45,7 @@ import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:grassroots_networking/grassroots_networking.dart';
 import 'package:grassroots_networking_glue/grassroots_glp_network.dart';
 import 'package:redux/redux.dart';
+import 'app_identity.dart' show RunningAppAttestation;
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 /// The layer on the phone, the runtime's interface over it, and the key pair
@@ -58,7 +59,14 @@ class PhoneNetwork {
   /// network ([GrassrootsNetwork.initialize]).
   final bool transports;
 
-  const PhoneNetwork._(this.layer, this.network, this.keyPair, this.transports);
+  /// The layer's attestation: the platform's, signing the version of the app
+  /// whose program the agent runs, which the host gives it once the runtime
+  /// has decided it ([RunningAppAttestation.give]); until then no session is
+  /// attested.
+  final RunningAppAttestation attestation;
+
+  const PhoneNetwork._(this.layer, this.network, this.keyPair, this.transports,
+      this.attestation);
 
   /// Instantiate the layer for the agent of [persona], with the agent's key
   /// pair, and start it.  The store the layer reduces its actions in runs
@@ -69,11 +77,12 @@ class PhoneNetwork {
       List<Middleware<AppState>> middleware = const []}) async {
     final sodium = await SodiumSumoInit.init();
     final identity = await _identity(persona);
+    final attestation = RunningAppAttestation(NativePlatformAttestation(
+        verifier: const AttestationVerifier(allowAppAttestDevelopment: true)));
     final layer = GrassrootsNetwork(
       identity: identity,
       underlays: const {Underlay.pan, Underlay.lan, Underlay.wan},
-      platformAttestation: NativePlatformAttestation(
-          verifier: const AttestationVerifier(allowAppAttestDevelopment: true)),
+      platformAttestation: attestation,
       store: Store<AppState>(appReducer,
           initialState: const AppState(), middleware: middleware),
       sodium: sodium,
@@ -89,6 +98,7 @@ class PhoneNetwork {
         priv: Uint8List.fromList(identity.privateKey),
       ),
       transports,
+      attestation,
     );
   }
 
