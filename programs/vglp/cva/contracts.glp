@@ -375,8 +375,8 @@ PLists     ::= [] ; [PList | PLists].
 PAct       ::= act(Constant, String, Strings, Said, String, Proposer).
 Proposer   ::= by(Ints).
 PActs      ::= [] ; [PAct | PActs].
-%% A standing declaration, standing(Schema, Predicate) (vGLP d433f71, Section 5.4, "The contract's words"; compiler/self.glp).
-PStand     ::= standing(Constant, Constant).
+%% A standing declaration, standing(Schema, Start, Stop) (vGLP 7c631b1, Section 5.4, "The contract's words"; compiler/self.glp).
+PStand     ::= standing(Constant, Constant, Constant).
 PStands    ::= [] ; [PStand | PStands].
 Pragmas    ::= pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands).
 
@@ -461,7 +461,7 @@ pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
      act(post, '"Post"', [], none, '"Contacts"', by([1])),
      act(arrive, '"Arrive"', [], none, '"Contacts"', by([1])),
      act(leave, '"Leave"', [], none, '"Contacts"', by([1]))],
-    [standing(greet, here)])).
+    [standing(greet, arrive, leave)])).
 pragmas_named(days, pragmas([list('"Dates"', [date])],
     [act(dawn, '"Dawn"', [], none, '"Dates"', by([1]))])).
 pragmas_named(linear, pragmas([list('"Levels"', [level])],

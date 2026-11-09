@@ -5395,8 +5395,8 @@ check "CVA author: alice's machine cites to bob b, whose first signer, its autho
 check_not "CVA author: ... and not a, whose author is alice" "cite(alice, bob, speech(utterance(a), alice))" "$cva_author"
 check "CVA author: ... bob holds cites(b)" "B = \[.*view(bob, \[cites(speech(speech(utterance(b), bob), alice))" "$cva_author"
 check "CVA author: ... the run suspends" "→ suspended" "$cva_author"
-# Standing requests (vGLP d433f71, Section 5.4, "The contract's words": "A pragma may declare a guarded act standing on an atom its guarding roles require: a person's request of the act that adds the atom is also their standing request (Definition Local) of every class of the standing act's parts that they propose, and their request of the act that deletes it withdraws it; the standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals"; Definition "Proposing", Stand and Withdraw; vGLP #24, Code_inbox.md, 2026-11-08 08:12 UTC, item 2).  The declaration's term, standing(Schema, Predicate), is the compiler's, vGLP's own contracts giving it (contracts.glp, pragmas_named/2), no paper yet giving the form of its line in a NAME.txt.  intros' greet(p, q), guarded by both, requiring here and knows of the other at each, stands on here: arrive makes the standing request and leave withdraws it.
-check "CVA standing: the platform prints greet standing on here" "^schema_standing(greet, on(here))\$" "$cva_signing_text"
+# Standing requests (vGLP 7c631b1, Section 5.4, "The contract's words": "An implementation pragma may make the acts of a clause standing, as `Encounter: Alice stands on [Open place] until [Close place]' does ...: the person's request of the act of the first button is also their standing request (Definition Local) of every class of the clause's acts that they propose, and their request of the act of the second withdraws it; a standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals"; Definition "Proposing", Stand and Withdraw).  The declaration's term, standing(Schema, Start, Stop), is the compiler's, vGLP's own contracts giving it (contracts.glp, pragmas_named/2) and pragmas.sh reading it from a NAME.txt's standing line (GSC 1a8e31c, Section 2).  intros' greet(p, q), guarded by both, requiring here and knows of the other at each, stands on here: arrive makes the standing request and leave withdraws it.
+check "CVA standing: the platform prints greet standing on arrive" "^schema_standing(greet, on(arrive))\$" "$cva_signing_text"
 check "CVA standing: ... arrive making the standing request" "^stand_act(arrive, makes(greet))\$" "$cva_signing_text"
 check "CVA standing: ... leave withdrawing it" "^stand_act(leave, withdraws(greet))\$" "$cva_signing_text"
 cva_standing=$("$REPL_RUN" <<HEREDOC
@@ -5422,18 +5422,19 @@ HEREDOC
 check_not "CVA standing: alice withdraws by leaving before bob arrives: no greet commits" "outcome(attempt([a-z]*, [0-9]*, [0-9]*, greet([a-z]*, [a-z]*), none), commit)" "$cva_withdraw"
 check "CVA standing: ... alice holds knows(bob) alone" "A = \[.*view(alice, \[knows(bob)\], \[bob\], \[\], \[tab('Contacts', knows)\]) | " "$cva_withdraw"
 check "CVA standing: ... and the run suspends" "→ suspended" "$cva_withdraw"
-# The compiler's checks of a standing declaration (cvac.glp, standing_faults): a schema of the contract (st_none), guarded (st_unguarded), each of whose guarding roles requires an atom of the predicate and atoms naming every other role and variable, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification") (st_unnamed, GPE's Encounter as its schema stands, Alice's atoms naming no Bob); and a schema declared standing needs no button (st_ok).
-cva_stfx="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(open, []), atom(knows, [role(2)])], []), rs(guarded, [atom(greeted, [role(1)])], [], [atom(open, []), atom(knows, [role(1)])], [])])"
-cva_stmeet="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(meet, [], [rs(guarded, [atom(met, [role(2)])], [], [atom(open, [])], []), rs(guarded, [atom(met, [role(1)])], [], [atom(open, [])], [])])"
-cva_stwave="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(wave, [], [rs(unguarded, [atom(waved, [])], [], [atom(open, [])], [atom(waved, [])])])"
-cva_stp="[list('\"Open\"', [open])], [act(open, '\"Open\"', [], none, '\"Open\"', by([1]))]"
+# The compiler's checks of a standing declaration (cvac.glp, standing_faults): a schema of the contract (st_none), guarded (st_unguarded), its two acts schemas of the contract (st_noact), each of whose guarding roles requires atoms naming every other role and variable, so that "the guarded parts with no opener of classes of rho that p proposes with s in dom(f) are finitely many and computable from p, s and rho" (Definition "Effective Local Specification") (st_unnamed, GPE's Encounter as its schema stands, Alice's atoms naming no Bob); and a schema declared standing needs no button (st_ok).
+cva_stfx="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(close, [], [rs(guarded, [], [atom(open, [])], [atom(open, [])], [])]), schema(greet, [], [rs(guarded, [atom(greeted, [role(2)])], [], [atom(open, []), atom(knows, [role(2)])], []), rs(guarded, [atom(greeted, [role(1)])], [], [atom(open, []), atom(knows, [role(1)])], [])])"
+cva_stmeet="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(close, [], [rs(guarded, [], [atom(open, [])], [atom(open, [])], [])]), schema(meet, [], [rs(guarded, [atom(met, [role(2)])], [], [atom(open, [])], []), rs(guarded, [atom(met, [role(1)])], [], [atom(open, [])], [])])"
+cva_stwave="schema(open, [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(close, [], [rs(guarded, [], [atom(open, [])], [atom(open, [])], [])]), schema(wave, [], [rs(unguarded, [atom(waved, [])], [], [atom(open, [])], [atom(waved, [])])])"
+cva_stp="[list('\"Open\"', [open])], [act(open, '\"Open\"', [], none, '\"Open\"', by([1])), act(close, '\"Close\"', [], none, '\"Open\"', by([1]))]"
 cva_standing_fx=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 100000000
-compile(st_ok, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(greet, open)])).
-compile(st_none, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(nope, open)])).
-compile(st_unnamed, [$cva_stmeet], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(meet, open)])).
-compile(st_unguarded, [$cva_stwave], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(wave, open)])).
+compile(st_ok, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(greet, open, close)])).
+compile(st_noact, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(greet, open, shut)])).
+compile(st_none, [$cva_stfx], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(nope, open, close)])).
+compile(st_unnamed, [$cva_stmeet], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(meet, open, close)])).
+compile(st_unguarded, [$cva_stwave], syntactically_grassroots, no_introduction, pragmas($cva_stp, [standing(wave, open, close)])).
 :quit
 HEREDOC
 2>&1)
@@ -5442,6 +5443,19 @@ check_not "CVA standing: ... and not refused (st_ok)" "not compiled(st_ok)" "$cv
 check "CVA standing: a declaration naming no schema, refused (st_none)" "a standing declaration names no schema of the contract" "$cva_standing_fx"
 check "CVA standing: a schema whose guarding roles name not each other, its standing parts not computable from a role's state, refused (st_unnamed)" "its standing parts are not computable from that role" "$cva_standing_fx"
 check "CVA standing: a schema with no guarding role, refused (st_unguarded)" "a standing declaration names a schema with no guarding role" "$cva_standing_fx"
+check "CVA standing: a declaration whose act withdrawing it is no schema of the contract, refused (st_noact)" "names, as the act that makes or withdraws the standing request, no schema of the contract.*shut" "$cva_standing_fx"
+# The standing line of a contract's implementation pragmas (GSC 1a8e31c, Section 2: "``Encounter: Alice stands on [Open place] until [Close place]'' says that Alice's act Open place is her standing request of every act of Encounter she guards ... and that her act Close place withdraws it"; vGLP 7c631b1, Section 5.4), read by pragmas.sh as standing(S, A, W) for each schema S of the clause: XG's Encounter stands on [Open place] until [Close place]; XW's line is not of that form, refused.
+cva_ps=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XG' 'Alice and Bob are persons.' '1. ■ Open Place.  Alice may declare the place open, and may close it.' '2. ■ Encounter.  Alice and Bob, who have both declared the place open, may know each other.' 'Interface pragmas' 'Contacts: the persons Alice knows.' 'Open Place: Alice [Open place] [Close place]' 'Implementation pragmas' 'Encounter: Alice stands on [Open place] until [Close place]; the two phones exchange keys.' > "$cva_ps/XG.txt"
+printf '%s\n' '% Extends: nothing.' 'XW' 'Alice and Bob are persons.' '1. ■ Open Place.  Alice may declare the place open, and may close it.' '2. ■ Encounter.  Alice and Bob, who have both declared the place open, may know each other.' 'Interface pragmas' 'Contacts: the persons Alice knows.' 'Open Place: Alice [Open place] [Close place]' 'Implementation pragmas' 'Encounter: Alice stands on [Open place].' > "$cva_ps/XW.txt"
+cva_ps_term="[schema(open_place, ['Alice'], [], [rs(guarded, [atom(open, [])], [], [], [atom(open, [])])]), schema(close_place, ['Alice'], [], [rs(guarded, [], [atom(open, [])], [atom(open, [])], [])]), schema(encounter, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(open, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(open, [])], [])])]"
+cva_ps_ok=$(bash "$CVA/compiler/pragmas.sh" "$cva_ps/XG.txt" "$cva_ps_term" 2>&1; echo "exit $?")
+cva_ps_bad=$(bash "$CVA/compiler/pragmas.sh" "$cva_ps/XW.txt" "$cva_ps_term" 2>&1; echo "exit $?")
+rm -rf "$cva_ps"
+check "CVA standing: the standing line read, encounter standing on open_place until close_place (XG)" "\[standing('encounter', 'open_place', 'close_place')\])$" "$cva_ps_ok"
+check "CVA standing: ... and pragmas.sh exits 0 (XG)" "^exit 0$" "$cva_ps_ok"
+check "CVA standing: a standing line of another form, refused (XW)" "is not \"<Clause>: <Name> stands on \[<Start>\] until \[<Stop>\]\"" "$cva_ps_bad"
+check "CVA standing: ... and pragmas.sh exits 1 (XW)" "^exit 1$" "$cva_ps_bad"
 
 # GB's mint_bond, advance and redeem_bc (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3: "GB: d, k and r by the request; t local to the issuer's role, its date; mint_bond's gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").  vGLP's contract bonds (programs/vglp/cva/contracts.glp): GB's three schemas as programs/currencies/bonds/GB.glp writes them, with GKK's establish and acquaint, GB's mint_coin and swap_cb, and dawn, which gives a person their first date, date(0), GB naming no act that does (Code #12 to Currencies, 2026-10-20 22:23 UTC).  advance, unguarded, its t local to its role and t1 given by succ, is opened by a dated person's machine whenever it can, so the run does not suspend and is stopped at the REPL's :limit (bonds/self.glp).  A request of mint_bond whose guard is not ready is dropped with the notice refused(N, p, unable), and a request of redeem_bc proposes the redeem part, the part it names, guarded by the bearer, never the swap part its class holds (vGLP 1423679, Section 5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, items 4 and 7): the bond maturing at 1000000 refused by the issuer's machine, le(d, t) failing, and the one maturing at 10 redeemed.
 cva_bonds_load=$("$REPL_RUN" <<HEREDOC
@@ -5626,6 +5640,36 @@ for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_pays
     check "CVA quiescence: the run of $v suspends, no agent left with an own transaction or a trigger" "→ suspended" "${!v}"
     check_not "CVA quiescence: ... the run of $v not stopped at the limit" "capped" "${!v}"
 done
+
+# The composition of contracts (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition, the union of their schemas and of their pragmas, which extends each ...; what two of them inherit from one contract is taken once, and a schema, a tab or a button of one name that two of them write differently is refused"), by programs/vglp/cva/compiler/compose.sh, on fixtures of its own: XA and XB both inherit establish, written with different variable names, and the tab Contacts and the button Establish; XA adds mint, XB burn; XC writes establish differently, XD the tab Contacts, XE the button Establish, XF another introduction predicate.
+cva_cm_est="schema(establish, ['Alice'], [pvar(c)], [rs(guarded, [atom(identity, [pvar(c)])], [], [], [atom(identity, [pvar(c)])])])"
+cva_cm_est2="schema(establish, ['Alice'], [pvar('Carol')], [rs(guarded, [atom(identity, [pvar('Carol')])], [], [], [atom(identity, [pvar('Carol')])])])"
+cva_cm_est3="schema(establish, ['Alice'], [pvar(c)], [rs(guarded, [atom(identity, [pvar(c)])], [], [], [])])"
+cva_cm_mint="schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])"
+cva_cm_burn="schema(burn, ['Alice'], [], [rs(guarded, [], [atom(coin, [role(1)])], [atom(coin, [role(1)])], [])])"
+cva_cm_tab="list('\"Contacts\"', ['identity'])"
+cva_cm_act="act('establish', '\"Establish\"', ['\"\"'], none, '\"Contacts\"', by([1]))"
+cva_cm_pa="pragmas([$cva_cm_tab, list('\"Coins\"', ['coin'])], [$cva_cm_act, act('mint', '\"Mint\"', ['\"\"', '\"amount\"'], none, '\"Coins\"', by([1]))])"
+cva_cm_pb="pragmas([$cva_cm_tab, list('\"Burnt\"', ['coin'])], [$cva_cm_act, act('burn', '\"Burn\"', [], none, '\"Burnt\"', by([1]))])"
+cva_cm_ok=$(bash "$CVA/compiler/compose.sh" XA "reflexive([knows], [$cva_cm_est, $cva_cm_mint])" "$cva_cm_pa" "introduction(knows)" XB "environment([today], [$cva_cm_est2, $cva_cm_burn])" "$cva_cm_pb" no_introduction 2>&1; echo "exit $?")
+cva_cm_schema=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XC "[$cva_cm_est3]" no_pragmas no_introduction 2>&1; echo "exit $?")
+cva_cm_tabx=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XD "[$cva_cm_est]" "pragmas([list('\"Contacts\"', ['knows'])], [])" no_introduction 2>&1; echo "exit $?")
+cva_cm_button=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XE "[$cva_cm_est]" "pragmas([], [act('establish', '\"Establish\"', [], none, '\"Contacts\"', by([1]))])" no_introduction 2>&1; echo "exit $?")
+cva_cm_intro=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est]" no_pragmas "introduction(knows)" XF "[$cva_cm_est]" no_pragmas "introduction(friend)" 2>&1; echo "exit $?")
+cva_cm_one=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est]" no_pragmas no_introduction 2>&1; echo "exit $?")
+check "CVA composition: the union of the schemas, establish inherited by both taken once, the first's, mint and burn added, the reflexive and the environment predicates kept (ok)" "^environment(\[today\], reflexive(\[knows\], \[$(printf '%s' "$cva_cm_est" | sed -e 's/[][]/\\&/g'), $(printf '%s' "$cva_cm_mint" | sed -e 's/[][]/\\&/g'), $(printf '%s' "$cva_cm_burn" | sed -e 's/[][]/\\&/g')\]))$" "$cva_cm_ok"
+check "CVA composition: ... the union of the pragmas, the tab Contacts and the button Establish both write taken once (ok)" "^pragmas(\[list('\"Contacts\"', \['identity'\]), list('\"Coins\"', \['coin'\]), list('\"Burnt\"', \['coin'\])\], \[act('establish', '\"Establish\"', \['\"\"'\], none, '\"Contacts\"', by(\[1\])), act('mint', .*, act('burn', '\"Burn\"', \[\], none, '\"Burnt\"', by(\[1\]))\])$" "$cva_cm_ok"
+check "CVA composition: ... the introduction predicate the one contract names (ok)" "^introduction(knows)$" "$cva_cm_ok"
+check "CVA composition: ... and compose.sh exits 0 (ok)" "^exit 0$" "$cva_cm_ok"
+check "CVA composition: a schema of one name two write differently refused (schema)" "the schema establish is written differently by XA and XC" "$cva_cm_schema"
+check "CVA composition: ... and compose.sh exits 1 (schema)" "^exit 1$" "$cva_cm_schema"
+check "CVA composition: a tab of one name two write differently refused (tab)" "the tab '\"Contacts\"' is written differently by XA and XD" "$cva_cm_tabx"
+check "CVA composition: ... and compose.sh exits 1 (tab)" "^exit 1$" "$cva_cm_tabx"
+check "CVA composition: a button of one name two write differently refused (button)" "the button '\"Establish\"' is written differently by XA and XE" "$cva_cm_button"
+check "CVA composition: ... and compose.sh exits 1 (button)" "^exit 1$" "$cva_cm_button"
+check "CVA composition: two introduction predicates refused (intro)" "XA and XF name different introduction predicates" "$cva_cm_intro"
+check "CVA composition: ... and compose.sh exits 1 (intro)" "^exit 1$" "$cva_cm_intro"
+check "CVA composition: one contract is no composition, refused as a bad argument (one)" "^exit 2$" "$cva_cm_one"
 echo ""
 
 
@@ -9162,6 +9206,17 @@ for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
+done
+# A composition of contracts, recorded in cascade/<NAME>+<NAME>/ (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition"; cascade.sh, several contracts): GSN and GC, both extending GKK.
+for cas_cs in "gsn gc"; do
+    cas_n=$(printf '%s' "$cas_cs" | tr a-z_ A-Z- | tr ' ' +)
+    cas_o="cascade/$cas_n"
+    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    cas_out=$(bash "$GLP_DIR/cascade.sh" $cas_cs --check 2>&1; echo "exit $?")
+    for cas_f in $(cd "$GLP_DIR/$cas_o" && ls | grep -vx manifest.md); do
+        check "cascade $cas_n: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
+    done
+    check "cascade $cas_n: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
 done
 
 echo ""
