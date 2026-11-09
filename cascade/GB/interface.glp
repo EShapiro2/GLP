@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), mint_coin('Peer', 'Integer'), mint_bond('Peer', 'Integer', 'Integer'), first_date('Peer', 'Integer'), advance('Peer', 'Integer'), swap_cc('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), swap_cb('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bc('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer'), swap_bb('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem_cc('Peer', 'Peer', 'Peer'), redeem_cb('Peer', 'Peer', 'Peer', 'Integer'), redeem_bc('Peer', 'Peer', 'Integer', 'Peer'), redeem_bb('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), deposit_c('Peer', 'Peer', 'Peer', 'Integer'), deposit_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), release_c('Peer', 'Peer', 'Peer', 'Integer'), release_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), return_c('Peer', 'Peer', 'Peer', 'Integer'), return_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), mint_coin('Peer', 'Integer'), mint_bond('Peer', 'Integer', 'Integer'), swap_cc('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), swap_cb('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bc('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer'), swap_bb('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem_cc('Peer', 'Peer', 'Peer'), redeem_cb('Peer', 'Peer', 'Peer', 'Integer'), redeem_bc('Peer', 'Peer', 'Integer', 'Peer'), redeem_bb('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), deposit_c('Peer', 'Peer', 'Peer', 'Integer'), deposit_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), release_c('Peer', 'Peer', 'Peer', 'Integer'), release_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), return_c('Peer', 'Peer', 'Peer', 'Integer'), return_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), mint('Peer', 'Integer'), mint_bond('Peer', 'Integer', 'Integer'), first_date('Peer', 'Integer'), advance('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), swap_cb('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bc('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer'), swap_bb('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), redeem_cb('Peer', 'Peer', 'Peer', 'Integer'), redeem_bc('Peer', 'Peer', 'Integer', 'Peer'), redeem_bb('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), deposit_c('Peer', 'Peer', 'Peer', 'Integer'), deposit_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), release_c('Peer', 'Peer', 'Peer', 'Integer'), release_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), return_c('Peer', 'Peer', 'Peer', 'Integer'), return_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), mint('Peer', 'Integer'), mint_bond('Peer', 'Integer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), swap_cb('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bc('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer'), swap_bb('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), redeem_cb('Peer', 'Peer', 'Peer', 'Integer'), redeem_bc('Peer', 'Peer', 'Integer', 'Peer'), redeem_bb('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), deposit_c('Peer', 'Peer', 'Peer', 'Integer'), deposit_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), release_c('Peer', 'Peer', 'Peer', 'Integer'), release_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), return_c('Peer', 'Peer', 'Peer', 'Integer'), return_b('Peer', 'Peer', 'Peer', 'Integer', 'Integer')]),
   type('Request', [propose('Proposal')]),
   type('Atom', [identity, knows('Peer'), coin('Peer'), bond('Peer', 'Integer'), date('Integer'), dated]),
   type('Peer', ['Key']),
@@ -1099,14 +1099,14 @@ interface([
   compiled(join_proposal_establish_1, 2),
   compiled(join_proposal_acquaint_2, 3),
   compiled(join_proposal_introduce_3, 4),
-  compiled(join_proposal_mint_coin_2, 3),
+  compiled(join_proposal_mint_2, 3),
   compiled(join_proposal_mint_bond_3, 4),
-  compiled(join_proposal_swap_cc_6, 7),
+  compiled(join_proposal_swap_6, 7),
   compiled(join_proposal_swap_cb_7, 8),
   compiled(join_proposal_swap_bc_7, 8),
   compiled(join_proposal_swap_bb_8, 9),
   compiled(join_proposal_pay_3, 4),
-  compiled(join_proposal_redeem_cc_3, 4),
+  compiled(join_proposal_redeem_3, 4),
   compiled(join_proposal_redeem_cb_4, 5),
   compiled(join_proposal_redeem_bc_4, 5),
   compiled(join_proposal_redeem_bb_5, 6),
