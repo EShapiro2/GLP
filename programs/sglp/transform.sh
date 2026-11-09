@@ -5,7 +5,7 @@
 # through the REPL.
 #
 #   bash programs/sglp/transform.sh            print into the programs' directories
-#   bash programs/sglp/transform.sh <dir>      print into <dir>/social_graph/, <dir>/coins/,
+#   bash programs/sglp/transform.sh <dir>      print into <dir>/examples/social_graph/, <dir>/examples/coins/,
 #                                              <dir>/tests/reader/, <dir>/tests/delivery/,
 #                                              <dir>/tests/receipt/, <dir>/tests/panel/,
 #                                              <dir>/tests/numbers/, <dir>/tests/steps/,
@@ -25,9 +25,9 @@
 # P social_graph, coins, reader, delivery, receipt, panel, numbers, steps, screen and census and Part profiles
 # and population, and writes what each prints between its lines "%% transform
 # begin" and "%% transform end" to its directory's Part.glp:
-# social_graph/profiles.glp and social_graph/population.glp, from
-# social_graph/graph_sglp.glp; coins/profiles.glp and coins/population.glp,
-# from coins/coins_sglp.glp; and the run tests' (xi) to (xiv), tests/reader/
+# examples/social_graph/profiles.glp and examples/social_graph/population.glp, from
+# examples/social_graph/graph_sglp.glp; examples/coins/profiles.glp and examples/coins/population.glp,
+# from examples/coins/coins_sglp.glp; and the run tests' (xi) to (xiv), tests/reader/
 # from rating_sglp.glp, tests/delivery/ from chat_sglp.glp, tests/receipt/ from
 # receipt_sglp.glp, tests/panel/ from show_sglp.glp, tests/numbers/ from
 # total_sglp.glp (sGLP's task of 2026-10-14 09:46 UTC, item 3), tests/steps/ from
@@ -192,9 +192,9 @@ else
         OUT="$1"
     fi
     BASE="$HERE"
-    mkdir -p "$OUT/social_graph" "$OUT/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" "$OUT/tests/steps" "$OUT/tests/screen" "$OUT/tests/census" || exit 2
+    mkdir -p "$OUT/examples/social_graph" "$OUT/examples/coins" "$OUT/tests/reader" "$OUT/tests/delivery" "$OUT/tests/receipt" "$OUT/tests/panel" "$OUT/tests/numbers" "$OUT/tests/steps" "$OUT/tests/screen" "$OUT/tests/census" || exit 2
 
-    PARTS="social_graph/profiles social_graph/population coins/profiles coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population tests/steps/profiles tests/steps/population tests/screen/profiles tests/screen/population tests/census/profiles tests/census/population"
+    PARTS="examples/social_graph/profiles examples/social_graph/population examples/coins/profiles examples/coins/population tests/reader/profiles tests/reader/population tests/delivery/profiles tests/delivery/population tests/receipt/profiles tests/receipt/population tests/panel/profiles tests/panel/population tests/numbers/profiles tests/numbers/population tests/steps/profiles tests/steps/population tests/screen/profiles tests/screen/population tests/census/profiles tests/census/population"
     {
         echo ':limit 1000000000000000'
         echo "$HERE"
