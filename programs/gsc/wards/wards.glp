@@ -1026,29 +1026,31 @@ v_sigmas([RS|Rs], S, I, V, R?) :-
     v_sigmas(Rs?, S1?, I?, V?, T),
     v_sigmas1(A?, S?, T?, R).
 
-% ward_sigma(Rs, I, Mk, Gs, Ss): [sigma] when the role at I of the roles Rs
-% is a ward role of Mk -- requiring Mk, with exactly one other role sigma
-% requiring v(I), v that of Mk's guardianship (def:relay, clause 1) -- and []
-% otherwise.
-procedure ward_sigma1(Ans?, Ints?, Ints).
-ward_sigma1(yes, [S], [S?]).
-ward_sigma1(yes, [], []).
-ward_sigma1(yes, [_, _|_], []).
-ward_sigma1(no, _, []).
+% ward_party(Rs, I, Mk, Gs, Ps): [ward(I, Mk, G)] when the role at I of the
+% roles Rs is a ward role of Mk -- requiring Mk, with at most one other role
+% sigma requiring v(I), v that of Mk's guardianship, G its guardian role,
+% guardian(sigma), or no_guardian where no role requires v(I) (def:relay,
+% clause 1, GAI 6b64d3d: "with at most one other role sigma of chi, its
+% guardian role"; GnW:3 and GnW:4) -- and [] otherwise.
+procedure ward_party1(Ans?, Ints?, Integer?, Constant?, Parties).
+ward_party1(yes, [S], I, Mk, [ward(I?, Mk?, guardian(S?))]).
+ward_party1(yes, [], I, Mk, [ward(I?, Mk?, no_guardian)]).
+ward_party1(yes, [_, _|_], _, _, []).
+ward_party1(no, _, _, _, []).
 
-procedure ward_sigma0(Atoms?, RoleSpecs?, Integer?, Constant?, Guardianships?, Ints).
-ward_sigma0(Req, Rs, I, Mk, Gs, R?) :-
+procedure ward_party0(Atoms?, RoleSpecs?, Integer?, Constant?, Guardianships?, Parties).
+ward_party0(Req, Rs, I, Mk, Gs, R?) :-
     ground(Req?), ground(Rs?), integer(I?), ground(Mk?), ground(Gs?) |
     atoms_member(Req?, atom(Mk?, []), A),
     v_of(Gs?, Mk?, V),
     v_sigmas(Rs?, 1, I?, V?, Ss),
-    ward_sigma1(A?, Ss?, R).
+    ward_party1(A?, Ss?, I?, Mk?, R).
 
-procedure ward_sigma(RoleSpecs?, Integer?, Constant?, Guardianships?, Ints).
-ward_sigma(Rs, I, Mk, Gs, R?) :- ground(Rs?), integer(I?), ground(Mk?), ground(Gs?) |
+procedure ward_party(RoleSpecs?, Integer?, Constant?, Guardianships?, Parties).
+ward_party(Rs, I, Mk, Gs, R?) :- ground(Rs?), integer(I?), ground(Mk?), ground(Gs?) |
     nth_rs(Rs?, I?, RS),
     rs_req(RS?, Req),
-    ward_sigma0(Req?, Rs?, I?, Mk?, Gs?, R).
+    ward_party0(Req?, Rs?, I?, Mk?, Gs?, R).
 
 % is_free_role(RS, M, R): the role forbids every mark in M.
 procedure is_free_role(RoleSpec?, Preds?, Ans).
@@ -1066,8 +1068,10 @@ procedure party_rk(Party?, RK).
 party_rk(ward(_, Mk, S), rk_ward(Mk?, S?)).
 party_rk(free(_), rk_free).
 
+% The guardian roles of a party: one for a ward role with a guardian role, none otherwise.
 procedure party_sigma(Party?, Ints).
-party_sigma(ward(_, _, S), [S?]).
+party_sigma(ward(_, _, guardian(S)), [S?]).
+party_sigma(ward(_, _, no_guardian), []).
 party_sigma(free(_), []).
 
 procedure rk_of(Integer?, Party?, Party?, Ints?, RK).
@@ -1184,18 +1188,24 @@ guard_adds_ok(rk_other, _, _, _, _, yes).
 % Clause 2 (GAI a81e827): an atom required at a role.  It is an atom of a reflexive predicate naming the role; or the one atom of a schema of arity one as in clause 1 of def:unobstructed-marks; or, at a ward role, its m or g(sigma); or, at a ward role rho of m, an atom of a predicate h whose arguments are distinct speech-act variables of the schema occurring in no other atom it requires but its record, with the conditions on h and its record h' below (records_of); or, at the guardian role sigma of a ward role rho, v(rho) or w(rho), or the record, the atom of h' whose arguments are rho and the arguments of the h-atom rho requires; or, at a guardian role or a free role, e(kappa) for another guardian role or free role kappa, e reflexive where both are guardian roles; or, where the schema has two ward roles, at the guardian role of one, e of the other ward role and its record (GnW:4); and the schema adds at a free role the record of each ward role (free_recs_ok below) (GAI 2e3e5cc).
 
 procedure req_ward_ok(RK?, Atom?, Guardianships?, Ans).
-req_ward_ok(rk_ward(Mk, S), Phi, Gs, R?) :- ground(Mk?), integer(S?), ground(Phi?), ground(Gs?) |
+req_ward_ok(rk_ward(Mk, S), Phi, Gs, R?) :- ground(Mk?), ground(S?), ground(Phi?), ground(Gs?) |
     g_of(Gs?, Mk?, G),
     same_atom(Phi?, atom(Mk?, []), A1),
-    same_atom(Phi?, atom(G?, [role(S?)]), A2),
+    req_g_ok(S?, G?, Phi?, A2),
     or_yes(A1?, A2?, R).
 req_ward_ok(rk_free, _, _, no).
 req_ward_ok(rk_guard, _, _, no).
 req_ward_ok(rk_other, _, _, no).
 
+% g(sigma) at a ward role whose guardian role is sigma; a ward role with no guardian role requires its m and no atom of g (def:relay, clause 2: "at a ward role, its m or g(sigma)").
+procedure req_g_ok(Guardian?, Constant?, Atom?, Ans).
+req_g_ok(guardian(S), G, Phi, R?) :- integer(S?), ground(G?), ground(Phi?) |
+    same_atom(Phi?, atom(G?, [role(S?)]), R).
+req_g_ok(no_guardian, _, _, no).
+
 % v(rho) or w(rho) at X for a ward party rho whose guardian role is X.
 procedure req_w_ok(Atom?, Integer?, Party?, Guardianships?, Ans).
-req_w_ok(Phi, X, ward(Rho, Mk, S), Gs, R?) :-
+req_w_ok(Phi, X, ward(Rho, Mk, guardian(S)), Gs, R?) :-
     S? =:= X?, ground(Phi?), integer(Rho?), ground(Mk?), ground(Gs?) |
     w_of(Gs?, Mk?, W),
     v_of(Gs?, Mk?, V),
@@ -1256,14 +1266,14 @@ req_e_ok(atom(Q, As), X, KX, E, Rf, RKs, R?) :-
 req_e_ok(atom(_, _), _, _, _, _, _, no) :- otherwise | true.
 
 % e of the other ward role, at the guardian role of one, where the schema has two ward roles (def:relay, clause 2, GAI 2cf0f13; GnW:4, Alice knows Dave).
-procedure e_other_ward(Integer?, Integer?, Integer?, Integer?, Ans).
-e_other_ward(X, K, S, Rho, yes) :- X? =:= S?, K? =:= Rho? | true.
+procedure e_other_ward(Integer?, Integer?, Guardian?, Integer?, Ans).
+e_other_ward(X, K, guardian(S), Rho, yes) :- X? =:= S?, K? =:= Rho? | true.
 e_other_ward(_, _, _, _, no) :- otherwise | true.
 
 procedure req_e_ward_ok(Atom?, Integer?, Constant?, Party?, Party?, Ans).
 req_e_ward_ok(atom(Q, [role(K)]), X, E, ward(R1, _, S1), ward(R2, _, S2), R?) :-
-    Q? =?= E?, integer(K?), integer(X?), integer(R1?), integer(S1?), integer(R2?),
-    integer(S2?) |
+    Q? =?= E?, integer(K?), integer(X?), integer(R1?), ground(S1?), integer(R2?),
+    ground(S2?) |
     e_other_ward(X?, K?, S1?, R2?, A1),
     e_other_ward(X?, K?, S2?, R1?, A2),
     or_yes(A1?, A2?, R).
@@ -1776,18 +1786,18 @@ req_less_recs([RS|Rs], T, Hs, R?) :- ground(RS?), ground(Rs?), ground(T?), groun
     atoms_app(Q1?, R2?, R).
 
 % The atom of h at the ward role X of Mk, whose guardian role is S, Sr being the roles of the schema: its arguments distinct speech-act variables of the schema, each occurring in no other atom the schema requires but its record; every schema of C adding Mk at a role adds an atom of h there; no schema of C deletes an atom of h; and there is a predicate h' of its record (records_of).
-procedure req_h_ok3(Preds?, Ans?, Integer?, Args?, Integer?, RoleSpecs?, Ans).
+procedure req_h_ok3(Preds?, Ans?, Guardian?, Args?, Integer?, RoleSpecs?, Ans).
 req_h_ok3([], _, _, _, _, _, no).
 req_h_ok3([Hp|Hps], A1, S, As, X, Sr, R?) :-
-    ground(Hp?), ground(Hps?), ground(A1?), integer(S?), ground(As?), integer(X?), ground(Sr?) |
+    ground(Hp?), ground(Hps?), ground(A1?), ground(S?), ground(As?), integer(X?), ground(Sr?) |
     req_less_recs(Sr?, [role(X?)|As?], [Hp?|Hps?], Req),
     svars_once(As?, Req?, A2),
     both_yes(A1?, A2?, R).
 
-procedure req_h_ok2(Constant?, Constant?, Integer?, Constant?, Integer?, Constant?, Args?,
+procedure req_h_ok2(Constant?, Constant?, Integer?, Constant?, Guardian?, Constant?, Args?,
                     Integer?, RoleSpecs?, Contract?, Ans).
 req_h_ok2(V, W, N, Mk, S, H, As, X, Sr, C, R?) :-
-    ground(V?), ground(W?), integer(N?), ground(Mk?), integer(S?), ground(H?), ground(As?),
+    ground(V?), ground(W?), integer(N?), ground(Mk?), ground(S?), ground(H?), ground(As?),
     integer(X?), ground(Sr?), ground(C?) |
     h_added_all(C?, Mk?, H?, N?, A0),
     records_of(C?, Mk?, V?, W?, H?, N?, Hs),
@@ -1795,11 +1805,11 @@ req_h_ok2(V, W, N, Mk, S, H, As, X, Sr, C, R?) :-
     both_yes(A0?, A1?, A01),
     req_h_ok3(Hs?, A01?, S?, As?, X?, Sr?, R).
 
-procedure req_h_ok1(Ans?, Constant?, Integer?, Constant?, Args?, Integer?, RoleSpecs?, Contract?,
+procedure req_h_ok1(Ans?, Constant?, Guardian?, Constant?, Args?, Integer?, RoleSpecs?, Contract?,
                     Guardianships?, Ans).
 req_h_ok1(no, _, _, _, _, _, _, _, _, no).
 req_h_ok1(yes, Mk, S, H, As, X, Sr, C, Gs, R?) :-
-    ground(Mk?), integer(S?), ground(H?), ground(As?), integer(X?), ground(Sr?), ground(C?),
+    ground(Mk?), ground(S?), ground(H?), ground(As?), integer(X?), ground(Sr?), ground(C?),
     ground(Gs?) |
     v_of(Gs?, Mk?, V),
     w_of(Gs?, Mk?, W),
@@ -1808,7 +1818,7 @@ req_h_ok1(yes, Mk, S, H, As, X, Sr, C, Gs, R?) :-
 
 procedure req_h_ok(RK?, Atom?, Integer?, RoleSpecs?, Contract?, Guardianships?, Ans).
 req_h_ok(rk_ward(Mk, S), atom(H, As), X, Sr, C, Gs, R?) :-
-    ground(Mk?), integer(S?), ground(H?), ground(As?), integer(X?), ground(Sr?), ground(C?),
+    ground(Mk?), ground(S?), ground(H?), ground(As?), integer(X?), ground(Sr?), ground(C?),
     ground(Gs?) |
     all_svars(As?, A1),
     distinct_args(As?, A2),
@@ -1819,12 +1829,12 @@ req_h_ok(rk_guard, _, _, _, _, _, no).
 req_h_ok(rk_other, _, _, _, _, _, no).
 
 % The record at the guardian role X of a ward role Rho: h'(Rho, As), for an atom h(As) the schema requires at Rho that clause 2 admits as an atom of h, h' a predicate of its record (records_of).
-procedure req_rec_hs(Atoms?, Constant?, Args?, Integer?, Constant?, Integer?, RoleSpecs?,
+procedure req_rec_hs(Atoms?, Constant?, Args?, Integer?, Constant?, Guardian?, RoleSpecs?,
                      Contract?, Guardianships?, Ans).
 req_rec_hs([], _, _, _, _, _, _, _, _, no).
 req_rec_hs([atom(H, Bs)|Xs], Hp, As, Rho, Mk, S, Sr, C, Gs, R?) :-
     ground(Bs?), ground(As?), Bs? =?= As?, ground(H?), ground(Xs?), ground(Hp?), integer(Rho?),
-    ground(Mk?), integer(S?), ground(Sr?), ground(C?), ground(Gs?) |
+    ground(Mk?), ground(S?), ground(Sr?), ground(C?), ground(Gs?) |
     req_h_ok(rk_ward(Mk?, S?), atom(H?, Bs?), Rho?, Sr?, C?, Gs?, A1),
     v_of(Gs?, Mk?, V),
     w_of(Gs?, Mk?, W),
@@ -1835,26 +1845,34 @@ req_rec_hs([atom(H, Bs)|Xs], Hp, As, Rho, Mk, S, Sr, C, Gs, R?) :-
     req_rec_hs(Xs?, Hp?, As?, Rho?, Mk?, S?, Sr?, C?, Gs?, A3),
     or_yes(A?, A3?, R).
 req_rec_hs([_|Xs], Hp, As, Rho, Mk, S, Sr, C, Gs, R?) :-
-    otherwise, ground(Xs?), ground(Hp?), ground(As?), integer(Rho?), ground(Mk?), integer(S?),
+    otherwise, ground(Xs?), ground(Hp?), ground(As?), integer(Rho?), ground(Mk?), ground(S?),
     ground(Sr?), ground(C?), ground(Gs?) |
     req_rec_hs(Xs?, Hp?, As?, Rho?, Mk?, S?, Sr?, C?, Gs?, R).
 
-procedure req_rec_party(Atom?, Integer?, Party?, RoleSpecs?, Contract?, Guardianships?, Ans).
-req_rec_party(atom(Hp, [role(R1)|As]), X, ward(Rho, Mk, S), Sr, C, Gs, R?) :-
-    integer(X?), integer(S?), integer(Rho?), integer(R1?),
-    S? =:= X?, R1? =:= Rho?,
-    ground(Hp?), ground(As?), ground(Mk?), ground(Sr?), ground(C?), ground(Gs?) |
+% req_rec_of(Phi, P, ...): Phi is the record of the ward role P, whatever role holds it.
+procedure req_rec_of(Atom?, Party?, RoleSpecs?, Contract?, Guardianships?, Ans).
+req_rec_of(atom(Hp, [role(R1)|As]), ward(Rho, Mk, S), Sr, C, Gs, R?) :-
+    integer(Rho?), integer(R1?), R1? =:= Rho?,
+    ground(Hp?), ground(As?), ground(Mk?), ground(S?), ground(Sr?), ground(C?), ground(Gs?) |
     nth_rs(Sr?, Rho?, RS),
     rs_req(RS?, Q),
     req_rec_hs(Q?, Hp?, As?, Rho?, Mk?, S?, Sr?, C?, Gs?, R).
+req_rec_of(_, _, _, _, _, no) :- otherwise | true.
+
+% The record at X of the ward role whose guardian role X is.
+procedure req_rec_party(Atom?, Integer?, Party?, RoleSpecs?, Contract?, Guardianships?, Ans).
+req_rec_party(Phi, X, ward(Rho, Mk, guardian(S)), Sr, C, Gs, R?) :-
+    integer(X?), integer(S?), S? =:= X?,
+    ground(Phi?), integer(Rho?), ground(Mk?), ground(Sr?), ground(C?), ground(Gs?) |
+    req_rec_of(Phi?, ward(Rho?, Mk?, guardian(S?)), Sr?, C?, Gs?, R).
 req_rec_party(_, _, _, _, _, _, no) :- otherwise | true.
 
 % The record of the other ward role, at the guardian role X of one, where the schema has two ward roles (def:relay, clause 2, GAI 2e3e5cc; GnW:4, Alice holding her record of Dave): the record req_rec_party admits at the guardian role of the other.
 procedure req_rec_other(Atom?, Integer?, Party?, Party?, RoleSpecs?, Contract?, Guardianships?, Ans).
-req_rec_other(Phi, X, ward(_, _, S1), ward(Rho2, Mk2, S2), Sr, C, Gs, R?) :-
-    integer(X?), integer(S1?), S1? =:= X?, integer(Rho2?), ground(Mk2?), integer(S2?),
+req_rec_other(Phi, X, ward(_, _, guardian(S1)), P2, Sr, C, Gs, R?) :-
+    integer(X?), integer(S1?), S1? =:= X?, ground(P2?),
     ground(Phi?), ground(Sr?), ground(C?), ground(Gs?) |
-    req_rec_party(Phi?, S2?, ward(Rho2?, Mk2?, S2?), Sr?, C?, Gs?, R).
+    req_rec_of(Phi?, P2?, Sr?, C?, Gs?, R).
 req_rec_other(_, _, _, _, _, _, _, no) :- otherwise | true.
 
 procedure req_rec_ok(RK?, Atom?, Integer?, Party?, Party?, RoleSpecs?, Contract?, Guardianships?,
@@ -2113,16 +2131,11 @@ second_parties(free_party, Rs, J, M, _, R?) :- ground(Rs?), integer(J?), ground(
     is_free_role(RS?, M?, A),
     free_party_at(A?, J?, R).
 second_parties(ward_party(Mk), Rs, J, _, Gs, R?) :- ground(Rs?), integer(J?), ground(Mk?), ground(Gs?) |
-    ward_sigma(Rs?, J?, Mk?, Gs?, Ss),
-    ward_party_at(Ss?, J?, Mk?, R).
+    ward_party(Rs?, J?, Mk?, Gs?, R).
 
 procedure free_party_at(Ans?, Integer?, Parties).
 free_party_at(yes, J, [free(J?)]).
 free_party_at(no, _, []).
-
-procedure ward_party_at(Ints?, Integer?, Constant?, Parties).
-ward_party_at([], _, _, []).
-ward_party_at([S|_], J, Mk, [ward(J?, Mk?, S?)]).
 
 % Over the second party's readings at J, then over J, then over I.
 procedure try_p2s(Parties?, Schema?, Contract?, Preds?, Preds?, Preds?, Guardianships?, Constant?,
@@ -2183,8 +2196,7 @@ try_is(I, K, Sc, C, Rf, M, Lv, Gs, E, Mk, Kind, R?) :-
     I? =< K?, integer(I?), integer(K?), ground(Sc?), ground(C?), ground(Rf?), ground(M?),
     ground(Lv?), ground(Gs?), ground(E?), ground(Mk?), ground(Kind?) |
     sch_roles(Sc?, Rs),
-    ward_sigma(Rs?, I?, Mk?, Gs?, Ss),
-    ward_party_at(Ss?, I?, Mk?, P1s),
+    ward_party(Rs?, I?, Mk?, Gs?, P1s),
     try_is1(P1s?, I?, K?, Sc?, C?, Rf?, M?, Lv?, Gs?, E?, Mk?, Kind?, R).
 
 procedure try_is1(Parties?, Integer?, Integer?, Schema?, Contract?, Preds?, Preds?, Preds?,

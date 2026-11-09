@@ -125,6 +125,11 @@ check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, k
 GSNPV=$(asread "$GSNPT")
 check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
 check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
+# A ward role has at most one guardian role (GAI 6b64d3d, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
+GAIT=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
+check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
+      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, identity, principal, principal_of, principal_of)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [retired])" \
+      "$(run "check($GAIT, V).")"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
@@ -834,10 +839,10 @@ check "and the verdict is the second conjunct alone" \
 # gives what the search found,
 # whatever the verdict, and guardianships the guardianships for a set of
 # marks.
-wd_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])"
+wd_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [])"
 out=$(run 'check_named(wd, V).' 'wards_of(wd, W).' 'contract_named(wd, C), guardianships(C?, [child], G).')
 check "wd is grassroots with wards, with no leaving mark" \
-      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [])" \
       "$out"
 check "wards_of gives its introduction with wards" "W = $wd_found" "$out"
 check "guardianships gives child's" \
@@ -895,7 +900,7 @@ no_wards wd_relay_unguarded   "the adult's role does not guard, so the two are n
 admitted_wards() { # admitted_wards <fixture> <what it adds>
   out=$(run "check_named($1, V).")
   check "$1: $2, and it is grassroots with wards" \
-        "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])" \
+        "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [])" \
         "$out"
 }
 admitted_wards wd_asymmetric "follow adds friend(q) at p and no friend(p) at q"
@@ -907,7 +912,7 @@ admitted_wards wd_introduce  "introduce adds friend(c) at q, c an agent variable
 # agent with agent -- in the order of the set.
 out=$(run 'check_named(wd2, V).')
 check "wd2 is grassroots with wards for the two marks child and agent" \
-      "V = grassroots_with_wards(befriend, [child, agent], [guardianship(child, identity, parent, parenting, parenting), guardianship(agent, identity, principal, principal_of, principal_of)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4)), relay(child_agent_befriend, ward(1, child, 3), ward(2, agent, 4)), relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [child, agent], [guardianship(child, identity, parent, parenting, parenting), guardianship(agent, identity, principal, principal_of, principal_of)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4))), relay(child_agent_befriend, ward(1, child, guardian(3)), ward(2, agent, guardian(4))), relay(agent_person_befriend, ward(1, agent, guardian(3)), free(2)), relay(agents_befriend, ward(1, agent, guardian(3)), ward(2, agent, guardian(4)))], [])" \
       "$out"
 
 # wd_two_marks adds a schema adding child and agent at one role: no
@@ -961,10 +966,10 @@ no_attest wd_attest_free    "agent_person_befriend requires an attestation of th
 # leaving mark; establish forbids it, which clause 1 admits; and the relay
 # acts forbid it, which clause 3 of def:relay admits.  So wd_leaving is
 # grassroots with wards and the verdict names retired.
-wl_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])"
+wl_found="introduction_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [retired])"
 out=$(run 'check_named(wd_leaving, V).' 'wards_of(wd_leaving, W).' 'leaving_of(wd_leaving, [child], L).')
 check "wd_leaving is grassroots with wards, retired its leaving mark" \
-      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [retired])" \
       "$out"
 check "wards_of names retired with its introduction with wards" "W = $wl_found" "$out"
 check "leaving_of returns retired for {child}, with the guardianship of child" \
@@ -1003,7 +1008,7 @@ no_leaving wd_leave_guardian    "adopt adds parent(p) at r and does not forbid r
 # part of clause 2 of def:unobstructed.
 out=$(run 'check_named(wd_listed, V).')
 check "a listed role adding no mark, leaving mark, friend or guardianship atom: syntactically grassroots with wards" \
-      "V = syntactically_grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [retired])" \
+      "V = syntactically_grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [retired])" \
       "$out"
 out=$(run 'check_named(wd_listed_leaving, V).' 'wards_of(wd_listed_leaving, W).')
 check "a listed role adding a leaving mark fails clause 2 of def:sg-wards" \
@@ -1024,7 +1029,7 @@ check_not "and it is not syntactically grassroots with wards" "syntactically_gra
 # carries the wildcard as one, so no cleared atom deletes a leaving mark.
 out=$(run 'check_named(wd_ward_e, V).')
 check "wd_ward_e: each parent of child_befriend requires friend of the other child, e of the other ward role (def:relay, clause 2, GnW:4): grassroots with wards" \
-      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, 3), free(2)), relay(child_befriend, ward(1, child, 3), ward(2, child, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [child], [guardianship(child, identity, parent, parenting, parenting)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [])" \
       "$out"
 no_wards wd_ward_e_own         "a parent of child_befriend requires friend of their own child, e of no other ward role (def:relay, clause 2)"
 no_wards wd_relay_guard_clears "a parent of child_befriend clears friend(*), deleting an atom naming the other guardian role (def:relay, clause 1)"
@@ -1034,10 +1039,10 @@ no_guardianship wd_clear_g     "drop clears parent(*), an atom of g (def:guardia
 # wr: AI agents, every guardian holding the record of the agent's
 # attestation, added by enter_agent at the creator and by make_guardian at
 # the guardian it makes, who copies it from the creator.
-wr_found="introduction_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])"
+wr_found="introduction_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, guardian(3)), free(2)), relay(agents_befriend, ward(1, agent, guardian(3)), ward(2, agent, guardian(4)))], [])"
 out=$(run 'check_named(wr, V).' 'wards_of(wr, W).' 'contract_named(wr, C), relay_h(C?, H).')
 check "wr: the record at every guardian, the attestation an atom of h: grassroots with wards" \
-      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, guardian(3)), free(2)), relay(agents_befriend, ward(1, agent, guardian(3)), ward(2, agent, guardian(4)))], [])" \
       "$out"
 check "wards_of gives its introduction with wards" "W = $wr_found" "$out"
 check "relay_h names the attestation at each ward role" \
@@ -1072,7 +1077,7 @@ check "wr_clear_w: and the verdict is Section 3's" "V = not_grassroots([obstruct
 no_record wr_rec_h_added "make_guardian adds the attestation at r and the record at q, adds no agent, and requires no record (def:relay, clause 2)"
 out=$(run 'check_named(wr_rec_third, V).' 'contract_named(wr_rec_third, C), relay_h(C?, H).')
 check "wr_rec_third: enter_agent adds guardian_of(r) at a third role with no record, adding agent at r and the record where it adds principal_of(r): grassroots with wards (def:relay, clause 2)" \
-      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, guardian(3)), free(2)), relay(agents_befriend, ward(1, agent, guardian(3)), ward(2, agent, guardian(4)))], [])" \
       "$out"
 check "wr_rec_third: relay_h names the attestation at each ward role" \
       "H = [h(agent_person_befriend, 1, attestation), h(agents_befriend, 1, attestation), h(agents_befriend, 2, attestation)]" "$out"
@@ -1087,7 +1092,7 @@ check "wr_quit: guardian_of is a v of no guardianship for agent" \
       "G = [guardianship(agent, identity, principal, principal_of, principal_of)]" "$out"
 out=$(run 'check_named(wr_release, V).')
 check "wr_release: release deletes guardian_of(x), x an agent variable, and forbids principal_of(x) (def:guardianship, clause 5): grassroots with wards as wr is" \
-      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, guardian(3)), free(2)), relay(agents_befriend, ward(1, agent, guardian(3)), ward(2, agent, guardian(4)))], [])" \
       "$out"
 no_record wr_release_kept "release deletes guardian_of(x), x an agent variable, and neither deletes nor forbids principal_of(x) (def:guardianship, clause 5)"
 out=$(run 'contract_named(wr_release_kept, C), guardianships(C?, [agent], G).')
@@ -1104,7 +1109,7 @@ check "wr_release_kept: ... principal_of the v of the one whose w it is" \
 no_record wr_free_unrecorded "agent_person_befriend adds at its free role no record of the agent (def:relay, clause 2, GAI 2e3e5cc)"
 out=$(run 'check_named(wr_rec_other, V).' 'contract_named(wr_rec_other, C), relay_h(C?, H).')
 check "wr_rec_other: a guardian role of agents_befriend requires the record of the other ward, agent_of(role(2), z) (def:relay, clause 2, GAI 2e3e5cc; GnW:4): grassroots with wards as wr is" \
-      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, 3), free(2)), relay(agents_befriend, ward(1, agent, 3), ward(2, agent, 4))], [])" \
+      "V = grassroots_with_wards(befriend, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_person_befriend, ward(1, agent, guardian(3)), free(2)), relay(agents_befriend, ward(1, agent, guardian(3)), ward(2, agent, guardian(4)))], [])" \
       "$out"
 check "wr_rec_other: relay_h names the attestation at each ward role" \
       "H = [h(agent_person_befriend, 1, attestation), h(agents_befriend, 1, attestation), h(agents_befriend, 2, attestation)]" "$out"
