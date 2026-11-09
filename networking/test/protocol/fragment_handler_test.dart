@@ -9,6 +9,7 @@ import 'package:grassroots_networking_core/src/models/packet.dart';
 void main() {
   const maxChunk = 270;
   const messageId = '00000000-0000-4000-8000-000000000001';
+  final sender = 'aa' * 32;
 
   group('FragmentHandler', () {
     late FragmentHandler handler;
@@ -84,7 +85,8 @@ void main() {
             handler.fragment(payload: payload, messageId: messageId, maxChunk: maxChunk);
         ReassembledMessage? done;
         for (final f in result.fragments) {
-          done = handler.addFragment(FragmentHandler.decodeFragment(f.payload));
+          done = handler.addFragment(FragmentHandler.decodeFragment(f.payload),
+              senderHex: sender);
         }
         expect(done, isNotNull);
         expect(done!.messageId, messageId);
@@ -102,7 +104,7 @@ void main() {
         ].reversed.toList();
         ReassembledMessage? done;
         for (final frag in decoded) {
-          done = handler.addFragment(frag);
+          done = handler.addFragment(frag, senderHex: sender);
         }
         expect(done, isNotNull);
         expect(done!.payload, payload);
@@ -117,7 +119,7 @@ void main() {
             FragmentHandler.decodeFragment(f.payload)
         ];
         for (var i = 0; i < decoded.length - 1; i++) {
-          expect(handler.addFragment(decoded[i]), isNull);
+          expect(handler.addFragment(decoded[i], senderHex: sender), isNull);
         }
       });
 
@@ -130,9 +132,9 @@ void main() {
           for (final f in result.fragments)
             FragmentHandler.decodeFragment(f.payload)
         ];
-        expect(handler.addFragment(decoded[0]), isNull);
-        expect(handler.addFragment(decoded[0]), isNull); // duplicate
-        final done = handler.addFragment(decoded[1]);
+        expect(handler.addFragment(decoded[0], senderHex: sender), isNull);
+        expect(handler.addFragment(decoded[0], senderHex: sender), isNull); // duplicate
+        final done = handler.addFragment(decoded[1], senderHex: sender);
         expect(done, isNotNull);
         expect(done!.payload, payload);
       });

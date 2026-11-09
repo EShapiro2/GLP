@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
@@ -224,8 +225,8 @@ void main() {
           bool anyCalled = false;
           bool decryptCalled = false;
           router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
-          router.onAckReceived = (_) => anyCalled = true;
-          router.onReadReceiptReceived = (_) => anyCalled = true;
+          router.onAckReceived = (_, __) => anyCalled = true;
+          router.onReadReceiptReceived = (_, __) => anyCalled = true;
           router.onAckRequested = (_, __, ___) => anyCalled = true;
           router.onSignalingReceived =
               (_, __, {String? observedIp, int? observedPort}) =>
@@ -465,7 +466,8 @@ void main() {
           rssi: -60,
         );
 
-        expect(receivedId, equals(messageId));
+        expect(receivedId,
+            equals(MessageRouter.deliveryIdOf(otherPubkey, messageId)));
         expect(receivedPubkey, equals(otherPubkey));
         expect(receivedPayload, equals(body));
         expect(receivedTransport, equals(PeerTransport.bleDirect));
@@ -486,10 +488,10 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
         );
 
-        expect(receivedTransport, equals(PeerTransport.udp));
+        expect(receivedTransport, equals(PeerTransport.wan));
       });
 
       test('drops a fragment whose payload lacks the fragment header',
@@ -602,9 +604,10 @@ void main() {
         await router.processPacket(p,
             transport: PeerTransport.bleDirect, rssi: -60);
         await router.processPacket(p,
-            transport: PeerTransport.udp, rssi: -60);
+            transport: PeerTransport.wan, rssi: -60);
 
-        expect(deliveries, [messageId, messageId]);
+        final deliveryId = MessageRouter.deliveryIdOf(otherPubkey, messageId);
+        expect(deliveries, [deliveryId, deliveryId]);
         expect(ackRequests, [messageId, messageId]);
       });
 
@@ -627,7 +630,7 @@ void main() {
               messageId: messageId,
               body: Uint8List.fromList([i & 0xff]),
             ),
-            transport: PeerTransport.udp,
+            transport: PeerTransport.wan,
           );
         }
 
@@ -715,7 +718,7 @@ void main() {
           body: Uint8List.fromList([7]),
         );
 
-        await router.processPacket(p, transport: PeerTransport.udp);
+        await router.processPacket(p, transport: PeerTransport.wan);
         expect(delivered, isEmpty);
         expect(fragmentAcks, isEmpty,
             reason: 'unacknowledged, so the sender retransmits');
@@ -724,8 +727,8 @@ void main() {
             reason: 'asked of the session that decrypted it');
 
         attested = true;
-        await router.processPacket(p, transport: PeerTransport.udp);
-        expect(delivered, [messageId]);
+        await router.processPacket(p, transport: PeerTransport.wan);
+        expect(delivered, [MessageRouter.deliveryIdOf(otherPubkey, messageId)]);
         expect(fragmentAcks, [messageId]);
         expect(acks, [messageId]);
       });
@@ -752,7 +755,7 @@ void main() {
               chunk: Uint8List.fromList([9, 9]),
             ),
           ),
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
         );
 
         expect(judged, hasLength(1));
@@ -770,7 +773,7 @@ void main() {
         stubSession();
 
         String? receivedMessageId;
-        router.onAckReceived = (messageId) => receivedMessageId = messageId;
+        router.onAckReceived = (_, messageId) => receivedMessageId = messageId;
 
         const messageId = 'acked-message-id';
         final p = securePacket(
@@ -824,7 +827,7 @@ void main() {
         stubSession();
 
         String? receivedMessageId;
-        router.onReadReceiptReceived = (id) => receivedMessageId = id;
+        router.onReadReceiptReceived = (_, id) => receivedMessageId = id;
 
         const messageId = 'msg-to-read';
         final p = securePacket(
@@ -845,7 +848,7 @@ void main() {
         stubSession();
 
         String? receivedMessageId;
-        router.onReadReceiptReceived = (id) => receivedMessageId = id;
+        router.onReadReceiptReceived = (_, id) => receivedMessageId = id;
 
         final p = securePacket(
           type: PacketType.readReceipt,
@@ -872,13 +875,13 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-123',
         );
 
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(peer!.transport, equals(PeerTransport.udp));
+        expect(peer!.transport, equals(PeerTransport.wan));
       });
 
       test('identifies UDP connection with the verified announce pubkey',
@@ -894,7 +897,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'temp-key-1',
         );
 
@@ -912,7 +915,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-123',
         );
 
@@ -933,7 +936,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'fallback-peer-id',
         );
 
@@ -953,11 +956,11 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-456',
         );
 
-        expect(receivedTransport, equals(PeerTransport.udp));
+        expect(receivedTransport, equals(PeerTransport.wan));
       });
     });
 
@@ -984,11 +987,12 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-789',
         );
 
-        expect(receivedId, equals(messageId));
+        expect(receivedId,
+            equals(MessageRouter.deliveryIdOf(otherPubkey, messageId)));
         expect(receivedPubkey, equals(otherPubkey));
         expect(receivedPayload, equals(body));
       });
@@ -1005,13 +1009,15 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-seen-test',
         );
 
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(peer!.lastUdpSeen, isNotNull);
+        expect(peer!.lastWanSeen, isNotNull);
+        expect(peer.lastLanSeen, isNull,
+            reason: 'a packet on the WAN session refreshes the WAN clock alone');
         expect(peer.lastSeen, isNotNull);
       });
 
@@ -1036,15 +1042,16 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-ack-test',
         );
 
-        expect(ackTransport, equals(PeerTransport.udp));
+        expect(ackTransport, equals(PeerTransport.wan));
         expect(
           ackPeerId,
           equals(
-            otherPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+            'wan/'
+            '${otherPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}',
           ),
         );
         expect(ackMessageId, equals(messageId));
@@ -1082,6 +1089,84 @@ void main() {
     });
 
     // =========================================================================
+    // BLE Liveness - the stale sweep's clock
+    // =========================================================================
+
+    group('processPacket (BLE) - liveness', () {
+      test('an authenticated ACK over BLE refreshes lastBleSeen and lastSeen',
+          () async {
+        stubSession();
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
+        store.dispatch(AssociateBleDeviceAction(
+          publicKey: otherPubkey,
+          deviceId: 'central:liveness-dev',
+          role: BleRole.central,
+        ));
+        expect(store.state.peers.getPeerByPubkey(otherPubkey)!.lastBleSeen,
+            isNull);
+
+        final ackReceived = Completer<String>();
+        router.onAckReceived = (_, id) => ackReceived.complete(id);
+
+        await router.processPacket(
+          securePacket(
+            type: PacketType.ack,
+            payload: Uint8List.fromList('ble-ack-liveness'.codeUnits),
+          ),
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: 'central:liveness-dev',
+          bleRole: BleRole.central,
+        );
+
+        expect(await ackReceived.future, equals('ble-ack-liveness'));
+        final peer = store.state.peers.getPeerByPubkey(otherPubkey)!;
+        expect(peer.lastBleSeen, isNotNull);
+        expect(peer.lastSeen, isNotNull);
+      }, timeout: Timeout.none);
+
+      test('an authenticated packet over BLE does not refresh a peer with no '
+          'BLE link', () async {
+        stubSession();
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
+
+        final ackReceived = Completer<String>();
+        router.onAckReceived = (_, id) => ackReceived.complete(id);
+
+        await router.processPacket(
+          securePacket(
+            type: PacketType.ack,
+            payload: Uint8List.fromList('late-ble-ack'.codeUnits),
+          ),
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: 'central:liveness-dev',
+          bleRole: BleRole.central,
+        );
+
+        expect(await ackReceived.future, equals('late-ble-ack'));
+        final peer = store.state.peers.getPeerByPubkey(otherPubkey)!;
+        expect(peer.lastBleSeen, isNull);
+        expect(peer.lastSeen, isNull);
+      }, timeout: Timeout.none);
+
+      test('a clear ACK over BLE does not refresh lastBleSeen', () async {
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
+
+        await router.processPacket(
+          GrassrootsPacket(
+            type: PacketType.ack,
+            payload: Uint8List.fromList('clear-ack'.codeUnits),
+          ),
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: 'central:liveness-dev',
+          bleRole: BleRole.central,
+        );
+
+        expect(store.state.peers.getPeerByPubkey(otherPubkey)!.lastBleSeen,
+            isNull);
+      });
+    });
+
+    // =========================================================================
     // UDP Packet Processing - ACK
     // =========================================================================
 
@@ -1090,7 +1175,7 @@ void main() {
         stubSession();
 
         String? receivedId;
-        router.onAckReceived = (id) => receivedId = id;
+        router.onAckReceived = (_, id) => receivedId = id;
 
         const messageId = 'ack-msg1';
         final p = securePacket(
@@ -1100,7 +1185,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-abc',
         );
 
@@ -1117,7 +1202,7 @@ void main() {
         stubSession();
 
         String? receivedId;
-        router.onReadReceiptReceived = (id) => receivedId = id;
+        router.onReadReceiptReceived = (_, id) => receivedId = id;
 
         const messageId = 'rr-msg-1';
         final p = securePacket(
@@ -1127,7 +1212,7 @@ void main() {
 
         await router.processPacket(
           p,
-          transport: PeerTransport.udp,
+          transport: PeerTransport.wan,
           udpPeerId: 'peer-def',
         );
 

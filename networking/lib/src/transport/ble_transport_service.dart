@@ -91,6 +91,18 @@ class BleTransportService extends TransportService {
   StreamSubscription<ble.BlePayload>? _payloadSub;
   StreamSubscription<String>? _logSub;
 
+  /// Redux store subscription: any change to the known-peer set or the trust
+  /// level re-evaluates the continuous scan filter ([_refreshScan]).
+  StreamSubscription<AppState>? _storeSub;
+
+  /// The service-UUID filter the continuous scan was last started with, or
+  /// null when no continuous scan is running. [_refreshScan] restarts the
+  /// scan only when the filter the store now implies differs from this.
+  List<String>? _appliedScanUuids;
+
+  /// True while [_refreshScan] is restarting the scan (single-flight guard).
+  bool _scanRefreshInFlight = false;
+
   /// Latest known plugin state per pathId (synchronous mirror of `paths()`).
   /// This is a strict cache of plugin facts, not consumer state.
   final Map<String, ble.BlePath> _paths = {};
@@ -257,6 +269,7 @@ class BleTransportService extends TransportService {
       _logSub = _ble.logs.listen(
         (msg) => debugPrint('[grassroots_bluetooth_layer] $msg'),
       );
+      _storeSub = store.onChange.listen((_) => unawaited(_refreshScan()));
 
       // `restoreState: true` opts the iOS plugin into CoreBluetooth's
       // state-preservation. With this on, when iOS suspends and later
@@ -336,25 +349,20 @@ class BleTransportService extends TransportService {
 
       if (shouldScan) {
         try {
-          await _ble.startScan(
-            serviceUuidPrefix: GrassrootsIdentity.grassrootsUuidPrefix,
-            timeout: Duration.zero, // continuous scan
-            // iOS CoreBluetooth deduplicates per-peer advertisements by
-            // default; with allowDuplicates=true it keeps delivering
-            // didDiscover so we see liveness/RSSI updates and so a peer that
-            // joined mid-scan still gets observed. It costs a bit more power,
-            // but also gives us fresh chances to retry a missing reverse leg.
-            allowDuplicates: true,
-          );
+          await _startContinuousScan();
           anyStarted = true;
           _lastAdvertisementAt = DateTime.now();
           _armScanWatchdog();
         } catch (e) {
           debugPrint('Failed to start scanning: $e');
         }
+        // The slot-rotation timer also refilters the scan per slot, and a
+        // central-only device never reaches the advertising branch that arms it.
+        _armSlotRotation();
       } else {
         _scanWatchdog?.cancel();
         _scanWatchdog = null;
+        _appliedScanUuids = null;
         try {
           await _ble.stopScan();
         } catch (_) {}
@@ -397,11 +405,7 @@ class BleTransportService extends TransportService {
     );
     _lastAdvertisementAt = t;
     try {
-      await _ble.startScan(
-        serviceUuidPrefix: GrassrootsIdentity.grassrootsUuidPrefix,
-        timeout: Duration.zero,
-        allowDuplicates: true,
-      );
+      await _startContinuousScan();
     } catch (e) {
       debugPrint('[ble] scan-watchdog: scan restart failed: $e');
     }
@@ -438,28 +442,107 @@ class BleTransportService extends TransportService {
     _slotRotationTimer =
         Timer.periodic(_slotRotationCheckInterval, (_) async {
       if (_stopped) return;
-      // Never advertise in a role mode that doesn't (centralOnly): the timer
-      // is cancelled on mode change, but guard here too so a stray tick can
-      // never violate the "a central-only device never advertises" invariant.
-      if (store.state.settings.bleRoleMode == BleRoleMode.centralOnly) return;
       final slot = GrassrootsIdentity.currentBleSlot();
-      if (slot == _advertisedSlot) return;
-      final beacon =
-          GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, slot);
-      try {
-        await _ble.startAdvertising(
-          serviceUuid: beacon,
-          characteristicUuid: _grassrootsCharacteristicUuid,
-          gattServiceUuid: _grassrootsGattServiceUuid,
-          bondless: true,
-        );
-        _advertisedSlot = slot;
-        debugPrint('[ble] slot rotated to $slot — advertising $beacon');
-      } catch (e) {
-        // Leave _advertisedSlot unchanged so the next tick retries.
-        debugPrint('[ble] slot re-advertise failed (will retry): $e');
+      // Re-advertise only while advertising: _advertisedSlot is null when we
+      // are not advertising, and a central-only device never advertises (the
+      // mode guard keeps a stray tick from violating that invariant).
+      if (_advertisedSlot != null &&
+          store.state.settings.bleRoleMode != BleRoleMode.centralOnly &&
+          slot != _advertisedSlot) {
+        final beacon =
+            GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, slot);
+        try {
+          await _ble.startAdvertising(
+            serviceUuid: beacon,
+            characteristicUuid: _grassrootsCharacteristicUuid,
+            gattServiceUuid: _grassrootsGattServiceUuid,
+            bondless: true,
+          );
+          _advertisedSlot = slot;
+          debugPrint('[ble] slot rotated to $slot — advertising $beacon');
+        } catch (e) {
+          // Leave _advertisedSlot unchanged so the next tick retries.
+          debugPrint('[ble] slot re-advertise failed (will retry): $e');
+        }
       }
+      // The exact-UUID scan filter rotates per slot too.
+      await _refreshScan();
     });
+  }
+
+  /// The service UUIDs the continuous scan filters on. Under Closed PAN trust
+  /// these are the recognition UUIDs (previous, current and next slot) of every
+  /// known peer, so the OS reports only those beacons and strangers are not
+  /// surfaced; a known peer's beacon is then found even while its app is in
+  /// the background. Under Open trust, or with no known peers, the list is empty
+  /// and the scan is prefix-only.
+  List<String> _scanServiceUuids() {
+    if (store.state.settings.isOpenOn(ProximityUnderlay.pan)) return const [];
+    final uuids = <String>{};
+    for (final pubkeyHex in store.state.knownPeers.knownPubkeyHexes) {
+      final pubkey = _hexToPubkeyBytes(pubkeyHex);
+      if (pubkey == null) continue;
+      uuids.addAll(_candidateUuidsForPubkey(pubkey));
+    }
+    return uuids.toList()..sort();
+  }
+
+  /// Start the continuous scan with the current filter and record the filter
+  /// applied.
+  Future<void> _startContinuousScan() async {
+    if (_stopped || _isPeripheralOnly) return;
+    final uuids = _scanServiceUuids();
+    await _ble.startScan(
+      serviceUuidPrefix: GrassrootsIdentity.grassrootsUuidPrefix,
+      serviceUuids: uuids,
+      timeout: Duration.zero, // continuous scan
+      // iOS CoreBluetooth deduplicates per-peer advertisements by
+      // default; with allowDuplicates=true it keeps delivering
+      // didDiscover so we see liveness/RSSI updates and so a peer that
+      // joined mid-scan still gets observed. It costs a bit more power,
+      // but also gives us fresh chances to retry a missing reverse leg.
+      allowDuplicates: true,
+    );
+    if (_stopped || _isPeripheralOnly) {
+      // The lifecycle or role changed while the scan was starting: the scan we
+      // just began is not wanted, and must not be recorded as applied.
+      try {
+        await _ble.stopScan();
+      } catch (_) {}
+      return;
+    }
+    _appliedScanUuids = uuids;
+  }
+
+  bool get _isPeripheralOnly =>
+      store.state.settings.bleRoleMode == BleRoleMode.peripheralOnly;
+
+  /// Restart the continuous scan when the filter the current store implies
+  /// (known peers' slot UUIDs under Closed trust) differs from the one
+  /// applied. A no-op unless a continuous scan is running, so it is safe to
+  /// call on every store change and every slot tick.
+  ///
+  /// Single-flight: store changes arriving while a restart is in flight only
+  /// wake the loop to re-check, so a burst of changes produces at most one
+  /// restart (none when the filter is unchanged), never one per change.
+  Future<void> _refreshScan() async {
+    if (_scanRefreshInFlight) return;
+    _scanRefreshInFlight = true;
+    try {
+      while (!_stopped &&
+          !_isPeripheralOnly &&
+          _appliedScanUuids != null &&
+          !listEquals(_scanServiceUuids(), _appliedScanUuids)) {
+        try {
+          await _startContinuousScan();
+        } catch (e) {
+          debugPrint('[ble] scan refilter failed: $e');
+          return;
+        }
+      }
+    } finally {
+      _scanRefreshInFlight = false;
+    }
   }
 
   @override
@@ -470,6 +553,7 @@ class BleTransportService extends TransportService {
     _slotRotationTimer?.cancel();
     _slotRotationTimer = null;
     _advertisedSlot = null;
+    _appliedScanUuids = null;
     try {
       await _ble.stopScan();
     } catch (_) {}
@@ -500,6 +584,7 @@ class BleTransportService extends TransportService {
     try {
       await _ble.startScan(
         serviceUuidPrefix: GrassrootsIdentity.grassrootsUuidPrefix,
+        serviceUuids: _scanServiceUuids(),
         timeout: t,
         // Match the continuous-scan path so already-discovered peers keep
         // surfacing for RSSI refreshes and reverse-leg retries.
@@ -604,7 +689,7 @@ class BleTransportService extends TransportService {
     }
   }
 
-  @override
+  /// The GATT leg's peer id for a public key (if known).
   String? getPeerIdForPubkey(Uint8List pubkey) {
     final peer = _peersState.getPeerByPubkey(pubkey);
     if (peer == null) return null;
@@ -665,6 +750,7 @@ class BleTransportService extends TransportService {
     await _pathSub?.cancel();
     await _payloadSub?.cancel();
     await _logSub?.cancel();
+    await _storeSub?.cancel();
     try {
       await _ble.dispose();
     } catch (_) {}

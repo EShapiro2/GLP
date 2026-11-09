@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking/grassroots_networking.dart';
 
 void main() {
-  group('computeStaleUdpPeerPubkeys', () {
+  group('computeStaleIpPeerPubkeys', () {
+    String toHex(Uint8List pubkey) =>
+        pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
     test('returns only connected UDP peers that missed the stale threshold',
         () {
       final now = DateTime.now();
@@ -14,27 +17,25 @@ void main() {
       final bleOnlyPubkey =
           Uint8List.fromList(List.generate(32, (i) => (i + 65) % 256));
 
-      String toHex(Uint8List pubkey) =>
-          pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-      final stale = computeStaleUdpPeerPubkeys(
+      final stale = computeStaleIpPeerPubkeys(
         peers: [
           PeerState(
             publicKey: stalePubkey,
             lastSeen: now,
-            lastUdpSeen: now.subtract(const Duration(seconds: 31)),
+            lastWanSeen: now.subtract(const Duration(seconds: 31)),
           ),
           PeerState(
             publicKey: freshPubkey,
             lastSeen: now,
-            lastUdpSeen: now.subtract(const Duration(seconds: 5)),
+            lastWanSeen: now.subtract(const Duration(seconds: 5)),
           ),
           PeerState(
             publicKey: bleOnlyPubkey,
             lastSeen: now,
           ),
         ],
-        connectedUdpPubkeys: {
+        underlay: Underlay.wan,
+        connectedPubkeys: {
           toHex(stalePubkey),
           toHex(freshPubkey),
         },
@@ -43,6 +44,31 @@ void main() {
       );
 
       expect(stale, equals({toHex(stalePubkey)}));
+    });
+
+    test(
+        'each IP session is stale by its own clock: a silent WAN session is '
+        'stale while the same peer\'s live LAN session is not (spec '
+        '§ANNOUNCE and Liveness: "independently per underlay")', () {
+      final now = DateTime.now();
+      final pubkey = Uint8List.fromList(List.generate(32, (i) => (i + 7) % 256));
+      final peer = PeerState(
+        publicKey: pubkey,
+        lastSeen: now,
+        lastLanSeen: now.subtract(const Duration(seconds: 2)),
+        lastWanSeen: now.subtract(const Duration(seconds: 31)),
+      );
+
+      Set<String> staleOn(Underlay underlay) => computeStaleIpPeerPubkeys(
+            peers: [peer],
+            underlay: underlay,
+            connectedPubkeys: {toHex(pubkey)},
+            staleThreshold: const Duration(seconds: 20),
+            now: now,
+          );
+
+      expect(staleOn(Underlay.wan), {toHex(pubkey)});
+      expect(staleOn(Underlay.lan), isEmpty);
     });
   });
 

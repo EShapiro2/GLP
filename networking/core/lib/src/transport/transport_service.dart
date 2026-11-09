@@ -164,9 +164,6 @@ abstract class TransportService {
   /// This allows higher layers to address peers by pubkey.
   void associatePeerWithPubkey(String peerId, Uint8List pubkey);
 
-  /// Get peer ID for a public key (if known).
-  String? getPeerIdForPubkey(Uint8List pubkey);
-
   /// Get public key for a peer ID (if known).
   Uint8List? getPubkeyForPeerId(String peerId);
 
