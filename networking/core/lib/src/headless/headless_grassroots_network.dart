@@ -910,17 +910,14 @@ class HeadlessGrassrootsNetwork {
   /// completes. The message is saved in the persisted queue before this
   /// returns, and dropped from it once acknowledged, so that the queue
   /// survives the termination of the application (GNA §2.11); a save that
-  /// fails is thrown. Returns the message id, or null for invalid input.
-  Future<String?> send(
-    Uint8List recipientPubkey,
-    Uint8List payload, {
-    String? messageId,
-  }) async {
+  /// fails is thrown. Returns the id the layer gave the message, or null for
+  /// invalid input.
+  Future<String?> send(Uint8List recipientPubkey, Uint8List payload) async {
     if (recipientPubkey.length != 32) {
       debugPrint('[headless] Cannot send: recipient key must be 32 bytes');
       return null;
     }
-    messageId ??= _uuid.v4();
+    final messageId = _uuid.v4();
     await _persistedQueue.add(OutboundQueueEntry(
       recipientHex: _hex(recipientPubkey),
       messageId: messageId,

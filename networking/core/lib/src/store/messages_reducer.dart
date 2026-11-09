@@ -213,6 +213,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
       messageType: ChatMessageType.values[action.messageType],
       udpAddress: action.udpAddress,
       messageId: action.messageId,
+      wireMessageId: action.wireMessageId,
       mediaPath: action.mediaPath,
       mediaMime: action.mediaMime,
       viewOnce: action.viewOnce,
@@ -256,6 +257,21 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     );
   }
 
+  if (action is LinkWireMessageAction) {
+    final conv = state.conversations[action.peerHex];
+    if (conv == null) return state;
+    final idx = conv.indexWhere(
+        (m) => m.isOutgoing && m.messageId == action.messageId);
+    if (idx < 0) return state;
+    final newConv = List<ChatMessageState>.from(conv)
+      ..[idx] = conv[idx].copyWith(wireMessageId: action.wireMessageId);
+    return state.copyWith(
+      conversations: Map<String, List<ChatMessageState>>.from(
+          state.conversations)
+        ..[action.peerHex] = newConv,
+    );
+  }
+
   if (action is MarkPictureViewedAction) {
     final conv = state.conversations[action.peerHex];
     if (conv == null) return state;
@@ -286,10 +302,14 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     // Drop the message thread + unread count. Outgoing/incoming delivery-status
     // records get pruned here too: with the chat history gone there is nothing
     // for those records to bind to, and they would otherwise leak forever.
+    // They are keyed by the layer's id: a chat message's wireMessageId, a
+    // friendship message's messageId.
     final messageIdsToDrop = <String>{
       for (final m in (state.conversations[action.peerHex] ??
-          const <ChatMessageState>[]))
+          const <ChatMessageState>[])) ...[
         if (m.messageId != null) m.messageId!,
+        if (m.wireMessageId != null) m.wireMessageId!,
+      ],
     };
 
     final newConversations = Map<String, List<ChatMessageState>>.from(

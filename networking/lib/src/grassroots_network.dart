@@ -2468,8 +2468,8 @@ class GrassrootsNetwork {
   /// 1. Bluetooth (if peer is nearby and BLE is enabled)
   /// 2. UDP (if peer has UDP address and UDP is enabled)
   ///
-  /// Returns the message ID if the message was sent or queued, null only for
-  /// invalid input.
+  /// Returns the id the layer gave the message if it was sent or queued, null
+  /// only for invalid input.
   /// The message status can be tracked via store.state.messages.
   ///
   /// Transport selection: tries BLE first (preferred for nearby peers),
@@ -2482,19 +2482,16 @@ class GrassrootsNetwork {
   /// dropped from it once it is settled, so that the queue survives the
   /// termination of the application (GNA §2.11); a save that fails is
   /// thrown.
-  Future<String?> send(
-    Uint8List recipientPubkey,
-    Uint8List payload, {
-    String? messageId,
-  }) async {
+  Future<String?> send(Uint8List recipientPubkey, Uint8List payload) async {
     if (recipientPubkey.length != 32) {
       debugPrint('Cannot send: recipient public key must be 32 bytes');
       return null;
     }
 
-    // Use provided message ID or generate one. Full UUID required — the
-    // MESSAGE payload carries it as a fixed 36-character prefix.
-    messageId ??= _uuid.v4();
+    // The layer names every message it sends, never the caller (api.tex,
+    // Send payload): a fresh full UUID, which the fragment header carries as
+    // a fixed 36-character id.
+    final messageId = _uuid.v4();
 
     await _persistedQueue.add(OutboundQueueEntry(
       recipientHex: _pubkeyToHex(recipientPubkey),
@@ -2518,7 +2515,7 @@ class GrassrootsNetwork {
     void queueInMemory() => _queueOutboundMessage(
           recipientPubkey: recipientPubkey,
           payload: payload,
-          messageId: messageId!,
+          messageId: messageId,
         );
     unawaited(_trySendMessageNow(
       recipientPubkey: recipientPubkey,

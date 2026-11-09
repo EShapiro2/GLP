@@ -795,6 +795,7 @@ void main() {
         'messageType': 0,
         'udpAddress': null,
         'messageId': null,
+        'wireMessageId': null,
       };
 
       final action = HydrateConversationsAction(
@@ -851,6 +852,121 @@ void main() {
       expect(newState.conversations.containsKey('new-r'), isTrue);
       expect(newState.unreadCounts.containsKey('old-r'), isFalse);
       expect(newState.unreadCounts['new-r'], 1);
+    });
+  });
+
+  group('LinkWireMessageAction', () {
+    final peerHex = 'aa' * 32;
+    final myHex = 'bb' * 32;
+    MessagesState withChat({required bool isOutgoing}) => messagesReducer(
+          MessagesState.initial,
+          SaveChatMessageAction(
+            senderPubkeyHex: isOutgoing ? myHex : peerHex,
+            recipientPubkeyHex: isOutgoing ? peerHex : myHex,
+            content: 'hi',
+            isOutgoing: isOutgoing,
+            messageId: 'chat-1',
+          ),
+        );
+
+    test('links an outgoing chat message to the id the layer gave it, and a '
+        'resend replaces the link', () {
+      var state = messagesReducer(
+        withChat(isOutgoing: true),
+        LinkWireMessageAction(
+            peerHex: peerHex, messageId: 'chat-1', wireMessageId: 'wire-1'),
+      );
+      expect(state.conversations[peerHex]!.single.wireMessageId, 'wire-1');
+      state = messagesReducer(
+        state,
+        LinkWireMessageAction(
+            peerHex: peerHex, messageId: 'chat-1', wireMessageId: 'wire-2'),
+      );
+      expect(state.conversations[peerHex]!.single.wireMessageId, 'wire-2');
+    });
+
+    test('leaves an incoming message with the same id alone', () {
+      final before = withChat(isOutgoing: false);
+      final after = messagesReducer(
+        before,
+        LinkWireMessageAction(
+            peerHex: peerHex, messageId: 'chat-1', wireMessageId: 'wire-1'),
+      );
+      expect(after.conversations[peerHex]!.single.wireMessageId, isNull);
+    });
+  });
+
+  group('DeleteConversationAction', () {
+    test('prunes the delivery records kept under the layer\'s ids', () {
+      final peerHex = 'aa' * 32;
+      final myHex = 'bb' * 32;
+      final actions = <MessageAction>[
+        SaveChatMessageAction(
+          senderPubkeyHex: myHex,
+          recipientPubkeyHex: peerHex,
+          content: 'out',
+          isOutgoing: true,
+          messageId: 'chat-out',
+        ),
+        MessageSendingAction(
+          messageId: 'wire-out',
+          underlay: Underlay.wan,
+          recipientPubkey: testRecipientPubkey,
+          payloadSize: 3,
+        ),
+        LinkWireMessageAction(
+            peerHex: peerHex, messageId: 'chat-out', wireMessageId: 'wire-out'),
+        SaveChatMessageAction(
+          senderPubkeyHex: peerHex,
+          recipientPubkeyHex: myHex,
+          content: 'in',
+          isOutgoing: false,
+          messageId: 'chat-in',
+          wireMessageId: 'wire-in',
+        ),
+        MessageReceivedAction(
+          messageId: 'wire-in',
+          underlay: Underlay.wan,
+          senderPubkey: testSenderPubkey,
+          payloadSize: 2,
+        ),
+        MessageSendingAction(
+          messageId: 'other',
+          underlay: Underlay.wan,
+          recipientPubkey: testRecipientPubkey,
+          payloadSize: 1,
+        ),
+      ];
+      final state = actions.fold(MessagesState.initial, messagesReducer);
+      expect(state.outgoingMessages.keys, containsAll(['wire-out', 'other']));
+      expect(state.incomingMessages.keys, contains('wire-in'));
+
+      final after = messagesReducer(state, DeleteConversationAction(peerHex));
+      expect(after.conversations.containsKey(peerHex), isFalse);
+      expect(after.outgoingMessages.keys, ['other']);
+      expect(after.incomingMessages, isEmpty);
+    });
+  });
+
+  group('ChatMessageState JSON', () {
+    final message = ChatMessageState(
+      senderPubkeyHex: 'bb' * 32,
+      recipientPubkeyHex: 'aa' * 32,
+      content: 'hi',
+      timestamp: testTimestamp,
+      isOutgoing: true,
+      messageId: 'chat-1',
+      wireMessageId: 'wire-1',
+    );
+
+    test('keeps the id the layer gave the message across a save and load', () {
+      expect(ChatMessageState.fromJson(message.toJson()).wireMessageId,
+          'wire-1');
+    });
+
+    test('refuses a saved message without the wireMessageId key', () {
+      final json = message.toJson()..remove('wireMessageId');
+      expect(() => ChatMessageState.fromJson(json), throwsFormatException);
     });
   });
 

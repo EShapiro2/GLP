@@ -184,14 +184,14 @@ void _mediaCleanupMiddleware(
   }
 
   if (action is MessageDeliveredAction) {
-    // Find the matching outgoing chat message by messageId across all
-    // conversations. Pictures are infrequent; this scan is cheap relative to
-    // the actual message arrival.
-    final messageId = action.messageId;
+    // Find the matching outgoing chat message, by the id the layer gave it,
+    // across all conversations. Pictures are infrequent; this scan is cheap
+    // relative to the actual message arrival.
+    final wireId = action.messageId;
     for (final entry in store.state.messages.conversations.entries) {
       final peerHex = entry.key;
       for (final msg in entry.value) {
-        if (msg.messageId == messageId &&
+        if (msg.wireMessageId == wireId &&
             msg.isOutgoing &&
             msg.viewOnce &&
             msg.mediaPath != null) {
@@ -199,7 +199,7 @@ void _mediaCleanupMiddleware(
           unawaited(deleteMediaFile(pathToDelete));
           store.dispatch(MarkPictureViewedAction(
             peerHex: peerHex,
-            messageId: messageId,
+            messageId: msg.messageId!,
           ));
           return;
         }
@@ -566,14 +566,16 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
 
     switch (AppPayload.decode(payload)) {
       case BlockPayload(:final block):
-        await _handleBlock(
-            block, senderHex, myHex, messageId, senderPubkey, underlay);
+        await _handleBlock(block, senderHex, myHex, messageId, messageId,
+            senderPubkey, underlay);
       case ChatPayload(messageId: final chatId, :final block):
         await _handleBlock(
-            block, senderHex, myHex, chatId, senderPubkey, underlay);
+            block, senderHex, myHex, chatId, messageId, senderPubkey, underlay);
       case ReadReceiptPayload(messageId: final readId):
-        if (receiptMarksRead(appStore.state.messages, readId, senderHex)) {
-          appStore.dispatch(MessageReadAction(messageId: readId));
+        final wireId =
+            receiptReadWireId(appStore.state.messages, readId, senderHex);
+        if (wireId != null) {
+          appStore.dispatch(MessageReadAction(messageId: wireId));
         }
       case null:
         debugPrint(
@@ -586,6 +588,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       String senderHex,
       String myHex,
       String messageId,
+      String wireId,
       Uint8List senderPubkey,
       Underlay underlay) async {
     // Find sender name
@@ -601,13 +604,13 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         if (sayBlock is TextSayBlock) {
           debugPrint(
               '💬 [$transportName] Message from $senderName: "${sayBlock.content}"');
-          await _handleTextMessage(
-              senderHex, myHex, sayBlock.content, messageId, senderPubkey);
+          await _handleTextMessage(senderHex, myHex, sayBlock.content,
+              messageId, wireId, senderPubkey);
         } else if (sayBlock is PictureSayBlock) {
           debugPrint(
               '📷 [$transportName] Picture from $senderName (${sayBlock.imageBytes.length} bytes, viewOnce=${sayBlock.viewOnce})');
           await _handlePictureMessage(
-              senderHex, myHex, sayBlock, messageId, senderPubkey);
+              senderHex, myHex, sayBlock, messageId, wireId, senderPubkey);
         }
 
       case BlockType.friendshipOffer:
@@ -630,8 +633,13 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     }
   }
 
-  Future<void> _handleTextMessage(String senderHex, String myHex,
-      String content, String messageId, Uint8List senderPubkey) async {
+  Future<void> _handleTextMessage(
+      String senderHex,
+      String myHex,
+      String content,
+      String messageId,
+      String wireId,
+      Uint8List senderPubkey) async {
     // Save message to Redux store
     appStore.dispatch(SaveChatMessageAction(
       senderPubkeyHex: senderHex,
@@ -639,6 +647,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       content: content,
       isOutgoing: false,
       messageId: messageId,
+      wireMessageId: wireId,
     ));
     // Read receipt sent when user opens the chat (see ChatScreen._sendReadReceipts)
 
@@ -652,8 +661,13 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     await _showMessageNotification(senderHex, senderName, content);
   }
 
-  Future<void> _handlePictureMessage(String senderHex, String myHex,
-      PictureSayBlock block, String messageId, Uint8List senderPubkey) async {
+  Future<void> _handlePictureMessage(
+      String senderHex,
+      String myHex,
+      PictureSayBlock block,
+      String messageId,
+      String wireId,
+      Uint8List senderPubkey) async {
     // Persist the image bytes to disk under a SHA-256-named file. dedupes
     // identical images naturally.
     final file = await writeMediaFile(block.imageBytes, block.mime);
@@ -666,6 +680,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       content: '',
       isOutgoing: false,
       messageId: messageId,
+      wireMessageId: wireId,
       messageType: ChatMessageType.picture.index,
       mediaPath: file.path,
       mediaMime: block.mime,

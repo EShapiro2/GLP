@@ -240,16 +240,32 @@ class _ChatScreenState extends State<ChatScreen> {
 
   static const _uuid = Uuid();
 
+  /// Hand chat message [messageId] to the layer, and link it to the id the
+  /// layer gives it, under which its delivery status is reported.
+  Future<String?> _sendChat(
+      Uint8List recipientPubkey, String messageId, Block block) async {
+    final wireId = await widget.grassroots.send(
+      recipientPubkey,
+      ChatPayload(messageId: messageId, block: block).encode(),
+    );
+    if (wireId != null) {
+      widget.store.dispatch(LinkWireMessageAction(
+        peerHex: ChatMessage.pubkeyToHex(recipientPubkey),
+        messageId: messageId,
+        wireMessageId: wireId,
+      ));
+    }
+    return wireId;
+  }
+
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
     _messageController.clear();
 
-    // Generate message ID upfront so we can show the message immediately
-    // Full UUID — messageId is encoded as a 16-byte packet id on the wire,
-// and as a 36-char string in the FRAGMENT_START header. An 8-char prefix
-// would corrupt either format.
+    // The chat id, generated upfront so the message shows at once: a full
+    // UUID, which the chat payload carries as 36 ASCII characters.
     final messageId = _uuid.v4();
 
     // Save to conversation immediately so the message appears in the UI
@@ -263,15 +279,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
     _scrollToBottom();
 
-    // Send in the background — status updates (sending → sent/delivered/failed)
-    // will be dispatched by GrassrootsNetwork.send() and reflected via the status icon
+    // Send in the background — the layer reports the status (sending → sent →
+    // delivered) under the id `send` returns, which the status icon follows
+    // once _sendChat has linked it
     final block = TextSayBlock(content: text);
     debugPrint("Sending '$text' to peer ${widget.peer.displayName}");
-    widget.grassroots.send(
-      widget.peer.publicKey,
-      ChatPayload(messageId: messageId, block: block).encode(),
-      messageId: messageId,
-    );
+    unawaited(_sendChat(widget.peer.publicKey, messageId, block));
   }
 
   /// Open a small bottom sheet to pick an image source (camera or gallery)
@@ -366,9 +379,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final mediaFile = await writeMediaFile(compressed, mime);
       debugPrint('[picture-send] wrote ${mediaFile.path}');
 
-      // Full UUID — messageId is encoded as a 16-byte packet id on the wire,
-// and as a 36-char string in the FRAGMENT_START header. An 8-char prefix
-// would corrupt either format.
+      // The chat id: a full UUID, which the chat payload carries as 36 ASCII
+      // characters.
       final messageId = _uuid.v4();
 
       widget.store.dispatch(SaveChatMessageAction(
@@ -389,20 +401,18 @@ class _ChatScreenState extends State<ChatScreen> {
         mime: mime,
         imageBytes: compressed,
       );
-      final wireBytes =
-          ChatPayload(messageId: messageId, block: block).encode();
-      debugPrint('[picture-send] block serialized: ${wireBytes.length} bytes; '
-          'dispatching to grassroots.send for peer ${widget.peer.displayName}');
+      debugPrint('[picture-send] dispatching to grassroots.send for peer '
+          '${widget.peer.displayName}');
 
-      final sentMessageId = await widget.grassroots
-          .send(widget.peer.publicKey, wireBytes, messageId: messageId);
+      final sentMessageId =
+          await _sendChat(widget.peer.publicKey, messageId, block);
 
       if (sentMessageId == null) {
-        // send() returns null only for invalid input; offline peers are queued
-        // by GrassrootsNetwork and retain a clock-style status until reachable.
+        // send() returns null only for invalid input, and the layer then
+        // tracks no status for it; offline peers are queued by
+        // GrassrootsNetwork and retain a clock-style status until reachable.
         debugPrint(
             '[picture-send] grassroots.send returned null for ${widget.peer.displayName}');
-        widget.store.dispatch(MessageFailedAction(messageId: messageId));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -498,7 +508,6 @@ class _ChatScreenState extends State<ChatScreen> {
               messageId: forwardId,
               block: TextSayBlock(content: message.content),
             ).encode(),
-            messageId: forwardId,
           );
 
           if (forwardedMessageId == null) {
@@ -519,7 +528,12 @@ class _ChatScreenState extends State<ChatScreen> {
             recipientPubkeyHex: ChatMessage.pubkeyToHex(peer.publicKey),
             content: message.content,
             isOutgoing: true,
-            messageId: forwardedMessageId,
+            messageId: forwardId,
+          ));
+          widget.store.dispatch(LinkWireMessageAction(
+            peerHex: ChatMessage.pubkeyToHex(peer.publicKey),
+            messageId: forwardId,
+            wireMessageId: forwardedMessageId,
           ));
 
           if (!mounted) return;
@@ -818,11 +832,8 @@ class _ChatScreenState extends State<ChatScreen> {
     // is only shown for failed messages, and pictures over BLE rarely fail
     // partway because fragmentation is in-process.)
     final block = TextSayBlock(content: message.content);
-    final messageId = await widget.grassroots.send(
-      widget.peer.publicKey,
-      ChatPayload(messageId: existingMessageId, block: block).encode(),
-      messageId: existingMessageId,
-    );
+    final messageId =
+        await _sendChat(widget.peer.publicKey, existingMessageId, block);
 
     if (!mounted) return;
 
@@ -1182,9 +1193,14 @@ class _MessageBubble extends StatelessWidget {
   Widget _buildStatusIcon(BuildContext context) {
     // Get message status from store
     MessageStatus status = MessageStatus.sent;
+    // Reported by the layer under the id it gave the message; sending until
+    // `send` has returned it.
+    final wireId = message.wireMessageId;
     if (message.messageId != null && messagesState != null) {
-      final outgoing = messagesState!.getOutgoingMessage(message.messageId!);
-      status = outgoing?.status ?? MessageStatus.sent;
+      status = wireId == null
+          ? MessageStatus.sending
+          : messagesState!.getOutgoingMessage(wireId)?.status ??
+              MessageStatus.sent;
     }
 
     switch (status) {

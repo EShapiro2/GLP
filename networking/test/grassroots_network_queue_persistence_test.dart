@@ -355,11 +355,16 @@ void main() {
             ReadReceiptPayload(messageId: decoded.messageId).encode()));
       }
     };
-    // The sender's side: a receipt marks the outgoing message it names read.
+    // The sender's side: a receipt marks the outgoing message it names read,
+    // by the id the layer gave it.
     sender.onMessageReceived = (s, payload, id, u) {
       final decoded = AppPayload.decode(payload);
       if (decoded is ReadReceiptPayload) {
-        sender.store.dispatch(MessageReadAction(messageId: decoded.messageId));
+        final wireId = receiptReadWireId(
+            sender.store.state.messages, decoded.messageId, hex(s));
+        if (wireId != null) {
+          sender.store.dispatch(MessageReadAction(messageId: wireId));
+        }
       }
     };
     recipient.putKnownPeer(senderId.publicKey);
@@ -369,19 +374,33 @@ void main() {
     sender.wan!
         .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
 
+    final recipientHex = hex(recipientId.publicKey);
+    sender.store.dispatch(SaveChatMessageAction(
+      senderPubkeyHex: hex(senderId.publicKey),
+      recipientPubkeyHex: recipientHex,
+      content: 'read me',
+      isOutgoing: true,
+      messageId: chatId,
+    ));
     final wireId = await sender.send(
       recipientId.publicKey,
       ChatPayload(
         messageId: chatId,
         block: TextSayBlock(content: 'read me'),
       ).encode(),
-      messageId: chatId,
     );
-    expect(wireId, chatId);
+    // The layer names the message itself, never after the chat id.
+    expect(wireId, isNotNull);
+    expect(wireId, isNot(chatId));
+    sender.store.dispatch(LinkWireMessageAction(
+      peerHex: recipientHex,
+      messageId: chatId,
+      wireMessageId: wireId!,
+    ));
 
     final action = await read.future;
-    expect(action.messageId, chatId);
-    expect(sender.store.state.messages.outgoingMessages[chatId]?.status,
+    expect(action.messageId, wireId);
+    expect(sender.store.state.messages.outgoingMessages[wireId]?.status,
         MessageStatus.read);
   }, timeout: Timeout.none);
 

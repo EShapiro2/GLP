@@ -92,12 +92,19 @@ Uint8List _join(int kind, List<int> id, Uint8List? block) {
   return out.toBytes();
 }
 
-/// Whether a receipt from [readerHex] may mark outgoing message [messageId]
-/// read: only a receipt from the peer that message was sent to. A receipt
-/// naming no message sent to its sender marks nothing read (F07).
-bool receiptMarksRead(
+/// The outgoing message a receipt from [readerHex] marks read, by the id the
+/// layer gave it when it was sent: the receipt names the chat id
+/// [messageId], and only a message in the conversation with the reader, so
+/// sent to it, is looked for. Null when the receipt marks nothing read: it
+/// names no message sent to its sender (F07), or one the layer has not yet
+/// named.
+String? receiptReadWireId(
   MessagesState messages,
   String messageId,
   String readerHex,
-) =>
-    messages.outgoingMessages[messageId]?.recipientPubkeyHex == readerHex;
+) {
+  for (final m in messages.conversations[readerHex] ?? const []) {
+    if (m.isOutgoing && m.messageId == messageId) return m.wireMessageId;
+  }
+  return null;
+}
