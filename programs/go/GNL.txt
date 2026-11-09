@@ -1,6 +1,6 @@
 % GNL: Network Lodging --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.3 and cites a clause as GNL:1.
-% Paper: GO, Grassroots Organisations: Building Digital Banks, Corporations, Networks and Cooperatives, in preparation
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.3 and cites a clause as GNL:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
 % Last changed: 2026-11-09, written by GO #3 Cowork.
 % Schemas: GNL.glp beside this file.
