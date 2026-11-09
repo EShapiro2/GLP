@@ -11,6 +11,7 @@ Alice and Bob are persons.  A person is nearby Alice when her phone reaches thei
 1. ■ Open Place.  Alice may declare the place she is in open, and may close it.
 2. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, may know each other.
 Interface pragmas
+Look: 📶, network
 Nearby: the persons nearby whom Alice knows.
 Open Place: Alice [Open place] [Close place]
 Implementation pragmas

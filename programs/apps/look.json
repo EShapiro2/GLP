@@ -1,0 +1,54 @@
+{
+ "families": {
+  "identity": {
+   "from": "#5b8def",
+   "to": "#3a64c4",
+   "name": "Identity"
+  },
+  "social": {
+   "from": "#34c3ae",
+   "to": "#169482",
+   "name": "Social"
+  },
+  "care": {
+   "from": "#a98be3",
+   "to": "#7552c4",
+   "name": "Care"
+  },
+  "money": {
+   "from": "#f6c25a",
+   "to": "#e0911c",
+   "name": "Money"
+  },
+  "mobility": {
+   "from": "#f79a78",
+   "to": "#dc5d3c",
+   "name": "Mobility"
+  },
+  "governance": {
+   "from": "#7b8cff",
+   "to": "#4a54d6",
+   "name": "Governance"
+  },
+  "sharing": {
+   "from": "#f78fb3",
+   "to": "#d6407c",
+   "name": "Sharing"
+  },
+  "os": {
+   "from": "#9aa3ad",
+   "to": "#5f6b78",
+   "name": "Operating System"
+  },
+  "network": {
+   "from": "#7fb3d5",
+   "to": "#3f7fa8",
+   "name": "Network"
+  },
+  "other": {
+   "from": "#b0b0b8",
+   "to": "#7a7a85",
+   "name": "Other"
+  }
+ }
+}
