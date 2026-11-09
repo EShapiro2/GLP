@@ -8,37 +8,17 @@
 %% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= befriend(Peer, Peer) ; mint(Peer) ; tap(Peer, Peer) ; pat(Peer, Peer).
-Proposal ::= befriend(Peer, Peer) ; mint(Peer) ; tap(Peer, Peer) ; pat(Peer, Peer).
-Request  ::= propose(Proposal).
-YesNo    ::= yes ; no.
-Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote     ::= yes ; no(Reason).
-Decision ::= commit ; abort(Peer, Reason) ; yield.
-Rho      ::= one(Class) ; rho(Proposal).
-Names    ::= none ; request(Rho, Integer).
-Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
-Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
-Net      ::= msg(Peer, Content).
-Atom     ::= friend(Peer) ; coin ; tapped(Peer) ; tapped_by(Peer).
-Approved ::= Proposal.
-Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
-Asking   ::= Attempt ; hello(Peer, Proposal).
-Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number) ; held(Atom, Integer).
-Question ::= request_r(Request?) ; approval_w(Approval).
-Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
-Ask(Q)   ::= ask(Constant, Q).
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_parts(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_parts(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_parts(LA?, LB?, N?) :-
     pair([own([A1], propose(befriend(A1?, bob))),
           wait(holds(friend(bob))),
@@ -56,7 +36,7 @@ play_parts(LA?, LB?, N?) :-
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks joined.
-procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), MA),

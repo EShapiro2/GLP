@@ -12,16 +12,7 @@
 %% offer yes, carol's no, and confirms the meeting with bob, and logs what it
 %% sees; the person channel never closes, so neither does the log.
 
-Peer     ::= Constant.
-YesNo    ::= yes ; no.
 Offer    ::= offer(Peer).
-Response ::= accept(Peer) ; refuse(Peer).
-Card     ::= card(Peer, YesNo?).
-Ok       ::= ok(Peer, YesNo?).
-Fact     ::= met(Response) ; heard(Response) ; confirmed(Peer, YesNo).
-Question ::= ok_w(Ok) ; card_w(Card).
-Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= ok_w(_) ; card_w(_) ; YesNo.
 
 imported procedure home#befriend(Peer?, Peer?, Stream(Fact),
     Stream(Ask(Question))).

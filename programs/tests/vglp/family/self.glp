@@ -31,10 +31,6 @@
 %% closes, so neither does a log.
 
 Wish      ::= wish(Constant?).
-Allowance ::= allowance(Integer?).
-Question  ::= chore_w(Chore) ; wish_w(Wish) ; allowance_w(Allowance).
-Ask(Q)    ::= ask(Constant, Q).
-Drawn     ::= chore_w(_) ; wish_w(_) ; allowance_w(_) ; YesNo ; Constant.
 
 imported procedure parent#parent(Stream(Done), Stream(Ask(Question))).
 imported procedure child#child(Stream(Done), Stream(Ask(Question))).

@@ -640,18 +640,17 @@ class _Generator {
         hook.writeln(_constructClause(t, root, w));
         // The views its construct draws, each under the functor of its ask,
         // are of its view type, run_f's (vGLP, Section 6.3, "The construct
-        // process"); in T they stay typed _, since every GLP module that
-        // imports the dispatcher writes T again by hand, with f(_), and an
-        // import agrees with its export only where their types are equal
-        // (TGLP modules.tex, "Cross-module type checking").  The paper has
-        // the compilation write the types it forms into each such module
-        // (vGLP, Section 6.3, "The canonical compilation": "the compilation
+        // process"), and T's alternative of the functor is f(V), V that view
+        // type.  The compilation writes the types it forms into each module
+        // that imports a compiled procedure or the dispatcher (vGLP ac8c281,
+        // Section 6.3, "The canonical compilation": "Every module of [M]
+        // type-checks as GLP with no type written by hand: the compilation
         // writes into each module that imports a compiled procedure or the
         // dispatcher the types it forms for them, among them the type of the
-        // asks, the view types and the parameter of the person channel"),
-        // which is not built: until it is, T's alternative of each ask
-        // functor is f(_).
-        drawnAlts.add('${t.functor}(_)');
+        // asks, the view types and the parameter of the person channel";
+        // program_linker.dart, _writeCompiledTypes), so no module writes T
+        // again by hand.
+        drawnAlts.add('${t.functor}(${_rootViews[t.functor]})');
       } finally {
         declared = sourceDeclared;
       }

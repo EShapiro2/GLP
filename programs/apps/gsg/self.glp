@@ -3,7 +3,7 @@
 %%
 %% The directory is a certified program of its own: the platform, the mini-app entry miniapp/4 that wraps it (miniapp.glp), its scripted person (person.glp) and the plays that activate it by run/3, two executions over one conversation, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gsg.glpw is what the super-app installs; the plays of the super-app hosting it on two smartphones are ../gsg_boot.glp.
 %%
-%% The types of platform.vglp, written again for the declarations of the procedures imported from its compiled module, as every hand-written module importing a compiled procedure restates them today (the plays of programs/vglp/cva/social_graph likewise).  The compiled module's own definitions shadow these within it, and the two must agree.
+%% The types of platform.vglp, written again for the declarations of this directory's modules, but for those the compilation forms --- Question, Drawn and Ask(Q) --- which the linker writes into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names them (vGLP, Section 6.3, "The canonical compilation") (the plays of programs/vglp/cva/social_graph likewise).  The compiled module's own definitions shadow these within it, and the two must agree.
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
@@ -30,9 +30,6 @@ Asking   ::= Attempt ; hello(Peer, Proposal).
 Approved ::= Proposal.
 Approval ::= approval(Asking, List(Word), YesNo?).
 Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number) ; held(Atom, Integer).
-Question ::= request_r(Request?) ; approval_w(Approval).
-Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
-Ask(Q)   ::= ask(Constant, Q).
 
 %% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, view(Id, S, K, A, Ts), the agent's own key, the machine state, the persons the agent knows, the approvals pending and the tabs (vGLP 12f629d, Section 5.4, "The compilation"), and each notice, refused(P, Q, D) (vGLP f0acbc1, Section 5.4, "The compilation"); the agent's own key and the persons it knows, as the last view drawn shows them, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
 Asked    ::= Class ; Attempt.

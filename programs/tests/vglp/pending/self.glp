@@ -24,14 +24,6 @@
 %% The types of pending.vglp and those its compilation adds, written again
 %% for the declarations of the procedures imported from its compiled module.
 
-Peer     ::= Constant.
-YesNo    ::= yes ; no.
-Card     ::= card(Peer, YesNo?).
-Note     ::= note(Constant).
-Board    ::= board(List(Note), YesNo?).
-Question ::= card_w(Card) ; list_card_w(List(Card)) ; board_w(Board).
-Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= card_w(_) ; list_card_w(_) ; board_w(_) ; output(List(Output)) ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): each answer, got(N, X).
