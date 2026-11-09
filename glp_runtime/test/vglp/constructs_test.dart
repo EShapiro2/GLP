@@ -135,7 +135,7 @@ decide(no, From, refuse(From?)).
       // The person channel's type, the values the program draws under the
       // functors of its asks and the grants' raw inputs (vGLP, Definition
       // "Construct Process").
-      expect(c.source, contains('Drawn ::= card_w(_) ; YesNo.'));
+      expect(c.source, contains('Drawn ::= card_w(View_card) ; YesNo.'));
       // On an ask it writes the spawn of the construct process with the next
       // identifier, keeping the writer of its grants and the reader of its
       // draws; constructs/1 calls construct/4 on each spawn.
@@ -791,7 +791,7 @@ procedure (Pick?)*pick(Stream(Pick)).
 (P)*pick([P?]).
 ''');
       expect(c.source,
-          contains('Drawn ::= yesNo_r(_) ; pick_r(_) ; YesNo ; yes(MyChild).'));
+          contains('Drawn ::= yesNo_r(View_yesNo_r) ; pick_r(View_pick_r) ; YesNo ; yes(MyChild).'));
       final f = File('$_programs/vglp_union_fixture_${pid}_'
           '${DateTime.now().microsecondsSinceEpoch}.glp');
       try {
@@ -2566,7 +2566,7 @@ Output ::= said(Peer) ; heard(Peer, Integer) ; ok.
       expect(c.source, contains('[draw(0, W?, output(Es?)) | Ds?]'));
       expect(c.source, contains('merge_draws(ODs?, DOut?, POut)'));
       expect(c.source, contains('[], [], 1, Ss)'));
-      expect(c.source, contains('Drawn ::= card_w(_) ; output(List(Output)) ; '
+      expect(c.source, contains('Drawn ::= card_w(View_card) ; output(List(Output)) ; '
           'YesNo.'));
     });
 

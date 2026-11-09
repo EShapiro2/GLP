@@ -35,7 +35,7 @@ play_chat(Out?, Log?) :-
 
 procedure chatting_person(_?, PersonIn(Drawn), Stream(_)).
 chatting_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
-                [input(Id?, Q?, "hello"), input(Id?, Q?, stream_string_r(7)),
+                [input(Id?, Q?, "hello"), input(Id?, Q?, stream_string_r(input([]))),
                  input(Id?, Q?, "world") | Gs?],
                 [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |

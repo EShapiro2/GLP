@@ -128,15 +128,6 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
 
 Decision ::= yes ; no.
 
-Question ::= stream_request_r(Stream(Request)?)
-           ; card_w(Card)
-           ; groupCard_w(GroupCard)
-           ; joinCard_w(JoinCard)
-           ; inviteCard_w(InviteCard).
-Drawn ::= stream_request_r(_) ; card_w(_)
-        ; groupCard_w(_) ; joinCard_w(_) ; inviteCard_w(_)
-        ; output(List(Output)) ; YesNo ; Request.
-Ask(Q) ::= ask(Constant, Q).
 
 Offer ::= Intro ; GroupOffer ; JoinOffer ; InviteOffer.
 Step ::= req(Request)
@@ -447,6 +438,15 @@ inject_group_reply(G, M, R, Ys, [group_reply(G?, M?, R?)|Ys?]) :-
     known(R?) | true.
 inject_group_reply(G, M, R, [Y|Ys], [Y?|Ys1?]) :-
     inject_group_reply(G?, M?, R?, Ys?, Ys1).
+
+%% The mini-app's two entries, exported again from the root of the fixture, so that the types the compilation forms --- Question, Drawn and Ask(Q), those of agents/'s compiled modules --- are written into this self.glp, whose scope person.glp and plays.glp name them in (vGLP, Section 6.3, "The canonical compilation": the compilation writes them into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names one of them); the hand copies written here until 2026-11-09 are gone.
+imported procedure agents#app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+exported procedure app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+app(Id, Ui, Convs) :- agents # app(Id?, Ui?, Convs?).
+
+imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+exported procedure app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+app_child(Id, Es, Ui, Convs) :- agents # app_child(Id?, Es?, Ui?, Convs?).
 
 imported procedure plays#village.
 exported procedure village.

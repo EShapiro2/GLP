@@ -457,7 +457,7 @@ play_quote(P?, Log?) :-
 
 procedure pricing_person(_?, PersonIn(Drawn), Stream(_)).
 pricing_person([draw(Id, W, price_r(input(Q))) | Ds],
-               [input(Id?, Q?, price_r(3)), input(Id?, Q?, price(2.5)) | Gs?],
+               [input(Id?, Q?, price_r(input([]))), input(Id?, Q?, price(2.5)) | Gs?],
                [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |
     pricing_person(Ds?, Gs, Log).
@@ -473,7 +473,7 @@ pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     // The grant's raw input is of the person channel's type, the program's
     // draws and its questions' types (vGLP, Definition "Construct
     // Process"), so price(3), whose argument is no Real, is not granted from
-    // GLP: the refused grant is price_r(3), of that type and no Price.
+    // GLP: the refused grant is price_r(input([])), of that type and no Price.
     test('a grant that forms no Price is refused; a grant of a '
         'real answers it; the construct is a number field', () async {
       final engine = GlpEngine(rootSelfGlpPath: _root);

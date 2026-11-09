@@ -531,10 +531,7 @@ programs/tests/guards_invalid/false_in_guard.glp	open-decl	bad_guard/1
 programs/tests/guards_invalid/true_in_guard.glp	open-decl	bad_guard/1
 programs/tests/import_agreement/wildcard_neg/self.glp	open-decl	lib#pick/2
 programs/tests/linker_root_redef/undeclared/m.glp	untyped	merge/3
-programs/tests/linker_tree/agents/adult.glp	open-type	Drawn
-programs/tests/linker_tree/agents/child.glp	open-type	Drawn
 programs/tests/linker_tree/agents/miniapp.glp	open-decl	show_screen/2
-programs/tests/linker_tree/agents/parent.glp	open-type	Drawn
 programs/tests/linker_tree/person.glp	open-decl	act/14
 programs/tests/linker_tree/person.glp	open-decl	card_of/2
 programs/tests/linker_tree/person.glp	open-decl	choose/9
@@ -551,7 +548,6 @@ programs/tests/linker_tree/person.glp	open-type	OpenCard
 programs/tests/linker_tree/plays.glp	open-decl	log/2
 programs/tests/linker_tree/plays.glp	open-decl	log_shown/3
 programs/tests/linker_tree/plays.glp	open-decl	person#person/8
-programs/tests/linker_tree/self.glp	open-type	Drawn
 programs/tests/linker_tree/self.glp	open-type	Watched
 programs/tests/linkprobes/linkprobe10/agents.glp	open-decl	alice_init/2
 programs/tests/linkprobes/linkprobe10/agents.glp	open-decl	bob_init/2
