@@ -18,9 +18,10 @@
 %%                  prints their modules from.
 %%
 %% The monitor is exposed to the subtree: the harnesses spawn it.  sglp.glp,
-%% the units of a horizon (Span, span/2), the slot (Slot, fill/2) and the term
-%% form (SglpTerms, terms_length/2), is exposed to the subtree: the
-%% transformation, the printed modules and the harnesses share it.  Every
+%% the units of a horizon (Span, span/2), the slot (Slot, fill/2), the term
+%% form (SglpTerms, terms_length/2) and length/2 and length/3, is exposed to
+%% the subtree: the transformation, the printed modules and the harnesses
+%% share it.  Every
 %% simulation lives in this subtree, an owner's among them (sGLP #11,
 %% Code_inbox 2026-11-07 21:21 UTC, Udi approving), and the root exposes
 %% neither (GLP #13, 21:07 and 21:19 UTC).
@@ -30,7 +31,7 @@
 %% UTC, Udi approving: "sGLP is a separate language, compiled to GLP, and
 %% should not impose any burden on GLP").  Besides the exposes, this self.glp
 %% holds the transformation's two entries, which transform.sh calls with this
-%% directory loaded, and length/2 and length/3 (below).
+%% directory loaded.
 -expose(monitor).
 -expose(sglp).
 
@@ -46,21 +47,3 @@ transform(P, Part) :- transform # transform(P?, Part?).
 imported procedure transform#transform_terms(SglpTerms?, SglpTerms?, Constant?).
 exported procedure transform_terms(SglpTerms?, SglpTerms?, Constant?).
 transform_terms(V, S, Part) :- transform # transform_terms(V?, S?, Part?).
-
-%% length/2 and length/3, ordinary GLP, which the transformation
-%% (transform.glp) and the sGLP sources of tests/census and tests/screen call,
-%% besides the examples' one_of: they stay here, every caller under this
-%% directory, while where they belong is sGLP's to say (the layout of sGLP #11,
-%% Code_inbox 2026-11-09 10:22 UTC, moves them to examples/, whose siblings
-%% call them).
-%% length(Xs?, N): N is the number of elements of Xs, counted by length/3 in
-%% an accumulator, tail-recursively, so that a list of n elements leaves no n
-%% additions suspended at once, each waiting on the count of the rest, as the
-%% count it replaces did (sGLP's code task of 2026-10-02 20:58 UTC, S2).
-procedure(X) length(Stream(X)?, Integer).
-length(Xs, N?) :- length(Xs?, 0, N).
-
-%% length(Xs?, A?, N): N is A plus the number of elements of Xs.
-procedure(X) length(Stream(X)?, Integer?, Integer).
-length([], A, A?).
-length([_|Xs], A, N?) :- A1 := A? + 1, length(Xs?, A1?, N).
