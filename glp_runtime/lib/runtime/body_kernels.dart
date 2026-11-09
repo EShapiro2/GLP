@@ -143,6 +143,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Networking seam kernels (Definition Seam Predicates)
   registry.register('_peer_address', 2, peerAddressKernel);
   registry.register('_peer_app', 2, peerAppKernel);
+  registry.register('_self_app', 2, selfAppKernel);
   registry.register('_punch_udp', 1, punchUdpKernel);
   registry.register('_declare', 1, declareKernel);
   registry.register('_remove', 1, removeKernel);
@@ -1450,6 +1451,33 @@ BodyKernelResult peerAppKernel(GlpRuntime rt, List<Object?> args) {
   }
   return bindResult(rt, args[1], app);
 }
+
+/// '_self_app'(R, I) — assign R `app(D, N, V)` for the app whose program the
+/// agent runs, the app the layer attests to the agent's peers, and I the same
+/// for the app installed on the device; the two differ after an update the
+/// runtime refused (GLP-Spec cce13ce, appendix-guards, "Networking seam":
+/// `self_app(App, App)`; IGLP 59c40e2, Definition "Seam Predicates":
+/// `self_app(R?, I?) :- '_self_app'(R, I)`).  The kernel reads what the host
+/// gave the runtime ([GlpRuntime.selfApps]): the app the store keeps with the
+/// program where the update was refused, and the installed app otherwise.
+/// Where the host gave no app, as the REPL and the simulation give none,
+/// `none`.
+BodyKernelResult selfAppKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        '[ABORT] \'_self_app\'/2: expected 2 arguments, got ${args.length}');
+  }
+  final apps = rt.selfApps;
+  final r = bindResult(rt, args[0], _appTerm(apps?.running));
+  if (r != BodyKernelResult.success) return r;
+  return bindResult(rt, args[1], _appTerm(apps?.installed));
+}
+
+/// `app(D, N, V)` of [a], or `none` where there is none.
+Term _appTerm(Application? a) => a == null
+    ? ConstTerm('none')
+    : StructTerm('app',
+        [ConstTerm(a.developer), ConstTerm(a.name), ConstTerm(a.version)]);
 
 /// '_punch_udp'(A?) — open a path to address A and return nothing.  Where no
 /// layer is bound it returns having done nothing ("One interface", 6ba0329).

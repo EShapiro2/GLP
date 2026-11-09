@@ -23,12 +23,13 @@ import '../analysis/type_checker/root_scope.dart' show rootRenamed;
 
 /// The body kernels that reach the network or the person (IGLP Cowork,
 /// 2026-09-08; GLP-Spec appendix-guards, the Network and I/O kernel rows).
-/// '_declare' and '_remove' since 2026-11-03 (GLP-Spec 1ce0263, IGLP 3b736bb), in place of the five kernels of place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2: the system predicates of the networking layer and the kernels beneath them are OS-privileged (GSG, Section 3); peer_app/2 and '_peer_app' since 2026-11-07, a fifth system predicate of the networking layer (GLP-Spec 5fab8ac, its catalogue row naming the networking layer).
+/// '_declare' and '_remove' since 2026-11-03 (GLP-Spec 1ce0263, IGLP 3b736bb), in place of the five kernels of place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2: the system predicates of the networking layer and the kernels beneath them are OS-privileged (GSG, Section 3); peer_app/2 and '_peer_app' since 2026-11-07, a fifth system predicate of the networking layer (GLP-Spec 5fab8ac, its catalogue row naming the networking layer); self_app/2 and '_self_app' since 2026-11-09 (GLP-Spec cce13ce, its catalogue row naming the platform).
 const Set<String> privilegedKernels = {
   '_send/3',
   '_output/1',
   '_peer_address/2',
   '_peer_app/2',
+  '_self_app/2',
   '_punch_udp/1',
   '_declare/1',
   '_remove/1',
@@ -48,6 +49,7 @@ const Set<String> privilegedPredicates = {
   'send_to_user/1',
   'peer_address/2',
   'peer_app/2',
+  'self_app/2',
   'punch_udp/1',
   'declare/1',
   'remove/1',
