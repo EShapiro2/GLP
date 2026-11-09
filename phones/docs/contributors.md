@@ -15,10 +15,10 @@ Phones #1 Cowork, 2026-11-09, Udi approving (07:01--07:03 UTC).  For Nimrod and 
 Each of you builds and signs the app on your own Mac with your own Apple team, until the project's paid account lets us distribute it.
 
 1. Clone `https://github.com/EShapiro2/GLP`; Flutter, Xcode, `ideviceinstaller` (Homebrew, `libimobiledevice`) and Python 3 on the path.
-2. Set your team and a bundle identifier of your own in `glp_multiagent/ios/Runner.xcodeproj`, since the app's identifier is registered to Udi's team.  Do not commit this change.
+2. Give your team and a bundle identifier of your own as `GLP_TEAM` and `GLP_BUNDLE_ID` in the environment, since the app's identifier is registered to Udi's team; `build.sh`, `build_sim.sh` and `devices.sh` read them, and the Xcode project is not edited.
 3. The debugging log's password is in the repository, `phones/tools/debuglog-password`, and `build.sh` reads it from there; `GRASSROOTS` is any directory of yours, under which `build.sh` writes its builds, `$GRASSROOTS/tmp/phones`.
-4. Connect each phone once and run `flutter run -d <udid> -t lib/main_superapp.dart` from `glp_multiagent`, which registers it with your team.
-5. `GRASSROOTS=<dir> phones/tools/build.sh <udid>` builds the app with the reporter on and installs it; `phones/tools/devices.sh` lists your phones.  With a mode, `build.sh <udid> <mode>` builds the scripted app, whose person runs a play by itself.
+4. Connect each phone once and run, from `glp_multiagent`, `FLUTTER_XCODE_DEVELOPMENT_TEAM=$GLP_TEAM FLUTTER_XCODE_GLP_BUNDLE_ID=$GLP_BUNDLE_ID flutter run -d <udid> -t lib/main_superapp.dart`, which registers it with your team; `build.sh` prints this line when a phone is missing.
+5. `GRASSROOTS=<dir> phones/tools/build.sh <udid>` builds the app with the reporter on and installs it; `phones/tools/devices.sh` lists your phones.  With a mode, `build.sh <udid> <mode>` builds the scripted app, whose person runs a play by itself; `build_sim.sh <mode> [<simulator>]` builds it for a simulator, in a clone of its own.
 
 ## Running a play
 
