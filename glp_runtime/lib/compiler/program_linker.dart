@@ -236,10 +236,19 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   // are read into every scope as SelfGlpReading reads them, until the
   // compilation has written its types into them (module_hierarchy.dart,
   // selfGlpReading; vGLP, Section 6.3).
+  // The self.glp files above the root, up to programs/, are read the same
+  // way: one of them may import a procedure whose declaration names a type
+  // the compilation forms in a module below the root, as the currencies'
+  // self.glp names Drawn through its plays, and gets it written in a
+  // discovery of its own directory's program (_readCompiledTypesOfChain).
   final outer = selfGlpReading;
+  final above = programsDir == null
+      ? const <String>[]
+      : _ancestorSelfGlpFiles(root.absolute.path, programsDir);
   selfGlpReading = _selfGlpReadingOf([
     for (final f in _listFiles(root))
-      if (ppath.basename(f.path) == 'self.glp') f.path
+      if (ppath.basename(f.path) == 'self.glp') f.path,
+    ...above,
   ]);
   try {
     // The program's vGLP sources, read before any module is compiled, and
@@ -263,6 +272,19 @@ List<DiscoveredModule> discoverProgram(String rootDir,
     _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
         program: program, layers: layers);
     final written = _writeCompiledTypes(modules);
+    // An ancestor self.glp above the root that imports a procedure naming a
+    // formed type imports it from a module outside this program: its types
+    // come from a discovery of its directory's program, as a single
+    // module's chain gets them (discoverSingleModule), and its module here
+    // reads them.
+    if (above.any((p) =>
+            written.contains(SelfGlpReading.key(p)) &&
+            !(selfGlpReading?.written.containsKey(SelfGlpReading.key(p)) ??
+                true)) &&
+        _readCompiledTypesOfChain(above,
+            rootSelfGlpPath: rootSelfGlpPath, rootScope: rs)) {
+      _writeReadTypes(modules);
+    }
     if (written.isNotEmpty) {
       // Each module with a self.glp written into, or read leniently until
       // now, on its chain, the compiled modules among them, gets its scope
@@ -3835,12 +3857,20 @@ List<String> emitVglpSources(String rootDir,
   // The sources compile in the scopes the loader gives them, the self.glp
   // files that import their procedures read as discoverProgram reads them
   // before the compilation has formed their types (selfGlpReading).
+  // The self.glp files above the root too, each with the types the
+  // compilation writes into it, from a discovery of its directory's program
+  // (discoverProgram, _readCompiledTypesOfChain).
   final outer = selfGlpReading;
+  final above = _ancestorSelfGlpFiles(root.path, programsDir);
   selfGlpReading = _selfGlpReadingOf([
     for (final f in _listFiles(root))
-      if (ppath.basename(f.path) == 'self.glp') f.path
+      if (ppath.basename(f.path) == 'self.glp') f.path,
+    ...above,
   ]);
   try {
+    if (above.isNotEmpty) {
+      _readCompiledTypesOfChain(above, rootSelfGlpPath: rootSelfGlpPath);
+    }
     return _emitVglpSources(root, programsDir, dispatcher, rootSelfGlpPath,
         onSkip);
   } finally {

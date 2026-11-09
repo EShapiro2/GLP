@@ -164,7 +164,6 @@ programs/book/streams/producers_consumers/parallel_table.glp	open-decl	read/3
 programs/book/streams/producers_consumers/parallel_table.glp	open-decl	table/4
 programs/cssn/miniapp.glp	open-decl	to_person/2
 programs/cssn/self.glp	open-type	Drawn
-programs/currencies/bonds/dated/bonds_agent.glp	open-type	Drawn
 programs/currencies/bonds/dated/miniapp.glp	open-decl	show_screen/2
 programs/currencies/bonds/dated/person.glp	open-decl	events/2
 programs/currencies/bonds/dated/person.glp	open-decl	instruments_of/2
@@ -180,7 +179,6 @@ programs/currencies/bonds/dated/self.glp	open-decl	person#person/7
 programs/currencies/bonds/dated/self.glp	open-decl	person/7
 programs/currencies/bonds/self.glp	open-type	Event
 programs/currencies/bonds/village.glp	open-decl	dated#person/7
-programs/currencies/coins/currency/coins_agent.glp	open-type	Drawn
 programs/currencies/coins/currency/miniapp.glp	open-decl	show_screen/2
 programs/currencies/coins/currency/person.glp	open-decl	events/2
 programs/currencies/coins/currency/person.glp	open-decl	newest/3
@@ -207,7 +205,6 @@ programs/currencies/sovereign/denominated/person.glp	open-type	OpenOffer
 programs/currencies/sovereign/denominated/plays.glp	open-decl	person#person/7
 programs/currencies/sovereign/denominated/self.glp	open-decl	person#person/7
 programs/currencies/sovereign/denominated/self.glp	open-decl	person/7
-programs/currencies/sovereign/denominated/sovereign_agent.glp	open-type	Drawn
 programs/currencies/sovereign/play_ui.glp	open-decl	denominated#person/7
 programs/currencies/sovereign/self.glp	open-type	Event
 programs/currencies/sovereign/village.glp	open-decl	denominated#person/7
