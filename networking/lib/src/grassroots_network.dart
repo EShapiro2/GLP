@@ -406,6 +406,18 @@ class GrassrootsNetwork {
       if (bytes == null) return false;
       return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
     },
+    // A message's attempts ran out on the session: tear it down as the liveness
+    // sweep does for UDP, so reachability is reported. The message stays
+    // queued.
+    // A signal for a session already gone concerns nothing that stands.
+    onAttemptsExhausted: (peerHex) {
+      final peer = _peersState.getPeerByPubkeyHex(peerHex);
+      if (peer == null ||
+          _udpService?.getPeerIdForPubkey(peer.publicKey) == null) {
+        return;
+      }
+      _disconnectStaleUdp(peer);
+    },
   );
 
   /// The BLE carrier of the same transport: fragments ride GATT writes,
@@ -413,6 +425,16 @@ class GrassrootsNetwork {
   /// fires (spec §Message Transport).
   late final MessageTransportSender _bleMessageSender =
       MessageTransportSender.gatt(
+    // A message's attempts ran out on the BLE path: sever it as the liveness
+    // sweep does, so reachability is reported. The message stays queued.
+    onAttemptsExhausted: (peerHex) {
+      final peer = _peersState.getPeerByPubkeyHex(peerHex);
+      if (peer == null ||
+          _bleService?.getPeerIdForPubkey(peer.publicKey) == null) {
+        return;
+      }
+      _disconnectStaleBle(peer);
+    },
     sendPacket: (peerHex, packet) async {
       final service = _bleService;
       if (service == null) return false;
@@ -2865,6 +2887,13 @@ class GrassrootsNetwork {
     );
   }
 
+  /// Signal that a message to [pubkey] exhausted its attempts, as the UDP
+  /// sender does when a fragment runs out of retransmissions: the test seam for
+  /// the exhaustion teardown.
+  @visibleForTesting
+  void debugExhaustUdpAttempts(Uint8List pubkey) =>
+      _udpMessageSender.debugExhaust(_pubkeyToHex(pubkey));
+
   @visibleForTesting
   int queuedMessageCountForPeer(Uint8List pubkey) =>
       _outboundMessageQueue[_pubkeyToHex(pubkey)]?.length ?? 0;
@@ -3893,14 +3922,23 @@ class GrassrootsNetwork {
       onMessageReceived?.call(senderPubkey, payload, messageId, underlay);
     };
 
-    // ACK received (delivery confirmation)
-    _messageRouter.onAckReceived = (messageId) {
+    // ACK received (delivery confirmation). It settles an outbound message
+    // only when it comes from the recipient the message was sent to.
+    _messageRouter.onAckReceived = (senderPubkey, messageId) {
+      final senderHex = _pubkeyToHex(senderPubkey);
+      final sentToOther = _persistedQueue.entries.any((entry) =>
+          entry.messageId == messageId && entry.recipientHex != senderHex);
+      if (sentToOther) {
+        debugPrint('ACK for message $messageId from $senderHex, which is not '
+            'its recipient: ignored');
+        return;
+      }
       debugPrint('ACK received for message $messageId');
       store.dispatch(MessageDeliveredAction(messageId: messageId));
       _clearAckPending(messageId);
       unawaited(_persistedQueue.remove(messageId));
-      _udpMessageSender.handleMessageAck(messageId);
-      _bleMessageSender.handleMessageAck(messageId);
+      _udpMessageSender.handleMessageAck(senderHex, messageId);
+      _bleMessageSender.handleMessageAck(senderHex, messageId);
     };
 
     // Per-fragment ACK: settle the sender-side retransmit slot (spec
@@ -3942,10 +3980,26 @@ class GrassrootsNetwork {
       }
     };
 
-    // Read receipt received
-    _messageRouter.onReadReceiptReceived = (messageId) {
-      debugPrint('Read receipt received for message $messageId');
-      store.dispatch(MessageReadAction(messageId: messageId));
+    // Read receipt received. The reader names the message by the id it was
+    // delivered under, the layer-assigned MessageRouter.deliveryIdOf of our
+    // public key and our wire id (F07); resolve it to our wire id among our
+    // outgoing messages to that reader, and mark that one read.
+    _messageRouter.onReadReceiptReceived = (senderPubkey, messageId) {
+      final readerHex = _pubkeyToHex(senderPubkey);
+      final wireId = store.state.messages.outgoingMessages.values
+              .where((m) => m.recipientPubkeyHex == readerHex)
+              .map((m) => m.messageId)
+              .where((wire) =>
+                  MessageRouter.deliveryIdOf(identity.publicKey, wire) ==
+                  messageId)
+              .firstOrNull;
+      if (wireId == null) {
+        debugPrint('Read receipt for $messageId from $readerHex names no '
+            'message sent to it: ignored');
+        return;
+      }
+      debugPrint('Read receipt received for message $wireId');
+      store.dispatch(MessageReadAction(messageId: wireId));
     };
 
     // Map incoming UDP connections from any verified packet's sender: a
@@ -4837,14 +4891,7 @@ class GrassrootsNetwork {
           '[udp-stale] No UDP traffic from ${peer.displayName} for '
           '${staleThreshold.inSeconds}s; disconnecting stale session',
         );
-        // The session goes with its path, here and not on the path's
-        // disconnect event, which finds no peer once the stale peers are
-        // removed below: a session left standing would be announced into
-        // for ever, and the sweep would re-dial no rendezvous server whose
-        // session went stale (GNA ip.tex, "Address-change recovery").
-        _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
-        store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
-        unawaited(_udpService!.disconnectFromPeer(pubkeyHex));
+        _disconnectStaleUdp(peer);
       }
     }
 
@@ -4875,21 +4922,49 @@ class GrassrootsNetwork {
       // linked with (20s connecting-wedge on iOS, GATT-133 churn on
       // Android). Tearing the radio down first makes the recovery dial a
       // legitimate first link.
-      final centralId = peer.bleCentralDeviceId;
-      if (centralId != null) {
-        unawaited(_bleService?.disconnectDevice(centralId, forget: true));
-      }
-      final peripheralId = peer.blePeripheralDeviceId;
-      if (peripheralId != null) {
-        unawaited(_bleService?.disconnectDevice(peripheralId, forget: true));
-      }
-      // role: null clears both central and peripheral attachments.
-      store.dispatch(PeerBleDisconnectedAction(peer.publicKey));
+      _disconnectStaleBle(peer);
     }
 
     // Dispatch action to remove stale peers via Redux
     store.dispatch(StaleDiscoveredBlePeersRemovedAction(staleThreshold));
     store.dispatch(StalePeersRemovedAction(staleThreshold));
+  }
+
+  /// Tear down a silent UDP session: the liveness sweep's teardown, also taken
+  /// when a message's attempts are exhausted on it.
+  void _disconnectStaleUdp(PeerState peer) {
+    // The session goes with its path, here and not on the path's disconnect
+    // event, which finds no peer once the stale peers are removed: a session
+    // left standing would be announced into for ever, and the sweep would
+    // re-dial no rendezvous server whose session went stale (GNA ip.tex,
+    // "Address-change recovery").
+    _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
+    store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
+    unawaited(_udpService!.disconnectFromPeer(peer.pubkeyHex));
+  }
+
+  /// Tear down a silent BLE attachment: the liveness sweep's teardown, also
+  /// taken when a message's attempts are exhausted on the BLE path.
+  void _disconnectStaleBle(PeerState peer) {
+    // Redux is a strict projection of transport facts — so when we
+    // synthesize a disconnect, make it a fact: physically tear down any
+    // plugin paths still attached to this peer. An ANNOUNCE-quiet link is
+    // often still alive at the radio level; clearing only the Redux
+    // attachment blinds the identity-keyed dial guards, and the recovery
+    // dial then opens a doomed SECOND link to a device we are still
+    // linked with (20s connecting-wedge on iOS, GATT-133 churn on
+    // Android). Tearing the radio down first makes the recovery dial a
+    // legitimate first link.
+    final centralId = peer.bleCentralDeviceId;
+    if (centralId != null) {
+      unawaited(_bleService?.disconnectDevice(centralId, forget: true));
+    }
+    final peripheralId = peer.blePeripheralDeviceId;
+    if (peripheralId != null) {
+      unawaited(_bleService?.disconnectDevice(peripheralId, forget: true));
+    }
+    // role: null clears both central and peripheral attachments.
+    store.dispatch(PeerBleDisconnectedAction(peer.publicKey));
   }
 
 }

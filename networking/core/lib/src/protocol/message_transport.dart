@@ -30,6 +30,7 @@ class MessageTransportSender {
     this.initialBackoff = const Duration(milliseconds: 400),
     this.maxBackoff = const Duration(seconds: 6),
     this.maxAttempts = 8,
+    this.onAttemptsExhausted,
   });
 
   /// The GATT carrier (spec §Message Protocol: over BLE a fragment rides a
@@ -37,13 +38,17 @@ class MessageTransportSender {
   /// [FragmentHandler.bleMaxChunk], a window of four, and retransmission a
   /// backstop to the link's own acknowledgment. One profile, so that a test
   /// drives the carrier the coordinator runs.
-  factory MessageTransportSender.gatt({required PacketSender sendPacket}) =>
+  factory MessageTransportSender.gatt({
+    required PacketSender sendPacket,
+    void Function(String peerHex)? onAttemptsExhausted,
+  }) =>
       MessageTransportSender(
         maxChunk: FragmentHandler.bleMaxChunk,
         windowPerPeer: 4,
         initialBackoff: const Duration(seconds: 2),
         maxAttempts: 3,
         sendPacket: sendPacket,
+        onAttemptsExhausted: onAttemptsExhausted,
       );
 
   final int maxChunk;
@@ -59,6 +64,13 @@ class MessageTransportSender {
   /// Retransmissions per fragment before the whole message fails (the
   /// caller re-queues it under fair delivery).
   final int maxAttempts;
+
+  /// Called with the peer's hex once when a message's attempts are exhausted (a
+  /// fragment reached [maxAttempts] unacknowledged), after every message to
+  /// that peer has failed (see [abandonPeer]). Not called for a message refused
+  /// on its first transmission, failed by [abandonPeer], or failed by its
+  /// `isCurrent` check: none of those is exhaustion.
+  final void Function(String peerHex)? onAttemptsExhausted;
 
   final FragmentHandler _fragmenter = FragmentHandler();
   final Map<String, _PeerLane> _lanes = {};
@@ -127,24 +139,36 @@ class MessageTransportSender {
     _pump(lane);
   }
 
-  /// A whole-message acknowledgment arrived (delivery receipt): everything
-  /// still outstanding for that message is settled — the receiver has it.
-  void handleMessageAck(String messageId) {
-    for (final lane in _lanes.values) {
-      final message = lane.messageById(messageId);
-      if (message == null) continue;
-      for (final inFlight in message.inFlight.values) {
-        inFlight.timer?.cancel();
-        lane.slotsInUse--;
-      }
-      message.inFlight.clear();
-      message.pending.clear();
-      message.complete(true);
-      lane.messages.remove(message);
-      _pump(lane);
-      return;
+  /// A whole-message acknowledgment arrived from [peerHex], the peer the
+  /// message was sent to (delivery receipt): everything still outstanding for
+  /// that message is settled — the receiver has it. An acknowledgment from any
+  /// other peer settles nothing.
+  void handleMessageAck(String peerHex, String messageId) {
+    final lane = _lanes[peerHex];
+    if (lane == null) return;
+    final message = lane.messageById(messageId);
+    if (message == null) return;
+    for (final inFlight in message.inFlight.values) {
+      inFlight.timer?.cancel();
+      lane.slotsInUse--;
     }
+    message.inFlight.clear();
+    message.pending.clear();
+    message.complete(true);
+    lane.messages.remove(message);
+    _pump(lane);
   }
+
+  /// A message's attempts ran out toward [peerHex]: fail every message to it
+  /// and signal the peer once.
+  void _exhaust(String peerHex) {
+    abandonPeer(peerHex);
+    onAttemptsExhausted?.call(peerHex);
+  }
+
+  /// The exhaustion of a message's attempts toward [peerHex], as a test drives
+  /// it: what [_transmit] does when a fragment runs out of retransmissions.
+  void debugExhaust(String peerHex) => _exhaust(peerHex);
 
   /// Drop all state toward [peerHex]; outstanding messages fail (and fall
   /// back to the caller's fair-delivery queue).
@@ -192,7 +216,11 @@ class MessageTransportSender {
   ) {
     if (_disposed || message.completer.isCompleted) return;
     if (inFlight.attempts >= maxAttempts) {
-      _failMessage(lane, message);
+      // The session the peer's messages ride is given up: every message of the
+      // lane fails, not only this one, so none retransmits on a session already
+      // torn down. Each falls back to its caller's queue, and the signal comes
+      // once.
+      _exhaust(lane.peerHex);
       return;
     }
     if (message.isCurrent != null && !message.isCurrent!()) {

@@ -224,8 +224,8 @@ void main() {
           bool anyCalled = false;
           bool decryptCalled = false;
           router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
-          router.onAckReceived = (_) => anyCalled = true;
-          router.onReadReceiptReceived = (_) => anyCalled = true;
+          router.onAckReceived = (_, __) => anyCalled = true;
+          router.onReadReceiptReceived = (_, __) => anyCalled = true;
           router.onAckRequested = (_, __, ___) => anyCalled = true;
           router.onSignalingReceived =
               (_, __, {String? observedIp, int? observedPort}) =>
@@ -465,7 +465,8 @@ void main() {
           rssi: -60,
         );
 
-        expect(receivedId, equals(messageId));
+        expect(receivedId,
+            equals(MessageRouter.deliveryIdOf(otherPubkey, messageId)));
         expect(receivedPubkey, equals(otherPubkey));
         expect(receivedPayload, equals(body));
         expect(receivedTransport, equals(PeerTransport.bleDirect));
@@ -604,7 +605,8 @@ void main() {
         await router.processPacket(p,
             transport: PeerTransport.udp, rssi: -60);
 
-        expect(deliveries, [messageId, messageId]);
+        final deliveryId = MessageRouter.deliveryIdOf(otherPubkey, messageId);
+        expect(deliveries, [deliveryId, deliveryId]);
         expect(ackRequests, [messageId, messageId]);
       });
 
@@ -725,7 +727,7 @@ void main() {
 
         attested = true;
         await router.processPacket(p, transport: PeerTransport.udp);
-        expect(delivered, [messageId]);
+        expect(delivered, [MessageRouter.deliveryIdOf(otherPubkey, messageId)]);
         expect(fragmentAcks, [messageId]);
         expect(acks, [messageId]);
       });
@@ -770,7 +772,7 @@ void main() {
         stubSession();
 
         String? receivedMessageId;
-        router.onAckReceived = (messageId) => receivedMessageId = messageId;
+        router.onAckReceived = (_, messageId) => receivedMessageId = messageId;
 
         const messageId = 'acked-message-id';
         final p = securePacket(
@@ -824,7 +826,7 @@ void main() {
         stubSession();
 
         String? receivedMessageId;
-        router.onReadReceiptReceived = (id) => receivedMessageId = id;
+        router.onReadReceiptReceived = (_, id) => receivedMessageId = id;
 
         const messageId = 'msg-to-read';
         final p = securePacket(
@@ -845,7 +847,7 @@ void main() {
         stubSession();
 
         String? receivedMessageId;
-        router.onReadReceiptReceived = (id) => receivedMessageId = id;
+        router.onReadReceiptReceived = (_, id) => receivedMessageId = id;
 
         final p = securePacket(
           type: PacketType.readReceipt,
@@ -988,7 +990,8 @@ void main() {
           udpPeerId: 'peer-789',
         );
 
-        expect(receivedId, equals(messageId));
+        expect(receivedId,
+            equals(MessageRouter.deliveryIdOf(otherPubkey, messageId)));
         expect(receivedPubkey, equals(otherPubkey));
         expect(receivedPayload, equals(body));
       });
@@ -1090,7 +1093,7 @@ void main() {
         stubSession();
 
         String? receivedId;
-        router.onAckReceived = (id) => receivedId = id;
+        router.onAckReceived = (_, id) => receivedId = id;
 
         const messageId = 'ack-msg1';
         final p = securePacket(
@@ -1117,7 +1120,7 @@ void main() {
         stubSession();
 
         String? receivedId;
-        router.onReadReceiptReceived = (id) => receivedId = id;
+        router.onReadReceiptReceived = (_, id) => receivedId = id;
 
         const messageId = 'rr-msg-1';
         final p = securePacket(

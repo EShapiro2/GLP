@@ -204,7 +204,8 @@ void main() {
         rssi: -70,
       );
 
-      expect(receivedId, equals(messageId));
+      expect(receivedId,
+          equals(MessageRouter.deliveryIdOf(aliceIdentity.publicKey, messageId)));
       expect(receivedPayload, equals(messagePayload));
       expect(receivedSender, equals(aliceIdentity.publicKey));
     });
@@ -241,7 +242,7 @@ void main() {
       );
 
       String? receivedMessageId;
-      bobRouter.onReadReceiptReceived = (id) {
+      bobRouter.onReadReceiptReceived = (_, id) {
         receivedMessageId = id;
       };
 
@@ -318,7 +319,8 @@ void main() {
         udpPeerId: 'peer-alice-id',
       );
 
-      expect(receivedId, equals(messageId));
+      expect(receivedId,
+          equals(MessageRouter.deliveryIdOf(aliceIdentity.publicKey, messageId)));
       expect(receivedPayload, equals(messagePayload));
       expect(receivedSender, equals(aliceIdentity.publicKey));
     });
@@ -331,7 +333,7 @@ void main() {
       final packet = aliceProtocol.createAckPacket(messageId: messageId);
 
       String? receivedMessageId;
-      bobRouter.onAckReceived = (id) {
+      bobRouter.onAckReceived = (_, id) {
         receivedMessageId = id;
       };
 
@@ -354,7 +356,7 @@ void main() {
       );
 
       String? receivedMessageId;
-      bobRouter.onReadReceiptReceived = (id) {
+      bobRouter.onReadReceiptReceived = (_, id) {
         receivedMessageId = id;
       };
 

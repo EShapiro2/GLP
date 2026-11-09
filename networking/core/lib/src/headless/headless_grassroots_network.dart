@@ -197,6 +197,15 @@ class HeadlessGrassrootsNetwork {
       if (bytes == null) return false;
       return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
     },
+    // A message's attempts ran out on the session: tear that session down, as
+    // the silence sweep does, so reachability is reported. The message stays
+    // in the queue. A signal from a session already gone concerns nothing that
+    // stands, and is dropped.
+    onAttemptsExhausted: (peerHex) {
+      final pubkey = _bytes(peerHex);
+      if (!_noiseSessions.hasSession(PeerTransport.udp, pubkey)) return;
+      _tearDownSession(pubkey);
+    },
   );
   StreamSubscription<AppState>? _storeSubscription;
   StreamSubscription<dynamic>? _connectionSub;
@@ -1199,9 +1208,9 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
-    _messageRouter.onAckReceived = (messageId) {
+    _messageRouter.onAckReceived = (senderPubkey, messageId) {
       debugPrint('[headless] ACK received for $messageId');
-      _udpMessageSender.handleMessageAck(messageId);
+      _udpMessageSender.handleMessageAck(_hex(senderPubkey), messageId);
     };
 
     _messageRouter.onFragmentAckReceived =
@@ -1515,6 +1524,22 @@ class HeadlessGrassrootsNetwork {
         'went unacknowledged; tearing the session down');
     _tearDownSession(pubkey);
   }
+
+  /// Signal that a message to [pubkey] exhausted its attempts, as the sender
+  /// does when a fragment runs out of retransmissions: the test seam for the
+  /// exhaustion teardown, the sender's own signal being reached only after a
+  /// heartbeat-scale wait.
+  @visibleForTesting
+  void debugExhaustAttempts(Uint8List pubkey) =>
+      _udpMessageSender.debugExhaust(_hex(pubkey));
+
+  /// The identifiers of the messages to [pubkey] in the in-memory replay queue,
+  /// for tests.
+  @visibleForTesting
+  List<String> debugQueuedMessageIds(Uint8List pubkey) => [
+        for (final entry in _outboundQueue[_hex(pubkey)] ?? const [])
+          entry.messageId,
+      ];
 
   /// Tear the UDP session with [pubkey] down: an attestation found invalid,
   /// or ours undeliverable on it. The disconnect event drops reachability
