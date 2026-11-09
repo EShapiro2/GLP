@@ -28,10 +28,13 @@
 # GrassApp-<mode>-<sha>.ipa for a scripted build; and installs it, stopping if
 # the install has not finished within INSTALL_LIMIT seconds (default 300).
 #
-# The profile lists a phone only once the team has registered it: connect the
-# phone and run, once, `flutter run -d <udid> -t lib/main_superapp.dart` from
-# glp_multiagent, which registers it; the free team signs one phone per build.
-# GRASSROOTS (default /Users/udi/Grassroots) changes where it writes.
+# GLP_TEAM and GLP_BUNDLE_ID give the Apple team and the bundle identifier,
+# by default the Xcode project's, G374822FDT and com.eshapiro.grassapp
+# (common.sh); the build is checked to carry both.  The profile lists a phone
+# only once the team has registered it: connect the phone and run, once, the
+# `flutter run` line build.sh prints when the phone is missing, which
+# registers it; the free team signs one phone per build.  GRASSROOTS (default
+# /Users/udi/Grassroots) changes where it writes.
 set -euo pipefail
 ME=build.sh
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
@@ -79,13 +82,15 @@ import plistlib, sys
 p = plistlib.load(open(sys.argv[1], "rb"))
 devices = [d.lower() for d in p.get("ProvisionedDevices", [])]
 print((p.get("TeamIdentifier") or ["none"])[0], "yes" if sys.argv[2].lower() in devices else "no")' "$W/profile.plist" "$udid")
+[ "$team" = "$TEAM" ] || die "the build is signed with a profile of team $team, not of $TEAM"
+built_id=$(python3 -I -c 'import plistlib, sys; print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleIdentifier", ""))' "$RUNNER/Info.plist")
+[ "$built_id" = "$BUNDLE_ID" ] || die "the app's bundle identifier is $built_id, not $BUNDLE_ID"
 if [ "$listed" != yes ]; then
-    die "the profile signing this build does not list the phone $udid; connect it and run once, from $APP: flutter run -d $udid -t lib/main_superapp.dart, which registers it; then build.sh $udid again"
+    die "the profile signing this build does not list the phone $udid; connect it and run once, from $APP: FLUTTER_XCODE_DEVELOPMENT_TEAM=$TEAM FLUTTER_XCODE_GLP_BUNDLE_ID=$BUNDLE_ID flutter run -d $udid -t lib/main_superapp.dart, which registers it; then build.sh $udid again"
 fi
 
 # Every binary under Runner.app/Frameworks built for iOS (a simulator build's
-# says IOSSIMULATOR) and signed by the profile's team (an ad hoc signature has
-# none).
+# says IOSSIMULATOR) and signed by the team (an ad hoc signature has none).
 bad=0
 shopt -s nullglob
 for fw in "$RUNNER"/Frameworks/*.framework "$RUNNER"/Frameworks/*.dylib; do

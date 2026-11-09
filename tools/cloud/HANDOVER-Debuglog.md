@@ -10,7 +10,7 @@ On branch Cloud-debuglog, merged on main 710f7c17:
 - `servers/peoplesweb/deploy/Caddyfile` and `sweep.sh`: the route `/log*` and the thirty days' retention.
 - `phones/tools/`: `build.sh`, `devices.sh`, `follow.sh`, each with its use in its head comment.
 
-On branch Cloud-buildsh, on Phones' report of a build iOS refused: `build.sh` cleans before every build, checks every framework's platform and team before it installs, and installs under a time limit; `build_sim.sh` builds for the simulator in a clone of its own; `common.sh` holds what the two share; both tools, and `follow.sh`, read the repository's password.
+On branch Cloud-buildsh, on Phones' report of a build iOS refused and on contributors building with their own team: `build.sh` cleans before every build, checks the profile's team, the app's identifier and every framework's platform and team before it installs, and installs under a time limit; `build_sim.sh` builds for the simulator in a clone of its own; `common.sh` holds what they share, with GLP_TEAM and GLP_BUNDLE_ID; the Runner target's identifier is the build setting GLP_BUNDLE_ID; the tools read the repository's password.
 
 ## Open
 
