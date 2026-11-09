@@ -15,7 +15,6 @@
 #   open-type   `_` or `_?` in a type definition (the type's name)
 # Lines beginning with # and empty lines are not entries.
 cascade/AGORA/platform.glp	open-type	Drawn
-cascade/STAY/platform.glp	open-type	Drawn
 cascade/CSSN/platform.glp	open-decl	comb_approval_approval_3/7
 cascade/CSSN/platform.glp	open-decl	comb_menu_menu_3/7
 cascade/CSSN/platform.glp	open-decl	cons_more/5
