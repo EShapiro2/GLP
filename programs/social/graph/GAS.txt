@@ -4,7 +4,7 @@
 % Extends: GPD, Grassroots Programs Dissemination, GSA's (programs/social/graph), and through it GSG and GKK; and GnW, Guardians 'n' Wards, GAI's (programs/gai/GnW.txt), the store a ward of its owner (Udi, 2026-11-08 09:24 UTC); that a contract extends two is put to GSC, 09:27 UTC.  It cites their clauses whole and restates none.
 % Defines: store, defined in the box after the declaration, a contract being self-contained.  Program and developer are defined with GPD; Alice, Bob and Carol are variables naming distinct persons.
 % Last changed: 2026-11-08, the store a ward with a key of its own, Dave, extending GnW too, Delist, and the store's page an implementation pragma (Udi, 2026-11-08 09:24 UTC; written by GSA #2); 2026-11-07, Listing undertaken, Carol signing the program she lists (Udi, 2026-11-07); the schemas rewritten on GFP the same evening; Udi's edits in Overleaf (GSA 01d37e5): Listing attested, of a program developed by Bob, as long as Carol trusts Bob; Installation from a Store with no condition on the owner's trust; GPD the contract it extends; written by GSA #1 Cowork at Udi's word: a store is a separate contract; listing only, and a program is installed from a store as long as the store's owner trusts its developer (Udi, 2026-11-07); a draft for Udi's approval and GSC's checker.
-% Schemas: GAS.glp beside this file is the contract of 2026-11-07, extending GPD alone; it is rewritten on GnW's schemas once GAI amends them.  Then: GPD's sixteen, GnW's, and five over the predicates store, listed, trusts_store, item and installed, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Schemas: GAS.glp beside this file, GPD's sixteen and six, the store a ward created as GAI.glp creates one, over guardian_of, guarded_by, store, listed, trusts_store, item and installed, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 GAS: Grassroots App Store
 GAS extends GPD and GnW (GAI, Corralling AI Risks with Grassroots Contracts, arXiv).
 Alice, Bob and Carol are persons, Dave a ward.  A store is a ward operated by a machine at an address every person can reach, holding a list of programs.
@@ -15,7 +15,7 @@ Alice, Bob and Carol are persons, Dave a ward.  A store is a ward operated by a 
 Interface pragmas
 Stores: the stores Alice trusts.
 Listings: the programs listed in Carol's store.
-Store: Carol [Open store]
+Store: Carol [Open store] <name>
 Listing: Carol [List] [Delist]
 Store Trust: Alice [Trust store] <store> [Distrust store] <store>
 Installation from a Store: Alice [Install]

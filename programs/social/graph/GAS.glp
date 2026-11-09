@@ -1,13 +1,14 @@
 %% ---------------------------------------------------------------------------
-%% GAS.glp --- the Grassroots App Store contract, GSA's, extending GPD, in the clause syntax of
+%% GAS.glp --- the Grassroots App Store contract, GSA's, extending GPD and GnW, in the clause syntax of
 %% GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GAS.txt beside
-%% this file: open_store is GAS:1, Store; list GAS:2, Listing; trust_store and distrust_store GAS:3,
-%% Store Trust; install_listed GAS:4, Installation from a Store.  GPD's schemas come first.  A store
-%% is the name term <Carol>.s, Carol its owner; store(Carol, <Carol>.s) says that Carol set it up,
-%% listed(Carol, <Carol>.s, sgn(y, Carol)) that she listed the program she holds as y, signing it,
-%% and trusts_store(Alice, <Carol>.s) that Alice trusts the store; author_of, item_of and program
-%% are GFP's and GSC's values appendix's, in the checker's names, as GPD.glp uses them.  Written by
-%% GSA #1 Cowork, 2026-11-07; the checker's names by GSA #2, 2026-11-07.
+%% this file: open_store is GAS:1, Store, GnW:1's creation of a ward, the store Dave; list and delist
+%% GAS:2, Listing; trust_store and distrust_store GAS:3, Store Trust; install_listed GAS:4,
+%% Installation from a Store.  GPD's schemas come first.  guardian_of(Carol, Dave) and
+%% guarded_by(Dave, Carol) say that Carol created the store Dave and is its guardian (GnW:1, as
+%% GAI.glp writes a creation); store(Dave) that Dave is a store; listed(Dave, sgn(y, Carol)) that
+%% Carol listed in Dave the program she holds as y, signing it; trusts_store(Alice, Dave) that Alice
+%% trusts the store.  author_of, item_of and program are GFP's and GSC's values appendix's.  Written by
+%% GSA #1 Cowork, 2026-11-07; the store a ward by GSA #2, 2026-11-09 (Udi, 2026-11-08 09:24 UTC).
 %% ---------------------------------------------------------------------------
 
 SNT         ::= own(Constant) ; ext(SNT, Constant).
@@ -113,29 +114,37 @@ contract_named(gas,
         forall('Bob', atom(participant, ['Alice', p, 'Bob']),
                [atom(identity, ['Bob']), atom(participant, ['Bob', p, 'Alice'])])],
        true, ['Alice']),
-    sas(open_store, ['Carol'], [s],
-       [atom(store, ['Carol', ext(own('Carol'), s)])],
-       [atom(identity, ['Carol']), not(atom(store, ['Carol', ext(own('Carol'), s)]))],
-       true, ['Carol']),
-    sas(list, ['Carol', 'Bob'], ['Bob', s, y],
-       [atom(listed, ['Carol', ext(own('Carol'), s), sgn(y, 'Carol')])],
-       [atom(identity, ['Carol']), atom(store, ['Carol', ext(own('Carol'), s)]), atom(item, ['Carol', y]),
-        atom(trusts, ['Carol', 'Bob'])],
-       and(program(item_of(y)), eq(author_of(y), 'Bob')), ['Carol']),
-    sas(trust_store, ['Alice', 'Carol'], [s],
-       [atom(trusts_store, ['Alice', ext(own('Carol'), s)])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']),
-        not(atom(trusts_store, ['Alice', ext(own('Carol'), s)])),
-        atom(identity, ['Carol']), atom(store, ['Carol', ext(own('Carol'), s)])],
+    sas(open_store, ['Carol', 'Dave'], [],
+       [atom(guardian_of, ['Carol', 'Dave']), atom(friend, ['Carol', 'Dave']), atom(knows, ['Carol', 'Dave']),
+        atom(identity, ['Dave']), atom(store, ['Dave']), atom(guarded_by, ['Dave', 'Carol']),
+        atom(friend, ['Dave', 'Carol']), atom(knows, ['Dave', 'Carol'])],
+       [atom(identity, ['Carol']), not(atom(identity, ['Dave']))],
+       true, ['Carol', 'Dave']),
+    sas(list, ['Carol', 'Dave', 'Bob'], ['Bob', y],
+       [atom(listed, ['Dave', sgn(y, 'Carol')])],
+       [atom(identity, ['Carol']), atom(guardian_of, ['Carol', 'Dave']), atom(item, ['Carol', y]),
+        atom(trusts, ['Carol', 'Bob']),
+        atom(store, ['Dave']), atom(guarded_by, ['Dave', 'Carol'])],
+       and(program(item_of(y)), eq(author_of(y), 'Bob')), ['Carol', 'Dave']),
+    sas(delist, ['Carol', 'Dave'], [z],
+       [not(atom(listed, ['Dave', z]))],
+       [atom(identity, ['Carol']), atom(guardian_of, ['Carol', 'Dave']),
+        atom(store, ['Dave']), atom(guarded_by, ['Dave', 'Carol']), atom(listed, ['Dave', z])],
+       true, ['Carol', 'Dave']),
+    sas(trust_store, ['Alice', 'Dave', 'Carol'], [],
+       [atom(trusts_store, ['Alice', 'Dave'])],
+       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Alice', 'Dave']),
+        not(atom(trusts_store, ['Alice', 'Dave'])),
+        atom(store, ['Dave']), atom(guarded_by, ['Dave', 'Carol']),
+        atom(guardian_of, ['Carol', 'Dave'])],
        true, ['Alice']),
-    sas(distrust_store, ['Alice', 'Carol'], ['Carol', s],
-       [not(atom(trusts_store, ['Alice', ext(own('Carol'), s)]))],
-       [atom(identity, ['Alice']), atom(trusts_store, ['Alice', ext(own('Carol'), s)])],
+    sas(distrust_store, ['Alice', 'Dave'], [],
+       [not(atom(trusts_store, ['Alice', 'Dave']))],
+       [atom(identity, ['Alice']), atom(trusts_store, ['Alice', 'Dave'])],
        true, ['Alice']),
-    sas(install_listed, ['Alice', 'Carol'], [s, z],
+    sas(install_listed, ['Alice', 'Dave'], [z],
        [atom(item, ['Alice', z]), atom(installed, ['Alice', item_of(z)])],
-       [atom(identity, ['Alice']), atom(trusts_store, ['Alice', ext(own('Carol'), s)]),
+       [atom(identity, ['Alice']), atom(trusts_store, ['Alice', 'Dave']),
         not(atom(installed, ['Alice', item_of(z)])),
-        atom(identity, ['Carol']), atom(store, ['Carol', ext(own('Carol'), s)]),
-        atom(listed, ['Carol', ext(own('Carol'), s), z])],
+        atom(store, ['Dave']), atom(listed, ['Dave', z])],
        true, ['Alice'])]).
