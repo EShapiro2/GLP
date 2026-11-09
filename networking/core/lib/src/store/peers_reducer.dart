@@ -334,6 +334,21 @@ PeersState peersReducer(PeersState state, dynamic action) {
     return state;
   }
 
+  if (action is PeerBleSeenAction) {
+    final pubkeyHex = _pubkeyToHex(action.publicKey);
+    final existing = state.peers[pubkeyHex];
+    // A packet decrypted after both GATT legs dropped must not refresh a peer
+    // with no BLE link.
+    if (existing != null && existing.hasBleConnection) {
+      final now = DateTime.now();
+      final updated = existing.copyWith(lastSeen: now, lastBleSeen: now);
+      return state.copyWith(
+        peers: Map.from(state.peers)..[pubkeyHex] = updated,
+      );
+    }
+    return state;
+  }
+
   if (action is PeerUdpDisconnectedAction) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     final existing = state.peers[pubkeyHex];

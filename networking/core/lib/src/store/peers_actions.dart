@@ -187,6 +187,16 @@ class PeerUdpSeenAction extends PeerAction {
   PeerUdpSeenAction(this.publicKey);
 }
 
+/// A session-authenticated packet was received over BLE from a peer.
+///
+/// Refreshes the BLE liveness clock the stale sweep checks: any authenticated
+/// traffic counts, not only ANNOUNCE (spec §ANNOUNCE and Liveness).
+class PeerBleSeenAction extends PeerAction {
+  final Uint8List publicKey;
+
+  PeerBleSeenAction(this.publicKey);
+}
+
 /// Mark peer as disconnected from UDP
 class PeerUdpDisconnectedAction extends PeerAction {
   final Uint8List publicKey;

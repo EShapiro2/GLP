@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
@@ -1081,6 +1082,84 @@ void main() {
         expect(ackTransport, equals(PeerTransport.bleDirect));
         expect(ackPeerId, isNull);
         expect(ackMessageId, equals(messageId));
+      });
+    });
+
+    // =========================================================================
+    // BLE Liveness - the stale sweep's clock
+    // =========================================================================
+
+    group('processPacket (BLE) - liveness', () {
+      test('an authenticated ACK over BLE refreshes lastBleSeen and lastSeen',
+          () async {
+        stubSession();
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
+        store.dispatch(AssociateBleDeviceAction(
+          publicKey: otherPubkey,
+          deviceId: 'central:liveness-dev',
+          role: BleRole.central,
+        ));
+        expect(store.state.peers.getPeerByPubkey(otherPubkey)!.lastBleSeen,
+            isNull);
+
+        final ackReceived = Completer<String>();
+        router.onAckReceived = (_, id) => ackReceived.complete(id);
+
+        await router.processPacket(
+          securePacket(
+            type: PacketType.ack,
+            payload: Uint8List.fromList('ble-ack-liveness'.codeUnits),
+          ),
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: 'central:liveness-dev',
+          bleRole: BleRole.central,
+        );
+
+        expect(await ackReceived.future, equals('ble-ack-liveness'));
+        final peer = store.state.peers.getPeerByPubkey(otherPubkey)!;
+        expect(peer.lastBleSeen, isNotNull);
+        expect(peer.lastSeen, isNotNull);
+      }, timeout: Timeout.none);
+
+      test('an authenticated packet over BLE does not refresh a peer with no '
+          'BLE link', () async {
+        stubSession();
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
+
+        final ackReceived = Completer<String>();
+        router.onAckReceived = (_, id) => ackReceived.complete(id);
+
+        await router.processPacket(
+          securePacket(
+            type: PacketType.ack,
+            payload: Uint8List.fromList('late-ble-ack'.codeUnits),
+          ),
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: 'central:liveness-dev',
+          bleRole: BleRole.central,
+        );
+
+        expect(await ackReceived.future, equals('late-ble-ack'));
+        final peer = store.state.peers.getPeerByPubkey(otherPubkey)!;
+        expect(peer.lastBleSeen, isNull);
+        expect(peer.lastSeen, isNull);
+      }, timeout: Timeout.none);
+
+      test('a clear ACK over BLE does not refresh lastBleSeen', () async {
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
+
+        await router.processPacket(
+          GrassrootsPacket(
+            type: PacketType.ack,
+            payload: Uint8List.fromList('clear-ack'.codeUnits),
+          ),
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: 'central:liveness-dev',
+          bleRole: BleRole.central,
+        );
+
+        expect(store.state.peers.getPeerByPubkey(otherPubkey)!.lastBleSeen,
+            isNull);
       });
     });
 
