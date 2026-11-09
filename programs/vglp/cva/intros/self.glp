@@ -67,13 +67,14 @@
 %% signer, the author and the item of a speech act, its last signer, its first
 %% signer and its utterance" (vGLP 27bae5d, Section 5.4, "Speech-act schemas as
 %% local specifications"), local to every role.
-%% greet stands on here (contracts.glp, its pragmas, standing(greet, here)):
-%% "a person's request of the act that adds the atom is also their standing
-%% request of every class of the standing act's parts that they propose, and
-%% their request of the act that deletes it withdraws it; the standing act has
-%% no button, every guarding role of it proposes it, and its persons are asked
-%% nothing" (vGLP d433f71, Section 5.4, "The contract's words"): arrive makes
-%% the standing request and leave withdraws it.
+%% greet stands on arrive until leave (contracts.glp, its pragmas,
+%% standing(greet, arrive, leave)): "the person's request of the act of the
+%% first button is also their standing request of every class of the clause's
+%% acts that they propose, and their request of the act of the second
+%% withdraws it; a standing act has no button, every guarding role of it
+%% proposes it, and its persons are asked nothing" (vGLP 7c631b1, Section 5.4,
+%% "The contract's words"): arrive makes the standing request and leave
+%% withdraws it.
 %%
 %% Section VG of test/run_all_tests.sh runs trio/7 on three scripts each, carol's empty:
 %%
