@@ -478,4 +478,54 @@ void main() {
         hasLength(2),
         reason: 'the server saw a second session from the node');
   }, timeout: Timeout.none);
+
+  // The same for a known peer, as the app holds the directory: the server
+  // restarts mid-run, with no session state, at its address and under its
+  // key.  The node's stale session ends with its path, and the sweep makes a
+  // new one, handshake and all, which the restarted server reports: a
+  // session the layer kept standing would have it announce into nothing and
+  // count the peer connected while the server received no datagram from it.
+  test(
+      'a known peer restarted mid-run is reached again under a new session, '
+      'the sweep running the handshake', () async {
+    final port = await deadPort();
+    final server = HeadlessGrassrootsNetwork(
+      outboundQueueStore: MemoryOutboundQueueStore(),
+      identity: await identityFromSeed(0xa0),
+      serverAddress:
+          ServerAddress(listenPort: port, publicAddress: '127.0.0.1:$port'),
+      rendezvousServer: true,
+      sodium: sodium,
+    );
+    addTearDown(server.dispose);
+    final nodeId = await identityFromSeed(0xa1);
+    final sessions = <Completer<void>>[Completer<void>(), Completer<void>()];
+    var seen = 0;
+    server.onPeerConnected = (pk, underlay, _) {
+      if (hex(pk) != hex(nodeId.publicKey) || seen >= sessions.length) return;
+      sessions[seen++].complete();
+    };
+    expect(await server.start(), isTrue);
+    final serverPk = server.identity.publicKey;
+
+    final (node, _) = await startBare(nodeId);
+    final lost = Completer<void>();
+    node.onPeerDisconnected = (pk, underlay) {
+      if (hex(pk) == hex(serverPk) && !lost.isCompleted) lost.complete();
+    };
+    node.putKnownPeer(serverPk);
+    node.wan!.putPeerAddress(serverPk, '127.0.0.1:$port');
+    await sessions[0].future;
+
+    // The server restarts: the node's session with it goes stale and ends.
+    await server.stop();
+    expect(await server.start(), isTrue);
+    await lost.future;
+    expect(node.debugHasUdpSession(serverPk), isFalse);
+
+    // The sweep reaches it again under a new session, which it reports.
+    await sessions[1].future;
+    await stateWhere(node.store, (_) => node.isPeerReachable(serverPk));
+    expect(node.isPeerReachable(serverPk), isTrue);
+  }, timeout: Timeout.none);
 }
