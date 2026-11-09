@@ -19,13 +19,6 @@
 %% The types of speech.vglp and those its compilation adds, written again for
 %% the declarations of the procedures imported from its compiled module.
 
-YesNo     ::= yes ; no.
-SpeechAct ::= speech(Utterance, Key).
-Utterance ::= text(String) ; SpeechAct.
-Forward   ::= forward(SpeechAct, YesNo?).
-Question  ::= speechAct_r(SpeechAct?) ; forward_w(Forward).
-Ask(Q)    ::= ask(Constant, Q).
-Drawn     ::= speechAct_r(_) ; forward_w(_) ; output(List(Output)) ; SpeechAct ; YesNo.
 
 %% The program's output to its person, the reserved type Output (vGLP
 %% 169b008, Definition "Canonical Compilation"): the speech act the person

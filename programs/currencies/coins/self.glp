@@ -177,9 +177,6 @@ Approval ::= approval(Offer, YesNo?).
 %% definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
-Question ::= approval_w(Approval) ; stream_request_r(Stream(Request)?).
-Drawn ::= approval_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
-Ask(Q)   ::= ask(Constant, Q).
 
 %% What the person sees on the mini-app's person channel: the constructs the
 %% dispatcher draws and withdraws, draw(Id, W, V) and withdraw(Id), each a

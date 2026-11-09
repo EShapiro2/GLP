@@ -17,12 +17,8 @@
 %% A grant is input(Id, P, R), P the position the view marks input(P).  The
 %% person approves the dishes and names 7, and logs what it sees.
 
-YesNo      ::= yes ; no.
 ParentCard ::= card(Constant, YesNo?).
 ChildCard  ::= card(Integer?).
-Question   ::= child_card_w(ChildCard) ; parent_card_w(ParentCard).
-Ask(Q)     ::= ask(Constant, Q).
-Drawn      ::= child_card_w(_) ; parent_card_w(_) ; Integer ; YesNo.
 
 imported procedure parent#parent(Stream(YesNo), Stream(Ask(Question))).
 imported procedure child#child(Stream(Integer), Stream(Ask(Question))).

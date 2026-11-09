@@ -75,41 +75,17 @@
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
 
-Class    ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
-           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
-           ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer)
-           ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer).
-Request  ::= propose(Proposal).
-YesNo    ::= yes ; no.
-Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote     ::= yes ; no(Reason).
-Decision ::= commit ; abort(Peer, Reason) ; yield.
-Rho      ::= one(Class) ; rho(Proposal).
-Names    ::= none ; request(Rho, Integer).
-Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
-Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; request(Rho, Integer).
-Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
-Net      ::= msg(Peer, Content).
-Atom     ::= identity ; knows(Peer) ; coin(Peer).
-Approved ::= Proposal.
-Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
-Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
-Asking   ::= Attempt ; hello(Peer, Proposal).
-Approval ::= approval(Asking, List(Word), YesNo?).
-Word     ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number) ; held(Atom, Integer).
-Question ::= request_r(Request?) ; approval_w(Approval).
-Drawn    ::= request_r(_) ; approval_w(_) ; output(List(Output)) ; Request ; YesNo.
-Ask(Q)   ::= ask(Constant, Q).
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
 
 imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
     Stream(Output), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_pay_swap(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_pay_swap(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
@@ -123,7 +99,7 @@ play_pay_swap(LA?, LB?, N?) :-
           approval(swap(alice, bob, alice, 2, bob, 3), yes)],
          LA, LB, N).
 
-exported procedure play_redeem(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_redeem(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_redeem(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
@@ -145,7 +121,7 @@ play_redeem(LA?, LB?, N?) :-
           approval(swap(alice, bob, alice, 1, bob, 1), yes)],
          LA, LB, N).
 
-exported procedure play_busy(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_busy(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 2))), wait(has(coin(alice), 2)),
@@ -163,7 +139,7 @@ play_busy(LA?, LB?, N?) :-
           approval(swap(alice, bob, alice, 1, bob, 1), no)],
          LA, LB, N).
 
-exported procedure play_declined(Stream(_), Stream(_), Stream(Sent(Cargo))).
+exported procedure play_declined(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_declined(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(mint(A2?, 1))), wait(holds(coin(alice))),
@@ -177,7 +153,7 @@ play_declined(LA?, LB?, N?) :-
 
 %% alice and bob, each with its dispatcher and scripted person, their networks
 %% joined.
-procedure pair(Steps(Drawn)?, Steps(Drawn)?, Stream(_), Stream(_), Stream(Sent(Cargo))).
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 pair(SA, SB, LA?, LB?, N?) :-
     platform # agent(alice, InA?, OutA, TA, AsA),
     platform # dispatch(AsA?, ch(GA?, DA), MA),

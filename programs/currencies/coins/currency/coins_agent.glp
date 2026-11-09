@@ -173,7 +173,7 @@ form_integer(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-Drawn ::= approval_w(_) ; stream_request_r(_) ; output(List(Output)) ; YesNo ; Request.
+Drawn ::= approval_w(View_approval) ; stream_request_r(View_stream_request_r) ; output(List(Output)) ; YesNo ; Request.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(thread(menu([form(holdings, [field('Holdings', thread(form(lot, [field('Issuer', shown), field('Amount', shown)])))]), form(opened, [field('Friend', shown)]), form(minted, [field('Amount', shown)]), form(paid, [field('Friend', shown), field('Amount', shown)]), form(received, [field('From', shown), field('Amount', shown)]), form(returned, [field('From', shown), field('Amount', shown)]), form(swap_done, [field('Friend', shown)]), form(swap_declined, [field('Friend', shown)]), form(swap_failed, [field('From', shown)]), form(declined, [field('From', shown)]), form(swap_same, [field('Friend', shown), field('GiveCoin', shown), field('GiveAmount', shown)]), form(redeemed, [field('Friend', shown), field('WantCoin', shown)]), form(menu, [field('Friend', shown), field('Issuers', thread)]), form(presented, [field('From', shown), field('WantCoin', shown)]), form(unfulfilled, [field('From', shown), field('WantCoin', shown)]), form(refused, [field('Friend', shown)]), form(redeem_same, [field('Friend', shown)]), form(lacking, [field('Issuer', shown), field('Amount', shown)]), form(no_conversation, [field('Friend', shown)])])), MOut?, G0s?, ODs), constructs(Ss?).

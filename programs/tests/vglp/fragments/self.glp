@@ -30,17 +30,6 @@
 %% for the declarations of the procedures imported from its compiled module;
 %% type identity is structural, and the module's own shadow these within it.
 
-Peer     ::= Constant.
-Request  ::= post(String) ; quit.
-Offer    ::= offer(Peer).
-Response ::= accept(Peer) ; refuse(Peer).
-YesNo    ::= yes ; no.
-Card     ::= card(Peer, YesNo?).
-Content  ::= friend_request(Peer, Response?).
-Msg      ::= msg(Peer, Content).
-Question ::= stream_request_r(Stream(Request)?) ; card_w(Card).
-Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= stream_request_r(_) ; card_w(_) ; Request ; YesNo.
 
 imported procedure questions#agent(Peer?, Stream(Msg)?, Stream(String),
     Stream(Ask(Question))).
