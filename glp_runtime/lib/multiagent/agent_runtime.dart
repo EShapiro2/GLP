@@ -804,7 +804,9 @@ class AgentRuntime {
   /// pair, the compiled program it runs").
   Future<void> _keepProgram(AgentStateStore store) async {
     await store.saveProgram(
-        StoredProgram.compiled(_code!, _appModule, app: installedApp)
+        StoredProgram.compiled(_code!, _appModule,
+                app: installedApp,
+                files: StoredProgram.filesOf(_appModule?.directory))
             .toBytes());
     _log('INIT: the store keeps the compiled program the agent runs');
   }

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 abstract class Term {}
@@ -196,8 +197,17 @@ class ModuleTerm implements Term {
   /// or was read from a file, whose artefact names no directory.
   final String? directory;
 
+  /// The files of [directory] the store keeps with the compiled program, by
+  /// path relative to it, which `load_file/2` reads in place of the directory
+  /// where the agent runs that program after a refused update (IGLP 96cd44a,
+  /// Implementation Notes, "Persistence": "the compiled program it runs with
+  /// the files of its directory, which load_file/2 reads"; "An update":
+  /// "otherwise the agent runs the compiled program the store holds, and
+  /// load_file/2 reads the files the store holds with it").  Null otherwise.
+  final Map<String, Uint8List>? keptFiles;
+
   ModuleTerm(this.artefact,
-      {this.name = '', this.declaredTypes, this.directory});
+      {this.name = '', this.declaredTypes, this.directory, this.keptFiles});
 
   @override
   String toString() => 'Module($name)';

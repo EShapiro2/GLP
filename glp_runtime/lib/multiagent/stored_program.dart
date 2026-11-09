@@ -26,6 +26,7 @@
 /// entries.
 library;
 
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -47,7 +48,11 @@ const List<int> storedProgramMagic = [0x47, 0x4C, 0x50, 0x50];
 /// `self_app/2` gives after a refused update (GLP-Spec cce13ce,
 /// appendix-guards, "Networking seam"; IGLP 59c40e2); a version-1 program is
 /// not read.
-const int storedProgramVersion = 2;
+/// Version 3 (2026-11-09) writes after the app the files of the program's
+/// directory, each by its path relative to it, which `load_file/2` reads after
+/// a refused update (IGLP 96cd44a, Implementation Notes, "Persistence" and "An
+/// update"); a version-2 program is not read.
+const int storedProgramVersion = 3;
 
 /// The identity of a code image: SHA-256 over its instruction-set version,
 /// its name, its symbols and its code, which the goals' program counters
@@ -85,13 +90,18 @@ class StoredProgram {
   /// host gave none.
   final Application? app;
 
+  /// The files of the program's directory, by path relative to it, as they
+  /// were when the program was kept: what `load_file/2` reads where the agent
+  /// runs this program after a refused update ([rt.ModuleTerm.keptFiles]).
+  final Map<String, Uint8List> files;
+
   final Uint8List? _moduleArtefact;
   final String _moduleName;
   final String? _moduleDirectory;
   final ast.Module? _typeScope;
   final Map<String, OpaqueEntry> _opaque;
 
-  StoredProgram._(this.code, this.app, this._moduleArtefact,
+  StoredProgram._(this.code, this.app, this.files, this._moduleArtefact,
       this._moduleName, this._moduleDirectory, this._typeScope, this._opaque);
 
   /// The program an engine compiled: [code] the bytes of its code
@@ -99,11 +109,11 @@ class StoredProgram {
   /// carry the scope they were built from.  Throws where they carry none:
   /// tables derived from an interface say nothing of a scope, and a compiled
   /// program's goals read its scope.  [app] is the app whose program it is,
-  /// as the host gives it.
+  /// as the host gives it, and [files] the files of its directory.
   factory StoredProgram.compiled(Uint8List code, rt.ModuleTerm? module,
-      {Application? app}) {
+      {Application? app, Map<String, Uint8List> files = const {}}) {
     if (module == null) {
-      return StoredProgram._(code, app, null, '', null, null, const {});
+      return StoredProgram._(code, app, files, null, '', null, null, const {});
     }
     final tables = module.declaredTypes;
     ast.Module? scope;
@@ -117,8 +127,9 @@ class StoredProgram {
       scope = tables.source;
       opaque = tables.opaque;
     }
-    return StoredProgram._(code, app, (module.artefact as Artefact).toBytes(),
-        module.name, module.directory, scope, opaque);
+    return StoredProgram._(code, app, files,
+        (module.artefact as Artefact).toBytes(), module.name, module.directory,
+        scope, opaque);
   }
 
   /// The program the store keeps as [bytes] ([toBytes]).
@@ -141,9 +152,14 @@ class StoredProgram {
             name: r.string(),
             version: int.parse(r.string()))
         : null;
+    final files = <String, Uint8List>{};
+    for (var i = r.clen(); i > 0; i--) {
+      final path = r.string();
+      files[path] = r.bytes();
+    }
     if (r.u8() == 0) {
       _end(r);
-      return StoredProgram._(code, app, null, '', null, null, const {});
+      return StoredProgram._(code, app, files, null, '', null, null, const {});
     }
     final artefact = r.bytes();
     final name = r.string();
@@ -158,7 +174,7 @@ class StoredProgram {
     }
     _end(r);
     return StoredProgram._(
-        code, app, artefact, name, directory, scope, opaque);
+        code, app, files, artefact, name, directory, scope, opaque);
   }
 
   static void _end(WireReader r) {
@@ -182,6 +198,12 @@ class StoredProgram {
         ..string(app.developer)
         ..string(app.name)
         ..string('${app.version}');
+    }
+    w.clen(files.length);
+    for (final MapEntry(key: path, value: bytes) in files.entries) {
+      w
+        ..string(path)
+        ..bytes(bytes);
     }
     final artefact = _moduleArtefact;
     if (artefact == null) {
@@ -228,10 +250,36 @@ class StoredProgram {
       if (_opaque.isNotEmpty) tables = tables.withOpaque(_opaque);
     }
     return rt.ModuleTerm(Artefact.fromBytes(artefact),
-        name: _moduleName, declaredTypes: tables, directory: _moduleDirectory);
+        name: _moduleName,
+        declaredTypes: tables,
+        directory: _moduleDirectory,
+        keptFiles: files);
   }
 
   /// The type-identity tables of the program, where its module carries them.
+  /// The files under [directory], by path relative to it with `/` between
+  /// its parts, as `load_file/2` names them: each regular file, a link being
+  /// none, which `load_file/2` refuses where it leaves the directory.  None
+  /// where [directory] is null or does not exist.
+  static Map<String, Uint8List> filesOf(String? directory) {
+    if (directory == null) return const {};
+    final dir = Directory(directory);
+    if (!dir.existsSync()) return const {};
+    final base = dir.absolute.path;
+    final files = <String, Uint8List>{};
+    for (final e in dir.listSync(recursive: true, followLinks: false)) {
+      if (e is! File) continue;
+      final abs = e.absolute.path;
+      if (!abs.startsWith('$base${Platform.pathSeparator}')) continue;
+      final rel = abs
+          .substring(base.length + 1)
+          .split(Platform.pathSeparator)
+          .join('/');
+      files[rel] = e.readAsBytesSync();
+    }
+    return files;
+  }
+
   TypeIdentityTables? get tables {
     final t = module?.declaredTypes;
     return t is TypeIdentityTables ? t : null;
