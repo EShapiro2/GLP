@@ -116,17 +116,18 @@ class ServerAddress {
 /// ([MemoryOutboundQueueStore]), which lasts as long as the process.
 class HeadlessGrassrootsNetwork {
   HeadlessGrassrootsNetwork({
-    required this.identity,
+    required GrassrootsIdentity identity,
     this.attestation = const NoPlatformAttestation(),
     this.serverAddress,
     this.rendezvousServer = false,
     required this.sodium,
     HeadlessKnownPeersStore? knownPeersStore,
     required OutboundQueueStore outboundQueueStore,
-  }) : _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
+  }) : _identity = identity,
+       _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
     _persistedQueue = PersistentOutboundQueue(
       store: outboundQueueStore,
-      ownerHex: _hex(identity.publicKey),
+      ownerHex: _hex(_identity.publicKey),
     );
     _restoreOutboundQueue();
     // GNA §2.2: a rendezvous server is one having a server address.
@@ -135,9 +136,9 @@ class HeadlessGrassrootsNetwork {
           'a rendezvous server has a server address, and none was given');
     }
     store = Store<AppState>(appReducer, initialState: const AppState());
-    _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
+    _protocolHandler = ProtocolHandler(identity: _identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
-    _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
+    _noiseSessions = NoiseSessionManager(identity: _identity, sodium: sodium);
     _messageRouter = MessageRouter(
       store: store,
       protocolHandler: _protocolHandler,
@@ -153,7 +154,7 @@ class HeadlessGrassrootsNetwork {
     });
   }
 
-  final GrassrootsIdentity identity;
+  final GrassrootsIdentity _identity;
   final SodiumSumo sodium;
 
   /// The rendezvous servers GLP declared, by public key hex (GNA §4.2: "The
@@ -195,7 +196,17 @@ class HeadlessGrassrootsNetwork {
     sendPacket: (peerHex, packet) async {
       final bytes = await _sessionPacketBytes(packet, _bytes(peerHex));
       if (bytes == null) return false;
-      return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
+      return await _udpService?.sendToPeer(_pathOfHex(peerHex), bytes) ??
+          false;
+    },
+    // A message's attempts ran out on the session: tear that session down, as
+    // the silence sweep does, so reachability is reported. The message stays
+    // in the queue. A signal from a session already gone concerns nothing that
+    // stands, and is dropped.
+    onAttemptsExhausted: (peerHex) {
+      final pubkey = _bytes(peerHex);
+      if (!_noiseSessions.hasSession(PeerTransport.wan, pubkey)) return;
+      _tearDownSession(pubkey);
     },
   );
   StreamSubscription<AppState>? _storeSubscription;
@@ -372,7 +383,7 @@ class HeadlessGrassrootsNetwork {
   String? _reflectedAddress;
 
   /// The agent's own public key (spec §Identity, `getIdentity() → PubKey`).
-  Uint8List getIdentity() => identity.publicKey;
+  Uint8List getIdentity() => _identity.publicKey;
 
   /// The underlays [pubkey] is reachable over (spec §Connection and
   /// Reachability, `peerUnderlays(pk)`): [Underlay.wan], this profile's one,
@@ -387,12 +398,37 @@ class HeadlessGrassrootsNetwork {
   String? _observedPeerAddress(Uint8List pubkey) {
     if (!isPeerReachable(pubkey)) return null;
     final udp = _udpService;
-    final peerId = udp?.getPeerIdForPubkey(pubkey);
+    final peerId = udp?.pathIdFor(PeerTransport.wan, _hex(pubkey));
     if (udp == null || peerId == null) return null;
     final remote = udp.getRemoteAddress(peerId);
     return remote == null
         ? null
         : observedAddressString(remote.ip, remote.port);
+  }
+
+  /// Record the address at which the layer observes a known peer's
+  /// authenticated session as that peer's recorded WAN address (spec
+  /// `docs/GLP_Networking_API/sections/ip.tex` §Connectivity and Address: "the
+  /// latest, whether GLP supplied it or the layer observed it, replaces the
+  /// earlier"). Recorded through the path [_putPeerAddress] uses, so it is
+  /// persisted the same way. Only a key already in the known set is recorded
+  /// (never created here). This profile runs no LAN, so every IP session is WAN.
+  void _recordObservedWanAddress(Uint8List pubkey) {
+    final pubkeyHex = _hex(pubkey);
+    if (!store.state.knownPeers.known.containsKey(pubkeyHex)) return;
+    final observed = _observedPeerAddress(pubkey);
+    final parsed = observed == null ? null : parseAddressString(observed);
+    if (parsed == null) return;
+    final address = parsed.toAddressString();
+    if (store.state.knownPeers.known[pubkeyHex] == address) return;
+    store.dispatch(AssociateUdpAddressAction(
+      publicKey: pubkey,
+      address: address,
+    ));
+    store.dispatch(KnownPeerAddressUpdatedAction(
+      pubkeyHex: pubkeyHex,
+      udpAddress: address,
+    ));
   }
 
   /// Detached Ed25519 signature over [message] under the agent's key (spec
@@ -468,6 +504,31 @@ class HeadlessGrassrootsNetwork {
     wan.onConnectivityStatusChanged?.call(previous, reflected);
   }
 
+  /// Whether a session with a declared rendezvous server stands.
+  bool _rendezvousSessionStands() {
+    for (final server in _rendezvousServers.values) {
+      if (_noiseSessions.hasSession(PeerTransport.wan, server.publicKey)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// The address a reflection gave is lost with the last live session with a
+  /// declared rendezvous server: this profile has no platform connectivity
+  /// event, so the teardown of that session is the fact it observes. Called
+  /// after a session ends, with [standing] whether a rendezvous session stood
+  /// before it ended; while one stays live nothing is reported.
+  void _onRendezvousSessionsEnded(bool standing) {
+    if (!standing || _rendezvousSessionStands()) return;
+    final previous = _reflectedAddress;
+    if (previous == null) return;
+    _reflectedAddress = null;
+    debugPrint('[headless][reflect] public address $previous lost with its '
+        'last rendezvous session');
+    wan.onConnectivityStatusChanged?.call(previous, null);
+  }
+
   /// On a rendezvous server: reflect to [pubkey] the address its session is
   /// observed at, so that an agent learns its public address from the server
   /// (spec §Rendezvous Server, "Address observation"; §Connectivity and
@@ -484,7 +545,7 @@ class HeadlessGrassrootsNetwork {
         pubkey,
       );
       if (bytes == null) return;
-      await _udpService?.sendToPeer(_hex(pubkey), bytes);
+      await _udpService?.sendToPeer(_path(pubkey), bytes);
     }());
   }
 
@@ -493,13 +554,15 @@ class HeadlessGrassrootsNetwork {
   @visibleForTesting
   Future<bool> debugSendSignaling(Uint8List pubkey, Uint8List payload) async {
     final udp = _udpService;
-    if (udp == null || udp.getPeerIdForPubkey(pubkey) == null) return false;
+    if (udp == null || !udp.hasPath(PeerTransport.wan, _hex(pubkey))) {
+      return false;
+    }
     final bytes = await _sessionPacketBytes(
       GrassrootsPacket(type: PacketType.signaling, payload: payload),
       pubkey,
     );
     if (bytes == null) return false;
-    return udp.sendToPeer(_hex(pubkey), bytes);
+    return udp.sendToPeer(_path(pubkey), bytes);
   }
 
   /// Read the attached local network and, if it differs from the held one,
@@ -532,6 +595,9 @@ class HeadlessGrassrootsNetwork {
   /// when the transport's disconnect event arrives.
   void removeKnownPeer(Uint8List pubkey) {
     store.dispatch(KnownPeerRemovedAction(_hex(pubkey)));
+    // Clear the peer's recorded address too (an empty address clears it), so
+    // neither a send nor a re-supplied key dials it again.
+    store.dispatch(AssociateUdpAddressAction(publicKey: pubkey, address: ''));
     _endSession(pubkey);
   }
 
@@ -542,19 +608,22 @@ class HeadlessGrassrootsNetwork {
   /// arrives.
   void _endSession(Uint8List pubkey) {
     final hex = _hex(pubkey);
+    final standing = _rendezvousSessionStands();
     _handshakeRetransmits.remove(hex)?.cancel();
     _attestationDeadlines.remove(hex)?.timer.cancel();
     _attestedOn.remove(hex);
-    _noiseSessions.reset(PeerTransport.udp, pubkey);
+    _noiseSessions.reset(PeerTransport.wan, pubkey);
     _udpMessageSender.abandonPeer(hex);
-    store.dispatch(PeerUdpConnectionChangedAction(
+    store.dispatch(PeerIpSessionChangedAction(
       pubkeyHex: hex,
+      underlay: Underlay.wan,
       connected: false,
     ));
-    unawaited(_udpService?.disconnectFromPeer(hex));
+    unawaited(_udpService?.disconnectFromPeer(_pathOfHex(hex)));
     if (_reachablePeers.remove(hex)) {
       onPeerDisconnected?.call(pubkey, Underlay.wan);
     }
+    _onRendezvousSessionsEnded(standing);
   }
 
   /// Declare the rendezvous server holding [pubkey] at [address] (GNA §4.2,
@@ -572,7 +641,7 @@ class HeadlessGrassrootsNetwork {
     _rendezvousServers[hex] = server;
     if (previous != null &&
         previous.address != server.address &&
-        !_noiseSessions.hasSession(PeerTransport.udp, server.publicKey)) {
+        !_noiseSessions.hasSession(PeerTransport.wan, server.publicKey)) {
       _endSession(server.publicKey);
     }
     final inFlight = _connecting[hex];
@@ -589,8 +658,11 @@ class HeadlessGrassrootsNetwork {
   /// declared does nothing.  The heartbeat dials it no more.  Behind
   /// [WanApi.removeRendezvousServer].
   void _removeRendezvousServer(Uint8List pubkey) {
-    if (_rendezvousServers.remove(_hex(pubkey)) == null) return;
+    if (!_rendezvousServers.containsKey(_hex(pubkey))) return;
+    // The session ends while the server is still declared, so that its
+    // teardown counts as a rendezvous session's end (see _endSession).
     _endSession(pubkey);
+    _rendezvousServers.remove(_hex(pubkey));
   }
 
   /// Inform the layer of a peer's current public `ip:port` (spec
@@ -626,9 +698,11 @@ class HeadlessGrassrootsNetwork {
     await _persistedQueue.restored;
     if (_udpService != null) return true;
     final udp = UdpTransportService(
-      identity: identity,
+      identity: _identity,
       store: store,
       protocolHandler: _protocolHandler,
+      // The WAN alone (decision 18): every path is a WAN session's.
+      sessionOf: (_) => PeerTransport.wan,
       listenPort: serverAddress?.listenPort ?? 0,
     );
     if (!await udp.initialize()) {
@@ -638,10 +712,7 @@ class HeadlessGrassrootsNetwork {
     _setupUdpCallbacks(udp);
     await udp.start();
     for (final entry in udp.rawSocketsByType.entries) {
-      _holePunchServices[entry.key] = HolePunchService(
-        socket: entry.value,
-        senderPubkey: identity.publicKey,
-      );
+      _holePunchServices[entry.key] = HolePunchService(socket: entry.value);
     }
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
       _announceOnLiveSessions();
@@ -658,7 +729,7 @@ class HeadlessGrassrootsNetwork {
     wan.onConnectivityStatusChanged?.call(null, _publicAddress());
     await _refreshLocalNetwork();
     debugPrint('[headless] listening on UDP port $boundPort '
-        '(${_hex(identity.publicKey).substring(0, 8)}…)');
+        '(${_hex(_identity.publicKey).substring(0, 8)}…)');
     _holdRendezvousSessions();
     return true;
   }
@@ -669,7 +740,7 @@ class HeadlessGrassrootsNetwork {
   /// the floor of authenticated traffic an idle session has.
   void _announceOnLiveSessions() {
     if (_udpService == null) return;
-    for (final pubkey in _noiseSessions.sessionPeers(PeerTransport.udp)) {
+    for (final pubkey in _noiseSessions.sessionPeers(PeerTransport.wan)) {
       unawaited(_announceInSession(pubkey));
     }
   }
@@ -678,12 +749,12 @@ class HeadlessGrassrootsNetwork {
   Future<void> _announceInSession(Uint8List pubkey) async {
     final udp = _udpService;
     if (udp == null ||
-        !_noiseSessions.hasSession(PeerTransport.udp, pubkey)) {
+        !_noiseSessions.hasSession(PeerTransport.wan, pubkey)) {
       return;
     }
     final bytes = await _sessionPacketBytes(_announcePacket(), pubkey);
     if (bytes == null) return;
-    await udp.sendToPeer(_hex(pubkey), bytes);
+    await udp.sendToPeer(_path(pubkey), bytes);
   }
 
   /// Tear down each session silent for two consecutive intervals (spec
@@ -731,8 +802,9 @@ class HeadlessGrassrootsNetwork {
         'handshake; its earlier session is gone');
     _attestedOn.remove(hex);
     _attestationDeadlines.remove(hex)?.timer.cancel();
-    store.dispatch(PeerUdpConnectionChangedAction(
+    store.dispatch(PeerIpSessionChangedAction(
       pubkeyHex: hex,
+      underlay: Underlay.wan,
       connected: false,
     ));
     if (_reachablePeers.remove(hex)) {
@@ -750,14 +822,14 @@ class HeadlessGrassrootsNetwork {
     final udp = _udpService;
     if (udp == null) return;
     for (final server in _rendezvousServers.values.toList()) {
-      if (_noiseSessions.hasSession(PeerTransport.udp, server.publicKey)) {
+      if (_noiseSessions.hasSession(PeerTransport.wan, server.publicKey)) {
         continue;
       }
       final hex = server.pubkeyHex;
       if (_connecting.containsKey(hex)) continue;
       _connecting[hex] = () async {
         try {
-          if (udp.getPeerIdForPubkey(server.publicKey) == null &&
+          if (!udp.hasPath(PeerTransport.wan, hex) &&
               !await _dial(server.publicKey, server.address)) {
             debugPrint('[headless][rendezvous] could not dial $server');
             return;
@@ -781,7 +853,8 @@ class HeadlessGrassrootsNetwork {
     if (udp == null) return false;
     final parsed = parseAddressString(address);
     if (parsed == null) return false;
-    return udp.connectToPeer(_hex(pubkey), parsed.ip, parsed.port);
+    return await udp.connectToPeer(_hex(pubkey), parsed.ip, parsed.port) !=
+        null;
   }
 
   Future<void> stop() async {
@@ -795,10 +868,12 @@ class HeadlessGrassrootsNetwork {
     _holePunchServices.clear();
     await _connectionSub?.cancel();
     _connectionSub = null;
-    _noiseSessions.resetTransport(PeerTransport.udp);
+    final standing = _rendezvousSessionStands();
+    _noiseSessions.resetTransport(PeerTransport.wan);
     for (final hex in _reachablePeers.toList()) {
       onPeerDisconnected?.call(_bytes(hex), Underlay.wan);
     }
+    _onRendezvousSessionsEnded(standing);
     _reachablePeers.clear();
     _lastHeard.clear();
     _attestedOn.clear();
@@ -912,13 +987,13 @@ class HeadlessGrassrootsNetwork {
     Uint8List recipientPubkey,
   ) async {
     if (!packet.type.hasSecureVariant) return packet.serialize();
-    if (!_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey) &&
+    if (!_noiseSessions.hasSession(PeerTransport.wan, recipientPubkey) &&
         !await _ensureUdpSession(recipientPubkey)) {
       return null;
     }
     final encrypted = await _noiseSessions.encryptPacket(
       packet,
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
       remotePubkey: recipientPubkey,
     );
     return encrypted.serialize();
@@ -932,16 +1007,19 @@ class HeadlessGrassrootsNetwork {
   /// endpoint with the lexicographically smaller public key" (GNA §4.1): the
   /// session manager keeps that end's handshake.
   Future<bool> _ensureUdpSession(Uint8List recipientPubkey) async {
-    if (_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey)) {
+    if (_noiseSessions.hasSession(PeerTransport.wan, recipientPubkey)) {
       return true;
     }
-    if (_udpService?.getPeerIdForPubkey(recipientPubkey) == null) return false;
+    if (!(_udpService?.hasPath(PeerTransport.wan, _hex(recipientPubkey)) ??
+        false)) {
+      return false;
+    }
     final sent = await _serializedHandshake(_handshakeChain, () async {
       final payload = await _noiseSessions.startHandshake(
-        PeerTransport.udp,
+        PeerTransport.wan,
         recipientPubkey,
         pattern: NoisePattern.ik,
-        peerId: _hex(recipientPubkey),
+        peerId: _path(recipientPubkey),
       );
       if (payload == null) return true;
       final handshakeBytes = GrassrootsPacket(
@@ -949,11 +1027,11 @@ class HeadlessGrassrootsNetwork {
         payload: payload,
       ).serialize();
       if (!await (_udpService?.sendToPeer(
-                _hex(recipientPubkey),
+                _path(recipientPubkey),
                 handshakeBytes,
               ) ??
               Future.value(false))) {
-        _noiseSessions.reset(PeerTransport.udp, recipientPubkey);
+        _noiseSessions.reset(PeerTransport.wan, recipientPubkey);
         return false;
       }
       _scheduleHandshakeRetransmit(recipientPubkey);
@@ -961,7 +1039,7 @@ class HeadlessGrassrootsNetwork {
     });
     if (!sent) return false;
     final established =
-        await _noiseSessions.waitForSession(PeerTransport.udp, recipientPubkey);
+        await _noiseSessions.waitForSession(PeerTransport.wan, recipientPubkey);
     return established;
   }
 
@@ -979,7 +1057,7 @@ class HeadlessGrassrootsNetwork {
     final connecting = () async {
       final udp = _udpService;
       if (udp == null) return;
-      if (udp.getPeerIdForPubkey(pubkey) == null) {
+      if (!udp.hasPath(PeerTransport.wan, hex)) {
         final address =
             store.state.peers.getPeerByPubkeyHex(hex)?.udpAddress ??
                 store.state.knownPeers.known[hex];
@@ -1057,7 +1135,7 @@ class HeadlessGrassrootsNetwork {
       if (udpPeerId == null) return;
       final carrier = _udpService?.getPubkeyForPeerId(udpPeerId);
       if (carrier != null &&
-          _noiseSessions.hasSession(PeerTransport.udp, carrier)) {
+          _noiseSessions.hasSession(PeerTransport.wan, carrier)) {
         return;
       }
       unawaited(_udpService?.disconnectFromPeer(udpPeerId));
@@ -1065,12 +1143,13 @@ class HeadlessGrassrootsNetwork {
 
     _messageRouter.onUdpPeerIdentified = (senderPubkey, udpPeerId) {
       _udpService?.mapIncomingConnectionToPubkey(udpPeerId, _hex(senderPubkey));
+      _recordObservedWanAddress(senderPubkey);
     };
 
     // The ANNOUNCE a session carried, the heartbeat: liveness traffic, as
     // every packet its session decrypts is.
     _messageRouter.onPeerAnnounced = (data, transport,
-        {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+        {String? udpPeerId, bool inSession = false}) {
       _lastHeard[_hex(data.publicKey)] = DateTime.now();
     };
 
@@ -1096,7 +1175,7 @@ class HeadlessGrassrootsNetwork {
                 payload: payload,
               ).serialize();
               await _udpService?.sendToPeer(
-                peerId ?? _hex(remotePubkey),
+                peerId ?? _path(remotePubkey),
                 bytes,
               );
             },
@@ -1146,10 +1225,10 @@ class HeadlessGrassrootsNetwork {
     _messageRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
       try {
-        Uint8List? remotePubkey;
-        if (peerId != null && !peerId.contains(':') && peerId.length == 64) {
-          remotePubkey = _bytes(peerId);
-        }
+        final identified =
+            peerId == null ? null : UdpTransportService.parsePathId(peerId);
+        final remotePubkey =
+            identified == null ? null : _bytes(identified.pubkeyHex);
         final decrypted = await _noiseSessions.decryptPacket(
           packet,
           transport: transport,
@@ -1165,8 +1244,10 @@ class HeadlessGrassrootsNetwork {
     };
 
     _messageRouter.onAckRequested = (transport, peerId, messageId) async {
-      if (peerId == null) return;
-      final recipientPubkey = _bytes(peerId);
+      final identified =
+          peerId == null ? null : UdpTransportService.parsePathId(peerId);
+      if (peerId == null || identified == null) return;
+      final recipientPubkey = _bytes(identified.pubkeyHex);
       final bytes = await _sessionPacketBytes(
         _protocolHandler.createAckPacket(messageId: messageId),
         recipientPubkey,
@@ -1176,9 +1257,9 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
-    _messageRouter.onAckReceived = (messageId) {
+    _messageRouter.onAckReceived = (senderPubkey, messageId) {
       debugPrint('[headless] ACK received for $messageId');
-      _udpMessageSender.handleMessageAck(messageId);
+      _udpMessageSender.handleMessageAck(_hex(senderPubkey), messageId);
     };
 
     _messageRouter.onFragmentAckReceived =
@@ -1189,14 +1270,16 @@ class HeadlessGrassrootsNetwork {
 
     _messageRouter.onFragmentAckRequested =
         (transport, peerId, messageId, index) async {
-      if (peerId == null) return;
+      final identified =
+          peerId == null ? null : UdpTransportService.parsePathId(peerId);
+      if (peerId == null || identified == null) return;
       final bytes = await _sessionPacketBytes(
         GrassrootsPacket(
           type: PacketType.fragmentAck,
           payload: FragmentHandler.encodeFragmentAck(
               messageId: messageId, index: index),
         ),
-        _bytes(peerId),
+        _bytes(identified.pubkeyHex),
       );
       if (bytes != null) {
         await _udpService?.sendToPeer(peerId, bytes);
@@ -1252,13 +1335,13 @@ class HeadlessGrassrootsNetwork {
   }
 
   void _setupUdpCallbacks(UdpTransportService udp) {
-    udp.onUdpDataReceived = (peerId, data) {
+    udp.onUdpDataReceived = (session, peerId, data) {
       _enqueueRx(peerId, () async {
         try {
           final packet = GrassrootsPacket.deserialize(data);
           await _messageRouter.processPacket(
             packet,
-            transport: PeerTransport.udp,
+            transport: session,
             udpPeerId: peerId,
           );
         } catch (e) {
@@ -1270,12 +1353,15 @@ class HeadlessGrassrootsNetwork {
 
     _connectionSub = udp.connectionStream.listen((event) {
       if (!event.connected) {
-        if (event.peerId.length == 64 && !event.peerId.contains(':')) {
-          final pubkey = _bytes(event.peerId);
-          _noiseSessions.reset(PeerTransport.udp, pubkey);
-          if (_reachablePeers.remove(event.peerId)) {
+        final identified = UdpTransportService.parsePathId(event.peerId);
+        if (identified != null) {
+          final pubkey = _bytes(identified.pubkeyHex);
+          final standing = _rendezvousSessionStands();
+          _noiseSessions.reset(PeerTransport.wan, pubkey);
+          if (_reachablePeers.remove(identified.pubkeyHex)) {
             onPeerDisconnected?.call(pubkey, Underlay.wan);
           }
+          _onRendezvousSessionsEnded(standing);
         }
       }
     });
@@ -1295,13 +1381,13 @@ class HeadlessGrassrootsNetwork {
     void tick() {
       _handshakeRetransmits.remove(hex);
       final payload = _noiseSessions.handshakeRetransmitPayload(
-          PeerTransport.udp, pubkey);
+          PeerTransport.wan, pubkey);
       if (payload == null || attempt >= 5 || _udpService == null) return;
       attempt++;
       debugPrint('[headless][noise] Retransmitting handshake to '
           '${hex.substring(0, 8)} (attempt $attempt)');
       unawaited(_udpService?.sendToPeer(
-        peerId ?? hex,
+        peerId ?? _path(pubkey),
         GrassrootsPacket(type: PacketType.noiseHandshake, payload: payload)
             .serialize(),
       ));
@@ -1317,7 +1403,7 @@ class HeadlessGrassrootsNetwork {
   /// §2.6), with backoff, as long as the peer's attempts to deliver it last
   /// ([_awaitPeerAttestation] tears the session down after that).
   void _retransmitFinalUntilAttestation(Uint8List pubkey) {
-    final hash = _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
+    final hash = _noiseSessions.handshakeHashFor(PeerTransport.wan, pubkey);
     if (hash == null) return;
     final hex = _hex(pubkey);
     _handshakeRetransmits.remove(hex)?.cancel();
@@ -1330,12 +1416,12 @@ class HeadlessGrassrootsNetwork {
       if (_sameBytes(_attestationArrivedOn[hex], hash)) return;
       if (window.elapsed > _udpMessageSender.attemptWindow) return;
       final payload =
-          _noiseSessions.finalHandshakePayload(PeerTransport.udp, pubkey);
+          _noiseSessions.finalHandshakePayload(PeerTransport.wan, pubkey);
       if (payload == null) return;
       debugPrint('[headless][noise] Retransmitting the final handshake '
           'message to ${hex.substring(0, 8)}: no attestation yet');
       unawaited(udp.sendToPeer(
-        hex,
+        _path(pubkey),
         GrassrootsPacket(type: PacketType.noiseHandshake, payload: payload)
             .serialize(),
       ));
@@ -1356,8 +1442,9 @@ class HeadlessGrassrootsNetwork {
 
   void _onSessionEstablished(Uint8List pubkey) {
     _lastHeard[_hex(pubkey)] = DateTime.now();
-    store.dispatch(PeerUdpConnectionChangedAction(
+    store.dispatch(PeerIpSessionChangedAction(
       pubkeyHex: _hex(pubkey),
+      underlay: Underlay.wan,
       connected: true,
     ));
     // "Once the session is established, ANNOUNCE is sent inside it" (GNA
@@ -1387,7 +1474,7 @@ class HeadlessGrassrootsNetwork {
   /// come (GNA, 2026-10-11, Attestation Q1). An attestation is never queued
   /// for the next session: the next session sends its own.
   void _awaitPeerAttestation(Uint8List pubkey) {
-    final hash = _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
+    final hash = _noiseSessions.handshakeHashFor(PeerTransport.wan, pubkey);
     if (hash == null) return;
     final hex = _hex(pubkey);
     final standing = _attestationDeadlines[hex];
@@ -1423,7 +1510,7 @@ class HeadlessGrassrootsNetwork {
   /// [handshakeHash].
   bool _isCurrentSession(Uint8List pubkey, Uint8List handshakeHash) =>
       _sameBytes(
-        _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey),
+        _noiseSessions.handshakeHashFor(PeerTransport.wan, pubkey),
         handshakeHash,
       );
 
@@ -1442,7 +1529,7 @@ class HeadlessGrassrootsNetwork {
   /// the session is torn down (§Message Protocol).
   Future<void> _sendAttestation(Uint8List pubkey) async {
     final handshakeHash =
-        _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
+        _noiseSessions.handshakeHashFor(PeerTransport.wan, pubkey);
     if (handshakeHash == null) return;
     final hex = _hex(pubkey);
     if (_sameBytes(_attestationSentOn[hex], handshakeHash)) return;
@@ -1453,15 +1540,15 @@ class HeadlessGrassrootsNetwork {
     // version number (GNA §2.6).
     AttestationEvidence? evidence;
     try {
-      final offered = await attestation.attestationFor(identity.publicKey);
+      final offered = await attestation.attestationFor(_identity.publicKey);
       final version =
           offered == null ? null : await attestation.applicationVersion();
       final signature = version == null
           ? null
           : await attestation.signSessionDigest(
-              identityPublicKey: identity.publicKey,
+              identityPublicKey: _identity.publicKey,
               digest: attestationDigest(
-                identityPublicKey: identity.publicKey,
+                identityPublicKey: _identity.publicKey,
                 version: version,
                 handshakeHash: handshakeHash,
               ),
@@ -1493,17 +1580,36 @@ class HeadlessGrassrootsNetwork {
     _tearDownSession(pubkey);
   }
 
+  /// Signal that a message to [pubkey] exhausted its attempts, as the sender
+  /// does when a fragment runs out of retransmissions: the test seam for the
+  /// exhaustion teardown, the sender's own signal being reached only after a
+  /// heartbeat-scale wait.
+  @visibleForTesting
+  void debugExhaustAttempts(Uint8List pubkey) =>
+      _udpMessageSender.debugExhaust(_hex(pubkey));
+
+  /// The identifiers of the messages to [pubkey] in the in-memory replay queue,
+  /// for tests.
+  @visibleForTesting
+  List<String> debugQueuedMessageIds(Uint8List pubkey) => [
+        for (final entry in _outboundQueue[_hex(pubkey)] ?? const [])
+          entry.messageId,
+      ];
+
   /// Tear the UDP session with [pubkey] down: an attestation found invalid,
   /// or ours undeliverable on it. The disconnect event drops reachability
   /// where the peer had it.
   void _tearDownSession(Uint8List pubkey) {
+    final standing = _rendezvousSessionStands();
     _attestedOn.remove(_hex(pubkey));
-    _noiseSessions.reset(PeerTransport.udp, pubkey);
-    store.dispatch(PeerUdpConnectionChangedAction(
+    _noiseSessions.reset(PeerTransport.wan, pubkey);
+    store.dispatch(PeerIpSessionChangedAction(
       pubkeyHex: _hex(pubkey),
+      underlay: Underlay.wan,
       connected: false,
     ));
-    unawaited(_udpService?.disconnectFromPeer(_hex(pubkey)));
+    unawaited(_udpService?.disconnectFromPeer(_path(pubkey)));
+    _onRendezvousSessionsEnded(standing);
   }
 
   /// A peer's attestation arrived on the session whose handshake hash is
@@ -1574,7 +1680,9 @@ class HeadlessGrassrootsNetwork {
       underlay: Underlay.wan,
       attestation: attestation,
     ));
-    if (_reachablePeers.add(_hex(pubkey))) {
+    final connected = _reachablePeers.add(_hex(pubkey));
+    _recordObservedWanAddress(pubkey);
+    if (connected) {
       onPeerConnected?.call(pubkey, Underlay.wan, attestation.application);
     }
     if (rendezvousServer) _reflectAddressTo(pubkey);
@@ -1601,6 +1709,13 @@ class HeadlessGrassrootsNetwork {
         type: PacketType.announce,
         payload: _protocolHandler.createAnnouncePayload(),
       );
+
+  /// The id of [pubkey]'s UDP path: this profile runs the WAN alone, so
+  /// every path is a WAN session's (decision 18).
+  static String _path(Uint8List pubkey) => _pathOfHex(_hex(pubkey));
+
+  static String _pathOfHex(String pubkeyHex) =>
+      UdpTransportService.pathId(PeerTransport.wan, pubkeyHex);
 
   static String _hex(Uint8List bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

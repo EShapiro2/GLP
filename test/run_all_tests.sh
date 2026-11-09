@@ -4216,6 +4216,24 @@ rm -rf "$cva_ph"
 check "CVA pragmas: the interface pragmas under their heading read, the implementation pragmas skipped (XI)" "^pragmas(\[list('\"Coins\"', \['coin'\])\], \[act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))\])$" "$cva_ph_i"
 check "CVA pragmas: ... and pragmas.sh exits 0 (XI)" "^exit 0$" "$cva_ph_i"
 check "CVA pragmas: ... the same as under the heading Pragmas alone (XP)" "^pragmas(\[list('\"Coins\"', \['coin'\])\], \[act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))\])$" "$cva_ph_p"
+# The look the interface pragmas open with, "Look: <icon>, <family>" (GSC 34bc713, Section 2: "The interface pragmas may open with a line naming the app's look, its icon and its family"): read and no tab, under either heading (XL, XLI); not first, refused (XLX); not of that form, refused (XLF).
+cva_pl=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XL' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Look: 🪙, money' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' > "$cva_pl/XL.txt"
+printf '%s\n' '% Extends: nothing.' 'XLI' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Interface pragmas' 'Look: 🪙, money' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' > "$cva_pl/XLI.txt"
+printf '%s\n' '% Extends: nothing.' 'XLX' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'Look: 🪙, money' 'Minting: Alice [Mint] <amount>' > "$cva_pl/XLX.txt"
+printf '%s\n' '% Extends: nothing.' 'XLF' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Pragmas' 'Look: money' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' > "$cva_pl/XLF.txt"
+cva_pl_l=$(bash "$CVA/compiler/pragmas.sh" "$cva_pl/XL.txt" "[$cva_ph_mint]" 2>&1; echo "exit $?")
+cva_pl_i=$(bash "$CVA/compiler/pragmas.sh" "$cva_pl/XLI.txt" "[$cva_ph_mint]" 2>&1; echo "exit $?")
+cva_pl_x=$(bash "$CVA/compiler/pragmas.sh" "$cva_pl/XLX.txt" "[$cva_ph_mint]" 2>&1; echo "exit $?")
+cva_pl_f=$(bash "$CVA/compiler/pragmas.sh" "$cva_pl/XLF.txt" "[$cva_ph_mint]" 2>&1; echo "exit $?")
+rm -rf "$cva_pl"
+check "CVA pragmas: the Look line read and no tab, the pragmas as without it (XL)" "^pragmas(\[list('\"Coins\"', \['coin'\])\], \[act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))\])$" "$cva_pl_l"
+check "CVA pragmas: ... and pragmas.sh exits 0 (XL)" "^exit 0$" "$cva_pl_l"
+check "CVA pragmas: ... the same under the heading Interface pragmas (XLI)" "^pragmas(\[list('\"Coins\"', \['coin'\])\], \[act('mint'" "$cva_pl_i"
+check "CVA pragmas: a Look line not the first of the interface pragmas, refused (XLX)" 'the look is the line the interface pragmas open with, "Look: <icon>, <family>"' "$cva_pl_x"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (XLX)" "^exit 0$" "$cva_pl_x"
+check "CVA pragmas: a Look line not of the form Look: <icon>, <family>, refused (XLF)" '"Look: money": the look is the line the interface pragmas open with' "$cva_pl_f"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (XLF)" "^exit 0$" "$cva_pl_f"
 # Several buttons on a line, and one button on two lines (vGLP 40f8444, Section 5.4, "The contract's words": "for each act they propose, its button, in brackets, bearing the act's name, and its fields, in angle brackets"; "A button is of the acts it names"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1 and 2): the fields after a button, up to the next button, are that button's, so XM's "[Mint] <amount> [Burn]" is read, mint with k and burn with none (buttons), and XN's "[Mint] [Burn] <amount>" refused, mint leaving k unnamed and burn's <amount> beyond its variables (buttons_order); XD's [Mint] on two lines refused, the button and both lines named (twice); and XH extends XB-L, a contract's name with a hyphened part read whole, as GFF's GDO-L (hyphen).
 cva_pb=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XM' 'Alice is a person.' '1. ■ Minting. Alice may mint coins and burn one.' 'Pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount> [Burn]' > "$cva_pb/XM.txt"

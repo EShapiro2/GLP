@@ -115,8 +115,10 @@ class FragmentHandler {
   /// retransmit with backoff, so this must outlast the sender giving up.
   static const Duration reassemblyTimeout = Duration(minutes: 2);
 
-  /// Messages currently being reassembled, keyed by messageId.
-  final Map<String, _ReassemblyState> _reassemblyBuffer = {};
+  /// Messages currently being reassembled, keyed by the sender's public key
+  /// (hex) and the messageId: two senders may each use the same id.
+  final Map<({String senderHex, String messageId}), _ReassemblyState>
+      _reassemblyBuffer = {};
 
   Timer? _cleanupTimer;
 
@@ -227,16 +229,19 @@ class FragmentHandler {
     return (messageId, index);
   }
 
-  /// Store an incoming [fragment]. Returns the reassembled message when
-  /// this fragment completes it, null otherwise (including duplicates).
+  /// Store an incoming [fragment] sent by the peer whose public key (hex) is
+  /// [senderHex]. Returns the reassembled message when this fragment
+  /// completes it, null otherwise (including duplicates).
   ///
   /// A message's fragments share one type: a fragment whose type differs
-  /// from the first one received for its messageId is dropped, as one whose
-  /// count differs is, so a payload's chunk can never complete an attestation
-  /// or the reverse.
-  ReassembledMessage? addFragment(Fragment fragment) {
+  /// from the first one received for its sender and messageId is dropped, as
+  /// one whose count differs is, so a payload's chunk can never complete an
+  /// attestation or the reverse.
+  ReassembledMessage? addFragment(Fragment fragment,
+      {required String senderHex}) {
+    final key = (senderHex: senderHex, messageId: fragment.messageId);
     final state = _reassemblyBuffer.putIfAbsent(
-      fragment.messageId,
+      key,
       () => _ReassemblyState(count: fragment.count, type: fragment.type),
     );
     if (state.count != fragment.count) {
@@ -251,7 +256,7 @@ class FragmentHandler {
     }
     state.receivedChunks[fragment.index] = fragment.chunk;
     if (!state.isComplete) return null;
-    _reassemblyBuffer.remove(fragment.messageId);
+    _reassemblyBuffer.remove(key);
     return ReassembledMessage(
       messageId: fragment.messageId,
       payload: state.assemble(),
@@ -262,10 +267,10 @@ class FragmentHandler {
   void _startCleanupTimer() {
     _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       final now = DateTime.now();
-      _reassemblyBuffer.removeWhere((messageId, state) {
+      _reassemblyBuffer.removeWhere((key, state) {
         final stale = now.difference(state.startedAt) > reassemblyTimeout;
         if (stale) {
-          debugPrint('[fragment] Reassembly timed out for $messageId '
+          debugPrint('[fragment] Reassembly timed out for ${key.messageId} '
               '(${state.receivedChunks.length}/${state.count})');
         }
         return stale;

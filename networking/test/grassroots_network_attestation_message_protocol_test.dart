@@ -148,8 +148,9 @@ void main() {
 
   Future<GrassrootsNetwork> startNode(
     GrassrootsIdentity id,
-    PlatformAttestation attestation,
-  ) async {
+    PlatformAttestation attestation, {
+    void Function(dynamic action)? onAction,
+  }) async {
     final hosts = LoopbackHostReader();
     final network = GrassrootsNetwork(
       identity: id,
@@ -157,6 +158,12 @@ void main() {
       store: Store<AppState>(
         appReducer,
         initialState: const AppState(),
+        middleware: [
+          (store, action, next) {
+            onAction?.call(action);
+            next(action);
+          },
+        ],
       ),
       sodium: sodium,
       localHostAddressReader: hosts.call,
@@ -342,6 +349,10 @@ void main() {
       calleeId.publicKey,
       Uint8List.fromList(utf8.encode('hello')),
     );
+    // The delivery attempt runs after send has returned, so the hold is
+    // awaited on the store's queued status rather than read at once.
+    await stateWhere(caller.store,
+        (s) => s.messages.outgoingMessages[messageId]?.status == MessageStatus.queued);
     expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 1,
         reason: 'held: the callee is not reachable yet');
 
@@ -365,5 +376,84 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(caller.queuedMessageCountForPeer(calleeId.publicKey), 0,
         reason: 'the queue gives the message up once it is acknowledged');
+  }, timeout: Timeout.none);
+
+  test(
+      '[F05] send completes once its message is saved, and its delivery '
+      'attempt runs after it: while every fragment is lost, send has returned '
+      'and no delivery outcome is recorded yet (api.tex, Send payload)',
+      () async {
+    final callerAttestation = _LargeAttestation(
+      offers: Uint8List.fromList(List.generate(3000, (i) => (i * 19) % 256)),
+      application: calleeApplication,
+    );
+    final calleeAttestation = _LargeAttestation(
+      offers: Uint8List.fromList(List.generate(3000, (i) => (i * 23) % 256)),
+      application: callerApplication,
+    );
+
+    final callerId = await identityFromSeed(0x97);
+    final calleeId = await identityFromSeed(0x98);
+
+    // The message ids for which the caller's store records a delivery
+    // outcome: sent, or queued again after the attempt failed.
+    final outcomes = <String>[];
+    final caller = await startNode(callerId, callerAttestation,
+        onAction: (action) {
+      if (action is MessageSentAction) outcomes.add(action.messageId);
+      if (action is MessageQueuedAction) outcomes.add(action.messageId);
+    });
+    final callee = await startNode(calleeId, calleeAttestation);
+    final calleeAddress = await listeningAddress(callee);
+    final relay =
+        await _LossyRelay.start(int.parse(calleeAddress.split(':').last));
+    addTearDown(() async {
+      relay.close();
+      await caller.dispose();
+      await callee.dispose();
+    });
+
+    final helloReceived = Completer<void>();
+    final secondReceived = Completer<void>();
+    final callerConnects = Completer<void>();
+    callee.onMessageReceived = (_, payload, __, ___) {
+      final text = utf8.decode(payload);
+      if (text == 'hello' && !helloReceived.isCompleted) {
+        helloReceived.complete();
+      }
+      if (text == 'second' && !secondReceived.isCompleted) {
+        secondReceived.complete();
+      }
+    };
+    caller.onPeerConnected = (_, __, ___) {
+      if (!callerConnects.isCompleted) callerConnects.complete();
+    };
+
+    caller.putKnownPeer(calleeId.publicKey);
+    callee.putKnownPeer(callerId.publicKey);
+    caller.wan!.putPeerAddress(calleeId.publicKey, '127.0.0.1:${relay.port}');
+    await caller.send(
+      calleeId.publicKey,
+      Uint8List.fromList(utf8.encode('hello')),
+    );
+    await helloReceived.future;
+    await callerConnects.future;
+
+    // Every message fragment sent toward the callee from here on is lost, so
+    // the second message's delivery attempt cannot finish.
+    relay.dropTowardCallee = (datagram) =>
+        datagram.isNotEmpty &&
+        datagram.first == PacketType.secureFragment.value;
+    final messageId = await caller.send(
+      calleeId.publicKey,
+      Uint8List.fromList(utf8.encode('second')),
+    );
+    expect(outcomes.where((id) => id == messageId), isEmpty,
+        reason: 'send returned with the message saved, while its delivery '
+            'attempt is still in flight');
+
+    // The fragments get through, and the message is delivered.
+    relay.dropTowardCallee = (_) => false;
+    await secondReceived.future;
   }, timeout: Timeout.none);
 }

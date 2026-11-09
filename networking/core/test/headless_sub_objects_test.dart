@@ -96,11 +96,11 @@ void main() {
 
     // putPeerAddress records the address with the known peer, and refuses an
     // unparseable one.
-    final serverKey = server.identity.publicKey;
+    final serverKey = server.getIdentity();
     final serverHex = serverKey
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join();
-    server.putKnownPeer(caller.identity.publicKey);
+    server.putKnownPeer(caller.getIdentity());
     caller.wan.putPeerAddress(serverKey, '127.0.0.1:${server.boundPort}');
     expect(caller.store.state.knownPeers.known[serverHex],
         '127.0.0.1:${server.boundPort}');
@@ -109,10 +109,10 @@ void main() {
 
     // observedPeerAddress: none before the session, the source address of
     // the session once the peer is reachable.
-    expect(server.wan.observedPeerAddress(caller.identity.publicKey), isNull);
+    expect(server.wan.observedPeerAddress(caller.getIdentity()), isNull);
     await caller.send(serverKey, Uint8List.fromList([1]));
     await untilBothReachable(server, caller);
-    expect(server.wan.observedPeerAddress(caller.identity.publicKey),
+    expect(server.wan.observedPeerAddress(caller.getIdentity()),
         '127.0.0.1:${caller.boundPort}');
 
     // punchUdp refuses an unparseable address and returns at once on a

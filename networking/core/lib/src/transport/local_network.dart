@@ -155,10 +155,13 @@ class LocalNetwork {
 
 /// Read the attached local network from the platform's interface list.
 ///
-/// One enumeration serves both the fingerprint and the prefixes. Loopback is
-/// excluded — it is not a network the agent is attached to. Link-local
-/// addresses are included: a self-assigned network is still a local network,
-/// and two agents on one carry LAN contact between them.
+/// One enumeration serves both the fingerprint and the prefixes. Loopback and
+/// link-local addresses are included, the device itself and a self-assigned
+/// network being local, so two agents on one machine, as two simulators on
+/// one Mac, are LAN contact to each other (GNA 582ef60, Implementation Notes:
+/// "Loopback and link-local addresses are included, the device itself and a
+/// self-assigned network being local, so two agents on one machine are LAN
+/// contact to each other"; Section 2.6, "a loopback address among them").
 ///
 /// The spec names three constituents of the fingerprint: the default gateway
 /// address, the local address prefix, and the wireless network name where the
@@ -170,7 +173,7 @@ Future<LocalNetwork> readLocalNetwork() async {
   final List<NetworkInterface> interfaces;
   try {
     interfaces = await NetworkInterface.list(
-      includeLoopback: false,
+      includeLoopback: true,
       includeLinkLocal: true,
     );
   } catch (e) {
@@ -181,7 +184,6 @@ Future<LocalNetwork> readLocalNetwork() async {
   final prefixes = <LocalPrefix>[];
   for (final interface in interfaces) {
     for (final address in interface.addresses) {
-      if (address.isLoopback) continue;
       prefixes.add(localPrefixOf(address));
     }
   }
@@ -203,7 +205,10 @@ typedef LocalHostAddressReader = Future<List<InternetAddress>> Function();
 /// and a fresh temporary address within a prefix already held must not read as
 /// a change of local network.
 ///
-/// Loopback is excluded, as it is for the prefixes; link-local addresses are
+/// Loopback is excluded: a peer is dialed at an address the platform reports
+/// for it, and a loopback peer is dialed at its loopback address whatever the
+/// agent's candidates ([UdpTransportService.canDialAddress]); the prefixes,
+/// which include it, are [readLocalNetwork]'s.  Link-local addresses are
 /// included.
 Future<List<InternetAddress>> readLocalHostAddresses() async {
   final List<NetworkInterface> interfaces;

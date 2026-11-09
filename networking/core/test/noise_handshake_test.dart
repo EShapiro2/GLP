@@ -192,7 +192,7 @@ void main() {
     };
     final announced = <(String, bool)>[];
     router.onPeerAnnounced =
-        (data, t, {bool isNew = false, String? udpPeerId, bool inSession = false}) =>
+        (data, t, {String? udpPeerId, bool inSession = false}) =>
             announced.add((hexOf(data.publicKey), inSession));
 
     await router.processPacket(
@@ -234,7 +234,7 @@ void main() {
     final bob = await identityFromSeed(0x37);
     final aliceSessions = manager(alice);
     final bobSessions = manager(bob);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
     // After ANNOUNCE each holds the other's claimed key; Open accepts XX.
     bool openFor(NoisePattern pattern, Uint8List key) =>
         pattern == NoisePattern.xx && hexOf(key) == hexOf(alice.publicKey);
@@ -290,7 +290,7 @@ void main() {
     final mallory = await identityFromSeed(0x3a);
     final aliceSessions = manager(alice);
     final mallorySessions = manager(mallory);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
 
     final m1 = (await aliceSessions.startHandshake(transport, bob.publicKey,
         pattern: NoisePattern.xx))!;
@@ -320,7 +320,7 @@ void main() {
     final aliceSessions = manager(alice);
     final bobSessions = manager(bob);
     final carolSessions = manager(carol);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
 
     // Alice expects Carol's key; Bob, who holds another, cannot read it.
     final toCarol = (await aliceSessions.startHandshake(transport,
@@ -366,7 +366,7 @@ void main() {
     final bob = await identityFromSeed(0x3f);
     final aliceSessions = manager(alice);
     final bobSessions = manager(bob);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
     final completed = <String>[];
     bobSessions.onSessionCompleted =
         (t, pk, peerId) => completed.add('${t.name} ${hexOf(pk)} $peerId');
@@ -440,7 +440,7 @@ void main() {
     final newHash = restarted.handshakeHashFor(transport, bob.publicKey)!;
     expect(newHash, isNot(hash));
     expect(await openAtBob(await sealFrom(restarted, 2)), ('02', hexOf(newHash)));
-    expect(completed, ['udp ${hexOf(alice.publicKey)} alice-leg'],
+    expect(completed, ['wan ${hexOf(alice.publicKey)} alice-leg'],
         reason: 'the completion is reported once, before the packet');
     expect(bobSessions.handshakeHashFor(transport, alice.publicKey), newHash);
     expect(bobSessions.finalHandshakePayload(transport, alice.publicKey),
@@ -466,7 +466,7 @@ void main() {
     final bob = await identityFromSeed(0x40);
     final aliceSessions = manager(alice);
     final bobSessions = manager(bob);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
     bool openFor(NoisePattern pattern, Uint8List key) =>
         pattern == NoisePattern.xx && hexOf(key) == hexOf(alice.publicKey);
 
@@ -580,7 +580,7 @@ void main() {
         hexOf(x.publicKey).compareTo(hexOf(y.publicKey)) < 0 ? (x, y) : (y, x);
     final smallSessions = manager(small);
     final largeSessions = manager(large);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
     bool accept(NoisePattern p, Uint8List k) => p == NoisePattern.ik;
 
     final fromSmall = (await smallSessions.startHandshake(
@@ -616,7 +616,7 @@ void main() {
     final alice = await identityFromSeed(0x43);
     final bob = await identityFromSeed(0x44);
     final bobSessions = manager(bob);
-    const transport = PeerTransport.udp;
+    const transport = PeerTransport.wan;
 
     // A version-6 peer opens with XX message 1 in the envelope of that
     // version: handshake payload version 2, message 1, the claim, its

@@ -47,11 +47,26 @@ void main() {
       PeerState(
         publicKey: pubkey(seed),
         connectionState: PeerConnectionState.connected,
-        transport: PeerTransport.udp,
+        transport: underlay.session,
         udpAddress: '10.0.0.$seed:9514',
-        hasLiveUdpConnection: true,
-        udpAttestation: PeerAttestation.unattested,
-        udpUnderlay: underlay,
+        lanAuthenticated: underlay == Underlay.lan,
+        wanAuthenticated: underlay == Underlay.wan,
+        lanAttestation:
+            underlay == Underlay.lan ? PeerAttestation.unattested : null,
+        wanAttestation:
+            underlay == Underlay.wan ? PeerAttestation.unattested : null,
+      );
+
+  /// A session on the LAN and another on the WAN, each attested.
+  PeerState peerOnLanAndWan(int seed) => PeerState(
+        publicKey: pubkey(seed),
+        connectionState: PeerConnectionState.connected,
+        transport: PeerTransport.lan,
+        udpAddress: '10.0.0.$seed:9514',
+        lanAuthenticated: true,
+        wanAuthenticated: true,
+        lanAttestation: PeerAttestation.unattested,
+        wanAttestation: PeerAttestation.unattested,
       );
 
   PeerState peerOnBoth(int seed) => PeerState(
@@ -62,9 +77,8 @@ void main() {
         bleAuthenticated: true,
         bleAttestation: PeerAttestation.unattested,
         udpAddress: '10.0.0.$seed:9514',
-        hasLiveUdpConnection: true,
-        udpAttestation: PeerAttestation.unattested,
-        udpUnderlay: Underlay.wan,
+        wanAuthenticated: true,
+        wanAttestation: PeerAttestation.unattested,
       );
 
   PeerState peerOffline(int seed) => PeerState(
@@ -227,6 +241,20 @@ void main() {
         (pubkeyHex(pubkey(1)), Underlay.wan),
       ]);
       expect(disconnects, [(pubkeyHex(pubkey(1)), Underlay.lan)]);
+    });
+
+    test(
+        'a peer with a session on the LAN and one on the WAN is connected '
+        'over each; losing the WAN session reports the WAN alone, the LAN '
+        'session standing (spec §Session Establishment, decision 32)', () {
+      tick(stateWith([peerOnLanAndWan(1)]));
+      expect(connects, [
+        (pubkeyHex(pubkey(1)), Underlay.lan),
+        (pubkeyHex(pubkey(1)), Underlay.wan),
+      ]);
+      tick(stateWith([peerOnUdp(1, Underlay.lan)]));
+      expect(disconnects, [(pubkeyHex(pubkey(1)), Underlay.wan)]);
+      expect(tracker[pubkeyHex(pubkey(1))], {Underlay.lan});
     });
 
     test('null callbacks are safe', () {

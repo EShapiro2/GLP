@@ -859,8 +859,8 @@ typedef _Server = ({
 Future<void> _untilBothReachable(
     HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) async {
   bool holds() =>
-      a.isPeerReachable(b.identity.publicKey) &&
-      b.isPeerReachable(a.identity.publicKey);
+      a.isPeerReachable(b.getIdentity()) &&
+      b.isPeerReachable(a.getIdentity());
   if (holds()) return;
   final done = Completer<void>();
   void check() {

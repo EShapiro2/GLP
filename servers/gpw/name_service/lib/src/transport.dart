@@ -39,7 +39,7 @@ class PushService {
   final HeadlessGrassrootsNetwork network;
   final MirrorWriter writer;
 
-  String get publicKeyB64 => b64url(network.identity.publicKey);
+  String get publicKeyB64 => b64url(network.getIdentity());
 
   static Future<PushService> start({
     required String identityPath,

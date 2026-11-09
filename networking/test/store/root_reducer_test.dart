@@ -87,15 +87,17 @@ void main() {
 
       test('SettingsAction routes to settingsReducer', () {
         const initial = AppState.initial;
-        // The default role mode is auto, so setting another should change
-        // state
-        final action = SetBleRoleModeAction(BleRoleMode.centralOnly);
+        final action = SetColdCallTrustLevelAction(
+          ProximityUnderlay.lan,
+          ColdCallTrustLevel.open,
+        );
 
         final result = appReducer(initial, action);
 
         // The settings state should have changed
         expect(result.settings, isNot(equals(initial.settings)));
-        expect(result.settings.bleRoleMode, BleRoleMode.centralOnly);
+        expect(result.settings.trustLevelOf(ProximityUnderlay.lan),
+            ColdCallTrustLevel.open);
 
         // Other state sections remain unchanged
         expect(result.peers, equals(initial.peers));

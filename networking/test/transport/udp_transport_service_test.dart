@@ -8,8 +8,10 @@ import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 import 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
 import 'package:grassroots_networking_core/src/transport/transport_service.dart';
+import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
@@ -34,6 +36,14 @@ InternetAddress _loopbackFor(UdpTransportService service) =>
 String _hex(Uint8List b) =>
     b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 
+/// The classifier of these tests: IPv4 loopback is on the local network and
+/// IPv6 loopback is not, so one machine holds a LAN path and a WAN path at
+/// once (decision 8 decides by the address alone).
+PeerTransport _ipv4IsLan(InternetAddress address) =>
+    address.type == InternetAddressType.IPv4
+        ? PeerTransport.lan
+        : PeerTransport.wan;
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -57,6 +67,7 @@ void main() {
           identity: identity,
           store: store,
           protocolHandler: protocolHandler,
+          sessionOf: _ipv4IsLan,
         );
 
     group('lifecycle', () {
@@ -84,6 +95,7 @@ void main() {
           identity: identity,
           store: store,
           protocolHandler: protocolHandler,
+          sessionOf: _ipv4IsLan,
           listenPort: 0,
         );
         addTearDown(service.dispose);
@@ -117,16 +129,17 @@ void main() {
         final sub = service.connectionStream.listen(events.add);
         addTearDown(sub.cancel);
 
-        final ok = await service.connectToPeer(
+        final loopback = _loopbackFor(service);
+        final id = await service.connectToPeer(
           peerHex,
-          _loopbackFor(service),
+          loopback,
           service.localPort!,
         );
-        expect(ok, isTrue);
-        expect(service.getPeerIdForPubkey(
-            Uint8List.fromList(List.filled(32, 7))) != null, isTrue);
+        expect(id, UdpTransportService.pathId(_ipv4IsLan(loopback), peerHex));
+        expect(service.hasPath(_ipv4IsLan(loopback), peerHex), isTrue);
         await Future<void>.delayed(Duration.zero);
-        expect(events.any((e) => e.connected && !e.isIncoming), isTrue);
+        expect(events.any((e) => e.connected && !e.isIncoming && e.peerId == id),
+            isTrue);
       });
 
       test('disconnectFromPeer drops the path and fires a disconnect',
@@ -136,12 +149,61 @@ void main() {
         await service.initialize();
         await service.start();
         final peerHex = _hex(Uint8List.fromList(List.filled(32, 9)));
-        await service.connectToPeer(
-            peerHex, _loopbackFor(service), service.localPort!);
-        await service.disconnectFromPeer(peerHex);
+        final loopback = _loopbackFor(service);
+        final id = await service.connectToPeer(
+            peerHex, loopback, service.localPort!);
+        await service.disconnectFromPeer(id!);
+        expect(service.hasPath(_ipv4IsLan(loopback), peerHex), isFalse);
+      });
+
+      test(
+          'a peer holds a LAN path and a WAN path at once, each its own, and '
+          'dropping one leaves the other (spec §Session Establishment: '
+          'sessions are per underlay)', () async {
+        final service = build();
+        addTearDown(service.dispose);
+        await service.initialize();
+        await service.start();
+        if (!service.activeAddressTypes.containsAll(
+            {InternetAddressType.IPv4, InternetAddressType.IPv6})) {
+          markTestSkipped('needs both IPv4 and IPv6 loopback');
+          return;
+        }
+        final peerHex = _hex(Uint8List.fromList(List.filled(32, 4)));
+        final lan = await service.connectToPeer(
+            peerHex, InternetAddress.loopbackIPv4, 40001);
+        final wan = await service.connectToPeer(
+            peerHex, InternetAddress.loopbackIPv6, 40002);
+        expect(lan, UdpTransportService.pathId(PeerTransport.lan, peerHex));
+        expect(wan, UdpTransportService.pathId(PeerTransport.wan, peerHex));
+        expect(service.getRemoteAddress(lan!)!.port, 40001);
+        expect(service.getRemoteAddress(wan!)!.port, 40002);
+        expect(service.sessionOfPath(lan), PeerTransport.lan);
+        expect(service.sessionOfPath(wan), PeerTransport.wan);
+
+        await service.disconnectFromPeer(wan);
+        expect(service.hasPath(PeerTransport.wan, peerHex), isFalse);
+        expect(service.hasPath(PeerTransport.lan, peerHex), isTrue);
+        expect(service.getRemoteAddress(lan)!.port, 40001);
+      });
+
+      test('an address under no underlay the layer runs opens no path',
+          () async {
+        final service = UdpTransportService(
+          identity: identity,
+          store: store,
+          protocolHandler: protocolHandler,
+          sessionOf: (_) => null,
+        );
+        addTearDown(service.dispose);
+        await service.initialize();
+        await service.start();
+        final peerHex = _hex(Uint8List.fromList(List.filled(32, 6)));
         expect(
-            service.getPeerIdForPubkey(Uint8List.fromList(List.filled(32, 9))),
+            await service.connectToPeer(
+                peerHex, _loopbackFor(service), service.localPort!),
             isNull);
+        expect(service.connectedCount, 0);
       });
 
       test('mapIncomingConnectionToPubkey keeps the temp id as an alias',
@@ -152,15 +214,18 @@ void main() {
         await service.start();
 
         // Simulate an inbound path under a temp id, then identify it.
-        const tempId = '127.0.0.1:40000';
+        final loopback = _loopbackFor(service);
+        final temp = AddressInfo(loopback, 40000);
+        final tempId = temp.toAddressString();
         final peerHex = _hex(Uint8List.fromList(List.filled(32, 3)));
-        await service.connectToPeer(
-            tempId, _loopbackFor(service), service.localPort!);
-        service.mapIncomingConnectionToPubkey(tempId, peerHex);
+        expect(await service.connectToAddress(temp), isTrue);
+        final id = service.mapIncomingConnectionToPubkey(tempId, peerHex);
+        expect(id, UdpTransportService.pathId(_ipv4IsLan(loopback), peerHex));
         // Both ids resolve to a live path — an in-flight handler holding the
         // temp id can still reach the peer.
-        expect(service.getRemoteAddress(peerHex), isNotNull);
+        expect(service.getRemoteAddress(id), isNotNull);
         expect(service.getRemoteAddress(tempId), isNotNull);
+        expect(service.peerIdForAddress(tempId), id);
       });
     });
 
@@ -171,6 +236,7 @@ void main() {
           identity: await _createTestIdentity(),
           store: _createTestStore(),
           protocolHandler: protocolHandler,
+          sessionOf: _ipv4IsLan,
         );
         addTearDown(a.dispose);
         addTearDown(b.dispose);
@@ -180,7 +246,7 @@ void main() {
         await b.start();
 
         final received = Completer<Uint8List>();
-        b.onUdpDataReceived = (peerId, data) {
+        b.onUdpDataReceived = (session, peerId, data) {
           if (!received.isCompleted) received.complete(data);
         };
 
@@ -191,12 +257,11 @@ void main() {
           payload: Uint8List.fromList(List.filled(98, 1)),
         );
         // Wire a→b: associate b's address on a and send.
-        await a.connectToPeer(
+        final id = await a.connectToPeer(
             _hex(Uint8List.fromList(List.filled(32, 2))),
             _loopbackFor(b),
             b.localPortForAddressType(a.activeAddressType!) ?? b.localPort!);
-        final sent = await a.sendToPeer(
-            _hex(Uint8List.fromList(List.filled(32, 2))), packet.serialize());
+        final sent = await a.sendToPeer(id!, packet.serialize());
         expect(sent, isTrue);
 
         final data = await received.future;
@@ -204,20 +269,58 @@ void main() {
         expect(aHex, isNotEmpty);
       }, timeout: Timeout.none);
 
+      test(
+          'an inbound datagram is attributed by its source address: from a '
+          'local address to the LAN session, from any other to the WAN '
+          'session (decision 8)', () async {
+        final receiver = build();
+        addTearDown(receiver.dispose);
+        await receiver.initialize();
+        await receiver.start();
+        if (!receiver.activeAddressTypes.containsAll(
+            {InternetAddressType.IPv4, InternetAddressType.IPv6})) {
+          markTestSkipped('needs both IPv4 and IPv6 loopback');
+          return;
+        }
+        final arrivals = <PeerTransport>[];
+        final first = Completer<void>();
+        final both = Completer<void>();
+        receiver.onUdpDataReceived = (session, peerId, data) {
+          arrivals.add(session);
+          expect(receiver.sessionOfPath(peerId), session);
+          if (arrivals.length == 1 && !first.isCompleted) first.complete();
+          if (arrivals.length == 2 && !both.isCompleted) both.complete();
+        };
+        final announce = GrassrootsPacket(
+          type: PacketType.announce,
+          payload: Uint8List.fromList(List.filled(98, 1)),
+        ).serialize();
+        final v4 = await RawDatagramSocket.bind(InternetAddress.loopbackIPv4, 0);
+        final v6 = await RawDatagramSocket.bind(InternetAddress.loopbackIPv6, 0);
+        addTearDown(v4.close);
+        addTearDown(v6.close);
+        v4.send(announce, InternetAddress.loopbackIPv4,
+            receiver.localPortForAddressType(InternetAddressType.IPv4)!);
+        // The second datagram goes once the first has arrived, so the order
+        // of arrival is the order of sending.
+        await first.future;
+        v6.send(announce, InternetAddress.loopbackIPv6,
+            receiver.localPortForAddressType(InternetAddressType.IPv6)!);
+        await both.future;
+        expect(arrivals, [PeerTransport.lan, PeerTransport.wan]);
+      }, timeout: Timeout.none);
+
       test('refuses an oversized datagram', () async {
         final service = build();
         addTearDown(service.dispose);
         await service.initialize();
         await service.start();
-        await service.connectToPeer(
+        final id = await service.connectToPeer(
             _hex(Uint8List.fromList(List.filled(32, 5))),
             _loopbackFor(service),
             service.localPort!);
         final tooBig = Uint8List(UdpTransportService.maxDatagramBytes + 1);
-        expect(
-            await service.sendToPeer(
-                _hex(Uint8List.fromList(List.filled(32, 5))), tooBig),
-            isFalse);
+        expect(await service.sendToPeer(id!, tooBig), isFalse);
       });
 
       test('sendToPeer fails for an unknown peer', () async {

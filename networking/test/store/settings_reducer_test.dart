@@ -10,11 +10,9 @@ class _UnknownAction extends SettingsAction {}
 void main() {
   group('settingsReducer', () {
     group('default state', () {
-      test('initial state runs both BLE roles and is closed on every underlay',
-          () {
+      test('initial state is closed on every underlay', () {
         const state = SettingsState.initial;
 
-        expect(state.bleRoleMode, BleRoleMode.auto);
         expect(state.coldCallTrustLevels, SettingsState.closedOnEveryUnderlay);
       });
 
@@ -26,25 +24,12 @@ void main() {
       });
     });
 
-    group('SetBleRoleModeAction', () {
-      test('sets the role mode and leaves the trust levels untouched', () {
-        final open = SettingsState.initial
-            .withTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
-        final result =
-            settingsReducer(open, SetBleRoleModeAction(BleRoleMode.centralOnly));
-
-        expect(result.bleRoleMode, BleRoleMode.centralOnly);
-        expect(result.coldCallTrustLevels, open.coldCallTrustLevels);
-      });
-    });
-
     group('the persisted blob, read with no tolerance', () {
-      test('round-trips the role mode and the levels', () {
+      test('round-trips the levels', () {
         final state = SettingsState.initial
-            .copyWith(bleRoleMode: BleRoleMode.peripheralOnly)
             .withTrustLevel(ProximityUnderlay.pan, ColdCallTrustLevel.open);
         expect(SettingsState.fromJson(state.toJson()), state);
-        expect(state.toJson().keys.toSet(), {'bleRoleMode', 'coldCallTrustLevels'});
+        expect(state.toJson().keys.toSet(), {'coldCallTrustLevels'});
       });
 
       test('a blob carrying the transport toggles is malformed', () {
@@ -63,13 +48,10 @@ void main() {
         expect(() => SettingsState.fromJson(old), throwsFormatException);
       });
 
-      test('a blob lacking the role mode is malformed', () {
-        final blob = SettingsState.initial.toJson()..remove('bleRoleMode');
-        expect(() => SettingsState.fromJson(blob), throwsFormatException);
-      });
-
-      test('a blob naming no role mode is malformed', () {
-        final blob = SettingsState.initial.toJson()..['bleRoleMode'] = 'both';
+      test('a blob carrying the removed role mode is malformed', () {
+        // The BLE role mode is gone: BLE always runs both roles, so a blob
+        // that still carries it is discarded whole, whatever its value.
+        final blob = SettingsState.initial.toJson()..['bleRoleMode'] = 'auto';
         expect(() => SettingsState.fromJson(blob), throwsFormatException);
       });
     });
@@ -97,7 +79,6 @@ void main() {
 
         expect(result.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.open);
-        expect(result.bleRoleMode, state.bleRoleMode);
       });
 
       test('leaves the other medium\'s level untouched', () {
@@ -199,7 +180,6 @@ void main() {
       test('replaces entire settings state', () {
         const state = SettingsState.initial;
         final hydratedState = SettingsState.initial
-            .copyWith(bleRoleMode: BleRoleMode.centralOnly)
             .withTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
         final result = settingsReducer(
           state,
@@ -207,14 +187,12 @@ void main() {
         );
 
         expect(result, equals(hydratedState));
-        expect(result.bleRoleMode, BleRoleMode.centralOnly);
         expect(result.trustLevelOf(ProximityUnderlay.lan),
             ColdCallTrustLevel.open);
       });
 
       test('completely discards previous state', () {
         final previousState = SettingsState.initial
-            .copyWith(bleRoleMode: BleRoleMode.peripheralOnly)
             .withTrustLevel(ProximityUnderlay.pan, ColdCallTrustLevel.open);
         const hydratedState = SettingsState.initial;
         final result = settingsReducer(
@@ -223,7 +201,6 @@ void main() {
         );
 
         expect(result, equals(hydratedState));
-        expect(result.bleRoleMode, BleRoleMode.auto);
         expect(result.trustLevelOf(ProximityUnderlay.pan),
             ColdCallTrustLevel.closed);
       });

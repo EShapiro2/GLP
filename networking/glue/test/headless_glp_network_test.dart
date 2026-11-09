@@ -79,7 +79,7 @@ void main() {
         return;
       }
       expect(network.getIdentity(),
-          glp.PubKey.fromList(layer.identity.publicKey));
+          glp.PubKey.fromList(layer.getIdentity()));
 
       network.putKnownPeer(peer);
       expect(layer.store.state.knownPeers.known.containsKey(peer.hex), isTrue);
@@ -195,7 +195,7 @@ void main() {
       addTearDown(saving.dispose);
       await HeadlessGlpNetwork(saving).send(peer, Uint8List.fromList([1]));
       expect(
-          (await store.load(_hex(saving.identity.publicKey)))
+          (await store.load(_hex(saving.getIdentity())))
               .map((e) => e.recipientHex),
           [peer.hex],
           reason: 'the message is saved once the glue\'s send completes');

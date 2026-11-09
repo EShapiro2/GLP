@@ -175,41 +175,6 @@ void main() {
       });
     });
 
-    group('createReadReceiptPacket', () {
-      test('creates read receipt with message ID', () {
-        const messageId = 'test-message-id-12345';
-        final packet = handler.createReadReceiptPacket(messageId: messageId);
-
-        expect(packet.type, equals(PacketType.readReceipt));
-        expect(utf8.decode(packet.payload), equals(messageId));
-      });
-
-      test('handles UUID message IDs', () {
-        const messageId = '550e8400-e29b-41d4-a716-446655440000';
-        final packet = handler.createReadReceiptPacket(messageId: messageId);
-
-        final decodedId = utf8.decode(packet.payload);
-        expect(decodedId, equals(messageId));
-      });
-    });
-
-    group('decodeReadReceipt', () {
-      test('decodes read receipt payload', () {
-        const messageId = 'msg-abc-123';
-        final payload = utf8.encode(messageId);
-        final decoded = handler.decodeReadReceipt(payload);
-
-        expect(decoded, equals(messageId));
-      });
-
-      test('handles empty message ID', () {
-        final payload = utf8.encode('');
-        final decoded = handler.decodeReadReceipt(payload);
-
-        expect(decoded, equals(''));
-      });
-    });
-
     group('createAckPacket', () {
       test('creates ACK with message ID', () {
         const messageId = 'ack-msg-1';

@@ -107,14 +107,6 @@ class ProtocolHandler {
     return buffer.toBytes();
   }
 
-  /// Create READ_RECEIPT packet
-  GrassrootsPacket createReadReceiptPacket({required String messageId}) {
-    return GrassrootsPacket(
-      type: PacketType.readReceipt,
-      payload: utf8.encode(messageId),
-    );
-  }
-
   // ===== Decoding =====
 
   /// Decode and verify a self-signed ANNOUNCE payload.
@@ -161,11 +153,6 @@ class ProtocolHandler {
       publicKey: Uint8List.fromList(pubkey),
       protocolVersion: version,
     );
-  }
-
-  /// Decode READ_RECEIPT payload
-  String decodeReadReceipt(Uint8List payload) {
-    return utf8.decode(payload);
   }
 
   /// Create ACK packet (for delivery confirmation)
