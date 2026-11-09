@@ -1,9 +1,9 @@
 # A run of the cascade on GPE
 
-- Contract: `GPE` (`gpe` to the checker), its owner's two files `programs/social/graph/GPE.txt` and `programs/social/graph/GPE.glp`, copied here as they stood at `db96f014`.
-- The paper: `/Users/udi/Grassroots/GSA (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `db96f014` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-09 16:50 UTC by `cascade.sh gpe`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GPE` (`gpe` to the checker), its owner's two files `programs/social/graph/GPE.txt` and `programs/social/graph/GPE.glp`, copied here as they stood at `74a133c0`.
+- The paper: `git@github.com:EShapiro2/GSG-Grassroots-Social-Graph.git` at `42c09c85`, for the paper's own record.
+- The tools: this repository at `74a133c0` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-09 17:00 UTC by `cascade.sh gpe`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

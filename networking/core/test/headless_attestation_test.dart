@@ -140,7 +140,7 @@ void main() {
       await caller.dispose();
       await service.dispose();
     });
-    service.putKnownPeer(caller.identity.publicKey);
+    service.putKnownPeer(caller.getIdentity());
     expect(await service.start(), isTrue);
     expect(await caller.start(), isTrue);
     return (service, caller);
@@ -151,11 +151,11 @@ void main() {
     HeadlessGrassrootsNetwork service,
   ) async {
     caller.wan.putPeerAddress(
-      service.identity.publicKey,
+      service.getIdentity(),
       '127.0.0.1:${service.boundPort}',
     );
     await caller.send(
-      service.identity.publicKey,
+      service.getIdentity(),
       Uint8List.fromList(utf8.encode('hello')),
     );
   }
@@ -246,7 +246,7 @@ void main() {
     );
     expect(serviceConnected, isFalse,
         reason: 'onPeerConnected does not fire on a failed attestation');
-    expect(service.isPeerReachable(caller.identity.publicKey), isFalse);
+    expect(service.isPeerReachable(caller.getIdentity()), isFalse);
   }, timeout: Timeout.none);
 
   test('a profile with nothing to offer is unattested at its peer, and still '
@@ -325,7 +325,7 @@ void main() {
     );
     expect(serviceConnected, isFalse,
         reason: 'onPeerConnected does not fire on a failed attestation');
-    expect(service.isPeerReachable(caller.identity.publicKey), isFalse,
+    expect(service.isPeerReachable(caller.getIdentity()), isFalse,
         reason: 'the session is torn down');
   }, timeout: Timeout.none);
 }

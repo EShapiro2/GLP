@@ -196,9 +196,10 @@ void main() {
     await firstConnect.future;
     expect(connects, isNotEmpty,
         reason: 'the exchange must complete and the peer become reachable');
-    // Loopback lies within none of the agent's own local prefixes, so the
-    // UDP session is WAN.
-    expect(connects.single.$2, Underlay.wan);
+    // Loopback is among the agent's own local prefixes, so the UDP session
+    // between two agents on one machine is LAN (GNA 582ef60: "two agents on
+    // one machine are LAN contact to each other"; WAN until then).
+    expect(connects.single.$2, Underlay.lan);
     expect(connects.single.$3, isNull,
         reason: 'a platform with no attestation yields null for the '
             'application: the identity is unattested, not refused');

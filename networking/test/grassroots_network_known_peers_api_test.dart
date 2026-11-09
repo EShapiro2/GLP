@@ -146,9 +146,12 @@ void main() {
     expect(store.state.knownPeers.isKnown(peerHex), isFalse);
     expect(store.state.knownPeers.addressOf(peerHex), isNull);
     expect(store.state.knownPeers.dialBook, isEmpty);
+    expect(store.state.peers.getPeerByPubkeyHex(peerHex)?.udpAddress, isNull);
 
-    // Withdrawal is not amnesia about the wire: re-supplying works.
+    // Withdrawal is not amnesia about the wire: re-supplying works, and does
+    // not bring the withdrawn address back.
     network.putKnownPeer(peer.publicKey);
     expect(store.state.knownPeers.isKnown(peerHex), isTrue);
+    expect(store.state.peers.getPeerByPubkeyHex(peerHex)?.udpAddress, isNull);
   });
 }

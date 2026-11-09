@@ -53,9 +53,8 @@ void main() {
       'aabbccdd11223344aabbccdd11223344aabbccdd11223344aabbccdd11223344';
   const peerB =
       'eeff00112233445566778899aabbccddeeff00112233445566778899aabbccdd';
-  // A non-default settings state: a role mode and an open level.
+  // A non-default settings state: an open level.
   final customSettings = const SettingsState()
-      .copyWith(bleRoleMode: BleRoleMode.centralOnly)
       .withTrustLevel(ProximityUnderlay.lan, ColdCallTrustLevel.open);
 
   late PersistenceService service;
@@ -144,7 +143,6 @@ void main() {
       final result = await service.loadSettings();
 
       expect(result, equals(customSettings));
-      expect(result.bleRoleMode, BleRoleMode.centralOnly);
     });
 
     test('returns default SettingsState on corrupt data', () async {
@@ -159,10 +157,11 @@ void main() {
     });
 
     test('discards a partial settings blob whole', () async {
-      // No tolerant decoder: a blob lacking the role mode is malformed and is
-      // discarded whole, leaving the defaults, rather than read past.
+      // No tolerant decoder: a blob lacking the trust level of an underlay is
+      // malformed and is discarded whole, leaving the defaults, rather than
+      // read past.
       final partialJson = {
-        'coldCallTrustLevels': {'pan': 'open', 'lan': 'closed'},
+        'coldCallTrustLevels': {'pan': 'open'},
       };
 
       SharedPreferences.setMockInitialValues({
@@ -509,7 +508,6 @@ void main() {
       expect(knownPeersJson['known'], isEmpty);
 
       final settingsJson = jsonDecode(settingsData!) as Map<String, dynamic>;
-      expect(settingsJson['bleRoleMode'], 'auto');
       expect(settingsJson['coldCallTrustLevels'], {'pan': 'closed', 'lan': 'closed'});
 
       final conversationsJson =
@@ -737,7 +735,7 @@ void main() {
       // Verify contents
       final settingsJson = jsonDecode(prefs.getString('grassroots_settings_v2')!)
           as Map<String, dynamic>;
-      expect(settingsJson['bleRoleMode'], 'centralOnly');
+      expect(settingsJson.keys.toSet(), {'coldCallTrustLevels'});
 
       final unreadJson =
           jsonDecode(prefs.getString('grassroots_unread_counts_v2')!)

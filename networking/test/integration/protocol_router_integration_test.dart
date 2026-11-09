@@ -117,7 +117,7 @@ void main() {
       AnnounceData? receivedAnnounce;
       PeerTransport? receivedTransport;
       bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (data, transport, {String? udpPeerId, bool inSession = false}) {
         receivedAnnounce = data;
         receivedTransport = transport;
       };
@@ -159,7 +159,7 @@ void main() {
 
       bool announced = false;
       bobRouter.onPeerAnnounced =
-          (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (_, __, {String? udpPeerId, bool inSession = false}) {
         announced = true;
       };
 
@@ -204,7 +204,8 @@ void main() {
         rssi: -70,
       );
 
-      expect(receivedId, equals(messageId));
+      expect(receivedId,
+          equals(MessageRouter.deliveryIdOf(aliceIdentity.publicKey, messageId)));
       expect(receivedPayload, equals(messagePayload));
       expect(receivedSender, equals(aliceIdentity.publicKey));
     });
@@ -232,29 +233,6 @@ void main() {
     });
   });
 
-  group('BLE READ_RECEIPT roundtrip', () {
-    test('Alice sends read receipt, Bob receives message ID', () async {
-      const messageId = 'msg-12345678';
-
-      final packet = aliceProtocol.createReadReceiptPacket(
-        messageId: messageId,
-      );
-
-      String? receivedMessageId;
-      bobRouter.onReadReceiptReceived = (id) {
-        receivedMessageId = id;
-      };
-
-      await bobRouter.processPacket(
-        seal(packet),
-        transport: PeerTransport.bleDirect,
-        rssi: -70,
-      );
-
-      expect(receivedMessageId, equals(messageId));
-    });
-  });
-
   group('UDP ANNOUNCE roundtrip', () {
     test('Alice creates UDP ANNOUNCE, Bob receives and decodes it', () async {
       final announcePayload = aliceProtocol.createAnnouncePayload();
@@ -268,14 +246,14 @@ void main() {
       AnnounceData? receivedAnnounce;
       PeerTransport? receivedTransport;
       bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (data, transport, {String? udpPeerId, bool inSession = false}) {
         receivedAnnounce = data;
         receivedTransport = transport;
       };
 
       await bobRouter.processPacket(
         packet,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
@@ -285,13 +263,13 @@ void main() {
         receivedAnnounce!.protocolVersion,
         equals(ProtocolHandler.protocolVersion),
       );
-      expect(receivedTransport, equals(PeerTransport.udp));
+      expect(receivedTransport, equals(PeerTransport.wan));
 
       // Verify Bob's Redux store was updated
       final peerState =
           bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peerState, isNotNull);
-      expect(peerState!.transport, equals(PeerTransport.udp));
+      expect(peerState!.transport, equals(PeerTransport.wan));
     });
 
   });
@@ -314,11 +292,12 @@ void main() {
 
       await bobRouter.processPacket(
         seal(packet),
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
-      expect(receivedId, equals(messageId));
+      expect(receivedId,
+          equals(MessageRouter.deliveryIdOf(aliceIdentity.publicKey, messageId)));
       expect(receivedPayload, equals(messagePayload));
       expect(receivedSender, equals(aliceIdentity.publicKey));
     });
@@ -331,36 +310,13 @@ void main() {
       final packet = aliceProtocol.createAckPacket(messageId: messageId);
 
       String? receivedMessageId;
-      bobRouter.onAckReceived = (id) {
+      bobRouter.onAckReceived = (_, id) {
         receivedMessageId = id;
       };
 
       await bobRouter.processPacket(
         seal(packet),
-        transport: PeerTransport.udp,
-        udpPeerId: 'peer-alice-id',
-      );
-
-      expect(receivedMessageId, equals(messageId));
-    });
-  });
-
-  group('UDP READ_RECEIPT roundtrip', () {
-    test('Alice sends read receipt via UDP, Bob receives it', () async {
-      const messageId = 'rcpt1234';
-
-      final packet = aliceProtocol.createReadReceiptPacket(
-        messageId: messageId,
-      );
-
-      String? receivedMessageId;
-      bobRouter.onReadReceiptReceived = (id) {
-        receivedMessageId = id;
-      };
-
-      await bobRouter.processPacket(
-        seal(packet),
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
@@ -402,7 +358,7 @@ void main() {
 
       int announceCount = 0;
       bobRouter.onPeerAnnounced =
-          (_, __, {bool isNew = false, String? udpPeerId, bool inSession = false}) {
+          (_, __, {String? udpPeerId, bool inSession = false}) {
         announceCount++;
       };
 
@@ -452,7 +408,7 @@ void main() {
 
       await bobRouter.processPacket(
         udpPacket,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-udp',
       );
 
@@ -460,7 +416,8 @@ void main() {
       // dial book stays empty until putPeerAddress supplies one.
       peer = bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peer, isNotNull);
-      expect(peer!.lastUdpSeen, isNotNull);
+      expect(peer!.lastWanSeen, isNotNull);
+      expect(peer.lastLanSeen, isNull);
       expect(peer.udpAddress, isNull);
     });
   });

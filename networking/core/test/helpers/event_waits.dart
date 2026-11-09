@@ -63,8 +63,8 @@ Future<void> until(
 Future<void> untilBothReachable(
         HeadlessGrassrootsNetwork a, HeadlessGrassrootsNetwork b) =>
     until([a, b], () =>
-        a.isPeerReachable(b.identity.publicKey) &&
-        b.isPeerReachable(a.identity.publicKey));
+        a.isPeerReachable(b.getIdentity()) &&
+        b.isPeerReachable(a.getIdentity()));
 
 /// A queue store that tells each save of a queue: [inner] holds the queue,
 /// and [untilSaved] waits for the save the test waits on.

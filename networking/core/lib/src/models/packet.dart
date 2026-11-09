@@ -20,9 +20,6 @@ enum PacketType {
   /// Whole-message delivery acknowledgment (dedup re-ACKed)
   ack(0x06),
 
-  /// Read receipt (recipient has read the message)
-  readReceipt(0x08),
-
   /// Signaling between an agent and a rendezvous server (the reflected
   /// address)
   signaling(0x09),
@@ -38,9 +35,6 @@ enum PacketType {
 
   /// Session-encrypted delivery acknowledgment.
   secureAck(0x0F),
-
-  /// Session-encrypted read receipt.
-  secureReadReceipt(0x11),
 
   /// Session-encrypted signaling packet.
   secureSignaling(0x12),
@@ -85,7 +79,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
-      case PacketType.readReceipt:
       case PacketType.signaling:
       case PacketType.attestationFragment:
         return true;
@@ -94,7 +87,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -113,7 +105,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -122,7 +113,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
-      case PacketType.readReceipt:
       case PacketType.signaling:
       case PacketType.attestationFragment:
       case PacketType.noiseHandshake:
@@ -138,8 +128,6 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.secureFragmentAck;
       case PacketType.ack:
         return PacketType.secureAck;
-      case PacketType.readReceipt:
-        return PacketType.secureReadReceipt;
       case PacketType.signaling:
         return PacketType.secureSignaling;
       case PacketType.attestationFragment:
@@ -150,7 +138,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
       case PacketType.secureAttestationFragment:
       case PacketType.secureAnnounce:
@@ -166,8 +153,6 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.fragmentAck;
       case PacketType.secureAck:
         return PacketType.ack;
-      case PacketType.secureReadReceipt:
-        return PacketType.readReceipt;
       case PacketType.secureSignaling:
         return PacketType.signaling;
       case PacketType.secureAttestationFragment:
@@ -178,7 +163,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
-      case PacketType.readReceipt:
       case PacketType.signaling:
       case PacketType.attestationFragment:
       case PacketType.noiseHandshake:
