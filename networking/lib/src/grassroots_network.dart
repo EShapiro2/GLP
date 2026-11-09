@@ -168,22 +168,30 @@ List<KnownPeerAddressUpdatedAction> computeKnownPeerAddressMirrorActions({
   return actions;
 }
 
+/// Peers whose session on the IP [underlay] — [Underlay.lan] or
+/// [Underlay.wan] — has a path standing ([connectedPubkeys]) and has been
+/// silent past [staleThreshold] by that session's own clock
+/// ([PeerState.lastSeenOn]): "A peer silent for two consecutive intervals is
+/// stale on that underlay, independently per underlay" (spec §ANNOUNCE and
+/// Liveness, Heartbeat). Traffic on the peer's other sessions does not count.
 @visibleForTesting
-Set<String> computeStaleUdpPeerPubkeys({
+Set<String> computeStaleIpPeerPubkeys({
   required Iterable<PeerState> peers,
-  required Set<String> connectedUdpPubkeys,
+  required Underlay underlay,
+  required Set<String> connectedPubkeys,
   required Duration staleThreshold,
   DateTime? now,
 }) {
+  assert(underlay != Underlay.pan, 'an IP session is on the LAN or the WAN');
   final evaluationTime = now ?? DateTime.now();
   final stale = <String>{};
 
   for (final peer in peers) {
-    if (!connectedUdpPubkeys.contains(peer.pubkeyHex)) continue;
-    final lastUdpSeen = peer.lastUdpSeen;
-    if (lastUdpSeen == null) continue;
+    if (!connectedPubkeys.contains(peer.pubkeyHex)) continue;
+    final lastSeen = peer.lastSeenOn(underlay);
+    if (lastSeen == null) continue;
 
-    if (evaluationTime.difference(lastUdpSeen) > staleThreshold) {
+    if (evaluationTime.difference(lastSeen) > staleThreshold) {
       stale.add(peer.pubkeyHex);
     }
   }
@@ -363,8 +371,10 @@ class GrassrootsNetwork {
   /// each observe no handshake in flight and create one, clobbering the
   /// pair's single state machine — glare then stalls instead of resolving by
   /// the deterministic rule. An IK first message names its sender only once
-  /// it is read (GNA §2.6), so the chain is one per medium
-  /// ([_handshakeChainOf]); waiting for the session happens outside it.
+  /// it is read (GNA §2.6), so the chain is one per session kind — the PAN's,
+  /// the LAN's and the WAN's ([_handshakeChainOf]), the LAN and the WAN
+  /// sharing the UDP carrier but each holding its own sessions; waiting for
+  /// the session happens outside it.
   final Map<String, Future<void>> _handshakeChains = {};
 
   /// The handshake chain of [transport].
@@ -393,32 +403,49 @@ class GrassrootsNetwork {
   /// The IP carrier of the shared message transport (spec §Message
   /// Transport): session-encrypted fragments in UDP datagrams, per-fragment
   /// ACK, retransmit-with-backoff under a bounded per-peer window —
-  /// retransmission is the reliability mechanism.
-  late final MessageTransportSender _udpMessageSender = MessageTransportSender(
-    maxChunk: FragmentHandler.udpMaxChunk,
-    sendPacket: (peerHex, packet) async {
-      final bytes = await _packetBytesForTransport(
-        packet: packet,
-        transport: PeerTransport.udp,
-        recipientPubkey: _hexToBytes(peerHex),
-        peerId: peerHex,
+  /// retransmission is the reliability mechanism. One sender per IP session,
+  /// so the LAN session and the WAN session each have their own lanes, and a
+  /// session's exhaustion tears down that session alone.
+  late final MessageTransportSender _lanMessageSender =
+      _ipMessageSender(PeerTransport.lan);
+  late final MessageTransportSender _wanMessageSender =
+      _ipMessageSender(PeerTransport.wan);
+
+  MessageTransportSender _ipMessageSender(PeerTransport session) =>
+      MessageTransportSender(
+        maxChunk: FragmentHandler.udpMaxChunk,
+        sendPacket: (peerHex, packet) async {
+          final pathId = UdpTransportService.pathId(session, peerHex);
+          final bytes = await _packetBytesForTransport(
+            packet: packet,
+            transport: session,
+            recipientPubkey: _hexToBytes(peerHex),
+            peerId: pathId,
+          );
+          if (bytes == null) return false;
+          return await _udpService?.sendToPeer(pathId, bytes) ?? false;
+        },
+        // A message's attempts ran out on the session: tear it down as the
+        // liveness sweep does, so reachability is reported. The message stays
+        // queued. A signal for a session already gone concerns nothing that
+        // stands.
+        onAttemptsExhausted: (peerHex) {
+          final peer = _peersState.getPeerByPubkeyHex(peerHex);
+          if (peer == null ||
+              !(_udpService?.hasPath(session, peerHex) ?? false)) {
+            return;
+          }
+          _disconnectStaleIp(peer, session);
+        },
       );
-      if (bytes == null) return false;
-      return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
-    },
-    // A message's attempts ran out on the session: tear it down as the liveness
-    // sweep does for UDP, so reachability is reported. The message stays
-    // queued.
-    // A signal for a session already gone concerns nothing that stands.
-    onAttemptsExhausted: (peerHex) {
-      final peer = _peersState.getPeerByPubkeyHex(peerHex);
-      if (peer == null ||
-          _udpService?.getPeerIdForPubkey(peer.publicKey) == null) {
-        return;
-      }
-      _disconnectStaleUdp(peer);
-    },
-  );
+
+  /// The message transport sender of [transport]'s carrier.
+  MessageTransportSender _messageSenderFor(PeerTransport transport) =>
+      switch (transport) {
+        PeerTransport.bleDirect => _bleMessageSender,
+        PeerTransport.lan => _lanMessageSender,
+        PeerTransport.wan => _wanMessageSender,
+      };
 
   /// The BLE carrier of the same transport: fragments ride GATT writes,
   /// which are link-acknowledged — retransmission is a backstop that rarely
@@ -505,10 +532,7 @@ class GrassrootsNetwork {
     final key = _handshakePairKey(transport, pubkey);
     _handshakeRetransmits.remove(key)?.cancel();
     final window = Stopwatch()..start();
-    final sender = switch (transport) {
-      PeerTransport.udp => _udpMessageSender,
-      PeerTransport.bleDirect => _bleMessageSender,
-    };
+    final sender = _messageSenderFor(transport);
     var interval = const Duration(milliseconds: 800);
     void tick() {
       _handshakeRetransmits.remove(key);
@@ -600,8 +624,10 @@ class GrassrootsNetwork {
   late final NoiseSessionManager _noiseSessions;
 
   /// Deduplicate in-flight UDP path setups (punch and association) across all
-  /// callers.
-  final Map<String, Future<bool>> _udpConnectInFlight = {};
+  /// callers, by the path's id ([UdpTransportService.pathId]): a LAN dial and a
+  /// WAN dial to one peer are two paths, and neither waits on the other. Each
+  /// completes with the opened path's id, or null.
+  final Map<String, Future<String?>> _udpConnectInFlight = {};
 
   /// Deduplicate proactive auto-UDP workflows kicked off by repeated ANNOUNCEs.
   final Map<String, Future<void>> _autoUdpConnectInFlight = {};
@@ -924,19 +950,28 @@ class GrassrootsNetwork {
       const <Underlay>[];
 
   /// The public `ip:port` at which the layer observes the connected peer — the
-  /// source address of its live, attested UDP session — or null when the peer
-  /// is reachable over no IP underlay (GNA §4.2, `observedPeerAddress(pk)`,
+  /// source address of its live, attested UDP session, the WAN session's where
+  /// the peer holds one on each IP underlay — or null when the peer is
+  /// reachable over no IP underlay (GNA §4.2, `observedPeerAddress(pk)`,
   /// behind `peer_address/2`), behind [WanApi.observedPeerAddress]. Not the
   /// dial-book address, which GLP supplies or a session observed earlier
   /// (GNA, 2026-10-11, Task C).
   String? _observedPeerAddress(Uint8List pubkey) {
     final peer = _peersState.getPeerByPubkey(pubkey);
-    if (peer == null ||
-        !peer.reachableUnderlays.any((u) => u != Underlay.pan)) {
-      return null;
+    if (peer == null) return null;
+    for (final session in const [PeerTransport.wan, PeerTransport.lan]) {
+      if (!peer.reachableUnderlays.contains(session.underlay)) continue;
+      final observed = _observedAddressOn(session, pubkey);
+      if (observed != null) return observed;
     }
+    return null;
+  }
+
+  /// The `ip:port` of [pubkey]'s path of the IP [session], or null when it
+  /// holds none.
+  String? _observedAddressOn(PeerTransport session, Uint8List pubkey) {
     final udp = _udpService;
-    final peerId = udp?.getPeerIdForPubkey(pubkey);
+    final peerId = udp?.pathIdFor(session, _pubkeyToHex(pubkey));
     if (udp == null || peerId == null) return null;
     final remote = udp.getRemoteAddress(peerId);
     return remote == null
@@ -960,11 +995,15 @@ class GrassrootsNetwork {
     if (!_localNetworkRead) return;
     final pubkeyHex = _pubkeyToHex(pubkey);
     if (!store.state.knownPeers.known.containsKey(pubkeyHex)) return;
-    if (!_noiseSessions.hasSession(PeerTransport.udp, pubkey)) return;
-    if (_udpUnderlayOf(pubkey) != Underlay.wan) return;
-    final observed = _observedPeerAddress(pubkey);
+    if (!_noiseSessions.hasSession(PeerTransport.wan, pubkey)) return;
+    final observed = _observedAddressOn(PeerTransport.wan, pubkey);
     final parsed = observed == null ? null : parseAddressString(observed);
     if (parsed == null) return;
+    // A path's session is fixed when the path opens, so a LAN peer that
+    // reached us before the local network was read holds a WAN path at its
+    // LAN address. The address must be WAN contact under the prefixes now in
+    // force, or it is not the WAN address.
+    if (_ipSessionFor(parsed.ip) != PeerTransport.wan) return;
     final address = parsed.toAddressString();
     if (store.state.knownPeers.known[pubkeyHex] == address) return;
     store.dispatch(AssociateUdpAddressAction(
@@ -1112,15 +1151,17 @@ class GrassrootsNetwork {
         return open &&
             announced != null &&
             listEquals(announced, remotePubkey);
-      case PeerTransport.udp:
-        final underlay = _ipUnderlayOfConnection(peerId);
-        if (underlay == null) return false;
-        final lanOpen = underlay == Underlay.lan &&
+      case PeerTransport.lan:
+      case PeerTransport.wan:
+        final lanOpen = transport == PeerTransport.lan &&
             store.state.settings.isOpenOn(ProximityUnderlay.lan);
         if (pattern == NoisePattern.ik) {
           return lanOpen || _isKnownPeerPubkey(remotePubkey);
         }
-        return lanOpen && peerId == _pubkeyToHex(remotePubkey);
+        return lanOpen &&
+            peerId ==
+                UdpTransportService.pathId(
+                    transport, _pubkeyToHex(remotePubkey));
     }
   }
 
@@ -1132,13 +1173,12 @@ class GrassrootsNetwork {
   /// connection dropped"). Over IP that is LAN contact, by its source address
   /// (GNA §2.7); WAN contact is initiated by address with the peer's key
   /// already expected, and has no ANNOUNCE before its handshake.
-  bool _acceptsClearAnnounce(PeerTransport transport, {String? udpPeerId}) =>
-      switch (transport) {
+  bool _acceptsClearAnnounce(PeerTransport transport) => switch (transport) {
         PeerTransport.bleDirect =>
           store.state.settings.isOpenOn(ProximityUnderlay.pan),
-        PeerTransport.udp =>
-          _ipUnderlayOfConnection(udpPeerId) == Underlay.lan &&
-              store.state.settings.isOpenOn(ProximityUnderlay.lan),
+        PeerTransport.lan =>
+          store.state.settings.isOpenOn(ProximityUnderlay.lan),
+        PeerTransport.wan => false,
       };
 
   /// The pattern this side runs as initiator toward [pubkey] (GNA §2.6): IK
@@ -1151,10 +1191,7 @@ class GrassrootsNetwork {
         _isRendezvousPubkeyHex(_pubkeyToHex(pubkey))) {
       return NoisePattern.ik;
     }
-    if (transport == PeerTransport.udp &&
-        _udpUnderlayOf(pubkey) == Underlay.wan) {
-      return NoisePattern.ik;
-    }
+    if (transport == PeerTransport.wan) return NoisePattern.ik;
     return NoisePattern.xx;
   }
 
@@ -1184,26 +1221,19 @@ class GrassrootsNetwork {
     return null;
   }
 
-  /// The underlay of the IP contact carried on [udpPeerId], by its source
-  /// address ([_ipUnderlayFor]).  This is the whole of how the layer tells
-  /// LAN contact from contact from the Internet at large.
-  Underlay? _ipUnderlayOfConnection(String? udpPeerId) => _ipUnderlayFor(
-        udpPeerId == null ? null : _udpService?.getRemoteAddress(udpPeerId)?.ip,
-      );
+  /// The IP session of a path to [address]: [PeerTransport.lan] or
+  /// [PeerTransport.wan] as [_ipUnderlayFor] classifies it, or null when it
+  /// falls under no underlay this layer runs.  The UDP carrier asks this once
+  /// per path, when the path is opened, and an inbound datagram belongs to
+  /// the session of the path its source address is bound to.  This is the
+  /// whole of how the layer tells LAN contact from contact from the Internet
+  /// at large.
+  PeerTransport? _ipSessionFor(InternetAddress? address) =>
+      _ipUnderlayFor(address)?.session;
 
-  /// The underlay of [pk]'s session on [carrier] (spec §Networking API): a
-  /// GATT session is [Underlay.pan], and a UDP session is [_udpUnderlayOf].
-  /// Null for a carrier that holds no session.
-  Underlay? _underlayOf(PeerTransport carrier, Uint8List pk) =>
-      switch (carrier) {
-        PeerTransport.bleDirect => Underlay.pan,
-        PeerTransport.udp => _udpUnderlayOf(pk),
-      };
-
-  /// The underlay of [pk]'s UDP session ([_ipUnderlayFor] of its address), or
-  /// null when it falls under no underlay this layer runs.
-  Underlay? _udpUnderlayOf(Uint8List pk) =>
-      _ipUnderlayOfConnection(_udpService?.getPeerIdForPubkey(pk));
+  /// Whether [pubkey] holds a Noise session on either IP underlay.
+  bool _hasIpSession(Uint8List pubkey) => ipSessions
+      .any((session) => _noiseSessions.hasSession(session, pubkey));
 
   /// Our public UDP address, as a rendezvous server observed it.
   ///
@@ -1338,6 +1368,7 @@ class GrassrootsNetwork {
         identity: identity,
         store: store,
         protocolHandler: _protocolHandler,
+        sessionOf: _ipSessionFor,
       );
 
       // Initialize the service (dispatches state to Redux)
@@ -1462,7 +1493,9 @@ class GrassrootsNetwork {
       } catch (e) {
         debugPrint('Error stopping UDP: $e');
       }
-      _noiseSessions.resetTransport(PeerTransport.udp);
+      for (final session in ipSessions) {
+        _noiseSessions.resetTransport(session);
+      }
     }
   }
 
@@ -1491,7 +1524,7 @@ class GrassrootsNetwork {
     _rendezvousServers[server.pubkeyHex] = server;
     if (previous != null && previous.address != server.address) {
       _resetRendezvousBackoff(_rendezvousConfigKey(previous));
-      if (!_noiseSessions.hasSession(PeerTransport.udp, server.publicKey)) {
+      if (!_hasIpSession(server.publicKey)) {
         _endUdpSession(server.publicKey, 'its declared address was replaced');
       }
     }
@@ -1512,23 +1545,35 @@ class GrassrootsNetwork {
     _endUdpSession(pubkey, 'it is no longer a declared rendezvous server');
   }
 
-  /// End the UDP session with [pubkey], and its path: its handshake and its
-  /// attestation exchange stop, and the reachability subscriber reports the
-  /// peer disconnected over the IP underlay where it was reachable.
+  /// End the UDP sessions with [pubkey], on the LAN and on the WAN, and their
+  /// paths: their handshakes and their attestation exchanges stop, and the
+  /// reachability subscriber reports the peer disconnected over each IP
+  /// underlay where it was reachable. An IP underlay on which the peer holds
+  /// no path, no session and no authenticated state has nothing to end.
   void _endUdpSession(Uint8List pubkey, String reason) {
     final pubkeyHex = _pubkeyToHex(pubkey);
-    debugPrint('[udp] Ending the session with ${pubkeyHex.substring(0, 8)}: '
+    debugPrint('[udp] Ending the sessions with ${pubkeyHex.substring(0, 8)}: '
         '$reason');
-    final key = _handshakePairKey(PeerTransport.udp, pubkey);
-    _handshakeRetransmits.remove(key)?.cancel();
-    _attestationDeadlines.remove(key)?.timer.cancel();
-    _attestedOn.remove(key);
-    _noiseSessions.reset(PeerTransport.udp, pubkey);
-    store.dispatch(PeerUdpConnectionChangedAction(
-      pubkeyHex: pubkeyHex,
-      connected: false,
-    ));
-    unawaited(_udpService?.disconnectFromPeer(pubkeyHex));
+    final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
+    for (final session in ipSessions) {
+      if (!(_udpService?.hasPath(session, pubkeyHex) ?? false) &&
+          !_noiseSessions.hasSession(session, pubkey) &&
+          !(peer?.isAuthenticatedOn(session.underlay) ?? false)) {
+        continue;
+      }
+      final key = _handshakePairKey(session, pubkey);
+      _handshakeRetransmits.remove(key)?.cancel();
+      _attestationDeadlines.remove(key)?.timer.cancel();
+      _attestedOn.remove(key);
+      _noiseSessions.reset(session, pubkey);
+      store.dispatch(PeerIpSessionChangedAction(
+        pubkeyHex: pubkeyHex,
+        underlay: session.underlay,
+        connected: false,
+      ));
+      unawaited(_udpService
+          ?.disconnectFromPeer(UdpTransportService.pathId(session, pubkeyHex)));
+    }
   }
 
   /// Whether [server] is still declared, at its address: what a dial begun
@@ -1695,10 +1740,12 @@ class GrassrootsNetwork {
         _lastRendezvousSuppressionLogKey.remove(configKey);
 
         // A session stands: its heartbeat is ANNOUNCE inside it (GNA §2.5).
-        if (_noiseSessions.hasSession(
-            PeerTransport.udp, rendezvous.publicKey)) {
-          await _announceInSession(PeerTransport.udp, rendezvous.publicKey,
-              peerId: rendezvous.pubkeyHex);
+        // The server's session is the one its address falls under
+        // (decision 8).
+        final standing = _ipSessionFor(rendezvousAddress.ip);
+        if (standing != null &&
+            _noiseSessions.hasSession(standing, rendezvous.publicKey)) {
+          await _announceInSession(standing, rendezvous.publicKey);
           _resetRendezvousBackoff(configKey);
           debugPrint(
             '[rendezvous] Announced inside the standing session '
@@ -1711,15 +1758,17 @@ class GrassrootsNetwork {
         // server by (GNA §2.6: "for a rendezvous server, whose key GLP
         // declared").
         if (!_isDeclared(rendezvous)) return false;
-        final success = await _ensureUdpConnection(
-              rendezvous.pubkeyHex,
-              rendezvous.address,
-              isRendezvous: true,
-            ) &&
+        final session = await _ensureUdpConnection(
+          rendezvous.pubkeyHex,
+          rendezvous.address,
+          isRendezvous: true,
+        );
+        final success = session != null &&
             await _ensureNoiseSession(
-              transport: PeerTransport.udp,
+              transport: session,
               recipientPubkey: rendezvous.publicKey,
-              peerId: rendezvous.pubkeyHex,
+              peerId:
+                  UdpTransportService.pathId(session, rendezvous.pubkeyHex),
             );
         if (success && !_isDeclared(rendezvous)) {
           // Removed, or its address replaced, while the dial ran.
@@ -1930,7 +1979,9 @@ class GrassrootsNetwork {
 
     await _stopLanDiscovery();
     if (_udpService != null) {
-      _noiseSessions.resetTransport(PeerTransport.udp);
+      for (final session in ipSessions) {
+        _noiseSessions.resetTransport(session);
+      }
       await _udpService!.dispose();
       _udpService = null;
     }
@@ -1940,10 +1991,15 @@ class GrassrootsNetwork {
       UdpTransportStateChangedAction(TransportState.uninitialized),
     );
 
-    // Mark UDP peers as disconnected (connections are dead)
+    // Mark UDP peers as disconnected (connections are dead): on the LAN where
+    // a LAN session stood, and on the WAN where a WAN session stood or a WAN
+    // address is recorded.
     for (final peer in _peersState.peersList) {
-      if (peer.udpAddress != null) {
-        store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
+      if (peer.lanAuthenticated) {
+        store.dispatch(PeerIpDisconnectedAction(peer.publicKey, Underlay.lan));
+      }
+      if (peer.wanAuthenticated || peer.udpAddress != null) {
+        store.dispatch(PeerIpDisconnectedAction(peer.publicKey, Underlay.wan));
       }
     }
 
@@ -2102,7 +2158,12 @@ class GrassrootsNetwork {
     }
     final canonical = parsed.toAddressString();
     debugPrint('[lan] recognized known peer $peerShort at $canonical');
-    if (_udpService?.getPeerIdForPubkey(matched) != null) return;
+    // A path of the session this address falls under already stands; a
+    // session on the other IP underlay does not stand in for it.
+    final session = _ipSessionFor(parsed.ip);
+    if (session != null && (_udpService?.hasPath(session, pubkeyHex) ?? false)) {
+      return;
+    }
     final myHex = _pubkeyToHex(identity.publicKey);
     if (myHex.compareTo(pubkeyHex) < 0) {
       unawaited(_dialLanMatch(pubkeyHex, parsed));
@@ -2124,25 +2185,29 @@ class GrassrootsNetwork {
   Future<void> _dialLanMatch(String pubkeyHex, AddressInfo parsed) async {
     final udp = _udpService;
     if (udp == null) return;
-    if (_ipUnderlayFor(parsed.ip) == null) {
+    final session = _ipSessionFor(parsed.ip);
+    if (session == null) {
       debugPrint(
         '[lan] ${parsed.toAddressString()} falls under no underlay this layer '
         'runs; not dialing',
       );
       return;
     }
-    if (_udpConnectInFlight.containsKey(pubkeyHex)) return;
+    final pathId = UdpTransportService.pathId(session, pubkeyHex);
+    if (_udpConnectInFlight.containsKey(pathId)) return;
     final connectFuture = udp.connectToPeer(pubkeyHex, parsed.ip, parsed.port);
-    _udpConnectInFlight[pubkeyHex] = connectFuture;
-    bool opened;
+    _udpConnectInFlight[pathId] = connectFuture;
+    String? opened;
     try {
       opened = await connectFuture;
     } finally {
-      if (identical(_udpConnectInFlight[pubkeyHex], connectFuture)) {
-        _udpConnectInFlight.remove(pubkeyHex);
+      if (identical(_udpConnectInFlight[pathId], connectFuture)) {
+        _udpConnectInFlight.remove(pathId);
       }
     }
-    if (!opened) {
+    final openedSession =
+        opened == null ? null : UdpTransportService.parsePathId(opened);
+    if (opened == null || openedSession == null) {
       debugPrint(
         '[lan] could not open a path to ${pubkeyHex.substring(0, 8)} at '
         '${parsed.toAddressString()}',
@@ -2150,9 +2215,9 @@ class GrassrootsNetwork {
       return;
     }
     await _ensureNoiseSession(
-      transport: PeerTransport.udp,
+      transport: openedSession.session,
       recipientPubkey: _hexToBytes(pubkeyHex),
-      peerId: pubkeyHex,
+      peerId: opened,
     );
   }
 
@@ -2218,13 +2283,14 @@ class GrassrootsNetwork {
     if (udp == null) return;
     // The temp peer id IS the canonical address, the same convention the
     // inbound path uses, so their ANNOUNCE re-keys this very path.
-    final opened = await udp.connectToPeer(canonical, parsed.ip, parsed.port);
-    if (!opened) {
+    final opened = await udp.connectToAddress(parsed);
+    final session = udp.sessionOfPath(canonical);
+    if (!opened || session == null) {
       debugPrint('[lan] could not open a path to $canonical');
       return;
     }
     // The first contact's ANNOUNCE, before the XX handshake (GNA §2.5).
-    final sent = await _sendClearAnnounce(PeerTransport.udp, canonical);
+    final sent = await _sendClearAnnounce(session, canonical);
     debugPrint(
       sent
           ? '[lan] ANNOUNCE sent to $canonical; awaiting theirs'
@@ -2463,7 +2529,9 @@ class GrassrootsNetwork {
   /// reachable — its session there established, authenticated and attested —
   /// and answer whether it did (spec §Session Establishment; GNA, 2026-10-11,
   /// Task A: `send` is held until the peer is reachable). PAN first, then the
-  /// peer's IP underlay. A peer reachable over none is connected to in the
+  /// LAN, then the WAN; the message rides one session whole, and a session
+  /// that refuses it hands it to the next. A peer reachable over none is
+  /// connected to in the
   /// background ([_openPathsTo]), and the attestation exchange's completion
   /// drains the queue ([_onAttestationReceived]).
   Future<bool> _trySendMessageNow({
@@ -2505,25 +2573,28 @@ class GrassrootsNetwork {
       debugPrint('BLE send failed, falling back to UDP...');
     }
 
-    // --- The LAN or the WAN: the peer's attested UDP session ---
-    if (_udpAvailable && _udpService != null) {
-      // Re-read peer — state may have changed during the BLE attempt.
+    // --- The LAN, then the WAN: the peer's attested UDP sessions ---
+    for (final session in ipSessions) {
+      final udp = _udpService;
+      if (!_udpAvailable || udp == null) break;
+      // Re-read peer — state may have changed during an earlier attempt.
       final resolvedPeer = _peersState.getPeerByPubkey(recipientPubkey) ?? peer;
-      final ipUnderlay = resolvedPeer.reachableUnderlays
-          .where((u) => u != Underlay.pan)
-          .firstOrNull;
-      if (ipUnderlay != null &&
-          _udpService!.getPeerIdForPubkey(recipientPubkey) != null &&
-          await _udpMessageSender.sendMessage(
-            resolvedPeer.pubkeyHex,
-            messageId,
-            payload,
-          )) {
+      if (!resolvedPeer.reachableUnderlays.contains(session.underlay) ||
+          !udp.hasPath(session, resolvedPeer.pubkeyHex)) {
+        continue;
+      }
+      debugPrint('Sending via ${session.name.toUpperCase()} to '
+          '${peer.displayName}');
+      if (await _messageSenderFor(session).sendMessage(
+        resolvedPeer.pubkeyHex,
+        messageId,
+        payload,
+      )) {
         _markSentAndTrackForAck(
           messageId: messageId,
           recipientPubkey: recipientPubkey,
           payload: payload,
-          underlay: ipUnderlay,
+          underlay: session.underlay,
           bleDeviceId: null,
         );
         return true;
@@ -2579,14 +2650,21 @@ class GrassrootsNetwork {
     if (udp == null || !_udpAvailable) return;
     if (reachable.any((u) => u != Underlay.pan)) return;
 
-    if (udp.getPeerIdForPubkey(pubkey) != null) {
+    final standing = [
+      for (final session in ipSessions)
+        if (udp.hasPath(session, pubkeyHex)) session,
+    ];
+    if (standing.isNotEmpty) {
       // A path stands and its session is not attested yet: make sure its
-      // handshake is under way.
-      await _ensureNoiseSession(
-        transport: PeerTransport.udp,
-        recipientPubkey: pubkey,
-        peerId: pubkeyHex,
-      );
+      // handshake is under way, on each IP underlay that has one.
+      await Future.wait([
+        for (final session in standing)
+          _ensureNoiseSession(
+            transport: session,
+            recipientPubkey: pubkey,
+            peerId: UdpTransportService.pathId(session, pubkeyHex),
+          ),
+      ]);
       return;
     }
 
@@ -2595,13 +2673,14 @@ class GrassrootsNetwork {
       if (candidates.isEmpty) return false;
       final address = target.udpAddress ?? candidates.first;
       debugPrint('Connecting via UDP to ${target.displayName} at $address');
-      if (!await _ensureUdpConnection(target.pubkeyHex, address)) return false;
+      final session = await _ensureUdpConnection(target.pubkeyHex, address);
+      if (session == null) return false;
       // Where both ends dial, the first messages cross and the glare rule
       // settles the pair.
       await _ensureNoiseSession(
-        transport: PeerTransport.udp,
+        transport: session,
         recipientPubkey: pubkey,
-        peerId: target.pubkeyHex,
+        peerId: UdpTransportService.pathId(session, target.pubkeyHex),
       );
       return true;
     }
@@ -2874,12 +2953,12 @@ class GrassrootsNetwork {
     );
   }
 
-  /// Signal that a message to [pubkey] exhausted its attempts, as the UDP
-  /// sender does when a fragment runs out of retransmissions: the test seam for
-  /// the exhaustion teardown.
+  /// Signal that a message to [pubkey] exhausted its attempts on its session
+  /// on the IP [underlay], as that session's sender does when a fragment runs
+  /// out of retransmissions: the test seam for the exhaustion teardown.
   @visibleForTesting
-  void debugExhaustUdpAttempts(Uint8List pubkey) =>
-      _udpMessageSender.debugExhaust(_pubkeyToHex(pubkey));
+  void debugExhaustIpAttempts(Underlay underlay, Uint8List pubkey) =>
+      _messageSenderFor(underlay.session).debugExhaust(_pubkeyToHex(pubkey));
 
   @visibleForTesting
   int queuedMessageCountForPeer(Uint8List pubkey) =>
@@ -2904,10 +2983,19 @@ class GrassrootsNetwork {
   @visibleForTesting
   Future<void> debugSweepKnownPeers() => _sweepKnownPeers();
 
-  /// Drop the UDP path to [pubkey], as a lost session does.
+  /// Whether the message lane of [pubkey]'s session on the IP [underlay]
+  /// still holds a message: one neither acknowledged nor failed.
   @visibleForTesting
-  Future<void> debugDropUdpPath(Uint8List pubkey) async {
-    await _udpService?.disconnectFromPeer(_pubkeyToHex(pubkey));
+  bool debugIpLaneHolds(Underlay underlay, Uint8List pubkey) =>
+      _messageSenderFor(underlay.session)
+          .hasOutstanding(_pubkeyToHex(pubkey));
+
+  /// Drop [pubkey]'s UDP path of its session on the IP [underlay], as a lost
+  /// session does.
+  @visibleForTesting
+  Future<void> debugDropIpPath(Underlay underlay, Uint8List pubkey) async {
+    await _udpService?.disconnectFromPeer(
+        UdpTransportService.pathId(underlay.session, _pubkeyToHex(pubkey)));
   }
 
   /// The agent's own candidates for the local end of a dial — its interface
@@ -2921,8 +3009,8 @@ class GrassrootsNetwork {
   Set<String> debugLocalCandidates() => _connectionLocalCandidates();
 
   /// The peer id bound to [address] on the UDP path, or null when none is —
-  /// the address itself while the peer is unidentified, its pubkey hex after
-  /// ANNOUNCE has claimed the path.
+  /// the address itself while the peer is unidentified, its path id
+  /// ([UdpTransportService.pathId]) after ANNOUNCE has claimed the path.
   @visibleForTesting
   String? debugUdpPeerIdForAddress(String address) =>
       _udpService?.peerIdForAddress(address);
@@ -3008,15 +3096,17 @@ class GrassrootsNetwork {
     if (_udpAvailable && _udpService != null) {
       try {
         for (final peer in _peersState.peersList) {
-          if (_udpService!.getPeerIdForPubkey(peer.publicKey) == null ||
-              !peer.reachableUnderlays.any((u) => u != Underlay.pan)) {
-            continue;
+          for (final session in ipSessions) {
+            if (!_udpService!.hasPath(session, peer.pubkeyHex) ||
+                !peer.reachableUnderlays.contains(session.underlay)) {
+              continue;
+            }
+            await _messageSenderFor(session).sendMessage(
+              peer.pubkeyHex,
+              _uuid.v4(),
+              payload,
+            );
           }
-          await _udpMessageSender.sendMessage(
-            peer.pubkeyHex,
-            _uuid.v4(),
-            payload,
-          );
         }
       } catch (e) {
         debugPrint('UDP broadcast failed: $e');
@@ -3096,6 +3186,18 @@ class GrassrootsNetwork {
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
+  /// The key of the peer on the connection [peerId] of [transport], where the
+  /// connection names it: a GATT leg the BLE service has identified, or an
+  /// identified UDP path ([UdpTransportService.pathId]). Null otherwise — a
+  /// temp UDP path among them.
+  Uint8List? _pubkeyOfConnection(PeerTransport transport, String peerId) {
+    if (transport == PeerTransport.bleDirect) {
+      return _bleService?.getPubkeyForPeerId(peerId);
+    }
+    final identified = UdpTransportService.parsePathId(peerId);
+    return identified == null ? null : _hexToBytes(identified.pubkeyHex);
+  }
+
   /// Whether [pubkey] is in the known set — a key GLP supplied via the API
   /// (putKnownPeer / putPeerAddress). This is the Closed-mode recognition
   /// predicate (spec §Cold-Call Trust Levels: the layer recognizes only
@@ -3149,14 +3251,17 @@ class GrassrootsNetwork {
   /// channel exists.
   void _onNoiseSessionEstablished(PeerTransport transport, Uint8List pubkey) {
     switch (transport) {
-      case PeerTransport.udp:
+      case PeerTransport.lan:
+      case PeerTransport.wan:
         store.dispatch(
-          PeerUdpConnectionChangedAction(
+          PeerIpSessionChangedAction(
             pubkeyHex: _pubkeyToHex(pubkey),
+            underlay: transport.underlay,
             connected: true,
           ),
         );
-        _recordObservedWanAddress(pubkey);
+        // F02: only a WAN session's address is ever the recorded WAN address.
+        if (transport == PeerTransport.wan) _recordObservedWanAddress(pubkey);
         break;
       case PeerTransport.bleDirect:
         store.dispatch(PeerBleAuthenticatedAction(pubkey));
@@ -3169,11 +3274,10 @@ class GrassrootsNetwork {
     // discovery, once per identity, the handshake having taken the place of
     // the ANNOUNCE that identified it before (GNA §3.1). The rendezvous
     // server is infrastructure, not a discoverable peer.
-    final underlay = _underlayOf(transport, pubkey);
-    final discoveredOn = switch (underlay) {
-      Underlay.pan => ProximityUnderlay.pan,
-      Underlay.lan => ProximityUnderlay.lan,
-      Underlay.wan || null => null,
+    final discoveredOn = switch (transport) {
+      PeerTransport.bleDirect => ProximityUnderlay.pan,
+      PeerTransport.lan => ProximityUnderlay.lan,
+      PeerTransport.wan => null,
     };
     final pubkeyHex = _pubkeyToHex(pubkey);
     if (discoveredOn != null &&
@@ -3206,10 +3310,7 @@ class GrassrootsNetwork {
   /// attestation is never queued for the next session: the next session
   /// sends its own.
   void _awaitPeerAttestation(PeerTransport transport, Uint8List pubkey) {
-    final sender = switch (transport) {
-      PeerTransport.udp => _udpMessageSender,
-      PeerTransport.bleDirect => _bleMessageSender,
-    };
+    final sender = _messageSenderFor(transport);
     final hash = _noiseSessions.handshakeHashFor(transport, pubkey);
     if (hash == null) return;
     final key = _handshakePairKey(transport, pubkey);
@@ -3277,10 +3378,7 @@ class GrassrootsNetwork {
     PeerTransport transport,
     Uint8List pubkey,
   ) async {
-    final sender = switch (transport) {
-      PeerTransport.udp => _udpMessageSender,
-      PeerTransport.bleDirect => _bleMessageSender,
-    };
+    final sender = _messageSenderFor(transport);
     final handshakeHash = _noiseSessions.handshakeHashFor(transport, pubkey);
     if (handshakeHash == null) {
       debugPrint('[attest] No handshake hash for '
@@ -3372,17 +3470,9 @@ class GrassrootsNetwork {
           'attested; ignored');
       return;
     }
-    final underlay = _underlayOf(transport, senderPubkey);
-    if (underlay == null) {
-      // An IP session whose peer's address falls under no underlay this layer
-      // runs is no session (GNA, 2026-10-11, Q1).
-      _tearDownForAttestation(
-        transport,
-        senderPubkey,
-        'the session falls under no underlay this layer runs',
-      );
-      return;
-    }
+    // The session's own underlay: a path is opened only under an underlay
+    // this layer runs (GNA, 2026-10-11, Q1), and its session keeps it.
+    final underlay = transport.underlay;
 
     AttestationEvidence? offered;
     try {
@@ -3445,12 +3535,15 @@ class GrassrootsNetwork {
     _attestedOn.remove(_handshakePairKey(transport, pubkey));
     _noiseSessions.reset(transport, pubkey);
     switch (transport) {
-      case PeerTransport.udp:
-        store.dispatch(PeerUdpConnectionChangedAction(
+      case PeerTransport.lan:
+      case PeerTransport.wan:
+        store.dispatch(PeerIpSessionChangedAction(
           pubkeyHex: _pubkeyToHex(pubkey),
+          underlay: transport.underlay,
           connected: false,
         ));
-        unawaited(_udpService?.disconnectFromPeer(_pubkeyToHex(pubkey)));
+        unawaited(_udpService?.disconnectFromPeer(
+            UdpTransportService.pathId(transport, _pubkeyToHex(pubkey))));
       case PeerTransport.bleDirect:
         store.dispatch(PeerBleDisconnectedAction(pubkey));
     }
@@ -3464,11 +3557,10 @@ class GrassrootsNetwork {
     if (transport == PeerTransport.bleDirect) {
       peerId ??= _connectedBleDeviceIdForPeer(peer);
       if (peerId == null) return;
-    } else if (transport == PeerTransport.udp) {
-      if (_udpService?.getPeerIdForPubkey(peer.publicKey) == null) return;
-      peerId ??= peer.pubkeyHex;
     } else {
-      return;
+      final pathId = _udpService?.pathIdFor(transport, peer.pubkeyHex);
+      if (pathId == null) return;
+      peerId ??= pathId;
     }
 
     await _ensureNoiseSession(
@@ -3497,9 +3589,9 @@ class GrassrootsNetwork {
       final open = switch (transport) {
         PeerTransport.bleDirect =>
           store.state.settings.isOpenOn(ProximityUnderlay.pan),
-        PeerTransport.udp =>
-          _udpUnderlayOf(recipientPubkey) == Underlay.lan &&
-              store.state.settings.isOpenOn(ProximityUnderlay.lan),
+        PeerTransport.lan =>
+          store.state.settings.isOpenOn(ProximityUnderlay.lan),
+        PeerTransport.wan => false,
       };
       if (!open) {
         debugPrint('[noise] No handshake toward the stranger '
@@ -3558,14 +3650,11 @@ class GrassrootsNetwork {
       return service.sendToPeer(id, bytes);
     }
 
-    if (transport == PeerTransport.udp) {
-      final id = peerId ?? _pubkeyToHex(recipientPubkey);
-      final service = _udpService;
-      if (service == null) return false;
-      return service.sendToPeer(id, bytes);
-    }
-
-    return false;
+    final id = peerId ??
+        UdpTransportService.pathId(transport, _pubkeyToHex(recipientPubkey));
+    final service = _udpService;
+    if (service == null) return false;
+    return service.sendToPeer(id, bytes);
   }
 
   Future<Uint8List?> _packetBytesForTransport({
@@ -3676,37 +3765,44 @@ class GrassrootsNetwork {
     required Uint8List recipientPubkey,
     bool isRendezvous = false,
   }) async {
-    if (_udpService == null) return false;
+    final udp = _udpService;
+    if (udp == null) return false;
 
-    final connected =
-        _udpService!.getPeerIdForPubkey(recipientPubkey) != null ||
+    // A standing path, the LAN's before the WAN's; else the path to the
+    // recorded address, on the session it falls under.
+    final session =
+        ipSessions.where((s) => udp.hasPath(s, pubkeyHex)).firstOrNull ??
             await _ensureUdpConnection(
               pubkeyHex,
               udpAddress,
               isRendezvous: isRendezvous,
             );
-    if (!connected) return false;
+    if (session == null) return false;
+    final pathId = UdpTransportService.pathId(session, pubkeyHex);
 
     final bytes = await _packetBytesForTransport(
       packet: packet,
-      transport: PeerTransport.udp,
+      transport: session,
       recipientPubkey: recipientPubkey,
-      peerId: pubkeyHex,
+      peerId: pathId,
     );
     if (bytes == null) return false;
 
-    return _udpService!.sendToPeer(pubkeyHex, bytes);
+    return await _udpService?.sendToPeer(pathId, bytes) ?? false;
   }
 
-  Future<bool> _ensureUdpConnection(
+  /// Open a path to [pubkeyHex] at the best remote candidate of its recorded
+  /// address and [udpAddress], and answer the IP session it belongs to — the
+  /// one its address falls under (decision 8) — or null when none opened.  A
+  /// path of that session already standing is kept, and a path of the other
+  /// IP session neither satisfies nor blocks this one.
+  Future<PeerTransport?> _ensureUdpConnection(
     String pubkeyHex,
     String udpAddress, {
     bool isRendezvous = false,
   }) async {
-    if (_udpService == null) return false;
-    if (_udpService!.getPeerIdForPubkey(_hexToBytes(pubkeyHex)) != null) {
-      return true;
-    }
+    final udp = _udpService;
+    if (udp == null) return null;
     final peerShort = pubkeyHex.substring(0, 8);
     final peer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
 
@@ -3714,6 +3810,12 @@ class GrassrootsNetwork {
       peer,
       fallbackAddress: udpAddress,
     );
+    // A path of the session a candidate falls under already stands.
+    for (final candidate in remoteCandidates) {
+      final parsed = parseAddressString(candidate);
+      final session = parsed == null ? null : _ipSessionFor(parsed.ip);
+      if (session != null && udp.hasPath(session, pubkeyHex)) return session;
+    }
     // First dials can race the interface read: with no local candidates no
     // compatible pair exists and the dial fails spuriously — this is how a
     // rendezvous probe issued right after initialize()
@@ -3732,32 +3834,38 @@ class GrassrootsNetwork {
       peerLabel: peerShort,
     );
     if (pair == null) {
-      return false;
+      return null;
     }
     final addr = pair.remote;
     final selectedAddress = addr.toAddressString();
-    if (_ipUnderlayFor(addr.ip) == null) {
+    final session = _ipSessionFor(addr.ip);
+    if (session == null) {
       // No session over an underlay this layer does not run (GNA, 2026-10-11,
       // Q1).
       debugPrint(
         '[udp-send] $selectedAddress for $peerShort falls under no underlay '
         'this layer runs ($underlays); not dialing',
       );
-      return false;
+      return null;
     }
+    if (udp.hasPath(session, pubkeyHex)) return session;
 
     // Datagrams need no stream (spec §IP Connection): associating the path
     // has no simultaneous-open hazard, so both sides may do it freely; the
     // deterministic-initiator rule applies to session initiation, where the
     // glare rule enforces it.
 
-    final inFlight = _udpConnectInFlight[pubkeyHex];
+    final pathId = UdpTransportService.pathId(session, pubkeyHex);
+    final inFlight = _udpConnectInFlight[pathId];
     if (inFlight != null) {
       debugPrint('[udp-send] Reusing in-flight path setup to $peerShort...');
-      return inFlight;
+      final opened = await inFlight;
+      return opened == null
+          ? null
+          : UdpTransportService.parsePathId(opened)?.session;
     }
 
-    late final Future<bool> connectFuture;
+    late final Future<String?> connectFuture;
     connectFuture = () async {
       // Hole-punch to open NAT mappings before the path is associated.
       // Skip for peers with publicly routable addresses — punching is wasted
@@ -3773,25 +3881,27 @@ class GrassrootsNetwork {
       }
 
       debugPrint('[udp-send] Associating $peerShort at $selectedAddress...');
-      return _udpService!.connectToPeer(pubkeyHex, addr.ip, addr.port);
+      return udp.connectToPeer(pubkeyHex, addr.ip, addr.port);
     }();
-    _udpConnectInFlight[pubkeyHex] = connectFuture;
+    _udpConnectInFlight[pathId] = connectFuture;
 
-    bool connected = false;
+    String? opened;
     try {
-      connected = await connectFuture;
+      opened = await connectFuture;
     } finally {
-      if (identical(_udpConnectInFlight[pubkeyHex], connectFuture)) {
-        _udpConnectInFlight.remove(pubkeyHex);
+      if (identical(_udpConnectInFlight[pathId], connectFuture)) {
+        _udpConnectInFlight.remove(pathId);
       }
     }
 
-    if (connected) return true;
+    final openedSession =
+        opened == null ? null : UdpTransportService.parsePathId(opened)?.session;
+    if (openedSession != null) return openedSession;
 
     debugPrint(
       '[udp-send] Path setup failed to $peerShort at $selectedAddress',
     );
-    return false;
+    return null;
   }
 
   /// Proactively establish a UDP connection to a known peer at its dial-book
@@ -3835,14 +3945,15 @@ class GrassrootsNetwork {
     late final Future<void> task;
     task = () async {
       try {
-        final success = await _ensureUdpConnection(
-              pubkeyHex,
-              normalizedAddress,
-            ) &&
+        final session = await _ensureUdpConnection(
+          pubkeyHex,
+          normalizedAddress,
+        );
+        final success = session != null &&
             await _ensureNoiseSession(
-              transport: PeerTransport.udp,
+              transport: session,
               recipientPubkey: _hexToBytes(pubkeyHex),
-              peerId: pubkeyHex,
+              peerId: UdpTransportService.pathId(session, pubkeyHex),
             );
         if (success) {
           debugPrint(
@@ -3886,17 +3997,15 @@ class GrassrootsNetwork {
   /// Set up MessageRouter callbacks to dispatch to Redux and application layer
   void _setupRouterCallbacks() {
     // A message is kept before it is delivered and acknowledged to its
-    // sender, until the runtime acknowledges it (GNA §2.9, §2.11).  One whose
-    // session has no underlay is not delivered (below), and is not kept.
+    // sender, until the runtime acknowledges it (GNA §2.9, §2.11), with the
+    // underlay of the session it arrived on.
     _messageRouter.keepDelivered =
         (messageId, senderPubkey, payload, arrivalTransport) async {
-      final underlay = _underlayOf(arrivalTransport, senderPubkey);
-      if (underlay == null) return;
       await _persistedQueue.keep(DeliveredQueueEntry(
         senderHex: _pubkeyToHex(senderPubkey),
         messageId: messageId,
         payload: payload,
-        underlay: underlay,
+        underlay: arrivalTransport.underlay,
       ));
     };
 
@@ -3905,8 +4014,7 @@ class GrassrootsNetwork {
         (messageId, senderPubkey, payload, arrivalTransport) {
       // The underlay of the session the message arrived on, from the receive
       // path (not inferred from the peer's preferred/active carrier).
-      final underlay = _underlayOf(arrivalTransport, senderPubkey);
-      if (underlay == null) return;
+      final underlay = arrivalTransport.underlay;
 
       store.dispatch(
         MessageReceivedAction(
@@ -3934,7 +4042,8 @@ class GrassrootsNetwork {
       store.dispatch(MessageDeliveredAction(messageId: messageId));
       _clearAckPending(messageId);
       unawaited(_persistedQueue.remove(messageId));
-      _udpMessageSender.handleMessageAck(senderHex, messageId);
+      _lanMessageSender.handleMessageAck(senderHex, messageId);
+      _wanMessageSender.handleMessageAck(senderHex, messageId);
       _bleMessageSender.handleMessageAck(senderHex, messageId);
     };
 
@@ -3942,9 +4051,7 @@ class GrassrootsNetwork {
     // §Message Transport).
     _messageRouter.onFragmentAckReceived =
         (senderPubkey, messageId, index, transport) {
-      final sender = transport == PeerTransport.udp
-          ? _udpMessageSender
-          : _bleMessageSender;
+      final sender = _messageSenderFor(transport);
       sender.handleFragmentAck(_pubkeyToHex(senderPubkey), messageId, index);
     };
 
@@ -3952,12 +4059,7 @@ class GrassrootsNetwork {
     _messageRouter.onFragmentAckRequested =
         (transport, peerId, messageId, index) async {
       if (peerId == null) return;
-      Uint8List? recipientPubkey;
-      if (transport == PeerTransport.udp) {
-        recipientPubkey = _hexToBytes(peerId);
-      } else if (transport == PeerTransport.bleDirect) {
-        recipientPubkey = _bleService?.getPubkeyForPeerId(peerId);
-      }
+      final recipientPubkey = _pubkeyOfConnection(transport, peerId);
       if (recipientPubkey == null) return;
       final bytes = await _packetBytesForTransport(
         packet: GrassrootsPacket(
@@ -3970,7 +4072,7 @@ class GrassrootsNetwork {
         peerId: peerId,
       );
       if (bytes == null) return;
-      if (transport == PeerTransport.udp) {
+      if (transport.isIp) {
         await _udpService?.sendToPeer(peerId, bytes);
       } else {
         await _bleService?.sendToPeer(peerId, bytes);
@@ -4040,7 +4142,7 @@ class GrassrootsNetwork {
           // The handshake authenticated the connection's identity — map any
           // still-anonymous inbound UDP connection to the peer's pubkey, and
           // a GATT leg to its peer.
-          if (transport == PeerTransport.udp && peerId != null) {
+          if (transport.isIp && peerId != null) {
             _udpService?.mapIncomingConnectionToPubkey(
               peerId,
               _pubkeyToHex(remote),
@@ -4066,7 +4168,7 @@ class GrassrootsNetwork {
     // initiator's first packet opens under it, and only then ends the
     // standing session (GNA §2.6).
     _noiseSessions.onSessionCompleted = (transport, remote, peerId) {
-      if (transport == PeerTransport.udp && peerId != null) {
+      if (transport.isIp && peerId != null) {
         _udpService?.mapIncomingConnectionToPubkey(peerId, _pubkeyToHex(remote));
       }
       _recordHandshakeIdentity(transport, remote, peerId);
@@ -4091,19 +4193,11 @@ class GrassrootsNetwork {
       try {
         // Resolve the connection's identity when the transport already knows
         // it (BLE deviceId→pubkey from the handshake or an ANNOUNCE; UDP
-        // peerId is the pubkey hex once the connection is mapped). The session
+        // peerId names the pubkey once the connection is mapped). The session
         // manager falls back to its own connection→identity map from the
         // handshake, and over GATT to the session whose keys open the packet.
-        Uint8List? remotePubkey;
-        if (peerId != null) {
-          if (transport == PeerTransport.bleDirect) {
-            remotePubkey = _bleService?.getPubkeyForPeerId(peerId);
-          } else if (transport == PeerTransport.udp &&
-              !peerId.contains(':') &&
-              peerId.length == 64) {
-            remotePubkey = _hexToBytes(peerId);
-          }
-        }
+        final remotePubkey =
+            peerId == null ? null : _pubkeyOfConnection(transport, peerId);
         return await _noiseSessions.decryptPacket(
           packet,
           transport: transport,
@@ -4135,7 +4229,7 @@ class GrassrootsNetwork {
           final connection = switch (transport) {
             PeerTransport.bleDirect =>
               _connectedBleDeviceIdForPeer(announcedPeer),
-            PeerTransport.udp => udpPeerId,
+            PeerTransport.lan || PeerTransport.wan => udpPeerId,
           };
           if (connection != null &&
               !_noiseSessions.hasSession(transport, data.publicKey)) {
@@ -4156,10 +4250,8 @@ class GrassrootsNetwork {
         // other identity-learned event ([_onNoiseSessionEstablished]).
         final discoveredOn = switch (transport) {
           PeerTransport.bleDirect => ProximityUnderlay.pan,
-          PeerTransport.udp =>
-            _ipUnderlayOfConnection(udpPeerId) == Underlay.lan
-                ? ProximityUnderlay.lan
-                : null,
+          PeerTransport.lan => ProximityUnderlay.lan,
+          PeerTransport.wan => null,
         };
         if (discoveredOn != null &&
             !_isRendezvousPubkeyHex(pubkeyHex) &&
@@ -4186,12 +4278,7 @@ class GrassrootsNetwork {
         debugPrint('Cannot send ACK for $messageId: no peerId');
         return;
       }
-      Uint8List? recipientPubkey;
-      if (transport == PeerTransport.udp) {
-        recipientPubkey = _hexToBytes(peerId);
-      } else if (transport == PeerTransport.bleDirect) {
-        recipientPubkey = _bleService?.getPubkeyForPeerId(peerId);
-      }
+      final recipientPubkey = _pubkeyOfConnection(transport, peerId);
       if (recipientPubkey == null) {
         debugPrint('Cannot send ACK for $messageId: unknown recipient pubkey');
         return;
@@ -4208,9 +4295,9 @@ class GrassrootsNetwork {
       );
       if (bytes == null) return;
 
-      if (transport == PeerTransport.udp) {
+      if (transport.isIp) {
         await _udpService?.sendToPeer(peerId, bytes);
-      } else if (transport == PeerTransport.bleDirect) {
+      } else {
         await _bleService?.sendToPeer(peerId, bytes);
       }
     };
@@ -4376,7 +4463,7 @@ class GrassrootsNetwork {
 
     // Forward UDP data to the MessageRouter, preserving each connection's
     // arrival order through async processing (spec §Session Establishment).
-    _udpService!.onUdpDataReceived = (peerId, data) {
+    _udpService!.onUdpDataReceived = (session, peerId, data) {
       _enqueueRx('udp:$peerId', () async {
         try {
           final packet = GrassrootsPacket.deserialize(data);
@@ -4386,7 +4473,7 @@ class GrassrootsNetwork {
           final remote = _udpService?.getRemoteAddress(peerId);
           await _messageRouter.processPacket(
             packet,
-            transport: PeerTransport.udp,
+            transport: session,
             udpPeerId: peerId,
             observedIp: remote?.ip.address,
             observedPort: remote?.port,
@@ -4401,15 +4488,20 @@ class GrassrootsNetwork {
     // trust; any other "is ignored and its connection dropped" (GNA §2.5,
     // Trust gating): WAN contact runs IK with the expected key and sends no
     // ANNOUNCE before it.
-    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
-        _acceptsClearAnnounce(PeerTransport.udp, udpPeerId: udpPeerId);
+    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) {
+      final session =
+          udpPeerId == null ? null : _udpService?.sessionOfPath(udpPeerId);
+      return session != null && _acceptsClearAnnounce(session);
+    };
 
     _messageRouter.onUdpAnnounceRejected = (senderPubkey, udpPeerId) {
       if (udpPeerId == null) return;
       // Not a path that carries a session.
       final carrier = _udpService?.getPubkeyForPeerId(udpPeerId);
+      final session = _udpService?.sessionOfPath(udpPeerId);
       if (carrier != null &&
-          _noiseSessions.hasSession(PeerTransport.udp, carrier)) {
+          session != null &&
+          _noiseSessions.hasSession(session, carrier)) {
         return;
       }
       unawaited(_udpService?.disconnectFromPeer(udpPeerId));
@@ -4425,16 +4517,22 @@ class GrassrootsNetwork {
       // handshake or the ANNOUNCE that names the peer re-keys the path and
       // fires a second connection event under the real key, and that one does
       // this work.
-      if (event.peerId.contains(':')) {
+      final identified = UdpTransportService.parsePathId(event.peerId);
+      if (identified == null) {
         debugPrint(
           'UDP path ${event.connected ? "opened" : "closed"} for the '
           'unidentified ${event.peerId}',
         );
         return;
       }
+      // The path is one IP session's — the LAN's or the WAN's — and what it
+      // reports concerns that session alone.
+      final session = identified.session;
+      final pubkeyHex = identified.pubkeyHex;
       if (event.connected) {
         debugPrint('UDP peer connected: ${event.peerId}');
-        store.dispatch(PeerUdpSeenAction(_hexToBytes(event.peerId)));
+        store.dispatch(
+            PeerIpSeenAction(_hexToBytes(pubkeyHex), session.underlay));
         {
           // Incoming: a peer reached us at our public address without us
           // first opening a NAT mapping for them. Record that our current
@@ -4443,7 +4541,7 @@ class GrassrootsNetwork {
           // Outgoing: we reached the peer at their advertised address
           // without any punch coordination. Record that their address
           // accepted unsolicited inbound.
-          final peer = _peersState.getPeerByPubkeyHex(event.peerId);
+          final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
           final observedRemote = _udpService!.getRemoteAddress(event.peerId);
           final peerCandidates = _udpCandidatesForPeer(peer);
           final matchedAdvertisedAddress = observedRemote != null &&
@@ -4497,34 +4595,36 @@ class GrassrootsNetwork {
         }
       } else {
         debugPrint('UDP peer disconnected: ${event.peerId}');
-        final disconnectedPeer = _peersState.getPeerByPubkeyHex(event.peerId);
+        final disconnectedPeer = _peersState.getPeerByPubkeyHex(pubkeyHex);
         if (disconnectedPeer != null) {
-          _onUdpPeerDisconnected(disconnectedPeer);
+          _onUdpPeerDisconnected(disconnectedPeer, session);
         }
       }
       if (!event.connected) {
-        // Disconnect is immediate — drop reachability now.
+        // Disconnect is immediate — drop reachability over this underlay now.
         store.dispatch(
-          PeerUdpConnectionChangedAction(
-            pubkeyHex: event.peerId,
+          PeerIpSessionChangedAction(
+            pubkeyHex: pubkeyHex,
+            underlay: session.underlay,
             connected: false,
           ),
         );
       }
       if (event.connected) {
-        _drainQueuedMessagesForPeer(_hexToBytes(event.peerId));
+        _drainQueuedMessagesForPeer(_hexToBytes(pubkeyHex));
       }
     });
   }
 
-  /// Fired when a UDP path ended or the ANNOUNCE keepalive timed out: the
-  /// session goes with it.  Overall reachability is tracked by the
-  /// reachability subscriber on the store, which fires the consolidated
-  /// onPeerDisconnected when the last live transport drops; recovery is the
+  /// Fired when a UDP path of the IP [session] ended or its ANNOUNCE
+  /// keepalive timed out: that session goes with it, and the peer's session
+  /// on the other IP underlay stands.  Reachability per underlay is tracked
+  /// by the reachability subscriber on the store, which fires
+  /// onPeerDisconnected for the underlay that went down; recovery is the
   /// heartbeat sweep's and the social graph's (spec §Connectivity and
   /// Address, "Address-change recovery").
-  void _onUdpPeerDisconnected(PeerState peer) {
-    _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
+  void _onUdpPeerDisconnected(PeerState peer, PeerTransport session) {
+    _noiseSessions.reset(session, peer.publicKey);
   }
 
   /// Called by the host app when it returns to the foreground.
@@ -4615,7 +4715,7 @@ class GrassrootsNetwork {
     if (udp == null || !_udpAvailable) return;
     final down = [
       for (final server in _rendezvousServers.values)
-        if (udp.getPeerIdForPubkey(server.publicKey) == null) server,
+        if (!ipSessions.any((s) => udp.hasPath(s, server.pubkeyHex))) server,
     ];
     if (down.isEmpty) return;
     unawaited(_syncDeclaredRendezvous(configs: down, reason: 'heartbeat'));
@@ -4626,10 +4726,15 @@ class GrassrootsNetwork {
   /// reconnection attempts towards unreachable known peers ... and the replay
   /// of queued messages once a recipient is live again"; §4.2, Address-change
   /// recovery: "The heartbeat sweep therefore re-initiates connections to the
-  /// known peers").  A peer reachable over any underlay is not swept.  A dial
-  /// in flight is not repeated, and one that failed waits out its backoff
-  /// ([_connectToPeerViaUdp]).  The session's attestation exchange makes the
-  /// peer reachable, and that drains its queue.
+  /// known peers").  Sessions are per underlay (spec §Session Establishment),
+  /// so the recorded address is dialed whenever the peer is not reachable
+  /// over the session that address falls under (decision 8) — the WAN's, for
+  /// a WAN address — whatever its other sessions: a live LAN session does not
+  /// stand in for the WAN one.  A recorded address under no underlay this
+  /// layer runs is not dialed.  A dial in flight is not repeated, and one that
+  /// failed waits out its backoff ([_connectToPeerViaUdp]).  The session's
+  /// attestation exchange makes the peer reachable, and that drains its
+  /// queue.
   ///
   /// A peer known only from its LAN instance has no recorded address, so the
   /// dial book does not reach it; [_redialLanMatches] redials it from the
@@ -4638,17 +4743,25 @@ class GrassrootsNetwork {
     if (_udpService == null || !_udpAvailable) return Future.value();
     for (final entry in store.state.knownPeers.dialBook.entries) {
       final peer = _peersState.getPeerByPubkeyHex(entry.key);
-      if (peer != null && peer.isReachable) continue;
-      unawaited(
-          _connectToPeerViaUdp(entry.key, peer?.udpAddress ?? entry.value));
+      final address = peer?.udpAddress ?? entry.value;
+      final parsed = parseAddressString(address);
+      final session = parsed == null ? null : _ipSessionFor(parsed.ip);
+      // An address under no underlay this layer runs has no session to be
+      // had: it is not dialed, on this tick or any other.
+      if (session == null) continue;
+      if (peer != null && peer.reachableUnderlays.contains(session.underlay)) {
+        continue;
+      }
+      unawaited(_connectToPeerViaUdp(entry.key, address));
     }
     return _redialLanMatches();
   }
 
-  /// Redial each unreachable known peer whose LAN instance resolved within the
-  /// cache window (two slots), by the deterministic initiator only, as
-  /// [_tryLanContact] does on resolution. Unmatched instances are not dialed
-  /// here: that would cold-call them on every tick.
+  /// Redial each known peer with no LAN session whose LAN instance resolved
+  /// within the cache window (two slots), by the deterministic initiator only,
+  /// as [_tryLanContact] does on resolution — whatever its other sessions: a
+  /// live WAN session does not stand in for the LAN one. Unmatched instances
+  /// are not dialed here: that would cold-call them on every tick.
   Future<void> _redialLanMatches() async {
     final udp = _udpService;
     if (udp == null) return;
@@ -4662,12 +4775,16 @@ class GrassrootsNetwork {
       final matched = matchLanToken(entry.key, known);
       if (matched == null) continue;
       final pubkeyHex = _pubkeyToHex(matched);
-      final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-      if (peer != null && peer.isReachable) continue;
-      if (udp.getPeerIdForPubkey(matched) != null) continue;
-      if (myHex.compareTo(pubkeyHex) >= 0) continue;
       final parsed = parseAddressString(entry.value.address);
       if (parsed == null) continue;
+      final session = _ipSessionFor(parsed.ip);
+      if (session == null) continue;
+      final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
+      if (peer != null && peer.reachableUnderlays.contains(session.underlay)) {
+        continue;
+      }
+      if (udp.hasPath(session, pubkeyHex)) continue;
+      if (myHex.compareTo(pubkeyHex) >= 0) continue;
       dials.add(_dialLanMatch(pubkeyHex, parsed));
     }
     await Future.wait(dials);
@@ -4732,22 +4849,26 @@ class GrassrootsNetwork {
   }
 
   /// The heartbeat over IP (GNA §2.5, Heartbeat): ANNOUNCE inside every UDP
-  /// session; on an identified path that carries no session, toward a key
-  /// this side expects, the IK handshake afresh.
+  /// session, the LAN's and the WAN's alike; on an identified path that
+  /// carries no session, toward a key this side expects, the IK handshake
+  /// afresh.
   Future<void> _broadcastAnnounceViaUdp() async {
     final udp = _udpService;
     if (udp == null || !_udpAvailable) return;
     for (final peer in _peersState.peersList) {
       final pubkey = peer.publicKey;
-      if (udp.getPeerIdForPubkey(pubkey) == null) continue;
-      if (_noiseSessions.hasSession(PeerTransport.udp, pubkey)) {
-        await _announceInSession(PeerTransport.udp, pubkey);
-      } else if (_patternToward(PeerTransport.udp, pubkey) == NoisePattern.ik) {
-        unawaited(_ensureNoiseSession(
-          transport: PeerTransport.udp,
-          recipientPubkey: pubkey,
-          peerId: peer.pubkeyHex,
-        ));
+      for (final session in ipSessions) {
+        final pathId = udp.pathIdFor(session, peer.pubkeyHex);
+        if (pathId == null) continue;
+        if (_noiseSessions.hasSession(session, pubkey)) {
+          await _announceInSession(session, pubkey);
+        } else if (_patternToward(session, pubkey) == NoisePattern.ik) {
+          unawaited(_ensureNoiseSession(
+            transport: session,
+            recipientPubkey: pubkey,
+            peerId: pathId,
+          ));
+        }
       }
     }
   }
@@ -4820,7 +4941,8 @@ class GrassrootsNetwork {
     switch (transport) {
       case PeerTransport.bleDirect:
         return 'ble:$connection';
-      case PeerTransport.udp:
+      case PeerTransport.lan:
+      case PeerTransport.wan:
         final remote = _udpService?.getRemoteAddress(connection);
         return remote == null
             ? null
@@ -4842,7 +4964,7 @@ class GrassrootsNetwork {
     final sent = switch (transport) {
       PeerTransport.bleDirect =>
         await _bleService?.sendToPeer(connection, bytes) ?? false,
-      PeerTransport.udp =>
+      PeerTransport.lan || PeerTransport.wan =>
         await _udpService?.sendToPeer(connection, bytes) ?? false,
     };
     if (!sent) {
@@ -4864,7 +4986,8 @@ class GrassrootsNetwork {
     final connection = peerId ??
         switch (transport) {
           PeerTransport.bleDirect => _bleService?.getPeerIdForPubkey(pubkey),
-          PeerTransport.udp => _pubkeyToHex(pubkey),
+          PeerTransport.lan || PeerTransport.wan =>
+            UdpTransportService.pathId(transport, _pubkeyToHex(pubkey)),
         };
     if (connection == null) return false;
     final bytes = await _packetBytesForTransport(
@@ -4877,7 +5000,7 @@ class GrassrootsNetwork {
     return switch (transport) {
       PeerTransport.bleDirect =>
         await _bleService?.sendToPeer(connection, bytes) ?? false,
-      PeerTransport.udp =>
+      PeerTransport.lan || PeerTransport.wan =>
         await _udpService?.sendToPeer(connection, bytes) ?? false,
     };
   }
@@ -4889,39 +5012,44 @@ class GrassrootsNetwork {
         payload: _protocolHandler.createAnnouncePayload(),
       );
 
-  /// Remove peers that haven't sent an ANNOUNCE within the interval.
+  /// Tear down links silent for two announce intervals, and forget unprotected
+  /// peers silent on every carrier.
   ///
-  /// BLE/general staleness uses [PeerState.lastSeen]. UDP liveness is tracked
-  /// independently via [PeerState.lastUdpSeen] so a nearby BLE friend can age
-  /// out of "Friends Online" without disappearing from "Nearby".
+  /// BLE staleness uses [PeerState.lastBleSeen]. Each IP session's liveness
+  /// is tracked independently, the LAN session's via [PeerState.lastLanSeen]
+  /// and the WAN session's via [PeerState.lastWanSeen], so a silent session
+  /// is torn down alone while the peer's other sessions stand (spec §ANNOUNCE
+  /// and Liveness: "stale on that underlay, independently per underlay").
+  /// [PeerState.lastSeen], the latest of all, only decides when an
+  /// unprotected peer's entry is forgotten.
   void _removeStalePeers() {
     final staleThreshold = config.announceInterval * 2; // Give 2x grace period
 
-    // Tear down quiet UDP sessions that have missed 2 announce cycles.
-    final connectedUdpPubkeys = <String>{};
-    if (_udpService != null) {
-      for (final peer in _peersState.peersList) {
-        if (_udpService!.getPeerIdForPubkey(peer.publicKey) != null) {
-          connectedUdpPubkeys.add(peer.pubkeyHex);
-        }
-      }
-    }
-
-    final staleUdpPeers = computeStaleUdpPeerPubkeys(
-      peers: _peersState.peersList,
-      connectedUdpPubkeys: connectedUdpPubkeys,
-      staleThreshold: staleThreshold,
-    );
-    if (_udpService != null) {
-      for (final pubkeyHex in staleUdpPeers) {
-        final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-        if (peer == null) continue;
-
-        debugPrint(
-          '[udp-stale] No UDP traffic from ${peer.displayName} for '
-          '${staleThreshold.inSeconds}s; disconnecting stale session',
+    // Tear down quiet UDP sessions that have missed 2 announce cycles, each
+    // IP session by its own clock.
+    final udp = _udpService;
+    if (udp != null) {
+      for (final session in ipSessions) {
+        final stale = computeStaleIpPeerPubkeys(
+          peers: _peersState.peersList,
+          underlay: session.underlay,
+          connectedPubkeys: {
+            for (final peer in _peersState.peersList)
+              if (udp.hasPath(session, peer.pubkeyHex)) peer.pubkeyHex,
+          },
+          staleThreshold: staleThreshold,
         );
-        _disconnectStaleUdp(peer);
+        for (final pubkeyHex in stale) {
+          final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
+          if (peer == null) continue;
+
+          debugPrint(
+            '[udp-stale] No ${session.name.toUpperCase()} traffic from '
+            '${peer.displayName} for ${staleThreshold.inSeconds}s; '
+            'disconnecting stale session',
+          );
+          _disconnectStaleIp(peer, session);
+        }
       }
     }
 
@@ -4960,11 +5088,13 @@ class GrassrootsNetwork {
     store.dispatch(StalePeersRemovedAction(staleThreshold));
   }
 
-  /// Tear down a silent UDP session: the liveness sweep's teardown, also taken
-  /// when a message's attempts are exhausted on it.
-  void _disconnectStaleUdp(PeerState peer) {
-    store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
-    unawaited(_udpService!.disconnectFromPeer(peer.pubkeyHex));
+  /// Tear down a silent UDP session of the IP [session]: the liveness
+  /// sweep's teardown, also taken when a message's attempts are exhausted on
+  /// it. The peer's session on the other IP underlay is untouched.
+  void _disconnectStaleIp(PeerState peer, PeerTransport session) {
+    store.dispatch(PeerIpDisconnectedAction(peer.publicKey, session.underlay));
+    unawaited(_udpService!.disconnectFromPeer(
+        UdpTransportService.pathId(session, peer.pubkeyHex)));
   }
 
   /// Tear down a silent BLE attachment: the liveness sweep's teardown, also

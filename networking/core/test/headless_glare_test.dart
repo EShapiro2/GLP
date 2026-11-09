@@ -169,7 +169,8 @@ class _CrossingDialer {
           peerId: peerId,
           acceptFirstMessage: (pattern, _) => pattern == NoisePattern.ik,
           sendResponse: (payload, remotePubkey) async {
-            await udp!.sendToPeer(peerId ?? _hex(remotePubkey), _framed(payload));
+            await udp!.sendToPeer(
+                peerId ?? _path(remotePubkey), _framed(payload));
           },
         );
         if (result.sessionEstablished && peerId != null) {
@@ -180,10 +181,10 @@ class _CrossingDialer {
     router.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
       try {
-        Uint8List? remotePubkey;
-        if (peerId != null && peerId.length == 64 && !peerId.contains(':')) {
-          remotePubkey = _bytes(peerId);
-        }
+        final identified =
+            peerId == null ? null : UdpTransportService.parsePathId(peerId);
+        final remotePubkey =
+            identified == null ? null : _bytes(identified.pubkeyHex);
         return await sessions.decryptPacket(
           packet,
           transport: transport,
@@ -234,18 +235,19 @@ class _CrossingDialer {
       identity: identity,
       store: store,
       protocolHandler: protocol,
+      sessionOf: (_) => PeerTransport.wan,
     );
     if (!await service.initialize()) {
       throw StateError('dialer failed to bind a UDP socket');
     }
-    service.onUdpDataReceived = (peerId, data) {
+    service.onUdpDataReceived = (session, peerId, data) {
       // Per-connection arrival order (spec §Session Establishment).
       final previous = _rxChains[peerId] ?? Future<void>.value();
       _rxChains[peerId] = previous.then((_) async {
         try {
           await router.processPacket(
             GrassrootsPacket.deserialize(data),
-            transport: PeerTransport.udp,
+            transport: session,
             udpPeerId: peerId,
           );
         } catch (_) {}
@@ -263,19 +265,18 @@ class _CrossingDialer {
     String host,
     int port,
   ) async {
-    final hex = _hex(peerPubkey);
-    _peerHex = hex;
-    if (!await udp!.connectToPeer(hex, InternetAddress(host), port)) {
-      return false;
-    }
+    final path = await udp!.connectToPeer(
+        _hex(peerPubkey), InternetAddress(host), port);
+    if (path == null) return false;
+    _peerHex = path;
     _heldFirstMessage = await sessions.startHandshake(
-      PeerTransport.udp,
+      PeerTransport.wan,
       peerPubkey,
       pattern: NoisePattern.ik,
-      peerId: hex,
+      peerId: path,
     );
     final established =
-        await sessions.waitForSession(PeerTransport.udp, peerPubkey);
+        await sessions.waitForSession(PeerTransport.wan, peerPubkey);
     if (established) await sendAttestation(peerPubkey);
     return established;
   }
@@ -288,7 +289,7 @@ class _CrossingDialer {
   /// self-contained attestation fragment.
   Future<void> sendAttestation(Uint8List peerPubkey) async {
     final handshakeHash =
-        sessions.handshakeHashFor(PeerTransport.udp, peerPubkey);
+        sessions.handshakeHashFor(PeerTransport.wan, peerPubkey);
     if (handshakeHash == null) return;
     final encrypted = await sessions.encryptPacket(
       GrassrootsPacket(
@@ -300,10 +301,10 @@ class _CrossingDialer {
           chunk: encodeAttestationPayload(null),
         ),
       ),
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
       remotePubkey: peerPubkey,
     );
-    await udp!.sendToPeer(_hex(peerPubkey), encrypted.serialize());
+    await udp!.sendToPeer(_path(peerPubkey), encrypted.serialize());
   }
 
   Future<bool> sendPayload(
@@ -323,10 +324,10 @@ class _CrossingDialer {
           chunk: payload,
         ),
       ),
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
       remotePubkey: peerPubkey,
     );
-    return udp!.sendToPeer(_hex(peerPubkey), encrypted.serialize());
+    return udp!.sendToPeer(_path(peerPubkey), encrypted.serialize());
   }
 
   Future<void> dispose() async {
@@ -334,6 +335,11 @@ class _CrossingDialer {
     sessions.dispose();
   }
 }
+
+/// The id of the WAN path to [pubkey] (the headless profile runs the WAN
+/// alone).
+String _path(Uint8List pubkey) =>
+    UdpTransportService.pathId(PeerTransport.wan, _hex(pubkey));
 
 String _hex(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

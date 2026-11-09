@@ -13,7 +13,9 @@ import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
+import 'package:grassroots_networking_core/src/transport/local_network.dart';
 
+import 'helpers/event_waits.dart';
 import 'helpers/sodium_test_bootstrap.dart';
 
 /// Hermetic host candidates (see the glare test).
@@ -234,22 +236,31 @@ void main() {
     final peerId = sorted.last;
 
     final dialer = await startNode(dialerId);
+    // Loopback is not a local network: the dialer's prefixes are injected to
+    // place it within them, so the instance's address is LAN contact and its
+    // path the LAN session's (decision 8). The construction-time read of the
+    // local network would otherwise overwrite the injection.
+    await stateWhere(dialer.store, (s) => s.localNetwork.networkId != null);
+    dialer.store.dispatch(LocalNetworkChangedAction(localNetworkFromPrefixes(
+        [localPrefixOf(InternetAddress('127.0.0.1'))])));
     // Known by key alone: the LAN instance is the only address there is.
     dialer.putKnownPeer(peerId.publicKey);
 
     final (lanAddress, dialed) = await instance();
     dialer.debugResolveLanInstance(peerId.lanToken, lanAddress);
     await dialed;
+    final lanPath = 'lan/${hex(peerId.publicKey)}';
+    expect(dialer.debugUdpPeerIdForAddress(lanAddress), lanPath);
 
     // The session drops: the path to the LAN address is gone.
-    await dialer.debugDropUdpPath(peerId.publicKey);
+    await dialer.debugDropIpPath(Underlay.lan, peerId.publicKey);
     expect(dialer.debugUdpPeerIdForAddress(lanAddress), isNull);
 
     // The heartbeat sweep redials the cached LAN instance, the dial's path
-    // is bound again to the peer's key before the sweep completes.
+    // is bound again to the peer's key, as its LAN session's, before the
+    // sweep completes.
     await dialer.debugSweepKnownPeers();
-    expect(dialer.debugUdpPeerIdForAddress(lanAddress),
-        equals(hex(peerId.publicKey)),
+    expect(dialer.debugUdpPeerIdForAddress(lanAddress), equals(lanPath),
         reason: 'the sweep must redial a LAN-only peer from its LAN instance, '
             'since its recorded address is absent');
   });

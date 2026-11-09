@@ -276,7 +276,7 @@ void main() {
 
       await bobRouter.processPacket(
         packet,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
@@ -286,13 +286,13 @@ void main() {
         receivedAnnounce!.protocolVersion,
         equals(ProtocolHandler.protocolVersion),
       );
-      expect(receivedTransport, equals(PeerTransport.udp));
+      expect(receivedTransport, equals(PeerTransport.wan));
 
       // Verify Bob's Redux store was updated
       final peerState =
           bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peerState, isNotNull);
-      expect(peerState!.transport, equals(PeerTransport.udp));
+      expect(peerState!.transport, equals(PeerTransport.wan));
     });
 
   });
@@ -315,7 +315,7 @@ void main() {
 
       await bobRouter.processPacket(
         seal(packet),
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
@@ -339,7 +339,7 @@ void main() {
 
       await bobRouter.processPacket(
         seal(packet),
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
@@ -362,7 +362,7 @@ void main() {
 
       await bobRouter.processPacket(
         seal(packet),
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-id',
       );
 
@@ -454,7 +454,7 @@ void main() {
 
       await bobRouter.processPacket(
         udpPacket,
-        transport: PeerTransport.udp,
+        transport: PeerTransport.wan,
         udpPeerId: 'peer-alice-udp',
       );
 
@@ -462,7 +462,8 @@ void main() {
       // dial book stays empty until putPeerAddress supplies one.
       peer = bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peer, isNotNull);
-      expect(peer!.lastUdpSeen, isNotNull);
+      expect(peer!.lastWanSeen, isNotNull);
+      expect(peer.lastLanSeen, isNull);
       expect(peer.udpAddress, isNull);
     });
   });

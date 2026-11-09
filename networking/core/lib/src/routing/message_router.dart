@@ -9,6 +9,7 @@ import '../protocol/protocol_handler.dart';
 import '../store/app_state.dart';
 import '../store/peers_actions.dart';
 import '../store/peers_state.dart';
+import '../transport/udp_transport_service.dart';
 import 'dart:typed_data';
 import '../platform/compat.dart';
 
@@ -267,7 +268,7 @@ class MessageRouter {
           return;
         }
       }
-      if (transport == PeerTransport.udp) {
+      if (transport.isIp) {
         final accepted = shouldAcceptUdpAnnounce?.call(
               data.publicKey,
               udpPeerId: udpPeerId,
@@ -283,9 +284,10 @@ class MessageRouter {
         }
       }
       String? effectiveUdpPeerId = udpPeerId;
-      if (transport == PeerTransport.udp && udpPeerId != null) {
+      if (transport.isIp && udpPeerId != null) {
         onUdpPeerIdentified?.call(data.publicKey, udpPeerId);
-        effectiveUdpPeerId = _pubkeyToHex(data.publicKey);
+        effectiveUdpPeerId = UdpTransportService.pathId(
+            transport, _pubkeyToHex(data.publicKey));
       }
       _handleAnnounce(
         data,
@@ -316,14 +318,16 @@ class MessageRouter {
     packet = clearPacket;
 
     String? effectiveUdpPeerId = udpPeerId;
-    if (transport == PeerTransport.udp) {
+    if (transport.isIp) {
       if (udpPeerId != null) {
         onUdpPeerIdentified?.call(senderPubkey, udpPeerId);
-        effectiveUdpPeerId = _pubkeyToHex(senderPubkey);
+        effectiveUdpPeerId =
+            UdpTransportService.pathId(transport, _pubkeyToHex(senderPubkey));
       }
       // Any session-authenticated packet over UDP counts as liveness traffic
-      // for that peer, even if it is an ACK, read receipt, or retransmission.
-      store.dispatch(PeerUdpSeenAction(senderPubkey));
+      // for that peer's session on this underlay, even if it is an ACK, read
+      // receipt, or retransmission.
+      store.dispatch(PeerIpSeenAction(senderPubkey, transport.underlay));
     }
     // Any session-authenticated packet over BLE refreshes the stale sweep's
     // clock for that peer, not only ANNOUNCE. Unauthenticated packets never

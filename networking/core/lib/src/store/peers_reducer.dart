@@ -1,4 +1,5 @@
 import '../models/peer.dart';
+import '../models/underlay.dart';
 import 'peers_state.dart';
 import 'peers_actions.dart';
 
@@ -176,7 +177,8 @@ PeersState peersReducer(PeersState state, dynamic action) {
         bleCentralDeviceId: action.bleCentralDeviceId,
         blePeripheralDeviceId: action.blePeripheralDeviceId,
         lastBleSeen: isBle ? now : null,
-        lastUdpSeen: action.transport == PeerTransport.udp ? now : null,
+        lastLanSeen: action.transport == PeerTransport.lan ? now : null,
+        lastWanSeen: action.transport == PeerTransport.wan ? now : null,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = newPeer,
@@ -199,8 +201,10 @@ PeersState peersReducer(PeersState state, dynamic action) {
         blePeripheralDeviceId:
             action.blePeripheralDeviceId ?? existing.blePeripheralDeviceId,
         lastBleSeen: isBle ? now : existing.lastBleSeen,
-        lastUdpSeen:
-            action.transport == PeerTransport.udp ? now : existing.lastUdpSeen,
+        lastLanSeen:
+            action.transport == PeerTransport.lan ? now : existing.lastLanSeen,
+        lastWanSeen:
+            action.transport == PeerTransport.wan ? now : existing.lastWanSeen,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -239,12 +243,12 @@ PeersState peersReducer(PeersState state, dynamic action) {
       final hasAnyBle = newCentralId != null || newPeripheralId != null;
 
       // A BLE-disconnect event describes a BLE fact. Deliberately do NOT
-      // consult `hasLiveUdpConnection` here: mixing transport-orthogonal
+      // consult the IP sessions here: mixing transport-orthogonal
       // state into the projection muddles two unrelated UI dimensions
       // ("Connected Peers" cares about BLE; "Friends Online" cares about
       // UDP). Once both BLE roles are gone the peer's `connectionState`
       // flips to `disconnected`; UDP-derived state is updated separately
-      // by `PeerUdpDisconnectedAction` / `PeerUdpConnectionChangedAction`.
+      // by `PeerIpDisconnectedAction` / `PeerIpSessionChangedAction`.
       final newConnectionState =
           hasAnyBle ? existing.connectionState : PeerConnectionState.disconnected;
 
@@ -261,18 +265,20 @@ PeersState peersReducer(PeersState state, dynamic action) {
         bleCentralDeviceId: newCentralId,
         blePeripheralDeviceId: newPeripheralId,
         lastBleSeen: hasAnyBle ? existing.lastBleSeen : null,
-        lastUdpSeen: existing.lastUdpSeen,
+        lastLanSeen: existing.lastLanSeen,
+        lastWanSeen: existing.lastWanSeen,
         udpAddress: existing.udpAddress,
         lastDirectReachAt: existing.lastDirectReachAt,
-        hasLiveUdpConnection: existing.hasLiveUdpConnection,
+        lanAuthenticated: existing.lanAuthenticated,
+        wanAuthenticated: existing.wanAuthenticated,
         // Clear BLE auth only when the last BLE path is gone; a partial drop
         // (one role) leaves the Noise session intact.
         bleAuthenticated: hasAnyBle ? existing.bleAuthenticated : false,
         // Nothing is cached across sessions: the attestation goes out with
         // the session that produced it (spec §Session Establishment).
         bleAttestation: hasAnyBle ? existing.bleAttestation : null,
-        udpAttestation: existing.udpAttestation,
-        udpUnderlay: existing.udpUnderlay,
+        lanAttestation: existing.lanAttestation,
+        wanAttestation: existing.wanAttestation,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -291,7 +297,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
         peers: Map.from(state.peers)
           ..[pubkeyHex] = existing
               .copyWith(bleAuthenticated: true)
-              .withoutAttestation(PeerTransport.bleDirect),
+              .withoutAttestation(Underlay.pan),
       );
     }
     return state;
@@ -308,12 +314,13 @@ PeersState peersReducer(PeersState state, dynamic action) {
     );
   }
 
-  if (action is PeerUdpConnectionChangedAction) {
+  if (action is PeerIpSessionChangedAction) {
     final existing = state.peers[action.pubkeyHex];
     if (existing != null) {
-      final updated = existing
-          .copyWith(hasLiveUdpConnection: action.connected)
-          .withoutAttestation(PeerTransport.udp);
+      final updated = existing.withIpSession(
+        action.underlay,
+        authenticated: action.connected,
+      );
       return state.copyWith(
         peers: Map.from(state.peers)..[action.pubkeyHex] = updated,
       );
@@ -321,12 +328,14 @@ PeersState peersReducer(PeersState state, dynamic action) {
     return state;
   }
 
-  if (action is PeerUdpSeenAction) {
+  if (action is PeerIpSeenAction) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     final existing = state.peers[pubkeyHex];
     if (existing != null) {
       final now = DateTime.now();
-      final updated = existing.copyWith(lastSeen: now, lastUdpSeen: now);
+      final updated = action.underlay == Underlay.lan
+          ? existing.copyWith(lastSeen: now, lastLanSeen: now)
+          : existing.copyWith(lastSeen: now, lastWanSeen: now);
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
       );
@@ -349,37 +358,26 @@ PeersState peersReducer(PeersState state, dynamic action) {
     return state;
   }
 
-  if (action is PeerUdpDisconnectedAction) {
+  if (action is PeerIpDisconnectedAction) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     final existing = state.peers[pubkeyHex];
     if (existing != null) {
-      // If no other transport, mark as disconnected
-      final newConnectionState = existing.hasBleConnection
-          ? existing.connectionState
-          : PeerConnectionState.disconnected;
-      // Preserve UDP address — it's the last known location and needed
-      // for reconnection. Never clear peer addresses.
-      // Clear hasLiveUdpConnection — with the UDP path gone, no session is live.
-      final updated = PeerState(
-        publicKey: existing.publicKey,
+      // If no other transport, mark as disconnected: no GATT link, and no
+      // authenticated session on the other IP underlay.
+      final otherIp =
+          action.underlay == Underlay.lan ? Underlay.wan : Underlay.lan;
+      final newConnectionState =
+          existing.hasBleConnection || existing.isAuthenticatedOn(otherIp)
+              ? existing.connectionState
+              : PeerConnectionState.disconnected;
+      // Preserve the UDP address — it's the last known location and needed
+      // for reconnection. Never clear peer addresses. The session on this
+      // underlay is gone, and its attestation with it; transport
+      // independence: BLE and the other IP session are untouched.
+      final updated = existing.withIpSession(
+        action.underlay,
+        authenticated: false,
         connectionState: newConnectionState,
-        transport: existing.transport,
-        rssi: existing.rssi,
-        protocolVersion: existing.protocolVersion,
-        lastSeen: existing.lastSeen,
-        bleCentralDeviceId: existing.bleCentralDeviceId,
-        blePeripheralDeviceId: existing.blePeripheralDeviceId,
-        lastBleSeen: existing.lastBleSeen,
-        lastUdpSeen: existing.lastUdpSeen,
-        udpAddress: existing.udpAddress, // Preserve for reconnection
-        lastDirectReachAt: existing.lastDirectReachAt,
-        hasLiveUdpConnection: false,
-        // Transport independence: a UDP drop must not touch BLE auth.
-        bleAuthenticated: existing.bleAuthenticated,
-        bleAttestation: existing.bleAttestation,
-        // The UDP session is gone, and its attestation and underlay with it.
-        udpAttestation: null,
-        udpUnderlay: null,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -387,7 +385,6 @@ PeersState peersReducer(PeersState state, dynamic action) {
     }
     return state;
   }
-
   if (action is PeerDisconnectedAction) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     final existing = state.peers[pubkeyHex];
@@ -465,14 +462,16 @@ PeersState peersReducer(PeersState state, dynamic action) {
         bleCentralDeviceId: existing.bleCentralDeviceId,
         blePeripheralDeviceId: existing.blePeripheralDeviceId,
         lastBleSeen: existing.lastBleSeen,
-        lastUdpSeen: existing.lastUdpSeen,
+        lastLanSeen: existing.lastLanSeen,
+        lastWanSeen: existing.lastWanSeen,
         udpAddress: newAddress,
         lastDirectReachAt: preserveReach ? existing.lastDirectReachAt : null,
-        hasLiveUdpConnection: existing.hasLiveUdpConnection,
+        lanAuthenticated: existing.lanAuthenticated,
+        wanAuthenticated: existing.wanAuthenticated,
         bleAuthenticated: existing.bleAuthenticated,
         bleAttestation: existing.bleAttestation,
-        udpAttestation: existing.udpAttestation,
-        udpUnderlay: existing.udpUnderlay,
+        lanAttestation: existing.lanAttestation,
+        wanAttestation: existing.wanAttestation,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -486,7 +485,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
     final created = PeerState(
       publicKey: action.publicKey,
       connectionState: PeerConnectionState.disconnected,
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
       udpAddress: newAddress,
     );
     return state.copyWith(
@@ -503,7 +502,7 @@ PeersState peersReducer(PeersState state, dynamic action) {
     final created = PeerState(
       publicKey: action.publicKey,
       connectionState: PeerConnectionState.disconnected,
-      transport: PeerTransport.udp,
+      transport: PeerTransport.wan,
     );
     return state.copyWith(
       peers: Map.from(state.peers)..[pubkeyHex] = created,

@@ -343,8 +343,8 @@ void main() {
         if (hex(pk) == hex(silentPk)) connects.add(underlay);
       },
       onState: (state) {
-        if (state.peers.getPeerByPubkey(silentPk)?.hasLiveUdpConnection ??
-            false) {
+        final peer = state.peers.getPeerByPubkey(silentPk);
+        if (peer != null && (peer.lanAuthenticated || peer.wanAuthenticated)) {
           everLive = true;
         }
       },
@@ -383,7 +383,7 @@ void main() {
     final sent = node.send(serverPk, Uint8List.fromList([7]));
     expect(node.isPeerReachable(serverPk), isTrue,
         reason: 'the session stands before the exhaustion');
-    node.debugExhaustUdpAttempts(serverPk);
+    node.debugExhaustIpAttempts(Underlay.wan, serverPk);
     // Reported at once, where the silence sweep would take two announce
     // intervals.
     expect(node.isPeerReachable(serverPk), isFalse,

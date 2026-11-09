@@ -230,7 +230,7 @@ void main() {
     final knownId = await identityFromSeed(0x56);
     callee.putKnownPeer(knownId.publicKey);
     final xx1 = (await NoiseSessionManager(identity: knownId, sodium: sodium!)
-        .startHandshake(PeerTransport.udp, callee.identity.publicKey,
+        .startHandshake(PeerTransport.wan, callee.identity.publicKey,
             pattern: NoisePattern.xx))!;
     final datagram =
         GrassrootsPacket(type: PacketType.noiseHandshake, payload: xx1)
@@ -351,7 +351,7 @@ void main() {
 
     // This version's IK message 1 bearing version 6 is refused too.
     final ik = (await NoiseSessionManager(identity: v6Id, sodium: sodium!)
-        .startHandshake(PeerTransport.udp, callee.identity.publicKey,
+        .startHandshake(PeerTransport.wan, callee.identity.publicKey,
             pattern: NoisePattern.ik))!;
     final relabelled = Uint8List.fromList(ik)..setRange(0, 2, [0, 6]);
     expect(

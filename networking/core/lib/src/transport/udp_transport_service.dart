@@ -9,6 +9,7 @@ import '../transport/address_utils.dart';
 import '../transport/hole_punch_service.dart';
 import '../models/identity.dart';
 import '../models/packet.dart';
+import '../models/peer.dart';
 import '../protocol/protocol_handler.dart';
 import '../store/store.dart';
 
@@ -25,11 +26,18 @@ enum UdpConnectFailureKind {
 /// with its session is the connection in the liveness sense — this service
 /// only binds sockets, associates peer addresses, and moves datagrams.
 ///
-/// A "connection" here is soft state: a peer's dialable address, keyed by
-/// pubkey hex once identified (a temp `ip:port` id until then). There is no
+/// A "connection" here is soft state: a peer's dialable address. There is no
 /// transport-level handshake and no stream; teardown is the coordinator's
 /// liveness sweep (two silent ANNOUNCE intervals) or an explicit
 /// [disconnectFromPeer].
+///
+/// Sessions are per underlay (spec §Session Establishment), and the LAN and
+/// the WAN share these sockets, so a peer may hold two paths at once: one for
+/// its LAN session and one for its WAN session. Each path belongs to the IP
+/// session [sessionOf] assigns its address when the path is opened (decision
+/// 8), and an inbound datagram is attributed to the path its source address
+/// is bound to. An identified path is keyed by [pathId] — its session and the
+/// peer's pubkey hex; an unidentified one by its temp `ip:port` id.
 class UdpTransportService extends TransportService {
   /// Datagram budget: one framed, session-encrypted packet must fit within
   /// a conservative path-MTU estimate.
@@ -43,12 +51,45 @@ class UdpTransportService extends TransportService {
   /// ephemeral port per family. Server profiles bind their published port.
   final int listenPort;
 
+  /// The IP session a path to [address] belongs to — [PeerTransport.lan] or
+  /// [PeerTransport.wan] — or null when it falls under no underlay the layer
+  /// runs, and no path is opened to it (decision 8). Asked once per path, when
+  /// it is opened.
+  final PeerTransport? Function(InternetAddress address) sessionOf;
+
   UdpTransportService({
     required this.identity,
     required this.store,
     required this.protocolHandler,
+    required this.sessionOf,
     this.listenPort = 0,
   });
+
+  /// The id of the identified path of [session] to the peer holding
+  /// [pubkeyHex]: what the path is keyed by, and what its datagrams and its
+  /// connection events carry as their peer id.
+  static String pathId(PeerTransport session, String pubkeyHex) {
+    assert(session.isIp, 'a UDP path belongs to an IP session');
+    return '${session.name}/$pubkeyHex';
+  }
+
+  /// The session and the peer's pubkey hex an identified path id names, or
+  /// null for a temp `ip:port` id or any other string.
+  static ({PeerTransport session, String pubkeyHex})? parsePathId(
+      String peerId) {
+    final slash = peerId.indexOf('/');
+    if (slash < 0) return null;
+    final session = switch (peerId.substring(0, slash)) {
+      'lan' => PeerTransport.lan,
+      'wan' => PeerTransport.wan,
+      _ => null,
+    };
+    final pubkeyHex = peerId.substring(slash + 1);
+    if (session == null || pubkeyHex.length != 64) return null;
+    return (session: session, pubkeyHex: pubkeyHex);
+  }
+
+  static bool _isTemp(String peerId) => peerId.contains(':');
 
   // --- Sockets ---
 
@@ -61,8 +102,8 @@ class UdpTransportService extends TransportService {
 
   // --- Peer paths ---
 
-  /// Peer id (pubkey hex, or temp `ip:port` until identified) → address.
-  final Map<String, AddressInfo> _peerPaths = {};
+  /// Peer id ([pathId], or temp `ip:port` until identified) → path.
+  final Map<String, _UdpPath> _peerPaths = {};
 
   /// Reverse map: `ip:port` → peer id currently associated with it.
   final Map<String, String> _addressToPeerId = {};
@@ -86,8 +127,10 @@ class UdpTransportService extends TransportService {
   final _connectionController =
       StreamController<TransportConnectionEvent>.broadcast();
 
-  /// Called when a packet-bearing datagram arrives from a peer.
-  void Function(String peerId, Uint8List data)? onUdpDataReceived;
+  /// Called when a packet-bearing datagram arrives from a peer, with the IP
+  /// session of the path it arrived on.
+  void Function(PeerTransport session, String peerId, Uint8List data)?
+      onUdpDataReceived;
 
   UdpConnectFailureKind? _lastConnectFailureKind;
 
@@ -136,7 +179,7 @@ class UdpTransportService extends TransportService {
 
   @override
   int get connectedCount =>
-      _peerPaths.keys.where((id) => !id.contains(':')).length;
+      _peerPaths.keys.where((id) => !_isTemp(id)).length;
 
   @override
   bool get isActive => _state == TransportState.active;
@@ -210,9 +253,7 @@ class UdpTransportService extends TransportService {
 
   void _sweepTempPaths() {
     final cutoff = DateTime.now().subtract(tempPathExpiry);
-    for (final tempKey in _peerPaths.keys
-        .where((id) => id.contains(':'))
-        .toList()) {
+    for (final tempKey in _peerPaths.keys.where(_isTemp).toList()) {
       final seen = _tempPathLastSeen[tempKey];
       if (seen != null && seen.isAfter(cutoff)) continue;
       final path = _peerPaths.remove(tempKey);
@@ -220,8 +261,8 @@ class UdpTransportService extends TransportService {
       // Drop the reverse entry only if it still points at the temp id (an
       // identified path re-keyed it to the pubkey).
       if (path != null &&
-          _addressToPeerId[path.toAddressString()] == tempKey) {
-        _addressToPeerId.remove(path.toAddressString());
+          _addressToPeerId[path.addressKey] == tempKey) {
+        _addressToPeerId.remove(path.addressKey);
       }
     }
   }
@@ -236,7 +277,7 @@ class UdpTransportService extends TransportService {
     }
     _socketSubs.clear();
 
-    final peers = _peerPaths.keys.where((id) => !id.contains(':')).toList();
+    final peers = _peerPaths.keys.where((id) => !_isTemp(id)).toList();
     _peerPaths.clear();
     _addressToPeerId.clear();
     _tempPathLastSeen.clear();
@@ -340,25 +381,45 @@ class UdpTransportService extends TransportService {
     return hasUsableRoute;
   }
 
-  /// Associate [pubkeyHex] with a dialable address. There is no
-  /// transport-level handshake (spec §IP Connection: datagrams need no
-  /// stream) — the association is immediately usable and the session layer
-  /// above defines reachability.
-  Future<bool> connectToPeer(
+  /// Associate [pubkeyHex] with a dialable address, on the IP session the
+  /// address belongs to ([sessionOf]). There is no transport-level handshake
+  /// (spec §IP Connection: datagrams need no stream) — the association is
+  /// immediately usable and the session layer above defines reachability.
+  ///
+  /// Returns the path's id ([pathId]), or null when no path was opened: no
+  /// usable route, or an address under no underlay the layer runs. A path of
+  /// that session standing toward another address is moved to this one.
+  Future<String?> connectToPeer(
       String pubkeyHex, InternetAddress addr, int port) async {
-    _lastConnectFailureKind = null;
-    if (!canDialAddress(addr)) {
-      _lastConnectFailureKind = UdpConnectFailureKind.networkUnreachable;
-      debugPrint('Cannot associate $pubkeyHex: no usable '
-          '${addr.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
-          'route for ${addr.address}:$port');
-      return false;
-    }
-    final isNew = !_peerPaths.containsKey(pubkeyHex);
-    _setPath(pubkeyHex, AddressInfo(addr, port));
+    final session = _openableSession(addr, port, pubkeyHex);
+    if (session == null) return null;
+    final id = pathId(session, pubkeyHex);
+    final isNew = !_peerPaths.containsKey(id);
+    _setPath(id, _UdpPath(AddressInfo(addr, port), session));
     if (isNew && !_connectionController.isClosed) {
       _connectionController.add(TransportConnectionEvent(
-        peerId: pubkeyHex,
+        peerId: id,
+        transport: TransportType.udp,
+        connected: true,
+        isIncoming: false,
+      ));
+    }
+    return id;
+  }
+
+  /// Open a temp path to [address] for a peer whose key is not known yet (an
+  /// outbound LAN cold call): its id is the address itself, the convention
+  /// the inbound path uses, so the ANNOUNCE that names the peer re-keys it
+  /// ([mapIncomingConnectionToPubkey]). Returns whether the path is open.
+  Future<bool> connectToAddress(AddressInfo address) async {
+    final id = address.toAddressString();
+    final session = _openableSession(address.ip, address.port, id);
+    if (session == null) return false;
+    final isNew = !_peerPaths.containsKey(id);
+    _setPath(id, _UdpPath(address, session));
+    if (isNew && !_connectionController.isClosed) {
+      _connectionController.add(TransportConnectionEvent(
+        peerId: id,
         transport: TransportType.udp,
         connected: true,
         isIncoming: false,
@@ -367,57 +428,80 @@ class UdpTransportService extends TransportService {
     return true;
   }
 
-  /// The coordinator identified the sender behind a temp connection id
-  /// (verified ANNOUNCE or session-authenticated packet): re-key its path to
-  /// the pubkey. The temp id is retained as an alias to the same address —
-  /// the datagram receive loop can drain several packets from one peer
-  /// before the identifying one is processed, so an in-flight handler still
-  /// holding the temp id must keep resolving to a live path.
-  void mapIncomingConnectionToPubkey(String tempKey, String pubkeyHex) {
-    if (tempKey == pubkeyHex) return;
-    final path = _peerPaths[tempKey];
-    if (path == null) return;
-    debugPrint('Mapped incoming path $tempKey → $pubkeyHex');
-    final hadPath = _peerPaths.containsKey(pubkeyHex);
+  /// The session a path to [addr] would belong to, or null — with
+  /// [lastConnectFailureKind] set — when none can be opened.
+  PeerTransport? _openableSession(InternetAddress addr, int port, String to) {
+    _lastConnectFailureKind = null;
+    if (!canDialAddress(addr)) {
+      _lastConnectFailureKind = UdpConnectFailureKind.networkUnreachable;
+      debugPrint('Cannot associate $to: no usable '
+          '${addr.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
+          'route for ${addr.address}:$port');
+      return null;
+    }
+    final session = sessionOf(addr);
+    if (session == null) {
+      _lastConnectFailureKind = UdpConnectFailureKind.other;
+      debugPrint('Cannot associate $to: ${addr.address}:$port falls under no '
+          'underlay this layer runs');
+    }
+    return session;
+  }
+
+  /// The coordinator identified the sender behind [peerId] (verified
+  /// ANNOUNCE or session-authenticated packet): key its path by [pathId] of
+  /// the path's session and [pubkeyHex], and return that id. The temp id is
+  /// retained as an alias to the same address — the datagram receive loop can
+  /// drain several packets from one peer before the identifying one is
+  /// processed, so an in-flight handler still holding the temp id must keep
+  /// resolving to a live path. Returns [peerId] itself when it names no path.
+  String mapIncomingConnectionToPubkey(String peerId, String pubkeyHex) {
+    final path = _peerPaths[peerId];
+    if (path == null) return peerId;
+    final id = pathId(path.session, pubkeyHex);
+    if (id == peerId) return id;
+    debugPrint('Mapped incoming path $peerId → $id');
+    final hadPath = _peerPaths.containsKey(id);
     // Re-key the reverse map to the identity, but keep the temp→address
     // forward entry as an alias for outbound sends.
-    _peerPaths[pubkeyHex] = path;
-    _peerPaths[tempKey] = path;
-    _addressToPeerId[path.toAddressString()] = pubkeyHex;
+    _peerPaths[id] = path;
+    _addressToPeerId[path.addressKey] = id;
     if (!hadPath && !_connectionController.isClosed) {
       _connectionController.add(TransportConnectionEvent(
-        peerId: pubkeyHex,
+        peerId: id,
         transport: TransportType.udp,
         connected: true,
         isIncoming: true,
       ));
     }
+    return id;
   }
 
-  Future<void> disconnectFromPeer(String pubkeyHex) async {
-    final path = _peerPaths.remove(pubkeyHex);
+  /// Drop the path [peerId] — a [pathId], or a temp id.
+  Future<void> disconnectFromPeer(String peerId) async {
+    final path = _peerPaths.remove(peerId);
     if (path == null) return;
-    if (_addressToPeerId[path.toAddressString()] == pubkeyHex) {
-      _addressToPeerId.remove(path.toAddressString());
+    if (_addressToPeerId[path.addressKey] == peerId) {
+      _addressToPeerId.remove(path.addressKey);
     }
     if (!_connectionController.isClosed) {
       _connectionController.add(TransportConnectionEvent(
-        peerId: pubkeyHex,
+        peerId: peerId,
         transport: TransportType.udp,
         connected: false,
         reason: 'Disconnected',
       ));
     }
-    debugPrint('Disconnected from peer $pubkeyHex');
+    debugPrint('Disconnected from peer $peerId');
   }
 
-  void _setPath(String peerId, AddressInfo path) {
+  void _setPath(String peerId, _UdpPath path) {
     final previous = _peerPaths[peerId];
     if (previous != null) {
-      _addressToPeerId.remove(previous.toAddressString());
+      _addressToPeerId.remove(previous.addressKey);
     }
     _peerPaths[peerId] = path;
-    _addressToPeerId[path.toAddressString()] = peerId;
+    _addressToPeerId[path.addressKey] = peerId;
   }
 
   @override
@@ -425,26 +509,35 @@ class UdpTransportService extends TransportService {
     // Paths are re-keyed via mapIncomingConnectionToPubkey.
   }
 
-  @override
-  String? getPeerIdForPubkey(Uint8List pubkey) {
-    final hex = pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return _peerPaths.containsKey(hex) ? hex : null;
+  /// The id of [pubkeyHex]'s identified path of [session], or null when it
+  /// holds none.
+  String? pathIdFor(PeerTransport session, String pubkeyHex) {
+    final id = pathId(session, pubkeyHex);
+    return _peerPaths.containsKey(id) ? id : null;
   }
+
+  /// Whether [pubkeyHex] holds an identified path of [session].
+  bool hasPath(PeerTransport session, String pubkeyHex) =>
+      pathIdFor(session, pubkeyHex) != null;
+
+  /// The IP session of the path [peerId], or null when no such path stands.
+  PeerTransport? sessionOfPath(String peerId) => _peerPaths[peerId]?.session;
 
   @override
   Uint8List? getPubkeyForPeerId(String peerId) {
-    if (peerId.contains(':') || peerId.length != 64) return null;
-    if (!_peerPaths.containsKey(peerId)) return null;
+    final parsed = parsePathId(peerId);
+    if (parsed == null || !_peerPaths.containsKey(peerId)) return null;
+    final hex = parsed.pubkeyHex;
     final bytes = Uint8List(32);
     for (var i = 0; i < 32; i++) {
-      bytes[i] = int.parse(peerId.substring(2 * i, 2 * i + 2), radix: 16);
+      bytes[i] = int.parse(hex.substring(2 * i, 2 * i + 2), radix: 16);
     }
     return bytes;
   }
 
   /// The peer id currently bound to [addressKey], or null when nothing is.
   ///
-  /// A pubkey hex once the peer at that address has been identified, and the
+  /// A [pathId] once the peer at that address has been identified, and the
   /// address itself while the path is still a temp one. A caller about to open
   /// a path to an address uses this to see whether one already exists — under
   /// either name — rather than dialing a second time.
@@ -454,7 +547,7 @@ class UdpTransportService extends TransportService {
   ({InternetAddress ip, int port})? getRemoteAddress(String peerId) {
     final path = _peerPaths[peerId];
     if (path == null) return null;
-    return (ip: path.ip, port: path.port);
+    return (ip: path.address.ip, port: path.address.port);
   }
 
   // ===== Send / receive =====
@@ -472,15 +565,16 @@ class UdpTransportService extends TransportService {
           '(${data.length} > $maxDatagramBytes) — fragment above this layer');
       return false;
     }
-    final socket = _rawSockets[path.ip.type];
+    final address = path.address;
+    final socket = _rawSockets[address.ip.type];
     if (socket == null) {
       debugPrint('Cannot send to $peerId: no '
-          '${path.ip.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
+          '${address.ip.type == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
           'socket');
       return false;
     }
     try {
-      return socket.send(data, path.ip, path.port) > 0;
+      return socket.send(data, address.ip, address.port) > 0;
     } catch (e) {
       debugPrint('Failed to send to peer $peerId: $e');
       return false;
@@ -490,7 +584,7 @@ class UdpTransportService extends TransportService {
   @override
   Future<void> broadcast(Uint8List data, {Set<String>? excludePeerIds}) async {
     for (final peerId in _peerPaths.keys.toList()) {
-      if (peerId.contains(':')) continue; // unidentified paths
+      if (_isTemp(peerId)) continue; // unidentified paths
       if (excludePeerIds != null && excludePeerIds.contains(peerId)) continue;
       await sendToPeer(peerId, data);
     }
@@ -515,11 +609,17 @@ class UdpTransportService extends TransportService {
           typeByte != PacketType.noiseHandshake.value) {
         return;
       }
+      // The source address decides the session the contact belongs to
+      // (decision 8); one under no underlay the layer runs has none.
+      final session = sessionOf(datagram.address);
+      if (session == null) return;
       peerId = addressKey;
-      _setPath(peerId, address);
-      debugPrint('Inbound datagram path from $addressKey');
+      _setPath(peerId, _UdpPath(address, session));
+      debugPrint('Inbound datagram path from $addressKey (${session.name})');
     }
-    if (peerId.contains(':')) {
+    final path = _peerPaths[peerId];
+    if (path == null) return;
+    if (_isTemp(peerId)) {
       _tempPathLastSeen[peerId] = DateTime.now();
     }
 
@@ -530,7 +630,7 @@ class UdpTransportService extends TransportService {
         data: data,
       ));
     }
-    onUdpDataReceived?.call(peerId, data);
+    onUdpDataReceived?.call(path.session, peerId, data);
   }
 
   // ===== Internal =====
@@ -566,4 +666,15 @@ class UdpTransportService extends TransportService {
     _state = newState;
     store.dispatch(UdpTransportStateChangedAction(newState));
   }
+}
+
+/// A UDP path: the peer's address, and the IP session it belongs to, fixed
+/// when the path is opened.
+class _UdpPath {
+  final AddressInfo address;
+  final PeerTransport session;
+
+  _UdpPath(this.address, this.session);
+
+  String get addressKey => address.toAddressString();
 }
