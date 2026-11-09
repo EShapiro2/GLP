@@ -116,6 +116,18 @@ class VariableTable {
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
+  // The writers that occur in a widowed guard (GLP-Spec glp.tex, Remark
+  // "Guards and SRSW", aeed242: "if X occurs in a widowed guard, X occurs in
+  // the head and the guards and nowhere else in the clause"; Definition "SRSW
+  // of a Guarded Clause": the iff of a variable and its paired one holds "but
+  // for a writer occurring in a widowed guard of C").
+  final Set<String> _widowedVars = {};
+
+  /// Mark the writer [varName] as occurring in a widowed guard.
+  void markWidowed(String varName) => _widowedVars.add(varName);
+
+  bool isWidowed(String varName) => _widowedVars.contains(varName);
+
   /// Whether the WRITER may occur more than once: "if the success of a guard
   /// implies that X? is bound to a ground term, then both X and X? may occur
   /// multiple times in the clause" (GLP-Spec glp.tex, Remark "Guards and
@@ -163,6 +175,32 @@ class VariableTable {
       // Skip anonymous variables (names starting with _) - they are exempt from SRSW
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
+
+      // A writer in a widowed guard occurs in the head and the guards and
+      // nowhere else in the clause, and its reader need not occur (GLP-Spec
+      // glp.tex, Remark "Guards and SRSW" and Definition "SRSW of a Guarded
+      // Clause", aeed242).  Its reader, where it occurs, is held to the rules
+      // of any reader below.
+      if (isWidowed(info.name)) {
+        final line = info.firstOccurrence?.line ?? 0;
+        if (info.writerOccurrencesHead != 1) {
+          violations.add('Line $line: Writer variable "${info.name}" of a '
+              'widowed guard occurs ${info.writerOccurrencesHead} times in the '
+              'head, and must occur there once');
+        }
+        if (info.writerOccurrencesHeadBody > info.writerOccurrencesHead) {
+          violations.add('Line $line: Writer variable "${info.name}" of a '
+              'widowed guard occurs in the body, and occurs in the head and '
+              'the guards and nowhere else');
+        }
+        if (info.readerOccurrencesHeadBody > 1 &&
+            !allowsMultipleReaders(info.name)) {
+          violations.add('Line $line: Reader variable "${info.name}?" occurs '
+              '${info.readerOccurrencesHeadBody} times without a '
+              'groundness-implying guard or a constant or MutualRef type');
+        }
+        continue;
+      }
 
       // Check writer occurrences.  SRSW requires SO, "every variable occurs in
       // it at most once" (GLP-Spec glp.tex, Definitions "Single-Occurrence (SO)
@@ -483,6 +521,13 @@ class Analyzer {
         guard.column,
         phase: 'analyzer'
       );
+    }
+
+    // widowed(X): X a writer that occurs in the head and the guards and
+    // nowhere else ([VariableTable.collectSRSWViolations]).
+    if (guard.predicate == 'widowed' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm && !arg.isReader) varTable.markWidowed(arg.name);
     }
 
     // Special handling for ground/1

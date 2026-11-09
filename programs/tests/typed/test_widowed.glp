@@ -1,0 +1,19 @@
+% test_widowed.glp - the widowed/1 guard (GLP-Spec appendix-guards.tex, aeed242).
+
+exported procedure dropped(Constant).
+dropped(R?) :- watch(X, R), keep(X?, G?), go(G).
+
+exported procedure kept(Constant).
+kept(R?) :- watch(X, R), hold(X?).
+
+procedure watch(Integer, Constant).
+watch(X?, gone) :- widowed(X) | true.
+
+procedure keep(Integer?, Constant?).
+keep(_, go).
+
+procedure go(Constant).
+go(go).
+
+procedure hold(Integer?).
+hold(5).

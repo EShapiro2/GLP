@@ -1754,8 +1754,8 @@ class MadContext {
   /// applied and forwarded reader names, the held requests and recorded
   /// requesters, and the links reported and not yet answered.  Written at the
   /// end of an event cycle, when no transaction is in progress.
-  void saveState(StateWriter w) {
-    if (_deferredReports.isNotEmpty) {
+  void saveState(StateWriter w, {bool scanning = false}) {
+    if (!scanning && _deferredReports.isNotEmpty) {
       throw StateError('the state is saved inside a transaction, with '
           '${_deferredReports.length} reports not yet appended');
     }
@@ -1768,6 +1768,10 @@ class MadContext {
     w.uint(callbacks.length);
     for (final (at, tag) in callbacks) {
       if (tag == null) {
+        if (scanning) {
+          w.cell(at);
+          continue;
+        }
         throw StateError('a heap callback on cell ${at.id} was registered '
             'with no tag, and cannot be made again for a restarted agent');
       }

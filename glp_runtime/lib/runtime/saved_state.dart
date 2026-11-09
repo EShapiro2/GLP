@@ -207,7 +207,36 @@ class StateWriter {
     required this.agentName,
     required this.agentKey,
     this.appModule,
-  });
+  }) : _occurred = null;
+
+  /// A writer that saves nothing and records which cells the state reaches by
+  /// an occurrence ([occurrences]): every cell a root or a term names, a cell
+  /// a bound writer's chain or value reaches, and none reached by pairing
+  /// alone --- a writer's paired reader, and an unbound writer's pointer to
+  /// it.  `widowed/1` asks it whether a reader occurs in the agent's state
+  /// (GlpRuntime.readerOccurs).
+  StateWriter.scan()
+      : programIdentity = Uint8List(0),
+        agentName = '',
+        agentKey = Uint8List(0),
+        appModule = null,
+        _occurred = <HeapCell>{};
+
+  final Set<HeapCell>? _occurred;
+
+  /// The cells the roots written reach by an occurrence, in a writer made by
+  /// [StateWriter.scan]: every cell they reach is visited, as [finish] visits
+  /// it, and nothing is saved.
+  Set<HeapCell> occurrences() {
+    final occurred = _occurred;
+    if (occurred == null) {
+      throw StateError('occurrences of a writer that saves a state');
+    }
+    while (_pending.isNotEmpty) {
+      _cell(_pending.removeLast());
+    }
+    return occurred;
+  }
 
   void u8(int v) => _roots.u8(v);
   void uint(int v) => _roots.uint(v);
@@ -241,8 +270,9 @@ class StateWriter {
     if (m != null) _roots.uint(_moduleIndex(m));
   }
 
-  void _cellRef(_Out o, HeapCell c) {
+  void _cellRef(_Out o, HeapCell c, {bool pairing = false}) {
     o.uint(c.id);
+    if (!pairing) _occurred?.add(c);
     if (_reached.add(c)) _pending.add(c);
   }
 
@@ -330,17 +360,21 @@ class StateWriter {
       o.u8(0);
     } else {
       o.u8(1);
-      _cellRef(o, paired);
+      _cellRef(o, paired, pairing: true);
     }
     final content = c.content;
     if (content == null) {
       o.u8(_kNull);
     } else if (content is Pointer) {
       o.u8(_kPointer);
-      _cellRef(o, content.targetAddr);
+      // An unbound writer points to its paired reader: a pairing, and no
+      // occurrence of the reader.
+      _cellRef(o, content.targetAddr,
+          pairing: c.tag == CellTag.WrtTag &&
+              identical(content.targetAddr, c.pairedReader));
     } else if (content is WriterContent) {
       o.u8(_kWriter);
-      _cellRef(o, content.readerAddr);
+      _cellRef(o, content.readerAddr, pairing: true);
       // The suspension list, head first, each node naming its shared record.
       final nodes = <int>[];
       for (var n = content.suspensions; n != null; n = n.next) {

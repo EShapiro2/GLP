@@ -278,6 +278,10 @@ procedure ground(_?).
 procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
+% widowed(X) succeeds when X is a writer whose paired reader occurs nowhere in
+% the agent's state, and suspends while it occurs; a reader sent to another
+% agent occurs in its link (GLP-Spec appendix-guards.tex, aeed242).
+procedure widowed(_).
 
 % Time guards
 procedure wait(Number?).

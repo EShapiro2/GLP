@@ -69,6 +69,7 @@ const Set<String> builtinProcedures = {
   'known/1',
   'unknown/1',
   'no_readers/1',
+  'widowed/1',
   // Time guards
   'wait/1',
   'wait_until/1',

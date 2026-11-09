@@ -290,7 +290,12 @@ class Scheduler {
       // and what it does may give the machine work before the next.  While
       // the outbox holds a message the drain ends with the goals waiting, and
       // the agent drains again after its Sends ([drainAndSend]).
+      // widowed/1 (GLP-Spec appendix-guards.tex, aeed242): at quiescence a
+      // goal waiting for a reader to occur nowhere in the agent's state is
+      // re-tried once the reader occurs nowhere (GlpRuntime.wakeWidowed),
+      // before the goals waiting on when_idle.
       if (rt.gq.length == 0) {
+        if (rt.wakeWidowed()) continue;
         if (rt.isIdle && rt.wakeIdle()) continue;
         break;
       }

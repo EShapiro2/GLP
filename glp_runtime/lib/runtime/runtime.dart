@@ -220,6 +220,76 @@ class GlpRuntime {
   /// Goal [goalId] has passed when_idle: it no longer waits on it.
   void clearIdleWait(int goalId) => _idleWaits.remove(goalId);
 
+  // widowed/1 (GLP-Spec appendix-guards.tex, aeed242): "widowed(X) succeeds
+  // when X is a writer whose paired reader occurs nowhere in the agent's
+  // state, having been dropped, and suspends while the reader occurs."  A
+  // goal suspends on it as on when_idle: on the reader of a fresh variable,
+  // whose writer the scheduler binds at quiescence once the watched reader
+  // occurs nowhere ([wakeWidowed]), which re-tries the goal.  Keyed by goal,
+  // each with the writer whose reader it watches, in the order the goals
+  // first suspended.
+  final Map<int, ({HeapCell writer, HeapCell reader, HeapCell watched})>
+      _widowWaits = {};
+
+  /// Whether [reader] occurs in the agent's state: the roots the state is
+  /// saved from ([saveState], and in madGLP [MadContext.saveState]) and the
+  /// argument registers of the goal being reduced, [current], and every cell
+  /// they reach by an occurrence ([StateWriter.scan]).  A reader sent to
+  /// another agent occurs in the global_send goal or the table entry of its
+  /// link.
+  bool readerOccurs(HeapCell reader, {CallEnv? current}) =>
+      _occurrences(current: current).contains(reader);
+
+  Set<HeapCell> _occurrences({CallEnv? current}) {
+    final w = StateWriter.scan();
+    saveState(w);
+    final ctx = madContext;
+    if (ctx is MadContext) ctx.saveState(w, scanning: true);
+    if (current != null) {
+      for (final t in current.values) {
+        w.term(t);
+      }
+    }
+    return w.occurrences();
+  }
+
+  /// The reader goal [goalId] suspends on while it waits on widowed/1 for the
+  /// paired reader of the writer [watched] to occur nowhere: the one it
+  /// already waits on, or a fresh one.
+  HeapCell widowReader(int goalId, HeapCell watched) {
+    final w = _widowWaits[goalId];
+    if (w != null && identical(w.watched, watched)) return w.reader;
+    final (writer, reader) = heap.allocateVariable();
+    _widowWaits[goalId] = (writer: writer, reader: reader, watched: watched);
+    return reader;
+  }
+
+  /// Goal [goalId] has passed widowed/1: it no longer waits on it.
+  void clearWidowWait(int goalId) => _widowWaits.remove(goalId);
+
+  /// At quiescence, re-try every goal waiting on widowed/1 whose watched
+  /// reader now occurs nowhere in the agent's state: bind the writer of the
+  /// reader it suspended on, which puts it back in the queue.  One scan of the
+  /// state serves every wait.  True if a goal was re-tried.  An entry whose
+  /// goal was re-tried by another of its readers wakes nothing and is dropped.
+  bool wakeWidowed() {
+    if (_widowWaits.isEmpty) return false;
+    final occurring = _occurrences();
+    var woke = false;
+    for (final goalId in _widowWaits.keys.toList()) {
+      final w = _widowWaits[goalId]!;
+      final reader = w.watched.pairedReader;
+      if (reader != null && occurring.contains(reader)) continue;
+      _widowWaits.remove(goalId);
+      final reactivated = heap.bindVariableConst(w.writer, 0);
+      for (final goalRef in reactivated) {
+        enqueueReactivatedGoal(goalRef);
+      }
+      if (reactivated.isNotEmpty) woke = true;
+    }
+    return woke;
+  }
+
   /// The number of goals whose state the runtime holds: those in the queue
   /// or suspended, once every goal that ended has left ([goalEnded]).
   int get goalsHeld => _goals.length;
@@ -465,6 +535,15 @@ class GlpRuntime {
       w.cell(pair.writer);
       w.cell(pair.reader);
     }
+    // The watched writer's reader is written by its pairing, and is no
+    // occurrence of the reader.
+    w.uint(_widowWaits.length);
+    for (final MapEntry(key: id, value: wait) in _widowWaits.entries) {
+      w.uint(id);
+      w.cell(wait.writer);
+      w.cell(wait.reader);
+      w.cell(wait.watched);
+    }
     placeStreams.saveState(w);
     nearbyStreams.saveState(w);
     reachableStreams.saveState(w);
@@ -529,6 +608,12 @@ class GlpRuntime {
       final id = r.uint();
       final writer = r.cell();
       _idleWaits[id] = (writer: writer, reader: r.cell());
+    }
+    for (var i = r.uint(); i > 0; i--) {
+      final id = r.uint();
+      final writer = r.cell();
+      final reader = r.cell();
+      _widowWaits[id] = (writer: writer, reader: reader, watched: r.cell());
     }
     placeStreams.restoreState(r);
     nearbyStreams.restoreState(r);

@@ -1242,7 +1242,7 @@ const Set<String> runtimeGuards = {
   'ground/1', 'known/1', 'integer/1', 'string/1', 'constant/1', 'number/1',
   'real/1', 'list/1', 'compound/1', 'module/1', 'is_mutual_ref/1', 'unknown/1',
   'otherwise/0', 'wait/1', 'wait_until/1', 'when_idle/0', 'no_readers/1',
-  '=?=/2', '=?\\=/2',
+  'widowed/1', '=?=/2', '=?\\=/2',
 };
 
 /// The arithmetic comparison guards (GLP-Spec appendix-guards.tex,
@@ -1822,6 +1822,35 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         return GuardResult.success;
       }
       cx.Si.add(cx.rt.idleReader(cx.goalId));
+      return GuardResult.suspend;
+
+    case 'widowed':
+      // GLP-Spec appendix-guards.tex (aeed242): "widowed(X) succeeds when X
+      // is a writer whose paired reader occurs nowhere in the agent's state,
+      // having been dropped, and suspends while the reader occurs.  A reader
+      // sent to another agent occurs in the link the agent keeps for it, so a
+      // writer whose reader was sent away is not widowed."  The state is the
+      // one the agent saves, with the argument registers of the goal being
+      // reduced (GlpRuntime.readerOccurs).  An X that is not an unassigned
+      // writer is never widowed: a value, a reader, or a writer assigned.
+      // While the reader occurs the goal suspends on a reader the scheduler
+      // assigns at quiescence once it occurs nowhere (GlpRuntime.wakeWidowed).
+      if (args.isEmpty) return GuardResult.failure;
+      final x = args[0];
+      if (x is! VarRef || !cx.rt.heap.isWriter(x.addr)) {
+        return GuardResult.failure;
+      }
+      final writer = cx.rt.heap.derefAddr(x.addr);
+      if (writer is! VarRef || !identical(writer.addr, x.addr)) {
+        return GuardResult.failure;
+      }
+      final reader = x.addr.pairedReader;
+      if (reader == null) return GuardResult.failure;
+      if (!cx.rt.readerOccurs(reader, current: cx.env)) {
+        cx.rt.clearWidowWait(cx.goalId);
+        return GuardResult.success;
+      }
+      cx.Si.add(cx.rt.widowReader(cx.goalId, x.addr));
       return GuardResult.suspend;
 
     case '=?=':
