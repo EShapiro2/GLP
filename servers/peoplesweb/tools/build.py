@@ -167,11 +167,19 @@ about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
 # The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
 # the server, with its state.json, or else the ones built by hand in
 # web/papers.
-pd = os.environ.get('PAPERS_DIR') or os.path.join(HERE, 'web', 'papers')
-if not os.path.isdir(pd):
-    pd = os.path.join(HERE, 'web', 'papers')
-served = {f[:-4] for f in os.listdir(pd) if f.endswith('.pdf')} if os.path.isdir(pd) else set()
-paper_state = load_state(pd)
+# web/papers, each served from where it is newest: PAPERS_DIR where the sync
+# has built it, web/papers otherwise, so a paper not yet built there keeps
+# its link.
+hand = os.path.join(HERE, 'web', 'papers')
+synced = os.environ.get('PAPERS_DIR') or ''
+pdfs = {}
+for d in (hand, synced):
+    if d and os.path.isdir(d):
+        for f in os.listdir(d):
+            if f.endswith('.pdf'):
+                pdfs[f] = os.path.join(d, f)
+served = {f[:-4] for f in pdfs}
+paper_state = load_state(synced) if synced else {}
 byid = dict(cat)
 
 
@@ -234,9 +242,8 @@ for f in os.listdir(os.path.join(HERE, 'web')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
-    for f in os.listdir(pd):
-        if f.endswith('.pdf'):
-            shutil.copy(os.path.join(pd, f), os.path.join(WWW, 'papers', f))
+    for f, path in pdfs.items():
+        shutil.copy(path, os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'glpCommit': commit}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
