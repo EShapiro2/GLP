@@ -34,12 +34,18 @@ class AgentSurface extends StatefulWidget {
   /// The construct family the bridge's constructs are drawn with (vGLP,
   /// Remark "Construct Families"): the grassroots app's unless one is given.
   final ConstructFamily family;
+
+  /// The icon of the app's contract, shown before the panel's name; null,
+  /// and none is shown.  The colours are the theme's, which the app takes
+  /// from its contract's family (look.dart).
+  final String? icon;
   const AgentSurface(
       {super.key,
       required this.agentId,
       required this.runtime,
       this.muteNotices = false,
-      this.family = ConstructFamily.standard});
+      this.family = ConstructFamily.standard,
+      this.icon});
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -115,7 +121,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
   /// default), so a grid of surfaces each renders its own agent as "You".
   String get _self => widget.agentId.toLowerCase();
 
-  static const MaterialColor _accent = Colors.green;
+  /// The accent, the primary colour of the theme the app is drawn in, which
+  /// its contract's family gives (look.dart); a lighter tint of it behind an
+  /// alert.
+  Color get _accent => Theme.of(context).colorScheme.primary;
+  Color get _accentLight => Theme.of(context).colorScheme.primaryContainer;
 
   // === Per-panel card routing ===============================================
 
@@ -173,7 +183,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(_cap(active.name),
+        title: Text(
+            '${widget.icon == null ? '' : '${widget.icon}  '}${_cap(active.name)}',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Padding(
@@ -408,7 +419,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           for (final e in held.entries) {
             rows.add(ListTile(
               dense: true,
-              leading: const Icon(Icons.toll, color: _accent),
+              leading: Icon(Icons.toll, color: _accent),
               title: Text(_r.store.displayKey(e.key),
                   style: const TextStyle(fontWeight: FontWeight.w600)),
               trailing: Text(displayText(e.value),
@@ -444,7 +455,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
               dense: true,
               leading: CircleAvatar(
                 radius: 14,
-                backgroundColor: _accent.shade100,
+                backgroundColor: _accentLight,
                 child: Text(_initial(name),
                     style: const TextStyle(
                         fontSize: 12,
@@ -541,7 +552,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   }
 
   /// A row's trailing alert affordance: a count badge over a notification dot.
-  Widget _rowAlert() => const Icon(Icons.notifications_active, color: _accent);
+  Widget _rowAlert() => Icon(Icons.notifications_active, color: _accent);
 
   // === Friends panel — the social graph =====================================
 
@@ -633,7 +644,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final shown = _r.store.displayKey(name);
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: _accent.shade100,
+        backgroundColor: _accentLight,
         child: Text(_initial(shown),
             style: const TextStyle(
                 color: Colors.black87, fontWeight: FontWeight.bold)),
@@ -644,7 +655,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           ? Text(renderTemplate(card.desc.title, card.fields),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _accent, fontWeight: FontWeight.w600))
+              style: TextStyle(color: _accent, fontWeight: FontWeight.w600))
           : (subtitle == null
               ? null
               : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -786,7 +797,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final release =
         (s != null && s.args.length > 3) ? displayText(s.args[3]) : null;
     return ListTile(
-      leading: const Icon(Icons.lock_clock, color: _accent),
+      leading: Icon(Icons.lock_clock, color: _accent),
       title: Text('$amount ${_coinShort(issuer, w)} → ${_cap(_r.store.displayKey(who))}',
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(release == null ? 'in escrow' : 'releases $release'),
@@ -923,7 +934,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
             ),
           ),
           IconButton(
-              onPressed: send, icon: const Icon(Icons.send, color: _accent)),
+              onPressed: send, icon: Icon(Icons.send, color: _accent)),
         ],
       ),
     );
@@ -945,7 +956,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final alerting = card != null;
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: _accent.shade100,
+        backgroundColor: _accentLight,
         child: const Icon(Icons.groups, color: Colors.black87),
       ),
       title: Text(_groupName(key),
@@ -954,7 +965,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           ? Text(renderTemplate(card.desc.title, card.fields),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: _accent, fontWeight: FontWeight.w600))
+              style: TextStyle(color: _accent, fontWeight: FontWeight.w600))
           : ((msgs == null || msgs.isEmpty)
               ? const Text('No messages yet',
                   style: TextStyle(color: Colors.grey))
@@ -1034,7 +1045,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           children: [
             if (!outgoing)
               Text(_cap(_r.store.displayKey(author)),
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: _accent)),
@@ -1076,7 +1087,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
             ),
           ),
           IconButton(
-              onPressed: send, icon: const Icon(Icons.send, color: _accent)),
+              onPressed: send, icon: Icon(Icons.send, color: _accent)),
         ],
       ),
     );

@@ -40,6 +40,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/look.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
@@ -48,6 +49,7 @@ import 'package:glp_multiagent/isolate_protocol.dart'
     show runtimeTermOf, screenTermOf;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
+import 'programs_dir.dart';
 
 Future<void> _loadFonts() async {
   Future<void> add(FontLoader l, String p) async =>
@@ -80,15 +82,9 @@ Widget _phoneApp(Widget surface) => Directionality(
                   color: Colors.white,
                   child: MaterialApp(
                     debugShowCheckedModeBanner: false,
-                    theme: ThemeData(
-                        fontFamily: 'AppFont',
-                        useMaterial3: true,
-                        colorScheme:
-                            ColorScheme.fromSeed(seedColor: Colors.green),
-                        elevatedButtonTheme: ElevatedButtonThemeData(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white))),
+                    theme: Looks.readSync('${programsDir()}/self.glp')
+                        .of('GC')
+                        .theme(fontFamily: 'AppFont'),
                     home: surface,
                   ),
                 ),

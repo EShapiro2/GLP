@@ -64,6 +64,18 @@ done
 # configuration is a file of the repository the app reads when it is built"),
 # beside the program; SuperAppHost reads it (readServices).
 stage social/graph/core/services.json
+# The look of each app, read where the site's build reads it
+# (lib/ui_runtime/look.dart; GSA #2, 2026-11-09): each family's colours,
+# apps/look.json; each contract's NAME.txt, whose interface pragmas open with
+# its Look line, 'Look: <icon>, <family>' (GSC's Section 2); and the site's
+# about.json, which holds a contract's icon and family until its owner writes
+# that line, staged beside programs/ at its place in the repository.
+stage apps/look.json
+while read -r f; do
+  stage "${f#"$SRC"/}"
+done < <(grep -rl --include='*.txt' '^% Owner:' "$SRC" | sort)
+mkdir -p "$OUT/servers/peoplesweb/web"
+cp ../servers/peoplesweb/web/about.json "$OUT/servers/peoplesweb/web/about.json"
 # A .vglp is compiled with the dispatcher's generic source, programs/vglp/dispatcher.glp,
 # and its part typed over the type of a position, programs/vglp/views.glp.
 if [ -n "$(find "$DST" -name '*.vglp')" ]; then
@@ -99,7 +111,7 @@ while read -r p; do
   name=$(printf '%04d' "$n")
   cp "$OUT/$p" "$OUT/bundle/$name"
   printf '%s\t%s\n' "$name" "$p" >> "$OUT/manifest.txt"
-done < <(cd "$OUT" && find programs -type f | sort)
+done < <(cd "$OUT" && find programs servers -type f | sort)
 
 for a in pingapp currency denominated dated gsg gsn; do
   test -s "$DST/social/graph/core/$a.glpw" \

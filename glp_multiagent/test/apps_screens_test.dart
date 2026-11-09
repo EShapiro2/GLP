@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart'
     show runtimeTermOf, screenTermOf;
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/look.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
@@ -472,17 +473,13 @@ class _Run {
   }
 
   /// The phones: side by side, each the person's agent surface on a screen of its own; on the simulator, each the person's agent surface on the whole screen, one over another, the person [_front] on top.
+  /// Each phone in the look of the app's contract, its family's colours
+  /// (`programs/apps/look.json`, look.dart), as the app draws it.
   Widget _phones() => MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-            useMaterial3: true,
-            brightness: Brightness.light,
-            fontFamily: 'Roboto',
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-            elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white))),
+        theme: Looks.readSync('${screens.programs}/self.glp')
+            .of(app)
+            .theme(fontFamily: 'Roboto'),
         home: screens.simulator ? _screen() : _side(),
       );
 
