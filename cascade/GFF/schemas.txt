@@ -1,60 +1,41 @@
-establish(Alice?) :
-    at Alice: not identity, +identity
+establish: identity(Alice) <-
+    not identity(Alice) guarded by Alice
 
-acquaint(Alice?, Bob?) :
-    at Alice: identity, +knows(Bob)
-    at Bob: identity, +knows(Alice)
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), identity(Bob) guarded by Alice, Bob
 
-introduce(Alice?, Bob?; c) :
-    at Alice: identity, knows(Bob), knows(c)
-    at Bob: identity, knows(Alice), +knows(c)
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
 
-befriend(Alice?, Bob?) :
-    at Alice: identity, knows(Bob), not friend(Bob), +friend(Bob)
-    at Bob: identity, knows(Alice), not friend(Alice), +friend(Alice)
+befriend: friend(Alice, Bob), pointer(Alice, Bob, Bob), friend(Bob, Alice), pointer(Bob, Alice, Alice) <-
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
 
-unfriend(Alice?, Bob) :
-    at Alice: identity, -friend(Bob)
-    at Bob: identity, -friend(Alice)
+unfriend: not friend(Alice, Bob), not pointer(Alice, Bob, Bob), not friend(Bob, Alice), not pointer(Bob, Alice, Alice) <-
+    identity(Alice), friend(Alice, Bob), pointer(Alice, Bob, Bob), identity(Bob), friend(Bob, Alice), pointer(Bob, Alice, Alice) guarded by Alice
 
-post(Alice?; x) :
-    at Alice: identity, not feed(x), +feed(x)
+point_friend: points_to(Alice, Bob) <-
+    identity(Alice), friend(Alice, Bob), not points_to(Alice, Bob), identity(Bob) guarded by Alice
 
-follow(Alice?; b) :
-    at Alice: identity, knows(b), not decided(b), +decided(b)
+point_transitive: points_to(Alice, Carol) <-
+    identity(Alice), knows(Alice, Carol), points_to(Alice, Bob), identity(Bob), points_to(Bob, Carol) guarded by Alice
 
-friends_follow(Alice, Bob) :
-    at Alice: identity, friend(Bob), not following(Bob), +follows(Bob, Bob), +following(Bob)
-    at Bob: identity, +follower(Alice, Bob)
+unpoint: not points_to(Alice, Bob) <-
+    identity(Alice), points_to(Alice, Bob), identity(Bob) guarded by Alice
 
-through_friend(Alice, Carol; b) :
-    at Alice: identity, decided(b), friend(Carol), not following(b), +follows(b, Carol), +following(b)
-    at Carol: identity, following(b), +follower(Alice, b)
+follow_friend: pointer(Alice, Bob, Dave) <-
+    identity(Alice), friend(Alice, Bob), not pointer(Alice, Bob, Dave), identity(Bob), pointer(Bob, Carol, Dave) guarded by Alice
 
-unfollow(Alice?, Carol; b) :
-    at Alice: identity, -decided(b), -follows(b, Carol), -following(b)
-    at Carol: identity, -follower(Alice, b)
+follow_transitive: pointer(Alice, Carol, Dave) <-
+    identity(Alice), knows(Alice, Carol), pointer(Alice, Bob, Dave), not pointer(Alice, Carol, Dave), identity(Bob), pointer(Bob, Carol, Dave), not (friend(Alice, Carol) and Carol = Dave) guarded by Alice
 
-ask(Alice, Carol; b) :
-    at Alice: identity, decided(b), friend(Carol), not asked_of(Carol, b), +asked_of(Carol, b)
-    at Carol: identity, +asked(Alice, b)
+follow_transitive_friend: pointer(Alice, Carol, Dave) <-
+    identity(Alice), knows(Alice, Carol), friend(Alice, Bob), not pointer(Alice, Carol, Dave), identity(Bob), pointer(Bob, Carol, Dave), not (friend(Alice, Carol) and Carol = Dave) guarded by Alice
 
-answer_follows(Carol, Alice; b, x) :
-    at Carol: identity, following(b), item(x, b), -asked(Alice, b)
-    at Alice: identity, +path(b, Carol, x)
+unfollow: not pointer(Alice, Bob, Dave) <-
+    identity(Alice), pointer(Alice, Bob, Dave), identity(Bob), not (friend(Alice, Bob) and Bob = Dave) guarded by Alice
 
-answer_follows_through(Carol, Alice; b, d) :
-    at Carol: identity, follows(b, d), -asked(Alice, b)
-    at Alice: identity, +path_through(b, Carol, d)
+post: item(Alice, x, Alice) <-
+    identity(Alice), not item(Alice, x, Alice) guarded by Alice
 
-answer_does_not_follow(Carol, Alice; b) :
-    at Carol: identity, not following(b), -asked(Alice, b)
-    at Alice: identity, +does_not_follow(b, Carol)
-
-deliver_own(Bob, Alice; x) :
-    at Bob: identity, feed(x), follower(Alice, Bob), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(x, Bob)
-
-deliver_on(Carol, Alice; b, x) :
-    at Carol: identity, following(b), item(x, b), follower(Alice, b), friend(Alice), not sent(x, Alice), +sent(x, Alice)
-    at Alice: identity, +item(sgn(x, Carol), b)
+deliver: item(Alice, x, Carol), received(Alice, x, Carol, Bob) <-
+    identity(Alice), pointer(Alice, Bob, Carol), not item(Alice, x, Carol), identity(Bob), item(Bob, x, Carol)

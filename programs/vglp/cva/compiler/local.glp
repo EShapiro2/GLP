@@ -14,7 +14,8 @@
 Utt      ::= utt(Integer) ; Sp.
 Sp       ::= sp(Utt, Integer).
 %% The community name a name term denotes, cn(V) of the person V, and cdot(N, S), the community name N followed by the speech act S (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
-Val      ::= person(Integer) ; Sp ; free_var(Arg) ; cn(Val) ; cdot(Val, Val).
+%% item(U), the item of a speech act, its utterance under its signatures (vGLP e1d1b8a, Section 5.4).
+Val      ::= person(Integer) ; Sp ; free_var(Arg) ; cn(Val) ; cdot(Val, Val) ; item(Utt).
 Vals     ::= [] ; [Val | Vals].
 Bnd      ::= bnd(Arg, Val).
 Binding  ::= [] ; [Bnd | Binding].
@@ -281,6 +282,7 @@ var_name(real(X), vn(X?)).
 var_name(role(_), novar).
 var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
+var_name(item_of(_), novar).
 var_name(any, novar).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_name(ilist(_, _), novar).
@@ -599,6 +601,7 @@ variables_of([svar(X)|As], [svar(X?)|R?]) :- variables_of(As?, R).
 variables_of([role(_)|As], R?) :- variables_of(As?, R).
 variables_of([nterm(_)|As], R?) :- variables_of(As?, R).
 variables_of([sgn(_, _)|As], R?) :- variables_of(As?, R).
+variables_of([item_of(_)|As], R?) :- variables_of(As?, R).
 variables_of([any|As], R?) :- variables_of(As?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 variables_of([ilist(_, _)|As], R?) :- variables_of(As?, R).
@@ -607,6 +610,8 @@ variables_of([ilist(_, _)|As], R?) :- variables_of(As?, R).
 procedure flat_args(Args?, Args).
 flat_args([], []).
 flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
+%% An item item_of(y) holds its variable y, as a signed term does.
+flat_args([item_of(V)|As], [V?|R?]) :- flat_args(As?, R).
 flat_args([any|As], R?) :- flat_args(As?, R).
 flat_args([nterm(N)|As], R?) :- nt_flat(N?, Ws), flat_args(As?, R1), app(Ws?, R1?, R).
 flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
@@ -885,6 +890,7 @@ person_vars([pvar(X)|Vs], [pvar(X?)|R?]) :- person_vars(Vs?, R).
 person_vars([svar(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([nterm(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([sgn(_, _)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([item_of(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([real(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([any|Vs], R?) :- person_vars(Vs?, R).
@@ -897,6 +903,7 @@ speech_vars([role(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([pvar(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([nterm(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([sgn(_, _)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([item_of(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([real(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
@@ -939,6 +946,8 @@ people_count([bnd(_, free_var(_))|Bs], N?) :- people_count(Bs?, N).
 %% A binding binds no variable to a community name, a name term being imaged from its parts (nt_val); the clauses cover the type.
 people_count([bnd(_, cn(_))|Bs], N?) :- people_count(Bs?, N).
 people_count([bnd(_, cdot(_, _))|Bs], N?) :- people_count(Bs?, N).
+%% Nor to an item, an item being imaged from its variable (img_item); the clause covers the type.
+people_count([bnd(_, item(_))|Bs], N?) :- people_count(Bs?, N).
 procedure max1(Integer?, Integer?, Integer).
 max1(I, M, N?) :- I? >= M? | N := I? + 1.
 max1(I, M, M?) :- I? < M? | true.
@@ -1010,6 +1019,7 @@ person_index(found(free_var(_)), -1).
 person_index(unbound, -1).
 person_index(found(cn(_)), -1).
 person_index(found(cdot(_, _)), -1).
+person_index(found(item(_)), -1).
 procedure deltas_for(Ints?, RoleSpecs?, Binding?, Deltas).
 deltas_for([], _, _, []).
 deltas_for([P|Ps], Rs, B, [delta(P?, D?, A?)|Xs?]) :- ground(Rs?), ground(B?) |
@@ -1153,6 +1163,8 @@ adm_var(nterm(_), _, _, _, yes).
 %% value is the speech act bound to y, signed by the person in role i
 %% (img_sgn).
 adm_var(sgn(_, _), _, _, _, yes).
+%% An item names no agent (GSC, the appendix on values: "a value, and an utterance, is no agent role, no agent variable and no name term"), so admissibility does not concern it.
+adm_var(item_of(_), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 adm_var(real(_), _, _, _, yes).
@@ -1214,6 +1226,10 @@ img_args([sgn(Y, I)|As], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
 img_args([nterm(N)|As], B, [X?|Xs?]) :- ground(B?), ground(N?) |
     nt_val(N?, B?, X),
     img_args(As?, B?, Xs).
+img_args([item_of(V)|As], B, [X?|Xs?]) :- ground(B?), ground(V?) |
+    lookup(V?, B?, F),
+    img_item(F?, item_of(V?), X),
+    img_args(As?, B?, Xs).
 img_args([A|As], B, [X?|Xs?]) :- otherwise, ground(B?), ground(A?) |
     lookup(A?, B?, F),
     val_or_free(F?, A?, X),
@@ -1233,6 +1249,13 @@ nt_val(ext_any(N), B, cdot(C?, free_var(any))) :- nt_val(N?, B?, C).
 procedure img_sgn(Found?, Integer?, Arg?, Val).
 img_sgn(found(sp(U, S)), P, _, sp(sp(U?, S?), P?)).
 img_sgn(_, _, A, free_var(A?)) :- otherwise | true.
+%% The image of an item item_of(y): the utterance under the signatures of the speech act bound to y; a free y stands for itself.
+procedure img_item(Found?, Arg?, Val).
+img_item(found(sp(U, _)), _, item(V?)) :- base_utt(U?, V).
+img_item(_, A, free_var(A?)) :- otherwise | true.
+procedure base_utt(Utt?, Utt).
+base_utt(utt(N), utt(N?)).
+base_utt(sp(U, _), V?) :- base_utt(U?, V).
 
 %% --- Multisets --------------------------------------------------------------
 procedure(X) ms_remove(X?, Stream(X)?, YesNo, Stream(X)).
@@ -1594,12 +1617,20 @@ match_arg(sgn(Y, I), sp(sp(U, S), P), B, R?) :- ground(U?), ground(B?) |
     match_arg(svar(Y?), sp(U?, S?), B?, R1),
     match_then(R1?, role(I?), person(P?), R).
 match_arg(nterm(N), V, B, R?) :- ground(N?), ground(V?), ground(B?) | match_nt(N?, V?, B?, R).
+%% An item matches the item of the speech act its variable is bound to, and binds nothing: the atoms binding the variable come before it (vGLP e1d1b8a, Section 5.4).
+match_arg(item_of(A), V, B, R?) :- ground(A?), ground(V?), ground(B?) |
+    lookup(A?, B?, F),
+    img_item(F?, item_of(A?), I),
+    same_item(I?, V?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of a cleared atom's image, free_var(any), and nothing else, and binds nothing.
 match_arg(any, V, B, R?) :- ground(V?) | wild_val(V?, B?, R).
 match_arg(A, V, B, R?) :- otherwise, ground(A?), ground(V?), ground(B?) |
     lookup(A?, B?, F),
     kind_fits(A?, V?, K),
     match_one(F?, K?, A?, V?, B?, R).
+procedure same_item(Val?, Val?, Binding?, MRes).
+same_item(item(U), item(W), B, mok(B?)) :- U? =?= W? | true.
+same_item(_, _, _, mno) :- otherwise | true.
 procedure match_then(MRes?, Arg?, Val?, MRes).
 match_then(mno, _, _, mno).
 match_then(mok(B), A, V, R?) :- match_arg(A?, V?, B?, R).
