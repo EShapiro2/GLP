@@ -27,8 +27,10 @@ import 'helpers/sodium_test_bootstrap.dart';
 /// level; any other source is governed by no level.
 ///
 /// Two full [GrassrootsNetwork] instances talk over loopback UDP. Loopback is
-/// not a local network, so the receiver's prefixes are injected to place the
-/// caller inside or outside them, which is exactly the distinction under test.
+/// a local prefix (GNA 582ef60), so two layers on one machine are LAN contact
+/// to each other, which the last test holds with the machine's own prefixes;
+/// the others inject the receiver's prefixes to place the caller inside or
+/// outside them, which is exactly the distinction under test.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -172,6 +174,50 @@ void main() {
     );
     return answered;
   }
+
+  // GNA 582ef60: "an unsolicited inbound contact whose source address lies
+  // within one of the agent's own local address prefixes, a loopback address
+  // among them, is LAN contact, governed by the LAN level" (Section 2.6), and
+  // the appendix: "two agents on one machine are LAN contact to each other".
+  // No prefix is injected: the receiver's are the machine's own, read by the
+  // layer, and loopback is among them.  Its LAN Open answers an unknown
+  // caller on loopback, which no level would admit as WAN contact, and the
+  // session is reported LAN.
+  test('two layers on one machine meet over the LAN: an unknown caller on '
+      'loopback is LAN contact under the machine\'s own prefixes', () async {
+    final callerId = await identityFromSeed(0x7a);
+    final receiverId = await identityFromSeed(0x7b);
+    final callerHex = hexOf(callerId.publicKey);
+    final (caller, _) = await startNode(callerId);
+    final (receiver, receiverStore) = await startNode(receiverId);
+    addTearDown(() async {
+      await caller.dispose();
+      await receiver.dispose();
+    });
+    expect(
+        receiverStore.state.localNetwork.network
+            .containsAddress(InternetAddress.loopbackIPv4),
+        isTrue,
+        reason: 'loopback is among the prefixes the layer read');
+
+    final connected = Completer<Underlay>();
+    receiver.onPeerConnected = (pk, underlay, application) {
+      if (hexOf(pk) == callerHex && !connected.isCompleted) {
+        connected.complete(underlay);
+      }
+    };
+    await receiver.lan!.setTrustLevel(ColdCallTrustLevel.open);
+    final receiverAddress = await listeningAddress(receiver);
+    expect(receiverAddress, isNotNull);
+    caller.wan!.putPeerAddress(receiverId.publicKey, receiverAddress!);
+    await caller.send(
+      receiverId.publicKey,
+      Uint8List.fromList(utf8.encode('one machine')),
+    );
+
+    expect(await connected.future, Underlay.lan);
+    expect(receiver.peerUnderlays(callerId.publicKey), [Underlay.lan]);
+  }, timeout: Timeout.none);
 
   test('LAN Open answers an unknown caller from within a local prefix',
       () async {
