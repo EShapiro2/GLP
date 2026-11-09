@@ -232,28 +232,87 @@ List<DiscoveredModule> discoverProgram(String rootDir,
       : null;
   final rs = rootScope ?? _rootScopeOf(rootSelfGlpPath);
 
-  // The program's vGLP sources, read before any module is compiled, and the
-  // self.vglp layers, compiled first: each joins the module of the self.glp
-  // beside it, which every module of its directory and below has in scope
-  // (vGLP at a89a751, sections/parts/canonical-compilation.tex).
-  final program = _vglpProgramOf(root, programsDir);
-  final layers = program == null
-      ? const <String, Module>{}
-      : _compileLayers(program, root, programsDir, rootSelfGlpPath, rs);
-  final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs,
-      layers: layers);
+  // The self.glp files that import a compiled procedure or the dispatcher
+  // are read into every scope as SelfGlpReading reads them, until the
+  // compilation has written its types into them (module_hierarchy.dart,
+  // selfGlpReading; vGLP, Section 6.3).
+  final outer = selfGlpReading;
+  selfGlpReading = SelfGlpReading(_compiledImporters(root));
+  try {
+    // The program's vGLP sources, read before any module is compiled, and
+    // the self.vglp layers, compiled first: each joins the module of the
+    // self.glp beside it, which every module of its directory and below has
+    // in scope (vGLP at a89a751, sections/parts/canonical-compilation.tex).
+    final program = _vglpProgramOf(root, programsDir);
+    final layers = program == null
+        ? const <String, Module>{}
+        : _compileLayers(program, root, programsDir, rootSelfGlpPath, rs);
+    final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath, rs,
+        layers: layers);
 
-  // A .vglp source is compiled and joins the program as the module of its own
-  // name (vGLP, Definition "Canonical Compilation").  This runs AFTER the
-  // exposes are resolved, because the compilation types an answer writer by the
-  // position it occurs at and those positions are often arguments of an exposed
-  // procedure — `send_net` and the rest of social/graph/routing.
-  _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
-      program: program, layers: layers);
-  _writeCompiledTypes(modules);
-  _attachVolitionalRecords(modules, program);
-  _rootLast(modules);
-  return modules;
+    // A .vglp source is compiled and joins the program as the module of its
+    // own name (vGLP, Definition "Canonical Compilation").  This runs AFTER
+    // the exposes are resolved, because the compilation types an answer
+    // writer by the position it occurs at and those positions are often
+    // arguments of an exposed procedure — `send_net` and the rest of
+    // social/graph/routing.
+    _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
+        program: program, layers: layers);
+    final written = _writeCompiledTypes(modules);
+    if (written.isNotEmpty) {
+      // Each module with a self.glp written into on its chain, the
+      // compiled modules among them, gets its scope again, the self.glp
+      // read whole with the types written into it.
+      for (final m in modules) {
+        if (!m.filePath.startsWith(root.absolute.path) &&
+            !m.filePath.startsWith(root.path)) {
+          continue;
+        }
+        final chain = discoverSelfChain(
+            targetFile: File(m.filePath).absolute.path,
+            rootDir: root.absolute.path,
+            programsDir: programsDir);
+        if (!chain.any((p) => written.contains(SelfGlpReading.key(p)))) {
+          continue;
+        }
+        m.ancestorScope = _vglpScope(File(m.filePath), modules, root,
+            programsDir, rootSelfGlpPath, rs, layers);
+      }
+    }
+    _attachVolitionalRecords(modules, program);
+    _rootLast(modules);
+    return modules;
+  } finally {
+    selfGlpReading = outer;
+  }
+}
+
+/// The `self.glp` files of the tree at [root] that import a procedure of a
+/// `.vglp` source the linker compiles --- `imported procedure M#p(...)`, M a
+/// source of the `self.glp`'s directory or below with no hand-written `.glp`
+/// beside it, the dispatcher included --- by [SelfGlpReading.key].
+Set<String> _compiledImporters(Directory root) {
+  final out = <String>{};
+  for (final f in _listFiles(root)) {
+    if (ppath.basename(f.path) != 'self.glp') continue;
+    final Module m;
+    try {
+      m = _parseFile(f.path);
+    } on Object {
+      continue;
+    }
+    final dir = f.parent.path;
+    for (final d in [...m.procDeclarations, ...m.paramProcDecls]) {
+      final q = d.modulePath;
+      if (!d.imported || q == null) continue;
+      final stem = ppath.join(dir, q.replaceAll('#', ppath.separator));
+      if (File('$stem.vglp').existsSync() && !File('$stem.glp').existsSync()) {
+        out.add(SelfGlpReading.key(f.path));
+        break;
+      }
+    }
+  }
+  return out;
 }
 
 /// The program's vGLP sources ([VglpProgram]), or null where it has none:
@@ -563,15 +622,11 @@ TypeEnvironment _layeredScope(String targetFile, String rootDir,
       continue;
     }
     final combined = _withLayer(_parseFile(p), layer, p, p);
-    try {
-      env = mergeModuleIntoScope(
-          liftExposedTypes(env, combined, p, root: r), combined,
-          label: r != null
-              ? modulePathName(p, r)
-              : ppath.basename(File(p).absolute.parent.path));
-    } on UndefinedDeclarationTypeError catch (e) {
-      throw e.inFile(p);
-    }
+    env = mergeSelfGlpModule(env, combined, p,
+        label: r != null
+            ? modulePathName(p, r)
+            : ppath.basename(File(p).absolute.parent.path),
+        root: r);
   }
   return env;
 }
@@ -750,66 +805,6 @@ List<DiscoveredModule> _discoverGlpModules(Directory root, String? programsDir,
 /// sources compile and run.
 ///
 /// A source in the paper's syntax, or one that reaches a question, compiles by
-/// The types the compilation forms, written into each module that imports a
-/// compiled procedure or the dispatcher: "Every module of [M] type-checks as
-/// GLP with no type written by hand: the compilation writes into each module
-/// that imports a compiled procedure or the dispatcher the types it forms for
-/// them, among them the type of the asks, the view types and the parameter
-/// of the person channel" (vGLP ac8c281, Section 6.3, "The canonical
-/// compilation"; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC, item 1).  For
-/// each declaration `imported procedure M#p(...)` of a module whose qualifier
-/// M is a compiled module beside it, the definitions of that module of the
-/// types the declaration names, and of those they name, are written into the
-/// importing module, each in place of a definition of its name there: a copy
-/// written by hand gives way to the compilation's.
-void _writeCompiledTypes(List<DiscoveredModule> modules) {
-  final compiled = {
-    for (final m in modules)
-      if (m.filePath.endsWith('.vglp')) ppath.normalize(m.filePath): m
-  };
-  if (compiled.isEmpty) return;
-  void named(TypeExpr t, List<String> out) {
-    mapTypeRefs(t, (ref) {
-      out.add(ref.name);
-      for (final a in ref.typeArgs) {
-        named(a, out);
-      }
-      return ref;
-    });
-  }
-
-  for (final m in modules) {
-    if (m.filePath.endsWith('.vglp')) continue;
-    final dir = ppath.dirname(m.filePath);
-    final want = <String, TypeDef>{};
-    for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
-      final q = d.modulePath;
-      if (!d.imported || q == null) continue;
-      final c = compiled[ppath.normalize(
-          ppath.join(dir, '${q.replaceAll('#', ppath.separator)}.vglp'))];
-      if (c == null) continue;
-      final defs = {for (final td in c.ast.typeDefs) td.name: td};
-      final todo = <String>[];
-      for (final t in d.argTypes) {
-        named(t, todo);
-      }
-      while (todo.isNotEmpty) {
-        final n = todo.removeLast();
-        final td = defs[n];
-        if (td == null || want.containsKey(n)) continue;
-        want[n] = td;
-        for (final alt in td.alternatives) {
-          named(alt, todo);
-        }
-      }
-    }
-    if (want.isEmpty) continue;
-    m.ast.typeDefs
-      ..removeWhere((td) => want.containsKey(td.name))
-      ..addAll(want.values);
-  }
-}
-
 /// the canonical compilation; any other is refused (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     String? programsDir, String? rootSelfGlpPath, TypeEnvironment? rs,
@@ -864,6 +859,75 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
       ancestorScope: ancestorScope,
     ));
   }
+}
+
+/// The types the compilation forms, written into each module that imports a
+/// compiled procedure or the dispatcher: "Every module of [M] type-checks as
+/// GLP with no type written by hand: the compilation writes into each module
+/// that imports a compiled procedure or the dispatcher the types it forms for
+/// them, among them the type of the asks, the view types and the parameter
+/// of the person channel" (vGLP 2f08466, Section 6.3, "The canonical
+/// compilation"; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC, item 1).  For
+/// each declaration `imported procedure M#p(...)` of a module whose qualifier
+/// M is a compiled module of its directory or below, the definitions of that
+/// module of the types the declaration names, and of those they name, are
+/// written into the importing module, each in place of a definition of its
+/// name there: a copy written by hand gives way to the compilation's.  A
+/// `self.glp` written into is recorded in [selfGlpReading], so that every
+/// scope reads it with the types; the paths of those are returned.
+Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
+  final compiled = {
+    for (final m in modules)
+      if (m.filePath.endsWith('.vglp')) ppath.normalize(m.filePath): m
+  };
+  final writtenSelf = <String>{};
+  if (compiled.isEmpty) return writtenSelf;
+  void named(TypeExpr t, List<String> out) {
+    mapTypeRefs(t, (ref) {
+      out.add(ref.name);
+      for (final a in ref.typeArgs) {
+        named(a, out);
+      }
+      return ref;
+    });
+  }
+
+  for (final m in modules) {
+    if (m.filePath.endsWith('.vglp')) continue;
+    final dir = ppath.dirname(m.filePath);
+    final want = <String, TypeDef>{};
+    for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
+      final q = d.modulePath;
+      if (!d.imported || q == null) continue;
+      final c = compiled[ppath.normalize(
+          ppath.join(dir, '${q.replaceAll('#', ppath.separator)}.vglp'))];
+      if (c == null) continue;
+      final defs = {for (final td in c.ast.typeDefs) td.name: td};
+      final todo = <String>[];
+      for (final t in d.argTypes) {
+        named(t, todo);
+      }
+      while (todo.isNotEmpty) {
+        final n = todo.removeLast();
+        final td = defs[n];
+        if (td == null || want.containsKey(n)) continue;
+        want[n] = td;
+        for (final alt in td.alternatives) {
+          named(alt, todo);
+        }
+      }
+    }
+    if (want.isEmpty) continue;
+    m.ast.typeDefs
+      ..removeWhere((td) => want.containsKey(td.name))
+      ..addAll(want.values);
+    if (m.isSelfGlp) {
+      final key = SelfGlpReading.key(m.filePath);
+      selfGlpReading?.written[key] = want.values.toList();
+      writtenSelf.add(key);
+    }
+  }
+  return writtenSelf;
 }
 
 /// The scope a `.vglp` source is compiled in: its ancestor chain, with the
@@ -3524,6 +3588,22 @@ List<String> emitVglpSources(String rootDir,
   final programsDir = File(rootSelfGlpPath).parent.absolute.path;
   final dispatcher = _dispatcherSource(programsDir);
 
+  // The sources compile in the scopes the loader gives them, the self.glp
+  // files that import their procedures read as discoverProgram reads them
+  // before the compilation has formed their types (selfGlpReading).
+  final outer = selfGlpReading;
+  selfGlpReading = SelfGlpReading(_compiledImporters(root));
+  try {
+    return _emitVglpSources(root, programsDir, dispatcher, rootSelfGlpPath,
+        onSkip);
+  } finally {
+    selfGlpReading = outer;
+  }
+}
+
+List<String> _emitVglpSources(Directory root, String programsDir,
+    DispatcherSource? dispatcher, String rootSelfGlpPath,
+    void Function(String message)? onSkip) {
   final rs = _rootScopeOf(rootSelfGlpPath);
   final program = _vglpProgramOf(root, programsDir);
   final selfTexts = <String, String>{};

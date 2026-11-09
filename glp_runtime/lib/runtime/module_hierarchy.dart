@@ -487,16 +487,113 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
     {String? root, String? label}) {
   final source = selfGlpSource(path);
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  final lifted = liftExposedTypes(env, module, path, root: root);
-  try {
-    return mergeModuleIntoScope(lifted, module,
-        label: label ??
-            (root != null ? modulePathName(path, root) : _directoryLabel(path)));
-  } on UndefinedDeclarationTypeError catch (e) {
-    // The declaration is the self.glp's: the error names its file.
-    throw e.inFile(path);
+  return mergeSelfGlpModule(env, module, path,
+      label: label ??
+          (root != null ? modulePathName(path, root) : _directoryLabel(path)),
+      root: root);
+}
+
+/// How the linker reads a `self.glp` into a scope while it discovers a program
+/// with `.vglp` sources: "Every module of [M] type-checks as GLP with no type
+/// written by hand: the compilation writes into each module that imports a
+/// compiled procedure or the dispatcher the types it forms for them, among
+/// them the type of the asks, the view types and the parameter of the person
+/// channel" (vGLP 2f08466, Section 6.3, "The canonical compilation").  A
+/// `self.glp` is such a module where it imports a procedure of a `.vglp`
+/// source the linker compiles; it is also in the scope that source is compiled
+/// in, so it is read into a scope before the types it needs exist.  Until the
+/// compilation has formed them, such a `self.glp` is merged without each
+/// declaration naming a type no scope defines, and that declaration's
+/// clauses: the compilation of the source reads none of them.  Once formed,
+/// they are written into it ([written]), each in place of a definition of its
+/// name, and it is merged whole.  Null outside a discovery.
+SelfGlpReading? selfGlpReading;
+
+/// The `self.glp` files that import compiled procedures ([importers]) and the
+/// types written into each ([written]), by normalised absolute path.
+class SelfGlpReading {
+  final Set<String> importers;
+  final Map<String, List<TypeDef>> written = {};
+  SelfGlpReading(this.importers);
+
+  /// [path] normalised, as [importers] and [written] key it.
+  static String key(String path) =>
+      File(path).absolute.uri.normalizePath().toFilePath();
+
+  /// [module], the parsed `self.glp` at [path], with the types written into
+  /// it, each in place of a definition of its name.
+  ast.Module read(String path, ast.Module module) {
+    final types = written[key(path)];
+    if (types == null) return module;
+    final names = {for (final t in types) t.name};
+    return _moduleWith(module, typeDefs: [
+      for (final t in module.typeDefs)
+        if (!names.contains(t.name)) t,
+      ...types
+    ]);
+  }
+
+  /// Whether [path] is merged without its declarations that name a type no
+  /// scope defines yet.
+  bool lenient(String path) =>
+      importers.contains(key(path)) && !written.containsKey(key(path));
+}
+
+/// Merge [module], the parsed `self.glp` at [path], into [env], read as
+/// [selfGlpReading] reads it.
+TypeEnvironment mergeSelfGlpModule(
+    TypeEnvironment env, ast.Module module, String path,
+    {required String label, String? root}) {
+  final reading = selfGlpReading;
+  var m = reading == null ? module : reading.read(path, module);
+  while (true) {
+    final lifted = liftExposedTypes(env, m, path, root: root);
+    try {
+      return mergeModuleIntoScope(lifted, m, label: label);
+    } on UndefinedDeclarationTypeError catch (e) {
+      // The declaration is the self.glp's: the error names its file.
+      if (reading == null || !reading.lenient(path)) throw e.inFile(path);
+      bool named(String name, int arity) =>
+          name == e.procedure && arity == e.arity;
+      final before = m.procDeclarations.length + m.paramProcDecls.length;
+      m = _moduleWith(m,
+          procDeclarations: [
+            for (final d in m.procDeclarations)
+              if (!named(d.name, d.argTypes.length)) d
+          ],
+          paramProcDecls: [
+            for (final d in m.paramProcDecls)
+              if (!named(d.name, d.argTypes.length)) d
+          ],
+          procedures: [
+            for (final p in m.procedures)
+              if (!named(p.name, p.arity)) p
+          ]);
+      if (m.procDeclarations.length + m.paramProcDecls.length == before) {
+        throw e.inFile(path);
+      }
+    }
   }
 }
+
+/// [m] with the lists given in place of its own.
+ast.Module _moduleWith(ast.Module m,
+        {List<TypeDef>? typeDefs,
+        List<ProcDecl>? procDeclarations,
+        List<ProcDecl>? paramProcDecls,
+        List<ast.Procedure>? procedures}) =>
+    ast.Module(
+      typeDefs: typeDefs ?? m.typeDefs,
+      procDeclarations: procDeclarations ?? m.procDeclarations,
+      paramProcDecls: paramProcDecls ?? m.paramProcDecls,
+      procedures: procedures ?? m.procedures,
+      compileMode: m.compileMode,
+      exposes: m.exposes,
+      displayDecls: m.displayDecls,
+      volitionalDeclarations: m.volitionalDeclarations,
+      line: m.line,
+      column: m.column,
+    );
 
 /// [env] with the types that [exposer]'s `-expose` directives lift into the
 /// scope of its directory, [exposer] being the module of the file at
