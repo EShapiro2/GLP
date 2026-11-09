@@ -1,9 +1,9 @@
 # A run of the cascade on BCC
 
-- Contract: `BCC` (`bcc` to the checker), its owner's two files `programs/currencies/bcc/BCC.txt` and `programs/currencies/bcc/BCC.glp`, copied here as they stood at `6bca4bdb`.
-- The paper: `/Users/udi/Grassroots/GCC (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `6bca4bdb` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-09 16:51 UTC by `cascade.sh bcc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `BCC` (`bcc` to the checker), its owner's two files `programs/currencies/bcc/BCC.txt` and `programs/currencies/bcc/BCC.glp`, copied here as they stood at `57929b11`.
+- The paper: `https://github.com/EShapiro2/gcc-grassroots-commmunity-currencies` at `67e877a3`, for the paper's own record.
+- The tools: this repository at `57929b11` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-09 19:30 UTC by `cascade.sh bcc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
