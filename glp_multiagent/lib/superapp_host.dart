@@ -138,6 +138,11 @@ class SuperAppHost {
   /// the app; null, and every start is a first start.
   final AgentStateStore? stateStore;
 
+  /// The app installed on the device, as the platform names it
+  /// ([installedApp] of app_identity.dart), which the runtime keeps with the
+  /// program and self_app/2 assigns; null where the platform names none.
+  final Application? installedApp;
+
   /// The agent.
   final AgentRuntime agent;
 
@@ -168,6 +173,7 @@ class SuperAppHost {
     this.services = const [],
     this.firstAct,
     this.stateStore,
+    this.installedApp,
   }) : agent = AgentRuntime(
           agentId: agentId,
           program: program,
@@ -175,6 +181,7 @@ class SuperAppHost {
           keyPair: keyPair,
           network: network,
           stateStore: stateStore,
+          installedApp: installedApp,
         );
 
   /// The agent's key, as 64 lowercase hex characters: its name.
