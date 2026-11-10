@@ -66,6 +66,15 @@ term() {    # term <owner's file> <name> ; the contract's term, as it prints it
     | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //'
 }
 
+instance() { # instance <owner's file> <name> <base's term> ; an instance's contract, instantiate/4 of the bindings and additions its file prints, instance_named(Name, Base, Bindings, Additions), on the base's term, as cascade.sh's read_contract makes it (GSC 22605d6, Definition Parametric contract)
+  local out bs a
+  out=$(cd "$GLP_DIR/glp_runtime" \
+     && printf '%s\ninstance_named(%s, B, Bs, A).\n:quit\n' "$1" "$2" | bin/glpc 2>&1 | sed -e 's/^\(GLP> \)*//')
+  bs=$(printf '%s\n' "$out" | grep -E '^Bs = ' | head -1 | sed -e 's/^Bs = //')
+  a=$(printf '%s\n' "$out" | grep -E '^A = ' | head -1 | sed -e 's/^A = //')
+  run "instantiate($3, $bs, $a, D)." | sed -e 's/^\(GLP> \)*//' | grep -E '^D = ' | head -1 | sed -e 's/^D = //'
+}
+
 compiled() { # compiled <fixture> <schema> ; the display, whitespace removed
   run "compile_schema($1, $2)." | sed -n '/begin{align/,/end{align/p' \
     | sed 's/GLP>//' | squash
@@ -123,15 +132,17 @@ check_eq "as_read gives an environment contract its wrapper, each schema inside 
       "environment([today], $GKKV)" "$(asread "environment([today], $GKKT)")"
 check_eq "as_read descends an environment contract's reflexive body as unnamed/2 does" \
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
-GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+# GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
+GNWI=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+GSNPT=$(instance "$GLP_DIR/programs/gai/GSNP.glp" gsnp "$GNWI")
 check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
 check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
 check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
 # A ward role has at most one guardian role (GSC a885275, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
-GAIT=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
+GAIT=$(instance "$GLP_DIR/programs/gai/GAI.glp" gai "$GNWI")
 check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
-      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, identity, principal, principal_of, principal_of)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [retired])" \
+      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, operator_of, operated_by)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
