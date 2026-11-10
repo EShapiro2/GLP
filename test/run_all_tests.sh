@@ -139,6 +139,17 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# GAI's contract in the old form forbidding marks, which GSC's Section 8 at
+# df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
+# merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
+# UTC); each entry comes off with that rewrite.
+    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role"
+    "cascade gai: cascade.sh --check exits 0"
+    "cascade gai: verdict.txt is what the tools print"
+    "cascade gai: vmat.tex is what the tools print"
+    "cascade gsnp: cascade.sh --check exits 0"
+    "cascade gsnp: verdict.txt is what the tools print"
+    "cascade gsnp: vmat.tex is what the tools print"
 # The super-app's hosting of CSSN's ported mini-app (CSSN's port of
 # 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
 # person channel; each entry comes off with that port.
@@ -3941,7 +3952,7 @@ compile(signing_con, [schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])]
 compile(signing_bad, [], malformed([signing_not_agent(send, svar(x))])).
 compile(headless, [], malformed([not_in_head(s, svar(x))])).
 compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
-compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, guardian(2)), free(2))], [])).
+compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, v, u)], [relay(r, ward(1, m, guardian(2)), free(2))], [i, f])).
 compile(listed_two, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(1, invited, [svar(n)]), unguarded, [], [atom(guest, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_bases, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(friend, [role(2)])], []), rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(2, invited, [svar(n)]), unguarded, [], [atom(guest, [role(2), svar(n)])], [], [])])], syntactically_grassroots).
 compile(seated_role, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(seated(ext(own(1), n), member), unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots).
@@ -4342,6 +4353,46 @@ check "CVA pragmas: several contracts joined by and, a hyphenated name read whol
 check "CVA pragmas: ... and pragmas.sh exits 0 (relation)" "^exit 0$" "$cva_prel_hy"
 check "CVA pragmas: a contract the line names with no NAME.txt, refused, named (relation)" "the contract XNONE, which its line saying what it is written from names, has no XNONE.txt" "$cva_prel_no"
 
+# A typed field (vGLP 37fe038, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows, and a text by the type its variable carries in the schema where it carries one, as an email address or a person's name, which constrains nothing and which the field's widget is told"): typed(email, x) in the clause syntax of XT.glp, pragmas.sh giving the act the types of its fields, ft(2, email), and the compiler printing the field of kind email; the same contract with x bare compiles to the same platform but for that kind.
+cva_ty=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XT' 'Alice is a person.' '1. ■ Registration. Alice may register an email address.' 'Pragmas' 'Addresses: the emails Alice holds.' 'Registration: Alice [Register] <email>' > "$cva_ty/XT.txt"
+printf '%s\n' "contract_named(xt, [sas(register, ['Alice'], [x], [atom(email, ['Alice', typed(email, x)])], [not(atom(email, ['Alice', x]))], true, ['Alice'])])." > "$cva_ty/XT.glp"
+cva_ty_read="[schema(register, ['Alice'], [svar(x)], [rs(guarded, [atom(email, [svar(x)])], [], [], [atom(email, [svar(x)])])])]"
+cva_ty_typed=$(bash "$CVA/compiler/pragmas.sh" "$cva_ty/XT.txt" "$cva_ty_read" 2>&1)
+sed 's/typed(email, x)/x/' "$cva_ty/XT.glp" > "$cva_ty/XT.glp.tmp" && mv "$cva_ty/XT.glp.tmp" "$cva_ty/XT.glp"
+cva_ty_bare=$(bash "$CVA/compiler/pragmas.sh" "$cva_ty/XT.txt" "$cva_ty_read" 2>&1)
+rm -rf "$cva_ty"
+check "CVA typed: pragmas.sh gives the act the type of its field of the typed variable, ft(2, email), its seventh argument (typed)" "act('register', '\"Register\"', \['\"\"', '\"email\"'\], none, '\"Addresses\"', by(\[1\]), \[ft(2, 'email')\])" "$cva_ty_typed"
+check "CVA typed: ... and none for the bare variable, the act as before (typed)" "act('register', '\"Register\"', \['\"\"', '\"email\"'\], none, '\"Addresses\"', by(\[1\]))\]" "$cva_ty_bare"
+cva_ty_c1=$("$REPL_RUN" <<HEREDOC 2>&1 | awk '$0 ~ /%% compile begin/{on=1;next} $0 ~ /%% compile end/{on=0} on' | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(xt, $cva_ty_read, syntactically_grassroots, no_introduction, $cva_ty_typed).
+:quit
+HEREDOC
+)
+cva_ty_c2=$("$REPL_RUN" <<HEREDOC 2>&1 | awk '$0 ~ /%% compile begin/{on=1;next} $0 ~ /%% compile end/{on=0} on' | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(xt, $cva_ty_read, syntactically_grassroots, no_introduction, $cva_ty_bare).
+:quit
+HEREDOC
+)
+check "CVA typed: the typed contract's request form has the field of kind email (typed)" 'field(2, "email", email)' "$cva_ty_c1"
+check "CVA typed: ... the bare one's of kind text (typed)" 'field(2, "email", text)' "$cva_ty_c2"
+cva_ty_diff=$(diff <(printf '%s\n' "$cva_ty_c1" | sed -e 's/field(2, "email", email)/field(2, "email", text)/' -e 's/, \[ft(2, email)\])/)/' -e '/^PFType    ::= /d' -e '/^PFTypes   ::= /d' -e 's/^PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes)\.$/PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer)./') <(printf '%s\n' "$cva_ty_c2") > /dev/null && echo same || echo differs)
+check "CVA typed: ... and the two platforms are the same but for that kind: in the request form, in the pragmas the platform exports, and in the types of those pragmas, which name the types of an act's fields only where an act has one (typed)" "^same$" "$cva_ty_diff"
+cva_ty_rd=$("$REPL_RUN" <<HEREDOC 2>&1
+$GLP_DIR/programs/gsc/
+:limit 10000000
+as_read([sas(register, ['Alice'], [x], [atom(email, ['Alice', typed(email, x)])], [not(atom(email, ['Alice', x]))], true, ['Alice'])], R1).
+as_read([sas(register, ['Alice'], [x], [atom(email, ['Alice', x])], [not(atom(email, ['Alice', x]))], true, ['Alice'])], R2).
+:quit
+HEREDOC
+)
+cva_ty_r1=$(printf '%s\n' "$cva_ty_rd" | sed -e 's/^\(GLP> \)*//' | grep '^R1 = ' | sed 's/^R1 = //')
+cva_ty_r2=$(printf '%s\n' "$cva_ty_rd" | sed -e 's/^\(GLP> \)*//' | grep '^R2 = ' | sed 's/^R2 = //')
+check "CVA typed: GSC's reader reads typed(email, x) as x, the typed schema read as the bare one (typed)" "^same$" "$([ -n "$cva_ty_r1" ] && [ "$cva_ty_r1" = "$cva_ty_r2" ] && echo same || echo differs)"
 # The forwarding clauses of contract/2 and version/2 in the program's root module (vGLP 722343d, Section 5.4, "The contract's words": "a goal posted to a program is admitted only at a procedure its root module exports, so the canonical compilation writes into the root module of the program the platform is compiled for a forwarding clause for each of the two, as it writes there the types it forms"): programs/tests/vglp/forward, its self.glp writing neither, its platform.vglp exporting both.
 cva_fwd=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/vglp/forward/
@@ -4381,8 +4432,11 @@ check "CVA pragmas: ... the act's fields name l at its third place, d no place o
 # chain3 (a third binding joins them, all marking the same people, compiled),
 # clash2_marks and chain3_marks (the same, the two marking different people:
 # two classes, and one, its parts guarded apart, both compiled),
-# wards and wards_leaving (a verdict grassroots with wards compiles, A, with
-# no leaving mark and with one, GSC's Appendix F), signed (a signed term in
+# wards and wards_leaving (a verdict grassroots with wards compiles, A, the
+# guardianship (m, v, u) and the verdict's fifth argument the kinds' [iota, f]
+# of GSC's Section 8 at df5e454, whose leaving marks are gone; wards_leaving,
+# a leaving mark there until GSC 7e00aba, now names the kinds identity and
+# person), signed (a signed term in
 # an added atom, the speech act bound to y signed by the person in role i,
 # compiles, B), itemarg (the item of a speech act, item_of(x), as an argument
 # of an atom required, forbidden and added, passes the checks, vGLP e1d1b8a),
@@ -4398,8 +4452,8 @@ $CVA/compiler/
 :limit 100000000
 compile(clash2, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [], [rs(guarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
 compile(chain3, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [], [rs(guarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])]), schema(s3, [], [rs(guarded, [atom(z, [])], [], [], []), rs(guarded, [atom(w, [])], [], [], [])])], syntactically_grassroots).
-compile(wards, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, guardian(2)), free(2))], [])).
-compile(wards_leaving, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, guardian(2)), free(2))], [retired])).
+compile(wards, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, v, u)], [relay(r, ward(1, m, guardian(2)), free(2))], [i, f])).
+compile(wards_leaving, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, v, u)], [relay(r, ward(1, m, guardian(2)), free(2))], [identity, person])).
 compile(signed, [schema(fwd, [svar(x)], [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots).
 compile(itemarg, [schema(inst, [svar(x)], [rs(guarded, [atom(installed, [item_of(svar(x))])], [], [atom(item, [svar(x)])], [atom(installed, [item_of(svar(x))])])])], syntactically_grassroots).
 compile(deadfree, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [pvar(x)], [rs(guarded, [atom(z, [])], [], [atom(q, [pvar(x)])], [atom(q, [pvar(x)])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
@@ -4418,7 +4472,7 @@ check "CVA compiler: a third schema-binding linking them joins one class, all ma
 check "CVA compiler: ... the two marking different people, two classes, passing the checks (clash2_marks)" "%% not compiled, having no pragmas(clash2_marks)" "$cva_classes"
 check "CVA compiler: ... and the third joining them, one class, its parts guarded apart, passing the checks (chain3_marks)" "%% not compiled, having no pragmas(chain3_marks)" "$cva_classes"
 check "CVA compiler: a contract grassroots with wards passes the checks (wards)" "%% not compiled, having no pragmas(wards)" "$cva_classes"
-check "CVA compiler: ... and one with a leaving mark, the verdict's fifth argument (GSC, Appendix F, Definition \"Leaving mark\"), passing the checks (wards_leaving)" "%% not compiled, having no pragmas(wards_leaving)" "$cva_classes"
+check "CVA compiler: ... and one whose kinds are identity and person, the verdict's fifth argument [iota, f] (GSC, Section 8, Definition \"Kinds\", df5e454), passing the checks (wards_leaving)" "%% not compiled, having no pragmas(wards_leaving)" "$cva_classes"
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, passes the checks (signed)" "%% not compiled, having no pragmas(signed)" "$cva_classes"
 check "CVA compiler: the item of a speech act as an argument of an atom, item_of(x), required, forbidden and added, its variable bound by an atom the role requires, passes the checks (itemarg; vGLP e1d1b8a, Section 5.4: an argument of an atom may be \"the signer, the author or the item of a speech act\")" "%% not compiled, having no pragmas(itemarg)" "$cva_classes"
 check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"
@@ -5587,7 +5641,9 @@ check "CVA signing conditions: ... and got(a)" "B = \[.*view(bob, \[[^]]*got(spe
 check "CVA signing conditions: ... the run suspends, none of alice's own transactions holding" "→ suspended" "$cva_signing"
 # The author of a speech act in a constraint, evaluated at the binding (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; GSC 65a26da, def:numbers, "the author author(y), the first signer of y"): intros' cite(p, q ; x), unguarded, author(x) = q, opened by alice on the items she posts, a signed by her, its author alice, and b signed by bob and again by her, its author bob.
 check "CVA author: cite's constraint printed as the contract writes it, local to every role" "^schema_numeric(cite, numeric(\[cj(every, eq(author_of(svar(x)), role(2)))\], \[\], \[\]))\$" "$cva_signing_text"
-check "CVA author: the printed expression type takes the author and the item of a speech act" "^Expr      ::= .* ; author_of(Var) ; item_of(Var).\$" "$cva_signing_text"
+# The item of a speech act is a Var, an argument of an atom, and so an Expr through Var; an alternative item_of(Var) beside Var would be a second alternative of item_of/1, which TGLP's Type Declarations refuse (vGLP's yes, 2026-11-10 13:08 UTC; Cloud #12, 0868f162).
+check "CVA author: the printed expression type takes the author of a speech act, and the item through Var" "^Expr      ::= Var ; .* ; author_of(Var).\$" "$cva_signing_text"
+check "CVA author: ... the printed Var takes the item of a speech act" "^            ; item_of(Var)\$" "$cva_signing_text"
 cva_author=$("$REPL_RUN" <<HEREDOC
 $CVA/intros/
 :limit 20000000

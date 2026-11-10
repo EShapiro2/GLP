@@ -126,13 +126,18 @@ TypeEnvironment _buildEnvironmentFromModule(
   final procedures = <String, ProcDecl>{};
   final paramProcDecls = <String, ProcDecl>{};
 
-  // Add type definitions (including aliases - will be resolved later)
+  // Add type definitions (including aliases - will be resolved later), and
+  // then check each for determinism against all of them: a bare type-name
+  // alternative may name a type defined after it ([_checkDeterminism]).
+  // Until 2026-11-10 each was checked against those before it alone.
+  for (final typeDef in module.typeDefs) {
+    types[typeDef.name] = typeDef;
+  }
   for (final typeDef in module.typeDefs) {
     // Aliases are allowed; the determinism check is skipped for them.
     if (!_isTypeAlias(typeDef)) {
       _checkDeterminism(typeDef, {...scopeTypes, ...types});
     }
-    types[typeDef.name] = typeDef;
   }
 
   // Add procedure declarations
@@ -559,8 +564,67 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
         _checkPrimitiveOverlap(alt.name, reached, primitives, hasWildcard, def);
         primitives.addAll(reached);
       }
+      // And it stands for the functors and constants the named type reaches,
+      // through its own named alternatives too: "An alternative in a type
+      // definition may also be a type name S, providing type union for
+      // types with disjoint top-level functors.  This disjointness is
+      // required so that a term's top functor selects its alternative
+      // deterministically" (TGLP typed-glp.tex, "Type Declarations"); so
+      // `Goal(M#Procedure)`, `Goal(G) ::= true ; (Goal(G), Goal(G)) ; G`, is
+      // refused where M exports true/0, "the functors of M's declarations
+      // distinct from true and ," (TGLP 44e1a60, modules.tex, "Procedure
+      // declarations").  Until 2026-11-10 only the primitives reached were
+      // compared, and `T ::= true ; U` with `U ::= true ; halt` was admitted.
+      final heads = _reachedHeads(alt, scope);
+      for (final key in heads.functors) {
+        claim(key,
+            'Duplicate functor alternative: $key, reached through ${alt.name}, in ${def.name}');
+      }
+      for (final key in heads.constants) {
+        if (constants.contains(key)) {
+          throw NonDeterministicTypeError(
+            'Duplicate constant alternative: $key, reached through ${alt.name}, in ${def.name}',
+            def.line, def.column);
+        }
+        constants.add(key);
+      }
     }
   }
+}
+
+/// The functors (`f/n`, `[]/0`, `[|]/2`, `\\/2`) and the constants a bare
+/// type-name alternative reaches: those of the named type's alternatives, and
+/// of the types its own bare type-name alternatives name, at every depth, a
+/// definition visited once; empty when the name is a primitive, a parameter
+/// or a name this scope does not define ([_checkDeterminism]).
+({Set<String> functors, Set<String> constants}) _reachedHeads(
+    TypeRef alt, Map<String, TypeDef> scope) {
+  final functors = <String>{};
+  final constants = <String>{};
+  final visiting = <String>{};
+  void walk(TypeDef def) {
+    if (!visiting.add(def.name)) return;
+    for (final a in def.alternatives) {
+      if (a is ConstantAlt) {
+        constants.add(constantLabel(a.value));
+      } else if (a is ListNilAlt) {
+        functors.add('[]/0');
+      } else if (a is ListConsAlt) {
+        functors.add('[|]/2');
+      } else if (a is StructAlt) {
+        functors.add('${a.functor}/${a.args.length}');
+      } else if (a is DiffListAlt) {
+        functors.add('\\/2');
+      } else if (a is TypeRef && !a.isParameterized) {
+        final d = scope[a.name];
+        if (d != null) walk(d);
+      }
+    }
+  }
+  if (alt.isParameterized) return (functors: functors, constants: constants);
+  final def = scope[alt.name];
+  if (def != null) walk(def);
+  return (functors: functors, constants: constants);
 }
 
 /// The primitive types a bare type-name alternative accepts, following its
