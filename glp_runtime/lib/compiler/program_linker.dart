@@ -291,7 +291,10 @@ List<DiscoveredModule> _discoverProgramIn(Directory root, String? programsDir,
     // social/graph/routing.
     _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
         program: program, layers: layers);
-    final written = _writeCompiledTypes(modules);
+    final written = {
+      ..._writeCompiledTypes(modules),
+      ..._writeProcedureTypes(modules),
+    };
     if (written.isNotEmpty) {
       // Each module with a self.glp written into, or read leniently until
       // now, on its chain, the compiled modules among them, gets its scope
@@ -1105,6 +1108,158 @@ Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
   }
   return rebuild;
 }
+
+/// The type `M#Procedure`, written into each module that names it.
+/// "`M#Procedure` is the union of the declarations `M` exports, the type
+/// `Procedure` of Section sec:procedure-declarations restricted to them.  A
+/// meta-program is parameterised by the type of the goals it interprets and
+/// called at it: a meta-interpreter declared `procedure(G) reduce(Goal(G)?)`,
+/// with `Goal(G) ::= true ; (Goal(G), Goal(G)) ; G`, is called as
+/// `reduce(Goal(M#Procedure)?)` for the program `M` it interprets, and, `G`
+/// being an alternative of `Goal(G)`, it is checked at each program it
+/// interprets" (TGLP 44e1a60, modules.tex, "Procedure declarations"; GLP #14,
+/// Code_inbox.md, 2026-11-10 12:06 UTC).
+///
+/// For each name `M#Procedure` a module's declarations or type definitions
+/// reference, `M` the module an import's qualifier names from the module's
+/// directory --- the compiled module of its source, the module `M.glp`, or the
+/// `self.glp` of the directory `M` --- the module gets the definition
+/// `M#Procedure ::= p1(...) ; ... ; pk(...)`, one alternative for each
+/// declaration `M` exports, in their order, a declaration of arity zero a
+/// constant and each argument type as `M` writes it, and, with it, the
+/// definitions in `M` of the types those declarations name and of those they
+/// name, as a compiled module's types are written ([_writeCompiledTypes]), so
+/// that a type `M` defines itself is defined where it is named; a type the
+/// module defines under the same name stands.  A parameterised declaration
+/// `M` exports is refused with the reason: the paragraph gives the union of
+/// the declarations and names no instance of such a one to take.  The writing
+/// is repeated until no module gains a type, a declaration `M` exports naming
+/// another module's `Procedure`.  A `self.glp` written into is recorded in
+/// [selfGlpReading], so that every scope reads it with the type.  Returned:
+/// the `self.glp` files whose scopes are to be built again.  Until 2026-11-10
+/// the reader read `M#Procedure` as any qualified type name, and no scope
+/// defined it ("Unresolved type: M#Procedure").
+Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
+  const suffix = '#$procedureTypeName';
+  final reading = selfGlpReading;
+  final rebuild = <String>{};
+
+  final compiled = <String, DiscoveredModule>{};
+  for (final m in modules) {
+    if (m.filePath.endsWith('.vglp')) {
+      compiled[ppath.normalize(ppath.withoutExtension(m.filePath))] = m;
+    } else if (!m.isSelfGlp && _isCompiledSelfGlp(m.filePath)) {
+      compiled[ppath.normalize(ppath.withoutExtension(m.filePath))] = m;
+    }
+  }
+  final byPath = {for (final m in modules) ppath.normalize(m.filePath): m};
+  DiscoveredModule? target(DiscoveredModule m, String q) {
+    final stem = ppath.normalize(ppath.join(
+        ppath.dirname(m.filePath), q.replaceAll('#', ppath.separator)));
+    return compiled[stem] ??
+        byPath['$stem.glp'] ??
+        byPath[ppath.join(stem, 'self.glp')];
+  }
+
+  // The names `M#Procedure` the module references, each with the line of its
+  // first reference, in the order of the references.
+  Map<String, int> referenced(DiscoveredModule m) {
+    final out = <String, int>{};
+    void seen(TypeRef r) {
+      if (r.name.endsWith(suffix) && r.typeArgs.isEmpty) {
+        out.putIfAbsent(r.name, () => r.line);
+      }
+    }
+    void walk(TypeExpr t) {
+      mapTypeRefs(t, (ref) {
+        seen(ref);
+        for (final a in ref.typeArgs) {
+          walk(a);
+        }
+        return ref;
+      });
+    }
+    for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
+      for (final t in d.argTypes) {
+        walk(t);
+      }
+    }
+    for (final td in m.ast.typeDefs) {
+      for (final alt in td.alternatives) {
+        walk(alt);
+      }
+    }
+    return out;
+  }
+
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final m in modules) {
+      final have = {for (final td in m.ast.typeDefs) td.name};
+      final added = <TypeDef>[];
+      for (final e in referenced(m).entries) {
+        final name = e.key;
+        if (have.contains(name)) continue;
+        final q = name.substring(0, name.length - suffix.length);
+        final t = target(m, q);
+        if (t == null || identical(t, m)) {
+          throw Exception('${m.filePath}:${e.value}: $name names no module '
+              '$q of ${ppath.dirname(m.filePath)}: the qualifier of '
+              '$procedureTypeName is a single child directory or module '
+              'file relative to the referring module\'s directory (TGLP '
+              'modules.tex, "Procedure declarations")');
+        }
+        final exportedAll = [
+          for (final d in [...t.ast.procDeclarations, ...t.ast.paramProcDecls])
+            if (d.exported && !d.imported) d
+        ];
+        final param =
+            exportedAll.where((d) => d.typeParams.isNotEmpty).toList();
+        if (param.isNotEmpty) {
+          final d = param.first;
+          throw Exception('${m.filePath}:${e.value}: $name: ${t.filePath} '
+              'exports the parameterised declaration ${d.name}/${d.arity}, '
+              'and the union of the declarations $q exports has no instance '
+              'of it to take (TGLP modules.tex, "Procedure declarations")');
+        }
+        final exported = exportedAll;
+        final alts = <TypeExpr>[
+          for (final d in exported)
+            d.argTypes.isEmpty
+                ? ConstantAlt(d.name, d.line, d.column)
+                : StructAlt(d.name, d.argTypes, d.line, d.column)
+        ];
+        final names = <String>[];
+        for (final d in exported) {
+          names.addAll(_namesIn(d));
+        }
+        for (final td in _typesClosed(names, t.ast)) {
+          if (have.contains(td.name)) continue;
+          have.add(td.name);
+          added.add(td);
+        }
+        have.add(name);
+        added.add(TypeDef(name, alts, e.value, 0));
+      }
+      if (added.isEmpty) continue;
+      m.ast.typeDefs.addAll(added);
+      if (m.isSelfGlp) {
+        reading?.write(m.filePath, added);
+        rebuild.add(SelfGlpReading.key(m.filePath));
+      }
+      changed = true;
+    }
+  }
+  return rebuild;
+}
+
+/// The name of the type of the procedure declarations, `Procedure ::=
+/// merge(Stream?, Stream?, Stream)` the shorthand `procedure merge(Stream?,
+/// Stream?, Stream).` stands for (TGLP typed-glp.tex, "Procedure
+/// Declarations"), which `M#Procedure` restricts to the declarations `M`
+/// exports ([_writeProcedureTypes]).
+const String procedureTypeName = 'Procedure';
 
 /// The scope a `.vglp` source is compiled in: its ancestor chain, with the
 /// exposes merged.  The exposes are resolved already and were merged into the
