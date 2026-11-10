@@ -13,32 +13,8 @@
 %% 2026-11-07, for GSC's checker.
 %% ---------------------------------------------------------------------------
 
-SNT         ::= own(Constant) ; ext(SNT, Constant).
-SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-              ; sgn(Constant, Constant) ; item_of(Constant).
-SArgs       ::= [] ; [SArg | SArgs].
-SAtom       ::= atom(Constant, SArgs).
-SMult       ::= SAtom ; times(SArg, SAtom).
-SQLit       ::= SMult ; not(SMult).
-SQLits      ::= [] ; [SQLit | SQLits].
-SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
-SLits       ::= [] ; [SLit | SLits].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-              ; author_of(Constant) ; item_of(Constant).
-SConstraint ::= true ; and(SConstraint, SConstraint)
-              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; or(SConstraint, SConstraint)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr).
-RName       ::= Constant ; one(Constant, Constant).
-Names       ::= [] ; [RName | Names].
-PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
-Schemas     ::= [] ; [Schema | Schemas].
-Contract    ::= Schemas ; environment(PNames, Schemas).
-
 % contract_named(gpe, C): the contract, GPE (Coordination Appendix C).
-procedure contract_named(Constant?, Contract).
+procedure contract_named(Constant?, SDeclared).
 contract_named(gpe, environment([nearby],
    [sas(establish, ['Alice'], [],
        [atom(identity, ['Alice'])],

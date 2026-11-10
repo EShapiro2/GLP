@@ -263,6 +263,59 @@ AppToSg ::= invite(Key).
 SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 
 % =============================================================================
+% SPEECH-ACT SCHEMAS IN GSC'S CLAUSE SYNTAX
+% =============================================================================
+% The term by which a contract's NAME.glp declares its speech-act schemas
+% (GSC's paper, Sections 3.1 and 3.2, Definitions Name term, Role, Speech-act
+% schema and Schema with values; the term as GSC #11 Cowork settled it, Code
+% inbox 2026-11-04 19:57 UTC and 2026-11-05 06:28 UTC; what each part is, and
+% how GSC's reader reads it, is programs/gsc/self.glp, before as_read/2).
+% Defined here, the lowest common ancestor of the 42 contracts' modules and
+% programs/gsc, by TGLP's rule that common protocol types are defined once
+% there, and the GLP paper's predefined types (GLP #14, Code_inbox 2026-11-10
+% 12:03 UTC, item 2, Udi's ruling); until 2026-11-10 programs/gsc/self.glp
+% defined them and every contract's .glp held a copy.
+% A schema sas(Name, Names, Vars, Head, Body, Constraint, Guards); a contract
+% the list of its schemas; a contract declared with its reflexive or its
+% environment predicates.
+RName     ::= Constant ; one(Constant, Constant).
+Names      ::= [] ; [RName | Names].
+SNT    ::= own(Constant) ; ext(SNT, Constant).
+SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant).
+SArgs  ::= [] ; [SArg | SArgs].
+SAtom  ::= atom(Constant, SArgs).
+SAtoms ::= [] ; [SAtom | SAtoms].
+SMult  ::= SAtom ; times(SArg, SAtom).
+SQLit  ::= SMult ; not(SMult).
+SQLits ::= [] ; [SQLit | SQLits].
+SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+         ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
+         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
+SExprs ::= [] ; [SExpr | SExprs].
+% A safe formula and a constraint are one type, a constraint being a safe
+% formula with no atom and no quantifier.
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint) ; not(SConstraint)
+              ; implies(SConstraint, SConstraint)
+              ; ne(SExpr, SExpr) ; rel(Constant, SExprs)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr)
+              ; atom(Constant, SArgs) ; times(SArg, SAtom)
+              ; exists(PNames, SAtom, SConstraint)
+              ; forall(PNames, SAtom, SConstraint, SConstraint)
+              ; forall(Constant, SAtom, SQLits)
+              ; [] ; [SConstraint | SLits].
+SLits  ::= [] ; [SConstraint | SLits].
+PNames ::= [] ; [Constant | PNames].
+Preds ::= [] ; [Constant | Preds].
+SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+SContract  ::= [] ; [SSchema | SContract].
+SDeclared  ::= SContract ; reflexive(Preds, SContract)
+             ; environment(Preds, SContract).
+
+% =============================================================================
 % BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
 % =============================================================================
 

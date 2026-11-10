@@ -8,33 +8,8 @@
 %% Written by GRH #1 Cowork, 2026-11-06, from GDO-LB's clauses, Udi's text with "only if".
 %% ---------------------------------------------------------------------------
 
-SNT         ::= own(Constant) ; ext(SNT, Constant).
-SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-              ; sgn(Constant, Constant).
-SArgs       ::= [] ; [SArg | SArgs].
-SAtom       ::= atom(Constant, SArgs).
-SMult       ::= SAtom ; times(SArg, SAtom).
-SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
-SHeads      ::= [] ; [SHead | SHeads].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
-SExprs      ::= [] ; [SExpr | SExprs].
-SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
-              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
-              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
-SConds      ::= [] ; [SCond | SConds].
-RName       ::= Constant ; one(Constant, Constant).
-Names       ::= [] ; [RName | Names].
-PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
-Contract    ::= [] ; [Schema | Contract].
-Preds       ::= [] ; [Constant | Preds].
-Declared    ::= Contract ; environment(Preds, Contract).
-
 %% contract_named(gdo_lb, C): the contract, GDO-LB.
-procedure contract_named(Constant?, Declared).
+procedure contract_named(Constant?, SDeclared).
 contract_named(gdo_lb, environment([location, degree, threshold],
    [
 %% GKK:1, Identity.
