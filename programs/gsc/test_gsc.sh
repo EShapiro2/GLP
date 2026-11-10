@@ -2395,6 +2395,23 @@ check "and an addition of a new name comes after the base's schemas" \
       "atom(person, ['Alice'])], true, ['Alice'])])" "$(printf '%s\n' "$out" | grep 'sas(sign, ')"
 check "a constant parameter val(bylaws_p) is written bylaws_mcs by the binding bylaws_p = bylaws_mcs" \
       "D = [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_mcs)])], [atom(identity, ['Alice'])], true, ['Alice'])]" "$out"
+# An instance may name the base's schemas its own way (GSC 22605d6), in its
+# bindings beside the predicates': ward_acquaint = child_acquaint renames the
+# relay act, and an addition named child_acquaint replaces it; a name taken
+# from another schema of the base occurs in it, and a schema the base has not
+# is no parameter.
+GNWN="[ward = child, guardian_of = parenting, guarded_by = parent_of, ward_acquaint = child_acquaint, wards_acquaint = children_acquaint]"
+CHA="sas(child_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'], [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Carol']), atom(child, ['Carol']), atom(parent_of, ['Carol', 'Alice']), atom(identity, ['Bob']), atom(person, ['Bob'])], true, ['Carol', 'Bob'])"
+out2=$(run "instantiate($GNWP, $GNWN, [], D), check(D?, V)." "instance_faults($GNWP, $GNWN, F)." \
+           "instance_faults($GNWP, [ward_acquaint = befriend, nothing = x], F)." \
+           "instantiate($GNWP, $GNWN, [$CHA], D).")
+check "an instance naming the relay acts its own way is certified, the relay acts by the instance's names" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)], [relay(child_acquaint, ward(1, child, no_guardian), free(2)), relay(children_acquaint, ward(1, child, no_guardian), ward(2, child, no_guardian))], [identity, person])" "$out2"
+check "its bindings of schemas have no fault" "F = []" "$out2"
+check "a schema's name taken from another schema occurs in the base, and a schema the base has not is no parameter" \
+      "F = [occurs(befriend), not_a_parameter(nothing)]" "$out2"
+check "an addition bearing the instance's name for a schema replaces it in its place" \
+      "sas(child_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'], [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Carol']), atom(child, ['Carol']), atom(parent_of, ['Carol', 'Alice']), atom(identity, ['Bob']), atom(person, ['Bob'])], true, ['Carol', 'Bob']), sas(ward_befriend" "$out2"
 check "as_read keeps a parametric contract's parameters" \
       "R = parametric([val(bylaws_p)], [schema(adopt, ['Alice'], [], [rs(guarded, [atom(bylaws, [val(bylaws_p)])], [], [atom(identity, [])], [])])])" "$out"
 
