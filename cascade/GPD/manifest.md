@@ -1,9 +1,9 @@
 # A run of the cascade on GPD
 
-- Contract: `GPD` (`gpd` to the checker), its owner's two files `programs/social/graph/GPD.txt` and `programs/social/graph/GPD.glp`, copied here as they stood at `d1553aab`.
-- The paper: `git@github.com:EShapiro2/GSG-Grassroots-Social-Graph.git` at `f585f511`, for the paper's own record.
-- The tools: this repository at `d1553aab` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 14:46 UTC by `cascade.sh gpd`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GPD` (`gpd` to the checker), its owner's two files `programs/social/graph/GPD.txt` and `programs/social/graph/GPD.glp`, copied here as they stood at `d49346e3`.
+- The paper: `/Users/udi/Grassroots/GSA (not on this machine)` at `unknown`, for the paper's own record.
+- The tools: this repository at `d49346e3` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 15:56 UTC by `cascade.sh gpd`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
