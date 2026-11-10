@@ -147,6 +147,7 @@ KNOWN_RED_CHECKS=(
 # apps print again (Code #27, 2026-11-10).
     "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp"
     "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp"
+    "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI"
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
