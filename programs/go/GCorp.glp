@@ -6,34 +6,8 @@
 %% Parameter: bylaws_p, an utterance, the bylaws, which an instance writes as its own (GSC, Section 8, Definition Parametric contract; GSC 45f1ec7).  The term form of a constant parameter is Code's to give; until then the reader refuses a constant that is no role and no variable (not_in_vars).
 %% ---------------------------------------------------------------------------
 
-SNT         ::= own(Constant) ; ext(SNT, Constant).
-SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant) ; real(Constant)
-              ; sgn(Constant, Constant) ; item_of(Constant).
-SArgs       ::= [] ; [SArg | SArgs].
-SAtom       ::= atom(Constant, SArgs).
-SMult       ::= SAtom ; times(SArg, SAtom).
-SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
-SHeads      ::= [] ; [SHead | SHeads].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond)
-              ; sum(PNames, SAtom, SCond, SExpr) ; author_of(Constant) ; item_of(Constant).
-SExprs      ::= [] ; [SExpr | SExprs].
-SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
-              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; rel(Constant, SExprs)
-              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
-SConds      ::= [] ; [SCond | SConds].
-RName       ::= Constant ; one(Constant, Constant).
-Names       ::= [] ; [RName | Names].
-PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
-Contract    ::= [] ; [Schema | Contract].
-Preds       ::= [] ; [Constant | Preds].
-Declared    ::= Contract ; environment(Preds, Contract).
-
 % contract_named(gcorp, C): the contract, GCorp.
-procedure contract_named(Constant?, Declared).
+procedure contract_named(Constant?, SDeclared).
 contract_named(gcorp, environment([today],
    [
 %% GKK:1, Identity.
