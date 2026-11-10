@@ -138,8 +138,8 @@ hold_rule(msg(dave, cargo(bob, start(attempt(_, _, _, befriend(bob, dave), _))))
 hold_rule(msg(carol, cargo(alice, vote(attempt(_, _, _, child_close(_, _, _, _), _), _))), 3).
 hold_rule(_, 0) :- otherwise | true.
 procedure rel_rule(Net?, Integer).
-rel_rule(msg(dave, cargo(carol, outcome(attempt(_, _, _, join(_, _, _), _), commit))), 1).
-rel_rule(msg(carol, cargo(dave, vote(attempt(_, _, _, child_close(_, _, _, _), _), yes))), 2).
+rel_rule(msg(dave, cargo(carol, outcome(attempt(_, _, _, join(_, _, _), _), commit(_)))), 1).
+rel_rule(msg(carol, cargo(dave, vote(attempt(_, _, _, child_close(_, _, _, _), _), yes(_)))), 2).
 rel_rule(msg(carol, cargo(dave, yield(_))), 3).
 rel_rule(_, 0) :- otherwise | true.
 procedure slot_of(Integer?, Slots?, Slot).

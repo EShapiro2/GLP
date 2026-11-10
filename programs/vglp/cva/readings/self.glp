@@ -29,10 +29,10 @@
 %%   nudge(p?, q)        :  at p  knows(q), not nudged(q), +nudged(q)
 %%                          at q  knows(p), +nudged_by(p)
 %%   vouch(p? ; y)       :  at p  not attestation(y), +attestation(y)
-%%   meet(c?, b? ; y)    :  at c  attestation(y), not knows(b), +knows(b)
+%%   present(c?, b? ; y)    :  at c  attestation(y), not knows(b), +knows(b)
 %%                          at b  not knows(c), +knows(c), +record(c, y)
 %%
-%% meet's y is read at c's role, as GAI's GnW:3 reads a ward's attestation
+%% present's y is read at c's role, as GAI's GnW:3 reads a ward's attestation
 %% at the ward and records it at the person who comes to know it: c's
 %% machine finds it in its state, its vote yes carries it, and b records it,
 %% no field naming it; b proposes it, as Bob proposes GAI's agent_acquaint,
@@ -44,8 +44,8 @@
 %%
 %% play_readings: alice and bob start, each at level 0, and alice watches,
 %% so her request stands for every part of trail she proposes, none yet,
-%% knowing nobody.  Bob vouches an attestation, att; alice asks to meet bob,
-%% meet(bob, alice), and bob answers yes: bob's machine reads y, its vote yes
+%% knowing nobody.  Bob vouches an attestation, att; alice asks bob to present
+%% himself, present(bob, alice), and bob answers yes: bob's machine reads y, its vote yes
 %% carrying it, and alice holds record(bob, att) with knows(bob).  Knowing bob, her machine
 %% proposes trail(alice, bob): bob's machine votes yes unasked, reading
 %% b = 0, alice's tally finds no readings meeting a < b, and refuses the
@@ -83,7 +83,7 @@ exported procedure play_readings(Stream(ScriptLog), Stream(ScriptLog), Stream(Se
 play_readings(LA?, LB?, N?) :-
     pair([own([A1], propose(start(A1?))), wait(holds(started)),
           own([A2], propose(watch(A2?))), wait(holds(watching)),
-          own([A9], propose(meet(bob, A9?))),
+          own([A9], propose(present(bob, A9?))),
           wait(holds(record(bob, speech(utterance(att), bob)))),
           own([A8], propose(nudge(A8?, bob))), wait(holds(nudged(bob))),
           wait(holds(trails(bob))),
@@ -96,7 +96,7 @@ play_readings(LA?, LB?, N?) :-
          [own([B1], propose(start(B1?))), wait(holds(started)),
           own([B2, B3], propose(vouch(B2?, speech(utterance(att), B3?)))),
           wait(holds(attestation(speech(utterance(att), bob)))),
-          approval(meet(bob, alice), yes), wait(holds(knows(alice))),
+          approval(present(bob, alice), yes), wait(holds(knows(alice))),
           wait(holds(nudged_by(alice))),
           own([B5], propose(bump(B5?))), wait(holds(level(1))),
           wait(holds(trailed(alice))),
