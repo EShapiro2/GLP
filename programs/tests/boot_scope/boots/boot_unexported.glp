@@ -1,26 +1,13 @@
 %% boot_unexported.glp --- a boot source loaded on
-%% programs/tests/boot_scope/program calling helper/2, which the program does
-%% not export: the check refuses the call, naming it, and nothing runs.
+%% programs/tests/boot_scope/program whose person calls helper/2, which the
+%% program does not export: the check refuses the call, naming it, and nothing
+%% runs.
 
 procedure boot.
 boot :-
     agent(ch(_?, _), ch(_?, _))@alice,
-    say(alice, ch(_?, _))@alice.
-procedure client(Constant?, Stream(_)?).
-client(_, _) :- helper(secret(3), N), report(N?).
+    client(alice, ch(_?, _))@alice.
 
-procedure report(Integer?).
-report(N) :- send_to_user([total(N?)]).
-
-%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)) (GLP-Spec maglp.tex, Definition "Multiagent GLP"), and the person scripted at each agent, say/2, run on its person channel in the person's place (IGLP, Implementation Notes, "Boot"), tells the agent its name, by which agent/2 starts the agent's program on the network input, the agent's key having been made at its spawn.
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
-agent(ch(In, []), ch(N, [])) :- start(In?, N?).
-
-%% The agent's program, by the name its person tells it.
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
-start([alice | _], N) :- client(alice, N?).
-start(_, _) :- otherwise | true.
-
-%% The person at each agent: it tells the agent its name, and reads nothing.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), answered by the program (IGLP, Implementation Notes, "Boot": "A boot defines no agent/2"); the boot file carries its clause and the person scripted at alice, and nothing else (TGLP 6ce148a, modules.tex, "Entry and the absence of a boot module").  The person is the boot source the scope is asked of: it is checked in the program's entry points and the boot file's chain, and tells the agent what it computes, which the agent shows.
+exported procedure client(Constant?, Channel(Stream(Constant), Stream(Report))?).
+client(_, ch(_, [total(N?)])) :- helper(secret(3), N).

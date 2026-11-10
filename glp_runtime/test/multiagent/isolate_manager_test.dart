@@ -6,6 +6,8 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
+import 'boot_program.dart';
+
 /// The agent cold-call round-trip fixture (repo-relative from glp_runtime/).
 const _fixtureDir = '../programs/tests/agent_roundtrip';
 
@@ -32,21 +34,19 @@ void main() {
     });
 
     test('boots three agents from boot config', () async {
-      // Minimal program that completes immediately
-      final source = '''
+      // Minimal program that completes immediately, a program directory the
+      // boot's clause starts three agents on (TGLP 6ce148a, "Entry and the
+      // absence of a boot module").
+      final config = bootWithProgram('''
 procedure boot.
 boot :-
     agent(ch(_?, _), ch(_?, _))@alice,
     agent(ch(_?, _), ch(_?, _))@bob,
     agent(ch(_?, _), ch(_?, _))@charlie.
-
+''', '''
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(_, []), ch(_, [])).
-''';
-
-      final loader = BootLoader();
-      final config = loader.load(source);
-      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
+''');
 
       await manager.boot(config);
 
@@ -65,19 +65,17 @@ agent(ch(_, []), ch(_, [])).
       // GLP-Spec appendix-guards.tex, "Identity and signature": "self_key(Key)
       // assigns Key the agent's public key".  Each agent tells its person the
       // key self_key/1 assigns it.
-      final source = '''
+      final config = bootWithProgram('''
 procedure boot.
 boot :-
     agent(ch(_?, _), ch(_?, _))@alice,
     agent(ch(_?, _), ch(_?, _))@bob.
-
+''', '''
 KeyReport ::= self(Key).
 
 exported procedure agent(Channel(Stream(Constant), Stream(KeyReport))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
 agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
-''';
-      final config = BootLoader().load(source);
-      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
+''');
 
       await manager.boot(config);
       // The keys exist before the agents run, and are the agents' own.

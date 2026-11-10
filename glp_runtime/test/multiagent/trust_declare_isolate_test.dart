@@ -18,32 +18,33 @@
 @Timeout.none
 library;
 
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
+
+import 'boot_program.dart';
 
 /// Two agents: bob declares PAN open and LAN open, alice declares nothing.
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
+
+/// The agents' program, a program directory's self.glp (boot_program.dart).
+const _program = '''
 exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
 agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
 start([alice | _], N) :- agent_init(alice, N?).
 start([bob | _], N) :- agent_init(bob, N?).
 start(_, _) :- otherwise | true.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
 procedure agent_init(_?, _?).
 agent_init(bob, _) :- declare(trust(pan, open)), declare(trust(lan, open)).
 agent_init(alice, _).
 ''';
-
-String get _rootSelf => File('../programs/self.glp').absolute.path;
 
 void main() {
   late IsolateManager manager;
@@ -53,8 +54,7 @@ void main() {
 
   test("an agent's trust declaration sets the level the router enforces",
       () async {
-    final config = BootLoader().load(_boot);
-    config.rootSelfGlpPath = _rootSelf;
+    final config = bootWithProgram(_boot, _program);
 
     await manager.boot(config);
     // Before the agents run: bob's key, made at his spawn (IGLP,

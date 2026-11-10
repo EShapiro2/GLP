@@ -1,0 +1,24 @@
+%% nearby/self.glp --- the agents' program of ../nearby_boot.glp, moved out of
+%% it: a boot file carries its boot clause and the persons it names, and the
+%% agents' program is a program directory (TGLP 6ce148a, modules.tex, "Entry
+%% and the absence of a boot module").  See ../nearby_boot.glp for what it exercises.
+
+NbMsg ::= poke.
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(NbMsg)), Stream(NetMsg(NbMsg)))?).
+agent(ch(In, []), ch(_, [])) :- start(In?).
+
+procedure start(Stream(Constant)?).
+start([alice | _]) :- declare(peer(bob)), declare(nearby(pan, S)), watch(S?).
+start([bob | _]).
+start([]).
+
+%% The first presence goes to the person, and the declaration is removed;
+%% the stream's closing goes to the person too.
+procedure watch(Stream(Presence)?).
+watch([P | S]) :- ground(P?) | send_to_user([P?]), remove(nearby(pan)), closing(S?).
+watch([]) :- send_to_user([closed]).
+
+procedure closing(Stream(Presence)?).
+closing([_ | S]) :- closing(S?).
+closing([]) :- send_to_user([closed]).

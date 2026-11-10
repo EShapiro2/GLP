@@ -22,11 +22,12 @@ import 'dart:io';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:test/test.dart';
+
+import '../multiagent/boot_program.dart';
 
 String get _rootSelf => File('../programs/self.glp').absolute.path;
 const _dir = '../programs/tests/post_goal';
@@ -234,13 +235,16 @@ void main() {
         () async {
       final manager = IsolateManager();
       addTearDown(manager.shutdown);
-      final config = BootLoader().load('''
+      // The boot carries its clause alone, and the agents' program is a
+      // program directory (TGLP 6ce148a, "Entry and the absence of a boot
+      // module").
+      final config = bootWithProgram('''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice.
+''', '''
 exported procedure agent(Integer?, Integer?).
 agent(_, _).
 ''');
-      config.rootSelfGlpPath = _rootSelf;
       await expectLater(
         manager.boot(config),
         throwsA(predicate((e) {

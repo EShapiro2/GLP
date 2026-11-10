@@ -27,12 +27,11 @@
 @Timeout.none
 library;
 
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
+
+import 'boot_program.dart';
 
 /// The harness sets no trust level at spawn (IGLP 45fabfc, "Simulation
 /// realisation"), so dave, alice and carol open their PANs at their start,
@@ -45,7 +44,12 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart';
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _), ch(_?, _))@dave, say(dave, ch(_?, _))@dave, agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@carol, say(carol, ch(_?, _))@carol.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
 
+/// The agents' program, a program directory's self.glp (boot_program.dart).
+const _program = '''
 PdMsg ::= go ; ready ; declared ; key(Key) ; declare(Key) ; hello(Constant).
 DaveKey ::= waiting ; got(Key).
 
@@ -54,8 +58,6 @@ agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure start(Stream(Constant)?, Stream(NetMsg(PdMsg))?).
 start([P | _], N) :- agent_init(P?, N?).
 start([], _).
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
 procedure agent_init(Constant?, Stream(NetMsg(PdMsg))?).
 agent_init(bob, In) :-
@@ -104,8 +106,6 @@ heard([_ | In]) :- otherwise | heard(In?).
 heard([]).
 ''';
 
-String get _rootSelf => File('../programs/self.glp').absolute.path;
-
 void main() {
   late IsolateManager manager;
 
@@ -114,8 +114,7 @@ void main() {
 
   test('under closed, a peer declared by declare(peer(P)) is answered and an '
       'undeclared one is not', () async {
-    final config = BootLoader().load(_boot);
-    config.rootSelfGlpPath = _rootSelf;
+    final config = bootWithProgram(_boot, _program);
 
     await manager.boot(config);
     manager.start();

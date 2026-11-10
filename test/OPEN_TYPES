@@ -510,9 +510,6 @@ programs/tests/agent_roundtrip/channel.glp	open-decl	send/3
 programs/tests/agent_roundtrip/play_madglp/agents.glp	open-decl	actor/2
 programs/tests/agent_roundtrip/streams.glp	open-decl	tag_stream/3
 programs/tests/agent_roundtrip/typed_ui_actors.glp	open-decl	ui_actor/2
-programs/tests/boot_scope/boots/boot_ok.glp	open-decl	client/2
-programs/tests/boot_scope/boots/boot_unexported.glp	open-decl	client/2
-programs/tests/boot_scope/boots/boot_unexported_type.glp	open-decl	client/2
 programs/tests/call_instantiation/wildcard_arg.glp	open-decl	tag/3
 programs/tests/cert_refused/app.glp	open-decl	leak/1
 programs/tests/cert_refused/app.glp	open-decl	shout/1
@@ -776,7 +773,6 @@ programs/tests/neg_boot_programdir/types/agents.glp	open-decl	agent_init/2
 programs/tests/neg_boot_programdir/types/self.glp	open-decl	agent_init/2
 programs/tests/neg_boot_programdir/types/self.glp	open-decl	agents#agent_init/2
 programs/tests/neg_guard_boot/agent.glp	open-decl	agent_init/2
-programs/tests/neg_guard_boot/agent_boot.glp	open-decl	agent_init/2
 programs/tests/neg_guard_dir/self.glp	open-decl	p/2
 programs/tests/neg_guard_linked/m.glp	open-decl	p/2
 programs/tests/neg_guard_linked/self.glp	open-decl	m#p/2
@@ -786,7 +782,6 @@ programs/tests/neg_guard_unreached/self.glp	open-decl	p/2
 programs/tests/neg_guard_unreached/self.glp	open-decl	reached#echo/2
 programs/tests/neg_guard_unreached/unreached.glp	open-decl	q/2
 programs/tests/neg_srsw_boot/agent.glp	open-decl	agent_init/2
-programs/tests/neg_srsw_boot/agent_boot.glp	open-decl	agent_init/2
 programs/tests/neg_srsw_unreached/reached.glp	open-decl	echo/2
 programs/tests/neg_srsw_unreached/self.glp	open-decl	p/2
 programs/tests/neg_srsw_unreached/self.glp	open-decl	reached#echo/2
