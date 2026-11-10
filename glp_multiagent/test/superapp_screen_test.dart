@@ -261,14 +261,17 @@ void main() {
       await settle();
     }
 
-    // The form offers the five acts of the person's own super-app, a menu of
-    // their forms and buttons, and only those: the alternatives of Request.
+    // The form offers the ten acts of the person's own super-app, a menu of
+    // their forms and buttons, and only those: the alternatives of Request
+    // (programs/social/graph/core/home.vglp): trust and install (GAS), invite
+    // (GPE), the place (GPE:1), the links (GRV:2) and the listings (GDS:2).
     for (final label in [
-      'trust', 'install', 'invite', 'open_place', 'close_place'
+      'trust', 'install', 'invite', 'open_place', 'close_place',
+      'invite_link', 'open_link', 'list', 'list_unlisted', 'unlist'
     ]) {
       expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget);
     }
-    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(5));
+    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(10));
     await _shot(tester, '/private/tmp/superapp-forms.png');
 
     // --- Trust the compiler that certified the mini-app: its key, a Key and
