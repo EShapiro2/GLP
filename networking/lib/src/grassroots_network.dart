@@ -2745,14 +2745,13 @@ class GrassrootsNetwork {
           final queued = queue.first;
 
           // Skip messages whose Redux status is already past `sent` (i.e.
-          // delivered/read/failed): a message settled by another attempt
-          // while it sat in the queue is not sent again.
+          // delivered/read): a message settled by another attempt while it
+          // sat in the queue is not sent again.
           final current =
               store.state.messages.outgoingMessages[queued.messageId];
           if (current != null &&
               (current.status == MessageStatus.delivered ||
-                  current.status == MessageStatus.read ||
-                  current.status == MessageStatus.failed)) {
+                  current.status == MessageStatus.read)) {
             debugPrint(
               '[queue] Skipping ${queued.messageId} for '
               '${pubkeyHex.substring(0, 8)} — already ${current.status.name}',
