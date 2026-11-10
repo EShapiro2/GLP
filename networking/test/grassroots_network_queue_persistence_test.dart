@@ -452,6 +452,85 @@ void main() {
         reason: 'a settled message is removed from the saved queue');
   }, timeout: Timeout.none);
 
+  test(
+      'a message whose tries run out on every link the peer was reachable '
+      'over is shown failed and stays queued, failed while it waits; tried '
+      'again once the peer is back, it is delivered', () async {
+    final senderId = await identityFromSeed(0x9e);
+    final recipientId = await identityFromSeed(0x9f);
+
+    final sender = await startNode(senderId);
+    var recipient = await startNode(recipientId);
+    var recipientDisposed = false;
+    addTearDown(() async {
+      await sender.dispose();
+      if (!recipientDisposed) await recipient.dispose();
+    });
+    final arrived = <String>[];
+    void listen(GrassrootsNetwork node) => node.onMessageReceived =
+        (s, payload, id, senderMessageId, u) => arrived.add(senderMessageId);
+    listen(recipient);
+    recipient.putKnownPeer(senderId.publicKey);
+    recipient.wan!
+        .putPeerAddress(senderId.publicKey, await listeningAddress(sender));
+    sender.putKnownPeer(recipientId.publicKey);
+    sender.wan!
+        .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
+    final first = await sender.send(recipientId.publicKey, Uint8List(1));
+    await stateWhere(
+        sender.store,
+        (s) =>
+            s.messages.outgoingMessages[first]?.status ==
+            MessageStatus.delivered);
+
+    // The recipient goes silent while the sender still holds its sessions:
+    // the next message's tries run out on each link it rides.
+    await recipient.dispose();
+    recipientDisposed = true;
+    final lost = await sender.send(recipientId.publicKey, Uint8List(2));
+    var failed = false;
+    unawaited(stateWhere(
+        sender.store,
+        (s) =>
+            s.messages.outgoingMessages[lost]?.status ==
+            MessageStatus.failed).then((_) => failed = true));
+    while (!failed) {
+      for (final underlay in [Underlay.lan, Underlay.wan]) {
+        if (sender.debugIpLaneHolds(underlay, recipientId.publicKey)) {
+          sender.debugExhaustIpAttempts(underlay, recipientId.publicKey);
+        }
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    expect(sender.queuedMessageCountForPeer(recipientId.publicKey), 1,
+        reason: 'failed, it is still held for the next path');
+    expect((await savedQueue(senderId)).map((e) => e.messageId), [lost],
+        reason: 'and still in the saved queue');
+
+    // Heartbeats that find no path leave it failed, not queued.
+    await Future<void>.delayed(const Duration(seconds: 5));
+    expect(sender.store.state.messages.outgoingMessages[lost]!.status,
+        MessageStatus.failed);
+
+    // The recipient is back; the red "!" tries the peer at once.
+    recipient = await startNode(recipientId);
+    recipientDisposed = false;
+    listen(recipient);
+    recipient.putKnownPeer(senderId.publicKey);
+    recipient.wan!
+        .putPeerAddress(senderId.publicKey, await listeningAddress(sender));
+    sender.wan!
+        .putPeerAddress(recipientId.publicKey, await listeningAddress(recipient));
+    sender.retryQueued(recipientId.publicKey);
+    await stateWhere(
+        sender.store,
+        (s) =>
+            s.messages.outgoingMessages[lost]?.status ==
+            MessageStatus.delivered);
+    expect(arrived, contains(lost));
+    expect(sender.queuedMessageCountForPeer(recipientId.publicKey), 0);
+  }, timeout: Timeout.none);
+
   test("each agent's queue is its own", () async {
     final aId = await identityFromSeed(0x93);
     final bId = await identityFromSeed(0x94);

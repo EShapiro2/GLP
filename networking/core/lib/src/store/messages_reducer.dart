@@ -18,7 +18,7 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     final existing = state.outgoingMessages[action.messageId];
 
     if (existing != null) {
-      // Never regress from delivered/read/failed. The drain dispatches
+      // Never regress from delivered/read. The drain dispatches
       // MessageSendingAction blindly; if the message was already delivered
       // (e.g. ACK arrived before the drain picked it up), this would
       // otherwise wipe `deliveredAt` and flip the UI checkmarks backward.
@@ -58,13 +58,35 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
     return state.copyWith(outgoingMessages: updated);
   }
 
+  if (action is MessageFailedAction) {
+    final existing = state.outgoingMessages[action.messageId];
+    if (existing == null) return state;
+
+    // Don't downgrade delivered/read to failed: by definition the recipient
+    // already has it, so it's not really failed from their perspective.
+    if (existing.status == MessageStatus.delivered ||
+        existing.status == MessageStatus.read) {
+      return state;
+    }
+
+    final updated = Map<String, OutgoingMessage>.from(state.outgoingMessages);
+    updated[action.messageId] = existing.copyWith(
+      status: MessageStatus.failed,
+    );
+
+    return state.copyWith(outgoingMessages: updated);
+  }
+
   if (action is MessageQueuedAction) {
     final existing = state.outgoingMessages[action.messageId];
     if (existing == null) return state;
 
     // `sent → queued` is legitimate (a re-queue after a failed attempt);
-    // `delivered/read/failed → queued` is a regression and gets dropped.
-    if (_isTerminalForRegression(existing.status)) {
+    // `delivered/read → queued` is a regression and gets dropped.  A failed
+    // message stays failed while it waits: only a new attempt
+    // ([MessageSendingAction]) moves it on.
+    if (_isTerminalForRegression(existing.status) ||
+        existing.status == MessageStatus.failed) {
       return state;
     }
 

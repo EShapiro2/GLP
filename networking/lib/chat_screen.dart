@@ -797,7 +797,22 @@ class _ChatScreenState extends State<ChatScreen> {
       message: message,
       onLongPress: (position) => _showMessageOptions(message, position),
       messagesState: widget.store.state.messages,
+      onRetry: message.isOutgoing ? _retryMessages : null,
       store: widget.store,
+    );
+  }
+
+  /// A failed message's red "!": the layer tries this peer's queued
+  /// messages now rather than at its next heartbeat.  The message is still in
+  /// the layer's queue, under the id `send` gave it, so nothing is sent
+  /// again under a new id.
+  void _retryMessages() {
+    widget.grassroots.retryQueued(widget.peer.publicKey);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Retrying'),
+        duration: Duration(seconds: 2),
+      ),
     );
   }
 
@@ -928,12 +943,14 @@ class _MessageBubble extends StatelessWidget {
   final ChatMessageState message;
   final void Function(Offset position)? onLongPress;
   final MessagesState? messagesState;
+  final VoidCallback? onRetry;
   final Store<AppState>? store;
 
   const _MessageBubble({
     required this.message,
     this.onLongPress,
     this.messagesState,
+    this.onRetry,
     this.store,
   });
 
@@ -1156,6 +1173,16 @@ class _MessageBubble extends StatelessWidget {
           Icons.schedule,
           size: 14,
           color: Colors.white70,
+        );
+      case MessageStatus.failed:
+        // Red exclamation (its tries ran out; still queued) - tap to retry
+        return GestureDetector(
+          onTap: onRetry,
+          child: const Icon(
+            Icons.error_outline,
+            size: 14,
+            color: Colors.redAccent,
+          ),
         );
       case MessageStatus.sent:
         // 1 check (sent)
