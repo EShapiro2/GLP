@@ -23,6 +23,7 @@ import '../analysis/type_checker/root_scope.dart' show isBuiltinProcedure;
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../analysis/type_checker/type_identity.dart';
+import '../analysis/type_checker/well_typed_clause.dart' show crossModuleBinding;
 import '../analysis/type_checker/param_expansion.dart'
     show UndefinedDeclarationTypeError, buildAbstractInstance;
 import '../analysis/type_checker/program_dfa.dart' show UnknownTypeError;
@@ -2889,6 +2890,7 @@ List<Procedure> _renamedProcedures(
   // the calls that resolve to nothing, every one of them reported together.
   final resolver = _CrossModuleResolver(modules);
   final byName = {for (final m in modules) m.moduleName: m};
+  final owners = typeOwnersByModule(modules);
 
   // Process each module
   for (final mod in modules) {
@@ -2917,11 +2919,13 @@ List<Procedure> _renamedProcedures(
         // becomes M:p (bare in the loaded module), ancestor self.glp →
         // ancestor:p, static cross-module M' # p → M':p (a local Spawn, not a
         // Distribute; manual §19.7).
-        final resolvedBody = clause.body
-            ?.map((g) => _resolveGoal(
-                g, mod.moduleName, localSigs, modAncestorProcs, remote,
-                keepLocalBare: keepBare))
-            .toList();
+        final resolvedBody = clause.body?.map((g) {
+          final r = _resolveGoal(
+              g, mod.moduleName, localSigs, modAncestorProcs, remote,
+              keepLocalBare: keepBare);
+          _crossModuleBinding(g, r, mod, byName, owners);
+          return r;
+        }).toList();
 
         // A defined guard calls a user unit-clause procedure, which step 3
         // renames to M:g. Resolve the guard call in the same scope so it points
@@ -3625,6 +3629,118 @@ String _declarationText(ProcDecl d) {
   final kind = d.imported ? 'imported ' : (d.exported ? 'exported ' : '');
   final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
   return '${kind}procedure$params ${d.qualifiedName}(${d.argTypes.join(', ')}).';
+}
+
+/// The binding the caller's imported declaration fixes for the cross-module
+/// call [source], resolved to [resolved], recorded on the resolved goal for
+/// the linked check ([crossModuleBinding]): "The imported declaration must
+/// agree with the declaration M exports: their type automata are equal ...
+/// once the exported declaration's type parameters, if any, are
+/// instantiated" (TGLP modules.tex, "Cross-module type checking"; Code #27,
+/// Code_inbox.md, 2026-11-10 14:06 UTC).  Where [mod] declares `imported
+/// procedure q#p(...)` for the call `q # p(...)`, and the module the call
+/// resolves to exports p/n with type parameters, each parameter the export's
+/// declaration writes where the import writes a type name with no arguments
+/// is bound to that type, both declarations renamed as the flat program
+/// names them ([renameDeclTypes]); a parameter the import leaves to one of
+/// its own stays open, fixed at the call as a local call's is.  A spawned
+/// call is the goal it spawns.  Nothing is recorded where the declarations
+/// do not match position by position: the import's agreement with the
+/// export is checked where the import is ([checkModulesIndependently]).
+void _crossModuleBinding(
+    Goal source,
+    Goal resolved,
+    DiscoveredModule mod,
+    Map<String, DiscoveredModule> byName,
+    Map<String, Map<String, String>> owners) {
+  var s = source;
+  var r = resolved;
+  if (s is SpawnGoal && r is SpawnGoal) {
+    s = s.innerGoal;
+    r = r.innerGoal;
+  }
+  if (s is! RemoteGoal) return;
+  final inner = s.goal;
+  if (inner is RemoteGoal) return;
+  final q = s.staticModuleName;
+  ProcDecl? import;
+  for (final d in [...mod.ast.procDeclarations, ...mod.ast.paramProcDecls]) {
+    if (d.imported &&
+        d.modulePath == q &&
+        d.name == inner.functor &&
+        d.argTypes.length == inner.arity) {
+      import = d;
+      break;
+    }
+  }
+  if (import == null) return;
+  // The module the call resolved to, the prefix of the resolved name.
+  final at = r.functor.lastIndexOf(':');
+  if (at <= 0) return;
+  final target = byName[r.functor.substring(0, at)];
+  if (target == null) return;
+  ProcDecl? export;
+  for (final d in [
+    ...target.ast.procDeclarations,
+    ...target.ast.paramProcDecls
+  ]) {
+    if (d.exported &&
+        !d.imported &&
+        d.name == inner.functor &&
+        d.argTypes.length == inner.arity &&
+        d.typeParams.isNotEmpty) {
+      export = d;
+      break;
+    }
+  }
+  if (export == null) return;
+  final importOwners = owners[mod.filePath];
+  final exportOwners = owners[target.filePath];
+  if (importOwners == null || exportOwners == null) return;
+  final ia = renameDeclTypes(import, importOwners);
+  final ea = renameDeclTypes(export, exportOwners);
+  final params = export.typeParams.toSet();
+  final own = import.typeParams.toSet();
+  final binding = <String, String>{};
+  var matched = true;
+  void walk(TypeExpr e, TypeExpr i) {
+    if (!matched) return;
+    if (e is TypeRef && params.contains(e.name) && e.typeArgs.isEmpty) {
+      if (i is! TypeRef || i.typeArgs.isNotEmpty || own.contains(i.name)) {
+        return; // left open, or a type with arguments: inferred at the call
+      }
+      // The parameter's own type: the import's, complemented where the
+      // export marks the parameter as an input.
+      final input = e.isInput ? !i.isInput : i.isInput;
+      final t = input ? '${i.name}?' : i.name;
+      final had = binding[e.name];
+      if (had != null && had != t) {
+        matched = false;
+        return;
+      }
+      binding[e.name] = t;
+      return;
+    }
+    if (e is TypeRef && i is TypeRef) {
+      if (e.name != i.name ||
+          e.isInput != i.isInput ||
+          e.typeArgs.length != i.typeArgs.length) {
+        matched = false;
+        return;
+      }
+      for (var k = 0; k < e.typeArgs.length; k++) {
+        walk(e.typeArgs[k], i.typeArgs[k]);
+      }
+      return;
+    }
+    if (e is PrimitiveModeAlt && i is PrimitiveModeAlt) return;
+    matched = false;
+  }
+  for (var k = 0; k < ea.length && k < ia.length; k++) {
+    walk(ea[k], ia[k]);
+  }
+  if (!matched || binding.isEmpty) return;
+  crossModuleBinding[r] = binding;
 }
 
 /// Resolve a single goal in a clause body.

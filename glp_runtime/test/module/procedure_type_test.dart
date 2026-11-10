@@ -23,13 +23,14 @@
 /// text, at two programs' M#Procedure, reading each program's clauses from a
 /// table with "the entries clause(true, true) and clause((A, B), (A?, B?))
 /// beside the program's own, since an otherwise guard narrows no type" (TGLP
-/// 6ce148a; GLP #14, Code_inbox.md, 2026-11-10 13:13 UTC, item 1b).  The
-/// table is declared at the program's instance, clause(Goal(prog#Procedure)?,
-/// Goal(prog#Procedure)); TGLP's table typed at G, procedure(G)
-/// clause(Goal(G)?, Goal(G)), is refused by the linked check, which binds the
-/// meta-interpreter's G from its clauses as Goal(_) and not from the import's
-/// instance (Cloud #12 to Code, Code_inbox.md, 2026-11-10, a fault of the
-/// checker against TGLP modules.tex, "Cross-module type checking").
+/// 6ce148a; GLP #14, Code_inbox.md, 2026-11-10 13:13 UTC, item 1b), the
+/// table "typed at G, procedure(G) clause(Goal(G)?, Goal(G))", and the
+/// meta-interpreter's G fixed at prog#Procedure by the import, "The imported
+/// declaration must agree with the declaration M exports ... once the
+/// exported declaration's type parameters, if any, are instantiated" (TGLP
+/// modules.tex, "Cross-module type checking"; well_typed_clause.dart,
+/// `crossModuleBinding`); and a table entry for a goal prog does not export
+/// is refused.
 library;
 
 import 'dart:io';
@@ -182,7 +183,7 @@ go :- keep(halt).
       write('self.glp', '''
 Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
 imported procedure meta#run(Goal(prog#Procedure)?).
-procedure clause(Goal(prog#Procedure)?, Goal(prog#Procedure)).
+procedure(G) clause(Goal(G)?, Goal(G)).
 clause(true, true).
 clause((A, B), (A?, B?)).
 clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
@@ -209,7 +210,7 @@ append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
       write('self.glp', '''
 Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
 imported procedure meta#run(Goal(prog#Procedure)?).
-procedure clause(Goal(prog#Procedure)?, Goal(prog#Procedure)).
+procedure(G) clause(Goal(G)?, Goal(G)).
 clause(true, true).
 clause((A, B), (A?, B?)).
 clause(append([], Ys, Ys?), true).
@@ -222,6 +223,29 @@ go(Zs?) :- meta # run(append([1], [2, 3], Zs)).
       final r = await engine.runGoal('go(Z).');
       expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
       expect(_shown(engine, r.bindings['Z']), '.(1, .(2, .(3, [])))');
+    });
+
+    test('a table entry for a goal prog does not export is refused', () {
+      write('meta.glp', _meta);
+      write('prog.glp', '''
+exported procedure append(Stream(Integer)?, Stream(Integer)?, Stream(Integer)).
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+''');
+      write('self.glp', '''
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+imported procedure meta#run(Goal(prog#Procedure)?).
+procedure(G) clause(Goal(G)?, Goal(G)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(halt, true).
+clause(append([], Ys, Ys?), true).
+clause(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
+exported procedure go(Stream(Integer)).
+go(Zs?) :- meta # run(append([1], [2, 3], Zs)).
+''');
+      expect(() => _engine().loadProgram(prog.path),
+          refused('Type checking failed for linked program'));
     });
   });
 }
