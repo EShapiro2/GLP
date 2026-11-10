@@ -3309,7 +3309,7 @@ procedure outcome_held(Decision?, Info?, Peer?, Helds?, Helds).
 outcome_held(commit(_), I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
 outcome_held(abort(_, _), _, _, Hd, Hd?).
 outcome_held(yield, _, _, Hd, Hd?).
-%% The approvals an abort ends at a participant: the request the attempt names, where the agent made it; and, where it names none, every approval of the class pending at the agent, where it is a guard of the part that voted yes or answered yes on the attempt.
+%% The approvals an abort ends at a participant: the request the attempt names, where the agent made it; and, where it names none, every approval of the class pending at the agent, where it is a guard of the part that voted yes on the attempt, or answered yes and has not voted on it (vGLP 80d3268, Definition "Deciding", Outcome: "p ends every approval of [t] pending at it if p is a guard of [t]_j that has recorded voted(alpha, yes), or answered(alpha, yes) and no vote on alpha"; vGLP #25, Code_inbox.md, 2026-11-10 22:25 UTC).  Until 80d3268 an answer yes ended them whatever the vote, so a guard that answered yes and then voted no, its approvals ended by the vote, had them ended again by the abort.
 procedure abort_ends(Names?, YesNo?, YesNo?, Info?, Attempt?, Peer?, Recs?, Recs, YesNo).
 abort_ends(request(Rr, K), Mi, Ed, _, _, _, R, R1?, En?) :- end_request(Rr?, K?, Mi?, Ed?, R?, R1, En).
 abort_ends(none, _, _, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) |
@@ -3317,7 +3317,10 @@ abort_ends(none, _, _, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) |
     guards_part(C?, Id?, Gd),
     mem(voted(At?, yes), R?, Vy),
     mem(answered(At?, yes), R?, Ay),
-    or(Vy?, Ay?, Said),
+    mem(voted(At?, no), R?, Vn),
+    neg(Vn?, Unvoted),
+    and(Ay?, Unvoted?, Ay1),
+    or(Vy?, Ay1?, Said),
     and(Gd?, Said?, B),
     guard_ends(B?, I?, Id?, R?, R1, En).
 %% The request the attempt names ended, where the agent made it, Mine, and has not ended it, Done (st_req).
