@@ -4473,8 +4473,8 @@ compile(q_read, [qschema(s, ['Alice', 'Bob'], [], [pvar('Bob')], true, [rs(guard
 HEREDOC
 2>&1)
 check "CVA compiler: a schema with a safe formula of its body local to its first role, qschema, passes the checks (q_local)" "%% not compiled, having no pragmas(q_local)" "$cva_q"
-check "CVA compiler: a safe formula whose atoms two roles hold, refused as local to no role (q_nowhere)" "formula of a schema's body is local to no role" "$cva_q"
-check "CVA compiler: ... the schema named (q_nowhere)" "%% the schema(s)" "$cva_q"
+check "CVA compiler: a safe formula whose atoms two roles hold is of the part's condition, taken, passing the checks (q_nowhere; vGLP 5f55cf3, Section 5.4)" "%% not compiled, having no pragmas(q_nowhere)" "$cva_q"
+check_not "CVA compiler: ... and not refused (q_nowhere)" "%% not compiled(q_nowhere)" "$cva_q"
 check "CVA compiler: a quantified conjunct binding a listed guarding role, taken, passing the checks (q_conjunct)" "%% not compiled, having no pragmas(q_conjunct)" "$cva_q"
 check "CVA compiler: a count in a constraint, local to the role holding its anchor, taken, passing the checks (q_card)" "%% not compiled, having no pragmas(q_card)" "$cva_q"
 check "CVA compiler: a conjunct binding no listed role with a conditional literal at a role other than the one holding its anchor, its instances a list the attempt names, taken, passing the checks (q_inst; vGLP 9ee6f87, Section 5.4)" "%% not compiled, having no pragmas(q_inst)" "$cva_q"
@@ -4556,12 +4556,12 @@ HEREDOC
 check "CVA readings: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/readings" "$cva_readings_load"
 check_not "CVA readings: no type errors" "Type checking failed" "$cva_readings_load"
 cva_readings_text=$(cat "$CVA/readings/platform.vglp")
-check "CVA readings: meet's y, required at the ward's role and added at the person's, is read at the ward's role, as GAI's GnW:3 reads an attestation" "^schema_numeric(meet, numeric(\[cj(every, true)\], \[svar(y)\], \[read(1, \[svar(y)\], \[\])\]))$" "$cva_readings_text"
-check "CVA readings: ... the schema-binding does not bind it, no field naming it" "^binding_of(meet(V1, V2), meet, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(y), lv(meet, y))\])$" "$cva_readings_text"
-check "CVA readings: ... the Meet button, proposed by the person, its one field the other person, none for y" "button(\"Meet\", \[act(meet, 2, \[1, 2\], \[forb(knows, \[at(1)\]), .*\], \[\], \[field(1, \"Person\", key)\], " "$cva_readings_text"
+check "CVA readings: present's y, required at the ward's role and added at the person's, is read at the ward's role, as GAI's GnW:3 reads an attestation" "^schema_numeric(present, numeric(\[cj(every, true)\], \[svar(y)\], \[read(1, \[svar(y)\], \[\])\]))$" "$cva_readings_text"
+check "CVA readings: ... the schema-binding does not bind it, no field naming it" "^binding_of(present(V1, V2), present, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(y), lv(present, y))\])$" "$cva_readings_text"
+check "CVA readings: ... the Present button, proposed by the person, its one field the other person, none for y" "button(\"Present\", \[act(present, 2, \[1, 2\], \[forb(knows, \[at(1)\]), .*\], \[\], \[field(1, \"Person\", key)\], " "$cva_readings_text"
 check "CVA readings: outrank's a and b, each local to its role, with a > b a conjunct naming the local variables of two roles, of the part's condition, each read at its role" "^schema_numeric(outrank, numeric(\[cj(cond, gt(num(a), num(b)))\], \[num(a), num(b)\], \[read(1, \[num(a)\], \[\]), read(2, \[num(b)\], \[\])\]))$" "$cva_readings_text"
 check "CVA readings: bump's t1, determined from t by an equality, local to the role, no field, its request bump(p) alone" "^binding_of(bump(V1), bump, \[b(role(1), p(V1?)), b(num(t1), lv(bump, t1)), b(num(t), lv(bump, t))\])$" "$cva_readings_text"
-check "CVA readings: the vote yes carries readings and the commit the readings chosen, got keeping the vote (vGLP b413fe1, 3.2)" "^Vote      ::= yes(Bindings) ; no(Reason).$" "$cva_readings_text"
+check "CVA readings: the vote yes carries readings and the commit the readings chosen, got keeping the vote (vGLP b413fe1, 3.2)" "^Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).$" "$cva_readings_text"
 cva_readings=$("$REPL_RUN" <<HEREDOC
 $CVA/readings/
 :limit 100000000
@@ -4569,8 +4569,8 @@ play_readings(A, B, N).
 :quit
 HEREDOC
 2>&1)
-check "CVA readings: alice asks to meet bob, who answers yes, his vote carrying the reading of his state, y the attestation he holds, as GAI's GnW:3" "sent(bob, alice, vote(attempt(alice, 7, 7, meet(bob, alice), none), yes(\[\[b(svar(y), s(speech(utterance(att), bob)))\]\])))" "$cva_readings"
-check "CVA readings: ... and the commit carries the reading chosen" "sent(alice, bob, outcome(attempt(alice, 7, 7, meet(bob, alice), none), commit(\[b(svar(y), s(speech(utterance(att), bob)))\])))" "$cva_readings"
+check "CVA readings: alice asks to present bob to her, who answers yes, his vote carrying the reading of his state, y the attestation he holds, as GAI's GnW:3" "sent(bob, alice, vote(attempt(alice, 7, 7, present(bob, alice), none), yes(\[\[b(svar(y), s(speech(utterance(att), bob)))\]\])))" "$cva_readings"
+check "CVA readings: ... and the commit carries the reading chosen" "sent(alice, bob, outcome(attempt(alice, 7, 7, present(bob, alice), none), commit(\[b(svar(y), s(speech(utterance(att), bob)))\])))" "$cva_readings"
 check "CVA readings: ... alice records it, record(bob, y), with knows(bob), under the readings" "view(alice, \[knows(bob), record(bob, speech(utterance(att), bob)), watching, started, level(0)\], \[bob\]" "$cva_readings"
 check "CVA readings: knowing bob, alice's machine proposes trail(alice, bob), her standing request since she watched, and bob's votes yes unasked, reading b = 0" "sent(bob, alice, vote(attempt(alice, 8, 8, trail(alice, bob), none), yes(\[\[b(num(b), n(0))\]\])))" "$cva_readings"
 check "CVA readings: ... alice's tally finds no readings meeting a < b and refuses the attempt on its condition, itself the refuser, unable" "sent(alice, bob, outcome(attempt(alice, 8, 8, trail(alice, bob), none), abort(alice, unable)))" "$cva_readings"
@@ -4654,28 +4654,28 @@ class_info(share(alice, bob, [carol, dave]), alice, [], R5, A5).
 part_dom(share(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(noted, [p(dave)]), g(noted, [p(carol)])], D6).
 part_dom(share(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(noted, [p(carol)]), g(noted, [p(erin)])], D7).
 unable_reason(share(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(noted, [p(carol)]), g(noted, [p(erin)])], R8).
-apply_part(share(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)])], S9).
+apply_part(share(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)])], [], S9).
 name_class(pass(alice, bob), [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], C10).
 part_dom(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], D11).
 unable_reason(pass(alice, bob, [i(carol, 2), i(dave, 1), i(dave, 3)]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], R12).
-apply_part(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), bob, [g(started, []), g(knows, [p(alice)])], S13).
+apply_part(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), bob, [g(started, []), g(knows, [p(alice)])], [], S13).
 class_info(pass(alice, bob, [i(carol, 2), i(carol, 5), i(dave, 1)]), alice, [], R14, A14).
 iota_pairs(share(alice, bob, [carol, dave]), alice, I15).
 name_class(tally(alice, bob), [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], C16).
 part_dom(tally(alice, bob, [carol, dave]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)]), g(owes, [p(carol), n(5)])], D17).
 unable_reason(tally(alice, bob, [carol, erin]), alice, [g(started, []), g(knows, [p(bob)]), g(owes, [p(dave), n(1)]), g(owes, [p(carol), n(2)])], R18).
-apply_part(tally(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)])], S19).
+apply_part(tally(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)])], [], S19).
 class_info(tally(alice, bob, [carol, dave]), alice, [], R20, A20).
 part_dom(clear(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)]), g(seen, [p(carol)])], D21).
-apply_part(clear(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)]), g(seen, [p(carol)]), g(seen, [p(erin)])], S22).
-apply_part(settle(alice), alice, [g(started, []), g(noted, [p(carol)]), g(noted, [p(dave)])], S23).
-apply_part(wipe(alice), alice, [g(settled, []), g(started, []), g(noted, [p(carol)]), g(noted, [p(dave)])], S24).
+apply_part(clear(alice, bob, [carol, dave]), bob, [g(started, []), g(knows, [p(alice)]), g(seen, [p(carol)]), g(seen, [p(erin)])], [], S22).
+apply_part(settle(alice), alice, [g(started, []), g(noted, [p(carol)]), g(noted, [p(dave)])], [], S23).
+apply_part(wipe(alice), alice, [g(settled, []), g(started, []), g(noted, [p(carol)]), g(noted, [p(dave)])], [], S24).
 part_dom(wipe(alice), alice, [g(started, []), g(settled, [])], D25).
 question_words(share(alice, bob, [carol, dave]), bob, W26).
 part_dom(pour(alice, 2.5), alice, [g(started, [])], D27).
 part_dom(pour(alice, -1.0), alice, [g(started, [])], D28).
-apply_part(pour(alice, 2.5), alice, [g(started, [])], S29).
-apply_part(drain(alice, 2.5), alice, [g(started, []), g(poured, [r(2.5)])], S30).
+apply_part(pour(alice, 2.5), alice, [g(started, [])], [], S29).
+apply_part(drain(alice, 2.5), alice, [g(started, []), g(poured, [r(2.5)])], [], S30).
 class_info(pour(alice, 2.5), alice, [], R31, A31).
 :quit
 HEREDOC
@@ -4773,7 +4773,7 @@ for c in social_graph coins currency; do
     check "CVA approvals, $c: an attempt names its request, or none" "^Attempt   ::= attempt(Peer, Integer, Integer, Class, Names)\.$" "$cva_agent"
     check "CVA approvals, $c: ... a request, the class of a guarded part with no opener the agent requests of itself, one(C), or rho_N, rho(N)" "^Rho       ::= one(Class) ; rho(Proposal)\.$" "$cva_agent"
     check "CVA approvals, $c: a vote no carries its reason, declined or unable, with the atoms the schema requires at the voter that its state lacks and those it forbids that its state has; and unable alone, the reason of the notice of a request dropped where the agent is ready for no part it names (vGLP, Section 5.4, \"The compilation\")" "^Reason    ::= declined ; unable ; unable(List(Atom), List(Atom))\.$" "$cva_agent"
-    check "CVA approvals, $c: ... an abort its refuser and that vote's reason, and a yield is an outcome of its own" "^Decision  ::= commit ; abort(Peer, Reason) ; yield\.$" "$cva_agent"
+    check "CVA approvals, $c: ... an abort its refuser and that vote's reason, and a yield is an outcome of its own" "^Decision  ::= commit(Binding) ; abort(Peer, Reason) ; yield\.$" "$cva_agent"
     check "CVA approvals, $c: ... a request is a cargo, and so is a ready (vGLP 1d84a35)" "^            ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer)\.$" "$cva_agent"
     check "CVA approvals, $c: the record holds the requests made and the ends of approvals" "^            ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer)$" "$cva_agent"
     check "CVA approvals, $c: the program's output to its person is of the type of the views, view(S, K, A), the approvals pending A beside the machine state and the persons known, each by its request name, Approved ::= Proposal, and, with pragmas, the lists, and the notices, refused(N, Q, D), N the request name of the refused attempt's part (vGLP e286276, Section 5.4, \"The compilation\")" "$cva_output" "$cva_agent"
@@ -4792,10 +4792,10 @@ for c in social_graph coins currency; do
     check "CVA approvals, $c: ... and the notice where an approval of the guard ends" "^    ended_notice(En?, C2?, F?, D?, Ns),$" "$cva_agent"
     check "CVA approvals, $c: a guard's vote no ends every approval of the class pending at it, with the notice, the agent its refuser" "^    ended_notice(En?, C2?, Id?, D?, Ns)[,.]$" "$cva_agent"
     check "CVA approvals, $c: an abort ends the request the attempt names, or the approvals of a guard that voted or answered yes, with the notice" "^    ended_notice(En?, C?, Q?, D?, Ns)[,.]$" "$cva_agent"
-    check "CVA approvals, $c: Commit ends every approval of the class pending at the agent" "^    end_approvals(I?, Id?, \[closed(At?)|R?\], R1, _)\.$" "$cva_agent"
+    check "CVA approvals, $c: Commit ends every approval of the class pending at the agent" "^    end_approvals(I?, Id?, \[closed(At?)|R0?\], R1, _)\.$" "$cva_agent"
     check "CVA approvals, $c: ... and Commit and Outcome on commit delete every request of the class the agent holds" "^    drop_held_class(Hd?, I?, Id?, Hd1),$" "$cva_agent"
     check "CVA approvals, $c: Start: a guard whose request the attempt names votes yes if it is pending and no if not, unasked" "^    start_named(En?, I?, At?, Id?, Ap?, Ss, Ns, Ap1)\.$" "$cva_agent"
-    check "CVA approvals, $c: ... a guard is asked only where no approval of the class is pending at it" "^start_asked(yes, no, At, app(S, K, L, R), \[\], approval_for(At?), \[\], app(S?, K?, L?, \[asked(At?)|R?\])) :-$" "$cva_agent"
+    check "CVA approvals, $c: ... a guard is asked only where no approval of the class is pending at it" "^start_asked(yes, no, At, _, app(S, K, L, R), \[\], approval_for(At?), \[\], app(S?, K?, L?, \[asked(At?)|R?\])) :-$" "$cva_agent"
     check "CVA approvals, $c: the agent's own Wound and Yield tell the outcome yield" "^    tell(Q?, Id?, outcome(At?, yield), Ss)\.$" "$cva_agent"
     check "CVA approvals, $c: ... the view written when the agent starts: the empty machine state, no person known and no approval pending" "$cva_start" "$cva_agent"
     check "CVA approvals, $c: ... and the new view, where the machine state changes or a peer becomes known, its atoms as the contract writes them" "^show_view(yes, St, \[V?|Thr1?\], Thr1) :- view_of(St?, V)\.$" "$cva_agent"
@@ -5132,7 +5132,7 @@ HEREDOC
 2>&1)
 check "CVA introduce: alice, befriended with both, requests and proposes introducing bob and carol, attempt 6, its start told to both" "sent(alice, bob, start(attempt(alice, 6, 6, introduce(alice, bob, carol), none))), sent(alice, carol, start(attempt(alice, 6, 6, introduce(alice, bob, carol), none)))" "$cva_intro"
 check "CVA introduce: bob, asked, answers no, his vote no declined, and alice tells both abort, bob its refuser, declined" "sent(bob, alice, vote(attempt(alice, 6, 6, introduce(alice, bob, carol), none), no(declined))), sent(alice, bob, outcome(attempt(alice, 6, 6, introduce(alice, bob, carol), none), abort(bob, declined))), sent(alice, carol, outcome(attempt(alice, 6, 6, introduce(alice, bob, carol), none), abort(bob, declined)))" "$cva_intro"
-check "CVA introduce: carol, asked, her approval question still open when Outcome closes the attempt, gives it yes once she is asked on attempt 8, and yes to that" "C = \[.*gave(attempt(alice, 6, 6, introduce(alice, bob, carol), none), yes(\[\[\]\])), gave(attempt(alice, 8, 8, introduce(alice, bob, carol), none), yes(\[\[\]\]))" "$cva_intro"
+check "CVA introduce: carol, asked, her approval question still open when Outcome closes the attempt, gives it yes once she is asked on attempt 8, and yes to that" "C = \[.*gave(attempt(alice, 6, 6, introduce(alice, bob, carol), none), yes), gave(attempt(alice, 8, 8, introduce(alice, bob, carol), none), yes)" "$cva_intro"
 check_not "CVA introduce: ... the approval question closed by the program, her yes reaches no goal: no vote of hers on attempt 6" "sent(carol, alice, vote(attempt(alice, 6, 6, introduce" "$cva_intro"
 # The network log interleaves the messages of different agents in the order the scheduler runs them, which the paper leaves open (the runs of maGLP and vmaGLP interleave the agents' reductions, vGLP, Sections 4.2 and 5.2): the check holds the order of each agent's messages and not their interleaving with another agent's, which changes with what each reduction costs (Code #12, 2026-10-20, change 2 of the five).
 check "CVA introduce: alice, seeing the notice of the refusal, which ended her approval, requests it again, attempt 8, and both answer yes" "\(sent(carol, alice, vote(attempt(alice, 8, 8, introduce(alice, bob, carol), none), yes(\[\[\]\]))), sent(bob, alice, vote(attempt(alice, 8, 8, introduce(alice, bob, carol), none), yes(\[\[\]\])))\|sent(bob, alice, vote(attempt(alice, 8, 8, introduce(alice, bob, carol), none), yes(\[\[\]\]))), sent(carol, alice, vote(attempt(alice, 8, 8, introduce(alice, bob, carol), none), yes(\[\[\]\])))\)" "$cva_intro"
@@ -5500,13 +5500,13 @@ HEREDOC
 2>&1)
 check "CVA wardclose: alice's request is a Request of rho_N to carol's machine, the opener of the parts named N, carrying N, her number 3" "sent(alice, carol, $CVA_WC_R)" "$cva_wardclose"
 check "CVA wardclose: carol's machine, holding it, completes the list from its listed atoms and proposes child_close(carol, alice, [carol, dave], n), attempt 9, naming the request, its start told to alice and dave" "sent(alice, carol, $CVA_WC_R), .*sent(carol, alice, start(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R))), sent(carol, dave, start(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R)))" "$cva_wardclose"
-check "CVA wardclose: dave votes yes and holds the close prepared; bob's start of befriend(bob, dave), rank 2, arrives, and dave asks carol to yield, Wound" "sent(dave, carol, vote(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yes)), sent(bob, dave, start(attempt(bob, 2, 2, befriend(bob, dave), none))), sent(dave, carol, yield(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R)))" "$cva_wardclose"
+check "CVA wardclose: dave votes yes and holds the close prepared; bob's start of befriend(bob, dave), rank 2, arrives, and dave asks carol to yield, Wound" "sent(dave, carol, vote(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yes(\[\[\]\]))), sent(bob, dave, start(attempt(bob, 2, 2, befriend(bob, dave), none))), sent(dave, carol, yield(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R)))" "$cva_wardclose"
 check "CVA wardclose: carol, alice's yes not yet tallied, yields, the outcome yield told to both" "sent(carol, alice, outcome(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yield)), sent(carol, dave, outcome(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yield))" "$cva_wardclose"
 check "CVA wardclose: ... and her machine proposes the close again on the request it still holds, attempt 10 keeping the wounded rank 9, with no question to anyone" "sent(carol, dave, outcome(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yield)), .*sent(carol, alice, start(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R))), sent(carol, dave, start(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R)))" "$cva_wardclose"
-check "CVA wardclose: alice's machine votes yes on each, unasked, the request it names pending at her" "sent(alice, carol, vote(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yes)), .*sent(alice, carol, vote(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), yes))" "$cva_wardclose"
+check "CVA wardclose: alice's machine votes yes on each, unasked, the request it names pending at her" "sent(alice, carol, vote(attempt(carol, 9, 9, $CVA_WC_C, $CVA_WC_R), yes(\[\[\]\]))), .*sent(alice, carol, vote(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), yes(\[\[\]\])))" "$cva_wardclose"
 # The network log interleaves the messages of different agents in the order the scheduler runs them, which the paper leaves open (the runs of maGLP and vmaGLP interleave the agents' reductions, vGLP, Sections 4.2 and 5.2): the check holds the order of each agent's messages and not their interleaving with another agent's, which changes with what each reduction costs (Code #12, 2026-10-20, change 2 of the five).
-check "CVA wardclose: dave, asked once on bob's befriend, answers yes, it commits, and dave's yes on the close follows" "sent(dave, bob, vote(attempt(bob, 2, 2, befriend(bob, dave), none), yes(\[\[\]\]))), .*sent(bob, dave, outcome(attempt(bob, 2, 2, befriend(bob, dave), none), commit(\[\]))), .*sent(dave, carol, vote(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), yes))" "$cva_wardclose"
-check "CVA wardclose: the close commits at alice and dave, and carol's Commit introduces alice and dave to each other" "sent(carol, alice, outcome(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), commit)), sent(carol, dave, outcome(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), commit)), intro(carol, alice, dave), intro(carol, dave, alice) | " "$cva_wardclose"
+check "CVA wardclose: dave, asked once on bob's befriend, answers yes, it commits, and dave's yes on the close follows" "sent(dave, bob, vote(attempt(bob, 2, 2, befriend(bob, dave), none), yes(\[\[\]\]))), .*sent(bob, dave, outcome(attempt(bob, 2, 2, befriend(bob, dave), none), commit(\[\]))), .*sent(dave, carol, vote(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), yes(\[\[\]\])))" "$cva_wardclose"
+check "CVA wardclose: the close commits at alice and dave, and carol's Commit introduces alice and dave to each other" "sent(carol, alice, outcome(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), commit(\[\]))), sent(carol, dave, outcome(attempt(carol, 10, 9, $CVA_WC_C, $CVA_WC_R), commit(\[\]))), intro(carol, alice, dave), intro(carol, dave, alice) | " "$cva_wardclose"
 check "CVA wardclose: carol's screen: the group closed, her membership and her listing of herself ended" "C = \[.*view(carol, \[closed($CVA_WC_N), listed(dave, $CVA_WC_N), friend(dave), parent(alice)\], \[alice, dave\], \[\], \[tab('Friends', friend)\]) | " "$cva_wardclose"
 check "CVA wardclose: dave's membership ended in the one act, and he comes to know alice" "D = \[.*view(dave, \[friend(bob), friend(carol)\], \[bob, carol\], \[\], \[tab('Friends', friend)\]), view(dave, \[friend(bob), friend(carol)\], \[alice, bob, carol\], \[\], \[tab('Friends', friend)\]) | " "$cva_wardclose"
 check "CVA wardclose: alice's screen: she adopted carol and comes to know dave, her person acting once on the close, the request, pending by its request name, child_close(carol, alice, n), with no list in it, until the close commits (vGLP e286276, Section 5.4, \"The compilation\")" "A = \[view(alice, \[\], \[\], \[\], \[tab('Friends', friend)\]), view(alice, \[\], \[\], \[adopt(alice, carol)\], \[tab('Friends', friend)\]), view(alice, \[\], \[carol\], \[adopt(alice, carol)\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol\], \[\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol\], \[child_close(carol, alice, $CVA_WC_N)\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol\], \[\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol, dave\], \[\], \[tab('Friends', friend)\]) | " "$cva_wardclose"
@@ -5546,7 +5546,7 @@ check_not "CVA numbers: no introduction: no role requires an atom naming an agen
 # The introduction at a commit (vGLP 613ee8d, Section 3.2, Definition "Introduction Rule, Introduce Peers": "Commit, and Outcome on a commit, of an attempt of [t]_j at p add the same messages and record for every {q, r} in iota_p([t]_j) with q, r in known_p for which p has not recorded introduced(q, r)"; Section 5.4, "Act schemas as local specifications": the introduction rule of a contract "gives each person p, for a part determined by a schema-binding in which p's role requires an atom naming an agent c bound to a variable and the person q in another role gains an atom naming c, the pair {q, c}: at the commit p, who knows both, introduces them to each other"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, item 2).  vGLP's contract intros (programs/vglp/cva/contracts.glp), GKK's acquaint and introduce with no identity: alice comes to know bob and carol, introduces carol to bob, and at the commit her machine introduces bob's and carol's to each other; they exchange ihellos and know each other, and bob meets carol (intros/self.glp).
 cva_intros_text=$(cat "$CVA/intros/platform.vglp")
 check "CVA introductions: Commit adds to the pairs of the attempt's other participants the pairs the introduction rule gives the agent for the part" "^    iota_known(P?, Id?, St?, Ps2),$" "$cva_intros_text"
-check "CVA introductions: ... and Outcome on a commit those it gives a participant" "^outcome_intros(commit, At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) |$" "$cva_intros_text"
+check "CVA introductions: ... and Outcome on a commit those it gives a participant" "^outcome_intros(commit(_), At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) |$" "$cva_intros_text"
 cva_intros_load=$("$REPL_RUN" <<HEREDOC
 $CVA/intros/
 :quit
@@ -5650,7 +5650,7 @@ check "CVA ready: the platform prints the cargo ready(Attempt)" "^            ; 
 check "CVA ready: ... the records readied, ready and unable" "^            ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer)$" "$cva_signing_text"
 check "CVA ready: ... Ready as an own transaction, its effect recording readied(At) and telling the initiator ready(At)" "^ready_effect(At, St, \[to(P?, ready(At?))\], St1?) :- ground(At?), ground(St?) |$" "$cva_signing_text"
 check "CVA ready: ... Readied on the message, recording ready(At, F)" "^    add_rec(ready(At?, F?), Ap?, Ap1),$" "$cva_signing_text"
-check "CVA ready: ... and under standing approvals alone the parts proposed are those the agent is ready for whose last refusal as unable has its ready, none refused at once" "^    readied_parts(Rs?, I?, R?, Rs1),$" "$cva_signing_text"
+check "CVA ready: ... and under standing approvals alone the parts proposed are those the agent is ready for whose last refusal as unable has its ready, none refused at once" "^    readied_parts(Rs?, I?, Id?, R?, Rs1),$" "$cva_signing_text"
 cva_noshow=$("$REPL_RUN" <<HEREDOC
 $CVA/intros/
 :limit 20000000

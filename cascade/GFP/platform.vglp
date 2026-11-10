@@ -94,10 +94,27 @@ schema_entry(forward, schema(forward, [svar(x)], [rs(guarded, [], [], [atom(iden
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
-schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
+schema_numeric(establish, numeric([cj(every, true)], [], []))
+.
+schema_numeric(acquaint, numeric([cj(every, true)], [], []))
+.
+schema_numeric(introduce, numeric([cj(every, true)], [], []))
+.
+schema_numeric(befriend, numeric([cj(every, true)], [], []))
+.
+schema_numeric(unfriend, numeric([cj(every, true)], [], []))
+.
+schema_numeric(sign, numeric([cj(every, true)], [], []))
+.
+schema_numeric(forward, numeric([cj(every, true)], [], []))
+.
+schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
 schema_forms(_, []) :- otherwise | true.
+
+procedure schema_held(Constant?, HPats).
+schema_held(_, []) :- otherwise | true.
 
 procedure schema_base(Constant?, Integer).
 schema_base(establish, 1)
@@ -378,8 +395,10 @@ Utterance ::= utterance(String) ; program(Module) ; Speech.
 YesNo     ::= yes ; no.
 %% A notice of a request dropped because the agent can carry out no part it names carries the reason unable alone (vGLP, Section 5.4, "The compilation": "with a notice refused(N, p, unable)").
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote      ::= yes ; no(Reason).
-Decision  ::= commit ; abort(Peer, Reason) ; yield.
+%% A vote yes carries the readings of its voter's state, each a binding of the variables read at its roles and of the counts of the condition it takes (vGLP 566c186, Definition "Cargo, App State, Question, Approval, Free, Ready": "a vote yes carrying the readings of its voter's state and a vote no its reason"); a commit the readings the initiator chose, one of each participant's, joined ("a commit carrying the readings its initiator chose").
+%% A vote yes carries the readings of the voter's state, and, for a part whose condition holds a formula across roles, the atoms of its state the formula's atoms at its role match, yes(Readings, Atoms) (vGLP 5f55cf3, Section 5.4).
+Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision  ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho       ::= one(Class) ; rho(Proposal).
 Names     ::= none ; request(Rho, Integer).
 Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
@@ -458,13 +477,26 @@ Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Ex
 %% An expression may also be a function the value types provide, fn(min, [X, Y]) or fn(floor, [X]), the count of the instances of a quantifier, cardinality(Xs, H, A, Phi), or the sum of a numeric term over them, sum(Xs, H, A, Phi, U), A the anchor held by H, as programs/gsc writes them (GSC 67a7da0, def:numbers): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var) ; item_of(Var).
 Exprs     ::= [] ; [Expr | Exprs].
-CRole     ::= every ; at(Integer).
+%% The role of a conjunct of the constraint: every, which every role checks; at(I), which the role I checks; cond, of the part's condition, which the initiator checks on the readings (vGLP 566c186, Section 5.4: "a conjunct that names variables local to two roles or more is of the part's condition").
+CRole     ::= every ; at(Integer) ; cond.
+Conj      ::= cj(CRole, Constraint).
+Conjs     ::= [] ; [Conj | Conjs].
+%% What a role reads with its vote yes: read(I, Vars, Counts), the variables local to the role I read there and the counts and sums of the condition anchored there, each cx(Name, Expr), named num(Name) in the condition, its value taken in the state (vGLP 566c186, Section 5.4: "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries"; Section 3.2: "each participant reading its own count and the initiator comparing them").
+CExpr     ::= cx(Constant, Expr).
+CExprs    ::= [] ; [CExpr | CExprs].
+Read      ::= read(Integer, Vars, CExprs).
+Reads     ::= [] ; [Read | Reads].
+Chosen    ::= chosen(Binding) ; nochoice.
+BindingsList ::= [] ; [Bindings | BindingsList].
 %% A safe formula of a schema's body (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula is built from atoms and constraints by and, or and not and by the quantifiers exists x (A and phi) and forall x (A and phi -> psi), A an atom, the quantifier's anchor"), as programs/gsc writes it: fa(H, M) the atom M held by H, fnot, fand and for, fexists(Xs, H, A, Phi), fforall(Xs, H, A, Phi, Psi) and fcons(C), a constraint.  schema_forms(Name, Forms), which the compiler prints from the contract, gives each with the role it is local to, sform(at(I), F), or sform(every, F), every role checking it: "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state" (ibid.).
 Form      ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
 Forms     ::= [] ; [Form | Forms].
 SForm     ::= sform(CRole, Form).
+%% The atoms each role reads for the formulas of the part's condition, hp(I, Atoms) for the role I (schema_held; vGLP 5f55cf3, Section 5.4).
+HPat      ::= hp(Integer, SAtoms).
+HPats     ::= [] ; [HPat | HPats].
 SForms    ::= [] ; [SForm | SForms].
-Numeric   ::= numeric(Constraint, Vars, CRole).
+Numeric   ::= numeric(Conjs, Vars, Reads).
 NumRes    ::= num_is(Number) ; no_num.
 LNorm     ::= norm(Binding) ; badnorm.
 
@@ -521,9 +553,11 @@ CAtoms    ::= [] ; [CAtom | CAtoms].
 Lock      ::= unlocked ; held(Attempt).
 %% readied(A): the agent, a participant of A that refused it as unable, has told its initiator ready(A); ready(A, Q): the initiator of A has Q's ready(A) (vGLP 1d84a35, Definition "Cargo, App State, Question, Approval, Free, Ready"); unable(A, Q): Q refused the agent's attempt A as unable, the reason of its got(A, Q, no), which Propose under standing approvals reads, "where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)" (Definition "Proposing", Propose), and which the agent's next attempt of the part deletes.
 Rec       ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo)
-            ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt)
+            ; got(Attempt, Peer, Vote) ; chose(Attempt, Binding) ; closed(Attempt) ; wounded(Attempt)
             ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer)
             ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer)
+%% unmet(A, N): the attempt A refused on its condition by its initiator, at the initiator and at each participant that voted yes on it, N the number of attempts the agent had committed then; commits(N), that number, raised at each commit, by Propose of one participant, Commit and Outcome on a commit (vGLP 566c186, Definition "Proposing", Propose: under standing approvals alone, "where p refused beta on its condition, p has recorded ready(beta, q) of some participant q or has committed an attempt since"; Ready: "or i refused alpha on its condition and p has committed an attempt since").
+            ; unmet(Attempt, Integer) ; commits(Integer)
             ; ended(Attempt) ; introduced(Peer, Peer).
 Recs      ::= [] ; [Rec | Recs].
 App       ::= app(GAtoms, Integer, Lock, Recs).
@@ -1901,33 +1935,47 @@ guard_parts_cands(yes, no, Ps, I, Id, S, _, Cs?) :- ground(Ps?), ground(I?), gro
     ready_parts(Ps?, Id?, S?, Rs),
     guard_ready(Rs?, Ps?, I?, Cs).
 %% Under standing approvals alone, a part is proposed only where the agent is ready for it and, where another participant refused the agent's last attempt of it as unable, that participant's ready has come (vGLP 1d84a35, Definition "Proposing", Propose: "where every approval of [t] pending at p is standing, moreover s in dom(f), and, where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)"); none is refused at once.
-guard_parts_cands(yes, yes, Ps, I, Id, S, R, Cs?) :- ground(Ps?), ground(I?), ground(S?), ground(R?) |
+guard_parts_cands(yes, yes, Ps, I, Id, S, R, Cs?) :- ground(Ps?), ground(I?), ground(S?), ground(R?), ground(Id?) |
     ready_parts(Ps?, Id?, S?, Rs),
-    readied_parts(Rs?, I?, R?, Rs1),
+    readied_parts(Rs?, I?, Id?, R?, Rs1),
     part_pcands(Rs1?, I?, Cs).
-procedure readied_parts(Classes?, Info?, Recs?, Classes).
-readied_parts([], _, _, []).
-readied_parts([P|Ps], I, R, Cs?) :- ground(P?), ground(I?), ground(R?) |
-    unready(R?, I?, P?, R?, U),
-    readied_parts(Ps?, I?, R?, Cs1),
+procedure readied_parts(Classes?, Info?, Peer?, Recs?, Classes).
+readied_parts([], _, _, _, []).
+readied_parts([P|Ps], I, Id, R, Cs?) :- ground(P?), ground(I?), ground(R?), ground(Id?) |
+    unready(R?, I?, P?, Id?, R?, U),
+    readied_parts(Ps?, I?, Id?, R?, Cs1),
     keep_unless(U?, P?, Cs1?, Cs).
 procedure keep_unless(YesNo?, Class?, Classes?, Classes).
 keep_unless(yes, _, Cs, Cs?).
 keep_unless(no, P, Cs, [P?|Cs?]).
 %% unready(Rs, I, P, R, U): whether an unable(B, Q) of an attempt B of the part P stands in the record R with no ready(B, Q).
-procedure unready(Recs?, Info?, Class?, Recs?, YesNo).
-unready([], _, _, _, no).
-unready([unable(B, Q)|Rs], I, P, R, U?) :- ground(B?), ground(Q?), ground(I?), ground(P?), ground(R?) |
+%% unready(Rs, I, P, Id, R, U): whether an unable(B, Q) of an attempt B of the part P stands in the record R with no ready(B, Q), or an unmet(B, N) of the agent's own attempt B of P with no ready(B, _) and no commit since (vGLP 566c186, Definition "Proposing", Propose: "where p refused beta on its condition, p has recorded ready(beta, q) of some participant q or has committed an attempt since").
+procedure unready(Recs?, Info?, Class?, Peer?, Recs?, YesNo).
+unready([], _, _, _, _, no).
+unready([unable(B, Q)|Rs], I, P, Id, R, U?) :- ground(B?), ground(Q?), ground(I?), ground(P?), ground(R?) |
     attempt_class(B?, C),
     part_of_same(I?, C?, P?, Sm),
     mem(ready(B?, Q?), R?, Rd),
     neg(Rd?, Nr),
     and(Sm?, Nr?, U1),
-    unready1(U1?, Rs?, I?, P?, R?, U).
-unready([_|Rs], I, P, R, U?) :- otherwise | unready(Rs?, I?, P?, R?, U).
-procedure unready1(YesNo?, Recs?, Info?, Class?, Recs?, YesNo).
-unready1(yes, _, _, _, _, yes).
-unready1(no, Rs, I, P, R, U?) :- unready(Rs?, I?, P?, R?, U).
+    unready1(U1?, Rs?, I?, P?, Id?, R?, U).
+unready([unmet(B, N)|Rs], I, P, Id, R, U?) :- ground(B?), integer(N?), ground(I?), ground(P?), ground(R?), ground(Id?) |
+    attempt_class(B?, C),
+    part_of_same(I?, C?, P?, Sm),
+    attempt_id(B?, J),
+    same(J?, Id?, Own),
+    any_ready(R?, B?, Rd),
+    commits_of(R?, M),
+    since(M?, N?, Sn),
+    or(Rd?, Sn?, Ok),
+    neg(Ok?, Nk),
+    and(Sm?, Own?, So),
+    and(So?, Nk?, U1),
+    unready1(U1?, Rs?, I?, P?, Id?, R?, U).
+unready([_|Rs], I, P, Id, R, U?) :- otherwise | unready(Rs?, I?, P?, Id?, R?, U).
+procedure unready1(YesNo?, Recs?, Info?, Class?, Peer?, Recs?, YesNo).
+unready1(yes, _, _, _, _, _, yes).
+unready1(no, Rs, I, P, Id, R, U?) :- unready(Rs?, I?, P?, Id?, R?, U).
 procedure guard_ready(Classes?, Classes?, Info?, Cands).
 guard_ready([], [], _, []).
 guard_ready([], [P|_], I, [cand(op(P?), prop(I?, P?, none))]) :- ground(P?) | true.
@@ -2044,13 +2092,18 @@ commit_go(yes, At, R, Id, St, Acc, Acc1?, St1?) :- ground(At?) |
     st_class(C?, St?, Cr, St1),
     commit_cand(yes, Cr?, At?, Id?, R?, Acc?, Acc1).
 procedure commit_cand(YesNo?, ClassRes?, Attempt?, Peer?, Recs?, Cands?, Cands).
-commit_cand(yes, cls(I), At, Id, R, Acc, Cs?) :- ground(I?), ground(At?), ground(R?) |
+%% Commit's precondition: the attempt open and its readings chosen, chose(At, W) recorded (vGLP 566c186, Definition "Deciding", Commit: "L = alpha, and p has recorded chose(alpha, w)").
+commit_cand(yes, cls(I), At, _, R, Acc, Cs?) :- ground(I?), ground(At?), ground(R?) |
     mem(closed(At?), R?, Cl),
     neg(Cl?, Open),
-    all_yes(I?, At?, Id?, R?, All),
-    and(Open?, All?, B),
+    has_chose(R?, At?, Chs),
+    and(Open?, Chs?, B),
     vote_cand(B?, cls(I?), cm(At?), Acc?, Cs).
 commit_cand(_, _, _, _, _, Acc, Acc?) :- otherwise | true.
+procedure has_chose(Recs?, Attempt?, YesNo).
+has_chose([], _, no).
+has_chose([chose(A, _)|_], At, yes) :- A? =?= At? | true.
+has_chose([_|R], At, B?) :- otherwise | has_chose(R?, At?, B).
 
 %% Ready, an own transaction (vGLP 1d84a35, Definition "Proposing", Ready): of each attempt the agent, not its initiator, voted no on as unable --- voted(At, no) with no answered(At, no) --- and has not readied, whose initiator it knows, where its state is now in the domain of its effect in the attempt's part.
 procedure ready_cands(St?, Cands, St).
@@ -2077,8 +2130,31 @@ ready_cands1([voted(At, no)|Rs], R, V, St, Acc, Cs?, St2?) :- ground(At?), groun
     and(Y1?, Kn?, Go),
     ready_go(Go?, At?, Id?, V?, St?, Acc?, Acc1, St1),
     ready_cands1(Rs?, R?, V?, St1?, Acc1?, Cs, St2).
+%% And of each attempt of another's the agent voted yes on that its initiator refused on its condition, unmet(At, N), once the agent has committed an attempt since, commits above N (vGLP 566c186, Definition "Proposing", Ready: "or i refused alpha on its condition and p has committed an attempt since").
+ready_cands1([unmet(At, N)|Rs], R, V, St, Acc, Cs?, St2?) :- ground(At?), ground(R?), ground(V?), integer(N?) |
+    v_id(V?, Id),
+    attempt_id(At?, P),
+    same(P?, Id?, Own),
+    neg(Own?, Other),
+    mem(readied(At?), R?, Rd),
+    neg(Rd?, Nr),
+    commits_of(R?, M),
+    since(M?, N?, Sn),
+    v_kn(V?, Kv),
+    known_kn(P?, Kv?, Kn),
+    and(Other?, Nr?, X1),
+    and(X1?, Sn?, X2),
+    and(X2?, Kn?, Go),
+    ready_go2(Go?, At?, St?, Acc?, Acc1, St1),
+    ready_cands1(Rs?, R?, V?, St1?, Acc1?, Cs, St2).
 ready_cands1([_|Rs], R, V, St, Acc, Cs?, St1?) :- otherwise |
     ready_cands1(Rs?, R?, V?, St?, Acc?, Cs, St1).
+procedure ready_go2(YesNo?, Attempt?, St?, Cands?, Cands, St).
+ready_go2(no, _, St, Acc, Acc?, St?).
+ready_go2(yes, At, St, Acc, Acc1?, St1?) :- ground(At?) |
+    attempt_class(At?, C),
+    st_class(C?, St?, Cr, St1),
+    ready_cand(yes, Cr?, rd(At?), Acc?, Acc1).
 procedure ready_go(YesNo?, Attempt?, Peer?, V?, St?, Cands?, Cands, St).
 ready_go(no, _, _, _, St, Acc, Acc?, St?).
 ready_go(yes, At, Id, V, St, Acc, Acc1?, St1?) :- ground(At?), ground(V?) |
@@ -2376,7 +2452,7 @@ opened1([], Nm, [R|Rs], Id, Sh, Cs?) :- ground(Nm?), ground(R?), ground(Id?), gr
     opened2(Bs?, Nm?, [R?|Rs?], Id?, Sh?, Cs).
 %% A variable of a deleted or added atom that the atoms the first role requires do not name is given its values by the constraint once those are bound (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"; con_extend); the schema-binding is taken where each of its numeric variables is bound to a number (nums_bound), its first role's required atoms are in the state and its forbidden ones not, and the constraint, where it is local to the first role or to every role, holds.
 procedure num_extend(Numeric?, Bindings?, GAtoms?, Bindings).
-num_extend(numeric(C, _, _), Bs, Sh, R?) :- ground(C?) | extend_each(Bs?, C?, Sh?, R).
+num_extend(numeric(Cj, _, _), Bs, Sh, R?) :- ground(Cj?) | conjs_local(Cj?, C), extend_each(Bs?, C?, Sh?, R).
 %% Each binding extended by the constraint, its counts and sums taken in the state Sh under the binding (con_counted).
 procedure extend_each(Bindings?, Constraint?, GAtoms?, Bindings).
 extend_each([], _, _, []).
@@ -2523,33 +2599,72 @@ propose_app(no, I, At, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) |
     attempt_class(At?, P),
     unable_reason(P?, Id?, S?, D),
     refuse_at_once(I?, At?, D?, St?, Ss, Ns, St1).
+procedure first_reading(Bindings?, Binding).
+first_reading([], []).
+first_reading([W|_], W?).
 procedure propose_go(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
+%% An attempt of one participant: its readings chosen at its Propose, the first of the agent's state, recorded chose(At, W), and its effect under them (vGLP 566c186, Definition "Proposing", Propose: "where alpha has no other participant, records chose(alpha, w) for a reading w of s").
 propose_go(yes, I, At, Id, app(S, _, L, R), [], app(S1?, K?, L?, R2?)) :-
-    ground(I?), ground(At?), ground(R?) |
+    ground(I?), ground(At?), ground(R?), ground(S?) |
     attempt_k(At?, K),
     attempt_class(At?, P),
-    drop_unable(I?, P?, R?, R0),
+    drop_unable(I?, P?, Id?, R?, R0),
     attempt_class(At?, P2),
-    apply_part(P2?, Id?, S?, S1),
-    end_approvals(I?, Id?, [closed(At?), voted(At?, yes)|R0?], R2, _).
+    readings_of(P2?, Id?, S?, Ws),
+    first_reading(Ws?, W),
+    attempt_class(At?, P3),
+    readings_of(P3?, Id?, S?, Ws2),
+    first_reading(Ws2?, W2),
+    attempt_class(At?, P4),
+    apply_part(P4?, Id?, S?, W?, S1),
+    bump_commits(R0?, R00),
+    end_approvals(I?, Id?, [closed(At?), voted(At?, yes), chose(At?, W2?)|R00?], R2, _).
 propose_go(no, I, At, Id, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes)|R0?])) :-
     ground(At?), ground(I?) |
     attempt_k(At?, K),
     attempt_class(At?, P),
-    drop_unable(I?, P?, R?, R0),
+    drop_unable(I?, P?, Id?, R?, R0),
     info_q(I?, Q),
     tell(Q?, Id?, start(At?), Ss).
 %% The refusals as unable of the agent's earlier attempts of the part P leave the record at a Propose of P, the new attempt being the agent's last of the part (vGLP 1d84a35, Definition "Proposing", Propose: "p's last attempt beta of [t]_j").
-procedure drop_unable(Info?, Class?, Recs?, Recs).
-drop_unable(_, _, [], []).
-drop_unable(I, P, [unable(B, Q)|Rs], R?) :- ground(I?), ground(P?), ground(B?), ground(Q?) |
+procedure drop_unable(Info?, Class?, Peer?, Recs?, Recs).
+drop_unable(_, _, _, [], []).
+drop_unable(I, P, Id, [unable(B, Q)|Rs], R?) :- ground(I?), ground(P?), ground(B?), ground(Q?) |
     attempt_class(B?, C),
     part_of_same(I?, C?, P?, Sm),
-    drop_unable1(Sm?, unable(B?, Q?), I?, P?, Rs?, R).
-drop_unable(I, P, [X|Rs], [X?|R?]) :- otherwise | drop_unable(I?, P?, Rs?, R).
-procedure drop_unable1(YesNo?, Rec?, Info?, Class?, Recs?, Recs).
-drop_unable1(yes, _, I, P, Rs, R?) :- drop_unable(I?, P?, Rs?, R).
-drop_unable1(no, X, I, P, Rs, [X?|R?]) :- drop_unable(I?, P?, Rs?, R).
+    drop_unable1(Sm?, unable(B?, Q?), I?, P?, Id?, Rs?, R).
+%% The agent's own refusal on its condition of an earlier attempt of the part leaves likewise; one of another's attempt the agent voted yes on stays, Ready reading it.
+drop_unable(I, P, Id, [unmet(B, N)|Rs], R?) :- ground(I?), ground(P?), ground(B?), integer(N?), ground(Id?) |
+    attempt_class(B?, C),
+    part_of_same(I?, C?, P?, Sm),
+    attempt_id(B?, J),
+    same(J?, Id?, Own),
+    and(Sm?, Own?, Go),
+    drop_unable1(Go?, unmet(B?, N?), I?, P?, Id?, Rs?, R).
+drop_unable(I, P, Id, [X|Rs], [X?|R?]) :- otherwise | drop_unable(I?, P?, Id?, Rs?, R).
+procedure drop_unable1(YesNo?, Rec?, Info?, Class?, Peer?, Recs?, Recs).
+drop_unable1(yes, _, I, P, Id, Rs, R?) :- drop_unable(I?, P?, Id?, Rs?, R).
+drop_unable1(no, X, I, P, Id, Rs, [X?|R?]) :- drop_unable(I?, P?, Id?, Rs?, R).
+%% commits(N), the attempts the agent has committed, raised at each commit, and read against unmet(At, N) (Propose under standing approvals, Ready, spent_rec).
+procedure commits_of(Recs?, Integer).
+commits_of([], 0).
+commits_of([commits(N)|_], N?).
+commits_of([_|R], N?) :- otherwise | commits_of(R?, N).
+procedure bump_commits(Recs?, Recs).
+bump_commits([], [commits(1)]).
+bump_commits([commits(N)|R], [commits(N1?)|R?]) :- N1 := N? + 1.
+bump_commits([X|R], [X?|R1?]) :- otherwise | bump_commits(R?, R1).
+procedure chose_of(Recs?, Attempt?, Binding).
+chose_of([], _, []).
+chose_of([chose(A, W)|_], At, W?) :- A? =?= At? | true.
+chose_of([_|R], At, W?) :- otherwise | chose_of(R?, At?, W).
+procedure since(Integer?, Integer?, YesNo).
+since(M, N, yes) :- M? > N? | true.
+since(_, _, no) :- otherwise | true.
+procedure any_ready(Recs?, Attempt?, YesNo).
+any_ready([], _, no).
+any_ready([ready(A, _)|_], B, yes) :- A? =?= B? | true.
+any_ready([_|R], B, X?) :- otherwise | any_ready(R?, B?, X).
 %% Whether the terms C and P name the same part: the same schema, and one part of the class I.
 procedure part_of_same(Info?, Class?, Class?, YesNo).
 part_of_same(I, C, P, Sm?) :- ground(I?), ground(C?), ground(P?) |
@@ -2599,11 +2714,19 @@ tell1(yes, _, _, Ss, Ss?).
 tell1(no, Q, X, Ss, [to(Q?, X?)|Ss?]).
 
 %% Vote yes: recorded, sent to the initiator, and the attempt held prepared.
-procedure vote_yes_app(Attempt?, App?, Sends, App).
-vote_yes_app(At, app(S, K, _, R), [to(I?, vote(At?, yes))],
+procedure vote_yes_app(Attempt?, Peer?, App?, Sends, App).
+vote_yes_app(At, Id, app(S, K, _, R), [to(I?, vote(At?, V?))],
         app(S?, K?, held(At?), [voted(At?, yes)|R?])) :-
-    ground(At?) |
-    attempt_id(At?, I).
+    ground(At?), ground(S?), ground(Id?) |
+    attempt_id(At?, I),
+    attempt_class(At?, C),
+    readings_of(C?, Id?, S?, Ws),
+    attempt_class(At?, C2),
+    held_of_me(C2?, Id?, S?, Gs),
+    yes_vote(Gs?, Ws?, V).
+procedure yes_vote(GAtoms?, Bindings?, Vote).
+yes_vote([], Ws, yes(Ws?)).
+yes_vote([G|Gs], Ws, yes(Ws?, [G?|Gs?])).
 %% Vote no, of reason D (Section 3.2, before Definition "Proposing": "vote y records voted(alpha, y), adds message(p, i, vote(alpha, y)) to o_p, ... and, if y = no and p is a guard of [t]_j, ends every approval of [t] pending at p; the reason of a vote no is declined where p has recorded answered(alpha, no) and unable otherwise"): recorded, sent to the initiator with its reason, and, the agent a guard of the attempt's part, every approval of the class pending at it ended, with the notice, the agent its refuser (vGLP f0acbc1, Section 5.4, "The compilation": "or from the vote where the agent's own vote no refused it").
 procedure vote_no(Info?, Attempt?, Peer?, Reason?, App?, Sends, Outputs, App).
 vote_no(I, At, Id, D, app(S, K, L, R), [to(P?, vote(At?, no(D?)))], Ns?, app(S?, K?, L?, R2?)) :-
@@ -2666,15 +2789,15 @@ start_app3(notmine, _, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(I?), ground
     asked_by(At?, Id?, Ak),
     app_recs(Ap?, R),
     approval_of(I?, Id?, R?, Apv),
-    start_asked(Ak?, Apv?, At?, Ap?, Ss, Cr, Ns, Ap1).
+    start_asked(Ak?, Apv?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
 procedure start_named(YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
-start_named(no, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_named(no, _, At, Id, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], []), Ap?, Ss, Ns, Ap1).
-procedure start_asked(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, Outputs, App).
-start_asked(yes, no, At, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?)|R?])) :-
+procedure start_asked(YesNo?, YesNo?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_asked(yes, no, At, _, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?)|R?])) :-
     ground(At?) | true.
-start_asked(yes, yes, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
-start_asked(no, _, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_asked(yes, yes, At, Id, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
+start_asked(no, _, At, Id, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 %% Whether the attempt names a request the agent made, requested(Rho, K) in its record (st_req).
 procedure names_mine(Attempt?, YesNo?, Mine).
 names_mine(attempt(_, _, _, _, none), _, notmine).
@@ -2721,7 +2844,7 @@ vote_app0(I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) |
     part_dom(C?, Id?, S?, Dm),
     vote_on(YN?, Dm?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
 procedure vote_on(YesNo?, YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
-vote_on(yes, yes, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+vote_on(yes, yes, _, At, Id, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 vote_on(yes, no, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) |
     app_state(Ap?, S),
     attempt_class(At?, C),
@@ -2736,11 +2859,217 @@ tally_effect(I, At, F, V, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) |
     tally1(Cl?, I?, At?, F?, V?, St?, Ss, Ns, St1).
 procedure tally1(YesNo?, Info?, Attempt?, Peer?, Vote?, St?, Sends, Outputs, St).
 tally1(yes, _, _, _, _, St, [], [], St?).
-tally1(no, _, At, F, yes, St, [], [], St1?) :- ground(St?) |
+%% A yes recorded with its readings; on the last yes the readings chosen or the attempt refused on its condition (tally_last).
+tally1(no, I, At, F, yes(Ws), St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(St?) |
     st_app(St?, Ap),
-    add_rec(got(At?, F?, yes), Ap?, Ap1),
+    add_rec(got(At?, F?, yes(Ws?)), Ap?, Ap1),
+    set_app(St?, Ap1?, St1),
+    tally_last(I?, At?, St1?, Ss, Ns, St2).
+tally1(no, I, At, F, yes(Ws, Gs), St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(St?) |
+    st_app(St?, Ap),
+    add_rec(got(At?, F?, yes(Ws?, Gs?)), Ap?, Ap1),
+    set_app(St?, Ap1?, St1),
+    tally_last(I?, At?, St1?, Ss, Ns, St2).
+tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- tally_no(I?, At?, F?, D?, St?, Ss, Ns, St3).
+%% On the last yes (vGLP 566c186, Definition "Deciding", Tally: "If y = yes and a yes of every participant other than p is now recorded, p records chose(alpha, w) for some w in W with w_p in g(s) and, for each other participant q', w_q' among the readings recorded with its yes, if there is such a w.  If ... there is none, p refuses alpha ... a refusal on its condition, with itself as refuser, as unable"): the readings chosen, the first in a fixed order --- the participants in the order of the class, the agent's own readings of its state among them, each participant's in the order its vote carried them --- under which the part's condition holds with the schema-binding (choose_readings), recorded chose(At, W), W the readings joined; none, the attempt refused as on a no, the agent its refuser, unable, and unmet(At, N) recorded, N the attempts the agent has committed, which Propose under standing approvals reads.
+procedure tally_last(Info?, Attempt?, St?, Sends, Outputs, St).
+tally_last(I, At, St, Ss?, Ns?, St1?) :- ground(I?), ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    all_yes(I?, At?, Id?, R?, All),
+    tally_last1(All?, I?, At?, St?, Ss, Ns, St1).
+procedure tally_last1(YesNo?, Info?, Attempt?, St?, Sends, Outputs, St).
+tally_last1(no, _, _, St, [], [], St?).
+tally_last1(yes, I, At, St, Ss?, Ns?, St1?) :- ground(I?), ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    st_app(St?, Ap2),
+    app_state(Ap2?, S),
+    choose_readings(I?, At?, Id?, S?, R?, Ch),
+    tally_chosen(Ch?, I?, At?, St?, Ss, Ns, St1).
+procedure tally_chosen(Chosen?, Info?, Attempt?, St?, Sends, Outputs, St).
+tally_chosen(chosen(W), _, At, St, [], [], St1?) :- ground(At?), ground(St?) |
+    st_app(St?, Ap),
+    add_rec(chose(At?, W?), Ap?, Ap1),
     set_app(St?, Ap1?, St1).
-tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), ground(D?), ground(St?) |
+tally_chosen(nochoice, I, At, St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(St?) |
+    st_id(St?, Id),
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    commits_of(R?, N),
+    st_app(St?, Ap2),
+    add_rec(unmet(At?, N?), Ap2?, Ap1),
+    set_app(St?, Ap1?, St1),
+    tally_no(I?, At?, Id?, unable, St1?, Ss, Ns, St2).
+%% The readings chosen for the attempt: of each participant, in the order of the class, its readings, the agent's own of its state and the others' as their votes carried them (readings_in), and the first choice, one of each, under which the condition of the part holds with the schema-binding (first_meeting).
+procedure choose_readings(Info?, Attempt?, Peer?, GAtoms?, Recs?, Chosen).
+choose_readings(I, At, Id, S, R, Ch?) :- ground(I?), ground(At?), ground(Id?), ground(S?), ground(R?) |
+    info_q(I?, Q),
+    attempt_class(At?, C),
+    readings_of(C?, Id?, S?, Own),
+    readings_in(Q?, At?, Id?, Own?, R?, Wss),
+    attempt_class(At?, C2),
+    term_spec(C2?, Nm, _, Bn),
+    unlocal(Bn?, B0),
+    cond_of(Nm?, Cd),
+    attempt_class(At?, C4),
+    term_spec(C4?, Nm4, _, _),
+    cond_forms(Nm4?, Fs),
+    info_q(I?, Q2),
+    attempt_class(At?, C3),
+    held_of_me(C3?, Id?, S?, Own2),
+    held_tagged(Q2?, At?, Id?, Own2?, R?, Tg),
+    attempt_class(At?, C5),
+    term_spec(C5?, Nm5, _, _),
+    schema_listed(Nm5?, Ks),
+    first_meeting(Wss?, cx(Cd?, Fs?, Tg?, Ks?), B0?, [], Ch).
+procedure readings_in(Peers?, Attempt?, Peer?, Bindings?, Recs?, BindingsList).
+readings_in([], _, _, _, _, []).
+readings_in([P|Ps], At, Id, Own, R, [Ws?|Wss?]) :- ground(P?), ground(At?), ground(Id?), ground(Own?), ground(R?) |
+    same(P?, Id?, Me),
+    readings_rec(Me?, At?, P?, Own?, R?, Ws),
+    readings_in(Ps?, At?, Id?, Own?, R?, Wss).
+procedure readings_rec(YesNo?, Attempt?, Peer?, Bindings?, Recs?, Bindings).
+readings_rec(yes, _, _, Own, _, Own?).
+readings_rec(no, At, P, _, R, Ws?) :- got_readings(R?, At?, P?, Ws).
+procedure got_readings(Recs?, Attempt?, Peer?, Bindings).
+got_readings([], _, _, []).
+got_readings([got(A, Q, yes(Ws))|_], At, P, Ws?) :- A? =?= At?, Q? =?= P? | true.
+got_readings([got(A, Q, yes(Ws, _))|_], At, P, Ws?) :- A? =?= At?, Q? =?= P? | true.
+got_readings([_|R], At, P, Ws?) :- otherwise | got_readings(R?, At?, P?, Ws).
+%% The condition of the part: the conjuncts of the constraint of it, and its formulas across roles evaluated on the atoms of the readings each tagged with the person who holds it, its listed roles left to the formulas' quantifiers to bind (vGLP 5f55cf3, Section 5.4: "the initiator evaluates the formula on the readings, each atom, anchor, count and sum taken in the reading of the person who holds it").
+CondX     ::= cx(Constraint, Forms, GAtoms, Ints).
+procedure first_meeting(BindingsList?, CondX?, Binding?, Binding?, Chosen).
+first_meeting([], cx(Cd, Fs, Tg, Ks), B0, Acc, Ch?) :- ground(Cd?), ground(Fs?), ground(Tg?), ground(Ks?), ground(B0?), ground(Acc?) |
+    app(Acc?, B0?, B),
+    con_holds(Cd?, B?, H1),
+    app(Acc?, B0?, B1),
+    drop_roles(B1?, Ks?, B2),
+    forms_hold(Fs?, B2?, Tg?, H2),
+    and(H1?, H2?, H),
+    chosen_if(H?, Acc?, Ch).
+first_meeting([Ws|Wss], Cd, B0, Acc, Ch?) :- ground(Ws?), ground(Wss?), ground(Cd?), ground(B0?), ground(Acc?) |
+    first_meeting_each(Ws?, Wss?, Cd?, B0?, Acc?, Ch).
+procedure first_meeting_each(Bindings?, BindingsList?, CondX?, Binding?, Binding?, Chosen).
+first_meeting_each([], _, _, _, _, nochoice).
+first_meeting_each([W|Ws], Wss, Cd, B0, Acc, Ch?) :- ground(W?), ground(Ws?), ground(Wss?), ground(Cd?), ground(B0?), ground(Acc?) |
+    app(Acc?, W?, Acc1),
+    first_meeting(Wss?, Cd?, B0?, Acc1?, Ch1),
+    first_meeting_next(Ch1?, Ws?, Wss?, Cd?, B0?, Acc?, Ch).
+procedure first_meeting_next(Chosen?, Bindings?, BindingsList?, CondX?, Binding?, Binding?, Chosen).
+first_meeting_next(chosen(W), _, _, _, _, _, chosen(W?)).
+first_meeting_next(nochoice, Ws, Wss, Cd, B0, Acc, Ch?) :- first_meeting_each(Ws?, Wss?, Cd?, B0?, Acc?, Ch).
+procedure chosen_if(YesNo?, Binding?, Chosen).
+chosen_if(yes, W, chosen(W?)).
+chosen_if(no, _, nochoice).
+%% The formulas of the part's condition, each with its atoms' holders first among their arguments (schema_forms).
+procedure cond_forms(Constant?, Forms).
+cond_forms(Nm, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), cond_forms1(Sf?, Fs).
+procedure cond_forms1(SForms?, Forms).
+cond_forms1([], []).
+cond_forms1([sform(cond, F)|Sf], [F?|Fs?]) :- cond_forms1(Sf?, Fs).
+cond_forms1([_|Sf], Fs?) :- otherwise | cond_forms1(Sf?, Fs).
+%% The atoms of the participants' readings, each tagged with the person holding it: the agent's own, Own, and each other's as its vote yes carried them.
+procedure held_tagged(Peers?, Attempt?, Peer?, GAtoms?, Recs?, GAtoms).
+held_tagged([], _, _, _, _, []).
+held_tagged([P|Ps], At, Id, Own, R, Tg?) :- ground(P?), ground(At?), ground(Id?), ground(Own?), ground(R?) |
+    same(P?, Id?, Me),
+    held_rec(Me?, At?, P?, Own?, R?, Gs),
+    tag_atoms(Gs?, P?, T1),
+    held_tagged(Ps?, At?, Id?, Own?, R?, T2),
+    app(T1?, T2?, Tg).
+procedure held_rec(YesNo?, Attempt?, Peer?, GAtoms?, Recs?, GAtoms).
+held_rec(yes, _, _, Own, _, Own?).
+held_rec(no, At, P, _, R, Gs?) :- got_held(R?, At?, P?, Gs).
+procedure got_held(Recs?, Attempt?, Peer?, GAtoms).
+got_held([], _, _, []).
+got_held([got(A, Q, yes(_, Gs))|_], At, P, Gs?) :- A? =?= At?, Q? =?= P? | true.
+got_held([_|R], At, P, Gs?) :- otherwise | got_held(R?, At?, P?, Gs).
+procedure tag_atoms(GAtoms?, Peer?, GAtoms).
+tag_atoms([], _, []).
+tag_atoms([g(N, Vs)|Gs], P, [g(N?, [p(P?)|Vs?])|Ts?]) :- ground(P?) | tag_atoms(Gs?, P?, Ts).
+%% The indices of a schema's listed roles.
+procedure schema_listed(Constant?, Ints).
+schema_listed(Nm, Ks?) :- ground(Nm?) | schema_entry(Nm?, E), schema_listed1(E?, Ks).
+procedure schema_listed1(Schema?, Ints).
+schema_listed1(lschema(_, _, _, Lsts), Ks?) :- listing_ixs(Lsts?, Ks).
+schema_listed1(_, []) :- otherwise | true.
+procedure listing_ixs(Listings?, Ints).
+listing_ixs([], []).
+listing_ixs([listing(I, _, _, _, _, _, _)|Ls], [I?|Ks?]) :- listing_ixs(Ls?, Ks).
+listing_ixs([_|Ls], Ks?) :- otherwise | listing_ixs(Ls?, Ks).
+%% A binding less the roles of the indices Ks.
+procedure drop_roles(Binding?, Ints?, Binding).
+drop_roles([], _, []).
+drop_roles([b(role(J), X)|Bs], Ks, R?) :- integer(J?), ground(Ks?) | mem(J?, Ks?, In), drop_roles(Bs?, Ks?, R1), drop_one(In?, b(role(J?), X?), R1?, R).
+drop_roles([X|Bs], Ks, [X?|R?]) :- otherwise | drop_roles(Bs?, Ks?, R).
+procedure drop_one(YesNo?, Bind?, Binding?, Binding).
+drop_one(yes, _, R, R?).
+drop_one(no, X, R, [X?|R?]).
+%% The atoms of the agent's state its reading holds for the formulas of the part's condition: those the formulas' atoms at its roles match, the agent bound in each role it is in, as a person of a listed role among them (schema_held; vGLP 5f55cf3, Section 5.4).
+procedure held_of_me(Class?, Peer?, GAtoms?, GAtoms).
+held_of_me(P, Id, S, Gs?) :- ground(P?), ground(Id?), ground(S?) |
+    term_spec(P?, Nm, Rs, Bn),
+    roles_sent(Rs?, 1, Bn?, Id?, Is),
+    term_spec(P?, _, _, Bn2),
+    neg_ixs(Bn2?, Id?, Ks),
+    term_spec(P?, _, _, Bn3),
+    unlocal(Bn3?, B0),
+    schema_held(Nm?, Hp),
+    reflexive_preds(Rf),
+    hat(Rf?, Id?, S?, Sh),
+    held_pats(Hp?, Is?, Ks?, B0?, Id?, Pm),
+    held_scan(Sh?, Pm?, Gs).
+%% The indices K of the listed roles the agent is a person of, the binding giving it role(-K).
+procedure neg_ixs(Binding?, Peer?, Ints).
+neg_ixs([], _, []).
+neg_ixs([b(role(J), p(Q))|Bs], Id, [K?|Ks?]) :- integer(J?), J? < 0, Q? =?= Id? | K := 0 - J?, neg_ixs(Bs?, Id?, Ks).
+neg_ixs([_|Bs], Id, Ks?) :- otherwise | neg_ixs(Bs?, Id?, Ks).
+%% Each role's atoms with the binding they are matched under: the class's, for an agent role the agent is in; for a listed role it is a person of, the same with the role bound to the agent; none for a role it is not in.
+BindOr    ::= nobind ; bind(Binding).
+HMatch    ::= pm(BindOr, SAtoms).
+HMatches  ::= [] ; [HMatch | HMatches].
+procedure held_pats(HPats?, Ints?, Ints?, Binding?, Peer?, HMatches).
+held_pats([], _, _, _, _, []).
+held_pats([hp(I, Ms)|Hp], Is, Ks, B, Id, [pm(Bo?, Ms?)|Pm?]) :- integer(I?), ground(Is?), ground(Ks?), ground(B?), ground(Id?) |
+    mem(I?, Is?, InA),
+    mem(I?, Ks?, InL),
+    held_bind(InA?, InL?, I?, B?, Id?, Bo),
+    held_pats(Hp?, Is?, Ks?, B?, Id?, Pm).
+procedure held_bind(YesNo?, YesNo?, Integer?, Binding?, Peer?, BindOr).
+held_bind(yes, _, _, B, _, bind(B?)).
+held_bind(no, yes, I, B, Id, bind([b(role(I?), p(Id?))|B1?])) :- integer(I?) | drop_roles(B?, [I?], B1).
+held_bind(no, no, _, _, _, nobind).
+%% The atoms of the state, each copy once, that some role's atoms match.
+procedure held_scan(GAtoms?, HMatches?, GAtoms).
+held_scan([], _, []).
+held_scan([G|Gs], Pm, R?) :- ground(G?), ground(Pm?) |
+    pm_any(Pm?, G?, Y),
+    held_scan(Gs?, Pm?, R1),
+    held_keep(Y?, G?, R1?, R).
+procedure pm_any(HMatches?, GAtom?, YesNo).
+pm_any([], _, no).
+pm_any([pm(nobind, _)|Pm], G, Y?) :- pm_any(Pm?, G?, Y).
+pm_any([pm(bind(B), Ms)|Pm], G, Y?) :- ground(G?) | held_any(Ms?, G?, B?, Y1), pm_any1(Y1?, Pm?, G?, Y).
+procedure pm_any1(YesNo?, HMatches?, GAtom?, YesNo).
+pm_any1(yes, _, _, yes).
+pm_any1(no, Pm, G, Y?) :- pm_any(Pm?, G?, Y).
+procedure held_any(SAtoms?, GAtom?, Binding?, YesNo).
+held_any([], _, _, no).
+held_any([M|Ms], G, B, Y?) :- ground(G?), ground(B?) |
+    match_into(M?, [G?], B?, Bs),
+    held_some(Bs?, Ms?, G?, B?, Y).
+procedure held_some(Bindings?, SAtoms?, GAtom?, Binding?, YesNo).
+held_some([], Ms, G, B, Y?) :- held_any(Ms?, G?, B?, Y).
+held_some([_|_], _, _, _, yes).
+procedure held_keep(YesNo?, GAtom?, GAtoms?, GAtoms).
+held_keep(yes, G, R, [G?|R?]).
+held_keep(no, _, R, R?).
+%% The refusal on a no, or on the condition with the agent itself as refuser (Definition "Deciding", Tally).
+procedure tally_no(Info?, Attempt?, Peer?, Reason?, St?, Sends, Outputs, St).
+tally_no(I, At, F, D, St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), ground(D?), ground(St?) |
     st_id(St?, Id),
     info_q(I?, Q),
     tell(Q?, Id?, outcome(At?, abort(F?, D?)), Ss),
@@ -2748,8 +3077,8 @@ tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), grou
     app_recs(Ap?, R),
     attempt_class(At?, C),
     guards_part(C?, Id?, Gd),
-    unable_rec(D?, At?, F?, R?, R0),
-    guard_ends(Gd?, I?, Id?, [closed(At?), got(At?, F?, no)|R0?], R1, En),
+    unable_rec(D?, At?, F?, Id?, R?, R0),
+    guard_ends(Gd?, I?, Id?, [closed(At?), got(At?, F?, no(D?))|R0?], R1, En),
     attempt_class(At?, C2),
     ended_notice(En?, C2?, F?, D?, Ns),
     st_app(St?, Ap2),
@@ -2764,10 +3093,14 @@ add_rec(X, app(S, K, L, R), app(S?, K?, L?, [X?|R?])).
 procedure unlock_recs(App?, Recs?, App).
 unlock_recs(app(S, K, _, _), R, app(S?, K?, unlocked, R?)).
 %% The refuser F of the agent's attempt, recorded unable(At, F) where its reason is unable: what Propose under standing approvals reads (vGLP 1d84a35, Definition "Proposing", Propose).
-procedure unable_rec(Reason?, Attempt?, Peer?, Recs?, Recs).
-unable_rec(declined, _, _, R, R?).
-unable_rec(unable, At, F, R, [unable(At?, F?)|R?]).
-unable_rec(unable(_, _), At, F, R, [unable(At?, F?)|R?]).
+%% The agent's own refusal on its condition is recorded unmet(At, N) instead (tally_chosen).
+procedure unable_rec(Reason?, Attempt?, Peer?, Peer?, Recs?, Recs).
+unable_rec(declined, _, _, _, R, R?).
+unable_rec(unable, At, F, Id, R, R1?) :- ground(F?), ground(Id?), ground(At?), ground(R?) | same(F?, Id?, Me), unable_other(Me?, At?, F?, R?, R1).
+unable_rec(unable(_, _), At, F, _, R, [unable(At?, F?)|R?]).
+procedure unable_other(YesNo?, Attempt?, Peer?, Recs?, Recs).
+unable_other(yes, _, _, R, R?).
+unable_other(no, At, F, R, [unable(At?, F?)|R?]).
 
 %% Commit, an own transaction, of an attempt the agent initiated with a yes of every
 %% other participant recorded (vGLP f0acbc1, Definition "Deciding", Commit): the effect applied, the lock released, the
@@ -2955,13 +3288,17 @@ cname_base(community(Q), Q?).
 cname_base(dot(N, _), Q?) :- cname_base(N?, Q).
 cname_base(dot_any(N), Q?) :- cname_base(N?, Q).
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
+%% The effect under the readings chosen, which the commit tells (vGLP 566c186, Definition "Deciding", Commit: "s := f(s, w), ... tells outcome(alpha, commit) with w").
 commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :-
-    ground(I?), ground(At?), ground(Id?) |
+    ground(I?), ground(At?), ground(Id?), ground(R?) |
     attempt_class(At?, P),
-    apply_part(P?, Id?, S?, S1),
+    chose_of(R?, At?, W),
+    apply_part(P?, Id?, S?, W?, S1),
+    chose_of(R?, At?, W2),
     info_q(I?, Q),
-    tell(Q?, Id?, outcome(At?, commit), Ss),
-    end_approvals(I?, Id?, [closed(At?)|R?], R1, _).
+    tell(Q?, Id?, outcome(At?, commit(W2?)), Ss),
+    bump_commits(R?, R0),
+    end_approvals(I?, Id?, [closed(At?)|R0?], R1, _).
 
 %% Yield, at the initiator, on yield(At): nothing more where the attempt is
 %% closed or a yes of every other participant is recorded; otherwise the lock
@@ -3034,9 +3371,14 @@ procedure all_yes1(Peers?, Attempt?, Peer?, Recs?, YesNo).
 all_yes1([], _, _, _, yes).
 all_yes1([P|Ps], At, Id, R, B?) :- ground(P?), ground(At?), ground(Id?), ground(R?) |
     same(P?, Id?, Me),
-    mem(got(At?, P?, yes), R?, G),
+    got_yes(R?, At?, P?, G),
     or(Me?, G?, Ok),
     all_yes2(Ok?, Ps?, At?, Id?, R?, B).
+procedure got_yes(Recs?, Attempt?, Peer?, YesNo).
+got_yes([], _, _, no).
+got_yes([got(A, Q, yes(_))|_], At, P, yes) :- A? =?= At?, Q? =?= P? | true.
+got_yes([got(A, Q, yes(_, _))|_], At, P, yes) :- A? =?= At?, Q? =?= P? | true.
+got_yes([_|R], At, P, B?) :- otherwise | got_yes(R?, At?, P?, B).
 procedure all_yes2(YesNo?, Peers?, Attempt?, Peer?, Recs?, YesNo).
 all_yes2(no, _, _, _, _, no).
 all_yes2(yes, Ps, At, Id, R, B?) :- all_yes1(Ps?, At?, Id?, R?, B).
@@ -3055,7 +3397,7 @@ outcome_effect(I, At, Z, St, Ns?, Ms?, St2?) :- ground(I?), ground(At?), ground(
     set_held(St1?, Hd1?, St2).
 %% On a commit, the introduction rule's pairs of the attempt's part at the agent, both known and not recorded introduced, introduced as Commit introduces them (vGLP 613ee8d, Definition "Introduction Rule, Introduce Peers": "Commit, and Outcome on a commit, of an attempt of [t]_j at p add the same messages and record"); on an abort or a yield, none.
 procedure outcome_intros(Decision?, Attempt?, Peer?, St?, App?, Nets, App).
-outcome_intros(commit, At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) |
+outcome_intros(commit(_), At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) |
     attempt_class(At?, P),
     iota_known(P?, Id?, St?, Ps),
     st_ix(St?, Ix),
@@ -3064,24 +3406,41 @@ outcome_intros(commit, At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) |
 outcome_intros(abort(_, _), _, _, _, Ap, [], Ap?).
 outcome_intros(yield, _, _, _, Ap, [], Ap?).
 procedure outcome_app(Info?, Attempt?, Decision?, Peer?, YesNo?, YesNo?, App?, Outputs, App).
-outcome_app(I, At, commit, Id, _, _, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)) :-
-    ground(I?), ground(At?) |
+%% On a commit, the effect under the readings it carries (vGLP 566c186, Definition "Deciding", Outcome: "s := f(s, w) if z = commit, w the readings it carries").
+outcome_app(I, At, commit(W), Id, _, _, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)) :-
+    ground(I?), ground(At?), ground(R?) |
     attempt_class(At?, P),
-    apply_part(P?, Id?, S?, S1),
+    apply_part(P?, Id?, S?, W?, S1),
     release(L?, At?, L1),
-    end_approvals(I?, Id?, [closed(At?)|R?], R1, _).
+    bump_commits(R?, R0),
+    end_approvals(I?, Id?, [closed(At?)|R0?], R1, _).
+%% On an abort by the initiator on its condition, abort(I, unable) from I, of an attempt the agent voted yes on, unmet(At, N) recorded, N the attempts the agent has committed, which Ready reads (Definition "Proposing", Ready: "or i refused alpha on its condition and p has committed an attempt since").
 outcome_app(I, At, abort(Q, D), Id, Mi, Ed, app(S, K, L, R), Ns?, app(S?, K?, L1?, R1?)) :-
-    ground(At?), ground(D?) |
+    ground(At?), ground(D?), ground(Q?), ground(R?) |
     release(L?, At?, L1),
+    unmet_rec(Q?, D?, At?, R?, R0),
     attempt_names(At?, Nm),
-    abort_ends(Nm?, Mi?, Ed?, I?, At?, Id?, [closed(At?)|R?], R1, En),
+    abort_ends(Nm?, Mi?, Ed?, I?, At?, Id?, [closed(At?)|R0?], R1, En),
     attempt_class(At?, C),
     ended_notice(En?, C?, Q?, D?, Ns).
 outcome_app(_, At, yield, _, _, _, app(S, K, L, R), [], app(S?, K?, L1?, [closed(At?)|R?])) :-
     ground(At?) |
     release(L?, At?, L1).
+procedure unmet_rec(Peer?, Reason?, Attempt?, Recs?, Recs).
+unmet_rec(Q, unable, At, R, R1?) :- ground(Q?), ground(At?), ground(R?) |
+    attempt_id(At?, P),
+    same(P?, Q?, Init),
+    mem(voted(At?, yes), R?, Vy),
+    and(Init?, Vy?, Go),
+    commits_of(R?, N),
+    unmet_add(Go?, At?, N?, R?, R1).
+unmet_rec(_, declined, _, R, R?).
+unmet_rec(_, unable(_, _), _, R, R?).
+procedure unmet_add(YesNo?, Attempt?, Integer?, Recs?, Recs).
+unmet_add(yes, At, N, R, [unmet(At?, N?)|R?]).
+unmet_add(no, _, _, R, R?).
 procedure outcome_held(Decision?, Info?, Peer?, Helds?, Helds).
-outcome_held(commit, I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
+outcome_held(commit(_), I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
 outcome_held(abort(_, _), _, _, Hd, Hd?).
 outcome_held(yield, _, _, Hd, Hd?).
 %% The approvals an abort ends at a participant: the request the attempt names, where the agent made it; and, where it names none, every approval of the class pending at the agent, where it is a guard of the part that voted yes or answered yes on the attempt.
@@ -3288,6 +3647,19 @@ spent_rec(readied(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(unable(A, Q), _, _, R, _, Tr, F?, Tr?) :- ground(A?), ground(Q?), ground(R?) | mem(ready(A?, Q?), R?, B), fate_of(B?, F).
 spent_rec(ready(A, Q), _, _, R, _, Tr, F?, Tr?) :- ground(A?), ground(Q?), ground(R?) | mem(unable(A?, Q?), R?, B), neg(B?, Nb), fate_of(Nb?, F).
 spent_rec(got(A, _, _), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
+spent_rec(chose(A, _), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
+%% unmet(A, N) leaves, at the initiator of A, once a ready of A has come or an attempt has been committed since, and, at a participant that voted yes on A, once it has readied A; commits(N) stays.
+spent_rec(unmet(A, N), _, _, R, Id, Tr, F?, Tr?) :- ground(A?), integer(N?), ground(R?), ground(Id?) |
+    attempt_id(A?, P),
+    same(P?, Id?, Own),
+    commits_of(R?, M),
+    since(M?, N?, Sn),
+    any_ready(R?, A?, Rd),
+    mem(readied(A?), R?, Dn),
+    or(Sn?, Rd?, X1),
+    unmet_gone(Own?, X1?, Dn?, G),
+    fate_of(G?, F).
+spent_rec(commits(_), _, _, _, _, Tr, keep, Tr?).
 spent_rec(closed(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(wounded(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(yielded(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
@@ -3299,6 +3671,9 @@ spent_rec(ended(A), _, _, _, _, Tr, F?, Tr1?) :- ground(A?) |
 spent_rec(requested(Rr, K), _, Ea, _, _, Tr, F?, Tr?) :- mem(ended(Rr?, K?), Ea?, B), fate_of(B?, F).
 spent_rec(ended(_, _), _, _, _, _, Tr, move, Tr?).
 spent_rec(introduced(_, _), _, _, _, _, Tr, intro, Tr?).
+procedure unmet_gone(YesNo?, YesNo?, YesNo?, YesNo).
+unmet_gone(yes, X, _, X?).
+unmet_gone(no, _, D, D?).
 procedure in_closed(Attempt?, Attempts?, Fate).
 in_closed(A, Cl, F?) :- mem(A?, Cl?, B), fate_of(B?, F).
 procedure fate_of(YesNo?, Fate).
@@ -3554,6 +3929,85 @@ all_in1(yes, Ps, Q, B?) :- all_in(Ps?, Q?, B).
 %% specifications"; dom_bindings, apply_part).  The part
 %% named by the term P: whether the state S is in the domain of its effect at
 %% the agent.
+%% The readings of the agent's state for the part the term P names (vGLP 566c186, Definition "Local Specification ...": g(s), "the readings of the state", a finite set; Section 5.4: "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries"; Section 3.2: "each participant reading its own count"): for each binding under which its precondition holds (dom_bindings), the values of the variables read at the roles sent to the agent (schema_numeric's reads) and the value in its state of each count or sum of the condition anchored there, under the name the condition gives it, each way once; one empty reading where the roles read nothing.
+procedure readings_of(Class?, Peer?, GAtoms?, Bindings).
+readings_of(P, Id, S, Ws?) :- ground(P?), ground(Id?), ground(S?) |
+    term_spec(P?, Nm, Rs, Bn),
+    reflexive_preds(Rf),
+    hat(Rf?, Id?, S?, Sh),
+    dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs),
+    term_spec(P?, Nm2, Rs2, Bn2),
+    roles_sent(Rs2?, 1, Bn2?, Id?, Is),
+    schema_numeric(Nm2?, N),
+    num_reads(N?, Rd),
+    reads_sent(Rd?, Is?, Vs, Cxs),
+    reflexive_preds(Rf2),
+    hat(Rf2?, Id?, S?, Sh2),
+    project_each(Bs?, Vs?, Cxs?, Sh2?, Ws0),
+    dedup(Ws0?, Ws).
+procedure num_reads(Numeric?, Reads).
+num_reads(numeric(_, _, Rd), Rd?).
+%% The indices of the roles sent to the agent.
+procedure roles_sent(RoleSpecs?, Integer?, Binding?, Peer?, Ints).
+roles_sent([], _, _, _, []).
+roles_sent([_|Rs], I, B, Id, Is?) :- integer(I?), ground(B?), ground(Id?) |
+    role_person(I?, B?, Q),
+    same(Q?, Id?, Me),
+    I1 := I? + 1,
+    roles_sent(Rs?, I1?, B?, Id?, Is1),
+    keep_ix(Me?, I?, Is1?, Is).
+procedure keep_ix(YesNo?, Integer?, Ints?, Ints).
+keep_ix(yes, I, Is, [I?|Is?]).
+keep_ix(no, _, Is, Is?).
+%% The variables read at the roles of the indices Is, and the counts they take.
+procedure reads_sent(Reads?, Ints?, Vars, CExprs).
+reads_sent([], _, [], []).
+reads_sent([read(I, Vs1, Cx1)|Rd], Is, Vs?, Cxs?) :- ground(Is?), integer(I?) |
+    mem(I?, Is?, In),
+    reads_sent(Rd?, Is?, Vs2, Cx2),
+    reads_take(In?, Vs1?, Cx1?, Vs2?, Cx2?, Vs, Cxs).
+procedure reads_take(YesNo?, Vars?, CExprs?, Vars?, CExprs?, Vars, CExprs).
+reads_take(yes, Vs1, Cx1, Vs2, Cx2, Vs?, Cxs?) :- app(Vs1?, Vs2?, Vs), app(Cx1?, Cx2?, Cxs).
+reads_take(no, _, _, Vs2, Cx2, Vs2?, Cx2?).
+%% Each binding projected onto the variables read, in their order, with the value of each count taken in the state under it.
+procedure project_each(Bindings?, Vars?, CExprs?, GAtoms?, Bindings).
+project_each([], _, _, _, []).
+project_each([B|Bs], Vs, Cxs, Sh, [W?|Ws?]) :- ground(B?), ground(Vs?), ground(Cxs?), ground(Sh?) |
+    project_vars(Vs?, B?, W1),
+    project_counts(Cxs?, B?, Sh?, W2),
+    app(W1?, W2?, W),
+    project_each(Bs?, Vs?, Cxs?, Sh?, Ws).
+procedure project_vars(Vars?, Binding?, Binding).
+project_vars([], _, []).
+project_vars([V|Vs], B, W?) :- ground(V?), ground(B?) |
+    lookup(V?, B?, F),
+    project_vars(Vs?, B?, W1),
+    project_found(F?, V?, W1?, W).
+procedure project_found(Found?, Var?, Binding?, Binding).
+project_found(found(X), V, W, [b(V?, X?)|W?]).
+project_found(free, _, W, W?).
+procedure project_counts(CExprs?, Binding?, GAtoms?, Binding).
+project_counts([], _, _, []).
+project_counts([cx(N, E)|Cxs], B, Sh, W?) :- ground(N?), ground(E?), ground(B?), ground(Sh?) |
+    expr_counted(E?, B?, Sh?, E1),
+    expr_val(E1?, B?, R),
+    project_counts(Cxs?, B?, Sh?, W1),
+    count_bind_val(R?, N?, W1?, W).
+procedure count_bind_val(NumRes?, Constant?, Binding?, Binding).
+%% A count is a whole number; a sum that is no whole number gives no reading.
+count_bind_val(num_is(K), N, W, [b(num(N?), n(I?))|W?]) :- integer(K?) | num_val(num_is(K?), I).
+count_bind_val(num_is(K), _, W, W?) :- otherwise, number(K?) | true.
+count_bind_val(no_num, _, W, W?).
+%% The condition of the part: the conjuncts of the constraint that name variables local to two roles or more, conjoined, its counts named (vGLP 566c186, Section 5.4: "a conjunct that names variables local to two roles or more is of the part's condition"), which the initiator checks on the readings (choose_readings).
+procedure cond_of(Constant?, Constraint).
+cond_of(Nm, C?) :- ground(Nm?) | schema_numeric(Nm?, N), cond_of1(N?, C).
+procedure cond_of1(Numeric?, Constraint).
+cond_of1(numeric(Cj, _, _), C?) :- conjs_cond(Cj?, C).
+procedure conjs_cond(Conjs?, Constraint).
+conjs_cond([], true).
+conjs_cond([cj(cond, C)|Cj], and(C?, D?)) :- conjs_cond(Cj?, D).
+conjs_cond([cj(every, _)|Cj], D?) :- conjs_cond(Cj?, D).
+conjs_cond([cj(at(_), _)|Cj], D?) :- conjs_cond(Cj?, D).
 procedure part_dom(Class?, Peer?, GAtoms?, YesNo).
 part_dom(P, Id, S, B?) :- ground(P?), ground(Id?), ground(S?) |
     term_spec(P?, Nm, Rs, Bn),
@@ -3830,6 +4284,8 @@ forms_at(Nm, B, Id, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), forms_at1(Sf?, 
 procedure forms_at1(SForms?, Binding?, Peer?, Forms).
 forms_at1([], _, _, []).
 forms_at1([sform(every, F)|Sf], B, Id, [F?|Fs?]) :- forms_at1(Sf?, B?, Id?, Fs).
+%% A safe formula is local to one role or to every role, never of the condition; the clause covers the type.
+forms_at1([sform(cond, _)|Sf], B, Id, Fs?) :- forms_at1(Sf?, B?, Id?, Fs).
 forms_at1([sform(at(I), F)|Sf], B, Id, Fs?) :- ground(B?), ground(Id?) |
     role_person(I?, B?, P),
     same(P?, Id?, Me),
@@ -3915,16 +4371,45 @@ forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
 
 %% The effect at the agent Id of the part the term P names: its state less the atoms the schema-binding deletes there, plus those it adds, the join of those of the roles sent to Id, as multisets (GSC, Definition "Compilation"), a multiplicity k deleting or adding k copies, under the binding under which its precondition there holds, its variables local to Id's roles bound by the state: "its effect there is with that binding" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"; dom_bindings), the first of them.  The effect is applied only where the precondition holds, by the Propose of an attempt of one participant, which tests it, and by the Commit and the Outcome of an attempt the agent voted yes on, holding it prepared since, so that its state has not changed; the second clause covers the type.
-procedure apply_part(Class?, Peer?, GAtoms?, GAtoms).
-apply_part(P, Id, S, S1?) :- ground(P?), ground(Id?), ground(S?) |
+%% The effect under the readings chosen, W (vGLP 566c186, Definition "Local Specification ...": f(s, w); Section 5.4: "the commit tells them to every participant, whose effect is under them"): among the bindings under which the precondition holds, those that agree with W on the variables both bind, each extended by the values W gives the variables it leaves free, the variables read at the other roles among them (under_readings), the first of them giving the effect.
+procedure apply_part(Class?, Peer?, GAtoms?, Binding?, GAtoms).
+apply_part(P, Id, S, W, S1?) :- ground(P?), ground(Id?), ground(S?), ground(W?) |
     term_spec(P?, Nm, Rs, Bn),
     reflexive_preds(Rf),
     hat(Rf?, Id?, S?, Sh),
     dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs),
+    under_readings(Bs?, W?, Bs1),
     term_spec(P?, Nm2, Rs2, Bn2),
     reflexive_preds(Rf2),
     hat(Rf2?, Id?, S?, Sh2),
-    apply_with(Bs?, Nm2?, Rs2?, Bn2?, Id?, S?, Sh2?, S1).
+    apply_with(Bs1?, Nm2?, Rs2?, Bn2?, Id?, S?, Sh2?, S1).
+procedure under_readings(Bindings?, Binding?, Bindings).
+under_readings([], _, []).
+under_readings([B|Bs], W, R?) :- ground(B?), ground(W?) |
+    agrees(W?, B?, A),
+    merge_in(W?, B?, B1),
+    under_readings(Bs?, W?, R1),
+    keep_binding(A?, B1?, R1?, R).
+procedure agrees(Binding?, Binding?, YesNo).
+agrees([], _, yes).
+agrees([b(V, X)|W], B, A?) :- ground(V?), ground(X?), ground(B?) |
+    lookup(V?, B?, F),
+    agrees1(F?, X?, W?, B?, A).
+procedure agrees1(Found?, Val?, Binding?, Binding?, YesNo).
+agrees1(free, _, W, B, A?) :- agrees(W?, B?, A).
+agrees1(found(Y), X, W, B, A?) :- ground(X?), ground(Y?) | same(X?, Y?, E), agrees2(E?, W?, B?, A).
+procedure agrees2(YesNo?, Binding?, Binding?, YesNo).
+agrees2(no, _, _, no).
+agrees2(yes, W, B, A?) :- agrees(W?, B?, A).
+procedure merge_in(Binding?, Binding?, Binding).
+merge_in([], B, B?).
+merge_in([b(V, X)|W], B, B2?) :- ground(V?), ground(B?) |
+    lookup(V?, B?, F),
+    merge_one(F?, V?, X?, B?, B1),
+    merge_in(W?, B1?, B2).
+procedure merge_one(Found?, Var?, Val?, Binding?, Binding).
+merge_one(free, V, X, B, [b(V?, X?)|B?]).
+merge_one(found(_), _, _, B, B?).
 %% The atoms of the conjuncts local to the roles sent to the agent are deleted with the schema-binding's, from d_p, and added with its added ones (local_effect).
 procedure apply_with(Bindings?, Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms?, GAtoms).
 apply_with([B|_], Nm, Rs, _, Id, S, Sh, S1?) :- ground(Rs?), ground(B?), ground(Id?) |
@@ -5963,11 +6448,28 @@ con_at(Nm, B, Id, C?) :- ground(Nm?), ground(B?) |
     schema_numeric(Nm?, N),
     con_at0(N?, B?, Id?, C).
 procedure con_at0(Numeric?, Binding?, Peer?, Constraint).
-con_at0(numeric(C, _, every), _, _, C?).
-con_at0(numeric(C, _, at(I)), B, Id, C1?) :- ground(B?) |
+%% The conjuncts local to every role and those local to a role sent to the agent, conjoined; those of the condition are the initiator's to check on the readings (cond_of).
+con_at0(numeric(Cj, _, _), B, Id, C?) :- ground(B?), ground(Id?) | conjs_at(Cj?, B?, Id?, C).
+procedure conjs_at(Conjs?, Binding?, Peer?, Constraint).
+conjs_at([], _, _, true).
+conjs_at([cj(every, C)|Cj], B, Id, and(C?, D?)) :- conjs_at(Cj?, B?, Id?, D).
+conjs_at([cj(at(I), C)|Cj], B, Id, and(C1?, D?)) :- ground(B?), ground(Id?) |
     role_person(I?, B?, P),
     same(P?, Id?, Me),
-    con_if(Me?, C?, C1).
+    con_if(Me?, C?, C1),
+    conjs_at(Cj?, B?, Id?, D).
+conjs_at([cj(cond, _)|Cj], B, Id, D?) :- conjs_at(Cj?, B?, Id?, D).
+%% The conjuncts local to every role, conjoined (con_live), and those not of the condition (num_extend).
+procedure conjs_every(Conjs?, Constraint).
+conjs_every([], true).
+conjs_every([cj(every, C)|Cj], and(C?, D?)) :- conjs_every(Cj?, D).
+conjs_every([cj(at(_), _)|Cj], D?) :- conjs_every(Cj?, D).
+conjs_every([cj(cond, _)|Cj], D?) :- conjs_every(Cj?, D).
+procedure conjs_local(Conjs?, Constraint).
+conjs_local([], true).
+conjs_local([cj(every, C)|Cj], and(C?, D?)) :- conjs_local(Cj?, D).
+conjs_local([cj(at(_), C)|Cj], and(C?, D?)) :- conjs_local(Cj?, D).
+conjs_local([cj(cond, _)|Cj], D?) :- conjs_local(Cj?, D).
 procedure con_if(YesNo?, Constraint?, Constraint).
 con_if(yes, C, C?).
 con_if(no, _, true).
@@ -6027,8 +6529,7 @@ sum_add(_, _, K0, K0?) :- otherwise | true.
 procedure con_live(Constant?, Binding?, YesNo).
 con_live(Nm, B, V?) :- ground(Nm?) | schema_numeric(Nm?, N), con_live1(N?, B?, V).
 procedure con_live1(Numeric?, Binding?, YesNo).
-con_live1(numeric(C, _, every), B, V?) :- con_holds(C?, B?, V).
-con_live1(numeric(_, _, at(_)), _, yes).
+con_live1(numeric(Cj, _, _), B, V?) :- ground(B?) | conjs_every(Cj?, C), con_holds(C?, B?, V).
 %% The binding less the values lv(S, X) of the variables local to a role, which the state binds (dom_bindings).
 procedure unlocal(Binding?, Binding).
 unlocal([], []).

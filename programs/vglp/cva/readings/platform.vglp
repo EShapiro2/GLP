@@ -28,7 +28,7 @@ nudge(Peer, Peer)
 ;
 vouch(Peer, Speech)
 ;
-meet(Peer, Peer)
+present(Peer, Peer)
 .
 
 Proposal ::=
@@ -48,14 +48,14 @@ nudge(Peer, Peer)
 ;
 vouch(Peer, Speech)
 ;
-meet(Peer, Peer)
+present(Peer, Peer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Bump", [act(bump, 1, [1], [req(started, []), req(level, [any])], [], [], [], [])]), button("Outrank", [act(outrank, 1, [1, 2], [req(knows, [at(2)]), req(level, [any]), forb(outranks, [at(2)])], [2], [], [], [])]), button("Watch", [act(watch, 1, [1], [forb(watching, [])], [], [], [], [])]), button("Unwatch", [act(unwatch, 1, [1], [req(watching, [])], [], [], [], [])]), button("Nudge", [act(nudge, 1, [1, 2], [req(knows, [at(2)]), forb(nudged, [at(2)])], [2], [], [], [])]), button("Vouch", [act(vouch, 1, [1], [forb(attestation, [at(2)])], [], [field(2, "Text", text)], [], [])]), button("Meet", [act(meet, 2, [1, 2], [forb(knows, [at(1)]), unless(outranks, [at(1)]), unless(outranked, [at(1)]), unless(trails, [at(1)]), unless(trailed, [at(1)]), unless(nudged, [at(1)]), unless(nudged_by, [at(1)]), unless(knows, [at(1)]), unless(record, [at(1), any])], [], [field(1, "Person", key)], [], [])])])
+Request? =::= social_menu([button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Bump", [act(bump, 1, [1], [req(started, []), req(level, [any])], [], [], [], [])]), button("Outrank", [act(outrank, 1, [1, 2], [req(knows, [at(2)]), req(level, [any]), forb(outranks, [at(2)])], [2], [], [], [])]), button("Watch", [act(watch, 1, [1], [forb(watching, [])], [], [], [], [])]), button("Unwatch", [act(unwatch, 1, [1], [req(watching, [])], [], [], [], [])]), button("Nudge", [act(nudge, 1, [1, 2], [req(knows, [at(2)]), forb(nudged, [at(2)])], [2], [], [], [])]), button("Vouch", [act(vouch, 1, [1], [forb(attestation, [at(2)])], [], [field(2, "Text", text)], [], [])]), button("Present", [act(present, 2, [1, 2], [forb(knows, [at(1)]), unless(outranks, [at(1)]), unless(outranked, [at(1)]), unless(trails, [at(1)]), unless(trailed, [at(1)]), unless(nudged, [at(1)]), unless(nudged_by, [at(1)]), unless(knows, [at(1)]), unless(record, [at(1), any])], [], [field(1, "Person", key)], [], [])])])
 .
 
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
@@ -113,7 +113,7 @@ atom_of(g(record, [p(V1), s(V2)]), shown(record(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(bump, [], [rs(guarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [atom(started, [])], [])]), schema(outrank, [], [rs(guarded, [atom(outranks, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(outranks, [role(2)])]), rs(unguarded, [atom(outranked, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(watch, [], [rs(guarded, [atom(watching, [])], [], [], [atom(watching, [])])]), schema(unwatch, [], [rs(guarded, [], [atom(watching, [])], [], [])]), schema(trail, [], [rs(guarded, [atom(trails, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(trails, [role(2)])]), rs(unguarded, [atom(trailed, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(nudge, [], [rs(guarded, [atom(nudged, [role(2)])], [], [atom(knows, [role(2)])], [atom(nudged, [role(2)])]), rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(knows, [role(1)])], [])]), schema(vouch, [svar(y)], [rs(guarded, [atom(attestation, [svar(y)])], [], [], [atom(attestation, [svar(y)])])]), schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])])])
+contract_schemas([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(bump, [], [rs(guarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [atom(started, [])], [])]), schema(outrank, [], [rs(guarded, [atom(outranks, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(outranks, [role(2)])]), rs(unguarded, [atom(outranked, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(watch, [], [rs(guarded, [atom(watching, [])], [], [], [atom(watching, [])])]), schema(unwatch, [], [rs(guarded, [], [atom(watching, [])], [], [])]), schema(trail, [], [rs(guarded, [atom(trails, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(trails, [role(2)])]), rs(unguarded, [atom(trailed, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(nudge, [], [rs(guarded, [atom(nudged, [role(2)])], [], [atom(knows, [role(2)])], [atom(nudged, [role(2)])]), rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(knows, [role(1)])], [])]), schema(vouch, [svar(y)], [rs(guarded, [atom(attestation, [svar(y)])], [], [], [atom(attestation, [svar(y)])])]), schema(present, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -133,7 +133,7 @@ schema_entry(nudge, schema(nudge, [], [rs(guarded, [atom(nudged, [role(2)])], []
 .
 schema_entry(vouch, schema(vouch, [svar(y)], [rs(guarded, [atom(attestation, [svar(y)])], [], [], [atom(attestation, [svar(y)])])]))
 .
-schema_entry(meet, schema(meet, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])]))
+schema_entry(present, schema(present, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -154,7 +154,7 @@ schema_numeric(nudge, numeric([cj(every, true)], [], []))
 .
 schema_numeric(vouch, numeric([cj(every, true)], [], []))
 .
-schema_numeric(meet, numeric([cj(every, true)], [svar(y)], [read(1, [svar(y)], [])]))
+schema_numeric(present, numeric([cj(every, true)], [svar(y)], [read(1, [svar(y)], [])]))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -181,7 +181,7 @@ schema_base(nudge, 1)
 .
 schema_base(vouch, 1)
 .
-schema_base(meet, 2)
+schema_base(present, 2)
 .
 schema_base(_, 1) :- otherwise | true.
 
@@ -225,7 +225,7 @@ binding_of(nudge(V1, V2), nudge, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(vouch(V1, V2), vouch, [b(role(1), p(V1?)), b(svar(y), s(V2?))])
 .
-binding_of(meet(V1, V2), meet, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(y), lv(meet, y))])
+binding_of(present(V1, V2), present, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar(y), lv(present, y))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -301,7 +301,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar(y), B?, D?, V2)
 .
-class_of(meet, B, D, meet(V1?, V2?))
+class_of(present, B, D, present(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -329,7 +329,7 @@ name_class(nudge(V1, V2), _, nudge(V1?, V2?))
 .
 name_class(vouch(V1, V2), _, vouch(V1?, V2?))
 .
-name_class(meet(V1, V2), _, meet(V1?, V2?))
+name_class(present(V1, V2), _, present(V1?, V2?))
 .
 
 procedure request_name(Class?, PName).
@@ -349,7 +349,7 @@ request_name(nudge(V1, V2), pname(nudge(V1?, V2?)))
 .
 request_name(vouch(V1, V2), pname(vouch(V1?, V2?)))
 .
-request_name(meet(V1, V2), pname(meet(V1?, V2?)))
+request_name(present(V1, V2), pname(present(V1?, V2?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -360,7 +360,7 @@ tabs([tab("Levels", level), tab("Contacts", knows)])
 
 %% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names, with the role of the proposer, asked(G, Words); none, asked(0, []), where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
 procedure sentence_of(Class?, Peer?, Asked).
-sentence_of(meet(V1, V2), Me, Ws?)
+sentence_of(present(V1, V2), Me, Ws?)
 :-
 ground(V1?)
 ,
@@ -420,7 +420,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), nschema(bump, [num(t), num(t1)], eq(num(t1), plus(num(t), num(1))), [rs(guarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [atom(started, [])], [])]), nschema(outrank, [num(a), num(b)], gt(num(a), num(b)), [rs(guarded, [atom(outranks, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(outranks, [role(2)])]), rs(unguarded, [atom(outranked, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(watch, [], [rs(guarded, [atom(watching, [])], [], [], [atom(watching, [])])]), schema(unwatch, [], [rs(guarded, [], [atom(watching, [])], [], [])]), nschema(trail, [num(a), num(b)], lt(num(a), num(b)), [rs(guarded, [atom(trails, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(trails, [role(2)])]), rs(unguarded, [atom(trailed, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(nudge, [], [rs(guarded, [atom(nudged, [role(2)])], [], [atom(knows, [role(2)])], [atom(nudged, [role(2)])]), rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(knows, [role(1)])], [])]), schema(vouch, [svar(y)], [rs(guarded, [atom(attestation, [svar(y)])], [], [], [atom(attestation, [svar(y)])])]), schema(meet, [svar(y)], [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])])], pragmas([list("Levels", [level]), list("Contacts", [knows])], [act(start, "Start", [], none, "Levels", by([1])), act(bump, "Bump", [], none, "Levels", by([1])), act(outrank, "Outrank", [], none, "Levels", by([1])), act(watch, "Watch", [], none, "Levels", by([1])), act(unwatch, "Unwatch", [], none, "Levels", by([1])), act(nudge, "Nudge", [], none, "Contacts", by([1])), act(vouch, "Vouch", ["", "Text"], none, "Contacts", by([1])), act(meet, "Meet", ["Person", ""], said([[person(2), text(" asks to meet you.")], []]), "Contacts", by([2]))], [standing(trail, watch, unwatch)], nolook, version(1, 1))))
+contract("", with([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), nschema(bump, [num(t), num(t1)], eq(num(t1), plus(num(t), num(1))), [rs(guarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [atom(started, [])], [])]), nschema(outrank, [num(a), num(b)], gt(num(a), num(b)), [rs(guarded, [atom(outranks, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(outranks, [role(2)])]), rs(unguarded, [atom(outranked, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(watch, [], [rs(guarded, [atom(watching, [])], [], [], [atom(watching, [])])]), schema(unwatch, [], [rs(guarded, [], [atom(watching, [])], [], [])]), nschema(trail, [num(a), num(b)], lt(num(a), num(b)), [rs(guarded, [atom(trails, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(trails, [role(2)])]), rs(unguarded, [atom(trailed, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]), schema(nudge, [], [rs(guarded, [atom(nudged, [role(2)])], [], [atom(knows, [role(2)])], [atom(nudged, [role(2)])]), rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(knows, [role(1)])], [])]), schema(vouch, [svar(y)], [rs(guarded, [atom(attestation, [svar(y)])], [], [], [atom(attestation, [svar(y)])])]), schema(present, [svar(y)], [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])])], pragmas([list("Levels", [level]), list("Contacts", [knows])], [act(start, "Start", [], none, "Levels", by([1])), act(bump, "Bump", [], none, "Levels", by([1])), act(outrank, "Outrank", [], none, "Levels", by([1])), act(watch, "Watch", [], none, "Levels", by([1])), act(unwatch, "Unwatch", [], none, "Levels", by([1])), act(nudge, "Nudge", [], none, "Contacts", by([1])), act(vouch, "Vouch", ["", "Text"], none, "Contacts", by([1])), act(present, "Present", ["Person", ""], said([[person(2), text(" asks to meet you.")], []]), "Contacts", by([2]))], [standing(trail, watch, unwatch)], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -429,7 +429,7 @@ version(1, 1)
 
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
-meeting_peer(meet(V1, V2), Me, P?)
+meeting_peer(present(V1, V2), Me, P?)
 :-
 ground(V1?)
 ,
