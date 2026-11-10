@@ -1,9 +1,9 @@
 # A run of the cascade on GB
 
-- Contract: `GB` (`gb` to the checker), its owner's two files `programs/currencies/bonds/GB.txt` and `programs/currencies/bonds/GB.glp`, copied here as they stood at `84026856`.
+- Contract: `GB` (`gb` to the checker), its owner's two files `programs/currencies/bonds/GB.txt` and `programs/currencies/bonds/GB.glp`, copied here as they stood at `d6c0db41`.
 - The paper: `/Users/udi/Grassroots/GB (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `84026856` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 11:58 UTC by `cascade.sh gb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `d6c0db41` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 15:42 UTC by `cascade.sh gb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
