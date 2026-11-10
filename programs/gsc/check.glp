@@ -39,19 +39,16 @@
 %
 % A contract whose first conjunct fails, and whose other two hold, may be
 % grassroots with wards.  One with no community roles (self.glp) is decided
-% by GAI's appendix "Contracts with Wards": when it has an introduction with
-% wards (def:introduction-wards), the protocol realising it is volitionally
-% grassroots (thm:grassroots-wards), and its verdict names the introductory
-% act, the marks, their guardianships, the relay acts the search found and
-% the leaving marks of the contract (def:leaving): with none the
-% realisation is open and the protocol is grassroots as well (the paragraph
-% after thm:grassroots-wards); with any, the paper claims it volitionally
-% grassroots and no more.  One with community roles is decided by
-% def:sg-wards of CSSN's paper, which composes GAI's appendix with GSC's
-% conditions: an agent-named contract with an introduction with wards
-% meeting it is syntactically_grassroots_with_wards(Act, Marks,
-% Guardianships, Relays, Leaving).  Otherwise the faults are reported as
-% before.
+% by GSC's Section 8, "Contracts with Wards" (GSC 7e00aba): when it has an
+% introduction with wards (def:introduction-wards), the protocol realising it
+% is volitionally grassroots (thm:grassroots-wards), and its verdict names
+% the introductory act, the ward marks M, their guardianships, the relay acts
+% the search found and [iota, f] of its kinds (iota, f, M) (def:kinds).  One
+% with community roles is decided by def:sg-wards of CSSN's paper, which
+% composes Section 8 with GSC's conditions: an agent-named contract with an
+% introduction with wards meeting it is
+% syntactically_grassroots_with_wards(Act, Marks, Guardianships, Relays,
+% [Iota, F]).  Otherwise the faults are reported as before.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result_env(NContract?, Preds?, Preds?, Faults).
@@ -61,8 +58,7 @@ imported procedure prov#traceable_env(Contract?, Constraints?, Preds?, Preds).
 imported procedure prov#all_preds(Contract?, Preds).
 imported procedure volition#volition_faults(Contract?, NContract?, Preds?, Faults).
 imported procedure wards#wards(Contract?, Preds?, Wards).
-imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
-imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
+imported procedure wards#guardianships_for(Contract?, Preds?, Preds?, Guardianships).
 imported procedure wards#relay_h_for(Contract?, Preds?, Wards?, RelayHs).
 imported procedure contracts#contract(Constant?, NDeclared).
 imported procedure contracts#variant(Constant?, WContract?, WDeclared).
@@ -1138,33 +1134,15 @@ relay_h_pd(D, H?) :- ground(D?) |
     decl_reflexive(D?, Rf),
     relay_h1(C?, Rf?, H).
 
-% The guardianships for a set of marks M (def:guardianship), every one of
-% each mark, for inspection.
-exported procedure guardianships(NDeclared?, Preds?, Guardianships).
-guardianships(D, M, G?) :- ground(D?), ground(M?) |
+% The guardianships for the kinds [iota, f] and a set of marks M
+% (def:kinds, def:guardianship), every one of each mark, for inspection.
+exported procedure guardianships(NDeclared?, Preds?, Preds?, Guardianships).
+guardianships(D, K, M, G?) :- ground(D?), ground(K?), ground(M?) |
     plain_decl(D?, PD),
-    guardianships_pd(PD?, M?, G).
+    guardianships_pd(PD?, K?, M?, G).
 
-procedure guardianships_pd(Declared?, Preds?, Guardianships).
-guardianships_pd(D, M, G?) :- ground(D?), ground(M?) |
+procedure guardianships_pd(Declared?, Preds?, Preds?, Guardianships).
+guardianships_pd(D, K, M, G?) :- ground(D?), ground(K?), ground(M?) |
     decl_schemas(D?, C),
-    wards # guardianships_for(C?, M?, G).
+    wards # guardianships_for(C?, K?, M?, G).
 
-% The leaving marks of a contract for a set M of marks (def:leaving), for
-% inspection: def:leaving supposes a guardianship for every mark in M, and
-% its clause 3 reads the g of that guardianship, so the leaving marks are
-% given for each choice of a guardianship for each mark, leaving(Gs, L).
-exported procedure leaving(NDeclared?, Preds?, Leavings).
-leaving(D, M, L?) :- ground(D?), ground(M?) |
-    plain_decl(D?, PD),
-    leaving_pd(PD?, M?, L).
-
-procedure leaving_pd(Declared?, Preds?, Leavings).
-leaving_pd(D, M, L?) :- ground(D?), ground(M?) |
-    decl_schemas(D?, C),
-    wards # leaving_for(C?, M?, L).
-
-exported procedure leaving_of(Constant?, Preds?, Leavings).
-leaving_of(Nm, M, L?) :- ground(Nm?), ground(M?) |
-    contracts # contract(Nm?, D),
-    leaving(D?, M?, L).

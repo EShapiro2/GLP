@@ -57,7 +57,8 @@ Constraint ::= true ; and(Constraint, Constraint)
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
              ; sum(Args, Arg, Atom, Form, Expr)
-             ; author_of(Arg) ; item_of(Arg).
+             ; author_of(Arg).
+%% The item of a speech act, item_of(Y), is an Arg, an argument of an atom (vGLP e1d1b8a, Section 5.4), and so an Expr through Arg: an alternative item_of(Arg) beside Arg would be a second alternative of the functor item_of/1, which TGLP's Type Declarations refuse ("a type name S, providing type union for types with disjoint top-level functors"; vGLP #24's yes, Code_inbox.md, 2026-11-10 13:08 UTC; Cloud #12).
 %% author_of(Y), item_of(Y) and program(E), the author and the item of the speech act bound to Y and a condition on an utterance its type provides, as programs/gsc/self.glp writes them (GSC 65a26da, def:numbers): the compiler takes the author and the item (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- ...; the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 20:36 item 1), and refuses a contract that holds a program condition, with the reason (cvac.glp, con_beyond).
 Exprs      ::= [] ; [Expr | Exprs].
 Constraints ::= [] ; [Constraint | Constraints].
@@ -163,8 +164,8 @@ Fault     ::= no_introductory_act
             ; signing_not_speech_act(Constant, Arg)
             ; obstructed_jointly(Constant).
 Faults    ::= [] ; [Fault | Faults].
-%% An introduction with wards (GSC, Appendix F): guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of Definition "Guardianship" (GAI, appendix "Contracts with Wards"); a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
-Guardianship  ::= guardianship(Constant, Constant, Constant, Constant, Constant).
+%% An introduction with wards (GSC, Section 8, "Contracts with Wards", 070c5d1): guardianship(M, V, U) is the guardianship (m, v, u) of Definition "Guardianship", as programs/gsc/self.glp writes it, and the last argument of a verdict is [Iota, F] of the kinds (iota, f, M), where the leaving marks stood until GSC 7e00aba (mirrored from programs/gsc on branch GSC-wards8); a party of a relay act (Definition "Relay") is a ward role, ward(Role, Mark, GuardianRole), or a free role, free(Role); a relay act is named with its two parties.  grassroots_with_wards names the introductory act unobstructed but for the marks, the set of marks, the guardianship of each, the relay acts found and the leaving marks of the contract (Definition "Leaving mark"), as programs/gsc/self.glp writes it from GLP 91a2962b on (GSC #3, Code_inbox.md, 2026-10-18 22:16 UTC).  syntactically_grassroots_with_wards, of the same arguments, is the verdict on one with listed roles or name terms (def:sg-wards of CSSN's paper; programs/gsc/self.glp at GSC-unob3 f06db5dc).
+Guardianship  ::= guardianship(Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 %% A ward role has at most one guardian role (GAI 6b64d3d, Definition "Relay act", clause 1), so its guardian is guardian(Role) or no_guardian, as programs/gsc/self.glp writes it.
 Guardian  ::= guardian(Integer) ; no_guardian.
@@ -190,7 +191,13 @@ Said      ::= none ; said(PSentences).
 Strings   ::= [] ; [String | Strings].
 PList     ::= list(String, Strings).
 PLists    ::= [] ; [PList | PLists].
-PAct      ::= act(Constant, String, Strings, Said, String, Proposer).
+%% An act whose schema types a speech-act variable a field names, typed(T, x) (programs/self.glp, SArg), carries a seventh argument, the types of its fields, ft(K, T) for its K-th field (pragmas.sh; vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one, as an email address or a person's name, which constrains nothing and which the field's widget is told"); the compiler reads every act as one with that argument, [] for an act with none (cvac.glp, norm_acts).
+FType     ::= ft(Integer, Constant).
+FTypes    ::= [] ; [FType | FTypes].
+PAct      ::= act(Constant, String, Strings, Said, String, Proposer)
+            ; act(Constant, String, Strings, Said, String, Proposer, FTypes).
+TAct      ::= act(Constant, String, Strings, Said, String, Proposer, FTypes).
+TActs     ::= [] ; [TAct | TActs].
 Proposer  ::= any ; by(Ints) ; by(Ints, Sames).
 Same      ::= same(Integer, Integer).
 Sames     ::= [] ; [Same | Sames].
@@ -202,7 +209,7 @@ PStands   ::= [] ; [PStand | PStands].
 PLook     ::= nolook ; look(String, String).
 PVersion  ::= version(Integer, Integer).
 %% The pragmas the platform exports in contract(Text, Schemas), the text apart (cvac.glp, export_lines).
-RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
+RPragmas  ::= pragmas(PLists, TActs, PStands, PLook, PVersion).
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String).
 %% What a schema does to the atom a standing declaration stands on (cvac.glp, standing_lines): makes the standing request, withdraws it, or neither.

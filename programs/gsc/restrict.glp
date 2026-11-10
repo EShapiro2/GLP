@@ -2,10 +2,10 @@
 % Restriction by its syntactic approximations (GSC, Section "Relations among
 % Contracts", sections/07b-relations.tex): Definition Stronger body
 % (def:stronger) and Proposition Syntactic restrictions (prop:syntactic),
-% its clauses (a) to (c).
+% its clauses (a) to (d), (d) at GSC 745b9e3.
 %
 % Restriction is undecidable (prop:undecidable), and the proposition gives
-% three syntactic conditions that imply it, each strengthening a body.
+% four syntactic conditions that imply it, each strengthening a body.
 % Whether one body is stronger than another is undecidable in general; "the
 % checker decides it where the stronger body holds every literal and every
 % safe formula of the weaker and its constraint implies the weaker's, a
@@ -41,12 +41,21 @@
 % roles of a schema of C and a stronger body; (c) replacing a schema with no
 % guarding agent role by one with its name, roles and guards and a stronger
 % body, which restricts only under an invariant of the contract that no
-% syntactic condition decides, so the verdict names each such schema.  A
-% schema of C' is matched to C's by its name.  The steps are taken in the
+% syntactic condition decides, so the verdict names each such schema; and
+% (d) replacing a schema with a guarding agent role by one with its name and
+% a stronger body, whose guarding roles are those of the schema and agent
+% roles that are no roles of it, every other role it adds an agent role that
+% is a reading role, and every binding admissible for it admissible for the
+% schema, decided by the sufficient condition the paper gives after the Lemma
+% Stronger body (admissible_d).  A schema of C' is matched to C's by its
+% name.  The steps are taken in the
 % order: the replacements, in the order of C', the additions, and the
-% deletions; the proposition asks that the two contracts of every step be
-% syntactically grassroots, Sigma' a subset of Sigma, and that C and C' have
-% simple unguarded classes for (a) and (c), which the checker decides by the
+% deletions; the proposition asks that the two contracts of every step have
+% traceable provenance and satisfy volition (GSC 0a30d52: "Let C and C' have
+% traceable provenance and satisfy volition", for "be syntactically
+% grassroots" until then), so a certified contract may restrict one that is
+% not, Sigma' a subset of Sigma, and that C and C' have
+% simple unguarded classes for (a), (c) and (d), which the checker decides by the
 % sufficient condition the paper gives (Section 9, before prop:syntactic).
 % ---------------------------------------------------------------------------
 
@@ -344,6 +353,7 @@ rn_arg(real(X), M, real(R?)) :- ground(X?), ground(M?) |
     num_name(A?, X?, R).
 rn_arg(any, _, any).
 rn_arg(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_arg(val(C), _, val(C?)).
 
 % The name of a value argument, the variable's own where it is no num(X).
 procedure num_name(Arg?, Constant?, Constant).
@@ -417,6 +427,7 @@ rn_expr(real(X), M, R?) :- ground(X?), ground(M?) |
 rn_expr(any, _, any).
 rn_expr(author_of(Y), M, author_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
 rn_expr(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_expr(val(C), _, val(C?)).
 rn_expr(plus(X, Y), M, plus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
     rn_expr(X?, M?, X1),
     rn_expr(Y?, M?, Y1).
@@ -452,6 +463,7 @@ arg_expr(num(X), num(X?)).
 arg_expr(real(X), real(X?)).
 arg_expr(any, any).
 arg_expr(item_of(Y), item_of(Y?)).
+arg_expr(val(C), val(C?)).
 
 procedure rn_exprs(Exprs?, RMs?, Exprs).
 rn_exprs([], _, []).
@@ -745,8 +757,10 @@ rm_target([rm(_, J)|_], K, yes) :- J? =:= K? | true.
 rm_target([_|Ms], K, R?) :- otherwise, integer(K?) | rm_target(Ms?, K?, R).
 
 % The roles of tau' no role of tau is, each extra_role(J) where it is not an
-% agent role that is a reading role (def:schema: not a guarding role, adding
-% and deleting nothing).
+% agent role adding and deleting nothing: a reading role (def:schema: not a
+% guarding role, adding and deleting nothing), or, for (d), a guarding agent
+% role added (prop:syntactic, GSC 745b9e3); which of them guard is the
+% shape's (nd_shape), so (a) and (c) still take reading roles alone.
 procedure rm_extras(RMs?, NRoleSpecs?, Integer?, SBFaults).
 rm_extras(_, [], _, []).
 rm_extras(M, [RS|Rs], J, R?) :- ground(M?), ground(RS?), ground(Rs?), integer(J?) |
@@ -762,7 +776,7 @@ rm_extra1(no, yes, _, T, T?).
 rm_extra1(no, no, J, T, [extra_role(J?)|T?]).
 
 procedure agent_reading(NRoleSpec?, Ans).
-agent_reading(rs(unguarded, [], [], _, _), yes).
+agent_reading(rs(_, [], [], _, _), yes).
 agent_reading(_, no) :- otherwise | true.
 
 % Whether role J of tau' is no role of tau.
@@ -1095,9 +1109,10 @@ nd_map(nd(_, NR, SR), nd(_, NB, SB0), M?) :- ground(NR?), ground(SR?), ground(NB
     rs_count(RsR?, KR),
     role_map(RsB?, NB?, NR?, KR?, 1, M).
 
-% shape(ExtraFree, Guards): whether tau' has no role tau has not, and whether
-% the guards are the same, each role of tau guarding where the role of tau'
-% it is guards and every role tau' adds guarding nothing.
+% shape(ExtraFree, Guards, AddedGuards): whether tau' has no role tau has
+% not; whether each role of tau guards where the role of tau' it is guards;
+% and whether some role tau' adds guards, which (d) admits and (a) and (c)
+% do not.
 procedure nd_shape(ND?, ND?, Shape).
 nd_shape(DR, DB, S?) :- ground(DR?), ground(DB?) |
     nd_map(DR?, DB?, M),
@@ -1106,13 +1121,30 @@ nd_shape(DR, DB, S?) :- ground(DR?), ground(DB?) |
     nd_shape1(M?, RsR?, RsB?, S).
 
 procedure nd_shape1(RMs?, NRoleSpecs?, NRoleSpecs?, Shape).
-nd_shape1(M, RsR, RsB, shape(X?, G?)) :- ground(M?), ground(RsR?), ground(RsB?) |
+nd_shape1(M, RsR, RsB, shape(X?, G?, AG?)) :- ground(M?), ground(RsR?), ground(RsB?) |
     rs_count(RsR?, KR),
     rs_count(RsB?, KB),
     rm_all_targets(M?, KR?, X0),
     rs_count_eq(KR?, KB?, X1),
     both_yes(X0?, X1?, X),
-    same_guards(M?, RsB?, RsR?, 1, G).
+    same_guards(M?, RsB?, RsR?, 1, G),
+    added_guards(M?, RsR?, 1, AG).
+
+% added_guards(M, Rs, J, R): some role of tau' from J on, among Rs, is no
+% role of tau and guards.
+procedure added_guards(RMs?, NRoleSpecs?, Integer?, Ans).
+added_guards(_, [], _, no).
+added_guards(M, [RS|Rs], J, R?) :- ground(M?), ground(RS?), ground(Rs?), integer(J?) |
+    extra_of(M?, J?, E),
+    nrs_guard(RS?, G),
+    added_guard1(E?, G?, A),
+    J1 := J? + 1,
+    added_guards(M?, Rs?, J1?, B),
+    or_yes(A?, B?, R).
+
+procedure added_guard1(Ans?, Guard?, Ans).
+added_guard1(yes, guarded, yes).
+added_guard1(_, _, no) :- otherwise | true.
 
 procedure rs_count_eq(Integer?, Integer?, Ans).
 rs_count_eq(A, B, yes) :- A? =:= B? | true.
@@ -1311,6 +1343,8 @@ decl_parts([], w_list, []).
 decl_parts([S|Ss], w_list, [S?|Ss?]).
 decl_parts(reflexive(Rf, Ss), w_refl(Rf?), Ss?).
 decl_parts(environment(Ev, B), W?, Ss?) :- ground(B?) | decl_env(Ev?, B?, W, Ss).
+% A parametric contract is compared as it is written, its wrapper dropped.
+decl_parts(parametric(_, D), W?, Ss?) :- ground(D?) | decl_parts(D?, W, Ss).
 
 procedure decl_env(Preds?, WBody?, Wrap, WContract).
 decl_env(Ev, [], w_env(Ev?), []).
@@ -1376,20 +1410,150 @@ replaced(no, DR, DB, S?, F?) :- ground(DR?), ground(DB?) |
     stronger_nd(DR?, DB?, SB),
     nd_shape(DR?, DB?, Sh),
     nd_name(DR?, N),
-    replaced1(G?, SB?, Sh?, N?, S, F).
+    replaced1(G?, SB?, Sh?, N?, DR?, DB?, S, F).
 
 % (a): a schema with a guarding agent role replaced by one with its name and
 % guards and a stronger body, every role it adds an agent role that is a
-% reading role (stronger_nd's extra_role).  (c): one with no guarding agent
-% role replaced by one with its name, roles and guards and a stronger body.
-procedure replaced1(Ans?, SB?, Shape?, Constant?, RSteps, RFaults).
-replaced1(yes, stronger, shape(_, yes), N, [replaced_a(N?)], []).
-replaced1(yes, stronger, shape(_, no), N, [], [guards_differ(N?)]).
-replaced1(yes, not_stronger(Fs), _, N, [], [body_not_stronger(N?, Fs?)]).
-replaced1(no, stronger, shape(yes, yes), N, [replaced_c(N?)], []).
-replaced1(no, stronger, shape(no, _), N, [], [roles_differ(N?)]).
-replaced1(no, stronger, shape(yes, no), N, [], [guards_differ(N?)]).
-replaced1(no, not_stronger(Fs), _, N, [], [body_not_stronger(N?, Fs?)]).
+% reading role (stronger_nd's extra_role, and no added role guarding).  (d):
+% the same with guarding agent roles added, every binding admissible for the
+% new schema admissible for the old (admissible_d).  (c): one with no
+% guarding agent role replaced by one with its name, roles and guards and a
+% stronger body.
+procedure replaced1(Ans?, SB?, Shape?, Constant?, ND?, ND?, RSteps, RFaults).
+replaced1(yes, stronger, shape(_, yes, no), N, _, _, [replaced_a(N?)], []).
+replaced1(yes, stronger, shape(_, yes, yes), N, DR, DB, S?, F?) :- ground(DR?), ground(DB?) |
+    admissible_d(DR?, DB?, A),
+    replaced_d(A?, N?, S, F).
+replaced1(yes, stronger, shape(_, no, _), N, _, _, [], [guards_differ(N?)]).
+replaced1(yes, not_stronger(Fs), _, N, _, _, [], [body_not_stronger(N?, Fs?)]).
+replaced1(no, stronger, shape(yes, yes, _), N, _, _, [replaced_c(N?)], []).
+replaced1(no, stronger, shape(no, _, _), N, _, _, [], [roles_differ(N?)]).
+replaced1(no, stronger, shape(yes, no, _), N, _, _, [], [guards_differ(N?)]).
+replaced1(no, not_stronger(Fs), _, N, _, _, [], [body_not_stronger(N?, Fs?)]).
+
+procedure replaced_d(Ans?, Constant?, RSteps, RFaults).
+replaced_d(yes, N, [replaced_d(N?)], []).
+replaced_d(no, N, [], [bindings_not_admissible(N?)]).
+
+% admissible_d(Tau', Tau, R): every binding admissible for tau' is
+% admissible for tau, by the paper's sufficient condition (Section 9, after
+% the Lemma Stronger body, GSC 745b9e3): "A binding admissible for tau' is
+% admissible for tau where every guarding role of tau' is one of tau; where
+% no speech-act variable of tau occurs in an atom it adds and in none it
+% requires; and where the constraint of tau' has every such variable signed
+% by the agent in a guarding role of tau (def:binding)".  tau' adds guarding
+% roles in (d), so the first does not hold; the other two are taken
+% together: every speech-act variable of tau occurring in an atom it adds,
+% at a role or in a conjunct, and in no atom it requires at a role, is, read
+% as tau''s, the second argument of a conjunct signed(role(J), Y) of tau''s
+% constraint, J the role of tau' that a guarding role of tau is.  An atom a
+% conjunct requires is not counted as required, which only asks more.
+procedure admissible_d(ND?, ND?, Ans).
+admissible_d(nd(_, NR, SR), nd(_, NB, SB0), R?) :-
+    ground(NR?), ground(SR?), ground(NB?), ground(SB0?) |
+    nsch_roles(SR?, RsR),
+    nsch_roles(SB0?, RsB),
+    nsch_vars(SB0?, VB),
+    admissible_d1(NR?, SR?, NB?, SB0?, RsR?, RsB?, VB?, R).
+
+procedure admissible_d1(NameOfs?, NSchema?, NameOfs?, NSchema?, NRoleSpecs?, NRoleSpecs?, Args?,
+                        Ans).
+admissible_d1(NR, SR, NB, SB0, RsR, RsB, VB, R?) :-
+    ground(NR?), ground(SR?), ground(NB?), ground(SB0?), ground(RsR?), ground(RsB?), ground(VB?) |
+    rs_count(RsR?, KR),
+    role_map(RsB?, NB?, NR?, KR?, 1, M0),
+    var_map(VB?, NR?, RsR?, M0?, M1),
+    admissible_d3(SR?, SB0?, RsB?, RsR?, M1?, R).
+
+procedure admissible_d3(NSchema?, NSchema?, NRoleSpecs?, NRoleSpecs?, RMs?, Ans).
+admissible_d3(SR, SB0, RsB, RsR, M1, R?) :-
+    ground(SR?), ground(SB0?), ground(RsB?), ground(RsR?), ground(M1?) |
+    vm_roles(RsB?, RsR?, M1?, M1?, 1, M),
+    admissible_d2(SR?, SB0?, RsB?, M?, R).
+
+procedure admissible_d2(NSchema?, NSchema?, NRoleSpecs?, RMs?, Ans).
+admissible_d2(SR, SB0, RsB, M, R?) :- ground(SR?), ground(SB0?), ground(RsB?), ground(M?) |
+    added_svars(SB0?, Ad),
+    carried(RsB?, Rq),
+    args_missing(Ad?, Rq?, Us),
+    guard_targets(RsB?, M?, 1, Js),
+    nsch_constraint(SR?, CR),
+    cons_flat(CR?, [], Cs),
+    all_signed(Us?, M?, Js?, Cs?, R).
+
+% The speech-act variables occurring in the atoms a schema adds, at its
+% roles and in its conjuncts, each once.
+procedure added_svars(NSchema?, Args).
+added_svars(S, R?) :- ground(S?) |
+    nsch_roles(S?, Rs),
+    nsch_conjs(S?, Cj),
+    adds_svars_rs(Rs?, [], T1),
+    adds_svars_cj(Cj?, T1?, T2),
+    added_svars1(T2?, R).
+
+procedure added_svars1(Args?, Args).
+added_svars1(As, R?) :- ground(As?) |
+    svars_only(As?, Vs),
+    args_dedup(Vs?, R).
+
+procedure adds_svars_rs(NRoleSpecs?, Args?, Args).
+adds_svars_rs([], T, T?).
+adds_svars_rs([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_add(RS?, A),
+    adds_svars_rs(Rs?, T?, T1),
+    carried_ms(A?, T1?, R).
+
+procedure adds_svars_cj(Conjuncts?, Args?, Args).
+adds_svars_cj([], T, T?).
+adds_svars_cj([conjunct(_, _, _, _, Ad, _, _)|Cs], T, R?) :- ground(Ad?), ground(Cs?), ground(T?) |
+    adds_svars_cj(Cs?, T?, T1),
+    adds_svars_hm(Ad?, T1?, R).
+
+procedure adds_svars_hm(HMults?, Args?, Args).
+adds_svars_hm([], T, T?).
+adds_svars_hm([hm(_, M)|Hs], T, R?) :- ground(M?), ground(Hs?), ground(T?) |
+    adds_svars_hm(Hs?, T?, T1),
+    carried_ms([M?], T1?, R).
+
+% The speech-act variables among Args, the name terms dropped: a name term
+% carries a speech-act variable that carried_args lists besides.
+procedure svars_only(Args?, Args).
+svars_only([], []).
+svars_only([svar(Y)|As], [svar(Y?)|R?]) :- ground(As?) | svars_only(As?, R).
+svars_only([_|As], R?) :- otherwise, ground(As?) | svars_only(As?, R).
+
+% The roles of tau' that the guarding roles of tau are, from role I of tau.
+procedure guard_targets(NRoleSpecs?, RMs?, Integer?, Ints).
+guard_targets([], _, _, []).
+guard_targets([RS|Rs], M, I, R?) :- ground(RS?), ground(Rs?), ground(M?), integer(I?) |
+    nrs_guard(RS?, G),
+    rm_lookup(M?, I?, J),
+    I1 := I? + 1,
+    guard_targets(Rs?, M?, I1?, T),
+    guard_target1(G?, J?, T?, R).
+
+procedure guard_target1(Guard?, Integer?, Ints?, Ints).
+guard_target1(guarded, J, T, [J?|T?]).
+guard_target1(unguarded, _, T, T?).
+
+procedure all_signed(Args?, RMs?, Ints?, Constraints?, Ans).
+all_signed([], _, _, _, yes).
+all_signed([U|Us], M, Js, Cs, R?) :- ground(U?), ground(Us?), ground(M?), ground(Js?), ground(Cs?) |
+    rn_arg(U?, M?, Y),
+    signed_by(Cs?, Y?, Js?, A),
+    all_signed(Us?, M?, Js?, Cs?, B),
+    both_yes(A?, B?, R).
+
+% signed_by(Cs, Y, Js, R): some conjunct signed(role(J), Y) among Cs, J among Js.
+procedure signed_by(Constraints?, Arg?, Ints?, Ans).
+signed_by([], _, _, no).
+signed_by([signed(role(J), Y1)|Cs], Y, Js, R?) :-
+    Y1? =?= Y?, integer(J?), ground(Cs?), ground(Js?) |
+    ints_member(Js?, J?, A),
+    signed_by(Cs?, Y?, Js?, B),
+    or_yes(A?, B?, R).
+signed_by([_|Cs], Y, Js, R?) :- otherwise, ground(Cs?), ground(Y?), ground(Js?) |
+    signed_by(Cs?, Y?, Js?, R).
 
 % (b): a schema with no guarding role, with the head and the roles of a
 % schema of the contract it is added to and a stronger body.
@@ -1412,7 +1576,7 @@ added_of([DB|Ds], DR, R?) :- ground(DB?), ground(Ds?), ground(DR?) |
     added_of1(SB?, Sh?, DB?, Ds?, DR?, R).
 
 procedure added_of1(SB?, Shape?, ND?, NDs?, ND?, OfFound).
-added_of1(stronger, shape(yes, _), DB, _, _, of(N?)) :- ground(DB?) | nd_name(DB?, N).
+added_of1(stronger, shape(yes, _, _), DB, _, _, of(N?)) :- ground(DB?) | nd_name(DB?, N).
 added_of1(_, _, _, Ds, DR, R?) :- otherwise | added_of(Ds?, DR?, R).
 
 % Each schema of C that C' has not: deleted by (a) where it has a guarding
@@ -1464,6 +1628,8 @@ procedure apply_step(RStep?, WContract?, WContract?, WContract).
 apply_step(replaced_a(N), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
     ws_find(SR?, N?, F), ws_replace(C?, N?, F?, R).
 apply_step(replaced_c(N), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
+    ws_find(SR?, N?, F), ws_replace(C?, N?, F?, R).
+apply_step(replaced_d(N), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
     ws_find(SR?, N?, F), ws_replace(C?, N?, F?, R).
 apply_step(added_b(N, _), C, SR, R?) :- ground(N?), ground(C?), ground(SR?) |
     ws_find(SR?, N?, F), ws_append(C?, F?, R).
@@ -1522,12 +1688,14 @@ procedure step_kind(RStep?, Constant).
 step_kind(kept(_), kept).
 step_kind(replaced_a(_), rep).
 step_kind(replaced_c(_), rep).
+step_kind(replaced_d(_), rep).
 step_kind(added_b(_, _), add).
 step_kind(deleted_a(_), del).
 
-% Each step taken from C in turn: the contract after it is syntactically
-% grassroots, and where the step is of (a) or (c) the contracts before and
-% after it have simple unguarded classes.
+% Each step taken from C in turn: the contract after it has traceable
+% provenance and satisfies volition (GSC 0a30d52), and where the step is of
+% (a), (c) or (d) the contracts before and after it have simple unguarded
+% classes.
 procedure run_steps(RSteps?, WContract?, WContract?, Wrap?, RFaults).
 run_steps([], _, _, _, []).
 run_steps([X|Xs], C, SR, W, F?) :- ground(X?), ground(Xs?), ground(C?), ground(SR?), ground(W?) |
@@ -1545,12 +1713,38 @@ run_steps1(X, C, C1, Xs, SR, W, F?) :- ground(X?), ground(C?), ground(C1?), grou
     rfaults_app(F1?, F23?, F).
 
 procedure step_sg(Verdict?, RStep?, RFaults).
-step_sg(syntactically_grassroots, _, []).
-step_sg(V, X, [step_not_sg(X?, V?)]) :- otherwise | true.
+step_sg(V, X, F?) :- ground(V?), ground(X?) |
+    pv_ok(V?, A),
+    step_pv(A?, V?, X?, F).
+
+procedure step_pv(Ans?, Verdict?, RStep?, RFaults).
+step_pv(yes, _, _, []).
+step_pv(no, V, X, [step_not_pv(X?, V?)]).
+
+% pv_ok(V, R): the contract whose verdict is V has traceable provenance and
+% satisfies volition: it is certified, or its faults are all of the first
+% conjunct of def:syntactically-grassroots, the introductory act's
+% (no_introductory_act, obstructed and obstructed_jointly), the faults of
+% the second and third being every other fault of not_grassroots.  A
+% malformed contract has neither.
+procedure pv_ok(Verdict?, Ans).
+pv_ok(syntactically_grassroots, yes).
+pv_ok(grassroots_with_wards(_, _, _, _, _), yes).
+pv_ok(syntactically_grassroots_with_wards(_, _, _, _, _), yes).
+pv_ok(malformed(_), no).
+pv_ok(not_grassroots(Fs), R?) :- ground(Fs?) | intro_faults_only(Fs?, R).
+
+procedure intro_faults_only(Faults?, Ans).
+intro_faults_only([], yes).
+intro_faults_only([no_introductory_act|Fs], R?) :- ground(Fs?) | intro_faults_only(Fs?, R).
+intro_faults_only([obstructed(_, _, _, _)|Fs], R?) :- ground(Fs?) | intro_faults_only(Fs?, R).
+intro_faults_only([obstructed_jointly(_)|Fs], R?) :- ground(Fs?) | intro_faults_only(Fs?, R).
+intro_faults_only([_|_], no) :- otherwise | true.
 
 procedure step_su(RStep?, WContract?, WContract?, RFaults).
 step_su(replaced_a(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
 step_su(replaced_c(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
+step_su(replaced_d(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
 step_su(deleted_a(_), C, C1, F?) :- ground(C?), ground(C1?) | su_pair(C?, C1?, F).
 step_su(added_b(_, _), _, _, []).
 step_su(kept(_), _, _, []).
@@ -1629,8 +1823,13 @@ base_faults(VR, VB, PM, F?) :- ground(VR?), ground(VB?), ground(PM?) |
     rfaults_app(F1?, F23?, F).
 
 procedure sg_fault(Verdict?, Constant?, RFaults).
-sg_fault(syntactically_grassroots, _, []).
-sg_fault(V, W, [not_sg(W?, V?)]) :- otherwise | true.
+sg_fault(V, W, F?) :- ground(V?), ground(W?) |
+    pv_ok(V?, A),
+    pv_fault(A?, V?, W?, F).
+
+procedure pv_fault(Ans?, Verdict?, Constant?, RFaults).
+pv_fault(yes, _, _, []).
+pv_fault(no, V, W, [not_pv(W?, V?)]).
 
 procedure pm_fault(Preds?, RFaults).
 pm_fault([], []).

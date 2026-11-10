@@ -1,0 +1,251 @@
+/// `M#Procedure`, the union of the declarations M exports (TGLP 44e1a60,
+/// modules.tex, "Procedure declarations": "`M#Procedure` is the union of the
+/// declarations `M` exports, the type `Procedure` of Section
+/// sec:procedure-declarations restricted to them.  A meta-program is
+/// parameterised by the type of the goals it interprets and called at it: a
+/// meta-interpreter declared `procedure(G) reduce(Goal(G)?)`, with `Goal(G)
+/// ::= true ; (Goal(G), Goal(G)) ; G`, is called as `reduce(Goal(M#Procedure)?)`
+/// for the program `M` it interprets, and, `G` being an alternative of
+/// `Goal(G)`, it is checked at each program it interprets, the functors of
+/// `M`'s declarations distinct from `true` and `,`"; GLP #14, Code_inbox.md,
+/// 2026-11-10 12:06 UTC; program_linker.dart, `_writeProcedureTypes`).
+///
+/// The linker writes the type into each module that names it, from the
+/// exports of the module the qualifier names, M.glp or M/self.glp of the
+/// referring module's directory; a qualifier naming no module, and a
+/// parameterised export, are refused with the reason; and `Goal(M#Procedure)`
+/// is refused where M exports `true/0`, two alternatives then sharing the
+/// constant `true` (type_environment_builder.dart, `_checkDeterminism`, which
+/// follows a bare type-name alternative to the functors and constants it
+/// reaches).  M#Procedure holds each argument type of M's declarations
+/// complemented, a goal held as a term (TGLP 6ce148a).  The last group runs
+/// the vanilla meta-interpreter (programs/book/meta/plain/plain_meta.glp), one
+/// text, at two programs' M#Procedure, reading each program's clauses from a
+/// table with "the entries clause(true, true) and clause((A, B), (A?, B?))
+/// beside the program's own, since an otherwise guard narrows no type" (TGLP
+/// 6ce148a; GLP #14, Code_inbox.md, 2026-11-10 13:13 UTC, item 1b), the
+/// table "typed at G, procedure(G) clause(Goal(G)?, Goal(G))", and the
+/// meta-interpreter's G fixed at prog#Procedure by the import, "The imported
+/// declaration must agree with the declaration M exports ... once the
+/// exported declaration's type parameters, if any, are instantiated" (TGLP
+/// modules.tex, "Cross-module type checking"; well_typed_clause.dart,
+/// `crossModuleBinding`); and a table entry for a goal prog does not export
+/// is refused.
+library;
+
+import 'dart:io';
+
+import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
+import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:test/test.dart';
+
+final String _rootSelf = File('../programs/self.glp').absolute.path;
+
+GlpEngine _engine() => GlpEngine(rootSelfGlpPath: _rootSelf);
+
+/// [t] dereferenced through, as functor(args) and constants.
+String _shown(GlpEngine engine, rt.Term? t) {
+  if (t == null) return '_';
+  final d = engine.runtime.heap.dereference(t);
+  if (d is rt.ConstTerm) return '${d.value}';
+  if (d is rt.StructTerm) {
+    return '${d.functor}(${d.args.map((a) => _shown(engine, a)).join(', ')})';
+  }
+  return '_';
+}
+
+/// The vanilla meta-interpreter, parameterised by the type of the goals it
+/// interprets; the program's clauses as it reads them, clause/2, are the
+/// program's, in its self.glp, the ancestor scope, where Goal(G) is defined.
+const String _meta = '''
+exported procedure(G) run(Goal(G)?).
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | clause(A?, B), run(B?).
+''';
+
+const String _prog = '''
+exported procedure merge(Stream(Integer)?, Stream(Integer)?, Stream(Integer)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+exported procedure halt.
+halt.
+''';
+
+void main() {
+  late Directory prog;
+
+  setUp(() {
+    // Under the root, programs/ (TGLP modules.tex, "Scope construction").
+    prog = Directory('../programs/tests').createTempSync('glp_metatypes_');
+  });
+
+  tearDown(() => prog.deleteSync(recursive: true));
+
+  void write(String name, String text) =>
+      File('${prog.path}/$name').writeAsStringSync(text);
+
+  Matcher refused(String reason) => throwsA(predicate(
+      (e) => e.toString().contains(reason), 'refused: $reason'));
+
+  group('M#Procedure, the union of the declarations M exports', () {
+    test('a program naming prog#Procedure loads, prog.glp exporting merge/3 and halt/0',
+        () {
+      write('prog.glp', _prog);
+      write('self.glp', '''
+procedure keep(prog#Procedure?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(_engine().loadProgram(prog.path), isTrue);
+    });
+
+    test('and the directory prog, entered through its self.glp', () {
+      Directory('${prog.path}/prog').createSync();
+      write('prog/self.glp', _prog);
+      write('self.glp', '''
+procedure keep(prog#Procedure?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(_engine().loadProgram(prog.path), isTrue);
+    });
+
+    test('Goal(prog#Procedure) is refused where prog exports true/0', () {
+      write('prog.glp', '''
+exported procedure true.
+true.
+exported procedure halt.
+halt.
+''');
+      write('self.glp', '''
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+procedure keep(Goal(prog#Procedure)?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(
+          () => _engine().loadProgram(prog.path),
+          refused('Duplicate constant alternative: true, reached through '
+              'prog#Procedure, in Goal<prog#Procedure>'));
+    });
+
+    test('a qualifier naming no module is refused, the module named', () {
+      write('self.glp', '''
+procedure keep(nowhere#Procedure?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(() => _engine().loadProgram(prog.path),
+          refused('nowhere#Procedure names no module nowhere'));
+    });
+
+    test('a parameterised export is refused, the declaration named', () {
+      write('prog.glp', '''
+exported procedure(X) id(X?, X).
+id(X, X?).
+''');
+      write('self.glp', '''
+procedure keep(prog#Procedure?).
+keep(_).
+exported procedure go.
+go :- keep(id(1, _)).
+''');
+      expect(() => _engine().loadProgram(prog.path),
+          refused('exports the parameterised declaration id/2'));
+    });
+
+    test('a functor or constant reached through a named alternative is one alternative (TGLP, "Type Declarations")',
+        () {
+      write('self.glp', '''
+T ::= true ; U.
+U ::= true ; halt.
+procedure keep(T?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(() => _engine().loadProgram(prog.path),
+          refused('Duplicate constant alternative: true, reached through U, in T'));
+    });
+  });
+
+  group("the vanilla meta-interpreter at two programs' M#Procedure", () {
+    test('merge', () async {
+      write('meta.glp', _meta);
+      write('prog.glp', _prog);
+      write('self.glp', '''
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+imported procedure meta#run(Goal(prog#Procedure)?).
+procedure(G) clause(Goal(G)?, Goal(G)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge([], [], []), true).
+clause(halt, true).
+exported procedure go(Stream(Integer)).
+go(Zs?) :- meta # run((merge([1, 2], [3], Xs), merge(Xs?, [4], Zs))).
+''');
+      final engine = _engine();
+      expect(engine.loadProgram(prog.path), isTrue);
+      final r = await engine.runGoal('go(Z).');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_shown(engine, r.bindings['Z']), '.(1, .(2, .(3, .(4, []))))');
+    });
+
+    test('append', () async {
+      write('meta.glp', _meta);
+      write('prog.glp', '''
+exported procedure append(Stream(Integer)?, Stream(Integer)?, Stream(Integer)).
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+''');
+      write('self.glp', '''
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+imported procedure meta#run(Goal(prog#Procedure)?).
+procedure(G) clause(Goal(G)?, Goal(G)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(append([], Ys, Ys?), true).
+clause(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
+exported procedure go(Stream(Integer)).
+go(Zs?) :- meta # run(append([1], [2, 3], Zs)).
+''');
+      final engine = _engine();
+      expect(engine.loadProgram(prog.path), isTrue);
+      final r = await engine.runGoal('go(Z).');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_shown(engine, r.bindings['Z']), '.(1, .(2, .(3, [])))');
+    });
+
+    test('a table entry for a goal prog does not export is refused', () {
+      write('meta.glp', _meta);
+      write('prog.glp', '''
+exported procedure append(Stream(Integer)?, Stream(Integer)?, Stream(Integer)).
+append([], Ys, Ys?).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+''');
+      write('self.glp', '''
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+imported procedure meta#run(Goal(prog#Procedure)?).
+procedure(G) clause(Goal(G)?, Goal(G)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(halt, true).
+clause(append([], Ys, Ys?), true).
+clause(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
+exported procedure go(Stream(Integer)).
+go(Zs?) :- meta # run(append([1], [2, 3], Zs)).
+''');
+      expect(() => _engine().loadProgram(prog.path),
+          refused('Type checking failed for linked program'));
+    });
+  });
+}

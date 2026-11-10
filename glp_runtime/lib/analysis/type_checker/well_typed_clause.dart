@@ -3644,6 +3644,17 @@ class _CallInstantiation {
       have.add(type);
     }
 
+    // A parameter an imported declaration fixes is tried at that type alone
+    // ([crossModuleBinding]); the others are read as below.
+    final fixedByImport = crossModuleBinding[call.goal] ?? const {};
+    for (final e in fixedByImport.entries) {
+      add(e.key, e.value);
+    }
+    void addUnfixed(String param, String type) {
+      if (fixedByImport.containsKey(param)) return;
+      add(param, type);
+    }
+
     if (probe != null) {
       for (final site in sites[i]!.entries) {
         final state = site.value;
@@ -3656,19 +3667,21 @@ class _CallInstantiation {
           if (kind == _Partner.body) {
             _supplied(state, actual, probe, dfa, (p, t) => fromBody.add((p, t)));
           } else {
-            _supplied(state, actual, probe, dfa, add);
+            _supplied(state, actual, probe, dfa, addUnfixed);
           }
         }
         fromBody.sort((a, b) => '${a.$1} ${a.$2}'.compareTo('${b.$1} ${b.$2}'));
         for (final (p, t) in fromBody) {
-          add(p, t);
+          addUnfixed(p, t);
         }
       }
     }
-    // Then the types the callee's clauses fix for each parameter.
+    // Then the types the callee's clauses fix for each parameter no import
+    // fixes.
     final defining = definingOf(call);
     if (defining != null) {
-      _addCalleeFixed(call.template, tried, defining, dfa, env);
+      _addCalleeFixed(call.template, tried, defining, dfa, env,
+          fixed: fixedByImport.keys.toSet());
     }
     final unsupplied = [
       for (final tp in params)
@@ -3844,7 +3857,8 @@ class _CallInstantiation {
 /// other parameters to the types tried for them so far, a parameter with none
 /// standing unbound, until no reading adds one ([_calleeFixedTypes]).
 void _addCalleeFixed(ProcDecl template, Map<String, List<String>> tried,
-    List<ast.Clause> clauses, ProgramDFA dfa, TypeEnvironment env) {
+    List<ast.Clause> clauses, ProgramDFA dfa, TypeEnvironment env,
+    {Set<String> fixed = const {}}) {
   final params = template.typeParams;
   final byClauses = _fixedCache[env] ??=
       Map<Object, Map<String, Map<String, List<String>>>>.identity();
@@ -3862,6 +3876,9 @@ void _addCalleeFixed(ProcDecl template, Map<String, List<String>> tried,
   for (var round = 0; changed && round < 8; round++) {
     changed = false;
     for (final p in params) {
+      // A parameter an imported declaration fixes takes no other type
+      // ([crossModuleBinding]).
+      if (fixed.contains(p)) continue;
       final others = [
         for (final q in params)
           if (q != p) q
@@ -4240,6 +4257,25 @@ ProcDecl _concreteDecl(ProcDecl paramTemplate, Map<String, String> bindings,
       imported: paramTemplate.imported,
       modulePath: paramTemplate.modulePath);
 }
+
+/// The binding an imported declaration fixes for a cross-module call of the
+/// linked program, by the goal the linker resolved it to: "The imported
+/// declaration must agree with the declaration M exports: their type automata
+/// are equal ... once the exported declaration's type parameters, if any, are
+/// instantiated" (TGLP modules.tex, "Cross-module type checking"), so a
+/// monomorphic `imported procedure M#p(...)` of a parameterised export fixes
+/// the export's parameters at the call, and the call is checked at that
+/// instance, its sites and the callee's clauses read for no other.  Each
+/// entry maps a parameter of the export to the renamed name of the type the
+/// import gives it, `?` appended for an input type.  Set by the linker
+/// (program_linker.dart, `_crossModuleBinding`); read by [_CallInstantiation]
+/// where it gathers the types tried for each parameter.  Until 2026-11-10 the
+/// linked check read the sites and the callee's clauses alone, and a call
+/// `meta # run((merge(...), ...))` through `imported procedure
+/// meta#run(Goal(prog#Procedure)?)` bound G to `Goal(_)` from run's clauses
+/// (GLP #14 and Code #27, Code_inbox.md, 2026-11-10 14:06 UTC).
+final Expando<Map<String, String>> crossModuleBinding =
+    Expando<Map<String, String>>('crossModuleBinding');
 
 /// The name of the abstract type standing for a parameter while a call's sites
 /// are read ([_probeOf]) and while the callee's clauses are read for the types

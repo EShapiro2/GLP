@@ -15,6 +15,7 @@ import 'bridge.dart';
 import 'construct_family.dart';
 import 'tab_screen.dart';
 import 'term.dart';
+import 'typed_before.dart';
 
 /// The name a widget declaration gives [approvalSentence]: `Approval =::= approval_sentence.`
 const String approvalSentenceName = 'approval_sentence';
@@ -1792,15 +1793,18 @@ class _SocialTabState extends State<SocialTab> {
                   ),
               ])
             else ...[
+              // The device is told what a field takes by its type's name, an email address or a person's name, and the values typed in it before are offered (typed_before.dart; vGLP 37fe038, Section 5.4; Section 6.2, Remark "Construct Families").
               TextField(
                 key: socialKey(_id, fieldKey(l)),
                 controller: _form(fieldKey(l)),
                 decoration: InputDecoration(labelText: l, isDense: true),
-                keyboardType: kept[l]!.$2.type == 'number'
-                    ? TextInputType.number
-                    : TextInputType.text,
+                keyboardType: keyboardFor(kept[l]!.$2.type),
+                autofillHints: autofillHintsFor(kept[l]!.$2.type),
                 onChanged: (_) => setState(() {}),
               ),
+              typedBeforeChips('menu:${fieldKey(l)}', _form(fieldKey(l)),
+                  keyOf: (v) => socialKey(_id, 'before:${fieldKey(l)}:$v'),
+                  onPicked: () => setState(() {})),
               // An agent variable, "by key or picked among the persons the viewer knows", the viewer among them, a person in no role (programs/vglp/cva/compiler/README.md, 6; vGLP, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows").
               if (kept[l]!.$2.type == 'agent')
                 Wrap(spacing: 6, runSpacing: 4, children: [
@@ -1822,6 +1826,12 @@ class _SocialTabState extends State<SocialTab> {
                 ? null
                 : () {
                     ask.propose(r);
+                    for (final l in union) {
+                      if (kept[l]!.$2.type != 'person') {
+                        TypedBefore.record(
+                            'menu:${fieldKey(l)}', _form(fieldKey(l)).text);
+                      }
+                    }
                     setState(() {
                       for (final l in union) {
                         _form(fieldKey(l)).clear();
