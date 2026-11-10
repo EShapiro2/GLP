@@ -286,7 +286,8 @@ RName     ::= Constant ; one(Constant, Constant).
 Names      ::= [] ; [RName | Names].
 SNT    ::= own(Constant) ; ext(SNT, Constant).
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant).
+         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant)
+         ; val(Constant).
 SArgs  ::= [] ; [SArg | SArgs].
 SAtom  ::= atom(Constant, SArgs).
 SAtoms ::= [] ; [SAtom | SAtoms].

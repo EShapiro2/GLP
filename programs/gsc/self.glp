@@ -64,9 +64,18 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % has no base (the appendix, after def:binding-numbers: "A value, and an
 % utterance, is no agent role, no agent variable and no name term, so it has
 % no base"), and a binding sends it to the utterance beta(y) carries.
+% val(C) is a constant value or utterance of any type but a number, as an
+% act's name or the name of a contract's bylaws, an argument of an atom and of
+% a constraint's relation (def:numbers: "an argument of an atom may be a
+% value or a value variable", and "a decidable relation among utterances and
+% values that their types provide"; GSC #14's yes, Code_inbox 2026-11-10
+% 18:02 UTC, GSC df5e454): it names no agent and has no base, as a value has
+% none, and it matches val(C) alone.  A constant parameter of a parametric
+% contract is one (Definition Parametric contract), val(p) listed in
+% parametric(Params, D).
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
         ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any
-        ; item_of(Arg).
+        ; item_of(Arg) ; val(Constant).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
@@ -848,6 +857,8 @@ sas_arg(sgn(Y, N), E, _, sgn(Y?, I?)) :-
 % 4401dd6), item_of(svar(Y)), Y read as a bare argument is: check.glp asks
 % that Y be a speech-act variable an agent role requires (item_schemas).
 sas_arg(item_of(Y), E, V, item_of(R?)) :- sas_bare(Y?, E?, V?, R).
+% val(C), a constant value, is read as it is (Arg).
+sas_arg(val(C), _, _, val(C?)).
 sas_arg(C, E, V, R?) :- otherwise | sas_bare(C?, E?, V?, R).
 
 procedure(X) sas_bare(X?, REnts?, PNames?, Arg).
@@ -950,6 +961,7 @@ sas_expr(real(X), E, V, R?) :- sas_arg(real(X?), E?, V?, R).
 sas_expr(sgn(Y, N), E, V, R?) :- sas_arg(sgn(Y?, N?), E?, V?, R).
 sas_expr(author_of(Y), E, V, author_of(R?)) :- sas_bare(Y?, E?, V?, R).
 sas_expr(item_of(Y), E, V, item_of(R?)) :- sas_bare(Y?, E?, V?, R).
+sas_expr(val(C), _, _, val(C?)).
 sas_expr(C, E, V, R?) :- otherwise | sas_bare(C?, E?, V?, R).
 
 % A cardinality's anchor and phi, V1 the variables with those it binds.
@@ -1809,6 +1821,7 @@ sas_arg_vf(num(_), _, _, _, _, T, T?).
 sas_arg_vf(real(_), _, _, _, _, T, T?).
 sas_arg_vf(sgn(_, _), _, _, _, _, T, T?).
 sas_arg_vf(item_of(Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
+sas_arg_vf(val(_), _, _, _, _, T, T?).
 sas_arg_vf(C, E, V, Nm, P, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, P?, T?, R).
 
 procedure(X) sas_bare_vf(X?, REnts?, PNames?, Constant?, Constant?, Faults?, Faults).
@@ -1914,6 +1927,7 @@ sas_expr_vf(real(_), _, _, _, T, T?).
 sas_expr_vf(sgn(_, _), _, _, _, T, T?).
 sas_expr_vf(author_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
 sas_expr_vf(item_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
+sas_expr_vf(val(_), _, _, _, T, T?).
 sas_expr_vf(C, E, V, Nm, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, constraint, T?, R).
 
 procedure sas_exprs_vf(SExprs?, REnts?, PNames?, Constant?, Faults?, Faults).
@@ -2156,7 +2170,7 @@ read_faults(environment(_, B), R?) :- wbody_faults(B?, R).
 % utterance beta(y) carries, so an item holds the same program, or the same
 % post, whoever signed it over"); an utterance names no agent.
 Val   ::= person(Integer) ; speech(Integer) ; signed(Val, Val) ; undef
-        ; nval(Constant) ; nfree(Constant) ; vany ; utt(Val).
+        ; nval(Constant) ; nfree(Constant) ; vany ; utt(Val) ; cval(Constant).
 Vals  ::= [] ; [Val | Vals].
 GAtom ::= gatom(Constant, Vals).
 
@@ -2577,6 +2591,7 @@ apply_arg(S, sgn(Y, J), signed(SV?, PV?)) :- ground(S?), ground(Y?), integer(J?)
     apply_arg(S?, role(J?), PV).
 apply_arg(S, num(X), V?) :- ground(S?), ground(X?) | apply_num(S?, X?, V).
 apply_arg(_, any, vany).
+apply_arg(_, val(C), cval(C?)).
 apply_arg(S, item_of(Y), V?) :- ground(S?), ground(Y?) |
     apply_arg(S?, Y?, W),
     item_val(W?, V).
@@ -2677,6 +2692,7 @@ kind_ok(real(_), utt(_), no).
 % The wildcard and an item are matched by match_one, never here.
 kind_ok(any, _, no).
 kind_ok(item_of(_), _, no).
+kind_ok(val(_), _, no).
 
 % roles_at(S, V, Js): the indices of the roles S sends to V.  Clause 2 of
 % def:unobstructed asks of the other party that one of them be no reading
@@ -2770,6 +2786,7 @@ binding_ok(num(_), _, _, _, no).
 binding_ok(real(_), _, _, _, no).
 binding_ok(any, _, _, _, no).
 binding_ok(item_of(_), _, _, _, no).
+binding_ok(val(_), _, _, _, no).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, Eqs?, MatchRes).
 match_bind(yes, A, V, S, E, match([bind(A?, V?)|S?], E?)).
@@ -2806,6 +2823,7 @@ match_sgn(_, _, nval(_), _, _, _, nomatch).
 match_sgn(_, _, nfree(_), _, _, _, nomatch).
 match_sgn(_, _, vany, _, _, _, nomatch).
 match_sgn(_, _, utt(_), _, _, _, nomatch).
+match_sgn(_, _, cval(_), _, _, _, nomatch).
 
 % A value argument num(X) matches a value by equality (def:unobstructed, at
 % a binding of its schema; def:binding-numbers): the number X matches the
@@ -2857,6 +2875,8 @@ match_one(sgn(Y, J), V, S, E, Rs, R?) :-
     match_sgn(Y?, J?, V?, S?, E?, Rs?, R).
 match_one(num(X), V, S, E, _, R?) :- ground(X?), ground(V?), ground(S?), ground(E?) |
     match_num(X?, V?, S?, E?, R).
+match_one(val(C), V, S, E, _, R?) :- ground(C?), ground(V?), ground(S?), ground(E?) |
+    match_cval(C?, V?, S?, E?, R).
 match_one(item_of(Y), V, S, E, Rs, R?) :-
     ground(Y?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
     match_item(Y?, V?, S?, E?, Rs?, R).
@@ -2864,6 +2884,11 @@ match_one(A, V, S, E, Rs, R?) :-
     otherwise, ground(A?), ground(V?), ground(S?), ground(E?), ground(Rs?) |
     subst_lookup(S?, A?, F),
     match_one1(F?, A?, V?, S?, E?, Rs?, R).
+
+% A constant value matches the same constant alone.
+procedure match_cval(Constant?, Val?, Subst?, Eqs?, MatchRes).
+match_cval(C, cval(D), S, E, match(S?, E?)) :- C? =?= D? | true.
+match_cval(_, _, _, _, nomatch) :- otherwise | true.
 
 procedure match_rest(MatchRes?, Args?, Vals?, RoleSpecs?, MatchRes).
 match_rest(nomatch, _, _, _, nomatch).
@@ -3100,6 +3125,7 @@ filter_pvars([num(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([real(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([any|As], R?) :- filter_pvars(As?, R).
 filter_pvars([item_of(_)|As], R?) :- filter_pvars(As?, R).
+filter_pvars([val(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_pvars(S?, Ps),
     filter_pvars(As?, R1),
@@ -3117,6 +3143,7 @@ filter_svars([any|As], R?) :- filter_svars(As?, R).
 % An item names no agent and has no base (Arg), so the speech-act variable
 % inside it is not read as one the atom carries.
 filter_svars([item_of(_)|As], R?) :- filter_svars(As?, R).
+filter_svars([val(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
     nt_svars(S?, Ss),
     filter_svars(As?, R1),
@@ -3181,6 +3208,7 @@ fresh_val(num(X), _, nfree(X?)).
 fresh_val(real(X), _, nfree(X?)).
 fresh_val(any, _, undef).
 fresh_val(item_of(_), _, undef).
+fresh_val(val(C), _, cval(C?)).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -3580,6 +3608,7 @@ arg_base(real(_), b_num).
 arg_base(any, b_any).
 % An item, an utterance, has no base, as a value has none (Arg).
 arg_base(item_of(_), b_num).
+arg_base(val(_), b_num).
 
 procedure role_base(RoleSpec?, Integer?, Base).
 role_base(rs(_, _, _, _, _), I, b_role(I?)).
@@ -3605,6 +3634,8 @@ args_bases([svar(_)|As], T, R?) :- ground(As?), ground(T?) |
 args_bases([any|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([item_of(_)|As], T, R?) :- ground(As?), ground(T?) |
+    args_bases(As?, T?, R).
+args_bases([val(_)|As], T, R?) :- ground(As?), ground(T?) |
     args_bases(As?, T?, R).
 args_bases([A|As], T, [B?|R?]) :- otherwise, ground(A?), ground(As?), ground(T?) |
     arg_base(A?, B),
@@ -3960,7 +3991,11 @@ constraint_args(not(C), T, R?) :- constraint_args(C?, T?, R).
 constraint_args(implies(C1, C2), T, R?) :- ground(C1?), ground(C2?), ground(T?) |
     constraint_args(C2?, T?, R1),
     constraint_args(C1?, R1?, R).
-constraint_args(rel(_, Xs), T, R?) :- exprs_args(Xs?, T?, R).
+% A relation is among utterances and values (def:numbers, GSC 45f1ec7: "a
+% decidable relation among utterances and values that their types
+% provide"): an item and a constant value among its arguments are no value
+% argument and are asked nothing here; its other arguments are (rel_args).
+constraint_args(rel(_, Xs), T, R?) :- rel_args(Xs?, T?, R).
 constraint_args(le(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 constraint_args(lt(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
 constraint_args(ge(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([X?, Y?], T?, R).
@@ -4089,6 +4124,15 @@ expr_args(sgn(Y, J), T, [sgn(Y?, J?)|T?]).
 expr_args(any, T, [any|T?]).
 expr_args(author_of(Y), T, [Y?|T?]).
 expr_args(item_of(Y), T, [Y?|T?]).
+expr_args(val(_), T, T?).
+
+procedure rel_args(Exprs?, Args?, Args).
+rel_args([], T, T?).
+rel_args([item_of(_)|Xs], T, R?) :- ground(Xs?), ground(T?) | rel_args(Xs?, T?, R).
+rel_args([val(_)|Xs], T, R?) :- ground(Xs?), ground(T?) | rel_args(Xs?, T?, R).
+rel_args([X|Xs], T, R?) :- otherwise, ground(X?), ground(Xs?), ground(T?) |
+    rel_args(Xs?, T?, R1),
+    exprs_args([X?], R1?, R).
 
 procedure exprs_args(Exprs?, Args?, Args).
 exprs_args([], T, T?).

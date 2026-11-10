@@ -353,6 +353,7 @@ rn_arg(real(X), M, real(R?)) :- ground(X?), ground(M?) |
     num_name(A?, X?, R).
 rn_arg(any, _, any).
 rn_arg(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_arg(val(C), _, val(C?)).
 
 % The name of a value argument, the variable's own where it is no num(X).
 procedure num_name(Arg?, Constant?, Constant).
@@ -426,6 +427,7 @@ rn_expr(real(X), M, R?) :- ground(X?), ground(M?) |
 rn_expr(any, _, any).
 rn_expr(author_of(Y), M, author_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
 rn_expr(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
+rn_expr(val(C), _, val(C?)).
 rn_expr(plus(X, Y), M, plus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(M?) |
     rn_expr(X?, M?, X1),
     rn_expr(Y?, M?, Y1).
@@ -461,6 +463,7 @@ arg_expr(num(X), num(X?)).
 arg_expr(real(X), real(X?)).
 arg_expr(any, any).
 arg_expr(item_of(Y), item_of(Y?)).
+arg_expr(val(C), val(C?)).
 
 procedure rn_exprs(Exprs?, RMs?, Exprs).
 rn_exprs([], _, []).

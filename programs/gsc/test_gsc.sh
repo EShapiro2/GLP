@@ -2341,6 +2341,22 @@ check_eq "a conjunct of the weaker constraint that is a conjunct of the stronger
 check_eq "befriend with an atom more in its body is stronger" "V = stronger" "$(sf 6)"
 check_eq "introduce with its variable renamed is the same schema" "V = stronger" "$(sf 7)"
 
+# --- a constant value, val(C) (def:numbers; GSC #14's yes, 2026-11-10 18:02 UTC) ---
+# A constant value or utterance of any type but a number is written val(C):
+# post(Alice? ; y) adds posted(y, val(news)) and asks that admits(item(y),
+# val(post)), an item and a constant among a relation's arguments, which the
+# relation, "among utterances and values", takes; GSG with sign and post is
+# syntactically grassroots.  The same names written bare are variables left
+# out of the head, refused as before.
+SIGN="sas(sign, ['Alice'], [y], [atom(item, ['Alice', y])], [atom(identity, ['Alice'])], true, ['Alice'])"
+POST="sas(post, ['Alice'], [y], [atom(posted, ['Alice', y, val(news)])], [atom(identity, ['Alice']), atom(item, ['Alice', y])], rel(admits, [item_of(y), val(post)]), ['Alice'])"
+POSTB="sas(post, ['Alice'], [y], [atom(posted, ['Alice', y, news])], [atom(identity, ['Alice']), atom(item, ['Alice', y])], rel(admits, [item_of(y), post]), ['Alice'])"
+out=$(run "as_read([$POST], R)." "check([$EST, $ACQ, $INTRO, $BF, $UF, $SIGN, $POST], V)." "check([$EST, $ACQ, $INTRO, $BF, $UF, $SIGN, $POSTB], V).")
+check "val(C) is read as it is, in an atom and in a relation" \
+      "R = [nschema(post, ['Alice'], [svar(y)], rel(admits, [item_of(svar(y)), val(post)]), [rs(guarded, [atom(posted, [svar(y), val(news)])], [], [atom(identity, []), atom(item, [svar(y)])], [])])]" "$out"
+check_eq "GSG with sign and post, its constants written val, is syntactically grassroots" "V = syntactically_grassroots" "$(sf 1)"
+check_eq "the same constants written bare are variables not in the head" "V = malformed([not_in_vars(post, posted), not_in_vars(post, constraint)])" "$(sf 2)"
+
 # --- the author, the item and a condition on an utterance (GSC 6df39d4, def:numbers) ---
 # "the author author(y), the first signer of y, in an equality with an agent
 # role or agent variable, the item item(y), the utterance under the
