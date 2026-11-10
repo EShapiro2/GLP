@@ -1544,11 +1544,33 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
     // outermost directory was discovered to write the type, and the module
     // discovered again (Cloud #16, Code_inbox.md, 2026-11-10 13:15 UTC,
     // point 4).
-    var modules = discover();
+    //
+    // A self.glp of the chain in the directory of a compiled source names
+    // the types its compilation forms plainly, being in their scope (TGLP
+    // d993305, "Sources compiled to GLP": the formed types are in the scope
+    // of every module at or below the sources' directory "when it is loaded
+    // alone"); where that source has no committed compiled module to read
+    // them from at the start ([_selfGlpReadingOf]), as programs/cssn's
+    // platform.vglp has none, its refusal has them written from a discovery
+    // of that directory's program, and the module is discovered again
+    // ([_readCompiledTypesOfChain]).
+    List<DiscoveredModule> discoverRead() {
+      try {
+        return discover();
+      } on UndefinedDeclarationTypeError {
+        if (!_readCompiledTypesOfChain(selfPaths,
+            rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope)) {
+          rethrow;
+        }
+        return discover();
+      }
+    }
+
+    var modules = discoverRead();
     if (_writeQualifiedTypes(modules,
             rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope)
         .isNotEmpty) {
-      modules = discover();
+      modules = discoverRead();
       _writeQualifiedTypes(modules,
           rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
     }
@@ -1556,6 +1578,48 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
   } finally {
     selfGlpReading = outer;
   }
+}
+
+/// The types the compilation writes into the `self.glp` files at [selfPaths]
+/// that stand in the directory of a compiled source (TGLP d993305,
+/// modules.tex, Compilation, "Sources compiled to GLP": the types a
+/// compilation of a directory's sources forms are in the scope of every
+/// module at or below that directory, "in whatever program it is compiled
+/// and when it is loaded alone"; vGLP, Section 6.3), read into
+/// [selfGlpReading] from a discovery of the program of the outermost such
+/// directory; false where there is none.  A self.glp above the sources'
+/// directory names the formed types by M#T ([_writeQualifiedTypes]) and is
+/// not taken here.  Until 2026-11-10 any self.glp with a compiled module in
+/// its directory or below was (Cloud #16, Code_inbox.md, 2026-11-10 13:15
+/// UTC, point 4).
+bool _readCompiledTypesOfChain(List<String> selfPaths,
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
+  final reading = selfGlpReading;
+  if (reading == null) return false;
+  final rootKey =
+      rootSelfGlpPath == null ? null : SelfGlpReading.key(rootSelfGlpPath);
+  final keys = {for (final p in selfPaths) SelfGlpReading.key(p)};
+  for (final p in selfPaths) {
+    if (SelfGlpReading.key(p) == rootKey) continue;
+    final dir = File(p).parent.absolute.path;
+    final dirNorm = _normPath(dir);
+    if (!_compiledModulesBelow(dir)
+        .any((c) => _normPath(File(c).parent.path) == dirNorm)) {
+      continue;
+    }
+    final program = discoverProgram(dir,
+        rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
+    var any = false;
+    for (final m in program) {
+      if (!m.isSelfGlp || !keys.contains(SelfGlpReading.key(m.filePath))) {
+        continue;
+      }
+      reading.write(m.filePath, m.ast.typeDefs);
+      any = true;
+    }
+    return any;
+  }
+  return false;
 }
 
 /// The types [selfGlpReading] has written into a `self.glp`, written into its
