@@ -1475,13 +1475,14 @@ BodyKernelResult peerAppKernel(GlpRuntime rt, List<Object?> args) {
 /// '_self_app'(R, I) — assign R `app(D, N, V)` for the app whose program the
 /// agent runs, the app the layer attests to the agent's peers, and I the same
 /// for the app installed on the device; the two differ after an update the
-/// runtime refused (GLP-Spec cce13ce, appendix-guards, "Networking seam":
-/// `self_app(App, App)`; IGLP 59c40e2, Definition "Seam Predicates":
+/// runtime refused (the GLP paper b840c47, appendix-guards, "Networking
+/// seam": `self_app(App, App)`; IGLP 59c40e2, Definition "Seam Predicates":
 /// `self_app(R?, I?) :- '_self_app'(R, I)`).  The kernel reads what the host
 /// gave the runtime ([GlpRuntime.selfApps]): the app the store keeps with the
 /// program where the update was refused, and the installed app otherwise.
 /// Where the host gave no app, as the REPL and the simulation give none,
-/// `none`.
+/// each is `none`: "where the runtime is given no app, as in a simulation,
+/// each is none" (the GLP paper b840c47, "Networking seam").
 BodyKernelResult selfAppKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     return kernelAbort(
