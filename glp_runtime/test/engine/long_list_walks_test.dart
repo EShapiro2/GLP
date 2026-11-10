@@ -173,18 +173,18 @@ void main() {
         'round-trip', () {
       final (g, value) = PayloadCodec.deserializeGlobalSendPayload(
           PayloadCodec.createGlobalSendPayload(
-              GlobalName.reader('alice', 7), _ints(_n)));
-      expect('$g', '_r(alice, 7)');
+              GlobalName.reader('alice', 7), _ints(_n), senderEpoch: 1));
+      expect('$g', '_r(alice, 1, 7)');
       expect(_elements(value).length, _n);
 
       final (g0, cell) = PayloadCodec.deserializeGlobalSendPayload(
           PayloadCodec.createSerializerPayload(
               GlobalName.writer('bob', 0), _ints(_n),
-              serial: 1));
-      expect('$g0', '_w(bob, 0)');
+              serial: 1, senderEpoch: 1));
+      expect('$g0', '_w(bob, 0, 0)');
       final c = cell as StructTerm;
       expect(_elements(c.args[0]).length, _n);
-      expect('${c.args[1]}', '_w(bob, 0)');
+      expect('${c.args[1]}', '_w(bob, 0, 0)');
     });
   });
 
@@ -243,7 +243,7 @@ void main() {
           PayloadCodec.deserializeGlobalSendPayload(payloads.single);
       final names = extractGlobalNames(sent);
       expect(names.map((g) => '$g'),
-          [for (var i = 1; i <= _n; i++) '_r(alice, $i)'],
+          [for (var i = 1; i <= _n; i++) '_r(alice, 1, $i)'],
           reason: 'Globalize allocates the indices in the order the readers '
               'occur, from 1');
     });

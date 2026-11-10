@@ -96,11 +96,12 @@ void main() {
 
   group('variable round-trip — both polarities', () {
     test('writer and reader, symbolic and raw-key agents', () {
-      final writer = WVar.symbolic(isReader: false, agent: 'alice', index: 0);
-      final reader = WVar.symbolic(isReader: true, agent: 'bob', index: 4242);
+      final writer = WVar.symbolic(isReader: false, agent: 'alice', epoch: 0, index: 0);
+      final reader = WVar.symbolic(isReader: true, agent: 'bob', epoch: 1, index: 4242);
       final key = WVar(
           isReader: false,
           agent: Uint8List.fromList(List<int>.generate(32, (i) => i)),
+          epoch: 1,
           index: 7);
       expect(_roundTripTerm(writer), writer);
       expect(_roundTripTerm(reader), reader);
@@ -111,7 +112,7 @@ void main() {
   group('structure round-trip — nesting and lists', () {
     test('nested structure with mixed children', () {
       final t = WStruct('msg', [
-        WVar.symbolic(isReader: false, agent: 'alice', index: 1),
+        WVar.symbolic(isReader: false, agent: 'alice', epoch: 1, index: 1),
         const WConst(WString('payload')),
         WStruct('.', [
           const WConst(WInt(1)),
@@ -135,6 +136,7 @@ void main() {
       final a = WireAssignment(
         gIsReader: true,
         gAgent: Uint8List.fromList(utf8.encode('carol')),
+        gEpoch: 1,
         gIndex: 9,
         value: WStruct('connected', [const WConst(WString('dave'))]),
       );
@@ -168,10 +170,11 @@ void main() {
       final a = WireAssignment.serializer(
           agent: agent, head: const WConst(WInt(1)), serial: 200);
       final b = encodeAssignmentToBytes(a);
-      // polarity 0; agent: length 1, 'q'; index 0; serial 200 as a two-byte
-      // clen (high bits 10); then the list cell (tag 3, '.', arity 2).
-      expect(b.sublist(0, 6), [0, 1, 0x71, 0, 0x80, 200]);
-      expect(b[6], 3);
+      // polarity 0; agent: length 1, 'q'; epoch 0; index 0; serial 200 as a
+      // two-byte clen (high bits 10); then the list cell (tag 3, '.', arity
+      // 2).  The epoch is new in code-format version 4 (IGLP db0a117).
+      expect(b.sublist(0, 7), [0, 1, 0x71, 0, 0, 0x80, 200]);
+      expect(b[7], 3);
       final back = _roundTripAssign(a);
       expect(back.serial, 200);
       expect(back, a);
@@ -186,11 +189,12 @@ void main() {
       final a = WireAssignment(
         gIsReader: false,
         gAgent: Uint8List.fromList(utf8.encode('q')),
+        gEpoch: 1,
         gIndex: 4,
         value: const WConst(WInt(1)),
       );
-      // polarity 0; agent 'q'; index 4; then the term at once.
-      expect(encodeAssignmentToBytes(a).sublist(0, 5), [0, 1, 0x71, 4, 1]);
+      // polarity 0; agent 'q'; epoch 1; index 4; then the term at once.
+      expect(encodeAssignmentToBytes(a).sublist(0, 6), [0, 1, 0x71, 1, 4, 1]);
       expect(_roundTripAssign(a).serial, isNull);
     });
 
@@ -199,12 +203,17 @@ void main() {
       final q = Uint8List.fromList(utf8.encode('q'));
       expect(
           () => WireAssignment(
-              gIsReader: false, gAgent: q, gIndex: 0, value: const WConst(WNil())),
+              gIsReader: false,
+              gAgent: q,
+              gEpoch: 0,
+              gIndex: 0,
+              value: const WConst(WNil())),
           throwsArgumentError);
       expect(
           () => WireAssignment(
               gIsReader: true,
               gAgent: q,
+              gEpoch: 1,
               gIndex: 3,
               value: const WConst(WNil()),
               serial: 1),

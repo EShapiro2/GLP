@@ -193,6 +193,16 @@ class AgentRuntime {
   /// The program the agent runs is a new version the store does not keep yet: an update was taken ([_restoreSaved]), and the new version is kept with the first state saved under it ([save]), so that a state the store holds is always of the program it keeps, or of the one [program] compiles to.
   bool _programToKeep = false;
 
+  /// The application is suspended: the host called [save], at its platform's announcement of termination, and the agent takes no event until the host calls [resume] (IGLP db0a117, Definition "Suspension, Termination, Crash": "a suspended agent takes no transition"; Persistence, When: "After the save the agent takes no event until the application resumes").  The events that arrive wait in [_events].
+  bool _suspended = false;
+
+  /// Whether the application is suspended ([save], [resume]).
+  bool get suspended => _suspended;
+
+  /// Whether the running mark was set in the store at this start, so that the restart was one after a crash (IGLP db0a117, Definition "Restart after a Crash"; Persistence, Restart): the epoch was incremented and every link end retired.
+  bool get restartedAfterCrash => _restartedAfterCrash;
+  bool _restartedAfterCrash = false;
+
   /// The agent is disposed: it takes no event, saves nothing and hands nothing to the layer ([dispose]).
   bool _disposed = false;
 
@@ -396,10 +406,15 @@ class AgentRuntime {
             : PersonIdentity.forPersona(agentId).keyPair);
 
     final saved = await store?.load();
+    // The running mark: set at every start and resumption and cleared by the
+    // save, so set at a start where the application crashed since it last
+    // ran (IGLP db0a117, Persistence, When and Restart).
+    final crashed = store != null && await store.loadRunning();
     _setUp();
     if (saved != null && await _restoreOrLose(store!, saved)) {
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
+      if (crashed) await _restartAfterCrash(store);
       // The layer starts empty at every launch, and at a restart the runtime
       // makes every declaration the store holds to it again before any goal
       // of the agent is reduced; the program does not declare again (IGLP
@@ -411,6 +426,7 @@ class AgentRuntime {
       _log('INIT: ${redeclared.length} standing declarations made to the '
           'layer again');
       _output('[INIT] Restored the agent\'s saved state');
+      await store.saveRunning(true);
       await _submit(const _Resume());
       // The person's screen is not part of the local state: at a restart the
       // runtime grants refresh, an Input addressed to no construct, in the
@@ -435,10 +451,41 @@ class AgentRuntime {
     // "Persistence"), the version a later restart refusing an update
     // restarts it under.
     if (store != null) await _keepProgram(store);
+    // A crash before the first suspension: the agent restarts from "its
+    // initial local state where it was never suspended, with e_p incremented
+    // by one" (IGLP db0a117, Definition "Restart after a Crash"), the epoch
+    // opened before the boot allocates a name.
+    if (crashed && saved == null) await _restartAfterCrash(store, fresh: true);
+    if (store != null) await store.saveRunning(true);
     await _submit(const _Boot());
     _firstStart = true;
     _initialized = true;
     updateStats();
+  }
+
+  /// The restart after a crash (IGLP db0a117, Definition "Restart after a
+  /// Crash"; Persistence, Restart: "If the running mark is set at a start,
+  /// the application crashed: the runtime increments the epoch and retires
+  /// the link ends, and saves the state at once, so that a second crash
+  /// before the next suspension opens a further epoch"): the context opens
+  /// the next epoch and retires every link end but the serializer entry
+  /// ([MadContext.crashRestart]), and the state is saved at once, the one
+  /// save made at no suspension.  [fresh], the agent was never suspended:
+  /// its initial state is saved once the boot has run, by [initialize].
+  Future<void> _restartAfterCrash(AgentStateStore store,
+      {bool fresh = false}) async {
+    _restartedAfterCrash = true;
+    final retired = _ctx!.crashRestart();
+    _log('INIT: the running mark was set at this start, so the application '
+        'crashed: the agent restarts in epoch ${_ctx!.epoch}, '
+        '${retired.length} link ends retired');
+    _output('[INIT] The agent restarts after a crash, in epoch '
+        '${_ctx!.epoch}, every link end retired');
+    if (!fresh && !await _saveNow()) {
+      _log('[ERROR] the state of the restart after a crash was not saved: a '
+          'second crash before the next suspension restarts in this epoch '
+          'again');
+    }
   }
 
   /// Restore the state [saved] the store holds ([_restoreSaved]); true where it is restored.  A saved state the runtime cannot read or cannot restore --- written under an earlier format of the store, under a program the store no longer keeps, or otherwise unreadable --- is lost: the runtime reports it, on [onLog] as `[ERROR]` and to the person, and the agent starts afresh from the program, under the key pair the store keeps, as at a first start, and this returns false (IGLP db0a117, Implementation Notes, "Persistence", Failure: "If the runtime cannot read or cannot restore the saved state, as one written under an earlier format of the store, or under a program the store no longer keeps, the state is lost: the runtime reports it and starts the agent afresh, under the key pair the store keeps").  A state of another agent, of another name or key, is no state of this one and is not read: the restart throws, as until 2026-11-10 every unreadable state did ([SavedStateOfAnotherAgent]).
@@ -950,7 +997,13 @@ class AgentRuntime {
 
   Future<void> _pump() async {
     while (_events.isNotEmpty) {
-      final (event, done) = _events.removeFirst();
+      // A suspended agent takes no event: what arrived waits for [resume].
+      // A save the host asks for while suspended, at a second announcement
+      // of termination, is the host's and is taken, wherever it waits.
+      final (event, done) = _suspended && !_disposed
+          ? (_takeSave() ?? (null, null))
+          : _events.removeFirst();
+      if (event == null || done == null) break;
       if (_disposed) {
         _log('DISPOSED: $event is not taken');
         done.complete();
@@ -967,10 +1020,38 @@ class AgentRuntime {
     _pumping = false;
   }
 
+  /// Take the first [_Save] waiting in [_events], or null where none waits.
+  (_AgentEvent, Completer<void>)? _takeSave() {
+    for (final entry in _events) {
+      if (entry.$1 is _Save) {
+        _events.remove(entry);
+        return entry;
+      }
+    }
+    return null;
+  }
+
   /// One event cycle (IGLP d70ec2e, Implementation Notes, "Event-driven execution": "On each event the agent binds what the event delivers, reduces until quiescent ... and then performs its Sends"; "Persistence": "A message is handed to the layer, and a delivered message acknowledged to the layer, in the cycle that makes or applies it"): the agent applies [event], reduces and performs its Sends, waiting for the layer's answer to each ([_applyAndSend], [Scheduler.drainAndSend]), and the message it applied is acknowledged to the layer ([GlpNetwork.acknowledge]; GNA, Section 2.9), with or without a store.  The restart's cycle ([_Resume]) and a connection's ([_Retry]) apply nothing, and hand to the layer what M_p holds undelivered.  A save the host asked for is a cycle of its own ([_Save], [save]), so the state saved is one between cycles.  Until 2026-11-10 a cycle over a store saved the state before its Sends, and acknowledged a message once a state holding it applied was saved.
   Future<void> _cycle(_AgentEvent event) async {
     if (event is _Save) {
-      event.kept.complete(await _saveNow());
+      final kept = await _saveNow();
+      // The platform announced termination: the application is suspended
+      // from now until it resumes or ends, and the agent takes no event
+      // (IGLP db0a117, Definition "Suspension, Termination, Crash").  The
+      // save clears the running mark, so a termination from here is no crash.
+      _suspended = true;
+      final store = stateStore;
+      if (kept && store != null && !_disposed) {
+        try {
+          await store.saveRunning(false);
+        } catch (e) {
+          _log('[ERROR] the running mark was not cleared: $e; the next start '
+              'restarts after a crash');
+        }
+      }
+      _log('SUSPENDED: the agent takes no event until the application '
+          'resumes');
+      event.kept.complete(kept);
       return;
     }
     await _applyAndSend(event);
@@ -980,6 +1061,10 @@ class AgentRuntime {
   }
 
   /// Save the agent's local state in its store: the host's one call, made when its platform announces termination --- the phone app when it goes to the background, `AppLifecycleState.paused`; a headless host, the directory and the rendezvous server, at its termination signal --- and at no other time (IGLP d70ec2e, Implementation Notes, "Persistence": the runtime keeps the state "by a store the host gives it, ..., saving it when the application goes to the background, which the platform announces before it may kill the application, and at no other time").  Taken as a cycle of the agent's, after the cycles before it, so that the state saved is one between cycles, every Send of the last cycle handed over.  True where the state is kept.  False where the save fails --- the store keeps the state saved before it, and the failure is reported on [onLog], as `[ERROR]` ("If the save fails, the store keeps the state saved before it, and the runtime reports the failure") --- where the agent has no [stateStore], and where it is disposed.  What is saved is the whole state the Persistence note lists ([_snapshot]); the key pair is kept at the first start ([keptKeyPair]) and the compiled program at the first start and, after an update is taken, with the first save under it ([_keepProgram]).
+  ///
+  /// The save suspends the agent until [resume]: it takes no event, and a
+  /// save asked for again while it is suspended is taken, the state saved
+  /// the same.
   Future<bool> save() {
     if (stateStore == null || _disposed) return Future.value(false);
     final event = _Save();
@@ -987,6 +1072,32 @@ class AgentRuntime {
       if (!event.kept.isCompleted) event.kept.complete(false);
     }));
     return event.kept.future;
+  }
+
+  /// The application resumed from its suspension: the host calls it when
+  /// its platform announces the resumption, the phone app at
+  /// `AppLifecycleState.resumed`.  The running mark is set again ("At every
+  /// start and at every resumption the runtime sets a mark, running, in the
+  /// store", IGLP db0a117, Persistence, When), and the agent takes the
+  /// events that arrived while it was suspended, and those to come.  Does
+  /// nothing where the agent is not suspended, or is disposed.
+  Future<void> resume() async {
+    if (!_suspended || _disposed) return;
+    final store = stateStore;
+    if (store != null) {
+      try {
+        await store.saveRunning(true);
+      } catch (e) {
+        _log('[ERROR] the running mark was not set at the resumption: $e; a '
+            'crash before the next suspension would restart in this epoch');
+      }
+    }
+    _suspended = false;
+    _log('RESUMED: the agent takes events again');
+    if (!_pumping && _events.isNotEmpty) {
+      _pumping = true;
+      scheduleMicrotask(() => unawaited(_pump()));
+    }
   }
 
   /// The save [save] asked for, in its cycle.

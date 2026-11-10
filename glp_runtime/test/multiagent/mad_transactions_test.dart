@@ -58,7 +58,7 @@ void main() {
       final (writerAddr, readerAddr) = runtime.heap.allocateVariable();
 
       // Add LocalizeEntry: this simulates having localized _r(p, 3)
-      ctx.wp.addLocalizeEntry(writerAddr, 'p', 3);
+      ctx.wp.addLocalizeEntry(writerAddr, GlobalName.reader('p', 3));
 
       // Receive the assignment message from p
       final globalName = GlobalName.reader('p', 3);
@@ -74,7 +74,7 @@ void main() {
       expect((derefed as ConstTerm).value, 42);
 
       // Verify entry was removed
-      expect(ctx.wp.findByRemote('p', 3), isNull);
+      expect(ctx.wp.findByRemote(GlobalName.reader('p', 3)), isNull);
     });
 
     test('receive localizes nested variables', () {
@@ -101,7 +101,7 @@ void main() {
       );
 
       // Verify LocalizeEntry was created for nested _r(q,2)
-      expect(ctx.wp.findByRemote('q', 2), isNotNull);
+      expect(ctx.wp.findByRemote(GlobalName.reader('q', 2)), isNotNull);
     });
 
     test('writer value with no GlobalizeEntry is dropped silently', () {
@@ -147,7 +147,7 @@ void main() {
         ),
         returnsNormally,
       );
-      expect(ctx.wp.findByRemote('p', 5), isNull);
+      expect(ctx.wp.findByRemote(GlobalName.reader('p', 5)), isNull);
 
       // 2) Carrier cold-call (serializer, index 0) whose content is _r(p, 5):
       //    localize() creates LocalizeEntry (Z_q, p, 5) and immediately delivers
@@ -173,7 +173,7 @@ void main() {
       expect((delivered as ConstTerm).value, 42);
 
       // Entry was created by localize then removed by delivery.
-      expect(ctx.wp.findByRemote('p', 5), isNull);
+      expect(ctx.wp.findByRemote(GlobalName.reader('p', 5)), isNull);
     });
 
     // Definition madGLP Receive Transaction, Serializer case: "If (s, i) ∈
@@ -212,7 +212,7 @@ void main() {
       receive(GlobalName.reader('p', 1).toTerm(), 'p', 2);
       expect(ctx.wp.localizeEntryCount, 1);
       final writerAfterFirst = ctx.wp.serializerWriterAddr;
-      expect(ctx.wp.serializerHasAppended('p', 2), isTrue);
+      expect(ctx.wp.serializerHasAppended('p', 1, 2), isTrue);
 
       // The same message again: dropped and nothing changes — no second
       // entry, no second element, the entry's writer where it was.
@@ -241,7 +241,7 @@ void main() {
       final runtime = GlpRuntime();
       final ctx = MadContext(agentId: 'q', runtime: runtime);
       final (writerAddr, _) = runtime.heap.allocateVariable();
-      ctx.wp.addLocalizeEntry(writerAddr, 'p', 3);
+      ctx.wp.addLocalizeEntry(writerAddr, GlobalName.reader('p', 3));
 
       for (var k = 0; k < 2; k++) {
         ctx.handleMadAssignment(
@@ -251,7 +251,7 @@ void main() {
         );
       }
       expect((runtime.heap.derefAddr(writerAddr) as ConstTerm).value, 42);
-      expect(ctx.wp.findByRemote('p', 3), isNull);
+      expect(ctx.wp.findByRemote(GlobalName.reader('p', 3)), isNull);
       expect(ctx.earlyAssignmentCount, 0,
           reason: 'the repeat found its entry removed: dropped, not early');
       expect(ctx.mp.totalLength, 1, reason: 'one acknowledgement, not two');
@@ -360,6 +360,7 @@ void main() {
       final globalizeResult = globalize(
         variables: [TermVar.reader(readerXp, writerAddr: writerXp)],
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: ctxP.wp,
         records: ctxP.up,
@@ -434,6 +435,7 @@ void main() {
       final globalizeResult = globalize(
         variables: [TermVar.writer(writerVp, readerAddr: readerVp)],
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: ctxP.wp,
         records: ctxP.up,

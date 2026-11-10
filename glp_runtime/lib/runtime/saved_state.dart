@@ -65,11 +65,17 @@ class SavedStateFormatException implements Exception {
 /// 0c77e47, Implementation Notes, "Persistence"); a version-4 state is not
 /// read.  Version 6 (2026-11-08) writes the reachable declaration after the
 /// nearby declarations, with its stream's tail writer (GLP-Spec cb9df43,
-/// "Networking seam": reachable(S)); a version-5 state is not read.  A state
-/// of an earlier version is lost at the restart, and the agent starts afresh
-/// (IGLP db0a117, "Persistence", Failure; [SavedStateFormatException]).
+/// "Networking seam": reachable(S)); a version-5 state is not read.  Version
+/// 7 (2026-11-10) writes each global name with its epoch, `_w(p, e, i)`, the
+/// agent's epoch and its known epochs, the epoch each link end records of the
+/// agent at its other end, the serializer's appended cold calls as (sender,
+/// epoch, serial), and the ends retired (IGLP db0a117, Definitions "Epoch",
+/// "Global Variable Name" and "madGLP Local State"; Persistence, "What is
+/// saved"); a version-6 state is not read.  A state of an earlier version is
+/// lost at the restart, and the agent starts afresh (IGLP db0a117,
+/// "Persistence", Failure; [SavedStateFormatException]).
 const List<int> savedStateMagic = [0x47, 0x4C, 0x50, 0x53];
-const int savedStateVersion = 6;
+const int savedStateVersion = 7;
 
 // Term tags.
 const int _tVar = 0;
@@ -214,7 +220,47 @@ class StateWriter {
     required this.agentName,
     required this.agentKey,
     this.appModule,
-  });
+  })  : _occurred = null,
+        exceptGoal = null;
+
+  /// A writer that saves nothing and records which cells the state reaches by
+  /// an occurrence ([occurrences]): every cell a root or a term names, a cell
+  /// a bound writer's chain or value reaches, and none reached by pairing
+  /// alone --- a writer's paired reader, an unbound writer's pointer to it,
+  /// and an unbound reader's pointer to its writer.  `widowed/1` asks it
+  /// whether a variable's pair occurs in the agent's state
+  /// ([GlpRuntime.cellOccurs]); [exceptGoal], the goal being reduced, is left
+  /// out of the scan ("the goal being reduced not counted", the GLP paper
+  /// f577e20, appendix-guards.tex, the guard table).
+  StateWriter.scan({this.exceptGoal})
+      : programIdentity = Uint8List(0),
+        agentName = '',
+        agentKey = Uint8List(0),
+        appModule = null,
+        _occurred = <HeapCell>{};
+
+  final Set<HeapCell>? _occurred;
+
+  /// The goal a scan leaves out, or null.
+  final int? exceptGoal;
+
+  /// The cells the roots written reach by an occurrence, in a writer made by
+  /// [StateWriter.scan]: every cell they reach is visited, as [finish] visits
+  /// it, and nothing is saved.
+  Set<HeapCell> occurrences() {
+    final occurred = _occurred;
+    if (occurred == null) {
+      throw StateError('occurrences of a writer that saves a state');
+    }
+    while (_pending.isNotEmpty) {
+      _cell(_pending.removeLast());
+    }
+    return occurred;
+  }
+
+  /// A cell written by its pairing: reached, as [cell] reaches it, and no
+  /// occurrence of it in a scan.
+  void pairedCell(HeapCell c) => _cellRef(_roots, c, pairing: true);
 
   void u8(int v) => _roots.u8(v);
   void uint(int v) => _roots.uint(v);
@@ -248,8 +294,9 @@ class StateWriter {
     if (m != null) _roots.uint(_moduleIndex(m));
   }
 
-  void _cellRef(_Out o, HeapCell c) {
+  void _cellRef(_Out o, HeapCell c, {bool pairing = false}) {
     o.uint(c.id);
+    if (!pairing) _occurred?.add(c);
     if (_reached.add(c)) _pending.add(c);
   }
 
@@ -296,6 +343,7 @@ class StateWriter {
         o.u8(_tGlobalName);
         o.u8(x.isReader ? 1 : 0);
         o.str(x.agent);
+        o.uint(x.epoch);
         o.uint(x.index);
       } else {
         throw StateError('a term of kind ${x.runtimeType} has no saved form');
@@ -328,6 +376,15 @@ class StateWriter {
     }
   }
 
+  /// Whether [writer] is unbound and paired with [reader]: it points at
+  /// [reader], or holds it with the goals suspended on it.
+  static bool _unboundWriterOf(HeapCell writer, HeapCell reader) {
+    final content = writer.content;
+    if (content is Pointer) return identical(content.targetAddr, reader);
+    if (content is WriterContent) return identical(content.readerAddr, reader);
+    return false;
+  }
+
   void _cell(HeapCell c) {
     final o = _cells;
     o.uint(c.id);
@@ -337,17 +394,27 @@ class StateWriter {
       o.u8(0);
     } else {
       o.u8(1);
-      _cellRef(o, paired);
+      _cellRef(o, paired, pairing: true);
     }
     final content = c.content;
     if (content == null) {
       o.u8(_kNull);
     } else if (content is Pointer) {
       o.u8(_kPointer);
-      _cellRef(o, content.targetAddr);
+      // An unbound writer points to its paired reader, and an unbound reader
+      // to its writer, which points back at it or, with goals suspended on
+      // it, holds it in its [WriterContent]: a pairing, and no occurrence of
+      // the other.
+      final target = content.targetAddr;
+      final pairing = (c.tag == CellTag.WrtTag && identical(target, c.pairedReader)) ||
+          (c.tag == CellTag.RoTag &&
+              target.tag == CellTag.WrtTag &&
+              identical(target.pairedReader, c) &&
+              _unboundWriterOf(target, c));
+      _cellRef(o, target, pairing: pairing);
     } else if (content is WriterContent) {
       o.u8(_kWriter);
-      _cellRef(o, content.readerAddr);
+      _cellRef(o, content.readerAddr, pairing: true);
       // The suspension list, head first, each node naming its shared record.
       final nodes = <int>[];
       for (var n = content.suspensions; n != null; n = n.next) {
@@ -623,7 +690,10 @@ class StateReader {
           done = _modules[i];
         case _tGlobalName:
           done = GlobalNameTerm(
-              isReader: _in.u8() == 1, agent: _in.str(), index: _in.uint());
+              isReader: _in.u8() == 1,
+              agent: _in.str(),
+              epoch: _in.uint(),
+              index: _in.uint());
         default:
           throw SavedStateFormatException('a term has the bad tag $tag');
       }

@@ -2,11 +2,14 @@
 /// canonical encoding (IGLP app:in-networking, "Payloads").
 ///
 /// Normative source: the IGLP paper appendix `app:code-format`, §§cf-primitives,
-/// cf-terms. Variables travel as global names per Definition Globalize: a tag-2
-/// variable with a u8 polarity (0 writer `_w(p,i)`, 1 reader `_r(p,i)`), the
-/// agent, and a clen index. There is no original-creator identifier, no
-/// paired-reader field, and no serializer string marker — the serializer
-/// message's tail is the encoded variable `_w(q,0)`.
+/// cf-terms (IGLP db0a117, code-format version 4). Variables travel as global
+/// names per Definition Globalize: a tag-2 variable with a u8 polarity (0
+/// writer `_w(p,e,i)`, 1 reader `_r(p,e,i)`), the agent, a clen epoch and a
+/// clen index. There is no original-creator identifier, no paired-reader
+/// field, and no serializer string marker — the serializer message's tail is
+/// the encoded variable `_w(q,0,0)`.  Every message carries the epoch of its
+/// sender after its kind byte, and a fourth kind, gone, answers traffic for
+/// an end the receiver lost.
 ///
 /// On the madGLP send path a term is globalized before serialization
 /// (mad_context), so its variables are already global names, each a
@@ -32,63 +35,113 @@ class PayloadCodec {
   // madGLP assignment payloads
   // ==========================================================================
 
-  /// Encode the value message `G := T↑` (kind 0): the u8 kind, the global
-  /// name G (polarity, agent, index), then the encoding of T.
-  static List<int> createGlobalSendPayload(GlobalName globalName, Term value) {
-    return encodeMessageToBytes(WireValueMessage(WireAssignment(
-      gIsReader: globalName.isReader,
-      gAgent: _agentBytes(globalName.agent),
-      gIndex: globalName.index,
-      value: termToWire(value),
-    )));
+  /// Encode the value message `G := T↑` (kind 0): the u8 kind, the clen
+  /// epoch of the sender, the global name G (polarity, agent, epoch, index),
+  /// then the encoding of T.
+  static List<int> createGlobalSendPayload(GlobalName globalName, Term value,
+      {required int senderEpoch}) {
+    return encodeMessageToBytes(WireValueMessage(
+        WireAssignment(
+          gIsReader: globalName.isReader,
+          gAgent: _agentBytes(globalName.agent),
+          gEpoch: globalName.epoch,
+          gIndex: globalName.index,
+          value: termToWire(value),
+        ),
+        senderEpoch: senderEpoch));
   }
 
   /// Encode a serializer (cold-call) message to agent q: the value message
   /// `_w(q,0) := [T↑ | _w(q,0)]` under the sender's [serial], "an index the
-  /// sender allocates from its global-name counter" (§cf-terms, Messages).
-  /// The tail is the encoded variable `_w(q,0)`.
+  /// sender allocates from its global-name counter" in its epoch
+  /// [senderEpoch], "so that (p, e, i) is unique for the whole run"
+  /// (§cf-terms, Messages; Remark "Cold-Call via Serializer").  The tail is
+  /// the encoded variable `_w(q,0,0)`.
   static List<int> createSerializerPayload(
       GlobalName serializerName, Term content,
-      {required int serial}) {
-    assert(serializerName.isWriter && serializerName.index == 0,
-        'Serializer payload requires _w(agent, 0) global name');
-    return encodeMessageToBytes(WireValueMessage(WireAssignment.serializer(
-      agent: _agentBytes(serializerName.agent),
-      head: termToWire(content),
-      serial: serial,
-    )));
+      {required int serial, required int senderEpoch}) {
+    assert(serializerName.isSerializer,
+        'Serializer payload requires _w(agent, 0, 0) global name');
+    return encodeMessageToBytes(WireValueMessage(
+        WireAssignment.serializer(
+          agent: _agentBytes(serializerName.agent),
+          head: termToWire(content),
+          serial: serial,
+        ),
+        senderEpoch: senderEpoch));
   }
 
-  /// Encode a request `req(_r(p,i))` (kind 1): u8 kind, polarity (1), agent,
-  /// clen index — no term.
-  static List<int> createRequestPayload(GlobalName globalName) {
+  /// Encode a request `req(_r(p,e,i))` (kind 1): u8 kind, clen sender epoch,
+  /// polarity (1), agent, clen epoch, clen index — no term.
+  static List<int> createRequestPayload(GlobalName globalName,
+      {required int senderEpoch}) {
     assert(globalName.isReader, 'a request carries a reader name');
     return encodeMessageToBytes(WireRequestMessage.symbolic(
-        agent: globalName.agent, index: globalName.index));
+        agent: globalName.agent,
+        epoch: globalName.epoch,
+        index: globalName.index,
+        senderEpoch: senderEpoch));
   }
 
-  /// Encode an acknowledgement `ack(_r(p,i))` (kind 2): u8 kind, polarity (1),
-  /// agent, clen index — no term.
-  static List<int> createAckPayload(GlobalName globalName) {
+  /// Encode an acknowledgement `ack(_r(p,e,i))` (kind 2): u8 kind, clen
+  /// sender epoch, polarity (1), agent, clen epoch, clen index — no term.
+  static List<int> createAckPayload(GlobalName globalName,
+      {required int senderEpoch}) {
     assert(globalName.isReader, 'an acknowledgement carries a reader name');
     return encodeMessageToBytes(WireAckMessage.symbolic(
-        agent: globalName.agent, index: globalName.index));
+        agent: globalName.agent,
+        epoch: globalName.epoch,
+        index: globalName.index,
+        senderEpoch: senderEpoch));
   }
 
-  /// Decode a request or acknowledgement payload (kind 1 or 2) to its reader
-  /// global name. Throws on a value message or malformed bytes, and
-  /// [GlobalNameRefusal] where the name's agent is not an atom.
-  static GlobalName decodeRequestOrAckPayload(List<int> payload) {
-    final m = decodeMessageFromBytes(_asUint8(payload));
-    return switch (m) {
-      WireRequestMessage(:final agent, :final index) =>
-        GlobalName.reader(_agentAtom(agent, true, index), index),
-      WireAckMessage(:final agent, :final index) =>
-        GlobalName.reader(_agentAtom(agent, true, index), index),
-      WireValueMessage() => throw WireFormatException(
-          'expected request/acknowledgement, got value message'),
-    };
+  /// Encode a `gone(G)` (kind 3), which answers traffic for the end G its
+  /// sender lost (IGLP db0a117, "Requests and Acknowledgements"): u8 kind,
+  /// clen sender epoch, polarity of G, agent, clen epoch, clen index — no
+  /// term.
+  static List<int> createGonePayload(GlobalName globalName,
+      {required int senderEpoch}) {
+    return encodeMessageToBytes(WireGoneMessage.symbolic(
+        isReader: globalName.isReader,
+        agent: globalName.agent,
+        epoch: globalName.epoch,
+        index: globalName.index,
+        senderEpoch: senderEpoch));
   }
+
+  /// Decode a request, acknowledgement or gone payload (kind 1, 2 or 3) to
+  /// its kind, the global name it carries and its sender's epoch. Throws on a
+  /// value message or malformed bytes, and [GlobalNameRefusal] where the
+  /// name's agent is not an atom.
+  static ({int kind, GlobalName name, int senderEpoch}) decodeLinkPayload(
+      List<int> payload) {
+    final m = decodeMessageFromBytes(_asUint8(payload));
+    if (m is! WireLinkMessage) {
+      throw WireFormatException(
+          'expected request/acknowledgement/gone, got value message');
+    }
+    final agent = _agentAtom(m.agent, m.isReader, m.epoch, m.index);
+    return (
+      kind: m.kind,
+      name: m.isReader
+          ? GlobalName.reader(agent, m.index, epoch: m.epoch)
+          : GlobalName.writer(agent, m.index, epoch: m.epoch),
+      senderEpoch: m.senderEpoch,
+    );
+  }
+
+  /// The epoch of the sender a message [payload] carries after its kind
+  /// byte, whatever its kind.
+  static int senderEpochOf(List<int> payload) {
+    final r = WireReader(_asUint8(payload));
+    r.u8();
+    return r.clen();
+  }
+
+  /// [payload] with its sender's epoch rewritten to [senderEpoch]
+  /// ([messageWithSenderEpoch]).
+  static Uint8List withSenderEpoch(List<int> payload, int senderEpoch) =>
+      messageWithSenderEpoch(_asUint8(payload), senderEpoch);
 
   /// Decode a global-send (value) payload to (GlobalName, Term). Embedded
   /// variables return as [GlobalNameTerm]s for the localize machinery, and
@@ -114,29 +167,32 @@ class PayloadCodec {
   /// A serializer message's serial is not returned; the Receive transaction
   /// takes it from [deserializeValuePayload].
   static (GlobalName, Term) deserializeGlobalSendPayload(List<int> payload) {
-    final (:name, :value, serial: _) = deserializeValuePayload(payload);
+    final (:name, :value, serial: _, senderEpoch: _) =
+        deserializeValuePayload(payload);
     return (name, value);
   }
 
-  /// [deserializeGlobalSendPayload] with the serial: a serializer message to
-  /// `_w(q,0)` carries the serial its sender allocated, which with the sender
-  /// names the cold call for the whole run (§cf-terms, Messages); [serial] is
-  /// null for every other value message.
-  static ({GlobalName name, Term value, int? serial}) deserializeValuePayload(
-      List<int> payload) {
+  /// [deserializeGlobalSendPayload] with the serial and the sender's epoch: a
+  /// serializer message to `_w(q,0)` carries the serial its sender allocated,
+  /// which with the sender and its epoch names the cold call for the whole
+  /// run (§cf-terms, Messages); [serial] is null for every other value
+  /// message.
+  static ({GlobalName name, Term value, int? serial, int senderEpoch})
+      deserializeValuePayload(List<int> payload) {
     final m = decodeMessageFromBytes(_asUint8(payload));
     if (m is! WireValueMessage) {
       throw WireFormatException('expected value message (kind 0)');
     }
     final a = m.assignment;
-    final agent = _agentAtom(a.gAgent, a.gIsReader, a.gIndex);
+    final agent = _agentAtom(a.gAgent, a.gIsReader, a.gEpoch, a.gIndex);
     final globalName = a.gIsReader
-        ? GlobalName.reader(agent, a.gIndex)
-        : GlobalName.writer(agent, a.gIndex);
+        ? GlobalName.reader(agent, a.gIndex, epoch: a.gEpoch)
+        : GlobalName.writer(agent, a.gIndex, epoch: a.gEpoch);
     return (
       name: globalName,
       value: _wireToTerm(a.value, receipt: true),
       serial: a.serial,
+      senderEpoch: m.senderEpoch,
     );
   }
 
@@ -211,7 +267,10 @@ class PayloadCodec {
       return WConst(WModule((term.artefact as Artefact).toBytes()));
     } else if (term is GlobalNameTerm) {
       return WVar.symbolic(
-          isReader: term.isReader, agent: term.agent, index: term.index);
+          isReader: term.isReader,
+          agent: term.agent,
+          epoch: term.epoch,
+          index: term.index);
     } else if (term is StructTerm) {
       return null;
     } else if (term is VarRef) {
@@ -301,15 +360,16 @@ class PayloadCodec {
           return ModuleTerm(artefact, name: artefact.moduleName);
         }
         return ConstTerm(_constFromWire(constant));
-      case WVar(:final isReader, :final agent, :final index):
+      case WVar(:final isReader, :final agent, :final epoch, :final index):
         if (!receipt) {
           throw WireFormatException('a ground term contains tags 1 and 3 '
               'only, and this one carries the variable '
-              '${_shownName(isReader, agent, index)}');
+              '${_shownName(isReader, agent, epoch, index)}');
         }
         return GlobalNameTerm(
             isReader: isReader,
-            agent: _agentAtom(agent, isReader, index),
+            agent: _agentAtom(agent, isReader, epoch, index),
+            epoch: epoch,
             index: index);
       case WStruct():
         throw ArgumentError('a structure is mapped by wireToTerm, not here');
@@ -324,17 +384,19 @@ class PayloadCodec {
   /// agent; Implementation Notes: "agent identifiers in global names remain
   /// symbolic"); bytes that are no UTF-8 text name no atom, and
   /// [GlobalNameRefusal] is thrown, naming the name.
-  static String _agentAtom(Uint8List agent, bool isReader, int index) {
+  static String _agentAtom(
+      Uint8List agent, bool isReader, int epoch, int index) {
     try {
       return utf8.decode(agent);
     } on FormatException {
-      throw GlobalNameRefusal(_shownName(isReader, agent, index));
+      throw GlobalNameRefusal(_shownName(isReader, agent, epoch, index));
     }
   }
 
   /// The global name as a diagnostic names it: its agent as text where the
   /// bytes are UTF-8, and as `0x` and their hexadecimal digits otherwise.
-  static String _shownName(bool isReader, Uint8List agent, int index) {
+  static String _shownName(
+      bool isReader, Uint8List agent, int epoch, int index) {
     String shownAgent;
     try {
       shownAgent = utf8.decode(agent);
@@ -342,7 +404,7 @@ class PayloadCodec {
       shownAgent =
           '0x${agent.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
     }
-    return '${isReader ? '_r' : '_w'}($shownAgent, $index)';
+    return '${isReader ? '_r' : '_w'}($shownAgent, $epoch, $index)';
   }
 
   static WireConst _constToWire(Object? v) {
@@ -391,9 +453,9 @@ class PayloadCodec {
 /// A received message is refused: a global name it carries has an agent that
 /// is not an atom (IGLP code-format-fragment.tex, Terms, tag 2: "the reader
 /// refuses a global name whose agent or index is anything else").  Its index
-/// is a clen, a non-negative integer by its encoding.
+/// and its epoch are clens, non-negative integers by their encoding.
 class GlobalNameRefusal extends WireFormatException {
-  /// The global name, as `_w(0xfffe, 2)`.
+  /// The global name, as `_w(0xfffe, 1, 2)`.
   final String name;
 
   GlobalNameRefusal(this.name)

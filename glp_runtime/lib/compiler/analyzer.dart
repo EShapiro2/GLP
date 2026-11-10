@@ -26,6 +26,11 @@ class VariableInfo {
   // ([VariableTable.collectSRSWViolations]).
   int writerOccurrencesHead = 0;
 
+  // Reader occurrences in the clause head alone: where the writer occurs in
+  // a widowed guard, its reader occurs here and nowhere else (the GLP paper
+  // f577e20, Remark "Guards and SRSW").
+  int readerOccurrencesHead = 0;
+
   // First occurrence location
   AstNode? firstOccurrence;
 
@@ -90,7 +95,8 @@ class VariableTable {
   /// Record a reader occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
   /// Anonymous variables (names starting with '_') are not tracked for SRSW.
-  void recordReaderOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
+  void recordReaderOccurrence(String name, AstNode node,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     // Skip anonymous variables - they don't participate in SRSW
     if (name.startsWith('_')) return;
     
@@ -101,6 +107,7 @@ class VariableTable {
 
     // Record reader occurrence
     writerInfo.readerOccurrences++;
+    if (inHead) writerInfo.readerOccurrencesHead++;
     if (inHeadOrBody) {
       writerInfo.readerOccurrencesHeadBody++;
     }
@@ -115,6 +122,25 @@ class VariableTable {
   }
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
+
+  // The variables occurring in a widowed guard, each as the mode it occurs
+  // there in: the writer X (`widowed(X)`) or the reader X? (`widowed(X?)`)
+  // (the GLP paper f577e20, glp.tex, Remark "Guards and SRSW": "if X occurs
+  // in a widowed guard, X? occurs in the head, X in the guard, and neither
+  // elsewhere in the clause; and if X? occurs in a widowed guard, X occurs in
+  // the head, X? in the guard, and neither elsewhere in the clause";
+  // Definition "SRSW of a Guarded Clause": the iff of a variable and its
+  // paired one holds "but for a variable occurring in a widowed guard of C,
+  // whose paired variable occurs in the head of C, and neither occurs
+  // elsewhere in C").
+  final Map<String, bool> _widowedVars = {};
+
+  /// Mark [varName] as occurring in a widowed guard, as a writer or, where
+  /// [asReader], as a reader.
+  void markWidowed(String varName, {required bool asReader}) =>
+      _widowedVars[varName] = asReader;
+
+  bool isWidowed(String varName) => _widowedVars.containsKey(varName);
 
   /// Whether the WRITER may occur more than once: "if the success of a guard
   /// implies that X? is bound to a ground term, then both X and X? may occur
@@ -163,6 +189,48 @@ class VariableTable {
       // Skip anonymous variables (names starting with _) - they are exempt from SRSW
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
+
+      // A variable of a widowed guard: the variable in the guard, its pair
+      // in the head, and neither elsewhere in the clause (the GLP paper
+      // f577e20, Remark "Guards and SRSW" and Definition "SRSW of a Guarded
+      // Clause").  `widowed(X)`: X? once in the head, X in the guard and
+      // nowhere else; `widowed(X?)`: X once in the head, X? in the guard and
+      // nowhere else.
+      final widowedAsReader = _widowedVars[info.name];
+      if (widowedAsReader != null) {
+        final line = info.firstOccurrence?.line ?? 0;
+        if (!widowedAsReader) {
+          // widowed(X): the writer in the guard, the reader in the head.
+          if (info.readerOccurrencesHead != 1 ||
+              info.readerOccurrencesHeadBody != 1) {
+            violations.add('Line $line: Reader variable "${info.name}?" of a '
+                'widowed guard over the writer "${info.name}" must occur once, '
+                'in the head, and nowhere else in the clause');
+          }
+          if (info.writerOccurrencesHeadBody != 0 ||
+              info.writerOccurrences != 1) {
+            violations.add('Line $line: Writer variable "${info.name}" of a '
+                'widowed guard occurs in the guard and nowhere else in the '
+                'clause');
+          }
+        } else {
+          // widowed(X?): the reader in the guard, the writer in the head.
+          if (info.writerOccurrencesHead != 1 ||
+              info.writerOccurrencesHeadBody != 1 ||
+              info.writerOccurrences != 1) {
+            violations.add('Line $line: Writer variable "${info.name}" of a '
+                'widowed guard over the reader "${info.name}?" must occur '
+                'once, in the head, and nowhere else in the clause');
+          }
+          if (info.readerOccurrencesHeadBody != 0 ||
+              info.readerOccurrences != 1) {
+            violations.add('Line $line: Reader variable "${info.name}?" of a '
+                'widowed guard occurs in the guard and nowhere else in the '
+                'clause');
+          }
+        }
+        continue;
+      }
 
       // Check writer occurrences.  SRSW requires SO, "every variable occurs in
       // it at most once" (GLP-Spec glp.tex, Definitions "Single-Occurrence (SO)
@@ -485,6 +553,14 @@ class Analyzer {
       );
     }
 
+    // widowed(X) and widowed(X?): the variable in the guard, its pair in the
+    // head, neither elsewhere ([VariableTable.collectSRSWViolations]; the GLP
+    // paper f577e20, Remark "Guards and SRSW").
+    if (guard.predicate == 'widowed' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) varTable.markWidowed(arg.name, asReader: arg.isReader);
+    }
+
     // Special handling for ground/1
     // ground(X?) implies the argument is fully ground (no unbound variables)
     if (guard.predicate == 'ground' && guard.args.length == 1) {
@@ -628,7 +704,8 @@ class Analyzer {
       if (t.name.startsWith('_')) return;
 
       if (t.isReader) {
-        varTable.recordReaderOccurrence(t.name, t, inHeadOrBody: inHeadOrBody);
+        varTable.recordReaderOccurrence(t.name, t,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       } else {
         varTable.recordWriterOccurrence(t.name, t,
             inHeadOrBody: inHeadOrBody, inHead: inHead);

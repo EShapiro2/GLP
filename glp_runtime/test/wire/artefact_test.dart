@@ -57,11 +57,12 @@ Artefact _sample({PersonIdentity? signer}) => Artefact(
 
 void main() {
   group('artefact byte format', () {
-    test('header begins with magic GLPW and code-format version 3', () {
+    test('header begins with magic GLPW and code-format version 4', () {
       final b = _sample().toBytes();
       expect(b.sublist(0, 4), artefactMagic); // 'GLPW'
-      expect(b[4], wireFormatVersion); // 3 (the serializer message's serial)
-      expect(wireFormatVersion, 3);
+      expect(b[4], wireFormatVersion); // 4 (the epoch in a global name, the
+      // sender's epoch in a message and the kind gone; IGLP db0a117)
+      expect(wireFormatVersion, 4);
     });
 
     test('neither identity is in the header: the body is followed by the '
@@ -240,7 +241,7 @@ void main() {
     // certificate's compiled identity and the certificate verifies.
     test('refuses a code-format version-2 artefact', () {
       final body = Uint8List.fromList(_sample().bodyBytes());
-      expect(body[4], 3);
+      expect(body[4], 4);
       body[4] = 2;
       final cert = Certificate.signed(
           signer: _compiler,

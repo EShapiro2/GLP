@@ -22,59 +22,93 @@ enum GlobalNameType {
   reader,
 }
 
-/// Global variable name: `_w(p, i)` or `_r(p, i)`
+/// Global variable name: `_w(p, e, i)` or `_r(p, e, i)`, where p is the
+/// allocating agent, the link's anchor, e the epoch of p at the allocation
+/// and i the index p allocated (IGLP db0a117, Definition "Global Variable
+/// Name").  A name's epoch is fixed: "a name of p allocated in one epoch is
+/// allocated again in no later one" (Termination and Restart), so names are
+/// unique across p's crashes, whose restarts open new epochs.  The
+/// serializer is `_w(p, 0, 0)`, "of epoch 0 and of every epoch of p"
+/// (Definition "Index-0 Serializer").  To a program a name is the 2-ary
+/// structure `'_w'(P, I)` or `'_r'(P, I)`, the epoch not at issue ([toStruct];
+/// "Where the epoch is not at issue we write _w(p, i) for _w(p, e_p, i)").
 ///
 /// See: IGLP Definition Global Variable Name (app:global-variable-names)
 class GlobalName {
   final GlobalNameType type;
   final String agent;
+  final int epoch;
   final int index;
 
-  GlobalName(this.type, this.agent, this.index);
+  GlobalName(this.type, this.agent, this.epoch, this.index);
 
-  /// Create a writer global name `_w(agent, index)`
-  GlobalName.writer(this.agent, this.index) : type = GlobalNameType.writer;
+  /// Create a writer global name `_w(agent, epoch, index)`.  [epoch] is the
+  /// anchor's epoch at the allocation; where not given, 0 for the serializer,
+  /// index 0, and 1 otherwise, the epoch of every agent at its first start,
+  /// which an agent that never crashed is in still (Definition "Epoch").
+  GlobalName.writer(this.agent, this.index, {int? epoch})
+      : type = GlobalNameType.writer,
+        epoch = epoch ?? (index == 0 ? 0 : 1);
 
-  /// Create a reader global name `_r(agent, index)`
-  GlobalName.reader(this.agent, this.index) : type = GlobalNameType.reader;
+  /// Create a reader global name `_r(agent, epoch, index)`; [epoch] as
+  /// [GlobalName.writer] takes it.
+  GlobalName.reader(this.agent, this.index, {int? epoch})
+      : type = GlobalNameType.reader,
+        epoch = epoch ?? (index == 0 ? 0 : 1);
 
   bool get isWriter => type == GlobalNameType.writer;
   bool get isReader => type == GlobalNameType.reader;
 
+  /// Whether this is the serializer name `_w(p, 0, 0)`.
+  bool get isSerializer => isWriter && index == 0;
+
   @override
-  String toString() =>
-      type == GlobalNameType.writer ? '_w($agent, $index)' : '_r($agent, $index)';
+  String toString() => type == GlobalNameType.writer
+      ? '_w($agent, $epoch, $index)'
+      : '_r($agent, $epoch, $index)';
 
   @override
   bool operator ==(Object other) =>
       other is GlobalName &&
       type == other.type &&
       agent == other.agent &&
+      epoch == other.epoch &&
       index == other.index;
 
   @override
-  int get hashCode => Object.hash(type, agent, index);
+  int get hashCode => Object.hash(type, agent, epoch, index);
 
   /// The name [t] stands for, a global name in the place of a variable.  A
   /// structure `'_w'(P, I)` or `'_r'(P, I)` presents no such name: it is a
   /// program's term (IGLP madglp-spec.tex:17, at IGLP 1e01638).
   static GlobalName fromTerm(GlobalNameTerm t) => t.isReader
-      ? GlobalName.reader(t.agent, t.index)
-      : GlobalName.writer(t.agent, t.index);
+      ? GlobalName.reader(t.agent, t.index, epoch: t.epoch)
+      : GlobalName.writer(t.agent, t.index, epoch: t.epoch);
 
   /// This name in the place of a variable, as Globalize puts it in T↑.
-  GlobalNameTerm toTerm() =>
-      GlobalNameTerm(isReader: isReader, agent: agent, index: index);
+  GlobalNameTerm toTerm() => GlobalNameTerm(
+      isReader: isReader, agent: agent, epoch: epoch, index: index);
 
   /// This name as the 2-ary structure a program sees, `'_w'(P, I)` or
-  /// `'_r'(P, I)`, functor giving polarity, first argument the anchor.
+  /// `'_r'(P, I)`, functor giving polarity, first argument the anchor; the
+  /// epoch is not at issue to a program (IGLP db0a117, "Global Variable
+  /// Names": "To a program it is a ground term---the 2-ary structures").
   StructTerm toStruct() =>
       StructTerm(isWriter ? '_w' : '_r', [ConstTerm(agent), ConstTerm(index)]);
+
+  /// The name of the other polarity, the paired end's: `_r(p, e, i)` for
+  /// `_w(p, e, i)` and the converse.
+  GlobalName get paired => GlobalName(
+      isWriter ? GlobalNameType.reader : GlobalNameType.writer,
+      agent,
+      epoch,
+      index);
 
   /// Write this name into an agent's saved state.
   void save(StateWriter w) {
     w.boolean(isWriter);
     w.str(agent);
+    w.uint(epoch);
     w.uint(index);
   }
 
@@ -82,10 +116,11 @@ class GlobalName {
   static GlobalName restore(StateReader r) {
     final isWriter = r.boolean();
     final agent = r.str();
+    final epoch = r.uint();
     final index = r.uint();
     return isWriter
-        ? GlobalName.writer(agent, index)
-        : GlobalName.reader(agent, index);
+        ? GlobalName.writer(agent, index, epoch: epoch)
+        : GlobalName.reader(agent, index, epoch: epoch);
   }
 }
 
@@ -244,6 +279,7 @@ class LocalizeResult {
 GlobalizeResult globalize({
   required List<TermVar> variables,
   required String localAgent,
+  required int localEpoch,
   required String remoteAgent,
   required GlobalWritersTable table,
   required ImportedWriterRecords records,
@@ -263,8 +299,7 @@ GlobalizeResult globalize({
       // value has already gone carries none.
       final importedWriter = records.remove(v.writerAddr);
       if (importedWriter != null) {
-        globalNames.add(
-            GlobalName.writer(importedWriter.anchor, importedWriter.index));
+        globalNames.add(importedWriter.name);
         forwardedWriters.add(importedWriter);
         continue;
       }
@@ -275,7 +310,7 @@ GlobalizeResult globalize({
       //        No goal is spawned—p will receive the assignment on this link."
       // Entry stores the writer address Y for later binding when value arrives.
       final index = table.addGlobalizeEntry(v.writerAddr, remoteAgent);
-      globalNames.add(GlobalName.writer(localAgent, index));
+      globalNames.add(GlobalName.writer(localAgent, index, epoch: localEpoch));
       continue;
     }
 
@@ -285,9 +320,8 @@ GlobalizeResult globalize({
     // implies the reader is unbound — applying the incoming value removes it.
     final imported = table.findLocalizeEntryByWriter(v.writerAddr);
     if (imported != null) {
-      final original =
-          GlobalName.reader(imported.remoteAgent, imported.remoteIndex);
-      table.removeLocalizeEntry(imported.remoteAgent, imported.remoteIndex);
+      final original = imported.name;
+      table.removeLocalizeEntry(original);
       globalNames.add(original);
       forwardedNames.add(original);
       continue;
@@ -298,7 +332,7 @@ GlobalizeResult globalize({
     //        and spawn global_send(Y?, _r(p,i), q). No entry is created—
     //        the global_send goal handles outgoing communication."
     final index = table.allocateIndex();
-    final globalName = GlobalName.reader(localAgent, index);
+    final globalName = GlobalName.reader(localAgent, index, epoch: localEpoch);
     globalNames.add(globalName);
 
     // Spawn global_send(Y?, _r(p,i), q)
@@ -375,7 +409,7 @@ LocalizeResult localize({
       // was forwarded, and the value that goal produces is held" (Definition
       // Held Link, case 2). The hold happens at binding, long after this
       // message is gone, so the sender has to travel in the record.
-      records.add(writerAddr, gn.agent, gn.index, fromAgent);
+      records.add(writerAddr, gn, fromAgent);
 
       // Spawn global_send(Y_q?, _w(p,i), p)
       // When q assigns Y_q, Y_q? becomes known, gs fires and sends value to p.
@@ -393,7 +427,7 @@ LocalizeResult localize({
       //        in W'_q, add entry (Z_q, p, i), and replace _r(p, i) with Z_q?
       //        (the reader) in T_q↓. No goal is spawned—q will receive the
       //        assignment on this link."
-      table.addLocalizeEntry(writerAddr, gn.agent, gn.index);
+      table.addLocalizeEntry(writerAddr, gn);
       useReader.add(true); // Use Z_q? (reader)
 
       // Request rule: "If the sending agent is not p, the name was forwarded,

@@ -227,6 +227,12 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
             _caught(e, stack);
             return false;
           });
+        } else if (state == AppLifecycleState.resumed) {
+          // The suspension ends: the agent takes events again, and the
+          // running mark is set (IGLP db0a117, Persistence, When).
+          host.resume().catchError((Object e, StackTrace stack) {
+            _caught(e, stack);
+          });
         }
       });
       try {

@@ -168,7 +168,7 @@ void main() {
     bob.flushMessages();
     expect(toAlice, hasLength(1));
     expect(toAlice.single[0], wireMsgKindAcknowledgement);
-    expect(PayloadCodec.decodeRequestOrAckPayload(toAlice.single), link);
+    expect(PayloadCodec.decodeLinkPayload(toAlice.single).name, link);
     aliceCtx.handleIncomingPayload(payload: toAlice.single, fromAgent: 'bob');
     expect(aliceCtx.pendingReaderValueCount, 0);
     expect(aliceCtx.globalSendRegistry.pendingCount, 0);

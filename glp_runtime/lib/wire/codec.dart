@@ -120,16 +120,28 @@ class WConst extends WireTerm {
 /// 2 variable — a global name per Definition Globalize: polarity (writer
 /// `_w(p,i)` / reader `_r(p,i)`), agent p (raw bytes), index i.
 class WVar extends WireTerm {
-  /// false = writer `_w(p,i)`, true = reader `_r(p,i)` (the polarity u8).
+  /// false = writer `_w(p,e,i)`, true = reader `_r(p,e,i)` (the polarity u8).
   final bool isReader;
   final Uint8List agent;
+
+  /// The epoch of the agent at the allocation, a clen after the agent (IGLP
+  /// db0a117, §cf-terms, tag 2; new in code-format version 4): 0 for the
+  /// serializer, `_w(q, 0, 0)`.
+  final int epoch;
   final int index;
-  WVar({required this.isReader, required this.agent, required this.index});
+  WVar(
+      {required this.isReader,
+      required this.agent,
+      required this.epoch,
+      required this.index});
 
   /// Build a variable whose agent is a UTF-8 symbolic name (simulation
   /// realisation).
   WVar.symbolic(
-      {required this.isReader, required String agent, required this.index})
+      {required this.isReader,
+      required String agent,
+      required this.epoch,
+      required this.index})
       : agent = Uint8List.fromList(utf8.encode(agent));
 
   /// The agent decoded as a UTF-8 symbolic name (simulation realisation).
@@ -139,10 +151,12 @@ class WVar extends WireTerm {
   bool operator ==(Object other) =>
       other is WVar &&
       other.isReader == isReader &&
+      other.epoch == epoch &&
       other.index == index &&
       bytesEqual(other.agent, agent);
   @override
-  int get hashCode => Object.hash(isReader, index, Object.hashAll(agent));
+  int get hashCode =>
+      Object.hash(isReader, epoch, index, Object.hashAll(agent));
 }
 
 /// 3 structure — functor, arity n, then n arguments in order.
@@ -160,16 +174,21 @@ class WStruct extends WireTerm {
 }
 
 /// An assignment message `G := T↑` (§cf-terms, Messages). G is a global name;
-/// the message carries G's polarity, agent, and index, then the encoding of T.
+/// the message carries G's polarity, agent, epoch and index, then the
+/// encoding of T.
 ///
 /// A message to `_w(q,0)` is a serializer (cold-call) message and carries a
 /// [serial] after the index, and no other message does: "polarity 0, agent q,
-/// index 0, clen serial, then the encoding of the list cell" (§cf-terms,
-/// Messages; new in code-format version 3).
+/// epoch 0, index 0, clen serial, then the encoding of the list cell"
+/// (§cf-terms, Messages; the serial new in code-format version 3, the epoch
+/// in version 4).
 class WireAssignment {
   /// Polarity of G: false = writer `_w`, true = reader `_r`.
   final bool gIsReader;
   final Uint8List gAgent;
+
+  /// The epoch in G, the anchor's at the allocation; 0 for the serializer.
+  final int gEpoch;
   final int gIndex;
   final WireTerm value;
 
@@ -182,6 +201,7 @@ class WireAssignment {
   WireAssignment(
       {required this.gIsReader,
       required this.gAgent,
+      required this.gEpoch,
       required this.gIndex,
       required this.value,
       this.serial}) {
@@ -210,10 +230,11 @@ class WireAssignment {
       {required Uint8List agent,
       required WireTerm head,
       required int serial}) {
-    final tail = WVar(isReader: false, agent: agent, index: 0);
+    final tail = WVar(isReader: false, agent: agent, epoch: 0, index: 0);
     return WireAssignment(
       gIsReader: false,
       gAgent: agent,
+      gEpoch: 0,
       gIndex: 0,
       value: WStruct('.', [head, tail]),
       serial: serial,
@@ -224,82 +245,166 @@ class WireAssignment {
   bool operator ==(Object other) =>
       other is WireAssignment &&
       other.gIsReader == gIsReader &&
+      other.gEpoch == gEpoch &&
       other.gIndex == gIndex &&
       other.serial == serial &&
       other.value == value &&
       bytesEqual(other.gAgent, gAgent);
   @override
-  int get hashCode =>
-      Object.hash(gIsReader, gIndex, serial, value, Object.hashAll(gAgent));
+  int get hashCode => Object.hash(
+      gIsReader, gEpoch, gIndex, serial, value, Object.hashAll(gAgent));
 }
 
 // ============================================================================
-// Message kinds (§cf-terms, Messages) — code-format version 2
+// Message kinds (§cf-terms, Messages) — code-format versions 2 and 4
 // ============================================================================
 
 /// Message kind byte: every message opens with a u8 kind.
 const int wireMsgKindValue = 0;
 const int wireMsgKindRequest = 1;
 const int wireMsgKindAcknowledgement = 2;
+const int wireMsgKindGone = 3;
 
 /// A madGLP message (§cf-terms, Messages). Opens with a u8 kind: 0 value,
-/// 1 request, 2 acknowledgement. The kind byte is new in code-format
-/// version 2.
+/// 1 request, 2 acknowledgement, 3 gone; then the clen epoch of the sender,
+/// [senderEpoch], "the epoch its sender is in when it sends it" (IGLP
+/// db0a117, Definition "madGLP Local State", the paragraph after it).  The
+/// kind byte is new in code-format version 2, the sender's epoch and the
+/// kind gone in version 4.
 sealed class WireMessage {
-  const WireMessage();
+  /// The epoch of the sender when it sends the message.
+  final int senderEpoch;
+  const WireMessage({required this.senderEpoch});
 }
 
 /// Kind 0 — a value `G := T↑`.
 class WireValueMessage extends WireMessage {
   final WireAssignment assignment;
-  const WireValueMessage(this.assignment);
+  const WireValueMessage(this.assignment, {required super.senderEpoch});
   @override
   bool operator ==(Object other) =>
-      other is WireValueMessage && other.assignment == assignment;
+      other is WireValueMessage &&
+      other.senderEpoch == senderEpoch &&
+      other.assignment == assignment;
   @override
-  int get hashCode => assignment.hashCode;
+  int get hashCode => Object.hash(senderEpoch, assignment);
 }
 
-/// Kind 1 — a request `req(G)`. G is a reader name `_r(p,i)`: the message
-/// carries polarity (1), agent, and clen index — no term follows.
-class WireRequestMessage extends WireMessage {
+/// A message naming a link and carrying no term: a request `req(G)`, an
+/// acknowledgement `ack(G)` or a `gone(G)`, which "continues: u8 polarity of
+/// G, agent of G, clen epoch of G, clen index of G; no term follows"
+/// (§cf-terms, Messages).
+sealed class WireLinkMessage extends WireMessage {
+  /// The polarity of G: a request and an acknowledgement carry a reader name,
+  /// `_r(p, e, i)`; a gone carries the name of the end lost, of either
+  /// polarity.
+  final bool isReader;
   final Uint8List agent;
+  final int epoch;
   final int index;
-  WireRequestMessage({required this.agent, required this.index});
-
-  /// Build with a UTF-8 symbolic agent name (simulation realisation).
-  WireRequestMessage.symbolic({required String agent, required this.index})
-      : agent = Uint8List.fromList(utf8.encode(agent));
+  WireLinkMessage(
+      {required this.isReader,
+      required this.agent,
+      required this.epoch,
+      required this.index,
+      required super.senderEpoch});
 
   String get agentString => utf8.decode(agent);
+
+  /// The u8 kind of this message.
+  int get kind;
+
   @override
   bool operator ==(Object other) =>
-      other is WireRequestMessage &&
+      other is WireLinkMessage &&
+      other.kind == kind &&
+      other.isReader == isReader &&
+      other.epoch == epoch &&
       other.index == index &&
+      other.senderEpoch == senderEpoch &&
       bytesEqual(other.agent, agent);
   @override
-  int get hashCode => Object.hash(index, Object.hashAll(agent));
+  int get hashCode =>
+      Object.hash(kind, isReader, epoch, index, senderEpoch, Object.hashAll(agent));
 }
 
-/// Kind 2 — an acknowledgement `ack(G)`. G is a reader name `_r(p,i)`: the
-/// message carries polarity (1), agent, and clen index — no term follows.
-class WireAckMessage extends WireMessage {
-  final Uint8List agent;
-  final int index;
-  WireAckMessage({required this.agent, required this.index});
+/// Kind 1 — a request `req(G)`. G is a reader name `_r(p,e,i)`.
+class WireRequestMessage extends WireLinkMessage {
+  WireRequestMessage(
+      {required super.agent,
+      required super.epoch,
+      required super.index,
+      required super.senderEpoch})
+      : super(isReader: true);
 
   /// Build with a UTF-8 symbolic agent name (simulation realisation).
-  WireAckMessage.symbolic({required String agent, required this.index})
-      : agent = Uint8List.fromList(utf8.encode(agent));
+  WireRequestMessage.symbolic(
+      {required String agent,
+      required int epoch,
+      required int index,
+      required int senderEpoch})
+      : this(
+            agent: Uint8List.fromList(utf8.encode(agent)),
+            epoch: epoch,
+            index: index,
+            senderEpoch: senderEpoch);
 
-  String get agentString => utf8.decode(agent);
   @override
-  bool operator ==(Object other) =>
-      other is WireAckMessage &&
-      other.index == index &&
-      bytesEqual(other.agent, agent);
+  int get kind => wireMsgKindRequest;
+}
+
+/// Kind 2 — an acknowledgement `ack(G)`. G is a reader name `_r(p,e,i)`.
+class WireAckMessage extends WireLinkMessage {
+  WireAckMessage(
+      {required super.agent,
+      required super.epoch,
+      required super.index,
+      required super.senderEpoch})
+      : super(isReader: true);
+
+  /// Build with a UTF-8 symbolic agent name (simulation realisation).
+  WireAckMessage.symbolic(
+      {required String agent,
+      required int epoch,
+      required int index,
+      required int senderEpoch})
+      : this(
+            agent: Uint8List.fromList(utf8.encode(agent)),
+            epoch: epoch,
+            index: index,
+            senderEpoch: senderEpoch);
+
   @override
-  int get hashCode => Object.hash(index, Object.hashAll(agent));
+  int get kind => wireMsgKindAcknowledgement;
+}
+
+/// Kind 3 — a `gone(G)`, "which answers traffic for an end its receiver lost"
+/// (IGLP db0a117, "Requests and Acknowledgements"): G names the end, of
+/// either polarity.  New in code-format version 4.
+class WireGoneMessage extends WireLinkMessage {
+  WireGoneMessage(
+      {required super.isReader,
+      required super.agent,
+      required super.epoch,
+      required super.index,
+      required super.senderEpoch});
+
+  /// Build with a UTF-8 symbolic agent name (simulation realisation).
+  WireGoneMessage.symbolic(
+      {required bool isReader,
+      required String agent,
+      required int epoch,
+      required int index,
+      required int senderEpoch})
+      : this(
+            isReader: isReader,
+            agent: Uint8List.fromList(utf8.encode(agent)),
+            epoch: epoch,
+            index: index,
+            senderEpoch: senderEpoch);
+
+  @override
+  int get kind => wireMsgKindGone;
 }
 
 /// Thrown when a byte string is not a valid canonical encoding.
@@ -596,10 +701,11 @@ void encodeTerm(WireWriter w, WireTerm t) {
       case WConst(:final constant):
         w.u8(1);
         encodeConstantPayload(w, constant);
-      case WVar(:final isReader, :final agent, :final index):
+      case WVar(:final isReader, :final agent, :final epoch, :final index):
         w.u8(2);
         w.u8(isReader ? 1 : 0);
         w.bytes(agent);
+        w.clen(epoch);
         w.clen(index);
       case WStruct(:final functor, :final args):
         w.u8(3);
@@ -635,8 +741,9 @@ WireTerm decodeTerm(WireReader r) {
           throw WireFormatException('variable polarity not 0/1: $pol');
         }
         final agent = r.bytes();
+        final epoch = r.clen();
         final index = r.clen();
-        node = WVar(isReader: pol == 1, agent: agent, index: index);
+        node = WVar(isReader: pol == 1, agent: agent, epoch: epoch, index: index);
       case 3:
         final functor = r.string();
         final arity = r.clen();
@@ -678,12 +785,14 @@ WireTerm decodeTermFromBytes(Uint8List b) {
 // Message encoding (§cf-terms, Messages)
 // ============================================================================
 
-/// Encode an assignment: polarity, agent, index, then — for a serializer
-/// message `_w(q,0) := ...` alone — the clen serial, then the term
-/// (§cf-terms, Messages; the serial is new in code-format version 3).
+/// Encode an assignment: polarity, agent, epoch, index, then — for a
+/// serializer message `_w(q,0) := ...` alone — the clen serial, then the term
+/// (§cf-terms, Messages; the serial is new in code-format version 3, the
+/// epoch in version 4).
 void encodeAssignment(WireWriter w, WireAssignment a) {
   w.u8(a.gIsReader ? 1 : 0);
   w.bytes(a.gAgent);
+  w.clen(a.gEpoch);
   w.clen(a.gIndex);
   if (a.isSerializer) w.clen(a.serial!);
   encodeTerm(w, a.value);
@@ -695,6 +804,7 @@ WireAssignment decodeAssignment(WireReader r) {
     throw WireFormatException('assignment polarity not 0/1: $pol');
   }
   final agent = r.bytes();
+  final epoch = r.clen();
   final index = r.clen();
   final serial =
       WireAssignment.isSerializerName(pol == 1, index) ? r.clen() : null;
@@ -702,6 +812,7 @@ WireAssignment decodeAssignment(WireReader r) {
   return WireAssignment(
       gIsReader: pol == 1,
       gAgent: agent,
+      gEpoch: epoch,
       gIndex: index,
       value: value,
       serial: serial);
@@ -720,48 +831,88 @@ WireAssignment decodeAssignmentFromBytes(Uint8List b) {
   return a;
 }
 
-/// Encode a message with its opening u8 kind (§cf-terms, Messages; code-format
-/// version 2): 0 value, then the assignment, a serializer message's serial
-/// among it (version 3); 1 request / 2 acknowledgement, then polarity (1, a
-/// reader name), agent, clen index — no term.
+/// Encode a message with its opening u8 kind and the clen epoch of its
+/// sender (§cf-terms, Messages; code-format versions 2 and 4): 0 value, then
+/// the assignment, a serializer message's serial among it (version 3); 1
+/// request / 2 acknowledgement / 3 gone, then polarity, agent, clen epoch,
+/// clen index — no term.
 void encodeMessage(WireWriter w, WireMessage m) {
   switch (m) {
-    case WireValueMessage(:final assignment):
+    case WireValueMessage(:final assignment, :final senderEpoch):
       w.u8(wireMsgKindValue);
+      w.clen(senderEpoch);
       encodeAssignment(w, assignment);
-    case WireRequestMessage(:final agent, :final index):
-      w.u8(wireMsgKindRequest);
-      w.u8(1); // polarity: a reader name
+    case WireLinkMessage(
+        :final kind,
+        :final isReader,
+        :final agent,
+        :final epoch,
+        :final index,
+        :final senderEpoch
+      ):
+      w.u8(kind);
+      w.clen(senderEpoch);
+      w.u8(isReader ? 1 : 0);
       w.bytes(agent);
-      w.clen(index);
-    case WireAckMessage(:final agent, :final index):
-      w.u8(wireMsgKindAcknowledgement);
-      w.u8(1); // polarity: a reader name
-      w.bytes(agent);
+      w.clen(epoch);
       w.clen(index);
   }
 }
 
 WireMessage decodeMessage(WireReader r) {
   final kind = r.u8();
+  final senderEpoch = r.clen();
   switch (kind) {
     case wireMsgKindValue:
-      return WireValueMessage(decodeAssignment(r));
+      return WireValueMessage(decodeAssignment(r), senderEpoch: senderEpoch);
     case wireMsgKindRequest:
     case wireMsgKindAcknowledgement:
+    case wireMsgKindGone:
       final pol = r.u8();
-      if (pol != 1) {
+      if (pol != 0 && pol != 1) {
+        throw WireFormatException('link message polarity not 0/1: $pol');
+      }
+      if (kind != wireMsgKindGone && pol != 1) {
         throw WireFormatException(
             'request/acknowledgement polarity must be 1 (reader), got $pol');
       }
       final agent = r.bytes();
+      final epoch = r.clen();
       final index = r.clen();
-      return kind == wireMsgKindRequest
-          ? WireRequestMessage(agent: agent, index: index)
-          : WireAckMessage(agent: agent, index: index);
+      return switch (kind) {
+        wireMsgKindRequest => WireRequestMessage(
+            agent: agent, epoch: epoch, index: index, senderEpoch: senderEpoch),
+        wireMsgKindAcknowledgement => WireAckMessage(
+            agent: agent, epoch: epoch, index: index, senderEpoch: senderEpoch),
+        _ => WireGoneMessage(
+            isReader: pol == 1,
+            agent: agent,
+            epoch: epoch,
+            index: index,
+            senderEpoch: senderEpoch),
+      };
     default:
       throw WireFormatException('unknown message kind: $kind');
   }
+}
+
+/// The epoch byte(s) of the message [payload] rewritten to [senderEpoch]:
+/// the kind byte, the new clen epoch, then the rest of the message after its
+/// old epoch.  A message queued before a restart after a crash is sent in
+/// the epoch the restart opened, "the epoch its sender is in when it sends
+/// it" (IGLP db0a117).
+Uint8List messageWithSenderEpoch(Uint8List payload, int senderEpoch) {
+  final r = WireReader(payload);
+  final kind = r.u8();
+  r.clen(); // the epoch written when the message was made
+  final w = WireWriter();
+  w.u8(kind);
+  w.clen(senderEpoch);
+  final rest = Uint8List.sublistView(payload, r.offset);
+  final b = BytesBuilder(copy: false)
+    ..add(w.toBytes())
+    ..add(rest);
+  return b.toBytes();
 }
 
 Uint8List encodeMessageToBytes(WireMessage m) {

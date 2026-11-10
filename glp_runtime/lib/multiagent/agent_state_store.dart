@@ -80,6 +80,19 @@ abstract class AgentStateStore {
   /// it is kept; completes with an error where it is not, and then the
   /// program saved before it stands.
   Future<void> saveProgram(Uint8List program);
+
+  /// Whether the running mark is set: "At every start and at every
+  /// resumption the runtime sets a mark, running, in the store, and the save
+  /// clears it" (IGLP db0a117, Implementation Notes, "Persistence", When).
+  /// Set at a start, the application crashed since it last ran: it neither
+  /// saved at a suspension nor terminated from one ("Restart": "If the
+  /// running mark is set at a start, the application crashed").  False where
+  /// the store is new.
+  Future<bool> loadRunning();
+
+  /// Set the running mark, or clear it.  Completes once the mark is kept;
+  /// completes with an error where it is not.
+  Future<void> saveRunning(bool running);
 }
 
 /// A store in one file, which the embedding application names, the key
@@ -95,6 +108,24 @@ class FileAgentStateStore implements AgentStateStore {
   File get _keyFile => File('$path.key');
 
   File get _programFile => File('$path.program');
+
+  /// The running mark: the file `<path>.running`, which exists while the
+  /// mark is set.
+  File get _runningFile => File('$path.running');
+
+  @override
+  Future<bool> loadRunning() => _runningFile.exists();
+
+  @override
+  Future<void> saveRunning(bool running) async {
+    final f = _runningFile;
+    if (running) {
+      await f.parent.create(recursive: true);
+      await f.writeAsString('running', flush: true);
+    } else if (await f.exists()) {
+      await f.delete();
+    }
+  }
 
   @override
   Future<Uint8List?> loadProgram() async {
@@ -169,6 +200,15 @@ class MemoryAgentStateStore implements AgentStateStore {
 
   /// The number of programs saved.
   int programSaves = 0;
+
+  /// The running mark ([loadRunning]).
+  bool running = false;
+
+  @override
+  Future<bool> loadRunning() async => running;
+
+  @override
+  Future<void> saveRunning(bool running) async => this.running = running;
 
   @override
   Future<Uint8List?> loadProgram() async => _program;

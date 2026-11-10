@@ -249,6 +249,7 @@ void main() {
         final gres = globalize(
           variables: [TermVar.reader(restR, writerAddr: restW)],
           localAgent: 'charlie',
+          localEpoch: 1,
           remoteAgent: 'bob',
           table: charlie.wp,
           records: charlie.up,
