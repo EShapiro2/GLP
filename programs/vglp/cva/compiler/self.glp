@@ -297,16 +297,33 @@ atoms_args([rest(K, J, A)|Xs], [K?, J?|R?]) :- atoms_args([A?|Xs?], R).
 %% "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ...; a constraint is local to the role whose local variables it names, and to every role where it names none.  A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state.  Every other variable is bound by the schema-binding, and a request names it" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications").  num_info(Name, Constraint, Locals, Role): a schema's constraint, true where it has none; its local variables, each loc(I, V), V an agent, speech-act or numeric variable, pvar(X), svar(X) or num(X), and I the index of the role it is local to; and the role whose local variables the constraint names, at(I), every where it names none, so that every role checks it, and two_roles where it names those of two roles or more, which the contract being a local specification forbids ("a constraint names the local variables of one role", ibid.).
 Loc     ::= loc(Integer, Arg).
 Locs    ::= [] ; [Loc | Locs].
-CRole   ::= every ; at(Integer) ; two_roles.
+%% The role of a conjunct of the constraint: every, naming no local variable and holding no count; at(I), naming the local variables of the one role I or holding counts anchored there; and cond, of the part's condition, naming those of two roles or more (vGLP 566c186, Section 5.4: "A conjunct of the constraint is local to the role whose local variables it names, and to every role where it names none; a conjunct that names variables local to two roles or more is of the part's condition").
+CRole   ::= every ; at(Integer) ; cond.
+Conj    ::= cj(CRole, Constraint).
+Conjs   ::= [] ; [Conj | Conjs].
+%% A count or a sum of the condition, cx(Name, Expr), named num(Name) in the condition as printed, Name '#1', '#2', ... (local.glp, cnt_name), its value read by the role holding its anchor; cr(Holder, Name, Expr) the same with its anchor's holder, as abs_expr collects them.
+CExpr   ::= cx(Constant, Expr).
+CExprs  ::= [] ; [CExpr | CExprs].
+CRead   ::= cr(Arg, Constant, Expr).
+CReads  ::= [] ; [CRead | CReads].
+%% What a role reads with its vote yes: read(I, Vars, Counts), the variables local to the role I that are read there and the counts of the condition anchored there (vGLP 566c186, Section 5.4: "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries"; Section 3.2: "each participant reading its own count and the initiator comparing them"); read(0, [], Counts) the counts anchored at no agent role, a fault (local.glp, read_faults).
+Read    ::= read(Integer, Args, CExprs).
+Reads   ::= [] ; [Read | Reads].
 %% A safe formula of a schema's body with the role it is local to: "A safe formula of B, and a quantified conjunct, is local to a role where every atom of it, but the literals of a listed role in its conclusion, is held by that role, and every variable of it is a role, a variable of the schema, a variable of its quantifiers or local to that role: the machine of the person in that role evaluates it in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"): fi(at(I), F), local to the role I; fi(every, F), a formula with no atom and no local variable, local to every role, as a constraint that names no local variable is, which each checks; and fi(nowhere, F), local to no role, which the contract being a local specification forbids (local.glp, form_infos).
-FRole   ::= every ; at(Integer) ; nowhere.
+FRole   ::= every ; at(Integer) ; nowhere ; cond.
+%% The atoms of a formula across roles, each with its holder, ha(Holder, Atom); and the atoms each role reads for it, hp(I, Atoms), the atoms of the formula the role I holds with the variables it does not bind left any (local.glp, form_held; vGLP 5f55cf3, Section 5.4).
+HAtom   ::= ha(Arg, Atom).
+HAtoms  ::= [] ; [HAtom | HAtoms].
+HPat    ::= hp(Integer, Atoms).
+HPats   ::= [] ; [HPat | HPats].
 FInfo   ::= fi(FRole, Form).
 FInfos  ::= [] ; [FInfo | FInfos].
-NumInfo ::= num_info(Constant, Constraint, Locs, CRole, FInfos).
+%% num_info(Name, Constraint, Locals, Conjuncts, Forms, Reads): the schema's constraint whole, its local variables, its conjuncts each with its role, those of the condition with their counts named, the safe formulas of its body with their roles, and what each role reads (local.glp, num_info_of).
+NumInfo ::= num_info(Constant, Constraint, Locs, Conjs, FInfos, Reads).
 NumInfos ::= [] ; [NumInfo | NumInfos].
 procedure num_lookup(Constant?, NumInfos?, NumInfo).
-num_lookup(Nm, [], num_info(Nm?, true, [], every, [])).
-num_lookup(Nm, [num_info(N, C, L, R, F)|_], num_info(N?, C?, L?, R?, F?)) :- Nm? =?= N? | true.
+num_lookup(Nm, [], num_info(Nm?, true, [], [], [], [])).
+num_lookup(Nm, [num_info(N, C, L, J, F, D)|_], num_info(N?, C?, L?, J?, F?, D?)) :- Nm? =?= N? | true.
 num_lookup(Nm, [_|Ns], I?) :- otherwise | num_lookup(Nm?, Ns?, I).
 %% The local variables, as arguments.
 procedure loc_vars(Locs?, Args).

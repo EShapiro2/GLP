@@ -338,6 +338,8 @@ contract_named(counts, environment([cap, wt], C?)) :- counts(C).
 contract_named(shares, C?) :- shares(C).
 contract_named(published, C?) :- published(C).
 contract_named(leaves, C?) :- leaves(C).
+contract_named(readings, C?) :- readings(C).
+contract_named(backed, C?) :- backed(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -368,6 +370,8 @@ introduction_named(counts, no_introduction).
 introduction_named(shares, no_introduction).
 introduction_named(published, no_introduction).
 introduction_named(leaves, no_introduction).
+introduction_named(readings, no_introduction).
+introduction_named(backed, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -499,6 +503,24 @@ pragmas_named(leaves, pragmas([list('"Programs"', [installed])],
     [act(install, '"Install"', ['""', '"Program"'], none, '"Programs"', by([1])),
      act(invite, '"Invite"', ['""', '"Person"'], said([[], [person(1), text('" invites you."')]]), '"Programs"', by([1])),
      act(leave, '"Leave"', [], none, '"Programs"', by([1]))])).
+
+pragmas_named(readings, pragmas([list('"Levels"', [level]), list('"Contacts"', [knows])],
+    [act(start, '"Start"', [], none, '"Levels"', by([1])),
+     act(bump, '"Bump"', [], none, '"Levels"', by([1])),
+     act(outrank, '"Outrank"', [], none, '"Levels"', by([1])),
+     act(watch, '"Watch"', [], none, '"Levels"', by([1])),
+     act(unwatch, '"Unwatch"', [], none, '"Levels"', by([1])),
+     act(nudge, '"Nudge"', [], none, '"Contacts"', by([1])),
+     act(vouch, '"Vouch"', ['""', '"Text"'], none, '"Contacts"', by([1])),
+     act(present, '"Present"', ['"Person"', '""'], said([[person(2), text('" asks to meet you."')], []]), '"Contacts"', by([2]))],
+    [standing(trail, watch, unwatch)])).
+pragmas_named(backed, pragmas([list('"Treasurers"', [officer]), list('"Reserve"', [reserve])],
+    [act(acquaint, '"Acquaint"', ['""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Treasurers"', by([1])),
+     act(appoint, '"Appoint"', ['""', '"Person"'], said([[], [person(1), text('" asks you to be a treasurer."')]]), '"Treasurers"', by([1])),
+     act(deposit, '"Deposit"', ['""', '"Amount"'], none, '"Reserve"', by([1])),
+     act(owe, '"Owe"', ['""', '""', '"Amount"'], none, '"Treasurers"', by([1])),
+     act(repay, '"Repay"', [], none, '"Treasurers"', by([1])),
+     act(join, '"Join"', [], said([[], [person(1), text('" asks you to join its treasurers."')]]), '"Treasurers"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -867,3 +889,51 @@ leaves([schema(install, [svar(x)],
            crs(qlisted(1, participant, [svar(x), role(2)], [role(2)]), unguarded, [], [atom(participant, [svar(x), role(1)])], [], [])],
           [conjunct([role(2)], 1, atom(participant, [svar(x), role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(participant, [svar(x), role(1)])))])],
           [])]).
+
+%% readings: variables read at a role and a condition across roles (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications": "A variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do"; "a conjunct that names variables local to two roles or more is of the part's condition"; "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries; the initiator chooses readings under which the conjuncts of the condition hold, and the commit tells them to every participant, whose effect is under them").  As GAI's GnW:3, the ward's attestation read at the ward and recorded at the person who comes to know it: vouch(p? ; y) adds attestation(y) at p, and present(c?, b?) requires attestation(y) at c, which keeps it, and adds record(c, y) at b, b proposing it, as Bob proposes GAI's agent_acquaint, and no field naming y.  As a treasurer's count against their community's: start(p?) adds level(0), bump(p ; t, t1) raises it, and outrank(p?, q ; a, b) requires level(a) at p and level(b) at q, a and b each local to its role, with a > b of the part's condition, which the initiator checks on the readings; trail(p?, q ; a, b), with a < b, is the same standing on watch until unwatch; nudge(p?, q) adds nudged(q) at p and nudged_by(p) at q, a change of q's state.
+procedure readings(Contract).
+readings([schema(start, [],
+            [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]),
+          nschema(bump, [num(t), num(t1)], eq(num(t1), plus(num(t), num(1))),
+            [rs(guarded, [atom(level, [num(t1)])], [atom(level, [num(t)])], [atom(started, [])], [])]),
+          nschema(outrank, [num(a), num(b)], gt(num(a), num(b)),
+            [rs(guarded, [atom(outranks, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(outranks, [role(2)])]),
+             rs(unguarded, [atom(outranked, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]),
+          schema(watch, [],
+            [rs(guarded, [atom(watching, [])], [], [], [atom(watching, [])])]),
+          schema(unwatch, [],
+            [rs(guarded, [], [atom(watching, [])], [], [])]),
+          nschema(trail, [num(a), num(b)], lt(num(a), num(b)),
+            [rs(guarded, [atom(trails, [role(2)])], [], [atom(knows, [role(2)]), atom(level, [num(a)])], [atom(trails, [role(2)])]),
+             rs(unguarded, [atom(trailed, [role(1)])], [], [atom(knows, [role(1)]), atom(level, [num(b)])], [])]),
+          schema(nudge, [],
+            [rs(guarded, [atom(nudged, [role(2)])], [], [atom(knows, [role(2)])], [atom(nudged, [role(2)])]),
+             rs(unguarded, [atom(nudged_by, [role(1)])], [], [atom(knows, [role(1)])], [])]),
+          schema(vouch, [svar(y)],
+            [rs(guarded, [atom(attestation, [svar(y)])], [], [], [atom(attestation, [svar(y)])])]),
+          schema(present, [svar(y)],
+            [rs(guarded, [atom(knows, [role(2)])], [], [atom(attestation, [svar(y)])], [atom(knows, [role(2)])]),
+             rs(guarded, [atom(knows, [role(1)]), atom(record, [role(1), svar(y)])], [], [], [atom(knows, [role(1)])])])]).
+
+%% backed: a safe formula across roles (vGLP 5f55cf3, Section 5.4, "Speech-act schemas as local specifications": "A safe formula of B that is local to no role, its atoms held by two roles or more, each a role of the schema or a listed role its quantifier binds, is of the part's condition ...: the reading of a participant's state then holds, beside the values of the variables read at its role, the atoms of that state that the atoms of the formula held by its role match, a variable local to another role and a variable the formula's quantifiers bind matching any value, and the initiator evaluates the formula on the readings, each atom, anchor, count and sum taken in the reading of the person who holds it"), as GBCC:1's cc_join (programs/go/GBCC.glp): acquaint(o?, b?) adds knows at both; appoint(o?, c?) makes c a treasurer of o, officer(c) at o and officer_of(o) at c; deposit(c? ; k) adds k reserve at c; owe(o?, c ; k) adds k owes(c) at o, c an officer of it; repay(o? ; c) deletes one owes(c) at o and adds repaid(c); and join(o?, b?, c[officer(o, c)]), o and b knowing each other, makes b a treasurer, each treasurer c recording cotreasurer(b), only if every treasurer c of o stays backed, the owes(c) o holds at most the reserve c holds, a formula held by o and by c.
+procedure backed(Contract).
+backed([schema(acquaint, [],
+          [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]),
+           rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]),
+        schema(appoint, [],
+          [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]),
+           rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]),
+        schema(deposit, [num(k)],
+          [rs(guarded, [times(num(k), atom(reserve, []))], [], [], [])]),
+        schema(owe, [num(k)],
+          [rs(guarded, [times(num(k), atom(owes, [role(2)]))], [], [atom(officer, [role(2)])], []),
+           rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]),
+        schema(repay, [pvar(c)],
+          [rs(guarded, [atom(repaid, [pvar(c)])], [atom(owes, [pvar(c)])], [], [])]),
+        qschema(join, [], [role(3)], true,
+          [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]),
+           rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]),
+           crs(qlisted(1, officer, [role(3)], [role(3)]), unguarded, [atom(cotreasurer, [role(2)])], [], [], [])],
+          [conjunct([role(3)], 1, atom(officer, [role(3)]), fcons(true), [], [], [fa(role(3), atom(cotreasurer, [role(2)]))])],
+          [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true),
+             [fcons(le(cardinality([], role(1), atom(owes, [role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, []), fcons(true))))])])]).

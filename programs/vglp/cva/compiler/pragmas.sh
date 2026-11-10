@@ -40,7 +40,7 @@ sub inside {
     }
     return ("", length $s);
 }
-# The variables local to a role of the schema whose arguments are @args: "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"), an agent, speech-act or numeric variable alike, inside a name term or a signed term included; each named by its name, as the head writes it.
+# The variables local to a role of the schema whose arguments are @args: "A variable that occurs only in atoms required or deleted at one role, and in the constraint and the safe formulas, is local to it; and a variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do; a variable of an atom deleted at one role and added at another is not local, and the request names it" (vGLP 6abbed9, Section 5.4, "Speech-act schemas as local specifications"; local.glp, locals_of), an agent, speech-act or numeric variable alike, inside a name term or a signed term included; each named by its name, as the head writes it: kept or deleted at one role and nowhere else, forbidden nowhere and listed by no listed role, and added nowhere, or deleted nowhere and added at other roles only.
 sub var_tokens {
     my ($t) = @_;
     $t =~ s/\batom\(\w+,/atom(/g;
@@ -49,23 +49,44 @@ sub var_tokens {
 sub local_vars {
     my ($roles) = @_;
     $roles =~ s/^\[//; $roles =~ s/\]$//;
-    my (%at, %elsewhere);
+    my (%at, %elsewhere, %del, %add, $lb);
     my $r = 0;
     for my $spec (top_args($roles)) {
         $r++;
         my ($f) = $spec =~ /^(c?rs)\(/ or next;
         my ($body) = inside($spec, length $f);
         my @p = top_args($body);
-        if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind) }
+        if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind); $lb //= $1 if $kind =~ /^q?listed\((\d+)/ }
         for my $k (1 .. $#p) {
             for my $x (var_tokens($p[$k])) {
-                if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 } else { $elsewhere{$x} = 1 }
+                if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
+                if ($k == 2) { $del{$x} = 1 }
+                if ($k == 1) { $add{$x}{$r} = 1 }
+                if ($k == 4) { $elsewhere{$x} = 1 }
             }
         }
     }
-    return grep { !$elsewhere{$_} && keys %{ $at{$_} } == 1 } keys %at;
+    # Each local variable with 0, or, where it is read at its role (vGLP 6abbed9, Section 5.4), that role; and the base of the schema\x27s listed roles, where it has one.
+    my @out;
+    for my $x (keys %at) {
+        next if $elsewhere{$x} || keys %{ $at{$x} } != 1;
+        my ($r0) = keys %{ $at{$x} };
+        if (!$add{$x}) { push @out, [$x, 0] }
+        elsif (!$del{$x} && !$add{$x}{$r0}) { push @out, [$x, $r0] }
+    }
+    return (\@out, $lb);
 }
 my (@snames, %svars, %preds, %locals);
+# A variable read at a role is local only where that role is not the base of the schema (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there"; "the request names it, as it names a variable that only the base\x27s atoms hold and other roles record, the person who proposes choosing it, as Alice chooses whom she introduces"): the base the base of its listed roles or the role its line names before its button, the variable read at the base put back among the request\x27s variables once that line is read.
+my (%readat, %lbase, %hvars, %based);
+sub base_read {
+    my ($S, $pl) = @_;
+    return if $based{$S}++;
+    my $b = $lbase{$S} // $pl;
+    my $back = 0;
+    for my $v (keys %{ $readat{$S} || {} }) { next unless $readat{$S}{$v} == $b && $locals{$S}{$v}; delete $locals{$S}{$v}; $back = 1 }
+    $svars{$S} = [ grep { !$locals{$S}{$_} } @{ $hvars{$S} } ] if $back;
+}
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
     while ($term =~ /\b([ncq]?schema)\(/g) {
@@ -81,11 +102,15 @@ if (defined $term && $term ne "") {
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
         my $rarg = $kw eq "qschema" ? $args[$named ? 5 : 4] : $args[-1];
-        my %local = map { $_ => 1 } local_vars($rarg);
+        my ($lv, $lb) = local_vars($rarg);
+        my %local = map { $_->[0] => 1 } @$lv;
+        $readat{$n} = { map { $_->[0] => $_->[1] } grep { $_->[1] } @$lv };
+        $lbase{$n} = $lb if defined $lb;
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
         $locals{$n} = { map { $_ => 1 } grep { $local{$_} } @hv };
         $svars{$n} = [ grep { !$local{$_} } @hv ];
+        $hvars{$n} = [ @hv ];
     }
 }
 # The contract term read whole, for the roles of each schema: tparse gives a term as [functor, args] for a compound, ["[]", items] for a list, and [name] for a constant.
@@ -612,6 +637,7 @@ for my $f (@order) {
                             my @same = map { "same($rplace{$_->[0]}, $rplace{$_->[1]})" } grep { exists $rplace{ $_->[0] } && exists $rplace{ $_->[1] } } @{ $ones{$S} // [] };
                             $by{$S} = @same ? "by([$pl], [" . join(", ", @same) . "])" : "by([$pl])";
                             $plof{$S} = $pl;
+                            base_read($S, $pl);
                             $said{$S} = @g == 1
                                 ? (exists $q{$pl} ? "said([$q{$pl}])" : undef)
                                 : "said([" . join(", ", map { exists $q{$_} ? $q{$_} : "[]" } @g) . "])";

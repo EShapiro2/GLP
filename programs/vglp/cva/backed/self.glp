@@ -1,0 +1,104 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract backed
+%% (../contracts.glp, contract_named(backed, C)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: a safe formula across roles
+%% (vGLP 5f55cf3, Section 5.4, "Speech-act schemas as local specifications":
+%% "A safe formula of B that is local to no role, its atoms held by two roles
+%% or more, each a role of the schema or a listed role its quantifier binds,
+%% is of the part's condition, as a formula that holds of every member of a
+%% listed role and reads the base's state and the member's: the reading of a
+%% participant's state then holds, beside the values of the variables read at
+%% its role, the atoms of that state that the atoms of the formula held by its
+%% role match, a variable local to another role and a variable the formula's
+%% quantifiers bind matching any value, and the initiator evaluates the
+%% formula on the readings, each atom, anchor, count and sum taken in the
+%% reading of the person who holds it"), as GBCC:1's cc_join
+%% (programs/go/GBCC.glp).  Written as GSC writes a contract, k a numeric
+%% variable:
+%%
+%%   acquaint(o?, b?)     :  at o  not knows(b), +knows(b)
+%%                           at b  not knows(o), +knows(o)
+%%   appoint(o?, c?)      :  at o  not officer(c), +officer(c)
+%%                           at c  not officer_of(o), +officer_of(o)
+%%   deposit(c? ; k)      :  at c  +k reserve
+%%   owe(o?, c ; k)       :  at o  officer(c), +k owes(c)
+%%                           at c  officer_of(o)
+%%   repay(o? ; c)        :  at o  -owes(c), +repaid(c)
+%%   join(o?, b?, c[officer(o, c)])
+%%                        :  at o  knows(b), not officer(b), +officer(b)
+%%                           at b  knows(o), not officer_of(o), +officer_of(o)
+%%                           at each c  +cotreasurer(b)
+%%                        only if forall c (officer(o, c) ->
+%%                           #owes(c) at o =< #reserve at c)
+%%
+%% join's formula holds atoms at o and at each treasurer c, so it is of the
+%% part's condition: o's reading holds its officer and owes atoms, each c's
+%% its reserve atoms, which its vote yes carries, and o, the initiator,
+%% evaluates the formula on them at the Tally of the last yes.
+%%
+%% play_backed: carol deposits 2 and answers yes to alice's appointment, so
+%% alice's organisation has one treasurer, carol, holding reserve 2.  alice
+%% and bob come to know each other, and alice
+%% records that carol owes 3 and asks bob to join; bob answers yes, carol's
+%% machine votes yes unasked, its vote carrying her two reserve atoms, and
+%% alice's tally finds the formula failing, carol's 3 owed above her
+%% reserve, and refuses the attempt on its condition, alice the refuser,
+%% unable; alice is told refused(join(alice, bob), alice, unable), her
+%% request ended.  alice records a repayment, carol owing 2, at most her
+%% reserve, and asks again; bob answers yes again, the formula holds, and it
+%% commits: alice holds officer(bob), bob officer_of(alice), and carol
+%% cotreasurer(bob).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_backed(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_backed(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(appoint(A1?, carol))), wait(holds(officer(carol))),
+          own([A7], propose(acquaint(A7?, bob))), wait(holds(knows(bob))),
+          own([A2], propose(owe(A2?, carol, 3))), wait(has(owes(carol), 3)),
+          own([A3], propose(join(A3?, bob))),
+          wait(refused(join(alice, bob), alice, unable)),
+          own([A4], propose(repay(A4?, carol))), wait(holds(repaid(carol))),
+          own([A6], propose(join(A6?, bob))), wait(holds(officer(bob)))],
+         [approval(acquaint(alice, bob), yes),
+          approval(join(alice, bob, [carol]), yes),
+          approval(join(alice, bob, [carol]), yes),
+          wait(holds(officer_of(alice)))],
+         [own([C1], propose(deposit(C1?, 2))), wait(has(reserve, 2)),
+          approval(appoint(alice, carol), yes),
+          wait(holds(officer_of(alice))),
+          wait(holds(cotreasurer(bob)))],
+         LA, LB, LC, N).
+
+%% alice, bob and carol, each with its dispatcher and scripted person, their
+%% networks joined.
+procedure trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).
