@@ -11,7 +11,8 @@
 #
 # What it does on the VPS, as root:
 #   1. shows what runs now: the clone's commit, the two units, the two queues;
-#   2. pulls the clone at /srv/glp and checks it is at the commit given;
+#   2. fetches the clone at /srv/glp, fast-forwards it to the commit given (not to
+#      main's tip, which may have moved on), and checks it is there;
 #   3. stops the two units;
 #   4. moves each layer's queue file aside, into /var/lib/glp/queues-before-<commit>/:
 #      a kept message saved by protocol 8 has no senderMessageId, and a queue
@@ -39,8 +40,9 @@ if [ "$GO" != "--go" ]; then
   say "dry run: nothing changed; add --go to update to $COMMIT"
   exit 0
 fi
-say "pull the clone"
-sudo -u glp git -C /srv/glp pull -q --ff-only
+say "bring the clone to $COMMIT"
+sudo -u glp git -C /srv/glp fetch -q origin
+sudo -u glp git -C /srv/glp merge -q --ff-only "$COMMIT"
 HEAD=$(git -C /srv/glp rev-parse HEAD)
 case "$HEAD" in "$COMMIT"*) echo "clone at $HEAD" ;; *) echo "the clone is at $HEAD, not $COMMIT: stopping, nothing restarted"; exit 1 ;; esac
 say "stop the two units"
