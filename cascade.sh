@@ -276,6 +276,45 @@ if [ ${#NAMES[@]} -eq 1 ]; then
 else
     # The composition: each contract read, with its pragmas, as when it is
     # compiled alone, and composed by programs/vglp/cva/compiler/compose.sh.
+    # The third contract the contracts amend, where they amend one (vGLP
+    # 668df7d, Section 5.4: "for two that amend a third the schemas of the
+    # third that both keep together with the schemas each adds"): of the
+    # contracts every one of them is written from, itself or through others
+    # (pragmas.sh --from), the one that no other such contract is written
+    # from; none where they share none, the composition then their union.
+    PRAG="$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh"
+    : > "$WORK/common"
+    for i in "${!NAMES[@]}"; do
+        [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] || { : > "$WORK/common"; break; }
+        bash "$PRAG" --from "${SRCS[i]}/${CTXTS[i]}" > "$WORK/from.raw" 2> "$WORK/from.err" && sort "$WORK/from.raw" > "$WORK/from.$i" || { say "the contracts ${FILES[i]} is written from were not read: $(head -1 "$WORK/from.err")"; exit 1; }
+        if [ "$i" -eq 0 ]; then cp "$WORK/from.$i" "$WORK/common"; else comm -12 "$WORK/common" "$WORK/from.$i" > "$WORK/common.t"; mv "$WORK/common.t" "$WORK/common"; fi
+    done
+    THIRD=()
+    while IFS= read -r c; do
+        near=1
+        while IFS= read -r d; do
+            [ "$d" = "$c" ] && continue
+            bash "$PRAG" --from "$d" 2> /dev/null | grep -qxF "$c" && { near=0; break; }
+        done < "$WORK/common"
+        [ $near -eq 1 ] && THIRD+=("$c")
+    done < "$WORK/common"
+    if [ ${#THIRD[@]} -gt 1 ]; then
+        say "the contracts amend no one third: each of $(for t in "${THIRD[@]}"; do basename "$t" .txt; done | tr '\n' ' ')is written from by all of them and from none of the others"
+        exit 1
+    fi
+    BASEARGS=()
+    if [ ${#THIRD[@]} -eq 1 ]; then
+        TF=$(basename "${THIRD[0]}" .txt); TD=$(dirname "${THIRD[0]}")
+        Tn=$(printf '%s' "$TF" | tr 'A-Z-' 'a-z_')
+        [ -f "$TD/$TF.glp" ] || { say "the third contract the contracts amend, $TF, has no $TF.glp beside its $TF.txt"; exit 1; }
+        read_contract "$Tn" "$TD" "$TF"
+        if ! P=$(bash "$PRAG" "${THIRD[0]}" "$RD" 2> "$WORK/pr.err"); then
+            say "the pragmas of $TF, the third contract the contracts amend, were not read: $(head -1 "$WORK/pr.err")"
+            exit 1
+        fi
+        BASEARGS=(--base "$TF" "$RD" "$P")
+        say "the third contract the composition is over: $TF"
+    fi
     COMP=()
     for i in "${!NAMES[@]}"; do
         cp "${SRCS[i]}/${CTXTS[i]}" "$OUT/${CTXTS[i]}"
@@ -288,7 +327,7 @@ else
         fi
         COMP+=("${FILES[i]}" "$RD" "$P" "$INTRO")
     done
-    if ! bash "$GLP_DIR/programs/vglp/cva/compiler/compose.sh" "${COMP[@]}" > "$WORK/compose.out" 2> "$WORK/compose.err"; then
+    if ! bash "$GLP_DIR/programs/vglp/cva/compiler/compose.sh" ${BASEARGS[@]+"${BASEARGS[@]}"} "${COMP[@]}" > "$WORK/compose.out" 2> "$WORK/compose.err"; then
         say "the composition was refused: $(head -1 "$WORK/compose.err")"
         exit 1
     fi
@@ -455,7 +494,7 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
         echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$CTXT\` and \`$OWNER/$FILE.glp\`, copied here as they stood at \`$GLP_COMMIT\`."
         echo "- The paper: $(paper_line "$PAPER"), for the paper's own record."
     else
-        echo "- Contract: the composition of ${FILES[*]} (\`$NAME\` to the checker), the union of their schemas and of their pragmas (vGLP, Section 5.4, \"The contract's words\"), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at \`$GLP_COMMIT\`:"
+        echo "- Contract: the composition of ${FILES[*]} (\`$NAME\` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, \"The contract's words\"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at \`$GLP_COMMIT\`:"
         for i in "${!NAMES[@]}"; do
             echo "  - \`${FILES[i]}\`: \`${OWNERS[i]}/${CTXTS[i]}\` and \`${OWNERS[i]}/${FILES[i]}.glp\`; the paper $(paper_line "${PAPERS[i]}")."
         done

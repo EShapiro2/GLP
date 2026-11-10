@@ -7,12 +7,17 @@
 
 # A NAME.txt may carry two kinds of pragmas under their headings, "Interface pragmas" and "Implementation pragmas", "Pragmas" alone meaning the interface ones (GSC, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69): the interface pragmas are read as above, and the implementation pragmas are skipped, no paper yet saying what form they take in the app's code.
 
+# With --from, prints instead the NAME.txt of each contract the contract is written from, on its line saying so (relation_names below) or its line % Extends:, and of each that one is written from, and so on, one to a line, each before the contracts written from it, the contract itself last: what cascade.sh composes contracts over (README.md beside this file, "Composition").
+#
+#   bash programs/vglp/cva/compiler/pragmas.sh --from <NAME.txt>
 set -u
-[ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh <NAME.txt> [<contract term>]" >&2; exit 2; }
+FROM=""
+if [ "${1:-}" = "--from" ]; then FROM=1; shift; fi
+[ $# -ge 1 ] && [ $# -le 2 ] && [ -f "$1" ] || { echo "usage: pragmas.sh [--from] <NAME.txt> [<contract term>]" >&2; exit 2; }
 PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
-use strict; use warnings;
-my ($top, $programs, $term) = @ARGV;
+use strict; use warnings; use Cwd ();
+my ($top, $programs, $term, $from) = @ARGV;
 # The schemas of the contract term, where it is given, each with the variables of its head after its roles that the request names, in order: a button names the schemas bearing its name or its name with a suffix after an underscore, as swap_cc of [Swap] (GSC, Code_inbox.md, 2026-10-24 08:06 UTC).  A variable local to a role, agent, speech-act or numeric, one that occurs only in atoms the schema requires or deletes at that one role, and in the constraint, is not named by the request, and no field names it (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state.  Every other variable is bound by the schema-binding, and a request names it"), as t, the date of the issuer, in the redeem_bc of GB, and d, the person Bob points to with the label, in the lpoint_friend of GDO-L.
 # The arguments of the term at the top level of the text $s, split at its commas outside brackets.
 sub top_args {
@@ -267,7 +272,7 @@ sub q_atom {   # a GLP quoted name holding the text $s
 sub q_string { # a quoted name holding the GLP source of the string $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return q_atom("\"$s\"");
 }
-# The contracts a contract names on the line saying what it is written from, the first after its title and before its names declaration, "<NAME> <relation> <OTHER> (...)." or with no parentheses, the relation one of GSC\x27s five, amends, extends, instantiates, implements and restricts (GSC, Section 8, Relations among Contracts, Definitions Amendment, extension, instantiation and Implementation, restriction), several contracts joined by "and", and several relations joined by "and", each with the contracts after it, as "GAI extends GnW and amends GFP (...)." (GAI.txt; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC) (style guide 36; vGLP #23, Code_inbox.md, 2026-11-06 07:17 UTC, 1); nothing where the contract has no such line.  A name is read whole with a hyphened part, as GDO-L.
+# The contracts a contract names on the line saying what it is written from, the first after its title and before its names declaration, in GSC\x27s form (GSC df5e454, Section 2: "A contract written from others says so in its first line, after its title, by the relations of Section 8: each relation is followed by the contract it is to, or by `it\x27 for the contract named last, the relations joined by `and\x27, and an instantiation says after the contract\x27s name, between commas, what it writes for what, as ``CSSN instantiates GSNW, a child for a ward and a parent for a guardian, and restricts and extends it\x27\x27"): "<NAME> <relation> <OTHER> (...)." or with no parentheses, the relation one of GSC\x27s five, amends, extends, instantiates, implements and restricts (GSC, Section 8, Relations among Contracts, Definitions Amendment, extension, instantiation and Implementation, restriction); relations that share their contract joined by "and", as "restricts and extends it"; several contracts of one relation joined by commas and "and", as "GSNP amends GSN and GFP, and GAI."; and an instantiation\x27s words, "a child for a ward and a parent for a guardian", between commas after the contract\x27s name, which name no contract; nothing where the contract has no such line.  A name is read whole with a hyphened part, as GDO-L.
 sub relation_names {
     my ($f, @l) = @_;
     my @body = grep { !/^%/ && /\S/ } @l;
@@ -275,16 +280,31 @@ sub relation_names {
     my $nm = qr/[A-Z][A-Za-z0-9]*(?:-[A-Z][A-Za-z0-9]*)*/;
     my $rel = qr/(?:amends|extends|instantiates|implements|restricts)/;
     return () unless $body[1] =~ /^$nm\s+($rel\s+.*?)\.\s*$/;
-    my $of = $1;
-    $of =~ s/\s*\([^()]*\)//g;
-    # Each relation with the contracts after it, up to the next relation: "extends GnW and amends GFP" is extends GnW, amends GFP.
+    my $line = $body[1];
+    my $s = $1;
+    $s =~ s/\s*\([^()]*\)//g;
+    my $no = sub { die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", names no contract at \"$_[0]\"\n" };
     my @names;
-    for my $part (split /(?:\s*,\s*|\s+)(?:and\s+)?(?=$rel\s)/, $of) {
-        $part =~ s/^$rel\s+// or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no relation at \"$part\"\n";
-        for my $n (split /\s*,\s*(?:and\s+)?|\s+and\s+/, $part) {
-            $n =~ /^$nm$/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$n\"\n";
-            push @names, $n;
+    while (1) {
+        # The relations that share a contract: "restricts and extends".
+        $s =~ s/^($rel)\s+// or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", names no relation at \"$s\"\n";
+        my @rels = ($1);
+        while ($s =~ s/^and\s+($rel)\s+//) { push @rels, $1 }
+        # The contract they are to: "it", the contract named last, or contracts joined by commas and "and".
+        if ($s =~ s/^it(?=$|[\s,])//) {
+            @names or $no->("it");
+        } else {
+            $s =~ s/^($nm)(?=$|[\s,])// or $no->($s);
+            push @names, $1;
+            while ($s =~ s/^(?:\s*,\s*(?:and\s+)?|\s+and\s+)($nm)(?=$|[\s,])//) { push @names, $1 }
+            # An instantiation\x27s words, between commas after the contract\x27s name, up to the next relation or the end of the line.
+            if (grep { $_ eq "instantiates" } @rels and $s =~ s/^\s*,\s*((?:(?!,\s*(?:and\s+)?$rel\s).)*?)\s*(?=,\s*(?:and\s+)?$rel\s|$)//) {
+                my $w = $1;
+                $w =~ /\bfor\b/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", says between commas after the contract instantiated what it writes for what, and \"$w\" does not\n";
+            }
         }
+        last if $s =~ /^\s*$/;
+        $s =~ s/^\s*,?\s*and\s+(?=$rel\s)// or $no->($s);
     }
     return @names;
 }
@@ -321,6 +341,7 @@ sub visit {
     }
     push @order, $f;
 }
+if ($from) { visit($top); print Cwd::abs_path($_) . "\n" for @order; exit 0 }
 my @own = read_txt($top);
 unless (grep { iface_head($_) } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
@@ -878,4 +899,4 @@ pop @cl while @cl && $cl[-1] !~ /\S/;
 my $tx = join("\n", @cl);
 $tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
 print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . ")\n";
-' "$1" "$PROGRAMS" "${2:-}"
+' "$1" "$PROGRAMS" "${2:-}" "$FROM"
