@@ -48,12 +48,16 @@ import 'package:redux/redux.dart';
 import 'app_identity.dart' show RunningAppAttestation;
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
-/// The layer on the phone, the runtime's interface over it, and the key pair
-/// they hold.
+/// The layer on the phone, the runtime's interface over it, and the agent's
+/// key, the layer's: the layer holds the key pair, private half included, and
+/// signs with it; the host and the runtime hold the public key (GNA,
+/// decision 39; the GLP paper f265fec, appendix-guards, "Identity and
+/// signature"; IGLP 07a2b00, Implementation Notes, "The contract").  Until
+/// 2026-11-10 the host held the pair and handed it to the runtime.
 class PhoneNetwork {
   final GrassrootsNetwork layer;
   final glp.GlpNetwork network;
-  final ({glp.PubKey pub, Uint8List priv}) keyPair;
+  final glp.PubKey key;
 
   /// Whether the layer brought up a transport, Bluetooth or the local
   /// network ([GrassrootsNetwork.initialize]).
@@ -65,7 +69,7 @@ class PhoneNetwork {
   /// attested.
   final RunningAppAttestation attestation;
 
-  const PhoneNetwork._(this.layer, this.network, this.keyPair, this.transports,
+  const PhoneNetwork._(this.layer, this.network, this.key, this.transports,
       this.attestation);
 
   /// Instantiate the layer for the agent of [persona], with the agent's key
@@ -93,10 +97,7 @@ class PhoneNetwork {
     return PhoneNetwork._(
       layer,
       network,
-      (
-        pub: glp.PubKey.fromList(identity.publicKey),
-        priv: Uint8List.fromList(identity.privateKey),
-      ),
+      glp.PubKey.fromList(identity.publicKey),
       transports,
       attestation,
     );

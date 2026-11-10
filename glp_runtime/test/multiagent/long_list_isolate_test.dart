@@ -89,7 +89,7 @@ void main() {
     };
 
     alice.send(StructTerm('msg', [ConstTerm('bob'), _ints(_n)]), true, 'bob',
-        0, 'bob');
+        0, 0, 'bob');
     alice.flushMessages();
 
     final cell = rtBob.heap.getValue(netIn) as StructTerm;

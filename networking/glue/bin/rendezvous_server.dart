@@ -55,7 +55,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:args/args.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
@@ -128,7 +127,6 @@ Future<void> main(List<String> argv) async {
     agentId: 'rendezvous',
     program: args['program'] as String,
     rootSelfGlpPath: args['root-self'] as String,
-    keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
     network: network,
     stateStore: FileAgentStateStore(args['state-file'] as String),
   );

@@ -550,6 +550,21 @@ class SimulationNetworkClient extends GlpNetwork {
     this.acknowledgeToRouter,
   });
 
+  /// A client with no router: the layer of a process that runs no agent ---
+  /// the REPL before `:mad`, a compiler, a test --- holding [keyPair] and
+  /// signing with it, so that an engine signs by it ([LayerSigner]) and
+  /// holds no private key (the GLP paper f265fec, appendix-guards, "Identity
+  /// and signature"; IGLP 07a2b00, Implementation Notes, "The contract").  A
+  /// send goes nowhere; [selfId] names it in its directory.
+  factory SimulationNetworkClient.alone(({PubKey pub, Uint8List priv}) keyPair,
+          {String selfId = 'alone'}) =>
+      SimulationNetworkClient(
+        selfId: selfId,
+        directory: NetworkDirectory()..register(selfId, keyPair.pub),
+        keyPair: keyPair,
+        sendToRouter: (_, _, _) {},
+      );
+
   // --- Identity ---
 
   @override

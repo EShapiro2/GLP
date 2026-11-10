@@ -151,8 +151,8 @@ void main() {
       // Bob's pair (X_b, X_b?); he introduces Alice↔Charlie by sending the
       // reader to Alice and the writer to Charlie, each in a cold-call.
       final (xbW, xbR) = bobRt.heap.allocateVariable();
-      ctxBob.send(StructTerm('m', [VarRef(xbR)]), true, 'alice', 0, 'alice');
-      ctxBob.send(StructTerm('n', [VarRef(xbW)]), true, 'charlie', 0,
+      ctxBob.send(StructTerm('m', [VarRef(xbR)]), true, 'alice', 0, 0, 'alice');
+      ctxBob.send(StructTerm('n', [VarRef(xbW)]), true, 'charlie', 0, 0,
           'charlie');
       net.settle();
 
@@ -322,7 +322,7 @@ void main() {
 
       // Before the value arrives, Bob forwards the reader to Alice in a
       // cold-call: the original name is emitted, Bob's entry removed.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       expect(ctxBob.wp.localizeEntryCount, 0);
       net.flushAll();
@@ -417,7 +417,7 @@ void main() {
 
       // Bob forwards the reader to Alice before the value arrives; Alice's
       // request redirects the pending value; the copy at Bob is dropped.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       net.flushAll();
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
@@ -513,7 +513,7 @@ void main() {
       net.flushAll();
 
       // Bob forwards to Alice; her request redirects the parent value.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       net.flushAll();
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
@@ -599,7 +599,7 @@ void main() {
       // Bob forwards the reader to Alice before any value exists. Alice's
       // request is held (case 1) and does not leave her; Charlie learns
       // nothing, so his goal still points at the agent he exported to.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       net.settle();
       expect(ctxAlice.mp.heldCount, 1);

@@ -60,8 +60,9 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
   final (writerW, readerW) = aliceRt.heap.allocateVariable();
   ctxAlice.send(
     StructTerm('msg', [VarRef(readerW)]),
-    true, // isWriter: destination serializer _w(bob, 0)
+    true, // isWriter: destination serializer _w(bob, 0, 0)
     'bob',
+    0,
     0,
     'bob',
   );

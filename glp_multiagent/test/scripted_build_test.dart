@@ -193,7 +193,6 @@ void main() {
         program: '$programs/social/graph/core',
         rootSelfGlpPath: '$programs/self.glp',
         network: ReportingGlpNetwork(net, reporter),
-        keyPair: kp,
         manifest: superappManifest,
         firstAct: script.firstAct,
       );
@@ -271,7 +270,6 @@ void main() {
         program: '$programs/social/graph/core',
         rootSelfGlpPath: '$programs/self.glp',
         network: ReportingGlpNetwork(net, reporter),
-        keyPair: kp,
         manifest: superappManifest,
         firstAct: ScriptedPerson(mode).firstAct,
         stateStore: store,

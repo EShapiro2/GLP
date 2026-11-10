@@ -17,12 +17,18 @@
 /// 11:53 UTC): the catalogue's guard table does not carry it and signature/2
 /// does its work, so a clause guarded by it is refused.
 ///
-/// Keys and signed terms are lowercase-hex string constants. The runtime holds
-/// the person's identity from construction; the networking layer is given the
-/// same pair.
+/// Keys and signed terms are lowercase-hex string constants.  The layer holds
+/// the key pair and signs with it, and the runtime holds no private key: it
+/// signs by the layer, for sign/3 and for the certificate its compiler writes
+/// (the GLP paper f265fec, appendix-guards, "Identity and signature": the
+/// runtime "gives it to the networking layer, which holds the private key and
+/// signs with it"; "Key is the agent's own, the layer holding no other, and
+/// any other key aborts the call"; IGLP 07a2b00, Implementation Notes, "The
+/// contract").  Here the layer is the simulation's client.
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/analysis/type_checker/root_scope.dart'
@@ -31,6 +37,7 @@ import 'package:glp_runtime/bytecode/runner.dart' show runtimeGuards;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
@@ -42,23 +49,38 @@ final String _rootSelf = File('../programs/self.glp').absolute.path;
 String _hex(List<int> b) =>
     b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
 
-/// A madGLP engine for agent [id] whose person is [identity], with a
-/// SimulationNetworkClient bound as its GlpNetwork under the same pair, and
-/// send_to_user/1 captured into [out].
-GlpEngine _agent(String id, PersonIdentity identity, List<String> out) {
-  final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: identity);
+/// A madGLP engine for agent [id] whose key pair [identity] its layer holds:
+/// a SimulationNetworkClient over the pair, bound as the engine's GlpNetwork,
+/// the engine signing by it ([LayerSigner]); send_to_user/1 captured into
+/// [out].
+GlpEngine _agent(String id, PersonIdentity identity, List<String> out,
+    {SimulationNetworkClient? layer}) {
+  final client = layer ?? SimulationNetworkClient.alone(identity.keyPair, selfId: id);
+  final engine =
+      GlpEngine(rootSelfGlpPath: _rootSelf, identity: LayerSigner(client));
   engine.enableMadGLP(agentId: id);
   engine.runtime.outputCallback = (line) => out.add(line);
-
-  final dir = NetworkDirectory()..register(id, identity.pub);
-  final client = SimulationNetworkClient(
-    selfId: id,
-    directory: dir,
-    keyPair: identity.keyPair,
-    sendToRouter: (_, _, _) {},
-  );
   engine.madContext!.network = client;
   return engine;
+}
+
+/// The simulation's layer, counting the signatures it makes.
+class _CountingLayer extends SimulationNetworkClient {
+  int signatures = 0;
+
+  _CountingLayer(({PubKey pub, Uint8List priv}) keyPair, String id)
+      : super(
+          selfId: id,
+          directory: NetworkDirectory()..register(id, keyPair.pub),
+          keyPair: keyPair,
+          sendToRouter: (_, _, _) {},
+        );
+
+  @override
+  Uint8List sign(Uint8List message) {
+    signatures++;
+    return super.sign(message);
+  }
 }
 
 /// Load [source] as a program of its own, from a file: a goal then carries a
@@ -142,7 +164,59 @@ signer(unsigned) :- send_to_user([unsigned]).
       }
     });
 
-    test('sign signs under no key but the person\'s', () async {
+    test('the layer signs: the certificate the compiler writes and sign/3 '
+        'are the layer\'s signatures, and the runtime holds no key pair '
+        '(the GLP paper f265fec, "Identity and signature"; IGLP 07a2b00)',
+        () async {
+      final out = <String>[];
+      final a = PersonIdentity.generate();
+      final layer = _CountingLayer(a.keyPair, 'alice');
+      final engine = _agent('alice', a, out, layer: layer);
+      expect(engine.identity, isA<LayerSigner>(),
+          reason: 'what the runtime holds of the identity is a signer over '
+              'the layer, and no PersonIdentity');
+      expect((engine.identity as LayerSigner).network, same(layer));
+      expect(engine.identity.pub, a.pub);
+      // A module that reaches neither the network nor the person is
+      // certified: by the layer's signature.
+      final dir = _load(engine, '''
+procedure same(Constant?, Constant).
+same(X, X?).
+''');
+      try {
+        // The certificate is written on first use.
+        final cert = (engine.appModule!.artefact as Artefact).certificate;
+        expect(layer.signatures, 1,
+            reason: 'the certificate of the loaded program is the layer\'s '
+                'signature');
+        expect(cert.isRefused, isFalse);
+        expect(cert.verifies(), isTrue);
+        expect(_hex(cert.agent), a.pub.hex);
+        final result =
+            await engine.runGoal('self_key(K), sign(hello, K?, S)');
+        expect(result.succeeded, isTrue);
+        expect(layer.signatures, 2, reason: 'sign/3 signs by the layer');
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('an engine given no signer signs by a layer of its own, with a fresh '
+        'key pair: the runtime holds no PersonIdentity', () async {
+      final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+      expect(engine.identity, isA<LayerSigner>());
+      expect((engine.identity as LayerSigner).network,
+          isA<SimulationNetworkClient>());
+      final result = await engine.runGoal('self_key(K)');
+      expect(result.succeeded, isTrue);
+      final k = result.bindings['K'];
+      expect(k, isA<ConstTerm>());
+      expect((k as ConstTerm).value, engine.identity.pub.hex);
+    });
+
+    test('sign/3 aborts on a key not the agent\'s own: "Key is the agent\'s '
+        'own, the layer holding no other, and any other key aborts the call" '
+        '(the GLP paper f265fec, "Identity and signature")', () async {
       final out = <String>[];
       final a = PersonIdentity.generate();
       final b = PersonIdentity.generate();

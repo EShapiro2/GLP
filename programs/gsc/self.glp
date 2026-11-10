@@ -277,8 +277,6 @@ NDeclared  ::= NContract ; reflexive(Preds, NContract).
 % possibly the person of the role Other (GSC 316d875, Section 2: "a clause
 % that admits one person in both writes 'Alice and Bob, possibly one
 % person'; the schema's head writes the second name as one('Bob', 'Alice')").
-RName     ::= Constant ; one(Constant, Constant).
-Names      ::= [] ; [RName | Names].
 RChunks     ::= [] ; [RName | RChunks].
 % The clause syntax (GSC 859a007, Sections 3.1 and 3.2, Definitions Name
 % term, role, Speech-act schema and Schema with values), as GSC #11 Cowork
@@ -308,35 +306,6 @@ RChunks     ::= [] ; [RName | RChunks].
 % ext(Sigma, '_') for Sigma._, a value num(X), and a signed term sgn(Y,
 % Name).  A constant is read by =?= against Names and Vars, and its
 % constant taken from there (sas_bare below).
-SNT    ::= own(Constant) ; ext(SNT, Constant).
-SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant).
-SArgs  ::= [] ; [SArg | SArgs].
-SAtom  ::= atom(Constant, SArgs).
-SAtoms ::= [] ; [SAtom | SAtoms].
-SMult  ::= SAtom ; times(SArg, SAtom).
-SQLit  ::= SMult ; not(SMult).
-SQLits ::= [] ; [SQLit | SQLits].
-SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-         ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
-         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
-SExprs ::= [] ; [SExpr | SExprs].
-% A safe formula and a constraint are one type, a constraint being a safe
-% formula with no atom and no quantifier.
-SConstraint ::= true ; and(SConstraint, SConstraint)
-              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; or(SConstraint, SConstraint) ; not(SConstraint)
-              ; implies(SConstraint, SConstraint)
-              ; ne(SExpr, SExpr) ; rel(Constant, SExprs)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr)
-              ; atom(Constant, SArgs) ; times(SArg, SAtom)
-              ; exists(PNames, SAtom, SConstraint)
-              ; forall(PNames, SAtom, SConstraint, SConstraint)
-              ; forall(Constant, SAtom, SQLits)
-              ; [] ; [SConstraint | SLits].
-SLits  ::= [] ; [SConstraint | SLits].
-PNames ::= [] ; [Constant | PNames].
 WSchema    ::= schema(Constant, Args, NRoleSpecs)
              ; cschema(Constant, Args, Nil, NRoleSpecs)
              ; nschema(Constant, Args, Constraint, NRoleSpecs)
@@ -347,16 +316,12 @@ WSchema    ::= schema(Constant, Args, NRoleSpecs)
              ; qschema(Constant, Names, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
              ; SSchema.
 WContract  ::= [] ; [WSchema | WContract].
-% The clause syntax's own types, which every contract's NAME.glp declares its
-% term by and declares no copy of (GSC #13, 2026-11-09, by claude.md's rule
-% against duplicating content): a schema sas(Name, Names, Vars, Head, Body,
-% Constraint, Guards), a contract the list of its schemas, and a contract
-% declared with its reflexive or its environment predicates.  A contract
-% under programs/gsc sees them by its directory's self.glp.
-SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
-SContract  ::= [] ; [SSchema | SContract].
-SDeclared  ::= SContract ; reflexive(Preds, SContract)
-             ; environment(Preds, SContract).
+% The clause syntax's own types, SSchema, SContract and SDeclared and the
+% types they are built of, are the root programs/self.glp's since 2026-11-10,
+% by TGLP's rule that common protocol types are defined once at the lowest
+% common ancestor of the modules that use them (GLP #14, Code_inbox
+% 2026-11-10 12:03 UTC, item 2, Udi's ruling): every contract's NAME.glp
+% declares its term by them and declares no copy.
 WBody      ::= WContract ; reflexive(Preds, WContract).
 WDeclared  ::= WBody ; environment(Preds, WBody).
 
@@ -2212,7 +2177,6 @@ Ctx ::= ctx(Val, Integer).
 % --- Verdicts --------------------------------------------------------------
 Ans   ::= yes ; no.
 Ints  ::= [] ; [Integer | Ints].
-Preds ::= [] ; [Constant | Preds].
 % listed_role(Schema, Role, Atom) is the first part of clause 2 of
 % def:unobstructed: the listed role Role of Schema adds Atom, of the
 % predicate of an atom the introductory act forbids at a role.

@@ -27,9 +27,11 @@ class GlobalizeEntry {
   /// The epoch this end records of the agent at the other end, the holder:
   /// "for an end at the anchor, the epoch carried by the first request,
   /// acknowledgement or value from the holder, and no epoch until one
-  /// arrives" (IGLP db0a117, after Definition "madGLP Local State").  Null
+  /// arrives" (IGLP cec4682, after Definition "madGLP Local State").  Null
   /// until one arrives; an end with none is retired by no epoch the agent
-  /// learns, and by the agent's own crash.
+  /// learns, and by the agent's own crash: "a holder that crashes before it
+  /// has sent on a link is not learnt of by the anchor from its epoch, but
+  /// from the gone its next message on the link draws".
   int? holderEpoch;
 
   GlobalizeEntry({
@@ -56,7 +58,7 @@ class LocalizeEntry {
 
   /// The epoch in the name, e in `_r(p, e, i)`: the epoch this end records
   /// of the anchor, "for an end whose other end is at the anchor, the epoch
-  /// in the name" (IGLP db0a117, after Definition "madGLP Local State").
+  /// in the name" (IGLP cec4682, after Definition "madGLP Local State").
   final int remoteEpoch;
 
   /// Index from the remote agent's global name (i in `_r(p, e, i)`)

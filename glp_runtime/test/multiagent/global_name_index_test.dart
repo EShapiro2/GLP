@@ -250,7 +250,7 @@ void main() {
     alice.onMessageReady = (_, msg) => payloads.add(msg.payload);
     final sent =
         StructTerm('got', [StructTerm('_w', [ConstTerm('p'), ConstTerm(2)])]);
-    alice.send(sent, false, 'alice', 1, 'bob');
+    alice.send(sent, false, 'alice', 1, 1, 'bob');
     alice.flushMessages();
     expect(alice.wp.globalizeEntryCount, 0, reason: 'no variable, no entry');
     expect(alice.globalSendRegistry.pendingCount, 0);

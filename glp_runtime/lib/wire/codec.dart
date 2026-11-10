@@ -268,7 +268,7 @@ const int wireMsgKindGone = 3;
 /// A madGLP message (§cf-terms, Messages). Opens with a u8 kind: 0 value,
 /// 1 request, 2 acknowledgement, 3 gone; then the clen epoch of the sender,
 /// [senderEpoch], "the epoch its sender is in when it sends it" (IGLP
-/// db0a117, Definition "madGLP Local State", the paragraph after it).  The
+/// cec4682, Definition "madGLP Local State", the paragraph after it).  The
 /// kind byte is new in code-format version 2, the sender's epoch and the
 /// kind gone in version 4.
 sealed class WireMessage {

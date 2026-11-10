@@ -170,7 +170,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
               ? [layerActions(reporter)]
               : const []);
       _net = net;
-      if (debugLogOn) reporter?.setPhone(net.keyPair.pub.hex);
+      if (debugLogOn) reporter?.setPhone(net.key.hex);
       // The agent's local state is kept across the termination of the app by
       // a store in the app's own directory, which the person does not see
       // (IGLP, Implementation Notes, "Persistence": "a store the host gives
@@ -189,7 +189,6 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
         network: debugLogOn && reporter != null
             ? ReportingGlpNetwork(net.network, reporter)
             : net.network,
-        keyPair: net.keyPair,
         manifest: superappManifest,
         services: readServices(glp.coreDir),
         firstAct: script?.firstAct,

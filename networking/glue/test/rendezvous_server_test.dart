@@ -296,7 +296,6 @@ friend_version(2).
       agentId: id,
       program: coreDir,
       rootSelfGlpPath: rootSelfGlpPath,
-      keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
       network: HeadlessGlpNetwork(layer),
     );
     addTearDown(agent.dispose);
@@ -406,7 +405,6 @@ friend_version(2).
         agentId: id,
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
         network: HeadlessGlpNetwork(layer),
       );
       addTearDown(agent.dispose);
@@ -779,7 +777,6 @@ friend_version(2).
       agentId: 'directory',
       program: directoryPath,
       rootSelfGlpPath: rootSelfGlpPath,
-      keyPair: (pub: dirKey, priv: Uint8List.fromList(dirIdentity.privateKey)),
       network: HeadlessGlpNetwork(dirLayer),
     );
     addTearDown(dirAgent.dispose);
