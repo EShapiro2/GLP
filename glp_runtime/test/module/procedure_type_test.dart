@@ -13,7 +13,11 @@
 /// The linker writes the type into each module that names it, from the
 /// exports of the module the qualifier names, M.glp or M/self.glp of the
 /// referring module's directory; a qualifier naming no module, and a
-/// parameterised export, are refused with the reason.  The last group runs the vanilla meta-interpreter
+/// parameterised export, are refused with the reason; and `Goal(M#Procedure)`
+/// is refused where M exports `true/0`, two alternatives then sharing the
+/// constant `true` (type_environment_builder.dart, `_checkDeterminism`, which
+/// follows a bare type-name alternative to the functors and constants it
+/// reaches).  The last group runs the vanilla meta-interpreter
 /// (programs/book/meta/plain/plain_meta.glp), one text, at two programs, each
 /// typed by hand at the dual of its declaration, the form the checker types
 /// today (Cloud #12 to Code, Code_inbox.md, 2026-11-10).
@@ -101,6 +105,26 @@ go :- keep(halt).
       expect(_engine().loadProgram(prog.path), isTrue);
     });
 
+    test('Goal(prog#Procedure) is refused where prog exports true/0', () {
+      write('prog.glp', '''
+exported procedure true.
+true.
+exported procedure halt.
+halt.
+''');
+      write('self.glp', '''
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+procedure keep(Goal(prog#Procedure)?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(
+          () => _engine().loadProgram(prog.path),
+          refused('Duplicate constant alternative: true, reached through '
+              'prog#Procedure, in Goal<prog#Procedure>'));
+    });
+
     test('a qualifier naming no module is refused, the module named', () {
       write('self.glp', '''
 procedure keep(nowhere#Procedure?).
@@ -125,6 +149,20 @@ go :- keep(id(1, _)).
 ''');
       expect(() => _engine().loadProgram(prog.path),
           refused('exports the parameterised declaration id/2'));
+    });
+
+    test('a functor or constant reached through a named alternative is one alternative (TGLP, "Type Declarations")',
+        () {
+      write('self.glp', '''
+T ::= true ; U.
+U ::= true ; halt.
+procedure keep(T?).
+keep(_).
+exported procedure go.
+go :- keep(halt).
+''');
+      expect(() => _engine().loadProgram(prog.path),
+          refused('Duplicate constant alternative: true, reached through U, in T'));
     });
   });
 
