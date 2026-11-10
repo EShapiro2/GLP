@@ -5417,7 +5417,9 @@ check "CVA signing conditions: ... and got(a)" "B = \[.*view(bob, \[[^]]*got(spe
 check "CVA signing conditions: ... the run suspends, none of alice's own transactions holding" "→ suspended" "$cva_signing"
 # The author of a speech act in a constraint, evaluated at the binding (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; GSC 65a26da, def:numbers, "the author author(y), the first signer of y"): intros' cite(p, q ; x), unguarded, author(x) = q, opened by alice on the items she posts, a signed by her, its author alice, and b signed by bob and again by her, its author bob.
 check "CVA author: cite's constraint printed as the contract writes it, local to every role" "^schema_numeric(cite, numeric(eq(author_of(svar(x)), role(2)), \[\], every))\$" "$cva_signing_text"
-check "CVA author: the printed expression type takes the author and the item of a speech act" "^Expr      ::= .* ; author_of(Var) ; item_of(Var).\$" "$cva_signing_text"
+# The item of a speech act is a Var, an argument of an atom, and so an Expr through Var; an alternative item_of(Var) beside Var would be a second alternative of item_of/1, which TGLP's Type Declarations refuse (vGLP's yes, 2026-11-10 13:08 UTC; Cloud #12, 0868f162).
+check "CVA author: the printed expression type takes the author of a speech act, and the item through Var" "^Expr      ::= Var ; .* ; author_of(Var).\$" "$cva_signing_text"
+check "CVA author: ... the printed Var takes the item of a speech act" "^            ; item_of(Var)\$" "$cva_signing_text"
 cva_author=$("$REPL_RUN" <<HEREDOC
 $CVA/intros/
 :limit 20000000
