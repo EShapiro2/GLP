@@ -171,9 +171,19 @@ c_
 knows
 }
 (
-c
+\mathit{Carol}
 )
 \}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -192,7 +202,7 @@ knows
 knows
 }
 (
-c
+\mathit{Carol}
 )
  \in c_
 {
@@ -212,6 +222,14 @@ knows
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -243,6 +261,21 @@ retired
  \cap c_
 {
 \Bob
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+child
+}
+,
+\mathit{
+retired
+}
+\}
+ \cap c_
+{
+\mathit{Carol}
 }
  = \emptyset
 ,\\
@@ -332,15 +365,15 @@ knows
 \text{provided } 
 \{
 \mathit{
-child
-}
-,
-\mathit{
 friend
 }
 (
 \Bob
 )
+,
+\mathit{
+child
+}
 ,
 \mathit{
 retired
@@ -354,15 +387,15 @@ retired
  \text{ and } 
 \{
 \mathit{
-child
-}
-,
-\mathit{
 friend
 }
 (
 \Alice
 )
+,
+\mathit{
+child
+}
 ,
 \mathit{
 retired
@@ -1185,6 +1218,15 @@ identity
 }
 ,
 \mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
 member
 }
 (
@@ -1192,15 +1234,6 @@ member
 \Alice
 \rangle
 \cdot
-n
-)
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
 n
 )
  \in c_
@@ -5887,6 +5920,17 @@ listed
 (
 \Alice
 ,
+n
+)
+,
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
 n
 )
  \in c_
