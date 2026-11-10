@@ -1,9 +1,13 @@
-/// An agent's local state survives the termination of its application (IGLP,
-/// Definition "Restart": "the local state s_p of p at restart is its local
-/// state at termination"; Implementation Notes, "Persistence": "a message is
-/// handed to the layer, and a delivered message acknowledged to the layer,
-/// only from a state the store holds, and a restart resumes from the state
-/// the store holds").
+/// An agent's local state survives the termination of its application (IGLP
+/// d70ec2e, Definition "Restart": "the local state s_p of p at restart is its
+/// local state at termination"; Implementation Notes, "Persistence": the
+/// runtime keeps it by a store, "saving it when the application goes to the
+/// background, which the platform announces before it may kill the
+/// application, and at no other time"; "A message is handed to the layer, and
+/// a delivered message acknowledged to the layer, in the cycle that makes or
+/// applies it, and a restart resumes from the state the store holds").  The
+/// host's call is [AgentRuntime.save], made here where the phone goes to the
+/// background.
 ///
 /// "A madGLP run therefore continues across a restart ...: a message the
 /// layer delivers after a restart finds the entry its localization created, a
@@ -84,49 +88,6 @@ waiter(go) :- when_idle | send_to_user([waiter]).
 /// A message the layer holds: its sender, its recipient, its payload and the
 /// id the layer gave it.
 typedef _Held = ({String from, String to, Uint8List payload, String id});
-
-/// A store whose saves wait until the test lets them complete.
-class _GatedStore extends MemoryAgentStateStore {
-  Completer<void>? gate;
-
-  @override
-  Future<void> save(Uint8List state) async {
-    final g = gate;
-    if (g != null) await g.future;
-    await super.save(state);
-  }
-}
-
-/// A store whose next save, once [terminate] is set, keeps the state and then never completes: the application terminates after the save and before anything that follows it in the cycle.
-class _TerminatingStore extends MemoryAgentStateStore {
-  bool terminate = false;
-
-  @override
-  Future<void> save(Uint8List state) async {
-    await super.save(state);
-    if (terminate) {
-      terminate = false;
-      await Completer<void>().future;
-    }
-  }
-}
-
-/// A store whose saves of the numbers in [failing], counted from 1, fail.
-class _FailingStore extends MemoryAgentStateStore {
-  final Set<int> failing;
-  int attempts = 0;
-
-  _FailingStore(this.failing);
-
-  @override
-  Future<void> save(Uint8List state) async {
-    attempts++;
-    if (failing.contains(attempts)) {
-      throw const FileSystemException('the state was not kept');
-    }
-    await super.save(state);
-  }
-}
 
 void main() {
   late String root;
@@ -209,8 +170,9 @@ void main() {
     final b1 = host('b', playB, storeB, kpB);
     await a1.initialize();
     await b1.initialize();
-    expect(File('${dir.path}/a.state').existsSync(), isTrue,
-        reason: 'the initial start is a cycle, and its end saves the state');
+    expect(File('${dir.path}/a.state').existsSync(), isFalse,
+        reason: 'nothing is saved until the host calls save: the state is '
+            'saved when the app goes to the background, and at no other time');
     expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b'],
         reason: 'the cold call waits in the layer');
 
@@ -219,8 +181,8 @@ void main() {
     final coldCall = await deliverTo('b', b1);
     expect(b1.ctx!.wp.findByRemote('a', 1), isNotNull);
     expect(delivered['b'], [coldCall.single.id],
-        reason: 'the layer is told the cold call is delivered once the cycle '
-            'that applied it is saved');
+        reason: 'the layer is told the cold call is delivered in the cycle '
+            'that applied it');
 
     // a's person acts: the writer is assigned, the value leaves a, and is
     // pending there until acknowledged.
@@ -229,11 +191,17 @@ void main() {
     final value = queue.where((m) => m.from == 'a' && m.to == 'b').toList();
     expect(value, hasLength(1), reason: 'the value waits in the layer');
 
-    // Both applications terminate.  The layer keeps its queue.
+    // Both applications go to the background, which saves each agent's
+    // state, and terminate.  The layer keeps its queue.
+    expect(await a1.save(), isTrue);
+    expect(await b1.save(), isTrue);
+    expect(File('${dir.path}/a.state').existsSync(), isTrue);
+    a1.dispose();
+    b1.dispose();
     final restartedFrom = out['b']!.length;
 
-    // Both restart, each from its store, and go on from the state saved at
-    // the end of its last cycle: no entry goal is posted again.
+    // Both restart, each from its store, and go on from the state saved: no
+    // entry goal is posted again.
     final a2 = host('a', playA, FileAgentStateStore('${dir.path}/a.state'),
         kpA);
     final b2 = host('b', playB, storeB, kpB);
@@ -263,36 +231,59 @@ void main() {
         reason: 'the pending value is acknowledged');
   });
 
-  test('the layer is told a message is delivered only once the cycle that '
-      'applied it is saved', () async {
-    final storeB = _GatedStore();
+  test('a delivered message is acknowledged in the cycle that applies it, '
+      'and nothing is saved in a cycle', () async {
+    // IGLP d70ec2e, Implementation Notes, "Persistence": "A message is handed
+    // to the layer, and a delivered message acknowledged to the layer, in the
+    // cycle that makes or applies it"; the state is saved "when the
+    // application goes to the background ... and at no other time".  Until
+    // 2026-11-10 a message was acknowledged once a state holding it applied
+    // was saved, and every cycle saved.
+    final storeB = MemoryAgentStateStore();
     final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
     final b = host('b', playB, storeB, generateKeyPair());
     await a.initialize();
     await b.initialize();
 
-    storeB.gate = Completer<void>();
+    final coldCall = await deliverTo('b', b);
+    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(delivered['b'], [coldCall.single.id]);
+    expect(storeB.saves, 0, reason: 'no cycle saves');
+  });
+
+  test('a save asked for during a cycle is taken after it: the state saved '
+      'is one between cycles', () async {
+    final storeB = MemoryAgentStateStore();
+    final kpB = generateKeyPair();
+    final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
+    final b = host('b', playB, storeB, kpB);
+    await a.initialize();
+    await b.initialize();
+
     final coldCall = queue.single;
     queue.clear();
     final cycle =
         b.onMadMessageReceived('a', coldCall.payload, messageId: coldCall.id);
-    // The cycle has applied the message and waits on its save.
-    await Future<void>.delayed(Duration.zero);
-    await Future<void>.delayed(Duration.zero);
-    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull);
-    expect(delivered['b'], isEmpty,
-        reason: 'the cycle that applied the message is not yet saved');
-
-    storeB.gate!.complete();
+    final saved = b.save();
     await cycle;
-    expect(delivered['b'], [coldCall.id]);
+    expect(await saved, isTrue);
+    expect(storeB.saves, 1);
+
+    // The state saved holds the cold call applied.
+    final b2 = host('b', playB, storeB, kpB);
+    await b2.initialize();
+    expect(b2.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(b2.ctx!.wp.serializerAppendedCount, 1);
   });
 
-  test('an agent terminated after its cycle\'s save and before the hand-over '
-      'finds the message undelivered at restart and hands it over, once',
-      () async {
+  test('the host saves at the announcement of termination, between cycles, '
+      'every Send of the last cycle handed over: a restart from it hands '
+      'nothing over again and posts no entry goal; a crash after a cycle not '
+      'saved loses that cycle', () async {
+    // IGLP d70ec2e, Termination and Restart: "A crash loses what the agent
+    // did since, and the agent restarts from the state last saved".
     final kpA = generateKeyPair();
-    final storeA = _TerminatingStore();
+    final storeA = MemoryAgentStateStore();
     final a1 = host('a', playA, storeA, kpA);
     final b = host('b', playB, MemoryAgentStateStore(), generateKeyPair());
     await a1.initialize();
@@ -301,39 +292,29 @@ void main() {
     // a's reader, _r(a, 1).
     await deliverTo('b', b);
     expect(queue, isEmpty);
+    expect(storeA.saves, 0);
 
-    // a's person acts: the cycle assigns the writer, and the value's message
-    // is in M_p, undelivered.  The save keeps the state, and the application
-    // terminates before the hand-over.
-    storeA.terminate = true;
-    final saves = storeA.saves;
-    unawaited(a1.injectUserInput(ConstTerm('go')));
-    while (storeA.saves == saves) {
-      await Future<void>.delayed(Duration.zero);
-    }
-    await Future<void>.delayed(Duration.zero);
-    expect(queue, isEmpty,
-        reason: 'a message is handed to the layer only from a state the '
-            'store holds, after the save, and the application terminated '
-            'before the hand-over');
-    expect(a1.ctx!.mp.sendableLength, 1,
-        reason: 'the state saved holds the message undelivered');
+    // a's person acts: the cycle assigns the writer and hands the value's
+    // message to the layer, at once.
+    await a1.injectUserInput(ConstTerm('go'));
+    expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b']);
+    expect(a1.ctx!.mp.sendableLength, 0,
+        reason: 'the cycle handed its Send over');
 
-    // a restarts from the state the store holds, and hands the message over.
+    // The app goes to the background, which saves, and terminates.
+    expect(await a1.save(), isTrue);
+    expect(storeA.saves, 1);
+    a1.dispose();
+
+    // a restarts from the state the store holds: the value is pending there,
+    // nothing is handed over again, and no entry goal is posted.
     final a2 = host('a', playA, storeA, kpA);
     await a2.initialize();
     expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b'],
-        reason: 'the restart hands the undelivered message over, once');
+        reason: 'the message is handed over once');
     expect(a2.ctx!.mp.sendableLength, 0);
     expect(a2.ctx!.hasPendingReaderValue('a', 1), isTrue,
         reason: 'the value is pending until b acknowledges it');
-
-    // The state saved after the hand-over holds the message delivered: a
-    // restart from it hands nothing over again.
-    final a3 = host('a', playA, storeA, kpA);
-    await a3.initialize();
-    expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b'],
-        reason: 'the message is handed over once');
     expect(out['a']!.where((l) => l.startsWith('[GOAL] Started')),
         hasLength(1),
         reason: 'the restarted agent posts no entry goal');
@@ -343,15 +324,22 @@ void main() {
     await deliverTo('b', b);
     expect(out['b'], contains('< got(hello)'));
     expect(queue.map((m) => '${m.from}>${m.to}'), ['b>a']);
-    await deliverTo('a', a3);
-    expect(a3.ctx!.hasPendingReaderValue('a', 1), isFalse);
+    await deliverTo('a', a2);
+    expect(a2.ctx!.hasPendingReaderValue('a', 1), isFalse);
     expect(queue, isEmpty);
+
+    // a crashes, with no save since: the acknowledgement's cycle is lost, and
+    // a restarts from the state last saved, the value pending still.
+    a2.dispose();
+    final a3 = host('a', playA, storeA, kpA);
+    await a3.initialize();
+    expect(a3.ctx!.hasPendingReaderValue('a', 1), isTrue,
+        reason: 'the state last saved');
+    expect(queue, isEmpty, reason: 'that state holds nothing undelivered');
   });
 
   test('over a store, a goal waiting on when_idle is re-tried after the '
-      'hand-over, each run saved before its messages are handed over; where '
-      'the save of a run fails, nothing is handed over from its state',
-      () async {
+      'hand-over, as with none, and no run is saved', () async {
     /// `c` over [store], its outputs and its Sends recorded in the order
     /// they happen, each Send with the number of saves kept before it.
     Future<List<String>> run(MemoryAgentStateStore store) async {
@@ -371,41 +359,24 @@ void main() {
       return events;
     }
 
-    // The boot's cycle: the cold call is saved and handed over; sender/1
-    // passes and cold-calls b again, which is saved and handed over; waiter/1
-    // then passes, and its run is saved.
+    // The boot's cycle: the cold call is handed over; sender/1 passes and
+    // cold-calls b again, which is handed over; waiter/1 then passes.
     final store = MemoryAgentStateStore();
     expect(await run(store), [
-      'send b after 1',
+      'send b after 0',
       'out sender',
-      'send b after 2',
+      'send b after 0',
       'out waiter',
     ]);
-    expect(store.saves, 3);
-
-    // The save of the run after the first hand-over fails: the agent runs on
-    // its state in memory, and the cycle ends there, the second cold call
-    // kept undelivered in M_p and not handed over from a state the store does
-    // not hold (IGLP, Implementation Notes, "Persistence"); the run is not
-    // made again.
-    final failing = _FailingStore({2});
-    expect(await run(failing), [
-      'send b after 1',
-      'out sender',
-    ]);
-    expect(failing.saves, 1);
+    expect(store.saves, 0);
   });
 
-  test('a cycle whose save fails leaves the agent running on its state in '
-      'memory, reported once; nothing is handed to the layer or acknowledged '
-      'until the next cycle that changes the state saves it', () async {
-    // IGLP, Implementation Notes, "Persistence": "a message is handed to the
-    // layer, and a delivered message acknowledged to the layer, only from a
-    // state the store holds, and a restart resumes from the state the store
-    // holds".  Code #26, Cloud-Runtime_inbox 2026-11-08 22:09 UTC: the
-    // runtime reports the failed save once on onLog as [ERROR], keeps the
-    // agent running on its state in memory, and tries the save again at the
-    // next cycle that changes the state, not at once.
+  test('a save that fails leaves the store with the state saved before it, '
+      'reported; the agent runs on, and the next save keeps its state',
+      () async {
+    // IGLP d70ec2e, Implementation Notes, "Persistence": "If the save fails,
+    // the store keeps the state saved before it, and the runtime reports the
+    // failure."
     final storeB = MemoryAgentStateStore();
     final kpB = generateKeyPair();
     final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
@@ -414,35 +385,32 @@ void main() {
     b.onLog = (_, m) => logs.add(m);
     await a.initialize();
     await b.initialize();
-    final savesBefore = storeB.saves;
+    expect(await b.save(), isTrue, reason: 'the state before the cold call');
+    expect(storeB.saves, 1);
+
+    await deliverTo('b', b);
+    expect(delivered['b'], hasLength(1),
+        reason: 'acknowledged in the cycle, whatever the store');
+    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull);
 
     storeB.failNextSaves = 1;
-    await deliverTo('b', b);
+    expect(await b.save(), isFalse);
     expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1));
-    expect(storeB.saves, savesBefore, reason: 'the save failed');
-    expect(delivered['b'], isEmpty,
-        reason: 'the store does not hold the cold call applied');
-    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull,
-        reason: 'the agent runs on its state in memory');
-    expect(b.ctx!.wp.serializerAppendedCount, 1);
-    expect(queue.where((m) => m.from == 'b'), isEmpty,
-        reason: 'nothing is handed to the layer from a state not saved');
+    expect(storeB.saves, 1, reason: 'the store keeps the state saved before');
 
-    // A restart now would resume from the state the store holds, which has
-    // not applied the cold call.
+    // A restart now resumes from the state the store holds, which has not
+    // applied the cold call.
     final early = host('b', playB, storeB, kpB);
     await early.initialize();
     expect(early.ctx!.wp.findByRemote('a', 1), isNull);
     early.dispose();
 
-    // The next cycle that changes the state saves it, and then the cold call
-    // and the value are acknowledged and b's acknowledgement handed over.
+    // The agent runs on, and the next save keeps its state.
     await a.injectUserInput(ConstTerm('go'));
     await deliverTo('b', b);
-    expect(storeB.saves, greaterThan(savesBefore));
-    expect(delivered['b'], hasLength(2));
     expect(out['b'], contains('< got(hello)'));
-    expect(queue.where((m) => m.from == 'b'), isNotEmpty);
+    expect(await b.save(), isTrue);
+    expect(storeB.saves, 2);
     expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1));
 
     final b2 = host('b', playB, storeB, kpB);
@@ -451,13 +419,10 @@ void main() {
         reason: 'the state saved holds the cold call applied');
   });
 
-  test('a store that refuses every save leaves the event loop free: the agent '
-      'runs on, the failure reported once, and a timer fires', () async {
-    // Cloud #6, Code_inbox 2026-11-08 21:13 UTC: a cycle whose save failed
-    // was taken again at once, with no bound, so a store that kept failing,
-    // as a full disc does, spun the event loop and the app hung.  IGLP,
-    // Implementation Notes, "Event-driven execution": the host event loop
-    // stays live, "so timers, I/O, and the UI stay live".
+  test('a store that refuses every save: each save asked for is reported, '
+      'the agent runs on, and the event loop stays free', () async {
+    // IGLP, Implementation Notes, "Event-driven execution": the host event
+    // loop stays live, "so timers, I/O, and the UI stay live".
     final storeB = MemoryAgentStateStore();
     final a = host('a', playA, MemoryAgentStateStore(), generateKeyPair());
     final b = host('b', playB, storeB, generateKeyPair());
@@ -469,21 +434,24 @@ void main() {
 
     final fired = Completer<void>();
     Timer(Duration.zero, fired.complete);
-    final delivering = deliverTo('b', b);
+    final saving = b.save();
     await fired.future;
-    await delivering;
+    expect(await saving, isFalse);
+    expect(await b.save(), isFalse);
+    expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(2),
+        reason: 'each save asked for is reported once');
+
+    await deliverTo('b', b);
     await a.injectUserInput(ConstTerm('go'));
     await deliverTo('b', b);
     expect(out['b'], contains('< got(hello)'),
         reason: 'the agent runs on its state in memory');
-    expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1),
-        reason: 'reported once, not at every cycle');
-    expect(delivered['b'], isEmpty);
-    expect(queue.where((m) => m.from == 'b'), isEmpty);
+    expect(delivered['b'], hasLength(2));
+    expect(storeB.saves, 0);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  test('a disposed agent takes no event and makes no save, and the next '
-      'launch from its store is the one agent that writes it', () async {
+  test('a disposed agent takes no event and its save keeps nothing, and the '
+      'next launch from its store is the one agent that writes it', () async {
     // IGLP, Implementation Notes, "Event-driven execution": "shutdown is the
     // embedding application's"; Definition "Restart" and "Persistence": one
     // agent and one store per launch.  Cloud #6, Code_inbox 2026-11-08 21:13
@@ -495,6 +463,7 @@ void main() {
     final b = host('b', playB, MemoryAgentStateStore(), generateKeyPair());
     await a.initialize();
     await b.initialize();
+    expect(await a.save(), isTrue);
     final logs = <String>[];
     a.onLog = (_, m) => logs.add(m);
     final saves = storeA.saves;
@@ -503,7 +472,8 @@ void main() {
     a.dispose();
     expect(a.disposed, isTrue);
     await a.injectUserInput(ConstTerm('go'));
-    expect(storeA.saves, saves, reason: 'no save after the dispose');
+    expect(await a.save(), isFalse, reason: 'no save after the dispose');
+    expect(storeA.saves, saves);
     expect(queue.length, sent, reason: 'nothing handed to the layer');
     expect(out['a']!.where((l) => l == '> go'), isEmpty,
         reason: 'the channel to the person is closed');
@@ -514,6 +484,7 @@ void main() {
     await a2.initialize();
     expect(a2.firstStart, isFalse);
     await a2.injectUserInput(ConstTerm('go'));
+    expect(await a2.save(), isTrue);
     expect(storeA.saves, greaterThan(saves));
     expect(a.disposed, isTrue);
   });
@@ -522,7 +493,65 @@ void main() {
     final store = MemoryAgentStateStore();
     final a = host('a', playA, store, generateKeyPair());
     await a.initialize();
+    expect(await a.save(), isTrue);
     final other = host('a', playA, store, generateKeyPair());
     await expectLater(other.initialize(), throwsStateError);
+  });
+
+  test('a saved state the runtime cannot read is a loss of the state: '
+      'reported, and the agent starts afresh from the program, under the key '
+      'pair the store keeps; it does not throw', () async {
+    // IGLP d70ec2e, Implementation Notes, "Persistence": "A saved state the
+    // runtime cannot read, as one written under an earlier format of the
+    // store, is a loss of the state: the runtime reports it and starts the
+    // agent afresh, under the key pair the store keeps."  Seen on the
+    // directory server, whose state file was written under store version 1
+    // (GLP #14, Code_inbox 2026-11-10 08:11 UTC, item 3).
+    final store = MemoryAgentStateStore();
+    AgentRuntime launch() {
+      final agent = AgentRuntime(
+          agentId: 'a', program: playA, rootSelfGlpPath: root, stateStore: store);
+      agent.onOutput = out.putIfAbsent('a', () => []).add;
+      agent.onSendMadMessage = (to, payload) async => queue.add((
+            from: 'a',
+            to: to,
+            payload: Uint8List.fromList(payload),
+            id: 'm${nextId++}',
+          ));
+      return agent;
+    }
+
+    final a1 = launch();
+    await a1.initialize();
+    expect(await a1.save(), isTrue);
+    a1.dispose();
+    final kept = (await store.loadKeyPair())!;
+
+    // The state as an earlier format of the store wrote it: the magic, the
+    // version byte 1, and what this runtime does not read.
+    final old = Uint8List.fromList((await store.load())!);
+    old[4] = 1;
+    await store.save(old);
+
+    final logs = <String>[];
+    final a2 = launch();
+    a2.onLog = (_, m) => logs.add(m);
+    await a2.initialize();
+    expect(a2.firstStart, isTrue, reason: 'the agent starts afresh');
+    expect(logs.where((l) => l.startsWith('[ERROR] the saved state cannot be '
+        'read, and is lost')), hasLength(1));
+    expect(out['a']!.where((l) => l.startsWith('[GOAL] Started')),
+        hasLength(2), reason: 'the entry goal is posted again');
+    expect(queue.map((m) => '${m.from}>${m.to}'), ['a>b', 'a>b'],
+        reason: 'the fresh start cold-calls b again');
+    expect((await store.loadKeyPair())!.pub, kept.pub,
+        reason: 'under the key pair the store keeps');
+    // The agent runs, and its next save replaces the lost state.
+    await a2.injectUserInput(ConstTerm('go'));
+    expect(await a2.save(), isTrue);
+    final a3 = launch();
+    await a3.initialize();
+    expect(a3.firstStart, isFalse);
+    expect(a3.ctx!.hasPendingReaderValue('a', 1), isTrue);
   });
 }

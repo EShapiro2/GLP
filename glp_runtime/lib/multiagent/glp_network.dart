@@ -286,7 +286,7 @@ abstract class GlpNetwork {
   void Function(PubKey sender, Uint8List payload, String messageId,
       String senderMessageId, Underlay underlay)? onMessageReceived;
 
-  /// `acknowledge(messageId)`: "Confirm that the message delivered under messageId has been applied and saved by the runtime; the layer keeps a delivered message until it is acknowledged, and delivers it again at restart otherwise" (GNA 776016c, Section 2.9; Section 2.11, Fair message delivery).  The runtime calls it once the cycle that applied the message is saved, or, where the agent keeps no state, once the cycle is complete (IGLP, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, only from a state the store holds").
+  /// `acknowledge(messageId)`: "Confirm that the message delivered under messageId has been applied and saved by the runtime; the layer keeps a delivered message until it is acknowledged, and delivers it again at restart otherwise" (GNA 776016c, Section 2.9; Section 2.11, Fair message delivery).  The runtime calls it once the cycle that applied the message is complete (IGLP d70ec2e, Implementation Notes, "Persistence": "a delivered message acknowledged to the layer, in the cycle that makes or applies it"); the state is saved when the application goes to the background, and a crash loses the cycles since, which the layer does not deliver again.
   void acknowledge(String messageId);
 
   // --- Cryptography (GNA, "The Seam", Signatures) ---

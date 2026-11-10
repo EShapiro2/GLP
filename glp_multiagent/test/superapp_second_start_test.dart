@@ -188,6 +188,9 @@ void main() {
     expect(seen.keys, contains(0));
     expect(seen.length, greaterThan(1));
     expect(first.errors, isEmpty);
+    // The app goes to the background, which saves the agent's state (IGLP
+    // d70ec2e, Implementation Notes, "Persistence"), and is terminated.
+    expect(await first.host.save(), isTrue);
     first.host.dispose();
 
     // The second start, from the same store: no first act, and the screen,

@@ -637,6 +637,9 @@ void main() {
       first.onPeerDiscovered!(peer, ProximityUnderlay.pan);
       expect(await out.lineWhere((l) => l.startsWith('< ')),
           '< seen(${peer.hex})');
+      // The app goes to the background, which saves the state (IGLP
+      // d70ec2e, Implementation Notes, "Persistence").
+      expect(await agent.save(), isTrue);
 
       final second = _WireNetwork(kp, _Wire());
       final again = AgentRuntime(
@@ -683,8 +686,9 @@ void main() {
       );
       // The layer answers the place's declaration with the centre it
       // registered, the device's location, which the runtime keeps in a cycle
-      // of its own and saves (IGLP 96cd44a, "Persistence": "the places with
-      // the centre each was declared about"); the test waits on that cycle.
+      // of its own (IGLP 96cd44a, "Persistence": "the places with the centre
+      // each was declared about"); the test waits on that cycle before the
+      // host saves.
       final kept = Completer<void>();
       agent.onLog = (_, m) {
         if (m.startsWith('PLACE: home kept about') && !kept.isCompleted) {
@@ -704,6 +708,8 @@ void main() {
           reason: 'the first start makes each declaration once, the place '
               'about the device\'s location');
       await kept.future;
+      expect(await agent.save(), isTrue,
+          reason: 'the app goes to the background, which saves the state');
 
       final log = <String>[];
       final second = _RecordingNetwork(kp, _Wire(), log);
@@ -860,6 +866,7 @@ void main() {
       await agent.initialize();
       await agent.injectUserInput(ConstTerm('watch'));
       expect(agent.runtime!.reachableStreams.isDeclared('wan'), isTrue);
+      expect(await agent.save(), isTrue);
 
       final second = _WireNetwork(kp, _Wire());
       final again = AgentRuntime(

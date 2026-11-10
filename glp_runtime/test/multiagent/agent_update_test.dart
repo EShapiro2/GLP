@@ -220,6 +220,9 @@ void main() {
     final first = await keptIdentity(store);
     await a1.injectUserInput(ConstTerm('go'));
     expect(out1, ['< went']);
+    // The app goes to the background, which saves the state (IGLP d70ec2e,
+    // Implementation Notes, "Persistence"), before each termination below.
+    expect(await a1.save(), isTrue);
 
     // The application is updated, keeping serve/2 and its type: the state is
     // restored under the new version, and refresh draws with its code.
@@ -230,13 +233,16 @@ void main() {
     expect(out2, ['< drawn(again)'],
         reason: 'the refresh is taken by the new version\'s code, from the '
             'restored state');
-    expect(store.programSaves, 2,
-        reason: 'the store keeps the new version, once the state restored '
-            'under it is saved');
-    final second = await keptIdentity(store);
-    expect(bytesEqual(second, first), isFalse);
+    expect(store.programSaves, 1,
+        reason: 'the new version is kept only once a state restored under it '
+            'is saved');
     await a2.injectUserInput(ConstTerm('refresh'));
     expect(out2, ['< drawn(again)', '< drawn(again)']);
+    expect(await a2.save(), isTrue);
+    expect(store.programSaves, 2,
+        reason: 'the store keeps the new version with the first save under it');
+    final second = await keptIdentity(store);
+    expect(bytesEqual(second, first), isFalse);
 
     // An update that changes serve/2's type is refused: the agent restarts
     // under the version it terminated under, which the store keeps.
@@ -252,6 +258,8 @@ void main() {
     await a3.injectUserInput(ConstTerm('refresh'));
     expect(out3, ['< drawn(again)', '< drawn(again)'],
         reason: 'the agent runs the second version');
+    expect(await a3.save(), isTrue);
+    expect(store.programSaves, 2);
 
     // The state the refused restart saved is the second version's: the next
     // start under the third version refuses it again, and one under the
@@ -293,12 +301,14 @@ void main() {
     expect(a1.runningApp, app(1));
     expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(1),
         reason: 'the store keeps the app with the program');
+    expect(await a1.save(), isTrue);
 
     // An update the runtime takes: the program the agent runs is the
     // installed app's.
     final (a2, _) = await launch(_v2, store, installed: app(2));
     expect(a2.updated, isTrue);
     expect(a2.runningApp, app(2));
+    expect(await a2.save(), isTrue);
     expect(StoredProgram.fromBytes((await store.loadProgram())!).app, app(2));
 
     // An update the runtime refuses: the agent runs the program the store
@@ -322,6 +332,7 @@ void main() {
     final (a1, out1) = await launch(_v1, store);
     await a1.injectUserInput(ConstTerm('go'));
     expect(out1, ['< went']);
+    expect(await a1.save(), isTrue);
     final first = await keptIdentity(store);
 
     final (a2, out2) = await launch(_t2, store);
@@ -330,6 +341,7 @@ void main() {
         allOf(contains('serve/2'), contains('another type identity')));
     expect(out2, ['< drawn(gone)'],
         reason: 'the version the agent terminated under draws');
+    expect(await a2.save(), isTrue);
     expect(bytesEqual(await keptIdentity(store), first), isTrue);
 
     final (a3, out3) = await launch(_t3, store);
@@ -354,6 +366,7 @@ void main() {
     final (a1, out1) = await launch(_l1, store);
     await a1.injectUserInput(ConstTerm('read'));
     expect(out1, ['< note(first)']);
+    expect(await a1.save(), isTrue);
     final kept = StoredProgram.fromBytes((await store.loadProgram())!);
     expect(utf8.decode(kept.files['note.txt']!), 'first');
     expect(kept.files.keys, contains('app.glp'));
@@ -365,6 +378,7 @@ void main() {
     expect(a2.updateRefusal, isNotNull);
     await a2.injectUserInput(ConstTerm('read'));
     expect(out2, ['< note(first)']);
+    expect(await a2.save(), isTrue);
 
     // A restart under the version the store keeps, which is no update, reads
     // the directory.
@@ -402,22 +416,32 @@ void main() {
     expect(a1.firstStart, isTrue);
     expect(File('$path.program').existsSync(), isTrue);
     expect(File('$path.key').existsSync(), isTrue);
+    expect(await a1.save(), isTrue);
     final (a2, out2) = await launch(_v2, FileAgentStateStore(path));
     expect(a2.updated, isTrue);
     expect(out2, ['< drawn(none)']);
   });
 
-  test('a saved state of code the store keeps no program of is refused, and '
-      'the restart throws', () async {
+  test('a saved state of code the store keeps no program of cannot be read, '
+      'and is lost: reported, and the agent starts afresh under its key pair',
+      () async {
+    // IGLP d70ec2e, Implementation Notes, "Persistence": "A saved state the
+    // runtime cannot read ... is a loss of the state: the runtime reports it
+    // and starts the agent afresh, under the key pair the store keeps."
+    // Until 2026-11-10 the restart threw.
     final store = MemoryAgentStateStore();
-    await launch(_v1, store);
+    final (a1, _) = await launch(_v1, store);
+    await a1.injectUserInput(ConstTerm('go'));
+    expect(await a1.save(), isTrue);
     // A store that has lost its program: the state's code is not the new
     // version's, and the store keeps nothing it could run.
     final lost = MemoryAgentStateStore()..saveKeyPair((await store.loadKeyPair())!);
     await lost.save((await store.load())!);
-    File(file).writeAsStringSync(_v2);
-    final agent = AgentRuntime(
-        agentId: 'u', program: file, rootSelfGlpPath: root, stateStore: lost);
-    await expectLater(agent.initialize(), throwsStateError);
+    final (a2, out2) = await launch(_v2, lost);
+    expect(a2.firstStart, isTrue);
+    expect(out2, [contains('saved state cannot be read and is lost')]);
+    expect((await lost.loadKeyPair())!.pub, (await store.loadKeyPair())!.pub);
+    await a2.injectUserInput(ConstTerm('refresh'));
+    expect(out2.last, '< drawn(none)', reason: 'afresh, nothing went');
   });
 }

@@ -1,6 +1,7 @@
 /// The bytes of an agent's saved state: the codec the runtime writes its local
-/// state with in each event cycle, and reads it back with at restart (IGLP,
-/// Definition "Restart", madglp-spec.tex; Implementation Notes,
+/// state with when its application goes to the background, and reads it back
+/// with at restart (IGLP d70ec2e, Definition "Restart", madglp-spec.tex;
+/// Implementation Notes,
 /// "Persistence": "In the meantime the runtime keeps it by a store the host
 /// gives it, beside the layer's queue").
 ///

@@ -209,6 +209,9 @@ void main() {
     expect(first.errors, isEmpty);
     expect(File('$path.program').existsSync(), isTrue,
         reason: 'the store keeps the compiled program the agent runs');
+    // The app goes to the background, which saves the agent's state (IGLP
+    // d70ec2e, Implementation Notes, "Persistence"), and is terminated.
+    expect(await first.host.save(), isTrue);
     first.host.dispose();
 
     // A new version: dispatch/6, which ran at the start and is called by no
@@ -240,6 +243,9 @@ void main() {
         ['pan open', 'lan open', 'pan closed', 'lan closed']);
     final seen2 = second.screen();
     expect(second.errors, isEmpty);
+    expect(await second.host.save(), isTrue,
+        reason: 'the state restored under the new version is saved, and the '
+            'new version kept with it');
     second.host.dispose();
 
     // A version that calls home's serve_1/7 serve_2/7: the goal that serves
