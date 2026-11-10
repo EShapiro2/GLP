@@ -4348,7 +4348,7 @@ printf '%s\n' '% Extends: nothing.' 'XT' 'Alice is a person.' '1. ■ Registrati
 printf '%s\n' "contract_named(xt, [sas(register, ['Alice'], [x], [atom(email, ['Alice', typed(email, x)])], [not(atom(email, ['Alice', x]))], true, ['Alice'])])." > "$cva_ty/XT.glp"
 cva_ty_read="[schema(register, ['Alice'], [svar(x)], [rs(guarded, [atom(email, [svar(x)])], [], [], [atom(email, [svar(x)])])])]"
 cva_ty_typed=$(bash "$CVA/compiler/pragmas.sh" "$cva_ty/XT.txt" "$cva_ty_read" 2>&1)
-sed -i 's/typed(email, x)/x/' "$cva_ty/XT.glp"
+sed 's/typed(email, x)/x/' "$cva_ty/XT.glp" > "$cva_ty/XT.glp.tmp" && mv "$cva_ty/XT.glp.tmp" "$cva_ty/XT.glp"
 cva_ty_bare=$(bash "$CVA/compiler/pragmas.sh" "$cva_ty/XT.txt" "$cva_ty_read" 2>&1)
 rm -rf "$cva_ty"
 check "CVA typed: pragmas.sh gives the act the type of its field of the typed variable, ft(2, email), its seventh argument (typed)" "act('register', '\"Register\"', \['\"\"', '\"email\"'\], none, '\"Addresses\"', by(\[1\]), \[ft(2, 'email')\])" "$cva_ty_typed"
