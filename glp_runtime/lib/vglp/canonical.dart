@@ -1773,10 +1773,10 @@ class DeclaredWidget {
       final i = _int(x.args[0]);
       final s = _labelConstant(x.args[1]);
       final ty = _labelConstant(x.args[2]);
-      if (i == null || s == null || !DeclaredField.types.contains(ty)) {
+      if (i == null || s == null || ty == null || !DeclaredField.isType(ty)) {
         return null;
       }
-      out.add(DeclaredField(i, s, ty!));
+      out.add(DeclaredField(i, s, ty));
     }
     return out;
   }
@@ -1943,9 +1943,22 @@ class ActCondition {
 }
 
 /// A field of an act, `field(I, S, T)`: its [place], its [label] and its
-/// [type], one of [types].
+/// [type], one of [types], or, for a text field, the type its variable
+/// carries in the schema, a constant, as `email` or `name` (vGLP 37fe038,
+/// Section 5.4: "a text by the type its variable carries in the schema where
+/// it carries one, as an email address or a person's name, which constrains
+/// nothing and which the field's widget is told"; programs/vglp/cva/
+/// compiler/README.md, 26).
 class DeclaredField {
   static const types = {'person', 'key', 'agent', 'text', 'number'};
+
+  /// Whether [t] is a field's type: one of [types], or a text's type, a
+  /// constant naming it.
+  static bool isType(String t) =>
+      types.contains(t) || RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(t);
+
+  /// Whether the field takes a text, of a type its variable carries or none.
+  bool get isText => type == 'text' || !types.contains(type);
 
   final int place;
   final String label;

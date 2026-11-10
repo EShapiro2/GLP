@@ -109,6 +109,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'typed_before.dart';
 import 'bridge.dart';
 import 'named_widgets.dart';
 import 'tab_screen.dart';
@@ -624,6 +625,7 @@ class _ConstructViewState extends State<ConstructView> {
             onPressed: value == null
                 ? null
                 : () {
+                    _recordTyped(at);
                     widget.grant(p, value);
                     if (keepOpen) setState(() => _clear(at));
                   },
@@ -675,15 +677,22 @@ class _ConstructViewState extends State<ConstructView> {
         return _keyed(
             kind,
             at,
-            TextField(
-              controller: _text(k),
-              keyboardType: kind == 'number'
-                  ? const TextInputType.numberWithOptions(
-                      signed: true, decimal: true)
-                  : TextInputType.text,
-              decoration: InputDecoration(labelText: label, isDense: true),
-              onChanged: (_) => setState(() {}),
-            ));
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              TextField(
+                controller: _text(k),
+                keyboardType: kind == 'number'
+                    ? const TextInputType.numberWithOptions(
+                        signed: true, decimal: true)
+                    : TextInputType.text,
+                decoration: InputDecoration(labelText: label, isDense: true),
+                onChanged: (_) => setState(() {}),
+              ),
+              // The values typed in this field before, offered again (typed_before.dart; vGLP, Section 6.2, Remark "Construct Families").
+              if (kind != 'peer')
+                typedBeforeChips(_beforeKey(kind, label, at), _text(k),
+                    keyOf: (v) => ValueKey('$_id:before:${pathText(at)}:$v'),
+                    onPicked: () => setState(() {})),
+            ]));
       case 'button' when ws.length == 1:
         return _keyed('button', at,
             _labelled(label, Chip(label: Text(name ?? buttonOf(ws[0]).$1))));
@@ -849,6 +858,33 @@ class _ConstructViewState extends State<ConstructView> {
 
   TextEditingController _text(String k) =>
       _texts.putIfAbsent(k, TextEditingController.new);
+
+  /// The text fields drawn, by the key of their text, each with its
+  /// position and the key its typed values are kept by.
+  final Map<String, (List<int>, String)> _beforeKeys = {};
+
+  /// The key the values typed in a text field are kept by: its kind and its
+  /// label, the same each time a construct of its question draws it.
+  String _beforeKey(String kind, String? label, List<int> at) {
+    final b = 'construct:$kind:${label ?? pathText(at)}';
+    _beforeKeys[pathText(at)] = (List.of(at), b);
+    return b;
+  }
+
+  /// Record the texts of the fields at [at] and under it, at a submission.
+  void _recordTyped(List<int> at) {
+    for (final e in _beforeKeys.entries) {
+      final (pos, b) = e.value;
+      if (pos.length < at.length) continue;
+      var under = true;
+      for (var i = 0; i < at.length; i++) {
+        if (pos[i] != at[i]) under = false;
+      }
+      if (!under) continue;
+      final c = _texts[e.key];
+      if (c != null) TypedBefore.record(b, c.text);
+    }
+  }
 
   // === Pieces ==============================================================
 

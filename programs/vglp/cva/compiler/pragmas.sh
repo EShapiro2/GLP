@@ -325,6 +325,22 @@ my @own = read_txt($top);
 unless (grep { iface_head($_) } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);
 my (@tabs, @lists, @acts);
+# The types the contract\x27s schemas give their speech-act variables, typed(T, x) in the clause syntax of the NAME.glp beside each NAME.txt read, one occurrence typing the variable (programs/self.glp, SArg; vGLP 37fe038, Section 5.4), by schema and variable.
+my %ftype;
+for my $f (@order) {
+    (my $g = $f) =~ s/\.txt$/.glp/;
+    next unless -f $g;
+    open my $h, "<", $g or next;
+    my $t = do { local $/; <$h> };
+    close $h;
+    $t =~ s/^\s*%.*$//mg;
+    while ($t =~ /\bsas\(\s*(\w+)\s*,/g) {
+        my ($n, $at) = ($1, $-[0]);
+        my ($body) = inside($t, index($t, "(", $at));
+        while ($body =~ /\btyped\(\s*(\w+)\s*,\s*\x27?(\w+)\x27?\s*\)/g) { $ftype{$n}{$2} //= $1 }
+        pos($t) = $at + 4;
+    }
+}
 # The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
 my %is_name;
 for my $f (@order) {
@@ -821,11 +837,14 @@ for my $i (0 .. $#pending) {
     my %fname; @fname{@u} = @fields;
     for my $S (@real) {
         my %mine = map { $_->[2] => 1 } field_keys3($S, $pd->{pl}{$S});
-        my @own = map { $mine{ $_->[2] } ? $fname{ $_->[2] } : "" } field_slots($S);
+        my @sl = field_slots($S);
+        my @own = map { $mine{ $_->[2] } ? $fname{ $_->[2] } : "" } @sl;
+        # The type of each field for a speech-act variable the schema types, typed(T, x), ft(K, T) for its K-th field, as a seventh argument of the act where it has one, the compiler printing T as the field\x27s kind (vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one").
+        my @ft = map { ($mine{ $sl[$_][2] } && $sl[$_][0] eq "svar" && $ftype{$S}{ $sl[$_][2] }) ? "ft(" . ($_ + 1) . ", " . q_atom($ftype{$S}{ $sl[$_][2] }) . ")" : () } 0 .. $#sl;
         pop @own while @own && $own[-1] eq "";
         my $button = (grep { grep { $_ eq $S } @{ $pd->{reals}{$_} } } @{ $pd->{buttons} })[0];
         push @acts, "act(" . q_atom($S) . ", " . q_string($button) . ", ["
-            . join(", ", map { q_string($_) } @own) . "], " . ($pd->{said}{$S} // "none") . ", " . q_string($tab) . ", " . ($pd->{by}{$S} // "any") . ")";
+            . join(", ", map { q_string($_) } @own) . "], " . ($pd->{said}{$S} // "none") . ", " . q_string($tab) . ", " . ($pd->{by}{$S} // "any") . (@ft ? ", [" . join(", ", @ft) . "]" : "") . ")";
     }
 }
 # A schema a button covers that no kept line fits has no proposer, and "a button is offered only to the person named before it" (vGLP 516a0a2, Section 5.4): a fault, and the contract is not compiled.

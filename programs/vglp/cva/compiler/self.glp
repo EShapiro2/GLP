@@ -191,7 +191,13 @@ Said      ::= none ; said(PSentences).
 Strings   ::= [] ; [String | Strings].
 PList     ::= list(String, Strings).
 PLists    ::= [] ; [PList | PLists].
-PAct      ::= act(Constant, String, Strings, Said, String, Proposer).
+%% An act whose schema types a speech-act variable a field names, typed(T, x) (programs/self.glp, SArg), carries a seventh argument, the types of its fields, ft(K, T) for its K-th field (pragmas.sh; vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one, as an email address or a person's name, which constrains nothing and which the field's widget is told"); the compiler reads every act as one with that argument, [] for an act with none (cvac.glp, norm_acts).
+FType     ::= ft(Integer, Constant).
+FTypes    ::= [] ; [FType | FTypes].
+PAct      ::= act(Constant, String, Strings, Said, String, Proposer)
+            ; act(Constant, String, Strings, Said, String, Proposer, FTypes).
+TAct      ::= act(Constant, String, Strings, Said, String, Proposer, FTypes).
+TActs     ::= [] ; [TAct | TActs].
 Proposer  ::= any ; by(Ints) ; by(Ints, Sames).
 Same      ::= same(Integer, Integer).
 Sames     ::= [] ; [Same | Sames].
@@ -203,7 +209,7 @@ PStands   ::= [] ; [PStand | PStands].
 PLook     ::= nolook ; look(String, String).
 PVersion  ::= version(Integer, Integer).
 %% The pragmas the platform exports in contract(Text, Schemas), the text apart (cvac.glp, export_lines).
-RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
+RPragmas  ::= pragmas(PLists, TActs, PStands, PLook, PVersion).
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String).
 %% What a schema does to the atom a standing declaration stands on (cvac.glp, standing_lines): makes the standing request, withdraws it, or neither.

@@ -48,15 +48,20 @@ compile(Nm, D, V, I, P, E, W) :- norm_pragmas(P?, Q), compile_intro(Nm?, D?, V?,
 %% A term with no look, no version and no text, vGLP's own contracts' (../contracts.glp, pragmas_named/2), has nolook, version(1, 1) and the empty text.
 procedure norm_pragmas(Pragmas?, WPragmas).
 norm_pragmas(no_pragmas, no_pragmas).
-norm_pragmas(pragmas(Ls, As), pragmas(Ls?, As?, [], nolook, version(1, 1), '""')).
-norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, As?, Ss?, nolook, version(1, 1), '""')).
-norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?)).
+norm_pragmas(pragmas(Ls, As), pragmas(Ls?, Ts?, [], nolook, version(1, 1), '""')) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, Ts?, Ss?, nolook, version(1, 1), '""')) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?)) :- norm_acts(As?, Ts).
+%% Every act with the types of its fields, [] where it gives none (self.glp, PAct).
+procedure norm_acts(PActs?, TActs).
+norm_acts([], []).
+norm_acts([act(S, B, Fs, Q, T, By)|As], [act(S?, B?, Fs?, Q?, T?, By?, [])|Ts?]) :- norm_acts(As?, Ts).
+norm_acts([act(S, B, Fs, Q, T, By, Ft)|As], [act(S?, B?, Fs?, Q?, T?, By?, Ft?)|Ts?]) :- norm_acts(As?, Ts).
 %% The contract's words, its pragmas, carried through the compiler whole, with its environment predicates and the contract as read, which the platform exports (export_lines).
-WPragmas ::= no_pragmas ; pragmas(PLists, PActs, PStands, PLook, PVersion, String).
+WPragmas ::= no_pragmas ; pragmas(PLists, TActs, PStands, PLook, PVersion, String).
 Words ::= words(WPragmas, Preds, Lxs, WDeclared).
 %% The words of a contract carrying pragmas, the only contract the compiler prints a platform from (compile3a; vGLP, Section 5.4, "The contract's words"), which every procedure past compile3a takes, with its environment predicates.
 Worded ::= words(Given, Preds, Lxs, WDeclared).
-Given  ::= pragmas(PLists, PActs, PStands, PLook, PVersion, String).
+Given  ::= pragmas(PLists, TActs, PStands, PLook, PVersion, String).
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
 procedure compile_intro(Constant?, Declared?, Verdict?, Intro?, Words?).
 compile_intro(Nm, D, V, I, W) :- ground(Nm?), ground(D?) |
@@ -673,7 +678,7 @@ procedure keep_unless(YesNo?, Arg?, Args?, Args).
 keep_unless(yes, _, R, R?).
 keep_unless(no, A, R, [A?|R?]).
 %% The table of the schemas' numbers: each schema's constraint, true where it has none, its local variables and the role whose local variables the constraint names (local.glp, num_info_of).
-procedure num_table(QContract?, PActs?, Lxs?, NumInfos).
+procedure num_table(QContract?, TActs?, Lxs?, NumInfos).
 num_table([], _, _, []).
 num_table([schema(S, Hd, Rs)|Ss], As, Lx, [N?|Ns?]) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
     base_one(S?, Rs?, As?, Lx?, B),
@@ -693,7 +698,7 @@ num_table([qschema(S, Hd, _, C, Rs, _, Fs)|Ss], As, Lx, [N?|Ns?]) :- ground(S?),
     local # num_info_of(S?, Hd?, C?, Fs?, Rs?, B?, N),
     num_table(Ss?, As?, Lx?, Ns).
 %% The base of a schema, as schema_base prints it (base_lines1): the base of its listed roles and of its conjuncts whose instances the attempt names, or the guarding role its pragma names before its button, or its first guarding role, or its first role; a variable is read only at a role other than the base (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there").
-procedure base_one(Constant?, RoleSpecs?, PActs?, Lxs?, Integer).
+procedure base_one(Constant?, RoleSpecs?, TActs?, Lxs?, Integer).
 base_one(S, Rs, As, Lx, B?) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
     listed_bases(Rs?, Bs0),
     ix_bases(Lx?, S?, Bs1),
@@ -702,11 +707,11 @@ base_one(S, Rs, As, Lx, B?) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?)
     named_role(As?, S?, Gs?, Ns),
     base_of(Bs?, Ns?, B).
 %% The acts of a contract's pragmas, none for a contract with none.
-procedure pragma_acts(Pragmas?, PActs).
+procedure pragma_acts(Pragmas?, TActs).
 pragma_acts(no_pragmas, []).
-pragma_acts(pragmas(_, As), As?).
-pragma_acts(pragmas(_, As, _), As?).
-pragma_acts(pragmas(_, As, _, _, _, _), As?).
+pragma_acts(pragmas(_, As), Ts?) :- norm_acts(As?, Ts).
+pragma_acts(pragmas(_, As, _), Ts?) :- norm_acts(As?, Ts).
+pragma_acts(pragmas(_, As, _, _, _, _), Ts?) :- norm_acts(As?, Ts).
 
 %% A schema's variables are named V1, V2, ... in the printed clauses; there are
 %% as many names as vname/3 has.
@@ -1671,7 +1676,7 @@ procedure lc_of(Lxs?, Constant?, TLocals).
 lc_of([], _, []).
 lc_of([lc(S1, Bi, Xs, A, Phi, CA, CD)|Lx], S, [local(Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- S1? =?= S? | lc_of(Lx?, S?, Ls).
 lc_of([_|Lx], S, Ls?) :- otherwise | lc_of(Lx?, S?, Ls).
-procedure worded_acts(Worded?, PActs).
+procedure worded_acts(Worded?, TActs).
 worded_acts(words(pragmas(_, As, _, _, _, _), _, _, _), As?).
 %% The standing declarations of a contract carrying pragmas.
 procedure worded_stands(Worded?, PStands).
@@ -1720,10 +1725,10 @@ stand_act_of1(no, no, _, Ss, M, R?) :- stand_act_of(Ss?, M?, R).
 procedure same_act(Constant?, Constant?, YesNo).
 same_act(X, Y, yes) :- X? =?= Y? | true.
 same_act(_, _, no) :- otherwise | true.
-procedure base_lines(Contract?, PActs?, Lxs?, Lines).
+procedure base_lines(Contract?, TActs?, Lxs?, Lines).
 base_lines(C, As, Lx, ['', 'procedure schema_base(Constant?, Integer).'|L?]) :- ground(C?), ground(As?), ground(Lx?) | base_lines1(C?, As?, Lx?, L).
 %% The base of the conjuncts of a schema local to their base, its listed roles' and those of its conjuncts whose instances the attempt names, which have one (q_lines, local.glp).
-procedure base_lines1(Contract?, PActs?, Lxs?, Lines).
+procedure base_lines1(Contract?, TActs?, Lxs?, Lines).
 base_lines1([], _, _, ['schema_base(_, 1) :- otherwise | true.']).
 base_lines1([schema(S, _, Rs)|Ss], As, Lx, [T?, '.'|L?]) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
     listed_bases(Rs?, Bs0),
@@ -1738,9 +1743,9 @@ base_lines1([schema(S, _, Rs)|Ss], As, Lx, [T?, '.'|L?]) :- ground(S?), ground(R
 base_lines1([cschema(_, _, _, _)|Ss], As, Lx, L?) :- base_lines1(Ss?, As?, Lx?, L).
 base_lines1([nschema(_, _, _, _)|Ss], As, Lx, L?) :- base_lines1(Ss?, As?, Lx?, L).
 %% The guarding role the pragma of the schema S names before its button, first, then the schema's guarding roles Gs: the first of by(Ns) of the act of S, a guarding role at which the act is proposed (self.glp, Proposer), where it names one.
-procedure named_role(PActs?, Constant?, Ints?, Ints).
+procedure named_role(TActs?, Constant?, Ints?, Ints).
 named_role([], _, Gs, Gs?).
-named_role([act(S1, _, _, _, _, P)|_], S, Gs, Ns?) :- S1? =?= S?, ground(Gs?) | proposer_role(P?, Gs?, Ns).
+named_role([act(S1, _, _, _, _, P, _)|_], S, Gs, Ns?) :- S1? =?= S?, ground(Gs?) | proposer_role(P?, Gs?, Ns).
 named_role([_|As], S, Gs, Ns?) :- otherwise | named_role(As?, S?, Gs?, Ns).
 procedure proposer_role(Proposer?, Ints?, Ints).
 proposer_role(by([N|_]), Gs, [N?|Gs?]).
@@ -2021,9 +2026,9 @@ procedure all_in1(YesNo?, Args?, Args?, YesNo).
 all_in1(no, _, _, no).
 all_in1(yes, As, Fa, B?) :- all_in(As?, Fa?, B).
 %% The person named before a button, of a schema whose conjuncts local to their base have a base that guards, is the person in the base: "The person named before a button is in a guarding role of its acts: in the base, where the base guards, and then their proposer, or, where the base is an opener, the one guard, who requests it" (vGLP 9ee6f87, Section 5.4, "The contract's words"), the base finding the instances in its own state.  A line naming another, by(Gs) of its act with a role other than the base, is a fault, the schema named.
-procedure proposer_faults(PActs?, Contract?, Lxs?, Lines).
+procedure proposer_faults(TActs?, Contract?, Lxs?, Lines).
 proposer_faults([], _, _, []).
-proposer_faults([act(S, _, _, _, _, P)|As], C, Lx, F?) :- ground(S?), ground(P?), ground(C?), ground(Lx?) |
+proposer_faults([act(S, _, _, _, _, P, _)|As], C, Lx, F?) :- ground(S?), ground(P?), ground(C?), ground(Lx?) |
     find_schema(S?, C?, Sf),
     ix_bases(Lx?, S?, Ib),
     proposer_fault(Sf?, Ib?, P?, S?, F1),
@@ -2143,9 +2148,9 @@ find_schema(S, [schema(T, Hd, Rs)|_], sfound(Hd?, Rs?)) :- S? =?= T? | true.
 find_schema(S, [_|Cs], F?) :- otherwise | find_schema(S?, Cs?, F).
 
 %% Each act a pragma proposes, act(Name, Button, Fields, Sentence), is the schema Name its button names.
-procedure act_faults(PActs?, Contract?, Lines).
+procedure act_faults(TActs?, Contract?, Lines).
 act_faults([], _, []).
-act_faults([act(N, _, Fs, Q, _, _)|As], C, F?) :- ground(N?), ground(Fs?), ground(Q?), ground(C?) |
+act_faults([act(N, _, Fs, Q, _, _, _)|As], C, F?) :- ground(N?), ground(Fs?), ground(Q?), ground(C?) |
     schema_faults([N?], Fs?, Q?, C?, F1),
     act_faults(As?, C?, F2),
     lapp(F1?, F2?, F).
@@ -2314,19 +2319,20 @@ fword_texts([at(I)|Ws], [T?|Ts?]) :- term_to_string(at(I?), T), fword_texts(Ws?,
 %% The buttons of the request widget: one for each button of the pragmas, in their order, with the acts it names that the request type proposes, a button naming none of them left out.
 WField    ::= field(Integer, String, FieldType).
 WFields   ::= [] ; [WField | WFields].
-FieldType ::= person ; key ; agent ; text ; number.
+%% A text field of a typed variable is of its type, as email or name (vGLP 37fe038, Section 5.4), the device told what it takes (Section 6.2, Remark Construct Families).
+FieldType ::= person ; key ; agent ; text ; number ; Constant.
 FWord     ::= say(String) ; at(Integer).
 FWords    ::= [] ; [FWord | FWords].
 WAct      ::= act(Constant, Integer, Ints, Preconds, Ints, WFields, Preconds, FWords).
 WActs     ::= [] ; [WAct | WActs].
 WButton   ::= button(String, WActs).
 WButtons  ::= [] ; [WButton | WButtons].
-procedure act_buttons(PActs?, Contract?, Preds?, DrawCtx?, WButtons?, WButtons).
+procedure act_buttons(TActs?, Contract?, Preds?, DrawCtx?, WButtons?, WButtons).
 act_buttons([], _, _, _, Bs, Bs?).
-act_buttons([act(N, B, Fs, Q, _, By)|As], C, Ps, Rf, Bs0, Bs?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(By?), ground(C?), ground(Ps?), ground(Rf?), ground(Bs0?) |
+act_buttons([act(N, B, Fs, Q, _, By, Ft)|As], C, Ps, Rf, Bs0, Bs?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(By?), ground(Ft?), ground(C?), ground(Ps?), ground(Rf?), ground(Bs0?) |
     mem(N?, Ps?, In),
     find_schema(N?, C?, Sf),
-    schema_acts(In?, Sf?, N?, Fs?, Q?, By?, Rf?, Ws),
+    schema_acts(In?, Sf?, N?, Fs?, Ft?, Q?, By?, Rf?, Ws),
     add_button(Bs0?, B?, Ws?, Bs1),
     act_buttons(As?, C?, Ps?, Rf?, Bs1?, Bs).
 %% The acts Ws joined to the button labelled B, or a new button after the others; nothing where Ws is empty.  One name is one button (Section 5.4, "The contract's words": "A button is of the acts it names"), so every act of a name joins one button.
@@ -2336,10 +2342,10 @@ add_button([], B, [W|Ws], [button(B?, [W?|Ws?])]).
 add_button([button(B1, Xs)|Bs], B, [W|Ws], [button(B1?, Ys?)|Bs?]) :- ground(B1?), ground(B?), B1? =?= B? | app(Xs?, [W?|Ws?], Ys).
 add_button([X|Bs], B, [W|Ws], [X?|Bs1?]) :- otherwise | add_button(Bs?, B?, [W?|Ws?], Bs1).
 %% The acts of a schema the request type proposes, one for each guarding role at which it is proposed (proposer_roles).
-procedure schema_acts(YesNo?, SFound?, Constant?, Strings?, Said?, Proposer?, DrawCtx?, WActs).
-schema_acts(no, _, _, _, _, _, _, []).
-schema_acts(yes, nosfound, _, _, _, _, _, []).
-schema_acts(yes, sfound(Hd, Rs), S, Fs, Q, By, Rf, Ws?) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(Q?), ground(By?), ground(Rf?) |
+procedure schema_acts(YesNo?, SFound?, Constant?, Strings?, FTypes?, Said?, Proposer?, DrawCtx?, WActs).
+schema_acts(no, _, _, _, _, _, _, _, []).
+schema_acts(yes, nosfound, _, _, _, _, _, _, []).
+schema_acts(yes, sfound(Hd, Rs), S, Fs, Ft, Q, By, Rf, Ws?) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(Ft?), ground(Q?), ground(By?), ground(Rf?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
@@ -2348,7 +2354,7 @@ schema_acts(yes, sfound(Hd, Rs), S, Fs, Q, By, Rf, Ws?) :- ground(Hd?), ground(R
     drop_listed(Us0?, Lis1?, Us),
     field_places(Hd?, Rs?, Fp),
     meeting_schema(Rs?, Mt),
-    act_fields(Fp?, Fs?, Us?, Mt?, Fd),
+    act_fields(Fp?, Fs?, 1, Ft?, Us?, Mt?, Fd),
     guard_roles(Rs?, 1, Gr0),
     proposer_roles(By?, Gr0?, Gr),
     same_places(By?, Sm),
@@ -2360,14 +2366,21 @@ role_places([], _, []).
 role_places([role(_)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
 role_places([V|Vs], I, Is?) :- otherwise, integer(I?), ground(V?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
 %% The fields of an act, field(I, S, T), the k-th field of its pragma at the k-th place field_places counts, a field left empty, an inapplicable field of a schema that shares its button, naming none (README.md beside this file, 2).
-procedure act_fields(Ints?, Strings?, Args?, YesNo?, WFields).
-act_fields(_, [], _, _, []).
-act_fields([], [_|_], _, _, []).
-act_fields([_|Is], [F|Fs], Vs, Mt, Fd?) :- ground(F?), F? =?= '""' | act_fields(Is?, Fs?, Vs?, Mt?, Fd).
-act_fields([I|Is], [F|Fs], Vs, Mt, [field(I?, F?, T?)|Fd?]) :- otherwise, integer(I?), ground(F?), ground(Vs?), ground(Mt?) |
+procedure act_fields(Ints?, Strings?, Integer?, FTypes?, Args?, YesNo?, WFields).
+act_fields(_, [], _, _, _, _, []).
+act_fields([], [_|_], _, _, _, _, []).
+act_fields([_|Is], [F|Fs], K, Ft, Vs, Mt, Fd?) :- ground(F?), F? =?= '""', integer(K?) | K1 := K? + 1, act_fields(Is?, Fs?, K1?, Ft?, Vs?, Mt?, Fd).
+act_fields([I|Is], [F|Fs], K, Ft, Vs, Mt, [field(I?, F?, T?)|Fd?]) :- otherwise, integer(I?), integer(K?), ground(F?), ground(Ft?), ground(Vs?), ground(Mt?) |
     nth_arg(I?, Vs?, A),
-    field_type(A?, Mt?, T),
-    act_fields(Is?, Fs?, Vs?, Mt?, Fd).
+    field_type(A?, Mt?, T0),
+    ftype_of(Ft?, K?, T0?, T),
+    K1 := K? + 1,
+    act_fields(Is?, Fs?, K1?, Ft?, Vs?, Mt?, Fd).
+%% The kind of the K-th field: the type its schema gives its speech-act variable, ft(K, T), where it gives one, as email or name, which constrains nothing and which the field's widget is told (vGLP 37fe038, Section 5.4); else its kind by its variable (field_type).
+procedure ftype_of(FTypes?, Integer?, FieldType?, FieldType).
+ftype_of([], _, T, T?).
+ftype_of([ft(J, U)|_], K, text, U?) :- J? =:= K? | true.
+ftype_of([_|Ft], K, T, R?) :- otherwise | ftype_of(Ft?, K?, T?, R).
 %% The type of a field (vGLP, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows"; Section 6.2: "A field that takes a person in a role offers the persons the viewer knows ... The field of an acquaintance takes the key of a person the viewer does not know"): a person in a role, picked among the persons the viewer knows; the key of the peer of an acquaintance schema; an agent variable, a person in no role, by key or picked, which Section 6.2's two sentences do not restrict; a speech act, a text; a number.
 procedure field_type(Arg?, YesNo?, FieldType).
 field_type(role(_), no, person).
@@ -2403,6 +2416,7 @@ role_field_places([field(_, _, key)|Fs], Is?) :- role_field_places(Fs?, Is).
 role_field_places([field(_, _, agent)|Fs], Is?) :- role_field_places(Fs?, Is).
 role_field_places([field(_, _, text)|Fs], Is?) :- role_field_places(Fs?, Is).
 role_field_places([field(_, _, number)|Fs], Is?) :- role_field_places(Fs?, Is).
+role_field_places([field(_, _, _)|Fs], Is?) :- otherwise | role_field_places(Fs?, Is).
 procedure field_proved(Preconds?, Ints?, Preconds).
 field_proved([], _, []).
 field_proved([proved(Q, Ws, P, As)|Cs], Ks, R?) :- ground(Q?), ground(Ws?), ground(P?), ground(As?), ground(Ks?) |
@@ -2470,9 +2484,9 @@ form_words([person(K)|Ws], Pp, Vs0, Vs, [at(I?)|Fs?]) :- ground(Pp?), ground(Vs0
     place_of(A?, Vs?, 1, I),
     form_words(Ws?, Pp?, Vs0?, Vs?, Fs).
 %% The schemas the buttons name.
-procedure act_names(PActs?, Preds).
+procedure act_names(TActs?, Preds).
 act_names([], []).
-act_names([act(N, _, _, _, _, _)|As], [N?|Ns?]) :- act_names(As?, Ns).
+act_names([act(N, _, _, _, _, _, _)|As], [N?|Ns?]) :- act_names(As?, Ns).
 %% A guarded schema no button names: "A guarded schema is proposed by a person, by its button, so the compiler requires a button for every guarded schema; an unguarded one is proposed by its opener's machine and has none" (vGLP 932c710, Section 5.4, "The contract's words").  The schemas the request type proposes are those naming guarded parts (local.glp, proposable).
 procedure unnamed_lines(Preds?, Preds?, Lines).
 unnamed_lines([], _, []).
@@ -2808,7 +2822,16 @@ word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx), _, Lx, Dn), C, Nt, L?) :- grou
         'procedure sentence_of(Class?, Peer?, Asked).'|Lsn1?], Lex?, L).
 % The platform's exports of the contract it is compiled from (vGLP b413fe1, Section 5.4, "The contract's words": "The platform the compiler prints exports, beside its agent and its dispatcher, two procedures: contract(Text, Schemas), the contract it is compiled from, its clauses as text and its schemas with the pragmas as the term the checker and the compiler read; and version(Current, Back), its version and the earliest version of itself it is compatible with, both from a line of the pragmas, so the app that loads the platform reads its contract and its versions from it"): contract(Text, with(Read, Pragmas)), Text the clauses as pragmas.sh reads them from the contract's NAME.txt, Read the contract as GSC's reader reads it, its names with it, and Pragmas its pragmas, pragmas(Lists, Acts, Stands, Look, Version), the look among them, where the app and the site read it (ibid., "The contract's words": the look, "which the compiler carries into the platform it prints, among the pragmas of the contract the platform exports, where the app and the site that show it read it"); and version(Current, Back), from the contract's Version line, or version(1, 1).  The types of the term, GSC's reader's and the pragmas' (programs/gsc/self.glp; self.glp beside this file), are declared in the platform with an R before their names, the platform's own types bearing theirs.
 procedure export_lines(WDeclared?, RPragmas?, String?, PVersion?, Lines).
-export_lines(Dn, Pr, Tx, Vn, ['',
+%% The types of an act carry the types of its fields only where an act of the pragmas has some (vGLP 37fe038, Section 5.4), so that a platform with no typed field prints as before.
+export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
+    export_head(Hd),
+    acts_typed(Pr?, Y),
+    act_type_lines(Y?, Ma),
+    export_tail(Dn?, Pr?, Tx?, Vn?, Tl),
+    lapp(Hd?, Ma?, L1),
+    lapp(L1?, Tl?, L).
+procedure export_head(Lines).
+export_head(['',
         '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',
         'RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).',
         'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg).',
@@ -2843,9 +2866,21 @@ export_lines(Dn, Pr, Tx, Vn, ['',
         'PSaid     ::= none ; said(PSentences).',
         'PStrings  ::= [] ; [String | PStrings].',
         'PList     ::= list(String, PStrings).',
-        'PLists    ::= [] ; [PList | PLists].',
-        'PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer).',
-        'PProposer ::= any ; by(Ints) ; by(Ints, PSames).',
+        'PLists    ::= [] ; [PList | PLists].']).
+procedure act_type_lines(YesNo?, Lines).
+act_type_lines(no, ['PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer).']).
+act_type_lines(yes, ['PFType    ::= ft(Integer, Constant).',
+        'PFTypes   ::= [] ; [PFType | PFTypes].',
+        'PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes).']).
+%% Whether an act of the pragmas carries the types of its fields.
+procedure acts_typed(RPragmas?, YesNo).
+acts_typed(pragmas(_, As, _, _, _), Y?) :- acts_typed1(As?, Y).
+procedure acts_typed1(TActs?, YesNo).
+acts_typed1([], no).
+acts_typed1([act(_, _, _, _, _, _, [])|As], Y?) :- acts_typed1(As?, Y).
+acts_typed1([act(_, _, _, _, _, _, [_|_])|_], yes).
+procedure export_tail(WDeclared?, RPragmas?, String?, PVersion?, Lines).
+export_tail(Dn, Pr, Tx, Vn, ['PProposer ::= any ; by(Ints) ; by(Ints, PSames).',
         'PSame     ::= same(Integer, Integer).',
         'PSames    ::= [] ; [PSame | PSames].',
         'PActs     ::= [] ; [PAct | PActs].',
@@ -2884,15 +2919,20 @@ plists_src([list(N, Ws)|Ls], [T?|Ts?]) :- ground(N?), ground(Ws?) |
     term_to_string(Ws?, Wt),
     string_concat(['list(', N?, ', ', Wt?, ')'], T),
     plists_src(Ls?, Ts).
-procedure pacts_src(PActs?, Strings).
+procedure pacts_src(TActs?, Strings).
 pacts_src([], []).
-pacts_src([act(S, B, Fs, Sd, Tab, Pr)|As], [T?|Ts?]) :- ground(S?), ground(B?), ground(Fs?), ground(Sd?), ground(Tab?), ground(Pr?) |
+pacts_src([act(S, B, Fs, Sd, Tab, Pr, Fy)|As], [T?|Ts?]) :- ground(S?), ground(B?), ground(Fs?), ground(Sd?), ground(Tab?), ground(Pr?), ground(Fy?) |
     term_to_string(S?, St),
     list_text(Fs?, Ft),
     said_src(Sd?, Dt),
     term_to_string(Pr?, Pt),
-    string_concat(['act(', St?, ', ', B?, ', ', Ft?, ', ', Dt?, ', ', Tab?, ', ', Pt?, ')'], T),
+    ftypes_src(Fy?, Yt),
+    string_concat(['act(', St?, ', ', B?, ', ', Ft?, ', ', Dt?, ', ', Tab?, ', ', Pt?, Yt?, ')'], T),
     pacts_src(As?, Ts).
+%% The types of an act's fields, as its seventh argument, nothing where it has none.
+procedure ftypes_src(FTypes?, String).
+ftypes_src([], '').
+ftypes_src([F|Fs], T?) :- ground(F?), ground(Fs?) | term_to_string([F?|Fs?], Ft), string_concat([', ', Ft?], T).
 procedure said_src(Said?, String).
 said_src(none, 'none').
 said_src(said(Ss), T?) :- ground(Ss?) | sentences_src(Ss?, S1), list_text(S1?, St), string_concat(['said(', St?, ')'], T).
@@ -2946,10 +2986,10 @@ times_names([_|As], Ns?) :- otherwise | times_names(As?, Ns).
 procedure first_pred(Preds?, Constant).
 first_pred([P|_], P?).
 first_pred([], none).
-procedure sentence_lines(PActs?, Contract?, Lines).
+procedure sentence_lines(TActs?, Contract?, Lines).
 sentence_lines([], _, []).
-sentence_lines([act(_, _, _, none, _, _)|As], C, L?) :- sentence_lines(As?, C?, L).
-sentence_lines([act(N, _, Fs, said(Ws), _, By)|As], C, L?) :- ground(N?), ground(Ws?), ground(Fs?), ground(By?), ground(C?) |
+sentence_lines([act(_, _, _, none, _, _, _)|As], C, L?) :- sentence_lines(As?, C?, L).
+sentence_lines([act(N, _, Fs, said(Ws), _, By, _)|As], C, L?) :- ground(N?), ground(Ws?), ground(Fs?), ground(By?), ground(C?) |
     schema_sentences([N?], Ws?, Fs?, By?, C?, L1),
     sentence_lines(As?, C?, L2),
     lapp(L1?, L2?, L).

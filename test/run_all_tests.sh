@@ -4342,6 +4342,46 @@ check "CVA pragmas: several contracts joined by and, a hyphenated name read whol
 check "CVA pragmas: ... and pragmas.sh exits 0 (relation)" "^exit 0$" "$cva_prel_hy"
 check "CVA pragmas: a contract the line names with no NAME.txt, refused, named (relation)" "the contract XNONE, which its line saying what it is written from names, has no XNONE.txt" "$cva_prel_no"
 
+# A typed field (vGLP 37fe038, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows, and a text by the type its variable carries in the schema where it carries one, as an email address or a person's name, which constrains nothing and which the field's widget is told"): typed(email, x) in the clause syntax of XT.glp, pragmas.sh giving the act the types of its fields, ft(2, email), and the compiler printing the field of kind email; the same contract with x bare compiles to the same platform but for that kind.
+cva_ty=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XT' 'Alice is a person.' '1. ■ Registration. Alice may register an email address.' 'Pragmas' 'Addresses: the emails Alice holds.' 'Registration: Alice [Register] <email>' > "$cva_ty/XT.txt"
+printf '%s\n' "contract_named(xt, [sas(register, ['Alice'], [x], [atom(email, ['Alice', typed(email, x)])], [not(atom(email, ['Alice', x]))], true, ['Alice'])])." > "$cva_ty/XT.glp"
+cva_ty_read="[schema(register, ['Alice'], [svar(x)], [rs(guarded, [atom(email, [svar(x)])], [], [], [atom(email, [svar(x)])])])]"
+cva_ty_typed=$(bash "$CVA/compiler/pragmas.sh" "$cva_ty/XT.txt" "$cva_ty_read" 2>&1)
+sed 's/typed(email, x)/x/' "$cva_ty/XT.glp" > "$cva_ty/XT.glp.tmp" && mv "$cva_ty/XT.glp.tmp" "$cva_ty/XT.glp"
+cva_ty_bare=$(bash "$CVA/compiler/pragmas.sh" "$cva_ty/XT.txt" "$cva_ty_read" 2>&1)
+rm -rf "$cva_ty"
+check "CVA typed: pragmas.sh gives the act the type of its field of the typed variable, ft(2, email), its seventh argument (typed)" "act('register', '\"Register\"', \['\"\"', '\"email\"'\], none, '\"Addresses\"', by(\[1\]), \[ft(2, 'email')\])" "$cva_ty_typed"
+check "CVA typed: ... and none for the bare variable, the act as before (typed)" "act('register', '\"Register\"', \['\"\"', '\"email\"'\], none, '\"Addresses\"', by(\[1\]))\]" "$cva_ty_bare"
+cva_ty_c1=$("$REPL_RUN" <<HEREDOC 2>&1 | awk '$0 ~ /%% compile begin/{on=1;next} $0 ~ /%% compile end/{on=0} on' | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(xt, $cva_ty_read, syntactically_grassroots, no_introduction, $cva_ty_typed).
+:quit
+HEREDOC
+)
+cva_ty_c2=$("$REPL_RUN" <<HEREDOC 2>&1 | awk '$0 ~ /%% compile begin/{on=1;next} $0 ~ /%% compile end/{on=0} on' | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(xt, $cva_ty_read, syntactically_grassroots, no_introduction, $cva_ty_bare).
+:quit
+HEREDOC
+)
+check "CVA typed: the typed contract's request form has the field of kind email (typed)" 'field(2, "email", email)' "$cva_ty_c1"
+check "CVA typed: ... the bare one's of kind text (typed)" 'field(2, "email", text)' "$cva_ty_c2"
+cva_ty_diff=$(diff <(printf '%s\n' "$cva_ty_c1" | sed -e 's/field(2, "email", email)/field(2, "email", text)/' -e 's/, \[ft(2, email)\])/)/' -e '/^PFType    ::= /d' -e '/^PFTypes   ::= /d' -e 's/^PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes)\.$/PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer)./') <(printf '%s\n' "$cva_ty_c2") > /dev/null && echo same || echo differs)
+check "CVA typed: ... and the two platforms are the same but for that kind: in the request form, in the pragmas the platform exports, and in the types of those pragmas, which name the types of an act's fields only where an act has one (typed)" "^same$" "$cva_ty_diff"
+cva_ty_rd=$("$REPL_RUN" <<HEREDOC 2>&1
+$GLP_DIR/programs/gsc/
+:limit 10000000
+as_read([sas(register, ['Alice'], [x], [atom(email, ['Alice', typed(email, x)])], [not(atom(email, ['Alice', x]))], true, ['Alice'])], R1).
+as_read([sas(register, ['Alice'], [x], [atom(email, ['Alice', x])], [not(atom(email, ['Alice', x]))], true, ['Alice'])], R2).
+:quit
+HEREDOC
+)
+cva_ty_r1=$(printf '%s\n' "$cva_ty_rd" | sed -e 's/^\(GLP> \)*//' | grep '^R1 = ' | sed 's/^R1 = //')
+cva_ty_r2=$(printf '%s\n' "$cva_ty_rd" | sed -e 's/^\(GLP> \)*//' | grep '^R2 = ' | sed 's/^R2 = //')
+check "CVA typed: GSC's reader reads typed(email, x) as x, the typed schema read as the bare one (typed)" "^same$" "$([ -n "$cva_ty_r1" ] && [ "$cva_ty_r1" = "$cva_ty_r2" ] && echo same || echo differs)"
 # The forwarding clauses of contract/2 and version/2 in the program's root module (vGLP 722343d, Section 5.4, "The contract's words": "a goal posted to a program is admitted only at a procedure its root module exports, so the canonical compilation writes into the root module of the program the platform is compiled for a forwarding clause for each of the two, as it writes there the types it forms"): programs/tests/vglp/forward, its self.glp writing neither, its platform.vglp exporting both.
 cva_fwd=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/vglp/forward/
