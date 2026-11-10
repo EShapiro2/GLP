@@ -26,7 +26,7 @@ Ward and person: Bob [Agent acquaint] <person>
   Carol: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and her AI agent Carol befriend.
   Alice [Agent unfriend] <person>
-  Carol [Agent end] <person>
+  Carol [Agent end]
 Ward and ward: Carol [Agents acquaint] <person>
   Dave: Carol wishes that you know each other.
   Alice [Agents befriend]
