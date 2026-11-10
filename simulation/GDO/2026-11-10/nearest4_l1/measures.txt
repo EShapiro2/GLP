@@ -1,0 +1,54 @@
+          edges trans  mean optim stretch ideal optedge optcovr
+day 1       107     0  1408  1482    0.95  1482    100%     89%
+day 2       120     0  1482  1482    1.00  1482    100%    100%
+day 3       120     0  1482  1482    1.00  1482    100%    100%
+day 4       120     0  1482  1482    1.00  1482    100%    100%
+day 5       120     0  1482  1482    1.00  1482    100%    100%
+day 6       120     0  1482  1482    1.00  1482    100%    100%
+day 7       120     0  1482  1482    1.00  1482    100%    100%
+day 8       120     0  1482  1482    1.00  1482    100%    100%
+day 9       120     0  1482  1482    1.00  1482    100%    100%
+day 10      120     0  1482  1482    1.00  1482    100%    100%
+day 11      120     0  1482  1482    1.00  1482    100%    100%
+day 12      120     0  1482  1482    1.00  1482    100%    100%
+day 13      120     0  1482  1482    1.00  1482    100%    100%
+day 14      120     0  1482  1482    1.00  1482    100%    100%
+day 15      120     0  1482  1482    1.00  1482    100%    100%
+day 16      120     0  1482  1482    1.00  1482    100%    100%
+day 17      120     0  1482  1482    1.00  1482    100%    100%
+day 18      120     0  1482  1482    1.00  1482    100%    100%
+day 19      120     0  1482  1482    1.00  1482    100%    100%
+day 20      120     0  1482  1482    1.00  1482    100%    100%
+day 21      120     0  1482  1482    1.00  1482    100%    100%
+day 22      120     0  1482  1482    1.00  1482    100%    100%
+day 23      120     0  1482  1482    1.00  1482    100%    100%
+day 24      120     0  1482  1482    1.00  1482    100%    100%
+day 25      120     0  1482  1482    1.00  1482    100%    100%
+day 26      120     0  1482  1482    1.00  1482    100%    100%
+day 27      120     0  1482  1482    1.00  1482    100%    100%
+day 28      120     0  1482  1482    1.00  1482    100%    100%
+day 29      120     0  1482  1482    1.00  1482    100%    100%
+day 30      120     0  1482  1482    1.00  1482    100%    100%
+requests by class:
+  acquaint           208
+  unpoint            1018
+  befriend           174
+  establish          40
+  introduce          891
+  point_friend       120
+refusals by class and refuser (own machine / a peer's):
+  unpoint own              1018
+  acquaint own             20
+  acquaint peer            34
+approvals answered:
+  yes    1259
+churn: pointings made 120, ended 0; friendships made 348 (0 after the first day), ended 0
+overlay at the end: 120 edges over 40 persons; out-degree 0:0 1:0 2:0 3:40; 0 with none, 0 above d=3
+pointing edges: mean 1482 m, longest 4640 m (l1)
+ideal, the d nearest friends at the end: 120 edges, mean 1482 m
+bound, the d nearest persons of all: 120 edges, mean 1482 m
+against the optimum (every person pointing to its d nearest of all): stretch 1.00, gap 0 m; optimal edges 120 of 120 pointings (100%), covering 100% of the optimum's 120 edges
+against the ideal of friends (the d nearest friends): stretch 1.00, gap 0 m; 120 pointings to one of them (100%)
+pointings to a friend: 120; to a person who is not a friend (transitive): 0
+cumulative friendship graph: 1 components; pointings across components: 0
+summary	edges=120	maxdeg=3	over=0	mean=1482	optimum=1482	stretch=1.00	gap=0	optedge=100	optcover=100	ideal=1482	transitive=0	made=120	ended=0	made1=13	ended1=0	fmade1=0	fended1=0	trans_req=0	trans_peer=0	across=0
