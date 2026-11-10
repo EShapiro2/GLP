@@ -8,7 +8,7 @@
 
 SNT         ::= own(Constant) ; ext(SNT, Constant).
 SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant) ; real(Constant)
-              ; sgn(Constant, Constant) ; item_of(Constant).
+              ; sgn(Constant, Constant) ; item_of(Constant) ; val(Constant).
 SArgs       ::= [] ; [SArg | SArgs].
 SAtom       ::= atom(Constant, SArgs).
 SMult       ::= SAtom ; times(SArg, SAtom).
@@ -30,7 +30,9 @@ PNames      ::= [] ; [Constant | PNames].
 Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
 Contract    ::= [] ; [Schema | Contract].
 Preds       ::= [] ; [Constant | Preds].
-Declared    ::= Contract ; environment(Preds, Contract).
+SParam      ::= Constant ; val(Constant).
+SParams     ::= [] ; [SParam | SParams].
+Declared    ::= Contract ; environment(Preds, Contract) ; parametric(SParams, Declared).
 
 % contract_named(scb, C): the contract, SCB.
 procedure contract_named(Constant?, Declared).
@@ -113,7 +115,7 @@ contract_named(scb, environment([today],
         atom(identity, ['Orga']),
         atom(org, ['Orga']),
         atom(creator, ['Orga', 'Alice']),
-        atom(bylaws, ['Orga', bylaws_scb]),
+        atom(bylaws, ['Orga', val(bylaws_scb)]),
         atom(officer, ['Orga', 'Alice', num(1)]),
         atom(participant, ['Orga', 'Alice']),
         atom(friend, ['Orga', 'Alice']),

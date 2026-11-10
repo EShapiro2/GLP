@@ -15,6 +15,9 @@ Alice and Bob are persons, Orga a community currency.
 Pragmas
 Look: 🪙, money
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Treasurers: the treasurers of Orga.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -24,20 +27,17 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
 Acceptance: Alice [Accept] <limit>
 Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Treasurers: the treasurers of Orga.
 Treasurers: Bob [Become treasurer]
   Otto: Bob asks to become a treasurer.
   Bob [Resign]

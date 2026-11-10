@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: MCS.glp beside this file.
 MCS: Mutual Credit Society
-MCS instantiates the bylaws of GBank and amends it.
+MCS instantiates GBank, its bylaws those of a mutual credit society, and amends it.
 A mutual credit society is a bank with one role, member, held by every participant, whose acts are decided by all its members jointly.  A member can be in the red by their coins in circulation less the other persons' coins they hold.
 Alice and Bob are persons, Orga a mutual credit society.
 1. ■ Founding.  Alice may found Orga and become its first member.
@@ -16,6 +16,8 @@ Alice and Bob are persons, Orga a mutual credit society.
 Pragmas
 Look: 🤝, money
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -25,13 +27,11 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.

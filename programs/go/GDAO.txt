@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: GDAO.glp beside this file.
 GDAO: Grassroots DAO
-GDAO instantiates the bylaws of GCoop and restricts it.
+GDAO instantiates GCoop, its bylaws those of a DAO, and restricts it.
 A DAO is a cooperative with one role besides member, steward; the steward decides the admission of a member, and the members decide every other act of the DAO by a majority of the members.
 Alice and Bob are persons, Orga a DAO.
 1. ■ Founding.  Alice may found Orga and become its steward and first member.
@@ -13,6 +13,9 @@ Alice and Bob are persons, Orga a DAO.
 Pragmas
 Look: 🗳️, governance
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+DAOs: the DAOs Alice is a member of.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -22,19 +25,16 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
 Acceptance: Alice [Accept] <limit>
 Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-DAOs: the DAOs Alice is a member of.
 Joining: Bob [Join DAO]
   Otto: Bob asks to become a member.

@@ -26,7 +26,7 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>

@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: CB.glp beside this file.
 CB: Community Bank
-CB instantiates the bylaws of GBank and restricts it.
+CB instantiates GBank, its bylaws those of a community bank, and restricts it.
 A community bank is a bank with two roles, member, held by every participant, and director, held by members the members elect; the directors jointly decide the acts of the bank, and the members jointly elect and remove directors.  A member's credit line is a number of coins the directors set.
 Alice and Bob are persons, Orga a community bank.
 1. ■ Founding.  Alice may found Orga and become its first member and director.
@@ -18,6 +18,8 @@ Alice and Bob are persons, Orga a community bank.
 Pragmas
 Look: 🏘️, money
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -27,13 +29,11 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.

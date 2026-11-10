@@ -10,6 +10,8 @@ A corporation is an organisation that holds, pays and issues Dollar-denominated 
 Pragmas
 Look: 🏢, money
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -19,13 +21,11 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.

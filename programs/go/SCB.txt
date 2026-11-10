@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: SCB.glp beside this file.
 SCB: Sovereign Central Bank
-SCB instantiates the bylaws of GBank and restricts it.
+SCB instantiates GBank, its bylaws those of a central bank, and restricts it.
 A central bank is an organisation that is the sovereign of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar.  It has two roles, governor and committee member; the governors jointly decide the acts of the bank, and the committee members, the monetary policy committee, set by a majority the policy rate for each term, the return over that term at which the bank lends its coins against bonds.  A participant who holds no role is a counterparty.
 Gov is an organisation, Alice and Bob persons, Orga a central bank.
 1. ■ Founding.  Gov, with Alice, may found Orga as the sovereign of the Dollar, with Alice its first governor.
@@ -18,6 +18,8 @@ Gov is an organisation, Alice and Bob persons, Orga a central bank.
 Pragmas
 Look: 🏛️, money
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -27,13 +29,11 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.

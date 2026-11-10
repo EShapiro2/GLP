@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: CMB.glp beside this file.
 CMB: Commercial Bank
-CMB instantiates the bylaws of GBank and restricts it.
+CMB instantiates GBank, its bylaws those of a commercial bank, and restricts it.
 A commercial bank is an organisation that may issue Dollar-denominated coins and bonds, with two roles, director and loan officer; the directors jointly decide the acts of the bank; a loan officer decides a loan within their lending limit, a number of Dollars the directors set, and the directors decide a loan above it.  A participant who holds no role is a customer.
 Alice, Bob and Carol are persons, Orga a commercial bank.
 1. ■ Founding.  Alice may found Orga and become its first director.
@@ -17,6 +17,8 @@ Alice, Bob and Carol are persons, Orga a commercial bank.
 Pragmas
 Look: 🏦, money
 Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
   Bob [Vote]
@@ -26,13 +28,11 @@ Participation: Bob [Join]
   Otto: Bob asks to participate.
   Bob [Leave]
   Otto [Expel]
-Officers: Otto [Appoint] <role>
+Joint guardianship: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
   Otto [Dismiss] <role>
   Bob [Resign role] <role>
 Amendment: Otto [Amend] <bylaws>
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
