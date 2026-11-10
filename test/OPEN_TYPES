@@ -14,39 +14,6 @@
 #   open-decl   `_` or `_?` in a procedure declaration (name/arity; M#p/n imported)
 #   open-type   `_` or `_?` in a type definition (the type's name)
 # Lines beginning with # and empty lines are not entries.
-cascade/CSSN/platform.glp	open-decl	comb_approval_approval_3/7
-cascade/CSSN/platform.glp	open-decl	comb_menu_menu_3/7
-cascade/CSSN/platform.glp	open-decl	cons_more/5
-cascade/CSSN/platform.glp	open-decl	cons_views/3
-cascade/CSSN/platform.glp	open-decl	dispatch/3
-cascade/CSSN/platform.glp	open-decl	dispatch/4
-cascade/CSSN/platform.glp	open-decl	dispatch/5
-cascade/CSSN/platform.glp	open-decl	form_constant/2
-cascade/CSSN/platform.glp	open-decl	form_integer/2
-cascade/CSSN/platform.glp	open-decl	form_module/2
-cascade/CSSN/platform.glp	open-decl	form_number/2
-cascade/CSSN/platform.glp	open-decl	form_proposal/2
-cascade/CSSN/platform.glp	open-decl	form_real/2
-cascade/CSSN/platform.glp	open-decl	form_request/2
-cascade/CSSN/platform.glp	open-decl	form_speech/2
-cascade/CSSN/platform.glp	open-decl	form_string/2
-cascade/CSSN/platform.glp	open-decl	form_utterance/2
-cascade/CSSN/platform.glp	open-decl	form_yesNo/2
-cascade/CSSN/platform.glp	open-decl	present_approval/6
-cascade/CSSN/platform.glp	open-decl	present_approval_wait/6
-cascade/CSSN/platform.glp	open-decl	present_menu/6
-cascade/CSSN/platform.glp	open-decl	present_menu_wait/6
-cascade/CSSN/platform.glp	open-decl	run_approval_w/5
-cascade/CSSN/platform.glp	open-decl	run_menu_w/5
-cascade/CSSN/platform.glp	open-decl	shown/3
-cascade/CSSN/platform.glp	open-decl	shown_whole/2
-cascade/CSSN/platform.glp	open-decl	split_grants/3
-cascade/CSSN/platform.glp	open-decl	start_approval_approval_3/4
-cascade/CSSN/platform.glp	open-decl	start_menu_menu_3/4
-cascade/CSSN/platform.glp	open-decl	thread/3
-cascade/CSSN/platform.glp	open-decl	thread_cell/4
-cascade/CSSN/platform.glp	open-decl	thread_tail/3
-cascade/CSSN/platform.glp	open-type	Drawn
 programs/apps/gai/miniapp.glp	open-decl	to_person/2
 programs/apps/gb/miniapp.glp	open-decl	to_person/2
 programs/apps/gc/miniapp.glp	open-decl	to_person/2
