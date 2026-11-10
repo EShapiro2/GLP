@@ -58,6 +58,16 @@ Approval =::= approval_sentence.
 Request? =::= social_menu([button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Bump", [act(bump, 1, [1], [req(started, []), req(level, [any])], [], [], [], [])]), button("Outrank", [act(outrank, 1, [1, 2], [req(knows, [at(2)]), req(level, [any]), forb(outranks, [at(2)])], [2], [], [], [])]), button("Watch", [act(watch, 1, [1], [forb(watching, [])], [], [], [], [])]), button("Unwatch", [act(unwatch, 1, [1], [req(watching, [])], [], [], [], [])]), button("Nudge", [act(nudge, 1, [1, 2], [req(knows, [at(2)]), forb(nudged, [at(2)])], [2], [], [], [])]), button("Vouch", [act(vouch, 1, [1], [forb(attestation, [at(2)])], [], [field(2, "Text", text)], [], [])]), button("Present", [act(present, 2, [1, 2], [forb(knows, [at(1)]), unless(outranks, [at(1)]), unless(outranked, [at(1)]), unless(trails, [at(1)]), unless(trailed, [at(1)]), unless(nudged, [at(1)]), unless(nudged_by, [at(1)]), unless(knows, [at(1)]), unless(record, [at(1), any])], [], [field(1, "Person", key)], [], [])])])
 .
 
+%% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
+
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
 Atom ::=
 started

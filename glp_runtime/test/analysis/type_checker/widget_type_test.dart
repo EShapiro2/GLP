@@ -9,7 +9,15 @@
 /// Writer, GLP with Persons, Grant").  GLP #9 Cowork, 2026-10-20 09:22 UTC,
 /// item 4.1: "the root's Widget has the alternative named(Constant, Widget)".
 /// Until 2026-10-20 the root's Draw left the widget untyped, draw(Integer, _,
-/// T).
+/// T).  Since 2026-11-10 it is Widget(T), T the program's person-channel union,
+/// with named(T, Widget(T)): "the term W' a widget declaration names is a name
+/// or a name applied to arguments, as the request type's menu is applied to
+/// its buttons and fields; the compilation forms the union of the three, the
+/// parameter T of the program's person channel ..., so the widget a construct
+/// draws is typed as its value is" (vGLP 668df7d, Section 6.3, the paragraph
+/// after the construct process; Draw(T) ::= draw(Integer, Widget(T), T) ;
+/// withdraw(Integer)).  Under Draw(Constant), T is Constant, so a W that is no
+/// constant is refused there.
 ///
 /// Each program is written to a directory under the root, programs/ (TGLP
 /// modules.tex, "Scope construction"), and loaded as the REPL loads a file,
@@ -104,8 +112,25 @@ void main() {
       refused('foreign.glp', drawing('named(card, slider(1, 10))'));
     });
 
-    test('named(W, D) with W not a constant is refused', () {
+    test('named(W, D) with W not a constant is refused where T is Constant',
+        () {
       refused('name_term.glp', drawing('named(card(1), shown)'));
+    });
+
+    test('named(W, D) with W a name applied to arguments typechecks where T '
+        'has its alternative, and is refused where it has none', () {
+      expect(
+          load(
+              'name_applied.glp',
+              'Pick ::= dishes ; card(Integer).\n'
+                  'exported procedure d(Draw(Pick)).\n'
+                  'd(draw(1, named(card(1), shown), dishes)).\n'),
+          isTrue);
+      refused(
+          'name_unlisted.glp',
+          'Pick ::= dishes ; card(Integer).\n'
+              'exported procedure d(Draw(Pick)).\n'
+              'd(draw(1, named(menu_of(1), shown), dishes)).\n');
     });
   });
 }

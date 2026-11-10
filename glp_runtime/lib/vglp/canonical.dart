@@ -1333,6 +1333,24 @@ _Elicitation _elicitation(
     declared: widgets,
     fresh: freshProc,
     output: resolve(outputTypeName),
+    widgetAlternative: (functor, arity) {
+      // The type in scope that declares the widget term: the source's own
+      // first, the platform printing it (vGLP 0eeea71, Section 5.4), then
+      // those copied, then its scope's.
+      for (final td in [
+        ...own.values,
+        ...copies.values,
+        ...outer.typeTemplates.values,
+        ...outer.types.values
+      ]) {
+        for (final a in td.alternatives) {
+          if (a is StructAlt && a.functor == functor && a.arity == arity) {
+            return typeSource(a);
+          }
+        }
+      }
+      return null;
+    },
   );
 
   // The generic procedures emitted: those reached from the dispatcher's entry
@@ -1600,9 +1618,20 @@ class DeclaredWidget {
   /// The `W` of the term `named(W, D)` the widget is drawn by: "the widget W
   /// its declaration gives, a term of the construct family" (vGLP e22e2ad,
   /// Section 6.3): its name, and, where it declares buttons, the widget whole,
-  /// in the `Constant` the root's type `Widget` holds there, its text, from
-  /// which the construct family reads the term ([parse]).
+  /// its text, from which the construct family reads the term ([parse]).
   String get drawnAs => buttons.isEmpty ? name : source;
+
+  /// [drawnAs] as a term of the program's person-channel union T, printed:
+  /// "the term W' a widget declaration names is a name or a name applied to
+  /// arguments, as the request type's menu is applied to its buttons and
+  /// fields" (vGLP 668df7d, Section 6.3, the paragraph after the construct
+  /// process; programs/self.glp, `named(T, Widget(T))`).  Until 2026-11-10
+  /// the whole was one quoted constant.
+  String get drawnTerm => buttons.isEmpty ? constantSource(name) : source;
+
+  /// The arity of [drawnTerm]: 0 for the name alone, 1 for the name applied
+  /// to its list.
+  int get drawnArity => buttons.isEmpty ? 0 : 1;
 
   /// The widget [w] names, as [source] writes it or as a declaration writes
   /// it.

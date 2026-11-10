@@ -5,6 +5,14 @@
 Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer).
 Request ::= propose(Proposal).
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
 Atom ::= identity ; knows(Peer) ; friend(Peer).
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
 RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg).
@@ -4571,7 +4579,7 @@ form_string(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo.
+Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo ; last_state ; social_menu(List(MenuEntry)) ; approval_sentence.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
@@ -4581,22 +4589,22 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named('social_menu([button(\'Establish\', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button(\'Acquaint\', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button(\'Introduce\', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button(\'Befriend\', [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button(\'Unfriend\', [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])])])', form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Befriend', form(befriend, [field('Peer', peer), field('Peer', peer)])), label('Unfriend', form(unfriend, [field('Peer', peer), field('Peer', peer)]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button('Befriend', [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button('Unfriend', [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Befriend', form(befriend, [field('Peer', peer), field('Peer', peer)])), label('Unfriend', form(unfriend, [field('Peer', peer), field('Peer', peer)]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
 construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
 
-procedure output(Widget?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).
 
-procedure output_more(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_more(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Gs, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Gs?, Ds).
 output_more(W, Ms, Es, [refresh | Gs], Ds?) :- output_draw(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, Ms, Es, [input(_, _, _) | Gs], Ds?) :- output_more(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, [], Es, Gs, Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
-procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, Gs, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Gs?, Ds).
 
-procedure output_end(Widget?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_end(Widget(Drawn)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_end(W, Es, [refresh | Gs], [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_end(W?, Es?, Gs?, Ds).
 output_end(W, Es, [input(_, _, _) | Gs], Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
@@ -4654,18 +4662,18 @@ take_request(formed(V), _, V?, _, Gs, Gs?, done).
 take_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_request(P?, X, Gs?, Gs1, Done).
 
 View_request_r ::= Request ; input(Path).
-procedure run_request_r(Integer?, Widget?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r(Integer?, Widget(Drawn)?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_request_r_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_request_r_more(Integer?, Widget?, View_request_r?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r_more(Integer?, Widget(Drawn)?, View_request_r?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_request_r_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_request_r_last(Integer?, Widget?, View_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r_last(Integer?, Widget(Drawn)?, View_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_request_r_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_request_r_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
@@ -4691,18 +4699,18 @@ View_approval ::= approval(Asking, List(Word), Questioned(YesNo)).
 procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_approval), Done).
 present_approval(P, approval(H1, H2, H3?), Gs, Gs1?, [approval(H1?, H2?, input(M3?))], D3?) :- ground(P?), ground(H1?), ground(H2?) | path(P?, 3, M3), path(P?, 3, Q3), answer_yesNo(Q3?, H3, Gs?, Gs1, D3).
 
-procedure run_approval_w(Integer?, Widget?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w(Integer?, Widget(Drawn)?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_approval_w_more(Integer?, Widget?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_more(Integer?, Widget(Drawn)?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_approval_w_last(Integer?, Widget?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_last(Integer?, Widget(Drawn)?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_approval_w_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).

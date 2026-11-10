@@ -70,6 +70,16 @@ Approval =::= approval_sentence.
 Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), req(pointer, [at(2), at(2)])], [2], [], [], [])]), button("Point", [act(point_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(points_to, [at(2)])], [2], [], [], []), act(point_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(points_to, [at(2)])], [3, 2], [], [], [])]), button("Unpoint", [act(unpoint, 1, [1, 2], [req(identity, []), req(points_to, [at(2)])], [2], [], [], [])]), button("Follow", [act(follow_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(pointer, [at(2), at(3)])], [2], [field(3, "label", agent)], [], []), act(follow_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(pointer, [at(2), at(4)]), forb(pointer, [at(3), at(4)])], [3, 2, 4], [], [], []), act(follow_transitive_friend, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(friend, [at(2)]), forb(pointer, [at(3), at(4)])], [3, 2], [field(4, "label", agent)], [], [])]), button("Unfollow", [act(unfollow, 1, [1, 2], [req(identity, []), req(pointer, [at(2), any])], [2], [], [], [])])])
 .
 
+%% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
+
 %% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").
 Atom ::=
 identity

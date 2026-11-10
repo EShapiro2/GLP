@@ -50,7 +50,8 @@ HAsking(C, N, M) ::= attempt(Peer, Integer, Integer, C, N) ; hello(Peer, M).
 HRequest(R) ::= propose(R) ; input(Path).
 HAnswer    ::= yes ; no ; input(Path).
 HApproval(K, W) ::= approval(K, HAnswer) ; approval(K, W, HAnswer).
-HDrawn(R, K, W, S, P, D, B) ::= request_r(HRequest(R)) ; approval_w(HApproval(K, W)) ; output(List(HView(S, P, D, B))) ; propose(R) ; yes ; no.
+%% And the widget terms the platform's declarations name, each an alternative of the union the person channel carries: last_state, approval_sentence and the request widget's term social_menu(E), E the list of its entries, of the types the platform prints with it (vGLP 668df7d, Section 6.3, the paragraph after the construct process; vGLP 0eeea71, Section 5.4).
+HDrawn(R, K, W, S, P, D, B, E) ::= request_r(HRequest(R)) ; approval_w(HApproval(K, W)) ; output(List(HView(S, P, D, B))) ; propose(R) ; yes ; no ; last_state ; approval_sentence ; social_menu(E).
 Seen(K)    ::= seen(Integer, Path, K).
 Seens(K)   ::= [] ; [Seen(K) | Seens(K)].
 PSt(T, Q, S, P, D, B, K) ::= ps(Sess, List(HView(S, P, D, B)), Seens(K), Steps(T, Q, S, P, D)).
@@ -133,7 +134,7 @@ procedure(I, X) to_person(Channel(Stream(I), Stream(X))?, Stream(X)?).
 to_person(ch(_, O?), O).
 
 %% The person.
-procedure(T, Q, S, P, D, B, C, N, M, R, W) person(PersonOut(HDrawn(R, HAsking(C, N, M), W, S, P, D, B))?, PersonIn(T),
+procedure(T, Q, S, P, D, B, C, N, M, R, W, E) person(PersonOut(HDrawn(R, HAsking(C, N, M), W, S, P, D, B, E))?, PersonIn(T),
     PSt(T, Q, S, P, D, B, HAsking(C, N, M))?, Stream(Logged(Q, T, S, P, D, B))).
 person([draw(0, _, output(T))|Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
     ground(T?) |

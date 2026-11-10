@@ -1,10 +1,10 @@
 # A run of the cascade on GSN+GC
 
-- Contract: the composition of GSN GC (`gsn_gc` to the checker), the union of their schemas and of their pragmas (vGLP, Section 5.4, "The contract's words"), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `8f6cc771`:
-  - `GSN`: `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`; the paper `https://github.com/EShapiro2/jurix-formal-grassroots-social-contracts` at `0a30d523`.
-  - `GC`: `programs/currencies/coins/GC.txt` and `programs/currencies/coins/GC.glp`; the paper `https://github.com/EShapiro2/gc-grassroots-currencies` at `cdc2f241`.
-- The tools: this repository at `8f6cc771` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 14:26 UTC by `cascade.sh gsn gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: the composition of GSN GC (`gsn_gc` to the checker), the union of their schemas and of their pragmas (vGLP, Section 5.4, "The contract's words"), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `ca9abe75`:
+  - `GSN`: `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`; the paper `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`.
+  - `GC`: `programs/currencies/coins/GC.txt` and `programs/currencies/coins/GC.glp`; the paper `/Users/udi/Grassroots/GC (not on this machine)` at `unknown`.
+- The tools: this repository at `ca9abe75` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 21:01 UTC by `cascade.sh gsn gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
