@@ -1,10 +1,10 @@
 # CSSN's app
 
-The app of CSSN, the child-safe social network (CSSN, Section 4), as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its contract: its act schemas, `CSSN.glp`, and its pragmas, the lines after `Pragmas` in `CSSN.txt` and in the `NAME.txt` of each contract it extends, GSN, GSG and GKK (`programs/gsc`) and GnW (`programs/gai`).  Every word the app shows is the contract's (claude.md, "Sessions": "THE CONTRACT IS THE SOURCE OF ALL TRUTH RELATED TO THE APP"; vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows").
+The app of CSSN, the child-safe social network (CSSN, Section 4), as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its contract: its act schemas, `CSSN.glp`, and its pragmas, the lines after `Pragmas` in `CSSN.txt` and in the `NAME.txt` of each contract it extends, GSN, GSG and GKK, and GnW (`programs/gsc`).  Every word the app shows is the contract's (claude.md, "Sessions": "THE CONTRACT IS THE SOURCE OF ALL TRUTH RELATED TO THE APP"; vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows").
 
 ## The contract
 
-`CSSN.txt` holds the clauses, CSSN:1 to CSSN:6, each opening with its modality, and the pragmas: the tab `Children: the children Alice is parenting.` and a line for each clause with acts, its buttons, the roles' names after a button where the clause's names do not occur in the order of the roles, and one question per guarding role of the widest schema the button covers, in role order (vGLP, Section 5.4).  `CSSN.glp` holds the twenty-nine schemas over sixteen predicates: GSN's fourteen, with child forbidden where CSSN says, and the fifteen of the children, which realise GnW.
+`CSSN.txt` holds the clauses, CSSN:1 to CSSN:6, each opening with its modality, and the pragmas: the tab `Children: the children Alice is parenting.` and a line for each clause with acts, its buttons, the roles' names after a button where the clause's names do not occur in the order of the roles, and one question per guarding role of the widest schema the button covers, in role order (vGLP, Section 5.4).  `CSSN.glp` holds the thirty-one schemas over sixteen predicates: GSN's fourteen, with child forbidden where CSSN says, and the seventeen of the children, which realise GnW with CSSN:1 to CSSN:4.
 
 ## The cascade
 
