@@ -2365,12 +2365,14 @@ check_eq "the same constants written bare are variables not in the head" "V = ma
 # schema of Additions in the place of the base's of its name or after the
 # base's; instance_faults/3 names a binding of no parameter, a name written
 # that occurs in the base, a name written twice and a parameter bound twice.
-# GnW, parametric in its six predicates of wards, is certified as GnW is;
+# GnW, parametric in its six predicates of wards, is certified as GnW is
+# (GnW.glp writes it parametric(...)); GSG, which names no parameters, has
+# no instance;
 # its instance with child for ward, parenting for guardian_of and parent_of
 # for guarded_by is certified with child its ward mark; an addition named
 # establish replaces the base's, and sign is put after the base's schemas.
 GNWT=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
-GNWP="parametric([ward, creator, created, guardian_of, guarded_by, retired], $GNWT)"
+GNWP="$GNWT"   # GnW.glp's term is parametric(...) since GLP 829e65c3 (GSC #14)
 GNWB="[ward = child, guardian_of = parenting, guarded_by = parent_of]"
 EST2="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
 SIGNP="sas(sign, ['Alice'], [y], [atom(item, ['Alice', y])], [atom(identity, ['Alice']), atom(person, ['Alice'])], true, ['Alice'])"
@@ -2378,7 +2380,7 @@ VALP="parametric([val(bylaws_p)], [sas(adopt, ['Alice'], [], [atom(bylaws, ['Ali
 out=$(run "check($GNWP, V)." "instantiate($GNWP, $GNWB, [], D), check(D?, V)." \
           "instance_faults($GNWP, $GNWB, F)." \
           "instance_faults($GNWP, [friend = x, ward = knows, creator = c, created = c, retired = r, retired = s], F)." \
-          "instance_faults($GNWT, [ward = child], F)." \
+          "instance_faults($GSGT, [ward = child], F)." \
           "instantiate($GNWP, $GNWB, [$EST2, $SIGNP], D)." \
           "instantiate($VALP, [bylaws_p = bylaws_mcs], [], D)." "as_read($VALP, R).")
 check_eq "GnW parametric in its six predicates of wards is certified as GnW is" \
