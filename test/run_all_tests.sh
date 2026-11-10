@@ -3941,7 +3941,7 @@ compile(signing_con, [schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])]
 compile(signing_bad, [], malformed([signing_not_agent(send, svar(x))])).
 compile(headless, [], malformed([not_in_head(s, svar(x))])).
 compile(listed_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
-compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, guardian(2)), free(2))], [])).
+compile(wards_named, [cschema(cl, [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], [])])], syntactically_grassroots_with_wards(enter, [m], [guardianship(m, v, u)], [relay(r, ward(1, m, guardian(2)), free(2))], [i, f])).
 compile(listed_two, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(1, invited, [svar(n)]), unguarded, [], [atom(guest, [role(1), svar(n)])], [], [])])], syntactically_grassroots).
 compile(listed_bases, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [atom(friend, [role(2)])], []), rs(unguarded, [atom(seen, [svar(n)])], [], [atom(friend, [role(1)])], []), crs(listed(1, listed, [svar(n)]), unguarded, [], [atom(member, [role(1), svar(n)])], [], []), crs(listed(2, invited, [svar(n)]), unguarded, [], [atom(guest, [role(2), svar(n)])], [], [])])], syntactically_grassroots).
 compile(seated_role, [schema(cl, [svar(n)], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)])], [], []), crs(seated(ext(own(1), n), member), unguarded, [], [atom(member, [nterm(ext(own(1), n))])], [], [])])], syntactically_grassroots).
@@ -4381,8 +4381,11 @@ check "CVA pragmas: ... the act's fields name l at its third place, d no place o
 # chain3 (a third binding joins them, all marking the same people, compiled),
 # clash2_marks and chain3_marks (the same, the two marking different people:
 # two classes, and one, its parts guarded apart, both compiled),
-# wards and wards_leaving (a verdict grassroots with wards compiles, A, with
-# no leaving mark and with one, GSC's Appendix F), signed (a signed term in
+# wards and wards_leaving (a verdict grassroots with wards compiles, A, the
+# guardianship (m, v, u) and the verdict's fifth argument the kinds' [iota, f]
+# of GSC's Section 8 at df5e454, whose leaving marks are gone; wards_leaving,
+# a leaving mark there until GSC 7e00aba, now names the kinds identity and
+# person), signed (a signed term in
 # an added atom, the speech act bound to y signed by the person in role i,
 # compiles, B), itemarg (the item of a speech act, item_of(x), as an argument
 # of an atom required, forbidden and added, passes the checks, vGLP e1d1b8a),
@@ -4398,8 +4401,8 @@ $CVA/compiler/
 :limit 100000000
 compile(clash2, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [], [rs(guarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
 compile(chain3, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [], [rs(guarded, [atom(z, [])], [], [], [atom(a, [])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])]), schema(s3, [], [rs(guarded, [atom(z, [])], [], [], []), rs(guarded, [atom(w, [])], [], [], [])])], syntactically_grassroots).
-compile(wards, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, guardian(2)), free(2))], [])).
-compile(wards_leaving, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, i, g, w, w)], [relay(r, ward(1, m, guardian(2)), free(2))], [retired])).
+compile(wards, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, v, u)], [relay(r, ward(1, m, guardian(2)), free(2))], [i, f])).
+compile(wards_leaving, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])])], grassroots_with_wards(enter, [m], [guardianship(m, v, u)], [relay(r, ward(1, m, guardian(2)), free(2))], [identity, person])).
 compile(signed, [schema(fwd, [svar(x)], [rs(guarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []), rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])], syntactically_grassroots).
 compile(itemarg, [schema(inst, [svar(x)], [rs(guarded, [atom(installed, [item_of(svar(x))])], [], [atom(item, [svar(x)])], [atom(installed, [item_of(svar(x))])])])], syntactically_grassroots).
 compile(deadfree, [schema(s1, [], [rs(guarded, [atom(z, [])], [], [atom(a, [])], []), rs(guarded, [atom(w, [])], [], [atom(c, [])], [])]), schema(s2, [pvar(x)], [rs(guarded, [atom(z, [])], [], [atom(q, [pvar(x)])], [atom(q, [pvar(x)])]), rs(guarded, [atom(w, [])], [], [atom(d, [])], [])])], syntactically_grassroots).
@@ -4418,7 +4421,7 @@ check "CVA compiler: a third schema-binding linking them joins one class, all ma
 check "CVA compiler: ... the two marking different people, two classes, passing the checks (clash2_marks)" "%% not compiled, having no pragmas(clash2_marks)" "$cva_classes"
 check "CVA compiler: ... and the third joining them, one class, its parts guarded apart, passing the checks (chain3_marks)" "%% not compiled, having no pragmas(chain3_marks)" "$cva_classes"
 check "CVA compiler: a contract grassroots with wards passes the checks (wards)" "%% not compiled, having no pragmas(wards)" "$cva_classes"
-check "CVA compiler: ... and one with a leaving mark, the verdict's fifth argument (GSC, Appendix F, Definition \"Leaving mark\"), passing the checks (wards_leaving)" "%% not compiled, having no pragmas(wards_leaving)" "$cva_classes"
+check "CVA compiler: ... and one whose kinds are identity and person, the verdict's fifth argument [iota, f] (GSC, Section 8, Definition \"Kinds\", df5e454), passing the checks (wards_leaving)" "%% not compiled, having no pragmas(wards_leaving)" "$cva_classes"
 check "CVA compiler: a signed term in an added atom, the speech act bound to y signed by the person in role i, passes the checks (signed)" "%% not compiled, having no pragmas(signed)" "$cva_classes"
 check "CVA compiler: the item of a speech act as an argument of an atom, item_of(x), required, forbidden and added, its variable bound by an atom the role requires, passes the checks (itemarg; vGLP e1d1b8a, Section 5.4: an argument of an atom may be \"the signer, the author or the item of a speech act\")" "%% not compiled, having no pragmas(itemarg)" "$cva_classes"
 check "CVA compiler: a schema requiring and forbidding an atom of a variable of no deleted or added atom, refused as not effective (deadfree)" "%% not compiled(deadfree)" "$cva_classes"

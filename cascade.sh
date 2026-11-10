@@ -240,13 +240,61 @@ STATUS=0
 NOTE=()
 
 # 1. The contract, as it stands.
+# A contract's NAME.glp prints its term by contract_named(<name>, C); an
+# instance of a parametric contract's prints instance_named(<name>, Base,
+# Bindings, Additions) instead, only what the instance adds or replaces (GSC,
+# Definition Parametric contract; GSC #14, Code_inbox 2026-11-10 18:02 UTC),
+# and its term is formed from the base's by programs/gsc's instantiate/4, the
+# base's term printed from the base's own row, the bindings first put to
+# instance_faults/3.  A file cannot reach another's term (TGLP, a qualifier
+# naming no sibling), so the two are brought together here.
+# base_term <base>: the base's term, BT, and its file, BASEF.
+base_term() {
+local b="$1" sf="$FILE" so="$OWNER" sp="$PAPER" sd="$PLAYDIR" sa="$PLAYAT" sl="$PLAYLIMIT"
+lookup "$b"
+BASEF="$OWNER/$FILE.glp"
+printf '%s\ncontract_named(%s, C).\n:quit\n' "$GLP_DIR/$OWNER/$FILE.glp" "$b" > "$WORK/b.in"
+FILE="$sf"; OWNER="$so"; PAPER="$sp"; PLAYDIR="$sd"; PLAYAT="$sa"; PLAYLIMIT="$sl"
+repl "$WORK/b.in" "$WORK/b.out"
+BT=$(grep -E '^C = ' "$WORK/b.out" | head -1 | sed -e 's/^C = //')
+if [ -z "$BT" ]; then
+    say "the base $b's file, $BASEF, prints no contract_named($b, C)"
+    exit 1
+fi
+}
 # read_contract <name> <directory> <NAME>: the contract's term, CT, its
 # reading, RD, and its introduction predicate, INTRO.
 read_contract() {
 local n="$1" src="$2" f="$3"
+INSTANCE=""
+if grep -q "^instance_named($n," "$src/$f.glp"; then
+    printf '%s\ninstance_named(%s, B, Bs, A).\n:quit\n' "$src/$f.glp" "$n" > "$WORK/c.in"
+    repl "$WORK/c.in" "$WORK/c.out"
+    IB=$(grep -E '^B = ' "$WORK/c.out" | head -1 | sed -e 's/^B = //')
+    IBS=$(grep -E '^Bs = ' "$WORK/c.out" | head -1 | sed -e 's/^Bs = //')
+    IA=$(grep -E '^A = ' "$WORK/c.out" | head -1 | sed -e 's/^A = //')
+    if [ -z "$IB" ] || [ -z "$IBS" ] || [ -z "$IA" ]; then
+        say "$f.glp prints no instance_named($n, Base, Bindings, Additions)"
+        grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
+        exit 1
+    fi
+    base_term "$IB"
+    printf '%s\n:limit 10000000\ninstance_faults(%s, %s, F).\ninstantiate(%s, %s, %s, D).\n:quit\n' \
+        "$GLP_DIR/programs/gsc/" "$BT" "$IBS" "$BT" "$IBS" "$IA" > "$WORK/x.in"
+    repl "$WORK/x.in" "$WORK/x.out"
+    IF=$(grep -E '^F = ' "$WORK/x.out" | head -1 | sed -e 's/^F = //')
+    if [ "$IF" != "[]" ]; then
+        say "the instance's bindings $IBS of $IB are refused: ${IF:-no answer}"
+        exit 1
+    fi
+    CT=$(grep -E '^D = ' "$WORK/x.out" | head -1 | sed -e 's/^D = //')
+    INSTANCE="$IB, $BASEF, under $IBS"
+    say "an instance of $IB ($BASEF) under $IBS"
+else
 printf '%s\ncontract_named(%s, C).\n:quit\n' "$src/$f.glp" "$n" > "$WORK/c.in"
 repl "$WORK/c.in" "$WORK/c.out"
 CT=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
+fi
 if [ -z "$CT" ]; then
     say "$f.glp prints no contract_named($n, C)"
     grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
@@ -350,14 +398,26 @@ else
 fi
 
 # 5. The canonical platform, from programs/vglp/cva/compiler, with the
-# contract's words, its pragmas.
-if [ ${#NAMES[@]} -eq 1 ]; then
+# contract's words, its pragmas.  A parametric contract has no realisation
+# (GSC, Definition Parametric contract: "only an instantiation of every
+# parameter of a parametric contract is realised, as a protocol and as an
+# app"): it is checked and printed, and no platform is compiled, nor its
+# pragmas read.
+PARAMETRIC=0
+case "$CT" in parametric\(*) PARAMETRIC=1 ;; esac
+if [ "$PARAMETRIC" = 1 ]; then
+    COMPILED=0
+    NOTE+=("platform: a parametric contract has no realisation (GSC, Definition Parametric contract); its instances are compiled")
+    say "platform: none, the contract parametric"
+fi
+if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     PR=no_pragmas
     if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
         say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
         exit 1
     fi
 fi
+if [ "$PARAMETRIC" = 0 ]; then
 printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
 awk '
@@ -378,6 +438,7 @@ if grep -q '^%% not compiled' "$OUT/platform.vglp"; then
     say "platform.vglp: not compiled"
 else
     say "platform.vglp: $(wc -l < "$OUT/platform.vglp" | tr -d ' ') lines"
+fi
 fi
 
 # 6. The platform compiled to GLP, by the REPL's :emit in a scratch directory
@@ -454,6 +515,8 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
     if [ ${#NAMES[@]} -eq 1 ]; then
         echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$CTXT\` and \`$OWNER/$FILE.glp\`, copied here as they stood at \`$GLP_COMMIT\`."
         echo "- The paper: $(paper_line "$PAPER"), for the paper's own record."
+        [ -n "$INSTANCE" ] && echo "- An instance of $INSTANCE: its term formed by programs/gsc's instantiate/4 from the base's, its file holding only what it adds or replaces (GSC, Definition Parametric contract)."
+        [ "$PARAMETRIC" = 1 ] && echo "- Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract)."
     else
         echo "- Contract: the composition of ${FILES[*]} (\`$NAME\` to the checker), the union of their schemas and of their pragmas (vGLP, Section 5.4, \"The contract's words\"), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at \`$GLP_COMMIT\`:"
         for i in "${!NAMES[@]}"; do
@@ -485,6 +548,8 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
         else
             echo "| (no run) | ${NOTE[${#NOTE[@]}-1]#run: } |"
         fi
+    elif [ "$PARAMETRIC" = 1 ]; then
+        echo "| (no platform) | a parametric contract, with no realisation |"
     else
         echo "| \`platform.vglp\` | the CVA compiler's refusal, and no platform.glp and no run |"
     fi
