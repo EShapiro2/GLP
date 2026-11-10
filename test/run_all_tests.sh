@@ -139,17 +139,21 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# GAI's and GSNP's apps, printed before GAI wrote both as instances of GnW
+# (2026-11-10): vGLP's compiler now refuses their platforms on GnW's joint
+# acts, make_guardian, end_guardian and retire, a listed guarding role whose
+# base is the ward, which vGLP's Section 5.4 has no opener for (vGLP #25,
+# 2026-11-10 20:36 UTC; Udi's ruling pending); each entry comes off when the
+# apps print again (Code #27, 2026-11-10).
+    "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp"
+    "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp"
+    "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI"
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
-# UTC); each entry comes off with that rewrite.
-    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role"
-    "cascade gai: cascade.sh --check exits 0"
-    "cascade gai: verdict.txt is what the tools print"
-    "cascade gai: vmat.tex is what the tools print"
-    "cascade gsnp: cascade.sh --check exits 0"
-    "cascade gsnp: verdict.txt is what the tools print"
-    "cascade gsnp: vmat.tex is what the tools print"
+# UTC); each entry comes off with that rewrite.  GAI on GnW, GLP 6154e1e6,
+# certifies (Section GSC's line, off at GSC-instnames); the cascade's wait on
+# GAI.txt's [Agent end] field and on the records (Cloud #15, 2026-11-10).
 # The super-app's hosting of CSSN's ported mini-app (CSSN's port of
 # 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
 # person channel; each entry comes off with that port.
@@ -6003,12 +6007,14 @@ printf '%s\n' 'XI: Instance' 'XI instantiates XB, a child for a ward and a paren
 printf '%s\n' 'XJ: Joined' 'XJ amends XB and XC, and XI.' 'Alice is a person.' > "$cva_wf/XJ.txt"
 printf '%s\n' 'XK: Mixed' 'XK extends XC and restricts it.' 'Alice is a person.' > "$cva_wf/XK.txt"
 printf '%s\n' 'XO: Plain' 'XO instantiates XB and amends it.' 'Alice is a person.' > "$cva_wf/XO.txt"
+printf '%s\n' 'XM: Composed' 'XM instantiates XB, composes it with XC and restricts the composition.' 'Alice is a person.' > "$cva_wf/XM.txt"
 printf '%s\n' 'XN: None' 'XN instantiates the bylaws of XB and restricts it.' 'Alice is a person.' > "$cva_wf/XN.txt"
 printf '%s\n' 'XT: Bare' 'XT restricts it.' 'Alice is a person.' > "$cva_wf/XT.txt"
 cva_wf_i=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XI.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_j=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XJ.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_k=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XK.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_o=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XO.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_m=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XM.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_n=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XN.txt" 2>&1; echo "exit $?")
 cva_wf_t=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XT.txt" 2>&1; echo "exit $?")
 rm -rf "$cva_wf"
@@ -6016,6 +6022,7 @@ check "CVA written from: an instantiation's words between commas name no contrac
 check "CVA written from: contracts of one relation joined by 'and' and ', and' (joined)" "^XB.txt XC.txt XI.txt XJ.txt $" "$cva_wf_j"
 check "CVA written from: 'and restricts it', a second relation to the contract named last (mixed)" "^XB.txt XC.txt XK.txt $" "$cva_wf_k"
 check "CVA written from: an instantiation with no words between commas, 'instantiates XB and amends it', as GO's MCS (GSC 30013e6, Section 2: 'an instantiation may say after the contract's name, between commas, what it writes for what') (plain)" "^XB.txt XO.txt $" "$cva_wf_o"
+check "CVA written from: composes, 'composes it with XC', the instance composed with XC, and 'restricts the composition', as GAI.txt's line (GSC-instnames, c90ee820; GSC's answer on composition pending) (composes)" "^XB.txt XC.txt XM.txt $" "$cva_wf_m"
 check "CVA written from: a relation followed by no contract's name refused, named (none)" "names no contract at \"the bylaws of XB and restricts it\"" "$cva_wf_n"
 check "CVA written from: ... and pragmas.sh exits other than 0 (none)" "^exit [1-9]" "$cva_wf_n"
 check "CVA written from: 'it' with no contract named before it refused (bare)" "names no contract at \"it\"" "$cva_wf_t"

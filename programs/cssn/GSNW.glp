@@ -7,7 +7,7 @@
 
 % contract_named(gsnw, C): the contract, GSNW, friend and knows reflexive.
 procedure contract_named(Constant?, SDeclared).
-contract_named(gsnw, reflexive([friend, knows],
+contract_named(gsnw, parametric([ward, creator, created, guardian_of, guarded_by, retired], reflexive([friend, knows],
    [
 %% GKK:1, Identity.
     sas(establish, ['Alice'], [],
@@ -311,4 +311,4 @@ contract_named(gsnw, reflexive([friend, knows],
         not(atom(delivered, ['Alice', x, 'Bob', n])),
         atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])],
        true, [])
-])).
+]))).

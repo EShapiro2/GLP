@@ -1,4 +1,4 @@
-%% not compiled(gnw)
+%% not compiled(gas)
 %% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
 %% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
 %% the schema(make_guardian)

@@ -278,7 +278,9 @@ sub relation_names {
     my @body = grep { !/^%/ && /\S/ } @l;
     return () unless @body >= 2;
     my $nm = qr/[A-Z][A-Za-z0-9]*(?:-[A-Z][A-Za-z0-9]*)*/;
-    my $rel = qr/(?:amends|extends|instantiates|implements|restricts)/;
+    # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (GAI.txt) and "GSNP composes GAI with GSN and amends the composition" (GSNP.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|composes)/;
+    my $back = qr/(?:it|the instance|the composition)/;
     return () unless $body[1] =~ /^$nm\s+($rel\s+.*?)\.\s*$/;
     my $line = $body[1];
     my $s = $1;
@@ -290,21 +292,25 @@ sub relation_names {
         $s =~ s/^($rel)\s+// or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", names no relation at \"$s\"\n";
         my @rels = ($1);
         while ($s =~ s/^and\s+($rel)\s+//) { push @rels, $1 }
-        # The contract they are to: "it", the contract named last, or contracts joined by commas and "and".
-        if ($s =~ s/^it(?=$|[\s,])//) {
-            @names or $no->("it");
-        } else {
+        # The contract they are to: "it", "the instance" or "the composition", what the line has named before, or contracts joined by commas and "and"; and, of composes, the contract it is composed with after "with", either of the two named or named before.
+        my $target = sub {
+            if ($s =~ s/^($back)(?=$|[\s,])//) { @names or $no->($1); return }
             $s =~ s/^($nm)(?=$|[\s,])// or $no->($s);
             push @names, $1;
             while ($s =~ s/^(?:\s*,\s*(?:and\s+)?|\s+and\s+)($nm)(?=$|[\s,])//) { push @names, $1 }
-            # An instantiation\x27s words, between commas after the contract\x27s name, up to the next relation or the end of the line.
-            if (grep { $_ eq "instantiates" } @rels and $s =~ s/^\s*,\s*((?:(?!,\s*(?:and\s+)?$rel\s).)*?)\s*(?=,\s*(?:and\s+)?$rel\s|$)//) {
-                my $w = $1;
-                $w =~ /\bfor\b/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", says between commas after the contract instantiated what it writes for what, and \"$w\" does not\n";
-            }
+        };
+        $target->();
+        if (grep { $_ eq "composes" } @rels) {
+            $s =~ s/^\s+with\s+// or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", says composes with no \"with\" at \"$s\"\n";
+            $target->();
+        }
+        # An instantiation\x27s words, between commas after the contract\x27s name, up to the next relation or the end of the line, which it may omit.
+        if (grep { $_ eq "instantiates" } @rels and $s =~ s/^\s*,(?!\s*(?:and\s+)?$rel\s)\s*((?:(?!,\s*(?:and\s+)?$rel\s).)*?)\s*(?=,\s*(?:and\s+)?$rel\s|$)//) {
+            my $w = $1;
+            $w =~ /\bfor\b/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", says between commas after the contract instantiated what it writes for what, and \"$w\" does not\n";
         }
         last if $s =~ /^\s*$/;
-        $s =~ s/^\s*,?\s*and\s+(?=$rel\s)// or do { (my $at = $s) =~ s/^\s*,?\s*(?:and\s+)?//; $no->($at) };
+        $s =~ s/^\s*(?:,\s*(?:and\s+)?|and\s+)(?=$rel\s)// or do { (my $at = $s) =~ s/^\s*,?\s*(?:and\s+)?//; $no->($at) };
     }
     return @names;
 }

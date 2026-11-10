@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4, Grassroots Banks and cites a clause as GBank:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
-% Last changed: 2026-11-10, written by GO #3 Cowork.
+% Last changed: 2026-11-10, by GO #4 Cowork.
 % Schemas: GBank.glp beside this file.
 GBank: Grassroots Bank
 GBank extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -10,25 +10,55 @@ A bank is an organisation whose business is issuing coins and bonds against the 
 Pragmas
 Look: 🏦, money
 Organisations: the organisations Alice participates in, and her roles in each.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Otto: Bob asks to participate.
-  Bob [Leave]
-  Otto [Expel]
-Officers: Otto [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Otto [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Otto [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Bob [Named propose]
+  Bob [Named vote] <act>
+  Otto [Move retire] <motion>
+Creation: Alice [Found] <organisation> <role>
+  Orga: Alice asks you to approve this: found.
+  Greta [Gov found] <person Alice> <organisation> <role> <motion of the founding organisation>
+  Alice: Greta asks you to approve this: gov found.
+  Orga: Greta asks you to approve this: gov found.
+Ward and person: Otto [Org acquaint] <person Bob> <motion>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Participation: Bob [Join] <person Otto> <motion>
+  Otto: Bob asks you to approve this: join.
+  Bob [Leave]
+  Otto [Expel] <person Bob> <motion>
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion>
+  Bob [Resign role]
+  Nora [First officer] <person Bob> <role>
+  Bob: Nora asks you to approve this: first officer.
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
