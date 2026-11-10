@@ -174,6 +174,17 @@ class DirectoryAgent {
     return out;
   }
 
+  /// Save the agent's local state in its store: called at the server's
+  /// termination signal, which is the platform's announcement of termination
+  /// for a headless host, and at no other time (IGLP d70ec2e, Implementation
+  /// Notes, "Persistence"; [AgentRuntime.save]).  True where the state is
+  /// kept; false where the save failed, the store keeping the state saved
+  /// before it.
+  Future<bool> save() async {
+    await _inputs;
+    return agent.save();
+  }
+
   Future<void> dispose() async {
     service.store.onAsk = null;
     await _inputs;

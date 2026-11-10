@@ -126,6 +126,10 @@ Future<void> main(List<String> argv) async {
   }
   sweep.cancel();
   await server.close(force: true);
+  // The termination signal is the announcement of termination: the agent's
+  // state is saved now, and at no other time (IGLP d70ec2e, Implementation
+  // Notes, "Persistence").
+  if (!await agent.save()) stderr.writeln('the agent\'s state was not saved');
   await agent.dispose();
   exit(0);
 }

@@ -550,10 +550,14 @@ class _Directory {
   bool _stopped = false;
   _Directory(this.agent, this.web, this.mail, this.base, this.udp, this.lines);
   Store get store => agent.store;
+  /// The directory terminates as its server does at its termination signal:
+  /// the agent's state saved, then the launch ended (IGLP d70ec2e,
+  /// Implementation Notes, "Persistence").
   Future<void> stop() async {
     if (_stopped) return;
     _stopped = true;
     await web.close(force: true);
+    expect(await agent.save(), isTrue, reason: 'the state is kept');
     await agent.dispose();
   }
 }

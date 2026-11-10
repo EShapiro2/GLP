@@ -194,10 +194,10 @@ class SuperAppHost {
   /// person's place ([AgentRuntime.initialize]).  The person's grants go to
   /// the agent as they come, each an act of the person.  A restart under a
   /// new version of the program restores the state under it or refuses the
-  /// update ([updateRefusal]).  Throws where the saved state cannot be
-  /// restored: another agent's, or saved under code that is neither the
-  /// program's compilation nor the program the store keeps (AgentRuntime's
-  /// restore).
+  /// update ([updateRefusal]).  A saved state the runtime cannot read is a
+  /// loss of the state, reported in the transcript, and the agent starts
+  /// afresh, as at a first start (IGLP d70ec2e, Implementation Notes,
+  /// "Persistence"); a state of another agent throws.
   Future<void> start() async {
     agent.onUserOutput = (term) {
       onUserOutput?.call(term);
@@ -225,6 +225,14 @@ class SuperAppHost {
   /// Completes once every act of the person so far has been taken by the
   /// agent, each its event cycle complete.
   Future<void> get idle => _acts;
+
+  /// Save the agent's local state in the [stateStore]: the app calls it when
+  /// it goes to the background, which the platform announces before it may
+  /// kill the app, and at no other time (IGLP d70ec2e, Implementation Notes,
+  /// "Persistence"; [AgentRuntime.save]).  True where the state is kept;
+  /// false where the save failed, the store keeping the state saved before
+  /// it, or there is no store.
+  Future<bool> save() => agent.save();
 
   void dispose() => agent.dispose();
 

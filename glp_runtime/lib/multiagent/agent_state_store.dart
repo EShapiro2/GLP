@@ -7,15 +7,17 @@
 /// The embedding application gives the agent's host its store, as it gives
 /// the layer the file of its queue: a file the application names, or, in the
 /// simulation and the tests, the memory of the process that outlives the
-/// agent.  The host saves the state in each event cycle, before the cycle's
-/// messages are handed to the layer, and reads it at restart ([AgentRuntime]).
+/// agent.  The host saves the state when the application goes to the
+/// background, which the platform announces before it may kill it, and at no
+/// other time ([AgentRuntime.save]; IGLP d70ec2e, "Persistence"), and reads
+/// it at restart ([AgentRuntime]).
 ///
 /// The store keeps the agent's key pair too, first among what Persistence
-/// lists: the state is first saved in the agent's first cycle, and the key
-/// pair is needed before it, the layer being instantiated with it and the
-/// modules compiled for the agent certified under it (Implementation Notes,
-/// "Boot"), so the store keeps it apart from the state, and [keptKeyPair]
-/// makes it once.
+/// lists: the state is first saved when the application first goes to the
+/// background, and the key pair is needed before it, the layer being
+/// instantiated with it and the modules compiled for the agent certified
+/// under it (Implementation Notes, "Boot"), so the store keeps it apart from
+/// the state, and [keptKeyPair] makes it once, at the first start.
 ///
 /// The store keeps the compiled program the agent runs beside the key pair
 /// (IGLP 61f3283, "Persistence": "the agent's key pair, the compiled program
@@ -23,7 +25,7 @@
 /// version of the program, and where the update is refused the agent
 /// restarts under the version it terminated under (Termination and Restart),
 /// which the store holds.  The program is kept apart from the state too, as
-/// it changes only at an update, and the state is saved in every cycle.
+/// it changes only at an update, which the first save under it then keeps.
 library;
 
 import 'dart:io';

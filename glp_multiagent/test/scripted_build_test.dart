@@ -37,14 +37,13 @@ import 'package:glp_runtime/multiagent/simulation_network.dart'
 import 'helpers/air.dart';
 import 'programs_dir.dart';
 
-/// The store of a launch that is terminated as a phone's app is: once
-/// [terminate] is called it takes no save, and [terminate] completes once
-/// every save begun before it is written, so that the next launch reads what
-/// this one saved and nothing writes the file after.  A save begun after
-/// termination never completes, as in a process that has ended: the
-/// terminated agent takes no further cycle.  (A save that failed would be
-/// taken again at once, the runtime going back to the state saved before it,
-/// and would loop.)
+/// The store of a launch that is terminated as a phone's app is: the app
+/// saves when it goes to the background ([SuperAppHost.save]; IGLP d70ec2e,
+/// Implementation Notes, "Persistence"), and once [terminate] is called the
+/// store takes no save, [terminate] completing once every save begun before
+/// it is written, so that the next launch reads what this one saved and
+/// nothing writes the file after.  A save begun after termination never
+/// completes, as in a process that has ended.
 class _Launched implements AgentStateStore {
   final FileAgentStateStore store;
   final Set<Future<void>> _writing = {};
@@ -290,8 +289,10 @@ void main() {
     await alice.until(() => alice.net.declared.length >= 6);
     expect(alice.errors, isEmpty);
 
-    // Alice's app is terminated: her phone leaves the air, and her store
-    // takes no save after what is being written.
+    // Alice's app goes to the background, which saves her agent's state, and
+    // is terminated: her phone leaves the air, and her store takes no save
+    // after what is being written.
+    expect(await alice.host.save(), isTrue);
     alice.net.leave();
     await aliceStore.terminate();
     alice.host.dispose();

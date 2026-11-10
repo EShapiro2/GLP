@@ -68,7 +68,11 @@ void main() {
     await first.initialize();
     expect(first.firstStart, isTrue);
     final key = first.publicKey!;
-    expect((await store.loadKeyPair())?.pub, key);
+    expect((await store.loadKeyPair())?.pub, key,
+        reason: 'the key pair is kept at the first start, before any save');
+    // The app goes to the background, which saves the state (IGLP d70ec2e,
+    // Implementation Notes, "Persistence"), and terminates.
+    expect(await first.save(), isTrue);
 
     final second = AgentRuntime(
         agentId: 'alice',
