@@ -24,7 +24,8 @@ The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md
 | The Grassroots App's iOS runner registers PlaceGeofencePlugin | Cloud-iosplaces a336f1c, on main 81a0de76 | Code_inbox 2026-11-09 23:07 UTC |
 | The state saved when the app goes to the background and at no other time: AgentRuntime.save, the hosts' calls, the lost state started afresh (IGLP d70ec2e) | Runtime-save-on-background 6733fb9, off main 47907f48 | Code_inbox 2026-11-10 09:00 UTC |
 | The doc comments' citations brought to IGLP db0a117 | Runtime-cite-db0a117 b3f9dd6, on main | Code_inbox 2026-11-10 09:15 UTC |
-| Epochs and widowed/1 (IGLP db0a117; the GLP paper f577e20): names `_w(p, e, i)`, messages with the sender's epoch, `gone(G)`, code format 4, saved-state format 7, the running mark and the restart after a crash, `AgentRuntime.resume`, widowed/1 in both modes with its checker rule | Runtime-epochs, off main 62e8bb5a; the commit is in the report | Code_inbox 2026-11-10, the last report |
+| Epochs and widowed/1 (IGLP db0a117; the GLP paper f577e20): names `_w(p, e, i)`, messages with the sender's epoch, `gone(G)`, code format 4, saved-state format 7, the running mark and the restart after a crash, `AgentRuntime.resume`, widowed/1 in both modes with its checker rule | Runtime-epochs 383c296, on main 01253c9c | Code_inbox 2026-11-10 10:33 UTC |
+| GLP #14's points (a) and (b) on epochs (the GLP paper 07835e1; IGLP cec4682): widowed_writer/1 and widowed_reader/1 in place of widowed/1, each in its one mode, the checker's admission of both modes removed; the program's link name 3-ary, `'_r'(Key, Epoch, Index)` and `'_w'(Key, Epoch, Index)`, in GlobalName, `'_send'`, `'_authorise_link'`, the reports and `send_to_net`; the holder-epoch citations at IGLP cec4682 | Runtime-epochs2, off main 01253c9c; the commit is in the report | Code_inbox 2026-11-10, the last report |
 
 ## Queued
 
@@ -33,4 +34,4 @@ Nothing.
 ## Waiting
 
 1. A point for GNA's and IGLP's Implementation Notes, in the report of Cloud-places: a place's centre crosses the seam as a latitude and a longitude in degrees, as the platforms' geofencing takes it; neither paper says what a centre is.
-2. The paper points of the Runtime-epochs report, for IGLP and the GLP paper through Code: one declaration in the root `self.glp` for widowed/1's two rows; the epoch a program's 2-ary name resolves to; a GlobalizeEntry's holder epoch, none until a message from the holder; widowed(X?)'s success in one agent, which no well-typed program brings about.
+2. Nothing of Runtime-epochs: its four paper points were ruled (GLP #14, Code_inbox 2026-11-10 11:07 UTC) and (a), (b) and (c) carried out on Runtime-epochs2.

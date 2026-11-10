@@ -27,7 +27,7 @@ class VariableInfo {
   int writerOccurrencesHead = 0;
 
   // Reader occurrences in the clause head alone: where the writer occurs in
-  // a widowed guard, its reader occurs here and nowhere else (the GLP paper
+  // a widowed_writer guard, its reader occurs here and nowhere else (the GLP paper
   // f577e20, Remark "Guards and SRSW").
   int readerOccurrencesHead = 0;
 
@@ -124,19 +124,18 @@ class VariableTable {
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
   // The variables occurring in a widowed guard, each as the mode it occurs
-  // there in: the writer X (`widowed(X)`) or the reader X? (`widowed(X?)`)
-  // (the GLP paper f577e20, glp.tex, Remark "Guards and SRSW": "if X occurs
-  // in a widowed guard, X? occurs in the head, X in the guard, and neither
-  // elsewhere in the clause; and if X? occurs in a widowed guard, X occurs in
-  // the head, X? in the guard, and neither elsewhere in the clause";
-  // Definition "SRSW of a Guarded Clause": the iff of a variable and its
-  // paired one holds "but for a variable occurring in a widowed guard of C,
-  // whose paired variable occurs in the head of C, and neither occurs
-  // elsewhere in C").
+  // there in: the writer X (`widowed_writer(X)`) or the reader X?
+  // (`widowed_reader(X?)`) (the GLP paper 07835e1, glp.tex, Remark "Guards
+  // and SRSW": "if X occurs in a widowed_writer guard, X? occurs in the
+  // head, X in the guard, and neither elsewhere in the clause; and if X?
+  // occurs in a widowed_reader guard, X occurs in the head, X? in the guard,
+  // and neither elsewhere in the clause"; Definition "SRSW of a Guarded
+  // Clause": the iff of a variable and its paired one holds but for such a
+  // variable).
   final Map<String, bool> _widowedVars = {};
 
-  /// Mark [varName] as occurring in a widowed guard, as a writer or, where
-  /// [asReader], as a reader.
+  /// Mark [varName] as occurring in a widowed_writer guard, as a writer, or,
+  /// where [asReader], in a widowed_reader guard, as a reader.
   void markWidowed(String varName, {required bool asReader}) =>
       _widowedVars[varName] = asReader;
 
@@ -192,41 +191,41 @@ class VariableTable {
 
       // A variable of a widowed guard: the variable in the guard, its pair
       // in the head, and neither elsewhere in the clause (the GLP paper
-      // f577e20, Remark "Guards and SRSW" and Definition "SRSW of a Guarded
-      // Clause").  `widowed(X)`: X? once in the head, X in the guard and
-      // nowhere else; `widowed(X?)`: X once in the head, X? in the guard and
-      // nowhere else.
+      // 07835e1, Remark "Guards and SRSW" and Definition "SRSW of a Guarded
+      // Clause").  `widowed_writer(X)`: X? once in the head, X in the guard
+      // and nowhere else; `widowed_reader(X?)`: X once in the head, X? in
+      // the guard and nowhere else.
       final widowedAsReader = _widowedVars[info.name];
       if (widowedAsReader != null) {
         final line = info.firstOccurrence?.line ?? 0;
         if (!widowedAsReader) {
-          // widowed(X): the writer in the guard, the reader in the head.
+          // widowed_writer(X): the writer in the guard, the reader in the head.
           if (info.readerOccurrencesHead != 1 ||
               info.readerOccurrencesHeadBody != 1) {
             violations.add('Line $line: Reader variable "${info.name}?" of a '
-                'widowed guard over the writer "${info.name}" must occur once, '
+                'widowed_writer guard over "${info.name}" must occur once, '
                 'in the head, and nowhere else in the clause');
           }
           if (info.writerOccurrencesHeadBody != 0 ||
               info.writerOccurrences != 1) {
             violations.add('Line $line: Writer variable "${info.name}" of a '
-                'widowed guard occurs in the guard and nowhere else in the '
-                'clause');
+                'widowed_writer guard occurs in the guard and nowhere else '
+                'in the clause');
           }
         } else {
-          // widowed(X?): the reader in the guard, the writer in the head.
+          // widowed_reader(X?): the reader in the guard, the writer in the head.
           if (info.writerOccurrencesHead != 1 ||
               info.writerOccurrencesHeadBody != 1 ||
               info.writerOccurrences != 1) {
             violations.add('Line $line: Writer variable "${info.name}" of a '
-                'widowed guard over the reader "${info.name}?" must occur '
-                'once, in the head, and nowhere else in the clause');
+                'widowed_reader guard over "${info.name}?" must occur once, '
+                'in the head, and nowhere else in the clause');
           }
           if (info.readerOccurrencesHeadBody != 0 ||
               info.readerOccurrences != 1) {
             violations.add('Line $line: Reader variable "${info.name}?" of a '
-                'widowed guard occurs in the guard and nowhere else in the '
-                'clause');
+                'widowed_reader guard occurs in the guard and nowhere else '
+                'in the clause');
           }
         }
         continue;
@@ -553,12 +552,20 @@ class Analyzer {
       );
     }
 
-    // widowed(X) and widowed(X?): the variable in the guard, its pair in the
-    // head, neither elsewhere ([VariableTable.collectSRSWViolations]; the GLP
-    // paper f577e20, Remark "Guards and SRSW").
-    if (guard.predicate == 'widowed' && guard.args.length == 1) {
+    // widowed_writer(X) and widowed_reader(X?): the variable in the guard,
+    // its pair in the head, neither elsewhere
+    // ([VariableTable.collectSRSWViolations]; the GLP paper 07835e1, Remark
+    // "Guards and SRSW").  The mode of the argument is the declaration's,
+    // `procedure widowed_writer(_).` and `procedure widowed_reader(_?).`,
+    // which the type checker holds it to.
+    if ((guard.predicate == 'widowed_writer' ||
+            guard.predicate == 'widowed_reader') &&
+        guard.args.length == 1) {
       final arg = guard.args[0];
-      if (arg is VarTerm) varTable.markWidowed(arg.name, asReader: arg.isReader);
+      if (arg is VarTerm) {
+        varTable.markWidowed(arg.name,
+            asReader: guard.predicate == 'widowed_reader');
+      }
     }
 
     // Special handling for ground/1

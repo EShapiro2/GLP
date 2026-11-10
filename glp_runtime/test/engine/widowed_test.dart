@@ -1,14 +1,16 @@
-/// widowed/1 (the GLP paper f577e20, appendix-guards.tex, the guard table's
-/// two rows and the paragraph on link ends after it): widowed(X) succeeds
-/// when the reader paired to the writer X occurs in no goal of the agent and
-/// in no link end the agent holds, the goal being reduced not counted, and
-/// widowed(X?) when the writer paired to the reader X? does.  A goal whose
-/// guard finds the pair occurring suspends, and is re-tried at quiescence
-/// once it occurs nowhere (GlpRuntime.wakeWidowed).  The checker admits the
-/// guard in either mode under the rule of glp.tex, Remark "Guards and SRSW":
-/// "if X occurs in a widowed guard, X? occurs in the head, X in the guard,
-/// and neither elsewhere in the clause; and if X? occurs in a widowed guard,
-/// X occurs in the head, X? in the guard, and neither elsewhere in the
+/// widowed_writer/1 and widowed_reader/1 (the GLP paper 07835e1,
+/// appendix-guards.tex, the guard table's two rows and the paragraph on link
+/// ends after it): widowed_writer(X) succeeds when the reader paired to the
+/// writer X occurs in no goal of the agent and in no link end the agent
+/// holds, the goal being reduced not counted, and widowed_reader(X?) when the
+/// writer paired to the reader X? does; each is declared in its one mode,
+/// `procedure widowed_writer(_).` and `procedure widowed_reader(_?).`.  A
+/// goal whose guard finds the pair occurring suspends, and is re-tried at
+/// quiescence once it occurs nowhere (GlpRuntime.wakeWidowed).  The checker
+/// holds each guard to the rule of glp.tex, Remark "Guards and SRSW": "if X
+/// occurs in a widowed_writer guard, X? occurs in the head, X in the guard,
+/// and neither elsewhere in the clause; and if X? occurs in a widowed_reader
+/// guard, X occurs in the head, X? in the guard, and neither elsewhere in the
 /// clause" (Definition "SRSW of a Guarded Clause").
 ///
 /// Fixture: programs/tests/typed/widowed.glp.  The link ends' side, a
@@ -38,7 +40,7 @@ String _v(Object? term) =>
     '$term'.replaceAllMapped(RegExp(r'^Const\((.*)\)$'), (m) => m[1]!);
 
 void main() {
-  group('widowed(X): the reader paired to the writer occurs nowhere', () {
+  group('widowed_writer(X): the reader paired to the writer occurs nowhere', () {
     test('succeeds once the goal holding W? has ended', () async {
       final r =
           await _engine().runGoal('watch(W, O), holder(W?, T?), release(T)');
@@ -53,7 +55,7 @@ void main() {
     });
   });
 
-  group('widowed(X?): the writer paired to the reader occurs nowhere', () {
+  group('widowed_reader(X?): the writer paired to the reader occurs nowhere', () {
     // Its success in one agent no well-typed program brings about, the
     // checker refusing a head that leaves an output unassigned: the writer
     // goes with a link end retired, at a crash of the agent that holds it,
@@ -92,29 +94,45 @@ void main() {
       }
     }
 
-    test('widowed(X) with X? once in the head loads', () {
+    test('widowed_writer(X) with X? once in the head loads', () {
       expect(
           refusal('w_ok', '''
 procedure p(Constant, Constant).
-p(X?, a) :- widowed(X) | true.
+p(X?, a) :- widowed_writer(X) | true.
 '''),
           isNull);
     });
 
-    test('widowed(X?) with X once in the head loads', () {
+    test('widowed_reader(X?) with X once in the head loads', () {
       expect(
           refusal('r_ok', '''
 procedure p(Constant?, Constant).
-p(X, a) :- widowed(X?) | true.
+p(X, a) :- widowed_reader(X?) | true.
 '''),
           isNull);
     });
 
-    test('widowed(X) with X? also in the body is refused', () {
+    test('widowed_writer(X?), the reader where the declaration takes a '
+        'writer, is refused by the checker; widowed_reader(X) likewise', () {
+      expect(
+          refusal('w_mode', '''
+procedure p(Constant?, Constant).
+p(X, a) :- widowed_writer(X?) | true.
+'''),
+          contains('widowed_writer'));
+      expect(
+          refusal('r_mode', '''
+procedure p(Constant, Constant).
+p(X?, a) :- widowed_reader(X) | true.
+'''),
+          contains('widowed_reader'));
+    });
+
+    test('widowed_writer(X) with X? also in the body is refused', () {
       expect(
           refusal('w_body', '''
 procedure p(Constant, Constant).
-p(X?, Y?) :- widowed(X) | q(X?, Y).
+p(X?, Y?) :- widowed_writer(X) | q(X?, Y).
 
 procedure q(Constant?, Constant).
 q(V, V?).
@@ -122,20 +140,20 @@ q(V, V?).
           contains('widowed'));
     });
 
-    test('widowed(X) with X? nowhere in the head is refused', () {
+    test('widowed_writer(X) with X? nowhere in the head is refused', () {
       expect(
           refusal('w_nohead', '''
 procedure p(Constant).
-p(a) :- widowed(X) | true.
+p(a) :- widowed_writer(X) | true.
 '''),
           contains('widowed'));
     });
 
-    test('widowed(X?) with X also in the body is refused', () {
+    test('widowed_reader(X?) with X also in the body is refused', () {
       expect(
           refusal('r_body', '''
 procedure p(Constant?, Constant).
-p(X, Y?) :- widowed(X?) | q(X, Y).
+p(X, Y?) :- widowed_reader(X?) | q(X, Y).
 
 procedure q(Constant, Constant).
 q(a, b).
@@ -143,11 +161,11 @@ q(a, b).
           contains('widowed'));
     });
 
-    test('widowed(X?) with X in the body, not the head, is refused', () {
+    test('widowed_reader(X?) with X in the body, not the head, is refused', () {
       expect(
           refusal('r_nohead', '''
 procedure p(Constant).
-p(Y?) :- widowed(X?) | q(X, Y).
+p(Y?) :- widowed_reader(X?) | q(X, Y).
 
 procedure q(Constant, Constant).
 q(a, b).

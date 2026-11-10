@@ -237,7 +237,7 @@ void main() {
       for (var i = _n - 1; i >= 0; i--) {
         readers = StructTerm('.', [VarRef(addrs[i]), readers]);
       }
-      ctx.send(readers, false, 'bob', 3, 'bob');
+      ctx.send(readers, false, 'bob', 1, 3, 'bob');
       ctx.flushMessages();
       final (_, sent) =
           PayloadCodec.deserializeGlobalSendPayload(payloads.single);
