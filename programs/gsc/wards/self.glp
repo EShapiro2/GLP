@@ -1,7 +1,7 @@
 % ---------------------------------------------------------------------------
 % The condition on a contract with wards, GAI's (Coordination Appendix B;
 % Udi, 2026-10-20): GSC's Section 8, "Contracts with Wards", /Grassroots/GSC,
-% sections/07c-wards.tex at GSC a885275, and def:sg-wards of CSSN's paper.  This directory is a
+% sections/07c-wards.tex at GSC 7e00aba, and def:sg-wards of CSSN's paper.  This directory is a
 % child of the checker, programs/gsc, so that the checker's modules may call
 % it, a cross-module qualifier naming a child directory of the caller's
 % directory (TGLP, Section "Module System", "Cross-module type checking"),
@@ -15,13 +15,9 @@ imported procedure wards#wards(Contract?, Preds?, Wards).
 exported procedure wards(Contract?, Preds?, Wards).
 wards(C, Rf, W?) :- wards # wards(C?, Rf?, W).
 
-imported procedure wards#guardianships_for(Contract?, Preds?, Guardianships).
-exported procedure guardianships_for(Contract?, Preds?, Guardianships).
-guardianships_for(C, M, G?) :- wards # guardianships_for(C?, M?, G).
-
-imported procedure wards#leaving_for(Contract?, Preds?, Leavings).
-exported procedure leaving_for(Contract?, Preds?, Leavings).
-leaving_for(C, M, L?) :- wards # leaving_for(C?, M?, L).
+imported procedure wards#guardianships_for(Contract?, Preds?, Preds?, Guardianships).
+exported procedure guardianships_for(Contract?, Preds?, Preds?, Guardianships).
+guardianships_for(C, K, M, G?) :- wards # guardianships_for(C?, K?, M?, G).
 
 imported procedure wards#relay_h_for(Contract?, Preds?, Wards?, RelayHs).
 exported procedure relay_h_for(Contract?, Preds?, Wards?, RelayHs).

@@ -2306,19 +2306,22 @@ Faults  ::= [] ; [Fault | Faults].
 SigCtx  ::= sig(Ints, Conjuncts, Preds, Preds, Preds, Preds).
 SigBases ::= sb(Ans, Bases).
 
-% --- What an introduction with wards is made of (GAI, "Contracts with Wards")
-% guardianship(M, Iota, G, W, V) is the guardianship (m, iota, g, w, v) of
-% def:guardianship; a party of a relay act (def:relay) is a ward role,
+% --- What an introduction with wards is made of (GSC's Section 8, "Contracts with Wards", 7e00aba)
+% guardianship(M, G, W, V, U) is the guardianship (m, g, w, v, u) of
+% def:guardianship, g and w the records of the ward's creation at her and at
+% her creator, v and u the records of a guardian at him and at the ward;
+% a party of a relay act (def:relay) is a ward role,
 % ward(Role, Mark, Guardian), Guardian its guardian role, guardian(Role), or
 % no_guardian, a ward role having at most one guardian role (GAI 6b64d3d,
 % def:relay, clause 1: "with at most one other role sigma of chi, its guardian
 % role"; GnW:3 and GnW:4, agent_acquaint and agents_acquaint, have none), or a
 % free role, free(Role); a relay act is named with its two parties.  An introduction with wards
-% (def:introduction-wards) names the introductory act unobstructed but for
-% the marks, the set of marks, the guardianship of each and the relay acts
-% found: for each mark one with a free role, and for each pair of marks, in
-% the order of the set, one with a ward role of each; and the leaving marks
-% of the contract (def:leaving), in the order of its marks.
+% (def:introduction-wards) names the introductory act unobstructed among the
+% free, the set M of ward marks, the guardianship of each and the relay acts
+% found: for each mark that is not passive one with a free role, and for each
+% pair of them, in the order of the set, one with a ward role of each; and
+% [iota, f] of the kinds (iota, f, M) of the contract (def:kinds), in the
+% place the leaving marks held until GSC 7e00aba removed them.
 Guardianship  ::= guardianship(Constant, Constant, Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Guardian ::= guardian(Integer) ; no_guardian.
@@ -2331,11 +2334,6 @@ Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays, Preds
 % h(Schema, Role, H): the relay act Schema requires at its ward role Role an atom of the predicate H that clause 2 of def:relay admits as an atom of h and as nothing else (GSC 410a440).
 RelayH  ::= h(Constant, Integer, Constant).
 RelayHs ::= [] ; [RelayH | RelayHs].
-% The leaving marks of a contract for a set M of marks (def:leaving) depend
-% on the guardianship of each mark in M: leaving(Gs, Ls) holds the
-% guardianships taken, one per mark, and the leaving marks for them.
-Leaving  ::= leaving(Guardianships, Preds).
-Leavings ::= [] ; [Leaving | Leavings].
 
 % What the search of wards.glp carries: the sets of marks it tries, the
 % guardianship candidates of each mark of a set, the kind of each role of a
@@ -4457,10 +4455,9 @@ imported procedure check#intro_acts_variant(Constant?, WContract?, IntroActs).
 exported procedure intro_acts_variant(Constant?, WContract?, IntroActs).
 intro_acts_variant(Nm, B, A?) :- check # intro_acts_variant(Nm?, B?, A).
 
-% The introduction with wards (GAI, "Contracts with Wards"), for inspection:
-% what the search found, or that there is none; the guardianships for a set
-% of marks; and the leaving marks for it, with each choice of a guardianship
-% per mark.
+% The introduction with wards (GSC's Section 8, "Contracts with Wards"), for
+% inspection: what the search found, or that there is none; and the
+% guardianships for kinds [iota, f] and a set of marks.
 imported procedure check#wards_of(Constant?, Wards).
 exported procedure wards_of(Constant?, Wards).
 wards_of(Nm, W?) :- check # wards_of(Nm?, W).
@@ -4473,25 +4470,14 @@ imported procedure check#wards_variant(Constant?, WContract?, Wards).
 exported procedure wards_variant(Constant?, WContract?, Wards).
 wards_variant(Nm, B, W?) :- check # wards_variant(Nm?, B?, W).
 
-imported procedure check#guardianships(NDeclared?, Preds?, Guardianships).
-exported procedure guardianships(WDeclared?, Preds?, Guardianships).
-guardianships(D, M, G?) :- unnamed(D?, D0), check # guardianships(D0?, M?, G).
+imported procedure check#guardianships(NDeclared?, Preds?, Preds?, Guardianships).
+exported procedure guardianships(WDeclared?, Preds?, Preds?, Guardianships).
+guardianships(D, K, M, G?) :- unnamed(D?, D0), check # guardianships(D0?, K?, M?, G).
 
 % The atoms the relay acts of the introduction with wards require at their ward roles as atoms of h, by clause 2 of def:relay and by none of its other alternatives (GSC 410a440), of a contract given as a term.
 imported procedure check#relay_h(NDeclared?, RelayHs).
 exported procedure relay_h(WDeclared?, RelayHs).
 relay_h(D, H?) :- unnamed(D?, D0), check # relay_h(D0?, H).
-
-% The leaving marks of a contract for a set of marks (def:leaving), for each
-% choice of a guardianship of each mark, of a contract given as a term and
-% of a fixture by name.
-imported procedure check#leaving(NDeclared?, Preds?, Leavings).
-exported procedure leaving(WDeclared?, Preds?, Leavings).
-leaving(D, M, L?) :- unnamed(D?, D0), check # leaving(D0?, M?, L).
-
-imported procedure check#leaving_of(Constant?, Preds?, Leavings).
-exported procedure leaving_of(Constant?, Preds?, Leavings).
-leaving_of(Nm, M, L?) :- check # leaving_of(Nm?, M?, L).
 
 imported procedure contracts#contract(Constant?, NDeclared).
 exported procedure contract_named(Constant?, NDeclared).
