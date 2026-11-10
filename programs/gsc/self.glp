@@ -2306,10 +2306,9 @@ Faults  ::= [] ; [Fault | Faults].
 SigCtx  ::= sig(Ints, Conjuncts, Preds, Preds, Preds, Preds).
 SigBases ::= sb(Ans, Bases).
 
-% --- What an introduction with wards is made of (GSC's Section 8, "Contracts with Wards", 7e00aba)
-% guardianship(M, G, W, V, U) is the guardianship (m, g, w, v, u) of
-% def:guardianship, g and w the records of the ward's creation at her and at
-% her creator, v and u the records of a guardian at him and at the ward;
+% --- What an introduction with wards is made of (GSC's Section 8, "Contracts with Wards", 070c5d1)
+% guardianship(M, V, U) is the guardianship (m, v, u) of def:guardianship,
+% v and u the records of a guardian at him and at the ward;
 % a party of a relay act (def:relay) is a ward role,
 % ward(Role, Mark, Guardian), Guardian its guardian role, guardian(Role), or
 % no_guardian, a ward role having at most one guardian role (GAI 6b64d3d,
@@ -2322,7 +2321,7 @@ SigBases ::= sb(Ans, Bases).
 % pair of them, in the order of the set, one with a ward role of each; and
 % [iota, f] of the kinds (iota, f, M) of the contract (def:kinds), in the
 % place the leaving marks held until GSC 7e00aba removed them.
-Guardianship  ::= guardianship(Constant, Constant, Constant, Constant, Constant).
+Guardianship  ::= guardianship(Constant, Constant, Constant).
 Guardianships ::= [] ; [Guardianship | Guardianships].
 Guardian ::= guardian(Integer) ; no_guardian.
 Party  ::= ward(Integer, Constant, Guardian) ; free(Integer).
