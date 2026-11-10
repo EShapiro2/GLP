@@ -163,7 +163,6 @@ programs/book/streams/producers_consumers/mwm.glp	open-type	StreamCmd
 programs/book/streams/producers_consumers/parallel_table.glp	open-decl	read/3
 programs/book/streams/producers_consumers/parallel_table.glp	open-decl	table/4
 programs/cssn/miniapp.glp	open-decl	to_person/2
-programs/cssn/self.glp	open-type	Drawn
 programs/currencies/bonds/dated/miniapp.glp	open-decl	show_screen/2
 programs/currencies/bonds/dated/person.glp	open-decl	events/2
 programs/currencies/bonds/dated/person.glp	open-decl	instruments_of/2
