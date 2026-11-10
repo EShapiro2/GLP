@@ -142,7 +142,8 @@ typedef ScreenLayout = Widget? Function(
 /// A construct family: the default widgets, drawn below, the named widgets a
 /// declaration may choose among, and the layout of a screen's constructs.
 class ConstructFamily {
-  /// The Dart widget each declared widget name names.
+  /// The Dart widget each declared widget names, by the functor and arity of
+  /// the term `W` of its declaration, `social_menu/1` ([namedKey]).
   final Map<String, NamedWidgetBuilder> named;
 
   /// The screen's layout of its constructs, where the family has one for
@@ -154,9 +155,9 @@ class ConstructFamily {
 
   /// The grassroots app's family: the default widgets; the named widgets `approval_sentence`, the approval question of a canonical CVA platform as one sentence for the attempt's class and two buttons labelled for it, `last_state`, the last state a canonical platform's agent wrote, and `social_menu`, the request question of the apps of GSC's contracts drawn in their tabs (named_widgets.dart); and the screen of tabs, Friends and Groups, where a construct is drawn by `last_state` or `social_menu` (tab_screen.dart).
   static const ConstructFamily standard = ConstructFamily(named: {
-    approvalSentenceName: approvalSentence,
-    lastStateName: lastState,
-    socialMenuName: socialMenu,
+    approvalSentenceKey: approvalSentence,
+    lastStateKey: lastState,
+    socialMenuKey: socialMenu,
   }, screen: tabbedScreen);
 }
 
@@ -885,7 +886,7 @@ class _ConstructViewState extends State<ConstructView> {
   Widget _named(GTerm w, GTerm v, List<int> at,
       Widget Function(GTerm d) byDefault) {
     final (name, d) = namedWidget(w)!;
-    final b = widget.family.named[name];
+    final b = widget.family.named[namedKey(w)];
     if (b != null) {
       return KeyedSubtree(
           key: nodeKey(_id, name, at),

@@ -212,8 +212,19 @@ class _Screen {
 }
 
 void main() {
-  test('the standard family has approval_sentence', () {
-    expect(ConstructFamily.standard.named.keys, contains('approval_sentence'));
+  // The family finds its widgets by the functor and arity of the term a
+  // widget declaration names (bridge.dart, namedKey; vGLP 668df7d, Section
+  // 6.3: "a name or a name applied to arguments").
+  test('the standard family has approval_sentence, last_state and '
+      'social_menu, by functor and arity', () {
+    expect(ConstructFamily.standard.named.keys,
+        containsAll(['approval_sentence/0', 'last_state/0', 'social_menu/1']));
+    expect(namedKey(fixtureTerm('named(approval_sentence, shown)')),
+        'approval_sentence/0');
+    expect(namedKey(fixtureTerm('named(social_menu([button("Go", [])]), menu([]))')),
+        'social_menu/1');
+    expect(namedWidget(fixtureTerm('named(social_menu([]), menu([]))'))!.$1,
+        'social_menu');
   });
 
   testWidgets(

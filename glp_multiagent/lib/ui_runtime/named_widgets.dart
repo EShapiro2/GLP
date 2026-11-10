@@ -19,6 +19,16 @@ import 'term.dart';
 /// The name a widget declaration gives [approvalSentence]: `Approval =::= approval_sentence.`
 const String approvalSentenceName = 'approval_sentence';
 
+/// The keys the construct family finds its named widgets by, each the
+/// functor and arity of the term `W` a widget declaration names (bridge.dart,
+/// [widgetKey]; vGLP 668df7d, Section 6.3: the term "is a name or a name
+/// applied to arguments, as the request type's menu is applied to its buttons
+/// and fields"): [approvalSentence] and [lastState] a name alone, and
+/// [socialMenu] the name applied to the list of its labels and its buttons.
+const String approvalSentenceKey = '$approvalSentenceName/0';
+const String lastStateKey = '$lastStateName/0';
+const String socialMenuKey = '$socialMenuName/1';
+
 /// The key of the button of construct [id] granting the constant [c] at the question at [at].
 ValueKey<String> answerKey(int id, String c, List<int> at) =>
     ValueKey('$id:answer:$c:${pathText(at)}');
