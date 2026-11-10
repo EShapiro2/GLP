@@ -848,6 +848,11 @@ sas_arg(sgn(Y, N), E, _, sgn(Y?, I?)) :-
 % 4401dd6), item_of(svar(Y)), Y read as a bare argument is: check.glp asks
 % that Y be a speech-act variable an agent role requires (item_schemas).
 sas_arg(item_of(Y), E, V, item_of(R?)) :- sas_bare(Y?, E?, V?, R).
+% typed(T, Y), the speech-act variable Y of the type T, is read as Y: the type
+% constrains nothing (programs/self.glp, SArg; vGLP 37fe038, Section 5.4), and
+% the compiler takes it from the contract's term for the field of Y
+% (programs/vglp/cva/compiler/pragmas.sh).
+sas_arg(typed(_, Y), E, V, R?) :- sas_bare(Y?, E?, V?, R).
 sas_arg(C, E, V, R?) :- otherwise | sas_bare(C?, E?, V?, R).
 
 procedure(X) sas_bare(X?, REnts?, PNames?, Arg).
@@ -1476,6 +1481,7 @@ sas_occ_arg(num(Y), X, yes) :- Y? =?= X? | true.
 sas_occ_arg(real(Y), X, yes) :- Y? =?= X? | true.
 sas_occ_arg(sgn(Y, N), X, yes) :- Y? =?= X?, ground(N?) | true.
 sas_occ_arg(sgn(Y, N), X, yes) :- N? =?= X?, ground(Y?) | true.
+sas_occ_arg(typed(_, Y), X, yes) :- Y? =?= X? | true.
 sas_occ_arg(C, X, yes) :- C? =?= X? | true.
 sas_occ_arg(_, _, no) :- otherwise | true.
 
@@ -1809,6 +1815,7 @@ sas_arg_vf(num(_), _, _, _, _, T, T?).
 sas_arg_vf(real(_), _, _, _, _, T, T?).
 sas_arg_vf(sgn(_, _), _, _, _, _, T, T?).
 sas_arg_vf(item_of(Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
+sas_arg_vf(typed(_, Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
 sas_arg_vf(C, E, V, Nm, P, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, P?, T?, R).
 
 procedure(X) sas_bare_vf(X?, REnts?, PNames?, Constant?, Constant?, Faults?, Faults).

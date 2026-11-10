@@ -382,7 +382,10 @@ Strings    ::= [] ; [String | Strings].
 Ints       ::= [] ; [Integer | Ints].
 PList      ::= list(String, Preds).
 PLists     ::= [] ; [PList | PLists].
-PAct       ::= act(Constant, String, Strings, Said, String, Proposer).
+FType      ::= ft(Integer, Constant).
+FTypes     ::= [] ; [FType | FTypes].
+PAct       ::= act(Constant, String, Strings, Said, String, Proposer)
+             ; act(Constant, String, Strings, Said, String, Proposer, FTypes).
 Proposer   ::= by(Ints).
 PActs      ::= [] ; [PAct | PActs].
 %% A standing declaration, standing(Schema, Start, Stop) (vGLP 7c631b1, Section 5.4, "The contract's words"; compiler/self.glp).
