@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: CC.glp beside this file.
 CC: Community Currency
-CC instantiates GBank, its bylaws those of a community currency, and restricts it.
+CC instantiates GBank and restricts it.
 A community currency is the Dollar-denominated coins of an organisation, Orga, with one role, treasurer; the treasurers jointly decide the acts of Orga.
 Alice and Bob are persons, Orga a community currency.
 1. ■ Founding.  Alice may found Orga for the Dollar and become its first treasurer.
@@ -18,28 +18,57 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
 Treasurers: the treasurers of Orga.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Otto: Bob asks to participate.
-  Bob [Leave]
-  Otto [Expel]
-Joint guardianship: Otto [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Otto [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Otto [Amend] <bylaws>
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move cc join] <motion>
+  Otto [Move cc remove] <motion>
+Creation: Alice [Found] <organisation> <denomination>
+Ward and person: Otto [Org acquaint] <person Bob> <motion>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Participation: Bob [Join] <person Otto> <motion>
+  Otto: Bob asks you to approve this: join.
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion>
+  Bob [Resign role]
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Treasurers: Bob [Become treasurer]
-  Otto: Bob asks to become a treasurer.
-  Bob [Resign]
-  Otto [Remove treasurer]
-Drawing: Alice [Draw] <amount>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Treasurers: Otto [Cc join] <person Bob> <motion>
+  Bob: Otto asks you to approve this: cc join.
+  Bob [Cc resign]
+  Otto [Cc remove] <person Bob> <motion>
+Drawing: Alice [Cc draw] <amount>

@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: CMB.glp beside this file.
 CMB: Commercial Bank
-CMB instantiates GBank, its bylaws those of a commercial bank, and restricts it.
+CMB instantiates GBank and restricts it.
 A commercial bank is an organisation that may issue Dollar-denominated coins and bonds, with two roles, director and loan officer; the directors jointly decide the acts of the bank; a loan officer decides a loan within their lending limit, a number of Dollars the directors set, and the directors decide a loan above it.  A participant who holds no role is a customer.
 Alice, Bob and Carol are persons, Orga a commercial bank.
 1. ■ Founding.  Alice may found Orga and become its first director.
@@ -19,32 +19,60 @@ Look: 🏦, money
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Otto: Bob asks to participate.
-  Bob [Leave]
-  Otto [Expel]
-Joint guardianship: Otto [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Otto [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Otto [Amend] <bylaws>
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move leave] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move cmb limit] <limit> <motion>
+  Otto [Move cmb loan directors] <denomination> <amount> <maturity> <bonds> <t> <motion>
+Creation: Alice [Found] <organisation>
+Ward and person: Otto [Org acquaint] <person Bob> <motion>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Customers: Bob [Join] <person Otto> <motion>
+  Otto: Bob asks you to approve this: join.
+  Bob [Leave] <person Otto> <motion>
+  Otto: Bob asks you to approve this: leave.
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion>
+  Bob [Resign role]
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Customers: Bob [Become customer]
-  Otto: Bob asks to become a customer.
-  Bob [Cease]
-  Otto: Bob asks to cease to be a customer.
-Lending limit: Otto [Set lending limit] <Dollars>
-Deposit: Bob [Deposit] <amount>
-Loan: Bob [Ask loan] <amount> <maturity> <bonds>
-  Carol: Bob asks for a loan within your lending limit.
-  Otto: Bob asks for a loan.
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Lending limit: Otto [Cmb limit] <person Bob> <limit> <motion>
+Deposit: Bob [Cmb deposit] <amount>
+Loan: Bob [Cmb loan] <person Carol> <denomination> <amount> <maturity> <bonds> <person Otto> <motion>
+  Carol: Bob asks you to approve this: cmb loan.
+  Otto: Bob asks you to approve this: cmb loan.

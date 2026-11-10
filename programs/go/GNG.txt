@@ -20,40 +20,83 @@ Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
 Jobs: the jobs Bob received, and his engagements.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Otto: Bob asks to participate.
-  Bob [Leave]
-  Otto [Expel]
-Joint guardianship: Otto [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Otto [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Otto [Amend] <bylaws>
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move cc join] <denomination> <stake> <motion>
+  Otto [Move cc remove] <denomination> <motion>
+  Otto [Move gbcc record first] <maturity> <motion>
+  Otto [Move gbcc record] <maturity> <profile> <motion>
+  Otto [Move gno stake] <stake> <motion>
+Creation: Alice [Found] <organisation> <denomination>
+Ward and person: Otto [Org acquaint] <person Bob> <motion>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Participation: Bob [Join] <person Otto> <motion>
+  Otto: Bob asks you to approve this: join.
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion>
+  Bob [Resign role]
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+  Alice [Gng accept] <organisation> <person Bob> <payment> <deposit> <fee>
+  Alice [Gng reject] <organisation> <person Carol>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Stake: Otto [Set stake] <coins>
-Arbitration: Alice [Raise dispute] <arbiter>
-  Bob [Raise dispute] <arbiter>
-  Carol [Decide] <to customer> <to provider>
-Job: Alice [Post job] <price> <deadline> <terms>
-  Bob [Pass on]
-  Alice [Withdraw]
-Engagement: Alice [Engage] <payment> <deposit>
-  Bob: Alice asks to engage you for the job.
-Delivery: Bob [Delivered]
-Acceptance: Alice [Accept work] [Reject work] <arbiter>
-Cancelling: Alice [Cancel] <to Alice> <to Bob>
-  Bob [Cancel] <to Alice> <to Bob>
-  Alice [Deadline passed]
-Recommending: Alice [Recommend]
-Showing: Bob [Show] <recommendation>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Treasurers: Otto [Cc join] <person Bob> <denomination> <stake> <motion>
+  Bob: Otto asks you to approve this: cc join.
+  Bob [Cc resign]
+  Otto [Cc remove] <person Bob> <denomination> <motion>
+Drawing: Alice [Cc draw] <amount>
+Account: Otto [Gbcc record first] <person Alice> <Dollars> <motion>
+  Otto [Gbcc record] <person Alice> <Dollars> <paid so far> <motion>
+Stake: Otto [Gno stake] <stake> <motion>
+Arbitration: Alice [Gno raise c] <person Bob> <person Carol> <deal>
+  Bob [Gno raise p] <person Alice> <person Carol> <deal>
+  Carol [Gno arbitrate] <person Alice> <person Bob> <deal> <payment> <deposit> <fee> <to customer> <to provider>
+Pointing to friend: Alice [Point friend]
+Transitive pointing: Alice [Point transitive]
+Ceasing to point: Alice [Unpoint]
+Job: Alice [Gng job] <limit> <denomination> <price> <deadline> <terms>
+  Bob [Gng pass]
+  Alice [Gng withdraw]
+Engagement: Alice [Gng engage] <price> <deadline> <terms> <payment> <deposit> <fee> <deal>
+  Bob: Alice asks you to approve this: gng engage.
+Delivery: Bob [Gng deliver]
+Cancelling: Alice [Gng cancel c] <organisation> <person Bob> <payment> <deposit> <fee>
+  Bob [Gng cancel p] <organisation> <person Alice> <payment> <deposit> <fee>
+  Alice [Gng lapse] <organisation> <person Bob> <payment> <deposit> <fee>
+Review: Alice [Recommend] <stake>
+Showing: Bob [Show]
 Withdrawing: Alice [Withdraw recommendation]
