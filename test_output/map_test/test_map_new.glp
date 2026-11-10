@@ -1,0 +1,13 @@
+% Test 1: Basic map creation and single put
+% Verifies map_new creates an empty map and map_put adds an entry.
+% Uses map_contains guard to confirm the key exists.
+
+procedure test_new(_).
+test_new(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, 42, M1),
+    confirm_key(M1?, alice, Result).
+
+procedure confirm_key(_?, _?, _).
+confirm_key(M, Key, yes) :- map_contains(M?, Key?) | true.
+confirm_key(_, _, no) :- otherwise | true.

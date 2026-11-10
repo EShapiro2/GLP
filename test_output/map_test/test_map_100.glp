@@ -1,0 +1,42 @@
+% Test: Store 100 key-value pairs in a map and verify lookups.
+%
+% Builds a map with keys 1..100 where each key N maps to value N*10.
+% Verifies lookups at the beginning (key 1), middle (key 50),
+% and end (key 100) of the key range.
+
+% Recursive map builder: inserts keys N down to 1 with value N*10
+procedure build_n(Number?, _?, _).
+build_n(N, M, Final?) :-
+    N? > 0 |
+    V := N? * 10,
+    map_put(M?, N?, V?, M1),
+    N1 := N? - 1,
+    build_n(N1?, M1?, Final).
+build_n(N, M, M?) :-
+    N? =:= 0 | true.
+
+% Helper: look up 3 keys from a grounded map
+procedure lookup_3(_?, _, _, _).
+lookup_3(M, R1?, R2?, R3?) :-
+    map_contains(M?, 1) |
+    _map_get(M?, 1, R1),
+    map_get(M?, 50, R2),
+    map_get(M?, 100, R3).
+
+% Build 100-entry map and verify 3 lookups
+procedure test_100(_, _, _).
+test_100(A?, B?, C?) :-
+    map_new(M0),
+    build_n(100, M0?, Final),
+    lookup_3(Final?, A, B, C).
+
+% Verify key not in range fails
+procedure test_100_missing(_).
+test_100_missing(Result?) :-
+    map_new(M0),
+    build_n(100, M0?, Final),
+    check_missing(Final?, 101, Result).
+
+procedure check_missing(_?, _?, _).
+check_missing(M, Key, found) :- map_contains(M?, Key?) | true.
+check_missing(_, _, not_found) :- otherwise | true.

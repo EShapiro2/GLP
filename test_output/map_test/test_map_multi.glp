@@ -1,0 +1,16 @@
+% Test 4: Multiple puts and gets
+% Verifies multiple entries can be added and retrieved.
+% Uses map_contains guard to establish groundness for multiple reads.
+
+procedure test_multi(_, _).
+test_multi(R1?, R2?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    lookup_two(M2?, a, b, R1, R2).
+
+procedure lookup_two(_?, _?, _?, _, _).
+lookup_two(M, K1, K2, V1?, V2?) :-
+    map_contains(M?, K1?) |
+    _map_get(M?, K1?, V1),
+    map_get(M?, K2?, V2).

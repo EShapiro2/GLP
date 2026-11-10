@@ -1,0 +1,43 @@
+% Benchmark: O(1) lookup verification
+%
+% Strategy: Build maps of sizes 10, 100, and 1000.
+% Then do 5000 repeated lookups on each.
+% If lookup is O(1), the lookup phase takes the same time
+% regardless of map size.
+%
+% The shell benchmark script isolates lookup time by subtracting
+% build-only time from build+lookup time.
+
+% Recursive map builder: inserts keys N down to 1 with value N*10
+procedure build_n(Number?, _?, _).
+build_n(N, M, Final?) :-
+    N? > 0 |
+    V := N? * 10,
+    map_put(M?, N?, V?, M1),
+    N1 := N? - 1,
+    build_n(N1?, M1?, Final).
+build_n(N, M, M?) :-
+    N? =:= 0 | true.
+
+% Repeat lookup K times on a grounded map (result discarded)
+procedure repeat_get(Number?, _?, _).
+repeat_get(K, M, Done?) :-
+    K? > 0, map_contains(M?, 1) |
+    _map_get(M?, 1, _),
+    K1 := K? - 1,
+    repeat_get(K1?, M?, Done).
+repeat_get(K, _, done) :-
+    K? =:= 0 | true.
+
+% Build-only: construct map of size N (no lookups)
+procedure build_only(Number?, _).
+build_only(N, done) :-
+    map_new(M0),
+    build_n(N?, M0?, _).
+
+% Build + lookup: construct map of size N, then do K lookups
+procedure bench(Number?, Number?, _).
+bench(N, K, Done?) :-
+    map_new(M0),
+    build_n(N?, M0?, Final),
+    repeat_get(K?, Final?, Done).

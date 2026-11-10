@@ -1,0 +1,11 @@
+% Test 8: map_contains on empty map always fails
+% Verifies that an empty map does not contain any key.
+
+procedure test_empty(_).
+test_empty(Result?) :-
+    map_new(M0),
+    check_empty(M0?, any_key, Result).
+
+procedure check_empty(_?, _?, _).
+check_empty(M, Key, found) :- map_contains(M?, Key?) | true.
+check_empty(_, _, empty) :- otherwise | true.

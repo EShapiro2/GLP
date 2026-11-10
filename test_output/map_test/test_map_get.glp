@@ -1,0 +1,8 @@
+% Test 2: _map_get retrieval
+% Verifies _map_get body kernel correctly retrieves a value by key.
+
+procedure test_get(_).
+test_get(Result?) :-
+    map_new(M0),
+    map_put(M0?, bob, 99, M1),
+    _map_get(M1?, bob, Result).

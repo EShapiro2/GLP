@@ -1,0 +1,19 @@
+% Test 11: Map as agent state (integration test)
+% Verifies maps can be used as mutable state in an agent-style
+% message-processing loop: add entries via a list of commands,
+% then look up a value from the final map.
+
+CmdList ::= [] ; [_|CmdList].
+
+procedure build_map(_?, CmdList?, _).
+build_map(Contacts, [add(Name, Addr)|Cmds], Final?) :-
+    map_put(Contacts?, Name?, Addr?, C1),
+    build_map(C1?, Cmds?, Final).
+
+build_map(Contacts, [], Contacts?).
+
+procedure test_agent(_).
+test_agent(Result?) :-
+    map_new(M0),
+    build_map(M0?, [add(alice, 42), add(bob, 99)], Final),
+    map_get(Final?, alice, Result).

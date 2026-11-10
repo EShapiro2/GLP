@@ -1,0 +1,35 @@
+% Test 15: map_remove — basic removal
+%
+% Verifies that map_remove/3 removes a key from the map:
+%   - Removed key is no longer found by map_contains
+%   - Remaining keys are still accessible via _map_get
+%   - map_remove returns the modified map
+
+% Remove key b from {a→1, b→2, c→3}, verify b is gone, a and c remain
+procedure test_remove(_, _, _).
+test_remove(A?, C?, Gone?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    map_put(M2?, c, 3, M3),
+    map_remove(M3?, b, M4),
+    check_removed(M4?, A, C, Gone).
+
+procedure check_removed(_?, _, _, _).
+check_removed(M, A?, C?, gone) :-
+    map_contains(M?, a), map_contains(M?, c) |
+    _map_get(M?, a, A),
+    _map_get(M?, c, C).
+
+% Verify b is truly gone (map_contains should fail → otherwise)
+procedure test_remove_gone(_).
+test_remove_gone(Result?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_put(M1?, b, 2, M2),
+    map_remove(M2?, b, M3),
+    check_key_absent(M3?, b, Result).
+
+procedure check_key_absent(_?, _?, _).
+check_key_absent(M, Key, found) :- map_contains(M?, Key?) | true.
+check_key_absent(_, _, not_found) :- otherwise | true.

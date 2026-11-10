@@ -1,0 +1,13 @@
+% Test 3: Key not found (map_contains fails, otherwise catches)
+% Verifies map_contains correctly fails for absent keys,
+% and otherwise clause provides fallback.
+
+procedure test_missing(_).
+test_missing(Result?) :-
+    map_new(M0),
+    map_put(M0?, alice, 42, M1),
+    check_key(M1?, bob, Result).
+
+procedure check_key(_?, _?, _).
+check_key(M, Key, found) :- map_contains(M?, Key?) | true.
+check_key(_, _, not_found) :- otherwise | true.

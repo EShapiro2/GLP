@@ -1,0 +1,37 @@
+% Test 18: map_remove — edge cases
+%
+% Tests edge cases for map_remove:
+%   - Remove key not present (no crash, map unchanged)
+%   - Remove last key (map becomes empty)
+%   - Remove then re-add same key with new value
+
+% Helper: verify list is empty or not
+procedure verify_empty(_?, _).
+verify_empty([], empty).
+verify_empty([_|_], not_empty).
+
+% Test: remove non-existent key from empty map → no crash, still empty
+procedure test_remove_missing(_).
+test_remove_missing(Result?) :-
+    map_new(M0),
+    map_remove(M0?, x, M1),
+    map_keys(M1?, Keys),
+    verify_empty(Keys?, Result).
+
+% Test: remove only key → map is empty (map_keys returns [])
+procedure test_remove_last(_).
+test_remove_last(Result?) :-
+    map_new(M0),
+    map_put(M0?, a, 1, M1),
+    map_remove(M1?, a, M2),
+    map_keys(M2?, Keys),
+    verify_empty(Keys?, Result).
+
+% Test: remove key then re-add with different value
+procedure test_remove_readd(_).
+test_remove_readd(Val?) :-
+    map_new(M0),
+    map_put(M0?, k, old_value, M1),
+    map_remove(M1?, k, M2),
+    map_put(M2?, k, new_value, M3),
+    map_get(M3?, k, Val).
