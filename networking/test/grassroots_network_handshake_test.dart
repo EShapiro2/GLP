@@ -14,6 +14,7 @@ import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/underlay.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
@@ -69,8 +70,11 @@ class _Relay {
     carried.add((
       fromCaller: !fromCallee,
       type: data.isEmpty ? -1 : data[0],
-      kind: data.length > 7 && data[0] == PacketType.noiseHandshake.value
-          ? data[7]
+      // The frame's head is 5 bytes, and the envelope opens with the
+      // version declaration (GNA api.tex, "Versions") and then the kind.
+      kind: data.length > 5 + VersionDeclaration.length &&
+              data[0] == PacketType.noiseHandshake.value
+          ? data[5 + VersionDeclaration.length]
           : null,
     ));
     _carriedEvents.add(null);

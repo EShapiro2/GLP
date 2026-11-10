@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
@@ -156,11 +157,12 @@ void main() {
 
     // In flight, the envelope's identity claim is rewritten to say "Bob".
     // Messages 2/3 bind claim to static via the Noise transcript, not a
-    // signature, so the claim bytes (offset 3, after the version and the
+    // signature, so the claim bytes (after the version declaration and the
     // kind) are rewritable — the mismatch must be caught by the static-key
     // check.
+    const claimAt = VersionDeclaration.length + 1;
     final tampered = Uint8List.fromList(msg2.responsePayload!);
-    tampered.setRange(3, 35, bob.publicKey);
+    tampered.setRange(claimAt, claimAt + 32, bob.publicKey);
 
     // Alice routes the message to her in-flight handshake with "Bob". The
     // delivered static is Mallory's and does not match the X25519 form of

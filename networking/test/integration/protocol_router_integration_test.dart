@@ -7,6 +7,7 @@ import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
@@ -134,7 +135,7 @@ void main() {
       expect(receivedAnnounce!.publicKey, equals(aliceIdentity.publicKey));
       expect(
         receivedAnnounce!.protocolVersion,
-        equals(ProtocolHandler.protocolVersion),
+        equals(VersionDeclaration.smartphoneVersion),
       );
       expect(receivedTransport, equals(PeerTransport.bleDirect));
 
@@ -261,7 +262,7 @@ void main() {
       expect(receivedAnnounce!.publicKey, equals(aliceIdentity.publicKey));
       expect(
         receivedAnnounce!.protocolVersion,
-        equals(ProtocolHandler.protocolVersion),
+        equals(VersionDeclaration.smartphoneVersion),
       );
       expect(receivedTransport, equals(PeerTransport.wan));
 

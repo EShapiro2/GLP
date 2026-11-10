@@ -15,6 +15,7 @@ export 'src/models/underlay.dart';
 export 'src/models/underlay_api.dart';
 export 'src/models/rendezvous_server.dart';
 export 'src/protocol/protocol_handler.dart';
+export 'src/protocol/layer_version.dart';
 export 'src/protocol/fragment_handler.dart';
 export 'src/protocol/message_transport.dart';
 export 'src/protocol/outbound_queue_store.dart';

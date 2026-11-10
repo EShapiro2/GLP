@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:sodium_libs/sodium_libs.dart';
@@ -42,11 +43,9 @@ void main() {
         final pubkeyFromPayload = payload.sublist(0, 32);
         expect(pubkeyFromPayload, equals(testIdentity.publicKey));
 
-        // Protocol version (next 2 bytes)
-        final versionData =
-            ByteData.view(payload.buffer, payload.offsetInBytes + 32, 2);
-        final version = versionData.getUint16(0, Endian.big);
-        expect(version, equals(ProtocolHandler.protocolVersion));
+        // The version declaration (next 9 bytes; GNA api.tex, "Versions")
+        expect(VersionDeclaration.decode(payload, 32),
+            VersionDeclaration.smartphone);
       });
 
       test(
@@ -71,8 +70,7 @@ void main() {
         final decoded = handler.decodeAnnounce(payload);
 
         expect(decoded.publicKey, equals(testIdentity.publicKey));
-        expect(decoded.protocolVersion,
-            equals(ProtocolHandler.protocolVersion));
+        expect(decoded.declaration, VersionDeclaration.smartphone);
       });
 
       test('throws on a payload longer than the fixed record', () {
@@ -129,9 +127,7 @@ void main() {
 
         // Well-formed record carrying testIdentity's key + version...
         final record = BytesBuilder()..add(testIdentity.publicKey);
-        final versionBytes = ByteData(2)
-          ..setUint16(0, ProtocolHandler.protocolVersion, Endian.big);
-        record.add(versionBytes.buffer.asUint8List());
+        record.add(VersionDeclaration.smartphone.encode());
         final recordBytes = record.toBytes();
 
         // ...but signed under a different identity. Forged: an ANNOUNCE whose
@@ -148,29 +144,52 @@ void main() {
       });
     });
 
-    group('protocol version refusal', () {
-      test('an ANNOUNCE carrying a different protocol version is refused',
-          () async {
-        // Build a payload identical to ours but with version+1, re-signed —
-        // structurally valid, wrong protocol (spec: the wire changed
-        // incompatibly; mixed versions are refused at ANNOUNCE).
-        final own = handler.createAnnouncePayload();
-        final tampered = Uint8List.fromList(own.sublist(0, 34));
-        final view = ByteData.view(tampered.buffer);
-        view.setUint16(32, ProtocolHandler.protocolVersion + 1, Endian.big);
-        final resigned = Uint8List.fromList(
-            [...tampered, ...handler.signBytes(tampered)]);
+    // GNA api.tex, "Versions": "Each peer checks that the version the other
+    // works with lies between its own earliest compatible version and its own
+    // version ... otherwise the connection is refused."
+    group('versions (GNA, "Versions")', () {
+      /// An ANNOUNCE of ours carrying [declared] in place of our declaration,
+      /// re-signed: structurally valid.
+      Uint8List announcing(VersionDeclaration declared) {
+        final record = Uint8List.fromList(
+            [...testIdentity.publicKey, ...declared.encode()]);
+        return Uint8List.fromList([...record, ...handler.signBytes(record)]);
+      }
 
-        expect(
-          () => handler.decodeAnnounce(resigned),
-          throwsA(isA<FormatException>().having(
-              (e) => e.message, 'message', contains('refused'))),
-        );
+      test('a server one version ahead that still works with our version is '
+          'accepted, and we talk to it as the version it works with', () {
+        final decoded = handler.decodeAnnounce(announcing(
+            const VersionDeclaration(
+                kind: LayerKind.server,
+                version: 2,
+                earliest: 1,
+                worksWithSmartphone: 1,
+                worksWithServer: 2)));
+        expect(decoded.declaration.version, 2);
+        expect(decoded.talksAs, 1);
       });
 
-      test('an ANNOUNCE carrying our protocol version is accepted', () {
+      test('a peer that works with a smartphone version we are not between '
+          'our earliest and our version is refused', () {
+        for (final w in [0, 2]) {
+          expect(
+            () => handler.decodeAnnounce(announcing(VersionDeclaration(
+                kind: LayerKind.server,
+                version: 2,
+                earliest: 2,
+                worksWithSmartphone: w,
+                worksWithServer: 2))),
+            throwsA(isA<FormatException>().having(
+                (e) => e.message, 'message', contains('refused'))),
+            reason: 'works with smartphone $w, we are 1 back to 1',
+          );
+        }
+      });
+
+      test('an ANNOUNCE carrying our own declaration is accepted', () {
         final decoded = handler.decodeAnnounce(handler.createAnnouncePayload());
-        expect(decoded.protocolVersion, ProtocolHandler.protocolVersion);
+        expect(decoded.declaration, VersionDeclaration.smartphone);
+        expect(decoded.talksAs, VersionDeclaration.smartphoneVersion);
       });
     });
 

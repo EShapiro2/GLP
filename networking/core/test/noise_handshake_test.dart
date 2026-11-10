@@ -63,8 +63,12 @@ void main() {
       hexOf(haystack).contains(hexOf(needle));
 
   /// The protocol version and the message kind an envelope opens with.
-  (int, int) envelopeHead(Uint8List payload) =>
-      (ByteData.sublistView(payload, 0, 2).getUint16(0), payload[2]);
+  /// The version an envelope declares and its message kind (GNA api.tex,
+  /// "Versions": the declaration opens the envelope).
+  (int, int) envelopeHead(Uint8List payload) => (
+        VersionDeclaration.decode(payload).version,
+        payload[VersionDeclaration.length]
+      );
 
   bool Function(NoisePattern, Uint8List) knownOnly(Uint8List known) =>
       (pattern, key) =>
@@ -90,7 +94,7 @@ void main() {
         pattern: NoisePattern.ik,
         peerId: initiatorLeg,
       ))!;
-      expect(envelopeHead(m1), (9, 0x11));
+      expect(envelopeHead(m1), (1, 0x11));
       expect(contains(m1, alice.publicKey), isFalse,
           reason: 'the initiator\'s key travels encrypted to the expected one');
       expect(aliceSessions.handshakeRetransmitPayload(transport, bob.publicKey),
@@ -114,7 +118,7 @@ void main() {
       expect(atBob.sessionEstablished, isTrue);
       expect(atBob.sentFinal, isTrue);
       final m2 = atBob.responsePayload!;
-      expect(envelopeHead(m2), (9, 0x12));
+      expect(envelopeHead(m2), (1, 0x12));
       expect(contains(m2, bob.publicKey), isFalse,
           reason: 'the responder never transmits its static key');
       expect(bobSessions.finalHandshakePayload(transport, alice.publicKey), m2,
@@ -242,14 +246,14 @@ void main() {
 
     final m1 = (await aliceSessions.startHandshake(transport, bob.publicKey,
         pattern: NoisePattern.xx, peerId: hexOf(bob.publicKey)))!;
-    expect(envelopeHead(m1), (9, 0x01));
+    expect(envelopeHead(m1), (1, 0x01));
     final atBob = await bobSessions.handleHandshakePacket(handshake(m1),
         transport: transport,
         peerId: hexOf(alice.publicKey),
         acceptFirstMessage: openFor);
     expect(atBob.sessionEstablished, isFalse);
     final m2 = atBob.responsePayload!;
-    expect(envelopeHead(m2), (9, 0x02));
+    expect(envelopeHead(m2), (1, 0x02));
     expect(bobSessions.handshakeRetransmitPayload(transport, alice.publicKey),
         m2);
 
@@ -260,7 +264,7 @@ void main() {
     expect(atAlice.sessionEstablished, isTrue);
     expect(atAlice.sentFinal, isTrue);
     final m3 = atAlice.responsePayload!;
-    expect(envelopeHead(m3), (9, 0x03));
+    expect(envelopeHead(m3), (1, 0x03));
     expect(aliceSessions.finalHandshakePayload(transport, bob.publicKey), m3);
 
     final done = await bobSessions.handleHandshakePacket(handshake(m3),
@@ -299,9 +303,11 @@ void main() {
         handshake(m1),
         transport: transport,
         acceptFirstMessage: (_, __) => true);
-    // The claim (after version and kind) is rewritten to Bob's.
+    // The claim (after the version declaration and the kind) is rewritten to
+    // Bob's.
+    const claimAt = VersionDeclaration.length + 1;
     final tampered = Uint8List.fromList(atMallory.responsePayload!)
-      ..setRange(3, 35, bob.publicKey);
+      ..setRange(claimAt, claimAt + 32, bob.publicKey);
     final result = await aliceSessions.handleHandshakePacket(
         handshake(tampered),
         transport: transport,
@@ -612,67 +618,171 @@ void main() {
         largeSessions.handshakeHashFor(transport, small.publicKey));
   });
 
-  test('a version-6 handshake is refused at the handshake', () async {
-    if (skipped()) return;
-    final alice = await identityFromSeed(0x43);
-    final bob = await identityFromSeed(0x44);
-    final bobSessions = manager(bob);
+  // GNA api.tex, "Versions": "In the handshake, and in an ANNOUNCE that
+  // precedes it, each peer declares its kind, its version, its earliest
+  // compatible version, and the version of the other's kind that it works
+  // with.  Each peer checks that the version the other works with lies
+  // between its own earliest compatible version and its own version; where
+  // both checks pass the session is established, and each talks to the other
+  // as the version the other works with, and otherwise the connection is
+  // refused.  Thus a server can be updated ahead of the smartphones, and a
+  // smartphone ahead of the servers, provided the updated one remains
+  // compatible back to the version the other works with.  Two peers of one
+  // kind do the same."
+  group('versions (GNA, "Versions")', () {
     const transport = PeerTransport.wan;
+    const phone1 = VersionDeclaration.smartphone;
+    const server1 = VersionDeclaration.server;
 
-    // A version-6 peer opens with XX message 1 in the envelope of that
-    // version: handshake payload version 2, message 1, the claim, its
-    // signature over the claim and the ephemeral, the ephemeral.
-    final ephemeral = Uint8List.fromList(List.generate(32, (i) => i + 1));
-    final secret = SecureKey.fromList(sodium!, alice.privateKey);
-    final signature = sodium!.crypto.sign.detached(
-        message: Uint8List.fromList([...alice.publicKey, ...ephemeral]),
-        secretKey: secret);
-    secret.dispose();
-    final v6 = Uint8List.fromList(
-        [2, 1, ...alice.publicKey, ...signature, ...ephemeral]);
-    var asked = false;
-    await expectLater(
-        bobSessions.handleHandshakePacket(handshake(v6),
-            transport: transport,
-            acceptFirstMessage: (_, __) => asked = true),
-        throwsFormatException);
-    expect(asked, isFalse, reason: 'refused before it is read');
+    VersionDeclaration decl(LayerKind kind, int version, int earliest,
+            {int phone = 1, int server = 1}) =>
+        VersionDeclaration(
+            kind: kind,
+            version: version,
+            earliest: earliest,
+            worksWithSmartphone: phone,
+            worksWithServer: server);
 
-    // This version's envelope bearing version 6 is refused too.
-    final m1 = (await manager(alice).startHandshake(transport, bob.publicKey,
-        pattern: NoisePattern.ik))!;
-    final relabelled = Uint8List.fromList(m1)..setRange(0, 2, [0, 6]);
-    await expectLater(
-        bobSessions.handleHandshakePacket(handshake(relabelled),
-            transport: transport, acceptFirstMessage: (_, __) => true),
-        throwsFormatException);
-    expect(bobSessions.hasSession(transport, alice.publicKey), isFalse);
+    /// An IK handshake from [a], declaring [da], to [b], declaring [db]:
+    /// both managers, or a [FormatException] where one refuses the other.
+    Future<(NoiseSessionManager, NoiseSessionManager)> ik(int seedA,
+        VersionDeclaration da, int seedB, VersionDeclaration db) async {
+      final a = await identityFromSeed(seedA);
+      final b = await identityFromSeed(seedB);
+      final atA =
+          NoiseSessionManager(identity: a, sodium: sodium!, declaration: da);
+      final atB =
+          NoiseSessionManager(identity: b, sodium: sodium!, declaration: db);
+      final m1 = (await atA.startHandshake(transport, b.publicKey,
+          pattern: NoisePattern.ik))!;
+      final r = await atB.handleHandshakePacket(handshake(m1),
+          transport: transport, acceptFirstMessage: (_, __) => true);
+      await atA.handleHandshakePacket(handshake(r.responsePayload!),
+          transport: transport, acceptFirstMessage: (_, __) => true);
+      return (atA, atB);
+    }
 
-    // And bearing version 7, the version before the attestation message
-    // carried the application's version number (GNA §2.6).
-    final version7 = Uint8List.fromList(m1)..setRange(0, 2, [0, 7]);
-    await expectLater(
-        bobSessions.handleHandshakePacket(handshake(version7),
-            transport: transport, acceptFirstMessage: (_, __) => true),
-        throwsFormatException);
-    expect(bobSessions.hasSession(transport, alice.publicKey), isFalse);
+    Future<void> connects(int s, VersionDeclaration da, VersionDeclaration db,
+        {required int aTalksAs, required int bTalksAs}) async {
+      final a = await identityFromSeed(s);
+      final b = await identityFromSeed(s + 1);
+      final (atA, atB) = await ik(s, da, s + 1, db);
+      expect(atA.hasSession(transport, b.publicKey), isTrue);
+      expect(atB.hasSession(transport, a.publicKey), isTrue);
+      expect(atA.peerDeclaration(transport, b.publicKey), db);
+      expect(atB.peerDeclaration(transport, a.publicKey), da);
+      expect(atA.talksAs(transport, b.publicKey), aTalksAs,
+          reason: 'each talks to the other as the version the other works '
+              'with');
+      expect(atB.talksAs(transport, a.publicKey), bTalksAs);
+    }
 
-    // And bearing version 8, the version whose receiver acknowledged every
-    // fragment of a message before it saved the message, and sent a
-    // whole-message acknowledgment (GNA, 2026-11-08).
-    final version8 = Uint8List.fromList(m1)..setRange(0, 2, [0, 8]);
-    await expectLater(
-        bobSessions.handleHandshakePacket(handshake(version8),
-            transport: transport, acceptFirstMessage: (_, __) => true),
-        throwsFormatException);
-    expect(bobSessions.hasSession(transport, alice.publicKey), isFalse);
+    test(
+        'a server one version ahead, still compatible back to the version '
+        'the phone works with, connects, whichever dials', () async {
+      if (skipped()) return;
+      final server2 = decl(LayerKind.server, 2, 1, server: 2);
+      await connects(0x51, phone1, server2, aTalksAs: 1, bTalksAs: 1);
+      await connects(0x53, server2, phone1, aTalksAs: 1, bTalksAs: 1);
+    });
 
-    // And a version-6 ANNOUNCE.
-    final handler = ProtocolHandler(identity: alice, sodium: sodium!);
-    final record = handler.createAnnouncePayload();
-    record.setRange(32, 34, [0, 6]);
-    final resigned = Uint8List.fromList(
-        [...record.sublist(0, 34), ...handler.signBytes(record.sublist(0, 34))]);
-    expect(() => handler.decodeAnnounce(resigned), throwsFormatException);
+    test(
+        'a server one version ahead and compatible back to itself alone is '
+        'refused by it: the phone works with server 1', () async {
+      if (skipped()) return;
+      final server2 = decl(LayerKind.server, 2, 2, server: 2);
+      await expectLater(ik(0x55, phone1, 0x56, server2), throwsFormatException,
+          reason: 'the server refuses message 1');
+      await expectLater(ik(0x57, server2, 0x58, phone1), throwsFormatException,
+          reason: 'the server refuses message 2');
+    });
+
+    test(
+        'a phone one version ahead, still compatible back to the version '
+        'the server works with, connects; one compatible back to itself alone '
+        'is refused', () async {
+      if (skipped()) return;
+      final phone2 = decl(LayerKind.smartphone, 2, 1, phone: 2);
+      await connects(0x59, phone2, server1, aTalksAs: 1, bTalksAs: 1);
+      await connects(0x5b, server1, phone2, aTalksAs: 1, bTalksAs: 1);
+      final phone2only = decl(LayerKind.smartphone, 2, 2, phone: 2);
+      await expectLater(
+          ik(0x5d, phone2only, 0x5e, server1), throwsFormatException);
+      await expectLater(
+          ik(0x5f, server1, 0x60, phone2only), throwsFormatException);
+    });
+
+    test(
+        'two phones do the same, each declaring the smartphone version it '
+        'works with', () async {
+      if (skipped()) return;
+      final phone2 = decl(LayerKind.smartphone, 2, 1, phone: 1);
+      await connects(0x61, phone2, phone1, aTalksAs: 1, bTalksAs: 1);
+      final phone2works2 = decl(LayerKind.smartphone, 2, 1, phone: 2);
+      await expectLater(
+          ik(0x63, phone2works2, 0x64, phone1), throwsFormatException,
+          reason: 'phone 1 cannot talk as smartphone 2');
+    });
+
+    test(
+        'the declarations are bound to the handshake: a responder\'s '
+        'declaration changed on the way fails message 2, and no session '
+        'stands', () async {
+      if (skipped()) return;
+      final a = await identityFromSeed(0x65);
+      final b = await identityFromSeed(0x66);
+      final atA = NoiseSessionManager(
+          identity: a, sodium: sodium!, declaration: phone1);
+      final atB = NoiseSessionManager(
+          identity: b, sodium: sodium!, declaration: server1);
+      final m1 = (await atA.startHandshake(transport, b.publicKey,
+          pattern: NoisePattern.ik))!;
+      final r = await atB.handleHandshakePacket(handshake(m1),
+          transport: transport, acceptFirstMessage: (_, __) => true);
+      // The server's version, which no check reads, from 1 to 3.
+      final m2 = Uint8List.fromList(r.responsePayload!)..setRange(1, 3, [0, 3]);
+      await expectLater(
+          atA.handleHandshakePacket(handshake(m2),
+              transport: transport, acceptFirstMessage: (_, __) => true),
+          throwsFormatException,
+          reason: 'message 2 does not decrypt under the hash it was not '
+              'written to');
+      expect(atA.hasSession(transport, b.publicKey), isFalse);
+      // The message as sent still completes it.
+      await atA.handleHandshakePacket(handshake(r.responsePayload!),
+          transport: transport, acceptFirstMessage: (_, __) => true);
+      expect(atA.hasSession(transport, b.publicKey), isTrue);
+    });
+
+    test(
+        'an envelope and an ANNOUNCE declaring a smartphone version this '
+        'layer is not are refused before either is read further', () async {
+      if (skipped()) return;
+      final alice = await identityFromSeed(0x67);
+      final bob = await identityFromSeed(0x68);
+      final bobSessions = manager(bob);
+      final m1 = (await manager(alice)
+          .startHandshake(transport, bob.publicKey, pattern: NoisePattern.ik))!;
+      final relabelled = Uint8List.fromList(m1)
+        ..setRange(0, VersionDeclaration.length,
+            decl(LayerKind.smartphone, 3, 2, phone: 2).encode());
+      var asked = false;
+      await expectLater(
+          bobSessions.handleHandshakePacket(handshake(relabelled),
+              transport: transport,
+              acceptFirstMessage: (_, __) => asked = true),
+          throwsFormatException);
+      expect(asked, isFalse, reason: 'refused before it is read');
+      expect(bobSessions.hasSession(transport, alice.publicKey), isFalse);
+
+      final handler = ProtocolHandler(identity: alice, sodium: sodium!);
+      final record = Uint8List.fromList([
+        ...alice.publicKey,
+        ...decl(LayerKind.server, 3, 2, phone: 2).encode()
+      ]);
+      final resigned =
+          Uint8List.fromList([...record, ...handler.signBytes(record)]);
+      expect(() => handler.decodeAnnounce(resigned), throwsFormatException);
+    });
   });
 }

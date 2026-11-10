@@ -11,6 +11,7 @@ import 'package:grassroots_networking_core/src/signaling/signaling_codec.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
 import 'package:grassroots_networking_core/src/places/place_registry.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
 import 'package:grassroots_networking_core/src/transport/hole_punch_service.dart';
@@ -234,6 +235,11 @@ Set<String> computeStaleBlePeerPubkeys({
 /// await grassroots.send(recipientPubkey, gsgBlockData);
 /// ```
 class GrassrootsNetwork {
+  /// The layer's kind and versions, declared in every ANNOUNCE and handshake
+  /// envelope and checked against each peer's (GNA api.tex, "Versions"):
+  /// the Flutter profile is a smartphone's layer, at its current versions unless given others.
+  final VersionDeclaration versionDeclaration;
+
   /// Our identity (from GSG layer)
   final GrassrootsIdentity _identity;
 
@@ -828,6 +834,7 @@ class GrassrootsNetwork {
   GrassrootsNetwork({
     required GrassrootsIdentity identity,
     required Set<Underlay> underlays,
+    this.versionDeclaration = VersionDeclaration.smartphone,
     PlatformAttestation? platformAttestation,
     PlaceGeofenceBackend? placeGeofenceBackend,
     required this.store,
@@ -845,9 +852,11 @@ class GrassrootsNetwork {
         _places = placeGeofenceBackend == null
             ? null
             : PlaceRegistry(backend: placeGeofenceBackend) {
-    _protocolHandler = ProtocolHandler(identity: _identity, sodium: sodium);
+    _protocolHandler = ProtocolHandler(
+        identity: _identity, sodium: sodium, declaration: versionDeclaration);
     _fragmentHandler = FragmentHandler();
-    _noiseSessions = NoiseSessionManager(identity: _identity, sodium: sodium);
+    _noiseSessions = NoiseSessionManager(
+        identity: _identity, sodium: sodium, declaration: versionDeclaration);
     _messageRouter = MessageRouter(
       store: store,
       protocolHandler: _protocolHandler,
@@ -3059,7 +3068,8 @@ class GrassrootsNetwork {
     }
     store.dispatch(PeerAnnounceReceivedAction(
       publicKey: pubkey,
-      protocolVersion: ProtocolHandler.protocolVersion,
+      protocolVersion:
+          _noiseSessions.peerDeclaration(transport, pubkey)?.version ?? 0,
       underSession: true,
       transport: transport,
       bleCentralDeviceId: centralId,

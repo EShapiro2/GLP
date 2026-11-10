@@ -6,6 +6,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
@@ -28,9 +29,7 @@ Uint8List buildAnnouncePayload({
 
   buffer.add(pubkey);
 
-  final versionBytes = ByteData(2);
-  versionBytes.setUint16(0, ProtocolHandler.protocolVersion, Endian.big);
-  buffer.add(versionBytes.buffer.asUint8List());
+  buffer.add(VersionDeclaration.smartphone.encode());
 
   final record = buffer.toBytes();
   buffer.add(signer.signBytes(record));
@@ -538,7 +537,7 @@ void main() {
         store.dispatch(PeerAnnounceReceivedAction(
           underSession: true,
           publicKey: otherPubkey,
-          protocolVersion: ProtocolHandler.protocolVersion,
+          protocolVersion: VersionDeclaration.smartphoneVersion,
           rssi: -44,
           bleCentralDeviceId: 'central:peer-1',
         ));

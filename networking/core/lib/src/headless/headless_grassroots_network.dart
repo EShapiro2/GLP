@@ -14,6 +14,7 @@ import '../models/underlay.dart';
 import '../models/underlay_api.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
+import '../protocol/layer_version.dart';
 import '../protocol/message_transport.dart';
 import '../protocol/outbound_queue_store.dart';
 import '../protocol/protocol_handler.dart';
@@ -115,8 +116,14 @@ class ServerAddress {
 /// its file ([FileOutboundQueueStore]); a test may give memory
 /// ([MemoryOutboundQueueStore]), which lasts as long as the process.
 class HeadlessGrassrootsNetwork {
+  /// The layer's kind and versions, declared in every ANNOUNCE and handshake
+  /// envelope and checked against each peer's (GNA api.tex, "Versions"):
+  /// the headless profile is a server's layer ("A headless server profile"), at its current versions unless given others.
+  final VersionDeclaration versionDeclaration;
+
   HeadlessGrassrootsNetwork({
     required GrassrootsIdentity identity,
+    this.versionDeclaration = VersionDeclaration.server,
     this.attestation = const NoPlatformAttestation(),
     this.serverAddress,
     this.rendezvousServer = false,
@@ -136,9 +143,11 @@ class HeadlessGrassrootsNetwork {
           'a rendezvous server has a server address, and none was given');
     }
     store = Store<AppState>(appReducer, initialState: const AppState());
-    _protocolHandler = ProtocolHandler(identity: _identity, sodium: sodium);
+    _protocolHandler = ProtocolHandler(
+        identity: _identity, sodium: sodium, declaration: versionDeclaration);
     _fragmentHandler = FragmentHandler();
-    _noiseSessions = NoiseSessionManager(identity: _identity, sodium: sodium);
+    _noiseSessions = NoiseSessionManager(
+        identity: _identity, sodium: sodium, declaration: versionDeclaration);
     _messageRouter = MessageRouter(
       store: store,
       protocolHandler: _protocolHandler,

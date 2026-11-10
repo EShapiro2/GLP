@@ -1,4 +1,4 @@
-# Handover of Cloud-GDS (Cloud #13, 2026-11-09)
+# Handover of Cloud-GDS (Cloud #13, 2026-11-10)
 
 The next session of the role reads this after its mail (GLP `CLAUDE.md`, "Cloud", 3).  Cloud #8's handover, which this replaces, is in git at 94622eaa.
 
@@ -12,11 +12,15 @@ Dan Bachar's #43 (a620a2ac6, F17, decision 40), #44 (71991cb21, F18, decision 41
 
 Branch `Cloud-net9` is main (e630989, 2026-11-09 17:0x UTC, holding #28 to #42 and Cloud-loopback) with #45's head merged in, no conflict, and this handover, and nothing else: the three leave nothing of decision 42 undone that I found.  Every `GlpNetwork` implementation (the glue's two, the simulation client, `glp_multiagent/lib/debuglog/reporting_network.dart`) and every caller compile with `send` returning the id and `onMessageReceived` taking `senderMessageId`; the kept message records it and reports it again after a restart on both profiles; `dart analyze` reports no error in `glp_runtime`, `networking`, `networking/glue`, `networking/core`, `servers/directory`, `servers/gpw/name_service`, `servers/debuglog` and `tools/live`, and `flutter analyze` none in `glp_multiagent`.
 
+## Done by Cloud #13 (Code #27's task of 2026-11-10 21:42 UTC): GNA's Versions
+
+Branch `Cloud-versions`, off main 3f1d1de, from GNA 099b6b5, `sections/api.tex`, paragraph Versions, and GSA #3's entries of 2026-11-10 18:13 and 21:40 UTC in `Code_inbox.md`.  `networking/core/lib/src/protocol/layer_version.dart` holds `LayerKind` and `VersionDeclaration`: kind, version, earliest compatible version, and the smartphone and the server version it works with, 9 bytes on the wire.  It opens the handshake envelope, before the kind byte, and follows the key in ANNOUNCE, now 105 bytes.  `VersionDeclaration.accepts` is the check; `NoiseSessionManager.talksAs` and `peerDeclaration` give what was agreed.  The initiator's declaration is in the Noise prologue and the responder's is mixed into the hash before message 2, so a declaration changed on the way fails the handshake.  The Flutter profile declares `VersionDeclaration.smartphone`, the headless one `VersionDeclaration.server`, both 1 back to 1; a constructor argument `versionDeclaration` gives another, as the tests do.  The tests are in `networking/core/test/noise_handshake_test.dart`, group "versions", and `headless_handshake_test.dart`'s refusal of versions 6, 7 and 9.
+
 ## Open for the role
 
 - Cloud #8's task 3, the home by composition, waiting on GSA's GAS faults, vGLP's `item_of` and GPE's Nearby tab (Cloud #8's reports of 2026-11-09 13:53 and 14:24 UTC).
 - `Cloud-close`, waiting on `widowed/1` (GLP's, Cloud #10's 13:22 UTC).
-- Protocol 9 is merged only when both servers and both phones move together; the list of what moves is in the report.
+- The wire of Versions replaces protocol 9: the servers and the phones take it together once, the last time; from then on each kind moves alone, within the versions the other works with.  GNA's Implementation Notes are GSA's to bring to it once it is on main.
 
 ## Environment
 

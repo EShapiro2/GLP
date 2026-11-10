@@ -1,3 +1,4 @@
+import '../protocol/layer_version.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -8,7 +9,6 @@ import 'package:sodium/sodium_sumo.dart' as libsodium;
 import '../models/identity.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
-import '../protocol/protocol_handler.dart';
 
 const _xxProtocolName = 'Noise_XX_25519_ChaChaPoly_SHA256';
 const _ikProtocolName = 'Noise_IK_25519_ChaChaPoly_SHA256';
@@ -160,10 +160,38 @@ class NoiseSessionManager {
     required this.identity,
     required this.sodium,
     this.handshakeTimeout = const Duration(seconds: 5),
+    this.declaration = VersionDeclaration.smartphone,
   });
 
-  /// The protocol version every handshake envelope opens with (GNA §2.6).
-  static int get protocolVersion => ProtocolHandler.protocolVersion;
+  /// The layer's versions, which every handshake envelope opens with (GNA
+  /// api.tex, "Versions": "In the handshake, and in an ANNOUNCE that precedes
+  /// it, each peer declares its kind, its version, its earliest compatible
+  /// version, and the version of the other's kind that it works with").
+  /// The initiator's declaration is the prologue, which both ends mix into
+  /// the handshake hash; the responder's, in message 2's envelope, both ends
+  /// mix in before message 2's Noise message, so a declaration changed on the
+  /// way fails that message.  Until 2026-11-10 one protocol version, shared
+  /// by both kinds, opened every envelope and any other was refused.
+  final VersionDeclaration declaration;
+
+  /// The declaration of the peer of each session established, by medium and
+  /// key: what the peer declared, and so the version of this layer's kind it
+  /// talks to the peer as ([talksAs]).
+  final Map<_SessionKey, VersionDeclaration> _peerDeclarations = {};
+
+  /// The declaration [remotePubkey] made in the handshake of its session on
+  /// [transport], or null where none was made.
+  VersionDeclaration? peerDeclaration(
+          PeerTransport transport, Uint8List remotePubkey) =>
+      _peerDeclarations[_SessionKey(transport, _hex(remotePubkey))];
+
+  /// The version of this layer's kind it talks to [remotePubkey] as on
+  /// [transport]: the one the peer works with ("each talks to the other as
+  /// the version the other works with"); null where no session was made.
+  int? talksAs(PeerTransport transport, Uint8List remotePubkey) {
+    final d = peerDeclaration(transport, remotePubkey);
+    return d == null ? null : declaration.accepts(d);
+  }
 
   bool hasSession(PeerTransport transport, Uint8List remotePubkey) {
     return _entries[_SessionKey(transport, _hex(remotePubkey))]?.session !=
@@ -225,6 +253,7 @@ class NoiseSessionManager {
               remotePubkey, 'remotePubkey', 'not an Ed25519 public key');
         }
         handshake = await _NoiseHandshakeState.create(
+          prologue: _NoiseHandshakeState.prologueOf(declaration.encode()),
           role: NoiseHandshakeRole.initiator,
           pattern: NoisePattern.ik,
           localStaticKeyPair: await _staticKeyPair(),
@@ -233,15 +262,17 @@ class NoiseSessionManager {
         // The payload is our Ed25519 identity, encrypted after the static:
         // the responder checks that the static is its image.
         final body = await handshake.writeIk1(identity.publicKey);
-        encoded = _encodeEnvelope(_Kind.ik1, body);
+        encoded = _encodeEnvelope(declaration, _Kind.ik1, body);
       case NoisePattern.xx:
         handshake = await _NoiseHandshakeState.create(
+          prologue: _NoiseHandshakeState.prologueOf(declaration.encode()),
           role: NoiseHandshakeRole.initiator,
           pattern: NoisePattern.xx,
           localStaticKeyPair: await _staticKeyPair(),
         );
         final body = await handshake.writeXx1();
         encoded = _encodeEnvelope(
+          declaration,
           _Kind.xx1,
           body,
           claim: identity.publicKey,
@@ -349,6 +380,10 @@ class NoiseSessionManager {
         sendResponse,
   }) async {
     final envelope = _decodeEnvelope(packet.payload);
+    final declared = envelope.declaration;
+    if (declaration.accepts(declared) == null) {
+      throw VersionDeclaration.refusal(declaration, declared);
+    }
 
     var result = switch (envelope.kind) {
       _Kind.xx1 => await _handleXx1(envelope, transport, acceptFirstMessage),
@@ -358,6 +393,11 @@ class NoiseSessionManager {
         await _handleIk1(envelope, transport, peerId, acceptFirstMessage),
       _Kind.ik2 => await _handleIk2(envelope, transport, peerId),
     };
+
+    if (result.sessionEstablished) {
+      _peerDeclarations[_SessionKey(transport, _hex(result.remotePubkey))] =
+          declared;
+    }
 
     final response = result.responsePayload;
     if (sendResponse != null && response != null) {
@@ -558,13 +598,16 @@ class NoiseSessionManager {
     }
 
     final handshake = await _NoiseHandshakeState.create(
+      prologue: _NoiseHandshakeState.prologueOf(envelope.declarationBytes),
       role: NoiseHandshakeRole.responder,
       pattern: NoisePattern.xx,
       localStaticKeyPair: await _staticKeyPair(),
     );
     await handshake.readXx1(body);
+    await handshake.mixResponderDeclaration(declaration.encode());
     final responseBody = await handshake.writeXx2();
     final encoded = _encodeEnvelope(
+      declaration,
       _Kind.xx2,
       responseBody,
       claim: identity.publicKey,
@@ -633,6 +676,7 @@ class NoiseSessionManager {
     }
     entry.lastInboundBody = body;
 
+    await handshake.mixResponderDeclaration(envelope.declarationBytes);
     await handshake.readXx2(body);
     if (!_verifyRemoteStatic(handshake, remotePubkey)) {
       _entries.remove(key);
@@ -643,6 +687,7 @@ class NoiseSessionManager {
     final responseBody = await handshake.writeXx3();
     final session = await handshake.splitForInitiator();
     final encoded = _encodeEnvelope(
+      declaration,
       _Kind.xx3,
       responseBody,
       claim: identity.publicKey,
@@ -764,6 +809,7 @@ class NoiseSessionManager {
     // Only the holder of the key the initiator expects can read the message,
     // and reading it is what names the initiator.
     final handshake = await _NoiseHandshakeState.create(
+      prologue: _NoiseHandshakeState.prologueOf(envelope.declarationBytes),
       role: NoiseHandshakeRole.responder,
       pattern: NoisePattern.ik,
       localStaticKeyPair: await _staticKeyPair(),
@@ -816,9 +862,10 @@ class NoiseSessionManager {
           remotePubkey: remotePubkey, pattern: NoisePattern.ik);
     }
 
+    await handshake.mixResponderDeclaration(declaration.encode());
     final responseBody = await handshake.writeIk2();
     final session = await handshake.splitForResponder();
-    final encoded = _encodeEnvelope(_Kind.ik2, responseBody);
+    final encoded = _encodeEnvelope(declaration, _Kind.ik2, responseBody);
 
     // "A live session ends when a new handshake with the peer completes, or
     // by silence" (GNA §2.6), and "a recorded IK first message can be
@@ -944,6 +991,7 @@ class NoiseSessionManager {
       if (entry == null || handshake == null) continue;
       final trial = handshake.copy();
       try {
+        await trial.mixResponderDeclaration(envelope.declarationBytes);
         await trial.readIk2(body);
       } catch (_) {
         continue;
@@ -1218,6 +1266,7 @@ class _NoiseHandshakeState {
   });
 
   static Future<_NoiseHandshakeState> create({
+    required Uint8List prologue,
     required NoiseHandshakeRole role,
     required NoisePattern pattern,
     required SimpleKeyPair localStaticKeyPair,
@@ -1226,7 +1275,7 @@ class _NoiseHandshakeState {
     final symmetric = await _NoiseSymmetricState.initialize(
       pattern == NoisePattern.ik ? _ikProtocolName : _xxProtocolName,
     );
-    await symmetric.mixHash(_prologue());
+    await symmetric.mixHash(prologue);
     final state = _NoiseHandshakeState._(
       role: role,
       pattern: pattern,
@@ -1267,12 +1316,17 @@ class _NoiseHandshakeState {
     return copied;
   }
 
-  static Uint8List _prologue() {
-    final version = ByteData(2)
-      ..setUint16(0, NoiseSessionManager.protocolVersion, Endian.big);
-    return Uint8List.fromList(
-        [...utf8.encode(_prologueLabel), ...version.buffer.asUint8List()]);
-  }
+  /// The prologue: the label and the initiator's version declaration, which
+  /// the responder reads from message 1's envelope (GNA api.tex, "Versions").
+  static Uint8List prologueOf(Uint8List initiatorDeclaration) =>
+      Uint8List.fromList(
+          [...utf8.encode(_prologueLabel), ...initiatorDeclaration]);
+
+  /// Mix the responder's version declaration into the handshake hash, before
+  /// message 2's Noise message is written or read, so that a declaration
+  /// changed on the way fails that message.
+  Future<void> mixResponderDeclaration(Uint8List declaration) =>
+      symmetric.mixHash(declaration);
 
   // --- XX: -> e / <- e, ee, s, es / -> s, se ---
 
@@ -1673,23 +1727,30 @@ class _Envelope {
 
   final Uint8List body;
 
-  const _Envelope(this.kind, this.claim, this.signature, this.body);
+  /// The sender's version declaration, as it travelled (GNA api.tex,
+  /// "Versions").
+  final Uint8List declarationBytes;
+
+  VersionDeclaration get declaration =>
+      VersionDeclaration.decode(declarationBytes);
+
+  const _Envelope(
+      this.declarationBytes, this.kind, this.claim, this.signature, this.body);
 }
 
-/// The handshake envelope: the protocol version (2 bytes, big-endian), the
-/// message kind (1 byte), for XX the sender's identity claim (32 bytes) and,
+/// The handshake envelope: the sender's version declaration (9 bytes,
+/// [VersionDeclaration]; GNA api.tex, "Versions"), the message kind (1 byte), for XX the sender's identity claim (32 bytes) and,
 /// on message 1, its signature over the claim and the ephemeral (64 bytes),
 /// and the Noise message.
 Uint8List _encodeEnvelope(
+  VersionDeclaration declaration,
   _Kind kind,
   Uint8List body, {
   Uint8List? claim,
   Uint8List? signature,
 }) {
-  final version = ByteData(2)
-    ..setUint16(0, NoiseSessionManager.protocolVersion, Endian.big);
   return Uint8List.fromList([
-    ...version.buffer.asUint8List(),
+    ...declaration.encode(),
     kind.value,
     if (claim != null) ...claim,
     if (signature != null) ...signature,
@@ -1697,21 +1758,19 @@ Uint8List _encodeEnvelope(
   ]);
 }
 
-/// Decode a handshake envelope. A peer on another protocol version is
-/// refused here, at the handshake (GNA §2.6): its envelope is not read
-/// further.
+/// Decode a handshake envelope.  The declaration is read here and checked by
+/// [NoiseSessionManager.handleHandshakePacket], before the message is
+/// processed: a peer whose declared versions this layer does not accept is
+/// refused at the handshake (GNA api.tex, "Versions").
 _Envelope _decodeEnvelope(Uint8List payload) {
-  if (payload.length < 3) {
+  const d = VersionDeclaration.length;
+  if (payload.length < d + 1) {
     throw const FormatException('Noise handshake payload is truncated');
   }
-  final version =
-      ByteData.sublistView(payload, 0, 2).getUint16(0, Endian.big);
-  if (version != NoiseSessionManager.protocolVersion) {
-    throw FormatException('Noise handshake protocol version $version != '
-        '${NoiseSessionManager.protocolVersion}; refused');
-  }
-  final kind = _Kind.fromValue(payload[2]);
-  var offset = 3;
+  final declarationBytes = Uint8List.fromList(payload.sublist(0, d));
+  VersionDeclaration.decode(declarationBytes);
+  final kind = _Kind.fromValue(payload[d]);
+  var offset = d + 1;
   Uint8List? claim;
   Uint8List? signature;
   if (kind.carriesClaim) {
@@ -1730,8 +1789,8 @@ _Envelope _decodeEnvelope(Uint8List payload) {
       offset += _signatureLength;
     }
   }
-  return _Envelope(
-      kind, claim, signature, Uint8List.fromList(payload.sublist(offset)));
+  return _Envelope(declarationBytes, kind, claim, signature,
+      Uint8List.fromList(payload.sublist(offset)));
 }
 
 SecretBox _secretBoxWithoutNonce(Uint8List data, {required Uint8List nonce}) {

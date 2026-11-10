@@ -1,9 +1,11 @@
 import 'dart:typed_data';
+import 'layer_version.dart';
 import '../models/identity.dart';
 import 'package:sodium/sodium.dart';
 
-/// Exact length of an ANNOUNCE payload: pubkey(32) + version(2) + sig(64).
-const int announcePayloadLength = 98;
+/// Exact length of an ANNOUNCE payload: pubkey(32) + version declaration(9)
+/// + sig(64) (GNA api.tex, "Versions").
+const int announcePayloadLength = 32 + VersionDeclaration.length + 64;
 
 /// Handles Grassroots protocol logic: packet encoding/decoding,
 /// ANNOUNCE parsing, MESSAGE handling, etc.
@@ -13,69 +15,11 @@ const int announcePayloadLength = 98;
 class ProtocolHandler {
   final GrassrootsIdentity identity;
   final Sodium _sodium;
-  /// The protocol version, carried in ANNOUNCE and opening every Noise
-  /// handshake envelope; a mismatch is refused at either.
-  ///
-  /// 3 since 2026-07-12, for the Message Protocol (spec §Message Protocol): self-contained, session-encrypted fragments over UDP datagrams and GATT writes, acknowledged per fragment, and the self-ordering handshake.
-  ///
-  /// 4 since 2026-08-02, for the attestation exchange of §Session
-  /// Establishment. It bumps rather than rides version 3 because it changes
-  /// what session establishment REQUIRES: a version-4 agent waits for an
-  /// attestation a version-3 agent never sends, so the peer never becomes
-  /// reachable and the session dies by timeout with nothing saying why. That
-  /// silent divergence is what this check exists to refuse loudly.
-  ///
-  /// 5 since 2026-08-03, for the two-step exchange §Session Establishment now
-  /// specifies: attest the key once over a challenge naming the identity key,
-  /// and sign the per-session digest with it. Two independent reasons, either
-  /// sufficient. The SHAPE changes — version 4 carries an attestation alone,
-  /// version 5 an attestation and a signature, and this layer's decoders do
-  /// not tolerate a missing field. And the MEANING changes, which is worse: a
-  /// version-4 attestation is over the SESSION digest, a version-5 one over
-  /// `pk` and long-lived, so a version-4 verifier handed a version-5
-  /// attestation would check it against the session digest, find it INVALID,
-  /// and tear the session down — a spurious hard security failure with a
-  /// misleading reason rather than a decode error.
-  ///
-  /// 6 since 2026-10-11, for the attestation exchange riding the Message
-  /// Protocol (spec §Session Establishment, §Message Protocol): the
-  /// attestation travels as the fragments of a message, acknowledged and
-  /// retransmitted, where version 5 sent it as one packet. The SHAPE changes —
-  /// a version-5 peer's single attestation packet is not a fragment, and this
-  /// layer's fragment decoder does not tolerate it — so a mixed pair would
-  /// wait on an exchange neither side can read. Refused here instead.
-  ///
-  /// 7 since 2026-10-21, for Noise IK whenever the initiator expects the
-  /// responder's key, ANNOUNCE inside the session, and the final handshake
-  /// message retransmitted until the attestation arrives (GNA §2.5, §2.6,
-  /// "Protocol version 7, version 6 refused at the handshake"). The SHAPE
-  /// changes: a version-6 peer opens contact with a clear ANNOUNCE and an XX
-  /// handshake whose envelope this version does not read, and reads none of
-  /// this version's IK. Since a version-7 handshake is not preceded by
-  /// ANNOUNCE, the refusal is at the handshake, whose envelope opens with the
-  /// version; ANNOUNCE refuses another version too.
-  ///
-  /// 8 since 2026-10-23, for the version number in the attestation exchange
-  /// (GNA §2.6, "H("glp attest" | pk | v | h), where v is the application's
-  /// version number"): the attestation message carries v, and the
-  /// per-session signature is over a digest naming it. The SHAPE changes: a
-  /// version-7 attestation message carries no version number, and its
-  /// signature is over a digest this version does not compute, so a mixed
-  /// pair would tear every session down at the exchange. Refused at the
-  /// handshake instead.
-  ///
-  /// 9 since 2026-11-08, for the acknowledgment of a message's last fragment
-  /// only once the receiver has reassembled and saved the message, and no
-  /// whole-message acknowledgment (GNA, 2026-11-08: a message whose fragments
-  /// are all acknowledged is settled). The SHAPE changes — the ACK packet
-  /// types are gone, and this version drops them as unknown — and so does
-  /// the MEANING of the last fragment acknowledgment: a version-8 receiver
-  /// acknowledges every fragment before it saves the message, so a
-  /// version-9 sender would settle a message its recipient may lose; and a
-  /// version-8 sender, waiting for a whole-message acknowledgment a version-9
-  /// receiver never sends, would send every message again forever. Refused at
-  /// the handshake instead.
-  static const int protocolVersion = 9;
+
+  /// The layer's versions, which every ANNOUNCE declares (GNA api.tex,
+  /// "Versions"; [VersionDeclaration]).  Until 2026-11-10 one protocol
+  /// version, 9 at the last, was shared by both kinds and any other refused.
+  final VersionDeclaration declaration;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;
@@ -87,6 +31,7 @@ class ProtocolHandler {
   ProtocolHandler({
     required this.identity,
     required Sodium sodium,
+    this.declaration = VersionDeclaration.smartphone,
   }) : _sodium = sodium;
 
   // ===== Encoding =====
@@ -101,17 +46,17 @@ class ProtocolHandler {
   /// distribution is not ANNOUNCE's role (addresses reach the layer via
   /// `putPeerAddress`, fed by GLP).
   ///
-  /// Format: [pubkey(32) + version(2) + signature(64)]
+  /// Format: [pubkey(32) + version declaration(9) + signature(64)], the
+  /// declaration the layer's kind, version, earliest compatible version and
+  /// the versions of each kind it works with (GNA api.tex, "Versions").
   Uint8List createAnnouncePayload() {
     final buffer = BytesBuilder();
 
     // Pubkey (32 bytes)
     buffer.add(identity.publicKey);
 
-    // Protocol version (2 bytes)
-    final versionBytes = ByteData(2);
-    versionBytes.setUint16(0, protocolVersion, Endian.big);
-    buffer.add(versionBytes.buffer.asUint8List());
+    // The version declaration (9 bytes)
+    buffer.add(declaration.encode());
 
     buffer.add(signBytes(buffer.toBytes()));
     return buffer.toBytes();
@@ -127,8 +72,8 @@ class ProtocolHandler {
   AnnounceData decodeAnnounce(Uint8List data) {
     if (data.length != announcePayloadLength) {
       throw const FormatException(
-          'ANNOUNCE payload must be exactly pubkey(32) + version(2) + '
-          'signature(64) bytes');
+          'ANNOUNCE payload must be exactly pubkey(32) + version '
+          'declaration(9) + signature(64) bytes');
     }
     var offset = 0;
 
@@ -136,18 +81,12 @@ class ProtocolHandler {
     final pubkey = data.sublist(offset, offset + 32);
     offset += 32;
 
-    // Version (2 bytes)
-    final version = ByteData.view(data.buffer, data.offsetInBytes + offset, 2)
-        .getUint16(0, Endian.big);
-    offset += 2;
-
-    // Refuse mixed protocol versions: the wire protocol changed
-    // incompatibly (spec §Message Transport); a peer speaking another
-    // version cannot interoperate and its contact is refused here.
-    if (version != protocolVersion) {
-      throw FormatException(
-          'ANNOUNCE protocol version $version != $protocolVersion; refused');
-    }
+    // The version declaration (9 bytes), checked once the signature is:
+    // "each peer checks that the version the other works with lies between
+    // its own earliest compatible version and its own version ... otherwise
+    // the connection is refused" (GNA api.tex, "Versions").
+    final declared = VersionDeclaration.decode(data, offset);
+    offset += VersionDeclaration.length;
 
     final signature = data.sublist(offset, offset + announceSignatureLength);
     final signedBytes = data.sublist(0, offset);
@@ -158,10 +97,15 @@ class ProtocolHandler {
     )) {
       throw const FormatException('ANNOUNCE signature verification failed');
     }
+    final talksAs = declaration.accepts(declared);
+    if (talksAs == null) {
+      throw VersionDeclaration.refusal(declaration, declared);
+    }
 
     return AnnounceData(
       publicKey: Uint8List.fromList(pubkey),
-      protocolVersion: version,
+      declaration: declared,
+      talksAs: talksAs,
     );
   }
 
@@ -210,11 +154,20 @@ class ProtocolHandler {
 /// Decoded ANNOUNCE data
 class AnnounceData {
   final Uint8List publicKey;
-  final int protocolVersion;
+  /// The peer's version declaration (GNA api.tex, "Versions").
+  final VersionDeclaration declaration;
+
+  /// The version of this layer's kind it talks to the peer as: the one the
+  /// peer works with.
+  final int talksAs;
+
+  /// The peer's version.
+  int get protocolVersion => declaration.version;
 
   const AnnounceData({
     required this.publicKey,
-    required this.protocolVersion,
+    required this.declaration,
+    required this.talksAs,
   });
 
   String get pubkeyHex =>

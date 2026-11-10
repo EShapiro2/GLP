@@ -11,6 +11,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/headless/headless_grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/protocol/layer_version.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/protocol/outbound_queue_store.dart';
 import 'package:grassroots_networking_core/src/models/rendezvous_server.dart';
@@ -326,8 +327,9 @@ void main() {
         }
         received.add(packet.type);
         if (packet.type == PacketType.noiseHandshake &&
-            packet.payload.length > 2) {
-          kinds.add(packet.payload[2]);
+            packet.payload.length > VersionDeclaration.length) {
+          // The kind follows the version declaration (GNA, "Versions").
+          kinds.add(packet.payload[VersionDeclaration.length]);
         }
       }
     });

@@ -17,7 +17,8 @@ typedef _Carried = ({bool fromCaller, int type, int? kind});
 
 /// A loopback UDP relay in front of the callee that records what it carries
 /// in each direction, and drops what [drop] picks. The frame's type byte is in
-/// the clear, and a handshake envelope opens with the version and the kind.
+/// the clear, and a handshake envelope opens with the version declaration and
+/// the kind.
 class _Relay {
   _Relay._(this._socket, this._calleePort) {
     _socket.listen((event) {
@@ -63,12 +64,17 @@ class _Relay {
   int get port => _socket.port;
   String get address => '127.0.0.1:$port';
 
+  /// The frame's head is 5 bytes, and the envelope opens with the version
+  /// declaration (GNA api.tex, "Versions") and then the kind.
+  static const int _kindAt = 5 + VersionDeclaration.length;
+
   static _Carried _describe(bool fromCaller, Uint8List data) => (
         fromCaller: fromCaller,
         type: data.isEmpty ? -1 : data[0],
-        kind: data.length > 7 && data[0] == PacketType.noiseHandshake.value
-            ? data[7]
-            : null,
+        kind:
+            data.length > _kindAt && data[0] == PacketType.noiseHandshake.value
+                ? data[_kindAt]
+                : null,
       );
 
   void _relay(Datagram d) {
@@ -319,7 +325,9 @@ void main() {
         reason: 'not after the attestation arrived');
   }, timeout: Timeout.none);
 
-  test('a peer on version 6 or 7 is refused at the handshake', () async {
+  test(
+      'a peer on the one protocol version of before (6, 7, 9), or declaring '
+      'a version this server is not, is refused at the handshake', () async {
     if (skipped()) return;
     final callee = await node(0x5f);
     final v6Id = await identityFromSeed(0x60);
@@ -362,13 +370,36 @@ void main() {
                 .serialize()),
         isFalse);
     // And bearing version 7, the version before the attestation message
-    // carried the application's version number (GNA §2.6).
-    final version7 = Uint8List.fromList(ik)..setRange(0, 2, [0, 7]);
+    // carried the application's version number (GNA §2.6), and 9, the last
+    // one protocol version, before each kind was versioned on its own.
+    for (final v in [7, 9]) {
+      final relabelled = Uint8List.fromList(ik)..setRange(0, 2, [0, v]);
+      expect(
+          await answered(
+              callee,
+              GrassrootsPacket(
+                      type: PacketType.noiseHandshake, payload: relabelled)
+                  .serialize()),
+          isFalse,
+          reason: 'version $v');
+    }
+    // And a smartphone that works with server 2, which this server, 1 back to
+    // 1, is not (GNA api.tex, "Versions").
+    final ahead = Uint8List.fromList(ik)
+      ..setRange(
+          0,
+          VersionDeclaration.length,
+          const VersionDeclaration(
+                  kind: LayerKind.smartphone,
+                  version: 2,
+                  earliest: 2,
+                  worksWithSmartphone: 2,
+                  worksWithServer: 2)
+              .encode());
     expect(
         await answered(
             callee,
-            GrassrootsPacket(
-                    type: PacketType.noiseHandshake, payload: version7)
+            GrassrootsPacket(type: PacketType.noiseHandshake, payload: ahead)
                 .serialize()),
         isFalse);
     expect(callee.isPeerReachable(v6Id.publicKey), isFalse);
