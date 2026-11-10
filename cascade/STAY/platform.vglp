@@ -1085,7 +1085,7 @@ RRoleSpecs ::= [] ; [RRoleSpec | RRoleSpecs].
 RReach    ::= reach(RNameTerm, Constant, RNameTerm).
 RReaches  ::= [] ; [RReach | RReaches].
 RConstraint ::= true ; and(RConstraint, RConstraint) ; eq(RExpr, RExpr) ; le(RExpr, RExpr) ; lt(RExpr, RExpr) ; ge(RExpr, RExpr) ; gt(RExpr, RExpr) ; succ(RArg, RArg) ; or(RConstraint, RConstraint) ; signed(RArg, RArg) ; unsigned(RArg, RArg) ; not(RConstraint) ; implies(RConstraint, RConstraint) ; ne(RExpr, RExpr) ; rel(Constant, RExprs) ; program(RExpr).
-RExpr     ::= RArg ; plus(RExpr, RExpr) ; minus(RExpr, RExpr) ; mul(RExpr, RExpr) ; fn(Constant, RExprs) ; cardinality(RArgs, RArg, RAtom, RForm) ; sum(RArgs, RArg, RAtom, RForm, RExpr) ; author_of(RArg) ; item_of(RArg).
+RExpr     ::= RArg ; plus(RExpr, RExpr) ; minus(RExpr, RExpr) ; mul(RExpr, RExpr) ; fn(Constant, RExprs) ; cardinality(RArgs, RArg, RAtom, RForm) ; sum(RArgs, RArg, RAtom, RForm, RExpr) ; author_of(RArg).
 RExprs    ::= [] ; [RExpr | RExprs].
 RForm     ::= fa(RArg, RAtom) ; fnot(RForm) ; fand(RForm, RForm) ; for(RForm, RForm) ; fexists(RArgs, RArg, RAtom, RForm) ; fforall(RArgs, RArg, RAtom, RForm, RForms) ; fcons(RConstraint).
 RForms    ::= [] ; [RForm | RForms].
@@ -1239,7 +1239,7 @@ Preds     ::= [] ; [Constant | Preds].
 %% A constraint may also hold not(C), implies(C1, C2) and ne(X, Y), X != Y, as programs/gsc writes them (GSC c8c5ead, def:numbers); eq and ne compare two agents, two speech acts or two community names as they compare two numbers ("eq and ne also compare two agent variables, two speech-act variables or two name terms", ibid.).
 Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var) ; program(Expr).
 %% An expression may also be a function the value types provide, fn(min, [X, Y]) or fn(floor, [X]), the count of the instances of a quantifier, cardinality(Xs, H, A, Phi), or the sum of a numeric term over them, sum(Xs, H, A, Phi, U), A the anchor held by H, as programs/gsc writes them (GSC 67a7da0, def:numbers): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
-Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var) ; item_of(Var).
+Expr      ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var).
 Exprs     ::= [] ; [Expr | Exprs].
 %% The role of a conjunct of the constraint: every, which every role checks; at(I), which the role I checks; cond, of the part's condition, which the initiator checks on the readings (vGLP 566c186, Section 5.4: "a conjunct that names variables local to two roles or more is of the part's condition").
 CRole     ::= every ; at(Integer) ; cond.

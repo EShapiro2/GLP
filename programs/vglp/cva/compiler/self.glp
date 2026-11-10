@@ -57,7 +57,8 @@ Constraint ::= true ; and(Constraint, Constraint)
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
              ; sum(Args, Arg, Atom, Form, Expr)
-             ; author_of(Arg) ; item_of(Arg).
+             ; author_of(Arg).
+%% The item of a speech act, item_of(Y), is an Arg, an argument of an atom (vGLP e1d1b8a, Section 5.4), and so an Expr through Arg: an alternative item_of(Arg) beside Arg would be a second alternative of the functor item_of/1, which TGLP's Type Declarations refuse ("a type name S, providing type union for types with disjoint top-level functors"; vGLP #24's yes, Code_inbox.md, 2026-11-10 13:08 UTC; Cloud #12).
 %% author_of(Y), item_of(Y) and program(E), the author and the item of the speech act bound to Y and a condition on an utterance its type provides, as programs/gsc/self.glp writes them (GSC 65a26da, def:numbers): the compiler takes the author and the item (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- ...; the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 20:36 item 1), and refuses a contract that holds a program condition, with the reason (cvac.glp, con_beyond).
 Exprs      ::= [] ; [Expr | Exprs].
 Constraints ::= [] ; [Constraint | Constraints].
