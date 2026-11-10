@@ -29,7 +29,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/glp_sources.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart' show bytesToHex;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 
@@ -68,9 +67,7 @@ void main() {
     expect(glp.coreDir, startsWith('${docs.path}/'));
 
     // As AgentRuntime._setUp makes the agent's engine and loads its program.
-    final engine = GlpEngine(
-        rootSelfGlpPath: glp.rootSelfGlp,
-        identity: PersonIdentity.generate());
+    final engine = GlpEngine(rootSelfGlpPath: glp.rootSelfGlp);
     engine.enableMadGLP(agentId: 'bundle_load_test');
     expect(engine.loadProgram(glp.coreDir), isTrue,
         reason: 'the bundle\'s core did not load');

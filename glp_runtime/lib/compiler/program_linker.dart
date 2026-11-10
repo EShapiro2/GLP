@@ -235,7 +235,9 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   // The self.glp files that import a compiled procedure or the dispatcher
   // are read into every scope as SelfGlpReading reads them, until the
   // compilation has written its types into them (module_hierarchy.dart,
-  // selfGlpReading; vGLP, Section 6.3).
+  // selfGlpReading; TGLP d993305, "Sources compiled to GLP": "The sources
+  // are compiled in the directory's scope without those types, and the
+  // directory's self.glp is checked after, with them"; vGLP, Section 6.3).
   // A self.glp above the root, up to programs/, is read whole: where one
   // imports a procedure whose declaration names a type the compilation forms
   // in a module below the root, as the currencies' self.glp names Drawn
@@ -997,13 +999,23 @@ class _WrittenType {
 }
 
 /// The types the compilation forms, written into the modules that import
-/// them: "Every module of [M] type-checks as GLP with no type written by
-/// hand: the compilation writes into each module that imports a compiled
-/// procedure, the dispatcher, or a procedure whose declaration names a type
-/// the compilation forms, the types it forms for them, the linker so writing
-/// them, among them the type of the asks, the view types and the parameter
-/// of the person channel" (vGLP e1d1b8a, Section 6.3, "The canonical
-/// compilation"; vGLP #24, Code_inbox.md, 2026-11-07 17:19 UTC, item 1).
+/// them (TGLP d993305, modules.tex, Compilation, "Sources compiled to GLP":
+/// "The types the compilation of a directory's sources forms are defined in
+/// that directory's scope, as if its self.glp defined them, and so are in the
+/// scope of every module at or below that directory, in whatever program it
+/// is compiled and when it is loaded alone; a module elsewhere names them by
+/// M#T, as it names any type of another module's exports"; vGLP e1d1b8a,
+/// Section 6.3, "The canonical compilation": "the compilation writes into
+/// each module that imports a compiled procedure, the dispatcher, or a
+/// procedure whose declaration names a type the compilation forms, the types
+/// it forms for them, the linker so writing them").  Writing them into the
+/// directory's self.glp and into the modules at or below it is the
+/// paragraph's "as if its self.glp defined them".  A module above the
+/// directory --- programs/tests/linker_tree's self.glp and plays.glp over
+/// agents/, the currencies' self.glp, village.glp and play_ui.glp over their
+/// agents' directories --- gets them written too, by name, where the
+/// paragraph has it name them by M#T, which the checker does not resolve
+/// (Cloud #16, Code_inbox 2026-11-10, the Runtime-cite-d993305 report).
 ///
 /// A compiled module --- one the loader compiled from a `.vglp` source, or
 /// one committed beside its source, its first line the compiler's header ---
@@ -1171,8 +1183,10 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       return discover();
     } on UndefinedDeclarationTypeError {
       // A self.glp of the chain may be a module the compilation writes
-      // types into, directly or through a module of its directory (vGLP,
-      // Section 6.3; _writeCompiledTypes), and so name a type no scope
+      // types into, directly or through a module of its directory (TGLP
+      // d993305, "Sources compiled to GLP": the formed types are in the
+      // scope of every module at or below the sources' directory "when it
+      // is loaded alone"; _writeCompiledTypes), and so name a type no scope
       // defines until the program of its directory is discovered: discover
       // that program, read its self.glp files as the compilation wrote them,
       // and discover the module again; where no compiled module is below the
@@ -1189,9 +1203,20 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
 }
 
 /// The types the compilation writes into the `self.glp` files at [selfPaths]
-/// (vGLP, Section 6.3), read into [selfGlpReading] from a discovery of the
-/// program of the outermost of them, the root excepted, with a compiled
-/// module in its directory or below; false where there is none.
+/// (TGLP d993305, modules.tex, Compilation, "Sources compiled to GLP": the
+/// types a compilation of a directory's sources forms are in the scope of
+/// every module at or below that directory, "in whatever program it is
+/// compiled and when it is loaded alone"; vGLP, Section 6.3), read into
+/// [selfGlpReading] from a discovery of the program of the outermost of
+/// them, the root excepted, with a compiled module in its directory or
+/// below; false where there is none.  Every case the tree takes it in is a
+/// self.glp above the sources' directory --- linker_tree's under host.glp
+/// loaded alone, coins' under GC.glp alone and under coins/currency as the
+/// program, sovereign's under sovereign/denominated --- which the paragraph
+/// has name the formed types by M#T; the case it covers, a module at or
+/// below the directory loaded alone, is served by [_selfGlpReadingOf] reading
+/// a committed compiled module's types from the start (Cloud #16,
+/// Code_inbox 2026-11-10, the Runtime-cite-d993305 report).
 bool _readCompiledTypesOfChain(List<String> selfPaths,
     {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
   final reading = selfGlpReading;

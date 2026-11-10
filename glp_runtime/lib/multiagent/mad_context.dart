@@ -10,7 +10,7 @@ import 'dart:async';
 
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart'
-    show deepDeref, reachableKey;
+    show deepDeref, networkKey, publicAddressKey, reachableKey;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/saved_state.dart';
@@ -158,6 +158,19 @@ class MadContext {
   /// session, and is checked when the reach is delivered.  Where it is not
   /// set, a reach is delivered as the layer reports it.
   void Function(Term reach, int declaration)? reachSink;
+
+  /// Where set, the host's: a change of the agent's own public address the
+  /// layer reports, `onConnectivityStatusChanged`, delivered as an event of
+  /// the agent's own, whose cycle hands it to [deliverPublicAddress], as it
+  /// does a reach ([reachSink]).  [declaration] is the public-address
+  /// declaration that stood when the layer reported the change.  Where it is
+  /// not set, the change is delivered as the layer reports it.
+  void Function(Term address, int declaration)? publicAddressSink;
+
+  /// Where set, the host's: a change of the local network the layer reports,
+  /// `onNetworkChanged`, delivered as an event of the agent's own, whose
+  /// cycle hands it to [deliverNetwork], as [publicAddressSink].
+  void Function(Term network, int declaration)? networkSink;
 
   /// The number of reaches delivered onto the reachable stream, so that a
   /// host delivering them as they arrive can tell that a run is to follow.
@@ -881,7 +894,9 @@ class MadContext {
   /// it", IGLP 96cd44a), its stream a refusal is put on, as [declarePlace]
   /// does.
   /// A nearby declaration calls no layer function: its stream is fed by what
-  /// the new layer reports.  A layer function the layer does not have is
+  /// the new layer reports; a public-address or network declaration calls
+  /// none either, and its standing stream is given the new layer's present
+  /// value (the GLP paper f265fec, "Networking seam").  A layer function the layer does not have is
   /// traced and the rest are made.  Does nothing where no layer is bound.
   /// Returns the declarations made.
   List<StandingDeclaration> declareStandingToLayer() {
@@ -912,6 +927,20 @@ class MadContext {
                 : null;
             _askLayerForPlace(
                 network, a[0], centre, double.parse(a[1]), declaration);
+          case SeamDeclarationKind.publicAddress:
+            // No layer function: the standing stream, restored with the
+            // state, is given the new layer's present address, as a
+            // declaration begins (the GLP paper f265fec, "Networking seam").
+            if (runtime.publicAddressStreams.standing(publicAddressKey) ==
+                null) {
+              continue;
+            }
+            runtime.publicAddressStreams.deliver(
+                publicAddressKey, addressTerm(presentPublicAddress()));
+          case SeamDeclarationKind.network:
+            if (runtime.networkStreams.standing(networkKey) == null) continue;
+            runtime.networkStreams
+                .deliver(networkKey, networkTerm(presentNetwork()));
         }
         made.add(d);
         _trace('[MAD $agentId] restart: $d made to the layer again');
@@ -1159,6 +1188,149 @@ class MadContext {
     runtime.reachableStreams.deliver(reachableKey, reach);
     reachesDelivered++;
     _trace('[MAD $agentId] reachable: $reach');
+  }
+
+  // ===========================================================================
+  // THE AGENT'S OWN PUBLIC ADDRESS AND LOCAL NETWORK (Definition Seam
+  // Predicates: public_address(S), network(S))
+  // ===========================================================================
+  //
+  // The GLP paper f265fec, appendix-guards, "Networking seam": "public_address(S)
+  // assigns S a stream of the agent's own public address, beginning with
+  // address(A), A the ip:port the layer has learnt from a rendezvous server,
+  // or none where it knows none, when it is declared, and then the address at
+  // each change, none where it is lost. ... network(S) assigns S a stream of
+  // the local network the agent is attached to, beginning with attached(N), N
+  // an opaque fingerprint of that network, or none where it is attached to
+  // none or the platform makes the fingerprint unreadable, when it is
+  // declared, and then the network at each change ... For each, a further
+  // declaration supersedes the earlier one and closes its stream, and the
+  // removal ends the declaration and closes its stream.  The address and the
+  // network change independently of each other."  IGLP 07a2b00, Definition
+  // "Seam Predicates": declare(public_address(S?)) and declare(network(S?)).
+  //
+  // The layer gives the present address by getPublicAddress() and each change
+  // by onConnectivityStatusChanged(old, new), the present network by
+  // networkIdentity() and each change by onNetworkChanged(old, new) (GNA
+  // ip.tex, Connectivity and Address; Local Network Identity); the host
+  // routes the two callbacks to [publicAddressChanged] and
+  // [networkChanged].  A layer that does not provide a function, the
+  // simulation's, gives none (IGLP 07a2b00, "Simulation realisation").  The
+  // streams are the runtime's bookkeeping ([GlpRuntime.publicAddressStreams],
+  // [GlpRuntime.networkStreams]), fed and closed as a place's; what the layer
+  // reports is the layer's, so a restart gives a standing stream the new
+  // layer's present value ([declareStandingToLayer]).
+
+  /// `address(A)` for the address [a], or `none` where the layer knows none.
+  static Term addressTerm(String? a) =>
+      a == null ? ConstTerm('none') : StructTerm('address', [ConstTerm(a)]);
+
+  /// `attached(N)` for the network fingerprint [n], or `none` where the agent
+  /// is attached to none or the fingerprint is unreadable.
+  static Term networkTerm(String? n) =>
+      n == null ? ConstTerm('none') : StructTerm('attached', [ConstTerm(n)]);
+
+  /// The agent's public address as the layer knows it now; null where it
+  /// knows none, or does not provide the function.
+  String? presentPublicAddress() {
+    try {
+      return network?.getPublicAddress();
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
+  /// The local network the layer is attached to now, by its fingerprint;
+  /// null where it is attached to none, or does not provide the function.
+  String? presentNetwork() {
+    try {
+      return network?.networkIdentity();
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
+  /// Declare a watch on the agent's own public address, its stream growing
+  /// from [streamWriterAddr], the writer of the `S` of
+  /// `declare(public_address(S))`; a declaration already standing is
+  /// superseded and its stream closed.  The stream is given the present
+  /// address at once.
+  void declarePublicAddress(HeapCell streamWriterAddr) {
+    runtime.publicAddressStreams.declare(publicAddressKey, streamWriterAddr);
+    final present = addressTerm(presentPublicAddress());
+    _trace('[MAD $agentId] declare public_address: stream '
+        'writer=$streamWriterAddr, present $present');
+    runtime.publicAddressStreams.deliver(publicAddressKey, present);
+  }
+
+  /// Declare a watch on the local network the agent is attached to, its
+  /// stream growing from [streamWriterAddr], the writer of the `S` of
+  /// `declare(network(S))`; a declaration already standing is superseded and
+  /// its stream closed.  The stream is given the present network at once.
+  void declareNetwork(HeapCell streamWriterAddr) {
+    runtime.networkStreams.declare(networkKey, streamWriterAddr);
+    final present = networkTerm(presentNetwork());
+    _trace('[MAD $agentId] declare network: stream writer=$streamWriterAddr, '
+        'present $present');
+    runtime.networkStreams.deliver(networkKey, present);
+  }
+
+  /// The layer reported the agent's public address changed to [newAddress],
+  /// null where it is lost, `onConnectivityStatusChanged(old, new)`.  Called
+  /// by the host that binds the network.
+  void publicAddressChanged(String? newAddress) {
+    final declaration =
+        runtime.publicAddressStreams.standing(publicAddressKey);
+    if (declaration == null) return;
+    final address = addressTerm(newAddress);
+    final sink = publicAddressSink;
+    if (sink != null) {
+      sink(address, declaration);
+    } else {
+      deliverPublicAddress(address, declaration: declaration);
+    }
+  }
+
+  /// The layer reported the local network changed to [newId], null where the
+  /// agent is attached to none, `onNetworkChanged(old, new)`.  Called by the
+  /// host that binds the network.
+  void networkChanged(String? newId) {
+    final declaration = runtime.networkStreams.standing(networkKey);
+    if (declaration == null) return;
+    final net = networkTerm(newId);
+    final sink = networkSink;
+    if (sink != null) {
+      sink(net, declaration);
+    } else {
+      deliverNetwork(net, declaration: declaration);
+    }
+  }
+
+  /// Deliver [address] on the public-address stream, serializer-fashion; one
+  /// answering a [declaration] that no longer stands, removed or superseded,
+  /// is dropped.
+  void deliverPublicAddress(Term address, {required int declaration}) {
+    if (!runtime.publicAddressStreams
+        .isStanding(publicAddressKey, declaration)) {
+      _trace('[MAD $agentId] public address $address for a declaration that '
+          'no longer stands --- dropped');
+      return;
+    }
+    runtime.publicAddressStreams.deliver(publicAddressKey, address);
+    _trace('[MAD $agentId] public_address: $address');
+  }
+
+  /// Deliver [net] on the network stream, serializer-fashion; one answering
+  /// a [declaration] that no longer stands, removed or superseded, is
+  /// dropped.
+  void deliverNetwork(Term net, {required int declaration}) {
+    if (!runtime.networkStreams.isStanding(networkKey, declaration)) {
+      _trace('[MAD $agentId] network $net for a declaration that no longer '
+          'stands --- dropped');
+      return;
+    }
+    runtime.networkStreams.deliver(networkKey, net);
+    _trace('[MAD $agentId] network: $net');
   }
 
   /// The layer's session with [pk] as reported, or null where it has none:

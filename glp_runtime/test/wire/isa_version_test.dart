@@ -20,6 +20,8 @@ import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart';
 import 'package:glp_runtime/engine_v2/interp.dart' show codeImageFromProgram;
 import 'package:glp_runtime/multiagent/identity.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
@@ -27,7 +29,11 @@ import 'package:test/test.dart';
 
 Uint8List _hm() => Uint8List.fromList(List<int>.generate(32, (i) => 7 * i));
 
-final PersonIdentity _compiler = PersonIdentity.generate();
+/// The compiling person's layer, which holds the key pair and signs: the
+/// signer an engine certifies by (the GLP paper f265fec, "Identity and
+/// signature").
+final AgentSigner _compiler =
+    LayerSigner(SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
 
 const String _source = '''
 procedure p(Integer?).
