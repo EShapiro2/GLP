@@ -51,7 +51,10 @@ import 'package:glp_runtime/wire/artefact.dart'
     show Artefact, ArtefactExport, glpIsaVersion;
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show TypeIdentityTables;
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show AgentSigner, LayerSigner, PersonIdentity;
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/compiler/certification.dart'
     show privilegedRootSeed, privilegedCalls;
 
@@ -206,13 +209,21 @@ class GlpEngine {
   /// ([GlpRuntime.madContext]), set by [enableMadGLP].
   MadContext? get madContext => _runtime.madContext;
 
-  /// The person's identity the runtime holds (Secure GLP §Assumptions: `sign`
-  /// succeeds only under a key whose private half the runtime holds for its
-  /// own person). It signs every certificate this engine's compiler writes and
-  /// backs `self_key/1` and `sign/3`. Given at construction by a harness that
-  /// also installs it on the agent's networking layer; generated fresh
-  /// otherwise (glpc, the suite), where the paper names no key.
-  PersonIdentity get identity => _runtime.identity!;
+  /// What the runtime holds of the agent's identity: the public key, and a
+  /// signature by the networking layer, which holds the private key (the GLP
+  /// paper f265fec, appendix-guards, "Identity and signature": the runtime
+  /// "gives it to the networking layer, which holds the private key and signs
+  /// with it"; IGLP 07a2b00, Implementation Notes, "The contract").  It signs
+  /// every certificate this engine's compiler writes and backs `self_key/1`
+  /// and `sign/3`.  Given at construction by the host, a [LayerSigner] over
+  /// the agent's layer, the networking layer or the simulation's client;
+  /// where none is given (glpc's compiler, the suite), a layer of the
+  /// engine's own, the simulation's client with no router, made with a fresh
+  /// key pair, which it holds and signs with: the paper names no key there
+  /// (reported to IGLP, 2026-09-08), and the runtime holds no private key
+  /// either way.  Until 2026-11-10 the runtime held the key pair itself and
+  /// signed with it.
+  AgentSigner get identity => _runtime.identity!;
 
   /// Access to the runtime (for madGLP integration)
   GlpRuntime get runtime => _runtime;
@@ -229,9 +240,12 @@ class GlpEngine {
   ///
   /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
   /// Loading root self.glp is not optional — it's part of engine initialization.
-  GlpEngine({required String rootSelfGlpPath, PersonIdentity? identity}) {
+  GlpEngine({required String rootSelfGlpPath, AgentSigner? identity}) {
     _rootSelfGlpPath = rootSelfGlpPath;
-    _runtime.identity = identity ?? PersonIdentity.generate();
+    _runtime.identity = identity ??
+        LayerSigner(SimulationNetworkClient.alone(
+            PersonIdentity.generate().keyPair,
+            selfId: 'engine'));
 
     // Nothing is set for the process: every check, partial evaluation and
     // compilation below is given its scope (module_hierarchy.dart,

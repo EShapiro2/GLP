@@ -88,12 +88,6 @@ void main() {
             .newKeyPairFromSeed(Uint8List.fromList(List.filled(32, fill))),
       );
 
-  /// The key pair the host holds for the person: the layer's own.
-  ({glp.PubKey pub, Uint8List priv}) keyPairOf(GrassrootsIdentity id) => (
-        pub: glp.PubKey.fromList(id.publicKey),
-        priv: Uint8List.fromList(id.privateKey),
-      );
-
   Future<String> line(List<String> lines, bool Function(String) test) async {
     final deadline = DateTime.now().add(const Duration(seconds: 90));
     while (true) {
@@ -115,8 +109,9 @@ void main() {
     }
     final callerId = await identityOf(0x5a);
     final calleeId = await identityOf(0x6b);
-    final callerKp = keyPairOf(callerId);
-    final calleeKp = keyPairOf(calleeId);
+    // The keys the layers hold; the host hands the runtime no key pair.
+    final callerKey = glp.PubKey.fromList(callerId.publicKey);
+    final calleeKey = glp.PubKey.fromList(calleeId.publicKey);
 
     // The callee's layer, which answers no unsolicited contact from a key
     // outside its known-peer set (GNA, "Cold Calls", Trust levels).
@@ -131,7 +126,7 @@ void main() {
     );
     addTearDown(calleeLayer.dispose);
     final calleeNet = HeadlessGlpNetwork(calleeLayer);
-    calleeNet.putKnownPeer(callerKp.pub);
+    calleeNet.putKnownPeer(callerKey);
 
     // The caller's layer, given the callee's key and address: what
     // declare(peer(P)) and declare(address(P, A)) give it.
@@ -147,14 +142,12 @@ void main() {
       agentId: 'callee',
       program: play,
       rootSelfGlpPath: root,
-      keyPair: calleeKp,
       network: calleeNet,
     );
     final caller = AgentRuntime(
       agentId: 'caller',
       program: play,
       rootSelfGlpPath: root,
-      keyPair: callerKp,
       network: callerNet,
     );
     final calleeOut = <String>[];
@@ -165,8 +158,8 @@ void main() {
     caller.onPeerConnected =
         (pk, underlay, identity) => connected.add('${pk.hex} $underlay');
 
-    expect(caller.name, callerKp.pub.hex);
-    expect(callee.name, calleeKp.pub.hex);
+    expect(caller.name, callerKey.hex);
+    expect(callee.name, calleeKey.hex);
 
     // The callee is bound to its layer before the layer starts, so that no
     // message the layer delivers finds no agent; the caller's layer starts,
@@ -176,17 +169,17 @@ void main() {
     await callee.injectUserInput(rt.ConstTerm('answer'));
     expect(await calleeLayer.start(), isTrue);
     expect(await callerLayer.start(), isTrue);
-    callerNet.putKnownPeer(calleeKp.pub);
-    callerNet.putPeerAddress(calleeKp.pub, '127.0.0.1:${calleeLayer.boundPort}');
+    callerNet.putKnownPeer(calleeKey);
+    callerNet.putPeerAddress(calleeKey, '127.0.0.1:${calleeLayer.boundPort}');
     await caller.initialize();
     // The caller's person names the callee, by its key.
     await caller.injectUserInput(
-        rt.StructTerm('call', [rt.ConstTerm(calleeKp.pub.hex)]));
+        rt.StructTerm('call', [rt.ConstTerm(calleeKey.hex)]));
 
     // The cold call crosses: the callee's program receives it on its network
     // input, addressed to its own name, its key.
     final called = await line(calleeOut, (l) => l.startsWith('< called('));
-    expect(called, contains(calleeKp.pub.hex));
+    expect(called, contains(calleeKey.hex));
 
     // The assignment crosses back.
     final answered = await line(callerOut, (l) => l.startsWith('< answered('));
@@ -194,6 +187,6 @@ void main() {
 
     // The caller's host surfaced the layer's report of the callee, over the
     // WAN, the headless profile's one underlay.
-    expect(connected, contains('${calleeKp.pub.hex} ${glp.Underlay.wan}'));
+    expect(connected, contains('${calleeKey.hex} ${glp.Underlay.wan}'));
   }, timeout: const Timeout(Duration(minutes: 3)));
 }

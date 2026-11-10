@@ -1,20 +1,8 @@
-/// The person's identity as the runtime holds it: an Ed25519 key pair.
+/// The agent's identity: the key pair a host makes and keeps, and what the runtime holds of it.
 ///
-/// Secure GLP (core.tex, §Assumptions and §The Seam): `sign` succeeds only
-/// under a key whose private half the runtime holds for its own person, and
-/// the module certificate is that person's signature at compilation. The
-/// runtime therefore holds one identity, from construction, and every kernel
-/// that signs — `'_sign'`/3, and the compiler writing a certificate — signs
-/// under it; `'_self_key'`/1 answers its public half. A harness that
-/// instantiates the agent's networking layer with its key pair (GNA,
-/// "Identity") installs the same pair here, so the layer, the certificate and
-/// `self_key` agree on who the person is.
+/// The private key is the networking layer's alone (GNA api.tex, "Identity": "The key pair is generated and persisted above the networking layer and is supplied to the layer's constructor when it is instantiated"; decision 39, the key pair private to the layer, which gives out the public key and signs; the GLP paper f265fec, appendix-guards, "Identity and signature": the runtime "gives it to the networking layer, which holds the private key and signs with it"; IGLP 07a2b00, Implementation Notes, "The contract": "the runtime supplies the key pair to the layer when it instantiates it, the layer keeping it unchanged for its lifetime").  So the runtime holds no private key: it holds an [AgentSigner], the layer's public key and a signature by the layer's `sign`, and every kernel that signs --- `'_sign'`/3, and the compiler writing a certificate --- signs by it; `'_self_key'`/1 answers its public key.  [PersonIdentity] is the key pair as a host makes it (the seed IGLP names, "Boot") and keeps it (the store, "Persistence"), to hand to the layer at its instantiation, and the runtime keeps no copy of it beyond that; a host that holds one gives the runtime a [LayerSigner] over the layer.
 ///
-/// Where the compiler runs with no agent — `glpc`, the suite — the paper says
-/// nothing about whose key certifies (reported to IGLP, 2026-09-08): the
-/// runtime generates a fresh pair at construction and holds it for the person
-/// of that process. Keys are real Ed25519 (`ed25519_edwards`, synchronous,
-/// as `SimulationNetworkClient` uses).
+/// An engine made with no signer --- glpc's compiler, the suite, where the paper names no key (reported to IGLP, 2026-09-08) --- makes a fresh key pair and hands it to a layer of its own, the simulation's client with no router ([SimulationNetworkClient.alone]), and signs by that layer; a bare runtime, made with no engine, holds no key, and `self_key/1` and `sign/3` abort in it.  The REPL and the harnesses bind the simulation's layer, which signs with the key pair it was made with, as the networking layer does.  Keys are real Ed25519 (`ed25519_edwards`, synchronous, as `SimulationNetworkClient` uses).
 library;
 
 import 'dart:convert' show utf8;
@@ -24,8 +12,31 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:ed25519_edwards/ed25519_edwards.dart' as ed;
 
-import 'glp_network.dart' show PubKey;
+import 'glp_network.dart' show GlpNetwork, PubKey;
 
+/// What the runtime holds of the agent's identity: the public key, and a signature made by the holder of the private key, the networking layer (the GLP paper f265fec, "Identity and signature"; IGLP 07a2b00, "The contract").  No realisation holds the private key but a layer's: [LayerSigner].
+abstract class AgentSigner {
+  /// The public key: what `self_key/1` assigns and a certificate names.
+  PubKey get pub;
+
+  /// Sign [message] under the private key, which the layer holds.
+  Uint8List sign(Uint8List message);
+}
+
+/// The agent's signer over its networking layer, [network], whose `getIdentity()` is the public key and whose `sign(bytes)` signs under the private key it holds (GNA, decision 39; GlpNetwork, "The layer holds the private key").  The layer of an agent over the network, and the simulation's client in a simulation and in the REPL.
+class LayerSigner implements AgentSigner {
+  final GlpNetwork network;
+
+  const LayerSigner(this.network);
+
+  @override
+  PubKey get pub => network.getIdentity();
+
+  @override
+  Uint8List sign(Uint8List message) => network.sign(message);
+}
+
+/// An Ed25519 key pair, as a host makes it for an agent and hands it to the agent's networking layer; the runtime holds no [PersonIdentity] (the library comment above).
 class PersonIdentity {
   /// The public key: what `self_key/1` assigns and a certificate names.
   final PubKey pub;
