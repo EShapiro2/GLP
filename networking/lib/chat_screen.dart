@@ -797,41 +797,8 @@ class _ChatScreenState extends State<ChatScreen> {
       message: message,
       onLongPress: (position) => _showMessageOptions(message, position),
       messagesState: widget.store.state.messages,
-      onResend: message.isOutgoing ? () => _resendMessage(message) : null,
       store: widget.store,
     );
-  }
-
-  Future<void> _resendMessage(ChatMessageState message) async {
-    debugPrint(
-        "Resending '${message.content}' to peer ${widget.peer.displayName}");
-
-    // Send via Grassroots using SayBlock. Picture resend is not yet wired —
-    // for now resend treats the message as text. (The bubble's resend affordance
-    // is only shown for failed messages, and pictures over BLE rarely fail
-    // partway because fragmentation is in-process.) The layer gives the block
-    // sent again an id of its own.
-    final block = TextSayBlock(content: message.content);
-    final messageId = await _sendChat(widget.peer.publicKey, block);
-
-    if (!mounted) return;
-
-    if (messageId != null) {
-      debugPrint("Resend successful for messageId: $messageId");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Message resent'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to resend message'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   void _showPeerInfo() {
@@ -961,14 +928,12 @@ class _MessageBubble extends StatelessWidget {
   final ChatMessageState message;
   final void Function(Offset position)? onLongPress;
   final MessagesState? messagesState;
-  final VoidCallback? onResend;
   final Store<AppState>? store;
 
   const _MessageBubble({
     required this.message,
     this.onLongPress,
     this.messagesState,
-    this.onResend,
     this.store,
   });
 
@@ -1191,16 +1156,6 @@ class _MessageBubble extends StatelessWidget {
           Icons.schedule,
           size: 14,
           color: Colors.white70,
-        );
-      case MessageStatus.failed:
-        // Red exclamation (failed) - clickable for resend
-        return GestureDetector(
-          onTap: onResend,
-          child: const Icon(
-            Icons.error_outline,
-            size: 14,
-            color: Colors.redAccent,
-          ),
         );
       case MessageStatus.sent:
         // 1 check (sent)

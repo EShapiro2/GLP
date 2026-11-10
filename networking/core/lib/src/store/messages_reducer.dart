@@ -9,9 +9,7 @@ import 'messages_actions.dart';
 /// Returns `true` if the action should be dropped (the existing status is
 /// already at a terminal-ish state that this action would regress).
 bool _isTerminalForRegression(MessageStatus status) =>
-    status == MessageStatus.delivered ||
-    status == MessageStatus.read ||
-    status == MessageStatus.failed;
+    status == MessageStatus.delivered || status == MessageStatus.read;
 
 /// Reducer for messages state
 MessagesState messagesReducer(MessagesState state, MessageAction action) {
@@ -56,25 +54,6 @@ MessagesState messagesReducer(MessagesState state, MessageAction action) {
         }
       }
     }
-
-    return state.copyWith(outgoingMessages: updated);
-  }
-
-  if (action is MessageFailedAction) {
-    final existing = state.outgoingMessages[action.messageId];
-    if (existing == null) return state;
-
-    // Don't downgrade delivered/read to failed: by definition the recipient
-    // already has it, so it's not really failed from their perspective.
-    if (existing.status == MessageStatus.delivered ||
-        existing.status == MessageStatus.read) {
-      return state;
-    }
-
-    final updated = Map<String, OutgoingMessage>.from(state.outgoingMessages);
-    updated[action.messageId] = existing.copyWith(
-      status: MessageStatus.failed,
-    );
 
     return state.copyWith(outgoingMessages: updated);
   }

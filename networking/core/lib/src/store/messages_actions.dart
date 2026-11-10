@@ -10,8 +10,6 @@ enum MessageStatus {
   /// Message is queued until the peer becomes reachable
   queued,
 
-  /// Message failed to send (red !)
-  failed,
 
   /// Message sent from device (1 green ✓)
   sent,
@@ -45,19 +43,6 @@ class MessageSendingAction extends MessageAction {
     required this.underlay,
     required this.recipientPubkey,
     required this.payloadSize,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-}
-
-/// A message failed to send
-/// Status: failed (red !)
-class MessageFailedAction extends MessageAction {
-  /// Message ID that failed
-  final String messageId;
-  final DateTime timestamp;
-
-  MessageFailedAction({
-    required this.messageId,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 }

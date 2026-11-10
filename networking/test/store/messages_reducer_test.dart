@@ -72,48 +72,6 @@ void main() {
     });
   });
 
-  group('MessageFailedAction', () {
-    test('updates existing message status to failed', () {
-      final state = MessagesState(
-        outgoingMessages: {
-          'msg-1': OutgoingMessage(
-            messageId: 'msg-1',
-            underlay: Underlay.pan,
-            recipientPubkey: testRecipientPubkey,
-            payloadSize: 128,
-            sentAt: testTimestamp,
-            status: MessageStatus.sending,
-          ),
-        },
-      );
-
-      final action = MessageFailedAction(messageId: 'msg-1');
-      final newState = messagesReducer(state, action);
-
-      expect(newState.outgoingMessages['msg-1']!.status, MessageStatus.failed);
-    });
-
-    test('returns same state for unknown messageId', () {
-      final state = MessagesState(
-        outgoingMessages: {
-          'msg-1': OutgoingMessage(
-            messageId: 'msg-1',
-            underlay: Underlay.pan,
-            recipientPubkey: testRecipientPubkey,
-            payloadSize: 128,
-            sentAt: testTimestamp,
-            status: MessageStatus.sending,
-          ),
-        },
-      );
-
-      final action = MessageFailedAction(messageId: 'unknown-msg');
-      final newState = messagesReducer(state, action);
-
-      expect(identical(newState, state), isTrue);
-    });
-  });
-
   group('MessageQueuedAction', () {
     test('updates existing message status to queued', () {
       final state = MessagesState(
@@ -430,16 +388,6 @@ void main() {
           newState.outgoingMessages['msg-1']!.status, MessageStatus.sending);
     });
 
-    test('MessageFailedAction does NOT downgrade delivered to failed', () {
-      final state = MessagesState(
-        outgoingMessages: {'msg-1': deliveredAt(MessageStatus.delivered)},
-      );
-      final newState =
-          messagesReducer(state, MessageFailedAction(messageId: 'msg-1'));
-      expect(newState.outgoingMessages['msg-1']!.status,
-          MessageStatus.delivered);
-    });
-
     test('MessageDeliveredAction does NOT regress from read to delivered', () {
       final state = MessagesState(
         outgoingMessages: {'msg-1': deliveredAt(MessageStatus.read)},
@@ -449,23 +397,6 @@ void main() {
         MessageDeliveredAction(messageId: 'msg-1', timestamp: testTimestamp),
       );
       expect(newState.outgoingMessages['msg-1']!.status, MessageStatus.read);
-    });
-
-    test('failed is terminal: no re-promotion on MessageSendingAction', () {
-      final state = MessagesState(
-        outgoingMessages: {'msg-1': deliveredAt(MessageStatus.failed)},
-      );
-      final newState = messagesReducer(
-        state,
-        MessageSendingAction(
-          messageId: 'msg-1',
-          underlay: Underlay.pan,
-          recipientPubkey: testRecipientPubkey,
-          payloadSize: 64,
-          timestamp: testTimestamp,
-        ),
-      );
-      expect(newState.outgoingMessages['msg-1']!.status, MessageStatus.failed);
     });
   });
 
