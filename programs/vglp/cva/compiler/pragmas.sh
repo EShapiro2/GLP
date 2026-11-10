@@ -304,7 +304,7 @@ sub relation_names {
             }
         }
         last if $s =~ /^\s*$/;
-        $s =~ s/^\s*,?\s*and\s+(?=$rel\s)// or $no->($s);
+        $s =~ s/^\s*,?\s*and\s+(?=$rel\s)// or do { (my $at = $s) =~ s/^\s*,?\s*(?:and\s+)?//; $no->($at) };
     }
     return @names;
 }
