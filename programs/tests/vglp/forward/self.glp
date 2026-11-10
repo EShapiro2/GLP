@@ -1,0 +1,10 @@
+%% self.glp --- the root module of a program whose platform exports its
+%% contract and its versions, for Section VG of test/run_all_tests.sh: "a
+%% goal posted to a program is admitted only at a procedure its root module
+%% exports, so the canonical compilation writes into the root module of the
+%% program the platform is compiled for a forwarding clause for each of the
+%% two, as it writes there the types it forms" (vGLP 722343d, Section 5.4,
+%% "The contract's words").  This file writes neither procedure; the linker
+%% writes their forwarding clauses here, with the types platform.vglp forms,
+%% and the goals contract(T, S) and version(C, B) posted to the program are
+%% answered from the platform.

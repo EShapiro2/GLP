@@ -178,6 +178,20 @@ class AgentStats extends FromAgentMsg {
   });
 }
 
+/// The look of the program's contract, read off the platform it is compiled
+/// from: the compiled platform exports `contract(Text, Schemas)`, its
+/// pragmas among the schemas and the look among the pragmas, `look(Icon,
+/// Family)`, where the app that loads it reads it (vGLP b413fe1, Section
+/// 5.4, "The contract's words"; [lookOfExport]).  Sent once the agent has
+/// started, where the platform writes a look; a platform with none, nolook,
+/// sends nothing, and the app keeps the look it has.
+class AgentLook extends FromAgentMsg {
+  final String agentId;
+  final String icon;
+  final String family;
+  AgentLook(this.agentId, this.icon, this.family);
+}
+
 /// Error during initialization or runtime.
 class AgentError extends FromAgentMsg {
   final String agentId;
@@ -230,6 +244,7 @@ Future<void> _runAgent(InitAgent init) async {
   if (!init.deferStart) {
     try {
       await agent.initialize();
+      await _sendLook(agent, init.replyPort);
       await _firstAct(agent, init.entry);
       _sendStats(agent, init.replyPort);
     } catch (e) {
@@ -246,6 +261,7 @@ Future<void> _runAgent(InitAgent init) async {
       // Deferred start: initialize GLP now (all ports are registered).
       try {
         await agent.initialize();
+        await _sendLook(agent, init.replyPort);
         await _firstAct(agent, init.entry);
         _sendStats(agent, init.replyPort);
       } catch (e) {
@@ -265,6 +281,59 @@ Future<void> _runAgent(InitAgent init) async {
       break;
     }
   }
+}
+
+/// The look of the program's contract, read off the platform the program is
+/// compiled from, `contract(T, S)`, and sent as [AgentLook]; a program that
+/// posts no such goal --- "the procedures that may be posted are exactly the
+/// entry points" (TGLP, modules.tex), the root's exports, so a program whose
+/// root does not export its platform's `contract/2` answers nothing, as does
+/// one whose platform writes no look --- sends none, and the app keeps the
+/// look of the tree.
+Future<void> _sendLook(AgentRuntime agent, SendPort reply) async {
+  try {
+    final r = await agent.query('contract(T, S)');
+    final s = r.bindings['S'];
+    final look = s == null ? null : lookOfExport(s);
+    if (look != null) {
+      reply.send(AgentLook(agent.agentId, look.icon, look.family));
+    }
+  } catch (_) {
+    // A program that exports no contract has no look to send.
+  }
+}
+
+/// The look among the pragmas of a platform's export `with(Read, Pragmas)`,
+/// `Pragmas` the term `pragmas(Lists, Acts, Stands, Look, Version)` and
+/// `Look` `look(Icon, Family)` (programs/vglp/cva/compiler/README.md, 20);
+/// null where it is `nolook` or the term is of another form.
+({String icon, String family})? lookOfExport(rt.Term schemas) {
+  if (schemas is! rt.StructTerm ||
+      schemas.functor != 'with' ||
+      schemas.args.length != 2) {
+    return null;
+  }
+  final pragmas = schemas.args[1];
+  if (pragmas is! rt.StructTerm ||
+      pragmas.functor != 'pragmas' ||
+      pragmas.args.length != 5) {
+    return null;
+  }
+  final look = pragmas.args[3];
+  if (look is! rt.StructTerm ||
+      look.functor != 'look' ||
+      look.args.length != 2) {
+    return null;
+  }
+  final icon = look.args[0];
+  final family = look.args[1];
+  if (icon is! rt.ConstTerm ||
+      icon.value is! String ||
+      family is! rt.ConstTerm ||
+      family.value is! String) {
+    return null;
+  }
+  return (icon: icon.value as String, family: family.value as String);
 }
 
 /// At the agent's first start, the act that starts the program [entry] on the

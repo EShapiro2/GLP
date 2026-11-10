@@ -8,7 +8,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_multiagent/isolate_protocol.dart' show lookOfExport;
 import 'package:glp_multiagent/manifests/superapp_ui.dart';
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/look.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
@@ -79,6 +81,28 @@ void main() {
     expect(() => Looks.parse('{"families": {}}'), throwsFormatException);
     expect(() => Looks.parse('{"families": {"other": {"from": "#12", "to": "#7a7a85", "name": "O"}}}'),
         throwsFormatException);
+  });
+
+  test('the look a platform exports, look(Icon, Family) among the pragmas of contract(Text, Schemas), read off the term, and nolook or another term giving none (vGLP b413fe1, Section 5.4)', () {
+    rt.Term s(String f, List<rt.Term> args) => rt.StructTerm(f, args);
+    rt.Term c(Object v) => rt.ConstTerm(v);
+    final nil = c(rt.nil);
+    final pragmas = s('pragmas', [nil, nil, nil, s('look', [c('📦'), c('os')]), s('version', [c(1), c(1)])]);
+    expect(lookOfExport(s('with', [nil, pragmas])), (icon: '📦', family: 'os'));
+    final none = s('pragmas', [nil, nil, nil, c('nolook'), s('version', [c(1), c(1)])]);
+    expect(lookOfExport(s('with', [nil, none])), isNull);
+    expect(lookOfExport(c('other')), isNull);
+    expect(lookOfExport(s('with', [nil, nil])), isNull);
+  });
+
+  test('a contract\'s look from the icon and the family its platform exports, the colours the family\'s, a family not in the file the family other', () {
+    final l = Looks.parse(_families);
+    final x = l.withLook('xpd', '📦', 'os');
+    expect(x.contract, 'XPD');
+    expect(x.icon, '📦');
+    expect(x.family, 'os');
+    expect(x.colours.name, 'Operating System');
+    expect(l.withLook('X', '🏪', 'nosuch').family, Looks.otherFamily);
   });
 
   test('the theme\'s primary colour is the family\'s dark colour, its buttons filled with it', () {

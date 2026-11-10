@@ -365,19 +365,19 @@ knows
 \text{provided } 
 \{
 \mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
 agent
 }
 ,
 \mathit{
 retired
 }
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
 \}
  \cap c_
 {
@@ -387,19 +387,19 @@ friend
  \text{ and } 
 \{
 \mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
 agent
 }
 ,
 \mathit{
 retired
 }
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
 \}
  \cap c_
 {
@@ -713,7 +713,7 @@ identity
 }
 ,
 \mathit{
-authored
+item
 }
 (
 y
@@ -754,6 +754,14 @@ retired
 \Bob
 }
  = \emptyset
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+y
+)
+=
+\Alice
 ,\\
 &
 \text{guarded by } \{
@@ -1346,16 +1354,6 @@ agent_of
 y
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -1385,37 +1383,6 @@ identity
 {
 \Bob
 }
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-guardian_of
-}
-(
-\Alice
-)
-,
-\mathit{
-agent_of
-}
-(
-\Alice
-,
-y
-)
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
- \in c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -1441,29 +1408,12 @@ retired
 \Bob
 }
  = \emptyset
- \text{ and } 
-\{
-\mathit{
-agent
-}
-,
-\mathit{
-retired
-}
-\}
- \cap c_
-{
-\mathit{Carol}
-}
- = \emptyset
 ,\\
 &
 \text{guarded by } \{
 \Alice
 ,
 \Bob
-,
-\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -1846,26 +1796,6 @@ agent_of
 y
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
-, \qquad 
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
-}
 ,\\
 &
 \text{provided } 
@@ -1906,77 +1836,6 @@ z
 {
 \Bob
 }
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-guardian_of
-}
-(
-\Alice
-)
-,
-\mathit{
-agent_of
-}
-(
-\Alice
-,
-y
-)
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-agent_of
-}
-(
-\Bob
-,
-z
-)
-,
-\mathit{
-knows
-}
-(
-\mathit{Dave}
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-guardian_of
-}
-(
-\Bob
-)
-,
-\mathit{
-agent_of
-}
-(
-\Bob
-,
-z
-)
- \in c_
-{
-\mathit{Dave}
-}
 ,\\
 &
 \text{provided } 
@@ -1995,46 +1854,12 @@ retired
 {
 \Bob
 }
- \text{ and } 
-\{
-\mathit{
-agent
-}
-,
-\mathit{
-retired
-}
-\}
- \cap c_
-{
-\mathit{Carol}
-}
- = \emptyset
- \text{ and } 
-\{
-\mathit{
-agent
-}
-,
-\mathit{
-retired
-}
-\}
- \cap c_
-{
-\mathit{Dave}
-}
- = \emptyset
 ,\\
 &
 \text{guarded by } \{
 \Alice
 ,
 \Bob
-,
-\mathit{Carol}
-,
-\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -3294,13 +3119,6 @@ item
 (
 x
 )
-,
-\mathit{
-authored
-}
-(
-x
-)
 \}
 ,\\
 &
@@ -3315,13 +3133,23 @@ identity
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+item
+}
+(
+x
+)
+,
 \mathit{
 retired
 }
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -3369,7 +3197,7 @@ identity
 }
 ,
 \mathit{
-authored
+item
 }
 (
 x
@@ -3403,6 +3231,14 @@ retired
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+x
+)
+=
+\Alice
 ,\\
 &
 \text{guarded by } \{
@@ -3481,23 +3317,13 @@ identity
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
-authored
-}
-(
-x
-)
-,
 \mathit{
 retired
 }
-\}
- \cap c_
+ \notin c_
 {
 \Alice
 }
- = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -4035,6 +3861,15 @@ identity
 }
 ,
 \mathit{
+listed
+}
+(
+\Alice
+,
+n
+)
+,
+\mathit{
 member
 }
 (
@@ -4042,15 +3877,6 @@ member
 \Alice
 \rangle
 \cdot
-n
-)
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
 n
 )
  \in c_
@@ -4139,7 +3965,7 @@ identity
 }
 ,
 \mathit{
-authored
+item
 }
 (
 x
@@ -4181,6 +4007,14 @@ n
 \Alice
 }
  = \emptyset
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+x
+)
+=
+\Alice
 ,\\
 &
 \text{guarded by } \{
@@ -4231,7 +4065,7 @@ identity
 }
 ,
 \mathit{
-authored
+item
 }
 (
 x
@@ -4309,6 +4143,14 @@ n
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+x
+)
+=
+\Alice
 ,\\
 &
 \text{guarded by } \{
@@ -4421,23 +4263,13 @@ friend
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
-authored
-}
-(
-x
-)
-,
 \mathit{
 retired
 }
-\}
- \cap c_
+ \notin c_
 {
 \Alice
 }
- = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -4563,14 +4395,6 @@ n
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
-authored
-}
-(
-y
-)
-,
 \mathit{
 delivered
 }
@@ -4581,12 +4405,18 @@ y
 ,
 n
 )
-\}
- \cap c_
+ \notin c_
 {
 \Alice
 }
- = \emptyset
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+y
+)
+\neq
+\Alice
 ,\\
 &
 \text{guarded by } \emptyset
@@ -4666,13 +4496,6 @@ n
 )
 ,
 \mathit{
-authored
-}
-(
-y
-)
-,
-\mathit{
 listed
 }
 (
@@ -4727,6 +4550,14 @@ n
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+y
+)
+=
+\Alice
 ,\\
 &
 \text{guarded by } \emptyset

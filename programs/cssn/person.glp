@@ -1,15 +1,15 @@
 %% person.glp --- the child-safe mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and village_person/6, the same person looking also at the phones of its children, for the plays of this directory (plays.glp).  It is the scripted person of the apps (programs/apps/gsnp/person.glp), with the village's scripts, the requests it makes reported, and the step at(K, C).
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP, Section 5.4, "Triggers"); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes, and the notices refused(P, Q, D), when an approval its person made, by a request or by an answer yes, ends by a refusal, Q the refuser and D the reason, declined or unable (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises and a hello asks, approval(A, Ws, YesNo?), A the attempt or hello(P, N), Ws the contract's question.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks) of the request question open; wait(C) waits until the person's screen shows C; at(K, C) waits until the screen of the phone of K, a child of the person, shows C, the parent looking at the child's phone (CSSN #5, Code_inbox.md, 2026-10-18 21:52 UTC: "await_at(Party, Screen), a parent's scripted person watching its child's screen, stands for the plays"), since a parent's state does not change by the child's acts (CSSN, Section 4); and approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  A request is its person's approval, which stands until the transaction is taken or refused: the agent proposes, and proposes again an attempt that yields, with no further question to its person (vGLP f0acbc1, Section 3.2, "The protocol"; Section 5.4, "Triggers"), so a script makes a request once and waits on what it brings about.  A screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, did(R) where it makes the request R, and gave(K, A) where it answers an approval question.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each bare, of the request type Request?, taking one request (vGLP 12f629d, Section 5.4, "The compilation"); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(Id, S, K, A, Ts), its own key Id, the machine state S, the persons K it knows, the approvals A its person made that are pending and the tabs Ts, when it starts and whenever any changes (vGLP 12f629d, Section 5.4, "The compilation"), and the notices refused(P, Q, D), when an approval its person made, by a request or by an answer yes, ends by a refusal, Q the refuser and D the reason, declined or unable (vGLP f0acbc1, Section 5.4, "The compilation"); and the approval questions Start raises and a hello asks, approval(A, Ws, YesNo?), A the attempt or hello(P, N), Ws the contract's question.  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the last view drawn shows, so that a person proposing a class that names their agent names it by the key they read off the view, as the request form does (vGLP 12f629d, Section 5.4, "The compilation"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"); look reports menu(K, Ks), K the agent's own key and Ks the persons it knows, as the last view drawn shows them, once a request question is drawn; wait(C) waits until the person's screen shows C; at(K, C) waits until the screen of the phone of K, a child of the person, shows C, the parent looking at the child's phone (CSSN #5, Code_inbox.md, 2026-10-18 21:52 UTC: "await_at(Party, Screen), a parent's scripted person watching its child's screen, stands for the plays"), since a parent's state does not change by the child's acts (CSSN, Section 4); and approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  A request is its person's approval, which stands until the transaction is taken or refused: the agent proposes, and proposes again an attempt that yields, with no further question to its person (vGLP f0acbc1, Section 3.2, "The protocol"; Section 5.4, "Triggers"), so a script makes a request once and waits on what it brings about.  A screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, did(R) where it makes the request R, and gave(K, A) where it answers an approval question.
 %%
 %% The agent drops a request whose condition does not hold when it reads it, the agent not free, not clear or not knowing every other participant (vGLP, Section 5.4, "Triggers"; Definition "Proposing"), and the person sees neither the agent's lock nor its inbox.  So each script makes a request where the person's screen, or the screen of the child the parent looks at, shows that what the request follows is done; and a parent answers a child's invitation to a second group once the child's own requests in the first are made, so that no answer of theirs holds them while an attempt of the first group waits on them.
 %%
 %% The roles are the seven agents of the village of CSSN, Section 4.6.3, "Village Demonstration": the adults alice, bob, grace and frank, and the children carol, alice's, and dave and eve, bob's and grace's.  Its group kids_chat is named by carol, its leader, speech(utterance(kids_chat), carol), and frank's study group by frank, speech(utterance(study), frank).  CSSN extends GSN, with no signing (CSSN.txt): the content of a message is the speech act speech(utterance(T), P) of its author P, which its recipient holds as received(x, p), p the friend who sent it (GSN:1), and a member of the group n led by a as received_in(x, a, n), once a delivers it (GSN:5).  The agents come to know each other at the level of the machines by the hello of a meeting schema's request, acquaint and enter, which carries the request to the peer named by key and asks the peer's person (vGLP, Section 5.4, "The compilation"), and by an introduction, of the contract's introduction rule, knows its introduction predicate, or of Commit.  The contract's meetings and introductions record knowing at the level of the contract, knows(q).  The acts, in the paper's numbering:
 %%   1. Coming into the contract.  alice, bob, grace and frank establish their identities (GKK:1) and come to know each other (GKK:2; acquaint(p?, q?)): alice and bob, alice requesting; bob and grace, and bob and frank, bob requesting; alice enters carol, carol's phone answering yes (GnW:1, CSSN:1; enter(p?, r?)); bob enters dave and then eve, each child's phone answering yes, bob holding both phones, and makes grace a parent of each, an act of bob and grace, grace answering yes and nobody else asked, bob befriending grace (CSSN:1; make_parent(p?, q?, r?)).
 %%   2. Adult friendships.  alice befriends bob (GSG:1); alice sends bob 'Hello Bob' in a message (GSN:1; message(p?, q ; x)); once it has reached him, bob befriends frank; bob introduces alice to frank, an act of bob and frank, and frank to alice, an act of bob and alice (GKK:3; introduce(p?, q? ; c)), the paper's two introductions, bob requesting each and frank and alice approving; and alice, once she knows frank, befriends frank, who knows her.
-%%   3. Child acquaintances and friendships (GnW:2, CSSN:2 and CSSN:3; child_acquaint_2(r?, s?, p?, q?), child_befriend(r?, s?, p?, q?)).  alice and dave, and alice and eve, come to know each other by a child acquaintance alice requests, naming bob, and bob and carol by one bob requests, naming alice (GnW:4, each parent knowing the other child); then alice requests that carol and dave come to know each other, naming bob, and bob, carol and dave answer yes; once carol's phone shows that she knows dave, alice requests that they befriend, and the three answer yes; once dave's phone shows carol his friend, bob requests that dave and eve come to know each other and then befriend, naming himself twice, the sibling case, and dave and eve answer yes; once carol's phone shows that her agent knows eve's, introduced to hers by dave's agent once dave knows both, alice requests that carol and eve come to know each other and then befriend, naming bob, and bob, carol and eve answer yes.  bob, once he has requested that dave and eve befriend, looks at dave's phone until it shows eve dave's friend before he answers alice's requests on carol and eve, and eve answers them once her screen shows dave her friend.
-%%   4. Child-adult acquaintances and friendships (CSSN:2 and CSSN:3; child_acquaint(r?, a?, p?), child_adult_befriend(r?, a?, p?)).  Once carol's phone shows eve her friend, alice requests that carol and frank come to know each other and then befriend; once eve's phone shows carol her friend, bob requests that dave and frank come to know each other and then befriend; frank and the child answer yes.  bob answers carol's invitations of dave and eve to kids_chat before he looks at dave's phone for dave and frank's friendship, so that an attempt of carol's that pre-empts his does not wait on it.
-%%   5. Child-managed group.  Once carol is friends with dave, eve and frank, she creates kids_chat (CSSN:2) and invites dave and then eve, alice, bob and the child answering yes (child_join_2(r?, s?, p?, q? ; n)); carol posts 'Welcome everyone!' (GSN:5; post_own(a? ; x, n)), and her agent delivers it to every member she lists who is her friend (deliver(a, q ; x, n)); dave, having it, posts 'Thanks Carol!' to carol (post(p?, a ; x, n)), whose agent delivers it likewise; eve, having dave's, posts 'Hi all!'; and, once her own has come back to her, leaves the group (GSN:4; leave(a, q? ; n)).
+%%   3. Child acquaintances and friendships (CSSN:2 and GnW:4; child_acquaint(r?, a?, p?), child_acquaint_2(r?, s?, p?, q?), child_befriend(r?, s?, p?, q?)).  bob and carol come to know each other by a child acquaintance alice, carol's parent, requests, naming bob, and alice and dave, and alice and eve, by one bob, their parent, requests, naming alice, the parent being the proposer of a child acquaintance, CSSN.txt's pragma "Alice [Child acquaint]" (CSSN:2, each parent knowing the other child); then alice requests that carol and dave come to know each other, naming bob, and bob, carol and dave answer yes; once carol's phone shows that she knows dave, alice requests that they befriend, and the three answer yes; once dave's phone shows carol his friend, bob requests that dave and eve come to know each other and then befriend, naming himself twice, the sibling case, and dave and eve answer yes; once carol's phone shows that her agent knows eve's, introduced to hers by dave's agent once dave knows both, alice requests that carol and eve come to know each other and then befriend, naming bob, and bob, carol and eve answer yes.  bob, once he has requested that dave and eve befriend, looks at dave's phone until it shows eve dave's friend before he answers alice's requests on carol and eve, and eve answers them once her screen shows dave her friend.
+%%   4. Child-adult acquaintances and friendships (CSSN:2 and GnW:3; child_acquaint(r?, a?, p?), child_adult_befriend(r?, a?, p?)).  Once carol's phone shows eve her friend, alice requests that carol and frank come to know each other and then befriend; once eve's phone shows carol her friend, bob requests that dave and frank come to know each other and then befriend; frank and the child answer yes.  bob answers carol's invitations of dave and eve to kids_chat before he looks at dave's phone for dave and frank's friendship, so that an attempt of carol's that pre-empts his does not wait on it.
+%%   5. Child-managed group.  Once carol is friends with dave, eve and frank, she creates kids_chat (CSSN:3) and invites dave and then eve, alice, bob and the child answering yes (child_join_2(r?, s?, p?, q? ; n)); carol posts 'Welcome everyone!' (GSN:5; post_own(a? ; x, n)), and her agent delivers it to every member she lists who is her friend (deliver(a, q ; x, n)); dave, having it, posts 'Thanks Carol!' to carol (post(p?, a ; x, n)), whose agent delivers it likewise; eve, having dave's, posts 'Hi all!'; and, once her own has come back to her, leaves the group (GSN:4; leave(a, q? ; n)).
 %%   6. Adult-managed group.  Once frank is friends with dave and carol, he creates study and invites dave and then carol, bob and alice, the child's parents, and the child answering yes (child_join(a?, s?, p? ; n)); frank posts 'Welcome to the study group'; dave, once he has it and eve's post to kids_chat, posts 'Hi from Dave!' to frank; carol, once she has dave's, has delivered eve's post and eve has left kids_chat, posts 'Hi from Carol!' to frank.  Each child answers its invitation to the study group once its own requests in kids_chat are made, and bob answers dave's once dave's post to kids_chat has come back to dave.
 %%   7. Parents ending.  Once dave's phone shows carol's post to the study group, grace ends dave's friendship with carol (GnW:3; child_unfriend(r, s, p?)), and carol's agent drops dave from kids_chat, his leader no longer his friend (GSN:4, drop); once dave's phone shows him out of kids_chat, bob ends dave's membership of the study group (child_leave(a, s, p? ; n)).  Once carol's phone shows dave out of kids_chat, alice closes it, child_close(r, p?, r[listed(*, n)] ; n): her request child_close(carol, alice, n) is a Request of rho_N to carol's machine, the opener of its parts, which completes the list from its listed atoms and proposes the close, naming the request, alice's machine voting yes, unasked (vGLP f0acbc1, Section 3.2, Definitions "Local Specification, Part, Guard Set, Opener, Request" and "Proposing"; Section 5.4, "Act schemas as local specifications").
 %%   8. Coming of age.  Once dave's phone shows him out of the study group, bob, eve's creator, declares eve of age (CSSN:4; of_age(r, p?, r[guarded_by(*)])), which ends bob's and grace's guardianship of eve, grace being the parent of eve bob made; eve, an adult, comes to know frank and befriends him, with no parent among the guards (GKK:2, GSG:1).
@@ -19,10 +19,10 @@
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; at(Key, Cond) ; approval(Asked, YesNo).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
         ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking.
-Last  ::= last(List(Atom), List(Key)) ; nolast.
+Last  ::= last(Key, List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
-Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
+Sess  ::= nosess ; sess(Integer, Path).
 Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 %% The last view of each child's screen the person has looked at.
@@ -67,9 +67,9 @@ script(alice, Me, [Bob, _, Frank, Carol, Dave, Eve], [own([A1], propose(establis
                                                       own([A5, A6], propose(message(A5?, Bob?, speech(utterance('Hello Bob'), A6?)))),
                                                       approval(introduce(Bob?, Me?, Frank?), yes), wait(holds(knows(Frank?))),
                                                       own([A7], propose(befriend(A7?, Frank?))), wait(holds(friend(Frank?))),
-                                                      own([A7a], propose(child_acquaint(Dave?, A7a?, Bob?))), wait(holds(knows(Dave?))),
-                                                      own([A7b], propose(child_acquaint(Eve?, A7b?, Bob?))), wait(holds(knows(Eve?))),
-                                                      approval(child_acquaint(Carol?, Bob?, Me?), yes), at(Carol?, holds(knows(Bob?))),
+                                                      own([A7a], propose(child_acquaint(Carol?, Bob?, A7a?))), at(Carol?, holds(knows(Bob?))),
+                                                      approval(child_acquaint(Dave?, Me?, Bob?), yes), wait(holds(knows(Dave?))),
+                                                      approval(child_acquaint(Eve?, Me?, Bob?), yes), wait(holds(knows(Eve?))),
                                                       own([A8], propose(child_acquaint_2(Carol?, Dave?, A8?, Bob?))), at(Carol?, holds(knows(Dave?))),
                                                       own([A9], propose(child_befriend(Carol?, Dave?, A9?, Bob?))), at(Carol?, holds(friend(Dave?))),
                                                       at(Carol?, known(Eve?)), wait(known(Eve?)),
@@ -99,9 +99,9 @@ script(bob, Me, [Alice, Grace, Frank, Carol, Dave, Eve], [own([B1], propose(esta
                                                           own([B6], propose(befriend(B6?, Frank?))), wait(holds(friend(Frank?))),
                                                           own([B7], propose(introduce(B7?, Frank?, Alice?))),
                                                           own([B8], propose(introduce(B8?, Alice?, Frank?))),
-                                                          approval(child_acquaint(Dave?, Alice?, Me?), yes),
-                                                          approval(child_acquaint(Eve?, Alice?, Me?), yes),
-                                                          own([B8a], propose(child_acquaint(Carol?, B8a?, Alice?))), wait(holds(knows(Carol?))),
+                                                          approval(child_acquaint(Carol?, Me?, Alice?), yes), wait(holds(knows(Carol?))),
+                                                          own([B8a], propose(child_acquaint(Dave?, Alice?, B8a?))), at(Dave?, holds(knows(Alice?))),
+                                                          own([B8b], propose(child_acquaint(Eve?, Alice?, B8b?))), at(Eve?, holds(knows(Alice?))),
                                                           approval(child_acquaint_2(Carol?, Dave?, Alice?, Me?), yes),
                                                           approval(child_befriend(Carol?, Dave?, Alice?, Me?), yes),
                                                           at(Dave?, holds(friend(Carol?))),
@@ -203,7 +203,7 @@ script(eve, Me, [Alice, Bob, _, Frank, Carol, Dave], [approval(enter(Bob?, Me?),
                                                       own([E4], propose(acquaint(E4?, Frank?))), wait(holds(knows(Frank?))),
                                                       own([E5], propose(befriend(E5?, Frank?))), wait(holds(friend(Frank?)))]) :-
     ground(Me?), ground(Alice?), ground(Bob?), ground(Frank?), ground(Carol?), ground(Dave?) | true.
-%% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob come to know each other (GKK:2; acquaint(p?, q?)) and befriend (GSG:1), Alice proposing; Alice requests that Carol and Dave come to know each other, naming Bob, and Bob, Carol and Dave approve (CSSN:2; child_acquaint_2(r?, s?, p?, q?)); Alice, looking at Carol's phone until it shows that Carol knows Dave, requests that they befriend, naming Bob, and Bob, Carol and Dave approve (CSSN:3; child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)); and Bob declares Dave of age (CSSN:4; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.  The scenario of CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 3.  A scripted Alice is the village's person, village_person/6, looking at Carol's phone, which the harness hands her (self.glp).
+%% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob come to know each other (GKK:2; acquaint(p?, q?)) and befriend (GSG:1), Alice proposing; Alice requests that Carol and Dave come to know each other, naming Bob, and Bob, Carol and Dave approve (CSSN:2; child_acquaint_2(r?, s?, p?, q?)); Alice, looking at Carol's phone until it shows that Carol knows Dave, requests that they befriend, naming Bob, and Bob, Carol and Dave approve (GnW:4; child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)); and Bob declares Dave of age (CSSN:4; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.  The scenario of CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 3.  A scripted Alice is the village's person, village_person/6, looking at Carol's phone, which the harness hands her (self.glp).
 script(fig_alice, _, [Bob, Carol, Dave], [own([A1], propose(establish(A1?))), wait(holds(identity)),
                                           own([A2], propose(enter(A2?, Carol?))), wait(holds(parenting(Carol?))),
                                           own([A3], propose(acquaint(A3?, Bob?))), wait(holds(knows(Bob?))),
@@ -238,9 +238,10 @@ person([d(draw(0, _, output(T))) | Es], Gs?, ps(Se, Old, Cs, Ss, Ls), Log?) :-
     log_new(Old?, T?, Log, Log1?),
     advance(ps(Se?, T?, Cs?, Ss?, Ls?), Gs, Gs1?, St1, Log1, Log2?),
     person(Es?, Gs1, St1?, Log2).
-person([d(draw(Id, _, menu_w(menu(Me, Ks, input(P))))) | Es], Gs?, ps(_, T, Cs, Ss, Ls), Log?) :-
-    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?, Ls?), Gs, Gs1?, St1, Log, Log1?),
+%% The request question, bare, of the request type Request? (vGLP 12f629d, Section 5.4, "The compilation"): the person reads the agent's own key and the persons it knows off the last view drawn on construct 0, as the request form does (Section 6.2).
+person([d(draw(Id, _, request_r(input(P)))) | Es], Gs?, ps(_, T, Cs, Ss, Ls), Log?) :-
+    ground(Id?), ground(P?) |
+    advance(ps(sess(Id?, P?), T?, Cs?, Ss?, Ls?), Gs, Gs1?, St1, Log, Log1?),
     person(Es?, Gs1, St1?, Log1).
 person([d(draw(Id, _, approval_w(approval(At, _, input(P))))) | Es], Gs?, ps(Se, T, Cs, Ss, Ls), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
@@ -250,9 +251,9 @@ person([d(withdraw(Id)) | Es], Gs?, ps(Se, T, Cs, Ss, Ls), Log?) :-
     ground(Id?) |
     drop_shown(Id?, Cs?, Cs1),
     person(Es?, Gs, ps(Se?, T?, Cs1?, Ss?, Ls?), Log).
-person([w(seen(K, view(S, Ks, _, _))) | Es], Gs?, ps(Se, T, Cs, Ss, Ls), Log?) :-
-    ground(K?), ground(S?), ground(Ks?), ground(Ls?) |
-    look_at(K?, last(S?, Ks?), Ls?, Ls1),
+person([w(seen(K, view(Me, S, Ks, _, _))) | Es], Gs?, ps(Se, T, Cs, Ss, Ls), Log?) :-
+    ground(K?), ground(Me?), ground(S?), ground(Ks?), ground(Ls?) |
+    look_at(K?, last(Me?, S?, Ks?), Ls?, Ls1),
     advance(ps(Se?, T?, Cs?, Ss?, Ls1?), Gs, Gs1?, St1, Log, Log1?),
     person(Es?, Gs1, St1?, Log1).
 person([_ | Es], Gs?, St, Log?) :-
@@ -271,19 +272,19 @@ looked(_, [], nolast).
 
 %% advance(St, Gs, Gs1, St1, Log, Log1): the script's steps taken as far as they can be, the grants written on Gs, continuing at Gs1.
 procedure advance(PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
-advance(ps(sess(Id, P, _, _), T, Cs, [req(R) | Ss], Ls), [input(Id?, P?, R?) | Gs?], Gs1, St1?, [did(R?) | Log?], Log1) :-
+advance(ps(sess(Id, P), T, Cs, [req(R) | Ss], Ls), [input(Id?, P?, R?) | Gs?], Gs1, St1?, [did(R?) | Log?], Log1) :-
     ground(Id?), ground(P?), ground(R?) |
     advance(ps(nosess, T?, Cs?, Ss?, Ls?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R) | Ss], Ls), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?) | Ss?], Ls?), Log1?, Log1).
-advance(ps(sess(Id, P, Me, _), T, Cs, [own(Ks, R) | Ss], Ls), Gs?, Gs1, St1?, Log?, Log1) :-
-    ground(Id?), ground(P?) |
-    fill(Me?, Ks?),
-    grant(Id?, P?, R?, Gs, Gs2?, Log, Log2?),
-    advance(ps(nosess, T?, Cs?, Ss?, Ls?), Gs2, Gs1?, St1, Log2, Log1?).
+advance(ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss], Ls), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    owned(L?, ps(sess(Id?, P?), T?, Cs?, [own(Ks?, R?) | Ss?], Ls?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [own(Ks, R) | Ss], Ls), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?) | Ss?], Ls?), Log1?, Log1).
-advance(ps(sess(Id, P, Me, Ks), T, Cs, [look | Ss], Ls), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
-    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?, Ls?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P), T, Cs, [look | Ss], Ls), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    menu_looked(L?, ps(sess(Id?, P?), T?, Cs?, [look | Ss?], Ls?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [look | Ss], Ls), Gs1?, Gs1, ps(nosess, T?, Cs?, [look | Ss?], Ls?), Log1?, Log1).
 advance(ps(Se, T, Cs, [wait(X) | Ss], Ls), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Se?), ground(T?), ground(Cs?), ground(X?) |
@@ -299,6 +300,22 @@ advance(ps(Se, T, Cs, [approval(K, A) | Ss], Ls), Gs?, Gs1, St1?, Log?, Log1) :-
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?) | Ss?], Ls?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, [], Ls), Gs1?, Gs1, ps(Se?, T?, Cs?, [], Ls?), Log1?, Log1).
+
+%% owned(L, St, ...): the step own(Ks, R), the agent's own key read off the last view drawn, L, written into each hole of Ks, and R granted; with no view drawn yet, the step waits (vGLP 12f629d, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2).
+procedure owned(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+owned(last(Me, _, _), ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss], Ls), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Me?), ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?, Log, Log2?),
+    advance(ps(nosess, T?, Cs?, Ss?, Ls?), Gs2, Gs1?, St1, Log2, Log1?).
+owned(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% menu_looked(L, St, ...): the step look, which reports menu(K, Ks), the agent's own key and the persons it knows as the last view drawn, L, shows them; with no view drawn yet, the step waits.
+procedure menu_looked(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+menu_looked(last(Me, _, Ks), ps(Se, T, Cs, [look | Ss], Ls), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
+    ground(Me?), ground(Ks?) |
+    advance(ps(Se?, T?, Cs?, Ss?, Ls?), Gs, Gs1?, St1, Log, Log1?).
+menu_looked(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
 
 %% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
 procedure fill(Key?, Holes?).
@@ -334,7 +351,7 @@ shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), grou
 shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
     find_approval(K?, Cs?, F),
     found_yn(F?, B).
-shows(asking, sess(_, _, _, _), _, _, y).
+shows(asking, sess(_, _), _, _, y).
 shows(asking, nosess, _, _, n).
 
 %% What a last view shows, the person's own or a child's (the step at(K, C)): the persons known and the atoms held.
@@ -357,7 +374,8 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+%% The view, view(Id, S, K, A, Ts): the agent's own key, the machine state, the persons it knows, the approvals pending and the tabs (vGLP 12f629d, Section 5.4, "The compilation"), the script looking at the first three.
+last_view([view(Me, S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(Me?, S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -365,7 +383,7 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
@@ -373,7 +391,7 @@ among_output(X, [Y | _], y) :- X? =?= Y? | true.
 among_output(X, [_ | Ys], B?) :- otherwise | among_output(X?, Ys?, B).
 
 procedure known_in(Key?, Last?, YN).
-known_in(Q, last(_, Ks), B?) :- among_key(Q?, Ks?, B).
+known_in(Q, last(_, _, Ks), B?) :- among_key(Q?, Ks?, B).
 known_in(_, nolast, n).
 
 procedure among_key(Key?, List(Key)?, YN).
@@ -382,7 +400,7 @@ among_key(X, [Y | _], y) :- X? =?= Y? | true.
 among_key(X, [_ | Ys], B?) :- otherwise | among_key(X?, Ys?, B).
 
 procedure count_in(Atom?, Last?, Integer).
-count_in(A, last(S, _), N?) :- count(A?, S?, N).
+count_in(A, last(_, S, _), N?) :- count(A?, S?, N).
 count_in(_, nolast, 0).
 
 procedure count(Atom?, List(Atom)?, Integer).

@@ -137,6 +137,15 @@ class Looks {
     return null;
   }
 
+  /// The look of [contract] with the [icon] and the [family] its compiled
+  /// platform exports in `contract(Text, Schemas)`, the look among the
+  /// pragmas (vGLP b413fe1, Section 5.4), the colours the family's; a family
+  /// the file does not name is the family other.
+  ContractLook withLook(String contract, String icon, String family) {
+    final f = families.containsKey(family) ? family : otherFamily;
+    return ContractLook(contract.toUpperCase(), icon, f, families[f]!);
+  }
+
   /// The look of [contract], its name in any case; a contract with no look,
   /// or of a family the file does not name, is of the family other.
   ContractLook of(String contract) {

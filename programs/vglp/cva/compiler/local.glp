@@ -32,25 +32,52 @@ exported procedure faults(Contract?, Preds?, NumInfos?, Strings).
 faults(C, Rf, Nt, Ls?) :- ground(C?), ground(Rf?), ground(Nt?) |
     effective_lines(C?, Nt?, L1),
     locality_lines(C?, C?, Rf?, L2),
-    numeric_locality(Nt?, L3),
+    numeric_faults(Nt?, L3),
     lapp(L1?, L2?, L12),
     lapp(L12?, L3?, Ls).
 
 %% --- Numbers -----------------------------------------------------------------
 %% num_info_of(Name, Head, Constraint, Roles, Info): the schema's constraint, its local variables and the role whose local variables the constraint names (self.glp, NumInfo).  "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role, as the person d where Bob's role requires that Bob point to someone with a label" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"): a variable of the head, agent, speech-act or numeric, that occurs in an atom some role keeps or deletes, inside a name term or a signed term or as a multiplicity on such an atom included (self.glp, atoms_args; flat_args), at one role, and in no atom added or forbidden, nor among a listed role's arguments; "a constraint is local to the role whose local variables it names, and to every role where it names none" (ibid.), at(I) or every, and two_roles where it names those of two roles or more.
 %% num_info_of(Name, Head, Constraint, Forms, Roles, Info) gives also the safe formulas of the schema's body, each with the role it is local to (form_infos).
-exported procedure num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, NumInfo).
-num_info_of(Nm, Hd, C, Fs, Rs, num_info(Nm?, C?, Ls?, R?, Fi?)) :- ground(Hd?), ground(Rs?), ground(C?) |
+%% Readings (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications"): the conjuncts of the constraint each with its role (conjuncts_of), and what each role reads with its vote yes (reads_of).
+exported procedure num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, Integer?, NumInfo).
+num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- ground(Hd?), ground(Rs?), ground(C?), integer(B?) |
     variables_of(Hd?, Vs1),
     variables_of(Hd?, Vs2),
     variables_of(Hd?, Vs3),
     variables_of(Hd?, Vs4),
-    locals_of(Vs1?, Rs?, Ls00),
-    locals_of(Vs2?, Rs?, Ls10),
-    locals_of(Vs3?, Rs?, Ls20),
+    variables_of(Hd?, Vs5),
+    variables_of(Hd?, Vs6),
+    locals_of(Vs1?, Rs?, B?, Ls00),
+    locals_of(Vs2?, Rs?, B?, Ls10),
+    locals_of(Vs3?, Rs?, B?, Ls20),
+    locals_of(Vs5?, Rs?, B?, Ls30),
+    locals_of(Vs6?, Rs?, B?, Ls40),
     det_locals(C?, Hd?, Rs?, Ls00?, Ls),
     det_locals(C?, Hd?, Rs?, Ls10?, Ls1),
     det_locals(C?, Hd?, Rs?, Ls20?, Ls2),
+    det_locals(C?, Hd?, Rs?, Ls30?, Ls3),
+    det_locals(C?, Hd?, Rs?, Ls40?, Ls4),
+    conjuncts_of(C?, Ls1?, Cj, _),
+    conjuncts_of(C?, Ls3?, Cj2, Crs),
+    reads_of(Rs?, Ls2?, Cj2?, Crs?, Rd),
+    form_infos(Fs?, Vs4?, Ls4?, Fi).
+
+%% The conjuncts of the constraint, each with its role (conj_role): every, where it names no local variable and holds no count or sum; at(I), the one role whose local variables it names or whose anchors its counts hold; and cond, two roles or more, "a conjunct that names variables local to two roles or more is of the part's condition" (vGLP 566c186, Section 5.4).  A conjunct of the condition is taken with each of its counts and sums replaced by a numeric variable of a name no schema writes, '#1', '#2', ..., the k-th count of the condition (cnt_name), whose value the role holding its anchor reads with its vote: "a precondition that compares a count in one participant's state with a count in another's is a condition on two readings, each participant reading its own count and the initiator comparing them" (vGLP 566c186, Section 3.2); Crs holds each, cr(H, N, E), H its anchor's holder.
+procedure conjuncts_of(Constraint?, Locs?, Conjs, CReads).
+conjuncts_of(C, Ls, Cj?, Crs?) :- ground(C?), ground(Ls?) |
+    con_conjuncts(C?, Cs),
+    conj_each(Cs?, Ls?, 1, Cj, Crs).
+procedure conj_each(Constraints?, Locs?, Integer?, Conjs, CReads).
+conj_each([], _, _, [], []).
+conj_each([C|Cs], Ls, K0, [cj(R?, C1?)|Cj?], Crs?) :- ground(C?), ground(Ls?), integer(K0?) |
+    conj_role(C?, Ls?, R),
+    conj_role(C?, Ls?, R2),
+    conj_abs(R2?, C?, K0?, K1, C1, Crs1),
+    conj_each(Cs?, Ls?, K1?, Cj, Crs2),
+    app(Crs1?, Crs2?, Crs).
+procedure conj_role(Constraint?, Locs?, CRole).
+conj_role(C, Ls, R?) :- ground(C?), ground(Ls?) |
     con_args(C?, Ca0),
     con_counts(C?, Ks),
     counts_free(Ks?, Cf),
@@ -58,8 +85,170 @@ num_info_of(Nm, Hd, C, Fs, Rs, num_info(Nm?, C?, Ls?, R?, Fi?)) :- ground(Hd?), 
     con_counts(C?, Ks1),
     counts_holders(Ks1?, Ch),
     holder_roles(Ch?, Hr, _),
-    con_role(Ca?, Hr?, Ls1?, R),
-    form_infos(Fs?, Vs4?, Ls2?, Fi).
+    con_role(Ca?, Hr?, Ls?, R).
+procedure conj_abs(CRole?, Constraint?, Integer?, Integer, Constraint, CReads).
+conj_abs(every, C, K, K?, C?, []).
+conj_abs(at(_), C, K, K?, C?, []).
+conj_abs(cond, C, K0, K1?, C1?, Crs?) :- abs_con(C?, K0?, K1, C1, Crs).
+procedure abs_con(Constraint?, Integer?, Integer, Constraint, CReads).
+abs_con(true, K, K?, true, []).
+abs_con(and(C1, C2), K0, K2?, and(D1?, D2?), Crs?) :- integer(K0?) |
+    abs_con(C1?, K0?, K1, D1, R1),
+    abs_con(C2?, K1?, K2, D2, R2),
+    app(R1?, R2?, Crs).
+abs_con(or(C1, C2), K0, K2?, or(D1?, D2?), Crs?) :- integer(K0?) |
+    abs_con(C1?, K0?, K1, D1, R1),
+    abs_con(C2?, K1?, K2, D2, R2),
+    app(R1?, R2?, Crs).
+abs_con(implies(C1, C2), K0, K2?, implies(D1?, D2?), Crs?) :- integer(K0?) |
+    abs_con(C1?, K0?, K1, D1, R1),
+    abs_con(C2?, K1?, K2, D2, R2),
+    app(R1?, R2?, Crs).
+abs_con(not(C), K0, K1?, not(D?), Crs?) :- abs_con(C?, K0?, K1, D, Crs).
+abs_con(eq(X, Y), K0, K2?, eq(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_con(ne(X, Y), K0, K2?, ne(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_con(le(X, Y), K0, K2?, le(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_con(lt(X, Y), K0, K2?, lt(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_con(ge(X, Y), K0, K2?, ge(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_con(gt(X, Y), K0, K2?, gt(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_con(succ(X, Y), K, K?, succ(X?, Y?), []).
+abs_con(signed(U, Y), K, K?, signed(U?, Y?), []).
+abs_con(unsigned(U, Y), K, K?, unsigned(U?, Y?), []).
+abs_con(rel(N, Es), K0, K1?, rel(N?, Ds?), Crs?) :- abs_exprs(Es?, K0?, K1, Ds, Crs).
+abs_con(program(E), K0, K1?, program(D?), Crs?) :- abs_expr(E?, K0?, K1, D, Crs).
+procedure abs_exprs(Exprs?, Integer?, Integer, Exprs, CReads).
+abs_exprs([], K, K?, [], []).
+abs_exprs([E|Es], K0, K2?, [D?|Ds?], Crs?) :- integer(K0?) |
+    abs_expr(E?, K0?, K1, D, R1),
+    abs_exprs(Es?, K1?, K2, Ds, R2),
+    app(R1?, R2?, Crs).
+procedure abs_expr(Expr?, Integer?, Integer, Expr, CReads).
+abs_expr(plus(X, Y), K0, K2?, plus(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_expr(minus(X, Y), K0, K2?, minus(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_expr(mul(X, Y), K0, K2?, mul(U?, V?), Crs?) :- integer(K0?) |
+    abs_expr(X?, K0?, K1, U, R1),
+    abs_expr(Y?, K1?, K2, V, R2),
+    app(R1?, R2?, Crs).
+abs_expr(fn(F, Es), K0, K1?, fn(F?, Ds?), Crs?) :- abs_exprs(Es?, K0?, K1, Ds, Crs).
+abs_expr(cardinality(Xs, H, A, F), K0, K1?, num(N?), [cr(H2?, N2?, cardinality(Xs?, H?, A?, F?))]) :- integer(K0?), ground(H?) |
+    cnt_name(K0?, N),
+    cnt_name(K0?, N2),
+    same_holder(H?, H2),
+    K1 := K0? + 1.
+abs_expr(sum(Xs, H, A, F, U), K0, K1?, num(N?), [cr(H2?, N2?, sum(Xs?, H?, A?, F?, U?))]) :- integer(K0?), ground(H?) |
+    cnt_name(K0?, N),
+    cnt_name(K0?, N2),
+    same_holder(H?, H2),
+    K1 := K0? + 1.
+abs_expr(E, K, K?, E?, []) :- otherwise, ground(E?) | true.
+procedure same_holder(Arg?, Arg).
+same_holder(H, H?).
+%% The names of the counts of a condition, '#1' to '#16', and '#more' beyond them, a fault (read_faults).
+procedure cnt_name(Integer?, Constant).
+cnt_name(1, '#1').
+cnt_name(2, '#2').
+cnt_name(3, '#3').
+cnt_name(4, '#4').
+cnt_name(5, '#5').
+cnt_name(6, '#6').
+cnt_name(7, '#7').
+cnt_name(8, '#8').
+cnt_name(9, '#9').
+cnt_name(10, '#10').
+cnt_name(11, '#11').
+cnt_name(12, '#12').
+cnt_name(13, '#13').
+cnt_name(14, '#14').
+cnt_name(15, '#15').
+cnt_name(16, '#16').
+cnt_name(K, '#more') :- K? > 16 | true.
+cnt_name(K, '#more') :- K? < 1 | true.
+
+%% What each role reads with its vote yes: "A local variable is read at its role where it occurs also in an atom the schema adds at another role ... or in a conjunct of the constraint with a variable local to another role" (vGLP 566c186, Section 5.4), and the counts and sums of the condition anchored at the role (cnt_name); read(I, Vs, Cxs) for each role reading something, and read(0, [], Cxs) for the counts anchored at no agent role.
+procedure reads_of(RoleSpecs?, Locs?, Conjs?, CReads?, Reads).
+reads_of(Rs, Ls, Cj, Crs, Rd?) :- ground(Rs?), ground(Ls?), ground(Cj?), ground(Crs?) |
+    cond_args(Cj?, Ca),
+    reads_from(1, Rs?, Rs?, Ls?, Ca?, Crs?, Rd1),
+    stray_counts(Crs?, Cxs),
+    read_add([], Cxs?, 0, Rd1?, Rd).
+%% The arguments the conjuncts of the condition name.
+procedure cond_args(Conjs?, Args).
+cond_args([], []).
+cond_args([cj(cond, C)|Cj], A?) :- con_args(C?, A1), cond_args(Cj?, A2), app(A1?, A2?, A).
+cond_args([cj(every, _)|Cj], A?) :- cond_args(Cj?, A).
+cond_args([cj(at(_), _)|Cj], A?) :- cond_args(Cj?, A).
+procedure reads_from(Integer?, RoleSpecs?, RoleSpecs?, Locs?, Args?, CReads?, Reads).
+reads_from(_, [], _, _, _, _, []).
+reads_from(I, [_|Rs], All, Ls, Ca, Crs, Rd?) :- integer(I?), ground(All?), ground(Ls?), ground(Ca?), ground(Crs?) |
+    read_vars(Ls?, I?, All?, Ca?, Vs),
+    read_counts(Crs?, I?, Cxs),
+    I1 := I? + 1,
+    reads_from(I1?, Rs?, All?, Ls?, Ca?, Crs?, Rd1),
+    read_add(Vs?, Cxs?, I?, Rd1?, Rd).
+procedure read_add(Args?, CExprs?, Integer?, Reads?, Reads).
+read_add([], [], _, Rd, Rd?).
+read_add([V|Vs], Cxs, I, Rd, [read(I?, [V?|Vs?], Cxs?)|Rd?]).
+read_add([], [X|Xs], I, Rd, [read(I?, [], [X?|Xs?])|Rd?]).
+%% The variables local to the role I that an atom added at another role holds, or a conjunct of the condition names.
+procedure read_vars(Locs?, Integer?, RoleSpecs?, Args?, Args).
+read_vars([], _, _, _, []).
+read_vars([loc(J, V)|Ls], I, Rs, Ca, Vs?) :- J? =:= I?, ground(V?), ground(Rs?), ground(Ca?) |
+    roles_adding(Rs?, 1, V?, Js),
+    other_role(Js?, I?, A1),
+    mem(V?, Ca?, A2),
+    or(A1?, A2?, Rd),
+    read_vars(Ls?, I?, Rs?, Ca?, Vs1),
+    keep_arg_if(Rd?, V?, Vs1?, Vs).
+read_vars([_|Ls], I, Rs, Ca, Vs?) :- otherwise | read_vars(Ls?, I?, Rs?, Ca?, Vs).
+%% Whether an index other than I is among them.
+procedure other_role(Ints?, Integer?, YesNo).
+other_role([], _, no).
+other_role([J|Js], I, B?) :- J? =:= I? | other_role(Js?, I?, B).
+other_role([J|_], I, yes) :- J? =\= I? | true.
+%% The indices of the roles that add an atom naming V.
+procedure roles_adding(RoleSpecs?, Integer?, Arg?, Ints).
+roles_adding([], _, _, []).
+roles_adding([R|Rs], I, V, Is?) :- ground(R?), integer(I?), ground(V?) |
+    rs_lists(R?, P, _, _, _),
+    atoms_args(P?, A1),
+    flat_args(A1?, Af),
+    mem(V?, Af?, In),
+    I1 := I? + 1,
+    roles_adding(Rs?, I1?, V?, Is1),
+    keep_index(In?, I?, Is1?, Is).
+procedure read_counts(CReads?, Integer?, CExprs).
+read_counts([], _, []).
+read_counts([cr(role(J), N, E)|Crs], I, [cx(N?, E?)|Cxs?]) :- J? =:= I? | read_counts(Crs?, I?, Cxs).
+read_counts([_|Crs], I, Cxs?) :- otherwise | read_counts(Crs?, I?, Cxs).
+%% The counts of the condition anchored at no agent role.
+procedure stray_counts(CReads?, CExprs).
+stray_counts([], []).
+stray_counts([cr(role(_), _, _)|Crs], Cxs?) :- stray_counts(Crs?, Cxs).
+stray_counts([cr(H, N, E)|Crs], [cx(N?, E?)|Cxs?]) :- otherwise, ground(H?) | stray_counts(Crs?, Cxs).
 
 %% "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer's state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): a numeric variable of the head, not local by its occurrences, that an equality conjunct of the constraint determines, its one variable not local, with a coefficient not 0, from variables local to one role I, one at least, and others the schema-binding binds, and that only role I's atoms name, is local to I: "the machine of the person in that role finds a value for it in its own state, or computes it" (ibid.).
 procedure det_locals(Constraint?, Args?, RoleSpecs?, Locs?, Locs).
@@ -210,7 +399,8 @@ procedure frole(YesNo?, Ints?, FRole).
 frole(no, _, nowhere).
 frole(yes, [], every).
 frole(yes, [I], at(I?)).
-frole(yes, [_, _|_], nowhere).
+%% "A safe formula of B that is local to no role, its atoms held by two roles or more, each a role of the schema or a listed role its quantifier binds, is of the part's condition" (vGLP 5f55cf3, Section 5.4).
+frole(yes, [_, _|_], cond).
 %% The holders of a formula's atoms and of its quantifiers' anchors.
 procedure form_holders(Form?, Args).
 form_holders(fa(H, _), [H?]).
@@ -307,39 +497,61 @@ var_ok([], InV, InV?).
 procedure keep_arg_if(YesNo?, Arg?, Args?, Args).
 keep_arg_if(yes, A, R, [A?|R?]).
 keep_arg_if(no, _, R, R?).
-procedure locals_of(Args?, RoleSpecs?, Locs).
-locals_of([], _, []).
-locals_of([V|Vs], Rs, Ls?) :- ground(V?), ground(Rs?) |
-    occ_roles(Rs?, 1, V?, Kr0, Ot),
+%% "A variable that occurs only in atoms required or deleted at one role, and in the constraint and the safe formulas, is local to it; and a variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do; a variable of an atom deleted at one role and added at another is not local, and the request names it" (vGLP 6abbed9, Section 5.4, "Speech-act schemas as local specifications", on Cloud #14's reading, Code_inbox.md, 2026-11-10 11:09 and 11:12 UTC): a variable kept or deleted at one role I and nowhere else, forbidden nowhere and listed by no listed role, is local to I where no atom adds it, or where no atom deletes it and no atom adds it at I.
+procedure locals_of(Args?, RoleSpecs?, Integer?, Locs).
+locals_of([], _, _, []).
+locals_of([V|Vs], Rs, B, Ls?) :- ground(V?), ground(Rs?), integer(B?) |
+    occ_roles(Rs?, 1, V?, Kr0, Ot, Dl, Ad),
     dedup(Kr0?, Kr),
-    locals_of(Vs?, Rs?, Ls1),
-    local_one(Kr?, Ot?, V?, Ls1?, Ls).
-%% occ_roles(Rs, I, V, Kr, Ot): the indices of the roles that keep or delete an atom naming V, and whether a role adds or forbids one, or lists V among a listed role's arguments.
-procedure occ_roles(RoleSpecs?, Integer?, Arg?, Ints, YesNo).
-occ_roles([], _, _, [], no).
-occ_roles([R|Rs], I, V, Kr?, Ot?) :- ground(R?), integer(I?), ground(V?) |
+    locals_of(Vs?, Rs?, B?, Ls1),
+    local_one(Kr?, Ot?, Dl?, Ad?, B?, V?, Ls1?, Ls).
+%% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V; whether a role forbids one, or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
+procedure occ_roles(RoleSpecs?, Integer?, Arg?, Ints, YesNo, YesNo, Ints).
+occ_roles([], _, _, [], no, no, []).
+occ_roles([R|Rs], I, V, Kr?, Ot?, Dl?, Ad?) :- ground(R?), integer(I?), ground(V?) |
     rs_lists(R?, P, M, K, N),
+    rs_lists(R?, _, M2, _, _),
     atoms_args(K?, A1),
     atoms_args(M?, A2),
     atoms_args(P?, A3),
     atoms_args(N?, A4),
     kind_args(R?, A5),
+    atoms_args(M2?, A6),
     app(A1?, A2?, Akm0),
-    app(A3?, A4?, Apn0),
-    app(Apn0?, A5?, Apn1),
+    app(A4?, A5?, Apn0),
     flat_args(Akm0?, Akm),
-    flat_args(Apn1?, Apn),
+    flat_args(Apn0?, Apn),
+    flat_args(A3?, Ap),
+    flat_args(A6?, Am),
     mem(V?, Akm?, InK),
     mem(V?, Apn?, InO),
+    mem(V?, Ap?, InP),
+    mem(V?, Am?, InM),
     I1 := I? + 1,
-    occ_roles(Rs?, I1?, V?, Kr1, Ot1),
+    occ_roles(Rs?, I1?, V?, Kr1, Ot1, Dl1, Ad1),
     keep_index(InK?, I?, Kr1?, Kr),
-    or(InO?, Ot1?, Ot).
-procedure local_one(Ints?, YesNo?, Arg?, Locs?, Locs).
-local_one([I], no, V, Ls, [loc(I?, V?)|Ls?]).
-local_one([_], yes, _, Ls, Ls?).
-local_one([], _, _, Ls, Ls?).
-local_one([_, _|_], _, _, Ls, Ls?).
+    or(InO?, Ot1?, Ot),
+    or(InM?, Dl1?, Dl),
+    keep_index(InP?, I?, Ad1?, Ad).
+procedure local_one(Ints?, YesNo?, YesNo?, Ints?, Integer?, Arg?, Locs?, Locs).
+local_one([I], no, Dl, Ad, B, V, Ls, R?) :- integer(I?), ground(Ad?) |
+    local_ok(Dl?, Ad?, I?, B?, Ok),
+    det_add(Ok?, I?, V?, Ls?, R).
+local_one([_], yes, _, _, _, _, Ls, Ls?).
+local_one([], _, _, _, _, _, Ls, Ls?).
+local_one([_, _|_], _, _, _, _, _, Ls, Ls?).
+%% Local where no atom adds it; or, no atom deleting it, where none adds it at its own role and its role is not the base of the schema, B (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there"; "the request names it, as it names a variable that only the base's atoms hold and other roles record, the person who proposes choosing it, as Alice chooses whom she introduces").
+procedure local_ok(YesNo?, Ints?, Integer?, Integer?, YesNo).
+local_ok(_, [], _, _, yes).
+local_ok(yes, [_|_], _, _, no).
+local_ok(no, [J|Js], I, B, Ok?) :- integer(I?), integer(B?) |
+    mem(I?, [J?|Js?], In),
+    neg(In?, Ni),
+    not_base(I?, B?, Nb),
+    and(Ni?, Nb?, Ok).
+procedure not_base(Integer?, Integer?, YesNo).
+not_base(I, B, no) :- I? =:= B? | true.
+not_base(_, _, yes) :- otherwise | true.
 %% The role whose local variables the constraint names.
 %% The roles of the local variables it names and the roles holding the anchors of its counts and sums.
 procedure con_role(Args?, Ints?, Locs?, CRole).
@@ -361,17 +573,49 @@ loc_role(A, [_|Ls], Is?) :- otherwise | loc_role(A?, Ls?, Is).
 procedure con_role1(Ints?, CRole).
 con_role1([], every).
 con_role1([I], at(I?)).
-con_role1([_, _|_], two_roles).
+con_role1([_, _|_], cond).
 
-%% "the contract is a local specification where ... a constraint names the local variables of one role" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); a contract whose constraint names those of two roles is refused, the schema named.
-procedure numeric_locality(NumInfos?, Strings).
-numeric_locality([], []).
-numeric_locality([num_info(S, _, _, R, Fi)|Ns], L?) :- ground(S?) |
-    numeric_locality1(R?, S?, L1),
+%% The faults of the numbers: a safe formula local to no role (form_locality), and a count or a sum of the condition that its role cannot take (read_faults).  A conjunct naming the local variables of two roles is no fault since vGLP 566c186: it is of the part's condition.
+procedure numeric_faults(NumInfos?, Strings).
+numeric_faults([], []).
+numeric_faults([num_info(S, _, Ls, _, Fi, Rd)|Ns], L?) :- ground(S?) |
+    read_faults(Rd?, Ls?, S?, L1),
     form_locality(Fi?, S?, L0),
-    numeric_locality(Ns?, L2),
+    numeric_faults(Ns?, L2),
     lapp(L1?, L0?, L10),
     lapp(L10?, L2?, L).
+%% A count or a sum of the condition is taken at the role holding its anchor, which reads its value with its vote (vGLP 566c186, Section 3.2: "each participant reading its own count"): one anchored at no agent role, or naming a variable local to another role, which the role cannot bind, is a fault, as is a condition with more counts than the compiler names (cnt_name).
+procedure read_faults(Reads?, Locs?, Constant?, Strings).
+read_faults([], _, _, []).
+read_faults([read(I, _, Cxs)|Rd], Ls, S, L?) :- integer(I?), ground(Ls?), ground(S?) |
+    cx_faults(Cxs?, I?, Ls?, S?, L1),
+    read_faults(Rd?, Ls?, S?, L2),
+    lapp(L1?, L2?, L).
+procedure cx_faults(CExprs?, Integer?, Locs?, Constant?, Strings).
+cx_faults([], _, _, _, []).
+cx_faults([cx(N, E)|Cxs], I, Ls, S, L?) :- ground(N?), ground(E?), ground(Ls?), ground(S?) |
+    counts_free([E?], Fv),
+    foreign_local(Fv?, Ls?, I?, F),
+    cx_fault(F?, N?, I?, S?, L1),
+    cx_faults(Cxs?, I?, Ls?, S?, L2),
+    lapp(L1?, L2?, L).
+procedure cx_fault(YesNo?, Constant?, Integer?, Constant?, Strings).
+cx_fault(_, _, 0, S, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a count or a sum of',
+        '%% the part\'s condition is anchored at no agent role, so no participant reads it:', T?]) :- ground(S?) | said('%% the schema', S?, T).
+cx_fault(yes, _, I, S, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a count or a sum of',
+        '%% the part\'s condition names a variable local to another role, which the role holding its anchor cannot bind:', T?]) :-
+    I? =\= 0, ground(S?) | said('%% the schema', S?, T).
+cx_fault(no, '#more', I, S, ['%% the part\'s condition holds more counts and sums than the compiler names, sixteen:', T?]) :-
+    I? =\= 0, ground(S?) | said('%% the schema', S?, T).
+cx_fault(no, _, _, _, []) :- otherwise | true.
+%% Whether an argument among them is local to a role other than I.
+procedure foreign_local(Args?, Locs?, Integer?, YesNo).
+foreign_local([], _, _, no).
+foreign_local([A|As], Ls, I, F?) :- ground(A?), ground(Ls?), integer(I?) |
+    loc_role(A?, Ls?, Js),
+    other_role(Js?, I?, F1),
+    foreign_local(As?, Ls?, I?, F2),
+    or(F1?, F2?, F).
 %% "A safe formula of B ... is local to a role where every atom of it ... is held by that role, and every variable of it is a role, a variable of the schema, a variable of its quantifiers or local to that role" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"); a formula local to no role is refused, the schema named, its machine of no person evaluating it in its own state.
 procedure form_locality(FInfos?, Constant?, Strings).
 form_locality([], _, []).
@@ -380,12 +624,174 @@ form_locality([fi(nowhere, _)|_], S, ['%% it is not a local specification (vGLP,
     ground(S?) | said('%% the schema', S?, T).
 form_locality([fi(every, _)|Fs], S, L?) :- form_locality(Fs?, S?, L).
 form_locality([fi(at(_), _)|Fs], S, L?) :- form_locality(Fs?, S?, L).
-procedure numeric_locality1(CRole?, Constant?, Strings).
-numeric_locality1(every, _, []).
-numeric_locality1(at(_), _, []).
-numeric_locality1(two_roles, S, ['%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a constraint',
-        '%% names the local variables of two roles or more, and it names those of one:', T?]) :-
-    ground(S?) | said('%% the schema', S?, T).
+form_locality([fi(cond, _)|Fs], S, L?) :- form_locality(Fs?, S?, L).
+
+%% --- Formulas across roles (vGLP 5f55cf3, Section 5.4) -------------------------
+%% "the reading of a participant's state then holds, beside the values of the variables read at its role, the atoms of that state that the atoms of the formula held by its role match, a variable local to another role and a variable the formula's quantifiers bind matching any value, and the initiator evaluates the formula on the readings, each atom, anchor, count and sum taken in the reading of the person who holds it."
+%% Whether a formula's atoms are held by two roles or more, a formula of the body that binds a listed role being one of them where it is (cvac.glp, q_forms).
+exported procedure form_cross(Form?, YesNo).
+form_cross(F, B?) :- ground(F?) |
+    form_holders(F?, Hs),
+    holder_roles(Hs?, Is0, _),
+    dedup(Is0?, Is),
+    two_or_more(Is?, B).
+procedure two_or_more(Ints?, YesNo).
+two_or_more([_, _|_], yes).
+two_or_more(_, no) :- otherwise | true.
+%% The formula the initiator evaluates on the readings: each atom, anchor, count and sum with its holder put first among its arguments, so that it is matched in the atoms of the readings each tagged with the person who holds it (the printed text, cond_tagged).
+exported procedure tag_form(Form?, Form).
+tag_form(fa(H, M), fa(H?, M1?)) :- ground(H?) | tag_atom(H?, M?, M1).
+tag_form(fnot(F), fnot(F1?)) :- tag_form(F?, F1).
+tag_form(fand(F, G), fand(F1?, G1?)) :- tag_form(F?, F1), tag_form(G?, G1).
+tag_form(for(F, G), for(F1?, G1?)) :- tag_form(F?, F1), tag_form(G?, G1).
+tag_form(fexists(Xs, H, A, F), fexists(Xs?, H?, A1?, F1?)) :- ground(H?) | tag_atom(H?, A?, A1), tag_form(F?, F1).
+tag_form(fforall(Xs, H, A, F, Gs), fforall(Xs?, H?, A1?, F1?, Gs1?)) :- ground(H?) | tag_atom(H?, A?, A1), tag_form(F?, F1), tag_forms(Gs?, Gs1).
+tag_form(fcons(C), fcons(C1?)) :- tag_con(C?, C1).
+procedure tag_forms(Forms?, Forms).
+tag_forms([], []).
+tag_forms([F|Fs], [F1?|Fs1?]) :- tag_form(F?, F1), tag_forms(Fs?, Fs1).
+procedure tag_atom(Arg?, Atom?, Atom).
+tag_atom(H, atom(P, As), atom(P?, [H?|As?])).
+tag_atom(H, times(K, M), times(K?, M1?)) :- tag_atom(H?, M?, M1).
+tag_atom(H, rest(K, J, M), rest(K?, J?, M1?)) :- tag_atom(H?, M?, M1).
+procedure tag_con(Constraint?, Constraint).
+tag_con(and(C, D), and(C1?, D1?)) :- tag_con(C?, C1), tag_con(D?, D1).
+tag_con(or(C, D), or(C1?, D1?)) :- tag_con(C?, C1), tag_con(D?, D1).
+tag_con(implies(C, D), implies(C1?, D1?)) :- tag_con(C?, C1), tag_con(D?, D1).
+tag_con(not(C), not(C1?)) :- tag_con(C?, C1).
+tag_con(eq(X, Y), eq(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_con(le(X, Y), le(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_con(lt(X, Y), lt(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_con(ge(X, Y), ge(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_con(gt(X, Y), gt(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_con(ne(X, Y), ne(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_con(rel(N, Es), rel(N?, Es1?)) :- tag_exprs(Es?, Es1).
+tag_con(program(E), program(E1?)) :- tag_expr(E?, E1).
+%% true, succ and the signing conditions hold no atom.
+tag_con(C, C?) :- otherwise | true.
+procedure tag_exprs(Exprs?, Exprs).
+tag_exprs([], []).
+tag_exprs([E|Es], [E1?|Es1?]) :- tag_expr(E?, E1), tag_exprs(Es?, Es1).
+procedure tag_expr(Expr?, Expr).
+tag_expr(plus(X, Y), plus(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_expr(minus(X, Y), minus(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_expr(mul(X, Y), mul(X1?, Y1?)) :- tag_expr(X?, X1), tag_expr(Y?, Y1).
+tag_expr(fn(N, Es), fn(N?, Es1?)) :- tag_exprs(Es?, Es1).
+tag_expr(cardinality(Xs, H, A, F), cardinality(Xs?, H?, A1?, F1?)) :- ground(H?) | tag_atom(H?, A?, A1), tag_form(F?, F1).
+tag_expr(sum(Xs, H, A, F, U), sum(Xs?, H?, A1?, F1?, U1?)) :- ground(H?) | tag_atom(H?, A?, A1), tag_form(F?, F1), tag_expr(U?, U1).
+%% A value, a variable, the author or the item of a speech act holds no atom.
+tag_expr(E, E?) :- otherwise | true.
+%% The atoms each role reads for a formula across roles: those of the formula it holds, a multiplicity aside, each variable the formula's quantifiers bind and each variable local to another role made any, a listed role keeping itself.
+exported procedure form_held(Form?, Locs?, HPats).
+form_held(F, Ls, Hp?) :- ground(F?), ground(Ls?) |
+    form_has(F?, Ps),
+    form_has(F?, Ps2),
+    form_bound(F?, Bv),
+    held_roles(Ps?, Is0),
+    dedup(Is0?, Is),
+    held_each(Is?, Ps2?, Bv?, Ls?, Hp).
+procedure form_has(Form?, HAtoms).
+form_has(fa(H, M), [ha(H?, M?)]).
+form_has(fnot(F), P?) :- form_has(F?, P).
+form_has(fand(F, G), P?) :- form_has(F?, P1), form_has(G?, P2), app(P1?, P2?, P).
+form_has(for(F, G), P?) :- form_has(F?, P1), form_has(G?, P2), app(P1?, P2?, P).
+form_has(fexists(_, H, A, F), [ha(H?, A?)|P?]) :- form_has(F?, P).
+form_has(fforall(_, H, A, F, Gs), [ha(H?, A?)|P?]) :- form_has(F?, P1), forms_has(Gs?, P2), app(P1?, P2?, P).
+form_has(fcons(C), P?) :- con_has(C?, P).
+procedure forms_has(Forms?, HAtoms).
+forms_has([], []).
+forms_has([F|Fs], P?) :- form_has(F?, P1), forms_has(Fs?, P2), app(P1?, P2?, P).
+procedure con_has(Constraint?, HAtoms).
+con_has(and(C, D), P?) :- con_has(C?, P1), con_has(D?, P2), app(P1?, P2?, P).
+con_has(or(C, D), P?) :- con_has(C?, P1), con_has(D?, P2), app(P1?, P2?, P).
+con_has(implies(C, D), P?) :- con_has(C?, P1), con_has(D?, P2), app(P1?, P2?, P).
+con_has(not(C), P?) :- con_has(C?, P).
+con_has(eq(X, Y), P?) :- exprs_has([X?, Y?], P).
+con_has(le(X, Y), P?) :- exprs_has([X?, Y?], P).
+con_has(lt(X, Y), P?) :- exprs_has([X?, Y?], P).
+con_has(ge(X, Y), P?) :- exprs_has([X?, Y?], P).
+con_has(gt(X, Y), P?) :- exprs_has([X?, Y?], P).
+con_has(ne(X, Y), P?) :- exprs_has([X?, Y?], P).
+con_has(rel(_, Es), P?) :- exprs_has(Es?, P).
+con_has(program(E), P?) :- exprs_has([E?], P).
+con_has(_, []) :- otherwise | true.
+procedure exprs_has(Exprs?, HAtoms).
+exprs_has([], []).
+exprs_has([E|Es], P?) :- expr_has(E?, P1), exprs_has(Es?, P2), app(P1?, P2?, P).
+procedure expr_has(Expr?, HAtoms).
+expr_has(plus(X, Y), P?) :- exprs_has([X?, Y?], P).
+expr_has(minus(X, Y), P?) :- exprs_has([X?, Y?], P).
+expr_has(mul(X, Y), P?) :- exprs_has([X?, Y?], P).
+expr_has(fn(_, Es), P?) :- exprs_has(Es?, P).
+expr_has(cardinality(_, H, A, F), [ha(H?, A?)|P?]) :- form_has(F?, P).
+expr_has(sum(_, H, A, F, U), [ha(H?, A?)|P?]) :- form_has(F?, P1), expr_has(U?, P2), app(P1?, P2?, P).
+expr_has(_, []) :- otherwise | true.
+%% The variables a formula's quantifiers, counts and sums bind.
+procedure form_bound(Form?, Args).
+form_bound(fa(_, _), []).
+form_bound(fnot(F), B?) :- form_bound(F?, B).
+form_bound(fand(F, G), B?) :- form_bound(F?, B1), form_bound(G?, B2), app(B1?, B2?, B).
+form_bound(for(F, G), B?) :- form_bound(F?, B1), form_bound(G?, B2), app(B1?, B2?, B).
+form_bound(fexists(Xs, _, _, F), B?) :- form_bound(F?, B1), app(Xs?, B1?, B).
+form_bound(fforall(Xs, _, _, F, Gs), B?) :- form_bound(F?, B1), forms_bound(Gs?, B2), app(B1?, B2?, B3), app(Xs?, B3?, B).
+form_bound(fcons(C), B?) :- con_has_bound(C?, B).
+procedure forms_bound(Forms?, Args).
+forms_bound([], []).
+forms_bound([F|Fs], B?) :- form_bound(F?, B1), forms_bound(Fs?, B2), app(B1?, B2?, B).
+procedure con_has_bound(Constraint?, Args).
+con_has_bound(C, B?) :- con_counts(C?, Ks), counts_bound(Ks?, B).
+procedure counts_bound(Exprs?, Args).
+counts_bound([], []).
+counts_bound([cardinality(Xs, _, _, F)|Ks], B?) :- form_bound(F?, B1), counts_bound(Ks?, B2), app(B1?, B2?, B3), app(Xs?, B3?, B).
+counts_bound([sum(Xs, _, _, F, _)|Ks], B?) :- form_bound(F?, B1), counts_bound(Ks?, B2), app(B1?, B2?, B3), app(Xs?, B3?, B).
+counts_bound([_|Ks], B?) :- otherwise | counts_bound(Ks?, B).
+procedure held_roles(HAtoms?, Ints).
+held_roles([], []).
+held_roles([ha(role(I), _)|Ps], [I?|Is?]) :- held_roles(Ps?, Is).
+held_roles([_|Ps], Is?) :- otherwise | held_roles(Ps?, Is).
+procedure held_each(Ints?, HAtoms?, Args?, Locs?, HPats).
+held_each([], _, _, _, []).
+held_each([I|Is], Ps, Bv, Ls, [hp(I?, Ms?)|Hp?]) :- integer(I?), ground(Ps?), ground(Bv?), ground(Ls?) |
+    held_of(Ps?, I?, Bv?, Ls?, Ms),
+    held_each(Is?, Ps?, Bv?, Ls?, Hp).
+procedure held_of(HAtoms?, Integer?, Args?, Locs?, Atoms).
+held_of([], _, _, _, []).
+held_of([ha(role(J), M)|Ps], I, Bv, Ls, [M1?|Ms?]) :- J? =:= I?, integer(I?), ground(M?), ground(Bv?), ground(Ls?) |
+    anon_atom(M?, I?, Bv?, Ls?, M1),
+    held_of(Ps?, I?, Bv?, Ls?, Ms).
+held_of([_|Ps], I, Bv, Ls, Ms?) :- otherwise | held_of(Ps?, I?, Bv?, Ls?, Ms).
+procedure anon_atom(Atom?, Integer?, Args?, Locs?, Atom).
+anon_atom(atom(P, As), I, Bv, Ls, atom(P?, As1?)) :- anon_args(As?, 1, I?, Bv?, Ls?, As1).
+anon_atom(times(_, M), I, Bv, Ls, M1?) :- anon_atom(M?, I?, Bv?, Ls?, M1).
+anon_atom(rest(_, _, M), I, Bv, Ls, M1?) :- anon_atom(M?, I?, Bv?, Ls?, M1).
+%% An argument the role does not bind is written as a variable of its place, pvar('~K') at the K-th argument, which no schema names and the match binds to any value.
+procedure anon_args(Args?, Integer?, Integer?, Args?, Locs?, Args).
+anon_args([], _, _, _, _, []).
+anon_args([A|As], K, I, Bv, Ls, [A1?|As1?]) :- integer(K?), integer(I?), ground(Bv?), ground(Ls?) |
+    anon_arg(A?, K?, I?, Bv?, Ls?, A1),
+    K1 := K? + 1,
+    anon_args(As?, K1?, I?, Bv?, Ls?, As1).
+procedure anon_arg(Arg?, Integer?, Integer?, Args?, Locs?, Arg).
+anon_arg(role(J), _, I, _, _, role(J?)) :- J? =:= I? | true.
+anon_arg(A, K, I, Bv, Ls, A1?) :- otherwise, ground(A?), integer(K?), integer(I?), ground(Bv?), ground(Ls?) |
+    mem(A?, Bv?, InB),
+    loc_role(A?, Ls?, Js),
+    other_role(Js?, I?, Ot),
+    or(InB?, Ot?, An),
+    anon_pick(An?, K?, A?, A1).
+procedure anon_pick(YesNo?, Integer?, Arg?, Arg).
+anon_pick(yes, K, _, pvar(N?)) :- integer(K?) | anon_name(K?, N).
+anon_pick(no, _, A, A?).
+procedure anon_name(Integer?, Constant).
+anon_name(1, '~1').
+anon_name(2, '~2').
+anon_name(3, '~3').
+anon_name(4, '~4').
+anon_name(5, '~5').
+anon_name(6, '~6').
+anon_name(7, '~7').
+anon_name(8, '~8').
+anon_name(_, '~more') :- otherwise | true.
 
 %% The variables a constraint gives finitely many values once those of Bd are bound: succ(X, Y), Y = X + 1, gives Y one value once X is bound, and X one once Y is; eq(X, Y), an equality of two linear expressions (GSC bcc1891, Definition "Schema with values"), gives its one numeric variable not in Bd one value, where it has one and its coefficient in X - Y is not 0; le, lt, ge and gt give a variable no finite set of values; and(C1, C2) gives a variable finitely many values where C1 or C2 does; or(C1, C2) where each of C1 and C2 does (vGLP 613ee8d, Section 5.4: "or the constraint gives the variable finitely many values once those are bound").  A number is bound.
 procedure con_det(Constraint?, Args?, Args).
@@ -545,7 +951,7 @@ effective_lines([schema(Nm, _, Rs)|Ss], Nt, L?) :- ground(Nm?), ground(Rs?), gro
 effective_lines([cschema(_, _, _, _)|Ss], Nt, L?) :- effective_lines(Ss?, Nt?, L).
 effective_lines([nschema(_, _, _, _)|Ss], Nt, L?) :- effective_lines(Ss?, Nt?, L).
 procedure effective_schema(NumInfo?, Constant?, RoleSpecs?, Strings).
-effective_schema(num_info(_, Con, Ls, _, _), Nm, Rs, L?) :- ground(Nm?), ground(Rs?), ground(Ls?), ground(Con?) |
+effective_schema(num_info(_, Con, Ls, _, _, _), Nm, Rs, L?) :- ground(Nm?), ground(Rs?), ground(Ls?), ground(Con?) |
     loc_vars(Ls?, Lv),
     free_lines(Nm?, Rs?, Lv?, L0),
     guarded_any(Rs?, G),
@@ -1416,13 +1822,13 @@ lreqs_at(Rs, B, P, Rf, R?) :- ground(Rs?), ground(B?), integer(P?) |
     app(R1?, R2?, R).
 procedure listing_reqs(RoleSpecs?, Integer?, Binding?, Integer?, GAs).
 listing_reqs([], _, _, _, []).
+%% The anchor's arguments As hold the listed role, role(I), at its place (cvac.glp, norm_roles), so their image under B, which binds the role, is the listing atom.
 listing_reqs([crs(listed(Bi, Rho, As), _, _, _, _, _)|Rs], I, B, P, G?) :- integer(I?), integer(Bi?), ground(B?), integer(P?) |
     role_person(Bi?, B?, Pb),
-    role_person(I?, B?, Q),
     img_args(As?, B?, Vs),
     I1 := I? + 1,
     listing_reqs(Rs?, I1?, B?, P?, G1),
-    keep_listing(Pb?, P?, ga(Rho?, [person(Q?)|Vs?]), G1?, G).
+    keep_listing(Pb?, P?, ga(Rho?, Vs?), G1?, G).
 listing_reqs([_|Rs], I, B, P, G?) :- otherwise, integer(I?) | I1 := I? + 1, listing_reqs(Rs?, I1?, B?, P?, G).
 procedure keep_listing(Integer?, Integer?, GA?, GAs?, GAs).
 keep_listing(Pb, P, A, G, [A?|G?]) :- Pb? =:= P? | true.

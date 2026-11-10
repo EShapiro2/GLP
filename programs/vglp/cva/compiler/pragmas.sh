@@ -40,7 +40,7 @@ sub inside {
     }
     return ("", length $s);
 }
-# The variables local to a role of the schema whose arguments are @args: "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role" (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications"), an agent, speech-act or numeric variable alike, inside a name term or a signed term included; each named by its name, as the head writes it.
+# The variables local to a role of the schema whose arguments are @args: "A variable that occurs only in atoms required or deleted at one role, and in the constraint and the safe formulas, is local to it; and a variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do; a variable of an atom deleted at one role and added at another is not local, and the request names it" (vGLP 6abbed9, Section 5.4, "Speech-act schemas as local specifications"; local.glp, locals_of), an agent, speech-act or numeric variable alike, inside a name term or a signed term included; each named by its name, as the head writes it: kept or deleted at one role and nowhere else, forbidden nowhere and listed by no listed role, and added nowhere, or deleted nowhere and added at other roles only.
 sub var_tokens {
     my ($t) = @_;
     $t =~ s/\batom\(\w+,/atom(/g;
@@ -49,23 +49,44 @@ sub var_tokens {
 sub local_vars {
     my ($roles) = @_;
     $roles =~ s/^\[//; $roles =~ s/\]$//;
-    my (%at, %elsewhere);
+    my (%at, %elsewhere, %del, %add, $lb);
     my $r = 0;
     for my $spec (top_args($roles)) {
         $r++;
         my ($f) = $spec =~ /^(c?rs)\(/ or next;
         my ($body) = inside($spec, length $f);
         my @p = top_args($body);
-        if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind) }
+        if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind); $lb //= $1 if $kind =~ /^q?listed\((\d+)/ }
         for my $k (1 .. $#p) {
             for my $x (var_tokens($p[$k])) {
-                if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 } else { $elsewhere{$x} = 1 }
+                if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
+                if ($k == 2) { $del{$x} = 1 }
+                if ($k == 1) { $add{$x}{$r} = 1 }
+                if ($k == 4) { $elsewhere{$x} = 1 }
             }
         }
     }
-    return grep { !$elsewhere{$_} && keys %{ $at{$_} } == 1 } keys %at;
+    # Each local variable with 0, or, where it is read at its role (vGLP 6abbed9, Section 5.4), that role; and the base of the schema\x27s listed roles, where it has one.
+    my @out;
+    for my $x (keys %at) {
+        next if $elsewhere{$x} || keys %{ $at{$x} } != 1;
+        my ($r0) = keys %{ $at{$x} };
+        if (!$add{$x}) { push @out, [$x, 0] }
+        elsif (!$del{$x} && !$add{$x}{$r0}) { push @out, [$x, $r0] }
+    }
+    return (\@out, $lb);
 }
 my (@snames, %svars, %preds, %locals);
+# A variable read at a role is local only where that role is not the base of the schema (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there"; "the request names it, as it names a variable that only the base\x27s atoms hold and other roles record, the person who proposes choosing it, as Alice chooses whom she introduces"): the base the base of its listed roles or the role its line names before its button, the variable read at the base put back among the request\x27s variables once that line is read.
+my (%readat, %lbase, %hvars, %based);
+sub base_read {
+    my ($S, $pl) = @_;
+    return if $based{$S}++;
+    my $b = $lbase{$S} // $pl;
+    my $back = 0;
+    for my $v (keys %{ $readat{$S} || {} }) { next unless $readat{$S}{$v} == $b && $locals{$S}{$v}; delete $locals{$S}{$v}; $back = 1 }
+    $svars{$S} = [ grep { !$locals{$S}{$_} } @{ $hvars{$S} } ] if $back;
+}
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
 if (defined $term && $term ne "") {
     while ($term =~ /\b([ncq]?schema)\(/g) {
@@ -81,11 +102,15 @@ if (defined $term && $term ne "") {
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
         my $rarg = $kw eq "qschema" ? $args[$named ? 5 : 4] : $args[-1];
-        my %local = map { $_ => 1 } local_vars($rarg);
+        my ($lv, $lb) = local_vars($rarg);
+        my %local = map { $_->[0] => 1 } @$lv;
+        $readat{$n} = { map { $_->[0] => $_->[1] } grep { $_->[1] } @$lv };
+        $lbase{$n} = $lb if defined $lb;
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
         $locals{$n} = { map { $_ => 1 } grep { $local{$_} } @hv };
         $svars{$n} = [ grep { !$local{$_} } @hv ];
+        $hvars{$n} = [ @hv ];
     }
 }
 # The contract term read whole, for the roles of each schema: tparse gives a term as [functor, args] for a compound, ["[]", items] for a list, and [name] for a constant.
@@ -307,7 +332,8 @@ for my $f (@order) {
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
         last if $x =~ /^\d+\./ || any_head($x);
-        next unless $x =~ /^(.*?)\s+(?:is|are)\s+(?:a\s+)?persons?\.(?:\s|$)/;
+        # The declaration names every name it lists, of every kind, as "Alice, Bob and Erin are persons, Carol and Dave wards." names five (vGLP 722343d, Section 5.4: "a name the contract\x27s declaration gives a person or a ward"; GSC, Section 2: "a declaration of the contract\x27s names, saying what each names").
+        next unless $x =~ /^(.*?\s+(?:is|are)\s+(?:a\s+)?persons?\b[^.]*)\.(?:\s|$)/;
         $declared = 1;
         $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
     }
@@ -335,11 +361,13 @@ for my $f (reverse @order) {
     }
 }
 # The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below): an interface heading, "Pragmas" or "Interface pragmas", is the line "Pragmas", and an implementation heading and every line after it up to the next interface heading are skipped (iface_head, impl_head).
-# The interface pragmas may open with the app\x27s look, "Look: <icon>, <family>" (GSC 34bc713, Section 2: "The interface pragmas may open with a line naming the app\x27s look, its icon and its family, as \x27Look: chat, social\x27, the colours of each family being one file of the repository beside the contracts"): read into $look{F} as [Icon, Family], and no tab.  A Look line anywhere else, or not of that form, is refused.  How the compiler carries the look into the platform no paper says yet (vGLP, Section 5.4, names none), so the term printed below does not hold it.
-my %look;
+# The interface pragmas may open with the app\x27s look, "Look: <icon>, <family>" (GSC 34bc713, Section 2: "The interface pragmas may open with a line naming the app\x27s look, its icon and its family, as \x27Look: chat, social\x27, the colours of each family being one file of the repository beside the contracts"): read into $look{F} as [Icon, Family], and no tab.  A Look line anywhere else, or not of that form, is refused.  The compiler carries the look into the platform "among the pragmas of the contract the platform exports, where the app and the site that show it read it" (vGLP b413fe1, Section 5.4, "The contract’s words"), so the term printed below holds it, look(Icon, Family), or nolook where the contract writes none.
+# A contract’s version, "Version: <Current>, compatible from <Back>." among the interface pragmas, both whole numbers, Back at most Current, at most one such line in a contract, an extension’s own line standing over the contract’s it extends, and version(1, 1) where none writes one (vGLP 81fb280, Section 5.4: the platform exports "version(Current, Back), its version and the earliest version of itself it is compatible with, both from a line of the pragmas"; the line’s form Code’s, GSA’s yes, Code_inbox.md, 2026-11-07 22:35 UTC and GSA, 2026-11-08): read into $version{F} as [Current, Back].  A Version line not of that form, a second one, or one with Back above Current, is refused.
+my (%look, %version);
 sub joined {
     my ($f) = @_;
     my (@m, $aft, $impl, $first);
+    delete $version{$f};
     for my $x (read_txt($f)) {
         if (impl_head($x)) { $impl = 1; next }
         if (iface_head($x)) { $impl = 0; $aft = 1; $first = 1; push @m, "Pragmas"; next }
@@ -348,6 +376,15 @@ sub joined {
             $x =~ /^Look:\s*(\S.*?),\s*([\w-]+)\s*$/ && $first
                 or die "pragmas.sh: $f: \"$x\": the look is the line the interface pragmas open with, \"Look: <icon>, <family>\" (GSC, Section 2)\n";
             $look{$f} = [$1, $2];
+            $first = 0;
+            next;
+        }
+        if ($aft && $x =~ /^Version\s*:/) {
+            $x =~ /^Version:\s*(\d+),\s*compatible from\s*(\d+)\s*\.?\s*$/
+                or die "pragmas.sh: $f: \"$x\": a version line is \"Version: <Current>, compatible from <Back>.\", both whole numbers (vGLP, Section 5.4)\n";
+            die "pragmas.sh: $f: \"$x\": a second version line, where a contract writes at most one\n" if $version{$f};
+            die "pragmas.sh: $f: \"$x\": the version it is compatible from, $2, is above its version, $1\n" if $2 > $1;
+            $version{$f} = [$1, $2];
             $first = 0;
             next;
         }
@@ -491,7 +528,8 @@ for my $f (@order) {
         # A pragma line (GSC 25b6b3c, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them, a question line belonging to the nearest button line above it.  "A name in a pragma is the schema role of that name, the schemas naming their roles as the clauses do" (GSC 25b6b3c, Section 2): each name is the role its schema term names so, $rnames{S}, and a name no role of the schema bears, in a question, is the agent variable of an act with one, as Carol of GKK:3 is c of introduce, filled by its field; any other is a fault.  "A button is offered only to the person named before it", by([G]), G the role of that person, which must be guarding; "the persons named before the questions are asked", each question put to the role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role an act needs that the line names neither as its proposer nor as asked is a fault, the act never asking that person.  A question naming the one guarding role of an act is text of its request form.
         if ($rest !~ /^\[/) {
             my @parts = split /\x01/, $rest;
-            my %nm = map { $_ => 1 } keys %is_name;
+            # A name in a pragma is the schema\x27s role of that name, a name the contract\x27s declaration gives a person or a ward (vGLP 722343d, Section 5.4), whichever contract\x27s declaration gave it: the declared names and the names of the roles of the contract\x27s schemas, each line\x27s names then held to the roles of the schemas its buttons name (below).
+            my %nm = map { $_ => 1 } (keys %is_name, map { @{ $rnames{$_} // [] } } keys %rnames);
             my $alt = join("|", sort { length($b) <=> length($a) || $a cmp $b } keys %nm);
             my @props;
             for my $i (0 .. $#parts) {
@@ -599,6 +637,7 @@ for my $f (@order) {
                             my @same = map { "same($rplace{$_->[0]}, $rplace{$_->[1]})" } grep { exists $rplace{ $_->[0] } && exists $rplace{ $_->[1] } } @{ $ones{$S} // [] };
                             $by{$S} = @same ? "by([$pl], [" . join(", ", @same) . "])" : "by([$pl])";
                             $plof{$S} = $pl;
+                            base_read($S, $pl);
                             $said{$S} = @g == 1
                                 ? (exists $q{$pl} ? "said([$q{$pl}])" : undef)
                                 : "said([" . join(", ", map { exists $q{$_} ? $q{$_} : "[]" } @g) . "])";
@@ -829,5 +868,14 @@ for my $f (@order) {
     }
 }
 if (@faults) { print STDERR @faults; exit 1 }
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "]" . (@stands ? ", [" . join(", ", @stands) . "]" : "") . ")\n";
+# The term printed, pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1): the look of the contract itself, look(Icon, Family) or nolook; its version, its own line or, having none, the line of the nearest contract it extends that has one, or version(1, 1); and its clauses as text, the lines of its NAME.txt after the meta-information up to its first pragmas heading, joined by a newline (vGLP b413fe1, Section 5.4: the platform exports "contract(Text, Schemas), the contract it is compiled from, its clauses as text and its schemas with the pragmas").
+my $lk = $look{$top} ? "look(" . q_string($look{$top}[0]) . ", " . q_string($look{$top}[1]) . ")" : "nolook";
+my ($vf) = grep { $version{$_} } reverse @order;
+my $vn = $vf ? "version($version{$vf}[0], $version{$vf}[1])" : "version(1, 1)";
+my @cl;
+for my $x (@own) { next if $x =~ /^%/; last if any_head($x); push @cl, $x }
+pop @cl while @cl && $cl[-1] !~ /\S/;
+my $tx = join("\n", @cl);
+$tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}"
