@@ -31,7 +31,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import FOUNDATIONAL, load_state, paper_of  # noqa: E402
+from papers import foundational, load_state, paper_of  # noqa: E402
 import certify  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
@@ -357,5 +357,5 @@ if served:
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state)}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
