@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as GCoop:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
-% Last changed: 2026-11-10, written by GO #3 Cowork.
+% Last changed: 2026-11-10, by GO #4 Cowork.
 % Schemas: GCoop.glp beside this file.
 GCoop: Grassroots Cooperative
 GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -31,6 +31,7 @@ Acts of the organisation: Alice [Sign] <act>
   Bob [Named vote] <act>
   Otto [Move retire] <motion>
 Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
 Ward and person: Otto [Org acquaint] <person Bob> <motion>
   Bob: Otto asks you to approve this: org acquaint.
 Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>

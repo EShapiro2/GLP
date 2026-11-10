@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.1 and cites a clause as WC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCoop, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-10, written by GO #3 Cowork.
+% Last changed: 2026-11-10, by GO #4 Cowork.
 % Schemas: WC.glp beside this file.
 WC: Workers' Cooperative
 WC instantiates GCoop and restricts it.
@@ -40,6 +40,7 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move wc pay] <denomination> <amount> <motion>
   Otto [Move wc distribute] <denomination> <coins each> <motion>
 Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
 Ward and person: Otto [Org acquaint] <person Bob> <motion>
   Bob: Otto asks you to approve this: org acquaint.
 Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>

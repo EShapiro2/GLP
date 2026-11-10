@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.5 and cites a clause as SCB:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-10, written by GO #3 Cowork.
+% Last changed: 2026-11-10, by GO #4 Cowork.
 % Schemas: SCB.glp beside this file.
 SCB: Sovereign Central Bank
 SCB instantiates GBank and restricts it.
@@ -45,6 +45,7 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move scb lend] <denomination> <amount> <t> <fee> <rate> <motion>
 Creation: Greta [Gov found] <person Alice> <organisation> <denomination> <motion of the founding organisation>
   Alice: Greta asks you to approve this: gov found.
+  Orga: Greta asks you to approve this: gov found.
 Ward and person: Otto [Org acquaint] <person Bob> <motion>
   Bob: Otto asks you to approve this: org acquaint.
 Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
