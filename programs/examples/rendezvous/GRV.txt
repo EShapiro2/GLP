@@ -4,7 +4,7 @@
 % Extends: GSV, Grassroots Services, GNA's (GSV.txt beside this file), which instantiates GnW, GSC's (programs/gsc/GnW.txt), and through it GSG and GKK: a rendezvous server is a service (Udi, 2026-11-10 13:52 UTC).  GDS, the directory service, is a separate contract (GDS.txt beside this file).
 % Defines: rendezvous server and invitation link, defined in the box after the declaration.  Person, knowing a person, friend, ward and guardian are defined with GKK, GSG and GnW.
 % Last changed: 2026-11-10 (second), the environment predicate link, by which Alice's app supplies the serial and the expiry of her next link (Udi, 2026-11-10 21:14 UTC; Code #27, 20:42 UTC); 2026-11-10, on GSV: a rendezvous server is a service, and Carol makes her service Dave a rendezvous server; the schemas rewritten on GSV, Registration's named invite_by_link as its button (Udi, 2026-11-10 13:52 UTC, approving GSA #3); 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDS (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
-% Schemas: GRV.glp beside this file: GSV's seventeen and GRV's five, open_server, invite_by_link, redeem, present and match.
+% Schemas: GRV.glp beside this file, an instance of GnW with ward written service, as GSV's, and GRV's five added: open_server, invite_by_link, redeem, present and match.
 GRV: Grassroots Rendezvous
 GRV extends GSV.
 Alice, Bob and Carol are persons, Dave a ward.  A rendezvous server is a service.  An invitation link is a term Alice signs, naming Alice, a rendezvous server, a serial and an expiry.
