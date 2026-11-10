@@ -23,12 +23,14 @@ import 'package:glp_runtime/compiler/glp_printer.dart'
 import 'machine_state.dart' show GoalRef;
 import 'sim_clock.dart' show PendingToken;
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart'
     show Application, GlpNetwork, ProximityUnderlay, PubKey, TrustLevel;
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show SimulationNetworkClient;
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show AgentSigner, PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
@@ -1065,9 +1067,14 @@ String bytesToHex(List<int> bytes) {
 // §Offer and Handshake Messages, "Signed content", and §Program Artefact)
 // =============================================================================
 //
-// The runtime holds one identity for its person (multiagent/identity.dart):
-// `self_key/1` answers its public half, `sign/3` signs under it and under no
-// other key, and the compiler's certificate is written under it. Keys, hashes
+// The runtime holds of the agent's identity its public key and a signer over
+// the networking layer, which holds the private key and signs with it
+// (multiagent/identity.dart; the GLP paper f265fec, appendix-guards,
+// "Identity and signature": the runtime "gives it to the networking layer,
+// which holds the private key and signs with it"; GNA, decision 39):
+// `self_key/1` answers the public key, `sign/3` signs by the layer under that
+// key and under no other, and the compiler's certificate is written by it the
+// same way. Keys, hashes
 // and signed terms are the catalogue's Key, Hash and SignedTerm — strings —
 // carried as lowercase hex: a key is the 32-byte Ed25519 public key, a hash
 // the 32-byte SHA-256, and a signed term the byte string S of "Signed content":
@@ -1088,11 +1095,11 @@ Uint8List? _bytesOfHex(String hex) {
   return out;
 }
 
-/// The runtime's person identity, or null with a diagnostic printed.
-PersonIdentity? _personIdentity(GlpRuntime rt, String kernel) {
+/// The runtime's signer, the agent's public key and the layer's signature, or null with a diagnostic printed: a bare runtime, made with no engine, holds no key (multiagent/identity.dart).
+AgentSigner? _personIdentity(GlpRuntime rt, String kernel) {
   final id = rt.identity;
   if (id == null) {
-    print('[ABORT] $kernel: the runtime holds no key for its person');
+    print('[ABORT] $kernel: the runtime holds no key: no layer signs for it');
     return null;
   }
   return id;
@@ -1111,10 +1118,13 @@ BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 /// '_sign'(T?, Key?, SignedTerm) — bind SignedTerm to the signed term of the
-/// ground term T under Key, which must be a key whose private half the runtime
-/// holds for its own person (Secure GLP G2), else an error. The module identity
-/// in the signed term is the calling goal's module's source identity, supplied
-/// here and not by the caller.
+/// ground term T under Key, which must be the agent's own key, the one the
+/// layer holds the private half of: "Key is the agent's own, the layer holding
+/// no other, and any other key aborts the call" (the GLP paper f265fec,
+/// appendix-guards, "Identity and signature").  The signature is the layer's
+/// ([AgentSigner.sign]; IGLP 07a2b00, "The contract"), the runtime holding
+/// no private key.  The module identity in the signed term is the calling
+/// goal's module's source identity, supplied here and not by the caller.
 BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 3) {
     return kernelAbort('[ABORT] _sign/3: expected 3 arguments, got ${args.length}');
@@ -1128,8 +1138,9 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
         '${_deref(rt, args[1])}');
   }
   if (key != id.pub.hex) {
-    return kernelAbort('[ABORT] _sign/3: the runtime holds no private key for $key; it '
-        'signs only under ${id.pub.hex}, its own person\'s');
+    return kernelAbort('[ABORT] _sign/3: $key is not the agent\'s own key; the '
+        'layer holds no other than ${id.pub.hex}, and any other key aborts the '
+        'call (the GLP paper f265fec, "Identity and signature")');
   }
 
   final goalId = rt.currentGoalId;
@@ -1480,9 +1491,11 @@ BodyKernelResult peerAppKernel(GlpRuntime rt, List<Object?> args) {
 /// `self_app(R?, I?) :- '_self_app'(R, I)`).  The kernel reads what the host
 /// gave the runtime ([GlpRuntime.selfApps]): the app the store keeps with the
 /// program where the update was refused, and the installed app otherwise.
-/// Where the host gave no app, as the REPL and the simulation give none,
-/// each is `none`: "where the runtime is given no app, as in a simulation,
-/// each is none" (the GLP paper b840c47, "Networking seam").
+/// Where the host gave no app, as the REPL, the simulation and a headless
+/// server give none, each is `none`: "where the runtime is given no app, as
+/// in a simulation or on a headless server, each is none" (the GLP paper
+/// f265fec, appendix-guards, "Networking seam"; IGLP 07a2b00, Definition
+/// "Seam Predicates").
 BodyKernelResult selfAppKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     return kernelAbort(
@@ -1541,7 +1554,7 @@ PubKey? _peerKey(GlpNetwork network, String name) {
   return PubKey.fromHex(name);
 }
 
-/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)`; IGLP, Definition "Seam Predicates", 3b736bb).  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E, `nearby(U, S)` through [MadContext.declareNearby], which grows S from what the layer reports, `onPeerDiscovered` and `onPeerLost`, and calls no layer function (GLP-Spec 210cee1; IGLP b20951d), and `reachable(S)` through [MadContext.declareReachable], which grows S from what the layer reports, `onPeerConnected` and `onPeerDisconnected` over the WAN, and calls no layer function (GLP-Spec cb9df43; IGLP 0c77e47).  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
+/// '_declare'(D?) — make the declaration D to the networking layer or the platform, and assign nothing but a place's stream (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String) ; trust(ProximityUnderlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?) ; nearby(ProximityUnderlay, Stream(Presence)?) ; reachable(Stream(Reach)?) ; public_address(Stream(PeerAddress)?) ; network(Stream(Network)?)`, the GLP paper f265fec; IGLP 07a2b00, Definition "Seam Predicates").  Each alternative reaches the layer function behind it (GNA, Sections 2.4, 3 and 4.2): `peer(P)` [GlpNetwork.putKnownPeer], `address(P, A)` [GlpNetwork.putPeerAddress], `rendezvous(P, A)` [GlpNetwork.putRendezvousServer], `trust(U, L)` [GlpNetwork.setTrustLevel], `place(P, R, E)` [GlpNetwork.declarePlace] through [MadContext.declarePlace], which grows E, `nearby(U, S)` through [MadContext.declareNearby], which grows S from what the layer reports, `onPeerDiscovered` and `onPeerLost`, and calls no layer function (GLP-Spec 210cee1; IGLP b20951d), and `reachable(S)` through [MadContext.declareReachable], which grows S from what the layer reports, `onPeerConnected` and `onPeerDisconnected` over the WAN, and calls no layer function (GLP-Spec cb9df43; IGLP 0c77e47), and `public_address(S)` and `network(S)` through [MadContext.declarePublicAddress] and [MadContext.declareNetwork], which give S the layer's present value and then each change the layer reports (the GLP paper f265fec; IGLP 07a2b00).  A term no alternative of Declaration matches is a violated precondition, and so an abort; the type checker refuses it in a program.  Where no layer is bound the declaration returns having done nothing, but for a place, whose stream is the runtime's ("One interface", 6ba0329).
 BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
   const who = "'_declare'/1";
   if (args.length != 1) {
@@ -1565,13 +1578,17 @@ BodyKernelResult declareKernel(GlpRuntime rt, List<Object?> args) {
       return _declareNearby(rt, a);
     case 'reachable/1':
       return _declareReachable(rt, a);
+    case 'public_address/1':
+      return _declarePublicAddress(rt, a);
+    case 'network/1':
+      return _declareNetwork(rt, a);
   }
   return kernelAbort('[ABORT] $who: argument (D) must be a Declaration --- '
       'peer(P), address(P, A), rendezvous(P, A), trust(U, L), place(P, R, E), '
-      'nearby(U, S) or reachable(S) --- got $d');
+      'nearby(U, S), reachable(S), public_address(S) or network(S) --- got $d');
 }
 
-/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)`; IGLP, Definition "Seam Predicates", 3b736bb): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream, `nearby(U)`, which closes the stream of the nearby declaration on U (GLP-Spec 210cee1), and `reachable`, which closes the stream of the reachable declaration (GLP-Spec cb9df43).  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
+/// '_remove'(R?) — end the declaration R, and assign nothing (GLP-Spec appendix-guards, "Networking seam", 1ce0263: `Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant) ; nearby(ProximityUnderlay) ; reachable ; public_address ; network`, the GLP paper f265fec; IGLP 07a2b00, Definition "Seam Predicates"): `peer(P)` [GlpNetwork.removeKnownPeer], `rendezvous(P)` [GlpNetwork.removeRendezvousServer], `place(P)` [GlpNetwork.removePlace] through [MadContext.removePlace], which closes its stream, `nearby(U)`, which closes the stream of the nearby declaration on U (GLP-Spec 210cee1), `reachable`, which closes the stream of the reachable declaration (GLP-Spec cb9df43), and `public_address` and `network`, which close the stream of each (the GLP paper f265fec).  A term no alternative of Removal matches is a violated precondition, and so an abort.  Where no layer is bound it returns having done nothing, but for a place, whose stream it closes all the same ("One interface", 6ba0329).
 BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
   const who = "'_remove'/1";
   if (args.length != 1) {
@@ -1581,9 +1598,12 @@ BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
   final a = r is StructTerm ? r.args : const <Term>[];
   final form = r is StructTerm
       ? '${r.functor}/${a.length}'
-      : _groundString(rt, r) == 'reachable'
-          ? 'reachable/0'
-          : null;
+      : switch (_groundString(rt, r)) {
+          'reachable' => 'reachable/0',
+          'public_address' => 'public_address/0',
+          'network' => 'network/0',
+          _ => null,
+        };
   switch (form) {
     case 'peer/1':
       return _removePeer(rt, a);
@@ -1595,9 +1615,14 @@ BodyKernelResult removeKernel(GlpRuntime rt, List<Object?> args) {
       return _removeNearby(rt, a);
     case 'reachable/0':
       return _removeReachable(rt);
+    case 'public_address/0':
+      return _removePublicAddress(rt);
+    case 'network/0':
+      return _removeNetwork(rt);
   }
   return kernelAbort('[ABORT] $who: argument (R) must be a Removal --- '
-      'peer(P), rendezvous(P), place(P), nearby(U) or reachable --- got $r');
+      'peer(P), rendezvous(P), place(P), nearby(U), reachable, public_address '
+      'or network --- got $r');
 }
 
 /// Call the layer function [call] with the layer bound to [rt] and the key a ground [arg] names in it, for the alternative [what] of [who].  It returns having done nothing where no layer is bound; an [arg] that is not a ground constant, or that names no peer, is a violated precondition, and so an abort.
@@ -1807,6 +1832,75 @@ BodyKernelResult _removeReachable(GlpRuntime rt) {
 
 /// The one key of [GlpRuntime.reachableStreams]: an agent has at most one reachable declaration standing.
 const String reachableKey = 'wan';
+
+/// The stream writer a declaration's `S` names, or null with the abort of [who] and [what] where it is none.
+(HeapCell?, BodyKernelResult) _streamWriter(
+    GlpRuntime rt, String who, String what, Term arg) {
+  final stream = _deref(rt, arg);
+  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
+    return (
+      null,
+      kernelAbort('[ABORT] $who: $what: the stream (S) must be a writer')
+    );
+  }
+  return (stream.addr, BodyKernelResult.success);
+}
+
+/// `declare(public_address(S))`: assign S a stream of the agent's own public address, "beginning with address(A), A the ip:port the layer has learnt from a rendezvous server, or none where it knows none, when it is declared, and then the address at each change, none where it is lost"; a further declaration supersedes the earlier one and closes its stream (the GLP paper f265fec, appendix-guards, "Networking seam"; IGLP 07a2b00, Definition "Seam Predicates").  The stream is fed and closed as a place's, by the runtime's bookkeeping ([GlpRuntime.publicAddressStreams]); what feeds it is the layer's `getPublicAddress()` at the declaration and `onConnectivityStatusChanged` after (GNA ip.tex, Connectivity and Address; [MadContext.declarePublicAddress]).  The declaration is recorded among the standing ones, so that a restart gives the stream the new layer's present value.
+///
+/// Where no layer is bound the declaration stands all the same, its stream given `none`: a layer that observes nothing knows no address (IGLP, Implementation Notes, "One interface"); the simulation's layer observes none either (IGLP 07a2b00, "Simulation realisation").
+BodyKernelResult _declarePublicAddress(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'public_address(S)';
+  final (writer, failed) = _streamWriter(rt, who, what, a[0]);
+  if (writer == null) return failed;
+  final ctx = rt.madContext;
+  if (ctx is MadContext) {
+    ctx.declarePublicAddress(writer);
+  } else {
+    rt.publicAddressStreams.declare(publicAddressKey, writer);
+    rt.publicAddressStreams.deliver(publicAddressKey, ConstTerm('none'));
+  }
+  rt.seamDeclarations.publicAddress();
+  return BodyKernelResult.success;
+}
+
+/// `remove(public_address)`: end the public-address declaration, closing its stream, its tail assigned `[]`; does nothing where none stands (the GLP paper f265fec, "Networking seam").  The closing is the runtime's, layer or none.
+BodyKernelResult _removePublicAddress(GlpRuntime rt) {
+  rt.publicAddressStreams.close(publicAddressKey);
+  rt.seamDeclarations.removePublicAddress();
+  return BodyKernelResult.success;
+}
+
+/// `declare(network(S))`: assign S a stream of the local network the agent is attached to, "beginning with attached(N), N an opaque fingerprint of that network, or none where it is attached to none or the platform makes the fingerprint unreadable, when it is declared, and then the network at each change"; a further declaration supersedes the earlier one and closes its stream (the GLP paper f265fec, appendix-guards, "Networking seam"; IGLP 07a2b00, Definition "Seam Predicates").  The stream is fed and closed as a place's ([GlpRuntime.networkStreams]); what feeds it is the layer's `networkIdentity()` at the declaration and `onNetworkChanged` after (GNA ip.tex, Local Network Identity; [MadContext.declareNetwork]).  The declaration is recorded among the standing ones, so that a restart gives the stream the new layer's present value.
+///
+/// Where no layer is bound the declaration stands all the same, its stream given `none`; the simulation's layer is attached to no network either.
+BodyKernelResult _declareNetwork(GlpRuntime rt, List<Term> a) {
+  const who = "'_declare'/1", what = 'network(S)';
+  final (writer, failed) = _streamWriter(rt, who, what, a[0]);
+  if (writer == null) return failed;
+  final ctx = rt.madContext;
+  if (ctx is MadContext) {
+    ctx.declareNetwork(writer);
+  } else {
+    rt.networkStreams.declare(networkKey, writer);
+    rt.networkStreams.deliver(networkKey, ConstTerm('none'));
+  }
+  rt.seamDeclarations.network();
+  return BodyKernelResult.success;
+}
+
+/// `remove(network)`: end the network declaration, closing its stream, its tail assigned `[]`; does nothing where none stands (the GLP paper f265fec, "Networking seam").  The closing is the runtime's, layer or none.
+BodyKernelResult _removeNetwork(GlpRuntime rt) {
+  rt.networkStreams.close(networkKey);
+  rt.seamDeclarations.removeNetwork();
+  return BodyKernelResult.success;
+}
+
+/// The one key of [GlpRuntime.publicAddressStreams]: an agent has at most one public-address declaration standing.
+const String publicAddressKey = 'wan';
+
+/// The one key of [GlpRuntime.networkStreams]: an agent has at most one network declaration standing.
+const String networkKey = 'local';
 
 /// `remove(peer(P))`: take P, and any address recorded for it, off the layer's known peers, `removeKnownPeer(pk)` (GLP-Spec appendix-guards, "Networking seam"; GNA, "Known Peers").
 BodyKernelResult _removePeer(GlpRuntime rt, List<Term> a) {

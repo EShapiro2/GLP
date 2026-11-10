@@ -71,11 +71,17 @@ class SavedStateFormatException implements Exception {
 /// agent at its other end, the serializer's appended cold calls as (sender,
 /// epoch, serial), and the ends retired (IGLP db0a117, Definitions "Epoch",
 /// "Global Variable Name" and "madGLP Local State"; Persistence, "What is
-/// saved"); a version-6 state is not read.  A state of an earlier version is
+/// saved"); a version-6 state is not read.  Version 8 (2026-11-10) writes the
+/// public-address and network declarations after the reachable declaration,
+/// each with its stream's tail writer, and among the standing declarations
+/// (the GLP paper f265fec, "Networking seam": public_address(S) and
+/// network(S); IGLP 07a2b00, "Persistence", What is saved: "the nearby,
+/// reachable, public-address and network declarations"); a version-7 state is
+/// not read.  A state of an earlier version is
 /// lost at the restart, and the agent starts afresh (IGLP db0a117,
 /// "Persistence", Failure; [SavedStateFormatException]).
 const List<int> savedStateMagic = [0x47, 0x4C, 0x50, 0x53];
-const int savedStateVersion = 7;
+const int savedStateVersion = 8;
 
 // Term tags.
 const int _tVar = 0;

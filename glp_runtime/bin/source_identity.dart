@@ -24,7 +24,7 @@ library;
 import 'dart:io';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/multiagent/identity.dart';
+
 import 'package:glp_runtime/runtime/body_kernels.dart' show bytesToHex;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 
@@ -38,10 +38,9 @@ void main(List<String> args) {
       ? File(args[1]).absolute.path
       : Platform.script.resolve('../../programs/self.glp').toFilePath();
 
-  // As AgentRuntime._setUp makes the agent's engine: the key does not enter
-  // h(M), so a fresh one serves.
-  final engine = GlpEngine(
-      rootSelfGlpPath: rootSelfGlp, identity: PersonIdentity.generate());
+  // As AgentRuntime._setUp makes the agent's engine, with no layer to sign
+  // by: the key does not enter h(M), and the certificate is not read.
+  final engine = GlpEngine(rootSelfGlpPath: rootSelfGlp);
   engine.enableMadGLP(agentId: 'source_identity');
   engine.loadProgram(programDir);
   final module = engine.appModule;

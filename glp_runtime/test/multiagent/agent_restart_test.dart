@@ -86,6 +86,24 @@ procedure waiter(Go?).
 waiter(go) :- when_idle | send_to_user([waiter]).
 ''';
 
+/// `o` watches its own public address and local network: each stream begins
+/// with the present value, none in the simulation (the GLP paper f265fec,
+/// "Networking seam"; IGLP 07a2b00, "Simulation realisation").
+const String _own = r'''
+Shown ::= addr(PeerAddress) ; net(Network).
+
+exported procedure agent(Channel(Stream(Constant), Stream(Shown))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :- declare(public_address(A)), declare(network(N)), watch_a(A?), watch_n(N?).
+
+procedure watch_a(Stream(PeerAddress)?).
+watch_a([X | S]) :- ground(X?) | send_to_user([addr(X?)]), watch_a(S?).
+watch_a([]).
+
+procedure watch_n(Stream(Network)?).
+watch_n([X | S]) :- ground(X?) | send_to_user([net(X?)]), watch_n(S?).
+watch_n([]).
+''';
+
 /// A message the layer holds: its sender, its recipient, its payload and the
 /// id the layer gave it.
 typedef _Held = ({String from, String to, Uint8List payload, String id});
@@ -96,6 +114,7 @@ void main() {
   late String playA;
   late String playB;
   late String idle;
+  late String own;
 
   setUpAll(() {
     // Under the root, so the program's scope holds the root self.glp
@@ -107,6 +126,8 @@ void main() {
     File(playB).writeAsStringSync(_playB);
     idle = '${dir.path}/idle.glp';
     File(idle).writeAsStringSync(_idle);
+    own = '${dir.path}/own.glp';
+    File(own).writeAsStringSync(_own);
     root = File('../programs/self.glp').absolute.path;
   });
   tearDownAll(() => dir.deleteSync(recursive: true));
@@ -504,6 +525,35 @@ void main() {
     expect(await a2.save(), isTrue);
     expect(storeA.saves, greaterThan(saves));
     expect(a.disposed, isTrue);
+  });
+
+  test('the public-address and network declarations stand across a restart: '
+      'the store keeps them, and each stream is given the new layer\'s present '
+      'value again (the GLP paper f265fec, "Networking seam"; IGLP 07a2b00, '
+      '"Persistence")', () async {
+    final kp = generateKeyPair();
+    final store = MemoryAgentStateStore();
+    final o1 = host('o', own, store, kp);
+    await o1.initialize();
+    expect(out['o']!.where((l) => l.startsWith('< ')),
+        ['< addr(none)', '< net(none)'],
+        reason: 'the simulation\'s layer knows no address and no network');
+    expect(o1.runtime!.seamDeclarations.standing.map((d) => d.kind.name),
+        containsAll(['publicAddress', 'network']));
+    expect(await o1.save(), isTrue);
+    o1.dispose();
+
+    final o2 = host('o', own, store, kp);
+    await o2.initialize();
+    expect(o2.runtime!.seamDeclarations.standing.map((d) => d.kind.name),
+        containsAll(['publicAddress', 'network']),
+        reason: 'the store keeps both standing');
+    expect(o2.runtime!.publicAddressStreams.isDeclared('wan'), isTrue);
+    expect(o2.runtime!.networkStreams.isDeclared('local'), isTrue);
+    expect(out['o']!.where((l) => l.startsWith('< ')),
+        ['< addr(none)', '< net(none)', '< addr(none)', '< net(none)'],
+        reason: 'at the restart each standing stream is given the new '
+            'layer\'s present value');
   });
 
   test('a saved state is refused under another key', () async {

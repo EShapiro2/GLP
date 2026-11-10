@@ -33,6 +33,7 @@ import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show generateKeyPair;
 
@@ -66,10 +67,14 @@ class _Alone extends GlpNetwork {
   @override
   List<Underlay> peerUnderlays(PubKey pk) => const [];
   @override
-  Uint8List sign(Uint8List message) => throw UnimplementedError();
+  // The layer holds the private key and signs: the runtime signs by it, for
+  // the certificate its compiler writes and sign/3 (the GLP paper f265fec,
+  // "Identity and signature").
+  Uint8List sign(Uint8List message) =>
+      PersonIdentity(keyPair.pub, keyPair.priv).sign(message);
   @override
   bool verify(PubKey signer, Uint8List message, Uint8List signature) =>
-      throw UnimplementedError();
+      PersonIdentity.verify(signer, message, signature);
   @override
   List<DiscoveredPeer> getPeers() => const [];
   @override
@@ -192,7 +197,6 @@ void main() {
           program: '$tree/social/graph/core',
           rootSelfGlpPath: '$tree/self.glp',
           network: _Alone(kp),
-          keyPair: kp,
           manifest: superappManifest,
           stateStore: FileAgentStateStore(path),
         ));

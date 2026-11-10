@@ -6779,14 +6779,14 @@ check "SK2 decompose_module assigns the compiler's key" "K = \('[0-9][0-9a-f]\{6
 check "SK2 decompose_module assigns the source identity" "S = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
 check "SK2 decompose_module assigns the compiled identity" "C = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
 
-# sign/3 signs only under a key whose private half the runtime holds (G2).
+# sign/3 signs only under the agent's own key, the one the layer holds the private half of: any other key aborts the call (the GLP paper f265fec, "Identity and signature").
 sk3=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/sign_probe
 sign(hello, "0000000000000000000000000000000000000000000000000000000000000000", S).
 :quit
 HEREDOC
 2>&1)
-check "SK3 sign under another person's key is an error" "_sign/3: the runtime holds no private key for" "$sk3"
+check "SK3 sign under another person's key is an error" "_sign/3: .* is not the agent's own key" "$sk3"
 
 # signature/2 on a term that is not a verified signed term answers unsigned: a
 # value the caller matches and not a failure, so the goal succeeds and the

@@ -7,7 +7,7 @@ import 'seam_declarations.dart';
 import 'sim_clock.dart';
 import 'saved_state.dart';
 import 'terms.dart' show Term, ModuleTerm;
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart' show AgentSigner;
 import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
@@ -138,6 +138,21 @@ class GlpRuntime {
   /// paragraph after it), kept whether a networking layer is bound or none is.
   late final PlaceStreams reachableStreams = PlaceStreams(this);
 
+  /// The public-address declaration and its stream, under the one key
+  /// `wan`: the runtime's bookkeeping behind declare(public_address(S)) and
+  /// remove(public_address), fed and closed as a place's stream (the GLP
+  /// paper f265fec, appendix-guards, "Networking seam"; IGLP 07a2b00,
+  /// Definition "Seam Predicates"), kept whether a networking layer is bound
+  /// or none is.
+  late final PlaceStreams publicAddressStreams = PlaceStreams(this);
+
+  /// The network declaration and its stream, under the one key `local`: the
+  /// runtime's bookkeeping behind declare(network(S)) and remove(network),
+  /// fed and closed as a place's stream (the GLP paper f265fec,
+  /// appendix-guards, "Networking seam"; IGLP 07a2b00, Definition "Seam
+  /// Predicates"), kept whether a networking layer is bound or none is.
+  late final PlaceStreams networkStreams = PlaceStreams(this);
+
   /// The declarations made to the networking layer that stand, kept so that
   /// a restart makes each to the new layer again (seam_declarations.dart;
   /// IGLP 0c77e47, Implementation Notes, "Persistence").
@@ -156,13 +171,18 @@ class GlpRuntime {
   /// '_step_clock'.
   final SimClock simClock = SimClock();
 
-  /// The person's identity this runtime holds: the key `self_key/1` answers,
-  /// `sign/3` signs under, and the compiler certifies modules with. Set by the
-  /// engine at construction (multiagent/identity.dart); for an agent, the key
-  /// pair the runtime makes when it spawns the agent, before anything is
-  /// compiled or sent (GLP-Spec appendix-guards.tex, "Identity and
-  /// signature"; IGLP, Implementation Notes, "Boot").
-  PersonIdentity? identity;
+  /// What this runtime holds of the agent's identity: the public key
+  /// `self_key/1` answers and a certificate names, and a signature by the
+  /// networking layer, which holds the private key and signs with it, for
+  /// `sign/3` and the compiler's certificate (the GLP paper f265fec,
+  /// appendix-guards, "Identity and signature"; IGLP 07a2b00, Implementation
+  /// Notes, "The contract"; multiagent/identity.dart).  Set by the engine at
+  /// construction, a [LayerSigner] over the agent's layer, or over a layer of
+  /// the engine's own where it is given none ([GlpEngine.identity]); null in
+  /// a bare runtime, which holds no key.  The runtime keeps no
+  /// private key: a host makes the agent's key pair and hands it to the layer
+  /// at its instantiation (IGLP, "Boot" and "Persistence").
+  AgentSigner? identity;
 
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends
   /// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(
@@ -558,6 +578,8 @@ class GlpRuntime {
     placeStreams.saveState(w);
     nearbyStreams.saveState(w);
     reachableStreams.saveState(w);
+    publicAddressStreams.saveState(w);
+    networkStreams.saveState(w);
     seamDeclarations.saveState(w);
   }
 
@@ -629,6 +651,8 @@ class GlpRuntime {
     placeStreams.restoreState(r);
     nearbyStreams.restoreState(r);
     reachableStreams.restoreState(r);
+    publicAddressStreams.restoreState(r);
+    networkStreams.restoreState(r);
     seamDeclarations.restoreState(r);
   }
 

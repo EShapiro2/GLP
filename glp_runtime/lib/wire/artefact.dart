@@ -42,7 +42,8 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show AgentSigner, PersonIdentity;
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
 
@@ -146,7 +147,7 @@ class Certificate {
 
   /// A certificate written by [signer] over the two identities.
   factory Certificate.signed(
-      {required PersonIdentity signer,
+      {required AgentSigner signer,
       required Uint8List hSrc,
       required Uint8List hBin}) {
     return Certificate(
@@ -217,7 +218,7 @@ class Artefact {
   final Uint8List _hSrc;
 
   /// The compiling person, or null where no one certifies the module.
-  final PersonIdentity? _signer;
+  final AgentSigner? _signer;
 
   /// A certificate read from bytes, or written once from the body.
   Certificate? _certificate;
@@ -231,7 +232,7 @@ class Artefact {
     required this.typeDefsText,
     required this.exports,
     required this.symbols,
-    PersonIdentity? signer,
+    AgentSigner? signer,
   })  : _hSrc = hM,
         _signer = signer {
     if (hM.length != 32) {
@@ -389,7 +390,7 @@ class Artefact {
     required String isaVersion,
     String typeDefsText = '',
     List<ArtefactExport> exports = const [],
-    PersonIdentity? signer,
+    AgentSigner? signer,
   }) {
     // Procedure-entry labels: a `name/arity` signature, not an internal label.
     final internalSuffix = RegExp(r'_c\d+$');
