@@ -238,6 +238,15 @@ const openBtn = (c, cls = 'pill') => c.live
 const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refused it: ' + c.notCompiled.join('; ')
   : c.record ? 'The compiler printed no platform for it.' : 'Not yet run through the cascade.';
 
+// The stages of the cascade a contract may have reached, in order, each
+// deciding of a contract whether it got that far (stripHtml; the globe's key).
+const STAGES = [
+  ['Schemas', c => c.schemas.length > 0],
+  ['Checked', c => /^syntactically_grassroots/.test(c.verdict || '')],
+  ['Platform', c => !!(c.layers && c.layers.platform && c.live)],
+  ['Compiled', c => !!(c.layers && c.layers.glp)],
+  ['Running', c => !!c.live]];
+
 /* ---------- help ---------- */
 const HELP = {
   contract: ['What is a contract?', `<p>A few plain rules about what people may do with each other. Alice, Bob and Carol stand for any people.</p>
@@ -430,6 +439,22 @@ function drawGlobe(){
       : r === 'instantiates' ? stroked(p, q, `0.1 ${4.5*kk}`, kc, 0, 0, kk)
       : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
     s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });
+  s += `</g>`;
+  // Level with the key, how far the contracts got: the number that reached each
+  // stage of the cascade, every stage up to it ticked, as each contract's
+  // strip says where it stopped (STAGES, stripHtml), and the number of
+  // contracts in all, which a stage's count is out of (Udi, 2026-11-10).  Its
+  // box ends where the key's does; on a phone it stands beside the key, below
+  // the globe, and on a wide screen in the other corner, where it covers no
+  // contract, as it would beside the key.
+  const CNT = [...STAGES.map(([n], i) => [n, D.contracts.filter(c => STAGES.slice(0, i + 1).every(([, reached]) => reached(c))).length]),
+               ['contracts', D.contracts.length]];
+  const cx2 = nar ? kx + 170 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
+  s += `<g class="key"><rect x="${cx2-12}" y="${cy2-20}" width="150" height="${24*CNT.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
+  CNT.forEach(([n, k], i) => { const y = cy2 + 24*i;
+    if (i === CNT.length - 1) s += `<line x1="${cx2-4}" y1="${y-12}" x2="${cx2+130}" y2="${y-12}" stroke="#d5dee7"/>`;
+    s += `<text x="${cx2}" y="${y + 4}" font-size="12.5" fill="#33404d">${n}</text>`
+       + `<text x="${cx2 + 130}" y="${y + 4}" font-size="12.5" font-weight="600" text-anchor="end" fill="#33404d">${k}</text>`; });
   s += `</g>`;
   const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 772` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
@@ -643,10 +668,10 @@ function hoodHtml(c){
 // How far the contract got down the cascade, from cascade/<NAME>/ (GSA,
 // 2026-11-09, after Nimrod Talmon): its speech-act schemas, the grassroots
 // check, the platform printed from them, the platform compiled to GLP, and its
-// app running on the site; and why it stopped where it stopped.
+// app running on the site; and why it stopped where it stopped.  STAGES is the
+// one copy of the five, which the globe's key counts (draw).
 function stripHtml(c){
-  const steps = [['Schemas', c.schemas.length > 0], ['Checked', /^syntactically_grassroots/.test(c.verdict || '')],
-    ['Platform', !!(c.layers && c.layers.platform && c.live)], ['Compiled', !!(c.layers && c.layers.glp)], ['Running', !!c.live]];
+  const steps = STAGES.map(([n, reached]) => [n, reached(c)]);
   const stop = steps.findIndex(s => !s[1]);
   const why = stop < 0 ? '' : !c.record ? 'Not yet run through the cascade.'
     : stop === 0 ? 'The record holds no speech-act schemas.'
