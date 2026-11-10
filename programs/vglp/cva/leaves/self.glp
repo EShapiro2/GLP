@@ -1,0 +1,59 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract leaves
+%% (../contracts.glp, contract_named(leaves, C): install(p? ; x), invite(p?,
+%% q? ; x), and leave(p?, q[participant(p, x, *)] ; x), whose listed role q is
+%% at the third argument of its anchor, participant(p, x, q), after the holder
+%% and the program, as GPD's leave lists Bob by participant(Alice, p, Bob)),
+%% platform.vglp, which programs/vglp/cva/compile.sh prints from it: "a
+%% listed role is an agent variable bound by a quantifier whose anchor an
+%% agent role, its base, holds, the variable at any of the anchor's arguments"
+%% (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications").
+%%
+%% play_leaves: alice installs the program x, speech(utterance(app), alice),
+%% and invites bob to it, invite a meeting schema, its guarding roles requiring
+%% nothing naming the other, so her request is the cold call, the hello,
+%% which asks bob; he answers yes, his request of it, and it commits: alice
+%% holds participant(x, bob) and bob installed(x) and participant(x, alice).
+%% alice leaves x, leave(alice, x): her machine completes the list of the
+%% people she lists at the third argument of participant(alice, x, q), [bob],
+%% the class term leave(alice, [bob], x), and proposes it; bob's machine votes
+%% yes, unasked, the listed role unguarded, and it commits: alice holds neither
+%% installed(x) nor participant(x, bob), and bob no participant(x, alice).
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_leaves(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_leaves(LA?, LB?, N?) :-
+    pair([own([A1, A2], propose(install(A1?, speech(utterance(app), A2?)))),
+          wait(holds(installed(speech(utterance(app), alice)))),
+          own([A3, A4], propose(invite(A3?, bob, speech(utterance(app), A4?)))),
+          wait(holds(participant(speech(utterance(app), alice), bob))),
+          own([A5, A6], propose(leave(A5?, speech(utterance(app), A6?)))),
+          wait(lacks(installed(speech(utterance(app), alice))))],
+         [approval(invite(alice, bob, speech(utterance(app), alice)), yes),
+          wait(holds(participant(speech(utterance(app), alice), alice))),
+          wait(lacks(participant(speech(utterance(app), alice), alice)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

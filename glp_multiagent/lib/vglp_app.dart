@@ -112,13 +112,23 @@ class _VglpScreenState extends State<VglpScreen> {
     super.dispose();
   }
 
-  /// The look of the program's contract, once read; null until then.
+  /// The look of the program's contract, once read; null until then.  First
+  /// the tree's, from its contract's `NAME.txt` and the site's `about.json`
+  /// ([Looks.of]); then the one the program's platform exports in
+  /// `contract(Text, Schemas)`, where it writes one, which the agent reads
+  /// once started and sends as [AgentLook] (vGLP b413fe1, Section 5.4: the
+  /// app "reads its contract and its versions from it").
   ContractLook? _look;
+
+  /// The looks of the tree, kept for the families' colours.
+  Looks? _looks;
 
   Future<void> _spawn() async {
     final glp = await resolveGlpPaths();
     try {
-      _look = (await Looks.read(glp.rootSelfGlp)).of(_p.contract);
+      final looks = await Looks.read(glp.rootSelfGlp);
+      _looks = looks;
+      _look = looks.of(_p.contract);
     } catch (e) {
       _status = 'Error: no look: $e';
     }
@@ -155,6 +165,12 @@ class _VglpScreenState extends State<VglpScreen> {
       // agent's transcript (AgentOutput) is not the screen's.
       _ui?.handle(msg.term);
       setState(() {});
+    } else if (msg is AgentLook) {
+      final looks = _looks;
+      if (looks != null) {
+        setState(() =>
+            _look = looks.withLook(_p.contract, msg.icon, msg.family));
+      }
     } else if (msg is AgentError) {
       setState(() => _status = 'Error: ${msg.error}');
     }
