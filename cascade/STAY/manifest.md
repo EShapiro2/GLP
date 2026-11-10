@@ -1,9 +1,9 @@
 # A run of the cascade on STAY
 
-- Contract: `STAY` (`stay` to the checker), its owner's two files `programs/gce/stay/STAY.txt` and `programs/gce/stay/STAY.glp`, copied here as they stood at `90674fc0`.
+- Contract: `STAY` (`stay` to the checker), its owner's two files `programs/gce/stay/STAY.txt` and `programs/gce/stay/STAY.glp`, copied here as they stood at `a98ded98`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `90674fc0` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 15:55 UTC by `cascade.sh stay`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `a98ded98` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 16:26 UTC by `cascade.sh stay`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
