@@ -2343,6 +2343,7 @@ InstFault  ::= not_parametric ; not_a_parameter(Constant) ; occurs(Constant)
              ; written_twice(Constant) ; bound_twice(Constant).
 InstFaults ::= [] ; [InstFault | InstFaults].
 SParts     ::= sp(Preds, Preds, SContract).
+InstParts  ::= ip(SParams, SDeclared, SContract).
 % What a guarding role is held to (def:guardianship, GSC 0a30d52): iota, f, the
 % guardianship of each mark and the marks of M that are not passive.
 GuardParts ::= gp(Constant, Constant, Guardianships, Preds).
@@ -4351,11 +4352,14 @@ as_read(parametric(Ps, D), parametric(Ps?, R?)) :- ground(Ps?), ground(D?) | as_
 % --- parametric contracts and their instances (GSC, Definition Parametric
 % contract; GSC #14, Code_inbox 2026-11-10 18:02 UTC, GSC df5e454) ----------
 % instantiate(Base, Bindings, Additions, D): the instance of the parametric
-% contract Base, parametric(Params, B): B with each predicate P and each
-% constant val(P) that a binding P = Q names renamed Q throughout, its
-% wrapper kept; then each schema of Additions named as a schema of B in
-% that schema's place, and the others after B's, in their order, the
-% reflexive and environment predicates of the two together.  Base not
+% contract Base, parametric(Params, B): B with each predicate P, each
+% constant val(P) and each schema named P that a binding P = Q names renamed
+% Q throughout, its wrapper kept (GSC 22605d6: "An instantiation may also
+% write names of its own for schemas of the contract, a different one for
+% each ... the name of a schema has no part in what the schema denotes");
+% then each schema of Additions named as a schema of B, by the instance's
+% name for it, in that schema's place, and the others after B's, in their
+% order, the reflexive and environment predicates of the two together.  Base not
 % parametric is taken as B.  The faults of the bindings are
 % instance_faults/3's.
 exported procedure instantiate(SDeclared?, SBindings?, SDeclared?, WDeclared).
@@ -4366,26 +4370,36 @@ instantiate(B, Bs, A, D?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
     add_sdecl(B?, A?, D).
 
 % The faults of an instance's bindings: not_parametric, the base names no
-% parameters; not_a_parameter(P), P no parameter of the base; occurs(Q), Q
-% written for a parameter other than Q and occurring in the base, which an
-% instantiation asks it not to ("predicates of the same arity and kinds, and
-% values and utterances of the same kind, that do not occur in it");
-% written_twice(Q), Q written for two parameters ("a different one for
-% each"); and bound_twice(P).  [] where there is none.
+% parameters; not_a_parameter(P), P no parameter of the base and no name of
+% a schema of it; occurs(Q), Q written for a parameter or a schema other than
+% Q and occurring in the base, as a predicate, a constant or a schema's name,
+% which an instantiation asks it not to ("predicates of the same arity and
+% kinds, and values and utterances of the same kind, that do not occur in
+% it"); written_twice(Q), Q written for two parameters or schemas ("a
+% different one for each", of each); and bound_twice(P).  [] where there is
+% none.
 exported procedure instance_faults(SDeclared?, SBindings?, InstFaults).
 instance_faults(parametric(Ps, B), Bs, F?) :- ground(Ps?), ground(B?), ground(Bs?) |
-    inst_faults(Bs?, Ps?, B?, [], [], F).
+    sdecl_parts(B?, sp(_, _, Ss)),
+    inst_faults0(Bs?, Ps?, B?, Ss?, F).
 instance_faults(_, _, [not_parametric]) :- otherwise | true.
 
-procedure inst_faults(SBindings?, SParams?, SDeclared?, Preds?, Preds?, InstFaults).
-inst_faults([], _, _, _, _, []).
-inst_faults([(P = Q)|Bs], Ps, B, SP, SQ, F?) :-
-    ground(P?), ground(Q?), ground(Bs?), ground(Ps?), ground(B?), ground(SP?), ground(SQ?) |
-    param_member(Ps?, P?, A1),
+procedure inst_faults0(SBindings?, SParams?, SDeclared?, SContract?, InstFaults).
+inst_faults0(Bs, Ps, B, Ss, F?) :- ground(Bs?), ground(Ps?), ground(B?), ground(Ss?) |
+    inst_faults(Bs?, ip(Ps?, B?, Ss?), [], [], F).
+
+procedure inst_faults(SBindings?, InstParts?, Preds?, Preds?, InstFaults).
+inst_faults([], _, _, _, []).
+inst_faults([(P = Q)|Bs], ip(Ps, B, Ss), SP, SQ, F?) :-
+    ground(P?), ground(Q?), ground(Bs?), ground(Ps?), ground(B?), ground(Ss?), ground(SP?),
+    ground(SQ?) |
+    param_member(Ps?, P?, A0),
+    sas_named(Ss?, P?, A00),
+    or_yes(A0?, A00?, A1),
     occurs_in(P?, Q?, B?, A2),
     pred_member(Q?, SQ?, A3),
     pred_member(P?, SP?, A4),
-    inst_faults(Bs?, Ps?, B?, [P?|SP?], [Q?|SQ?], F0),
+    inst_faults(Bs?, ip(Ps?, B?, Ss?), [P?|SP?], [Q?|SQ?], F0),
     inst_fault(A4?, bound_twice(P?), F0?, F1),
     inst_fault(A3?, written_twice(Q?), F1?, F2),
     inst_fault(A2?, occurs(Q?), F2?, F3),
@@ -4456,8 +4470,9 @@ rn_preds([P|Ps], Bs, [Q?|R?]) :- ground(P?), ground(Ps?), ground(Bs?) |
 
 procedure rn_scontract(SContract?, SBindings?, SContract).
 rn_scontract([], _, []).
-rn_scontract([sas(Nm, Ns, Vs, H, B, Cn, G)|Ss], Bs, [sas(Nm?, Ns?, Vs?, H1?, B1?, Cn1?, G?)|R?]) :-
-    ground(H?), ground(B?), ground(Cn?), ground(Ss?), ground(Bs?) |
+rn_scontract([sas(Nm, Ns, Vs, H, B, Cn, G)|Ss], Bs, [sas(Nm1?, Ns?, Vs?, H1?, B1?, Cn1?, G?)|R?]) :-
+    ground(Nm?), ground(H?), ground(B?), ground(Cn?), ground(Ss?), ground(Bs?) |
+    rn_name(Nm?, Bs?, Nm1),
     rn_slits(H?, Bs?, H1),
     rn_slits(B?, Bs?, B1),
     rn_sc(Cn?, Bs?, Cn1),
