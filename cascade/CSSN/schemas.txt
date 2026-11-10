@@ -1,94 +1,115 @@
 Reflexive predicates: friend, knows
 
-establish: identity(Alice) <-
-    not identity(Alice), not retired(Alice) guarded by Alice
+establish: identity(Alice), person(Alice) <-
+    not identity(Alice) guarded by Alice
 
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), not child(Alice), not retired(Alice), identity(Bob), not child(Bob), not retired(Bob) guarded by Alice, Bob
+    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
 
 introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), not child(Alice), not retired(Alice), identity(Bob), knows(Bob, Alice), not child(Bob), not retired(Bob), identity(Carol), not child(Carol), not retired(Carol) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), not child(Alice), not retired(Alice), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice), not child(Bob), not retired(Bob) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
 
 unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <Bob>._), not friend(Bob, Alice), not listed(Bob, Alice, _), not member(Bob, <Alice>._) <-
-    identity(Alice), friend(Alice, Bob), not creator(Alice, Bob), not parenting(Alice, Bob), not retired(Alice), identity(Bob), friend(Bob, Alice), not creator(Bob, Alice), not parenting(Bob, Alice) guarded by Alice
+    identity(Alice), person(Alice), friend(Alice, Bob), not parenting(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-message: received(Bob, x, Alice) <-
-    identity(Alice), friend(Alice, Bob), not retired(Alice), identity(Bob) guarded by Alice
+enter: created(Alice, Carol), parenting(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), child(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
+    identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
 
-create: member(Alice, <Alice>.n), listed(Alice, Alice, n) <-
-    identity(Alice), not child(Alice), not member(Alice, <Alice>.n), not closed(Alice, n), not retired(Alice) guarded by Alice
+make_guardian: parenting(Bob, Carol), friend(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob) <-
+    identity(Bob), person(Bob), not parenting(Bob, Carol), identity(Alice), person(Alice), parenting(Alice, Carol), friend(Alice, Bob), identity(Carol), child(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Bob, Alice, Erin
 
-join: listed(Alice, Bob, n), member(Bob, <Alice>.n) <-
-    identity(Alice), member(Alice, <Alice>.n), friend(Alice, Bob), not child(Alice), not retired(Alice), identity(Bob), not child(Bob), not member(Bob, <Alice>.n), not retired(Bob) guarded by Alice, Bob
-
-leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n), not retired(Bob) guarded by Bob
-
-remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), not retired(Alice), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
-
-close: closed(Alice, n), not listed(Alice, Alice, n), not member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
-    identity(Alice), listed(Alice, Alice, n), member(Alice, <Alice>.n), not retired(Alice), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
-
-post_own: posted(Alice, x, n) <-
-    identity(Alice), member(Alice, <Alice>.n), not posted(Alice, x, n), not retired(Alice) guarded by Alice
-
-post: posted(Alice, x, n) <-
-    identity(Bob), member(Bob, <Alice>.n), not retired(Bob), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob), not posted(Alice, x, n), not retired(Alice) guarded by Bob
-
-deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), not retired(Alice), identity(Bob), member(Bob, <Alice>.n)
-
-enter: created(Alice, Carol), parenting(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), child(Carol), creator(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
-    identity(Alice), not child(Alice), not retired(Alice), not identity(Carol), not retired(Carol) guarded by Alice, Carol
-
-make_parent: parenting(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
-    identity(Alice), created(Alice, Carol), friend(Alice, Bob), not child(Alice), not retired(Alice), identity(Bob), friend(Bob, Alice), not child(Bob), not parenting(Bob, Carol), not friend(Bob, Carol), not retired(Bob), identity(Carol), child(Carol), creator(Carol, Alice), not friend(Carol, Bob) guarded by Alice, Bob
-
-end_parent: not parenting(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Alice), created(Alice, Carol), not retired(Alice), identity(Bob), parenting(Bob, Carol), not created(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Alice
+end_guardian: not parenting(Bob, Carol), not guarded_by(Carol, Bob) <-
+    identity(Alice), person(Alice), parenting(Alice, Carol), identity(Bob), person(Bob), parenting(Bob, Carol), identity(Carol), guarded_by(Carol, Alice), guarded_by(Carol, Bob), forall Erin (guarded_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Alice, Erin
 
 resign: not parenting(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Bob), parenting(Bob, Carol), not created(Bob, Carol), not retired(Bob), identity(Carol), child(Carol), guarded_by(Carol, Bob) guarded by Bob
+    identity(Bob), person(Bob), parenting(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
 
-parent_unfriend: not parenting(Bob, Carol), not friend(Bob, Carol), not listed(Bob, Carol, _), not member(Bob, <Carol>._), not guarded_by(Carol, Bob), not friend(Carol, Bob), not listed(Carol, Bob, _), not member(Carol, <Bob>._) <-
-    identity(Bob), parenting(Bob, Carol), friend(Bob, Carol), not created(Bob, Carol), not retired(Bob), identity(Carol), child(Carol), guarded_by(Carol, Bob), friend(Carol, Bob) guarded by Bob
+guardian_unfriend: not friend(Bob, Carol), not parenting(Bob, Carol), not listed(Bob, Carol, _), not member(Bob, <Carol>._), not listed(Carol, Bob, _), not member(Carol, <Bob>._), not friend(Carol, Bob), not guarded_by(Carol, Bob) <-
+    identity(Bob), person(Bob), friend(Bob, Carol), parenting(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
 
-of_age: not child(Carol), not creator(Carol, Alice), not guarded_by(Carol, _), not created(Alice, Carol), not parenting(Alice, Carol), forall Bob (guarded_by(Carol, Bob) -> not parenting(Bob, Carol)) <-
-    identity(Carol), child(Carol), creator(Carol, Alice), identity(Alice), created(Alice, Carol), parenting(Alice, Carol), not retired(Alice), forall Bob (guarded_by(Carol, Bob) -> identity(Bob), parenting(Bob, Carol), not created(Bob, Carol)) guarded by Alice
+ward_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), identity(Bob), person(Bob), identity(Alice), person(Alice), parenting(Alice, Carol), knows(Alice, Bob) guarded by Carol, Bob, Alice
 
-retire: retired(Carol), not child(Carol), not creator(Carol, Alice), not guarded_by(Carol, _), not friend(Carol, _), not listed(Carol, _, _), not member(Carol, _), not created(Alice, Carol), not parenting(Alice, Carol), forall Bob (guarded_by(Carol, Bob) -> not parenting(Bob, Carol)), forall Dave (friend(Carol, Dave) -> not friend(Dave, Carol), not listed(Dave, Carol, _), not member(Dave, <Carol>._)) <-
-    identity(Carol), child(Carol), creator(Carol, Alice), not retired(Carol), identity(Alice), created(Alice, Carol), parenting(Alice, Carol), not retired(Alice), forall Bob (guarded_by(Carol, Bob) -> identity(Bob), parenting(Bob, Carol), not created(Bob, Carol)), forall Dave (friend(Carol, Dave) -> identity(Dave), friend(Dave, Carol)) guarded by Alice
+ward_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), parenting(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
 
-child_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
-    identity(Carol), child(Carol), not retired(Carol), identity(Bob), not child(Bob), not retired(Bob), identity(Alice), parenting(Alice, Carol), knows(Alice, Bob), not child(Alice), not retired(Alice) guarded by Carol, Bob, Alice
+ward_unfriend: not friend(Carol, Bob), not listed(Carol, Bob, _), not member(Carol, <Bob>._), not friend(Bob, Carol), not listed(Bob, Carol, _), not member(Bob, <Carol>._) <-
+    identity(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), parenting(Alice, Carol) guarded by Alice
 
-child_acquaint_2: knows(Carol, Dave), knows(Dave, Carol) <-
-    identity(Carol), child(Carol), not retired(Carol), identity(Dave), child(Dave), not retired(Dave), identity(Alice), parenting(Alice, Carol), knows(Alice, Dave), knows(Alice, one(Bob, Alice)), not child(Alice), not retired(Alice), identity(one(Bob, Alice)), parenting(one(Bob, Alice), Dave), knows(one(Bob, Alice), Carol), knows(one(Bob, Alice), Alice), not child(one(Bob, Alice)), not retired(one(Bob, Alice)) guarded by Carol, Dave, Alice, one(Bob, Alice)
+ward_end: not friend(Carol, Bob), not listed(Carol, Bob, _), not member(Carol, <Bob>._), not friend(Bob, Carol), not listed(Bob, Carol, _), not member(Bob, <Carol>._) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
 
-child_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
-    identity(Carol), child(Carol), knows(Carol, Dave), not friend(Carol, Dave), not retired(Carol), identity(Dave), child(Dave), knows(Dave, Carol), not friend(Dave, Carol), not retired(Dave), identity(Alice), parenting(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), not child(Alice), not retired(Alice), identity(one(Bob, Alice)), parenting(one(Bob, Alice), Dave), knows(one(Bob, Alice), Carol), friend(one(Bob, Alice), Alice), not child(one(Bob, Alice)), not retired(one(Bob, Alice)) guarded by Carol, Dave, Alice, one(Bob, Alice)
+wards_acquaint: knows(Carol, Dave), knows(Dave, Carol) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), identity(Dave), child(Dave), guarded_by(Dave, one(Bob, Alice)), identity(Alice), person(Alice), parenting(Alice, Carol), knows(Alice, Dave), knows(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), parenting(one(Bob, Alice), Dave), knows(one(Bob, Alice), Carol), knows(one(Bob, Alice), Alice) guarded by Carol, Dave, Alice, one(Bob, Alice)
 
-child_adult_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
-    identity(Carol), child(Carol), knows(Carol, Bob), not friend(Carol, Bob), not retired(Carol), identity(Bob), knows(Bob, Carol), not child(Bob), not friend(Bob, Carol), not retired(Bob), identity(Alice), parenting(Alice, Carol), friend(Alice, Bob), not child(Alice), not retired(Alice) guarded by Carol, Bob, Alice
+wards_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), child(Dave), guarded_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), parenting(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), parenting(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
 
-child_unfriend: not friend(Carol, Bob), not listed(Carol, Bob, _), not member(Carol, <Bob>._), not friend(Bob, Carol), not listed(Bob, Carol, _), not member(Bob, <Carol>._) <-
-    identity(Carol), child(Carol), friend(Carol, Bob), identity(Bob), friend(Bob, Carol), not parenting(Bob, Carol), identity(Alice), parenting(Alice, Carol), not child(Alice), not retired(Alice) guarded by Alice
+retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), not listed(Carol, _, _), not member(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol), not listed(Bob, Carol, _), not member(Bob, <Carol>._)), forall Erin (guarded_by(Carol, Erin) -> not parenting(Erin, Carol)) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), identity(Alice), person(Alice), parenting(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Alice, Erin
 
-child_join: listed(Bob, Carol, n), member(Carol, <Bob>.n) <-
-    identity(Bob), member(Bob, <Bob>.n), friend(Bob, Carol), not child(Bob), not retired(Bob), identity(Carol), child(Carol), not member(Carol, <Bob>.n), not retired(Carol), identity(Alice), parenting(Alice, Carol), friend(Alice, Bob), not child(Alice), not retired(Alice) guarded by Bob, Carol, Alice
+message: received(Bob, x, Alice) <-
+    identity(Alice), person(Alice), friend(Alice, Bob), identity(Bob) guarded by Alice
 
-child_join_2: listed(Carol, Dave, n), member(Dave, <Carol>.n) <-
-    identity(Carol), child(Carol), member(Carol, <Carol>.n), friend(Carol, Dave), not retired(Carol), identity(Dave), child(Dave), not member(Dave, <Carol>.n), not retired(Dave), identity(Alice), parenting(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), not child(Alice), not retired(Alice), identity(one(Bob, Alice)), parenting(one(Bob, Alice), Dave), knows(one(Bob, Alice), Carol), friend(one(Bob, Alice), Alice), not child(one(Bob, Alice)), not retired(one(Bob, Alice)) guarded by Carol, Dave, Alice, one(Bob, Alice)
+ward_message: received(Bob, x, Carol) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), identity(Bob) guarded by Carol
 
-child_leave: not listed(Bob, Carol, n), not member(Carol, <Bob>.n) <-
-    identity(Bob), listed(Bob, Carol, n), identity(Carol), child(Carol), member(Carol, <Bob>.n), identity(Alice), parenting(Alice, Carol), not child(Alice), not retired(Alice) guarded by Alice
+create: member(Alice, <Alice>.n), listed(Alice, Alice, n) <-
+    identity(Alice), person(Alice), not member(Alice, <Alice>.n), not closed(Alice, n) guarded by Alice
 
-child_close: closed(Carol, n), not listed(Carol, Carol, n), not member(Carol, <Carol>.n), forall Bob (listed(Carol, Bob, n) -> not member(Bob, <Carol>.n)) <-
-    identity(Carol), child(Carol), listed(Carol, Carol, n), member(Carol, <Carol>.n), identity(Alice), parenting(Alice, Carol), not child(Alice), not retired(Alice), forall Bob (listed(Carol, Bob, n) -> identity(Bob), member(Bob, <Carol>.n)) guarded by Alice
+ward_create: member(Carol, <Carol>.n), listed(Carol, Carol, n) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), not member(Carol, <Carol>.n), not closed(Carol, n), identity(Alice), person(Alice), parenting(Alice, Carol), signed(Carol, n) guarded by Carol, Alice
 
-child_create: member(Carol, <Carol>.n), listed(Carol, Carol, n) <-
-    identity(Carol), child(Carol), not member(Carol, <Carol>.n), not closed(Carol, n), not retired(Carol), identity(Alice), parenting(Alice, Carol), not child(Alice), not retired(Alice) guarded by Carol, Alice
+join: listed(Alice, Bob, n), member(Bob, <Alice>.n) <-
+    identity(Alice), person(Alice), member(Alice, <Alice>.n), friend(Alice, Bob), identity(Bob), person(Bob), not member(Bob, <Alice>.n) guarded by Alice, Bob
+
+ward_join: listed(Bob, Carol, n), member(Carol, <Bob>.n) <-
+    identity(Bob), person(Bob), member(Bob, <Bob>.n), friend(Bob, Carol), identity(Carol), child(Carol), guarded_by(Carol, Alice), not member(Carol, <Bob>.n), identity(Alice), person(Alice), parenting(Alice, Carol), friend(Alice, Bob) guarded by Bob, Carol, Alice
+
+wards_join: listed(Carol, Dave, n), member(Dave, <Carol>.n) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), member(Carol, <Carol>.n), friend(Carol, Dave), identity(Dave), child(Dave), guarded_by(Dave, one(Bob, Alice)), not member(Dave, <Carol>.n), identity(Alice), person(Alice), parenting(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), parenting(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
+
+leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
+    identity(Alice), listed(Alice, Bob, n), identity(Bob), person(Bob), member(Bob, <Alice>.n) guarded by Bob
+
+ward_leave: not listed(Bob, Carol, n), not member(Carol, <Bob>.n) <-
+    identity(Bob), listed(Bob, Carol, n), identity(Carol), child(Carol), guarded_by(Carol, Alice), member(Carol, <Bob>.n) guarded by Carol
+
+remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
+    identity(Alice), person(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
+
+ward_remove: not listed(Carol, Bob, n), not member(Bob, <Carol>.n) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), listed(Carol, Bob, n), identity(Bob), member(Bob, <Carol>.n) guarded by Carol
+
+ward_withdraw: not listed(Bob, Carol, n), not member(Carol, <Bob>.n) <-
+    identity(Bob), listed(Bob, Carol, n), identity(Carol), guarded_by(Carol, Alice), member(Carol, <Bob>.n), identity(Alice), person(Alice), parenting(Alice, Carol) guarded by Alice
+
+close: closed(Alice, n), not listed(Alice, Alice, n), not member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
+    identity(Alice), person(Alice), listed(Alice, Alice, n), member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
+
+ward_close: closed(Carol, n), not listed(Carol, Carol, n), not member(Carol, <Carol>.n), forall Bob (listed(Carol, Bob, n) -> not member(Bob, <Carol>.n)) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), listed(Carol, Carol, n), member(Carol, <Carol>.n), forall Bob (listed(Carol, Bob, n) -> identity(Bob), member(Bob, <Carol>.n)) guarded by Carol
+
+guardian_close: closed(Carol, n), not listed(Carol, Carol, n), not member(Carol, <Carol>.n), forall Bob (listed(Carol, Bob, n) -> not member(Bob, <Carol>.n)) <-
+    identity(Carol), guarded_by(Carol, Alice), listed(Carol, Carol, n), member(Carol, <Carol>.n), identity(Alice), person(Alice), parenting(Alice, Carol), forall Bob (listed(Carol, Bob, n) -> identity(Bob), member(Bob, <Carol>.n)) guarded by Alice
+
+post_own: posted(Alice, x, n) <-
+    identity(Alice), person(Alice), member(Alice, <Alice>.n), not posted(Alice, x, n) guarded by Alice
+
+ward_post_own: posted(Carol, x, n) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), member(Carol, <Carol>.n), not posted(Carol, x, n) guarded by Carol
+
+post: posted(Alice, x, n) <-
+    identity(Bob), person(Bob), member(Bob, <Alice>.n), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob), not posted(Alice, x, n) guarded by Bob
+
+ward_post: posted(Bob, x, n) <-
+    identity(Carol), child(Carol), guarded_by(Carol, Alice), member(Carol, <Bob>.n), identity(Bob), member(Bob, <Bob>.n), listed(Bob, Carol, n), friend(Bob, Carol), not posted(Bob, x, n) guarded by Carol
+
+deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
+
+of_age: person(Carol), not child(Carol), not creator(Carol, Alice), not guarded_by(Carol, _), not created(Alice, Carol), forall Erin (guarded_by(Carol, Erin) -> not parenting(Erin, Carol)) <-
+    identity(Carol), guarded_by(Carol, Alice), child(Carol), creator(Carol, Alice), identity(Alice), person(Alice), parenting(Alice, Carol), created(Alice, Carol), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Alice
