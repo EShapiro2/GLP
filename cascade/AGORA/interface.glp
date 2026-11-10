@@ -23,7 +23,7 @@ interface([
   type('RReach', [reach('RNameTerm', 'Constant', 'RNameTerm')]),
   type('RReaches', [[], ['RReach' | 'RReaches']]),
   type('RConstraint', [true, and('RConstraint', 'RConstraint'), eq('RExpr', 'RExpr'), le('RExpr', 'RExpr'), lt('RExpr', 'RExpr'), ge('RExpr', 'RExpr'), gt('RExpr', 'RExpr'), succ('RArg', 'RArg'), or('RConstraint', 'RConstraint'), signed('RArg', 'RArg'), unsigned('RArg', 'RArg'), not('RConstraint'), implies('RConstraint', 'RConstraint'), ne('RExpr', 'RExpr'), rel('Constant', 'RExprs'), program('RExpr')]),
-  type('RExpr', ['RArg', plus('RExpr', 'RExpr'), minus('RExpr', 'RExpr'), mul('RExpr', 'RExpr'), fn('Constant', 'RExprs'), cardinality('RArgs', 'RArg', 'RAtom', 'RForm'), sum('RArgs', 'RArg', 'RAtom', 'RForm', 'RExpr'), author_of('RArg'), item_of('RArg')]),
+  type('RExpr', ['RArg', plus('RExpr', 'RExpr'), minus('RExpr', 'RExpr'), mul('RExpr', 'RExpr'), fn('Constant', 'RExprs'), cardinality('RArgs', 'RArg', 'RAtom', 'RForm'), sum('RArgs', 'RArg', 'RAtom', 'RForm', 'RExpr'), author_of('RArg')]),
   type('RExprs', [[], ['RExpr' | 'RExprs']]),
   type('RForm', [fa('RArg', 'RAtom'), fnot('RForm'), fand('RForm', 'RForm'), for('RForm', 'RForm'), fexists('RArgs', 'RArg', 'RAtom', 'RForm'), fforall('RArgs', 'RArg', 'RAtom', 'RForm', 'RForms'), fcons('RConstraint')]),
   type('RForms', [[], ['RForm' | 'RForms']]),
