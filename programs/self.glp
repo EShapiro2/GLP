@@ -294,7 +294,8 @@ SNT    ::= own(Constant) ; ext(SNT, Constant).
 % nothing and which the field's widget is told").
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
          ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant)
-         ; typed(Constant, Constant).
+         ; typed(Constant, Constant)
+         ; val(Constant).
 SArgs  ::= [] ; [SArg | SArgs].
 SAtom  ::= atom(Constant, SArgs).
 SAtoms ::= [] ; [SAtom | SAtoms].
@@ -325,7 +326,22 @@ Preds ::= [] ; [Constant | Preds].
 SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
 SContract  ::= [] ; [SSchema | SContract].
 SDeclared  ::= SContract ; reflexive(Preds, SContract)
-             ; environment(Preds, SContract).
+             ; environment(Preds, SContract)
+             ; parametric(SParams, SDeclared).
+% A parametric contract and an instance of it (GSC, Definition Parametric
+% contract, "The term of a parametric contract names its parameters, and that
+% of an instantiation the contract it instantiates and what it writes for
+% each"; GSC #14, Code_inbox 2026-11-10 18:02 UTC, GSC df5e454):
+% parametric(Params, D), each parameter a predicate, by its name, or a
+% constant value, val(C); and an instance, in the file of its owner,
+% instance_named(Name, Base, Bindings, Additions), each binding P = Q writing
+% Q for the parameter P, a predicate or a constant val(P) alike, written by
+% its name (bylaws_p = bylaws_mcs), and Additions only the schemas the
+% instance adds or replaces, a schema named as one of the base's replacing it.
+SParam    ::= Constant ; val(Constant).
+SParams   ::= [] ; [SParam | SParams].
+SBinding  ::= (Constant = Constant).
+SBindings ::= [] ; [SBinding | SBindings].
 
 % =============================================================================
 % BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)

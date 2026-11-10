@@ -923,7 +923,7 @@ hd_faults([schema(sign, [svar(x), svar(x), role(1)],
 % def:sg-wards fails.
 procedure gather_listed(Constant?, Schema).
 gather_listed(A, cschema(gather, [svar(n)], [],
-    [rs(guarded, [], [], [atom(identity, [])], [atom(retired, [])]),
+    [rs(guarded, [], [], [atom(identity, []), atom(person, [])], [atom(retired, [])]),
      crs(listed(1, club, [svar(n)]), unguarded,
          [atom(A?, [])], [], [atom(child, [])], [])])).
 
@@ -1844,6 +1844,10 @@ contract(an_named_unary, C?) :- an_named_unary(C).
 contract(sgn_listed, C?) :- sgn_listed(C).
 contract(hd_faults, C?) :- hd_faults(C).
 contract(wd_listed, C?) :- wd_listed(C).
+contract(wd_leaving_forbidden, C?) :- wd_leaving_forbidden(C).
+contract(wd_can_act, C?) :- wd_can_act(C).
+contract(wd_cannot_act, C?) :- wd_cannot_act(C).
+contract(wd_can_act_f, C?) :- wd_can_act_f(C).
 contract(wd_listed_leaving, C?) :- wd_listed_leaving(C).
 contract(wd_ward_e, C?) :- wd_ward_e(C).
 contract(wd_ward_e_own, C?) :- wd_ward_e_own(C).
@@ -2215,48 +2219,55 @@ sg_sgn_loose(C?) :-
 % so clause 2 fails.
 % Each fixture below changes it in one place and fails one clause of one
 % definition of GAI's appendix, its comment naming which.
+% Stated positively since GSC 7e00aba, its definitions at GSC 070c5d1: every
+% role that forbade child, or child and agent, requires person instead;
+% establish adds person with identity; a role deleting child or agent adds
+% person there (def:kinds, clause 3); and a guarded role that required
+% identity alone of the kinds requires person too, but where a fixture's
+% point is that it does not.  The kinds are (identity, person, {child}), and
+% the guardianship of child is (child, parenting, parent), g and w gone.
 procedure wd_establish(Schema).
 wd_establish(schema(establish, [],
-    [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
+    [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])])).
 
 procedure wd_enter(Schema).
 wd_enter(schema(enter, [],
     [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [],
-                 [atom(identity, [])], [atom(child, [])]),
+                 [atom(identity, []), atom(person, [])], []),
      rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                   atom(friend, [role(1)])], [], [], [atom(identity, [])])])).
 
 procedure wd_of_age(Schema).
 wd_of_age(schema(of_age, [],
-    [rs(guarded,   [], [atom(parenting, [role(2)])], [atom(identity, [])], []),
-     rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])],
+    [rs(guarded,   [], [atom(parenting, [role(2)])], [atom(identity, []), atom(person, [])], []),
+     rs(unguarded, [atom(person, [])], [atom(parent, [role(1)]), atom(child, [])],
                    [atom(identity, [])], [])])).
 
 procedure wd_befriend(Schema).
 wd_befriend(schema(befriend, [],
-    [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
-                 [atom(child, [])]),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                 [atom(child, [])])])).
+    [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])],
+                 []),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                 [])])).
 
 procedure wd_unfriends(Contract).
 wd_unfriends([schema(unfriend_p, [],
-       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, [])], []),
+       [rs(guarded,   [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []),
         rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]),
      schema(unfriend_q, [],
        [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []),
-        rs(guarded,   [], [atom(friend, [role(1)])], [atom(identity, [])], [])])]).
+        rs(guarded,   [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])])]).
 
 procedure wd_child_adult(Schema).
 wd_child_adult(schema(child_adult_befriend, [],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
                  []),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                 [atom(child, [])]),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                 [atom(child, [])])])).
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                 [])])).
 
 procedure wd_child_child(Schema).
 wd_child_child(schema(child_befriend, [],
@@ -2267,11 +2278,11 @@ wd_child_child(schema(child_befriend, [],
                  [atom(identity, []), atom(child, []), atom(parent, [role(4)])],
                  []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
-                 [atom(child, [])]),
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])],
-                 [atom(child, [])])])).
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(2)]), atom(friend, [role(3)])],
+                 [])])).
 
 % wd_with(Establish, Enter, OfAge, Befriend, Rest, C): the contract from its
 % parts, the two unfriend schemas before Rest.
@@ -2310,9 +2321,9 @@ wd_no_iota(C?) :-
             [A?, K?,
              schema(adopt, [],
                [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [],
-                            [atom(identity, [])], [atom(child, [])]),
+                            [atom(identity, []), atom(person, [])], []),
                 rs(guarded, [atom(parent, [role(1)]), atom(child, []), atom(friend, [role(1)])], [],
-                            [atom(identity, [])], [atom(child, [])])])], C).
+                            [atom(identity, []), atom(person, [])], [])])], C).
 
 procedure wd_no_g(Declared).
 wd_no_g(C?) :-
@@ -2321,7 +2332,7 @@ wd_no_g(C?) :-
     wd_with(E?,
             schema(enter, [],
               [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [],
-                           [atom(identity, [])], [atom(child, [])]),
+                           [atom(identity, []), atom(person, [])], []),
                rs(guarded, [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [],
                            [], [atom(identity, [])])]),
             O?, B?, [A?, K?], C).
@@ -2333,7 +2344,7 @@ wd_no_w(C?) :-
     wd_with(E?,
             schema(enter, [],
               [rs(guarded, [atom(friend, [role(2)])], [],
-                           [atom(identity, [])], [atom(child, [])]),
+                           [atom(identity, []), atom(person, [])], []),
                rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                             atom(friend, [role(1)])], [], [], [atom(identity, [])])]),
             O?, B?, [A?, K?], C).
@@ -2356,8 +2367,8 @@ wd_del_half(C?) :-
     wd_child_adult(A), wd_child_child(K),
     wd_with(E?, N?,
             schema(of_age, [],
-              [rs(guarded,   [atom(released, [role(2)])], [], [atom(identity, [])], []),
-               rs(unguarded, [], [atom(parent, [role(1)]), atom(child, [])],
+              [rs(guarded,   [atom(released, [role(2)])], [], [atom(identity, []), atom(person, [])], []),
+               rs(unguarded, [atom(person, [])], [atom(parent, [role(1)]), atom(child, [])],
                              [atom(identity, [])], [])]),
             B?, [A?, K?], C).
 
@@ -2380,11 +2391,11 @@ wd_req_unsupplied(C?) :-
     wd_child_adult(A), wd_child_child(K),
     wd_with(E?, N?, O?,
             schema(befriend, [],
-              [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(vetted, [])],
-                           [atom(child, [])]),
-               rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(vetted, [])],
-                           [atom(child, [])])]),
-            [A?, K?, schema(vet, [], [rs(guarded, [atom(vetted, [])], [], [atom(identity, [])], [])])],
+              [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(vetted, [])],
+                           []),
+               rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(vetted, [])],
+                           [])]),
+            [A?, K?, schema(vet, [], [rs(guarded, [atom(vetted, [])], [], [atom(identity, []), atom(person, []), atom(approval, [])], [])])],
             C).
 
 procedure wd_forb_other(Declared).
@@ -2393,10 +2404,10 @@ wd_forb_other(C?) :-
     wd_child_adult(A), wd_child_child(K),
     wd_with(E?, N?, O?,
             schema(befriend, [],
-              [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
-                           [atom(child, []), atom(blocked, [role(2)])]),
-               rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                           [atom(child, []), atom(blocked, [role(1)])])]),
+              [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])],
+                           [atom(blocked, [role(2)])]),
+               rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                           [atom(blocked, [role(1)])])]),
             [A?, K?], C).
 
 procedure wd_asymmetric(Declared).
@@ -2406,7 +2417,7 @@ wd_asymmetric(C?) :-
     wd_with(E?, N?, O?, B?,
             [A?, K?,
              schema(follow, [],
-               [rs(guarded,   [atom(friend, [role(2)])], [], [atom(identity, [])], []),
+               [rs(guarded,   [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])], []),
                 rs(unguarded, [atom(followed, [role(1)])], [],
                               [atom(identity, []), atom(friend, [role(1)])], [])])], C).
 
@@ -2416,10 +2427,10 @@ wd_forb_added(C?) :-
     wd_child_adult(A), wd_child_child(K),
     wd_with(E?, N?, O?,
             schema(befriend, [],
-              [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
-                           [atom(child, []), atom(friend, [role(2)])]),
-               rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                           [atom(child, []), atom(friend, [role(1)])])]),
+              [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])],
+                           [atom(friend, [role(2)])]),
+               rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                           [atom(friend, [role(1)])])]),
             [A?, K?], C).
 
 procedure wd_introduce(Declared).
@@ -2430,10 +2441,10 @@ wd_introduce(C?) :-
             [A?, K?,
              schema(introduce, [pvar(c)],
                [rs(guarded, [], [],
-                            [atom(identity, []), atom(friend, [role(2)]), atom(friend, [pvar(c)])],
-                            [atom(child, [])]),
+                            [atom(identity, []), atom(person, []), atom(friend, [role(2)]), atom(friend, [pvar(c)])],
+                            []),
                 rs(guarded, [atom(friend, [pvar(c)])], [],
-                            [atom(identity, []), atom(friend, [role(1)])], [])])], C).
+                            [atom(identity, []), atom(person, []), atom(friend, [role(1)])], [])])], C).
 
 procedure wd_two_atoms(Declared).
 wd_two_atoms(C?) :-
@@ -2441,10 +2452,10 @@ wd_two_atoms(C?) :-
     wd_child_adult(A), wd_child_child(K),
     wd_with(E?, N?, O?,
             schema(befriend, [],
-              [rs(guarded, [atom(friend, [role(2)]), atom(met, [])], [], [atom(identity, [])],
-                           [atom(child, [])]),
-               rs(guarded, [atom(friend, [role(1)]), atom(met, [])], [], [atom(identity, [])],
-                           [atom(child, [])])]),
+              [rs(guarded, [atom(friend, [role(2)]), atom(met, [])], [], [atom(identity, []), atom(person, [])],
+                           []),
+               rs(guarded, [atom(friend, [role(1)]), atom(met, [])], [], [atom(identity, []), atom(person, [])],
+                           [])]),
             [A?, K?], C).
 
 % --- negative, def:relay ---------------------------------------------------
@@ -2477,11 +2488,11 @@ wd_relay_extra_role(C?) :-
                [rs(guarded, [atom(friend, [role(2)])], [],
                             [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
                             []),
-                rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                            [atom(child, [])]),
+                rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                            []),
                 rs(guarded, [atom(approval, [])], [],
-                            [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                            [atom(child, [])]),
+                            [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                            []),
                 rs(unguarded, [atom(witnessed, [role(1)])], [],
                               [atom(identity, []), atom(friend, [role(1)])], [])]),
              K?], C).
@@ -2499,11 +2510,11 @@ wd_relay_guard_names(C?) :-
                             [atom(identity, []), atom(child, []), atom(parent, [role(4)])],
                             []),
                 rs(guarded, [atom(approval, []), atom(coapproved, [role(4)])], [],
-                            [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
-                            [atom(child, [])]),
+                            [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
+                            []),
                 rs(guarded, [atom(approval, [])], [],
-                            [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])],
-                            [atom(child, [])])])], C).
+                            [atom(identity, []), atom(person, []), atom(parenting, [role(2)]), atom(friend, [role(3)])],
+                            [])])], C).
 
 procedure wd_relay_req(Declared).
 wd_relay_req(C?) :-
@@ -2514,11 +2525,11 @@ wd_relay_req(C?) :-
                             [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
                             []),
                 rs(guarded, [atom(friend, [role(1)])], [],
-                            [atom(identity, []), atom(parent, [role(3)])],
-                            [atom(child, [])]),
+                            [atom(identity, []), atom(person, []), atom(parent, [role(3)])],
+                            []),
                 rs(guarded, [atom(approval, [])], [],
-                            [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                            [atom(child, [])])]),
+                            [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                            [])]),
              K?], C).
 
 procedure wd_relay_forb(Declared).
@@ -2529,11 +2540,11 @@ wd_relay_forb(C?) :-
                [rs(guarded, [atom(friend, [role(2)])], [],
                             [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
                             []),
-                rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                            [atom(child, [])]),
+                rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                            []),
                 rs(guarded, [atom(approval, [])], [],
-                            [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                            [atom(child, []), atom(friend, [role(2)])])]),
+                            [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                            [atom(friend, [role(2)])])]),
              K?], C).
 
 % wd_relay_forb_ward has child_adult_befriend's child, a ward role, forbid
@@ -2545,10 +2556,10 @@ procedure wd_relay_forb_at(Atoms?, Atoms?, Schema).
 wd_relay_forb_at(N1, N2, schema(child_adult_befriend, [],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(child, []), atom(parent, [role(3)])], N1?),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(child, [])|N2?]),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], N2?),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                 [atom(child, [])])])).
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                 [])])).
 
 procedure wd_relay_forb_ward(Declared).
 wd_relay_forb_ward(C?) :-
@@ -2570,11 +2581,11 @@ wd_relay_unguarded(C?) :-
                [rs(guarded, [atom(friend, [role(2)])], [],
                             [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
                             []),
-                rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                              [atom(child, [])]),
+                rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                              []),
                 rs(guarded, [atom(approval, [])], [],
-                            [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                            [atom(child, [])])]),
+                            [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                            [])]),
              K?], C).
 
 % --- wd2: children and AI agents, two marks --------------------------------
@@ -2595,50 +2606,50 @@ wd_relay_unguarded(C?) :-
 % mark in M.
 procedure wd2_establish(Schema).
 wd2_establish(schema(establish, [],
-    [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
+    [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])])).
 
 procedure wd2_enter(Schema).
 wd2_enter(schema(enter, [],
     [rs(guarded, [atom(parenting, [role(2)]), atom(friend, [role(2)])], [],
-                 [atom(identity, [])], [atom(child, []), atom(agent, [])]),
+                 [atom(identity, []), atom(person, [])], []),
      rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                   atom(friend, [role(1)])], [], [], [atom(identity, [])])])).
 
 procedure wd2_enter_agent(Schema).
 wd2_enter_agent(schema(enter_agent, [],
     [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)])], [],
-                 [atom(identity, [])], [atom(child, []), atom(agent, [])]),
+                 [atom(identity, []), atom(person, [])], []),
      rs(guarded, [atom(identity, []), atom(principal, [role(1)]), atom(agent, []),
                   atom(friend, [role(1)])], [], [], [atom(identity, [])])])).
 
 procedure wd2_befriend(Schema).
 wd2_befriend(schema(befriend, [],
-    [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])],
-                 [atom(child, []), atom(agent, [])]),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                 [atom(child, []), atom(agent, [])])])).
+    [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])],
+                 []),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                 [])])).
 
 procedure wd2_child_adult(Schema).
 wd2_child_adult(schema(child_adult_befriend, [],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(child, []), atom(parent, [role(3)])],
                  []),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                 [atom(child, []), atom(agent, [])]),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                 [atom(child, [])])])).
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                 [])])).
 
 procedure wd2_agent_person(Schema).
 wd2_agent_person(schema(agent_person_befriend, [],
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(agent, []), atom(principal, [role(3)])],
                  []),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                 [atom(child, []), atom(agent, [])]),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(1)]), atom(friend, [role(2)])],
-                 [atom(agent, [])])])).
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(1)]), atom(friend, [role(2)])],
+                 [])])).
 
 procedure wd2_agents(Schema).
 wd2_agents(schema(agents_befriend, [],
@@ -2649,11 +2660,11 @@ wd2_agents(schema(agents_befriend, [],
                  [atom(identity, []), atom(agent, []), atom(principal, [role(4)])],
                  []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(1)]), atom(friend, [role(4)])],
-                 [atom(agent, [])]),
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(1)]), atom(friend, [role(4)])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
-                 [atom(agent, [])])])).
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
+                 [])])).
 
 procedure wd2_child_agent(Schema).
 wd2_child_agent(schema(child_agent_befriend, [],
@@ -2664,11 +2675,11 @@ wd2_child_agent(schema(child_agent_befriend, [],
                  [atom(identity, []), atom(agent, []), atom(principal, [role(4)])],
                  []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
-                 [atom(child, [])]),
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
-                 [atom(agent, [])])])).
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
+                 [])])).
 
 procedure wd2_with(Contract?, Declared).
 wd2_with(Rest, reflexive([friend], [E?, N?, NA?, O?, B?|C?])) :- ground(Rest?) |
@@ -2687,7 +2698,7 @@ wd_two_marks(C?) :-
     wd2_with([schema(enter_hybrid, [],
        [rs(guarded, [atom(parenting, [role(2)]), atom(principal_of, [role(2)]),
                      atom(friend, [role(2)])], [],
-                    [atom(identity, [])], [atom(child, []), atom(agent, [])]),
+                    [atom(identity, []), atom(person, [])], []),
         rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(principal, [role(1)]),
                      atom(child, []), atom(agent, []), atom(friend, [role(1)])], [],
                     [], [atom(identity, [])])])], C).
@@ -2696,12 +2707,12 @@ wd_two_marks(C?) :-
 % wd_attest is wd2 with the AI agent's attestation, as GAI writes it: sign(p? ; x) : identity, +item(x); enter_agent(p?, r? ; x) requires item(x) at p and adds attestation(sgn(x, p)) at r, x signed over by p; and each relay act with a ward role of agent requires there attestation(y), y a speech-act variable of the act occurring in no other atom it requires.  enter_agent, the one schema adding agent, adds an atom of attestation there, and no schema deletes one; but enter_agent, adding principal_of(r), the v of agent's guardianship here, adds no record of the attestation at p, which clause 2 of def:relay asks of every schema adding v(r) (GAI 11d7133), so clause 2 admits no attestation and wd_attest has no introduction with wards; wr, after the fixtures of GAI 11d7133 below, adds the record at every guardian and is certified.  Each fixture after it changes it in one place, so that clause 2 admits an attestation a relay act requires as nothing, that relay act fails, and there is no introduction with wards: wd_attest_unadded, adopt_agent adds agent at r and no attestation; wd_attest_deleted, revoke(p?, r ; y) deletes attestation(y) at r; wd_attest_shared, agents_befriend requires attestation(y) at both agents, so y occurs in another atom it requires; wd_attest_role, agent_person_befriend requires attestation(p) at the agent, an argument that is no speech-act variable; wd_attest_child, child_adult_befriend requires attestation(y) at the child, a ward role of child, and enter, which adds child, adds no attestation; and wd_attest_free, agent_person_befriend requires attestation(y) at the person, a free role, in place of the agent.
 procedure wa_sign(Schema).
 wa_sign(schema(sign, [svar(x)],
-    [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, [])], [])])).
+    [rs(guarded, [atom(item, [svar(x)])], [], [atom(identity, []), atom(person, [])], [])])).
 
 procedure wa_enter_agent(Schema).
 wa_enter_agent(schema(enter_agent, [svar(x)],
     [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)])], [],
-                 [atom(identity, []), atom(item, [svar(x)])], [atom(child, []), atom(agent, [])]),
+                 [atom(identity, []), atom(person, []), atom(item, [svar(x)])], []),
      rs(guarded, [atom(identity, []), atom(principal, [role(1)]), atom(agent, []),
                   atom(friend, [role(1)]), atom(attestation, [sgn(x, 1)])], [], [],
                  [atom(identity, [])])])).
@@ -2712,11 +2723,11 @@ wa_agent_person_at(R1, R2, Vs, schema(agent_person_befriend, Vs?,
     [rs(guarded, [atom(friend, [role(2)])], [],
                  [atom(identity, []), atom(agent, []), atom(principal, [role(3)])|R1?],
                  []),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])|R2?],
-                 [atom(child, []), atom(agent, [])]),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])|R2?],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(1)]), atom(friend, [role(2)])],
-                 [atom(agent, [])])])).
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(1)]), atom(friend, [role(2)])],
+                 [])])).
 
 procedure wa_agent_person(Schema).
 wa_agent_person(S?) :- wa_agent_person_at([atom(attestation, [svar(y)])], [], [svar(y)], S).
@@ -2733,11 +2744,11 @@ wa_agents_with(Y, Z, Vs, schema(agents_befriend, Vs?,
                   atom(attestation, [Z?])],
                  []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(1)]), atom(friend, [role(4)])],
-                 [atom(agent, [])]),
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(1)]), atom(friend, [role(4)])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
-                 [atom(agent, [])])])).
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
+                 [])])).
 
 procedure wa_agents(Schema).
 wa_agents(S?) :- wa_agents_with(svar(y), svar(z), [svar(y), svar(z)], S).
@@ -2752,11 +2763,11 @@ wa_child_agent(schema(child_agent_befriend, [svar(y)],
                   atom(attestation, [svar(y)])],
                  []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
-                 [atom(child, [])]),
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(4)])],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
-                 [atom(agent, [])])])).
+                 [atom(identity, []), atom(person, []), atom(principal_of, [role(2)]), atom(friend, [role(3)])],
+                 [])])).
 
 % wa_with(EnterAgent, ChildAdult, ChildAgent, AgentPerson, Agents, Rest, C): wd2 with these schemas in place of its own, sign after its relay acts, and then the schemas Rest.
 procedure wa_with(Schema?, Schema?, Schema?, Schema?, Schema?, Contract?, Declared).
@@ -2779,7 +2790,7 @@ wd_attest_unadded(C?) :-
     wa_with(NA?, A?, CA?, AP?, AA?,
       [schema(adopt_agent, [],
          [rs(guarded, [atom(principal_of, [role(2)]), atom(friend, [role(2)])], [],
-                      [atom(identity, [])], [atom(child, []), atom(agent, [])]),
+                      [atom(identity, []), atom(person, [])], []),
           rs(guarded, [atom(identity, []), atom(principal, [role(1)]), atom(agent, []),
                        atom(friend, [role(1)])], [], [], [atom(identity, [])])])], C).
 
@@ -2788,7 +2799,7 @@ wd_attest_deleted(C?) :-
     wa_enter_agent(NA), wd2_child_adult(A), wa_child_agent(CA), wa_agent_person(AP), wa_agents(AA),
     wa_with(NA?, A?, CA?, AP?, AA?,
       [schema(revoke, [svar(y)],
-         [rs(guarded,   [], [], [atom(identity, []), atom(principal_of, [role(2)])], []),
+         [rs(guarded,   [], [], [atom(identity, []), atom(person, []), atom(principal_of, [role(2)])], []),
           rs(unguarded, [], [atom(attestation, [svar(y)])], [atom(identity, [])], [])])], C).
 
 procedure wd_attest_shared(Declared).
@@ -2812,11 +2823,11 @@ wd_attest_child(C?) :-
                      [atom(identity, []), atom(child, []), atom(parent, [role(3)]),
                       atom(attestation, [svar(y)])],
                      []),
-         rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])],
-                     [atom(child, []), atom(agent, [])]),
+         rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])],
+                     []),
          rs(guarded, [atom(approval, [])], [],
-                     [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
-                     [atom(child, [])])]),
+                     [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(2)])],
+                     [])]),
       CA?, AP?, AA?, [], C).
 
 procedure wd_attest_free(Declared).
@@ -2826,6 +2837,10 @@ wd_attest_free(C?) :-
     wa_with(NA?, A?, CA?, AP?, AA?, [], C).
 
 % --- leaving marks (def:leaving) -------------------------------------------
+% Leaving marks are gone at GSC 7e00aba, retired being a record: the
+% retire below deletes child at r and so adds person there (def:kinds, clause
+% 3), and nothing forbids retired; wd_leaving_forbidden, below wd_leaving,
+% keeps the forbidding as a negative.  Until then:
 % wd_leaving is wd with retirement written with a leaving mark, as GAI's appendix
 % writes Wards:4: every guarding role of every schema of wd forbids retired,
 % and retire(p?, r) ends the guardianship of p over r, deleting friend(r) and
@@ -2873,8 +2888,8 @@ forbid_at_guards(A, [qschema(Nm, Vs, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(Nm?, Vs?,
 procedure wd_retire(Schema).
 wd_retire(schema(retire, [],
     [rs(guarded,   [], [atom(friend, [role(2)]), atom(parenting, [role(2)])],
-                   [atom(identity, [])], [atom(retired, [])]),
-     rs(unguarded, [atom(retired, [])],
+                   [atom(identity, []), atom(person, [])], [atom(retired, [])]),
+     rs(unguarded, [atom(retired, []), atom(person, [])],
                    [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])],
                    [atom(identity, [])], [])])).
 
@@ -2882,8 +2897,7 @@ wd_retire(schema(retire, [],
 % guarding role, then Retire and the schemas Rest as they are given.
 procedure leaving_schemas(Contract?, Schema?, Contract?, Contract).
 leaving_schemas(Ss, Rt, Rest, C?) :- ground(Ss?), ground(Rt?), ground(Rest?) |
-    forbid_at_guards(atom(retired, []), Ss?, Ss1),
-    contract_app(Ss1?, [Rt?|Rest?], C).
+    contract_app(Ss?, [Rt?|Rest?], C).
 
 procedure wd_leaving1(Declared?, Schema?, Contract?, Declared).
 wd_leaving1(reflexive(Rf, Ss), Rt, Rest, reflexive(Rf?, C?)) :-
@@ -2899,13 +2913,27 @@ wd_leaving_with(Rt, Rest, C?) :- ground(Rt?), ground(Rest?) |
 procedure wd_leaving(Declared).
 wd_leaving(C?) :- wd_retire(Rt), wd_leaving_with(Rt?, [], C).
 
+% wd_leaving_forbidden: wd_leaving with retired forbidden at every guarding
+% role, as def:leaving had it until GSC 7e00aba: befriend forbids retired, and
+% an introductory act unobstructed among the free forbids nothing
+% (def:unobstructed-marks), so there is no introduction with wards.
+procedure wd_leaving_forbidden1(Declared?, Declared).
+wd_leaving_forbidden1(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) |
+    forbid_at_guards(atom(retired, []), Ss?, C).
+wd_leaving_forbidden1([], []).
+wd_leaving_forbidden1([S|Ss], C?) :- ground(S?), ground(Ss?) |
+    forbid_at_guards(atom(retired, []), [S?|Ss?], C).
+
+procedure wd_leaving_forbidden(Declared).
+wd_leaving_forbidden(C?) :- wd_leaving(W), wd_leaving_forbidden1(W?, C).
+
 procedure wd_leave_unforbidden(Declared).
 wd_leave_unforbidden(C?) :-
     wd_leaving_with(
       schema(retire, [],
         [rs(guarded,   [], [atom(friend, [role(2)]), atom(parenting, [role(2)])],
-                       [atom(identity, [])], []),
-         rs(unguarded, [atom(retired, [])],
+                       [atom(identity, []), atom(person, [])], []),
+         rs(unguarded, [atom(retired, []), atom(person, [])],
                        [atom(friend, [role(1)]), atom(parent, [role(1)]), atom(child, [])],
                        [atom(identity, [])], [])]),
       [], C).
@@ -2915,7 +2943,7 @@ wd_leave_deleted(C?) :-
     wd_retire(Rt),
     wd_leaving_with(Rt?,
       [schema(revive, [],
-         [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])],
+         [rs(guarded,   [], [], [atom(identity, []), atom(person, []), atom(friend, [role(2)])],
                         [atom(retired, [])]),
           rs(unguarded, [], [atom(retired, [])], [atom(identity, [])], [])])], C).
 
@@ -2924,7 +2952,7 @@ wd_leave_unmarked(C?) :-
     wd_retire(Rt),
     wd_leaving_with(Rt?,
       [schema(quit, [],
-         [rs(guarded, [atom(retired, [])], [], [atom(identity, [])],
+         [rs(guarded, [atom(retired, [])], [], [atom(identity, []), atom(person, [])],
                       [atom(retired, [])])])], C).
 
 procedure wd_leave_guardian(Declared).
@@ -2933,7 +2961,7 @@ wd_leave_guardian(C?) :-
     wd_leaving_with(Rt?,
       [schema(adopt, [],
          [rs(unguarded, [atom(parenting, [role(2)])], [],
-                        [atom(identity, []), atom(friend, [role(2)])], [atom(child, [])]),
+                        [atom(identity, []), atom(person, []), atom(friend, [role(2)])], []),
           rs(guarded,   [atom(identity, []), atom(parent, [role(1)]), atom(child, [])], [],
                         [], [atom(identity, []), atom(retired, [])])])], C).
 
@@ -2958,11 +2986,11 @@ wd_child_child_at(R3, R4, D3, schema(child_befriend, [],
                  [atom(identity, []), atom(child, []), atom(parent, [role(4)])],
                  []),
      rs(guarded, [atom(approval, [])], D3?,
-                 [atom(identity, []), atom(parenting, [role(1)]), atom(friend, [role(4)])|R3?],
-                 [atom(child, [])]),
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(1)]), atom(friend, [role(4)])|R3?],
+                 []),
      rs(guarded, [atom(approval, [])], [],
-                 [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(3)])|R4?],
-                 [atom(child, [])])])).
+                 [atom(identity, []), atom(person, []), atom(parenting, [role(2)]), atom(friend, [role(3)])|R4?],
+                 [])])).
 
 procedure wd_child_child_with(Atoms?, Atoms?, Atoms?, Declared).
 wd_child_child_with(R3, R4, D3, C?) :- ground(R3?), ground(R4?), ground(D3?) |
@@ -2993,6 +3021,36 @@ wd_relay_guard_clears(C?) :- wd_child_child_with([], [], [atom(friend, [any])], 
 % wd_twins: twins(p?, r?, s?) makes r and s children of p at once, adding
 % child at two roles, which clause 1 of def:guardianship forbids (GAI
 % 11d7133): child has no guardianship.
+% A guarding role that can act (GSC 0a30d52, def:guardianship): wd with
+% sign(p? ; y), adding item(y) at p, an act for any agent who can act, p
+% requiring identity and, in its body, person(p) or child(p) and parent of
+% someone, the u of child's guardianship: wd_can_act is grassroots with wards
+% as wd is.  wd_cannot_act's sign requires identity alone, a guarding role
+% neither forbidding identity, requiring person, requiring child and an atom
+% of parent, nor able to act, so there is no introduction with wards;
+% wd_can_act_f's body says person(p) alone, the disjunct of child missing.
+procedure wd_sign(Forms?, Schema).
+wd_sign(Fs, qschema(sign, [svar(y)], [pvar(x), svar(x), num(x)], true,
+    [rs(guarded, [atom(item, [svar(y)])], [], [atom(identity, [])], [])], [], Fs?)).
+
+procedure wd_with_sign(Forms?, Declared).
+wd_with_sign(Fs, C?) :- ground(Fs?) |
+    wd_establish(E), wd_enter(N), wd_of_age(O), wd_befriend(B),
+    wd_child_adult(A), wd_child_child(K), wd_sign(Fs?, S),
+    wd_with(E?, N?, O?, B?, [A?, K?, S?], C).
+
+procedure wd_can_act(Declared).
+wd_can_act(C?) :-
+    wd_with_sign([for(fa(role(1), atom(person, [])),
+                      fand(fa(role(1), atom(child, [])),
+                           fexists([svar(x)], role(1), atom(parent, [svar(x)]), fcons(true))))], C).
+
+procedure wd_cannot_act(Declared).
+wd_cannot_act(C?) :- wd_with_sign([], C).
+
+procedure wd_can_act_f(Declared).
+wd_can_act_f(C?) :- wd_with_sign([fa(role(1), atom(person, []))], C).
+
 procedure wd_twins(Declared).
 wd_twins(C?) :-
     wd_establish(E), wd_enter(N), wd_of_age(O), wd_befriend(B),
@@ -3002,7 +3060,7 @@ wd_twins(C?) :-
              schema(twins, [],
                [rs(guarded, [atom(parenting, [role(2)]), atom(parenting, [role(3)]),
                              atom(friend, [role(2)]), atom(friend, [role(3)])], [],
-                            [atom(identity, [])], [atom(child, [])]),
+                            [atom(identity, []), atom(person, [])], []),
                 rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                              atom(friend, [role(1)])], [], [], [atom(identity, [])]),
                 rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
@@ -3018,7 +3076,7 @@ wd_clear_g(C?) :-
             [A?, K?,
              schema(drop, [],
                [rs(guarded, [], [atom(note, []), atom(parent, [any])],
-                            [atom(identity, [])], [])])], C).
+                            [atom(identity, []), atom(person, [])], [])])], C).
 
 % --- wr: AI agents, their guardians and the record --------------------------
 % The schemas of GAI's contract with wards, as its appendix describes them, in
@@ -3037,14 +3095,21 @@ wd_clear_g(C?) :-
 % enter_agent, which adds agent at r, where it adds principal_of(r), and by
 % make_guardian, which adds guardian_of(r) and not agent, where it adds
 % guardian_of(r), requiring it where it requires principal_of(r) (def:relay,
-% clause 2, GAI a81e827).
+% clause 2, GAI a81e827).  At GSC 070c5d1 the guardianship of agent is
+% (agent, guardian_of, guarded_by): enter_agent and make_guardian add
+% guarded_by of the guardian at the agent, make_guardian's agent requiring
+% guarded_by of p and forbidding that of q, and p requiring guardian_of(r),
+% the record being required where an atom of v naming r is (def:relay,
+% clause 2); each ward role of a relay act requires guarded_by of its
+% guardian role.
 procedure wr_enter_agent(Schema).
 wr_enter_agent(schema(enter_agent, [svar(x)],
     [rs(guarded, [atom(principal_of, [role(2)]), atom(guardian_of, [role(2)]),
                   atom(friend, [role(2)]), atom(agent_of, [role(2), sgn(x, 1)])], [],
-                 [atom(identity, []), atom(item, [svar(x)])], [atom(agent, [])]),
+                 [atom(identity, []), atom(person, []), atom(item, [svar(x)])], []),
      rs(guarded, [atom(identity, []), atom(principal, [role(1)]), atom(agent, []),
-                  atom(friend, [role(1)]), atom(attestation, [sgn(x, 1)])], [], [],
+                  atom(guarded_by, [role(1)]), atom(friend, [role(1)]),
+                  atom(attestation, [sgn(x, 1)])], [], [],
                  [atom(identity, [])])])).
 
 % make_guardian with Vs its variables, Rq the record p requires and Ad the
@@ -3052,21 +3117,22 @@ wr_enter_agent(schema(enter_agent, [svar(x)],
 procedure wr_make_guardian_at(Args?, Atoms?, Atoms?, Atoms?, Schema).
 wr_make_guardian_at(Vs, Rq, Ad, A3, schema(make_guardian, Vs?,
     [rs(guarded, [], [],
-                 [atom(identity, []), atom(principal_of, [role(3)]), atom(friend, [role(2)])|Rq?],
-                 [atom(agent, [])]),
+                 [atom(identity, []), atom(person, []), atom(guardian_of, [role(3)]), atom(friend, [role(2)])|Rq?],
+                 []),
      rs(guarded, [atom(guardian_of, [role(3)]), atom(friend, [role(3)])|Ad?], [],
-                 [atom(identity, []), atom(friend, [role(1)])],
-                 [atom(agent, []), atom(friend, [role(3)])]),
-     rs(unguarded, [atom(friend, [role(2)])|A3?], [],
-                   [atom(identity, []), atom(agent, [])], [atom(friend, [role(2)])])])).
+                 [atom(identity, []), atom(person, []), atom(friend, [role(1)])],
+                 [atom(friend, [role(3)])]),
+     rs(unguarded, [atom(friend, [role(2)]), atom(guarded_by, [role(2)])|A3?], [],
+                   [atom(identity, []), atom(agent, []), atom(guarded_by, [role(1)])],
+                   [atom(friend, [role(2)]), atom(guarded_by, [role(2)])])])).
 
 procedure wr_make_guardian(Args?, Atoms?, Atoms?, Schema).
 wr_make_guardian(Vs, Rq, Ad, S?) :- wr_make_guardian_at(Vs?, Rq?, Ad?, [], S).
 
 procedure wr_befriend(Schema).
 wr_befriend(schema(befriend, [],
-    [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, [])], [atom(agent, [])]),
-     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [atom(agent, [])])])).
+    [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])], []),
+     rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])])).
 
 % agent_person_befriend with Ad added at the free role besides friend(role(1)):
 % the record of the agent, agent_of(role(1), y), which clause 2 of def:relay
@@ -3074,12 +3140,13 @@ wr_befriend(schema(befriend, [],
 procedure wr_agent_person_ad(Atoms?, Schema).
 wr_agent_person_ad(Ad, schema(agent_person_befriend, [svar(y)],
     [rs(guarded, [atom(friend, [role(2)])], [],
-                 [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])], []),
-     rs(guarded, [atom(friend, [role(1)])|Ad?], [], [atom(identity, [])], [atom(agent, [])]),
+                 [atom(identity, []), atom(agent, []), atom(guarded_by, [role(3)]),
+                  atom(attestation, [svar(y)])], []),
+     rs(guarded, [atom(friend, [role(1)])|Ad?], [], [atom(identity, []), atom(person, [])], []),
      rs(guarded, [], [],
-                 [atom(identity, []), atom(guardian_of, [role(1)]),
+                 [atom(identity, []), atom(person, []), atom(guardian_of, [role(1)]),
                   atom(agent_of, [role(1), svar(y)]), atom(friend, [role(2)])],
-                 [atom(agent, [])])])).
+                 [])])).
 
 procedure wr_agent_person(Schema).
 wr_agent_person(S?) :- wr_agent_person_ad([atom(agent_of, [role(1), svar(y)])], S).
@@ -3089,19 +3156,21 @@ wr_agent_person(S?) :- wr_agent_person_ad([atom(agent_of, [role(1), svar(y)])], 
 procedure wr_agents_rq(Atoms?, Schema).
 wr_agents_rq(Rq, schema(agents_befriend, [svar(y), svar(z)],
     [rs(guarded, [atom(friend, [role(2)])], [],
-                 [atom(identity, []), atom(agent, []), atom(attestation, [svar(y)])], []),
+                 [atom(identity, []), atom(agent, []), atom(guarded_by, [role(3)]),
+                  atom(attestation, [svar(y)])], []),
      rs(guarded, [atom(friend, [role(1)])], [],
-                 [atom(identity, []), atom(agent, []), atom(attestation, [svar(z)])], []),
+                 [atom(identity, []), atom(agent, []), atom(guarded_by, [role(4)]),
+                  atom(attestation, [svar(z)])], []),
      rs(guarded, [], [],
-                 [atom(identity, []), atom(guardian_of, [role(1)]),
+                 [atom(identity, []), atom(person, []), atom(guardian_of, [role(1)]),
                   atom(agent_of, [role(1), svar(y)]), atom(friend, [role(2)]),
                   atom(friend, [role(4)])|Rq?],
-                 [atom(agent, [])]),
+                 []),
      rs(guarded, [], [],
-                 [atom(identity, []), atom(guardian_of, [role(2)]),
+                 [atom(identity, []), atom(person, []), atom(guardian_of, [role(2)]),
                   atom(agent_of, [role(2), svar(z)]), atom(friend, [role(1)]),
                   atom(friend, [role(3)])],
-                 [atom(agent, [])])])).
+                 [])])).
 
 procedure wr_agents(Schema).
 wr_agents(S?) :- wr_agents_rq([], S).
@@ -3157,7 +3226,7 @@ wr_clear_h(C?) :-
                      [atom(agent_of, [role(3), svar(y)])], G),
     wr_with(G?, [schema(wipe, [],
                    [rs(guarded, [atom(wiped, [])], [atom(attestation, [any])],
-                                [atom(identity, [])], [])])], C).
+                                [atom(identity, []), atom(person, [])], [])])], C).
 
 % wr_clear_v: quit(q?, r) has q clear guardian_of(*), deleting guardian_of(r)
 % for every r, and delete or forbid no principal_of (def:guardianship,
@@ -3169,7 +3238,7 @@ wr_clear_v(C?) :-
                      [atom(agent_of, [role(3), svar(y)])], G),
     wr_with(G?, [schema(quit, [],
                    [rs(guarded, [], [atom(friend, [role(2)]), atom(guardian_of, [any])],
-                                [atom(identity, [])], [atom(agent, [])]),
+                                [atom(identity, []), atom(person, [])], []),
                     rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])], C).
 
 % --- contracts with wards at GAI a81e827 (sections/wards.tex) ---------------
@@ -3190,9 +3259,9 @@ wr_clear_w(C?) :-
     wr_make_guardian([svar(y)], [atom(agent_of, [role(3), svar(y)])],
                      [atom(agent_of, [role(3), svar(y)])], G),
     wr_with(G?, [schema(drop, [],
-                   [rs(guarded, [],
+                   [rs(guarded, [atom(person, [])],
                        [atom(agent, []), atom(principal, [role(1)]), atom(principal_of, [any])],
-                       [atom(identity, [])], [])])], C).
+                       [atom(identity, []), atom(person, [])], [])])], C).
 
 % wr_rec_h_added: make_guardian adds the attestation attestation(y) at r and
 % the record agent_of(r, y) at q, and requires no record: it adds no agent,
@@ -3213,12 +3282,13 @@ procedure wr_enter_third(Schema).
 wr_enter_third(schema(enter_agent, [svar(x)],
     [rs(guarded, [atom(principal_of, [role(2)]), atom(guardian_of, [role(2)]),
                   atom(friend, [role(2)]), atom(agent_of, [role(2), sgn(x, 1)])], [],
-                 [atom(identity, []), atom(item, [svar(x)])], [atom(agent, [])]),
+                 [atom(identity, []), atom(person, []), atom(item, [svar(x)])], []),
      rs(guarded, [atom(identity, []), atom(principal, [role(1)]), atom(agent, []),
+                  atom(guarded_by, [role(1)]), atom(guarded_by, [role(3)]),
                   atom(friend, [role(1)]), atom(attestation, [sgn(x, 1)])], [], [],
                  [atom(identity, [])]),
-     rs(guarded, [atom(guardian_of, [role(2)])], [], [atom(identity, [])],
-                 [atom(agent, [])])])).
+     rs(guarded, [atom(guardian_of, [role(2)])], [], [atom(identity, []), atom(person, [])],
+                 [])])).
 
 procedure wr_rec_third(Declared).
 wr_rec_third(C?) :-
@@ -3244,7 +3314,7 @@ wr_quit(C?) :-
                      [atom(agent_of, [role(3), svar(y)])], G),
     wr_with(G?, [schema(quit, [],
                    [rs(guarded, [atom(resigned, [])], [atom(guardian_of, [any])],
-                                [atom(identity, [])], [atom(agent, [])])])], C).
+                                [atom(identity, []), atom(person, [])], [])])], C).
 
 % wr_release_at(F, C): wr with release(q? ; x), q deleting guardian_of(x),
 % x an agent variable, and forbidding F.
@@ -3254,7 +3324,7 @@ wr_release_at(F, C?) :- ground(F?) |
                      [atom(agent_of, [role(3), svar(y)])], G),
     wr_with(G?, [schema(release, [pvar(x)],
                    [rs(guarded, [], [atom(guardian_of, [pvar(x)])],
-                                [atom(identity, [])], [atom(agent, [])|F?])])], C).
+                                [atom(identity, []), atom(person, [])], F?)])], C).
 
 % wr_release: release deletes guardian_of(x), v(u) for the agent variable u
 % = x, and forbids principal_of(x), w(u) (clause 5): grassroots with wards
