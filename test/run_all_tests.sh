@@ -4342,6 +4342,27 @@ check "CVA pragmas: several contracts joined by and, a hyphenated name read whol
 check "CVA pragmas: ... and pragmas.sh exits 0 (relation)" "^exit 0$" "$cva_prel_hy"
 check "CVA pragmas: a contract the line names with no NAME.txt, refused, named (relation)" "the contract XNONE, which its line saying what it is written from names, has no XNONE.txt" "$cva_prel_no"
 
+# The forwarding clauses of contract/2 and version/2 in the program's root module (vGLP 722343d, Section 5.4, "The contract's words": "a goal posted to a program is admitted only at a procedure its root module exports, so the canonical compilation writes into the root module of the program the platform is compiled for a forwarding clause for each of the two, as it writes there the types it forms"): programs/tests/vglp/forward, its self.glp writing neither, its platform.vglp exporting both.
+cva_fwd=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/vglp/forward/
+contract(T, S).
+version(C, B).
+:quit
+HEREDOC
+2>&1)
+check "CVA forwarding: contract(T, S) posted to the program answers its platform's contract, the root module forwarding it" "^S = with(greet, nolook)$" "$cva_fwd"
+check "CVA forwarding: ... and version(C, B) its versions" "^B = 1$" "$cva_fwd"
+check_not "CVA forwarding: ... neither goal undefined at the root" "Undefined procedure: \(contract\|version\)/2" "$cva_fwd"
+
+# The declaration names every name it lists, of every kind (vGLP 722343d, Section 5.4, "The contract's words": "A name in a pragma is the schema's role of that name, a name the contract's declaration gives a person or a ward"), as GnW's "Alice, Bob and Erin are persons, Carol and Dave wards."; Erin, a person the declaration names after another kind, asked.
+cva_dn=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XW' 'Alice and Erin are persons, Carol a ward.' '1. ■ Guarding. Alice may guard Carol, with a consent.' 'Pragmas' 'Guarded: the wards Alice guards.' 'Guarding: Alice [Guard]' '  Erin: Alice asks to guard Carol.' > "$cva_dn/XW.txt"
+cva_dn_guard="schema(guard, ['Alice', 'Carol', 'Erin'], [], [rs(guarded, [atom(guarded, [role(2)])], [], [atom(knows, [role(2)]), atom(knows, [role(3)])], [atom(guarded, [role(2)])]), rs(unguarded, [], [], [], []), rs(guarded, [], [], [], [])])"
+cva_dn_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_dn/XW.txt" "[$cva_dn_guard]" 2>&1; echo "exit $?")
+rm -rf "$cva_dn"
+check "CVA pragmas: a declaration of persons and a ward, Erin a person it names, asked (declared)" "act('guard', '\"Guard\"', \[\], said(\[\[\], \[person(1), text('\" asks to guard \"'), person(2), text('\".\"')\]\]), '\"Guarded\"', by(\[1\]))" "$cva_dn_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (declared)" "^exit 0$" "$cva_dn_out"
+
 # A variable local to a role is no place of the request and has no field (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "Every other variable is bound by the schema-binding, and a request names it"): XL's [Lpf] <label>, lpf(Alice, Bob ; l, d) its d local to Bob's role, names l and no field for d (local_field).
 cva_pl=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XL' 'Alice and Bob are persons.' '1. ■ Labeled pointing. Alice may point to their friend Bob with a label Bob points with.' 'Pragmas' 'Pointing: the persons Alice points to.' 'Labeled pointing: Alice [Lpf] <label>' > "$cva_pl/XL.txt"

@@ -332,7 +332,8 @@ for my $f (@order) {
     for my $x (read_txt($f)) {
         next if $x =~ /^%/;
         last if $x =~ /^\d+\./ || any_head($x);
-        next unless $x =~ /^(.*?)\s+(?:is|are)\s+(?:a\s+)?persons?\.(?:\s|$)/;
+        # The declaration names every name it lists, of every kind, as "Alice, Bob and Erin are persons, Carol and Dave wards." names five (vGLP 722343d, Section 5.4: "a name the contract\x27s declaration gives a person or a ward"; GSC, Section 2: "a declaration of the contract\x27s names, saying what each names").
+        next unless $x =~ /^(.*?\s+(?:is|are)\s+(?:a\s+)?persons?\b[^.]*)\.(?:\s|$)/;
         $declared = 1;
         $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
     }
@@ -527,7 +528,8 @@ for my $f (@order) {
         # A pragma line (GSC 25b6b3c, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them, a question line belonging to the nearest button line above it.  "A name in a pragma is the schema role of that name, the schemas naming their roles as the clauses do" (GSC 25b6b3c, Section 2): each name is the role its schema term names so, $rnames{S}, and a name no role of the schema bears, in a question, is the agent variable of an act with one, as Carol of GKK:3 is c of introduce, filled by its field; any other is a fault.  "A button is offered only to the person named before it", by([G]), G the role of that person, which must be guarding; "the persons named before the questions are asked", each question put to the role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role an act needs that the line names neither as its proposer nor as asked is a fault, the act never asking that person.  A question naming the one guarding role of an act is text of its request form.
         if ($rest !~ /^\[/) {
             my @parts = split /\x01/, $rest;
-            my %nm = map { $_ => 1 } keys %is_name;
+            # A name in a pragma is the schema\x27s role of that name, a name the contract\x27s declaration gives a person or a ward (vGLP 722343d, Section 5.4), whichever contract\x27s declaration gave it: the declared names and the names of the roles of the contract\x27s schemas, each line\x27s names then held to the roles of the schemas its buttons name (below).
+            my %nm = map { $_ => 1 } (keys %is_name, map { @{ $rnames{$_} // [] } } keys %rnames);
             my $alt = join("|", sort { length($b) <=> length($a) || $a cmp $b } keys %nm);
             my @props;
             for my $i (0 .. $#parts) {
