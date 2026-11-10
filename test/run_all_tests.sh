@@ -139,18 +139,20 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# GAI's and GSNP's apps, printed before GAI wrote both as instances of GnW
+# (2026-11-10): vGLP's compiler now refuses their platforms on GnW's joint
+# acts, make_guardian, end_guardian and retire, a listed guarding role whose
+# base is the ward, which vGLP's Section 5.4 has no opener for (vGLP #25,
+# 2026-11-10 20:36 UTC; Udi's ruling pending); each entry comes off when the
+# apps print again (Code #27, 2026-11-10).
+    "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp"
+    "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp"
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
 # UTC); each entry comes off with that rewrite.  GAI on GnW, GLP 6154e1e6,
 # certifies (Section GSC's line, off at GSC-instnames); the cascade's wait on
 # GAI.txt's [Agent end] field and on the records (Cloud #15, 2026-11-10).
-    "cascade gai: cascade.sh --check exits 0"
-    "cascade gai: verdict.txt is what the tools print"
-    "cascade gai: vmat.tex is what the tools print"
-    "cascade gsnp: cascade.sh --check exits 0"
-    "cascade gsnp: verdict.txt is what the tools print"
-    "cascade gsnp: vmat.tex is what the tools print"
 # The super-app's hosting of CSSN's ported mini-app (CSSN's port of
 # 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
 # person channel; each entry comes off with that port.
