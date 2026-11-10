@@ -58,8 +58,10 @@ class Probe {
 /// Section MB's checks, line for line (test/run_all_tests.sh, Section MB).
 const probes = [
   Probe('mad_held_links_boot.glp', [
-    ('carol', r"held\({carol}, _w\({alice}, [0-9]+\), {bob}\)"),
-    ('alice', r"held\({alice}, _w\({alice}, [0-9]+\), {carol}\)"),
+    // The link's name as the program sees it, the 3-ary '_w'(Key, Epoch,
+    // Index) (IGLP cec4682, "Global Variable Names").
+    ('carol', r"held\({carol}, '?_w'?\({alice}, [0-9]+, [0-9]+\), {bob}\)"),
+    ('alice', r"held\({alice}, '?_w'?\({alice}, [0-9]+, [0-9]+\), {carol}\)"),
     ('alice', r'delivered\(hello_from_carol\)'),
   ]),
   Probe('mad_stream_writer_boot.glp', [

@@ -978,7 +978,7 @@ app_names([], [], []).
 %% =============================================================================
 
 %% anchor_is(Parts, X, B, Parts1): whether the anchor a global name carries ---
-%% the name taken apart into a list, '_w'(Anchor, I) or '_r'(Anchor, I) --- is
+%% the name taken apart into a list, '_w'(Anchor, E, I) or '_r'(Anchor, E, I) --- is
 %% X, the parts handed on as Parts1 to a caller that reads them again: a reader
 %% of a type that is not constant is read once.  A name's parts are untyped,
 %% so the anchor is only ever compared, never produced as an agent.

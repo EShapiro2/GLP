@@ -1229,36 +1229,6 @@ ProcDecl _integerAssignment(ProcDecl decl) {
   );
 }
 
-/// Whether [decl] is the root's `procedure widowed(_).`, the guard, by its
-/// name, arity and open argument type: a procedure of a program named so,
-/// with a typed argument, is not it.
-bool _isRootWidowed(ProcDecl decl) =>
-    decl.name == 'widowed' &&
-    decl.arity == 1 &&
-    decl.argTypes[0] is PrimitiveModeAlt &&
-    !(decl.argTypes[0] as PrimitiveModeAlt).isInput;
-
-/// [decl], the root's `procedure widowed(_).`, in the mode of [atom]'s
-/// argument: `widowed(_?)` where the argument is a reader, [decl] itself
-/// otherwise (the guard table's two rows under one declaration).
-ProcDecl _widowedDecl(ast.Goal atom, ProcDecl decl) {
-  if (atom.args.length != 1) return decl;
-  final arg = atom.args[0];
-  if (arg is! ast.VarTerm || !arg.isReader) return decl;
-  final t = decl.argTypes[0];
-  return ProcDecl(
-    decl.name,
-    [PrimitiveModeAlt(true, t.line, t.column)],
-    decl.line,
-    decl.column,
-    typeParams: decl.typeParams,
-    isBuiltin: decl.isBuiltin,
-    exported: decl.exported,
-    imported: decl.imported,
-    modulePath: decl.modulePath,
-  );
-}
-
 /// The types [atom]'s variable occurrences have, as a body unit goal: the
 /// produced moded term of the goal, checked per argument against the declaration
 /// in scope (Definition "Well-Typed Clause" condition 2).
@@ -1586,12 +1556,6 @@ String baseTypeName(TypeExpr typeExpr) =>
     procDecl = _integerAssignment(procDecl);
   }
 
-  // widowed/1 takes its argument in either mode, the guard table's two rows
-  // (the GLP paper f577e20, appendix-guards.tex), which the root self.glp
-  // declares once, `procedure widowed(_).`: a call with a reader, `widowed(X?)`,
-  // is checked against the row of that mode, `widowed(_?)`.
-  if (_isRootWidowed(procDecl)) procDecl = _widowedDecl(atom, procDecl);
-
   // The environment the call's arguments are checked in: [env], unless the
   // call's instantiation needs types [env] cannot be given (see
   // [_buildDeclTypes]).
@@ -1803,10 +1767,6 @@ WellTypedResult _checkArgumentModes(
   if (modedTerm is! ModedCompound) return WellTypedResult.success({});
 
   final errors = <WellTypedError>[];
-  // widowed/1 takes its argument in either mode, the guard table's two rows,
-  // `procedure widowed(_).` and `procedure widowed(_?).` (the GLP paper
-  // f577e20, appendix-guards.tex); the root self.glp declares it once.
-  if (_isRootWidowed(decl)) return WellTypedResult.success({});
   for (int i = 0; i < decl.arity && i < modedTerm.args.length; i++) {
     final arg = modedTerm.args[i];
     if (arg is! ModedVariable) continue; // nested modes are the closure's

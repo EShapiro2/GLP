@@ -80,7 +80,9 @@ Reach ::= connected(Key) ; lost(Key).
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
 % reader or writer end anchored at the agent named by Key, at an index.  Root
 % scope since 2026-09-18; programs/system/mad_predicates.glp defined it before.
-GlobalName ::= '_r'(Key, Integer) ; '_w'(Key, Integer).
+% 3-ary since 2026-11-10 (the GLP paper 07835e1; IGLP cec4682, "Global Variable
+% Names"): the key of the anchor, its epoch and the index it allocated in it.
+GlobalName ::= '_r'(Key, Integer, Integer) ; '_w'(Key, Integer, Integer).
 
 % A message to the network (GLP-Spec appendix-guards, "Output to the network
 % (send_to_net/1)"): msg(Q, T), Q the key of the agent it is sent to.  Declared
@@ -278,15 +280,16 @@ procedure ground(_?).
 procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
-% widowed(X) succeeds when the reader paired to the writer X occurs in no goal
-% of the agent and in no link end the agent holds, the goal being reduced not
-% counted, and widowed(X?) when the writer paired to the reader X? does (the
-% GLP paper f577e20, appendix-guards.tex, the guard table's two rows and the
-% paragraph on link ends after it): a variable sent to another agent occurs in
-% the link end kept for it until that end is retired, at a crash of either
-% agent.  One declaration stands for the table's two rows, the checker
-% admitting the argument in either mode (Remark Guards and SRSW).
-procedure widowed(_).
+% widowed_writer(X) succeeds when the reader paired to the writer X occurs in
+% no goal of the agent and in no link end the agent holds, the goal being
+% reduced not counted, and widowed_reader(X?) when the writer paired to the
+% reader X? does (the GLP paper 07835e1, appendix-guards.tex, the guard
+% table's two rows and the paragraph on link ends after it): a variable sent
+% to another agent occurs in the link end kept for it until that end is
+% retired, at a crash of either agent.  Each is declared in its one mode
+% (Remark Guards and SRSW).
+procedure widowed_writer(_).
+procedure widowed_reader(_?).
 
 % Time guards
 procedure wait(Number?).
@@ -510,18 +513,18 @@ miniapp_person(_, _, _, _, []).
 % the seam-predicate row and "Output to the network (send_to_net/1)"; IGLP
 % madglp-spec.tex, Remark "Network Output Processing"): each element msg(Q, T)
 % of the stream, Q the key of an agent, is sent to agent Q, in order, through
-% '_send' on the link '_w'(Q, 0), Q's index-0 serializer; it ends when the
+% '_send' on the link '_w'(Q, 0, 0), Q's index-0 serializer; it ends when the
 % stream ends.  The guard ground(Q?) licenses Q's several occurrences.  A module
 % reaches the network through this predicate, the '_send' call being admitted
 % only to a system module, which this file is.
 procedure(X) send_to_net(Stream(NetMsg(X))?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) |
-    '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
+    '_send'(msg(Q?, T?), '_w'(Q?, 0, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
 % global_send/3 — IGLP's system predicate (madglp-spec.tex, Definition
 % "global_send Predicate"): global_send(T, G, Q) sends the value of the reader T,
-% once known, on the link G, '_r'(P, I) or '_w'(P, I), to agent Q.  It is the
+% once known, on the link G, '_r'(P, E, I) or '_w'(P, E, I), to agent Q.  It is the
 % goal Globalize spawns for an exported reader and Localize for an imported
 % writer; the runtime registers that goal as a callback on the writer's cell
 % (IGLP Implementation Notes, "The global_send goal"), and these clauses are

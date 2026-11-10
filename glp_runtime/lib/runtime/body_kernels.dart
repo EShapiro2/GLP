@@ -913,19 +913,22 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   // This causes serialization bugs where msg(bob, intro(alice, X)) becomes msg(VarRef, VarRef).
   final termArg = deepDeref(rt, args[0] as Term);
 
-  // Get global name G (second argument) - should be _w(Agent, Index) or _r(Agent, Index)
+  // The global name G (second argument), the 3-ary structure a program
+  // names a link by, '_w'(Agent, Epoch, Index) or '_r'(Agent, Epoch, Index)
+  // (IGLP cec4682, "Global Variable Names"; the GLP paper 07835e1,
+  // appendix-guards.tex, "Output to the network" and "Held links").
   final globalNameArg = _deref(rt, args[1]);
   if (globalNameArg is! StructTerm) {
-    return kernelAbort('[ABORT] \'_send\'/3: second argument (G) must be a struct _w/2 or _r/2, got ${globalNameArg.runtimeType}');
+    return kernelAbort('[ABORT] \'_send\'/3: second argument (G) must be a struct _w/3 or _r/3, got ${globalNameArg.runtimeType}');
   }
 
   // Parse the global name structure
   final functor = globalNameArg.functor;
   if (functor != '\'_w\'' && functor != '\'_r\'' && functor != '_w' && functor != '_r') {
-    return kernelAbort('[ABORT] \'_send\'/3: global name must be _w/2 or _r/2, got $functor');
+    return kernelAbort('[ABORT] \'_send\'/3: global name must be _w/3 or _r/3, got $functor');
   }
-  if (globalNameArg.args.length != 2) {
-    return kernelAbort('[ABORT] \'_send\'/3: global name must have 2 arguments, got ${globalNameArg.args.length}');
+  if (globalNameArg.args.length != 3) {
+    return kernelAbort('[ABORT] \'_send\'/3: global name must have 3 arguments, got ${globalNameArg.args.length}');
   }
 
   // Extract agent from global name (first arg of _w/_r)
@@ -940,16 +943,15 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort('[ABORT] \'_send\'/3: global name agent must be an atom, got $gnAgentArg');
   }
 
-  // Extract index from global name (second arg of _w/_r)
-  final gnIndexArg = _deref(rt, globalNameArg.args[1]);
-  int? gnIndex;
-  if (gnIndexArg is num) {
-    gnIndex = gnIndexArg.toInt();
-  } else if (gnIndexArg is ConstTerm && gnIndexArg.value is num) {
-    gnIndex = (gnIndexArg.value as num).toInt();
+  // Extract the epoch and the index from the global name (second and third
+  // args of _w/_r)
+  final gnEpoch = _intArg(rt, globalNameArg.args[1]);
+  if (gnEpoch == null) {
+    return kernelAbort('[ABORT] \'_send\'/3: global name epoch must be a number, got ${_deref(rt, globalNameArg.args[1])}');
   }
+  final gnIndex = _intArg(rt, globalNameArg.args[2]);
   if (gnIndex == null) {
-    return kernelAbort('[ABORT] \'_send\'/3: global name index must be a number, got $gnIndexArg');
+    return kernelAbort('[ABORT] \'_send\'/3: global name index must be a number, got ${_deref(rt, globalNameArg.args[2])}');
   }
 
   // Get destination agent Q (third argument)
@@ -968,7 +970,7 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   final isWriter = functor == '\'_w\'' || functor == '_w';
 
   // Unified send handles both serializer (index 0) and normal (index > 0) cases
-  ctx.send(termArg, isWriter, gnAgent, gnIndex, destAgent);
+  ctx.send(termArg, isWriter, gnAgent, gnEpoch, gnIndex, destAgent);
 
   return BodyKernelResult.success;
 }
@@ -976,8 +978,9 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
 /// '_authorise\_link'(L?, A?) — answer a reported held link (Definition
 /// authorise\_link Predicate).
 ///
-/// L is the link's global name in its ground presentation — `'_r'(P, I)` or
-/// `'_w'(P, I)`, the same form the `pending_link(G, S)` report carried. A is
+/// L is the link's global name in its ground presentation — `'_r'(P, E, I)`
+/// or `'_w'(P, E, I)`, the same form the `pending_link(G, S)` report carried
+/// (IGLP cec4682, "Global Variable Names").  A is
 /// the atom `authorise` or `refuse`. The GLP wrapper gates on `known(A?)`, so
 /// A is bound here.
 ///
@@ -996,7 +999,7 @@ BodyKernelResult authoriseLinkKernel(GlpRuntime rt, List<Object?> args) {
   final gn = _parseGroundGlobalName(rt, args[0]);
   if (gn == null) {
     return kernelAbort('[ABORT] \'_authorise_link\'/2: first argument (L) must be '
-        "'_r'(P, I) or '_w'(P, I), got ${_deref(rt, args[0])}");
+        "'_r'(P, E, I) or '_w'(P, E, I), got ${_deref(rt, args[0])}");
   }
 
   final answerArg = _deref(rt, args[1]);
@@ -1015,12 +1018,14 @@ BodyKernelResult authoriseLinkKernel(GlpRuntime rt, List<Object?> args) {
   return BodyKernelResult.success;
 }
 
-/// Parse a global name in its ground presentation: the 2-ary structures
-/// `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity, first argument the
-/// anchor. Returns null when [arg] is not one.
+/// Parse a global name in its ground presentation: the 3-ary structures
+/// `'_r'(P, E, I)` and `'_w'(P, E, I)`, "the functor giving the polarity, the
+/// first argument the anchor, the second its epoch and the third the index"
+/// (IGLP cec4682, "Global Variable Names").  Returns null when [arg] is not
+/// one.
 GlobalName? _parseGroundGlobalName(GlpRuntime rt, Object? arg) {
   final s = _deref(rt, arg);
-  if (s is! StructTerm || s.args.length != 2) return null;
+  if (s is! StructTerm || s.args.length != 3) return null;
   final functor = s.functor;
   final isWriter = functor == '_w' || functor == '\'_w\'';
   final isReader = functor == '_r' || functor == '\'_r\'';
@@ -1035,18 +1040,21 @@ GlobalName? _parseGroundGlobalName(GlpRuntime rt, Object? arg) {
   }
   if (agent == null) return null;
 
-  final indexArg = _deref(rt, s.args[1]);
-  int? index;
-  if (indexArg is num) {
-    index = indexArg.toInt();
-  } else if (indexArg is ConstTerm && indexArg.value is num) {
-    index = (indexArg.value as num).toInt();
-  }
-  if (index == null) return null;
+  final epoch = _intArg(rt, s.args[1]);
+  final index = _intArg(rt, s.args[2]);
+  if (epoch == null || index == null) return null;
 
   return isWriter
-      ? GlobalName.writer(agent, index)
-      : GlobalName.reader(agent, index);
+      ? GlobalName.writer(agent, index, epoch: epoch)
+      : GlobalName.reader(agent, index, epoch: epoch);
+}
+
+/// The integer [arg] is, dereferenced, or null where it is no number.
+int? _intArg(GlpRuntime rt, Object? arg) {
+  final v = _deref(rt, arg);
+  if (v is num) return v.toInt();
+  if (v is ConstTerm && v.value is num) return (v.value as num).toInt();
+  return null;
 }
 
 /// Lowercase hex of [bytes].

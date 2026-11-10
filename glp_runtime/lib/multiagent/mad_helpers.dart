@@ -89,12 +89,14 @@ class GlobalName {
   GlobalNameTerm toTerm() => GlobalNameTerm(
       isReader: isReader, agent: agent, epoch: epoch, index: index);
 
-  /// This name as the 2-ary structure a program sees, `'_w'(P, I)` or
-  /// `'_r'(P, I)`, functor giving polarity, first argument the anchor; the
-  /// epoch is not at issue to a program (IGLP db0a117, "Global Variable
-  /// Names": "To a program it is a ground term---the 2-ary structures").
-  StructTerm toStruct() =>
-      StructTerm(isWriter ? '_w' : '_r', [ConstTerm(agent), ConstTerm(index)]);
+  /// This name as the 3-ary structure a program sees, `'_w'(P, E, I)` or
+  /// `'_r'(P, E, I)`, "the functor giving the polarity, the first argument
+  /// the anchor, the second its epoch and the third the index" (IGLP
+  /// cec4682, "Global Variable Names"; the GLP paper 07835e1,
+  /// appendix-guards.tex, "Held links": `GlobalName ::= '_r'(Key, Integer,
+  /// Integer) ; '_w'(Key, Integer, Integer)`).
+  StructTerm toStruct() => StructTerm(isWriter ? '_w' : '_r',
+      [ConstTerm(agent), ConstTerm(epoch), ConstTerm(index)]);
 
   /// The name of the other polarity, the paired end's: `_r(p, e, i)` for
   /// `_w(p, e, i)` and the converse.

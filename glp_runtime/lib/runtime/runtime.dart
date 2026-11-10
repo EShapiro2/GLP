@@ -228,7 +228,7 @@ class GlpRuntime {
   /// Goal [goalId] has passed when_idle: it no longer waits on it.
   void clearIdleWait(int goalId) => _idleWaits.remove(goalId);
 
-  // widowed/1 (the GLP paper f577e20, appendix-guards.tex, the guard table):
+  // widowed_writer/1 and widowed_reader/1 (the GLP paper 07835e1, appendix-guards.tex, the guard table):
   // a goal whose guard asks whether a variable's pair occurs anywhere, and
   // finds it does, suspends as on when_idle: on the reader of a fresh
   // variable, whose writer the scheduler binds at quiescence once the watched
@@ -257,7 +257,7 @@ class GlpRuntime {
     return w.occurrences();
   }
 
-  /// The reader goal [goalId] suspends on while it waits on widowed/1 for
+  /// The reader goal [goalId] suspends on while it waits on widowed_writer/1 and widowed_reader/1 for
   /// the cell [watched] to occur nowhere: the one it already waits on, or a
   /// fresh one.
   HeapCell widowReader(int goalId, HeapCell watched) {
@@ -268,13 +268,13 @@ class GlpRuntime {
     return reader;
   }
 
-  /// Goal [goalId] has passed widowed/1: it no longer waits on it.
+  /// Goal [goalId] has passed widowed_writer/1 and widowed_reader/1: it no longer waits on it.
   void clearWidowWait(int goalId) => _widowWaits.remove(goalId);
 
-  /// Some goal may be waiting on widowed/1.
+  /// Some goal may be waiting on widowed_writer/1 and widowed_reader/1.
   bool get hasWidowWaits => _widowWaits.isNotEmpty;
 
-  /// At quiescence, re-try every goal waiting on widowed/1 whose watched cell
+  /// At quiescence, re-try every goal waiting on widowed_writer/1 and widowed_reader/1 whose watched cell
   /// now occurs nowhere in the agent's state: bind the writer of the reader
   /// it suspended on, which puts it back in the queue.  One scan of the state
   /// serves every wait.  True if a goal was re-tried.  An entry whose goal
@@ -472,7 +472,7 @@ class GlpRuntime {
     // the thing, first set first.  Registers, programs and modules are set
     // together, in the record's order; a budget and a wait reader begin
     // later, in the order of their clock ([_goalSeq]).
-    // In a scan for widowed/1 the goal being reduced is left out
+    // In a scan for widowed_writer/1 and widowed_reader/1 the goal being reduced is left out
     // ([StateWriter.scan], exceptGoal): its own arguments are no occurrence.
     final withEnv = [
       for (final g in _goals.values)
@@ -546,7 +546,7 @@ class GlpRuntime {
       w.cell(pair.writer);
       w.cell(pair.reader);
     }
-    // The goals waiting on widowed/1, each with the cell it watches, which
+    // The goals waiting on widowed_writer/1 and widowed_reader/1, each with the cell it watches, which
     // is written as a pairing: the wait is no occurrence of it.
     w.uint(_widowWaits.length);
     for (final MapEntry(key: id, value: wait) in _widowWaits.entries) {

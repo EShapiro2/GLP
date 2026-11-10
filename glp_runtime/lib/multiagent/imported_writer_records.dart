@@ -33,7 +33,7 @@ class ImportedWriterRecord {
   final String anchor;
 
   /// The epoch in the name, `_w(o, e, k)`: the epoch this end records of
-  /// the anchor (IGLP db0a117, after Definition "madGLP Local State").
+  /// the anchor (IGLP cec4682, after Definition "madGLP Local State").
   final int epoch;
 
   /// The index `k` of the link at its anchor.

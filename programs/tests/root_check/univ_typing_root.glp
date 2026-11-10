@@ -69,7 +69,7 @@ PlaceEvent ::= entered ; exited ; observable ; unobservable.
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
 % reader or writer end anchored at the agent named by Key, at an index.  Root
 % scope since 2026-09-18; programs/system/mad_predicates.glp defined it before.
-GlobalName ::= '_r'(Key, Integer) ; '_w'(Key, Integer).
+GlobalName ::= '_r'(Key, Integer, Integer) ; '_w'(Key, Integer, Integer).
 
 % A message to the network, as the root declares it (GLP, 2026-10-13 20:39
 % UTC; GLP-Spec b063ec9).
@@ -311,7 +311,7 @@ send_to_user([]).
 % only to a system module, which this file is.
 procedure(X) send_to_net(Stream(NetMsg(X))?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) |
-    '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
+    '_send'(msg(Q?, T?), '_w'(Q?, 0, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
 % global_send/3 — IGLP's system predicate (madglp-spec.tex, Definition

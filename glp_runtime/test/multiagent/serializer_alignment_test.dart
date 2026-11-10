@@ -131,7 +131,7 @@ void main() {
         wp = ctx.wp;
         for (var k = 0; k < 2; k++) {
           final (_, r) = rt.heap.allocateVariable();
-          ctx.send(StructTerm('m', [VarRef(r)]), true, 'bob', 0, 'bob');
+          ctx.send(StructTerm('m', [VarRef(r)]), true, 'bob', 0, 0, 'bob');
         }
       });
       expect(sent.map((m) => '${m.name}'), ['_w(bob, 0, 0)', '_w(bob, 0, 0)']);
@@ -147,15 +147,15 @@ void main() {
 
     test('the same term sent twice is two cold calls, under two serials', () {
       final sent = sendAll((ctx, rt) {
-        ctx.send(ConstTerm('hello'), true, 'bob', 0, 'bob');
-        ctx.send(ConstTerm('hello'), true, 'bob', 0, 'bob');
+        ctx.send(ConstTerm('hello'), true, 'bob', 0, 0, 'bob');
+        ctx.send(ConstTerm('hello'), true, 'bob', 0, 0, 'bob');
       });
       expect(sent.map((m) => m.serial), [1, 2]);
     });
 
     test('a value on a link of index above 0 takes no serial', () {
       final sent = sendAll((ctx, rt) {
-        ctx.send(ConstTerm('v'), false, 'alice', 7, 'bob');
+        ctx.send(ConstTerm('v'), false, 'alice', 1, 7, 'bob');
       });
       expect(sent.single.serial, isNull);
       expect('${sent.single.name}', '_r(alice, 1, 7)');

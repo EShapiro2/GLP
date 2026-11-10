@@ -132,16 +132,19 @@ List<(Term, String)> _reports(_Net net, String id) {
   return out;
 }
 
-/// Assert [term] is the ground presentation of the named link: the 2-ary
-/// structure `'_r'(P, I)` or `'_w'(P, I)`, functor giving polarity, first
-/// argument the anchor.
-void _expectGroundName(Term term, String anchor, int index, bool isWriter) {
+/// Assert [term] is the ground presentation of the named link: the 3-ary
+/// structure `'_r'(P, E, I)` or `'_w'(P, E, I)`, functor giving polarity,
+/// first argument the anchor, second its epoch, third the index (IGLP
+/// cec4682, "Global Variable Names").
+void _expectGroundName(Term term, String anchor, int index, bool isWriter,
+    {int epoch = 1}) {
   expect(term, isA<StructTerm>());
   final s = term as StructTerm;
   expect(s.functor, isWriter ? '_w' : '_r');
-  expect(s.args.length, 2);
+  expect(s.args.length, 3);
   expect((s.args[0] as ConstTerm).value, anchor);
-  expect((s.args[1] as ConstTerm).value, index);
+  expect((s.args[1] as ConstTerm).value, epoch);
+  expect((s.args[2] as ConstTerm).value, index);
 }
 
 /// Build the three-agent forwarded-reader setup: charlie anchors a reader and
@@ -173,7 +176,7 @@ void _expectGroundName(Term term, String anchor, int index, bool isWriter) {
   );
   ctxBob.send(
       StructTerm('m', [VarRef(lres.freshPairs[0].readerAddr)]),
-      true, 'alice', 0, 'alice');
+      true, 'alice', 0, 0, 'alice');
   return (rn: gres.globalNames[0], restW: restW);
 }
 
@@ -184,12 +187,12 @@ HeapCell _forwardedWriter(_Net net) {
   final qRt = net.runtimes['q']!;
   final rRt = net.runtimes['r']!;
   final (xW, _) = pRt.heap.allocateVariable();
-  net.agents['p']!.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 'q');
+  net.agents['p']!.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 0, 'q');
   net.settle();
   final yq = ((net.runtimes['q']!.heap.derefAddr(net.netIn['q']!) as StructTerm)
               .args[0] as StructTerm)
           .args[0] as VarRef;
-  net.agents['q']!.send(StructTerm('n', [VarRef(yq.addr)]), true, 'r', 0, 'r');
+  net.agents['q']!.send(StructTerm('n', [VarRef(yq.addr)]), true, 'r', 0, 0, 'r');
   net.settle();
   final zr = ((rRt.heap.derefAddr(net.netIn['r']!) as StructTerm).args[0]
           as StructTerm)
@@ -216,7 +219,7 @@ VarRef _carried(_Net net, String id) =>
   final res = _forwardedReader(net);
   net.deliverWhere((m) => m.to == 'alice');
   net.agents['alice']!.send(
-      StructTerm('m', [_carried(net, 'alice')]), true, 'dave', 0, 'dave');
+      StructTerm('m', [_carried(net, 'alice')]), true, 'dave', 0, 0, 'dave');
   net.deliverWhere((m) => m.to == 'dave');
   expect(net.agents['alice']!.wp.findByRemote(GlobalName.reader('charlie', res.rn.index)), isNull,
       reason: 'alice forwarded the name under its original anchor');
@@ -423,14 +426,14 @@ void main() {
       net.add('r');
       final pRt = net.runtimes['p']!;
       final (xW, xR) = pRt.heap.allocateVariable();
-      net.agents['p']!.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 'q');
+      net.agents['p']!.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 0, 'q');
       net.settle();
       final yq = ((net.runtimes['q']!.heap.derefAddr(net.netIn['q']!)
                   as StructTerm)
               .args[0] as StructTerm)
           .args[0] as VarRef;
       net.agents['q']!
-          .send(StructTerm('n', [VarRef(yq.addr)]), true, 'r', 0, 'r');
+          .send(StructTerm('n', [VarRef(yq.addr)]), true, 'r', 0, 0, 'r');
       net.settle();
       final zr = ((net.runtimes['r']!.heap.derefAddr(net.netIn['r']!)
                   as StructTerm)
@@ -459,14 +462,14 @@ void main() {
       net.add('r');
       final pRt = net.runtimes['p']!;
       final (xW, xR) = pRt.heap.allocateVariable();
-      net.agents['p']!.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 'q');
+      net.agents['p']!.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 0, 'q');
       net.settle();
       final yq = ((net.runtimes['q']!.heap.derefAddr(net.netIn['q']!)
                   as StructTerm)
               .args[0] as StructTerm)
           .args[0] as VarRef;
       net.agents['q']!
-          .send(StructTerm('n', [VarRef(yq.addr)]), true, 'r', 0, 'r');
+          .send(StructTerm('n', [VarRef(yq.addr)]), true, 'r', 0, 0, 'r');
       net.settle();
       final zr = ((net.runtimes['r']!.heap.derefAddr(net.netIn['r']!)
                   as StructTerm)
@@ -573,7 +576,7 @@ void main() {
       // p exports a writer to q and a reader to q — no forwarding anywhere.
       final (xW, xR) = pRt.heap.allocateVariable();
       net.agents['p']!
-          .send(StructTerm('m', [VarRef(xW), VarRef(xR)]), true, 'q', 0, 'q');
+          .send(StructTerm('m', [VarRef(xW), VarRef(xR)]), true, 'q', 0, 0, 'q');
       net.settle();
       final cell = (net.runtimes['q']!.heap.derefAddr(net.netIn['q']!)
               as StructTerm)

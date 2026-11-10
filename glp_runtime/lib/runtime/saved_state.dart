@@ -227,7 +227,7 @@ class StateWriter {
   /// an occurrence ([occurrences]): every cell a root or a term names, a cell
   /// a bound writer's chain or value reaches, and none reached by pairing
   /// alone --- a writer's paired reader, an unbound writer's pointer to it,
-  /// and an unbound reader's pointer to its writer.  `widowed/1` asks it
+  /// and an unbound reader's pointer to its writer.  `widowed_writer/1 and widowed_reader/1` asks it
   /// whether a variable's pair occurs in the agent's state
   /// ([GlpRuntime.cellOccurs]); [exceptGoal], the goal being reduced, is left
   /// out of the scan ("the goal being reduced not counted", the GLP paper
