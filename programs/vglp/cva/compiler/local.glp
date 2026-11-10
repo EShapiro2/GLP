@@ -1416,13 +1416,13 @@ lreqs_at(Rs, B, P, Rf, R?) :- ground(Rs?), ground(B?), integer(P?) |
     app(R1?, R2?, R).
 procedure listing_reqs(RoleSpecs?, Integer?, Binding?, Integer?, GAs).
 listing_reqs([], _, _, _, []).
+%% The anchor's arguments As hold the listed role, role(I), at its place (cvac.glp, norm_roles), so their image under B, which binds the role, is the listing atom.
 listing_reqs([crs(listed(Bi, Rho, As), _, _, _, _, _)|Rs], I, B, P, G?) :- integer(I?), integer(Bi?), ground(B?), integer(P?) |
     role_person(Bi?, B?, Pb),
-    role_person(I?, B?, Q),
     img_args(As?, B?, Vs),
     I1 := I? + 1,
     listing_reqs(Rs?, I1?, B?, P?, G1),
-    keep_listing(Pb?, P?, ga(Rho?, [person(Q?)|Vs?]), G1?, G).
+    keep_listing(Pb?, P?, ga(Rho?, Vs?), G1?, G).
 listing_reqs([_|Rs], I, B, P, G?) :- otherwise, integer(I?) | I1 := I? + 1, listing_reqs(Rs?, I1?, B?, P?, G).
 procedure keep_listing(Integer?, Integer?, GA?, GAs?, GAs).
 keep_listing(Pb, P, A, G, [A?|G?]) :- Pb? =:= P? | true.

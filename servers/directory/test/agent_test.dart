@@ -17,7 +17,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:directory_server/agent.dart';
 import 'package:directory_server/mail.dart';
@@ -212,7 +211,6 @@ void main() {
       agentId: 'app-$fill',
       program: appPath,
       rootSelfGlpPath: rootSelf,
-      keyPair: (pub: key, priv: Uint8List.fromList(id.privateKey)),
       network: HeadlessGlpNetwork(layer),
     );
     addTearDown(agent.dispose);
@@ -440,7 +438,7 @@ void main() {
     addTearDown(layer.dispose);
     final key = glp.PubKey.fromList(id.publicKey);
     final agent = AgentRuntime(agentId: 'app-6c', program: appPath, rootSelfGlpPath: rootSelf,
-        keyPair: (pub: key, priv: Uint8List.fromList(id.privateKey)), network: HeadlessGlpNetwork(layer));
+        network: HeadlessGlpNetwork(layer));
     addTearDown(agent.dispose);
     final a = _App(key, layer, agent);
     agent.onUserOutput = a.say;

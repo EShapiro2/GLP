@@ -204,7 +204,6 @@ void main() {
       program: '$programs/social/graph/core',
       rootSelfGlpPath: '$programs/self.glp',
       network: net,
-      keyPair: kp,
       manifest: superappManifest,
     );
     final p = _Phone(name, host, net);

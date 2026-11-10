@@ -1,9 +1,9 @@
 # A run of the cascade on GD
 
-- Contract: `GD` (`gd` to the checker), its owner's two files `programs/ggga/GD.txt` and `programs/ggga/GD.glp`, copied here as they stood at `86d6a018`.
-- The paper: `/Users/udi/Grassroots/SRC (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `86d6a018` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 13:36 UTC by `cascade.sh gd`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GD` (`gd` to the checker), its owner's two files `programs/ggga/GD.txt` and `programs/ggga/GD.glp`, copied here as they stood at `ffa59869`.
+- The paper: `https://github.com/EShapiro2/src---sybil-resilient-communities` at `bb178919`, for the paper's own record.
+- The tools: this repository at `ffa59869` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 12:02 UTC by `cascade.sh gd`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

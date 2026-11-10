@@ -531,6 +531,45 @@ answer(forty_two).
     });
     tearDownAll(() => dir.deleteSync(recursive: true));
 
+    test('self_app(R, I) assigns none for each on a headless server, where no '
+        'app is given (the GLP paper f265fec, appendix-guards, "Networking '
+        'seam"; IGLP 07a2b00, Definition "Seam Predicates")', () async {
+      if (sodiumUnavailable != null) {
+        markTestSkipped(sodiumUnavailable!);
+        return;
+      }
+      final selfProgram = File('${dir.path}/self_app.glp')
+        ..writeAsStringSync('''
+Shown ::= running(App) ; installed(App).
+
+exported procedure agent(Channel(Stream(Constant), Stream(Shown))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])) :- self_app(R, I), send_to_user([running(R?), installed(I?)]).
+''');
+      final layer = HeadlessGrassrootsNetwork(
+        outboundQueueStore: MemoryOutboundQueueStore(),
+        identity: await identityFromSeed(seedOf(0x31)),
+        sodium: sodium!,
+      );
+      addTearDown(layer.dispose);
+      // As the servers host their agents (servers/directory/lib/agent.dart,
+      // networking/glue/bin/rendezvous_server.dart): no app, and no key pair,
+      // the layer's being the agent's.
+      final host = AgentRuntime(
+        agentId: 'server',
+        program: selfProgram.absolute.path,
+        rootSelfGlpPath: rootSelfGlpPath,
+        network: HeadlessGlpNetwork(layer),
+      );
+      addTearDown(host.dispose);
+      final transcript = <String>[];
+      host.onOutput = transcript.add;
+      await host.initialize();
+      expect(transcript.where((l) => l.startsWith('< ')),
+          ['< running(none)', '< installed(none)']);
+      expect(host.name, glp.PubKey.fromList(layer.getIdentity()).hex,
+          reason: 'the agent is named by the layer\'s key');
+    }, timeout: Timeout.none);
+
     test('a cold call and an assignment cross between them through the adapter',
         () async {
       if (sodiumUnavailable != null) {
@@ -541,7 +580,6 @@ answer(forty_two).
       final calleeSeed = seedOf(0x6b);
       final callerIdentity = await identityFromSeed(callerSeed);
       final caller = glp.PubKey.fromList(callerIdentity.publicKey);
-      final callerPriv = Uint8List.fromList(callerIdentity.privateKey);
       final callee =
           glp.PubKey.fromList((await identityFromSeed(calleeSeed)).publicKey);
 
@@ -596,7 +634,6 @@ answer(forty_two).
         agentId: 'caller',
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        keyPair: (pub: caller, priv: callerPriv),
         network: network,
       );
       addTearDown(host.dispose);

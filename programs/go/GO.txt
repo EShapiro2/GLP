@@ -5,7 +5,7 @@
 % Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: GO.glp beside this file.
 GO: Grassroots Organisation
-GO extends GnW (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+GO instantiates GnW and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 An organisation is a ward with participants, which include its guardians, referred to as its officers, each with a role.  The state of the ward holds its bylaws and its register, recording the participants and the officers in each role.  The bylaws define the roles of the organisation, each with its powers and the acts by which a participant is appointed to it and removed from it, and name for each act of the organisation the officers and/or persons who decide it and the rule by which they decide it jointly, including admitting and removing a participant, and appointing an officer when there is none.
 Alice and Bob are persons, Orga a ward.
 1. ■ Founding.  Alice, or an organisation with Alice, may create an organisation, Orga, as a ward, choosing its bylaws, with Alice its first officer.

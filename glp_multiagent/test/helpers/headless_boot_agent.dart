@@ -28,7 +28,6 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart'
@@ -90,10 +89,6 @@ Future<void> main(List<String> args) async {
                 person['channelIndex'] as int),
         bootSource: bootSource,
         bootPath: bootPath,
-        keyPair: (
-          pub: glp.PubKey.fromList(identity.publicKey),
-          priv: Uint8List.fromList(identity.privateKey),
-        ),
         network: network,
       );
       // The transcript marks each element sent to the person with `< `.

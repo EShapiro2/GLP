@@ -1,0 +1,61 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract published
+%% (../contracts.glp, contract_named(published, C): publish(p? ; x), which adds
+%% item(x) and published(x) at p where the item of x is a program, the
+%% constraint program(item_of(x)), and note(p? ; x), which adds item(x), any
+%% item), platform.vglp, which programs/vglp/cva/compile.sh prints from it:
+%% a program condition in a constraint (vGLP b413fe1, Section 5.4, "Speech-act
+%% schemas as local specifications": a value may be "a program, a GLP module
+%% as text, which the runtime recognises", and a constraint is over
+%% "program(u), that the value u is a program"), a condition naming no local
+%% variable, so local to every role and checked where the schema is bound, as
+%% the author of a speech act is compared.
+%%
+%% play_published: alice publishes a program, this play's own module, her
+%% request publish(alice, speech(program(M), alice)), M from self_module/1,
+%% the utterance of her speech act the module: her machine holds the
+%% condition, the item of the speech act being a program, and commits, her
+%% state holding item and published of it.  She then asks to publish a text,
+%% speech(utterance(hello), alice): the condition fails at the binding, the
+%% schema-binding determines no transaction, and her machine is ready for no
+%% part the request names, so the request is dropped with the notice
+%% refused(publish(alice, speech(utterance(hello), alice)), alice, unable).
+%% She notes the same text, note having no condition, and holds item of it.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_published(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_published(LA?, LB?, N?) :-
+    self_module(M1),
+    self_module(M2),
+    pair([own([A1, A2], propose(publish(A1?, speech(program(M1?), A2?)))),
+          wait(holds(published(speech(program(M2?), alice)))),
+          own([A3, A4], propose(publish(A3?, speech(utterance(hello), A4?)))),
+          wait(refused(publish(alice, speech(utterance(hello), alice)), alice, unable)),
+          own([A5, A6], propose(note(A5?, speech(utterance(hello), A6?)))),
+          wait(holds(item(speech(utterance(hello), alice))))],
+         [],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined; bob takes no step.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

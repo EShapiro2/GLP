@@ -494,11 +494,12 @@ TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path,
 }
 
 /// How the linker reads a `self.glp` into a scope while it discovers a program
-/// with `.vglp` sources: "Every module of [M] type-checks as GLP with no type
-/// written by hand: the compilation writes into each module that imports a
-/// compiled procedure or the dispatcher the types it forms for them, among
-/// them the type of the asks, the view types and the parameter of the person
-/// channel" (vGLP 2f08466, Section 6.3, "The canonical compilation").  A
+/// with `.vglp` sources (TGLP d993305, modules.tex, Compilation, "Sources
+/// compiled to GLP": "The sources are compiled in the directory's scope
+/// without those types, and the directory's self.glp is checked after, with
+/// them"; vGLP 2f08466, Section 6.3, "The canonical compilation": "the
+/// compilation writes into each module that imports a compiled procedure or
+/// the dispatcher the types it forms for them").  A
 /// `self.glp` is such a module where it imports a procedure of a `.vglp`
 /// source the linker compiles; it is also in the scope that source is compiled
 /// in, so it is read into a scope before the types it needs exist.  Until the
@@ -514,6 +515,12 @@ SelfGlpReading? selfGlpReading;
 /// types written into each `self.glp` ([written]), by normalised absolute
 /// path: those of a compiled module committed beside its source from the
 /// start, and those of a source compiled at the load once it is compiled.
+/// [pending] is TGLP d993305's order, the directory's self.glp "checked
+/// after, with them"; it holds a self.glp above the sources' directory too,
+/// coins/, sovereign/ and linker_tree/ over their agents', which the
+/// paragraph has name the formed types by M#T and so leaves out of that
+/// order (Cloud #16, Code_inbox 2026-11-10, the Runtime-cite-d993305
+/// report).
 class SelfGlpReading {
   final Set<String> pending;
   final Map<String, List<TypeDef>> written = {};

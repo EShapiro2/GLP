@@ -310,10 +310,6 @@ class HeadlessBoot {
         person: spec.bootForm ? personOf(spec, keyOf) : null,
         bootSource: bootFile?.source,
         bootPath: bootFile?.path,
-        keyPair: (
-          pub: glp.PubKey.fromList(identity.publicKey),
-          priv: Uint8List.fromList(identity.privateKey),
-        ),
         network: net,
       );
       final lines = outputs[spec.id] = AgentLines(spec.id);
