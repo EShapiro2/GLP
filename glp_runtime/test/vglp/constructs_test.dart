@@ -2480,14 +2480,28 @@ procedure (Ask)*request(Integer?).
 
     test('an act that does not read as the grammar has it is no declaration',
         () {
+      // A field's kind is a constant: one of the kinds by its variable, or
+      // the type a text's variable carries (vGLP 37fe038, Section 5.4), so
+      // a kind that is no constant does not read; until vGLP 37fe038 a
+      // constant outside the kinds, other, was the case here.
       expect(
           DeclaredWidget.tryParse('social_menu([button("X", '
-              '[act(x, 1, [1], [], [], [field(2, "s", other)], [], [])])])'),
+              '[act(x, 1, [1], [], [], [field(2, "s", f(x))], [], [])])])'),
           isNull);
       expect(
           DeclaredWidget.tryParse(
               'social_menu([act(x, "Tab", 1, [], [], [])])'),
           isNull);
+    });
+
+    test('a text field of a typed variable reads with its type as its kind, '
+        'as email (vGLP 37fe038, Section 5.4)', () {
+      final w = DeclaredWidget.tryParse('social_menu([button("Register", '
+          '[act(register, 1, [1], [], [], [field(2, "email", email)], [], [])])])');
+      expect(w, isNotNull);
+      final f = w!.buttons.single.acts.single.fields.single;
+      expect(f.type, 'email');
+      expect(f.isText, isTrue);
     });
 
     test('are refused where W is not an atom, T not a moded type, or two name '
