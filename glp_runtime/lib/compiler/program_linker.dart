@@ -1126,7 +1126,8 @@ Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
 /// `self.glp` of the directory `M` --- the module gets the definition
 /// `M#Procedure ::= p1(...) ; ... ; pk(...)`, one alternative for each
 /// declaration `M` exports, in their order, a declaration of arity zero a
-/// constant and each argument type as `M` writes it, and, with it, the
+/// constant and each argument type of the declaration complemented
+/// ([_dualArg]; TGLP 6ce148a), and, with it, the
 /// definitions in `M` of the types those declarations name and of those they
 /// name, as a compiled module's types are written ([_writeCompiledTypes]), so
 /// that a type `M` defines itself is defined where it is named; a type the
@@ -1138,7 +1139,9 @@ Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
 /// [selfGlpReading], so that every scope reads it with the type.  Returned:
 /// the `self.glp` files whose scopes are to be built again.  Until 2026-11-10
 /// the reader read `M#Procedure` as any qualified type name, and no scope
-/// defined it ("Unresolved type: M#Procedure").
+/// defined it ("Unresolved type: M#Procedure"); until TGLP 6ce148a, the same
+/// day, the paragraph wrote the union without the complement, and the
+/// argument types were written as the declarations write them.
 Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
   const suffix = '#$procedureTypeName';
   final reading = selfGlpReading;
@@ -1228,7 +1231,8 @@ Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
           for (final d in exported)
             d.argTypes.isEmpty
                 ? ConstantAlt(d.name, d.line, d.column)
-                : StructAlt(d.name, d.argTypes, d.line, d.column)
+                : StructAlt(d.name, [for (final a in d.argTypes) _dualArg(a)],
+                    d.line, d.column)
         ];
         final names = <String>[];
         for (final d in exported) {
@@ -1252,6 +1256,19 @@ Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
     }
   }
   return rebuild;
+}
+
+/// An argument type of a declaration complemented, as `M#Procedure` holds it:
+/// "the type of a goal of a procedure `M` exports held as a term: the union
+/// of the declarations `M` exports ... with each argument type complemented,
+/// as an end of a channel is held at the dual of its other end's type" (TGLP
+/// 6ce148a, modules.tex, "Procedure declarations"; GLP #14, Code_inbox.md,
+/// 2026-11-10 13:13 UTC, item 1a).  A declaration's argument is a type name,
+/// marked or not, or a wildcard ([ProcDecl.argTypes]).
+TypeExpr _dualArg(TypeExpr t) {
+  if (t is TypeRef) return t.dual();
+  if (t is PrimitiveModeAlt) return PrimitiveModeAlt(!t.isInput, t.line, t.column);
+  return t;
 }
 
 /// The name of the type of the procedure declarations, `Procedure ::=

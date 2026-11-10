@@ -17,10 +17,19 @@
 /// is refused where M exports `true/0`, two alternatives then sharing the
 /// constant `true` (type_environment_builder.dart, `_checkDeterminism`, which
 /// follows a bare type-name alternative to the functors and constants it
-/// reaches).  The last group runs the vanilla meta-interpreter
-/// (programs/book/meta/plain/plain_meta.glp), one text, at two programs, each
-/// typed by hand at the dual of its declaration, the form the checker types
-/// today (Cloud #12 to Code, Code_inbox.md, 2026-11-10).
+/// reaches).  M#Procedure holds each argument type of M's declarations
+/// complemented, a goal held as a term (TGLP 6ce148a).  The last group runs
+/// the vanilla meta-interpreter (programs/book/meta/plain/plain_meta.glp), one
+/// text, at two programs' M#Procedure, reading each program's clauses from a
+/// table with "the entries clause(true, true) and clause((A, B), (A?, B?))
+/// beside the program's own, since an otherwise guard narrows no type" (TGLP
+/// 6ce148a; GLP #14, Code_inbox.md, 2026-11-10 13:13 UTC, item 1b).  The
+/// table is declared at the program's instance, clause(Goal(prog#Procedure)?,
+/// Goal(prog#Procedure)); TGLP's table typed at G, procedure(G)
+/// clause(Goal(G)?, Goal(G)), is refused by the linked check, which binds the
+/// meta-interpreter's G from its clauses as Goal(_) and not from the import's
+/// instance (Cloud #12 to Code, Code_inbox.md, 2026-11-10, a fault of the
+/// checker against TGLP modules.tex, "Cross-module type checking").
 library;
 
 import 'dart:io';
@@ -46,13 +55,13 @@ String _shown(GlpEngine engine, rt.Term? t) {
 }
 
 /// The vanilla meta-interpreter, parameterised by the type of the goals it
-/// interprets; the program's clauses as it reads them, reduce/2, are the
+/// interprets; the program's clauses as it reads them, clause/2, are the
 /// program's, in its self.glp, the ancestor scope, where Goal(G) is defined.
 const String _meta = '''
 exported procedure(G) run(Goal(G)?).
 run(true).
 run((A, B)) :- run(A?), run(B?).
-run(A) :- otherwise | reduce(A?, B), run(B?).
+run(A) :- otherwise | clause(A?, B), run(B?).
 ''';
 
 const String _prog = '''
@@ -166,21 +175,20 @@ go :- keep(halt).
     });
   });
 
-  group('the vanilla meta-interpreter at two programs, typed by hand at the dual of each declaration',
-      () {
+  group("the vanilla meta-interpreter at two programs' M#Procedure", () {
     test('merge', () async {
       write('meta.glp', _meta);
       write('prog.glp', _prog);
       write('self.glp', '''
 Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
-P ::= merge(Stream(Integer), Stream(Integer), Stream(Integer)?).
-imported procedure meta#run(Goal(P)?).
-procedure reduce(Goal(P)?, Goal(P)).
-reduce(true, true).
-reduce((A, B), (A?, B?)).
-reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
-reduce(merge([], [], []), true).
+imported procedure meta#run(Goal(prog#Procedure)?).
+procedure clause(Goal(prog#Procedure)?, Goal(prog#Procedure)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge([], [], []), true).
+clause(halt, true).
 exported procedure go(Stream(Integer)).
 go(Zs?) :- meta # run((merge([1, 2], [3], Xs), merge(Xs?, [4], Zs))).
 ''');
@@ -200,13 +208,12 @@ append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 ''');
       write('self.glp', '''
 Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
-P ::= append(Stream(Integer), Stream(Integer), Stream(Integer)?).
-imported procedure meta#run(Goal(P)?).
-procedure reduce(Goal(P)?, Goal(P)).
-reduce(true, true).
-reduce((A, B), (A?, B?)).
-reduce(append([], Ys, Ys?), true).
-reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
+imported procedure meta#run(Goal(prog#Procedure)?).
+procedure clause(Goal(prog#Procedure)?, Goal(prog#Procedure)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(append([], Ys, Ys?), true).
+clause(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).
 exported procedure go(Stream(Integer)).
 go(Zs?) :- meta # run(append([1], [2, 3], Zs)).
 ''');
