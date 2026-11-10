@@ -157,6 +157,7 @@ void _expectGroundName(Term term, String anchor, int index, bool isWriter) {
   final gres = globalize(
     variables: [TermVar.reader(restR, writerAddr: restW)],
     localAgent: 'charlie',
+    localEpoch: 1,
     remoteAgent: 'bob',
     table: ctxCharlie.wp,
     records: ctxCharlie.up,
@@ -217,9 +218,9 @@ VarRef _carried(_Net net, String id) =>
   net.agents['alice']!.send(
       StructTerm('m', [_carried(net, 'alice')]), true, 'dave', 0, 'dave');
   net.deliverWhere((m) => m.to == 'dave');
-  expect(net.agents['alice']!.wp.findByRemote('charlie', res.rn.index), isNull,
+  expect(net.agents['alice']!.wp.findByRemote(GlobalName.reader('charlie', res.rn.index)), isNull,
       reason: 'alice forwarded the name under its original anchor');
-  expect(net.agents['dave']!.hasReportedLink('charlie', res.rn.index, false),
+  expect(net.agents['dave']!.hasReportedLink(GlobalName.reader('charlie', res.rn.index)),
       isTrue);
   net.agents['alice']!.answerLink(res.rn, true);
   net.agents['dave']!.answerLink(res.rn, true);
@@ -240,7 +241,7 @@ void _expectDaveHasIt(_Net net, GlobalName rn, String why) {
   expect(net.runtimes['dave']!.heap.derefAddr(_carried(net, 'dave').addr),
       isA<ConstTerm>().having((c) => c.value, 'value', 'v'),
       reason: 'the current holder receives the value ($why)');
-  expect(net.agents['dave']!.wp.findByRemote('charlie', rn.index), isNull);
+  expect(net.agents['dave']!.wp.findByRemote(GlobalName.reader('charlie', rn.index)), isNull);
   expect(net.agents['charlie']!.pendingReaderValueCount, 0,
       reason: 'the current holder acknowledged: the link is closed ($why)');
   expect(net.agents['charlie']!.recordedRequestPairCount, 0,
@@ -507,7 +508,7 @@ void main() {
       expect(net.agents['alice']!.mp.heldCount, 0);
       expect(net.deliveryLog.where((m) => m.to == 'charlie'), isEmpty,
           reason: 'a refused request never goes out');
-      expect(net.agents['alice']!.wp.findByRemote('charlie', res.rn.index),
+      expect(net.agents['alice']!.wp.findByRemote(GlobalName.reader('charlie', res.rn.index)),
           isNull,
           reason: "the refused link's entry is released");
 

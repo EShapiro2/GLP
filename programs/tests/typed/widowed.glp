@@ -1,0 +1,42 @@
+%% widowed/1 (the GLP paper f577e20, appendix-guards.tex, the guard table's
+%% two rows): widowed(X) succeeds when the reader paired to the writer X
+%% occurs in no goal of the agent and in no link end the agent holds, the
+%% goal being reduced not counted; widowed(X?) when the writer paired to the
+%% reader X? does.  The clause's variable stands for the goal's: a head reader
+%% X? against the goal's writer W, a head writer X against the goal's reader
+%% R? (glp.tex, Remark "Guards and SRSW": the variable in the guard, its pair
+%% in the head, and neither elsewhere in the clause).
+%%
+%%   watch(W, O), holder(W?, T?), release(T)    O = widowed, once holder/2 ends
+%%   watch(W, O), holder(W?, T?)                suspended: holder/2 holds W?
+%%   wait(R?, O), assign(R)                     O = got(hello): assigned first
+%%   wait(R?, O), owner(R, T?)                  suspended: owner/2 holds R
+%%
+%% watch/2 suspends while holder/2 holds W?, and is re-tried at quiescence
+%% once W? occurs nowhere.  wait/2's widowed(X?) succeeds once the writer
+%% paired to R? occurs nowhere, which in one agent no well-typed program
+%% brings about, the checker refusing a head that leaves an output
+%% unassigned: the writer goes with a link end retired, at a crash of the
+%% agent that holds it (test/multiagent/epochs_test.dart).
+
+Go ::= go.
+Fate ::= widowed ; orphaned ; got(Constant).
+
+procedure watch(Constant, Fate).
+watch(X?, widowed) :- widowed(X) | true.
+
+procedure holder(Constant?, Go?).
+holder(_, go).
+
+procedure release(Go).
+release(go).
+
+procedure wait(Constant?, Fate).
+wait(hello, got(hello)).
+wait(X, orphaned) :- widowed(X?) | true.
+
+procedure owner(Constant, Go?).
+owner(none, go).
+
+procedure assign(Constant).
+assign(hello).

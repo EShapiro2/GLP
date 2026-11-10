@@ -234,6 +234,11 @@ class SuperAppHost {
   /// it, or there is no store.
   Future<bool> save() => agent.save();
 
+  /// The app resumed from the background: the agent takes events again, and
+  /// the running mark is set ([AgentRuntime.resume]; IGLP db0a117,
+  /// Implementation Notes, "Persistence", When).
+  Future<void> resume() => agent.resume();
+
   void dispose() => agent.dispose();
 
   /// [services] as the list term the first act carries, each

@@ -43,7 +43,9 @@ void main() {
         value: 42,
         table: table,
         records: records,
-        extractVariables: (_) => [], // No nested variables
+        localEpoch: 1,
+        extractVariables: (_) => [],
+        // No nested variables
       );
 
       // Then: goal fires with value
@@ -74,6 +76,7 @@ void main() {
         value: 'hello',
         table: table,
         records: records,
+        localEpoch: 1,
         extractVariables: (_) => [],
       );
 
@@ -105,10 +108,13 @@ void main() {
       // Under corrected definitions, globalizing a reader spawns a goal
       final result = registry.onWriterBound(
         writerAddr: _c(300),
-        value: 'foo(Y?)', // Symbolic - actual term contains reader Y?
+        value: 'foo(Y?)',
+        // Symbolic - actual term contains reader Y?
         table: table,
         records: records,
-        extractVariables: (_) => [TermVar.reader(_c(401), writerAddr: _c(400))], // Y? is a reader at 401
+        localEpoch: 1,
+        extractVariables: (_) => [TermVar.reader(_c(401), writerAddr: _c(400))],
+        // Y? is a reader at 401
       );
 
       // Then: value is globalized, spawning new goal for Y?
@@ -144,6 +150,7 @@ void main() {
         value: 'done',
         table: table,
         records: records,
+        localEpoch: 1,
         extractVariables: (_) => [],
       );
 
@@ -203,6 +210,7 @@ void main() {
         value: 'ignored',
         table: table,
         records: records,
+        localEpoch: 1,
         extractVariables: (_) => [],
       );
 

@@ -35,6 +35,14 @@ class GlobalSendGoal {
   /// holder and the value is globalized for it (spec §app:requests-acks).
   String destination;
 
+  /// The epoch this end records of the agent at the other end: for a goal of
+  /// a reader name anchored here, the holder's, "the epoch carried by the
+  /// first request, acknowledgement or value from the holder, and no epoch
+  /// until one arrives" (IGLP db0a117, after Definition "madGLP Local
+  /// State"); for a goal of an imported writer, the anchor's, the epoch in
+  /// the name, which the goal's [globalName] carries and this repeats.
+  int? otherEpoch;
+
   /// The requesters the anchor recorded among the link's holders, in the
   /// order their requests were authorised (IGLP §app:requests-acks: "the
   /// anchor p records s among the link's holders").  Delivery is unordered, so
@@ -48,14 +56,17 @@ class GlobalSendGoal {
     required this.readerAddr,
     required this.globalName,
     required this.destination,
+    this.otherEpoch,
   });
 
-  /// Create from a GlobalSendSpawn (conversion from spawn info to goal)
+  /// Create from a GlobalSendSpawn (conversion from spawn info to goal): a
+  /// goal of an imported writer records the anchor's epoch, the name's.
   factory GlobalSendGoal.fromSpawn(GlobalSendSpawn spawn) {
     return GlobalSendGoal(
       readerAddr: spawn.readerAddr,
       globalName: spawn.globalName,
       destination: spawn.destAgent,
+      otherEpoch: spawn.globalName.isWriter ? spawn.globalName.epoch : null,
     );
   }
 
@@ -80,6 +91,10 @@ class GlobalSendFiredResult {
   /// well as to [destination].
   final List<String> requesters;
 
+  /// The epoch the goal recorded of the agent at the other end
+  /// ([GlobalSendGoal.otherEpoch]), which the pending value then records.
+  final int? otherEpoch;
+
   /// The original value (before globalization)
   final Object? value;
 
@@ -96,6 +111,7 @@ class GlobalSendFiredResult {
     required this.globalName,
     required this.destination,
     this.requesters = const [],
+    this.otherEpoch,
     required this.value,
     required this.newGoals,
     required this.extractedVariables,
@@ -146,10 +162,17 @@ class GlobalSendRegistry {
   /// the holder of every link whose reader name anchored at the receiver
   /// occurs in V" — the destination consulted at send time is per-link
   /// runtime state.  A request records its requester by [recordRequester].
-  bool redirectGoal(GlobalName globalName, String newHolder) {
+  bool redirectGoal(GlobalName globalName, String newHolder) =>
+      recordHolder(globalName, newHolder);
+
+  /// [redirectGoal], recording [epoch] as the epoch the end records of the
+  /// holder where given (IGLP db0a117: "the epoch carried by the first
+  /// request, acknowledgement or value from the holder").
+  bool recordHolder(GlobalName globalName, String newHolder, {int? epoch}) {
     final goal = _entryForLink(globalName)?.value;
     if (goal == null) return false;
     goal.destination = newHolder;
+    if (epoch != null) goal.otherEpoch = epoch;
     return true;
   }
 
@@ -169,10 +192,12 @@ class GlobalSendRegistry {
   /// globalized for, and is kept among the requesters the value is sent to on
   /// production, so an earlier requester recorded before it still receives
   /// the value.  Returns false when no goal matches.
-  bool recordRequester(GlobalName globalName, String requester) {
+  bool recordRequester(GlobalName globalName, String requester,
+      {int? epoch}) {
     final goal = _entryForLink(globalName)?.value;
     if (goal == null) return false;
     goal.destination = requester;
+    if (epoch != null) goal.otherEpoch = epoch;
     if (!goal.requesters.contains(requester)) {
       goal.requesters.add(requester);
     }
@@ -205,6 +230,20 @@ class GlobalSendRegistry {
   /// agent leaves the link, so its goal must not fire.
   GlobalSendGoal? removeGoalFor(HeapCell readerAddr) => _goals.remove(readerAddr);
 
+  /// The goals registered.
+  Iterable<GlobalSendGoal> get all => _goals.values;
+
+  /// Remove every goal [test] holds of, and return them: the retirement of
+  /// link ends (IGLP db0a117, Definition "Retire": "from R_q the global_send
+  /// goal of the link").
+  List<GlobalSendGoal> retireWhere(bool Function(GlobalSendGoal) test) {
+    final gone = [for (final g in _goals.values) if (test(g)) g];
+    for (final g in gone) {
+      _goals.remove(g.readerAddr);
+    }
+    return gone;
+  }
+
   /// Called when a writer is bound to a value.
   ///
   /// If there's a goal watching this writer's reader, fires the goal:
@@ -227,17 +266,20 @@ class GlobalSendRegistry {
     required Object? value,
     required GlobalWritersTable table,
     required ImportedWriterRecords records,
+    required int localEpoch,
     required List<TermVar> Function(Object?) extractVariables,
   }) {
     final goal = _goals.remove(writerAddr);
     if (goal == null) return null;
 
     // Globalize the value (may spawn new goals for nested variables, and may
-    // forward imported writers occurring in it — Globalize case 4)
+    // forward imported writers occurring in it — Globalize case 4), the names
+    // allocated in this agent's epoch [localEpoch]
     final variables = extractVariables(value);
     final globalizeResult = globalize(
       variables: variables,
       localAgent: agentId,
+      localEpoch: localEpoch,
       remoteAgent: goal.destination,
       table: table,
       records: records,
@@ -252,6 +294,7 @@ class GlobalSendRegistry {
       globalName: goal.globalName,
       destination: goal.destination,
       requesters: List.unmodifiable(goal.requesters),
+      otherEpoch: goal.otherEpoch,
       value: value,
       newGoals: newGoals,
       extractedVariables: variables,
@@ -272,6 +315,8 @@ class GlobalSendRegistry {
       w.cell(goal.readerAddr);
       goal.globalName.save(w);
       w.str(goal.destination);
+      w.boolean(goal.otherEpoch != null);
+      if (goal.otherEpoch != null) w.uint(goal.otherEpoch!);
       w.uint(goal.requesters.length);
       for (final q in goal.requesters) {
         w.str(q);
@@ -285,10 +330,14 @@ class GlobalSendRegistry {
   void restoreState(StateReader r) {
     _goals.clear();
     for (var i = r.uint(); i > 0; i--) {
+      final readerAddr = r.cell();
+      final globalName = GlobalName.restore(r);
+      final destination = r.str();
       final goal = GlobalSendGoal(
-        readerAddr: r.cell(),
-        globalName: GlobalName.restore(r),
-        destination: r.str(),
+        readerAddr: readerAddr,
+        globalName: globalName,
+        destination: destination,
+        otherEpoch: r.boolean() ? r.uint() : null,
       );
       for (var j = r.uint(); j > 0; j--) {
         goal.requesters.add(r.str());

@@ -31,6 +31,7 @@ void main() {
       final result = globalize(
         variables: variables,
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: table,
         records: records,
@@ -64,6 +65,7 @@ void main() {
       final result = globalize(
         variables: variables,
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: table,
         records: records,
@@ -98,6 +100,7 @@ void main() {
       final result = globalize(
         variables: variables,
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: table,
         records: records,
@@ -138,6 +141,7 @@ void main() {
       final result = globalize(
         variables: variables,
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: table,
         records: records,
@@ -168,6 +172,7 @@ void main() {
       final result = globalize(
         variables: variables,
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: table,
         records: records,

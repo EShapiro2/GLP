@@ -228,28 +228,37 @@ class ModuleTerm implements Term {
 /// globalized variable was the structure `'_w'(p, i)` itself, and a program's
 /// structure of that form was sent as a tag-2 variable and localized.
 class GlobalNameTerm implements Term {
-  /// The polarity: a reader `_r(p, i)`, or a writer `_w(p, i)`.
+  /// The polarity: a reader `_r(p, e, i)`, or a writer `_w(p, e, i)`.
   final bool isReader;
 
   /// The allocating agent p, the link's anchor.
   final String agent;
 
+  /// The epoch e of p at the allocation (IGLP db0a117, Definition "Global
+  /// Variable Name"); 0 for the serializer, `_w(p, 0, 0)` of every epoch.
+  final int epoch;
+
   /// The index i, allocated by p.
   final int index;
 
   GlobalNameTerm(
-      {required this.isReader, required this.agent, required this.index});
+      {required this.isReader,
+      required this.agent,
+      required this.epoch,
+      required this.index});
 
   @override
-  String toString() => isReader ? '_r($agent, $index)' : '_w($agent, $index)';
+  String toString() =>
+      isReader ? '_r($agent, $epoch, $index)' : '_w($agent, $epoch, $index)';
 
   @override
   bool operator ==(Object other) =>
       other is GlobalNameTerm &&
       other.isReader == isReader &&
       other.agent == agent &&
+      other.epoch == epoch &&
       other.index == index;
 
   @override
-  int get hashCode => Object.hash(isReader, agent, index);
+  int get hashCode => Object.hash(isReader, agent, epoch, index);
 }

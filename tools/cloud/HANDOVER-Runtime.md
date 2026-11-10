@@ -12,6 +12,8 @@ The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md
 - The container has no IPv6: `networking`'s four hole-punch tests (`test/transport/hole_punch_service_test.dart`, three; `test/grassroots_network_underlay_sessions_test.dart`, one) fail here on `Address family not supported`, on `main` alike.
 - Repositories added by `add_repo`: `Grassroots-Project-Overview` (the mail, push), `Grassroots-docs`, `CGLP` (IGLP's paper), `GLP-Networking-API` (GNA's paper), each cloned at depth 1 under `/home/user/`.
 - The native bindings, `networking/ios/Runner/PlaceGeofencePlugin.swift` and `networking/android/.../PlaceGeofencePlugin.kt`, cannot be compiled in this container: a change to them is checked by reading, and on a phone by Code.
+- A whole `dart test` of `glp_runtime` takes about two hours here, under `-j 4`, so it runs in the background with its output in a file; the package's tests of two agents write their programs in temporary directories under `programs/tests/`, and a run killed before its end leaves them, to be removed by hand.  `test/vglp/canonical_test.dart`'s group (iii) fails on `main` 62e8bb5a in this container, two tests, on a widget declaration of a vGLP source, GSG's, before any change of the Runtime branch.
+- At a restart from a saved state the runtime grants `refresh` on the person's input stream: a test program that reads that stream must pass it over, or its goal fails there.
 
 ## Done
 
@@ -20,7 +22,9 @@ The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md
 | Cloud-runtime5, 7 and 6 joined for merge, run whole against main | Cloud-runtime8 183cc49, off main 94622eaa | Code_inbox 2026-11-09 17:01 UTC |
 | Each place's centre: declarePlace(place, centre, radius) through the layer, the platform bindings and the glue; the runtime keeps the centre and declares the place about it at a restart | Cloud-places 38eeefb, off Cloud-runtime8; the platform binding's test brought to the new register, main bce97bbb merged, in the commit after f8b09e3 | Code_inbox 2026-11-09 17:07 UTC, and the last report |
 | The Grassroots App's iOS runner registers PlaceGeofencePlugin | Cloud-iosplaces a336f1c, on main 81a0de76 | Code_inbox 2026-11-09 23:07 UTC |
-| The state saved when the app goes to the background and at no other time: AgentRuntime.save, the hosts' calls, the lost state started afresh (IGLP d70ec2e) | Runtime-save-on-background 6733fb9, off main 47907f48 | Code_inbox 2026-11-10, the last report |
+| The state saved when the app goes to the background and at no other time: AgentRuntime.save, the hosts' calls, the lost state started afresh (IGLP d70ec2e) | Runtime-save-on-background 6733fb9, off main 47907f48 | Code_inbox 2026-11-10 09:00 UTC |
+| The doc comments' citations brought to IGLP db0a117 | Runtime-cite-db0a117 b3f9dd6, on main | Code_inbox 2026-11-10 09:15 UTC |
+| Epochs and widowed/1 (IGLP db0a117; the GLP paper f577e20): names `_w(p, e, i)`, messages with the sender's epoch, `gone(G)`, code format 4, saved-state format 7, the running mark and the restart after a crash, `AgentRuntime.resume`, widowed/1 in both modes with its checker rule | Runtime-epochs, off main 62e8bb5a; the commit is in the report | Code_inbox 2026-11-10, the last report |
 
 ## Queued
 
@@ -28,5 +32,5 @@ Nothing.
 
 ## Waiting
 
-1. widowed/1, Cloud-runtime3 c13857cb, not for merge: waits on GLP's wording (Code_inbox 2026-11-09 13:22 UTC).
-2. A point for GNA's and IGLP's Implementation Notes, in the last report: a place's centre crosses the seam as a latitude and a longitude in degrees, as the platforms' geofencing takes it; neither paper says what a centre is.
+1. A point for GNA's and IGLP's Implementation Notes, in the report of Cloud-places: a place's centre crosses the seam as a latitude and a longitude in degrees, as the platforms' geofencing takes it; neither paper says what a centre is.
+2. The paper points of the Runtime-epochs report, for IGLP and the GLP paper through Code: one declaration in the root `self.glp` for widowed/1's two rows; the epoch a program's 2-ary name resolves to; a GlobalizeEntry's holder epoch, none until a message from the holder; widowed(X?)'s success in one agent, which no well-typed program brings about.

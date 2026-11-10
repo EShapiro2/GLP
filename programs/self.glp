@@ -278,6 +278,15 @@ procedure ground(_?).
 procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
+% widowed(X) succeeds when the reader paired to the writer X occurs in no goal
+% of the agent and in no link end the agent holds, the goal being reduced not
+% counted, and widowed(X?) when the writer paired to the reader X? does (the
+% GLP paper f577e20, appendix-guards.tex, the guard table's two rows and the
+% paragraph on link ends after it): a variable sent to another agent occurs in
+% the link end kept for it until that end is retired, at a crash of either
+% agent.  One declaration stands for the table's two rows, the checker
+% admitting the argument in either mode (Remark Guards and SRSW).
+procedure widowed(_).
 
 % Time guards
 procedure wait(Number?).

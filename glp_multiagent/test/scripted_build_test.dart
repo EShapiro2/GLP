@@ -77,6 +77,11 @@ class _Launched implements AgentStateStore {
   @override
   Future<void> saveProgram(Uint8List program) =>
       _write(() => store.saveProgram(program));
+  @override
+  Future<bool> loadRunning() => store.loadRunning();
+  @override
+  Future<void> saveRunning(bool running) =>
+      _terminated ? Future.value() : store.saveRunning(running);
 }
 
 /// One phone of the scripted build: its host, its layer, its reporter, and

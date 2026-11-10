@@ -36,6 +36,7 @@ void main() {
       final globalizeResult = globalize(
         variables: [TermVar.reader(readerXs, writerAddr: writerXs)],
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: ctxP.wp,
         records: ctxP.up,
@@ -107,6 +108,7 @@ void main() {
       final globalizeResult = globalize(
         variables: [TermVar.writer(writerV, readerAddr: readerV)],
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: ctxP.wp,
         records: ctxP.up,
@@ -181,6 +183,7 @@ void main() {
       final bobToAliceGlobal = globalize(
         variables: [TermVar.reader(readerXBob, writerAddr: writerXBob)],
         localAgent: 'bob',
+        localEpoch: 1,
         remoteAgent: 'alice',
         table: ctxBob.wp,
         records: ctxBob.up,
@@ -207,6 +210,7 @@ void main() {
       final bobToCharlieGlobal = globalize(
         variables: [TermVar.writer(writerXBob, readerAddr: readerXBob)],
         localAgent: 'bob',
+        localEpoch: 1,
         remoteAgent: 'charlie',
         table: ctxBob.wp,
         records: ctxBob.up,
@@ -298,6 +302,7 @@ void main() {
       final globalizeResult = globalize(
         variables: [TermVar.writer(writerX, readerAddr: readerX), TermVar.reader(readerX, writerAddr: writerX)],
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: ctxP.wp,
         records: ctxP.up,

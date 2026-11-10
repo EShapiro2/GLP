@@ -31,7 +31,7 @@ void main() {
 
     test('duplicate LocalizeEntry rejected', () {
       // Given: entry (X, p, 5) already exists
-      // When: addLocalizeEntry(Y, p, 5)
+      // When: addLocalizeEntry(Y, GlobalName.reader(p, 5))
       // Then: throws ArgumentError
       //
       // Spec Section 12: "Entry Lifecycle: Every global writers table entry

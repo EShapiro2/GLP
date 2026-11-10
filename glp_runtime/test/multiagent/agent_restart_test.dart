@@ -32,6 +32,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
@@ -179,7 +180,7 @@ void main() {
     // b applies the cold call: its localization creates the entry of a's
     // reader, _r(a, 1), and b's goal suspends on it.
     final coldCall = await deliverTo('b', b1);
-    expect(b1.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(b1.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNotNull);
     expect(delivered['b'], [coldCall.single.id],
         reason: 'the layer is told the cold call is delivered in the cycle '
             'that applied it');
@@ -212,7 +213,7 @@ void main() {
         reason: 'the restarted agent posts no entry goal');
     expect(a2.ctx!.hasPendingReaderValue('a', 1), isTrue,
         reason: 'a pending value is still pending');
-    expect(b2.ctx!.wp.findByRemote('a', 1), isNotNull,
+    expect(b2.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNotNull,
         reason: 'the entry its localization created survives');
 
     // The layer delivers the value after the restart: it finds b's entry and
@@ -220,7 +221,7 @@ void main() {
     final delivery = await deliverTo('b', b2);
     expect(delivery.single.id, value.single.id);
     expect(out['b']!.sublist(restartedFrom), contains('< got(hello)'));
-    expect(b2.ctx!.wp.findByRemote('a', 1), isNull,
+    expect(b2.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNull,
         reason: 'the entry is removed when its value is applied');
     expect(delivered['b'], contains(value.single.id));
 
@@ -246,7 +247,7 @@ void main() {
     await b.initialize();
 
     final coldCall = await deliverTo('b', b);
-    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(b.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNotNull);
     expect(delivered['b'], [coldCall.single.id]);
     expect(storeB.saves, 0, reason: 'no cycle saves');
   });
@@ -272,7 +273,7 @@ void main() {
     // The state saved holds the cold call applied.
     final b2 = host('b', playB, storeB, kpB);
     await b2.initialize();
-    expect(b2.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(b2.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNotNull);
     expect(b2.ctx!.wp.serializerAppendedCount, 1);
   });
 
@@ -329,12 +330,17 @@ void main() {
     expect(queue, isEmpty);
 
     // a crashes, with no save since: the acknowledgement's cycle is lost, and
-    // a restarts from the state last saved, the value pending still.
+    // a restarts from the state last saved --- the running mark set at a2's
+    // start, so a restart after a crash (IGLP db0a117, Definition "Restart
+    // after a Crash"): the next epoch, and every link end retired, the
+    // pending value with it.
     a2.dispose();
     final a3 = host('a', playA, storeA, kpA);
     await a3.initialize();
-    expect(a3.ctx!.hasPendingReaderValue('a', 1), isTrue,
-        reason: 'the state last saved');
+    expect(a3.restartedAfterCrash, isTrue);
+    expect(a3.ctx!.epoch, 2);
+    expect(a3.ctx!.hasPendingReaderValue('a', 1), isFalse,
+        reason: 'the end is retired at the restart after the crash');
     expect(queue, isEmpty, reason: 'that state holds nothing undelivered');
   });
 
@@ -387,11 +393,14 @@ void main() {
     await b.initialize();
     expect(await b.save(), isTrue, reason: 'the state before the cold call');
     expect(storeB.saves, 1);
+    // The save suspends the agent, as the platform's announcement of
+    // termination does; the application resumes.
+    await b.resume();
 
     await deliverTo('b', b);
     expect(delivered['b'], hasLength(1),
         reason: 'acknowledged in the cycle, whatever the store');
-    expect(b.ctx!.wp.findByRemote('a', 1), isNotNull);
+    expect(b.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNotNull);
 
     storeB.failNextSaves = 1;
     expect(await b.save(), isFalse);
@@ -399,18 +408,24 @@ void main() {
     expect(storeB.saves, 1, reason: 'the store keeps the state saved before');
 
     // A restart now resumes from the state the store holds, which has not
-    // applied the cold call.
+    // applied the cold call.  The running mark is set, b running and its
+    // failed save having cleared nothing, so it is a restart after a crash,
+    // which saves at once.
     final early = host('b', playB, storeB, kpB);
     await early.initialize();
-    expect(early.ctx!.wp.findByRemote('a', 1), isNull);
+    expect(early.restartedAfterCrash, isTrue);
+    expect(early.ctx!.wp.findByRemote(GlobalName.reader('a', 1)), isNull);
+    expect(storeB.saves, 2, reason: 'the restart after the crash saves');
     early.dispose();
 
-    // The agent runs on, and the next save keeps its state.
+    // The agent runs on, once the application resumes, and the next save
+    // keeps its state.
+    await b.resume();
     await a.injectUserInput(ConstTerm('go'));
     await deliverTo('b', b);
     expect(out['b'], contains('< got(hello)'));
     expect(await b.save(), isTrue);
-    expect(storeB.saves, 2);
+    expect(storeB.saves, 3);
     expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(1));
 
     final b2 = host('b', playB, storeB, kpB);
@@ -441,6 +456,8 @@ void main() {
     expect(logs.where((l) => l.startsWith('[ERROR]')), hasLength(2),
         reason: 'each save asked for is reported once');
 
+    // A save, kept or not, suspends the agent; the application resumes.
+    await b.resume();
     await deliverTo('b', b);
     await a.injectUserInput(ConstTerm('go'));
     await deliverTo('b', b);

@@ -176,7 +176,7 @@ void main() {
       expect(net.deliveryLog.length, mark,
           reason: 'a held value must not go out before authorisation');
       expect(ctxR.mp.heldCount, 1);
-      expect(ctxR.hasReportedLink('p', 1, true), isTrue);
+      expect(ctxR.hasReportedLink(GlobalName.writer('p', 1)), isTrue);
       expect((pRt.heap.derefAddr(xR) as Object?) is ConstTerm, isFalse,
           reason: 'and must not be applied at the anchor either');
 
@@ -185,7 +185,7 @@ void main() {
       // ends — until p's program authorises in turn.
       net.answerAll(true);
       net.settle();
-      expect(ctxP.hasReportedLink('p', 1, true), isTrue,
+      expect(ctxP.hasReportedLink(GlobalName.writer('p', 1)), isTrue,
           reason: 'the anchor holds an assignment from an agent it did not '
               'export the name to');
       expect((pRt.heap.derefAddr(xR) as Object?) is ConstTerm, isFalse);
@@ -256,10 +256,10 @@ void main() {
       expect(net.deliveryLog.length, mark,
           reason: 'a held value must not go out before authorisation');
       expect(ctxS.mp.heldCount, 1);
-      expect(ctxS.hasReportedLink('p', 1, true), isTrue);
+      expect(ctxS.hasReportedLink(GlobalName.writer('p', 1)), isTrue);
       net.answerAll(true);
       net.settle();
-      expect(ctxP.hasReportedLink('p', 1, true), isTrue);
+      expect(ctxP.hasReportedLink(GlobalName.writer('p', 1)), isTrue);
       net.answerAll(true);
       net.settle();
 
