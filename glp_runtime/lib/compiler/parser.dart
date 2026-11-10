@@ -2243,8 +2243,8 @@ class Parser {
         }
         final isInput = typeToken.type == TokenType.READER ||
             _matchTypeMark(typeArgs.isEmpty
-                ? qualifiedName
-                : '$qualifiedName(...)');
+                ? typeToken.lexeme
+                : '${typeToken.lexeme}(...)');
         return TypeRef(qualifiedName, line, column,
             isInput: isInput, typeArgs: typeArgs);
       }
