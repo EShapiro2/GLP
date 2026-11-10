@@ -19,6 +19,7 @@ Each of you builds and signs the app on your own Mac with your own Apple team, u
 3. The debugging log's password is in the repository, `phones/tools/debuglog-password`, and `build.sh` reads it from there; `GRASSROOTS` is any directory of yours, under which `build.sh` writes its builds, `$GRASSROOTS/tmp/phones`.
 4. Connect each phone once and run, from `glp_multiagent`, `FLUTTER_XCODE_DEVELOPMENT_TEAM=$GLP_TEAM FLUTTER_XCODE_GLP_BUNDLE_ID=$GLP_BUNDLE_ID flutter run -d <udid> -t lib/main_superapp.dart`, which registers it with your team; `build.sh` prints this line when a phone is missing.
 5. `GRASSROOTS=<dir> phones/tools/build.sh <udid>` builds the app with the reporter on and installs it; `phones/tools/devices.sh` lists your phones.  With a mode, `build.sh <udid> <mode>` builds the scripted app, whose person runs a play by itself; `build_sim.sh <mode> [<simulator>]` builds it for a simulator, in a clone of its own.
+6. An Android phone is built for by the same `build.sh`, given its adb serial in place of a UDID: the script sees which kind of phone the argument names and builds an `.apk` for an Android phone, installed by `adb install -r`.  It needs the Android SDK and `adb` on the path, and the phone unlocked with USB debugging allowed for your Mac; no Apple team, profile or registration, steps 2 and 4 being iOS's only, and one build serves every Android phone.  `devices.sh` lists the Android phones adb sees, by serial, before the iPhones.
 
 ## Running a play
 
