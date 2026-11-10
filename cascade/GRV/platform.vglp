@@ -1,2 +1,19 @@
-%% not compiled, having no pragmas(grv)
-%% it passes the checks, its verdict, local and effective, and has no pragmas, the words its app shows: the compiler prints a platform only from a contract with pragmas, and refuses one with none (vGLP, Section 5.4, "The contract's words").
+%% not compiled(grv)
+%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
+%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
+%% the schema(make_guardian)
+%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
+%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
+%% the schema(end_guardian)
+%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
+%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
+%% the schema(retire)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema
+%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:
+%% the schema(make_guardian)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema
+%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:
+%% the schema(end_guardian)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema
+%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:
+%% the schema(retire)
