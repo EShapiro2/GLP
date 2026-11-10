@@ -4847,7 +4847,8 @@ cp "$CVA/social_graph/platform.vglp" "$CVA/social_graph/self.glp" "$cva_scratch/
 HEREDOC
 cva_emitted=$(cat "$cva_scratch/platform.glp" 2>/dev/null)
 rm -rf "$cva_scratch"
-check "CVA widget: the request question, of the moded type Request?, drawn by the widget its declaration names" "^construct(Id, request_r(X?), Gs, Ds?) :- .*named('social_menu(" "$cva_emitted"
+# Its W is a term of T, social_menu(...) and no quoted constant (vGLP 668df7d, Section 6.3, the paragraph after the construct process: "the term W' a widget declaration names is a name or a name applied to arguments").
+check "CVA widget: the request question, of the moded type Request?, drawn by the widget its declaration names" "^construct(Id, request_r(X?), Gs, Ds?) :- .*named(social_menu(" "$cva_emitted"
 check "CVA widget: ... and the approval question, of the moded type Approval, by approval_sentence" "^construct(Id, approval_w(X), Gs, Ds?) :- .*named(approval_sentence, " "$cva_emitted"
 # The printed text run on its own: the emitted platform of the currency, GC, loaded, its procedures called with the terms they read.
 # Held requests first (vGLP e22e2ad, Section 5.4, "The compilation": "puts up again every request of its person it holds, and then the starts it holds"; Code #24's trace of 2026-11-06, /Users/udi/Grassroots/tmp/trace-frank.txt: with two held requests the second fell behind a new recheck).
