@@ -1,10 +1,10 @@
 %% IGLP's linker fixture, programs/tests/linker_tree, for program_linker_test.dart and program_compilation_test.dart: the plays, each person a scripted person on the mini-app's person channel beside a stand-in host, programs/cssn/plays.glp as it stood at GLP d2495778, its comments removed and three names changed: the directory childsafe to agents, the module and procedure superapp to host, and the procedures cssn and cssn_child to app and app_child.
 
-imported procedure agents#app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
-imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure agents#app(Key?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
+imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
 imported procedure host#host(Key?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Integer?).
 imported procedure host#sg_switch(SgOutStream?, Stream(SgEntry)?).
-imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
+imported procedure person#person(Key?, _?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
 
 procedure party(Key?, Script?, Stream(Conversation)?, Stream(Watched)?, SgInStream?, SgOutStream).
 party(Id, Script, Setup, Watch, SgIn, SgOut?) :-

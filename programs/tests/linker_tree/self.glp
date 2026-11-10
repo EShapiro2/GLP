@@ -440,12 +440,12 @@ inject_group_reply(G, M, R, [Y|Ys], [Y?|Ys1?]) :-
     inject_group_reply(G?, M?, R?, Ys?, Ys1).
 
 %% The mini-app's two entries, exported again from the root of the fixture, so that the types the compilation forms --- Question, Drawn and Ask(Q), those of agents/'s compiled modules --- are written into this self.glp, whose scope person.glp and plays.glp name them in (vGLP, Section 6.3, "The canonical compilation": the compilation writes them into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names one of them); the hand copies written here until 2026-11-09 are gone.
-imported procedure agents#app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
-exported procedure app(Key?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure agents#app(Key?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
+exported procedure app(Key?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
 app(Id, Ui, Convs) :- agents # app(Id?, Ui?, Convs?).
 
-imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
-exported procedure app_child(Key?, ParentEnds?, PersonChannel(Drawn)?, Stream(Conversation)?).
+imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
+exported procedure app_child(Key?, ParentEnds?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
 app_child(Id, Es, Ui, Convs) :- agents # app_child(Id?, Es?, Ui?, Convs?).
 
 imported procedure plays#village.

@@ -5,14 +5,14 @@ OpenCards ::= [] ; [OpenCard | OpenCards].
 Form      ::= no_form ; form(Integer, Path).
 SgOffer   ::= sg_offer(Key, ReqId).
 SgOffers  ::= [] ; [SgOffer | SgOffers].
-Choice    ::= grant(Integer, Path, Drawn) ; sg(SgCmd) ; next ; wait.
+Choice    ::= grant(Integer, Path, agents#Drawn) ; sg(SgCmd) ; next ; wait.
 
-exported procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
+exported procedure person(Key?, _?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
 person(Id, Ds, Gs?, Ns, Cs?, Script, Ws, Log?) :-
     ground(Id?) |
     person(Id?, Ds?, Gs, Ns?, Cs, Script?, no_form, [], [], [], [], Ws?, Log).
 
-procedure person(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+procedure person(Key?, _?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
 
 person(Id, [draw(0, _, output(Ms))|Ds], Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
     ground(Id?), ground(Ms?), ground(Seen?) |
@@ -47,7 +47,7 @@ person(Id, Ds, Gs?, Ns, Cs?, Script, Form, Cards, Offers, Seen, Wd, [W|Ws], Log?
     ground(W?) |
     step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, [W?|Wd?], Ws?, Log).
 
-procedure step(Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+procedure step(Key?, _?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
 step(Id, Ds, Gs?, Ns, Cs?, [], Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
     person(Id?, Ds?, Gs, Ns?, Cs, [], Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
 step(Id, Ds, Gs?, Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, Log?) :-
@@ -72,7 +72,7 @@ choose(accept_friend(Q), _, Cards, Offers, _, _, Ch?, Cards?, Offers1?) :-
     find_offer(Q?, Offers?, Ch, Offers1).
 choose(_, _, Cards, Offers, _, _, wait, Cards?, Offers?) :- otherwise | true.
 
-procedure act(Choice?, Key?, _?, PersonIn(Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
+procedure act(Choice?, Key?, _?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Form?, OpenCards?, SgOffers?, Stream(_)?, Stream(Watched)?, Stream(Watched)?, Stream(_)).
 act(grant(C, P, X), Id, Ds, [input(C?, P?, X?)|Gs?], Ns, Cs?, [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
     step(Id?, Ds?, Gs, Ns?, Cs, Script?, Form?, Cards?, Offers?, Seen?, Wd?, Ws?, Log).
 act(sg(Cmd), Id, Ds, Gs?, Ns, [Cmd?|Cs?], [S|Script], Form, Cards, Offers, Seen, Wd, Ws, [did(S?)|Log?]) :-
