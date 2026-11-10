@@ -5644,6 +5644,8 @@ check "CVA author: cite's constraint printed as the contract writes it, local to
 # The item of a speech act is a Var, an argument of an atom, and so an Expr through Var; an alternative item_of(Var) beside Var would be a second alternative of item_of/1, which TGLP's Type Declarations refuse (vGLP's yes, 2026-11-10 13:08 UTC; Cloud #12, 0868f162).
 check "CVA author: the printed expression type takes the author of a speech act, and the item through Var" "^Expr      ::= Var ; .* ; author_of(Var).\$" "$cva_signing_text"
 check "CVA author: ... the printed Var takes the item of a speech act" "^            ; item_of(Var)\$" "$cva_signing_text"
+# Outcome on an abort of an attempt naming no request: a guard ends its approvals of the class where it voted yes, or answered yes and has not voted (vGLP 80d3268, Definition "Deciding", Outcome; vGLP #25, Code_inbox.md, 2026-11-10 22:25 UTC; Cloud #12).
+check "CVA outcome: on an abort naming no request, an answer yes ends a guard's approvals only where it has not voted no" "^    mem(voted(At?, no), R?, Vn),\$" "$cva_signing_text"
 cva_author=$("$REPL_RUN" <<HEREDOC
 $CVA/intros/
 :limit 20000000
