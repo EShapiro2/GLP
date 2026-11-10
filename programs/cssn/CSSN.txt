@@ -1,10 +1,11 @@
 % CSSN: Child-Safe Social Network --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: CSSN.  The paper, /Users/udi/Grassroots/CSSN/main_CSSN.tex, prints it in its box in Section 4.1 and cites a clause as CSSN:1.
 % Paper: CSSN, Child-Safe Social Networking: From Social Contract to App, in preparation
-% Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and through it GSG and GKK, GSC's; and GnW, Guardians 'n' Wards, GAI's (programs/gai), its wards children and their guardians parents.  It cites their clauses whole and restates none.
+% Extends: GSN, Grassroots Social Network, GSC's (programs/gsc), and through it GSG and GKK, GSC's; and GnW, Guardians 'n' Wards, GSC's (programs/gsc; Udi, 2026-11-10, to GSC #14), its wards children and their guardians parents.  It cites their clauses whole and restates none.
 % Defines: parent, a guardian of a child's ward; the definition stands before the box in the paper.
 % Last changed: 2026-10-30, to Udi's revision of the contracts in Coordination Appendix E (Udi, 2026-10-30; Coordination #11, to_all 10:18 UTC), with CSSN #13's changes that Udi approved: clause 1 opens with 'Only', clause 2 without its last phrase, which GnW:4 covers, clause 4 undertaken, and clause 5, a child's messages, since GKK, GSG and GSN apply only to persons (Udi, 2026-10-30, to GAI #10); the pragmas follow GnW as agreed with GAI that day (GAI #10, CSSN_inbox 11:37 UTC; CSSN #13's changes 2 to 6, GAI_inbox 11:29 to 11:48 UTC).  The history before this is in git.
 % 2026-10-30, later: GnW:2 in Udi's wording (GAI fce54cd), a made parent may resign and stay the child's friend, the button [Resign] (CSSN #13 Cowork).
+% 2026-11-10: the pragmas to vGLP's rule (vGLP, Section 5.4, "The contract's words"; Code #23, CSSN_inbox 2026-11-05 14:05 UTC; Code #26, 2026-11-09 13:25 UTC): a field for each variable the proposer's state does not bind and no other, each button with its own fields, and the two-ward acts' buttons named apart, [Child acquaint 2] and [Child join 2] (Udi, 2026-11-10, to CSSN #14).
 % Schemas: CSSN.glp beside this file, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 CSSN: Child-Safe Social Network
 Alice and Bob are adults, Carol and Dave children.
@@ -17,33 +18,33 @@ Pragmas
 Children: the children Alice is parenting.
 Parent: Alice [Enter] <child>
   Carol: Alice asks to be your parent.
-Joint guardianship: Alice [Make parent] <person>
+Joint guardianship: Alice [Make parent]
   Bob: Alice asks you to be a parent of Carol.
-  Alice [End parent]
+  Alice [End parent] <person>
   Bob [Resign] [Parent unfriend]
-Ward and person: Alice [Child acquaint] <person>
+Ward and person: Alice [Child acquaint]
   Carol: Alice wishes that you and Bob know each other.
   Bob: Alice wishes that you and Carol know each other.
-  Alice [Child adult befriend] <person>
+  Alice [Child adult befriend]
   Carol: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and Carol befriend.
   Bob [Child join] <person>
   Carol: Bob asks you to join their group.
   Alice: Bob asks that Carol join their group.
-  Alice [Child unfriend] [Child leave] [Child close]
-Ward and ward: Alice [Child acquaint] <person> <person>
+  Alice [Child unfriend] <person> [Child leave] <person> <group> [Child close] <group>
+Ward and ward: Alice [Child acquaint 2]
   Carol: Alice wishes that you and Dave know each other.
   Dave: Alice wishes that you and Carol know each other.
   Bob: Alice wishes that Carol and your child Dave know each other.
-  Alice [Child befriend] <person> <person>
+  Alice [Child befriend]
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
   Bob: Alice asks that Carol and your child Dave befriend.
-  Carol [Child join] <person>
+  Carol [Child join 2] <person> <person>
   Dave: Carol asks you to join their group.
   Alice: Carol asks that Dave join their group.
   Bob: Carol asks that your child Dave join their group.
 Retiring: Alice [Retire]
-A child's group: Carol [Child create] <name>
+A child's group: Carol [Child create] <person> <name>
   Alice: Carol asks to create a group.
 Coming of age: Alice [Of age]
