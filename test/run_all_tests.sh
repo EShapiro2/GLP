@@ -139,6 +139,17 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# GAI's contract in the old form forbidding marks, which GSC's Section 8 at
+# df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
+# merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
+# UTC); each entry comes off with that rewrite.
+    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role (programs/gsc/test_gsc.sh)"
+    "cascade gai: cascade.sh --check exits 0"
+    "cascade gai: verdict.txt is what the tools print"
+    "cascade gai: vmat.tex is what the tools print"
+    "cascade gsnp: cascade.sh --check exits 0"
+    "cascade gsnp: verdict.txt is what the tools print"
+    "cascade gsnp: vmat.tex is what the tools print"
 # The super-app's hosting of CSSN's ported mini-app (CSSN's port of
 # 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
 # person channel; each entry comes off with that port.
