@@ -142,8 +142,9 @@ KNOWN_RED_CHECKS=(
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
-# UTC); each entry comes off with that rewrite.
-    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role"
+# UTC); each entry comes off with that rewrite.  GAI on GnW, GLP 6154e1e6,
+# certifies (Section GSC's line, off at GSC-instnames); the cascade's wait on
+# GAI.txt's [Agent end] field and on the records (Cloud #15, 2026-11-10).
     "cascade gai: cascade.sh --check exits 0"
     "cascade gai: verdict.txt is what the tools print"
     "cascade gai: vmat.tex is what the tools print"
