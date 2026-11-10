@@ -143,7 +143,7 @@ KNOWN_RED_CHECKS=(
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
 # UTC); each entry comes off with that rewrite.
-    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role (programs/gsc/test_gsc.sh)"
+    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role"
     "cascade gai: cascade.sh --check exits 0"
     "cascade gai: verdict.txt is what the tools print"
     "cascade gai: vmat.tex is what the tools print"
