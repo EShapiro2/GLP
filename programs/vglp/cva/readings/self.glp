@@ -1,0 +1,119 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract readings
+%% (../contracts.glp, contract_named(readings, C)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: variables read at a role and
+%% a condition across roles (vGLP 566c186 and 6abbed9, Section 5.4,
+%% "Speech-act schemas as local specifications": "A variable is also local to
+%% a role, and read there, where atoms the schema requires at that role hold
+%% it, no atom it deletes, forbids or adds at that role and no atom it
+%% requires, deletes or forbids at another role holds it, and atoms it adds at
+%% other roles do"; "a conjunct that names variables local to two roles or
+%% more is of the part's condition"; "the values it finds for the variables
+%% read at its role, in each way its state allows, are the readings of its
+%% state, which its vote yes carries; the initiator chooses readings under
+%% which the conjuncts of the condition hold, and the commit tells them to
+%% every participant, whose effect is under them"; Section 3.2, Definition
+%% "Deciding": the initiator "refuses the attempt on its condition", itself
+%% the refuser, unable).  Written as GSC writes a contract, a, b, t and t1
+%% numeric variables and y a speech act:
+%%
+%%   start(p?)           :  at p  not started, +started, +level(0)
+%%   bump(p? ; t, t1)    :  at p  started, -level(t), +level(t1)     t1 = t + 1
+%%   outrank(p?, q ; a, b):  at p  knows(q), level(a), not outranks(q), +outranks(q)
+%%                          at q  knows(p), level(b), +outranked(p)    a > b
+%%   watch(p?)           :  at p  not watching, +watching
+%%   unwatch(p?)         :  at p  -watching
+%%   trail(p?, q ; a, b)  :  at p  knows(q), level(a), not trails(q), +trails(q)
+%%                          at q  knows(p), level(b), +trailed(p)     a < b
+%%                          standing on watch until unwatch
+%%   nudge(p?, q)        :  at p  knows(q), not nudged(q), +nudged(q)
+%%                          at q  knows(p), +nudged_by(p)
+%%   vouch(p? ; y)       :  at p  not attestation(y), +attestation(y)
+%%   meet(c?, b? ; y)    :  at c  attestation(y), not knows(b), +knows(b)
+%%                          at b  not knows(c), +knows(c), +record(c, y)
+%%
+%% meet's y is read at c's role, as GAI's GnW:3 reads a ward's attestation
+%% at the ward and records it at the person who comes to know it: c's
+%% machine finds it in its state, its vote yes carries it, and b records it,
+%% no field naming it; b proposes it, as Bob proposes GAI's agent_acquaint,
+%% the field naming c.  outrank's a is local to p's role and b to q's, so
+%% a > b names the local variables of two roles and is of the part's
+%% condition: each machine reads its level, the initiator chooses readings
+%% that meet the condition, or refuses the attempt on it, itself the refuser,
+%% unable.  bump's t1 is determined by t, local, no field.
+%%
+%% play_readings: alice and bob start, each at level 0, and alice watches,
+%% so her request stands for every part of trail she proposes, none yet,
+%% knowing nobody.  Bob vouches an attestation, att; alice asks to meet bob,
+%% meet(bob, alice), and bob answers yes: bob's machine reads y, its vote yes
+%% carrying it, and alice holds record(bob, att) with knows(bob).  Knowing bob, her machine
+%% proposes trail(alice, bob): bob's machine votes yes unasked, reading
+%% b = 0, alice's tally finds no readings meeting a < b, and refuses the
+%% attempt on its condition, itself the refuser; no second attempt is made
+%% until a participant's state changes.  Alice nudges bob, a commit at both:
+%% her machine proposes trail(alice, bob) again, bob's reads b = 0 still, and
+%% it is refused again; bob, nudged, bumps to level 1, a commit since at a
+%% participant that voted yes, so his machine tells alice it is ready, hers
+%% proposes trail(alice, bob) once more, and it commits under the readings
+%% a = 0 and b = 1: alice holds trails(bob) and bob trailed(alice).  Where
+%% bob's bump comes before an attempt reaches him, that attempt commits, and
+%% the play ends the same; in every order each attempt of trail after the
+%% first follows a commit or a ready on the network.  Alice unwatches and
+%% asks to outrank bob, at 0 against 1: bob's machine votes yes, reading
+%% b = 1, alice's tally refuses the attempt on its condition, and alice sees
+%% refused(outrank(alice, bob), alice, unable), her approval ended.  She
+%% bumps twice, to level 2, and asks again: at 2 > 1 it commits, alice
+%% holding outranks(bob) and bob outranked(alice).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_readings(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_readings(LA?, LB?, N?) :-
+    pair([own([A1], propose(start(A1?))), wait(holds(started)),
+          own([A2], propose(watch(A2?))), wait(holds(watching)),
+          own([A9], propose(meet(bob, A9?))),
+          wait(holds(record(bob, speech(utterance(att), bob)))),
+          own([A8], propose(nudge(A8?, bob))), wait(holds(nudged(bob))),
+          wait(holds(trails(bob))),
+          own([A3], propose(unwatch(A3?))), wait(lacks(watching)),
+          own([A4], propose(outrank(A4?, bob))),
+          wait(refused(outrank(alice, bob), alice, unable)),
+          own([A5], propose(bump(A5?))), wait(holds(level(1))),
+          own([A6], propose(bump(A6?))), wait(holds(level(2))),
+          own([A7], propose(outrank(A7?, bob))), wait(holds(outranks(bob)))],
+         [own([B1], propose(start(B1?))), wait(holds(started)),
+          own([B2, B3], propose(vouch(B2?, speech(utterance(att), B3?)))),
+          wait(holds(attestation(speech(utterance(att), bob)))),
+          approval(meet(bob, alice), yes), wait(holds(knows(alice))),
+          wait(holds(nudged_by(alice))),
+          own([B5], propose(bump(B5?))), wait(holds(level(1))),
+          wait(holds(trailed(alice))),
+          wait(holds(outranked(alice)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

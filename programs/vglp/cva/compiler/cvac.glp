@@ -17,7 +17,10 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Strings).
-imported procedure local#num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, NumInfo).
+imported procedure local#num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, Integer?, NumInfo).
+imported procedure local#form_cross(Form?, YesNo).
+imported procedure local#tag_form(Form?, Form).
+imported procedure local#form_held(Form?, Locs?, HPats).
 imported procedure local#proposable(Contract?, Preds?, Preds).
 imported procedure local#listed_ok(Integer?, Ints?, YesNo).
 
@@ -65,7 +68,7 @@ procedure compile_q(Lines?, Constant?, Declared?, Verdict?, Intro?, Words?).
 compile_q([L|Ls], _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
-compile_q([], Nm, D, V, I, words(P, E0, _, Dn)) :- ground(D?), ground(I?) |
+compile_q([], Nm, D, V, I, words(P, E0, _, Dn)) :- ground(D?), ground(I?), ground(P?) |
     decl_schemas(D?, Cr0),
     reals_off(Cr0?, Cq0),
     q_normal(Cq0?, C0),
@@ -82,8 +85,16 @@ compile_q([], Nm, D, V, I, words(P, E0, _, Dn)) :- ground(D?), ground(I?) |
     real_lx(Cr4?, Rl),
     app(Lx0?, Rl?, Lx),
     W = words(P?, E0?, Lx?, Dn?),
-    num_table(C1?, Nt),
-    num_table(C2?, Nt1),
+    decl_schemas(D?, Cr5),
+    reals_off(Cr5?, Cq5),
+    lx_table(Cq5?, Lb1),
+    decl_schemas(D?, Cr6),
+    reals_off(Cr6?, Cq6),
+    lx_table(Cq6?, Lb2),
+    pragma_acts(P?, Pa1),
+    pragma_acts(P?, Pa2),
+    num_table(C1?, Pa1?, Lb1?, Nt),
+    num_table(C2?, Pa2?, Lb2?, Nt1),
     plain_contract(C0?, Nt1?, C),
     decl_reflexive(D?, Rf),
     intro_preds(I?, E),
@@ -121,7 +132,7 @@ det_real_of(S, Rs, Nt, Lx, D?) :- ground(S?), ground(Rs?) |
     added_args(Rs?, Aa),
     det_real(Xs?, Ls?, Aa?, D).
 procedure ni_locs(NumInfo?, Locs).
-ni_locs(num_info(_, _, Ls, _, _), Ls?).
+ni_locs(num_info(_, _, Ls, _, _, _), Ls?).
 procedure added_args(RoleSpecs?, Args).
 added_args([], []).
 added_args([R|Rs], As?) :- ground(R?) | rs_lists(R?, P, _, _, _), atoms_args(P?, A1), added_args(Rs?, A2), app(A1?, A2?, As).
@@ -651,7 +662,7 @@ plain_contract([qschema(S, Hd, _, _, Rs, _, _)|Ss], Nt, [schema(S?, Hd1?, Rs?)|P
 procedure strip_locals(Constant?, Args?, NumInfos?, Args).
 strip_locals(S, Hd, Nt, Hd1?) :- num_lookup(S?, Nt?, Ni), strip_locals1(Ni?, Hd?, Hd1).
 procedure strip_locals1(NumInfo?, Args?, Args).
-strip_locals1(num_info(_, _, Ls, _, _), Hd, Hd1?) :- loc_vars(Ls?, Vs), drop_args(Hd?, Vs?, Hd1).
+strip_locals1(num_info(_, _, Ls, _, _, _), Hd, Hd1?) :- loc_vars(Ls?, Vs), drop_args(Hd?, Vs?, Hd1).
 procedure drop_args(Args?, Args?, Args).
 drop_args([], _, []).
 drop_args([A|As], Vs, R?) :- ground(A?), ground(Vs?) |
@@ -662,13 +673,40 @@ procedure keep_unless(YesNo?, Arg?, Args?, Args).
 keep_unless(yes, _, R, R?).
 keep_unless(no, A, R, [A?|R?]).
 %% The table of the schemas' numbers: each schema's constraint, true where it has none, its local variables and the role whose local variables the constraint names (local.glp, num_info_of).
-procedure num_table(QContract?, NumInfos).
-num_table([], []).
-num_table([schema(S, Hd, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, [], Rs?, N), num_table(Ss?, Ns).
-num_table([nschema(S, Hd, C, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, C?, [], Rs?, N), num_table(Ss?, Ns).
-num_table([cschema(S, Hd, _, Rs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, true, [], Rs?, N), num_table(Ss?, Ns).
+procedure num_table(QContract?, PActs?, Lxs?, NumInfos).
+num_table([], _, _, []).
+num_table([schema(S, Hd, Rs)|Ss], As, Lx, [N?|Ns?]) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
+    base_one(S?, Rs?, As?, Lx?, B),
+    local # num_info_of(S?, Hd?, true, [], Rs?, B?, N),
+    num_table(Ss?, As?, Lx?, Ns).
+num_table([nschema(S, Hd, C, Rs)|Ss], As, Lx, [N?|Ns?]) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
+    base_one(S?, Rs?, As?, Lx?, B),
+    local # num_info_of(S?, Hd?, C?, [], Rs?, B?, N),
+    num_table(Ss?, As?, Lx?, Ns).
+num_table([cschema(S, Hd, _, Rs)|Ss], As, Lx, [N?|Ns?]) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
+    base_one(S?, Rs?, As?, Lx?, B),
+    local # num_info_of(S?, Hd?, true, [], Rs?, B?, N),
+    num_table(Ss?, As?, Lx?, Ns).
 %% A schema with quantifiers whose head has no quantified conjunct and whose roles are agent roles, the only one q_lines lets through: its constraint and the safe formulas of its body, each with the role it is local to (local.glp, form_infos).
-num_table([qschema(S, Hd, _, C, Rs, _, Fs)|Ss], [N?|Ns?]) :- local # num_info_of(S?, Hd?, C?, Fs?, Rs?, N), num_table(Ss?, Ns).
+num_table([qschema(S, Hd, _, C, Rs, _, Fs)|Ss], As, Lx, [N?|Ns?]) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
+    base_one(S?, Rs?, As?, Lx?, B),
+    local # num_info_of(S?, Hd?, C?, Fs?, Rs?, B?, N),
+    num_table(Ss?, As?, Lx?, Ns).
+%% The base of a schema, as schema_base prints it (base_lines1): the base of its listed roles and of its conjuncts whose instances the attempt names, or the guarding role its pragma names before its button, or its first guarding role, or its first role; a variable is read only at a role other than the base (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there").
+procedure base_one(Constant?, RoleSpecs?, PActs?, Lxs?, Integer).
+base_one(S, Rs, As, Lx, B?) :- ground(S?), ground(Rs?), ground(As?), ground(Lx?) |
+    listed_bases(Rs?, Bs0),
+    ix_bases(Lx?, S?, Bs1),
+    app(Bs0?, Bs1?, Bs),
+    guard_indices1(Rs?, 1, Gs),
+    named_role(As?, S?, Gs?, Ns),
+    base_of(Bs?, Ns?, B).
+%% The acts of a contract's pragmas, none for a contract with none.
+procedure pragma_acts(Pragmas?, PActs).
+pragma_acts(no_pragmas, []).
+pragma_acts(pragmas(_, As), As?).
+pragma_acts(pragmas(_, As, _), As?).
+pragma_acts(pragmas(_, As, _, _, _, _), As?).
 
 %% A schema's variables are named V1, V2, ... in the printed clauses; there are
 %% as many names as vname/3 has.
@@ -1012,7 +1050,7 @@ atom_parts1(Gs, L?) :- ground(Gs?) |
 %% The atoms of the schemas' constraints and safe formulas, the anchors of their quantifiers, counts and sums among them: an atom a schema reads only there, as an environment predicate's, is an atom of a state (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 procedure nt_atoms(NumInfos?, Atoms).
 nt_atoms([], []).
-nt_atoms([num_info(_, C, _, _, Fi)|Ns], As?) :- c_atoms(C?, A1), fi_atoms(Fi?, A2), nt_atoms(Ns?, A3), app(A2?, A3?, A23), app(A1?, A23?, As).
+nt_atoms([num_info(_, C, _, _, Fi, _)|Ns], As?) :- c_atoms(C?, A1), fi_atoms(Fi?, A2), nt_atoms(Ns?, A3), app(A2?, A3?, A23), app(A1?, A23?, As).
 procedure fi_atoms(FInfos?, Atoms).
 fi_atoms([], []).
 fi_atoms([fi(_, F)|Fs], As?) :- f_atoms(F?, A1), fi_atoms(Fs?, A2), app(A1?, A2?, As).
@@ -1165,7 +1203,7 @@ binding_lines([schema(S, Hd, Rs)|Ss], Nt, L?) :- ground(S?), ground(Hd?), ground
 binding_lines([cschema(_, _, _, _)|Ss], Nt, L?) :- binding_lines(Ss?, Nt?, L).
 binding_lines([nschema(_, _, _, _)|Ss], Nt, L?) :- binding_lines(Ss?, Nt?, L).
 procedure local_binds(NumInfo?, Constant?, Strings).
-local_binds(num_info(_, _, Ls, _, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs), local_binds1(Vs?, S?, Lb).
+local_binds(num_info(_, _, Ls, _, _, _), S, Lb?) :- ground(S?) | loc_vars(Ls?, Vs), local_binds1(Vs?, S?, Lb).
 procedure local_binds1(Args?, Constant?, Strings).
 local_binds1([], _, []).
 local_binds1([num(X)|Vs], S, [T?|Lb?]) :- ground(X?), ground(S?) | term_to_string(b(num(X?), lv(S?, X?)), T), local_binds1(Vs?, S?, Lb).
@@ -1411,13 +1449,16 @@ procedure q_listed_ixs(RoleSpecs?, Integer?, Ints).
 q_listed_ixs([], _, []).
 q_listed_ixs([crs(qlisted(_, _, _, _), _, _, _, _, _)|Rs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, q_listed_ixs(Rs?, I1?, Is).
 q_listed_ixs([_|Rs], I, Is?) :- otherwise, integer(I?) | I1 := I? + 1, q_listed_ixs(Rs?, I1?, Is).
-%% The safe formulas of the body less the quantifiers that bind a listed role.
+%% The safe formulas of the body less the quantifiers that bind a listed role, but those whose atoms two roles or more hold, which are of the part's condition (vGLP 5f55cf3, Section 5.4: "A safe formula of B that is local to no role, its atoms held by two roles or more, each a role of the schema or a listed role its quantifier binds, is of the part's condition").
 procedure q_forms(Forms?, Ints?, Forms).
 q_forms([], _, []).
 q_forms([F|Fs], Lis, R?) :- ground(F?), ground(Lis?) |
     binds_listed(F?, Lis?, B),
+    local # form_cross(F?, X),
+    neg(X?, Nx),
+    and(B?, Nx?, Dr),
     q_forms(Fs?, Lis?, R1),
-    keep_form_unless(B?, F?, R1?, R).
+    keep_form_unless(Dr?, F?, R1?, R).
 procedure binds_listed(Form?, Ints?, YesNo).
 binds_listed(fforall([role(I)], _, _, _, _), Lis, B?) :- integer(I?) | mem_int(I?, Lis?, B).
 binds_listed(_, _, no) :- otherwise | true.
@@ -1719,25 +1760,27 @@ guard_indices1([R|Rs], I, Gs?) :- ground(R?), integer(I?) |
 procedure keep_gi(YesNo?, Integer?, Ints?, Ints).
 keep_gi(yes, I, Gs, [I?|Gs?]).
 keep_gi(no, _, Gs, Gs?).
-%% The schemas' numbers, schema_numeric(Name, numeric(Constraint, Locals, Role)), printed for each schema with a constraint or a local variable: its constraint, its variables local to a role and the role whose local variables the constraint names, at(I), or every, where it names none and every role checks it (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a constraint is local to the role whose local variables it names, and to every role where it names none, which each checks"); any other schema has none, numeric(true, [], every).
+%% The schemas' numbers, schema_numeric(Name, numeric(Conjuncts, Locals, Reads)), printed for each schema with a constraint, a local variable or a reading: the conjuncts of its constraint each with its role, cj(every, C), which every role checks, cj(at(I), C), which the role I checks, and cj(cond, C), of the part's condition, which the initiator checks on the readings, its counts named num('#k') (local.glp, conjuncts_of); its variables local to a role; and what each role reads with its vote yes, read(I, Vars, Counts) (local.glp, reads_of) (vGLP 566c186, Section 5.4, "Speech-act schemas as local specifications"); any other schema has none, numeric([], [], []).
 procedure numeric_lines(NumInfos?, Lines).
 numeric_lines(Nt, ['', 'procedure schema_numeric(Constant?, Numeric).'|L?]) :- ground(Nt?) |
     numeric_lines1(Nt?, L1),
     form_lines(Nt?, L2),
-    lapp(L1?, ['', 'procedure schema_forms(Constant?, SForms).'|L2?], L).
+    held_lines(Nt?, L3),
+    lapp(L2?, ['', 'procedure schema_held(Constant?, HPats).'|L3?], L23),
+    lapp(L1?, ['', 'procedure schema_forms(Constant?, SForms).'|L23?], L).
 procedure numeric_lines1(NumInfos?, Lines).
-numeric_lines1([], ['schema_numeric(_, numeric(true, [], every)) :- otherwise | true.']).
-numeric_lines1([num_info(S, C, Ls, R, _)|Ns], L?) :- ground(S?), ground(C?), ground(Ls?), ground(R?) |
+numeric_lines1([], ['schema_numeric(_, numeric([], [], [])) :- otherwise | true.']).
+numeric_lines1([num_info(S, _, Ls, Cj, _, Rd)|Ns], L?) :- ground(S?), ground(Cj?), ground(Ls?), ground(Rd?) |
     loc_vars(Ls?, Vs1),
     loc_vars(Ls?, Vs2),
-    plain_num(C?, Vs1?, R?, P),
-    numeric_line(P?, S?, C?, Vs2?, R?, L1),
+    plain_num(Cj?, Vs1?, Rd?, P),
+    numeric_line(P?, S?, Cj?, Vs2?, Rd?, L1),
     numeric_lines1(Ns?, L2),
     lapp(L1?, L2?, L).
 %% The safe formulas of the schemas' bodies, schema_forms(Name, Forms), printed for each schema with one, each sform(R, F), F the formula as programs/gsc writes it and R the role it is local to, at(I), or every, which every role checks (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications": "A safe formula of B ... is local to a role where every atom of it ... is held by that role ...: the machine of the person in that role evaluates it in its own state"; local.glp, form_infos, which refuses one local to no role).
 procedure form_lines(NumInfos?, Lines).
 form_lines([], ['schema_forms(_, []) :- otherwise | true.']).
-form_lines([num_info(S, _, _, _, Fi)|Ns], L?) :- ground(S?), ground(Fi?) |
+form_lines([num_info(S, _, _, _, Fi, _)|Ns], L?) :- ground(S?), ground(Fi?) |
     form_line(Fi?, S?, L1),
     form_lines(Ns?, L2),
     lapp(L1?, L2?, L).
@@ -1751,14 +1794,33 @@ SForm  ::= sform(FRole, Form).
 SForms ::= [] ; [SForm | SForms].
 procedure sforms(FInfos?, SForms).
 sforms([], []).
-sforms([fi(R, F)|Fs], [sform(R?, F?)|Ss?]) :- sforms(Fs?, Ss).
-procedure plain_num(Constraint?, Args?, CRole?, YesNo).
-plain_num(true, [], every, yes).
+%% A formula of the condition printed with each atom's holder first among its arguments, as the initiator evaluates it on the readings (local.glp, tag_form).
+sforms([fi(cond, F)|Fs], [sform(cond, F1?)|Ss?]) :- local # tag_form(F?, F1), sforms(Fs?, Ss).
+sforms([fi(R, F)|Fs], [sform(R?, F?)|Ss?]) :- otherwise | sforms(Fs?, Ss).
+%% The atoms each role reads for the formulas of the condition of each schema, schema_held(Name, HPats), hp(I, Atoms) for each role I holding atoms of them (vGLP 5f55cf3, Section 5.4: "the reading of a participant's state then holds, beside the values of the variables read at its role, the atoms of that state that the atoms of the formula held by its role match").
+procedure held_lines(NumInfos?, Lines).
+held_lines([], ['schema_held(_, []) :- otherwise | true.']).
+held_lines([num_info(S, _, Ls, _, Fi, _)|Ns], L?) :- ground(S?), ground(Fi?), ground(Ls?) |
+    cond_held(Fi?, Ls?, Hp),
+    held_line(Hp?, S?, L1),
+    held_lines(Ns?, L2),
+    lapp(L1?, L2?, L).
+procedure cond_held(FInfos?, Locs?, HPats).
+cond_held([], _, []).
+cond_held([fi(cond, F)|Fs], Ls, Hp?) :- ground(Ls?) | local # form_held(F?, Ls?, H1), cond_held(Fs?, Ls?, H2), app(H1?, H2?, Hp).
+cond_held([_|Fs], Ls, Hp?) :- otherwise | cond_held(Fs?, Ls?, Hp).
+procedure held_line(HPats?, Constant?, Lines).
+held_line([], _, []).
+held_line([H|Hs], S, [T?, '.']) :- ground(H?), ground(Hs?), ground(S?) |
+    T0 =.. [schema_held, S?, [H?|Hs?]],
+    term_to_string(T0?, T).
+procedure plain_num(Conjs?, Args?, Reads?, YesNo).
+plain_num([], [], [], yes).
 plain_num(_, _, _, no) :- otherwise | true.
-procedure numeric_line(YesNo?, Constant?, Constraint?, Args?, CRole?, Lines).
+procedure numeric_line(YesNo?, Constant?, Conjs?, Args?, Reads?, Lines).
 numeric_line(yes, _, _, _, _, []).
-numeric_line(no, S, C, Vs, R, [T?, '.']) :- ground(S?), ground(C?), ground(Vs?), ground(R?) |
-    T0 =.. [schema_numeric, S?, numeric(C?, Vs?, R?)],
+numeric_line(no, S, Cj, Vs, Rd, [T?, '.']) :- ground(S?), ground(Cj?), ground(Vs?), ground(Rd?) |
+    T0 =.. [schema_numeric, S?, numeric(Cj?, Vs?, Rd?)],
     term_to_string(T0?, T).
 procedure schema_name(TSchema?, Constant).
 schema_name(schema(Nm, _, _), Nm?).
