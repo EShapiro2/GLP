@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as GCoop:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: GCoop.glp beside this file.
 GCoop: Grassroots Cooperative
 GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -12,7 +12,7 @@ Alice and Bob are persons, Orga a cooperative.
 2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and the members; his membership ends by an act of Bob or of the other members.
 3. ■ Board.  The members may elect a member to the board, and remove one from it.
 Pragmas
-Look: 🌱, cooperative
+Look: 🌱, sharing
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
@@ -20,14 +20,14 @@ Acts of the organisation: Bob [Propose] <act>
   Bob [Propose as named] <act>
   Bob [Vote as named] <credential>
 Participation: Bob [Join]
-  Orga: Bob asks to participate.
+  Otto: Bob asks to participate.
   Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
+  Otto [Expel]
+Officers: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
+  Otto [Dismiss] <role>
   Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
+Amendment: Otto [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
@@ -37,7 +37,5 @@ Acceptance: Alice [Accept] <limit>
 Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
 Membership: Bob [Join cooperative]
-  Orga: Bob asks to become a member.
-Board: Orga [Elect to board]
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).
+  Otto: Bob asks to become a member.
+Board: Otto [Elect to board]

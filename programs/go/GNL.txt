@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.3 and cites a clause as GNL:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GNO, GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and REC, Recommendations (programs/gce).
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: GNL.glp beside this file.
 GNL: Network Lodging
 GNL extends GNO, GDO (GRH, Grassroots Ride-Hailing, in preparation) and REC.
@@ -10,7 +10,7 @@ A host is a provider and a traveller a customer.  A listing names a place, the n
 Alice and Bob are persons, Orga a lodging organisation.
 1. ■ Listing.  Bob, a host, may post a listing to the travellers he points to, and a traveller may pass it to the travellers they point to; Bob may withdraw it.
 2. ■ Booking.  Alice, a traveller, and Bob, who know each other, may jointly book nights of his listing; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
-3. ■ Check-in and checkout.  The check-in is recorded when Alice and Bob are both at the place on the first night, and the checkout when Alice leaves it after the last; the payment and the deposit are then released to Bob.
+3. ■ Check-in and checkout.  Alice may record her check-in when she is at the place on the first night, and her checkout when she leaves it after the last; the payment and the deposit are then released to Bob.
 4. ■ Cancelling.  Alice or Bob may cancel a booking before the first night, and the payment and the deposit are released to Alice and to Bob as the terms say; if no check-in is recorded on the first night while Alice is at the place, she may cancel and both are released to her.
 5. ■ Dispute.  Alice, checked in, or Bob may raise a dispute over the payment and the deposit before checkout (GNO:4).
 6. ◆ Review.  REC:1, where Alice recommends Bob for the stay after checkout.
@@ -23,14 +23,14 @@ Acts of the organisation: Bob [Propose] <act>
   Bob [Propose as named] <act>
   Bob [Vote as named] <credential>
 Participation: Bob [Join]
-  Orga: Bob asks to participate.
+  Otto: Bob asks to participate.
   Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
+  Otto [Expel]
+Officers: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
+  Otto [Dismiss] <role>
   Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
+Amendment: Otto [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
@@ -39,7 +39,7 @@ Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount want
 Acceptance: Alice [Accept] <limit>
 Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Stake: Orga [Set stake] <coins>
+Stake: Otto [Set stake] <coins>
 Arbitration: Alice [Raise dispute] <arbiter>
   Bob [Raise dispute] <arbiter>
   Carol [Decide] <to customer> <to provider>
@@ -55,5 +55,3 @@ Cancelling: Alice [Cancel] <to Alice> <to Bob>
 Recommending: Alice [Recommend]
 Showing: Bob [Show] <recommendation>
 Withdrawing: Alice [Withdraw recommendation]
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).

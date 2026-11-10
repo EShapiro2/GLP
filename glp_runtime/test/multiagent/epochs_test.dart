@@ -55,7 +55,7 @@ relay([], none).
 
 /// `b` tells its person what the reader becomes, `got(hello)`, or that it
 /// is widowed: its writer, held by the link end `b` kept for it, occurs
-/// nowhere once that end is retired (the GLP paper f577e20,
+/// nowhere once that end is retired (the GLP paper 07835e1,
 /// appendix-guards.tex, the paragraph on link ends after the guard table).
 const String _playB = r'''
 RsMsg ::= value(Constant) ; ping.
@@ -71,7 +71,7 @@ b_in([]).
 
 procedure show(Constant?).
 show(hello) :- send_to_user([got(hello)]).
-show(V) :- widowed(V?) | send_to_user([widowed]).
+show(V) :- widowed_reader(V?) | send_to_user([widowed]).
 ''';
 
 /// A message the layer holds: its sender, its recipient, its payload and the
@@ -257,7 +257,7 @@ void main() {
   });
 
   test('the peer learns the epoch from the first message of the new one and '
-      'retires its ends at the restarted agent; widowed(X?) then succeeds on '
+      'retires its ends at the restarted agent; widowed_reader(X?) then succeeds on '
       'its waiting reader', () async {
     final storeA = MemoryAgentStateStore();
     final kpA = generateKeyPair();

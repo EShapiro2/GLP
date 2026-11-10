@@ -60,7 +60,8 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart' show OutboundMessage;
 import 'package:glp_runtime/multiagent/glp_network.dart';
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show LayerSigner, PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart' show PersonGoal;
 
@@ -133,15 +134,22 @@ class AgentRuntime {
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerDiscovered;
   void Function(PubKey pk, ProximityUnderlay underlay)? onPeerLost;
 
-  /// This agent's Ed25519 key pair.  Provided by the coordinator or the
-  /// application, or, where it is not, read from [stateStore], or made when
-  /// the host spawns the agent, before anything is compiled or sent, from the
-  /// SHA-256 of the clock, the device's hardware identifiers and the persona's
-  /// name, [agentId], combined by exclusive or, and saved in [stateStore]
-  /// (IGLP, Implementation Notes, "Boot").  Over a given network it must be
-  /// provided, the layer having been instantiated with it (IGLP, The
-  /// contract: "the runtime supplies the key pair to the layer when it
-  /// instantiates it, the layer keeping it unchanged for its lifetime").
+  /// This agent's Ed25519 key pair, for the simulation's layer the host builds
+  /// where it is given no network: provided by the coordinator, or, where it
+  /// is not, read from [stateStore], or made when the host spawns the agent,
+  /// before anything is compiled or sent, from the SHA-256 of the clock, the
+  /// device's hardware identifiers and the persona's name, [agentId], combined
+  /// by exclusive or, and saved in [stateStore] (IGLP 07a2b00, Implementation
+  /// Notes, "Boot").  It is handed to that layer at its instantiation, which
+  /// holds it and signs with it, and the runtime keeps no copy of the private
+  /// key beyond that (the GLP paper f265fec, "Identity and signature"; IGLP
+  /// 07a2b00, "The contract": "the runtime supplies the key pair to the layer
+  /// when it instantiates it, the layer keeping it unchanged for its
+  /// lifetime").  Over a given network the layer was instantiated with the
+  /// pair by the embedding application and holds it, the runtime takes its
+  /// public key from the layer, and none is given here; a pair given must be
+  /// the layer's.  Until 2026-11-10 a host over a given network handed the
+  /// pair, private half included.
   final ({PubKey pub, Uint8List priv})? keyPair;
 
   /// The shared identifier–key directory of the simulation. Provided by the
@@ -247,16 +255,14 @@ class AgentRuntime {
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
-    // The layer was instantiated with the agent's key pair (IGLP, The
-    // contract), and gives out only its public key, so the host is given the
-    // pair as well: the engine holds it from construction, so the certificate
-    // its compiler writes, self_key/1 and sign/3 are under the key the agent
-    // is named by.
+    // The layer was instantiated with the agent's key pair (IGLP 07a2b00, The
+    // contract), holds the private key and signs with it (GNA, decision 39;
+    // the GLP paper f265fec, "Identity and signature"), and gives out its
+    // public key: the runtime takes its key from the layer, signs by it, and
+    // keeps no private key.  A host that still hands the pair must hand the
+    // layer's.
     final kp = keyPair;
-    if (kp == null) {
-      throw ArgumentError('agent $agentId runs over a given network, whose '
-          'key pair names it, and was given none');
-    }
+    if (kp == null) return;
     if (kp.pub != network.getIdentity()) {
       throw ArgumentError('agent $agentId was given the key pair of '
           '${kp.pub.hex} and a network whose key is '
@@ -325,8 +331,13 @@ class AgentRuntime {
 
   bool get initialized => _initialized;
 
-  /// The agent's public key, once [initialize] has made or been given it.
-  PubKey? get publicKey => _kp?.pub;
+  /// The agent's public key, once [initialize] has made or been given it: the
+  /// given layer's, or the pair's the host builds the simulation's layer with.
+  PubKey? get publicKey =>
+      givenNetwork?.getIdentity() ?? _kp?.pub;
+
+  /// The agent's public key after [initialize].
+  PubKey get _selfKey => publicKey!;
 
   /// Whether [initialize] booted the agent afresh, its first start, and did
   /// not restore it from the state its [stateStore] holds (IGLP,
@@ -392,18 +403,25 @@ class AgentRuntime {
   /// Start the agent: where its [stateStore] holds a saved state, go on from it (IGLP, Definition "Restart": "the local state s_p of p at restart is its local state at termination"; Implementation Notes, "Persistence": "a restart resumes from the state the store holds"), the restart's cycle handing to the layer the messages that state holds undelivered ([_Resume]); otherwise boot it, the initial start being its first event cycle.
   Future<void> initialize() async {
     _log('INIT: Starting');
-    // The agent's key pair: provided, or the one its store keeps, or made
-    // now, at the agent's spawn, before anything is compiled or sent, from the
-    // SHA-256 of the clock, the device's hardware identifiers and the persona's
-    // name, and kept (IGLP, Implementation Notes, "Boot").  The engine holds it
-    // as the person's identity from construction --- so the certificate its
-    // compiler writes, self_key/1 and sign/3 are all under it --- and the
-    // networking layer below is given the same pair.
+    // The agent's key pair, for the simulation's layer: provided, or the one
+    // its store keeps, or made now, at the agent's spawn, before anything is
+    // compiled or sent, from the SHA-256 of the clock, the device's hardware
+    // identifiers and the persona's name, and kept (IGLP 07a2b00,
+    // Implementation Notes, "Boot").  The layer is given it and signs; the
+    // engine signs by the layer, so the certificate its compiler writes,
+    // self_key/1 and sign/3 are all under it ([_setUp]).
     final store = stateStore;
+    // Over a given network the layer holds the pair, and the runtime makes
+    // and keeps none; it keeps no copy of the private key beyond handing the
+    // store's key pair to the simulation's layer at its instantiation
+    // (the GLP paper f265fec, "Identity and signature"; IGLP 07a2b00, "The
+    // contract").
     _kp = keyPair ??
-        (store != null
-            ? await keptKeyPair(store, agentId)
-            : PersonIdentity.forPersona(agentId).keyPair);
+        (givenNetwork != null
+            ? null
+            : store != null
+                ? await keptKeyPair(store, agentId)
+                : PersonIdentity.forPersona(agentId).keyPair);
 
     final saved = await store?.load();
     // The running mark: set at every start and resumption and cleared by the
@@ -524,13 +542,19 @@ class AgentRuntime {
   /// Termination and Restart).
   void _setUp({StoredProgram? stored}) {
     final selfName = name; // its key over a given network ([name])
-    final kp = _kp!;
     _output('[INIT] Creating MadContext...');
+
+    // The layer first: the one given, or the simulation's, built with the
+    // agent's key pair, which it holds; the engine signs by it ([LayerSigner]),
+    // so the certificate its compiler writes, self_key/1 and sign/3 are under
+    // the key the agent is named by, and the runtime holds no private key
+    // (the GLP paper f265fec, "Identity and signature"; IGLP 07a2b00, "The
+    // contract").  Until 2026-11-10 the engine was given the key pair.
+    final network = givenNetwork ?? _makeSimulationNetwork(selfName, _kp!);
 
     // Use GlpEngine — the ONE way to run GLP programs.
     final engine = GlpEngine(
-        rootSelfGlpPath: rootSelfGlpPath,
-        identity: PersonIdentity(kp.pub, kp.priv));
+        rootSelfGlpPath: rootSelfGlpPath, identity: LayerSigner(network));
     _engine = engine;
 
     // Enable madGLP mode (creates the MadContext)
@@ -598,11 +622,10 @@ class AgentRuntime {
     // agent's GlpNetwork instead of serializing OutboundMessages directly ---
     // the one given, or, where none is, the simulation's.  The wire carries
     // the opaque payload bytes only (no MessageType).
-    final given = givenNetwork;
-    if (given != null) {
-      _bindGivenNetwork(given);
+    if (givenNetwork != null) {
+      _bindGivenNetwork(network);
     } else {
-      _bindSimulationNetwork(selfName, kp);
+      _bindSimulationNetwork(network as SimulationNetworkClient);
     }
 
     // A place event the layer reports is an event of its own: its cycle
@@ -634,6 +657,15 @@ class AgentRuntime {
     // on a nearby or reachable stream are bridged below the madGLP layer").
     _ctx!.reachSink = (reach, declaration) => unawaited(
         _submit(_Reach(reach, declaration)).catchError((Object _) {}));
+
+    // A change of the agent's own public address or local network likewise
+    // (the GLP paper f265fec, "Networking seam": public_address(S),
+    // network(S); IGLP 07a2b00, Definition "Seam Predicates").
+    _ctx!.publicAddressSink = (address, declaration) => unawaited(
+        _submit(_PublicAddress(address, declaration))
+            .catchError((Object _) {}));
+    _ctx!.networkSink = (net, declaration) => unawaited(
+        _submit(_Network(net, declaration)).catchError((Object _) {}));
 
     _output('[INIT] Loaded GLP program');
   }
@@ -927,10 +959,10 @@ class AgentRuntime {
       throw SavedStateOfAnotherAgent('the saved state is agent '
           '${r.agentName}\'s, and this agent is $name');
     }
-    if (!bytesEqual(r.agentKey, _kp!.pub.bytes)) {
+    if (!bytesEqual(r.agentKey, _selfKey.bytes)) {
       throw SavedStateOfAnotherAgent('the saved state is of the agent of key '
           '${PubKey(r.agentKey).hex}, and this agent runs under '
-          '${_kp!.pub.hex}: an agent has one key, which its store keeps '
+          '${_selfKey.hex}: an agent has one key, which its store keeps '
           'across the termination');
     }
     if (!bytesEqual(r.programIdentity, savedUnder ?? _programIdentity!)) {
@@ -1184,6 +1216,10 @@ class AgentRuntime {
         _ctx!.deliverPresence(underlay, presence, declaration: declaration);
       case _Reach(:final reach, :final declaration):
         _ctx!.deliverReach(reach, declaration: declaration);
+      case _PublicAddress(:final address, :final declaration):
+        _ctx!.deliverPublicAddress(address, declaration: declaration);
+      case _Network(:final network, :final declaration):
+        _ctx!.deliverNetwork(network, declaration: declaration);
     }
     return true;
   }
@@ -1193,7 +1229,7 @@ class AgentRuntime {
     final w = StateWriter(
       programIdentity: _programIdentity!,
       agentName: name,
-      agentKey: _kp!.pub.bytes,
+      agentKey: _selfKey.bytes,
       appModule: _appModule,
     );
     _runtime!.saveState(w);
@@ -1280,18 +1316,29 @@ class AgentRuntime {
       _ctx?.peerLost(pk, underlay);
       onPeerLost?.call(pk, underlay);
     };
+    _wireOwnAddressAndNetwork(network);
   }
 
-  /// Build and bind the simulation's network, where the host was given none:
-  /// a [SimulationNetworkClient] over [directory], whose sends go to the
-  /// coordinator by [onSendMadMessage] and whose deliveries the coordinator
-  /// makes by [onMadMessageReceived].  A destination is a key or a readable
-  /// name standing for one, and the seam resolves both to the one agent (IGLP
-  /// 4f84612, Implementation Notes, "Simulation realisation").
-  void _bindSimulationNetwork(
+  /// The agent's own public address and local network, as the layer reports
+  /// each change, onto the public-address and network streams
+  /// ([MadContext.publicAddressChanged], [MadContext.networkChanged]; GNA
+  /// ip.tex, onConnectivityStatusChanged and onNetworkChanged; the GLP paper
+  /// f265fec, "Networking seam").
+  void _wireOwnAddressAndNetwork(GlpNetwork network) {
+    network.onConnectivityStatusChanged =
+        (oldAddress, newAddress) => _ctx?.publicAddressChanged(newAddress);
+    network.onNetworkChanged = (oldId, newId) => _ctx?.networkChanged(newId);
+  }
+
+  /// The simulation's network, where the host was given none: a
+  /// [SimulationNetworkClient] over [directory], made with the agent's key
+  /// pair [kp], which it holds and signs with, as the networking layer does
+  /// (IGLP 07a2b00, "Simulation realisation").  Bound by
+  /// [_bindSimulationNetwork] once the context exists.
+  SimulationNetworkClient _makeSimulationNetwork(
       String selfName, ({PubKey pub, Uint8List priv}) kp) {
     directory.register(selfName, kp.pub); // self identity (for sign/verify)
-    final network = SimulationNetworkClient(
+    return SimulationNetworkClient(
       selfId: selfName,
       directory: directory,
       keyPair: kp,
@@ -1299,7 +1346,17 @@ class AgentRuntime {
           _sendMadPayload(toId, Uint8List.fromList(payload)),
       acknowledgeToRouter: (messageId) => onDelivered?.call(messageId),
     );
+  }
+
+  /// Bind the simulation's network, where the host was given none:
+  /// a [SimulationNetworkClient] over [directory], whose sends go to the
+  /// coordinator by [onSendMadMessage] and whose deliveries the coordinator
+  /// makes by [onMadMessageReceived].  A destination is a key or a readable
+  /// name standing for one, and the seam resolves both to the one agent (IGLP
+  /// 4f84612, Implementation Notes, "Simulation realisation").
+  void _bindSimulationNetwork(SimulationNetworkClient network) {
     _ctx!.network = network; // backs the seam predicates (IGLP Definition Seam Predicates)
+    _wireOwnAddressAndNetwork(network);
 
     // A destination, in a global name or in a message, is a key or a
     // readable name standing for one, and the seam resolves both to the one
@@ -1524,6 +1581,8 @@ class AgentRuntime {
       network.onPeerDiscovered = null;
       network.onPeerLost = null;
       network.onPlaceEvent = null;
+      network.onConnectivityStatusChanged = null;
+      network.onNetworkChanged = null;
     }
     final ctx = _ctx;
     if (ctx != null) {
@@ -1531,6 +1590,8 @@ class AgentRuntime {
       ctx.placeCentreSink = null;
       ctx.presenceSink = null;
       ctx.reachSink = null;
+      ctx.publicAddressSink = null;
+      ctx.networkSink = null;
     }
     onOutput = null;
   }
@@ -1641,6 +1702,28 @@ final class _Reach extends _AgentEvent {
   const _Reach(this.reach, this.declaration);
   @override
   String toString() => 'the reach $reach';
+}
+
+/// A change of the agent's own public address the layer reports, for the
+/// public-address declaration that stood when it was reported, [declaration]:
+/// `address(A)` or `none` (the GLP paper f265fec, "Networking seam").
+final class _PublicAddress extends _AgentEvent {
+  final rt.Term address;
+  final int declaration;
+  const _PublicAddress(this.address, this.declaration);
+  @override
+  String toString() => 'the public address $address';
+}
+
+/// A change of the local network the layer reports, for the network
+/// declaration that stood when it was reported, [declaration]: `attached(N)`
+/// or `none` (the GLP paper f265fec, "Networking seam").
+final class _Network extends _AgentEvent {
+  final rt.Term network;
+  final int declaration;
+  const _Network(this.network, this.declaration);
+  @override
+  String toString() => 'the network $network';
 }
 
 /// A restart's refusal of an update (IGLP 61f3283, madglp-spec.tex,

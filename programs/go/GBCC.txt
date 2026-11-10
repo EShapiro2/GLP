@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.3 and cites a clause as GBCC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: CC, restricting it.
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: GBCC.glp beside this file.
 GBCC: Grassroots Backed Community Currency
 GBCC extends CC and restricts it.
@@ -13,7 +13,7 @@ Alice and Bob are persons, Orga a community currency.
 3. ◆ Account.  Alice, a treasurer, may pay Dollars into the account, and the treasurers jointly record them as paid in by Alice.
 4. ○ Fiat redemption.  CC:4, from the account while it holds Dollars, and from a treasurer when it holds none.
 Pragmas
-Look: 🪙, bank
+Look: 🪙, money
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
@@ -21,14 +21,14 @@ Acts of the organisation: Bob [Propose] <act>
   Bob [Propose as named] <act>
   Bob [Vote as named] <credential>
 Participation: Bob [Join]
-  Orga: Bob asks to participate.
+  Otto: Bob asks to participate.
   Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
+  Otto [Expel]
+Officers: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
+  Otto [Dismiss] <role>
   Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
+Amendment: Otto [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
@@ -39,10 +39,8 @@ Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
 Treasurers: the treasurers of Orga.
 Treasurers: Bob [Become treasurer]
-  Orga: Bob asks to become a treasurer.
+  Otto: Bob asks to become a treasurer.
   Bob [Resign]
-  Orga [Remove treasurer]
+  Otto [Remove treasurer]
 Drawing: Alice [Draw] <amount>
-Account: Orga [Record payment] <Dollars>
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).
+Account: Otto [Record payment] <Dollars>

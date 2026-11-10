@@ -6927,14 +6927,14 @@ check "SK2 decompose_module assigns the compiler's key" "K = \('[0-9][0-9a-f]\{6
 check "SK2 decompose_module assigns the source identity" "S = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
 check "SK2 decompose_module assigns the compiled identity" "C = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk2"
 
-# sign/3 signs only under a key whose private half the runtime holds (G2).
+# sign/3 signs only under the agent's own key, the one the layer holds the private half of: any other key aborts the call (the GLP paper f265fec, "Identity and signature").
 sk3=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/sign_probe
 sign(hello, "0000000000000000000000000000000000000000000000000000000000000000", S).
 :quit
 HEREDOC
 2>&1)
-check "SK3 sign under another person's key is an error" "_sign/3: the runtime holds no private key for" "$sk3"
+check "SK3 sign under another person's key is an error" "_sign/3: .* is not the agent's own key" "$sk3"
 
 # signature/2 on a term that is not a verified signed term answers unsigned: a
 # value the caller matches and not a failure, so the goal succeeds and the
@@ -7004,8 +7004,8 @@ mb1=$("$REPL_RUN" <<HEREDOC
 HEREDOC
 2>&1)
 check "MB1 the boot settles with three agents" "Boot settled: 3 agents" "$mb1"
-check "MB1 the holder's assignment is held and reported, from the forwarding friend" "\[carol\] held(carol, '_w'(alice, [0-9]*), bob)" "$mb1"
-check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, '_w'(alice, [0-9]*), carol)" "$mb1"
+check "MB1 the holder's assignment is held and reported, from the forwarding friend" "\[carol\] held(carol, '_w'(alice, [0-9]*, [0-9]*), bob)" "$mb1"
+check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, '_w'(alice, [0-9]*, [0-9]*), carol)" "$mb1"
 check "MB1 both ends authorised, the value is delivered at the anchor" "\[alice\] delivered(hello_from_carol)" "$mb1"
 
 # MB2's artefact is a build output, ignored by git, written before the boot and
@@ -9409,8 +9409,11 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra gff dao ldao fdao rec stay lib joint; do
-    cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
+# A contract's NAME is the one cascade.sh's table gives it, as GnW, not its
+# <contract> upper-cased.
+for cas_c in gkk gsg gsn gnw gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra gff dao ldao fdao rec stay lib joint; do
+    cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
+    [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")

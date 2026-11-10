@@ -14,6 +14,8 @@ import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show interfaceTypeIdentityTables;
 import 'package:glp_runtime/multiagent/identity.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
@@ -22,9 +24,13 @@ import 'package:test/test.dart';
 Uint8List _hm() => Uint8List.fromList(List<int>.generate(32, (i) => i));
 
 /// The compiling person of these tests.
-final PersonIdentity _compiler = PersonIdentity.generate();
+/// The compiling person's layer, which holds the key pair and signs: the
+/// signer an engine certifies by (the GLP paper f265fec, "Identity and
+/// signature").
+final AgentSigner _compiler =
+    LayerSigner(SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
 
-Artefact _sample({PersonIdentity? signer}) => Artefact(
+Artefact _sample({AgentSigner? signer}) => Artefact(
       isaVersion: glpIsaVersion,
       hM: _hm(),
       moduleName: 'demo',
@@ -136,7 +142,8 @@ void main() {
 
     test('two compilers compiling one source produce two certificates over '
         'one pair of identities', () {
-      final other = PersonIdentity.generate();
+      final other = LayerSigner(
+          SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
       final c1 = _sample().certificate;
       final c2 = _sample(signer: other).certificate;
       expect(c1.hSrc, c2.hSrc);

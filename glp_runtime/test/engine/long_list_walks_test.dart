@@ -237,7 +237,7 @@ void main() {
       for (var i = _n - 1; i >= 0; i--) {
         readers = StructTerm('.', [VarRef(addrs[i]), readers]);
       }
-      ctx.send(readers, false, 'bob', 3, 'bob');
+      ctx.send(readers, false, 'bob', 1, 3, 'bob');
       ctx.flushMessages();
       final (_, sent) =
           PayloadCodec.deserializeGlobalSendPayload(payloads.single);
@@ -310,16 +310,14 @@ empty(Xs) :- Xs? =?= [] | true.
     test('sign and signature of a list of 50,000 give it back, in order',
         () async {
       final out = <String>[];
+      // The simulation's layer holds the key pair and signs; the engine
+      // signs by it (the GLP paper f265fec, "Identity and signature").
       final identity = PersonIdentity.generate();
-      final e = GlpEngine(rootSelfGlpPath: _root, identity: identity);
+      final client =
+          SimulationNetworkClient.alone(identity.keyPair, selfId: 'alice');
+      final e = GlpEngine(rootSelfGlpPath: _root, identity: LayerSigner(client));
       e.enableMadGLP(agentId: 'alice');
       e.runtime.outputCallback = out.add;
-      final dirOf = NetworkDirectory()..register('alice', identity.pub);
-      final client = SimulationNetworkClient(
-          selfId: 'alice',
-          directory: dirOf,
-          keyPair: identity.keyPair,
-          sendToRouter: (_, _, _) {});
       e.madContext!.network = client;
       e.maxCycles = 10000000;
       // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A

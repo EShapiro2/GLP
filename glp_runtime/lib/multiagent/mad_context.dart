@@ -10,7 +10,7 @@ import 'dart:async';
 
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart'
-    show deepDeref, reachableKey;
+    show deepDeref, networkKey, publicAddressKey, reachableKey;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/saved_state.dart';
@@ -158,6 +158,19 @@ class MadContext {
   /// session, and is checked when the reach is delivered.  Where it is not
   /// set, a reach is delivered as the layer reports it.
   void Function(Term reach, int declaration)? reachSink;
+
+  /// Where set, the host's: a change of the agent's own public address the
+  /// layer reports, `onConnectivityStatusChanged`, delivered as an event of
+  /// the agent's own, whose cycle hands it to [deliverPublicAddress], as it
+  /// does a reach ([reachSink]).  [declaration] is the public-address
+  /// declaration that stood when the layer reported the change.  Where it is
+  /// not set, the change is delivered as the layer reports it.
+  void Function(Term address, int declaration)? publicAddressSink;
+
+  /// Where set, the host's: a change of the local network the layer reports,
+  /// `onNetworkChanged`, delivered as an event of the agent's own, whose
+  /// cycle hands it to [deliverNetwork], as [publicAddressSink].
+  void Function(Term network, int declaration)? networkSink;
 
   /// The number of reaches delivered onto the reachable stream, so that a
   /// host delivering them as they arrive can tell that a run is to follow.
@@ -881,7 +894,9 @@ class MadContext {
   /// it", IGLP 96cd44a), its stream a refusal is put on, as [declarePlace]
   /// does.
   /// A nearby declaration calls no layer function: its stream is fed by what
-  /// the new layer reports.  A layer function the layer does not have is
+  /// the new layer reports; a public-address or network declaration calls
+  /// none either, and its standing stream is given the new layer's present
+  /// value (the GLP paper f265fec, "Networking seam").  A layer function the layer does not have is
   /// traced and the rest are made.  Does nothing where no layer is bound.
   /// Returns the declarations made.
   List<StandingDeclaration> declareStandingToLayer() {
@@ -912,6 +927,20 @@ class MadContext {
                 : null;
             _askLayerForPlace(
                 network, a[0], centre, double.parse(a[1]), declaration);
+          case SeamDeclarationKind.publicAddress:
+            // No layer function: the standing stream, restored with the
+            // state, is given the new layer's present address, as a
+            // declaration begins (the GLP paper f265fec, "Networking seam").
+            if (runtime.publicAddressStreams.standing(publicAddressKey) ==
+                null) {
+              continue;
+            }
+            runtime.publicAddressStreams.deliver(
+                publicAddressKey, addressTerm(presentPublicAddress()));
+          case SeamDeclarationKind.network:
+            if (runtime.networkStreams.standing(networkKey) == null) continue;
+            runtime.networkStreams
+                .deliver(networkKey, networkTerm(presentNetwork()));
         }
         made.add(d);
         _trace('[MAD $agentId] restart: $d made to the layer again');
@@ -1161,6 +1190,149 @@ class MadContext {
     _trace('[MAD $agentId] reachable: $reach');
   }
 
+  // ===========================================================================
+  // THE AGENT'S OWN PUBLIC ADDRESS AND LOCAL NETWORK (Definition Seam
+  // Predicates: public_address(S), network(S))
+  // ===========================================================================
+  //
+  // The GLP paper f265fec, appendix-guards, "Networking seam": "public_address(S)
+  // assigns S a stream of the agent's own public address, beginning with
+  // address(A), A the ip:port the layer has learnt from a rendezvous server,
+  // or none where it knows none, when it is declared, and then the address at
+  // each change, none where it is lost. ... network(S) assigns S a stream of
+  // the local network the agent is attached to, beginning with attached(N), N
+  // an opaque fingerprint of that network, or none where it is attached to
+  // none or the platform makes the fingerprint unreadable, when it is
+  // declared, and then the network at each change ... For each, a further
+  // declaration supersedes the earlier one and closes its stream, and the
+  // removal ends the declaration and closes its stream.  The address and the
+  // network change independently of each other."  IGLP 07a2b00, Definition
+  // "Seam Predicates": declare(public_address(S?)) and declare(network(S?)).
+  //
+  // The layer gives the present address by getPublicAddress() and each change
+  // by onConnectivityStatusChanged(old, new), the present network by
+  // networkIdentity() and each change by onNetworkChanged(old, new) (GNA
+  // ip.tex, Connectivity and Address; Local Network Identity); the host
+  // routes the two callbacks to [publicAddressChanged] and
+  // [networkChanged].  A layer that does not provide a function, the
+  // simulation's, gives none (IGLP 07a2b00, "Simulation realisation").  The
+  // streams are the runtime's bookkeeping ([GlpRuntime.publicAddressStreams],
+  // [GlpRuntime.networkStreams]), fed and closed as a place's; what the layer
+  // reports is the layer's, so a restart gives a standing stream the new
+  // layer's present value ([declareStandingToLayer]).
+
+  /// `address(A)` for the address [a], or `none` where the layer knows none.
+  static Term addressTerm(String? a) =>
+      a == null ? ConstTerm('none') : StructTerm('address', [ConstTerm(a)]);
+
+  /// `attached(N)` for the network fingerprint [n], or `none` where the agent
+  /// is attached to none or the fingerprint is unreadable.
+  static Term networkTerm(String? n) =>
+      n == null ? ConstTerm('none') : StructTerm('attached', [ConstTerm(n)]);
+
+  /// The agent's public address as the layer knows it now; null where it
+  /// knows none, or does not provide the function.
+  String? presentPublicAddress() {
+    try {
+      return network?.getPublicAddress();
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
+  /// The local network the layer is attached to now, by its fingerprint;
+  /// null where it is attached to none, or does not provide the function.
+  String? presentNetwork() {
+    try {
+      return network?.networkIdentity();
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
+  /// Declare a watch on the agent's own public address, its stream growing
+  /// from [streamWriterAddr], the writer of the `S` of
+  /// `declare(public_address(S))`; a declaration already standing is
+  /// superseded and its stream closed.  The stream is given the present
+  /// address at once.
+  void declarePublicAddress(HeapCell streamWriterAddr) {
+    runtime.publicAddressStreams.declare(publicAddressKey, streamWriterAddr);
+    final present = addressTerm(presentPublicAddress());
+    _trace('[MAD $agentId] declare public_address: stream '
+        'writer=$streamWriterAddr, present $present');
+    runtime.publicAddressStreams.deliver(publicAddressKey, present);
+  }
+
+  /// Declare a watch on the local network the agent is attached to, its
+  /// stream growing from [streamWriterAddr], the writer of the `S` of
+  /// `declare(network(S))`; a declaration already standing is superseded and
+  /// its stream closed.  The stream is given the present network at once.
+  void declareNetwork(HeapCell streamWriterAddr) {
+    runtime.networkStreams.declare(networkKey, streamWriterAddr);
+    final present = networkTerm(presentNetwork());
+    _trace('[MAD $agentId] declare network: stream writer=$streamWriterAddr, '
+        'present $present');
+    runtime.networkStreams.deliver(networkKey, present);
+  }
+
+  /// The layer reported the agent's public address changed to [newAddress],
+  /// null where it is lost, `onConnectivityStatusChanged(old, new)`.  Called
+  /// by the host that binds the network.
+  void publicAddressChanged(String? newAddress) {
+    final declaration =
+        runtime.publicAddressStreams.standing(publicAddressKey);
+    if (declaration == null) return;
+    final address = addressTerm(newAddress);
+    final sink = publicAddressSink;
+    if (sink != null) {
+      sink(address, declaration);
+    } else {
+      deliverPublicAddress(address, declaration: declaration);
+    }
+  }
+
+  /// The layer reported the local network changed to [newId], null where the
+  /// agent is attached to none, `onNetworkChanged(old, new)`.  Called by the
+  /// host that binds the network.
+  void networkChanged(String? newId) {
+    final declaration = runtime.networkStreams.standing(networkKey);
+    if (declaration == null) return;
+    final net = networkTerm(newId);
+    final sink = networkSink;
+    if (sink != null) {
+      sink(net, declaration);
+    } else {
+      deliverNetwork(net, declaration: declaration);
+    }
+  }
+
+  /// Deliver [address] on the public-address stream, serializer-fashion; one
+  /// answering a [declaration] that no longer stands, removed or superseded,
+  /// is dropped.
+  void deliverPublicAddress(Term address, {required int declaration}) {
+    if (!runtime.publicAddressStreams
+        .isStanding(publicAddressKey, declaration)) {
+      _trace('[MAD $agentId] public address $address for a declaration that '
+          'no longer stands --- dropped');
+      return;
+    }
+    runtime.publicAddressStreams.deliver(publicAddressKey, address);
+    _trace('[MAD $agentId] public_address: $address');
+  }
+
+  /// Deliver [net] on the network stream, serializer-fashion; one answering
+  /// a [declaration] that no longer stands, removed or superseded, is
+  /// dropped.
+  void deliverNetwork(Term net, {required int declaration}) {
+    if (!runtime.networkStreams.isStanding(networkKey, declaration)) {
+      _trace('[MAD $agentId] network $net for a declaration that no longer '
+          'stands --- dropped');
+      return;
+    }
+    runtime.networkStreams.deliver(networkKey, net);
+    _trace('[MAD $agentId] network: $net');
+  }
+
   /// The layer's session with [pk] as reported, or null where it has none:
   /// its attested application, null where the session is unattested.  Where
   /// the peer is connected over more than one underlay, the application
@@ -1193,9 +1365,10 @@ class MadContext {
     onPlaceEventDelivered?.call();
   }
 
-  /// The ground presentation of a global name (§Global Variable Names): the
-  /// 2-ary structures `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity,
-  /// first argument the anchor. This is the form a program sees — not the wire
+  /// The ground presentation of a global name (IGLP cec4682, "Global
+  /// Variable Names"): the 3-ary structures `'_r'(P, E, I)` and `'_w'(P, E,
+  /// I)`, functor giving polarity, first argument the anchor, second its
+  /// epoch, third the index.  This is the form a program sees — not the wire
   /// form, which stands in the place of a variable.
   static Term groundGlobalName(GlobalName gn) => gn.toStruct();
 
@@ -1984,18 +2157,10 @@ class MadContext {
   /// A held request answered, the next requester held for the same link is
   /// reported in its turn (§Held Links), within this transaction.
   bool answerLink(GlobalName gn, bool authorise) {
-    // The program answers with the 2-ary presentation of the name, the
-    // epoch not at issue to it: the link reported is the one of that anchor,
-    // index and polarity (IGLP db0a117, "Global Variable Names").
-    final reported = _reportedLinks.keys
-        .where((k) =>
-            k.agent == gn.agent &&
-            k.index == gn.index &&
-            k.isWriter == gn.isWriter)
-        .toList();
-    final name = reported.length == 1 ? reported.single : gn;
-    final answered = _answerLink(name, authorise);
-    if (answered && !name.isWriter) _reportNextHeldRequest(name);
+    // The program answers with the name the report carried, epoch and all
+    // (IGLP cec4682, "Global Variable Names").
+    final answered = _answerLink(gn, authorise);
+    if (answered && !gn.isWriter) _reportNextHeldRequest(gn);
     _flushReports();
     return answered;
   }
@@ -2296,7 +2461,12 @@ class MadContext {
   /// The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer
   /// address (index 0) or a normal global name (index > 0):
   ///
-  /// **Case G = `_w(q, 0)` (Serializer)**:
+  /// G is the program's name of the link, `_w(p, e, i)` or `_r(p, e, i)`,
+  /// its agent [gnAgent], its epoch [gnEpoch] and its index [gnIndex] (IGLP
+  /// cec4682, "Global Variable Names": the program's name is the 3-ary
+  /// structure).
+  ///
+  /// **Case G = `_w(q, 0, 0)` (Serializer)**:
   /// 1. Globalizes term T for remote agent Q
   /// 2. Allocates a serial i from the agent's global-name counter, one per
   ///    message, so that (this agent, i) is unique for the whole run as every
@@ -2307,7 +2477,8 @@ class MadContext {
   /// **Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
   /// 1. Globalizes term T for remote agent Q
   /// 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
-  void send(Term term, bool isWriter, String gnAgent, int gnIndex, String destAgent) {
+  void send(Term term, bool isWriter, String gnAgent, int gnEpoch, int gnIndex,
+      String destAgent) {
     // The global name's agent and the destination, each a key or a readable
     // name standing for one, resolved to the one agent ([resolveAgent]).
     final resolve = resolveAgent;
@@ -2354,14 +2525,10 @@ class MadContext {
     final globalizedTerm = globalizeTermWithResult(term, vars, globalizeResult);
     _trace('[MAD $agentId] send: globalized term = $globalizedTerm');
 
-    // The global name, with its epoch: the program gives the 2-ary form,
-    // the epoch not at issue to it, and the runtime supplies the epoch
-    // ([_epochOfProgramName]).
+    // The global name as the program gave it, epoch included.
     final globalName = isWriter
-        ? GlobalName.writer(gnAgent, gnIndex,
-            epoch: _epochOfProgramName(true, gnAgent, gnIndex))
-        : GlobalName.reader(gnAgent, gnIndex,
-            epoch: _epochOfProgramName(false, gnAgent, gnIndex));
+        ? GlobalName.writer(gnAgent, gnIndex, epoch: gnEpoch)
+        : GlobalName.reader(gnAgent, gnIndex, epoch: gnEpoch);
 
     // Create payload based on serializer (index 0) vs normal (index > 0)
     List<int> payload;
@@ -2404,30 +2571,5 @@ class MadContext {
 
     _trace('[MAD $agentId] send: queued message to $destAgent, mp.totalLength=${mp.totalLength}');
     _flushReports();
-  }
-
-  /// The epoch of the name `_w(agent, index)` or `_r(agent, index)` a program
-  /// gives `'_send'/3` in its 2-ary presentation (IGLP db0a117, "Global
-  /// Variable Names": "Where the epoch is not at issue we write _w(p, i) for
-  /// _w(p, e_p, i)"): 0 for the serializer; this agent's epoch for a name
-  /// anchored here; for a writer name anchored elsewhere, the epoch the
-  /// record of its link holds, the name's; for a reader name anchored
-  /// elsewhere, its entry's; and, where the agent holds no end of the link,
-  /// the epoch known of the anchor, or 1.
-  int _epochOfProgramName(bool isWriter, String agent, int index) {
-    if (isWriter && index == 0) return 0;
-    if (agent == agentId) return _epoch;
-    if (isWriter) {
-      for (final rec in up.all) {
-        if (rec.anchor == agent && rec.index == index) return rec.epoch;
-      }
-    } else {
-      for (final e in wp.localizeEntries) {
-        if (e.remoteAgent == agent && e.remoteIndex == index) {
-          return e.remoteEpoch;
-        }
-      }
-    }
-    return _knownEpochs[agent] ?? 1;
   }
 }

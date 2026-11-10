@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.2 and cites a clause as TC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCorp, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-10, written by GO #3 Cowork.
 % Schemas: TC.glp beside this file.
 TC: Trading Company
 TC instantiates the bylaws of GCorp and restricts it.
@@ -15,7 +15,7 @@ Alice, Bob, Carol, Dave and Eve are persons, Orga a trading company.
 5. ■ Sale.  Carol, a seller, and Eve, who know each other, may jointly decide that Eve pays Orga coins for a good Orga holds, which is then sold to Eve and Orga holds it no more.
 6. ○ Keeping.  Bob, a keeper, keeps every good Orga holds, and releases a good sold to Eve to Eve.
 Pragmas
-Look: 📦, corporation
+Look: 📦, money
 Organisations: the organisations Alice participates in, and her roles in each.
 Founding: Alice [Found] <organisation> <bylaws> <role>
 Acts of the organisation: Bob [Propose] <act>
@@ -23,14 +23,14 @@ Acts of the organisation: Bob [Propose] <act>
   Bob [Propose as named] <act>
   Bob [Vote as named] <credential>
 Participation: Bob [Join]
-  Orga: Bob asks to participate.
+  Otto: Bob asks to participate.
   Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
+  Otto [Expel]
+Officers: Otto [Appoint] <role>
   Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
+  Otto [Dismiss] <role>
   Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
+Amendment: Otto [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
 Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
@@ -45,5 +45,3 @@ Purchase: Alice [Buy] <supplier> <amount> <good>
 Receipt: Bob [Record receipt]
 Sale: Carol [Sell] <buyer> <amount>
   Eve: Carol offers you a good.
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).

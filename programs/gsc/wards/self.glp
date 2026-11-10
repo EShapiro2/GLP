@@ -1,7 +1,7 @@
 % ---------------------------------------------------------------------------
 % The condition on a contract with wards, GAI's (Coordination Appendix B;
-% Udi, 2026-10-20): GAI's appendix "Contracts with Wards", /Grassroots/GAI,
-% sections/wards.tex, and def:sg-wards of CSSN's paper.  This directory is a
+% Udi, 2026-10-20): GSC's Section 8, "Contracts with Wards", /Grassroots/GSC,
+% sections/07c-wards.tex at GSC a885275, and def:sg-wards of CSSN's paper.  This directory is a
 % child of the checker, programs/gsc, so that the checker's modules may call
 % it, a cross-module qualifier naming a child directory of the caller's
 % directory (TGLP, Section "Module System", "Cross-module type checking"),

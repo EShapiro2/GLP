@@ -1,14 +1,21 @@
 // glp_runtime/test/analysis/assignment_result_type_test.dart
 //
 // The type of the result of `:=` (TGLP typed-constant-readers.tex, "Type
-// checking of :=", 6858789): "The root declares the body kernel :=(Number,
+// checking of :=", 1962166): "The root declares the body kernel :=(Number,
 // Exp?) ... A goal X := E is checked with the type of X taken as Integer where
 // E is an integer expression --- an integer literal, a reader of type Integer,
 // one of +, -, *, //, mod or abs over integer expressions, or integer, round,
-// floor or ceil over any expression --- and as
-// Number otherwise, / and the remaining functions of Exp yielding a Number
-// whatever their operands; so N1 := N? + 1 with N an Integer types N1 as
-// Integer, which the monitor of Section [typed-glp-examples] needs."
+// floor or ceil over any expression ---, as Real where E is a real expression
+// --- a real literal, a reader of type Real, one of /, real, sqrt, sin, cos,
+// tan, asin, acos, atan, exp, ln or log over any expression, one of +, -, * or
+// pow with an operand a real expression, or abs over a real expression --- and
+// as Number otherwise; so N1 := N? + 1 with N an Integer types N1 as Integer,
+// which the monitor of Section [typed-glp-examples] needs, and Z := X? + Y?
+// with X and Y of type Real types Z as Real.  pow over integers is a Number, a
+// negative exponent yielding a real."  Until 2026-11-10 (TGLP 6858789) / and
+// the functions yielded a Number whatever their operands, and no typed
+// procedure could give a computed real the type Real (Code, GLP_inbox
+// 2026-11-07 20:37 UTC; GLP #14, Code_inbox 2026-11-10 12:03 UTC, item 1).
 //
 // Until 2026-10-02 a `:=` goal was not type-checked at all (root_scope.dart's
 // builtinGoals); checked against the root's declaration alone, its writer was a
@@ -117,21 +124,110 @@ void main() {
     });
   });
 
-  group('and as Number otherwise', () {
-    test('/ yields a Number whatever its operands', () {
+  group('X := E types X as Real where E is a real expression', () {
+    test("the smallest case of Code's report: Z := X? + Y? with X and Y of "
+        'type Real, at f(Real?, Real?, Real)', () {
+      expect(
+          load('procedure f(Real?, Real?, Real).\n'
+              'f(X, Y, Z?) :- Z := X? + Y?.\n'),
+          isTrue);
+    });
+
+    test('a real literal', () {
+      expect(load('procedure r(Real).\nr(X?) :- X := 1.5.\n'), isTrue);
+      expect(load('procedure r(Real).\nr(X?) :- X := 1.5 + 1.\n'), isTrue);
+    });
+
+    test('a reader of type Real, under + - * and pow with any other operand',
+        () {
+      for (final e in ['X? + 1', '2 - X?']) {
+        expect(
+            load('procedure f(Real?, Real).\nf(X, Z?) :- Z := $e.\n'),
+            isTrue,
+            reason: '$e is a real expression');
+      }
+      for (final e in ['X? * N?', 'pow(N?, X?)']) {
+        expect(
+            load('procedure f(Real?, Integer?, Real).\n'
+                'f(X, N, Z?) :- Z := $e.\n'),
+            isTrue,
+            reason: '$e is a real expression');
+      }
+    });
+
+    test('/, real, sqrt, sin, cos, tan, asin, acos, atan, exp, ln and log '
+        'over any expression', () {
+      expect(
+          load('procedure half(Integer?, Real).\n'
+              'half(N, H?) :- H := N? / 2.\n'),
+          isTrue);
+      for (final f in [
+        'real', 'sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'exp',
+        'ln', 'log'
+      ]) {
+        expect(
+            load('procedure c(Integer?, Real).\n'
+                'c(N, X?) :- X := $f(N?).\n'),
+            isTrue,
+            reason: '$f yields a Real whatever its operand');
+      }
+    });
+
+    test('abs over a real expression', () {
+      expect(
+          load('procedure a(Real?, Real).\na(X, Y?) :- Y := abs(X? - 7).\n'),
+          isTrue);
+    });
+
+    test('a result typed Real is a reader of type Real for another :=, in '
+        'either order', () {
+      expect(
+          load('procedure g(Integer?, Real).\n'
+              'g(N, Y?) :- X := N? / 2, Y := X? * 2.\n'),
+          isTrue);
+      expect(
+          load('procedure g(Integer?, Real).\n'
+              'g(N, Y?) :- Y := X? * 2, X := N? / 2.\n'),
+          isTrue);
+    });
+
+    test('a real expression is no integer expression: refused where an '
+        'Integer is produced', () {
       refused(
           'procedure half(Integer?, Integer).\n'
               'half(N, H?) :- H := N? / 2.\n',
-          'a Number is handed where an Integer is produced');
+          'a Real is handed where an Integer is produced');
+      refused('procedure f(Real?, Integer).\nf(X, Z?) :- Z := X? + 1.\n',
+          'a Real is handed where an Integer is produced');
+    });
+
+    test('a Real is a Number: accepted where a Number is produced', () {
       expect(
           load('procedure half(Integer?, Number).\n'
               'half(N, H?) :- H := N? / 2.\n'),
           isTrue);
     });
+  });
 
-    test('a real literal', () {
-      refused('procedure r(Integer).\nr(X?) :- X := 1.5 + 1.\n',
+  group('and as Number otherwise', () {
+    test('pow over integers is a Number: neither an Integer nor a Real', () {
+      expect(
+          load('procedure p(Integer?, Number).\np(N, X?) :- X := pow(2, N?).\n'),
+          isTrue);
+      refused('procedure p(Integer?, Integer).\np(N, X?) :- X := pow(2, N?).\n',
           'a Number is handed where an Integer is produced');
+      refused('procedure p(Integer?, Real).\np(N, X?) :- X := pow(2, N?).\n',
+          'a Number is handed where a Real is produced');
+    });
+
+    test('+ over a Number and an Integer is a Number', () {
+      refused('procedure f(Number?, Real).\nf(N, X?) :- X := N? + 1.\n',
+          'a Number is handed where a Real is produced');
+    });
+
+    test('a real literal is no integer expression', () {
+      refused('procedure r(Integer).\nr(X?) :- X := 1.5 + 1.\n',
+          'a Real is handed where an Integer is produced');
     });
 
     test('a reader of type Number', () {

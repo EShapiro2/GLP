@@ -1,12 +1,20 @@
-/// The declarations an agent has made to the networking layer and that stand: the record the store keeps of them, so that at a restart the runtime makes each to the new layer again (IGLP 0c77e47, Implementation Notes, "Persistence": the store keeps "every declaration standing --- the peers, the addresses, the rendezvous servers, the trust levels, the places, the nearby and reachable declarations"; "The layer starts empty at every launch, and at a restart the runtime makes every declaration the store holds to it again before any goal of the agent is reduced").
+/// The declarations an agent has made to the networking layer and that stand: the record the store keeps of them, so that at a restart the runtime makes each to the new layer again (IGLP 07a2b00, Implementation Notes, "Persistence": the store keeps "every standing declaration --- the peers, the addresses, the rendezvous servers, the trust levels, the places, each with the centre it was declared about, and the nearby, reachable, public-address and network declarations"; "The networking layer keeps no declaration across a launch: at a restart, before the first goal is reduced, the runtime declares to the layer again every declaration the saved state holds").
 ///
-/// Recorded here are the declarations a layer function receives: a peer, an address, a rendezvous server and a trust level, each where a layer is bound and took it, and a place, with its radius and, once the layer has answered, the centre the layer registered it about ([placeCentre]; IGLP 96cd44a, "Persistence": "the places with the centre each was declared about"; "at a restart the runtime makes every declaration the store holds to it again ..., each place about the centre the store holds for it"), whether a layer is bound or none is, since a place declaration stands either way ("One interface": "a place declaration records the place").  A place's stream and the number of its standing declaration are [GlpRuntime.placeStreams]'; a nearby or reachable declaration calls no layer function, and stands in its stream's bookkeeping alone ([GlpRuntime.nearbyStreams], [GlpRuntime.reachableStreams]), fed by what the new layer reports.  A removal takes off what it removes: `remove(peer(P))` the peer and any address recorded for it (GLP-Spec appendix-guards, "Networking seam": "takes P, and any address recorded for it, off the layer's known peers"), `remove(rendezvous(P))` the server, `remove(place(P))` the place.  A further declaration of the same peer's address, the same server, the same underlay's trust level or the same place replaces the one standing and is put last, so the record holds the declarations in the order in which the standing ones were made, and a restart makes them to the new layer in that order.
+/// Recorded here are the declarations a layer function receives: a peer, an address, a rendezvous server and a trust level, each where a layer is bound and took it, and a place, with its radius and, once the layer has answered, the centre the layer registered it about ([placeCentre]; IGLP 96cd44a, "Persistence": "the places with the centre each was declared about"; "at a restart the runtime makes every declaration the store holds to it again ..., each place about the centre the store holds for it"), whether a layer is bound or none is, since a place declaration stands either way ("One interface": "a place declaration records the place").  A place's stream and the number of its standing declaration are [GlpRuntime.placeStreams]'; a nearby or reachable declaration calls no layer function, and stands in its stream's bookkeeping alone ([GlpRuntime.nearbyStreams], [GlpRuntime.reachableStreams]), fed by what the new layer reports; a public-address or network declaration calls no layer function either, and is recorded here besides its stream's bookkeeping ([GlpRuntime.publicAddressStreams], [GlpRuntime.networkStreams]), so that a restart gives its standing stream the new layer's present value (the GLP paper f265fec, "Networking seam": each stream "beginning with" the present value "when it is declared").  A removal takes off what it removes: `remove(peer(P))` the peer and any address recorded for it (GLP-Spec appendix-guards, "Networking seam": "takes P, and any address recorded for it, off the layer's known peers"), `remove(rendezvous(P))` the server, `remove(place(P))` the place.  A further declaration of the same peer's address, the same server, the same underlay's trust level or the same place replaces the one standing and is put last, so the record holds the declarations in the order in which the standing ones were made, and a restart makes them to the new layer in that order.
 library;
 
 import 'saved_state.dart';
 
 /// The kind of a standing declaration: the alternative of Declaration it was made by.
-enum SeamDeclarationKind { peer, address, rendezvous, trust, place }
+enum SeamDeclarationKind {
+  peer,
+  address,
+  rendezvous,
+  trust,
+  place,
+  publicAddress,
+  network
+}
 
 /// A standing declaration: its [kind] and its arguments as the layer was given them --- a peer's key as 64 lowercase hex characters, an address, an underlay's and a level's names, a place's printed name and its radius printed, and then, where the layer has answered with the centre it registered the place about, its latitude and its longitude printed, in degrees.
 class StandingDeclaration {
@@ -20,7 +28,7 @@ class StandingDeclaration {
 }
 
 class SeamDeclarations {
-  /// The standing declarations, in the order they were made, by what a further declaration replaces: `peer:K`, `address:K`, `rendezvous:K`, `trust:U` and `place:P`.
+  /// The standing declarations, in the order they were made, by what a further declaration replaces: `peer:K`, `address:K`, `rendezvous:K`, `trust:U`, `place:P`, `public_address` and `network`.
   final Map<String, StandingDeclaration> _standing = {};
 
   /// The standing declarations, in the order they were made.
@@ -75,6 +83,20 @@ class SeamDeclarations {
 
   /// `remove(place(P))`.
   void removePlace(String place) => _standing.remove('place:$place');
+
+  /// `declare(public_address(S))`: the one public-address declaration, a further one replacing it (the GLP paper f265fec, "Networking seam").
+  void publicAddress() => _put('public_address',
+      const StandingDeclaration(SeamDeclarationKind.publicAddress, []));
+
+  /// `remove(public_address)`.
+  void removePublicAddress() => _standing.remove('public_address');
+
+  /// `declare(network(S))`: the one network declaration, a further one replacing it.
+  void network() =>
+      _put('network', const StandingDeclaration(SeamDeclarationKind.network, []));
+
+  /// `remove(network)`.
+  void removeNetwork() => _standing.remove('network');
 
   /// Write the standing declarations, in order.
   void saveState(StateWriter w) {

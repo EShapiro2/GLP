@@ -83,7 +83,6 @@ class DirectoryAgent {
       agentId: 'directory',
       program: program,
       rootSelfGlpPath: rootSelf,
-      keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
       network: HeadlessGlpNetwork(layer),
       stateStore: state,
     );
