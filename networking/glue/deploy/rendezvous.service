@@ -1,12 +1,16 @@
 # systemd unit for the rendezvous server (GNA Section 6),
 # networking/glue/bin/rendezvous_server.dart, on the peoplesweb VPS.
 # Deployed to /etc/systemd/system/rendezvous.service.  Runs as the system user
-# `glp` from the clone at /srv/glp, with the Flutter SDK's Dart, which the glue
-# package needs.  The server's key, its layer's fair-delivery queue and its
-# agent's local state are in /var/lib/glp, outside the clone, so a sweep leaves
-# them be; the state file keeps the agent's registrations and the requests
-# awaiting their match across a restart (IGLP, Definition "Restart").  The
-# firewall lets UDP port 9516 in.
+# `glp` from the servers' own clone, /srv/glp-servers, with the Flutter SDK's
+# Dart, which the glue package needs; its program and the root self.glp are
+# read from that clone at each start.  tools/live/update_servers.sh alone moves
+# the clone, to the commit of main it is given, so a restart runs what the
+# script last installed; the site's hourly sweep pulls /srv/glp, the site's
+# clone, and does not touch this one (GSA #3, 2026-11-10).  The server's key,
+# its layer's fair-delivery queue and its agent's local state are in
+# /var/lib/glp, outside the clone; the state file keeps the agent's
+# registrations and the requests awaiting their match across a restart (IGLP,
+# Definition "Restart").  The firewall lets UDP port 9516 in.
 [Unit]
 Description=The rendezvous server (GNA Section 6) at 162.35.126.126:9516
 After=network.target
@@ -14,12 +18,12 @@ After=network.target
 [Service]
 User=glp
 Group=glp
-WorkingDirectory=/srv/glp/networking/glue
-ExecStart=/opt/flutter/bin/dart run bin/rendezvous_server.dart --identity /var/lib/glp/rv-identity.json --port 9516 --public-address 162.35.126.126:9516 --outbound-queue-file /var/lib/glp/rv-queue.json --state-file /var/lib/glp/rv-state --program /srv/glp/programs/examples/rendezvous/rv_agent.glp --root-self /srv/glp/programs/self.glp
+WorkingDirectory=/srv/glp-servers/networking/glue
+ExecStart=/opt/flutter/bin/dart run bin/rendezvous_server.dart --identity /var/lib/glp/rv-identity.json --port 9516 --public-address 162.35.126.126:9516 --outbound-queue-file /var/lib/glp/rv-queue.json --state-file /var/lib/glp/rv-state --program /srv/glp-servers/programs/examples/rendezvous/rv_agent.glp --root-self /srv/glp-servers/programs/self.glp
 Restart=on-failure
 NoNewPrivileges=yes
 ProtectSystem=full
-ReadWritePaths=/srv/glp /var/lib/glp
+ReadWritePaths=/srv/glp-servers /var/lib/glp
 
 [Install]
 WantedBy=multi-user.target

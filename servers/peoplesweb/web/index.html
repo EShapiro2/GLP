@@ -682,7 +682,7 @@ function stripHtml(c){
     + (why ? `<p class="stopwhy">Stopped at ${steps[stop][0].toLowerCase()}: ${esc(why)}</p>` : '');
 }
 // Each relation the contract's box states, checked against the schemas by
-// GSC's Section 8 (GSA, 2026-11-09): agrees, agrees given an invariant,
+// GSC's Relations among Contracts (sec:relations; GSA, 2026-11-09): agrees, agrees given an invariant,
 // disagrees, or not checked, with the reason.
 function relsHtml(c){
   if (!c.checks || !c.checks.length) return '';

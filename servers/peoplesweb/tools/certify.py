@@ -1,8 +1,9 @@
 """What the site's build asks of GLP itself, through the REPL (bin/glpc):
 
 - relations(): each contract's stated relation to the contracts it names,
-  checked against their schemas by GSC's Section 8 definitions (Amendment,
-  extension, instantiation; Implementation, restriction): an extension keeps
+  checked against their schemas by the definitions of GSC's Relations among
+  Contracts, sec:relations (Amendment, extension, instantiation;
+  Implementation, restriction): an extension keeps
   every schema of what it extends; an amendment deletes and adds; a
   restriction is decided by GSC's checker, restricts/3 of programs/gsc, by the
   syntactic conditions of Proposition Syntactic restrictions; an

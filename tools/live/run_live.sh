@@ -62,10 +62,12 @@ part_vps() {
     [ "$s" = active ] || [ "$v" = INFO ] || v=FAIL
     echo "RESULT 0-unit-$u $v $u: $s" >> "$f"
   done
-  echo "RESULT 0-clone INFO /srv/glp at $(ssh_vps 'git -C /srv/glp log -1 --format="%h %ci"')" >> "$f"
+  # The servers run from their own clone, /srv/glp-servers, which
+  # update_servers.sh alone moves; /srv/glp is the site's (GSA #3, 2026-11-10).
+  echo "RESULT 0-clone INFO /srv/glp-servers at $(ssh_vps 'sudo -u glp git -C /srv/glp-servers log -1 --format="%h %ci"')" >> "$f"
   started=$(ssh_vps 'date -d "$(systemctl show rendezvous -p ActiveEnterTimestamp --value)" +%s')
-  changed=$(ssh_vps 'git -C /srv/glp log -1 --format=%ct -- programs/examples/rendezvous/rv_agent.glp')
-  last=$(ssh_vps 'git -C /srv/glp log -1 --format="%h %ci" -- programs/examples/rendezvous/rv_agent.glp')
+  changed=$(ssh_vps 'sudo -u glp git -C /srv/glp-servers log -1 --format=%ct -- programs/examples/rendezvous/rv_agent.glp')
+  last=$(ssh_vps 'sudo -u glp git -C /srv/glp-servers log -1 --format="%h %ci" -- programs/examples/rendezvous/rv_agent.glp')
   if [ "$started" -ge "$changed" ]; then
     echo "RESULT 0-rv-agent-current PASS the rendezvous server started $(date -u -r "$started" '+%F %T') UTC, after rv_agent.glp's last change ($last)" >> "$f"
   else

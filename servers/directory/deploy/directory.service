@@ -1,12 +1,16 @@
 # systemd unit for GDS, the Grassroots Directory Service (GNA Section 7),
 # servers/directory.  Deployed to /etc/systemd/system/directory.service.
-# Runs as the system user `glp` the executable built from the clone at
-# /srv/glp into /srv/directory (README, "The server"): the directory's agent
-# on the headless layer under the directory's own key, at UDP port 9518 and
-# the public address GDS_PUBLIC_ADDRESS, and the web server for its page.
-# Its key, its layer's queue, its agent's state and the store of listings are
-# in /var/lib/glp,
-# outside the clone, so a sweep leaves them be.
+# Runs as the system user `glp` the executable built from the servers' own
+# clone, /srv/glp-servers, into /srv/directory (README, "The server"): the
+# directory's agent on the headless layer under the directory's own key, at
+# UDP port 9518 and the public address GDS_PUBLIC_ADDRESS, and the web server
+# for its page.  Its program and the root self.glp are read from that clone at
+# each start.  tools/live/update_servers.sh alone moves the clone, to the
+# commit of main it is given, and builds the executable from it, so a restart
+# runs what the script last installed; the site's hourly sweep pulls /srv/glp,
+# the site's clone, and does not touch this one (GSA #3, 2026-11-10).  Its
+# key, its layer's queue, its agent's state and the store of listings are in
+# /var/lib/glp, outside the clone, its working directory.
 # Caddy, in front (servers/peoplesweb/deploy/Caddyfile), proxies
 # peoplesweb.org/directory to the page.  /etc/glp/directory.env gives
 # GDS_PUBLIC_ADDRESS and the SMTP relay; without SMTP_HOST the verification
@@ -21,7 +25,7 @@ Group=glp
 WorkingDirectory=/var/lib/glp
 Environment=HOST=127.0.0.1 PORT=8090 BASE_URL=https://peoplesweb.org DATA=/var/lib/glp/directory.json
 EnvironmentFile=/etc/glp/directory.env
-ExecStart=/srv/directory/bundle/bin/directory_server --identity /var/lib/glp/gds-identity.json --port 9518 --public-address ${GDS_PUBLIC_ADDRESS} --outbound-queue-file /var/lib/glp/gds-queue.json --state-file /var/lib/glp/gds-state --program /srv/glp/programs/examples/rendezvous/gds_agent.glp --root-self /srv/glp/programs/self.glp
+ExecStart=/srv/directory/bundle/bin/directory_server --identity /var/lib/glp/gds-identity.json --port 9518 --public-address ${GDS_PUBLIC_ADDRESS} --outbound-queue-file /var/lib/glp/gds-queue.json --state-file /var/lib/glp/gds-state --program /srv/glp-servers/programs/examples/rendezvous/gds_agent.glp --root-self /srv/glp-servers/programs/self.glp
 Restart=on-failure
 NoNewPrivileges=yes
 ProtectSystem=full

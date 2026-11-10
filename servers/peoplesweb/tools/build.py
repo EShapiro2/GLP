@@ -175,7 +175,7 @@ RELATIONS = ('extends', 'restricts', 'amends', 'implements', 'instantiates')
 
 
 def extends_of(c, lines):
-    """The relation a contract states and the contracts it relates to: the box's own first line, 'NAME amends GSN and GFP (cite).' (style guide, 36; GSC, Section 8), wherever it stands among the text's lines, or failing it the same sentence in a % line (DGC's); failing both, the % Extends or % Restricts line, its first sentence, less the contracts named only 'through' another."""
+    """The relation a contract states and the contracts it relates to: the box's own first line, 'NAME amends GSN and GFP (cite).' (style guide, 36; GSC, Relations among Contracts, sec:relations), wherever it stands among the text's lines, or failing it the same sentence in a % line (DGC's); failing both, the % Extends or % Restricts line, its first sentence, less the contracts named only 'through' another."""
     rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS) + r') ([^.(]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
         m = rel.search(l)
@@ -333,7 +333,7 @@ for c in contracts:
                 s['from'] = a
 
 # The relations each contract states, checked against the schemas (GSC,
-# Section 8), and each app of programs/apps as a certified artefact, both
+# Relations among Contracts, sec:relations), and each app of programs/apps as a certified artefact, both
 # through the REPL and cached (tools/certify.py); CERTIFY=0 skips both, for a
 # quick build of the pages alone.
 if os.environ.get('CERTIFY', '1') != '0':

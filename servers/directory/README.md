@@ -36,12 +36,13 @@ The web side takes the environment: `HOST` (default 127.0.0.1), `PORT` (default 
 
 ## The server
 
-On the peoplesweb VPS, as root, the clone at /srv/glp as for peoplesweb, with the Flutter SDK and libsodium installed as for the rendezvous server:
+On the peoplesweb VPS, as root, with the Flutter SDK and libsodium installed as for the rendezvous server.  The directory and the rendezvous server run from a clone of their own, /srv/glp-servers, which `tools/live/update_servers.sh` alone creates and moves, to the commit of main it is given; it installs both units from that clone and builds the directory's executable from it.  The site's hourly sweep pulls /srv/glp, the site's clone, and does not touch it, so a restart runs what the script last installed (GSA #3, 2026-11-10).  The first time, with `/etc/glp/directory.env` written as below:
 
-    cd /srv/glp/servers/directory && dart pub get && dart build cli -t bin/directory_server.dart -o /srv/directory
     mkdir -p /etc/glp /var/lib/glp && chown glp:glp /var/lib/glp
-    cp /srv/glp/servers/directory/deploy/directory.service /etc/systemd/system/
-    systemctl daemon-reload && systemctl enable --now directory
+
+then, from the Mac, `bash tools/live/update_servers.sh <commit of main> --go`, which creates the clone, builds the executable into /srv/directory, installs the unit and starts it; then, as root, so the unit starts at boot and Caddy proxies its page (the Caddyfile is the site's, from the site's clone):
+
+    systemctl enable directory
     cp /srv/glp/servers/peoplesweb/deploy/Caddyfile /etc/caddy/Caddyfile
     systemctl reload caddy
 
