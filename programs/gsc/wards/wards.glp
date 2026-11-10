@@ -813,11 +813,13 @@ uv_deleted_ok([S|Ss], V, U, R?) :- ground(S?), ground(Ss?), ground(V?), ground(U
     uv_deleted_ok(Ss?, V?, U?, A2),
     both_yes(A1?, A2?, R).
 
-% C has guardianships (GSC 070c5d1, the last sentence of def:guardianship):
-% every mark in M has one, and every guarding role of every schema of C
-% forbids iota, requires f, or requires a mark in M and an atom of the u of
-% its guardianship.  Decided on a choice Gs of one guardianship per mark of
-% M (try_combos).
+% C has guardianships (GSC 0a30d52, the last sentence of def:guardianship):
+% every mark in M has one, and every guarding role pi of every schema of C
+% forbids iota, requires f, requires a mark in M and an atom of the u of its
+% guardianship, or has in the body of its schema that pi can act, "the safe
+% formula f(pi) or, over the marks m of M that are not passive, m(pi) and
+% exists x, zs u_m(pi, x, zs)" (can_act).  Decided on a choice Gs of one
+% guardianship per mark of M (try_combos).
 procedure req_mark_u(Atoms?, Guardianships?, Ans).
 req_mark_u(_, [], no).
 req_mark_u(Req, [guardianship(Mk, _, U)|Gs], R?) :-
@@ -828,41 +830,145 @@ req_mark_u(Req, [guardianship(Mk, _, U)|Gs], R?) :-
     req_mark_u(Req?, Gs?, A3),
     or_yes(A12?, A3?, R).
 
-procedure guard_role_ok(Ans?, Atoms?, Atoms?, Constant?, Constant?, Guardianships?, Ans).
+% gp(Io, F, Gs, AMs): what a guarding role is held to, AMs the marks of M
+% that are not passive.
+procedure guard_role_ok(Ans?, Atoms?, Atoms?, Forms?, Integer?, GuardParts?, Ans).
 guard_role_ok(no, _, _, _, _, _, yes).
-guard_role_ok(yes, Req, N, Io, F, Gs, R?) :-
-    ground(Req?), ground(N?), ground(Io?), ground(F?), ground(Gs?) |
+guard_role_ok(yes, Req, N, Fs, I, gp(Io, F, Gs, AMs), R?) :-
+    ground(Req?), ground(N?), ground(Fs?), integer(I?), ground(Io?), ground(F?), ground(Gs?),
+    ground(AMs?) |
     atoms_member(N?, atom(Io?, []), A1),
     atoms_member(Req?, atom(F?, []), A2),
     req_mark_u(Req?, Gs?, A3),
+    can_act(Fs?, I?, F?, AMs?, Gs?, A4),
     or_yes(A1?, A2?, A12),
-    or_yes(A12?, A3?, R).
+    or_yes(A3?, A4?, A34),
+    or_yes(A12?, A34?, R).
 
-procedure roles_guard_ok(RoleSpecs?, Constant?, Constant?, Guardianships?, Ans).
+procedure roles_guard_ok(RoleSpecs?, Forms?, Integer?, GuardParts?, Ans).
 roles_guard_ok([], _, _, _, yes).
-roles_guard_ok([RS|Rs], Io, F, Gs, R?) :-
-    ground(RS?), ground(Rs?), ground(Io?), ground(F?), ground(Gs?) |
+roles_guard_ok([RS|Rs], Fs, I, P, R?) :-
+    ground(RS?), ground(Rs?), ground(Fs?), integer(I?), ground(P?) |
     is_guarding(RS?, G),
     rs_req(RS?, Req),
     rs_forb(RS?, N),
-    guard_role_ok(G?, Req?, N?, Io?, F?, Gs?, A1),
-    roles_guard_ok(Rs?, Io?, F?, Gs?, A2),
+    guard_role_ok(G?, Req?, N?, Fs?, I?, P?, A1),
+    I1 := I? + 1,
+    roles_guard_ok(Rs?, Fs?, I1?, P?, A2),
     both_yes(A1?, A2?, R).
 
-procedure guards_ok(Contract?, Constant?, Constant?, Guardianships?, Ans).
-guards_ok([], _, _, _, yes).
-guards_ok([S|Ss], Io, F, Gs, R?) :-
-    ground(S?), ground(Ss?), ground(Io?), ground(F?), ground(Gs?) |
+procedure guards_ok(Contract?, GuardParts?, Ans).
+guards_ok([], _, yes).
+guards_ok([S|Ss], P, R?) :- ground(S?), ground(Ss?), ground(P?) |
     sch_roles(S?, Rs),
-    roles_guard_ok(Rs?, Io?, F?, Gs?, A1),
-    guards_ok(Ss?, Io?, F?, Gs?, A2),
+    sch_forms(S?, Fs0),
+    conj_flat(Fs0?, [], Fs),
+    roles_guard_ok(Rs?, Fs?, 1, P?, A1),
+    guards_ok(Ss?, P?, A2),
     both_yes(A1?, A2?, R).
 
-% guards_ok_k(C, K, Gs, R): the same, K being [iota, f].
+% guards_ok_k(C, K, Gs, R): the same, K being [iota, f] and Gs one
+% guardianship per mark of M.
 procedure guards_ok_k(Contract?, Preds?, Guardianships?, Ans).
 guards_ok_k(C, [Io, F], Gs, R?) :- ground(C?), ground(Io?), ground(F?), ground(Gs?) |
-    guards_ok(C?, Io?, F?, Gs?, R).
+    gs_marks(Gs?, M),
+    active_marks(C?, M?, AMs),
+    guards_ok(C?, gp(Io?, F?, Gs?, AMs?), R).
 guards_ok_k(_, K, _, no) :- otherwise, ground(K?) | true.
+
+procedure gs_marks(Guardianships?, Preds).
+gs_marks([], []).
+gs_marks([guardianship(Mk, _, _)|Gs], [Mk?|R?]) :- gs_marks(Gs?, R).
+
+% The conjuncts of the safe formulas of a body, its conjunctions opened.
+procedure conj_flat(Forms?, Forms?, Forms).
+conj_flat([], T, T?).
+conj_flat([fand(A, B)|Fs], T, R?) :- ground(A?), ground(B?), ground(Fs?), ground(T?) |
+    conj_flat(Fs?, T?, T1),
+    conj_flat([A?, B?], T1?, R).
+conj_flat([Fm|Fs], T, [Fm?|R?]) :- otherwise, ground(Fs?), ground(T?) | conj_flat(Fs?, T?, R).
+
+% can_act(Fs, I, F, AMs, Gs, R): some conjunct among Fs is that the role I
+% can act: a disjunction, in any order, of f(pi) and, for each mark m of AMs,
+% m(pi) and exists Xs u_m(pi, ...), every argument of the atom of u_m but its
+% holder a variable Xs binds, the condition true and the conjunction either
+% way round; nothing else among its disjuncts, and every one of them there.
+procedure can_act(Forms?, Integer?, Constant?, Preds?, Guardianships?, Ans).
+can_act([], _, _, _, _, no).
+can_act([Fm|Fs], I, F, AMs, Gs, R?) :-
+    ground(Fm?), ground(Fs?), integer(I?), ground(F?), ground(AMs?), ground(Gs?) |
+    disjuncts(Fm?, [], Ds),
+    can_act_ds(Ds?, I?, F?, AMs?, Gs?, A),
+    can_act(Fs?, I?, F?, AMs?, Gs?, B),
+    or_yes(A?, B?, R).
+
+procedure disjuncts(Form?, Forms?, Forms).
+disjuncts(for(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
+    disjuncts(B?, T?, T1),
+    disjuncts(A?, T1?, R).
+disjuncts(Fm, T, [Fm?|T?]) :- otherwise | true.
+
+% The disjuncts read as the marks they are of, f's or a mark of M's, each
+% being one; then those marks are f and AMs, each once.
+procedure can_act_ds(Forms?, Integer?, Constant?, Preds?, Guardianships?, Ans).
+can_act_ds(Ds, I, F, AMs, Gs, R?) :-
+    ground(Ds?), integer(I?), ground(F?), ground(AMs?), ground(Gs?) |
+    disj_keys(Ds?, I?, F?, Gs?, Ok, Ks),
+    keys_cover(Ok?, Ks?, [F?|AMs?], R).
+
+procedure disj_keys(Forms?, Integer?, Constant?, Guardianships?, Ans, Preds).
+disj_keys([], _, _, _, yes, []).
+disj_keys([D|Ds], I, F, Gs, Ok?, Ks?) :- ground(D?), ground(Ds?), integer(I?), ground(F?), ground(Gs?) |
+    disj_key(D?, I?, F?, Gs?, A, K),
+    disj_keys(Ds?, I?, F?, Gs?, B, Ks1),
+    both_yes(A?, B?, Ok),
+    keys_cons(A?, K?, Ks1?, Ks).
+
+procedure keys_cons(Ans?, Constant?, Preds?, Preds).
+keys_cons(yes, K, T, [K?|T?]).
+keys_cons(no, _, T, T?).
+
+% One disjunct: f(pi), or m(pi) and exists Xs u_m(pi, Xs...) for a mark m
+% with a guardianship among Gs.
+procedure disj_key(Form?, Integer?, Constant?, Guardianships?, Ans, Constant).
+disj_key(fa(role(J), atom(P, [])), I, F, _, yes, F?) :- J? =:= I?, ground(P?), ground(F?), P? =?= F? | true.
+disj_key(fand(fa(role(J), atom(Mk, [])), E), I, _, Gs, R?, Mk?) :-
+    J? =:= I?, ground(Mk?), ground(E?), ground(Gs?) |
+    u_of(Gs?, Mk?, U),
+    exists_u(E?, I?, U?, R).
+disj_key(fand(E, fa(role(J), atom(Mk, []))), I, _, Gs, R?, Mk?) :-
+    J? =:= I?, ground(Mk?), ground(E?), ground(Gs?) |
+    u_of(Gs?, Mk?, U),
+    exists_u(E?, I?, U?, R).
+disj_key(_, _, F, _, no, F?) :- otherwise | true.
+
+procedure exists_u(Form?, Integer?, Constant?, Ans).
+exists_u(fexists(Xs, role(J), atom(Q, As), fcons(true)), I, U, R?) :-
+    J? =:= I?, ground(Xs?), ground(Q?), ground(As?), ground(U?), Q? =?= U? |
+    all_bound(As?, Xs?, R).
+exists_u(_, _, _, no) :- otherwise | true.
+
+procedure all_bound(Args?, Args?, Ans).
+all_bound([], _, yes).
+all_bound([A|As], Xs, R?) :- ground(A?), ground(As?), ground(Xs?) |
+    args_member(Xs?, A?, R1),
+    all_bound(As?, Xs?, R2),
+    both_yes(R1?, R2?, R).
+
+% Every key is among Ws and every member of Ws among the keys.
+procedure keys_cover(Ans?, Preds?, Preds?, Ans).
+keys_cover(no, _, _, no).
+keys_cover(yes, Ks, Ws, R?) :- ground(Ks?), ground(Ws?) |
+    preds_within(Ks?, Ws?, A),
+    preds_within(Ws?, Ks?, B),
+    both_yes(A?, B?, R).
+
+procedure preds_within(Preds?, Preds?, Ans).
+preds_within([], _, yes).
+preds_within([P|Ps], Ws, R?) :- ground(P?), ground(Ps?), ground(Ws?) |
+    pred_member(P?, Ws?, A),
+    preds_within(Ps?, Ws?, B),
+    both_yes(A?, B?, R).
 
 % --- the candidates of a mark (GSC 070c5d1) ---------------------------------
 % The vs with clause 1 (first part); and for each v the us with clauses 1

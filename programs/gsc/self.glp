@@ -2309,6 +2309,9 @@ RK   ::= rk_ward(Constant, Guardian) ; rk_free ; rk_guard ; rk_other.
 RKs  ::= [] ; [RK | RKs].
 Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
+% What a guarding role is held to (def:guardianship, GSC 0a30d52): iota, f, the
+% guardianship of each mark and the marks of M that are not passive.
+GuardParts ::= gp(Constant, Constant, Guardianships, Preds).
 
 % syntactically_grassroots is the verdict on a contract that is so by
 % def:syntactically-grassroots, of agent roles and listed roles alike (GSC
@@ -4357,7 +4360,7 @@ traceable_variant(Nm, B, E?) :- check # traceable_variant(Nm?, B?, E).
 % stronger than another's (def:stronger), with the faults where it is not,
 % each of the weaker schema's role I, atom, formula, conjunct of its
 % constraint or variable that the condition misses; shape(NoNewRole,
-% SameGuards); RStep, a step of prop:syntactic taken from C to C', and
+% SameGuards, AddedGuards); RStep, a step of prop:syntactic taken from C to C', and
 % RFault, why C' is not shown to restrict C; RVerdict, restriction(Steps),
 % C' restricting C by them, restriction_given_invariant(Steps, Schemas), the
 % same where the invariant of clause (c) holds of each schema named, which
@@ -4378,20 +4381,21 @@ SBFault  ::= role_missing(Integer) ; role_kind(Integer) ; head_differs(Integer)
            ; carried_differ ; extra_role(Integer) ; variable_clash(Arg).
 SBFaults ::= [] ; [SBFault | SBFaults].
 SB       ::= stronger ; not_stronger(SBFaults).
-Shape    ::= shape(Ans, Ans).
+Shape    ::= shape(Ans, Ans, Ans).
 % What a stronger body is decided on, and what restriction is: the parts of
 % the two schemas, and of the two contracts.
 SBParts  ::= sbp(NRoleSpecs, NRoleSpecs, Conjuncts, Conjuncts, Forms, Forms,
                  Constraint, Constraint, Args, Args, NumCtx).
 RParts   ::= rp(Verdict, Verdict, Preds, Preds, WContract, WContract, Wrap).
-RStep    ::= kept(Constant) ; replaced_a(Constant) ; replaced_c(Constant)
+RStep    ::= kept(Constant) ; replaced_a(Constant) ; replaced_c(Constant) ; replaced_d(Constant)
            ; added_b(Constant, Constant) ; deleted_a(Constant).
 RSteps   ::= [] ; [RStep | RSteps].
-RFault   ::= not_sg(Constant, Verdict) ; preds_not_in_base(Preds)
+RFault   ::= not_pv(Constant, Verdict) ; preds_not_in_base(Preds)
            ; body_not_stronger(Constant, SBFaults) ; guards_differ(Constant)
            ; roles_differ(Constant) ; added_guarded(Constant)
            ; no_schema_of(Constant) ; deleted_unguarded(Constant)
-           ; step_not_sg(RStep, Verdict) ; no_simple_unguarded(Constant).
+           ; step_not_pv(RStep, Verdict) ; no_simple_unguarded(Constant)
+           ; bindings_not_admissible(Constant).
 RFaults  ::= [] ; [RFault | RFaults].
 RVerdict ::= restriction(RSteps) ; restriction_given_invariant(RSteps, Constants)
            ; not_shown(RFaults).

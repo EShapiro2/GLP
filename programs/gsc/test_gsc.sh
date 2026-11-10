@@ -1027,6 +1027,19 @@ no_wards wd_relay_guard_clears "a parent of child_befriend clears friend(*), del
 no_guardianship wd_twins       "twins adds child at two roles (def:kinds, clause 2)"
 no_guardianship wd_clear_g     "drop clears parent(*), an atom of u, with no listed role over it (def:guardianship, clause 4)"
 
+# A guarding role that can act (GSC 0a30d52, def:guardianship): sign(p? ; y),
+# an act for any agent who can act, with person(p) or child(p) and parent of
+# someone in its body: certified as wd is; with no such formula, or with
+# person(p) alone, sign's guarding role is held to nothing it meets, and
+# there is no introduction with wards.
+out=$(run 'check_named(wd_can_act, V).' 'wards_of(wd_cannot_act, W).' 'wards_of(wd_can_act_f, W).')
+check "wd_can_act: sign's role can act, and the contract is certified as wd is" \
+      "V = syntactically_grassroots_with_wards(befriend, [child], [guardianship(child, parenting, parent)], [relay(child_adult_befriend, ward(1, child, guardian(3)), free(2)), relay(child_befriend, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [identity, person])" "$out"
+check_eq "wd_cannot_act: sign requires identity alone, so no introduction with wards" \
+      "W = no_introduction_with_wards" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^W = ' | sed -n 1p)"
+check_eq "wd_can_act_f: person(p) alone in sign's body is not that p can act" \
+      "W = no_introduction_with_wards" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^W = ' | sed -n 2p)"
+
 # wr: AI agents, every guardian holding the record of the agent's
 # attestation, added by enter_agent at the creator and by make_guardian at
 # the guardian it makes, who copies it from a guardian; guardian_of and
@@ -2274,6 +2287,50 @@ check_eq "a step of (a) in a contract whose unguarded poke has no atom naming bo
          "V = not_shown([no_simple_unguarded(poke), no_simple_unguarded(poke)])" "$(sf 8)"
 check_eq "GSG is not shown to restrict its restriction: befriend requires less" \
          "V = not_shown([body_not_stronger(befriend, [not_required(1, atom(knows, [role(1)]))])])" "$(sf 9)"
+
+# Clause (d) of prop:syntactic (GSC 745b9e3): a schema with a guarding agent
+# role replaced by one with its name and a stronger body, guarding agent roles
+# added that add and delete nothing, every binding admissible for the new
+# schema admissible for the old, by the paper's sufficient condition after
+# the Lemma Stronger body: every speech-act variable the old schema adds and
+# requires nowhere signed, in the new one's constraint, by the agent of one
+# of its guarding roles.  befriend with Carol, who knows both, among its
+# guards, by (d); the same with Carol adding an atom, no stronger body; GSG
+# with say(Alice? ; y), adding said(y) and requiring no atom with y, and say
+# with Bob, who knows Alice, among its guards: no admissible binding shown,
+# and shown with signed(Alice, y) in its constraint; and the base against
+# the restriction by (d), a role missing.
+BFG="sas(befriend, ['Alice', 'Bob', 'Carol'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice'])), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Carol', 'Bob'])], true, ['Alice', 'Bob', 'Carol'])"
+BFGH="sas(befriend, ['Alice', 'Bob', 'Carol'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice']), atom(vouched, ['Carol', 'Alice'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice'])), atom(identity, ['Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Carol', 'Bob'])], true, ['Alice', 'Bob', 'Carol'])"
+SAY="sas(say, ['Alice'], [y], [atom(said, ['Alice', y])], [atom(identity, ['Alice'])], true, ['Alice'])"
+SAYG="sas(say, ['Alice', 'Bob'], [y], [atom(said, ['Alice', y])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+SAYS="sas(say, ['Alice', 'Bob'], [y], [atom(said, ['Alice', y])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], signed('Alice', y), ['Alice', 'Bob'])"
+RS_D="[$EST, $ACQ, $INTRO, $BFG, $UF]"
+RS_DH="[$EST, $ACQ, $INTRO, $BFGH, $UF]"
+RS_SAY="[$EST, $ACQ, $INTRO, $BF, $UF, $SAY]"
+RS_SAYG="[$EST, $ACQ, $INTRO, $BF, $UF, $SAYG]"
+RS_SAYS="[$EST, $ACQ, $INTRO, $BF, $UF, $SAYS]"
+out=$(run "restricts($RS_D, $RS_GSG, V)." "restricts($RS_DH, $RS_GSG, V)." "check($RS_SAY, V)." "restricts($RS_SAYG, $RS_SAY, V)." "restricts($RS_SAYS, $RS_SAY, V)." "restricts($RS_GSG, $RS_D, V).")
+check_eq "befriend with Carol, who adds nothing, among its guards restricts GSG by (d)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), replaced_d(befriend), kept(unfriend)])" "$(sf 1)"
+check_eq "an added guard that adds an atom is no step: the body is not stronger" \
+         "V = not_shown([preds_not_in_base([vouched]), body_not_stronger(befriend, [extra_role(3)])])" "$(sf 2)"
+check_eq "GSG with say is syntactically grassroots" "V = syntactically_grassroots" "$(sf 3)"
+check_eq "say with a guard added and y signed by none of its guards: no binding shown admissible (d)" \
+         "V = not_shown([bindings_not_admissible(say)])" "$(sf 4)"
+check_eq "and with signed(Alice, y) in its constraint, Alice a guarding role of say, by (d)" \
+         "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), replaced_d(say)])" "$(sf 5)"
+check_eq "GSG is not shown to restrict its restriction by (d): Carol is no role of befriend" \
+         "V = not_shown([body_not_stronger(befriend, [role_missing(3)])])" "$(sf 6)"
+
+# The proposition asks of the contracts traceable provenance and volition, not
+# certification (GSC 0a30d52): GSG without acquaint is not certified, its
+# introductory act befriend obstructed, and befriend strengthened restricts it
+# by (a).
+out=$(run "check([$EST, $INTRO, $BF, $UF], V)." "restricts([$EST, $INTRO, $BFS, $UF], [$EST, $INTRO, $BF, $UF], V).")
+check_eq "GSG without acquaint is not certified, befriend obstructed" "V = not_grassroots([obstructed(befriend, 1, atom(knows, [role(2)]), unobtainable), obstructed(befriend, 2, atom(knows, [role(1)]), unobtainable)])" "$(sf 1)"
+check_eq "and befriend strengthened restricts it by (a), the two having traceable provenance and volition" \
+         "V = restriction([kept(establish), kept(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 2)"
 vt() { echo "sas(t, ['Alice'], [k], [atom(coin, ['Alice', $1(k)])], [atom(identity, ['Alice'])], $2, ['Alice'])"; }
 out=$(run "stronger_body($(vt num 'gt(num(k), num(1))'), $(vt num 'gt(num(k), num(0))'), V)." "stronger_body($(vt num 'gt(num(k), num(0))'), $(vt num 'gt(num(k), num(1))'), V)." "stronger_body($(vt num 'gt(num(k), num(0))'), $(vt num 'ge(num(k), num(1))'), V)." "stronger_body($(vt real 'gt(real(k), num(0))'), $(vt real 'ge(real(k), num(1))'), V)." "stronger_body($(vt num 'and(gt(num(k), num(0)), le(num(k), num(9)))'), $(vt num 'le(num(k), num(9))'), V)." "stronger_body($BFS, $BF, V)." "stronger_body($INTRO_D, $INTRO, V).")
 check_eq "k > 1 implies k > 0: a stronger body" "V = stronger" "$(sf 1)"

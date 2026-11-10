@@ -1845,6 +1845,9 @@ contract(sgn_listed, C?) :- sgn_listed(C).
 contract(hd_faults, C?) :- hd_faults(C).
 contract(wd_listed, C?) :- wd_listed(C).
 contract(wd_leaving_forbidden, C?) :- wd_leaving_forbidden(C).
+contract(wd_can_act, C?) :- wd_can_act(C).
+contract(wd_cannot_act, C?) :- wd_cannot_act(C).
+contract(wd_can_act_f, C?) :- wd_can_act_f(C).
 contract(wd_listed_leaving, C?) :- wd_listed_leaving(C).
 contract(wd_ward_e, C?) :- wd_ward_e(C).
 contract(wd_ward_e_own, C?) :- wd_ward_e_own(C).
@@ -3018,6 +3021,36 @@ wd_relay_guard_clears(C?) :- wd_child_child_with([], [], [atom(friend, [any])], 
 % wd_twins: twins(p?, r?, s?) makes r and s children of p at once, adding
 % child at two roles, which clause 1 of def:guardianship forbids (GAI
 % 11d7133): child has no guardianship.
+% A guarding role that can act (GSC 0a30d52, def:guardianship): wd with
+% sign(p? ; y), adding item(y) at p, an act for any agent who can act, p
+% requiring identity and, in its body, person(p) or child(p) and parent of
+% someone, the u of child's guardianship: wd_can_act is grassroots with wards
+% as wd is.  wd_cannot_act's sign requires identity alone, a guarding role
+% neither forbidding identity, requiring person, requiring child and an atom
+% of parent, nor able to act, so there is no introduction with wards;
+% wd_can_act_f's body says person(p) alone, the disjunct of child missing.
+procedure wd_sign(Forms?, Schema).
+wd_sign(Fs, qschema(sign, [svar(y)], [pvar(x), svar(x), num(x)], true,
+    [rs(guarded, [atom(item, [svar(y)])], [], [atom(identity, [])], [])], [], Fs?)).
+
+procedure wd_with_sign(Forms?, Declared).
+wd_with_sign(Fs, C?) :- ground(Fs?) |
+    wd_establish(E), wd_enter(N), wd_of_age(O), wd_befriend(B),
+    wd_child_adult(A), wd_child_child(K), wd_sign(Fs?, S),
+    wd_with(E?, N?, O?, B?, [A?, K?, S?], C).
+
+procedure wd_can_act(Declared).
+wd_can_act(C?) :-
+    wd_with_sign([for(fa(role(1), atom(person, [])),
+                      fand(fa(role(1), atom(child, [])),
+                           fexists([svar(x)], role(1), atom(parent, [svar(x)]), fcons(true))))], C).
+
+procedure wd_cannot_act(Declared).
+wd_cannot_act(C?) :- wd_with_sign([], C).
+
+procedure wd_can_act_f(Declared).
+wd_can_act_f(C?) :- wd_with_sign([fa(role(1), atom(person, []))], C).
+
 procedure wd_twins(Declared).
 wd_twins(C?) :-
     wd_establish(E), wd_enter(N), wd_of_age(O), wd_befriend(B),
