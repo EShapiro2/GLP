@@ -131,9 +131,11 @@ class PersistenceService {
     }
   }
 
-  /// Actually persist the state to storage
-  Future<void> _persistState(AppState state) async {
+  /// Actually persist the state to storage; whether every pending part was
+  /// written.
+  Future<bool> _persistState(AppState state) async {
     final prefs = await _preferences;
+    var written = true;
 
     if (_pendingKnownPeers) {
       try {
@@ -145,6 +147,7 @@ class PersistenceService {
         debugPrint('Persisted ${state.knownPeers.known.length} known peers');
       } catch (e) {
         debugPrint('Failed to persist known peers: $e');
+        written = false;
       }
     }
 
@@ -158,6 +161,7 @@ class PersistenceService {
         debugPrint('Persisted settings');
       } catch (e) {
         debugPrint('Failed to persist settings: $e');
+        written = false;
       }
     }
 
@@ -179,10 +183,21 @@ class PersistenceService {
         debugPrint('Persisted ${state.messages.conversations.length} conversations');
       } catch (e) {
         debugPrint('Failed to persist conversations: $e');
+        written = false;
       }
     }
 
     _lastPersistedState = state;
+    return written;
+  }
+
+  /// Persist what is pending now, not after the debounce, and report whether
+  /// it was written: a delivered message is acknowledged to the layer only
+  /// once the state that applied it is saved (GNA, Point-to-Point
+  /// Communication, `acknowledge`).
+  Future<bool> persistNow(AppState state) {
+    _debounceTimer?.cancel();
+    return _persistState(state);
   }
 
   /// Force immediate persistence (call on app exit)

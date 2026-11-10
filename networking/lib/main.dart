@@ -429,9 +429,11 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     );
     // The conversation names a message by the id its sender's send
     // returned, which both ends know: an incoming one by its senderMessageId.
+    // The layer's messageId is the one the message is acknowledged under.
     grassroots.onMessageReceived =
         (senderPubkey, payload, messageId, senderMessageId, underlay) {
-      _handleIncomingMessage(senderMessageId, senderPubkey, payload, underlay);
+      unawaited(_receive(grassroots, messageId, senderMessageId, senderPubkey,
+          payload, underlay));
     };
     for (final server in _preferences.rendezvousServers) {
       grassroots.wan?.putRendezvousServer(server.publicKey, server.address);
@@ -559,6 +561,35 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       if (_hasPendingIncomingRequest(peerHex)) result.add(peerHex);
     }
     return result;
+  }
+
+  /// A message [grassroots] delivered under [messageId]: applied, the state
+  /// that applied it saved, and then acknowledged, so the layer stops keeping
+  /// it and does not deliver it again at the next start (GNA, Point-to-Point
+  /// Communication, `acknowledge`; Fair message delivery).  A message whose
+  /// handling fails or whose state is not saved is not acknowledged, and the
+  /// layer delivers it again at the next start, where the conversation's
+  /// dedupe by [senderMessageId] keeps a second copy out.
+  Future<void> _receive(
+      GrassrootsNetwork grassroots,
+      String messageId,
+      String senderMessageId,
+      Uint8List senderPubkey,
+      Uint8List payload,
+      Underlay underlay) async {
+    try {
+      await _handleIncomingMessage(
+          senderMessageId, senderPubkey, payload, underlay);
+    } catch (e, st) {
+      debugPrint('Handling message $messageId failed, not acknowledged: '
+          '$e\n$st');
+      return;
+    }
+    if (!await persistenceService.persistNow(appStore.state)) {
+      debugPrint('Message $messageId applied but not saved, not acknowledged');
+      return;
+    }
+    await grassroots.acknowledge(messageId);
   }
 
   /// A message from [senderPubkey], named by the id its sender's `send`

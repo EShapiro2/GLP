@@ -383,6 +383,36 @@ void main() {
   });
 
   // ===================================================================
+  // persistNow
+  // ===================================================================
+  group('persistNow', () {
+    test('writes a changed conversation without waiting for the debounce, '
+        'and reports it written', () async {
+      final msg = makeMessage(
+        sender: peerA,
+        recipient: peerB,
+        content: 'Delivered msg',
+        messageId: 'msg-now-1',
+      );
+      final state = makeAppState(
+        messages: MessagesState(
+          conversations: {
+            peerA: [msg],
+          },
+          unreadCounts: const {peerA: 1},
+        ),
+      );
+
+      service.onStateChanged(state);
+      final written = await service.persistNow(state);
+
+      expect(written, isTrue);
+      final (conversations, _) = await PersistenceService().loadConversations();
+      expect(conversations[peerA]!.single.messageId, 'msg-now-1');
+    });
+  });
+
+  // ===================================================================
   // flush
   // ===================================================================
   group('flush', () {
