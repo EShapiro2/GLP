@@ -66,6 +66,15 @@ term() {    # term <owner's file> <name> ; the contract's term, as it prints it
     | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //'
 }
 
+instance() { # instance <owner's file> <name> <base's term> ; an instance's contract, instantiate/4 of the bindings and additions its file prints, instance_named(Name, Base, Bindings, Additions), on the base's term, as cascade.sh's read_contract makes it (GSC 22605d6, Definition Parametric contract)
+  local out bs a
+  out=$(cd "$GLP_DIR/glp_runtime" \
+     && printf '%s\ninstance_named(%s, B, Bs, A).\n:quit\n' "$1" "$2" | bin/glpc 2>&1 | sed -e 's/^\(GLP> \)*//')
+  bs=$(printf '%s\n' "$out" | grep -E '^Bs = ' | head -1 | sed -e 's/^Bs = //')
+  a=$(printf '%s\n' "$out" | grep -E '^A = ' | head -1 | sed -e 's/^A = //')
+  run "instantiate($3, $bs, $a, D)." | sed -e 's/^\(GLP> \)*//' | grep -E '^D = ' | head -1 | sed -e 's/^D = //'
+}
+
 compiled() { # compiled <fixture> <schema> ; the display, whitespace removed
   run "compile_schema($1, $2)." | sed -n '/begin{align/,/end{align/p' \
     | sed 's/GLP>//' | squash
@@ -123,15 +132,17 @@ check_eq "as_read gives an environment contract its wrapper, each schema inside 
       "environment([today], $GKKV)" "$(asread "environment([today], $GKKT)")"
 check_eq "as_read descends an environment contract's reflexive body as unnamed/2 does" \
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
-GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+# GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
+GNWI=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+GSNPT=$(instance "$GLP_DIR/programs/gai/GSNP.glp" gsnp "$GNWI")
 check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
 check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
 check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
 # A ward role has at most one guardian role (GSC a885275, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
-GAIT=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
+GAIT=$(instance "$GLP_DIR/programs/gai/GAI.glp" gai "$GNWI")
 check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
-      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, identity, principal, principal_of, principal_of)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [retired])" \
+      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, operator_of, operated_by)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
@@ -2365,12 +2376,14 @@ check_eq "the same constants written bare are variables not in the head" "V = ma
 # schema of Additions in the place of the base's of its name or after the
 # base's; instance_faults/3 names a binding of no parameter, a name written
 # that occurs in the base, a name written twice and a parameter bound twice.
-# GnW, parametric in its six predicates of wards, is certified as GnW is;
+# GnW, parametric in its six predicates of wards, is certified as GnW is
+# (GnW.glp writes it parametric(...)); GSG, which names no parameters, has
+# no instance;
 # its instance with child for ward, parenting for guardian_of and parent_of
 # for guarded_by is certified with child its ward mark; an addition named
 # establish replaces the base's, and sign is put after the base's schemas.
 GNWT=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
-GNWP="parametric([ward, creator, created, guardian_of, guarded_by, retired], $GNWT)"
+GNWP="$GNWT"   # GnW.glp's term is parametric(...) since GLP 829e65c3 (GSC #14)
 GNWB="[ward = child, guardian_of = parenting, guarded_by = parent_of]"
 EST2="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
 SIGNP="sas(sign, ['Alice'], [y], [atom(item, ['Alice', y])], [atom(identity, ['Alice']), atom(person, ['Alice'])], true, ['Alice'])"
@@ -2378,7 +2391,7 @@ VALP="parametric([val(bylaws_p)], [sas(adopt, ['Alice'], [], [atom(bylaws, ['Ali
 out=$(run "check($GNWP, V)." "instantiate($GNWP, $GNWB, [], D), check(D?, V)." \
           "instance_faults($GNWP, $GNWB, F)." \
           "instance_faults($GNWP, [friend = x, ward = knows, creator = c, created = c, retired = r, retired = s], F)." \
-          "instance_faults($GNWT, [ward = child], F)." \
+          "instance_faults($GSGT, [ward = child], F)." \
           "instantiate($GNWP, $GNWB, [$EST2, $SIGNP], D)." \
           "instantiate($VALP, [bylaws_p = bylaws_mcs], [], D)." "as_read($VALP, R).")
 check_eq "GnW parametric in its six predicates of wards is certified as GnW is" \
@@ -2395,6 +2408,23 @@ check "and an addition of a new name comes after the base's schemas" \
       "atom(person, ['Alice'])], true, ['Alice'])])" "$(printf '%s\n' "$out" | grep 'sas(sign, ')"
 check "a constant parameter val(bylaws_p) is written bylaws_mcs by the binding bylaws_p = bylaws_mcs" \
       "D = [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_mcs)])], [atom(identity, ['Alice'])], true, ['Alice'])]" "$out"
+# An instance may name the base's schemas its own way (GSC 22605d6), in its
+# bindings beside the predicates': ward_acquaint = child_acquaint renames the
+# relay act, and an addition named child_acquaint replaces it; a name taken
+# from another schema of the base occurs in it, and a schema the base has not
+# is no parameter.
+GNWN="[ward = child, guardian_of = parenting, guarded_by = parent_of, ward_acquaint = child_acquaint, wards_acquaint = children_acquaint]"
+CHA="sas(child_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'], [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Carol']), atom(child, ['Carol']), atom(parent_of, ['Carol', 'Alice']), atom(identity, ['Bob']), atom(person, ['Bob'])], true, ['Carol', 'Bob'])"
+out2=$(run "instantiate($GNWP, $GNWN, [], D), check(D?, V)." "instance_faults($GNWP, $GNWN, F)." \
+           "instance_faults($GNWP, [ward_acquaint = befriend, nothing = x], F)." \
+           "instantiate($GNWP, $GNWN, [$CHA], D).")
+check "an instance naming the relay acts its own way is certified, the relay acts by the instance's names" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)], [relay(child_acquaint, ward(1, child, no_guardian), free(2)), relay(children_acquaint, ward(1, child, no_guardian), ward(2, child, no_guardian))], [identity, person])" "$out2"
+check "its bindings of schemas have no fault" "F = []" "$out2"
+check "a schema's name taken from another schema occurs in the base, and a schema the base has not is no parameter" \
+      "F = [occurs(befriend), not_a_parameter(nothing)]" "$out2"
+check "an addition bearing the instance's name for a schema replaces it in its place" \
+      "sas(child_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'], [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Carol']), atom(child, ['Carol']), atom(parent_of, ['Carol', 'Alice']), atom(identity, ['Bob']), atom(person, ['Bob'])], true, ['Carol', 'Bob']), sas(ward_befriend" "$out2"
 check "as_read keeps a parametric contract's parameters" \
       "R = parametric([val(bylaws_p)], [schema(adopt, ['Alice'], [], [rs(guarded, [atom(bylaws, [val(bylaws_p)])], [], [atom(identity, [])], [])])])" "$out"
 
