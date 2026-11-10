@@ -7,15 +7,16 @@
 % 2026-10-30, later: GnW:2 in Udi's wording (GAI fce54cd), a made parent may resign and stay the child's friend, the button [Resign] (CSSN #13 Cowork).
 % 2026-11-10: the pragmas to vGLP's rule (vGLP, Section 5.4, "The contract's words"; Code #23, CSSN_inbox 2026-11-05 14:05 UTC; Code #26, 2026-11-09 13:25 UTC): a field for each variable the proposer's state does not bind and no other, each button with its own fields, and the two-ward acts' buttons named apart, [Child acquaint 2] and [Child join 2] (Udi, 2026-11-10, to CSSN #14).
 % 2026-11-10, later: clause 2, A child's acquaintances, new, the clauses after it renumbered: CSSN limits a child to the agents a parent knows, GnW:3 and GnW:4 no longer doing so since 2026-11-08 (Udi, 2026-11-10, to CSSN #14, approving the clause); its two buttons under its title.
+% 2026-11-10, later still: CSSN:2 ends 'Alice and Bob possibly one person', as its schema has it; 'her' in CSSN:5 and 'she is' in CSSN:6 (Udi, 2026-11-10, to CSSN #14; the pronouns his of 2026-11-07).
 % Schemas: CSSN.glp beside this file, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 CSSN: Child-Safe Social Network
 Alice and Bob are adults, Carol and Dave children.
 1. ◆ Parent.  Only a legal parent of a child, Alice, may create the ward Carol, operated by the child.
-2. ■ A child's acquaintances.  Carol, a child of Alice, comes to know Bob by an act of Carol, Alice and Bob, provided Alice knows Bob; and comes to know Dave, a child of Bob, by an act of Carol, Alice, Dave and Bob, provided Alice knows Dave and Bob.
+2. ■ A child's acquaintances.  Carol, a child of Alice, comes to know Bob by an act of Carol, Alice and Bob, provided Alice knows Bob; and comes to know Dave, a child of Bob, by an act of Carol, Alice, Dave and Bob, provided Alice knows Dave and Bob, Alice and Bob possibly one person.
 3. ■ A child's group.  Carol may create a group with the consent of a guardian, Alice; only a child, Dave, may join it.
 4. ○ Coming of age.  The creator of Carol may declare Carol of age, which ends every guardianship of Carol, Carol's friendships remaining, and Carol is then a person; the creator shall do so when Carol comes of age, and not before.
-5. ○ A child with no guardian.  Alice, aware that Dave is a child though not a ward, shall neither befriend Dave nor let their child befriend Dave, and shall report it to Dave's parents if Alice knows who they are.
-6. ■ A child's messages.  Carol may send a message to a friend, and to a group of which they are a member.
+5. ○ A child with no guardian.  Alice, aware that Dave is a child though not a ward, shall neither befriend Dave nor let her child befriend Dave, and shall report it to Dave's parents if Alice knows who they are.
+6. ■ A child's messages.  Carol may send a message to a friend, and to a group of which she is a member.
 Pragmas
 Children: the children Alice is parenting.
 Parent: Alice [Enter] <child>

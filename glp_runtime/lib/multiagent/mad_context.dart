@@ -1193,9 +1193,10 @@ class MadContext {
     onPlaceEventDelivered?.call();
   }
 
-  /// The ground presentation of a global name (§Global Variable Names): the
-  /// 2-ary structures `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity,
-  /// first argument the anchor. This is the form a program sees — not the wire
+  /// The ground presentation of a global name (IGLP cec4682, "Global
+  /// Variable Names"): the 3-ary structures `'_r'(P, E, I)` and `'_w'(P, E,
+  /// I)`, functor giving polarity, first argument the anchor, second its
+  /// epoch, third the index.  This is the form a program sees — not the wire
   /// form, which stands in the place of a variable.
   static Term groundGlobalName(GlobalName gn) => gn.toStruct();
 
@@ -1984,18 +1985,10 @@ class MadContext {
   /// A held request answered, the next requester held for the same link is
   /// reported in its turn (§Held Links), within this transaction.
   bool answerLink(GlobalName gn, bool authorise) {
-    // The program answers with the 2-ary presentation of the name, the
-    // epoch not at issue to it: the link reported is the one of that anchor,
-    // index and polarity (IGLP db0a117, "Global Variable Names").
-    final reported = _reportedLinks.keys
-        .where((k) =>
-            k.agent == gn.agent &&
-            k.index == gn.index &&
-            k.isWriter == gn.isWriter)
-        .toList();
-    final name = reported.length == 1 ? reported.single : gn;
-    final answered = _answerLink(name, authorise);
-    if (answered && !name.isWriter) _reportNextHeldRequest(name);
+    // The program answers with the name the report carried, epoch and all
+    // (IGLP cec4682, "Global Variable Names").
+    final answered = _answerLink(gn, authorise);
+    if (answered && !gn.isWriter) _reportNextHeldRequest(gn);
     _flushReports();
     return answered;
   }
@@ -2296,7 +2289,12 @@ class MadContext {
   /// The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer
   /// address (index 0) or a normal global name (index > 0):
   ///
-  /// **Case G = `_w(q, 0)` (Serializer)**:
+  /// G is the program's name of the link, `_w(p, e, i)` or `_r(p, e, i)`,
+  /// its agent [gnAgent], its epoch [gnEpoch] and its index [gnIndex] (IGLP
+  /// cec4682, "Global Variable Names": the program's name is the 3-ary
+  /// structure).
+  ///
+  /// **Case G = `_w(q, 0, 0)` (Serializer)**:
   /// 1. Globalizes term T for remote agent Q
   /// 2. Allocates a serial i from the agent's global-name counter, one per
   ///    message, so that (this agent, i) is unique for the whole run as every
@@ -2307,7 +2305,8 @@ class MadContext {
   /// **Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
   /// 1. Globalizes term T for remote agent Q
   /// 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
-  void send(Term term, bool isWriter, String gnAgent, int gnIndex, String destAgent) {
+  void send(Term term, bool isWriter, String gnAgent, int gnEpoch, int gnIndex,
+      String destAgent) {
     // The global name's agent and the destination, each a key or a readable
     // name standing for one, resolved to the one agent ([resolveAgent]).
     final resolve = resolveAgent;
@@ -2354,14 +2353,10 @@ class MadContext {
     final globalizedTerm = globalizeTermWithResult(term, vars, globalizeResult);
     _trace('[MAD $agentId] send: globalized term = $globalizedTerm');
 
-    // The global name, with its epoch: the program gives the 2-ary form,
-    // the epoch not at issue to it, and the runtime supplies the epoch
-    // ([_epochOfProgramName]).
+    // The global name as the program gave it, epoch included.
     final globalName = isWriter
-        ? GlobalName.writer(gnAgent, gnIndex,
-            epoch: _epochOfProgramName(true, gnAgent, gnIndex))
-        : GlobalName.reader(gnAgent, gnIndex,
-            epoch: _epochOfProgramName(false, gnAgent, gnIndex));
+        ? GlobalName.writer(gnAgent, gnIndex, epoch: gnEpoch)
+        : GlobalName.reader(gnAgent, gnIndex, epoch: gnEpoch);
 
     // Create payload based on serializer (index 0) vs normal (index > 0)
     List<int> payload;
@@ -2404,30 +2399,5 @@ class MadContext {
 
     _trace('[MAD $agentId] send: queued message to $destAgent, mp.totalLength=${mp.totalLength}');
     _flushReports();
-  }
-
-  /// The epoch of the name `_w(agent, index)` or `_r(agent, index)` a program
-  /// gives `'_send'/3` in its 2-ary presentation (IGLP db0a117, "Global
-  /// Variable Names": "Where the epoch is not at issue we write _w(p, i) for
-  /// _w(p, e_p, i)"): 0 for the serializer; this agent's epoch for a name
-  /// anchored here; for a writer name anchored elsewhere, the epoch the
-  /// record of its link holds, the name's; for a reader name anchored
-  /// elsewhere, its entry's; and, where the agent holds no end of the link,
-  /// the epoch known of the anchor, or 1.
-  int _epochOfProgramName(bool isWriter, String agent, int index) {
-    if (isWriter && index == 0) return 0;
-    if (agent == agentId) return _epoch;
-    if (isWriter) {
-      for (final rec in up.all) {
-        if (rec.anchor == agent && rec.index == index) return rec.epoch;
-      }
-    } else {
-      for (final e in wp.localizeEntries) {
-        if (e.remoteAgent == agent && e.remoteIndex == index) {
-          return e.remoteEpoch;
-        }
-      }
-    }
-    return _knownEpochs[agent] ?? 1;
   }
 }
