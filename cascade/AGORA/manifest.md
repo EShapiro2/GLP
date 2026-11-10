@@ -1,9 +1,9 @@
 # A run of the cascade on AGORA
 
-- Contract: `AGORA` (`agora` to the checker), its owner's two files `programs/currencies/agora/AGORA.txt` and `programs/currencies/agora/AGORA.glp`, copied here as they stood at `3f0ca61b`.
+- Contract: `AGORA` (`agora` to the checker), its owner's two files `programs/currencies/agora/AGORA.txt` and `programs/currencies/agora/AGORA.glp`, copied here as they stood at `00edb94f`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `3f0ca61b` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 12:01 UTC by `cascade.sh agora`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `00edb94f` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 14:22 UTC by `cascade.sh agora`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
