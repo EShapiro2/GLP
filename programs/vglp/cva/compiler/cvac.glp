@@ -2822,7 +2822,16 @@ word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx), _, Lx, Dn), C, Nt, L?) :- grou
         'procedure sentence_of(Class?, Peer?, Asked).'|Lsn1?], Lex?, L).
 % The platform's exports of the contract it is compiled from (vGLP b413fe1, Section 5.4, "The contract's words": "The platform the compiler prints exports, beside its agent and its dispatcher, two procedures: contract(Text, Schemas), the contract it is compiled from, its clauses as text and its schemas with the pragmas as the term the checker and the compiler read; and version(Current, Back), its version and the earliest version of itself it is compatible with, both from a line of the pragmas, so the app that loads the platform reads its contract and its versions from it"): contract(Text, with(Read, Pragmas)), Text the clauses as pragmas.sh reads them from the contract's NAME.txt, Read the contract as GSC's reader reads it, its names with it, and Pragmas its pragmas, pragmas(Lists, Acts, Stands, Look, Version), the look among them, where the app and the site read it (ibid., "The contract's words": the look, "which the compiler carries into the platform it prints, among the pragmas of the contract the platform exports, where the app and the site that show it read it"); and version(Current, Back), from the contract's Version line, or version(1, 1).  The types of the term, GSC's reader's and the pragmas' (programs/gsc/self.glp; self.glp beside this file), are declared in the platform with an R before their names, the platform's own types bearing theirs.
 procedure export_lines(WDeclared?, RPragmas?, String?, PVersion?, Lines).
-export_lines(Dn, Pr, Tx, Vn, ['',
+%% The types of an act carry the types of its fields only where an act of the pragmas has some (vGLP 37fe038, Section 5.4), so that a platform with no typed field prints as before.
+export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
+    export_head(Hd),
+    acts_typed(Pr?, Y),
+    act_type_lines(Y?, Ma),
+    export_tail(Dn?, Pr?, Tx?, Vn?, Tl),
+    lapp(Hd?, Ma?, L1),
+    lapp(L1?, Tl?, L).
+procedure export_head(Lines).
+export_head(['',
         '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',
         'RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).',
         'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg).',
@@ -2857,11 +2866,21 @@ export_lines(Dn, Pr, Tx, Vn, ['',
         'PSaid     ::= none ; said(PSentences).',
         'PStrings  ::= [] ; [String | PStrings].',
         'PList     ::= list(String, PStrings).',
-        'PLists    ::= [] ; [PList | PLists].',
-        'PFType    ::= ft(Integer, Constant).',
+        'PLists    ::= [] ; [PList | PLists].']).
+procedure act_type_lines(YesNo?, Lines).
+act_type_lines(no, ['PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer).']).
+act_type_lines(yes, ['PFType    ::= ft(Integer, Constant).',
         'PFTypes   ::= [] ; [PFType | PFTypes].',
-        'PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes).',
-        'PProposer ::= any ; by(Ints) ; by(Ints, PSames).',
+        'PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes).']).
+%% Whether an act of the pragmas carries the types of its fields.
+procedure acts_typed(RPragmas?, YesNo).
+acts_typed(pragmas(_, As, _, _, _), Y?) :- acts_typed1(As?, Y).
+procedure acts_typed1(TActs?, YesNo).
+acts_typed1([], no).
+acts_typed1([act(_, _, _, _, _, _, [])|As], Y?) :- acts_typed1(As?, Y).
+acts_typed1([act(_, _, _, _, _, _, [_|_])|_], yes).
+procedure export_tail(WDeclared?, RPragmas?, String?, PVersion?, Lines).
+export_tail(Dn, Pr, Tx, Vn, ['PProposer ::= any ; by(Ints) ; by(Ints, PSames).',
         'PSame     ::= same(Integer, Integer).',
         'PSames    ::= [] ; [PSame | PSames].',
         'PActs     ::= [] ; [PAct | PActs].',

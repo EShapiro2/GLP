@@ -4369,8 +4369,8 @@ HEREDOC
 )
 check "CVA typed: the typed contract's request form has the field of kind email (typed)" 'field(2, "email", email)' "$cva_ty_c1"
 check "CVA typed: ... the bare one's of kind text (typed)" 'field(2, "email", text)' "$cva_ty_c2"
-cva_ty_diff=$(diff <(printf '%s\n' "$cva_ty_c1" | sed -e 's/field(2, "email", email)/field(2, "email", text)/' -e 's/, \[ft(2, email)\])/)/') <(printf '%s\n' "$cva_ty_c2") > /dev/null && echo same || echo differs)
-check "CVA typed: ... and the two platforms are the same but for that kind, in the request form and in the pragmas the platform exports (typed)" "^same$" "$cva_ty_diff"
+cva_ty_diff=$(diff <(printf '%s\n' "$cva_ty_c1" | sed -e 's/field(2, "email", email)/field(2, "email", text)/' -e 's/, \[ft(2, email)\])/)/' -e '/^PFType    ::= /d' -e '/^PFTypes   ::= /d' -e 's/^PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes)\.$/PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer)./') <(printf '%s\n' "$cva_ty_c2") > /dev/null && echo same || echo differs)
+check "CVA typed: ... and the two platforms are the same but for that kind: in the request form, in the pragmas the platform exports, and in the types of those pragmas, which name the types of an act's fields only where an act has one (typed)" "^same$" "$cva_ty_diff"
 cva_ty_rd=$("$REPL_RUN" <<HEREDOC 2>&1
 $GLP_DIR/programs/gsc/
 :limit 10000000
