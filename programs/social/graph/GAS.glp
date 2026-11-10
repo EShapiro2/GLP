@@ -2,7 +2,7 @@
 %% GAS.glp --- the Grassroots App Store contract, GSA's, extending GPD and GnW, in the clause syntax of
 %% GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GAS.txt beside
 %% this file: open_store is GAS:1, Store, GnW:1's creation of a ward, the store Dave; list and delist
-%% GAS:2, Listing; trust_store and distrust_store GAS:3, Store Trust; install_listed GAS:4,
+%% GAS:2, Listing; trust_store and distrust_store GAS:3, Store Trust; install_from_store GAS:4,
 %% Installation from a Store.  GPD's schemas come first.  guardian_of(Carol, Dave) and
 %% guarded_by(Dave, Carol) say that Carol created the store Dave and is its guardian (GnW:1, as
 %% GAI.glp writes a creation); store(Dave) that Dave is a store; listed(Dave, sgn(y, Carol)) that
@@ -119,7 +119,7 @@ contract_named(gas,
        [not(atom(trusts_store, ['Alice', 'Dave']))],
        [atom(identity, ['Alice']), atom(trusts_store, ['Alice', 'Dave'])],
        true, ['Alice']),
-    sas(install_listed, ['Alice', 'Dave'], [z],
+    sas(install_from_store, ['Alice', 'Dave'], [z],
        [atom(item, ['Alice', z]), atom(installed, ['Alice', item_of(z)])],
        [atom(identity, ['Alice']), atom(trusts_store, ['Alice', 'Dave']),
         not(atom(installed, ['Alice', item_of(z)])),
