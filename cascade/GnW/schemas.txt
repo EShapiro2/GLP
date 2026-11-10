@@ -1,3 +1,5 @@
+Parameters: ward, creator, created, guardian_of, guarded_by, retired
+
 Reflexive predicates: friend, knows
 
 establish: identity(Alice), person(Alice) <-

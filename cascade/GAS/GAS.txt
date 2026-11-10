@@ -1,0 +1,26 @@
+% GAS: Grassroots App Store --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GSA (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GSA/main_SGSG.tex, prints it in its box in the section on the store and cites a clause as GAS:1.
+% Paper: GSA, The Grassroots Super-App and App Store, in preparation
+% Extends: GPD, Grassroots Programs Dissemination, GSA's (programs/social/graph), and through it GFP, GSG and GKK; and GSV, Grassroots Services, GNA's (programs/examples/rendezvous/GSV.txt), which instantiates GnW, GSC's (programs/gsc/GnW.txt): a store is a service (Udi, 2026-11-10 13:52 UTC).  It cites their clauses whole and restates none.
+% Defines: store, defined in the box after the declaration, a contract being self-contained.  Program and developer are defined with GPD; Alice, Bob and Carol are variables naming distinct persons.
+% Last changed: 2026-11-10 (second), on GSV: a store is a service holding a list of programs, and Carol makes her service Dave a store (Udi, 2026-11-10 13:52 UTC, approving GSA #3); 2026-11-10, the button of Installation from a Store is [Install from store] and its schema install_from_store, GPD writing [Install] for its own act (Udi, 2026-11-10 13:49 UTC, approving GSA #3; Code #27, 2026-11-09 21:21 UTC); 2026-11-09, Installation from a Store names the program in a field, <program>, the variable of its schema that Alice's atoms do not bind (Udi, 2026-11-09 21:17 UTC, approving GSA #3; Code #27, 17:23 UTC); 2026-11-08, the store a ward with a key of its own, Dave, extending GnW too, Delist, and the store's page an implementation pragma (Udi, 2026-11-08 09:24 UTC; written by GSA #2); 2026-11-07, Listing undertaken, Carol signing the program she lists (Udi, 2026-11-07); the schemas rewritten on GFP the same evening; Udi's edits in Overleaf (GSA 01d37e5): Listing attested, of a program developed by Bob, as long as Carol trusts Bob; Installation from a Store with no condition on the owner's trust; GPD the contract it extends; written by GSA #1 Cowork at Udi's word: a store is a separate contract; listing only, and a program is installed from a store as long as the store's owner trusts its developer (Udi, 2026-11-07); a draft for Udi's approval and GSC's checker.
+% Schemas: GAS.glp beside this file: GSV's seventeen, GFP's and GPD's, and GAS's six over store, listed, trusts_store, item and installed, the term from which a run of the cascade prints schemas.txt (cascade.sh).
+GAS: Grassroots App Store
+GAS extends GPD and GSV (GNA, GLP Networking API and Services, in preparation).
+Alice, Bob and Carol are persons, Dave a ward.  A store is a service holding a list of programs.
+1. ■ Store.  Carol may make her service Dave a store.
+2. ○ Listing.  Carol may list in Dave a program developed by Bob, after adding her signature to its signatures, as long as she trusts Bob as a developer; and may delist it.
+3. ■ Store Trust.  Alice may trust Dave, Carol being known to her, and may withdraw her trust.
+4. ■ Installation from a Store.  Alice may install a program listed in a store she trusts.
+Interface pragmas
+Look: 🏪, os
+Stores: the stores Alice trusts.
+Listings: the programs listed in Carol's store.
+Store: Carol [Open store]
+  Dave: Carol asks you to be a store.
+Listing: Carol [List] [Delist]
+  Dave: Carol asks you to list or delist a program.
+Store Trust: Alice [Trust store] [Distrust store]
+Installation from a Store: Alice [Install from store] <program>
+Implementation pragmas
+Store: the store's page shows its key, its owner and its listings, each program with its contract, the checker's verdict and the artefacts of its cascade; Dave answers anyone who asks for a listed program.
