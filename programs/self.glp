@@ -340,31 +340,35 @@ procedure is_mutual_ref(MutualRef?).
 %
 % This file may name them because it declares -mode(system).
 
-% Arithmetic
+% Arithmetic.  '_div', '_real' and '_sqrt' to '_atan' return Real, as the
+% catalogue has them (the GLP paper 0ec95cd, appendix-guards.tex, the kernel
+% table); '_add', '_sub', '_mul', '_abs' and '_pow' stay Number, a real where
+% an operand is real, and pow where the exponent is negative.  The checker
+% types X := E by TGLP 1962166, "Type checking of :=".
 procedure '_add'(Number?, Number?, Number).
 procedure '_sub'(Number?, Number?, Number).
 procedure '_mul'(Number?, Number?, Number).
-procedure '_div'(Number?, Number?, Number).
+procedure '_div'(Number?, Number?, Real).
 procedure '_idiv'(Number?, Number?, Integer).
 procedure '_mod'(Number?, Number?, Integer).
 
 % Math
 procedure '_abs'(Number?, Number).
-procedure '_sqrt'(Number?, Number).
-procedure '_sin'(Number?, Number).
-procedure '_cos'(Number?, Number).
-procedure '_tan'(Number?, Number).
-procedure '_exp'(Number?, Number).
-procedure '_ln'(Number?, Number).
-procedure '_log10'(Number?, Number).
+procedure '_sqrt'(Number?, Real).
+procedure '_sin'(Number?, Real).
+procedure '_cos'(Number?, Real).
+procedure '_tan'(Number?, Real).
+procedure '_exp'(Number?, Real).
+procedure '_ln'(Number?, Real).
+procedure '_log10'(Number?, Real).
 procedure '_pow'(Number?, Number?, Number).
-procedure '_asin'(Number?, Number).
-procedure '_acos'(Number?, Number).
-procedure '_atan'(Number?, Number).
+procedure '_asin'(Number?, Real).
+procedure '_acos'(Number?, Real).
+procedure '_atan'(Number?, Real).
 
 % Conversion
 procedure '_integer'(Number?, Integer).
-procedure '_real'(Number?, Number).
+procedure '_real'(Number?, Real).
 procedure '_round'(Number?, Integer).
 procedure '_floor'(Number?, Integer).
 procedure '_ceil'(Number?, Integer).
