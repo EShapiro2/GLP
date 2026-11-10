@@ -40,6 +40,7 @@
 #   gpe         GPE   GSA         programs/social/graph     ---
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              social_network
+#   gnw         GnW   GSC         programs/gsc              ---
 #   gsnp        GSNP  GAI         programs/gai              ---
 #   gc          GC    Currencies  programs/currencies/coins currency
 #   gb          GB    Currencies  programs/currencies/bonds ---
@@ -154,6 +155,7 @@ case "$1" in
     gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
     gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_network"
           PLAYLIMIT=6000000 ;;   # the standing approvals' Requests take GSN's play past 600000 (vGLP f0acbc1; Code #12, 2026-10-20)
+    gnw)  FILE=GnW;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, amends GSG (Udi, 2026-11-10, to GSC #14; GAI's programs/gai until 6415bff0)
     gsnp) FILE=GSNP; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
     gb)   FILE=GB;   OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
@@ -184,7 +186,7 @@ case "$1" in
     stay) FILE=STAY; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gnw gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not

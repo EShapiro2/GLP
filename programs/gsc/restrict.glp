@@ -9,7 +9,7 @@
 % Whether one body is stronger than another is undecidable in general; "the
 % checker decides it where the stronger body holds every literal and every
 % safe formula of the weaker and its constraint implies the weaker's, a
-% sufficient condition" (Section 8, after def:stronger).  stronger/3 decides
+% sufficient condition" (Section 9, after def:stronger).  stronger/3 decides
 % that condition: a schema tau' has a body stronger than tau's where they
 % have the same head, every role of tau is a role of tau' and every variable
 % of tau a role or a variable of tau', tau' requires at each role of tau
@@ -47,7 +47,7 @@
 % deletions; the proposition asks that the two contracts of every step be
 % syntactically grassroots, Sigma' a subset of Sigma, and that C and C' have
 % simple unguarded classes for (a) and (c), which the checker decides by the
-% sufficient condition the paper gives (Section 8, before prop:syntactic).
+% sufficient condition the paper gives (Section 9, before prop:syntactic).
 % ---------------------------------------------------------------------------
 
 imported procedure linear#cons_cd(Constraint?, VEnv?, Ans?, Cd).
@@ -1134,7 +1134,7 @@ procedure nd_name(ND?, Constant).
 nd_name(nd(N, _, _), N?).
 
 % ---------------------------------------------------------------------------
-% Simple unguarded classes, by the paper's sufficient condition (Section 8,
+% Simple unguarded classes, by the paper's sufficient condition (Section 9,
 % before prop:syntactic): "each schema with no guarding agent role has an
 % atom it adds or deletes at an agent role, the only atom with its predicate
 % that a schema of the contract adds, deletes or clears, among whose

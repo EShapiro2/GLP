@@ -9261,8 +9261,11 @@ if _section CAS; then
 echo "=== Section CAS: The cascade, recorded whole ==="
 echo ""
 
-for cas_c in gkk gsg gsn gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra gff dao ldao fdao rec stay lib joint; do
-    cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
+# A contract's NAME is the one cascade.sh's table gives it, as GnW, not its
+# <contract> upper-cased.
+for cas_c in gkk gsg gsn gnw gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra gff dao ldao fdao rec stay lib joint; do
+    cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
+    [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
