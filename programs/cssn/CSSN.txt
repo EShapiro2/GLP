@@ -6,14 +6,16 @@
 % Last changed: 2026-10-30, to Udi's revision of the contracts in Coordination Appendix E (Udi, 2026-10-30; Coordination #11, to_all 10:18 UTC), with CSSN #13's changes that Udi approved: clause 1 opens with 'Only', clause 2 without its last phrase, which GnW:4 covers, clause 4 undertaken, and clause 5, a child's messages, since GKK, GSG and GSN apply only to persons (Udi, 2026-10-30, to GAI #10); the pragmas follow GnW as agreed with GAI that day (GAI #10, CSSN_inbox 11:37 UTC; CSSN #13's changes 2 to 6, GAI_inbox 11:29 to 11:48 UTC).  The history before this is in git.
 % 2026-10-30, later: GnW:2 in Udi's wording (GAI fce54cd), a made parent may resign and stay the child's friend, the button [Resign] (CSSN #13 Cowork).
 % 2026-11-10: the pragmas to vGLP's rule (vGLP, Section 5.4, "The contract's words"; Code #23, CSSN_inbox 2026-11-05 14:05 UTC; Code #26, 2026-11-09 13:25 UTC): a field for each variable the proposer's state does not bind and no other, each button with its own fields, and the two-ward acts' buttons named apart, [Child acquaint 2] and [Child join 2] (Udi, 2026-11-10, to CSSN #14).
+% 2026-11-10, later: clause 2, A child's acquaintances, new, the clauses after it renumbered: CSSN limits a child to the agents a parent knows, GnW:3 and GnW:4 no longer doing so since 2026-11-08 (Udi, 2026-11-10, to CSSN #14, approving the clause); its two buttons under its title.
 % Schemas: CSSN.glp beside this file, the term from which a run of the cascade prints schemas.txt (cascade.sh).
 CSSN: Child-Safe Social Network
 Alice and Bob are adults, Carol and Dave children.
 1. ◆ Parent.  Only a legal parent of a child, Alice, may create the ward Carol, operated by the child.
-2. ■ A child's group.  Carol may create a group with the consent of a guardian, Alice; only a child, Dave, may join it.
-3. ○ Coming of age.  The creator of Carol may declare Carol of age, which ends every guardianship of Carol, Carol's friendships remaining, and Carol is then a person; the creator shall do so when Carol comes of age, and not before.
-4. ○ A child with no guardian.  Alice, aware that Dave is a child though not a ward, shall neither befriend Dave nor let their child befriend Dave, and shall report it to Dave's parents if Alice knows who they are.
-5. ■ A child's messages.  Carol may send a message to a friend, and to a group of which they are a member.
+2. ■ A child's acquaintances.  Carol, a child of Alice, comes to know Bob by an act of Carol, Alice and Bob, provided Alice knows Bob; and comes to know Dave, a child of Bob, by an act of Carol, Alice, Dave and Bob, provided Alice knows Dave and Bob.
+3. ■ A child's group.  Carol may create a group with the consent of a guardian, Alice; only a child, Dave, may join it.
+4. ○ Coming of age.  The creator of Carol may declare Carol of age, which ends every guardianship of Carol, Carol's friendships remaining, and Carol is then a person; the creator shall do so when Carol comes of age, and not before.
+5. ○ A child with no guardian.  Alice, aware that Dave is a child though not a ward, shall neither befriend Dave nor let their child befriend Dave, and shall report it to Dave's parents if Alice knows who they are.
+6. ■ A child's messages.  Carol may send a message to a friend, and to a group of which they are a member.
 Pragmas
 Children: the children Alice is parenting.
 Parent: Alice [Enter] <child>
@@ -22,21 +24,21 @@ Joint guardianship: Alice [Make parent]
   Bob: Alice asks you to be a parent of Carol.
   Alice [End parent] <person>
   Bob [Resign] [Parent unfriend]
-Ward and person: Alice [Child acquaint]
+A child's acquaintances: Alice [Child acquaint]
   Carol: Alice wishes that you and Bob know each other.
   Bob: Alice wishes that you and Carol know each other.
-  Alice [Child adult befriend]
+  Alice [Child acquaint 2]
+  Carol: Alice wishes that you and Dave know each other.
+  Dave: Alice wishes that you and Carol know each other.
+  Bob: Alice wishes that Carol and your child Dave know each other.
+Ward and person: Alice [Child adult befriend]
   Carol: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and Carol befriend.
   Bob [Child join] <person>
   Carol: Bob asks you to join their group.
   Alice: Bob asks that Carol join their group.
   Alice [Child unfriend] <person> [Child leave] <person> <group> [Child close] <group>
-Ward and ward: Alice [Child acquaint 2]
-  Carol: Alice wishes that you and Dave know each other.
-  Dave: Alice wishes that you and Carol know each other.
-  Bob: Alice wishes that Carol and your child Dave know each other.
-  Alice [Child befriend]
+Ward and ward: Alice [Child befriend]
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
   Bob: Alice asks that Carol and your child Dave befriend.

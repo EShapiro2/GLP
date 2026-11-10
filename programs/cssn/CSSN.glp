@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
 %% CSSN.glp --- the child-safe social network, CSSN's, in the term form programs/gsc reads (its README, "Writing a contract"), for programs/vglp/cva/compiler to compile into its canonical CVA platform (CSSN, Section 4.6.1).  The clauses are in CSSN.txt beside this file.  CSSN extends GSN, GSC's, and through it GSG and GKK, and GnW, GAI's, its wards children and their guardians parents.
-%% 2026-10-30, to Udi's revision of the contracts in Coordination Appendix E, with the changes to GnW agreed with GAI (GAI #10, CSSN_inbox 11:37 UTC; CSSN #13's changes 2 to 6, GAI_inbox 11:29 to 11:48 UTC) and to CSSN that Udi approved (CSSN #13 Cowork).  GKK, GSG and GSN apply only to persons, so child is forbidden at both roles of acquaint, introduce, befriend, create and join, and a child acquaints, befriends, joins and creates a group by the schemas for children; a child messages, posts, leaves a group and ends a friendship by GSN's schemas (CSSN:5; GnW:3).  unfriend forbids at either role the creator or a parent of the other, the friendships GnW:1 and GnW:2 protect, and, as GSN.glp's at 6069b119, clears every membership between the two, so drop is gone; child_unfriend and parent_unfriend clear them too.  The child records each parent the creator made, guarded_by, as GAI.glp's ward does (GLP 12eb5f29).  make_parent is an act of the creator and the adult, their friend, who becomes a guardian and a friend of the child (GnW:2); end_parent is the creator's ending of that guardianship, resign the made parent's ending of it, who stays the child's friend, and parent_unfriend the made parent's ending of their friendship with the child, which ends their guardianship (GnW:2, Udi's wording, GLP main, GAI fce54cd); of_age ends every guardianship through the listed role of the parents the child records, the child its first role, the opener of its parts (vGLP's effectiveness condition, as child_close); retire is the creator ending their friendship with the child, which ends every guardianship, through that listed role, and every friendship and membership of the child, through the listed role of the child's friends, in one act (GnW:5; GAI #10, CSSN_inbox 11:51 UTC); child_acquaint_2 and child_befriend require that each parent know the other child (GnW:4), child_join that the child's parent be a friend of the leader (GnW:3), and child_join_2 that each parent know the other child and be a friend of the other parent (GnW:4); child_create is a child's creating a group with a parent's consent (CSSN:2).  Thirty-one schemas over sixteen predicates; friend and knows are reflexive.  Every role requires identity, except the role of establish and the child's role of enter, which forbid it and add it; every guarding role forbids retired, and so does the leader's role of post and deliver.  The guardianship is (child, identity, creator, created, parenting).  The history before this is in git.
+%% 2026-10-30, to Udi's revision of the contracts in Coordination Appendix E, with the changes to GnW agreed with GAI (GAI #10, CSSN_inbox 11:37 UTC; CSSN #13's changes 2 to 6, GAI_inbox 11:29 to 11:48 UTC) and to CSSN that Udi approved (CSSN #13 Cowork).  GKK, GSG and GSN apply only to persons, so child is forbidden at both roles of acquaint, introduce, befriend, create and join, and a child acquaints, befriends, joins and creates a group by the schemas for children; a child messages, posts, leaves a group and ends a friendship by GSN's schemas (CSSN:6; GnW:3).  unfriend forbids at either role the creator or a parent of the other, the friendships GnW:1 and GnW:2 protect, and, as GSN.glp's at 6069b119, clears every membership between the two, so drop is gone; child_unfriend and parent_unfriend clear them too.  The child records each parent the creator made, guarded_by, as GAI.glp's ward does (GLP 12eb5f29).  make_parent is an act of the creator and the adult, their friend, who becomes a guardian and a friend of the child (GnW:2); end_parent is the creator's ending of that guardianship, resign the made parent's ending of it, who stays the child's friend, and parent_unfriend the made parent's ending of their friendship with the child, which ends their guardianship (GnW:2, Udi's wording, GLP main, GAI fce54cd); of_age ends every guardianship through the listed role of the parents the child records, the child its first role, the opener of its parts (vGLP's effectiveness condition, as child_close); retire is the creator ending their friendship with the child, which ends every guardianship, through that listed role, and every friendship and membership of the child, through the listed role of the child's friends, in one act (GnW:5; GAI #10, CSSN_inbox 11:51 UTC); child_acquaint_2 and child_befriend require that each parent know the other child (GnW:4), child_join that the child's parent be a friend of the leader (GnW:3), and child_join_2 that each parent know the other child and be a friend of the other parent (GnW:4); child_create is a child's creating a group with a parent's consent (CSSN:2).  Thirty-one schemas over sixteen predicates; friend and knows are reflexive.  Every role requires identity, except the role of establish and the child's role of enter, which forbid it and add it; every guarding role forbids retired, and so does the leader's role of post and deliver.  The guardianship is (child, identity, creator, created, parenting).  The history before this is in git.
 %%
 %% This term is the one source of the schemas: a run of the cascade prints their notation from it as schemas.txt (cascade.sh, programs/gsc/notation.glp).  Each comment below names the clause a schema realises.
 %% ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ gsn_schemas([
        rs(unguarded, [], [atom(friend, [role(1)]), atom(listed, [role(1), any]),
                           atom(member, [nterm(ext_any(own(1)))])], [atom(identity, [])],
                      [atom(creator, [role(1)]), atom(parenting, [role(1)])])]),
-%% GSN:1, Messaging, and CSSN:5 for a child.
+%% GSN:1, Messaging, and CSSN:6 for a child.
     schema(message, ['Alice', 'Bob'], [svar(x)],
       [rs(guarded,   [], [], [atom(identity, []), atom(friend, [role(2)])], [atom(retired, [])]),
        rs(unguarded, [atom(received, [svar(x), role(1)])], [],
@@ -112,7 +112,7 @@ gsn_schemas([
                    [atom(listed, [role(1), svar(n)])], [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [atom(retired, [])]),
        crs(listed(1, listed, [svar(n)]), unguarded,
            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%% GSN:4, Group messaging, and CSSN:5 for a child: the leader's own, a member's sent to the leader, and the leader delivering it to every member.
+%% GSN:4, Group messaging, and CSSN:6 for a child: the leader's own, a member's sent to the leader, and the leader delivering it to every member.
     schema(post_own, ['Alice'], [svar(x), svar(n)],
       [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
                    [atom(identity, []), atom(member, [nterm(ext(own(1), n))])],
@@ -133,7 +133,7 @@ gsn_schemas([
        rs(unguarded, [atom(received_in, [svar(x), role(1), svar(n)])], [],
                      [atom(identity, []), atom(member, [nterm(ext(own(1), n))])], [])])]).
 
-%% The sixteen schemas for children, realising GnW with CSSN:1 to CSSN:3; Alice is Carol's parent and Bob Dave's, or the adult in GnW:3.
+%% The sixteen schemas for children, realising GnW with CSSN:1 to CSSN:4; Alice is Carol's parent and Bob Dave's, or the adult in GnW:3.
 procedure children_schemas(Contract).
 children_schemas([
 %% GnW:1, Creation, with CSSN:1, Parent: the creator, Alice, chooses Carol's key pair and becomes Carol's guardian and friend.
@@ -176,7 +176,7 @@ children_schemas([
        rs(unguarded, [], [atom(guarded_by, [role(1)]), atom(friend, [role(1)]),
                           atom(listed, [role(1), any]), atom(member, [nterm(ext_any(own(1)))])],
                      [atom(identity, []), atom(child, [])], [])]),
-%% CSSN:3, Coming of age: the creator declares Carol of age, which ends every guardianship of Carol, the friendships remaining.
+%% CSSN:4, Coming of age: the creator declares Carol of age, which ends every guardianship of Carol, the friendships remaining.
     cschema(of_age, ['Carol', 'Alice', 'Carol'], [], [],
       [rs(unguarded, [], [atom(child, []), atom(creator, [role(2)]), atom(guarded_by, [any])],
                      [atom(identity, [])], []),
@@ -197,7 +197,7 @@ children_schemas([
        crs(listed(1, friend, []), unguarded,
            [], [atom(friend, [role(1)]), atom(listed, [role(1), any]), atom(member, [nterm(ext_any(own(1)))])],
            [atom(identity, [])], [])]),
-%% GnW:3, Ward and person: Carol comes to know Bob provided Alice knows Bob.
+%% CSSN:2, A child's acquaintances: Carol comes to know Bob provided Alice knows Bob.
     schema(child_acquaint, ['Carol', 'Bob', 'Alice'], [],
       [rs(guarded, [atom(knows, [role(2)])], [],
                    [atom(identity, []), atom(child, [])], [atom(retired, [])]),
@@ -206,7 +206,7 @@ children_schemas([
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(1)]), atom(knows, [role(2)])],
                    [atom(child, []), atom(retired, [])])]),
-%% GnW:4, Ward and ward: Carol and Dave come to know each other provided each parent knows the other child and the other parent.
+%% CSSN:2, A child's acquaintances: Carol and Dave come to know each other provided each parent knows the other child and the other parent.
     schema(child_acquaint_2, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [],
       [rs(guarded, [atom(knows, [role(2)])], [],
                    [atom(identity, []), atom(child, [])], [atom(retired, [])]),
@@ -264,7 +264,7 @@ children_schemas([
        rs(guarded, [], [],
                    [atom(identity, []), atom(parenting, [role(2)]), atom(friend, [role(1)])],
                    [atom(child, []), atom(retired, [])])]),
-%% GnW:4 with CSSN:2, Dave joins the group of Carol, their friend, provided each parent knows the other child and is a friend of the other parent.
+%% GnW:4 with CSSN:3, Dave joins the group of Carol, their friend, provided each parent knows the other child and is a friend of the other parent.
     schema(child_join_2, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [svar(n)],
       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
                    [atom(identity, []), atom(child, []), atom(member, [nterm(ext(own(1), n))]),
@@ -295,7 +295,7 @@ children_schemas([
                    [atom(identity, []), atom(parenting, [role(1)])], [atom(child, []), atom(retired, [])]),
        crs(listed(1, listed, [svar(n)]), unguarded,
            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
-%% CSSN:2, A child's group: Carol creates a group with the consent of Alice, a parent.
+%% CSSN:3, A child's group: Carol creates a group with the consent of Alice, a parent.
     schema(child_create, ['Carol', 'Alice'], [svar(n)],
       [rs(guarded, [atom(member, [nterm(ext(own(1), n))]),
                     atom(listed, [role(1), svar(n)])], [],
