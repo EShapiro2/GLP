@@ -1,1 +1,1 @@
-syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, guarded_by)], [relay(ward_acquaint, ward(1, child, guardian(3)), free(2)), relay(wards_acquaint, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [identity, person])
+syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, guarded_by)], [relay(child_acquaint, ward(1, child, guardian(3)), free(2)), relay(children_acquaint, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [identity, person])
