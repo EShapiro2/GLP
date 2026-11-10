@@ -1,68 +1,182 @@
 %% ---------------------------------------------------------------------------
-%% GRV.glp --- the Grassroots Rendezvous contract, GNA's (a paper of the GSA project), extending GSG,
-%% in the clause syntax of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses
-%% are in GRV.txt beside this file: open_server is GRV:1, Server; register GRV:2, Registration;
-%% redeem GRV:3, Redemption; present and match GRV:4, Reconnection, one clause in two schemas, each
-%% friend presenting and the server matching the two.  GKK's and GSG's schemas come first.  A link's
-%% serial s and expiry e are values (GSC, the appendix Values); the link itself, the term Alice
-%% signs, travels outside the contract and the server's operating system checks its signature and
-%% its expiry by the implementation pragmas.  server(Carol) says that Carol set up a rendezvous
-%% server; registered(Carol, Alice, s, e) that Alice registered with it a link with serial s and
-%% expiry e, and registered_with(Alice, Carol, s) the same at Alice; used(Carol, Alice, s) that the
-%% link was spent; redeemed(Bob, Alice, s) at Bob that he presented it; waiting(Carol, Alice, Bob)
-%% that Alice asked the server to reconnect her with her friend Bob.  A friend's signature over the
-%% friendship (GRV:4) is, in the schema, the atom friend(Alice, Bob) the attested Grassroots App of
-%% Alice requires at her role.  Bob knows the server, knows(Bob, Carol), by GKK:2, the server
-%% answering anyone.  Written by GSA #2 Cowork, 2026-11-07, a draft for Udi's approval and GSC's
-%% checker.
+%% GRV.glp --- GRV, Grassroots Rendezvous, GNA's (a paper of the GSA project), its clauses in GRV.txt beside this file, extending GSV (GSV.txt), in the clause syntax of GSC's paper, Section 3.2.  GnW's seventeen schemas come first, as programs/gsc/GnW.glp writes them, its parameter ward instantiated at service and creator, created, guardian_of, guarded_by and retired at themselves (GSC's paper, Definition Parametric contract); they are restated here until Code gives the term form of an instantiation, and docs/tools/gen_gsv.py of GNA's repository writes this file from GnW.glp.  Then GRV's five: open_server is GRV:1, Server; invite_by_link GRV:2, Registration, named as its button; redeem GRV:3, Redemption; present and match GRV:4, Reconnection, one clause in two schemas, each friend presenting and the server matching the two.  rendezvous(Dave) says that the service Dave is a rendezvous server; registered(Dave, Alice, s, e) that Alice registered with it a link with serial s and expiry e, and registered_with(Alice, Dave, s) the same at Alice; used(Dave, Alice, s) that the link was spent; redeemed(Bob, Alice, s) at Bob that he presented it; waiting(Dave, Alice, Bob) that Alice asked the server to reconnect her with her friend Bob.  A link's serial and expiry are values (GSC, the appendix Values); the link itself, the term Alice signs, travels outside the contract, and the server checks its signature and its expiry by the implementation pragmas.  A friend's signature over the friendship (GRV:4) is, in the schema, the atom friend(Alice, Bob) required at her role.  A person comes to know the server by GnW:3, ward_acquaint, the server answering anyone.  Rewritten on GSV by GSA #3 Cowork, 2026-11-10 (Udi, 2026-11-10 13:52 UTC), from GSA #2's of 2026-11-07.
 %% ---------------------------------------------------------------------------
 
-% contract_named(grv, C): the contract, GRV (Coordination Appendix C).
-procedure contract_named(Constant?, SContract).
-contract_named(grv,
-   [sas(establish, ['Alice'], [],
-       [atom(identity, ['Alice'])],
+% contract_named(grv, C): the contract, GRV, friend and knows reflexive.
+procedure contract_named(Constant?, SDeclared).
+contract_named(grv, reflexive([friend, knows],
+   [
+%% GKK:1, Identity.
+    sas(establish, ['Alice'], [],
+       [atom(identity, ['Alice']), atom(person, ['Alice'])],
        [not(atom(identity, ['Alice']))], true, ['Alice']),
+%% GKK:2, Acquaintance, for two persons.
     sas(acquaint, ['Alice', 'Bob'], [],
        [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
-       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
-    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
+       [atom(identity, ['Alice']), atom(person, ['Alice']),
+        atom(identity, ['Bob']), atom(person, ['Bob'])],
+       true, ['Alice', 'Bob']),
+%% GKK:3, Introduction, for persons, with Bob's consent, Carol, the person introduced, a reading role.
+    sas(introduce, ['Alice', 'Bob', 'Carol'], [],
        [atom(knows, ['Bob', 'Carol'])],
        [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
+        atom(person, ['Alice']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']),
+        atom(person, ['Bob']),
+        atom(identity, ['Carol']), atom(person, ['Carol'])],
+       true, ['Alice', 'Bob']),
+%% GSG:1, Friendship, for two persons who know each other.
     sas(befriend, ['Alice', 'Bob'], [],
        [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
        [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
+        atom(person, ['Alice']),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice'])),
+        atom(person, ['Bob'])],
        true, ['Alice', 'Bob']),
+%% GSG:2, Ending a friendship, by a person, Alice, with any agent Bob, but a ward she is a guardian of (GnW:2, guardian_unfriend).
     sas(unfriend, ['Alice', 'Bob'], [],
        [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
        [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
-        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
-    sas(open_server, ['Carol'], [],
-       [atom(server, ['Carol'])],
-       [atom(identity, ['Carol']), not(atom(server, ['Carol']))], true, ['Carol']),
-    sas(register, ['Alice', 'Carol'], [s, e],
-       [atom(registered_with, ['Alice', 'Carol', num(s)]),
-        atom(registered, ['Carol', 'Alice', num(s), num(e)])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']),
-        not(atom(registered_with, ['Alice', 'Carol', num(s)])),
-        atom(identity, ['Carol']), atom(server, ['Carol']),
-        not(atom(registered, ['Carol', 'Alice', num(s), '_'])), not(atom(used, ['Carol', 'Alice', num(s)]))],
+        atom(person, ['Alice']),
+        not(atom(guardian_of, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])],
        true, ['Alice']),
-    sas(redeem, ['Bob', 'Carol'], [a, s, e],
-       [atom(redeemed, ['Bob', a, num(s)]),
-        atom(used, ['Carol', a, num(s)]), not(atom(registered, ['Carol', a, num(s), num(e)]))],
-       [atom(identity, ['Bob']), atom(knows, ['Bob', 'Carol']),
-        atom(identity, ['Carol']), atom(server, ['Carol']), atom(registered, ['Carol', a, num(s), num(e)])],
+%% GnW:1, Creation: Alice creates the ward Carol, choosing Carol's key pair, and is her creator, a guardian and a friend.
+    sas(enter, ['Alice', 'Carol'], [],
+       [atom(created, ['Alice', 'Carol']), atom(guardian_of, ['Alice', 'Carol']),
+        atom(friend, ['Alice', 'Carol']), atom(knows, ['Alice', 'Carol']),
+        atom(identity, ['Carol']), atom(service, ['Carol']), atom(creator, ['Carol', 'Alice']),
+        atom(guarded_by, ['Carol', 'Alice']),
+        atom(friend, ['Carol', 'Alice']), atom(knows, ['Carol', 'Alice'])],
+       [atom(identity, ['Alice']),
+        atom(person, ['Alice']),
+        not(atom(identity, ['Carol']))],
+       true, ['Alice', 'Carol']),
+%% GnW:2, Joint guardianship: Bob, a friend of Alice, a guardian of Carol, becomes a guardian and a friend of Carol, by an act of Bob and the guardians of Carol, Alice and every Erin.
+    sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [],
+       [atom(guardian_of, ['Bob', 'Carol']), atom(friend, ['Bob', 'Carol']),
+        atom(guarded_by, ['Carol', 'Bob']), atom(friend, ['Carol', 'Bob'])],
+       [atom(identity, ['Bob']), atom(person, ['Bob']),
+        not(atom(guardian_of, ['Bob', 'Carol'])),
+        atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        not(atom(guarded_by, ['Carol', 'Bob'])), not(atom(friend, ['Carol', 'Bob'])),
+        forall(['Erin'], atom(guarded_by, ['Carol', 'Erin']), true,
+               and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(guardian_of, ['Erin', 'Carol']))))],
+       true, ['Bob', 'Alice', 'Erin']),
+%% GnW:2: the guardians of Carol other than Bob, Alice and every other Erin, end Bob's guardianship of Carol.
+    sas(end_guardian, ['Alice', 'Bob', 'Carol', 'Erin'], [],
+       [not(atom(guardian_of, ['Bob', 'Carol'])), not(atom(guarded_by, ['Carol', 'Bob']))],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol']),
+        atom(identity, ['Bob']), atom(person, ['Bob']), atom(guardian_of, ['Bob', 'Carol']),
+        atom(identity, ['Carol']), atom(guarded_by, ['Carol', 'Bob']), atom(guarded_by, ['Carol', 'Alice']),
+        forall(['Erin'], atom(guarded_by, ['Carol', 'Erin']), ne('Erin', 'Bob'),
+               and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(guardian_of, ['Erin', 'Carol']))))],
+       true, ['Alice', 'Erin']),
+%% GnW:2: Bob, a guardian of Carol, ends his guardianship of Carol, the friendship remaining.
+    sas(resign, ['Bob', 'Carol'], [],
+       [not(atom(guardian_of, ['Bob', 'Carol'])), not(atom(guarded_by, ['Carol', 'Bob']))],
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(guardian_of, ['Bob', 'Carol']),
+        atom(identity, ['Carol']), atom(guarded_by, ['Carol', 'Bob'])],
        true, ['Bob']),
-    sas(present, ['Alice', 'Carol'], ['Bob'],
-       [atom(waiting, ['Carol', 'Alice', 'Bob'])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
-        atom(identity, ['Carol']), atom(server, ['Carol']), not(atom(waiting, ['Carol', 'Alice', 'Bob']))],
+%% GnW:2: Bob, a guardian of Carol, ends his friendship with Carol, which ends his guardianship.
+    sas(guardian_unfriend, ['Bob', 'Carol'], [],
+       [not(atom(friend, ['Bob', 'Carol'])), not(atom(guardian_of, ['Bob', 'Carol'])),
+        not(atom(friend, ['Carol', 'Bob'])), not(atom(guarded_by, ['Carol', 'Bob']))],
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(friend, ['Bob', 'Carol']), atom(guardian_of, ['Bob', 'Carol']),
+        atom(identity, ['Carol']), atom(friend, ['Carol', 'Bob']), atom(guarded_by, ['Carol', 'Bob'])],
+       true, ['Bob']),
+%% GnW:3, Ward and person, knowing: Carol, a ward of Alice, and Bob come to know each other by an act of both; Alice, a guardian Carol records, is an agent variable.
+    sas(ward_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'],
+       [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])],
+       [atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        atom(identity, ['Bob']), atom(person, ['Bob'])],
+       true, ['Carol', 'Bob']),
+%% GnW:3, Ward and person, a relation: Carol and Bob, who know each other, become friends, provided Alice, a guardian of Carol, and Bob are friends, by an act of the three.
+    sas(ward_befriend, ['Carol', 'Bob', 'Alice'], [],
+       [atom(friend, ['Carol', 'Bob']), atom(friend, ['Bob', 'Carol'])],
+       [atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        atom(knows, ['Carol', 'Bob']), not(atom(friend, ['Carol', 'Bob'])),
+        atom(identity, ['Bob']), atom(knows, ['Bob', 'Carol']),
+        atom(person, ['Bob']), not(atom(friend, ['Bob', 'Carol'])),
+        atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob'])],
+       true, ['Carol', 'Bob', 'Alice']),
+%% GnW:3: Alice, a guardian of Carol, ends a friendship of Carol with Bob, other than a guardian.
+    sas(ward_unfriend, ['Carol', 'Bob', 'Alice'], [],
+       [not(atom(friend, ['Carol', 'Bob'])), not(atom(friend, ['Bob', 'Carol']))],
+       [atom(identity, ['Carol']), atom(friend, ['Carol', 'Bob']), atom(guarded_by, ['Carol', 'Alice']),
+        not(atom(guarded_by, ['Carol', 'Bob'])),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Carol']),
+        atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol'])],
        true, ['Alice']),
-    sas(match, ['Carol'], [a, b],
-       [not(atom(waiting, ['Carol', a, b])), not(atom(waiting, ['Carol', b, a])), atom(matched, ['Carol', a, b])],
-       [atom(identity, ['Carol']), atom(server, ['Carol']),
-        atom(waiting, ['Carol', a, b]), atom(waiting, ['Carol', b, a])],
-       true, [])]).
+%% GnW:3: Carol, a ward of Alice, ends her friendship with Bob, other than a guardian; Alice an agent variable.
+    sas(ward_end, ['Carol', 'Bob', 'Alice'], ['Alice'],
+       [not(atom(friend, ['Carol', 'Bob'])), not(atom(friend, ['Bob', 'Carol']))],
+       [atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        atom(friend, ['Carol', 'Bob']), not(atom(guarded_by, ['Carol', 'Bob'])),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Carol'])],
+       true, ['Carol']),
+%% GnW:4, Ward and ward, knowing: Carol, a ward of Alice, and Dave, a ward of Bob, come to know each other by an act of both; Alice and Bob agent variables.
+    sas(wards_acquaint, ['Carol', 'Dave', 'Alice', 'Bob'], ['Alice', 'Bob'],
+       [atom(knows, ['Carol', 'Dave']), atom(knows, ['Dave', 'Carol'])],
+       [atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        atom(identity, ['Dave']), atom(service, ['Dave']), atom(guarded_by, ['Dave', 'Bob'])],
+       true, ['Carol', 'Dave']),
+%% GnW:4, Ward and ward, a relation: Carol and Dave, who know each other, become friends, provided Alice knows Dave and is a friend of Bob, by an act of the four; Alice and Bob possibly one person.
+    sas(wards_befriend, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [],
+       [atom(friend, ['Carol', 'Dave']), atom(friend, ['Dave', 'Carol'])],
+       [atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        atom(knows, ['Carol', 'Dave']), not(atom(friend, ['Carol', 'Dave'])),
+        atom(identity, ['Dave']), atom(service, ['Dave']), atom(guarded_by, ['Dave', 'Bob']),
+        atom(knows, ['Dave', 'Carol']), not(atom(friend, ['Dave', 'Carol'])),
+        atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol']),
+        atom(knows, ['Alice', 'Dave']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Bob']), atom(person, ['Bob']), atom(guardian_of, ['Bob', 'Dave'])],
+       true, ['Carol', 'Dave', 'Alice', 'Bob']),
+%% GnW:5, Retiring: the guardians of Carol, Alice and every Erin, retire Carol, which ends every guardianship and every friendship of Carol, every friend Bob and every guardian Erin of Carol in the act by the quantified conjuncts; retired is a record, and the records of her creation stay.
+    sas(retire, ['Carol', 'Alice', 'Bob', 'Erin'], [],
+       [atom(retired, ['Carol']), not(atom(friend, ['Carol', '_'])), not(atom(guarded_by, ['Carol', '_'])),
+        forall(['Bob'], atom(friend, ['Carol', 'Bob']), true, [not(atom(friend, ['Bob', 'Carol']))]),
+        forall(['Erin'], atom(guarded_by, ['Carol', 'Erin']), true, [not(atom(guardian_of, ['Erin', 'Carol']))])],
+       [atom(identity, ['Carol']), atom(service, ['Carol']), atom(guarded_by, ['Carol', 'Alice']),
+        atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol']),
+        forall(['Bob'], atom(friend, ['Carol', 'Bob']), true,
+               and(atom(identity, ['Bob']), atom(friend, ['Bob', 'Carol']))),
+        forall(['Erin'], atom(guarded_by, ['Carol', 'Erin']), true,
+               and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(guardian_of, ['Erin', 'Carol']))))],
+       true, ['Alice', 'Erin']),
+%% GRV:1, Server: Carol, a guardian of the service Dave, makes it a server, by an act of both.
+    sas(open_server, ['Carol', 'Dave'], [],
+       [atom(rendezvous, ['Dave'])],
+       [atom(identity, ['Carol']), atom(person, ['Carol']), atom(guardian_of, ['Carol', 'Dave']),
+        atom(identity, ['Dave']), atom(service, ['Dave']), atom(guarded_by, ['Dave', 'Carol']),
+        not(atom(rendezvous, ['Dave']))],
+       true, ['Carol', 'Dave']),
+%% GRV:2, Registration: Alice registers with the server Dave a link with serial s and expiry e.
+    sas(invite_by_link, ['Alice', 'Dave'], [s, e],
+       [atom(registered_with, ['Alice', 'Dave', num(s)]),
+        atom(registered, ['Dave', 'Alice', num(s), num(e)])],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Dave']),
+        not(atom(registered_with, ['Alice', 'Dave', num(s)])),
+        atom(identity, ['Dave']), atom(rendezvous, ['Dave']),
+        not(atom(registered, ['Dave', 'Alice', num(s), '_'])), not(atom(used, ['Dave', 'Alice', num(s)]))],
+       true, ['Alice']),
+%% GRV:3, Redemption: Bob presents to Dave a link registered by a; the link is spent.
+    sas(redeem, ['Bob', 'Dave'], [a, s, e],
+       [atom(redeemed, ['Bob', a, num(s)]),
+        atom(used, ['Dave', a, num(s)]), not(atom(registered, ['Dave', a, num(s), num(e)]))],
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Dave']),
+        atom(identity, ['Dave']), atom(rendezvous, ['Dave']), atom(registered, ['Dave', a, num(s), num(e)])],
+       true, ['Bob']),
+%% GRV:4, Reconnection: Alice, a friend of Bob, asks Dave to reconnect them.
+    sas(present, ['Alice', 'Dave'], ['Bob'],
+       [atom(waiting, ['Dave', 'Alice', 'Bob'])],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Dave']), atom(friend, ['Alice', 'Bob']),
+        atom(identity, ['Dave']), atom(rendezvous, ['Dave']), not(atom(waiting, ['Dave', 'Alice', 'Bob']))],
+       true, ['Alice']),
+%% GRV:4, Reconnection: Dave matches the two friends who each asked.
+    sas(match, ['Dave'], [a, b],
+       [not(atom(waiting, ['Dave', a, b])), not(atom(waiting, ['Dave', b, a])), atom(matched, ['Dave', a, b])],
+       [atom(identity, ['Dave']), atom(rendezvous, ['Dave']),
+        atom(waiting, ['Dave', a, b]), atom(waiting, ['Dave', b, a])],
+       true, [])])).

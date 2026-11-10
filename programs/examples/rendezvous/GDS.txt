@@ -1,19 +1,21 @@
 % GDS: Grassroots Directory Service --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GNA, a paper of the GSA project (Udi, 2026-11-08).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GDS:1.
-% Paper: GNA, GLP Networking API Specification, in preparation
-% Extends: GnW, Guardians 'n' Wards, GAI's (programs/gai/GnW.txt), the directory a ward of its owner; it is a participant of GRV, registering nothing itself: the links it hands out are the listed person's own, registered by them (GRV:2).
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: GSV, Grassroots Services, GNA's (GSV.txt beside this file), which instantiates GnW, GSC's (programs/gsc/GnW.txt): a directory is a service (Udi, 2026-11-10 13:52 UTC); it is a participant of GRV, registering nothing itself: the links it hands out are the listed person's own, registered by them (GRV:2).
 % Defines: directory and listing, defined in the box after the declaration.  Rendezvous server and invitation link are defined with GRV.
-% Last changed: 2026-11-08, written by GSA #2 Cowork from Udi's design (2026-11-08 07:06 UTC: a page at <address>/directory, listed by a verified email and possibly a name, unlisted people retrieved by email and name) his decision that the directory is a ward of its own (07:12 UTC), and the name and its own section, GDS (07:17 UTC); the links are the listed person's own, so GRV is untouched (07:16 UTC).
-% Schemas: GDS.glp, to be written on GnW's schemas once GAI amends them.
+% Last changed: 2026-11-10, on GSV: a directory is a service with a page every person can read, and Carol makes her service Dora a directory; the schemas written (Udi, 2026-11-10 13:52 UTC, approving GSA #3); 2026-11-08, written by GSA #2 Cowork from Udi's design (2026-11-08 07:06 UTC: a page at <address>/directory, listed by a verified email and possibly a name, unlisted people retrieved by email and name) his decision that the directory is a ward of its own (07:12 UTC), and the name and its own section, GDS (07:17 UTC); the links are the listed person's own, so GRV is untouched (07:16 UTC).
+% Schemas: GDS.glp beside this file: GSV's seventeen and GDS's six, open_directory, list, list_unlisted, unlist, lookup and lookup_unlisted.
 GDS: Grassroots Directory Service
-GDS extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, arXiv).
-Alice, Bob and Carol are persons, Dora a ward.  A directory is a ward operated by a machine with a page every person can read.  A listing is an email address of Alice's that the directory verified, with a name of her choosing if she gives one.
-1. ■ Directory.  Carol may create a directory, Dora, as her ward.
+GDS extends GSV.
+Alice, Bob and Carol are persons, Dora a ward.  A directory is a service with a page every person can read.  A listing is an email address of Alice's that the directory verified, with a name of her choosing if she gives one.
+1. ■ Directory.  Carol may make her service Dora a directory.
 2. ■ Listing.  Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, listed or unlisted; her app then keeps Dora supplied with invitation links of hers; she may unlist herself.
 3. ■ Lookup.  Anyone may look a listed person up on Dora's page, and an unlisted person up by their email address and name.
 4. ■ Contact.  Dora gives whoever looked Alice up an invitation link of Alice's.
 Interface pragmas
 Look: 📇, network
+Directory: Carol [Open directory]
+  Dora: Carol asks you to be a directory.
 Listing: Alice [List] <email> <name> [List unlisted] <email> <name> [Unlist]
 Implementation pragmas
 Listing: the directory verifies an email address by sending it a message with a link, which Alice opens.
