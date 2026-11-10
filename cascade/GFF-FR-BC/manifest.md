@@ -1,9 +1,9 @@
 # A run of the cascade on GFF-FR-BC
 
-- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `cadac8e9`.
-- The paper: `https://github.com/EShapiro2/gff-grassroots-feeds-and-followers` at `b6ea2eab`, for the paper's own record.
-- The tools: this repository at `cadac8e9` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 11:59 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `9a8382ec`.
+- The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
+- The tools: this repository at `9a8382ec` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 15:55 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
