@@ -1,10 +1,10 @@
 %% ---------------------------------------------------------------------------
-%% GRV.glp --- GRV, Grassroots Rendezvous, GNA's (a paper of the GSA project), its clauses in GRV.txt beside this file, extending GSV (GSV.txt), in the clause syntax of GSC's paper, Section 3.2.  GnW's seventeen schemas come first, as programs/gsc/GnW.glp writes them, its parameter ward instantiated at service and creator, created, guardian_of, guarded_by and retired at themselves (GSC's paper, Definition Parametric contract); they are restated here until Code gives the term form of an instantiation, and docs/tools/gen_gsv.py of GNA's repository writes this file from GnW.glp.  Then GRV's five: open_server is GRV:1, Server; invite_by_link GRV:2, Registration, named as its button; redeem GRV:3, Redemption; present and match GRV:4, Reconnection, one clause in two schemas, each friend presenting and the server matching the two.  rendezvous(Dave) says that the service Dave is a rendezvous server; registered(Dave, Alice, s, e) that Alice registered with it a link with serial s and expiry e, and registered_with(Alice, Dave, s) the same at Alice; used(Dave, Alice, s) that the link was spent; redeemed(Bob, Alice, s) at Bob that he presented it; waiting(Dave, Alice, Bob) that Alice asked the server to reconnect her with her friend Bob.  A link's serial and expiry are values (GSC, the appendix Values); the link itself, the term Alice signs, travels outside the contract, and the server checks its signature and its expiry by the implementation pragmas.  A friend's signature over the friendship (GRV:4) is, in the schema, the atom friend(Alice, Bob) required at her role.  A person comes to know the server by GnW:3, ward_acquaint, the server answering anyone.  Rewritten on GSV by GSA #3 Cowork, 2026-11-10 (Udi, 2026-11-10 13:52 UTC), from GSA #2's of 2026-11-07.
+%% GRV.glp --- GRV, Grassroots Rendezvous, GNA's (a paper of the GSA project), its clauses in GRV.txt beside this file, extending GSV (GSV.txt), in the clause syntax of GSC's paper, Section 3.2.  GnW's seventeen schemas come first, as programs/gsc/GnW.glp writes them, its parameter ward instantiated at service and creator, created, guardian_of, guarded_by and retired at themselves (GSC's paper, Definition Parametric contract); they are restated here until Code gives the term form of an instantiation, and docs/tools/gen_gsv.py of GNA's repository writes this file from GnW.glp.  Then GRV's five: open_server is GRV:1, Server; invite_by_link GRV:2, Registration, named as its button; redeem GRV:3, Redemption; present and match GRV:4, Reconnection, one clause in two schemas, each friend presenting and the server matching the two.  rendezvous(Dave) says that the service Dave is a rendezvous server; registered(Dave, Alice, s, e) that Alice registered with it a link with serial s and expiry e, and registered_with(Alice, Dave, s) the same at Alice; used(Dave, Alice, s) that the link was spent; redeemed(Bob, Alice, s) at Bob that he presented it; waiting(Dave, Alice, Bob) that Alice asked the server to reconnect her with her friend Bob.  link(Alice, s, e) is an environment predicate, the serial and the expiry of the next invitation link of Alice, which her app keeps current and invite_by_link requires at her role, so its button has no field.  A link's serial and expiry are values (GSC, the appendix Values); the link itself, the term Alice signs, travels outside the contract, and the server checks its signature and its expiry by the implementation pragmas.  A friend's signature over the friendship (GRV:4) is, in the schema, the atom friend(Alice, Bob) required at her role.  A person comes to know the server by GnW:3, ward_acquaint, the server answering anyone.  Rewritten on GSV by GSA #3 Cowork, 2026-11-10 (Udi, 2026-11-10 13:52 UTC), from GSA #2's of 2026-11-07.
 %% ---------------------------------------------------------------------------
 
 % contract_named(grv, C): the contract, GRV, friend and knows reflexive.
 procedure contract_named(Constant?, SDeclared).
-contract_named(grv, reflexive([friend, knows],
+contract_named(grv, environment([link], reflexive([friend, knows],
    [
 %% GKK:1, Identity.
     sas(establish, ['Alice'], [],
@@ -157,6 +157,7 @@ contract_named(grv, reflexive([friend, knows],
        [atom(registered_with, ['Alice', 'Dave', num(s)]),
         atom(registered, ['Dave', 'Alice', num(s), num(e)])],
        [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Dave']),
+        atom(link, ['Alice', num(s), num(e)]),
         not(atom(registered_with, ['Alice', 'Dave', num(s)])),
         atom(identity, ['Dave']), atom(rendezvous, ['Dave']),
         not(atom(registered, ['Dave', 'Alice', num(s), '_'])), not(atom(used, ['Dave', 'Alice', num(s)]))],
@@ -179,4 +180,4 @@ contract_named(grv, reflexive([friend, knows],
        [not(atom(waiting, ['Dave', a, b])), not(atom(waiting, ['Dave', b, a])), atom(matched, ['Dave', a, b])],
        [atom(identity, ['Dave']), atom(rendezvous, ['Dave']),
         atom(waiting, ['Dave', a, b]), atom(waiting, ['Dave', b, a])],
-       true, [])])).
+       true, [])]))).
