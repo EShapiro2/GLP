@@ -441,7 +441,7 @@ ClauseCheckResult checkClause(
         activeInstantiations: activeInstantiations,
         callee: callee,
         plan: plans[i],
-        assignsInteger: reading.integerAssignments.contains(i),
+        assignmentType: reading.assignments[i],
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -1123,6 +1123,43 @@ const Set<String> _integerUnary = {'abs'};
 /// "integer, round, floor or ceil over any expression".
 const Set<String> _integerConversions = {'integer', 'round', 'floor', 'ceil'};
 
+/// The functions of `Exp` whose value is a real over any expression: "/,
+/// real, sqrt, sin, cos, tan, asin, acos, atan, exp, ln or log over any
+/// expression" (TGLP 1962166, "Type checking of :=").
+const Set<String> _realFunctions = {
+  '/', 'real', 'sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'exp',
+  'ln', 'log',
+};
+
+/// The operators of `Exp` that yield a real where an operand is a real
+/// expression: "+, -, * or pow with an operand a real expression".
+const Set<String> _realIfOperand = {'+', '-', '*', 'pow'};
+
+/// Whether [e] is a REAL EXPRESSION (TGLP 1962166, "Type checking of :=":
+/// "a real literal, a reader of type Real, one of /, real, sqrt, sin, cos,
+/// tan, asin, acos, atan, exp, ln or log over any expression, one of +, -, *
+/// or pow with an operand a real expression, or abs over a real expression");
+/// [realReader] answers for a reader by its variable's name.  "pow over
+/// integers is a Number", so pow with no real operand is not.
+bool isRealExpression(ast.Term e, bool Function(String name) realReader) {
+  if (e is ast.ConstTerm) return e.value is double;
+  if (e is ast.VarTerm) return e.isReader && realReader(e.name);
+  if (e is ast.StructTerm) {
+    if (_realFunctions.contains(e.functor) &&
+        (e.args.length == 1 || (e.functor == '/' && e.args.length == 2))) {
+      return true;
+    }
+    if (e.args.length == 2 && _realIfOperand.contains(e.functor)) {
+      return isRealExpression(e.args[0], realReader) ||
+          isRealExpression(e.args[1], realReader);
+    }
+    if (e.args.length == 1 && e.functor == 'abs') {
+      return isRealExpression(e.args[0], realReader);
+    }
+  }
+  return false;
+}
+
 /// Whether [e] is an INTEGER EXPRESSION (TGLP typed-glp.tex, "Type checking of
 /// :="): an integer literal, a reader of type Integer --- [integerReader]
 /// answers for one by its variable's name --- one of `+`, `-`, `*`, `//`, `mod`
@@ -1156,13 +1193,26 @@ bool _isIntegerState(DFAState state, ProgramDFA dfa) {
   return sameBaseType(state.baseName, 'Integer', dfa);
 }
 
+/// Whether [state] is the type `Real`, as [_isIntegerState] has `Integer`.
+bool _isRealState(DFAState state, ProgramDFA dfa) {
+  if (state.isWildcard || state.isProcedure) return false;
+  if (state.baseName == 'Real') return true;
+  return sameBaseType(state.baseName, 'Real', dfa);
+}
+
+/// The type the rule "Type checking of :=" gives the writer of a `:=` goal
+/// beyond the root's `Number`: `Integer` on an integer expression, `Real` on
+/// a real one.
+enum AssignmentType { integer, real }
+
 /// What [_instantiateCalls] reads of a clause or a goal, each by body-atom
 /// index: the instantiation of each call to a parameterised procedure, and the
-/// `:=` goals whose writer is an `Integer` ("Type checking of :=").
+/// `:=` goals whose writer is an `Integer` or a `Real` ("Type checking of
+/// :=").
 class _ClauseReading {
   final Map<int, _CallPlan> plans;
-  final Set<int> integerAssignments;
-  const _ClauseReading(this.plans, this.integerAssignments);
+  final Map<int, AssignmentType> assignments;
+  const _ClauseReading(this.plans, this.assignments);
 }
 
 /// The `:=` goals among [atoms], at the indices [assignments], whose writer is
@@ -1177,25 +1227,30 @@ class _ClauseReading {
 /// `Y := X? + 1, X := N? * 2` types `Y` as the reverse order does.  A variable
 /// that only the expressions of `:=` goals read has no type from them: their
 /// positions are typed `Exp`.
-Set<int> _integerAssignments(List<ast.Goal> atoms, List<int> assignments,
-    Iterable<(String, VariableTypeInfo)> typed, ProgramDFA dfa) {
+Map<int, AssignmentType> _assignmentTypes(List<ast.Goal> atoms,
+    List<int> assignments, Iterable<(String, VariableTypeInfo)> typed,
+    ProgramDFA dfa) {
   final integers = <String>{};
+  final reals = <String>{};
   for (final (key, info) in typed) {
-    if (!_isIntegerState(info.typeState, dfa)) continue;
-    integers.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+    final name = key.endsWith('?') ? key.substring(0, key.length - 1) : key;
+    if (_isIntegerState(info.typeState, dfa)) integers.add(name);
+    if (_isRealState(info.typeState, dfa)) reals.add(name);
   }
   for (var grew = true; grew;) {
     grew = false;
     for (final i in assignments) {
       final assignment = _unspawned(atoms[i]);
       final result = assignment.args[0];
-      if (result is! ast.VarTerm ||
-          result.isReader ||
-          integers.contains(result.name)) {
-        continue;
-      }
-      if (isIntegerExpression(assignment.args[1], integers.contains)) {
+      if (result is! ast.VarTerm || result.isReader) continue;
+      if (!integers.contains(result.name) &&
+          isIntegerExpression(assignment.args[1], integers.contains)) {
         integers.add(result.name);
+        grew = true;
+      }
+      if (!reals.contains(result.name) &&
+          isRealExpression(assignment.args[1], reals.contains)) {
+        reals.add(result.name);
         grew = true;
       }
     }
@@ -1203,22 +1258,26 @@ Set<int> _integerAssignments(List<ast.Goal> atoms, List<int> assignments,
   return {
     for (final i in assignments)
       if (isIntegerExpression(_unspawned(atoms[i]).args[1], integers.contains))
-        i
+        i: AssignmentType.integer
+      else if (isRealExpression(_unspawned(atoms[i]).args[1], reals.contains))
+        i: AssignmentType.real
   };
 }
 
 /// [decl], the declaration of `:=` in scope, with its first argument an
-/// `Integer` where the root declares it `Number`.  A declaration of another
-/// shape is left as it is: the rule types the root's kernel.
-ProcDecl _integerAssignment(ProcDecl decl) {
+/// `Integer` or a `Real`, as [type] says, where the root declares it
+/// `Number`.  A declaration of another shape is left as it is: the rule
+/// types the root's kernel.
+ProcDecl _typedAssignment(ProcDecl decl, AssignmentType type) {
   if (decl.arity != 2) return decl;
   final result = decl.argTypes[0];
   if (result is! TypeRef || !namesRoot(result.name, 'Number') || result.isInput) {
     return decl;
   }
+  final name = type == AssignmentType.integer ? 'Integer' : 'Real';
   return ProcDecl(
     decl.name,
-    [TypeRef('Integer', result.line, result.column), decl.argTypes[1]],
+    [TypeRef(name, result.line, result.column), decl.argTypes[1]],
     decl.line,
     decl.column,
     typeParams: decl.typeParams,
@@ -1336,7 +1395,7 @@ ClauseCheckResult checkGoal(
         activeInstantiations: activeInstantiations,
         callee: callee,
         plan: plans[i],
-        assignsInteger: reading.integerAssignments.contains(i),
+        assignmentType: reading.assignments[i],
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -1499,10 +1558,10 @@ String baseTypeName(TypeExpr typeExpr) =>
 /// ([definedGuardMeetErrors]) --- the instantiation is inferred from
 /// [callerVarTypes], the occurrences typed before the call.
 ///
-/// [assignsInteger] is set for a `:=` goal whose writer is an `Integer` by
-/// "Type checking of :=", as [_instantiateCalls] read the clause: the goal is
-/// checked against the declaration of `:=` with its first argument an
-/// `Integer` ([_integerAssignment]).
+/// [assignmentType] is set for a `:=` goal whose writer is an `Integer` or a
+/// `Real` by "Type checking of :=", as [_instantiateCalls] read the clause:
+/// the goal is checked against the declaration of `:=` with its first
+/// argument that type ([_typedAssignment]).
 (WellTypedResult, ModedTerm?) _checkBodyAtomWithTerm(
   ast.Goal atom,
   int atomIndex,
@@ -1513,7 +1572,7 @@ String baseTypeName(TypeExpr typeExpr) =>
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
   _CallPlan? plan,
-  bool assignsInteger = false,
+  AssignmentType? assignmentType,
   void Function(ast.Goal call, ProcDecl template)? onUninstantiated,
 }) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
@@ -1524,7 +1583,7 @@ String baseTypeName(TypeExpr typeExpr) =>
         activeInstantiations: activeInstantiations,
         callee: callee,
         plan: plan,
-        assignsInteger: assignsInteger,
+        assignmentType: assignmentType,
         onUninstantiated: onUninstantiated);
   }
 
@@ -1550,10 +1609,10 @@ String baseTypeName(TypeExpr typeExpr) =>
   }
 
   // The writer of `X := E` is an `Integer` where E is an integer expression,
-  // and a `Number` otherwise, as the root declares it (TGLP typed-glp.tex,
-  // "Type checking of :=").
-  if (assignsInteger && _isAssignment(atom)) {
-    procDecl = _integerAssignment(procDecl);
+  // a `Real` where E is a real expression, and a `Number` otherwise, as the
+  // root declares it (TGLP 1962166, "Type checking of :=").
+  if (assignmentType != null && _isAssignment(atom)) {
+    procDecl = _typedAssignment(procDecl, assignmentType);
   }
 
   // The environment the call's arguments are checked in: [env], unless the
@@ -3265,9 +3324,10 @@ class _CallInstantiation {
   var body = <String, List<(VariableTypeInfo, int)>>{};
 
   // The `:=` goals, typed by the occurrences typed so far, and typed again
-  // where a later reading decides one's writer an `Integer`: its earlier
-  // occurrences are dropped first, so that each body occurrence is read once.
-  var integerAssignments = <int>{};
+  // where a later reading decides one's writer an `Integer` or a `Real`: its
+  // earlier occurrences are dropped first, so that each body occurrence is
+  // read once.
+  var assignmentTypes = <int, AssignmentType>{};
   var assignmentTyped = <int>{};
 
   /// The probe, the sites and the variable keys of each call ([_probeOf],
@@ -3278,7 +3338,7 @@ class _CallInstantiation {
 
   // The occurrences typed before the rounds, restored before each run.
   late final Map<String, List<(VariableTypeInfo, int)>> bodyBefore;
-  late final Set<int> integerBefore;
+  late final Map<int, AssignmentType> assignmentsBefore;
   late final Set<int> typedBefore;
 
   _CallInstantiation(this.clause, this.procDecl, this.dfa, this.env,
@@ -3313,7 +3373,7 @@ class _CallInstantiation {
     }
 
     typeAssignments();
-    if (calls.isEmpty) return _ClauseReading(const {}, integerAssignments);
+    if (calls.isEmpty) return _ClauseReading(const {}, assignmentTypes);
 
     probes = <int, _Probe?>{
       for (final e in calls.entries) e.key: _probeOf(e.value.template, env)
@@ -3332,7 +3392,7 @@ class _CallInstantiation {
     bodyBefore = {
       for (final e in body.entries) e.key: [...e.value]
     };
-    integerBefore = {...integerAssignments};
+    assignmentsBefore = {...assignmentTypes};
     typedBefore = {...assignmentTyped};
 
     var outcome = rounds(null);
@@ -3430,7 +3490,7 @@ class _CallInstantiation {
             calleeRead: definingOf(call) != null);
       }
     }
-    return _ClauseReading(plans, integerAssignments);
+    return _ClauseReading(plans, assignmentTypes);
   }
 
   void take(int i, Map<String, VariableTypeInfo> types) {
@@ -3449,26 +3509,23 @@ class _CallInstantiation {
   }
 
   void typeAssignments() {
-    final decided = _integerAssignments(clause.bodyAtoms, assignments, [
+    final decided = _assignmentTypes(clause.bodyAtoms, assignments, [
       for (final e in head.entries) (e.key, e.value),
       for (final e in narrowed.entries) (e.key, e.value),
       for (final e in body.entries)
         for (final (info, _) in e.value) (e.key, info),
     ], dfa);
     for (final i in assignments) {
-      final integer = decided.contains(i);
-      if (assignmentTyped.contains(i) &&
-          integer == integerAssignments.contains(i)) {
-        continue;
-      }
-      if (integer) integerAssignments.add(i);
+      final type = decided[i];
+      if (assignmentTyped.contains(i) && type == assignmentTypes[i]) continue;
+      if (type != null) assignmentTypes[i] = type;
       for (final occurrences in body.values) {
         occurrences.removeWhere((o) => o.$2 == i);
       }
       final (result, _) = _checkBodyAtomWithTerm(clause.bodyAtoms[i], i, dfa,
           env,
           activeInstantiations: activeInstantiations,
-          assignsInteger: integer);
+          assignmentType: type);
       take(i, result.variableTypes);
       assignmentTyped.add(i);
     }
@@ -3767,7 +3824,7 @@ class _CallInstantiation {
 
   void restore() {
     body = {for (final e in bodyBefore.entries) e.key: [...e.value]};
-    integerAssignments = {...integerBefore};
+    assignmentTypes = {...assignmentsBefore};
     assignmentTyped = {...typedBefore};
   }
 
