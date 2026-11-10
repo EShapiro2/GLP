@@ -1343,6 +1343,8 @@ decl_parts([], w_list, []).
 decl_parts([S|Ss], w_list, [S?|Ss?]).
 decl_parts(reflexive(Rf, Ss), w_refl(Rf?), Ss?).
 decl_parts(environment(Ev, B), W?, Ss?) :- ground(B?) | decl_env(Ev?, B?, W, Ss).
+% A parametric contract is compared as it is written, its wrapper dropped.
+decl_parts(parametric(_, D), W?, Ss?) :- ground(D?) | decl_parts(D?, W, Ss).
 
 procedure decl_env(Preds?, WBody?, Wrap, WContract).
 decl_env(Ev, [], w_env(Ev?), []).

@@ -332,7 +332,7 @@ WContract  ::= [] ; [WSchema | WContract].
 % 2026-11-10 12:03 UTC, item 2, Udi's ruling): every contract's NAME.glp
 % declares its term by them and declares no copy.
 WBody      ::= WContract ; reflexive(Preds, WContract).
-WDeclared  ::= WBody ; environment(Preds, WBody).
+WDeclared  ::= WBody ; environment(Preds, WBody) ; parametric(SParams, WDeclared).
 
 % The contract as the checker reads it, its names and environment predicates
 % dropped.
@@ -341,6 +341,10 @@ unnamed([], []).
 unnamed([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
 unnamed(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
 unnamed(environment(_, B), D?) :- ground(B?) | unnamed_b(B?, D).
+% A parametric contract is checked as it is written, its parameters
+% predicates and constants as any others (GSC, Section 9: "a parametric
+% contract is checked once for all its instances").
+unnamed(parametric(_, D), R?) :- ground(D?) | unnamed(D?, R).
 procedure unnamed_b(WBody?, NDeclared).
 unnamed_b([], []).
 unnamed_b([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
@@ -392,6 +396,7 @@ env_preds([], []).
 env_preds([_|_], []).
 env_preds(reflexive(_, _), []).
 env_preds(environment(Ps, _), Ps?).
+env_preds(parametric(_, D), R?) :- ground(D?) | env_preds(D?, R).
 
 % --- Reading the clause syntax (GSC 859a007, def:role, def:schema, def:numbers)
 % sas_schema reads sas(Name, Names, Vars, Head, Body, Constraint, Guards)
@@ -2149,6 +2154,7 @@ read_faults([], []).
 read_faults([S|Ss], R?) :- wcontract_faults([S?|Ss?], R).
 read_faults(reflexive(_, Ss), R?) :- wcontract_faults(Ss?, R).
 read_faults(environment(_, B), R?) :- wbody_faults(B?, R).
+read_faults(parametric(_, D), R?) :- ground(D?) | read_faults(D?, R).
 
 % --- The image of a binding (def:schema, def:binding) ----------------------
 % People and speech acts are numbered; person(0) and person(1) are the two
@@ -2323,6 +2329,13 @@ RK   ::= rk_ward(Constant, Guardian) ; rk_free ; rk_guard ; rk_other.
 RKs  ::= [] ; [RK | RKs].
 Kind ::= free_party ; ward_party(Constant).
 IntroE ::= intro(Constant, Constant) ; no_intro.
+% The faults of an instance's bindings (instance_faults), and the parts of a
+% contract in the clause syntax: its reflexive and environment predicates and
+% its schemas (add_sdecl).
+InstFault  ::= not_parametric ; not_a_parameter(Constant) ; occurs(Constant)
+             ; written_twice(Constant) ; bound_twice(Constant).
+InstFaults ::= [] ; [InstFault | InstFaults].
+SParts     ::= sp(Preds, Preds, SContract).
 % What a guarding role is held to (def:guardianship, GSC 0a30d52): iota, f, the
 % guardianship of each mark and the marks of M that are not passive.
 GuardParts ::= gp(Constant, Constant, Guardianships, Preds).
@@ -4326,6 +4339,318 @@ as_read([], []).
 as_read([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
 as_read(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
 as_read(environment(Ev, B), environment(Ev?, D?)) :- ground(Ev?), ground(B?) | as_read_b(B?, D).
+as_read(parametric(Ps, D), parametric(Ps?, R?)) :- ground(Ps?), ground(D?) | as_read(D?, R).
+
+% --- parametric contracts and their instances (GSC, Definition Parametric
+% contract; GSC #14, Code_inbox 2026-11-10 18:02 UTC, GSC df5e454) ----------
+% instantiate(Base, Bindings, Additions, D): the instance of the parametric
+% contract Base, parametric(Params, B): B with each predicate P and each
+% constant val(P) that a binding P = Q names renamed Q throughout, its
+% wrapper kept; then each schema of Additions named as a schema of B in
+% that schema's place, and the others after B's, in their order, the
+% reflexive and environment predicates of the two together.  Base not
+% parametric is taken as B.  The faults of the bindings are
+% instance_faults/3's.
+exported procedure instantiate(SDeclared?, SBindings?, SDeclared?, WDeclared).
+instantiate(parametric(_, B), Bs, A, D?) :- ground(B?), ground(Bs?), ground(A?) |
+    rn_sdecl(B?, Bs?, B1),
+    add_sdecl(B1?, A?, D).
+instantiate(B, Bs, A, D?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
+    add_sdecl(B?, A?, D).
+
+% The faults of an instance's bindings: not_parametric, the base names no
+% parameters; not_a_parameter(P), P no parameter of the base; occurs(Q), Q
+% written for a parameter other than Q and occurring in the base, which an
+% instantiation asks it not to ("predicates of the same arity and kinds, and
+% values and utterances of the same kind, that do not occur in it");
+% written_twice(Q), Q written for two parameters ("a different one for
+% each"); and bound_twice(P).  [] where there is none.
+exported procedure instance_faults(SDeclared?, SBindings?, InstFaults).
+instance_faults(parametric(Ps, B), Bs, F?) :- ground(Ps?), ground(B?), ground(Bs?) |
+    inst_faults(Bs?, Ps?, B?, [], [], F).
+instance_faults(_, _, [not_parametric]) :- otherwise | true.
+
+procedure inst_faults(SBindings?, SParams?, SDeclared?, Preds?, Preds?, InstFaults).
+inst_faults([], _, _, _, _, []).
+inst_faults([(P = Q)|Bs], Ps, B, SP, SQ, F?) :-
+    ground(P?), ground(Q?), ground(Bs?), ground(Ps?), ground(B?), ground(SP?), ground(SQ?) |
+    param_member(Ps?, P?, A1),
+    occurs_in(P?, Q?, B?, A2),
+    pred_member(Q?, SQ?, A3),
+    pred_member(P?, SP?, A4),
+    inst_faults(Bs?, Ps?, B?, [P?|SP?], [Q?|SQ?], F0),
+    inst_fault(A4?, bound_twice(P?), F0?, F1),
+    inst_fault(A3?, written_twice(Q?), F1?, F2),
+    inst_fault(A2?, occurs(Q?), F2?, F3),
+    flip(A1?, N1),
+    inst_fault(N1?, not_a_parameter(P?), F3?, F).
+
+procedure inst_fault(Ans?, InstFault?, InstFaults?, InstFaults).
+inst_fault(yes, X, T, [X?|T?]).
+inst_fault(no, _, T, T?).
+
+% Whether P is among the parameters, as a predicate or as a constant val(P).
+procedure param_member(SParams?, Constant?, Ans).
+param_member([], _, no).
+param_member([val(C)|Ps], P, R?) :- ground(C?), ground(Ps?), ground(P?) |
+    same_name(C?, P?, A),
+    param_member1(A?, Ps?, P?, R).
+param_member([X|Ps], P, R?) :- otherwise, ground(X?), ground(Ps?), ground(P?) |
+    same_param(X?, P?, A),
+    param_member1(A?, Ps?, P?, R).
+
+procedure param_member1(Ans?, SParams?, Constant?, Ans).
+param_member1(yes, _, _, yes).
+param_member1(no, Ps, P, R?) :- ground(Ps?), ground(P?) | param_member(Ps?, P?, R).
+
+procedure same_name(Constant?, Constant?, Ans).
+same_name(A, B, yes) :- A? =?= B? | true.
+same_name(_, _, no) :- otherwise | true.
+
+procedure(X) same_param(X?, Constant?, Ans).
+same_param(A, B, yes) :- A? =?= B? | true.
+same_param(_, _, no) :- otherwise | true.
+
+% occurs_in(P, Q, B, R): Q, written for P, occurs in B, Q being no P: B
+% renamed with Q written '%probe%' differs from B.
+procedure occurs_in(Constant?, Constant?, SDeclared?, Ans).
+occurs_in(P, Q, _, no) :- P? =?= Q? | true.
+occurs_in(_, Q, B, R?) :- otherwise, ground(Q?), ground(B?) |
+    rn_sdecl(B?, [(Q? = '%probe%')], B1),
+    occurs_diff(B1?, B?, R).
+
+procedure occurs_diff(SDeclared?, SDeclared?, Ans).
+occurs_diff(B1, B, no) :- B1? =?= B? | true.
+occurs_diff(_, _, yes) :- otherwise | true.
+
+% --- renaming the predicates and constants of a contract ----------------------
+procedure rn_name(Constant?, SBindings?, Constant).
+rn_name(P, [], P?).
+rn_name(P, [(A = B)|_], B?) :- P? =?= A? | true.
+rn_name(P, [_|Bs], R?) :- otherwise, ground(P?), ground(Bs?) | rn_name(P?, Bs?, R).
+
+procedure rn_sdecl(SDeclared?, SBindings?, SDeclared).
+rn_sdecl([], _, []).
+rn_sdecl([S|Ss], Bs, R?) :- ground(S?), ground(Ss?), ground(Bs?) | rn_scontract([S?|Ss?], Bs?, R).
+rn_sdecl(reflexive(Rf, Ss), Bs, reflexive(Rf1?, R?)) :- ground(Rf?), ground(Ss?), ground(Bs?) |
+    rn_preds(Rf?, Bs?, Rf1),
+    rn_scontract(Ss?, Bs?, R).
+rn_sdecl(environment(Ev, Ss), Bs, environment(Ev1?, R?)) :- ground(Ev?), ground(Ss?), ground(Bs?) |
+    rn_preds(Ev?, Bs?, Ev1),
+    rn_scontract(Ss?, Bs?, R).
+rn_sdecl(parametric(Ps, D), Bs, parametric(Ps?, R?)) :- ground(D?), ground(Bs?) |
+    rn_sdecl(D?, Bs?, R).
+
+procedure rn_preds(Preds?, SBindings?, Preds).
+rn_preds([], _, []).
+rn_preds([P|Ps], Bs, [Q?|R?]) :- ground(P?), ground(Ps?), ground(Bs?) |
+    rn_name(P?, Bs?, Q),
+    rn_preds(Ps?, Bs?, R).
+
+procedure rn_scontract(SContract?, SBindings?, SContract).
+rn_scontract([], _, []).
+rn_scontract([sas(Nm, Ns, Vs, H, B, Cn, G)|Ss], Bs, [sas(Nm?, Ns?, Vs?, H1?, B1?, Cn1?, G?)|R?]) :-
+    ground(H?), ground(B?), ground(Cn?), ground(Ss?), ground(Bs?) |
+    rn_slits(H?, Bs?, H1),
+    rn_slits(B?, Bs?, B1),
+    rn_sc(Cn?, Bs?, Cn1),
+    rn_scontract(Ss?, Bs?, R).
+
+procedure rn_slits(SLits?, SBindings?, SLits).
+rn_slits([], _, []).
+rn_slits([C|Cs], Bs, [C1?|R?]) :- ground(C?), ground(Cs?), ground(Bs?) |
+    rn_sc(C?, Bs?, C1),
+    rn_slits(Cs?, Bs?, R).
+
+procedure rn_sc(SConstraint?, SBindings?, SConstraint).
+rn_sc(atom(P, As), Bs, atom(P1?, As1?)) :- ground(P?), ground(As?), ground(Bs?) |
+    rn_name(P?, Bs?, P1),
+    rn_sargs(As?, Bs?, As1).
+rn_sc(times(K, A), Bs, times(K1?, A1?)) :- ground(K?), ground(A?), ground(Bs?) |
+    rn_sarg(K?, Bs?, K1),
+    rn_satom(A?, Bs?, A1).
+rn_sc(and(X, Y), Bs, and(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sc(X?, Bs?, X1), rn_sc(Y?, Bs?, Y1).
+rn_sc(or(X, Y), Bs, or(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sc(X?, Bs?, X1), rn_sc(Y?, Bs?, Y1).
+rn_sc(implies(X, Y), Bs, implies(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sc(X?, Bs?, X1), rn_sc(Y?, Bs?, Y1).
+rn_sc(not(X), Bs, not(X1?)) :- ground(X?), ground(Bs?) | rn_sc(X?, Bs?, X1).
+rn_sc(eq(X, Y), Bs, eq(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sc(ne(X, Y), Bs, ne(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sc(le(X, Y), Bs, le(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sc(lt(X, Y), Bs, lt(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sc(ge(X, Y), Bs, ge(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sc(gt(X, Y), Bs, gt(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sc(succ(X, Y), Bs, succ(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sarg(X?, Bs?, X1), rn_sarg(Y?, Bs?, Y1).
+rn_sc(rel(N, Xs), Bs, rel(N?, Xs1?)) :- ground(Xs?), ground(Bs?) | rn_sexprs(Xs?, Bs?, Xs1).
+rn_sc(signed(X, Y), Bs, signed(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sarg(X?, Bs?, X1), rn_sarg(Y?, Bs?, Y1).
+rn_sc(unsigned(X, Y), Bs, unsigned(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sarg(X?, Bs?, X1), rn_sarg(Y?, Bs?, Y1).
+rn_sc(program(X), Bs, program(X1?)) :- ground(X?), ground(Bs?) | rn_sexpr(X?, Bs?, X1).
+rn_sc(exists(Xs, A, C), Bs, exists(Xs?, A1?, C1?)) :- ground(A?), ground(C?), ground(Bs?) |
+    rn_satom(A?, Bs?, A1), rn_sc(C?, Bs?, C1).
+rn_sc(forall(Xs, A, C, D), Bs, forall(Xs?, A1?, C1?, D1?)) :-
+    ground(A?), ground(C?), ground(D?), ground(Bs?) |
+    rn_satom(A?, Bs?, A1), rn_sc(C?, Bs?, C1), rn_sc(D?, Bs?, D1).
+rn_sc(forall(X, A, Ls), Bs, forall(X?, A1?, Ls1?)) :- ground(A?), ground(Ls?), ground(Bs?) |
+    rn_satom(A?, Bs?, A1), rn_sqlits(Ls?, Bs?, Ls1).
+rn_sc([], _, []).
+rn_sc([C|Cs], Bs, [C1?|R?]) :- ground(C?), ground(Cs?), ground(Bs?) |
+    rn_sc(C?, Bs?, C1),
+    rn_slits(Cs?, Bs?, R).
+rn_sc(true, _, true).
+
+procedure rn_sqlits(SQLits?, SBindings?, SQLits).
+rn_sqlits([], _, []).
+rn_sqlits([Q|Qs], Bs, [Q1?|R?]) :- ground(Q?), ground(Qs?), ground(Bs?) |
+    rn_sqlit(Q?, Bs?, Q1),
+    rn_sqlits(Qs?, Bs?, R).
+
+procedure rn_sqlit(SQLit?, SBindings?, SQLit).
+rn_sqlit(not(M), Bs, not(M1?)) :- ground(M?), ground(Bs?) | rn_smult(M?, Bs?, M1).
+rn_sqlit(atom(P, As), Bs, R?) :- ground(P?), ground(As?), ground(Bs?) | rn_satom(atom(P?, As?), Bs?, R).
+rn_sqlit(times(K, A), Bs, times(K1?, A1?)) :- ground(K?), ground(A?), ground(Bs?) |
+    rn_sarg(K?, Bs?, K1), rn_satom(A?, Bs?, A1).
+
+procedure rn_smult(SMult?, SBindings?, SMult).
+rn_smult(times(K, A), Bs, times(K1?, A1?)) :- ground(K?), ground(A?), ground(Bs?) |
+    rn_sarg(K?, Bs?, K1), rn_satom(A?, Bs?, A1).
+rn_smult(atom(P, As), Bs, R?) :- ground(P?), ground(As?), ground(Bs?) | rn_satom(atom(P?, As?), Bs?, R).
+
+procedure rn_satom(SAtom?, SBindings?, SAtom).
+rn_satom(atom(P, As), Bs, atom(P1?, As1?)) :- ground(P?), ground(As?), ground(Bs?) |
+    rn_name(P?, Bs?, P1),
+    rn_sargs(As?, Bs?, As1).
+
+procedure rn_sargs(SArgs?, SBindings?, SArgs).
+rn_sargs([], _, []).
+rn_sargs([A|As], Bs, [A1?|R?]) :- ground(A?), ground(As?), ground(Bs?) |
+    rn_sarg(A?, Bs?, A1),
+    rn_sargs(As?, Bs?, R).
+
+% A constant value val(C) is renamed as a predicate is; any other argument is
+% no parameter.
+procedure rn_sarg(SArg?, SBindings?, SArg).
+rn_sarg(val(C), Bs, val(C1?)) :- ground(C?), ground(Bs?) | rn_name(C?, Bs?, C1).
+rn_sarg(A, _, A?) :- otherwise | true.
+
+procedure rn_sexprs(SExprs?, SBindings?, SExprs).
+rn_sexprs([], _, []).
+rn_sexprs([X|Xs], Bs, [X1?|R?]) :- ground(X?), ground(Xs?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1),
+    rn_sexprs(Xs?, Bs?, R).
+
+procedure rn_sexpr(SExpr?, SBindings?, SExpr).
+rn_sexpr(plus(X, Y), Bs, plus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sexpr(minus(X, Y), Bs, minus(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sexpr(mul(X, Y), Bs, mul(X1?, Y1?)) :- ground(X?), ground(Y?), ground(Bs?) |
+    rn_sexpr(X?, Bs?, X1), rn_sexpr(Y?, Bs?, Y1).
+rn_sexpr(fn(N, Xs), Bs, fn(N?, Xs1?)) :- ground(Xs?), ground(Bs?) | rn_sexprs(Xs?, Bs?, Xs1).
+rn_sexpr(cardinality(Xs, A, C), Bs, cardinality(Xs?, A1?, C1?)) :- ground(A?), ground(C?), ground(Bs?) |
+    rn_satom(A?, Bs?, A1), rn_sc(C?, Bs?, C1).
+rn_sexpr(sum(Xs, A, C, U), Bs, sum(Xs?, A1?, C1?, U1?)) :-
+    ground(A?), ground(C?), ground(U?), ground(Bs?) |
+    rn_satom(A?, Bs?, A1), rn_sc(C?, Bs?, C1), rn_sexpr(U?, Bs?, U1).
+rn_sexpr(val(C), Bs, val(C1?)) :- ground(C?), ground(Bs?) | rn_name(C?, Bs?, C1).
+rn_sexpr(X, _, X?) :- otherwise | true.
+
+% --- the instance's additions -----------------------------------------------------
+procedure add_sdecl(SDeclared?, SDeclared?, WDeclared).
+add_sdecl(B, A, D?) :- ground(B?), ground(A?) |
+    sdecl_parts(B?, sp(RfB, EvB, SB)),
+    sdecl_parts(A?, sp(RfA, EvA, SA)),
+    add_sparts(sp(RfB?, EvB?, SB?), sp(RfA?, EvA?, SA?), D).
+
+procedure add_sparts(SParts?, SParts?, WDeclared).
+add_sparts(sp(RfB, EvB, SB), sp(RfA, EvA, SA), D?) :-
+    ground(RfB?), ground(EvB?), ground(SB?), ground(RfA?), ground(EvA?), ground(SA?) |
+    preds_app(RfB?, RfA?, Rf0),
+    preds_dedup(Rf0?, Rf),
+    preds_app(EvB?, EvA?, Ev0),
+    preds_dedup(Ev0?, Ev),
+    merge_ss(SB?, SA?, SB1),
+    new_ss(SA?, SB?, SN),
+    sc_app(SB1?, SN?, Ss),
+    sdecl_make(Rf?, Ev?, Ss?, D).
+
+% sdecl_parts(D, sp(Rf, Ev, Ss)): a contract's reflexive and environment
+% predicates and its schemas.
+procedure sdecl_parts(SDeclared?, SParts).
+sdecl_parts([], sp([], [], [])).
+sdecl_parts([S|Ss], sp([], [], [S?|Ss?])).
+sdecl_parts(reflexive(Rf, Ss), sp(Rf?, [], Ss?)).
+sdecl_parts(environment(Ev, Ss), sp([], Ev?, Ss?)).
+sdecl_parts(parametric(_, D), R?) :- ground(D?) | sdecl_parts(D?, R).
+
+procedure sdecl_make(Preds?, Preds?, SContract?, WDeclared).
+sdecl_make([], [], Ss, Ss?).
+sdecl_make([R|Rs], [], Ss, reflexive([R?|Rs?], Ss?)).
+sdecl_make([], [E|Es], Ss, environment([E?|Es?], Ss?)).
+sdecl_make([R|Rs], [E|Es], Ss, environment([E?|Es?], reflexive([R?|Rs?], Ss?))).
+
+procedure sc_app(SContract?, SContract?, SContract).
+sc_app([], T, T?).
+sc_app([S|Ss], T, [S?|R?]) :- sc_app(Ss?, T?, R).
+
+procedure sas_nm(SSchema?, Constant).
+sas_nm(sas(Nm, _, _, _, _, _, _), Nm?).
+
+% Each schema of SB, or the schema of SA of its name in its place.
+procedure merge_ss(SContract?, SContract?, SContract).
+merge_ss([], _, []).
+merge_ss([S|Ss], SA, [S1?|R?]) :- ground(S?), ground(Ss?), ground(SA?) |
+    sas_nm(S?, N),
+    sas_find(SA?, N?, S?, S1),
+    merge_ss(Ss?, SA?, R).
+
+% sas_find(Ss, N, D, S): the schema of Ss named N, D where there is none.
+procedure sas_find(SContract?, Constant?, SSchema?, SSchema).
+sas_find([], _, D, D?).
+sas_find([S|Ss], N, D, R?) :- ground(S?), ground(Ss?), ground(N?), ground(D?) |
+    sas_find1(S?, N?, A),
+    sas_find2(A?, S?, Ss?, N?, D?, R).
+
+procedure sas_find2(Ans?, SSchema?, SContract?, Constant?, SSchema?, SSchema).
+sas_find2(yes, S, _, _, _, S?).
+sas_find2(no, _, Ss, N, D, R?) :- ground(Ss?), ground(N?), ground(D?) | sas_find(Ss?, N?, D?, R).
+
+procedure sas_find1(SSchema?, Constant?, Ans).
+sas_find1(sas(Nm, _, _, _, _, _, _), N, yes) :- Nm? =?= N? | true.
+sas_find1(_, _, no) :- otherwise | true.
+
+% The schemas of SA named as none of SB's.
+procedure new_ss(SContract?, SContract?, SContract).
+new_ss([], _, []).
+new_ss([S|Ss], SB, R?) :- ground(S?), ground(Ss?), ground(SB?) |
+    sas_nm(S?, N),
+    sas_named(SB?, N?, A),
+    new_ss(Ss?, SB?, R1),
+    new_ss1(A?, S?, R1?, R).
+
+procedure new_ss1(Ans?, SSchema?, SContract?, SContract).
+new_ss1(yes, _, T, T?).
+new_ss1(no, S, T, [S?|T?]).
+
+procedure sas_named(SContract?, Constant?, Ans).
+sas_named([], _, no).
+sas_named([S|Ss], N, R?) :- ground(S?), ground(Ss?), ground(N?) |
+    sas_find1(S?, N?, A),
+    sas_named1(A?, Ss?, N?, R).
+
+procedure sas_named1(Ans?, SContract?, Constant?, Ans).
+sas_named1(yes, _, _, yes).
+sas_named1(no, Ss, N, R?) :- ground(Ss?), ground(N?) | sas_named(Ss?, N?, R).
 
 procedure as_read_b(WBody?, WBody).
 as_read_b([], []).

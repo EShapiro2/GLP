@@ -2357,6 +2357,47 @@ check "val(C) is read as it is, in an atom and in a relation" \
 check_eq "GSG with sign and post, its constants written val, is syntactically grassroots" "V = syntactically_grassroots" "$(sf 1)"
 check_eq "the same constants written bare are variables not in the head" "V = malformed([not_in_vars(post, posted), not_in_vars(post, constraint)])" "$(sf 2)"
 
+# --- parametric contracts and their instances (GSC, Definition Parametric
+# contract; GSC #14, 2026-11-10 18:02 UTC, GSC df5e454) ---------------------
+# parametric(Params, D) is checked as D is; instantiate(Base, Bindings,
+# Additions, D) renames each parameter P that a binding P = Q names to Q
+# throughout the base, a predicate or a constant val(P), and puts each
+# schema of Additions in the place of the base's of its name or after the
+# base's; instance_faults/3 names a binding of no parameter, a name written
+# that occurs in the base, a name written twice and a parameter bound twice.
+# GnW, parametric in its six predicates of wards, is certified as GnW is;
+# its instance with child for ward, parenting for guardian_of and parent_of
+# for guarded_by is certified with child its ward mark; an addition named
+# establish replaces the base's, and sign is put after the base's schemas.
+GNWT=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+GNWP="parametric([ward, creator, created, guardian_of, guarded_by, retired], $GNWT)"
+GNWB="[ward = child, guardian_of = parenting, guarded_by = parent_of]"
+EST2="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+SIGNP="sas(sign, ['Alice'], [y], [atom(item, ['Alice', y])], [atom(identity, ['Alice']), atom(person, ['Alice'])], true, ['Alice'])"
+VALP="parametric([val(bylaws_p)], [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_p)])], [atom(identity, ['Alice'])], true, ['Alice'])])"
+out=$(run "check($GNWP, V)." "instantiate($GNWP, $GNWB, [], D), check(D?, V)." \
+          "instance_faults($GNWP, $GNWB, F)." \
+          "instance_faults($GNWP, [friend = x, ward = knows, creator = c, created = c, retired = r, retired = s], F)." \
+          "instance_faults($GNWT, [ward = child], F)." \
+          "instantiate($GNWP, $GNWB, [$EST2, $SIGNP], D)." \
+          "instantiate($VALP, [bylaws_p = bylaws_mcs], [], D)." "as_read($VALP, R).")
+check_eq "GnW parametric in its six predicates of wards is certified as GnW is" \
+      "V = syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian_of, guarded_by)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])" "$(sf 1)"
+check_eq "its instance with child, parenting and parent_of is certified, child its ward mark" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)], [relay(ward_acquaint, ward(1, child, no_guardian), free(2)), relay(wards_acquaint, ward(1, child, no_guardian), ward(2, child, no_guardian))], [identity, person])" "$(sf 2)"
+check "the instance's bindings have no fault" "F = []" "$out"
+check "a binding of no parameter, a name occurring in the base, a name written twice and a parameter bound twice are faults" \
+      "F = [not_a_parameter(friend), occurs(knows), written_twice(c), bound_twice(retired)]" "$out"
+check "an instance of a contract that names no parameters is a fault" "F = [not_parametric]" "$out"
+check "an addition named establish replaces the base's in its place" \
+      "D = reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
+check "and an addition of a new name comes after the base's schemas" \
+      "atom(person, ['Alice'])], true, ['Alice'])])" "$(printf '%s\n' "$out" | grep 'sas(sign, ')"
+check "a constant parameter val(bylaws_p) is written bylaws_mcs by the binding bylaws_p = bylaws_mcs" \
+      "D = [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_mcs)])], [atom(identity, ['Alice'])], true, ['Alice'])]" "$out"
+check "as_read keeps a parametric contract's parameters" \
+      "R = parametric([val(bylaws_p)], [schema(adopt, ['Alice'], [], [rs(guarded, [atom(bylaws, [val(bylaws_p)])], [], [atom(identity, [])], [])])])" "$out"
+
 # --- the author, the item and a condition on an utterance (GSC 6df39d4, def:numbers) ---
 # "the author author(y), the first signer of y, in an equality with an agent
 # role or agent variable, the item item(y), the utterance under the
