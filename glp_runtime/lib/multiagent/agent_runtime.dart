@@ -1353,6 +1353,27 @@ class AgentRuntime {
   /// an event, and its cycle is taken in turn ([_cycle]).  An act whose cycle
   /// is not saved before the application terminates is not in the state the
   /// store holds, and no message of its cycle has reached the layer.
+  /// Run [goal] on the agent's engine and give its result, for a host that
+  /// reads what the program exports, as the Grassroots App reads a compiled
+  /// platform's `contract(Text, Schemas)` and `version(Current, Back)` (vGLP
+  /// b413fe1, Section 5.4: "so the app that loads the platform reads its
+  /// contract and its versions from it"), a module's exported procedure named
+  /// by the module, `platform # contract(T, S)` ([GlpEngine.runGoal]).  The
+  /// goal runs to quiescence between the agent's own event cycles, which the
+  /// caller orders ([isolate_protocol]); before [initialize] there is no
+  /// engine, and the result is a failure.  A goal names an entry point of the
+  /// program, the root's exports (TGLP, modules.tex, "Entry and the absence
+  /// of a boot module"); one naming another module's export by its module is
+  /// refused as it is at the REPL's prompt.
+  Future<ExecutionResult> query(String goal) async {
+    final engine = _engine;
+    if (engine == null) {
+      return ExecutionResult(
+          status: ExecutionStatus.failed, error: 'the agent is not initialised');
+    }
+    return engine.runGoal(goal);
+  }
+
   Future<void> injectUserInput(rt.Term act) async {
     final shown = formatTerm(act);
     _log('USER_INPUT: $shown');

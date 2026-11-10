@@ -64,7 +64,7 @@ sub union_into {   # union_into(\@into, \%seen, @xs): each x not yet in, in orde
     for my $x (@xs) { push @$into, $x unless $seen->{$x}++ }
 }
 my (@env, %env, @refl, %refl, @schemas, %schema, %schema_of, $has_env, $has_refl);
-my (@tabs, %tab, %tab_of, @acts, %button, %button_of, @stands, %stand, %stand_of, $any_pragmas, $three);
+my (@tabs, %tab, %tab_of, @acts, %button, %button_of, @stands, %stand, %stand_of, $any_pragmas, $three, $six, $look, $version, @texts);
 my ($intro, $intro_of) = ("no_introduction", "");
 my @args = @ARGV;
 while (@args) {
@@ -90,11 +90,17 @@ while (@args) {
         }
         $schema{$sn} = $s; $schema_of{$sn} = $name; push @schemas, $s;
     }
-    # The pragmas: no_pragmas, pragmas(Lists, Acts) or pragmas(Lists, Acts, Stands).
+    # The pragmas: no_pragmas, pragmas(Lists, Acts), pragmas(Lists, Acts, Stands) or pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1).  The paper says nothing of the look, the version and the text of a composition: its look is the first contract\x27s that writes one, its version the first contract\x27s, and its text the contracts\x27 texts one after another.
     $pr =~ s/^\s+|\s+$//g;
     unless ($pr eq "no_pragmas") {
         my ($pf, @pa) = compound($pr);
-        $pf eq "pragmas" && (@pa == 2 || @pa == 3) or die "compose.sh: $name: its pragmas are not a pragmas term: $pr\n";
+        $pf eq "pragmas" && (@pa == 2 || @pa == 3 || @pa == 6) or die "compose.sh: $name: its pragmas are not a pragmas term: $pr\n";
+        if (@pa == 6) {
+            $six = 1;
+            $look = $pa[3] if !defined $look || $look eq "nolook";
+            $version //= $pa[4];
+            push @texts, $pa[5];
+        }
         $any_pragmas = 1;
         for my $l (elems($pa[0], "$name: its tabs")) {
             my (undef, $tn) = compound($l);
@@ -118,7 +124,7 @@ while (@args) {
             }
             $button{$bt} = $txt; $button_of{$bt} = $name; push @acts, @{ $mine{$bt} };
         }
-        if (@pa == 3) {
+        if (@pa >= 3) {
             $three = 1;
             for my $x (elems($pa[2], "$name: its standing declarations")) {
                 my (undef, $sn) = compound($x);
@@ -143,7 +149,11 @@ $reading = "environment([" . join(", ", @env) . "], $reading)" if $has_env;
 my $pragmas = "no_pragmas";
 if ($any_pragmas) {
     $pragmas = "pragmas([" . join(", ", @tabs) . "], [" . join(", ", @acts) . "]";
-    $pragmas .= ", [" . join(", ", @stands) . "]" if $three;
+    $pragmas .= ", [" . join(", ", @stands) . "]" if $three || $six;
+    if ($six) {
+        my @inner = map { (my $t = $_) =~ s/^\x27"//; $t =~ s/"\x27$//; $t } @texts;
+        $pragmas .= ", " . ($look // "nolook") . ", " . ($version // "version(1, 1)") . ", \x27\"" . join("\\\\n\\\\n", grep { $_ ne "" } @inner) . "\"\x27";
+    }
     $pragmas .= ")";
 }
 print "$reading\n$pragmas\n$intro\n";

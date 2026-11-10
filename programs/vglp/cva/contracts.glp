@@ -266,16 +266,18 @@
 NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 %% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
+%% any the wildcard of a cleared atom, as programs/gsc/self.glp writes it (GSC 327e035).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; num(Constant) ; real(Constant).
+            ; num(Constant) ; real(Constant) ; any.
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
 Mult      ::= Atom ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Mults     ::= [] ; [Mult | Mults].
 Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+%% qlisted(Base, Rho, Args, Bound) a listed role among the arguments of its anchor at any place, as programs/gsc/self.glp writes one not at the second (vGLP b413fe1, Section 5.4).
 RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant)
-            ; listed(Integer, Constant, Args).
+            ; listed(Integer, Constant, Args) ; qlisted(Integer, Constant, Args, Args).
 RoleSpec  ::= rs(Guard, Mults, Mults, Mults, Atoms)
             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
@@ -285,7 +287,7 @@ Constraint ::= true ; and(Constraint, Constraint)
              ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
              ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
              ; or(Constraint, Constraint)
-             ; signed(Arg, Arg) ; unsigned(Arg, Arg).
+             ; signed(Arg, Arg) ; unsigned(Arg, Arg) ; program(Expr).
 Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
              ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
              ; sum(Args, Arg, Atom, Form, Expr)
@@ -334,6 +336,8 @@ contract_named(linear, C?) :- linear(C).
 contract_named(forms, C?) :- forms(C).
 contract_named(counts, environment([cap, wt], C?)) :- counts(C).
 contract_named(shares, C?) :- shares(C).
+contract_named(published, C?) :- published(C).
+contract_named(leaves, C?) :- leaves(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -362,6 +366,8 @@ introduction_named(linear, no_introduction).
 introduction_named(forms, no_introduction).
 introduction_named(counts, no_introduction).
 introduction_named(shares, no_introduction).
+introduction_named(published, no_introduction).
+introduction_named(leaves, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -486,6 +492,13 @@ pragmas_named(shares, pragmas([list('"Notes"', [noted]), list('"Seen"', [seen])]
      act(wipe, '"Wipe"', [], none, '"Notes"', by([1])),
      act(pour, '"Pour"', ['"amount"'], none, '"Notes"', by([1])),
      act(drain, '"Drain"', [], none, '"Notes"', by([1]))])).
+pragmas_named(published, pragmas([list('"Items"', [item])],
+    [act(publish, '"Publish"', ['""', '"Program"'], none, '"Items"', by([1])),
+     act(note, '"Note"', ['""', '"Text"'], none, '"Items"', by([1]))])).
+pragmas_named(leaves, pragmas([list('"Programs"', [installed])],
+    [act(install, '"Install"', ['""', '"Program"'], none, '"Programs"', by([1])),
+     act(invite, '"Invite"', ['""', '"Person"'], said([[], [person(1), text('" invites you."')]]), '"Programs"', by([1])),
+     act(leave, '"Leave"', [], none, '"Programs"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -834,3 +847,23 @@ forms([schema(start, [],
          [rs(unguarded, [atom(ticked, [])], [], [atom(armed, [])], [atom(ticked, [])])],
          [],
          [fnot(fexists([num(b)], role(1), atom(blocked, [num(b)]), fcons(gt(num(b), num(2)))))])]).
+
+%% published: a program condition (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications": a value may be "a program, a GLP module as text, which the runtime recognises", and a constraint is over "program(u), that the value u is a program"): publish(p? ; x) adds item(x) and published(x) at p where the item of x is a program, program(item_of(x)), a condition naming no local variable, local to every role and checked where the schema is bound; note(p? ; x) adds item(x), any item.
+procedure published(Contract).
+published([nschema(publish, [svar(x)], program(item_of(svar(x))),
+          [rs(guarded, [atom(item, [svar(x)]), atom(published, [svar(x)])], [], [], [atom(item, [svar(x)])])]),
+        schema(note, [svar(x)],
+          [rs(guarded, [atom(item, [svar(x)])], [], [], [atom(item, [svar(x)])])])]).
+
+%% leaves: a listed role at the third argument of its anchor (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications": "a listed role is an agent variable bound by a quantifier whose anchor an agent role, its base, holds, the variable at any of the anchor's arguments"), as GPD's leave lists Bob by participant(Alice, p, Bob) (programs/social/graph/GPD.glp), written as GSC's reader writes it, qlisted(Base, Rho, Args, Bound), the role among the anchor's arguments: install(p? ; x) adds installed(x) at p; invite(p?, q? ; x), p holding installed(x), adds participant(x, q) at p and installed(x) and participant(x, p) at q; leave(p?, q[participant(p, x, *)] ; x) deletes installed(x) and clears participant(x, _) at p, and deletes participant(x, p) at each q that p lists.
+procedure leaves(Contract).
+leaves([schema(install, [svar(x)],
+          [rs(guarded, [atom(installed, [svar(x)])], [], [], [atom(installed, [svar(x)])])]),
+        schema(invite, [svar(x)],
+          [rs(guarded, [atom(participant, [svar(x), role(2)])], [], [atom(installed, [svar(x)])], [atom(participant, [svar(x), role(2)])]),
+           rs(guarded, [atom(installed, [svar(x)]), atom(participant, [svar(x), role(1)])], [], [], [atom(installed, [svar(x)])])]),
+        qschema(leave, [svar(x)], [role(2)], true,
+          [rs(guarded, [], [atom(installed, [svar(x)]), atom(participant, [svar(x), any])], [], []),
+           crs(qlisted(1, participant, [svar(x), role(2)], [role(2)]), unguarded, [], [atom(participant, [svar(x), role(1)])], [], [])],
+          [conjunct([role(2)], 1, atom(participant, [svar(x), role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(participant, [svar(x), role(1)])))])],
+          [])]).

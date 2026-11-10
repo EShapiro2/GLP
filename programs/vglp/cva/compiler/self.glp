@@ -198,7 +198,13 @@ PActs     ::= [] ; [PAct | PActs].
 %% A standing declaration, standing(Schema, Start, Stop): the acts of the guarded schema Schema standing, the person's request of the act Start making their standing request of every class of Schema's acts that they propose, and their request of the act Stop withdrawing it (vGLP 7c631b1, Section 5.4, "The contract's words": "An implementation pragma may make the acts of a clause standing, as `Encounter: Alice stands on [Open place] until [Close place]' does ...: the person's request of the act of the first button is also their standing request (Definition Local) of every class of the clause's acts that they propose, and their request of the act of the second withdraws it; a standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals").  pragmas.sh reads it from a contract's implementation pragmas, "<Clause>: <Name> stands on [<Start>] until [<Stop>]", for each schema of the clause (GSC 1a8e31c, Section 2), and vGLP's own contracts give the term (contracts.glp, pragmas_named/2).
 PStand    ::= standing(Constant, Constant, Constant).
 PStands   ::= [] ; [PStand | PStands].
-Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands).
+%% The look of the contract, look(Icon, Family), the line its interface pragmas open with, or nolook; its version and the earliest version of itself it is compatible with, version(Current, Back), from its line "Version: <Current>, compatible from <Back>." or version(1, 1); and its clauses as text (pragmas.sh; vGLP b413fe1, Section 5.4: the platform the compiler prints exports contract(Text, Schemas) and version(Current, Back), the look among the pragmas).
+PLook     ::= nolook ; look(String, String).
+PVersion  ::= version(Integer, Integer).
+%% The pragmas the platform exports in contract(Text, Schemas), the text apart (cvac.glp, export_lines).
+RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
+Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String).
 %% What a schema does to the atom a standing declaration stands on (cvac.glp, standing_lines): makes the standing request, withdraws it, or neither.
 StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 
@@ -210,9 +216,10 @@ exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
 compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
 %% The contract's environment predicates, environment(Preds, Body) (programs/gsc/self.glp, WDeclared), go to the compiler beside the contract: "An environment predicate is the day, by the calendar, or a value the contract declares and does not fix ...: given when the platform is deployed, held from startup" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
-imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?).
+%% The contract as read, with its names, goes to the compiler whole besides, which prints it in the platform's contract(Text, Schemas) (cvac.glp, export_lines).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?).
 exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
-compile(Nm, D, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?).
+compile(Nm, D, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
 procedure env_of(WDeclared?, Preds).
 env_of(environment(Ps, _), Ps?).
 env_of(_, []) :- otherwise | true.

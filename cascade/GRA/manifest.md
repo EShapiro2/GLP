@@ -1,9 +1,9 @@
 # A run of the cascade on GRA
 
-- Contract: `GRA` (`gra` to the checker), its owner's two files `programs/lbm/GRA.txt` and `programs/lbm/GRA.glp`, copied here as they stood at `df51683b`.
-- The paper: `git@github.com:EShapiro2/GRH-Grassroots-Ride-Hailing.git` at `a16c0aa7`, for the paper's own record.
-- The tools: this repository at `df51683b` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 12:34 UTC by `cascade.sh gra`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GRA` (`gra` to the checker), its owner's two files `programs/lbm/GRA.txt` and `programs/lbm/GRA.glp`, copied here as they stood at `b66151e9`.
+- The paper: `https://github.com/EShapiro2/grh-grassroots-ride-hailing` at `a16c0aa7`, for the paper's own record.
+- The tools: this repository at `b66151e9` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-10 12:03 UTC by `cascade.sh gra`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

@@ -335,11 +335,13 @@ for my $f (reverse @order) {
     }
 }
 # The lines of a contract after the line "Pragmas", each pragma line with the indented lines after it carried on it after the mark \x01 (below): an interface heading, "Pragmas" or "Interface pragmas", is the line "Pragmas", and an implementation heading and every line after it up to the next interface heading are skipped (iface_head, impl_head).
-# The interface pragmas may open with the app\x27s look, "Look: <icon>, <family>" (GSC 34bc713, Section 2: "The interface pragmas may open with a line naming the app\x27s look, its icon and its family, as \x27Look: chat, social\x27, the colours of each family being one file of the repository beside the contracts"): read into $look{F} as [Icon, Family], and no tab.  A Look line anywhere else, or not of that form, is refused.  How the compiler carries the look into the platform no paper says yet (vGLP, Section 5.4, names none), so the term printed below does not hold it.
-my %look;
+# The interface pragmas may open with the app\x27s look, "Look: <icon>, <family>" (GSC 34bc713, Section 2: "The interface pragmas may open with a line naming the app\x27s look, its icon and its family, as \x27Look: chat, social\x27, the colours of each family being one file of the repository beside the contracts"): read into $look{F} as [Icon, Family], and no tab.  A Look line anywhere else, or not of that form, is refused.  The compiler carries the look into the platform "among the pragmas of the contract the platform exports, where the app and the site that show it read it" (vGLP b413fe1, Section 5.4, "The contract’s words"), so the term printed below holds it, look(Icon, Family), or nolook where the contract writes none.
+# A contract’s version, "Version: <Current>, compatible from <Back>." among the interface pragmas, both whole numbers, Back at most Current, at most one such line in a contract, an extension’s own line standing over the contract’s it extends, and version(1, 1) where none writes one (vGLP 81fb280, Section 5.4: the platform exports "version(Current, Back), its version and the earliest version of itself it is compatible with, both from a line of the pragmas"; the line’s form Code’s, GSA’s yes, Code_inbox.md, 2026-11-07 22:35 UTC and GSA, 2026-11-08): read into $version{F} as [Current, Back].  A Version line not of that form, a second one, or one with Back above Current, is refused.
+my (%look, %version);
 sub joined {
     my ($f) = @_;
     my (@m, $aft, $impl, $first);
+    delete $version{$f};
     for my $x (read_txt($f)) {
         if (impl_head($x)) { $impl = 1; next }
         if (iface_head($x)) { $impl = 0; $aft = 1; $first = 1; push @m, "Pragmas"; next }
@@ -348,6 +350,15 @@ sub joined {
             $x =~ /^Look:\s*(\S.*?),\s*([\w-]+)\s*$/ && $first
                 or die "pragmas.sh: $f: \"$x\": the look is the line the interface pragmas open with, \"Look: <icon>, <family>\" (GSC, Section 2)\n";
             $look{$f} = [$1, $2];
+            $first = 0;
+            next;
+        }
+        if ($aft && $x =~ /^Version\s*:/) {
+            $x =~ /^Version:\s*(\d+),\s*compatible from\s*(\d+)\s*\.?\s*$/
+                or die "pragmas.sh: $f: \"$x\": a version line is \"Version: <Current>, compatible from <Back>.\", both whole numbers (vGLP, Section 5.4)\n";
+            die "pragmas.sh: $f: \"$x\": a second version line, where a contract writes at most one\n" if $version{$f};
+            die "pragmas.sh: $f: \"$x\": the version it is compatible from, $2, is above its version, $1\n" if $2 > $1;
+            $version{$f} = [$1, $2];
             $first = 0;
             next;
         }
@@ -829,5 +840,14 @@ for my $f (@order) {
     }
 }
 if (@faults) { print STDERR @faults; exit 1 }
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "]" . (@stands ? ", [" . join(", ", @stands) . "]" : "") . ")\n";
+# The term printed, pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1): the look of the contract itself, look(Icon, Family) or nolook; its version, its own line or, having none, the line of the nearest contract it extends that has one, or version(1, 1); and its clauses as text, the lines of its NAME.txt after the meta-information up to its first pragmas heading, joined by a newline (vGLP b413fe1, Section 5.4: the platform exports "contract(Text, Schemas), the contract it is compiled from, its clauses as text and its schemas with the pragmas").
+my $lk = $look{$top} ? "look(" . q_string($look{$top}[0]) . ", " . q_string($look{$top}[1]) . ")" : "nolook";
+my ($vf) = grep { $version{$_} } reverse @order;
+my $vn = $vf ? "version($version{$vf}[0], $version{$vf}[1])" : "version(1, 1)";
+my @cl;
+for my $x (@own) { next if $x =~ /^%/; last if any_head($x); push @cl, $x }
+pop @cl while @cl && $cl[-1] !~ /\S/;
+my $tx = join("\n", @cl);
+$tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}"
