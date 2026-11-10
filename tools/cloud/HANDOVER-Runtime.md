@@ -1,4 +1,4 @@
-# Cloud #16 handover, Runtime, 2026-11-09
+# Cloud #16 handover, Runtime, 2026-11-10
 
 The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md`, section Cloud.  The tasks are Code #27's, in `Cloud-Runtime_inbox.md`; the reports are Cloud #16's, in `Code_inbox.md`.  This file points to the commits and the mail and copies neither.  Cloud #10's handover of the same day is in git, at Cloud-runtime7 c9cdafbb.
 
@@ -19,6 +19,8 @@ The arrangement, the repositories, the reading and the mail are GLP's `CLAUDE.md
 |---|---|---|
 | Cloud-runtime5, 7 and 6 joined for merge, run whole against main | Cloud-runtime8 183cc49, off main 94622eaa | Code_inbox 2026-11-09 17:01 UTC |
 | Each place's centre: declarePlace(place, centre, radius) through the layer, the platform bindings and the glue; the runtime keeps the centre and declares the place about it at a restart | Cloud-places 38eeefb, off Cloud-runtime8; the platform binding's test brought to the new register, main bce97bbb merged, in the commit after f8b09e3 | Code_inbox 2026-11-09 17:07 UTC, and the last report |
+| The Grassroots App's iOS runner registers PlaceGeofencePlugin | Cloud-iosplaces a336f1c, on main 81a0de76 | Code_inbox 2026-11-09 23:07 UTC |
+| The state saved when the app goes to the background and at no other time: AgentRuntime.save, the hosts' calls, the lost state started afresh (IGLP d70ec2e) | Runtime-save-on-background 6733fb9, off main 47907f48 | Code_inbox 2026-11-10, the last report |
 
 ## Queued
 
