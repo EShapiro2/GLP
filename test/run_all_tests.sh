@@ -6002,17 +6002,20 @@ printf '%s\n' 'XC: Other' 'XC extends XB.' 'Alice is a person.' > "$cva_wf/XC.tx
 printf '%s\n' 'XI: Instance' 'XI instantiates XB, a child for a ward and a parent for a guardian, and restricts and extends it.' 'Alice is a person.' > "$cva_wf/XI.txt"
 printf '%s\n' 'XJ: Joined' 'XJ amends XB and XC, and XI.' 'Alice is a person.' > "$cva_wf/XJ.txt"
 printf '%s\n' 'XK: Mixed' 'XK extends XC and restricts it.' 'Alice is a person.' > "$cva_wf/XK.txt"
+printf '%s\n' 'XO: Plain' 'XO instantiates XB and amends it.' 'Alice is a person.' > "$cva_wf/XO.txt"
 printf '%s\n' 'XN: None' 'XN instantiates the bylaws of XB and restricts it.' 'Alice is a person.' > "$cva_wf/XN.txt"
 printf '%s\n' 'XT: Bare' 'XT restricts it.' 'Alice is a person.' > "$cva_wf/XT.txt"
 cva_wf_i=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XI.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_j=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XJ.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_k=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XK.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_o=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XO.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_wf_n=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XN.txt" 2>&1; echo "exit $?")
 cva_wf_t=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XT.txt" 2>&1; echo "exit $?")
 rm -rf "$cva_wf"
 check "CVA written from: an instantiation's words between commas name no contract, and 'restricts and extends it' is to the contract named last (instance)" "^XB.txt XI.txt $" "$cva_wf_i"
 check "CVA written from: contracts of one relation joined by 'and' and ', and' (joined)" "^XB.txt XC.txt XI.txt XJ.txt $" "$cva_wf_j"
 check "CVA written from: 'and restricts it', a second relation to the contract named last (mixed)" "^XB.txt XC.txt XK.txt $" "$cva_wf_k"
+check "CVA written from: an instantiation with no words between commas, 'instantiates XB and amends it', as GO's MCS (GSC 30013e6, Section 2: 'an instantiation may say after the contract's name, between commas, what it writes for what') (plain)" "^XB.txt XO.txt $" "$cva_wf_o"
 check "CVA written from: a relation followed by no contract's name refused, named (none)" "names no contract at \"the bylaws of XB and restricts it\"" "$cva_wf_n"
 check "CVA written from: ... and pragmas.sh exits other than 0 (none)" "^exit [1-9]" "$cva_wf_n"
 check "CVA written from: 'it' with no contract named before it refused (bare)" "names no contract at \"it\"" "$cva_wf_t"
