@@ -644,8 +644,11 @@ function drawGlobe(){
     if (rel === 'amends' && front(am))
       out += `<line x1="${xy(side(am, 6*u)).replace(',', '" y1="')}" x2="${xy(side(am, -6*u)).replace(',', '" y2="')}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`;
     return out; };
+  // Each arrow in the colour of the family of the contract it comes from: its
+  // head touches the other contract's ellipse, which shows that one's colour,
+  // so the arrow shows where it comes from (Udi, 2026-11-10).
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(c)][1]);
+    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
   }));
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
