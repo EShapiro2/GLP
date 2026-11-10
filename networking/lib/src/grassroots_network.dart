@@ -60,6 +60,19 @@ class GrassrootsNetworkConfig {
   });
 }
 
+/// The outcome of one delivery attempt ([GrassrootsNetwork._trySendMessageNow]).
+enum _SendOutcome {
+  /// Settled on a link.
+  sent,
+
+  /// Tried on every link the peer was reachable over, and the tries ran out
+  /// on each: shown failed, and held in the queue.
+  triesRanOut,
+
+  /// No link to the peer to try: held in the queue.
+  noPath,
+}
+
 class _QueuedOutboundMessage {
   final String messageId;
   final Uint8List recipientPubkey;
@@ -635,6 +648,7 @@ class GrassrootsNetwork {
           recipientPubkey: recipientPubkey,
           payload: entry.payload,
           messageId: entry.messageId,
+          triesRanOut: false,
         );
       }
       _queueRead = true;
@@ -2524,20 +2538,23 @@ class GrassrootsNetwork {
     // Delivery runs after the save and is not awaited: the outcome reaches the
     // store as the message's status (sent, queued), so `send` completes once
     // the message is saved (api.tex, Send payload).
-    void queueInMemory() => _queueOutboundMessage(
+    void queueInMemory({required bool triesRanOut}) => _queueOutboundMessage(
           recipientPubkey: recipientPubkey,
           payload: payload,
           messageId: messageId,
+          triesRanOut: triesRanOut,
         );
     unawaited(_trySendMessageNow(
       recipientPubkey: recipientPubkey,
       payload: payload,
       messageId: messageId,
-    ).then((sent) {
-      if (!sent) queueInMemory();
+    ).then((outcome) {
+      if (outcome != _SendOutcome.sent) {
+        queueInMemory(triesRanOut: outcome == _SendOutcome.triesRanOut);
+      }
     }, onError: (Object error, StackTrace stack) {
       debugPrint('[send] Delivery of $messageId failed: $error; queued again');
-      queueInMemory();
+      queueInMemory(triesRanOut: false);
     }));
     return messageId;
   }
@@ -2551,7 +2568,29 @@ class GrassrootsNetwork {
   /// connected to in the
   /// background ([_openPathsTo]), and the attestation exchange's completion
   /// drains the queue ([_onAttestationReceived]).
-  Future<bool> _trySendMessageNow({
+  /// Try [pubkey]'s queued messages now rather than at the next heartbeat:
+  /// replay the peer's queue over the sessions it has, and open paths to it
+  /// where it has none, after which the queue is replayed as on any new
+  /// session.  The demo app calls it from a failed message's red "!".  It is
+  /// outside the paper's API (decision 46): the layer already replays the
+  /// queue by itself, and this only brings the replay forward.
+  void retryQueued(Uint8List pubkey) {
+    _drainQueuedMessagesForPeer(pubkey);
+    unawaited(_openPathsTo(pubkey));
+  }
+
+  /// Record that [messageId] is being sent over [underlay], as an attempt
+  /// begins on a link: a failed message is shown sending again.
+  void _markSending(String messageId, Uint8List recipientPubkey,
+          Uint8List payload, Underlay underlay) =>
+      store.dispatch(MessageSendingAction(
+        messageId: messageId,
+        underlay: underlay,
+        recipientPubkey: recipientPubkey,
+        payloadSize: payload.length,
+      ));
+
+  Future<_SendOutcome> _trySendMessageNow({
     required Uint8List recipientPubkey,
     required Uint8List payload,
     required String messageId,
@@ -2559,8 +2598,10 @@ class GrassrootsNetwork {
     final peer = _peersState.getPeerByPubkey(recipientPubkey);
     if (peer == null) {
       debugPrint('Cannot send now: peer not found; message will remain queued');
-      return false;
+      return _SendOutcome.noPath;
     }
+    // Whether a link was tried and its tries ran out.
+    var tried = false;
 
     // --- The PAN, preferred for nearby peers ---
     final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
@@ -2569,6 +2610,7 @@ class GrassrootsNetwork {
         _bleService != null &&
         bleDeviceId != null) {
       debugPrint('Sending via BLE to ${peer.displayName}');
+      _markSending(messageId, recipientPubkey, payload, Underlay.pan);
 
       final success = await _bleMessageSender.sendMessage(
         _pubkeyToHex(recipientPubkey),
@@ -2583,8 +2625,9 @@ class GrassrootsNetwork {
           payloadSize: payload.length,
           underlay: Underlay.pan,
         );
-        return true;
+        return _SendOutcome.sent;
       }
+      tried = true;
       debugPrint('BLE send failed, falling back to UDP...');
     }
 
@@ -2600,6 +2643,7 @@ class GrassrootsNetwork {
       }
       debugPrint('Sending via ${session.name.toUpperCase()} to '
           '${peer.displayName}');
+      _markSending(messageId, recipientPubkey, payload, session.underlay);
       if (await _messageSenderFor(session).sendMessage(
         resolvedPeer.pubkeyHex,
         messageId,
@@ -2611,8 +2655,9 @@ class GrassrootsNetwork {
           payloadSize: payload.length,
           underlay: session.underlay,
         );
-        return true;
+        return _SendOutcome.sent;
       }
+      tried = true;
     }
 
     debugPrint(
@@ -2620,7 +2665,7 @@ class GrassrootsNetwork {
       'message until it is',
     );
     unawaited(_openPathsTo(recipientPubkey));
-    return false;
+    return tried ? _SendOutcome.triesRanOut : _SendOutcome.noPath;
   }
 
   /// Path openings in progress, by pubkey hex: one at a time per peer.
@@ -2703,10 +2748,14 @@ class GrassrootsNetwork {
     debugPrint('[send] No direct path to ${peer.displayName}');
   }
 
+  /// Hold [messageId] in the queue for the peer's next session: shown
+  /// failed where [triesRanOut], its tries having run out on every link the
+  /// peer was reachable over, and queued otherwise.
   void _queueOutboundMessage({
     required Uint8List recipientPubkey,
     required Uint8List payload,
     required String messageId,
+    required bool triesRanOut,
   }) {
     final pubkeyHex = _pubkeyToHex(recipientPubkey);
     final queue = _outboundMessageQueue.putIfAbsent(pubkeyHex, () => []);
@@ -2725,7 +2774,9 @@ class GrassrootsNetwork {
       queue.add(queued);
     }
 
-    store.dispatch(MessageQueuedAction(messageId: messageId));
+    store.dispatch(triesRanOut
+        ? MessageFailedAction(messageId: messageId)
+        : MessageQueuedAction(messageId: messageId));
     debugPrint(
       '[queue] Queued message $messageId for ${pubkeyHex.substring(0, 8)} '
       '(${queue.length} pending)',
@@ -2746,7 +2797,7 @@ class GrassrootsNetwork {
 
           // Skip messages whose Redux status is already past `sent` (i.e.
           // delivered/read): a message settled by another attempt while it
-          // sat in the queue is not sent again.
+          // sat in the queue is not sent again.  A failed one is sent again.
           final current =
               store.state.messages.outgoingMessages[queued.messageId];
           if (current != null &&
@@ -2763,24 +2814,19 @@ class GrassrootsNetwork {
           final attemptCounted = queued.incrementAttempts();
           queue[0] = attemptCounted;
 
-          store.dispatch(
-            MessageSendingAction(
-              messageId: attemptCounted.messageId,
-              underlay: Underlay.pan,
-              recipientPubkey: attemptCounted.recipientPubkey,
-              payloadSize: attemptCounted.payload.length,
-            ),
-          );
-
-          final sent = await _trySendMessageNow(
+          // The attempt marks the message sending on the link it rides
+          // ([_markSending]); with no link it stays as it was, a failed
+          // message failed.
+          final outcome = await _trySendMessageNow(
             recipientPubkey: attemptCounted.recipientPubkey,
             payload: attemptCounted.payload,
             messageId: attemptCounted.messageId,
           );
 
-          if (!sent) {
-            store.dispatch(
-                MessageQueuedAction(messageId: attemptCounted.messageId));
+          if (outcome != _SendOutcome.sent) {
+            store.dispatch(outcome == _SendOutcome.triesRanOut
+                ? MessageFailedAction(messageId: attemptCounted.messageId)
+                : MessageQueuedAction(messageId: attemptCounted.messageId));
             debugPrint(
               '[queue] Drain paused for ${pubkeyHex.substring(0, 8)} after '
               '${attemptCounted.attempts} attempt(s)',
