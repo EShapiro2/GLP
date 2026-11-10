@@ -37,6 +37,8 @@
 #   gpd         GPD   GSA         programs/social/graph     ---
 #   gas         GAS   GSA         programs/social/graph     ---
 #   grv         GRV   GSA         programs/examples/rendezvous ---
+#   gsv         GSV   GSA         programs/examples/rendezvous ---
+#   gds         GDS   GSA         programs/examples/rendezvous ---
 #   gpe         GPE   GSA         programs/social/graph     ---
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              social_network
@@ -148,7 +150,9 @@ case "$1" in
     gfp)  FILE=GFP;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, extends GSG (GSC #13, 2026-11-07)
     gpd)  FILE=GPD;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GFP (GSA #2, 2026-11-07)
     gas)  FILE=GAS;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GPD (GSA #2, 2026-11-07)
-    grv)  FILE=GRV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSG (GSA #2, 2026-11-07)
+    grv)  FILE=GRV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-07; on GSV, GSA #3, 2026-11-10)
+    gsv)  FILE=GSV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), instantiates GnW (GSA #3, 2026-11-10)
+    gds)  FILE=GDS;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-08; on GSV, GSA #3, 2026-11-10)
     gpe)  FILE=GPE;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GKK (GSA #2, 2026-11-07)
     gkk)  FILE=GKK;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
           PLAYAT="programs/apps/gkk" ;;
@@ -186,7 +190,7 @@ case "$1" in
     stay) FILE=STAY; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gnw gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not

@@ -10,13 +10,13 @@ introduce: knows(Bob, Carol) <-
     identity(Alice), knows(Alice, Bob), knows(Alice, Carol), not agent(Alice), not retired(Alice), identity(Bob), knows(Bob, Alice), not agent(Bob), not retired(Bob), identity(Carol), not agent(Carol), not retired(Carol) guarded by Alice, Bob
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), not agent(Alice), not retired(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not agent(Bob), not retired(Bob), not friend(Bob, Alice) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), not agent(Alice), not retired(Alice), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice), not agent(Bob), not retired(Bob) guarded by Alice, Bob
 
 unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
     identity(Alice), friend(Alice, Bob), not retired(Alice), not principal(Alice, Bob), not guarded_by(Alice, Bob), not principal_of(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
 enter: principal_of(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), agent_of(Alice, Carol, y), identity(Carol), agent(Carol), principal(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice), attestation(Carol, y) <-
-    identity(Alice), authored(Alice, y), not agent(Alice), not retired(Alice), not identity(Carol), not retired(Carol) guarded by Alice, Carol
+    identity(Alice), item(Alice, y), not agent(Alice), not retired(Alice), not identity(Carol), not retired(Carol), author(y) = Alice guarded by Alice, Carol
 
 make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), agent_of(Bob, Carol, y), guarded_by(Carol, Bob), friend(Carol, Bob) <-
     identity(Alice), principal_of(Alice, Carol), friend(Alice, Bob), agent_of(Alice, Carol, y), not retired(Alice), identity(Bob), not agent(Bob), not retired(Bob), not guardian_of(Bob, Carol), identity(Carol), agent(Carol), not friend(Carol, Bob) guarded by Alice, Bob
@@ -31,7 +31,7 @@ guardian_unfriend: not friend(Bob, Carol), not guardian_of(Bob, Carol), not frie
     identity(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), not retired(Bob), not principal_of(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
 
 agent_acquaint: knows(Carol, Bob), knows(Bob, Carol), agent_of(Bob, Carol, y) <-
-    identity(Carol), agent(Carol), attestation(Carol, y), not retired(Carol), identity(Bob), not agent(Bob), not retired(Bob), identity(Alice), guardian_of(Alice, Carol), agent_of(Alice, Carol, y), knows(Alice, Bob), not agent(Alice), not retired(Alice) guarded by Carol, Bob, Alice
+    identity(Carol), agent(Carol), attestation(Carol, y), not retired(Carol), identity(Bob), not agent(Bob), not retired(Bob) guarded by Carol, Bob
 
 agent_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
     identity(Carol), agent(Carol), knows(Carol, Bob), not retired(Carol), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), not agent(Bob), not retired(Bob), not friend(Bob, Carol), identity(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), not agent(Alice), not retired(Alice) guarded by Carol, Bob, Alice
@@ -40,13 +40,13 @@ agent_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
     identity(Carol), friend(Carol, Bob), not principal(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), guardian_of(Alice, Carol), not agent(Alice), not retired(Alice) guarded by Alice
 
 agents_acquaint: knows(Carol, Dave), agent_of(Carol, Dave, z), knows(Dave, Carol), agent_of(Dave, Carol, y) <-
-    identity(Carol), agent(Carol), attestation(Carol, y), not retired(Carol), identity(Dave), agent(Dave), attestation(Dave, z), not retired(Dave), identity(Alice), guardian_of(Alice, Carol), agent_of(Alice, Carol, y), knows(Alice, Dave), agent_of(Alice, Dave, z), knows(Alice, one(Bob, Alice)), not agent(Alice), not retired(Alice), identity(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave), agent_of(one(Bob, Alice), Dave, z), not agent(one(Bob, Alice)), not retired(one(Bob, Alice)) guarded by Carol, Dave, Alice, one(Bob, Alice)
+    identity(Carol), agent(Carol), attestation(Carol, y), not retired(Carol), identity(Dave), agent(Dave), attestation(Dave, z), not retired(Dave) guarded by Carol, Dave
 
 agents_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
     identity(Carol), agent(Carol), knows(Carol, Dave), not retired(Carol), not friend(Carol, Dave), identity(Dave), agent(Dave), knows(Dave, Carol), not retired(Dave), not friend(Dave, Carol), identity(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), not agent(Alice), not retired(Alice), identity(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave), not agent(one(Bob, Alice)), not retired(one(Bob, Alice)) guarded by Carol, Dave, Alice, one(Bob, Alice)
 
-retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), retired_of(Alice, Carol), not friend(Alice, Carol), forall Carol (friend(Carol, Carol) -> not friend(Carol, Carol)), forall Dave (guarded_by(Carol, Dave) -> not guardian_of(Dave, Carol)) <-
-    identity(Carol), agent(Carol), principal(Carol, Alice), not retired(Carol), identity(Alice), principal_of(Alice, Carol), friend(Alice, Carol), not retired(Alice), forall Carol (friend(Carol, Carol) -> identity(Carol), friend(Carol, Carol)), forall Dave (guarded_by(Carol, Dave) -> identity(Dave), guardian_of(Dave, Carol), not principal_of(Dave, Carol)) guarded by Alice
+retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), retired_of(Alice, Carol), not friend(Alice, Carol), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Dave (guarded_by(Carol, Dave) -> not guardian_of(Dave, Carol)) <-
+    identity(Carol), agent(Carol), principal(Carol, Alice), not retired(Carol), identity(Alice), principal_of(Alice, Carol), friend(Alice, Carol), not retired(Alice), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Dave (guarded_by(Carol, Dave) -> identity(Dave), guardian_of(Dave, Carol), not principal_of(Dave, Carol)) guarded by Alice
 
-sign: item(Alice, x), authored(Alice, x) <-
-    identity(Alice), not retired(Alice) guarded by Alice
+sign: item(Alice, x) <-
+    identity(Alice), not item(Alice, x), not retired(Alice) guarded by Alice

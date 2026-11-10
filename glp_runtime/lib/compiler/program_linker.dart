@@ -293,6 +293,7 @@ List<DiscoveredModule> _discoverProgramIn(Directory root, String? programsDir,
     // social/graph/routing.
     _addVglpModules(modules, root, programsDir, rootSelfGlpPath, rs,
         program: program, layers: layers);
+    _writeForwarding(modules, root);
     final written = _writeCompiledTypes(modules);
     if (written.isNotEmpty) {
       // Each module with a self.glp written into, or read leniently until
@@ -996,6 +997,63 @@ class _WrittenType {
   final TypeDef def;
   final DiscoveredModule from;
   _WrittenType(this.def, this.from);
+}
+
+/// The forwarding clauses of the platform's contract and versions, written
+/// into the program's root module (vGLP 722343d, Section 5.4, "The
+/// contract's words": "a goal posted to a program is admitted only at a
+/// procedure its root module exports, so the canonical compilation writes
+/// into the root module of the program the platform is compiled for a
+/// forwarding clause for each of the two, as it writes there the types it
+/// forms").  The platform is the program's one compiled module that exports
+/// `contract/2` and `version/2` (cvac.glp, export_lines); its root module is
+/// the `self.glp` of the program's directory, [root].  Written there, before
+/// the formed types are ([_writeCompiledTypes]), are the declarations
+/// `imported procedure M#contract(String, Exported)` and `M#version(Integer,
+/// Integer)`, M the platform's module, the same exported, and the clauses
+/// `contract(T?, S?) :- M # contract(T, S).` and `version(C?, B?) :- M #
+/// version(C, B).`, so that the types the imports name are written with the
+/// rest.  Nothing is written where the program has no root `self.glp`, no
+/// such platform or more than one, or where its root module declares or
+/// defines either procedure itself.
+void _writeForwarding(List<DiscoveredModule> modules, Directory root) {
+  final dir = ppath.normalize(root.absolute.path);
+  DiscoveredModule? rootSelf;
+  for (final m in modules) {
+    if (m.isSelfGlp &&
+        ppath.normalize(ppath.dirname(File(m.filePath).absolute.path)) == dir) {
+      rootSelf = m;
+    }
+  }
+  if (rootSelf == null) return;
+  bool exports(DiscoveredModule m, String n) => m.ast.procDeclarations
+      .any((d) => d.exported && d.name == n && d.arity == 2);
+  final platforms = [
+    for (final m in modules)
+      if (!identical(m, rootSelf) &&
+          exports(m, 'contract') &&
+          exports(m, 'version'))
+        m
+  ];
+  if (platforms.length != 1) return;
+  final own = rootSelf.ast;
+  bool named(String n) =>
+      own.procDeclarations.any((d) => d.name == n && d.arity == 2) ||
+      own.procedures.any((p) => p.name == n && p.arity == 2);
+  if (named('contract') || named('version')) return;
+  final rel = ppath.relative(
+      ppath.withoutExtension(File(platforms.single.filePath).absolute.path),
+      from: dir);
+  final q = ppath.split(rel).join('#');
+  final text = 'imported procedure $q#contract(String, Exported).\n'
+      'imported procedure $q#version(Integer, Integer).\n'
+      'exported procedure contract(String, Exported).\n'
+      'contract(T?, S?) :- $q # contract(T, S).\n'
+      'exported procedure version(Integer, Integer).\n'
+      'version(C?, B?) :- $q # version(C, B).\n';
+  final forwarding = Parser(Lexer(text).tokenize()).parseModule();
+  own.procDeclarations.addAll(forwarding.procDeclarations);
+  own.procedures.addAll(forwarding.procedures);
 }
 
 /// The types the compilation forms, written into the modules that import
