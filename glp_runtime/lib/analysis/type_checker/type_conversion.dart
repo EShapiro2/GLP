@@ -43,6 +43,17 @@ TypeExpr termToTypeExpr(Term term) {
   }
   
   if (term is StructTerm) {
+    // A qualified type name, M # T, the type T that a declaration M exports
+    // references, under M's definition of it (TGLP modules.tex, "Procedure
+    // declarations": "Types referenced in an imported declaration are
+    // resolved against the caller's type scope, or, written M#T, against
+    // the exports of module M"), read in every type expression of a module
+    // as in a declaration ([Parser._parseProcArgType]): M a name, T a type
+    // name, with its arguments and its mark.  Until 2026-11-10 it was read
+    // as the structure '#'(M, T).
+    final qualified = _qualifiedTypeRef(term);
+    if (qualified != null) return qualified;
+
     // Difference list: A \ B
     if (term.functor == '\\' && term.args.length == 2) {
       return DiffListAlt(
@@ -84,6 +95,40 @@ TypeExpr termToTypeExpr(Term term) {
   
   // Should not reach here for valid terms
   throw ArgumentError('Cannot convert term to type expression: $term');
+}
+
+/// [term] as the qualified type reference `M#T` where it is `M # T`, M a
+/// name or itself `M1 # M2`, and T a type name, marked or not, with its
+/// arguments or none; null otherwise.
+TypeRef? _qualifiedTypeRef(StructTerm term) {
+  if (term.functor != '#' || term.args.length != 2) return null;
+  String? path(Term t) {
+    if (t is ConstTerm && t.value is String) return t.value as String;
+    if (t is StructTerm && t.functor == '#' && t.args.length == 2) {
+      final a = path(t.args[0]), b = path(t.args[1]);
+      return a == null || b == null ? null : '$a#$b';
+    }
+    return null;
+  }
+  final q = path(term.args[0]);
+  if (q == null) return null;
+  final t = term.args[1];
+  if (t is VarTerm) {
+    return TypeRef('$q#${t.name}', term.line, term.column,
+        isInput: t.isReader);
+  }
+  if (t is TypeRefTerm) {
+    var functor = t.functor;
+    var isInput = false;
+    if (functor.endsWith('?')) {
+      functor = functor.substring(0, functor.length - 1);
+      isInput = true;
+    }
+    if (functor.isEmpty || !_isUppercaseLetter(functor[0])) return null;
+    return TypeRef('$q#$functor', term.line, term.column,
+        isInput: isInput, typeArgs: t.args.map(termToTypeExpr).toList());
+  }
+  return null;
 }
 
 /// A parameterised type reference in a type alternative, `Name(T1, ..., Tn)`,

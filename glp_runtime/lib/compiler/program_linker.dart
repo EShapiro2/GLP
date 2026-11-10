@@ -237,31 +237,21 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   // are read into every scope as SelfGlpReading reads them, until the
   // compilation has written its types into them (module_hierarchy.dart,
   // selfGlpReading; vGLP, Section 6.3).
-  // A self.glp above the root, up to programs/, is read whole: where one
-  // imports a procedure whose declaration names a type the compilation forms
-  // in a module below the root, as the currencies' self.glp names Drawn
-  // through its plays, the refusal of its declaration has the types written
-  // from a discovery of its own directory's program
-  // (_readCompiledTypesOfChain), and the discovery is made again.
+  // A self.glp above the root, up to programs/, is read whole: one that
+  // names a type the compilation forms below it names it by M#T, which
+  // [_writeQualifiedTypes] resolves (TGLP d993305, Compilation, "Sources
+  // compiled to GLP": a module elsewhere names the formed types by M#T).
+  // Until 2026-11-10 such a self.glp named them plainly, and its refusal had
+  // them written from a discovery of its own directory's program, and the
+  // discovery made again (Cloud #16, Code_inbox.md, 2026-11-10 13:15 UTC,
+  // point 4).
   final outer = selfGlpReading;
-  final above = programsDir == null
-      ? const <String>[]
-      : _ancestorSelfGlpFiles(root.absolute.path, programsDir);
   selfGlpReading = _selfGlpReadingOf([
     for (final f in _listFiles(root))
       if (ppath.basename(f.path) == 'self.glp') f.path
   ]);
   try {
-    try {
-      return _discoverProgramIn(root, programsDir, rootSelfGlpPath, rs);
-    } on UndefinedDeclarationTypeError {
-      if (above.isEmpty ||
-          !_readCompiledTypesOfChain(above,
-              rootSelfGlpPath: rootSelfGlpPath, rootScope: rs)) {
-        rethrow;
-      }
-      return _discoverProgramIn(root, programsDir, rootSelfGlpPath, rs);
-    }
+    return _discoverProgramIn(root, programsDir, rootSelfGlpPath, rs);
   } finally {
     selfGlpReading = outer;
   }
@@ -294,7 +284,7 @@ List<DiscoveredModule> _discoverProgramIn(Directory root, String? programsDir,
         program: program, layers: layers);
     final written = {
       ..._writeCompiledTypes(modules),
-      ..._writeProcedureTypes(modules),
+      ..._writeQualifiedTypes(modules),
     };
     if (written.isNotEmpty) {
       // Each module with a self.glp written into, or read leniently until
@@ -355,8 +345,16 @@ SelfGlpReading _selfGlpReadingOf(Iterable<String> selfPaths,
     }
     final dir = File(path).parent.path;
     final dirNorm = _normPath(dir);
+    // The sources' own self.glp, a compiled module in its directory, waits
+    // for the compilation, its types "in the scope of the sources' directory
+    // and of every module at or below it, and checked after, with them"
+    // (TGLP d993305, Compilation, "Sources compiled to GLP"); a self.glp
+    // above that directory names them by M#T ([_writeQualifiedTypes]) and is
+    // read whole.  Until 2026-11-10 a self.glp with a compiled module anywhere
+    // below it waited too, coins/, sovereign/ and linker_tree/ among them
+    // (Cloud #16, Code_inbox.md, 2026-11-10 13:15 UTC, point 3).
     if (compiledBelow
-        .any((c) => ppath.isWithin(dirNorm, c))) {
+        .any((c) => _normPath(File(c).parent.path) == dirNorm)) {
       reading.pending.add(SelfGlpReading.key(path));
     }
     for (final d in [...m.procDeclarations, ...m.paramProcDecls]) {
@@ -1110,43 +1108,50 @@ Set<String> _writeCompiledTypes(List<DiscoveredModule> modules) {
   return rebuild;
 }
 
-/// The type `M#Procedure`, written into each module that names it.
-/// "`M#Procedure` is the union of the declarations `M` exports, the type
-/// `Procedure` of Section sec:procedure-declarations restricted to them.  A
-/// meta-program is parameterised by the type of the goals it interprets and
-/// called at it: a meta-interpreter declared `procedure(G) reduce(Goal(G)?)`,
-/// with `Goal(G) ::= true ; (Goal(G), Goal(G)) ; G`, is called as
-/// `reduce(Goal(M#Procedure)?)` for the program `M` it interprets, and, `G`
-/// being an alternative of `Goal(G)`, it is checked at each program it
-/// interprets" (TGLP 44e1a60, modules.tex, "Procedure declarations"; GLP #14,
-/// Code_inbox.md, 2026-11-10 12:06 UTC).
+/// The qualified types `M#T` and `M#Procedure`, written into each module that
+/// names them.  "Types referenced in an imported declaration are resolved
+/// against the caller's type scope, or, written `M#T`, against the exports of
+/// module `M`: `M#T` is the type `T` that a declaration `M` exports
+/// references, under `M`'s definition of it, so a module importing a
+/// compiled procedure names its types once, by the module that defines them,
+/// and writes no copy of them.  `M#Procedure` is the type of a goal of a
+/// procedure `M` exports held as a term: the union of the declarations `M`
+/// exports, the type `Procedure` of Section sec:procedure-declarations
+/// restricted to them, with each argument type complemented" (TGLP 6ce148a,
+/// modules.tex, "Procedure declarations"; GLP #14, Code_inbox.md, 2026-11-10
+/// 12:06, 13:13 and 13:23 UTC).
 ///
-/// For each name `M#Procedure` a module's declarations or type definitions
-/// reference, `M` the module an import's qualifier names from the module's
-/// directory --- the compiled module of its source, the module `M.glp`, or the
-/// `self.glp` of the directory `M` --- the module gets the definition
-/// `M#Procedure ::= p1(...) ; ... ; pk(...)`, one alternative for each
-/// declaration `M` exports, in their order, a declaration of arity zero a
-/// constant and each argument type of the declaration complemented
-/// ([_dualArg]; TGLP 6ce148a), and, with it, the
-/// definitions in `M` of the types those declarations name and of those they
-/// name, as a compiled module's types are written ([_writeCompiledTypes]), so
-/// that a type `M` defines itself is defined where it is named; a type the
-/// module defines under the same name stands.  A parameterised declaration
-/// `M` exports is refused with the reason: the paragraph gives the union of
-/// the declarations and names no instance of such a one to take.  The writing
-/// is repeated until no module gains a type, a declaration `M` exports naming
-/// another module's `Procedure`.  A `self.glp` written into is recorded in
-/// [selfGlpReading], so that every scope reads it with the type.  Returned:
-/// the `self.glp` files whose scopes are to be built again.  Until 2026-11-10
-/// the reader read `M#Procedure` as any qualified type name, and no scope
-/// defined it ("Unresolved type: M#Procedure"); until TGLP 6ce148a, the same
-/// day, the paragraph wrote the union without the complement, and the
-/// argument types were written as the declarations write them.
-Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
-  const suffix = '#$procedureTypeName';
+/// For each name `M#T` a module's declarations or type definitions reference,
+/// in any type expression, `M` the module an import's qualifier names from the
+/// module's directory --- the compiled module of its source, the module
+/// `M.glp`, or the `self.glp` of the directory `M` --- the module gets a
+/// definition of the name `M#T`: for `M#Procedure`, `p1(...) ; ... ;
+/// pk(...)`, one alternative for each declaration `M` exports, in their
+/// order, a declaration of arity zero a constant and each argument type
+/// complemented ([_dualArg]); for any other `T`, the alternatives of `M`'s
+/// definition of `T`, with its parameters, `M` defining `T` itself (its own
+/// definitions, those the compilation wrote into it among them) and a
+/// declaration `M` exports referencing it, directly or through the types it
+/// references.  In either, a type `U` that `M` defines is named `M#U`, and is
+/// written too, so the referring module holds no copy of `M`'s types under
+/// their own names; a type `M` does not define (a parameter, a type of the
+/// scope both see) is named as `M` names it.  A name the module defines
+/// itself stands.  Refused with the reason: a qualifier naming no module; a
+/// type `M` does not define; one no declaration `M` exports references; and,
+/// for `M#Procedure`, a parameterised declaration `M` exports, the union
+/// having no instance of it to take.  The writing is repeated until no module
+/// gains a type.  A `self.glp` written into is recorded in [selfGlpReading],
+/// so that every scope reads it with the types.  Returned: the `self.glp`
+/// files whose scopes are to be built again.  Until 2026-11-10 the reader
+/// read `M#T` and no scope defined it ("Unresolved type: M#T").
+Set<String> _writeQualifiedTypes(List<DiscoveredModule> modules,
+    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
   final reading = selfGlpReading;
   final rebuild = <String>{};
+  // Where [rootSelfGlpPath] is given, a module M the discovery does not hold
+  // is discovered on its own ([_discoverTarget]): a lone module's discovery
+  // holds its chain and not the modules its chain's names qualify.
+  final discovered = <String, DiscoveredModule?>{};
 
   final compiled = <String, DiscoveredModule>{};
   for (final m in modules) {
@@ -1156,96 +1161,187 @@ Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
       compiled[ppath.normalize(ppath.withoutExtension(m.filePath))] = m;
     }
   }
-  final byPath = {for (final m in modules) ppath.normalize(m.filePath): m};
+  // Paths compared absolute: a module of the program and one of its chain
+  // outside the program's tree may be named one relative and one absolute.
+  String abs(String p) => ppath.normalize(File(p).absolute.path);
+  final compiledAbs = {for (final e in compiled.entries) abs(e.key): e.value};
+  final byPath = {for (final m in modules) abs(m.filePath): m};
   DiscoveredModule? target(DiscoveredModule m, String q) {
-    final stem = ppath.normalize(ppath.join(
+    final stem = abs(ppath.join(
         ppath.dirname(m.filePath), q.replaceAll('#', ppath.separator)));
-    return compiled[stem] ??
+    final held = compiledAbs[stem] ??
         byPath['$stem.glp'] ??
         byPath[ppath.join(stem, 'self.glp')];
+    if (held != null || rootSelfGlpPath == null) return held;
+    return discovered.putIfAbsent(stem,
+        () => _discoverTarget(stem, rootSelfGlpPath, rootScope));
   }
 
-  // The names `M#Procedure` the module references, each with the line of its
-  // first reference, in the order of the references.
+  // The qualified names a type expression references, by name and arity,
+  // each with the line of its first reference.
+  void collect(TypeExpr t, Map<String, int> out) {
+    mapTypeRefs(t, (ref) {
+      final h = ref.name.lastIndexOf('#');
+      if (h > 0 && h < ref.name.length - 1) {
+        out.putIfAbsent(typeKey(ref.name, ref.typeArgs.length), () => ref.line);
+      }
+      for (final a in ref.typeArgs) {
+        collect(a, out);
+      }
+      return ref;
+    });
+  }
+
   Map<String, int> referenced(DiscoveredModule m) {
     final out = <String, int>{};
-    void seen(TypeRef r) {
-      if (r.name.endsWith(suffix) && r.typeArgs.isEmpty) {
-        out.putIfAbsent(r.name, () => r.line);
-      }
-    }
-    void walk(TypeExpr t) {
-      mapTypeRefs(t, (ref) {
-        seen(ref);
-        for (final a in ref.typeArgs) {
-          walk(a);
-        }
-        return ref;
-      });
-    }
     for (final d in [...m.ast.procDeclarations, ...m.ast.paramProcDecls]) {
       for (final t in d.argTypes) {
-        walk(t);
+        collect(t, out);
       }
     }
     for (final td in m.ast.typeDefs) {
       for (final alt in td.alternatives) {
-        walk(alt);
+        collect(alt, out);
       }
     }
     return out;
+  }
+
+  // [t] with every type [owner] defines named [q]#U, the keys of those named
+  // added to [need].
+  TypeExpr qualify(TypeExpr t, String q, Map<String, TypeDef> defs,
+      Set<String> params, Set<String> need) {
+    if (t is TypeRef) {
+      final args = [
+        for (final a in t.typeArgs) qualify(a, q, defs, params, need)
+      ];
+      final key = typeKey(t.name, t.typeArgs.length);
+      if (!params.contains(t.name) && defs.containsKey(key)) {
+        need.add(key);
+        return TypeRef('$q#${t.name}', t.line, t.column,
+            isInput: t.isInput, typeArgs: args);
+      }
+      return TypeRef(t.name, t.line, t.column,
+          isInput: t.isInput, typeArgs: args);
+    }
+    if (t is StructAlt) {
+      return StructAlt(t.functor,
+          [for (final a in t.args) qualify(a, q, defs, params, need)],
+          t.line, t.column);
+    }
+    if (t is ListConsAlt) {
+      return ListConsAlt(qualify(t.head, q, defs, params, need),
+          qualify(t.tail, q, defs, params, need), t.line, t.column);
+    }
+    if (t is DiffListAlt) {
+      return DiffListAlt(qualify(t.content, q, defs, params, need),
+          qualify(t.hole, q, defs, params, need), t.line, t.column);
+    }
+    return t;
   }
 
   var changed = true;
   while (changed) {
     changed = false;
     for (final m in modules) {
-      final have = {for (final td in m.ast.typeDefs) td.name};
+      final have = {
+        for (final td in m.ast.typeDefs) typeKey(td.name, td.typeParams.length)
+      };
       final added = <TypeDef>[];
-      for (final e in referenced(m).entries) {
-        final name = e.key;
-        if (have.contains(name)) continue;
-        final q = name.substring(0, name.length - suffix.length);
+      final pending = referenced(m).entries.toList();
+      while (pending.isNotEmpty) {
+        final e = pending.removeAt(0);
+        final key = e.key;
+        if (have.contains(key)) continue;
+        final slash = key.lastIndexOf('/');
+        final name = key.substring(0, slash);
+        final arity = int.parse(key.substring(slash + 1));
+        final h = name.lastIndexOf('#');
+        final q = name.substring(0, h);
+        final tname = name.substring(h + 1);
+        final where = '${m.filePath}:${e.value}';
         final t = target(m, q);
         if (t == null || identical(t, m)) {
-          throw Exception('${m.filePath}:${e.value}: $name names no module '
-              '$q of ${ppath.dirname(m.filePath)}: the qualifier of '
-              '$procedureTypeName is a single child directory or module '
-              'file relative to the referring module\'s directory (TGLP '
-              'modules.tex, "Procedure declarations")');
+          throw Exception('$where: $name names no module $q of '
+              '${ppath.dirname(m.filePath)}: the qualifier of a type is a '
+              'single child directory or module file relative to the '
+              'referring module\'s directory (TGLP modules.tex, "Procedure '
+              'declarations", "Cross-module type checking")');
         }
+        final defs = {
+          for (final td in t.ast.typeDefs)
+            typeKey(td.name, td.typeParams.length): td
+        };
         final exportedAll = [
           for (final d in [...t.ast.procDeclarations, ...t.ast.paramProcDecls])
             if (d.exported && !d.imported) d
         ];
-        final param =
-            exportedAll.where((d) => d.typeParams.isNotEmpty).toList();
-        if (param.isNotEmpty) {
-          final d = param.first;
-          throw Exception('${m.filePath}:${e.value}: $name: ${t.filePath} '
-              'exports the parameterised declaration ${d.name}/${d.arity}, '
-              'and the union of the declarations $q exports has no instance '
-              'of it to take (TGLP modules.tex, "Procedure declarations")');
+        final need = <String>{};
+        if (tname == procedureTypeName && arity == 0) {
+          final param =
+              exportedAll.where((d) => d.typeParams.isNotEmpty).toList();
+          if (param.isNotEmpty) {
+            final d = param.first;
+            throw Exception('$where: $name: ${t.filePath} exports the '
+                'parameterised declaration ${d.name}/${d.arity}, and the '
+                'union of the declarations $q exports has no instance of it '
+                'to take (TGLP modules.tex, "Procedure declarations")');
+          }
+          final alts = <TypeExpr>[
+            for (final d in exportedAll)
+              d.argTypes.isEmpty
+                  ? ConstantAlt(d.name, d.line, d.column)
+                  : StructAlt(
+                      d.name,
+                      [
+                        for (final a in d.argTypes)
+                          qualify(_dualArg(a), q, defs, const {}, need)
+                      ],
+                      d.line,
+                      d.column)
+          ];
+          added.add(TypeDef(name, alts, e.value, 0));
+        } else {
+          final def = defs[typeKey(tname, arity)];
+          if (def == null) {
+            throw Exception('$where: $name: ${t.filePath} defines no type '
+                '$tname${arity == 0 ? '' : ' of $arity parameters'} (TGLP '
+                'modules.tex, "Procedure declarations": M#T is the type T '
+                'that a declaration M exports references, under M\'s '
+                'definition of it)');
+          }
+          final names = <String>[];
+          for (final d in exportedAll) {
+            names.addAll(_namesIn(d));
+          }
+          final reached = {
+            for (final td in _typesClosed(names, t.ast))
+              typeKey(td.name, td.typeParams.length)
+          };
+          if (!reached.contains(typeKey(tname, arity))) {
+            throw Exception('$where: $name: no declaration ${t.filePath} '
+                'exports references $tname (TGLP modules.tex, "Procedure '
+                'declarations": M#T is the type T that a declaration M '
+                'exports references)');
+          }
+          final params = def.typeParams.toSet();
+          added.add(TypeDef(
+              name,
+              [
+                for (final alt in def.alternatives)
+                  qualify(alt, q, defs, params, need)
+              ],
+              e.value,
+              0,
+              typeParams: def.typeParams));
         }
-        final exported = exportedAll;
-        final alts = <TypeExpr>[
-          for (final d in exported)
-            d.argTypes.isEmpty
-                ? ConstantAlt(d.name, d.line, d.column)
-                : StructAlt(d.name, [for (final a in d.argTypes) _dualArg(a)],
-                    d.line, d.column)
-        ];
-        final names = <String>[];
-        for (final d in exported) {
-          names.addAll(_namesIn(d));
+        have.add(key);
+        for (final k in need) {
+          final s2 = k.lastIndexOf('/');
+          pending.add(MapEntry(
+              typeKey('$q#${k.substring(0, s2)}', int.parse(k.substring(s2 + 1))),
+              e.value));
         }
-        for (final td in _typesClosed(names, t.ast)) {
-          if (have.contains(td.name)) continue;
-          have.add(td.name);
-          added.add(td);
-        }
-        have.add(name);
-        added.add(TypeDef(name, alts, e.value, 0));
       }
       if (added.isEmpty) continue;
       m.ast.typeDefs.addAll(added);
@@ -1257,6 +1353,35 @@ Set<String> _writeProcedureTypes(List<DiscoveredModule> modules) {
     }
   }
   return rebuild;
+}
+
+/// The module a qualifier names, at [stem] with no extension, discovered on
+/// its own: the `self.glp` of the program at the directory [stem], with the
+/// types the compilation wrote into it, or the module [stem].glp; null where
+/// neither is there or its discovery is refused ([_writeQualifiedTypes]).
+DiscoveredModule? _discoverTarget(
+    String stem, String rootSelfGlpPath, TypeEnvironment? rootScope) {
+  try {
+    if (File(ppath.join(stem, 'self.glp')).existsSync()) {
+      final program = discoverProgram(stem,
+          rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
+      final key = ppath.normalize(File(ppath.join(stem, 'self.glp')).absolute.path);
+      for (final m in program) {
+        if (ppath.normalize(File(m.filePath).absolute.path) == key) return m;
+      }
+      return null;
+    }
+    if (File('$stem.glp').existsSync()) {
+      final key = ppath.normalize(File('$stem.glp').absolute.path);
+      for (final m in discoverSingleModule('$stem.glp',
+          rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope)) {
+        if (ppath.normalize(File(m.filePath).absolute.path) == key) return m;
+      }
+    }
+  } on Object {
+    return null;
+  }
+  return null;
 }
 
 /// An argument type of a declaration complemented, as `M#Procedure` holds it:
@@ -1276,7 +1401,7 @@ TypeExpr _dualArg(TypeExpr t) {
 /// merge(Stream?, Stream?, Stream)` the shorthand `procedure merge(Stream?,
 /// Stream?, Stream).` stands for (TGLP typed-glp.tex, "Procedure
 /// Declarations"), which `M#Procedure` restricts to the declarations `M`
-/// exports ([_writeProcedureTypes]).
+/// exports ([_writeQualifiedTypes]).
 const String procedureTypeName = 'Procedure';
 
 /// The scope a `.vglp` source is compiled in: its ancestor chain, with the
@@ -1340,55 +1465,27 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       return modules;
     }
 
-    try {
-      return discover();
-    } on UndefinedDeclarationTypeError {
-      // A self.glp of the chain may be a module the compilation writes
-      // types into, directly or through a module of its directory (vGLP,
-      // Section 6.3; _writeCompiledTypes), and so name a type no scope
-      // defines until the program of its directory is discovered: discover
-      // that program, read its self.glp files as the compilation wrote them,
-      // and discover the module again; where no compiled module is below the
-      // chain, or the types are still undefined, the refusal stands.
-      if (!_readCompiledTypesOfChain(selfPaths,
-          rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope)) {
-        rethrow;
-      }
-      return discover();
+    // A name M#T in the module or its chain, M a module the discovery of a
+    // lone module does not hold, is resolved against M discovered on its own
+    // ([_writeQualifiedTypes], [_discoverTarget]); a self.glp written into
+    // is read whole by the scopes of the discovery made again.  Until
+    // 2026-11-10 a declaration of the chain naming a type the compilation
+    // forms below it, plainly, was refused, and the program of the chain's
+    // outermost directory was discovered to write the type, and the module
+    // discovered again (Cloud #16, Code_inbox.md, 2026-11-10 13:15 UTC,
+    // point 4).
+    var modules = discover();
+    if (_writeQualifiedTypes(modules,
+            rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope)
+        .isNotEmpty) {
+      modules = discover();
+      _writeQualifiedTypes(modules,
+          rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
     }
+    return modules;
   } finally {
     selfGlpReading = outer;
   }
-}
-
-/// The types the compilation writes into the `self.glp` files at [selfPaths]
-/// (vGLP, Section 6.3), read into [selfGlpReading] from a discovery of the
-/// program of the outermost of them, the root excepted, with a compiled
-/// module in its directory or below; false where there is none.
-bool _readCompiledTypesOfChain(List<String> selfPaths,
-    {String? rootSelfGlpPath, TypeEnvironment? rootScope}) {
-  final reading = selfGlpReading;
-  if (reading == null) return false;
-  final rootKey =
-      rootSelfGlpPath == null ? null : SelfGlpReading.key(rootSelfGlpPath);
-  final keys = {for (final p in selfPaths) SelfGlpReading.key(p)};
-  for (final p in selfPaths) {
-    if (SelfGlpReading.key(p) == rootKey) continue;
-    final dir = File(p).parent.absolute.path;
-    if (_compiledModulesBelow(dir).isEmpty) continue;
-    final program = discoverProgram(dir,
-        rootSelfGlpPath: rootSelfGlpPath, rootScope: rootScope);
-    var any = false;
-    for (final m in program) {
-      if (!m.isSelfGlp || !keys.contains(SelfGlpReading.key(m.filePath))) {
-        continue;
-      }
-      reading.write(m.filePath, m.ast.typeDefs);
-      any = true;
-    }
-    return any;
-  }
-  return false;
 }
 
 /// The types [selfGlpReading] has written into a `self.glp`, written into its
@@ -4150,27 +4247,16 @@ List<String> emitVglpSources(String rootDir,
   // The sources compile in the scopes the loader gives them, the self.glp
   // files that import their procedures read as discoverProgram reads them
   // before the compilation has formed their types (selfGlpReading).
-  // A self.glp above the root refused for a type the compilation forms
-  // below it gets the type from a discovery of its directory's program, as
-  // discoverProgram has it.
+  // A self.glp above the root names a type the compilation forms below it
+  // by M#T, as discoverProgram has it.
   final outer = selfGlpReading;
-  final above = _ancestorSelfGlpFiles(root.path, programsDir);
   selfGlpReading = _selfGlpReadingOf([
     for (final f in _listFiles(root))
       if (ppath.basename(f.path) == 'self.glp') f.path
   ]);
   try {
-    try {
-      return _emitVglpSources(root, programsDir, dispatcher, rootSelfGlpPath,
-          onSkip);
-    } on UndefinedDeclarationTypeError {
-      if (above.isEmpty ||
-          !_readCompiledTypesOfChain(above, rootSelfGlpPath: rootSelfGlpPath)) {
-        rethrow;
-      }
-      return _emitVglpSources(root, programsDir, dispatcher, rootSelfGlpPath,
-          onSkip);
-    }
+    return _emitVglpSources(root, programsDir, dispatcher, rootSelfGlpPath,
+        onSkip);
   } finally {
     selfGlpReading = outer;
   }
