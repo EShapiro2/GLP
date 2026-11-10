@@ -36,7 +36,11 @@ import 'suspension.dart';
 import 'terms.dart';
 
 /// The saved state is not one this reader can read: corrupt, truncated, or
-/// of another format version.
+/// of another format version.  At a restart such a state is lost, reported,
+/// and the agent starts afresh under the key pair the store keeps (IGLP
+/// db0a117, Implementation Notes, "Persistence", Failure: "If the runtime
+/// cannot read or cannot restore the saved state, as one written under an
+/// earlier format of the store, ..., the state is lost").
 class SavedStateFormatException implements Exception {
   final String message;
   SavedStateFormatException(this.message);
@@ -61,7 +65,9 @@ class SavedStateFormatException implements Exception {
 /// 0c77e47, Implementation Notes, "Persistence"); a version-4 state is not
 /// read.  Version 6 (2026-11-08) writes the reachable declaration after the
 /// nearby declarations, with its stream's tail writer (GLP-Spec cb9df43,
-/// "Networking seam": reachable(S)); a version-5 state is not read.
+/// "Networking seam": reachable(S)); a version-5 state is not read.  A state
+/// of an earlier version is lost at the restart, and the agent starts afresh
+/// (IGLP db0a117, "Persistence", Failure; [SavedStateFormatException]).
 const List<int> savedStateMagic = [0x47, 0x4C, 0x50, 0x53];
 const int savedStateVersion = 6;
 
