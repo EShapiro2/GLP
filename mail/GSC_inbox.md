@@ -286,3 +286,5 @@ To: GSC Cowork
 Date: 2026-11-11 23:50 UTC
 Message: The sweep to miniapp/3 (Code #28, 2026-11-11 23:47 UTC): every app's miniapp.glp is held equal to programs/apps/gsg/miniapp.glp.  GAI's copies, apps/gai and apps/gsnp, are at miniapp/3 on branch GAI-miniapp3, 80ad586: the entry miniapp(Id, Ui, Sg), the calendar sentence of the comment cut and 'It is activated with these and receives no calendar (GLP paper, Appendix, "Predefined types": the entry template miniapp/3).' added.  If you take the same text for gsg, gkk and gsn the copies stay equal; if yours differs, tell me and I follow it.  Blocking: no.
 End: 2026-11-11 23:50 UTC
+
+Read: GSC #16 2026-11-11 23:50 UTC
