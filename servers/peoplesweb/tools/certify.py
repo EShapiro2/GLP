@@ -174,7 +174,9 @@ def terms(contracts):
             t = answer(o, 'C')
             r = answer(repl(['../programs/gsc', ':limit 10000000', f'as_read({t}, R).']), 'R') if t else None
             err = None if t else next((l.split(': ', 1)[-1].strip() for l in o.splitlines() if 'Error' in l), 'no term')
-            cache[c['id']] = {'hash': h, 'term': t, 'read': r, 'error': err}
+            # Kept only where the REPL loaded the file: a REPL that did not
+            # run (a timeout, a rebuild of glpc) is asked again next time.
+            cache[c['id']] = {'hash': h if 'Loaded' in o else None, 'term': t, 'read': r, 'error': err}
             changed = True
         if cache[c['id']]['term']:
             out[c['id']] = cache[c['id']]['term']
@@ -201,7 +203,9 @@ def terms(contracts):
             b, bs, a = o
             bid = names.get(b or '')
             if not all(o):
-                cache[c['id']] = {'hash_own': _hash(p), 'parts': o, 'term': None, 'read': None,
+                # Not kept as read: a REPL that failed once (a timeout, a
+                # rebuild) is asked again at the next build.
+                cache[c['id']] = {'hash_own': None, 'parts': o, 'term': None, 'read': None,
                                   'error': f'{os.path.basename(p)} prints no instance_named({name}, Base, Bindings, Additions)'}
                 changed = True
                 continue
@@ -214,7 +218,8 @@ def terms(contracts):
                             f'instantiate({out[bid]}, {bs}, {a}, D).', f'instantiate({out[bid]}, {bs}, [], D0).'])
                 t, t0 = answer(got, 'D'), answer(got, 'D0')
                 rd = repl(['../programs/gsc', ':limit 10000000', f'as_read({t}, R).', f'as_read({t0}, R0).']) if t and t0 else ''
-                cache[c['id']] = {'hash': h, 'hash_own': _hash(p), 'parts': o, 'term': t, 'read': answer(rd, 'R'),
+                whole = t and t0 and answer(rd, 'R') and answer(rd, 'R0')
+                cache[c['id']] = {'hash': h if whole else None, 'hash_own': _hash(p), 'parts': o, 'term': t, 'read': answer(rd, 'R'),
                                   'base': bid, 'faults': answer(got, 'F'), 'bare': t0, 'bare_read': answer(rd, 'R0'),
                                   'error': None if t else 'instantiate/4 gives no instance'}
                 changed = True

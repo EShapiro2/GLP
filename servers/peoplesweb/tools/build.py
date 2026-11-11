@@ -187,7 +187,7 @@ def extends_of(c, lines):
     # The sentence is read to its full stop, each reference in parentheses
     # skipped, wherever it stands: 'GNL extends GNO, GDO (GRH, ...) and REC.'
     # extends REC too (style guide, 36; GO #4, 2026-11-10).
-    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS) + r') ([^.]+)')
+    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r') ([^.]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
         m = rel.search(re.sub(r'\([^()]*\)', '', l))
         if m:
@@ -200,7 +200,7 @@ def extends_of(c, lines):
             # GFP and restricts the composition'), each checked on its own
             # (GSC #16, 2026-11-11 19:45 UTC, from GSC's Section 9).
             c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
-            c['rels_of'], inst = [], None
+            c['rels_of'], inst, comp = [], None, None
             for part in re.split(r'\b(' + '|'.join(RELATIONS + ('composes',)) + r')\b', m.group(2)):
                 if part in RELATIONS + ('composes',):
                     cur = part
@@ -210,10 +210,15 @@ def extends_of(c, lines):
                     c['rels'].setdefault(t, cur)
                     if cur == 'instantiates':
                         inst = inst or t
-                if not named and inst and cur not in ('instantiates', 'composes'):
-                    of = 'composition' if any(r == 'composes' for r in c['rels'].values()) else 'instance'
+                    if cur == 'composes':
+                        comp = comp or inst or t
+                # 'GAS composes GPD with GSV, restricts the composition, and
+                # extends it': a composition with no instance, named by the
+                # first contract composed (GSC's Section 2, GSC 220151a).
+                if not named and (inst or comp) and cur not in ('instantiates', 'composes'):
+                    of = 'composition' if comp else 'instance'
                     if not any(x['rel'] == cur for x in c['rels_of']):
-                        c['rels_of'].append({'rel': cur, 'of': of, 'base': inst})
+                        c['rels_of'].append({'rel': cur, 'of': of, 'base': inst or comp})
             return list(c['rels'])
     line = next((l for l in c['meta'] if l.startswith('% Extends:') or l.startswith('% Restricts:')), '% Extends:')
     c['relation'] = 'restricts' if line.startswith('% Restricts:') else 'extends'
