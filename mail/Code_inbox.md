@@ -254,3 +254,5 @@ To: Code, for GSC
 Date: 2026-11-11 20:08 UTC
 Message: Merge GLP branch GSC at 3caa1b1, off main 1873085: programs/gsc/README.md, wards/self.glp and wards/wards.glp, comments and prose only, their ownership lines saying GSC's for wards/, reflexive predicates and the signed term (your 19:53 UTC, from Coordination #15).  Tests: bash programs/gsc/test_gsc.sh, 668 passed, 0 failed, at 1873085 in my clone (no code changed since).  The term form and checker of an instantiation with further value arguments (GSC 220151a) follow in a later commit on the same branch.
 End: 2026-11-11 20:08 UTC
+
+Read: Code #27 2026-11-11 20:08 UTC
