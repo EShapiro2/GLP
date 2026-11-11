@@ -1,0 +1,14 @@
+%% peer_app/self.glp --- the agents' program of ../peer_app_boot.glp, moved out of
+%% it: a boot file carries its boot clause and the persons it names, and the
+%% agents' program is a program directory (TGLP 6ce148a, modules.tex, "Entry
+%% and the absence of a boot module").  See ../peer_app_boot.glp for what it exercises.
+
+PaMsg ::= poke.
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(PaMsg)), Stream(NetMsg(PaMsg)))?).
+agent(ch(In, []), ch(_, [])) :- start(In?).
+
+procedure start(Stream(Constant)?).
+start([alice | _]) :- peer_app(bob, A), send_to_user([A?]).
+start([bob | _]).
+start([]).

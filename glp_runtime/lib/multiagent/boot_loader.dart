@@ -121,6 +121,8 @@ class BootLoader {
   ///   with one argument `ch(_?,_)` and the others ground, at an agent the
   ///   clause declares
   /// - Duplicate agent IDs, or two scripted persons at one agent
+  /// - The file defines a procedure that no person `P@p` of the clause names,
+  ///   directly or by the procedures that person calls ([_personsOnly])
   BootConfig load(String source) {
     final List<Token> tokens;
     try {
@@ -142,11 +144,67 @@ class BootLoader {
     }
 
     final directives = _spawnDirectives(tokens, declaration, clause);
+    final rest = _blankOut(source, tokens, [declaration, clause]);
+    _personsOnly(rest, directives);
     return BootConfig(
       directives: directives,
       fullSource: source,
-      source: _blankOut(source, tokens, [declaration, clause]),
+      source: rest,
     );
+  }
+
+  /// Refuse a boot file that defines a procedure no scripted person of its
+  /// clause names, directly or by the procedures that person calls (TGLP
+  /// 6ce148a, modules.tex, "Entry and the absence of a boot module": a single
+  /// file used to start several agents carries its G@p clause "and the
+  /// persons scripted in GLP that the clause names, and nothing else: the
+  /// agents' program is a program directory, which the agents load"; IGLP
+  /// cec4682, Implementation Notes, "Boot": "A boot defines no agent/2"; GLP
+  /// #14, Code_inbox 2026-11-10 13:08 UTC, item 1).  [rest] is the file with
+  /// the boot declaration and clause blanked out.  A procedure is named by a
+  /// person where its name and arity are the person goal's, and reached where
+  /// a clause of a named or reached procedure calls it, in its guard, its body
+  /// or its else branch.  The types the persons use stay.  A file whose rest
+  /// does not parse is left to the compilation, which reports it.
+  void _personsOnly(String rest, List<SpawnDirective> directives) {
+    final Module module;
+    try {
+      module = Parser(Lexer(rest).tokenize()).parseModule();
+    } on CompileError {
+      return;
+    }
+    final defined = {for (final p in module.procedures) p.signature: p};
+    final reached = <String>{};
+    final pending = <String>[
+      for (final d in directives)
+        if (d.person != null) '${d.person!.functor}/${d.person!.args.length}'
+    ];
+    while (pending.isNotEmpty) {
+      final sig = pending.removeLast();
+      final proc = defined[sig];
+      if (proc == null || !reached.add(sig)) continue;
+      for (final c in proc.clauses) {
+        for (final g in c.guards ?? const <Guard>[]) {
+          pending.add('${g.predicate}/${g.args.length}');
+        }
+        for (final g in [...?c.body, ...?c.elseBranch?.body]) {
+          final called = g is SpawnGoal ? g.innerGoal : g;
+          if (called is RemoteGoal) continue;
+          pending.add('${called.functor}/${called.arity}');
+        }
+      }
+    }
+    final extra = [
+      for (final p in module.procedures)
+        if (!reached.contains(p.signature)) p.signature
+    ];
+    if (extra.isNotEmpty) {
+      throw BootLoaderException('Boot file defines ${extra.join(', ')}, '
+          'which no scripted person of its clause names or calls: a boot '
+          'file carries its G@p clause and the persons scripted in GLP that '
+          'the clause names, and nothing else; the agents\' program is a '
+          'program directory, which the agents load');
+    }
   }
 
   /// The tokens `procedure boot .`, as (first, last) indices.

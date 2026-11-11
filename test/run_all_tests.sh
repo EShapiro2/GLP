@@ -2312,8 +2312,9 @@ fi
 # NEG: one negative per check and load path (Integration 2026-10-11 15:53 UTC,
 # item 5).  SRSW on the multi-isolate path: an agent program with Id? twice in
 # its body (GLP-Spec glp.tex, Definitions "Single-Occurrence (SO) Invariant"
-# and "GLP Program, Goals"), booted with no program directory --- the agent
-# program follows the boot clause (programs/tests/neg_srsw_boot/) --- and as a
+# and "GLP Program, Goals"), as the self.glp of the program directory beside
+# the boot (programs/tests/neg_srsw_boot/agent/; until 2026-11-10 it followed
+# the boot clause in the boot file, which the loader now refuses) --- and as a
 # module of the program directory the agent loads
 # (programs/tests/neg_boot_programdir/srsw/, IsolateManager with programDir).
 # The AgentRuntime path is glp_runtime/test/multiagent/neg_check_paths_test.dart.
@@ -2322,9 +2323,9 @@ neg_srsw_inline=$("$REPL_RUN" <<HEREDOC
 :quit
 HEREDOC
 2>&1)
-check "NEG SRSW / :boot, no program directory: the agent's load is refused by the SRSW pass" "Agent alice failed to initialize: \[semantic\] SRSW violations found:" "$neg_srsw_inline"
-check "NEG SRSW / :boot, no program directory: the refusal names the reader occurring twice" "agent_init/2: Line 19: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
-check_not "NEG SRSW / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_srsw_inline"
+check "NEG SRSW / :boot, the program directory beside the boot: the agent's load is refused by the SRSW pass" "Agent alice failed to initialize: \[semantic\] SRSW violations found:" "$neg_srsw_inline"
+check "NEG SRSW / :boot, the program directory beside the boot: the refusal names the reader occurring twice" "agent_init/2: Line 12: Reader variable \"Id?\" occurs 2 times" "$neg_srsw_inline"
+check_not "NEG SRSW / :boot, the program directory beside the boot: the boot does not settle" "Boot settled" "$neg_srsw_inline"
 neg_srsw_dir=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/neg_boot_programdir/srsw_boot.glp
 :quit
@@ -2394,9 +2395,10 @@ done
 # no guard predicate (GLP-Spec glp.tex, Definition "Guarded Clause") --- on
 # every other load path: a program directory, the fault in its own self.glp
 # (neg_guard_dir/); a linked program of two modules, the fault in the module
-# the export reaches by a cross-module call (neg_guard_linked/); a boot with no
-# program directory, the agent program following the boot clause
-# (neg_guard_boot/); and a boot whose agents load a program directory with the
+# the export reaches by a cross-module call (neg_guard_linked/); a boot whose
+# program directory beside it holds the fault in its self.glp (neg_guard_boot/
+# agent/; until 2026-11-10 the program followed the boot clause in the boot
+# file); and a boot whose agents load a program directory with the
 # fault in one of its modules (neg_boot_programdir/guard/, IsolateManager with
 # programDir).  The AgentRuntime path is
 # glp_runtime/test/multiagent/neg_check_paths_test.dart.
@@ -2409,8 +2411,24 @@ neg_guard_inline=$("$REPL_RUN" <<HEREDOC
 :quit
 HEREDOC
 2>&1)
-check "NEG guards / :boot, no program directory: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 17" "$neg_guard_inline"
-check_not "NEG guards / :boot, no program directory: the boot does not settle" "Boot settled" "$neg_guard_inline"
+check "NEG guards / :boot, the program directory beside the boot: the agent's load is refused for the guard" "Agent alice failed to initialize: \[semantic\] \"true\" is not a guard - it can only appear in body position at Line 7" "$neg_guard_inline"
+check_not "NEG guards / :boot, the program directory beside the boot: the boot does not settle" "Boot settled" "$neg_guard_inline"
+
+# NEG: a boot file that defines the agents' program (programs/tests/neg_boot_defines/):
+# TGLP 6ce148a, modules.tex, "Entry and the absence of a boot module": a file
+# that starts several agents carries its G@p clause "and the persons scripted
+# in GLP that the clause names, and nothing else: the agents' program is a
+# program directory, which the agents load".  The loader refuses it, naming
+# what no person reaches, and spawns no agent (GLP #14, Code_inbox 2026-11-10
+# 13:08 UTC, item 1).
+neg_boot_defines=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/neg_boot_defines/agent_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "NEG boot file / defining the agents' program: the loader refuses it, naming what no person reaches" "Boot failed: BootLoaderException: Boot file defines agent/2, start/1, which no scripted person of its clause names or calls" "$neg_boot_defines"
+check_not "NEG boot file / defining the agents' program: no agent is spawned" "\[alice\]" "$neg_boot_defines"
+check_not "NEG boot file / defining the agents' program: the boot does not settle" "Boot settled" "$neg_boot_defines"
 neg_guard_bootdir=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/neg_boot_programdir/guard_boot.glp
 :quit

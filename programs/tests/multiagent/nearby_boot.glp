@@ -14,29 +14,14 @@
 % declare(peer(bob)), and a watch on the PAN at her start, tells her person
 % the first presence it carries, then removes the declaration and tells her
 % person that the stream is closed.  Section MB, MB8, runs it.
+%
+%% The agents' program is the program directory nearby/ beside this file,
+%% which the agents load, this file carrying its boot clause and the persons
+%% it names and nothing else (TGLP 6ce148a, modules.tex, "Entry and the
+%% absence of a boot module"; IGLP, Implementation Notes, "Boot").
 
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
-
-NbMsg ::= poke.
-
-exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(NbMsg)), Stream(NetMsg(NbMsg)))?).
-agent(ch(In, []), ch(_, [])) :- start(In?).
-
-procedure start(Stream(Constant)?).
-start([alice | _]) :- declare(peer(bob)), declare(nearby(pan, S)), watch(S?).
-start([bob | _]).
-start([]).
-
-%% The first presence goes to the person, and the declaration is removed;
-%% the stream's closing goes to the person too.
-procedure watch(Stream(Presence)?).
-watch([P | S]) :- ground(P?) | send_to_user([P?]), remove(nearby(pan)), closing(S?).
-watch([]) :- send_to_user([closed]).
-
-procedure closing(Stream(Presence)?).
-closing([_ | S]) :- closing(S?).
-closing([]) :- send_to_user([closed]).
 
 %% The person at each agent tells it its name, and reads nothing.
 exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
