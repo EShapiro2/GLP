@@ -1,5 +1,5 @@
 %% ---------------------------------------------------------------------------
-%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with knows its introduction predicate and with the contract's pragmas, CSSN.txt's lines after Pragmas and those of the contracts it extends (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation", "Act schemas as local specifications" and "The contract's words"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/4 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the two widget declarations the compiler prints into the platform, approval_sentence for Approval and social_menu for the request question, Request?, carrying the contract's words, and the program's output by last_state (vGLP, Section 6.2, "The words a platform shows"), so every word the app shows is the contract's and the app writes no self.vglp.
+%% programs/cssn --- the child-safe social network (CSSN, Section 4): its program is the canonical CVA platform of its contract, CSSN.glp (Appendix B.2), compiled by vGLP's compiler with knows its introduction predicate and with the contract's pragmas, CSSN.txt's lines after Pragmas and those of the contracts it extends (CSSN, Section 4.6, "The program"; vGLP, Section 5.4, "The compilation", "Act schemas as local specifications" and "The contract's words"), platform.vglp, which compile.sh prints and the canonical compilation compiles to GLP when the directory loads; the mini-app entry miniapp/3 that wraps it (miniapp.glp, the same file as programs/apps/gsg/miniapp.glp); its scripted person (person.glp); and the plays, the village of Section 4.6, "Village Demonstration" (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it.  The person's questions are drawn by the two widget declarations the compiler prints into the platform, approval_sentence for Approval and social_menu for the request question, Request?, carrying the contract's words, and the program's output by last_state (vGLP, Section 6.2, "The words a platform shows"), so every word the app shows is the contract's and the app writes no self.vglp.
 %%
 %% CSSN.txt and CSSN.glp, the contract's clauses and act schemas, are CSSN's Cowork's text (claude.md, "Sessions"); CSSN.glp is a module of this program, its types its own and none of its procedures exported.
 %%
@@ -77,10 +77,10 @@ Route     ::= route(Key, Stream(Net)?).
 Routes    ::= [] ; [Route | Routes].
 Sending   ::= went ; held(Net).
 
-%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn and Net.
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+%% The mini-app's entry, the instance of the root's entry template miniapp/3 (programs/self.glp) at the mini-app's two types, Drawn and Net.
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 %% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen.
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
