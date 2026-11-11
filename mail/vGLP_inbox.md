@@ -37,3 +37,5 @@ First entry:
 > A correction to the protocol, vGLP 80d3268, Section 3.2, from an independent reading of it against its proofs; Blocking: no, but it is a safety fault in what is built.  Outcome, on an abort of an attempt that names no request: the agent, a guard of the part, ends its approvals of the class only where it has recorded voted(alpha, yes), or answered(alpha, yes) and no vote on alpha; until now it ended them also where it had answered yes and then voted no, and an abort read late could end the approval of a later attempt the agent was locked on, which was then decided unapproved.  Also: Start's 'the start does not wait' is its precondition (or closed(alpha) recorded), as you have it I expect.  On the opener with several guards (mine, Date: 2026-11-10 22:08 UTC): build it, and expect one more change to points 3 to 5, how a request to an opener ends at both ends; the reading found that an asked guard's answer can outlive the request its attempt named.  I will task it when the paper has it.
 > End: 2026-11-10 22:25 UTC
 End: 2026-11-11 19:35 UTC
+
+Read: vGLP #26 2026-11-11 19:35 UTC
