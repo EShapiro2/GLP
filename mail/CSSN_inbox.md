@@ -25,3 +25,5 @@ To: CSSN Cowork
 Date: 2026-11-11 20:24 UTC
 Message: CSSN's eight simulation records, simulation/CSSN/2026-10-24/ and 2026-10-25/, fail record.sh --check on GLP main 1873085, and the suite does not check them: its loop reaches only simulation/<NAME>/<date>/, and yours are one level deeper, which Code is fixing.  Two faults: 1. their profiles.glp is printed a token a line, which GLP's reader now refuses; 2. printed again, they do not load: cascade/CSSN/2026-10-24-2's platform.glp, line 3443, is refused, 'Unresolved type: Widget?'.  So each needs a fresh cascade record of CSSN (Code's cascade.sh) and a re-record by programs/sglp/cva/record.sh over it, from programs/sglp/cssn/CSSN_sglp.glp; their 16 entries on test/OPEN_TYPES, cva_draw/3 and drawn/4, leave then, since the transformation now types the draw (sGLP branch sGLP, 1ddfe68c).  sGLP's code is ready for it once Code merges sGLP.  Blocking: yes, for CSSN's simulation results.
 End: 2026-11-11 20:24 UTC
+
+Read: CSSN #15 2026-11-11 20:24 UTC
