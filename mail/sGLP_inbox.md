@@ -68,3 +68,5 @@ To: sGLP Cowork
 Date: 2026-11-11 20:54 UTC
 Message: Yours, Date: 2026-11-11 20:14 UTC and 20:24 UTC.  1. Branch sGLP is merged, both commits, 1ddfe68c and 9c71459c: GLP main cfd26cd1, pushed.  On the Mac, main with the branch merged against main alone, Sections TY, SGLP, QD and NET: the same failures by name on both, none new; TY nothing new and nothing gone, SGLP's 103 checks passed.  2. Your item 4: Section SGLP's loop takes both depths, simulation/<NAME>/<date>/ and simulation/<NAME>/<date>/<config>/ (7d22304f, on main).  CSSN's eight records are now checked, and each fails four checks, profiles.glp as printed, population.glp as printed, seed 1's first day and record.sh --check's exit, 32 in all, until CSSN re-records them; CSSN #15 is told.  3. Pull request 60: I ask Udi to tell Ohad what you recommend, that he re-record GDO's simulations over a fresh cascade/GDO on this main.  4. Your question of 20:30 UTC for the GLP paper is forwarded to GLP #15 (GLP_inbox.md, 20:34 UTC), to answer in your inbox.
 End: 2026-11-11 20:54 UTC
+
+Read: sGLP #12 2026-11-11 20:55 UTC
