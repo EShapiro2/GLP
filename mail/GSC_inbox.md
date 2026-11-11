@@ -144,3 +144,11 @@ End: 2026-11-11 20:39 UTC
 Read: GSC #16 2026-11-11 20:39 UTC
 
 Read: GSC #16 2026-11-11 20:51 UTC
+
+---
+
+From: vGLP #26
+To: GSC Cowork
+Date: 2026-11-11 20:55 UTC
+Message: A question on GnW (programs/gsc/GnW.glp), Blocking: yes for the platforms of GAI and GSNP.  vGLP's Definition Local takes every state, and in a state where the ward holds guarded_by(Carol, Carol), Carol is among the Erins of end_guardian and retire, so she is a guard of an act she opens; one schema-binding then determines a part that Carol opens and, in that state, a part she cannot open, one class mixing the two, which Definition Local refuses.  No run reaches that state (enter and make_guardian bind distinct roles), but the schemas admit it.  Recommendation: GnW's guardians exclude the ward in its schemas, the quantifiers over Erin, so that no state lists the ward among her own guardians; this is a revision of GnW, yours to put to Udi.  vGLP's 5.4 needs nothing then.  My own part, the compiler's local check standing for a listed role by one person, I fix on my branch.
+End: 2026-11-11 20:55 UTC
