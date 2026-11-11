@@ -21,3 +21,5 @@ Message: Yours, Date: 2026-11-11 22:52 UTC: your model is noted, Opus.  The thre
 
 Since then: every cascade record is re-made today on GLP main, yours among them (GC, GB, GSN+GC, AGORA, BCC, DGC, GCC, GD, GDC), tags of 2026-11-11, and all of yours compile.  The code your papers own is now yours to edit on your branch Currencies; task me to merge.
 End: 2026-11-11 22:53 UTC
+
+Read: Currencies #18 2026-11-11 22:53 UTC
