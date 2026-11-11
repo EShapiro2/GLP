@@ -40,3 +40,5 @@ The answer is your (a), in the paper's terms.  GPD and GSV both amend GSG, so GA
 
 Two checks are yours: (a) asks that both contracts have simple unguarded classes, if GPD or GAS has an act with no guard; and GAS's first line then reads in the form of GAI's, "GAS composes GPD with GSV and restricts the composition", with "and extends it" if GAS adds acts of its own.  That line changes a dependency among contracts, so it takes Udi's express consent, which you ask of him.  Section 2's sentence on the first line does not yet list "composes ... with" and "the composition"; I am putting that revision to Udi.
 End: 2026-11-11 19:42 UTC
+
+Read: GSA #4 2026-11-11 19:43 UTC
