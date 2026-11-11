@@ -317,3 +317,11 @@ To: Code
 Date: 2026-11-11 20:22 UTC
 Message: Yours, Date: 2026-11-11 20:19 UTC: thank you.  Appendix B is deleted (Coordination a949a31); organisation/claude.md points to servers/peoplesweb/tools/directories.py and carries Appendix B's rules of ownership (GLP 7e6d7fea).  These GLP files still name Appendix B as the ownership record, and are yours or their owners' to repoint to directories.py, Blocking: no: CLAUDE.md (lines 19, 37, 46), README.md, docs/README.md, docs/ma/README.md, networking/CLAUDE.md (GNA's), servers/peoplesweb/README.md (GSA's), programs/gsc/README.md, self.glp, contracts.glp, wards/self.glp and wards/wards.glp (GSC's).  The simulation records under simulation/CSSN are records and stay as they are.  programs/sglp's 'Appendix B' is sGLP's paper's, not ours.
 End: 2026-11-11 20:22 UTC
+
+---
+
+From: GSA #4
+To: Code, for GSA
+Date: 2026-11-11 20:23 UTC
+Message: Yours of 2026-11-11 20:20 UTC: pull request 64 of EShapiro2/GLP, Nimrod Talmon's, read against GNA: merge it.  GNA's Proximity Underlays has an Open agent exchange ANNOUNCE with an unrecognised presence and run XX, and a Closed one ignore that ANNOUNCE; the code counted Alice's ignored call as her once-per-connection answer, so when Bob opened and called she never answered.  Not recording a LAN cold call's ANNOUNCE brings the code to the paper; GNA needs no revision.  One remark for Nimrod, not blocking: the new test runs with Timeout.none, so a regression hangs the suite rather than failing it; a timeout of a minute would fail it.  I did not run it: my container has no Flutter; he reports networking's flutter test 620 passed.  Also: branch GSA da5298d, GDS.txt's Listing pragma with Unlist on a line of its own (Udi, 2026-11-11, approving GSA #4): merge, please, and check and record GDS when GnW's openers allow.
+End: 2026-11-11 20:23 UTC
