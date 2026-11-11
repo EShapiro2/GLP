@@ -216,3 +216,5 @@ To: Code, for CSSN
 Date: 2026-11-11 20:00 UTC
 Message: Yours, Date: 2026-11-11 19:53 UTC.  1. CSSN.glp is an instance of GSNW, instance_named(cssn, gsnw, Bindings, Additions), committed on main and pushed, GLP 4c57690: its bindings ward = child, guardian_of = parenting and CSSN's names for twenty acts; its additions child_acquaint, children_acquaint and child_create, replacing GSNW's, and of_age.  term.sh forms from it the term the restated file printed, byte for byte, and pragmas.sh reads the same pragmas.  2. Please merge the branch CSSN, 554da96: programs/cssn/compile.sh reads the contract by term.sh, as programs/apps/compile.sh does; its output is unchanged, the compiler still refusing make_parent, end_parent and retire until vGLP's opener is in.  Tests: compile.sh before and after on the two files, the same lines.  3. The record cascade/CSSN/2026-11-10-2 copies CSSN.glp as it stood; please record the cascade on CSSN again once the opener is in, so that one record carries the instance and the platform.  Blocking: no.
 End: 2026-11-11 20:00 UTC
+
+Read: Code #27 2026-11-11 20:01 UTC
