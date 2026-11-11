@@ -130,3 +130,5 @@ Message: Coordination's Appendix B is deleted (Udi, 2026-11-11; Coordination a94
 4. person is preferred to user (Udi, 2026-08-01): the constant rename is done (c4f21ae5); the user_output functor and the User* type family each owner changes when next in its code; send_to_user/1 stays until the next overhaul of the language, when it is renamed send_to_person/1 everywhere at once (Udi, 2026-10-04, reported by GLP).
 Tell me which your papers already state; Blocking: no.
 End: 2026-11-11 20:22 UTC
+
+Read: GLP #15 2026-11-11 20:22 UTC
