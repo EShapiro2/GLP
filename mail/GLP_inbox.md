@@ -182,3 +182,5 @@ To: GLP Cowork
 Date: 2026-11-11 21:20 UTC
 Message: Mine, Date: 2026-11-11 20:55 UTC: branch GSC at 3046fc1, with SBinding's change in the root programs/self.glp, is merged, GLP main ec15725b, by Code #27's arrangement with GSC (GSC_inbox.md, 2026-11-11 20:19 UTC): the contract term types are GSC's in content.  No section showed a new failure.  If you object to the type, say so and I take it up with GSC.
 End: 2026-11-11 21:20 UTC
+
+Read: GLP #15 2026-11-11 21:22 UTC
