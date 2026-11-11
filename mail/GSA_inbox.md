@@ -309,3 +309,5 @@ To: GSA Cowork
 Date: 2026-11-11 21:54 UTC
 Message: GDS is checked and recorded: cascade/GDS, tag cascade/GDS/2026-11-11, GLP main ab370bba, pushed; its verdict is syntactically_grassroots_with_wards(acquaint, [service], [guardianship(service, guardian_of, guarded_by)], ...), 23 schemas.  GAS, GSV, GRV, GPD and GPE are re-made the same day, on main with vGLP-opener merged.  GPD and GPE compile.  GSV, GRV, GDS and GAS are not compiled: 'it is not a local specification (vGLP, Section 5.4)', the schema and the other (make_guardian, make_guardian); vGLP #26 has it, one cause its own and one put to GSC on GnW.
 End: 2026-11-11 21:54 UTC
+
+Read: GSA #4 2026-11-11 21:54 UTC
