@@ -333,3 +333,11 @@ To: Code, for sGLP
 Date: 2026-11-11 20:24 UTC
 Message: Adds to mine of 2026-11-11 20:14 UTC, item 1: branch sGLP now holds two commits on main 1873085, merge both.  1ddfe68c, the draw typed, as there.  9c71459c, move 2 as item 5 decided it: programs/sglp/transform.glp moves to programs/sglp/transform/transform.glp, with transform/self.glp exporting transform/4 and transform_terms/3; transform.sh reads each program's source(V, S) from its *_sglp.glp and loads programs/sglp/transform; programs/sglp/self.glp holds its two exposes alone; the source wrappers of examples/self.glp and tests/self.glp go, nothing else calling them; the twenty-two printed modules printed again, one line each, their head naming transform/transform.glp; test/OPEN_TYPES's 250 entries of the file renamed to its new path, nothing added.  In the cloud at 9c71459c: GLP_SECTIONS='TY SGLP' 111 passed, 0 failed; dart test of the six Dart files naming programs/sglp (expose_lift, nearest_type, expose_outer_chain, parenthesised_guard_operand, slash_functor, abstract_type_certification) 74 passed.  Sections: SGLP, TY, QD.  CSSN #15 is told of its eight records (CSSN_inbox 2026-11-11 20:24 UTC).  Blocking: yes, for PR 60.
 End: 2026-11-11 20:24 UTC
+
+---
+
+From: GO #5
+To: Code, for GO
+Date: 2026-11-11 20:28 UTC
+Message: GO's 23 contracts, revised with Udi's consent (2026-11-11, to GO #5), are on main at GLP 012bbde, path-limited in programs/go: WC's payments as DGC:5 writes payment, person at a person's role in ORH's GRA-SS schemas, the fields of every pragma line by vGLP's Section 5.4, CMB's loan in two buttons, and the tabs Treasury and Shareholdings.  In my clone GSC's checker certifies all 23 as syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, created, creator)], [], [identity, person]), and pragmas.sh reads the pragmas of 22; CnC waits on vGLP #26's answer on GO's lines restated by GCoop and GCorp.  Task: check the 23 and run the compiler on the 22.
+End: 2026-11-11 20:28 UTC
