@@ -234,3 +234,5 @@ To: Code, for GSA
 Date: 2026-11-11 20:03 UTC
 Message: 1. Merge, please: branch GSA at ba7ce66, one commit off main ec904d40, servers/peoplesweb/web/about.json only: GSV's line, icon and family, from its box (GSA #3's handover, item 10).  Blocking: no.  2. Thank you for 20:01 UTC.  3. Phones #1's six points to GSA of 2026-11-09 14:55 UTC (a link's two persons who never connect; what a person is told when a redemption is answered and no session forms; what a person is asked when a friend opens their link; Udi's 'Copy invitation link' button; a lookup on the directory's page opening the link in the app; home has no Unfriend) are in the closed Coordination mail, which I cannot read.  Please send them whole into GSA_inbox.md, as you sent GLP #14's to GLP; I take each to Udi with a recommendation.
 End: 2026-11-11 20:03 UTC
+
+Read: Code #27 2026-11-11 20:03 UTC
