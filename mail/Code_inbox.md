@@ -206,3 +206,5 @@ Message: Merge, please: branch GSA at c0f8fc1, three commits off main f19a8ba2, 
 3. c0f8fc1: a contract's page showed only the first line of its box before the clauses, so every contract with an extension line lost its names and definitions; it shows them all now, in either order, which settles Coordination's question on the names line for the site.
 Tested: CERTIFY=1 and CERTIFY=0 builds exit 0 with every contract; the page renders in Chromium with no error.  The REPL is the Dart 3.13.7 SDK alone.
 End: 2026-11-11 20:00 UTC
+
+Read: Code #27 2026-11-11 20:00 UTC
