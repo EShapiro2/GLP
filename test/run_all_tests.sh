@@ -8131,9 +8131,11 @@ play_links([], none, [invite_link], O2, N2, C2).
 play_links([], none, [open_link(nonsense)], O3, N3, C3).
 play_link_open(O4, N4).
 play_link_expired(O5).
+play_link_notice(N7).
 :quit
 HEREDOC
 2>&1)
+check "SG links: the person is shown the link as its web address, https://peoplesweb.org/i# and the link's text (GSA, Section 4, Legacy online connections; GNA, Section 6)" "N7 = msg(agent, person, invitation('\{0,1\}https://peoplesweb.org/i#[0-9a-f][0-9a-f]*'\{0,1\}))" "$sg_links"
 check "SG links: Invite by link tells the person the link, as text" "O1 = \[msg(agent, person, invitation('\{0,1\}[0-9a-f]*'\{0,1\}))" "$sg_links"
 check "SG links: Invite by link registers the link with the server the first act names" "^N1 = \[msg(rv, register('\{0,1\}[0-9a-f]*'\{0,1\}, '\{0,1\}[0-9a-f]*'\{0,1\}, X[0-9]*))\]$" "$sg_links"
 check "SG links: Invite by link with no server named is refused and told the reason" "O2 = \[msg(agent, person, rejected(no_rendezvous_server))\]$" "$sg_links"
