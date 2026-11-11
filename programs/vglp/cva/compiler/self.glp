@@ -111,6 +111,51 @@ procedure unnamed_b(WBody?, Declared).
 unnamed_b([], []).
 unnamed_b([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
 unnamed_b(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Ss?) | unnamed_c(Ss?, C).
+%% The possibly-one pairs of every schema of the contract as read (Ones, above).
+procedure ones_of(WDeclared?, Ones).
+ones_of([], []).
+ones_of([S|Ss], Os?) :- ground(S?), ground(Ss?) | ones_c([S?|Ss?], Os).
+ones_of(reflexive(_, Ss), Os?) :- ground(Ss?) | ones_c(Ss?, Os).
+ones_of(environment(_, B), Os?) :- ground(B?) | ones_b(B?, Os).
+procedure ones_b(WBody?, Ones).
+ones_b([], []).
+ones_b([S|Ss], Os?) :- ground(S?), ground(Ss?) | ones_c([S?|Ss?], Os).
+ones_b(reflexive(_, Ss), Os?) :- ground(Ss?) | ones_c(Ss?, Os).
+procedure ones_c(WContract?, Ones).
+ones_c([], []).
+ones_c([S|Ss], [O?|Os?]) :- ground(S?) | ones_s(S?, O), ones_c(Ss?, Os).
+procedure ones_s(WSchema?, OnePairs).
+ones_s(schema(Nm, _, _), ones(Nm?, [])).
+ones_s(cschema(Nm, _, _, _), ones(Nm?, [])).
+ones_s(nschema(Nm, _, _, _), ones(Nm?, [])).
+ones_s(qschema(Nm, _, _, _, _, _, _), ones(Nm?, [])).
+ones_s(schema(Nm, Ns, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+ones_s(cschema(Nm, Ns, _, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+ones_s(nschema(Nm, Ns, _, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+ones_s(qschema(Nm, Ns, _, _, _, _, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+procedure name_pairs(Names?, Names?, Integer?, Sames).
+name_pairs([], _, _, []).
+name_pairs([one(_, O)|Ns], All, I, Ps?) :- ground(O?), ground(All?), integer(I?) |
+    name_index(All?, O?, 1, J),
+    I1 := I? + 1,
+    name_pairs(Ns?, All?, I1?, Ps1),
+    keep_pair(J?, I?, Ps1?, Ps).
+name_pairs([_|Ns], All, I, Ps?) :- otherwise |
+    I1 := I? + 1,
+    name_pairs(Ns?, All?, I1?, Ps).
+procedure name_index(Names?, Constant?, Integer?, Integer).
+name_index([], _, _, 0).
+name_index([one(M, _)|_], O, K, K?) :- M? =?= O? | true.
+name_index([X|_], O, K, K?) :- X? =?= O? | true.
+name_index([_|Xs], O, K, J?) :- otherwise | K1 := K? + 1, name_index(Xs?, O?, K1?, J).
+procedure keep_pair(Integer?, Integer?, Sames?, Sames).
+keep_pair(J, _, Ps, Ps?) :- J? =:= 0 | true.
+keep_pair(J, I, Ps, [same(J?, I?)|Ps?]) :- otherwise | true.
+%% The possibly-one pairs of the schema Nm, none where Os names it not.
+procedure ones_pairs(Ones?, Constant?, Sames).
+ones_pairs([], _, []).
+ones_pairs([ones(N, Ps)|_], Nm, Ps?) :- N? =?= Nm? | true.
+ones_pairs([_|Os], Nm, R?) :- otherwise | ones_pairs(Os?, Nm?, R).
 procedure unnamed_c(WContract?, QContract).
 unnamed_c([], []).
 unnamed_c([S|Ss], [S1?|Ss1?]) :- ground(S?), ground(Ss?) |
@@ -202,6 +247,9 @@ TActs     ::= [] ; [TAct | TActs].
 Proposer  ::= any ; by(Ints) ; by(Ints, Sames).
 Same      ::= same(Integer, Integer).
 Sames     ::= [] ; [Same | Sames].
+%% The pairs of a schema's roles that its clause names possibly one person, ones(Schema, Pairs), each same(J, I), J the role of Other and I the role written one(Name, Other) (GSC, Definition "Binding": "but for two the schema marks as possibly one"; programs/gsc/self.glp: "the schema's head writes the second name as one('Bob', 'Alice')"); a schema read with no names has none.
+OnePairs  ::= ones(Constant, Sames).
+Ones      ::= [] ; [OnePairs | Ones].
 PActs     ::= [] ; [PAct | PActs].
 %% A standing declaration, standing(Schema, Start, Stop): the acts of the guarded schema Schema standing, the person's request of the act Start making their standing request of every class of Schema's acts that they propose, and their request of the act Stop withdrawing it (vGLP 7c631b1, Section 5.4, "The contract's words": "An implementation pragma may make the acts of a clause standing, as `Encounter: Alice stands on [Open place] until [Close place]' does ...: the person's request of the act of the first button is also their standing request (Definition Local) of every class of the clause's acts that they propose, and their request of the act of the second withdraws it; a standing act has no button, every guarding role of it proposes it, and its persons are asked nothing, their machines voting yes on their standing approvals").  pragmas.sh reads it from a contract's implementation pragmas, "<Clause>: <Name> stands on [<Start>] until [<Stop>]", for each schema of the clause (GSC 1a8e31c, Section 2), and vGLP's own contracts give the term (contracts.glp, pragmas_named/2).
 PStand    ::= standing(Constant, Constant, Constant).
