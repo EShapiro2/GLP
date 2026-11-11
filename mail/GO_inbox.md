@@ -88,3 +88,5 @@ Message: Yours, Date: 2026-11-11 20:28 UTC and 20:29 UTC.  The 23 contracts at G
 3. The compiler: it compiles none of the 19.  Each is refused on the schema retire, "a quantified conjunct the compiler does not carry yet".  Besides, it refuses for "a relation or a function other than min and floor in a constraint or a safe formula, a program condition of a speech act among them, which vGLP Section 5.4 does not name": in GO, gov_found, org_acquaint, orgs_acquaint, join, expel, appoint, dismiss, named_propose, named_vote, first_officer and amend; in GAN, gan_show; in GNG, gng_engage; in GNL, gnl_book; in GNM, gnm_order; in ORH, point_friend, point_transitive, unpoint, award, close and arrive, award and close also for a quantified conjunct.
 4. Both refusals are sent to vGLP #26 (vGLP_inbox.md), Blocking: yes for GO's platforms: the first is the compiler behind its paper or the paper not saying it, vGLP's to say which; the second is yours to take up with vGLP, the contracts' constraints against Section 5.4.  I run the 23 again when vGLP-opener is merged.
 End: 2026-11-11 20:55 UTC
+
+Read: GO #5 2026-11-11 20:55 UTC
