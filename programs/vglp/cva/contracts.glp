@@ -268,7 +268,7 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
 %% any the wildcard of a cleared atom, as programs/gsc/self.glp writes it (GSC 327e035).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; num(Constant) ; real(Constant) ; any.
+            ; num(Constant) ; real(Constant) ; any ; val(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -338,6 +338,7 @@ contract_named(counts, environment([cap, wt], C?)) :- counts(C).
 contract_named(shares, C?) :- shares(C).
 contract_named(published, C?) :- published(C).
 contract_named(leaves, C?) :- leaves(C).
+contract_named(consts, C?) :- consts(C).
 contract_named(readings, C?) :- readings(C).
 contract_named(backed, C?) :- backed(C).
 
@@ -370,6 +371,7 @@ introduction_named(counts, no_introduction).
 introduction_named(shares, no_introduction).
 introduction_named(published, no_introduction).
 introduction_named(leaves, no_introduction).
+introduction_named(consts, no_introduction).
 introduction_named(readings, no_introduction).
 introduction_named(backed, no_introduction).
 
@@ -506,6 +508,11 @@ pragmas_named(leaves, pragmas([list('"Programs"', [installed])],
     [act(install, '"Install"', ['""', '"Program"'], none, '"Programs"', by([1])),
      act(invite, '"Invite"', ['""', '"Person"'], said([[], [person(1), text('" invites you."')]]), '"Programs"', by([1])),
      act(leave, '"Leave"', [], none, '"Programs"', by([1]))])).
+
+pragmas_named(consts, pragmas([list('"Bylaws"', [bylaws]), list('"Amended"', [amended])],
+    [act(adopt, '"Adopt"', [], none, '"Bylaws"', by([1])),
+     act(adopt_cc, '"Adopt CC"', [], none, '"Bylaws"', by([1])),
+     act(amend, '"Amend"', [], none, '"Amended"', by([1]))])).
 
 pragmas_named(readings, pragmas([list('"Levels"', [level]), list('"Contacts"', [knows])],
     [act(start, '"Start"', [], none, '"Levels"', by([1])),
@@ -892,6 +899,15 @@ leaves([schema(install, [svar(x)],
            crs(qlisted(1, participant, [svar(x), role(2)], [role(2)]), unguarded, [], [atom(participant, [svar(x), role(1)])], [], [])],
           [conjunct([role(2)], 1, atom(participant, [svar(x), role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(participant, [svar(x), role(1)])))])],
           [])]).
+
+%% consts: a constant the contract names, val(C), an argument of an atom (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value --- a whole number, a real, a string, or a program, a GLP module as text, which the runtime recognises, or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg: "it matches val(C) alone"), as the name of a contract's bylaws: adopt(p?) adds bylaws(cb) at p, which it forbids; adopt_cc(p?) adds bylaws(cc), which it forbids; and amend(p?) requires bylaws(cb), which bylaws(cc) does not satisfy, and adds amended(cb).
+procedure consts(Contract).
+consts([schema(adopt, [],
+          [rs(guarded, [atom(bylaws, [val(cb)])], [], [], [atom(bylaws, [val(cb)])])]),
+        schema(adopt_cc, [],
+          [rs(guarded, [atom(bylaws, [val(cc)])], [], [], [atom(bylaws, [val(cc)])])]),
+        schema(amend, [],
+          [rs(guarded, [atom(amended, [val(cb)])], [], [atom(bylaws, [val(cb)])], [atom(amended, [val(cb)])])])]).
 
 %% readings: variables read at a role and a condition across roles (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications": "A variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do"; "a conjunct that names variables local to two roles or more is of the part's condition"; "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries; the initiator chooses readings under which the conjuncts of the condition hold, and the commit tells them to every participant, whose effect is under them").  As GAI's GnW:3, the ward's attestation read at the ward and recorded at the person who comes to know it: vouch(p? ; y) adds attestation(y) at p, and present(c?, b?) requires attestation(y) at c, which keeps it, and adds record(c, y) at b, b proposing it, as Bob proposes GAI's agent_acquaint, and no field naming y.  As a treasurer's count against their community's: start(p?) adds level(0), bump(p ; t, t1) raises it, and outrank(p?, q ; a, b) requires level(a) at p and level(b) at q, a and b each local to its role, with a > b of the part's condition, which the initiator checks on the readings; trail(p?, q ; a, b), with a < b, is the same standing on watch until unwatch; nudge(p?, q) adds nudged(q) at p and nudged_by(p) at q, a change of q's state.
 procedure readings(Contract).

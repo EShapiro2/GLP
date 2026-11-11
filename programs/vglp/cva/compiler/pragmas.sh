@@ -261,10 +261,33 @@ sub find_txt {
 sub iface_head { my ($x) = @_; return $x eq "Pragmas" || $x eq "Interface pragmas" }
 sub impl_head { my ($x) = @_; return $x eq "Implementation pragmas" }
 sub any_head { my ($x) = @_; return iface_head($x) || impl_head($x) }
+# An instance\x27s own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"): the bindings of instance_named(<name>, Base, Bindings, Additions) in the NAME.glp beside the contract\x27s NAME.txt, a schema of the base bound to the instance\x27s name for it, as ward_acquaint = agent_acquaint (GAI.glp).  A button of a line the instance inherits that names a schema so bound bears the instance\x27s name, [Ward acquaint] reading as [Agent acquaint], so that an act bears the name its instance gives it and the instance\x27s own line of that button replaces it.
+my %bind;
+sub read_bindings {
+    my ($f) = @_;
+    (my $g = $f) =~ s/\.txt$/.glp/;
+    return unless -f $g;
+    open my $h, "<", $g or return;
+    my $t = do { local $/; <$h> };
+    close $h;
+    $t =~ s/^\s*%.*$//mg;
+    $t =~ /\binstance_named\(\s*\w+\s*,\s*\w+\s*,\s*\[/g or return;
+    my ($bs) = inside($t, pos($t) - 1);
+    while ($bs =~ /(\w+)\s*=\s*(\w+)/g) { $bind{$1} = $2 }
+}
+sub bound_button {
+    my ($b) = @_;
+    (my $a = lc $b) =~ s/ +/_/g;
+    return $b unless exists $bind{$a};
+    (my $n = $bind{$a}) =~ s/_/ /g;
+    return ucfirst $n;
+}
 sub read_txt {
     my ($f) = @_;
     open(my $h, "<", $f) or die "pragmas.sh: cannot read $f\n";
-    my @l = <$h>; close $h; chomp @l; return @l;
+    my @l = <$h>; close $h; chomp @l;
+    if (%bind && $f ne $top) { for (@l) { next if /^%/; s{\[([^\]]+)\]}{"[" . bound_button($1) . "]"}ge } }
+    return @l;
 }
 sub q_atom {   # a GLP quoted name holding the text $s
     my ($s) = @_; $s =~ s/\\/\\\\/g; $s =~ s/\x27/\\\x27/g; return "\x27$s\x27";
@@ -348,6 +371,7 @@ sub visit {
     push @order, $f;
 }
 if ($from) { visit($top); print Cwd::abs_path($_) . "\n" for @order; exit 0 }
+read_bindings($top);
 my @own = read_txt($top);
 unless (grep { iface_head($_) } @own) { print "no_pragmas\n"; exit 0 }
 visit($top);

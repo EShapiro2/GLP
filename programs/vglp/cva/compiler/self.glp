@@ -26,9 +26,10 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% Act schemas allow numbers (GSC 9231074, Section 3.2; vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it"): num(X) is the numeric variable X where X is a name and the number X where X is a number, and times(K, A) is the atom A with the multiplicity K, as programs/gsc/self.glp writes them.
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
 %% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
+%% val(C), a constant the contract names, a value or an utterance, as an act's name or the name of a contract's bylaws (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value --- a whole number, a real, a string, or a program, a GLP module as text, which the runtime recognises, or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg): no variable, so no field and no place in a class term, and printed as C.
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String)
-            ; item_of(Arg).
+            ; item_of(Arg) ; val(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -344,6 +345,7 @@ is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
 is_nvar(item_of(_), no).
+is_nvar(val(_), no).
 is_nvar(nterm(_), no).
 is_nvar(sgn(_, _), no).
 is_nvar(any, no).
@@ -393,6 +395,8 @@ expr_args(sum(_, _, _, _, _), []).
 %% The author and the item of a speech act name its speech-act variable (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- ...; the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 20:36 item 1).
 expr_args(author_of(Y), A?) :- expr_args(Y?, A).
 expr_args(item_of(Y), A?) :- expr_args(Y?, A).
+%% A constant the contract names, val(C), names no variable.
+expr_args(val(_), []).
 procedure exprl_args(Exprs?, Args).
 exprl_args([], []).
 exprl_args([E|Es], A?) :- expr_args(E?, A1), exprl_args(Es?, A2), app(A1?, A2?, A).

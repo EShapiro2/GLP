@@ -3912,6 +3912,7 @@ check "CVA compiler: vGLP's published, a program condition in a constraint, prog
 check "CVA compiler: vGLP's leaves, a listed role at the third argument of its anchor, certified by GSC's check/2, compiled to the platform it prints (vGLP b413fe1)" "leaves/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's readings, variables read at a role and a condition across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 566c186, 6abbed9, 7892aeb)" "readings/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's backed, a safe formula across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 5f55cf3)" "backed/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's consts, constants the contract names, val(cb) and val(cc), arguments of atoms, compiled to the platform it prints (vGLP 0eeea71)" "consts/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -4174,15 +4175,22 @@ check "CVA compiler, text: the platform of the renamed twin but for those names 
 check "CVA compiler, text: ... a platform printed (twin)" "the canonical CVA platform of the contract(twin)" "$cva_twin_b"
 
 # The pragmas of a contract that extends another (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one"): GAI's GSNP writes its own [Message] line, which replaces GSN's.
-cva_gsnp_out=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/gai/GSNP.glp
-contract_named(gsnp, C).
-:quit
-HEREDOC
-2>&1)
-cva_gsnp_term=$(echo "$cva_gsnp_out" | sed -e 's/^\(GLP> \)*//' | sed -n -e 's/^C = //p' | head -1)
+# GSNP.glp prints an instance of GnW, instance_named(gsnp, gnw, ...), since GAI's 6154e1e6: its term is formed from GnW's by term.sh, as cascade.sh forms it (Code #27, Cloud-vGLP_inbox.md, 2026-11-10 21:11 UTC).
+cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/GSNP.glp" gsnp 2>&1)
 cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_term" 2>&1 || true)
 check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "GSN: Messaging: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name" "$cva_gsnp_pragmas"
+# An instance's own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 20:39 UTC, 2): XI, instance_named(xi, xb, [ward = child, ward_link = child_link], []), writing no line of its own, has XB's [Ward link] as [Child link], the act child_link (names); and without the bindings the button names no act (bare).
+cva_in=$(mktemp -d)
+printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Link. Alice may link.' 'Pragmas' 'Links: the links Alice holds.' 'Link: Alice [Ward link]' > "$cva_in/XB.txt"
+printf '%s\n' 'XI: Instance' 'XI instantiates XB.' 'Alice is a person.' 'Pragmas' > "$cva_in/XI.txt"
+printf '%s\n' "instance_named(xi, xb, [ward = child, ward_link = child_link], [])." > "$cva_in/XI.glp"
+cva_in_rd="[schema(child_link, ['Alice'], [], [rs(guarded, [atom(linked, [])], [], [], [atom(linked, [])])])]"
+cva_in_named=$(bash "$CVA/compiler/pragmas.sh" "$cva_in/XI.txt" "$cva_in_rd" 2>&1)
+rm -f "$cva_in/XI.glp"
+cva_in_bare=$(bash "$CVA/compiler/pragmas.sh" "$cva_in/XI.txt" "$cva_in_rd" 2>&1)
+rm -rf "$cva_in"
+check "CVA pragmas: an instance's name for a schema of its base, XB's [Ward link] read as [Child link], the act child_link (names)" "act('child_link', '\"Child link\"', \[\], none, " "$cva_in_named"
+check_not "CVA pragmas: ... and without the bindings no act child_link (bare)" "child_link" "$cva_in_bare"
 # The rule on fixtures of pragmas.sh's own (vGLP 40f8444, Section 5.4, "The contract's words"): XB, its Link line naming a field for Bob, whom link's friend(Bob) at Alice binds, refused, the field named (bound); XE, extending XB, whose Joint link line writes [Link] under another clause's title and replaces XB's Link line, whose term has no mint, so XB's [Mint] goes, and whose [Link] has no field, read (inherit); XC, its [Mint] with no field for k, a multiplicity naming no variable bound, refused, the variable named (unnamed).
 cva_px=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' '2. ■ Link. Alice may link Bob.' '3. ■ Minting. Alice may mint coins.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' 'Link: Alice [Link] <person>' 'Minting: Alice [Mint] <amount>' > "$cva_px/XB.txt"
@@ -4584,6 +4592,27 @@ check "CVA leaves: alice's leave names the people her state lists at the anchor'
 check "CVA leaves: ... alice holds neither installed nor participant after it" "view(alice, \[participant(speech(utterance(app), alice), bob), installed(speech(utterance(app), alice))\], \[bob\], \[leave(alice, speech(utterance(app), alice))\], \[tab('Programs', installed)\]), view(alice, \[\], \[bob\], \[\], \[tab('Programs', installed)\])" "$cva_leaves"
 check "CVA leaves: ... and bob, listed, loses participant(x, alice), keeping installed(x)" "view(bob, \[installed(speech(utterance(app), alice)), participant(speech(utterance(app), alice), alice)\], \[alice\], \[\], \[tab('Programs', installed)\]), view(bob, \[installed(speech(utterance(app), alice))\], \[alice\], \[\], \[tab('Programs', installed)\])" "$cva_leaves"
 check_not "CVA leaves: bob's person is never asked on the leave, the listed role unguarded" "gave(leave\|gave(attempt([a-z]*, [0-9]*, [0-9]*, leave" "$cva_leaves"
+
+# A constant the contract names (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value ... or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg: val(C) "matches val(C) alone"): vGLP's consts, adopt adding bylaws(cb), adopt_cc bylaws(cc), and amend requiring bylaws(cb) and adding amended(cb).
+cva_consts_load=$("$REPL_RUN" <<HEREDOC
+$CVA/consts/
+:quit
+HEREDOC
+2>&1)
+check "CVA consts: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/consts" "$cva_consts_load"
+check_not "CVA consts: no type errors" "Type checking failed" "$cva_consts_load"
+check "CVA consts: an atom with a constant is of the type Constant at that place, bylaws(Constant)" "^bylaws(Constant)$" "$(cat "$CVA/consts/platform.vglp")"
+check "CVA consts: the agent holds a constant as v(C), and the view shows it as C" "^atom_of(g(bylaws, \[v(V1)\]), shown(bylaws(V1?)))$" "$(cat "$CVA/consts/platform.vglp")"
+cva_consts=$("$REPL_RUN" <<HEREDOC
+$CVA/consts/
+:limit 20000000
+play_consts(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA consts: alice adopts cc, and her state holds bylaws(cc)" "view(alice, \[bylaws(cc)\]" "$cva_consts"
+check "CVA consts: ... then cb, bylaws(cb) beside it, the two constants two atoms" "view(alice, \[bylaws(cb), bylaws(cc)\]" "$cva_consts"
+check "CVA consts: ... and amend, whose bylaws(cb) her state holds, adds amended(cb)" "view(alice, \[amended(cb), bylaws(cb), bylaws(cc)\]" "$cva_consts"
 
 # Readings (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications": "A variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do"; "a conjunct that names variables local to two roles or more is of the part's condition"; "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries; the initiator chooses readings under which the conjuncts of the condition hold, and the commit tells them to every participant, whose effect is under them"; Section 3.2, Definition "Deciding", the initiator refusing the attempt on its condition, and "Proposing", a standing approval's part proposed again only once a participant is ready or a commit since): vGLP's contract readings, programs/vglp/cva/readings, its play play_readings (its self.glp).
 cva_readings_load=$("$REPL_RUN" <<HEREDOC
