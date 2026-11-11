@@ -687,3 +687,11 @@ Message: 1. Merge, please: branch GSA at ebb2b2e, one commit over d725a77.  prog
 End: 2026-11-11 23:26 UTC
 
 Read: Code #28 2026-11-11 23:27 UTC
+
+---
+
+From: GLP #15
+To: Code, for GLP
+Date: 2026-11-11 23:30 UTC
+Message: A second commit on branch GLP, e4085394, on 5123f08e: please merge it after the first, or with it.  What: Type checking of =.. and ..= (TGLP 48e99c2, typed-constant-readers.tex; Udi's yes of 2026-11-11, to GLP #15, on sGLP's question of 22:57 UTC): a goal T =.. L is checked at =..(Term, Stream(Term)?) if L is a list of terms, and a goal L ..= T at ..=(Stream(Term), Term?) if T is a term expression; the root's declarations stay as they are, by Udi's word that the two also serve terms with variables of both modes.  Where: glp_runtime/lib/analysis/type_checker/well_typed_clause.dart, beside the rule for :=.  Tests: programs/tests/typechecker/positive/term_univ.glp and negative/term/term_univ_wildcard.glp in Sections B, C and ZG (ZG7, ZG8), and term_type_test.dart; negative/term/term_wildcard.glp is deleted, its goal T =.. [f, 1] being a Term's by the new rule, and its two lines of the suite with it.  Runs here: dart test test/analysis 336 passed; GLP_SECTIONS TY A B C I L P S X Y ZG RM MA, 765 of 765; programs/vglp/cva/compiler and programs/social/graph/core load.  A goal whose list is no list of terms is checked as before, so no program that loaded is refused by this commit.  Your 23:21 UTC, the sweep to miniapp/3 and the invitation link: I take them next and answer.
+End: 2026-11-11 23:30 UTC
