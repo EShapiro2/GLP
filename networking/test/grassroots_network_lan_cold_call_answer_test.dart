@@ -136,4 +136,61 @@ void main() {
     expect(await bobMeetsAlice.future, Underlay.lan);
     expect(await aliceMeetsBob.future, Underlay.lan);
   });
+
+  test('an ANNOUNCE answered on a connection that has since closed is '
+      'answered again on the next connection at the same address',
+      timeout: Timeout.none, () async {
+    final aliceId = await identityFromSeed(0x83);
+    final bobId = await identityFromSeed(0x84);
+    final (alice, aliceAddress) = await startNode(aliceId);
+    final (bob, _) = await startNode(bobId);
+    await alice.lan!.setTrustLevel(ColdCallTrustLevel.open);
+    await bob.lan!.setTrustLevel(ColdCallTrustLevel.open);
+
+    // Each meeting completes the next completer; a lost session sends the
+    // test to the next meeting.
+    var bobMeets = Completer<void>();
+    var aliceMeets = Completer<void>();
+    final bobLoses = Completer<void>();
+    final aliceLoses = Completer<void>();
+    bob.onPeerConnected = (pk, underlay, application) {
+      if (hex(pk) == hex(aliceId.publicKey) && !bobMeets.isCompleted) {
+        bobMeets.complete();
+      }
+    };
+    alice.onPeerConnected = (pk, underlay, application) {
+      if (hex(pk) == hex(bobId.publicKey) && !aliceMeets.isCompleted) {
+        aliceMeets.complete();
+      }
+    };
+    bob.onPeerDisconnected = (pk, underlay) {
+      if (hex(pk) == hex(aliceId.publicKey) && !bobLoses.isCompleted) {
+        bobLoses.complete();
+      }
+    };
+    alice.onPeerDisconnected = (pk, underlay) {
+      if (hex(pk) == hex(bobId.publicKey) && !aliceLoses.isCompleted) {
+        aliceLoses.complete();
+      }
+    };
+
+    // Bob calls Alice and she answers: the first connection.
+    bob.debugResolveLanInstance(aliceToken, aliceAddress);
+    await bobMeets.future;
+    await aliceMeets.future;
+
+    // The connection closes on both sides, as two silent intervals close it.
+    bobMeets = Completer<void>();
+    aliceMeets = Completer<void>();
+    await alice.debugDropIpPath(Underlay.lan, bobId.publicKey);
+    await bob.debugDropIpPath(Underlay.lan, aliceId.publicKey);
+    await aliceLoses.future;
+    await bobLoses.future;
+
+    // Bob calls again from the same address: a new connection, and Alice's
+    // answer on the first one does not stand in for an answer on this one.
+    bob.debugResolveLanInstance(aliceToken, aliceAddress);
+    await bobMeets.future;
+    await aliceMeets.future;
+  });
 }

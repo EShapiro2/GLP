@@ -4173,6 +4173,12 @@ class GrassrootsNetwork {
   void _setupUdpServiceCallbacks() {
     if (_udpService == null) return;
 
+    // The record of a clear ANNOUNCE sent on a UDP connection goes with the
+    // connection: a later contact at the same address is a new connection,
+    // and its ANNOUNCE is answered.
+    _udpService!.onPathClosed =
+        (addressKey) => _clearAnnouncedOn.remove('udp:$addressKey');
+
     // Forward UDP data to the MessageRouter, preserving each connection's
     // arrival order through async processing (spec §Session Establishment).
     _udpService!.onUdpDataReceived = (session, peerId, data) {
@@ -4639,7 +4645,9 @@ class GrassrootsNetwork {
   /// Connections this side sent the clear ANNOUNCE of a first contact on, by
   /// medium and by GATT leg or by the peer's address: an ANNOUNCE is answered
   /// once per connection, so two sides answering each other do not repeat it
-  /// without end.
+  /// without end.  An entry goes with its connection: a GATT leg's when the
+  /// leg disconnects, a UDP path's when no path stands at its address
+  /// ([UdpTransportService.onPathClosed]).
   final Set<String> _clearAnnouncedOn = {};
 
   String? _clearAnnounceKey(PeerTransport transport, String connection) {
@@ -4659,9 +4667,8 @@ class GrassrootsNetwork {
   /// first contact under Open trust (GNA §2.5); with [reply], only where this
   /// side has not sent one on that connection yet.  A LAN cold call ([call])
   /// is not recorded: the instance called may have ignored it under Closed
-  /// trust, and the record of a UDP connection outlives its path, so a
-  /// recorded call would leave the ANNOUNCE that instance sends once it
-  /// opens unanswered, and its handshake refused for want of ours.
+  /// trust, and a recorded call would leave the ANNOUNCE that instance sends
+  /// once it opens unanswered, and its handshake refused for want of ours.
   Future<bool> _sendClearAnnounce(
     PeerTransport transport,
     String connection, {
