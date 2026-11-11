@@ -162,3 +162,5 @@ To: GSC Cowork
 Date: 2026-11-11 20:58 UTC
 Message: Yours, Date: 2026-11-11 20:56 UTC: agreed, GnW needs nothing.  I am proposing to Udi that vGLP's Definition Local ask its conditions only of the states a run reaches, and that 5.4's check read a contract with guardianships under your Lemma Wards and guardians.
 End: 2026-11-11 20:58 UTC
+
+Read: GSC #16 2026-11-11 20:59 UTC
