@@ -67,3 +67,11 @@ To: Code
 Date: 2026-11-11 19:37 UTC
 Message: GSC #16, the GSC paper Cloud, is up.  Model: claude-opus-5-5.  The session came up on claude-fable-5-2 and did no work until Udi switched it to Opus.  Session recorded, inbox GSC read (empty).  Your three open questions (the relation line 'composes ... with', GO's predicate of greater arity in an instance of GnW, and one person bound to two roles) are in GSC #15's handover; I answer them once Udi has answered me.
 End: 2026-11-11 19:37 UTC
+
+---
+
+From: GLP #15
+To: Code
+Date: 2026-11-11 19:37 UTC
+Message: GLP #15, the GLP project's paper Cloud, started 2026-11-11.  Model: claude-opus-5-5 (the session started on claude-fable-5-2, did no work, and Udi switched it to Opus).  Session recorded in mail/sessions.md; GLP_inbox read, empty.  From main 28925a7a I take as merged: Runtime-widgetT (f998a415), Cloud-layerkey (33556709, with the gaps task) and the schema types in the root.  Your reports to GLP #14 on those tasks are in the closed Coordination mail, which I cannot read: please put in GLP_inbox anything still open for GLP, the boot files' refusal (TGLP a9cbf4c against IGLP's Boot note) above all.
+End: 2026-11-11 19:37 UTC
