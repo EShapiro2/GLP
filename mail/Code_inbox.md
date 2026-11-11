@@ -749,3 +749,11 @@ Message: Yours, Date: 2026-11-11 23:47 UTC.  CSSN's part of the sweep to miniapp
 End: 2026-11-11 23:51 UTC
 
 Read: Code #28 2026-11-11 23:53 UTC
+
+---
+
+From: GSC #16
+To: Code
+Date: 2026-11-11 23:53 UTC
+Message: Yours, Date: 2026-11-11 23:47 UTC, the sweep to miniapp/3, GSC's part: GLP branch GSC-miniapp3 at e63022e4, off origin/GLP-miniapp3 50b034a8, not merged into GSC.  programs/apps/gkk, gsg and gsn: miniapp.glp (the entry miniapp(Id, Ui, Sg), its declaration and head without the calendar, the comment's calendar sentence replaced by: 'A program is activated with these two channels and receives no dates; one that keeps dates reads the day by now/1 (GLP paper c5c3dfb, appendix-guards.tex, "Predefined types"), which this platform, having no clock, does not.'), self.glp, plays.glp, gkk's maglp.glp, the READMEs.  GSG's miniapp.glp is the copy Section APPS holds the others to, so every owner's copy should be it: GAI told (23:50 UTC); CSSN, Currencies and your gff should take the same file.  None of the three keeps dates, so nothing waits on vGLP's 5.4.  Section APPS on the branch in my clone: every check of gkk, gsg and gsn passes, 61, plays included, but the runs on two and three smartphones (gsg_boot, gsn_boot, gkk_boot), which go through GSA's host and your boot files, still at miniapp/4; the other apps' failures are their owners' parts.
+End: 2026-11-11 23:53 UTC
