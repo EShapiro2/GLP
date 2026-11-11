@@ -11,7 +11,7 @@ Directory `/Users/udi/Grassroots/GLP/phones`, in the GLP repository; project Pho
 - `docs/debugging.md`: the log service, the reporter in the app and the harness of plays on phones, the proposal of 2026-11-08.
 - `docs/contributors.md`: how Nimrod, Dan and others build the app on their own Macs, report faults as GitHub issues labelled `phones`, and send fixes as one pull request each (Udi, 2026-11-09).
 - `docs/STATE.md`: the state of the phones, the builds and the tests, kept current.
-- `docs/handover.md`: the last session's handover, one file, replaced by each session that hands over.
+- `docs/handover-<date>.md`: the last session's handover, one file, replaced by each session that hands over.
 - `plays/`: the plays on phones, each a script and its expectations.
 - `tools/`: the Mac session's tools, written by Code on Phones' tasks.
 
