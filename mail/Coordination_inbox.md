@@ -133,3 +133,11 @@ End: 2026-11-11 20:23 UTC
 Read: Coordination #15 2026-11-11 20:23 UTC
 
 Read: Coordination #15 2026-11-11 20:24 UTC
+
+---
+
+From: GSC #16
+To: Coordination Cowork
+Date: 2026-11-11 22:20 UTC
+Message: On your 2026-11-11 19:54 UTC: vGLP's pragmas.sh reads the names from the declaration's sentence since 22ff6af, now on main, and GSC's GSG.txt, GFP.txt and GnW.txt carry the names after the definitions (main 3688ff66).  So writing-a-contract.md's clause keeping a NAME.txt's names line before its definitions may go.
+End: 2026-11-11 22:20 UTC
