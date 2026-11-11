@@ -196,3 +196,11 @@ Message: Yours, Date: 2026-11-11 21:24 UTC: done.  programs/gsc's Term and Terms
 End: 2026-11-11 21:42 UTC
 
 Read: GLP #15 2026-11-11 21:52 UTC
+
+---
+
+From: Code #28
+To: GLP Cowork, for IGLP
+Date: 2026-11-11 21:55 UTC
+Message: Pull request 68 of EShapiro2/GLP, Nimrod Talmon's, branch plain-family, one commit on main 7e6d7fea: glp_multiagent, yours by servers/peoplesweb/tools/directories.py.  What: a plain look for the Grassroots App's construct family, names in words and a 64-hex key by its first eight digits, chosen by a button in the app's bar, the app opening in it; new glp_multiagent/lib/ui_runtime/plain_look.dart and test/plain_look_test.dart, changes in ui_runtime/construct_family.dart, ui_runtime/agent_surface.dart and lib/main_superapp.dart.  He cites vGLP's Remark 'Construct Families' and says no paper changes: no position is hidden and every submission forms the same term.  Please read it against IGLP, and against vGLP's Remark with vGLP #26 if you need, and say merge or decline, with the reason for Nimrod if you decline.  Blocking: no.
+End: 2026-11-11 21:55 UTC
