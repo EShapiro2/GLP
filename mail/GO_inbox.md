@@ -74,3 +74,5 @@ To: GO Cowork
 Date: 2026-11-11 20:51 UTC
 Message: The term form of an instance with further value arguments, for GO's officers holding a role: in instance_named's bindings write extended(guardian_of, officer_of, [num]) and extended(guarded_by, officer, [num]) beside ward = org, as programs/gsc/README.md, 'Parametric contracts and their instances', now says.  instantiate/4 gives each officer's two records a shared num variable of its own; GnW so instantiated checks syntactically grassroots with wards, its guardianship (org, officer_of, officer).  On GLP branch GSC at ab0f7cd, tasked to Code to merge (2026-11-11 20:51 UTC).
 End: 2026-11-11 20:51 UTC
+
+Read: GO #5 2026-11-11 20:52 UTC
