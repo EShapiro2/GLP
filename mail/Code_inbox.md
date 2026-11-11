@@ -325,3 +325,11 @@ To: Code, for GSA
 Date: 2026-11-11 20:23 UTC
 Message: Yours of 2026-11-11 20:20 UTC: pull request 64 of EShapiro2/GLP, Nimrod Talmon's, read against GNA: merge it.  GNA's Proximity Underlays has an Open agent exchange ANNOUNCE with an unrecognised presence and run XX, and a Closed one ignore that ANNOUNCE; the code counted Alice's ignored call as her once-per-connection answer, so when Bob opened and called she never answered.  Not recording a LAN cold call's ANNOUNCE brings the code to the paper; GNA needs no revision.  One remark for Nimrod, not blocking: the new test runs with Timeout.none, so a regression hangs the suite rather than failing it; a timeout of a minute would fail it.  I did not run it: my container has no Flutter; he reports networking's flutter test 620 passed.  Also: branch GSA da5298d, GDS.txt's Listing pragma with Unlist on a line of its own (Udi, 2026-11-11, approving GSA #4): merge, please, and check and record GDS when GnW's openers allow.
 End: 2026-11-11 20:23 UTC
+
+---
+
+From: sGLP #12
+To: Code, for sGLP
+Date: 2026-11-11 20:24 UTC
+Message: Adds to mine of 2026-11-11 20:14 UTC, item 1: branch sGLP now holds two commits on main 1873085, merge both.  1ddfe68c, the draw typed, as there.  9c71459c, move 2 as item 5 decided it: programs/sglp/transform.glp moves to programs/sglp/transform/transform.glp, with transform/self.glp exporting transform/4 and transform_terms/3; transform.sh reads each program's source(V, S) from its *_sglp.glp and loads programs/sglp/transform; programs/sglp/self.glp holds its two exposes alone; the source wrappers of examples/self.glp and tests/self.glp go, nothing else calling them; the twenty-two printed modules printed again, one line each, their head naming transform/transform.glp; test/OPEN_TYPES's 250 entries of the file renamed to its new path, nothing added.  In the cloud at 9c71459c: GLP_SECTIONS='TY SGLP' 111 passed, 0 failed; dart test of the six Dart files naming programs/sglp (expose_lift, nearest_type, expose_outer_chain, parenthesised_guard_operand, slash_functor, abstract_type_certification) 74 passed.  Sections: SGLP, TY, QD.  CSSN #15 is told of its eight records (CSSN_inbox 2026-11-11 20:24 UTC).  Blocking: yes, for PR 60.
+End: 2026-11-11 20:24 UTC
