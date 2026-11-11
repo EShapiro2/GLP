@@ -1,0 +1,38 @@
+# mail-lib: what mail-send, mail-read and mail-session share.  Sourced, never run.
+# The mail is the branch mail of EShapiro2/GLP, checked out as a worktree; delivery is by the push.
+# No command merges.  Each takes the remote's mail as it is, makes its one change on top, and pushes; when
+# the push is refused, because another session pushed first, it takes the remote's mail again and makes
+# its change again.  So an inbox is only ever appended to, one whole entry at a time, in the order of the
+# pushes.  A merge of two appends by union, the way of the mail on the Mac until 2026-11-11, joined two
+# entries written at once and lost the End: line of one (Code #27, 2026-11-11).
+# This worktree holds the mail and nothing else: never edit it by hand, since every command resets it.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+G=(git -C "$ROOT" -c user.name='Ehud Shapiro' -c user.email='udi.shapiro@gmail.com')
+# The branch is the one this worktree is on: mail, or a branch a test runs on.
+B="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
+now() { date -u '+%Y-%m-%d %H:%M UTC'; }
+inbox_file() {
+  case "$1" in
+    */*) printf '%s\n' "$1" ;;
+    *_inbox.md) printf '%s\n' "$ROOT/mail/$1" ;;
+    *) printf '%s\n' "$ROOT/mail/${1}_inbox.md" ;;
+  esac
+}
+# sync: this worktree becomes the remote's mail, whatever it held.
+sync() { "${G[@]}" fetch -q origin "$B" >/dev/null 2>&1 && "${G[@]}" reset -q --hard FETCH_HEAD >/dev/null 2>&1; }
+# transact <message>: sync, call apply, which the command defines and which makes its one change under
+# mail/, commit and push; all of it again when the push is refused.
+# 0 pushed; 1 the remote not reached or the push refused six times, nothing delivered; 2 apply refused.
+transact() {
+  local _commit="$1" i
+  for i in 1 2 3 4 5 6; do
+    if sync; then
+      apply || return 2
+      "${G[@]}" add -- mail >/dev/null 2>&1 && "${G[@]}" commit -q -m "$_commit" -- mail >/dev/null 2>&1 \
+        && "${G[@]}" push -q origin "HEAD:$B" >/dev/null 2>&1 && return 0
+    fi
+    sleep "$i"
+  done
+  sync
+  return 1
+}

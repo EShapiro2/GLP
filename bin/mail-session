@@ -1,0 +1,20 @@
+#!/bin/bash
+# mail-session: record the session that reads an inbox, so that a sender can nudge it.
+# Usage: bash bin/mail-session <inbox> "<name>" <session id>      as: mail-session sGLP "sGLP #12" session_01Ab...
+# It appends a line to mail/sessions.md; the last line of an inbox is its session.  Run it at your start.
+set -u
+. "$(dirname "$0")/mail-lib"
+[ $# -ge 3 ] || { echo "mail-session: usage: mail-session <inbox> \"<name>\" <session id>"; exit 1; }
+inbox="$1"; me="$2"; id="$3"
+file="$(inbox_file "$inbox")"
+key="$(basename "$file")"; key="${key%_inbox.md}"
+apply() {
+  [ -f "$file" ] || return 1
+  printf '%s | %s | %s | %s\n' "$key" "$me" "$id" "$(now)" >> "$ROOT/mail/sessions.md"
+}
+transact "$me: session of $key"; rc=$?
+case $rc in
+  0) echo "Recorded: $key | $me | $id" ;;
+  2) echo "mail-session: no inbox $(basename "$file")"; exit 1 ;;
+  *) echo "NOT RECORDED: the remote was not reached; run it again"; exit 1 ;;
+esac

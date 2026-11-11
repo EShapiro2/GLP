@@ -1,0 +1,30 @@
+#!/bin/bash
+# mail-send: append one entry to an inbox and deliver it, by pushing the branch mail.
+# Usage: bash bin/mail-send <inbox> "<From>" "<To>" "<Message>"
+#        bash bin/mail-send <inbox> "<From>" "<To>" -        (the message on stdin)
+# <inbox> is the inbox's name (sGLP, Code, Coordination, ...).
+# "Sent:" is printed only when the push has succeeded: the entry is then delivered.  "NOT SENT" means that
+# nothing was delivered: send it again.  After "Sent:" comes the line of the recipient's session in
+# mail/sessions.md: nudge that session by its id, "Read your mail: <inbox>, <time> UTC".
+set -u
+. "$(dirname "$0")/mail-lib"
+[ $# -ge 4 ] || { echo "mail-send: usage: mail-send <inbox> \"<From>\" \"<To>\" \"<Message>\"|-"; exit 1; }
+inbox="$1"; from="$2"; to="$3"; msg="$4"
+file="$(inbox_file "$inbox")"; name="$(basename "$file")"
+[ "$msg" = "-" ] && msg="$(cat)"
+[ -n "$msg" ] || { echo "mail-send: empty message"; exit 1; }
+apply() {
+  [ -f "$file" ] || return 1
+  T="$(now)"
+  printf '\n---\n\nFrom: %s\nTo: %s\nDate: %s\nMessage: %s\nEnd: %s\n' "$from" "$to" "$T" "$msg" "$T" >> "$file"
+}
+T=""
+transact "$from: to $to"; rc=$?
+case $rc in
+  0) echo "Sent: $name $T" ;;
+  2) echo "mail-send: no inbox $name"; exit 1 ;;
+  *) echo "NOT SENT: $name; nothing was delivered, send it again"; exit 1 ;;
+esac
+key="${name%_inbox.md}"
+who="$(awk -F' [|] ' -v k="$key" '$1 == k' "$ROOT/mail/sessions.md" 2>/dev/null | tail -n 1)"
+if [ -n "$who" ]; then echo "Nudge: $who"; else echo "Nudge: no session on record for $key"; fi

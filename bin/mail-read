@@ -1,0 +1,55 @@
+#!/bin/bash
+# mail-read: print a session's new mail --- to_all since its last receipt, then its own inbox from its last
+# receipt forward --- and stamp its receipt, by pushing the branch mail.
+# Usage: bash bin/mail-read <inbox> "<name>"      the session's name, as "sGLP #12" or "Code #28"
+# Never pipe it into tail or head: it stamps the receipt whatever is shown.  A long read goes to a file.
+# Its last two lines count the entries of to_all and of the inbox, so a read cut short shows it.
+set -u
+. "$(dirname "$0")/mail-lib"
+[ $# -ge 2 ] || { echo "mail-read: usage: mail-read <inbox> \"<name>\""; exit 1; }
+inbox="$1"; me="$2"
+file="$(inbox_file "$inbox")"
+T="$(now)"
+first=""; T0=""; mine=""
+apply() {
+  [ -f "$file" ] || return 1
+  local last line prefix
+  last="$(grep -n -F -e "Read: $me " "$file" | grep -E '^[0-9]+:Read: ' | tail -n 1)"
+  # A session's first read has no receipt under its own name: it reads from the last receipt of its
+  # project's earlier session, the same name with another number.
+  first=""
+  if [ -z "$last" ]; then
+    prefix="${me%% #*}"
+    if [ "$prefix" != "$me" ]; then
+      last="$(grep -n -F -e "Read: $prefix #" "$file" | grep -E '^[0-9]+:Read: ' | tail -n 1)"
+      [ -n "$last" ] && first="=== first read of $me: from the receipt of ${last#*Read: }"
+    fi
+  fi
+  if [ -n "$last" ]; then
+    line="${last%%:*}"; T0="$(printf '%s\n' "$last" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC$')"; [ -n "$T0" ] || T0="0000-00-00 00:00 UTC"
+  else
+    line=0; T0="0000-00-00 00:00 UTC"
+  fi
+  mine="$(tail -n +$((line + 1)) "$file")"
+  printf '\nRead: %s %s\n' "$me" "$T" >> "$file"
+}
+transact "$me: receipt"; rc=$?
+[ $rc -eq 2 ] && { echo "mail-read: no inbox $(basename "$file")"; exit 1; }
+if [ $rc -ne 0 ]; then
+  # Not stamped: show the mail as this worktree last had it, from the last receipt, and say so.
+  apply; "${G[@]}" checkout -q -- mail >/dev/null 2>&1
+  echo "=== RECEIPT NOT STAMPED: the remote was not reached; this is the mail as of the last fetch, and the next read shows it again"
+fi
+[ -n "$first" ] && echo "$first"
+# to_all: every entry dated at or after the last receipt.  An entry of the receipt's own minute is shown
+# again once, which is better than never.  An entry runs from its From: line to its End: line.
+all="$(awk -v t0="$T0" '/^From: / { b = ""; d = ""; on = 1 } on { b = b $0 "\n" } /^Date: / { d = substr($0, 7) } /^End: / && on { if (d >= t0) printf "%s---\n", b; on = 0 }' "$ROOT/mail/to_all_inbox.md")"
+echo "=== to_all since $T0"
+printf '%s\n' "$all"
+echo "=== $(basename "$file") since $T0"
+printf '%s\n' "$mine"
+[ $rc -eq 0 ] && echo "=== receipt: Read: $me $T"
+count() { printf '%s\n' "$1" | awk '/^From: /{f=substr($0,7)} /^Date: /{n++; s=s (n>1?"; ":"") substr($0,7) " " f} END{printf "%d entries%s%s\n", n, (n?": ":""), s}'; }
+echo "=== to_all: $(count "$all")"
+echo "=== $(basename "$file"): $(count "$mine")"
+exit $rc
