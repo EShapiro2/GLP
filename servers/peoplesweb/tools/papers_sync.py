@@ -31,7 +31,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from papers import BY_DIR, FIXES, SOURCES, pdf_name  # noqa: E402
+from papers import FIXES, SOURCES, arxiv_of, pdf_name  # noqa: E402
 
 OUT = os.environ.get('PAPERS_DIR', '/var/lib/glp/papers')
 SRC = os.environ.get('PAPERS_SRC', '/var/lib/glp/papers-src')
@@ -82,8 +82,11 @@ def build(d, path, main):
             t = f.read()
         with open(mf, 'w') as f:
             f.write(t.replace(old, new))
-    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', main], cwd=work)
-    pdf = os.path.join(work, main[:-4] + '.pdf')
+    # Built in the main file's own directory, which its inputs are relative
+    # to (CGMS's is ARXIV/main_ARXIV.tex), the PDF beside it.
+    here, base = os.path.split(os.path.join(work, main))
+    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', base], cwd=here)
+    pdf = os.path.join(here, base[:-4] + '.pdf')
     if r.returncode != 0 or not os.path.exists(pdf):
         tail = '\n'.join((r.stdout + r.stderr).strip().splitlines()[-8:])
         raise RuntimeError(f'latexmk:\n{tail}')
@@ -126,7 +129,7 @@ def main():
     except (OSError, ValueError):
         state = {}
     try:
-        on_arxiv = arxiv_dates([v['arxiv'] for v in BY_DIR.values() if 'arxiv' in v])
+        on_arxiv = arxiv_dates([a for a in map(arxiv_of, SOURCES) if a])
     except Exception as e:  # arXiv unreachable: the recorded dates stand
         print(f'papers: arXiv: {e}')
         on_arxiv = {}
@@ -148,7 +151,7 @@ def main():
         except Exception as e:
             st['error'] = str(e)[:500]
             print(f'papers: {d}: {e}')
-        a = BY_DIR[d].get('arxiv')
+        a = arxiv_of(d)
         if a:
             if a in on_arxiv:
                 st['arxiv_updated'] = on_arxiv[a]

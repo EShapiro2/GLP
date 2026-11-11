@@ -1,17 +1,25 @@
 #!/bin/bash
-# The composition of several contracts, as vGLP's compiler takes them (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition, the union of their schemas and of their pragmas, which extends each, as the grassroots app's own platform is compiled from four contracts; what two of them inherit from one contract is taken once, and a schema, a tab or a button of one name that two of them write differently is refused").
+# The composition of several contracts, as vGLP's compiler takes them (vGLP 668df7d, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition, for two that amend a third the schemas of the third that both keep together with the schemas each adds, which is their union where both extend it, and their pragmas likewise, an inherited tab or button standing as above, as the grassroots app's own platform is compiled from four contracts; what two of them inherit from one contract is taken once, and a schema, a tab or a button of one name that two of them write differently is refused"; GSC, Section 8: "The composition of two contracts amending a third is the schemas of the third that both keep together with the schemas each adds; it amends each, and where both extend the third, as GSN and GC extend GKK, it is their union, which extends each").
 #
-#   bash programs/vglp/cva/compiler/compose.sh <NAME> <reading> <pragmas> <intro> [<NAME> <reading> <pragmas> <intro> ...]
+#   bash programs/vglp/cva/compiler/compose.sh [--base <NAME> <reading> <pragmas>] <NAME> <reading> <pragmas> <intro> [<NAME> <reading> <pragmas> <intro> ...]
 #
-# Each contract is given by its name, as the record names it (GSN), its reading, the term GSC's as_read/2 prints of its schemas, its pragmas, as pragmas.sh prints them of its NAME.txt and that reading, and its introduction predicate, introduction(P) or no_introduction.  Prints three lines, the reading, the pragmas and the introduction predicate of the composition, which the compiler's compile/5 takes as it takes one contract's; or, on a refusal, the line saying why on the standard error, and exits 1.  Exits 2 on a bad argument.
+# Each contract is given by its name, as the record names it (GSN), its reading, the term GSC's as_read/2 prints of its schemas, its pragmas, as pragmas.sh prints them of its NAME.txt and that reading, and its introduction predicate, introduction(P) or no_introduction; the third contract they amend, where one is given, by its name, its reading and its pragmas after --base.  Prints three lines, the reading, the pragmas and the introduction predicate of the composition, which the compiler's compile/5 takes as it takes one contract's; or, on a refusal, the line saying why on the standard error, and exits 1.  Exits 2 on a bad argument.
+#
+# With a third contract, a schema of it is in the composition where every contract keeps it, the same schema, and not where one deletes it or replaces it, writing a schema of its name differently; each contract's schemas that the third lacks or writes differently are its added schemas, and are in the composition.  Without one, every schema of the contracts is, which is the composition where all extend the third.  The pragmas likewise: a tab, a button or a standing declaration of the third's pragmas is in the composition where every contract with pragmas has it as the third writes it, and each contract's that the third lacks or writes differently are; and then a button stands while the composition has an act it names and a tab while it has the predicate the tab lists (vGLP, Section 5.4: "an inherited tab standing while the contract has the predicate it lists, as an inherited button stands while the contract has an act it names").
 #
 # The forms the paper leaves open, the composer's (README.md beside this file, "Composition"):
 # - The schemas are taken in the order of the contracts, each contract's in its own order, a schema of a name already taken being the same schema or refused.  Two schemas are the same where their terms are the same up to the names of their variables, each name in pvar, svar, num, real, nvar, own_var and the speech act of sgn renamed in the order of its first occurrence, as GKK's introduce is pvar('Carol') in GSN.glp and pvar(c) in GC.glp; the first is kept.  The names of the roles are part of the schema, since a pragma names a role by them.
-# - The environment predicates and the reflexive predicates are the union of the contracts', in their order.
+# - The environment predicates and the reflexive predicates are the union of the contracts', in their order; and so are the parameters of a parametric contract, parametric(Params, D), the paper saying nothing of composing one: the composition is parametric in the union, outermost, where any contract is.
 # - The tabs, list(Name, Words), are taken by name, the same text once, and a tab of one name with different words refused; the buttons by their text, each contract's acts of one button together, the same acts once, and a button of one text whose acts differ refused; a standing declaration by its schema, likewise.  A contract with no pragmas adds none.
 # - The introduction predicate is the one the contracts name, no_introduction where none does; two that name different ones are refused.
+# - Which contract is the third is cascade.sh's: the one contract every contract given is written from, itself or through others, that no other such contract is written from (pragmas.sh --from).
 set -u
-[ $# -ge 8 ] && [ $(( $# % 4 )) -eq 0 ] || { echo "usage: compose.sh <NAME> <reading> <pragmas> <intro> [<NAME> <reading> <pragmas> <intro> ...], two contracts or more" >&2; exit 2; }
+BASE=()
+if [ "${1:-}" = "--base" ]; then
+    [ $# -ge 4 ] || { echo "usage: compose.sh [--base <NAME> <reading> <pragmas>] <NAME> <reading> <pragmas> <intro> [<NAME> <reading> <pragmas> <intro> ...], two contracts or more" >&2; exit 2; }
+    BASE=("$2" "$3" "$4"); shift 4
+fi
+[ $# -ge 8 ] && [ $(( $# % 4 )) -eq 0 ] || { echo "usage: compose.sh [--base <NAME> <reading> <pragmas>] <NAME> <reading> <pragmas> <intro> [<NAME> <reading> <pragmas> <intro> ...], two contracts or more" >&2; exit 2; }
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings;
 $SIG{__DIE__} = sub { print STDERR $_[0]; exit 1 };   # a refusal exits 1
@@ -63,77 +71,99 @@ sub union_into {   # union_into(\@into, \%seen, @xs): each x not yet in, in orde
     my ($into, $seen, @xs) = @_;
     for my $x (@xs) { push @$into, $x unless $seen->{$x}++ }
 }
-my (@env, %env, @refl, %refl, @schemas, %schema, %schema_of, $has_env, $has_refl);
-my (@tabs, %tab, %tab_of, @acts, %button, %button_of, @stands, %stand, %stand_of, $any_pragmas, $three, $six, $look, $version, @texts);
-my ($intro, $intro_of) = ("no_introduction", "");
-my @args = @ARGV;
-while (@args) {
-    my ($name, $rd, $pr, $in) = splice(@args, 0, 4);
-    # The reading: a list of schemas, reflexive(Preds, Schemas), or environment(Preds, Body).
+my $why = "(vGLP, Section 5.4, \"The contract\x27s words\")";
+# A reading: its environment predicates, its reflexive predicates, and its schemas, the text of each.
+sub reading_parts {
+    my ($name, $rd) = @_;
+    my (@par, @env, @refl, $hp, $he, $hr);
     my $body = $rd; $body =~ s/^\s+|\s+$//g;
     my ($f, @a) = compound($body);
-    if ($f eq "environment") {
-        $has_env = 1; union_into(\@env, \%env, elems($a[0], "$name: its environment predicates"));
-        $body = $a[1]; ($f, @a) = compound($body);
-    }
-    if ($f eq "reflexive") {
-        $has_refl = 1; union_into(\@refl, \%refl, elems($a[0], "$name: its reflexive predicates"));
-        $body = $a[1];
-    }
+    # A parametric contract, parametric(Params, D), its parameters predicates and constants as any others (GSC, programs/gsc/self.glp: "A parametric contract is checked as it is written").
+    if ($f eq "parametric") { $hp = 1; @par = elems($a[0], "$name: its parameters"); $body = $a[1]; ($f, @a) = compound($body) }
+    if ($f eq "environment") { $he = 1; @env = elems($a[0], "$name: its environment predicates"); $body = $a[1]; ($f, @a) = compound($body) }
+    if ($f eq "reflexive") { $hr = 1; @refl = elems($a[0], "$name: its reflexive predicates"); $body = $a[1] }
+    my @s;
     for my $s (elems($body, "$name: its schemas")) {
         my ($sf, $sn) = compound($s);
         defined $sn or die "compose.sh: $name: a schema with no name: $s\n";
-        if (exists $schema{$sn}) {
-            canonical($schema{$sn}) eq canonical($s)
-                or die "compose.sh: the schema $sn is written differently by $schema_of{$sn} and $name, so their composition is refused (vGLP, Section 5.4, \"The contract\x27s words\")\n";
-            next;
-        }
-        $schema{$sn} = $s; $schema_of{$sn} = $name; push @schemas, $s;
+        push @s, [$sn, $s, canonical($s)];
     }
-    # The pragmas: no_pragmas, pragmas(Lists, Acts), pragmas(Lists, Acts, Stands) or pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1).  The paper says nothing of the look, the version and the text of a composition: its look is the first contract\x27s that writes one, its version the first contract\x27s, and its text the contracts\x27 texts one after another.
+    return { par => \@par, env => \@env, refl => \@refl, hp => $hp, he => $he, hr => $hr, schemas => \@s };
+}
+# Pragmas: no_pragmas, pragmas(Lists, Acts), pragmas(Lists, Acts, Stands) or pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1); their tabs by name, their buttons by text, each with its acts together, and their standing declarations by schema, each [key, text, items], in order.
+sub pragma_parts {
+    my ($name, $pr) = @_;
     $pr =~ s/^\s+|\s+$//g;
-    unless ($pr eq "no_pragmas") {
-        my ($pf, @pa) = compound($pr);
-        $pf eq "pragmas" && (@pa == 2 || @pa == 3 || @pa == 6) or die "compose.sh: $name: its pragmas are not a pragmas term: $pr\n";
-        if (@pa == 6) {
+    return undef if $pr eq "no_pragmas";
+    my ($pf, @pa) = compound($pr);
+    $pf eq "pragmas" && (@pa == 2 || @pa == 3 || @pa == 6) or die "compose.sh: $name: its pragmas are not a pragmas term: $pr\n";
+    my (@tabs, @buttons, @stands, %mine, @order);
+    for my $l (elems($pa[0], "$name: its tabs")) { my (undef, $tn) = compound($l); push @tabs, [$tn, $l, [$l]] }
+    for my $x (elems($pa[1], "$name: its acts")) {
+        my (undef, undef, $bt) = compound($x);
+        push @order, $bt unless exists $mine{$bt};
+        push @{ $mine{$bt} }, $x;
+    }
+    push @buttons, [$_, join(", ", @{ $mine{$_} }), $mine{$_}] for @order;
+    if (@pa >= 3) { for my $x (elems($pa[2], "$name: its standing declarations")) { my (undef, $sn) = compound($x); push @stands, [$sn, $x, [$x]] } }
+    return { n => scalar(@pa), tabs => \@tabs, buttons => \@buttons, stands => \@stands, look => $pa[3], version => $pa[4], text => $pa[5] };
+}
+# The composition of one kind of item, [key, text, payload] each, of the contracts, given in order, over the third\x27s, where one is given: an item of the third is in it where every contract has it as the third writes it, and each contract\x27s that the third lacks or writes differently is, two of one key written differently refused.  $same compares two texts.
+sub compose_items {
+    my ($what, $same, $base, @cs) = @_;   # $base: undef or [items]; @cs: [name, [items]] each
+    my %b; if ($base) { $b{$_->[0]} = $_->[1] for @$base }
+    my %kept;
+    if ($base) {
+        for my $k (keys %b) {
+            my $all = 1;
+            for my $c (@cs) {
+                my ($it) = grep { $_->[0] eq $k } @{ $c->[1] };
+                do { $all = 0; last } unless $it && $same->($it->[1], $b{$k});
+            }
+            $kept{$k} = 1 if $all;
+        }
+    }
+    my (@out, %taken, %of);
+    for my $c (@cs) {
+        for my $it (@{ $c->[1] }) {
+            my ($k, $t) = @$it;
+            my $inherited = $base && exists $b{$k} && $same->($t, $b{$k});
+            next if $inherited && !$kept{$k};
+            if (exists $taken{$k}) {
+                $same->($taken{$k}, $t) or die "compose.sh: the $what $k is written differently by $of{$k} and $c->[0], so their composition is refused $why\n";
+                next;
+            }
+            $taken{$k} = $t; $of{$k} = $c->[0]; push @out, $it;
+        }
+    }
+    return @out;
+}
+my $eq = sub { $_[0] eq $_[1] };
+my $schema_same = sub { canonical($_[0]) eq canonical($_[1]) };
+my @args = @ARGV;
+my $nbase = shift @args;
+my ($bname, $brd, $bpr) = $nbase ? splice(@args, 0, 3) : ();
+my $bread = $nbase ? reading_parts($bname, $brd) : undef;
+my $bprag = $nbase ? pragma_parts($bname, $bpr) : undef;
+my (@par, %par, $has_par, @env, %env, @refl, %refl, $has_env, $has_refl, @creads, @cprags, $six, $three, $look, $version, @texts);
+my ($intro, $intro_of) = ("no_introduction", "");
+while (@args) {
+    my ($name, $rd, $pr, $in) = splice(@args, 0, 4);
+    my $r = reading_parts($name, $rd);
+    $has_par ||= $r->{hp}; $has_env ||= $r->{he}; $has_refl ||= $r->{hr};
+    union_into(\@par, \%par, @{ $r->{par} });
+    union_into(\@env, \%env, @{ $r->{env} }); union_into(\@refl, \%refl, @{ $r->{refl} });
+    push @creads, [$name, [map { [$_->[0], $_->[1]] } @{ $r->{schemas} }]];
+    my $p = pragma_parts($name, $pr);
+    if ($p) {
+        push @cprags, [$name, $p];
+        $three = 1 if $p->{n} >= 3;
+        # The paper says nothing of the look, the version and the text of a composition: its look is the first contract\x27s that writes one, its version the first contract\x27s, and its text the contracts\x27 texts one after another.
+        if ($p->{n} == 6) {
             $six = 1;
-            $look = $pa[3] if !defined $look || $look eq "nolook";
-            $version //= $pa[4];
-            push @texts, $pa[5];
-        }
-        $any_pragmas = 1;
-        for my $l (elems($pa[0], "$name: its tabs")) {
-            my (undef, $tn) = compound($l);
-            if (exists $tab{$tn}) {
-                $tab{$tn} eq $l or die "compose.sh: the tab $tn is written differently by $tab_of{$tn} and $name, so their composition is refused (vGLP, Section 5.4, \"The contract\x27s words\")\n";
-                next;
-            }
-            $tab{$tn} = $l; $tab_of{$tn} = $name; push @tabs, $l;
-        }
-        my (%mine, @order);
-        for my $x (elems($pa[1], "$name: its acts")) {
-            my (undef, undef, $bt) = compound($x);
-            push @order, $bt unless exists $mine{$bt};
-            push @{ $mine{$bt} }, $x;
-        }
-        for my $bt (@order) {
-            my $txt = join(", ", @{ $mine{$bt} });
-            if (exists $button{$bt}) {
-                $button{$bt} eq $txt or die "compose.sh: the button $bt is written differently by $button_of{$bt} and $name, so their composition is refused (vGLP, Section 5.4, \"The contract\x27s words\")\n";
-                next;
-            }
-            $button{$bt} = $txt; $button_of{$bt} = $name; push @acts, @{ $mine{$bt} };
-        }
-        if (@pa >= 3) {
-            $three = 1;
-            for my $x (elems($pa[2], "$name: its standing declarations")) {
-                my (undef, $sn) = compound($x);
-                if (exists $stand{$sn}) {
-                    $stand{$sn} eq $x or die "compose.sh: the standing of $sn is written differently by $stand_of{$sn} and $name, so their composition is refused (vGLP, Section 5.4, \"The contract\x27s words\")\n";
-                    next;
-                }
-                $stand{$sn} = $x; $stand_of{$sn} = $name; push @stands, $x;
-            }
+            $look = $p->{look} if !defined $look || $look eq "nolook";
+            $version //= $p->{version};
+            push @texts, $p->{text};
         }
     }
     # The introduction predicate.
@@ -143,13 +173,28 @@ while (@args) {
         elsif ($intro ne $in) { die "compose.sh: $intro_of and $name name different introduction predicates, $intro and $in, so their composition is refused\n" }
     }
 }
+my @schemas = map { $_->[1] } compose_items("schema", $schema_same, $bread ? [map { [$_->[0], $_->[1]] } @{ $bread->{schemas} }] : undef, @creads);
+my %has_act = map { my (undef, $n) = compound($_); ($n => 1) } @schemas;
 my $reading = "[" . join(", ", @schemas) . "]";
 $reading = "reflexive([" . join(", ", @refl) . "], $reading)" if $has_refl;
 $reading = "environment([" . join(", ", @env) . "], $reading)" if $has_env;
+$reading = "parametric([" . join(", ", @par) . "], $reading)" if $has_par;
 my $pragmas = "no_pragmas";
-if ($any_pragmas) {
-    $pragmas = "pragmas([" . join(", ", @tabs) . "], [" . join(", ", @acts) . "]";
-    $pragmas .= ", [" . join(", ", @stands) . "]" if $three || $six;
+if (@cprags) {
+    my $bp = $bprag;
+    my @tabs = compose_items("tab", $eq, $bp ? $bp->{tabs} : ($nbase ? [] : undef), map { [$_->[0], $_->[1]{tabs}] } @cprags);
+    my @buttons = compose_items("button", $eq, $bp ? $bp->{buttons} : ($nbase ? [] : undef), map { [$_->[0], $_->[1]{buttons}] } @cprags);
+    my @stands = compose_items("standing of", $eq, $bp ? $bp->{stands} : ($nbase ? [] : undef), map { [$_->[0], $_->[1]{stands}] } @cprags);
+    # A button stands while the composition has an act it names, a tab while it has the predicate it lists, a standing declaration while it has its schema.
+    @buttons = grep { my $b = $_; grep { my (undef, $sn) = compound($_); $sn =~ s{^\x27|\x27$}{}g; $has_act{$sn} } @{ $b->[2] } } @buttons;
+    @stands = grep { (my $k = $_->[0]) =~ s{^\x27|\x27$}{}g; $has_act{$k} } @stands;
+    @tabs = grep {
+        my (undef, undef, $ps) = compound($_->[1]);
+        my @p = map { (my $q = $_) =~ s/^\x27|\x27$//g; $q } elems($ps, "a tab\x27s predicates");
+        grep { my $q = $_; $reading =~ /\batom\(\x27?\Q$q\E\x27?,/ } @p;
+    } @tabs;
+    $pragmas = "pragmas([" . join(", ", map { $_->[1] } @tabs) . "], [" . join(", ", map { @{ $_->[2] } } @buttons) . "]";
+    $pragmas .= ", [" . join(", ", map { $_->[1] } @stands) . "]" if $three || $six;
     if ($six) {
         my @inner = map { (my $t = $_) =~ s/^\x27"//; $t =~ s/"\x27$//; $t } @texts;
         $pragmas .= ", " . ($look // "nolook") . ", " . ($version // "version(1, 1)") . ", \x27\"" . join("\\\\n\\\\n", grep { $_ ne "" } @inner) . "\"\x27";
@@ -157,4 +202,4 @@ if ($any_pragmas) {
     $pragmas .= ")";
 }
 print "$reading\n$pragmas\n$intro\n";
-' "$@"
+' "${#BASE[@]}" ${BASE[@]+"${BASE[@]}"} "$@"
