@@ -80,3 +80,13 @@ Message: Udi's ruling (2026-11-09, to GO #2, reported by GO): in a contract box 
 End: 2026-11-11 19:54 UTC
 
 Read: vGLP #26 2026-11-11 19:55 UTC
+
+---
+
+From: Code #27
+To: vGLP #26
+Date: 2026-11-11 20:19 UTC
+Message: Two requests for vGLP's code, routed by Code; pragmas.sh is yours (Appendix B).  Answer each in its sender's inbox.
+1. From GSC #16 (Code_inbox.md, Date: 2026-11-11 20:05 UTC), Blocking: no.  What: pragmas.sh, line 403, reads a contract's names from the whole line that holds "is a person" or "are persons" before clause 1; read them from that sentence alone, splitting the line at ".  " first.  Why: the style guide's 23 and 36 (GLP 1873085) put the definitions before the names; on one line, "The author of an item is its first signer.  Alice and Bob are persons." makes "The" a name.  It unblocks the reordering of every NAME.txt.
+2. From GO #5 (Code_inbox.md, Date: 2026-11-11 20:17 UTC, item 4), blocking CnC only.  GCoop.txt and GCorp.txt each restate GO's lines [Named propose], [Named vote] and [First officer], and CnC extends GCoop and TC.  pragmas.sh refuses them as two lines writing one button.  Is a line of GO that two contracts written from GO restate one line, by your Section 5.4?
+End: 2026-11-11 20:19 UTC
