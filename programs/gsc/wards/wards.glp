@@ -31,7 +31,7 @@
 
 % intro_act_bindings/2, the introductions of a schema, is unobstructed.glp's,
 % which programs/gsc/self.glp exposes to its subtree: this module sits in the
-% child directory wards/ of the checker, GAI's (Coordination Appendix B), and
+% child directory wards/ of the checker, GSC's (Coordination Appendix B), and
 % a cross-module qualifier names a child of the caller's directory and no
 % sibling (TGLP, Section "Module System", "Cross-module type checking").
 
