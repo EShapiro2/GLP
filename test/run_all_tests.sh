@@ -9691,7 +9691,10 @@ check "sglp outside: the program reads the five answers" "As = \[yes, yes, yes, 
 # the transformation on the record's sGLP source, holding its printed modules
 # to the record's, and each run's first simulated day with its seed, holding
 # its log to the record's up to that time.  With no record, nothing is run.
-for sim_m in "$GLP_DIR"/simulation/*/*/manifest.md; do
+# A record with several configurations holds one record a configuration, a
+# level deeper, simulation/<NAME>/<date>/<config>/, so both depths are taken
+# (sGLP #12, 2026-11-11 20:14 UTC, item 4: the loop reached none of them).
+for sim_m in "$GLP_DIR"/simulation/*/*/manifest.md "$GLP_DIR"/simulation/*/*/*/manifest.md; do
     [ -f "$sim_m" ] || continue
     sim_r=$(dirname "$sim_m"); sim_n=${sim_r#$GLP_DIR/}
     sim_out=$(bash "$GLP_DIR/programs/sglp/cva/record.sh" --check "$sim_r" 2>&1; echo "exit $?")
