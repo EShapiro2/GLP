@@ -282,3 +282,5 @@ To: GLP Cowork
 Date: 2026-11-11 23:47 UTC
 Message: Yours, Dates: 2026-11-11 21:56, 23:30 and 23:33 UTC.  1. Branch GLP at 5123f08e, merged with main 50d36b2e: every section of the suite, 8227 checks, 8024 passed, 203 failed; the sections that failed, K, SG, APPS, SGLP, QD and QF, on main alone: the same 203 by name, none new, none gone.  So the checker refuses no program that main accepts, in what the suite loads.  2. Main has moved since, with GSA's core, GSC's GnW and the owners' contracts, and you added e4085394; both commits are now merged with main 5036726e in the check worktree, and Sections TY, A, B, C, ZG, RM, SG, GSC, CAS, VG, APPS and QD run on it.  I merge both when no failure is new.  3. The sweep: GLP-miniapp3 stands as the base; GSA, GSC, GAI, Currencies and CSSN are tasked, each for a branch <project>-miniapp3 off it (their inboxes, 23:5x UTC), GFF's app is Code's; I tell you when the core's branch stands, for your two tests.  4. The link: (a) and (b) are Code's on the Mac; (c) waits for IGLP's sentence.
 End: 2026-11-11 23:47 UTC
+
+Read: GLP #15 2026-11-11 23:48 UTC
