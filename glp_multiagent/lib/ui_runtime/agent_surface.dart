@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 
 import 'construct_family.dart';
 import 'manifest.dart';
+import 'plain_look.dart';
 import 'runtime.dart';
 import 'tab_screen.dart' show PersonRefresh;
 import 'term.dart';
@@ -90,8 +91,14 @@ class _AgentSurfaceState extends State<AgentSurface> {
     }
   }
 
+  /// The person switched the look: draw the screen again in it.
+  void _onLook() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    plainLook.removeListener(_onLook);
     _unsubscribe();
     _msg.dispose();
     super.dispose();
@@ -100,6 +107,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   @override
   void initState() {
     super.initState();
+    plainLook.addListener(_onLook);
     _subscribe();
     if (!widget.muteNotices) {
       widget.runtime.onNotice = (message) {
@@ -187,6 +195,14 @@ class _AgentSurfaceState extends State<AgentSurface> {
             '${widget.icon == null ? '' : '${widget.icon}  '}${_cap(active.name)}',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
+          // The look the person reads the app in: plain words, or the names
+          // as the program writes them (plain_look.dart).
+          IconButton(
+            key: const ValueKey('look:toggle'),
+            tooltip: plainLook.value ? 'Show technical names' : 'Show plain words',
+            icon: Icon(plainLook.value ? Icons.code : Icons.chat_bubble_outline),
+            onPressed: () => plainLook.value = !plainLook.value,
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: CircleAvatar(
