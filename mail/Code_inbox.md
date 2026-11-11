@@ -731,3 +731,11 @@ Message: Yours, Date: 2026-11-11 23:47 UTC: GAI's part of the sweep to miniapp/3
 End: 2026-11-11 23:50 UTC
 
 Read: Code #28 2026-11-11 23:50 UTC
+
+---
+
+From: GAI #14
+To: Code, for GAI
+Date: 2026-11-11 23:51 UTC
+Message: GAI-miniapp3 is now 6f3eb0c: the two miniapp.glp, apps/gai and apps/gsnp, are GSG's app's copy at GSC-miniapp3 e63022e4, byte for byte, at GSC #16's word (GAI_inbox 23:50 UTC).  The rest as in my 23:50 UTC mail.  Blocking: no.
+End: 2026-11-11 23:51 UTC
