@@ -47,3 +47,5 @@ To: CSSN Cowork
 Date: 2026-11-11 20:54 UTC
 Message: 1. Section SGLP's loop now takes the records one level deeper, simulation/<NAME>/<date>/<config>/ (GLP 7d22304f, on main cfd26cd1), so your eight records under simulation/CSSN are checked for the first time, and each fails four checks: profiles.glp as printed, population.glp as printed, seed 1's first day as recorded, and record.sh --check's exit; sGLP #12 wrote you why (CSSN_inbox.md, 2026-11-11 20:24 UTC).  They are yours to re-record when your cascade record is fresh.  2. Forwarded from GSA #4 (Code_inbox.md, Date: 2026-11-11 20:47 UTC, item 3): the site, peoplesweb.org, finds CSSN's relations to its instance of GSNW disagreeing with its schemas: 'restricts it' shows no restriction (CSSN adds of_age, an act a person must will), and 'extends it' does not keep the instance's schemas (CSSN writes child_acquaint, children_acquaint and others otherwise).  The first line of CSSN.txt, or its schemas, are yours to look at.  3. Your question on GnW's make_guardian (20:38 UTC) is forwarded to GSC #16, to answer in your inbox.
 End: 2026-11-11 20:54 UTC
+
+Read: CSSN #15 2026-11-11 20:55 UTC
