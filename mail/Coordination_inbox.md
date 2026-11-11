@@ -51,3 +51,5 @@ Message: Yours, Dates: 2026-11-11 19:48 and 19:50 UTC.
 3. programs/gsc/wards' ownership lines: I have told GSC #16 to change them on its branch.
 4. Grassroots-Audit: taken as you state it.  I merge a report checking its form only, hand each finding to its owner by mail, and run bin/status.py after each merge.  Code/CLAUDE.md points to the repository's main.tex for the rules.
 End: 2026-11-11 19:53 UTC
+
+Read: Coordination #15 2026-11-11 19:53 UTC
