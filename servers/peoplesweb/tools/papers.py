@@ -1,6 +1,6 @@
 """Each contract's paper, as the site's balloons cite it: the full citation --- title and authors --- and an arXiv link where the paper is on arXiv, else a PDF the site serves, with its state.
 
-Which paper a contract belongs to is read from the contract itself, the % Owner line of its NAME.txt, which names the paper's main file under /Grassroots/<DIR>/; this table only cites each paper.  The arXiv identifiers, titles and authors of the published papers are Bib-Grassroots' entries; the others' are their main files'.  The PDFs under web/papers/ are built from the paper repositories and go stale as the papers move; a sweep serves them as last built.
+This file is the one record of the site's papers, each paper's repository, main file, title, authors and arXiv identifier (Coordination, 2026-11-11).  Which paper a contract belongs to is read from the contract itself, the % Owner line of its NAME.txt, which names the paper's main file under /Grassroots/<DIR>/; this file cites each paper.  The arXiv identifiers, titles and authors of the published papers are Bib-Grassroots' entries; the others' are their main files'.  The PDFs under web/papers/ are built from the paper repositories and go stale as the papers move; a sweep serves them as last built.
 """
 import json
 import os
@@ -33,10 +33,7 @@ BY_DIR = {
            'authors': 'Ehud Shapiro', 'pdf': 'GO'},
 }
 
-# Where each paper's source is: its repository under EShapiro2 on GitHub, the
-# one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each
-# from there; a paper on arXiv gets a PDF too, served as Updated while its
-# repository is ahead of its latest arXiv version.
+# Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
 SOURCES = {
     'GSC': {'repo': 'Jurix-Formal-Grassroots-Social-Contracts', 'main': 'main.tex'},
     'GC': {'repo': 'GC-Grassroots-Currencies', 'main': 'main_Grassroots_Currencies.tex'},
@@ -55,12 +52,7 @@ SOURCES = {
 # acmart wants a country in every affiliation, which Overleaf forgives
 # (Udi, 2026-11-07: not to be fixed in GFF's repository).
 FIXES = {'GFF': [(r'\affiliation{}', r'\affiliation{\country{}}')]}
-# The foundational papers' sources (FOUNDATIONAL below), each by its project's
-# directory, repository and main file, taken from Coordination's Appendix A
-# on 2026-11-10, this file being the one record of the site's papers
-# (Coordination, 2026-11-11); built and compared with arXiv as the contracts'
-# papers are, so each is linked as Updated beside arXiv while its repository
-# is ahead (Udi, 2026-11-10).
+# The foundational papers' sources (FOUNDATIONAL below), each by its project's directory, repository and main file; built and compared with arXiv as the contracts' papers are, so each is linked as Updated beside arXiv while its repository is ahead (Udi, 2026-11-10).
 SOURCES.update({
     'GLP-Spec': {'repo': 'GLP-ICLP-2026', 'main': 'main-GLP-ICLP-2026.tex'},
     'TGLP': {'repo': 'Moded-Types', 'main': 'main_tglp.tex'},
