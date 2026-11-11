@@ -128,7 +128,18 @@ def paper_of(owner_line, served_pdfs=(), state=None, published=()):
     m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
     if not m or m.group(1) not in BY_DIR:
         return {'title': '', 'authors': '', 'state': 'no paper' if re.search(r'No paper', owner_line or '') else 'in preparation'}
-    d = m.group(1)
+    return cite_of(m.group(1), served_pdfs, state, published)
+
+
+def cite_of(d, served_pdfs=(), state=None, published=()):
+    """The citation of the paper in directory d, a contract's paper or a foundational one, or None."""
+    if d not in BY_DIR:
+        f = next((f for f in FOUNDATIONAL if f.get('dir') == d), None)
+        if f is None:
+            return None
+        v = {k: x for k, x in f.items() if k != 'dir'}
+        updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}), published)
+        return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
     name = v.pop('pdf', None)

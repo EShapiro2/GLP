@@ -209,6 +209,8 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
     <div id="shelves"></div>
     <div class="sh"><h2>Foundational Papers</h2></div>
     <div class="card refs" id="found"></div>
+    <div class="sh"><h2>Directories</h2></div>
+    <div class="card refs" id="dirs"></div>
   </section>
   <section id="view"></section>
 </main>
@@ -870,6 +872,7 @@ function page(c, hood){
       <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
       </div>
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
+      ${c.dir ? `<p class="small">In the repository: <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(c.dir)}" target="_blank" rel="noopener"><code>${esc(c.dir)}</code></a>.</p>` : ''}
     </div>
     ${relsHtml(c)}
     <div class="sec"><div class="sh"><h2>References</h2></div>
@@ -941,7 +944,7 @@ function relsHtml(c){
   const mk = {agrees: '✓', given: '✓', disagrees: '✗', open: '–'};
   const say = {agrees: 'agrees with its schemas', given: 'agrees, given an invariant', disagrees: 'disagrees with its schemas', open: 'not checked'};
   return `<div class="sec"><div class="sh"><h2>Relations</h2></div><div class="card refs rels">${c.checks.map(r =>
-    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} <a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
+    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
 }
 // The app as a certified artefact, the .glpw the Grassroots App installs.
 function artHtml(c){
@@ -971,6 +974,18 @@ function schemaHtml(s, open){
 }
 
 $('#found').innerHTML = (D.foundational || []).map(citeHtml).join('');
+// Who answers for each directory of GLP, every directory accounted for
+// (tools/directories.py; Udi, 2026-11-11, to Coordination #14): the project,
+// its papers, and for a project with no paper its text under papers/.
+function dirHtml(e){
+  const a = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+  const gh = `https://github.com/EShapiro2/GLP/${e.dir ? 'tree' : 'blob'}/main/${e.path}`;
+  const papers = e.cites.length ? e.cites.map(P => P.arxiv ? a(`https://arxiv.org/abs/${P.arxiv}`, `<i>${esc(P.title)}</i>`) : P.pdf ? a(P.pdf, `<i>${esc(P.title)}</i>`) : `<i>${esc(P.title)}</i>`).join('; ')
+    : e.text ? a(`https://github.com/EShapiro2/GLP/tree/main/${e.text}`, 'no paper; what it is and does') : 'no paper';
+  return `<div class="cite">${a(gh, `<code>${esc(e.path)}</code>`)}: <b>${esc(e.who)}</b>, ${papers}${e.note ? `; ${esc(e.note)}` : ''}.</div>`;
+}
+$('#dirs').innerHTML = (D.directories || []).map(dirHtml).join('')
+  + ((D.unaccounted || []).length ? `<div class="cite">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</div>` : '');
 V.zoom = BASEZ();
 layout(); drawGlobe(); globeNav(); drawShelves(); route();
 window.addEventListener('resize', () => { if ($('#top').style.display !== 'none') drawShelves(); });
