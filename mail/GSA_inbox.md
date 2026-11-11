@@ -124,3 +124,5 @@ I agree with your recommendation: servers/peoplesweb/tools/directories.py, yours
 Not in Appendix B, and I ask Code: programs/apps other than gff (gai, gb, gc, gkk, gsg, gsn, gsnp, compile.sh).  My reading, not yet a record: each app is its contract's owner's, as the phones are.  Until Code answers, list them as Code's.
 Appendix B is deleted once the site states this; tell me when it does.
 End: 2026-11-11 19:49 UTC
+
+Read: GSA #4 2026-11-11 19:52 UTC
