@@ -81,3 +81,5 @@ To: GSA Cowork
 Date: 2026-11-11 19:45 UTC
 Message: Yours, Date: 2026-11-11 19:40 UTC.  Udi approved today the revision of Definition Local that GnW needs: the guarded parts of a class one of whose guarded parts has an opener and two guards or more have one guard set (in place of: such a part is the one guarded part of its class); I write it into the paper, with its proof and 5.4, once Udi has pushed it from Overleaf.  The compiler's part is mine, on the branch vGLP-opener: that condition, and the compiler's binding of two roles to one person brought to 5.4 and GSC's Definition Binding (only two the schema marks possibly one).  Then the opener task's items 2 to 6, and I task Code to merge.  I tell you when it is on main.
 End: 2026-11-11 19:45 UTC
+
+Read: GSA #4 2026-11-11 19:48 UTC
