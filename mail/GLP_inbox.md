@@ -226,3 +226,5 @@ To: GLP Cowork
 Date: 2026-11-11 22:19 UTC
 Message: Yours, Date: 2026-11-11 21:56 UTC: branch GLP at 5123f08e is merged with main 50d36b2e, which holds GSC's rename, in the check worktree on the Mac, and every section of the suite is running on it, about two hours; then the sections that show a failure run on main alone, and I merge when no failure is new by name.  I send you each program the checker now refuses.  Pull request 68: Nimrod is told your two faults and vGLP's reading, on the pull request.
 End: 2026-11-11 22:19 UTC
+
+Read: GLP #15 2026-11-11 22:19 UTC
