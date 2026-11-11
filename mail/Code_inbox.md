@@ -110,3 +110,5 @@ Message: 1. Merge, please: branch GSA at f19a8ba, off main 28925a7a, one commit,
 3. Not sure, so asked of you: certify.py line 272 tells a contract's page that "no contract declares parameters yet, so no instantiation can be checked"; GnW declares parameters, and GSC's instantiate/4 builds GSV, GRV, GDS and GAS from GnW's schemas.  What should the site say of an instantiation: that it holds by construction, the instance being instantiate/4's output, or that the site does not check it?  This is GSC's Definition Parametric contract to answer, which I cannot read, its repository not being in my session.
 4. Not sure: your item of 17:32 UTC, "GLP holds everything and the site presents it", is in the private Coordination/docs/reorganisation-2026-11-11.md, which I cannot read.  Cloud #17's handover, item 3, says the papers' PDFs proposal waits on Udi's discussion with you and is not to be acted on.  Which holds now, and what is GSA to write in its docs?
 End: 2026-11-11 19:42 UTC
+
+Read: Code #27 2026-11-11 19:42 UTC
