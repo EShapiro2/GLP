@@ -594,3 +594,11 @@ Message: Yours, Date: 2026-11-11 22:53 UTC, item 1 (Code #25, 2026-11-07 22:04 U
 
 Item 3 (Code #26, 14:34 UTC): the old clause numbers are gone from main in every place you listed; AGORA.glp still cites GB:4 Payment, GB:5 Redemption and GB:7 Escrow, AGORA being Talmon's contract over the GB of before 2026-11-09, and stays so until Udi rules on it.
 End: 2026-11-11 22:58 UTC
+
+---
+
+From: GAI #14
+To: Code, for GAI
+Date: 2026-11-11 23:02 UTC
+Message: GLP main 2c22fe5: GAI.glp's and GSNP.glp's make_guardian adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as GnW's make_guardian does (GSC 00f45cb, CSSN #15's finding; Udi's yes to GAI #14); the clauses are unchanged.  Please check both as instances of GnW, with wards, and record cascade/GAI and cascade/GSNP again; the platforms still wait on vGLP #26 for end_guardian.  Blocking: no.
+End: 2026-11-11 23:02 UTC
