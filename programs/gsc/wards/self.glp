@@ -1,5 +1,5 @@
 % ---------------------------------------------------------------------------
-% The condition on a contract with wards, GSC's (Coordination Appendix B;
+% The condition on a contract with wards, GSC's (servers/peoplesweb/tools/directories.py;
 % Udi, 2026-11-10, to GSC #14; GAI's from 2026-10-20 to that day): GSC's Section 8, "Contracts with Wards", /Grassroots/GSC,
 % sections/07c-wards.tex at GSC 070c5d1, and def:sg-wards of CSSN's paper.  This directory is a
 % child of the checker, programs/gsc, so that the checker's modules may call

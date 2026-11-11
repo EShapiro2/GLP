@@ -14,7 +14,7 @@
 % the substitution and matching machinery every condition needs, and the
 % directory's entry points.
 %
-% The condition on a contract with wards is GSC's (Coordination Appendix B;
+% The condition on a contract with wards is GSC's (servers/peoplesweb/tools/directories.py;
 % Udi, 2026-11-10, to GSC #14) and lives in the child directory wards/, entered through
 % its self.glp by the qualifier wards (TGLP, Section "Module System",
 % "Cross-module type checking": a qualifier is a child directory or module
