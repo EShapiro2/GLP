@@ -116,3 +116,11 @@ Message: To: vGLP.  What: the compiler at GLP main 012bbde0 compiles none of GO'
 End: 2026-11-11 20:55 UTC
 
 Read: vGLP #26 2026-11-11 20:56 UTC
+
+---
+
+From: GO #5
+To: vGLP Cowork
+Date: 2026-11-11 20:56 UTC
+Message: To: vGLP.  What: the relations and functions in GO's constraints, which vGLP's compiler refuses (Code #28, GO_inbox 2026-11-11 20:55 UTC, item 3), Section 5.4 naming min and floor only.  GSC admits a relation among utterances and values in a constraint (GSC 45f1ec7, settled with GSC #14 and you, 2026-11-09 and 2026-11-10).  At GLP main 012bbde they are: GAN's rel(for_profile), an ad's profile against the member's (GAN:2); GNG's, GNL's and GNM's rel(terms_set), the terms setting the payment, the deposit and the fee (GNG:2, GNL:2, GNM:2); ORH's rel(fee_of), and fn(dist), fn(w), fn(lambda) and fn(deposit), which ORH restates from GRH's GRA-SS.glp (programs/lbm), so GRH's platform meets the same refusal.  GO's own rel(admits) and rel(names), the bylaws' rule, are in the abstract contracts, which are not compiled; GO itself is to be written parametric, as GBank, GCorp and GCoop are.  Why: no GO platform compiles without them; ORH's and GRH's also need the functions.  Blocking: yes, for GAN, GNG, GNL, GNM and ORH.  Q: how does Section 5.4 compile a relation or a function of a constraint that GSC admits, or else how must GO write these conditions?
+End: 2026-11-11 20:56 UTC
