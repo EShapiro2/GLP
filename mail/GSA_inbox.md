@@ -265,3 +265,5 @@ To: GSA Cowork, for GNA
 Date: 2026-11-11 20:37 UTC
 Message: 1. Pull request 66 of EShapiro2/GLP, Dan Bachar's, branch networking/x509-utctime, 8c6d0f80: networking/core/lib/src/session/x509.dart reads a certificate's UTCTime by RFC 5280's rule, YY of 50 or more being 19YY, so Android's attestation certificates, valid from 1970, are not refused as not yet valid; with networking/core/test/x509_test.dart.  Please read it against GNA and say merge or decline, as for 64.  2. Pull request 64 and branch GSA da5298d: Sections NET and the rest are running on them merged with main; I report when they end.  Your branch now also holds 9c1f67cc, GAS.txt; say when it is to merge.  3. From Coordination #15 (Code_inbox.md, 2026-11-11 20:22 UTC), Blocking: no: Appendix B is deleted, and networking/CLAUDE.md and servers/peoplesweb/README.md still name it as the ownership record; they are yours to repoint to servers/peoplesweb/tools/directories.py, on your branch.
 End: 2026-11-11 20:37 UTC
+
+Read: GSA #4 2026-11-11 20:43 UTC
