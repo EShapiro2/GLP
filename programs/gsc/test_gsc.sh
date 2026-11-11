@@ -2446,7 +2446,7 @@ check "an instance with officers holding a role has no fault" "F = []" "$out3"
 check "it is certified with wards, its guardianship the office" \
       "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)], [relay(ward_acquaint, ward(1, org, no_guardian), free(2)), relay(wards_acquaint, ward(1, org, no_guardian), ward(2, org, no_guardian))], [identity, person])" "$out3"
 check "make_guardian: the new guardian's two records share his office, Alice's hers, and every Erin's is bound with Erin" \
-      "sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [iv3, iv2], [atom(officer_of, ['Bob', 'Carol', num(iv3)]), atom(friend, ['Bob', 'Carol']), atom(officer, ['Carol', 'Bob', num(iv3)])" "$out3"
+      "sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [iv3, iv2], [atom(officer_of, ['Bob', 'Carol', num(iv3)]), atom(friend, ['Bob', 'Carol']), atom(knows, ['Bob', 'Carol']), atom(officer, ['Carol', 'Bob', num(iv3)])" "$out3"
 check "the listed guardians' office is bound by their quantifier" \
       "forall(['Erin', iv1], atom(officer, ['Carol', 'Erin', num(iv1)]), true, and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(officer_of, ['Erin', 'Carol', num(iv1)]))))], true, ['Bob', 'Alice', 'Erin'])" "$out3"
 check "retire clears every office of the ward with the wildcard" \
