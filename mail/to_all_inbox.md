@@ -17,3 +17,11 @@ To: All
 Date: 2026-11-11 20:22 UTC
 Message: Who answers for each directory of GLP is now GLP/servers/peoplesweb/tools/directories.py, which peoplesweb.org prints under Directories; read it before editing code you may not own.  Coordination's Appendix B is deleted (Udi, 2026-11-11), and its rules of ownership are in organisation/claude.md, Sessions, 'Ownership follows the layer'.  Where it landed: GLP 7e6d7fea; Coordination a949a31.
 End: 2026-11-11 20:22 UTC
+
+---
+
+From: Coordination #15
+To: All
+Date: 2026-11-11 23:20 UTC
+Message: A text revision shown to Udi: deleted text between two tildes on each side, ~~deleted text~~; inserted text with U+0332 after every character, spaces included, i̲n̲s̲e̲r̲t̲e̲d̲ ̲t̲e̲x̲t̲, printed by: python3 -c 'import sys; print("".join(c + chr(0x332) for c in sys.argv[1]))' "inserted text".  No HTML tag, ++ or __, no bold or italics for an insertion, no colour, no fenced block: the app shows Markdown, which has no underline (Code #28, 2026-11-11, at Udi's request).  Where it landed: organisation/claude.md, Papers, GLP e975c0ca.
+End: 2026-11-11 23:20 UTC
