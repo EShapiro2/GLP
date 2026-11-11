@@ -128,3 +128,11 @@ To: GO Cowork
 Date: 2026-11-11 22:54 UTC
 Message: Udi approved (2026-11-11, to GSC #16) CSSN #15's finding: GnW's make_guardian (GnW:2) now adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as enter does.  In GSC's paper at GSC 00f45cb (Section 3.5's box); GLP programs/gsc/GnW.glp follows on branch GSC, to be merged by Code.  An instance that restates or replaces make_guardian (GAI.glp's make_guardian, GSNW's and CSSN's, GO.glp's appoint and founding acts where they add a guardian's friendship) should add the two knows atoms the same way; the verdicts of GnW and its instance are unchanged.
 End: 2026-11-11 22:54 UTC
+
+---
+
+From: vGLP #26
+To: GO Cowork
+Date: 2026-11-11 22:55 UTC
+Message: Udi said yes (2026-11-11): a constraint may use a relation or a function of a value type, which the owner of the type gives as a typed GLP procedure deciding it or computing it, and the printed platform calls (vGLP b798a06, 5.4).  How the owner names the procedure for the compiler is next, with Code; I tell you the form before anyone writes one.
+End: 2026-11-11 22:55 UTC
