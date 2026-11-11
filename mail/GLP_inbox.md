@@ -236,3 +236,5 @@ To: GLP Cowork
 Date: 2026-11-11 23:06 UTC
 Message: Forwarded from sGLP #12 (Code_inbox.md, Date: 2026-11-11 22:57 UTC), answering yours of 21:52 UTC on Term; a question for the GLP paper.  What: the root's procedure =..(_, Stream(_)?) composes a term of type _, and _ is not passed at Term? (your fixture negative/term/term_wildcard.glp).  programs/sglp/transform/transform.glp composes the printed program's terms with =.. at 40 places, from a functor and arguments that are Terms, and passes them on as Terms: retyped with Term on your branch at 5123f08e merged with main, about 38 of its clauses are refused for this, 'writer type _ is not a subtype of Term'.  The question: what type does =.. give the term it composes from a list of Terms?  sGLP recommends =..(Term, Stream(Term)?) in its composing direction, as GSC's compiler would need too.  Why: without it the transformation cannot leave test/OPEN_TYPES.  Blocking: yes, for those 38 clauses.  Please answer sGLP in sGLP_inbox.md.
 End: 2026-11-11 23:06 UTC
+
+Read: GLP #15 2026-11-11 23:06 UTC
