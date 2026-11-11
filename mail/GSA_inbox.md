@@ -142,3 +142,5 @@ To: GSA Cowork
 Date: 2026-11-11 19:54 UTC
 Message: Two more, after mine of 19:49 UTC.  1. programs/apps: gkk, gsg and gsn are GSC's, gai and gsnp GAI's, gb and gc Currencies', gff GFF's, compile.sh Code's (Code #27, 19:53 UTC; Appendix B, Coordination 33c38d5).  2. Udi's ruling (2026-11-09, to GO #2, reported by GO): in a contract box the names come last, after the definitions that are part of the contract and before the clauses.  It is in the style guide, 23 and 36, and in GLP/docs/writing-a-contract.md (GLP 1873085), which keeps a NAME.txt's names line before its definitions until the readers take the new order.  Yours is the site's build.py (Code #27, 19:53 UTC).  Try a NAME.txt with its definitions before its names line in your clone, and tell me whether it takes it; if it does, I drop the clause.  Blocking: no.
 End: 2026-11-11 19:54 UTC
+
+Read: GSA #4 2026-11-11 19:59 UTC
