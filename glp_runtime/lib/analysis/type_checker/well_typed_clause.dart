@@ -1202,8 +1202,139 @@ bool _isRealState(DFAState state, ProgramDFA dfa) {
 
 /// The type the rule "Type checking of :=" gives the writer of a `:=` goal
 /// beyond the root's `Number`: `Integer` on an integer expression, `Real` on
-/// a real one.
-enum AssignmentType { integer, real }
+/// a real one.  And [term], for a goal `T =.. L` or `L ..= T` that the rule
+/// "Type checking of =.. and ..=" checks at `Term` ([_typedUniv]).
+enum AssignmentType { integer, real, term }
+
+// =============================================================================
+// The result type of `=..` and `..=` (TGLP typed-glp.tex, "Type checking of
+// =.. and ..=")
+// =============================================================================
+//
+// "The root declares =..(_, Stream(_)?), which composes a term from the list
+// of its functor and its arguments, and ..=(Stream(_), _?), which decomposes
+// a term into that list; a term so composed or decomposed may have variables
+// of both modes, so the two are declared with wildcards.  A goal T =.. L is
+// checked at =..(Term, Stream(Term)?) if L is a list of terms --- the empty
+// list, a reader of a type that is a subtype of Stream(Term), or a list cell
+// whose head is a term expression and whose tail is a list of terms --- and a
+// goal L ..= T is checked at ..=(Stream(Term), Term?) if T is a term
+// expression --- a constant, a reader of a type that is a subtype of Term, or
+// a structure or a list cell over term expressions" (TGLP 48e99c2,
+// typed-constant-readers.tex; Udi, 2026-11-11, to GLP #15).  The declarations
+// stay as they are; the goal is checked against its own with the wildcards
+// `Term` where the rule says so.
+
+/// Whether [atom] is a composition `T =.. L`.
+bool _isCompose(ast.Goal atom) =>
+    namesRoot(atom.functor, '=..') && atom.arity == 2;
+
+/// Whether [atom] is a decomposition `L ..= T`.
+bool _isDecompose(ast.Goal atom) =>
+    namesRoot(atom.functor, '..=') && atom.arity == 2;
+
+/// Whether [atom] is a goal of `=..` or `..=`.
+bool _isUniv(ast.Goal atom) => _isCompose(atom) || _isDecompose(atom);
+
+/// Whether [e] is a TERM EXPRESSION ("Type checking of =.. and ..="): "a
+/// constant, a reader of a type that is a subtype of Term, or a structure or
+/// a list cell over term expressions"; [termReader] answers for a reader by
+/// its variable's name.  A list is walked along its spine in a loop.
+bool isTermExpression(ast.Term e, bool Function(String name) termReader) {
+  ast.Term? t = e;
+  while (t is ast.ListTerm && !t.isNil) {
+    if (t.head == null || !isTermExpression(t.head!, termReader)) return false;
+    t = t.tail;
+  }
+  if (t == null) return false;
+  if (t is ast.ConstTerm) return true;
+  if (t is ast.ListTerm) return true; // the empty list, a constant
+  if (t is ast.VarTerm) return t.isReader && termReader(t.name);
+  if (t is ast.StructTerm) {
+    return t.args.every((a) => isTermExpression(a, termReader));
+  }
+  return false;
+}
+
+/// Whether [e] is a LIST OF TERMS ("Type checking of =.. and ..="): "the
+/// empty list, a reader of a type that is a subtype of Stream(Term), or a
+/// list cell whose head is a term expression and whose tail is a list of
+/// terms"; [termReader] and [termListReader] answer for a reader by its
+/// variable's name.
+bool isListOfTerms(ast.Term e, bool Function(String name) termReader,
+    bool Function(String name) termListReader) {
+  ast.Term? t = e;
+  while (t is ast.ListTerm && !t.isNil) {
+    if (t.head == null || !isTermExpression(t.head!, termReader)) return false;
+    t = t.tail;
+  }
+  if (t is ast.ListTerm) return true; // the empty list
+  if (t is ast.VarTerm) return t.isReader && termListReader(t.name);
+  return false;
+}
+
+/// [decl], the declaration of `=..` or `..=` in scope, with each wildcard
+/// `Term` at its mode and each `Stream(_)` the `Stream(Term)` of the same
+/// mode: `=..(Term, Stream(Term)?)` and `..=(Stream(Term), Term?)`.  A
+/// declaration of another shape is left as it is: the rule types the root's
+/// two.
+ProcDecl _typedUniv(ProcDecl decl) {
+  if (decl.arity != 2) return decl;
+  const ofWildcard = '<_>';
+  TypeExpr? retyped(TypeExpr t) {
+    if (t is PrimitiveModeAlt) {
+      return TypeRef(TypeRef.termType, t.line, t.column, isInput: t.isInput);
+    }
+    if (t is TypeRef && t.typeArgs.isEmpty && t.name.endsWith(ofWildcard)) {
+      final template =
+          t.name.substring(0, t.name.length - ofWildcard.length);
+      return TypeRef('$template<${TypeRef.termType}>', t.line, t.column,
+          isInput: t.isInput);
+    }
+    return null;
+  }
+
+  final first = retyped(decl.argTypes[0]);
+  final second = retyped(decl.argTypes[1]);
+  if (first == null || second == null) return decl;
+  return ProcDecl(
+    decl.name,
+    [first, second],
+    decl.line,
+    decl.column,
+    typeParams: decl.typeParams,
+    isBuiltin: decl.isBuiltin,
+    exported: decl.exported,
+    imported: decl.imported,
+    modulePath: decl.modulePath,
+  );
+}
+
+/// The states of `Term` and of `Stream(Term)` by which the goals of `=..`
+/// and `..=` among [atoms] at [indices] are read ([_assignmentTypes]): null
+/// where there is no such goal, where the declaration in scope is not the
+/// root's, or where a type of the name `Term` is defined in scope, the rule
+/// then typing nothing.  `Stream(Term)` is built into [dfa] where no
+/// declaration has named it yet ([_buildDeclTypes]).
+(DFAState, DFAState)? _univStates(List<ast.Goal> atoms, List<int> indices,
+    ProgramDFA dfa, TypeEnvironment env) {
+  for (final i in indices) {
+    final goal = _unspawned(atoms[i]);
+    if (!_isUniv(goal)) continue;
+    final decl = env.getProcedure(goal.functor, goal.arity);
+    if (decl == null) continue;
+    final typed = _typedUniv(decl);
+    if (identical(typed, decl)) continue;
+    _buildDeclTypes(typed, dfa, env);
+    final term = dfa.states[TypeRef.termType];
+    final list = dfa.states[baseTypeName(
+        _isCompose(goal) ? typed.argTypes[1] : typed.argTypes[0])];
+    if (term == null || list == null) continue;
+    if (dfa.automata[term.name]?.anyFunctorTarget == null) continue;
+    return (term, list);
+  }
+  return null;
+}
 
 /// What [_instantiateCalls] reads of a clause or a goal, each by body-atom
 /// index: the instantiation of each call to a parameterised procedure, and the
@@ -1227,22 +1358,54 @@ class _ClauseReading {
 /// `Y := X? + 1, X := N? * 2` types `Y` as the reverse order does.  A variable
 /// that only the expressions of `:=` goals read has no type from them: their
 /// positions are typed `Exp`.
+///
+/// The goals of `=..` and `..=` among them are read likewise, by "Type
+/// checking of =.. and ..=", [univ] the states of `Term` and `Stream(Term)`
+/// ([_univStates]): a variable is of a type that is a subtype of `Term`, or
+/// of `Stream(Term)`, where an occurrence of it, or of its pair, has such a
+/// type, or where it is the writer of a goal the rule checks at `Term`.
 Map<int, AssignmentType> _assignmentTypes(List<ast.Goal> atoms,
     List<int> assignments, Iterable<(String, VariableTypeInfo)> typed,
-    ProgramDFA dfa) {
+    ProgramDFA dfa, [(DFAState, DFAState)? univ]) {
   final integers = <String>{};
   final reals = <String>{};
+  final terms = <String>{};
+  final termLists = <String>{};
   for (final (key, info) in typed) {
     final name = key.endsWith('?') ? key.substring(0, key.length - 1) : key;
     if (_isIntegerState(info.typeState, dfa)) integers.add(name);
     if (_isRealState(info.typeState, dfa)) reals.add(name);
+    if (univ != null) {
+      final state = info.typeState;
+      final out = state.isDual ? dfa.states[state.baseName] : state;
+      if (out != null && !out.isWildcard && !out.isProcedure) {
+        if (isSubtype(out, univ.$1, dfa)) terms.add(name);
+        if (isSubtype(out, univ.$2, dfa)) termLists.add(name);
+      }
+    }
   }
+  bool composesTerm(ast.Goal goal) =>
+      univ != null &&
+      _isCompose(goal) &&
+      isListOfTerms(goal.args[1], terms.contains, termLists.contains);
+  bool decomposesTerm(ast.Goal goal) =>
+      univ != null &&
+      _isDecompose(goal) &&
+      isTermExpression(goal.args[1], terms.contains);
   for (var grew = true; grew;) {
     grew = false;
     for (final i in assignments) {
       final assignment = _unspawned(atoms[i]);
       final result = assignment.args[0];
       if (result is! ast.VarTerm || result.isReader) continue;
+      if (_isUniv(assignment)) {
+        if (composesTerm(assignment) && terms.add(result.name)) grew = true;
+        if (decomposesTerm(assignment)) {
+          if (termLists.add(result.name)) grew = true;
+          if (terms.add(result.name)) grew = true;
+        }
+        continue;
+      }
       if (!integers.contains(result.name) &&
           isIntegerExpression(assignment.args[1], integers.contains)) {
         integers.add(result.name);
@@ -1257,7 +1420,14 @@ Map<int, AssignmentType> _assignmentTypes(List<ast.Goal> atoms,
   }
   return {
     for (final i in assignments)
-      if (isIntegerExpression(_unspawned(atoms[i]).args[1], integers.contains))
+      if (_isUniv(_unspawned(atoms[i])))
+        if (composesTerm(_unspawned(atoms[i])) ||
+            decomposesTerm(_unspawned(atoms[i])))
+          i: AssignmentType.term
+        else
+          ...const <int, AssignmentType>{}
+      else if (isIntegerExpression(
+          _unspawned(atoms[i]).args[1], integers.contains))
         i: AssignmentType.integer
       else if (isRealExpression(_unspawned(atoms[i]).args[1], reals.contains))
         i: AssignmentType.real
@@ -1274,6 +1444,7 @@ ProcDecl _typedAssignment(ProcDecl decl, AssignmentType type) {
   if (result is! TypeRef || !namesRoot(result.name, 'Number') || result.isInput) {
     return decl;
   }
+  if (type == AssignmentType.term) return decl;
   final name = type == AssignmentType.integer ? 'Integer' : 'Real';
   return ProcDecl(
     decl.name,
@@ -1619,6 +1790,14 @@ String baseTypeName(TypeExpr typeExpr) =>
   // call's instantiation needs types [env] cannot be given (see
   // [_buildDeclTypes]).
   var checkEnv = env;
+
+  // A goal T =.. L whose L is a list of terms, and a goal L ..= T whose T is
+  // a term expression, are checked at =..(Term, Stream(Term)?) and at
+  // ..=(Stream(Term), Term?) (TGLP 48e99c2, "Type checking of =.. and ..=").
+  if (assignmentType == AssignmentType.term && _isUniv(atom)) {
+    procDecl = _typedUniv(procDecl);
+    checkEnv = _buildDeclTypes(procDecl, dfa, env);
+  }
 
   // Call-site instantiation for parameterized procedures.
   // If a parameterized template exists, try to infer type param bindings
@@ -3355,7 +3534,10 @@ class _CallInstantiation {
       final call =
           _parametricCall(clause.bodyAtoms[i], env, activeInstantiations);
       if (call != null) calls[i] = call;
-      if (_isAssignment(_unspawned(clause.bodyAtoms[i]))) assignments.add(i);
+      if (_isAssignment(_unspawned(clause.bodyAtoms[i])) ||
+          _isUniv(_unspawned(clause.bodyAtoms[i]))) {
+        assignments.add(i);
+      }
     }
     if (calls.isEmpty && assignments.isEmpty) {
       return const _ClauseReading({}, {});
@@ -3514,7 +3696,7 @@ class _CallInstantiation {
       for (final e in narrowed.entries) (e.key, e.value),
       for (final e in body.entries)
         for (final (info, _) in e.value) (e.key, info),
-    ], dfa);
+    ], dfa, _univStates(clause.bodyAtoms, assignments, dfa, env));
     for (final i in assignments) {
       final type = decided[i];
       if (assignmentTyped.contains(i) && type == assignmentTypes[i]) continue;

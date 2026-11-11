@@ -1697,6 +1697,9 @@ POSITIVE_FILES=(
     # The built-in type Term (TGLP typed-glp.tex, "Type Declarations"): run
     # in Section ZG.
     "$TC_DIR/positive/term_type.glp"
+    # Type checking of =.. and ..= (TGLP typed-constant-readers.tex): run in
+    # Section ZG.
+    "$TC_DIR/positive/term_univ.glp"
     "$TC_DIR/positive/merge_basic.glp"
     "$TC_DIR/positive/append_list.glp"
     "$TC_DIR/positive/copy_stream.glp"
@@ -1964,7 +1967,7 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/term/term_channel.glp"
     "$TC_DIR/negative/term/term_writer_below.glp"
     "$TC_DIR/negative/term/term_union.glp"
-    "$TC_DIR/negative/term/term_wildcard.glp"
+    "$TC_DIR/negative/term/term_univ_wildcard.glp"
 
     # --- typechecker/negative/head ---
     "$TC_DIR/negative/head/merge_wrong_constant.glp"
@@ -6986,8 +6989,29 @@ check "ZG6 a writer does not stand below Term?" \
     "writer requires ↑ (produce), got ↓ (consume)" "$(zg_term term_writer_below.glp)"
 check "ZG6 Term is the one alternative of a definition" \
     "overlaps with the other alternatives of Item" "$(zg_term term_union.glp)"
-check "ZG6 a value of type _ is not passed at Term?" \
-    "writer type _ is not a subtype of Term" "$(zg_term term_wildcard.glp)"
+
+# Type checking of =.. and ..= (TGLP typed-constant-readers.tex; Udi,
+# 2026-11-11): a goal T =.. L is checked at =..(Term, Stream(Term)?) if L is
+# a list of terms, and a goal L ..= T at ..=(Stream(Term), Term?) if T is a
+# term expression; otherwise at the root's declarations, as before.
+zg7=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/typechecker/positive/term_univ.glp
+make(foo, [1, bar(2)], U1).
+parts(g(a, [b]), U2).
+rename(g(a, 7), h, U3).
+pair(1, k(2), U4).
+twice(s, 0, U5).
+:quit
+HEREDOC
+2>&1)
+check "ZG7 =..: the program loads" "Loaded: .*term_univ.glp" "$zg7"
+check "ZG7 =..: a term composed of a list of Terms is a Term" "U1 = foo(1, bar(2))" "$zg7"
+check "ZG7 ..=: a Term decomposes into a list of Terms" "U2 = \[g, a, \[b\]\]" "$zg7"
+check "ZG7 ..= then =..: a term taken apart and built again" "U3 = h(a, 7)" "$zg7"
+check "ZG7 =..: a list written out, its elements term expressions" "U4 = pair(1, f(k(2), \[1\]))" "$zg7"
+check "ZG7 =..: the writer of one composition read by another" "U5 = s(s(0))" "$zg7"
+check "ZG8 =..: a list that holds a channel composes a term of type _" \
+    "the body occurrence produces _, which is not within what the head occurrence hands out (Term)" "$(zg_term term_univ_wildcard.glp)"
 
 echo ""
 

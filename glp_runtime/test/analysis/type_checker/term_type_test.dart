@@ -35,6 +35,10 @@ import 'package:glp_runtime/analysis/type_checker/program_dfa.dart';
 import 'package:glp_runtime/analysis/type_checker/subtyping.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
+import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart';
+import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
 final _root = File('../programs/self.glp').absolute.path;
@@ -237,6 +241,38 @@ void main() {
     });
   });
 
+  group('Type checking of =.. and ..= (TGLP typed-constant-readers.tex)', () {
+    ast.Term parse(String text) {
+      final program = Parser(Lexer('p :- q($text).').tokenize()).parseModule();
+      return program.procedures.single.clauses.single.body!.single.args.single;
+    }
+
+    bool isTerm(String name) => name == 'T';
+    bool isList(String name) => name == 'Ts';
+
+    test('a term expression: a constant, a reader of a Term, a structure or '
+        'a list cell over term expressions', () {
+      for (final t in const [
+        'a', '1', '2.5', '[]', 'T?', 'f(T?, 1)', '[T?, g(a)]', '[a|T?]',
+      ]) {
+        expect(isTermExpression(parse(t), isTerm), isTrue, reason: t);
+      }
+      for (final t in const ['T', 'X?', 'f(X?)', '[a, X?]', 'f(T)', '_']) {
+        expect(isTermExpression(parse(t), isTerm), isFalse, reason: t);
+      }
+    });
+
+    test('a list of terms: the empty list, a reader of a Stream(Term), a '
+        'cell of a term expression and a list of terms', () {
+      for (final t in const ['[]', 'Ts?', '[a, T?]', '[f(T?)|Ts?]']) {
+        expect(isListOfTerms(parse(t), isTerm, isList), isTrue, reason: t);
+      }
+      for (final t in const ['T?', '[a|T?]', '[X?]', 'f(a)', 'Ts', '[a|X?]']) {
+        expect(isListOfTerms(parse(t), isTerm, isList), isFalse, reason: t);
+      }
+    });
+  });
+
   group('programs over Term', () {
     test('the positive fixture loads', () {
       expect(_refusal('positive/term_type.glp'), isEmpty);
@@ -253,8 +289,18 @@ void main() {
           contains('writer requires ↑ (produce), got ↓ (consume)'));
       expect(_refusal('negative/term/term_union.glp'),
           contains('overlaps with the other alternatives of Item'));
-      expect(_refusal('negative/term/term_wildcard.glp'),
-          contains('writer type _ is not a subtype of Term'));
+    });
+
+    test('=.. and ..= over Terms: the positive fixture loads', () {
+      expect(_refusal('positive/term_univ.glp'), isEmpty);
+    });
+
+    test('=.. over a list that is no list of terms composes a term of type _',
+        () {
+      expect(
+          _refusal('negative/term/term_univ_wildcard.glp'),
+          contains('the body occurrence produces _, which is not within what '
+              'the head occurrence hands out (Term)'));
     });
 
     test('a type a program defines under the name Term is that definition',

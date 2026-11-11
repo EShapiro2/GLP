@@ -1,0 +1,7 @@
+%% A goal T =.. L whose L is no list of terms is checked at the root's
+%% declaration, =..(_, Stream(_)?), and types T as _ (TGLP
+%% typed-constant-readers.tex, "Type checking of =.. and ..=").  Refused: the
+%% list holds a channel, so T is of type _, and _ is not passed at Term.
+
+procedure wrap(Channel(Integer, Integer)?, Term).
+wrap(Ch, T?) :- T =.. [box, Ch?].

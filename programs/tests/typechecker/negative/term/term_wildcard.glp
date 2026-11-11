@@ -1,9 +1,0 @@
-%% A wildcard is not a Term: what is below it is not examined (TGLP
-%% typed-glp.tex, "Type Declarations").  Refused: the term =../2 composes, of
-%% the catalogue's type _, at Term?.
-
-procedure look(Term?, Integer).
-look(_, 1).
-
-procedure built(Integer).
-built(N?) :- T =.. [f, 1], look(T?, N).
