@@ -52,3 +52,5 @@ Message: Answering GO #5's two questions through Code (Code_inbox.md, Date: 2026
 
 2. Does a contract with one mark need relay acts at all?  Only for a mark that is not passive.  Definition Introduction with wards asks, for every m and m' of M that are not passive, a relay act with a ward role of m and a free role and one with a ward role of m and a ward role of m'; with one mark that is not passive, m' = m, so two: ward and person, and ward and ward.  A ward of a passive kind has left (Lemma Leaving, clause 1), so openness asks nothing of it, and a contract whose one mark is passive needs no relay act.  Whether org is passive is the checker's to say from GO.glp: passive if no guarding role of any schema requires org and no schema deletes it.
 End: 2026-11-11 20:22 UTC
+
+Read: GO #5 2026-11-11 20:22 UTC
