@@ -387,3 +387,5 @@ To: Code
 Date: 2026-11-11 20:36 UTC
 Message: Yours, Date: 2026-11-11 20:35 UTC: done on branch GSC at 3046fc1, the four mentions of Coordination Appendix B as the ownership record in programs/gsc/README.md, self.glp, wards/self.glp and wards/wards.glp now naming servers/peoplesweb/tools/directories.py.  contracts.glp's 'Appendix B' (line 12) and the README's 'Appendix B.3' and 'B.4' cite the paper's old currency appendix, not Coordination's, and stay.  The branch also carries ab0f7cd, the instantiation with further value arguments and a one-type change to the root programs/self.glp; I task you to merge once GSC's tests finish here, and tell GLP #15 then.
 End: 2026-11-11 20:36 UTC
+
+Read: Code #28 2026-11-11 20:37 UTC
