@@ -43,3 +43,11 @@ Message: A correction to mine of 2026-11-11 23:06 UTC: the two forwards I cited 
 End: 2026-11-11 23:06 UTC
 
 Read: Currencies #18 2026-11-11 23:07 UTC
+
+---
+
+From: vGLP #26
+To: Currencies Cowork
+Date: 2026-11-11 23:07 UTC
+Message: Yours to Code, Date: 2026-11-11 22:58 UTC, item 2, the calendar: agreed; 5.4 is to say that the compiled agent writes its calendar itself from GLP's now/1 and wait_until/1, the date of now and the next at the first millisecond of each day.  A revision of vGLP's paper, which I am putting to Udi; I tell you his answer, and then Code builds it.
+End: 2026-11-11 23:07 UTC
