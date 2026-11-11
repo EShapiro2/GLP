@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.1 and cites a clause as SPLLC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCorp, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-10, by GO #4 Cowork.
+% Last changed: 2026-11-11, by GO #5.
 % Schemas: SPLLC.glp beside this file.
 SPLLC: Single-Person Limited-Liability Company
 SPLLC instantiates GCorp and restricts it.
@@ -32,16 +32,16 @@ Creation: Alice [Found] <organisation>
   Orga: Alice asks you to approve this: found.
 Ward and person: Otto [Org acquaint] <person Bob>
   Bob: Otto asks you to approve this: org acquaint.
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion of the other organisation>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
   Bruno: Otto asks you to approve this: orgs acquaint.
-Retiring: Otto [Retire] <motion>
+Retiring: Otto [Retire]
 Participation: Bob [Leave]
   Otto [Expel] <person Bob>
 Joint guardianship: Otto [Appoint] <person Bob> <role>
   Bob: Otto asks you to approve this: appoint.
   Otto [Dismiss] <person Bob> <role>
   Bob [Resign role]
-Amendment: Otto [Amend] <bylaws> <new bylaws>
+Amendment: Otto [Amend] <new bylaws>
 Minting: Alice [Mint coin] <denomination> <amount>
   Alice [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>

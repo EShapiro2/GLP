@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.4 and cites a clause as GNM:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GNO, GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and REC, Recommendations (programs/gce).
-% Last changed: 2026-11-10, by GO #4 Cowork.
+% Last changed: 2026-11-11, by GO #5.
 % Schemas: GNM.glp beside this file.
 GNM: Network Marketplace
 GNM extends GNO, GDO (GRH, Grassroots Ride-Hailing, in preparation) and REC.
@@ -46,18 +46,18 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move gno stake] <stake> <motion>
 Creation: Alice [Found] <organisation> <denomination>
   Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob> <motion>
+Ward and person: Otto [Org acquaint] <person Bob>
   Bob: Otto asks you to approve this: org acquaint.
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
   Bruno: Otto asks you to approve this: orgs acquaint.
-Retiring: Otto [Retire] <motion>
-Participation: Bob [Join] <person Otto> <motion>
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
   Otto: Bob asks you to approve this: join.
-Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+Joint guardianship: Otto [Appoint] <person Bob> <role>
   Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role> <motion>
+  Otto [Dismiss] <person Bob> <role>
   Bob [Resign role]
-Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Amendment: Otto [Amend] <new bylaws>
 Minting: Alice [Mint coin] <denomination> <amount>
   Alice [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
@@ -73,28 +73,28 @@ Escrow: Alice [Deposit] <amount>
   Bob: Carol asks you to approve this: release.
   Carol [Return] <amount>
   Alice: Carol asks you to approve this: return.
-Treasurers: Otto [Cc join] <person Bob> <denomination> <stake> <motion>
+Treasurers: Otto [Cc join] <person Bob>
   Bob: Otto asks you to approve this: cc join.
   Bob [Cc resign]
-  Otto [Cc remove] <person Bob> <denomination> <motion>
+  Otto [Cc remove] <person Bob>
 Drawing: Alice [Cc draw] <amount>
-Account: Otto [Gbcc record first] <person Alice> <Dollars> <motion>
-  Otto [Gbcc record] <person Alice> <Dollars> <paid so far> <motion>
-Stake: Otto [Gno stake] <stake> <motion>
-Arbitration: Alice [Gno raise c] <person Bob> <person Carol> <deal>
-  Bob [Gno raise p] <person Alice> <person Carol> <deal>
-  Carol [Gno arbitrate] <person Alice> <person Bob> <deal> <payment> <deposit> <fee> <to customer> <to provider>
+Account: Otto [Gbcc record first] <person Alice> <Dollars>
+  Otto [Gbcc record] <person Alice>
+Stake: Otto [Gno stake] <stake>
+Arbitration: Alice [Gno raise c] <deal> <person Carol>
+  Bob [Gno raise p] <deal> <person Carol>
+  Carol [Gno arbitrate] <deal> <person Alice> <person Bob> <fee> <to customer> <to provider>
 Pointing to friend: Alice [Point friend]
 Transitive pointing: Alice [Point transitive]
 Ceasing to point: Alice [Unpoint]
-Listing: Bob [Gnm list] <limit> <denomination> <price> <terms>
+Listing: Bob [Gnm list] <limit> <price> <terms>
   Alice [Gnm pass]
   Bob [Gnm withdraw]
 Order: Alice [Gnm order] <payment> <deposit> <fee> <deal>
   Bob: Alice asks you to approve this: gnm order.
-Delivery: Alice [Gnm deliver] <organisation> <person Bob> <payment> <deposit> <fee>
-Cancelling: Alice [Gnm cancel c] <organisation> <person Bob> <payment> <deposit> <fee>
-  Bob [Gnm cancel p] <organisation> <person Alice> <payment> <deposit> <fee>
+Delivery: Alice [Gnm deliver] <organisation> <person Bob>
+Cancelling: Alice [Gnm cancel c] <organisation> <person Bob> <to customer> <to provider> <payment to provider> <deposit to provider>
+  Bob [Gnm cancel p] <organisation> <person Alice> <to customer> <to provider> <payment to provider> <deposit to provider>
 Review: Alice [Recommend] <stake>
 Showing: Bob [Show]
 Withdrawing: Alice [Withdraw recommendation]

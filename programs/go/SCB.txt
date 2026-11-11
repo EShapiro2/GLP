@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.5 and cites a clause as SCB:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-10, by GO #4 Cowork.
+% Last changed: 2026-11-11, by GO #5.
 % Schemas: SCB.glp beside this file.
 SCB: Sovereign Central Bank
 SCB instantiates GBank and restricts it.
@@ -43,23 +43,23 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move amend] <bylaws> <new bylaws> <motion>
   Otto [Move scb rate] <maturity> <rate> <motion>
   Otto [Move scb lend] <denomination> <amount> <t> <fee> <rate> <motion>
-Creation: Greta [Gov found] <person Alice> <organisation> <denomination> <motion of the founding organisation>
+Creation: Greta [Gov found] <person Alice> <organisation> <denomination>
   Alice: Greta asks you to approve this: gov found.
   Orga: Greta asks you to approve this: gov found.
-Ward and person: Otto [Org acquaint] <person Bob> <motion>
+Ward and person: Otto [Org acquaint] <person Bob>
   Bob: Otto asks you to approve this: org acquaint.
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
   Bruno: Otto asks you to approve this: orgs acquaint.
-Retiring: Otto [Retire] <motion>
-Participation: Bob [Join] <person Otto> <motion>
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
   Otto: Bob asks you to approve this: join.
-Counterparties: Bob [Leave] <person Otto> <motion>
+Counterparties: Bob [Leave] <person Otto>
   Otto: Bob asks you to approve this: leave.
-Joint guardianship: Greta [Appoint] <organisation> <person Bob> <role> <motion of the founding organisation>
+Joint guardianship: Greta [Appoint] <organisation> <person Bob> <role>
   Bob: Greta asks you to approve this: appoint.
-  Greta [Dismiss] <organisation> <person Bob> <role> <motion of the founding organisation>
+  Greta [Dismiss] <organisation> <person Bob> <role>
   Bob [Resign role]
-Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Amendment: Otto [Amend] <new bylaws>
 Minting: Alice [Mint coin] <denomination> <amount>
   Alice [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
@@ -75,6 +75,6 @@ Escrow: Alice [Deposit] <amount>
   Bob: Carol asks you to approve this: release.
   Carol [Return] <amount>
   Alice: Carol asks you to approve this: return.
-Policy rate: Otto [Scb rate] <maturity> <rate> <motion>
-Lending: Bob [Scb lend] <person Otto> <denomination> <amount> <fee> <rate> <motion>
+Policy rate: Otto [Scb rate] <maturity> <rate>
+Lending: Bob [Scb lend] <person Otto> <denomination> <amount> <maturity> <bonds>
   Otto: Bob asks you to approve this: scb lend.
