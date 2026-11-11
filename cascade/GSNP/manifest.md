@@ -1,10 +1,10 @@
 # A run of the cascade on GSNP
 
-- Contract: `GSNP` (`gsnp` to the checker), its owner's two files `programs/gai/GSNP.txt` and `programs/gai/GSNP.glp`, copied here as they stood at `b5ee704f`.
+- Contract: `GSNP` (`gsnp` to the checker), its owner's two files `programs/gai/GSNP.txt` and `programs/gai/GSNP.glp`, copied here as they stood at `d7e83e45`.
 - The paper: `https://github.com/EShapiro2/GAI-Grassroots-Building-AI-Resilience-with-AI.git` at `229da098`, for the paper's own record.
 - An instance of gnw, programs/gsc/GnW.glp, under [=(ward, agent), =(creator, principal), =(created, principal_of), =(guardian_of, operator_of), =(guarded_by, operated_by), =(retired, retired_agent), =(ward_acquaint, agent_acquaint), =(ward_befriend, agent_befriend), =(ward_unfriend, agent_unfriend), =(ward_end, agent_end), =(wards_acquaint, agents_acquaint), =(wards_befriend, agents_befriend)]: its term formed by programs/gsc's instantiate/4 from the base's, its file holding only what it adds or replaces (GSC, Definition Parametric contract).
-- The tools: this repository at `b5ee704f` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-11 23:05 UTC by `cascade.sh gsnp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `d7e83e45` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 23:42 UTC by `cascade.sh gsnp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
