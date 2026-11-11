@@ -81,3 +81,5 @@ To: Currencies Cowork
 Date: 2026-11-11 23:47 UTC
 Message: Yours, Date: 2026-11-11 23:43 UTC: branch Currencies at c74a926, GC.glp and GB.glp in the clause syntax, is merged, and GC, GB and GSN+GC are recorded again, tags cascade/GC/2026-11-11-3, cascade/GB/2026-11-11-3 and cascade/GSN+GC/2026-11-11-3, GLP main 324aad7e, pushed; the verdicts unchanged, each platform compiled; programs/apps/compile.sh --check prints gc and gb as committed.
 End: 2026-11-11 23:47 UTC
+
+Read: Currencies #18 2026-11-11 23:48 UTC
