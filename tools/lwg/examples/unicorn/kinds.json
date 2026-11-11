@@ -1,0 +1,66 @@
+{
+ "14": {
+  "kind": "boundary",
+  "note": "who may be a member: employees"
+ },
+ "15": {
+  "kind": "scope",
+  "note": ""
+ },
+ "16": {
+  "kind": "boundary",
+  "note": "the directors approve each application"
+ },
+ "17": {
+  "kind": "choice",
+  "note": "duties of a member"
+ },
+ "18": {
+  "kind": "information",
+  "note": ""
+ },
+ "19": {
+  "kind": "information",
+  "note": ""
+ },
+ "20": {
+  "kind": "boundary",
+  "note": "five ways membership ends"
+ },
+ "21": {
+  "kind": "aggregation",
+  "note": "also a hearing before the vote"
+ },
+ "22": {
+  "kind": "payoff",
+  "note": "also a boundary rule: re-admission"
+ },
+ "32": {
+  "kind": "information",
+  "note": "notice before a meeting"
+ },
+ "37": {
+  "kind": "aggregation",
+  "note": "quorum"
+ },
+ "47": {
+  "kind": "aggregation",
+  "note": "weight"
+ },
+ "49": {
+  "kind": "aggregation",
+  "note": "ties"
+ },
+ "53": {
+  "kind": "aggregation",
+  "note": "which rule for which act"
+ },
+ "54": {
+  "kind": "aggregation",
+  "note": "the two thresholds"
+ },
+ "55": {
+  "kind": "aggregation",
+  "note": ""
+ }
+}

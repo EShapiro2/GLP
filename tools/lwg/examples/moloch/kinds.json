@@ -1,0 +1,42 @@
+{
+ "1": {
+  "kind": "position",
+  "note": "the member is a holder of shares"
+ },
+ "2": {
+  "kind": "choice",
+  "note": ""
+ },
+ "3": {
+  "kind": "payoff",
+  "note": "the exit right (ragequit)"
+ },
+ "4": {
+  "kind": "boundary",
+  "note": "who may propose; a deposit"
+ },
+ "5": {
+  "kind": "boundary",
+  "note": "what a proposal names"
+ },
+ "6": {
+  "kind": "payoff",
+  "note": "escrow; return on rejection"
+ },
+ "7": {
+  "kind": "aggregation",
+  "note": "period; one vote; at most 5 proposals a day"
+ },
+ "8": {
+  "kind": "aggregation",
+  "note": ""
+ },
+ "9": {
+  "kind": "aggregation",
+  "note": "voting closes, then a period for exit"
+ },
+ "10": {
+  "kind": "choice",
+  "note": "who carries out a decided proposal"
+ }
+}

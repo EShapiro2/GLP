@@ -1,0 +1,211 @@
+{
+ "name": "LWGA",
+ "title": "Association under the Israeli Model Bylaws",
+ "source": "Amutot Law, 5740-1980, First Schedule",
+ "base": "GCoop",
+ "roles": {
+  "1": "member",
+  "2": "committee member"
+ },
+ "rules": {
+  "meeting": {
+   "body": 1,
+   "weight": "one",
+   "base": "cast",
+   "threshold": [
+    1,
+    2,
+    true
+   ],
+   "quorum": [
+    1,
+    4
+   ],
+   "window": null,
+   "open_days": 10
+  },
+  "committee": {
+   "body": 2,
+   "weight": "one",
+   "base": "cast",
+   "threshold": [
+    1,
+    2,
+    true
+   ],
+   "quorum": null,
+   "window": null
+  }
+ },
+ "acts": {
+  "*": "meeting",
+  "coop_join": "committee"
+ },
+ "preset": "quorum in ballots",
+ "rows": {
+  "1(a)": {
+   "mapped_to": "founding: the founder is the first member",
+   "status": "built",
+   "question": "The app has no registrar. Does the association also register with the Registrar of Amutot?"
+  },
+  "1(b)": {
+   "mapped_to": "joining is an act of the applicant, who thereby undertakes the contract",
+   "status": "built"
+  },
+  "1(c)": {
+   "mapped_to": "act: admit a member, decided by the committee rule; on appeal, the same act decided by the meeting rule",
+   "status": "built",
+   "question": "An appeal against a refusal goes to the general meeting. Build it as a second vote by the members?"
+  },
+  "2(a)": {
+   "mapped_to": "weight: one vote each; any member may be elected to the committee",
+   "status": "built"
+  },
+  "2(b)": {
+   "mapped_to": "no act of the organization",
+   "status": "no clause"
+  },
+  "2(c)": {
+   "mapped_to": "dues",
+   "status": "not built",
+   "question": "Dues need coins. In which coins are dues paid, and does the committee's decision need the members' vote each time?"
+  },
+  "2(d)": {
+   "mapped_to": "dues",
+   "status": "not built"
+  },
+  "3(a)": {
+   "mapped_to": "act: leave, by the member alone; act: expel",
+   "status": "built",
+   "question": "Leaving takes effect at once in the app; the bylaws ask 30 days' notice. Who records a member's death?"
+  },
+  "3(b)": {
+   "mapped_to": "act: expel; decided by the meeting rule",
+   "status": "built",
+   "question": "The meeting may expel only on the committee's proposal and for four grounds. Who attests the ground, and must a committee member move the motion?"
+  },
+  "3(c)": {
+   "mapped_to": "hearing before expulsion (inclusion)",
+   "status": "open",
+   "question": "How is the member heard: a written response shown to all before the vote, or a live hearing?"
+  },
+  "4": {
+   "mapped_to": "absorbed: the app delivers every motion to every member (inclusion)",
+   "status": "absorbed"
+  },
+  "5": {
+   "mapped_to": "absorbed: there is no time or place",
+   "status": "absorbed"
+  },
+  "6": {
+   "mapped_to": "notice becomes a period: a motion of the members can be decided only ten days or more after it was moved (inclusion)",
+   "status": "built",
+   "question": "Ten days' notice: should a motion stay open for at least ten days before it can be decided?"
+  },
+  "7": {
+   "mapped_to": "act: elect a member to the committee; decided by the meeting rule",
+   "status": "built",
+   "question": "The audit committee is not built. Reports to the meeting are an undertaking of the committee?"
+  },
+  "8(a)": {
+   "mapped_to": "quorum in ballots: a quarter of the members must vote",
+   "status": "built",
+   "question": "Preset used: quorum in ballots. The bylaws count those present at the opening; here it is those who voted. Agreed?"
+  },
+  "8(b)": {
+   "mapped_to": "second call with no quorum (decision)",
+   "status": "not built",
+   "question": "If a motion fails for lack of quorum, may it be moved again with no quorum, as the adjourned meeting allows?"
+  },
+  "9": {
+   "mapped_to": "absorbed: the app orders the procedure; no chair or secretary of a meeting",
+   "status": "absorbed"
+  },
+  "10": {
+   "mapped_to": "meeting rule: more than half of the votes cast",
+   "status": "built",
+   "question": "The chair may break a tie. With no chair, a tie fails. Agreed?"
+  },
+  "11": {
+   "mapped_to": "absorbed: the app records every act",
+   "status": "absorbed"
+  },
+  "12": {
+   "mapped_to": "role: committee member",
+   "status": "built",
+   "question": "At least two committee members: enforce, or leave to the members?"
+  },
+  "13(a)": {
+   "mapped_to": "act: remove from the committee, by the meeting rule; no fixed term",
+   "status": "built"
+  },
+  "13(b)": {
+   "mapped_to": "act: resign a role, by the committee member alone",
+   "status": "built",
+   "question": "Who records a court order that ends a committee member's office?"
+  },
+  "14(a)": {
+   "mapped_to": "act: appoint to the committee, decided by the committee rule",
+   "status": "built",
+   "question": "Build co-option by the committee, or leave elections to the members only? (The bylaws limit it to a vacancy and until the next meeting; neither limit is built.)"
+  },
+  "14(b)": {
+   "mapped_to": "substitute for an absent committee member",
+   "status": "not built"
+  },
+  "15": {
+   "mapped_to": "left to the committee",
+   "status": "no clause"
+  },
+  "16": {
+   "mapped_to": "committee rule: more than half of the votes cast; a tie fails",
+   "status": "built"
+  },
+  "17": {
+   "mapped_to": "absorbed: the app records every act",
+   "status": "absorbed"
+  },
+  "18": {
+   "mapped_to": "signing for the association by two committee members",
+   "status": "not built",
+   "question": "Which acts need two signers?"
+  },
+  "19": {
+   "mapped_to": "audit committee",
+   "status": "not built"
+  },
+  "20": {
+   "mapped_to": "branches: an organization may found another",
+   "status": "not built"
+  },
+  "21": {
+   "mapped_to": "undertaking on dissolution",
+   "status": "not built",
+   "question": "State the transfer of surplus assets as an undertaking of the members?"
+  }
+ },
+ "also": {
+  "coop_join_appeal": {
+   "copy_of": "coop_join",
+   "rule": "meeting",
+   "clause": "Appeal: Bob becomes a member of Orga also by an act of Bob and the members."
+  },
+  "coop_board_fill": {
+   "copy_of": "coop_board",
+   "rule": "committee",
+   "clause": "Filling a seat: the committee members appoint a member to the committee."
+  }
+ },
+ "definition": "An association is a cooperative with two roles, member, held by every participant, and committee member; the committee members decide the admission of a member when {committee}; the members decide every other act of the association when {meeting}.",
+ "names": "Alice and Bob are persons, Orga an association.",
+ "clauses": [
+  "■ Founding.  Alice may found Orga and become its first member.",
+  "■ Admission.  Bob becomes a member of Orga by an act of Bob and the committee members.",
+  "■ Voting against.  A member or a committee member may vote against a proposed act of Orga, once, in place of voting for it.",
+  "■ Appeal.  Bob becomes a member of Orga also by an act of Bob and the members.",
+  "■ Filling a seat.  The committee members may appoint a member to the committee."
+ ],
+ "act_names": {
+  "coop_join": "admit a member"
+ }
+}

@@ -1,0 +1,108 @@
+[
+ {
+  "id": "1",
+  "text": "Moloch has a native asset called shares. Shares are minted and assigned when a new member is accepted into the Guild and provide voting rights ...",
+  "kind": "position",
+  "note": "the member is a holder of shares",
+  "mapped_to": "shares of the organization; a vote counts the shares its voter holds",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "2",
+  "text": "They are non-transferrable ...",
+  "kind": "choice",
+  "note": "",
+  "mapped_to": "the acts that pass a coin on exclude shares; the organization still pays out the shares it issues",
+  "status": "built",
+  "question": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "3",
+  "text": "... but can be irreversibly redeemed at any time to collect a proportional share of all ETH held by the Guild in the Guild Bank.",
+  "kind": "payoff",
+  "note": "the exit right (ragequit)",
+  "mapped_to": "act: exit, by the shareholder alone: give up shares and take the same part of a coin the organization holds; the shares are cancelled",
+  "status": "built",
+  "question": "Exit takes a part of one kind of coin at a time; with several kinds in the treasury, the shareholder exits in several steps. Agreed?",
+  "answer": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "4",
+  "text": "To combat spam, new membership proposals can only be submitted by existing members and require a 10 ETH deposit.",
+  "kind": "boundary",
+  "note": "who may propose; a deposit",
+  "mapped_to": "a shareholder moves a motion to issue shares; no deposit",
+  "status": "built",
+  "question": "The deposit against spam is not built. Needed?",
+  "answer": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "5",
+  "text": "The membership proposal includes the number of shares the applicant is requesting, and either the amount of ETH the applicant is offering as tribute or a pledge ...",
+  "kind": "boundary",
+  "note": "what a proposal names",
+  "mapped_to": "act: issue shares; the motion names the number of shares",
+  "status": "built",
+  "question": "The motion does not name the applicant or the tribute: the organization issues the shares to itself and then pays them out. Default kept. Tie the tribute to the grant?",
+  "answer": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "6",
+  "text": "All ETH offered as tribute is held in escrow by the Moloch.sol contract until the proposal vote is completed and processed. If a proposal vote passes, the applicant becomes a member ...",
+  "kind": "payoff",
+  "note": "escrow; return on rejection",
+  "mapped_to": "escrow of the tribute",
+  "status": "not built",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "7",
+  "text": "Proposals are voted on in the order they are submitted. The voting period for each proposal is 7 days. During the voting period, members can vote (only once, no redos) ...",
+  "kind": "aggregation",
+  "note": "period; one vote; at most 5 proposals a day",
+  "mapped_to": "a shareholder votes once on a motion; the motion can be decided only after its period",
+  "status": "built",
+  "question": "Order of proposals and the limit of five a day are not built. Needed?",
+  "answer": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "8",
+  "text": "Proposal votes are determined by simple majority of votes cast on the proposal, with no quorum requirement.",
+  "kind": "aggregation",
+  "note": "",
+  "mapped_to": "the shares rule: more than half of the shares voted are for; no quorum",
+  "status": "built",
+  "question": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "9",
+  "text": "At the end of the voting period, proposals enter into a 7 day grace period before the proposal is processed. The grace period gives members who voted No or didn't vote the opportunity to exit ...",
+  "kind": "aggregation",
+  "note": "voting closes, then a period for exit",
+  "mapped_to": "the motion can be decided only 14 days or more after it was moved",
+  "status": "built",
+  "question": "Voting does not close after 7 days here: votes stay open for the 14 days. A shareholder who voted for a motion may still exit before it is decided, which the document forbids. Default kept; neither is built.",
+  "answer": "",
+  "clause": "LWGM"
+ },
+ {
+  "id": "10",
+  "text": "At the end of the grace period, proposals are processed when anyone calls processProposal. A 0.1 ETH reward is deducted from the proposal deposit ...",
+  "kind": "choice",
+  "note": "who carries out a decided proposal",
+  "mapped_to": "a director takes the act once the rule holds; no reward",
+  "status": "built",
+  "question": "Here a director, not anyone, carries out a decided motion. Agreed?",
+  "answer": "",
+  "clause": "LWGM"
+ }
+]

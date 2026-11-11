@@ -1,0 +1,328 @@
+[
+ {
+  "id": "1(a)",
+  "text": "קבלת חברים: מייסדי העמותה הנם חברים בה מיום רישום העמותה בפנקס העמותות.",
+  "kind": "boundary",
+  "note": "founders are members from registration; the registrar is outside",
+  "mapped_to": "founding: the founder is the first member",
+  "status": "built",
+  "question": "The app has no registrar. Does the association also register with the Registrar of Amutot?",
+  "answer": "Keep registration out for now. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "1(b)",
+  "text": "קבלת חברים: אדם החפץ להיות חבר העמותה יגיש לועד בקשה בלשון זו: () ”אני (שם, מען ומספר זהות) מבקש להיות חבר בעמותה (שם העמותה). מטרות העמותה ותקנונה ידועים לי. אם אתקבל כחבר בה, אני מתחייב לקיים את הוראות התקנון ואת החלטות האסיפה הכללית של העמותה“.",
+  "kind": "boundary",
+  "note": "the application is an undertaking to keep the bylaws",
+  "mapped_to": "joining is an act of the applicant, who thereby undertakes the contract",
+  "status": "built",
+  "question": "",
+  "clause": "LWGA"
+ },
+ {
+  "id": "1(c)",
+  "text": "קבלת חברים: ההחלטה בדבר קבלת המבקש כחבר העמותה או אי קבלתו נתונה בידי הועד; סירב הועד לקבל את המבקש, רשאי הוא לערור על הסירוב לפני האסיפה הכללית הקרובה.",
+  "kind": "aggregation",
+  "note": "the committee decides admission; refusal may be appealed to the general meeting",
+  "mapped_to": "act: admit a member, decided by the committee rule; on appeal, the same act decided by the meeting rule",
+  "status": "built",
+  "question": "An appeal against a refusal goes to the general meeting. Build it as a second vote by the members?",
+  "answer": "Yes, or an appeal committee. (Nimrod) Built as a second vote by the members.",
+  "clause": "LWGA"
+ },
+ {
+  "id": "2(a)",
+  "text": "זכויות וחובות של חבר: חבר העמותה זכאי להשתתף ולהצביע בכל אסיפה כללית ויהיה לו קול אחד בכל הצבעה; הוא זכאי לבחור ולהיבחר לועד או לועדת הבקורת.",
+  "kind": "aggregation",
+  "note": "one member one vote; may elect and be elected",
+  "mapped_to": "weight: one vote each; any member may be elected to the committee",
+  "status": "built",
+  "question": "",
+  "clause": "LWGA"
+ },
+ {
+  "id": "2(b)",
+  "text": "זכויות וחובות של חבר: חבר העמותה זכאי להשתתף בפעולות העמותה וליהנות משירותיה.",
+  "kind": "choice",
+  "note": "",
+  "mapped_to": "no act of the organization",
+  "status": "no clause",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "2(c)",
+  "text": "זכויות וחובות של חבר: הועד, באישור האסיפה הכללית, רשאי לקבוע דמי חבר שתשלומם יהיה חובה על החברים.",
+  "kind": "payoff",
+  "note": "dues, set by the committee with the meeting's approval",
+  "mapped_to": "dues",
+  "status": "not built",
+  "question": "Dues need coins. In which coins are dues paid, and does the committee's decision need the members' vote each time?",
+  "answer": "In the coins of the association. (Nimrod) Not built yet.",
+  "clause": ""
+ },
+ {
+  "id": "2(d)",
+  "text": "זכויות וחובות של חבר: פקיעת החברות בעמותה אינה פוטרת מסילוק התשלומים שהגיעו לעמותה מן החבר ערב פקיעת חברותו בעד התקופה שעד לפקיעת חברותו.",
+  "kind": "payoff",
+  "note": "",
+  "mapped_to": "dues",
+  "status": "not built",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "3(a)",
+  "text": "פקיעת חברות: החברות בעמותה פוקעת – (1) במות החבר, ובחבר שהוא תאגיד – בגמר פירוקו; (2) בפרישתו מן העמותה; הודעת פרישה בכתב תינתן לועד שלושים יום מראש; (3) בהוצאתו מן העמותה.",
+  "kind": "boundary",
+  "note": "membership ends by death, by leaving on 30 days' notice, or by expulsion",
+  "mapped_to": "act: leave, by the member alone; act: expel",
+  "status": "built",
+  "question": "Leaving takes effect at once in the app; the bylaws ask 30 days' notice. Who records a member's death?",
+  "answer": "Leaving takes effect at once. Nobody records a death for now; maybe a registrar committee later. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "3(b)",
+  "text": "פקיעת חברות: האסיפה הכללית רשאית, לפי הצעת הועד, להחליט על הוצאת חבר מן העמותה מאחד הטעמים הבאים: (1) החבר לא שילם לעמותה את המגיע לה ממנו; (2) החבר לא קיים את הוראות התקנון או החלטה של האסיפה הכללית; (3) החבר פועל בניגוד למטרות העמותה; (4) החבר הורשע בעבירה שמפאת מהותה, חומרתה או נסיבותיה אין הוא ראוי לשמש כחבר עמותה.",
+  "kind": "boundary",
+  "note": "expulsion by the meeting, on the committee's proposal, for listed grounds",
+  "mapped_to": "act: expel; decided by the meeting rule",
+  "status": "built",
+  "question": "The meeting may expel only on the committee's proposal and for four grounds. Who attests the ground, and must a committee member move the motion?",
+  "answer": "Any member may move the motion; no ground is attested. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "3(c)",
+  "text": "פקיעת חברות: לא יציע הועד לאסיפה כללית להוציא חבר מן העמותה אלא לאחר שנתן לו הזדמנות נאותה להשמיע טענותיו לפניו, ולא יציע מהטעמים האמורים בתקנת משנה (ב)(1), (2) או (3) אלא לאחר שהתרה בחבר ונתן לו זמן סביר לתיקון המעוות.",
+  "kind": "judgment",
+  "note": "proper opportunity to be heard; reasonable time to correct",
+  "mapped_to": "hearing before expulsion (inclusion)",
+  "status": "open",
+  "question": "How is the member heard: a written response shown to all before the vote, or a live hearing?",
+  "answer": "A signed act of the member, kept on record. (Nimrod) Not built yet.",
+  "clause": ""
+ },
+ {
+  "id": "4",
+  "text": "מתן הודעות לחבר: הזמנה, דרישה, התראה והודעה אחרת של העמותה לחבר יינתנו לו בכתב שיימסר לו ביד או יישלח בדואר רגיל אל מענו הרשום בפנקס החברים; לפי בקשת החבר בכתב תשנה העמותה את מענו הרשום בפנקס החברים.",
+  "kind": "information",
+  "note": "",
+  "mapped_to": "absorbed: the app delivers every motion to every member (inclusion)",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "5",
+  "text": "זמן ומקום: יומה, שעתה ומיקומה של אסיפה כללית ייקבעו בידי הועד.",
+  "kind": "information",
+  "note": "",
+  "mapped_to": "absorbed: there is no time or place",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "6",
+  "text": "הזמנה: אסיפה כללית תכונס על ידי הודעה שתינתן לכל חבר לפחות עשרה ימים מראש ותציין יום, שעה, מקום וסדר יום לאסיפה.",
+  "kind": "information",
+  "note": "ten days' notice with the agenda",
+  "mapped_to": "notice becomes a period: a motion of the members can be decided only ten days or more after it was moved (inclusion)",
+  "status": "built",
+  "question": "Ten days' notice: should a motion stay open for at least ten days before it can be decided?",
+  "answer": "Yes. (Nimrod) Built: ten days.",
+  "clause": "LWGA"
+ },
+ {
+  "id": "7",
+  "text": "תפקידים של אסיפה כללית רגילה: אסיפה כללית רגילה תשמע דינים וחשבונות על פעולות הועד ועל פעולות ועדת הבקורת, תדון בהם ובדין וחשבון הכספי שהגיש לה הועד, תחליט על אישורם, ותבחר בועד ובועדת הבקורת.",
+  "kind": "boundary",
+  "note": "the ordinary meeting elects the committee and the audit committee, and hears reports",
+  "mapped_to": "act: elect a member to the committee; decided by the meeting rule",
+  "status": "built",
+  "question": "The audit committee is not built. Reports to the meeting are an undertaking of the committee?",
+  "answer": "Not needed; every act is logged. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "8(a)",
+  "text": "מנין: אסיפה כללית לא תיפתח אם לא נכחו לפחות רבע ממספר חברי העמותה; היה מנין זה נוכח בפתיחת האסיפה, רשאית היא להמשיך בדיוניה ולקבל החלטות אף אם פחת מספר הנוכחים.",
+  "kind": "aggregation",
+  "note": "quorum; Ostrom files quorum under position rules",
+  "mapped_to": "quorum in ballots: a quarter of the members must vote",
+  "status": "built",
+  "question": "Preset used: quorum in ballots. The bylaws count those present at the opening; here it is those who voted. Agreed?",
+  "answer": "Agreed. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "8(b)",
+  "text": "מנין: לא נתכנס המנין האמור תוך שעה מהזמן הנקוב בהזמנה, יראו את האסיפה כנדחית, ללא צורך בהזמנה נוספת, בשבוע ימים לאותה שעה ולאותו מקום, ובאסיפה נדחית זו יהיו הנוכחים רשאים לדון ולהחליט, יהיה מספרם אשר יהיה.",
+  "kind": "aggregation",
+  "note": "adjourned meeting decides with any number",
+  "mapped_to": "second call with no quorum (decision)",
+  "status": "not built",
+  "question": "If a motion fails for lack of quorum, may it be moved again with no quorum, as the adjourned meeting allows?",
+  "answer": "No second call for now; the motion may be moved again under the same rule. (Left to Claude by Nimrod)",
+  "clause": ""
+ },
+ {
+  "id": "9",
+  "text": "יושב ראש ומזכיר: אסיפה כללית תבחר, מבין חברי העמותה, יושב ראש ומזכיר לאסיפה.",
+  "kind": "position",
+  "note": "chair and secretary of the meeting",
+  "mapped_to": "absorbed: the app orders the procedure; no chair or secretary of a meeting",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "10",
+  "text": "החלטות: החלטות האסיפה הכללית יתקבלו ברוב קולות של המצביעים, זולת אם החוק או תקנון זה דרשו רוב אחר לקבלתן; היו הקולות שקולים, רשאי יושב ראש האסיפה להכריע.",
+  "kind": "aggregation",
+  "note": "majority of those voting; the chair may break a tie",
+  "mapped_to": "meeting rule: more than half of the votes cast",
+  "status": "built",
+  "question": "The chair may break a tie. With no chair, a tie fails. Agreed?",
+  "answer": "Agreed: a tie fails. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "11",
+  "text": "פרוטוקול: מזכיר האסיפה הכללית ינהל את פרוטוקול האסיפה.",
+  "kind": "information",
+  "note": "",
+  "mapped_to": "absorbed: the app records every act",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "12",
+  "text": "מספר החברים: מספר חברי הועד ייקבע בהחלטת האסיפה הכללית ולא יהיה פחות משנים.",
+  "kind": "position",
+  "note": "the committee has at least two members",
+  "mapped_to": "role: committee member",
+  "status": "built",
+  "question": "At least two committee members: enforce, or leave to the members?",
+  "answer": "Do not enforce. (Nimrod)",
+  "clause": "LWGA"
+ },
+ {
+  "id": "13(a)",
+  "text": "תקופת הכהונה: הועד יכהן מהיבחרו באסיפה כללית ועד שאסיפה כללית אחרת תבחר ועד חדש; חבר הועד היוצא יכול להיבחר לועד החדש.",
+  "kind": "boundary",
+  "note": "",
+  "mapped_to": "act: remove from the committee, by the meeting rule; no fixed term",
+  "status": "built",
+  "question": "",
+  "clause": "LWGA"
+ },
+ {
+  "id": "13(b)",
+  "text": "תקופת הכהונה: חבר הועד רשאי להתפטר בכל עת מכהונתו על ידי הודעה בכתב לועד; חבר הועד יחדל לכהן אם הוכרז פסול דין או אם ניתן לגביו צו לפתיחת הליכים לפי חוק חדלות פירעון ושיקום כלכלי, התשע״ח–2018.",
+  "kind": "boundary",
+  "note": "resignation; a court order is outside",
+  "mapped_to": "act: resign a role, by the committee member alone",
+  "status": "built",
+  "question": "Who records a court order that ends a committee member's office?",
+  "answer": "Anyone can record it. (Nimrod) Not built yet.",
+  "clause": "LWGA"
+ },
+ {
+  "id": "14(a)",
+  "text": "השלמת הועד: נתפנה מקומו של חבר הועד, רשאים הנותרים או הנותר למנות חבר אחר של העמותה לכהן כחבר הועד עד לאסיפה הכללית הקרובה; עד למינוי כזה רשאים הנותרים או הנותר להמשיך לפעול כועד.",
+  "kind": "boundary",
+  "note": "the remaining committee members fill a vacancy",
+  "mapped_to": "act: appoint to the committee, decided by the committee rule",
+  "status": "built",
+  "question": "Build co-option by the committee, or leave elections to the members only? (The bylaws limit it to a vacancy and until the next meeting; neither limit is built.)",
+  "answer": "Yes. (Nimrod) Built.",
+  "clause": "LWGA"
+ },
+ {
+  "id": "14(b)",
+  "text": "השלמת הועד: חבר הועד שנבצר ממנו למלא תפקידיו, רשאים הנותרים או הנותר למנות חבר העמותה למלא מקומו עד שישוב למלא תפקידיו.",
+  "kind": "boundary",
+  "note": "",
+  "mapped_to": "substitute for an absent committee member",
+  "status": "not built",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "15",
+  "text": "ישיבות הועד: הועד רשאי להסדיר בעצמו את מועד ישיבותיו, ההזמנה להן, המנין הדרוש בהן ודרך ניהולן.",
+  "kind": "judgment",
+  "note": "the committee regulates its own meetings",
+  "mapped_to": "left to the committee",
+  "status": "no clause",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "16",
+  "text": "החלטות: החלטות הועד יתקבלו ברוב קולות המצביעים; היו הקולות שקולים, לא נתקבלה ההצעה; החלטת כל חברי הועד פה אחד יכול שתתקבל גם שלא בישיבת הועד.",
+  "kind": "aggregation",
+  "note": "majority of those voting, a tie fails; or all, without a meeting",
+  "mapped_to": "committee rule: more than half of the votes cast; a tie fails",
+  "status": "built",
+  "question": "",
+  "clause": "LWGA"
+ },
+ {
+  "id": "17",
+  "text": "פרוטוקול: הועד ינהל פרוטוקול מישיבותיו והחלטותיו.",
+  "kind": "information",
+  "note": "",
+  "mapped_to": "absorbed: the app records every act",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "18",
+  "text": "זכות הייצוג: הועד רשאי להסמיך שניים או יותר מבין חבריו לחתום בשם העמותה על מסמכים שיחייבו אותה, ולבצע בשמה פעולות שהן בתחום סמכותו.",
+  "kind": "aggregation",
+  "note": "two or more authorized committee members sign for the association",
+  "mapped_to": "signing for the association by two committee members",
+  "status": "not built",
+  "question": "Which acts need two signers?",
+  "answer": "",
+  "clause": ""
+ },
+ {
+  "id": "19",
+  "text": "תחולת הוראות: הוראות תקנות 12 עד 17 יחולו, בשינויים המחוייבים, גם על ועדת הבקורת.",
+  "kind": "position",
+  "note": "audit committee, under the committee's provisions",
+  "mapped_to": "audit committee",
+  "status": "not built",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "20",
+  "text": "הקמת סניפים וארגונם: העמותה רשאית, בהחלטת האסיפה הכללית, להקים סניפים ולקבוע את ארגונם ואת סדרי ניהול עניניהם.",
+  "kind": "choice",
+  "note": "branches, by decision of the general meeting",
+  "mapped_to": "branches: an organization may found another",
+  "status": "not built",
+  "question": "",
+  "clause": ""
+ },
+ {
+  "id": "21",
+  "text": "העברת נכסים עודפים: פורקה העמותה ולאחר שנפרעו חובותיה במלואם נשארו נכסים, יועברו נכסים אלה לעמותה אחרת או לחברה לתועלת הציבור אחרת הרשומה אצל רשם ההקדשות כהגדרתו בחוק החברות, התשנ״ט–1999 בעלת מטרות דומות.",
+  "kind": "payoff",
+  "note": "surplus assets on dissolution; refers to the Companies Law",
+  "mapped_to": "undertaking on dissolution",
+  "status": "not built",
+  "question": "State the transfer of surplus assets as an undertaking of the members?",
+  "answer": "Not yet. (Nimrod)",
+  "clause": ""
+ }
+]
