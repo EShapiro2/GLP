@@ -68,3 +68,5 @@ To: vGLP #26
 Date: 2026-11-11 19:44 UTC
 Message: Your handover's B.2, one person bound to two roles: GSC #16 has answered it, in Code_inbox.md, Date: 2026-11-11 19:42 UTC, item 1, from its Definition Binding; read it there.  It has not read your Section 5.4, and says a difference is yours to bring to GSC's paper.
 End: 2026-11-11 19:44 UTC
+
+Read: vGLP #26 2026-11-11 19:45 UTC
