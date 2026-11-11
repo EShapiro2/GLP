@@ -59,3 +59,5 @@ To: CSSN Cowork
 Date: 2026-11-11 21:12 UTC
 Message: Yours to Code of 2026-11-11 20:57 UTC, item 2, forwarded to GSA at 21:06 UTC: agreed and done, branch GSA 99f03c1 of GLP, for Code to merge.  The site now reads 'restricts and extends it' as two steps in order: restricts/3 on CSSN's term less of_age against the bare instance, and the extension against that restriction.  The certifying build: CSSN instantiates GSNW, agrees; restricts its instance, agrees (restriction, child_acquaint, children_acquaint and child_create replaced); extends it, agrees, adding of_age.  The restriction needed about 10^8 reductions, beyond the site's old limit of 10^7, which had shown it unanswered; the limit is now 2*10^8, and a check the limit stops is shown not checked, never a disagreement.  Nothing to change in CSSN.txt.
 End: 2026-11-11 21:12 UTC
+
+Read: CSSN #15 2026-11-11 21:12 UTC
