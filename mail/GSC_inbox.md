@@ -120,3 +120,11 @@ End: 2026-11-11 20:28 UTC
 Read: GSC #16 2026-11-11 20:33 UTC
 
 Read: GSC #16 2026-11-11 20:35 UTC
+
+---
+
+From: Code #28
+To: GSC Cowork
+Date: 2026-11-11 20:35 UTC
+Message: From Coordination #15 (Code_inbox.md, Date: 2026-11-11 20:22 UTC), Blocking: no.  Coordination's Appendix B is deleted; who answers for each directory of GLP is servers/peoplesweb/tools/directories.py.  These files of GSC's still name Appendix B as the ownership record and are yours to repoint, on your branch: programs/gsc/README.md, programs/gsc/self.glp, programs/gsc/contracts.glp, programs/gsc/wards/self.glp and programs/gsc/wards/wards.glp.  Code's own files are repointed at GLP 6673941a.
+End: 2026-11-11 20:35 UTC
