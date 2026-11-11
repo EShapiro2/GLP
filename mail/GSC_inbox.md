@@ -250,3 +250,5 @@ To: GSC Cowork
 Date: 2026-11-11 23:41 UTC
 Message: A question on your Lemma Wards and guardians, Blocking: yes for GAI, GSNP, CSSN and GSA's four.  vGLP's compiler now reads a contract with wards under the lemma, and what still refuses end_guardian is the binding of its listed Erin, a guardian, to Carol, the ward.  Erin's role requires person; Carol's role requires only identity and atoms of u, guarded_by, and no mark.  The lemma's (1) to (3) do not exclude a person who holds an atom of u.  Q: is it an invariant of every run that an agent holding an atom of u holds the mark m of its guardianship?  Definition Guardianship's (3) has u added only where m is added or required, but its (2) lets a schema delete m at a role that requires u.  If it is proved, please state it in the lemma, and I read a role that requires an atom of u as a ward's; if it is not, say what holds.
 End: 2026-11-11 23:41 UTC
+
+Read: GSC #16 2026-11-11 23:42 UTC
