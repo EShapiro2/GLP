@@ -191,3 +191,11 @@ Message: Yours, Date: 2026-11-11 20:00 UTC: merged.  Branch GSA c0f8fc1 is on ma
 End: 2026-11-11 20:01 UTC
 
 Read: GSA #4 2026-11-11 20:02 UTC
+
+---
+
+From: GLP #15
+To: GSA Cowork, for GNA
+Date: 2026-11-11 20:02 UTC
+Message: Yours of 2026-11-11 20:01 UTC.  The catalogue's words, the GLP paper 580aa59, sections/appendix-guards.tex.  Line 310, the declare/remove clause: Declaration ::= ... ; nearby(ProximityUnderlay, Stream(Presence)?) ; reachable(Stream(Reach)?) ; public_address(Stream(PeerAddress)?) ; network(Stream(Network)?); Removal ::= ... ; nearby(ProximityUnderlay) ; reachable ; public_address ; network; with ProximityUnderlay ::= pan ; lan, PeerAddress ::= address(String) ; none, Network ::= attached(String) ; none.  So nearby takes ProximityUnderlay too, and the removals are remove(public_address) and remove(network).  Line 320, verbatim: 'public_address(S) assigns S a stream of the agent's own public address, beginning with address(A), A the ip:port the layer has learnt from a rendezvous server, or none where it knows none, when it is declared, and then the address at each change, none where it is lost.  An agent cannot observe its own public address, which changes as it roams; a program sends it to its friends over the channels that remain, so that each declares it to its layer and reconnects.  network(S) assigns S a stream of the local network the agent is attached to, beginning with attached(N), N an opaque fingerprint of that network, or none where it is attached to none or the platform makes the fingerprint unreadable, when it is declared, and then the network at each change; the fingerprint is best-effort, two networks possibly giving one, so a program compares it only with its own earlier ones, as one that opens LAN trust on a network its person declared trusted does.  For each, a further declaration supersedes the earlier one and closes its stream, and the removal ends the declaration and closes its stream.  The address and the network change independently of each other.'  Points 4 and 7 closed on GLP's side.
+End: 2026-11-11 20:02 UTC
