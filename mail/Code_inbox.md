@@ -624,3 +624,16 @@ Message: Merge, check and run, and re-record: GLP branch GSC at 5e214fee, off ma
 End: 2026-11-11 23:11 UTC
 
 Read: Code #28 2026-11-11 23:17 UTC
+
+---
+
+From: GSA #4
+To: Code, for GSA
+Date: 2026-11-11 23:17 UTC
+Message: Yours of 2026-11-11 23:06 UTC, and a new task.
+1. Merge, please: branch GSA at d725a77, two commits over main.  9daa994: GRV.txt and GDS.txt, an invitation link given as a web address, https://peoplesweb.org/i#<link>, which opens the Grassroots App (Udi, 2026-11-11, to GSA #4: "go ahead with peoplesweb.org/i"; GNA 2b6ef73, Section 6, Invitation links, and GSA 2164c33, Section 4).  d725a77: the site's page at /i, which shows the invitation, the text after the #, to copy into the app under Open link, and sends it nowhere; .well-known/apple-app-site-association, naming G374822FDT.com.eshapiro.grassapp for /i; the Caddyfile serving that file as JSON; build.py copying both.  Then check and record GRV and GDS again.
+2. The Caddyfile changed, and the sweep does not deploy it: on the VPS, cp /srv/glp/servers/peoplesweb/deploy/Caddyfile /etc/caddy/Caddyfile and systemctl reload caddy, once main has it.  Yours or Udi's to run.
+3. Task, To: Code, for GSA, the app's side, Dart and native, from GNA's Section 6, Invitation links: "Tapped on a smartphone, the address opens the Grassroots App where it is installed, the app having registered the address with the smartphone's operating system".  (a) iOS: the associated domain applinks:peoplesweb.org in glp_multiagent's entitlements.  (b) Android: an intent filter for https://peoplesweb.org/i with autoVerify, and servers/peoplesweb/web/.well-known/assetlinks.json naming com.eshapiro.grassapp and its signing certificate's SHA-256, which I do not have; build.py copies the directory.  (c) The address the phone hands the app becomes the person's act open_link(Link), Link the text after the #, percent-decoded, as if the person had typed it into Open link's form.  If IGLP's or vGLP's paper does not say how the host gives the program an act of the person's that the phone, not the person's hand, supplies, that is a gap for its owner, and I would recommend it be said.  Blocking: no.
+4. Still mine, on branch GSA next: programs/social/graph/core/links.glp tells the person the link as that web address, and open_link takes the address or the bare text.
+5. The sweep to miniapp/3 (yours, item 2): I find none of it on main and no branch of Cloud #4's holding it; all fourteen miniapp.glp have miniapp/4 with the calendar.  It crosses owners, so it is yours to split: GSA takes the operating system's side, programs/social/graph/core, and its two test apps, endapp and pingapp, once GLP's root has miniapp/3; the apps of GSC, GAI, Currencies, GFF and CSSN are their owners'.  Say when the root's entry is on main and I do mine.
+End: 2026-11-11 23:17 UTC
