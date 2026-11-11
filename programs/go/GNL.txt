@@ -87,10 +87,10 @@ Arbitration: Alice [Gno raise c] <deal> <person Carol>
 Pointing to friend: Alice [Point friend]
 Transitive pointing: Alice [Point transitive]
 Ceasing to point: Alice [Unpoint]
-Listing: Bob [Gnl list] <limit> <place> <first night> <last night> <price> <terms>
+Listing: Bob [Gnl list] <limit> <place> <first night> <last night> <price> <terms> <deposit> <fee>
   Alice [Gnl pass]
   Bob [Gnl withdraw]
-Booking: Alice [Gnl book] <payment> <deposit> <fee> <deal>
+Booking: Alice [Gnl book] <deal>
   Bob: Alice asks you to approve this: gnl book.
 Check-in and checkout: Alice [Gnl checkin] <organisation> <person Bob>
   Alice [Gnl checkout] <organisation> <person Bob>

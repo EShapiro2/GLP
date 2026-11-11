@@ -89,10 +89,10 @@ Arbitration: Alice [Gno raise c] <deal> <person Carol>
 Pointing to friend: Alice [Point friend]
 Transitive pointing: Alice [Point transitive]
 Ceasing to point: Alice [Unpoint]
-Job: Alice [Gng job] <limit> <price> <deadline> <terms>
+Job: Alice [Gng job] <limit> <price> <deadline> <terms> <deposit> <fee>
   Bob [Gng pass]
   Alice [Gng withdraw]
-Engagement: Alice [Gng engage] <payment> <deposit> <fee> <deal>
+Engagement: Alice [Gng engage] <deposit> <payment> <deal>
   Bob: Alice asks you to approve this: gng engage.
 Delivery: Bob [Gng deliver]
 Cancelling: Alice [Gng cancel c] <organisation> <person Bob> <to customer> <to provider> <payment to provider> <deposit to provider>

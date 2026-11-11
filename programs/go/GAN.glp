@@ -890,14 +890,14 @@ contract_named(gan, environment([today, fraction],
         not(atom(ad, ['Carol', l, '_', '_', '_', '_', '_', '_', '_']))],
        true,
        ['Alice']),
-%% GAN:2, Showing: Alice is shown an ad she received if it is for her profile; an act no one wills.
+%% GAN:2, Showing: Alice is shown an ad she received if the profile it names is hers (Udi, 2026-11-11, to GO #5); an act no one wills.
     sas(gan_show, ['Alice'], [l, f, pr, v, k, mx, p, 'Bob', 'Orga'],
        [atom(shown, ['Alice', l])],
        [atom(identity, ['Alice']),
         atom(ad, ['Alice', l, 'Bob', 'Orga', num(f), num(pr), num(v), num(k), num(mx)]),
         atom(profile, ['Alice', num(p)]),
         not(atom(shown, ['Alice', l]))],
-       rel(for_profile, [num(pr), num(p)]),
+       eq(num(pr), num(p)),
        []),
 %% GAN:3, Viewing, attested: Alice attests that she viewed the ad, and Bob pays her v Orga-coins from his stake, up to mx.
     sas(gan_view, ['Alice', 'Orga'], [l, f, pr, v, k, mx, 'Bob', g, g1],

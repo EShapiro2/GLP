@@ -87,10 +87,10 @@ Arbitration: Alice [Gno raise c] <deal> <person Carol>
 Pointing to friend: Alice [Point friend]
 Transitive pointing: Alice [Point transitive]
 Ceasing to point: Alice [Unpoint]
-Listing: Bob [Gnm list] <limit> <price> <terms>
+Listing: Bob [Gnm list] <limit> <price> <terms> <deposit> <fee>
   Alice [Gnm pass]
   Bob [Gnm withdraw]
-Order: Alice [Gnm order] <payment> <deposit> <fee> <deal>
+Order: Alice [Gnm order] <deal>
   Bob: Alice asks you to approve this: gnm order.
 Delivery: Alice [Gnm deliver] <organisation> <person Bob>
 Cancelling: Alice [Gnm cancel c] <organisation> <person Bob> <to customer> <to provider> <payment to provider> <deposit to provider>
