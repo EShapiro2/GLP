@@ -1,0 +1,8 @@
+%% Below Term? every position is consumed, so a writer does not stand there
+%% (TGLP typed-glp.tex, "Type Declarations").  Refused: Y at Term?.
+
+procedure look(Term?, Integer).
+look(_, 1).
+
+procedure ask(Integer, Integer).
+ask(Y?, N?) :- look(f(Y), N).

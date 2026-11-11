@@ -91,6 +91,16 @@ Object? _meetRef(_Ref a, _Ref b, TypeEnvironment env, Set<String> assumed) {
   if (a.isWildcard) return b;
   if (b.isWildcard) return a;
 
+  // `Term`: its paths are every path of its mode that ends at a constant, at
+  // Integer, Real, String or Module (TGLP typed-glp.tex, "Type
+  // Declarations"), so its meet with a type is what of that type lies on
+  // such paths ([_meetWithTerm]).
+  // A type of that name a scope defines is that definition, met below.
+  if (!env.types.containsKey(TypeRef.termType)) {
+    if (a.name == TypeRef.termType) return _meetWithTerm(a, b, env, assumed);
+    if (b.name == TypeRef.termType) return _meetWithTerm(b, a, env, assumed);
+  }
+
   final pairKey = '${a.stateName}&${b.stateName}';
   if (!assumed.add(pairKey)) return a; // coinductive: already being met
 
@@ -98,12 +108,24 @@ Object? _meetRef(_Ref a, _Ref b, TypeEnvironment env, Set<String> assumed) {
   final altsB = _flatten(b, env, <String>{});
   if (altsA == null || altsB == null) return null;
 
+  // A type whose bare alternative reaches `Term` is `Term` at that mode.
+  for (final alt in altsA) {
+    if (alt.key == _termKey) {
+      return _meetWithTerm(_termRefOf(alt), b, env, assumed);
+    }
+  }
+  for (final alt in altsB) {
+    if (alt.key == _termKey) {
+      return _meetWithTerm(_termRefOf(alt), a, env, assumed);
+    }
+  }
+
   final byKeyB = {for (final alt in altsB) alt.key: alt};
   final met = <_Alt>[];
   for (final altA in altsA) {
     final altB = byKeyB[altA.key];
     if (altB != null) {
-      final merged = _meetAlt(altA, altB, env, assumed);
+      final merged = _meetAlt(altA, altB, a.dual, env, assumed);
       if (merged != null) met.add(merged);
       continue;
     }
@@ -132,9 +154,75 @@ Object? _meetRef(_Ref a, _Ref b, TypeEnvironment env, Set<String> assumed) {
   return TypeDef(name, [for (final alt in met) alt.source], 0, 0);
 }
 
+/// The key of the alternative `Term` in [_flatten]'s list.
+const _termKey = 'prim:${TypeRef.termType}';
+
+/// `Term` at the absolute mode [_flatten] gave its alternative [alt].
+_Ref _termRefOf(_Alt alt) =>
+    _Ref(TypeRef.termType, (alt.source as TypeRef).isInput);
+
+/// The meet of [term], `Term` at its mode, and [other], of the same mode:
+/// the alternatives of [other] that are a constant, one of Integer, Real,
+/// String and Module, or a structure every argument of which meets `Term` at
+/// [term]'s mode --- a path of `Term` keeps one mode throughout, so an
+/// alternative with a mode-inverted argument, a mutual reference or an
+/// opaque type below it contributes nothing, and a wildcard argument is met
+/// as `Term`.  [other] where
+/// every alternative of it survives whole; [term] where [other] is `Term`,
+/// reaches it by a bare alternative, or has a top-level wildcard alternative.
+Object? _meetWithTerm(
+    _Ref term, _Ref other, TypeEnvironment env, Set<String> assumed) {
+  if (other.name == TypeRef.termType) return term;
+  if (other.isPrimitive) {
+    return TypeRef.constantPrimitives.contains(other.name) ? other : null;
+  }
+  final pairKey = '${term.stateName}&${other.stateName}';
+  if (!assumed.add(pairKey)) return other; // coinductive: already being met
+  final alts = _flatten(other, env, <String>{});
+  if (alts == null) return null;
+  final met = <_Alt>[];
+  for (final alt in alts) {
+    if (alt.key == _termKey || alt.key == 'wild') return term;
+    if (alt.key.startsWith('prim:')) {
+      if (TypeRef.constantPrimitives.contains(alt.key.substring(5))) {
+        met.add(alt);
+      }
+      continue;
+    }
+    if (alt.args.isEmpty) {
+      met.add(alt); // a constant
+      continue;
+    }
+    final argRefs = <_Ref>[];
+    var empty = false;
+    for (final arg in alt.args) {
+      final m = _meetRef(term, arg, env, assumed);
+      if (m == null) {
+        empty = true;
+        break;
+      }
+      if (m is _Ref) {
+        argRefs.add(m);
+        continue;
+      }
+      final def = m as TypeDef;
+      if (!env.types.containsKey(def.name)) env.types[def.name] = def;
+      argRefs.add(_Ref(def.name, arg.dual));
+    }
+    if (empty) continue;
+    met.add(_Alt(alt.key, _rebuild(alt.source, argRefs, term.dual), argRefs));
+  }
+  if (met.isEmpty) return null;
+  if (_sameAlts(met, alts)) return other;
+  final name = 'meet<${term.stateName},${other.stateName}>';
+  return TypeDef(name, [for (final alt in met) alt.source], 0, 0);
+}
+
 /// The meet of two alternatives that share a key: argument by argument.  Empty
-/// where any argument meet is empty.
-_Alt? _meetAlt(_Alt a, _Alt b, TypeEnvironment env, Set<String> assumed) {
+/// where any argument meet is empty.  [dual] is the absolute mode of the type
+/// the alternatives are of ([_rebuild]).
+_Alt? _meetAlt(
+    _Alt a, _Alt b, bool dual, TypeEnvironment env, Set<String> assumed) {
   if (a.args.isEmpty) return a; // a constant or a primitive: nothing below it
   if (a.args.length != b.args.length) return null;
   final argRefs = <_Ref>[];
@@ -149,18 +237,25 @@ _Alt? _meetAlt(_Alt a, _Alt b, TypeEnvironment env, Set<String> assumed) {
     if (!env.types.containsKey(def.name)) env.types[def.name] = def;
     argRefs.add(_Ref(def.name, a.args[i].dual));
   }
-  return _Alt(a.key, _rebuild(a.source, argRefs, a.args), argRefs);
+  return _Alt(a.key, _rebuild(a.source, argRefs, dual), argRefs);
 }
 
 /// [source] with each argument replaced by the meet reference at that position.
 /// The `?` a rebuilt reference carries is the one that gives it its absolute
-/// mode again under the enclosing type's own flag, which is `false` for a type
-/// this file builds: every alternative of it is written from the producer's view.
-TypeExpr _rebuild(TypeExpr source, List<_Ref> args, List<_Ref> was) {
+/// mode again under the enclosing type's own flag, [dual]: an alternative is
+/// written from the producer's view, as [source] is, and the type built of it
+/// is taken at [dual] ([meetOfTypes]), which complements it once more.  Until
+/// 2026-11-11 the reference carried its absolute mode whatever [dual], so the
+/// meet of two consumed types with a structure alternative had every argument
+/// of it at the opposite mode --- the meet of `A?` and `B?`, `A ::= f(Integer)
+/// ; g(Integer)` and `B ::= f(Integer) ; h`, an edge f(1,1):up to `Integer`
+/// --- and an alternative that survived whole was not recognised as its
+/// type's own ([_sameAlts]).
+TypeExpr _rebuild(TypeExpr source, List<_Ref> args, bool dual) {
   TypeExpr at(int i) => args[i].isWildcard
-      ? PrimitiveModeAlt(args[i].dual, source.line, source.column)
+      ? PrimitiveModeAlt(args[i].dual != dual, source.line, source.column)
       : TypeRef(args[i].name!, source.line, source.column,
-          isInput: args[i].dual);
+          isInput: args[i].dual != dual);
   if (source is StructAlt) {
     return StructAlt(source.functor, [for (var i = 0; i < args.length; i++) at(i)],
         source.line, source.column);
@@ -180,7 +275,8 @@ TypeExpr _rebuild(TypeExpr source, List<_Ref> args, List<_Ref> was) {
 /// union"), each argument resolved to its absolute mode.  Null where the name
 /// has no definition.
 List<_Alt>? _flatten(_Ref ref, TypeEnvironment env, Set<String> seen) {
-  if (ref.isPrimitive) {
+  if (ref.isPrimitive &&
+      !(ref.name == TypeRef.termType && env.types.containsKey(ref.name))) {
     return [_Alt('prim:${ref.name}', TypeRef(ref.name!, 0, 0, isInput: ref.dual), const [])];
   }
   final def = env.types[ref.name];
