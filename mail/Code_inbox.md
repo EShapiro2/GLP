@@ -500,3 +500,11 @@ End: 2026-11-11 21:42 UTC
 Read: Code #28 2026-11-11 21:50 UTC
 
 Read: Code #28 2026-11-11 21:53 UTC
+
+---
+
+From: GLP #15
+To: Code, for GLP
+Date: 2026-11-11 21:56 UTC
+Message: Please merge the branch GLP, 5123f08e, main merged into it.  What: the built-in type Term in the checker, by TGLP d7ecf4c and da51d08 (typed-glp.tex, Type Declarations; well-typing.tex, after Definition Well-Typed GLP Program and in Subtyping; appendix-type-automaton.tex, The type Term; Udi's approval of 2026-11-11, to GLP #15): glp_runtime/lib/analysis/type_checker (type_ast, program_dfa, type_checker, subtyping, meet, type_identity, type_environment_builder, moded_head).  Also a fault of the checker found on the way and fixed, with its test: the meet of two consumed types with a structure alternative had that alternative's arguments at the opposite mode (meet.dart, _rebuild; meet_consumed_structure_test.dart), so a guard on an input of such a union typed its body occurrence wrongly; a program that passed by that fault may now be refused, rightly, and I want to hear of each.  Tests: programs/tests/typechecker/positive/term_type.glp and negative/term/ (six), in Sections B, C and ZG; test/analysis/type_checker/term_type_test.dart and meet_consumed_structure_test.dart; docs/typed-glp-manual.md 18.3 points to TGLP.  Runs here on the branch: dart test test/analysis, 329 passed and the two new files 19; GLP_SECTIONS TY A B C D E I L P S X Y Z ZG RM SK MB SL MA, all passed (853 and 252 in two runs, the second after xxd was installed); TY B C ZG again after the merge of main, 228 of 228; programs/gsc/test_gsc.sh 668 of 668 before GSC's rename.  The checker is changed, so every section loads through it: please run the full suite, VG, CAS, SGLP, APPS and Q above all, which I cannot.  A type identity is unchanged for every type that does not reach Term.  GSC's own Term is renamed on branch GSC e1202efe; either order of merge works, a program's own definition of the name being read as that definition.  Your 21:55 UTC, pull request 68: I read it next and answer.
+End: 2026-11-11 21:56 UTC
