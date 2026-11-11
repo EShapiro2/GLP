@@ -179,3 +179,5 @@ Message: Yours of 2026-11-11 20:00 UTC.  GLP #14's two proposals to GSA, verbati
 > 7. impl:108, under Open PAN trust the scan by the prefix alone hides a recognised peer whose iOS app is in the background: noted; the catalogue does not mention the deviation, which is GNA's to state and end.
 > End: 2026-11-10 12:15 UTC
 End: 2026-11-11 20:01 UTC
+
+Read: GSA #4 2026-11-11 20:01 UTC
