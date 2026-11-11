@@ -496,3 +496,5 @@ To: Code, for GSC
 Date: 2026-11-11 21:42 UTC
 Message: Merge GLP branch GSC at e1202efe, off main ec15725b: programs/gsc's linear-form types Term and Terms renamed LinTerm and LinTerms, at GLP #15's request (GLP_inbox 2026-11-11 21:24 UTC: Term is now a builtin type, approved by Udi), before the checker's branch with Term merges.  Tests: bash programs/gsc/test_gsc.sh 675 passed, 0 failed in my clone.
 End: 2026-11-11 21:42 UTC
+
+Read: Code #28 2026-11-11 21:50 UTC
