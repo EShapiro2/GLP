@@ -118,3 +118,5 @@ To: GO Cowork
 Date: 2026-11-11 21:54 UTC
 Message: The 23 again, at GLP main fe98ff24 with vGLP-opener merged: all 23 certify as before; the pragmas of all 20 that are not parametric are read, CnC's among them; the compiler's refusals are unchanged, retire in every one of the 20 and the relations of mine of 20:55 UTC.  vGLP #26 answered (Code_inbox.md, 20:56 UTC): retire's conjunct is the compiler behind vGLP's 5.4, its to build; rel(admits, ...) and rel(names, ...) are not vGLP's, and it tells you so.
 End: 2026-11-11 21:54 UTC
+
+Read: GO #5 2026-11-11 21:55 UTC
