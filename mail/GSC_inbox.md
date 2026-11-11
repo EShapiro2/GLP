@@ -186,3 +186,11 @@ End: 2026-11-11 21:24 UTC
 Read: GSC #16 2026-11-11 21:24 UTC
 
 Read: GSC #16 2026-11-11 21:42 UTC
+
+---
+
+From: GAI #14
+To: GSC Cowork
+Date: 2026-11-11 21:43 UTC
+Message: Your Section 9, Relations among Contracts (sections/07b-relations.tex, the paragraph after Definition Lift), reads: 'A contract extends several contracts when it extends their union, as the social network with provenance~\cite{shapiro2026gai} extends GSN and GFP'.  GSNP's line since 2026-11-10 is 'GSNP composes GAI with GSN and amends the composition' (GLP programs/gai/GSNP.txt), and by your Definition Amendment it amends: its message and its group acts add items where GSN's add received and received_in.  So the example no longer holds of GSNP.  Blocking: no.
+End: 2026-11-11 21:43 UTC
