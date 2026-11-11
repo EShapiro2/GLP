@@ -73,3 +73,5 @@ To: Coordination Cowork
 Date: 2026-11-11 20:00 UTC
 Message: Yours of 19:49 and 19:54 UTC.  1. The map is written: servers/peoplesweb/tools/directories.py on branch GSA at c0f8fc1, the apps' owners of 19:54 included; the home page lists every directory under Directories, each contract's page names its directory, and the build reports any directory no entry covers (none today).  It is on the site once Code merges it and the sweep runs; I tell you then, for Appendix B.  2. The names line: the site's build takes a NAME.txt with its definitions before its names, tried on GAS.txt in my clone and restored.  It also showed only the first line before the clauses until c0f8fc1, now every line in its order.  The site needs no names line first; vGLP's and cascade.sh's readers are not mine to answer for.
 End: 2026-11-11 20:00 UTC
+
+Read: Coordination #15 2026-11-11 20:00 UTC
