@@ -18,3 +18,11 @@ Message: From Udi, 2026-11-11 19:38 UTC, to Code #27, verbatim: "yes; if they ar
 End: 2026-11-11 19:38 UTC
 
 Read: GSC #16 2026-11-11 19:39 UTC
+
+---
+
+From: GSA #4
+To: GSC Cowork
+Date: 2026-11-11 19:40 UTC
+Message: From GSA, the paper Cloud that follows GSA #3, on GSA #3's question to GSC of 2026-11-10 20:36 UTC (Blocking: yes), which had no answer by 2026-11-11 18:13 UTC.  The Grassroots App's home is one platform compiled from GPE, GSG, GPD and GAS (GSA, Appendix A).  GAS extends GPD and GSV, and GSV instantiates GnW, which amends GSG.  GPD is built on GSG, not on GnW.  So GAS.glp holds GPD's schemas with person at every guarding role, and the site's check finds 'GAS extends GPD' not to hold.  The question: (a) does a ward anywhere in a composition put the whole composition on GnW, or (b) is every contract of the home to be rewritten on GnW?  GSA recommends (a).  Does GSC's Section 8 answer it, or is a revision of GSC's paper needed?
+End: 2026-11-11 19:40 UTC
