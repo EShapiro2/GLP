@@ -2427,6 +2427,34 @@ check "an addition bearing the instance's name for a schema replaces it in its p
       "sas(child_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice'], [atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Carol']), atom(child, ['Carol']), atom(parent_of, ['Carol', 'Alice']), atom(identity, ['Bob']), atom(person, ['Bob'])], true, ['Carol', 'Bob']), sas(ward_befriend" "$out2"
 check "as_read keeps a parametric contract's parameters" \
       "R = parametric([val(bylaws_p)], [schema(adopt, ['Alice'], [], [rs(guarded, [atom(bylaws, [val(bylaws_p)])], [], [atom(identity, [])], [])])])" "$out"
+# An instance may write for a parameter that is not a mark a predicate with
+# further value arguments (GSC 220151a, Definition Parametric contract), the
+# binding extended(P, Q, Types): GO's officers each hold a role, so GnW's
+# guardian_of and guarded_by are written officer_of and officer with a num.
+# In each schema the atoms of such predicates over one set of agent variables
+# share a fresh value variable, so the two records of one guardianship share
+# it and each guardian has his own, bound by the quantifier binding one of
+# its agents, or in Vars; an atom with a wildcard among its agents takes the
+# wildcard.  The instance is certified with GnW, its guardianship the office
+# (Theorem What the check preserves, clause 5).  A mark is no such parameter,
+# nor a name the base has no atom of.
+GNWX="[ward = org, extended(guardian_of, officer_of, [num]), extended(guarded_by, officer, [num])]"
+out3=$(run "instance_faults($GNWP, $GNWX, F)." "instantiate($GNWP, $GNWX, [], D), check(D?, V)." \
+           "instantiate($GNWP, $GNWX, [], D)." \
+           "instance_faults($GNWP, [extended(ward, w2, [num]), extended(nothing, n2, [num])], F).")
+check "an instance with officers holding a role has no fault" "F = []" "$out3"
+check "it is certified with wards, its guardianship the office" \
+      "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)], [relay(ward_acquaint, ward(1, org, no_guardian), free(2)), relay(wards_acquaint, ward(1, org, no_guardian), ward(2, org, no_guardian))], [identity, person])" "$out3"
+check "make_guardian: the new guardian's two records share his office, Alice's hers, and every Erin's is bound with Erin" \
+      "sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [iv3, iv2], [atom(officer_of, ['Bob', 'Carol', num(iv3)]), atom(friend, ['Bob', 'Carol']), atom(officer, ['Carol', 'Bob', num(iv3)])" "$out3"
+check "the listed guardians' office is bound by their quantifier" \
+      "forall(['Erin', iv1], atom(officer, ['Carol', 'Erin', num(iv1)]), true, and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(officer_of, ['Erin', 'Carol', num(iv1)]))))], true, ['Bob', 'Alice', 'Erin'])" "$out3"
+check "retire clears every office of the ward with the wildcard" \
+      "not(atom(officer, ['Carol', '_', '_']))" "$out3"
+check "end_guardian ends one office of Bob's" \
+      "sas(end_guardian, ['Alice', 'Bob', 'Carol', 'Erin'], [iv2, iv3], [not(atom(officer_of, ['Bob', 'Carol', num(iv2)])), not(atom(officer, ['Carol', 'Bob', num(iv2)]))]" "$out3"
+check "a mark written with a value argument, and a name the base has no atom of, are faults" \
+      "F = [extended_mark(ward), extended_no_atom(nothing), not_a_parameter(nothing)]" "$out3"
 
 # --- the author, the item and a condition on an utterance (GSC 6df39d4, def:numbers) ---
 # "the author author(y), the first signer of y, in an equality with an agent

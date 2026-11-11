@@ -4,9 +4,9 @@
 % Decides def:syntactically-grassroots of /Grassroots/GSC, Section 3, one
 % definition for a contract of agent roles and listed roles (GSC ac7ad63),
 % with the values of its appendix "Values in Speech-Act Schemas" (app:numbers).
-% The signed term, reflexive predicates and contracts with wards are GAI's
-% extension of the language (GAI's appendix "Contracts with Wards"; GSC
-% 83b951c and 1a2a5f3), held here for GAI.  The papers are the specification
+% The signed term (Section 3.2, GSC 6927e49), reflexive predicates and
+% contracts with wards (Section 8, "Contracts with Wards", since 2026-11-10)
+% are GSC's language; GAI's from 2026-10-20 to 2026-11-10.  The papers are the specification
 % and no definition of them is restated here; each procedure names the
 % definition it decides.  README.md maps the two.
 %
@@ -14,8 +14,8 @@
 % the substitution and matching machinery every condition needs, and the
 % directory's entry points.
 %
-% The condition on a contract with wards is GAI's (Coordination Appendix B;
-% Udi, 2026-10-20) and lives in the child directory wards/, entered through
+% The condition on a contract with wards is GSC's (Coordination Appendix B;
+% Udi, 2026-11-10, to GSC #14) and lives in the child directory wards/, entered through
 % its self.glp by the qualifier wards (TGLP, Section "Module System",
 % "Cross-module type checking": a qualifier is a child directory or module
 % file of the caller's directory).  It reads the introductions of a schema,
@@ -2340,7 +2340,22 @@ IntroE ::= intro(Constant, Constant) ; no_intro.
 % contract in the clause syntax: its reflexive and environment predicates and
 % its schemas (add_sdecl).
 InstFault  ::= not_parametric ; not_a_parameter(Constant) ; occurs(Constant)
-             ; written_twice(Constant) ; bound_twice(Constant).
+             ; written_twice(Constant) ; bound_twice(Constant)
+             ; extended_mark(Constant) ; extended_not_agents(Constant)
+             ; extended_no_atom(Constant).
+% An instantiation's predicates written with further value arguments, each
+% with the types of its added arguments; whether a predicate is one; what a
+% scan of a parameter's atoms finds (seen, a mark, an argument no agent);
+% and the fresh value variables of a set of agent variables, kn(Key, Names),
+% Key the set, sorted (GSC 220151a, Definition Parametric contract).
+XPred   ::= xp(Constant, VTypes).
+XPreds  ::= [] ; [XPred | XPreds].
+XOpt    ::= xnone ; xsome(VTypes).
+XScan   ::= xs(Ans, Ans, Ans).
+KName   ::= kn(SArgs, PNames).
+KNames  ::= [] ; [KName | KNames].
+KeyList ::= [] ; [SArgs | KeyList].
+XUsed   ::= xu(PNames, Names, SArgs).
 InstFaults ::= [] ; [InstFault | InstFaults].
 SParts     ::= sp(Preds, Preds, SContract).
 InstParts  ::= ip(SParams, SDeclared, SContract).
@@ -4365,7 +4380,9 @@ as_read(parametric(Ps, D), parametric(Ps?, R?)) :- ground(Ps?), ground(D?) | as_
 exported procedure instantiate(SDeclared?, SBindings?, SDeclared?, WDeclared).
 instantiate(parametric(_, B), Bs, A, D?) :- ground(B?), ground(Bs?), ground(A?) |
     rn_sdecl(B?, Bs?, B1),
-    add_sdecl(B1?, A?, D).
+    xpreds(Bs?, Xs),
+    xa_sdecl(B1?, Xs?, B2),
+    add_sdecl(B2?, A?, D).
 instantiate(B, Bs, A, D?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
     add_sdecl(B?, A?, D).
 
@@ -4377,7 +4394,12 @@ instantiate(B, Bs, A, D?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
 % kinds, and values and utterances of the same kind, that do not occur in
 % it"); written_twice(Q), Q written for two parameters or schemas ("a
 % different one for each", of each); and bound_twice(P).  [] where there is
-% none.
+% none.  A binding extended(P, Q, Types) is a fault where P is a mark, an atom
+% of it having its holder alone, extended_mark(P); where an argument of an
+% atom of it is no agent variable of its schema, extended_not_agents(P), the
+% added variables being of a set of agent variables (GSC 220151a) and this
+% checker taking every argument of such a predicate for one; and where the
+% base has no atom of it, extended_no_atom(P).
 exported procedure instance_faults(SDeclared?, SBindings?, InstFaults).
 instance_faults(parametric(Ps, B), Bs, F?) :- ground(Ps?), ground(B?), ground(Bs?) |
     sdecl_parts(B?, sp(_, _, Ss)),
@@ -4393,6 +4415,17 @@ inst_faults([], _, _, _, []).
 inst_faults([(P = Q)|Bs], ip(Ps, B, Ss), SP, SQ, F?) :-
     ground(P?), ground(Q?), ground(Bs?), ground(Ps?), ground(B?), ground(Ss?), ground(SP?),
     ground(SQ?) |
+    inst_faults1(P?, Q?, [], Bs?, ip(Ps?, B?, Ss?), SP?, SQ?, F).
+inst_faults([extended(P, Q, _)|Bs], ip(Ps, B, Ss), SP, SQ, F?) :-
+    ground(P?), ground(Q?), ground(Bs?), ground(Ps?), ground(B?), ground(Ss?), ground(SP?),
+    ground(SQ?) |
+    xa_faults(P?, Ss?, [], FX),
+    inst_faults1(P?, Q?, FX?, Bs?, ip(Ps?, B?, Ss?), SP?, SQ?, F).
+
+procedure inst_faults1(Constant?, Constant?, InstFaults?, SBindings?, InstParts?, Preds?, Preds?, InstFaults).
+inst_faults1(P, Q, FX, Bs, ip(Ps, B, Ss), SP, SQ, F?) :-
+    ground(P?), ground(Q?), ground(FX?), ground(Bs?), ground(Ps?), ground(B?), ground(Ss?), ground(SP?),
+    ground(SQ?) |
     param_member(Ps?, P?, A0),
     sas_named(Ss?, P?, A00),
     or_yes(A0?, A00?, A1),
@@ -4404,7 +4437,12 @@ inst_faults([(P = Q)|Bs], ip(Ps, B, Ss), SP, SQ, F?) :-
     inst_fault(A3?, written_twice(Q?), F1?, F2),
     inst_fault(A2?, occurs(Q?), F2?, F3),
     flip(A1?, N1),
-    inst_fault(N1?, not_a_parameter(P?), F3?, F).
+    inst_fault(N1?, not_a_parameter(P?), F3?, F4),
+    instf_app(FX?, F4?, F).
+
+procedure instf_app(InstFaults?, InstFaults?, InstFaults).
+instf_app([], T, T?).
+instf_app([X|Xs], T, [X?|R?]) :- instf_app(Xs?, T?, R).
 
 procedure inst_fault(Ans?, InstFault?, InstFaults?, InstFaults).
 inst_fault(yes, X, T, [X?|T?]).
@@ -4448,6 +4486,7 @@ occurs_diff(_, _, yes) :- otherwise | true.
 procedure rn_name(Constant?, SBindings?, Constant).
 rn_name(P, [], P?).
 rn_name(P, [(A = B)|_], B?) :- P? =?= A? | true.
+rn_name(P, [extended(A, B, _)|_], B?) :- P? =?= A? | true.
 rn_name(P, [_|Bs], R?) :- otherwise, ground(P?), ground(Bs?) | rn_name(P?, Bs?, R).
 
 procedure rn_sdecl(SDeclared?, SBindings?, SDeclared).
@@ -4586,6 +4625,509 @@ rn_sexpr(sum(Xs, A, C, U), Bs, sum(Xs?, A1?, C1?, U1?)) :-
     rn_satom(A?, Bs?, A1), rn_sc(C?, Bs?, C1), rn_sexpr(U?, Bs?, U1).
 rn_sexpr(val(C), Bs, val(C1?)) :- ground(C?), ground(Bs?) | rn_name(C?, Bs?, C1).
 rn_sexpr(X, _, X?) :- otherwise | true.
+
+% --- an instance with further value arguments (GSC 220151a, Definition
+% Parametric contract: "or, for a predicate that is not a mark, of the same
+% kinds with further value arguments ...; in each schema, the atoms of such
+% predicates over one set of agent variables share a fresh value variable for
+% each added argument, bound by the quantifier that binds one of those agent
+% variables") ---------------------------------------------------------------
+% A binding P = with(Q, Types) writes Q for P and gives every atom of Q, in
+% every schema, one more argument for each type, num(V) or real(V): V the
+% fresh value variable of the atom's set of agent variables for that place,
+% shared by every atom of such a predicate over the same set, so that the two
+% records of one guardianship share it and each guardian has his own.  An
+% atom with the wildcard among its agent arguments is given the wildcard,
+% the wildcard being a variable of its own, universally quantified where the
+% atom is negated (def:schema).  The variable of a set is put in the binder
+% list of the quantifier binding one of its agent variables, the innermost,
+% and otherwise in the schema's Vars; its name is the first of iv1, iv2, ...
+% the schema does not already use.  This checker takes every argument of such
+% a predicate for an agent variable, and instance_faults/3 refuses a binding
+% where one is not (extended_not_agents).
+
+% xpreds(Bs, Xs): the predicates written with further value arguments.
+procedure xpreds(SBindings?, XPreds).
+xpreds([], []).
+xpreds([extended(_, Q, Ts)|Bs], [xp(Q?, Ts?)|R?]) :- xpreds(Bs?, R).
+xpreds([_|Bs], R?) :- otherwise | xpreds(Bs?, R).
+
+procedure xp_types(Constant?, XPreds?, XOpt).
+xp_types(_, [], xnone).
+xp_types(P, [xp(Q, Ts)|_], xsome(Ts?)) :- P? =?= Q? | true.
+xp_types(P, [_|Xs], R?) :- otherwise | xp_types(P?, Xs?, R).
+
+% The faults of a binding extended(P, Q, Types), from the atoms of P in the base.
+procedure xa_faults(Constant?, SContract?, InstFaults?, InstFaults).
+xa_faults(P, Ss, T, R?) :- ground(P?), ground(Ss?) |
+    xa_pscan(Ss?, P?, xs(no, no, no), X),
+    xa_faults1(X?, P?, T?, R).
+
+procedure xa_faults1(XScan?, Constant?, InstFaults?, InstFaults).
+xa_faults1(xs(no, _, _), P, T, [extended_no_atom(P?)|T?]).
+xa_faults1(xs(yes, M, N), P, T, R?) :- ground(P?) |
+    inst_fault(M?, extended_mark(P?), T?, T1),
+    inst_fault(N?, extended_not_agents(P?), T1?, R).
+
+procedure xa_pscan(SContract?, Constant?, XScan?, XScan).
+xa_pscan([], _, X, X?).
+xa_pscan([sas(_, Ns, _, H, B, Cn, _)|Ss], P, X, R?) :-
+    ground(Ns?), ground(H?), ground(B?), ground(Cn?), ground(Ss?), ground(P?) |
+    sas_ana(H?, B?, Cn?, SA),
+    xa_pscan1(SA?, Ns?, P?, X?, X1),
+    xa_pscan(Ss?, P?, X1?, R).
+
+procedure xa_pscan1(SA?, Names?, Constant?, XScan?, XScan).
+xa_pscan1(sa(_, _, _, _, _, _, _, _, _, _, AA, _, _, _), Ns, P, X, R?) :-
+    ground(AA?), ground(Ns?), ground(P?) |
+    xa_holders(AA?, Hs),
+    xa_pscan2(AA?, Ns?, Hs?, P?, X?, R).
+
+procedure xa_pscan2(SAtoms?, Names?, SArgs?, Constant?, XScan?, XScan).
+xa_pscan2([], _, _, _, X, X?).
+xa_pscan2([atom(Q, As)|Aa], Ns, Hs, P, xs(_, M, N), R?) :-
+    ground(Q?), ground(As?), ground(Aa?), ground(Ns?), ground(Hs?), ground(P?), Q? =?= P? |
+    sargs_len(As?, L),
+    xa_le1(L?, M1),
+    or_yes(M?, M1?, M2),
+    xa_nonagent(As?, Ns?, Hs?, N1),
+    or_yes(N?, N1?, N2),
+    xa_pscan2(Aa?, Ns?, Hs?, P?, xs(yes, M2?, N2?), R).
+xa_pscan2([_|Aa], Ns, Hs, P, X, R?) :- otherwise | xa_pscan2(Aa?, Ns?, Hs?, P?, X?, R).
+
+procedure xa_le1(Integer?, Ans).
+xa_le1(L, yes) :- L? < 2 | true.
+xa_le1(_, no) :- otherwise | true.
+
+procedure sargs_len(SArgs?, Integer).
+sargs_len([], 0).
+sargs_len([_|Xs], N?) :- sargs_len(Xs?, M), N := M? + 1.
+
+% Whether an argument is neither the wildcard nor an agent variable of its
+% schema: one of its Names, or the holder of one of its atoms, a bound
+% variable holding an atom being one Names may leave out (README, "Writing a
+% contract").
+procedure xa_nonagent(SArgs?, Names?, SArgs?, Ans).
+xa_nonagent([], _, _, no).
+xa_nonagent([A|As], Ns, Hs, R?) :- A? =?= '_' | xa_nonagent(As?, Ns?, Hs?, R).
+xa_nonagent([A|As], Ns, Hs, R?) :- otherwise, ground(A?), ground(Ns?), ground(Hs?) |
+    xa_in_names(A?, Ns?, M1),
+    xa_in_sargs(A?, Hs?, M2),
+    or_yes(M1?, M2?, M),
+    xa_nonagent1(M?, As?, Ns?, Hs?, R).
+
+procedure xa_nonagent1(Ans?, SArgs?, Names?, SArgs?, Ans).
+xa_nonagent1(yes, As, Ns, Hs, R?) :- xa_nonagent(As?, Ns?, Hs?, R).
+xa_nonagent1(no, _, _, _, yes).
+
+procedure xa_in_names(SArg?, Names?, Ans).
+xa_in_names(_, [], no).
+xa_in_names(A, [one(B, _)|_], yes) :- A? =?= B? | true.
+xa_in_names(A, [N|_], yes) :- A? =?= N? | true.
+xa_in_names(A, [_|Ns], R?) :- otherwise | xa_in_names(A?, Ns?, R).
+
+procedure xa_in_sargs(SArg?, SArgs?, Ans).
+xa_in_sargs(_, [], no).
+xa_in_sargs(A, [B|_], yes) :- A? =?= B? | true.
+xa_in_sargs(A, [_|Bs], R?) :- otherwise | xa_in_sargs(A?, Bs?, R).
+
+procedure xa_holders(SAtoms?, SArgs).
+xa_holders([], []).
+xa_holders([atom(_, [H|_])|Aa], [H?|R?]) :- xa_holders(Aa?, R).
+xa_holders([_|Aa], R?) :- otherwise | xa_holders(Aa?, R).
+
+% The rewrite of a contract, schema by schema, wrappers kept.
+procedure xa_sdecl(SDeclared?, XPreds?, SDeclared).
+xa_sdecl(D, [], D?).
+xa_sdecl(D, [X|Xs], R?) :- ground(D?), ground(X?), ground(Xs?) | xa_sdecl1(D?, [X?|Xs?], R).
+
+procedure xa_sdecl1(SDeclared?, XPreds?, SDeclared).
+xa_sdecl1([], _, []).
+xa_sdecl1([S|Ss], Xs, R?) :- ground(S?), ground(Ss?), ground(Xs?) | xa_scontract([S?|Ss?], Xs?, R).
+xa_sdecl1(reflexive(Rf, Ss), Xs, reflexive(Rf?, R?)) :- ground(Ss?), ground(Xs?) | xa_scontract(Ss?, Xs?, R).
+xa_sdecl1(environment(Ev, Ss), Xs, environment(Ev?, R?)) :- ground(Ss?), ground(Xs?) | xa_scontract(Ss?, Xs?, R).
+xa_sdecl1(parametric(Ps, D), Xs, parametric(Ps?, R?)) :- ground(D?), ground(Xs?) | xa_sdecl1(D?, Xs?, R).
+
+procedure xa_scontract(SContract?, XPreds?, SContract).
+xa_scontract([], _, []).
+xa_scontract([S|Ss], Xs, [S1?|R?]) :- ground(S?), ground(Ss?), ground(Xs?) |
+    xa_schema(S?, Xs?, S1),
+    xa_scontract(Ss?, Xs?, R).
+
+procedure xa_schema(SSchema?, XPreds?, SSchema).
+xa_schema(sas(Nm, Ns, Vs, H, B, Cn, G), Xs, R?) :-
+    ground(Nm?), ground(Ns?), ground(Vs?), ground(H?), ground(B?), ground(Cn?), ground(G?), ground(Xs?) |
+    sas_ana(H?, B?, Cn?, SA),
+    xa_schema1(sas(Nm?, Ns?, Vs?, H?, B?, Cn?, G?), SA?, Xs?, R).
+
+procedure xa_schema1(SSchema?, SA?, XPreds?, SSchema).
+xa_schema1(sas(Nm, Ns, Vs, H, B, Cn, G), sa(_, _, _, _, _, _, _, _, _, _, AA, Bs, _, _), Xs,
+           sas(Nm?, Ns?, Vs1?, H1?, B1?, Cn1?, G?)) :-
+    ground(Nm?), ground(Ns?), ground(Vs?), ground(H?), ground(B?), ground(Cn?), ground(G?),
+    ground(AA?), ground(Bs?), ground(Xs?) |
+    xa_keys(AA?, Xs?, [], Ks),
+    xa_holders(AA?, Hs),
+    xa_bnames(Bs?, Bn),
+    sas_nums_atoms(AA?, [], Nv),
+    preds_app(Vs?, Bn?, U1),
+    preds_app(U1?, Nv?, U),
+    xa_width(Xs?, 0, W),
+    xa_pool(Pool),
+    xa_alloc(Ks?, W?, xu(U?, Ns?, Hs?), Pool?, KN),
+    xa_schema2(Vs?, H?, B?, Cn?, Xs?, KN?, Vs1, H1, B1, Cn1).
+
+procedure xa_schema2(PNames?, SLits?, SLits?, SConstraint?, XPreds?, KNames?,
+                     PNames, SLits, SLits, SConstraint).
+xa_schema2(Vs, H, B, Cn, Xs, KN, Vs1?, H1?, B1?, Cn1?) :-
+    ground(Vs?), ground(H?), ground(B?), ground(Cn?), ground(Xs?), ground(KN?) |
+    xa_slits(H?, Xs?, KN?, H1, N1),
+    xa_slits(B?, Xs?, KN?, B1, N2),
+    xa_sc(Cn?, Xs?, KN?, Cn1, N3),
+    kn_app(N1?, N2?, N12),
+    kn_app(N12?, N3?, N),
+    kn_names(N?, Nn),
+    preds_dedup(Nn?, Nd),
+    preds_app(Vs?, Nd?, Vs1).
+
+procedure xa_bnames(Bnds?, PNames).
+xa_bnames([], []).
+xa_bnames([bnd(Xs, _)|Bs], R?) :- xa_bnames(Bs?, R1), preds_app(Xs?, R1?, R).
+
+procedure xa_pool(PNames).
+xa_pool([iv1, iv2, iv3, iv4, iv5, iv6, iv7, iv8, iv9, iv10, iv11, iv12, iv13, iv14, iv15, iv16,
+         iv17, iv18, iv19, iv20, iv21, iv22, iv23, iv24, iv25, iv26, iv27, iv28, iv29, iv30,
+         iv31, iv32, iv33, iv34, iv35, iv36, iv37, iv38, iv39, iv40]).
+
+procedure xa_width(XPreds?, Integer?, Integer).
+xa_width([], W, W?).
+xa_width([xp(_, Ts)|Xs], W, R?) :- ground(Ts?) |
+    vtypes_len(Ts?, L),
+    xa_max(W?, L?, W1),
+    xa_width(Xs?, W1?, R).
+
+procedure vtypes_len(VTypes?, Integer).
+vtypes_len([], 0).
+vtypes_len([_|Xs], N?) :- vtypes_len(Xs?, M), N := M? + 1.
+
+procedure xa_max(Integer?, Integer?, Integer).
+xa_max(A, B, A?) :- A? >= B? | true.
+xa_max(_, B, B?) :- otherwise | true.
+
+% The sets of agent variables of the atoms of predicates written with
+% further value arguments, each sorted, once each; an atom with the wildcard
+% among its arguments has none.
+procedure xa_keys(SAtoms?, XPreds?, KeyList?, KeyList).
+xa_keys([], _, K, K?).
+xa_keys([atom(P, As)|Aa], Xs, K, R?) :- ground(P?), ground(As?), ground(Aa?), ground(Xs?), ground(K?) |
+    xp_types(P?, Xs?, T),
+    xa_keys1(T?, As?, K?, K1),
+    xa_keys(Aa?, Xs?, K1?, R).
+
+procedure xa_keys1(XOpt?, SArgs?, KeyList?, KeyList).
+xa_keys1(xnone, _, K, K?).
+xa_keys1(xsome(_), As, K, R?) :- ground(As?), ground(K?) |
+    sargs_wild(As?, W),
+    xa_keys2(W?, As?, K?, R).
+
+procedure xa_keys2(Ans?, SArgs?, KeyList?, KeyList).
+xa_keys2(yes, _, K, K?).
+xa_keys2(no, As, K, R?) :- ground(As?), ground(K?) |
+    xa_key(As?, Ky),
+    xa_keyadd(Ky?, K?, R).
+
+procedure xa_keyadd(SArgs?, KeyList?, KeyList).
+xa_keyadd(Ky, K, R?) :- ground(Ky?), ground(K?) |
+    keys_member(Ky?, K?, M),
+    xa_keyadd1(M?, Ky?, K?, R).
+
+procedure xa_keyadd1(Ans?, SArgs?, KeyList?, KeyList).
+xa_keyadd1(yes, _, K, K?).
+xa_keyadd1(no, Ky, K, [Ky?|K?]).
+
+procedure keys_member(SArgs?, KeyList?, Ans).
+keys_member(_, [], no).
+keys_member(K, [L|Ls], R?) :- ground(K?), ground(L?) |
+    xa_same(K?, L?, A),
+    keys_member1(A?, K?, Ls?, R).
+
+procedure keys_member1(Ans?, SArgs?, KeyList?, Ans).
+keys_member1(yes, _, _, yes).
+keys_member1(no, K, Ls, R?) :- keys_member(K?, Ls?, R).
+
+procedure sargs_wild(SArgs?, Ans).
+sargs_wild([], no).
+sargs_wild([A|_], yes) :- A? =?= '_' | true.
+sargs_wild([_|As], R?) :- otherwise | sargs_wild(As?, R).
+
+% xa_key(As, K): the arguments As, once each, a set: two keys are one where
+% each holds the other's members (keys_member).
+procedure xa_key(SArgs?, SArgs).
+xa_key(As, R?) :- xa_key1(As?, [], R).
+
+procedure xa_key1(SArgs?, SArgs?, SArgs).
+xa_key1([], K, K?).
+xa_key1([A|As], K, R?) :- ground(A?), ground(K?) |
+    xa_in_sargs(A?, K?, M),
+    xa_key2(M?, A?, As?, K?, R).
+
+procedure xa_key2(Ans?, SArg?, SArgs?, SArgs?, SArgs).
+xa_key2(yes, _, As, K, R?) :- xa_key1(As?, K?, R).
+xa_key2(no, A, As, K, R?) :- xa_key1(As?, [A?|K?], R).
+
+procedure xa_subset(SArgs?, SArgs?, Ans).
+xa_subset([], _, yes).
+xa_subset([A|As], K, R?) :- ground(A?), ground(K?) |
+    xa_in_sargs(A?, K?, M),
+    xa_subset1(M?, As?, K?, R).
+
+procedure xa_subset1(Ans?, SArgs?, SArgs?, Ans).
+xa_subset1(yes, As, K, R?) :- xa_subset(As?, K?, R).
+xa_subset1(no, _, _, no).
+
+procedure xa_same(SArgs?, SArgs?, Ans).
+xa_same(K, L, R?) :- ground(K?), ground(L?) |
+    xa_subset(K?, L?, A),
+    xa_subset(L?, K?, B),
+    both_yes(A?, B?, R).
+
+% xa_alloc(Keys, W, Used, Pool, KN): W fresh names for each key, from the
+% pool, none of them used by the schema.
+procedure xa_alloc(KeyList?, Integer?, XUsed?, PNames?, KNames).
+xa_alloc([], _, _, _, []).
+xa_alloc([K|Ks], W, U, P, [kn(K?, Ns?)|R?]) :- ground(K?), ground(Ks?), ground(W?), ground(U?), ground(P?) |
+    xa_take(W?, P?, U?, Ns, P1),
+    xa_alloc(Ks?, W?, U?, P1?, R).
+
+procedure xa_take(Integer?, PNames?, XUsed?, PNames, PNames).
+xa_take(0, P, _, [], P?).
+xa_take(W, [N|P], xu(U, Ns, Hs), R?, P1?) :- W? > 0, ground(N?), ground(P?), ground(U?), ground(Ns?), ground(Hs?) |
+    pred_member(N?, U?, M1),
+    xa_in_names(N?, Ns?, M2),
+    xa_in_sargs(N?, Hs?, M3),
+    or_yes(M1?, M2?, M12),
+    or_yes(M12?, M3?, M),
+    xa_take1(M?, W?, N?, P?, xu(U?, Ns?, Hs?), R, P1).
+
+procedure xa_take1(Ans?, Integer?, Constant?, PNames?, XUsed?, PNames, PNames).
+xa_take1(yes, W, _, P, U, R?, P1?) :- xa_take(W?, P?, U?, R, P1).
+xa_take1(no, W, N, P, U, [N?|R?], P1?) :- W1 := W? - 1, xa_take(W1?, P?, U?, R, P1).
+
+procedure kn_app(KNames?, KNames?, KNames).
+kn_app([], T, T?).
+kn_app([K|Ks], T, [K?|R?]) :- kn_app(Ks?, T?, R).
+
+procedure kn_names(KNames?, PNames).
+kn_names([], []).
+kn_names([kn(_, Ns)|Ks], R?) :- kn_names(Ks?, R1), preds_app(Ns?, R1?, R).
+
+procedure kn_lookup(SArgs?, KNames?, PNames).
+kn_lookup(_, [], []).
+kn_lookup(K, [kn(L, Ns)|Ks], R?) :- ground(K?), ground(L?), ground(Ns?), ground(Ks?) |
+    xa_same(K?, L?, A),
+    kn_lookup1(A?, K?, Ns?, Ks?, R).
+
+procedure kn_lookup1(Ans?, SArgs?, PNames?, KNames?, PNames).
+kn_lookup1(yes, _, Ns, _, Ns?).
+kn_lookup1(no, K, _, Ks, R?) :- kn_lookup(K?, Ks?, R).
+
+% xa_bind(Bv, N, Bv1, Up): the names of the sets among N that meet the
+% binder list Bv bound there, appended to it; the others handed up.
+procedure xa_bind(PNames?, KNames?, PNames, KNames).
+xa_bind(Bv, N, Bv1?, Up?) :- ground(Bv?), ground(N?) |
+    xa_split(N?, Bv?, Here, Up),
+    kn_names(Here?, Hn),
+    preds_dedup(Hn?, Hd),
+    preds_app(Bv?, Hd?, Bv1).
+
+procedure xa_split(KNames?, PNames?, KNames, KNames).
+xa_split([], _, [], []).
+xa_split([kn(K, Ns)|Ks], Bv, H?, U?) :- ground(K?), ground(Ns?), ground(Ks?), ground(Bv?) |
+    pn_meets(K?, Bv?, M),
+    xa_split1(M?, kn(K?, Ns?), Ks?, Bv?, H, U).
+
+procedure xa_split1(Ans?, KName?, KNames?, PNames?, KNames, KNames).
+xa_split1(yes, E, Ks, Bv, [E?|H?], U?) :- xa_split(Ks?, Bv?, H, U).
+xa_split1(no, E, Ks, Bv, H?, [E?|U?]) :- xa_split(Ks?, Bv?, H, U).
+
+procedure pn_meets(SArgs?, PNames?, Ans).
+pn_meets([], _, no).
+pn_meets([X|Xs], Bv, R?) :- ground(X?), ground(Bv?) |
+    sas_held_x(X?, Bv?, M),
+    pn_meets1(M?, Xs?, Bv?, R).
+
+procedure pn_meets1(Ans?, SArgs?, PNames?, Ans).
+pn_meets1(yes, _, _, yes).
+pn_meets1(no, Xs, Bv, R?) :- pn_meets(Xs?, Bv?, R).
+
+% The rewrite of literals, formulas and constraints: each atom of such a
+% predicate given its added arguments, and the sets whose variables it took,
+% with their names, handed up.
+procedure xa_slits(SLits?, XPreds?, KNames?, SLits, KNames).
+xa_slits([], _, _, [], []).
+xa_slits([C|Cs], Xs, KN, [C1?|R?], N?) :- ground(C?), ground(Cs?), ground(Xs?), ground(KN?) |
+    xa_sc(C?, Xs?, KN?, C1, N1),
+    xa_slits(Cs?, Xs?, KN?, R, N2),
+    kn_app(N1?, N2?, N).
+
+procedure xa_sc(SConstraint?, XPreds?, KNames?, SConstraint, KNames).
+xa_sc(atom(P, As), Xs, KN, R?, N?) :- ground(P?), ground(As?), ground(Xs?), ground(KN?) |
+    xa_satom(atom(P?, As?), Xs?, KN?, R, N).
+xa_sc(times(K, A), Xs, KN, times(K?, A1?), N?) :- ground(A?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N).
+xa_sc(and(X, Y), Xs, KN, and(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sc(X?, Xs?, KN?, X1, N1), xa_sc(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(or(X, Y), Xs, KN, or(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sc(X?, Xs?, KN?, X1, N1), xa_sc(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(implies(X, Y), Xs, KN, implies(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sc(X?, Xs?, KN?, X1, N1), xa_sc(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(not(X), Xs, KN, not(X1?), N?) :- ground(X?), ground(Xs?), ground(KN?) | xa_sc(X?, Xs?, KN?, X1, N).
+xa_sc(eq(X, Y), Xs, KN, eq(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(ne(X, Y), Xs, KN, ne(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(le(X, Y), Xs, KN, le(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(lt(X, Y), Xs, KN, lt(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(ge(X, Y), Xs, KN, ge(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(gt(X, Y), Xs, KN, gt(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sc(rel(Nm, Es), Xs, KN, rel(Nm?, Es1?), N?) :- ground(Es?), ground(Xs?), ground(KN?) |
+    xa_sexprs(Es?, Xs?, KN?, Es1, N).
+xa_sc(program(E), Xs, KN, program(E1?), N?) :- ground(E?), ground(Xs?), ground(KN?) |
+    xa_sexpr(E?, Xs?, KN?, E1, N).
+xa_sc(exists(Bv, A, C), Xs, KN, exists(Bv1?, A1?, C1?), N?) :-
+    ground(Bv?), ground(A?), ground(C?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N1),
+    xa_sc(C?, Xs?, KN?, C1, N2),
+    kn_app(N1?, N2?, N3),
+    xa_bind(Bv?, N3?, Bv1, N).
+xa_sc(forall(Bv, A, C, D), Xs, KN, forall(Bv1?, A1?, C1?, D1?), N?) :-
+    ground(Bv?), ground(A?), ground(C?), ground(D?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N1),
+    xa_sc(C?, Xs?, KN?, C1, N2),
+    xa_sc(D?, Xs?, KN?, D1, N3),
+    kn_app(N1?, N2?, N12),
+    kn_app(N12?, N3?, N4),
+    xa_bind(Bv?, N4?, Bv1, N).
+xa_sc(forall(X, A, Ls), Xs, KN, R?, N?) :- ground(X?), ground(A?), ground(Ls?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N1),
+    xa_sqlits(Ls?, Xs?, KN?, Ls1, N2),
+    kn_app(N1?, N2?, N3),
+    xa_bind([X?], N3?, Bv1, N),
+    xa_fa3(Bv1?, X?, A1?, Ls1?, R).
+xa_sc([], _, _, [], []).
+xa_sc([C|Cs], Xs, KN, [C1?|R?], N?) :- ground(C?), ground(Cs?), ground(Xs?), ground(KN?) |
+    xa_sc(C?, Xs?, KN?, C1, N1),
+    xa_slits(Cs?, Xs?, KN?, R, N2),
+    kn_app(N1?, N2?, N).
+xa_sc(C, _, _, C?, []) :- otherwise | true.
+
+% A conjunct forall(X, A, Ls) whose binder takes a variable becomes
+% forall([X, ...], A, true, Ls), the same conjunct (README, "Writing a contract").
+procedure xa_fa3(PNames?, Constant?, SAtom?, SQLits?, SConstraint).
+xa_fa3([], X, A, Ls, forall(X?, A?, Ls?)).
+xa_fa3([_], X, A, Ls, forall(X?, A?, Ls?)).
+xa_fa3([B, C|Bs], _, A, Ls, forall([B?, C?|Bs?], A?, true, L1?)) :- xa_ql2sl(Ls?, L1).
+
+procedure xa_ql2sl(SQLits?, SLits).
+xa_ql2sl([], []).
+xa_ql2sl([Q|Qs], [C?|R?]) :- xa_ql2c(Q?, C), xa_ql2sl(Qs?, R).
+
+procedure xa_ql2c(SQLit?, SConstraint).
+xa_ql2c(not(atom(P, As)), not(atom(P?, As?))).
+xa_ql2c(not(times(K, A)), not(times(K?, A?))).
+xa_ql2c(atom(P, As), atom(P?, As?)).
+xa_ql2c(times(K, A), times(K?, A?)).
+
+procedure xa_sqlits(SQLits?, XPreds?, KNames?, SQLits, KNames).
+xa_sqlits([], _, _, [], []).
+xa_sqlits([Q|Qs], Xs, KN, [Q1?|R?], N?) :- ground(Q?), ground(Qs?), ground(Xs?), ground(KN?) |
+    xa_sqlit(Q?, Xs?, KN?, Q1, N1),
+    xa_sqlits(Qs?, Xs?, KN?, R, N2),
+    kn_app(N1?, N2?, N).
+
+procedure xa_sqlit(SQLit?, XPreds?, KNames?, SQLit, KNames).
+xa_sqlit(not(M), Xs, KN, not(M1?), N?) :- ground(M?), ground(Xs?), ground(KN?) | xa_smult(M?, Xs?, KN?, M1, N).
+xa_sqlit(atom(P, As), Xs, KN, R?, N?) :- ground(P?), ground(As?), ground(Xs?), ground(KN?) |
+    xa_satom(atom(P?, As?), Xs?, KN?, R, N).
+xa_sqlit(times(K, A), Xs, KN, times(K?, A1?), N?) :- ground(A?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N).
+
+procedure xa_smult(SMult?, XPreds?, KNames?, SMult, KNames).
+xa_smult(times(K, A), Xs, KN, times(K?, A1?), N?) :- ground(A?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N).
+xa_smult(atom(P, As), Xs, KN, R?, N?) :- ground(P?), ground(As?), ground(Xs?), ground(KN?) |
+    xa_satom(atom(P?, As?), Xs?, KN?, R, N).
+
+procedure xa_satom(SAtom?, XPreds?, KNames?, SAtom, KNames).
+xa_satom(atom(P, As), Xs, KN, atom(P?, As1?), N?) :- ground(P?), ground(As?), ground(Xs?), ground(KN?) |
+    xp_types(P?, Xs?, T),
+    xa_satom1(T?, As?, KN?, As1, N).
+
+procedure xa_satom1(XOpt?, SArgs?, KNames?, SArgs, KNames).
+xa_satom1(xnone, As, _, As?, []).
+xa_satom1(xsome(Ts), As, KN, R?, N?) :- ground(Ts?), ground(As?), ground(KN?) |
+    sargs_wild(As?, W),
+    xa_satom2(W?, Ts?, As?, KN?, R, N).
+
+procedure xa_satom2(Ans?, VTypes?, SArgs?, KNames?, SArgs, KNames).
+xa_satom2(yes, Ts, As, _, R?, []) :- xa_wilds(Ts?, Ws), sargs_app(As?, Ws?, R).
+xa_satom2(no, Ts, As, KN, R?, N?) :- ground(As?) |
+    xa_key(As?, K),
+    xa_satom3(K?, Ts?, As?, KN?, R, N).
+
+procedure xa_satom3(SArgs?, VTypes?, SArgs?, KNames?, SArgs, KNames).
+xa_satom3(K, Ts, As, KN, R?, [kn(K?, Us?)]) :- ground(K?), ground(KN?) |
+    kn_lookup(K?, KN?, Ns),
+    xa_vargs(Ts?, Ns?, Vas, Us),
+    sargs_app(As?, Vas?, R).
+
+procedure xa_wilds(VTypes?, SArgs).
+xa_wilds([], []).
+xa_wilds([_|Ts], ['_'|R?]) :- xa_wilds(Ts?, R).
+
+procedure xa_vargs(VTypes?, PNames?, SArgs, PNames).
+xa_vargs([], _, [], []).
+xa_vargs([num|Ts], [V|Vs], [num(V?)|R?], [V?|U?]) :- ground(V?) | xa_vargs(Ts?, Vs?, R, U).
+xa_vargs([real|Ts], [V|Vs], [real(V?)|R?], [V?|U?]) :- ground(V?) | xa_vargs(Ts?, Vs?, R, U).
+
+procedure sargs_app(SArgs?, SArgs?, SArgs).
+sargs_app([], T, T?).
+sargs_app([A|As], T, [A?|R?]) :- sargs_app(As?, T?, R).
+
+procedure xa_sexprs(SExprs?, XPreds?, KNames?, SExprs, KNames).
+xa_sexprs([], _, _, [], []).
+xa_sexprs([X|Xs1], Xs, KN, [X1?|R?], N?) :- ground(X?), ground(Xs1?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1),
+    xa_sexprs(Xs1?, Xs?, KN?, R, N2),
+    kn_app(N1?, N2?, N).
+
+procedure xa_sexpr(SExpr?, XPreds?, KNames?, SExpr, KNames).
+xa_sexpr(plus(X, Y), Xs, KN, plus(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sexpr(minus(X, Y), Xs, KN, minus(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sexpr(mul(X, Y), Xs, KN, mul(X1?, Y1?), N?) :- ground(X?), ground(Y?), ground(Xs?), ground(KN?) |
+    xa_sexpr(X?, Xs?, KN?, X1, N1), xa_sexpr(Y?, Xs?, KN?, Y1, N2), kn_app(N1?, N2?, N).
+xa_sexpr(fn(Nm, Es), Xs, KN, fn(Nm?, Es1?), N?) :- ground(Es?), ground(Xs?), ground(KN?) |
+    xa_sexprs(Es?, Xs?, KN?, Es1, N).
+xa_sexpr(cardinality(Bv, A, C), Xs, KN, cardinality(Bv1?, A1?, C1?), N?) :-
+    ground(Bv?), ground(A?), ground(C?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N1),
+    xa_sc(C?, Xs?, KN?, C1, N2),
+    kn_app(N1?, N2?, N3),
+    xa_bind(Bv?, N3?, Bv1, N).
+xa_sexpr(sum(Bv, A, C, U), Xs, KN, sum(Bv1?, A1?, C1?, U1?), N?) :-
+    ground(Bv?), ground(A?), ground(C?), ground(U?), ground(Xs?), ground(KN?) |
+    xa_satom(A?, Xs?, KN?, A1, N1),
+    xa_sc(C?, Xs?, KN?, C1, N2),
+    xa_sexpr(U?, Xs?, KN?, U1, N3),
+    kn_app(N1?, N2?, N12),
+    kn_app(N12?, N3?, N4),
+    xa_bind(Bv?, N4?, Bv1, N).
+xa_sexpr(X, _, _, X?, []) :- otherwise | true.
 
 % --- the instance's additions -----------------------------------------------------
 procedure add_sdecl(SDeclared?, SDeclared?, WDeclared).
