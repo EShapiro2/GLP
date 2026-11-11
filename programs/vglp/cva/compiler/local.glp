@@ -1509,7 +1509,7 @@ procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, 
 pair_row1(no, _, _, _, _, _, _, no).
 pair_row1(yes, I, J, K, Rs, B, Ps, R?) :- pair_row(I?, J?, K?, Rs?, B?, Ps?, R).
 procedure pair_ok(Integer?, Integer?, RoleSpec?, RoleSpec?, Integer?, Integer?, Sames?, YesNo).
-pair_ok(P, Q, RI, RJ, I, J, Ps, R?) :- P? =:= Q?, ground(RI?), ground(RJ?), integer(I?), integer(J?) |
+pair_ok(P, Q, RI, RJ, I, J, Ps, R?) :- P? =:= Q?, ground(RI?), ground(RJ?), integer(I?), integer(J?), ground(Ps?) |
     role_names(RI?, J?, A1),
     role_names(RJ?, I?, A2),
     or(A1?, A2?, A),
@@ -1520,8 +1520,70 @@ pair_ok(P, Q, RI, RJ, I, J, Ps, R?) :- P? =:= Q?, ground(RI?), ground(RJ?), inte
     neg(Ag?, NAg),
     marked(I?, J?, Ps?, Mk),
     or(NAg?, Mk?, OkM),
-    and(R0?, OkM?, R).
+    and(R0?, OkM?, R1),
+    marks_of(Ps?, Ms),
+    gships_of(Ps?, Gs),
+    lemma_ok(RI?, RJ?, Ms?, Gs?, L),
+    and(R1?, L?, R).
 pair_ok(_, _, _, _, _, _, _, yes) :- otherwise | true.
+%% GSC, Lemma Wards and guardians, (1): an agent holding identity holds person or one mark of M, and not both; so no binding sends to one person a role that requires person and a role that requires a mark (vGLP b798a06, Section 5.4: "the compiler checks it on the states that meet the invariants the contract's paper proves, a contract with guardianships under GSC's Lemma Wards and guardians, by which every guardian of a ward is a person"), as end_guardian's Erin, a guardian, a person, and its Carol, the ward, are two (vGLP #26).
+%% A role's person is a person where the role requires person, or requires an atom of v, being a guardian (the lemma, (2)), or is a listed role whose anchor is an atom of u held by its base, being a guardian of the ward that lists them (the lemma, (3) and (2)).
+procedure lemma_ok(RoleSpec?, RoleSpec?, Preds?, Sames?, YesNo).
+lemma_ok(_, _, [], _, yes).
+lemma_ok(RI, RJ, [M|Ms], Gs, L?) :- ground(RI?), ground(RJ?), ground(M?), ground(Ms?), ground(Gs?) |
+    person_role(RI?, Gs?, PI),
+    person_role(RJ?, Gs?, PJ),
+    req_preds(RI?, [M?|Ms?], MI),
+    req_preds(RJ?, [M?|Ms?], MJ),
+    and(PI?, MJ?, B1),
+    and(MI?, PJ?, B2),
+    or(B1?, B2?, B),
+    neg(B?, L).
+%% Whether a role requires an atom of the predicate F, or of one of the predicates Fs.
+procedure req_pred(RoleSpec?, Constant?, YesNo).
+req_pred(R, F, B?) :- ground(R?) |
+    rs_lists(R?, _, M0, K, _),
+    uncleared(M0?, M),
+    app(M?, K?, A),
+    atoms_pred(A?, F?, B).
+procedure req_preds(RoleSpec?, Preds?, YesNo).
+req_preds(_, [], no).
+req_preds(R, [F|Fs], B?) :- ground(R?) | req_pred(R?, F?, B1), req_preds(R?, Fs?, B2), or(B1?, B2?, B).
+procedure atoms_pred(Atoms?, Constant?, YesNo).
+atoms_pred([], _, no).
+atoms_pred([atom(G, _)|_], F, yes) :- G? =?= F? | true.
+atoms_pred([_|As], F, B?) :- otherwise | atoms_pred(As?, F?, B).
+procedure marks_of(Sames?, Preds).
+marks_of([], []).
+marks_of([mark(M)|Ss], [M?|Ms?]) :- marks_of(Ss?, Ms).
+marks_of([same(_, _)|Ss], Ms?) :- marks_of(Ss?, Ms).
+marks_of([gship(_, _, _)|Ss], Ms?) :- marks_of(Ss?, Ms).
+procedure gships_of(Sames?, Sames).
+gships_of([], []).
+gships_of([gship(M, V, U)|Ss], [gship(M?, V?, U?)|Gs?]) :- gships_of(Ss?, Gs).
+gships_of([same(_, _)|Ss], Gs?) :- gships_of(Ss?, Gs).
+gships_of([mark(_)|Ss], Gs?) :- gships_of(Ss?, Gs).
+procedure person_role(RoleSpec?, Sames?, YesNo).
+person_role(R, Gs, B?) :- ground(R?), ground(Gs?) |
+    req_pred(R?, person, B1),
+    gship_vs(Gs?, Vs),
+    req_preds(R?, Vs?, B2),
+    gship_us(Gs?, Us),
+    listed_by(R?, Us?, B3),
+    or(B1?, B2?, B12),
+    or(B12?, B3?, B).
+procedure gship_vs(Sames?, Preds).
+gship_vs([], []).
+gship_vs([gship(_, V, _)|Gs], [V?|Vs?]) :- gship_vs(Gs?, Vs).
+gship_vs([_|Gs], Vs?) :- otherwise | gship_vs(Gs?, Vs).
+procedure gship_us(Sames?, Preds).
+gship_us([], []).
+gship_us([gship(_, _, U)|Gs], [U?|Us?]) :- gship_us(Gs?, Us).
+gship_us([_|Gs], Us?) :- otherwise | gship_us(Gs?, Us).
+procedure listed_by(RoleSpec?, Preds?, YesNo).
+listed_by(crs(listed(_, Rho, _), _, _, _, _, _), Us, B?) :- mem(Rho?, Us?, B).
+listed_by(crs(qlisted(_, Rho, _, _), _, _, _, _, _), Us, B?) :- mem(Rho?, Us?, B).
+listed_by(_, _, no) :- otherwise | true.
 %% Whether a role spec is an agent role's, not a listed role's.
 procedure agent_spec(RoleSpec?, YesNo).
 agent_spec(rs(_, _, _, _, _), yes).
@@ -1529,6 +1591,8 @@ agent_spec(crs(_, _, _, _, _, _), no).
 %% Whether the roles I and J are a pair of Ps, in either order.
 procedure marked(Integer?, Integer?, Sames?, YesNo).
 marked(_, _, [], no).
+marked(I, J, [mark(_)|Ss], M?) :- marked(I?, J?, Ss?, M).
+marked(I, J, [gship(_, _, _)|Ss], M?) :- marked(I?, J?, Ss?, M).
 marked(I, J, [same(A, B)|Ss], M?) :- integer(I?), integer(J?), integer(A?), integer(B?) | marked1(I?, J?, A?, B?, Ss?, M).
 procedure marked1(Integer?, Integer?, Integer?, Integer?, Sames?, YesNo).
 marked1(I, J, A, B, _, yes) :- I? =:= A?, J? =:= B? | true.
