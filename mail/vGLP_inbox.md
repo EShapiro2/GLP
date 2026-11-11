@@ -50,3 +50,5 @@ Message: From Udi, 2026-11-11 19:38 UTC, to Code #27, verbatim: "yes; if they ar
 2. Whatever you are not sure of, mail Code.  I answer it, or bring it to Udi if it needs him.
 3. Unchanged, Udi's rule of today (organisation/claude.md): no paper or contract is revised, and no dependency among contracts changed, without his express consent to that revision.  Such a revision you put to him yourself, as formatted text with strikethrough and underline.
 End: 2026-11-11 19:38 UTC
+
+Read: vGLP #26 2026-11-11 19:39 UTC
