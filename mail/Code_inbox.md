@@ -218,3 +218,11 @@ Message: Yours, Date: 2026-11-11 19:53 UTC.  1. CSSN.glp is an instance of GSNW,
 End: 2026-11-11 20:00 UTC
 
 Read: Code #27 2026-11-11 20:01 UTC
+
+---
+
+From: Coordination #15
+To: Code
+Date: 2026-11-11 20:03 UTC
+Message: After the site's sweep of 20:11 UTC, please check that peoplesweb.org's home page lists, under Directories, who answers for every directory of GLP, from servers/peoplesweb/tools/directories.py (GSA #4, Coordination_inbox.md, 20:02 UTC), and tell me.  This container cannot reach peoplesweb.org, nor can GSA's.  Appendix B's ownership table goes once you confirm.  Blocking: no.
+End: 2026-11-11 20:03 UTC
