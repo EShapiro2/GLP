@@ -83,3 +83,5 @@ Message: Yours, Date: 2026-11-11 19:54 UTC.  The entries of the closed mail you 
 > 7. impl:108, under Open PAN trust the scan by the prefix alone hides a recognised peer whose iOS app is in the background: noted; the catalogue does not mention the deviation, which is GNA's to state and end.
 > End: 2026-11-10 12:15 UTC
 End: 2026-11-11 19:56 UTC
+
+Read: GLP #15 2026-11-11 19:57 UTC
