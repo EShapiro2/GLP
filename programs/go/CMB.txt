@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.4 and cites a clause as CMB:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-10, by GO #4 Cowork.
+% Last changed: 2026-11-11, by GO #5.
 % Schemas: CMB.glp beside this file.
 CMB: Commercial Bank
 CMB instantiates GBank and restricts it.
@@ -43,20 +43,20 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move cmb loan directors] <denomination> <amount> <maturity> <bonds> <t> <motion>
 Creation: Alice [Found] <organisation>
   Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob> <motion>
+Ward and person: Otto [Org acquaint] <person Bob>
   Bob: Otto asks you to approve this: org acquaint.
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
   Bruno: Otto asks you to approve this: orgs acquaint.
-Retiring: Otto [Retire] <motion>
-Customers: Bob [Join] <person Otto> <motion>
+Retiring: Otto [Retire]
+Customers: Bob [Join] <person Otto>
   Otto: Bob asks you to approve this: join.
-  Bob [Leave] <person Otto> <motion>
+  Bob [Leave] <person Otto>
   Otto: Bob asks you to approve this: leave.
-Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+Joint guardianship: Otto [Appoint] <person Bob> <role>
   Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role> <motion>
+  Otto [Dismiss] <person Bob> <role>
   Bob [Resign role]
-Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Amendment: Otto [Amend] <new bylaws>
 Minting: Alice [Mint coin] <denomination> <amount>
   Alice [Mint bond] <denomination> <maturity> <amount>
 Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
@@ -72,8 +72,9 @@ Escrow: Alice [Deposit] <amount>
   Bob: Carol asks you to approve this: release.
   Carol [Return] <amount>
   Alice: Carol asks you to approve this: return.
-Lending limit: Otto [Cmb limit] <person Bob> <limit> <motion>
+Lending limit: Otto [Cmb limit] <person Bob> <limit>
 Deposit: Bob [Cmb deposit] <amount>
-Loan: Bob [Cmb loan] <person Carol> <denomination> <amount> <maturity> <bonds> <person Otto> <motion>
+Loan: Bob [Cmb loan] <person Carol> <denomination> <amount> <maturity> <bonds>
   Carol: Bob asks you to approve this: cmb loan.
-  Otto: Bob asks you to approve this: cmb loan.
+  Bob [Cmb loan directors] <person Otto> <denomination> <amount> <maturity> <bonds>
+  Otto: Bob asks you to approve this: cmb loan directors.
