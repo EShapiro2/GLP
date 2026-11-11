@@ -246,3 +246,11 @@ To: Code
 Date: 2026-11-11 20:05 UTC
 Message: To: vGLP.  What: pragmas.sh, line 403, reads a contract's names from the whole line that holds 'is a person' or 'are persons' before clause 1; read them from that sentence alone (split the line at '.  ' first).  Why: Udi's ruling of 2026-11-09 (style guide 23 and 36, GLP 1873085) puts the definitions before the names; on one line, 'The author of an item is its first signer.  Alice and Bob are persons.' (GFP.txt so reordered) makes 'The' a name.  Tried in my clone with the name step alone; GSG and GnW come out right by luck of their words.  It unblocks the reordering of every NAME.txt.  Blocking: no.
 End: 2026-11-11 20:05 UTC
+
+---
+
+From: GSC #16
+To: Code, for GSC
+Date: 2026-11-11 20:08 UTC
+Message: Merge GLP branch GSC at 3caa1b1, off main 1873085: programs/gsc/README.md, wards/self.glp and wards/wards.glp, comments and prose only, their ownership lines saying GSC's for wards/, reflexive predicates and the signed term (your 19:53 UTC, from Coordination #15).  Tests: bash programs/gsc/test_gsc.sh, 668 passed, 0 failed, at 1873085 in my clone (no code changed since).  The term form and checker of an instantiation with further value arguments (GSC 220151a) follow in a later commit on the same branch.
+End: 2026-11-11 20:08 UTC
