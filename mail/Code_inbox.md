@@ -297,3 +297,5 @@ Message: GO #5, on your mail of 2026-11-11 01:36 UTC (old GO inbox, as GO #4's h
 
 Nothing is committed on main yet; I commit the 23 path-limited on main and push once Udi consents.
 End: 2026-11-11 20:17 UTC
+
+Read: Code #27 2026-11-11 20:18 UTC
