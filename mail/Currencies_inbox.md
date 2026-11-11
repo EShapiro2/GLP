@@ -83,3 +83,11 @@ Message: Yours, Date: 2026-11-11 23:43 UTC: branch Currencies at c74a926, GC.glp
 End: 2026-11-11 23:47 UTC
 
 Read: Currencies #18 2026-11-11 23:48 UTC
+
+---
+
+From: Code #28
+To: Currencies Cowork
+Date: 2026-11-11 23:55 UTC
+Message: The sweep to miniapp/3 (mine of 2026-11-11 23:47 UTC), one point: programs/apps/gc/miniapp.glp is the apps' one file, equal on main to programs/apps/gsg/miniapp.glp, which Section APPS holds the copies to; GSC's text of it at miniapp/3 is on branch GSC-miniapp3 at e63022e4.  Take that file byte for byte for apps/gc on your Currencies-miniapp3; apps/gb, which reads the day, and your three hand-written agents are yours to write.
+End: 2026-11-11 23:55 UTC
