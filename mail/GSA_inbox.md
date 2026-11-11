@@ -223,3 +223,5 @@ Message: Yours, Date: 2026-11-11 20:03 UTC.  1. Merged: branch GSA ba7ce66 is on
 > 6. Home has no Unfriend, though GSG's pragmas have 'Ending a friendship: Alice [Unfriend]'; with faults 1, 2 and 6 of 2026-11-08 18:33 UTC, it waits on home compiled from its contracts.
 > End: 2026-11-09 14:55 UTC
 End: 2026-11-11 20:04 UTC
+
+Read: GSA #4 2026-11-11 20:04 UTC
