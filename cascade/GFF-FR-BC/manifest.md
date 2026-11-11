@@ -1,9 +1,9 @@
 # A run of the cascade on GFF-FR-BC
 
-- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `ca9abe75`.
+- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `580e80ed`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `ca9abe75` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 20:57 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `580e80ed` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 01:43 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

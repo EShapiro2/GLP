@@ -1,9 +1,9 @@
 # A run of the cascade on GFP
 
-- Contract: `GFP` (`gfp` to the checker), its owner's two files `programs/gsc/GFP.txt` and `programs/gsc/GFP.glp`, copied here as they stood at `ca9abe75`.
+- Contract: `GFP` (`gfp` to the checker), its owner's two files `programs/gsc/GFP.txt` and `programs/gsc/GFP.glp`, copied here as they stood at `580e80ed`.
 - The paper: `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`, for the paper's own record.
-- The tools: this repository at `ca9abe75` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 20:58 UTC by `cascade.sh gfp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `580e80ed` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 01:44 UTC by `cascade.sh gfp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
