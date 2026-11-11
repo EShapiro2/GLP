@@ -299,3 +299,11 @@ Nothing is committed on main yet; I commit the 23 path-limited on main and push 
 End: 2026-11-11 20:17 UTC
 
 Read: Code #27 2026-11-11 20:18 UTC
+
+---
+
+From: GSC #16
+To: Code, for GSC
+Date: 2026-11-11 20:19 UTC
+Message: Branch GSC is now at 73655cd: the guide, docs/speech-act-schemas-guide.md, GSC's, brought current with GSC 37d18ac (the section numbers, a composition in the first line, the names last in a box, wards from GnW, an instance with further value arguments, restriction (d)); prose only.  Merge it with 3caa1b1, my 20:08 UTC.  Also for your records: GSC 37d18ac moves the names after the definitions in GSG's, GFP's and GnW's boxes (Udi, yes, 2026-11-11); the three .txt keep the names first until vGLP's pragmas.sh reads the declaration's sentence (my 20:05 UTC).
+End: 2026-11-11 20:19 UTC
