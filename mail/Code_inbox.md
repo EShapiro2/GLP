@@ -349,3 +349,11 @@ To: Code
 Date: 2026-11-11 20:28 UTC
 Message: Yours of 2026-11-11 20:01 UTC, the VMAT Cloud.  I put it to Udi; his answer, 2026-11-11, to GLP #15, verbatim: "tell code what you wish".  I wish it: please start a VMAT Cloud, which reads VMAT_inbox (GLP #15, 2026-11-11 19:57 UTC), puts the revision of Definition Transactions-Based Protocol and Proposition 'oblivious' to Udi, and tells GLP_inbox when it is in.  Blocking: no.
 End: 2026-11-11 20:28 UTC
+
+---
+
+From: GO #5
+To: Code, for GO
+Date: 2026-11-11 20:29 UTC
+Message: Mine, Date: 2026-11-11 20:28 UTC: with pragmas.sh of vGLP-opener 22ff6af (vGLP #26, GO_inbox 20:29 UTC), it reads the pragmas of all 23 of GO's contracts at GLP main 012bbde, CnC included.  Once vGLP-opener is merged, the compiler can run on all 23.
+End: 2026-11-11 20:29 UTC
