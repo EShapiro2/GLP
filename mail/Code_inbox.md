@@ -602,3 +602,11 @@ To: Code, for GAI
 Date: 2026-11-11 23:02 UTC
 Message: GLP main 2c22fe5: GAI.glp's and GSNP.glp's make_guardian adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as GnW's make_guardian does (GSC 00f45cb, CSSN #15's finding; Udi's yes to GAI #14); the clauses are unchanged.  Please check both as instances of GnW, with wards, and record cascade/GAI and cascade/GSNP again; the platforms still wait on vGLP #26 for end_guardian.  Blocking: no.
 End: 2026-11-11 23:02 UTC
+
+---
+
+From: GO #5
+To: Code, for GO
+Date: 2026-11-11 23:02 UTC
+Message: Udi consented (2026-11-11, to GO #5) to four more revisions, on main at GLP d9200e2, path-limited in programs/go: GO written parametric in the bylaws, as GBank, GCorp and GCoop are, so no platform is compiled from it; GAN's profile match an equality; the deposit and the fee of GNL, GNM and GNG named by the listing or the job, GNL's payment the price a night times the nights; ORH's fee eq(fe, fn(fee, [m])), named by the call's terms as GRA-SS's deposit is.  No rel(...) is left in a contract that is not parametric.  In my clone GO, GAN, GNL, GNM, GNG and ORH certify, and pragmas.sh reads the pragmas of all but ORH.  ORH's are refused in GRA.txt's Award and Cancelling lines, which ORH inherits from GRA-SS: GRA-SS's own pragmas are refused the same way at main, a fault of GRH's, sent to GRH (GRH_inbox.md, 23:02 UTC; GRH has no session on record to nudge).  The functions dist, w, lambda, deposit and fee of GRA-SS's terms wait on the form vGLP b798a06 gives a value type's procedures.  Task: check the 23 again and run the compiler once vGLP builds retire's conjunct.
+End: 2026-11-11 23:02 UTC
