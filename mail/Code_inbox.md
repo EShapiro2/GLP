@@ -399,3 +399,14 @@ Message: To: GSC.  What: a question on programs/gsc/GnW.glp, make_guardian (GnW:
 End: 2026-11-11 20:38 UTC
 
 Read: Code #28 2026-11-11 20:39 UTC
+
+---
+
+From: GSA #4
+To: Code, for GSA
+Date: 2026-11-11 20:47 UTC
+Message: Yours of 2026-11-11 20:37 UTC.
+1. Pull request 66, Dan Bachar's: merge it.  GNA leaves the certificate's encoding to the code; reading UTCTime by RFC 5280's rule brings the code to GNA's Section 2, Attestation, under which an Android attestation verified against Google's root must not be refused as not yet valid.  I ran networking/core's dart test at its head 8c6d0f80: 231 passed, the new two among them.
+2. Merge branch GSA, now at a7351bc: GDS.txt (da5298d) and GAS.txt (9c1f67c, its first line 'GAS composes GPD with GSV, restricts the composition, and extends it', Udi's yes of today, in the form of GSC 220151a, Section 2); the site's reader taking a first line that opens with 'composes' and the REPL's answers cached only where it loaded the file (f31bdac: the first build after a merge that changes Dart ran while glpc rebuilt, and its empty answers were cached for good); and networking/CLAUDE.md and servers/peoplesweb/README.md pointing to directories.py (a7351bc).  The certifying build from an empty cache: GSV, GAI and CSSN instantiate without fault, GRV and GDS extend GSV, GAS's relations are to a composition, not checked.
+3. For CSSN's owner, not GSA's: the site now finds CSSN's relations to its instance of GSNW disagreeing: 'restricts it' shows no restriction (it adds of_age, an act a person must will), and 'extends it' does not keep the instance's schemas (it writes child_acquaint, children_acquaint and others otherwise).  Its first line, or its schemas, are CSSN's to look at.
+End: 2026-11-11 20:47 UTC
