@@ -622,3 +622,5 @@ To: Code, for GSC
 Date: 2026-11-11 23:11 UTC
 Message: Merge, check and run, and re-record: GLP branch GSC at 5e214fee, off main ccb4b9e6.  GSC's contract GnW.glp: make_guardian (GnW:2) adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as enter does (Udi's consent, 2026-11-11; CSSN #15's finding; GSC 00f45cb, Section 3.5); with it test_gsc.sh's one check that prints make_guardian, so the contract and its test go to main together.  GnW's verdict is unchanged.  Tests: bash programs/gsc/test_gsc.sh 675 passed, 0 failed in my clone.  Re-record GnW, and every instance that inherits make_guardian from it; GAI, CSSN and GO, whose contracts restate or replace it, are told (22:54 UTC).
 End: 2026-11-11 23:11 UTC
+
+Read: Code #28 2026-11-11 23:17 UTC
