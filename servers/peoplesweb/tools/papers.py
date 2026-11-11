@@ -26,6 +26,11 @@ BY_DIR = {
     'GSA': {'title': 'The Grassroots Super-App and App Store', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro',
             'pdf': 'GSA', 'state': 'uploaded to arXiv, number not yet announced'},
     'GNA': {'title': 'GLP Networking API and Services', 'authors': 'Dan Bachar and Ehud Shapiro', 'pdf': 'GNA'},
+    # GO's contracts (programs/go) cite it, in preparation; title and authors
+    # as its main file has them, Bib-Grassroots having no entry (Code #27,
+    # 2026-11-11, from GO 84c9335).
+    'GO': {'title': 'Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives',
+           'authors': 'Ehud Shapiro', 'pdf': 'GO'},
 }
 
 # Where each paper's source is: its repository under EShapiro2 on GitHub, the
@@ -51,10 +56,11 @@ SOURCES = {
 # (Udi, 2026-11-07: not to be fixed in GFF's repository).
 FIXES = {'GFF': [(r'\affiliation{}', r'\affiliation{\country{}}')]}
 # The foundational papers' sources (FOUNDATIONAL below), each by its project's
-# directory, repository and main file as Coordination's Appendix A records
-# them (Grassroots-Project-Overview, sections/A-paper-map.tex); built and
-# compared with arXiv as the contracts' papers are, so each is linked as
-# Updated beside arXiv while its repository is ahead (Udi, 2026-11-10).
+# directory, repository and main file, taken from Coordination's Appendix A
+# on 2026-11-10, this file being the one record of the site's papers
+# (Coordination, 2026-11-11); built and compared with arXiv as the contracts'
+# papers are, so each is linked as Updated beside arXiv while its repository
+# is ahead (Udi, 2026-11-10).
 SOURCES.update({
     'GLP-Spec': {'repo': 'GLP-ICLP-2026', 'main': 'main-GLP-ICLP-2026.tex'},
     'TGLP': {'repo': 'Moded-Types', 'main': 'main_tglp.tex'},
@@ -84,7 +90,7 @@ def arxiv_of(d):
     or a foundational one, or None."""
     if d in BY_DIR:
         return BY_DIR[d].get('arxiv')
-    return next((f['arxiv'] for f in FOUNDATIONAL if f['dir'] == d), None)
+    return next((f.get('arxiv') for f in FOUNDATIONAL if f.get('dir') == d), None)
 
 
 def updated(v, name, served_pdfs, st):
@@ -130,9 +136,15 @@ def paper_of(owner_line, served_pdfs=(), state=None):
 
 
 # The foundational papers, those with no contract of their own (Udi,
-# 2026-11-09, choosing them), listed under Foundational Papers on the site;
-# titles, authors and arXiv identifiers as Bib-Grassroots has them, and each
-# its project's directory, the key of its source in SOURCES.
+# 2026-11-09, choosing them, and 2026-11-11, taking Coordination's list of
+# ten published and two in preparation), listed under Foundational Papers on
+# the site; titles, authors, venues and arXiv identifiers as Bib-Grassroots
+# has them (Code #27, 2026-11-11, at its pull of 14:53 UTC), a paper not in
+# it as its main file has it; and, where the site builds its PDF, its
+# project's directory, the key of its source in SOURCES.  2301.04391 is the
+# extended version of the DISC 2023 brief announcement, the only entry
+# Bib-Grassroots has; the arXiv numbers of 2306.13941 and 2005.06261 are
+# Coordination's Appendix A's, their entries carrying none.
 FOUNDATIONAL = [
     {'dir': 'GLP-Spec', 'title': 'GLP: A Grassroots, Multiagent, Concurrent, Logic Programming Language for AI', 'authors': 'Ehud Shapiro', 'arxiv': '2510.15747'},
     {'dir': 'TGLP', 'title': 'Types for Grassroots Logic Programs', 'authors': 'Ehud Shapiro', 'arxiv': '2601.17957'},
@@ -147,6 +159,18 @@ FOUNDATIONAL = [
     {'dir': 'Federation', 'title': 'Grassroots Federation: Fair Democratic Governance at Scale', 'authors': 'Nimrod Talmon and Ehud Shapiro', 'arxiv': '2505.02208', 'venue': 'AAMAS 2026'},
     {'dir': 'CCDG', 'title': 'Constitutional Consensus', 'authors': 'Idit Keidar, Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2505.19216'},
     {'dir': 'CGMS', 'title': 'Constitutional Governance in Metric Spaces', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'arxiv': '2605.13362', 'venue': 'ADT 2026, to appear'},
+    {'title': 'Grassroots Distributed Systems: Concept, Examples, Implementation and Applications (Brief Announcement)', 'authors': 'Ehud Shapiro', 'arxiv': '2301.04391', 'venue': 'DISC 2023'},
+    {'title': 'Grassroots Social Networking: Serverless, Permissionless Protocols for Twitter/LinkedIn/WhatsApp', 'authors': 'Ehud Shapiro', 'arxiv': '2306.13941', 'venue': "OASIS '23"},
+    {'title': 'A Grassroots Architecture to Supplant Global Digital Platforms by a Global Digital Democracy', 'authors': 'Ehud Shapiro', 'arxiv': '2404.13468', 'venue': "DAWO '24"},
+    {'title': 'Digital social contracts: A foundation for an egalitarian and just digital society', 'authors': 'Luca Cardelli, Liav Orgad, Gal Shahaf, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2005.06261', 'venue': 'First International Forum on Digital and Democracy, 2020'},
+    {'title': 'Multiagent Transition Systems for Composing Fault-Resilient Protocol Stacks', 'authors': 'Ehud Shapiro', 'arxiv': '2112.13650'},
+    {'title': 'Grassroots Flash: A Payment System for Grassroots Cryptocurrencies', 'authors': 'Andrew Lewis-Pye, Oded Naor and Ehud Shapiro', 'arxiv': '2309.13191'},
+    {'title': 'The Blocklace: A Byzantine-repelling and Universal Conflict-free Replicated Data Type', 'authors': 'Paulo Sérgio Almeida and Ehud Shapiro', 'arxiv': '2402.08068'},
+    {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
+    {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
+    {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
+    {'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    {'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026'},
 ]
 
 
@@ -156,6 +180,7 @@ def foundational(served_pdfs=(), state=None):
     out = []
     for f in FOUNDATIONAL:
         v = {k: x for k, x in f.items() if k != 'dir'}
-        updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+        if 'dir' in f:
+            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         out.append(v)
     return out
