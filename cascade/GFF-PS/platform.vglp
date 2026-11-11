@@ -554,7 +554,7 @@ sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 % The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg).
+RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs     ::= [] ; [RArg | RArgs].
 RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
 RAtoms    ::= [] ; [RAtom | RAtoms].
@@ -676,7 +676,9 @@ Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant)
 %% A cleared atom (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "A schema may mark an atom it deletes as cleared, with the wildcard * among its arguments or as the speech act of a name term: the act deletes every atom of the state that it matches, and requires none"), written among the deleted atoms of a role as programs/gsc writes it (GSC 327e035, Definition "Speech-act schema"): any is the wildcard as an argument, and ext_any(N) the name term N.*, the wildcard as its speech act.
             ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any
 %% item_of(V), the item of the speech act bound to V, its utterance under its signatures, an argument of an atom (vGLP e1d1b8a, Section 5.4).
+%% val(C), a constant the contract names, a value or an utterance, as an act's name or the name of a contract's bylaws, an argument of an atom (vGLP 0eeea71, Section 5.4): its image is v(C), and it matches v(C) alone.
             ; item_of(Var)
+            ; val(Constant)
 %% inst(K, J, X), the variable X its quantifier binds at the J-th instance of the K-th conjunct of a schema whose instances the attempt names, which stands for X in its conditional literals, the binding sending it to the value that instance gives X (instances, cond_specs).
             ; inst(Integer, Integer, Var).
 %% own_iv(V) and ext_iv(N, V) are <x> and N.y with x or y a variable a conjunct's quantifier binds, V its inst(K, J, X) at the J-th instance (cond_specs).
@@ -753,7 +755,8 @@ CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 %% A number, n(K); and lv(S, X), the value a schema-binding of the schema S gives a variable X local to a role, agent, speech-act or numeric, which it does not bind: it stands for the variable, which the state of the person in that role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").
 %% A value is a whole number, n(K), or a real, r(X), "a value, a whole number, a real or a string, or a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"); arithmetic on them is on numbers, a result with a real among its operands a real.
 %% The item of a speech act, i(U), its utterance under its signatures (vGLP 27bae5d, Section 5.4).
-Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any.
+%% A constant the contract names, v(C), the image of val(C) (vGLP 0eeea71, Section 5.4).
+Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any ; v(Constant).
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals      ::= [] ; [Val | Vals].
 GAtom     ::= g(Constant, Vals).
@@ -3525,6 +3528,7 @@ val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(r(_), _, no).
 val_names(i(_), _, no).
+val_names(v(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 procedure cname_base(CName?, Peer).
@@ -5059,6 +5063,8 @@ adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 %% An item names no agent, so admissibility does not concern it (GSC, the appendix on values).
 adm_var(item_of(_), _, _, _, yes).
+%% Nor does a constant the contract names.
+adm_var(val(_), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
@@ -5375,6 +5381,7 @@ is_lv(c(_), no).
 is_lv(n(_), no).
 is_lv(r(_), no).
 is_lv(i(_), no).
+is_lv(v(_), no).
 is_lv(any, no).
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
 locals_put([], _, B, B?).
@@ -5682,6 +5689,7 @@ cimg_args([sgn(Y, I)|Vs], B, [X?|Xs?]) :- ground(B?), ground(Y?), ground(I?) |
     cimg_sgn(F?, P?, sgn(Y?, I?), X),
     cimg_args(Vs?, B?, Xs).
 cimg_args([num(X)|Vs], B, [cmp_val(n(N?))|Xs?]) :- integer(X?) | N := X?, cimg_args(Vs?, B?, Xs).
+cimg_args([val(C)|Vs], B, [cmp_val(v(C?))|Xs?]) :- cimg_args(Vs?, B?, Xs).
 cimg_args([item_of(V)|Vs], B, [X?|Xs?]) :- ground(B?), ground(V?) |
     lookup(V?, B?, F),
     item_found(F?, F1),
@@ -6191,6 +6199,7 @@ found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(r(_)), unbound).
 found_peer(found(i(_)), unbound).
+found_peer(found(v(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -6245,6 +6254,8 @@ img_args([nterm(N)|Vs], B, [c(C?)|Xs?]) :- ground(B?), ground(N?) |
     nt_img(N?, B?, C),
     img_args(Vs?, B?, Xs).
 img_args([num(X)|Vs], B, [n(N?)|Xs?]) :- integer(X?) | N := X?, img_args(Vs?, B?, Xs).
+%% The image of a constant the contract names, val(C), is v(C).
+img_args([val(C)|Vs], B, [v(C?)|Xs?]) :- img_args(Vs?, B?, Xs).
 %% The image of an item item_of(y): the utterance under the signatures of the speech act bound to y.
 img_args([item_of(V)|Vs], B, [X?|Xs?]) :- ground(B?), ground(V?) |
     lookup(V?, B?, F),
@@ -6303,6 +6314,7 @@ atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
 vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
+vars_bound([val(_)|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 %% An item is bound where its variable is.
 vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
@@ -6365,6 +6377,10 @@ match_args([nterm(N)|Vs], [X|Xs], B, R?) :- ground(N?), ground(X?), ground(B?) |
 match_args([num(X)|Vs], [Y|Ys], B, R?) :- number(X?), ground(Y?), ground(B?) |
     lit_val(X?, Y?, E),
     lit_then(E?, Vs?, Ys?, B?, R).
+%% A constant the contract names, val(C), matches v(C) alone, and binds nothing.
+match_args([val(C)|Vs], [Y|Ys], B, R?) :- ground(C?), ground(Y?), ground(B?) |
+    const_lit(C?, Y?, E),
+    lit_then(E?, Vs?, Ys?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of the image of a cleared atom, and nothing else, binding nothing: the deleted atoms of a class carry the images of the cleared atoms of its schema-bindings (joins), and a schema-binding found by matching them has the same cleared atoms.
 %% An item item_of(y) matches the item of the speech act bound to y, and binds nothing: the atoms binding y come before it (vGLP e1d1b8a, Section 5.4).
 match_args([item_of(V)|Vs], [X|Xs], B, R?) :- ground(V?), ground(X?), ground(B?) |
@@ -6383,6 +6399,9 @@ procedure lit_val(Number?, Val?, YesNo).
 lit_val(X, n(K), yes) :- X? =:= K? | true.
 lit_val(X, r(K), yes) :- X? =:= K? | true.
 lit_val(_, _, no) :- otherwise | true.
+procedure const_lit(Constant?, Val?, YesNo).
+const_lit(C, v(D), yes) :- C? =?= D? | true.
+const_lit(_, _, no) :- otherwise | true.
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
 any_val(_, no) :- otherwise | true.
@@ -6415,6 +6434,7 @@ name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, r(_), noparts).
 name_parts(_, i(_), noparts).
+name_parts(_, v(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 procedure nt_parts(NTerm?, CName?, NameParts).
@@ -6444,6 +6464,7 @@ sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(r(_), unsigned).
 sgn_parts(i(_), unsigned).
+sgn_parts(v(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 procedure match_sgn(SgnParts?, Constant?, Integer?, Vars?, Vals?, Binding?, Match).
@@ -6495,6 +6516,7 @@ kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
 %% The wildcard is matched by match_args, and matches no variable; the clauses cover the types.
 %% An item is matched by match_args; the clause covers the type.
 kind_ok(item_of(_), _, no).
+kind_ok(val(_), _, no).
 kind_ok(any, _, no).
 kind_ok(V, any, no) :- ground(V?) | true.
 
@@ -6509,6 +6531,7 @@ val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(r(_)), D, D?).
 val_peer1(found(i(_)), D, D?).
+val_peer1(found(v(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -6521,6 +6544,7 @@ val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(r(_)), D, speech(utterance(none), D?)).
 val_speech1(found(i(_)), D, speech(utterance(none), D?)).
+val_speech1(found(v(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -6537,6 +6561,7 @@ procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
 num_found(found(r(K)), num_is(K?)).
 num_found(found(i(_)), no_num).
+num_found(found(v(_)), no_num).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -6596,6 +6621,8 @@ expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
 %% The author of a speech act, its first signer, and its item, its utterance under its signatures: "the signer, the author and the item of a speech act, its last signer, its first signer and its utterance" (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications").
 expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
+%% A constant the contract names is its own value, v(C).
+expr_term1(val(C), _, found(v(C?))).
 expr_term1(_, _, free) :- otherwise | true.
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
@@ -6658,6 +6685,7 @@ expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
 expr_val(author_of(_), _, no_num).
 expr_val(item_of(_), _, no_num).
+expr_val(val(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 %% The wildcard of a cleared atom is in no constraint (GSC 327e035); the clause covers the type.
@@ -6856,6 +6884,7 @@ expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
 expr_free(author_of(_), _, F0, F0?).
 expr_free(item_of(_), _, F0, F0?).
+expr_free(val(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).
