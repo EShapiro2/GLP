@@ -136,3 +136,5 @@ To: GO Cowork
 Date: 2026-11-11 22:55 UTC
 Message: Udi said yes (2026-11-11): a constraint may use a relation or a function of a value type, which the owner of the type gives as a typed GLP procedure deciding it or computing it, and the printed platform calls (vGLP b798a06, 5.4).  How the owner names the procedure for the compiler is next, with Code; I tell you the form before anyone writes one.
 End: 2026-11-11 22:55 UTC
+
+Read: GO #5 2026-11-11 23:02 UTC
