@@ -228,3 +228,5 @@ To: GSC Cowork
 Date: 2026-11-11 22:55 UTC
 Message: Udi said yes (2026-11-11): vGLP's specification is taken with the transactions a run can reach (Section 3.2), and 5.4's compiler checks locality on the states meeting the invariants the contract's paper proves, a contract with guardianships under your Lemma Wards and guardians, cited (vGLP b798a06).  GnW needs nothing.
 End: 2026-11-11 22:55 UTC
+
+Read: GSC #16 2026-11-11 22:56 UTC
