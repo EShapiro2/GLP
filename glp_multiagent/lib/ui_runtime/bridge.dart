@@ -137,16 +137,38 @@ const String refCtor = 'ref';
 const String namedCtor = 'named';
 
 /// The name of the declared widget and the default widget `D` of [w], where
-/// it is `named(W, D)`; null for any other widget.  `W` is the name, or, where
-/// the declaration declares buttons, the declared widget whole, its name
-/// applied to them ([declaredText]).
+/// it is `named(W, D)`; null for any other widget.  `W` is a term of the
+/// program's person-channel union `T`, "a name or a name applied to
+/// arguments, as the request type's menu is applied to its buttons and
+/// fields" (vGLP 668df7d, Section 6.3, the paragraph after the construct
+/// process; programs/self.glp, `named(T, Widget(T))`), and its name is its
+/// functor; the family finds its widget by the functor and the arity
+/// ([namedKey]).
 (String, GTerm)? namedWidget(GTerm w) {
   final (k, ws) = ctorArgs(w);
   if (k != namedCtor || ws.length != 2) return null;
-  final n = _recName(ws[0]);
-  final i = n.indexOf('(');
-  return (i < 0 ? n : n.substring(0, i), ws[1]);
+  return (_functorOf(ws[0]), ws[1]);
 }
+
+/// The key the construct family finds the widget of a declared widget [w],
+/// `named(W, D)`, by: `W`'s functor and arity, `social_menu/1` for
+/// `social_menu(Ws)` and `approval_sentence/0` for the name alone ([widgetKey];
+/// GLP #14, Code_inbox 2026-11-10 18:08 UTC); null for any other widget.
+String? namedKey(GTerm w) {
+  final (k, ws) = ctorArgs(w);
+  if (k != namedCtor || ws.length != 2) return null;
+  return widgetKey(ws[0]);
+}
+
+/// The functor and arity of [t], `F/N`, a constant its own name of arity 0:
+/// the key of a Dart widget a widget declaration may name (named_widgets.dart).
+String widgetKey(GTerm t) => switch (t) {
+      GStruct(:final functor, :final args) => '$functor/${args.length}',
+      _ => '${_recName(t)}/0',
+    };
+
+/// The functor of [t], a constant its own name.
+String _functorOf(GTerm t) => t is GStruct ? t.functor : _recName(t);
 
 /// The `W` of [w], where it is `named(W, D)`, as the declaration gives it,
 /// which `DeclaredWidget.parse` reads (glp_runtime/lib/vglp/canonical.dart;

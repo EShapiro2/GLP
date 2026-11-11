@@ -186,19 +186,19 @@ procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, form(approval, [field('Offer', form(offer, [field('From', shown), field('Want', form(lot, [field('Issuer', shown), field('Amount', shown)])), field('Offered', thread(form(coin, [field('Issuer', shown), field('Serial', shown)])))])), field('YesNo', buttons([yes, no]))]), Vs?, Done?, Gs?, Gs1, Ds).
 construct(Id, stream_request_r(X?), Gs, Ds?) :- answer_stream_request([], X, Gs1?, _, Done), run_stream_request_r(Id?, input_box(menu([form(mint, [field('Amount', number)]), form(swap, [field('Friend', peer), field('GiveCoin', peer), field('GiveAmount', number), field('WantCoin', peer), field('WantAmount', number)]), form(pay, [field('Friend', peer), field('Amount', number)]), form(redeem, [field('Friend', peer), field('WantCoin', peer)])])), [input([])], Done?, Gs?, Gs1, Ds).
 
-procedure output(Widget?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).
 
-procedure output_more(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_more(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Gs, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Gs?, Ds).
 output_more(W, Ms, Es, [refresh | Gs], Ds?) :- output_draw(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, Ms, Es, [input(_, _, _) | Gs], Ds?) :- output_more(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, [], Es, Gs, Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
-procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, Gs, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Gs?, Ds).
 
-procedure output_end(Widget?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_end(Widget(Drawn)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_end(W, Es, [refresh | Gs], [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_end(W?, Es?, Gs?, Ds).
 output_end(W, Es, [input(_, _, _) | Gs], Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
@@ -223,18 +223,18 @@ View_approval ::= approval(Offer, Questioned(YesNo)).
 procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_approval), Done).
 present_approval(P, approval(H1, H2?), Gs, Gs1?, [approval(H1?, input(M2?))], D2?) :- ground(P?), ground(H1?) | path(P?, 2, M2), path(P?, 2, Q2), answer_yesNo(Q2?, H2, Gs?, Gs1, D2).
 
-procedure run_approval_w(Integer?, Widget?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w(Integer?, Widget(Drawn)?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_approval_w_more(Integer?, Widget?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_more(Integer?, Widget(Drawn)?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_approval_w_last(Integer?, Widget?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_last(Integer?, Widget(Drawn)?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_approval_w_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
@@ -281,18 +281,18 @@ take_stream_request(formed(V), P, [V? | X1?], _, Gs, Gs1?, Done?) :- answer_stre
 take_stream_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_stream_request(P?, X, Gs?, Gs1, Done).
 
 View_stream_request_r ::= Stream(Request) ; input(Path).
-procedure run_stream_request_r(Integer?, Widget?, Stream(View_stream_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_stream_request_r(Integer?, Widget(Drawn)?, Stream(View_stream_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_stream_request_r(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_stream_request_r(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_stream_request_r_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_stream_request_r_more(Integer?, Widget?, View_stream_request_r?, Stream(View_stream_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_stream_request_r_more(Integer?, Widget(Drawn)?, View_stream_request_r?, Stream(View_stream_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_stream_request_r_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_stream_request_r_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_stream_request_r_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_stream_request_r_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_stream_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_stream_request_r_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_stream_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_stream_request_r_last(Integer?, Widget?, View_stream_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_stream_request_r_last(Integer?, Widget(Drawn)?, View_stream_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_stream_request_r_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_stream_request_r_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, stream_request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_stream_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_stream_request_r_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_stream_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).

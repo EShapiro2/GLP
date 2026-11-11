@@ -473,6 +473,7 @@ var_name(role(_), novar).
 var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
 var_name(item_of(_), novar).
+var_name(val(_), novar).
 var_name(any, novar).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_name(ilist(_, _), novar).
@@ -879,6 +880,7 @@ lin_coef(sum(_, _, _, _, _), _, 0).
 %% The author and the item of a speech act are a person and an utterance, no number, and carry no coefficient.
 lin_coef(author_of(_), _, 0).
 lin_coef(item_of(_), _, 0).
+lin_coef(val(_), _, 0).
 procedure same_arg_coef(Arg?, Arg?, Number).
 same_arg_coef(A, V, 1) :- A? =?= V? | true.
 same_arg_coef(_, _, 0) :- otherwise | true.
@@ -1008,6 +1010,7 @@ variables_of([role(_)|As], R?) :- variables_of(As?, R).
 variables_of([nterm(_)|As], R?) :- variables_of(As?, R).
 variables_of([sgn(_, _)|As], R?) :- variables_of(As?, R).
 variables_of([item_of(_)|As], R?) :- variables_of(As?, R).
+variables_of([val(_)|As], R?) :- variables_of(As?, R).
 variables_of([any|As], R?) :- variables_of(As?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 variables_of([ilist(_, _)|As], R?) :- variables_of(As?, R).
@@ -1019,6 +1022,8 @@ flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
 %% An item item_of(y) holds its variable y, as a signed term does.
 flat_args([item_of(V)|As], [V?|R?]) :- flat_args(As?, R).
 flat_args([any|As], R?) :- flat_args(As?, R).
+%% A constant the contract names, val(C), is no variable and names nothing, and is left out, as the wildcard is (vGLP 0eeea71, Section 5.4).
+flat_args([val(_)|As], R?) :- flat_args(As?, R).
 flat_args([nterm(N)|As], R?) :- nt_flat(N?, Ws), flat_args(As?, R1), app(Ws?, R1?, R).
 flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
 %% The variables of a name term, its base, a role or an agent variable, and its speech-act variables: "a variable inside a signed term or a name term included" (vGLP c649c0d, Section 5.4, the paragraph on act schemas), and its base named by it.
@@ -1297,6 +1302,7 @@ person_vars([svar(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([nterm(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([sgn(_, _)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([item_of(_)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([val(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([real(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([any|Vs], R?) :- person_vars(Vs?, R).
@@ -1310,6 +1316,7 @@ speech_vars([pvar(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([nterm(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([sgn(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([item_of(_)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([val(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([real(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
@@ -1571,6 +1578,7 @@ adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 %% An item names no agent (GSC, the appendix on values: "a value, and an utterance, is no agent role, no agent variable and no name term"), so admissibility does not concern it.
 adm_var(item_of(_), _, _, _, yes).
+adm_var(val(_), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 adm_var(real(_), _, _, _, yes).
@@ -1636,6 +1644,8 @@ img_args([item_of(V)|As], B, [X?|Xs?]) :- ground(B?), ground(V?) |
     lookup(V?, B?, F),
     img_item(F?, item_of(V?), X),
     img_args(As?, B?, Xs).
+%% A constant the contract names, val(C), stands for itself, as a number does, its image free_var(val(C)), which matches it alone (vGLP 0eeea71, Section 5.4; programs/gsc/self.glp, Arg: "it matches val(C) alone").
+img_args([val(C)|As], B, [free_var(val(C?))|Xs?]) :- ground(B?) | img_args(As?, B?, Xs).
 img_args([A|As], B, [X?|Xs?]) :- otherwise, ground(B?), ground(A?) |
     lookup(A?, B?, F),
     val_or_free(F?, A?, X),
@@ -2052,12 +2062,17 @@ match_arg(item_of(A), V, B, R?) :- ground(A?), ground(V?), ground(B?) |
     lookup(A?, B?, F),
     img_item(F?, item_of(A?), I),
     same_item(I?, V?, B?, R).
+%% A constant the contract names, val(C), matches its image, free_var(val(C)), alone, and binds nothing.
+match_arg(val(C), V, B, R?) :- ground(C?), ground(V?), ground(B?) | same_const(val(C?), V?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of a cleared atom's image, free_var(any), and nothing else, and binds nothing.
 match_arg(any, V, B, R?) :- ground(V?) | wild_val(V?, B?, R).
 match_arg(A, V, B, R?) :- otherwise, ground(A?), ground(V?), ground(B?) |
     lookup(A?, B?, F),
     kind_fits(A?, V?, K),
     match_one(F?, K?, A?, V?, B?, R).
+procedure same_const(Arg?, Val?, Binding?, MRes).
+same_const(A, free_var(W), B, mok(B?)) :- A? =?= W? | true.
+same_const(_, _, _, mno) :- otherwise | true.
 procedure same_item(Val?, Val?, Binding?, MRes).
 same_item(item(U), item(W), B, mok(B?)) :- U? =?= W? | true.
 same_item(_, _, _, mno) :- otherwise | true.

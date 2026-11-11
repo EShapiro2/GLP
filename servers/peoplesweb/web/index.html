@@ -327,35 +327,33 @@ function layout(){
     let x = lo;
     for (const k of ks){ const w = (hi - lo) * leaves(k) / tot; place(k, x, x + w); x += w; }
   })('GKK', -80 * Math.PI/180, 80 * Math.PI/180);
-  // The rings as the layers of a layered drawing: every relation an edge from
-  // the contract to the one built on it, with a waypoint on each ring it
-  // passes, so a long arrow keeps its place among the others.
-  const maxd = MAXD(), Lr = Array.from({length: maxd + 1}, () => []), UP = {}, DN = {}, X = {}, REAL = new Set();
-  const add = (v, d, x) => { Lr[d].push(v); UP[v] = UP[v] || []; DN[v] = DN[v] || []; X[v] = x; };
-  D.contracts.forEach(c => { add(c.id, DEPTH[c.id], PHI[c.id]); REAL.add(c.id); });
-  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    let u = p;
-    for (let d = DEPTH[p] + 1; d < DEPTH[c.id]; d++){
-      const v = `${p}>${c.id}@${d}`;
-      add(v, d, PHI[p] + (PHI[c.id] - PHI[p]) * (d - DEPTH[p]) / (DEPTH[c.id] - DEPTH[p]));
-      DN[u].push(v); UP[v].push(u); u = v;
-    }
-    DN[u].push(c.id); UP[c.id].push(u);
-  }));
+  // The rings as the layers of a layered drawing, each relation an edge from
+  // the contract to the one built on it.  The order along the rings and the
+  // longitudes are found from the contracts alone, each placed by all its
+  // parents and children wherever they stand; an arrow that passes rings
+  // between its two contracts is routed afterwards through the gaps those
+  // rings leave, so it does not push the names aside nor run round the end of
+  // every ring and along the globe's edge (Udi, 2026-11-10, "fix globe").
+  const maxd = MAXD(), Lr = Array.from({length: maxd + 1}, () => []), UP = {}, DN = {}, X = {};
+  const REAL = new Set(D.contracts.map(c => c.id));
+  D.contracts.forEach(c => { Lr[DEPTH[c.id]].push(c.id); UP[c.id] = []; DN[c.id] = []; X[c.id] = PHI[c.id]; });
+  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => { UP[c.id].push(p); DN[p].push(c.id); }));
+  const span = (a, b) => Math.abs(DEPTH[a] - DEPTH[b]);
   Lr.forEach(r => r.sort((a, b) => X[a] - X[b]));
   // The order along each ring: sweeps down and up the rings, each setting a
-  // ring's order by the mean place of each member's neighbours on the ring
-  // above (going down) or below (going up), the order with the fewest
-  // crossings of edges kept.
+  // ring's order by the mean place of each contract's parents (going down) or
+  // children (going up) along their rings, a relation that passes more rings
+  // weighing less; the order with the fewest crossings of the arrows between
+  // neighbouring rings kept.
   const crossings = () => { const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i)); let n = 0;
     for (let d = 0; d < maxd; d++){
-      const es = []; Lr[d].forEach(u => DN[u].forEach(v => es.push([I[u], I[v]])));
+      const es = []; Lr[d].forEach(u => DN[u].forEach(v => { if (DEPTH[v] === d + 1) es.push([I[u], I[v]]); }));
       for (let i = 0; i < es.length; i++) for (let j = i + 1; j < es.length; j++)
         if ((es[i][0] - es[j][0]) * (es[i][1] - es[j][1]) < 0) n++;
     }
     return n; };
   // Then each pair of neighbours on a ring is swapped where that crosses fewer
-  // edges to the rings above and below, until no swap helps.  The whole is
+  // arrows to the rings above and below, until no swap helps.  The whole is
   // done from several starting orders, the tree's and the same with each
   // contract's children shuffled, a fixed seed making it the same every time.
   const start = Lr.map(r => r.slice());
@@ -366,7 +364,7 @@ function layout(){
       for (let k = 1; k <= maxd; k++){
         const d = down ? k : maxd - k, nb = down ? UP : DN, P = {};
         Lr.forEach(r => r.forEach((v, i) => P[v] = (i + 0.5) / r.length));
-        const key = v => nb[v].length ? nb[v].reduce((t, u) => t + P[u], 0) / nb[v].length : P[v];
+        const key = v => { let s = 0, t = 0; nb[v].forEach(u => { const g = 1 / span(u, v); s += g * P[u]; t += g; }); return t ? s / t : P[v]; };
         Lr[d] = Lr[d].map((v, i) => [v, key(v), i]).sort((a, b) => a[1] - b[1] || a[2] - b[2]).map(a => a[0]);
       }
       const n = crossings();
@@ -377,7 +375,8 @@ function layout(){
       swapped = false;
       const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i));
       const cost = (a, b) => { let n = 0;
-        for (const nb of [UP, DN]) for (const x of nb[a]) for (const y of nb[b]) if (I[x] > I[y]) n++;
+        for (const nb of [UP, DN]) for (const x of nb[a]) for (const y of nb[b])
+          if (span(x, a) === 1 && span(y, b) === 1 && DEPTH[x] === DEPTH[y] && I[x] > I[y]) n++;
         return n; };
       for (let d = 1; d <= maxd; d++) for (let i = 0; i + 1 < Lr[d].length; i++){
         const a = Lr[d][i], b = Lr[d][i+1];
@@ -392,37 +391,32 @@ function layout(){
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
         let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })('GKK', -1, 1);
-      start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => (pos[a.split('>')[0]] ?? 0) - (pos[b.split('>')[0]] ?? 0)));
-      for (let d = 0; d <= maxd; d++) Lr[d].sort((a, b) => (REAL.has(a) ? pos[a] : pos[a.split('>')[0]] + (pos[a.split('>')[1].split('@')[0]] - pos[a.split('>')[0]]) * 0.5)
-                                                     - (REAL.has(b) ? pos[b] : pos[b.split('>')[0]] + (pos[b.split('>')[1].split('@')[0]] - pos[b.split('>')[0]]) * 0.5));
+      start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => pos[a] - pos[b]));
     } else start.forEach((r, d) => Lr[d] = r.slice());
     const n = sweep();
     if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
   }
   best.forEach((r, d) => Lr[d] = r);
   // The longitudes: each ring in that order, its names a name's width and a
-  // margin apart along the ring, a waypoint half a name's width and a margin
-  // from a name beside it, so the arrow through it passes clear of the name, using as much of the sphere as the ring needs, up to nearly
-  // all the way round (Udi, 2026-11-09: "we can use more than half the globe
-  // if needed, not all contracts have to be visible upfront"); then, again and
-  // again, each moved halfway to the mean longitude of its neighbours above
-  // and below (GKK, at the pole, has none), the drawing centred, and the gaps
-  // restored in the ring's order.  A ring too full even for that sets
+  // margin apart along the ring, using as much of the sphere as the ring
+  // needs, up to nearly all the way round (Udi, 2026-11-09: "we can use more
+  // than half the globe if needed, not all contracts have to be visible
+  // upfront"); then, again and again, each moved halfway to the mean longitude
+  // of its parents and children, a relation that passes more rings weighing
+  // less (GKK, at the pole, has no longitude), the drawing centred, and the
+  // gaps restored in the ring's order.  A ring too full even for that sets
   // alternate names on a second row, toward the wider gap beside it.
   const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*id.length + 0.8*FS0();
-  const pairs = [], RR = [];
+  const pairs = [];
   for (let d = 1; d <= maxd; d++){
-    const ring = Lr[d], R = 265 * Math.sin(RING[d]), names = ring.filter(v => REAL.has(v));
+    const ring = Lr[d], R = 265 * Math.sin(RING[d]);
     const full = (a, b) => 1.3 * (w(a) + w(b) + 14) / R;
-    const two = names.reduce((n, id, i) => n + (i ? full(names[i-1], id) : 0), 0) > 1.8 * lim;
+    const two = ring.reduce((n, id, i) => n + (i ? full(ring[i-1], id) : 0), 0) > 1.8 * lim;
     const up = RING[d] - RING[d-1], down = d < maxd ? RING[d+1] - RING[d] : up;
-    if (two) names.forEach((id, i) => LAT[id] = i % 2 ? 0 : up >= down ? -0.42 * up : 0.42 * down);
-    const ps = [], at = {}; ring.forEach((v, i) => at[v] = i);
-    for (let i = 1; i < ring.length; i++){
-      const a = ring[i-1], b = ring[i], ra = REAL.has(a), rb = REAL.has(b);
-      ps.push([i-1, i, ra && rb ? (two ? 0.3 : 1) * full(a, b) : ra || rb ? (w(ra ? a : b) + 14) / R : 10 / R]);
-    }
-    if (two) for (let i = 2; i < names.length; i++) ps.push([at[names[i-2]], at[names[i]], full(names[i-2], names[i])]);
+    if (two) ring.forEach((id, i) => LAT[id] = i % 2 ? 0 : up >= down ? -0.42 * up : 0.42 * down);
+    const ps = [];
+    for (let i = 1; i < ring.length; i++) ps.push([i-1, i, (two ? 0.3 : 1) * full(ring[i-1], ring[i])]);
+    if (two) for (let i = 2; i < ring.length; i++) ps.push([i-2, i, full(ring[i-2], ring[i])]);
     pairs[d] = ps;
     let acc = 0; ring.forEach((v, i) => { if (i) acc += ps[i-1][2]; X[v] = acc; });
     ring.forEach(v => X[v] -= acc / 2);
@@ -437,11 +431,12 @@ function layout(){
     }
     ring.forEach((v, i) => X[v] = ph[i]);
   } };
-  const nbs = v => [...UP[v], ...DN[v]].filter(u => u !== 'GKK');
   for (let it = 0; it < 400; it++){
     const nx = {};
-    for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => { const ns = nbs(v);
-      nx[v] = ns.length ? (X[v] + ns.reduce((t, u) => t + X[u], 0) / ns.length) / 2 : X[v]; });
+    for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => {
+      let s = 0, t = 0;
+      [...UP[v], ...DN[v]].forEach(u => { if (u !== 'GKK'){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
+      nx[v] = t ? (X[v] + s / t) / 2 : X[v]; });
     let lo = Infinity, hi = -Infinity;
     for (const v in nx){ X[v] = nx[v]; lo = Math.min(lo, X[v]); hi = Math.max(hi, X[v]); }
     for (const v in nx) X[v] -= (lo + hi) / 2;
@@ -455,14 +450,56 @@ function layout(){
     if (n > most){ most = n; off = a * Math.PI/180; }
   }
   REAL.forEach(id => { if (id !== 'GKK') PHI[id] = X[id] - off; });
-  // Each relation's waypoints, the rings it passes, which its arrow is drawn
-  // through (drawGlobe).
+  // Each long arrow's waypoints, one on each ring it passes, which it is drawn
+  // through (drawGlobe): on each ring a place clear of the names there, half
+  // a name's width and the width of an arrow from each, and of the arrows
+  // routed before it, an arrow's width from each; of those places, the route
+  // that keeps nearest the course straight from the one contract to the
+  // other, in colatitude and longitude, and changes its course least, a change
+  // of course weighing four times a step aside, found ring by ring by dynamic
+  // programming.  The arrows passing fewer rings are routed first.
+  const placed = [];
+  const blocked = d => {
+    const R = 265 * Math.sin(RING[d]), cut = [];
+    Lr[d].forEach(id => { const h = (w(id) + 7) / R; cut.push([PHI[id] - h, PHI[id] + h]); });
+    placed.forEach(([d2, ph]) => { if (d2 === d) cut.push([ph - 8 / R, ph + 8 / R]); });
+    cut.sort((a, b) => a[0] - b[0]);
+    const merged = [];
+    for (const [a, b] of cut){ const m = merged[merged.length - 1]; if (m && a <= m[1]) m[1] = Math.max(m[1], b); else merged.push([a, b]); }
+    return merged; };
+  const longs = [];
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    const ws = [];
-    for (let d = DEPTH[p] + 1; d < DEPTH[c.id]; d++) ws.push([RING[d], X[`${p}>${c.id}@${d}`] - off]);
-    WAY[`${p}>${c.id}`] = ws;
-  }));
+    if (span(p, c.id) > 1) longs.push([p, c.id]); else WAY[`${p}>${c.id}`] = []; }));
+  longs.sort((a, b) => span(...a) - span(...b));
+  for (const [p, q] of longs){
+    const t0 = th0(p), t1 = th0(q), rings = [];
+    for (let d = DEPTH[p] + 1; d < DEPTH[q]; d++){
+      const R = 265 * Math.sin(RING[d]), ideal = PHI[p] + (PHI[q] - PHI[p]) * (RING[d] - t0) / (t1 - t0);
+      const merged = blocked(d), cands = [];
+      if (!merged.some(([a, b]) => ideal > a && ideal < b)) cands.push(ideal);
+      merged.forEach(([a, b]) => [a, b].forEach(x => { if (Math.abs(x - ideal) < Math.PI/3 && !merged.some(([a2, b2]) => x > a2 + 1e-9 && x < b2 - 1e-9)) cands.push(x); }));
+      if (!cands.length) cands.push(ideal);
+      rings.push({d, R, ideal, cands});
+    }
+    // cost: the distance from the straight course, and the change of course
+    // from the ring before, both along the ring, in the globe's units.
+    let prev = [{ph: PHI[p], ideal: PHI[p], cost: 0, path: []}];
+    for (const r of rings){
+      prev = r.cands.map(ph => {
+        let bestP = null, bc = Infinity;
+        for (const s of prev){
+          const c = s.cost + ((ph - r.ideal) * r.R) ** 2 + 4 * (((ph - s.ph) - (r.ideal - s.ideal)) * r.R) ** 2;
+          if (c < bc){ bc = c; bestP = s; }
+        }
+        return {ph, ideal: r.ideal, cost: bc, path: [...bestP.path, [RING[r.d], ph]]}; });
+    }
+    const route = prev.reduce((a, b) => b.cost < a.cost ? b : a).path;
+    route.forEach(([t, ph]) => placed.push([RING.indexOf(t), ph]));
+    WAY[`${p}>${q}`] = route;
+  }
 }
+// A contract's colatitude: its ring's, and its row's on a ring of two rows.
+const th0 = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
 const MAXD = () => Math.max(...Object.values(DEPTH));
 const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // A phone: the card narrower than 640 pixels.  The view is then cropped to the
@@ -536,19 +573,30 @@ function drawGlobe(){
     if (DEPTH[id] === 0) return (rxa + rya) / 2;
     const ph = PHI[id], t = th(id), E = [Math.cos(ph), 0, -Math.sin(ph)], Nn = [-Math.cos(t)*Math.sin(ph), Math.sin(t), -Math.cos(t)*Math.cos(ph)];
     return 1 / Math.sqrt((dot3(T, E)/rxa)**2 + (dot3(T, Nn)/rya)**2); };
-  // The curve: a Catmull-Rom spline in colatitude and longitude through the
-  // two contracts and the waypoints between them (GKK, at the pole, taking the
-  // longitude of the point after it), sampled every degree or so.
+  // The curve: through the two contracts and the waypoints between them
+  // (GKK, at the pole, taking the longitude of the point after it), its
+  // longitude a monotone cubic in its colatitude (Fritsch and Carlson), so it
+  // never swings past a point it passes and makes no loop; sampled every
+  // degree or so.
   const curve = (p, q) => {
     const cs = [[th(p), PHI[p]], ...(WAY[`${p}>${q}`] || []), [th(q), PHI[q]]];
     if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
+    const n = cs.length, h = [], dl = [], m = [];
+    for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
+    for (let i = 0; i < n; i++)
+      m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
+    for (let i = 0; i + 1 < n; i++){
+      if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
+      const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
+      if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
+    }
     const pts = [];
-    for (let i = 0; i + 1 < cs.length; i++){
-      const P0 = cs[Math.max(0, i-1)], P1 = cs[i], P2 = cs[i+1], P3 = cs[Math.min(cs.length-1, i+2)];
-      const n = Math.max(2, Math.ceil(Math.hypot(P2[0]-P1[0], (P2[1]-P1[1])*Math.sin((P1[0]+P2[0])/2)) / (Math.PI/180)));
-      for (let j = i ? 1 : 0; j <= n; j++){ const t = j/n, t2 = t*t, t3 = t2*t;
-        const f = k => 0.5*((2*P1[k]) + (-P0[k] + P2[k])*t + (2*P0[k] - 5*P1[k] + 4*P2[k] - P3[k])*t2 + (-P0[k] + 3*P1[k] - 3*P2[k] + P3[k])*t3);
-        pts.push(vec(f(0), f(1))); }
+    for (let i = 0; i + 1 < n; i++){
+      const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
+      const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
+      for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
+        const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
+        pts.push(vec(t0 + (t1 - t0) * u, f)); }
     }
     return pts; };
   const paint = (p, q, rel, fill) => {
@@ -596,8 +644,11 @@ function drawGlobe(){
     if (rel === 'amends' && front(am))
       out += `<line x1="${xy(side(am, 6*u)).replace(',', '" y1="')}" x2="${xy(side(am, -6*u)).replace(',', '" y2="')}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`;
     return out; };
+  // Each arrow in the colour of the family of the contract it comes from: its
+  // head touches the other contract's ellipse, which shows that one's colour,
+  // so the arrow shows where it comes from (Udi, 2026-11-10).
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(c)][1]);
+    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
   }));
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
@@ -650,9 +701,11 @@ function drawGlobe(){
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
   const show = (c, e) => {
-    const r = wrap.getBoundingClientRect(), touch = LASTPT !== 'mouse';
+    const r = wrap.getBoundingClientRect();
+    // The balloon ends with the link that opens the contract, on every screen
+    // (Udi, 2026-11-10).
     tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${citeHtml(c.paper || {})}`
-      + (touch ? `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)} ›</a>` : '');
+      + `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)}</a>`;
     tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
     if (NARROW()){ tip.style.left = '8px'; tip.style.right = '8px'; }
     else { tip.style.right = ''; tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px'; }
@@ -687,8 +740,7 @@ function globeNav(){
     if (e.isPrimary){ pts.clear(); pinch = null; }
     pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pts.size >= 2){ pinch = [dist(), V.zoom]; drag = null; DRAGGED = true; return; }
-    drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false;
-    if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); });
+    drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false; });
   g.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return;
     pts.set(e.pointerId, [e.clientX, e.clientY]);
@@ -696,7 +748,14 @@ function globeNav(){
       V.zoom = clampZ(pinch[1] * dist() / pinch[0]); drawGlobe(); return; }
     if (!drag) return;
     const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
-    if (Math.abs(dx) + Math.abs(dy) > (LASTPT === 'mouse' ? 3 : 8)) DRAGGED = true;
+    // A mouse's drag keeps the pointer from its start, so the globe turns on
+    // when the mouse leaves it; the pointer is taken only once the drag has
+    // begun, for a pointer taken at the press sends the release, and so the
+    // click, to the globe and not to the contract pressed, which a click opens
+    // (Udi, 2026-11-10: "it does not open").
+    if (!DRAGGED && Math.abs(dx) + Math.abs(dy) > (LASTPT === 'mouse' ? 3 : 8)){
+      DRAGGED = true;
+      if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); }
     if (!DRAGGED) return;
     V.phi0 = drag[2] - dx / (140 * V.zoom);
     V.tilt = Math.max(-1.2, Math.min(1.4, drag[3] + dy / 220));

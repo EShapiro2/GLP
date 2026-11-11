@@ -139,17 +139,21 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# GAI's and GSNP's apps, printed before GAI wrote both as instances of GnW
+# (2026-11-10): vGLP's compiler now refuses their platforms on GnW's joint
+# acts, make_guardian, end_guardian and retire, a listed guarding role whose
+# base is the ward, which vGLP's Section 5.4 has no opener for (vGLP #25,
+# 2026-11-10 20:36 UTC; Udi's ruling pending); each entry comes off when the
+# apps print again (Code #27, 2026-11-10).
+    "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp"
+    "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp"
+    "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI"
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
-# UTC); each entry comes off with that rewrite.
-    "GSC: GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role"
-    "cascade gai: cascade.sh --check exits 0"
-    "cascade gai: verdict.txt is what the tools print"
-    "cascade gai: vmat.tex is what the tools print"
-    "cascade gsnp: cascade.sh --check exits 0"
-    "cascade gsnp: verdict.txt is what the tools print"
-    "cascade gsnp: vmat.tex is what the tools print"
+# UTC); each entry comes off with that rewrite.  GAI on GnW, GLP 6154e1e6,
+# certifies (Section GSC's line, off at GSC-instnames); the cascade's wait on
+# GAI.txt's [Agent end] field and on the records (Cloud #15, 2026-11-10).
 # The super-app's hosting of CSSN's ported mini-app (CSSN's port of
 # 2026-10-09): GSG's to port, as it hosts the currency's mini-app at its
 # person channel; each entry comes off with that port.
@@ -3908,6 +3912,7 @@ check "CVA compiler: vGLP's published, a program condition in a constraint, prog
 check "CVA compiler: vGLP's leaves, a listed role at the third argument of its anchor, certified by GSC's check/2, compiled to the platform it prints (vGLP b413fe1)" "leaves/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's readings, variables read at a role and a condition across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 566c186, 6abbed9, 7892aeb)" "readings/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's backed, a safe formula across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 5f55cf3)" "backed/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's consts, constants the contract names, val(cb) and val(cc), arguments of atoms, compiled to the platform it prints (vGLP 0eeea71)" "consts/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -4172,15 +4177,22 @@ check "CVA compiler, text: the platform of the renamed twin but for those names 
 check "CVA compiler, text: ... a platform printed (twin)" "the canonical CVA platform of the contract(twin)" "$cva_twin_b"
 
 # The pragmas of a contract that extends another (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one"): GAI's GSNP writes its own [Message] line, which replaces GSN's.
-cva_gsnp_out=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/gai/GSNP.glp
-contract_named(gsnp, C).
-:quit
-HEREDOC
-2>&1)
-cva_gsnp_term=$(echo "$cva_gsnp_out" | sed -e 's/^\(GLP> \)*//' | sed -n -e 's/^C = //p' | head -1)
+# GSNP.glp prints an instance of GnW, instance_named(gsnp, gnw, ...), since GAI's 6154e1e6: its term is formed from GnW's by term.sh, as cascade.sh forms it (Code #27, Cloud-vGLP_inbox.md, 2026-11-10 21:11 UTC).
+cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/GSNP.glp" gsnp 2>&1)
 cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_term" 2>&1 || true)
 check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "GSN: Messaging: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name" "$cva_gsnp_pragmas"
+# An instance's own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 20:39 UTC, 2): XI, instance_named(xi, xb, [ward = child, ward_link = child_link], []), writing no line of its own, has XB's [Ward link] as [Child link], the act child_link (names); and without the bindings the button names no act (bare).
+cva_in=$(mktemp -d)
+printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Link. Alice may link.' 'Pragmas' 'Links: the links Alice holds.' 'Link: Alice [Ward link]' > "$cva_in/XB.txt"
+printf '%s\n' 'XI: Instance' 'XI instantiates XB.' 'Alice is a person.' 'Pragmas' > "$cva_in/XI.txt"
+printf '%s\n' "instance_named(xi, xb, [ward = child, ward_link = child_link], [])." > "$cva_in/XI.glp"
+cva_in_rd="[schema(child_link, ['Alice'], [], [rs(guarded, [atom(linked, [])], [], [], [atom(linked, [])])])]"
+cva_in_named=$(bash "$CVA/compiler/pragmas.sh" "$cva_in/XI.txt" "$cva_in_rd" 2>&1)
+rm -f "$cva_in/XI.glp"
+cva_in_bare=$(bash "$CVA/compiler/pragmas.sh" "$cva_in/XI.txt" "$cva_in_rd" 2>&1)
+rm -rf "$cva_in"
+check "CVA pragmas: an instance's name for a schema of its base, XB's [Ward link] read as [Child link], the act child_link (names)" "act('child_link', '\"Child link\"', \[\], none, " "$cva_in_named"
+check_not "CVA pragmas: ... and without the bindings no act child_link (bare)" "child_link" "$cva_in_bare"
 # The rule on fixtures of pragmas.sh's own (vGLP 40f8444, Section 5.4, "The contract's words"): XB, its Link line naming a field for Bob, whom link's friend(Bob) at Alice binds, refused, the field named (bound); XE, extending XB, whose Joint link line writes [Link] under another clause's title and replaces XB's Link line, whose term has no mint, so XB's [Mint] goes, and whose [Link] has no field, read (inherit); XC, its [Mint] with no field for k, a multiplicity naming no variable bound, refused, the variable named (unnamed).
 cva_px=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' '2. ■ Link. Alice may link Bob.' '3. ■ Minting. Alice may mint coins.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' 'Link: Alice [Link] <person>' 'Minting: Alice [Mint] <amount>' > "$cva_px/XB.txt"
@@ -4584,6 +4596,27 @@ check "CVA leaves: ... alice holds neither installed nor participant after it" "
 check "CVA leaves: ... and bob, listed, loses participant(x, alice), keeping installed(x)" "view(bob, \[installed(speech(utterance(app), alice)), participant(speech(utterance(app), alice), alice)\], \[alice\], \[\], \[tab('Programs', installed)\]), view(bob, \[installed(speech(utterance(app), alice))\], \[alice\], \[\], \[tab('Programs', installed)\])" "$cva_leaves"
 check_not "CVA leaves: bob's person is never asked on the leave, the listed role unguarded" "gave(leave\|gave(attempt([a-z]*, [0-9]*, [0-9]*, leave" "$cva_leaves"
 
+# A constant the contract names (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value ... or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg: val(C) "matches val(C) alone"): vGLP's consts, adopt adding bylaws(cb), adopt_cc bylaws(cc), and amend requiring bylaws(cb) and adding amended(cb).
+cva_consts_load=$("$REPL_RUN" <<HEREDOC
+$CVA/consts/
+:quit
+HEREDOC
+2>&1)
+check "CVA consts: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/consts" "$cva_consts_load"
+check_not "CVA consts: no type errors" "Type checking failed" "$cva_consts_load"
+check "CVA consts: an atom with a constant is of the type Constant at that place, bylaws(Constant)" "^bylaws(Constant)$" "$(cat "$CVA/consts/platform.vglp")"
+check "CVA consts: the agent holds a constant as v(C), and the view shows it as C" "^atom_of(g(bylaws, \[v(V1)\]), shown(bylaws(V1?)))$" "$(cat "$CVA/consts/platform.vglp")"
+cva_consts=$("$REPL_RUN" <<HEREDOC
+$CVA/consts/
+:limit 20000000
+play_consts(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA consts: alice adopts cc, and her state holds bylaws(cc)" "view(alice, \[bylaws(cc)\]" "$cva_consts"
+check "CVA consts: ... then cb, bylaws(cb) beside it, the two constants two atoms" "view(alice, \[bylaws(cb), bylaws(cc)\]" "$cva_consts"
+check "CVA consts: ... and amend, whose bylaws(cb) her state holds, adds amended(cb)" "view(alice, \[amended(cb), bylaws(cb), bylaws(cc)\]" "$cva_consts"
+
 # Readings (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications": "A variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do"; "a conjunct that names variables local to two roles or more is of the part's condition"; "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries; the initiator chooses readings under which the conjuncts of the condition hold, and the commit tells them to every participant, whose effect is under them"; Section 3.2, Definition "Deciding", the initiator refusing the attempt on its condition, and "Proposing", a standing approval's part proposed again only once a participant is ready or a commit since): vGLP's contract readings, programs/vglp/cva/readings, its play play_readings (its self.glp).
 cva_readings_load=$("$REPL_RUN" <<HEREDOC
 $CVA/readings/
@@ -4850,7 +4883,8 @@ cp "$CVA/social_graph/platform.vglp" "$CVA/social_graph/self.glp" "$cva_scratch/
 HEREDOC
 cva_emitted=$(cat "$cva_scratch/platform.glp" 2>/dev/null)
 rm -rf "$cva_scratch"
-check "CVA widget: the request question, of the moded type Request?, drawn by the widget its declaration names" "^construct(Id, request_r(X?), Gs, Ds?) :- .*named('social_menu(" "$cva_emitted"
+# Its W is a term of T, social_menu(...) and no quoted constant (vGLP 668df7d, Section 6.3, the paragraph after the construct process: "the term W' a widget declaration names is a name or a name applied to arguments").
+check "CVA widget: the request question, of the moded type Request?, drawn by the widget its declaration names" "^construct(Id, request_r(X?), Gs, Ds?) :- .*named(social_menu(" "$cva_emitted"
 check "CVA widget: ... and the approval question, of the moded type Approval, by approval_sentence" "^construct(Id, approval_w(X), Gs, Ds?) :- .*named(approval_sentence, " "$cva_emitted"
 # The printed text run on its own: the emitted platform of the currency, GC, loaded, its procedures called with the terms they read.
 # Held requests first (vGLP e22e2ad, Section 5.4, "The compilation": "puts up again every request of its person it holds, and then the starts it holds"; Code #24's trace of 2026-11-06, /Users/udi/Grassroots/tmp/trace-frank.txt: with two held requests the second fell behind a new recheck).
@@ -5966,6 +6000,67 @@ check "CVA composition: ... and compose.sh exits 1 (button)" "^exit 1$" "$cva_cm
 check "CVA composition: two introduction predicates refused (intro)" "XA and XF name different introduction predicates" "$cva_cm_intro"
 check "CVA composition: ... and compose.sh exits 1 (intro)" "^exit 1$" "$cva_cm_intro"
 check "CVA composition: one contract is no composition, refused as a bad argument (one)" "^exit 2$" "$cva_cm_one"
+# The composition of contracts that amend a third (vGLP 668df7d, Section 5.4, "The contract's words": "of several it prints the platform of their composition, for two that amend a third the schemas of the third that both keep together with the schemas each adds, which is their union where both extend it, and their pragmas likewise, an inherited tab or button standing as above"; GSC, Section 8; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 18:04 UTC, 1): XG the third, with establish, unfriend and mint; XA keeping it whole; XW amending it, deleting mint, replacing unfriend and adding ward, its pragmas the button Unfriend written anew, Ward added and Coins gone with mint.
+cva_c3_unf1="schema(unfriend, ['Alice'], [pvar(b)], [rs(guarded, [atom(friend, [pvar(b)])], [], [atom(friend, [pvar(b)])], [])])"
+cva_c3_unf2="schema(unfriend, ['Alice'], [pvar(b)], [rs(guarded, [atom(friend, [pvar(b)]), atom(person, [])], [], [atom(friend, [pvar(b)])], [])])"
+cva_c3_ward="schema(ward, ['Alice'], [pvar(c)], [rs(guarded, [], [], [], [atom(ward, [pvar(c)])])])"
+cva_c3_g="[$cva_cm_est, $cva_c3_unf1, $cva_cm_mint]"
+cva_c3_w="[$cva_cm_est, $cva_c3_unf2, $cva_c3_ward]"
+cva_c3_pg="pragmas([$cva_cm_tab, list('\"Coins\"', ['coin'])], [$cva_cm_act, act('unfriend', '\"Unfriend\"', [], none, '\"Contacts\"', by([1])), act('mint', '\"Mint\"', ['\"\"', '\"amount\"'], none, '\"Coins\"', by([1]))])"
+cva_c3_pw="pragmas([$cva_cm_tab, list('\"Wards\"', ['ward'])], [$cva_cm_act, act('unfriend', '\"Unfriend\"', [], said([[], [person(1), text('\" ends your friendship.\"')]]), '\"Contacts\"', by([1])), act('ward', '\"Ward\"', ['\"\"', '\"name\"'], none, '\"Wards\"', by([1]))])"
+cva_c3_ok=$(bash "$CVA/compiler/compose.sh" --base XG "$cva_c3_g" "$cva_c3_pg" XA "$cva_c3_g" "$cva_c3_pg" no_introduction XW "$cva_c3_w" "$cva_c3_pw" no_introduction 2>&1; echo "exit $?")
+cva_c3_union=$(bash "$CVA/compiler/compose.sh" XA "$cva_c3_g" "$cva_c3_pg" no_introduction XW "$cva_c3_w" "$cva_c3_pw" no_introduction 2>&1; echo "exit $?")
+cva_c3_two=$(bash "$CVA/compiler/compose.sh" --base XG "[$cva_cm_est]" no_pragmas XA "[$cva_cm_est, $cva_c3_unf1]" no_pragmas no_introduction XW "[$cva_cm_est, $cva_c3_unf2]" no_pragmas no_introduction 2>&1; echo "exit $?")
+check "CVA composition over a third: XG's schemas both keep, establish, with each one's added, XW's unfriend replacing XG's and ward, mint deleted by XW gone (third)" "^\[$(printf '%s' "$cva_cm_est, $cva_c3_unf2, $cva_c3_ward" | sed -e 's/[][\\.*^$]/\\&/g')\]$" "$cva_c3_ok"
+check "CVA composition over a third: ... the pragmas likewise, Contacts and Establish kept, XW's Unfriend for XG's, Ward added, Coins and Mint gone with mint (third)" "^pragmas(\[$(printf '%s' "$cva_cm_tab, list('\"Wards\"', ['ward'])], [$cva_cm_act, act('unfriend', '\"Unfriend\"', [], said([[], [person(1), text('\" ends your friendship.\"')]]), '\"Contacts\"', by([1])), act('ward', '\"Ward\"', ['\"\"', '\"name\"'], none, '\"Wards\"', by([1]))" | sed -e 's/[][\\.*^$]/\\&/g')\])$" "$cva_c3_ok"
+check "CVA composition over a third: ... and compose.sh exits 0 (third)" "^exit 0$" "$cva_c3_ok"
+check "CVA composition over a third: the same two with no third, their union, refused, unfriend written differently by both (union)" "the schema unfriend is written differently by XA and XW" "$cva_c3_union"
+check "CVA composition over a third: two added schemas of one name written differently refused as before (two)" "the schema unfriend is written differently by XA and XW" "$cva_c3_two"
+check "CVA composition over a third: ... and compose.sh exits 1 (two)" "^exit 1$" "$cva_c3_two"
+# GSG composed with a contract built on GnW, which amends GSG (GnW.txt: "GnW amends GSG."): over GSG, the third, the composition has GnW's establish, which replaces GSG's, and not GSG's, and is GnW's reading; with no third the two are refused, establish written differently.  GnW's pragmas are given as none, its GnW.txt not yet read by pragmas.sh (its Ward end's field, which GSC df5e454 takes out).
+cva_c3_rd() {   # cva_c3_rd <contract> <NAME.glp>: the contract as GSC's reader reads it
+    local ct
+    ct=$(printf '%s\ncontract_named(%s, C).\n:quit\n' "$2" "$1" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^C = ' | head -1 | sed -e 's/^C = //')
+    printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$ct" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | head -1 | sed -e 's/^R = //'
+}
+cva_c3_gsg=$(cva_c3_rd gsg "$GLP_DIR/programs/gsc/GSG.glp")
+cva_c3_gnw=$(cva_c3_rd gnw "$GLP_DIR/programs/gsc/GnW.glp")
+cva_c3_pgsg=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gsc/GSG.txt" "$cva_c3_gsg" 2>&1)
+cva_c3_real=$(bash "$CVA/compiler/compose.sh" --base GSG "$cva_c3_gsg" "$cva_c3_pgsg" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
+cva_c3_realu=$(bash "$CVA/compiler/compose.sh" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
+check "CVA composition over a third: GSG and GnW over GSG, GnW's establish and not GSG's, the composition GnW's reading (gsg)" "^same$" "$([ -n "$cva_c3_gnw" ] && [ "$(printf '%s\n' "$cva_c3_real" | sed -n 1p)" = "$cva_c3_gnw" ] && echo same || echo differs)"
+check "CVA composition over a third: ... and compose.sh exits 0 (gsg)" "^exit 0$" "$cva_c3_real"
+check "CVA composition over a third: GSG and GnW with no third refused, establish written differently by both (gsg)" "the schema establish is written differently by GSG and GnW" "$cva_c3_realu"
+# The third, cascade.sh's (README.md beside compose.sh, "Composition"), from the contracts each is written from, pragmas.sh --from: GSG, GnW and GSN each written from GSG, and GnW and GSN, which GSNW amends, from GKK and GSG.
+cva_c3_from=$(bash "$CVA/compiler/pragmas.sh" --from "$GLP_DIR/programs/cssn/GSNW.txt" 2>&1 | sed -e 's|.*/programs/||' | tr '\n' ' ')
+check "CVA composition over a third: pragmas.sh --from gives the contracts GSNW is written from, each before the contracts written from it, GSNW last (from)" "^gsc/GKK.txt gsc/GSG.txt gsc/GSN.txt gsc/GnW.txt cssn/GSNW.txt $" "$cva_c3_from"
+# The line saying what a contract is written from, in GSC's form (GSC df5e454, Section 2: "each relation is followed by the contract it is to, or by `it' for the contract named last, the relations joined by `and', and an instantiation says after the contract's name, between commas, what it writes for what"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 18:04 UTC, 2).
+cva_wf=$(mktemp -d)
+printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Establish. Alice may establish her identity.' > "$cva_wf/XB.txt"
+printf '%s\n' 'XC: Other' 'XC extends XB.' 'Alice is a person.' > "$cva_wf/XC.txt"
+printf '%s\n' 'XI: Instance' 'XI instantiates XB, a child for a ward and a parent for a guardian, and restricts and extends it.' 'Alice is a person.' > "$cva_wf/XI.txt"
+printf '%s\n' 'XJ: Joined' 'XJ amends XB and XC, and XI.' 'Alice is a person.' > "$cva_wf/XJ.txt"
+printf '%s\n' 'XK: Mixed' 'XK extends XC and restricts it.' 'Alice is a person.' > "$cva_wf/XK.txt"
+printf '%s\n' 'XO: Plain' 'XO instantiates XB and amends it.' 'Alice is a person.' > "$cva_wf/XO.txt"
+printf '%s\n' 'XM: Composed' 'XM instantiates XB, composes it with XC and restricts the composition.' 'Alice is a person.' > "$cva_wf/XM.txt"
+printf '%s\n' 'XN: None' 'XN instantiates the bylaws of XB and restricts it.' 'Alice is a person.' > "$cva_wf/XN.txt"
+printf '%s\n' 'XT: Bare' 'XT restricts it.' 'Alice is a person.' > "$cva_wf/XT.txt"
+cva_wf_i=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XI.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_j=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XJ.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_k=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XK.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_o=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XO.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_m=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XM.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_wf_n=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XN.txt" 2>&1; echo "exit $?")
+cva_wf_t=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_wf/XT.txt" 2>&1; echo "exit $?")
+rm -rf "$cva_wf"
+check "CVA written from: an instantiation's words between commas name no contract, and 'restricts and extends it' is to the contract named last (instance)" "^XB.txt XI.txt $" "$cva_wf_i"
+check "CVA written from: contracts of one relation joined by 'and' and ', and' (joined)" "^XB.txt XC.txt XI.txt XJ.txt $" "$cva_wf_j"
+check "CVA written from: 'and restricts it', a second relation to the contract named last (mixed)" "^XB.txt XC.txt XK.txt $" "$cva_wf_k"
+check "CVA written from: an instantiation with no words between commas, 'instantiates XB and amends it', as GO's MCS (GSC 30013e6, Section 2: 'an instantiation may say after the contract's name, between commas, what it writes for what') (plain)" "^XB.txt XO.txt $" "$cva_wf_o"
+check "CVA written from: composes, 'composes it with XC', the instance composed with XC, and 'restricts the composition', as GAI.txt's line (GSC-instnames, c90ee820; GSC's answer on composition pending) (composes)" "^XB.txt XC.txt XM.txt $" "$cva_wf_m"
+check "CVA written from: a relation followed by no contract's name refused, named (none)" "names no contract at \"the bylaws of XB and restricts it\"" "$cva_wf_n"
+check "CVA written from: ... and pragmas.sh exits other than 0 (none)" "^exit [1-9]" "$cva_wf_n"
+check "CVA written from: 'it' with no contract named before it refused (bare)" "names no contract at \"it\"" "$cva_wf_t"
 echo ""
 
 

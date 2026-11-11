@@ -1,4 +1,4 @@
-# Phones --- state, 2026-11-10 13:39 UTC (Phones #2 Cowork)
+# Phones --- state, 2026-11-11 18:13 UTC (Phones #2 Cowork)
 
 Taken over from `tmp/phones/STATE.md` (Code #25B Phones, 13:57 UTC) and Code #25's handover (Code_inbox.md, 13:36 and 13:38 UTC).
 
@@ -6,12 +6,12 @@ Taken over from `tmp/phones/STATE.md` (Code #25B Phones, 13:57 UTC) and Code #25
 
 - 11 Pro: UDID `00008030-000275600A12802E`, iOS 17.4.1, phone key `33ac34ed...`; the reporter build of GLP 1ecdd1e8 since 2026-11-09 13:28 UTC.
 - 16 Pro: UDID `00008140-001C38C83A12801C`, iOS 26.6.1, phone key `6c2c1695...`; the reporter build of GLP 1ecdd1e8 since 2026-11-09 13:29 UTC.
-- Both phones are to be rebuilt, the app and its data deleted first, so each will have a new key; the keys above stay as the names of their log runs.  The de558755 build of 2026-11-09 23:02 UTC was never installed.  Main 01253c9c changes the code format to 4 and the saved-state format to 7, so the phones are built from the commit the servers are updated to in the same sitting, 01253c9c or later (Code #27, Phones_inbox.md 2026-11-10 11:03 UTC).
+- The next build of both phones is `tmp/phones/GrassApp-debug-33556709.ipa`, GLP main 33556709, code format 4, saved-state format 8, built by Phones Mac at 2026-11-10 20:41 UTC and not installed: the install stopped, the 11 Pro not on the Mac's USB (`tmp/phones/build-11pro-33556709.txt`).  It is installed with the app and its data deleted first, so each phone will have a new key; the keys above stay as the names of their log runs.  The de558755 build of 2026-11-09 23:02 UTC was never installed.
 - The Mac as an agent: a team-signed debug build with the Keychain entitlement starts but shows no window (Code #25, 13:38 UTC); the entitlement edit is not in the tree.
 
 ## Servers
 
-The rendezvous server, 162.35.126.126:9516, and the directory, :9518, run GLP main e45d656f since 2026-11-10 10:12 UTC, protocol 9 and code format 3, the directory's key 6eb240e8 kept (Code #27, Phones_inbox.md 10:15 UTC).
+The rendezvous server, 162.35.126.126:9516, under its key bc18e1f9, and the directory, :9518, run GLP main 33556709 since Udi's `update_servers.sh 33556709 --go` of 2026-11-10 about 13:43 UTC, code format 4 and saved-state format 8; the live checks, `run_live.sh vps 1 2`, 37 passed (Code #27, Phones_inbox.md 2026-11-10 20:39 UTC).  The site's hourly sweep has since pulled `/srv/glp` to 1116316c, the same wire, which the servers take only at a restart; Cloud-serverclone moves the servers to `/srv/glp-servers`, moved only by `update_servers.sh` (Code #27, GSA_inbox.md 2026-11-10 13:37 UTC).
 
 ## Signing
 

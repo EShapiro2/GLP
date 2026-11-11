@@ -465,7 +465,6 @@ programs/social/graph/core/agent.glp	open-decl	may_release/5
 programs/social/graph/core/agent.glp	open-decl	mr_anchor/6
 programs/social/graph/core/agent.glp	open-decl	mr_intro/6
 programs/social/graph/core/agent.glp	open-decl	undertaking_check/3
-programs/social/graph/core/home.glp	open-type	Drawn
 programs/social/graph/core/self.glp	open-decl	answering/4
 programs/social/graph/core/self.glp	open-decl	hold_output/1
 programs/social/graph/core/self.glp	open-decl	play_home/5

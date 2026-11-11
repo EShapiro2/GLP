@@ -299,6 +299,12 @@ class GenericNames {
   final String askType;
 
   String get drawType => '$drawTypeName($drawn)';
+
+  /// The widget in a draw, `Widget(T)`, T the program's person-channel union
+  /// (programs/self.glp; vGLP 668df7d, Section 6.3, the paragraph after the
+  /// construct process: "so the widget a construct draws is typed as its
+  /// value is").
+  String get widgetType => '$widgetTypeName($drawn)';
   String get inputType => '$inputTypeName($drawn)';
   String get pathType => pathTypeName;
   String get personChannelType => '$personChannelTypeName($drawn)';
@@ -380,9 +386,10 @@ ConstructProcesses buildConstructs({
   required Map<String, String> declared,
   required String Function(String stem) fresh,
   TypeDef? output,
+  String? Function(String functor, int arity)? widgetAlternative,
 }) {
-  final g = _Generator(
-      generic, resolve, declared, fresh, questionType, constructName);
+  final g = _Generator(generic, resolve, declared, fresh, questionType,
+      constructName, widgetAlternative ?? (_, _) => null);
   return g.build(types, output: output);
 }
 
@@ -576,8 +583,60 @@ class _Generator {
   static const _formedMark = '\u0001';
 
   _Generator(this.gen, this.resolve, this.sourceDeclared, this.fresh,
-      this.questionType, this.constructName)
+      this.questionType, this.constructName, this.widgetAlternative)
       : declared = sourceDeclared;
+
+  /// The alternative, as written, of the type in scope that declares the
+  /// widget term of functor and arity given, or null where no type does
+  /// ([buildConstructs]).
+  final String? Function(String functor, int arity) widgetAlternative;
+
+  /// The widget terms the compilation prints, `W` of each `named(W, D)`, by
+  /// functor and arity: each an alternative of T, the person channel's union
+  /// ([_widgetAlternatives]).
+  final _widgetTerms = <String, DeclaredWidget>{};
+
+  /// The term [dw] is drawn by, `W` of `named(W, D)`, recorded among
+  /// [_widgetTerms]: "the term W' a widget declaration names is a name or a
+  /// name applied to arguments, as the request type's menu is applied to its
+  /// buttons and fields; the compilation forms the union of the three, the
+  /// parameter T of the program's person channel" (vGLP 668df7d, Section
+  /// 6.3, the paragraph after the construct process).
+  String _widgetTerm(DeclaredWidget dw) {
+    _widgetTerms.putIfAbsent('${dw.name}/${dw.drawnArity}', () => dw);
+    return dw.drawnTerm;
+  }
+
+  /// The alternatives of T the widget terms the compilation prints give,
+  /// those of [drawnAlts] not among them: a name, the constant itself; a name
+  /// applied to arguments, the alternative of its functor and arity the type
+  /// declarations in scope give it, the platform's own for the request
+  /// widget's term (vGLP 0eeea71, Section 5.4: the compiler types the term
+  /// "by type declarations it prints with the platform").
+  List<String> _widgetAlternatives(List<String> drawnAlts) {
+    final out = <String>[];
+    for (final dw in _widgetTerms.values) {
+      final String alt;
+      if (dw.drawnArity == 0) {
+        alt = constantSource(dw.name);
+      } else {
+        final a = widgetAlternative(dw.name, dw.drawnArity);
+        if (a == null) {
+          throw CompileError(
+              'The widget term ${dw.name}/${dw.drawnArity} a widget '
+              'declaration names has no type declaration in scope, so the '
+              'type of the person channel is not formed (vGLP 0eeea71, '
+              'Section 5.4: the compiler types the request widget\'s term '
+              '"by type declarations it prints with the platform"; Section '
+              '6.3, the paragraph after the construct process)',
+              0, 0, phase: 'analyzer');
+        }
+        alt = a;
+      }
+      if (!drawnAlts.contains(alt) && !out.contains(alt)) out.add(alt);
+    }
+    return out;
+  }
 
   ConstructProcesses build(List<InteractiveType> types, {TypeDef? output}) {
     final hook = StringBuffer();
@@ -660,6 +719,7 @@ class _Generator {
       drawnAlts.add('output(List($outputTypeName))');
     }
     drawnAlts.addAll(_rUnion(drawnAlts));
+    drawnAlts.addAll(_widgetAlternatives(drawnAlts));
     hook.writeln();
     // T, the type of what the person channel carries: the values the program
     // draws, each construct's under the functor of its ask and construct 0's
@@ -724,7 +784,7 @@ class _Generator {
     final ds = 'Stream(${gen.drawType})';
     final dn = gen.doneType;
     _out
-      ..writeln('procedure $r(Integer?, $widgetTypeName?, $vs, '
+      ..writeln('procedure $r(Integer?, ${gen.widgetType}?, $vs, '
           '$dn?, $gs?, $gs, $ds).')
       ..writeln('$r(Id, W, [V | Vs], Done, Gs, Gs1?, '
           '[draw(Id?, W?, $f(V?)) | Ds?]) :- '
@@ -733,7 +793,7 @@ class _Generator {
       ..writeln('$r(Id, _, [], Done, Gs, Gs1?, Ds?) :- '
           '$grants(Gs?, Gs1), ${gen.runEnd}(Id?, Done?, Ds).')
       ..writeln()
-      ..writeln('procedure $more(Integer?, $widgetTypeName?, $view?, $vs, '
+      ..writeln('procedure $more(Integer?, ${gen.widgetType}?, $view?, $vs, '
           '$dn?, $gs?, $gs, $ds).')
       ..writeln('$more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).')
       ..writeln('$more(Id, W, _, [V | Vs], Done, Gs, Gs1?, '
@@ -748,7 +808,7 @@ class _Generator {
       ..writeln('$more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- '
           '$last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).')
       ..writeln()
-      ..writeln('procedure $last(Integer?, $widgetTypeName?, $view?, '
+      ..writeln('procedure $last(Integer?, ${gen.widgetType}?, $view?, '
           '$dn?, $gs?, $gs, $ds).')
       ..writeln('$last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).')
       ..writeln('$last(Id, W, V, Done, [refresh | Gs], Gs1?, '
@@ -788,11 +848,11 @@ class _Generator {
     final ds = 'Stream(${gen.drawType})';
     final gs = gen.inputsType;
     _out
-      ..writeln('procedure $o($widgetTypeName?, $ms?, $gs?, $ds).')
+      ..writeln('procedure $o(${gen.widgetType}?, $ms?, $gs?, $ds).')
       ..writeln('$o(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- '
           'ground(W?) | $more(W?, Ms?, [], Gs?, Ds).')
       ..writeln()
-      ..writeln('procedure $more($widgetTypeName?, $ms?, $es?, $gs?, $ds).')
+      ..writeln('procedure $more(${gen.widgetType}?, $ms?, $es?, $gs?, $ds).')
       ..writeln('$more(W, [M | Ms], Es, Gs, Ds?) :- ground(M?), ground(Es?) | '
           '$add(Es?, M?, Es1), $draw(W?, Ms?, Es1?, Gs?, Ds).')
       ..writeln('$more(W, Ms, Es, [refresh | Gs], Ds?) :- '
@@ -801,11 +861,11 @@ class _Generator {
           '$more(W?, Ms?, Es?, Gs?, Ds).')
       ..writeln('$more(W, [], Es, Gs, Ds?) :- $end(W?, Es?, Gs?, Ds).')
       ..writeln()
-      ..writeln('procedure $draw($widgetTypeName?, $ms?, $es?, $gs?, $ds).')
+      ..writeln('procedure $draw(${gen.widgetType}?, $ms?, $es?, $gs?, $ds).')
       ..writeln('$draw(W, Ms, Es, Gs, [draw(0, W?, output(Es?)) | Ds?]) :- '
           'ground(W?), ground(Es?) | $more(W?, Ms?, Es?, Gs?, Ds).')
       ..writeln()
-      ..writeln('procedure $end($widgetTypeName?, $es?, $gs?, $ds).')
+      ..writeln('procedure $end(${gen.widgetType}?, $es?, $gs?, $ds).')
       ..writeln('$end(W, Es, [refresh | Gs], [draw(0, W?, output(Es?)) | Ds?]) '
           ':- ground(W?), ground(Es?) | $end(W?, Es?, Gs?, Ds).')
       ..writeln('$end(W, Es, [input(_, _, _) | Gs], Ds?) :- '
@@ -1030,7 +1090,7 @@ class _Generator {
     // type").  The program writes it, so the declaration is of the moded type
     // Stream(Output), with no `?`.
     final d = w == 'shown' ? 'thread' : 'thread($w)';
-    return dw == null ? d : 'named(${constantSource(dw.drawnAs)}, $d)';
+    return dw == null ? d : 'named(${_widgetTerm(dw)}, $d)';
   }
 
   // --- the construct clause -------------------------------------------------
@@ -2928,7 +2988,7 @@ class _Generator {
     } finally {
       _labels = outer;
     }
-    return dw == null ? d : 'named(${constantSource(dw.drawnAs)}, $d)';
+    return dw == null ? d : 'named(${_widgetTerm(dw)}, $d)';
   }
 
   /// [w], the widget of the constructor [f], with the label the declaration

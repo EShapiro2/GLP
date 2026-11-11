@@ -5,9 +5,17 @@
 Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer) ; point_friend(Peer, Peer) ; point_transitive(Peer, Peer, Peer) ; unpoint(Peer, Peer) ; follow_friend(Peer, Peer, Peer) ; follow_transitive(Peer, Peer, Peer, Peer) ; follow_transitive_friend(Peer, Peer, Peer, Peer) ; unfollow(Peer, Peer) ; post(Peer, Speech) ; deliver(Peer, Peer, Peer, Speech).
 Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; befriend(Peer, Peer) ; unfriend(Peer, Peer) ; point_friend(Peer, Peer) ; point_transitive(Peer, Peer, Peer) ; unpoint(Peer, Peer) ; follow_friend(Peer, Peer, Peer) ; follow_transitive(Peer, Peer, Peer, Peer) ; follow_transitive_friend(Peer, Peer, Peer, Peer) ; unfollow(Peer, Peer) ; post(Peer, Speech).
 Request ::= propose(Proposal).
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
 Atom ::= identity ; knows(Peer) ; friend(Peer) ; pointer(Peer, Peer) ; points_to(Peer) ; item(Speech, Peer) ; received(Speech, Peer, Peer).
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg).
+RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs ::= [] ; [RArg | RArgs].
 RAtom ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
 RAtoms ::= [] ; [RAtom | RAtoms].
@@ -71,7 +79,7 @@ Asked ::= asked(Integer, List(Word)).
 Close ::= close.
 Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
 MeetPeer ::= peer(Peer) ; nopeer.
-Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; inst(Integer, Integer, Var).
+Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; val(Constant) ; inst(Integer, Integer, Var).
 NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm) ; own_iv(Var) ; ext_iv(NTerm, Var).
 Vars ::= [] ; [Var | Vars].
 SAtom ::= atom(Constant, Vars) ; times(Var, SAtom) ; rest(Var, Var, SAtom) ; opt(SAtom).
@@ -116,7 +124,7 @@ Numeric ::= numeric(Conjs, Vars, Reads).
 NumRes ::= num_is(Number) ; no_num.
 LNorm ::= norm(Binding) ; badnorm.
 CName ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any.
+Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any ; v(Constant).
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals ::= [] ; [Val | Vals].
 GAtom ::= g(Constant, Vals).
@@ -1874,6 +1882,7 @@ val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(r(_), _, no).
 val_names(i(_), _, no).
+val_names(v(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 
@@ -2869,6 +2878,7 @@ adm_var(pvar(_), _, _, _, yes).
 adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 adm_var(item_of(_), _, _, _, yes).
+adm_var(val(_), _, _, _, yes).
 adm_var(num(_), _, _, _, yes).
 adm_var(any, _, _, _, yes).
 adm_var(inst(_, _, _), _, _, _, yes).
@@ -3088,6 +3098,7 @@ is_lv(c(_), no).
 is_lv(n(_), no).
 is_lv(r(_), no).
 is_lv(i(_), no).
+is_lv(v(_), no).
 is_lv(any, no).
 
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
@@ -3289,6 +3300,7 @@ procedure cimg_args(Vars?, Binding?, CVals).
 cimg_args([], _, []).
 cimg_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), cimg_sgn(F?, P?, sgn(Y?, I?), X), cimg_args(Vs?, B?, Xs).
 cimg_args([num(X) | Vs], B, [cmp_val(n(N?)) | Xs?]) :- integer(X?) | N := X?, cimg_args(Vs?, B?, Xs).
+cimg_args([val(C) | Vs], B, [cmp_val(v(C?)) | Xs?]) :- cimg_args(Vs?, B?, Xs).
 cimg_args([item_of(V) | Vs], B, [X? | Xs?]) :- ground(B?), ground(V?) | lookup(V?, B?, F), item_found(F?, F1), cimg_item(F1?, item_of(V?), X), cimg_args(Vs?, B?, Xs).
 cimg_args([nterm(N) | Vs], B, [X? | Xs?]) :- ground(B?), ground(N?) | nt_vars(N?, Ws), vars_bound(Ws?, B?, Bd), cimg_name(Bd?, N?, B?, X), cimg_args(Vs?, B?, Xs).
 cimg_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?), ground(V?) | lookup(V?, B?, F), cimg_val(F?, V?, X), cimg_args(Vs?, B?, Xs).
@@ -3695,6 +3707,7 @@ found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(r(_)), unbound).
 found_peer(found(i(_)), unbound).
+found_peer(found(v(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -3735,6 +3748,7 @@ img_args([], _, []).
 img_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), img_sgn(F?, P?, X), img_args(Vs?, B?, Xs).
 img_args([nterm(N) | Vs], B, [c(C?) | Xs?]) :- ground(B?), ground(N?) | nt_img(N?, B?, C), img_args(Vs?, B?, Xs).
 img_args([num(X) | Vs], B, [n(N?) | Xs?]) :- integer(X?) | N := X?, img_args(Vs?, B?, Xs).
+img_args([val(C) | Vs], B, [v(C?) | Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([item_of(V) | Vs], B, [X? | Xs?]) :- ground(B?), ground(V?) | lookup(V?, B?, F), item_found(F?, F1), img_val(F1?, X), img_args(Vs?, B?, Xs).
 img_args([any | Vs], B, [any | Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?) | lookup(V?, B?, F), img_val(F?, X), img_args(Vs?, B?, Xs).
@@ -3777,6 +3791,7 @@ atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
 vars_bound([num(X) | Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
+vars_bound([val(_) | Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([item_of(V) | Vs], B, R?) :- vars_bound([V? | Vs?], B?, R).
 vars_bound([nterm(N) | Vs], B, R?) :- ground(N?) | nt_vars(N?, Ws), app(Ws?, Vs?, Vs1), vars_bound(Vs1?, B?, R).
 vars_bound([V | Vs], B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), vars_bound1(F?, Vs?, B?, R).
@@ -3815,6 +3830,7 @@ match_args([_ | _], [], _, nomatch).
 match_args([sgn(Y, I) | Vs], [X | Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) | sgn_parts(X?, Ps), match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
 match_args([nterm(N) | Vs], [X | Xs], B, R?) :- ground(N?), ground(X?), ground(B?) | name_parts(N?, X?, Ps), match_name(Ps?, Vs?, Xs?, B?, R).
 match_args([num(X) | Vs], [Y | Ys], B, R?) :- number(X?), ground(Y?), ground(B?) | lit_val(X?, Y?, E), lit_then(E?, Vs?, Ys?, B?, R).
+match_args([val(C) | Vs], [Y | Ys], B, R?) :- ground(C?), ground(Y?), ground(B?) | const_lit(C?, Y?, E), lit_then(E?, Vs?, Ys?, B?, R).
 match_args([item_of(V) | Vs], [X | Xs], B, R?) :- ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), item_found(F?, F1), item_then(F1?, X?, Vs?, Xs?, B?, R).
 match_args([any | Vs], [X | Xs], B, R?) :- ground(X?), ground(B?) | any_val(X?, E), lit_then(E?, Vs?, Xs?, B?, R).
 match_args([V | Vs], [X | Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), kind_ok(V?, X?, K), match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
@@ -3823,6 +3839,10 @@ procedure lit_val(Number?, Val?, YesNo).
 lit_val(X, n(K), yes) :- (X? =:= K?) | true.
 lit_val(X, r(K), yes) :- (X? =:= K?) | true.
 lit_val(_, _, no) :- otherwise | true.
+
+procedure const_lit(Constant?, Val?, YesNo).
+const_lit(C, v(D), yes) :- (C? =?= D?) | true.
+const_lit(_, _, no) :- otherwise | true.
 
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
@@ -3856,6 +3876,7 @@ name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, r(_), noparts).
 name_parts(_, i(_), noparts).
+name_parts(_, v(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 
@@ -3889,6 +3910,7 @@ sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(r(_), unsigned).
 sgn_parts(i(_), unsigned).
+sgn_parts(v(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 
@@ -3936,6 +3958,7 @@ kind_ok(sgn(_, _), r(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
 kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
 kind_ok(item_of(_), _, no).
+kind_ok(val(_), _, no).
 kind_ok(any, _, no).
 kind_ok(V, any, no) :- ground(V?) | true.
 
@@ -3949,6 +3972,7 @@ val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(r(_)), D, D?).
 val_peer1(found(i(_)), D, D?).
+val_peer1(found(v(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -3963,6 +3987,7 @@ val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(r(_)), D, speech(utterance(none), D?)).
 val_speech1(found(i(_)), D, speech(utterance(none), D?)).
+val_speech1(found(v(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -3975,6 +4000,7 @@ procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
 num_found(found(r(K)), num_is(K?)).
 num_found(found(i(_)), no_num).
+num_found(found(v(_)), no_num).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -4036,6 +4062,7 @@ expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
 expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
 expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
+expr_term1(val(C), _, found(v(C?))).
 expr_term1(_, _, free) :- otherwise | true.
 
 procedure author_found(Found?, Found).
@@ -4107,6 +4134,7 @@ expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
 expr_val(author_of(_), _, no_num).
 expr_val(item_of(_), _, no_num).
+expr_val(val(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 expr_val(any, _, no_num).
@@ -4288,6 +4316,7 @@ expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
 expr_free(author_of(_), _, F0, F0?).
 expr_free(item_of(_), _, F0, F0?).
+expr_free(val(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).
@@ -4643,7 +4672,7 @@ form_module(_, refused) :- otherwise | true.
 
 %% --- the construct process of each interactive type ---
 
-Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo.
+Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo ; last_state ; social_menu(List(MenuEntry)) ; approval_sentence.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
@@ -4653,22 +4682,22 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named('social_menu([button(\'Establish\', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button(\'Acquaint\', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button(\'Introduce\', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button(\'Befriend\', [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button(\'Unfriend\', [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), req(pointer, [at(2), at(2)])], [2], [], [], [])]), button(\'Point\', [act(point_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(points_to, [at(2)])], [2], [], [], []), act(point_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(points_to, [at(2)])], [3, 2], [], [], [])]), button(\'Unpoint\', [act(unpoint, 1, [1, 2], [req(identity, []), req(points_to, [at(2)])], [2], [], [], [])]), button(\'Follow\', [act(follow_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(pointer, [at(2), at(3)])], [2], [field(3, label, agent)], [], []), act(follow_transitive, 1, [1, 2, 3], [req(identity, []), req(knows, [at(3)]), req(pointer, [at(2), at(4)]), forb(pointer, [at(3), at(4)])], [3, 2, 4], [], [], []), act(follow_transitive_friend, 1, [1, 2, 3], [req(identity, []), req(knows, [at(3)]), req(friend, [at(2)]), forb(pointer, [at(3), at(4)])], [3, 2], [field(4, label, agent)], [], [])]), button(\'Unfollow\', [act(unfollow, 1, [1, 2], [req(identity, []), req(pointer, [at(2), any])], [2], [], [], [])]), button(\'Post\', [act(post, 1, [1], [req(identity, []), forb(item, [at(2), at(1)])], [], [field(2, item, text)], [], [])])])', form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Befriend', form(befriend, [field('Peer', peer), field('Peer', peer)])), label('Unfriend', form(unfriend, [field('Peer', peer), field('Peer', peer)])), label('Point', form(point_friend, [field('Peer', peer), field('Peer', peer)])), label('Point', form(point_transitive, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Unpoint', form(unpoint, [field('Peer', peer), field('Peer', peer)])), label('Follow', form(follow_friend, [field('Peer', peer), field('Peer', peer), field(label, peer)])), label('Follow', form(follow_transitive, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Follow', form(follow_transitive_friend, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(label, peer)])), label('Unfollow', form(unfollow, [field('Peer', peer), field('Peer', peer)])), label('Post', form(post, [field('Peer', peer), field(item, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button('Befriend', [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button('Unfriend', [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), req(pointer, [at(2), at(2)])], [2], [], [], [])]), button('Point', [act(point_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(points_to, [at(2)])], [2], [], [], []), act(point_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(points_to, [at(2)])], [3, 2], [], [], [])]), button('Unpoint', [act(unpoint, 1, [1, 2], [req(identity, []), req(points_to, [at(2)])], [2], [], [], [])]), button('Follow', [act(follow_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(pointer, [at(2), at(3)])], [2], [field(3, label, agent)], [], []), act(follow_transitive, 1, [1, 2, 3], [req(identity, []), req(knows, [at(3)]), req(pointer, [at(2), at(4)]), forb(pointer, [at(3), at(4)])], [3, 2, 4], [], [], []), act(follow_transitive_friend, 1, [1, 2, 3], [req(identity, []), req(knows, [at(3)]), req(friend, [at(2)]), forb(pointer, [at(3), at(4)])], [3, 2], [field(4, label, agent)], [], [])]), button('Unfollow', [act(unfollow, 1, [1, 2], [req(identity, []), req(pointer, [at(2), any])], [2], [], [], [])]), button('Post', [act(post, 1, [1], [req(identity, []), forb(item, [at(2), at(1)])], [], [field(2, item, text)], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Befriend', form(befriend, [field('Peer', peer), field('Peer', peer)])), label('Unfriend', form(unfriend, [field('Peer', peer), field('Peer', peer)])), label('Point', form(point_friend, [field('Peer', peer), field('Peer', peer)])), label('Point', form(point_transitive, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Unpoint', form(unpoint, [field('Peer', peer), field('Peer', peer)])), label('Follow', form(follow_friend, [field('Peer', peer), field('Peer', peer), field(label, peer)])), label('Follow', form(follow_transitive, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Follow', form(follow_transitive_friend, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(label, peer)])), label('Unfollow', form(unfollow, [field('Peer', peer), field('Peer', peer)])), label('Post', form(post, [field('Peer', peer), field(item, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
 construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(deliver, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(deliver, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(point_friend, [field('Peer', shown), field('Peer', shown)]), form(point_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unpoint, [field('Peer', shown), field('Peer', shown)]), form(follow_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(follow_transitive_friend, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(unfollow, [field('Peer', shown), field('Peer', shown)]), form(post, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(pointer, [field('Peer', shown), field('Peer', shown)]), form(points_to, [field('Peer', shown)]), form(item, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown)]), form(received, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Peer', shown)])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
 
-procedure output(Widget?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).
 
-procedure output_more(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_more(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Gs, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Gs?, Ds).
 output_more(W, Ms, Es, [refresh | Gs], Ds?) :- output_draw(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, Ms, Es, [input(_, _, _) | Gs], Ds?) :- output_more(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, [], Es, Gs, Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
-procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, Gs, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Gs?, Ds).
 
-procedure output_end(Widget?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_end(Widget(Drawn)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_end(W, Es, [refresh | Gs], [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_end(W?, Es?, Gs?, Ds).
 output_end(W, Es, [input(_, _, _) | Gs], Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
@@ -4808,18 +4837,18 @@ take_request(formed(V), _, V?, _, Gs, Gs?, done).
 take_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_request(P?, X, Gs?, Gs1, Done).
 
 View_request_r ::= Request ; input(Path).
-procedure run_request_r(Integer?, Widget?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r(Integer?, Widget(Drawn)?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_request_r_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_request_r_more(Integer?, Widget?, View_request_r?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r_more(Integer?, Widget(Drawn)?, View_request_r?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_request_r_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_request_r_last(Integer?, Widget?, View_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r_last(Integer?, Widget(Drawn)?, View_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_request_r_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_request_r_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
@@ -4845,18 +4874,18 @@ View_approval ::= approval(Asking, List(Word), Questioned(YesNo)).
 procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_approval), Done).
 present_approval(P, approval(H1, H2, H3?), Gs, Gs1?, [approval(H1?, H2?, input(M3?))], D3?) :- ground(P?), ground(H1?), ground(H2?) | path(P?, 3, M3), path(P?, 3, Q3), answer_yesNo(Q3?, H3, Gs?, Gs1, D3).
 
-procedure run_approval_w(Integer?, Widget?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w(Integer?, Widget(Drawn)?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_approval_w_more(Integer?, Widget?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_more(Integer?, Widget(Drawn)?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_approval_w_last(Integer?, Widget?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_last(Integer?, Widget(Drawn)?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_approval_w_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).

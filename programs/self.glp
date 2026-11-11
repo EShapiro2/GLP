@@ -157,7 +157,7 @@ Done ::= done.
 % it last drew (vGLP d433f71, Section 6.3: "Input(T) ::= input(Integer, Path,
 % T) ; refresh."; IGLP 7a25ff8, the paragraph after Definition "Restart"),
 % and writes what the mini-app draws for its person, draw(Id, W, V), W
-% the widget, of type Widget, and V at T, and withdraw(Id); nothing merged, a
+% the widget, of type Widget(T), and V at T, and withdraw(Id); nothing merged, a
 % program's output reaching the person as the elements of the output thread,
 % construct 0.  Neither stream ends: the person and the program stay
 % connected, and a goal standing for the person waits on the draws when it
@@ -167,8 +167,17 @@ PersonIn(T) ::= [Input(T) | PersonIn(T)].
 PersonOut(T) ::= [Draw(T) | PersonOut(T)].
 Input(T) ::= input(Integer, Path, T) ; refresh.
 Path ::= [] ; [Integer | Path].
-Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
+Draw(T) ::= draw(Integer, Widget(T), T) ; withdraw(Integer).
 
+% The widget in a draw, Widget(T), T the program's person-channel union: "the
+% term W' a widget declaration names is a name or a name applied to arguments,
+% as the request type's menu is applied to its buttons and fields; the
+% compilation forms the union of the three, the parameter T of the program's
+% person channel ..., so the widget a construct draws is typed as its value
+% is" (vGLP 668df7d, Section 6.3, the paragraph after the construct process;
+% GLP #14, Code_inbox 2026-11-10 18:08 UTC).  So a declared widget is
+% named(W', D), W' of type T, in place of named(Constant, Widget) until
+% 2026-11-10, and every alternative is over Widget(T) and WidgetField(T).
 % The widget in a draw (vGLP, Section 6.3: "Widget is the type of the terms
 % that draw widgets: the terms of the default widgets, built from the
 % constructors of Definition Default Widget, and, for a declared widget, the
@@ -227,17 +236,17 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % Section 5.4, "The contract's words": the question of an act with one
 % guarding role "is text of its request form";
 % programs/vglp/cva/compiler/README.md, "The pragmas").
-Widget ::= button(ButtonValue) ; buttons(List(ButtonValue))
+Widget(T) ::= button(ButtonValue) ; buttons(List(ButtonValue))
       ; text ; number ; peer
-      ; form(String, List(WidgetField)) ; menu(List(Widget))
+      ; form(String, List(WidgetField(T))) ; menu(List(Widget(T)))
       ; shown ; picker
-      ; input_box(Widget) ; input_list(Widget)
-      ; thread ; thread(Widget)
-      ; rec(String, Widget) ; ref(String)
-      ; named(Constant, Widget)
-      ; label(String, Widget)
-      ; act(ActPlace, Widget).
-WidgetField ::= field(String, Widget) ; question(String, Widget).
+      ; input_box(Widget(T)) ; input_list(Widget(T))
+      ; thread ; thread(Widget(T))
+      ; rec(String, Widget(T)) ; ref(String)
+      ; named(T, Widget(T))
+      ; label(String, Widget(T))
+      ; act(ActPlace, Widget(T)).
+WidgetField(T) ::= field(String, Widget(T)) ; question(String, Widget(T)).
 ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
 ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), List(Integer), List(FormWord)).
 GroupAt ::= group(Integer, Integer).

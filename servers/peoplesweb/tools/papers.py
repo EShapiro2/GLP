@@ -26,6 +26,11 @@ BY_DIR = {
     'GSA': {'title': 'The Grassroots Super-App and App Store', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro',
             'pdf': 'GSA', 'state': 'uploaded to arXiv, number not yet announced'},
     'GNA': {'title': 'GLP Networking API and Services', 'authors': 'Dan Bachar and Ehud Shapiro', 'pdf': 'GNA'},
+    # GO's contracts (programs/go) cite it, in preparation; title and authors
+    # as its main file has them, Bib-Grassroots having no entry (Code #27,
+    # 2026-11-11, from GO 84c9335).
+    'GO': {'title': 'Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives',
+           'authors': 'Ehud Shapiro', 'pdf': 'GO'},
 }
 
 # Where each paper's source is: its repository under EShapiro2 on GitHub, the
@@ -50,13 +55,51 @@ SOURCES = {
 # acmart wants a country in every affiliation, which Overleaf forgives
 # (Udi, 2026-11-07: not to be fixed in GFF's repository).
 FIXES = {'GFF': [(r'\affiliation{}', r'\affiliation{\country{}}')]}
+# The foundational papers' sources (FOUNDATIONAL below), each by its project's
+# directory, repository and main file, taken from Coordination's Appendix A
+# on 2026-11-10, this file being the one record of the site's papers
+# (Coordination, 2026-11-11); built and compared with arXiv as the contracts'
+# papers are, so each is linked as Updated beside arXiv while its repository
+# is ahead (Udi, 2026-11-10).
+SOURCES.update({
+    'GLP-Spec': {'repo': 'GLP-ICLP-2026', 'main': 'main-GLP-ICLP-2026.tex'},
+    'TGLP': {'repo': 'Moded-Types', 'main': 'main_tglp.tex'},
+    'IGLP': {'repo': 'CGLP', 'main': 'main_iglp.tex'},
+    'VMAT': {'repo': 'Grassroots-atomic-transactions', 'main': 'main VMAT.tex'},
+    'vGLP': {'repo': 'VEUI-Volition-Elicitation-Rationalizing-the-GLP-Smartphone-User-Interface', 'main': 'main_UIVE.tex'},
+    'sGLP': {'repo': 'svGLP-Stochastic-Volitional-GLP', 'main': 'main_svGLP.tex'},
+    'CGP': {'repo': 'Global-Platforms-Characterization-ArXiv-2025', 'main': 'main_characterisation_ArXiv.tex'},
+    'GPAT': {'repo': 'ICDCN-2026', 'main': 'main_GPAT.tex'},
+    'SPM': {'repo': 'SPM-Securing-People-and-their-Machines', 'main': 'main SPM.tex'},
+    'DSA': {'repo': 'DSA', 'main': 'main.tex'},
+    'Federation': {'repo': 'Grassroots-Federation', 'main': 'main.tex'},
+    'CCDG': {'repo': 'Grassroots-Constitutional-Consensus-2026', 'main': 'mainConstitutionalConsensus.tex'},
+    'CGMS': {'repo': 'SMA-Simple-Metric-Aggregation', 'main': 'ARXIV/main_ARXIV.tex'},
+})
 for _d, _p in {'GSC': 'GSC', 'GC': 'GC', 'GB': 'GB', 'SGC': 'SGC'}.items():
     BY_DIR[_d].setdefault('pdf', _p)
 
 
 def pdf_name(d):
     """The served PDF's name for the paper in directory d."""
-    return BY_DIR[d].get('pdf', d)
+    return BY_DIR.get(d, {}).get('pdf', d)
+
+
+def arxiv_of(d):
+    """The arXiv identifier of the paper in directory d, a contract's paper
+    or a foundational one, or None."""
+    if d in BY_DIR:
+        return BY_DIR[d].get('arxiv')
+    return next((f.get('arxiv') for f in FOUNDATIONAL if f.get('dir') == d), None)
+
+
+def updated(v, name, served_pdfs, st):
+    """Add to the citation v of a paper on arXiv the link to its PDF as
+    Updated, with the date of its source's last change, where the PDF is
+    served and the source has changed since the latest arXiv version."""
+    if name in served_pdfs and st.get('ahead'):
+        v['updated'] = f'papers/{name}.pdf'
+        v['updated_on'] = st.get('changed', '')[:10]
 
 
 def load_state(papers_dir):
@@ -82,9 +125,7 @@ def paper_of(owner_line, served_pdfs=(), state=None):
     served = name is not None and name in served_pdfs
     if 'arxiv' in v:
         # Updated: the source has changed since the latest arXiv version.
-        if served and st.get('ahead'):
-            v['updated'] = f'papers/{name}.pdf'
-            v['updated_on'] = st.get('changed', '')[:10]
+        updated(v, name, served_pdfs, st)
     elif name is not None:
         v.setdefault('state', 'in preparation')
         if served:
@@ -95,20 +136,51 @@ def paper_of(owner_line, served_pdfs=(), state=None):
 
 
 # The foundational papers, those with no contract of their own (Udi,
-# 2026-11-09, choosing them), listed under Foundational Papers on the site;
-# titles, authors and arXiv identifiers as Bib-Grassroots has them.
+# 2026-11-09, choosing them, and 2026-11-11, taking Coordination's list of
+# ten published and two in preparation), listed under Foundational Papers on
+# the site; titles, authors, venues and arXiv identifiers as Bib-Grassroots
+# has them (Code #27, 2026-11-11, at its pull of 14:53 UTC), a paper not in
+# it as its main file has it; and, where the site builds its PDF, its
+# project's directory, the key of its source in SOURCES.  2301.04391 is the
+# extended version of the DISC 2023 brief announcement, the only entry
+# Bib-Grassroots has; the arXiv numbers of 2306.13941 and 2005.06261 are
+# Coordination's Appendix A's, their entries carrying none.
 FOUNDATIONAL = [
-    {'title': 'GLP: A Grassroots, Multiagent, Concurrent, Logic Programming Language for AI', 'authors': 'Ehud Shapiro', 'arxiv': '2510.15747'},
-    {'title': 'Types for Grassroots Logic Programs', 'authors': 'Ehud Shapiro', 'arxiv': '2601.17957'},
-    {'title': 'Implementing Grassroots Logic Programs with Multiagent Transition Systems and AI', 'authors': 'Ehud Shapiro', 'arxiv': '2602.06934'},
-    {'title': 'Volition-Guarded Multiagent Atomic Transactions: Describing People and their Machines', 'authors': 'Andy Lewis-Pye and Ehud Shapiro', 'arxiv': '2604.25596'},
-    {'title': 'Volition Elicitation: Operational Semantics for People and Their Machines', 'authors': 'Idit Keidar and Ehud Shapiro', 'arxiv': '2607.14138'},
-    {'title': 'sGLP: Simulating People with Stochastic Agents', 'authors': 'Ehud Shapiro', 'arxiv': '2610.14738'},
-    {'title': 'Characterising Global Platforms: Centralised, Decentralised, Federated, and Grassroots', 'authors': 'Ehud Shapiro', 'arxiv': '2511.03286'},
-    {'title': 'Grassroots Platforms with Atomic Transactions: Social Graphs, Cryptocurrencies, and Democratic Federations', 'authors': 'Ehud Shapiro', 'arxiv': '2502.11299', 'venue': 'Theoretical Computer Science, 2026'},
-    {'title': 'Securing People and their Machines Against Major Faults', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro', 'arxiv': '2607.02304', 'venue': 'SSS 2026, to appear'},
-    {'title': 'Digital Speech Acts Retain Control of Copyright with People, Not Platforms', 'authors': 'James Golike and Ehud Shapiro', 'arxiv': '2606.19263'},
-    {'title': 'Grassroots Federation: Fair Democratic Governance at Scale', 'authors': 'Nimrod Talmon and Ehud Shapiro', 'arxiv': '2505.02208', 'venue': 'AAMAS 2026'},
-    {'title': 'Constitutional Consensus', 'authors': 'Idit Keidar, Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2505.19216'},
-    {'title': 'Constitutional Governance in Metric Spaces', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'arxiv': '2605.13362', 'venue': 'ADT 2026, to appear'},
+    {'dir': 'GLP-Spec', 'title': 'GLP: A Grassroots, Multiagent, Concurrent, Logic Programming Language for AI', 'authors': 'Ehud Shapiro', 'arxiv': '2510.15747'},
+    {'dir': 'TGLP', 'title': 'Types for Grassroots Logic Programs', 'authors': 'Ehud Shapiro', 'arxiv': '2601.17957'},
+    {'dir': 'IGLP', 'title': 'Implementing Grassroots Logic Programs with Multiagent Transition Systems and AI', 'authors': 'Ehud Shapiro', 'arxiv': '2602.06934'},
+    {'dir': 'VMAT', 'title': 'Volition-Guarded Multiagent Atomic Transactions: Describing People and their Machines', 'authors': 'Andy Lewis-Pye and Ehud Shapiro', 'arxiv': '2604.25596'},
+    {'dir': 'vGLP', 'title': 'Volition Elicitation: Operational Semantics for People and Their Machines', 'authors': 'Idit Keidar and Ehud Shapiro', 'arxiv': '2607.14138'},
+    {'dir': 'sGLP', 'title': 'sGLP: Simulating People with Stochastic Agents', 'authors': 'Ehud Shapiro', 'arxiv': '2610.14738'},
+    {'dir': 'CGP', 'title': 'Characterising Global Platforms: Centralised, Decentralised, Federated, and Grassroots', 'authors': 'Ehud Shapiro', 'arxiv': '2511.03286'},
+    {'dir': 'GPAT', 'title': 'Grassroots Platforms with Atomic Transactions: Social Graphs, Cryptocurrencies, and Democratic Federations', 'authors': 'Ehud Shapiro', 'arxiv': '2502.11299', 'venue': 'Theoretical Computer Science, 2026'},
+    {'dir': 'SPM', 'title': 'Securing People and their Machines Against Major Faults', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro', 'arxiv': '2607.02304', 'venue': 'SSS 2026, to appear'},
+    {'dir': 'DSA', 'title': 'Digital Speech Acts Retain Control of Copyright with People, Not Platforms', 'authors': 'James Golike and Ehud Shapiro', 'arxiv': '2606.19263'},
+    {'dir': 'Federation', 'title': 'Grassroots Federation: Fair Democratic Governance at Scale', 'authors': 'Nimrod Talmon and Ehud Shapiro', 'arxiv': '2505.02208', 'venue': 'AAMAS 2026'},
+    {'dir': 'CCDG', 'title': 'Constitutional Consensus', 'authors': 'Idit Keidar, Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2505.19216'},
+    {'dir': 'CGMS', 'title': 'Constitutional Governance in Metric Spaces', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'arxiv': '2605.13362', 'venue': 'ADT 2026, to appear'},
+    {'title': 'Grassroots Distributed Systems: Concept, Examples, Implementation and Applications (Brief Announcement)', 'authors': 'Ehud Shapiro', 'arxiv': '2301.04391', 'venue': 'DISC 2023'},
+    {'title': 'Grassroots Social Networking: Serverless, Permissionless Protocols for Twitter/LinkedIn/WhatsApp', 'authors': 'Ehud Shapiro', 'arxiv': '2306.13941', 'venue': "OASIS '23"},
+    {'title': 'A Grassroots Architecture to Supplant Global Digital Platforms by a Global Digital Democracy', 'authors': 'Ehud Shapiro', 'arxiv': '2404.13468', 'venue': "DAWO '24"},
+    {'title': 'Digital social contracts: A foundation for an egalitarian and just digital society', 'authors': 'Luca Cardelli, Liav Orgad, Gal Shahaf, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2005.06261', 'venue': 'First International Forum on Digital and Democracy, 2020'},
+    {'title': 'Multiagent Transition Systems for Composing Fault-Resilient Protocol Stacks', 'authors': 'Ehud Shapiro', 'arxiv': '2112.13650'},
+    {'title': 'Grassroots Flash: A Payment System for Grassroots Cryptocurrencies', 'authors': 'Andrew Lewis-Pye, Oded Naor and Ehud Shapiro', 'arxiv': '2309.13191'},
+    {'title': 'The Blocklace: A Byzantine-repelling and Universal Conflict-free Replicated Data Type', 'authors': 'Paulo Sérgio Almeida and Ehud Shapiro', 'arxiv': '2402.08068'},
+    {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
+    {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
+    {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
+    {'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    {'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026'},
 ]
+
+
+def foundational(served_pdfs=(), state=None):
+    """The foundational papers' citations, each with the link to its PDF as
+    Updated where its source is ahead of arXiv, as a contract's paper has it."""
+    out = []
+    for f in FOUNDATIONAL:
+        v = {k: x for k, x in f.items() if k != 'dir'}
+        if 'dir' in f:
+            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+        out.append(v)
+    return out
