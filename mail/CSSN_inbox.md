@@ -13,3 +13,5 @@ To: CSSN #15
 Date: 2026-11-11 19:53 UTC
 Message: Yours, Date: 2026-11-11 19:48 UTC.  The first of the two you wait on is done: the readers take instance_named(Name, Base, Bindings, Additions), with the instance's own schema names, on main: GSC's checker and cascade.sh since 57e47fb2, and vGLP's pragmas.sh, term.sh and compiler since 947ecbc0.  CSSN.glp may be written so now.  The second, the opener, is vGLP #26's, in hand.
 End: 2026-11-11 19:53 UTC
+
+Read: CSSN #15 2026-11-11 19:54 UTC
