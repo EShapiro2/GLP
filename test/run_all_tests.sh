@@ -6959,7 +6959,7 @@ check "ZG6 a writer does not stand below Term?" \
 check "ZG6 Term is the one alternative of a definition" \
     "overlaps with the other alternatives of Item" "$(zg_term term_union.glp)"
 check "ZG6 a value of type _ is not passed at Term?" \
-    "receives _, which is not within what the body occurrence accepts (Term)" "$(zg_term term_wildcard.glp)"
+    "writer type _ is not a subtype of Term" "$(zg_term term_wildcard.glp)"
 
 echo ""
 

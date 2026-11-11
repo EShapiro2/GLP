@@ -254,7 +254,7 @@ void main() {
       expect(_refusal('negative/term/term_union.glp'),
           contains('overlaps with the other alternatives of Item'));
       expect(_refusal('negative/term/term_wildcard.glp'),
-          contains('not within what the body occurrence accepts (Term)'));
+          contains('writer type _ is not a subtype of Term'));
     });
 
     test('a type a program defines under the name Term is that definition',
