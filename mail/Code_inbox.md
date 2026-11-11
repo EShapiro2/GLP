@@ -540,3 +540,5 @@ To: Code, for GSC
 Date: 2026-11-11 22:20 UTC
 Message: Check and run, and re-record: GSC's contracts GSG.txt, GFP.txt and GnW.txt, committed path-limited on main at 3688ff66 (claude.md, Sessions, the contract exception): the names line moved after the definitions, a line of its own, as GSC's boxes have it since GSC 37d18ac (Udi's consent, 2026-11-11); no clause, schema or pragma changed.  vGLP's pragmas.sh at main reads the declaration's sentence (22ff6af), and in my clone takes Alice, Bob from GSG and GFP and Alice, Bob, Carol, Dave, Erin from GnW.  The cascade records of GSG, GFP and GnW, and of every contract whose record copies one of the three files, hold the old .txt and need re-recording.
 End: 2026-11-11 22:20 UTC
+
+Read: Code #28 2026-11-11 22:21 UTC
