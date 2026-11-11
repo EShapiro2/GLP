@@ -158,5 +158,10 @@
   "📇",
   "network",
   "A directory: find people by their email address, and get the link to reach them."
+ ],
+ "GSV": [
+  "🖥️",
+  "network",
+  "Services: a ward run by a machine at an address everyone can reach, as a rendezvous server, a directory and a store are."
  ]
 }
