@@ -1,0 +1,53 @@
+%% ---------------------------------------------------------------------------
+%% GDS.glp --- GDS, Grassroots Directory Service, GNA's (a paper of the GSA project), its clauses in GDS.txt beside this file, extending GSV (GSV.txt), in the clause syntax of GSC's paper, Section 3.2.  The term is an instance of GnW (programs/gsc/GnW.glp), instance_named(Name, gnw, Bindings, Additions), its parameter ward written service and the other five as GnW writes them (GSC's paper, Definition Parametric contract; programs/gsc/README.md, "Parametric contracts and their instances"); it restates no schema of GnW, and docs/tools/gen_gsv.py of GNA's repository writes this file.  Then GDS's six: open_directory is GDS:1, Directory; list, list_unlisted and unlist GDS:2, Listing; lookup and lookup_unlisted GDS:3 and GDS:4, Lookup and Contact, of a person who has the Grassroots App, a lookup on the directory's page by anyone else being outside the contract (the implementation pragmas).  directory(Dora) says that the service Dora is a directory; listed(Dora, Alice, e, n) and unlisted(Dora, Alice, e, n) that Alice is listed with it by the email address e and the name n, shown on its page or not, and listed_with(Alice, Dora) the same at Alice; contact(Bob, a) at Bob that Dora gave him a link of a's.  Every guarding role requires person, or service and a guardian, Carol an agent variable where the directory guards (GSC's paper, Definition Guardianship).  The verification of the email address, the links and their supply are the implementation pragmas'.  A person comes to know the directory by GnW:3, ward_acquaint.  Written by GSA #3 Cowork, 2026-11-10 (Udi, 2026-11-10 13:52 UTC).
+%% ---------------------------------------------------------------------------
+
+% instance_named(gds, gnw, Bindings, Additions): the contract, GDS.
+procedure instance_named(Constant?, Constant, SBindings, SDeclared).
+instance_named(gds, gnw,
+   [ward = service],
+   [
+%% GDS:1, Directory: Carol, a guardian of the service Dora, makes it a directory, by an act of both.
+    sas(open_directory, ['Carol', 'Dora'], [],
+       [atom(directory, ['Dora'])],
+       [atom(identity, ['Carol']), atom(person, ['Carol']), atom(guardian_of, ['Carol', 'Dora']),
+        atom(identity, ['Dora']), atom(service, ['Dora']), atom(guarded_by, ['Dora', 'Carol']),
+        not(atom(directory, ['Dora']))],
+       true, ['Carol', 'Dora']),
+%% GDS:2, Listing: Alice lists herself with Dora by the email address e and the name n, listed, by an act of both, Dora having verified the address.
+    sas(list, ['Alice', 'Dora', 'Carol'], ['Carol', e, n],
+       [atom(listed_with, ['Alice', 'Dora']),
+        atom(listed, ['Dora', 'Alice', e, n])],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Dora']),
+        not(atom(listed_with, ['Alice', 'Dora'])),
+        atom(identity, ['Dora']), atom(service, ['Dora']), atom(guarded_by, ['Dora', 'Carol']), atom(directory, ['Dora']),
+        not(atom(listed, ['Dora', 'Alice', '_', '_'])), not(atom(unlisted, ['Dora', 'Alice', '_', '_']))],
+       true, ['Alice', 'Dora']),
+%% GDS:2, Listing: Alice lists herself with Dora by the email address e and the name n, unlisted, by an act of both, Dora having verified the address.
+    sas(list_unlisted, ['Alice', 'Dora', 'Carol'], ['Carol', e, n],
+       [atom(listed_with, ['Alice', 'Dora']),
+        atom(unlisted, ['Dora', 'Alice', e, n])],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Dora']),
+        not(atom(listed_with, ['Alice', 'Dora'])),
+        atom(identity, ['Dora']), atom(service, ['Dora']), atom(guarded_by, ['Dora', 'Carol']), atom(directory, ['Dora']),
+        not(atom(listed, ['Dora', 'Alice', '_', '_'])), not(atom(unlisted, ['Dora', 'Alice', '_', '_']))],
+       true, ['Alice', 'Dora']),
+%% GDS:2, Listing: Alice unlists herself.
+    sas(unlist, ['Alice', 'Dora'], [],
+       [not(atom(listed_with, ['Alice', 'Dora'])),
+        not(atom(listed, ['Dora', 'Alice', '_', '_'])), not(atom(unlisted, ['Dora', 'Alice', '_', '_']))],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(listed_with, ['Alice', 'Dora']),
+        atom(identity, ['Dora']), atom(directory, ['Dora'])],
+       true, ['Alice']),
+%% GDS:3 and GDS:4, Lookup and Contact: Bob looks up the person a, listed with Dora, and Dora gives him a link of theirs.
+    sas(lookup, ['Bob', 'Dora', 'Carol'], ['Carol', a, e, n],
+       [atom(contact, ['Bob', a])],
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Dora']), not(atom(contact, ['Bob', a])),
+        atom(identity, ['Dora']), atom(service, ['Dora']), atom(guarded_by, ['Dora', 'Carol']), atom(directory, ['Dora']), atom(listed, ['Dora', a, e, n])],
+       true, ['Bob', 'Dora']),
+%% GDS:3 and GDS:4, Lookup and Contact: Bob looks up the person a, unlisted with Dora, and Dora gives him a link of theirs.
+    sas(lookup_unlisted, ['Bob', 'Dora', 'Carol'], ['Carol', a, e, n],
+       [atom(contact, ['Bob', a])],
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Dora']), not(atom(contact, ['Bob', a])),
+        atom(identity, ['Dora']), atom(service, ['Dora']), atom(guarded_by, ['Dora', 'Carol']), atom(directory, ['Dora']), atom(unlisted, ['Dora', a, e, n])],
+       true, ['Bob', 'Dora'])]).
