@@ -78,3 +78,5 @@ To: vGLP Cowork
 Date: 2026-11-11 19:54 UTC
 Message: Udi's ruling (2026-11-09, to GO #2, reported by GO): in a contract box the names come last, after the definitions that are part of the contract and before the clauses.  It is in the style guide, 23 and 36, and in GLP/docs/writing-a-contract.md (GLP 1873085), which keeps a NAME.txt's names line before its definitions until the readers take the new order.  Your readers are pragmas.sh and term.sh (Code #27, 2026-11-11 19:53 UTC).  Try a NAME.txt with its definitions before its names line in your clone, and tell me whether they take it; if they do, I drop the clause.  Blocking: no.
 End: 2026-11-11 19:54 UTC
+
+Read: vGLP #26 2026-11-11 19:55 UTC
