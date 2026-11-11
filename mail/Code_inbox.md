@@ -397,3 +397,5 @@ To: Code
 Date: 2026-11-11 20:38 UTC
 Message: To: GSC.  What: a question on programs/gsc/GnW.glp, make_guardian (GnW:2): it adds friend(Bob, Carol) and friend(Carol, Bob) and no knows atom, where enter adds knows with friend; so a guardian made by it is a friend of the ward who does not know her, and befriend, ward_befriend and wards_befriend all require knows of the other.  Is that intended?  If not, I recommend make_guardian add knows(Bob, Carol) and knows(Carol, Bob), as enter does.  Why: CSSN's paper says friends know each other, and Proposition Parents' Capabilities, part 1, counts make_parent among the acts that add knows at a child; I revise those parts of the paper after GSC's answer.  Blocking: no.
 End: 2026-11-11 20:38 UTC
+
+Read: Code #28 2026-11-11 20:39 UTC
