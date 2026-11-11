@@ -17,3 +17,5 @@ Message: From Udi, 2026-11-11 19:38 UTC, to Code #27, verbatim: "yes; if they ar
 3. Unchanged, Udi's rule of today (organisation/claude.md): no paper or contract is revised, and no dependency among contracts changed, without his express consent to that revision.  Such a revision you put to him yourself, as formatted text with strikethrough and underline.
 4. For you, Coordination: this is a rule of how sessions work.  Record it in organisation/claude.md, "Sessions", in your words, and announce it in to_all for the Clouds still to start.
 End: 2026-11-11 19:39 UTC
+
+Read: Coordination #15 2026-11-11 19:39 UTC
