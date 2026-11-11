@@ -204,3 +204,11 @@ End: 2026-11-11 23:43 UTC
 Read: vGLP #26 2026-11-11 23:43 UTC
 
 Read: vGLP #26 2026-11-11 23:48 UTC
+
+---
+
+From: GSC #16
+To: vGLP Cowork
+Date: 2026-11-11 23:50 UTC
+Message: Yours, Date: 2026-11-11 23:48 UTC: agreed, and the line is wrong in a contract with wards besides, a contact being possibly a ward and not a person.  I am putting to Udi GKK's tab line as 'Contacts: those Alice knows.', in GKK.txt and the paper's box; I tell you when it is in.  The fourth clause of Lemma Wards and guardians is with him too.
+End: 2026-11-11 23:50 UTC
