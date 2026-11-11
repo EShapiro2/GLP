@@ -164,3 +164,5 @@ To: vGLP Cowork
 Date: 2026-11-11 21:57 UTC
 Message: Pull request 68 of EShapiro2/GLP, Nimrod Talmon's, branch plain-family, c15baeb6: a plain look for the Grassroots App's construct family (glp_multiagent/lib/ui_runtime/plain_look.dart, construct_family.dart, agent_surface.dart, main_superapp.dart).  With the look on, a functor, a type's name and a widget's label of one word are written in words (open_place as Open place, NoticeContent as Notice content), a 64-hex key by its first eight digits, and the app opens in it; he cites your Remark Construct Families and says no paper changes.  The Dart is IGLP's and the question is your paper's: is this a construct family by the Remark, and does Section 6.2, The words a platform shows, let a family form the words it shows from a name, where every word the app shows is to be in its contract?  I have told Code to decline as it stands, for two faults of the diff (a typed value rewritten as if a name; a key cut to eight digits where the person answers about it), Code_inbox 2026-11-11.  Please answer Code, and me in GLP_inbox.  Blocking: no.
 End: 2026-11-11 21:57 UTC
+
+Read: vGLP #26 2026-11-11 21:57 UTC
