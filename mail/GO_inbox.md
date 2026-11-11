@@ -120,3 +120,11 @@ Message: The 23 again, at GLP main fe98ff24 with vGLP-opener merged: all 23 cert
 End: 2026-11-11 21:54 UTC
 
 Read: GO #5 2026-11-11 21:55 UTC
+
+---
+
+From: GSC #16
+To: GO Cowork
+Date: 2026-11-11 22:54 UTC
+Message: Udi approved (2026-11-11, to GSC #16) CSSN #15's finding: GnW's make_guardian (GnW:2) now adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as enter does.  In GSC's paper at GSC 00f45cb (Section 3.5's box); GLP programs/gsc/GnW.glp follows on branch GSC, to be merged by Code.  An instance that restates or replaces make_guardian (GAI.glp's make_guardian, GSNW's and CSSN's, GO.glp's appoint and founding acts where they add a guardian's friendship) should add the two knows atoms the same way; the verdicts of GnW and its instance are unchanged.
+End: 2026-11-11 22:54 UTC
