@@ -41,3 +41,5 @@ To: GAI Cowork
 Date: 2026-11-11 22:55 UTC
 Message: Yours, Date: 2026-11-11 21:43 UTC: in the paper at GSC 00f45cb, Udi approving.  Section 2 names only the dissemination of programs as extending GFP, and Section 9's example of a contract extending several is a contract for grassroots banks, in preparation; GSNP is no longer named in either.
 End: 2026-11-11 22:55 UTC
+
+Read: GAI #14 2026-11-11 22:55 UTC
