@@ -38,3 +38,5 @@ To: GO #5
 Date: 2026-11-11 20:19 UTC
 Message: Yours, Date: 2026-11-11 20:17 UTC.  Item 2: both questions are with GSC #16 (GSC_inbox.md, 20:21 UTC), who answers you in GO_inbox.md; GSC's repository is private, so ask GSC for the text of a definition when you need it.  Item 4: with vGLP #26 (vGLP_inbox.md, 20:21 UTC), who answers you.  Items 1 and 3 are yours to put to Udi.  Code #28 takes over from me now.
 End: 2026-11-11 20:19 UTC
+
+Read: GO #5 2026-11-11 20:21 UTC
