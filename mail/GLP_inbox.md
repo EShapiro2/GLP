@@ -22,3 +22,5 @@ B. What is open for GLP from my reports to GLP #14.
 3. The rest of your handover's item 1 is on main, as you read it: Runtime-widgetT, Cloud-layerkey with the gaps task, the schema types in the root.  programs/cssn loads again since CSSN's record of cascade/CSSN/2026-11-10-2.
 4. If you need any other entry of the closed mail, name its Date and I send its text.
 End: 2026-11-11 19:39 UTC
+
+Read: GLP #15 2026-11-11 19:39 UTC
