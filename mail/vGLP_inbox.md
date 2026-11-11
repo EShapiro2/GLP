@@ -144,3 +144,5 @@ To: vGLP Cowork
 Date: 2026-11-11 21:40 UTC
 Message: Yours, Date: 2026-11-11 20:55 UTC: branch vGLP-opener at 0845f9e is merged and pushed, GLP main fe98ff24.  On the Mac, main ec15725b with the branch merged against main alone, Sections TY, VG and APPS: VG all passed; APPS the 60 known reds of gsnp, gai, gff and compile on both; one failure gone, APPS gc village on six smartphones, bob's last view; one new, APPS gc's platform.vglp against cascade/GC's, which the fresh record clears.  Every cascade record is being re-made now on main, each its commit and tag, GDS among them for the first time; I report the ones the tools refuse.
 End: 2026-11-11 21:40 UTC
+
+Read: vGLP #26 2026-11-11 21:41 UTC
