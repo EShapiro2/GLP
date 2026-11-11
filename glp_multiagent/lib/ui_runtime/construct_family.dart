@@ -112,6 +112,7 @@ import 'package:flutter/material.dart';
 import 'typed_before.dart';
 import 'bridge.dart';
 import 'named_widgets.dart';
+import 'plain_look.dart';
 import 'tab_screen.dart';
 import 'term.dart';
 
@@ -359,7 +360,7 @@ class _ConstructViewState extends State<ConstructView> {
               children: items,
             ));
       case 'shown' when ws.isEmpty:
-        return _keyed('shown', at, Text(displayText(v)));
+        return _keyed('shown', at, Text(plainDisplay(v)));
       case 'thread' when ws.isEmpty:
         // Its elements so far, each shown, or pending where the program has
         // not yet written it whole, at the position it carries.
@@ -375,7 +376,7 @@ class _ConstructViewState extends State<ConstructView> {
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: pendingAt(e) != null
                         ? _pending(const GAtom('shown'), pendingAt(e)!)
-                        : Text(displayText(e)),
+                        : Text(plainDisplay(e)),
                   ),
               ],
             ));
@@ -427,7 +428,7 @@ class _ConstructViewState extends State<ConstructView> {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(entries[i].label,
+                      Text(plainWords(entries[i].label),
                           style: const TextStyle(fontSize: 12)),
                       const SizedBox(width: 8),
                       Flexible(child: node),
@@ -480,15 +481,15 @@ class _ConstructViewState extends State<ConstructView> {
           }
         }
         if (alts.any((a) => a is GAtom && a.name == 'shown')) {
-          return _keyed('menu', at, Text(displayText(v)));
+          return _keyed('menu', at, Text(plainDisplay(v)));
         }
       // A position the person has answered, inside a form whose answer left
       // a question of its own open: the answer, shown and no more edited.
       case 'text' || 'number' || 'peer' when ws.isEmpty:
-        return _keyed('shown', at, Text(displayText(v)));
+        return _keyed('shown', at, Text(plainDisplay(v)));
       case 'button' || 'buttons' || 'input_box' || 'input_list'
           when ws.length == 1:
-        return _keyed('shown', at, Text(displayText(v)));
+        return _keyed('shown', at, Text(plainDisplay(v)));
     }
     return _undrawable(w, at);
   }
@@ -525,7 +526,7 @@ class _ConstructViewState extends State<ConstructView> {
               else
                 OutlinedButton(
                   onPressed: () => widget.grant(p, e),
-                  child: Text(displayText(e)),
+                  child: Text(plainDisplay(e)),
                 ),
           ],
         ));
@@ -685,7 +686,9 @@ class _ConstructViewState extends State<ConstructView> {
                     ? const TextInputType.numberWithOptions(
                         signed: true, decimal: true)
                     : TextInputType.text,
-                decoration: InputDecoration(labelText: label, isDense: true),
+                decoration: InputDecoration(
+                    labelText: label == null ? null : plainWords(label),
+                    isDense: true),
                 onChanged: (_) => setState(() {}),
               ),
               // The values typed in this field before, offered again (typed_before.dart; vGLP, Section 6.2, Remark "Construct Families").
@@ -696,7 +699,7 @@ class _ConstructViewState extends State<ConstructView> {
             ]));
       case 'button' when ws.length == 1:
         return _keyed('button', at,
-            _labelled(label, Chip(label: Text(name ?? buttonOf(ws[0]).$1))));
+            _labelled(label, Chip(label: Text(plainWords(name ?? buttonOf(ws[0]).$1)))));
       case 'buttons' when ws.length == 1 && ws[0] is GList:
         final chosen = _chosen[k];
         return _keyed(
@@ -707,7 +710,7 @@ class _ConstructViewState extends State<ConstructView> {
                 for (final b in (ws[0] as GList).items) buttonOf(b)
               ])
                 ChoiceChip(
-                  label: Text(shows),
+                  label: Text(plainWords(shows)),
                   selected: chosen != null && formatTerm(chosen) == formatTerm(c),
                   onSelected: (_) => setState(() => _chosen[k] = c),
                 ),
@@ -751,7 +754,7 @@ class _ConstructViewState extends State<ConstructView> {
                 Wrap(spacing: 8, children: [
                   for (var i = 0; i < alts.length; i++)
                     ChoiceChip(
-                      label: Text(_alternativeLabel(alts, i)),
+                      label: Text(plainWords(_alternativeLabel(alts, i))),
                       selected: chosen == i,
                       // Another alternative is another form: what was
                       // typed into the last one goes with it.
@@ -892,7 +895,7 @@ class _ConstructViewState extends State<ConstructView> {
   /// A button showing [shows]: its constant, or the label it carries.
   Widget _button(String shows, VoidCallback onPressed) => ElevatedButton(
         onPressed: onPressed,
-        child: Text(shows),
+        child: Text(plainWords(shows)),
       );
 
   /// A field of a recursive type the person has not opened, at [at]: its
@@ -905,7 +908,7 @@ class _ConstructViewState extends State<ConstructView> {
       'closed',
       at,
       Row(children: [
-        if (label != null) Text(label, style: const TextStyle(fontSize: 12)),
+        if (label != null) Text(plainWords(label), style: const TextStyle(fontSize: 12)),
         if (label != null) const SizedBox(width: 8),
         OutlinedButton(
           key: openKey(_id, at),
@@ -979,7 +982,7 @@ class _ConstructViewState extends State<ConstructView> {
 
   /// A form's heading, its functor (vGLP f9b63d6, Definition "Widget
   /// Declaration, Default Widget": "a tuple: a form headed by its functor").
-  static Widget _heading(String functor) => Text(functor,
+  static Widget _heading(String functor) => Text(plainWords(functor),
       style: const TextStyle(fontWeight: FontWeight.bold));
 
   /// [child] under [label], where there is one.
@@ -988,7 +991,7 @@ class _ConstructViewState extends State<ConstructView> {
       : Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 12)),
+            Text(plainWords(label), style: const TextStyle(fontSize: 12)),
             child,
           ],
         );
