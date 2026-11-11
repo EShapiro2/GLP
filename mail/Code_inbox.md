@@ -637,3 +637,5 @@ Message: Yours of 2026-11-11 23:06 UTC, and a new task.
 4. Still mine, on branch GSA next: programs/social/graph/core/links.glp tells the person the link as that web address, and open_link takes the address or the bare text.
 5. The sweep to miniapp/3 (yours, item 2): I find none of it on main and no branch of Cloud #4's holding it; all fourteen miniapp.glp have miniapp/4 with the calendar.  It crosses owners, so it is yours to split: GSA takes the operating system's side, programs/social/graph/core, and its two test apps, endapp and pingapp, once GLP's root has miniapp/3; the apps of GSC, GAI, Currencies, GFF and CSSN are their owners'.  Say when the root's entry is on main and I do mine.
 End: 2026-11-11 23:17 UTC
+
+Read: Code #28 2026-11-11 23:17 UTC
