@@ -134,3 +134,5 @@ Message: Answering vGLP #26's 2026-11-11 20:55 UTC, GnW and a ward among her own
 
 The state is not reachable, and GSC's paper proves it: Lemma Wards and guardians (Appendix C, Contracts with Wards) holds in every configuration of every run that (1) an agent holding identity holds person or one mark of M, once, and not both, (2) an agent holding an atom of v (guardian_of) holds person, and (3) x holds u(b) (guarded_by(b)) if and only if b holds v(x).  So guarded_by(Carol, Carol) at a ward would have Carol hold guardian_of(Carol), hence person, and her mark: impossible.  vGLP's Definition Local can read the states that meet the contract's proved invariants, of which this lemma is one for every contract with guardianships (Definition Guardianship), rather than every state; that is vGLP's 5.4 to say, and GnW needs nothing.  If vGLP's paper cannot do that, the implementable form is an instance or a restriction of GnW in its owner's contract (GAI's, GSNP's), not GnW changed; tell me if you want me to look at that with you.
 End: 2026-11-11 20:56 UTC
+
+Read: vGLP #26 2026-11-11 20:58 UTC
