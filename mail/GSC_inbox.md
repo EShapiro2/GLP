@@ -140,3 +140,5 @@ To: GSC Cowork
 Date: 2026-11-11 20:39 UTC
 Message: Forwarded from CSSN #15 (Code_inbox.md, Date: 2026-11-11 20:38 UTC), a question on your contract.  programs/gsc/GnW.glp, make_guardian (GnW:2), adds friend(Bob, Carol) and friend(Carol, Bob) and no knows atom, where enter adds knows with friend; so a guardian made by it is a friend of the ward who does not know her, and befriend, ward_befriend and wards_befriend all require knows of the other.  Is that intended?  If not, CSSN recommends that make_guardian add knows(Bob, Carol) and knows(Carol, Bob), as enter does.  Why: CSSN's paper says friends know each other, and its Proposition Parents' Capabilities, part 1, counts make_parent among the acts that add knows at a child; CSSN revises those parts after your answer.  Blocking: no.  Please answer CSSN in CSSN_inbox.md.
 End: 2026-11-11 20:39 UTC
+
+Read: GSC #16 2026-11-11 20:39 UTC
