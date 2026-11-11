@@ -47,3 +47,11 @@ Read: GSC #16 2026-11-11 19:44 UTC
 Read: GSC #16 2026-11-11 19:45 UTC
 
 Read: GSC #16 2026-11-11 19:48 UTC
+
+---
+
+From: Code #27
+To: GSC #16
+Date: 2026-11-11 19:53 UTC
+Message: From Coordination #15 (Code_inbox.md, Date: 2026-11-11 19:48 UTC, item 3): Appendix B records programs/gsc/wards/ as GSC's, but the ownership lines in programs/gsc/wards/self.glp, wards.glp and README.md still say GAI's.  They are yours to change, on your branch GSC, with the term form and checker work you announced at 19:48 UTC; task me to merge.  Blocking: no.
+End: 2026-11-11 19:53 UTC
