@@ -4237,6 +4237,26 @@ check "CVA pragmas: implements read as a relation, XC2's [Mint] read (implements
 check "CVA pragmas: ... and pragmas.sh exits 0 (implements)" "^exit 0$" "$cva_pr2_impl"
 check "CVA pragmas: a word that is no relation, refused, the name read named (norel)" 'names no contract at "copies XC2"' "$cva_pr2_norel"
 check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (norel)" "^exit 0$" "$cva_pr2_norel"
+# The names after a definition on their line (the style guide, 23 and 36, GLP 1873085; GSC #16, Code_inbox.md, 2026-11-11 20:05 UTC; vGLP #26): XO's "The author of a wave is its first signer.  Alice and Bob are persons." names Alice and Bob and not The, so its question's "The" is text (defnames).  A line two contracts write alike is one line, and a tab they write alike one tab ("what two of them inherit from one contract is taken once, and a schema, a tab or a button of one name that two of them write differently is refused", vGLP, Section 5.4, "The contract's words"; GO #5, Code_inbox.md, 2026-11-11 20:17 UTC, 4; vGLP #26): XN extends XL and XM, each extending XD and writing its Friendship line and its Waves tab alike, read with one [Befriend], one [Wave] and one Waves tab (alike); XP extends XL and XK, whose Friendship lines differ in their question, refused (unlike).
+cva_pp=$(mktemp -d)
+printf '%s\n' 'XO' 'The author of a wave is its first signer.  Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: The friend Alice asks.' > "$cva_pp/XO.txt"
+printf '%s\n' 'XD' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pp/XD.txt"
+printf '%s\n' 'XL' 'XL extends XD.' 'Alice is a person.' '1. ■ Waving. Alice may wave.' 'Pragmas' 'Waves: the waves of Alice.' 'Waving: Alice [Wave]' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pp/XL.txt"
+printf '%s\n' 'XM' 'XM extends XD.' 'Alice is a person.' '1. ■ Waving. Alice may wave.' 'Pragmas' 'Waves: the waves of Alice.' 'Waving: Alice [Wave]' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pp/XM.txt"
+printf '%s\n' 'XK' 'XK extends XD.' 'Alice is a person.' '1. ■ Waving. Alice may wave.' 'Pragmas' 'Waves: the waves of Alice.' 'Waving: Alice [Wave]' 'Friendship: Alice [Befriend]' '  Bob: Alice asks you.' > "$cva_pp/XK.txt"
+printf '%s\n' 'XN' 'XN extends XL and XM.' 'Alice is a person.' '1. ■ Hello. Alice may wave.' 'Pragmas' > "$cva_pp/XN.txt"
+printf '%s\n' 'XP' 'XP extends XL and XK.' 'Alice is a person.' '1. ■ Hello. Alice may wave.' 'Pragmas' > "$cva_pp/XP.txt"
+cva_pp_wave="schema(wave, ['Alice'], [], [rs(guarded, [atom(wave, [])], [], [], [])])"
+cva_pp_def=$(bash "$CVA/compiler/pragmas.sh" "$cva_pp/XO.txt" "[$cva_px_bef]" 2>&1; echo "exit $?")
+cva_pp_alike=$(bash "$CVA/compiler/pragmas.sh" "$cva_pp/XN.txt" "[$cva_px_bef, $cva_pp_wave]" 2>&1; echo "exit $?")
+cva_pp_unlike=$(bash "$CVA/compiler/pragmas.sh" "$cva_pp/XP.txt" "[$cva_px_bef, $cva_pp_wave]" 2>&1; echo "exit $?")
+rm -rf "$cva_pp"
+check "CVA pragmas: the names read from their sentence after a definition on their line, the question's The text (defnames)" "said(\[\[\], \[text('\"The friend \"'), person(1), text('\" asks.\"')\]\])" "$cva_pp_def"
+check "CVA pragmas: ... and pragmas.sh exits 0 (defnames)" "^exit 0$" "$cva_pp_def"
+check "CVA pragmas: a line two contracts write alike, one [Befriend], and their tab one Waves tab (alike)" "^pragmas(\[list('\"Friends\"', \['friend'\]), list('\"Waves\"', \['wave'\])\], \[act('wave', '\"Wave\"', \[\], none, '\"Waves\"', by(\[1\])), act('befriend', '\"Befriend\"'" "$cva_pp_alike"
+check "CVA pragmas: ... and pragmas.sh exits 0 (alike)" "^exit 0$" "$cva_pp_alike"
+check "CVA pragmas: two contracts writing one button's line differently, refused (unlike)" 'the button \[Befriend\] is written by two lines, "XL: Friendship: Alice \[Befriend\]" and "XK: Friendship: Alice \[Befriend\]"' "$cva_pp_unlike"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (unlike)" "^exit 0$" "$cva_pp_unlike"
 # Two kinds of pragmas (GSC, sections/02-contracts.tex:3; GSA, sections/s3-super-app.tex:69; GSC #13, Code_inbox.md, 2026-11-07 19:29 UTC, 2): "Interface pragmas" read as "Pragmas" are, and "Implementation pragmas", and every line after it to the next interface heading, skipped, no paper yet saying what form they take in the app's code (XI); and "Pragmas" alone the interface ones (XP).
 cva_ph=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XI' 'Alice is a person.' '1. ■ Minting. Alice may mint coins.' 'Interface pragmas' 'Coins: the coins Alice holds.' 'Minting: Alice [Mint] <amount>' 'Implementation pragmas' 'Minting: before minting, the app checks the amount.' > "$cva_ph/XI.txt"

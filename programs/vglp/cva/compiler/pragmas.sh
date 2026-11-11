@@ -400,9 +400,12 @@ for my $f (@order) {
         next if $x =~ /^%/;
         last if $x =~ /^\d+\./ || any_head($x);
         # The declaration names every name it lists, of every kind, as "Alice, Bob and Erin are persons, Carol and Dave wards." names five (vGLP 722343d, Section 5.4: "a name the contract\x27s declaration gives a person or a ward"; GSC, Section 2: "a declaration of the contract\x27s names, saying what each names").
-        next unless $x =~ /^(.*?\s+(?:is|are)\s+(?:a\s+)?persons?\b[^.]*)\.(?:\s|$)/;
-        $declared = 1;
-        $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
+        # The declaration is the sentence of the line that says it, the line split at ".  " first, so that a definition before it on its line names no one: "The author of an item is its first signer.  Alice and Bob are persons." names Alice and Bob (the style guide, 23 and 36, the definitions before the names, GLP 1873085; GSC #16, Code_inbox.md, 2026-11-11 20:05 UTC; vGLP #26).
+        for my $s (split /\.\s{2,}/, $x) {
+            next unless $s =~ /^(.*?\s+(?:is|are)\s+(?:a\s+)?persons?\b[^.]*)\.?\s*$/;
+            $declared = 1;
+            $is_name{$_} = 1 for ($1 =~ /\b([A-Z][a-z]+)\b/g);
+        }
     }
     next if $declared;
     for my $x (read_txt($f)) {
@@ -466,7 +469,7 @@ my %anc;
 sub ancestors { my ($f, $g) = @_; for my $h (@{ $extends{$g} // [] }) { next if $anc{$f}{$h}++; ancestors($f, $h) } }
 ancestors($_, $_) for @order;
 # The button lines of every contract read, each a line naming a person and the buttons they propose, the clause line or an indented line after it, with its question lines (vGLP 40f8444, Section 5.4, "The contract’s words": "A line follows for each other person who proposes, likewise, and for each person asked, their name, a colon, and the question put to them; a question line belongs to the button line nearest above it"), by its key, file, line and rank; and the buttons each bears.
-my (%line_buttons, @line_keys, %line_shown);
+my (%line_buttons, @line_keys, %line_shown, %line_same);
 for my $f (@order) {
     my %own; my $after = 0; my $tabs = 1; my $ln = -1;
     for my $x (joined($f)) {
@@ -491,6 +494,7 @@ for my $f (@order) {
             (my $nm = $f) =~ s{.*/}{}; $nm =~ s/\.txt$//;
             (my $txt = $part) =~ s/^\s+//;
             $line_shown{$k} = "$nm: $title: $txt";
+            $line_same{$k} = "$title\x03$rest";
         }
     }
 }
@@ -518,6 +522,11 @@ for my $k (@line_keys) {
         if ($once{$b}++) {
             push @dup_out, "$line_shown{$k}: refused, the button [$ob] written twice on it";
             push @faults, "pragmas.sh: the line \"$line_shown{$k}\" writes the button [$ob] twice, and a button is of the acts it names, one name one button (vGLP, Section 5.4, \"The contract’s words\")\n";
+            next;
+        }
+        # A line two contracts write alike, its clause\x27s lines the same, as two contracts written from GO restate its lines, is one line, taken once: "what two of them inherit from one contract is taken once, and a schema, a tab or a button of one name that two of them write differently is refused" (vGLP, Section 5.4, "The contract\x27s words"; GO #5, Code_inbox.md, 2026-11-11 20:17 UTC, 4; vGLP #26).
+        if (exists $button_line{$b} && $line_same{ $button_line{$b} } eq $line_same{$k}) {
+            $replaced{$k}{$b} = $button_line{$b};
             next;
         }
         if (exists $button_line{$b}) {
@@ -733,7 +742,8 @@ for my $t (@tabs) {
     my @by = replacing_tabs($t);
     my @last = @by ? grep { !replacing_tabs($_) } @by : ($t);
     push @lines_out, "$t->{name}: the tab $t->{title}: replaced by the tab of " . join(" and ", map { $_->{name} } @last) . " of the same name" if @by;
-    for my $k (@last) { push @lists, $k->{list} unless $tab_placed{$k}++ }
+    # A tab two contracts write alike, its name and its predicate, is one tab, taken once ("what two of them inherit from one contract is taken once", vGLP, Section 5.4, "The contract\x27s words"; vGLP #26).
+    for my $k (@last) { push @lists, $k->{list} unless $tab_placed{ $k->{list} }++ }
 }
 # The places of a request name a field may name, as cvac.glp field_places counts them: its roles but its listed roles, then the variables of its head that a person or the state fills; each slot [kind, place in the request, key], the key of a role its name, "@Name", and of a variable its name.
 sub field_slots {
