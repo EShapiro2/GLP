@@ -7043,7 +7043,7 @@ check "RM9 an activated module reaches a root-scope procedure in its body" "Z = 
 # parameterised declaration of P/N in declaration order, and find_type/3 errs
 # where the length of Hs is not the number of its type parameters.  The
 # fixture calls it on the root's merge/3, of one type parameter, and
-# miniapp/4, of two.
+# miniapp/3, of two.
 rm10=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/find_type_list
 one(T).
@@ -7057,7 +7057,7 @@ HEREDOC
 check "RM10 find_type/3 at one type parameter, a list of one" "T = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm10"
 check "RM10 find_type/3 at two type parameters, a list of two" "U = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$rm10"
 check "RM10 find_type/3 errs on an empty list for one type parameter" "_find_type/3: the length of the list of type identities, 0, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
-check "RM10 find_type/3 errs on one identity for two type parameters" "_find_type/3: the length of the list of type identities, 1, is not the number of type parameters of the declaration of :miniapp/4, 2" "$rm10"
+check "RM10 find_type/3 errs on one identity for two type parameters" "_find_type/3: the length of the list of type identities, 1, is not the number of type parameters of the declaration of :miniapp/3, 2" "$rm10"
 check "RM10 find_type/3 errs on two identities for one type parameter" "_find_type/3: the length of the list of type identities, 2, is not the number of type parameters of the declaration of :merge/3, 1" "$rm10"
 
 # At the prompt after a load, a posted goal's P/N names a declaration of the
