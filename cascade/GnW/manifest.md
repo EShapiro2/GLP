@@ -1,10 +1,10 @@
 # A run of the cascade on GnW
 
-- Contract: `GnW` (`gnw` to the checker), its owner's two files `programs/gsc/GnW.txt` and `programs/gsc/GnW.glp`, copied here as they stood at `02473539`.
+- Contract: `GnW` (`gnw` to the checker), its owner's two files `programs/gsc/GnW.txt` and `programs/gsc/GnW.glp`, copied here as they stood at `4f57d614`.
 - The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `5a045279`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
-- The tools: this repository at `02473539` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-11 22:23 UTC by `cascade.sh gnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `4f57d614` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 23:39 UTC by `cascade.sh gnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
