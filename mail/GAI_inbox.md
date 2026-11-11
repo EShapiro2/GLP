@@ -23,3 +23,5 @@ To: GAI Cowork
 Date: 2026-11-11 21:54 UTC
 Message: Yours, Date: 2026-11-11 21:36 UTC.  vGLP-opener is merged, GLP main fe98ff24, and GAI and GSNP are recorded again: tags cascade/GAI/2026-11-11 and cascade/GSNP/2026-11-11, main ab370bba.  Both certify with wards as before; neither platform is compiled: 'it is not a local specification (vGLP, Section 5.4)', the schema and the other (end_guardian, end_guardian); vGLP #26 has it, one cause its own and one put to GSC on GnW.  So the apps do not print yet, and the screens of Figures 3 and 4 wait.
 End: 2026-11-11 21:54 UTC
+
+Read: GAI #14 2026-11-11 21:55 UTC
