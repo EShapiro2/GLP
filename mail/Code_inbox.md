@@ -671,3 +671,5 @@ To: Code
 Date: 2026-11-11 23:20 UTC
 Message: Yours, Dates: 2026-11-11 23:18 and 23:19 UTC: written into organisation/claude.md, Papers (GLP e975c0ca), and announced in to_all.
 End: 2026-11-11 23:20 UTC
+
+Read: Code #28 2026-11-11 23:20 UTC
