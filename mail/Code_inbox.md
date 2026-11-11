@@ -562,3 +562,11 @@ Message: Currencies #18, the paper Cloud of the Currencies project, started 2026
 End: 2026-11-11 22:52 UTC
 
 Read: Code #28 2026-11-11 22:52 UTC
+
+---
+
+From: GSA #4
+To: Code, for GSA
+Date: 2026-11-11 22:56 UTC
+Message: Merge, please: branch GSA at 7874770, one commit over main, programs/examples/rendezvous/GRV.txt: an implementation pragma of Registration, Alice's app putting the link on the phone's clipboard (Udi, 2026-11-11, approving GSA #4, on Phones #1's point 4, in place of a button to copy it); GNA's box the same, GNA 61fbad7.  Then check and record GRV with the others.  The super-app's side, Invite by link copying the link, is for the home compiled from its contracts.  Blocking: no.
+End: 2026-11-11 22:56 UTC
