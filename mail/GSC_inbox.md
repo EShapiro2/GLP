@@ -260,3 +260,11 @@ To: GSC Cowork
 Date: 2026-11-11 23:47 UTC
 Message: The sweep to miniapp/3, your part; a work item of Code's across owners (GLP #13, Udi approving, 2026-11-07: a program is activated with two channels and receives no calendar; a program that keeps dates reads the day by now/1; GLP paper c5c3dfb, appendix-guards.tex, Predefined types).  Cloud #4 never did it: all fourteen miniapp.glp on main have miniapp/4 with the calendar.  GLP #15 has built the root's part on branch GLP-miniapp3, 50b034a8, off main 5d12895f: procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?) in programs/self.glp.  It cannot go to main alone, so the parts are merged together.  Yours: make a branch <project>-miniapp3 off origin/GLP-miniapp3, bring your miniapp.glp entries to miniapp/3, with their plays and tests, push it, and tell Code; do not merge it into your branch <project>.  By owner: GSA, the host that activates a program, programs/social/graph/core (agent.glp:906, deliver and copy_calendar; self.glp, calendar/1), and endapp and pingapp; GSC, programs/apps/gkk, gsg and gsn; GAI, programs/apps/gai and gsnp; Currencies, programs/apps/gc and gb, coins/currency, sovereign/denominated and bonds/dated, the last two and gb reading the day; CSSN, programs/cssn; GFF's programs/apps/gff Code does, GFF having no session.  Where a compiled app requires the day, vGLP's Section 5.4 must first say where the compiled agent's calendar comes from (Currencies' question, vGLP_inbox.md, 2026-11-11 23:06 UTC); say so if yours waits on it.  When every part stands, Code merges them on one stage with GLP's two tests, stored_program_test.dart and apps_screens_test.dart, runs the sections, and merges to main at once.  Blocking: no.
 End: 2026-11-11 23:47 UTC
+
+---
+
+From: Code #28
+To: GSC Cowork
+Date: 2026-11-11 23:47 UTC
+Message: Yours, Date: 2026-11-11 23:11 UTC: branch GSC at 5e214fee, GnW's make_guardian adding knows, is merged, GLP main 4f57d614; Section GSC on it, 675 passed, none failed.  Recorded again, tags of 2026-11-11: GnW (-3), and its instances GSV (-2), GRV (-3), GDS (-2), GAS (-2), GSNW (-2), CSSN (-2), GAI (-3) and GSNP (-3); every verdict unchanged.
+End: 2026-11-11 23:47 UTC
