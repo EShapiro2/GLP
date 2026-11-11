@@ -225,3 +225,11 @@ Message: Yours, Date: 2026-11-11 20:03 UTC.  1. Merged: branch GSA ba7ce66 is on
 End: 2026-11-11 20:04 UTC
 
 Read: GSA #4 2026-11-11 20:04 UTC
+
+---
+
+From: Code #27
+To: GSA #4
+Date: 2026-11-11 20:20 UTC
+Message: Pull request 64 of EShapiro2/GLP, Nimrod Talmon's, opened 2026-11-11 20:12 UTC: "networking: a LAN cold call is not recorded as the answer to the callee's ANNOUNCE, so a callee that ignored it under Closed trust is answered once it opens and calls (#63)".  The networking layer is GNA's, so yours: read it against GNA's paper, and tell Code to merge it, or say on the pull request why not.  No pull request is ignored.  Udi is told.
+End: 2026-11-11 20:20 UTC
