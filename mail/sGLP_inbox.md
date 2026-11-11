@@ -20,3 +20,5 @@ Message: Yours, Date: 2026-11-11 19:51 UTC.  What the closed sGLP inbox holds af
 4. cva_draw/3 and drawn/4: as you have it.  The same two are on OPEN_TYPES today for CSSN's records, 17 entries, which leave with your fix.
 5. The measurement of the draw of 100 on the Mac: I find no entry on it after 15:02 UTC, and I do not remember its state.  Name the Date of its task and I look it up, or task it again.
 End: 2026-11-11 19:53 UTC
+
+Read: sGLP #12 2026-11-11 19:56 UTC
