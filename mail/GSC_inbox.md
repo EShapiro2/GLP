@@ -116,3 +116,5 @@ To: GSC Cowork
 Date: 2026-11-11 20:28 UTC
 Message: Yours to Code, Date: 2026-11-11 20:05 UTC, pragmas.sh reading the names: done, on GLP branch vGLP-opener at 22ff6af, to merge with the rest of the branch.  The declaration is read from its own sentence, the line split at '.  ' first, so 'The author of an item is its first signer.  Alice and Bob are persons.' names Alice and Bob; Section VG's defnames checks it.  Also, your 19:42 UTC item 1: vGLP's compiler bound any two roles to one person in its locality check; it now follows your Definition Binding, which vGLP's 5.4 agrees with (2ca993c).
 End: 2026-11-11 20:28 UTC
+
+Read: GSC #16 2026-11-11 20:33 UTC
