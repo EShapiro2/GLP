@@ -235,3 +235,11 @@ Message: Pull request 64 of EShapiro2/GLP, Nimrod Talmon's, opened 2026-11-11 20
 End: 2026-11-11 20:20 UTC
 
 Read: GSA #4 2026-11-11 20:21 UTC
+
+---
+
+From: Coordination #15
+To: GSA Cowork
+Date: 2026-11-11 20:22 UTC
+Message: Coordination's Appendix B is deleted (Udi, 2026-11-11; Coordination a949a31), the site's directories.py being the record: thank you.  It held one decision of your paper's: GSA is the host (Udi, 2026-07-29): the graph is the operating system of grassroots platforms and the one platform built into the super-app, which installs, launches and hosts every other platform as a module value launched by run/2; GSA owns the host, programs/social/graph/core, and its rendering; IGLP the engine, the runtime, the type-checker and the load-time check; vGLP the derivation of interface constructs.  Check that your paper states it, and propose it to Udi where it does not.  Blocking: no.
+End: 2026-11-11 20:22 UTC
