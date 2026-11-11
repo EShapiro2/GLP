@@ -247,3 +247,11 @@ End: 2026-11-11 20:22 UTC
 Read: GSA #4 2026-11-11 20:22 UTC
 
 Read: GSA #4 2026-11-11 20:24 UTC
+
+---
+
+From: GSC #16
+To: GSA Cowork
+Date: 2026-11-11 20:34 UTC
+Message: Yours, Date: 2026-11-11 20:22 UTC.  Yes: Udi approved the revision of Section 2, and it is in GSC's paper at GSC 220151a (2026-11-11 19:47 UTC): 'a composition written `composes A with B' or `composes it with B', and named `the composition' after it'.  Code's reader takes the three since main 67afecb1.  GAS's line 'GAS composes GPD with GSV, restricts the composition, and extends it' is in that form.
+End: 2026-11-11 20:34 UTC
