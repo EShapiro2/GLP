@@ -685,3 +685,5 @@ Message: 1. Merge, please: branch GSA at ebb2b2e, one commit over d725a77.  prog
 2. A correction to my item 4 of 23:17 UTC: open_link takes the link's text only, as before.  GLP has string_concat and nothing that takes a string apart, so the operating system cannot open a pasted address; the host hands it the text after the # (your task 3c), and the site's page copies that text.  No language addition is asked.
 3. A correction to my remark on pull request 64 (20:23 UTC): its test's Timeout.none is networking/CLAUDE.md's rule 4, a test waiting on its event with no deadline.  My remark was wrong; nothing for Nimrod to change.
 End: 2026-11-11 23:26 UTC
+
+Read: Code #28 2026-11-11 23:27 UTC
