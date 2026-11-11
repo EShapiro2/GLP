@@ -9,7 +9,7 @@
 #
 # The forms the paper leaves open, the composer's (README.md beside this file, "Composition"):
 # - The schemas are taken in the order of the contracts, each contract's in its own order, a schema of a name already taken being the same schema or refused.  Two schemas are the same where their terms are the same up to the names of their variables, each name in pvar, svar, num, real, nvar, own_var and the speech act of sgn renamed in the order of its first occurrence, as GKK's introduce is pvar('Carol') in GSN.glp and pvar(c) in GC.glp; the first is kept.  The names of the roles are part of the schema, since a pragma names a role by them.
-# - The environment predicates and the reflexive predicates are the union of the contracts', in their order.
+# - The environment predicates and the reflexive predicates are the union of the contracts', in their order; and so are the parameters of a parametric contract, parametric(Params, D), the paper saying nothing of composing one: the composition is parametric in the union, outermost, where any contract is.
 # - The tabs, list(Name, Words), are taken by name, the same text once, and a tab of one name with different words refused; the buttons by their text, each contract's acts of one button together, the same acts once, and a button of one text whose acts differ refused; a standing declaration by its schema, likewise.  A contract with no pragmas adds none.
 # - The introduction predicate is the one the contracts name, no_introduction where none does; two that name different ones are refused.
 # - Which contract is the third is cascade.sh's: the one contract every contract given is written from, itself or through others, that no other such contract is written from (pragmas.sh --from).
@@ -75,9 +75,11 @@ my $why = "(vGLP, Section 5.4, \"The contract\x27s words\")";
 # A reading: its environment predicates, its reflexive predicates, and its schemas, the text of each.
 sub reading_parts {
     my ($name, $rd) = @_;
-    my (@env, @refl, $he, $hr);
+    my (@par, @env, @refl, $hp, $he, $hr);
     my $body = $rd; $body =~ s/^\s+|\s+$//g;
     my ($f, @a) = compound($body);
+    # A parametric contract, parametric(Params, D), its parameters predicates and constants as any others (GSC, programs/gsc/self.glp: "A parametric contract is checked as it is written").
+    if ($f eq "parametric") { $hp = 1; @par = elems($a[0], "$name: its parameters"); $body = $a[1]; ($f, @a) = compound($body) }
     if ($f eq "environment") { $he = 1; @env = elems($a[0], "$name: its environment predicates"); $body = $a[1]; ($f, @a) = compound($body) }
     if ($f eq "reflexive") { $hr = 1; @refl = elems($a[0], "$name: its reflexive predicates"); $body = $a[1] }
     my @s;
@@ -86,7 +88,7 @@ sub reading_parts {
         defined $sn or die "compose.sh: $name: a schema with no name: $s\n";
         push @s, [$sn, $s, canonical($s)];
     }
-    return { env => \@env, refl => \@refl, he => $he, hr => $hr, schemas => \@s };
+    return { par => \@par, env => \@env, refl => \@refl, hp => $hp, he => $he, hr => $hr, schemas => \@s };
 }
 # Pragmas: no_pragmas, pragmas(Lists, Acts), pragmas(Lists, Acts, Stands) or pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1); their tabs by name, their buttons by text, each with its acts together, and their standing declarations by schema, each [key, text, items], in order.
 sub pragma_parts {
@@ -143,12 +145,13 @@ my $nbase = shift @args;
 my ($bname, $brd, $bpr) = $nbase ? splice(@args, 0, 3) : ();
 my $bread = $nbase ? reading_parts($bname, $brd) : undef;
 my $bprag = $nbase ? pragma_parts($bname, $bpr) : undef;
-my (@env, %env, @refl, %refl, $has_env, $has_refl, @creads, @cprags, $six, $three, $look, $version, @texts);
+my (@par, %par, $has_par, @env, %env, @refl, %refl, $has_env, $has_refl, @creads, @cprags, $six, $three, $look, $version, @texts);
 my ($intro, $intro_of) = ("no_introduction", "");
 while (@args) {
     my ($name, $rd, $pr, $in) = splice(@args, 0, 4);
     my $r = reading_parts($name, $rd);
-    $has_env ||= $r->{he}; $has_refl ||= $r->{hr};
+    $has_par ||= $r->{hp}; $has_env ||= $r->{he}; $has_refl ||= $r->{hr};
+    union_into(\@par, \%par, @{ $r->{par} });
     union_into(\@env, \%env, @{ $r->{env} }); union_into(\@refl, \%refl, @{ $r->{refl} });
     push @creads, [$name, [map { [$_->[0], $_->[1]] } @{ $r->{schemas} }]];
     my $p = pragma_parts($name, $pr);
@@ -175,6 +178,7 @@ my %has_act = map { my (undef, $n) = compound($_); ($n => 1) } @schemas;
 my $reading = "[" . join(", ", @schemas) . "]";
 $reading = "reflexive([" . join(", ", @refl) . "], $reading)" if $has_refl;
 $reading = "environment([" . join(", ", @env) . "], $reading)" if $has_env;
+$reading = "parametric([" . join(", ", @par) . "], $reading)" if $has_par;
 my $pragmas = "no_pragmas";
 if (@cprags) {
     my $bp = $bprag;
