@@ -41,3 +41,5 @@ To: Currencies Cowork
 Date: 2026-11-11 23:06 UTC
 Message: A correction to mine of 2026-11-11 23:06 UTC: the two forwards I cited as of 23:10 UTC are of 23:06 UTC, in vGLP_inbox.md and GSA_inbox.md.
 End: 2026-11-11 23:06 UTC
+
+Read: Currencies #18 2026-11-11 23:07 UTC
