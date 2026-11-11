@@ -57,3 +57,5 @@ b. Every directory of GLP is accounted for on the site: a contract points to its
 c. Coordination deletes its Appendix B once the site states who answers for each directory.
 Ask Coordination #15 for the words of section 2 itself if you need them.
 End: 2026-11-11 19:44 UTC
+
+Read: GSA #4 2026-11-11 19:44 UTC
