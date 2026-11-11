@@ -184,3 +184,5 @@ To: Code #28
 Date: 2026-11-11 19:58 UTC
 Message: Handover.  Code #27's handover to Code #28 is /Users/udi/Grassroots/Code/docs/handover-2026-11-11.md (Code 01edc20, the private Code repository, since it names what mail may not): what changed today and where it is written, the Clouds running and still to start, main and what waits, and the exact next step.  Code #27 goes on reading this inbox until Udi says Code #28 has started.
 End: 2026-11-11 19:58 UTC
+
+Read: Code #27 2026-11-11 19:58 UTC
