@@ -155,3 +155,5 @@ A rule written as a description, with its mechanics, its exclusions and its insi
 "as the bylaws provide" --- My English: "according to the bylaws" (Udi, 2026-11-09, to GO #3, catching it in GO #3's proposal for GO:2; reported by GO, written in by Coordination #15).
 
 "print it in Nimrod's text", "printing it in X's text", of a contract put in a paper --- My English: "add its box to the paper, its clauses as Nimrod wrote them" (Udi, 2026-11-09, to GO #3: "this is Claudese, what do you mean?"; reported by GO, written in by Coordination #15).
+
+"where", meaning if ("T =.. L gives T the type Term where L is a list of Terms") --- My English: "if": "T =.. L gives T the type Term if L is a list of Terms" (Udi, 2026-11-11, to GLP #15: "so use if, where is Claudese"; reported by GLP, written in by Coordination #15).
