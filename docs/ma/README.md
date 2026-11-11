@@ -34,4 +34,4 @@ Payloads are encoded by `glp_runtime/lib/wire/payload_codec.dart`.  Tests: `/Use
 
 ## Who changes what
 
-Ownership is Coordination Appendix B, `/Users/udi/Grassroots/Coordination/sections/B-code-map.tex`; the rules for every change are `/Users/udi/Grassroots/GLP/CLAUDE.md`.
+Who answers for each directory is `servers/peoplesweb/tools/directories.py` in this repository; the rules for every change are `/Users/udi/Grassroots/GLP/CLAUDE.md`.

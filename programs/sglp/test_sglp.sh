@@ -94,7 +94,7 @@
 #       answering fewer a saver; and its credit where it is shown an offer with
 #       Held above 20, which the cautious answer no and the generous yes, every
 #       such answer agreeing with its line.
-# (x)   the transformation (transform.glp, transform.sh; the task of 2026-10-03
+# (x)   the transformation (transform/transform.glp, transform.sh; the task of 2026-10-03
 #       09:27 UTC): the printed modules in place, examples/social_graph/profiles.glp and
 #       population.glp and examples/coins/profiles.glp and population.glp, are what the
 #       transformation prints from the sGLP sources, graph_sglp.glp and
@@ -610,12 +610,12 @@ check "the printed modules are what the transformation prints from the sGLP sour
 # first.
 V="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
 P="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q(a)), [], [])"
-repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txbad.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$P, person(r), run(2, [mix(d, [share(p, 0.5)])], 1, day, 1)], profiles)."
-repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txgood.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)." \
     "transform_terms($V, [$P, run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], population)."
-repl "$WORK/txzero.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txzero.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$P, person(r), binds('Q', p_q), run(2, [mix(d, [share(p, 1.0), share(r, 0.0)])], 1, day, 1)], population)." \
     "transform_terms($V, [$P, person(r), binds('Q', p_q), run(2, [mix(d, [share(r, 0.0), share(p, 1.0)])], 1, day, 1)], population)."
 sed 's/^\(GLP> \)*//' "$WORK/txbad.out" > "$WORK/txbad.lines"
@@ -661,7 +661,7 @@ check "the mended source is translated: the token and its clause go(_), its stop
 # reader would read as anything else quoted, a capitalised type's name not.
 QV="[type('Note', ['Hello there', '42', plain]), type('Q', [q(dual('Note'))]), volitional('Q', '\\'Q\\'', q_w, ask(dual('Note')))]"
 QP="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Person'), dual('Integer'))), clause(p_q(var('X'), var('_'), var('_')), [], [rated(ans(var('X?')), rate(1, day))]), decl(ans(dual('Q'))), clause(ans(q('Hello there')), [], []), clause(ans(q('42')), [], []), clause(ans(q(plain)), [], [])"
-repl "$WORK/txtext.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txtext.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($QV, [$QP, type('Tag', ['one tag', other('Note', dual('Note'))]), run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)], profiles)."
 sed 's/^\(GLP> \)*//' "$WORK/txtext.out" > "$WORK/txtext.lines"
 ! grep -q '^%% not transformed' "$WORK/txtext.lines" &&
@@ -683,7 +683,7 @@ RV="[type('Rating', [rating('Integer')]), volitional(dual('Rating'), '\'Rating?\
 RP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Person'), dual('Integer'))), clause(fair_rating(var('R?'), var('_'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), slot(var('R'))), rate(1, day))]), decl(give(dual('Integer'), dual('Slot'('Rating')))), clause(give(var('K'), slot(rating(var('K?')))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 BV="[type('Reply', [ok, no]), type('Bid', [bid('Integer', dual('Reply'))]), volitional(dual('Bid'), '\'Bid?\'', bid_r, offer('Integer'))]"
 BP="person(fair), binds('Bid', fair_bid), decl(fair_bid('Bid', dual('Person'), dual('Integer'))), clause(fair_bid(bid(1, var('_')), var('_'), var('_')), [], []), run(1, [mix(bidder, [share(fair, 1.0)])], 30, days, 1)"
-repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txreader.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($RV, [$RP], profiles)." \
     "transform_terms($RV, [$RP], population)." \
     "transform_terms($BV, [$BP], population)."
@@ -733,7 +733,7 @@ NV="[type('YesNo', [yes, no]), type('Card', [card('Integer', dual('YesNo'))]), t
 NP="person(p), binds('Panel', p_panel), decl(p_panel(dual('Panel'), dual('Person'), dual('Integer'))), clause(p_panel(var('_'), var('_'), var('_')), [], []), run(1, [mix(d, [share(p, 1.0)])], 1, day, 1)"
 OP="person(fair), binds('Rating', fair_rating), decl(fair_rating('Rating', dual('Person'), dual('Integer'))), clause(fair_rating(var('R?'), var('_'), var('S')), [], [random(var('S?'), 5, var('K'), var('_')), rated(give(var('K?'), var('R')), rate(1, day))]), decl(give(dual('Integer'), 'Rating')), clause(give(var('K'), rating(var('K?'))), [], []), run(1, [mix(rater, [share(fair, 1.0)])], 30, days, 20260927)"
 CV="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A'))), compiled(ask, 2), compiled(ask1, 3), compiled(ans, 1)]"
-repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txmoded.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($PV, [$PP], population)." \
     "transform_terms($NV, [$NP], population)." \
     "transform_terms($RV, [$OP], population)." \
@@ -791,7 +791,7 @@ OLDP="person(p), binds('Q', p_q), decl(p_q(dual('Q'), dual('Integer'))), clause(
 VP="[type('A', [a]), type('Q', [q(dual('A'))]), type('Person', [person('Constant', 'Constant', 'List'('Constant'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A')))]"
 VS="[type('A', [a]), type('Q', [q(dual('A'))]), volitional('Q', '\'Q\'', q_w, ask(dual('A'))), compiled(seen, 1)]"
 RUN1="run(2, [mix(d, [share(p, 1.0)])], 1, day, 1)"
-repl "$WORK/txcensus.out" ':limit 1000000000000' "$HERE" \
+repl "$WORK/txcensus.out" ':limit 1000000000000' "$HERE/transform" \
     "transform_terms($V, [$CW, $P1, $P2, $RUN2], profiles)." \
     "transform_terms($V, [$CW, $P1, $P2, $RUN2], population)." \
     "transform_terms($V, [$CW, $P1, person(p3), run(w, [mix(d1, r1, [share(p1, 1.0)]), mix(d2, r2, [share(p3, 1.0)])], 1, day, 1)], population)." \
