@@ -701,9 +701,11 @@ function drawGlobe(){
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
   const show = (c, e) => {
-    const r = wrap.getBoundingClientRect(), touch = LASTPT !== 'mouse';
+    const r = wrap.getBoundingClientRect();
+    // The balloon ends with the link that opens the contract, on every screen
+    // (Udi, 2026-11-10).
     tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${citeHtml(c.paper || {})}`
-      + (touch ? `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)} ›</a>` : '');
+      + `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)}</a>`;
     tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
     if (NARROW()){ tip.style.left = '8px'; tip.style.right = '8px'; }
     else { tip.style.right = ''; tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px'; }
@@ -738,8 +740,7 @@ function globeNav(){
     if (e.isPrimary){ pts.clear(); pinch = null; }
     pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pts.size >= 2){ pinch = [dist(), V.zoom]; drag = null; DRAGGED = true; return; }
-    drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false;
-    if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); });
+    drag = [e.clientX, e.clientY, V.phi0, V.tilt]; DRAGGED = false; });
   g.addEventListener('pointermove', e => {
     if (!pts.has(e.pointerId)) return;
     pts.set(e.pointerId, [e.clientX, e.clientY]);
@@ -747,7 +748,14 @@ function globeNav(){
       V.zoom = clampZ(pinch[1] * dist() / pinch[0]); drawGlobe(); return; }
     if (!drag) return;
     const dx = e.clientX - drag[0], dy = e.clientY - drag[1];
-    if (Math.abs(dx) + Math.abs(dy) > (LASTPT === 'mouse' ? 3 : 8)) DRAGGED = true;
+    // A mouse's drag keeps the pointer from its start, so the globe turns on
+    // when the mouse leaves it; the pointer is taken only once the drag has
+    // begun, for a pointer taken at the press sends the release, and so the
+    // click, to the globe and not to the contract pressed, which a click opens
+    // (Udi, 2026-11-10: "it does not open").
+    if (!DRAGGED && Math.abs(dx) + Math.abs(dy) > (LASTPT === 'mouse' ? 3 : 8)){
+      DRAGGED = true;
+      if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); }
     if (!DRAGGED) return;
     V.phi0 = drag[2] - dx / (140 * V.zoom);
     V.tilt = Math.max(-1.2, Math.min(1.4, drag[3] + dy / 220));
