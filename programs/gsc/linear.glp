@@ -15,7 +15,7 @@
 % q(N) is a variable over them, and z(N) one over the whole numbers, a
 % multiplicity carrying its bound N >= 1 as an atom of its own.
 %
-% A linear form is lin(Terms, C), the sum of each coefficient times its
+% A linear form is lin(LinTerms, C), the sum of each coefficient times its
 % variable plus C, every coefficient a whole number: a value the contract
 % writes as a number that is not whole is read as the exact fraction it is,
 % and a comparison is multiplied out by the denominators.  An atom is
@@ -75,7 +75,7 @@ sgn(A, 0) :- A? =:= 0 | true.
 
 % --- linear forms ----------------------------------------------------------
 
-procedure terms_coef(Terms?, Var?, Integer).
+procedure terms_coef(LinTerms?, Var?, Integer).
 terms_coef([], _, 0).
 terms_coef([t(W, C)|_], V, C?) :- W? =?= V? | true.
 terms_coef([_|Ts], V, R?) :- otherwise | terms_coef(Ts?, V?, R).
@@ -83,12 +83,12 @@ terms_coef([_|Ts], V, R?) :- otherwise | terms_coef(Ts?, V?, R).
 procedure lin_coef(Lin?, Var?, Integer).
 lin_coef(lin(Ts, _), V, R?) :- terms_coef(Ts?, V?, R).
 
-procedure new_term(Integer?, Var?, Terms?, Terms).
+procedure new_term(Integer?, Var?, LinTerms?, LinTerms).
 new_term(C, _, Ts, Ts?) :- C? =:= 0 | true.
 new_term(C, V, Ts, [t(V?, C?)|Ts?]) :- integer(C?), C? =\= 0 | true.
 
 % C times V added to the terms.
-procedure terms_add1(Terms?, Var?, Integer?, Terms).
+procedure terms_add1(LinTerms?, Var?, Integer?, LinTerms).
 terms_add1([], V, C, R?) :- ground(V?), integer(C?) | new_term(C?, V?, [], R).
 terms_add1([t(W, D)|Ts], V, C, R?) :-
     ground(W?), ground(V?), W? =?= V?, integer(D?), integer(C?), ground(Ts?) |
@@ -96,19 +96,19 @@ terms_add1([t(W, D)|Ts], V, C, R?) :-
     new_term(E?, W?, Ts?, R).
 terms_add1([T|Ts], V, C, [T?|R?]) :- otherwise | terms_add1(Ts?, V?, C?, R).
 
-procedure terms_add(Terms?, Terms?, Terms).
+procedure terms_add(LinTerms?, LinTerms?, LinTerms).
 terms_add([], Ts, Ts?).
 terms_add([t(V, C)|Us], Ts, R?) :- ground(V?), integer(C?), ground(Us?), ground(Ts?) |
     terms_add1(Ts?, V?, C?, Ts1),
     terms_add(Us?, Ts1?, R).
 
-procedure terms_scale(Terms?, Integer?, Terms).
+procedure terms_scale(LinTerms?, Integer?, LinTerms).
 terms_scale([], _, []).
 terms_scale([t(V, C)|Ts], K, [t(V?, D?)|R?]) :- integer(C?), integer(K?), ground(Ts?) |
     D := C? * K?,
     terms_scale(Ts?, K?, R).
 
-procedure terms_drop(Terms?, Var?, Terms).
+procedure terms_drop(LinTerms?, Var?, LinTerms).
 terms_drop([], _, []).
 terms_drop([t(W, _)|Ts], V, Ts?) :- W? =?= V? | true.
 terms_drop([T|Ts], V, [T?|R?]) :- otherwise | terms_drop(Ts?, V?, R).
@@ -146,7 +146,7 @@ lin_drop(lin(Ts, C), V, lin(T?, C?)) :- terms_drop(Ts?, V?, T).
 procedure lin_split(Lin?, Lin, Lin).
 lin_split(lin(Ts, C), lin(I?, C?), lin(Q?, 0)) :- ground(Ts?) | terms_split(Ts?, I, Q).
 
-procedure terms_split(Terms?, Terms, Terms).
+procedure terms_split(LinTerms?, LinTerms, LinTerms).
 terms_split([], [], []).
 terms_split([t(z(N), K)|Ts], [t(z(N?), K?)|I?], Q?) :- terms_split(Ts?, I, Q).
 terms_split([t(q(N), K)|Ts], I?, [t(q(N?), K?)|Q?]) :- terms_split(Ts?, I, Q).
@@ -156,7 +156,7 @@ lin_has_terms(lin([], _), no).
 lin_has_terms(lin([_|_], _), yes).
 
 % The sums of the negative and of the positive coefficients.
-procedure terms_range(Terms?, Integer?, Integer?, Integer, Integer).
+procedure terms_range(LinTerms?, Integer?, Integer?, Integer, Integer).
 terms_range([], N, P, N?, P?).
 terms_range([t(_, K)|Ts], N, P, RN?, RP?) :- integer(K?), K? < 0, integer(N?), ground(Ts?) |
     N1 := N? + K?,
@@ -165,13 +165,13 @@ terms_range([t(_, K)|Ts], N, P, RN?, RP?) :- integer(K?), K? >= 0, integer(P?), 
     P1 := P? + K?,
     terms_range(Ts?, N?, P1?, RN, RP).
 
-procedure terms_gcd(Terms?, Integer?, Integer).
+procedure terms_gcd(LinTerms?, Integer?, Integer).
 terms_gcd([], G, G?).
 terms_gcd([t(_, C)|Ts], G, R?) :- integer(C?), integer(G?), ground(Ts?) |
     gcd(C?, G?, G1),
     terms_gcd(Ts?, G1?, R).
 
-procedure terms_div(Terms?, Integer?, Terms).
+procedure terms_div(LinTerms?, Integer?, LinTerms).
 terms_div([], _, []).
 terms_div([t(V, C)|Ts], G, [t(V?, D?)|R?]) :- integer(C?), integer(G?), ground(Ts?) |
     D := C? // G?,
@@ -184,7 +184,7 @@ lin_norm(lin(Ts, C), R?) :- ground(Ts?), integer(C?) |
     terms_gcd(Ts?, C?, G),
     lin_norm1(G?, Ts?, C?, R).
 
-procedure lin_norm1(Integer?, Terms?, Integer?, Lin).
+procedure lin_norm1(Integer?, LinTerms?, Integer?, Lin).
 lin_norm1(G, Ts, C, lin(Ts?, C?)) :- G? =< 1 | true.
 lin_norm1(G, Ts, C, lin(T?, D?)) :- integer(G?), G? > 1, ground(Ts?), integer(C?) |
     terms_div(Ts?, G?, T),
@@ -213,7 +213,7 @@ atom_norm(dvd(M, lin(Ts, C)), R?) :- integer(M?), ground(Ts?), integer(C?) |
     dvd_norm(M?, Ts?, C?, R).
 
 % M divides a constant C exactly where it divides C mod M; one divides all.
-procedure dvd_norm(Integer?, Terms?, Integer?, LAtom).
+procedure dvd_norm(Integer?, LinTerms?, Integer?, LAtom).
 dvd_norm(M, Ts, C, dvd(M?, lin(Ts?, D?))) :- integer(M?), M? > 1, integer(C?) | D := C? mod M?.
 dvd_norm(M, _, _, geq(lin([], 0))) :- M? =< 1 | true.
 
@@ -334,13 +334,13 @@ vars_member([], _, no).
 vars_member([W|_], V, yes) :- W? =?= V? | true.
 vars_member([_|Ws], V, R?) :- otherwise | vars_member(Ws?, V?, R).
 
-procedure terms_vars(Terms?, Vars?, Vars).
+procedure terms_vars(LinTerms?, Vars?, Vars).
 terms_vars([], Acc, Acc?).
 terms_vars([t(V, _)|Ts], Acc, R?) :- ground(V?), ground(Ts?), ground(Acc?) |
     vars_member(Acc?, V?, M),
     terms_vars1(M?, V?, Ts?, Acc?, R).
 
-procedure terms_vars1(Ans?, Var?, Terms?, Vars?, Vars).
+procedure terms_vars1(Ans?, Var?, LinTerms?, Vars?, Vars).
 terms_vars1(yes, _, Ts, Acc, R?) :- terms_vars(Ts?, Acc?, R).
 terms_vars1(no, V, Ts, Acc, R?) :- terms_vars(Ts?, [V?|Acc?], R).
 
@@ -352,7 +352,7 @@ conj_vars([A|As], Acc, R?) :- ground(A?), ground(As?), ground(Acc?) |
     terms_vars(Ts?, Acc?, Acc1),
     conj_vars(As?, Acc1?, R).
 
-procedure lin_terms(Lin?, Terms).
+procedure lin_terms(Lin?, LinTerms).
 lin_terms(lin(Ts, _), Ts?).
 
 % A variable of the kind asked: a rational one (sel_q), a whole-number one
@@ -980,7 +980,7 @@ conj_decomp([A|As], [B?|R?]) :- ground(A?), ground(As?) |
 procedure lin_decomp(Lin?, Lin).
 lin_decomp(lin(Ts, C), lin(T?, C?)) :- ground(Ts?) | terms_decomp(Ts?, [], T).
 
-procedure terms_decomp(Terms?, Terms?, Terms).
+procedure terms_decomp(LinTerms?, LinTerms?, LinTerms).
 terms_decomp([], Acc, Acc?).
 terms_decomp([t(q(iv(X)), K)|Ts], Acc, R?) :-
     ground(X?), integer(K?), ground(Ts?), ground(Acc?) |
