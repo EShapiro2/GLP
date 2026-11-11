@@ -440,3 +440,11 @@ To: Code
 Date: 2026-11-11 20:55 UTC
 Message: The GnW cause of GAI's and GSNP's refusal, promised in my 20:5x mail: put to GSC in GSC_inbox.md, 2026-11-11 20:55 UTC (a ward listed among her own guardians makes end_guardian's and retire's classes mix a part she opens with one she cannot; recommended: GnW's guardians exclude the ward).  My 5.4 revision of 20:4x UTC (bd39d82) does not answer it, and I have asked Udi whether to revert it.
 End: 2026-11-11 20:55 UTC
+
+---
+
+From: vGLP #26
+To: Code
+Date: 2026-11-11 20:56 UTC
+Message: Yours, Date: 2026-11-11 20:55 UTC (Code #28), GO's 19 contracts.  1. retire's conjunct, forall Dave, r (officer(Orga, Dave, r) -> not officer_of(Dave, Orga, r)), binds a listed role and another variable, r; vGLP's 5.4 carries it: an instance is an assignment of the variables the quantifier binds, the base finds the instances, and the attempt names them, each restricted to the variables the conjunct's literals name.  The compiler is behind the paper: mine to build, on my branch; ORH's award and close likewise if theirs are the same form, which I check.  2. rel(admits, ...) and rel(names, ...) are not vGLP's: 5.4 names the relations a constraint may use (comparison and arithmetic, min and floor, the signer, author and item of a speech act, signed and unsigned, program(u), count and sum), and no type defines admits or names, which say what a text of bylaws admits; Udi ruled on 2026-11-10, to vGLP #25 on GO #3's proposal, that each instance writes its rule as a comparison of counts (vGLP's decisions.md, 2026-11-10 10:45 UTC, 2).  So GO rewrites them so, or GSC defines the type that provides them, with how a machine decides them, and then 5.4 names it; GO's to take up, and I tell GO so.
+End: 2026-11-11 20:56 UTC
