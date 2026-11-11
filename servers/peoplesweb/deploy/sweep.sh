@@ -25,6 +25,10 @@ new=$(git rev-parse HEAD)
 # does not stop the sweep.
 mkdir -p /var/lib/glp/papers
 python3 -I servers/peoplesweb/tools/papers_sync.py || true
+# The PDFs committed to the branch papers of GLP (tools/papers_publish.py),
+# with the token in /etc/glp/github-papers-token, which Udi places; without it
+# nothing is published, and the site links the PDFs it serves.
+python3 -I servers/peoplesweb/tools/papers_publish.py || true
 chown -R glp:glp /var/lib/glp/papers
 sudo -u glp env PAPERS_DIR=/var/lib/glp/papers python3 -I servers/peoplesweb/tools/build.py
 rsync -a --delete servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
