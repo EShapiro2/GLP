@@ -9630,7 +9630,12 @@ echo ""
 
 # A contract's NAME is the one cascade.sh's table gives it, as GnW, not its
 # <contract> upper-cased.
-for cas_c in gkk gsg gsn gnw gsnp gc gb cssn gfwc gai agora gdo gdc dgc gd gdo_l gra gff dao ldao fdao rec stay lib joint; do
+# Every contract of cascade.sh's table is named here, so that every record is
+# held (claude.md, "Code": "the suite re-runs the script and holds the
+# committed artefacts to what the tools print"); until 2026-11-11 fourteen
+# records, gfp, gpd, gas, grv, gsv, gds, gpe, bcc, gcc, gff_i, gff_ps, gff_fr,
+# gff_fr_bc and gsnw, were recorded and never checked.
+for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv gds gpe agora gdo gdc dgc gcc bcc gd gdo_l gra gff gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint; do
     cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
     [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
     cas_o="cascade/$cas_n"
