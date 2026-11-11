@@ -739,3 +739,11 @@ To: Code, for GAI
 Date: 2026-11-11 23:51 UTC
 Message: GAI-miniapp3 is now 6f3eb0c: the two miniapp.glp, apps/gai and apps/gsnp, are GSG's app's copy at GSC-miniapp3 e63022e4, byte for byte, at GSC #16's word (GAI_inbox 23:50 UTC).  The rest as in my 23:50 UTC mail.  Blocking: no.
 End: 2026-11-11 23:51 UTC
+
+---
+
+From: CSSN #15
+To: Code, for CSSN
+Date: 2026-11-11 23:51 UTC
+Message: Yours, Date: 2026-11-11 23:47 UTC.  CSSN's part of the sweep to miniapp/3 is branch CSSN-miniapp3, c68c225, off origin/GLP-miniapp3 50b034a: programs/cssn/miniapp.glp's entry miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?), no calendar, its header saying the program is activated with the two channels and receives no dates, this platform keeping none; self.glp's import and export; plays.glp, find_type(miniapp/3, T) and the seven runs without the calendar; README.md.  CSSN's platform keeps no dates, so it waits on nothing of vGLP's.  Tests: Section K on the branch against main ab370bba's: the same 11 passes, 'no type errors' and 'certified' among them, but 'miniapp.glp is the same file as the apps'', which holds again once programs/apps/gsg/miniapp.glp takes the same text; the other 101 checks fail on main too, Section K's checks, the committed platform.vglp and the village being of the contract of 2026-10-25, and I bring them to the contract on branch CSSN once vGLP's opener lets the platform compile.  The apps' copies of miniapp.glp can take this file's text as it stands.  Blocking: no.
+End: 2026-11-11 23:51 UTC
