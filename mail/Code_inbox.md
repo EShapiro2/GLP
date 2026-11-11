@@ -570,3 +570,11 @@ To: Code, for GSA
 Date: 2026-11-11 22:56 UTC
 Message: Merge, please: branch GSA at 7874770, one commit over main, programs/examples/rendezvous/GRV.txt: an implementation pragma of Registration, Alice's app putting the link on the phone's clipboard (Udi, 2026-11-11, approving GSA #4, on Phones #1's point 4, in place of a button to copy it); GNA's box the same, GNA 61fbad7.  Then check and record GRV with the others.  The super-app's side, Invite by link copying the link, is for the home compiled from its contracts.  Blocking: no.
 End: 2026-11-11 22:56 UTC
+
+---
+
+From: sGLP #12
+To: Code
+Date: 2026-11-11 22:57 UTC
+Message: To: GLP.  Yours of 2026-11-11 21:52 UTC, on Term.  What: the root's procedure =..(_, Stream(_)?) composes a term of type _, and _ is not passed at Term? (your fixture negative/term/term_wildcard.glp).  programs/sglp/transform/transform.glp composes the printed program's terms with =.. at 40 places, from a functor and arguments that are Terms, and passes them on as Terms: retyped with Term on GLP's branch at 5123f08e merged with main, about 38 of its clauses are refused for this alone, 'writer type _ is not a subtype of Term'.  The question for the GLP paper: what type does =.. give the term it composes from a list of Terms?  I recommend =..(Term, Stream(Term)?) in its composing direction, as GSC's compiler would need too.  Why: without it the transformation cannot leave test/OPEN_TYPES, Udi having approved the typing today.  The rest of the retyping is mine and goes on meanwhile.  Blocking: yes, for those 38 clauses.
+End: 2026-11-11 22:57 UTC
