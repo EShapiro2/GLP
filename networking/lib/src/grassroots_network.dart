@@ -2324,8 +2324,11 @@ class GrassrootsNetwork {
       debugPrint('[lan] could not open a path to $canonical');
       return;
     }
-    // The first contact's ANNOUNCE, before the XX handshake (GNA §2.5).
-    final sent = await _sendClearAnnounce(session, canonical);
+    // The first contact's ANNOUNCE, before the XX handshake (GNA §2.5).  It
+    // is a call, not an answer: an instance under Closed trust ignores it,
+    // and when that instance opens and calls in turn, its ANNOUNCE is still
+    // to be answered.
+    final sent = await _sendClearAnnounce(session, canonical, call: true);
     debugPrint(
       sent
           ? '[lan] ANNOUNCE sent to $canonical; awaiting theirs'
@@ -4654,14 +4657,21 @@ class GrassrootsNetwork {
 
   /// Send our ANNOUNCE in clear on [connection], the identity bootstrap of a
   /// first contact under Open trust (GNA §2.5); with [reply], only where this
-  /// side has not sent one on that connection yet.
+  /// side has not sent one on that connection yet.  A LAN cold call ([call])
+  /// is not recorded: the instance called may have ignored it under Closed
+  /// trust, and the record of a UDP connection outlives its path, so a
+  /// recorded call would leave the ANNOUNCE that instance sends once it
+  /// opens unanswered, and its handshake refused for want of ours.
   Future<bool> _sendClearAnnounce(
     PeerTransport transport,
     String connection, {
     bool reply = false,
+    bool call = false,
   }) async {
     final key = _clearAnnounceKey(transport, connection);
-    if (key != null && !_clearAnnouncedOn.add(key) && reply) return false;
+    if (key != null && !call && !_clearAnnouncedOn.add(key) && reply) {
+      return false;
+    }
     final bytes = _announcePacket().serialize();
     final sent = switch (transport) {
       PeerTransport.bleDirect =>
