@@ -1,49 +1,54 @@
+Parameters: ward, creator, created, guardian_of, guarded_by, retired
+
 Reflexive predicates: friend, knows
 
-establish: identity(Alice) <-
-    not identity(Alice), not retired(Alice) guarded by Alice
+establish: identity(Alice), person(Alice) <-
+    not identity(Alice) guarded by Alice
 
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), not ward(Alice), not retired(Alice), identity(Bob), not ward(Bob), not retired(Bob) guarded by Alice, Bob
+    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
 
 introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), not ward(Alice), not retired(Alice), identity(Bob), knows(Bob, Alice), not ward(Bob), not retired(Bob), identity(Carol), not ward(Carol), not retired(Carol) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), not ward(Alice), not retired(Alice), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice), not ward(Bob), not retired(Bob) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
 
 unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
-    identity(Alice), friend(Alice, Bob), not retired(Alice), not creator(Alice, Bob), not guarded_by(Alice, Bob), not created(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
+    identity(Alice), person(Alice), friend(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), ward(Carol), creator(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
-    identity(Alice), not ward(Alice), not retired(Alice), not identity(Carol), not retired(Carol) guarded by Alice, Carol
+enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), ward(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
+    identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
 
 make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob) <-
-    identity(Alice), created(Alice, Carol), friend(Alice, Bob), not retired(Alice), identity(Bob), not ward(Bob), not retired(Bob), not guardian_of(Bob, Carol), identity(Carol), ward(Carol), not friend(Carol, Bob) guarded by Alice, Bob
+    identity(Bob), person(Bob), not guardian_of(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), identity(Carol), ward(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Bob, Alice, Erin
 
 end_guardian: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Alice), created(Alice, Carol), not retired(Alice), identity(Bob), guardian_of(Bob, Carol), not created(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Alice
+    identity(Alice), person(Alice), guardian_of(Alice, Carol), identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Alice), guarded_by(Carol, Bob), forall Erin (guarded_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
 
 resign: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Bob), guardian_of(Bob, Carol), not retired(Bob), not created(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
+    identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
 
 guardian_unfriend: not friend(Bob, Carol), not guardian_of(Bob, Carol), not friend(Carol, Bob), not guarded_by(Carol, Bob) <-
-    identity(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), not retired(Bob), not created(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
+    identity(Bob), person(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
 
 ward_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
-    identity(Carol), ward(Carol), not retired(Carol), identity(Bob), not ward(Bob), not retired(Bob) guarded by Carol, Bob
+    identity(Carol), ward(Carol), guarded_by(Carol, Alice), identity(Bob), person(Bob) guarded by Carol, Bob
 
 ward_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
-    identity(Carol), ward(Carol), knows(Carol, Bob), not retired(Carol), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), not ward(Bob), not retired(Bob), not friend(Bob, Carol), identity(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), not ward(Alice), not retired(Alice) guarded by Carol, Bob, Alice
+    identity(Carol), ward(Carol), guarded_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
 
 ward_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), friend(Carol, Bob), not creator(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), guardian_of(Alice, Carol), not ward(Alice), not retired(Alice) guarded by Alice
+    identity(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol) guarded by Alice
+
+ward_end: not friend(Carol, Bob), not friend(Bob, Carol) <-
+    identity(Carol), ward(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
 
 wards_acquaint: knows(Carol, Dave), knows(Dave, Carol) <-
-    identity(Carol), ward(Carol), not retired(Carol), identity(Dave), ward(Dave), not retired(Dave) guarded by Carol, Dave
+    identity(Carol), ward(Carol), guarded_by(Carol, Alice), identity(Dave), ward(Dave), guarded_by(Dave, Bob) guarded by Carol, Dave
 
 wards_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
-    identity(Carol), ward(Carol), knows(Carol, Dave), not retired(Carol), not friend(Carol, Dave), identity(Dave), ward(Dave), knows(Dave, Carol), not retired(Dave), not friend(Dave, Carol), identity(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), not ward(Alice), not retired(Alice), identity(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave), not ward(one(Bob, Alice)), not retired(one(Bob, Alice)) guarded by Carol, Dave, Alice, one(Bob, Alice)
+    identity(Carol), ward(Carol), guarded_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), ward(Dave), guarded_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
 
-retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), retired_of(Alice, Carol), not friend(Alice, Carol), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Dave (guarded_by(Carol, Dave) -> not guardian_of(Dave, Carol)) <-
-    identity(Carol), ward(Carol), creator(Carol, Alice), not retired(Carol), identity(Alice), created(Alice, Carol), friend(Alice, Carol), not retired(Alice), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Dave (guarded_by(Carol, Dave) -> identity(Dave), guardian_of(Dave, Carol), not created(Dave, Carol)) guarded by Alice
+retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> not guardian_of(Erin, Carol)) <-
+    identity(Carol), ward(Carol), guarded_by(Carol, Alice), identity(Alice), person(Alice), guardian_of(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin

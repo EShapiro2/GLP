@@ -6,33 +6,8 @@
 %% recorded pointer (Udi, 2026-11-07, to GFF #4).  Every role requires identity.  The clauses are in GDO-L.txt beside this file.
 %% ---------------------------------------------------------------------------
 
-SNT         ::= own(Constant) ; ext(SNT, Constant).
-SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-              ; sgn(Constant, Constant).
-SArgs       ::= [] ; [SArg | SArgs].
-SAtom       ::= atom(Constant, SArgs).
-SMult       ::= SAtom ; times(SArg, SAtom).
-SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
-SHeads      ::= [] ; [SHead | SHeads].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
-SExprs      ::= [] ; [SExpr | SExprs].
-SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
-              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
-              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
-SConds      ::= [] ; [SCond | SConds].
-RName       ::= Constant ; one(Constant, Constant).
-Names       ::= [] ; [RName | Names].
-PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
-Contract    ::= [] ; [Schema | Contract].
-Preds       ::= [] ; [Constant | Preds].
-Declared    ::= Contract ; environment(Preds, Contract).
-
 %% contract_named(gdo_l, C): the contract, GDO-L.
-procedure contract_named(Constant?, Declared).
+procedure contract_named(Constant?, SDeclared).
 contract_named(gdo_l,
    [sas(establish, ['Alice'], [],
        [atom(identity, ['Alice'])],

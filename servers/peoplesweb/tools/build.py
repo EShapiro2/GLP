@@ -31,7 +31,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import FOUNDATIONAL, load_state, paper_of  # noqa: E402
+from papers import foundational, load_state, paper_of  # noqa: E402
 import certify  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
@@ -176,9 +176,12 @@ RELATIONS = ('extends', 'restricts', 'amends', 'implements', 'instantiates')
 
 def extends_of(c, lines):
     """The relation a contract states and the contracts it relates to: the box's own first line, 'NAME amends GSN and GFP (cite).' (style guide, 36; GSC, Section 8), wherever it stands among the text's lines, or failing it the same sentence in a % line (DGC's); failing both, the % Extends or % Restricts line, its first sentence, less the contracts named only 'through' another."""
-    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS) + r') ([^.(]+)')
+    # The sentence is read to its full stop, each reference in parentheses
+    # skipped, wherever it stands: 'GNL extends GNO, GDO (GRH, ...) and REC.'
+    # extends REC too (style guide, 36; GO #4, 2026-11-10).
+    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS) + r') ([^.]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
-        m = rel.search(l)
+        m = rel.search(re.sub(r'\([^()]*\)', '', l))
         if m:
             # Each contract named takes the relation written before it: 'GAI
             # extends GnW and amends GFP' is two relations, one to each.
@@ -357,5 +360,5 @@ if served:
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state)}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

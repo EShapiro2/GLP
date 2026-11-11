@@ -4,7 +4,7 @@
 ///
 /// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The platform declares `Menu =::= social_menu` and `Approval =::= approval_sentence.` (`programs/apps/<app>/platform.vglp`, as vGLP's compiler prints it; GSNP's, GAI's and GC's apps declare them again in their `self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and, where it offers `mint`, Coins, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  GKK's, GSG's and GSN's apps are compiled from contracts with pragmas, and their tabs are the lists the view names, each word on them the contract's (vGLP 1126f4f, Sections 5.4, 6.2 and 8).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `listTabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
-/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app is compiled from its contract and its pragmas, CSSN.txt's and those of the contracts it extends, so every word on its screens is the contract's (claude.md, "Sessions"; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, the buttons of CSSN's acts beside a child's row in Children, Child meet, Child befriend and Of age among them, and the questions of CSSN's pragmas, "Alice asks that Carol and your child Dave befriend.".
+/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app is compiled from its contract and its pragmas, CSSN.txt's and those of the contracts it extends, so every word on its screens is the contract's (claude.md, "Sessions"; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, the buttons of CSSN's acts beside a child's row in Children, Child acquaint, Child befriend and Of age among them, and the questions of CSSN's pragmas, "Alice asks that Carol and your child Dave befriend.".
 ///
 /// The screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`), in the light theme.  The scenario runs on two kinds of phone ([Screens]):
 ///
@@ -224,7 +224,7 @@ class _Run {
   /// The writer of the lines a scripted parent's person reads off the phones of their children, by the parent's name ([watching]).
   final Map<String, InputInjector> watches;
 
-  /// The children each scripted parent looks at the phones of, by the parent's name: in CSSN's app a parent's state does not change by the child's acts (CSSN, Section 4), so a scripted parent's person waits on the child's phone, `at(K, C)` (`programs/cssn/person.glp`), as in the village (`programs/cssn/plays.glp`); each line `seen(K, view(S, Ks))`, the last view on the child's phone, handed to it whenever it changes ([_look]).
+  /// The children each scripted parent looks at the phones of, by the parent's name: in CSSN's app a parent's state does not change by the child's acts (CSSN, Section 4), so a scripted parent's person waits on the child's phone, `at(K, C)` (`programs/cssn/person.glp`), as in the village (`programs/cssn/plays.glp`); each line `seen(K, view(Id, S, Ks, A, Ts))`, the last view on the child's phone, handed to it whenever it changes ([_look]).
   final Map<String, List<String>> watching;
 
   /// The last view handed to each parent of each child, by `parent:child`.
@@ -451,7 +451,7 @@ class _Run {
     ]);
   }
 
-  /// Hand each scripted parent in [watching] the last view on each child's phone they look at, `seen(K, view(S, Ks, A, Ts))`, where it changed since last handed; true where one was handed.
+  /// Hand each scripted parent in [watching] the last view on each child's phone they look at, `seen(K, view(Id, S, Ks, A, Ts))`, where it changed since last handed; true where one was handed.
   bool _look() {
     var handed = false;
     for (final MapEntry(key: parent, value: children) in watching.entries) {
@@ -2220,7 +2220,7 @@ void appsScreens(Screens screens) {
     await run.foot(alice, send);
     run.plain(alice, allow: {'Peer'});
     await run.shoot(alice, 'cssn-app-2.png');
-    // She taps Child befriend: Bob, Carol and Dave approve, and Carol and Dave are friends (CSSN:3); Carol then ends the friendship (GSG:2).
+    // She taps Child befriend: Bob, Carol and Dave approve, and Carol and Dave are friends (GnW:4); Carol then ends the friendship (GSG:2).
     await run.tap(alice, send);
     for (final q in ['bob', 'carol', 'dave']) {
       expect(run.scriptedSeen(q),
@@ -2309,12 +2309,12 @@ void appsScreens(Screens screens) {
     await run.shoot(bob, 'cssn-app-3.png');
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
-    // Carol and Dave are friends (CSSN:3), and Carol ends the friendship (GSG:2); Bob's state does not change by either.
+    // Carol and Dave are friends (GnW:4), and Carol ends the friendship (GSG:2); Bob's state does not change by either.
     expect(run.scriptedSeen('dave'),
         contains(startsWith('view([friend(carol), ')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
-    // (6) Bob's Children tab: Dave's row with the buttons of the acts that name a child of the proposer's, Of age among them, CSSN's "[Of age]" (CSSN:4, GnW:4; of_age(p?, r)), which names Dave and nothing else, so it proposes of_age(bob, dave) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
+    // (6) Bob's Children tab: Dave's row with the buttons of the acts that name a child of the proposer's, Of age among them, CSSN's "[Of age]" (CSSN:4; of_age(p?, r)), which names Dave and nothing else, so it proposes of_age(bob, dave) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
     await run.top(bob);
     expect(run.control(bob, 'atom:dave'), findsOneWidget);
     expect(

@@ -37,6 +37,8 @@
 #   gpd         GPD   GSA         programs/social/graph     ---
 #   gas         GAS   GSA         programs/social/graph     ---
 #   grv         GRV   GSA         programs/examples/rendezvous ---
+#   gsv         GSV   GSA         programs/examples/rendezvous ---
+#   gds         GDS   GSA         programs/examples/rendezvous ---
 #   gpe         GPE   GSA         programs/social/graph     ---
 #   gsg         GSG   GSC         programs/gsc              social_graph
 #   gsn         GSN   GSC         programs/gsc              social_network
@@ -148,7 +150,9 @@ case "$1" in
     gfp)  FILE=GFP;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, extends GSG (GSC #13, 2026-11-07)
     gpd)  FILE=GPD;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GFP (GSA #2, 2026-11-07)
     gas)  FILE=GAS;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GPD (GSA #2, 2026-11-07)
-    grv)  FILE=GRV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSG (GSA #2, 2026-11-07)
+    grv)  FILE=GRV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-07; on GSV, GSA #3, 2026-11-10)
+    gsv)  FILE=GSV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), instantiates GnW (GSA #3, 2026-11-10)
+    gds)  FILE=GDS;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-08; on GSV, GSA #3, 2026-11-10)
     gpe)  FILE=GPE;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GKK (GSA #2, 2026-11-07)
     gkk)  FILE=GKK;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
           PLAYAT="programs/apps/gkk" ;;
@@ -186,7 +190,7 @@ case "$1" in
     stay) FILE=STAY; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gpe gsg gsn gnw gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
@@ -236,13 +240,61 @@ STATUS=0
 NOTE=()
 
 # 1. The contract, as it stands.
+# A contract's NAME.glp prints its term by contract_named(<name>, C); an
+# instance of a parametric contract's prints instance_named(<name>, Base,
+# Bindings, Additions) instead, only what the instance adds or replaces (GSC,
+# Definition Parametric contract; GSC #14, Code_inbox 2026-11-10 18:02 UTC),
+# and its term is formed from the base's by programs/gsc's instantiate/4, the
+# base's term printed from the base's own row, the bindings first put to
+# instance_faults/3.  A file cannot reach another's term (TGLP, a qualifier
+# naming no sibling), so the two are brought together here.
+# base_term <base>: the base's term, BT, and its file, BASEF.
+base_term() {
+local b="$1" sf="$FILE" so="$OWNER" sp="$PAPER" sd="$PLAYDIR" sa="$PLAYAT" sl="$PLAYLIMIT"
+lookup "$b"
+BASEF="$OWNER/$FILE.glp"
+printf '%s\ncontract_named(%s, C).\n:quit\n' "$GLP_DIR/$OWNER/$FILE.glp" "$b" > "$WORK/b.in"
+FILE="$sf"; OWNER="$so"; PAPER="$sp"; PLAYDIR="$sd"; PLAYAT="$sa"; PLAYLIMIT="$sl"
+repl "$WORK/b.in" "$WORK/b.out"
+BT=$(grep -E '^C = ' "$WORK/b.out" | head -1 | sed -e 's/^C = //')
+if [ -z "$BT" ]; then
+    say "the base $b's file, $BASEF, prints no contract_named($b, C)"
+    exit 1
+fi
+}
 # read_contract <name> <directory> <NAME>: the contract's term, CT, its
 # reading, RD, and its introduction predicate, INTRO.
 read_contract() {
 local n="$1" src="$2" f="$3"
+INSTANCE=""
+if grep -q "^instance_named($n," "$src/$f.glp"; then
+    printf '%s\ninstance_named(%s, B, Bs, A).\n:quit\n' "$src/$f.glp" "$n" > "$WORK/c.in"
+    repl "$WORK/c.in" "$WORK/c.out"
+    IB=$(grep -E '^B = ' "$WORK/c.out" | head -1 | sed -e 's/^B = //')
+    IBS=$(grep -E '^Bs = ' "$WORK/c.out" | head -1 | sed -e 's/^Bs = //')
+    IA=$(grep -E '^A = ' "$WORK/c.out" | head -1 | sed -e 's/^A = //')
+    if [ -z "$IB" ] || [ -z "$IBS" ] || [ -z "$IA" ]; then
+        say "$f.glp prints no instance_named($n, Base, Bindings, Additions)"
+        grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
+        exit 1
+    fi
+    base_term "$IB"
+    printf '%s\n:limit 10000000\ninstance_faults(%s, %s, F).\ninstantiate(%s, %s, %s, D).\n:quit\n' \
+        "$GLP_DIR/programs/gsc/" "$BT" "$IBS" "$BT" "$IBS" "$IA" > "$WORK/x.in"
+    repl "$WORK/x.in" "$WORK/x.out"
+    IF=$(grep -E '^F = ' "$WORK/x.out" | head -1 | sed -e 's/^F = //')
+    if [ "$IF" != "[]" ]; then
+        say "the instance's bindings $IBS of $IB are refused: ${IF:-no answer}"
+        exit 1
+    fi
+    CT=$(grep -E '^D = ' "$WORK/x.out" | head -1 | sed -e 's/^D = //')
+    INSTANCE="$IB, $BASEF, under $IBS"
+    say "an instance of $IB ($BASEF) under $IBS"
+else
 printf '%s\ncontract_named(%s, C).\n:quit\n' "$src/$f.glp" "$n" > "$WORK/c.in"
 repl "$WORK/c.in" "$WORK/c.out"
 CT=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
+fi
 if [ -z "$CT" ]; then
     say "$f.glp prints no contract_named($n, C)"
     grep -E '(Error|error|✗)' "$WORK/c.out" | head -10
@@ -272,6 +324,45 @@ if [ ${#NAMES[@]} -eq 1 ]; then
 else
     # The composition: each contract read, with its pragmas, as when it is
     # compiled alone, and composed by programs/vglp/cva/compiler/compose.sh.
+    # The third contract the contracts amend, where they amend one (vGLP
+    # 668df7d, Section 5.4: "for two that amend a third the schemas of the
+    # third that both keep together with the schemas each adds"): of the
+    # contracts every one of them is written from, itself or through others
+    # (pragmas.sh --from), the one that no other such contract is written
+    # from; none where they share none, the composition then their union.
+    PRAG="$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh"
+    : > "$WORK/common"
+    for i in "${!NAMES[@]}"; do
+        [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] || { : > "$WORK/common"; break; }
+        bash "$PRAG" --from "${SRCS[i]}/${CTXTS[i]}" > "$WORK/from.raw" 2> "$WORK/from.err" && sort "$WORK/from.raw" > "$WORK/from.$i" || { say "the contracts ${FILES[i]} is written from were not read: $(head -1 "$WORK/from.err")"; exit 1; }
+        if [ "$i" -eq 0 ]; then cp "$WORK/from.$i" "$WORK/common"; else comm -12 "$WORK/common" "$WORK/from.$i" > "$WORK/common.t"; mv "$WORK/common.t" "$WORK/common"; fi
+    done
+    THIRD=()
+    while IFS= read -r c; do
+        near=1
+        while IFS= read -r d; do
+            [ "$d" = "$c" ] && continue
+            bash "$PRAG" --from "$d" 2> /dev/null | grep -qxF "$c" && { near=0; break; }
+        done < "$WORK/common"
+        [ $near -eq 1 ] && THIRD+=("$c")
+    done < "$WORK/common"
+    if [ ${#THIRD[@]} -gt 1 ]; then
+        say "the contracts amend no one third: each of $(for t in "${THIRD[@]}"; do basename "$t" .txt; done | tr '\n' ' ')is written from by all of them and from none of the others"
+        exit 1
+    fi
+    BASEARGS=()
+    if [ ${#THIRD[@]} -eq 1 ]; then
+        TF=$(basename "${THIRD[0]}" .txt); TD=$(dirname "${THIRD[0]}")
+        Tn=$(printf '%s' "$TF" | tr 'A-Z-' 'a-z_')
+        [ -f "$TD/$TF.glp" ] || { say "the third contract the contracts amend, $TF, has no $TF.glp beside its $TF.txt"; exit 1; }
+        read_contract "$Tn" "$TD" "$TF"
+        if ! P=$(bash "$PRAG" "${THIRD[0]}" "$RD" 2> "$WORK/pr.err"); then
+            say "the pragmas of $TF, the third contract the contracts amend, were not read: $(head -1 "$WORK/pr.err")"
+            exit 1
+        fi
+        BASEARGS=(--base "$TF" "$RD" "$P")
+        say "the third contract the composition is over: $TF"
+    fi
     COMP=()
     for i in "${!NAMES[@]}"; do
         cp "${SRCS[i]}/${CTXTS[i]}" "$OUT/${CTXTS[i]}"
@@ -284,7 +375,7 @@ else
         fi
         COMP+=("${FILES[i]}" "$RD" "$P" "$INTRO")
     done
-    if ! bash "$GLP_DIR/programs/vglp/cva/compiler/compose.sh" "${COMP[@]}" > "$WORK/compose.out" 2> "$WORK/compose.err"; then
+    if ! bash "$GLP_DIR/programs/vglp/cva/compiler/compose.sh" ${BASEARGS[@]+"${BASEARGS[@]}"} "${COMP[@]}" > "$WORK/compose.out" 2> "$WORK/compose.err"; then
         say "the composition was refused: $(head -1 "$WORK/compose.err")"
         exit 1
     fi
@@ -346,14 +437,26 @@ else
 fi
 
 # 5. The canonical platform, from programs/vglp/cva/compiler, with the
-# contract's words, its pragmas.
-if [ ${#NAMES[@]} -eq 1 ]; then
+# contract's words, its pragmas.  A parametric contract has no realisation
+# (GSC, Definition Parametric contract: "only an instantiation of every
+# parameter of a parametric contract is realised, as a protocol and as an
+# app"): it is checked and printed, and no platform is compiled, nor its
+# pragmas read.
+PARAMETRIC=0
+case "$CT" in parametric\(*) PARAMETRIC=1 ;; esac
+if [ "$PARAMETRIC" = 1 ]; then
+    COMPILED=0
+    NOTE+=("platform: a parametric contract has no realisation (GSC, Definition Parametric contract); its instances are compiled")
+    say "platform: none, the contract parametric"
+fi
+if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     PR=no_pragmas
     if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
         say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
         exit 1
     fi
 fi
+if [ "$PARAMETRIC" = 0 ]; then
 printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
 awk '
@@ -374,6 +477,7 @@ if grep -q '^%% not compiled' "$OUT/platform.vglp"; then
     say "platform.vglp: not compiled"
 else
     say "platform.vglp: $(wc -l < "$OUT/platform.vglp" | tr -d ' ') lines"
+fi
 fi
 
 # 6. The platform compiled to GLP, by the REPL's :emit in a scratch directory
@@ -450,8 +554,10 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
     if [ ${#NAMES[@]} -eq 1 ]; then
         echo "- Contract: \`$FILE\` (\`$NAME\` to the checker), its owner's two files \`$OWNER/$CTXT\` and \`$OWNER/$FILE.glp\`, copied here as they stood at \`$GLP_COMMIT\`."
         echo "- The paper: $(paper_line "$PAPER"), for the paper's own record."
+        [ -n "$INSTANCE" ] && echo "- An instance of $INSTANCE: its term formed by programs/gsc's instantiate/4 from the base's, its file holding only what it adds or replaces (GSC, Definition Parametric contract)."
+        [ "$PARAMETRIC" = 1 ] && echo "- Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract)."
     else
-        echo "- Contract: the composition of ${FILES[*]} (\`$NAME\` to the checker), the union of their schemas and of their pragmas (vGLP, Section 5.4, \"The contract's words\"), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at \`$GLP_COMMIT\`:"
+        echo "- Contract: the composition of ${FILES[*]} (\`$NAME\` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, \"The contract's words\"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at \`$GLP_COMMIT\`:"
         for i in "${!NAMES[@]}"; do
             echo "  - \`${FILES[i]}\`: \`${OWNERS[i]}/${CTXTS[i]}\` and \`${OWNERS[i]}/${FILES[i]}.glp\`; the paper $(paper_line "${PAPERS[i]}")."
         done
@@ -481,6 +587,8 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
         else
             echo "| (no run) | ${NOTE[${#NOTE[@]}-1]#run: } |"
         fi
+    elif [ "$PARAMETRIC" = 1 ]; then
+        echo "| (no platform) | a parametric contract, with no realisation |"
     else
         echo "| \`platform.vglp\` | the CVA compiler's refusal, and no platform.glp and no run |"
     fi

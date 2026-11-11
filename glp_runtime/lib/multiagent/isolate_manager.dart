@@ -33,7 +33,8 @@ import 'package:glp_runtime/runtime/runtime.dart' show GlpRuntime;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show LayerSigner, PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 
@@ -693,17 +694,20 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   log('Starting isolate');
 
-  final engine = _makeEngine(config);
-  final ctx = engine.madContext!;
-  final runtime = engine.runtime;
-
   // The networking seam (IGLP, Implementation Notes, "Networking Seam"): the
   // agent talks to a GlpNetwork, the simulation's client, made with the
   // agent's key pair --- the key the networking layer holds for the agent
   // (IGLP, Implementation Notes, "Boot") --- over the directory, which holds
-  // every agent of the boot from the spawn.
+  // every agent of the boot from the spawn.  The client is made before the
+  // engine, which signs by it ([LayerSigner]): the layer holds the private
+  // key, the runtime none (the GLP paper f265fec, "Identity and signature";
+  // IGLP 07a2b00, "The contract").
   final directory = config.directory;
-  final network = _bindSimulation(config, ctx, directory, log);
+  final simulation = _simulationClient(config, directory);
+  final engine = _makeEngine(config, simulation);
+  final ctx = engine.madContext!;
+  final runtime = engine.runtime;
+  final network = _bindSimulation(simulation, config, ctx, directory, log);
 
   if (!_loadProgram(engine, config, log)) return;
   engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
@@ -733,19 +737,21 @@ void _agentIsolateEntry(AgentConfig config) async {
       receivePort, config, ctx, network, directory, runEvent, log);
 }
 
-/// The agent's engine, in madGLP mode, holding the agent's key pair, made at
-/// its spawn from the clock, the device's hardware identifiers and the
-/// persona's name (IGLP, Implementation Notes, "Boot"): self_key/1 answers its
-/// public half, sign/3 signs under it, and the certificate of every module
-/// compiled for the agent names it (IGLP code-format-fragment.tex, the
-/// certificate: "the public key of the agent for which the program was
-/// compiled").  The load refuses a program that does not typecheck: this
-/// isolate ran with the checker's errors printed as warnings until
-/// 2026-09-18.
-GlpEngine _makeEngine(AgentConfig config) {
+/// The agent's engine, in madGLP mode, signing by [simulation], the
+/// simulation's layer, which holds the agent's key pair, made at its spawn
+/// from the clock, the device's hardware identifiers and the persona's name
+/// (IGLP 07a2b00, Implementation Notes, "Boot"; "The contract": the layer
+/// holds the key pair; the GLP paper f265fec, "Identity and signature"):
+/// self_key/1 answers its public key, sign/3 signs by the layer under it, and
+/// the certificate of every module compiled for the agent names it (IGLP
+/// code-format-fragment.tex, the certificate: "the public key of the agent
+/// for which the program was compiled").  The load refuses a program that
+/// does not typecheck: this isolate ran with the checker's errors printed as
+/// warnings until 2026-09-18.
+GlpEngine _makeEngine(AgentConfig config, SimulationNetworkClient simulation) {
   final engine = GlpEngine(
       rootSelfGlpPath: config.rootSelfGlpPath,
-      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv));
+      identity: LayerSigner(simulation));
 
   // Enable madGLP mode (creates the MadContext)
   engine.enableMadGLP(agentId: config.agentId);
@@ -859,15 +865,14 @@ HeapCell _initializeSerializerEntry(
 }
 
 /// The simulation's client over [directory], made with the agent's key pair,
-/// and bound: the seam predicates, the outgoing messages, and the incoming
-/// messages, whose run the event loop makes ([_eventLoop], Deliver).
-GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
-    NetworkDirectory directory, void Function(String) log) {
+/// which it holds and signs with, as the networking layer does (IGLP 07a2b00,
+/// "The contract" and "Simulation realisation").  The client forwards sends to
+/// the router (main isolate) over the existing port; deliveries arrive as
+/// Deliver messages and fire onMessageReceived.
+SimulationNetworkClient _simulationClient(
+    AgentConfig config, NetworkDirectory directory) {
   final agentId = config.agentId;
-  // The simulation: the client forwards sends to the router (main isolate)
-  // over the existing port; deliveries arrive as Deliver messages and fire
-  // onMessageReceived.
-  final simulation = SimulationNetworkClient(
+  return SimulationNetworkClient(
     selfId: agentId,
     directory: directory,
     keyPair: config.keyPair,
@@ -881,6 +886,15 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
     knownPeerToRouter: (pk, known) =>
         config.mainPort.send(RouterKnownPeer(agentId, pk, known)),
   );
+}
+
+/// Bind [simulation], the simulation's client: the seam predicates, the
+/// outgoing messages, and the incoming messages, whose run the event loop
+/// makes ([_eventLoop], Deliver).
+GlpNetwork _bindSimulation(SimulationNetworkClient simulation,
+    AgentConfig config, MadContext ctx, NetworkDirectory directory,
+    void Function(String) log) {
+  final agentId = config.agentId;
   final GlpNetwork network = simulation;
   // Back the seam predicates (IGLP Definition Seam Predicates), peer_app/2
   // by what the layer reports of each peer's session.
@@ -897,6 +911,13 @@ GlpNetwork _bindSimulation(AgentConfig config, MadContext ctx,
   // decides ([SimulationRouter]).
   network.onPeerDiscovered = ctx.peerDiscovered;
   network.onPeerLost = ctx.peerLost;
+  // And the public-address and network declarations by what the layer
+  // reports of the agent's own address and local network, none in the
+  // simulation (the GLP paper f265fec, "Networking seam"; IGLP 07a2b00,
+  // "Simulation realisation").
+  network.onConnectivityStatusChanged =
+      (oldAddress, newAddress) => ctx.publicAddressChanged(newAddress);
+  network.onNetworkChanged = (oldId, newId) => ctx.networkChanged(newId);
 
   // A destination, in a global name or in a message, is a key or a readable
   // name standing for one, and the seam resolves both to the one agent (IGLP

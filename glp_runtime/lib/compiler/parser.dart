@@ -2224,12 +2224,29 @@ class Parser {
         pathParts.add(_advance().lexeme); // consume atom
         _advance(); // consume #
       }
-      // Now parse the final type name (must be VARIABLE or READER)
+      // Now parse the final type name (must be VARIABLE or READER), with its
+      // type arguments, `M#T(A1, ..., An)`, as an unqualified one takes them
+      // (TGLP modules.tex, "Procedure declarations": `M#T` is the type T
+      // that a declaration M exports references, under M's definition of
+      // it, a type with parameters among them).
       if (_check(TokenType.VARIABLE) || _check(TokenType.READER)) {
         final typeToken = _advance();
-        final isInput = typeToken.type == TokenType.READER || _matchTypeMark(typeToken.lexeme);
         final qualifiedName = '${pathParts.join('#')}#${typeToken.lexeme}';
-        return TypeRef(qualifiedName, line, column, isInput: isInput);
+        final typeArgs = <TypeExpr>[];
+        if (typeToken.type == TokenType.VARIABLE &&
+            _matchFunctorParen(typeToken)) {
+          typeArgs.add(_parseProcArgType());
+          while (_match(TokenType.COMMA)) {
+            typeArgs.add(_parseProcArgType());
+          }
+          _consume(TokenType.RPAREN, 'Expected ")" after type arguments');
+        }
+        final isInput = typeToken.type == TokenType.READER ||
+            _matchTypeMark(typeArgs.isEmpty
+                ? typeToken.lexeme
+                : '${typeToken.lexeme}(...)');
+        return TypeRef(qualifiedName, line, column,
+            isInput: isInput, typeArgs: typeArgs);
       }
       throw CompileError(
         'Expected type name after module path in qualified type reference',

@@ -1,0 +1,1550 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+sign
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+x
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+forward
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+x
+,
+\Alice
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+item
+}
+(
+x
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+publish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+x
+)
+,
+\mathit{
+published
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+x
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{program}(
+\mathrm{item}(
+x
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+trust
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+trusts
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+trusts
+}
+(
+Carol
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+distrust
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+trusts
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+trusts
+}
+(
+Carol
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+offer
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+y
+,
+\Alice
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+item
+}
+(
+y
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathrm{program}(
+\mathrm{item}(
+y
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+install_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+installed
+}
+(
+x
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+published
+}
+(
+x
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+installed
+}
+(
+x
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+install
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+item
+}
+(
+y
+)
+,
+\mathit{
+trusts
+}
+(
+Bob
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{program}(
+\mathrm{item}(
+y
+)
+)
+\land
+\mathrm{author}(
+y
+)
+=
+Bob
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+invite_new
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Alice
+)
+,
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+y
+,
+\Alice
+)
+)
+,
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+item
+}
+(
+y
+)
+,
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+trusts
+}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+y
+)
+=
+Carol
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+invite_installed
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+item
+}
+(
+y
+)
+,
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+trusts
+}
+(
+Carol
+)
+,
+\mathit{
+installed
+}
+(
+\mathrm{item}(
+y
+)
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+participant
+}
+(
+\mathrm{item}(
+y
+)
+,
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+y
+)
+=
+Carol
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+leave
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+installed
+}
+(
+p
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+installed
+}
+(
+p
+)
+,
+\mathit{
+participant
+}
+(
+p
+,
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+participant
+}
+(
+p
+,
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+installed
+}
+(
+p
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+participant
+}
+(
+p
+,
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+participant
+}
+(
+p
+,
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\Bob
+\,(
+\mathit{
+participant
+}
+(
+\Alice
+,
+p
+,
+\Bob
+)
+\rightarrow
+\mathit{
+identity
+}
+(
+\Bob
+)
+\land
+\mathit{
+participant
+}
+(
+\Bob
+,
+p
+,
+\Alice
+)
+)
+,\\
+&
+\text{making } 
+\forall 
+\Bob
+\,(
+\mathit{
+participant
+}
+(
+\Alice
+,
+p
+,
+\Bob
+)
+\rightarrow
+\neg 
+\mathit{
+participant
+}
+(
+\Bob
+,
+p
+,
+\Alice
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}

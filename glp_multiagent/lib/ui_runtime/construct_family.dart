@@ -109,6 +109,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'typed_before.dart';
 import 'bridge.dart';
 import 'named_widgets.dart';
 import 'tab_screen.dart';
@@ -142,7 +143,8 @@ typedef ScreenLayout = Widget? Function(
 /// A construct family: the default widgets, drawn below, the named widgets a
 /// declaration may choose among, and the layout of a screen's constructs.
 class ConstructFamily {
-  /// The Dart widget each declared widget name names.
+  /// The Dart widget each declared widget names, by the functor and arity of
+  /// the term `W` of its declaration, `social_menu/1` ([namedKey]).
   final Map<String, NamedWidgetBuilder> named;
 
   /// The screen's layout of its constructs, where the family has one for
@@ -154,9 +156,9 @@ class ConstructFamily {
 
   /// The grassroots app's family: the default widgets; the named widgets `approval_sentence`, the approval question of a canonical CVA platform as one sentence for the attempt's class and two buttons labelled for it, `last_state`, the last state a canonical platform's agent wrote, and `social_menu`, the request question of the apps of GSC's contracts drawn in their tabs (named_widgets.dart); and the screen of tabs, Friends and Groups, where a construct is drawn by `last_state` or `social_menu` (tab_screen.dart).
   static const ConstructFamily standard = ConstructFamily(named: {
-    approvalSentenceName: approvalSentence,
-    lastStateName: lastState,
-    socialMenuName: socialMenu,
+    approvalSentenceKey: approvalSentence,
+    lastStateKey: lastState,
+    socialMenuKey: socialMenu,
   }, screen: tabbedScreen);
 }
 
@@ -624,6 +626,7 @@ class _ConstructViewState extends State<ConstructView> {
             onPressed: value == null
                 ? null
                 : () {
+                    _recordTyped(at);
                     widget.grant(p, value);
                     if (keepOpen) setState(() => _clear(at));
                   },
@@ -675,15 +678,22 @@ class _ConstructViewState extends State<ConstructView> {
         return _keyed(
             kind,
             at,
-            TextField(
-              controller: _text(k),
-              keyboardType: kind == 'number'
-                  ? const TextInputType.numberWithOptions(
-                      signed: true, decimal: true)
-                  : TextInputType.text,
-              decoration: InputDecoration(labelText: label, isDense: true),
-              onChanged: (_) => setState(() {}),
-            ));
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              TextField(
+                controller: _text(k),
+                keyboardType: kind == 'number'
+                    ? const TextInputType.numberWithOptions(
+                        signed: true, decimal: true)
+                    : TextInputType.text,
+                decoration: InputDecoration(labelText: label, isDense: true),
+                onChanged: (_) => setState(() {}),
+              ),
+              // The values typed in this field before, offered again (typed_before.dart; vGLP, Section 6.2, Remark "Construct Families").
+              if (kind != 'peer')
+                typedBeforeChips(_beforeKey(kind, label, at), _text(k),
+                    keyOf: (v) => ValueKey('$_id:before:${pathText(at)}:$v'),
+                    onPicked: () => setState(() {})),
+            ]));
       case 'button' when ws.length == 1:
         return _keyed('button', at,
             _labelled(label, Chip(label: Text(name ?? buttonOf(ws[0]).$1))));
@@ -850,6 +860,33 @@ class _ConstructViewState extends State<ConstructView> {
   TextEditingController _text(String k) =>
       _texts.putIfAbsent(k, TextEditingController.new);
 
+  /// The text fields drawn, by the key of their text, each with its
+  /// position and the key its typed values are kept by.
+  final Map<String, (List<int>, String)> _beforeKeys = {};
+
+  /// The key the values typed in a text field are kept by: its kind and its
+  /// label, the same each time a construct of its question draws it.
+  String _beforeKey(String kind, String? label, List<int> at) {
+    final b = 'construct:$kind:${label ?? pathText(at)}';
+    _beforeKeys[pathText(at)] = (List.of(at), b);
+    return b;
+  }
+
+  /// Record the texts of the fields at [at] and under it, at a submission.
+  void _recordTyped(List<int> at) {
+    for (final e in _beforeKeys.entries) {
+      final (pos, b) = e.value;
+      if (pos.length < at.length) continue;
+      var under = true;
+      for (var i = 0; i < at.length; i++) {
+        if (pos[i] != at[i]) under = false;
+      }
+      if (!under) continue;
+      final c = _texts[e.key];
+      if (c != null) TypedBefore.record(b, c.text);
+    }
+  }
+
   // === Pieces ==============================================================
 
   /// A button showing [shows]: its constant, or the label it carries.
@@ -885,7 +922,7 @@ class _ConstructViewState extends State<ConstructView> {
   Widget _named(GTerm w, GTerm v, List<int> at,
       Widget Function(GTerm d) byDefault) {
     final (name, d) = namedWidget(w)!;
-    final b = widget.family.named[name];
+    final b = widget.family.named[namedKey(w)];
     if (b != null) {
       return KeyedSubtree(
           key: nodeKey(_id, name, at),

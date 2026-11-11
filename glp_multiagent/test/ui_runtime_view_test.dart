@@ -24,12 +24,14 @@ import 'fixture_term.dart';
 
 /// The widget of the request question, `named(W, D)`: `W` the declared widget
 /// whole, its buttons (programs/vglp/cva/compiler/README.md, 6;
-/// glp_runtime/lib/vglp/canonical.dart, `DeclaredWidget.drawnAs`), and `D` the
-/// default widget of `Request ::= propose(Proposal)`, a menu of the form
-/// `propose`, over [proposals] (vGLP d433f71: the request type has no
-/// alternative refresh).
+/// glp_runtime/lib/vglp/canonical.dart, `DeclaredWidget.drawnAs`), a term of
+/// the program's union, the name applied to its buttons (vGLP 668df7d,
+/// Section 6.3: "a name or a name applied to arguments"), and `D` the default
+/// widget of `Request ::= propose(Proposal)`, a menu of the form `propose`,
+/// over [proposals] (vGLP d433f71: the request type has no alternative
+/// refresh).  Until 2026-11-10 `W` was a quoted constant, its text.
 String _requestWidget(String buttons, String proposals) =>
-    "named('social_menu([${buttons.replaceAll("'", r"\'")}])', "
+    "named(social_menu([$buttons]), "
     "menu([form(propose, [field('Proposal', menu([$proposals]))])]))";
 
 /// Two proposals: establish, its button Establish, where the state lacks

@@ -1,225 +1,114 @@
 %% ---------------------------------------------------------------------------
-%% GSNP.glp --- GSNP, Grassroots Social Network with Provenance, GAI's, its pragmas in GSNP.txt beside this file, extending GSN and GFP (programs/gsc/GSN.glp, GFP.glp) and GAI (GAI.glp beside this file), and through them GnW, GSG and GKK, in the clause syntax of GSC's paper, Section 3.2 (the form is described in programs/gsc/GKK.glp and README.md, "Writing a contract").  This term is the one source of the schemas; a run of the cascade prints their notation from it (schemas.txt).
-%% Twenty-nine schemas: GAI.glp's seventeen, with unfriend also clearing every listing and membership between the two (GSN:3); message, GSN:1, an item its sender authored; forward, GFP:2; and GSN's groups, create, join, leave, remove and close, with post_own, post, post_forward, deliver and deliver_own carrying items.  sign is GFP's create, item(Alice, x) with x signed by Alice, so author_of(x), the first signer, is Alice (GFP; Udi, 2026-11-07, to GAI #12); forward adds item(Bob, sgn(x, Alice)) as GFP.glp's forward.  GSNP amends GFP (GSC, Section 8): every guard of create and forward forbids retired, the leaving mark of GnW:5.  An AI agent takes no group act here.
-%% Rewritten by GAI #12 Cowork, 2026-11-07, from the checker's term form into the clause syntax, on GFP (Udi's yes to GAI #12); 2026-11-08, a ward comes to know any agent by an act of the two (Udi, 2026-11-08, to GAI #12, on GSA #2's proposal).
+%% GSNP.glp --- GSNP, Grassroots Social Network with Provenance, GAI's, its pragmas in GSNP.txt beside this file: GAI (GAI.glp beside this file) composed with GSN, GSC's (programs/gsc/GSN.glp), the composition amended (GSC's paper, Section Relations among Contracts).  A file cannot reach another's term, so the term is GAI's, an instance of GnW with GAI's bindings and GAI's six schemas, with the schemas of GSNP after them.
+%% Twelve schemas beyond GAI's six: unfriend, GnW's for a person, also clearing every listing and membership between the two (GSN:3); message, GSN:1, an item its sender authored, the sender a person or an AI agent with a guardian; and GSN's groups, create, join, leave, remove and close, with post_own, post, post_forward, deliver and deliver_own carrying items, a group act a person's.  sign and forward are GFP's with the stronger body, as in GAI.glp.
+%% Written by GAI #13 Cowork, 2026-11-10, on GnW as GSC has it, from GAI #12's term of 2026-11-08: person required where agent was forbidden, and no schema asking whether an agent is retired.
 %% ---------------------------------------------------------------------------
 
-SNT         ::= own(Constant) ; ext(SNT, Constant).
-SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-              ; sgn(Constant, Constant).
-SArgs       ::= [] ; [SArg | SArgs].
-SAtom       ::= atom(Constant, SArgs).
-SMult       ::= SAtom ; times(SArg, SAtom).
-SQLit       ::= SMult ; not(SMult).
-SQLits      ::= [] ; [SQLit | SQLits].
-SLit        ::= SQLit ; forall(Constant, SAtom, SQLits).
-SLits       ::= [] ; [SLit | SLits].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-              ; author_of(Constant).
-SConstraint ::= true ; and(SConstraint, SConstraint)
-              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; or(SConstraint, SConstraint)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg).
-RName       ::= Constant ; one(Constant, Constant).
-Names       ::= [] ; [RName | Names].
-PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
-Contract    ::= [] ; [Schema | Contract].
-Preds       ::= [] ; [Constant | Preds].
-Declared    ::= Contract ; reflexive(Preds, Contract).
-
-% contract_named(gsnp, C): the contract, GSNP, friend and knows reflexive.
-procedure contract_named(Constant?, Declared).
-contract_named(gsnp, reflexive([friend, knows],
+% instance_named(gsnp, gnw, Bindings, Additions): the contract, GSNP.
+procedure instance_named(Constant?, Constant, SBindings, SDeclared).
+instance_named(gsnp, gnw,
+   [ward = agent, creator = principal, created = principal_of,
+    guardian_of = operator_of, guarded_by = operated_by, retired = retired_agent,
+    ward_acquaint = agent_acquaint, ward_befriend = agent_befriend, ward_unfriend = agent_unfriend,
+    ward_end = agent_end, wards_acquaint = agents_acquaint, wards_befriend = agents_befriend],
    [
-%% GKK:1, Identity.
-    sas(establish, ['Alice'], [],
-       [atom(identity, ['Alice'])],
-       [not(atom(identity, ['Alice'])), not(atom(retired, ['Alice']))], true, ['Alice']),
-%% GKK:2, Acquaintance, for two persons.
-    sas(acquaint, ['Alice', 'Bob'], [],
-       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
-       [atom(identity, ['Alice']), not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), not(atom(agent, ['Bob'])), not(atom(retired, ['Bob']))],
-       true, ['Alice', 'Bob']),
-%% GKK:3, Introduction, for persons, with Bob's consent: GnW's introduce, replacing GKK's, Carol, the person introduced, a reading role (Udi, 2026-11-03, to GSC #10).
-    sas(introduce, ['Alice', 'Bob', 'Carol'], [],
-       [atom(knows, ['Bob', 'Carol'])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']),
-        not(atom(agent, ['Bob'])), not(atom(retired, ['Bob'])),
-        atom(identity, ['Carol']), not(atom(agent, ['Carol'])), not(atom(retired, ['Carol']))],
-       true, ['Alice', 'Bob']),
-%% GSG:1, Friendship, for two persons who know each other.
-    sas(befriend, ['Alice', 'Bob'], [],
-       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice'])),
-        not(atom(agent, ['Bob'])), not(atom(retired, ['Bob']))],
-       true, ['Alice', 'Bob']),
-%% GSG:2, Ending a friendship, by either friend, but a ward with a guardian (GnW:1, GnW:2), a guardian with the ward (GnW:2, GnW:5); with GSN:3, it clears every listing and membership between the two, as GSN.glp's unfriend does.
-    sas(unfriend, ['Alice', 'Bob'], [],
-       [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice'])),
-        not(atom(listed, ['Alice', 'Bob', '_'])), not(atom(member, ['Alice', ext(own('Bob'), '_')])),
-        not(atom(listed, ['Bob', 'Alice', '_'])), not(atom(member, ['Bob', ext(own('Alice'), '_')]))],
-       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']), not(atom(retired, ['Alice'])),
-        not(atom(principal, ['Alice', 'Bob'])), not(atom(guarded_by, ['Alice', 'Bob'])),
-        not(atom(principal_of, ['Alice', 'Bob'])), not(atom(guardian_of, ['Alice', 'Bob'])),
-        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])],
-       true, ['Alice']),
-%% GnW:1, Creation, with GAI:1 and GAI:2: Alice creates the AI agent Carol, choosing its key pair, and is its creator, principal, guardian and friend; Carol carries Alice's attestation y, an item Alice holds and authored, its first signer (GFP).
+%% GnW:1 with GAI:2, Creation: Alice creates the AI agent Carol with y, her attestation, an item she holds and authored; Carol holds it, and Alice its record.
     sas(enter, ['Alice', 'Carol'], [y],
-       [atom(principal_of, ['Alice', 'Carol']), atom(guardian_of, ['Alice', 'Carol']),
+       [atom(principal_of, ['Alice', 'Carol']), atom(operator_of, ['Alice', 'Carol']),
         atom(friend, ['Alice', 'Carol']), atom(knows, ['Alice', 'Carol']),
         atom(agent_of, ['Alice', 'Carol', y]),
         atom(identity, ['Carol']), atom(agent, ['Carol']), atom(principal, ['Carol', 'Alice']),
+        atom(operated_by, ['Carol', 'Alice']),
         atom(friend, ['Carol', 'Alice']), atom(knows, ['Carol', 'Alice']),
         atom(attestation, ['Carol', y])],
-       [atom(identity, ['Alice']), atom(item, ['Alice', y]),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
-        not(atom(identity, ['Carol'])), not(atom(retired, ['Carol']))],
+       [atom(identity, ['Alice']),
+        atom(person, ['Alice']), atom(item, ['Alice', y]),
+        not(atom(identity, ['Carol']))],
        eq(author_of(y), 'Alice'), ['Alice', 'Carol']),
-%% GnW:2, Joint guardianship: Alice, the creator of Carol, makes her friend Bob a guardian and a friend of Carol, by an act of Alice and Bob.
-    sas(make_guardian, ['Alice', 'Bob', 'Carol'], [y],
-       [atom(guardian_of, ['Bob', 'Carol']), atom(friend, ['Bob', 'Carol']),
+%% GnW:2 with GAI:2, Joint guardianship: Bob becomes a guardian of Carol and records her attestation y, which Alice, a guardian, holds recorded.
+    sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [y],
+       [atom(operator_of, ['Bob', 'Carol']), atom(friend, ['Bob', 'Carol']),
         atom(agent_of, ['Bob', 'Carol', y]),
-        atom(guarded_by, ['Carol', 'Bob']), atom(friend, ['Carol', 'Bob'])],
-       [atom(identity, ['Alice']), atom(principal_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
-        atom(agent_of, ['Alice', 'Carol', y]), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), not(atom(agent, ['Bob'])), not(atom(retired, ['Bob'])),
-        not(atom(guardian_of, ['Bob', 'Carol'])),
-        atom(identity, ['Carol']), atom(agent, ['Carol']), not(atom(friend, ['Carol', 'Bob']))],
-       true, ['Alice', 'Bob']),
-%% GnW:2: Alice, the creator of Carol, ends Bob's guardianship of Carol.
-    sas(end_guardian, ['Alice', 'Bob', 'Carol'], [],
-       [not(atom(guardian_of, ['Bob', 'Carol'])), not(atom(guarded_by, ['Carol', 'Bob']))],
-       [atom(identity, ['Alice']), atom(principal_of, ['Alice', 'Carol']), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), atom(guardian_of, ['Bob', 'Carol']), not(atom(principal_of, ['Bob', 'Carol'])),
-        atom(identity, ['Carol']), atom(guarded_by, ['Carol', 'Bob'])],
-       true, ['Alice']),
-%% GnW:2: Bob, a guardian of Carol other than her creator, ends his guardianship of Carol, the friendship remaining.
-    sas(resign, ['Bob', 'Carol'], [],
-       [not(atom(guardian_of, ['Bob', 'Carol'])), not(atom(guarded_by, ['Carol', 'Bob']))],
-       [atom(identity, ['Bob']), atom(guardian_of, ['Bob', 'Carol']),
-        not(atom(retired, ['Bob'])), not(atom(principal_of, ['Bob', 'Carol'])),
-        atom(identity, ['Carol']), atom(guarded_by, ['Carol', 'Bob'])],
-       true, ['Bob']),
-%% GnW:2: Bob, a guardian of Carol, ends his friendship with Carol, which ends his guardianship.
-    sas(guardian_unfriend, ['Bob', 'Carol'], [],
-       [not(atom(friend, ['Bob', 'Carol'])), not(atom(guardian_of, ['Bob', 'Carol'])),
-        not(atom(friend, ['Carol', 'Bob'])), not(atom(guarded_by, ['Carol', 'Bob']))],
-       [atom(identity, ['Bob']), atom(friend, ['Bob', 'Carol']), atom(guardian_of, ['Bob', 'Carol']),
-        not(atom(retired, ['Bob'])), not(atom(principal_of, ['Bob', 'Carol'])),
-        atom(identity, ['Carol']), atom(friend, ['Carol', 'Bob']), atom(guarded_by, ['Carol', 'Bob'])],
-       true, ['Bob']),
-%% GnW:3, Ward and person, knowing, with GAI:2: Carol, a ward, and Bob come to know each other by an act of both; Bob records Carol with its attestation y.
-    sas(agent_acquaint, ['Carol', 'Bob'], [y],
+        atom(operated_by, ['Carol', 'Bob']), atom(friend, ['Carol', 'Bob'])],
+       [atom(identity, ['Bob']), atom(person, ['Bob']),
+        not(atom(operator_of, ['Bob', 'Carol'])),
+        atom(identity, ['Alice']), atom(person, ['Alice']), atom(operator_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
+        atom(agent_of, ['Alice', 'Carol', y]),
+        atom(identity, ['Carol']), atom(agent, ['Carol']), atom(operated_by, ['Carol', 'Alice']),
+        not(atom(operated_by, ['Carol', 'Bob'])), not(atom(friend, ['Carol', 'Bob'])),
+        forall(['Erin'], atom(operated_by, ['Carol', 'Erin']), true,
+               and(atom(identity, ['Erin']), and(atom(person, ['Erin']), atom(operator_of, ['Erin', 'Carol']))))],
+       true, ['Bob', 'Alice', 'Erin']),
+%% GnW:3 with GAI:2, Ward and person, knowing: Carol presents her attestation y, and Bob records it.
+    sas(agent_acquaint, ['Carol', 'Bob', 'Alice'], ['Alice', y],
        [atom(knows, ['Carol', 'Bob']),
         atom(knows, ['Bob', 'Carol']), atom(agent_of, ['Bob', 'Carol', y])],
-       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(attestation, ['Carol', y]),
-        not(atom(retired, ['Carol'])),
-        atom(identity, ['Bob']), not(atom(agent, ['Bob'])), not(atom(retired, ['Bob']))],
+       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(operated_by, ['Carol', 'Alice']),
+        atom(attestation, ['Carol', y]),
+        atom(identity, ['Bob']), atom(person, ['Bob'])],
        true, ['Carol', 'Bob']),
-%% GnW:3, Ward and person, a relation: Carol and Bob, who know each other, become friends, provided Alice and Bob are friends, by an act of the three.
-    sas(agent_befriend, ['Carol', 'Bob', 'Alice'], [],
-       [atom(friend, ['Carol', 'Bob']), atom(friend, ['Bob', 'Carol'])],
-       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(knows, ['Carol', 'Bob']),
-        not(atom(retired, ['Carol'])), not(atom(friend, ['Carol', 'Bob'])),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Carol']),
-        not(atom(agent, ['Bob'])), not(atom(retired, ['Bob'])), not(atom(friend, ['Bob', 'Carol'])),
-        atom(identity, ['Alice']), atom(guardian_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice']))],
-       true, ['Carol', 'Bob', 'Alice']),
-%% GnW:3: Alice, a guardian of Carol, ends a friendship of Carol with Bob, other than a guardian.
-    sas(agent_unfriend, ['Carol', 'Bob', 'Alice'], [],
-       [not(atom(friend, ['Carol', 'Bob'])), not(atom(friend, ['Bob', 'Carol']))],
-       [atom(identity, ['Carol']), atom(friend, ['Carol', 'Bob']),
-        not(atom(principal, ['Carol', 'Bob'])), not(atom(guarded_by, ['Carol', 'Bob'])),
-        atom(identity, ['Bob']), atom(friend, ['Bob', 'Carol']),
-        atom(identity, ['Alice']), atom(guardian_of, ['Alice', 'Carol']),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice']))],
-       true, ['Alice']),
-%% GnW:4, Ward and ward, knowing, with GAI:2: Carol and Dave, wards, come to know each other by an act of both, each recording the other with its attestation.
-    sas(agents_acquaint, ['Carol', 'Dave'], [y, z],
+%% GnW:4 with GAI:2, Ward and ward, knowing: Carol and Dave each present their attestation, y and z, and each records the other's.
+    sas(agents_acquaint, ['Carol', 'Dave', 'Alice', 'Bob'], ['Alice', 'Bob', y, z],
        [atom(knows, ['Carol', 'Dave']), atom(agent_of, ['Carol', 'Dave', z]),
         atom(knows, ['Dave', 'Carol']), atom(agent_of, ['Dave', 'Carol', y])],
-       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(attestation, ['Carol', y]),
-        not(atom(retired, ['Carol'])),
-        atom(identity, ['Dave']), atom(agent, ['Dave']), atom(attestation, ['Dave', z]),
-        not(atom(retired, ['Dave']))],
+       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(operated_by, ['Carol', 'Alice']),
+        atom(attestation, ['Carol', y]),
+        atom(identity, ['Dave']), atom(agent, ['Dave']), atom(operated_by, ['Dave', 'Bob']),
+        atom(attestation, ['Dave', z])],
        true, ['Carol', 'Dave']),
-%% GnW:4, Ward and ward, a relation: Carol and Dave, who know each other, become friends, provided Alice knows Dave and is a friend of Bob, by an act of the four; Alice and Bob possibly one person.
-    sas(agents_befriend, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [],
-       [atom(friend, ['Carol', 'Dave']), atom(friend, ['Dave', 'Carol'])],
-       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(knows, ['Carol', 'Dave']),
-        not(atom(retired, ['Carol'])), not(atom(friend, ['Carol', 'Dave'])),
-        atom(identity, ['Dave']), atom(agent, ['Dave']), atom(knows, ['Dave', 'Carol']),
-        not(atom(retired, ['Dave'])), not(atom(friend, ['Dave', 'Carol'])),
-        atom(identity, ['Alice']), atom(guardian_of, ['Alice', 'Carol']),
-        atom(knows, ['Alice', 'Dave']), atom(friend, ['Alice', 'Bob']),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), atom(guardian_of, ['Bob', 'Dave']),
-        not(atom(agent, ['Bob'])), not(atom(retired, ['Bob']))],
-       true, ['Carol', 'Dave', 'Alice', 'Bob']),
-%% GnW:5, Retiring: Alice, the creator of Carol, ends her friendship with Carol, which ends every guardianship and every friendship of Carol, every friend Bob and every guardian Dave of Carol in the act by the quantified conjuncts; retired is the leaving mark, and the creator's records stay.
-    sas(retire, ['Carol', 'Alice', 'Bob', 'Dave'], [],
-       [atom(retired, ['Carol']), not(atom(friend, ['Carol', '_'])), not(atom(guarded_by, ['Carol', '_'])),
-        atom(retired_of, ['Alice', 'Carol']), not(atom(friend, ['Alice', 'Carol'])),
-        forall('Bob', atom(friend, ['Carol', 'Bob']), [not(atom(friend, ['Bob', 'Carol']))]),
-        forall('Dave', atom(guarded_by, ['Carol', 'Dave']), [not(atom(guardian_of, ['Dave', 'Carol']))])],
-       [atom(identity, ['Carol']), atom(agent, ['Carol']), atom(principal, ['Carol', 'Alice']),
-        not(atom(retired, ['Carol'])),
-        atom(identity, ['Alice']), atom(principal_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Carol']),
-        not(atom(retired, ['Alice'])),
-        forall('Bob', atom(friend, ['Carol', 'Bob']), [atom(identity, ['Bob']), atom(friend, ['Bob', 'Carol'])]),
-        forall('Dave', atom(guarded_by, ['Carol', 'Dave']),
-               [atom(identity, ['Dave']), atom(guardian_of, ['Dave', 'Carol']),
-                not(atom(principal_of, ['Dave', 'Carol']))])],
-       true, ['Alice']),
-%% GAI:1 and GFP:1, Creation: an agent signs what they create, the developer the code of an AI agent and the principal the attestation, and holds it as an item, its author its first signer (GFP).
+%% GFP:1, Signing, GFP's sign with a stronger body: Alice is a person, or an AI agent with a guardian (GSC, Definition Guardianship, 'can act').
     sas(sign, ['Alice'], [x],
        [atom(item, ['Alice', x])],
-       [atom(identity, ['Alice']), not(atom(item, ['Alice', x])), not(atom(retired, ['Alice']))],
+       [atom(identity, ['Alice']), not(atom(item, ['Alice', x])),
+        or(atom(person, ['Alice']), and(atom(agent, ['Alice']), exists(['G'], atom(operated_by, ['Alice', 'G']), true)))],
+       true, ['Alice']),
+%% GFP:2, Forwarding, GFP's forward with a stronger body: Alice is a person, or an AI agent with a guardian.
+    sas(forward, ['Alice', 'Bob'], [x],
+       [atom(item, ['Bob', sgn(x, 'Alice')])],
+       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']),
+        or(atom(person, ['Alice']), and(atom(agent, ['Alice']), exists(['G'], atom(operated_by, ['Alice', 'G']), true))),
+        atom(identity, ['Bob'])],
+       true, ['Alice']),
+%% GSG:2 with GSN:3, Ending a friendship, by a person, Alice, with any agent Bob but an AI agent she is a guardian of, which also clears every listing and membership between the two.
+    sas(unfriend, ['Alice', 'Bob'], [],
+       [not(atom(friend, ['Alice', 'Bob'])), not(atom(listed, ['Alice', 'Bob', '_'])),
+        not(atom(member, ['Alice', ext(own('Bob'), '_')])),
+        not(atom(friend, ['Bob', 'Alice'])), not(atom(listed, ['Bob', 'Alice', '_'])),
+        not(atom(member, ['Bob', ext(own('Alice'), '_')]))],
+       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
+        atom(person, ['Alice']),
+        not(atom(operator_of, ['Alice', 'Bob'])),
+        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])],
        true, ['Alice']),
 %% GSN:1, Messaging: Alice sends her friend Bob an item she holds and authored, its first signer, as she signed it.
     sas(message, ['Alice', 'Bob'], [x],
        [atom(item, ['Bob', x])],
-       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']),
-        not(atom(retired, ['Alice'])), atom(identity, ['Bob'])],
+       [atom(identity, ['Alice']), or(atom(person, ['Alice']), and(atom(agent, ['Alice']), exists(['G'], atom(operated_by, ['Alice', 'G']), true))), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']), atom(identity, ['Bob'])],
        eq(author_of(x), 'Alice'), ['Alice']),
-%% GFP:2, Forwarding: Alice forwards an item she holds to her friend Bob, adding her signature, as GFP.glp's forward, a retired agent forwarding nothing.
-    sas(forward, ['Alice', 'Bob'], [x],
-       [atom(item, ['Bob', sgn(x, 'Alice')])],
-       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']),
-        not(atom(retired, ['Alice'])), atom(identity, ['Bob'])],
-       true, ['Alice']),
-%% GSN:2, Group: Alice creates a group, of which she is the leader and first member; an AI agent takes no group act here.
+%% GSN:2, Group: Alice creates a group, of which she is the leader and first member; a group act is a person's, and an AI agent takes none.
     sas(create, ['Alice'], [n],
        [atom(member, ['Alice', ext(own('Alice'), n)]), atom(listed, ['Alice', 'Alice', n])],
-       [atom(identity, ['Alice']), not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
+       [atom(identity, ['Alice']), atom(person, ['Alice']),
         not(atom(member, ['Alice', ext(own('Alice'), n)])), not(atom(closed, ['Alice', n]))],
        true, ['Alice']),
 %% GSN:3, Joining and Leaving: Alice, the leader, adds her friend Bob, with his consent.
     sas(join, ['Alice', 'Bob'], [n],
        [atom(listed, ['Alice', 'Bob', n]), atom(member, ['Bob', ext(own('Alice'), n)])],
        [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]), atom(friend, ['Alice', 'Bob']),
-        not(atom(agent, ['Alice'])), not(atom(retired, ['Alice'])),
-        atom(identity, ['Bob']), not(atom(agent, ['Bob'])), not(atom(retired, ['Bob'])),
+        atom(person, ['Alice']),
+        atom(identity, ['Bob']), atom(person, ['Bob']),
         not(atom(member, ['Bob', ext(own('Alice'), n)]))],
        true, ['Alice', 'Bob']),
 %% GSN:3: Bob ends his membership.
     sas(leave, ['Alice', 'Bob'], [n],
        [not(atom(listed, ['Alice', 'Bob', n])), not(atom(member, ['Bob', ext(own('Alice'), n)]))],
        [atom(identity, ['Alice']), atom(listed, ['Alice', 'Bob', n]),
-        atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)]), not(atom(retired, ['Bob']))],
+        atom(identity, ['Bob']), atom(person, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])],
        true, ['Bob']),
 %% GSN:3: Alice, the leader, ends Bob's membership.
     sas(remove, ['Alice', 'Bob'], [n],
        [not(atom(listed, ['Alice', 'Bob', n])), not(atom(member, ['Bob', ext(own('Alice'), n)]))],
-       [atom(identity, ['Alice']), atom(listed, ['Alice', 'Bob', n]), not(atom(retired, ['Alice'])),
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(listed, ['Alice', 'Bob', n]),
         atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])],
        true, ['Alice']),
 %% GSN:2: Alice closes the group by leaving it, with every member Bob she lists.
@@ -228,22 +117,20 @@ contract_named(gsnp, reflexive([friend, knows],
         not(atom(member, ['Alice', ext(own('Alice'), n)])),
         forall('Bob', atom(listed, ['Alice', 'Bob', n]),
                [not(atom(member, ['Bob', ext(own('Alice'), n)]))])],
-       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
-        atom(listed, ['Alice', 'Alice', n]), not(atom(retired, ['Alice'])),
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(listed, ['Alice', 'Alice', n]),
         forall('Bob', atom(listed, ['Alice', 'Bob', n]),
                [atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])])],
        true, ['Alice']),
 %% GSN:4, Group messaging: the leader posts her own item.
     sas(post_own, ['Alice'], [x, n],
        [atom(posted, ['Alice', x, n])],
-       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(member, ['Alice', ext(own('Alice'), n)]),
-        not(atom(retired, ['Alice'])), not(atom(posted, ['Alice', x, n]))],
+       [atom(identity, ['Alice']), atom(person, ['Alice']), atom(item, ['Alice', x]), atom(member, ['Alice', ext(own('Alice'), n)]), not(atom(posted, ['Alice', x, n]))],
        eq(author_of(x), 'Alice'), ['Alice']),
 %% GSN:4: a member, Bob, sends the leader Alice an item he authored, as he signed it.
     sas(post, ['Bob', 'Alice'], [x, n],
        [atom(posted, ['Alice', x, n])],
-       [atom(identity, ['Bob']), atom(item, ['Bob', x]), atom(member, ['Bob', ext(own('Alice'), n)]),
-        not(atom(retired, ['Bob'])),
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(item, ['Bob', x]), atom(member, ['Bob', ext(own('Alice'), n)]),
         atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
         atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
         not(atom(posted, ['Alice', x, n]))],
@@ -251,8 +138,7 @@ contract_named(gsnp, reflexive([friend, knows],
 %% GSN:4 with GFP:2: a member, Bob, sends the leader Alice an item he holds, adding his signature.
     sas(post_forward, ['Bob', 'Alice'], [x, n],
        [atom(posted, ['Alice', sgn(x, 'Bob'), n])],
-       [atom(identity, ['Bob']), atom(item, ['Bob', x]), atom(member, ['Bob', ext(own('Alice'), n)]),
-        not(atom(retired, ['Bob'])),
+       [atom(identity, ['Bob']), atom(person, ['Bob']), atom(item, ['Bob', x]), atom(member, ['Bob', ext(own('Alice'), n)]),
         atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
         atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob'])],
        true, ['Bob']),
@@ -271,4 +157,4 @@ contract_named(gsnp, reflexive([friend, knows],
         atom(posted, ['Alice', y, n]), atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
         not(atom(delivered, ['Alice', y, 'Bob', n])),
         atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])],
-       eq(author_of(y), 'Alice'), [])])).
+       eq(author_of(y), 'Alice'), [])]).

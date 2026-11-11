@@ -1,21 +1,19 @@
 # A run of the cascade on GnW
 
-- Contract: `GnW` (`gnw` to the checker), its owner's two files `programs/gsc/GnW.txt` and `programs/gsc/GnW.glp`, copied here as they stood at `1f85af09`.
-- The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `9cb0a0fe`, for the paper's own record.
-- The tools: this repository at `1f85af09` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-10 12:18 UTC by `cascade.sh gnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GnW` (`gnw` to the checker), its owner's two files `programs/gsc/GnW.txt` and `programs/gsc/GnW.glp`, copied here as they stood at `580e80ed`.
+- The paper: `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`, for the paper's own record.
+- Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
+- The tools: this repository at `580e80ed` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 01:48 UTC by `cascade.sh gnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
 | `GnW.txt` | the contract |
 | `GnW.glp` | the act schemas, as terms |
 | `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
-| `verdict.txt` | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, identity, creator, created, created)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [retired])` |
-| `vmat.tex` | the VMAT form, 16 displays, one per schema |
-| `platform.vglp` | the canonical CVA platform, as printed |
-| `platform.glp` | the platform compiled to GLP, as emitted |
-| `interface.glp` | the platform's interface in sGLP's term form, as programs/sglp/cva/interface.sh prints it |
-| (no run) | vGLP keeps no plays for gnw |
+| `verdict.txt` | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian_of, guarded_by)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])` |
+| `vmat.tex` | the VMAT form, 17 displays, one per schema |
+| (no platform) | a parametric contract, with no realisation |
 
 What the tools refused or lacked:
-- run: vGLP keeps no plays for gnw
+- platform: a parametric contract has no realisation (GSC, Definition Parametric contract); its instances are compiled

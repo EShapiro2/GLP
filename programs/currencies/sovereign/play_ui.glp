@@ -52,17 +52,17 @@
 %% certified program is denominated/, which this directory is not (see
 %% self.glp).
 
-imported procedure denominated#sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
-imported procedure denominated#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#sovereign(Key?, PersonChannel(denominated#Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
+imported procedure denominated#person(Key?, _?, PersonIn(denominated#Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
-exported procedure sovereign_ui(Key?, SovereignPeers?, PersonIn(Drawn)?, SovereignNet?).
+exported procedure sovereign_ui(Key?, SovereignPeers?, PersonIn(denominated#Drawn)?, SovereignNet?).
 sovereign_ui(Cb, [Diana, Frank], Grants, _) :-
     market(Cb?, Diana?, Frank?, ch(Grants?, Draws)),
     send_to_user(Draws?).
 
 %% The market: the central bank's mini-app on its person channel, with an
 %% empty calendar, and the two scripted peers, over the three conversations.
-procedure market(Key?, Key?, Key?, PersonChannel(Drawn)?).
+procedure market(Key?, Key?, Key?, PersonChannel(denominated#Drawn)?).
 market(Cb, Diana, Frank, Ui) :-
     ground(Cb?), ground(Diana?), ground(Frank?) |
     denominated # sovereign(Cb?, Ui?, [conversation(Diana?, ch(HD?, DH)), conversation(Frank?, ch(HF?, FH))], []),

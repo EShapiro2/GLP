@@ -1,0 +1,50 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract consts
+%% (../contracts.glp, contract_named(consts, C): adopt(p?) adds bylaws(cb),
+%% adopt_cc(p?) adds bylaws(cc), and amend(p?) requires bylaws(cb) and adds
+%% amended(cb), cb and cc constants the contract names, val(cb) and val(cc)),
+%% platform.vglp, which programs/vglp/cva/compile.sh prints from it: "an
+%% argument of an atom may be a value ... or a constant the contract names, a
+%% value or an utterance" (vGLP 0eeea71, Section 5.4, "Speech-act schemas as
+%% local specifications").
+%%
+%% play_consts: alice adopts the bylaws cc, adopt_cc(alice), and her state
+%% holds bylaws(cc); then cb, adopt(alice), and it holds bylaws(cb) beside it;
+%% then she amends, amend(alice), whose bylaws(cb) her state holds, and it
+%% holds amended(cb).  bob takes no step.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_consts(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_consts(LA?, LB?, N?) :-
+    pair([own([A1], propose(adopt_cc(A1?))),
+          wait(holds(bylaws(cc))),
+          own([A2], propose(adopt(A2?))),
+          wait(holds(bylaws(cb))),
+          own([A3], propose(amend(A3?))),
+          wait(holds(amended(cb)))],
+         [],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

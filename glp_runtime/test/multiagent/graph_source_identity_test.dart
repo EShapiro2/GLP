@@ -20,6 +20,8 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/identity.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/runtime/body_kernels.dart' show bytesToHex;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/wire/artefact.dart';
@@ -31,9 +33,14 @@ final String _core = Directory('../programs/social/graph/core').absolute.path;
 void main() {
   test('signature/2 reports, for attest/2 signed under the social graph, the '
       'h(M) that source_identity prints', () async {
+    // The simulation's layer holds alice's key pair and signs; the engine
+    // signs by it (the GLP paper f265fec, "Identity and signature").
     final a = PersonIdentity.generate();
-    final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: a);
+    final layer = SimulationNetworkClient.alone(a.keyPair, selfId: 'alice');
+    final engine =
+        GlpEngine(rootSelfGlpPath: _rootSelf, identity: LayerSigner(layer));
     engine.enableMadGLP(agentId: 'alice');
+    engine.madContext!.network = layer;
     engine.loadProgram(_core);
     final hM = bytesToHex((engine.appModule!.artefact as Artefact).hM);
 

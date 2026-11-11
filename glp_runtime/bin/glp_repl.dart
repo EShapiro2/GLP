@@ -12,6 +12,8 @@ import 'package:glp_runtime/multiagent/simulation_network.dart'
     show NetworkDirectory, SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/boot_loader.dart' show BootLoader;
 import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show LayerSigner, PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/multiagent/isolate_manager.dart'
     show IsolateManager;
@@ -39,7 +41,21 @@ void main() async {
   // Platform.script points to glp_runtime/bin/glp_repl.dart.
   // Two levels up (../../) reaches the GLP repo root; then programs/self.glp.
   final rootSelfGlpPath = Platform.script.resolve('../../programs/self.glp').toFilePath();
-  final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath);
+  // The REPL's key pair, made for this process and handed to the simulation's
+  // layer, which holds it and signs with it: the engine signs by that layer,
+  // for the certificate :artefact writes, self_key/1 and sign/3, and holds no
+  // private key (the GLP paper f265fec, appendix-guards, "Identity and
+  // signature"; IGLP 07a2b00, Implementation Notes, "The contract").  :mad
+  // binds a client over the same pair, under the agent's name.
+  final replKeyPair = PersonIdentity.generate().keyPair;
+  final replLayer = SimulationNetworkClient(
+    selfId: 'repl',
+    directory: NetworkDirectory()..register('repl', replKeyPair.pub),
+    keyPair: replKeyPair,
+    sendToRouter: (toId, payload, senderMessageId) {},
+  );
+  final engine =
+      GlpEngine(rootSelfGlpPath: rootSelfGlpPath, identity: LayerSigner(replLayer));
   print('Loaded root self.glp');
   print('');
 
@@ -142,7 +158,7 @@ void main() async {
         final cert = artefact.certificate;
         print(cert.isRefused
             ? '✓ Wrote ${out.path} --- no certificate: refused'
-            : '✓ Wrote ${out.path} --- certified under ${engine.identity.pub.hex}');
+            : '✓ Wrote ${out.path} --- certified under ${replKeyPair.pub.hex}');
       } catch (e) {
         print('Artefact failed: $e');
       }
@@ -205,7 +221,7 @@ void main() async {
     if (trimmed.startsWith(':mad')) {
       // :mad <agent> — enter madGLP mode for what follows: a MadContext is
       // created for <agent>, backed by a single-agent simulation networking
-      // layer carrying the runtime's own identity, so that the seam
+      // layer carrying the REPL's key pair, the one the engine signs by, so that the seam
       // predicates — send_to_net/1, the
       // networking seam, authorise_link/2 — execute instead of aborting. A
       // directory program loaded afterwards runs under it (SGSG's harness
@@ -221,13 +237,13 @@ void main() async {
       }
       final agent = parts[1].toLowerCase();
       engine.enableMadGLP(agentId: agent);
-      final directory = NetworkDirectory()..register(agent, engine.identity.pub);
+      final directory = NetworkDirectory()..register(agent, replKeyPair.pub);
       void dropped(String toId) =>
           print('[MAD $agent] message to $toId dropped: no router in the REPL');
       final network = SimulationNetworkClient(
         selfId: agent,
         directory: directory,
-        keyPair: engine.identity.keyPair,
+        keyPair: replKeyPair,
         sendToRouter: (toId, payload, senderMessageId) => dropped(toId),
       );
       engine.madContext!.network = network;
@@ -250,7 +266,7 @@ void main() async {
             .send(pk, Uint8List.fromList(message.payload))
             .then((_) {});
       };
-      print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
+      print('madGLP mode on: agent $agent, key ${replKeyPair.pub.hex}');
       continue;
     }
 

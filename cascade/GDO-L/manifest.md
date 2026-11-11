@@ -1,9 +1,9 @@
 # A run of the cascade on GDO-L
 
-- Contract: `GDO-L` (`gdo_l` to the checker), its owner's two files `programs/gff/GDO-L.txt` and `programs/gff/GDO-L.glp`, copied here as they stood at `66a46428`.
+- Contract: `GDO-L` (`gdo_l` to the checker), its owner's two files `programs/gff/GDO-L.txt` and `programs/gff/GDO-L.glp`, copied here as they stood at `6c97dddb`.
 - The paper: `https://github.com/EShapiro2/gff-grassroots-feeds-and-followers` at `b6ea2eab`, for the paper's own record.
-- The tools: this repository at `66a46428` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-09 19:27 UTC by `cascade.sh gdo_l`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `6c97dddb` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 05:13 UTC by `cascade.sh gdo_l`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

@@ -64,8 +64,9 @@ class TabPlace extends InheritedWidget {
 ValueKey<String> listTabKey(String predicate) =>
     ValueKey('tab:list:$predicate');
 
-/// The name of the declared widget of [c], where it has one.
-String? _declared(OpenConstruct c) => namedWidget(c.widget)?.$1;
+/// The key of the declared widget of [c], its term's functor and arity,
+/// where it has one ([namedKey]).
+String? _declared(OpenConstruct c) => namedKey(c.widget);
 
 /// Whether [c] is an approval question, `approval(Attempt, YesNo?)`, or, on a platform compiled from a contract with pragmas, `approval(Attempt, Ws, YesNo?)`.
 bool _isApproval(OpenConstruct c) {
@@ -83,7 +84,7 @@ Widget? tabbedScreen(
     void Function(int id, GTerm path, GTerm raw) grant) {
   final tabbed = constructs.any((c) {
     final n = _declared(c);
-    return n == lastStateName || n == socialMenuName;
+    return n == lastStateKey || n == socialMenuKey;
   });
   if (!tabbed) return null;
   return TabScreen(constructs: constructs, family: family, grant: grant);
@@ -133,7 +134,7 @@ class _TabScreenState extends State<TabScreen> {
     for (final c in cs) {
       if (c.id == 0) {
         c0 = c;
-      } else if (request == null && _declared(c) == socialMenuName) {
+      } else if (request == null && _declared(c) == socialMenuKey) {
         request = c;
       } else if (_isApproval(c)) {
         approvals.add(c);
@@ -163,7 +164,7 @@ class _TabScreenState extends State<TabScreen> {
         if (request != null)
           _view(request, output, card: false)
         else if (c0 != null)
-          _view(c0, output, card: _declared(c0) != lastStateName),
+          _view(c0, output, card: _declared(c0) != lastStateKey),
       ],
     );
   }
@@ -187,7 +188,7 @@ class _TabScreenState extends State<TabScreen> {
       List<OpenConstruct> others,
       GTerm? output) {
     final first = lists.first.predicate;
-    final byState = c0 != null && _declared(c0) == lastStateName;
+    final byState = c0 != null && _declared(c0) == lastStateKey;
     Widget view(OpenConstruct c, {bool card = true}) =>
         _view(c, output, card: card);
     Widget tab(String pred) => TabPlace(

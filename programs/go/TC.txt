@@ -2,10 +2,10 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.2 and cites a clause as TC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCorp, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-10, written by GO #3 Cowork.
+% Last changed: 2026-11-10, by GO #4 Cowork.
 % Schemas: TC.glp beside this file.
 TC: Trading Company
-TC instantiates the bylaws of GCorp and restricts it.
+TC instantiates GCorp and restricts it.
 A trading company is a corporation with three roles, buyer, keeper and seller; its officers jointly appoint and remove officers.  A good is a thing Orga buys and sells; Orga holds a good from its receipt by a keeper until its release.
 Alice, Bob, Carol, Dave and Eve are persons, Orga a trading company.
 1. ■ Founding.  Alice may found Orga and become its first buyer, keeper and seller.
@@ -17,31 +17,62 @@ Alice, Bob, Carol, Dave and Eve are persons, Orga a trading company.
 Pragmas
 Look: 📦, money
 Organisations: the organisations Alice participates in, and her roles in each.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Otto: Bob asks to participate.
-  Bob [Leave]
-  Otto [Expel]
-Officers: Otto [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Otto [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Otto [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
 Goods: the goods Orga bought, holds and sold.
-Purchase: Alice [Buy] <supplier> <amount> <good>
-  Dave: Alice offers to buy a good from you.
-Receipt: Bob [Record receipt]
-Sale: Carol [Sell] <buyer> <amount>
-  Eve: Carol offers you a good.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move expel] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob> <motion>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Participation: Bob [Join] <person Otto> <motion>
+  Otto: Bob asks you to approve this: join.
+  Bob [Leave]
+  Otto [Expel] <person Bob> <motion>
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion>
+  Bob [Resign role]
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Purchase: Alice [Tc purchase] <person Dave> <denomination> <issuer> <amount> <good>
+  Dave: Alice asks you to approve this: tc purchase.
+Receipt: Bob [Tc receive] <good> <amount>
+Sale: Carol [Tc sale] <person Eve> <denomination> <issuer> <amount> <k0> <good>
+  Eve: Carol asks you to approve this: tc sale.

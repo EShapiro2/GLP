@@ -1,9 +1,19 @@
 %% not compiled(gsnp)
-%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
-%% the schema and the places its fields leave unnamed(make_guardian, 2)
-%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
-%% the schema and the places its fields leave unnamed(agent_acquaint, 2)
-%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
-%% the schema and the places its fields leave unnamed(agents_acquaint, 3)
-%% a pragma's fields leave unnamed places of the act that one entry does not fill (vGLP, Section 5.4, "The contract's words"):
-%% the schema and the places its fields leave unnamed(post_forward, 2)
+%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
+%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
+%% the schema(make_guardian)
+%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
+%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
+%% the schema(end_guardian)
+%% it is not effective (vGLP, Section 5.4, the paragraph on act schemas): a schema with a
+%% listed role whose base is neither a guarding role nor, the schema having one guarding role or none, its first role:
+%% the schema(retire)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema
+%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:
+%% the schema(make_guardian)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema
+%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:
+%% the schema(end_guardian)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a schema
+%% with a listed role whose base is not a guarding role has more than one guarding role, and it has one:
+%% the schema(retire)

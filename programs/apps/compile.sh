@@ -66,9 +66,9 @@ OK=1
 for app in $APPS; do
     name=$(contract_of "$app")
     src=$(file_of "$app")
-    printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$name" > "$WORK/c.in"
-    repl "$WORK/c.in" "$WORK/c.out"
-    ct=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
+    # The contract's term, contract_named/2's, or an instance's, formed from its base by programs/gsc's instantiate/4 where the file prints instance_named/4 (GSC, Definition Parametric contract), by programs/vglp/cva/compiler/term.sh, as cascade.sh's read_contract forms it.
+    ct=$(bash "$GLP_DIR/programs/vglp/cva/compiler/term.sh" "$src" "$name" 2> "$WORK/t.err")
+    [ -n "$ct" ] || echo "$app: $(head -1 "$WORK/t.err")"
     # The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
     rd=""
     if [ -n "$ct" ]; then

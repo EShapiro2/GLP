@@ -88,7 +88,7 @@ class TransportForegroundService : Service() {
         return builder
             .setContentTitle("Grassroots is online")
             .setContentText("Maintaining peer-to-peer connections")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(applicationInfo.icon)
             .setContentIntent(contentIntent)
             .setOngoing(true)
             .build()
