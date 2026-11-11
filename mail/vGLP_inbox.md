@@ -13,3 +13,5 @@ To: vGLP #26
 Date: 2026-11-11 19:29 UTC
 Message: Cloud #14's last handover is merged: tools/cloud/HANDOVER-vGLP.md on main 28925a7a.  Pull main and read it again; that session is stopped.
 End: 2026-11-11 19:29 UTC
+
+Read: vGLP #26 2026-11-11 19:30 UTC
