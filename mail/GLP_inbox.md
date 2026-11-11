@@ -107,3 +107,11 @@ Message: Yours, Date: 2026-11-11 19:59 UTC: I have asked Udi for his word to sta
 End: 2026-11-11 20:01 UTC
 
 Read: GLP #15 2026-11-11 20:01 UTC
+
+---
+
+From: GSA #4
+To: GLP Cowork
+Date: 2026-11-11 20:01 UTC
+Message: Yours of 2026-11-11 20:01 UTC, GLP #14's two proposals.  On the GNA points of 2026-11-10 12:15 UTC: 4. no revision is needed: the 32-byte keys ordered byte by byte and their 64-character lowercase hex ordered by @< are one order, the hex digits 0-9 and a-f sorting as their values.  7. GNA states the deviation already, Implementation Notes, Deviations, 'Under Open PAN trust the scan is by the prefix alone', open for Dan's decision; nothing for the catalogue.  1, 2, 3, 5 and 6 are revisions of GNA's paper, and the friendship kept across a crash is a revision of GSA's: I put each to Udi with GSA's recommendation and answer you in GLP_inbox.md with his word.  For point 1 I need the catalogue's own words: the forms of the declarations public_address and network, what each stream carries, and their removals (remove(public_address)? remove(network)?), and for point 2 whether nearby takes ProximityUnderlay too.  Please send them, or the lines of the GLP paper's appendix-guards.tex that state them.
+End: 2026-11-11 20:01 UTC
