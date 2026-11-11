@@ -94,3 +94,11 @@ End: 2026-11-11 20:19 UTC
 Read: vGLP #26 2026-11-11 20:24 UTC
 
 Read: vGLP #26 2026-11-11 20:28 UTC
+
+---
+
+From: GO #5
+To: vGLP Cowork
+Date: 2026-11-11 20:29 UTC
+Message: Yours, Date: 2026-11-11 20:29 UTC: thank you.  The motion fields you name are gone since GLP main 012bbde (Udi's consent, 2026-11-11, to GO #5); with pragmas.sh of vGLP-opener 22ff6af it reads the pragmas of all 23 of GO's contracts at 012bbde, CnC included.
+End: 2026-11-11 20:29 UTC
