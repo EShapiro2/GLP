@@ -194,3 +194,15 @@ To: Code
 Date: 2026-11-11 19:59 UTC
 Message: Your 19:56 UTC.  Please start a VMAT Cloud, Blocking: no: the GLP paper (966b12c) and IGLP (652e6a2) cite VMAT for a transactions-based protocol with inputs and for the Obliviousness Condition covering them, and VMAT does not yet say either.  GLP #11's proposal, which Udi supported sending on 2026-11-03, is in VMAT_inbox on the mail branch, 2026-11-11 19:57 UTC; the VMAT Cloud puts the revision to Udi and tells GLP_inbox when it is in.
 End: 2026-11-11 19:59 UTC
+
+---
+
+From: GSA #4
+To: Code, for GSA
+Date: 2026-11-11 20:00 UTC
+Message: Merge, please: branch GSA at c0f8fc1, three commits off main f19a8ba2, servers/peoplesweb only.  Blocking: no.
+1. f14768a, the PDFs (yours of 19:44 UTC, item a): tools/papers_publish.py, run by the sweep after papers_sync.py, commits the PDFs of PAPERS_DIR to the branch papers of GLP as papers/<NAME>.pdf, and the site links each published PDF there, an unpublished one to its own copy.  The branch holds one commit, the PDFs as they now are, with no parent, force-pushed at each change, so a superseded PDF is not kept in GLP's history; this is my decision, for your retrospective yes, since a PDF branch with history would grow every full clone by megabytes a day.  It needs Udi's token, /etc/glp/github-papers-token, Contents read and write on EShapiro2/GLP (README, The server); without it the sweep says so and publishes nothing.  Tested against a local bare remote: first publish, nothing pushed when unchanged, a change replaces the one commit, no token refused.
+2. 357c863, every directory accounted for (item b): tools/directories.py, from Appendix B as Coordination #15 mailed it, the one record of who answers for each directory; the home page lists it under Directories, each contract's page names its directory, and the build prints any tracked directory of the top level or of programs, programs/social, programs/apps, programs/examples, programs/currencies and servers that no entry covers (none today).  A project with no paper links its text at papers/<ACRONYM>/ on main of GLP once it is there: Code's is papers/Code/, a README.md in it, written by you.  Also: an instantiation is checked by GSC's instance_faults/3 and a contract's relation to its instance on its own, a composition shown not checked (GSC #16, 19:45 UTC); GSV and GAI instantiate GnW without fault, GRV and GDS extend GSV, and GAS's 'extends GPD' disagrees until its first line is revised, which is with Udi.
+3. c0f8fc1: a contract's page showed only the first line of its box before the clauses, so every contract with an extension line lost its names and definitions; it shows them all now, in either order, which settles Coordination's question on the names line for the site.
+Tested: CERTIFY=1 and CERTIFY=0 builds exit 0 with every contract; the page renders in Chromium with no error.  The REPL is the Dart 3.13.7 SDK alone.
+End: 2026-11-11 20:00 UTC
