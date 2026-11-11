@@ -148,11 +148,18 @@ def contract_text(path):
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
-    clauses = []
-    for l in body[2:end]:
+    clauses, preamble = [], []
+    for l in body[1:end]:
         m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
-        if m: clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
-    return {'id': name, 'title': title, 'preamble': body[1], 'clauses': clauses,
+        if m:
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+        elif not clauses:
+            # Every line of the box before its clauses, in its order: the
+            # extension line, the definitions that are part of the contract
+            # and the declaration of its names, whichever comes first (style
+            # guide, 23 and 36; Udi, 2026-11-09, to GO #2).
+            preamble.append(l.strip())
+    return {'id': name, 'title': title, 'preamble': '\n'.join(preamble), 'clauses': clauses,
             'pragmas': [l for l in body[end:] if l.strip() != 'Pragmas'], 'meta': meta}
 
 

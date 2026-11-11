@@ -1,4 +1,4 @@
-"""Who answers for each directory of GLP, as the site states it: the one record of it (Udi, 2026-11-11, to Coordination #14, reported by Coordination #15 to GSA, 2026-11-11 19:49 UTC: "each contract points to its directory, each foundational paper points to the directory(ies) it is responsible for, and paperless directories do the same, as discussed above, and also show on the website as such.  so all directories in /GLP are accounted for"; and "in general the website should reflect all aspects of project organisation, not other place").  Written from Coordination's Appendix B at Coordination 8da61a4, which Coordination deletes once the site states this.
+"""Who answers for each directory of GLP, as the site states it: the one record of it (Udi, 2026-11-11, to Coordination #14, reported by Coordination #15 to GSA, 2026-11-11 19:49 UTC: "each contract points to its directory, each foundational paper points to the directory(ies) it is responsible for, and paperless directories do the same, as discussed above, and also show on the website as such.  so all directories in /GLP are accounted for"; and "in general the website should reflect all aspects of project organisation, not other place").  Written from Coordination's Appendix B at Coordination 8da61a4 and 33c38d5, which Coordination deletes once the site states this.
 
 Each entry is a path of GLP, the project that answers for it, the papers of that project, by their directory keys in tools/papers.py, and a note.  The most specific path that covers a file or a directory is the one that answers for it.  A project with no paper has a subdirectory of papers/ in GLP, named by its acronym, with a text that says what it is and does (Udi, 2026-11-11, to Coordination #14: "fine, so let's organise it as such"), which the project writes and the site links.
 """
@@ -42,7 +42,14 @@ DIRECTORIES = [
     ('programs/p99', 'P99', [], ''),
     ('phones', 'Phones', [], 'phone testing; GSA its specification, Code its code'),
     ('organisation', 'Coordination', [], "the organisation's rules: claude.md, the style guide and claudese.md"),
-    ('programs/apps', 'Code', [], "the apps' directories, until Code says whose each is (Coordination #15, 2026-11-11)"),
+    ('programs/apps', 'Code', [], "the apps' boot files and compile.sh"),
+    ('programs/apps/gkk', 'GSC', ['GSC'], "GKK's app"),
+    ('programs/apps/gsg', 'GSC', ['GSC'], "GSG's app"),
+    ('programs/apps/gsn', 'GSC', ['GSC'], "GSN's app"),
+    ('programs/apps/gai', 'GAI', ['GAI'], "GAI's app"),
+    ('programs/apps/gsnp', 'GAI', ['GAI'], "GSNP's app"),
+    ('programs/apps/gb', 'Currencies', ['GB'], "GB's app"),
+    ('programs/apps/gc', 'Currencies', ['GC'], "GC's app"),
     ('programs/apps/look.json', 'GSA', ['GSA'], "the families' names and colours"),
     ('cascade', 'Code', [], 'the recorded runs of the cascade'),
     ('cascade.sh', 'Code', [], 'the cascade'),
