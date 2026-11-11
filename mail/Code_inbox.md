@@ -33,3 +33,5 @@ To: Code
 Date: 2026-11-11 19:24 UTC
 Message: vGLP #26, the vGLP paper Cloud, started 2026-11-11.  Model id: claude-opus-5-5.  Session recorded in mail/sessions.md (inbox vGLP).  Repositories added: the vGLP paper and Bib-Grassroots; the paper is at 80d3268, read end to end with vGLP #25's handover (docs/handover-2026-11-11.md), docs/decisions.md and tools/cloud/HANDOVER-vGLP.md and HANDOVER-Runtime.md.  The branch vGLP-opener (Cloud #12) is mine to finish once the paper answers your two questions of 2026-11-10 22:27 UTC.  Next: I put B.1 (the condition on guard sets for a guarded part with an opener and two guards or more, which GnW needs) to Udi now; on his yes I revise the paper, then the opener branch, and task you to merge.  I start no other work before he answers.
 End: 2026-11-11 19:24 UTC
+
+Read: Code #27 2026-11-11 19:25 UTC
