@@ -85,12 +85,21 @@ def arxiv_of(d):
     return next((f.get('arxiv') for f in FOUNDATIONAL if f.get('dir') == d), None)
 
 
-def updated(v, name, served_pdfs, st):
+# Where a published PDF is: the branch papers of GLP, to which tools/papers_publish.py commits each PDF the sweep builds (Udi, 2026-11-11, to Code #27).
+ON_BRANCH = 'https://github.com/EShapiro2/GLP/blob/papers/papers/{}.pdf'
+
+
+def pdf_link(name, published=()):
+    """The link to the PDF of that name: on the branch papers of GLP where it is published there, else as the site serves it."""
+    return ON_BRANCH.format(name) if name in published else f'papers/{name}.pdf'
+
+
+def updated(v, name, served_pdfs, st, published=()):
     """Add to the citation v of a paper on arXiv the link to its PDF as
     Updated, with the date of its source's last change, where the PDF is
     served and the source has changed since the latest arXiv version."""
     if name in served_pdfs and st.get('ahead'):
-        v['updated'] = f'papers/{name}.pdf'
+        v['updated'] = pdf_link(name, published)
         v['updated_on'] = st.get('changed', '')[:10]
 
 
@@ -105,23 +114,43 @@ def load_state(papers_dir):
         return {}
 
 
-def paper_of(owner_line, served_pdfs=(), state=None):
+def load_published(papers_dir):
+    """The names of the PDFs tools/papers_publish.py has committed to the branch papers of GLP."""
+    try:
+        with open(os.path.join(papers_dir, 'published.json')) as f:
+            return set(json.load(f).get('pdfs', {}))
+    except (OSError, ValueError, AttributeError):
+        return set()
+
+
+def paper_of(owner_line, served_pdfs=(), state=None, published=()):
     """The citation of the paper the % Owner line names: title, authors, and an arXiv identifier, or a served PDF (papers/<X>.pdf, where built) with its state; a contract with no paper says so."""
     m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
     if not m or m.group(1) not in BY_DIR:
         return {'title': '', 'authors': '', 'state': 'no paper' if re.search(r'No paper', owner_line or '') else 'in preparation'}
-    d = m.group(1)
+    return cite_of(m.group(1), served_pdfs, state, published)
+
+
+def cite_of(d, served_pdfs=(), state=None, published=()):
+    """The citation of the paper in directory d, a contract's paper or a foundational one, or None."""
+    if d not in BY_DIR:
+        f = next((f for f in FOUNDATIONAL if f.get('dir') == d), None)
+        if f is None:
+            return None
+        v = {k: x for k, x in f.items() if k != 'dir'}
+        updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}), published)
+        return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
     name = v.pop('pdf', None)
     served = name is not None and name in served_pdfs
     if 'arxiv' in v:
         # Updated: the source has changed since the latest arXiv version.
-        updated(v, name, served_pdfs, st)
+        updated(v, name, served_pdfs, st, published)
     elif name is not None:
         v.setdefault('state', 'in preparation')
         if served:
-            v['pdf'] = f'papers/{name}.pdf'
+            v['pdf'] = pdf_link(name, published)
             if st.get('changed'):
                 v['pdf_on'] = st['changed'][:10]
     return v
@@ -166,13 +195,13 @@ FOUNDATIONAL = [
 ]
 
 
-def foundational(served_pdfs=(), state=None):
+def foundational(served_pdfs=(), state=None, published=()):
     """The foundational papers' citations, each with the link to its PDF as
     Updated where its source is ahead of arXiv, as a contract's paper has it."""
     out = []
     for f in FOUNDATIONAL:
         v = {k: x for k, x in f.items() if k != 'dir'}
         if 'dir' in f:
-            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}), published)
         out.append(v)
     return out

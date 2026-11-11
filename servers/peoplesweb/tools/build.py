@@ -31,7 +31,8 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import foundational, load_state, paper_of  # noqa: E402
+from papers import cite_of, foundational, load_published, load_state, paper_of  # noqa: E402
+import directories  # noqa: E402
 import certify  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
@@ -147,11 +148,18 @@ def contract_text(path):
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
-    clauses = []
-    for l in body[2:end]:
+    clauses, preamble = [], []
+    for l in body[1:end]:
         m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
-        if m: clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
-    return {'id': name, 'title': title, 'preamble': body[1], 'clauses': clauses,
+        if m:
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+        elif not clauses:
+            # Every line of the box before its clauses, in its order: the
+            # extension line, the definitions that are part of the contract
+            # and the declaration of its names, whichever comes first (style
+            # guide, 23 and 36; Udi, 2026-11-09, to GO #2).
+            preamble.append(l.strip())
+    return {'id': name, 'title': title, 'preamble': '\n'.join(preamble), 'clauses': clauses,
             'pragmas': [l for l in body[end:] if l.strip() != 'Pragmas'], 'meta': meta}
 
 
@@ -185,14 +193,27 @@ def extends_of(c, lines):
         if m:
             # Each contract named takes the relation written before it: 'GAI
             # extends GnW and amends GFP' is two relations, one to each.
+            # After 'instantiates X', a relation that names no contract is the
+            # contract's relation to its instance of X ('CSSN instantiates GSNW
+            # ... and restricts and extends it'), or, after 'composes it with
+            # Y', to that composition ('GAI instantiates GnW, composes it with
+            # GFP and restricts the composition'), each checked on its own
+            # (GSC #16, 2026-11-11 19:45 UTC, from GSC's Section 9).
             c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
-            for part in re.split(r'\b(' + '|'.join(RELATIONS) + r')\b', m.group(2)):
-                if part in RELATIONS:
+            c['rels_of'], inst = [], None
+            for part in re.split(r'\b(' + '|'.join(RELATIONS + ('composes',)) + r')\b', m.group(2)):
+                if part in RELATIONS + ('composes',):
                     cur = part
                     continue
-                for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part):
-                    if t in texts and t != c['id']:
-                        c['rels'].setdefault(t, cur)
+                named = [t for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part) if t in texts and t != c['id']]
+                for t in named:
+                    c['rels'].setdefault(t, cur)
+                    if cur == 'instantiates':
+                        inst = inst or t
+                if not named and inst and cur not in ('instantiates', 'composes'):
+                    of = 'composition' if any(r == 'composes' for r in c['rels'].values()) else 'instance'
+                    if not any(x['rel'] == cur for x in c['rels_of']):
+                        c['rels_of'].append({'rel': cur, 'of': of, 'base': inst})
             return list(c['rels'])
     line = next((l for l in c['meta'] if l.startswith('% Extends:') or l.startswith('% Restricts:')), '% Extends:')
     c['relation'] = 'restricts' if line.startswith('% Restricts:') else 'extends'
@@ -258,6 +279,8 @@ for d in (hand, synced):
                 pdfs[f] = os.path.join(d, f)
 served = {f[:-4] for f in pdfs}
 paper_state = load_state(synced) if synced else {}
+# The PDFs committed to the branch papers of GLP (tools/papers_publish.py), each linked there.
+published = load_published(synced) if synced else set()
 byid = dict(cat)
 
 
@@ -307,7 +330,8 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
     c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
-    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
+    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state, published)
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -340,7 +364,7 @@ for c in contracts:
 # through the REPL and cached (tools/certify.py); CERTIFY=0 skips both, for a
 # quick build of the pages alone.
 if os.environ.get('CERTIFY', '1') != '0':
-    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {})} for c in contracts])
+    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {}), 'rels_of': c.get('rels_of', [])} for c in contracts])
     arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
 else:
     checks, arts = {}, {}
@@ -359,6 +383,15 @@ if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
+# Who answers for each directory of GLP (tools/directories.py), each with the
+# citations of its project's papers; and what no entry covers, which the
+# build prints and the page shows, so that every directory is accounted for.
+dirs = directories.table(GLP)
+for e in dirs:
+    e['cites'] = [x for x in (cite_of(k, served, paper_state, published) for k in e.pop('papers')) if x]
+lost = directories.unaccounted(GLP)
+if lost:
+    print('directories: no entry answers for ' + ', '.join(lost))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state)}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state, published), 'directories': dirs, 'unaccounted': lost}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
