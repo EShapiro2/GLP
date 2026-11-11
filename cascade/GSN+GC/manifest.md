@@ -1,10 +1,10 @@
 # A run of the cascade on GSN+GC
 
-- Contract: the composition of GSN GC (`gsn_gc` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, "The contract's words"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `1d6347bd`:
+- Contract: the composition of GSN GC (`gsn_gc` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, "The contract's words"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `65b7bb3c`:
   - `GSN`: `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`; the paper `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `5a045279`.
   - `GC`: `programs/currencies/coins/GC.txt` and `programs/currencies/coins/GC.glp`; the paper `git@github.com:EShapiro2/GC-Grassroots-Currencies.git` at `cdc2f241`.
-- The tools: this repository at `1d6347bd` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-11 21:42 UTC by `cascade.sh gsn gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `65b7bb3c` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-11 23:46 UTC by `cascade.sh gsn gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
