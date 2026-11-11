@@ -59,7 +59,7 @@ imported procedure population#cva_check(Integer?, Stream(Key)?, Constant).
 imported procedure(X) population#cva_agents(Integer?, Stream(Key)?, MutualRef?,
                                             MutualRef?, Stream(Key),
                                             Stream(Seat(X))).
-imported procedure population#cva_draw(Integer?, Stream(Key)?, Stream(_)).
+imported procedure population#cva_draw(Integer?, Stream(Key)?, Stream(population#Drawn)).
 
 %% run(Ks?, C?, U?, Seed?): the run of the run declaration's persons until C
 %% Us from Seed, Ks the keys of run n agents, or empty where it names a census.
@@ -112,8 +112,8 @@ agents([], [], []).
 
 %% draw(Ks?, Seed?, D): D the list of agent(A, P), each agent's stochastic
 %% person P, A of 1..N in order, the persons' order, drawn from its seed as
-%% cva_agents/6 draws it, without the run.
-exported procedure draw(Stream(Key)?, Integer?, Stream(_)).
+%% cva_agents/6 draws it, without the run, of population.glp's type Drawn.
+exported procedure draw(Stream(Key)?, Integer?, Stream(population#Drawn)).
 draw(Ks, Seed, D?) :- ground(Ks?), integer(Seed?) |
     split_random_seed(Seed?, _, Base),
     population # cva_draw(Base?, Ks?, D).

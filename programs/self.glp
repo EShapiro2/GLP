@@ -349,7 +349,14 @@ SDeclared  ::= SContract ; reflexive(Preds, SContract)
 % instance adds or replaces, a schema named as one of the base's replacing it.
 SParam    ::= Constant ; val(Constant).
 SParams   ::= [] ; [SParam | SParams].
-SBinding  ::= (Constant = Constant).
+% A binding extended(P, Q, Types) writes for the predicate parameter P, not
+% a mark, the predicate Q with further value arguments, Types the types of the
+% added arguments in order, as extended(guardian_of, officer_of, [num]) (GSC
+% 220151a, Definition Parametric contract: "or, for a predicate that is not
+% a mark, of the same kinds with further value arguments"; GSC #16, 2026-11-11).
+VType     ::= num ; real.
+VTypes    ::= [] ; [VType | VTypes].
+SBinding  ::= (Constant = Constant) ; extended(Constant, Constant, VTypes).
 SBindings ::= [] ; [SBinding | SBindings].
 
 % =============================================================================

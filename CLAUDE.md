@@ -16,7 +16,7 @@ Code, at session start:
 
 A subagent, at the start of its task: the same 1 to 4 with the owning project's `CLAUDE.md` at 2, then the sections of the owning paper its task names.  🔴 Every brief Code writes names §18, and every GLP procedure a subagent writes or a tool of its task prints has a declaration with no `_` or `_?`; section TY of the suite fails otherwise.  It reads no inbox and leaves no receipt, having none.
 
-On demand, named by the task: `docs/DISCIPLINE.md` (development discipline), `docs/typed-glp-manual.md` (typed GLP), `docs/glp-cheat-sheet.md` ("GLP is NOT Prolog"), Coordination Appendix B (ownership), the reference specifications listed at the end.
+On demand, named by the task: `docs/DISCIPLINE.md` (development discipline), `docs/typed-glp-manual.md` (typed GLP), `docs/glp-cheat-sheet.md` ("GLP is NOT Prolog"), `servers/peoplesweb/tools/directories.py` (who answers for each directory), the reference specifications listed at the end.
 
 ## Cloud
 
@@ -34,7 +34,7 @@ There are two kinds of Cloud, each a Claude Code session in a cloud container wi
 
 ## Ownership
 
-Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-map.tex`, the only copy: one owner per directory under `programs/` and per Dart subsystem, ownership following the layer — GLP-Spec the language, IGLP all Dart, GSG the operating system, an application its own GLP.  Confirm you own a unit before editing it.  A change to code you do not own is a request to Code, in `Code_inbox.md`.  Implementation decisions go in the owning paper's Implementation Notes appendix, not in a separate spec document.
+Who answers for each directory is `servers/peoplesweb/tools/directories.py`, the one record, which peoplesweb.org prints under Directories; the rules of ownership are `organisation/claude.md`, "Sessions", "Ownership follows the layer".  Confirm you own a unit before editing it.  A change to code you do not own is a request to Code, in `Code_inbox.md`.  Implementation decisions go in the owning paper's Implementation Notes appendix, not in a separate spec document.
 
 ## Branches, worktrees and merges
 
@@ -43,7 +43,7 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 - The clone at `/Users/udi/Grassroots/GLP` stays on `main` and is Code's alone.  No subagent edits, commits or runs in it.
 - One worktree per task, made by Code, named after its branch (`GSG-gap`, `GLP-unsglp`) and made off the branch its task names: `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<branch> -b <branch> <base>`.  A subagent works only in the one its brief names: `cd /Users/udi/Grassroots/GLP-worktrees/<branch>`.
 - 🔴 **The subagent reads the owning paper named in its task and codes from it.**  Code does not summarise the paper for it and does not specify: the owner's Cowork wrote the task from the paper, and the paper is the specification.
-- 🔴 **It edits only what its owner owns** (Coordination Appendix B), commits path-limited on the branch --- `git add <files> && git commit -m "<message>" -- <files>` --- and never `git add -A`.  Single-line commit messages.  `git merge main` first, so the branch carries the current gate.
+- 🔴 **It edits only what its owner owns** (`servers/peoplesweb/tools/directories.py`), commits path-limited on the branch --- `git add <files> && git commit -m "<message>" -- <files>` --- and never `git add -A`.  Single-line commit messages.  `git merge main` first, so the branch carries the current gate.
 - 🔴 **It runs the tests its task names, and not the full suite.**  The full suite is run only by Code, on `main`, one run at a time: two suites at once contend on the Dart build lock and neither is a gate.
 - 🔴 **A question or a paper fault ends the subagent.**  It reports and stops; Code posts the question in the owner's inbox and spawns again when the answer is there.  A workaround in code is never the answer to a fault in the paper.
 - When the branch is ready, Code merges it into `main`, runs the full suite there, pushes, and answers the owner in its inbox.  A merge that fails the suite is not pushed.  On a merge conflict, STOP and report.

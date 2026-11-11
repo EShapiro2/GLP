@@ -16,12 +16,12 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
-imported procedure local#faults(Contract?, Preds?, NumInfos?, Strings).
+imported procedure local#faults(Contract?, Preds?, NumInfos?, Ones?, Strings).
 imported procedure local#num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, Integer?, NumInfo).
 imported procedure local#form_cross(Form?, YesNo).
 imported procedure local#tag_form(Form?, Form).
 imported procedure local#form_held(Form?, Locs?, HPats).
-imported procedure local#proposable(Contract?, Preds?, Preds).
+imported procedure local#proposable(Contract?, Preds?, Ones?, Preds).
 imported procedure local#listed_ok(Integer?, Ints?, YesNo).
 
 Found ::= named(String, String) ; unnamed.
@@ -111,6 +111,9 @@ real_det_lines(C, Nt, W, Nm, L?) :- ground(Nt?) |
     dets_real(C?, Nt?, Lx?, Ss),
     real_det_lines1(Ss?, L0),
     head_line(L0?, Nm?, L).
+%% The possibly-one pairs of the contract as read, which the words carry (self.glp, ones_of).
+procedure words_ones(Words?, Ones).
+words_ones(words(_, _, _, D), Os?) :- ones_of(D?, Os).
 procedure words_lx(Words?, Lxs).
 words_lx(words(_, _, Lx, _), Lx?).
 procedure real_det_lines1(Preds?, Lines).
@@ -171,8 +174,9 @@ compile1([L|Ls], _, _, _, _, _, _) :-
     lapp(Ls?, ['%% compile end'], Ls1).
 
 procedure compile2(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
-compile2([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(Nt?) |
-    local # faults(C?, Rf?, Nt?, Fs),
+compile2([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(Nt?), ground(W?) |
+    words_ones(W?, Os),
+    local # faults(C?, Rf?, Nt?, Os?, Fs),
     compile3(Fs?, Nm?, C?, Rf?, E?, Nt?, W?).
 compile2([L|Ls], _, _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
@@ -180,7 +184,8 @@ compile2([L|Ls], _, _, _, _, _, _) :-
 
 procedure compile3(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
 compile3([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(W?) |
-    local # proposable(C?, Rf?, Ps),
+    words_ones(W?, Os),
+    local # proposable(C?, Rf?, Os?, Ps),
     compile3a(Ps?, Nm?, C?, Rf?, E?, Nt?, W?).
 compile3([F|Fs], Nm, _, _, _, _, _) :- ground(Nm?) |
     said('%% not compiled', Nm?, H),

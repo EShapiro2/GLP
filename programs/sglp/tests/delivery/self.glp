@@ -45,7 +45,7 @@ exported procedure delivery_run(Stream(String)).
 delivery_run(Ts?) :- harness # run(Ts).
 
 %% The sGLP source in the term form, chat_sglp.glp, for the transformation
-%% (programs/sglp/transform.glp).
+%% (programs/sglp/transform/transform.glp).
 imported procedure chat_sglp#source(SglpTerms, SglpTerms).
 exported procedure source(SglpTerms, SglpTerms).
 source(V?, S?) :- chat_sglp # source(V, S).

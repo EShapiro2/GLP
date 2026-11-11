@@ -2324,8 +2324,11 @@ class GrassrootsNetwork {
       debugPrint('[lan] could not open a path to $canonical');
       return;
     }
-    // The first contact's ANNOUNCE, before the XX handshake (GNA §2.5).
-    final sent = await _sendClearAnnounce(session, canonical);
+    // The first contact's ANNOUNCE, before the XX handshake (GNA §2.5).  It
+    // is a call, not an answer: an instance under Closed trust ignores it,
+    // and when that instance opens and calls in turn, its ANNOUNCE is still
+    // to be answered.
+    final sent = await _sendClearAnnounce(session, canonical, call: true);
     debugPrint(
       sent
           ? '[lan] ANNOUNCE sent to $canonical; awaiting theirs'
@@ -4170,6 +4173,12 @@ class GrassrootsNetwork {
   void _setupUdpServiceCallbacks() {
     if (_udpService == null) return;
 
+    // The record of a clear ANNOUNCE sent on a UDP connection goes with the
+    // connection: a later contact at the same address is a new connection,
+    // and its ANNOUNCE is answered.
+    _udpService!.onPathClosed =
+        (addressKey) => _clearAnnouncedOn.remove('udp:$addressKey');
+
     // Forward UDP data to the MessageRouter, preserving each connection's
     // arrival order through async processing (spec §Session Establishment).
     _udpService!.onUdpDataReceived = (session, peerId, data) {
@@ -4636,7 +4645,9 @@ class GrassrootsNetwork {
   /// Connections this side sent the clear ANNOUNCE of a first contact on, by
   /// medium and by GATT leg or by the peer's address: an ANNOUNCE is answered
   /// once per connection, so two sides answering each other do not repeat it
-  /// without end.
+  /// without end.  An entry goes with its connection: a GATT leg's when the
+  /// leg disconnects, a UDP path's when no path stands at its address
+  /// ([UdpTransportService.onPathClosed]).
   final Set<String> _clearAnnouncedOn = {};
 
   String? _clearAnnounceKey(PeerTransport transport, String connection) {
@@ -4654,14 +4665,20 @@ class GrassrootsNetwork {
 
   /// Send our ANNOUNCE in clear on [connection], the identity bootstrap of a
   /// first contact under Open trust (GNA §2.5); with [reply], only where this
-  /// side has not sent one on that connection yet.
+  /// side has not sent one on that connection yet.  A LAN cold call ([call])
+  /// is not recorded: the instance called may have ignored it under Closed
+  /// trust, and a recorded call would leave the ANNOUNCE that instance sends
+  /// once it opens unanswered, and its handshake refused for want of ours.
   Future<bool> _sendClearAnnounce(
     PeerTransport transport,
     String connection, {
     bool reply = false,
+    bool call = false,
   }) async {
     final key = _clearAnnounceKey(transport, connection);
-    if (key != null && !_clearAnnouncedOn.add(key) && reply) return false;
+    if (key != null && !call && !_clearAnnouncedOn.add(key) && reply) {
+      return false;
+    }
     final bytes = _announcePacket().serialize();
     final sent = switch (transport) {
       PeerTransport.bleDirect =>

@@ -1,0 +1,29 @@
+% GSNW: Grassroots Social Network with Wards --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: CSSN (Udi, 2026-11-10, to GSC #14, reported by GSC, and to CSSN #14, the name): CSSN is its one user today, and GSC takes it over if a second contract comes to need it.  The paper, /Users/udi/Grassroots/CSSN/main_CSSN.tex, prints it in its box and cites a clause as GSNW:1.
+% Paper: CSSN, Child-Safe Social Networking: From Social Contract to App, in preparation
+% Extends: GSNW amends GSN, Grassroots Social Network, and GnW, Guardians 'n' Wards, both GSC's (programs/gsc), in the terms of GSC's paper, Section Relations among Contracts: it deletes GSN's message, create, join, leave, remove, close, post_own and post and adds its own, person required at each guard; it deletes GnW's unfriend, guardian_unfriend, ward_unfriend, ward_end and retire and adds its own, which also end every membership between the two; and it adds eleven schemas for wards.  Through them it has GSG and GKK, GSC's.  It cites their clauses whole and restates none.
+% Parameters: GnW's, ward, creator, created, guardian_of, guarded_by and retired (GSC's paper, Definition Parametric contract); no app runs GSNW, and CSSN instantiates it.
+% Defines: nothing of its own; ward, guardian and relation are GnW's, and a ward joins and leaves a group by GnW:3 and GnW:4, a relation being a friendship or the membership of a group.
+% Last changed: 2026-11-10, written by CSSN #14 Cowork, the box as Udi approved it (2026-11-10 13:39 UTC, to CSSN #14).
+% Schemas: GSNW.glp beside this file, thirty-seven schemas.
+GSNW: Grassroots Social Network with Wards
+GSNW amends GSN and GnW.
+Alice is a person, Carol a ward.
+1. ■ A ward's messages.  Carol may send a message to a friend, and to a group of which she is a member.
+2. ■ A ward's group.  Carol may create a group, of which she is the leader and first member, and may close it by leaving it, as may Alice, a guardian of Carol.
+Pragmas
+A ward's messages: Carol [Ward message] <text>
+  Carol [Ward post] <text>
+  Carol [Ward post own] <text>
+A ward's group: Carol [Ward create] <name>
+  Carol [Ward close]
+  Alice [Guardian close] <group>
+Ward and person: Bob [Ward join] <person>
+  Carol: Bob asks you to join his group.
+  Alice: Bob asks that your ward Carol join his group.
+  Carol [Ward leave] [Ward remove]
+  Alice [Ward withdraw] <person> <group>
+Ward and ward: Carol [Wards join] <person>
+  Dave: Carol asks you to join her group.
+  Alice: Carol asks that Dave join her group.
+  Bob: Carol asks that your ward Dave join her group.
