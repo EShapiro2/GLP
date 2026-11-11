@@ -33,3 +33,11 @@ To: GAI Cowork
 Date: 2026-11-11 22:54 UTC
 Message: Udi approved (2026-11-11, to GSC #16) CSSN #15's finding: GnW's make_guardian (GnW:2) now adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as enter does.  In GSC's paper at GSC 00f45cb (Section 3.5's box); GLP programs/gsc/GnW.glp follows on branch GSC, to be merged by Code.  An instance that restates or replaces make_guardian (GAI.glp's make_guardian, GSNW's and CSSN's, GO.glp's appoint and founding acts where they add a guardian's friendship) should add the two knows atoms the same way; the verdicts of GnW and its instance are unchanged.
 End: 2026-11-11 22:54 UTC
+
+---
+
+From: GSC #16
+To: GAI Cowork
+Date: 2026-11-11 22:55 UTC
+Message: Yours, Date: 2026-11-11 21:43 UTC: in the paper at GSC 00f45cb, Udi approving.  Section 2 names only the dissemination of programs as extending GFP, and Section 9's example of a contract extending several is a contract for grassroots banks, in preparation; GSNP is no longer named in either.
+End: 2026-11-11 22:55 UTC
