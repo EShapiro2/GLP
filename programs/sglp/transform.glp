@@ -2575,7 +2575,8 @@ person_key([_|Ts], Md, KT?) :- otherwise | person_key(Ts?, Md?, KT).
 %% person, drawn from its seed with the declaration's thresholds and its
 %% person process's seed split from the seed the profiles leave (Section 3,
 %% Definition "Simulation Program"; Appendix B, "Seeds"); and cva_draw(B, Ks,
-%% D), the population's draw, each agent's stochastic person, agent(A, P).  The
+%% D), the population's draw, each agent's stochastic person, agent(A, P), of
+%% the type Drawn, which the harness names population#Drawn.  The
 %% persons and their type, the source's, stay in the population, the harness,
 %% written once for every source, naming the keys and the seats only.
 procedure fixed_entries(_?, _?, _?, _?, Terms?, _?, Terms?, Terms).
@@ -2601,10 +2602,11 @@ fixed_entries(N, C, U, Seed, Ts, KT, Tl, ['', '%% The run\'s entries of one arit
     clause(stochastic_agent(var('A'), var('B'), var('H'), var('Mon'), var('Log'), var('Asks'), var('O')), [ground(var('H?'))],
            [SG1?, split_random_seed(var('S?'), var('Seed'), var('_')),
             start_screen(var('A?'), var('O?'), var('Mon?'), var('Log?'), var('Scr')),
-            person(var('A?'), var('P?'), var('H?'), var('Mon?'), var('Scr?'), var('Seed?'), var('Log?'), var('Asks?'))], L8?, L7),
-    decl('exported procedure ', cva_draw, [dual('Integer'), dual('Stream'('Key')), 'Stream'('_')],
+            person(var('A?'), var('P?'), var('H?'), var('Mon?'), var('Scr?'), var('Seed?'), var('Log?'), var('Asks?'))],
+           ['', '%% An agent of the population\'s draw: its number and its stochastic person (Appendix B, "Seeds").', 'Drawn ::= agent(Integer, Profiles).'|L8?], L7),
+    decl('exported procedure ', cva_draw, [dual('Integer'), dual('Stream'('Key')), 'Stream'('Drawn')],
          ['cva_draw(B, Ks, D?) :- persons(B?, Ks?, _, Ps, B1), drawn(1, Ps?, B1?, D).',
-          'procedure drawn(Integer?, List(Person)?, Integer?, Stream(_)).',
+          'procedure drawn(Integer?, List(Person)?, Integer?, Stream(Drawn)).',
           'drawn(_, [], _, []).'|L9?], L8),
     clause(drawn(var('A'), [var('H') | var('Hs')], var('B'), [agent(var('A?'), var('P?')) | var('D?')]),
            [integer(var('A?')), integer(var('B?')), ground(var('H?'))],

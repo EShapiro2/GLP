@@ -201,7 +201,6 @@ programs/sglp/sglp.glp	open-type	SglpTerms
 programs/sglp/tests/panel/population.glp	open-decl	answer_1/9
 programs/sglp/tests/panel/population.glp	open-decl	present_1/11
 programs/sglp/tests/panel/population.glp	open-decl	present_2/11
-programs/sglp/tests/route/population.glp	open-decl	cva_draw/3
 programs/sglp/tests/steps/population.glp	open-decl	answer_2/9
 programs/sglp/tests/steps/population.glp	open-decl	present_1/11
 programs/sglp/tests/steps/population.glp	open-decl	present_2/11
