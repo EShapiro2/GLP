@@ -2565,9 +2565,24 @@ vote_no(I, At, Id, D, app(S, K, L, R), [to(P?, vote(At?, no(D?)))], Ns?, app(S?,
     attempt_id(At?, P),
     attempt_class(At?, C),
     guards_part(C?, Id?, Gd),
-    guard_ends(Gd?, I?, Id?, [voted(At?, no)|R?], R2, En),
+    attempt_names(At?, Nm),
+    vote_ends(Gd?, Nm?, I?, Id?, [voted(At?, no)|R?], R2, En),
     attempt_class(At?, C2),
     ended_notice(En?, C2?, Id?, D?, Ns).
+%% vote_ends(Guard?, Names?, I?, Id?, R?, R1, En): where the agent is a guard of the part, every approval of the class I pending at it ended, but a request it made to another agent, rho(N), that the attempt does not name (vGLP ec00127, before Definition "Proposing": "if y = no and p is a guard of [t]_j, ends every approval of [t] pending at p, a standing one excepted, as everywhere below, and here also a request to another agent that alpha does not name"; vGLP #25, Code_inbox.md, 2026-11-10 22:08 UTC, item 4).
+procedure vote_ends(YesNo?, Names?, Info?, Peer?, Recs?, Recs, YesNo).
+vote_ends(no, _, _, _, R, R?, no).
+vote_ends(yes, Nm, I, Id, R, R1?, En?) :- ground(R?) |
+    pending_approvals(R?, I?, Id?, R?, Es0),
+    vote_kept(Es0?, Nm?, Es),
+    end_all(Es?, R?, R1, En).
+procedure vote_kept(Recs?, Names?, Recs).
+vote_kept([], _, []).
+vote_kept([ended(rho(N), K)|Es], Nm, Es1?) :- ground(N?), integer(K?), ground(Nm?) |
+    same(Nm?, request(rho(N?), K?), S),
+    vote_kept(Es?, Nm?, Es0),
+    keep_rec(S?, ended(rho(N?), K?), Es0?, Es1).
+vote_kept([E|Es], Nm, [E?|Es1?]) :- otherwise | vote_kept(Es?, Nm?, Es1).
 %% guard_ends(Guard?, I?, Id?, R?, R1, En): where the agent is a guard of the part, every approval of the class I pending at it ended.
 procedure guard_ends(YesNo?, Info?, Peer?, Recs?, Recs, YesNo).
 guard_ends(no, _, _, R, R?, no).
@@ -2619,8 +2634,30 @@ start_app3(mine(_, _), En, I, At, Id, Ap, Ss?, noapproval, Ns?, Ap1?) :-
 start_app3(notmine, _, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(I?), ground(At?), ground(Ap?) |
     asked_by(At?, Id?, Ak),
     app_recs(Ap?, R),
-    approval_of(I?, Id?, R?, Apv),
+    attempt_names(At?, Nm),
+    named_approval(Nm?, I?, Id?, R?, Apv),
     start_asked(Ak?, Apv?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
+%% The approval by which an asked guard votes yes without asking its person (vGLP ec00127, Definition "Starting and Wounding", Start: "where p is asked by alpha and no approval of [t] is pending at p, or, where alpha names a request, none that is an answer yes of p to an attempt naming that request, p records asked(alpha)"; vGLP #25, Code_inbox.md, 2026-11-10 22:08 UTC, item 3): where the attempt names none, an approval of its class pending at the agent; where it names a request, an answer yes of the agent to an attempt naming that request, pending, the agent's own requests not counting.
+procedure named_approval(Names?, Info?, Peer?, Recs?, YesNo).
+named_approval(none, I, Id, R, B?) :- approval_of(I?, Id?, R?, B).
+named_approval(request(Rr, K), _, _, R, B?) :- ground(R?) | answer_naming(R?, Rr?, K?, R?, B).
+procedure answer_naming(Recs?, Rho?, Integer?, Recs?, YesNo).
+answer_naming([], _, _, _, no).
+answer_naming([answered(A, yes)|Rs], Rr, K, R, B?) :- ground(A?), ground(Rr?), integer(K?), ground(R?) |
+    named_open(A?, Rr?, K?, R?, B1),
+    answer_naming1(B1?, Rs?, Rr?, K?, R?, B).
+answer_naming([_|Rs], Rr, K, R, B?) :- otherwise | answer_naming(Rs?, Rr?, K?, R?, B).
+procedure answer_naming1(YesNo?, Recs?, Rho?, Integer?, Recs?, YesNo).
+answer_naming1(yes, _, _, _, _, yes).
+answer_naming1(no, Rs, Rr, K, R, B?) :- answer_naming(Rs?, Rr?, K?, R?, B).
+%% Whether the attempt A names the request (Rr, K) and the answer yes to it has not ended, ended(A) not recorded.
+procedure named_open(Attempt?, Rho?, Integer?, Recs?, YesNo).
+named_open(A, Rr, K, R, B?) :- ground(A?), ground(R?) |
+    attempt_names(A?, Na),
+    same(Na?, request(Rr?, K?), S),
+    mem(ended(A?), R?, Done),
+    neg(Done?, Open),
+    and(S?, Open?, B).
 procedure start_named(YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
 start_named(no, _, At, Id, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], []), Ap?, Ss, Ns, Ap1).
@@ -3277,7 +3314,11 @@ outcome_held(abort(_, _), _, _, Hd, Hd?).
 outcome_held(yield, _, _, Hd, Hd?).
 %% The approvals an abort ends at a participant: the request the attempt names, where the agent made it; and, where it names none, every approval of the class pending at the agent, where it is a guard of the part that voted yes on the attempt, or answered yes and has not voted on it (vGLP 80d3268, Definition "Deciding", Outcome: "p ends every approval of [t] pending at it if p is a guard of [t]_j that has recorded voted(alpha, yes), or answered(alpha, yes) and no vote on alpha"; vGLP #25, Code_inbox.md, 2026-11-10 22:25 UTC).  Until 80d3268 an answer yes ended them whatever the vote, so a guard that answered yes and then voted no, its approvals ended by the vote, had them ended again by the abort.
 procedure abort_ends(Names?, YesNo?, YesNo?, Info?, Attempt?, Peer?, Recs?, Recs, YesNo).
-abort_ends(request(Rr, K), Mi, Ed, _, _, _, R, R1?, En?) :- end_request(Rr?, K?, Mi?, Ed?, R?, R1, En).
+abort_ends(request(Rr, K), Mi, Ed, _, _, _, R, R2?, En?) :- ground(Rr?), integer(K?), ground(R?) |
+    end_request(Rr?, K?, Mi?, Ed?, R?, R1, En1),
+    answers_named(R?, Rr?, K?, R?, Es),
+    end_all(Es?, R1?, R2, En2),
+    or(En1?, En2?, En).
 abort_ends(none, _, _, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) |
     attempt_class(At?, C),
     guards_part(C?, Id?, Gd),
@@ -3289,6 +3330,14 @@ abort_ends(none, _, _, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) |
     or(Vy?, Ay1?, Said),
     and(Gd?, Said?, B),
     guard_ends(B?, I?, Id?, R?, R1, En).
+%% The agent's answers yes to attempts naming the request (Rr, K) and not ended, each ended(A): "If z = abort and alpha names a request, p ends that request if it is p's, and its answers yes to attempts naming it" (vGLP ec00127, Definition "Deciding", Outcome; vGLP #25, Code_inbox.md, 2026-11-10 22:08 UTC, item 5).
+procedure answers_named(Recs?, Rho?, Integer?, Recs?, Recs).
+answers_named([], _, _, _, []).
+answers_named([answered(A, yes)|Rs], Rr, K, R, Es?) :- ground(A?), ground(Rr?), integer(K?), ground(R?) |
+    named_open(A?, Rr?, K?, R?, B),
+    answers_named(Rs?, Rr?, K?, R?, Es1),
+    keep_rec(B?, ended(A?), Es1?, Es).
+answers_named([_|Rs], Rr, K, R, Es?) :- otherwise | answers_named(Rs?, Rr?, K?, R?, Es).
 %% The request the attempt names ended, where the agent made it, Mine, and has not ended it, Done (st_req).
 procedure end_request(Rho?, Integer?, YesNo?, YesNo?, Recs?, Recs, YesNo).
 end_request(Rr, K, Mine, Done, R, R1?, En?) :-
