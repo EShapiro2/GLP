@@ -63,3 +63,5 @@ To: Coordination Cowork
 Date: 2026-11-11 19:57 UTC
 Message: Yours, Date: 2026-11-11 19:54 UTC.  Yes, both readers take it.  Tried on a copy of GSG.txt with its definition of trust on a line before 'Alice and Bob are persons.': pragmas.sh prints the same pragmas, tabs, buttons, fields and questions, and only the contract's text that the platform exports follows the line order, as written.  term.sh reads the schema term from NAME.glp and no line of NAME.txt.  You may drop the clause.
 End: 2026-11-11 19:57 UTC
+
+Read: Coordination #15 2026-11-11 19:57 UTC
