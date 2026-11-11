@@ -82,7 +82,7 @@ declaration(N?, C?, U?, Seed?, Hom?, Wary?) :-
     population # declaration(N, C, U, Seed, Hom, Wary).
 
 %% The sGLP source of this program in the term form (README.md, "The term
-%% form"), graph_sglp.glp, for the transformation (programs/sglp/transform.glp).
+%% form"), graph_sglp.glp, for the transformation (programs/sglp/transform/transform.glp).
 imported procedure graph_sglp#source(SglpTerms, SglpTerms).
 exported procedure source(SglpTerms, SglpTerms).
 source(V?, S?) :- graph_sglp # source(V, S).

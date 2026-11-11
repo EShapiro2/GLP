@@ -9,7 +9,7 @@
 %% module lifts its exported procedures and the types their signatures carry
 %% (TGLP modules.tex, "The -expose directive"), so each type here is carried
 %% by a procedure exported here: Span by span/2, Slot by fill/2, SglpTerms by
-%% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform.glp,
+%% terms_length/2.  show_whole/4 and whole_frame/5 are the printed relays' (transform/transform.glp,
 %% "The question shown whole").  length/2 and length/3, ordinary GLP, are
 %% exported here too, since the transformation, the printed modules of
 %% tests/census and tests/screen and the examples' one_of call them (sGLP #11,
@@ -55,7 +55,7 @@ fill(slot(X?), X).
 %% open --- a list or a stream --- the relay builds the copy, B, and its
 %% skeleton, S, the term with each position the person writes marked
 %% '$h'(C, J), and the list of the slots, Fs, in which each answer of the
-%% question receives the skeleton (transform.glp, "The question shown whole").
+%% question receives the skeleton (transform/transform.glp, "The question shown whole").
 %% show_whole(B?, S?, Fs?, Y): once B has no reader, the copy complete, and S is
 %% ground, Y is assigned B, the copy shown at one place, and each slot of Fs
 %% is filled with S.

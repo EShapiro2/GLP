@@ -1,0 +1,24 @@
+%% programs/sglp/transform: the transformation of sGLP programs into GLP,
+%% transform.glp (sGLP's paper, Section 4, "The transformation"), the program
+%% programs/sglp/transform.sh loads.  Its chain of self.glp files reaches
+%% programs/sglp/self.glp, which exposes sglp.glp, the term form (SglpTerms)
+%% among it, to its subtree (TGLP, modules.tex, "The -expose directive").
+%% This self.glp holds the transformation's two entries (sGLP #11, Code_inbox
+%% 2026-11-09 14:53 UTC, Udi approving; sGLP #12's decision of Code #27's two
+%% points, Code_inbox 2026-11-11 20:14 UTC, item 5).
+
+%% transform(Program?, V?, S?, Part?): print Part, profiles or population, of
+%% the transformation of Program's sGLP source, V the vGLP program's interface
+%% and S the sGLP program in the term form, the printed module's head naming
+%% Program (transform.glp; transform.sh reads the source and writes the
+%% printed modules).
+imported procedure transform#transform(Constant?, SglpTerms?, SglpTerms?, Constant?).
+exported procedure transform(Constant?, SglpTerms?, SglpTerms?, Constant?).
+transform(P, V, S, Part) :- transform # transform(P?, V?, S?, Part?).
+
+%% transform_terms(V?, S?, Part?): the same for a source of no program of
+%% programs/sglp, the head naming it given; Part also cva_profiles or
+%% cva_population, over a canonical CVA platform's interface.
+imported procedure transform#transform_terms(SglpTerms?, SglpTerms?, Constant?).
+exported procedure transform_terms(SglpTerms?, SglpTerms?, Constant?).
+transform_terms(V, S, Part) :- transform # transform_terms(V?, S?, Part?).
