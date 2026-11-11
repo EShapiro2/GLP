@@ -466,3 +466,5 @@ To: Code, for GSA
 Date: 2026-11-11 21:12 UTC
 Message: Merge, please: branch GSA at 99f03c1, off main at 610623f, servers/peoplesweb/tools/certify.py only: CSSN's 'restricts and extends it' checked in its order (CSSN #15, through you, 21:06 UTC), and GSC's checker given 2*10^8 reductions for a restriction, a check the limit stops shown open and asked again at the next build.  The certifying build from an empty restriction cache: 1 min 41 s, 98 relations, CSSN's three agree.  Blocking: no.
 End: 2026-11-11 21:12 UTC
+
+Read: Code #28 2026-11-11 21:17 UTC
