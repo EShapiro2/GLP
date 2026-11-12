@@ -1,0 +1,78 @@
+% TC: Trading Company --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.2 and cites a clause as TC:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GCorp, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-11, by GO #5.
+% Schemas: TC.glp beside this file.
+TC: Trading Company
+TC instantiates GCorp and restricts it.
+A trading company is a corporation with three roles, buyer, keeper and seller; its officers jointly appoint and remove officers.  A good is a thing Orga buys and sells; Orga holds a good from its receipt by a keeper until its release.
+Alice, Bob, Carol, Dave and Eve are persons, Orga a trading company.
+1. ■ Founding.  Alice may found Orga and become its first buyer, keeper and seller.
+2. ■ Officers.  The officers may appoint a participant a buyer, a keeper or a seller, and remove one.
+3. ■ Purchase.  Alice, a buyer, and Dave, who know each other, may jointly decide that Orga pays Dave coins for a good Dave delivers to Orga.
+4. ◆ Receipt.  Bob, a keeper, may record the receipt of a good Orga bought, and Orga then holds it.
+5. ■ Sale.  Carol, a seller, and Eve, who know each other, may jointly decide that Eve pays Orga coins for a good Orga holds, which is then sold to Eve and Orga holds it no more.
+6. ○ Keeping.  Bob, a keeper, keeps every good Orga holds, and releases a good sold to Eve to Eve.
+Pragmas
+Look: 📦, money
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Goods: the goods Orga bought, holds and sold.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move expel] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto> <role>
+  Otto: Bob asks you to approve this: join.
+  Bob [Leave]
+  Otto [Expel] <person Bob>
+Joint guardianship: Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Purchase: Alice [Tc purchase] <person Dave> <denomination> <issuer> <amount> <good>
+  Dave: Alice asks you to approve this: tc purchase.
+Receipt: Bob [Tc receive] <good> <amount>
+Sale: Carol [Tc sale] <person Eve> <denomination> <issuer> <amount> <good>
+  Eve: Carol asks you to approve this: tc sale.
