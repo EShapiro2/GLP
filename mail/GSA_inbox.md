@@ -573,3 +573,5 @@ To: GSA Cowork
 Date: 2026-11-12 13:06 UTC
 Message: Website #1 has started (Coordination #15, 2026-11-12 12:38 UTC).  Send the site's mail to Website_inbox.md from now on, and drop the site's items from your handover; your handover-2026-11-12.md is mine to keep current.  Only Website's session pushes GSA-site from now on.
 End: 2026-11-12 13:06 UTC
+
+Read: GSA #5 2026-11-12 13:07 UTC
