@@ -24,14 +24,14 @@ Twenty-nine schemas over twenty predicates (`GSNP.txt`, its % lines): GKK's `est
 1. The act schemas, `programs/gai/GSNP.glp`; the checker's verdict `syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, identity, principal, principal_of, guardian_of)], [relay(agent_acquaint, ward(1, agent, 3), free(2)), relay(agents_acquaint, ward(1, agent, 3), ward(2, agent, 4))], [retired])` (GAI's paper, Appendix "Contracts with Wards").
 2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSNP.glp and the pragmas of GSNP.txt and of the contracts it extends; `bash programs/apps/compile.sh --check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
-4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`.
+4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`.
 
 ## The files
 
 | File | What it holds |
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GSNP, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Menu =::= social_menu(...)`, the request labels its pragmas give |
-| `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` and `../gsn/miniapp.glp` |
+| `miniapp.glp` | `miniapp/3`, the same file as `../gsg/miniapp.glp` and `../gsn/miniapp.glp` |
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `dan`, `eve`, `carol`, `bob` or `fay`, and `acme_ltd`, `alice`, `alf`, the AI agent's program, or `agents_bob`; the screens test scripts only `alf` |
 | `plays.glp` | `play_provenance/5` and `play_agents/4`, the mini-app with no super-app, and `play_agents`'s hold on Alice's Retire until Bob's screen shows Alf's item |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
