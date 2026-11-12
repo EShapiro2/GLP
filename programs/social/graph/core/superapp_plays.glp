@@ -63,7 +63,7 @@ tee([], [], []).
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
 miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
-    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp/3, M?, H0),
     opaque_type(miniapp_person/5, M?, H),
     person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 
@@ -1011,7 +1011,7 @@ alice_after_two(_, _, _, [_], []).
 alice_after_two(_, _, _, [], []).
 
 %% The installers of play_coins: each installs the currency with its end of
-%% its person channel; the play writes no date, the currency keeping none.
+%% its person channel.
 procedure alice_coins_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_coins_person(Me, Q, C, CSig, AppEnd, Outs,
                    [msg(person, Me?, install(currency, C?, CSig?, AppEnd?)),

@@ -8053,7 +8053,7 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 # whose artefacts :artefact writes into core, where the agent's load_file/2
 # reads them; cssn's artefact carries no certificate (its boot glue reaches the
 # person) and loads as text, which the super-app does not install.  Each
-# mini-app is the instance of the root's entry template miniapp/4 at its own
+# mini-app is the instance of the root's entry template miniapp/3 at its own
 # type, activated at the template's opaque instance, and each person of a
 # mini-app is its own scripted person, the second template miniapp_person/5's
 # instance, the plays holding every screen at Opaque (GSG 2026-10-13 10:29
@@ -8382,7 +8382,7 @@ check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
 # The denominated currencies mini-app (programs/currencies/sovereign/denominated, Currencies'
 # own) hosted by the super-app.  The super-app holds no declaration of a
 # mini-app's types: it activates every mini-app alike, by run/3 at the type
-# identity of the root's entry template miniapp/4 at the opaque instance of
+# identity of the root's entry template miniapp/3 at the opaque instance of
 # the type the mini-app's exports record (GSG paper, Sections 3 and 4; TGLP
 # modules.tex, Dynamic Activation, "Opaque types"; GSG 2026-10-13 10:29 UTC).
 # This play fences that activation rather than the acts, which are the
