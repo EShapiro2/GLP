@@ -29,14 +29,6 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 button{font:inherit}
-header{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06)}
-.hin{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
-.logo{font-weight:700;font-size:16px;letter-spacing:-.01em;cursor:pointer;display:flex;align-items:center;gap:9px}
-.logo .mark{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)}
-.search{margin-left:auto;position:relative}
-.search input{width:min(300px,46vw);padding:8px 12px 8px 32px;border:none;border-radius:10px;background:rgba(118,118,128,.12);font:inherit;font-size:14px;outline:none}
-.search input:focus{background:#fff;box-shadow:0 0 0 3px rgba(10,122,255,.25)}
-.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5}
 main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 /* home */
 .hero h1{font-size:clamp(30px,4.4vw,44px);letter-spacing:-.025em;line-height:1.08;margin:8px 0 10px;font-weight:800}
@@ -177,7 +169,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
-@media (max-width:640px){.hin{padding:10px 16px;gap:10px}.logo{font-size:14.5px;white-space:nowrap}.search input{width:96px}
+@media (max-width:640px){
   #tip{max-width:none}
   .app .pill.ghost{display:none}.shelf{grid-template-columns:minmax(0,1fr);padding:6px 16px}.prod .icon{width:96px;height:96px;font-size:48px;border-radius:22px}
   .tog{padding:14px 16px}.tog .minis{display:none}.tog .cnt{margin-left:auto}
@@ -189,16 +181,42 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
   table.roles td{border:none;padding:3px 0}
   table.roles td[data-k]:not(:empty)::before{content:attr(data-k);display:block;font-weight:600;color:var(--faint);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
   table.roles td[data-k]:empty{display:none}}
-.getapp{margin-left:auto;font-size:14px;font-weight:600;white-space:nowrap}.getapp+.getapp2,.getapp2{font-size:14px;font-weight:600;white-space:nowrap;margin-left:16px}.getapp2+.search{margin-left:0}
+/* the tabs of this page: home, contracts, papers, projects (nav.js) */
+.tab{display:none}
+.pt{margin:6px 0 18px}.pt h1{font-size:clamp(28px,4vw,38px);letter-spacing:-.025em;line-height:1.1;margin:0 0 6px;font-weight:800}.pt p{color:var(--mute);font-size:16px;max-width:680px;margin:0}
+/* papers, by project */
+.pgrp{display:grid;grid-template-columns:190px minmax(0,1fr);gap:0 24px;padding:4px 20px;margin-top:12px}
+.pgrp .who{padding:14px 0}.pgrp .who b{display:block;font-size:16px}.pgrp .who small{color:var(--mute);font-size:13px;line-height:1.35;display:block}
+.pgrp .who a{color:var(--blue);font-size:13px}
+.pgrp .cites .cite{padding:14px 0;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.5}.pgrp .cites .cite:last-child{border-bottom:0}
+.pgrp a{color:var(--blue)}
+/* projects: a tree of project, paper, contracts and directories */
+.ptools{display:flex;gap:10px;margin:0 0 4px}
+.proj{margin-top:12px}
+.proj>summary{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;list-style:none;border-radius:20px}
+.proj>summary::-webkit-details-marker{display:none}
+.proj>summary b{font-size:17px;letter-spacing:-.01em}.proj>summary .nm2{color:var(--mute);font-size:14px;flex:1;min-width:0}
+.proj>summary .cnt{color:var(--mute);font-size:13.5px;white-space:nowrap}
+.proj>summary .chev{color:var(--faint);font-size:20px;line-height:1;transition:transform .2s}
+.proj[open]>summary{border-bottom:1px solid var(--line);border-radius:20px 20px 0 0}.proj[open]>summary .chev{transform:rotate(90deg)}
+.tree{padding:10px 20px 16px;font-size:14.5px;line-height:1.5}
+.tree ul{list-style:none;margin:0;padding:0 0 0 20px;border-left:1px solid var(--line)}
+.tree>ul{padding-left:0;border-left:0}
+.tree li{padding:5px 0 1px;position:relative}
+.tree ul ul>li::before{content:"";position:absolute;left:-20px;top:17px;width:13px;border-top:1px solid var(--line)}
+.tree .lab{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-right:8px}
+.tree a{color:var(--blue);overflow-wrap:anywhere}.tree code{font:12.5px var(--mono)}
+.tree .nt{color:var(--mute)}.tree .k{color:var(--mute);display:inline-block;min-width:72px}
+.tree .none{color:var(--faint)}
+@media (max-width:640px){.pgrp{grid-template-columns:minmax(0,1fr);padding:4px 16px}.pgrp .who{padding:14px 0 0}
+  .proj>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:14px 16px}.proj>summary .chev{grid-column:2;grid-row:1}.proj>summary .nm2,.proj>summary .cnt{grid-column:1/-1;white-space:normal}.tree{padding:10px 16px 14px}.tree ul{padding-left:14px}.tree ul ul>li::before{left:-14px;width:9px}}
 </style>
 </head>
 <body>
-<header><div class="hin">
-  <div class="logo" id="home"><span class="mark"></span>The Grassroots App Store</div>
-  <div class="search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search" autocomplete="off"></div>
-</div></header>
+<header id="bar" data-tab="home" data-search></header>
+<script src="nav.js"></script>
 <main>
-  <section id="top">
+  <section id="tab-home" class="tab">
     <div class="hero">
       <h1>Social contracts that run.</h1>
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
@@ -206,11 +224,19 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
     </div>
     <div class="sh"><h2>Grassroots Contracts</h2><span id="hint">drag to turn, scroll to zoom</span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
+  </section>
+  <section id="tab-contracts" class="tab">
+    <div class="pt"><h1>Contracts</h1><p id="ccount"></p></div>
     <div id="shelves"></div>
-    <div class="sh"><h2>Foundational Papers</h2></div>
-    <div class="card refs" id="found"></div>
-    <div class="sh"><h2>Directories</h2></div>
-    <div class="card refs" id="dirs"></div>
+  </section>
+  <section id="tab-papers" class="tab">
+    <div class="pt"><h1>Papers</h1><p>The papers of each project, and after them the earlier papers the projects build on.</p></div>
+    <div id="plist"></div>
+  </section>
+  <section id="tab-projects" class="tab">
+    <div class="pt"><h1>Projects</h1><p>Each project with its papers, and under each paper its contracts and its directories in the <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener" style="color:var(--blue)">GLP repository</a>. A directory with no paper is under Code.</p></div>
+    <div class="ptools"><button class="pill" id="pexp">Expand all</button><button class="pill ghost" id="pcol">Collapse all</button></div>
+    <div id="ptree"></div>
   </section>
   <section id="view"></section>
 </main>
@@ -820,12 +846,25 @@ function doSearch(){
     g.style.display = q && !any ? 'none' : ''; g.classList.toggle('open', q ? any : OPEN.has(+g.dataset.g)); });
   lastRows();
 }
-$('#q').addEventListener('input', () => { if (C[location.hash.slice(1).replace(/-hood$/, '')]) go(null); doSearch(); });
+// The search is of the contracts: typed anywhere but on the globe or the
+// shelves, it opens the shelves.
+$('#q').addEventListener('input', () => { if (!['home', 'contracts'].includes(TAB)) go(null); doSearch(); });
 $('#q').addEventListener('keydown', e => { if (e.key === 'Enter'){ const a = document.querySelector('.app:not(.dim)'); if (a) go(a.dataset.id); } });
 
 /* ---------- routing ---------- */
+// The page's tabs (nav.js): home, the paragraph and the globe; contracts, the
+// shelves; papers; projects; each shown by the address after the #, a
+// contract's page by its name there, under the tab contracts.  A tab's
+// section is named tab-<name>, so that the browser, finding nothing named by
+// the address, does not scroll the section under the bar.
+const TABS = ['home', 'contracts', 'papers', 'projects'];
+let TAB = 'home', TOPROJ = null;
 function go(id, hood){ location.hash = id ? `#${id}${hood ? '-hood' : ''}` : '#contracts'; }
-$('#home').onclick = () => { $('#q').value = ''; doSearch(); go(null); };
+// Home is the page's address with nothing after it, which a link would load
+// again: it is shown in place.
+document.querySelectorAll('#bar [data-t="home"]').forEach(a => a.onclick = e => {
+  e.preventDefault(); $('#q').value = ''; doSearch();
+  history.pushState(null, '', location.pathname); route(); window.scrollTo(0, 0); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if ($('#pop').style.display === 'flex'){ $('#pop').style.display = 'none'; return; }
@@ -838,8 +877,17 @@ function route(){
   const h = location.hash.slice(1);
   const part = h.endsWith('-hood') ? 'hood' : '';
   const id = part ? h.slice(0, -5) : h;
-  if (!C[id]){ LAST = null; $('#view').style.display = 'none'; $('#top').style.display = ''; lastRows(); return; }
-  $('#top').style.display = 'none';
+  const was = TAB;
+  TAB = C[id] ? 'view' : TABS.includes(h) ? h : 'home';
+  TABS.forEach(t => $('#tab-' + t).style.display = t === TAB ? 'block' : 'none');
+  setTab(TAB === 'view' ? 'contracts' : TAB);
+  if (!C[id]){ LAST = null; $('#view').style.display = 'none';
+    if (TAB === 'home') drawGlobe(); if (TAB === 'contracts') lastRows();
+    if (TAB !== was) window.scrollTo(0, 0);
+    const d = TAB === 'projects' && TOPROJ && document.querySelector(`.proj[data-proj="${TOPROJ}"]`);
+    TOPROJ = null;
+    if (d){ d.open = true; d.scrollIntoView({block: 'start'}); window.scrollBy(0, -($('#bar').offsetHeight + 12)); }
+    return; }
   const v = $('#view'); v.style.display = 'block'; v.classList.remove('zoomin'); void v.offsetWidth; v.classList.add('zoomin');
   const y = window.scrollY;
   page(C[id], part === 'hood');
@@ -973,22 +1021,58 @@ function schemaHtml(s, open){
     ${s.roles.map(r => `<tr><td class="r">${esc(r.role)}</td><td data-k="Needs · must not have">${at(r.need,'need')}${at(r.not,'not')}</td><td data-k="Gets">${at(r.add,'add')}</td><td data-k="Loses">${at(r.del,'del')}</td></tr>`).join('')}</table></details>`;
 }
 
-$('#found').innerHTML = (D.foundational || []).map(citeHtml).join('');
-// Who answers for each directory of GLP, every directory accounted for
-// (tools/directories.py; Udi, 2026-11-11, to Coordination #14): the project,
-// its papers, and for a project with no paper its text under papers/.
-function dirHtml(e){
-  const a = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
-  const gh = `https://github.com/EShapiro2/GLP/${e.dir ? 'tree' : 'blob'}/main/${e.path}`;
-  const papers = e.cites.length ? e.cites.map(P => P.arxiv ? a(`https://arxiv.org/abs/${P.arxiv}`, `<i>${esc(P.title)}</i>`) : P.pdf ? a(P.pdf, `<i>${esc(P.title)}</i>`) : `<i>${esc(P.title)}</i>`).join('; ')
-    : e.text ? a(`https://github.com/EShapiro2/GLP/tree/main/${e.text}`, 'no paper; what it is and does') : 'no paper';
-  return `<div class="cite">${a(gh, `<code>${esc(e.path)}</code>`)}: <b>${esc(e.who)}</b>, ${papers}${e.note ? `; ${esc(e.note)}` : ''}.</div>`;
+/* ---------- papers ---------- */
+// Every paper, by project (tools/directories.py, PROJECTS), each with its
+// full citation, and after them the papers no project holds (Udi, 2026-11-12,
+// to GSA #5).
+const projHead = p => `<b>${esc(p.id)}</b>${p.name ? `<small>${esc(p.name)}</small>` : ''}`;
+const hasCode = p => p.dirs.length || p.papers.some(q => q.dirs.length || q.contracts.length);
+$('#plist').innerHTML = D.projects.map(p => `<div class="card pgrp"><div class="who">${projHead(p)}${hasCode(p) ? `<a href="#projects" data-proj="${esc(p.id)}">Its contracts and directories</a>` : ''}</div>
+    <div class="cites">${p.papers.map(q => citeHtml(q.cite)).join('')}</div></div>`).join('')
+  + ((D.otherPapers || []).length ? `<div class="card pgrp"><div class="who"><b>Earlier papers</b></div><div class="cites">${D.otherPapers.map(citeHtml).join('')}</div></div>` : '');
+
+/* ---------- projects ---------- */
+// A tree in which each project, paper, contract and directory is once (Udi,
+// 2026-11-12, to GSA #5; tools/directories.py, tree): a project's papers;
+// under a paper its directories and its contracts; under a contract what is
+// its own, its text or its directory, its app, its phone file and its record
+// of the cascade; and under Code the directories with no paper, each with
+// the project that answers for it.
+const ghPath = e => `<a href="https://github.com/EShapiro2/GLP/${e.dir ? 'tree' : 'blob'}/main/${esc(e.path)}" target="_blank" rel="noopener"><code>${esc(e.path)}</code></a>`;
+const paperLink = P => { const t = `<i>${esc(P.title || '')}</i>`;
+  const href = P.arxiv ? `https://arxiv.org/abs/${P.arxiv}` : P.pdf || '';
+  return href ? `<a href="${href}" target="_blank" rel="noopener">${t}</a>` : t; };
+const dirLi = e => `<li>${ghPath(e)}${e.who ? ` <b>${esc(e.who)}</b>` : ''}${e.note ? ` <span class="nt">${esc(e.note)}</span>` : ''}${e.text ? ` <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(e.text)}" target="_blank" rel="noopener">what it is and does</a>` : ''}${
+  (e.contracts || []).length ? `<ul>${e.contracts.map(conLi).join('')}</ul>` : ''}</li>`;
+const conLi = c => `<li><a href="#${esc(c.id)}"><b>${esc(c.id)}</b></a>${C[c.id] ? ` <span class="nt">${esc(C[c.id].title)}</span>` : ''}
+  <ul>${c.items.map(i => `<li><span class="k">${esc(i.k)}</span>${ghPath(i)}</li>`).join('')}</ul></li>`;
+const branch = (lab, lis) => lis.length ? `<li><span class="lab">${lab}</span><ul>${lis.join('')}</ul></li>` : '';
+const nOf = (n, one, many) => n ? `${n} ${n === 1 ? one : many}` : '';
+function projHtml(p){
+  const cs = p.papers.reduce((n, q) => n + q.contracts.length, 0), ds = p.papers.reduce((n, q) => n + q.dirs.length, 0) + p.dirs.length;
+  return `<details class="card proj" data-proj="${esc(p.id)}"><summary><b>${esc(p.id)}</b><span class="nm2">${esc(p.name || '')}</span>
+    <span class="cnt">${[nOf(p.papers.length, 'paper', 'papers'), nOf(cs, 'contract', 'contracts'), nOf(ds, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${p.papers.map(q => `<li><span class="lab">Paper</span>${paperLink(q.cite)}
+      ${q.dirs.length || q.contracts.length ? `<ul>${branch('Directories', q.dirs.map(dirLi))}${branch('Contracts', q.contracts.map(conLi))}</ul>` : ''}</li>`).join('')}
+    ${branch('Directories of the whole project', p.dirs.map(dirLi))}</ul></div></details>`;
 }
-$('#dirs').innerHTML = (D.directories || []).map(dirHtml).join('')
-  + ((D.unaccounted || []).length ? `<div class="cite">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</div>` : '');
+$('#ptree').innerHTML = D.projects.map(projHtml).join('')
+  + `<details class="card proj" data-proj="Code"><summary><b>Code</b><span class="nm2">The directories with no paper, each with the project that answers for it</span>
+    <span class="cnt">${nOf(D.code.length, 'directory', 'directories')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${D.code.map(dirLi).join('')}</ul></div></details>`
+  + ((D.unaccounted || []).length ? `<p class="why">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</p>` : '')
+  + ((D.faults || []).length ? `<p class="why">${D.faults.map(esc).join('; ')}.</p>` : '');
+$('#pexp').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = true);
+$('#pcol').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = false);
+// From a project's papers to the project in the tree, which route opens once
+// it shows the tree.
+document.querySelectorAll('#plist [data-proj]').forEach(a => a.onclick = () => { TOPROJ = a.dataset.proj; });
+$('#ccount').textContent = `${D.contracts.length} contracts, by family. ${D.contracts.filter(c => c.live).length} run as apps on this site.`;
+// A search another page sent here, index.html?q=...#contracts (nav.js).
+$('#q').value = new URLSearchParams(location.search).get('q') || '';
 V.zoom = BASEZ();
 layout(); drawGlobe(); globeNav(); drawShelves(); route();
-window.addEventListener('resize', () => { if ($('#top').style.display !== 'none') drawShelves(); });
+window.addEventListener('resize', () => { if (TAB === 'contracts') drawShelves(); });
 </script>
 </body>
 </html>

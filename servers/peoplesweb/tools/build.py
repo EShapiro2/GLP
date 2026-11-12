@@ -38,7 +38,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import cite_of, foundational, load_state, paper_of  # noqa: E402
+from papers import cite_of, foundational, key_of, load_state, paper_of  # noqa: E402
 import directories  # noqa: E402
 import certify  # noqa: E402
 
@@ -344,6 +344,7 @@ for n in sorted(set(compiled) | set(cat)):
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
     c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['paperKey'] = key_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''))
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -389,7 +390,7 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
-    if f.endswith(('.html', '.png', '.ico', '.jpg')):
+    if f.endswith(('.html', '.js', '.png', '.ico', '.jpg')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
 # The page an invitation link opens, peoplesweb.org/i (GNA, Section 6,
 # Invitation links), and the file that names the Grassroots App to iOS as the
@@ -400,17 +401,28 @@ if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
-# Who answers for each directory of GLP (tools/directories.py), each with the
-# citations of its project's papers; and what no entry covers, which the
-# build prints and the page shows, so that every directory is accounted for.
-dirs = directories.table(GLP)
-for e in dirs:
-    e['cites'] = [x for x in (cite_of(k, served, paper_state) for k in e.pop('papers')) if x]
+# The projects (tools/directories.py): each with its papers, each paper with
+# its citation, its contracts and its directories, and under Code the
+# directories with no paper, a tree in which each is once (Udi, 2026-11-12, to
+# GSA #5); the Papers page lists the same projects' papers, and after them the
+# papers no project holds.  What no entry covers, and what does not fit the
+# tree, the build prints and the page shows, so that every directory is
+# accounted for.
+projects, code, faults = directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
+for p in projects:
+    for q in p['papers']:
+        q['cite'] = cite_of(q['key'], served, paper_state) or {}
+        if not q['cite']:
+            faults.append(f"the paper {q['key']} of {p['id']} is not in tools/papers.py")
 lost = directories.unaccounted(GLP)
 if lost:
     print('directories: no entry answers for ' + ', '.join(lost))
+for f in faults:
+    print('projects: ' + f)
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state), 'directories': dirs, 'unaccounted': lost}
+    data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
+            'otherPapers': foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
+            'unaccounted': lost, 'faults': faults}
     if TEST:
         # The test site's pages are one level below the site's root, and the
         # API they call is the live server's, at the root.

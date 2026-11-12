@@ -106,22 +106,29 @@ def load_state(papers_dir):
         return {}
 
 
+def key_of(owner_line):
+    """The paper the % Owner line of a contract names, by its key in BY_DIR, or None."""
+    m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
+    return m.group(1) if m and m.group(1) in BY_DIR else None
+
+
 def paper_of(owner_line, served_pdfs=(), state=None):
     """The citation of the paper the % Owner line names: title, authors, and an arXiv identifier, or a served PDF (papers/<X>.pdf, where built) with its state; a contract with no paper says so."""
-    m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
-    if not m or m.group(1) not in BY_DIR:
+    k = key_of(owner_line)
+    if k is None:
         return {'title': '', 'authors': '', 'state': 'no paper' if re.search(r'No paper', owner_line or '') else 'in preparation'}
-    return cite_of(m.group(1), served_pdfs, state)
+    return cite_of(k, served_pdfs, state)
 
 
 def cite_of(d, served_pdfs=(), state=None):
     """The citation of the paper in directory d, a contract's paper or a foundational one, or None."""
     if d not in BY_DIR:
-        f = next((f for f in FOUNDATIONAL if f.get('dir') == d), None)
+        f = next((f for f in FOUNDATIONAL if d in (f.get('dir'), f.get('key'))), None)
         if f is None:
             return None
-        v = {k: x for k, x in f.items() if k != 'dir'}
-        updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}))
+        v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
+        if 'dir' in f:
+            updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}))
         return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
@@ -148,7 +155,10 @@ def cite_of(d, served_pdfs=(), state=None):
 # project's directory, the key of its source in SOURCES.  2301.04391 is the
 # extended version of the DISC 2023 brief announcement, the only entry
 # Bib-Grassroots has; the arXiv numbers of 2306.13941 and 2005.06261 are
-# Coordination's Appendix A's, their entries carrying none.
+# Coordination's Appendix A's, their entries carrying none.  A paper whose
+# PDF the site does not build and which a project holds is named by 'key',
+# the name tools/directories.py's PROJECTS knows it by, as 'dir' is of one it
+# builds.
 FOUNDATIONAL = [
     {'dir': 'GLP-Spec', 'title': 'GLP: A Grassroots, Multiagent, Concurrent, Logic Programming Language for AI', 'authors': 'Ehud Shapiro', 'arxiv': '2510.15747'},
     {'dir': 'TGLP', 'title': 'Types for Grassroots Logic Programs', 'authors': 'Ehud Shapiro', 'arxiv': '2601.17957'},
@@ -173,17 +183,21 @@ FOUNDATIONAL = [
     {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
-    {'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
-    {'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026'},
+    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    {'key': 'GPBD', 'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026'},
 ]
 
 
-def foundational(served_pdfs=(), state=None):
+def foundational(served_pdfs=(), state=None, but=()):
     """The foundational papers' citations, each with the link to its PDF as
-    Updated where its source is ahead of arXiv, as a contract's paper has it."""
+    Updated where its source is ahead of arXiv, as a contract's paper has it;
+    less those named in but, by 'dir' or 'key', which the site lists with
+    their projects."""
     out = []
     for f in FOUNDATIONAL:
-        v = {k: x for k, x in f.items() if k != 'dir'}
+        if f.get('dir') in but or f.get('key') in but:
+            continue
+        v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
             updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         out.append(v)
