@@ -73,8 +73,10 @@ DIRECTORIES = [
 # paper's title (Udi, 2026-11-12, to GSA #5, approving the nine: GLP, VMAT,
 # vGLP, GSC, GAI, CSSN, CGP, DSA and CGMS).  The site's
 # Papers and Projects pages are printed from it (tree, below).  A project of
-# DIRECTORIES that is not here has no paper, and its directories are listed
-# under Code with the project named (Udi, 2026-11-12, to GSA #5).
+# DIRECTORIES that is not here has no paper (NO_PAPER, below), and its
+# directories are listed under Code with the project named (Udi, 2026-11-12,
+# to GSA #5); a directory of a project here that names no paper is under its
+# project.
 PROJECTS = [
     ('GLP', 'Grassroots Logic Programs', ['GLP-Spec', 'TGLP', 'IGLP']),
     ('VMAT', 'Volition-Guarded Multiagent Atomic Transactions', ['VMAT']),
@@ -96,6 +98,21 @@ PROJECTS = [
     ('DSA', 'Digital Speech Acts', ['DSA']),
     ('CCDG', 'Constitutional Consensus', ['CCDG']),
     ('CGMS', 'Constitutional Governance in Metric Spaces', ['CGMS']),
+    # The projects whose papers the site does not present, by name and with no
+    # paper under them, each name in full as the table of inboxes gives it
+    # (Coordination #15, to Website #1, 2026-11-12 13:11 UTC: the papers are
+    # not on arXiv, and whether the site names one is for Udi to approve).
+    ('GBM', 'Grassroots Business Models', []),
+    ('CFRI', '', []),
+    ('IVMAT', '', []),
+    ('GFWC', 'Grassroots Federation Without Consensus', []),
+    ('CDWC', 'Constitutional Democracy Without Consensus', []),
+    ('GPW', 'Grassroots Personal Websites', []),
+    ('Secure-GLP', 'Secure GLP', []),
+    ('P99', '', []),
+    ('DDD', '', []),
+    ('KYC', '', []),
+    ('LBM', 'Location Based Matching', []),
 ]
 
 # The projects with no paper, in the order the site lists them under Code:
@@ -211,7 +228,11 @@ def tree(root, contracts):
                 faults.append(f'{path} is {who}\'s and the contract {taken[path]} is not')
             continue
         ps = {project_of(k) for k in ks}
-        if not ks:
+        if not ks and who in byid:
+            d['contracts'] = []
+            byid[who]['dirs'].append(d)
+            codeby[path] = d
+        elif not ks:
             t = os.path.join(TEXTS, who)
             d.update(who=who, text=t if isdir(t) else '', contracts=[])
             code.append(d)

@@ -1026,7 +1026,7 @@ function schemaHtml(s, open){
 // to GSA #5).
 const projHead = p => `<b>${esc(p.id)}</b>${p.name ? `<small>${esc(p.name)}</small>` : ''}`;
 const hasCode = p => p.dirs.length || p.papers.some(q => q.dirs.length || q.contracts.length);
-$('#plist').innerHTML = D.projects.map(p => `<div class="card pgrp"><div class="who">${projHead(p)}${hasCode(p) ? `<a href="#projects" data-proj="${esc(p.id)}">Its contracts and directories</a>` : ''}</div>
+$('#plist').innerHTML = D.projects.filter(p => p.papers.length).map(p => `<div class="card pgrp"><div class="who">${projHead(p)}${hasCode(p) ? `<a href="#projects" data-proj="${esc(p.id)}">Its contracts and directories</a>` : ''}</div>
     <div class="cites">${p.papers.map(q => citeHtml(q.cite)).join('')}</div></div>`).join('')
   + ((D.otherPapers || []).length ? `<div class="card pgrp"><div class="who"><b>Earlier papers</b></div><div class="cites">${D.otherPapers.map(citeHtml).join('')}</div></div>` : '');
 
