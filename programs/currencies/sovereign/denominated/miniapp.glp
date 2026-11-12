@@ -13,12 +13,11 @@
 %% reaches the network or the person --- so the program is certified.
 %%
 %% sovereign/4 is the same with the agent's calendar, a stream of dates,
-%% which the headless plays write themselves, and miniapp/3 gives today's date
+%% which the headless plays write themselves
 %% (../village.glp, ../credit_line.glp, plays.glp).  sovereign/3 gives the
 %% agent an empty calendar: its date stands at 0, so a bond it mints matures
 %% on a date later than 0, and no bond of its own is mature by its date.  The
-%% super-app activates miniapp/3 below, which reads today's date
-%% from the phone (today/1).
+%% super-app activates miniapp/3 below, with no calendar.
 
 imported procedure sovereign_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Acceptance)?, Integer?, Stream(Ask(Question))).
 imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
@@ -59,37 +58,17 @@ relay([], []).
 %% Activation, "Opaque types"; vGLP 2026-10-14 13:21 UTC, S2; Currencies
 %% 2026-10-13 20:09 UTC, item 1).  Its grants: the person's key, the person
 %% channel and the channel to the social graph (GLP paper, appendix-guards,
-%% "Predefined types": the entry template miniapp/3).  The calendar is
-%% today's date, which today/1 reads from the phone, and the agent's date is
-%% initially that date (GB, "The Transactions": "their date d*_p, initially the day of p's
-%% calendar", which SGC recalls), the agent passing over a date not past its
-%% own.  The social graph's stream
+%% "Predefined types": the entry template miniapp/3).  The mini-app is
+%% sovereign/3's, its agent's date at 0 and no calendar, until GB says how the
+%% agent reads the day from the phone (vGLP 609b630, Section 5.4).  The
+%% social graph's stream
 %% gives each conversation to the agent; a held link is passed over, the
 %% mini-app making no warm call, and its stream up to the social graph closes
 %% when the social graph's closes.
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?).
 miniapp(Id, Ui, ch(Down, Up?)) :-
     sg_conversations(Down?, Convs, Up),
-    today(Cal),
-    dated(Id?, Ui?, Convs?, Cal?).
-
-%% dated(Id, Ui, Convs, Cal): the mini-app of sovereign/4, its agent's date
-%% initially the first date of the calendar Cal; a calendar with no date is
-%% sovereign/3's, the date at 0.
-procedure dated(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
-dated(Id, Ui, Convs, [D | Cal]) :-
-    ground(Id?), ground(D?) |
-    sovereign_agent # agent(Id?, [], [], Convs?, [D? | Cal?], [user_output(Screen)], [], D?, [], 1, Asks),
-    sovereign_agent # dispatch(Asks?, Ui?, MCh),
-    show_screen(MCh?, Screen?).
-dated(Id, Ui, Convs, []) :-
-    sovereign(Id?, Ui?, Convs?, []).
-
-%% today(Cal): the calendar of one date, today's, the day of now/1, the
-%% Unix time in milliseconds divided by 86400000: the phone has the correct
-%% date (vGLP 609b630, Section 5.4).
-procedure today(Stream(Integer)).
-today([D?]) :- now(T), D := T? // 86400000.
+    sovereign(Id?, Ui?, Convs?).
 
 procedure sg_conversations(Stream(SgToApp(PeerMsg))?, Stream(Conversation(PeerMsg)), Stream(AppToSg)).
 sg_conversations([conversation(K, Ch) | Down], [conversation(K?, Ch?) | Convs?], Up?) :-
