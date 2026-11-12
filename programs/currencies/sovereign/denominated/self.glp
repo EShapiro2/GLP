@@ -22,9 +22,9 @@ imported procedure miniapp#sovereign(Key?, PersonChannel(Drawn)?, Stream(Convers
 exported procedure sovereign(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 sovereign(Id, Ui, Convs, Cal) :- miniapp # sovereign(Id?, Ui?, Convs?, Cal?).
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).

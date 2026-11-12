@@ -240,7 +240,7 @@ class _Run {
       this.watching = const {},
       this.calendars = const {}});
 
-  /// The writer of each agent's calendar, by name, where the app requires the day: the stream of dates the device writes from its clock, one a day (GSG, miniapp/4; vGLP, Section 5.4, "Act schemas as local specifications"), which the test writes ([day]).
+  /// The writer of each agent's calendar, by name, where the app's entry still takes one, which the test writes ([day]).  An app's entry is miniapp/3, the person's key and the two channels (GLP paper c5c3dfb, appendix-guards.tex, "Predefined types"), and a run given no first day posts it so.  GB's app alone is still at miniapp/4, its compiled agent taking a calendar, a stream of dates, one a day, until vGLP's compiler prints an agent that reads the phone's date (vGLP 609b630, Section 5.4): a run given a first day posts that entry, with the calendar.
   final Map<String, InputInjector> calendars;
 
   /// The date [d] written on the calendar of [name], and the run reduced and drawn again: on a device the clock writes it.
@@ -309,7 +309,7 @@ class _Run {
               conversation(a, b)
             else if (b == chain[i])
               conversation(b, a),
-        ].join(', ')}], U$i), ${firstDay == null ? '[]' : 'K$i?'})',
+        ].join(', ')}], U$i)${firstDay == null ? '' : ', K$i?'})',
         if (scripted.contains(chain[i]) && watching.containsKey(chain[i]))
           'village_person(${chain[i]}, ${roles[chain[i]] ?? chain[i]}, ${known(chain[i])}, ch(D$i?, G$i), W$i?, S$i)'
         else if (scripted.contains(chain[i]))

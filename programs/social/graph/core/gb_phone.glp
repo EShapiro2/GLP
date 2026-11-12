@@ -40,10 +40,10 @@ person_gb(Me, Role, Ps, Calls, Accepts, NetIn) :-
     miniapp_person_run(C?, Me?, Role?, Ps?, PersonEnd?, Screen),
     send_to_user(Screen?).
 
-%% acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices, Cmds): a person's acts on their super-app: trust the compiler's key, install the mini-app with their end of its person channel, write the first day on its calendar, consent in advance to the invitation of each peer in Accepts, connect to each peer in Calls, and, as each connection is reported, invite the peer connected where they called them; every connection is reported to the person, sg(connected(Q)).
+%% acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices, Cmds): a person's acts on their super-app: trust the compiler's key, install the mini-app with their end of its person channel, consent in advance to the invitation of each peer in Accepts, connect to each peer in Calls, and, as each connection is reported, invite the peer connected where they called them; every connection is reported to the person, sg(connected(Q)).
 procedure acts(Key?, Constant?, List(Key)?, List(Key)?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
 acts(Me, App, Calls, Accepts, C, CK, CSig, AppEnd, Notices,
-     [msg(person, Me?, trust(CK?)), msg(person, Me?, install(App?, C?, CSig?, AppEnd?)), msg(person, Me?, date(1)) | Cmds?]) :-
+     [msg(person, Me?, trust(CK?)), msg(person, Me?, install(App?, C?, CSig?, AppEnd?)) | Cmds?]) :-
     ground(Calls?) |
     consents(Me?, App?, Accepts?, Cmds, Cmds1?),
     connects(Me?, Calls?, Cmds1, Cmds2?),
@@ -91,7 +91,7 @@ certified(M, CK?, CSig?) :-
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
 miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
-    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp/3, M?, H0),
     opaque_type(miniapp_person/5, M?, H),
     person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 

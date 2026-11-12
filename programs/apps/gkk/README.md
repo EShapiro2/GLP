@@ -6,14 +6,14 @@ The app of GKK, Grassroots Keys and Knowledge, the base mini-app of the grassroo
 
 GKK is GSC's contract, the base contract every contract extends (Coordination Appendix C); its clauses are `programs/gsc/GKK.txt`, as GSC's paper, Section 2.1, has them, and its act schemas `programs/gsc/GKK.glp`.
 
-GKK:1 is the schema `establish(p?)`, which adds `identity` at the person, and every role of the other two schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every view shows, its first argument, and the request form reads off the last view drawn (vGLP, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"), a class of one participant, taken at once.  GKK:2 is `acquaint(p?, q?)`, guarded by both, adding `knows` of the other at each; GKK:3 is `introduce(p?, q? ; c)`, guarded by both, `c` the person introduced, who takes no part: `p` requires `knows(q)` and `knows(c)`, `q` requires `knows(p)` and gains `knows(c)`.  The checker's verdict is `syntactically_grassroots`, with acquaint its introductory act (`programs/gsc`, `intro_acts/2`).
+GKK:1 is the schema `establish(p?)`, which adds `identity` at the person, and every role of the other two schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/3`, and which the platform's agent takes as its `Peer`.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every view shows, its first argument, and the request form reads off the last view drawn (vGLP, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"), a class of one participant, taken at once.  GKK:2 is `acquaint(p?, q?)`, guarded by both, adding `knows` of the other at each; GKK:3 is `introduce(p?, q? ; c)`, guarded by both, `c` the person introduced, who takes no part: `p` requires `knows(q)` and `knows(c)`, `q` requires `knows(p)` and gains `knows(c)`.  The checker's verdict is `syntactically_grassroots`, with acquaint its introductory act (`programs/gsc`, `intro_acts/2`).
 
 ## The cascade
 
 1. The act schemas, `programs/gsc/GKK.glp`; the checker's verdict `syntactically_grassroots`.
 2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, "The compilation"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GKK.glp.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
 3. GLP: the canonical compilation (vGLP, Section 6.3) compiles `platform.vglp` when the directory loads.
-4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`, which the super-app activates by `run/3`.
+4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`, which the super-app activates by `run/3`.
 
 `cascade.sh gkk` runs the cascade on GKK, its run with scripted persons this directory's play.
 
@@ -22,7 +22,7 @@ GKK:1 is the schema `establish(p?)`, which adds `identity` at the person, and ev
 | File | What it holds |
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GKK, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Request =::= social_menu(...)`, the request labels its pragmas give, its request question bare, of the request type `Request?` (vGLP, Section 5.4, "The compilation") |
-| `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations; GSG's app's file, the same in each app (`../gsg/README.md`) |
+| `miniapp.glp` | `miniapp/3`: the agent, its dispatcher, and the agent's network over the conversations; GSG's app's file, the same in each app (`../gsg/README.md`) |
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice`, `bob` or `carol` |
 | `plays.glp` | `play_keys/3`, the mini-app with no super-app |
 | `maglp.glp` | `gkk_agent/4`, the mini-app as maGLP: the agent's key by `self_key/1`, a cold call with a conversation to each agent the person names, and the mini-app over the conversations; `programs/tests/multiagent/gkk_maglp_boot.glp` boots it |
