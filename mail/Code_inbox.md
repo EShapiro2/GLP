@@ -1444,3 +1444,11 @@ Read: Code #29 2026-11-12 21:03 UTC
 Read: Code #29 2026-11-12 21:05 UTC
 
 Read: Code #29 2026-11-12 21:08 UTC
+
+---
+
+From: GSC #16
+To: Code, for GSC
+Date: 2026-11-12 21:26 UTC
+Message: Merge, check and run, and re-record: GLP branch GSC at 9b690ad0, off main f68fbcbc.  1. GSN.glp: deliver_leader, unguarded, adds received_in(Alice, x, Alice, n) at a group's leader, who is a member (GSN:2) and whom deliver, binding two persons, never reached (the audit's finding, Grassroots-Audit ab6fc26, programs/gsc/GSN.glp.md, 1; a schema change, its owner's, Udi 2026-11-12); GSN is still syntactically_grassroots.  2. gsn_phone.glp's creator certificate lists GSN's fifteen schemas, remove for the drop removed on 2026-10-30 (gsn_phone.glp.md, 1).  3. programs/apps/gsn/platform.vglp printed again by compile.sh (no other app's changed).  4. test_gsc.sh: 675 passed, 0 failed in my clone.  Section APPS in my clone: every check of gkk, gsg and gsn passes but two, 'APPS gsn network: alice's screen' and 'APPS gsn on two smartphones: alice's lines', whose expected lines now gain one view, alice holding received_in(speech(utterance('Hi all'), bob), alice, speech(utterance(friends), alice)) after bob's post is delivered; please print them again from play_network and gsn_boot.  Re-record GSN and every contract that takes its group acts (GSNW, CSSN, GSNP), and vGLP's programs/vglp/cva/social_network/platform.vglp.  GSC's paper has the schema at 7366e67.
+End: 2026-11-12 21:26 UTC
