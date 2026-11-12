@@ -1,5 +1,5 @@
 %% miniapp.glp --- the test mini-app that ENDS OF ITS OWN ACCORD: its entry
-%% miniapp/4, the super-app's entry template at the mini-app's own types
+%% miniapp/3, the super-app's entry template at the mini-app's own types
 %% EndShown and EndMsg (self.glp), which the super-app hosts as it hosts every mini-app, by the
 %% template's opaque instance at that type.
 %%
@@ -27,8 +27,8 @@
 %% are the meta-interpreter's, and activation does not yet post a control
 %% stream (Section 7).
 
-exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
-miniapp(Id, ch(Gs, Draws?), ch(Down, Up?), _) :-
+exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?).
+miniapp(Id, ch(Gs, Draws?), ch(Down, Up?)) :-
     ground(Id?) |
     loop(Id?, Down?, [], Ui, Up, []),
     show(Ui?, Gs?, Draws).

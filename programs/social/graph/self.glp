@@ -51,10 +51,7 @@ UserContent ::= connect(Key)
               %% channel (the super-app user interface holds the other end; in
               %% a play, the play does), at the template's parameter, opaque to
               %% the super-app, which holds it at Opaque (TGLP modules.tex,
-              %% "Opaque types").  date: today's date, which the super-app
-              %% writes on the calendar of every mini-app installed, from the
-              %% device's clock (superapp/4), a play from its script (GSG,
-              %% 2026-10-13 20:59 UTC).  invite: offer a friend the mini-app.
+              %% "Opaque types").  invite: offer a friend the mini-app.
               %% accept_invite / decline_invite: the invitee's volition.
               %% attestation: read back the attestation minted at the
               %% befriending (Section 5.5).
@@ -63,7 +60,6 @@ UserContent ::= connect(Key)
               %% with no invitation and no peer, beginning an instance of one
               %% (GSA paper, Section 3, "A grassroots program instance").
               ; activate(Constant)
-              ; date(Integer)
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Key)
@@ -219,16 +215,16 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %% befriending, the invitations pending a volition, and the keys of the
 %% compilers the person trusts (the bundled compilers' by installation).
 %%   app(Name, Content, CreatorSig, Status), Content the module value load_file/2
-%%   gave (a Module where the certificate verified): Status is idle(Ui, Cal,
-%%   Dates), holding the mini-app's end of its person channel and its calendar
-%%   until activation, or running(SgEnd, Cal, Dates) once run/3 has activated
-%%   it, SgEnd the super-app's writer of the mini-app's social-graph stream and
-%%   Cal the calendar kept for its next activation; in both, Dates the writer
-%%   of the calendar, on which the super-app writes each date.  Every mini-app
+%%   gave (a Module where the certificate verified): Status is idle(Ui),
+%%   holding the mini-app's end of its person channel until activation, or
+%%   running(SgEnd) once run/3 has activated it, SgEnd the super-app's writer
+%%   of the mini-app's social-graph stream.  A mini-app is granted its two
+%%   channels and no dates (GSA paper, Section 2, "What the Grassroots App
+%%   grants a program"; the root's entry template miniapp/3).  Every mini-app
 %%   is held alike, at Opaque: the super-app holds no declaration of a
 %%   mini-app's types (GSG paper, Section 3, "Activation and joining").
-AppStatus ::= idle(PersonChannel(Opaque), Stream(Integer), Stream(Integer)?)
-            ; running(Stream(SgToApp(Opaque))?, Stream(Integer), Stream(Integer)?).
+AppStatus ::= idle(PersonChannel(Opaque))
+            ; running(Stream(SgToApp(Opaque))?).
 App       ::= app(Constant, Module, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Key, String).
