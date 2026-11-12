@@ -5,36 +5,39 @@
 %% PRODUCER: Sends same data to both consumers
 %% =============================================================================
 
-exported procedure producer_init(_?, _?).
+exported procedure producer_init(Keys?, Stream(NetMsg(Msg))?).
 producer_init(keys(_, [Consumer1, Consumer2]), _) :-
     send_to_net([msg(Consumer1?, data([1,2,3])), msg(Consumer2?, data([1,2,3]))]).
+producer_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% CONSUMER1: Receives and wraps data
 %% =============================================================================
 
-exported procedure consumer1_init(_?, _?).
+exported procedure consumer1_init(Keys?, Stream(NetMsg(Msg))?).
 consumer1_init(_, [msg(_, data(List))|_]) :-
     ground(List?) |
     receive(List?, Result),
     consume(Result?).
+consumer1_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% CONSUMER2: Receives and wraps data
 %% =============================================================================
 
-exported procedure consumer2_init(_?, _?).
+exported procedure consumer2_init(Keys?, Stream(NetMsg(Msg))?).
 consumer2_init(_, [msg(_, data(List))|_]) :-
     ground(List?) |
     receive(List?, Result),
     consume(Result?).
+consumer2_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% SHARED
 %% =============================================================================
 
-procedure receive(_?, _).
+procedure receive(List(Integer)?, Got).
 receive(List, got(List?)) :- ground(List?) | true.
 
-procedure consume(_?).
+procedure consume(Got?).
 consume(_) :- true.

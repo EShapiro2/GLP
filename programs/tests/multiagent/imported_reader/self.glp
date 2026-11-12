@@ -5,26 +5,31 @@
 %% directory: BootLoader strips it on the boot path, but a directory load does
 %% not, and its @ atoms would then meet the type checker.
 
-imported procedure agents#agent1_init(_?, _?).
-imported procedure agents#agent2_init(_?, _?).
+imported procedure agents#agent1_init(Keys?, Stream(NetMsg(Msg))?).
+imported procedure agents#agent2_init(Keys?, Stream(NetMsg(Msg))?).
 
-exported procedure agent1_init(_?, _?).
+exported procedure agent1_init(Keys?, Stream(NetMsg(Msg))?).
 agent1_init(Id, In) :- agents # agent1_init(Id?, In?).
 
-exported procedure agent2_init(_?, _?).
+exported procedure agent2_init(Keys?, Stream(NetMsg(Msg))?).
 agent2_init(Id, In) :- agents # agent2_init(Id?, In?).
 
 %% Every agent's initial goal, agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), is answered by this program: "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts" (IGLP 30c04c5, Implementation Notes, "Boot").  The person's first act, init(Entry, Me, Ps), names the entry, with the agent's own key and the keys of the peers its person knows.
 PersonSays ::= init(Constant, Key, List(Key)).
 
-exported procedure(X) agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+%% An agent's own key with the keys of the peers its person knows, and what
+%% the agents of this program send one another.
+Keys ::= keys(Key, List(Key)).
+Msg ::= list(List(String)).
+
+exported procedure agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(Stream(NetMsg(Msg)), Stream(NetMsg(Msg)))?).
 %% The agent opens its PAN at its start: the boot harness sets no trust level
 %% at spawn (IGLP 45fabfc, "Simulation realisation"), and the agents of the
 %% boot contact one another by cold call.
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
 
 %% The agent's program, by the role its person tells it, with its own key and its peers' keys, keys(Me, Ps).
-procedure(X) start(Stream(PersonSays)?, Stream(NetMsg(X))?).
+procedure start(Stream(PersonSays)?, Stream(NetMsg(Msg))?).
 start([init(agent1_init, Me, Ps) | _], N) :- agent1_init(keys(Me?, Ps?), N?).
 start([init(agent2_init, Me, Ps) | _], N) :- agent2_init(keys(Me?, Ps?), N?).
 start(_, _) :- otherwise | true.

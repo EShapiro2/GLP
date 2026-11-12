@@ -5,21 +5,23 @@
 %% AGENT1: Sends data to agent2
 %% =============================================================================
 
-exported procedure agent1_init(_?, _?).
+exported procedure agent1_init(Keys?, Stream(NetMsg(Msg))?).
 agent1_init(keys(_, [Agent2]), _) :-
     send_to_net([msg(Agent2?, data([1,2,3]))]).
+agent1_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% AGENT2: Receives data, transforms it, sends result back to agent1
 %% Tests: receive from network, local computation, send result to network
 %% =============================================================================
 
-exported procedure agent2_init(_?, _?).
+exported procedure agent2_init(Keys?, Stream(NetMsg(Msg))?).
 agent2_init(keys(_, [Agent1]), [msg(_, data(Xs))|_]) :-
     ground(Xs?) |
     transform(Xs?, Ys),
     send_to_net([msg(Agent1?, result(Ys?))]).
+agent2_init(_, _) :- otherwise | true.
 
-procedure transform(_?, _).
+procedure transform(List(Integer)?, List(Got)).
 transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).
 transform([], []).

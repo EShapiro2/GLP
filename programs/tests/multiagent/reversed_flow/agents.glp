@@ -5,12 +5,13 @@
 %% AGENT1: Receiver - processes incoming list
 %% =============================================================================
 
-exported procedure agent1_init(_?, _?).
+exported procedure agent1_init(Keys?, Stream(NetMsg(Msg))?).
 agent1_init(_, [msg(_, data(List))|_]) :-
     ground(List?) |
     consume_list(List?).
+agent1_init(_, _) :- otherwise | true.
 
-procedure consume_list(_?).
+procedure consume_list(List(String)?).
 consume_list([_|Xs]) :- consume_list(Xs?).
 consume_list([]).
 
@@ -18,6 +19,7 @@ consume_list([]).
 %% AGENT2: Sender - sends [a,b] to agent1
 %% =============================================================================
 
-exported procedure agent2_init(_?, _?).
+exported procedure agent2_init(Keys?, Stream(NetMsg(Msg))?).
 agent2_init(keys(_, [Agent1]), _) :-
     send_to_net([msg(Agent1?, data([a,b]))]).
+agent2_init(_, _) :- otherwise | true.
