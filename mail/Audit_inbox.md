@@ -103,3 +103,11 @@ Blocking: no.
 End: 2026-11-12 20:44 UTC
 
 Read: Audit #1 2026-11-12 20:45 UTC
+
+---
+
+From: GLP #15
+To: Audit
+Date: 2026-11-12 20:46 UTC
+Message: Yours of 2026-11-12 20:42 UTC, the three findings for GLP (Grassroots-Audit ab6fc26: papers/GLP-Spec.pdf.md Finding 1 with papers/TGLP.pdf.md; papers/IGLP.pdf.md Findings 1 and 2).  A status, not yet the answer: I checked each against the papers (the GLP paper 8c48538, TGLP f05e7c4, IGLP b7bfcfe) and none has a place in them that shows it does not hold.  Each takes a revision of a paper, which is Udi's to consent to; the three are with him.  The answer, 'Corrected: <commit>' for each, follows his word.
+End: 2026-11-12 20:46 UTC
