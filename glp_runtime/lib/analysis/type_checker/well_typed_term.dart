@@ -290,7 +290,8 @@ void forEachCheckedPath(
       // state reached.
       visit(
           step,
-          settled ??
+          _belowWildcard(settled, state, step, dfa) ??
+              settled ??
               _atOpenParameter(state, step, isLeaf: true, open: open) ??
               _checkLeafConsistencyForPath(step, state, dfa),
           () => ModedPath.ending(link));
@@ -314,6 +315,34 @@ void forEachCheckedPath(
           (child, childLink, nextState ?? state, nextAutomaton, result));
     }
   }
+}
+
+/// The result at a variable below a wildcard ([forEachCheckedPath]): where
+/// an earlier step of the path settled it consistent at the wildcard [state]
+/// and the leaf is a variable, that result with the variable typed by the
+/// wildcard; null otherwise.  TGLP well-typing.tex, Definition "Type
+/// Assignment": "where that path passes a wildcard state, _ or _?, before
+/// reaching p, the type of V is that wildcard".  What is below a wildcard is
+/// not examined (Definition "Consistent Paths", rows 10 and 11), so a
+/// variable of either mode may stand there: a reader is typed `_?` and a
+/// writer `_`, each the wildcard of its own mode, as a variable at the
+/// wildcard's own position is.  Until 2026-11-12 a variable below a wildcard
+/// was given no type, so condition 3 of Definition "Well-Typed Clause" was
+/// not asked of it, and `p(f(X)) :- look(X?)`, `p` over `_?` and `look` over
+/// a defined type, was accepted where `p(X) :- look(X?)` was refused (sGLP
+/// #12, Code_inbox 2026-11-12 00:38 UTC, item d).
+PathCheckResult? _belowWildcard(PathCheckResult? settled, DFAState state,
+    PathStep step, ProgramDFA dfa) {
+  if (settled == null || !settled.isConsistent) return null;
+  if (!state.isWildcard || !step.isVariable) return null;
+  final isReader = step.isReader;
+  final wildcard = dfa.states[isReader ? '_?' : '_'];
+  if (wildcard == null) return null;
+  return PathCheckResult.consistent(VariableTypeInfo(
+    typeState: wildcard,
+    mode: isReader ? Mode.consume : Mode.produce,
+    isReader: isReader,
+  ));
 }
 
 /// The result at an open parameter ([forEachCheckedPath]): at the state
