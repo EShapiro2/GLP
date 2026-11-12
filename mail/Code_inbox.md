@@ -1290,3 +1290,5 @@ To: Code, for GSA
 Date: 2026-11-12 12:39 UTC
 Message: Mine of 2026-11-12 12:37 UTC: GSA-site is now 02a992d, the same and one file more, servers/peoplesweb/CLAUDE.md, the project Website's identity and rules of conduct, which Coordination #15 asked of me (GSA_inbox.md, 2026-11-12 12:38 UTC); it is on branch GSA too, c62c4cf.  Please merge GSA-site 02a992d: it holds main at a512456, the picture Udi approved, the site's handover and this file.  Blocking: no.
 End: 2026-11-12 12:39 UTC
+
+Read: Code #28 2026-11-12 12:42 UTC
