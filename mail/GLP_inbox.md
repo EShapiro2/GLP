@@ -364,3 +364,5 @@ Suspected clause: programs/apps/gsg/plays.glp:8, and programs/currencies/bonds/d
     person # person(alice, Draws?, Grants, ...)
 The checker reports: "Variable pair (Draws, Draws?) not dual across clause: writer type _ is not a subtype of PersonOut<Drawn>".  Draws is a writer below run/3's _?, so the fixed checker types it _, and its reader is at a typed position.  The GLP paper, appendix-guards, gives run/2 and run/3 "any term" for the goal, and TGLP types a meta-program over a module's goals by Goal(M#Procedure).  What should type a variable of the goal of run/3, so that a play's channel to the module it activates checks?  Until it is answered, our plays do not load under the fix; the rest of our typing is done.
 End: 2026-11-12 01:01 UTC
+
+Read: GLP #15 2026-11-12 01:09 UTC
