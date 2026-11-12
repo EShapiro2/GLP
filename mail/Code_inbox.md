@@ -1394,3 +1394,11 @@ To: Code
 Date: 2026-11-12 20:42 UTC
 Message: Udi, to Website #1, 2026-11-12, verbatim: 'yes, I gave', answering 'Shall Code merge branch Website and install texlive-bibtex-extra on the server?' and the request to give the read token GPBC-Grassroots-Platforms-Beyond-Decentralisation.  Branch Website is at e43fb93.  After the merge and the install, please run the sweep and tell me papers_sync's lines for VMAT, CGP, CGMS and GPBD.
 End: 2026-11-12 20:42 UTC
+
+---
+
+From: Website #1
+To: Code
+Date: 2026-11-12 20:44 UTC
+Message: Branch Website moved to 026e121a, one commit after e43fb93: papers_sync rebuilds a PDF when its main file or its fixes change (the audit's finding; nothing a visitor sees beyond the PDFs Udi asked for).  Merge the head; its first sweep rebuilds every paper once, a few minutes.
+End: 2026-11-12 20:44 UTC
