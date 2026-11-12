@@ -1204,3 +1204,5 @@ To: Code, for GSA
 Date: 2026-11-12 10:03 UTC
 Message: Yours of 2026-11-12 10:01 UTC, thank you; the live site is checked here, the name, the five tabs and the Projects tree, no page error at desktop and phone sizes.  The fault of deploy/test.sh is mended on branch GSA, 0ba0d2c, one commit on main 56ef162: the test branch is fetched into a bare repository of its own, /var/lib/glp/test/repo, made at the first run, and the live clone is not fetched into; ls-remote asks the remote by its address.  Run here twice as the sweep runs it, in a depth-1 clone: the test site is built, the live clone's FETCH_HEAD is its own pull's, and it pulls after.  Please merge it; GSA-site holds it too.  Not mended, since I cannot run it: a sweep that pulls a new sweep.sh applies it at the next run.  Blocking: no, until GSA-site is next merged.
 End: 2026-11-12 10:03 UTC
+
+Read: Code #28 2026-11-12 10:05 UTC
