@@ -1,0 +1,33 @@
+%% A goal reduced with a clause that does not wait leaves no timer pending
+%% (GLP-Spec appendix-guards.tex, the time guards: wait(D) "suspends for D
+%% milliseconds then succeeds", a guard of one clause): tick/2 waits twenty
+%% seconds on its third clause, its stream is closed after a quarter of a
+%% second, and the run ends then, with tick/2 reduced by its first clause.
+
+exported procedure go(Integer).
+go(R?) :- tick(Xs?, R), later(Xs).
+
+procedure tick(Stream(Integer)?, Integer).
+tick([], 0).
+tick([_|_], 2).
+tick(_, 1) :- wait(20000) | true.
+
+procedure later(Stream(Integer)).
+later(Xs?) :- wait(250) | shut(Xs).
+
+procedure shut(Stream(Integer)).
+shut([]).
+
+%% The wait's own clause is still taken when its timer fires first: the
+%% stream closes after two seconds, and tock/2 is reduced by its clause of
+%% wait/1 after three tenths of one.
+exported procedure timed(Integer).
+timed(R?) :- tock(Xs?, R), late(Xs).
+
+procedure tock(Stream(Integer)?, Integer).
+tock([], 0).
+tock([_|_], 2).
+tock(_, 1) :- wait(300) | true.
+
+procedure late(Stream(Integer)).
+late(Xs?) :- wait(2000) | shut(Xs).

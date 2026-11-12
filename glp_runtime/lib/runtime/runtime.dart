@@ -1,3 +1,5 @@
+import 'dart:async' show Timer;
+
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
@@ -29,6 +31,11 @@ class GoalRecord {
   int budgetSeq = 0;
   HeapCell? waitReader;
   int waitSeq = 0;
+
+  /// The timer of the wait the goal began ([waitReader]), while it has not
+  /// fired; null once it has, where the goal began none, and for a wait
+  /// restored from a saved state, whose timer did not survive.
+  Timer? waitTimer;
 
   GoalRecord(this.id);
 
@@ -200,6 +207,40 @@ class GlpRuntime {
   /// Clear wait state for a goal (after timer completes)
   void clearWaitState(int goalId) {
     _goals[goalId]?.waitReader = null;
+  }
+
+  /// The timer of the wait the goal [goalId] began ([Runtime.setWaitReader]).
+  void setWaitTimer(int goalId, Timer timer) {
+    _goal(goalId).waitTimer = timer;
+  }
+
+  /// The timer of [goalId]'s wait fired.
+  void waitTimerFired(int goalId) {
+    _goals[goalId]?.waitTimer = null;
+  }
+
+  /// The wait of the goal [goalId] is over though its timer has not fired:
+  /// the goal was reduced with a clause that does not wait on it, or ended.
+  /// The timer is cancelled and no longer pending, and the wait's reader is
+  /// forgotten.  wait(D) "suspends for D milliseconds then succeeds" and
+  /// wait_until(T) "suspends until the current time is at or past timestamp
+  /// T" (GLP-Spec appendix-guards.tex, the time guards): each is a guard of
+  /// one clause, and once the goal is reduced with another clause no goal
+  /// waits on the timer, so a run with no goal left ends.  Until 2026-11-12
+  /// the timer stayed pending, and the run waited for it: tick([], 0). and
+  /// tick(_, 1) :- wait(20000) | true., its stream closed after a second,
+  /// answered after twenty-one (GSA #5, Code_inbox 2026-11-12 09:46 UTC,
+  /// play_sovereign waiting on a wait_until of the next day).
+  void releaseWait(int goalId) {
+    final rec = _goals[goalId];
+    if (rec == null) return;
+    final timer = rec.waitTimer;
+    if (timer != null) {
+      timer.cancel();
+      rec.waitTimer = null;
+      decrementPendingTimers();
+    }
+    rec.waitReader = null;
   }
 
   /// Set wait state for a goal
@@ -416,6 +457,7 @@ class GlpRuntime {
   /// 2026-10-02 they were kept for the whole run, some 500 bytes a goal: 1.6
   /// of the 5 GB live at the end of a year of sGLP's 100-agent social graph.
   void goalEnded(GoalId g) {
+    releaseWait(g);
     _goals.remove(g);
   }
 
