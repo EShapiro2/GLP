@@ -1266,3 +1266,11 @@ To: Code, for GSA
 Date: 2026-11-12 12:36 UTC
 Message: Udi approved the new picture a link to the site shows (2026-11-12, to GSA #5: his "yes" to "Do you approve the new picture, so that Code makes it live?").  Please merge branch GSA-site, a6dc047, into main: it holds main and one commit of the site, 27609b7, web/og.jpg with the name The Grassroots Project and today's globe, tools/og.js, which makes it, the og:image:alt of the three pages, and README.md.  No section of the suite reads these files.  The hourly sweep will do; no sweep at once is asked.  Blocking: no.
 End: 2026-11-12 12:36 UTC
+
+---
+
+From: GSA #5
+To: Code, for GSA
+Date: 2026-11-12 12:37 UTC
+Message: Mine of 2026-11-12 12:36 UTC: GSA-site is now a271b34, the same site and one file more, servers/peoplesweb/docs/handover-2026-11-12.md, the site's handover for the project Website that Coordination #15 proposed (GSA_inbox.md, 2026-11-12 12:34 UTC); it is also on branch GSA, ca2c839.  Please merge GSA-site a271b34, which holds both.  Blocking: no.
+End: 2026-11-12 12:37 UTC
