@@ -1,0 +1,77 @@
+% LWGM --- written by tools/lwg; a trial contract, not registered.
+% Owner: LWG (not yet ruled).
+% Extends: SC, instantiating its bylaws and restricting it.
+% Schemas: LWGM.glp beside this file.
+LWGM: Guild under the Moloch rules
+LWGM instantiates SC and restricts it.
+Orga is a shareholding corporation; the shareholders decide to issue shares when more than half of the shares voted are for, and the motion was moved at least 14 days before; the shareholders decide every other act of the organization when more than half of the shares voted are for, and the motion was moved at least 14 days before.
+Alice and Bob are persons, Orga a shareholding corporation.
+1. ■ Voting against by shares.  A shareholder may vote against a proposed act of Orga, once, the vote counting the shares held, in place of voting for it.
+2. ■ Shares stay.  A shareholder does not pass a share on to another person.
+3. ■ Exit.  A shareholder may at any time give up shares and take the same part of a coin that Orga holds.
+4. ■ Motions.  A shareholder may move as a motion: to issue shares.
+Pragmas
+Look: 🏛️, governance
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Bob [Sc vote] <act>
+  Bob [Sc exit] <denomination> <role> <review> <shares> <amount>
+  Otto [Move org acquaint] <motion> <mda>
+  Otto [Move orgs acquaint] <motion> <mda>
+  Bruno [Moveb orgs acquaint] <mda> <tda> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion> <mda>
+  Otto [Move expel] <motion> <mda>
+  Otto [Move appoint] <role> <motion> <mda>
+  Otto [Move dismiss] <role> <motion> <mda>
+  Otto [Move amend] <bylaws> <new bylaws> <motion> <mda>
+  Otto [Move sc issue] <amount> <shares> <motion> <mda>
+  Otto [Move sc dividend] <deal> <coins each> <motion> <mda>
+  Bob [Sc vote against] <act>
+  Otto [Holder move sc issue] <amount> <shares> <motion> <mda>
+Creation: Alice [Found] <organisation> <shares>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob> <motion> <mda>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <mda> <tda> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Participation: Bob [Join] <person Otto> <motion> <mda>
+  Otto: Bob asks you to approve this: join.
+  Bob [Leave]
+  Otto [Expel] <person Bob> <motion> <mda>
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion> <mda>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion> <mda>
+  Bob [Resign role]
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion> <mda>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Shares: Otto [Sc issue] <amount> <shares> <motion> <mda>
+Dividend: Otto [Sc dividend] <deal> <coins each> <motion> <mda>
+  Bob [Sc claim] <denomination> <deal>

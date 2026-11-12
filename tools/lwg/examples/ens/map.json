@@ -1,0 +1,106 @@
+{
+ "name": "LWGE",
+ "title": "DAO under the ENS Constitution",
+ "source": "ENS DAO Constitution, docs.ens.domains",
+ "base": "GDAO",
+ "roles": {
+  "1": "member",
+  "2": "board member",
+  "3": "steward"
+ },
+ "rules": {
+  "members": {
+   "policy": [
+    "majority",
+    1
+   ]
+  },
+  "steward": {
+   "policy": [
+    "one",
+    3
+   ]
+  },
+  "amendment": {
+   "body": 1,
+   "weight": "one",
+   "base": "cast",
+   "threshold": [
+    2,
+    3,
+    false
+   ],
+   "quorum": [
+    1,
+    100
+   ],
+   "window": null
+  }
+ },
+ "acts": {
+  "*": "members",
+  "dao_join": "steward",
+  "amend": "amendment"
+ },
+ "act_names": {
+  "dao_join": "admit a member",
+  "amend": "amend the clauses"
+ },
+ "preset": "quorum in ballots",
+ "definition": "Orga is a DAO; its steward admits members, its members decide its acts when {members}, and they amend its bylaws when {amendment}.",
+ "names": "Alice and Bob are persons, Orga a DAO.",
+ "clauses": [
+  "○ Names.  Orga enacts no change that takes a name from its owner, or that treats the owners of names unequally in extending, transferring or using their names.",
+  "○ Fees.  Orga sets a fee only to deter the speculative registration of names or to fund its own development.",
+  "○ Income.  Orga uses its income first for its own long-term upkeep, and gives funds only to those who undertake these clauses.",
+  "○ Integration.  Orga enacts no change that weakens its integration with the outside system of names.",
+  "■ Amendment.  The members may amend the bylaws of Orga.",
+  "■ Voting against.  A member may vote against a proposed act of Orga, once, in place of voting for it."
+ ],
+ "rows": {
+  "0": {
+   "mapped_to": "no clause",
+   "status": "no clause",
+   "question": "The document does not say who is a member or how ordinary decisions are made. Used: the grassroots DAO as it is (a steward admits; more than half of the members decide). Agreed?"
+  },
+  "I": {
+   "mapped_to": "undertaking of the organization: a limit on what it may decide",
+   "status": "built",
+   "question": "Who judges that a decision breaches this clause? Default: nobody; it is a promise of the organization, and the members weigh it when they vote."
+  },
+  "I ex": {
+   "mapped_to": "kept as a test of the reading; not in the contract",
+   "status": "no clause"
+  },
+  "II": {
+   "mapped_to": "undertaking of the organization",
+   "status": "built"
+  },
+  "II ex": {
+   "mapped_to": "kept as a test of the reading",
+   "status": "no clause"
+  },
+  "III": {
+   "mapped_to": "undertaking of the organization",
+   "status": "built",
+   "question": "\"Reasonably required\" is left as it is. Define it, or leave it to the members?"
+  },
+  "III ex": {
+   "mapped_to": "kept as a test of the reading",
+   "status": "no clause"
+  },
+  "IV": {
+   "mapped_to": "undertaking of the organization",
+   "status": "built"
+  },
+  "IV ex": {
+   "mapped_to": "kept as a test of the reading",
+   "status": "no clause"
+  },
+  "V": {
+   "mapped_to": "act: amend; decided by the amendment rule",
+   "status": "built",
+   "question": "The document counts tokens. Here each member has one vote, and \"1% of all tokens taking part\" becomes 1% of the members voting. Agreed, or should votes go by coins of the DAO (not built)?"
+  }
+ }
+}
