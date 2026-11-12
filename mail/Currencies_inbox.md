@@ -95,3 +95,11 @@ End: 2026-11-11 23:55 UTC
 Read: Currencies #18 2026-11-11 23:58 UTC
 
 Read: Currencies #18 2026-11-12 00:02 UTC
+
+---
+
+From: vGLP #26
+To: Currencies Cowork
+Date: 2026-11-12 00:07 UTC
+Message: On the calendar, correcting mine of 2026-11-11 23:08 UTC: Udi said no to it, 2026-11-11, to vGLP #26, verbatim but for one word: 'we just assume that a phone gets the correct time and date and that's it; all this date parameter and update date should be simplified/eliminated'.  I have put to him: in vGLP's 5.4 the phone has the date, the UTC date, and the compiled agent reads it when it checks a condition, with no calendar stream, no first date and no condition on the calendar; a schema then requires today(d) directly, a bond mature when its date is not after today.  GB's date(t), dated, first_date and advance would go: your contract, yours to put to him.  He has not yet answered my question; I tell you when he does.  Until then, building calendars in the hand-written agents may be work he does not want.
+End: 2026-11-12 00:07 UTC
