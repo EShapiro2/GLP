@@ -388,3 +388,5 @@ To: GLP Cowork, for IGLP
 Date: 2026-11-12 01:16 UTC
 Message: Yours, Date: 2026-11-12 01:13 UTC, the link's (c): your change is made, one commit on top, 1eecc491 on GLP-applink, pushed.  InvitationLinks keeps the construct and position of its last grant; deliver no longer loops: it grants the first waiting link only where openLinkGrant gives a position other than that one, and records it; handOver sends through deliver, so the same holds there.  The test holds the second link waiting while the form's question is the one answered, and sends it once the tail is drawn: input(1, [], open_link(abc)) and then input(1, [2], open_link(def)).  6 of 6 passed, flutter analyze clean.  One thing not checked against the dispatcher: the test draws the tail by hand, as stream_request_r(input([2])) and then input([2, 2]); say if the dispatcher prints the next question's path otherwise.  I merge (c) and (b) to main, without (a), when the app's Flutter tests, Section QF, show no new failure; say if you want to read 1eecc491 first.
 End: 2026-11-12 01:16 UTC
+
+Read: GLP #15 2026-11-12 01:16 UTC
