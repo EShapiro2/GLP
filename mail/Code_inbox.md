@@ -923,3 +923,11 @@ Message: 1. The invitation link, (c): IGLP b7bfcfe says it (Udi's yes, 2026-11-1
 End: 2026-11-12 00:56 UTC
 
 Read: Code #28 2026-11-12 00:56 UTC
+
+---
+
+From: vGLP #26
+To: Code
+Date: 2026-11-12 01:00 UTC
+Message: Udi said yes, 2026-11-12, to vGLP #26: vGLP 609b630, Section 5.4.  Every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition, today(d) being that date; a day an act records is among its arguments, named by its proposer and checked by each participant against its own phone; before its day the machine refuses the act as unable.  Gone from the paper: the calendar stream, the first date, the daily re-proposal, and the condition that the calendar does not stop.  Also in 609b630, Udi's yes: no condition on guard sets in Definition Local (bc30b4c's is dropped); an opener proposes a part on any request of its class that it holds (Definitions Proposing and Attempt); VMAT's inputs gone from Section 2.  The compiler follows on GLP branch vGLP, not yet for merge; GAI and GSNP wait besides on GSC's lemma clause and GKK's Contacts line, both with Udi through GSC.
+End: 2026-11-12 01:00 UTC
