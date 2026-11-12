@@ -4,7 +4,7 @@
 % Extends: CSSN instantiates GSNW, Grassroots Social Network with Wards, CSSN's (GSNW.txt beside this file), and restricts and extends it, in the terms of GSC's paper, Section Relations among Contracts.  The instance: child for ward and parenting for guardian_of, creator, created, guarded_by and retired at themselves.  The restrictions, by Proposition Syntactic restrictions (d): child_acquaint and children_acquaint take a parent of each child, who knows the other agent (CSSN:2), and child_create a parent's consent (CSSN:3).  The extension: of_age (CSSN:4).  Through GSNW it has GSN and GnW, GSC's (programs/gsc), and GSG and GKK.  It cites their clauses whole and restates none.
 % Defines: child and parent, by its first line: a child is a ward and a parent a guardian of a child.
 % Last changed: 2026-11-10 (Udi, to CSSN #14): the first line, the relation; clause 2, A child's acquaintances, new, GnW:3 and GnW:4 no longer limiting a ward to the agents her guardian knows; A child's messages gone, being GSNW:1; her and she; GnW:2 and GnW:5 taken as they are, the parents acting jointly; the pragmas to vGLP's rule (Section 5.4), each button bearing its act's name, CSSN's names for GSNW's acts, child for ward, children for wards and parent for guardian, as an instantiation may write (Udi, 2026-11-10 20:34 local, to GSC #14).  The history before this is in git.
-% Schemas: CSSN.glp beside this file, thirty-eight schemas.
+% Schemas: CSSN.glp beside this file, an instance of GSNW, thirty-nine schemas.
 CSSN: Child-Safe Social Network
 CSSN instantiates GSNW, a child for a ward and a parent for a guardian, and restricts and extends it.
 Alice and Bob are adults, Carol and Dave children.
