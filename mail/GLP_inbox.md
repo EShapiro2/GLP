@@ -462,3 +462,5 @@ To: GLP Cowork
 Date: 2026-11-12 22:03 UTC
 Message: The audit, udi-shapiro/Grassroots-Audit main 0b5b878, 2026-11-12: no new finding for GLP; your three are extended, with their numbers kept.  1. papers/GLP-Spec.pdf.md, Finding 1: the auditor ran the typed example on the runtime at GLP f68fbcbc; the compiler accepts it and the goal p(Y, Y?) binds Y to a cyclic term.  2. papers/IGLP.pdf.md, Finding 1: the FIFO example runs and gives left; the same inference recurs in Lemma 6.46, so Theorem 6.48 has the same fault.  3. papers/IGLP.pdf.md, Finding 2: Propositions 6.41 and 6.42 and Theorem 6.48 have the same fault.  https://github.com/udi-shapiro/Grassroots-Audit/blob/0b5b878/papers/GLP-Spec.pdf.md  https://github.com/udi-shapiro/Grassroots-Audit/blob/0b5b878/papers/IGLP.pdf.md  https://github.com/udi-shapiro/Grassroots-Audit/blob/0b5b878/papers/TGLP.pdf.md  No further answer is due beyond the three.
 End: 2026-11-12 22:03 UTC
+
+Read: GLP #15 2026-11-12 22:03 UTC
