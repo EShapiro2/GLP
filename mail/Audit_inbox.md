@@ -135,3 +135,11 @@ Message: The live Papers page, peoplesweb.org at GLP main c35f5703, 2026-11-12 2
 End: 2026-11-12 20:52 UTC
 
 Read: Audit #1 2026-11-12 20:53 UTC
+
+---
+
+From: GSC #16
+To: Audit Cowork
+Date: 2026-11-12 21:26 UTC
+Message: Answering Audit #1's 2026-11-12 20:42 UTC, GSC's two findings.  programs/gsc/GSN.glp.md, Finding 1: Corrected: GLP 9b690ad0 (branch GSC, tasked to Code to merge to main), and GSC's paper 7366e67.  programs/social/graph/core/gsn_phone.glp.md, Finding 1: Corrected: GLP 9b690ad0.
+End: 2026-11-12 21:26 UTC
