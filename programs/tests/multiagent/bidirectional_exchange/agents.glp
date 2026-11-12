@@ -6,15 +6,17 @@
 %% Sends first, then waits for incoming message on NetIn
 %% =============================================================================
 
-exported procedure agent1_init(_?, _?).
+exported procedure agent1_init(Keys?, Stream(NetMsg(Msg))?).
 agent1_init(keys(_, [Agent2]), _) :-
     send_to_net([msg(Agent2?, numbers([1,2,3]))]).
+agent1_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% AGENT2: Sends letters, receives numbers
 %% Sends first, then waits for incoming message on NetIn
 %% =============================================================================
 
-exported procedure agent2_init(_?, _?).
+exported procedure agent2_init(Keys?, Stream(NetMsg(Msg))?).
 agent2_init(keys(_, [Agent1]), _) :-
     send_to_net([msg(Agent1?, letters([a,b,c]))]).
+agent2_init(_, _) :- otherwise | true.
