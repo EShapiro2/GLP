@@ -55,7 +55,7 @@ On the peoplesweb VPS, as root, with Git, Python 3, Dart (https://dart.dev/get-d
 
 The papers need TeX Live and a read-only GitHub token for the papers' private repositories:
 
-    apt-get install -y --no-install-recommends latexmk texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra texlive-publishers texlive-science texlive-pictures texlive-plain-generic texlive-lang-greek cm-super lmodern
+    apt-get install -y --no-install-recommends latexmk texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra texlive-publishers texlive-science texlive-pictures texlive-plain-generic texlive-lang-greek texlive-bibtex-extra cm-super lmodern
     install -d -m 700 /etc/glp && umask 077 && cat > /etc/glp/github-token   # paste the token, Enter, Ctrl-D
 
 the token a fine-grained one of EShapiro2's with Contents read-only on the repositories `tools/papers.py` names in `SOURCES`, and on Bib-Grassroots.  The first sweep after it builds every paper, a few minutes; later ones only what changed.  To commit the PDFs to the branch `papers`, a second token, a fine-grained one of EShapiro2's with Contents read and write on EShapiro2/GLP, which Udi places himself:
