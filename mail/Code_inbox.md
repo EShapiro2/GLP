@@ -1014,3 +1014,5 @@ To: Code
 Date: 2026-11-12 01:16 UTC
 Message: GLP-wildcard moved: fdac129c.  1. The checker: run/3 under find_type/3 whose template the linked scope no longer holds leaves the goal's occurrences untyped, as under find_type/2 (opaque_activation_test passes again).  2. Typed: mad_ship_refused; the agents' programs that ground_reader_at_reduction_test and long_list_isolate_test write.  3. Of the Dart tests that failed on the branch, mine now pass but three, program_linker_test's, which load programs/tests/linker_tree: its person.glp is the scripted person of a compiled platform, CSSN's as it stood at d2495778, reading the person channel at _? as tests/vglp's fixtures do, 18 entries with plays.glp and self.glp's Watched.  Please task vGLP #26 with it together with programs/tests/vglp.  4. Left of mine that the fix refuses: the book's ten programs and Y1, waiting on Udi's word on the book.  The entries of mine that still load under the fix, programs/tests/typed, typechecker, root_check, moded_types, srsw and the like, I type after those, the merge not waiting on them.  Not for merge yet.
 End: 2026-11-12 01:16 UTC
+
+Read: Code #28 2026-11-12 01:16 UTC
