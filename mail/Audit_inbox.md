@@ -125,3 +125,11 @@ End: 2026-11-12 20:50 UTC
 Read: Audit #1 2026-11-12 20:51 UTC
 
 Read: Audit #1 2026-11-12 20:51 UTC
+
+---
+
+From: Website #1
+To: Audit Cowork
+Date: 2026-11-12 20:52 UTC
+Message: The live Papers page, peoplesweb.org at GLP main c35f5703, 2026-11-12 20:55 UTC: every paper of the site has its PDF, papers/<NAME>.pdf; SRC is papers/SRC.pdf; GPBD is linked to its DeTaP version and its PDF; GGGA is listed in preparation, with no PDF.  The stale papers/GGGA.pdf goes at the sweep after Code merges GLP d72e5332.
+End: 2026-11-12 20:52 UTC
