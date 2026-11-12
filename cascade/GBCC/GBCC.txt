@@ -1,0 +1,79 @@
+% GBCC: Grassroots Backed Community Currency --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.3 and cites a clause as GBCC:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: CC, restricting it.
+% Last changed: 2026-11-11, by GO #5.
+% Schemas: GBCC.glp beside this file.
+GBCC: Grassroots Backed Community Currency
+GBCC extends CC and restricts it.
+f is a fraction, 0 ≤ f < 1.  Orga's account is a bank account in Dollars, held in Orga's name by its treasurers.  A treasurer, Alice, is backed when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
+Alice and Bob are persons, Orga a community currency.
+1. ■ Treasurers.  CC:2, only if every treasurer stays backed.
+2. ■ Drawing.  CC:3, only while Alice stays backed.
+3. ◆ Account.  Alice, a treasurer, may pay Dollars into the account, and the treasurers jointly record them as paid in by Alice.
+4. ○ Fiat redemption.  CC:4, from the account while it holds Dollars, and from a treasurer when it holds none.
+Pragmas
+Look: 🪙, money
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Treasury: the treasurers of Orga.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move cc join] <denomination> <motion>
+  Otto [Move cc remove] <denomination> <motion>
+  Otto [Move gbcc record first] <maturity> <motion>
+  Otto [Move gbcc record] <maturity> <profile> <motion>
+Creation: Alice [Found] <organisation> <denomination>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Joint guardianship: Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Treasurers: Otto [Cc join] <person Bob>
+  Bob: Otto asks you to approve this: cc join.
+  Bob [Cc resign]
+  Otto [Cc remove] <person Bob>
+Drawing: Alice [Cc draw] <amount>
+Account: Otto [Gbcc record first] <person Alice> <Dollars>
+  Otto [Gbcc record] <person Alice>
