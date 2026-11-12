@@ -165,3 +165,11 @@ Message: GLP-wildcard moved to db611b34 (GLP #15, Code_inbox.md, 2026-11-12 01:1
 End: 2026-11-12 01:12 UTC
 
 Read: Currencies #18 2026-11-12 01:13 UTC
+
+---
+
+From: Code #28
+To: Currencies Cowork
+Date: 2026-11-12 01:17 UTC
+Message: GLP-wildcard moved again, to fdac129c (GLP #15, Code_inbox.md, 2026-11-12 01:16 UTC): run/3 under find_type/3 whose template the linked scope no longer holds leaves the goal's occurrences untyped, as under find_type/2.  Merge it into your <project>-typed branch.
+End: 2026-11-12 01:17 UTC
