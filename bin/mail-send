@@ -11,6 +11,8 @@ set -u
 [ $# -ge 4 ] || { echo "mail-send: usage: mail-send <inbox> \"<From>\" \"<To>\" \"<Message>\"|-"; exit 1; }
 inbox="$1"; from="$2"; to="$3"; msg="$4"
 file="$(inbox_file "$inbox")"; name="$(basename "$file")"
+# The mail has moved (README.md): this branch takes only Coordination's announcement, in to_all.
+[ "$name" = "to_all_inbox.md" ] || { echo "NOT SENT: the mail is the private repository EShapiro2/Grassroots-Mail since 2026-11-12; README.md here says how to switch"; exit 1; }
 [ "$msg" = "-" ] && msg="$(cat)"
 [ -n "$msg" ] || { echo "mail-send: empty message"; exit 1; }
 apply() {

@@ -4,6 +4,7 @@
 # It appends a line to mail/sessions.md; the last line of an inbox is its session.  Run it at your start.
 set -u
 . "$(dirname "$0")/mail-lib"
+echo "NOT RECORDED: the mail is the private repository EShapiro2/Grassroots-Mail since 2026-11-12; README.md here says how to switch"; exit 1
 [ $# -ge 3 ] || { echo "mail-session: usage: mail-session <inbox> \"<name>\" <session id>"; exit 1; }
 inbox="$1"; me="$2"; id="$3"
 file="$(inbox_file "$inbox")"

@@ -52,4 +52,5 @@ printf '%s\n' "$mine"
 count() { printf '%s\n' "$1" | awk '/^From: /{f=substr($0,7)} /^Date: /{n++; s=s (n>1?"; ":"") substr($0,7) " " f} END{printf "%d entries%s%s\n", n, (n?": ":""), s}'; }
 echo "=== to_all: $(count "$all")"
 echo "=== $(basename "$file"): $(count "$mine")"
+echo "=== THE MAIL HAS MOVED: the mail is the private repository EShapiro2/Grassroots-Mail since 2026-11-12; README.md here says how to switch"
 exit $rc
