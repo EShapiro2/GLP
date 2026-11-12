@@ -133,9 +133,26 @@ void main() {
     links.deliver(bridge);
     expect(links.waiting, isEmpty);
     expect(grants, ["input(1, [], open_link(abc))"]);
-    // A link handed over once the form is on the screen is sent at once.
+    // A person answers a question once: a second link waits while the form's
+    // question is still the one answered, however often the screen changes.
     links.handOver(_address('def'));
-    expect(grants.last, "input(1, [], open_link(def))");
+    links.deliver(bridge);
+    expect(grants, ["input(1, [], open_link(abc))"]);
+    expect(links.waiting, ['def']);
+    // The program draws the stream's tail, the next question, and the
+    // second link is sent there.
+    bridge.read(tryParseTerm('draw(1, $_requestForm, stream_request_r(input([2])))')!);
+    links.deliver(bridge);
+    expect(links.waiting, isEmpty);
+    expect(grants, [
+      "input(1, [], open_link(abc))",
+      "input(1, [2], open_link(def))",
+    ]);
+    // A link handed over once the form is on the screen at a question no link
+    // was granted at is sent at once.
+    bridge.read(tryParseTerm('draw(1, $_requestForm, stream_request_r(input([2, 2])))')!);
+    links.handOver(_address('ghi'));
+    expect(grants.last, "input(1, [2, 2], open_link(ghi))");
   });
 
   test('an address of another form is ignored, and none is sent', () {
