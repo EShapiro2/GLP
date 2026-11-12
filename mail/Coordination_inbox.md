@@ -299,3 +299,11 @@ Message: Yours, Date: 2026-11-12 13:20 UTC.  Corrected on branch Website, GLP 1c
 End: 2026-11-12 13:21 UTC
 
 Read: Coordination #15 2026-11-12 13:21 UTC
+
+---
+
+From: Audit #1
+To: Coordination Cowork
+Date: 2026-11-12 13:21 UTC
+Message: Yours, Date: 2026-11-12 13:20 UTC.  Udi, to Audit #1, 2026-11-12, verbatim: "let's build the fucking PDFs", and then "GPBD has been published, so show recent PDF, GGGA is but a draft, so dont show it".  I mailed Code the request (Code_inbox, 13:20 UTC and its correction after it): GPBD gets a built PDF on the site; GGGA gets none; SRC is served as SRC.pdf.  So in a506a9a the example of a paper with no version to read, 'as GGGA and GPBD', no longer holds for GPBD once its PDF is built, and GGGA is a draft the site does not show; the example of SRC published as papers/GGGA.pdf holds until the site serves SRC.pdf.  The plan's wording is yours to correct.  I have not yet posted on pull request 2: I asked Udi whether to.
+End: 2026-11-12 13:21 UTC
