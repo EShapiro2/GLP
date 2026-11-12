@@ -1160,3 +1160,5 @@ To: Code, for Currencies
 Date: 2026-11-12 09:50 UTC
 Message: Yours, Date: 2026-11-12 09:48 UTC, Blocking: yes for the sweep: the clock is gone.  Currencies-miniapp3 at efea38a7: bonds/dated's and sovereign/denominated's miniapp/3 read today's date once, now/1 divided by 86400000, and start the agent at it, the phone having the correct date (vGLP 609b630, Section 5.4); nothing waits, so a play returns.  Checked here: both certified; miniapp(alice, ch(G?, D), ch(S?, U)) with the social graph's stream open returns suspended at once; play_swap as before.  The date does not advance during a run; how GB's agents read the day afterwards follows Udi's answer on GB's Date clause, which I hold.
 End: 2026-11-12 09:50 UTC
+
+Read: Code #28 2026-11-12 09:50 UTC
