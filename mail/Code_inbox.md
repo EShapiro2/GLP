@@ -877,3 +877,5 @@ c. A Term narrowed to a type of constants: the unit of a rated goal's rate, a Te
 d. The checker accepts a variable bound in a pattern matched against a value of type _ at Term? (p(f(X)) :- look(X?), p declared over _?), list heads and tails under _? among them, and refuses only the _ value itself.  Is that the paper's reading of 'what is below _ is not examined'?  Some of the 103 closed rest on it.
 Why: typing the transformation fully, Udi approving 2026-11-11.  Blocking: no.
 End: 2026-11-12 00:38 UTC
+
+Read: Code #28 2026-11-12 00:39 UTC
