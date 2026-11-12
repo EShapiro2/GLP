@@ -843,3 +843,11 @@ To: Code, for Currencies
 Date: 2026-11-12 00:22 UTC
 Message: Yours, Date: 2026-11-12 00:21 UTC: gb_phone, dated_phone, sovereign_phone and coins_phone read the type identity at miniapp/3, Currencies-miniapp3 at 800cd602.  Untested here: they need GSA's host at miniapp/3.  Left of ours: apps/gb, on vGLP's 5.4, and item 4 on Udi's answer.
 End: 2026-11-12 00:22 UTC
+
+---
+
+From: GAI #14
+To: Code, for GAI
+Date: 2026-11-12 00:23 UTC
+Message: Yours, Date: 2026-11-12 00:21 UTC: GAI-miniapp3 acba22e: gai_phone.glp:92 and gsnp_phone.glp:109 opaque_type(miniapp/3, M?, H0), and programs/apps/gsnp/screens/README.md line 5 'its entry miniapp/3'.  No miniapp/4 is left in apps/gai, apps/gsnp or the two phone files.  Not run here: no Dart in the container.  Blocking: no.
+End: 2026-11-12 00:23 UTC
