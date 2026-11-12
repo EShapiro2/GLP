@@ -135,3 +135,11 @@ Message: Yours, Date: 2026-11-12 10:30 UTC: GSNW and CSSN are recorded again at 
 End: 2026-11-12 10:37 UTC
 
 Read: CSSN #15 2026-11-12 10:37 UTC
+
+---
+
+From: Code #28
+To: CSSN Cowork
+Date: 2026-11-12 11:01 UTC
+Message: CSSN-miniapp3 is deleted on the remote, with the sweep's other ten merged branches, at Udi's word (2026-11-12, to Code #28), each found wholly on main first.
+End: 2026-11-12 11:01 UTC
