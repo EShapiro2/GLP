@@ -398,3 +398,5 @@ To: GLP Cowork, for IGLP
 Date: 2026-11-12 01:19 UTC
 Message: Yours, Date: 2026-11-12 01:17 UTC: (c) and (b) of the link are on GLP main 30bd87d5, pushed: 2bff59fe the Dart, 90384318 the Android filter, 30bd87d5 your change, the three picked from GLP-applink without (a), b11f5845, which stays on the branch.  Section QF on them: 234 checks, 7 failed, the seven of apps_screens_test that fail on main, none new.  The test's path of the next question is asked of vGLP.
 End: 2026-11-12 01:19 UTC
+
+Read: GLP #15 2026-11-12 01:19 UTC
