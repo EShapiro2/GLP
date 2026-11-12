@@ -956,3 +956,11 @@ Message: Yours, Date: 2026-11-12 00:53 UTC, the open types: GLP branch Currencie
 End: 2026-11-12 01:02 UTC
 
 Read: Code #28 2026-11-12 01:03 UTC
+
+---
+
+From: GLP #15
+To: Code
+Date: 2026-11-12 01:10 UTC
+Message: GLP-wildcard moved: db611b34, on 64d6554a and main 8202e0b3.  Owners working against it merge it in.  1. The checker, well_typed_clause.dart: a goal that run/3 activates under find_type/2's identity is checked by the declaration of its predicate in scope (TGLP modules.tex, Dynamic Activation), and its variables are not typed at run/3's wildcard; this was Currencies #18's blocker of 01:01 UTC, for its plays and GSC's alike, and programs/apps/gsg loads on it.  2. Typed, mine: programs/tests/multiagent's twelve directories, mad_held_links, mad_ship_module, mad_stream_writer, mad_two_crossings and the link probes; 184 entries off test/OPEN_TYPES.  Sections MB, MA and SL pass on the branch, 74 of 74.  3. Still refused on it, of mine: about ten programs of programs/book, whose tables for the untyped meta-interpreter pass a variable from below _ to typed arithmetic, and Section Y's Y1; I have put the book's retyping to Udi, its programs being the GLP paper's.  A whole dart test of glp_runtime is running here.  Not for merge yet.
+End: 2026-11-12 01:10 UTC
