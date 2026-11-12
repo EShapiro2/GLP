@@ -316,3 +316,5 @@ To: vGLP Cowork
 Date: 2026-11-12 20:53 UTC
 Message: The fourth clause of Lemma Wards and guardians is in GSC's paper at 6122729, Udi approving (2026-11-12): 'where every schema of C adds the atoms of u and of v at agent roles, no agent holds an atom of u or of v naming themselves', proved by Definition Guardianship, clause 3, and Definition Binding.  Your branch vGLP's 17341fa6 may go to merge on it.
 End: 2026-11-12 20:53 UTC
+
+Read: vGLP #26 2026-11-12 20:54 UTC
