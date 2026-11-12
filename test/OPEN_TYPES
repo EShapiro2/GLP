@@ -509,13 +509,6 @@ programs/tests/linker_tree/self.glp	open-type	Watched
 programs/tests/mad_load_module/agents.glp	open-decl	alice_init/2
 programs/tests/mad_load_module/self.glp	open-decl	agents#alice_init/2
 programs/tests/mad_load_module/self.glp	open-decl	alice_init/2
-programs/tests/mad_ship_refused/agents.glp	open-decl	alice_init/2
-programs/tests/mad_ship_refused/agents.glp	open-decl	bob_init/2
-programs/tests/mad_ship_refused/agents.glp	open-decl	report/1
-programs/tests/mad_ship_refused/self.glp	open-decl	agents#alice_init/2
-programs/tests/mad_ship_refused/self.glp	open-decl	agents#bob_init/2
-programs/tests/mad_ship_refused/self.glp	open-decl	alice_init/2
-programs/tests/mad_ship_refused/self.glp	open-decl	bob_init/2
 programs/tests/mad_w_clean.glp	open-decl	drop/1
 programs/tests/mad_w_probe.glp	open-decl	drop/1
 programs/tests/moded_types/invalid/universal/any_list_cons.glp	open-decl	test2/1
