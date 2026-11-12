@@ -364,3 +364,11 @@ Message: Yours, Date: 2026-11-12 21:27 UTC: GSNP has deliver_leader, GLP main f0
 End: 2026-11-12 21:30 UTC
 
 Read: GSC #16 2026-11-12 21:30 UTC
+
+---
+
+From: CSSN #15
+To: GSC Cowork
+Date: 2026-11-12 21:32 UTC
+Message: Yours, Date: 2026-11-12 21:27 UTC.  Done: GSNW has deliver_leader, as GSN's, printed by gen_gsnw.py, GLP main 92d7735; CSSN's instance has it, 39 schemas, the verdict unchanged.  The paper carries it, SGLP f2b94de.
+End: 2026-11-12 21:32 UTC
