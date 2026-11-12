@@ -23,7 +23,7 @@ DIRECTORIES = [
     ('programs/social/graph/core/gsnp_phone.glp', 'GAI', ['GAI'], "GSNP's app on the phone"),
     ('programs/social/graph/core/gai_phone.glp', 'GAI', ['GAI'], "GAI's app on the phone"),
     ('programs/social/graph/core/gc_phone.glp', 'Currencies', ['GC'], "GC's app on the phone"),
-    ('servers/peoplesweb', 'GSA', ['GSA'], 'the Grassroots App Store at peoplesweb.org, GAS, which has no paper of its own'),
+    ('servers/peoplesweb', 'Website', [], "the site peoplesweb.org: its pages, its build, the papers' PDFs, the test site and the sweep's scripts"),
     ('networking', 'GNA', ['GNA'], 'the networking layer, imported from Dan Bachar\'s grassroots-networking'),
     ('programs/examples/rendezvous', 'GNA', ['GNA'], 'the rendezvous server and the directory, GSV, GRV and GDS'),
     ('servers/directory', 'GNA', ['GNA'], 'the directory, the contract GDS'),
@@ -96,6 +96,20 @@ PROJECTS = [
     ('DSA', 'Digital Speech Acts', ['DSA']),
     ('CCDG', 'Constitutional Consensus', ['CCDG']),
     ('CGMS', 'Constitutional Governance in Metric Spaces', ['CGMS']),
+]
+
+# The projects with no paper, in the order the site lists them under Code:
+# each project's name, its name in full, and the repository of its work where
+# that is not GLP (organisation/claude.md, "Mail", the table of inboxes; the
+# directories each answers for are in DIRECTORIES).  Website and Audit were
+# started on 2026-11-12 (Coordination #15, to Website #1, 2026-11-12).
+NO_PAPER = [
+    ('Code', 'The GLP repository as a whole', ''),
+    ('Coordination', 'Grassroots Coordination', ''),
+    ('Website', 'The site peoplesweb.org', ''),
+    ('Audit', 'Our side of the audit by GPT auditors', 'udi-shapiro/Grassroots-Audit'),
+    ('Phones', 'Phone testing', ''),
+    ('GCE', 'Grassroots Contract Examples', ''),
 ]
 
 # The directories whose every entry the site must account for, besides the

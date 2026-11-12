@@ -1,0 +1,172 @@
+Environment predicates: today
+
+establish: identity(Alice), person(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, Carol) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), person(Bob), knows(Bob, Alice), identity(Carol), person(Carol) guarded by Alice, Bob
+
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), person(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
+
+unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
+    identity(Alice), person(Alice), friend(Alice, Bob), not officer_of(Alice, Bob, _), identity(Bob), friend(Bob, Alice) guarded by Alice
+
+sign: item(Alice, x) <-
+    identity(Alice), person(Alice), not item(Alice, x) guarded by Alice
+
+found: created(Alice, Orga), officer_of(Alice, Orga, 1), participates(Alice, Orga), friend(Alice, Orga), knows(Alice, Orga), officer_of(Alice, Orga, 3), identity(Orga), org(Orga), creator(Orga, Alice), bylaws(Orga, bylaws_gdao), officer(Orga, Alice, 1), participant(Orga, Alice), friend(Orga, Alice), knows(Orga, Alice), officer(Orga, Alice, 3) <-
+    identity(Alice), person(Alice), not identity(Orga) guarded by Alice, Orga
+
+org_acquaint: knows(Orga, Bob), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_org_acquaint(Orga, xpa, Bob), knows(Bob, Orga) <-
+    identity(Orga), org(Orga), officer(Orga, Otto, 1), proposal(Orga, xpa), motion_org_acquaint(Orga, xpa, Bob), identity(Bob), person(Bob), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Bob, Otto
+
+orgs_acquaint: knows(Orga, Orgb), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_orgs_acquaint(Orga, xpa, Orgb), knows(Orgb, Orga), not proposal(Orgb, xpb), not vote(Orgb, _, xpb, _), not motion_orgs_acquaint(Orgb, xpb, Orga, Otto) <-
+    identity(Orga), org(Orga), officer(Orga, Otto, 1), proposal(Orga, xpa), motion_orgs_acquaint(Orga, xpa, Orgb), identity(Orgb), org(Orgb), officer(Orgb, Bruno, rob), proposal(Orgb, xpb), motion_orgs_acquaint(Orgb, xpb, Orga, Otto), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), identity(Bruno), person(Bruno), officer_of(Bruno, Orgb, rob), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna, vib = cardinality(v1b, rvb, vote(Orgb, v1b, xpb, rvb)), vnb = cardinality(v2b, rqb, officer(Orgb, v2b, rqb)), vib = vnb guarded by Otto, Bruno
+
+retire: retired(Orga), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_retire(Orga, xpa), forall Dave, r (officer(Orga, Dave, r) -> not officer_of(Dave, Orga, r)) <-
+    identity(Orga), org(Orga), officer(Orga, Otto, roa), proposal(Orga, xpa), motion_retire(Orga, xpa), identity(Otto), person(Otto), officer_of(Otto, Orga, roa), forall Dave, r (officer(Orga, Dave, r) -> identity(Dave), officer_of(Dave, Orga, r)), via = cardinality(v1a, rva, vote(Orga, v1a, xpa, rva)), vna = cardinality(v2a, rqa, officer(Orga, v2a, rqa)), via = vna guarded by Otto
+
+propose: proposal(Orga, x) <-
+    identity(Bob), person(Bob), officer_of(Bob, Orga, r), item(Bob, x), identity(Orga), org(Orga), officer(Orga, Bob, r), not proposal(Orga, x), author(x) = Bob guarded by Bob
+
+vote: voted(Bob, Orga, x, r), vote(Orga, Bob, x, r) <-
+    identity(Bob), person(Bob), officer_of(Bob, Orga, r), not voted(Bob, Orga, x, r), identity(Orga), officer(Orga, Bob, r), proposal(Orga, x), not vote(Orga, Bob, x, _) guarded by Bob
+
+join: participates(Bob, Orga), participant(Orga, Bob), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_join(Orga, xpa, Bob) <-
+    identity(Bob), person(Bob), knows(Bob, Orga), not participates(Bob, Orga), identity(Orga), org(Orga), knows(Orga, Bob), officer(Orga, Otto, 1), proposal(Orga, xpa), motion_join(Orga, xpa, Bob), not participant(Orga, Bob), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Bob, Otto
+
+leave: not participates(Bob, Orga), not officer_of(Bob, Orga, _), not participant(Orga, Bob), not officer(Orga, Bob, _) <-
+    identity(Bob), person(Bob), officer_of(Bob, Orga, 1), participates(Bob, Orga), identity(Orga), officer(Orga, Bob, 1), participant(Orga, Bob) guarded by Bob
+
+expel: not participant(Orga, Bob), not officer(Orga, Bob, _), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_expel(Orga, xpa, Bob), not participates(Bob, Orga), not officer_of(Bob, Orga, _) <-
+    identity(Orga), org(Orga), officer(Orga, Bob, 1), officer(Orga, Otto, 1), participant(Orga, Bob), proposal(Orga, xpa), motion_expel(Orga, xpa, Bob), identity(Bob), officer_of(Bob, Orga, 1), participates(Bob, Orga), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Otto
+
+appoint: officer(Orga, Bob, r), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_appoint(Orga, xpa, Bob, r), officer_of(Bob, Orga, r) <-
+    identity(Orga), org(Orga), participant(Orga, Bob), officer(Orga, Otto, 1), proposal(Orga, xpa), motion_appoint(Orga, xpa, Bob, r), not officer(Orga, Bob, r), identity(Bob), person(Bob), participates(Bob, Orga), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Bob, Otto
+
+dismiss: not officer(Orga, Bob, r), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_dismiss(Orga, xpa, Bob, r), not officer_of(Bob, Orga, r) <-
+    identity(Orga), org(Orga), officer(Orga, Otto, 1), officer(Orga, Bob, r), proposal(Orga, xpa), motion_dismiss(Orga, xpa, Bob, r), identity(Bob), officer_of(Bob, Orga, r), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Otto
+
+resign_role: not officer_of(Bob, Orga, r), not officer(Orga, Bob, r) <-
+    identity(Bob), person(Bob), officer_of(Bob, Orga, r), identity(Orga), officer(Orga, Bob, r) guarded by Bob
+
+amend: bylaws(Orga, b1), not bylaws(Orga, b), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_amend(Orga, xpa, b, b1) <-
+    identity(Orga), org(Orga), officer(Orga, Otto, 1), bylaws(Orga, b), proposal(Orga, xpa), motion_amend(Orga, xpa, b, b1), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Otto
+
+mint_coin: k.coin(Alice, Alice, f) <-
+    identity(Alice), person(Alice) guarded by Alice
+
+mint_bond: k.bond(Alice, Alice, f, d) <-
+    identity(Alice), person(Alice), date(Alice, t), d > t guarded by Alice
+
+first_date: date(Alice, d), dated(Alice) <-
+    identity(Alice), today(Alice, d), not dated(Alice)
+
+advance: date(Alice, t1), not date(Alice, t) <-
+    identity(Alice), today(Alice, d), date(Alice, t), t1 = t + 1, t1 <= d
+
+swap_cc: k1.coin(Alice, v, f), knows(Alice, v), not k.coin(Alice, u, f), k.coin(Bob, u, f), knows(Bob, u), not k1.coin(Bob, v, f) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), k.coin(Alice, u, f), identity(Bob), person(Bob), knows(Bob, Alice), k1.coin(Bob, v, f) guarded by Alice, Bob
+
+swap_cb: k1.bond(Alice, v, f, d1), knows(Alice, v), not k.coin(Alice, u, f), k.coin(Bob, u, f), knows(Bob, u), not k1.bond(Bob, v, f, d1) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), k.coin(Alice, u, f), identity(Bob), person(Bob), knows(Bob, Alice), k1.bond(Bob, v, f, d1) guarded by Alice, Bob
+
+swap_bc: k1.coin(Alice, v, f), knows(Alice, v), not k.bond(Alice, u, f, d), k.bond(Bob, u, f, d), knows(Bob, u), not k1.coin(Bob, v, f) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), k.bond(Alice, u, f, d), identity(Bob), person(Bob), knows(Bob, Alice), k1.coin(Bob, v, f) guarded by Alice, Bob
+
+swap_bb: k1.bond(Alice, v, f, d1), knows(Alice, v), not k.bond(Alice, u, f, d), k.bond(Bob, u, f, d), knows(Bob, u), not k1.bond(Bob, v, f, d1) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), k.bond(Alice, u, f, d), identity(Bob), person(Bob), knows(Bob, Alice), k1.bond(Bob, v, f, d1) guarded by Alice, Bob
+
+accept_c: l.accepts(Alice, u, f) <-
+    identity(Alice), person(Alice), coin(Alice, u, f) guarded by Alice
+
+accept_b: l.accepts(Alice, u, f) <-
+    identity(Alice), person(Alice), bond(Alice, u, f, d) guarded by Alice
+
+pay: not k.coin(Alice, Bob, f), k.coin(Bob, Bob, f) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), k.coin(Alice, Bob, f), identity(Bob) guarded by Alice
+
+payout: not k.coin(Alice, Alice, f), k.coin(Bob, Alice, f), not k.accepts(Bob, Alice, f) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), k.coin(Alice, Alice, f), identity(Bob), k.accepts(Bob, Alice, f) guarded by Alice
+
+spend: not k.coin(Alice, Carol, f), k.coin(Bob, Carol, f), not k.accepts(Bob, Carol, f) <-
+    identity(Alice), person(Alice), k.coin(Alice, Carol, f), identity(Bob), k.accepts(Bob, Carol, f), identity(Carol) guarded by Alice
+
+redeem_cc: coin(Alice, r, f), knows(Alice, r), not coin(Alice, Bob, f), coin(Bob, Bob, f), not coin(Bob, r, f) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), coin(Alice, Bob, f), identity(Bob), coin(Bob, r, f) guarded by Alice
+
+redeem_cb: bond(Alice, r, f, d1), knows(Alice, r), not coin(Alice, Bob, f), coin(Bob, Bob, f), not bond(Bob, r, f, d1) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), coin(Alice, Bob, f), identity(Bob), bond(Bob, r, f, d1) guarded by Alice
+
+redeem_bc: coin(Alice, r, f), knows(Alice, r), not bond(Alice, Bob, f, d), bond(Bob, Bob, f, d), not coin(Bob, r, f) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), bond(Alice, Bob, f, d), identity(Bob), date(Bob, t), coin(Bob, r, f), d <= t guarded by Alice
+
+redeem_bb: bond(Alice, r, f, d1), knows(Alice, r), not bond(Alice, Bob, f, d), bond(Bob, Bob, f, d), not bond(Bob, r, f, d1) <-
+    identity(Alice), person(Alice), knows(Alice, Bob), bond(Alice, Bob, f, d), identity(Bob), date(Bob, t), bond(Bob, r, f, d1), d <= t guarded by Alice
+
+deposit_c: not k.coin(Alice, u, f), k.coin(Carol, u, f), knows(Carol, u) <-
+    identity(Alice), person(Alice), knows(Alice, Carol), k.coin(Alice, u, f), identity(Carol), person(Carol), knows(Carol, Alice) guarded by Alice, Carol
+
+deposit_b: not k.bond(Alice, u, f, d), k.bond(Carol, u, f, d), knows(Carol, u) <-
+    identity(Alice), person(Alice), knows(Alice, Carol), k.bond(Alice, u, f, d), identity(Carol), person(Carol), knows(Carol, Alice) guarded by Alice, Carol
+
+release_c: not k.coin(Carol, u, f), k.coin(Bob, u, f), knows(Bob, u) <-
+    identity(Carol), person(Carol), knows(Carol, Bob), k.coin(Carol, u, f), identity(Bob), person(Bob), knows(Bob, Carol) guarded by Carol, Bob
+
+release_b: not k.bond(Carol, u, f, d), k.bond(Bob, u, f, d), knows(Bob, u) <-
+    identity(Carol), person(Carol), knows(Carol, Bob), k.bond(Carol, u, f, d), identity(Bob), person(Bob), knows(Bob, Carol) guarded by Carol, Bob
+
+return_c: not k.coin(Carol, u, f), k.coin(Alice, u, f), knows(Alice, u) <-
+    identity(Carol), person(Carol), knows(Carol, Alice), k.coin(Carol, u, f), identity(Alice), person(Alice), knows(Alice, Carol) guarded by Carol, Alice
+
+return_b: not k.bond(Carol, u, f, d), k.bond(Alice, u, f, d), knows(Alice, u) <-
+    identity(Carol), person(Carol), knows(Carol, Alice), k.bond(Carol, u, f, d), identity(Alice), person(Alice), knows(Alice, Carol) guarded by Carol, Alice
+
+coop_board: officer(Orga, Bob, 2), not proposal(Orga, xpa), not vote(Orga, _, xpa, _), not motion_coop_board(Orga, xpa, Bob), officer_of(Bob, Orga, 2) <-
+    identity(Orga), org(Orga), participant(Orga, Bob), officer(Orga, Bob, 1), officer(Orga, Otto, 1), proposal(Orga, xpa), motion_coop_board(Orga, xpa, Bob), not officer(Orga, Bob, 2), identity(Bob), person(Bob), participates(Bob, Orga), identity(Otto), person(Otto), officer_of(Otto, Orga, 1), via = cardinality(v1a, vote(Orga, v1a, xpa, 1)), vna = cardinality(v2a, officer(Orga, v2a, 1)), 2*via > vna guarded by Bob, Otto
+
+dao_join: participates(Bob, Orga), officer_of(Bob, Orga, 1), participant(Orga, Bob), officer(Orga, Bob, 1) <-
+    identity(Bob), person(Bob), knows(Bob, Orga), not participates(Bob, Orga), identity(Orga), org(Orga), knows(Orga, Bob), officer(Orga, Otto, 3), not participant(Orga, Bob), identity(Otto), person(Otto), officer_of(Otto, Orga, 3) guarded by Bob, Otto
+
+delegate: delegated(Bob, Orga, Carol), delegate(Orga, Bob, Carol) <-
+    identity(Bob), person(Bob), officer_of(Bob, Orga, 1), knows(Bob, Carol), not delegated(Bob, Orga, _), identity(Orga), officer(Orga, Bob, 1), officer(Orga, Carol, 1), Bob != Carol guarded by Bob
+
+revoke: not delegated(Bob, Orga, Carol), not delegate(Orga, Bob, Carol) <-
+    identity(Bob), person(Bob), delegated(Bob, Orga, Carol), identity(Orga), delegate(Orga, Bob, Carol) guarded by Bob
+
+count: vote(Orga, Bob, x, 1) <-
+    identity(Orga), proposal(Orga, x), delegate(Orga, Bob, Carol), vote(Orga, Carol, x, 1), not vote(Orga, Bob, x, _)
+
+move_org_acquaint: proposal(Orga, xpa), motion_org_acquaint(Orga, xpa, Bob) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Bob), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+move_orgs_acquaint: proposal(Orga, xpa), motion_orgs_acquaint(Orga, xpa, Orgb) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Orgb), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+moveb_orgs_acquaint: proposal(Orgb, xpb), motion_orgs_acquaint(Orgb, xpb, Orga, Otto) <-
+    identity(Bruno), person(Bruno), officer_of(Bruno, Orgb, rob), knows(Bruno, Orga), knows(Bruno, Otto), identity(Orgb), officer(Orgb, Bruno, rob), not proposal(Orgb, xpb) guarded by Bruno
+
+move_retire: proposal(Orga, xpa), motion_retire(Orga, xpa) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, roa), identity(Orga), officer(Orga, Otto, roa), not proposal(Orga, xpa) guarded by Otto
+
+move_join: proposal(Orga, xpa), motion_join(Orga, xpa, Bob) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Bob), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+move_expel: proposal(Orga, xpa), motion_expel(Orga, xpa, Bob) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Bob), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+move_appoint: proposal(Orga, xpa), motion_appoint(Orga, xpa, Bob, r) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Bob), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+move_dismiss: proposal(Orga, xpa), motion_dismiss(Orga, xpa, Bob, r) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Bob), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+move_amend: proposal(Orga, xpa), motion_amend(Orga, xpa, b, b1) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto
+
+move_coop_board: proposal(Orga, xpa), motion_coop_board(Orga, xpa, Bob) <-
+    identity(Otto), person(Otto), officer_of(Otto, Orga, 1), knows(Otto, Bob), identity(Orga), officer(Orga, Otto, 1), not proposal(Orga, xpa) guarded by Otto

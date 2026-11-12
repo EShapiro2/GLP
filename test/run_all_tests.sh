@@ -9718,7 +9718,7 @@ echo ""
 # committed artefacts to what the tools print"); until 2026-11-11 fourteen
 # records, gfp, gpd, gas, grv, gsv, gds, gpe, bcc, gcc, gff_i, gff_ps, gff_fr,
 # gff_fr_bc and gsnw, were recorded and never checked.
-for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv gds gpe agora gdo gdc dgc gcc bcc gd gdo_l gra gff gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint; do
+for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv gds gpe agora gdo gdc dgc gcc bcc gd gdo_l gra gff gff_i gff_ps gff_fr gff_fr_bc gdo_lb gra_ss dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc; do
     cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
     [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
     cas_o="cascade/$cas_n"

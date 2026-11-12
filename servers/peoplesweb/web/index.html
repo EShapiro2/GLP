@@ -1045,6 +1045,9 @@ const dirLi = e => `<li>${ghPath(e)}${e.who ? ` <b>${esc(e.who)}</b>` : ''}${e.n
   (e.contracts || []).length ? `<ul>${e.contracts.map(conLi).join('')}</ul>` : ''}</li>`;
 const conLi = c => `<li><a href="#${esc(c.id)}"><b>${esc(c.id)}</b></a>${C[c.id] ? ` <span class="nt">${esc(C[c.id].title)}</span>` : ''}
   <ul>${c.items.map(i => `<li><span class="k">${esc(i.k)}</span>${ghPath(i)}</li>`).join('')}</ul></li>`;
+// A project with no paper (tools/directories.py, NO_PAPER): its name, its
+// name in full, and its repository where its work is not in GLP.
+const noPaperLi = p => `<li><b>${esc(p.id)}</b> <span class="nt">${esc(p.name)}</span>${p.repo ? ` <a href="https://github.com/${esc(p.repo)}" target="_blank" rel="noopener"><code>${esc(p.repo)}</code></a>` : ''}</li>`;
 const branch = (lab, lis) => lis.length ? `<li><span class="lab">${lab}</span><ul>${lis.join('')}</ul></li>` : '';
 const nOf = (n, one, many) => n ? `${n} ${n === 1 ? one : many}` : '';
 function projHtml(p){
@@ -1056,9 +1059,9 @@ function projHtml(p){
     ${branch('Directories of the whole project', p.dirs.map(dirLi))}</ul></div></details>`;
 }
 $('#ptree').innerHTML = D.projects.map(projHtml).join('')
-  + `<details class="card proj" data-proj="Code"><summary><b>Code</b><span class="nm2">The directories with no paper, each with the project that answers for it</span>
-    <span class="cnt">${nOf(D.code.length, 'directory', 'directories')}</span><span class="chev">›</span></summary>
-    <div class="tree"><ul>${D.code.map(dirLi).join('')}</ul></div></details>`
+  + `<details class="card proj" data-proj="Code"><summary><b>Code</b><span class="nm2">The projects with no paper, and the directories with no paper, each with the project that answers for it</span>
+    <span class="cnt">${[nOf((D.noPaper || []).length, 'project', 'projects'), nOf(D.code.length, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${branch('Projects with no paper', (D.noPaper || []).map(noPaperLi))}${branch('Directories', D.code.map(dirLi))}</ul></div></details>`
   + ((D.unaccounted || []).length ? `<p class="why">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</p>` : '')
   + ((D.faults || []).length ? `<p class="why">${D.faults.map(esc).join('; ')}.</p>` : '');
 $('#pexp').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = true);
