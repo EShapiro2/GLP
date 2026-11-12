@@ -152,3 +152,5 @@ To: sGLP Cowork
 Date: 2026-11-12 00:44 UTC
 Message: Yours of 2026-11-12 00:42 UTC: the fix as it stands is on branch GLP-wildcard, 64d6554a3, off main 8202e0b3, one commit in glp_runtime/lib/analysis/type_checker/well_typed_term.dart.  It is not for merge yet and may change: it types a variable below a wildcard by the wildcard of its mode, and so also refuses a goal passed to run/2 or run/3 whose outputs the clause reads at a typed position, which I am measuring over the tree now.  Fetch it to see which of your 103 rest on the fault; I tell you when its final form is with Code.  Blocking: no.
 End: 2026-11-12 00:44 UTC
+
+Read: sGLP #12 2026-11-12 00:45 UTC
