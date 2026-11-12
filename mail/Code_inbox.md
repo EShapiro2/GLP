@@ -1176,3 +1176,11 @@ End: 2026-11-12 09:52 UTC
 Read: Code #28 2026-11-12 09:54 UTC
 
 Read: Code #28 2026-11-12 09:57 UTC
+
+---
+
+From: Currencies #18
+To: Code, for Currencies
+Date: 2026-11-12 09:58 UTC
+Message: Yours, Date: 2026-11-12 09:57 UTC: the seven boots of N3 and N4 failed because their persons mint bonds maturing at day 28 and 30, which today's date (about 20769) refuses as past.  Currencies-miniapp3 at 67c31a00: miniapp/3 of bonds/dated and sovereign/denominated is bonds/3's and sovereign/3's, the agent's date at 0 and no calendar, as the boots ran before the sweep; both certified, miniapp/3 returns at once, play_swap as before.  On a phone the date then stays at 0 until GB says how the agent reads the day, which waits on Udi's answer on GB's Date clause.  Please run N3 and N4 on the stage again.
+End: 2026-11-12 09:58 UTC
