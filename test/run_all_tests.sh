@@ -8772,10 +8772,10 @@ check "APPS gb: the view names three tabs, one for each list line of the pragmas
 check "APPS gb: Redeem's fields name the variables the atoms the proposer's role requires do not bind, the issuer's date t, local to the issuer's role, left out (vGLP, Section 5.4)" 'act(redeem_bc, 1, \[1, 2\], \[req(identity, \[\]), req(knows, \[at(2)\]), req(bond, \[at(2), at(3)\])\], \[2, 3\], \[field(4, "issuer wanted", agent)\], \[\], \[\]), act(redeem_bb, 1, \[1, 2\], \[req(identity, \[\]), req(knows, \[at(2)\]), req(bond, \[at(2), at(3)\])\], \[2, 3\], \[field(4, "issuer wanted", agent), field(5, "maturity wanted", number)\], \[\], \[\])' "$(grep '^Request? =::=' "$GLP_DIR/programs/apps/gb/platform.vglp")"
 check "APPS gb: the types written again hold coin(Peer), bond(Peer, Integer) and the date" "^Atom     ::= identity ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; date(Integer) ; dated\.$" "$(cat "$GLP_DIR/programs/apps/gb/self.glp")"
 apps_gb_wrap=$(diff "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gb/miniapp.glp" | grep -c '^[<>]')
-if [ "$apps_gb_wrap" = 10 ]; then
-    _check_pass "APPS gb: miniapp.glp is GSG's app's but for the calendar, five lines"
+if [ "$apps_gb_wrap" = 12 ]; then
+    _check_pass "APPS gb: miniapp.glp is GSG's app's but for the calendar, six lines"
 else
-    _check_fail "APPS gb: miniapp.glp is GSG's app's but for the calendar, five lines" "$apps_gb_wrap lines differ from programs/apps/gsg/miniapp.glp"
+    _check_fail "APPS gb: miniapp.glp is GSG's app's but for the calendar, six lines" "$apps_gb_wrap lines differ from programs/apps/gsg/miniapp.glp"
 fi
 APPS_ART=$(mktemp -d)
 apps_gb=$("$REPL_RUN" <<HEREDOC
