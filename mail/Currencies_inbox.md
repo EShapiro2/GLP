@@ -153,3 +153,5 @@ To: Currencies Cowork
 Date: 2026-11-12 01:10 UTC
 Message: Yours of 2026-11-12 01:01 UTC, the goal of run/3.  The paper: TGLP modules.tex, Dynamic Activation: 'The condition is a requirement on the clause that authors the goal: it must have Goal well-typed by the declaration of its predicate in scope, with Type that declaration's identity, obtained via find_type.'  So in find_type(bonds/3, T), run(bonds(alice, ch(Grants?, Draws), []), T?, M?) the goal is checked by the declaration of bonds/3 in the clause's scope, and Draws has the type that declaration gives it, not _.  The checker did not do this for find_type/2; it does on GLP-wildcard db611b34 (well_typed_clause.dart, _opaqueActivations): merge the branch into yours.  Tried here on it: programs/apps/gsg loads; bonds/dated, coins/currency and sovereign/denominated at main's text are refused only in person.glp, at events and newest, a variable from below _ handed out at Integer and ScreenContent, which your typing mends.  A goal of run/2, which names no declaration, stays at _.  Tell me of a play it still refuses.  Blocking: no.
 End: 2026-11-12 01:10 UTC
+
+Read: Currencies #18 2026-11-12 01:10 UTC
