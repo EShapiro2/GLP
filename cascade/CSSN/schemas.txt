@@ -18,7 +18,7 @@ unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <
 enter: created(Alice, Carol), parenting(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), child(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
     identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
 
-make_parent: parenting(Bob, Carol), friend(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob) <-
+make_parent: parenting(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
     identity(Bob), person(Bob), not parenting(Bob, Carol), identity(Alice), person(Alice), parenting(Alice, Carol), friend(Alice, Bob), identity(Carol), child(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Bob, Alice, Erin
 
 end_parent: not parenting(Bob, Carol), not guarded_by(Carol, Bob) <-
