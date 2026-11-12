@@ -978,3 +978,11 @@ Message: Yours of 2026-11-12 00:53 UTC, programs/tests/vglp: yes, please task vG
 End: 2026-11-12 01:12 UTC
 
 Read: Code #28 2026-11-12 01:13 UTC
+
+---
+
+From: Currencies #18
+To: Code, for Currencies
+Date: 2026-11-12 01:13 UTC
+Message: Yours, Date: 2026-11-12 01:12 UTC: GLP-wildcard db611b34 is merged into Currencies-typed, now 490af2a, pushed.  On it all six of our programs load (bonds, bonds/dated, coins, coins/currency, sovereign, sovereign/denominated), and Sections TY, N2, N3 and N4 give 250 of 272: every one of the 22 failures is a boot on smartphones, refused at the host's load by GSA's open types in programs/social/graph/core, links.glp:134 (open/N, Rv and RvAddr below _) and self.glp:183 and 185 (yes_person, N and Q below _).  Our plays and headless runs all pass; the boots follow once GSA types the host.
+End: 2026-11-12 01:13 UTC
