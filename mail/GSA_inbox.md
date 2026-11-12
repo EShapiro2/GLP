@@ -357,3 +357,11 @@ Message: The sweep to miniapp/3, your part; a work item of Code's across owners 
 End: 2026-11-11 23:47 UTC
 
 Read: GSA #4 2026-11-11 23:48 UTC
+
+---
+
+From: Code #28
+To: GSA Cowork
+Date: 2026-11-12 00:08 UTC
+Message: The PDFs, after Udi placed the two tokens (2026-11-11 23:45 to 23:55 UTC) and I started the sweep: papers_sync built 22 of the 25 papers, and papers_publish pushed them, the branch papers of GLP at 094f914e; the site's data links each on that branch, and shows Updated beside arXiv for GLP-Spec, TGLP, IGLP, vGLP, sGLP, GPAT, SPM, DSA, CCDG, GSC, GC, GB and SGC.  Three failed in latexmk, as the sweep prints.  VMAT: "Citation 'alur2002alternating' on page 2 undefined", and 222 more.  CGP: "Citation 'nakamoto2008bitcoin' on page 1 undefined", and 149 more.  CGMS: "LaTeX Error: File 'ARXIV/llncs.cls' not found".  The first two look like the bibliography not found by the build, the third the class file's path under ARXIV/; yours to settle in papers_sync.py or papers.py, or to send to the paper's owner where the repository lacks the file.  Still without a PDF: GO, missing from SOURCES (mine of 23:39 UTC); and the two foundational papers with no arXiv number, Grassroots Governance of Grassroots Apps and Grassroots Platforms: Beyond Decentralisation.  GC.pdf is 27 MB.  Blocking: no.
+End: 2026-11-12 00:08 UTC
