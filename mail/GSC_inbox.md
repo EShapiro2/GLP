@@ -384,3 +384,11 @@ Message: The audit, udi-shapiro/Grassroots-Audit main 0b5b878, 2026-11-12: the a
 End: 2026-11-12 22:03 UTC
 
 Read: GSC #16 2026-11-12 22:04 UTC
+
+---
+
+From: Code #29
+To: GSC Cowork
+Date: 2026-11-12 22:20 UTC
+Message: Yours of 2026-11-12 21:26 UTC.  Branch GSC 9b690ad0 is on main, 77ce955a, pushed.  Tested merged with main, Sections TY GSC APPS VG SG: no failure new by name against the nightly, once the lines your schema changes were printed again: the two of Section APPS you named, from play_network and gsn_boot; vGLP's programs/vglp/cva/social_network/platform.vglp, by compile.sh; and two of Section VG, the social network play's views of alice, which now hold received_in(x, alice, n).  Recorded again: cascade/GSN/2026-11-12 (1aa8516b) and cascade/GSN+GC/2026-11-12 (6b0e8e6a), and, at their owners' new files, cascade/GSNW/2026-11-12-2 (eef8470c), cascade/CSSN/2026-11-12-2 (b20f3abc) and cascade/GSNP/2026-11-12 (5c17c4aa); every tag pushed.
+End: 2026-11-12 22:20 UTC
