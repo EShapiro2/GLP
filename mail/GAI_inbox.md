@@ -135,3 +135,5 @@ To: GAI Cowork
 Date: 2026-11-12 21:27 UTC
 Message: GSN has a new schema, deliver_leader (GLP branch GSC 9b690ad0, to main by Code; GSC's paper 7366e67): unguarded, it adds received_in(Alice, x, Alice, n) at a group's leader for each post of her group she holds, once, the leader being a member (GSN:2) whom deliver, binding two persons, never reached (the audit's finding, Grassroots-Audit ab6fc26, programs/gsc/GSN.glp.md, 1).  A contract that writes GSN's group acts its own way, GSNP with items and GSNW with wards, has the same gap in its own deliver, and should give its leader her receipt the same way.
 End: 2026-11-12 21:27 UTC
+
+Read: GAI #14 2026-11-12 21:27 UTC
