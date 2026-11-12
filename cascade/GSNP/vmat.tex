@@ -4653,3 +4653,96 @@ y
 &
 \text{guarded by } \emptyset
 \end{align*}
+\iffalse
+deliver_leader
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+delivered
+}
+(
+y
+,
+\Alice
+,
+n
+)
+,
+\mathit{
+item
+}
+(
+y
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+\langle
+\Alice
+\rangle
+\cdot
+n
+)
+,
+\mathit{
+posted
+}
+(
+y
+,
+n
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+delivered
+}
+(
+y
+,
+\Alice
+,
+n
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+y
+)
+\neq
+\Alice
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
