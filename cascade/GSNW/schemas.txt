@@ -20,7 +20,7 @@ unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <
 enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), ward(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
     identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
 
-make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob) <-
+make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
     identity(Bob), person(Bob), not guardian_of(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), identity(Carol), ward(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Bob, Alice, Erin
 
 end_guardian: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-

@@ -58,8 +58,8 @@ contract_named(gsnw, parametric([ward, creator, created, guardian_of, guarded_by
        true, ['Alice', 'Carol']),
 %% GnW:2, Joint guardianship: Bob, a friend of Alice, a guardian of Carol, becomes a guardian and a friend of Carol, by an act of Bob and the guardians of Carol, Alice and every Erin.
     sas(make_guardian, ['Bob', 'Alice', 'Carol', 'Erin'], [],
-       [atom(guardian_of, ['Bob', 'Carol']), atom(friend, ['Bob', 'Carol']),
-        atom(guarded_by, ['Carol', 'Bob']), atom(friend, ['Carol', 'Bob'])],
+       [atom(guardian_of, ['Bob', 'Carol']), atom(friend, ['Bob', 'Carol']), atom(knows, ['Bob', 'Carol']),
+        atom(guarded_by, ['Carol', 'Bob']), atom(friend, ['Carol', 'Bob']), atom(knows, ['Carol', 'Bob'])],
        [atom(identity, ['Bob']), atom(person, ['Bob']),
         not(atom(guardian_of, ['Bob', 'Carol'])),
         atom(identity, ['Alice']), atom(person, ['Alice']), atom(guardian_of, ['Alice', 'Carol']), atom(friend, ['Alice', 'Bob']),
