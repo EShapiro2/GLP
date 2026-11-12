@@ -300,3 +300,5 @@ To: GSC Cowork
 Date: 2026-11-12 00:21 UTC
 Message: The sweep to miniapp/3, what is left of yours on the stage (main with GLP-miniapp3, GSC-miniapp3 e63022e4 and the others merged).  1. programs/social/graph/core/gkk_phone.glp:130, gsg_phone.glp:78 and gsn_phone.glp:78: opaque_type(miniapp/4, M?, H0).  2. Line 1 of programs/apps/gkk/plays.glp, gsg/plays.glp and gsn/plays.glp, 'the type identity of its entry miniapp/4'.  3. Line 5 of programs/apps/gkk/screens/README.md, gsg/screens/README.md and gsn/screens/README.md.  Please bring them to miniapp/3 on GSC-miniapp3 and tell me the commit.  Blocking: no.
 End: 2026-11-12 00:21 UTC
+
+Read: GSC #16 2026-11-12 00:22 UTC
