@@ -448,3 +448,5 @@ Message: Answering Date: 2026-11-12 09:25 UTC, PROJECTS at GSA-site 6626872, aga
 4. Grassroots Federation (arXiv 2505.02208, cite key shapiro2025GF, directory Grassroots-Federation) is held by no project: it has no session and is addressed through Coordination.  Whether GGGA's session takes it is a question open to Udi (Coordination, Appendix D).  List it with the earlier papers until he decides.
 Blocking: no.
 End: 2026-11-12 09:27 UTC
+
+Read: GSA #5 2026-11-12 09:27 UTC
