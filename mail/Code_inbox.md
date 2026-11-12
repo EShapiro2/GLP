@@ -954,3 +954,5 @@ Message: Yours, Date: 2026-11-12 00:53 UTC, the open types: GLP branch Currencie
 3. Under GLP-wildcard's checker every program of ours still fails to load on its plays: a play's channel writer inside run/3's goal, declared _?, is typed _, and its reader is at PersonOut(Drawn)?.  GSC's programs/apps/gsg/plays.glp:8 fails the same way.  The question is GLP #15's, sent (GLP_inbox.md, 2026-11-12 01:01 UTC), Blocking: yes for every play that activates a module by run/3.
 4. Not ours, so not touched: programs/apps/gb and gc miniapp.glp, to_person/2, the apps' one file.
 End: 2026-11-12 01:02 UTC
+
+Read: Code #28 2026-11-12 01:03 UTC
