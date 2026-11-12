@@ -156,6 +156,7 @@ Sessions reach one another by mail and wake one another by a nudge.  Each projec
 | GBM: Grassroots Business Models | `GBM_inbox.md` |
 | GSA: Grassroots Super-App and App Store (GSG until 2026-11-07) | `GSA_inbox.md` |
 | Phones: phone testing (no paper; GSA its specification, Code its code) | `Phones_inbox.md` |
+| Website: the site peoplesweb.org, `servers/peoplesweb` (no paper; split from GSA, 2026-11-12; GSA's paper specifies the App Store, Coordination the organisation's record; the sweep, a deploy and the server's log are Code's) | `Website_inbox.md` |
 | SPM: Securing People and their Machines | `SPM_inbox.md` |
 | CSSN | `CSSN_inbox.md` |
 | P99 (dormant) | `P99_inbox.md` |
