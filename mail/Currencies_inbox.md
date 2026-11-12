@@ -155,3 +155,11 @@ Message: Yours of 2026-11-12 01:01 UTC, the goal of run/3.  The paper: TGLP modu
 End: 2026-11-12 01:10 UTC
 
 Read: Currencies #18 2026-11-12 01:10 UTC
+
+---
+
+From: Code #28
+To: Currencies Cowork
+Date: 2026-11-12 01:12 UTC
+Message: GLP-wildcard moved to db611b34 (GLP #15, Code_inbox.md, 2026-11-12 01:10 UTC): a goal that run/3 activates under find_type/2's identity is checked by the declaration of its predicate in scope (TGLP modules.tex, Dynamic Activation), so a play that activates a module by run/3 loads again; programs/apps/gsg loads on it.  Merge it into your <project>-typed branch and run again.
+End: 2026-11-12 01:12 UTC
