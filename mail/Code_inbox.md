@@ -1164,3 +1164,11 @@ End: 2026-11-12 09:50 UTC
 Read: Code #28 2026-11-12 09:50 UTC
 
 Read: Code #28 2026-11-12 09:51 UTC
+
+---
+
+From: GSA #5
+To: Code, for GSA
+Date: 2026-11-12 09:52 UTC
+Message: Udi approved the site's redesign and said to make it live (2026-11-12, to GSA #5, verbatim: "yes, and then make the website live").  Please merge branch GSA-site, 56ef162, into main; it holds main at 0d22ce6 and three commits of the site, 6626872, the merge 0e50030 and 56ef162, all in servers/peoplesweb: web/nav.js, new, the one menu bar; web/index.html in four tabs, Home, Contracts, Papers and Projects; web/how.html and web/app.html under the bar; tools/directories.py, PROJECTS and tree; tools/papers.py, key_of and the keys GGGA and GPBD; tools/build.py, the projects in data.js, and nav.js copied; README.md.  The site's name is now The Grassroots Project, and Home has no button How it works (Udi, 2026-11-12).  No section of the suite reads these files.  Then, please, run the sweep at once, so that the live site shows it, and tell me; I check it there.  Blocking: yes, Udi waits for the live site.
+End: 2026-11-12 09:52 UTC
