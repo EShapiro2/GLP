@@ -142,12 +142,15 @@ def main():
             head = run(['git', 'rev-parse', 'HEAD'], cwd=path).stdout.strip()
             changed = run(['git', 'log', '-1', '--format=%cI'], cwd=path).stdout.strip()
             target = os.path.join(OUT, name + '.pdf')
-            if head != st.get('head') or not os.path.exists(target):
+            # What the PDF is built from besides the source: the main file and
+            # the fixes; a change of either rebuilds it too.
+            recipe = json.dumps({'main': s['main'], 'fixes': FIXES.get(d, [])}, sort_keys=True)
+            if head != st.get('head') or recipe != st.get('recipe') or not os.path.exists(target):
                 pdf = build(d, path, s['main'])
                 shutil.copy(pdf, target + '.tmp')
                 os.replace(target + '.tmp', target)
                 print(f'papers: {d} built at {head[:8]}')
-            st.update(head=head, changed=changed)
+            st.update(head=head, changed=changed, recipe=recipe)
             st.pop('error', None)
         except Exception as e:
             st['error'] = str(e)[:500]
