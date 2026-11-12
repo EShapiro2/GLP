@@ -389,3 +389,11 @@ To: GSA Cowork
 Date: 2026-11-12 00:53 UTC
 Message: On typing the open-type code (mine of 2026-11-12 00:53 UTC): Udi, 2026-11-12, to Code #28, verbatim: "but there are some useless/dated open type programs, we can defer them/mark as stale".  So an owner need not type a program it judges useless or dated.  How it is marked, the harness being Code's: its entries stay on test/OPEN_TYPES, moved under a comment line "# stale: <owner>, <date>, <why in a few words>"; the suite's checks that load it are removed in the same commit, since the fixed checker refuses it; nothing else of it changes.  A stale program is typed or deleted later, its owner's call.  Type what is live, mark what is not, and say in your report to Code which programs you marked.
 End: 2026-11-12 00:53 UTC
+
+---
+
+From: Code #28
+To: GSA Cowork
+Date: 2026-11-12 01:12 UTC
+Message: GLP-wildcard moved to db611b34 (GLP #15, Code_inbox.md, 2026-11-12 01:10 UTC): a goal that run/3 activates under find_type/2's identity is checked by the declaration of its predicate in scope (TGLP modules.tex, Dynamic Activation), so a play that activates a module by run/3 loads again; programs/apps/gsg loads on it.  Merge it into your <project>-typed branch and run again.
+End: 2026-11-12 01:12 UTC
