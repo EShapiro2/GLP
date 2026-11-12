@@ -7,7 +7,7 @@
 %% artefacts the REPL's :artefact writes here, the one place the agent's
 %% load_file/2 resolves a name.  The super-app holds no declaration of a
 %% mini-app's types: each mini-app's entry is the instance of the entry
-%% template miniapp/4, declared once in the root programs/self.glp, at the
+%% template miniapp/3, declared once in the root programs/self.glp, at the
 %% mini-app's own type, and the super-app activates it by the template's
 %% opaque instance at that type (GSG paper, Sections 3 and 4).  Loaded as part
 %% of ../ (the UI boot plays), the agent is called as core # agent, through
@@ -78,10 +78,7 @@ superapp(Id, Known, Services, Grants, NetIn) :-
     ground(Id?), ground(Known?), ground(Services?) |
     servers_of(Services?, Servers),
     directory_of(Services?, Dir),
-    place # os_phone(Id?, Known?, Servers?, Dir?, In?, NetIn?, Outs, NetOut),
-    calendar(Dates),
-    date_msgs(Id?, Dates?, DateMsgs),
-    merge(Cmds?, DateMsgs?, In),
+    place # os_phone(Id?, Known?, Servers?, Dir?, Cmds?, NetIn?, Outs, NetOut),
     send_to_net(NetOut?),
     split_out(Outs?, Shown, Seen),
     home # home(Id?, Seen?, Cmds, Asks),
@@ -321,29 +318,6 @@ notice(msg(A, P, listed(E)), msg(A?, P?, listed(E?)), msg(A?, P?, listed(E?))) :
 %% superapp_plays.glp reach it by scope.
 procedure hold_person(Channel(PersonOut(Opaque), PersonIn(Opaque))?).
 hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).
-
-%% calendar(Dates): the dates of the device's clock, one a day: today's, the
-%% day since the Unix epoch the runtime's clock now/1 reads, at once, and each
-%% next one at the start of its day (GSG paper, Section 3, "What the super-app
-%% grants a mini-app": "a calendar, a stream of dates the super-app writes
-%% from the smartphone's clock, one a day"; GB appendix-derivation.tex: "on a
-%% device the clock writes it").  superapp/4 gives each to the agent, which
-%% writes it on the calendar of every mini-app installed; a play gives the
-%% agent its dates from its script instead.
-procedure calendar(Stream(Integer)).
-calendar(Cal?) :- now(T), D := T? // 86400000, dates(D?, Cal).
-
-procedure dates(Integer?, Stream(Integer)).
-dates(D, [D? | Cal?]) :- N := (D? + 1) * 86400000, next_date(N?, D?, Cal).
-
-procedure next_date(Integer?, Integer?, Stream(Integer)).
-next_date(N, D, Cal?) :- wait_until(N?) | D1 := D? + 1, dates(D1?, Cal).
-
-%% date_msgs(Id, Dates, Msgs): each date the person's act date(D) to the agent.
-procedure date_msgs(Key?, Stream(Integer)?, UserInStream).
-date_msgs(Id, [D | Ds], [msg(person, Id?, date(D?)) | Ms?]) :-
-    ground(Id?), integer(D?) | date_msgs(Id?, Ds?, Ms).
-date_msgs(_, [], []).
 
 %% The agent, exported for the parent's UI boot plays (../boot.glp,
 %% ../play_ui_boot.glp), which call it as core # agent: a call into this
