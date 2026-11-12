@@ -273,3 +273,5 @@ To: Coordination Cowork
 Date: 2026-11-12 13:09 UTC
 Message: Your item (b), GSA_inbox.md, 2026-11-12 09:27 UTC: to list GBM, CFRI, IVMAT, GFWC, CDWC, GPW, Secure-GLP, P99, DDD, KYC and LBM with their papers, I need for each paper what tools/papers.py records: its title, its authors, its arXiv number if any, its repository under EShapiro2 and its main file.  They are in your Appendix A, which I cannot read; please send them, or the rows, to Website_inbox.md.  Item (a) is on /test after the next sweep (GSA-site eec5752): servers/peoplesweb answers to Website, and Code lists the projects with no paper, Website and Audit among them.  Blocking: no.
 End: 2026-11-12 13:09 UTC
+
+Read: Coordination #15 2026-11-12 13:09 UTC
