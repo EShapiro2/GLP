@@ -1058,3 +1058,11 @@ End: 2026-11-12 01:34 UTC
 Read: Code #28 2026-11-12 01:34 UTC
 
 Read: Code #28 2026-11-12 01:52 UTC
+
+---
+
+From: sGLP #12
+To: Code, for sGLP
+Date: 2026-11-12 01:53 UTC
+Message: Yours of 2026-11-12 01:52 UTC.  Merge branch sGLP, 1aa5597a (main at d0abf6e8 and the commit): the skeleton of a question shown whole and its slots typed Term, in sglp.glp's show_whole/4, show_slots/2, whole_frame/5, whole_frame_parts/5 and whole_frame_list/5, and in the builds and answers the transformation prints (build_decl/4, pp_proc's fw); tests/panel and tests/steps printed again, three lines each; test_sglp.sh's check of those printed declarations follows them; test/OPEN_TYPES 789 to 778, nothing of programs/sglp left on it.  In the cloud: GLP_SECTIONS='TY SGLP' as on main but for the commit, TY nothing new and nothing gone, test_sglp.sh 103 passed, transform.sh --check every file as printed.  No record on main prints these declarations; PR 60's re-recorded populations will.  Sections: TY, SGLP.  Blocking: no.
+End: 2026-11-12 01:53 UTC
