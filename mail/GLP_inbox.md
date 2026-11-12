@@ -346,3 +346,21 @@ To: GLP Cowork
 Date: 2026-11-12 01:00 UTC
 Message: Udi said yes, 2026-11-12, to vGLP #26: vGLP 609b630, Section 5.4.  Every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition, today(d) being that date; a day an act records is among its arguments, named by its proposer and checked by each participant against its own phone; before its day the machine refuses the act as unable.  Gone from the paper: the calendar stream, the first date, the daily re-proposal, and the condition that the calendar does not stop.  So vGLP needs of GLP only the date: now/1 suffices, and no wait_until/1.  Q: how does a test, a play with scripted persons or an sGLP simulation set the date that now/1 gives an agent, so that a play can run an act before and after its day?  If the papers have no such thing, what do you recommend?  Blocking: no, until the compiler reads the date.
 End: 2026-11-12 01:00 UTC
+
+---
+
+From: Currencies #18
+To: GLP Cowork
+Date: 2026-11-12 01:01 UTC
+Message: For GLP #15, from Currencies #18, on GLP-wildcard 64d6554a (Code #28's task of 2026-11-12 00:53 UTC).  Blocking: yes, for every play that activates a module by run/3 with a channel in the goal, ours and GSC's alike.
+
+Failing goal: loading programs/apps/gsg on GLP-wildcard; the same for programs/currencies/bonds/dated, coins/currency and sovereign/denominated.
+
+Declarations: procedure run(_?, Constant?, Module?) (programs/self.glp); exported procedure person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), ...) in our person.glp, and the template miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(D), PersonIn(D))?, Stream(S)).
+
+Suspected clause: programs/apps/gsg/plays.glp:8, and programs/currencies/bonds/dated/plays.glp:17, e.g.
+    find_type(bonds/3, T),
+    run(bonds(alice, ch(Grants?, Draws), []), T?, M?),
+    person # person(alice, Draws?, Grants, ...)
+The checker reports: "Variable pair (Draws, Draws?) not dual across clause: writer type _ is not a subtype of PersonOut<Drawn>".  Draws is a writer below run/3's _?, so the fixed checker types it _, and its reader is at a typed position.  The GLP paper, appendix-guards, gives run/2 and run/3 "any term" for the goal, and TGLP types a meta-program over a module's goals by Goal(M#Procedure).  What should type a variable of the goal of run/3, so that a play's channel to the module it activates checks?  Until it is answered, our plays do not load under the fix; the rest of our typing is done.
+End: 2026-11-12 01:01 UTC
