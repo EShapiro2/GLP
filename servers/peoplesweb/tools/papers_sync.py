@@ -82,11 +82,12 @@ def build(d, path, main):
             t = f.read()
         with open(mf, 'w') as f:
             f.write(t.replace(old, new))
-    # Built in the main file's own directory, which its inputs are relative
-    # to (CGMS's is ARXIV/main_ARXIV.tex), the PDF beside it.
-    here, base = os.path.split(os.path.join(work, main))
-    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', base], cwd=here)
-    pdf = os.path.join(here, base[:-4] + '.pdf')
+    # Built at the repository's root, as Overleaf builds it, whose inputs
+    # are relative to it (CGMS's main file is ARXIV/main_ARXIV.tex and reads
+    # ARXIV/sections/...); the PDF is written at the root.
+    base = os.path.basename(main)
+    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', main], cwd=work)
+    pdf = os.path.join(work, base[:-4] + '.pdf')
     if r.returncode != 0 or not os.path.exists(pdf):
         tail = '\n'.join((r.stdout + r.stderr).strip().splitlines()[-8:])
         raise RuntimeError(f'latexmk:\n{tail}')
@@ -141,12 +142,15 @@ def main():
             head = run(['git', 'rev-parse', 'HEAD'], cwd=path).stdout.strip()
             changed = run(['git', 'log', '-1', '--format=%cI'], cwd=path).stdout.strip()
             target = os.path.join(OUT, name + '.pdf')
-            if head != st.get('head') or not os.path.exists(target):
+            # What the PDF is built from besides the source: the main file and
+            # the fixes; a change of either rebuilds it too.
+            recipe = json.dumps({'main': s['main'], 'fixes': FIXES.get(d, [])}, sort_keys=True)
+            if head != st.get('head') or recipe != st.get('recipe') or not os.path.exists(target):
                 pdf = build(d, path, s['main'])
                 shutil.copy(pdf, target + '.tmp')
                 os.replace(target + '.tmp', target)
                 print(f'papers: {d} built at {head[:8]}')
-            st.update(head=head, changed=changed)
+            st.update(head=head, changed=changed, recipe=recipe)
             st.pop('error', None)
         except Exception as e:
             st['error'] = str(e)[:500]

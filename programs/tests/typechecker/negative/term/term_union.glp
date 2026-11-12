@@ -1,0 +1,8 @@
+%% Term has an alternative for every functor, so it shares a top-level
+%% functor with any other alternative (TGLP typed-glp.tex, "Type
+%% Declarations").  Refused.
+
+Item ::= none ; Term.
+
+procedure pick(Item?, Item).
+pick(X, X?).

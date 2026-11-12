@@ -1311,17 +1311,24 @@ GuardResult _waitOnTimer(RunnerContext cx, num milliseconds) {
   // Track pending timer
   cx.rt.incrementPendingTimers();
 
-  // Start timer that binds writer when it fires
-  Timer(Duration(milliseconds: milliseconds.toInt()), () {
-    // Bind writer to 0 (any value works)
-    final reactivated = cx.rt.heap.bindVariableConst(writerAddr, 0);
-    // Enqueue reactivated goals and clean up suspended map
-    for (final goalRef in reactivated) {
-      cx.rt.enqueueReactivatedGoal(goalRef);
-    }
-    // Decrement pending timer count
-    cx.rt.decrementPendingTimers();
-  });
+  // Start timer that binds writer when it fires.  The goal's record keeps
+  // it while it has not fired, so that a goal reduced with another clause,
+  // or ended, cancels it ([Runtime.releaseWait]).
+  final rt = cx.rt;
+  final goalId = cx.goalId;
+  rt.setWaitTimer(
+      goalId,
+      Timer(Duration(milliseconds: milliseconds.toInt()), () {
+        rt.waitTimerFired(goalId);
+        // Bind writer to 0 (any value works)
+        final reactivated = rt.heap.bindVariableConst(writerAddr, 0);
+        // Enqueue reactivated goals and clean up suspended map
+        for (final goalRef in reactivated) {
+          rt.enqueueReactivatedGoal(goalRef);
+        }
+        // Decrement pending timer count
+        rt.decrementPendingTimers();
+      }));
 
   // Suspend on the timer's reader, which the runtime binds: it is no
   // reader of the guard's argument ([_guardUndecided] decides those).
@@ -2686,6 +2693,11 @@ mixin OpExecutors {
       cx.Si.clear();
       return StepOutcome.nextClause;
     }
+
+    // The clause commits: a wait the goal began under a guard of another
+    // clause is over ([Runtime.releaseWait]).  A wait under this clause's own
+    // guard was cleared when the guard succeeded.
+    cx.rt.releaseWait(cx.goalId);
 
     // Convert tentative structures to real Terms before committing.
     final convertedSigmaHat = <HeapCell, Object?>{};

@@ -47,6 +47,7 @@
 #   gc          GC    Currencies  programs/currencies/coins currency
 #   gb          GB    Currencies  programs/currencies/bonds ---
 #   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
+#   gsnw        GSNW  CSSN        programs/cssn             ---
 #   gfwc        GFWC  GFWC        programs/federation       ---
 #   gai         GAI   GAI         programs/gai              ---
 #   gff         GFF   GFF         programs/gff              programs/apps/gff (GFF's, the app's plays)
@@ -58,6 +59,31 @@
 #   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   GRH         programs/lbm              ---
 #   gff_i       GFF-I GFF         programs/gff              ---
+#   cb          CB    GO          programs/go               ---
+#   cc          CC    GO          programs/go               ---
+#   cmb         CMB   GO          programs/go               ---
+#   cnc         CnC   GO          programs/go               ---
+#   gan         GAN   GO          programs/go               ---
+#   gbcc        GBCC  GO          programs/go               ---
+#   gbank       GBank GO          programs/go               ---
+#   gcoop       GCoop GO          programs/go               ---
+#   gcorp       GCorp GO          programs/go               ---
+#   gdao        GDAO  GO          programs/go               ---
+#   gldao       GLDAO GO          programs/go               ---
+#   gng         GNG   GO          programs/go               ---
+#   gnl         GNL   GO          programs/go               ---
+#   gnm         GNM   GO          programs/go               ---
+#   gno         GNO   GO          programs/go               ---
+#   go          GO    GO          programs/go               ---
+#   mcs         MCS   GO          programs/go               ---
+#   orh         ORH   GO          programs/go               ---
+#   sc          SC    GO          programs/go               ---
+#   scb         SCB   GO          programs/go               ---
+#   spllc       SPLLC GO          programs/go               ---
+#   tc          TC    GO          programs/go               ---
+#   wc          WC    GO          programs/go               ---
+#   gdo_lb      GDO-LB GRH        programs/lbm              ---
+#   gra_ss      GRA-SS GRH        programs/lbm              ---
 #   gff_ps      GFF-PS GFF        programs/gff              ---
 #   gff_fr      GFF-FR GFF        programs/gff              ---
 #   gff_fr_bc   GFF-FR-BC GFF     programs/gff              ---
@@ -163,6 +189,7 @@ case "$1" in
     gsnp) FILE=GSNP; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
     gb)   FILE=GB;   OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
+    gsnw) FILE=GSNW; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;   # CSSN's, parametric, the base CSSN instantiates (Udi, 2026-11-10, to GSC #14 and CSSN #14, its % Owner line)
     cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
@@ -190,7 +217,32 @@ case "$1" in
     stay) FILE=STAY; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
+    cb) FILE=CB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
+    cc) FILE=CC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    cmb) FILE=CMB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    cnc) FILE=CnC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gan) FILE=GAN; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gbcc) FILE=GBCC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gbank) FILE=GBank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gcoop) FILE=GCoop; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gcorp) FILE=GCorp; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gdao) FILE=GDAO; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gldao) FILE=GLDAO; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gng) FILE=GNG; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gnl) FILE=GNL; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gnm) FILE=GNM; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gno) FILE=GNO; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    go) FILE=GO; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    mcs) FILE=MCS; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    orh) FILE=ORH; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    sc) FILE=SC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    scb) FILE=SCB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    spllc) FILE=SPLLC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    tc) FILE=TC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    wc) FILE=WC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gdo_lb) FILE=GDO-LB; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
+    gra_ss) FILE=GRA-SS; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gdo_lb gra_ss gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
@@ -408,7 +460,7 @@ fi
 say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
-printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
+printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
 repl "$WORK/v.in" "$WORK/v.out"
 VT=$(grep -E '^V = ' "$WORK/v.out" | head -1 | sed -e 's/^V = //')
 if [ -z "$VT" ]; then
@@ -419,7 +471,7 @@ fi
 printf '%s\n' "$VT" > "$OUT/verdict.txt"
 say "verdict: $VT"
 
-printf '%s\n:limit 10000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
+printf '%s\n:limit 1000000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
 repl "$WORK/m.in" "$WORK/m.out"
 # What the compiler prints between the goal and its status line: the displays,
 # a token to a line, or the lines of its refusal.

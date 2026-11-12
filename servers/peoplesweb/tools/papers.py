@@ -1,6 +1,6 @@
 """Each contract's paper, as the site's balloons cite it: the full citation --- title and authors --- and an arXiv link where the paper is on arXiv, else a PDF the site serves, with its state.
 
-This file is the one record of the site's papers, each paper's repository, main file, title, authors and arXiv identifier (Coordination, 2026-11-11).  Which paper a contract belongs to is read from the contract itself, the % Owner line of its NAME.txt, which names the paper's main file under /Grassroots/<DIR>/; this file cites each paper.  The arXiv identifiers, titles and authors of the published papers are Bib-Grassroots' entries; the others' are their main files'.  The PDFs under web/papers/ are built from the paper repositories and go stale as the papers move; a sweep serves them as last built.
+This file is the one record of the site's papers, each paper's repository, main file, title, authors and arXiv identifier (Coordination, 2026-11-11).  Which paper a contract belongs to is read from the contract itself, the % Owner line of its NAME.txt, which names the paper's main file under /Grassroots/<DIR>/; this file cites each paper.  The arXiv identifiers, titles and authors of the published papers are Bib-Grassroots' entries; the others' are their main files'.  The PDFs are built by the sweep from the paper repositories (tools/papers_sync.py) and served as last built.
 """
 import json
 import os
@@ -20,7 +20,7 @@ BY_DIR = {
             'pdf': 'GAI', 'state': 'uploaded to arXiv, number pending'},
     'CSSN': {'title': 'Child-Safe Social Networking: From Social Contract to App', 'authors': 'Ehud Shapiro', 'pdf': 'CSSN'},
     'SRC': {'title': 'Trust, Distrust and Committed Dynamics for Sybil-Resilient Communities in Social Graphs',
-            'authors': '', 'pdf': 'GGGA'},
+            'authors': '', 'pdf': 'SRC'},
     'GRH': {'title': 'Grassroots Ride-Hailing', 'authors': '', 'pdf': 'GRH'},
     'GFF': {'title': 'Grassroots Feeds and Followers', 'authors': '', 'pdf': 'GFF'},
     'GSA': {'title': 'The Grassroots Super-App and App Store', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro',
@@ -47,6 +47,7 @@ SOURCES = {
     'GFF': {'repo': 'GFF-Grassroots-Feeds-and-Followers', 'main': 'main_CSSN.tex'},
     'GSA': {'repo': 'GSG-Grassroots-Social-Graph', 'main': 'main_SGSG.tex'},
     'GNA': {'repo': 'GLP-Networking-API', 'main': 'main.tex'},
+    'GO': {'repo': 'GO-Grassroots-Organisations', 'main': 'main_characterisation_ArXiv.tex'},
 }
 # Built from a copy with these replacements, the repository left as it is:
 # acmart wants a country in every affiliation, which Overleaf forgives
@@ -67,6 +68,12 @@ SOURCES.update({
     'Federation': {'repo': 'Grassroots-Federation', 'main': 'main.tex'},
     'CCDG': {'repo': 'Grassroots-Constitutional-Consensus-2026', 'main': 'mainConstitutionalConsensus.tex'},
     'CGMS': {'repo': 'SMA-Simple-Metric-Aggregation', 'main': 'ARXIV/main_ARXIV.tex'},
+    # Udi, 2026-11-12, to Website #1: "I want updated PDF for all including
+    # Grassroots Platforms: Beyond Decentralisation"; and to Audit #1, the
+    # same day: "GPBD has been published, so show recent PDF".
+    'GPBD': {'repo': 'GPBC-Grassroots-Platforms-Beyond-Decentralisation', 'main': 'main_characterisation_ArXiv.tex'},
+    # GGGA is not built: "GGGA is but a draft, so dont show it" (Udi,
+    # 2026-11-12, to Audit #1, reported by Audit #1).
 })
 for _d, _p in {'GSC': 'GSC', 'GC': 'GC', 'GB': 'GB', 'SGC': 'SGC'}.items():
     BY_DIR[_d].setdefault('pdf', _p)
@@ -85,22 +92,25 @@ def arxiv_of(d):
     return next((f.get('arxiv') for f in FOUNDATIONAL if f.get('dir') == d), None)
 
 
-# Where a published PDF is: the branch papers of GLP, to which tools/papers_publish.py commits each PDF the sweep builds (Udi, 2026-11-11, to Code #27).
-ON_BRANCH = 'https://github.com/EShapiro2/GLP/blob/papers/papers/{}.pdf'
-
-
-def pdf_link(name, published=()):
-    """The link to the PDF of that name: on the branch papers of GLP where it is published there, else as the site serves it."""
-    return ON_BRANCH.format(name) if name in published else f'papers/{name}.pdf'
-
-
-def updated(v, name, served_pdfs, st, published=()):
+def updated(v, name, served_pdfs, st):
     """Add to the citation v of a paper on arXiv the link to its PDF as
     Updated, with the date of its source's last change, where the PDF is
     served and the source has changed since the latest arXiv version."""
     if name in served_pdfs and st.get('ahead'):
-        v['updated'] = pdf_link(name, published)
+        v['updated'] = f'papers/{name}.pdf'
         v['updated_on'] = st.get('changed', '')[:10]
+
+
+def built(v, name, served_pdfs, st):
+    """Add to the citation v of a foundational paper the link to the PDF
+    the site builds of it: as Updated beside arXiv where the source is ahead
+    of it, and for a paper not on arXiv always, with its date."""
+    if 'arxiv' in v:
+        updated(v, name, served_pdfs, st)
+    elif name in served_pdfs:
+        v['pdf'] = f'papers/{name}.pdf'
+        if st.get('changed'):
+            v['pdf_on'] = st['changed'][:10]
 
 
 def load_state(papers_dir):
@@ -114,31 +124,29 @@ def load_state(papers_dir):
         return {}
 
 
-def load_published(papers_dir):
-    """The names of the PDFs tools/papers_publish.py has committed to the branch papers of GLP."""
-    try:
-        with open(os.path.join(papers_dir, 'published.json')) as f:
-            return set(json.load(f).get('pdfs', {}))
-    except (OSError, ValueError, AttributeError):
-        return set()
-
-
-def paper_of(owner_line, served_pdfs=(), state=None, published=()):
-    """The citation of the paper the % Owner line names: title, authors, and an arXiv identifier, or a served PDF (papers/<X>.pdf, where built) with its state; a contract with no paper says so."""
+def key_of(owner_line):
+    """The paper the % Owner line of a contract names, by its key in BY_DIR, or None."""
     m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
-    if not m or m.group(1) not in BY_DIR:
+    return m.group(1) if m and m.group(1) in BY_DIR else None
+
+
+def paper_of(owner_line, served_pdfs=(), state=None):
+    """The citation of the paper the % Owner line names: title, authors, and an arXiv identifier, or a served PDF (papers/<X>.pdf, where built) with its state; a contract with no paper says so."""
+    k = key_of(owner_line)
+    if k is None:
         return {'title': '', 'authors': '', 'state': 'no paper' if re.search(r'No paper', owner_line or '') else 'in preparation'}
-    return cite_of(m.group(1), served_pdfs, state, published)
+    return cite_of(k, served_pdfs, state)
 
 
-def cite_of(d, served_pdfs=(), state=None, published=()):
+def cite_of(d, served_pdfs=(), state=None):
     """The citation of the paper in directory d, a contract's paper or a foundational one, or None."""
     if d not in BY_DIR:
-        f = next((f for f in FOUNDATIONAL if f.get('dir') == d), None)
+        f = next((f for f in FOUNDATIONAL if d in (f.get('dir'), f.get('key'))), None)
         if f is None:
             return None
-        v = {k: x for k, x in f.items() if k != 'dir'}
-        updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}), published)
+        v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
+        if 'dir' in f:
+            built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
@@ -146,11 +154,11 @@ def cite_of(d, served_pdfs=(), state=None, published=()):
     served = name is not None and name in served_pdfs
     if 'arxiv' in v:
         # Updated: the source has changed since the latest arXiv version.
-        updated(v, name, served_pdfs, st, published)
+        updated(v, name, served_pdfs, st)
     elif name is not None:
         v.setdefault('state', 'in preparation')
         if served:
-            v['pdf'] = pdf_link(name, published)
+            v['pdf'] = f'papers/{name}.pdf'
             if st.get('changed'):
                 v['pdf_on'] = st['changed'][:10]
     return v
@@ -165,7 +173,10 @@ def cite_of(d, served_pdfs=(), state=None, published=()):
 # project's directory, the key of its source in SOURCES.  2301.04391 is the
 # extended version of the DISC 2023 brief announcement, the only entry
 # Bib-Grassroots has; the arXiv numbers of 2306.13941 and 2005.06261 are
-# Coordination's Appendix A's, their entries carrying none.
+# Coordination's Appendix A's, their entries carrying none.  A paper whose
+# PDF the site does not build and which a project holds is named by 'key',
+# the name tools/directories.py's PROJECTS knows it by, as 'dir' is of one it
+# builds.
 FOUNDATIONAL = [
     {'dir': 'GLP-Spec', 'title': 'GLP: A Grassroots, Multiagent, Concurrent, Logic Programming Language for AI', 'authors': 'Ehud Shapiro', 'arxiv': '2510.15747'},
     {'dir': 'TGLP', 'title': 'Types for Grassroots Logic Programs', 'authors': 'Ehud Shapiro', 'arxiv': '2601.17957'},
@@ -190,18 +201,25 @@ FOUNDATIONAL = [
     {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
-    {'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
-    {'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026'},
+    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    # 'url': the version a venue publishes, linked from the state (Udi,
+    # 2026-11-12, to Website #1).
+    {'dir': 'GPBD', 'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026',
+     'url': 'https://blockchain-technology-lab.github.io/DeTaP/papers/GPBD__Grassroots_Platforms_Beyond_Decentralisation.pdf'},
 ]
 
 
-def foundational(served_pdfs=(), state=None, published=()):
+def foundational(served_pdfs=(), state=None, but=()):
     """The foundational papers' citations, each with the link to its PDF as
-    Updated where its source is ahead of arXiv, as a contract's paper has it."""
+    Updated where its source is ahead of arXiv, as a contract's paper has it;
+    less those named in but, by 'dir' or 'key', which the site lists with
+    their projects."""
     out = []
     for f in FOUNDATIONAL:
-        v = {k: x for k, x in f.items() if k != 'dir'}
+        if f.get('dir') in but or f.get('key') in but:
+            continue
+        v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
-            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}), published)
+            built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         out.append(v)
     return out

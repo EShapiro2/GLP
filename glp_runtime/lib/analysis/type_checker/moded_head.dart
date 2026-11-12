@@ -331,7 +331,9 @@ List<(TypeExpr, bool)> _alternativesOf(String typeName, TypeEnvironment typeEnv)
     if (def == null) return;
     for (final alt in def.alternatives) {
       if (alt is TypeRef && !alt.isParameterized &&
-          !TypeRef.builtins.contains(alt.name)) {
+          (!TypeRef.builtins.contains(alt.name) ||
+              (alt.name == TypeRef.termType &&
+                  typeEnv.getType(alt.name) != null))) {
         walk(alt.name, flip != alt.isInput, {...seen});
         continue;
       }

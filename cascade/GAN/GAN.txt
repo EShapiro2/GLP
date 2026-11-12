@@ -1,0 +1,92 @@
+% GAN: Grassroots Ad Network --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.2 and cites a clause as GAN:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Last changed: 2026-11-11, by GO #5.
+% Schemas: GAN.glp beside this file.
+GAN: Grassroots Ad Network
+GAN extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
+An advertiser is a provider and a member a customer.  A member's profile is in their state and nowhere else.  An ad names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its budget, the most it pays in all.
+Alice and Bob are persons, Orga an ad network.
+1. ■ Posting.  Bob, an advertiser, may post an ad to the members he points to, its budget locked on top of his stake, and a member may pass it to the members they point to.
+2. ■ Showing.  Alice, a member, is shown an ad she received if it is for her profile.
+3. ◆ Viewing and clicking.  Alice may attest that she viewed, or clicked, an ad shown to her, and the ad's budget then pays her its coins for the view or the click, up to the most one member may earn from it.
+Pragmas
+Look: 📣, network
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Ads: the ads shown to Alice.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move cc join] <denomination> <stake> <motion>
+  Otto [Move cc remove] <denomination> <motion>
+  Otto [Move gbcc record first] <maturity> <motion>
+  Otto [Move gbcc record] <maturity> <profile> <motion>
+  Otto [Move gno stake] <stake> <motion>
+Creation: Alice [Found] <organisation> <denomination>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Joint guardianship: Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Treasurers: Otto [Cc join] <person Bob>
+  Bob: Otto asks you to approve this: cc join.
+  Bob [Cc resign]
+  Otto [Cc remove] <person Bob>
+Drawing: Alice [Cc draw] <amount>
+Account: Otto [Gbcc record first] <person Alice> <Dollars>
+  Otto [Gbcc record] <person Alice>
+Stake: Otto [Gno stake] <stake>
+Arbitration: Alice [Gno raise c] <deal> <person Carol>
+  Bob [Gno raise p] <deal> <person Carol>
+  Carol [Gno arbitrate] <deal> <person Alice> <person Bob> <fee> <to customer> <to provider>
+Pointing to friend: Alice [Point friend]
+Transitive pointing: Alice [Point transitive]
+Ceasing to point: Alice [Unpoint]
+Showing: Alice [Gan profile] <profile>
+Posting: Bob [Gan fund] <limit> <good>
+  Bob [Gan post] <denomination> <price> <issuer wanted> <amount> <most per member>
+  Alice [Gan pass]
+Viewing and clicking: Alice [Gan view] <g1>
+  Alice [Gan click] <g1>

@@ -2418,7 +2418,7 @@ Missing ::= missing(Integer) ; all_reached.
 % bv(X), the value variable X of a schema whose bindings are eliminated
 % (linear.glp, elim_block); and nv(X) and fv(X), the whole and the
 % fractional parts of the act's rational value X.  A linear form is
-% lin(Terms, C), the sum of each term's coefficient times its variable,
+% lin(LinTerms, C), the sum of each term's coefficient times its variable,
 % plus C, all whole numbers; an atom is geq(L), L >= 0, grt(L), L > 0,
 % equ(L), L = 0, or dvd(M, L), M divides L; a conjunction is a list of atoms
 % and a formula a list of conjunctions, their disjunction.
@@ -2426,9 +2426,9 @@ Name      ::= iv(Constant) ; sv(Ints, Constant) ; bv(Constant) ; nv(Constant)
             ; fv(Constant).
 Var       ::= q(Name) ; z(Name).
 Vars      ::= [] ; [Var | Vars].
-Term      ::= t(Var, Integer).
-Terms     ::= [] ; [Term | Terms].
-Lin       ::= lin(Terms, Integer).
+LinTerm   ::= t(Var, Integer).
+LinTerms  ::= [] ; [LinTerm | LinTerms].
+Lin       ::= lin(LinTerms, Integer).
 LAtom     ::= geq(Lin) ; grt(Lin) ; equ(Lin) ; dvd(Integer, Lin).
 Conj      ::= [] ; [LAtom | Conj].
 DNF       ::= [] ; [Conj | DNF].

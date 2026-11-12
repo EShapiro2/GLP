@@ -22,6 +22,12 @@
 /// A scripted build runs the same app with a scripted person in place of the
 /// person on the screen ([GrassrootsApp.script]; main_scripted.dart).
 ///
+/// An invitation link the person tapped, which the phone hands the app, is
+/// the person's act: the app sends on the person channel the act that opens
+/// the link, as if the person had entered its text (IGLP, Implementation
+/// Notes, "Boot"; invitation_link.dart).  A scripted build's person is its
+/// script, and it takes no such act.
+///
 /// The demonstration with scripted peers in one heap, `superapp_ui/4`, is
 /// `main_superapp_ui.dart`.
 library;
@@ -33,6 +39,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'debuglog/app_reporting.dart';
 import 'glp_sources.dart';
+import 'invitation_link.dart';
 import 'manifests/superapp_ui.dart';
 import 'phone_network.dart';
 import 'scripted_person.dart';
@@ -46,31 +53,40 @@ const String _persona = 'person';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const GrassrootsApp());
+  // Before runApp, so that the addresses the phone hands the app reach the
+  // links before the app's navigator (invitation_link.dart, [InvitationLinks.listen]).
+  runApp(GrassrootsApp(links: InvitationLinks.listen()));
 }
 
 class GrassrootsApp extends StatelessWidget {
-  const GrassrootsApp({super.key, this.script});
+  const GrassrootsApp({super.key, this.script, this.links});
 
   /// A scripted build's person, made when the app starts, where a fault in
   /// the build's defines is the app's to report; null, and the person is on
   /// the screen.
   final ScriptedPerson Function()? script;
 
+  /// The invitation links the phone hands the app, each sent as the person's
+  /// act that opens it; null, and none is taken.
+  final InvitationLinks? links;
+
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'Grassroots',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(useMaterial3: true),
-        home: GrassrootsScreen(script: script),
+        home: GrassrootsScreen(script: script, links: links),
       );
 }
 
 class GrassrootsScreen extends StatefulWidget {
-  const GrassrootsScreen({super.key, this.script});
+  const GrassrootsScreen({super.key, this.script, this.links});
 
   /// [GrassrootsApp.script].
   final ScriptedPerson Function()? script;
+
+  /// [GrassrootsApp.links].
+  final InvitationLinks? links;
   @override
   State<GrassrootsScreen> createState() => _GrassrootsScreenState();
 }
@@ -202,6 +218,9 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
         }
       }
       host.ui.onChange = () {
+        // A link the phone handed the app is sent once the request form is
+        // on the screen (invitation_link.dart).
+        widget.links?.deliver(host.ui.bridge);
         if (mounted) setState(() {});
         _screenChanged();
       };

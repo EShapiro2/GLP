@@ -6,21 +6,21 @@ The app of GSG, the grassroots social graph, as a mini-app of the Grassroots Sup
 
 GSG is GSC's contract (Coordination Appendix C); its clauses are `programs/gsc/GSG.txt`, as GSC's paper, Section 2.2, has them, and its act schemas `programs/gsc/GSG.glp`.  GSG extends GKK, the base contract (`programs/gsc/GKK.txt`; the app `../gkk`), whose clauses it cites: Identity, GKK:1; Acquaintance, GKK:2; and Introduction, GKK:3.
 
-GKK:1 is the schema `establish`, guarded by the person, which adds `identity` at them, and every role of the other schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/4`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every view shows, its first argument, and the request form reads off the last view drawn (vGLP, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"), a class of one participant, taken at once.  GKK:2 is the schema `acquaint`, guarded by both, adding `knows` of the other at each, and GKK:3 `introduce`; GSG:1 is the schema `befriend`, guarded by both, requiring `knows` of the other at each, so the two come to know each other before they befriend, and GSG:2 the schema `unfriend`, guarded by either friend; the trust GSG:1 requires, and GSG:3, describe no act (GSC's paper, Section 2.3).
+GKK:1 is the schema `establish`, guarded by the person, which adds `identity` at them, and every role of the other schemas requires `identity`.  In the app the key pair is the one the super-app holds, which the super-app hands the mini-app as the `Key` of its entry `miniapp/3`, and which the platform's agent takes as its `Peer`: every act the agent takes names its person by that key.  The person establishes their identity by their first request, `propose(establish(P))`, `P` their key, which every view shows, its first argument, and the request form reads off the last view drawn (vGLP, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"), a class of one participant, taken at once.  GKK:2 is the schema `acquaint`, guarded by both, adding `knows` of the other at each, and GKK:3 `introduce`; GSG:1 is the schema `befriend`, guarded by both, requiring `knows` of the other at each, so the two come to know each other before they befriend, and GSG:2 the schema `unfriend`, guarded by either friend; the trust GSG:1 requires, and GSG:3, describe no act (GSC's paper, Section 2.3).
 
 ## The cascade
 
 1. The act schemas, `programs/gsc/GSG.glp`; the checker's verdict `syntactically_grassroots` (`cascade/GSG/verdict.txt`).
 2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, "The compilation"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSG.glp.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
 3. GLP: the canonical compilation (vGLP, Section 6.3) compiles `platform.vglp` when the directory loads.
-4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`, which the super-app activates by `run/3`.
+4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`, which the super-app activates by `run/3`.
 
 ## The files
 
 | File | What it holds |
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GSG, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Request =::= social_menu(...)`, the request labels its pragmas give, its request question bare, of the request type `Request?` (vGLP, Section 5.4, "The compilation") |
-| `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations |
+| `miniapp.glp` | `miniapp/3`: the agent, its dispatcher, and the agent's network over the conversations |
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice` or `bob` |
 | `plays.glp` | `play_friends/2` and `play_held/3`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, and the exports |

@@ -18,7 +18,7 @@ unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <
 enter: principal_of(Alice, Carol), operator_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), agent_of(Alice, Carol, y), identity(Carol), agent(Carol), principal(Carol, Alice), operated_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice), attestation(Carol, y) <-
     identity(Alice), person(Alice), item(Alice, y), not identity(Carol), author(y) = Alice guarded by Alice, Carol
 
-make_guardian: operator_of(Bob, Carol), friend(Bob, Carol), agent_of(Bob, Carol, y), operated_by(Carol, Bob), friend(Carol, Bob) <-
+make_guardian: operator_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), agent_of(Bob, Carol, y), operated_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
     identity(Bob), person(Bob), not operator_of(Bob, Carol), identity(Alice), person(Alice), operator_of(Alice, Carol), friend(Alice, Bob), agent_of(Alice, Carol, y), identity(Carol), agent(Carol), operated_by(Carol, Alice), not operated_by(Carol, Bob), not friend(Carol, Bob), forall Erin (operated_by(Carol, Erin) -> identity(Erin), person(Erin), operator_of(Erin, Carol)) guarded by Bob, Alice, Erin
 
 end_guardian: not operator_of(Bob, Carol), not operated_by(Carol, Bob) <-
@@ -89,3 +89,6 @@ deliver: delivered(Alice, y, Bob, n), item(Bob, sgn(y, Alice)) <-
 
 deliver_own: delivered(Alice, y, Bob, n), item(Bob, y) <-
     identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, y, Bob, n), identity(Bob), member(Bob, <Alice>.n), author(y) = Alice
+
+deliver_leader: delivered(Alice, y, Alice, n), item(Alice, y) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), not delivered(Alice, y, Alice, n), author(y) != Alice

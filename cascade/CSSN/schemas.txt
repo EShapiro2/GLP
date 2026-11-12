@@ -18,7 +18,7 @@ unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <
 enter: created(Alice, Carol), parenting(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), child(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
     identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
 
-make_parent: parenting(Bob, Carol), friend(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob) <-
+make_parent: parenting(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
     identity(Bob), person(Bob), not parenting(Bob, Carol), identity(Alice), person(Alice), parenting(Alice, Carol), friend(Alice, Bob), identity(Carol), child(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Bob, Alice, Erin
 
 end_parent: not parenting(Bob, Carol), not guarded_by(Carol, Bob) <-
@@ -110,6 +110,9 @@ child_post: posted(Bob, x, n) <-
 
 deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
     identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
+
+deliver_leader: received_in(Alice, x, Alice, n) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), not received_in(Alice, x, Alice, n)
 
 of_age: person(Carol), not child(Carol), not creator(Carol, Alice), not guarded_by(Carol, _), not created(Alice, Carol), forall Erin (guarded_by(Carol, Erin) -> not parenting(Erin, Carol)) <-
     identity(Carol), guarded_by(Carol, Alice), child(Carol), creator(Carol, Alice), identity(Alice), person(Alice), parenting(Alice, Carol), created(Alice, Carol), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Alice

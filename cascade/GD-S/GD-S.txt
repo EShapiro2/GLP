@@ -1,0 +1,13 @@
+% GD-S: Separating GD --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GGGA (Udi, 2026-11-06, to GGGA #3).  The paper, /Users/udi/Grassroots/SRC/main-distrust-layers.tex, of the GGGA project, prints it in its box in sections/sybil-resilience.tex, and cites a clause as GD-S:1.
+% Paper: SRC, Trust, Distrust and Committed Dynamics for Sybil-Resilient Communities in Social Graphs, in preparation
+% Restricts: GD, Grassroots Distrust, GGGA's (GD.txt beside this file), and with it GSG and GKK, in the terms of GSC's paper, Section Relations among Contracts: GD-S:1 restricts GSG:1, a stronger body with the same head, guard and name; every other act of GD is kept; GD-S:2 is undertaken and adds no schema.
+% Defines: nothing.
+% Last changed: 2026-11-06, written by GGGA #3 Cowork from GD's clauses 4 and 5, GD-S restricting GD as GFF-I restricts GFF and GDO-LB restricts GDO (Udi, 2026-11-06, to GGGA #3, approving the name and the split).
+% Schemas: GD-S.glp beside this file, GD's nine, befriend with a stronger body.  GD-S:2 has an undertaking formula (GSC, Definition Undertaking formula), friend(Alice, Bob) and distrusts(Bob, Carol) and not distrusts(Alice, Carol) leads-to distrusts(Alice, Carol) or not friend(Alice, Bob), printed in the paper, and no schema.
+% Pragmas: GD's and GSG's, GD-S having their acts.
+GD-S: Separating GD
+Alice, Bob and Carol are persons.  GD-S restricts GD.
+1. ◆ Friendship.  GSG:1, only if Alice and Bob do not distrust each other.
+2. ○ Taking sides.  Alice, whose friend Bob distrusts Carol, will eventually distrust Carol or end their friendship with Bob.
+Pragmas

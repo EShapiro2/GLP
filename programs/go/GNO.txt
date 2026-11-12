@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as GNO:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GBCC, restricting it.
-% Last changed: 2026-11-11, by GO #5.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: GNO.glp beside this file.
 GNO: Grassroots Network Organisation
 GNO extends GBCC and restricts it.
@@ -31,6 +31,10 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move org acquaint] <motion>
   Otto [Move orgs acquaint] <motion>
   Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
   Otto [Move retire] <motion>
   Otto [Move join] <motion>
   Otto [Move appoint] <role> <motion>
@@ -45,15 +49,24 @@ Creation: Alice [Found] <organisation> <denomination>
   Orga: Alice asks you to approve this: found.
 Ward and person: Otto [Org acquaint] <person Bob>
   Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
 Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
   Bruno: Otto asks you to approve this: orgs acquaint.
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-Joint guardianship: Otto [Appoint] <person Bob> <role>
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Otto [Appoint] <person Bob> <role>
   Bob: Otto asks you to approve this: appoint.
   Otto [Dismiss] <person Bob> <role>
   Bob [Resign role]
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
 Amendment: Otto [Amend] <new bylaws>
 Minting: Alice [Mint coin] <denomination> <amount>
   Alice [Mint bond] <denomination> <maturity> <amount>

@@ -1,0 +1,83 @@
+% CB: Community Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.2 and cites a clause as CB:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GBank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-11, by GO #5.
+% Schemas: CB.glp beside this file.
+CB: Community Bank
+CB instantiates GBank and restricts it.
+A community bank is a bank with two roles, member, held by every participant, and director, held by members the members elect; the directors jointly decide the acts of the bank, and the members jointly elect and remove directors.  A member's credit line is a number of coins the directors set.
+Alice and Bob are persons, Orga a community bank.
+1. ■ Founding.  Alice may found Orga and become its first member and director.
+2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and the directors; his membership ends by an act of Bob or of the directors.
+3. ■ Directors.  The members may elect a member a director, and remove a director.
+4. ■ Credit line.  The directors may set Bob's credit line.
+5. ■ Credit.  Bob may swap Bob-coins he holds for Orga-coins, as long as the Bob-coins Orga holds do not exceed his credit line.
+6. ○ Community currency.  A member shall accept Orga-coins in payment for their offerings at the prices they post.
+7. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other.
+Pragmas
+Look: 🏘️, money
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move expel] <denomination> <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move expel plain] <denomination> <motion>
+  Otto [Move cb join] <motion>
+  Otto [Move cb elect] <motion>
+  Otto [Move cb line] <limit> <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Membership: Bob [Leave] <denomination>
+  Otto [Expel] <person Bob> <denomination>
+  Bob [Cb join] <person Otto>
+  Otto: Bob asks you to approve this: cb join.
+Joint guardianship: Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Directors: Otto [Cb elect] <person Bob>
+  Bob: Otto asks you to approve this: cb elect.
+Credit line: Otto [Cb line] <person Bob> <limit>
+Credit: Bob [Cb credit] <amount>
