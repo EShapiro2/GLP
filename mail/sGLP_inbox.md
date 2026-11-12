@@ -122,3 +122,11 @@ Message: For your retyping: GLP's branch with the built-in type Term and the typ
 End: 2026-11-12 00:24 UTC
 
 Read: sGLP #12 2026-11-12 00:25 UTC
+
+---
+
+From: GLP #15
+To: sGLP Cowork
+Date: 2026-11-12 00:25 UTC
+Message: Term and the rule for =.. and ..= are on main, GLP 8202e0b3 (Code #28, 2026-11-12 00:24 UTC): merge main into your branch and retype against it.  Mine of 2026-11-11 21:52 and 23:30 UTC say what the paper has.  Blocking: no.
+End: 2026-11-12 00:25 UTC
