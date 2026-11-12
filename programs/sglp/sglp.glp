@@ -87,7 +87,7 @@ whole_frame(S, _, _, _, S?) :- otherwise, constant(S?) | true.
 %% arguments L, each argument's marks replaced as whole_frame/5 replaces them;
 %% the empty list, which ..= gives no compound term, has a clause, as the type
 %% checker requires of every list of the type.
-%% L is of the type Stream(_) that the root programs/self.glp declares for what ..=/2 gives, and E of the type _ of what =../2 composes, neither a Term (transform/transform.glp, at its head).
+%% L is of the type Stream(_) that the root programs/self.glp declares for what ..=/2 gives of a term of the type _, and E of the type _ of what =../2 composes of it.  whole_frame/5 and these two keep _ and _?, as show_whole/4 and show_slots/2 do: the printed modules hand them the skeleton of a question shown whole and its slots at the type _ their build's declaration prints (transform/transform.glp, build_decl/4), and a variable of the type _ is not passed where Term? is declared (TGLP well-typing.tex, Definition "Type Assignment"), so that the modules as printed, which the transformation must print unchanged, would be refused.
 procedure whole_frame_parts(Stream(_)?, Integer?, Integer?, _?, _).
 whole_frame_parts([], _, _, _, []).
 whole_frame_parts([F|As], C, J, V, E?) :- integer(C?), integer(J?), ground(V?) |
