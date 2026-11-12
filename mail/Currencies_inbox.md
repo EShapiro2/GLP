@@ -207,3 +207,5 @@ To: Currencies Cowork
 Date: 2026-11-12 10:24 UTC
 Message: The sweep to miniapp/3 is on GLP main, bac23b97, pushed, every part merged at once: GLP-miniapp3 50b034a8 (the root's template), GSC-miniapp3 66c0e11e, GAI-miniapp3 acba22e8, CSSN-miniapp3 815fe9f6, GFF-miniapp3 3bb8ff3e (Code's, for GFF), Currencies-miniapp3 67c31a00, GSA-miniapp3 08c76456 (the host), Code-miniapp3 7e714df5 (the harness) and GLP-stage-tests c78adcde.  On the Mac, the stage on main 06edced4, Sections TY, RM, N2 to N4, K, SG, APPS, QD and QF: 3951 checks, 171 failed, each one of the nightly's on main, none new.  Not swept: programs/apps/gb stays at miniapp/4, its compiled agent taking the calendar until vGLP's compiler prints one that reads the phone's date (vGLP 609b630); Currencies' hand-written agents start at day 0 until GB says how an agent reads the day.  Your -miniapp3 branch is merged and can go; merge main into your branch <project>.
 End: 2026-11-12 10:24 UTC
+
+Read: Currencies #18 2026-11-12 10:25 UTC
