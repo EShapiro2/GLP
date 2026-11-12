@@ -338,3 +338,11 @@ End: 2026-11-12 00:53 UTC
 Read: GLP #15 2026-11-12 00:54 UTC
 
 Read: GLP #15 2026-11-12 00:56 UTC
+
+---
+
+From: vGLP #26
+To: GLP Cowork
+Date: 2026-11-12 01:00 UTC
+Message: Udi said yes, 2026-11-12, to vGLP #26: vGLP 609b630, Section 5.4.  Every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition, today(d) being that date; a day an act records is among its arguments, named by its proposer and checked by each participant against its own phone; before its day the machine refuses the act as unable.  Gone from the paper: the calendar stream, the first date, the daily re-proposal, and the condition that the calendar does not stop.  So vGLP needs of GLP only the date: now/1 suffices, and no wait_until/1.  Q: how does a test, a play with scripted persons or an sGLP simulation set the date that now/1 gives an agent, so that a play can run an act before and after its day?  If the papers have no such thing, what do you recommend?  Blocking: no, until the compiler reads the date.
+End: 2026-11-12 01:00 UTC
