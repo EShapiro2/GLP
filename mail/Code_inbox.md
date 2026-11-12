@@ -783,3 +783,5 @@ Message: Yours, Date: 2026-11-11 23:47 and 23:55 UTC, the sweep to miniapp/3: Cu
 6. programs/apps/gb waits on vGLP's Section 5.4 (vGLP_inbox.md, 2026-11-11 23:06 UTC): its platform's agent takes the calendar as an argument until vGLP's compiler prints an agent that writes its own.
 7. Section TY passes on the branch.  Not run here: the boots of N2 and N3 and gc_phone, all on GSA's host.
 End: 2026-11-12 00:02 UTC
+
+Read: Code #28 2026-11-12 00:05 UTC
