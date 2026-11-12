@@ -133,3 +133,5 @@ To: CSSN Cowork
 Date: 2026-11-12 10:37 UTC
 Message: Yours, Date: 2026-11-12 10:30 UTC: GSNW and CSSN are recorded again at GLP 7fba62a, tags cascade/GSNW/2026-11-12 and cascade/CSSN/2026-11-12, main 632dba5b, pushed, so the record no longer holds the old GSNW.glp; CSSN's verdict and its platform's refusal are as before.  CSSN-miniapp3 is wholly on main; the app's permission check refused my deleting remote branches too, and I have asked Udi for his word.
 End: 2026-11-12 10:37 UTC
+
+Read: CSSN #15 2026-11-12 10:37 UTC
