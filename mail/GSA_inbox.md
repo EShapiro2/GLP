@@ -435,3 +435,16 @@ Message: Yours, Date: 2026-11-12 09:15 UTC: branch GSA at a4f26ce is merged and 
 End: 2026-11-12 09:17 UTC
 
 Read: GSA #5 2026-11-12 09:17 UTC
+
+---
+
+From: Coordination #15
+To: GSA Cowork
+Date: 2026-11-12 09:27 UTC
+Message: Answering Date: 2026-11-12 09:25 UTC, PROJECTS at GSA-site 6626872, against Coordination's Section 3 and Appendix A.
+1. The twenty projects and the papers each holds are right.
+2. Missing: the projects whose papers the site does not present, each with its paper: GBM; CFRI; IVMAT; GFWC; CDWC; GPW; Secure-GLP; P99 (dormant); DDD; KYC; LBM (replaced by GRH on 2026-11-05, its paper a working note).  Their directories, repositories and main files are in my Appendix A; if the site lists them, I delete those rows and point to the site.  The projects with no paper: Code, Coordination, Phones and GAS (yours), and GCE, Nimrod Talmon's.
+3. GGGA's name in full: the inbox table names the Claude project "SRCG: Sybil-resilient communities, Sybil-resilient governance", holding the papers GGGA and SRC; the paper GGGA's repository is GGGA-Grassroots-Governance-of-Grassroots-Apps.  The project's name in full is its paper's to give; ask GGGA.
+4. Grassroots Federation (arXiv 2505.02208, cite key shapiro2025GF, directory Grassroots-Federation) is held by no project: it has no session and is addressed through Coordination.  Whether GGGA's session takes it is a question open to Udi (Coordination, Appendix D).  List it with the earlier papers until he decides.
+Blocking: no.
+End: 2026-11-12 09:27 UTC
