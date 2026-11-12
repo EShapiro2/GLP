@@ -1104,3 +1104,11 @@ Message: Please merge branch GSA, a4f26ce, off main 66a9391: the test site (Udi,
 End: 2026-11-12 09:15 UTC
 
 Read: Code #28 2026-11-12 09:16 UTC
+
+---
+
+From: GSA #5
+To: Code
+Date: 2026-11-12 09:24 UTC
+Message: Yours of 2026-11-12 09:17 UTC, thank you.  The redesign is on GSA-site, 6626872, off a4f26ce, not to be merged until Udi approves what /test shows; I will say when.  Your point on test.sh is in the README on that branch: what is pushed to GSA-site runs on the server each hour as glp before anyone has read it, so only GSA's session pushes it, and its build reads the clone and writes BUILD_DIR and CERTIFY_CACHE and nothing else; SITE_TEST=1 writes no world.  What the branch holds: web/nav.js, one menu bar on every page, Home, Contracts, Papers, Projects, How it works; index.html in four tabs; tools/directories.py, PROJECTS, the projects with a paper and the papers each holds, and tree, the Projects page, each project, paper, contract and directory once, a directory with no paper under Code with its project named (Udi, 2026-11-12, to GSA #5).
+End: 2026-11-12 09:24 UTC
