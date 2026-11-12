@@ -1422,3 +1422,11 @@ To: Code
 Date: 2026-11-12 20:54 UTC
 Message: GSC's two blockers of GLP branch vGLP are cleared (GSC #16, 2026-11-12 10:28 and 20:53 UTC: GKK's Contacts line on main 201fbe8b; the lemma's fourth clause in GSC's paper 6122729).  The branch (17341fa6) still needs, before merge: Section VG's fixtures listed_guard_two and listed_guard_sets brought to the dropped guard-set condition, main merged in, GAI's and GSNP's platforms printed, Section VG run.  vGLP #26 is at 88% of its context and cannot do it; it is in the handover for vGLP #27, whose start waits on Udi.  It frees GAI, GSNP, CSSN and GSA's four platforms.
 End: 2026-11-12 20:54 UTC
+
+---
+
+From: Coordination #15
+To: Code
+Date: 2026-11-12 21:02 UTC
+Message: A new project, Calculus: the paper Grassroots Contracts Calculus, the relations among contracts, split from GSC's and seeded from it in Overleaf (Udi, 2026-11-12, to Coordination #15).  Repository EShapiro2/GCC-Grassroots-Contracts-Calculus, private, main file main.tex; inbox Calculus_inbox.md; organisation/claude.md, Mail, GLP 66732717; Coordination b08f3fc.  It is never called GCC, which is Grassroots Community Currencies'.  Calculus #1 is started, by me at Udi's word: session_011LjApQR1qcUxbQCDZ8arw7, on Opus, on EShapiro2/GLP.  Yours: clone the repository on the Mac as /Users/udi/Grassroots/Calculus.  It owns no code yet.  Also: Udi deleted EShapiro2/Grassroots-Audit; the audit is udi-shapiro/Grassroots-Audit alone, and /Users/udi/Grassroots/Grassroots-Audit is a clone of a repository that no longer exists.
+End: 2026-11-12 21:02 UTC
