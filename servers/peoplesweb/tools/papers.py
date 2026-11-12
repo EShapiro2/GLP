@@ -20,7 +20,7 @@ BY_DIR = {
             'pdf': 'GAI', 'state': 'uploaded to arXiv, number pending'},
     'CSSN': {'title': 'Child-Safe Social Networking: From Social Contract to App', 'authors': 'Ehud Shapiro', 'pdf': 'CSSN'},
     'SRC': {'title': 'Trust, Distrust and Committed Dynamics for Sybil-Resilient Communities in Social Graphs',
-            'authors': '', 'pdf': 'GGGA'},
+            'authors': '', 'pdf': 'SRC'},
     'GRH': {'title': 'Grassroots Ride-Hailing', 'authors': '', 'pdf': 'GRH'},
     'GFF': {'title': 'Grassroots Feeds and Followers', 'authors': '', 'pdf': 'GFF'},
     'GSA': {'title': 'The Grassroots Super-App and App Store', 'authors': 'Ohad Eitan, Idit Keidar and Ehud Shapiro',
@@ -68,6 +68,12 @@ SOURCES.update({
     'Federation': {'repo': 'Grassroots-Federation', 'main': 'main.tex'},
     'CCDG': {'repo': 'Grassroots-Constitutional-Consensus-2026', 'main': 'mainConstitutionalConsensus.tex'},
     'CGMS': {'repo': 'SMA-Simple-Metric-Aggregation', 'main': 'ARXIV/main_ARXIV.tex'},
+    # Udi, 2026-11-12, to Website #1: "I want updated PDF for all including
+    # Grassroots Platforms: Beyond Decentralisation"; and to Audit #1, the
+    # same day: "GPBD has been published, so show recent PDF".
+    'GPBD': {'repo': 'GPBC-Grassroots-Platforms-Beyond-Decentralisation', 'main': 'main_characterisation_ArXiv.tex'},
+    # GGGA is not built: "GGGA is but a draft, so dont show it" (Udi,
+    # 2026-11-12, to Audit #1, reported by Audit #1).
 })
 for _d, _p in {'GSC': 'GSC', 'GC': 'GC', 'GB': 'GB', 'SGC': 'SGC'}.items():
     BY_DIR[_d].setdefault('pdf', _p)
@@ -93,6 +99,18 @@ def updated(v, name, served_pdfs, st):
     if name in served_pdfs and st.get('ahead'):
         v['updated'] = f'papers/{name}.pdf'
         v['updated_on'] = st.get('changed', '')[:10]
+
+
+def built(v, name, served_pdfs, st):
+    """Add to the citation v of a foundational paper the link to the PDF
+    the site builds of it: as Updated beside arXiv where the source is ahead
+    of it, and for a paper not on arXiv always, with its date."""
+    if 'arxiv' in v:
+        updated(v, name, served_pdfs, st)
+    elif name in served_pdfs:
+        v['pdf'] = f'papers/{name}.pdf'
+        if st.get('changed'):
+            v['pdf_on'] = st['changed'][:10]
 
 
 def load_state(papers_dir):
@@ -128,7 +146,7 @@ def cite_of(d, served_pdfs=(), state=None):
             return None
         v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
-            updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}))
+            built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
@@ -184,7 +202,10 @@ FOUNDATIONAL = [
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
     {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
-    {'key': 'GPBD', 'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026'},
+    # 'url': the version a venue publishes, linked from the state (Udi,
+    # 2026-11-12, to Website #1).
+    {'dir': 'GPBD', 'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026',
+     'url': 'https://blockchain-technology-lab.github.io/DeTaP/papers/GPBD__Grassroots_Platforms_Beyond_Decentralisation.pdf'},
 ]
 
 
@@ -199,6 +220,6 @@ def foundational(served_pdfs=(), state=None, but=()):
             continue
         v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
-            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+            built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         out.append(v)
     return out

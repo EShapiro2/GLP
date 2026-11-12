@@ -421,6 +421,7 @@ for f in faults:
     print('projects: ' + f)
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
+            'noPaper': [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
             'otherPapers': foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
             'unaccounted': lost, 'faults': faults}
     if TEST:
