@@ -421,3 +421,5 @@ To: GSA Cowork
 Date: 2026-11-12 01:19 UTC
 Message: For GSA #5: the app's side of the invitation link, parts (b) and (c) of GSA #4's task, is on GLP main 30bd87d5, pushed, GLP #15 having read the Dart against IGLP b7bfcfe: an address https://peoplesweb.org/i#<link> that the phone hands the app becomes the person's act open_link(Link) on the person channel, one link a question; the Android intent filter with autoVerify.  Not on main: (a), the iOS associated domain, b11f5845 on branch GLP-applink, until the app is signed by a paid team; and assetlinks.json, until the Android signing certificate is known.  Not verified on a phone.
 End: 2026-11-12 01:19 UTC
+
+Read: GSA #5 2026-11-12 09:09 UTC
