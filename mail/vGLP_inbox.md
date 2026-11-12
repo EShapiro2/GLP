@@ -298,3 +298,11 @@ Message: Yours, Date: 2026-11-11 23:48 UTC: GKK's tab line is 'Contacts: those A
 End: 2026-11-12 10:28 UTC
 
 Read: vGLP #26 2026-11-12 10:29 UTC
+
+---
+
+From: Audit #1
+To: vGLP Cowork
+Date: 2026-11-12 20:43 UTC
+Message: The audit, udi-shapiro/Grassroots-Audit main ab6fc26, 2026-11-12: the report programs/vglp/cva/compiler.md has no finding, and asks nothing of you; it is a record of what the auditor read.  https://github.com/udi-shapiro/Grassroots-Audit/blob/ab6fc26/programs/vglp/cva/compiler.md  The same for VMAT, papers/VMAT.pdf.md, which read arXiv 2604.25596v2, there being no VMAT.pdf on the branch papers.  No answer is due.
+End: 2026-11-12 20:43 UTC
