@@ -154,9 +154,19 @@ GTerm? _plain(GTerm w) {
 /// The invitation links the phone has handed the app and the app has not
 /// yet sent, in the order the phone handed them, and the bridge they are
 /// sent on once it is given.
+///
+/// A person answers a question of the request stream once: once a link is
+/// granted at a position, that position is answered, and the next question
+/// is at the stream's tail, which the program draws.  So a further link
+/// waits until the screen offers a question at another position (GLP #15,
+/// on IGLP b7bfcfe, Boot: "as if the person had entered its text").
 class InvitationLinks with WidgetsBindingObserver {
   final List<String> _waiting = [];
   Bridge? _bridge;
+
+  /// The construct and the position of the question the last link was
+  /// granted at, as `Id:P`; null before any.
+  String? _granted;
 
   /// The links waiting for the request form, in order.
   List<String> get waiting => List.unmodifiable(_waiting);
@@ -175,8 +185,8 @@ class InvitationLinks with WidgetsBindingObserver {
   }
 
   /// The address the phone handed the app: its link waits for the request
-  /// form, and is sent at once where the form is on the screen; any other
-  /// address is ignored.
+  /// form, and is sent at once where the form is on the screen at a question
+  /// no link was granted at; any other address is ignored.
   void handOver(Uri address) {
     final link = invitationLinkText(address);
     if (link == null) return;
@@ -185,18 +195,22 @@ class InvitationLinks with WidgetsBindingObserver {
     if (bridge != null) deliver(bridge);
   }
 
-  /// Send every waiting link on [bridge], each as the person's act that
-  /// opens it, where the request form is open; the links wait otherwise.
-  /// The app calls it whenever the screen changes.
+  /// Send the first waiting link on [bridge], as the person's act that
+  /// opens it, where the request form is open at a question other than the
+  /// one the last link was granted at; the links wait otherwise.  The app
+  /// calls it whenever the screen changes, and the next link is sent once
+  /// the program has drawn the question after it.
   void deliver(Bridge bridge) {
     _bridge = bridge;
-    while (_waiting.isNotEmpty) {
-      final grant = openLinkGrant(bridge, _waiting.first);
-      if (grant == null) return;
-      _waiting.removeAt(0);
-      final (id, path, raw) = grant;
-      bridge.grant(id, path, raw);
-    }
+    if (_waiting.isEmpty) return;
+    final grant = openLinkGrant(bridge, _waiting.first);
+    if (grant == null) return;
+    final (id, path, raw) = grant;
+    final at = '$id:${formatTerm(path)}';
+    if (at == _granted) return;
+    _waiting.removeAt(0);
+    _granted = at;
+    bridge.grant(id, path, raw);
   }
 
   @override
