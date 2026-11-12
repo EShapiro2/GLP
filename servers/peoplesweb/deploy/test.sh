@@ -5,7 +5,12 @@
 # branch's servers/peoplesweb, its pages and its build, run over the
 # repository as main has it, so the test site shows the live site's contracts,
 # papers and apps.  deploy/sweep.sh runs this after it publishes the live
-# site.  The branch's directory is unpacked into /var/lib/glp/test/site and
+# site.  The branch is fetched into a repository of its own,
+# /var/lib/glp/test/repo, and never into the live clone: that clone is
+# shallow, and a branch fetched into it with --depth 1 marked its commit
+# shallow there, so that when main was moved to that commit the sweep's pull
+# could not fast-forward and the sweep stopped (Code #28, 2026-11-12 10:01
+# UTC).  The branch's directory is unpacked into /var/lib/glp/test/site and
 # built into /var/lib/glp/test/build with SITE_TEST=1 (tools/build.py: the
 # build writes no world, the test pages calling the live server); what the
 # build asks of GLP is cached apart, in /var/lib/glp/test/cache, begun from
@@ -20,15 +25,17 @@ WORK=${TEST_WORK:-/var/lib/glp/test}
 WWW=${TEST_WWW:-/var/www/peoplesweb.org/test}
 AS=${TEST_AS-sudo -u glp}
 cd "$GLP"
-if $AS git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then :; else
+URL=$(git remote get-url origin)
+if $AS git ls-remote --exit-code --heads "$URL" "$BRANCH" >/dev/null 2>&1; then :; else
 	[ $? -eq 2 ] && rm -rf "$WWW"
 	exit 0
 fi
-$AS git fetch -q --depth 1 origin "$BRANCH"
 $AS mkdir -p "$WORK/cache"
+[ -d "$WORK/repo" ] || $AS git init -q --bare "$WORK/repo"
+$AS git -C "$WORK/repo" fetch -q --depth 1 "$URL" "$BRANCH"
 $AS rm -rf "$WORK/site"
 $AS mkdir -p "$WORK/site"
-$AS sh -c "git archive FETCH_HEAD servers/peoplesweb | tar -x -C '$WORK/site'"
+$AS sh -c "git -C '$WORK/repo' archive FETCH_HEAD servers/peoplesweb | tar -x -C '$WORK/site'"
 if [ -d servers/peoplesweb/cache ]; then
 	$AS cp -R servers/peoplesweb/cache/. "$WORK/cache/"
 fi
