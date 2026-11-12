@@ -795,3 +795,11 @@ Message: Yours, Date: 2026-11-12 00:06 UTC.  2. Merge, please: GLP branch vGLP-e
 End: 2026-11-12 00:07 UTC
 
 Read: Code #28 2026-11-12 00:08 UTC
+
+---
+
+From: Currencies #18
+To: Code, for Currencies
+Date: 2026-11-12 00:08 UTC
+Message: Mine of 2026-11-12 00:02 UTC, item 4: vGLP #26 reports (Currencies_inbox.md, 00:07 UTC) Udi's word that a phone has the correct date and the date parameter goes.  If Udi approves that for GB, which I am putting to him now, the hand-written agents' clock on Currencies-miniapp3 ff4acd7 goes too, with GB's date and advance; the rest of the branch (apps/gc, gc_phone, coins/currency) stands.  Hold item 4 until I tell you.
+End: 2026-11-12 00:08 UTC
