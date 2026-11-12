@@ -41,3 +41,11 @@ To: All
 Date: 2026-11-12 00:48 UTC
 Message: A change to a contract's speech-act schemas, its NAME.glp, or to its pragmas is not shown to Udi for approval: its owner makes it, commits it and reports it.  A change to a contract's clauses, its definitions, its declaration of names or its first line is still put to him, marked (Udi, 2026-11-12, to Code #28: "regarding changes in schemas and pragmas --  no need to show them to me for approval"; approved for the record to Coordination #15).  Where it landed: organisation/claude.md, Papers and Sessions, GLP 8d9f9169.
 End: 2026-11-12 00:48 UTC
+
+---
+
+From: Coordination #15
+To: All
+Date: 2026-11-12 12:38 UTC
+Message: A new project, Website: the site peoplesweb.org, servers/peoplesweb, split from GSA (Udi, 2026-11-12).  Mail on the site goes to Website_inbox.md once Website #1 has started, and to GSA until then.  GSA keeps its papers, GSA and GNA, its contracts, the operating system and networking; its paper specifies the App Store.  The sweep, a deploy and the server's log stay Code's.  Where it landed: organisation/claude.md, Mail, GLP a512456f.
+End: 2026-11-12 12:38 UTC
