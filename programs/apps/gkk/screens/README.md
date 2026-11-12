@@ -2,7 +2,7 @@
 
 The screens of the figure of GKK's app in GSC's paper, Section 2.1 (Code_inbox.md, GSC #5 Cowork, 2026-10-20 17:53 UTC), in the figure's order: Alice's and Bob's phones as the construct family draws the app, one screen with the tab Contacts, the list of GKK's pragmas, drawn from the last view the agent wrote (`../README.md`, "The screens").  Each file is one phone's screen taken on the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point, its status bar at 9:41 with full signal, Wi-Fi and battery, in the light theme, set in Roboto; the simulator's screenshot is the display alone, so it is framed as the phone, in a black bezel with rounded corners, 1080 by 2220 pixels on white, as the screens of GSG's app are (`../../gsg/screens/`).
 
-They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/4` for Alice, Bob and Carol, over a conversation between Alice and Bob and one between Alice and Carol, and takes each person's acts by tapping and typing on the tab's controls.  From `glp_multiagent/`:
+They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/3` for Alice, Bob and Carol, over a conversation between Alice and Bob and one between Alice and Carol, and takes each person's acts by tapping and typing on the tab's controls.  From `glp_multiagent/`:
 
 ```bash
 bash tool/sim_screens.sh
