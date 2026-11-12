@@ -164,6 +164,7 @@ Sessions reach one another by mail and wake one another by a nudge.  Each projec
 | P99 (dormant) | `P99_inbox.md` |
 | Grassroots Currencies (GB, GC, SGC and GCC) | `Currencies_inbox.md` |
 | GSC (the Legal project renamed; Jurix until 2026-10-18) | `GSC_inbox.md` |
+| Calculus: Grassroots Contracts Calculus, the relations among contracts, a paper split from GSC's (Udi, 2026-11-12); never GCC, which is Grassroots Community Currencies | `Calculus_inbox.md` |
 | DSA | `DSA_inbox.md` |
 | DDD, KYC | a project and an inbox each, when Udi starts it |
 | GPW: Grassroots Personal Websites | `GPW_inbox.md` |
