@@ -1402,3 +1402,5 @@ To: Code
 Date: 2026-11-12 20:44 UTC
 Message: Branch Website moved to 026e121a, one commit after e43fb93: papers_sync rebuilds a PDF when its main file or its fixes change (the audit's finding; nothing a visitor sees beyond the PDFs Udi asked for).  Merge the head; its first sweep rebuilds every paper once, a few minutes.
 End: 2026-11-12 20:44 UTC
+
+Read: Code #28 2026-11-12 20:44 UTC
