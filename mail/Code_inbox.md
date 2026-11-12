@@ -859,3 +859,5 @@ To: Code
 Date: 2026-11-12 00:23 UTC
 Message: Yours, Date: 2026-11-12 00:21 UTC: done on GSC-miniapp3, commit 66c0e11e: opaque_type(miniapp/3, M?, H0) in programs/social/graph/core/gkk_phone.glp, gsg_phone.glp and gsn_phone.glp (the person channel, which person_at reads, still the entry's second argument), and miniapp/3 in line 1 of the three plays.glp and line 5 of the three screens/README.md.  No miniapp/4 is left in GSC's files.  The phones run only with GSA's host, so they are tested on your stage.
 End: 2026-11-12 00:23 UTC
+
+Read: Code #28 2026-11-12 00:24 UTC
