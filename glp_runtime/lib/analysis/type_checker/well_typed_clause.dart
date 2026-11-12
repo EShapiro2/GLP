@@ -466,14 +466,14 @@ ClauseCheckResult checkClause(
         errors.add(BodyAtomError(
             'run/3 activating ${activation.goal.functor}/'
             '${activation.goal.arity} at the opaque instance of '
-            '${activation.template.key} at ${activation.label}',
+            '${activation.template?.key} at ${activation.label}',
             i,
             goalResult.errors));
       }
       // The goal's occurrences are typed by D⟨h_1, ..., h_k⟩, in place of the
       // `_?` the run/3 goal's first argument gives them (Definition "Type
       // Assignment"): the goal run/3 activates is read by D⟨h_1, ..., h_k⟩.
-      activated = goalResult.variableTypes.keys.toSet();
+      activated = _activatedKeys(activation, goalResult);
       atomResult = WellTypedResult(
         isWellTyped: atomResult.isWellTyped,
         variableTypes: {
@@ -680,15 +680,17 @@ class _OpaqueActivation {
   final ast.Goal goal;
 
   /// The template D: the caller's parameterised declaration `find_type/3`
-  /// names.
-  final ProcDecl template;
+  /// names; or the declaration `find_type/2` names, null where the scope
+  /// being checked no longer holds it.
+  final ProcDecl? template;
 
   /// h_1, ..., h_k as the clause writes them ([_activationLabels]), printed.
   final String label;
 
   /// D⟨h_1, ..., h_k⟩: the template with each parameter replaced by the
-  /// opaque type labelled with its h ([runOpaqueTypeName]).
-  final ProcDecl decl;
+  /// opaque type labelled with its h ([runOpaqueTypeName]); the declaration
+  /// itself for `find_type/2`, null as [template] is.
+  final ProcDecl? decl;
 
   /// The environment D⟨h_1, ..., h_k⟩ is checked in: the clause's, with the
   /// opaque types and the types D⟨h_1, ..., h_k⟩ reaches.
@@ -722,6 +724,35 @@ Map<int, _OpaqueActivation> _opaqueActivations(
   final atoms = clause.bodyAtoms;
   // The writer Type of each find_type/3 goal: its template and its h.
   final identities = <String, (ProcDecl, List<String>)>{};
+  // And of each find_type/2 goal: the declaration of P/N in scope, which is
+  // not parameterised.  "The condition is a requirement on the clause that
+  // authors the goal: it must have Goal well-typed by the declaration of its
+  // predicate in scope, with Type that declaration's identity, obtained via
+  // find_type" (TGLP modules.tex, "Dynamic Activation").  Until 2026-11-12
+  // such a goal was read at the `_?` of run/3's first argument, and nothing
+  // was asked of it.
+  final declared = <String, (String, int, ProcDecl?)>{};
+  for (final g in atoms) {
+    if (!namesRoot(g.functor, 'find_type') || g.arity != 2) continue;
+    final ref = g.args[0];
+    final type = g.args[1];
+    if (ref is! ast.StructTerm || ref.functor != '/' || ref.args.length != 2) {
+      continue;
+    }
+    final name = ref.args[0];
+    final arity = ref.args[1];
+    if (name is! ast.ConstTerm || name.value is! String) continue;
+    if (arity is! ast.ConstTerm || arity.value is! int) continue;
+    if (type is! ast.VarTerm || type.isReader) continue;
+    if (env.paramProcDecls.containsKey('${name.value}/${arity.value}')) {
+      continue;
+    }
+    declared[type.name] = (
+      '${name.value}',
+      arity.value as int,
+      env.getProcedure(name.value as String, arity.value as int),
+    );
+  }
   for (final g in atoms) {
     if (!namesRoot(g.functor, 'find_type') || g.arity != 3) continue;
     final ref = g.args[0];
@@ -740,7 +771,7 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (labels == null) continue;
     identities[type.name] = (template, labels);
   }
-  if (identities.isEmpty) return const {};
+  if (identities.isEmpty && declared.isEmpty) return const {};
 
   final out = <int, _OpaqueActivation>{};
   for (var i = 0; i < atoms.length; i++) {
@@ -748,9 +779,6 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (!namesRoot(r.functor, 'run') || r.arity != 3) continue;
     final type = r.args[1];
     if (type is! ast.VarTerm || !type.isReader) continue;
-    final identity = identities[type.name];
-    if (identity == null) continue;
-    final (template, labels) = identity;
     final goal = switch (r.args[0]) {
       ast.StructTerm(:final functor, :final args) =>
         ast.Goal(functor, args, r.line, r.column),
@@ -759,6 +787,25 @@ Map<int, _OpaqueActivation> _opaqueActivations(
       _ => null,
     };
     if (goal == null) continue;
+    final own = declared[type.name];
+    if (own != null) {
+      final (ownName, ownArity, ownDecl) = own;
+      final bareOwn = ownName.contains(':')
+          ? ownName.substring(ownName.lastIndexOf(':') + 1)
+          : ownName;
+      if (goal.functor == bareOwn && goal.arity == ownArity) {
+        // The linked program retains the reachable procedures (TGLP
+        // modules.tex, Compilation, fifth step), and a declaration that only
+        // find_type names is not among them: the clause was checked by it in
+        // its module, and here the goal's occurrences are left untyped.
+        out[i] = _OpaqueActivation(goal, ownDecl, 'its declaration', ownDecl,
+            env);
+      }
+      continue;
+    }
+    final identity = identities[type.name];
+    if (identity == null) continue;
+    final (template, labels) = identity;
     // The template's name as its module carries it, and as the goal names
     // the entry it posts: bare.
     final bare = template.name.contains(':')
@@ -813,14 +860,25 @@ List<String>? _activationLabels(ast.Term hs, int k) {
   return out;
 }
 
+/// The keys of the variable occurrences of [activation]'s goal: those its
+/// declaration types ([goalResult]), or, where the scope no longer holds the
+/// declaration, every variable of the goal.
+Set<String> _activatedKeys(
+        _OpaqueActivation activation, WellTypedResult goalResult) =>
+    activation.decl != null
+        ? goalResult.variableTypes.keys.toSet()
+        : {for (final a in activation.goal.args) ..._termVarKeys(a)};
+
 /// The goal of [activation], checked by D⟨h_1, ..., h_k⟩ as a body goal is by its
 /// declaration (Definition "Well-Typed Clause", condition 2).
 WellTypedResult _checkActivatedGoal(
     _OpaqueActivation activation, ProgramDFA dfa) {
+  final decl = activation.decl;
+  if (decl == null) return WellTypedResult.success({});
   try {
-    final moded = producedTerm(activation.goal, activation.decl,
+    final moded = producedTerm(activation.goal, decl,
         typeEnv: activation.env);
-    return _checkModedTermPerArg(moded, activation.decl, dfa);
+    return _checkModedTermPerArg(moded, decl, dfa);
   } on ArityMismatchError catch (e) {
     return WellTypedResult.failureAt(e.message, e.message);
   }
@@ -3547,11 +3605,26 @@ class _CallInstantiation {
         ? <String, VariableTypeInfo>{}
         : _checkHeadWithTerm(clause, procDecl, dfa, env).$1.variableTypes;
 
+    // A goal that run/3 activates is read by its declaration and not by the
+    // `_?` of run/3's first argument ([_opaqueActivations], [checkClause]):
+    // the occurrences of its variables are left out of this reading, as they
+    // were while a variable below a wildcard was given no type.
+    final activations = _opaqueActivations(clause, dfa, env);
     for (var i = 0; i < clause.bodyAtoms.length; i++) {
       if (calls.containsKey(i) || assignments.contains(i)) continue;
       final (result, _) = _checkBodyAtomWithTerm(clause.bodyAtoms[i], i, dfa, env,
           activeInstantiations: activeInstantiations);
-      take(i, result.variableTypes);
+      final activation = activations[i];
+      if (activation == null) {
+        take(i, result.variableTypes);
+        continue;
+      }
+      final activated =
+          _activatedKeys(activation, _checkActivatedGoal(activation, dfa));
+      take(i, {
+        for (final e in result.variableTypes.entries)
+          if (!activated.contains(e.key)) e.key: e.value
+      });
     }
 
     typeAssignments();

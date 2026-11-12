@@ -10,15 +10,18 @@ InnerChannel ::= ch(InnerStream, InnerStream?).
 NetContent ::= call ; chan(InnerChannel).
 NetStream ::= [] ; [NetMsg(NetContent) | NetStream].
 
-imported procedure host#alice_init(_?, NetStream?).
-imported procedure host#bob_init(_?, _?).
-exported procedure alice_init(_?, NetStream?).
+imported procedure host#alice_init(Keys?, NetStream?).
+imported procedure host#bob_init(Keys?, NetStream?).
+exported procedure alice_init(Keys?, NetStream?).
 alice_init(Id, In) :- host # alice_init(Id?, In?).
-exported procedure bob_init(_?, _?).
+exported procedure bob_init(Keys?, NetStream?).
 bob_init(Id, In) :- host # bob_init(Id?, In?).
 
 %% Every agent's initial goal, agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), is answered by this program: "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts" (IGLP 30c04c5, Implementation Notes, "Boot").  The person's first act, init(Entry, Me, Ps), names the entry, with the agent's own key and the keys of the peers its person knows.
 PersonSays ::= init(Constant, Key, List(Key)).
+
+%% An agent's own key with the keys of the peers its person knows.
+Keys ::= keys(Key, List(Key)).
 
 exported procedure agent(Channel(Stream(PersonSays), Stream(Constant))?, Channel(NetStream, Stream(NetMsg(NetContent)))?).
 %% The agent opens its PAN at its start: the boot harness sets no trust level
