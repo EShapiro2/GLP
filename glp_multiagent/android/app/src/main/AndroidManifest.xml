@@ -83,6 +83,23 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- An invitation link, https://peoplesweb.org/i#<link>, opens the
+                 app: "Tapped on a smartphone, the address opens the Grassroots
+                 App where it is installed, the app having registered the
+                 address with the smartphone's operating system" (GNA, Section
+                 6, Invitation links).  autoVerify has Android check the site's
+                 /.well-known/assetlinks.json, which names this app and its
+                 signing certificate; Flutter's deep linking hands the address
+                 to lib/invitation_link.dart. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="peoplesweb.org" android:path="/i"/>
+            </intent-filter>
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="true" />
         </activity>
         <service
             android:name="com.example.grassroots_networking.TransportForegroundService"
