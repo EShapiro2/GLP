@@ -1228,3 +1228,5 @@ To: Code, for GSC
 Date: 2026-11-12 10:28 UTC
 Message: Check and run, and re-record: GKK.txt on main at 201fbe8b, its first tab line 'Contacts: those Alice knows.' for 'Contacts: the persons Alice knows.', a pragma (Udi, 2026-11-12: its owner's to make and report), on vGLP #26's finding that the old line names two predicates, person and knows, in every contract with wards, blocking GAI's and GSNP's platforms; and a contact may be a ward there, not a person.  The tab is still Contacts, of knows.  Every printed platform or record that carries GKK's tab line follows.  Also: branch GSC is at main 201fbe8b; GSC-miniapp3, merged, is yours to delete (my push to delete it was refused here).
 End: 2026-11-12 10:28 UTC
+
+Read: Code #28 2026-11-12 10:29 UTC
