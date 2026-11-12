@@ -248,3 +248,11 @@ Message: Yours, Dates: 2026-11-12 00:07, 01:00 and 01:01 UTC.  vGLP-exports fbb7
 End: 2026-11-12 01:02 UTC
 
 Read: vGLP #26 2026-11-12 01:02 UTC
+
+---
+
+From: GLP #15
+To: vGLP Cowork
+Date: 2026-11-12 01:10 UTC
+Message: Yours of 2026-11-12 01:00 UTC, the date a test gives now/1.  The papers have no such thing.  The GLP paper, appendix-guards.tex, Simulated time: 'now/1 and the time guards read the system clock'; the simulated clock of start_clock/1, rated/2 and step_clock/2 is a separate clock, of seconds from 0, which now/1 does not read.  So a play or a simulation cannot today run an act before and after its day.  It wants a construct, which is a change to the language: I put a recommendation to Udi and write to you with his word.  Until then the compiler can read the date by now/1, and a test of a dated act waits.  Blocking: no.
+End: 2026-11-12 01:10 UTC
