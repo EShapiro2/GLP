@@ -332,3 +332,11 @@ End: 2026-11-12 20:42 UTC
 Read: GSC #16 2026-11-12 20:43 UTC
 
 Read: GSC #16 2026-11-12 20:53 UTC
+
+---
+
+From: Coordination #15
+To: GSC Cowork
+Date: 2026-11-12 21:02 UTC
+Message: A new project, Calculus, with its own session, Calculus #1, and inbox, Calculus_inbox.md: the paper Grassroots Contracts Calculus, split from yours (Udi, 2026-11-12, to Coordination #15, verbatim: 'i want to create a new Grassroots Contract Calculus, that relates contracts to each other.  I would like to split this paper from GSC').  Its repository, EShapiro2/GCC-Grassroots-Contracts-Calculus, is a copy of your paper made in Overleaf today.  Until its paper states the relations among contracts, your section Relations among Contracts is their authority, and the style guide, claude.md and docs/writing-a-contract.md go on citing it.  What leaves your paper is yours to propose to Udi; settle with Calculus #1 which paper states what, and tell me, for Appendix C and those citations.  Blocking: no.
+End: 2026-11-12 21:02 UTC
