@@ -176,10 +176,6 @@ programs/currencies/sovereign/self.glp	open-type	Event
 programs/currencies/sovereign/village.glp	open-decl	denominated#person/7
 programs/lib/lookup/lookup.glp	open-decl	lookup/3
 programs/lib/streams/tag_stream.glp	open-decl	tag_stream/3
-programs/p99/self.glp	open-decl	mm_close/2
-programs/p99/self.glp	open-decl	mm_copy/4
-programs/p99/self.glp	open-decl	mm_start/2
-programs/p99/self.glp	open-decl	mm_subs/4
 programs/self.glp	open-decl	..=/2
 programs/self.glp	open-decl	=../2
 programs/self.glp	open-decl	_univ_compose/4

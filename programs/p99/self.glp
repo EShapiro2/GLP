@@ -101,13 +101,13 @@ mwm(In, Out?) :-
     allocate_mutual_reference(Ref, Out),
     mm_start(In?, Ref?).
 
-procedure(X) mm_start(Cmds(X)?, _?).
+procedure(X) mm_start(Cmds(X)?, MutualRef?).
 mm_start(In, Ref) :-
     is_mutual_ref(Ref?) |
     mm_subs(In?, Ref?, done, Done),
     mm_close(Done?, Ref?).
 
-procedure(X) mm_subs(Cmds(X)?, _?, MergeDone?, MergeDone).
+procedure(X) mm_subs(Cmds(X)?, MutualRef?, MergeDone?, MergeDone).
 mm_subs([stream(Xs)|Cs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     mm_copy(Xs?, Ref?, L?, M),
@@ -118,14 +118,14 @@ mm_subs([merge(New)|Cs], Ref, L, R?) :-
     mm_subs(Cs?, Ref?, M?, R).
 mm_subs([], _, L, L?).
 
-procedure(X) mm_copy(Stream(X)?, _?, MergeDone?, MergeDone).
+procedure(X) mm_copy(Stream(X)?, MutualRef?, MergeDone?, MergeDone).
 mm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),
     mm_copy(Xs?, Ref1?, L?, R).
 mm_copy([], _, L, L?).
 
-procedure mm_close(MergeDone?, _?).
+procedure mm_close(MergeDone?, MutualRef?).
 mm_close(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).
