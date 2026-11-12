@@ -1,6 +1,6 @@
 """Each contract's paper, as the site's balloons cite it: the full citation --- title and authors --- and an arXiv link where the paper is on arXiv, else a PDF the site serves, with its state.
 
-This file is the one record of the site's papers, each paper's repository, main file, title, authors and arXiv identifier (Coordination, 2026-11-11).  Which paper a contract belongs to is read from the contract itself, the % Owner line of its NAME.txt, which names the paper's main file under /Grassroots/<DIR>/; this file cites each paper.  The arXiv identifiers, titles and authors of the published papers are Bib-Grassroots' entries; the others' are their main files'.  The PDFs under web/papers/ are built from the paper repositories and go stale as the papers move; a sweep serves them as last built.
+This file is the one record of the site's papers, each paper's repository, main file, title, authors and arXiv identifier (Coordination, 2026-11-11).  Which paper a contract belongs to is read from the contract itself, the % Owner line of its NAME.txt, which names the paper's main file under /Grassroots/<DIR>/; this file cites each paper.  The arXiv identifiers, titles and authors of the published papers are Bib-Grassroots' entries; the others' are their main files'.  The PDFs are built by the sweep from the paper repositories (tools/papers_sync.py) and served as last built.
 """
 import json
 import os
@@ -47,6 +47,7 @@ SOURCES = {
     'GFF': {'repo': 'GFF-Grassroots-Feeds-and-Followers', 'main': 'main_CSSN.tex'},
     'GSA': {'repo': 'GSG-Grassroots-Social-Graph', 'main': 'main_SGSG.tex'},
     'GNA': {'repo': 'GLP-Networking-API', 'main': 'main.tex'},
+    'GO': {'repo': 'GO-Grassroots-Organisations', 'main': 'main_characterisation_ArXiv.tex'},
 }
 # Built from a copy with these replacements, the repository left as it is:
 # acmart wants a country in every affiliation, which Overleaf forgives
@@ -85,21 +86,12 @@ def arxiv_of(d):
     return next((f.get('arxiv') for f in FOUNDATIONAL if f.get('dir') == d), None)
 
 
-# Where a published PDF is: the branch papers of GLP, to which tools/papers_publish.py commits each PDF the sweep builds (Udi, 2026-11-11, to Code #27).
-ON_BRANCH = 'https://github.com/EShapiro2/GLP/blob/papers/papers/{}.pdf'
-
-
-def pdf_link(name, published=()):
-    """The link to the PDF of that name: on the branch papers of GLP where it is published there, else as the site serves it."""
-    return ON_BRANCH.format(name) if name in published else f'papers/{name}.pdf'
-
-
-def updated(v, name, served_pdfs, st, published=()):
+def updated(v, name, served_pdfs, st):
     """Add to the citation v of a paper on arXiv the link to its PDF as
     Updated, with the date of its source's last change, where the PDF is
     served and the source has changed since the latest arXiv version."""
     if name in served_pdfs and st.get('ahead'):
-        v['updated'] = pdf_link(name, published)
+        v['updated'] = f'papers/{name}.pdf'
         v['updated_on'] = st.get('changed', '')[:10]
 
 
@@ -114,31 +106,22 @@ def load_state(papers_dir):
         return {}
 
 
-def load_published(papers_dir):
-    """The names of the PDFs tools/papers_publish.py has committed to the branch papers of GLP."""
-    try:
-        with open(os.path.join(papers_dir, 'published.json')) as f:
-            return set(json.load(f).get('pdfs', {}))
-    except (OSError, ValueError, AttributeError):
-        return set()
-
-
-def paper_of(owner_line, served_pdfs=(), state=None, published=()):
+def paper_of(owner_line, served_pdfs=(), state=None):
     """The citation of the paper the % Owner line names: title, authors, and an arXiv identifier, or a served PDF (papers/<X>.pdf, where built) with its state; a contract with no paper says so."""
     m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
     if not m or m.group(1) not in BY_DIR:
         return {'title': '', 'authors': '', 'state': 'no paper' if re.search(r'No paper', owner_line or '') else 'in preparation'}
-    return cite_of(m.group(1), served_pdfs, state, published)
+    return cite_of(m.group(1), served_pdfs, state)
 
 
-def cite_of(d, served_pdfs=(), state=None, published=()):
+def cite_of(d, served_pdfs=(), state=None):
     """The citation of the paper in directory d, a contract's paper or a foundational one, or None."""
     if d not in BY_DIR:
         f = next((f for f in FOUNDATIONAL if f.get('dir') == d), None)
         if f is None:
             return None
         v = {k: x for k, x in f.items() if k != 'dir'}
-        updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}), published)
+        updated(v, pdf_name(d), served_pdfs, (state or {}).get(d, {}))
         return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
@@ -146,11 +129,11 @@ def cite_of(d, served_pdfs=(), state=None, published=()):
     served = name is not None and name in served_pdfs
     if 'arxiv' in v:
         # Updated: the source has changed since the latest arXiv version.
-        updated(v, name, served_pdfs, st, published)
+        updated(v, name, served_pdfs, st)
     elif name is not None:
         v.setdefault('state', 'in preparation')
         if served:
-            v['pdf'] = pdf_link(name, published)
+            v['pdf'] = f'papers/{name}.pdf'
             if st.get('changed'):
                 v['pdf_on'] = st['changed'][:10]
     return v
@@ -195,13 +178,13 @@ FOUNDATIONAL = [
 ]
 
 
-def foundational(served_pdfs=(), state=None, published=()):
+def foundational(served_pdfs=(), state=None):
     """The foundational papers' citations, each with the link to its PDF as
     Updated where its source is ahead of arXiv, as a contract's paper has it."""
     out = []
     for f in FOUNDATIONAL:
         v = {k: x for k, x in f.items() if k != 'dir'}
         if 'dir' in f:
-            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}), published)
+            updated(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
         out.append(v)
     return out

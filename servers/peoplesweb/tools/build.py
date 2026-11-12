@@ -31,7 +31,7 @@ WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.pat
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import cite_of, foundational, load_published, load_state, paper_of  # noqa: E402
+from papers import cite_of, foundational, load_state, paper_of  # noqa: E402
 import directories  # noqa: E402
 import certify  # noqa: E402
 
@@ -269,23 +269,15 @@ for n in compiled:
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
 look = json.loads(read(os.path.join(GLP, 'programs', 'apps', 'look.json')))
 # The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
-# the server, with its state.json, or else the ones built by hand in
-# web/papers.
-# web/papers, each served from where it is newest: PAPERS_DIR where the sync
-# has built it, web/papers otherwise, so a paper not yet built there keeps
-# its link.
-hand = os.path.join(HERE, 'web', 'papers')
+# the server, with its state.json; a build with no PAPERS_DIR links none.
 synced = os.environ.get('PAPERS_DIR') or ''
 pdfs = {}
-for d in (hand, synced):
-    if d and os.path.isdir(d):
-        for f in os.listdir(d):
-            if f.endswith('.pdf'):
-                pdfs[f] = os.path.join(d, f)
+if synced and os.path.isdir(synced):
+    for f in os.listdir(synced):
+        if f.endswith('.pdf'):
+            pdfs[f] = os.path.join(synced, f)
 served = {f[:-4] for f in pdfs}
 paper_state = load_state(synced) if synced else {}
-# The PDFs committed to the branch papers of GLP (tools/papers_publish.py), each linked there.
-published = load_published(synced) if synced else set()
 byid = dict(cat)
 
 
@@ -336,7 +328,7 @@ for n in sorted(set(compiled) | set(cat)):
     c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
-    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state, published)
+    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -398,10 +390,10 @@ if served:
 # build prints and the page shows, so that every directory is accounted for.
 dirs = directories.table(GLP)
 for e in dirs:
-    e['cites'] = [x for x in (cite_of(k, served, paper_state, published) for k in e.pop('papers')) if x]
+    e['cites'] = [x for x in (cite_of(k, served, paper_state) for k in e.pop('papers')) if x]
 lost = directories.unaccounted(GLP)
 if lost:
     print('directories: no entry answers for ' + ', '.join(lost))
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state, published), 'directories': dirs, 'unaccounted': lost}, ensure_ascii=False) + ';\n')
+    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state), 'directories': dirs, 'unaccounted': lost}, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

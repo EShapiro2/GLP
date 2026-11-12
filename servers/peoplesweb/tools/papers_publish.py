@@ -1,12 +1,12 @@
 """Commit the papers' PDFs to the branch papers of GLP (Udi, 2026-11-11, to Code #27: the server builds each paper's PDF in its hourly sweep and commits it to a branch papers of GLP, as papers/<NAME>.pdf, and no session builds or pushes a PDF; reported to GSA by Code #27, 2026-11-11 19:44 UTC).
 
-Run by the hourly sweep as root, after tools/papers_sync.py, whose PDFs in PAPERS_DIR it commits, and before tools/build.py, which links each published PDF on the branch:
+Run by the hourly sweep as root, after tools/papers_sync.py, whose PDFs in PAPERS_DIR it commits, and before tools/build.py; the site links its own copy of each PDF, the same file, which a browser opens as a PDF (Udi, 2026-11-12, to GSA #4):
 
     PAPERS_DIR        the PDFs, and published.json, which this writes (default /var/lib/glp/papers)
     PAPERS_SRC        where its own bare repository is kept (default /var/lib/glp/papers-src)
     PAPERS_PUSH_TOKEN the file holding a GitHub token with write access to the contents of EShapiro2/GLP, which Udi places (default /etc/glp/github-papers-token)
 
-The branch holds one commit, the PDFs as they now are, with no parent: each change replaces it, so that the PDFs, a few megabytes each, are not kept in GLP's history once superseded.  A sweep whose PDFs are those last published pushes nothing.  Without the token, or when the push fails, nothing is published, the failure is printed, and the site links the PDFs it serves itself.  For a test, PAPERS_REMOTE names the repository to push to in place of GitHub's, and no token is read.
+The branch holds one commit, the PDFs as they now are, with no parent: each change replaces it, so that the PDFs, a few megabytes each, are not kept in GLP's history once superseded.  A sweep whose PDFs are those last published pushes nothing.  Without the token, or when the push fails, nothing is published and the failure is printed.  For a test, PAPERS_REMOTE names the repository to push to in place of GitHub's, and no token is read.
 """
 import base64
 import datetime as dt
