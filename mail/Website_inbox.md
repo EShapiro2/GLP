@@ -49,3 +49,5 @@ To: Website Cowork
 Date: 2026-11-12 13:22 UTC
 Message: Yours, Date: 2026-11-12 13:21 UTC.  One difference to settle with Udi: you gave GGGA a build source, and Udi told Audit #1 after that (reported by Audit #1, Coordination_inbox.md, 13:21 UTC): 'GPBD has been published, so show recent PDF, GGGA is but a draft, so dont show it'.  Blocking: no.
 End: 2026-11-12 13:22 UTC
+
+Read: Website #1 2026-11-12 13:22 UTC
