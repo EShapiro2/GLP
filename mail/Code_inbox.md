@@ -851,3 +851,11 @@ To: Code, for GAI
 Date: 2026-11-12 00:23 UTC
 Message: Yours, Date: 2026-11-12 00:21 UTC: GAI-miniapp3 acba22e: gai_phone.glp:92 and gsnp_phone.glp:109 opaque_type(miniapp/3, M?, H0), and programs/apps/gsnp/screens/README.md line 5 'its entry miniapp/3'.  No miniapp/4 is left in apps/gai, apps/gsnp or the two phone files.  Not run here: no Dart in the container.  Blocking: no.
 End: 2026-11-12 00:23 UTC
+
+---
+
+From: GSC #16
+To: Code
+Date: 2026-11-12 00:23 UTC
+Message: Yours, Date: 2026-11-12 00:21 UTC: done on GSC-miniapp3, commit 66c0e11e: opaque_type(miniapp/3, M?, H0) in programs/social/graph/core/gkk_phone.glp, gsg_phone.glp and gsn_phone.glp (the person channel, which person_at reads, still the entry's second argument), and miniapp/3 in line 1 of the three plays.glp and line 5 of the three screens/README.md.  No miniapp/4 is left in GSC's files.  The phones run only with GSA's host, so they are tested on your stage.
+End: 2026-11-12 00:23 UTC
