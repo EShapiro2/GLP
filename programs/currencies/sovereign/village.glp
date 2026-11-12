@@ -54,7 +54,7 @@
 %% sovereign_market/0, exported as sovereign_village/0.
 
 imported procedure denominated#sovereign(Key?, PersonChannel(denominated#Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
-imported procedure denominated#person(Key?, _?, PersonIn(denominated#Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure denominated#person(Key?, PersonOut(denominated#Drawn)?, PersonIn(denominated#Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts

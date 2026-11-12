@@ -20,7 +20,14 @@
 %% proposer, each with its construct and the position of its question.  What
 %% the dispatcher draws is a term of any type.
 Form ::= no_form ; form(Integer, Path).
-OpenOffer ::= open_offer(_, Integer, Path).
+OpenOffer ::= open_offer(Key, Integer, Path).
+%% What the person reads, one stream of events: a construct the dispatcher
+%% draws, with the view under its ask's functor, which the agent's module
+%% declares (coins_agent.glp: View_approval and View_stream_request_r), or the whole value where it is
+%% another; a construct withdrawn; and a message of the screen.
+PersonView ::= View_approval ; View_stream_request_r ; Drawn.
+PersonEvent ::= draw(Integer, Widget(Drawn), PersonView) ; withdraw(Integer) ; msg(Constant, Constant, ScreenContent).
+PersonEvents ::= [PersonEvent | PersonEvents].
 OpenOffers ::= [] ; [OpenOffer | OpenOffers].
 
 %% Whether a grant is out for the current step.
@@ -31,7 +38,7 @@ Choice ::= grant(Integer, Path, Drawn) ; wait.
 
 %% person(Id, Draws, Grants, Script, Screen): the person's grants on the
 %% channel, and the screen messages as they come.
-exported procedure person(Key?, _?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
+exported procedure person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), Script?, Stream(ScreenContent)).
 person(Id, Ds, Gs?, Script, Screen?) :-
     ground(Id?) |
     events(Ds?, Es),
@@ -43,18 +50,20 @@ person(Id, Ds, Gs?, Script, Screen?) :-
 %% 0's under output (vGLP, Definition "Construct Process"), and the event is
 %% the view under it.  The channel's stream never ends, and the person reads
 %% it for good, suspending when no draw comes.
-procedure events(_?, Events).
+procedure events(PersonOut(Drawn)?, PersonEvents).
 events([draw(0, thread(_), output(Ms))|Ds], Es?) :- newest(Ms?, Ds?, Es).
 events([draw(I, W, approval_w(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
 events([draw(I, W, stream_request_r(V))|Ds], [draw(I?, W?, V?)|Es?]) :- events(Ds?, Es).
 events([withdraw(I)|Ds], [withdraw(I?)|Es?]) :- events(Ds?, Es).
+%% Any other draw is passed on whole, and the person leaves it.
+events([draw(I, W, V)|Ds], [draw(I?, W?, V?)|Es?]) :- otherwise | events(Ds?, Es).
 
 %% The agent's screen reaches the person only as the thread the dispatcher
 %% draws as the construct 0, drawn again with every message so far as each
 %% arrives (vGLP, 2026-10-13 19:25 UTC, items 2 and 3): its newest element is
 %% the content that came, M, the event msg(agent, person, M), and the draw
 %% with none is no event.
-procedure newest(_?, _?, Events).
+procedure newest(List(Output)?, PersonOut(Drawn)?, PersonEvents).
 newest([], Ds, Es?) :- events(Ds?, Es).
 newest([M], Ds, [msg(agent, person, M?)|Es?]) :- events(Ds?, Es).
 newest([_, M1|Ms], Ds, Es?) :- newest([M1?|Ms?], Ds?, Es).
@@ -62,11 +71,11 @@ newest([_, M1|Ms], Ds, Es?) :- newest([M1?|Ms?], Ds?, Es).
 %% path_of(P?, Path): the path a draw marks, input(P), read off what the
 %% construct shows, which the dispatcher draws as a term of any type inside
 %% the functor of its ask: a list of argument indices.
-procedure path_of(_?, Path).
+procedure path_of(Path?, Path).
 path_of([I | Is], P?) :- integer(I?) | P = [I? | P1?], path_of(Is?, P1).
 path_of([], []).
 
-procedure person(Key?, Events?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Pending?, Stream(ScreenContent)).
+procedure person(Key?, PersonEvents?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Pending?, Stream(ScreenContent)).
 
 %% The request form: its question is the stream of requests, at position P.
 person(Id, [draw(C, _, input(P))|Es], Gs?, Script, _, Swaps, Pending, Screen?) :-
@@ -113,14 +122,14 @@ done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(await(M), M1, yes) :- M? =?= M1? | true.
 done(_, _, no) :- otherwise | true.
 
-procedure advance(Decision?, Key?, Events?, PersonIn(Drawn), Step?, Script?, Form?, OpenOffers?, Pending?, Stream(ScreenContent)).
+procedure advance(Decision?, Key?, PersonEvents?, PersonIn(Drawn), Step?, Script?, Form?, OpenOffers?, Pending?, Stream(ScreenContent)).
 advance(yes, Id, Es, Gs?, _, Script, Form, Swaps, _, Screen?) :-
     try_step(Id?, Es?, Gs, Script?, Form?, Swaps?, idle, Screen).
 advance(no, Id, Es, Gs?, Step, Script, Form, Swaps, Pending, Screen?) :-
     person(Id?, Es?, Gs, [Step?|Script?], Form?, Swaps?, Pending?, Screen).
 
 %% Grant the current step, if its construct is on screen and no grant is out.
-procedure try_step(Key?, Events?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Pending?, Stream(ScreenContent)).
+procedure try_step(Key?, PersonEvents?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Pending?, Stream(ScreenContent)).
 try_step(Id, Es, Gs?, [], Form, Swaps, Pending, Screen?) :-
     person(Id?, Es?, Gs, [], Form?, Swaps?, Pending?, Screen).
 try_step(Id, Es, Gs?, [Step|Script], Form, Swaps, sent, Screen?) :-
@@ -150,7 +159,7 @@ find_offer(From, [O|Rest], Ch?, [O?|Rest1?]) :-
     find_offer(From?, Rest?, Ch, Rest1).
 find_offer(_, [], wait, []).
 
-procedure act(Choice?, Key?, Events?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Stream(ScreenContent)).
+procedure act(Choice?, Key?, PersonEvents?, PersonIn(Drawn), Script?, Form?, OpenOffers?, Stream(ScreenContent)).
 %% A grant, on the request form or on an approval question.
 act(grant(C, P, X), Id, Es, [input(C?, P?, X?)|Gs?], Script, Form, Swaps, Screen?) :-
     person(Id?, Es?, Gs, Script?, Form?, Swaps?, sent, Screen).

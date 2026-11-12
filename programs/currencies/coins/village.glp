@@ -39,7 +39,7 @@
 %% from the run, while its scripted person grants its acts as before.
 
 imported procedure currency#coins(Key?, PersonChannel(currency#Drawn)?, Stream(Conversation(PeerMsg))?).
-imported procedure currency#person(Key?, _?, PersonIn(currency#Drawn), Script?, Stream(ScreenContent)).
+imported procedure currency#person(Key?, PersonOut(currency#Drawn)?, PersonIn(currency#Drawn), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
@@ -110,11 +110,10 @@ villager(_, Id, Script, Convs) :-
     currency # person(Id?, Events?, Grants, Script?, Screen),
     log(Id?, Screen?).
 
-%% Each event to the person and to the user both.  The person channel's
-%% stream is read as any term.
-procedure tee(Stream(_)?, Stream(_), Stream(_)).
+%% Each draw of the person channel to the person and to the user both; the
+%% person channel never ends.
+procedure tee(PersonOut(currency#Drawn)?, PersonOut(currency#Drawn), PersonOut(currency#Drawn)).
 tee([E|Es], [E?|Ps?], [E?|Us?]) :- ground(E?) | tee(Es?, Ps, Us).
-tee([], [], []).
 
 %% The screen messages, logged as tagged(Villager, Message).
 procedure log(Key?, Stream(ScreenContent)?).

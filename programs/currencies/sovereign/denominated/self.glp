@@ -26,8 +26,8 @@ imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMs
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
 miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
 
-imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
-exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure person#person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+exported procedure person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 person(Id, Draws, Grants?, Cal?, Script, Ag, Screen?) :- person # person(Id?, Draws?, Grants, Cal, Script?, Ag?, Screen).
 
 imported procedure plays#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).

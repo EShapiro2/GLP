@@ -31,7 +31,7 @@ coins(Id, Ui, Convs) :-
 %% The screen, onto the program's output to the person, which the
 %% dispatcher's channel to the program carries as any term; the person's
 %% input other than grants is not read.
-procedure show_screen(Channel(Stream(_), Stream(Output))?, Stream(ScreenMsg)?).
+procedure show_screen(Channel(Stream(Input(Drawn)), Stream(Output))?, Stream(ScreenMsg)?).
 show_screen(ch(_, Out?), Screen) :- relay(Screen?, Out).
 
 %% Each message as it comes, its content: the envelope msg(agent, person, C)
