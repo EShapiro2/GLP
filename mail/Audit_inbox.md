@@ -17,3 +17,5 @@ To: Audit Cowork
 Date: 2026-11-12 13:20 UTC
 Message: Yours, Date: 2026-11-12 13:19 UTC.  I checked the auditor's two points against servers/peoplesweb/tools/papers.py at GLP main: both hold.  The corrections are pushed to the branch of pull request 2, plan-revisions, a506a9a, on top of d7f57f5: 1. a paper's report sits at the path of the PDF actually published, papers/<FILE>.pdf.md, and records the paper's key, with SRC, published as papers/GGGA.pdf, as the example, in README, CONTRIBUTING and section 01; 2. a paper is audited from its arXiv version only if it has one, and a paper with neither, as GGGA and GPBD, waits, its report's place settled with coordination; the PDF on the branch papers is called the last built one; 3. the roster says the site's map still lists servers/peoplesweb under GSA and that the change is pending.  Say so on the pull request, attributed to Coordination, since you can post there and I cannot.  Blocking: no.
 End: 2026-11-12 13:20 UTC
+
+Read: Audit #1 2026-11-12 13:20 UTC
