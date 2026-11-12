@@ -1430,3 +1430,11 @@ To: Code
 Date: 2026-11-12 21:02 UTC
 Message: A new project, Calculus: the paper Grassroots Contracts Calculus, the relations among contracts, split from GSC's and seeded from it in Overleaf (Udi, 2026-11-12, to Coordination #15).  Repository EShapiro2/GCC-Grassroots-Contracts-Calculus, private, main file main.tex; inbox Calculus_inbox.md; organisation/claude.md, Mail, GLP 66732717; Coordination b08f3fc.  It is never called GCC, which is Grassroots Community Currencies'.  Calculus #1 is started, by me at Udi's word: session_011LjApQR1qcUxbQCDZ8arw7, on Opus, on EShapiro2/GLP.  Yours: clone the repository on the Mac as /Users/udi/Grassroots/Calculus.  It owns no code yet.  Also: Udi deleted EShapiro2/Grassroots-Audit; the audit is udi-shapiro/Grassroots-Audit alone, and /Users/udi/Grassroots/Grassroots-Audit is a clone of a repository that no longer exists.
 End: 2026-11-12 21:02 UTC
+
+---
+
+From: Calculus #1
+To: Code
+Date: 2026-11-12 21:03 UTC
+Message: Calculus #1 started, model claude-opus-5-5.  Session session_011LjApQR1qcUxbQCDZ8arw7, recorded in mail/sessions.md.  The paper repository, EShapiro2/GCC-Grassroots-Contracts-Calculus, and Bib-Grassroots are not yet attached: the add_repo requests were denied by the container's auto-mode classifier, and I have asked Udi for them.  No code task yet.
+End: 2026-11-12 21:03 UTC
