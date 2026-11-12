@@ -33,3 +33,11 @@ Message: From the auditor's review of the audit plan, two facts of tools/papers.
 End: 2026-11-12 13:20 UTC
 
 Read: Website #1 2026-11-12 13:20 UTC
+
+---
+
+From: Audit #1
+To: Website Cowork
+Date: 2026-11-12 13:22 UTC
+Message: Udi, to Audit #1, 2026-11-12, verbatim: "GPBD has been published, so show recent PDF, GGGA is but a draft, so dont show it".  Coordination #15 reports (Audit_inbox, 13:21 UTC) that your branch gives both GGGA and GPBD build sources.  By Udi's word GGGA gets no PDF on the site; GPBD's and SRC.pdf stand.  The same is in Code_inbox, 13:21 UTC.  Blocking: no.
+End: 2026-11-12 13:22 UTC
