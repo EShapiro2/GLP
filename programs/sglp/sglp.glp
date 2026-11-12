@@ -87,11 +87,12 @@ whole_frame(S, _, _, _, S?) :- otherwise, constant(S?) | true.
 %% arguments L, each argument's marks replaced as whole_frame/5 replaces them;
 %% the empty list, which ..= gives no compound term, has a clause, as the type
 %% checker requires of every list of the type.
-procedure whole_frame_parts(SglpTerms?, Integer?, Integer?, _?, _).
+%% L is of the type Stream(_) that the root programs/self.glp declares for what ..=/2 gives, and E of the type _ of what =../2 composes, neither a Term (transform/transform.glp, at its head).
+procedure whole_frame_parts(Stream(_)?, Integer?, Integer?, _?, _).
 whole_frame_parts([], _, _, _, []).
 whole_frame_parts([F|As], C, J, V, E?) :- integer(C?), integer(J?), ground(V?) |
     whole_frame_list(As?, C?, J?, V?, Es), E =.. [F?|Es?].
-procedure whole_frame_list(SglpTerms?, Integer?, Integer?, _?, SglpTerms).
+procedure whole_frame_list(Stream(_)?, Integer?, Integer?, _?, Stream(_)).
 whole_frame_list([], _, _, _, []).
 whole_frame_list([A|As], C, J, V, [E?|Es?]) :- integer(C?), integer(J?), ground(V?) |
     whole_frame(A?, C?, J?, V?, E), whole_frame_list(As?, C?, J?, V?, Es).
@@ -99,9 +100,9 @@ whole_frame_list([A|As], C, J, V, [E?|Es?]) :- integer(C?), integer(J?), ground(
 %% The term form of an sGLP program (README.md, "The term form"): a list of
 %% terms, one per declaration and clause, in GLP-Spec's term syntax; its
 %% elements are terms of any form, the source's heads and goals among them, so
-%% they are typed _, as a meta-interpreter's are (docs/typed-glp-manual.md,
-%% 18.3).
-SglpTerms ::= [] ; [_ | SglpTerms].
+%% they are of the built-in type Term (TGLP typed-glp.tex, "Type
+%% Declarations"; docs/typed-glp-manual.md, 18.3).
+SglpTerms ::= [] ; [Term | SglpTerms].
 
 %% terms_length(Ts?, N): N is the number of declarations and clauses in the
 %% term form Ts, counted in an accumulator by terms_length/3.
