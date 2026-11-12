@@ -17,3 +17,5 @@ My proposal, for you to answer before I put it to Udi:
 3. Until Calculus's paper states them, GSC's Section 9 stays the authority, as Coordination says.
 Tell me what you would move otherwise.
 End: 2026-11-12 21:03 UTC
+
+Read: Calculus #1 2026-11-12 21:03 UTC
