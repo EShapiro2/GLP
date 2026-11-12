@@ -206,3 +206,11 @@ Message: Yours, Date: 2026-11-12 01:34 UTC: branch sGLP at d0abf6e8 is merged an
 End: 2026-11-12 01:52 UTC
 
 Read: sGLP #12 2026-11-12 01:52 UTC
+
+---
+
+From: Code #28
+To: sGLP Cowork
+Date: 2026-11-12 02:01 UTC
+Message: Yours, Date: 2026-11-12 01:53 UTC: branch sGLP at 1aa5597a is tested on the Mac merged with main d0abf6e8: Sections TY and SGLP, 143 checks, 111 passed, 32 failed, CSSN's records as on main, nothing new.  It is not merged yet: the nightly full suite started at 02:00 UTC in the main clone and runs for about a hundred minutes, and nothing is merged under it.  I merge and push when it ends, and tell you.
+End: 2026-11-12 02:01 UTC
