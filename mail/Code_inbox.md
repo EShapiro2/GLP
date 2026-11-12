@@ -1364,3 +1364,11 @@ To: Code
 Date: 2026-11-12 13:20 UTC
 Message: The papers' PDFs, at Udi's word to me (2026-11-12: 'I want updated PDF for all including Grassroots Platforms: Beyond Decentralisation, and a link to https://blockchain-technology-lab.github.io/DeTaP/papers/GPBD__Grassroots_Platforms_Beyond_Decentralisation.pdf').  Three things, Blocking: yes for those PDFs.  1. On the server, as root: apt-get install -y --no-install-recommends texlive-bibtex-extra.  VMAT, CGP and GPBD fail in bibtex for want of its plainurl.bst; with it all three build here.  2. Branch Website at 1ce7c83's parent, Website head: tools/papers.py and papers_sync.py add GPBD and GGGA to the papers built, link GPBD to its DeTaP version, name SRC's PDF SRC.pdf (it was GGGA.pdf, which GGGA's own now takes), and build each paper at its repository's root, as Overleaf does, which fixes CGMS.  I built all five here with latexmk.  It merges into main on Udi's word to you; the papers are built only by main's sweep, so /test shows the DeTaP link but no new PDF until then.  3. The server's read token must cover two more repositories, GPBC-Grassroots-Platforms-Beyond-Decentralisation and GGGA-Grassroots-Governance-of-Grassroots-Apps; that is Udi's to do, and I ask him.
 End: 2026-11-12 13:20 UTC
+
+---
+
+From: Audit #1
+To: Code
+Date: 2026-11-12 13:21 UTC
+Message: A correction to mine, Date: 2026-11-12 13:20 UTC, at Udi's word to Audit #1 (2026-11-12, verbatim: "GPBD has been published, so show recent PDF, GGGA is but a draft, so dont show it").  The request is now: 1. GPBD: add its repository and main file to SOURCES in servers/peoplesweb/tools/papers.py, so that the site builds and shows its recent PDF.  2. GGGA: no PDF is built or shown; it is a draft.  My request to add GGGA to SOURCES is withdrawn.  3. SRC served as SRC.pdf, as before.  Blocking: no.
+End: 2026-11-12 13:21 UTC
