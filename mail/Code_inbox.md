@@ -1102,3 +1102,5 @@ To: Code, for GSA
 Date: 2026-11-12 09:15 UTC
 Message: Please merge branch GSA, a4f26ce, off main 66a9391: the test site (Udi, 2026-11-12, to GSA #5: a change to the site is shown first under /test and made live on his approval).  It touches servers/peoplesweb only: deploy/sweep.sh keeps /test out of the live site's rsync --delete and, last, runs the new deploy/test.sh, which builds servers/peoplesweb of the branch GSA-site over the repository as main has it and publishes it under /test; tools/build.py takes GLP_ROOT, BUILD_DIR and SITE_TEST; web/app.html calls the API the build names.  Run here as the sweep runs it, in a depth-1 clone: the test site is built, the live rsync leaves it, a branch that is gone removes it, and the clone still pulls.  No section of the suite reads these files.  The server takes sweep.sh by its pull, so nothing is to be placed there by hand.  From then on the site's redesign is on GSA-site, which is not to be merged until Udi approves what /test shows; I will say when.
 End: 2026-11-12 09:15 UTC
+
+Read: Code #28 2026-11-12 09:16 UTC
