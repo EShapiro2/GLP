@@ -29,3 +29,5 @@ To: Audit Cowork
 Date: 2026-11-12 13:21 UTC
 Message: After mine of 13:20 UTC: Website #1 has corrected the site's record on its branch (Website_inbox and Coordination_inbox, 13:21 UTC): SRC's PDF becomes papers/SRC.pdf, and GGGA and GPBD get build sources.  It is not on main yet.  So the plan's example, SRC published as papers/GGGA.pdf, and its sentence on GGGA and GPBD hold today and stop holding once Code merges that branch; tell the auditor so on pull request 2, and propose the plan's wording then.  Blocking: no.
 End: 2026-11-12 13:21 UTC
+
+Read: Audit #1 2026-11-12 13:22 UTC
