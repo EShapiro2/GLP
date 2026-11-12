@@ -1,4 +1,4 @@
-%% plays.glp --- the GAI mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for three executions, alice's, alf's and bob's, with the two ends of each of three root channels handed to them as their conversations, alice's and alf's, alf's and bob's, and bob's and alice's, the play standing in for the social graph, as ../gsnp/plays.glp does for five.  The persons are scripted (person.glp), each under its role, alf's script the AI agent's program, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gai_boot.glp.
+%% plays.glp --- the GAI mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/3, with its grants; and, for three executions, alice's, alf's and bob's, with the two ends of each of three root channels handed to them as their conversations, alice's and alf's, alf's and bob's, and bob's and alice's, the play standing in for the social graph, as ../gsnp/plays.glp does for five.  The persons are scripted (person.glp), each under its role, alf's script the AI agent's program, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gai_boot.glp.
 
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
@@ -6,10 +6,10 @@ imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(Pe
 exported procedure play_agents(Stream(Seen), Stream(Seen), Stream(Seen)).
 play_agents(A?, R?, B?) :-
     self_module(M),
-    find_type(miniapp/4, T),
-    run(miniapp(alice, ch(GA?, WA), ch([conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _), []), T?, M?),
+    find_type(miniapp/3, T),
+    run(miniapp(alice, ch(GA?, WA), ch([conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _)), T?, M?),
     person # miniapp_person(alice, alice, [bob, alf], ch(WA?, GA), A),
-    run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _), []), T?, M?),
+    run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _)), T?, M?),
     person # miniapp_person(alf, alf, [alice, bob], ch(WR?, GR), R),
-    run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _), []), T?, M?),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _)), T?, M?),
     person # miniapp_person(bob, bob, [alf, alice], ch(WB?, GB), B).

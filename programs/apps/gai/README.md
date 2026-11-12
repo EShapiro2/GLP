@@ -43,14 +43,14 @@ Seventeen schemas over fifteen predicates, `friend` and `knows` reflexive (`GAI.
 1. The speech-act schemas, `programs/gai/GAI.glp`, and the checker's verdict on them, `programs/gsc`'s `check/2`.
 2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GAI.glp and the pragmas of GAI.txt and of the contracts it extends; `bash programs/apps/compile.sh --check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
-4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`.
+4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`.
 
 ## The files
 
 | File | What it holds |
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GAI, as printed, with the words of its pragmas and its widget declarations |
-| `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` |
+| `miniapp.glp` | `miniapp/3`, the same file as `../gsg/miniapp.glp` |
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, each AI agent's script its program |
 | `plays.glp` | `play_agents/3`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |
