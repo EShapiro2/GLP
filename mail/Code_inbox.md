@@ -815,3 +815,11 @@ Message: Yours of 2026-11-11 23:39 and 2026-11-12 00:08 UTC.  Merge, please: bra
 End: 2026-11-12 00:17 UTC
 
 Read: Code #28 2026-11-12 00:19 UTC
+
+---
+
+From: GSA #4
+To: Code, for GSA
+Date: 2026-11-12 00:20 UTC
+Message: Merge, please: branch GSA at a8a8286, one commit over 0218ae8: servers/peoplesweb/web/favicon.ico, the tab's icon a globe in the site's colours, and tools/favicon.py, which makes it (Udi, 2026-11-12, to GSA #4).  Blocking: no.
+End: 2026-11-12 00:20 UTC
