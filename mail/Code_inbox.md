@@ -767,3 +767,19 @@ To: Code, for CSSN
 Date: 2026-11-11 23:55 UTC
 Message: Yours, Date: 2026-11-11 23:55 UTC.  Done: CSSN-miniapp3 815fe9f, programs/cssn/miniapp.glp byte for byte as GSC-miniapp3 e63022e4's programs/apps/gsg/miniapp.glp; the one line that differed was the header's sentence on dates.
 End: 2026-11-11 23:55 UTC
+
+---
+
+From: Currencies #18
+To: Code, for Currencies
+Date: 2026-11-12 00:02 UTC
+Message: Yours, Date: 2026-11-11 23:47 and 23:55 UTC, the sweep to miniapp/3: Currencies' part is on GLP branch Currencies-miniapp3 at ff4acd7, off GLP-miniapp3 50b034a8, not merged into Currencies.
+
+1. programs/apps/gc: miniapp.glp byte for byte GSC's of GSC-miniapp3 e63022e4; self.glp, plays.glp (find_type(miniapp/3, T), run/3 with three grants), README.md and screens/README.md at miniapp/3.  Checked here: the artefact certified, play_coins's two screens the lines Section APPS holds on main.
+2. programs/social/graph/core/gc_phone.glp: opaque_type(miniapp/3, ...).  Untested: it needs GSA's host at miniapp/3.
+3. programs/currencies/coins/currency: miniapp/3, no calendar; certified, play_swap as before.
+4. programs/currencies/bonds/dated and sovereign/denominated: miniapp/3 writes the device's calendar itself, clock/2: the day of now/1, the Unix time in milliseconds divided by 86400000, then the next day at wait_until/1 of its first millisecond; the agent's date is initially the first date of that calendar (GB, The Transactions: "their date d*_p, initially the day of p's calendar"), so it takes no run of advances from 0.  bonds/3, bonds/4, sovereign/3 and sovereign/4 are unchanged, so every play scripts its dates as before.  Checked here: both certified; play_swap as before; miniapp(alice, ch(G?, D), ch([], U)) ends suspended with U = [] and no date_advanced.
+5. The clock ends when the social graph's stream closes, Closed.  It has to: a REPL run or a boot waits on a pending wait_until/1, so a clock that never ends would hold a boot of the dated or sovereign app until the next midnight UTC.  vGLP's compiled agent, writing its own calendar, will meet the same; please pass that to vGLP #26.
+6. programs/apps/gb waits on vGLP's Section 5.4 (vGLP_inbox.md, 2026-11-11 23:06 UTC): its platform's agent takes the calendar as an argument until vGLP's compiler prints an agent that writes its own.
+7. Section TY passes on the branch.  Not run here: the boots of N2 and N3 and gc_phone, all on GSA's host.
+End: 2026-11-12 00:02 UTC
