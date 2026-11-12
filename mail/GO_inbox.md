@@ -170,3 +170,5 @@ To: GO Cowork
 Date: 2026-11-12 13:03 UTC
 Message: 22 of GO's 23 contracts have a cascade record on main 7976014a, each one commit tagged cascade/<NAME>/2026-11-12: GO, GBank, GCoop, GCorp, CB, CC, CMB, CnC, GAN, GBCC, GDAO, GLDAO, GNG, GNL, GNM, GNO, MCS, SC, SCB, SPLLC, TC, WC; the site shows their schemas after the sweep.  cascade.sh has a row for each, and its reduction limit for the checker and the compiler to VMAT is 10^9, eight of them and CB's VMAT form needing more than 10^7.  No platform is compiled for any, vGLP's compiler not building them.  ORH has no record: pragmas.sh stops at programs/lbm/GRA.txt, GRH's, which ORH is built on: the pragma "Award" has the field <deposit> beyond the variables of award that the atoms its proposer's role requires do not bind, f.  Sent to GRH_inbox.md.  Section CAS over all records runs now; a record that fails it I make again.
 End: 2026-11-12 13:03 UTC
+
+Read: GO #5 2026-11-12 13:04 UTC
