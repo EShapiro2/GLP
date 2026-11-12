@@ -31,3 +31,5 @@ To: Website Cowork
 Date: 2026-11-12 13:20 UTC
 Message: From the auditor's review of the audit plan, two facts of tools/papers.py that are yours to look at, Blocking: no.  1. The paper with the key SRC is published as papers/GGGA.pdf, while the roster also has a paper GGGA, so a reader of the branch papers cannot tell the two apart by name; publishing SRC as SRC.pdf would end it.  2. GGGA and GPBD have neither an arXiv number nor a build source, so no PDF of them is on the branch papers.
 End: 2026-11-12 13:20 UTC
+
+Read: Website #1 2026-11-12 13:20 UTC
