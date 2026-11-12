@@ -12,13 +12,13 @@
 %% holds nothing else --- no network entry, and no call to a predicate that
 %% reaches the network or the person --- so the program is certified.
 %%
-%% sovereign/4 is the same with the agent's calendar, a stream of dates, which
-%% on a device the clock writes and which the headless plays write themselves
+%% sovereign/4 is the same with the agent's calendar, a stream of dates,
+%% which the headless plays write themselves, and miniapp/3 gives today's date
 %% (../village.glp, ../credit_line.glp, plays.glp).  sovereign/3 gives the
 %% agent an empty calendar: its date stands at 0, so a bond it mints matures
 %% on a date later than 0, and no bond of its own is mature by its date.  The
-%% super-app activates miniapp/3 below, which writes the calendar itself from
-%% the device's clock (clock/2).
+%% super-app activates miniapp/3 below, which reads today's date
+%% from the phone (today/1).
 
 imported procedure sovereign_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Acceptance)?, Integer?, Stream(Ask(Question))).
 imported procedure sovereign_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
@@ -59,9 +59,9 @@ relay([], []).
 %% Activation, "Opaque types"; vGLP 2026-10-14 13:21 UTC, S2; Currencies
 %% 2026-10-13 20:09 UTC, item 1).  Its grants: the person's key, the person
 %% channel and the channel to the social graph (GLP paper, appendix-guards,
-%% "Predefined types": the entry template miniapp/3).  The calendar is the
-%% device's, which clock/2 writes, and the agent's date is initially its first
-%% date (GB, "The Transactions": "their date d*_p, initially the day of p's
+%% "Predefined types": the entry template miniapp/3).  The calendar is
+%% today's date, which today/1 reads from the phone, and the agent's date is
+%% initially that date (GB, "The Transactions": "their date d*_p, initially the day of p's
 %% calendar", which SGC recalls), the agent passing over a date not past its
 %% own.  The social graph's stream
 %% gives each conversation to the agent; a held link is passed over, the
@@ -69,9 +69,8 @@ relay([], []).
 %% when the social graph's closes.
 exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?).
 miniapp(Id, Ui, ch(Down, Up?)) :-
-    sg_conversations(Down?, Convs, Up0),
-    closing(Up0?, Up, Closed),
-    clock(Closed?, Cal),
+    sg_conversations(Down?, Convs, Up),
+    today(Cal),
     dated(Id?, Ui?, Convs?, Cal?).
 
 %% dated(Id, Ui, Convs, Cal): the mini-app of sovereign/4, its agent's date
@@ -86,30 +85,11 @@ dated(Id, Ui, Convs, [D | Cal]) :-
 dated(Id, Ui, Convs, []) :-
     sovereign(Id?, Ui?, Convs?, []).
 
-%% closing(Up0, Up, Closed): the stream up to the social graph, and Closed
-%% once it closes, when the social graph's stream does.
-procedure closing(Stream(AppToSg)?, Stream(AppToSg), Closed).
-closing([A | As], [A? | Up?], C?) :- closing(As?, Up, C).
-closing([], [], []).
-
-%% clock(Closed, Cal): the device's calendar, one date a day: the day of
-%% now/1, the Unix time in milliseconds divided by 86400000, and then each
-%% next day at wait_until/1 of its first millisecond (GLP paper,
-%% appendix-guards, "Clock access" and "Time guards"; for the compiled agent
-%% the same, vGLP #26 to Currencies, 2026-11-11 23:07 UTC), until the
-%% mini-app ends, Closed, when the calendar ends too.
-procedure clock(Closed?, Stream(Integer)).
-clock(S, Cal?) :- now(T), day_of(T?, S?, Cal).
-
-procedure day_of(Integer?, Closed?, Stream(Integer)).
-day_of(T, S, Cal?) :- D := T? // 86400000, next_day(D?, S?, Cal).
-
-procedure next_day(Integer?, Closed?, Stream(Integer)).
-next_day(D, S, [D? | Cal?]) :- ground(D?) | N := (D? + 1) * 86400000, at_day(N?, S?, Cal).
-
-procedure at_day(Integer?, Closed?, Stream(Integer)).
-at_day(N, S, Cal?) :- ground(N?), wait_until(N?) | day_of(N?, S?, Cal).
-at_day(_, [], []).
+%% today(Cal): the calendar of one date, today's, the day of now/1, the
+%% Unix time in milliseconds divided by 86400000: the phone has the correct
+%% date (vGLP 609b630, Section 5.4).
+procedure today(Stream(Integer)).
+today([D?]) :- now(T), D := T? // 86400000.
 
 procedure sg_conversations(Stream(SgToApp(PeerMsg))?, Stream(Conversation(PeerMsg)), Stream(AppToSg)).
 sg_conversations([conversation(K, Ch) | Down], [conversation(K?, Ch?) | Convs?], Up?) :-
