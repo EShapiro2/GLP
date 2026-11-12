@@ -1,16 +1,19 @@
 %% mad_ship_refused/agents.glp --- the two agents of ../mad_ship_refused_boot.glp.
 
 %% alice ships bob her own module value, refused a certificate, then after.
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(Keys?, Stream(NetMsg(Msg))?).
 alice_init(keys(_, [Bob]), _) :-
     ground(Bob?) |
     self_module(M),
     send_to_net([msg(Bob?, ship(M?)), msg(Bob?, after)]).
+alice_init(_, _) :- otherwise | true.
 
 %% bob reports each message he receives: a module, or the atom after.
-exported procedure bob_init(_?, _?).
+exported procedure bob_init(Keys?, Stream(NetMsg(Msg))?).
 bob_init(_, In) :- report(In?).
+bob_init(_, _) :- otherwise | true.
 
-procedure report(_?).
+procedure report(Stream(NetMsg(Msg))?).
 report([msg(_, ship(M)) | In]) :- module(M?) | send_to_user([got_module]), report(In?).
 report([msg(_, after) | In]) :- send_to_user([after]), report(In?).
+report([]).

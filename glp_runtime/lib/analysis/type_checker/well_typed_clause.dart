@@ -766,6 +766,15 @@ Map<int, _OpaqueActivation> _opaqueActivations(
     if (arity is! ast.ConstTerm || arity.value is! int) continue;
     if (type is! ast.VarTerm || type.isReader) continue;
     final template = env.paramProcDecls['${name.value}/${arity.value}'];
+    if (template == null &&
+        env.getProcedure(name.value as String, arity.value as int) == null) {
+      // The scope being checked no longer holds the declaration: the linked
+      // program retains the reachable procedures, and a template that only
+      // find_type names is not among them.  The clause was checked by it in
+      // its module; here the goal's occurrences are left untyped.
+      declared[type.name] = ('${name.value}', arity.value as int, null);
+      continue;
+    }
     if (template == null || template.typeParams.isEmpty) continue;
     final labels = _activationLabels(g.args[1], template.typeParams.length);
     if (labels == null) continue;
