@@ -7,7 +7,7 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), remove('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), remove('Peer', 'Peer', 'Speech'), close('Peer', 'List'('Peer'), 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Speech'), deliver_leader('Peer', 'Speech', 'Speech')]),
   type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), message('Peer', 'Peer', 'Speech'), create('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), leave('Peer', 'Peer', 'Speech'), remove('Peer', 'Peer', 'Speech'), close('Peer', 'Speech'), post_own('Peer', 'Speech', 'Speech'), post('Peer', 'Peer', 'Speech', 'Speech')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),

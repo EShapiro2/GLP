@@ -2,8 +2,8 @@
 %% GSN.glp --- the grassroots social network contract, GSC's, extending GSG, in the clause syntax
 %% of GSC's paper, Section 3.2 (Udi, 2026-11-04, to GSC #11; the form is described in GKK.glp).
 %% The clauses are in GSN.txt beside this file: message is GSN:1, create and close GSN:2, join,
-%% leave, remove and GSN's unfriend, which replaces GSG's, GSN:3, and post_own, post and deliver
-%% GSN:4.  A group is the name <Alice>.n, Alice its leader; close has a quantified conjunct in its
+%% leave, remove and GSN's unfriend, which replaces GSG's, GSN:3, and post_own, post, deliver and
+%% deliver_leader GSN:4.  A group is the name <Alice>.n, Alice its leader; close has a quantified conjunct in its
 %% body and in its head over every Bob that Alice lists (GSC, Section 3.2); unfriend clears every
 %% listing and membership between the two.  Every role but establish's requires identity.
 %% ---------------------------------------------------------------------------
@@ -79,4 +79,11 @@ contract_named(gsn,
        [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
         atom(posted, ['Alice', x, n]), atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
         not(atom(delivered, ['Alice', x, 'Bob', n])),
-        atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])], true, [])]).
+        atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])], true, []),
+%% GSN:4, the leader's own receipt: the leader is a member (GSN:2), and deliver binds two persons
+%% (GSC, Definition Binding), so the leader receives each post of her group by this schema, with
+%% no guard, once (the audit's finding, Grassroots-Audit ab6fc26, programs/gsc/GSN.glp.md, 1).
+    sas(deliver_leader, ['Alice'], [x, n],
+       [atom(received_in, ['Alice', x, 'Alice', n])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(posted, ['Alice', x, n]), not(atom(received_in, ['Alice', x, 'Alice', n]))], true, [])]).
