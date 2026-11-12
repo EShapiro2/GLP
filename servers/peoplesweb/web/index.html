@@ -309,6 +309,8 @@ function citeHtml(P){
   const link = P.arxiv ? a(`https://arxiv.org/abs/${P.arxiv}`, `arXiv:${P.arxiv}`)
       + (P.updated ? ` · ${a(P.updated, 'Updated')}${P.updated_on ? ` (${esc(P.updated_on)})` : ''}` : '')
       + (P.venue ? `; ${esc(P.venue)}` : '')
+    : P.url ? a(P.url, esc(cap(P.state || 'PDF')))
+      + (P.pdf ? ` · ${a(P.pdf, 'Updated')}${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}` : '')
     : P.pdf ? `${a(P.pdf, esc(cap(P.state || 'PDF')))}${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}`
     : esc(cap(P.state || ''));
   return P.title ? `<div class="cite"><i>${esc(P.title)}</i>${P.authors ? `. ${esc(P.authors)}` : ''}.${link ? ` ${link}` : ''}</div>`
@@ -1039,7 +1041,7 @@ $('#plist').innerHTML = D.projects.filter(p => p.papers.length).map(p => `<div c
 // the project that answers for it.
 const ghPath = e => `<a href="https://github.com/EShapiro2/GLP/${e.dir ? 'tree' : 'blob'}/main/${esc(e.path)}" target="_blank" rel="noopener"><code>${esc(e.path)}</code></a>`;
 const paperLink = P => { const t = `<i>${esc(P.title || '')}</i>`;
-  const href = P.arxiv ? `https://arxiv.org/abs/${P.arxiv}` : P.pdf || '';
+  const href = P.arxiv ? `https://arxiv.org/abs/${P.arxiv}` : P.url || P.pdf || '';
   return href ? `<a href="${href}" target="_blank" rel="noopener">${t}</a>` : t; };
 const dirLi = e => `<li>${ghPath(e)}${e.who ? ` <b>${esc(e.who)}</b>` : ''}${e.note ? ` <span class="nt">${esc(e.note)}</span>` : ''}${e.text ? ` <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(e.text)}" target="_blank" rel="noopener">what it is and does</a>` : ''}${
   (e.contracts || []).length ? `<ul>${e.contracts.map(conLi).join('')}</ul>` : ''}</li>`;

@@ -82,11 +82,12 @@ def build(d, path, main):
             t = f.read()
         with open(mf, 'w') as f:
             f.write(t.replace(old, new))
-    # Built in the main file's own directory, which its inputs are relative
-    # to (CGMS's is ARXIV/main_ARXIV.tex), the PDF beside it.
-    here, base = os.path.split(os.path.join(work, main))
-    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', base], cwd=here)
-    pdf = os.path.join(here, base[:-4] + '.pdf')
+    # Built at the repository's root, as Overleaf builds it, whose inputs
+    # are relative to it (CGMS's main file is ARXIV/main_ARXIV.tex and reads
+    # ARXIV/sections/...); the PDF is written at the root.
+    base = os.path.basename(main)
+    r = run(['latexmk', '-pdf', '-interaction=nonstopmode', '-halt-on-error', main], cwd=work)
+    pdf = os.path.join(work, base[:-4] + '.pdf')
     if r.returncode != 0 or not os.path.exists(pdf):
         tail = '\n'.join((r.stdout + r.stderr).strip().splitlines()[-8:])
         raise RuntimeError(f'latexmk:\n{tail}')
