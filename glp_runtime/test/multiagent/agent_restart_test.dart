@@ -104,6 +104,23 @@ watch_n([X | S]) :- ground(X?) | send_to_user([net(X?)]), watch_n(S?).
 watch_n([]).
 ''';
 
+/// `k` keeps four integers of magnitude 2^62 and more in a goal until its
+/// person says `go`, passing over the `refresh` a restart puts on the
+/// person's stream, and then shows them: a saved state holds every integer
+/// (sGLP #12, 2026-11-12: an integer of magnitude 2^62 or more aborted the
+/// writing of a state).
+const String _big = r'''
+Big ::= big(Integer, Integer, Integer, Integer).
+
+exported procedure agent(Channel(Stream(Constant), Stream(Big))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- keep(In?, 4611686018427387904, 9223372036854775807, -4611686018427387905, -9223372036854775807).
+
+procedure keep(Stream(Constant)?, Integer?, Integer?, Integer?, Integer?).
+keep([go | _], A, B, C, D) :- send_to_user([big(A?, B?, C?, D?)]).
+keep([refresh | In], A, B, C, D) :- keep(In?, A?, B?, C?, D?).
+keep([], _, _, _, _).
+''';
+
 /// A message the layer holds: its sender, its recipient, its payload and the
 /// id the layer gave it.
 typedef _Held = ({String from, String to, Uint8List payload, String id});
@@ -115,6 +132,7 @@ void main() {
   late String playB;
   late String idle;
   late String own;
+  late String big;
 
   setUpAll(() {
     // Under the root, so the program's scope holds the root self.glp
@@ -128,6 +146,8 @@ void main() {
     File(idle).writeAsStringSync(_idle);
     own = '${dir.path}/own.glp';
     File(own).writeAsStringSync(_own);
+    big = '${dir.path}/big.glp';
+    File(big).writeAsStringSync(_big);
     root = File('../programs/self.glp').absolute.path;
   });
   tearDownAll(() => dir.deleteSync(recursive: true));
@@ -251,6 +271,25 @@ void main() {
     await deliverTo('a', a2);
     expect(a2.ctx!.hasPendingReaderValue('a', 1), isFalse,
         reason: 'the pending value is acknowledged');
+  });
+
+  test('a saved state holds an integer of any magnitude: the agent restarted '
+      'from it shows the integers its goal kept', () async {
+    final kp = generateKeyPair();
+    final store = MemoryAgentStateStore();
+    final k1 = host('k', big, store, kp);
+    await k1.initialize();
+    expect(await k1.save(), isTrue);
+    k1.dispose();
+    final restartedFrom = out['k']!.length;
+
+    final k2 = host('k', big, store, kp);
+    await k2.initialize();
+    await k2.injectUserInput(ConstTerm('go'));
+    expect(
+        out['k']!.sublist(restartedFrom),
+        contains('< big(4611686018427387904, 9223372036854775807, '
+            '-4611686018427387905, -9223372036854775807)'));
   });
 
   test('a delivered message is acknowledged in the cycle that applies it, '
