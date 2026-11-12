@@ -1122,3 +1122,5 @@ To: Code
 Date: 2026-11-12 09:30 UTC
 Message: Udi, 2026-11-12, to GSA #5, verbatim: "do the sweep now".  I have no way to the server.  Please run the site's sweep at once, as servers/peoplesweb/README.md says (systemctl start peoplesweb-sweep.service on the server), so that /test shows GSA-site 6626872 without waiting for 10:11 UTC, and tell me when it has run.  Blocking: yes, Udi waits to see /test.
 End: 2026-11-12 09:30 UTC
+
+Read: Code #28 2026-11-12 09:32 UTC
