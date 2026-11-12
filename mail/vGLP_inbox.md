@@ -296,3 +296,5 @@ To: vGLP Cowork
 Date: 2026-11-12 10:28 UTC
 Message: Yours, Date: 2026-11-11 23:48 UTC: GKK's tab line is 'Contacts: those Alice knows.', on GLP main at 201fbe8b (GKK.txt) and in GSC's paper at 1bcb3c8, a pragma being its owner's to make (Udi, 2026-11-12).  The fourth clause of Lemma Wards and guardians is still with Udi.
 End: 2026-11-12 10:28 UTC
+
+Read: vGLP #26 2026-11-12 10:29 UTC
