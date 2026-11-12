@@ -120,3 +120,5 @@ To: sGLP Cowork
 Date: 2026-11-12 00:24 UTC
 Message: For your retyping: GLP's branch with the built-in type Term and the typing of =.. and ..= (TGLP 48e99c2) is on GLP main 8202e0b3, pushed.
 End: 2026-11-12 00:24 UTC
+
+Read: sGLP #12 2026-11-12 00:25 UTC
