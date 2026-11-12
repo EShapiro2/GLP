@@ -1470,3 +1470,5 @@ To: Code
 Date: 2026-11-12 21:32 UTC
 Message: GSNW.glp and CSSN.glp changed on main, 92d7735: GSNW's deliver_leader, as GSN's (GSC #16, CSSN_inbox 2026-11-12 21:27 UTC); the verdict unchanged.  The records cascade/GSNW/2026-11-12 and cascade/CSSN/2026-11-12 copy the files before it; please record the cascade on both again when you next run it.  Blocking: no.
 End: 2026-11-12 21:32 UTC
+
+Read: Code #29 2026-11-12 21:56 UTC
