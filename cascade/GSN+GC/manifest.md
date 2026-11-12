@@ -1,10 +1,10 @@
 # A run of the cascade on GSN+GC
 
-- Contract: the composition of GSN GC (`gsn_gc` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, "The contract's words"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `65b7bb3c`:
-  - `GSN`: `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`; the paper `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `5a045279`.
+- Contract: the composition of GSN GC (`gsn_gc` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, "The contract's words"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `1aa8516b`:
+  - `GSN`: `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`; the paper `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `61227299`.
   - `GC`: `programs/currencies/coins/GC.txt` and `programs/currencies/coins/GC.glp`; the paper `git@github.com:EShapiro2/GC-Grassroots-Currencies.git` at `cdc2f241`.
-- The tools: this repository at `65b7bb3c` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-11 23:46 UTC by `cascade.sh gsn gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `1aa8516b` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-12 22:19 UTC by `cascade.sh gsn gc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
@@ -14,7 +14,7 @@
 | `GC.glp` | the act schemas of GC, as terms |
 | `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
 | `verdict.txt` | the checker's verdict: `syntactically_grassroots` |
-| `vmat.tex` | the VMAT form, 18 displays, one per schema |
+| `vmat.tex` | the VMAT form, 19 displays, one per schema |
 | `platform.vglp` | the canonical CVA platform, as printed |
 | `platform.glp` | the platform compiled to GLP, as emitted |
 | `interface.glp` | the platform's interface in sGLP's term form, as programs/sglp/cva/interface.sh prints it |
