@@ -1694,6 +1694,12 @@ POSITIVE_FILES=(
     # field typed by the named alias AStream must type-check (false positive before
     # the alias-aware same-base fix).
     "$TC_DIR/positive/alias_dual_field.glp"
+    # The built-in type Term (TGLP typed-glp.tex, "Type Declarations"): run
+    # in Section ZG.
+    "$TC_DIR/positive/term_type.glp"
+    # Type checking of =.. and ..= (TGLP typed-constant-readers.tex): run in
+    # Section ZG.
+    "$TC_DIR/positive/term_univ.glp"
     "$TC_DIR/positive/merge_basic.glp"
     "$TC_DIR/positive/append_list.glp"
     "$TC_DIR/positive/copy_stream.glp"
@@ -1952,6 +1958,16 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/coverage/merge_missing_both_nil.glp"
     "$TC_DIR/negative/coverage/merge_missing_first_nil.glp"
     "$TC_DIR/negative/coverage/merge_missing_cons.glp"
+
+    # --- typechecker/negative/term: the built-in type Term (TGLP
+    # typed-glp.tex, "Type Declarations"); each refusal's message is held in
+    # Section ZG ---
+    "$TC_DIR/negative/term/term_no_variable.glp"
+    "$TC_DIR/negative/term/term_not_a_string.glp"
+    "$TC_DIR/negative/term/term_channel.glp"
+    "$TC_DIR/negative/term/term_writer_below.glp"
+    "$TC_DIR/negative/term/term_union.glp"
+    "$TC_DIR/negative/term/term_univ_wildcard.glp"
 
     # --- typechecker/negative/head ---
     "$TC_DIR/negative/head/merge_wrong_constant.glp"
@@ -6931,6 +6947,71 @@ iscon(5, R).
 HEREDOC
 2>&1)
 check "ZG4 constant(5) succeeds" "R = yes" "$zg4"
+
+# The built-in type Term (TGLP typed-glp.tex, "Type Declarations";
+# well-typing.tex, after Definition "Well-Typed GLP Program" and in
+# "Subtyping"; appendix-type-automaton.tex, "The type Term"): a procedure that
+# takes Term? takes a term of any functor; string/1 narrows a Term to a
+# String; a type produced throughout is passed at Term; a Term is produced; a
+# type defined over Term, and one that is Term by a bare alternative.
+zg5=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/typechecker/positive/term_type.glp
+leaves(f(var(a), g(1)), N1).
+name_of(var(x), S1).
+name_of(var(7), S2).
+count([1,2], N2).
+wrap(3, T1).
+head_of(clause(p(var(x)), []), H1).
+heads([var(a), q, f(1, 2)], N3).
+:quit
+HEREDOC
+2>&1)
+check "ZG5 Term: the program loads" "Loaded: .*term_type.glp" "$zg5"
+check "ZG5 Term: a term of any functor at Term?" "N1 = 2" "$zg5"
+check "ZG5 Term: string/1 narrows a Term to a String" "S1 = x" "$zg5"
+check "ZG5 Term: a Term that is no string takes the other clause" "S2 = none" "$zg5"
+check "ZG5 Term: a Stream(Integer) is passed at Term?" "N2 = 1" "$zg5"
+check "ZG5 Term: a Term is produced" "T1 = box(3)" "$zg5"
+check "ZG5 Term: a type that is Term by a bare alternative" "H1 = p(var(x))" "$zg5"
+check "ZG5 Term: a list of Terms" "N3 = 4" "$zg5"
+
+# The refusals, each for its reason.
+zg_term() { # zg_term <file>: the REPL's output on loading a negative
+    printf '%s\n:quit\n' "$GLP_DIR/programs/tests/typechecker/negative/term/$1" | "$REPL_RUN" 2>&1
+}
+check "ZG6 Term?: no clause with a variable is refused by input coverage" \
+    "kind argument 1: uncovered alternative \"every term" "$(zg_term term_no_variable.glp)"
+check "ZG6 Term is not a subtype of String" \
+    "Term is not a subtype of String" "$(zg_term term_not_a_string.glp)"
+check "ZG6 a channel is not passed at Term?" \
+    "not within what the body occurrence accepts (Term)" "$(zg_term term_channel.glp)"
+check "ZG6 a writer does not stand below Term?" \
+    "writer requires ↑ (produce), got ↓ (consume)" "$(zg_term term_writer_below.glp)"
+check "ZG6 Term is the one alternative of a definition" \
+    "overlaps with the other alternatives of Item" "$(zg_term term_union.glp)"
+
+# Type checking of =.. and ..= (TGLP typed-constant-readers.tex; Udi,
+# 2026-11-11): a goal T =.. L is checked at =..(Term, Stream(Term)?) if L is
+# a list of terms, and a goal L ..= T at ..=(Stream(Term), Term?) if T is a
+# term expression; otherwise at the root's declarations, as before.
+zg7=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/typechecker/positive/term_univ.glp
+make(foo, [1, bar(2)], U1).
+parts(g(a, [b]), U2).
+rename(g(a, 7), h, U3).
+pair(1, k(2), U4).
+twice(s, 0, U5).
+:quit
+HEREDOC
+2>&1)
+check "ZG7 =..: the program loads" "Loaded: .*term_univ.glp" "$zg7"
+check "ZG7 =..: a term composed of a list of Terms is a Term" "U1 = foo(1, bar(2))" "$zg7"
+check "ZG7 ..=: a Term decomposes into a list of Terms" "U2 = \[g, a, \[b\]\]" "$zg7"
+check "ZG7 ..= then =..: a term taken apart and built again" "U3 = h(a, 7)" "$zg7"
+check "ZG7 =..: a list written out, its elements term expressions" "U4 = pair(1, f(k(2), \[1\]))" "$zg7"
+check "ZG7 =..: the writer of one composition read by another" "U5 = s(s(0))" "$zg7"
+check "ZG8 =..: a list that holds a channel composes a term of type _" \
+    "the body occurrence produces _, which is not within what the head occurrence hands out (Term)" "$(zg_term term_univ_wildcard.glp)"
 
 echo ""
 

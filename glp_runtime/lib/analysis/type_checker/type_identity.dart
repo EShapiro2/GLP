@@ -190,6 +190,22 @@ String _label(String symbol, int arity, int argIndex, Mode mode) =>
 String _primLabel(String primName, bool dual) =>
     '#${primName.toLowerCase()}/0@0:${_modeTag(dual ? Mode.consume : Mode.produce)}';
 
+/// The label of `Term`'s transitions on every functor, arity and position:
+/// `#term/n@i:mode`, the whole infinite family written once, as a
+/// primitive's literals are ([_primLabel]; TGLP
+/// appendix-implementation-notes.tex, "Primitive types").
+String _termLabel(bool dual) =>
+    '#term/n@i:${_modeTag(dual ? Mode.consume : Mode.produce)}';
+
+/// The transitions of `Term` viewed at [dual] (TGLP
+/// appendix-type-automaton.tex, "The type Term"): those of Integer, Real,
+/// String and Module, and, on every functor, to itself.
+Map<String, _State> _termTransitions(bool dual) => {
+      for (final p in TypeRef.constantPrimitives)
+        _primLabel(p, dual): _State.check,
+      _termLabel(dual): _State.prim(TypeRef.termType, dual),
+    };
+
 /// The procedure-argument transition label: `#proc/n@i:mode`.  See the library
 /// note on why the procedure name is not part of it.
 String _procLabel(int arity, int argIndex, Mode mode) =>
@@ -295,6 +311,7 @@ class _Expansion {
       case _Kind.opaque:
         return const {};
       case _Kind.prim:
+        if (s.name == TypeRef.termType) return _termTransitions(s.dual);
         return {_primLabel(s.name, s.dual): _State.check};
       case _Kind.proc:
         throw StateError('procedure state reached as a transition target');
@@ -380,7 +397,14 @@ class _Expansion {
         throw StateError('Opaque, the union of all opaque types, occurs as '
             'an alternative of a type definition, which has no type identity');
       }
-      if (TypeRef.builtins.contains(alt.name)) {
+      if (alt.name == TypeRef.termType && !types.containsKey(alt.name)) {
+        // `Term` as a bare alternative: its transitions are inherited.  A
+        // type of that name a scope defines is that definition, below.
+        _termTransitions(d).forEach((label, to) => out.putIfAbsent(label, () => to));
+        return;
+      }
+      if (TypeRef.builtins.contains(alt.name) &&
+          !(alt.name == TypeRef.termType && types.containsKey(alt.name))) {
         out.putIfAbsent(_primLabel(alt.name, d), () => _State.check);
         return;
       }
@@ -435,7 +459,10 @@ class _Expansion {
       // a label is a lowercase hex hash.  One state at both modes, as an
       // opaque type is.
       if (e.name == TypeRef.opaqueUnion) return _State.opaque(opaqueUnionLabel);
-      if (TypeRef.builtins.contains(e.name)) return _State.prim(e.name, d);
+      if (TypeRef.builtins.contains(e.name) &&
+          !(e.name == TypeRef.termType && types.containsKey(e.name))) {
+        return _State.prim(e.name, d);
+      }
       if (!types.containsKey(e.name)) {
         throw UnknownTypeError(e.name, e.line, e.column);
       }

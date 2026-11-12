@@ -127,6 +127,15 @@ class DFAState {
   /// variable is consistent with it (Definition "Consistent Paths").
   bool get isOpaqueUnion => baseName == TypeRef.opaqueUnion;
 
+  /// True for the built-in type `Term` or its dual `Term?` (TGLP
+  /// typed-glp.tex, "Type Declarations"; appendix-type-automaton.tex, "The
+  /// type Term"): the state with the transitions of `Integer`, `Real`,
+  /// `String` and `Module` and, for every functor, arity and position, a
+  /// transition of its own mode to itself ([Automaton.anyFunctorTarget]).
+  /// Not a primitive ([isPrimitiveType]) and no constant type
+  /// ([isConstantType]).
+  bool get isTermType => baseName == TypeRef.termType;
+
   // Computed properties for type classification
   /// True for the primitive types: `_`, Integer, Real, String, Module, MutualRef.
   /// `Number` and `Constant` are NOT primitive — they are unions defined in the
@@ -227,11 +236,30 @@ class Automaton {
   /// derive from the definitions rather than from a built-in order.
   final Set<String> acceptedPrimitives;
 
-  Automaton(this.startState, this._transitions, {this.acceptedPrimitives = const {}});
+  /// `Term` or `Term?` where this type has `Term` as a bare type-name
+  /// alternative, transitively, or is `Term` itself; null otherwise.  The
+  /// start state then has, for every functor, arity and position, a
+  /// transition at this state's mode to it (TGLP appendix-type-automaton.tex,
+  /// "The type Term": "delta(Term, (f, n, i, up)) = Term for every functor f,
+  /// arity n >= 1 and position i.  Term? has the same transitions with mode
+  /// down, to Term?").  The family is infinite, so it is no entry of
+  /// [transitions]: [transition] and [transitionIgnoringMode] answer it, and
+  /// a walk over [transitions] reads this field.
+  final DFAState? anyFunctorTarget;
+
+  Automaton(this.startState, this._transitions,
+      {this.acceptedPrimitives = const {}, this.anyFunctorTarget});
 
   /// Get the target state for a transition, or null if no such transition.
   DFAState? transition(DFAState from, TransitionLabel label) {
-    return _transitions[(from, label)];
+    final explicit = _transitions[(from, label)];
+    if (explicit != null) return explicit;
+    final any = anyFunctorTarget;
+    if (any != null && from == startState && label.arity > 0) {
+      final mode = any.isDual ? Mode.consume : Mode.produce;
+      if (label.mode == null || label.mode == mode) return any;
+    }
+    return null;
   }
 
   /// Get all transitions (for iteration by coverage checker).
@@ -250,6 +278,7 @@ class Automaton {
         return entry.value;
       }
     }
+    if (from == startState && arity > 0) return anyFunctorTarget;
     return null;
   }
 }
@@ -465,6 +494,10 @@ ProgramDFA _wholeDfa(TypeEnvironment env) {
       DFAState(TypeRef.opaqueUnion, isDual: false, isFinal: false);
   states['${TypeRef.opaqueUnion}?'] =
       DFAState(TypeRef.opaqueUnion, isDual: true, isFinal: false);
+  states[TypeRef.termType] =
+      DFAState(TypeRef.termType, isDual: false, isFinal: false);
+  states['${TypeRef.termType}?'] =
+      DFAState(TypeRef.termType, isDual: true, isFinal: false);
 
   // Create automata for system types.  A primitive type's automaton has no
   // explicit transitions (conceptually, infinitely many to _FINAL_): its
@@ -478,6 +511,15 @@ ProgramDFA _wholeDfa(TypeEnvironment env) {
   automata[TypeRef.opaqueUnion] = _finalAutomaton(states[TypeRef.opaqueUnion]!);
   automata['${TypeRef.opaqueUnion}?'] =
       _finalAutomaton(states['${TypeRef.opaqueUnion}?']!);
+  // `Term` and `Term?` (TGLP appendix-type-automaton.tex, "The type Term"):
+  // the transitions of Integer, Real, String and Module, read as those
+  // primitives' are, in leaf consistency, and a transition to itself on
+  // every functor ([Automaton.anyFunctorTarget]).
+  for (final name in const [TypeRef.termType, '${TypeRef.termType}?']) {
+    automata[name] = Automaton(states[name]!, {},
+        acceptedPrimitives: TypeRef.constantPrimitives,
+        anyFunctorTarget: states[name]!);
+  }
 
   // Create states for ALL defined types FIRST
   // (Automata may reference other types, so all states must exist before building automata)
@@ -602,8 +644,45 @@ Automaton _buildTypeAutomaton(
         types: types, inherited: {typeName});
   }
 
+  final term = termAlternativeOf(typeDef, types);
   return Automaton(startState, transitions,
-      acceptedPrimitives: primitiveClosure(typeDef, types));
+      acceptedPrimitives: primitiveClosure(typeDef, types),
+      anyFunctorTarget: term == null
+          ? null
+          : states[term != isDual
+              ? '${TypeRef.termType}?'
+              : TypeRef.termType]);
+}
+
+/// Whether [typeDef] has `Term` among its bare type-name alternatives,
+/// transitively, and how: false where it is `Term` in the definition's own
+/// mode, true where it is `Term?`, null where no alternative reaches it.  A
+/// type that has it accepts what `Term` accepts, a bare alternative standing
+/// for everything the named type accepts (TGLP appendix-type-automaton.tex,
+/// "Type definition transitions", third bullet).
+bool? termAlternativeOf(TypeDef typeDef, Map<String, TypeDef> types) {
+  final visiting = <String>{};
+  bool? walk(TypeDef def, bool flip) {
+    if (!visiting.add(def.name)) return null;
+    for (final alt in def.alternatives) {
+      if (alt is! TypeRef || alt.isParameterized) continue;
+      // The built-in `Term`, where no definition in scope has its name.
+      if (alt.name == TypeRef.termType && !types.containsKey(alt.name)) {
+        return flip != alt.isInput;
+      }
+      if (TypeRef.builtins.contains(alt.name) &&
+          !types.containsKey(alt.name)) {
+        continue;
+      }
+      final target = types[alt.name];
+      if (target == null) continue;
+      final found = walk(target, flip != alt.isInput);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  return walk(typeDef, false);
 }
 
 /// The primitive type names [typeDef] accepts through its bare type-name
@@ -616,6 +695,17 @@ Set<String> primitiveClosure(TypeDef typeDef, Map<String, TypeDef> types) {
     if (!visiting.add(def.name)) return; // guard against a definition cycle
     for (final alt in def.alternatives) {
       if (alt is! TypeRef || alt.isParameterized) continue;
+      if (alt.name == TypeRef.termType && !types.containsKey(alt.name)) {
+        // `Term` has the transitions of Integer, Real, String and Module
+        // (TGLP appendix-type-automaton.tex, "The type Term").  A type of
+        // that name a scope defines is that definition, read below.
+        result.addAll(TypeRef.constantPrimitives);
+        continue;
+      }
+      if (alt.name == TypeRef.termType) {
+        walk(types[alt.name]!);
+        continue;
+      }
       if (TypeRef.builtins.contains(alt.name)) {
         result.add(alt.name);
         continue;
@@ -852,7 +942,10 @@ bool licensesRepeatedReader(DFAState state, Map<String, TypeDef> types) {
 bool _isConstantTypeNamed(
     String name, Map<String, TypeDef> types, Set<String> assumed) {
   if (TypeRef.constantPrimitives.contains(name)) return true;
-  if (TypeRef.builtins.contains(name)) return false; // MutualRef, and only it
+  if (TypeRef.builtins.contains(name) &&
+      !(name == TypeRef.termType && types.containsKey(name))) {
+    return false; // MutualRef, Opaque and the built-in Term
+  }
   if (!assumed.add(name)) return true; // already on the walk: no new alternative
   final def = types[name];
   if (def == null) return false; // a name with no definition answers for nothing
