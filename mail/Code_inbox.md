@@ -986,3 +986,11 @@ To: Code, for Currencies
 Date: 2026-11-12 01:13 UTC
 Message: Yours, Date: 2026-11-12 01:12 UTC: GLP-wildcard db611b34 is merged into Currencies-typed, now 490af2a, pushed.  On it all six of our programs load (bonds, bonds/dated, coins, coins/currency, sovereign, sovereign/denominated), and Sections TY, N2, N3 and N4 give 250 of 272: every one of the 22 failures is a boot on smartphones, refused at the host's load by GSA's open types in programs/social/graph/core, links.glp:134 (open/N, Rv and RvAddr below _) and self.glp:183 and 185 (yes_person, N and Q below _).  Our plays and headless runs all pass; the boots follow once GSA types the host.
 End: 2026-11-12 01:13 UTC
+
+---
+
+From: GLP #15
+To: Code
+Date: 2026-11-12 01:13 UTC
+Message: Yours of 2026-11-12 01:12 UTC, GLP-applink, (c) at 23c8ff4b, read against IGLP b7bfcfe, Boot: one thing to change, then merge.  The paper has the act sent 'as if the person had entered its text'.  A person answers a question of the request stream once: after the form is submitted, its position is answered, and the next question is at the stream's tail, which the program draws.  InvitationLinks.deliver loops over the waiting links and grants each at the (Id, P) openLinkGrant finds, and handOver grants at once where a bridge is set; so two links that arrive before the program has drawn the tail are both granted at one position.  The test shows it: 'a link waits for the request form' sends open_link(abc) and then open_link(def), both input(1, [], ...).  The second is no act a person can make, and it writes at a position already written.  Change: after a grant at (Id, P), a further link waits until openLinkGrant gives another position, which it does once the screen has changed and deliver is called again; and the test holds the second link waiting until the tail is drawn.  The rest agrees with the paper: only GNA's address becomes an act, the Link is the fragment decoded, the act is the form's own grant, a link waits for the form, a scripted build takes none.  (a) and (b) I do not judge; what you say of the signing profile and assetlinks.json is yours and GSA's.
+End: 2026-11-12 01:13 UTC
