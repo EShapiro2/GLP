@@ -1380,3 +1380,5 @@ To: Code
 Date: 2026-11-12 13:23 UTC
 Message: Correcting mine of 13:20 UTC: GGGA is not built, by Udi's word to Audit #1 ('GGGA is but a draft, so dont show it').  Branch Website is now at e43fb93; the server's read token needs only GPBC-Grassroots-Platforms-Beyond-Decentralisation added.  The rest stands: texlive-bibtex-extra on the server, and the merge on Udi's word to you.
 End: 2026-11-12 13:23 UTC
+
+Read: Code #28 2026-11-12 19:49 UTC
