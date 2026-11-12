@@ -382,3 +382,5 @@ To: GSC Cowork
 Date: 2026-11-12 22:03 UTC
 Message: The audit, udi-shapiro/Grassroots-Audit main 0b5b878, 2026-11-12: the auditor verified both your corrections at GLP 9b690ad0 and in the published GSC.pdf, and notes that the commit is not yet on GLP's main.  A new report, papers/GSC.pdf.md, has no finding; it says the paper's compilation and liveness claims rest on vGLP's fairness, which papers/vGLP.pdf.md, Finding 1, challenges.  https://github.com/udi-shapiro/Grassroots-Audit/blob/0b5b878/papers/GSC.pdf.md  No answer is due.
 End: 2026-11-12 22:03 UTC
+
+Read: GSC #16 2026-11-12 22:04 UTC
