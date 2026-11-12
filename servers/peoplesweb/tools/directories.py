@@ -67,31 +67,35 @@ DIRECTORIES = [
 # acronym, its name in full where it has one, and the papers it holds, by
 # their keys in tools/papers.py (organisation/claude.md, "Mail", the table of
 # inboxes, names the projects and the papers GLP, GSA, Currencies and GGGA
-# hold; a project of one paper holds the paper of its name).  The site's
+# hold; a project of one paper holds the paper of its name; Coordination #15
+# checked the projects and their papers, 2026-11-12 09:27 UTC).  Every project
+# has a name in full, that table's where it gives one and else one from its
+# paper's title (Udi, 2026-11-12, to GSA #5, approving the nine: GLP, VMAT,
+# vGLP, GSC, GAI, CSSN, CGP, DSA and CGMS).  The site's
 # Papers and Projects pages are printed from it (tree, below).  A project of
 # DIRECTORIES that is not here has no paper, and its directories are listed
 # under Code with the project named (Udi, 2026-11-12, to GSA #5).
 PROJECTS = [
-    ('GLP', '', ['GLP-Spec', 'TGLP', 'IGLP']),
-    ('VMAT', '', ['VMAT']),
-    ('vGLP', '', ['vGLP']),
+    ('GLP', 'Grassroots Logic Programs', ['GLP-Spec', 'TGLP', 'IGLP']),
+    ('VMAT', 'Volition-Guarded Multiagent Atomic Transactions', ['VMAT']),
+    ('vGLP', 'Volition Elicitation', ['vGLP']),
     ('sGLP', 'Stochastic GLP', ['sGLP']),
-    ('GSC', '', ['GSC']),
+    ('GSC', 'From Grassroots Contract to Grassroots App', ['GSC']),
     ('GSA', 'Grassroots Super-App and App Store', ['GSA', 'GNA']),
     ('SPM', 'Securing People and their Machines', ['SPM']),
     ('Currencies', 'Grassroots Currencies', ['GC', 'GB', 'SGC', 'GCC']),
-    ('GAI', '', ['GAI']),
-    ('CSSN', '', ['CSSN']),
+    ('GAI', 'Accountable AI Agents', ['GAI']),
+    ('CSSN', 'Child-Safe Social Networking', ['CSSN']),
     ('GFF', 'Grassroots Feeds and Followers', ['GFF']),
     ('GGGA', 'Sybil-resilient communities, Sybil-resilient governance', ['GGGA', 'SRC']),
     ('GO', 'Grassroots Organisations', ['GO']),
     ('GRH', 'Grassroots Ride-Hailing', ['GRH']),
-    ('CGP', '', ['CGP']),
+    ('CGP', 'Characterising Global Platforms', ['CGP']),
     ('GPAT', 'Grassroots Platforms Atomic Transactions', ['GPAT']),
     ('GPBD', 'Grassroots Platforms Beyond Decentralisation', ['GPBD']),
-    ('DSA', '', ['DSA']),
+    ('DSA', 'Digital Speech Acts', ['DSA']),
     ('CCDG', 'Constitutional Consensus', ['CCDG']),
-    ('CGMS', '', ['CGMS']),
+    ('CGMS', 'Constitutional Governance in Metric Spaces', ['CGMS']),
 ]
 
 # The directories whose every entry the site must account for, besides the

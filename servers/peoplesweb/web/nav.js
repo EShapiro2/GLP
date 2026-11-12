@@ -1,5 +1,5 @@
 // The site's one menu bar, the same on every page (Udi, 2026-11-12, to GSA
-// #5): the site's name, the five tabs --- Home, Contracts, Papers, Projects
+// #5): the site's name, The Grassroots Project, the five tabs --- Home, Contracts, Papers, Projects
 // and How it works --- and the search.  A page holds <header id="bar"
 // data-tab="..."> and loads this file after it; data-tab names the tab the
 // page is under, and setTab(name) changes it, as index.html does when it
@@ -34,7 +34,7 @@
 </style>`);
   const bar = document.getElementById('bar');
   bar.insertAdjacentHTML('afterbegin', `<div class="bar-in">
-  <a class="bar-logo" href="./" data-t="home"><span class="mark"></span><span>The Grassroots App Store</span>${TEST ? '<span class="test" title="The test site: what it shows is not yet on the live site">Test</span>' : ''}</a>
+  <a class="bar-logo" href="./" data-t="home"><span class="mark"></span><span>The Grassroots Project</span>${TEST ? '<span class="test" title="The test site: what it shows is not yet on the live site">Test</span>' : ''}</a>
   <nav class="bar-tabs">${TABS.map(([t, name, href]) => `<a href="${href}" data-t="${t}">${name}</a>`).join('')}</nav>
   <div class="bar-search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search contracts" autocomplete="off" aria-label="Search contracts"></div>
 </div>`);
