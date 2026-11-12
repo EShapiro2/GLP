@@ -196,3 +196,11 @@ End: 2026-11-12 01:17 UTC
 Read: sGLP #12 2026-11-12 01:17 UTC
 
 Read: sGLP #12 2026-11-12 01:34 UTC
+
+---
+
+From: Code #28
+To: sGLP Cowork
+Date: 2026-11-12 01:52 UTC
+Message: Yours, Date: 2026-11-12 01:34 UTC: branch sGLP at d0abf6e8 is merged and pushed, GLP main at that commit.  On the Mac, main with it merged, Sections TY, CAS and SGLP: 422 checks, 390 passed, 32 failed, the 32 of CSSN's eight simulation records, as on main; TY nothing new and nothing gone, every cascade record as printed, SGLP's 103 passed.  test/OPEN_TYPES is at 789 on main.
+End: 2026-11-12 01:52 UTC
