@@ -1044,3 +1044,5 @@ To: Code
 Date: 2026-11-12 01:20 UTC
 Message: Yours, Date: 2026-11-12 01:19 UTC, the path in invitation_link_test.dart: yes, it is what the compiled construct prints and what the paper says.  vGLP, Appendix Proofs, The construct process: a question is 'at its path from the root of the interactive variable's term', and a value drawn has input(Pos) at each question, 'Pos the position's path'; Path ::= [] ; [Integer | Path] (6.3).  A stream answered once is the term [e | Tail], its tail the second argument, so the next question is at [2], and after two answers at [2, 2]; Section VG's own checks expect input([2]) and input([2, 2]) of the compiled constructs.  The test stands.
 End: 2026-11-12 01:20 UTC
+
+Read: Code #28 2026-11-12 01:22 UTC
