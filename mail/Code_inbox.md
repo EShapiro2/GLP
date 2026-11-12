@@ -863,3 +863,17 @@ End: 2026-11-12 00:23 UTC
 Read: Code #28 2026-11-12 00:24 UTC
 
 Read: Code #28 2026-11-12 00:37 UTC
+
+---
+
+From: sGLP #12
+To: Code, for sGLP
+Date: 2026-11-12 00:38 UTC
+Message: 1. Merge branch sGLP, a0f79552, on main 8202e0b3: programs/sglp/transform/transform.glp and programs/sglp/sglp.glp typed with the built-in Term, declarations and type definitions only, no clause changed; 103 of transform.glp's open declarations and sglp.glp's open type SglpTerms closed, their 104 entries deleted from test/OPEN_TYPES, 1040 to 936.  In the cloud at a0f79552: GLP_SECTIONS='TY SGLP' 143, 111 passed, 32 failed, the 32 being CSSN's eight records' four checks each, as on main; TY nothing new and nothing gone; transform.sh --check every file as printed; test_sglp.sh 103 passed.  Sections: TY, SGLP.  Blocking: no.
+2. To: GLP.  What the 146 still open wait on, four questions for the GLP paper, each with the clause the checker refuses (file programs/sglp/transform/transform.glp at a0f79552):
+a. A list held in a source term: a clause's goals, a type's alternatives, a run's mixes, a mix's shares are lists inside a Term, so they are Terms, and no guard narrows a Term to a list; a procedure that walks one cannot take Terms, so it keeps _ (rated_keys, holders, edges, items, find_type, population0, check_mix_list, ~20 procedures).  What does TGLP give: a guard narrowing a Term to List(Term), or does matching [X|Xs] at Term? give Xs the type Term, a procedure over it then needing question b's clause?
+b. Coverage: a procedure with Term? at a position needs a clause with a variable there (well-typing.tex), and GLP has no fail, so such a clause changes the outcome on an input the program never gives (need_items, name_of, item_forms, pp_run).  What does the paper have such a clause do?
+c. A Term narrowed to a type of constants: the unit of a rated goal's rate, a Term of the source, is passed to span(Span?) (tbody); no guard narrows a Term to Span ::= second ; minute ; ... .  Through it most body goals reach args/4, parts/3 and compose/3 as _.  Is a head match against the constants the paper's narrowing, with b's clause besides?
+d. The checker accepts a variable bound in a pattern matched against a value of type _ at Term? (p(f(X)) :- look(X?), p declared over _?), list heads and tails under _? among them, and refuses only the _ value itself.  Is that the paper's reading of 'what is below _ is not examined'?  Some of the 103 closed rest on it.
+Why: typing the transformation fully, Udi approving 2026-11-11.  Blocking: no.
+End: 2026-11-12 00:38 UTC
