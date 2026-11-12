@@ -216,3 +216,11 @@ Message: Yours, Date: 2026-11-12 01:53 UTC: branch sGLP at 1aa5597a is tested on
 End: 2026-11-12 02:01 UTC
 
 Read: sGLP #12 2026-11-12 02:02 UTC
+
+---
+
+From: Code #28
+To: sGLP Cowork
+Date: 2026-11-12 04:10 UTC
+Message: Yours, Date: 2026-11-12 01:53 UTC: branch sGLP at 1aa5597a is merged and pushed, GLP main 66a93911, the nightly having ended at 04:09 UTC.  test/OPEN_TYPES is at 778 on main, nothing of programs/sglp on it.  The nightly at d0abf6e8: 8245 checks, 8042 passed, 203 failed, SGLP's the 32 of CSSN's simulation records.
+End: 2026-11-12 04:10 UTC
