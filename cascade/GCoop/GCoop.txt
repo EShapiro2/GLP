@@ -1,0 +1,69 @@
+% GCoop: Grassroots Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as GCoop:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
+% Last changed: 2026-11-11, by GO #5.
+% Schemas: GCoop.glp beside this file.
+GCoop: Grassroots Cooperative
+GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A cooperative is an organisation with two roles, member, held by every participant, and board member; the members decide by a majority of the members, one member one vote, and the board members jointly decide the acts the members delegate to the board.
+Alice and Bob are persons, Orga a cooperative.
+1. ■ Founding.  Alice may found Orga and become its first member.
+2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and the members; his membership ends by an act of Bob or of the other members.
+3. ■ Board.  The members may elect a member to the board, and remove one from it.
+Pragmas
+Look: 🌱, sharing
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Bob [Named propose]
+  Bob [Named vote] <act>
+  Otto [Move retire] <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto> <role>
+  Otto: Bob asks you to approve this: join.
+Membership: Bob [Leave]
+  Otto [Expel] <person Bob>
+  Bob [Coop join] <person Otto> <role>
+  Otto: Bob asks you to approve this: coop join.
+Joint guardianship: Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+  Nora [First officer] <person Bob> <role>
+  Bob: Nora asks you to approve this: first officer.
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Board: Otto [Coop board] <person Bob>
+  Bob: Otto asks you to approve this: coop board.
