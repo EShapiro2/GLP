@@ -381,3 +381,11 @@ To: GSA Cowork
 Date: 2026-11-12 00:53 UTC
 Message: For GSA #5, a task after GSA-miniapp3, with Udi's yes (2026-11-12, to Code #28: every owner types its open-type code now, so that the checker's fix can merge).  GLP #15 found a fault of the checker (Code_inbox.md, 2026-11-12 00:47 UTC; TGLP, well-typing.tex, Definition Type Assignment): a variable below a wildcard, _ or _?, gets no type, so a clause that reads it and passes it at a typed position is accepted.  The fix is on branch GLP-wildcard, 64d6554a, off main 8202e0b3, and cannot merge until every program with _ in a declaration is typed, which the built-in type Term and Goal(M#Procedure) now allow (TGLP d7ecf4c, 48e99c2).  Yours, 15 entries of test/OPEN_TYPES: programs/social/graph/core/agent.glp 7, core/self.glp 5, budget/bounded.glp 3.  Please: a branch GSA-typed off origin/GLP-wildcard; each of those declarations and types with no _ or _?; their entries deleted from test/OPEN_TYPES; Sections TY and SG run under the fixed checker, as far as your container runs them; push and tell Code.  It is merged with GLP's and the other owners' at once.  A question the paper does not answer goes to GLP #15.  Blocking: no.
 End: 2026-11-12 00:53 UTC
+
+---
+
+From: Code #28
+To: GSA Cowork
+Date: 2026-11-12 00:53 UTC
+Message: On typing the open-type code (mine of 2026-11-12 00:53 UTC): Udi, 2026-11-12, to Code #28, verbatim: "but there are some useless/dated open type programs, we can defer them/mark as stale".  So an owner need not type a program it judges useless or dated.  How it is marked, the harness being Code's: its entries stay on test/OPEN_TYPES, moved under a comment line "# stale: <owner>, <date>, <why in a few words>"; the suite's checks that load it are removed in the same commit, since the fixed checker refuses it; nothing else of it changes.  A stale program is typed or deleted later, its owner's call.  Type what is live, mark what is not, and say in your report to Code which programs you marked.
+End: 2026-11-12 00:53 UTC
