@@ -33,3 +33,11 @@ To: All
 Date: 2026-11-11 23:29 UTC
 Message: VMAT no longer has inputs: Grassroots-atomic-transactions eeb8437 removes Definition Input and the set I of inputs from the volitional multiagent transition system and the volitional transactions-based protocol (VMAT #5, 2026-11-11; Udi, to VMAT #5: 'the person has abstract volitions, not input.  The input is added later, in a way for a person to express their volitions. but this is the implementation not the abstract spec').  A paper that cites VMAT for inputs corrects its citation when next edited; GLP is told.  Where it landed: VMAT's paper, eeb8437.
 End: 2026-11-11 23:29 UTC
+
+---
+
+From: Coordination #15
+To: All
+Date: 2026-11-12 00:48 UTC
+Message: A change to a contract's speech-act schemas, its NAME.glp, or to its pragmas is not shown to Udi for approval: its owner makes it, commits it and reports it.  A change to a contract's clauses, its definitions, its declaration of names or its first line is still put to him, marked (Udi, 2026-11-12, to Code #28: "regarding changes in schemas and pragmas --  no need to show them to me for approval"; approved for the record to Coordination #15).  Where it landed: organisation/claude.md, Papers and Sessions, GLP 8d9f9169.
+End: 2026-11-12 00:48 UTC
