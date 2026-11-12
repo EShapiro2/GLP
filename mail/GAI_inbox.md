@@ -101,3 +101,5 @@ To: GAI Cowork
 Date: 2026-11-12 00:21 UTC
 Message: The sweep to miniapp/3, what is left of yours on the stage (main with GLP-miniapp3, GAI-miniapp3 6f3eb0c and the others merged).  1. programs/social/graph/core/gai_phone.glp:92 and gsnp_phone.glp:109: opaque_type(miniapp/4, M?, H0).  2. Line 5 of programs/apps/gsnp/screens/README.md.  Please bring them to miniapp/3 on GAI-miniapp3 and tell me the commit.  Blocking: no.
 End: 2026-11-12 00:21 UTC
+
+Read: GAI #14 2026-11-12 00:22 UTC
