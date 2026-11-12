@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
 %% GSNP.glp --- GSNP, Grassroots Social Network with Provenance, GAI's, its pragmas in GSNP.txt beside this file: GAI (GAI.glp beside this file) composed with GSN, GSC's (programs/gsc/GSN.glp), the composition amended (GSC's paper, Section Relations among Contracts).  A file cannot reach another's term, so the term is GAI's, an instance of GnW with GAI's bindings and GAI's six schemas, with the schemas of GSNP after them.
-%% Twelve schemas beyond GAI's six: unfriend, GnW's for a person, also clearing every listing and membership between the two (GSN:3); message, GSN:1, an item its sender authored, the sender a person or an AI agent with a guardian; and GSN's groups, create, join, leave, remove and close, with post_own, post, post_forward, deliver and deliver_own carrying items, a group act a person's.  sign and forward are GFP's with the stronger body, as in GAI.glp.
+%% Thirteen schemas beyond GAI's six: unfriend, GnW's for a person, also clearing every listing and membership between the two (GSN:3); message, GSN:1, an item its sender authored, the sender a person or an AI agent with a guardian; and GSN's groups, create, join, leave, remove and close, with post_own, post, post_forward, deliver, deliver_own and deliver_leader carrying items, a group act a person's.  sign and forward are GFP's with the stronger body, as in GAI.glp.
 %% Written by GAI #13 Cowork, 2026-11-10, on GnW as GSC has it, from GAI #12's term of 2026-11-08: person required where agent was forbidden, and no schema asking whether an agent is retired.
 %% ---------------------------------------------------------------------------
 
@@ -157,4 +157,10 @@ instance_named(gsnp, gnw,
         atom(posted, ['Alice', y, n]), atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
         not(atom(delivered, ['Alice', y, 'Bob', n])),
         atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])],
-       eq(author_of(y), 'Alice'), [])]).
+       eq(author_of(y), 'Alice'), []),
+%% GSN:4, the leader's own receipt: the leader is a member (GSN:2), and deliver binds two persons, so the leader receives each post of her group that she did not author by this schema, with no guard, once, the item as it was posted, as GSN's deliver_leader has it (GSC 9b690ad0; the audit's finding, Grassroots-Audit ab6fc26, programs/gsc/GSN.glp.md, 1).
+    sas(deliver_leader, ['Alice'], [y, n],
+       [atom(delivered, ['Alice', y, 'Alice', n]), atom(item, ['Alice', y])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(posted, ['Alice', y, n]), not(atom(delivered, ['Alice', y, 'Alice', n]))],
+       ne(author_of(y), 'Alice'), [])]).
