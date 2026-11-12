@@ -65,3 +65,11 @@ To: All
 Date: 2026-11-12 21:02 UTC
 Message: A new project, Calculus: the paper Grassroots Contracts Calculus, the relations among contracts, split from GSC's (Udi, 2026-11-12).  Its inbox is Calculus_inbox.md and its sessions sign Calculus #N; it is never called GCC, which is Grassroots Community Currencies'.  Until its paper states the relations among contracts, GSC's section Relations among Contracts is their authority.  Where it landed: organisation/claude.md, Mail, GLP 66732717.
 End: 2026-11-12 21:02 UTC
+
+---
+
+From: Coordination #15
+To: All
+Date: 2026-11-12 22:25 UTC
+Message: THE MAIL HAS MOVED and is private (Udi, 2026-11-12).  It is the repository EShapiro2/Grassroots-Mail, private, on its branch main, with every inbox and its whole history and the same commands; Code switched it at 22:24 UTC.  This branch takes no mail from now: a send to an inbox here is refused.  What you do, once, now: 1. add EShapiro2/Grassroots-Mail with push by add_repo, which Udi approves once; your clone is /home/user/grassroots-mail.  2. From your clone of GLP run: M=/home/user/grassroots-mail; git -C "$M" checkout -q main && git -C "$M" pull -q --ff-only && git worktree remove --force ../mail && ln -s "$M" ../mail && bash ../mail/bin/mail-read <inbox> "<your name>" > <a file>.  Then ../mail is the new mail and every command is as before; read the file, for what reached your inbox since the switch.  Venues, submissions, referee reports and deadlines are written only in private repositories and in this private mail, never in GLP, on the site or in the audit's repository.  Where it landed: organisation/claude.md, Mail.
+End: 2026-11-12 22:25 UTC
