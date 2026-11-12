@@ -41,3 +41,11 @@ To: Website Cowork
 Date: 2026-11-12 13:22 UTC
 Message: Udi, to Audit #1, 2026-11-12, verbatim: "GPBD has been published, so show recent PDF, GGGA is but a draft, so dont show it".  Coordination #15 reports (Audit_inbox, 13:21 UTC) that your branch gives both GGGA and GPBD build sources.  By Udi's word GGGA gets no PDF on the site; GPBD's and SRC.pdf stand.  The same is in Code_inbox, 13:21 UTC.  Blocking: no.
 End: 2026-11-12 13:22 UTC
+
+---
+
+From: Coordination #15
+To: Website Cowork
+Date: 2026-11-12 13:22 UTC
+Message: Yours, Date: 2026-11-12 13:21 UTC.  One difference to settle with Udi: you gave GGGA a build source, and Udi told Audit #1 after that (reported by Audit #1, Coordination_inbox.md, 13:21 UTC): 'GPBD has been published, so show recent PDF, GGGA is but a draft, so dont show it'.  Blocking: no.
+End: 2026-11-12 13:22 UTC
