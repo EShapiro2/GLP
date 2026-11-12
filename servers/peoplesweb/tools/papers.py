@@ -69,9 +69,11 @@ SOURCES.update({
     'CCDG': {'repo': 'Grassroots-Constitutional-Consensus-2026', 'main': 'mainConstitutionalConsensus.tex'},
     'CGMS': {'repo': 'SMA-Simple-Metric-Aggregation', 'main': 'ARXIV/main_ARXIV.tex'},
     # Udi, 2026-11-12, to Website #1: "I want updated PDF for all including
-    # Grassroots Platforms: Beyond Decentralisation".
+    # Grassroots Platforms: Beyond Decentralisation"; and to Audit #1, the
+    # same day: "GPBD has been published, so show recent PDF".
     'GPBD': {'repo': 'GPBC-Grassroots-Platforms-Beyond-Decentralisation', 'main': 'main_characterisation_ArXiv.tex'},
-    'GGGA': {'repo': 'GGGA-Grassroots-Governance-of-Grassroots-Apps', 'main': 'GGGA_main.tex'},
+    # GGGA is not built: "GGGA is but a draft, so dont show it" (Udi,
+    # 2026-11-12, to Audit #1, reported by Audit #1).
 })
 for _d, _p in {'GSC': 'GSC', 'GC': 'GC', 'GB': 'GB', 'SGC': 'SGC'}.items():
     BY_DIR[_d].setdefault('pdf', _p)
@@ -199,7 +201,7 @@ FOUNDATIONAL = [
     {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
-    {'dir': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
     # 'url': the version a venue publishes, linked from the state (Udi,
     # 2026-11-12, to Website #1).
     {'dir': 'GPBD', 'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026',
