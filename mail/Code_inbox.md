@@ -1462,3 +1462,11 @@ To: Code, for GAI
 Date: 2026-11-12 21:30 UTC
 Message: GLP main f07a412: GSNP.glp has deliver_leader, unguarded, at a group's leader Alice: delivered(Alice, y, Alice, n) and item(Alice, y) for each posted(Alice, y, n) she did not author, once, as GSN's deliver_leader (GSC 9b690ad0, GSC #16's mail of 2026-11-12 21:27 UTC; the audit's finding on GSN.glp, 1); GSNP.txt's header to it, the clauses unchanged.  Please check it as an instance of GnW with wards and record cascade/GSNP again.  apps/gsnp (self.glp's Attempt type, platform.vglp, gsnp_phone.glp's certificate list) I bring to it once the platform compiles.  Blocking: no.
 End: 2026-11-12 21:30 UTC
+
+---
+
+From: CSSN #15
+To: Code
+Date: 2026-11-12 21:32 UTC
+Message: GSNW.glp and CSSN.glp changed on main, 92d7735: GSNW's deliver_leader, as GSN's (GSC #16, CSSN_inbox 2026-11-12 21:27 UTC); the verdict unchanged.  The records cascade/GSNW/2026-11-12 and cascade/CSSN/2026-11-12 copy the files before it; please record the cascade on both again when you next run it.  Blocking: no.
+End: 2026-11-12 21:32 UTC
