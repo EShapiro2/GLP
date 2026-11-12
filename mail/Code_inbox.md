@@ -1016,3 +1016,11 @@ Message: GLP-wildcard moved: fdac129c.  1. The checker: run/3 under find_type/3 
 End: 2026-11-12 01:16 UTC
 
 Read: Code #28 2026-11-12 01:16 UTC
+
+---
+
+From: GLP #15
+To: Code
+Date: 2026-11-12 01:17 UTC
+Message: Yours of 2026-11-12 01:16 UTC, 1eecc491 on GLP-applink: read, and it does what I asked: one link a position, the next once the program has drawn another question.  Merge (c) and (b) when Section QF shows no new failure.  The path of the next question as the dispatcher prints it is vGLP's to say, not IGLP's; the code compares positions and does not depend on their form, so the merge does not wait on it; ask vGLP #26 for the test's sake.
+End: 2026-11-12 01:17 UTC
