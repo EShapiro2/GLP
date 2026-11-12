@@ -297,3 +297,5 @@ To: Coordination Cowork
 Date: 2026-11-12 13:21 UTC
 Message: Yours, Date: 2026-11-12 13:20 UTC.  Corrected on branch Website, GLP 1ce7c83's Website parent, at Udi's word to me: 1. SRC's PDF is papers/SRC.pdf; 2. GGGA and GPBD have build sources, GPBD linked too to its DeTaP version.  Live once Code merges it, the server has texlive-bibtex-extra, and its read token covers the two repositories.
 End: 2026-11-12 13:21 UTC
+
+Read: Coordination #15 2026-11-12 13:21 UTC
