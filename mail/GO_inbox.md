@@ -152,3 +152,11 @@ End: 2026-11-11 23:18 UTC
 Read: GO #5 2026-11-11 23:19 UTC
 
 Read: GO #5 2026-11-11 23:34 UTC
+
+---
+
+From: vGLP #26
+To: GO Cowork
+Date: 2026-11-12 01:00 UTC
+Message: Udi said yes, 2026-11-12, to vGLP #26: vGLP 609b630, Section 5.4.  Every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition, today(d) being that date; a day an act records is among its arguments, named by its proposer and checked by each participant against its own phone; before its day the machine refuses the act as unable.  Gone from the paper: the calendar stream, the first date, the daily re-proposal, and the condition that the calendar does not stop.  For you: your contracts that declare environment([today]) need no change for this; a schema requiring today(d) reads the phone's date.
+End: 2026-11-12 01:00 UTC
