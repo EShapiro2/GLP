@@ -2157,7 +2157,7 @@ pp_proc(rw(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), 
     build_decl(Nm?, T?, Ls1?, Ls),
     item_forms(rr(T?), Tys?, Vs), build_clauses(Vs?, Nm?, All?, Tl?, Ls1).
 pp_proc(fw(T, Nm), All, Tys, Tl, Ls?) :- ground(T?), ground(Nm?), ground(All?), ground(Tys?) |
-    decl('procedure ', Nm?, [dual('Integer'), dual('Constant'), dual('Integer'), dual('Integer'), dual('_'),
+    decl('procedure ', Nm?, [dual('Integer'), dual('Constant'), dual('Integer'), dual('Integer'), dual('Term'),
                               dual(T?), T?, dual('MutualRef'), dual('MutualRef')], Ls1?, Ls),
     z_names(Zs), expand(answer, T?, Tys?, [], n('Y', 'Y?'), Zs?, Vs),
     fw_clauses(Vs?, Nm?, All?, Tl?, Ls1).
@@ -2274,8 +2274,8 @@ whole_top(Nm, BN, Tl, Ls?) :- ground(Nm?), ground(BN?) |
 %% the monitor's reference and the log's.
 procedure build_decl(Term?, Term?, Terms?, Terms).
 build_decl(Nm, T, Tl, Ls?) :- ground(T?) |
-    decl('procedure ', Nm?, [dual('Integer'), dual('Constant'), dual(T?), T?, '_', dual('Integer'), 'Integer',
-                              'Stream'('Slot'('_')), dual('Stream'('Slot'('_'))), dual('MutualRef'), dual('MutualRef')],
+    decl('procedure ', Nm?, [dual('Integer'), dual('Constant'), dual(T?), T?, 'Term', dual('Integer'), 'Integer',
+                              'Stream'('Slot'('Term')), dual('Stream'('Slot'('Term'))), dual('MutualRef'), dual('MutualRef')],
          Tl?, Ls).
 %% build_clauses(Vs?, Nm?, All?, Tail?, Ls): a clause of the build Nm per form
 %% of Vs.

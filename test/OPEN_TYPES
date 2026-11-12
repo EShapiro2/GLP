@@ -192,17 +192,6 @@ programs/self.glp	open-decl	sign/3
 programs/self.glp	open-decl	signature/2
 programs/self.glp	open-decl	term_to_string/2
 programs/self.glp	open-type	Signature
-programs/sglp/sglp.glp	open-decl	show_slots/2
-programs/sglp/sglp.glp	open-decl	show_whole/4
-programs/sglp/sglp.glp	open-decl	whole_frame/5
-programs/sglp/sglp.glp	open-decl	whole_frame_list/5
-programs/sglp/sglp.glp	open-decl	whole_frame_parts/5
-programs/sglp/tests/panel/population.glp	open-decl	answer_1/9
-programs/sglp/tests/panel/population.glp	open-decl	present_1/11
-programs/sglp/tests/panel/population.glp	open-decl	present_2/11
-programs/sglp/tests/steps/population.glp	open-decl	answer_2/9
-programs/sglp/tests/steps/population.glp	open-decl	present_1/11
-programs/sglp/tests/steps/population.glp	open-decl	present_2/11
 programs/social/graph/budget/bounded.glp	open-decl	bounded/3
 programs/social/graph/budget/bounded.glp	open-decl	execute/4
 programs/social/graph/budget/bounded.glp	open-decl	reduce/2
