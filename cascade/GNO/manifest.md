@@ -1,9 +1,9 @@
 # A run of the cascade on GNO
 
-- Contract: `GNO` (`gno` to the checker), its owner's two files `programs/go/GNO.txt` and `programs/go/GNO.glp`, copied here as they stood at `bf81a28d`.
+- Contract: `GNO` (`gno` to the checker), its owner's two files `programs/go/GNO.txt` and `programs/go/GNO.glp`, copied here as they stood at `d85920af`.
 - The paper: `https://github.com/EShapiro2/GO-Grassroots-Organisations.git` at `9fe16288`, for the paper's own record.
-- The tools: this repository at `bf81a28d` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-12 23:17 UTC by `cascade.sh gno`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `d85920af` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:40 UTC by `cascade.sh gno`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
