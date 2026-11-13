@@ -1,9 +1,9 @@
 # A run of the cascade on GDAO
 
-- Contract: `GDAO` (`gdao` to the checker), its owner's two files `programs/go/GDAO.txt` and `programs/go/GDAO.glp`, copied here as they stood at `0e18a4bf`.
+- Contract: `GDAO` (`gdao` to the checker), its owner's two files `programs/go/GDAO.txt` and `programs/go/GDAO.glp`, copied here as they stood at `29db7d7f`.
 - The paper: `https://github.com/EShapiro2/GO-Grassroots-Organisations.git` at `9fe16288`, for the paper's own record.
-- The tools: this repository at `0e18a4bf` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-12 23:11 UTC by `cascade.sh gdao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `29db7d7f` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:32 UTC by `cascade.sh gdao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
