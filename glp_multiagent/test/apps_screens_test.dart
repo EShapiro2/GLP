@@ -1833,7 +1833,7 @@ void appsScreens(Screens screens) {
         findsOneWidget,
         reason: 'Bob\'s record of Alf does not show its principal and its developer');
     run.plain(bob);
-    await run.shoot(bob, 'gai-e-bob-friends.png');
+    await run.shoot(bob, 'gai-e-bob-known-agents.png');
     // Bob's Friends tab: Alf among his friends, its row without the record, and nothing beside Alf that his role forbids: Bob's agent_of(alf, y) shows that Alf holds agent, which no schema deletes, and Acquaint and Befriend forbid it at Alf's role (vGLP 893d4ea, Section 6.2).
     await run.list(bob, 'friend');
     await run.top(bob);
