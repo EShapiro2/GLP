@@ -53,6 +53,34 @@ void main() {
       expect(r.status, ExecutionStatus.suspended, reason: '${r.error}');
       expect(r.bindings['O'], isNull);
     });
+
+    // The guard looks through the agent's goals, and a goal may hold an
+    // integer of any magnitude: the look reads it as any other term (sGLP
+    // #12, 2026-11-12: an integer of magnitude 2^62 or more aborted it, and
+    // a seed split_random_seed/3 gives is such an integer).
+    for (final n in [
+      '5',
+      '4611686018427387903',
+      '4611686018427387904',
+      '9223372036854775807',
+      '-4611686018427387904',
+      '-4611686018427387905',
+      '-9223372036854775807',
+    ]) {
+      test('suspends while a goal holds W? and the integer $n', () async {
+        final r = await _engine().runGoal('watch(W, O), keeper(W?, $n, T?)');
+        expect(r.status, ExecutionStatus.suspended, reason: '${r.error}');
+        expect(r.bindings['O'], isNull);
+      });
+    }
+
+    test('succeeds once the goal holding W? and a large integer has ended',
+        () async {
+      final r = await _engine().runGoal(
+          'watch(W, O), keeper(W?, 4611686018427387904, T?), release(T)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['O']), 'widowed');
+    });
   });
 
   group('widowed_reader(X?): the writer paired to the reader occurs nowhere', () {
