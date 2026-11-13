@@ -1140,13 +1140,15 @@ void appsScreens(Screens screens) {
     expect(alice.atoms, contains('posted($hiAll, $friends)'));
     expect(alice.atoms, contains('delivered($hiAll, bob, $friends)'));
     expect(bob.atoms, contains('received_in($hiAll, alice, $friends)'));
-    // Bob's Posts tab lists the post delivered to him, the atom received_in(x, a, n) of his state; Alice's lists none, the leader receiving no delivery.
+    // Bob's Posts tab lists the post delivered to him, the atom received_in(x, a, n) of his state; Alice's lists it too, the leader receiving each post of her group by deliver_leader (GSN:4; GSC 9b690ad0).
     await run.list(bob, 'received_in');
     expect(run.control(bob, 'atom:received_in($hiAll, alice, $friends)'),
         findsOneWidget);
     expect(run.texts(bob), contains('Hi all'));
     await run.list(alice, 'received_in');
-    expect(run.texts(alice), isNot(contains('Hi all')));
+    expect(run.control(alice, 'atom:received_in($hiAll, alice, $friends)'),
+        findsOneWidget);
+    expect(run.texts(alice), contains('Hi all'));
     await run.list(bob, 'member');
 
     // (c) Bob's view of the group: the atom of his list, the group's name and its leader, and the buttons of the ways it binds, Leave among them.
