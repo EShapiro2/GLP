@@ -1,10 +1,10 @@
 # A run of the cascade on GCorp
 
-- Contract: `GCorp` (`gcorp` to the checker), its owner's two files `programs/go/GCorp.txt` and `programs/go/GCorp.glp`, copied here as they stood at `c674289e`.
+- Contract: `GCorp` (`gcorp` to the checker), its owner's two files `programs/go/GCorp.txt` and `programs/go/GCorp.glp`, copied here as they stood at `fe736282`.
 - The paper: `https://github.com/EShapiro2/GO-Grassroots-Organisations.git` at `9fe16288`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
-- The tools: this repository at `c674289e` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-12 23:05 UTC by `cascade.sh gcorp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `fe736282` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:31 UTC by `cascade.sh gcorp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

@@ -1,10 +1,10 @@
 # A run of the cascade on GSNW
 
-- Contract: `GSNW` (`gsnw` to the checker), its owner's two files `programs/cssn/GSNW.txt` and `programs/cssn/GSNW.glp`, copied here as they stood at `92d7735a`.
+- Contract: `GSNW` (`gsnw` to the checker), its owner's two files `programs/cssn/GSNW.txt` and `programs/cssn/GSNW.glp`, copied here as they stood at `0fb44ce7`.
 - The paper: `git@github.com:EShapiro2/SGLP.git` at `f2b94ded`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
-- The tools: this repository at `92d7735a` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-12 22:02 UTC by `cascade.sh gsnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `0fb44ce7` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:43 UTC by `cascade.sh gsnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

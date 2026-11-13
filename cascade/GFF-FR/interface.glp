@@ -442,7 +442,7 @@ interface([
   compiled(held_cands1, 5),
   compiled(held_cand0, 8),
   compiled(held_cand, 6),
-  compiled(opens_for, 4),
+  compiled(opens_for, 3),
   compiled(vote_cands0, 5),
   compiled(vote_cands, 7),
   compiled(vote_go, 8),
