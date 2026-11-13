@@ -1613,7 +1613,7 @@ void appsScreens(Screens screens) {
       'item on his Contacts tab and sending it to Eve by Message, Eve, Carol '
       'and Bob forwarding it by Forward from their Friends tabs, and the '
       'screens of Bob\'s Items and Friends tabs and Fay\'s Items tab', (tester) async {
-    // GSNP's app (programs/apps/gsnp), compiled down the cascade from GSNP.glp (programs/gai/GSNP.glp), an instance of GnW, and its pragmas, GSNP.txt with those of GSN, GFP, GAI, GnW, GSG and GKK, which it is written from: five tabs, Contacts, Friends, Items, AI agents and Groups (programs/apps/gsnp/platform.vglp, tabs/1), "Items: the items Alice holds." and "AI agents: the AI agents Alice is a guardian of."
+    // GSNP's app (programs/apps/gsnp), compiled down the cascade from GSNP.glp (programs/gai/GSNP.glp), an instance of GnW, and its pragmas, GSNP.txt with those of GSN, GFP, GAI, GnW, GSG and GKK, which it is written from: six tabs, Contacts, Friends, Items, AI agents, Known AI agents and Groups (programs/apps/gsnp/platform.vglp, tabs/1), "Items: the items Alice holds.", "AI agents: the AI agents Alice is an operator of." and "Known AI agents: the AI agents Alice knows, each the agent of the person who attests it." (GAI.txt at GLP 087095e2)
     final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
@@ -1622,7 +1622,8 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(dan, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(dan, 'member', 'Groups'), findsOneWidget);
     expect(run.listNamed(dan, 'item', 'Items'), findsOneWidget);
-    expect(run.listNamed(dan, 'agent', 'AI agents'), findsOneWidget);
+    expect(run.listNamed(dan, 'operator_of', 'AI agents'), findsOneWidget);
+    expect(run.listNamed(dan, 'agent_of', 'Known AI agents'), findsOneWidget);
 
     // The friendships of the play (GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; each establishes their identity (GKK:1), the first of each two comes to know the second by their key, the second answering yes (GKK:2), and then befriends them, the second answering yes (GSG:1).
     for (final p in run.persons) {
@@ -1772,20 +1773,24 @@ void appsScreens(Screens screens) {
     await run.tap(alice, run.control(alice, 'send:enter:$y'));
     expect(alice.atoms, containsAll(['principal_of(alf)', 'operator_of(alf)', 'friend(alf)', 'agent_of(alf, $y)']));
 
-    // (gai-b) Alice's AI agent Alf, its code signed by Acme Ltd and attested by her, and its Retire button (GnW:1, GAI:2, GnW:5): her AI agents tab, "the AI agents Alice is a guardian of.", lists Alf.
-    await run.list(alice, 'agent');
+    // (gai-b) Alice's AI agent Alf and its Retire button (GnW:1, GnW:5): her AI agents tab, "the AI agents Alice is an operator of.", lists Alf, operator_of(alf), and in Alf's row GAI's "Alice [Retire]", retire requiring operator_of(alf) at her, the row filling Alf (vGLP, Section 6.2).
+    await run.list(alice, 'operator_of');
     await run.top(alice);
     expect(run.control(alice, 'atom:alf'), findsOneWidget,
-        reason: 'Alice\'s AI agents tab does not list Alf, of whom she is a guardian');
-    // In Alf's row, her record of its attestation, y as she signed it, and GAI's "Alice [Retire]", retire requiring operator_of(alf) at her, the row filling Alf (vGLP, Section 6.2).
-    expect(
-        find.descendant(
-            of: run.control(alice, 'atom:alf'),
-            matching: find.text('Alf runs code signed by Acme Ltd (Alice)')),
-        findsOneWidget);
+        reason: 'Alice\'s AI agents tab does not list Alf, whom she operates');
     expect(run.control(alice, 'act:retire:alf'), findsOneWidget);
     run.plain(alice, allow: const {'Peer'});
     await run.shoot(alice, 'gai-b-alice-agents.png');
+    // Her Known AI agents tab, "the AI agents Alice knows, each the agent of the person who attests it.", lists her record of Alf, agent_of(alf, y), and in its row the attestation y as she signed it (GAI:2).
+    await run.list(alice, 'agent_of');
+    await run.top(alice);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'atom:agent_of(alf, $y)'),
+            matching: find.text('Alf runs code signed by Acme Ltd (Alice)')),
+        findsOneWidget,
+        reason: 'Alice\'s Known AI agents tab does not show Alf\'s attestation');
+    run.plain(alice, allow: const {'Peer'});
 
     // Acquaint (GKK:2), Alice asking to come to know Bob by his key and Bob answering yes.
     await run.meetByKey(alice, bob);
@@ -1819,20 +1824,27 @@ void appsScreens(Screens screens) {
     expect(bob.atoms, contains('item($summary)'));
     expect(bob.questions('approval'), isEmpty);
 
-    // (gai-e) Bob's Friends tab: Alf among his friends, its row showing his record of it, agent_of(alf, y): its principal, Alice, who signed y, and its developer, Acme Ltd, whose code y attests.
+    // (gai-e) Bob's Known AI agents tab: his record of Alf, agent_of(alf, y), its row showing y: its principal, Alice, who signed y, and its developer, Acme Ltd, whose code y attests (GAI:2).
+    await run.list(bob, 'agent_of');
+    await run.top(bob);
+    final bobsRecord = run.control(bob, 'atom:agent_of(alf, $y)');
+    expect(bobsRecord, findsOneWidget);
+    expect(find.descendant(of: bobsRecord, matching: find.text('Alf runs code signed by Acme Ltd (Alice)')),
+        findsOneWidget,
+        reason: 'Bob\'s record of Alf does not show its principal and its developer');
+    run.plain(bob);
+    await run.shoot(bob, 'gai-e-bob-friends.png');
+    // Bob's Friends tab: Alf among his friends, its row without the record, and nothing beside Alf that his role forbids: Bob's agent_of(alf, y) shows that Alf holds agent, which no schema deletes, and Acquaint and Befriend forbid it at Alf's role (vGLP 893d4ea, Section 6.2).
     await run.list(bob, 'friend');
     await run.top(bob);
     final bobsAlf = run.control(bob, 'atom:alf');
     expect(bobsAlf, findsOneWidget);
     expect(find.descendant(of: bobsAlf, matching: find.text('Alf runs code signed by Acme Ltd (Alice)')),
-        findsOneWidget,
-        reason: 'Bob\'s row of Alf does not show its principal and its developer');
-    // Nothing beside Alf that his role forbids: Bob's agent_of(alf, y) shows that Alf holds agent, which no schema deletes, and Acquaint and Befriend forbid it at Alf's role (vGLP 893d4ea, Section 6.2).
+        findsNothing);
     for (final f in ['acquaint', 'befriend', 'introduce']) {
       expect(run.control(bob, 'act:$f:alf'), findsNothing, reason: f);
     }
     run.plain(bob);
-    await run.shoot(bob, 'gai-e-bob-friends.png');
 
     // (gai-a) Bob's Items tab: the item the AI agent Alf authored.
     await run.list(bob, 'item');
@@ -1841,10 +1853,10 @@ void appsScreens(Screens screens) {
     run.plain(bob);
     await run.shoot(bob, 'gai-a-bob-chat-alf.png');
 
-    // Retire Alf (GnW:5): GAI's "Alice [Retire]", retire requiring operator_of(alf) at her, which no tab lists, a form on her first tab, Contacts, with Alf, the one AI agent she operates, which Alice taps once Bob's screen shows Alf's item; Alf and Bob are asked nothing, and Alf's guardianship and its friendships with Alice and with Bob end, Alf retired and taking no act, Bob keeping his record and the item.
-    await run.list(alice, 'knows');
+    // Retire Alf (GnW:5): GAI's "Alice [Retire]", retire requiring operator_of(alf) at her, drawn in Alf's row of her AI agents tab, the row filling Alf (vGLP, Section 6.2), which Alice taps once Bob's screen shows Alf's item; Alf and Bob are asked nothing, and Alf's guardianship and its friendships with Alice and with Bob end, Alf retired and taking no act, Bob keeping his record and the item.
+    await run.list(alice, 'operator_of');
     await run.top(alice);
-    await run.tap(alice, run.control(alice, 'send:retire:'));
+    await run.tap(alice, run.control(alice, 'act:retire:alf'));
     expect(alice.atoms, isNot(contains('operator_of(alf)')));
     expect(alice.atoms, isNot(contains('friend(alf)')));
     expect(bob.atoms, isNot(contains('friend(alf)')));
@@ -1859,7 +1871,7 @@ void appsScreens(Screens screens) {
       'GAI\'s paper in its order, Alice creating Alf with her attestation, '
       'Bob proposing Alf\'s acquaintance with him, Alice proposing its '
       'befriending him, and Alice retiring it, Alf\'s program scripted', (tester) async {
-    // GAI's app (programs/apps/gai), compiled from GAI.glp, an instance of GnW composed with GFP, and GAI.txt with the pragmas of GFP, GnW, GSG and GKK (programs/apps/gai/platform.vglp, tabs/1): four tabs, Contacts, Friends, Items and AI agents, "AI agents: the AI agents Alice is a guardian of."; no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), in the order of play_agents of programs/apps/gai (programs/apps/gai/person.glp and README.md, at GAI 6008f30; GAI #14, Code_inbox.md, 2026-11-13 00:47 UTC): by GnW:3 Bob proposes that Alf and he know each other and Alice proposes their friendship, and neither sees on their own screen what the other's act did, so each proposes on what their own screen shows.  Establish Alice and Bob; Alice signs the attestation y and enters Alf with it; Alice asks to come to know Bob; Bob, once he knows Alice, proposes Agent acquaint, Alf answering yes; Bob, once he knows Alf, offers Alice friendship, Alice answering yes; Alice, once Bob is her friend, proposes Agent befriend, Alf and Bob answering yes; and Alice, once it has ended, retires Alf, which ends Alf's friendships.  No attempt is refused.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, above; there is no unfriend.
+    // GAI's app (programs/apps/gai), compiled from GAI.glp, an instance of GnW composed with GFP, and GAI.txt with the pragmas of GFP, GnW, GSG and GKK (programs/apps/gai/platform.vglp, tabs/1): five tabs, Contacts, Friends, Items, AI agents and Known AI agents, "AI agents: the AI agents Alice is an operator of." and "Known AI agents: the AI agents Alice knows, each the agent of the person who attests it." (GAI.txt at GLP 087095e2); no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), in the order of play_agents of programs/apps/gai (programs/apps/gai/person.glp and README.md, at GAI 6008f30; GAI #14, Code_inbox.md, 2026-11-13 00:47 UTC): by GnW:3 Bob proposes that Alf and he know each other and Alice proposes their friendship, and neither sees on their own screen what the other's act did, so each proposes on what their own screen shows.  Establish Alice and Bob; Alice signs the attestation y and enters Alf with it; Alice asks to come to know Bob; Bob, once he knows Alice, proposes Agent acquaint, Alf answering yes; Bob, once he knows Alf, offers Alice friendship, Alice answering yes; Alice, once Bob is her friend, proposes Agent befriend, Alf and Bob answering yes; and Alice, once it has ended, retires Alf, which ends Alf's friendships.  No attempt is refused.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, above; there is no unfriend.
     final run = await _Run.start(tester, screens, 'gai',
         chain: const ['alice', 'alf', 'bob'],
         pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
@@ -1870,7 +1882,8 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(alice, 'item', 'Items'), findsOneWidget);
-    expect(run.listNamed(alice, 'agent', 'AI agents'), findsOneWidget);
+    expect(run.listNamed(alice, 'operator_of', 'AI agents'), findsOneWidget);
+    expect(run.listNamed(alice, 'agent_of', 'Known AI agents'), findsOneWidget);
     // Establish (GKK:1), Alice and Bob.
     for (final p in [alice, bob]) {
       await run.join(p);
@@ -1889,11 +1902,20 @@ void appsScreens(Screens screens) {
     await run.type(alice, run.control(alice, 'field:enter:$y:2'), 'alf');
     await run.tap(alice, run.control(alice, 'send:enter:$y'));
     expect(alice.atoms, containsAll(['principal_of(alf)', 'operator_of(alf)', 'friend(alf)', 'agent_of(alf, $y)']));
-    // Her AI agents tab, "the AI agents Alice is a guardian of.", lists Alf.
-    await run.list(alice, 'agent');
+    // Her AI agents tab, "the AI agents Alice is an operator of.", lists Alf, with Retire in its row; her Known AI agents tab lists her record of it, agent_of(alf, y), with y as she signed it (GAI:2).
+    await run.list(alice, 'operator_of');
     await run.top(alice);
     expect(run.control(alice, 'atom:alf'), findsOneWidget,
-        reason: 'Alice\'s AI agents tab does not list Alf, of whom she is a guardian');
+        reason: 'Alice\'s AI agents tab does not list Alf, whom she operates');
+    expect(run.control(alice, 'act:retire:alf'), findsOneWidget);
+    run.plain(alice, allow: const {'Peer'});
+    await run.list(alice, 'agent_of');
+    await run.top(alice);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'atom:agent_of(alf, $y)'),
+            matching: find.text('Alf runs code signed by Acme Ltd (Alice)')),
+        findsOneWidget);
     run.plain(alice, allow: const {'Peer'});
 
     // Acquaint (GKK:2), Alice asking to come to know Bob by his key and Bob answering yes.
@@ -1922,10 +1944,10 @@ void appsScreens(Screens screens) {
     expect(bob.atoms, contains('friend(alf)'));
     expect(bob.questions('approval'), isEmpty);
 
-    // Retire Alf (GnW:5): GAI's "Alice [Retire]", retire requiring operator_of(alf) at her, which no tab lists, a form on her first tab, Contacts, with Alf, the one AI agent she operates; Alf and Bob are asked nothing, and Alf's guardianship and its friendships with Alice and with Bob end, Alf retired and taking no act.
-    await run.list(alice, 'knows');
+    // Retire Alf (GnW:5): GAI's "Alice [Retire]", retire requiring operator_of(alf) at her, drawn in Alf's row of her AI agents tab, the row filling Alf (vGLP, Section 6.2); Alf and Bob are asked nothing, and Alf's guardianship and its friendships with Alice and with Bob end, Alf retired and taking no act.
+    await run.list(alice, 'operator_of');
     await run.top(alice);
-    await run.tap(alice, run.control(alice, 'send:retire:'));
+    await run.tap(alice, run.control(alice, 'act:retire:alf'));
     expect(alice.atoms, isNot(contains('operator_of(alf)')));
     expect(alice.atoms, isNot(contains('friend(alf)')));
     expect(bob.atoms, isNot(contains('friend(alf)')));
