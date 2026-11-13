@@ -112,8 +112,12 @@ real_det_lines(C, Nt, W, Nm, L?) :- ground(Nt?) |
     real_det_lines1(Ss?, L0),
     head_line(L0?, Nm?, L).
 %% The possibly-one pairs of the contract as read, which the words carry (self.glp, ones_of).
-procedure words_ones(Words?, Ones).
-words_ones(words(_, _, _, D), Os?) :- ones_of(D?, Os).
+procedure words_ones(Words?, Sames?, Ones).
+words_ones(words(_, _, _, D), Mk, Os?) :- ones_of(D?, Os0), ones_marked(Os0?, Mk?, Os).
+%% Each schema's pairs, with the contract's marks after them.
+procedure ones_marked(Ones?, Sames?, Ones).
+ones_marked([], _, []).
+ones_marked([ones(N, Ps)|Os], Mk, [ones(N?, Ps1?)|Os1?]) :- ground(Mk?) | app(Ps?, Mk?, Ps1), ones_marked(Os?, Mk?, Os1).
 procedure words_lx(Words?, Lxs).
 words_lx(words(_, _, Lx, _), Lx?).
 procedure real_det_lines1(Preds?, Lines).
@@ -157,37 +161,49 @@ procedure intro_preds(Intro?, Preds).
 intro_preds(no_introduction, []).
 intro_preds(introduction(P), [P?]).
 procedure compile0(Constant?, Contract?, Preds?, Preds?, NumInfos?, Verdict?, Words?).
-compile0(Nm, C, Rf, E, Nt, V, W) :- ground(Nm?), ground(C?), ground(Nt?), ground(W?) |
+compile0(Nm, C, Rf, E, Nt, V, W) :- ground(Nm?), ground(C?), ground(Nt?), ground(W?), ground(V?) |
     verdict_lines(V?, Nm?, L1),
     role_lines(C?, Nm?, L2),
     real_det_lines(C?, Nt?, W?, Nm?, L3),
     lapp(L2?, L3?, L23),
     lapp(L1?, L23?, L),
-    compile1(L?, Nm?, C?, Rf?, E?, Nt?, W?).
+    verdict_marks(V?, Mk),
+    compile1(L?, Nm?, C?, Rf?, E?, Nt?, W?, Mk?).
+%% The marks of a contract with wards, the predicates its verdict names, of which an agent holding identity holds one or person and not both (GSC, Lemma Wards and guardians; vGLP b798a06, Section 5.4: "the compiler checks it on the states that meet the invariants the contract's paper proves"); none for another contract.
+procedure verdict_marks(Verdict?, Sames).
+verdict_marks(syntactically_grassroots_with_wards(_, Ms, Gs, _, _), Mk?) :- marks_items(Ms?, Mk1), gships_items(Gs?, Mk2), app(Mk1?, Mk2?, Mk).
+verdict_marks(grassroots_with_wards(_, Ms, Gs, _, _), Mk?) :- marks_items(Ms?, Mk1), gships_items(Gs?, Mk2), app(Mk1?, Mk2?, Mk).
+verdict_marks(_, []) :- otherwise | true.
+procedure gships_items(Guardianships?, Sames).
+gships_items([], []).
+gships_items([guardianship(M, V, U)|Gs], [gship(M?, V?, U?)|Ks?]) :- gships_items(Gs?, Ks).
+procedure marks_items(Preds?, Sames).
+marks_items([], []).
+marks_items([M|Ms], [mark(M?)|Ks?]) :- marks_items(Ms?, Ks).
 
-procedure compile1(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
-compile1([], Nm, C, Rf, E, Nt, W) :- ground(C?) |
+procedure compile1(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Sames?).
+compile1([], Nm, C, Rf, E, Nt, W, Mk) :- ground(C?) |
     names_lines(C?, Nm?, L1),
-    compile2(L1?, Nm?, C?, Rf?, E?, Nt?, W?).
-compile1([L|Ls], _, _, _, _, _, _) :-
+    compile2(L1?, Nm?, C?, Rf?, E?, Nt?, W?, Mk?).
+compile1([L|Ls], _, _, _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 
-procedure compile2(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
-compile2([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(Nt?), ground(W?) |
-    words_ones(W?, Os),
+procedure compile2(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Sames?).
+compile2([], Nm, C, Rf, E, Nt, W, Mk) :- ground(C?), ground(Rf?), ground(Nt?), ground(W?), ground(Mk?) |
+    words_ones(W?, Mk?, Os),
     local # faults(C?, Rf?, Nt?, Os?, Fs),
-    compile3(Fs?, Nm?, C?, Rf?, E?, Nt?, W?).
-compile2([L|Ls], _, _, _, _, _, _) :-
+    compile3(Fs?, Nm?, C?, Rf?, E?, Nt?, W?, Mk?).
+compile2([L|Ls], _, _, _, _, _, _, _) :-
     send_to_user(['%% compile begin', L?|Ls1?]),
     lapp(Ls?, ['%% compile end'], Ls1).
 
-procedure compile3(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?).
-compile3([], Nm, C, Rf, E, Nt, W) :- ground(C?), ground(Rf?), ground(W?) |
-    words_ones(W?, Os),
+procedure compile3(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Words?, Sames?).
+compile3([], Nm, C, Rf, E, Nt, W, Mk) :- ground(C?), ground(Rf?), ground(W?) |
+    words_ones(W?, Mk?, Os),
     local # proposable(C?, Rf?, Os?, Ps),
     compile3a(Ps?, Nm?, C?, Rf?, E?, Nt?, W?).
-compile3([F|Fs], Nm, _, _, _, _, _) :- ground(Nm?) |
+compile3([F|Fs], Nm, _, _, _, _, _, _) :- ground(Nm?) |
     said('%% not compiled', Nm?, H),
     send_to_user(['%% compile begin', H?, F?|Fs1?]),
     lapp(Fs?, ['%% compile end'], Fs1).
@@ -2532,6 +2548,9 @@ same_places(by(_, Ss), Is?) :- ground(Ss?) | sames_items(Ss?, Is).
 procedure sames_items(Sames?, Preconds).
 sames_items([], []).
 sames_items([same(K, J)|Ss], [same(K?, J?)|Is?]) :- sames_items(Ss?, Is).
+%% A mark is of the local check (words_ones), and pragmas.sh gives an act none; the clause covers the type.
+sames_items([mark(_)|Ss], Is?) :- sames_items(Ss?, Is).
+sames_items([gship(_, _, _)|Ss], Is?) :- sames_items(Ss?, Is).
 %% The precondition of the act at the role G, the viewer's (vGLP 6e9f71d, Section 6.2, "The words a platform shows": a button is drawn "in the row of an entry that an atom the act requires or deletes at the proposer's role names, whatever the atom's predicate, a group <a>.n being named by n ...; and only where the viewer's state holds the atoms the act requires at the proposer's role and lacks those it forbids there"), so that the construct family finds from it both the rows the button is drawn in and whether it is drawn there: req(P, As) for each atom the schema requires or deletes at G, forb(P, As) for each it forbids there, As the place of each argument, at(K), a group by the places of its leader and its name, grp(J, K), and any where it is neither, as a variable local to the role; an atom of a reflexive predicate naming the role G itself is left out, holding at every person of that person (Section 5.4, "Act schemas as local specifications").
 procedure condition_places(Integer?, RoleSpecs?, Args?, DrawCtx?, Preconds).
 condition_places(G, Rs, Vs, ctx(Rf, Rl), Cs?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Rf?), ground(Rl?) |
