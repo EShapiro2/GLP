@@ -1,9 +1,9 @@
 # A run of the cascade on SCB
 
-- Contract: `SCB` (`scb` to the checker), its owner's two files `programs/go/SCB.txt` and `programs/go/SCB.glp`, copied here as they stood at `505f0143`.
+- Contract: `SCB` (`scb` to the checker), its owner's two files `programs/go/SCB.txt` and `programs/go/SCB.glp`, copied here as they stood at `97696444`.
 - The paper: `https://github.com/EShapiro2/GO-Grassroots-Organisations.git` at `9fe16288`, for the paper's own record.
-- The tools: this repository at `505f0143` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-12 23:19 UTC by `cascade.sh scb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `97696444` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:46 UTC by `cascade.sh scb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
