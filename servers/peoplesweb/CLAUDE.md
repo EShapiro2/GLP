@@ -4,7 +4,7 @@ Read `organisation/claude.md` of this repository first; every rule there applies
 
 ## Identity
 
-Project Website: the site peoplesweb.org, this directory, `servers/peoplesweb`, split from GSA on 2026-11-12 (Udi; Coordination #15, `organisation/claude.md`, "Mail").  It has no paper.  Inbox `Website_inbox.md`, on the branch `mail`.  Its sessions are paper Clouds in all but the paper, and sign `Website #N`; Website #1 is the first.  The handover is the latest `docs/handover-<date>.md`, read at the start with `README.md`; a session writes its own there before it ends.  Its branch for main is `Website`; the test site's branch is the one `deploy/test.sh` names.
+Project Website: the site peoplesweb.org, this directory, `servers/peoplesweb`, split from GSA on 2026-11-12 (Udi; Coordination #15, `organisation/claude.md`, "Mail").  It has no paper.  Inbox `Website_inbox.md`, in the private mail, `EShapiro2/Grassroots-Mail` (Coordination #15, 2026-11-12 22:25 UTC).  Its sessions are paper Clouds in all but the paper, and sign `Website #N`; Website #1 is the first.  The handover is the latest `docs/handover-<date>.md`, read at the start with `README.md`; a session writes its own there before it ends.  Its branch for main is `Website`; the test site's branch is the one `deploy/test.sh` names.
 
 ## Rules specific to this project
 
