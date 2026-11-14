@@ -16,6 +16,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
 import 'construct_family.dart';
 import 'manifest.dart';
@@ -39,13 +40,25 @@ class AgentSurface extends StatefulWidget {
   /// and none is shown.  The colours are the theme's, which the app takes
   /// from its contract's family (look.dart).
   final String? icon;
+
+  /// The person's own key, in hex: where it is given, the badge in the bar
+  /// opens the person's card, which shows it with Copy; null, and the badge
+  /// is a badge only.
+  final String? selfKey;
+
+  /// Where it is given, the person's card offers to start over as a new
+  /// person, after a confirmation; the embedder deletes the key pair and the
+  /// agent's saved state and starts afresh.
+  final Future<void> Function()? onStartOver;
   const AgentSurface(
       {super.key,
       required this.agentId,
       required this.runtime,
       this.muteNotices = false,
       this.family = ConstructFamily.standard,
-      this.icon});
+      this.icon,
+      this.selfKey,
+      this.onStartOver});
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -189,14 +202,17 @@ class _AgentSurfaceState extends State<AgentSurface> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 13,
-              backgroundColor: Colors.white24,
-              child: Text(_initial(widget.agentId),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
+            child: GestureDetector(
+              onTap: widget.selfKey == null ? null : _showSelf,
+              child: CircleAvatar(
+                radius: 13,
+                backgroundColor: Colors.white24,
+                child: Text(_initial(widget.agentId),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+              ),
             ),
           ),
         ],
@@ -1224,4 +1240,78 @@ class _AgentSurfaceState extends State<AgentSurface> {
   String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   String _initial(String s) => s.isEmpty ? '?' : s[0].toUpperCase();
+
+  /// The person's card: their key, with Copy, and, where the embedder offers
+  /// it, Start over.
+  void _showSelf() {
+    final key = widget.selfKey!;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('You',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              SelectableText(key,
+                  style:
+                      const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copy'),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: key));
+                      Navigator.pop(sheet);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Key copied')));
+                    },
+                  ),
+                  const Spacer(),
+                  if (widget.onStartOver != null)
+                    TextButton(
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      onPressed: () {
+                        Navigator.pop(sheet);
+                        _confirmStartOver();
+                      },
+                      child: const Text('Start over'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Starting over deletes the person's key, friends and everything the app
+  /// keeps on this device, so it is asked once more.
+  Future<void> _confirmStartOver() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Start over as a new person?'),
+        content: const Text('This deletes your key, your friends and '
+            'everything the app keeps on this device. It cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel')),
+          TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.pop(dialog, true),
+              child: const Text('Start over')),
+        ],
+      ),
+    );
+    if (yes == true) await widget.onStartOver?.call();
+  }
 }

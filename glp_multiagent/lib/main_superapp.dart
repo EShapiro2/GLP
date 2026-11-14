@@ -32,8 +32,12 @@
 /// `main_superapp_ui.dart`.
 library;
 
+import 'dart:io' show Directory;
+
 import 'app_identity.dart' show installedApp;
 import 'package:flutter/material.dart';
+import 'package:grassroots_networking/grassroots_networking.dart'
+    show IdentityStore;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -155,7 +159,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
   }
 
   Future<void> _start() async {
-    if (debugLogOn) {
+    if (debugLogOn && _reporter == null) {
       final reporter = await startDebugReporter();
       if (reporter != null) {
         _reporter = reporter;
@@ -269,6 +273,27 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
     }
   }
 
+  /// The person starts over as a new person: the agent and the layer stop,
+  /// the agent's saved state and the key pair are deleted, and the app
+  /// starts afresh, as at its first start.
+  Future<void> _startOver() async {
+    final host = _host, net = _net;
+    _background?.dispose();
+    _background = null;
+    setState(() {
+      _host = null;
+      _setStatus('Starting over…');
+    });
+    host?.dispose();
+    await net?.dispose();
+    _net = null;
+    final support = await getApplicationSupportDirectory();
+    final agents = Directory('${support.path}/agents');
+    if (await agents.exists()) await agents.delete(recursive: true);
+    await IdentityStore.clearIdentity();
+    await _start();
+  }
+
   @override
   Widget build(BuildContext context) {
     final host = _host;
@@ -295,13 +320,19 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
                     child: KeyedSubtree(
                       key: _surface,
                       child: _look == null
-                          ? AgentSurface(agentId: _persona, runtime: host.ui)
+                          ? AgentSurface(
+                              agentId: _persona,
+                              runtime: host.ui,
+                              selfKey: _net?.key.hex,
+                              onStartOver: _startOver)
                           : Theme(
                               data: _look!.theme(),
                               child: AgentSurface(
                                   agentId: _persona,
                                   runtime: host.ui,
-                                  icon: _look!.icon)),
+                                  icon: _look!.icon,
+                                  selfKey: _net?.key.hex,
+                                  onStartOver: _startOver)),
                     ),
                   ),
                 ],
