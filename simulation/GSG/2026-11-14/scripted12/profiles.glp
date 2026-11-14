@@ -1,0 +1,677 @@
+%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(given, cva_profiles)
+
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws on a canonical platform, person(K, agent, []), K a Key.
+Person ::= person(Key, Constant, List(Constant)).
+
+%% person(scripted)
+%% binds(Request, script_request)
+exported procedure script_request(Request, Person?, Integer?, MutualRef?).
+script_request(R?, person(p01, _, _), S, _)
+:-
+random(S?, 22, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p01, slot(R))
+.
+script_request(R?, person(p02, _, _), S, _)
+:-
+random(S?, 19, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p02, slot(R))
+.
+script_request(R?, person(p03, _, _), S, _)
+:-
+random(S?, 19, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p03, slot(R))
+.
+script_request(R?, person(p04, _, _), S, _)
+:-
+random(S?, 20, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p04, slot(R))
+.
+script_request(R?, person(p05, _, _), S, _)
+:-
+random(S?, 21, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p05, slot(R))
+.
+script_request(R?, person(p06, _, _), S, _)
+:-
+random(S?, 32, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p06, slot(R))
+.
+script_request(R?, person(p07, _, _), S, _)
+:-
+random(S?, 32, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p07, slot(R))
+.
+script_request(R?, person(p08, _, _), S, _)
+:-
+random(S?, 21, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p08, slot(R))
+.
+script_request(R?, person(p09, _, _), S, _)
+:-
+random(S?, 20, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p09, slot(R))
+.
+script_request(R?, person(p10, _, _), S, _)
+:-
+random(S?, 19, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p10, slot(R))
+.
+script_request(R?, person(p11, _, _), S, _)
+:-
+random(S?, 19, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p11, slot(R))
+.
+script_request(R?, person(p12, _, _), S, _)
+:-
+random(S?, 22, K, _)
+,
+rated(0.0005555555555555556, Tok)
+,
+act(Tok?, K?, p12, slot(R))
+.
+procedure act(Token?, Integer?, Key?, Slot(Request)?).
+act(stop, _, _, _)
+.
+act(go(_), 1, p01, slot(propose(establish(p01))))
+.
+act(go(_), 2, p01, slot(propose(establish(p01))))
+.
+act(go(_), 3, p01, slot(propose(establish(p01))))
+.
+act(go(_), 4, p01, slot(propose(acquaint(p01, p02))))
+.
+act(go(_), 5, p01, slot(propose(acquaint(p01, p02))))
+.
+act(go(_), 6, p01, slot(propose(acquaint(p01, p02))))
+.
+act(go(_), 7, p01, slot(propose(befriend(p01, p02))))
+.
+act(go(_), 8, p01, slot(propose(befriend(p01, p02))))
+.
+act(go(_), 9, p01, slot(propose(introduce(p01, p06, p02))))
+.
+act(go(_), 10, p01, slot(propose(introduce(p01, p02, p06))))
+.
+act(go(_), 11, p01, slot(propose(befriend(p01, p03))))
+.
+act(go(_), 12, p01, slot(propose(befriend(p01, p03))))
+.
+act(go(_), 13, p01, slot(propose(acquaint(p01, p06))))
+.
+act(go(_), 14, p01, slot(propose(acquaint(p01, p06))))
+.
+act(go(_), 15, p01, slot(propose(acquaint(p01, p06))))
+.
+act(go(_), 16, p01, slot(propose(befriend(p01, p06))))
+.
+act(go(_), 17, p01, slot(propose(befriend(p01, p06))))
+.
+act(go(_), 18, p01, slot(propose(befriend(p01, p05))))
+.
+act(go(_), 19, p01, slot(propose(befriend(p01, p05))))
+.
+act(go(_), 20, p01, slot(propose(befriend(p01, p07))))
+.
+act(go(_), 21, p01, slot(propose(befriend(p01, p07))))
+.
+act(go(_), 22, p01, slot(propose(unfriend(p01, p03))))
+.
+act(go(_), 1, p02, slot(propose(establish(p02))))
+.
+act(go(_), 2, p02, slot(propose(establish(p02))))
+.
+act(go(_), 3, p02, slot(propose(establish(p02))))
+.
+act(go(_), 4, p02, slot(propose(acquaint(p02, p01))))
+.
+act(go(_), 5, p02, slot(propose(acquaint(p02, p01))))
+.
+act(go(_), 6, p02, slot(propose(acquaint(p02, p01))))
+.
+act(go(_), 7, p02, slot(propose(befriend(p02, p01))))
+.
+act(go(_), 8, p02, slot(propose(befriend(p02, p01))))
+.
+act(go(_), 9, p02, slot(propose(befriend(p02, p06))))
+.
+act(go(_), 10, p02, slot(propose(befriend(p02, p06))))
+.
+act(go(_), 11, p02, slot(propose(acquaint(p02, p03))))
+.
+act(go(_), 12, p02, slot(propose(acquaint(p02, p03))))
+.
+act(go(_), 13, p02, slot(propose(acquaint(p02, p03))))
+.
+act(go(_), 14, p02, slot(propose(befriend(p02, p03))))
+.
+act(go(_), 15, p02, slot(propose(befriend(p02, p03))))
+.
+act(go(_), 16, p02, slot(propose(introduce(p02, p01, p03))))
+.
+act(go(_), 17, p02, slot(propose(introduce(p02, p03, p01))))
+.
+act(go(_), 18, p02, slot(propose(befriend(p02, p04))))
+.
+act(go(_), 19, p02, slot(propose(befriend(p02, p04))))
+.
+act(go(_), 1, p03, slot(propose(establish(p03))))
+.
+act(go(_), 2, p03, slot(propose(establish(p03))))
+.
+act(go(_), 3, p03, slot(propose(establish(p03))))
+.
+act(go(_), 4, p03, slot(propose(acquaint(p03, p02))))
+.
+act(go(_), 5, p03, slot(propose(acquaint(p03, p02))))
+.
+act(go(_), 6, p03, slot(propose(acquaint(p03, p02))))
+.
+act(go(_), 7, p03, slot(propose(befriend(p03, p02))))
+.
+act(go(_), 8, p03, slot(propose(befriend(p03, p02))))
+.
+act(go(_), 9, p03, slot(propose(befriend(p03, p01))))
+.
+act(go(_), 10, p03, slot(propose(befriend(p03, p01))))
+.
+act(go(_), 11, p03, slot(propose(acquaint(p03, p04))))
+.
+act(go(_), 12, p03, slot(propose(acquaint(p03, p04))))
+.
+act(go(_), 13, p03, slot(propose(acquaint(p03, p04))))
+.
+act(go(_), 14, p03, slot(propose(befriend(p03, p04))))
+.
+act(go(_), 15, p03, slot(propose(befriend(p03, p04))))
+.
+act(go(_), 16, p03, slot(propose(introduce(p03, p02, p04))))
+.
+act(go(_), 17, p03, slot(propose(introduce(p03, p04, p02))))
+.
+act(go(_), 18, p03, slot(propose(befriend(p03, p05))))
+.
+act(go(_), 19, p03, slot(propose(befriend(p03, p05))))
+.
+act(go(_), 1, p04, slot(propose(establish(p04))))
+.
+act(go(_), 2, p04, slot(propose(establish(p04))))
+.
+act(go(_), 3, p04, slot(propose(establish(p04))))
+.
+act(go(_), 4, p04, slot(propose(acquaint(p04, p03))))
+.
+act(go(_), 5, p04, slot(propose(acquaint(p04, p03))))
+.
+act(go(_), 6, p04, slot(propose(acquaint(p04, p03))))
+.
+act(go(_), 7, p04, slot(propose(befriend(p04, p03))))
+.
+act(go(_), 8, p04, slot(propose(befriend(p04, p03))))
+.
+act(go(_), 9, p04, slot(propose(befriend(p04, p02))))
+.
+act(go(_), 10, p04, slot(propose(befriend(p04, p02))))
+.
+act(go(_), 11, p04, slot(propose(acquaint(p04, p05))))
+.
+act(go(_), 12, p04, slot(propose(acquaint(p04, p05))))
+.
+act(go(_), 13, p04, slot(propose(acquaint(p04, p05))))
+.
+act(go(_), 14, p04, slot(propose(befriend(p04, p05))))
+.
+act(go(_), 15, p04, slot(propose(befriend(p04, p05))))
+.
+act(go(_), 16, p04, slot(propose(introduce(p04, p03, p05))))
+.
+act(go(_), 17, p04, slot(propose(introduce(p04, p05, p03))))
+.
+act(go(_), 18, p04, slot(propose(befriend(p04, p06))))
+.
+act(go(_), 19, p04, slot(propose(befriend(p04, p06))))
+.
+act(go(_), 20, p04, slot(propose(unfriend(p04, p05))))
+.
+act(go(_), 1, p05, slot(propose(establish(p05))))
+.
+act(go(_), 2, p05, slot(propose(establish(p05))))
+.
+act(go(_), 3, p05, slot(propose(establish(p05))))
+.
+act(go(_), 4, p05, slot(propose(acquaint(p05, p04))))
+.
+act(go(_), 5, p05, slot(propose(acquaint(p05, p04))))
+.
+act(go(_), 6, p05, slot(propose(acquaint(p05, p04))))
+.
+act(go(_), 7, p05, slot(propose(befriend(p05, p04))))
+.
+act(go(_), 8, p05, slot(propose(befriend(p05, p04))))
+.
+act(go(_), 9, p05, slot(propose(befriend(p05, p03))))
+.
+act(go(_), 10, p05, slot(propose(befriend(p05, p03))))
+.
+act(go(_), 11, p05, slot(propose(acquaint(p05, p06))))
+.
+act(go(_), 12, p05, slot(propose(acquaint(p05, p06))))
+.
+act(go(_), 13, p05, slot(propose(acquaint(p05, p06))))
+.
+act(go(_), 14, p05, slot(propose(befriend(p05, p06))))
+.
+act(go(_), 15, p05, slot(propose(befriend(p05, p06))))
+.
+act(go(_), 16, p05, slot(propose(introduce(p05, p04, p06))))
+.
+act(go(_), 17, p05, slot(propose(introduce(p05, p06, p04))))
+.
+act(go(_), 18, p05, slot(propose(befriend(p05, p01))))
+.
+act(go(_), 19, p05, slot(propose(befriend(p05, p01))))
+.
+act(go(_), 20, p05, slot(propose(befriend(p05, p07))))
+.
+act(go(_), 21, p05, slot(propose(befriend(p05, p07))))
+.
+act(go(_), 1, p06, slot(propose(establish(p06))))
+.
+act(go(_), 2, p06, slot(propose(establish(p06))))
+.
+act(go(_), 3, p06, slot(propose(establish(p06))))
+.
+act(go(_), 4, p06, slot(propose(befriend(p06, p02))))
+.
+act(go(_), 5, p06, slot(propose(befriend(p06, p02))))
+.
+act(go(_), 6, p06, slot(propose(acquaint(p06, p05))))
+.
+act(go(_), 7, p06, slot(propose(acquaint(p06, p05))))
+.
+act(go(_), 8, p06, slot(propose(acquaint(p06, p05))))
+.
+act(go(_), 9, p06, slot(propose(befriend(p06, p05))))
+.
+act(go(_), 10, p06, slot(propose(befriend(p06, p05))))
+.
+act(go(_), 11, p06, slot(propose(befriend(p06, p04))))
+.
+act(go(_), 12, p06, slot(propose(befriend(p06, p04))))
+.
+act(go(_), 13, p06, slot(propose(acquaint(p06, p01))))
+.
+act(go(_), 14, p06, slot(propose(acquaint(p06, p01))))
+.
+act(go(_), 15, p06, slot(propose(acquaint(p06, p01))))
+.
+act(go(_), 16, p06, slot(propose(befriend(p06, p01))))
+.
+act(go(_), 17, p06, slot(propose(befriend(p06, p01))))
+.
+act(go(_), 18, p06, slot(propose(introduce(p06, p05, p01))))
+.
+act(go(_), 19, p06, slot(propose(introduce(p06, p01, p05))))
+.
+act(go(_), 20, p06, slot(propose(acquaint(p06, p07))))
+.
+act(go(_), 21, p06, slot(propose(acquaint(p06, p07))))
+.
+act(go(_), 22, p06, slot(propose(acquaint(p06, p07))))
+.
+act(go(_), 23, p06, slot(propose(befriend(p06, p07))))
+.
+act(go(_), 24, p06, slot(propose(befriend(p06, p07))))
+.
+act(go(_), 25, p06, slot(propose(introduce(p06, p07, p05))))
+.
+act(go(_), 26, p06, slot(propose(introduce(p06, p05, p07))))
+.
+act(go(_), 27, p06, slot(propose(introduce(p06, p07, p01))))
+.
+act(go(_), 28, p06, slot(propose(introduce(p06, p01, p07))))
+.
+act(go(_), 29, p06, slot(propose(befriend(p06, p08))))
+.
+act(go(_), 30, p06, slot(propose(befriend(p06, p08))))
+.
+act(go(_), 31, p06, slot(propose(befriend(p06, p12))))
+.
+act(go(_), 32, p06, slot(propose(befriend(p06, p12))))
+.
+act(go(_), 1, p07, slot(propose(establish(p07))))
+.
+act(go(_), 2, p07, slot(propose(establish(p07))))
+.
+act(go(_), 3, p07, slot(propose(establish(p07))))
+.
+act(go(_), 4, p07, slot(propose(acquaint(p07, p08))))
+.
+act(go(_), 5, p07, slot(propose(acquaint(p07, p08))))
+.
+act(go(_), 6, p07, slot(propose(acquaint(p07, p08))))
+.
+act(go(_), 7, p07, slot(propose(befriend(p07, p08))))
+.
+act(go(_), 8, p07, slot(propose(befriend(p07, p08))))
+.
+act(go(_), 9, p07, slot(propose(introduce(p07, p12, p08))))
+.
+act(go(_), 10, p07, slot(propose(introduce(p07, p08, p12))))
+.
+act(go(_), 11, p07, slot(propose(befriend(p07, p09))))
+.
+act(go(_), 12, p07, slot(propose(befriend(p07, p09))))
+.
+act(go(_), 13, p07, slot(propose(acquaint(p07, p12))))
+.
+act(go(_), 14, p07, slot(propose(acquaint(p07, p12))))
+.
+act(go(_), 15, p07, slot(propose(acquaint(p07, p12))))
+.
+act(go(_), 16, p07, slot(propose(befriend(p07, p12))))
+.
+act(go(_), 17, p07, slot(propose(befriend(p07, p12))))
+.
+act(go(_), 18, p07, slot(propose(befriend(p07, p11))))
+.
+act(go(_), 19, p07, slot(propose(befriend(p07, p11))))
+.
+act(go(_), 20, p07, slot(propose(acquaint(p07, p06))))
+.
+act(go(_), 21, p07, slot(propose(acquaint(p07, p06))))
+.
+act(go(_), 22, p07, slot(propose(acquaint(p07, p06))))
+.
+act(go(_), 23, p07, slot(propose(befriend(p07, p06))))
+.
+act(go(_), 24, p07, slot(propose(befriend(p07, p06))))
+.
+act(go(_), 25, p07, slot(propose(introduce(p07, p06, p08))))
+.
+act(go(_), 26, p07, slot(propose(introduce(p07, p08, p06))))
+.
+act(go(_), 27, p07, slot(propose(introduce(p07, p06, p12))))
+.
+act(go(_), 28, p07, slot(propose(introduce(p07, p12, p06))))
+.
+act(go(_), 29, p07, slot(propose(befriend(p07, p05))))
+.
+act(go(_), 30, p07, slot(propose(befriend(p07, p05))))
+.
+act(go(_), 31, p07, slot(propose(befriend(p07, p01))))
+.
+act(go(_), 32, p07, slot(propose(befriend(p07, p01))))
+.
+act(go(_), 1, p08, slot(propose(establish(p08))))
+.
+act(go(_), 2, p08, slot(propose(establish(p08))))
+.
+act(go(_), 3, p08, slot(propose(establish(p08))))
+.
+act(go(_), 4, p08, slot(propose(acquaint(p08, p07))))
+.
+act(go(_), 5, p08, slot(propose(acquaint(p08, p07))))
+.
+act(go(_), 6, p08, slot(propose(acquaint(p08, p07))))
+.
+act(go(_), 7, p08, slot(propose(befriend(p08, p07))))
+.
+act(go(_), 8, p08, slot(propose(befriend(p08, p07))))
+.
+act(go(_), 9, p08, slot(propose(befriend(p08, p12))))
+.
+act(go(_), 10, p08, slot(propose(befriend(p08, p12))))
+.
+act(go(_), 11, p08, slot(propose(acquaint(p08, p09))))
+.
+act(go(_), 12, p08, slot(propose(acquaint(p08, p09))))
+.
+act(go(_), 13, p08, slot(propose(acquaint(p08, p09))))
+.
+act(go(_), 14, p08, slot(propose(befriend(p08, p09))))
+.
+act(go(_), 15, p08, slot(propose(befriend(p08, p09))))
+.
+act(go(_), 16, p08, slot(propose(introduce(p08, p07, p09))))
+.
+act(go(_), 17, p08, slot(propose(introduce(p08, p09, p07))))
+.
+act(go(_), 18, p08, slot(propose(befriend(p08, p10))))
+.
+act(go(_), 19, p08, slot(propose(befriend(p08, p10))))
+.
+act(go(_), 20, p08, slot(propose(befriend(p08, p06))))
+.
+act(go(_), 21, p08, slot(propose(befriend(p08, p06))))
+.
+act(go(_), 1, p09, slot(propose(establish(p09))))
+.
+act(go(_), 2, p09, slot(propose(establish(p09))))
+.
+act(go(_), 3, p09, slot(propose(establish(p09))))
+.
+act(go(_), 4, p09, slot(propose(acquaint(p09, p08))))
+.
+act(go(_), 5, p09, slot(propose(acquaint(p09, p08))))
+.
+act(go(_), 6, p09, slot(propose(acquaint(p09, p08))))
+.
+act(go(_), 7, p09, slot(propose(befriend(p09, p08))))
+.
+act(go(_), 8, p09, slot(propose(befriend(p09, p08))))
+.
+act(go(_), 9, p09, slot(propose(befriend(p09, p07))))
+.
+act(go(_), 10, p09, slot(propose(befriend(p09, p07))))
+.
+act(go(_), 11, p09, slot(propose(acquaint(p09, p10))))
+.
+act(go(_), 12, p09, slot(propose(acquaint(p09, p10))))
+.
+act(go(_), 13, p09, slot(propose(acquaint(p09, p10))))
+.
+act(go(_), 14, p09, slot(propose(befriend(p09, p10))))
+.
+act(go(_), 15, p09, slot(propose(befriend(p09, p10))))
+.
+act(go(_), 16, p09, slot(propose(introduce(p09, p08, p10))))
+.
+act(go(_), 17, p09, slot(propose(introduce(p09, p10, p08))))
+.
+act(go(_), 18, p09, slot(propose(befriend(p09, p11))))
+.
+act(go(_), 19, p09, slot(propose(befriend(p09, p11))))
+.
+act(go(_), 20, p09, slot(propose(unfriend(p09, p10))))
+.
+act(go(_), 1, p10, slot(propose(establish(p10))))
+.
+act(go(_), 2, p10, slot(propose(establish(p10))))
+.
+act(go(_), 3, p10, slot(propose(establish(p10))))
+.
+act(go(_), 4, p10, slot(propose(acquaint(p10, p09))))
+.
+act(go(_), 5, p10, slot(propose(acquaint(p10, p09))))
+.
+act(go(_), 6, p10, slot(propose(acquaint(p10, p09))))
+.
+act(go(_), 7, p10, slot(propose(befriend(p10, p09))))
+.
+act(go(_), 8, p10, slot(propose(befriend(p10, p09))))
+.
+act(go(_), 9, p10, slot(propose(befriend(p10, p08))))
+.
+act(go(_), 10, p10, slot(propose(befriend(p10, p08))))
+.
+act(go(_), 11, p10, slot(propose(acquaint(p10, p11))))
+.
+act(go(_), 12, p10, slot(propose(acquaint(p10, p11))))
+.
+act(go(_), 13, p10, slot(propose(acquaint(p10, p11))))
+.
+act(go(_), 14, p10, slot(propose(befriend(p10, p11))))
+.
+act(go(_), 15, p10, slot(propose(befriend(p10, p11))))
+.
+act(go(_), 16, p10, slot(propose(introduce(p10, p09, p11))))
+.
+act(go(_), 17, p10, slot(propose(introduce(p10, p11, p09))))
+.
+act(go(_), 18, p10, slot(propose(befriend(p10, p12))))
+.
+act(go(_), 19, p10, slot(propose(befriend(p10, p12))))
+.
+act(go(_), 1, p11, slot(propose(establish(p11))))
+.
+act(go(_), 2, p11, slot(propose(establish(p11))))
+.
+act(go(_), 3, p11, slot(propose(establish(p11))))
+.
+act(go(_), 4, p11, slot(propose(acquaint(p11, p10))))
+.
+act(go(_), 5, p11, slot(propose(acquaint(p11, p10))))
+.
+act(go(_), 6, p11, slot(propose(acquaint(p11, p10))))
+.
+act(go(_), 7, p11, slot(propose(befriend(p11, p10))))
+.
+act(go(_), 8, p11, slot(propose(befriend(p11, p10))))
+.
+act(go(_), 9, p11, slot(propose(befriend(p11, p09))))
+.
+act(go(_), 10, p11, slot(propose(befriend(p11, p09))))
+.
+act(go(_), 11, p11, slot(propose(acquaint(p11, p12))))
+.
+act(go(_), 12, p11, slot(propose(acquaint(p11, p12))))
+.
+act(go(_), 13, p11, slot(propose(acquaint(p11, p12))))
+.
+act(go(_), 14, p11, slot(propose(befriend(p11, p12))))
+.
+act(go(_), 15, p11, slot(propose(befriend(p11, p12))))
+.
+act(go(_), 16, p11, slot(propose(introduce(p11, p10, p12))))
+.
+act(go(_), 17, p11, slot(propose(introduce(p11, p12, p10))))
+.
+act(go(_), 18, p11, slot(propose(befriend(p11, p07))))
+.
+act(go(_), 19, p11, slot(propose(befriend(p11, p07))))
+.
+act(go(_), 1, p12, slot(propose(establish(p12))))
+.
+act(go(_), 2, p12, slot(propose(establish(p12))))
+.
+act(go(_), 3, p12, slot(propose(establish(p12))))
+.
+act(go(_), 4, p12, slot(propose(befriend(p12, p08))))
+.
+act(go(_), 5, p12, slot(propose(befriend(p12, p08))))
+.
+act(go(_), 6, p12, slot(propose(acquaint(p12, p11))))
+.
+act(go(_), 7, p12, slot(propose(acquaint(p12, p11))))
+.
+act(go(_), 8, p12, slot(propose(acquaint(p12, p11))))
+.
+act(go(_), 9, p12, slot(propose(befriend(p12, p11))))
+.
+act(go(_), 10, p12, slot(propose(befriend(p12, p11))))
+.
+act(go(_), 11, p12, slot(propose(befriend(p12, p10))))
+.
+act(go(_), 12, p12, slot(propose(befriend(p12, p10))))
+.
+act(go(_), 13, p12, slot(propose(acquaint(p12, p07))))
+.
+act(go(_), 14, p12, slot(propose(acquaint(p12, p07))))
+.
+act(go(_), 15, p12, slot(propose(acquaint(p12, p07))))
+.
+act(go(_), 16, p12, slot(propose(befriend(p12, p07))))
+.
+act(go(_), 17, p12, slot(propose(befriend(p12, p07))))
+.
+act(go(_), 18, p12, slot(propose(introduce(p12, p11, p07))))
+.
+act(go(_), 19, p12, slot(propose(introduce(p12, p07, p11))))
+.
+act(go(_), 20, p12, slot(propose(befriend(p12, p06))))
+.
+act(go(_), 21, p12, slot(propose(befriend(p12, p06))))
+.
+act(go(_), 22, p12, slot(propose(unfriend(p12, p07))))
+.
+
+%% person(agreeable)
+%% binds(Approval, agree)
+exported procedure agree(Approval?, Person?, Integer?, MutualRef?).
+agree(approval(_, _, A?), _, _, _)
+:-
+rated(0.0016666666666666668, Tok)
+,
+say_yes(Tok?, slot(A))
+.
+procedure say_yes(Token?, Slot(YesNo)?).
+say_yes(stop, _)
+.
+say_yes(go(_), slot(yes))
+.
+
+%% person(choosy)
+%% binds(Approval, choose)
+exported procedure choose(Approval?, Person?, Integer?, MutualRef?).
+choose(approval(_, _, A?), _, S, _)
+:-
+random(S?, 3, K, _)
+,
+rated(0.0016666666666666668, Tok)
+,
+answer(Tok?, K?, slot(A))
+.
+procedure answer(Token?, Integer?, Slot(YesNo)?).
+answer(stop, _, _)
+.
+answer(go(_), 1, slot(yes))
+.
+answer(go(_), 2, slot(yes))
+.
+answer(go(_), 3, slot(no))
+.

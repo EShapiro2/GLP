@@ -1,0 +1,185 @@
+%% GSG_sglp.glp --- the sGLP source of a simulation of GSG, the Grassroots Social Graph
+%% (programs/sglp/gsg), in the term form the transformation reads (programs/sglp/README.md,
+%% "The term form"), the profiles over the canonical platform's questions and nothing of its
+%% interface, which is the platform's as the cascade holds it (cascade/GSG/interface.glp).
+%% It is written for the canonical platform of GSG as recorded, cascade/GSG/platform.glp, and
+%% six agents, keyed p1 to p6 (cva/run.sh).  Printed by gen.sh beside this file.
+%%
+%%   p1  Alice   meets Bob and Carol; introduces them to each other (GKK:3); befriends Bob and
+%%               Carol, and Dave once Bob has introduced them; ends her friendship with Carol
+%%               at times (GSG:2), and Carol may be her friend again
+%%   p2  Bob     meets Alice and Dave; introduces them to each other; befriends Alice, Dave, and
+%%               Carol once introduced
+%%   p3  Carol   meets Alice and Eve; befriends Bob, Eve, and Frank once Eve has introduced them
+%%   p4  Dave    meets Bob and Frank; befriends Alice and Frank; ends his friendship with Frank
+%%               at times
+%%   p5  Eve     meets Carol and Frank; introduces them to each other; befriends both
+%%   p6  Frank   meets Dave and Eve; befriends Eve and Carol
+%%
+%% Its surface form, one person's script and the others' alike:
+%%
+%%   person scripted.
+%%   Request =::= script_request.
+%%   procedure script_request(Request, Person?, Integer?).
+%%   script_request(R?, person(p6, _, _), S) :-
+%%       random(S?, 15, K, _), act(K?, p6, slot(R)) @ 2/hour.
+%%   procedure act(Integer?, Key?, Slot(Request)?).
+%%   act(1, p6, slot(propose(establish(p6)))).           % to 3
+%%   act(4, p6, slot(propose(acquaint(p6, p4)))).        % to 6
+%%   act(7, p6, slot(propose(acquaint(p6, p5)))).        % to 9
+%%   act(10, p6, slot(propose(befriend(p6, p5)))).       % to 12
+%%   act(13, p6, slot(propose(befriend(p6, p3)))).       % to 15
+%%
+%%   person agreeable.
+%%   Approval =::= agree.
+%%   procedure agree(Approval?, Person?, Integer?).
+%%   agree(approval(_, _, A?), _, _) :- say_yes(slot(A)) @ 6/hour.
+%%   procedure say_yes(Slot(YesNo)?).
+%%   say_yes(slot(yes)).
+%%
+%%   run 6 agents [requests ~ (scripted : 1.0), approvals ~ (agreeable : 1.0)]
+%%       until 3 days seed 1.
+%%
+%% The scripted person, at each request question, draws one proposal from its list, a proposal
+%% listed k times drawn k times as often; a proposal the state does not allow is refused by the
+%% platform, so the order of a run is the order in which the drawn proposals become possible.
+%% The agreeable person approves every attempt and every hello it is asked about.
+
+exported procedure source(SglpTerms).
+source([
+   person(scripted),
+   binds('Request', script_request),
+   decl(script_request('Request', dual('Person'), dual('Integer'))),
+   clause(script_request(var('R?'), person(p1, var('_'), var('_')), var('S')), [],
+          [random(var('S?'), 22, var('K'), var('_')), rated(act(var('K?'), p1, slot(var('R'))), rate(2, hour))]),
+   clause(script_request(var('R?'), person(p2, var('_'), var('_')), var('S')), [],
+          [random(var('S?'), 22, var('K'), var('_')), rated(act(var('K?'), p2, slot(var('R'))), rate(2, hour))]),
+   clause(script_request(var('R?'), person(p3, var('_'), var('_')), var('S')), [],
+          [random(var('S?'), 17, var('K'), var('_')), rated(act(var('K?'), p3, slot(var('R'))), rate(2, hour))]),
+   clause(script_request(var('R?'), person(p4, var('_'), var('_')), var('S')), [],
+          [random(var('S?'), 16, var('K'), var('_')), rated(act(var('K?'), p4, slot(var('R'))), rate(2, hour))]),
+   clause(script_request(var('R?'), person(p5, var('_'), var('_')), var('S')), [],
+          [random(var('S?'), 19, var('K'), var('_')), rated(act(var('K?'), p5, slot(var('R'))), rate(2, hour))]),
+   clause(script_request(var('R?'), person(p6, var('_'), var('_')), var('S')), [],
+          [random(var('S?'), 15, var('K'), var('_')), rated(act(var('K?'), p6, slot(var('R'))), rate(2, hour))]),
+   decl(act(dual('Integer'), dual('Key'), dual('Slot'('Request')))),
+   clause(act(1, p1, slot(propose(establish(p1)))), [], []),
+   clause(act(2, p1, slot(propose(establish(p1)))), [], []),
+   clause(act(3, p1, slot(propose(establish(p1)))), [], []),
+   clause(act(4, p1, slot(propose(acquaint(p1, p2)))), [], []),
+   clause(act(5, p1, slot(propose(acquaint(p1, p2)))), [], []),
+   clause(act(6, p1, slot(propose(acquaint(p1, p2)))), [], []),
+   clause(act(7, p1, slot(propose(acquaint(p1, p3)))), [], []),
+   clause(act(8, p1, slot(propose(acquaint(p1, p3)))), [], []),
+   clause(act(9, p1, slot(propose(acquaint(p1, p3)))), [], []),
+   clause(act(10, p1, slot(propose(introduce(p1, p2, p3)))), [], []),
+   clause(act(11, p1, slot(propose(introduce(p1, p2, p3)))), [], []),
+   clause(act(12, p1, slot(propose(introduce(p1, p3, p2)))), [], []),
+   clause(act(13, p1, slot(propose(introduce(p1, p3, p2)))), [], []),
+   clause(act(14, p1, slot(propose(befriend(p1, p2)))), [], []),
+   clause(act(15, p1, slot(propose(befriend(p1, p2)))), [], []),
+   clause(act(16, p1, slot(propose(befriend(p1, p2)))), [], []),
+   clause(act(17, p1, slot(propose(befriend(p1, p3)))), [], []),
+   clause(act(18, p1, slot(propose(befriend(p1, p3)))), [], []),
+   clause(act(19, p1, slot(propose(befriend(p1, p3)))), [], []),
+   clause(act(20, p1, slot(propose(befriend(p1, p4)))), [], []),
+   clause(act(21, p1, slot(propose(befriend(p1, p4)))), [], []),
+   clause(act(22, p1, slot(propose(unfriend(p1, p3)))), [], []),
+   clause(act(1, p2, slot(propose(establish(p2)))), [], []),
+   clause(act(2, p2, slot(propose(establish(p2)))), [], []),
+   clause(act(3, p2, slot(propose(establish(p2)))), [], []),
+   clause(act(4, p2, slot(propose(acquaint(p2, p1)))), [], []),
+   clause(act(5, p2, slot(propose(acquaint(p2, p1)))), [], []),
+   clause(act(6, p2, slot(propose(acquaint(p2, p1)))), [], []),
+   clause(act(7, p2, slot(propose(acquaint(p2, p4)))), [], []),
+   clause(act(8, p2, slot(propose(acquaint(p2, p4)))), [], []),
+   clause(act(9, p2, slot(propose(acquaint(p2, p4)))), [], []),
+   clause(act(10, p2, slot(propose(introduce(p2, p1, p4)))), [], []),
+   clause(act(11, p2, slot(propose(introduce(p2, p1, p4)))), [], []),
+   clause(act(12, p2, slot(propose(introduce(p2, p4, p1)))), [], []),
+   clause(act(13, p2, slot(propose(introduce(p2, p4, p1)))), [], []),
+   clause(act(14, p2, slot(propose(befriend(p2, p1)))), [], []),
+   clause(act(15, p2, slot(propose(befriend(p2, p1)))), [], []),
+   clause(act(16, p2, slot(propose(befriend(p2, p1)))), [], []),
+   clause(act(17, p2, slot(propose(befriend(p2, p3)))), [], []),
+   clause(act(18, p2, slot(propose(befriend(p2, p3)))), [], []),
+   clause(act(19, p2, slot(propose(befriend(p2, p3)))), [], []),
+   clause(act(20, p2, slot(propose(befriend(p2, p4)))), [], []),
+   clause(act(21, p2, slot(propose(befriend(p2, p4)))), [], []),
+   clause(act(22, p2, slot(propose(befriend(p2, p4)))), [], []),
+   clause(act(1, p3, slot(propose(establish(p3)))), [], []),
+   clause(act(2, p3, slot(propose(establish(p3)))), [], []),
+   clause(act(3, p3, slot(propose(establish(p3)))), [], []),
+   clause(act(4, p3, slot(propose(acquaint(p3, p1)))), [], []),
+   clause(act(5, p3, slot(propose(acquaint(p3, p1)))), [], []),
+   clause(act(6, p3, slot(propose(acquaint(p3, p1)))), [], []),
+   clause(act(7, p3, slot(propose(acquaint(p3, p5)))), [], []),
+   clause(act(8, p3, slot(propose(acquaint(p3, p5)))), [], []),
+   clause(act(9, p3, slot(propose(acquaint(p3, p5)))), [], []),
+   clause(act(10, p3, slot(propose(befriend(p3, p2)))), [], []),
+   clause(act(11, p3, slot(propose(befriend(p3, p2)))), [], []),
+   clause(act(12, p3, slot(propose(befriend(p3, p2)))), [], []),
+   clause(act(13, p3, slot(propose(befriend(p3, p5)))), [], []),
+   clause(act(14, p3, slot(propose(befriend(p3, p5)))), [], []),
+   clause(act(15, p3, slot(propose(befriend(p3, p5)))), [], []),
+   clause(act(16, p3, slot(propose(befriend(p3, p6)))), [], []),
+   clause(act(17, p3, slot(propose(befriend(p3, p6)))), [], []),
+   clause(act(1, p4, slot(propose(establish(p4)))), [], []),
+   clause(act(2, p4, slot(propose(establish(p4)))), [], []),
+   clause(act(3, p4, slot(propose(establish(p4)))), [], []),
+   clause(act(4, p4, slot(propose(acquaint(p4, p2)))), [], []),
+   clause(act(5, p4, slot(propose(acquaint(p4, p2)))), [], []),
+   clause(act(6, p4, slot(propose(acquaint(p4, p2)))), [], []),
+   clause(act(7, p4, slot(propose(acquaint(p4, p6)))), [], []),
+   clause(act(8, p4, slot(propose(acquaint(p4, p6)))), [], []),
+   clause(act(9, p4, slot(propose(acquaint(p4, p6)))), [], []),
+   clause(act(10, p4, slot(propose(befriend(p4, p1)))), [], []),
+   clause(act(11, p4, slot(propose(befriend(p4, p1)))), [], []),
+   clause(act(12, p4, slot(propose(befriend(p4, p1)))), [], []),
+   clause(act(13, p4, slot(propose(befriend(p4, p6)))), [], []),
+   clause(act(14, p4, slot(propose(befriend(p4, p6)))), [], []),
+   clause(act(15, p4, slot(propose(befriend(p4, p6)))), [], []),
+   clause(act(16, p4, slot(propose(unfriend(p4, p6)))), [], []),
+   clause(act(1, p5, slot(propose(establish(p5)))), [], []),
+   clause(act(2, p5, slot(propose(establish(p5)))), [], []),
+   clause(act(3, p5, slot(propose(establish(p5)))), [], []),
+   clause(act(4, p5, slot(propose(acquaint(p5, p3)))), [], []),
+   clause(act(5, p5, slot(propose(acquaint(p5, p3)))), [], []),
+   clause(act(6, p5, slot(propose(acquaint(p5, p3)))), [], []),
+   clause(act(7, p5, slot(propose(acquaint(p5, p6)))), [], []),
+   clause(act(8, p5, slot(propose(acquaint(p5, p6)))), [], []),
+   clause(act(9, p5, slot(propose(acquaint(p5, p6)))), [], []),
+   clause(act(10, p5, slot(propose(introduce(p5, p3, p6)))), [], []),
+   clause(act(11, p5, slot(propose(introduce(p5, p3, p6)))), [], []),
+   clause(act(12, p5, slot(propose(introduce(p5, p6, p3)))), [], []),
+   clause(act(13, p5, slot(propose(introduce(p5, p6, p3)))), [], []),
+   clause(act(14, p5, slot(propose(befriend(p5, p3)))), [], []),
+   clause(act(15, p5, slot(propose(befriend(p5, p3)))), [], []),
+   clause(act(16, p5, slot(propose(befriend(p5, p3)))), [], []),
+   clause(act(17, p5, slot(propose(befriend(p5, p6)))), [], []),
+   clause(act(18, p5, slot(propose(befriend(p5, p6)))), [], []),
+   clause(act(19, p5, slot(propose(befriend(p5, p6)))), [], []),
+   clause(act(1, p6, slot(propose(establish(p6)))), [], []),
+   clause(act(2, p6, slot(propose(establish(p6)))), [], []),
+   clause(act(3, p6, slot(propose(establish(p6)))), [], []),
+   clause(act(4, p6, slot(propose(acquaint(p6, p4)))), [], []),
+   clause(act(5, p6, slot(propose(acquaint(p6, p4)))), [], []),
+   clause(act(6, p6, slot(propose(acquaint(p6, p4)))), [], []),
+   clause(act(7, p6, slot(propose(acquaint(p6, p5)))), [], []),
+   clause(act(8, p6, slot(propose(acquaint(p6, p5)))), [], []),
+   clause(act(9, p6, slot(propose(acquaint(p6, p5)))), [], []),
+   clause(act(10, p6, slot(propose(befriend(p6, p5)))), [], []),
+   clause(act(11, p6, slot(propose(befriend(p6, p5)))), [], []),
+   clause(act(12, p6, slot(propose(befriend(p6, p5)))), [], []),
+   clause(act(13, p6, slot(propose(befriend(p6, p3)))), [], []),
+   clause(act(14, p6, slot(propose(befriend(p6, p3)))), [], []),
+   clause(act(15, p6, slot(propose(befriend(p6, p3)))), [], []),
+
+   person(agreeable),
+   binds('Approval', agree),
+   decl(agree(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(agree(approval(var('_'), var('_'), var('A?')), var('_'), var('_')), [], [rated(say_yes(slot(var('A'))), rate(6, hour))]),
+   decl(say_yes(dual('Slot'('YesNo')))),
+   clause(say_yes(slot(yes)), [], []),
+
+   run(6, [mix(requests, [share(scripted, 1.0)]), mix(approvals, [share(agreeable, 1.0)])], 3, day, 1)]).

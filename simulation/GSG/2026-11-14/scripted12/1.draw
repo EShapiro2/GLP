@@ -1,0 +1,13 @@
+draw scripted 12 agreeable 8 choosy 4
+agent 1 scripted choosy
+agent 2 scripted agreeable
+agent 3 scripted agreeable
+agent 4 scripted choosy
+agent 5 scripted choosy
+agent 6 scripted agreeable
+agent 7 scripted agreeable
+agent 8 scripted agreeable
+agent 9 scripted agreeable
+agent 10 scripted agreeable
+agent 11 scripted choosy
+agent 12 scripted agreeable
