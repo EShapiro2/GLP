@@ -57,6 +57,6 @@ bash programs/sglp/lbm/sim/record.sh simulation/GDO-LB/<date>/<name> 'cfg(unifor
 bash programs/sglp/cva/record.sh --check simulation/GDO-LB/<date>/<name>
 ```
 
-A day of forty persons takes about two minutes at d = 3 and four at d = 8; a day of a hundred persons six to eleven minutes (main `47907f48`).  The records: `simulation/GDO/2026-11-10` (the world standing still) and `simulation/GDO-LB/2026-11-10` (GDO-LB, the persons travelling and the friendships changing), each record of the form `cva/record.sh` writes, `record.sh --check` passing on it.
+A day of forty persons takes about two minutes at d = 3 and four at d = 8; a day of a hundred persons six to eleven minutes (main `98ca7d4ca`).  The records: `simulation/GDO/2026-11-14` (the world standing still) and `simulation/GDO-LB/2026-11-14` (GDO-LB, the persons travelling and the friendships changing), each record of the form `cva/record.sh` writes, `record.sh --check` passing on it.
 
 The source is the realisation of GDO-LB, Location-Based GDO (`programs/lbm/GDO-LB.txt`, the restriction of GDO by its three conditions, GRH's): until GSC's term form of forall and exists and vGLP's environment predicates reach the cascade and GDO-LB compiles to a platform of its own, the conditions are the stochastic person's policy over GDO's platform, `gd_choose`, and the person's location, d and e are its attributes.
