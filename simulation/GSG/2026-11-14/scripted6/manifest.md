@@ -1,19 +1,22 @@
 # A simulation of GSG under sGLP
 
-The sGLP source beside this file run on the canonical platform of GSG by the harness of every canonical CVA platform (programs/sglp/cva/run.sh), on 2026-11-12 to 2026-11-14.  Written by hand in record.sh's form; record.sh was not used, the platform being the one recorded in cascade/GSG at the commit below, which no tag cascade/GSG/<date> holds.
+The owner's sGLP source run on the canonical platform its cascade record compiled, by the harness of every canonical CVA platform (programs/sglp/cva/), as programs/sglp/cva/record.sh recorded it on 2026-11-14 11:57 UTC.  The suite's Section SGLP re-runs the transformation and each run's first simulated day and holds them to this record (record.sh --check).
 
 - name: GSG
-- cascade: cascade/GSG at 47907f4 (cascade.sh gsg, 2026-11-09 23:00 UTC; platform.glp e162a476, interface.glp f260acd8)
-- source: GSG_sglp.glp (programs/sglp/gsg/GSG_sglp.glp)
-- programs/sglp commit: 47907f4
-- repository commit: 47907f4
+- cascade: cascade/GSG/2026-11-13
+- cascade commit: 21701666
+- source: GSG_sglp.glp
+- source path: /tmp/tmp.8T7pUpeNwO/GSG_sglp.glp
+- source commit: outside the repository
+- programs/sglp commit: 11dc4dee
+- repository commit: 11dc4dee
 - agents: 6
-- until: 3 days
-- seeds: 1, 7
+- until: 3 day
+- seeds: 1,7
 
 | File | What it holds |
 |---|---|
-| `GSG_sglp.glp` | the sGLP source, as it stood |
-| `profiles.glp`, `population.glp` | printed by programs/sglp/transform.sh --interface from it over cascade/GSG/interface.glp |
-| `1.log`, `1.draw` | seed 1: 1259 answers, the clock 258763.22390378098; the population's draw, draw scripted 6 agreeable 6 |
-| `7.log`, `7.draw` | seed 7: 1258 answers, the clock 259129.90407620318; the population's draw, draw scripted 6 agreeable 6 |
+| `GSG_sglp.glp` | the owner's sGLP source, as it stood |
+| `profiles.glp`, `population.glp` | printed by programs/sglp/transform.sh --interface from it over the platform's interface |
+| `1.log`, `1.draw` | seed 1: 3255 answers, the clock 258763.22390378098; the population's draw, draw scripted 6 agreeable 6 |
+| `7.log`, `7.draw` | seed 7: 3249 answers, the clock 259129.90407620318; the population's draw, draw scripted 6 agreeable 6 |

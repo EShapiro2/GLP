@@ -1,4 +1,4 @@
-%% Printed by programs/sglp/transform.glp from the sGLP source in the term form
+%% Printed by programs/sglp/transform/transform.glp from the sGLP source in the term form
 %% (README.md, "The term form"); edit the source and run transform.sh, not this file.
 %% transform(given, cva_population)
 
@@ -169,9 +169,12 @@ start_screen(A?, O?, Mon?, Log?, Scr)
 ,
 person(A?, P?, H?, Mon?, Scr?, Seed?, Log?, Asks?)
 .
-exported procedure cva_draw(Integer?, Stream(Key)?, Stream(_)).
+
+%% An agent of the population's draw: its number and its stochastic person (Appendix B, "Seeds").
+Drawn ::= agent(Integer, Profiles).
+exported procedure cva_draw(Integer?, Stream(Key)?, Stream(Drawn)).
 cva_draw(B, Ks, D?) :- persons(B?, Ks?, _, Ps, B1), drawn(1, Ps?, B1?, D).
-procedure drawn(Integer?, List(Person)?, Integer?, Stream(_)).
+procedure drawn(Integer?, List(Person)?, Integer?, Stream(Drawn)).
 drawn(_, [], _, []).
 drawn(A, [H | Hs], B, [agent(A?, P?) | D?])
 :-
