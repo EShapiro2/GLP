@@ -20,7 +20,13 @@ class IdentityStore {
   /// Secure-storage key holding the JSON-encoded identity.
   static const String _storageKey = 'identity';
 
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  /// On macOS the legacy keychain: the data protection keychain, the
+  /// package's default, needs the keychain-access-groups entitlement and so
+  /// a provisioning profile, without which every read and write fails with
+  /// -34018 and the app stops at launch.  The option is read on macOS only.
+  static final FlutterSecureStorage _storage = FlutterSecureStorage(
+    mOptions: MacOsOptions(usesDataProtectionKeychain: false),
+  );
 
   /// Persist [identity] to the secure keystore, replacing any existing one.
   ///
