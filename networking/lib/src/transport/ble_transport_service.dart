@@ -567,7 +567,7 @@ class BleTransportService extends TransportService {
     // correlate it with discovery state.
     if (role == BleRole.peripheral) {
       final peerIsIos = _isIosPeerPubkey(pubkey);
-      if (defaultTargetPlatform == TargetPlatform.iOS && !peerIsIos) {
+      if (_isApple && !peerIsIos) {
         // The reverse leg toward a non-iOS peer is the pair's SECOND link,
         // which an iOS central cannot open (hardware-measured; see
         // [_shouldOpenCentralLeg]) — so far from dialing it, abort any of our
@@ -713,7 +713,7 @@ class BleTransportService extends TransportService {
     // `connecting` for the full connect timeout. Scoped strictly to the
     // measured constraint: toward iOS peers the second link is attempted
     // (dual-role mandate; see GNA, Appendix, "Dual-role BLE").
-    if (defaultTargetPlatform == TargetPlatform.iOS &&
+    if (_isApple &&
         !_isIosPeerServiceUuid(serviceUuid) &&
         _hasLivePeripheralPathForServiceUuid(serviceUuid)) {
       debugPrint(
@@ -868,7 +868,7 @@ class BleTransportService extends TransportService {
       // leg, and our reverse dial completes the dual-role pair. Backgrounded
       // iPhones advertise no marker, so this self-damps — we never trade a
       // working link away unless the peer is provably there to rebuild it.
-      if (defaultTargetPlatform != TargetPlatform.iOS &&
+      if (!_isApple &&
           !_hasLivePeripheralPathForServiceUuid(serviceUuid)) {
         final centralId = _liveCentralPathIdForServiceUuid(serviceUuid);
         if (centralId != null && !_reformingCentralPathIds.contains(centralId)) {
@@ -1045,7 +1045,7 @@ class BleTransportService extends TransportService {
     DiscoveredPeerState? existing,
   ) {
     final peerIsIos = _isIosPeerServiceUuid(serviceUuid);
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
+    if (_isApple) {
       if (!peerIsIos) {
         // Constraint 1: toward a non-iOS peer we already hold an inbound
         // peripheral leg from, our dial is the measured-broken second link.
@@ -1141,6 +1141,14 @@ class BleTransportService extends TransportService {
   /// changes, while the marker itself comes and goes with iOS foregrounding.
   /// Checks the raw UUID sighting first, then — for beacons resolvable to an
   /// identified peer — the rotation-stable pubkey record.
+  /// Whether this device runs Apple's Bluetooth stack: iOS, or macOS, whose
+  /// plugin shares iOS's CoreBluetooth code and advertises the same iOS
+  /// marker ([grassrootsIosLocalName]), so peers treat it as iOS and it must
+  /// act as iOS does.
+  static bool get _isApple =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   bool _isIosPeerServiceUuid(String serviceUuid) {
     if (_iosMarkedServiceUuids.containsKey(serviceUuid.toLowerCase())) {
       return true;
@@ -1291,7 +1299,7 @@ class BleTransportService extends TransportService {
     // is the measured-broken second link, owned by the non-iOS side (see
     // [_shouldOpenCentralLeg]). Toward iOS peers we attempt it — dual-role
     // mandate.
-    if (defaultTargetPlatform == TargetPlatform.iOS &&
+    if (_isApple &&
         !_isIosPeerPubkey(pubkey)) {
       return;
     }

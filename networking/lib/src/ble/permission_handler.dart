@@ -27,6 +27,10 @@ class PermissionHandler {
       return await _checkAndroidPermissions();
     } else if (Platform.isIOS) {
       return await _checkIOSPermissions();
+    } else if (Platform.isMacOS) {
+      // macOS asks the person itself on CoreBluetooth's first use; the app
+      // needs the com.apple.security.device.bluetooth entitlement.
+      return true;
     }
     return false;
   }
@@ -41,6 +45,8 @@ class PermissionHandler {
       return await _requestAndroidPermissions();
     } else if (Platform.isIOS) {
       return await _requestIOSPermissions();
+    } else if (Platform.isMacOS) {
+      return PermissionResult.granted;
     }
 
     return PermissionResult.denied;
