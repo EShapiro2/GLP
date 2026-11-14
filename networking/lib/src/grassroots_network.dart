@@ -2474,6 +2474,10 @@ class GrassrootsNetwork {
   set onPlaceEvent(void Function(String place, PlaceEvent event)? cb) {
     final places = _places;
     if (places == null) {
+      // Unsetting the callback where none could be set unsets nothing, so
+      // that an agent's dispose, which unsets every callback, does not throw
+      // on a platform with no geofencing binding.
+      if (cb == null) return;
       throw StateError(
         'onPlaceEvent needs a PlaceGeofenceBackend; none was supplied to '
         'GrassrootsNetwork',
