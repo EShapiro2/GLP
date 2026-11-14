@@ -159,7 +159,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
   }
 
   Future<void> _start() async {
-    if (debugLogOn && _reporter == null) {
+    if (debugLogOn) {
       final reporter = await startDebugReporter();
       if (reporter != null) {
         _reporter = reporter;
@@ -273,11 +273,14 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
     }
   }
 
-  /// The person starts over as a new person: the agent and the layer stop,
-  /// the agent's saved state and the key pair are deleted, and the app
-  /// starts afresh, as at its first start.
+  /// The person starts over as a new person: the agent stops and saves
+  /// nothing, its saved state and the key pair are deleted, and the person is
+  /// asked to close the app and open it again, which starts it afresh, as at
+  /// its first start.  The app does not start again by itself: the layer's
+  /// dispose did not finish in a test on macOS and on Android (2026-11-14),
+  /// so a second layer is not opened beside the first.
   Future<void> _startOver() async {
-    final host = _host, net = _net;
+    final host = _host;
     _background?.dispose();
     _background = null;
     setState(() {
@@ -285,13 +288,14 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
       _setStatus('Starting over…');
     });
     host?.dispose();
-    await net?.dispose();
-    _net = null;
     final support = await getApplicationSupportDirectory();
     final agents = Directory('${support.path}/agents');
     if (await agents.exists()) await agents.delete(recursive: true);
     await IdentityStore.clearIdentity();
-    await _start();
+    if (mounted) {
+      setState(() => _setStatus(
+          'You are a new person. Close the app and open it again.'));
+    }
   }
 
   @override
