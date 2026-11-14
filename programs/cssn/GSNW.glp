@@ -1,6 +1,6 @@
 %% ---------------------------------------------------------------------------
 %% GSNW.glp --- GSNW, the Grassroots Social Network with Wards, CSSN's (Udi, 2026-11-10, to GSC #14 and to CSSN #14), its clauses in GSNW.txt beside this file, amending GSN and GnW, GSC's (programs/gsc), with GSG and GKK beneath them, in the clause syntax of GSC's paper, Section 3.2.  This term is the one source of the schemas.
-%% Thirty-seven schemas.  GnW's seventeen as GnW.glp writes them, but unfriend, guardian_unfriend, ward_unfriend, ward_end and retire, which also end every membership between the two (GSN:3; GnW:5).  GSN's eight for persons, message, create, join, leave, remove, close, post_own and post, person required at each guard, and its deliver.  And eleven for wards: ward_message, ward_post_own and ward_post (GSNW:1); ward_create, ward_close and guardian_close (GSNW:2); ward_join, ward_leave, ward_remove and ward_withdraw (GnW:3, a relation being a friendship or the membership of a group) and wards_join (GnW:4).  Every role a ward guards requires ward and guarded_by of a guardian, so a ward with no guardian takes no act.
+%% Thirty-eight schemas.  GnW's seventeen as GnW.glp writes them, but unfriend, guardian_unfriend, ward_unfriend, ward_end and retire, which also end every membership between the two (GSN:3; GnW:5).  GSN's eight for persons, message, create, join, leave, remove, close, post_own and post, person required at each guard, and its deliver and deliver_leader.  And eleven for wards: ward_message, ward_post_own and ward_post (GSNW:1); ward_create, ward_close and guardian_close (GSNW:2); ward_join, ward_leave, ward_remove and ward_withdraw (GnW:3, a relation being a friendship or the membership of a group) and wards_join (GnW:4).  Every role a ward guards requires ward and guarded_by of a guardian, so a ward with no guardian takes no act.
 %% GSNW is parametric as GnW is, in ward, creator, created, guardian_of, guarded_by and retired; no app runs it, and CSSN instantiates it (CSSN.glp).
 %% Written by CSSN #14 Cowork, 2026-11-10; printed by /Users/udi/Grassroots/CSSN/docs/gen_gsnw.py from programs/gsc/GnW.glp as it stood at the commit that last changed this file, GnW's schemas taken from it and not typed again, so that a change of GnW is carried by running the script again.  The earlier history is in git.
 %% ---------------------------------------------------------------------------
@@ -310,5 +310,11 @@ contract_named(gsnw, parametric([ward, creator, created, guardian_of, guarded_by
         atom(posted, ['Alice', x, n]), atom(listed, ['Alice', 'Bob', n]), atom(friend, ['Alice', 'Bob']),
         not(atom(delivered, ['Alice', x, 'Bob', n])),
         atom(identity, ['Bob']), atom(member, ['Bob', ext(own('Alice'), n)])],
+       true, []),
+%% GSN:4: the leader's own receipt of each post of her group, unguarded, once, the leader being a member whom deliver, binding two agents, never reaches (GSN.glp's deliver_leader, GSC 9b690ad0).
+    sas(deliver_leader, ['Alice'], [x, n],
+       [atom(received_in, ['Alice', x, 'Alice', n])],
+       [atom(identity, ['Alice']), atom(member, ['Alice', ext(own('Alice'), n)]),
+        atom(posted, ['Alice', x, n]), not(atom(received_in, ['Alice', x, 'Alice', n]))],
        true, [])
 ]))).

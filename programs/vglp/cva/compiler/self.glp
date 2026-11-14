@@ -245,7 +245,8 @@ PAct      ::= act(Constant, String, Strings, Said, String, Proposer)
 TAct      ::= act(Constant, String, Strings, Said, String, Proposer, FTypes).
 TActs     ::= [] ; [TAct | TActs].
 Proposer  ::= any ; by(Ints) ; by(Ints, Sames).
-Same      ::= same(Integer, Integer).
+%% mark(M) and gship(M, V, U): a mark and a guardianship (m, v, u) of the contract, by which the local check reads its states under GSC's Lemma Wards and guardians (vGLP b798a06, Section 5.4).
+Same      ::= same(Integer, Integer) ; mark(Constant) ; gship(Constant, Constant, Constant).
 Sames     ::= [] ; [Same | Sames].
 %% The pairs of a schema's roles that its clause names possibly one person, ones(Schema, Pairs), each same(J, I), J the role of Other and I the role written one(Name, Other) (GSC, Definition "Binding": "but for two the schema marks as possibly one"; programs/gsc/self.glp: "the schema's head writes the second name as one('Bob', 'Alice')"); a schema read with no names has none.
 OnePairs  ::= ones(Constant, Sames).

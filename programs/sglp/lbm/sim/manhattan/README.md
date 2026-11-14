@@ -1,0 +1,3 @@
+# Manhattan, for the simulations
+
+The frame of the `manhattan` geometry (`../../GDO_sglp.glp`, `gd_town200`) and of GRA's city (`../../gra/city.sh`): `pickups_grid.txt`, the 5,986 yellow-taxi pickup points of 2015-01-15 08:00–08:15 from LBM-code's `inputs/pickups_2015-01-15_0800-0815_quantized.json`, a first line with the offsets, then one point per line, `<x> <y>` in metres, the frame rotated 29° so that the avenues run along y and l1 is street distance; `map.svg`, the island's outline from LBM-code's `inputs/manhattan_main_island_km.json` in that frame with a grid of avenues every 260 m and streets every 80 m, which the replay pages draw north up.

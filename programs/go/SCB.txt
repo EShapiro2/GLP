@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.5 and cites a clause as SCB:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-11, by GO #5.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: SCB.glp beside this file.
 SCB: Sovereign Central Bank
 SCB instantiates GBank and restricts it.
@@ -35,6 +35,10 @@ Acts of the organisation: Alice [Sign] <act>
   Otto [Move org acquaint] <motion>
   Otto [Move orgs acquaint] <motion>
   Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
   Otto [Move retire] <motion>
   Otto [Move join] <motion>
   Otto [Move leave] <motion>
@@ -48,17 +52,26 @@ Creation: Greta [Gov found] <person Alice> <organisation> <denomination>
   Orga: Greta asks you to approve this: gov found.
 Ward and person: Otto [Org acquaint] <person Bob>
   Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
 Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
   Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Greta [Appoint] <organisation> <person Bob> <role>
+  Bob: Greta asks you to approve this: appoint.
+  Greta [Dismiss] <organisation> <person Bob> <role>
+  Bob [Resign role]
 Retiring: Otto [Retire]
 Participation: Bob [Join] <person Otto>
   Otto: Bob asks you to approve this: join.
 Counterparties: Bob [Leave] <person Otto>
   Otto: Bob asks you to approve this: leave.
-Joint guardianship: Greta [Appoint] <organisation> <person Bob> <role>
-  Bob: Greta asks you to approve this: appoint.
-  Greta [Dismiss] <organisation> <person Bob> <role>
-  Bob [Resign role]
 Amendment: Otto [Amend] <new bylaws>
 Minting: Alice [Mint coin] <denomination> <amount>
   Alice [Mint bond] <denomination> <maturity> <amount>

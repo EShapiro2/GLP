@@ -1416,12 +1416,12 @@ held_cand0(C, F, N, K, V, St, Cs?, St1?) :- ground(C?), ground(N?) | st_class(C?
 
 procedure held_cand(ClassRes?, Peer?, Class?, Names?, V?, Cands).
 held_cand(nocls, _, _, _, _, []).
-held_cand(cls(I), F, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term_part_of(I?, C?, Pr), v_id(V?, Id), opens_for(Pr?, Id?, F?, Op), may_propose(I?, V?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
+held_cand(cls(I), _, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term_part_of(I?, C?, Pr), v_id(V?, Id), opens_for(Pr?, Id?, Op), may_propose(I?, V?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
 
-procedure opens_for(PartRes?, Peer?, Peer?, YesNo).
-opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) | same(O?, Id?, B1), mem(F?, G?, B2), and(B1?, B2?, B).
-opens_for(part(pt(_, _, proposed(_))), _, _, no).
-opens_for(nopart, _, _, no).
+procedure opens_for(PartRes?, Peer?, YesNo).
+opens_for(part(pt(_, _, opener(O))), Id, B?) :- same(O?, Id?, B).
+opens_for(part(pt(_, _, proposed(_))), _, no).
+opens_for(nopart, _, no).
 
 procedure vote_cands0(Recs?, V?, St?, Cands, St).
 vote_cands0(R, V, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, V?, St?, [], Cs, St1).

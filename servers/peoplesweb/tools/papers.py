@@ -202,6 +202,23 @@ FOUNDATIONAL = [
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
     {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    # The papers not on arXiv of the projects that have no other paper on the
+    # site (Udi, 2026-11-14, to Website #2), each by its project's name as
+    # 'key', with the title and authors its main file has (Website #2,
+    # 2026-11-14, from each repository's main as Coordination #16 named it);
+    # a main file whose author is empty or a placeholder ("Friends" in IVMAT's,
+    # "Anonymous Author(s)" in GPW's, none in Secure-GLP's) gives no authors.
+    {'key': 'GBM', 'title': 'Grassroots Business Models', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'CFRI', 'title': 'Composing Fault-Resilient Implementations', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'IVMAT', 'title': 'Fault-Resilient Implementations of Volition-Guarded Atomic Transactions', 'authors': '', 'state': 'in preparation'},
+    {'key': 'GFWC', 'title': 'Grassroots Federation Without Consensus', 'authors': '', 'state': 'in preparation'},
+    {'key': 'CDWC', 'title': 'Constitutional Democracy Without Consensus', 'authors': '', 'state': 'in preparation'},
+    {'key': 'GPW', 'title': 'The Grassroots Web: A Personal Website on Your Smartphone', 'authors': '', 'state': 'in preparation'},
+    {'key': 'Secure-GLP', 'title': 'Secure GLP: Executing Digital Social Contracts without Consensus', 'authors': '', 'state': 'in preparation'},
+    {'key': 'P99', 'title': 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming, with Measured Effort', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'DDD', 'title': 'Digital Speech Acts Dissolve Orphaned Disinformation', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'KYC', 'title': 'Making Digital Speech Accountable', 'authors': 'James Golike and Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'LBM', 'title': 'Location-Based Matching for Digital Cooperatives', 'authors': '', 'state': 'in preparation'},
     # 'url': the version a venue publishes, linked from the state (Udi,
     # 2026-11-12, to Website #1).
     {'dir': 'GPBD', 'title': 'Grassroots Platforms: Beyond Decentralisation', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'state': 'accepted at DeTaP 2026',

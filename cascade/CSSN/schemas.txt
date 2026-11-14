@@ -111,5 +111,8 @@ child_post: posted(Bob, x, n) <-
 deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
     identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
 
+deliver_leader: received_in(Alice, x, Alice, n) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), not received_in(Alice, x, Alice, n)
+
 of_age: person(Carol), not child(Carol), not creator(Carol, Alice), not guarded_by(Carol, _), not created(Alice, Carol), forall Erin (guarded_by(Carol, Erin) -> not parenting(Erin, Carol)) <-
     identity(Carol), guarded_by(Carol, Alice), child(Carol), creator(Carol, Alice), identity(Alice), person(Alice), parenting(Alice, Carol), created(Alice, Carol), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), parenting(Erin, Carol)) guarded by Alice
