@@ -6,9 +6,12 @@
   every schema of what it extends; an amendment deletes and adds; a
   restriction is decided by GSC's checker, restricts/3 of programs/gsc, by the
   syntactic conditions of Proposition Syntactic restrictions; an
-  instantiation needs a parametric contract, and no contract declares
-  parameters yet; an implementation is a relation between runs, which no
-  check of the text decides.
+  instantiation by instance_faults/3 of programs/gsc, which finds the faults
+  of the instance's bindings by Definition Parametric contract, and the
+  contract's relation to its instance, its additions, on its own (GSC #16,
+  2026-11-11 19:45 UTC, from GSC's Section 9); a composition is not checked,
+  GSC's checker having no composition; an implementation is a relation
+  between runs, which no check of the text decides.
 - artefacts(): each app of programs/apps as a certified artefact, the REPL's
   ':artefact <app> <dir>', the .glpw the Grassroots App installs, certified
   under the key of the machine that builds the site.
@@ -85,6 +88,18 @@ def glp_of(txt):
     return (p, m.group(1)) if m else (p, None)
 
 
+def instance_of(txt):
+    """NAME.glp beside NAME.txt and the name its instance_named/4 gives, for a
+    contract written as an instance of a parametric contract (GSC, Definition
+    Parametric contract), or None."""
+    p = txt[:-4] + '.glp'
+    if not os.path.exists(p):
+        return None
+    with open(p, encoding='utf-8') as f:
+        m = re.search(r'^instance_named\(([a-z_0-9]+),', f.read(), re.M)
+    return (p, m.group(1)) if m else None
+
+
 def split_top(s):
     out, d, q, buf = [], 0, False, ''
     for ch in s:
@@ -121,6 +136,19 @@ def normal(schema):
     return s
 
 
+def without(term, names):
+    """A contract's term with the schemas of those names taken out of its list, its wrappers kept."""
+    t = term.strip()
+    if t.startswith('[') and t.endswith(']'):
+        keep = [x for x in split_top(t[1:-1]) if not (re.match(r"[a-z_]+\(([a-z_0-9]+)", x) and re.match(r"[a-z_]+\(([a-z_0-9]+)", x).group(1) in names)]
+        return '[' + ', '.join(keep) + ']'
+    m = re.match(r'^([a-z_]+)\((.*)\)$', t, re.S)
+    if not m:
+        return t
+    args = split_top(m.group(2))
+    return m.group(1) + '(' + ', '.join(args[:-1] + [without(args[-1], names)]) + ')'
+
+
 def schemas_of(term):
     """The schemas of a contract's term as GSC reads it, name -> normal form:
     the list of schemas, or a structure, environment(Ps, C) or reflexive(Ps,
@@ -145,8 +173,11 @@ def terms(contracts):
     programs/gsc."""
     cache, out, read, changed = _load('terms.json'), {}, {}, False
     gsc = _hash(os.path.join(GLP, 'programs', 'gsc'))
+    names = {}
     for c in contracts:
         p, name = glp_of(c['path'])
+        if name:
+            names[name] = c['id']
         if not p or not name:
             continue
         h = _hash(p) + gsc
@@ -156,19 +187,76 @@ def terms(contracts):
             t = answer(o, 'C')
             r = answer(repl(['../programs/gsc', ':limit 10000000', f'as_read({t}, R).']), 'R') if t else None
             err = None if t else next((l.split(': ', 1)[-1].strip() for l in o.splitlines() if 'Error' in l), 'no term')
-            cache[c['id']] = {'hash': h, 'term': t, 'read': r, 'error': err}
+            # Kept only where the REPL loaded the file: a REPL that did not
+            # run (a timeout, a rebuild of glpc) is asked again next time.
+            cache[c['id']] = {'hash': h if 'Loaded' in o else None, 'term': t, 'read': r, 'error': err}
             changed = True
         if cache[c['id']]['term']:
             out[c['id']] = cache[c['id']]['term']
         if cache[c['id']].get('read'):
             read[c['id']] = cache[c['id']]['read']
+    # The instances, after the contracts they instantiate: the instance's
+    # term is instantiate/4 of its base's term, its bindings and its
+    # additions, as cascade.sh's read_contract makes it, and beside it the
+    # faults of the bindings, instance_faults/3, and the bare instance, with
+    # no additions, which the contract's own relation to its instance is
+    # checked against.
+    inst = {}
+    pending = [c for c in contracts if instance_of(c['path'])]
+    for _ in range(len(pending)):
+        left = []
+        for c in pending:
+            p, name = instance_of(c['path'])
+            names[name] = c['id']
+            e = cache.get(c['id'], {})
+            o = e.get('parts') if e.get('hash_own') == _hash(p) else None
+            if o is None:
+                got = repl([f'load {os.path.relpath(p, os.path.join(GLP, "glp_runtime"))}', f'instance_named({name}, B, Bs, A).'])
+                o = [answer(got, 'B'), answer(got, 'Bs'), answer(got, 'A')]
+            b, bs, a = o
+            bid = names.get(b or '')
+            if not all(o):
+                # Not kept as read: a REPL that failed once (a timeout, a
+                # rebuild) is asked again at the next build.
+                cache[c['id']] = {'hash_own': None, 'parts': o, 'term': None, 'read': None,
+                                  'error': f'{os.path.basename(p)} prints no instance_named({name}, Base, Bindings, Additions)'}
+                changed = True
+                continue
+            if bid is None or bid not in out:
+                left.append(c)
+                continue
+            h = _hash(p) + gsc + cache[bid]['hash']
+            if e.get('hash') != h:
+                got = repl(['../programs/gsc', ':limit 10000000', f'instance_faults({out[bid]}, {bs}, F).',
+                            f'instantiate({out[bid]}, {bs}, {a}, D).', f'instantiate({out[bid]}, {bs}, [], D0).'])
+                t, t0 = answer(got, 'D'), answer(got, 'D0')
+                rd = repl(['../programs/gsc', ':limit 10000000', f'as_read({t}, R).', f'as_read({t0}, R0).']) if t and t0 else ''
+                whole = t and t0 and answer(rd, 'R') and answer(rd, 'R0')
+                cache[c['id']] = {'hash': h if whole else None, 'hash_own': _hash(p), 'parts': o, 'term': t, 'read': answer(rd, 'R'),
+                                  'base': bid, 'faults': answer(got, 'F'), 'bare': t0, 'bare_read': answer(rd, 'R0'),
+                                  'error': None if t else 'instantiate/4 gives no instance'}
+                changed = True
+            e = cache[c['id']]
+            if e.get('term'):
+                out[c['id']] = e['term']
+            if e.get('read'):
+                read[c['id']] = e['read']
+            inst[c['id']] = {k: e.get(k) for k in ('base', 'faults', 'bare', 'bare_read')}
+        if len(left) == len(pending):
+            break
+        pending = left
     if changed:
         _save('terms.json', cache)
     errors = {c['id']: cache[c['id']]['error'] for c in contracts if c['id'] in cache and cache[c['id']].get('error')}
-    return out, read, errors
+    return out, read, errors, inst
 
 
 # --- the relations ---------------------------------------------------------
+
+# The reductions GSC's checker may take to decide a restriction: CSSN's, the
+# largest, takes about 10^8 (2026-11-11), and a check stopped by the limit is
+# shown not checked, never as a disagreement.
+RESTRICT_LIMIT = '200000000'
 
 # The checker's reasons, RFault of programs/gsc/self.glp, in words.
 FAULTS = {
@@ -212,13 +300,15 @@ def compare(sub, sup):
 def relations(contracts):
     """For each contract, each relation its box states, checked: a list of
     {base, rel, result, why}, result one of agrees, given, disagrees, open."""
-    T, R, E = terms(contracts)
+    T, R, E, I = terms(contracts)
     P = {c['id']: c['path'] for c in contracts}
 
     def missing(i):
         if i in E:
             return f'{os.path.basename(P[i])[:-4]}.glp does not load: {E[i][:200]}'
         return f'{i} has no speech-act schemas ({i}.glp)'
+    def whole(i, base):
+        return f'{os.path.basename(P[i])[:-4]}.glp writes the contract whole, with no instance_named of {base} naming its bindings (GSC, Definition Parametric contract)'
     S = {k: schemas_of(v) for k, v in R.items()}
     gsc = _hash(os.path.join(GLP, 'programs', 'gsc'))
     cache, changed = _load('restricts.json'), False
@@ -254,11 +344,14 @@ def relations(contracts):
                 else:
                     key = f"{c['id']}|{base}|{_hash(glp_of(c['path'])[0])}|{gsc}"
                     if key not in cache:
-                        v = answer(repl(['../programs/gsc', ':limit 10000000', f"restricts({T[c['id']]}, {T[base]}, V)."]), 'V')
+                        v = answer(repl(['../programs/gsc', ':limit ' + RESTRICT_LIMIT, f"restricts({T[c['id']]}, {T[base]}, V)."]), 'V')
                         cache = {k: x for k, x in cache.items() if not k.startswith(f"{c['id']}|{base}|")}
                         cache[key] = v
                         changed = True
                     v = cache[key] or ''
+                    if v == '<unbound>':  # stopped by the limit: open, and asked again next time
+                        cache.pop(key, None)
+                        v = ''
                     if v.startswith('restriction_given_invariant'):
                         last = split_top(v[v.index('(') + 1:-1])[-1]
                         r['result'], r['why'] = 'given', f"GSC's checker: a restriction given an invariant of the contract for {last.strip('[]')} (Proposition Syntactic restrictions, (c))"
@@ -267,9 +360,78 @@ def relations(contracts):
                     elif v:
                         r['result'], r['why'] = 'disagrees', "GSC's checker shows no restriction: " + (faults_in_words(v) if v.startswith('not_shown(') else v)[:700] + ' (Proposition Syntactic restrictions)'
                     else:
-                        r['result'], r['why'] = 'open', "GSC's checker gave no verdict"
+                        r['result'], r['why'] = 'open', "GSC's checker gave no verdict within its limit"
             elif rel == 'instantiates':
-                r['result'], r['why'] = 'open', 'no contract declares parameters yet, so no instantiation can be checked (GSC, Definition Parametric contract)'
+                i = I.get(c['id'])
+                if not i:
+                    r['result'], r['why'] = 'open', 'not checked: ' + (missing(c['id']) if c['id'] in E or c['id'] not in T else whole(c['id'], base))
+                elif i['base'] != base:
+                    r['result'], r['why'] = 'disagrees', f"{c['id']}.glp writes an instance of {i['base']}, not of {base}"
+                elif i['faults'] == '[]':
+                    r['result'], r['why'] = 'agrees', "GSC's checker finds no fault in its bindings (instance_faults/3; GSC, Definition Parametric contract)"
+                elif i['faults']:
+                    r['result'], r['why'] = 'disagrees', "GSC's checker finds faults in its bindings: " + i['faults'][:700] + ' (instance_faults/3; GSC, Definition Parametric contract)'
+                else:
+                    r['result'], r['why'] = 'open', "GSC's checker gave no verdict on its bindings"
+            elif rel == 'composes':
+                r['result'], r['why'] = 'open', "a composition is not checked: GSC's checker has no composition (GSC, Section 9)"
+            else:
+                r['result'], r['why'] = 'open', 'an implementation is a relation between runs; no check of the text decides it (GSC, Definition Implementation)'
+            rs.append(r)
+        # The contract's relation to its instance, its additions, on its own
+        # (GSC #16, 2026-11-11 19:45 UTC): an extension or an amendment by the
+        # schemas, a restriction by restricts/3, as to a contract it names.
+        # 'restricts and extends it' names two steps in order: the instance
+        # restricted, and the restriction extended.  The restriction is
+        # checked on the contract less the schemas it adds that the instance
+        # has not, and the extension against that restriction (CSSN #15,
+        # 2026-11-11 20:57 UTC, through Code #28).
+        order = [x['rel'] for x in c.get('rels_of', []) if x['of'] == 'instance']
+        stepwise = 'restricts' in order and 'extends' in order[order.index('restricts') + 1:]
+        for x in c.get('rels_of', []):
+            r = {'base': x['base'], 'rel': x['rel'], 'of': x['of']}
+            i = I.get(c['id'])
+            new = [k for k in S.get(c['id'], {}) if i and i.get('bare_read') and k not in schemas_of(i['bare_read'])]
+            if x['of'] == 'composition':
+                r['result'], r['why'] = 'open', "a composition is not checked: GSC's checker has no composition (GSC, Section 9)"
+            elif not i:
+                r['result'], r['why'] = 'open', 'not checked: ' + (missing(c['id']) if c['id'] in E or c['id'] not in T else whole(c['id'], x['base']))
+            elif not i.get('bare_read') or c['id'] not in S:
+                r['result'], r['why'] = 'open', 'not checked: ' + missing(c['id'])
+            elif stepwise and x['rel'] == 'extends':
+                r['result'], r['why'] = 'agrees', ('it adds ' + ', '.join(new) + ' to its restriction of the instance' if new else 'it adds nothing to its restriction of the instance')
+            elif x['rel'] in ('extends', 'amends'):
+                gone, chg = compare(S[c['id']], schemas_of(i['bare_read']))
+                added = [k for k in S[c['id']] if k not in schemas_of(i['bare_read'])]
+                if x['rel'] == 'extends' and (gone or chg):
+                    r['result'], r['why'] = 'disagrees', 'it does not keep every schema of its instance: ' + '; '.join(y for y in [
+                        ('deletes ' + ', '.join(gone)) if gone else '', ('writes otherwise ' + ', '.join(chg)) if chg else ''] if y) + \
+                        ' (GSC, Definition Amendment, extension: an extension deletes nothing)'
+                else:
+                    r['result'] = 'agrees'
+                    r['why'] = '; '.join(y for y in [('deletes ' + ', '.join(gone)) if gone else '', ('writes otherwise ' + ', '.join(chg)) if chg else '',
+                                                     ('adds ' + ', '.join(added)) if added else ''] if y) or 'it adds nothing to its instance'
+            elif x['rel'] == 'restricts':
+                sub = without(T[c['id']], new) if stepwise else T[c['id']]
+                key = f"{c['id']}|instance|{_hash(instance_of(c['path'])[0])}|{gsc}|{_hash(glp_of(P[x['base']])[0] or P[x['base']])}|{int(stepwise)}"
+                if key not in cache:
+                    v = answer(repl(['../programs/gsc', ':limit ' + RESTRICT_LIMIT, f"restricts({sub}, {i['bare']}, V)."]), 'V')
+                    cache = {k: y for k, y in cache.items() if not k.startswith(f"{c['id']}|instance|")}
+                    cache[key] = v
+                    changed = True
+                v = cache[key] or ''
+                if v == '<unbound>':  # stopped by the limit: open, and asked again next time
+                    cache.pop(key, None)
+                    v = ''
+                if v.startswith('restriction_given_invariant'):
+                    last = split_top(v[v.index('(') + 1:-1])[-1]
+                    r['result'], r['why'] = 'given', f"GSC's checker: a restriction of its instance given an invariant of the contract for {last.strip('[]')} (Proposition Syntactic restrictions, (c))"
+                elif v.startswith('restriction'):
+                    r['result'], r['why'] = 'agrees', "GSC's checker: a restriction of its instance by Proposition Syntactic restrictions"
+                elif v:
+                    r['result'], r['why'] = 'disagrees', "GSC's checker shows no restriction of its instance: " + (faults_in_words(v) if v.startswith('not_shown(') else v)[:700] + ' (Proposition Syntactic restrictions)'
+                else:
+                    r['result'], r['why'] = 'open', "GSC's checker gave no verdict within its limit"
             else:
                 r['result'], r['why'] = 'open', 'an implementation is a relation between runs; no check of the text decides it (GSC, Definition Implementation)'
             rs.append(r)

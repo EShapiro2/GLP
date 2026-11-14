@@ -11,6 +11,7 @@
 /// Regular indices start at 1.
 
 import 'package:test/test.dart';
+import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 
@@ -69,19 +70,19 @@ void main() {
       final table = GlobalWritersTable('p');
       table.initializeSerializerEntry(_c(999));
       expect(table.serializerAppendedCount, 0);
-      expect(table.serializerHasAppended('q', 1), isFalse);
+      expect(table.serializerHasAppended('q', 1, 1), isFalse);
 
-      table.recordSerializerAppend('q', 1);
-      expect(table.serializerHasAppended('q', 1), isTrue);
+      table.recordSerializerAppend('q', 1, 1);
+      expect(table.serializerHasAppended('q', 1, 1), isTrue);
       // The pair names the cold call: the same serial from another sender,
       // or another serial from the same sender, is another cold call.
-      expect(table.serializerHasAppended('r', 1), isFalse);
-      expect(table.serializerHasAppended('q', 2), isFalse);
-      table.recordSerializerAppend('q', 1);
+      expect(table.serializerHasAppended('r', 1, 1), isFalse);
+      expect(table.serializerHasAppended('q', 1, 2), isFalse);
+      table.recordSerializerAppend('q', 1, 1);
       expect(table.serializerAppendedCount, 1);
       // Updating N_p leaves D_p as it is.
       table.updateSerializerWriter(_c(1001));
-      expect(table.serializerHasAppended('q', 1), isTrue);
+      expect(table.serializerHasAppended('q', 1, 1), isTrue);
     });
 
     test('removeGlobalizeEntry does not remove index 0', () {
@@ -119,13 +120,13 @@ void main() {
       // Given: empty table
       final table = GlobalWritersTable('q');
 
-      // When: addLocalizeEntry(100, 'p', 5) for _w(p,5)
-      table.addLocalizeEntry(_c(100), 'p', 5);
+      // When: addLocalizeEntry(100, GlobalName.reader('p', 5)) for _w(p,5)
+      table.addLocalizeEntry(_c(100), GlobalName.reader('p', 5));
 
-      // Then: findByRemote('p', 5) returns entry with writerAddr=100
+      // Then: findByRemote(GlobalName.reader('p', 5)) returns entry with writerAddr=100
       // Spec Section 3.1: "LocalizeEntry (X, q, i): X is local writer,
       // q is remote agent, i is index in q's global name"
-      final entry = table.findByRemote('p', 5);
+      final entry = table.findByRemote(GlobalName.reader('p', 5));
       expect(entry, isNotNull);
       expect(entry!.writerAddr, _c(100));
       expect(entry.remoteAgent, 'p');
@@ -153,18 +154,18 @@ void main() {
     test('findByRemote searches LocalizeEntries', () {
       // Given: multiple LocalizeEntries with different (agent, index) pairs
       final table = GlobalWritersTable('q');
-      table.addLocalizeEntry(_c(100), 'p', 0);
-      table.addLocalizeEntry(_c(200), 'p', 1);
-      table.addLocalizeEntry(_c(300), 'r', 0);
+      table.addLocalizeEntry(_c(100), GlobalName.reader('p', 0));
+      table.addLocalizeEntry(_c(200), GlobalName.reader('p', 1));
+      table.addLocalizeEntry(_c(300), GlobalName.reader('r', 0));
 
       // When/Then: each findByRemote returns correct entry or null
       // Spec Section 11.2: "For entries created by Localize, lookup requires
       // searching for a matching (q, i) pair"
-      expect(table.findByRemote('p', 0)?.writerAddr, _c(100));
-      expect(table.findByRemote('p', 1)?.writerAddr, _c(200));
-      expect(table.findByRemote('r', 0)?.writerAddr, _c(300));
-      expect(table.findByRemote('p', 2), isNull);
-      expect(table.findByRemote('s', 0), isNull);
+      expect(table.findByRemote(GlobalName.reader('p', 0))?.writerAddr, _c(100));
+      expect(table.findByRemote(GlobalName.reader('p', 1))?.writerAddr, _c(200));
+      expect(table.findByRemote(GlobalName.reader('r', 0))?.writerAddr, _c(300));
+      expect(table.findByRemote(GlobalName.reader('p', 2)), isNull);
+      expect(table.findByRemote(GlobalName.reader('s', 0)), isNull);
     });
 
     // Entry removal tests (spec Section 3.2)
@@ -192,18 +193,18 @@ void main() {
     test('removeLocalizeEntry by remote agent and index', () {
       // Given: LocalizeEntry for (p, 5)
       final table = GlobalWritersTable('q');
-      table.addLocalizeEntry(_c(100), 'p', 5);
+      table.addLocalizeEntry(_c(100), GlobalName.reader('p', 5));
 
       // Verify entry exists
-      expect(table.findByRemote('p', 5), isNotNull);
+      expect(table.findByRemote(GlobalName.reader('p', 5)), isNotNull);
 
-      // When: removeLocalizeEntry('p', 5)
-      table.removeLocalizeEntry('p', 5);
+      // When: removeLocalizeEntry(GlobalName.reader('p', 5))
+      table.removeLocalizeEntry(GlobalName.reader('p', 5));
 
-      // Then: findByRemote('p', 5) returns null
+      // Then: findByRemote(GlobalName.reader('p', 5)) returns null
       // Spec Section 3.2: "When an assignment message arrives and the
       // corresponding writer is bound, the entry is removed"
-      expect(table.findByRemote('p', 5), isNull);
+      expect(table.findByRemote(GlobalName.reader('p', 5)), isNull);
     });
   });
 }

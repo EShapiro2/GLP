@@ -44,9 +44,10 @@ Uint8List _gotValue(WireTerm n) =>
     encodeMessageToBytes(WireValueMessage(WireAssignment(
       gIsReader: true,
       gAgent: Uint8List.fromList(utf8.encode('alice')),
+      gEpoch: 1,
       gIndex: 1,
       value: WStruct('got', [n]),
-    )));
+    ), senderEpoch: 1));
 
 /// Structures of the form of a global name, each with how it prints: each is
 /// a program's term, whatever its arguments.
@@ -88,9 +89,10 @@ void main() {
       final payload = encodeMessageToBytes(WireValueMessage(WireAssignment(
         gIsReader: true,
         gAgent: Uint8List.fromList(utf8.encode('alice')),
+        gEpoch: 1,
         gIndex: 1,
         value: _struct('_w', WConst(WFloat(2.0))),
-      )));
+      ), senderEpoch: 1));
       final (_, value) = PayloadCodec.deserializeGlobalSendPayload(payload);
       expect('$value', '_w(Const(alice),Const(2.0))');
     });
@@ -98,19 +100,19 @@ void main() {
     test('a tag-2 variable is received as its name, in the place of a '
         'variable', () {
       final (_, value) = PayloadCodec.deserializeGlobalSendPayload(_gotValue(
-          WVar.symbolic(isReader: false, agent: 'alice', index: 2)));
+          WVar.symbolic(isReader: false, agent: 'alice', epoch: 1, index: 2)));
       expect((value as StructTerm).args.single,
           GlobalName.writer('alice', 2).toTerm());
-      expect(extractGlobalNames(value).map((g) => '$g'), ['_w(alice, 2)']);
+      expect(extractGlobalNames(value).map((g) => '$g'), ['_w(alice, 1, 2)']);
     });
 
     test('a tag-2 variable whose agent is not an atom is refused, the '
         'refusal naming it', () {
       for (final isReader in [false, true]) {
-        final shown = '${isReader ? '_r' : '_w'}(0xfffe, 2)';
+        final shown = '${isReader ? '_r' : '_w'}(0xfffe, 1, 2)';
         expect(
             () => PayloadCodec.deserializeGlobalSendPayload(_gotValue(
-                WVar(isReader: isReader, agent: _notUtf8, index: 2))),
+                WVar(isReader: isReader, agent: _notUtf8, epoch: 1, index: 2))),
             throwsA(isA<GlobalNameRefusal>()
                 .having((r) => r.name, 'name', shown)
                 .having((r) => r.message, 'message',
@@ -123,23 +125,24 @@ void main() {
       final payload = encodeMessageToBytes(WireValueMessage(WireAssignment(
         gIsReader: true,
         gAgent: _notUtf8,
+        gEpoch: 1,
         gIndex: 1,
         value: WConst(WInt(1)),
-      )));
+      ), senderEpoch: 1));
       expect(() => PayloadCodec.deserializeGlobalSendPayload(payload),
           throwsA(isA<GlobalNameRefusal>()
-              .having((r) => r.name, 'name', '_r(0xfffe, 1)')));
+              .having((r) => r.name, 'name', '_r(0xfffe, 1, 1)')));
     });
 
     test('a request and an acknowledgement whose agent is not an atom are '
         'refused', () {
       for (final payload in [
-        encodeMessageToBytes(WireRequestMessage(agent: _notUtf8, index: 3)),
-        encodeMessageToBytes(WireAckMessage(agent: _notUtf8, index: 3)),
+        encodeMessageToBytes(WireRequestMessage(agent: _notUtf8, epoch: 1, index: 3, senderEpoch: 1)),
+        encodeMessageToBytes(WireAckMessage(agent: _notUtf8, epoch: 1, index: 3, senderEpoch: 1)),
       ]) {
-        expect(() => PayloadCodec.decodeRequestOrAckPayload(payload),
+        expect(() => PayloadCodec.decodeLinkPayload(payload).name,
             throwsA(isA<GlobalNameRefusal>()
-                .having((r) => r.name, 'name', '_r(0xfffe, 3)')));
+                .having((r) => r.name, 'name', '_r(0xfffe, 1, 3)')));
       }
     });
   });
@@ -166,7 +169,7 @@ void main() {
     test('the encoding of a ground term carries no tag-2 variable: decoding '
         'one as a ground term is refused', () {
       final bytes = encodeTermToBytes(WStruct('m',
-          [WVar.symbolic(isReader: true, agent: 'p', index: 2)]));
+          [WVar.symbolic(isReader: true, agent: 'p', epoch: 1, index: 2)]));
       expect(() => PayloadCodec.wireToTerm(decodeTermFromBytes(bytes)),
           throwsA(isA<WireFormatException>()));
     });
@@ -190,21 +193,21 @@ void main() {
       rt = GlpRuntime();
       bob = MadContext(agentId: 'bob', runtime: rt);
       writer = rt.heap.allocateVariable().$1;
-      bob.wp.addLocalizeEntry(writer, 'alice', 1);
+      bob.wp.addLocalizeEntry(writer, GlobalName.reader('alice', 1));
     });
 
     test('carrying a tag-2 name whose agent is not an atom is refused at '
         'receipt, the refusal naming it, and nothing is received', () {
       final printed = _printed(() => bob.handleIncomingPayload(
-          payload: _gotValue(WVar(isReader: false, agent: _notUtf8, index: 2)),
+          payload: _gotValue(WVar(isReader: false, agent: _notUtf8, epoch: 1, index: 2)),
           fromAgent: 'alice'));
       expect(printed, [
         '[REFUSED] bob: a message from alice is refused at receipt: global '
-            'name _w(0xfffe, 2) has an agent that is not an atom'
+            'name _w(0xfffe, 1, 2) has an agent that is not an atom'
       ]);
       expect(rt.heap.isFullyBound(writer), isFalse,
           reason: 'nothing is assigned');
-      expect(bob.wp.findByRemote('alice', 1), isNotNull,
+      expect(bob.wp.findByRemote(GlobalName.reader('alice', 1)), isNotNull,
           reason: 'no Receive took the message: the entry stands');
       expect(bob.mp.totalLength, 0, reason: 'nothing is acknowledged');
     });
@@ -212,11 +215,11 @@ void main() {
     test('a request whose agent is not an atom is refused at receipt', () {
       final printed = _printed(() => bob.handleIncomingPayload(
           payload:
-              encodeMessageToBytes(WireRequestMessage(agent: _notUtf8, index: 3)),
+              encodeMessageToBytes(WireRequestMessage(agent: _notUtf8, epoch: 1, index: 3, senderEpoch: 1)),
           fromAgent: 'alice'));
       expect(printed, [
         '[REFUSED] bob: a message from alice is refused at receipt: global '
-            'name _r(0xfffe, 3) has an agent that is not an atom'
+            'name _r(0xfffe, 1, 3) has an agent that is not an atom'
       ]);
       expect(bob.mp.totalLength, 0);
     });
@@ -229,7 +232,7 @@ void main() {
         expect(printed, isEmpty);
         expect(rt.heap.isFullyBound(writer), isTrue);
         expect('${rt.heap.derefAddr(writer)}', 'got($shown)');
-        expect(bob.wp.findByRemote('alice', 1), isNull);
+        expect(bob.wp.findByRemote(GlobalName.reader('alice', 1)), isNull);
         expect(bob.wp.localizeEntryCount, 0);
         expect(bob.up.count, 0, reason: 'no imported writer is recorded');
         expect(bob.globalSendRegistry.pendingCount, 0,
@@ -247,7 +250,7 @@ void main() {
     alice.onMessageReady = (_, msg) => payloads.add(msg.payload);
     final sent =
         StructTerm('got', [StructTerm('_w', [ConstTerm('p'), ConstTerm(2)])]);
-    alice.send(sent, false, 'alice', 1, 'bob');
+    alice.send(sent, false, 'alice', 1, 1, 'bob');
     alice.flushMessages();
     expect(alice.wp.globalizeEntryCount, 0, reason: 'no variable, no entry');
     expect(alice.globalSendRegistry.pendingCount, 0);
@@ -258,7 +261,7 @@ void main() {
     final brt = GlpRuntime();
     final bob = MadContext(agentId: 'bob', runtime: brt);
     final writer = brt.heap.allocateVariable().$1;
-    bob.wp.addLocalizeEntry(writer, 'alice', 1);
+    bob.wp.addLocalizeEntry(writer, GlobalName.reader('alice', 1));
     final printed = _printed(
         () => bob.handleIncomingPayload(payload: payload, fromAgent: 'alice'));
     expect(printed, isEmpty);

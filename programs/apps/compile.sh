@@ -12,7 +12,7 @@
 #   gai    gai       programs/gai/GAI.glp
 #   gc     gc        programs/currencies/coins/GC.glp
 #   gb     gb        programs/currencies/bonds/GB.glp
-#   gff    gff       programs/gff/GFF.glp
+#   gff    gff_i     programs/gff/GFF-I.glp   (GFF-I, which restricts GFF, the abstract contract, and is the one compiled: programs/gff/GFF-I.txt)
 #
 # The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract, its verdict, its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise, and its pragmas, the words its app shows, read from the NAME.txt beside the owner's file and from those of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh (vGLP, Section 5.4, "The contract's words"), each act the schema its button names (GSC, Section 2).  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
 #
@@ -33,7 +33,7 @@ contract_of() { # contract_of <app> ; the checker's name of its contract
         gai) echo gai ;;
         gc) echo gc ;;
         gb) echo gb ;;
-        gff) echo gff ;;
+        gff) echo gff_i ;;
     esac
 }
 file_of() { # file_of <app> ; the owner's file that holds its contract
@@ -45,7 +45,7 @@ file_of() { # file_of <app> ; the owner's file that holds its contract
         gai) echo "$GLP_DIR/programs/gai/GAI.glp" ;;
         gc) echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
         gb) echo "$GLP_DIR/programs/currencies/bonds/GB.glp" ;;
-        gff) echo "$GLP_DIR/programs/gff/GFF.glp" ;;
+        gff) echo "$GLP_DIR/programs/gff/GFF-I.glp" ;;
     esac
 }
 
@@ -66,9 +66,9 @@ OK=1
 for app in $APPS; do
     name=$(contract_of "$app")
     src=$(file_of "$app")
-    printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$name" > "$WORK/c.in"
-    repl "$WORK/c.in" "$WORK/c.out"
-    ct=$(grep -E '^C = ' "$WORK/c.out" | head -1 | sed -e 's/^C = //')
+    # The contract's term, contract_named/2's, or an instance's, formed from its base by programs/gsc's instantiate/4 where the file prints instance_named/4 (GSC, Definition Parametric contract), by programs/vglp/cva/compiler/term.sh, as cascade.sh's read_contract forms it.
+    ct=$(bash "$GLP_DIR/programs/vglp/cva/compiler/term.sh" "$src" "$name" 2> "$WORK/t.err")
+    [ -n "$ct" ] || echo "$app: $(head -1 "$WORK/t.err")"
     # The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
     rd=""
     if [ -n "$ct" ]; then

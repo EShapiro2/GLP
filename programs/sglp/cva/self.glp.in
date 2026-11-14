@@ -26,7 +26,8 @@ imported procedure harness#run(Stream(Key)?, Number?, Span?, Integer?).
 exported procedure run(Stream(Key)?, Number?, Span?, Integer?).
 run(Ks, C, U, Seed) :- harness # run(Ks?, C?, U?, Seed?).
 
-%% draw(Ks?, Seed?, D): the population's draw of that run, without it.
-imported procedure harness#draw(Stream(Key)?, Integer?, Stream(_)).
-exported procedure draw(Stream(Key)?, Integer?, Stream(_)).
+%% draw(Ks?, Seed?, D): the population's draw of that run, without it, of
+%% population.glp's type Drawn (harness.glp).
+imported procedure harness#draw(Stream(Key)?, Integer?, Stream(population#Drawn)).
+exported procedure draw(Stream(Key)?, Integer?, Stream(population#Drawn)).
 draw(Ks, Seed, D?) :- harness # draw(Ks?, Seed?, D).

@@ -10,7 +10,8 @@
 import 'type_ast.dart';
 import 'root_scope.dart';
 import 'param_expansion.dart';
-import 'program_dfa.dart' show primitiveClosure, constantLabel;
+import 'program_dfa.dart'
+    show primitiveClosure, constantLabel, termAlternativeOf;
 import '../../compiler/ast.dart' as ast;
 
 /// Error for circular alias chain
@@ -126,13 +127,18 @@ TypeEnvironment _buildEnvironmentFromModule(
   final procedures = <String, ProcDecl>{};
   final paramProcDecls = <String, ProcDecl>{};
 
-  // Add type definitions (including aliases - will be resolved later)
+  // Add type definitions (including aliases - will be resolved later), and
+  // then check each for determinism against all of them: a bare type-name
+  // alternative may name a type defined after it ([_checkDeterminism]).
+  // Until 2026-11-10 each was checked against those before it alone.
+  for (final typeDef in module.typeDefs) {
+    types[typeDef.name] = typeDef;
+  }
   for (final typeDef in module.typeDefs) {
     // Aliases are allowed; the determinism check is skipped for them.
     if (!_isTypeAlias(typeDef)) {
       _checkDeterminism(typeDef, {...scopeTypes, ...types});
     }
-    types[typeDef.name] = typeDef;
   }
 
   // Add procedure declarations
@@ -550,6 +556,17 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
       hasWildcard = true;
 
     } else if (alt is TypeRef) {
+      // `Term` has an alternative for every functor (TGLP typed-glp.tex,
+      // "Type Declarations"), so an alternative that is `Term`, or reaches
+      // it, shares a top-level functor with every other alternative, and
+      // stands as the definition's one alternative.
+      if (def.alternatives.length > 1 && _reachesTerm(alt, scope)) {
+        throw NonDeterministicTypeError(
+            'Term, reached through ${alt.name}, overlaps with the other '
+            'alternatives of ${def.name}',
+            def.line,
+            def.column);
+      }
       // A bare type-name alternative stands for everything the named type
       // accepts.  Two such alternatives clash when the primitives they reach
       // intersect — `Number` and `Integer` clash because `Number` reaches
@@ -559,8 +576,76 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
         _checkPrimitiveOverlap(alt.name, reached, primitives, hasWildcard, def);
         primitives.addAll(reached);
       }
+      // And it stands for the functors and constants the named type reaches,
+      // through its own named alternatives too: "An alternative in a type
+      // definition may also be a type name S, providing type union for
+      // types with disjoint top-level functors.  This disjointness is
+      // required so that a term's top functor selects its alternative
+      // deterministically" (TGLP typed-glp.tex, "Type Declarations"); so
+      // `Goal(M#Procedure)`, `Goal(G) ::= true ; (Goal(G), Goal(G)) ; G`, is
+      // refused where M exports true/0, "the functors of M's declarations
+      // distinct from true and ," (TGLP 44e1a60, modules.tex, "Procedure
+      // declarations").  Until 2026-11-10 only the primitives reached were
+      // compared, and `T ::= true ; U` with `U ::= true ; halt` was admitted.
+      final heads = _reachedHeads(alt, scope);
+      for (final key in heads.functors) {
+        claim(key,
+            'Duplicate functor alternative: $key, reached through ${alt.name}, in ${def.name}');
+      }
+      for (final key in heads.constants) {
+        if (constants.contains(key)) {
+          throw NonDeterministicTypeError(
+            'Duplicate constant alternative: $key, reached through ${alt.name}, in ${def.name}',
+            def.line, def.column);
+        }
+        constants.add(key);
+      }
     }
   }
+}
+
+/// The functors (`f/n`, `[]/0`, `[|]/2`, `\\/2`) and the constants a bare
+/// type-name alternative reaches: those of the named type's alternatives, and
+/// of the types its own bare type-name alternatives name, at every depth, a
+/// definition visited once; empty when the name is a primitive, a parameter
+/// or a name this scope does not define ([_checkDeterminism]).
+({Set<String> functors, Set<String> constants}) _reachedHeads(
+    TypeRef alt, Map<String, TypeDef> scope) {
+  final functors = <String>{};
+  final constants = <String>{};
+  final visiting = <String>{};
+  void walk(TypeDef def) {
+    if (!visiting.add(def.name)) return;
+    for (final a in def.alternatives) {
+      if (a is ConstantAlt) {
+        constants.add(constantLabel(a.value));
+      } else if (a is ListNilAlt) {
+        functors.add('[]/0');
+      } else if (a is ListConsAlt) {
+        functors.add('[|]/2');
+      } else if (a is StructAlt) {
+        functors.add('${a.functor}/${a.args.length}');
+      } else if (a is DiffListAlt) {
+        functors.add('\\/2');
+      } else if (a is TypeRef && !a.isParameterized) {
+        final d = scope[a.name];
+        if (d != null) walk(d);
+      }
+    }
+  }
+  if (alt.isParameterized) return (functors: functors, constants: constants);
+  final def = scope[alt.name];
+  if (def != null) walk(def);
+  return (functors: functors, constants: constants);
+}
+
+/// Whether the bare type-name alternative [alt] is `Term` or reaches it
+/// through the bare type-name alternatives of the type it names.
+bool _reachesTerm(TypeRef alt, Map<String, TypeDef> scope) {
+  if (alt.isParameterized) return false;
+  final def = scope[alt.name];
+  if (def == null) return alt.name == TypeRef.termType;
+  return termAlternativeOf(def, scope) != null;
 }
 
 /// The primitive types a bare type-name alternative accepts, following its
@@ -568,6 +653,12 @@ void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
 /// scope can resolve.
 Set<String> _reachedPrimitives(TypeRef alt, Map<String, TypeDef> scope) {
   if (alt.isParameterized) return const {};
+  if (alt.name == TypeRef.termType) {
+    final own = scope[alt.name];
+    return own == null
+        ? TypeRef.constantPrimitives
+        : primitiveClosure(own, scope);
+  }
   if (TypeRef.builtins.contains(alt.name)) return {alt.name};
   final def = scope[alt.name];
   if (def == null) return const {};

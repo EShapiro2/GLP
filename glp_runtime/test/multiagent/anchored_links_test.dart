@@ -151,8 +151,8 @@ void main() {
       // Bob's pair (X_b, X_b?); he introduces Alice↔Charlie by sending the
       // reader to Alice and the writer to Charlie, each in a cold-call.
       final (xbW, xbR) = bobRt.heap.allocateVariable();
-      ctxBob.send(StructTerm('m', [VarRef(xbR)]), true, 'alice', 0, 'alice');
-      ctxBob.send(StructTerm('n', [VarRef(xbW)]), true, 'charlie', 0,
+      ctxBob.send(StructTerm('m', [VarRef(xbR)]), true, 'alice', 0, 0, 'alice');
+      ctxBob.send(StructTerm('n', [VarRef(xbW)]), true, 'charlie', 0, 0,
           'charlie');
       net.settle();
 
@@ -181,7 +181,7 @@ void main() {
       final beforeAuth = net.deliveryLog.length;
       expect(ctxAlice.mp.heldCount, 1,
           reason: "the holder's request is held, not sent");
-      expect(ctxAlice.hasReportedLink('charlie', 1, false), isTrue);
+      expect(ctxAlice.hasReportedLink(GlobalName.reader('charlie', 1)), isTrue);
       expect(
           net.deliveryLog
               .sublist(beforeAuth)
@@ -238,6 +238,7 @@ void main() {
       final gres = globalize(
         variables: [TermVar.reader(xR, writerAddr: xW)],
         localAgent: 'p',
+        localEpoch: 1,
         remoteAgent: 'q',
         table: ctxP.wp,
         records: ctxP.up,
@@ -264,7 +265,7 @@ void main() {
       // the value still pends at p until the ack arrives.
       net.deliverWhere((m) => m.to == 'q');
       expect((qRt.heap.derefAddr(zW) as ConstTerm).value, 42);
-      expect(ctxQ.wp.findByRemote('p', rn.index), isNull);
+      expect(ctxQ.wp.findByRemote(GlobalName.reader('p', rn.index)), isNull);
       expect(ctxP.hasPendingReaderValue('p', rn.index), isTrue);
 
       // Deliver the ack: the pending value is released — the link is closed.
@@ -297,6 +298,7 @@ void main() {
       final gres = globalize(
         variables: [TermVar.reader(restR, writerAddr: restW)],
         localAgent: 'charlie',
+        localEpoch: 1,
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
         records: ctxCharlie.up,
@@ -320,7 +322,7 @@ void main() {
 
       // Before the value arrives, Bob forwards the reader to Alice in a
       // cold-call: the original name is emitted, Bob's entry removed.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       expect(ctxBob.wp.localizeEntryCount, 0);
       net.flushAll();
@@ -345,7 +347,7 @@ void main() {
       // Alice's request reaches Charlie, who holds it in turn (case 3): the
       // pending value is not redirected until he authorises.
       net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
-      expect(ctxCharlie.hasReportedLink('charlie', rn.index, false), isTrue);
+      expect(ctxCharlie.hasReportedLink(GlobalName.reader('charlie', rn.index)), isTrue);
       net.flushAll();
       expect(net.queue.where((m) => m.to == 'alice'), isEmpty,
           reason: 'no redirect before the anchor authorises');
@@ -359,7 +361,7 @@ void main() {
                   as VarRef)
               .addr;
       expect((aliceRt.heap.derefAddr(zA) as ConstTerm).value, 'payload');
-      expect(ctxAlice.wp.findByRemote('charlie', rn.index), isNull);
+      expect(ctxAlice.wp.findByRemote(GlobalName.reader('charlie', rn.index)), isNull);
 
       // Alice's ack closes the link at Charlie.
       net.settle();
@@ -389,6 +391,7 @@ void main() {
       final gres = globalize(
         variables: [TermVar.reader(restR, writerAddr: restW)],
         localAgent: 'charlie',
+        localEpoch: 1,
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
         records: ctxCharlie.up,
@@ -414,7 +417,7 @@ void main() {
 
       // Bob forwards the reader to Alice before the value arrives; Alice's
       // request redirects the pending value; the copy at Bob is dropped.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       net.flushAll();
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
@@ -428,8 +431,7 @@ void main() {
       net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
       // Charlie holds the request in turn (case 3) and redirects only on his
       // own authorisation.
-      expect(ctxCharlie.hasReportedLink('charlie', gres.globalNames[0].index,
-          false), isTrue);
+      expect(ctxCharlie.hasReportedLink(GlobalName.reader('charlie', gres.globalNames[0].index)), isTrue);
       net.flushAll();
       expect(net.queue.where((m) => m.to == 'alice'), isEmpty);
       net.answerAll(true);
@@ -487,6 +489,7 @@ void main() {
       final gres = globalize(
         variables: [TermVar.reader(restR, writerAddr: restW)],
         localAgent: 'charlie',
+        localEpoch: 1,
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
         records: ctxCharlie.up,
@@ -510,7 +513,7 @@ void main() {
       net.flushAll();
 
       // Bob forwards to Alice; her request redirects the parent value.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       net.flushAll();
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
@@ -523,8 +526,7 @@ void main() {
       net.flushAll();
       net.deliverWhere((m) => m.from == 'charlie' && m.to == 'bob');
       net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
-      expect(ctxCharlie.hasReportedLink('charlie', gres.globalNames[0].index,
-          false), isTrue);
+      expect(ctxCharlie.hasReportedLink(GlobalName.reader('charlie', gres.globalNames[0].index)), isTrue);
       net.flushAll();
       expect(net.queue.where((m) => m.to == 'alice'), isEmpty);
       net.answerAll(true);
@@ -577,6 +579,7 @@ void main() {
       final gres = globalize(
         variables: [TermVar.reader(restR, writerAddr: restW)],
         localAgent: 'charlie',
+        localEpoch: 1,
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
         records: ctxCharlie.up,
@@ -596,11 +599,11 @@ void main() {
       // Bob forwards the reader to Alice before any value exists. Alice's
       // request is held (case 1) and does not leave her; Charlie learns
       // nothing, so his goal still points at the agent he exported to.
-      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0, 0,
           'alice');
       net.settle();
       expect(ctxAlice.mp.heldCount, 1);
-      expect(ctxAlice.hasReportedLink('charlie', rn.index, false), isTrue);
+      expect(ctxAlice.hasReportedLink(GlobalName.reader('charlie', rn.index)), isTrue);
       expect(ctxCharlie.globalSendRegistry.getGoalFor(restW)!.destination,
           'bob',
           reason: 'the holder is not recorded until the request is authorised '
@@ -625,7 +628,7 @@ void main() {
                   as VarRef)
               .addr;
       expect((aliceRt.heap.derefAddr(zA) as ConstTerm).value, 'late');
-      expect(ctxAlice.wp.findByRemote('charlie', rn.index), isNull);
+      expect(ctxAlice.wp.findByRemote(GlobalName.reader('charlie', rn.index)), isNull);
       expect(ctxCharlie.pendingReaderValueCount, 0);
     });
   });

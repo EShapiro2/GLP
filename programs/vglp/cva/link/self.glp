@@ -126,8 +126,8 @@ hold_rule(msg(dave, cargo(alice, start(attempt(_, _, _, link(_, _, _), _)))), 2)
 hold_rule(msg(carol, cargo(bob, start(attempt(_, _, _, link(_, _, _), _)))), 3).
 hold_rule(_, 0) :- otherwise | true.
 procedure rel_rule(Net?, Integer).
-rel_rule(msg(bob, cargo(carol, outcome(attempt(_, _, _, befriend(carol, bob), _), commit))), 1).
-rel_rule(msg(carol, cargo(bob, outcome(attempt(_, _, _, befriend(carol, bob), _), commit))), 1).
+rel_rule(msg(bob, cargo(carol, outcome(attempt(_, _, _, befriend(carol, bob), _), commit(_)))), 1).
+rel_rule(msg(carol, cargo(bob, outcome(attempt(_, _, _, befriend(carol, bob), _), commit(_)))), 1).
 rel_rule(msg(dave, cargo(bob, start(attempt(_, _, _, link(_, _, _), _)))), 2).
 rel_rule(msg(carol, cargo(alice, start(attempt(_, _, _, link(_, _, _), _)))), 3).
 rel_rule(_, 0) :- otherwise | true.

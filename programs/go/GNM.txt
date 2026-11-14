@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.4 and cites a clause as GNM:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GNO, GDO, Grassroots Directed Overlay, GRH's (programs/lbm), and REC, Recommendations (programs/gce).
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: GNM.glp beside this file.
 GNM: Network Marketplace
 GNM extends GNO, GDO (GRH, Grassroots Ride-Hailing, in preparation) and REC.
@@ -17,43 +17,97 @@ Alice and Bob are persons, Orga a marketplace.
 Pragmas
 Look: 🛒, network
 Organisations: the organisations Alice participates in, and her roles in each.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Orga: Bob asks to participate.
-  Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Stake: Orga [Set stake] <coins>
-Arbitration: Alice [Raise dispute] <arbiter>
-  Bob [Raise dispute] <arbiter>
-  Carol [Decide] <to customer> <to provider>
 Listings: the listings Alice received, and her orders.
-Listing: Bob [List] <price> <terms>
-  Alice [Pass on]
-  Bob [Withdraw]
-Order: Alice [Order] <payment> <deposit>
-  Bob: Alice asks to order your good.
-Delivery: Alice [Delivered]
-Cancelling: Alice [Cancel] <to Alice> <to Bob>
-  Bob [Cancel] <to Alice> <to Bob>
-Recommending: Alice [Recommend]
-Showing: Bob [Show] <recommendation>
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move cc join] <denomination> <stake> <motion>
+  Otto [Move cc remove] <denomination> <motion>
+  Otto [Move gbcc record first] <maturity> <motion>
+  Otto [Move gbcc record] <maturity> <profile> <motion>
+  Otto [Move gno stake] <stake> <motion>
+Creation: Alice [Found] <organisation> <denomination>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Treasurers: Otto [Cc join] <person Bob>
+  Bob: Otto asks you to approve this: cc join.
+  Bob [Cc resign]
+  Otto [Cc remove] <person Bob>
+Drawing: Alice [Cc draw] <amount>
+Account: Otto [Gbcc record first] <person Alice> <Dollars>
+  Otto [Gbcc record] <person Alice>
+Stake: Otto [Gno stake] <stake>
+Arbitration: Alice [Gno raise c] <deal> <person Carol>
+  Bob [Gno raise p] <deal> <person Carol>
+  Carol [Gno arbitrate] <deal> <person Alice> <person Bob> <fee> <to customer> <to provider>
+Pointing to friend: Alice [Point friend]
+Transitive pointing: Alice [Point transitive]
+Ceasing to point: Alice [Unpoint]
+Listing: Bob [Gnm list] <limit> <price> <terms> <deposit> <fee>
+  Alice [Gnm pass]
+  Bob [Gnm withdraw]
+Order: Alice [Gnm order] <deal>
+  Bob: Alice asks you to approve this: gnm order.
+Delivery: Alice [Gnm deliver] <organisation> <person Bob>
+Cancelling: Alice [Gnm cancel c] <organisation> <person Bob> <to customer> <to provider> <payment to provider> <deposit to provider>
+  Bob [Gnm cancel p] <organisation> <person Alice> <to customer> <to provider> <payment to provider> <deposit to provider>
+Review: Alice [Recommend] <stake>
+Showing: Bob [Show]
 Withdrawing: Alice [Withdraw recommendation]
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).

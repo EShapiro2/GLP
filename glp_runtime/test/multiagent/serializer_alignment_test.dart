@@ -41,7 +41,7 @@ void main() {
     test('createGlobalSendPayload / deserialize round-trips the global names',
         () {
       final g = GlobalName.writer('alice', 7);
-      final payload = PayloadCodec.createGlobalSendPayload(g, _globalized());
+      final payload = PayloadCodec.createGlobalSendPayload(g, _globalized(), senderEpoch: 1);
       final (gn, term) = PayloadCodec.deserializeGlobalSendPayload(payload);
       expect(gn.isWriter, isTrue);
       expect(gn.agent, 'alice');
@@ -60,7 +60,7 @@ void main() {
       // serial (code format, Messages, version 3).
       final payload = Uint8List.fromList(PayloadCodec.createSerializerPayload(
           GlobalName.writer('alice', 0), _globalized(),
-          serial: 1));
+          serial: 1, senderEpoch: 1));
       // A tag-3 structure would embed the functor string "_w"/"_r" verbatim.
       expect(_contains(payload, '_w'.codeUnits), isFalse);
       expect(_contains(payload, '_r'.codeUnits), isFalse);
@@ -73,6 +73,7 @@ void main() {
         GlobalName.writer('queen', 0),
         StructTerm('intro', [ConstTerm('hi')]),
         serial: 1,
+        senderEpoch: 1,
       );
       final (gn, value) = PayloadCodec.deserializeGlobalSendPayload(payload);
       expect(gn.isWriter, isTrue);
@@ -91,17 +92,17 @@ void main() {
     test('the serial rides with the message and decodes back', () {
       final payload = PayloadCodec.createSerializerPayload(
           GlobalName.writer('queen', 0), ConstTerm('hi'),
-          serial: 17);
-      final (:name, :value, :serial) =
+          serial: 17, senderEpoch: 1);
+      final (:name, :value, :serial, senderEpoch: _) =
           PayloadCodec.deserializeValuePayload(payload);
-      expect('$name', '_w(queen, 0)');
+      expect('$name', '_w(queen, 0, 0)');
       expect(serial, 17);
       expect(((value as StructTerm).args[0] as ConstTerm).value, 'hi');
       // A value message on any other name has none.
       expect(
           PayloadCodec.deserializeValuePayload(PayloadCodec
                   .createGlobalSendPayload(GlobalName.reader('queen', 3),
-                      ConstTerm('hi')))
+                      ConstTerm('hi'), senderEpoch: 1))
               .serial,
           isNull);
     });
@@ -113,7 +114,7 @@ void main() {
   // Remark "Serializer vs Regular Global Links": '_send' on index 0 sends
   // "under a fresh serial".
   group("'_send' on index 0 takes a serial from the global-name counter", () {
-    List<({GlobalName name, Term value, int? serial})> sendAll(
+    List<({GlobalName name, Term value, int? serial, int senderEpoch})> sendAll(
         void Function(MadContext ctx, GlpRuntime rt) sends) {
       final rt = GlpRuntime();
       final ctx = MadContext(agentId: 'alice', runtime: rt);
@@ -130,34 +131,34 @@ void main() {
         wp = ctx.wp;
         for (var k = 0; k < 2; k++) {
           final (_, r) = rt.heap.allocateVariable();
-          ctx.send(StructTerm('m', [VarRef(r)]), true, 'bob', 0, 'bob');
+          ctx.send(StructTerm('m', [VarRef(r)]), true, 'bob', 0, 0, 'bob');
         }
       });
-      expect(sent.map((m) => '${m.name}'), ['_w(bob, 0)', '_w(bob, 0)']);
+      expect(sent.map((m) => '${m.name}'), ['_w(bob, 0, 0)', '_w(bob, 0, 0)']);
       // The first message's reader takes index 1 and its serial 2; the second
       // message's reader 3 and its serial 4: one counter for both.
       expect(sent.map((m) => m.serial), [2, 4]);
       expect(
           sent.map((m) =>
               '${extractGlobalNames((m.value as StructTerm).args[0]).single}'),
-          ['_r(alice, 1)', '_r(alice, 3)']);
+          ['_r(alice, 1, 1)', '_r(alice, 1, 3)']);
       expect(wp.nextIndex, 5);
     });
 
     test('the same term sent twice is two cold calls, under two serials', () {
       final sent = sendAll((ctx, rt) {
-        ctx.send(ConstTerm('hello'), true, 'bob', 0, 'bob');
-        ctx.send(ConstTerm('hello'), true, 'bob', 0, 'bob');
+        ctx.send(ConstTerm('hello'), true, 'bob', 0, 0, 'bob');
+        ctx.send(ConstTerm('hello'), true, 'bob', 0, 0, 'bob');
       });
       expect(sent.map((m) => m.serial), [1, 2]);
     });
 
     test('a value on a link of index above 0 takes no serial', () {
       final sent = sendAll((ctx, rt) {
-        ctx.send(ConstTerm('v'), false, 'alice', 7, 'bob');
+        ctx.send(ConstTerm('v'), false, 'alice', 1, 7, 'bob');
       });
       expect(sent.single.serial, isNull);
-      expect('${sent.single.name}', '_r(alice, 7)');
+      expect('${sent.single.name}', '_r(alice, 1, 7)');
     });
   });
 

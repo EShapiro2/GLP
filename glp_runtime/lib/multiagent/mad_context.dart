@@ -10,7 +10,7 @@ import 'dart:async';
 
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart'
-    show deepDeref, reachableKey;
+    show deepDeref, networkKey, publicAddressKey, reachableKey;
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/saved_state.dart';
@@ -24,7 +24,11 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show SimulationNetworkClient;
 import 'package:glp_runtime/wire/codec.dart'
-    show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
+    show
+        wireMsgKindValue,
+        wireMsgKindRequest,
+        wireMsgKindAcknowledgement,
+        wireMsgKindGone;
 import 'package:glp_runtime/wire/artefact.dart' show ModuleRefusal;
 import 'package:glp_runtime/wire/payload_codec.dart'
     show GlobalNameRefusal, PayloadCodec;
@@ -33,11 +37,14 @@ import 'package:glp_runtime/wire/payload_codec.dart'
 typedef MessageDeliveryCallback = FutureOr<void> Function(
     String destination, OutboundMessage message);
 
-/// A pending reader-name value ([MadContext._pendingReaderValues]).
+/// A pending reader-name value ([MadContext._pendingReaderValues]):
+/// [holderEpoch] is the epoch this end records of the holder, from the first
+/// request or acknowledgement from it, null until one arrives.
 typedef _PendingReaderValue = ({
   List<int> payload,
   String destination,
-  List<GlobalName> nestedReaderNames
+  List<GlobalName> nestedReaderNames,
+  int? holderEpoch
 });
 
 /// madGLP Agent Context
@@ -47,6 +54,34 @@ typedef _PendingReaderValue = ({
 class MadContext {
   /// Unique identifier for this agent (e.g., "alice", "bob")
   final String agentId;
+
+  /// The epoch e_p of this agent (IGLP db0a117, Definition "Epoch": "an
+  /// integer e_p >= 1 of its local state, 1 at the first start of p"); a
+  /// restart after a crash opens the next ([crashRestart]).  Every global
+  /// name the agent allocates carries it, and every message it sends.
+  int get epoch => _epoch;
+  int _epoch = 1;
+
+  /// The known epochs E_p: "a partial function from agents to epochs"
+  /// (Definition "madGLP Local State"), the epoch each message from an agent
+  /// carried last, "which is never below the epoch E_q(p) held before"
+  /// ([learnEpoch]).
+  final Map<String, int> _knownEpochs = {};
+
+  /// The epoch known of [agent], or null where no message from it has been
+  /// applied.
+  int? knownEpoch(String agent) => _knownEpochs[agent];
+
+  /// The link ends this agent retired, by the name of each (Definition
+  /// "Retire"): at a restart after a crash, on learning a peer's new epoch,
+  /// and on a gone.  Traffic for one is answered gone(G), "it reaches an end
+  /// the agent lost" (IGLP db0a117, "Requests and Acknowledgements"), where
+  /// traffic for a name the agent never held an end of, or holds one of
+  /// still, is early or applied.
+  final Set<GlobalName> _retiredEnds = {};
+
+  /// Whether this agent retired its end of the link named [name].
+  bool hasRetired(GlobalName name) => _retiredEnds.contains(name);
 
   /// Underlying GLP runtime
   final GlpRuntime runtime;
@@ -124,6 +159,19 @@ class MadContext {
   /// set, a reach is delivered as the layer reports it.
   void Function(Term reach, int declaration)? reachSink;
 
+  /// Where set, the host's: a change of the agent's own public address the
+  /// layer reports, `onConnectivityStatusChanged`, delivered as an event of
+  /// the agent's own, whose cycle hands it to [deliverPublicAddress], as it
+  /// does a reach ([reachSink]).  [declaration] is the public-address
+  /// declaration that stood when the layer reported the change.  Where it is
+  /// not set, the change is delivered as the layer reports it.
+  void Function(Term address, int declaration)? publicAddressSink;
+
+  /// Where set, the host's: a change of the local network the layer reports,
+  /// `onNetworkChanged`, delivered as an event of the agent's own, whose
+  /// cycle hands it to [deliverNetwork], as [publicAddressSink].
+  void Function(Term network, int declaration)? networkSink;
+
   /// The number of reaches delivered onto the reachable stream, so that a
   /// host delivering them as they arrive can tell that a run is to follow.
   int reachesDelivered = 0;
@@ -139,7 +187,7 @@ class MadContext {
   /// creates the matching entry. Only the `_r` case needs holding: `_w(p, i)`
   /// entries exist before the global name leaves the agent, and the serializer
   /// entry at index 0 is permanent.
-  final Map<(String, int), ({Term value, String fromAgent})>
+  final Map<GlobalName, ({Term value, String fromAgent})>
       _heldReaderAssignments = {};
 
   /// Pending reader-name values (spec §app:requests-acks): a sent value
@@ -153,18 +201,13 @@ class MadContext {
   /// value carries (allocated when it was globalized): on the acknowledgement,
   /// the acker is recorded as the holder of each of their links (madGLP
   /// Receive, Acknowledgement case) — the acker localized them.
-  final Map<(String, int),
-          ({
-        List<int> payload,
-        String destination,
-        List<GlobalName> nestedReaderNames
-      })> _pendingReaderValues = {};
+  final Map<GlobalName, _PendingReaderValue> _pendingReaderValues = {};
 
   /// Reader names this agent forwarded on (Definition Globalize, forwarding
   /// case). After forwarding, the no-entry condition on an arriving value for
   /// the name means stale, not early: such arrivals are dropped, never held.
   /// Indices are never reused, so the record never misclassifies.
-  final Set<(String, int)> _forwardedReaderNames = {};
+  final Set<GlobalName> _forwardedReaderNames = {};
 
   /// Reader names whose value this agent applied, removing the entry (madGLP
   /// Receive, Reader case: "The entry matching (p, i) is removed").  A value
@@ -175,7 +218,7 @@ class MadContext {
   /// whose localization creates its global writers table entry" (IGLP
   /// app:in-networking, Early messages) — and is not held.  Indices are never
   /// reused, so the record never misclassifies.
-  final Set<(String, int)> _appliedReaderNames = {};
+  final Set<GlobalName> _appliedReaderNames = {};
 
   /// Held incoming assignments (Definition Held Link, case 4): an assignment
   /// arriving at the anchor from an agent it did not export the name to is
@@ -187,8 +230,8 @@ class MadContext {
   /// localization creates the entry and needs no answer; this one waits on the
   /// program. The paper points at the early hold only as the model for how a
   /// retained assignment is keyed.
-  final Map<(String, int, bool), ({Term value, String fromAgent})>
-      _heldAssignments = {};
+  final Map<GlobalName, ({Term value, String fromAgent})> _heldAssignments =
+      {};
 
   /// Held incoming requests (Definition Held Link, case 3): every request
   /// reaching the anchor is held — the agent the anchor exported the name to
@@ -199,7 +242,11 @@ class MadContext {
   /// forwarded again --- is held and reported in its turn, the anchor's
   /// program asked once for each party that comes to hold the end" (§Held
   /// Links), its turn coming when the program has answered the one before.
-  final Map<(String, int), List<String>> _heldRequests = {};
+  /// Each held request is its requester with the epoch its request carried,
+  /// which the goal or the pending value records of the holder once the
+  /// request is authorised (IGLP db0a117: "the epoch carried by the first
+  /// request, acknowledgement or value from the holder").
+  final Map<GlobalName, List<(String, int)>> _heldRequests = {};
 
   /// The (link, requester) pairs the anchor has recorded, by link: a requester
   /// is recorded when its request is held.  "A request repeating a (link,
@@ -207,12 +254,12 @@ class MadContext {
   /// --- is dropped" (§app:requests-acks).  A link's pairs are released when
   /// the link closes, after which every request for it is dropped as one "for
   /// a closed link" (madGLP Receive, Request case).
-  final Map<(String, int), Set<String>> _requestPairs = {};
+  final Map<GlobalName, Set<String>> _requestPairs = {};
 
   /// Links reported and not yet answered, newest report per link. Keyed as
   /// `(anchor, index, isWriter)`; the value is the agent the name or traffic
   /// came from — the `S` of the `pending_link(G, S)` report.
-  final Map<(String, int, bool), String> _reportedLinks = {};
+  final Map<GlobalName, String> _reportedLinks = {};
 
   /// Send MAD trace output to traceSink if set, otherwise silent.
   void _trace(String msg) {
@@ -314,6 +361,7 @@ class MadContext {
       value: value,
       table: wp,
       records: up,
+      localEpoch: _epoch,
       extractVariables: (val) {
         final vars = <TermVar>[];
         if (val is Term) {
@@ -361,19 +409,16 @@ class MadContext {
       result.globalizeResult,
     );
 
-    // Queue the assignment message
-    final payload =
-        PayloadCodec.createGlobalSendPayload(result.globalName, globalizedValue);
+    // Queue the assignment message, in this agent's epoch
+    final payload = PayloadCodec.createGlobalSendPayload(
+        result.globalName, globalizedValue,
+        senderEpoch: _epoch);
 
     mp.add(OutboundMessage(
       destination: result.destination,
       type: MessageType.assignment,
       payload: payload,
-      link: (
-        result.globalName.agent,
-        result.globalName.index,
-        result.globalName.isWriter
-      ),
+      link: result.globalName,
       held: holdValue,
     ));
     if (holdValue) {
@@ -391,6 +436,7 @@ class MadContext {
         destination: requester,
         type: MessageType.assignment,
         payload: payload,
+        link: result.globalName,
       ));
       _trace('[MAD $agentId] value ${result.globalName} sent to requester '
           '$requester as well');
@@ -403,14 +449,13 @@ class MadContext {
     // The spawns' names are the value's self-anchored reader links, recorded
     // so the acknowledgement can name their holder.
     if (result.globalName.isReader && result.globalName.index > 0) {
-      _pendingReaderValues[
-              (result.globalName.agent, result.globalName.index)] =
-          (
+      _pendingReaderValues[result.globalName] = (
         payload: payload,
         destination: result.destination,
         nestedReaderNames: result.globalizeResult.spawns
             .map((s) => s.globalName)
             .toList(),
+        holderEpoch: result.otherEpoch,
       );
       _trace('[MAD $agentId] value ${result.globalName} pending until ack');
     }
@@ -485,7 +530,7 @@ class MadContext {
   /// at this agent and is dropped, not held.
   void _recordForwardedNames(GlobalizeResult result) {
     for (final gn in result.forwardedNames) {
-      _forwardedReaderNames.add((gn.agent, gn.index));
+      _forwardedReaderNames.add(gn);
       _trace('[MAD $agentId] forwarded $gn under its original anchor');
     }
   }
@@ -501,8 +546,8 @@ class MadContext {
       // The goal's heap hook goes with it: this writer will never be bound
       // here, and nothing must fire on its behalf.
       runtime.heap.removeBindCallback(rec.writerAddr);
-      _trace('[MAD $agentId] forwarded imported writer as _w(${rec.anchor}, '
-          '${rec.index}) — record and goal removed, link left');
+      _trace('[MAD $agentId] forwarded imported writer as ${rec.name} — '
+          'record and goal removed, link left');
     }
   }
 
@@ -519,8 +564,8 @@ class MadContext {
       mp.add(OutboundMessage(
         destination: gn.agent,
         type: MessageType.request,
-        payload: PayloadCodec.createRequestPayload(gn),
-        link: (gn.agent, gn.index, false),
+        payload: PayloadCodec.createRequestPayload(gn, senderEpoch: _epoch),
+        link: gn,
         held: true,
       ));
       _trace('[MAD $agentId] queued req($gn) to ${gn.agent} — HELD');
@@ -544,20 +589,25 @@ class MadContext {
   /// Serializer case: extend network input stream, update entry (don't remove).
   ///
   /// [serial] is the serial a serializer message carries, which its sender
-  /// allocated (Definition "madGLP Receive Transaction", Serializer case: "m
-  /// ... under serial i from sender s"); a serializer message has one and no
-  /// other message does (IGLP Code Format, "Messages").  [fromAgent] is the
-  /// sender the layer authenticates.
+  /// allocated in its epoch [senderEpoch] (Definition "madGLP Send
+  /// Transaction", Serializer case: "under serial i of p's epoch e"); a
+  /// serializer message has one and no other message does (IGLP Code Format,
+  /// "Messages").  [fromAgent] is the sender the layer authenticates, and
+  /// [senderEpoch] the epoch the message carries, the sender's when it sent
+  /// it; a message handed here by a host and not by [handleIncomingPayload]
+  /// is taken as of epoch 1.
   void handleMadAssignment({
     required GlobalName globalName,
     required Term value,
     required String fromAgent,
     int? serial,
+    int senderEpoch = 1,
   }) {
     _trace('[MAD $agentId] handleMadAssignment: $globalName := $value from '
-        '$fromAgent${serial == null ? '' : ' under serial $serial'}');
+        '$fromAgent in epoch $senderEpoch'
+        '${serial == null ? '' : ' under serial $serial'}');
 
-    final isSerializer = globalName.isWriter && globalName.index == 0;
+    final isSerializer = globalName.isSerializer;
     if (isSerializer != (serial != null)) {
       throw ArgumentError(isSerializer
           ? 'a serializer message $globalName := ... carries a serial'
@@ -566,10 +616,11 @@ class MadContext {
 
     if (isSerializer) {
       // Case _w(p, 0) := [T | _w(p,0)] - serializer (cold-call to network input)
-      _handleSerializerAssignment(value, fromAgent, serial!);
+      _handleSerializerAssignment(value, fromAgent, senderEpoch, serial!);
     } else if (globalName.isWriter) {
       // Case _w(p, i) := T with i > 0 - we globalized this writer, direct lookup
-      _handleWriterAssignment(globalName, value, fromAgent);
+      _handleWriterAssignment(globalName, value, fromAgent,
+          senderEpoch: senderEpoch);
     } else {
       // Case _r(p, i) := T - we localized this, search for entry
       _handleReaderAssignment(globalName, value, fromAgent);
@@ -578,19 +629,22 @@ class MadContext {
 
   /// Handle serializer assignment _w(p, 0) := [T | _w(p,0)]
   ///
-  /// This is a cold-call to our network input stream, under [serial] from
-  /// [fromAgent], the sender the layer authenticates.  Definition madGLP
-  /// Receive Transaction, Serializer case: "The receiving agent is q, with
-  /// entry (N_q, D_q) at index 0 in W_q.  If (s, i) ∈ D_q, m is a repeat: it is
-  /// dropped and nothing changes.  Otherwise let N'_q be a fresh local writer,
-  /// σ̂ = {N_q := [T_q↓ | N'_q?]} ... The entry at index 0 in W'_q becomes
-  /// (N'_q, D_q ∪ {(s, i)})."
+  /// This is a cold-call to our network input stream, under [serial] of the
+  /// epoch [senderEpoch] of [fromAgent], the sender the layer authenticates.
+  /// IGLP db0a117, Definition madGLP Send Transaction, Serializer case: "q
+  /// holds the entry (N_q, D_q) at index 0 in W_q.  If (p, e, i) ∈ D_q, m is a
+  /// repeat: nothing changes at q.  Otherwise let N'_q be a fresh local
+  /// writer, σ̂ = {N_q := [T_q↓ | N'_q?]} ... The entry at index 0 in W'_q
+  /// becomes (N'_q, D_q ∪ {(p, e, i)})."  A serializer message of an earlier
+  /// epoch of the sender is a repeat only by its (sender, epoch, serial): the
+  /// sender's serials begin again in each epoch.
   ///
   /// A repeat is dropped before anything is localized, so it creates no entry,
   /// record, goal, request or report.
-  void _handleSerializerAssignment(Term value, String fromAgent, int serial) {
+  void _handleSerializerAssignment(
+      Term value, String fromAgent, int senderEpoch, int serial) {
     _trace('[MAD $agentId] _handleSerializerAssignment: cold-call from '
-        '$fromAgent under serial $serial');
+        '$fromAgent under serial $serial of epoch $senderEpoch');
 
     // Get current serializer writer from index-0 entry
     final currentWriter = wp.serializerWriterAddr;
@@ -599,9 +653,9 @@ class MadContext {
     }
     _trace('[MAD $agentId] _handleSerializerAssignment: current serializer writer=$currentWriter');
 
-    if (wp.serializerHasAppended(fromAgent, serial)) {
+    if (wp.serializerHasAppended(fromAgent, senderEpoch, serial)) {
       _trace('[MAD $agentId] _handleSerializerAssignment: ($fromAgent, '
-          '$serial) appended before — a repeat, dropped');
+          '$senderEpoch, $serial) appended before — a repeat, dropped');
       return;
     }
 
@@ -647,7 +701,7 @@ class MadContext {
     }
 
     _appendToNetworkInput(content);
-    wp.recordSerializerAppend(fromAgent, serial);
+    wp.recordSerializerAppend(fromAgent, senderEpoch, serial);
   }
 
   /// Append [content] to this agent's network input stream through the index-0
@@ -840,7 +894,9 @@ class MadContext {
   /// it", IGLP 96cd44a), its stream a refusal is put on, as [declarePlace]
   /// does.
   /// A nearby declaration calls no layer function: its stream is fed by what
-  /// the new layer reports.  A layer function the layer does not have is
+  /// the new layer reports; a public-address or network declaration calls
+  /// none either, and its standing stream is given the new layer's present
+  /// value (the GLP paper f265fec, "Networking seam").  A layer function the layer does not have is
   /// traced and the rest are made.  Does nothing where no layer is bound.
   /// Returns the declarations made.
   List<StandingDeclaration> declareStandingToLayer() {
@@ -871,6 +927,20 @@ class MadContext {
                 : null;
             _askLayerForPlace(
                 network, a[0], centre, double.parse(a[1]), declaration);
+          case SeamDeclarationKind.publicAddress:
+            // No layer function: the standing stream, restored with the
+            // state, is given the new layer's present address, as a
+            // declaration begins (the GLP paper f265fec, "Networking seam").
+            if (runtime.publicAddressStreams.standing(publicAddressKey) ==
+                null) {
+              continue;
+            }
+            runtime.publicAddressStreams.deliver(
+                publicAddressKey, addressTerm(presentPublicAddress()));
+          case SeamDeclarationKind.network:
+            if (runtime.networkStreams.standing(networkKey) == null) continue;
+            runtime.networkStreams
+                .deliver(networkKey, networkTerm(presentNetwork()));
         }
         made.add(d);
         _trace('[MAD $agentId] restart: $d made to the layer again');
@@ -1120,6 +1190,149 @@ class MadContext {
     _trace('[MAD $agentId] reachable: $reach');
   }
 
+  // ===========================================================================
+  // THE AGENT'S OWN PUBLIC ADDRESS AND LOCAL NETWORK (Definition Seam
+  // Predicates: public_address(S), network(S))
+  // ===========================================================================
+  //
+  // The GLP paper f265fec, appendix-guards, "Networking seam": "public_address(S)
+  // assigns S a stream of the agent's own public address, beginning with
+  // address(A), A the ip:port the layer has learnt from a rendezvous server,
+  // or none where it knows none, when it is declared, and then the address at
+  // each change, none where it is lost. ... network(S) assigns S a stream of
+  // the local network the agent is attached to, beginning with attached(N), N
+  // an opaque fingerprint of that network, or none where it is attached to
+  // none or the platform makes the fingerprint unreadable, when it is
+  // declared, and then the network at each change ... For each, a further
+  // declaration supersedes the earlier one and closes its stream, and the
+  // removal ends the declaration and closes its stream.  The address and the
+  // network change independently of each other."  IGLP 07a2b00, Definition
+  // "Seam Predicates": declare(public_address(S?)) and declare(network(S?)).
+  //
+  // The layer gives the present address by getPublicAddress() and each change
+  // by onConnectivityStatusChanged(old, new), the present network by
+  // networkIdentity() and each change by onNetworkChanged(old, new) (GNA
+  // ip.tex, Connectivity and Address; Local Network Identity); the host
+  // routes the two callbacks to [publicAddressChanged] and
+  // [networkChanged].  A layer that does not provide a function, the
+  // simulation's, gives none (IGLP 07a2b00, "Simulation realisation").  The
+  // streams are the runtime's bookkeeping ([GlpRuntime.publicAddressStreams],
+  // [GlpRuntime.networkStreams]), fed and closed as a place's; what the layer
+  // reports is the layer's, so a restart gives a standing stream the new
+  // layer's present value ([declareStandingToLayer]).
+
+  /// `address(A)` for the address [a], or `none` where the layer knows none.
+  static Term addressTerm(String? a) =>
+      a == null ? ConstTerm('none') : StructTerm('address', [ConstTerm(a)]);
+
+  /// `attached(N)` for the network fingerprint [n], or `none` where the agent
+  /// is attached to none or the fingerprint is unreadable.
+  static Term networkTerm(String? n) =>
+      n == null ? ConstTerm('none') : StructTerm('attached', [ConstTerm(n)]);
+
+  /// The agent's public address as the layer knows it now; null where it
+  /// knows none, or does not provide the function.
+  String? presentPublicAddress() {
+    try {
+      return network?.getPublicAddress();
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
+  /// The local network the layer is attached to now, by its fingerprint;
+  /// null where it is attached to none, or does not provide the function.
+  String? presentNetwork() {
+    try {
+      return network?.networkIdentity();
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
+  /// Declare a watch on the agent's own public address, its stream growing
+  /// from [streamWriterAddr], the writer of the `S` of
+  /// `declare(public_address(S))`; a declaration already standing is
+  /// superseded and its stream closed.  The stream is given the present
+  /// address at once.
+  void declarePublicAddress(HeapCell streamWriterAddr) {
+    runtime.publicAddressStreams.declare(publicAddressKey, streamWriterAddr);
+    final present = addressTerm(presentPublicAddress());
+    _trace('[MAD $agentId] declare public_address: stream '
+        'writer=$streamWriterAddr, present $present');
+    runtime.publicAddressStreams.deliver(publicAddressKey, present);
+  }
+
+  /// Declare a watch on the local network the agent is attached to, its
+  /// stream growing from [streamWriterAddr], the writer of the `S` of
+  /// `declare(network(S))`; a declaration already standing is superseded and
+  /// its stream closed.  The stream is given the present network at once.
+  void declareNetwork(HeapCell streamWriterAddr) {
+    runtime.networkStreams.declare(networkKey, streamWriterAddr);
+    final present = networkTerm(presentNetwork());
+    _trace('[MAD $agentId] declare network: stream writer=$streamWriterAddr, '
+        'present $present');
+    runtime.networkStreams.deliver(networkKey, present);
+  }
+
+  /// The layer reported the agent's public address changed to [newAddress],
+  /// null where it is lost, `onConnectivityStatusChanged(old, new)`.  Called
+  /// by the host that binds the network.
+  void publicAddressChanged(String? newAddress) {
+    final declaration =
+        runtime.publicAddressStreams.standing(publicAddressKey);
+    if (declaration == null) return;
+    final address = addressTerm(newAddress);
+    final sink = publicAddressSink;
+    if (sink != null) {
+      sink(address, declaration);
+    } else {
+      deliverPublicAddress(address, declaration: declaration);
+    }
+  }
+
+  /// The layer reported the local network changed to [newId], null where the
+  /// agent is attached to none, `onNetworkChanged(old, new)`.  Called by the
+  /// host that binds the network.
+  void networkChanged(String? newId) {
+    final declaration = runtime.networkStreams.standing(networkKey);
+    if (declaration == null) return;
+    final net = networkTerm(newId);
+    final sink = networkSink;
+    if (sink != null) {
+      sink(net, declaration);
+    } else {
+      deliverNetwork(net, declaration: declaration);
+    }
+  }
+
+  /// Deliver [address] on the public-address stream, serializer-fashion; one
+  /// answering a [declaration] that no longer stands, removed or superseded,
+  /// is dropped.
+  void deliverPublicAddress(Term address, {required int declaration}) {
+    if (!runtime.publicAddressStreams
+        .isStanding(publicAddressKey, declaration)) {
+      _trace('[MAD $agentId] public address $address for a declaration that '
+          'no longer stands --- dropped');
+      return;
+    }
+    runtime.publicAddressStreams.deliver(publicAddressKey, address);
+    _trace('[MAD $agentId] public_address: $address');
+  }
+
+  /// Deliver [net] on the network stream, serializer-fashion; one answering
+  /// a [declaration] that no longer stands, removed or superseded, is
+  /// dropped.
+  void deliverNetwork(Term net, {required int declaration}) {
+    if (!runtime.networkStreams.isStanding(networkKey, declaration)) {
+      _trace('[MAD $agentId] network $net for a declaration that no longer '
+          'stands --- dropped');
+      return;
+    }
+    runtime.networkStreams.deliver(networkKey, net);
+    _trace('[MAD $agentId] network: $net');
+  }
+
   /// The layer's session with [pk] as reported, or null where it has none:
   /// its attested application, null where the session is unattested.  Where
   /// the peer is connected over more than one underlay, the application
@@ -1152,9 +1365,10 @@ class MadContext {
     onPlaceEventDelivered?.call();
   }
 
-  /// The ground presentation of a global name (§Global Variable Names): the
-  /// 2-ary structures `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity,
-  /// first argument the anchor. This is the form a program sees — not the wire
+  /// The ground presentation of a global name (IGLP cec4682, "Global
+  /// Variable Names"): the 3-ary structures `'_r'(P, E, I)` and `'_w'(P, E,
+  /// I)`, functor giving polarity, first argument the anchor, second its
+  /// epoch, third the index.  This is the form a program sees — not the wire
   /// form, which stands in the place of a variable.
   static Term groundGlobalName(GlobalName gn) => gn.toStruct();
 
@@ -1173,7 +1387,7 @@ class MadContext {
   /// once the term carrying it can be read." A cold-call carrying a held link
   /// therefore reaches the program first, and the report about it second.
   void _reportPendingLink(GlobalName gn, String sender) {
-    _reportedLinks[(gn.agent, gn.index, gn.isWriter)] = sender;
+    _reportedLinks[gn] = sender;
     _deferredReports.add(StructTerm(
         'pending_link', [groundGlobalName(gn), ConstTerm(sender)]));
     _trace('[MAD $agentId] HELD $gn from $sender — reporting pending_link');
@@ -1192,21 +1406,15 @@ class MadContext {
 
   /// Whether the link `(anchor, index, isWriter)` has been reported and not yet
   /// answered.
-  bool hasReportedLink(String anchor, int index, bool isWriter) =>
-      _reportedLinks.containsKey((anchor, index, isWriter));
+  bool hasReportedLink(GlobalName link) => _reportedLinks.containsKey(link);
 
   /// Number of links reported and awaiting an answer.
   int get reportedLinkCount => _reportedLinks.length;
 
   /// Every link reported and not yet answered, with the sender each was
   /// reported against — the `(G, S)` of its `pending_link` report.
-  Iterable<(GlobalName, String)> get reportedLinks => _reportedLinks.entries
-      .map((e) => (
-            e.key.$3
-                ? GlobalName.writer(e.key.$1, e.key.$2)
-                : GlobalName.reader(e.key.$1, e.key.$2),
-            e.value
-          ));
+  Iterable<(GlobalName, String)> get reportedLinks =>
+      _reportedLinks.entries.map((e) => (e.key, e.value));
 
   /// Handle _w(p, i) := T assignment with i > 0 (we globalized writer Y)
   ///
@@ -1226,27 +1434,41 @@ class MadContext {
   ///
   /// [authorised] is set when `authorise_link/2` releases an assignment this
   /// agent held under case 4; the hold test is then skipped, the answer already
-  /// given.
+  /// given.  [senderEpoch] is the epoch the message carried, which the entry
+  /// records of the holder ("the epoch carried by the first request,
+  /// acknowledgement or value from the holder", IGLP db0a117).
+  ///
+  /// A value naming an epoch of this agent before its current one is stale
+  /// and dropped; one naming an end this agent lost is answered gone
+  /// ([_lostEnd]); otherwise a miss is a repeat, the value applied before,
+  /// and is dropped (IGLP db0a117, "Requests and Acknowledgements").
   void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent,
-      {bool authorised = false}) {
+      {bool authorised = false, int? senderEpoch}) {
+    if (globalName.epoch < _epoch) {
+      _trace('[MAD $agentId] _handleWriterAssignment: $globalName names '
+          'epoch ${globalName.epoch}, before this agent\'s $_epoch — stale, '
+          'dropped');
+      return;
+    }
     final entry = wp.lookupByIndex(globalName.index);
 
     if (entry == null) {
+      if (_lostEnd(globalName, fromAgent)) return;
       // Stale drop (spec §app:requests-acks): a value matching no entry is
       // dropped. A writer-name value always finds its fixed anchor entry, so
-      // a miss is provably stale — indices are never reused.
+      // a miss is provably stale — names are never reused.
       _trace('[MAD $agentId] _handleWriterAssignment: no entry for $globalName'
           ' — stale, dropped');
       return;
     }
+    if (senderEpoch != null) entry.holderEpoch ??= senderEpoch;
 
     // An assignment for a link already held is dropped, not held or reported
     // again: "A request from a requester already recorded for the link, and
     // an assignment for a link already holding one, are dropped, so each party
     // is reported once" (§Held Links) — an assignment delivered twice among
     // them (Remark "Fair Message Delivery").
-    final linkKey = (globalName.agent, globalName.index, true);
-    if (!authorised && _heldAssignments.containsKey(linkKey)) {
+    if (!authorised && _heldAssignments.containsKey(globalName)) {
       _trace('[MAD $agentId] _handleWriterAssignment: $globalName already '
           'held — assignment dropped');
       return;
@@ -1257,7 +1479,7 @@ class MadContext {
     // entry's `q` against the sender — and consults nothing outside the agent.
     // This is why `q` is kept in the entry `(X, q)`.
     if (entry.remoteAgent != fromAgent && !authorised) {
-      _heldAssignments[linkKey] = (value: value, fromAgent: fromAgent);
+      _heldAssignments[globalName] = (value: value, fromAgent: fromAgent);
       _reportPendingLink(globalName, fromAgent);
       return;
     }
@@ -1286,29 +1508,30 @@ class MadContext {
   /// Per IGLP, madGLP Receive Transaction, Reader case: "Agent q searches for
   /// entry (X_q, p, i)."
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
-    final entry = wp.findByRemote(globalName.agent, globalName.index);
+    final entry = wp.findByRemote(globalName);
     if (entry == null) {
       // After forwarding, no-entry means stale (spec §app:requests-acks): the
       // reader moved on, and the anchor's redirected value will reach its
       // current holder. Drop — holding is never needed for a forwarded name.
-      if (_forwardedReaderNames
-          .contains((globalName.agent, globalName.index))) {
+      if (_forwardedReaderNames.contains(globalName)) {
         _trace('[MAD $agentId] _handleReaderAssignment: $globalName was '
             'forwarded — stale value dropped');
         return;
       }
       // A repeat of a value already applied here finds its entry removed, and
       // is dropped (Remark Fair Message Delivery).
-      if (_appliedReaderNames.contains((globalName.agent, globalName.index))) {
+      if (_appliedReaderNames.contains(globalName)) {
         _trace('[MAD $agentId] _handleReaderAssignment: $globalName was '
             'applied before — a repeat, dropped');
         return;
       }
+      // An end this agent lost: answered gone (IGLP db0a117).
+      if (_lostEnd(globalName, fromAgent)) return;
       // Issue 7 / IGLP app:in-networking, Early messages: the assignment arrived before its
       // LocalizeEntry exists (possible under any non-FIFO transport). Hold it,
-      // keyed by (remoteAgent, remoteIndex); localize() delivers it when it
-      // creates the matching entry. Do not throw — the message is not dropped.
-      _heldReaderAssignments[(globalName.agent, globalName.index)] =
+      // keyed by its name; localize() delivers it when it creates the
+      // matching entry. Do not throw — the message is not dropped.
+      _heldReaderAssignments[globalName] =
           (value: value, fromAgent: fromAgent);
       _trace('[MAD $agentId] _handleReaderAssignment: no entry for $globalName '
           'yet — held pending localize');
@@ -1327,8 +1550,8 @@ class MadContext {
     _trace('[MAD $agentId] _handleReaderAssignment: bound writer, $activations activations');
 
     // Remove the entry
-    wp.removeLocalizeEntry(globalName.agent, globalName.index);
-    _appliedReaderNames.add((globalName.agent, globalName.index));
+    wp.removeLocalizeEntry(globalName);
+    _appliedReaderNames.add(globalName);
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
 
     // Acknowledge to the value's sender (madGLP Receive, Reader case): the
@@ -1337,7 +1560,8 @@ class MadContext {
     mp.add(OutboundMessage(
       destination: fromAgent,
       type: MessageType.acknowledgement,
-      payload: PayloadCodec.createAckPayload(globalName),
+      payload: PayloadCodec.createAckPayload(globalName, senderEpoch: _epoch),
+      link: globalName,
     ));
     _trace('[MAD $agentId] _handleReaderAssignment: queued ack($globalName) '
         'to $fromAgent');
@@ -1382,7 +1606,7 @@ class MadContext {
   void _deliverHeldReaderAssignments(List<GlobalName> globalNames) {
     for (final gn in globalNames) {
       if (gn.isWriter) continue; // only `_r` names create LocalizeEntries
-      final held = _heldReaderAssignments.remove((gn.agent, gn.index));
+      final held = _heldReaderAssignments.remove(gn);
       if (held == null) continue;
       _trace('[MAD $agentId] delivering held assignment for $gn from '
           '${held.fromAgent}');
@@ -1399,6 +1623,7 @@ class MadContext {
     required Term value,
     required List<GlobalName> nestedGlobalNames,
     required String fromAgent,
+    int senderEpoch = 1,
   }) {
     _trace('[MAD $agentId] handleMadAssignmentWithGlobalNames: $globalName with ${nestedGlobalNames.length} nested names');
 
@@ -1426,6 +1651,7 @@ class MadContext {
       globalName: globalName,
       value: value,
       fromAgent: fromAgent,
+      senderEpoch: senderEpoch,
     );
   }
 
@@ -1464,6 +1690,14 @@ class MadContext {
   /// The name is a tag-2 variable, or the name the message is addressed to;
   /// a structure `'_w'(P, I)` the message carries is a program's term and
   /// arrives as the structure (IGLP madglp-spec.tex:17, at IGLP 1e01638).
+  ///
+  /// Every message carries the epoch of its sender, which this agent learns
+  /// before the message is applied, retiring every link end whose other end
+  /// is at the sender with a recorded epoch below it ([learnEpoch]; IGLP
+  /// db0a117, Definition "madGLP Send Transaction": "In every case E'_q(p) is
+  /// the epoch m carries, and q retires every link end whose other end is at
+  /// p and whose recorded epoch of p is below it").  A fourth kind, gone(G),
+  /// retires this agent's end of the link G ([handleGone]).
   void handleIncomingPayload({
     required List<int> payload,
     required String fromAgent,
@@ -1474,7 +1708,8 @@ class MadContext {
     }
     switch (payload[0]) {
       case wireMsgKindValue:
-        final ({GlobalName name, Term value, int? serial}) received;
+        final ({GlobalName name, Term value, int? serial, int senderEpoch})
+            received;
         try {
           received = PayloadCodec.deserializeValuePayload(payload);
         } on ModuleRefusal catch (refusal) {
@@ -1486,24 +1721,30 @@ class MadContext {
               'receipt: ${refusal.message}');
           return;
         }
+        learnEpoch(fromAgent, received.senderEpoch);
         handleMadAssignment(
             globalName: received.name,
             value: received.value,
             fromAgent: fromAgent,
-            serial: received.serial);
-      case wireMsgKindRequest || wireMsgKindAcknowledgement:
-        final GlobalName name;
+            serial: received.serial,
+            senderEpoch: received.senderEpoch);
+      case wireMsgKindRequest || wireMsgKindAcknowledgement || wireMsgKindGone:
+        final ({int kind, GlobalName name, int senderEpoch}) link;
         try {
-          name = PayloadCodec.decodeRequestOrAckPayload(payload);
+          link = PayloadCodec.decodeLinkPayload(payload);
         } on GlobalNameRefusal catch (refusal) {
           print('[REFUSED] $agentId: a message from $fromAgent is refused at '
               'receipt: ${refusal.message}');
           return;
         }
-        if (payload[0] == wireMsgKindRequest) {
-          handleRequest(name, fromAgent);
-        } else {
-          handleAck(name, fromAgent);
+        learnEpoch(fromAgent, link.senderEpoch);
+        switch (link.kind) {
+          case wireMsgKindRequest:
+            handleRequest(link.name, fromAgent, senderEpoch: link.senderEpoch);
+          case wireMsgKindAcknowledgement:
+            handleAck(link.name, fromAgent, senderEpoch: link.senderEpoch);
+          default:
+            handleGone(link.name, fromAgent);
         }
       default:
         throw FormatException(
@@ -1514,14 +1755,217 @@ class MadContext {
     _flushReports();
   }
 
+  // =========================================================================
+  // Epochs: learning a peer's, retiring link ends, the restart after a crash
+  // (IGLP db0a117, Definitions "Epoch", "madGLP Local State", "Retire" and
+  // "Restart after a Crash")
+  // =========================================================================
+
+  /// A message from [agent] carrying the epoch [epoch] is applied: E_p(agent)
+  /// becomes [epoch], "which is never below the epoch E_q(p) held before",
+  /// and where it rose this agent retires every link end whose other end is
+  /// at [agent] and whose recorded epoch of [agent] is below it (IGLP
+  /// db0a117, Definition "madGLP Send Transaction", the sentence after the
+  /// list): [agent] crashed and restarted, and every link between the two
+  /// ended.  Returns the names of the ends retired.
+  List<GlobalName> learnEpoch(String agent, int epoch) {
+    final known = _knownEpochs[agent];
+    if (known != null && epoch <= known) return const [];
+    _knownEpochs[agent] = epoch;
+    if (known == null) {
+      // The first message from the agent: nothing recorded of it is below.
+      _trace('[MAD $agentId] epoch of $agent learnt: $epoch');
+    } else {
+      _trace('[MAD $agentId] epoch of $agent rose from $known to $epoch: '
+          'the ends at it are retired');
+    }
+    final retired = <GlobalName>[];
+    final entries = wp.retireEndsAt(agent, epoch);
+    for (final (index, _) in entries.globalize) {
+      retired.add(GlobalName.writer(agentId, index, epoch: _epoch));
+    }
+    for (final e in entries.localize) {
+      retired.add(e.name);
+    }
+    for (final rec in up.retireAt(agent, epoch)) {
+      globalSendRegistry.removeGoalFor(rec.writerAddr);
+      runtime.heap.removeBindCallback(rec.writerAddr);
+      retired.add(rec.name);
+    }
+    for (final goal in globalSendRegistry.retireWhere((g) =>
+        g.globalName.isReader &&
+        g.globalName.agent == agentId &&
+        g.destination == agent &&
+        g.otherEpoch != null &&
+        g.otherEpoch! < epoch)) {
+      runtime.heap.removeBindCallback(goal.readerAddr);
+      retired.add(goal.globalName);
+    }
+    for (final MapEntry(key: name, value: pending)
+        in _pendingReaderValues.entries.toList()) {
+      final h = pending.holderEpoch;
+      if (pending.destination == agent && h != null && h < epoch) {
+        _pendingReaderValues.remove(name);
+        retired.add(name);
+      }
+    }
+    for (final name in retired) {
+      _endRetired(name);
+    }
+    return retired;
+  }
+
+  /// A `gone(G)` from [fromAgent]: this agent retires its end of the link
+  /// [name], where it has one (IGLP db0a117, Definition "madGLP Send
+  /// Transaction", Gone: "q retires its end of the link G, where it has one:
+  /// the entry, or the record and the global_send goal, and the messages of
+  /// the link in M_q.  Nothing else changes at q").
+  void handleGone(GlobalName name, String fromAgent) {
+    _trace('[MAD $agentId] gone($name) from $fromAgent');
+    retireEnd(name);
+  }
+
+  /// Retire this agent's end of the link named [name], where it has one
+  /// (Definition "Retire"): the entry, or the record and the goal, or the
+  /// goal and the pending value of a reader name anchored here; the messages
+  /// of the link in M_p; and what the agent held or recorded of the link.
+  /// Returns whether an end was held.  The paired local variable stays in
+  /// the resolvent, widowed: "the writer of a removed entry is never
+  /// assigned, and the reader of a removed goal is held by no link".
+  bool retireEnd(GlobalName name) {
+    var held = false;
+    if (name.agent == agentId) {
+      if (name.epoch == _epoch) {
+        if (name.isWriter) {
+          if (wp.lookupByIndex(name.index) != null && name.index > 0) {
+            wp.removeGlobalizeEntry(name.index);
+            held = true;
+          }
+        } else {
+          final goal = globalSendRegistry.removeGoalForLink(name);
+          if (goal != null) {
+            runtime.heap.removeBindCallback(goal.readerAddr);
+            held = true;
+          }
+          if (_pendingReaderValues.remove(name) != null) held = true;
+        }
+      }
+    } else if (name.isReader) {
+      if (wp.findByRemote(name) != null) {
+        wp.removeLocalizeEntry(name);
+        held = true;
+      }
+    } else {
+      final rec = up.findByLink(name);
+      if (rec != null) {
+        up.remove(rec.writerAddr);
+        globalSendRegistry.removeGoalFor(rec.writerAddr);
+        runtime.heap.removeBindCallback(rec.writerAddr);
+        held = true;
+      }
+    }
+    _endRetired(name);
+    return held;
+  }
+
+  /// What goes with an end retired: the messages of its link, and what was
+  /// held, recorded or reported of it; and the name is recorded as lost, so
+  /// that traffic for it is answered gone ([_lostEnd]).
+  void _endRetired(GlobalName name) {
+    final removed = mp.removeOfLink(name);
+    _heldReaderAssignments.remove(name);
+    _heldAssignments.remove(name);
+    _heldRequests.remove(name);
+    _requestPairs.remove(name);
+    _reportedLinks.remove(name);
+    _retiredEnds.add(name);
+    _trace('[MAD $agentId] end $name retired'
+        '${removed == 0 ? '' : ', $removed messages of it removed'}');
+  }
+
+  /// Traffic from [fromAgent] for the end [name]: where this agent lost it,
+  /// retired at a crash, on learning the other agent's epoch or on a gone,
+  /// the agent answers gone([name]) to the sender, "which retires its own
+  /// end of the link" (IGLP db0a117, "Requests and Acknowledgements"), and
+  /// true is returned; false where the agent never had the end, or has it.
+  bool _lostEnd(GlobalName name, String fromAgent) {
+    if (!_retiredEnds.contains(name)) return false;
+    _trace('[MAD $agentId] traffic for the lost end $name from $fromAgent: '
+        'answered gone');
+    mp.add(OutboundMessage(
+      destination: fromAgent,
+      type: MessageType.gone,
+      payload: PayloadCodec.createGonePayload(name, senderEpoch: _epoch),
+    ));
+    return true;
+  }
+
+  /// The restart after a crash (IGLP db0a117, Definition "Restart after a
+  /// Crash": the local state at the restart "is its local state at its last
+  /// suspension ... with e_p incremented by one and every link end of p
+  /// retired but the serializer entry"): the next epoch is opened, every
+  /// entry but the serializer's, every record, every global_send goal and
+  /// every pending value is retired, with the messages of their links, what
+  /// was held, recorded or reported of them, and the early assignments; the
+  /// cold calls left in M_p are sent in the new epoch ("the epoch its sender
+  /// is in when it sends it").  The known epochs stand.  Returns the names of
+  /// the ends retired.
+  List<GlobalName> crashRestart() {
+    _epoch++;
+    _trace('[MAD $agentId] restart after a crash: epoch $_epoch, every link '
+        'end retired');
+    final retired = <GlobalName>[];
+    final entries = wp.retireAllButSerializer();
+    for (final (index, _) in entries.globalize) {
+      retired.add(GlobalName.writer(agentId, index, epoch: _epoch - 1));
+    }
+    for (final e in entries.localize) {
+      retired.add(e.name);
+    }
+    for (final rec in up.retireAll()) {
+      globalSendRegistry.removeGoalFor(rec.writerAddr);
+      runtime.heap.removeBindCallback(rec.writerAddr);
+      retired.add(rec.name);
+    }
+    for (final goal in globalSendRegistry.retireWhere((_) => true)) {
+      runtime.heap.removeBindCallback(goal.readerAddr);
+      retired.add(goal.globalName);
+    }
+    retired.addAll(_pendingReaderValues.keys);
+    _pendingReaderValues.clear();
+    for (final name in retired) {
+      _endRetired(name);
+    }
+    // What remains held or reported is of ends this agent never had.
+    _retiredEnds.addAll(_heldReaderAssignments.keys);
+    _heldReaderAssignments.clear();
+    _heldAssignments.clear();
+    _heldRequests.clear();
+    _requestPairs.clear();
+    _reportedLinks.clear();
+    for (final m in mp.all.toList()) {
+      if (m.link != null) mp.remove(m);
+    }
+    mp.withSenderEpoch(_epoch);
+    return retired;
+  }
+
   /// Handle req(_r(p, i)) — we are the anchor p (madGLP Receive, Request
   /// case): the request is held; on authorisation the requester is recorded
   /// among the link's holders and a pending value is addressed to it as well.
   /// A request repeating a recorded (link, requester) pair, and a request for
   /// a closed link, are dropped.
-  void handleRequest(GlobalName globalName, String fromAgent) {
-    _trace('[MAD $agentId] handleRequest: req($globalName) from $fromAgent');
-    final key = (globalName.agent, globalName.index);
+  void handleRequest(GlobalName globalName, String fromAgent,
+      {int senderEpoch = 1}) {
+    _trace('[MAD $agentId] handleRequest: req($globalName) from $fromAgent '
+        'in epoch $senderEpoch');
+    final key = globalName;
+    if (globalName.agent == agentId && globalName.epoch < _epoch) {
+      _trace('[MAD $agentId] handleRequest: $globalName names epoch '
+          '${globalName.epoch}, before this agent\'s $_epoch — stale, '
+          'dropped');
+      return;
+    }
 
     // "A request repeating a (link, requester) pair already recorded --- the
     // link held, authorised or closed --- is dropped" (§app:requests-acks); "A
@@ -1536,8 +1980,10 @@ class MadContext {
     }
 
     // A request matching no live link is stale and dropped as before, without
-    // troubling the program: "A request for a closed link is dropped."
+    // troubling the program: "A request for a closed link is dropped."  One
+    // for an end this agent lost is answered gone.
     if (!_readerLinkIsLive(globalName)) {
+      if (_lostEnd(globalName, fromAgent)) return;
       _trace('[MAD $agentId] handleRequest: $globalName matches nothing — '
           'stale request dropped');
       return;
@@ -1549,8 +1995,8 @@ class MadContext {
     // recorded until `authorise_link/2` answers.  A further requester's
     // request is held behind the one reported, and reported in its turn.
     (_requestPairs[key] ??= <String>{}).add(fromAgent);
-    final queue = _heldRequests[key] ??= <String>[];
-    queue.add(fromAgent);
+    final queue = _heldRequests[key] ??= <(String, int)>[];
+    queue.add((fromAgent, senderEpoch));
     if (queue.length == 1) {
       _reportPendingLink(globalName, fromAgent);
     } else {
@@ -1563,8 +2009,7 @@ class MadContext {
   /// value not yet produced (the `global_send` goal waits) or produced and
   /// pending.  Otherwise the link is closed — acknowledged or refused.
   bool _readerLinkIsLive(GlobalName globalName) =>
-      _pendingReaderValues
-          .containsKey((globalName.agent, globalName.index)) ||
+      _pendingReaderValues.containsKey(globalName) ||
       globalSendRegistry.hasGoalForLink(globalName);
 
   /// After the program answered the held request reported for the link
@@ -1573,41 +2018,39 @@ class MadContext {
   /// unreported: "A request for a closed link is dropped" (madGLP Receive,
   /// Request case).
   void _reportNextHeldRequest(GlobalName globalName) {
-    final key = (globalName.agent, globalName.index);
-    final queue = _heldRequests[key];
+    final queue = _heldRequests[globalName];
     if (queue == null) return;
     if (queue.isNotEmpty && _readerLinkIsLive(globalName)) {
-      _reportPendingLink(globalName, queue.first);
+      _reportPendingLink(globalName, queue.first.$1);
       return;
     }
-    for (final requester in queue) {
+    for (final (requester, _) in queue) {
       _trace('[MAD $agentId] held req($globalName) from $requester: the link '
           'closed — dropped');
     }
-    _heldRequests.remove(key);
+    _heldRequests.remove(globalName);
   }
 
   /// Release the request records of the reader-name link [globalName], now
   /// closed: its recorded (link, requester) pairs, and the requests held
   /// behind the one reported, which are for a closed link.
   void _releaseRequestRecords(GlobalName globalName, {bool held = false}) {
-    final key = (globalName.agent, globalName.index);
-    _requestPairs.remove(key);
-    if (held) _heldRequests.remove(key);
+    _requestPairs.remove(globalName);
+    if (held) _heldRequests.remove(globalName);
   }
 
   /// Perform the request the anchor held, once authorised (madGLP Receive,
-  /// Request case): record the requester among the link's holders, and address
-  /// a pending value to it as well, unsent.
-  void _applyRequest(GlobalName globalName, String fromAgent) {
-    final key = (globalName.agent, globalName.index);
-    final pending = _pendingReaderValues[key];
+  /// Request case): record the requester among the link's holders, with the
+  /// epoch [epoch] its request carried as the epoch the end records of it,
+  /// and address a pending value to it as well, unsent.
+  void _applyRequest(GlobalName globalName, String fromAgent, int epoch) {
+    final pending = _pendingReaderValues[globalName];
     if (pending != null) {
       // Address the pending value to the requester as well: "if the value is
       // pending, p addresses it to s as well" (§app:requests-acks). The copy
       // sent to a past holder is dropped there as stale; the value stays
       // pending until the current holder's acknowledgement arrives.
-      _addressPendingTo(key, pending, fromAgent);
+      _addressPendingTo(globalName, pending, fromAgent, epoch);
       _trace('[MAD $agentId] handleRequest: pending $globalName addressed '
           'to $fromAgent as well');
       return;
@@ -1616,7 +2059,8 @@ class MadContext {
     // Value not yet produced: record the requester among the link's holders —
     // per-link runtime state consulted at send time, when the value goes to
     // each holder recorded (§app:requests-acks).
-    if (globalSendRegistry.recordRequester(globalName, fromAgent)) {
+    if (globalSendRegistry.recordRequester(globalName, fromAgent,
+        epoch: epoch)) {
       _trace('[MAD $agentId] handleRequest: $fromAgent recorded among the '
           'holders of $globalName');
       return;
@@ -1633,16 +2077,23 @@ class MadContext {
   /// re-addressing any pending value of such a link to s; then remove the
   /// acknowledged value: the link is closed. An acknowledgement for a closed
   /// link is dropped.
-  void handleAck(GlobalName globalName, String fromAgent) {
-    final key = (globalName.agent, globalName.index);
-    final removed = _pendingReaderValues.remove(key);
+  void handleAck(GlobalName globalName, String fromAgent,
+      {int senderEpoch = 1}) {
+    if (globalName.agent == agentId && globalName.epoch < _epoch) {
+      _trace('[MAD $agentId] handleAck: $globalName names epoch '
+          '${globalName.epoch}, before this agent\'s $_epoch — stale, '
+          'dropped');
+      return;
+    }
+    final removed = _pendingReaderValues.remove(globalName);
     if (removed == null) {
+      if (_lostEnd(globalName, fromAgent)) return;
       _trace('[MAD $agentId] handleAck: ack($globalName) matches no pending '
           'value — stale, dropped');
       return;
     }
     for (final nested in removed.nestedReaderNames) {
-      _recordHolder(nested, fromAgent);
+      _recordHolder(nested, fromAgent, senderEpoch);
     }
     // The link is closed: every request for it is now dropped as one for a
     // closed link, so its recorded (link, requester) pairs are released.
@@ -1655,34 +2106,35 @@ class MadContext {
   /// state): a not-yet-fired global_send goal has its destination updated; a
   /// pending value addressed elsewhere is re-addressed to [holder]. A closed
   /// link needs nothing.
-  void _recordHolder(GlobalName globalName, String holder) {
-    if (globalSendRegistry.redirectGoal(globalName, holder)) {
+  void _recordHolder(GlobalName globalName, String holder, int epoch) {
+    if (globalSendRegistry.recordHolder(globalName, holder, epoch: epoch)) {
       _trace('[MAD $agentId] holder of $globalName recorded as $holder');
       return;
     }
-    final key = (globalName.agent, globalName.index);
-    final pending = _pendingReaderValues[key];
+    final pending = _pendingReaderValues[globalName];
     if (pending != null && pending.destination != holder) {
-      _addressPendingTo(key, pending, holder);
+      _addressPendingTo(globalName, pending, holder, epoch);
       _trace('[MAD $agentId] pending $globalName re-addressed to holder '
           '$holder');
     }
   }
 
   /// Address the pending value [pending] of the reader-name link [key] to
-  /// [holder]: it is recorded as the value's destination, and the value is
-  /// queued to it, unsent.
-  void _addressPendingTo((String, int) key, _PendingReaderValue pending,
-      String holder) {
+  /// [holder], whose epoch [epoch] the end records: it is recorded as the
+  /// value's destination, and the value is queued to it, unsent.
+  void _addressPendingTo(GlobalName key, _PendingReaderValue pending,
+      String holder, int epoch) {
     _pendingReaderValues[key] = (
       payload: pending.payload,
       destination: holder,
       nestedReaderNames: pending.nestedReaderNames,
+      holderEpoch: epoch,
     );
     mp.add(OutboundMessage(
       destination: holder,
       type: MessageType.assignment,
       payload: pending.payload,
+      link: key,
     ));
   }
 
@@ -1705,6 +2157,8 @@ class MadContext {
   /// A held request answered, the next requester held for the same link is
   /// reported in its turn (§Held Links), within this transaction.
   bool answerLink(GlobalName gn, bool authorise) {
+    // The program answers with the name the report carried, epoch and all
+    // (IGLP cec4682, "Global Variable Names").
     final answered = _answerLink(gn, authorise);
     if (answered && !gn.isWriter) _reportNextHeldRequest(gn);
     _flushReports();
@@ -1712,18 +2166,17 @@ class MadContext {
   }
 
   bool _answerLink(GlobalName gn, bool authorise) {
-    final linkKey = (gn.agent, gn.index, gn.isWriter);
-    if (_reportedLinks.remove(linkKey) == null) {
+    if (_reportedLinks.remove(gn) == null) {
       _trace('[MAD $agentId] answerLink: $gn was not reported — ignored');
       return false;
     }
     _trace('[MAD $agentId] answerLink: $gn '
         '${authorise ? "AUTHORISED" : "REFUSED"}');
 
-    final heldMessage = mp.findHeld(gn.agent, gn.index, gn.isWriter);
-    final heldAssignment = _heldAssignments.remove(linkKey);
+    final heldMessage = mp.findHeld(gn);
+    final heldAssignment = _heldAssignments.remove(gn);
     // The held request reported for the link is the first held for it.
-    final heldQueue = gn.isWriter ? null : _heldRequests[(gn.agent, gn.index)];
+    final heldQueue = gn.isWriter ? null : _heldRequests[gn];
     final heldRequester = (heldQueue == null || heldQueue.isEmpty)
         ? null
         : heldQueue.removeAt(0);
@@ -1733,7 +2186,7 @@ class MadContext {
       if (heldMessage != null) {
         heldMessage.held = false;
         // Case 2: the value now goes, so its record has served its purpose.
-        final rec = up.findByLink(gn.agent, gn.index);
+        final rec = up.findByLink(gn);
         if (rec != null) up.remove(rec.writerAddr);
         _trace('[MAD $agentId] answerLink: held message for $gn released');
       }
@@ -1745,7 +2198,7 @@ class MadContext {
       }
       // A retained request is performed.
       if (heldRequester != null) {
-        _applyRequest(gn, heldRequester);
+        _applyRequest(gn, heldRequester.$1, heldRequester.$2);
       }
       return true;
     }
@@ -1763,15 +2216,15 @@ class MadContext {
   /// agent, and any pending value addressed by it.
   void _dropLink(GlobalName gn) {
     if (gn.isWriter) {
-      wp.removeGlobalizeEntry(gn.index);
+      if (gn.agent == agentId) wp.removeGlobalizeEntry(gn.index);
     } else {
-      wp.removeLocalizeEntry(gn.agent, gn.index);
-      _pendingReaderValues.remove((gn.agent, gn.index));
+      wp.removeLocalizeEntry(gn);
+      _pendingReaderValues.remove(gn);
       // The link is closed: its recorded pairs go, and the requests still
       // held for it are for a closed link, dropped.
       _releaseRequestRecords(gn, held: true);
     }
-    final rec = up.findByLink(gn.agent, gn.index);
+    final rec = up.findByLink(gn);
     if (rec != null) {
       up.remove(rec.writerAddr);
       globalSendRegistry.removeGoalFor(rec.writerAddr);
@@ -1797,10 +2250,20 @@ class MadContext {
   /// applied and forwarded reader names, the held requests and recorded
   /// requesters, and the links reported and not yet answered.  Written at the
   /// end of an event cycle, when no transaction is in progress.
-  void saveState(StateWriter w) {
-    if (_deferredReports.isNotEmpty) {
+  void saveState(StateWriter w, {bool scanning = false}) {
+    if (!scanning && _deferredReports.isNotEmpty) {
       throw StateError('the state is saved inside a transaction, with '
           '${_deferredReports.length} reports not yet appended');
+    }
+    w.uint(_epoch);
+    w.uint(_knownEpochs.length);
+    for (final MapEntry(key: agent, value: e) in _knownEpochs.entries) {
+      w.str(agent);
+      w.uint(e);
+    }
+    w.uint(_retiredEnds.length);
+    for (final name in _retiredEnds) {
+      name.save(w);
     }
     wp.saveState(w);
     up.saveState(w);
@@ -1811,6 +2274,10 @@ class MadContext {
     w.uint(callbacks.length);
     for (final (at, tag) in callbacks) {
       if (tag == null) {
+        if (scanning) {
+          w.cell(at);
+          continue;
+        }
         throw StateError('a heap callback on cell ${at.id} was registered '
             'with no tag, and cannot be made again for a restarted agent');
       }
@@ -1819,20 +2286,20 @@ class MadContext {
     }
 
     w.uint(_heldReaderAssignments.length);
-    for (final MapEntry(key: (agent, index), value: held)
+    for (final MapEntry(key: name, value: held)
         in _heldReaderAssignments.entries) {
-      w.str(agent);
-      w.uint(index);
+      name.save(w);
       w.term(held.value);
       w.str(held.fromAgent);
     }
     w.uint(_pendingReaderValues.length);
-    for (final MapEntry(key: (agent, index), value: pending)
+    for (final MapEntry(key: name, value: pending)
         in _pendingReaderValues.entries) {
-      w.str(agent);
-      w.uint(index);
+      name.save(w);
       w.bytes(pending.payload);
       w.str(pending.destination);
+      w.boolean(pending.holderEpoch != null);
+      if (pending.holderEpoch != null) w.uint(pending.holderEpoch!);
       w.uint(pending.nestedReaderNames.length);
       for (final gn in pending.nestedReaderNames) {
         gn.save(w);
@@ -1841,60 +2308,61 @@ class MadContext {
     _saveNames(w, _forwardedReaderNames);
     _saveNames(w, _appliedReaderNames);
     w.uint(_heldAssignments.length);
-    for (final MapEntry(key: (agent, index, isWriter), value: held)
-        in _heldAssignments.entries) {
-      w.str(agent);
-      w.uint(index);
-      w.boolean(isWriter);
+    for (final MapEntry(key: name, value: held) in _heldAssignments.entries) {
+      name.save(w);
       w.term(held.value);
       w.str(held.fromAgent);
     }
     w.uint(_heldRequests.length);
-    for (final MapEntry(key: (agent, index), value: requesters)
+    for (final MapEntry(key: name, value: requesters)
         in _heldRequests.entries) {
-      w.str(agent);
-      w.uint(index);
+      name.save(w);
       w.uint(requesters.length);
-      for (final q in requesters) {
+      for (final (q, e) in requesters) {
         w.str(q);
+        w.uint(e);
       }
     }
     w.uint(_requestPairs.length);
-    for (final MapEntry(key: (agent, index), value: requesters)
+    for (final MapEntry(key: name, value: requesters)
         in _requestPairs.entries) {
-      w.str(agent);
-      w.uint(index);
+      name.save(w);
       w.uint(requesters.length);
       for (final q in requesters) {
         w.str(q);
       }
     }
     w.uint(_reportedLinks.length);
-    for (final MapEntry(key: (agent, index, isWriter), value: sender)
-        in _reportedLinks.entries) {
-      w.str(agent);
-      w.uint(index);
-      w.boolean(isWriter);
+    for (final MapEntry(key: name, value: sender) in _reportedLinks.entries) {
+      name.save(w);
       w.str(sender);
     }
   }
 
-  static void _saveNames(StateWriter w, Set<(String, int)> names) {
+  static void _saveNames(StateWriter w, Set<GlobalName> names) {
     w.uint(names.length);
-    for (final (agent, index) in names) {
-      w.str(agent);
-      w.uint(index);
+    for (final name in names) {
+      name.save(w);
     }
   }
 
-  static Set<(String, int)> _restoreNames(StateReader r) => {
-        for (var i = r.uint(); i > 0; i--) (r.str(), r.uint()),
+  static Set<GlobalName> _restoreNames(StateReader r) => {
+        for (var i = r.uint(); i > 0; i--) GlobalName.restore(r),
       };
 
   /// Read back what [saveState] wrote, into a context fresh from
   /// construction, and make again the heap callbacks of the `global_send`
   /// goals, each on the cell it sat on.
   void restoreState(StateReader r) {
+    _epoch = r.uint();
+    _knownEpochs.clear();
+    for (var i = r.uint(); i > 0; i--) {
+      final agent = r.str();
+      _knownEpochs[agent] = r.uint();
+    }
+    _retiredEnds
+      ..clear()
+      ..addAll(_restoreNames(r));
     wp.restoreState(r);
     up.restoreState(r);
     mp.restoreState(r);
@@ -1909,23 +2377,22 @@ class MadContext {
 
     _heldReaderAssignments.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final agent = r.str();
-      final index = r.uint();
+      final name = GlobalName.restore(r);
       final value = r.term();
-      _heldReaderAssignments[(agent, index)] =
-          (value: value, fromAgent: r.str());
+      _heldReaderAssignments[name] = (value: value, fromAgent: r.str());
     }
     _pendingReaderValues.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final agent = r.str();
-      final index = r.uint();
+      final name = GlobalName.restore(r);
       final payload = r.bytes();
       final destination = r.str();
+      final holderEpoch = r.boolean() ? r.uint() : null;
       final nested = [for (var j = r.uint(); j > 0; j--) GlobalName.restore(r)];
-      _pendingReaderValues[(agent, index)] = (
+      _pendingReaderValues[name] = (
         payload: payload,
         destination: destination,
         nestedReaderNames: nested,
+        holderEpoch: holderEpoch,
       );
     }
     _forwardedReaderNames
@@ -1936,31 +2403,26 @@ class MadContext {
       ..addAll(_restoreNames(r));
     _heldAssignments.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final agent = r.str();
-      final index = r.uint();
-      final isWriter = r.boolean();
+      final name = GlobalName.restore(r);
       final value = r.term();
-      _heldAssignments[(agent, index, isWriter)] =
-          (value: value, fromAgent: r.str());
+      _heldAssignments[name] = (value: value, fromAgent: r.str());
     }
     _heldRequests.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final agent = r.str();
-      final index = r.uint();
-      _heldRequests[(agent, index)] = [for (var j = r.uint(); j > 0; j--) r.str()];
+      final name = GlobalName.restore(r);
+      _heldRequests[name] = [
+        for (var j = r.uint(); j > 0; j--) (r.str(), r.uint())
+      ];
     }
     _requestPairs.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final agent = r.str();
-      final index = r.uint();
-      _requestPairs[(agent, index)] = {for (var j = r.uint(); j > 0; j--) r.str()};
+      final name = GlobalName.restore(r);
+      _requestPairs[name] = {for (var j = r.uint(); j > 0; j--) r.str()};
     }
     _reportedLinks.clear();
     for (var i = r.uint(); i > 0; i--) {
-      final agent = r.str();
-      final index = r.uint();
-      final isWriter = r.boolean();
-      _reportedLinks[(agent, index, isWriter)] = r.str();
+      final name = GlobalName.restore(r);
+      _reportedLinks[name] = r.str();
     }
   }
 
@@ -1984,9 +2446,11 @@ class MadContext {
   /// Early messages).
   int get earlyAssignmentCount => _heldReaderAssignments.length;
 
-  /// Whether the value for reader name (anchorAgent, index) is still pending.
-  bool hasPendingReaderValue(String anchorAgent, int index) =>
-      _pendingReaderValues.containsKey((anchorAgent, index));
+  /// Whether the value for the reader name `_r(anchorAgent, epoch, index)`
+  /// is still pending, [epoch] this agent's current one where not given.
+  bool hasPendingReaderValue(String anchorAgent, int index, {int? epoch}) =>
+      _pendingReaderValues.containsKey(
+          GlobalName.reader(anchorAgent, index, epoch: epoch ?? _epoch));
 
   // =========================================================================
   // Unified Send ('_send' builtin implementation)
@@ -1997,7 +2461,12 @@ class MadContext {
   /// The `'_send'(T, G, Q)` builtin behavior depends on whether G is a serializer
   /// address (index 0) or a normal global name (index > 0):
   ///
-  /// **Case G = `_w(q, 0)` (Serializer)**:
+  /// G is the program's name of the link, `_w(p, e, i)` or `_r(p, e, i)`,
+  /// its agent [gnAgent], its epoch [gnEpoch] and its index [gnIndex] (IGLP
+  /// cec4682, "Global Variable Names": the program's name is the 3-ary
+  /// structure).
+  ///
+  /// **Case G = `_w(q, 0, 0)` (Serializer)**:
   /// 1. Globalizes term T for remote agent Q
   /// 2. Allocates a serial i from the agent's global-name counter, one per
   ///    message, so that (this agent, i) is unique for the whole run as every
@@ -2008,7 +2477,8 @@ class MadContext {
   /// **Case G = `_w(p, i)` or `_r(p, i)` with i > 0 (Normal)**:
   /// 1. Globalizes term T for remote agent Q
   /// 2. Adds message `(G := T↑, Q)` to M_p — content sent directly
-  void send(Term term, bool isWriter, String gnAgent, int gnIndex, String destAgent) {
+  void send(Term term, bool isWriter, String gnAgent, int gnEpoch, int gnIndex,
+      String destAgent) {
     // The global name's agent and the destination, each a key or a readable
     // name standing for one, resolved to the one agent ([resolveAgent]).
     final resolve = resolveAgent;
@@ -2028,6 +2498,7 @@ class MadContext {
     final globalizeResult = globalize(
       variables: vars,
       localAgent: agentId,
+      localEpoch: _epoch,
       remoteAgent: destAgent,
       table: wp,
       records: up,
@@ -2054,26 +2525,28 @@ class MadContext {
     final globalizedTerm = globalizeTermWithResult(term, vars, globalizeResult);
     _trace('[MAD $agentId] send: globalized term = $globalizedTerm');
 
-    // Build the global name structure
+    // The global name as the program gave it, epoch included.
     final globalName = isWriter
-        ? GlobalName.writer(gnAgent, gnIndex)
-        : GlobalName.reader(gnAgent, gnIndex);
+        ? GlobalName.writer(gnAgent, gnIndex, epoch: gnEpoch)
+        : GlobalName.reader(gnAgent, gnIndex, epoch: gnEpoch);
 
     // Create payload based on serializer (index 0) vs normal (index > 0)
     List<int> payload;
-    if (isWriter && gnIndex == 0) {
+    if (globalName.isSerializer) {
       // Serializer case: wrap in list cell [T↑ | _w(q,0)], under a serial
-      // this agent allocates from its global-name counter — after T's own
-      // names, which keep the indices they had before cold calls carried one.
+      // this agent allocates from its global-name counter in its epoch —
+      // after T's own names, which keep the indices they had before cold
+      // calls carried one.
       final serial = wp.allocateIndex();
       _trace('[MAD $agentId] send: serializer case, wrapping in list cell, '
-          'serial $serial');
+          'serial $serial of epoch $_epoch');
       payload = PayloadCodec.createSerializerPayload(globalName, globalizedTerm,
-          serial: serial);
+          serial: serial, senderEpoch: _epoch);
     } else {
       // Normal case: send directly
       _trace('[MAD $agentId] send: normal case, sending directly');
-      payload = PayloadCodec.createGlobalSendPayload(globalName, globalizedTerm);
+      payload = PayloadCodec.createGlobalSendPayload(globalName, globalizedTerm,
+          senderEpoch: _epoch);
     }
 
     // Queue the message for delivery
@@ -2081,15 +2554,17 @@ class MadContext {
       destination: destAgent,
       type: MessageType.assignment,
       payload: payload,
+      link: globalName.isSerializer ? null : globalName,
     ));
 
     // A reader-name value pends until acknowledged (§app:requests-acks).
     if (!isWriter && gnIndex > 0) {
-      _pendingReaderValues[(gnAgent, gnIndex)] = (
+      _pendingReaderValues[globalName] = (
         payload: payload,
         destination: destAgent,
         nestedReaderNames:
             globalizeResult.spawns.map((s) => s.globalName).toList(),
+        holderEpoch: null,
       );
       _trace('[MAD $agentId] send: value ${globalName} pending until ack');
     }

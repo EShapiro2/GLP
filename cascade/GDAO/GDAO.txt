@@ -1,0 +1,87 @@
+% GDAO: Grassroots DAO --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.3 and cites a clause as GDAO:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GCoop, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-12, by GO #5.
+% Schemas: GDAO.glp beside this file.
+GDAO: Grassroots DAO
+GDAO instantiates GCoop and restricts it.
+A DAO is a cooperative with one role besides member, steward; the steward decides the admission of a member, and the members decide every other act of the DAO by a majority of the members.
+Alice and Bob are persons, Orga a DAO.
+1. ■ Founding.  Alice may found Orga and become its steward and first member.
+2. ■ Joining.  Bob becomes a member of Orga by an act of Bob and the steward.
+Pragmas
+Look: 🗳️, governance
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+DAOs: the DAOs Alice is a member of.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move expel] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move coop board] <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Membership: Bob [Leave]
+  Otto [Expel] <person Bob>
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Board: Otto [Coop board] <person Bob>
+  Bob: Otto asks you to approve this: coop board.
+Joining: Bob [Dao join] <person Otto>
+  Otto: Bob asks you to approve this: dao join.

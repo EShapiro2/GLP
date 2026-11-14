@@ -102,7 +102,6 @@ Future<void> main(List<String> argv) async {
       agentId: id,
       program: '$glpRoot/tests/live/gds_live_client.glp',
       rootSelfGlpPath: '$glpRoot/self.glp',
-      keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
       network: HeadlessGlpNetwork(layer),
     );
     final a = _Agent(id, key, layer, runtime);

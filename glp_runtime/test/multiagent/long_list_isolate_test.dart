@@ -14,10 +14,9 @@
 @Timeout.none
 library;
 
-import 'dart:io';
-
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
+
+import 'boot_program.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -25,21 +24,23 @@ import 'package:test/test.dart';
 
 const int _n = 50000;
 
-String get _rootSelf => File('../programs/self.glp').absolute.path;
-
 /// alice sends bob a list of 50,000 once it is complete, and bob checks that
 /// it is n, n - 1, ..., 1, element by element, and shows the person `ok`.
 const String _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
+
+/// The agents' program, a program directory's self.glp (boot_program.dart).
+const String _program = '''
 exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
 procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start([bob | _], N) :- bob_init(bob, N?).
 start(_, _) :- otherwise | true.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
 procedure alice_init(_?, _?).
 alice_init(_, _) :- gen($_n, Xs, D), ship(D?, Xs?).
@@ -89,7 +90,7 @@ void main() {
     };
 
     alice.send(StructTerm('msg', [ConstTerm('bob'), _ints(_n)]), true, 'bob',
-        0, 'bob');
+        0, 0, 'bob');
     alice.flushMessages();
 
     final cell = rtBob.heap.getValue(netIn) as StructTerm;
@@ -116,8 +117,7 @@ void main() {
 
     test('alice sends bob a list of 50,000 and bob reads it whole, in order',
         () async {
-      final config = BootLoader().load(_boot);
-      config.rootSelfGlpPath = _rootSelf;
+      final config = bootWithProgram(_boot, _program);
       await manager.boot(config);
       manager.start();
       await manager.settle();

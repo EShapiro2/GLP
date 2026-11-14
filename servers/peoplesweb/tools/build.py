@@ -21,17 +21,25 @@ its owner writes that line; web/about.json holds the site's own line for each
 contract; and programs/apps/look.json each family's name and colours, which
 the app's asset sync reads too.  build/ and
 programs/vglp/cva/web_worlds/ are generated, gitignored, and this script rebuilds them whole.
+
+The test site, peoplesweb.org/test (deploy/test.sh), is this script of another
+branch run over the repository as main has it: GLP_ROOT names the repository,
+BUILD_DIR where the site is written, and SITE_TEST=1 says that the build
+writes no world, the test pages using the live server's worlds, and that the
+pages are served one level below the site's root, where the API is.
 """
 import json, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # servers/peoplesweb
-GLP = os.path.dirname(os.path.dirname(HERE))                          # the repository
-BUILD = os.path.join(HERE, 'build')
+GLP = os.environ.get('GLP_ROOT') or os.path.dirname(os.path.dirname(HERE))   # the repository
+BUILD = os.environ.get('BUILD_DIR') or os.path.join(HERE, 'build')
+TEST = os.environ.get('SITE_TEST') == '1'                             # the test site (deploy/test.sh)
 WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.path.join(BUILD, 'www')
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import FOUNDATIONAL, load_state, paper_of  # noqa: E402
+from papers import cite_of, foundational, key_of, load_state, paper_of  # noqa: E402
+import directories  # noqa: E402
 import certify  # noqa: E402
 
 LAYERS = [('schemas', 'schemas.txt'), ('verdict', 'verdict.txt'), ('vmat', 'vmat.tex'),
@@ -147,11 +155,18 @@ def contract_text(path):
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
-    clauses = []
-    for l in body[2:end]:
+    clauses, preamble = [], []
+    for l in body[1:end]:
         m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
-        if m: clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
-    return {'id': name, 'title': title, 'preamble': body[1], 'clauses': clauses,
+        if m:
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+        elif not clauses:
+            # Every line of the box before its clauses, in its order: the
+            # extension line, the definitions that are part of the contract
+            # and the declaration of its names, whichever comes first (style
+            # guide, 23 and 36; Udi, 2026-11-09, to GO #2).
+            preamble.append(l.strip())
+    return {'id': name, 'title': title, 'preamble': '\n'.join(preamble), 'clauses': clauses,
             'pragmas': [l for l in body[end:] if l.strip() != 'Pragmas'], 'meta': meta}
 
 
@@ -176,20 +191,41 @@ RELATIONS = ('extends', 'restricts', 'amends', 'implements', 'instantiates')
 
 def extends_of(c, lines):
     """The relation a contract states and the contracts it relates to: the box's own first line, 'NAME amends GSN and GFP (cite).' (style guide, 36; GSC, Section 8), wherever it stands among the text's lines, or failing it the same sentence in a % line (DGC's); failing both, the % Extends or % Restricts line, its first sentence, less the contracts named only 'through' another."""
-    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS) + r') ([^.(]+)')
+    # The sentence is read to its full stop, each reference in parentheses
+    # skipped, wherever it stands: 'GNL extends GNO, GDO (GRH, ...) and REC.'
+    # extends REC too (style guide, 36; GO #4, 2026-11-10).
+    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r') ([^.]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
-        m = rel.search(l)
+        m = rel.search(re.sub(r'\([^()]*\)', '', l))
         if m:
             # Each contract named takes the relation written before it: 'GAI
             # extends GnW and amends GFP' is two relations, one to each.
+            # After 'instantiates X', a relation that names no contract is the
+            # contract's relation to its instance of X ('CSSN instantiates GSNW
+            # ... and restricts and extends it'), or, after 'composes it with
+            # Y', to that composition ('GAI instantiates GnW, composes it with
+            # GFP and restricts the composition'), each checked on its own
+            # (GSC #16, 2026-11-11 19:45 UTC, from GSC's Section 9).
             c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
-            for part in re.split(r'\b(' + '|'.join(RELATIONS) + r')\b', m.group(2)):
-                if part in RELATIONS:
+            c['rels_of'], inst, comp = [], None, None
+            for part in re.split(r'\b(' + '|'.join(RELATIONS + ('composes',)) + r')\b', m.group(2)):
+                if part in RELATIONS + ('composes',):
                     cur = part
                     continue
-                for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part):
-                    if t in texts and t != c['id']:
-                        c['rels'].setdefault(t, cur)
+                named = [t for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part) if t in texts and t != c['id']]
+                for t in named:
+                    c['rels'].setdefault(t, cur)
+                    if cur == 'instantiates':
+                        inst = inst or t
+                    if cur == 'composes':
+                        comp = comp or inst or t
+                # 'GAS composes GPD with GSV, restricts the composition, and
+                # extends it': a composition with no instance, named by the
+                # first contract composed (GSC's Section 2, GSC 220151a).
+                if not named and (inst or comp) and cur not in ('instantiates', 'composes'):
+                    of = 'composition' if comp else 'instance'
+                    if not any(x['rel'] == cur for x in c['rels_of']):
+                        c['rels_of'].append({'rel': cur, 'of': of, 'base': inst or comp})
             return list(c['rels'])
     line = next((l for l in c['meta'] if l.startswith('% Extends:') or l.startswith('% Restricts:')), '% Extends:')
     c['relation'] = 'restricts' if line.startswith('% Restricts:') else 'extends'
@@ -218,17 +254,25 @@ def has_platform(n):
 
 
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
+# The test site writes no world: its apps are the live server's, so a contract
+# is live there where the live build made its world.
+if TEST:
+    compiled = [n for n in compiled if os.path.exists(os.path.join(WORLDS, f'live_{n.lower()}', 'platform.vglp'))]
 
-shutil.rmtree(BUILD, ignore_errors=True); shutil.rmtree(WORLDS, ignore_errors=True)
-os.makedirs(WORLDS); os.makedirs(os.path.join(WWW, 'specs'))
-with open(os.path.join(WORLDS, '.gitignore'), 'w') as f:
-    f.write('# Generated by servers/peoplesweb/tools/build.py, and rebuilt whole by it.\n*\n')
+shutil.rmtree(BUILD, ignore_errors=True)
+os.makedirs(os.path.join(WWW, 'specs'))
+if not TEST:
+    shutil.rmtree(WORLDS, ignore_errors=True)
+    os.makedirs(WORLDS)
+    with open(os.path.join(WORLDS, '.gitignore'), 'w') as f:
+        f.write('# Generated by servers/peoplesweb/tools/build.py, and rebuilt whole by it.\n*\n')
 
 for n in compiled:
     c = n.lower()
-    subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'gen_harness.py'),
-                    os.path.join(GLP, 'cascade', n, 'platform.vglp'), os.path.join(WORLDS, f'live_{c}'), n],
-                   check=True, stdout=subprocess.DEVNULL)
+    if not TEST:
+        subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'gen_harness.py'),
+                        os.path.join(GLP, 'cascade', n, 'platform.vglp'), os.path.join(WORLDS, f'live_{c}'), n],
+                       check=True, stdout=subprocess.DEVNULL)
     s = spec(os.path.join(WORLDS, f'live_{c}', 'platform.vglp'))
     s['id'], s['title'] = n, cat[n]['title']
     s['calendar'] = 'cal(alice, N)' in read(os.path.join(WORLDS, f'live_{c}', 'self.glp'))
@@ -240,19 +284,13 @@ for n in compiled:
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
 look = json.loads(read(os.path.join(GLP, 'programs', 'apps', 'look.json')))
 # The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
-# the server, with its state.json, or else the ones built by hand in
-# web/papers.
-# web/papers, each served from where it is newest: PAPERS_DIR where the sync
-# has built it, web/papers otherwise, so a paper not yet built there keeps
-# its link.
-hand = os.path.join(HERE, 'web', 'papers')
+# the server, with its state.json; a build with no PAPERS_DIR links none.
 synced = os.environ.get('PAPERS_DIR') or ''
 pdfs = {}
-for d in (hand, synced):
-    if d and os.path.isdir(d):
-        for f in os.listdir(d):
-            if f.endswith('.pdf'):
-                pdfs[f] = os.path.join(d, f)
+if synced and os.path.isdir(synced):
+    for f in os.listdir(synced):
+        if f.endswith('.pdf'):
+            pdfs[f] = os.path.join(synced, f)
 served = {f[:-4] for f in pdfs}
 paper_state = load_state(synced) if synced else {}
 byid = dict(cat)
@@ -304,7 +342,9 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
     c['label'] = f"{n}: {t}" 
     c['cascade'] = n in compiled
+    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
     c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['paperKey'] = key_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''))
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -337,7 +377,7 @@ for c in contracts:
 # through the REPL and cached (tools/certify.py); CERTIFY=0 skips both, for a
 # quick build of the pages alone.
 if os.environ.get('CERTIFY', '1') != '0':
-    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {})} for c in contracts])
+    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {}), 'rels_of': c.get('rels_of', [])} for c in contracts])
     arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
 else:
     checks, arts = {}, {}
@@ -350,12 +390,43 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
-    if f.endswith(('.html', '.png', '.ico', '.jpg')):
+    if f.endswith(('.html', '.js', '.png', '.ico', '.jpg')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
+# The page an invitation link opens, peoplesweb.org/i (GNA, Section 6,
+# Invitation links), and the file that names the Grassroots App to iOS as the
+# app that opens such a link.
+for d in ('i', '.well-known'):
+    shutil.copytree(os.path.join(HERE, 'web', d), os.path.join(WWW, d), dirs_exist_ok=True)
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
+# The projects (tools/directories.py): each with its papers, each paper with
+# its citation, its contracts and its directories, and under Code the
+# directories with no paper, a tree in which each is once (Udi, 2026-11-12, to
+# GSA #5); the Papers page lists the same projects' papers, and after them the
+# papers no project holds.  What no entry covers, and what does not fit the
+# tree, the build prints and the page shows, so that every directory is
+# accounted for.
+projects, code, faults = directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
+for p in projects:
+    for q in p['papers']:
+        q['cite'] = cite_of(q['key'], served, paper_state) or {}
+        if not q['cite']:
+            faults.append(f"the paper {q['key']} of {p['id']} is not in tools/papers.py")
+lost = directories.unaccounted(GLP)
+if lost:
+    print('directories: no entry answers for ' + ', '.join(lost))
+for f in faults:
+    print('projects: ' + f)
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': FOUNDATIONAL}, ensure_ascii=False) + ';\n')
+    data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
+            'noPaper': [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
+            'otherPapers': foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
+            'unaccounted': lost, 'faults': faults}
+    if TEST:
+        # The test site's pages are one level below the site's root, and the
+        # API they call is the live server's, at the root.
+        data['test'], data['api'] = True, ''
+    f.write('window.DATA = ' + json.dumps(data, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

@@ -1,35 +1,63 @@
 % GO: Grassroots Organisation --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 3, Grassroots Organisations and cites a clause as GO:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GnW, Guardians 'n' Wards, GAI's (programs/gai), and through it GSG and GKK, GSC's.
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Extends: GnW, Guardians 'n' Wards, GSC's (programs/gsc), and through it GSG and GKK.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: GO.glp beside this file.
 GO: Grassroots Organisation
-GO extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, in preparation).
+GO instantiates GnW and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 An organisation is a ward with participants, which include its guardians, referred to as its officers, each with a role.  The state of the ward holds its bylaws and its register, recording the participants and the officers in each role.  The bylaws define the roles of the organisation, each with its powers and the acts by which a participant is appointed to it and removed from it, and name for each act of the organisation the officers and/or persons who decide it and the rule by which they decide it jointly, including admitting and removing a participant, and appointing an officer when there is none.
 Alice and Bob are persons, Orga a ward.
 1. ■ Founding.  Alice, or an organisation with Alice, may create an organisation, Orga, as a ward, choosing its bylaws, with Alice its first officer.
-2. ■ Acts of the organisation.  An officer, or a person the bylaws name, may propose an act of Orga, and the officers and/or persons the bylaws name for it may vote on it; Orga may take the act once their votes decide it according to the bylaws.
+2. ■ Acts of the organisation.  An officer, or a person the bylaws name, may propose an act of Orga, and the officers and/or persons the bylaws name for it may vote on it; an officer the bylaws name for the act may take it for Orga once their votes decide it according to the bylaws.
 3. ■ Participation.  Bob becomes a participant of Orga by an act of Bob and Orga; his participation ends by an act of Bob or of Orga, and with it every role he holds.
 4. ■ Officers.  A participant may be appointed to a role by an act of Orga and the participant, or removed from it by an act of Orga or of the participant, and is a guardian of Orga while they hold a role.
 5. ■ Amendment.  The bylaws may be amended by an act of Orga.
 6. ○ Accountability.  Orga is accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga is accountable for it with Orga.
 Pragmas
-Look: 🏛️, organisation
+Look: 🏛️, governance
 Organisations: the organisations Alice participates in, and her roles in each.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Orga: Bob asks to participate.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Bob [Named propose]
+  Bob [Named vote] <act>
+  Otto [Move retire] <motion>
+Creation: Alice [Found] <organisation> <role>
+  Orga: Alice asks you to approve this: found.
+  Greta [Gov found] <person Alice> <organisation> <role>
+  Alice: Greta asks you to approve this: gov found.
+  Orga: Greta asks you to approve this: gov found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+  Nora [First officer] <person Bob> <role>
+  Bob: Nora asks you to approve this: first officer.
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto> <role>
+  Otto: Bob asks you to approve this: join.
   Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).
+  Otto [Expel] <person Bob>
+Amendment: Otto [Amend] <new bylaws>

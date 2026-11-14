@@ -59,10 +59,6 @@ Future<void> main(List<String> args) async {
     agentId: 'agent',
     program: program,
     rootSelfGlpPath: rootSelfGlpPath,
-    keyPair: (
-      pub: glp.PubKey.fromList(identity.publicKey),
-      priv: Uint8List.fromList(identity.privateKey),
-    ),
     network: network,
   );
   // The transcript marks each element sent to the person with `< `.

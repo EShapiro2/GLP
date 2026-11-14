@@ -1,0 +1,9 @@
+%% ---------------------------------------------------------------------------
+%% GSV.glp --- GSV, Grassroots Services, GNA's (a paper of the GSA project; Udi, 2026-11-10), its text in GSV.txt beside this file, in the clause syntax of GSC's paper, Section 3.2 (programs/gsc/README.md, "Writing a contract").  GSV instantiates GnW and has no schema of its own.  The term is an instance of GnW (programs/gsc/GnW.glp), instance_named(Name, gnw, Bindings, Additions), its parameter ward written service and the other five as GnW writes them (GSC's paper, Definition Parametric contract; programs/gsc/README.md, "Parametric contracts and their instances"); it restates no schema of GnW, and docs/tools/gen_gsv.py of GNA's repository writes this file.  Written by GSA #3 Cowork, 2026-11-10.
+%% ---------------------------------------------------------------------------
+
+% instance_named(gsv, gnw, Bindings, Additions): the contract, GSV.
+procedure instance_named(Constant?, Constant, SBindings, SDeclared).
+instance_named(gsv, gnw,
+   [ward = service],
+   []).

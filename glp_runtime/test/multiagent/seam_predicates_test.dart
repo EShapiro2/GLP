@@ -49,6 +49,7 @@ import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -170,10 +171,36 @@ class _SeamNetwork extends GlpNetwork {
       throw UnimplementedError();
   @override
   List<DiscoveredPeer> getPeers() => const [];
+
+  /// The agent's own public address as the layer knows it, and the fingerprint
+  /// of the local network it is attached to; null where it knows none.
+  String? publicAddress;
+  String? networkId;
+
   @override
-  String? getPublicAddress() => throw UnimplementedError();
+  String? getPublicAddress() => publicAddress;
   @override
-  String? networkIdentity() => throw UnimplementedError();
+  String? networkIdentity() => networkId;
+}
+
+/// The elements on the stream growing from [addr], each as the program sees
+/// it --- a constant, or a structure of constants, `address(A)`,
+/// `attached(N)` --- and whether it is closed.
+({List<String> elements, bool closed}) _elements(GlpRuntime rt, HeapCell addr) {
+  String show(Object? t) => t is ConstTerm
+      ? '${t.value}'
+      : t is StructTerm
+          ? '${t.functor}(${t.args.map(show).join(', ')})'
+          : '$t';
+  final elements = <String>[];
+  Object? cell = rt.heap.derefAddr(addr);
+  while (cell is StructTerm && cell.functor == '.') {
+    elements.add(show(cell.args[0]));
+    final tail = cell.args[1];
+    cell = tail is VarRef ? rt.heap.derefAddr(tail.addr) : tail;
+  }
+  final closed = cell is ConstTerm && (cell.value == nil || cell.value == null);
+  return (elements: elements, closed: closed);
 }
 
 /// What `_output` shows of app('TEAM', 'app.grassroots', 7).
@@ -613,6 +640,168 @@ go :- declare(nearby(pan, S1)), watch(first, S1?), declare(nearby(pan, S2)),
       expect(out, ['closed(first)']);
       expect(result.suspended, isTrue,
           reason: 'the second is the standing declaration');
+    });
+  });
+
+  // The GLP paper f265fec, appendix-guards, "Networking seam": "public_address(S)
+  // assigns S a stream of the agent's own public address, beginning with
+  // address(A), A the ip:port the layer has learnt from a rendezvous server,
+  // or none where it knows none, when it is declared, and then the address at
+  // each change, none where it is lost. ... network(S) assigns S a stream of
+  // the local network the agent is attached to, beginning with attached(N), N
+  // an opaque fingerprint of that network, or none ..., when it is declared,
+  // and then the network at each change ... For each, a further declaration
+  // supersedes the earlier one and closes its stream, and the removal ends the
+  // declaration and closes its stream."  IGLP 07a2b00, Definition "Seam
+  // Predicates".
+  group('public_address and network streams (the GLP paper f265fec)', () {
+    test('public_address(S) begins with the present address, none where the '
+        'layer knows none, then each change, none where it is lost', () {
+      final a = _agentContext();
+      final (w1, _) = a.rt.heap.allocateVariable();
+      a.ctx.declarePublicAddress(w1);
+      expect(_elements(a.rt, w1).elements, ['none']);
+      a.ctx.publicAddressChanged('203.0.113.7:9600');
+      a.ctx.publicAddressChanged(null);
+      a.ctx.publicAddressChanged('198.51.100.2:41000');
+      expect(_elements(a.rt, w1).elements,
+          ['none', 'address(203.0.113.7:9600)', 'none',
+            'address(198.51.100.2:41000)']);
+      expect(_elements(a.rt, w1).closed, isFalse);
+
+      // Declared while the layer knows an address: it begins with it.
+      a.network.publicAddress = '203.0.113.7:9600';
+      final (w2, _) = a.rt.heap.allocateVariable();
+      a.ctx.declarePublicAddress(w2);
+      expect(_elements(a.rt, w1).closed, isTrue,
+          reason: 'a further declaration supersedes the earlier one and '
+              'closes its stream');
+      expect(_elements(a.rt, w2).elements, ['address(203.0.113.7:9600)']);
+    });
+
+    test('network(S) begins with the present network, none where attached to '
+        'none, then each change', () {
+      final a = _agentContext();
+      a.network.networkId = 'n1';
+      final (w, _) = a.rt.heap.allocateVariable();
+      a.ctx.declareNetwork(w);
+      a.ctx.networkChanged(null);
+      a.ctx.networkChanged('n2');
+      expect(_elements(a.rt, w).elements, ['attached(n1)', 'none', 'attached(n2)']);
+      expect(_elements(a.rt, w).closed, isFalse);
+    });
+
+    test('a change for a declaration no longer standing is dropped, and '
+        'nothing is reported where none stands', () {
+      final a = _agentContext();
+      a.ctx.publicAddressChanged('203.0.113.7:9600');
+      a.ctx.networkChanged('n1');
+      final (w, _) = a.rt.heap.allocateVariable();
+      a.ctx.declarePublicAddress(w);
+      final first = a.rt.publicAddressStreams.standing('wan')!;
+      final (w2, _) = a.rt.heap.allocateVariable();
+      a.ctx.declarePublicAddress(w2);
+      a.ctx.deliverPublicAddress(MadContext.addressTerm('1.2.3.4:5'),
+          declaration: first);
+      expect(_elements(a.rt, w2).elements, ['none'],
+          reason: 'a change answering the superseded declaration is dropped');
+    });
+
+    test('declare(public_address(S)) and declare(network(S)) through their GLP '
+        'wrappers: the present value, each change, and remove(public_address) '
+        'and remove(network) close the streams; the store keeps both standing',
+        () async {
+      final out = <String>[];
+      final network = _SeamNetwork()
+        ..publicAddress = '203.0.113.7:9600'
+        ..networkId = 'home';
+      final engine = _engine(out, network);
+      final ctx = engine.madContext!;
+      engine.loadSource('''
+procedure watch_a(Stream(PeerAddress)?).
+watch_a([X|S]) :- ground(X?) | send_to_user([X?]), watch_a(S?).
+watch_a([]) :- send_to_user([closed_a]).
+procedure watch_n(Stream(Network)?).
+watch_n([X|S]) :- ground(X?) | send_to_user([X?]), watch_n(S?).
+watch_n([]) :- send_to_user([closed_n]).
+procedure go.
+go :- declare(public_address(A)), declare(network(N)), watch_a(A?), watch_n(N?).
+procedure stop.
+stop :- remove(public_address), remove(network), remove(network).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.suspended, isTrue, reason: 'the streams stay open');
+      String plain(String l) => l.replaceAll("'", '');
+      expect(out.map(plain), ['address(203.0.113.7:9600)', 'attached(home)']);
+      expect(engine.runtime.seamDeclarations.standing.map((d) => d.kind.name),
+          containsAll(['publicAddress', 'network']),
+          reason: 'the store keeps both as standing declarations');
+      ctx.publicAddressChanged(null);
+      ctx.networkChanged('cafe');
+      await engine.runGoal('stop');
+      expect(out.map(plain), [
+        'address(203.0.113.7:9600)',
+        'attached(home)',
+        'none',
+        'attached(cafe)',
+        'closed_a',
+        'closed_n',
+      ], reason: 'the second remove(network), with none standing, does '
+          'nothing');
+      expect(engine.runtime.publicAddressStreams.isDeclared('wan'), isFalse);
+      expect(engine.runtime.networkStreams.isDeclared('local'), isFalse);
+      expect(engine.runtime.seamDeclarations.standing.map((d) => d.kind.name),
+          isNot(anyOf(contains('publicAddress'), contains('network'))));
+    });
+
+    test('a further declaration through the wrapper closes the first stream',
+        () async {
+      final out = <String>[];
+      final engine = _engine(out, _SeamNetwork());
+      engine.loadSource('''
+procedure watch(Constant?, Stream(PeerAddress)?).
+watch(N, [X|S]) :- ground(X?) | send_to_user([N?]), watch(N?, S?).
+watch(N, []) :- send_to_user([closed(N?)]).
+procedure go.
+go :- declare(public_address(S1)), watch(first, S1?),
+    declare(public_address(S2)), watch(second, S2?).
+''');
+      final result = await engine.runGoal('go');
+      // The first stream's closing and the second's present value wake two
+      // goals in one reduction; their order is the scheduler's.
+      expect(out, unorderedEquals(['first', 'closed(first)', 'second']));
+      expect(out.indexOf('first'), lessThan(out.indexOf('closed(first)')));
+      expect(result.suspended, isTrue);
+    });
+
+    test('the simulation\'s layer gives each stream none (IGLP 07a2b00, '
+        '"Simulation realisation"), and so does an engine with no layer', () async {
+      for (final mad in [true, false]) {
+        final out = <String>[];
+        final GlpEngine engine;
+        if (mad) {
+          final layer = SimulationNetworkClient.alone(
+              PersonIdentity.generate().keyPair, selfId: 'alice');
+          engine = _engine(out, layer);
+        } else {
+          engine = _unboundEngine(out, mad: false);
+        }
+        engine.loadSource('''
+procedure first_a(Stream(PeerAddress)?).
+first_a([X|_]) :- ground(X?) | send_to_user([X?]).
+first_a([]).
+procedure first_n(Stream(Network)?).
+first_n([X|_]) :- ground(X?) | send_to_user([X?]).
+first_n([]).
+procedure go.
+go :- declare(public_address(A)), declare(network(N)), first_a(A?), first_n(N?).
+''');
+        final result = await engine.runGoal('go');
+        expect(result.succeeded, isTrue, reason: 'mad=$mad');
+        expect(out, ['none', 'none'], reason: 'mad=$mad');
+        expect(engine.runtime.publicAddressStreams.isDeclared('wan'), isTrue,
+            reason: 'the declaration stands all the same');
+      }
     });
   });
 
@@ -1073,25 +1262,34 @@ go :- $goal.
       expect(decl('remove', 1), 'procedure remove(Removal?).');
       expect(decl('_declare', 1), 'procedure _declare(Declaration?).');
       expect(decl('_remove', 1), 'procedure _remove(Removal?).');
+      // The GLP paper f265fec, appendix-guards, "Networking seam".
       expect(alternatives('Declaration'), [
         'peer(Key)',
         'address(Key, String)',
         'rendezvous(Key, String)',
-        'trust(Underlay, TrustLevel)',
+        'trust(ProximityUnderlay, TrustLevel)',
         'place(Constant, Number, Stream(PlaceEvent)?)',
-        'nearby(Underlay, Stream(Presence)?)',
+        'nearby(ProximityUnderlay, Stream(Presence)?)',
         'reachable(Stream(Reach)?)',
+        'public_address(Stream(PeerAddress)?)',
+        'network(Stream(Network)?)',
       ]);
       expect(alternatives('Removal'), [
         'peer(Key)',
         'rendezvous(Key)',
         'place(Constant)',
-        'nearby(Underlay)',
+        'nearby(ProximityUnderlay)',
         'reachable',
+        'public_address',
+        'network',
       ]);
       expect(alternatives('Presence'), ['seen(Key)', 'gone(Key)']);
       expect(alternatives('Reach'), ['connected(Key)', 'lost(Key)']);
-      expect(alternatives('Underlay'), ['pan', 'lan']);
+      expect(alternatives('Network'), ['attached(String)', 'none']);
+      expect(alternatives('ProximityUnderlay'), ['pan', 'lan']);
+      expect(root.typeDefs.where((t) => t.name == 'Underlay'), isEmpty,
+          reason: 'renamed ProximityUnderlay, as GNA names it (the GLP paper '
+              'f265fec)');
       expect(alternatives('TrustLevel'), ['open', 'closed']);
       expect(alternatives('PlaceEvent'),
           ['entered', 'exited', 'observable', 'unobservable']);

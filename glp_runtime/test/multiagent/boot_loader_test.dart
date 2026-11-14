@@ -99,10 +99,10 @@ boot:-agent( ch( _? , _ ) , ch(_?,_) ) @ alice.
       test('preserves full source and strips boot clause', () {
         final source = '''
 procedure boot.
-boot :- agent(ch(_?, _), ch(_?, _))@a.
+boot :- agent(ch(_?, _), ch(_?, _))@a, say(a, ch(_?, _))@a.
 
-procedure agent(_?, Channel?).
-agent(Id, Ch) :- true.
+procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
 ''';
 
         final config = loader.load(source);
@@ -110,10 +110,11 @@ agent(Id, Ch) :- true.
         // fullSource preserves original
         expect(config.fullSource, equals(source));
 
-        // source is stripped (no boot clause, no @ character)
+        // source is stripped (no boot clause, no @ character), the person
+        // kept
         expect(config.source, isNot(contains('@')));
         expect(config.source, isNot(contains('procedure boot')));
-        expect(config.source, contains('procedure agent'));
+        expect(config.source, contains('procedure say'));
       });
     });
 
@@ -134,6 +135,61 @@ procedure agent(_?, Channel?).
 agent(Id, Ch) :- true.
 ''';
         expect(() => loader.load(source), refused('Could not find boot clause'));
+      });
+
+      // TGLP 6ce148a, modules.tex, "Entry and the absence of a boot module":
+      // a boot file carries its G@p clause "and the persons scripted in GLP
+      // that the clause names, and nothing else: the agents' program is a
+      // program directory, which the agents load"; the loader refuses a boot
+      // file that defines a procedure no P@p of its clause names, directly or
+      // by the procedures that person calls (GLP #14, Code_inbox 2026-11-10
+      // 13:08 UTC, item 1).
+      test('a boot file defining the agents\' program is refused, naming '
+          'what no person reaches', () {
+        final source = '''
+procedure boot.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(_, []), ch(_, [])).
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
+        expect(() => loader.load(source),
+            refused('Boot file defines agent/2, which no scripted person'));
+      });
+
+      test('with no person, any procedure the file defines is refused', () {
+        final source = '''
+procedure boot.
+boot :- agent(ch(_?, _), ch(_?, _))@alice.
+procedure helper(Constant?).
+helper(_).
+''';
+        expect(() => loader.load(source), refused('defines helper/1'));
+      });
+
+      test('the procedures a person calls, in its body, its guard or a callee, '
+          'are the person\'s, and a procedure beside them none calls is '
+          'refused', () {
+        const person = '''
+procedure boot.
+boot :- agent(ch(_?, _), ch(_?, _))@alice, talk(ch(_?, _))@alice.
+Says ::= hi ; bye.
+procedure talk(Channel(Stream(Constant), Stream(Says))?).
+talk(ch(_, Out?)) :- polite(yes) | words(Out).
+procedure polite(Constant?).
+polite(yes).
+procedure words(Stream(Says)).
+words([hi | Ws?]) :- more(Ws).
+procedure more(Stream(Says)).
+more([bye]).
+''';
+        final config = loader.load(person);
+        expect(config.directives.single.person!.functor, 'talk');
+        expect(
+            () => loader.load('${person}procedure unused(Constant?).\n'
+                'unused(_).\n'),
+            refused('defines unused/1'));
       });
 
       test('an agent goal other than agent(ch(_?,_),ch(_?,_)) is refused', () {

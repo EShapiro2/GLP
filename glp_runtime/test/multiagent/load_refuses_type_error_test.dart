@@ -13,12 +13,13 @@ library;
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
+import 'boot_program.dart';
+
 /// A module whose one body atom passes an atom where the callee declares
-/// Integer. This is what the checker sees on the boot path: the boot clause is
-/// stripped there, so what remains of the file is this ordinary module.
+/// Integer.  On the multi-isolate path it is the agents' program, a program
+/// directory (TGLP 6ce148a, "Entry and the absence of a boot module").
 const _illTyped = '''
 procedure agent_init(_?, _?).
 agent_init(_, _) :- takes_integer(hello).
@@ -36,17 +37,23 @@ procedure takes_integer(Integer?).
 takes_integer(_).
 ''';
 
-/// The boot clause the multi-isolate path spawns one agent from.
+/// The boot clause the multi-isolate path spawns one agent from, and the
+/// person scripted at it, all a boot file carries.
 const _bootClause = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
+
+/// The agent's entry, beside the module of [_illTyped] or [_wellTyped] in the
+/// program directory.
+const _entry = '''
 exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
 agent(ch(In, []), ch(N, [])) :- start(In?, N?).
 procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
 start([alice | _], N) :- agent_init(alice, N?).
 start(_, _) :- otherwise | true.
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
 ''';
 
@@ -92,8 +99,7 @@ void main() {
     tearDown(() async => manager.shutdown());
 
     test('boot fails on an agent program that does not typecheck', () async {
-      final config = BootLoader().load(_bootClause + _illTyped);
-      config.rootSelfGlpPath = _rootSelf;
+      final config = bootWithProgram(_bootClause, _entry + _illTyped);
 
       await expectLater(
         manager.boot(config),
@@ -106,8 +112,7 @@ void main() {
     }, timeout: Timeout.none);
 
     test('boot succeeds on the corrected program', () async {
-      final config = BootLoader().load(_bootClause + _wellTyped);
-      config.rootSelfGlpPath = _rootSelf;
+      final config = bootWithProgram(_bootClause, _entry + _wellTyped);
 
       await manager.boot(config);
       manager.start();

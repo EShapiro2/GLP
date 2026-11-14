@@ -64,23 +64,29 @@ PeerAddress ::= address(String) ; none.
 % that session is unattested, or none where the layer has no session with it.
 App ::= app(String, String, Integer) ; unattested ; none.
 
-% What declare/1 and remove/1 take (GLP-Spec appendix-guards, "Networking seam", 1ce0263; nearby since 210cee1; reachable since cb9df43): a declaration to the networking layer or the platform, of a peer the program knows, the address at which a peer is reached, a rendezvous server, a proximity underlay's cold-call trust level, a place with the stream of its events, a watch on the agents nearby over a proximity underlay with the stream of their presences or a watch on the agents the layer connects to over the WAN with the stream of their reaches; and the end of a declaration.
+% What declare/1 and remove/1 take (the GLP paper f265fec, appendix-guards, "Networking seam"; 1ce0263; nearby since 210cee1; reachable since cb9df43; public_address and network since f265fec): a declaration to the networking layer or the platform, of a peer the program knows, the address at which a peer is reached, a rendezvous server, a proximity underlay's cold-call trust level, a place with the stream of its events, a watch on the agents nearby over a proximity underlay with the stream of their presences, a watch on the agents the layer connects to over the WAN with the stream of their reaches, a watch on the agent's own public address with the stream of its changes, or a watch on the local network the agent is attached to with the stream of its changes; and the end of a declaration.  ProximityUnderlay is the catalogue's name, as GNA names it; the type was named Underlay until 2026-11-10.
 Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String)
-      ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?)
-      ; nearby(Underlay, Stream(Presence)?) ; reachable(Stream(Reach)?).
-Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant) ; nearby(Underlay)
-      ; reachable.
-Underlay ::= pan ; lan.
+      ; trust(ProximityUnderlay, TrustLevel)
+      ; place(Constant, Number, Stream(PlaceEvent)?)
+      ; nearby(ProximityUnderlay, Stream(Presence)?) ; reachable(Stream(Reach)?)
+      ; public_address(Stream(PeerAddress)?) ; network(Stream(Network)?).
+Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant)
+      ; nearby(ProximityUnderlay) ; reachable ; public_address ; network.
+ProximityUnderlay ::= pan ; lan.
 TrustLevel ::= open ; closed.
 PlaceEvent ::= entered ; exited ; observable ; unobservable.
 Presence ::= seen(Key) ; gone(Key).
 Reach ::= connected(Key) ; lost(Key).
+% What network(S)'s stream carries (the GLP paper f265fec, "Networking seam"): attached(N), N an opaque fingerprint of the local network the agent is attached to, or none where it is attached to none or the platform makes the fingerprint unreadable; public_address(S)'s stream carries a PeerAddress, address(A) or none.
+Network ::= attached(String) ; none.
 
 % The global name of a link end, which the runtime reports when it holds a link
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
 % reader or writer end anchored at the agent named by Key, at an index.  Root
 % scope since 2026-09-18; programs/system/mad_predicates.glp defined it before.
-GlobalName ::= '_r'(Key, Integer) ; '_w'(Key, Integer).
+% 3-ary since 2026-11-10 (the GLP paper 07835e1; IGLP cec4682, "Global Variable
+% Names"): the key of the anchor, its epoch and the index it allocated in it.
+GlobalName ::= '_r'(Key, Integer, Integer) ; '_w'(Key, Integer, Integer).
 
 % A message to the network (GLP-Spec appendix-guards, "Output to the network
 % (send_to_net/1)"): msg(Q, T), Q the key of the agent it is sent to.  Declared
@@ -151,7 +157,7 @@ Done ::= done.
 % it last drew (vGLP d433f71, Section 6.3: "Input(T) ::= input(Integer, Path,
 % T) ; refresh."; IGLP 7a25ff8, the paragraph after Definition "Restart"),
 % and writes what the mini-app draws for its person, draw(Id, W, V), W
-% the widget, of type Widget, and V at T, and withdraw(Id); nothing merged, a
+% the widget, of type Widget(T), and V at T, and withdraw(Id); nothing merged, a
 % program's output reaching the person as the elements of the output thread,
 % construct 0.  Neither stream ends: the person and the program stay
 % connected, and a goal standing for the person waits on the draws when it
@@ -161,8 +167,17 @@ PersonIn(T) ::= [Input(T) | PersonIn(T)].
 PersonOut(T) ::= [Draw(T) | PersonOut(T)].
 Input(T) ::= input(Integer, Path, T) ; refresh.
 Path ::= [] ; [Integer | Path].
-Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
+Draw(T) ::= draw(Integer, Widget(T), T) ; withdraw(Integer).
 
+% The widget in a draw, Widget(T), T the program's person-channel union: "the
+% term W' a widget declaration names is a name or a name applied to arguments,
+% as the request type's menu is applied to its buttons and fields; the
+% compilation forms the union of the three, the parameter T of the program's
+% person channel ..., so the widget a construct draws is typed as its value
+% is" (vGLP 668df7d, Section 6.3, the paragraph after the construct process;
+% GLP #14, Code_inbox 2026-11-10 18:08 UTC).  So a declared widget is
+% named(W', D), W' of type T, in place of named(Constant, Widget) until
+% 2026-11-10, and every alternative is over Widget(T) and WidgetField(T).
 % The widget in a draw (vGLP, Section 6.3: "Widget is the type of the terms
 % that draw widgets: the terms of the default widgets, built from the
 % constructors of Definition Default Widget, and, for a declared widget, the
@@ -221,17 +236,17 @@ Draw(T) ::= draw(Integer, Widget, T) ; withdraw(Integer).
 % Section 5.4, "The contract's words": the question of an act with one
 % guarding role "is text of its request form";
 % programs/vglp/cva/compiler/README.md, "The pragmas").
-Widget ::= button(ButtonValue) ; buttons(List(ButtonValue))
+Widget(T) ::= button(ButtonValue) ; buttons(List(ButtonValue))
       ; text ; number ; peer
-      ; form(String, List(WidgetField)) ; menu(List(Widget))
+      ; form(String, List(WidgetField(T))) ; menu(List(Widget(T)))
       ; shown ; picker
-      ; input_box(Widget) ; input_list(Widget)
-      ; thread ; thread(Widget)
-      ; rec(String, Widget) ; ref(String)
-      ; named(Constant, Widget)
-      ; label(String, Widget)
-      ; act(ActPlace, Widget).
-WidgetField ::= field(String, Widget) ; question(String, Widget).
+      ; input_box(Widget(T)) ; input_list(Widget(T))
+      ; thread ; thread(Widget(T))
+      ; rec(String, Widget(T)) ; ref(String)
+      ; named(T, Widget(T))
+      ; label(String, Widget(T))
+      ; act(ActPlace, Widget(T)).
+WidgetField(T) ::= field(String, Widget(T)) ; question(String, Widget(T)).
 ButtonValue ::= Constant ; [] ; label(String, ButtonValue).
 ActPlace ::= place(String, Integer, List(Integer), List(GroupAt), List(ItemAt), List(Integer), List(FormWord)).
 GroupAt ::= group(Integer, Integer).
@@ -261,6 +276,90 @@ AppToSg ::= invite(Key).
 SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 
 % =============================================================================
+% SPEECH-ACT SCHEMAS IN GSC'S CLAUSE SYNTAX
+% =============================================================================
+% The term by which a contract's NAME.glp declares its speech-act schemas
+% (GSC's paper, Sections 3.1 and 3.2, Definitions Name term, Role, Speech-act
+% schema and Schema with values; the term as GSC #11 Cowork settled it, Code
+% inbox 2026-11-04 19:57 UTC and 2026-11-05 06:28 UTC; what each part is, and
+% how GSC's reader reads it, is programs/gsc/self.glp, before as_read/2).
+% Defined here, the lowest common ancestor of the 42 contracts' modules and
+% programs/gsc, by TGLP's rule that common protocol types are defined once
+% there, and the GLP paper's predefined types (GLP #14, Code_inbox 2026-11-10
+% 12:03 UTC, item 2, Udi's ruling); until 2026-11-10 programs/gsc/self.glp
+% defined them and every contract's .glp held a copy.
+% A schema sas(Name, Names, Vars, Head, Body, Constraint, Guards); a contract
+% the list of its schemas; a contract declared with its reflexive or its
+% environment predicates.
+RName     ::= Constant ; one(Constant, Constant).
+Names      ::= [] ; [RName | Names].
+SNT    ::= own(Constant) ; ext(SNT, Constant).
+% typed(T, X), the speech-act variable X of the type T, as typed(email, x)
+% and typed(name, x), wherever it occurs as an argument, one occurrence typing
+% it; binding, the checker's conditions and the compilation read it as X, and
+% the type constrains nothing (GSC #14, 2026-11-10; vGLP 37fe038, Section
+% 5.4: "a text by the type its variable carries in the schema where it
+% carries one, as an email address or a person's name, which constrains
+% nothing and which the field's widget is told").
+SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
+         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant)
+         ; typed(Constant, Constant)
+         ; val(Constant).
+SArgs  ::= [] ; [SArg | SArgs].
+SAtom  ::= atom(Constant, SArgs).
+SAtoms ::= [] ; [SAtom | SAtoms].
+SMult  ::= SAtom ; times(SArg, SAtom).
+SQLit  ::= SMult ; not(SMult).
+SQLits ::= [] ; [SQLit | SQLits].
+SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
+         ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
+         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
+SExprs ::= [] ; [SExpr | SExprs].
+% A safe formula and a constraint are one type, a constraint being a safe
+% formula with no atom and no quantifier.
+SConstraint ::= true ; and(SConstraint, SConstraint)
+              ; eq(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
+              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
+              ; or(SConstraint, SConstraint) ; not(SConstraint)
+              ; implies(SConstraint, SConstraint)
+              ; ne(SExpr, SExpr) ; rel(Constant, SExprs)
+              ; signed(SArg, SArg) ; unsigned(SArg, SArg) ; program(SExpr)
+              ; atom(Constant, SArgs) ; times(SArg, SAtom)
+              ; exists(PNames, SAtom, SConstraint)
+              ; forall(PNames, SAtom, SConstraint, SConstraint)
+              ; forall(Constant, SAtom, SQLits)
+              ; [] ; [SConstraint | SLits].
+SLits  ::= [] ; [SConstraint | SLits].
+PNames ::= [] ; [Constant | PNames].
+Preds ::= [] ; [Constant | Preds].
+SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
+SContract  ::= [] ; [SSchema | SContract].
+SDeclared  ::= SContract ; reflexive(Preds, SContract)
+             ; environment(Preds, SContract)
+             ; parametric(SParams, SDeclared).
+% A parametric contract and an instance of it (GSC, Definition Parametric
+% contract, "The term of a parametric contract names its parameters, and that
+% of an instantiation the contract it instantiates and what it writes for
+% each"; GSC #14, Code_inbox 2026-11-10 18:02 UTC, GSC df5e454):
+% parametric(Params, D), each parameter a predicate, by its name, or a
+% constant value, val(C); and an instance, in the file of its owner,
+% instance_named(Name, Base, Bindings, Additions), each binding P = Q writing
+% Q for the parameter P, a predicate or a constant val(P) alike, written by
+% its name (bylaws_p = bylaws_mcs), and Additions only the schemas the
+% instance adds or replaces, a schema named as one of the base's replacing it.
+SParam    ::= Constant ; val(Constant).
+SParams   ::= [] ; [SParam | SParams].
+% A binding extended(P, Q, Types) writes for the predicate parameter P, not
+% a mark, the predicate Q with further value arguments, Types the types of the
+% added arguments in order, as extended(guardian_of, officer_of, [num]) (GSC
+% 220151a, Definition Parametric contract: "or, for a predicate that is not
+% a mark, of the same kinds with further value arguments"; GSC #16, 2026-11-11).
+VType     ::= num ; real.
+VTypes    ::= [] ; [VType | VTypes].
+SBinding  ::= (Constant = Constant) ; extended(Constant, Constant, VTypes).
+SBindings ::= [] ; [SBinding | SBindings].
+
+% =============================================================================
 % BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
 % =============================================================================
 
@@ -278,6 +377,16 @@ procedure ground(_?).
 procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
+% widowed_writer(X) succeeds when the reader paired to the writer X occurs in
+% no goal of the agent and in no link end the agent holds, the goal being
+% reduced not counted, and widowed_reader(X?) when the writer paired to the
+% reader X? does (the GLP paper 07835e1, appendix-guards.tex, the guard
+% table's two rows and the paragraph on link ends after it): a variable sent
+% to another agent occurs in the link end kept for it until that end is
+% retired, at a crash of either agent.  Each is declared in its one mode
+% (Remark Guards and SRSW).
+procedure widowed_writer(_).
+procedure widowed_reader(_?).
 
 % Time guards
 procedure wait(Number?).
@@ -331,31 +440,35 @@ procedure is_mutual_ref(MutualRef?).
 %
 % This file may name them because it declares -mode(system).
 
-% Arithmetic
+% Arithmetic.  '_div', '_real' and '_sqrt' to '_atan' return Real, as the
+% catalogue has them (the GLP paper 0ec95cd, appendix-guards.tex, the kernel
+% table); '_add', '_sub', '_mul', '_abs' and '_pow' stay Number, a real where
+% an operand is real, and pow where the exponent is negative.  The checker
+% types X := E by TGLP 1962166, "Type checking of :=".
 procedure '_add'(Number?, Number?, Number).
 procedure '_sub'(Number?, Number?, Number).
 procedure '_mul'(Number?, Number?, Number).
-procedure '_div'(Number?, Number?, Number).
+procedure '_div'(Number?, Number?, Real).
 procedure '_idiv'(Number?, Number?, Integer).
 procedure '_mod'(Number?, Number?, Integer).
 
 % Math
 procedure '_abs'(Number?, Number).
-procedure '_sqrt'(Number?, Number).
-procedure '_sin'(Number?, Number).
-procedure '_cos'(Number?, Number).
-procedure '_tan'(Number?, Number).
-procedure '_exp'(Number?, Number).
-procedure '_ln'(Number?, Number).
-procedure '_log10'(Number?, Number).
+procedure '_sqrt'(Number?, Real).
+procedure '_sin'(Number?, Real).
+procedure '_cos'(Number?, Real).
+procedure '_tan'(Number?, Real).
+procedure '_exp'(Number?, Real).
+procedure '_ln'(Number?, Real).
+procedure '_log10'(Number?, Real).
 procedure '_pow'(Number?, Number?, Number).
-procedure '_asin'(Number?, Number).
-procedure '_acos'(Number?, Number).
-procedure '_atan'(Number?, Number).
+procedure '_asin'(Number?, Real).
+procedure '_acos'(Number?, Real).
+procedure '_atan'(Number?, Real).
 
 % Conversion
 procedure '_integer'(Number?, Integer).
-procedure '_real'(Number?, Number).
+procedure '_real'(Number?, Real).
 procedure '_round'(Number?, Integer).
 procedure '_floor'(Number?, Integer).
 procedure '_ceil'(Number?, Integer).
@@ -469,22 +582,25 @@ send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
 % The super-app's entry template (GSG, 2026-10-13 11:57 UTC and 20:24 UTC;
-% the calendar, 20:59 UTC; Udi: approved): the person's key, the person
-% channel, the channel to the social graph, and the calendar, a stream of
-% dates the super-app writes from the device's clock, one a day, which a
-% mini-app that keeps no dates ignores (GSG paper, "What the super-app grants
-% a mini-app").  Two type parameters, one per channel (vGLP, 2026-10-14 13:21
-% UTC, S2; Udi: yes): D, what the mini-app draws for its person, formed by
-% vGLP's compiler from the wrapped drawn types and the grants' R types, and
-% T, the mini-app's own type, the messages of its root channels; neither
-% contains the other, and a hand-written mini-app chooses both.  One entry
-% name for every mini-app; never run here.
-procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?, Stream(Integer)?).
-miniapp(_, _, _, _).
+% Udi: approved): the person's key, the person channel and the channel to the
+% social graph.  A program is activated with these two channels and receives
+% no dates; one that keeps dates reads the day by now/1 (GLP paper c5c3dfb,
+% appendix-guards.tex, "Predefined types": "the entry templates miniapp/3
+% and miniapp_person/5"; GLP #13, 2026-11-07, Udi approving).  Until
+% 2026-11-11 the template was miniapp/4, its fourth argument a calendar, a
+% stream of dates the super-app wrote, one a day.  Two type parameters, one
+% per channel (vGLP, 2026-10-14 13:21 UTC, S2; Udi: yes): D, what the
+% mini-app draws for its person, formed by vGLP's compiler from the wrapped
+% drawn types and the grants' R types, and T, the mini-app's own type, the
+% messages of its root channels; neither contains the other, and a
+% hand-written mini-app chooses both.  One entry name for every mini-app;
+% never run here.
+procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?).
+miniapp(_, _, _).
 
 % The mini-app's scripted person (GSG, 2026-10-13 18:52 UTC, O5, and 20:22
 % UTC; Udi: approved): a mini-app exports it beside its entry, as this
-% template's instance at the D of its miniapp/4 instance (vGLP, 2026-10-14
+% template's instance at the D of its miniapp/3 instance (vGLP, 2026-10-14
 % 13:21 UTC, S2) and at S, the type of the screen it reports, chosen by the
 % mini-app (vGLP 2026-10-16 11:25 UTC, item 4; Udi: approved): the person's
 % key, a role choosing the script among the mini-app's own plays, the keys
@@ -501,18 +617,18 @@ miniapp_person(_, _, _, _, []).
 % the seam-predicate row and "Output to the network (send_to_net/1)"; IGLP
 % madglp-spec.tex, Remark "Network Output Processing"): each element msg(Q, T)
 % of the stream, Q the key of an agent, is sent to agent Q, in order, through
-% '_send' on the link '_w'(Q, 0), Q's index-0 serializer; it ends when the
+% '_send' on the link '_w'(Q, 0, 0), Q's index-0 serializer; it ends when the
 % stream ends.  The guard ground(Q?) licenses Q's several occurrences.  A module
 % reaches the network through this predicate, the '_send' call being admitted
 % only to a system module, which this file is.
 procedure(X) send_to_net(Stream(NetMsg(X))?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) |
-    '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
+    '_send'(msg(Q?, T?), '_w'(Q?, 0, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
 % global_send/3 — IGLP's system predicate (madglp-spec.tex, Definition
 % "global_send Predicate"): global_send(T, G, Q) sends the value of the reader T,
-% once known, on the link G, '_r'(P, I) or '_w'(P, I), to agent Q.  It is the
+% once known, on the link G, '_r'(P, E, I) or '_w'(P, E, I), to agent Q.  It is the
 % goal Globalize spawns for an exported reader and Localize for an imported
 % writer; the runtime registers that goal as a callback on the writer's cell
 % (IGLP Implementation Notes, "The global_send goal"), and these clauses are
@@ -934,7 +1050,10 @@ self_key(K?) :- '_self_key'(K).
 %% sign/3 - sign(Term, Key, Signed) requires Term ground and Key a key of that
 %% person, and assigns Signed the signature under Key of the pair of Term and
 %% the identity of the module making the call, which the runtime supplies and
-%% the caller cannot choose.  ground/1 suspends until Term is ground.
+%% the caller cannot choose; "Key is the agent's own, the layer holding no
+%% other, and any other key aborts the call" (the GLP paper f265fec,
+%% appendix-guards, "Identity and signature"), the networking layer holding
+%% the private key and signing.  ground/1 suspends until Term is ground.
 procedure sign(_?, Key?, SignedTerm).
 sign(T, K, S?) :- ground(T?), known(K?) | '_sign'(T?, K?, S).
 
@@ -958,7 +1077,7 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % =============================================================================
 % NETWORKING SEAM (peer_address/2, peer_app/2, punch_udp/1, declare/1, remove/1)
 % =============================================================================
-% GLP-Spec's appendix-guards lists the five among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263; peer_app/2 since 5fab8ac): peer_address(Key?, PeerAddress), peer_app(Key?, App), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types App, Declaration, Removal, Underlay, TrustLevel, PlaceEvent, Presence and Reach above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb; peer_app/2 since 4a334c2), and their kernels '_peer_address', '_peer_app', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
+% GLP-Spec's appendix-guards lists the five among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263; peer_app/2 since 5fab8ac): peer_address(Key?, PeerAddress), peer_app(Key?, App), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types App, Declaration, Removal, ProximityUnderlay, TrustLevel, PlaceEvent, Presence, Reach and Network above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb; peer_app/2 since 4a334c2), and their kernels '_peer_address', '_peer_app', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
 
 %% peer_address/2 - assign A address(S), S the address at which the layer
 %% observes peer P, or none where it observes no address for P.
@@ -976,8 +1095,10 @@ peer_app(P, A?) :- ground(P?) | '_peer_app'(P?, A).
 %% self_app/2 - assign R app(D, N, V) for the app whose program the agent runs,
 %% the app the networking layer attests to the agent's peers, and I the same
 %% for the app installed on the device; the two differ after an update the
-%% runtime refused (GLP-Spec appendix-guards, "Networking seam", cce13ce; IGLP,
-%% Definition "Seam Predicates", 59c40e2).
+%% runtime refused, and where the runtime is given no app, as in a simulation
+%% or on a headless server, each is none (the GLP paper f265fec,
+%% appendix-guards, "Networking seam"; IGLP 07a2b00, Definition "Seam
+%% Predicates").
 procedure self_app(App, App).
 self_app(R?, I?) :- '_self_app'(R, I).
 
@@ -985,16 +1106,18 @@ self_app(R?, I?) :- '_self_app'(R, I).
 procedure punch_udp(String?).
 punch_udp(A) :- ground(A?) | '_punch_udp'(A?).
 
-%% declare/1 - make the declaration D to the networking layer or the platform: peer(P) gives the layer the public key P of a peer the program knows; address(P, A) the address A at which peer P is reached; rendezvous(P, A) a rendezvous server, the agent of key P at address A, or replaces its address; trust(U, L) sets the cold-call trust level of proximity underlay U to L, both underlays standing at closed until declared; place(P, R, E) declares a place P of radius R about the declaring agent's location at the time of the call, and assigns E the stream of that agent's own entered and exited events for P, carrying unobservable where the layer stops reporting crossings and observable where it resumes, a further declaration of the same place superseding the earlier one and closing its stream; nearby(U, S) assigns S a stream of the agents nearby over proximity underlay U, seen(K) when the layer discovers on U an agent of key K that it recognises or, under open trust, contacts, and gone(K) when that agent can no longer be reached over U, a further declaration on the same underlay superseding the earlier one and closing its stream; reachable(S) assigns S a stream of the agents the layer connects to over the WAN, connected(K) when the layer has a session with the agent of key K over the WAN, beginning with every agent it has one with when it is declared, and lost(K) when that session ends, a further declaration superseding the earlier one and closing its stream (GLP-Spec appendix-guards, "Networking seam", 210cee1, cb9df43; IGLP, Definition "Seam Predicates", b20951d, 0c77e47).
+%% declare/1 - make the declaration D to the networking layer or the platform: peer(P) gives the layer the public key P of a peer the program knows; address(P, A) the address A at which peer P is reached; rendezvous(P, A) a rendezvous server, the agent of key P at address A, or replaces its address; trust(U, L) sets the cold-call trust level of proximity underlay U to L, both underlays standing at closed until declared; place(P, R, E) declares a place P of radius R about the declaring agent's location at the time of the call, and assigns E the stream of that agent's own entered and exited events for P, carrying unobservable where the layer stops reporting crossings and observable where it resumes, a further declaration of the same place superseding the earlier one and closing its stream; nearby(U, S) assigns S a stream of the agents nearby over proximity underlay U, seen(K) when the layer discovers on U an agent of key K that it recognises or, under open trust, contacts, and gone(K) when that agent can no longer be reached over U, a further declaration on the same underlay superseding the earlier one and closing its stream; reachable(S) assigns S a stream of the agents the layer connects to over the WAN, connected(K) when the layer has a session with the agent of key K over the WAN, beginning with every agent it has one with when it is declared, and lost(K) when that session ends, a further declaration superseding the earlier one and closing its stream; public_address(S) assigns S a stream of the agent's own public address, beginning with address(A), A the ip:port the layer has learnt from a rendezvous server, or none where it knows none, when it is declared, and then the address at each change, none where it is lost; network(S) assigns S a stream of the local network the agent is attached to, beginning with attached(N), N an opaque fingerprint of that network, or none where it is attached to none or the platform makes the fingerprint unreadable, when it is declared, and then the network at each change; for each, a further declaration supersedes the earlier one and closes its stream (the GLP paper f265fec, appendix-guards, "Networking seam"; GLP-Spec 210cee1, cb9df43; IGLP 07a2b00, Definition "Seam Predicates").
 procedure declare(Declaration?).
 declare(place(P, R, E?)) :-
     ground(P?), ground(R?) | '_declare'(place(P?, R?, E)).
 declare(nearby(U, S?)) :-
     ground(U?) | '_declare'(nearby(U?, S)).
 declare(reachable(S?)) :- '_declare'(reachable(S)).
+declare(public_address(S?)) :- '_declare'(public_address(S)).
+declare(network(S?)) :- '_declare'(network(S)).
 declare(D) :- ground(D?) | '_declare'(D?).
 
-%% remove/1 - end the declaration R: peer(P) takes P, and any address recorded for it, off the layer's known peers; rendezvous(P) takes the server off and ends the layer's session with it, a key not declared doing nothing; place(P) ends the declaration of P, closing its stream, and does nothing where P is not declared; nearby(U) ends the nearby declaration on U, closing its stream, and does nothing where none stands; reachable ends the reachable declaration, closing its stream, and does nothing where none stands.
+%% remove/1 - end the declaration R: peer(P) takes P, and any address recorded for it, off the layer's known peers and ends its sessions on every underlay; rendezvous(P) takes the server off and ends the layer's session with it, a key not declared doing nothing; place(P) ends the declaration of P, closing its stream, and does nothing where P is not declared; nearby(U) ends the nearby declaration on U, closing its stream, and does nothing where none stands; reachable, public_address and network each end that declaration, closing its stream, and do nothing where none stands (the GLP paper f265fec, appendix-guards, "Networking seam").
 procedure remove(Removal?).
 remove(R) :- ground(R?) | '_remove'(R?).
 

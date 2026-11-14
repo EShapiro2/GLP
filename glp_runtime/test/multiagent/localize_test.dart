@@ -100,7 +100,7 @@ void main() {
       //   - entry (Z_q, p, 3) added to table
       // Spec Section 5.2: "add entry (Z_q, p, i)"
       expect(table.localizeEntryCount, 1);
-      final entry = table.findByRemote('p', 3);
+      final entry = table.findByRemote(GlobalName.reader('p', 3));
       expect(entry, isNotNull);
       expect(entry!.writerAddr, _c(200));
       expect(entry.remoteAgent, 'p');
@@ -155,7 +155,7 @@ void main() {
 
       //   - entry for Z_q with remote (p, 2)
       expect(table.localizeEntryCount, 1);
-      final entry = table.findByRemote('p', 2);
+      final entry = table.findByRemote(GlobalName.reader('p', 2));
       expect(entry, isNotNull);
       expect(entry!.writerAddr, _c(302)); // Second pair's writer address
 

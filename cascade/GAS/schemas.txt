@@ -1,0 +1,103 @@
+Reflexive predicates: friend, knows
+
+establish: identity(Alice), person(Alice) <-
+    not identity(Alice) guarded by Alice
+
+acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
+    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
+
+introduce: knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
+
+befriend: friend(Alice, Bob), friend(Bob, Alice) <-
+    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
+
+unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
+    identity(Alice), person(Alice), friend(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
+
+enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), service(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
+    identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
+
+make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
+    identity(Bob), person(Bob), not guardian_of(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), identity(Carol), service(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Bob, Alice, Erin
+
+end_guardian: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
+    identity(Alice), person(Alice), guardian_of(Alice, Carol), identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Alice), guarded_by(Carol, Bob), forall Erin (guarded_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
+
+resign: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
+    identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
+
+guardian_unfriend: not friend(Bob, Carol), not guardian_of(Bob, Carol), not friend(Carol, Bob), not guarded_by(Carol, Bob) <-
+    identity(Bob), person(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
+
+ward_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Bob), person(Bob) guarded by Carol, Bob
+
+ward_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
+
+ward_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
+    identity(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol) guarded by Alice
+
+ward_end: not friend(Carol, Bob), not friend(Bob, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
+
+wards_acquaint: knows(Carol, Dave), knows(Dave, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Dave), service(Dave), guarded_by(Dave, Bob) guarded by Carol, Dave
+
+wards_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
+
+retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> not guardian_of(Erin, Carol)) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Alice), person(Alice), guardian_of(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
+
+sign: item(Alice, x) <-
+    identity(Alice), person(Alice), not item(Alice, x) guarded by Alice
+
+forward: item(Bob, sgn(x, Alice)) <-
+    identity(Alice), person(Alice), item(Alice, x), friend(Alice, Bob), identity(Bob) guarded by Alice
+
+publish: item(Carol, x), published(Carol, x) <-
+    identity(Carol), person(Carol), not item(Carol, x), program(item(x)) guarded by Carol
+
+trust: trusts(Alice, Carol) <-
+    identity(Alice), person(Alice), knows(Alice, Carol), not trusts(Alice, Carol) guarded by Alice
+
+distrust: not trusts(Alice, Carol) <-
+    identity(Alice), person(Alice), trusts(Alice, Carol) guarded by Alice
+
+offer: item(Alice, sgn(y, Carol)) <-
+    identity(Carol), person(Carol), item(Carol, y), friend(Carol, Alice), identity(Alice), program(item(y)) guarded by Carol
+
+install_own: installed(Alice, x) <-
+    identity(Alice), person(Alice), published(Alice, x), not installed(Alice, x) guarded by Alice
+
+install: installed(Alice, item(y)) <-
+    identity(Alice), person(Alice), item(Alice, y), trusts(Alice, Bob), not installed(Alice, item(y)), program(item(y)), author(y) = Bob guarded by Alice
+
+invite_new: participant(Alice, item(y), Bob), participant(Bob, item(y), Alice), item(Bob, sgn(y, Alice)), installed(Bob, item(y)) <-
+    identity(Alice), person(Alice), friend(Alice, Bob), item(Alice, y), installed(Alice, item(y)), not participant(Alice, item(y), Bob), identity(Bob), person(Bob), friend(Bob, Alice), trusts(Bob, Carol), not installed(Bob, item(y)), author(y) = Carol guarded by Alice, Bob
+
+invite_installed: participant(Alice, item(y), Bob), participant(Bob, item(y), Alice) <-
+    identity(Alice), person(Alice), friend(Alice, Bob), item(Alice, y), installed(Alice, item(y)), not participant(Alice, item(y), Bob), identity(Bob), person(Bob), friend(Bob, Alice), trusts(Bob, Carol), installed(Bob, item(y)), not participant(Bob, item(y), Alice), author(y) = Carol guarded by Alice, Bob
+
+leave: not installed(Alice, p), not participant(Alice, p, _), forall Bob (participant(Alice, p, Bob) -> not participant(Bob, p, Alice)) <-
+    identity(Alice), person(Alice), installed(Alice, p), forall Bob (participant(Alice, p, Bob) -> identity(Bob), participant(Bob, p, Alice)) guarded by Alice
+
+open_store: store(Dave) <-
+    identity(Carol), person(Carol), guardian_of(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, Carol), not store(Dave) guarded by Carol, Dave
+
+list: listed(Dave, sgn(y, Carol)) <-
+    identity(Carol), person(Carol), guardian_of(Carol, Dave), item(Carol, y), trusts(Carol, Bob), service(Dave), store(Dave), guarded_by(Dave, Carol), program(item(y)), author(y) = Bob guarded by Carol, Dave
+
+delist: not listed(Dave, z) <-
+    identity(Carol), person(Carol), guardian_of(Carol, Dave), service(Dave), store(Dave), guarded_by(Dave, Carol), listed(Dave, z) guarded by Carol, Dave
+
+trust_store: trusts_store(Alice, Dave) <-
+    identity(Alice), person(Alice), knows(Alice, Carol), knows(Alice, Dave), not trusts_store(Alice, Dave), store(Dave), guarded_by(Dave, Carol), guardian_of(Carol, Dave) guarded by Alice
+
+distrust_store: not trusts_store(Alice, Dave) <-
+    identity(Alice), person(Alice), trusts_store(Alice, Dave) guarded by Alice
+
+install_from_store: item(Alice, z), installed(Alice, item(z)) <-
+    identity(Alice), person(Alice), trusts_store(Alice, Dave), not installed(Alice, item(z)), store(Dave), listed(Dave, z) guarded by Alice

@@ -2,32 +2,8 @@
 %% GDC.glp --- Grassroots Denominated Coins, the contract GDC, Currencies' (Coordination Appendix C; Udi, 2026-11-04), in the clause syntax of GSC's paper, Section 3.2, sas(Name, Names, Vars, Head, Body, Constraint, Guards), as programs/gsc/README.md reads it.  The clauses are in GDC.txt beside this file.  GDC extends GC, which extends GKK, so the term holds their schemas, written here in the clause syntax: coin(Holder, u) a coin of u, dcoin(Holder, u, f) a coin of u denominated by f, u's debt of one unit of f (GDC:2).  GDC:1, Minting, is dmint; GC's swap, pay and redeem take a denominated coin in place of a coin, lot by lot, so each has twins named with d for the denominated lot, under GC's buttons.  GDC:2 and GDC:3 are undertaken and have no schema.  GCC.glp holds the same schemas, GCC extending GDC.  Written by Currencies #16 Cowork, 2026-11-06, the schemas as GCC.glp writes them at GLP main 060468f7, replacing the earlier term form of 2026-11-04.
 %% ---------------------------------------------------------------------------
 
-SNT         ::= own(Constant) ; ext(SNT, Constant).
-SArg        ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-              ; sgn(Constant, Constant).
-SArgs       ::= [] ; [SArg | SArgs].
-SAtom       ::= atom(Constant, SArgs).
-SMult       ::= SAtom ; times(SArg, SAtom).
-SHead       ::= SMult ; not(SMult) ; forall(PNames, SAtom, SCond, SHeads).
-SHeads      ::= [] ; [SHead | SHeads].
-SExpr       ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
-              ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SCond).
-SExprs      ::= [] ; [SExpr | SExprs].
-SCond       ::= true ; SMult ; not(SCond) ; and(SCond, SCond) ; or(SCond, SCond)
-              ; eq(SExpr, SExpr) ; ne(SExpr, SExpr) ; le(SExpr, SExpr) ; lt(SExpr, SExpr)
-              ; ge(SExpr, SExpr) ; gt(SExpr, SExpr) ; succ(SArg, SArg)
-              ; signed(SArg, SArg) ; unsigned(SArg, SArg)
-              ; forall(PNames, SAtom, SCond, SCond) ; exists(PNames, SAtom, SCond).
-SConds      ::= [] ; [SCond | SConds].
-RName       ::= Constant ; one(Constant, Constant).
-Names       ::= [] ; [RName | Names].
-PNames      ::= [] ; [Constant | PNames].
-Schema      ::= sas(Constant, Names, PNames, SHeads, SConds, SCond, PNames).
-Contract    ::= [] ; [Schema | Contract].
-Preds       ::= [] ; [Constant | Preds].
-
 %% contract_named(gdc, C): the contract, GDC (Coordination Appendix C).
-procedure contract_named(Constant?, Contract).
+procedure contract_named(Constant?, SContract).
 contract_named(gdc,
    [
 %% GKK:1, Identity.

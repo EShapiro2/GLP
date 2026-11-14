@@ -85,7 +85,7 @@ exported procedure draw(Integer?, Integer?, Integer?, Integer?, CoinsDraw).
 draw(N, Seed, Spend, Cred, D?) :- harness # draw(N?, Seed?, Spend?, Cred?, D).
 
 %% The sGLP source of this program in the term form (README.md, "The term
-%% form"), coins_sglp.glp, for the transformation (programs/sglp/transform.glp).
+%% form"), coins_sglp.glp, for the transformation (programs/sglp/transform/transform.glp).
 imported procedure coins_sglp#source(SglpTerms, SglpTerms).
 exported procedure source(SglpTerms, SglpTerms).
 source(V?, S?) :- coins_sglp # source(V, S).

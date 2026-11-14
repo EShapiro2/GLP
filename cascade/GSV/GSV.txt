@@ -1,0 +1,12 @@
+% GSV: Grassroots Services --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GNA, a paper of the GSA project (Udi, 2026-11-10 13:49 UTC, to GSA #3).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box.
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: GSV instantiates GnW, Guardians 'n' Wards, GSC's (programs/gsc/GnW.txt), in the terms of GSC's paper, Definition Parametric contract: ward at service, and creator, created, guardian_of, guarded_by and retired at themselves.  It has GnW's clauses, GnW:1 to GnW:5, of a service, and no clause of its own: a person creates a service by GnW:1.  GRV, GDS (beside this file) and GAS (programs/social/graph) extend it.
+% Defines: service, defined in the box after the declaration.  Person, ward and guardian are defined with GKK and GnW.
+% Last changed: 2026-11-10, written by GSA #3 Cowork (Udi, 2026-11-10 13:52 UTC, approving its text): the one definition GRV, GDS and GAS each held, a ward operated by a machine at an address every person can reach, GnW being parametric since that day.
+% Schemas: GSV.glp beside this file, an instance of GnW, instance_named(gsv, gnw, [ward = service], []), restating no schema.
+GSV: Grassroots Services
+GSV instantiates GnW (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Alice is a person, Dave a ward.  A service is a ward operated by a machine at an address every person can reach.
+Pragmas
+Look: 🖥️, network

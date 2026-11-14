@@ -5,14 +5,66 @@
 Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; mint_coin(Peer, Integer) ; mint_bond(Peer, Integer, Integer) ; first_date(Peer, Integer) ; advance(Peer, Integer) ; swap_cc(Peer, Peer, Peer, Integer, Peer, Integer) ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer) ; swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer) ; swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer) ; pay(Peer, Peer, Integer) ; redeem_cc(Peer, Peer, Peer) ; redeem_cb(Peer, Peer, Peer, Integer) ; redeem_bc(Peer, Peer, Integer, Peer) ; redeem_bb(Peer, Peer, Integer, Peer, Integer) ; deposit_c(Peer, Peer, Peer, Integer) ; deposit_b(Peer, Peer, Peer, Integer, Integer) ; release_c(Peer, Peer, Peer, Integer) ; release_b(Peer, Peer, Peer, Integer, Integer) ; return_c(Peer, Peer, Peer, Integer) ; return_b(Peer, Peer, Peer, Integer, Integer) ; list_place(Peer, Speech) ; book(Peer, Peer, Speech, Integer, Integer) ; cancel(Peer, Peer, Speech, Integer, Integer) ; review(Peer, Peer, Speech, Integer, Speech).
 Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; mint_coin(Peer, Integer) ; mint_bond(Peer, Integer, Integer) ; swap_cc(Peer, Peer, Peer, Integer, Peer, Integer) ; swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer) ; swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer) ; swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer) ; pay(Peer, Peer, Integer) ; redeem_cc(Peer, Peer, Peer) ; redeem_cb(Peer, Peer, Peer, Integer) ; redeem_bc(Peer, Peer, Integer, Peer) ; redeem_bb(Peer, Peer, Integer, Peer, Integer) ; deposit_c(Peer, Peer, Peer, Integer) ; deposit_b(Peer, Peer, Peer, Integer, Integer) ; release_c(Peer, Peer, Peer, Integer) ; release_b(Peer, Peer, Peer, Integer, Integer) ; return_c(Peer, Peer, Peer, Integer) ; return_b(Peer, Peer, Peer, Integer, Integer) ; list_place(Peer, Speech) ; book(Peer, Peer, Speech, Integer, Integer) ; cancel(Peer, Peer, Speech, Integer, Integer) ; review(Peer, Peer, Speech, Integer, Speech).
 Request ::= propose(Proposal).
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
 Atom ::= identity ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; date(Integer) ; dated ; place(Speech) ; stay(Speech, Peer, Integer) ; booked(Speech, Integer) ; guest(Peer, Speech, Integer, Integer) ; reviewed(Speech, Peer, Integer) ; review(Speech, Peer, Speech).
+RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
+RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
+RArgs ::= [] ; [RArg | RArgs].
+RAtom ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
+RAtoms ::= [] ; [RAtom | RAtoms].
+RGuard ::= guarded ; unguarded ; guarded_at(Constant).
+RRoleKind ::= seated(RNameTerm, Constant) ; constituent(RNameTerm, Constant) ; listed(Integer, Constant, RArgs) ; qlisted(Integer, Constant, RArgs, RArgs).
+RRoleSpec ::= rs(RGuard, RAtoms, RAtoms, RAtoms, RAtoms) ; crs(RRoleKind, RGuard, RAtoms, RAtoms, RAtoms, RAtoms).
+RRoleSpecs ::= [] ; [RRoleSpec | RRoleSpecs].
+RReach ::= reach(RNameTerm, Constant, RNameTerm).
+RReaches ::= [] ; [RReach | RReaches].
+RConstraint ::= true ; and(RConstraint, RConstraint) ; eq(RExpr, RExpr) ; le(RExpr, RExpr) ; lt(RExpr, RExpr) ; ge(RExpr, RExpr) ; gt(RExpr, RExpr) ; succ(RArg, RArg) ; or(RConstraint, RConstraint) ; signed(RArg, RArg) ; unsigned(RArg, RArg) ; not(RConstraint) ; implies(RConstraint, RConstraint) ; ne(RExpr, RExpr) ; rel(Constant, RExprs) ; program(RExpr).
+RExpr ::= RArg ; plus(RExpr, RExpr) ; minus(RExpr, RExpr) ; mul(RExpr, RExpr) ; fn(Constant, RExprs) ; cardinality(RArgs, RArg, RAtom, RForm) ; sum(RArgs, RArg, RAtom, RForm, RExpr) ; author_of(RArg).
+RExprs ::= [] ; [RExpr | RExprs].
+RForm ::= fa(RArg, RAtom) ; fnot(RForm) ; fand(RForm, RForm) ; for(RForm, RForm) ; fexists(RArgs, RArg, RAtom, RForm) ; fforall(RArgs, RArg, RAtom, RForm, RForms) ; fcons(RConstraint).
+RForms ::= [] ; [RForm | RForms].
+RHMult ::= hm(Integer, RAtom).
+RHMults ::= [] ; [RHMult | RHMults].
+RConjunct ::= conjunct(RArgs, Integer, RAtom, RForm, RHMults, RHMults, RForms).
+RConjuncts ::= [] ; [RConjunct | RConjuncts].
+RName ::= Constant ; one(Constant, Constant).
+RNames ::= [] ; [RName | RNames].
+RSchema ::= schema(Constant, RArgs, RRoleSpecs) ; cschema(Constant, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RArgs, RConstraint, RRoleSpecs) ; schema(Constant, RNames, RArgs, RRoleSpecs) ; cschema(Constant, RNames, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RNames, RArgs, RConstraint, RRoleSpecs) ; qschema(Constant, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms) ; qschema(Constant, RNames, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms).
+RContract ::= [] ; [RSchema | RContract].
+RBody ::= RContract ; reflexive(Preds, RContract).
+RDeclared ::= RBody ; environment(Preds, RBody).
+PWord ::= text(String) ; person(Integer).
+PWords ::= [] ; [PWord | PWords].
+PSentences ::= [] ; [PWords | PSentences].
+PSaid ::= none ; said(PSentences).
+PStrings ::= [] ; [String | PStrings].
+PList ::= list(String, PStrings).
+PLists ::= [] ; [PList | PLists].
+PAct ::= act(Constant, String, PStrings, PSaid, String, PProposer).
+PProposer ::= any ; by(Ints) ; by(Ints, PSames).
+PSame ::= same(Integer, Integer).
+PSames ::= [] ; [PSame | PSames].
+PActs ::= [] ; [PAct | PActs].
+PStand ::= standing(Constant, Constant, Constant).
+PStands ::= [] ; [PStand | PStands].
+PLook ::= nolook ; look(String, String).
+PVersion ::= version(Integer, Integer).
+RPragmas ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
+Exported ::= with(RDeclared, RPragmas).
 Peer ::= Key.
 Speech ::= speech(Utterance, Peer).
-Utterance ::= utterance(String) ; Speech.
+Utterance ::= utterance(String) ; program(Module) ; Speech.
 YesNo ::= yes ; no.
 Reason ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote ::= yes ; no(Reason).
-Decision ::= commit ; abort(Peer, Reason) ; yield.
+Vote ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho ::= one(Class) ; rho(Proposal).
 Names ::= none ; request(Rho, Integer).
 Attempt ::= attempt(Peer, Integer, Integer, Class, Names).
@@ -27,7 +79,7 @@ Asked ::= asked(Integer, List(Word)).
 Close ::= close.
 Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
 MeetPeer ::= peer(Peer) ; nopeer.
-Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; inst(Integer, Integer, Var).
+Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; val(Constant) ; inst(Integer, Integer, Var).
 NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm) ; own_iv(Var) ; ext_iv(NTerm, Var).
 Vars ::= [] ; [Var | Vars].
 SAtom ::= atom(Constant, Vars) ; times(Var, SAtom) ; rest(Var, Var, SAtom) ; opt(SAtom).
@@ -50,19 +102,29 @@ LLists ::= [] ; [LList | LLists].
 ListTuples ::= [] ; [LLists | ListTuples].
 Schemas ::= [] ; [Schema | Schemas].
 Preds ::= [] ; [Constant | Preds].
-Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var).
-Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var) ; item_of(Var).
+Constraint ::= true ; and(Constraint, Constraint) ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr) ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Var, Var) ; or(Constraint, Constraint) ; not(Constraint) ; implies(Constraint, Constraint) ; ne(Expr, Expr) ; signed(Var, Var) ; unsigned(Var, Var) ; program(Expr).
+Expr ::= Var ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr) ; fn(Constant, Exprs) ; cardinality(Vars, Var, SAtom, Form) ; sum(Vars, Var, SAtom, Form, Expr) ; author_of(Var).
 Exprs ::= [] ; [Expr | Exprs].
-CRole ::= every ; at(Integer).
+CRole ::= every ; at(Integer) ; cond.
+Conj ::= cj(CRole, Constraint).
+Conjs ::= [] ; [Conj | Conjs].
+CExpr ::= cx(Constant, Expr).
+CExprs ::= [] ; [CExpr | CExprs].
+Read ::= read(Integer, Vars, CExprs).
+Reads ::= [] ; [Read | Reads].
+Chosen ::= chosen(Binding) ; nochoice.
+BindingsList ::= [] ; [Bindings | BindingsList].
 Form ::= fa(Var, SAtom) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form) ; fexists(Vars, Var, SAtom, Form) ; fforall(Vars, Var, SAtom, Form, Forms) ; fcons(Constraint).
 Forms ::= [] ; [Form | Forms].
 SForm ::= sform(CRole, Form).
+HPat ::= hp(Integer, SAtoms).
+HPats ::= [] ; [HPat | HPats].
 SForms ::= [] ; [SForm | SForms].
-Numeric ::= numeric(Constraint, Vars, CRole).
+Numeric ::= numeric(Conjs, Vars, Reads).
 NumRes ::= num_is(Number) ; no_num.
 LNorm ::= norm(Binding) ; badnorm.
 CName ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any.
+Val ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any ; v(Constant).
 NameParts ::= parts(Vars, Vals) ; noparts.
 Vals ::= [] ; [Val | Vals].
 GAtom ::= g(Constant, Vals).
@@ -95,7 +157,7 @@ CVals ::= [] ; [CVal | CVals].
 CAtom ::= cmp_atom(Constant, CVals).
 CAtoms ::= [] ; [CAtom | CAtoms].
 Lock ::= unlocked ; held(Attempt).
-Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, YesNo) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer) ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer) ; ended(Attempt) ; introduced(Peer, Peer).
+Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, Vote) ; chose(Attempt, Binding) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer) ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer) ; unmet(Attempt, Integer) ; commits(Integer) ; ended(Attempt) ; introduced(Peer, Peer).
 Recs ::= [] ; [Rec | Recs].
 App ::= app(GAtoms, Integer, Lock, Recs).
 Pend ::= deferred(Net).
@@ -150,6 +212,10 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 Appr ::= ap(Info, PartsOf).
 Apprs ::= [] ; [Appr | Apprs].
 PartsOf ::= by_name(Class) ; any_part ; standing_part.
+CondX ::= cx(Constraint, Forms, GAtoms, Ints).
+BindOr ::= nobind ; bind(Binding).
+HMatch ::= pm(BindOr, SAtoms).
+HMatches ::= [] ; [HMatch | HMatches].
 
 Question ::= request_r(Request?) ; approval_w(Approval).
 
@@ -201,17 +267,39 @@ schema_entry(review, schema(review, [svar(x), num(d), svar(r)], [rs(guarded, [at
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
-schema_numeric(mint_bond, numeric(gt(num(d), num(t)), [num(t)], at(1))).
-schema_numeric(advance, numeric(and(succ(num(t), num(t1)), le(num(t1), num(d))), [num(t), num(d)], at(1))).
-schema_numeric(redeem_bc, numeric(le(num(d), num(t)), [num(t)], at(2))).
-schema_numeric(redeem_bb, numeric(le(num(d), num(t)), [num(t)], at(2))).
-schema_numeric(book, numeric(gt(num(d), num(t)), [num(t)], at(2))).
-schema_numeric(cancel, numeric(gt(num(d), num(t)), [num(t)], at(1))).
-schema_numeric(review, numeric(le(num(d), num(t)), [num(t)], at(1))).
-schema_numeric(_, numeric(true, [], every)) :- otherwise | true.
+schema_numeric(establish, numeric([cj(every, true)], [], [])).
+schema_numeric(acquaint, numeric([cj(every, true)], [], [])).
+schema_numeric(introduce, numeric([cj(every, true)], [], [])).
+schema_numeric(mint_coin, numeric([cj(every, true)], [], [])).
+schema_numeric(mint_bond, numeric([cj(at(1), gt(num(d), num(t)))], [num(t)], [])).
+schema_numeric(first_date, numeric([cj(every, true)], [], [])).
+schema_numeric(advance, numeric([cj(at(1), succ(num(t), num(t1))), cj(at(1), le(num(t1), num(d)))], [num(t), num(d)], [])).
+schema_numeric(swap_cc, numeric([cj(every, true)], [], [])).
+schema_numeric(swap_cb, numeric([cj(every, true)], [], [])).
+schema_numeric(swap_bc, numeric([cj(every, true)], [], [])).
+schema_numeric(swap_bb, numeric([cj(every, true)], [], [])).
+schema_numeric(pay, numeric([cj(every, true)], [], [])).
+schema_numeric(redeem_cc, numeric([cj(every, true)], [], [])).
+schema_numeric(redeem_cb, numeric([cj(every, true)], [], [])).
+schema_numeric(redeem_bc, numeric([cj(at(2), le(num(d), num(t)))], [num(t)], [])).
+schema_numeric(redeem_bb, numeric([cj(at(2), le(num(d), num(t)))], [num(t)], [])).
+schema_numeric(deposit_c, numeric([cj(every, true)], [], [])).
+schema_numeric(deposit_b, numeric([cj(every, true)], [], [])).
+schema_numeric(release_c, numeric([cj(every, true)], [], [])).
+schema_numeric(release_b, numeric([cj(every, true)], [], [])).
+schema_numeric(return_c, numeric([cj(every, true)], [], [])).
+schema_numeric(return_b, numeric([cj(every, true)], [], [])).
+schema_numeric(list_place, numeric([cj(every, true)], [], [])).
+schema_numeric(book, numeric([cj(at(2), gt(num(d), num(t)))], [num(t)], [])).
+schema_numeric(cancel, numeric([cj(at(1), gt(num(d), num(t)))], [num(t)], [])).
+schema_numeric(review, numeric([cj(at(1), le(num(d), num(t)))], [num(t)], [])).
+schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
 schema_forms(_, []) :- otherwise | true.
+
+procedure schema_held(Constant?, HPats).
+schema_held(_, []) :- otherwise | true.
 
 procedure schema_base(Constant?, Integer).
 schema_base(establish, 1).
@@ -378,6 +466,12 @@ sentence_of(return_c(V1, V2, _, V4), Me, Ws?) :- ground(V2?), ground(V1?), groun
 sentence_of(return_b(V1, V2, _, _, V5), Me, Ws?) :- ground(V2?), ground(V1?), ground(V5?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to return coins or bonds to you.'), valued(amount, V5?)])], Me?, Ws).
 sentence_of(book(V1, V2, _, V4, V5), Me, Ws?) :- ground(V2?), ground(V1?), ground(V4?), ground(V5?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to stay at your place.'), valued(night, V4?), valued(amount, V5?)])], Me?, Ws).
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
+
+exported procedure contract(String, Exported).
+contract('STAY: Grassroots Stays\nAlice and Bob are persons.  STAY extends GB.\n1. ◆ Hosting.  Alice, who can host guests at a place, may list it under a name not among their places.\n2. ■ Booking.  Bob, who knows Alice, and Alice may jointly decide that Bob stays at a place of Alice\'s on a night later than Alice\'s date, for a price Bob pays in Alice-coins; a place is booked at most once a night.\n3. ■ Cancelling.  Before the night, by Alice\'s date, Alice may cancel a stay, paying Bob back its whole price in Alice-coins; Bob is not asked.\n4. ■ Reviewing.  Once the night has come, by Bob\'s date, Bob may review their stay, once; Alice keeps the review and is not asked.', with(environment([today], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar(c)], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []), rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(mint_coin, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), nschema(mint_bond, ['Alice'], [num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]), schema(first_date, ['Alice'], [num(d)], [rs(unguarded, [atom(date, [num(d)]), atom(dated, [])], [], [atom(identity, []), atom(today, [num(d)])], [atom(dated, [])])]), nschema(advance, ['Alice'], [num(t), num(t1), num(d)], and(succ(num(t), num(t1)), le(num(t1), num(d))), [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, []), atom(today, [num(d)])], [])]), schema(swap_cc, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_cb, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(d1), num(k1)], [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_bc, ['Alice', 'Bob'], [pvar(u), num(d), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_bb, ['Alice', 'Bob'], [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)], [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num(k)], [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem_cc, ['Alice', 'Bob'], [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]), schema(redeem_cb, ['Alice', 'Bob'], [pvar(r), num(d1)], [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, [])], [])]), nschema(redeem_bc, ['Alice', 'Bob'], [num(d), pvar(r), num(t)], le(num(d), num(t)), [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(coin, [pvar(r)])], [atom(identity, []), atom(date, [num(t)])], [])]), nschema(redeem_bb, ['Alice', 'Bob'], [num(d), pvar(r), num(d1), num(t)], le(num(d), num(t)), [rs(guarded, [atom(bond, [pvar(r), num(d1)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num(d)])], [atom(bond, [pvar(r), num(d1)])], [atom(identity, []), atom(date, [num(t)])], [])]), schema(deposit_c, ['Alice', 'Carol'], [pvar(u), num(k)], [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_b, ['Alice', 'Carol'], [pvar(u), num(d), num(k)], [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_c, ['Carol', 'Bob'], [pvar(u), num(k)], [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_b, ['Carol', 'Bob'], [pvar(u), num(d), num(k)], [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_c, ['Carol', 'Alice'], [pvar(u), num(k)], [rs(guarded, [], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_b, ['Carol', 'Alice'], [pvar(u), num(d), num(k)], [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(list_place, ['Alice'], [svar(x)], [rs(guarded, [atom(place, [svar(x)])], [], [atom(identity, [])], [atom(place, [svar(x)])])]), nschema(book, ['Bob', 'Alice'], [svar(x), num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [atom(stay, [svar(x), role(2), num(d)])], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(booked, [svar(x), num(d)]), atom(guest, [role(1), svar(x), num(d), num(k)])], [], [atom(identity, []), atom(place, [svar(x)]), atom(date, [num(t)])], [atom(booked, [svar(x), num(d)])])]), nschema(cancel, ['Alice', 'Bob'], [svar(x), num(d), num(k), num(t)], gt(num(d), num(t)), [rs(guarded, [], [atom(booked, [svar(x), num(d)]), atom(guest, [role(2), svar(x), num(d), num(k)])], [atom(identity, []), atom(date, [num(t)])], []), rs(unguarded, [times(num(k), atom(coin, [role(1)]))], [atom(stay, [svar(x), role(1), num(d)])], [atom(identity, [])], [])]), nschema(review, ['Bob', 'Alice'], [svar(x), num(d), svar(r), num(t)], le(num(d), num(t)), [rs(guarded, [atom(reviewed, [svar(x), role(2), num(d)])], [], [atom(identity, []), atom(stay, [svar(x), role(2), num(d)]), atom(date, [num(t)])], [atom(reviewed, [svar(x), role(2), num(d)])]), rs(unguarded, [atom(review, [svar(x), role(1), svar(r)])], [], [atom(identity, [])], [])])]), pragmas([list('Contacts', [knows]), list('Coins', [coin]), list('Bonds', [bond]), list('Places', [place]), list('Stays', [stay]), list('Guests', [guest]), list('Reviews', [review])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[], [person(1), text(' asks to introduce '), person(3), text(' to you.')]]), 'Contacts', by([1])), act(mint_coin, 'Mint', ['', amount], none, 'Coins', by([1])), act(mint_bond, 'Mint bond', ['', maturity, amount], none, 'Coins', by([1])), act(swap_cc, 'Swap', ['', '', '', 'amount given', 'issuer wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins or bonds with you.')]]), 'Coins', by([1])), act(swap_cb, 'Swap', ['', '', '', 'amount given', 'issuer wanted', 'maturity wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins or bonds with you.')]]), 'Coins', by([1])), act(swap_bc, 'Swap', ['', '', '', '', 'amount given', 'issuer wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins or bonds with you.')]]), 'Coins', by([1])), act(swap_bb, 'Swap', ['', '', '', '', 'amount given', 'issuer wanted', 'maturity wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins or bonds with you.')]]), 'Coins', by([1])), act(pay, 'Pay', ['', '', amount], none, 'Coins', by([1])), act(redeem_cc, 'Redeem', ['', '', 'issuer wanted'], none, 'Coins', by([1])), act(redeem_cb, 'Redeem', ['', '', 'issuer wanted', 'maturity wanted'], none, 'Coins', by([1])), act(redeem_bc, 'Redeem', ['', '', '', 'issuer wanted'], none, 'Coins', by([1])), act(redeem_bb, 'Redeem', ['', '', '', 'issuer wanted', 'maturity wanted'], none, 'Coins', by([1])), act(deposit_c, 'Deposit', ['', '', '', amount], said([[], [person(1), text(' asks to deposit coins or bonds with you.')]]), 'Coins', by([1])), act(deposit_b, 'Deposit', ['', '', '', '', amount], said([[], [person(1), text(' asks to deposit coins or bonds with you.')]]), 'Coins', by([1])), act(release_c, 'Release', ['', '', '', amount], said([[], [person(1), text(' asks to release coins or bonds to you.')]]), 'Coins', by([1])), act(release_b, 'Release', ['', '', '', '', amount], said([[], [person(1), text(' asks to release coins or bonds to you.')]]), 'Coins', by([1])), act(return_c, 'Return', ['', '', '', amount], said([[], [person(1), text(' asks to return coins or bonds to you.')]]), 'Coins', by([1])), act(return_b, 'Return', ['', '', '', '', amount], said([[], [person(1), text(' asks to return coins or bonds to you.')]]), 'Coins', by([1])), act(list_place, 'List place', ['', place], none, 'Places', by([1])), act(book, 'Book', ['', '', place, night, amount], said([[], [person(1), text(' asks to stay at your place.')]]), 'Places', by([1])), act(cancel, 'Cancel', [], none, 'Places', by([1])), act(review, 'Review', ['', '', '', '', review], none, 'Places', by([1]))], [], nolook, version(1, 1)))).
+
+exported procedure version(Integer, Integer).
+version(1, 1).
 
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(acquaint(V1, V2), Me, P?) :- ground(V1?), ground(V2?), ground(Me?) | meet_other(V1?, V2?, Me?, P).
@@ -799,13 +893,9 @@ base_anchors1(lschema(_, _, _, Lsts), G, Bn, As?) :- lst_anchors(Lsts?, G?, Bn?,
 
 procedure lst_anchors(Listings?, Integer?, Binding?, GAtoms).
 lst_anchors([], _, _, []).
-lst_anchors([listing(I, Bi, Rho, Args, _, _, _) | Ls], G, Bn, As?) :- integer(G?), (Bi? =:= G?), ground(Bn?), ground(Args?) | copies_of(Bn?, I?, Qs), img_args(Args?, Bn?, Vs), rho_atoms(Qs?, Rho?, Vs?, A1), lst_anchors(Ls?, G?, Bn?, A2), app(A1?, A2?, As).
+lst_anchors([listing(I, Bi, Rho, Args, _, _, _) | Ls], G, Bn, As?) :- integer(G?), (Bi? =:= G?), ground(Bn?), ground(Args?), integer(I?) | copies_of(Bn?, I?, Qs), listing_atoms(Qs?, Rho?, Args?, Bn?, I?, A1), lst_anchors(Ls?, G?, Bn?, A2), app(A1?, A2?, As).
 lst_anchors([instances(K, Bi, Xs, A, _, _, _) | Ls], G, Bn, As?) :- integer(G?), integer(K?), (Bi? =:= G?), ground(Bn?), ground(Xs?), ground(A?) | insts_of(Bn?, K?, Xs?, L), anchor_atoms(L?, Xs?, A?, Bn?, A0), bound_gatoms(A0?, A1), lst_anchors(Ls?, G?, Bn?, A2), app(A1?, A2?, As).
 lst_anchors([_ | Ls], G, Bn, As?) :- otherwise | lst_anchors(Ls?, G?, Bn?, As).
-
-procedure rho_atoms(List(Peer)?, Constant?, Vals?, GAtoms).
-rho_atoms([], _, _, []).
-rho_atoms([Q | Qs], Rho, Vs, [g(Rho?, [p(Q?) | Vs?]) | As?]) :- ground(Q?), ground(Rho?), ground(Vs?) | rho_atoms(Qs?, Rho?, Vs?, As).
 
 procedure tabbed_g(GAtoms?, Preds?, GAtoms).
 tabbed_g([], _, []).
@@ -1125,24 +1215,25 @@ named_part(no, Ps, I, C, R?) :- parts_named(Ps?, I?, C?, R).
 procedure guard_parts_cands(YesNo?, YesNo?, Classes?, Info?, Peer?, GAtoms?, Recs?, Cands).
 guard_parts_cands(no, _, _, _, _, _, _, []).
 guard_parts_cands(yes, no, Ps, I, Id, S, _, Cs?) :- ground(Ps?), ground(I?), ground(S?) | ready_parts(Ps?, Id?, S?, Rs), guard_ready(Rs?, Ps?, I?, Cs).
-guard_parts_cands(yes, yes, Ps, I, Id, S, R, Cs?) :- ground(Ps?), ground(I?), ground(S?), ground(R?) | ready_parts(Ps?, Id?, S?, Rs), readied_parts(Rs?, I?, R?, Rs1), part_pcands(Rs1?, I?, Cs).
+guard_parts_cands(yes, yes, Ps, I, Id, S, R, Cs?) :- ground(Ps?), ground(I?), ground(S?), ground(R?), ground(Id?) | ready_parts(Ps?, Id?, S?, Rs), readied_parts(Rs?, I?, Id?, R?, Rs1), part_pcands(Rs1?, I?, Cs).
 
-procedure readied_parts(Classes?, Info?, Recs?, Classes).
-readied_parts([], _, _, []).
-readied_parts([P | Ps], I, R, Cs?) :- ground(P?), ground(I?), ground(R?) | unready(R?, I?, P?, R?, U), readied_parts(Ps?, I?, R?, Cs1), keep_unless(U?, P?, Cs1?, Cs).
+procedure readied_parts(Classes?, Info?, Peer?, Recs?, Classes).
+readied_parts([], _, _, _, []).
+readied_parts([P | Ps], I, Id, R, Cs?) :- ground(P?), ground(I?), ground(R?), ground(Id?) | unready(R?, I?, P?, Id?, R?, U), readied_parts(Ps?, I?, Id?, R?, Cs1), keep_unless(U?, P?, Cs1?, Cs).
 
 procedure keep_unless(YesNo?, Class?, Classes?, Classes).
 keep_unless(yes, _, Cs, Cs?).
 keep_unless(no, P, Cs, [P? | Cs?]).
 
-procedure unready(Recs?, Info?, Class?, Recs?, YesNo).
-unready([], _, _, _, no).
-unready([unable(B, Q) | Rs], I, P, R, U?) :- ground(B?), ground(Q?), ground(I?), ground(P?), ground(R?) | attempt_class(B?, C), part_of_same(I?, C?, P?, Sm), mem(ready(B?, Q?), R?, Rd), neg(Rd?, Nr), and(Sm?, Nr?, U1), unready1(U1?, Rs?, I?, P?, R?, U).
-unready([_ | Rs], I, P, R, U?) :- otherwise | unready(Rs?, I?, P?, R?, U).
+procedure unready(Recs?, Info?, Class?, Peer?, Recs?, YesNo).
+unready([], _, _, _, _, no).
+unready([unable(B, Q) | Rs], I, P, Id, R, U?) :- ground(B?), ground(Q?), ground(I?), ground(P?), ground(R?) | attempt_class(B?, C), part_of_same(I?, C?, P?, Sm), mem(ready(B?, Q?), R?, Rd), neg(Rd?, Nr), and(Sm?, Nr?, U1), unready1(U1?, Rs?, I?, P?, Id?, R?, U).
+unready([unmet(B, N) | Rs], I, P, Id, R, U?) :- ground(B?), integer(N?), ground(I?), ground(P?), ground(R?), ground(Id?) | attempt_class(B?, C), part_of_same(I?, C?, P?, Sm), attempt_id(B?, J), same(J?, Id?, Own), any_ready(R?, B?, Rd), commits_of(R?, M), since(M?, N?, Sn), or(Rd?, Sn?, Ok), neg(Ok?, Nk), and(Sm?, Own?, So), and(So?, Nk?, U1), unready1(U1?, Rs?, I?, P?, Id?, R?, U).
+unready([_ | Rs], I, P, Id, R, U?) :- otherwise | unready(Rs?, I?, P?, Id?, R?, U).
 
-procedure unready1(YesNo?, Recs?, Info?, Class?, Recs?, YesNo).
-unready1(yes, _, _, _, _, yes).
-unready1(no, Rs, I, P, R, U?) :- unready(Rs?, I?, P?, R?, U).
+procedure unready1(YesNo?, Recs?, Info?, Class?, Peer?, Recs?, YesNo).
+unready1(yes, _, _, _, _, _, yes).
+unready1(no, Rs, I, P, Id, R, U?) :- unready(Rs?, I?, P?, Id?, R?, U).
 
 procedure guard_ready(Classes?, Classes?, Info?, Cands).
 guard_ready([], [], _, []).
@@ -1166,12 +1257,12 @@ held_cand0(C, F, N, K, V, St, Cs?, St1?) :- ground(C?), ground(N?) | st_class(C?
 
 procedure held_cand(ClassRes?, Peer?, Class?, Names?, V?, Cands).
 held_cand(nocls, _, _, _, _, []).
-held_cand(cls(I), F, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term_part_of(I?, C?, Pr), v_id(V?, Id), opens_for(Pr?, Id?, F?, Op), may_propose(I?, V?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
+held_cand(cls(I), _, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term_part_of(I?, C?, Pr), v_id(V?, Id), opens_for(Pr?, Id?, Op), may_propose(I?, V?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
 
-procedure opens_for(PartRes?, Peer?, Peer?, YesNo).
-opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) | same(O?, Id?, B1), mem(F?, G?, B2), and(B1?, B2?, B).
-opens_for(part(pt(_, _, proposed(_))), _, _, no).
-opens_for(nopart, _, _, no).
+procedure opens_for(PartRes?, Peer?, YesNo).
+opens_for(part(pt(_, _, opener(O))), Id, B?) :- same(O?, Id?, B).
+opens_for(part(pt(_, _, proposed(_))), _, no).
+opens_for(nopart, _, no).
 
 procedure vote_cands0(Recs?, V?, St?, Cands, St).
 vote_cands0(R, V, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, V?, St?, [], Cs, St1).
@@ -1214,8 +1305,13 @@ commit_go(no, _, _, _, St, Acc, Acc?, St?).
 commit_go(yes, At, R, Id, St, Acc, Acc1?, St1?) :- ground(At?) | attempt_class(At?, C), st_class(C?, St?, Cr, St1), commit_cand(yes, Cr?, At?, Id?, R?, Acc?, Acc1).
 
 procedure commit_cand(YesNo?, ClassRes?, Attempt?, Peer?, Recs?, Cands?, Cands).
-commit_cand(yes, cls(I), At, Id, R, Acc, Cs?) :- ground(I?), ground(At?), ground(R?) | mem(closed(At?), R?, Cl), neg(Cl?, Open), all_yes(I?, At?, Id?, R?, All), and(Open?, All?, B), vote_cand(B?, cls(I?), cm(At?), Acc?, Cs).
+commit_cand(yes, cls(I), At, _, R, Acc, Cs?) :- ground(I?), ground(At?), ground(R?) | mem(closed(At?), R?, Cl), neg(Cl?, Open), has_chose(R?, At?, Chs), and(Open?, Chs?, B), vote_cand(B?, cls(I?), cm(At?), Acc?, Cs).
 commit_cand(_, _, _, _, _, Acc, Acc?) :- otherwise | true.
+
+procedure has_chose(Recs?, Attempt?, YesNo).
+has_chose([], _, no).
+has_chose([chose(A, _) | _], At, yes) :- (A? =?= At?) | true.
+has_chose([_ | R], At, B?) :- otherwise | has_chose(R?, At?, B).
 
 procedure ready_cands(St?, Cands, St).
 ready_cands(St, Cs?, St1?) :- ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), st_view(St?, V), ready_cands0(R?, V?, St?, Cs, St1).
@@ -1226,7 +1322,12 @@ ready_cands0(R, V, St, Cs?, St1?) :- ground(R?) | ready_cands1(R?, R?, V?, St?, 
 procedure ready_cands1(Recs?, Recs?, V?, St?, Cands?, Cands, St).
 ready_cands1([], _, _, St, Cs, Cs?, St?).
 ready_cands1([voted(At, no) | Rs], R, V, St, Acc, Cs?, St2?) :- ground(At?), ground(R?), ground(V?) | v_id(V?, Id), attempt_id(At?, P), same(P?, Id?, Own), mem(answered(At?, no), R?, Dc), mem(readied(At?), R?, Rd), v_kn(V?, Kv), known_kn(P?, Kv?, Kn), or(Own?, Dc?, X1), or(X1?, Rd?, X2), neg(X2?, Y1), and(Y1?, Kn?, Go), ready_go(Go?, At?, Id?, V?, St?, Acc?, Acc1, St1), ready_cands1(Rs?, R?, V?, St1?, Acc1?, Cs, St2).
+ready_cands1([unmet(At, N) | Rs], R, V, St, Acc, Cs?, St2?) :- ground(At?), ground(R?), ground(V?), integer(N?) | v_id(V?, Id), attempt_id(At?, P), same(P?, Id?, Own), neg(Own?, Other), mem(readied(At?), R?, Rd), neg(Rd?, Nr), commits_of(R?, M), since(M?, N?, Sn), v_kn(V?, Kv), known_kn(P?, Kv?, Kn), and(Other?, Nr?, X1), and(X1?, Sn?, X2), and(X2?, Kn?, Go), ready_go2(Go?, At?, St?, Acc?, Acc1, St1), ready_cands1(Rs?, R?, V?, St1?, Acc1?, Cs, St2).
 ready_cands1([_ | Rs], R, V, St, Acc, Cs?, St1?) :- otherwise | ready_cands1(Rs?, R?, V?, St?, Acc?, Cs, St1).
+
+procedure ready_go2(YesNo?, Attempt?, St?, Cands?, Cands, St).
+ready_go2(no, _, St, Acc, Acc?, St?).
+ready_go2(yes, At, St, Acc, Acc1?, St1?) :- ground(At?) | attempt_class(At?, C), st_class(C?, St?, Cr, St1), ready_cand(yes, Cr?, rd(At?), Acc?, Acc1).
 
 procedure ready_go(YesNo?, Attempt?, Peer?, V?, St?, Cands?, Cands, St).
 ready_go(no, _, _, _, St, Acc, Acc?, St?).
@@ -1374,7 +1475,7 @@ opened1([], _, [], _, _, []).
 opened1([], Nm, [R | Rs], Id, Sh, Cs?) :- ground(Nm?), ground(R?), ground(Id?), ground(Sh?) | rs_req(R?, Q), match_all(Q?, Sh?, [b(role(1), p(Id?))], Bs0), schema_numeric(Nm?, N), num_extend(N?, Bs0?, Sh?, Bs), opened2(Bs?, Nm?, [R? | Rs?], Id?, Sh?, Cs).
 
 procedure num_extend(Numeric?, Bindings?, GAtoms?, Bindings).
-num_extend(numeric(C, _, _), Bs, Sh, R?) :- ground(C?) | extend_each(Bs?, C?, Sh?, R).
+num_extend(numeric(Cj, _, _), Bs, Sh, R?) :- ground(Cj?) | conjs_local(Cj?, C), extend_each(Bs?, C?, Sh?, R).
 
 procedure extend_each(Bindings?, Constraint?, GAtoms?, Bindings).
 extend_each([], _, _, []).
@@ -1469,18 +1570,47 @@ procedure propose_app(YesNo?, Info?, Attempt?, St?, Sends, Outputs, St).
 propose_app(yes, I, At, St, Ss?, [], St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), info_q(I?, Q), only_me(Q?, Id?, One), st_app(St?, Ap), propose_go(One?, I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
 propose_app(no, I, At, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) | st_id(St?, Id), st_ms(St?, S), attempt_class(At?, P), unable_reason(P?, Id?, S?, D), refuse_at_once(I?, At?, D?, St?, Ss, Ns, St1).
 
+procedure first_reading(Bindings?, Binding).
+first_reading([], []).
+first_reading([W | _], W?).
+
 procedure propose_go(YesNo?, Info?, Attempt?, Peer?, App?, Sends, App).
-propose_go(yes, I, At, Id, app(S, _, L, R), [], app(S1?, K?, L?, R2?)) :- ground(I?), ground(At?), ground(R?) | attempt_k(At?, K), attempt_class(At?, P), drop_unable(I?, P?, R?, R0), attempt_class(At?, P2), apply_part(P2?, Id?, S?, S1), end_approvals(I?, Id?, [closed(At?), voted(At?, yes) | R0?], R2, _).
-propose_go(no, I, At, Id, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes) | R0?])) :- ground(At?), ground(I?) | attempt_k(At?, K), attempt_class(At?, P), drop_unable(I?, P?, R?, R0), info_q(I?, Q), tell(Q?, Id?, start(At?), Ss).
+propose_go(yes, I, At, Id, app(S, _, L, R), [], app(S1?, K?, L?, R2?)) :- ground(I?), ground(At?), ground(R?), ground(S?) | attempt_k(At?, K), attempt_class(At?, P), drop_unable(I?, P?, Id?, R?, R0), attempt_class(At?, P2), readings_of(P2?, Id?, S?, Ws), first_reading(Ws?, W), attempt_class(At?, P3), readings_of(P3?, Id?, S?, Ws2), first_reading(Ws2?, W2), attempt_class(At?, P4), apply_part(P4?, Id?, S?, W?, S1), bump_commits(R0?, R00), end_approvals(I?, Id?, [closed(At?), voted(At?, yes), chose(At?, W2?) | R00?], R2, _).
+propose_go(no, I, At, Id, app(S, _, _, R), Ss?, app(S?, K?, held(At?), [voted(At?, yes) | R0?])) :- ground(At?), ground(I?) | attempt_k(At?, K), attempt_class(At?, P), drop_unable(I?, P?, Id?, R?, R0), info_q(I?, Q), tell(Q?, Id?, start(At?), Ss).
 
-procedure drop_unable(Info?, Class?, Recs?, Recs).
-drop_unable(_, _, [], []).
-drop_unable(I, P, [unable(B, Q) | Rs], R?) :- ground(I?), ground(P?), ground(B?), ground(Q?) | attempt_class(B?, C), part_of_same(I?, C?, P?, Sm), drop_unable1(Sm?, unable(B?, Q?), I?, P?, Rs?, R).
-drop_unable(I, P, [X | Rs], [X? | R?]) :- otherwise | drop_unable(I?, P?, Rs?, R).
+procedure drop_unable(Info?, Class?, Peer?, Recs?, Recs).
+drop_unable(_, _, _, [], []).
+drop_unable(I, P, Id, [unable(B, Q) | Rs], R?) :- ground(I?), ground(P?), ground(B?), ground(Q?) | attempt_class(B?, C), part_of_same(I?, C?, P?, Sm), drop_unable1(Sm?, unable(B?, Q?), I?, P?, Id?, Rs?, R).
+drop_unable(I, P, Id, [unmet(B, N) | Rs], R?) :- ground(I?), ground(P?), ground(B?), integer(N?), ground(Id?) | attempt_class(B?, C), part_of_same(I?, C?, P?, Sm), attempt_id(B?, J), same(J?, Id?, Own), and(Sm?, Own?, Go), drop_unable1(Go?, unmet(B?, N?), I?, P?, Id?, Rs?, R).
+drop_unable(I, P, Id, [X | Rs], [X? | R?]) :- otherwise | drop_unable(I?, P?, Id?, Rs?, R).
 
-procedure drop_unable1(YesNo?, Rec?, Info?, Class?, Recs?, Recs).
-drop_unable1(yes, _, I, P, Rs, R?) :- drop_unable(I?, P?, Rs?, R).
-drop_unable1(no, X, I, P, Rs, [X? | R?]) :- drop_unable(I?, P?, Rs?, R).
+procedure drop_unable1(YesNo?, Rec?, Info?, Class?, Peer?, Recs?, Recs).
+drop_unable1(yes, _, I, P, Id, Rs, R?) :- drop_unable(I?, P?, Id?, Rs?, R).
+drop_unable1(no, X, I, P, Id, Rs, [X? | R?]) :- drop_unable(I?, P?, Id?, Rs?, R).
+
+procedure commits_of(Recs?, Integer).
+commits_of([], 0).
+commits_of([commits(N) | _], N?).
+commits_of([_ | R], N?) :- otherwise | commits_of(R?, N).
+
+procedure bump_commits(Recs?, Recs).
+bump_commits([], [commits(1)]).
+bump_commits([commits(N) | R], [commits(N1?) | R?]) :- N1 := (N? + 1).
+bump_commits([X | R], [X? | R1?]) :- otherwise | bump_commits(R?, R1).
+
+procedure chose_of(Recs?, Attempt?, Binding).
+chose_of([], _, []).
+chose_of([chose(A, W) | _], At, W?) :- (A? =?= At?) | true.
+chose_of([_ | R], At, W?) :- otherwise | chose_of(R?, At?, W).
+
+procedure since(Integer?, Integer?, YesNo).
+since(M, N, yes) :- (M? > N?) | true.
+since(_, _, no) :- otherwise | true.
+
+procedure any_ready(Recs?, Attempt?, YesNo).
+any_ready([], _, no).
+any_ready([ready(A, _) | _], B, yes) :- (A? =?= B?) | true.
+any_ready([_ | R], B, X?) :- otherwise | any_ready(R?, B?, X).
 
 procedure part_of_same(Info?, Class?, Class?, YesNo).
 part_of_same(I, C, P, Sm?) :- ground(I?), ground(C?), ground(P?) | binding_of(C?, N1, _), binding_of(P?, N2, _), same(N1?, N2?, Sn), same_part_if(Sn?, I?, C?, P?, Sm).
@@ -1508,11 +1638,24 @@ procedure tell1(YesNo?, Peer?, Cargo?, Sends?, Sends).
 tell1(yes, _, _, Ss, Ss?).
 tell1(no, Q, X, Ss, [to(Q?, X?) | Ss?]).
 
-procedure vote_yes_app(Attempt?, App?, Sends, App).
-vote_yes_app(At, app(S, K, _, R), [to(I?, vote(At?, yes))], app(S?, K?, held(At?), [voted(At?, yes) | R?])) :- ground(At?) | attempt_id(At?, I).
+procedure vote_yes_app(Attempt?, Peer?, App?, Sends, App).
+vote_yes_app(At, Id, app(S, K, _, R), [to(I?, vote(At?, V?))], app(S?, K?, held(At?), [voted(At?, yes) | R?])) :- ground(At?), ground(S?), ground(Id?) | attempt_id(At?, I), attempt_class(At?, C), readings_of(C?, Id?, S?, Ws), attempt_class(At?, C2), held_of_me(C2?, Id?, S?, Gs), yes_vote(Gs?, Ws?, V).
+
+procedure yes_vote(GAtoms?, Bindings?, Vote).
+yes_vote([], Ws, yes(Ws?)).
+yes_vote([G | Gs], Ws, yes(Ws?, [G? | Gs?])).
 
 procedure vote_no(Info?, Attempt?, Peer?, Reason?, App?, Sends, Outputs, App).
-vote_no(I, At, Id, D, app(S, K, L, R), [to(P?, vote(At?, no(D?)))], Ns?, app(S?, K?, L?, R2?)) :- ground(At?), ground(D?), ground(R?) | attempt_id(At?, P), attempt_class(At?, C), guards_part(C?, Id?, Gd), guard_ends(Gd?, I?, Id?, [voted(At?, no) | R?], R2, En), attempt_class(At?, C2), ended_notice(En?, C2?, Id?, D?, Ns).
+vote_no(I, At, Id, D, app(S, K, L, R), [to(P?, vote(At?, no(D?)))], Ns?, app(S?, K?, L?, R2?)) :- ground(At?), ground(D?), ground(R?) | attempt_id(At?, P), attempt_class(At?, C), guards_part(C?, Id?, Gd), attempt_names(At?, Nm), vote_ends(Gd?, Nm?, I?, Id?, [voted(At?, no) | R?], R2, En), attempt_class(At?, C2), ended_notice(En?, C2?, Id?, D?, Ns).
+
+procedure vote_ends(YesNo?, Names?, Info?, Peer?, Recs?, Recs, YesNo).
+vote_ends(no, _, _, _, R, R?, no).
+vote_ends(yes, Nm, I, Id, R, R1?, En?) :- ground(R?) | pending_approvals(R?, I?, Id?, R?, Es0), vote_kept(Es0?, Nm?, Es), end_all(Es?, R?, R1, En).
+
+procedure vote_kept(Recs?, Names?, Recs).
+vote_kept([], _, []).
+vote_kept([ended(rho(N), K) | Es], Nm, Es1?) :- ground(N?), integer(K?), ground(Nm?) | same(Nm?, request(rho(N?), K?), S), vote_kept(Es?, Nm?, Es0), keep_rec(S?, ended(rho(N?), K?), Es0?, Es1).
+vote_kept([E | Es], Nm, [E? | Es1?]) :- otherwise | vote_kept(Es?, Nm?, Es1).
 
 procedure guard_ends(YesNo?, Info?, Peer?, Recs?, Recs, YesNo).
 guard_ends(no, _, _, R, R?, no).
@@ -1541,16 +1684,32 @@ start_app2(yes, I, At, Id, Mi, En, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(At?) | nam
 
 procedure start_app3(Mine?, YesNo?, Info?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
 start_app3(mine(_, _), En, I, At, Id, Ap, Ss?, noapproval, Ns?, Ap1?) :- start_named(En?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
-start_app3(notmine, _, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(I?), ground(At?), ground(Ap?) | asked_by(At?, Id?, Ak), app_recs(Ap?, R), approval_of(I?, Id?, R?, Apv), start_asked(Ak?, Apv?, At?, Ap?, Ss, Cr, Ns, Ap1).
+start_app3(notmine, _, I, At, Id, Ap, Ss?, Cr?, Ns?, Ap1?) :- ground(I?), ground(At?), ground(Ap?) | asked_by(At?, Id?, Ak), app_recs(Ap?, R), attempt_names(At?, Nm), named_approval(Nm?, I?, Id?, R?, Apv), start_asked(Ak?, Apv?, At?, Id?, Ap?, Ss, Cr, Ns, Ap1).
+
+procedure named_approval(Names?, Info?, Peer?, Recs?, YesNo).
+named_approval(none, I, Id, R, B?) :- approval_of(I?, Id?, R?, B).
+named_approval(request(Rr, K), _, _, R, B?) :- ground(R?) | answer_naming(R?, Rr?, K?, R?, B).
+
+procedure answer_naming(Recs?, Rho?, Integer?, Recs?, YesNo).
+answer_naming([], _, _, _, no).
+answer_naming([answered(A, yes) | Rs], Rr, K, R, B?) :- ground(A?), ground(Rr?), integer(K?), ground(R?) | named_open(A?, Rr?, K?, R?, B1), answer_naming1(B1?, Rs?, Rr?, K?, R?, B).
+answer_naming([_ | Rs], Rr, K, R, B?) :- otherwise | answer_naming(Rs?, Rr?, K?, R?, B).
+
+procedure answer_naming1(YesNo?, Recs?, Rho?, Integer?, Recs?, YesNo).
+answer_naming1(yes, _, _, _, _, yes).
+answer_naming1(no, Rs, Rr, K, R, B?) :- answer_naming(Rs?, Rr?, K?, R?, B).
+
+procedure named_open(Attempt?, Rho?, Integer?, Recs?, YesNo).
+named_open(A, Rr, K, R, B?) :- ground(A?), ground(R?) | attempt_names(A?, Na), same(Na?, request(Rr?, K?), S), mem(ended(A?), R?, Done), neg(Done?, Open), and(S?, Open?, B).
 
 procedure start_named(YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
-start_named(no, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+start_named(no, _, At, Id, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], []), Ap?, Ss, Ns, Ap1).
 
-procedure start_asked(YesNo?, YesNo?, Attempt?, App?, Sends, ApprovalRes, Outputs, App).
-start_asked(yes, no, At, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?) | R?])) :- ground(At?) | true.
-start_asked(yes, yes, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
-start_asked(no, _, At, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+procedure start_asked(YesNo?, YesNo?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
+start_asked(yes, no, At, _, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?) | R?])) :- ground(At?) | true.
+start_asked(yes, yes, At, Id, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
+start_asked(no, _, At, Id, Ap, Ss?, noapproval, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 
 procedure names_mine(Attempt?, YesNo?, Mine).
 names_mine(attempt(_, _, _, _, none), _, notmine).
@@ -1576,7 +1735,7 @@ procedure vote_app0(Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
 vote_app0(I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_recs(Ap?, R), answer_of(At?, R?, YN), app_state(Ap?, S), attempt_class(At?, C), part_dom(C?, Id?, S?, Dm), vote_on(YN?, Dm?, I?, At?, Id?, Ap?, Ss, Ns, Ap1).
 
 procedure vote_on(YesNo?, YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
-vote_on(yes, yes, _, At, _, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Ap?, Ss, Ap1).
+vote_on(yes, yes, _, At, Id, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
 vote_on(yes, no, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- ground(At?), ground(Ap?) | app_state(Ap?, S), attempt_class(At?, C), unable_reason(C?, Id?, S?, D), vote_no(I?, At?, Id?, D?, Ap?, Ss, Ns, Ap1).
 vote_on(no, _, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, declined, Ap?, Ss, Ns, Ap1).
 
@@ -1585,8 +1744,144 @@ tally_effect(I, At, F, V, St, Ss?, Ns?, St1?) :- ground(At?), ground(St?) | st_c
 
 procedure tally1(YesNo?, Info?, Attempt?, Peer?, Vote?, St?, Sends, Outputs, St).
 tally1(yes, _, _, _, _, St, [], [], St?).
-tally1(no, _, At, F, yes, St, [], [], St1?) :- ground(St?) | st_app(St?, Ap), add_rec(got(At?, F?, yes), Ap?, Ap1), set_app(St?, Ap1?, St1).
-tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), ground(D?), ground(St?) | st_id(St?, Id), info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort(F?, D?)), Ss), st_app(St?, Ap), app_recs(Ap?, R), attempt_class(At?, C), guards_part(C?, Id?, Gd), unable_rec(D?, At?, F?, R?, R0), guard_ends(Gd?, I?, Id?, [closed(At?), got(At?, F?, no) | R0?], R1, En), attempt_class(At?, C2), ended_notice(En?, C2?, F?, D?, Ns), st_app(St?, Ap2), unlock_recs(Ap2?, R1?, Ap3), set_app(St?, Ap3?, St2), st_held(St?, Hd), attempt_names(At?, Nm), drop_named(Nm?, Hd?, Hd1), set_held(St2?, Hd1?, St3).
+tally1(no, I, At, F, yes(Ws), St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(St?) | st_app(St?, Ap), add_rec(got(At?, F?, yes(Ws?)), Ap?, Ap1), set_app(St?, Ap1?, St1), tally_last(I?, At?, St1?, Ss, Ns, St2).
+tally1(no, I, At, F, yes(Ws, Gs), St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(St?) | st_app(St?, Ap), add_rec(got(At?, F?, yes(Ws?, Gs?)), Ap?, Ap1), set_app(St?, Ap1?, St1), tally_last(I?, At?, St1?, Ss, Ns, St2).
+tally1(no, I, At, F, no(D), St, Ss?, Ns?, St3?) :- tally_no(I?, At?, F?, D?, St?, Ss, Ns, St3).
+
+procedure tally_last(Info?, Attempt?, St?, Sends, Outputs, St).
+tally_last(I, At, St, Ss?, Ns?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_recs(Ap?, R), all_yes(I?, At?, Id?, R?, All), tally_last1(All?, I?, At?, St?, Ss, Ns, St1).
+
+procedure tally_last1(YesNo?, Info?, Attempt?, St?, Sends, Outputs, St).
+tally_last1(no, _, _, St, [], [], St?).
+tally_last1(yes, I, At, St, Ss?, Ns?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_recs(Ap?, R), st_app(St?, Ap2), app_state(Ap2?, S), choose_readings(I?, At?, Id?, S?, R?, Ch), tally_chosen(Ch?, I?, At?, St?, Ss, Ns, St1).
+
+procedure tally_chosen(Chosen?, Info?, Attempt?, St?, Sends, Outputs, St).
+tally_chosen(chosen(W), _, At, St, [], [], St1?) :- ground(At?), ground(St?) | st_app(St?, Ap), add_rec(chose(At?, W?), Ap?, Ap1), set_app(St?, Ap1?, St1).
+tally_chosen(nochoice, I, At, St, Ss?, Ns?, St2?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), app_recs(Ap?, R), commits_of(R?, N), st_app(St?, Ap2), add_rec(unmet(At?, N?), Ap2?, Ap1), set_app(St?, Ap1?, St1), tally_no(I?, At?, Id?, unable, St1?, Ss, Ns, St2).
+
+procedure choose_readings(Info?, Attempt?, Peer?, GAtoms?, Recs?, Chosen).
+choose_readings(I, At, Id, S, R, Ch?) :- ground(I?), ground(At?), ground(Id?), ground(S?), ground(R?) | info_q(I?, Q), attempt_class(At?, C), readings_of(C?, Id?, S?, Own), readings_in(Q?, At?, Id?, Own?, R?, Wss), attempt_class(At?, C2), term_spec(C2?, Nm, _, Bn), unlocal(Bn?, B0), cond_of(Nm?, Cd), attempt_class(At?, C4), term_spec(C4?, Nm4, _, _), cond_forms(Nm4?, Fs), info_q(I?, Q2), attempt_class(At?, C3), held_of_me(C3?, Id?, S?, Own2), held_tagged(Q2?, At?, Id?, Own2?, R?, Tg), attempt_class(At?, C5), term_spec(C5?, Nm5, _, _), schema_listed(Nm5?, Ks), first_meeting(Wss?, cx(Cd?, Fs?, Tg?, Ks?), B0?, [], Ch).
+
+procedure readings_in(Peers?, Attempt?, Peer?, Bindings?, Recs?, BindingsList).
+readings_in([], _, _, _, _, []).
+readings_in([P | Ps], At, Id, Own, R, [Ws? | Wss?]) :- ground(P?), ground(At?), ground(Id?), ground(Own?), ground(R?) | same(P?, Id?, Me), readings_rec(Me?, At?, P?, Own?, R?, Ws), readings_in(Ps?, At?, Id?, Own?, R?, Wss).
+
+procedure readings_rec(YesNo?, Attempt?, Peer?, Bindings?, Recs?, Bindings).
+readings_rec(yes, _, _, Own, _, Own?).
+readings_rec(no, At, P, _, R, Ws?) :- got_readings(R?, At?, P?, Ws).
+
+procedure got_readings(Recs?, Attempt?, Peer?, Bindings).
+got_readings([], _, _, []).
+got_readings([got(A, Q, yes(Ws)) | _], At, P, Ws?) :- (A? =?= At?), (Q? =?= P?) | true.
+got_readings([got(A, Q, yes(Ws, _)) | _], At, P, Ws?) :- (A? =?= At?), (Q? =?= P?) | true.
+got_readings([_ | R], At, P, Ws?) :- otherwise | got_readings(R?, At?, P?, Ws).
+
+procedure first_meeting(BindingsList?, CondX?, Binding?, Binding?, Chosen).
+first_meeting([], cx(Cd, Fs, Tg, Ks), B0, Acc, Ch?) :- ground(Cd?), ground(Fs?), ground(Tg?), ground(Ks?), ground(B0?), ground(Acc?) | app(Acc?, B0?, B), con_holds(Cd?, B?, H1), app(Acc?, B0?, B1), drop_roles(B1?, Ks?, B2), forms_hold(Fs?, B2?, Tg?, H2), and(H1?, H2?, H), chosen_if(H?, Acc?, Ch).
+first_meeting([Ws | Wss], Cd, B0, Acc, Ch?) :- ground(Ws?), ground(Wss?), ground(Cd?), ground(B0?), ground(Acc?) | first_meeting_each(Ws?, Wss?, Cd?, B0?, Acc?, Ch).
+
+procedure first_meeting_each(Bindings?, BindingsList?, CondX?, Binding?, Binding?, Chosen).
+first_meeting_each([], _, _, _, _, nochoice).
+first_meeting_each([W | Ws], Wss, Cd, B0, Acc, Ch?) :- ground(W?), ground(Ws?), ground(Wss?), ground(Cd?), ground(B0?), ground(Acc?) | app(Acc?, W?, Acc1), first_meeting(Wss?, Cd?, B0?, Acc1?, Ch1), first_meeting_next(Ch1?, Ws?, Wss?, Cd?, B0?, Acc?, Ch).
+
+procedure first_meeting_next(Chosen?, Bindings?, BindingsList?, CondX?, Binding?, Binding?, Chosen).
+first_meeting_next(chosen(W), _, _, _, _, _, chosen(W?)).
+first_meeting_next(nochoice, Ws, Wss, Cd, B0, Acc, Ch?) :- first_meeting_each(Ws?, Wss?, Cd?, B0?, Acc?, Ch).
+
+procedure chosen_if(YesNo?, Binding?, Chosen).
+chosen_if(yes, W, chosen(W?)).
+chosen_if(no, _, nochoice).
+
+procedure cond_forms(Constant?, Forms).
+cond_forms(Nm, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), cond_forms1(Sf?, Fs).
+
+procedure cond_forms1(SForms?, Forms).
+cond_forms1([], []).
+cond_forms1([sform(cond, F) | Sf], [F? | Fs?]) :- cond_forms1(Sf?, Fs).
+cond_forms1([_ | Sf], Fs?) :- otherwise | cond_forms1(Sf?, Fs).
+
+procedure held_tagged(Peers?, Attempt?, Peer?, GAtoms?, Recs?, GAtoms).
+held_tagged([], _, _, _, _, []).
+held_tagged([P | Ps], At, Id, Own, R, Tg?) :- ground(P?), ground(At?), ground(Id?), ground(Own?), ground(R?) | same(P?, Id?, Me), held_rec(Me?, At?, P?, Own?, R?, Gs), tag_atoms(Gs?, P?, T1), held_tagged(Ps?, At?, Id?, Own?, R?, T2), app(T1?, T2?, Tg).
+
+procedure held_rec(YesNo?, Attempt?, Peer?, GAtoms?, Recs?, GAtoms).
+held_rec(yes, _, _, Own, _, Own?).
+held_rec(no, At, P, _, R, Gs?) :- got_held(R?, At?, P?, Gs).
+
+procedure got_held(Recs?, Attempt?, Peer?, GAtoms).
+got_held([], _, _, []).
+got_held([got(A, Q, yes(_, Gs)) | _], At, P, Gs?) :- (A? =?= At?), (Q? =?= P?) | true.
+got_held([_ | R], At, P, Gs?) :- otherwise | got_held(R?, At?, P?, Gs).
+
+procedure tag_atoms(GAtoms?, Peer?, GAtoms).
+tag_atoms([], _, []).
+tag_atoms([g(N, Vs) | Gs], P, [g(N?, [p(P?) | Vs?]) | Ts?]) :- ground(P?) | tag_atoms(Gs?, P?, Ts).
+
+procedure schema_listed(Constant?, Ints).
+schema_listed(Nm, Ks?) :- ground(Nm?) | schema_entry(Nm?, E), schema_listed1(E?, Ks).
+
+procedure schema_listed1(Schema?, Ints).
+schema_listed1(lschema(_, _, _, Lsts), Ks?) :- listing_ixs(Lsts?, Ks).
+schema_listed1(_, []) :- otherwise | true.
+
+procedure listing_ixs(Listings?, Ints).
+listing_ixs([], []).
+listing_ixs([listing(I, _, _, _, _, _, _) | Ls], [I? | Ks?]) :- listing_ixs(Ls?, Ks).
+listing_ixs([_ | Ls], Ks?) :- otherwise | listing_ixs(Ls?, Ks).
+
+procedure drop_roles(Binding?, Ints?, Binding).
+drop_roles([], _, []).
+drop_roles([b(role(J), X) | Bs], Ks, R?) :- integer(J?), ground(Ks?) | mem(J?, Ks?, In), drop_roles(Bs?, Ks?, R1), drop_one(In?, b(role(J?), X?), R1?, R).
+drop_roles([X | Bs], Ks, [X? | R?]) :- otherwise | drop_roles(Bs?, Ks?, R).
+
+procedure drop_one(YesNo?, Bind?, Binding?, Binding).
+drop_one(yes, _, R, R?).
+drop_one(no, X, R, [X? | R?]).
+
+procedure held_of_me(Class?, Peer?, GAtoms?, GAtoms).
+held_of_me(P, Id, S, Gs?) :- ground(P?), ground(Id?), ground(S?) | term_spec(P?, Nm, Rs, Bn), roles_sent(Rs?, 1, Bn?, Id?, Is), term_spec(P?, _, _, Bn2), neg_ixs(Bn2?, Id?, Ks), term_spec(P?, _, _, Bn3), unlocal(Bn3?, B0), schema_held(Nm?, Hp), reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), held_pats(Hp?, Is?, Ks?, B0?, Id?, Pm), held_scan(Sh?, Pm?, Gs).
+
+procedure neg_ixs(Binding?, Peer?, Ints).
+neg_ixs([], _, []).
+neg_ixs([b(role(J), p(Q)) | Bs], Id, [K? | Ks?]) :- integer(J?), (J? < 0), (Q? =?= Id?) | K := (0 - J?), neg_ixs(Bs?, Id?, Ks).
+neg_ixs([_ | Bs], Id, Ks?) :- otherwise | neg_ixs(Bs?, Id?, Ks).
+
+procedure held_pats(HPats?, Ints?, Ints?, Binding?, Peer?, HMatches).
+held_pats([], _, _, _, _, []).
+held_pats([hp(I, Ms) | Hp], Is, Ks, B, Id, [pm(Bo?, Ms?) | Pm?]) :- integer(I?), ground(Is?), ground(Ks?), ground(B?), ground(Id?) | mem(I?, Is?, InA), mem(I?, Ks?, InL), held_bind(InA?, InL?, I?, B?, Id?, Bo), held_pats(Hp?, Is?, Ks?, B?, Id?, Pm).
+
+procedure held_bind(YesNo?, YesNo?, Integer?, Binding?, Peer?, BindOr).
+held_bind(yes, _, _, B, _, bind(B?)).
+held_bind(no, yes, I, B, Id, bind([b(role(I?), p(Id?)) | B1?])) :- integer(I?) | drop_roles(B?, [I?], B1).
+held_bind(no, no, _, _, _, nobind).
+
+procedure held_scan(GAtoms?, HMatches?, GAtoms).
+held_scan([], _, []).
+held_scan([G | Gs], Pm, R?) :- ground(G?), ground(Pm?) | pm_any(Pm?, G?, Y), held_scan(Gs?, Pm?, R1), held_keep(Y?, G?, R1?, R).
+
+procedure pm_any(HMatches?, GAtom?, YesNo).
+pm_any([], _, no).
+pm_any([pm(nobind, _) | Pm], G, Y?) :- pm_any(Pm?, G?, Y).
+pm_any([pm(bind(B), Ms) | Pm], G, Y?) :- ground(G?) | held_any(Ms?, G?, B?, Y1), pm_any1(Y1?, Pm?, G?, Y).
+
+procedure pm_any1(YesNo?, HMatches?, GAtom?, YesNo).
+pm_any1(yes, _, _, yes).
+pm_any1(no, Pm, G, Y?) :- pm_any(Pm?, G?, Y).
+
+procedure held_any(SAtoms?, GAtom?, Binding?, YesNo).
+held_any([], _, _, no).
+held_any([M | Ms], G, B, Y?) :- ground(G?), ground(B?) | match_into(M?, [G?], B?, Bs), held_some(Bs?, Ms?, G?, B?, Y).
+
+procedure held_some(Bindings?, SAtoms?, GAtom?, Binding?, YesNo).
+held_some([], Ms, G, B, Y?) :- held_any(Ms?, G?, B?, Y).
+held_some([_ | _], _, _, _, yes).
+
+procedure held_keep(YesNo?, GAtom?, GAtoms?, GAtoms).
+held_keep(yes, G, R, [G? | R?]).
+held_keep(no, _, R, R?).
+
+procedure tally_no(Info?, Attempt?, Peer?, Reason?, St?, Sends, Outputs, St).
+tally_no(I, At, F, D, St, Ss?, Ns?, St3?) :- ground(I?), ground(At?), ground(D?), ground(St?) | st_id(St?, Id), info_q(I?, Q), tell(Q?, Id?, outcome(At?, abort(F?, D?)), Ss), st_app(St?, Ap), app_recs(Ap?, R), attempt_class(At?, C), guards_part(C?, Id?, Gd), unable_rec(D?, At?, F?, Id?, R?, R0), guard_ends(Gd?, I?, Id?, [closed(At?), got(At?, F?, no(D?)) | R0?], R1, En), attempt_class(At?, C2), ended_notice(En?, C2?, F?, D?, Ns), st_app(St?, Ap2), unlock_recs(Ap2?, R1?, Ap3), set_app(St?, Ap3?, St2), st_held(St?, Hd), attempt_names(At?, Nm), drop_named(Nm?, Hd?, Hd1), set_held(St2?, Hd1?, St3).
 
 procedure add_rec(Rec?, App?, App).
 add_rec(X, app(S, K, L, R), app(S?, K?, L?, [X? | R?])).
@@ -1594,10 +1889,14 @@ add_rec(X, app(S, K, L, R), app(S?, K?, L?, [X? | R?])).
 procedure unlock_recs(App?, Recs?, App).
 unlock_recs(app(S, K, _, _), R, app(S?, K?, unlocked, R?)).
 
-procedure unable_rec(Reason?, Attempt?, Peer?, Recs?, Recs).
-unable_rec(declined, _, _, R, R?).
-unable_rec(unable, At, F, R, [unable(At?, F?) | R?]).
-unable_rec(unable(_, _), At, F, R, [unable(At?, F?) | R?]).
+procedure unable_rec(Reason?, Attempt?, Peer?, Peer?, Recs?, Recs).
+unable_rec(declined, _, _, _, R, R?).
+unable_rec(unable, At, F, Id, R, R1?) :- ground(F?), ground(Id?), ground(At?), ground(R?) | same(F?, Id?, Me), unable_other(Me?, At?, F?, R?, R1).
+unable_rec(unable(_, _), At, F, _, R, [unable(At?, F?) | R?]).
+
+procedure unable_other(YesNo?, Attempt?, Peer?, Recs?, Recs).
+unable_other(yes, _, _, R, R?).
+unable_other(no, At, F, R, [unable(At?, F?) | R?]).
 
 procedure ready_effect(Attempt?, St?, Sends, St).
 ready_effect(At, St, [to(P?, ready(At?))], St1?) :- ground(At?), ground(St?) | attempt_id(At?, P), st_app(St?, Ap), add_rec(readied(At?), Ap?, Ap1), set_app(St?, Ap1?, St1).
@@ -1706,6 +2005,7 @@ val_names(c(N), C, B?) :- cname_base(N?, Q), same(Q?, C?, B).
 val_names(n(_), _, no).
 val_names(r(_), _, no).
 val_names(i(_), _, no).
+val_names(v(_), _, no).
 val_names(lv(_, _), _, no).
 val_names(any, _, no).
 
@@ -1715,7 +2015,7 @@ cname_base(dot(N, _), Q?) :- cname_base(N?, Q).
 cname_base(dot_any(N), Q?) :- cname_base(N?, Q).
 
 procedure commit_app(Info?, Attempt?, Peer?, App?, Sends, App).
-commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :- ground(I?), ground(At?), ground(Id?) | attempt_class(At?, P), apply_part(P?, Id?, S?, S1), info_q(I?, Q), tell(Q?, Id?, outcome(At?, commit), Ss), end_approvals(I?, Id?, [closed(At?) | R?], R1, _).
+commit_app(I, At, Id, app(S, K, _, R), Ss?, app(S1?, K?, unlocked, R1?)) :- ground(I?), ground(At?), ground(Id?), ground(R?) | attempt_class(At?, P), chose_of(R?, At?, W), apply_part(P?, Id?, S?, W?, S1), chose_of(R?, At?, W2), info_q(I?, Q), tell(Q?, Id?, outcome(At?, commit(W2?)), Ss), bump_commits(R?, R0), end_approvals(I?, Id?, [closed(At?) | R0?], R1, _).
 
 procedure yield_effect(Info?, Attempt?, St?, Sends, St).
 yield_effect(I, At, St, Ss?, St1?) :- ground(I?), ground(At?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), st_closed(At?, St?, Cl), yield_app(I?, At?, Id?, Cl?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1).
@@ -1751,7 +2051,13 @@ all_yes(I, At, Id, R, B?) :- ground(At?), ground(Id?), ground(R?) | info_q(I?, Q
 
 procedure all_yes1(Peers?, Attempt?, Peer?, Recs?, YesNo).
 all_yes1([], _, _, _, yes).
-all_yes1([P | Ps], At, Id, R, B?) :- ground(P?), ground(At?), ground(Id?), ground(R?) | same(P?, Id?, Me), mem(got(At?, P?, yes), R?, G), or(Me?, G?, Ok), all_yes2(Ok?, Ps?, At?, Id?, R?, B).
+all_yes1([P | Ps], At, Id, R, B?) :- ground(P?), ground(At?), ground(Id?), ground(R?) | same(P?, Id?, Me), got_yes(R?, At?, P?, G), or(Me?, G?, Ok), all_yes2(Ok?, Ps?, At?, Id?, R?, B).
+
+procedure got_yes(Recs?, Attempt?, Peer?, YesNo).
+got_yes([], _, _, no).
+got_yes([got(A, Q, yes(_)) | _], At, P, yes) :- (A? =?= At?), (Q? =?= P?) | true.
+got_yes([got(A, Q, yes(_, _)) | _], At, P, yes) :- (A? =?= At?), (Q? =?= P?) | true.
+got_yes([_ | R], At, P, B?) :- otherwise | got_yes(R?, At?, P?, B).
 
 procedure all_yes2(YesNo?, Peers?, Attempt?, Peer?, Recs?, YesNo).
 all_yes2(no, _, _, _, _, no).
@@ -1761,23 +2067,37 @@ procedure outcome_effect(Info?, Attempt?, Decision?, St?, Outputs, Nets, St).
 outcome_effect(I, At, Z, St, Ns?, Ms?, St2?) :- ground(I?), ground(At?), ground(Z?), ground(St?) | st_id(St?, Id), st_app(St?, Ap), st_req(At?, St?, Mi, En), outcome_app(I?, At?, Z?, Id?, Mi?, En?, Ap?, Ns, Ap1), outcome_intros(Z?, At?, Id?, St?, Ap1?, Ms, Ap2), set_app(St?, Ap2?, St1), st_held(St?, Hd), outcome_held(Z?, I?, Id?, Hd?, Hd1), set_held(St1?, Hd1?, St2).
 
 procedure outcome_intros(Decision?, Attempt?, Peer?, St?, App?, Nets, App).
-outcome_intros(commit, At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) | attempt_class(At?, P), iota_known(P?, Id?, St?, Ps), st_ix(St?, Ix), ix_intros(Ix?, In), commit_intros(Ps?, Id?, In?, Ap?, Ms, Ap1).
+outcome_intros(commit(_), At, Id, St, Ap, Ms?, Ap1?) :- ground(At?), ground(St?) | attempt_class(At?, P), iota_known(P?, Id?, St?, Ps), st_ix(St?, Ix), ix_intros(Ix?, In), commit_intros(Ps?, Id?, In?, Ap?, Ms, Ap1).
 outcome_intros(abort(_, _), _, _, _, Ap, [], Ap?).
 outcome_intros(yield, _, _, _, Ap, [], Ap?).
 
 procedure outcome_app(Info?, Attempt?, Decision?, Peer?, YesNo?, YesNo?, App?, Outputs, App).
-outcome_app(I, At, commit, Id, _, _, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)) :- ground(I?), ground(At?) | attempt_class(At?, P), apply_part(P?, Id?, S?, S1), release(L?, At?, L1), end_approvals(I?, Id?, [closed(At?) | R?], R1, _).
-outcome_app(I, At, abort(Q, D), Id, Mi, Ed, app(S, K, L, R), Ns?, app(S?, K?, L1?, R1?)) :- ground(At?), ground(D?) | release(L?, At?, L1), attempt_names(At?, Nm), abort_ends(Nm?, Mi?, Ed?, I?, At?, Id?, [closed(At?) | R?], R1, En), attempt_class(At?, C), ended_notice(En?, C?, Q?, D?, Ns).
+outcome_app(I, At, commit(W), Id, _, _, app(S, K, L, R), [], app(S1?, K?, L1?, R1?)) :- ground(I?), ground(At?), ground(R?) | attempt_class(At?, P), apply_part(P?, Id?, S?, W?, S1), release(L?, At?, L1), bump_commits(R?, R0), end_approvals(I?, Id?, [closed(At?) | R0?], R1, _).
+outcome_app(I, At, abort(Q, D), Id, Mi, Ed, app(S, K, L, R), Ns?, app(S?, K?, L1?, R1?)) :- ground(At?), ground(D?), ground(Q?), ground(R?) | release(L?, At?, L1), unmet_rec(Q?, D?, At?, R?, R0), attempt_names(At?, Nm), abort_ends(Nm?, Mi?, Ed?, I?, At?, Id?, [closed(At?) | R0?], R1, En), attempt_class(At?, C), ended_notice(En?, C?, Q?, D?, Ns).
 outcome_app(_, At, yield, _, _, _, app(S, K, L, R), [], app(S?, K?, L1?, [closed(At?) | R?])) :- ground(At?) | release(L?, At?, L1).
 
+procedure unmet_rec(Peer?, Reason?, Attempt?, Recs?, Recs).
+unmet_rec(Q, unable, At, R, R1?) :- ground(Q?), ground(At?), ground(R?) | attempt_id(At?, P), same(P?, Q?, Init), mem(voted(At?, yes), R?, Vy), and(Init?, Vy?, Go), commits_of(R?, N), unmet_add(Go?, At?, N?, R?, R1).
+unmet_rec(_, declined, _, R, R?).
+unmet_rec(_, unable(_, _), _, R, R?).
+
+procedure unmet_add(YesNo?, Attempt?, Integer?, Recs?, Recs).
+unmet_add(yes, At, N, R, [unmet(At?, N?) | R?]).
+unmet_add(no, _, _, R, R?).
+
 procedure outcome_held(Decision?, Info?, Peer?, Helds?, Helds).
-outcome_held(commit, I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
+outcome_held(commit(_), I, Id, Hd, Hd1?) :- drop_held_class(Hd?, I?, Id?, Hd1).
 outcome_held(abort(_, _), _, _, Hd, Hd?).
 outcome_held(yield, _, _, Hd, Hd?).
 
 procedure abort_ends(Names?, YesNo?, YesNo?, Info?, Attempt?, Peer?, Recs?, Recs, YesNo).
-abort_ends(request(Rr, K), Mi, Ed, _, _, _, R, R1?, En?) :- end_request(Rr?, K?, Mi?, Ed?, R?, R1, En).
-abort_ends(none, _, _, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) | attempt_class(At?, C), guards_part(C?, Id?, Gd), mem(voted(At?, yes), R?, Vy), mem(answered(At?, yes), R?, Ay), or(Vy?, Ay?, Said), and(Gd?, Said?, B), guard_ends(B?, I?, Id?, R?, R1, En).
+abort_ends(request(Rr, K), Mi, Ed, _, _, _, R, R2?, En?) :- ground(Rr?), integer(K?), ground(R?) | end_request(Rr?, K?, Mi?, Ed?, R?, R1, En1), answers_named(R?, Rr?, K?, R?, Es), end_all(Es?, R1?, R2, En2), or(En1?, En2?, En).
+abort_ends(none, _, _, I, At, Id, R, R1?, En?) :- ground(At?), ground(R?) | attempt_class(At?, C), guards_part(C?, Id?, Gd), mem(voted(At?, yes), R?, Vy), mem(answered(At?, yes), R?, Ay), mem(voted(At?, no), R?, Vn), neg(Vn?, Unvoted), and(Ay?, Unvoted?, Ay1), or(Vy?, Ay1?, Said), and(Gd?, Said?, B), guard_ends(B?, I?, Id?, R?, R1, En).
+
+procedure answers_named(Recs?, Rho?, Integer?, Recs?, Recs).
+answers_named([], _, _, _, []).
+answers_named([answered(A, yes) | Rs], Rr, K, R, Es?) :- ground(A?), ground(Rr?), integer(K?), ground(R?) | named_open(A?, Rr?, K?, R?, B), answers_named(Rs?, Rr?, K?, R?, Es1), keep_rec(B?, ended(A?), Es1?, Es).
+answers_named([_ | Rs], Rr, K, R, Es?) :- otherwise | answers_named(Rs?, Rr?, K?, R?, Es).
 
 procedure end_request(Rho?, Integer?, YesNo?, YesNo?, Recs?, Recs, YesNo).
 end_request(Rr, K, Mine, Done, R, R1?, En?) :- neg(Done?, Open), and(Mine?, Open?, B), end_request1(B?, Rr?, K?, R?, R1, En).
@@ -1901,6 +2221,9 @@ spent_rec(readied(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(unable(A, Q), _, _, R, _, Tr, F?, Tr?) :- ground(A?), ground(Q?), ground(R?) | mem(ready(A?, Q?), R?, B), fate_of(B?, F).
 spent_rec(ready(A, Q), _, _, R, _, Tr, F?, Tr?) :- ground(A?), ground(Q?), ground(R?) | mem(unable(A?, Q?), R?, B), neg(B?, Nb), fate_of(Nb?, F).
 spent_rec(got(A, _, _), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
+spent_rec(chose(A, _), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
+spent_rec(unmet(A, N), _, _, R, Id, Tr, F?, Tr?) :- ground(A?), integer(N?), ground(R?), ground(Id?) | attempt_id(A?, P), same(P?, Id?, Own), commits_of(R?, M), since(M?, N?, Sn), any_ready(R?, A?, Rd), mem(readied(A?), R?, Dn), or(Sn?, Rd?, X1), unmet_gone(Own?, X1?, Dn?, G), fate_of(G?, F).
+spent_rec(commits(_), _, _, _, _, Tr, keep, Tr?).
 spent_rec(closed(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(wounded(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(yielded(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
@@ -1908,6 +2231,10 @@ spent_rec(ended(A), _, _, _, _, Tr, F?, Tr1?) :- ground(A?) | attempt_id(A?, I),
 spent_rec(requested(Rr, K), _, Ea, _, _, Tr, F?, Tr?) :- mem(ended(Rr?, K?), Ea?, B), fate_of(B?, F).
 spent_rec(ended(_, _), _, _, _, _, Tr, move, Tr?).
 spent_rec(introduced(_, _), _, _, _, _, Tr, intro, Tr?).
+
+procedure unmet_gone(YesNo?, YesNo?, YesNo?, YesNo).
+unmet_gone(yes, X, _, X?).
+unmet_gone(no, _, D, D?).
 
 procedure in_closed(Attempt?, Attempts?, Fate).
 in_closed(A, Cl, F?) :- mem(A?, Cl?, B), fate_of(B?, F).
@@ -2095,6 +2422,61 @@ procedure all_in1(YesNo?, Peers?, Peers?, YesNo).
 all_in1(no, _, _, no).
 all_in1(yes, Ps, Q, B?) :- all_in(Ps?, Q?, B).
 
+procedure readings_of(Class?, Peer?, GAtoms?, Bindings).
+readings_of(P, Id, S, Ws?) :- ground(P?), ground(Id?), ground(S?) | term_spec(P?, Nm, Rs, Bn), reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs), term_spec(P?, Nm2, Rs2, Bn2), roles_sent(Rs2?, 1, Bn2?, Id?, Is), schema_numeric(Nm2?, N), num_reads(N?, Rd), reads_sent(Rd?, Is?, Vs, Cxs), reflexive_preds(Rf2), hat(Rf2?, Id?, S?, Sh2), project_each(Bs?, Vs?, Cxs?, Sh2?, Ws0), dedup(Ws0?, Ws).
+
+procedure num_reads(Numeric?, Reads).
+num_reads(numeric(_, _, Rd), Rd?).
+
+procedure roles_sent(RoleSpecs?, Integer?, Binding?, Peer?, Ints).
+roles_sent([], _, _, _, []).
+roles_sent([_ | Rs], I, B, Id, Is?) :- integer(I?), ground(B?), ground(Id?) | role_person(I?, B?, Q), same(Q?, Id?, Me), I1 := (I? + 1), roles_sent(Rs?, I1?, B?, Id?, Is1), keep_ix(Me?, I?, Is1?, Is).
+
+procedure keep_ix(YesNo?, Integer?, Ints?, Ints).
+keep_ix(yes, I, Is, [I? | Is?]).
+keep_ix(no, _, Is, Is?).
+
+procedure reads_sent(Reads?, Ints?, Vars, CExprs).
+reads_sent([], _, [], []).
+reads_sent([read(I, Vs1, Cx1) | Rd], Is, Vs?, Cxs?) :- ground(Is?), integer(I?) | mem(I?, Is?, In), reads_sent(Rd?, Is?, Vs2, Cx2), reads_take(In?, Vs1?, Cx1?, Vs2?, Cx2?, Vs, Cxs).
+
+procedure reads_take(YesNo?, Vars?, CExprs?, Vars?, CExprs?, Vars, CExprs).
+reads_take(yes, Vs1, Cx1, Vs2, Cx2, Vs?, Cxs?) :- app(Vs1?, Vs2?, Vs), app(Cx1?, Cx2?, Cxs).
+reads_take(no, _, _, Vs2, Cx2, Vs2?, Cx2?).
+
+procedure project_each(Bindings?, Vars?, CExprs?, GAtoms?, Bindings).
+project_each([], _, _, _, []).
+project_each([B | Bs], Vs, Cxs, Sh, [W? | Ws?]) :- ground(B?), ground(Vs?), ground(Cxs?), ground(Sh?) | project_vars(Vs?, B?, W1), project_counts(Cxs?, B?, Sh?, W2), app(W1?, W2?, W), project_each(Bs?, Vs?, Cxs?, Sh?, Ws).
+
+procedure project_vars(Vars?, Binding?, Binding).
+project_vars([], _, []).
+project_vars([V | Vs], B, W?) :- ground(V?), ground(B?) | lookup(V?, B?, F), project_vars(Vs?, B?, W1), project_found(F?, V?, W1?, W).
+
+procedure project_found(Found?, Var?, Binding?, Binding).
+project_found(found(X), V, W, [b(V?, X?) | W?]).
+project_found(free, _, W, W?).
+
+procedure project_counts(CExprs?, Binding?, GAtoms?, Binding).
+project_counts([], _, _, []).
+project_counts([cx(N, E) | Cxs], B, Sh, W?) :- ground(N?), ground(E?), ground(B?), ground(Sh?) | expr_counted(E?, B?, Sh?, E1), expr_val(E1?, B?, R), project_counts(Cxs?, B?, Sh?, W1), count_bind_val(R?, N?, W1?, W).
+
+procedure count_bind_val(NumRes?, Constant?, Binding?, Binding).
+count_bind_val(num_is(K), N, W, [b(num(N?), n(I?)) | W?]) :- integer(K?) | num_val(num_is(K?), I).
+count_bind_val(num_is(K), _, W, W?) :- otherwise, number(K?) | true.
+count_bind_val(no_num, _, W, W?).
+
+procedure cond_of(Constant?, Constraint).
+cond_of(Nm, C?) :- ground(Nm?) | schema_numeric(Nm?, N), cond_of1(N?, C).
+
+procedure cond_of1(Numeric?, Constraint).
+cond_of1(numeric(Cj, _, _), C?) :- conjs_cond(Cj?, C).
+
+procedure conjs_cond(Conjs?, Constraint).
+conjs_cond([], true).
+conjs_cond([cj(cond, C) | Cj], and(C?, D?)) :- conjs_cond(Cj?, D).
+conjs_cond([cj(every, _) | Cj], D?) :- conjs_cond(Cj?, D).
+conjs_cond([cj(at(_), _) | Cj], D?) :- conjs_cond(Cj?, D).
+
 procedure part_dom(Class?, Peer?, GAtoms?, YesNo).
 part_dom(P, Id, S, B?) :- ground(P?), ground(Id?), ground(S?) | term_spec(P?, Nm, Rs, Bn), part_dom1(Nm?, Rs?, Bn?, Id?, S?, B).
 
@@ -2173,10 +2555,10 @@ anchor_atoms([I | Is], Xs, A, Bn, [G? | Gs?]) :- ground(I?), ground(Xs?), ground
 
 procedure gaps_one(YesNo?, Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, GAtoms, GAtoms).
 gaps_one(no, _, _, _, _, _, _, [], []).
-gaps_one(yes, I, Rho, As, Phi, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?), integer(I?) | copies_of(Bn?, I?, Want), list_at(I?, Rho?, As?, Phi?, Bn?, S?, Have), img_args(As?, Bn?, Vs), gaps_two(Want?, Have?, Rho?, Vs?, L, H).
+gaps_one(yes, I, Rho, As, Phi, Bn, S, L?, H?) :- ground(Rho?), ground(As?), ground(Bn?), ground(S?), integer(I?) | copies_of(Bn?, I?, Want), list_at(I?, Rho?, As?, Phi?, Bn?, S?, Have), gaps_two(Want?, Have?, Rho?, As?, Bn?, I?, L, H).
 
-procedure gaps_two(Peers?, Peers?, Constant?, Vals?, GAtoms, GAtoms).
-gaps_two(Want, Have, Rho, Vs, L?, H?) :- ground(Want?), ground(Have?), ground(Rho?), ground(Vs?) | peers_minus(Want?, Have?, Lp), peers_minus(Have?, Want?, Hp), listing_atoms(Lp?, Rho?, Vs?, L), listing_atoms(Hp?, Rho?, Vs?, H).
+procedure gaps_two(Peers?, Peers?, Constant?, Vars?, Binding?, Integer?, GAtoms, GAtoms).
+gaps_two(Want, Have, Rho, As, Bn, I, L?, H?) :- ground(Want?), ground(Have?), ground(Rho?), ground(As?), ground(Bn?), integer(I?) | peers_minus(Want?, Have?, Lp), peers_minus(Have?, Want?, Hp), listing_atoms(Lp?, Rho?, As?, Bn?, I?, L), listing_atoms(Hp?, Rho?, As?, Bn?, I?, H).
 
 procedure peers_minus(Peers?, Peers?, Peers).
 peers_minus([], _, []).
@@ -2186,9 +2568,9 @@ procedure keep_out(YesNo?, Peer?, Peers?, Peers).
 keep_out(yes, _, R, R?).
 keep_out(no, P, R, [P? | R?]).
 
-procedure listing_atoms(Peers?, Constant?, Vals?, GAtoms).
-listing_atoms([], _, _, []).
-listing_atoms([Q | Qs], Rho, Vs, [g(Rho?, [p(Q?) | Vs?]) | Gs?]) :- ground(Rho?), ground(Vs?) | listing_atoms(Qs?, Rho?, Vs?, Gs).
+procedure listing_atoms(Peers?, Constant?, Vars?, Binding?, Integer?, GAtoms).
+listing_atoms([], _, _, _, _, []).
+listing_atoms([Q | Qs], Rho, As, B, I, [g(Rho?, Vs?) | Gs?]) :- ground(Rho?), ground(As?), ground(B?), integer(I?) | img_args(As?, [b(role(I?), p(Q?)) | B?], Vs), listing_atoms(Qs?, Rho?, As?, B?, I?, Gs).
 
 procedure ready_parts(Classes?, Peer?, GAtoms?, Classes).
 ready_parts([], _, _, []).
@@ -2255,6 +2637,7 @@ forms_at(Nm, B, Id, Fs?) :- ground(Nm?) | schema_forms(Nm?, Sf), forms_at1(Sf?, 
 procedure forms_at1(SForms?, Binding?, Peer?, Forms).
 forms_at1([], _, _, []).
 forms_at1([sform(every, F) | Sf], B, Id, [F? | Fs?]) :- forms_at1(Sf?, B?, Id?, Fs).
+forms_at1([sform(cond, _) | Sf], B, Id, Fs?) :- forms_at1(Sf?, B?, Id?, Fs).
 forms_at1([sform(at(I), F) | Sf], B, Id, Fs?) :- ground(B?), ground(Id?) | role_person(I?, B?, P), same(P?, Id?, Me), forms_at1(Sf?, B?, Id?, Fs1), keep_form(Me?, F?, Fs1?, Fs).
 
 procedure keep_form(YesNo?, Form?, Forms?, Forms).
@@ -2326,8 +2709,32 @@ procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
 forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
 
-procedure apply_part(Class?, Peer?, GAtoms?, GAtoms).
-apply_part(P, Id, S, S1?) :- ground(P?), ground(Id?), ground(S?) | term_spec(P?, Nm, Rs, Bn), reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs), term_spec(P?, Nm2, Rs2, Bn2), reflexive_preds(Rf2), hat(Rf2?, Id?, S?, Sh2), apply_with(Bs?, Nm2?, Rs2?, Bn2?, Id?, S?, Sh2?, S1).
+procedure apply_part(Class?, Peer?, GAtoms?, Binding?, GAtoms).
+apply_part(P, Id, S, W, S1?) :- ground(P?), ground(Id?), ground(S?), ground(W?) | term_spec(P?, Nm, Rs, Bn), reflexive_preds(Rf), hat(Rf?, Id?, S?, Sh), dom_bindings(Nm?, Rs?, Bn?, Id?, Sh?, Bs), under_readings(Bs?, W?, Bs1), term_spec(P?, Nm2, Rs2, Bn2), reflexive_preds(Rf2), hat(Rf2?, Id?, S?, Sh2), apply_with(Bs1?, Nm2?, Rs2?, Bn2?, Id?, S?, Sh2?, S1).
+
+procedure under_readings(Bindings?, Binding?, Bindings).
+under_readings([], _, []).
+under_readings([B | Bs], W, R?) :- ground(B?), ground(W?) | agrees(W?, B?, A), merge_in(W?, B?, B1), under_readings(Bs?, W?, R1), keep_binding(A?, B1?, R1?, R).
+
+procedure agrees(Binding?, Binding?, YesNo).
+agrees([], _, yes).
+agrees([b(V, X) | W], B, A?) :- ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), agrees1(F?, X?, W?, B?, A).
+
+procedure agrees1(Found?, Val?, Binding?, Binding?, YesNo).
+agrees1(free, _, W, B, A?) :- agrees(W?, B?, A).
+agrees1(found(Y), X, W, B, A?) :- ground(X?), ground(Y?) | same(X?, Y?, E), agrees2(E?, W?, B?, A).
+
+procedure agrees2(YesNo?, Binding?, Binding?, YesNo).
+agrees2(no, _, _, no).
+agrees2(yes, W, B, A?) :- agrees(W?, B?, A).
+
+procedure merge_in(Binding?, Binding?, Binding).
+merge_in([], B, B?).
+merge_in([b(V, X) | W], B, B2?) :- ground(V?), ground(B?) | lookup(V?, B?, F), merge_one(F?, V?, X?, B?, B1), merge_in(W?, B1?, B2).
+
+procedure merge_one(Found?, Var?, Val?, Binding?, Binding).
+merge_one(free, V, X, B, [b(V?, X?) | B?]).
+merge_one(found(_), _, _, B, B?).
 
 procedure apply_with(Bindings?, Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms?, GAtoms).
 apply_with([B | _], Nm, Rs, _, Id, S, Sh, S1?) :- ground(Rs?), ground(B?), ground(Id?) | specs_at(Rs?, 1, B?, Id?, RsP), joins(RsP?, B?, D, A), local_effect(Nm?, B?, Id?, Sh?, Dl, Al), clear_split(D?, Dp0, Ks), app(Dp0?, Dl?, Dp), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(Al?, S0?, S0b), app(A?, S0b?, S1).
@@ -2599,6 +3006,7 @@ adm_var(pvar(_), _, _, _, yes).
 adm_var(nterm(_), _, _, _, yes).
 adm_var(sgn(_, _), _, _, _, yes).
 adm_var(item_of(_), _, _, _, yes).
+adm_var(val(_), _, _, _, yes).
 adm_var(num(_), _, _, _, yes).
 adm_var(any, _, _, _, yes).
 adm_var(inst(_, _, _), _, _, _, yes).
@@ -2818,6 +3226,7 @@ is_lv(c(_), no).
 is_lv(n(_), no).
 is_lv(r(_), no).
 is_lv(i(_), no).
+is_lv(v(_), no).
 is_lv(any, no).
 
 procedure locals_put(Vars?, Constant?, Binding?, Binding).
@@ -3019,6 +3428,7 @@ procedure cimg_args(Vars?, Binding?, CVals).
 cimg_args([], _, []).
 cimg_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), cimg_sgn(F?, P?, sgn(Y?, I?), X), cimg_args(Vs?, B?, Xs).
 cimg_args([num(X) | Vs], B, [cmp_val(n(N?)) | Xs?]) :- integer(X?) | N := X?, cimg_args(Vs?, B?, Xs).
+cimg_args([val(C) | Vs], B, [cmp_val(v(C?)) | Xs?]) :- cimg_args(Vs?, B?, Xs).
 cimg_args([item_of(V) | Vs], B, [X? | Xs?]) :- ground(B?), ground(V?) | lookup(V?, B?, F), item_found(F?, F1), cimg_item(F1?, item_of(V?), X), cimg_args(Vs?, B?, Xs).
 cimg_args([nterm(N) | Vs], B, [X? | Xs?]) :- ground(B?), ground(N?) | nt_vars(N?, Ws), vars_bound(Ws?, B?, Bd), cimg_name(Bd?, N?, B?, X), cimg_args(Vs?, B?, Xs).
 cimg_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?), ground(V?) | lookup(V?, B?, F), cimg_val(F?, V?, X), cimg_args(Vs?, B?, Xs).
@@ -3297,16 +3707,30 @@ inst_bind([_ | _], [], B0, B0?).
 inst_bind([X | Xs], [V | Vs], B0, [b(X?, V?) | B?]) :- inst_bind(Xs?, Vs?, B0?, B).
 
 procedure list_at(Integer?, Constant?, Vars?, Form?, Binding?, GAtoms?, List(Peer)).
-list_at(I, Rho, As, Phi, B0, S, L?) :- ground(As?), ground(B0?), ground(S?) | img_args(As?, B0?, Vs), listing_in(S?, Rho?, Vs?, Ps0), phi_people(Ps0?, I?, Phi?, B0?, S?, Ps00), sort_peers(Ps00?, Ps1), dedup(Ps1?, L).
+list_at(I, Rho, As, Phi, B0, S, L?) :- ground(As?), ground(B0?), ground(S?), integer(I?) | img_args(As?, B0?, Vs), arg_pos(As?, I?, 1, K), nth_out(Vs?, K?, _, Vr), listing_in(S?, Rho?, Vr?, K?, Ps0), phi_people(Ps0?, I?, Phi?, B0?, S?, Ps00), sort_peers(Ps00?, Ps1), dedup(Ps1?, L).
 
 procedure phi_people(Peers?, Integer?, Form?, Binding?, GAtoms?, Peers).
 phi_people([], _, _, _, _, []).
 phi_people([Q | Qs], I, Phi, B0, S, R?) :- ground(Q?), integer(I?), ground(Phi?), ground(B0?), ground(S?) | form_holds(Phi?, [b(role(I?), p(Q?)) | B0?], S?, H), phi_people(Qs?, I?, Phi?, B0?, S?, R1), keep_peer(H?, Q?, R1?, R).
 
-procedure listing_in(GAtoms?, Constant?, Vals?, Peers).
-listing_in([], _, _, []).
-listing_in([g(F, [p(Q) | Xs]) | Gs], Rho, Vs, Ps?) :- ground(F?), ground(Xs?), ground(Rho?), ground(Vs?) | same(F?, Rho?, E1), same(Xs?, Vs?, E2), and(E1?, E2?, E), listing_in(Gs?, Rho?, Vs?, Ps1), keep_peer(E?, Q?, Ps1?, Ps).
-listing_in([_ | Gs], Rho, Vs, Ps?) :- otherwise | listing_in(Gs?, Rho?, Vs?, Ps).
+procedure arg_pos(Vars?, Integer?, Integer?, Integer).
+arg_pos([], _, _, 0).
+arg_pos([role(J) | _], I, K, K?) :- (J? =:= I?) | true.
+arg_pos([_ | As], I, K, P?) :- otherwise, integer(K?) | K1 := (K? + 1), arg_pos(As?, I?, K1?, P).
+
+procedure nth_out(Vals?, Integer?, Val, Vals).
+nth_out([], _, any, []).
+nth_out([X | Xs], K, X?, Xs?) :- (K? =:= 1) | true.
+nth_out([X | Xs], K, Y?, [X? | Ys?]) :- (K? > 1) | K1 := (K? - 1), nth_out(Xs?, K1?, Y, Ys).
+nth_out([X | Xs], K, any, [X? | Xs?]) :- (K? < 1) | true.
+
+procedure listing_in(GAtoms?, Constant?, Vals?, Integer?, Peers).
+listing_in([], _, _, _, []).
+listing_in([g(F, Xs) | Gs], Rho, Vr, K, Ps?) :- ground(F?), ground(Xs?), ground(Rho?), ground(Vr?), integer(K?) | same(F?, Rho?, E1), nth_out(Xs?, K?, X, Xr), same(Xr?, Vr?, E2), and(E1?, E2?, E), listing_in(Gs?, Rho?, Vr?, K?, Ps1), keep_listed(E?, X?, Ps1?, Ps).
+
+procedure keep_listed(YesNo?, Val?, Peers?, Peers).
+keep_listed(yes, p(Q), Ps, [Q? | Ps?]).
+keep_listed(_, _, Ps, Ps?) :- otherwise | true.
 
 procedure listed_class(Constant?, Binding?, GAtoms?, Class).
 listed_class(Nm, B0, S, C?) :- ground(Nm?), ground(B0?) | listed_people(Nm?, B0?, S?, Ls), listed_binding(Nm?, B0?, Ls?, B), role_person(1, B0?, D), class_of(Nm?, B?, D?, C).
@@ -3411,6 +3835,7 @@ found_peer(found(c(_)), unbound).
 found_peer(found(n(_)), unbound).
 found_peer(found(r(_)), unbound).
 found_peer(found(i(_)), unbound).
+found_peer(found(v(_)), unbound).
 found_peer(found(lv(_, _)), unbound).
 found_peer(free, unbound).
 found_peer(found(any), unbound).
@@ -3451,6 +3876,7 @@ img_args([], _, []).
 img_args([sgn(Y, I) | Vs], B, [X? | Xs?]) :- ground(B?), ground(Y?), ground(I?) | lookup(svar(Y?), B?, F), role_person(I?, B?, P), img_sgn(F?, P?, X), img_args(Vs?, B?, Xs).
 img_args([nterm(N) | Vs], B, [c(C?) | Xs?]) :- ground(B?), ground(N?) | nt_img(N?, B?, C), img_args(Vs?, B?, Xs).
 img_args([num(X) | Vs], B, [n(N?) | Xs?]) :- integer(X?) | N := X?, img_args(Vs?, B?, Xs).
+img_args([val(C) | Vs], B, [v(C?) | Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([item_of(V) | Vs], B, [X? | Xs?]) :- ground(B?), ground(V?) | lookup(V?, B?, F), item_found(F?, F1), img_val(F1?, X), img_args(Vs?, B?, Xs).
 img_args([any | Vs], B, [any | Xs?]) :- img_args(Vs?, B?, Xs).
 img_args([V | Vs], B, [X? | Xs?]) :- otherwise, ground(B?) | lookup(V?, B?, F), img_val(F?, X), img_args(Vs?, B?, Xs).
@@ -3493,6 +3919,7 @@ atom_bound(opt(A), B, R?) :- atom_bound(A?, B?, R).
 procedure vars_bound(Vars?, Binding?, YesNo).
 vars_bound([], _, yes).
 vars_bound([num(X) | Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
+vars_bound([val(_) | Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([item_of(V) | Vs], B, R?) :- vars_bound([V? | Vs?], B?, R).
 vars_bound([nterm(N) | Vs], B, R?) :- ground(N?) | nt_vars(N?, Ws), app(Ws?, Vs?, Vs1), vars_bound(Vs1?, B?, R).
 vars_bound([V | Vs], B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), vars_bound1(F?, Vs?, B?, R).
@@ -3531,6 +3958,7 @@ match_args([_ | _], [], _, nomatch).
 match_args([sgn(Y, I) | Vs], [X | Xs], B, R?) :- ground(Y?), ground(I?), ground(X?), ground(B?) | sgn_parts(X?, Ps), match_sgn(Ps?, Y?, I?, Vs?, Xs?, B?, R).
 match_args([nterm(N) | Vs], [X | Xs], B, R?) :- ground(N?), ground(X?), ground(B?) | name_parts(N?, X?, Ps), match_name(Ps?, Vs?, Xs?, B?, R).
 match_args([num(X) | Vs], [Y | Ys], B, R?) :- number(X?), ground(Y?), ground(B?) | lit_val(X?, Y?, E), lit_then(E?, Vs?, Ys?, B?, R).
+match_args([val(C) | Vs], [Y | Ys], B, R?) :- ground(C?), ground(Y?), ground(B?) | const_lit(C?, Y?, E), lit_then(E?, Vs?, Ys?, B?, R).
 match_args([item_of(V) | Vs], [X | Xs], B, R?) :- ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), item_found(F?, F1), item_then(F1?, X?, Vs?, Xs?, B?, R).
 match_args([any | Vs], [X | Xs], B, R?) :- ground(X?), ground(B?) | any_val(X?, E), lit_then(E?, Vs?, Xs?, B?, R).
 match_args([V | Vs], [X | Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B?) | lookup(V?, B?, F), kind_ok(V?, X?, K), match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
@@ -3539,6 +3967,10 @@ procedure lit_val(Number?, Val?, YesNo).
 lit_val(X, n(K), yes) :- (X? =:= K?) | true.
 lit_val(X, r(K), yes) :- (X? =:= K?) | true.
 lit_val(_, _, no) :- otherwise | true.
+
+procedure const_lit(Constant?, Val?, YesNo).
+const_lit(C, v(D), yes) :- (C? =?= D?) | true.
+const_lit(_, _, no) :- otherwise | true.
 
 procedure any_val(Val?, YesNo).
 any_val(any, yes).
@@ -3572,6 +4004,7 @@ name_parts(_, s(_), noparts).
 name_parts(_, n(_), noparts).
 name_parts(_, r(_), noparts).
 name_parts(_, i(_), noparts).
+name_parts(_, v(_), noparts).
 name_parts(_, lv(_, _), noparts).
 name_parts(_, any, noparts).
 
@@ -3599,11 +4032,13 @@ match_name(noparts, _, _, _, nomatch).
 procedure sgn_parts(Val?, SgnParts).
 sgn_parts(s(speech(speech(U, Q), P)), signed(s(speech(U?, Q?)), P?)).
 sgn_parts(s(speech(utterance(_), _)), unsigned).
+sgn_parts(s(speech(program(_), _)), unsigned).
 sgn_parts(p(_), unsigned).
 sgn_parts(c(_), unsigned).
 sgn_parts(n(_), unsigned).
 sgn_parts(r(_), unsigned).
 sgn_parts(i(_), unsigned).
+sgn_parts(v(_), unsigned).
 sgn_parts(lv(_, _), unsigned).
 sgn_parts(any, unsigned).
 
@@ -3651,6 +4086,7 @@ kind_ok(sgn(_, _), r(_), no).
 kind_ok(sgn(_, _), lv(_, _), no).
 kind_ok(inst(_, _, X), V, K?) :- kind_ok(X?, V?, K).
 kind_ok(item_of(_), _, no).
+kind_ok(val(_), _, no).
 kind_ok(any, _, no).
 kind_ok(V, any, no) :- ground(V?) | true.
 
@@ -3664,6 +4100,7 @@ val_peer1(found(c(_)), D, D?).
 val_peer1(found(n(_)), D, D?).
 val_peer1(found(r(_)), D, D?).
 val_peer1(found(i(_)), D, D?).
+val_peer1(found(v(_)), D, D?).
 val_peer1(found(lv(_, _)), D, D?).
 val_peer1(free, D, D?).
 val_peer1(found(any), D, D?).
@@ -3678,6 +4115,7 @@ val_speech1(found(c(_)), D, speech(utterance(none), D?)).
 val_speech1(found(n(_)), D, speech(utterance(none), D?)).
 val_speech1(found(r(_)), D, speech(utterance(none), D?)).
 val_speech1(found(i(_)), D, speech(utterance(none), D?)).
+val_speech1(found(v(_)), D, speech(utterance(none), D?)).
 val_speech1(found(lv(_, _)), D, speech(utterance(none), D?)).
 val_speech1(free, D, speech(utterance(none), D?)).
 val_speech1(found(any), D, speech(utterance(none), D?)).
@@ -3690,6 +4128,7 @@ procedure num_found(Found?, NumRes).
 num_found(found(n(K)), num_is(K?)).
 num_found(found(r(K)), num_is(K?)).
 num_found(found(i(_)), no_num).
+num_found(found(v(_)), no_num).
 num_found(found(p(_)), no_num).
 num_found(found(s(_)), no_num).
 num_found(found(c(_)), no_num).
@@ -3726,6 +4165,11 @@ con_holds(succ(X, Y), B, R?) :- ground(B?) | num_of(X?, B?, A), num_of(Y?, B?, C
 con_holds(or(C1, C2), B, R?) :- ground(B?) | con_holds(C1?, B?, R1), con_holds(C2?, B?, R2), or(R1?, R2?, R).
 con_holds(signed(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, yes, R).
 con_holds(unsigned(U, Y), B, R?) :- ground(B?) | lookup(U?, B?, P), lookup(Y?, B?, S), signing(P?, S?, no, R).
+con_holds(program(E), B, R?) :- ground(B?) | expr_term(E?, B?, F), is_program(F?, R).
+
+procedure is_program(Found?, YesNo).
+is_program(found(i(program(_))), yes).
+is_program(_, no) :- otherwise | true.
 
 procedure eq_vals(NumRes?, NumRes?, Expr?, Expr?, Binding?, YesNo).
 eq_vals(num_is(A), num_is(C), _, _, _, R?) :- num_eq(num_is(A?), num_is(C?), R).
@@ -3746,6 +4190,7 @@ expr_term1(pvar(X), B, F?) :- lookup(pvar(X?), B?, F).
 expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
 expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
+expr_term1(val(C), _, found(v(C?))).
 expr_term1(_, _, free) :- otherwise | true.
 
 procedure author_found(Found?, Found).
@@ -3754,6 +4199,7 @@ author_found(_, free) :- otherwise | true.
 
 procedure first_signer(Speech?, Peer).
 first_signer(speech(utterance(_), P), P?).
+first_signer(speech(program(_), P), P?).
 first_signer(speech(speech(U, Q), _), P?) :- first_signer(speech(U?, Q?), P).
 
 procedure item_found(Found?, Found).
@@ -3762,6 +4208,7 @@ item_found(_, free) :- otherwise | true.
 
 procedure utterance_of(Speech?, Utterance).
 utterance_of(speech(utterance(T), _), utterance(T?)).
+utterance_of(speech(program(M), _), program(M?)).
 utterance_of(speech(speech(U, Q), _), V?) :- utterance_of(speech(U?, Q?), V).
 
 procedure nt_term(YesNo?, NTerm?, Binding?, CName).
@@ -3798,6 +4245,7 @@ procedure signed_by(Peer?, Utterance?, YesNo).
 signed_by(P, speech(_, Q), yes) :- (P? =?= Q?) | true.
 signed_by(P, speech(U, _), R?) :- otherwise | signed_by(P?, U?, R).
 signed_by(_, utterance(_), no).
+signed_by(_, program(_), no).
 
 procedure expr_val(Expr?, Binding?, NumRes).
 expr_val(plus(X, Y), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(plus, A?, C?, R).
@@ -3814,6 +4262,7 @@ expr_val(pvar(_), _, no_num).
 expr_val(svar(_), _, no_num).
 expr_val(author_of(_), _, no_num).
 expr_val(item_of(_), _, no_num).
+expr_val(val(_), _, no_num).
 expr_val(sgn(_, _), _, no_num).
 expr_val(nterm(_), _, no_num).
 expr_val(any, _, no_num).
@@ -3852,8 +4301,25 @@ procedure con_at(Constant?, Binding?, Peer?, Constraint).
 con_at(Nm, B, Id, C?) :- ground(Nm?), ground(B?) | schema_numeric(Nm?, N), con_at0(N?, B?, Id?, C).
 
 procedure con_at0(Numeric?, Binding?, Peer?, Constraint).
-con_at0(numeric(C, _, every), _, _, C?).
-con_at0(numeric(C, _, at(I)), B, Id, C1?) :- ground(B?) | role_person(I?, B?, P), same(P?, Id?, Me), con_if(Me?, C?, C1).
+con_at0(numeric(Cj, _, _), B, Id, C?) :- ground(B?), ground(Id?) | conjs_at(Cj?, B?, Id?, C).
+
+procedure conjs_at(Conjs?, Binding?, Peer?, Constraint).
+conjs_at([], _, _, true).
+conjs_at([cj(every, C) | Cj], B, Id, and(C?, D?)) :- conjs_at(Cj?, B?, Id?, D).
+conjs_at([cj(at(I), C) | Cj], B, Id, and(C1?, D?)) :- ground(B?), ground(Id?) | role_person(I?, B?, P), same(P?, Id?, Me), con_if(Me?, C?, C1), conjs_at(Cj?, B?, Id?, D).
+conjs_at([cj(cond, _) | Cj], B, Id, D?) :- conjs_at(Cj?, B?, Id?, D).
+
+procedure conjs_every(Conjs?, Constraint).
+conjs_every([], true).
+conjs_every([cj(every, C) | Cj], and(C?, D?)) :- conjs_every(Cj?, D).
+conjs_every([cj(at(_), _) | Cj], D?) :- conjs_every(Cj?, D).
+conjs_every([cj(cond, _) | Cj], D?) :- conjs_every(Cj?, D).
+
+procedure conjs_local(Conjs?, Constraint).
+conjs_local([], true).
+conjs_local([cj(every, C) | Cj], and(C?, D?)) :- conjs_local(Cj?, D).
+conjs_local([cj(at(_), C) | Cj], and(C?, D?)) :- conjs_local(Cj?, D).
+conjs_local([cj(cond, _) | Cj], D?) :- conjs_local(Cj?, D).
 
 procedure con_if(YesNo?, Constraint?, Constraint).
 con_if(yes, C, C?).
@@ -3874,6 +4340,7 @@ con_counted(gt(X, Y), B, Sh, gt(U?, V?)) :- ground(B?), ground(Sh?) | expr_count
 con_counted(succ(X, Y), _, _, succ(X?, Y?)).
 con_counted(signed(X, Y), _, _, signed(X?, Y?)).
 con_counted(unsigned(X, Y), _, _, unsigned(X?, Y?)).
+con_counted(program(E), _, _, program(E?)).
 
 procedure expr_counted(Expr?, Binding?, GAtoms?, Expr).
 expr_counted(plus(X, Y), B, Sh, plus(U?, V?)) :- ground(B?), ground(Sh?) | expr_counted(X?, B?, Sh?, U), expr_counted(Y?, B?, Sh?, V).
@@ -3908,8 +4375,7 @@ procedure con_live(Constant?, Binding?, YesNo).
 con_live(Nm, B, V?) :- ground(Nm?) | schema_numeric(Nm?, N), con_live1(N?, B?, V).
 
 procedure con_live1(Numeric?, Binding?, YesNo).
-con_live1(numeric(C, _, every), B, V?) :- con_holds(C?, B?, V).
-con_live1(numeric(_, _, at(_)), _, yes).
+con_live1(numeric(Cj, _, _), B, V?) :- ground(B?) | conjs_every(Cj?, C), con_holds(C?, B?, V).
 
 procedure unlocal(Binding?, Binding).
 unlocal([], []).
@@ -3933,6 +4399,7 @@ blen([_ | Bs], N?) :- blen(Bs?, M), N := (M? + 1).
 
 procedure con_ext1(Constraint?, Binding?, Bindings).
 con_ext1(true, B, [B?]).
+con_ext1(program(_), B, [B?]).
 con_ext1(and(C1, C2), B, Bs?) :- ground(B?) | con_ext1(C2?, B?, Bs2), ext_by(Bs2?, C1?, Bs).
 con_ext1(eq(X, Y), B, Bs?) :- ground(X?), ground(Y?), ground(B?) | eq_ext(X?, Y?, B?, Bs).
 con_ext1(le(_, _), B, [B?]).
@@ -3977,6 +4444,7 @@ expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
 expr_free(author_of(_), _, F0, F0?).
 expr_free(item_of(_), _, F0, F0?).
+expr_free(val(_), _, F0, F0?).
 expr_free(sgn(_, _), _, F0, F0?).
 expr_free(nterm(_), _, F0, F0?).
 expr_free(any, _, F0, F0?).
@@ -4330,34 +4798,38 @@ procedure(T) form_integer(T?, Formed(Integer)).
 form_integer(R, F?) :- integer(R?) | F = formed(R?).
 form_integer(_, refused) :- otherwise | true.
 
+procedure(T) form_module(T?, Formed(Module)).
+form_module(R, F?) :- module(R?) | F = formed(R?).
+form_module(_, refused) :- otherwise | true.
+
 %% --- the construct process of each interactive type ---
 
-Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo.
+Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo ; last_state ; social_menu(List(MenuEntry)) ; approval_sentence.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
-dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
+dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question, Drawn))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named('social_menu([button(\'Establish\', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button(\'Acquaint\', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button(\'Introduce\', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button(\'Mint\', [act(mint_coin, 1, [1], [req(identity, [])], [], [field(2, amount, number)], [], [])]), button(\'Mint bond\', [act(mint_bond, 1, [1], [req(identity, []), req(date, [any])], [], [field(2, maturity, number), field(3, amount, number)], [], [])]), button(\'Swap\', [act(swap_cc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, \'amount given\', number), field(5, \'issuer wanted\', agent), field(6, \'amount wanted\', number)], [], []), act(swap_cb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, \'amount given\', number), field(5, \'issuer wanted\', agent), field(6, \'maturity wanted\', number), field(7, \'amount wanted\', number)], [], []), act(swap_bc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, \'amount given\', number), field(6, \'issuer wanted\', agent), field(7, \'amount wanted\', number)], [], []), act(swap_bb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, \'amount given\', number), field(6, \'issuer wanted\', agent), field(7, \'maturity wanted\', number), field(8, \'amount wanted\', number)], [], [])]), button(\'Pay\', [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, amount, number)], [], [])]), button(\'Redeem\', [act(redeem_cc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, \'issuer wanted\', agent)], [], []), act(redeem_cb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, \'issuer wanted\', agent), field(4, \'maturity wanted\', number)], [], []), act(redeem_bc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, \'issuer wanted\', agent)], [], []), act(redeem_bb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, \'issuer wanted\', agent), field(5, \'maturity wanted\', number)], [], [])]), button(\'Deposit\', [act(deposit_c, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, amount, number)], [], []), act(deposit_b, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, amount, number)], [], [])]), button(\'Release\', [act(release_c, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, amount, number)], [], []), act(release_b, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, amount, number)], [], [])]), button(\'Return\', [act(return_c, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, amount, number)], [], []), act(return_b, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, amount, number)], [], [])]), button(\'List place\', [act(list_place, 1, [1], [req(identity, []), forb(place, [at(2)])], [], [field(2, place, text)], [], [])]), button(\'Book\', [act(book, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, place, text), field(4, night, number), field(5, amount, number)], [], [])]), button(\'Cancel\', [act(cancel, 1, [1, 2], [req(identity, []), req(date, [any]), req(booked, [at(3), at(4)]), req(guest, [at(2), at(3), at(4), at(5)])], [3, 4, 2, 5], [], [], [])]), button(\'Review\', [act(review, 1, [1, 2], [req(identity, []), req(stay, [at(3), at(2), at(4)]), req(date, [any]), forb(reviewed, [at(3), at(2), at(4)])], [3, 2, 4], [field(5, review, text)], [], [])])])', form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Mint', form(mint_coin, [field('Peer', peer), field(amount, number)])), label('Mint bond', form(mint_bond, [field('Peer', peer), field(maturity, number), field(amount, number)])), label('Swap', form(swap_cc, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Swap', form(swap_cb, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('maturity wanted', number), field('amount wanted', number)])), label('Swap', form(swap_bc, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Swap', form(swap_bb, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field('amount given', number), field('issuer wanted', peer), field('maturity wanted', number), field('amount wanted', number)])), label('Pay', form(pay, [field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Redeem', form(redeem_cc, [field('Peer', peer), field('Peer', peer), field('issuer wanted', peer)])), label('Redeem', form(redeem_cb, [field('Peer', peer), field('Peer', peer), field('issuer wanted', peer), field('maturity wanted', number)])), label('Redeem', form(redeem_bc, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('issuer wanted', peer)])), label('Redeem', form(redeem_bb, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('issuer wanted', peer), field('maturity wanted', number)])), label('Deposit', form(deposit_c, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Deposit', form(deposit_b, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('Release', form(release_c, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Release', form(release_b, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('Return', form(return_c, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Return', form(return_b, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('List place', form(list_place, [field('Peer', peer), field(place, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))])), label('Book', form(book, [field('Peer', peer), field('Peer', peer), field(place, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field(night, number), field(amount, number)])), label('Cancel', form(cancel, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field('Integer', number), field('Integer', number)])), label('Review', form(review, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field('Integer', number), field(review, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
-construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(first_date, [field('Peer', shown), field('Integer', shown)]), form(advance, [field('Peer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(first_date, [field('Peer', shown), field('Integer', shown)]), form(advance, [field('Peer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button('Mint', [act(mint_coin, 1, [1], [req(identity, [])], [], [field(2, amount, number)], [], [])]), button('Mint bond', [act(mint_bond, 1, [1], [req(identity, []), req(date, [any])], [], [field(2, maturity, number), field(3, amount, number)], [], [])]), button('Swap', [act(swap_cc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, 'amount given', number), field(5, 'issuer wanted', agent), field(6, 'amount wanted', number)], [], []), act(swap_cb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, 'amount given', number), field(5, 'issuer wanted', agent), field(6, 'maturity wanted', number), field(7, 'amount wanted', number)], [], []), act(swap_bc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, 'amount given', number), field(6, 'issuer wanted', agent), field(7, 'amount wanted', number)], [], []), act(swap_bb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, 'amount given', number), field(6, 'issuer wanted', agent), field(7, 'maturity wanted', number), field(8, 'amount wanted', number)], [], [])]), button('Pay', [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, amount, number)], [], [])]), button('Redeem', [act(redeem_cc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, 'issuer wanted', agent)], [], []), act(redeem_cb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, 'issuer wanted', agent), field(4, 'maturity wanted', number)], [], []), act(redeem_bc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, 'issuer wanted', agent)], [], []), act(redeem_bb, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, 'issuer wanted', agent), field(5, 'maturity wanted', number)], [], [])]), button('Deposit', [act(deposit_c, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, amount, number)], [], []), act(deposit_b, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, amount, number)], [], [])]), button('Release', [act(release_c, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, amount, number)], [], []), act(release_b, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, amount, number)], [], [])]), button('Return', [act(return_c, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, amount, number)], [], []), act(return_b, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, amount, number)], [], [])]), button('List place', [act(list_place, 1, [1], [req(identity, []), forb(place, [at(2)])], [], [field(2, place, text)], [], [])]), button('Book', [act(book, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, place, text), field(4, night, number), field(5, amount, number)], [], [])]), button('Cancel', [act(cancel, 1, [1, 2], [req(identity, []), req(date, [any]), req(booked, [at(3), at(4)]), req(guest, [at(2), at(3), at(4), at(5)])], [3, 4, 2, 5], [], [], [])]), button('Review', [act(review, 1, [1, 2], [req(identity, []), req(stay, [at(3), at(2), at(4)]), req(date, [any]), forb(reviewed, [at(3), at(2), at(4)])], [3, 2, 4], [field(5, review, text)], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Mint', form(mint_coin, [field('Peer', peer), field(amount, number)])), label('Mint bond', form(mint_bond, [field('Peer', peer), field(maturity, number), field(amount, number)])), label('Swap', form(swap_cc, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Swap', form(swap_cb, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('maturity wanted', number), field('amount wanted', number)])), label('Swap', form(swap_bc, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Swap', form(swap_bb, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field('amount given', number), field('issuer wanted', peer), field('maturity wanted', number), field('amount wanted', number)])), label('Pay', form(pay, [field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Redeem', form(redeem_cc, [field('Peer', peer), field('Peer', peer), field('issuer wanted', peer)])), label('Redeem', form(redeem_cb, [field('Peer', peer), field('Peer', peer), field('issuer wanted', peer), field('maturity wanted', number)])), label('Redeem', form(redeem_bc, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('issuer wanted', peer)])), label('Redeem', form(redeem_bb, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('issuer wanted', peer), field('maturity wanted', number)])), label('Deposit', form(deposit_c, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Deposit', form(deposit_b, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('Release', form(release_c, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Release', form(release_b, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('Return', form(return_c, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Return', form(return_b, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('List place', form(list_place, [field('Peer', peer), field(place, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))])), label('Book', form(book, [field('Peer', peer), field('Peer', peer), field(place, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field(night, number), field(amount, number)])), label('Cancel', form(cancel, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field('Integer', number), field('Integer', number)])), label('Review', form(review, [field('Peer', peer), field('Peer', peer), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)]))), field('Integer', number), field(review, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(first_date, [field('Peer', shown), field('Integer', shown)]), form(advance, [field('Peer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(first_date, [field('Peer', shown), field('Integer', shown)]), form(advance, [field('Peer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint_coin, [field('Peer', shown), field('Integer', shown)]), form(mint_bond, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_bc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_bb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_cc, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(redeem_cb, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem_bc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_bb, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(deposit_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(release_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(release_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(return_c, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(return_b, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(list_place, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(book, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(cancel, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(review, [field('Peer', shown), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(bond, [field('Peer', shown), field('Integer', shown)]), form(date, [field('Integer', shown)]), shown, form(place, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), form(stay, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(booked, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown)]), form(guest, [field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Integer', shown), field('Integer', shown)]), form(reviewed, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Integer', shown)]), form(review, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)]))), field('Peer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
 
-procedure output(Widget?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).
 
-procedure output_more(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_more(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_more(W, [M | Ms], Es, Gs, Ds?) :- ground(M?), ground(Es?) | output_add(Es?, M?, Es1), output_draw(W?, Ms?, Es1?, Gs?, Ds).
 output_more(W, Ms, Es, [refresh | Gs], Ds?) :- output_draw(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, Ms, Es, [input(_, _, _) | Gs], Ds?) :- output_more(W?, Ms?, Es?, Gs?, Ds).
 output_more(W, [], Es, Gs, Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
-procedure output_draw(Widget?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_draw(Widget(Drawn)?, Stream(Output)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_draw(W, Ms, Es, Gs, [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_more(W?, Ms?, Es?, Gs?, Ds).
 
-procedure output_end(Widget?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
+procedure output_end(Widget(Drawn)?, List(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output_end(W, Es, [refresh | Gs], [draw(0, W?, output(Es?)) | Ds?]) :- ground(W?), ground(Es?) | output_end(W?, Es?, Gs?, Ds).
 output_end(W, Es, [input(_, _, _) | Gs], Ds?) :- output_end(W?, Es?, Gs?, Ds).
 
@@ -4514,6 +4986,10 @@ procedure join_utterance_utterance_1(Formed(String)?, Formed(Utterance)).
 join_utterance_utterance_1(formed(X1), formed(utterance(X1?))).
 join_utterance_utterance_1(refused, refused).
 
+procedure join_utterance_program_1(Formed(Module)?, Formed(Utterance)).
+join_utterance_program_1(formed(X1), formed(program(X1?))).
+join_utterance_program_1(refused, refused).
+
 procedure join_utterance_speech_2(Formed(Utterance)?, Formed(Peer)?, Formed(Utterance)).
 join_utterance_speech_2(formed(X1), formed(X2), formed(speech(X1?, X2?))).
 join_utterance_speech_2(refused, _, refused).
@@ -4521,6 +4997,7 @@ join_utterance_speech_2(_, refused, refused).
 
 procedure form_utterance(Utterance?, Formed(Utterance)).
 form_utterance(utterance(R1), F?) :- form_string(R1?, F1), join_utterance_utterance_1(F1?, F).
+form_utterance(program(R1), F?) :- form_module(R1?, F1), join_utterance_program_1(F1?, F).
 form_utterance(speech(R1, R2), F?) :- form_utterance(R1?, F1), form_string(R2?, F2), join_utterance_speech_2(F1?, F2?, F).
 form_utterance(_, refused) :- otherwise | true.
 
@@ -4606,18 +5083,18 @@ take_request(formed(V), _, V?, _, Gs, Gs?, done).
 take_request(refused, P, X?, G, Gs, [G? | Gs1?], Done?) :- answer_request(P?, X, Gs?, Gs1, Done).
 
 View_request_r ::= Request ; input(Path).
-procedure run_request_r(Integer?, Widget?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r(Integer?, Widget(Drawn)?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_request_r_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_request_r_more(Integer?, Widget?, View_request_r?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r_more(Integer?, Widget(Drawn)?, View_request_r?, Stream(View_request_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_request_r_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_request_r_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_request_r_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_request_r_last(Integer?, Widget?, View_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_request_r_last(Integer?, Widget(Drawn)?, View_request_r?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_request_r_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_request_r_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, request_r(V?)) | Ds?]) :- ground(W?), ground(V?) | run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_request_r_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_request_r_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
@@ -4643,18 +5120,18 @@ View_approval ::= approval(Asking, List(Word), Questioned(YesNo)).
 procedure present_approval(Path?, Approval?, Inputs(Drawn)?, Inputs(Drawn), Stream(View_approval), Done).
 present_approval(P, approval(H1, H2, H3?), Gs, Gs1?, [approval(H1?, H2?, input(M3?))], D3?) :- ground(P?), ground(H1?), ground(H2?) | path(P?, 3, M3), path(P?, 3, Q3), answer_yesNo(Q3?, H3, Gs?, Gs1, D3).
 
-procedure run_approval_w(Integer?, Widget?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w(Integer?, Widget(Drawn)?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w(Id, W, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w(Id, _, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_grants(Gs?, Gs1), run_end(Id?, Done?, Ds).
 
-procedure run_approval_w_more(Integer?, Widget?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_more(Integer?, Widget(Drawn)?, View_approval?, Stream(View_approval)?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_more(Id, _, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_more(Id, W, _, [V | Vs], Done, Gs, Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, Vs, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_more(Id?, W?, V?, Vs?, Done?, Gs?, Gs1, Ds).
 run_approval_w_more(Id, W, V, [], Done, Gs, Gs1?, Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 
-procedure run_approval_w_last(Integer?, Widget?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
+procedure run_approval_w_last(Integer?, Widget(Drawn)?, View_approval?, Done?, Inputs(Drawn)?, Inputs(Drawn), Stream(Draw(Drawn))).
 run_approval_w_last(Id, _, _, done, Gs, Gs?, [withdraw(Id?)]).
 run_approval_w_last(Id, W, V, Done, [refresh | Gs], Gs1?, [draw(Id?, W?, approval_w(V?)) | Ds?]) :- ground(W?), ground(V?) | run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).
 run_approval_w_last(Id, W, V, Done, [input(I, P, R) | Gs], [input(I?, P?, R?) | Gs1?], Ds?) :- run_approval_w_last(Id?, W?, V?, Done?, Gs?, Gs1, Ds).

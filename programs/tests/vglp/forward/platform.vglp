@@ -1,0 +1,21 @@
+%% platform.vglp --- a platform as vGLP's compiler prints one, cut to what
+%% the program's root module forwards: contract(Text, Schemas), the contract
+%% it is compiled from, and version(Current, Back), its version and the
+%% earliest version of itself it is compatible with (vGLP b413fe1, Section
+%% 5.4, "The contract's words"), both exported, the type of the contract term
+%% its own (programs/vglp/cva/compiler/cvac.glp, export_lines).
+
+Exported ::= with(Constant, Constant).
+
+exported procedure contract(String, Exported).
+contract('1. Alice may greet Bob.', with(greet, nolook)).
+
+exported procedure version(Integer, Integer).
+version(2, 1).
+
+%% A platform's agent asks its person; this one's one question, a card the
+%% person approves or not.
+YesNo ::= yes ; no.
+Card ::= card(Constant, YesNo?).
+procedure (Card)*approve(Constant?, YesNo).
+(card(C?, A))*approve(C, A?) :- ground(C?) | true.

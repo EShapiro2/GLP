@@ -132,6 +132,17 @@ class UdpTransportService extends TransportService {
   void Function(PeerTransport session, String peerId, Uint8List data)?
       onUdpDataReceived;
 
+  /// Called with the address of a path that is gone --- dropped by
+  /// [disconnectFromPeer], expired by [_sweepTempPaths], moved to another
+  /// address or cleared by [stop] --- once no path stands at that address,
+  /// so that what the layer keeps per connection goes with the connection.
+  void Function(String addressKey)? onPathClosed;
+
+  void _pathClosed(String addressKey) {
+    if (_addressToPeerId.containsKey(addressKey)) return;
+    onPathClosed?.call(addressKey);
+  }
+
   UdpConnectFailureKind? _lastConnectFailureKind;
 
   // ===== Public getters =====
@@ -264,6 +275,7 @@ class UdpTransportService extends TransportService {
           _addressToPeerId[path.addressKey] == tempKey) {
         _addressToPeerId.remove(path.addressKey);
       }
+      if (path != null) _pathClosed(path.addressKey);
     }
   }
 
@@ -278,9 +290,11 @@ class UdpTransportService extends TransportService {
     _socketSubs.clear();
 
     final peers = _peerPaths.keys.where((id) => !_isTemp(id)).toList();
+    final addresses = {for (final p in _peerPaths.values) p.addressKey};
     _peerPaths.clear();
     _addressToPeerId.clear();
     _tempPathLastSeen.clear();
+    addresses.forEach(_pathClosed);
     for (final peerId in peers) {
       if (!_connectionController.isClosed) {
         _connectionController.add(TransportConnectionEvent(
@@ -484,6 +498,7 @@ class UdpTransportService extends TransportService {
     if (_addressToPeerId[path.addressKey] == peerId) {
       _addressToPeerId.remove(path.addressKey);
     }
+    _pathClosed(path.addressKey);
     if (!_connectionController.isClosed) {
       _connectionController.add(TransportConnectionEvent(
         peerId: peerId,
@@ -502,6 +517,9 @@ class UdpTransportService extends TransportService {
     }
     _peerPaths[peerId] = path;
     _addressToPeerId[path.addressKey] = peerId;
+    if (previous != null && previous.addressKey != path.addressKey) {
+      _pathClosed(previous.addressKey);
+    }
   }
 
   @override

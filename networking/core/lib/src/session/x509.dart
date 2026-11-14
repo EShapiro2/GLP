@@ -13,6 +13,7 @@
 /// verifiers are defeated.
 library;
 
+import 'dart:convert' show ascii;
 import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
@@ -222,9 +223,27 @@ class X509Certificate {
   }
 
   static DateTime _time(ASN1Object o) {
-    if (o is ASN1UtcTime) return o.dateTimeValue.toUtc();
+    if (o is ASN1UtcTime) return _utcTime(o);
     if (o is ASN1GeneralizedTime) return o.dateTimeValue.toUtc();
     throw const X509Exception('validity carries an unrecognised time type');
+  }
+
+  /// A UTCTime as RFC 5280 §4.1.2.5.1 has it: YYMMDDHHMMSSZ, the year 19YY
+  /// where YY is 50 or more and 20YY where it is less.  Read from the bytes,
+  /// not by asn1lib's [ASN1UtcTime.dateTimeValue], whose pivot is 75: it reads
+  /// the 700101000000Z with which Android's KeyStore begins every attestation
+  /// certificate as 2070, so every Android attestation was refused as not yet
+  /// valid.
+  static DateTime _utcTime(ASN1UtcTime o) {
+    final text = ascii.decode(o.valueBytes(), allowInvalid: true);
+    final m = RegExp(r'^(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z$').firstMatch(text);
+    if (m == null) {
+      throw X509Exception('validity carries a malformed UTCTime: $text');
+    }
+    int at(int i) => int.parse(m.group(i)!);
+    final yy = at(1);
+    return DateTime.utc(
+        yy >= 50 ? 1900 + yy : 2000 + yy, at(2), at(3), at(4), at(5), at(6));
   }
 
   /// True where this certificate's basicConstraints marks it a certificate

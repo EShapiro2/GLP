@@ -1,4 +1,4 @@
-%% plays.glp --- the GSNP mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/4, with its grants; and, for five executions, with the two ends of each of four root channels handed to them as their conversations, dan's and eve's, eve's and carol's, carol's and bob's, and bob's and fay's, the play standing in for the social graph, as ../gsn/plays.glp does for two.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gsnp_boot.glp.
+%% plays.glp --- the GSNP mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/3, with its grants; and, for five executions, with the two ends of each of four root channels handed to them as their conversations, dan's and eve's, eve's and carol's, carol's and bob's, and bob's and fay's, the play standing in for the social graph, as ../gsn/plays.glp does for two.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.  The super-app hosting the mini-app on smartphones is ../gsnp_boot.glp.
 
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
@@ -6,31 +6,31 @@ imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(Pe
 exported procedure play_provenance(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_provenance(D?, E?, C?, B?, F?) :-
     self_module(M),
-    find_type(miniapp/4, T),
-    run(miniapp(dan, ch(GD?, WD), ch([conversation(eve, ch(ED?, DE))], _), []), T?, M?),
+    find_type(miniapp/3, T),
+    run(miniapp(dan, ch(GD?, WD), ch([conversation(eve, ch(ED?, DE))], _)), T?, M?),
     person # miniapp_person(dan, dan, [eve], ch(WD?, GD), D),
-    run(miniapp(eve, ch(GE?, WE), ch([conversation(dan, ch(DE?, ED)), conversation(carol, ch(CE?, EC))], _), []), T?, M?),
+    run(miniapp(eve, ch(GE?, WE), ch([conversation(dan, ch(DE?, ED)), conversation(carol, ch(CE?, EC))], _)), T?, M?),
     person # miniapp_person(eve, eve, [dan, carol], ch(WE?, GE), E),
-    run(miniapp(carol, ch(GC?, WC), ch([conversation(eve, ch(EC?, CE)), conversation(bob, ch(BC?, CB))], _), []), T?, M?),
+    run(miniapp(carol, ch(GC?, WC), ch([conversation(eve, ch(EC?, CE)), conversation(bob, ch(BC?, CB))], _)), T?, M?),
     person # miniapp_person(carol, carol, [eve, bob], ch(WC?, GC), C),
-    run(miniapp(bob, ch(GB?, WB), ch([conversation(carol, ch(CB?, BC)), conversation(fay, ch(FB?, BF))], _), []), T?, M?),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(carol, ch(CB?, BC)), conversation(fay, ch(FB?, BF))], _)), T?, M?),
     person # miniapp_person(bob, bob, [carol, fay], ch(WB?, GB), B),
-    run(miniapp(fay, ch(GF?, WF), ch([conversation(bob, ch(BF?, FB))], _), []), T?, M?),
+    run(miniapp(fay, ch(GF?, WF), ch([conversation(bob, ch(BF?, FB))], _)), T?, M?),
     person # miniapp_person(fay, fay, [bob], ch(WF?, GF), F).
 
-%% play_agents(K, A, R, B): the play of GAI's Figure "The GAI app" and of the AI agent's item of its Figure "The GSNP app" on the full platform, in the order of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; Code_inbox.md, GAI #10 Cowork, 2026-10-31 12:54 and 14:14 UTC), with Acme Ltd's signing of Alf's code before it: acme_ltd, the developer, alice, alf, her AI agent, and bob; a conversation between acme_ltd and alice, alice and alf, alice and bob, and alf and bob.  Acme Ltd establishes their identity, comes to know and befriends Alice, signs Alf's code and sends it to her in a message (GKK:1, GKK:2, GSG:1, GAI:1, GSN:1); Alice and Bob establish their identities, come to know each other and befriend (GKK:1, GKK:2, GSG:1); Alice signs her attestation y and enters Alf with it (GAI:2, GnW:1); Alice proposes Alf's acquaintance with Bob, Alf and Bob answering yes, Bob recording Alf with y (GnW:3, GAI:2; agent_acquaint), and then its befriending him, Alf and Bob answering yes (GnW:3; agent_befriend); Alf signs an item and sends it to Bob (GSNP:1, GSN:1); and Alice retires Alf, which ends its friendships, nobody asked (GnW:5; retire), with no unfriend (person.glp, the roles acme_ltd, alice, alf and agents_bob).  Nothing on Alice's screen changes when Alf's item reaches Bob, so the play, standing in for the two persons as it stands in for the social graph, orders her Retire after it: her request to retire reaches her agent once Bob's screen shows him holding the item (hold and told, below), as in the screens test she taps Retire once it does (glp_multiagent/test/apps_screens_test.dart).
+%% play_agents(K, A, R, B): the play of GAI's Figure "Accountable AI agents" and of the AI agent's item of its Figure "The GSNP app" on the full platform, the acts of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), with Acme Ltd's signing of Alf's code before them: acme_ltd, the developer, alice, alf, her AI agent, and bob; a conversation between acme_ltd and alice, alice and alf, alice and bob, and alf and bob.  Acme Ltd establishes their identity, comes to know and befriends Alice, signs Alf's code and sends it to her in a message (GKK:1, GKK:2, GSG:1, GAI:1, GSN:1); Alice and Bob establish their identities (GKK:1); Alice signs her attestation y and enters Alf with it (GFP:1, GAI:2, GnW:1); Alice and Bob come to know each other (GKK:2); Bob proposes that Alf and he know each other, Alf answering yes, Bob recording Alf with y (GnW:3, GAI:2; agent_acquaint); Bob offers Alice friendship, which she accepts (GSG:1); Alice proposes Alf's befriending Bob, Alf and Bob answering yes (GnW:3; agent_befriend); Alf signs an item and sends it to Bob (GFP:1, GSN:1); and Alice retires Alf, which ends its friendships, nobody asked (GnW:5; retire), with no unfriend (person.glp, the roles acme_ltd, alice, alf and agents_bob).  Each person proposes on what their own screen shows, as in GAI's app (../gai/plays.glp).  Nothing on Alice's screen changes when Alf's item reaches Bob, so the play, standing in for the two persons as it stands in for the social graph, orders her Retire after it: her request to retire reaches her agent once Bob's screen shows him holding the item (hold and told, below), as in the screens test she taps Retire once it does (glp_multiagent/test/apps_screens_test.dart).
 exported procedure play_agents(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_agents(K?, A?, R?, B?) :-
     self_module(M),
-    find_type(miniapp/4, T),
-    run(miniapp(acme_ltd, ch(GK?, WK), ch([conversation(alice, ch(AK?, KA))], _), []), T?, M?),
+    find_type(miniapp/3, T),
+    run(miniapp(acme_ltd, ch(GK?, WK), ch([conversation(alice, ch(AK?, KA))], _)), T?, M?),
     person # miniapp_person(acme_ltd, acme_ltd, [alice], ch(WK?, GK), K),
-    run(miniapp(alice, ch(GA?, WA), ch([conversation(acme_ltd, ch(KA?, AK)), conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _), []), T?, M?),
+    run(miniapp(alice, ch(GA?, WA), ch([conversation(acme_ltd, ch(KA?, AK)), conversation(alf, ch(RA?, AR)), conversation(bob, ch(BA?, AB))], _)), T?, M?),
     person # miniapp_person(alice, alice, [acme_ltd, alf, bob], ch(WA?, GA0), A),
     hold(GA0?, Told?, GA),
-    run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _), []), T?, M?),
+    run(miniapp(alf, ch(GR?, WR), ch([conversation(alice, ch(AR?, RA)), conversation(bob, ch(BR?, RB))], _)), T?, M?),
     person # miniapp_person(alf, alf, [alice, bob], ch(WR?, GR), R),
-    run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _), []), T?, M?),
+    run(miniapp(bob, ch(GB?, WB), ch([conversation(alf, ch(RB?, BR)), conversation(alice, ch(AB?, BA))], _)), T?, M?),
     person # miniapp_person(bob, agents_bob, [alf, alice], ch(WB?, GB), B0),
     told(B0?, speech(utterance('Today\'s summary of the news'), alf), B, Told).
 
@@ -67,7 +67,7 @@ told1(holding, Ss, _, Ss1?, told) :- seen(Ss?, Ss1).
 told1(not_holding, Ss, X, Ss1?, C?) :- told(Ss?, X?, Ss1, C).
 
 procedure holding(Seen?, Speech?, Holding).
-holding(view(As, _, _, _), X, H?) :- ground(As?), ground(X?) | held(item(X?), As?, H).
+holding(view(_, As, _, _, _), X, H?) :- ground(As?), ground(X?) | held(item(X?), As?, H).
 holding(_, _, not_holding) :- otherwise | true.
 
 procedure held(Atom?, List(Atom)?, Holding).

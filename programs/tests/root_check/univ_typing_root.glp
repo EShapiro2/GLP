@@ -59,9 +59,9 @@ PeerAddress ::= address(String) ; none.
 
 % What declare/1 and remove/1 take (GLP-Spec appendix-guards, "Networking seam", 1ce0263), as the root self.glp has them.
 Declaration ::= peer(Key) ; address(Key, String) ; rendezvous(Key, String)
-      ; trust(Underlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?).
+      ; trust(ProximityUnderlay, TrustLevel) ; place(Constant, Number, Stream(PlaceEvent)?).
 Removal ::= peer(Key) ; rendezvous(Key) ; place(Constant).
-Underlay ::= pan ; lan.
+ProximityUnderlay ::= pan ; lan.
 TrustLevel ::= open ; closed.
 PlaceEvent ::= entered ; exited ; observable ; unobservable.
 
@@ -69,7 +69,7 @@ PlaceEvent ::= entered ; exited ; observable ; unobservable.
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
 % reader or writer end anchored at the agent named by Key, at an index.  Root
 % scope since 2026-09-18; programs/system/mad_predicates.glp defined it before.
-GlobalName ::= '_r'(Key, Integer) ; '_w'(Key, Integer).
+GlobalName ::= '_r'(Key, Integer, Integer) ; '_w'(Key, Integer, Integer).
 
 % A message to the network, as the root declares it (GLP, 2026-10-13 20:39
 % UTC; GLP-Spec b063ec9).
@@ -311,7 +311,7 @@ send_to_user([]).
 % only to a system module, which this file is.
 procedure(X) send_to_net(Stream(NetMsg(X))?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) |
-    '_send'(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
+    '_send'(msg(Q?, T?), '_w'(Q?, 0, 0), Q?), send_to_net(In?).
 send_to_net([]).
 
 % global_send/3 — IGLP's system predicate (madglp-spec.tex, Definition
@@ -686,7 +686,7 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % =============================================================================
 % NETWORKING SEAM (peer_address/2, punch_udp/1, declare/1, remove/1)
 % =============================================================================
-% GLP-Spec's appendix-guards lists the four among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263): peer_address(Key?, PeerAddress), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types Declaration, Removal, Underlay, TrustLevel and PlaceEvent above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb), and their kernels '_peer_address', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
+% GLP-Spec's appendix-guards lists the four among the seam predicates, on the same grounds as sign/3 and authorise_link/2 above, and their declarations are its signature column verbatim (1ce0263): peer_address(Key?, PeerAddress), punch_udp(String?), declare(Declaration?) and remove(Removal?), with the types Declaration, Removal, ProximityUnderlay, TrustLevel and PlaceEvent above.  The clauses are IGLP's madglp-spec.tex, Definition "Seam Predicates" (3b736bb), and their kernels '_peer_address', '_punch_udp', '_declare' and '_remove' are declared in the block above; the layer behind them is GLP-Networking-API's.  declare/1 and remove/1 replace place_declare/3, place_remove/1, trust_declare/2, peer_declare/1 and address_declare/2, gone on 2026-11-03.
 
 %% peer_address/2 - assign A address(S), S the address at which the layer
 %% observes peer P, or none where it observes no address for P.

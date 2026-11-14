@@ -8,8 +8,12 @@
 library;
 
 import 'dart:collection';
+import 'dart:typed_data';
 
 import 'package:glp_runtime/runtime/saved_state.dart';
+import 'package:glp_runtime/wire/codec.dart' show messageWithSenderEpoch;
+
+import 'mad_helpers.dart' show GlobalName;
 
 /// Type of outbound message
 enum MessageType {
@@ -24,6 +28,11 @@ enum MessageType {
   /// Acknowledgement: ack(_r(p, i)) — sent to a reader-name value's sender
   /// after applying it; releases the pending value and closes the link.
   acknowledgement,
+
+  /// Gone: gone(G) — answers traffic for an end this agent lost, and the
+  /// receiver retires its own end (IGLP db0a117, "Requests and
+  /// Acknowledgements").  Carries no term.
+  gone,
 }
 
 /// An outbound message to another agent
@@ -34,12 +43,17 @@ class OutboundMessage {
   /// Type of message
   final MessageType type;
 
-  /// Serialized payload (opaque bytes)
-  final List<int> payload;
+  /// Serialized payload (opaque bytes), the message in its canonical encoding,
+  /// its sender's epoch after its kind byte ([withSenderEpoch]).
+  List<int> payload;
 
-  /// The link this message belongs to, as `(anchor, index, isWriter)`, when the
-  /// message can be held. Null for messages that never hold (serializer sends).
-  final (String, int, bool)? link;
+  /// The link this message belongs to, by its global name, where it belongs
+  /// to one: a value, a request or an acknowledgement on a link, and so a
+  /// message a retirement of that link's end removes (IGLP db0a117,
+  /// Definition "Retire": "from M_q every message of the link").  Null for a
+  /// serializer send, a cold call, and for a gone, which belong to no link
+  /// the agent holds.
+  final GlobalName? link;
 
   /// Whether this message is held (Definition Held Link): it stays in M_p and
   /// is not eligible for Send until `authorise_link/2` authorises it, or is
@@ -56,6 +70,15 @@ class OutboundMessage {
     this.link,
     this.held = false,
   });
+
+  /// Rewrite the sender's epoch this message carries to [epoch]: a message
+  /// queued before a restart after a crash is sent in the epoch the restart
+  /// opened, "the epoch its sender is in when it sends it" (IGLP db0a117).
+  void withSenderEpoch(int epoch) {
+    payload = messageWithSenderEpoch(
+        payload is Uint8List ? payload as Uint8List : Uint8List.fromList(payload),
+        epoch);
+  }
 
   @override
   String toString() {
@@ -122,12 +145,30 @@ class MessageQueue {
   Iterable<OutboundMessage> get all =>
       _queuesByDestination.values.expand((q) => q);
 
-  /// The held message for link `(anchor, index, isWriter)`, or null.
-  OutboundMessage? findHeld(String anchor, int index, bool isWriter) {
+  /// The held message for the link named [link], or null.
+  OutboundMessage? findHeld(GlobalName link) {
     for (final m in all) {
-      if (m.held && m.link == (anchor, index, isWriter)) return m;
+      if (m.held && m.link == link) return m;
     }
     return null;
+  }
+
+  /// Remove every message of the link named [link], held or not (IGLP
+  /// db0a117, Definition "Retire"); the number removed.
+  int removeOfLink(GlobalName link) {
+    var n = 0;
+    for (final m in all.where((m) => m.link == link).toList()) {
+      if (remove(m)) n++;
+    }
+    return n;
+  }
+
+  /// Rewrite the sender's epoch of every message to [epoch]
+  /// ([OutboundMessage.withSenderEpoch]).
+  void withSenderEpoch(int epoch) {
+    for (final m in all) {
+      m.withSenderEpoch(epoch);
+    }
   }
 
   /// Remove [message] from M_p wherever it sits. Used when a link is refused.
@@ -199,11 +240,7 @@ class MessageQueue {
         w.bytes(m.payload);
         final link = m.link;
         w.boolean(link != null);
-        if (link != null) {
-          w.str(link.$1);
-          w.uint(link.$2);
-          w.boolean(link.$3);
-        }
+        if (link != null) link.save(w);
         w.boolean(m.held);
       }
     }
@@ -217,12 +254,7 @@ class MessageQueue {
       for (var j = r.uint(); j > 0; j--) {
         final type = MessageType.values[r.u8()];
         final payload = r.bytes();
-        (String, int, bool)? link;
-        if (r.boolean()) {
-          final anchor = r.str();
-          final index = r.uint();
-          link = (anchor, index, r.boolean());
-        }
+        final link = r.boolean() ? GlobalName.restore(r) : null;
         add(OutboundMessage(
           destination: destination,
           type: type,

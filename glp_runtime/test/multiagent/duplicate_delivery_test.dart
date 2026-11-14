@@ -217,7 +217,7 @@ void main() {
         // alice cold-calls bob with a reader and a writer of her own.
         final (xW, xR) = aRt.heap.allocateVariable();
         final (yW, yR) = aRt.heap.allocateVariable();
-        alice.send(StructTerm('m', [VarRef(xR), VarRef(yW)]), true, 'bob', 0,
+        alice.send(StructTerm('m', [VarRef(xR), VarRef(yW)]), true, 'bob', 0, 0,
             'bob');
         net.settle();
         // alice assigns X: a value to bob on _r(alice,1), acknowledged.
@@ -249,6 +249,7 @@ void main() {
         final gres = globalize(
           variables: [TermVar.reader(restR, writerAddr: restW)],
           localAgent: 'charlie',
+          localEpoch: 1,
           remoteAgent: 'bob',
           table: charlie.wp,
           records: charlie.up,
@@ -263,7 +264,7 @@ void main() {
           freshAddrAllocator: () => bobRt.heap.allocateVariable(),
         );
         bob.send(StructTerm('m', [VarRef(lres.freshPairs[0].readerAddr)]),
-            true, 'alice', 0, 'alice');
+            true, 'alice', 0, 0, 'alice');
         // alice's request is held at alice, then at charlie; both authorise.
         net.settleAuthorising();
         charlieRt.heap.bindVariable(restW, ConstTerm('through'));
@@ -283,10 +284,10 @@ void main() {
         // p exports a writer to q, who forwards it to r; r assigns it, and the
         // value is held at r and then at p (Held Links, cases 2 and 4).
         final (xW, xR) = pRt.heap.allocateVariable();
-        p.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 'q');
+        p.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 0, 'q');
         net.settle();
         net.agents['q']!.send(
-            StructTerm('n', [_arg(net, 'q', 0, 0)]), true, 'r', 0, 'r');
+            StructTerm('n', [_arg(net, 'q', 0, 0)]), true, 'r', 0, 0, 'r');
         net.settle();
         net.runtimes['r']!.heap
             .bindVariable(_arg(net, 'r', 0, 0).addr, ConstTerm(42));
@@ -302,11 +303,11 @@ void main() {
     final r = _both((net) {
       final alice = net.add('alice');
       net.add('bob');
-      alice.send(ConstTerm('one'), true, 'bob', 0, 'bob');
+      alice.send(ConstTerm('one'), true, 'bob', 0, 0, 'bob');
       net.settle();
-      alice.send(ConstTerm('two'), true, 'bob', 0, 'bob');
+      alice.send(ConstTerm('two'), true, 'bob', 0, 0, 'bob');
       net.settle();
-      alice.send(ConstTerm('two'), true, 'bob', 0, 'bob');
+      alice.send(ConstTerm('two'), true, 'bob', 0, 0, 'bob');
       net.settle();
       return [for (final e in net.stream('bob')) net.show('bob', e)];
     });

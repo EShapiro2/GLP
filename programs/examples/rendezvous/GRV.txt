@@ -1,20 +1,25 @@
 % GRV: Grassroots Rendezvous --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GNA, a paper of the GSA project (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GRV:1.
-% Paper: GNA, GLP Networking API Specification, in preparation
-% Extends: GnW, Guardians 'n' Wards, GAI's (programs/gai/GnW.txt), the server a ward of its owner, and through it GSG and GKK.  GnW is to drop the confinement of a ward to whom its guardian knows (Udi, 2026-11-08 07:09 UTC; proposed to GAI 07:10 UTC), which GRV rests on.  GDS, the directory service, is a separate ward's contract (GDS.txt beside this file).
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: GSV, Grassroots Services, GNA's (GSV.txt beside this file), which instantiates GnW, GSC's (programs/gsc/GnW.txt), and through it GSG and GKK: a rendezvous server is a service (Udi, 2026-11-10 13:52 UTC).  GDS, the directory service, is a separate contract (GDS.txt beside this file).
 % Defines: rendezvous server and invitation link, defined in the box after the declaration.  Person, knowing a person, friend, ward and guardian are defined with GKK, GSG and GnW.
-% Last changed: 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDS (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
-% Schemas: GRV.glp beside this file is the contract of 2026-11-07, extending GSG, certified (cascade/GRV/2026-11-07); it is rewritten on GnW's schemas once GAI amends them.
+% Last changed: 2026-11-11 (second), the link given as a web address, https://peoplesweb.org/i#<link>, which opens the Grassroots App (Udi, 2026-11-11, to GSA #4: 'go ahead with peoplesweb.org/i'); 2026-11-11, Registration puts the link on the clipboard, in place of a button to copy it (Udi, 2026-11-11, approving GSA #4, on Phones #1's point 4); 2026-11-10 (second), the environment predicate link, by which Alice's app supplies the serial and the expiry of her next link (Udi, 2026-11-10 21:14 UTC; Code #27, 20:42 UTC); 2026-11-10, on GSV: a rendezvous server is a service, and Carol makes her service Dave a rendezvous server; the schemas rewritten on GSV, Registration's named invite_by_link as its button (Udi, 2026-11-10 13:52 UTC, approving GSA #3); 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDS (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
+% Schemas: GRV.glp beside this file, an instance of GnW with ward written service, as GSV's, and GRV's five added: open_server, invite_by_link, redeem, present and match.
 GRV: Grassroots Rendezvous
-GRV extends GnW (GAI, Corralling AI Risks with Grassroots Contracts, arXiv).
-Alice, Bob and Carol are persons, Dave a ward.  A rendezvous server is a ward operated by a machine at an address every person can reach.  An invitation link is a term Alice signs, naming Alice, a rendezvous server, a serial and an expiry.
-1. ■ Server.  Carol may create a rendezvous server, Dave, as her ward.
+GRV extends GSV.
+Alice, Bob and Carol are persons, Dave a ward.  A rendezvous server is a service.  An invitation link is a term Alice signs, naming Alice, a rendezvous server, a serial and an expiry.
+1. ■ Server.  Carol may make her service Dave a rendezvous server.
 2. ■ Registration.  Alice may register with Dave an invitation link she signed that names Dave, with a serial she has not registered with Dave before.
 3. ■ Redemption.  Bob may present to Dave an invitation link registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
 4. ■ Reconnection.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship; Dave then gives each the address of the other.
 Interface pragmas
 Look: 🛰️, network
+Server: Carol [Open server]
+  Dave: Carol asks you to be a rendezvous server.
 Registration: Alice [Invite by link]
 Implementation pragmas
 Redemption, Reconnection: the address of a person is the one at which the server's networking layer observes them, read by peer_address/2; a person given an address punches towards it by punch_udp/1, and the smaller key initiates.
 Registration: an invitation link expires an hour after it is made.
+Registration: the link is given as a web address, https://peoplesweb.org/i#<link>, which opens the Grassroots App where it is installed.
+Registration: Alice's app puts the link on the phone's clipboard, for her to paste into any channel she has.
+Registration: an environment predicate, link(Alice, serial, expiry), the serial and the expiry of the next invitation link of Alice, which Alice's app keeps current.

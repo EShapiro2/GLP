@@ -1,0 +1,27 @@
+%% programs/tests/neg_boot_defines/agent_boot.glp
+%%
+%% Negative fixture: a boot file that defines the agents' program beside its
+%% boot clause and its person, as the boots here did until 2026-11-10.  TGLP
+%% 6ce148a, modules.tex, "Entry and the absence of a boot module": a file that
+%% starts several agents carries its G@p clause "and the persons scripted in
+%% GLP that the clause names, and nothing else: the agents' program is a
+%% program directory, which the agents load"; IGLP, Implementation Notes,
+%% "Boot": "A boot defines no agent/2".  The loader refuses the file, naming
+%% agent/2 and start/2, which no person of the clause names or calls, and no
+%% agent is spawned.
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, ch(_?, _))@alice.
+
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Constant)), Stream(NetMsg(Constant)))?).
+agent(ch(In, []), ch(_, [])) :- start(In?).
+
+procedure start(Stream(Constant)?).
+start([alice | _]) :- send_to_user([hello]).
+start([]).
+
+%% The person at alice: it tells the agent its name, and reads nothing.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).

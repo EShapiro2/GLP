@@ -239,8 +239,9 @@ run(_).
       expect(c.source, contains('exported procedure dispatch_1('));
       expect(c.source, contains('procedure(Q, T) dispatch_1('));
       expect(c.source, contains('Ask_1(Q) ::= ask(Constant, Q).'));
-      // The widget at the root's Widget, the type of the widget in a draw
-      // (vGLP, Section 6.3; GLP #9 Cowork, 2026-10-20 09:22 UTC, item 4.1).
+      // The widget at the root's Widget(T), the type of the widget in a draw,
+      // T the person channel's union (vGLP 668df7d, Section 6.3, the
+      // paragraph after the construct process).
       // The views of a construct whose root the person writes are of its view
       // type, T ; input(Path) (vGLP, Section 6.3, "The construct process").
       expect(c.source, contains('View_t_r ::= T ; input(Path).'));
@@ -248,12 +249,12 @@ run(_).
       // a question being answered only once drawn (vGLP, Section 6.3, "The
       // construct process": "On a grant input(Id, Pos, R) for a question W
       // it holds and has drawn").
-      expect(c.source, contains('procedure run_t_r(Integer?, Widget?, '
+      expect(c.source, contains('procedure run_t_r(Integer?, Widget(Drawn)?, '
           'Stream(View_t_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), '
           'Stream(Draw(Drawn))).'));
       // On refresh the construct draws again what it last drew, the view V
       // it holds (vGLP d433f71, Section 6.3, "The construct process").
-      expect(c.source, contains('procedure run_t_r_more(Integer?, Widget?, '
+      expect(c.source, contains('procedure run_t_r_more(Integer?, Widget(Drawn)?, '
           'View_t_r?, Stream(View_t_r)?, Done?, Inputs(Drawn)?, Inputs(Drawn), '
           'Stream(Draw(Drawn))).'));
       expect(c.source, contains('constructs_1([spawn(Id, Q, Gs, Ds?) | Ss]) '
@@ -2445,7 +2446,19 @@ procedure (YesNo?)*approve(Integer?).
           'proved(identity, [], knows, [at(4)])], [2, 3], '
           '[field(4, "person", person), field(5, "text", text)], '
           '[same(1, 4)], [at(1), say(" sends.")])])])';
+      // The widget term's types, as the platform prints them beside its
+      // request type (vGLP 0eeea71, Section 5.4: the compiler types the term
+      // "by type declarations it prints with the platform"; cvac.glp,
+      // widget_lines): T's alternative social_menu(List(MenuEntry)).
       final c = compile('''
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
 Peer ::= Key.
 Act ::= send(Peer, Peer, String, Peer, String) ; leave(Peer).
 Ask ::= ask(Act?).
@@ -2472,22 +2485,81 @@ procedure (Ask)*request(Integer?).
       expect(
           c.widgets['Ask'],
           allOf(
-              startsWith("named('social_menu([button("),
+              startsWith("named(social_menu([button("),
               contains("label('Send', form(send, [field('Peer', peer), "
                   "field('Peer', peer), field('String', text), "
                   "field(person, peer), field(text, text)]))")));
     });
 
+    // vGLP 668df7d, Section 6.3, the paragraph after the construct process:
+    // "the term W' a widget declaration names is a name or a name applied to
+    // arguments ...; the compilation forms the union of the three, the
+    // parameter T of the program's person channel"; vGLP 0eeea71, Section
+    // 5.4: the compiler types the request widget's term "by type declarations
+    // it prints with the platform".
+    test('a widget term is an alternative of T: a name as itself, a name '
+        'applied to arguments by the type in scope declaring it; one no type '
+        'declares is refused', () {
+      const types = '''
+RequestMenu ::= social_menu(List(MenuEntry)).
+MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
+MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).
+MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).
+MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+MenuField ::= field(Integer, String, MenuFieldType).
+MenuFieldType ::= person ; key ; agent ; text ; number.
+MenuWord ::= say(String) ; at(Integer).
+''';
+      const program = '''
+Peer ::= Key.
+Ask ::= ask(Peer?).
+YesNo ::= yes ; no.
+Ask =::= social_menu([button("Ask", [act(ask, 1, [1], [], [], [], [], [])])]).
+YesNo? =::= approval_sentence.
+procedure (Ask)*request(Integer?).
+(ask(_))*request(_).
+procedure (YesNo?)*approve(Integer?).
+(yes)*approve(_).
+''';
+      final c = compile(types + program);
+      final drawn = RegExp(r'^Drawn ::= (.*)\.$', multiLine: true)
+          .firstMatch(c.source)!
+          .group(1)!;
+      expect(drawn, contains('social_menu(List(MenuEntry))'));
+      expect(drawn, contains('approval_sentence'));
+      expect(c.source, contains('named(social_menu([button('));
+      expect(c.source, contains('named(approval_sentence, '));
+      expect(
+          () => compile(program),
+          throwsA(predicate((e) => e.toString().contains(
+              'The widget term social_menu/1 a widget declaration names has '
+              'no type declaration in scope'))));
+    });
+
     test('an act that does not read as the grammar has it is no declaration',
         () {
+      // A field's kind is a constant: one of the kinds by its variable, or
+      // the type a text's variable carries (vGLP 37fe038, Section 5.4), so
+      // a kind that is no constant does not read; until vGLP 37fe038 a
+      // constant outside the kinds, other, was the case here.
       expect(
           DeclaredWidget.tryParse('social_menu([button("X", '
-              '[act(x, 1, [1], [], [], [field(2, "s", other)], [], [])])])'),
+              '[act(x, 1, [1], [], [], [field(2, "s", f(x))], [], [])])])'),
           isNull);
       expect(
           DeclaredWidget.tryParse(
               'social_menu([act(x, "Tab", 1, [], [], [])])'),
           isNull);
+    });
+
+    test('a text field of a typed variable reads with its type as its kind, '
+        'as email (vGLP 37fe038, Section 5.4)', () {
+      final w = DeclaredWidget.tryParse('social_menu([button("Register", '
+          '[act(register, 1, [1], [], [], [field(2, "email", email)], [], [])])])');
+      expect(w, isNotNull);
+      final f = w!.buttons.single.acts.single.fields.single;
+      expect(f.type, 'email');
+      expect(f.isText, isTrue);
     });
 
     test('are refused where W is not an atom, T not a moded type, or two name '

@@ -26,7 +26,10 @@ import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show AgentSigner, LayerSigner, PersonIdentity;
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
@@ -62,6 +65,12 @@ go(X, Y?) :- main # go(X?, Y).
   return dir;
 }
 
+/// The compiling person's layer, which holds the key pair and signs: the
+/// signer the engines here certify by (the GLP paper f265fec, "Identity and
+/// signature"); an engine with no layer bound certifies nothing.
+final AgentSigner _compiler =
+    LayerSigner(SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
+
 void main() {
   late BytecodeProgram prog;
   late Artefact artefact;
@@ -86,7 +95,7 @@ void main() {
     );
 
     projectDir = _tempProject(_projectSource);
-    final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+    final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: _compiler);
     engine.loadProgram(projectDir.path);
     projectModule = engine.appModule!;
   });
@@ -292,7 +301,7 @@ void main() {
         () {
       final dir = _tempProject(_projectSource);
       try {
-        final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+        final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: _compiler);
         engine.loadProgram(dir.path);
 
         final moduleValue = engine.appModule;
@@ -324,7 +333,7 @@ void main() {
     test('the artefact round-trips through toBytes/fromBytes', () {
       final dir = _tempProject(_projectSource);
       try {
-        final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+        final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: _compiler);
         engine.loadProgram(dir.path);
         final art = engine.appModule!.artefact as Artefact;
 
@@ -345,7 +354,7 @@ void main() {
     test('a module value built at load can be run', () {
       final dir = _tempProject(_projectSource);
       try {
-        final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+        final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: _compiler);
         engine.loadProgram(dir.path);
         final moduleValue = engine.appModule!;
         final art = moduleValue.artefact as Artefact;
@@ -457,7 +466,10 @@ void main() {
       final c = certificateOf(projectModule);
       final other = Uint8List.fromList(c.hBin)..[0] ^= 0xFF;
       final signed = Certificate.signed(
-          signer: PersonIdentity.generate(), hSrc: c.hSrc, hBin: other);
+          signer: LayerSigner(
+              SimulationNetworkClient.alone(PersonIdentity.generate().keyPair)),
+          hSrc: c.hSrc,
+          hBin: other);
       expect(signed.verifies(), isTrue);
       final module = withCertificate(projectModule, signed);
       expect(activate(module), (BodyKernelResult.abort, 0));

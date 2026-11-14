@@ -14,6 +14,8 @@ import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show interfaceTypeIdentityTables;
 import 'package:glp_runtime/multiagent/identity.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
@@ -22,9 +24,13 @@ import 'package:test/test.dart';
 Uint8List _hm() => Uint8List.fromList(List<int>.generate(32, (i) => i));
 
 /// The compiling person of these tests.
-final PersonIdentity _compiler = PersonIdentity.generate();
+/// The compiling person's layer, which holds the key pair and signs: the
+/// signer an engine certifies by (the GLP paper f265fec, "Identity and
+/// signature").
+final AgentSigner _compiler =
+    LayerSigner(SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
 
-Artefact _sample({PersonIdentity? signer}) => Artefact(
+Artefact _sample({AgentSigner? signer}) => Artefact(
       isaVersion: glpIsaVersion,
       hM: _hm(),
       moduleName: 'demo',
@@ -57,11 +63,12 @@ Artefact _sample({PersonIdentity? signer}) => Artefact(
 
 void main() {
   group('artefact byte format', () {
-    test('header begins with magic GLPW and code-format version 3', () {
+    test('header begins with magic GLPW and code-format version 4', () {
       final b = _sample().toBytes();
       expect(b.sublist(0, 4), artefactMagic); // 'GLPW'
-      expect(b[4], wireFormatVersion); // 3 (the serializer message's serial)
-      expect(wireFormatVersion, 3);
+      expect(b[4], wireFormatVersion); // 4 (the epoch in a global name, the
+      // sender's epoch in a message and the kind gone; IGLP db0a117)
+      expect(wireFormatVersion, 4);
     });
 
     test('neither identity is in the header: the body is followed by the '
@@ -135,7 +142,8 @@ void main() {
 
     test('two compilers compiling one source produce two certificates over '
         'one pair of identities', () {
-      final other = PersonIdentity.generate();
+      final other = LayerSigner(
+          SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
       final c1 = _sample().certificate;
       final c2 = _sample(signer: other).certificate;
       expect(c1.hSrc, c2.hSrc);
@@ -240,7 +248,7 @@ void main() {
     // certificate's compiled identity and the certificate verifies.
     test('refuses a code-format version-2 artefact', () {
       final body = Uint8List.fromList(_sample().bodyBytes());
-      expect(body[4], 3);
+      expect(body[4], 4);
       body[4] = 2;
       final cert = Certificate.signed(
           signer: _compiler,

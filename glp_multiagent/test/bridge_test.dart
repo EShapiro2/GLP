@@ -1071,8 +1071,10 @@ sent([]).
       r.handle(fixtureTerm('draw(2, named(gauge, buttons([low, high])), '
           'input([]))'));
       final handed = <String>[];
+      // The family finds a named widget by its term's functor and arity
+      // (bridge.dart, namedKey).
       final family = ConstructFamily(named: {
-        'stars': (context, c, dflt, view, at, grant, output) {
+        'stars/0': (context, c, dflt, view, at, grant, output) {
           handed.add(formatTerm(dflt));
           return TextButton(
               onPressed: () => grant(questionAt(view)!, const GInt(5)),
@@ -1107,8 +1109,10 @@ sent([]).
         'a declared widget is drawn with the last value drawn on construct 0, '
         'and drawn again with each value drawn on it', (tester) async {
       final handed = <String>[];
+      // The family finds a named widget by its term's functor and arity
+      // (bridge.dart, namedKey).
       final family = ConstructFamily(named: {
-        'stars': (context, c, dflt, view, at, grant, output) {
+        'stars/0': (context, c, dflt, view, at, grant, output) {
           handed.add(output == null ? 'none' : formatTerm(output));
           return Text('stars over ${output == null ? 'none' : formatTerm(output)}');
         },

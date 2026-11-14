@@ -42,7 +42,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 THEIRS="gsg gsn gc"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter merges coins wardclose numbers bonds intros days linear forms counts shares"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts"
 CONTRACTS="$THEIRS $OURS"
 
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's

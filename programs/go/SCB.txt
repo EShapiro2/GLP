@@ -2,10 +2,10 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.5 and cites a clause as SCB:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: SCB.glp beside this file.
 SCB: Sovereign Central Bank
-SCB instantiates the bylaws of GBank and restricts it.
+SCB instantiates GBank and restricts it.
 A central bank is an organisation that is the sovereign of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar.  It has two roles, governor and committee member; the governors jointly decide the acts of the bank, and the committee members, the monetary policy committee, set by a majority the policy rate for each term, the return over that term at which the bank lends its coins against bonds.  A participant who holds no role is a counterparty.
 Gov is an organisation, Alice and Bob persons, Orga a central bank.
 1. ■ Founding.  Gov, with Alice, may found Orga as the sovereign of the Dollar, with Alice its first governor.
@@ -16,36 +16,78 @@ Gov is an organisation, Alice and Bob persons, Orga a central bank.
 6. ■ Open market.  Bob, a counterparty, and Orga may jointly decide to swap coins and bonds they hold.
 7. ○ Authority.  Gov founds Orga and appoints and removes its officers as the law of the Dollar provides.
 Pragmas
-Look: 🏛️, bank
+Look: 🏛️, money
 Organisations: the organisations Alice participates in, and her roles in each.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Orga: Bob asks to participate.
-  Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Greta [Moveg gov found] <denomination> <motion of the founding organisation>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move leave] <motion>
+  Greta [Moveg appoint] <role> <motion of the founding organisation>
+  Greta [Moveg dismiss] <role> <motion of the founding organisation>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move scb rate] <maturity> <rate> <motion>
+  Otto [Move scb lend] <denomination> <amount> <t> <fee> <rate> <motion>
+Creation: Greta [Gov found] <person Alice> <organisation> <denomination>
+  Alice: Greta asks you to approve this: gov found.
+  Orga: Greta asks you to approve this: gov found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Greta [Appoint] <organisation> <person Bob> <role>
+  Bob: Greta asks you to approve this: appoint.
+  Greta [Dismiss] <organisation> <person Bob> <role>
+  Bob [Resign role]
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Counterparties: Bob [Leave] <person Otto>
+  Otto: Bob asks you to approve this: leave.
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Founding: Gov [Found central bank] <organisation> <bylaws> <denomination> <person>
-  Alice: Gov asks you to be the first governor.
-Counterparties: Bob [Become counterparty]
-  Orga: Bob asks to become a counterparty.
-Policy rate: Orga [Set policy rate] <term> <rate>
-Lending: Bob [Borrow] <amount> <term>
-  Orga: Bob asks to borrow against bonds.
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Policy rate: Otto [Scb rate] <maturity> <rate>
+Lending: Bob [Scb lend] <person Otto> <denomination> <amount> <maturity> <bonds>
+  Otto: Bob asks you to approve this: scb lend.

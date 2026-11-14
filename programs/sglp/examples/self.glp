@@ -10,16 +10,6 @@
 %% for another mix, with this directory loaded (social_graph/run.sh); a run of
 %% coins among friends is a call of coins/7 (coins/run.sh).
 
-%% The examples' sGLP sources, which the transformation reads
-%% (../transform.glp, whose qualifier names a child of its own directory, this
-%% one).
-imported procedure social_graph#source(SglpTerms, SglpTerms).
-exported procedure social_graph_source(SglpTerms, SglpTerms).
-social_graph_source(V?, S?) :- social_graph # source(V, S).
-imported procedure coins#source(SglpTerms, SglpTerms).
-exported procedure coins_source(SglpTerms, SglpTerms).
-coins_source(V?, S?) :- coins # source(V, S).
-
 %% one_of and nth, ordinary GLP, shared by the examples' profiles (the social
 %% graph's, moved from social_graph/graph.glp for coins among friends, sGLP's
 %% code task of 2026-10-02 15:24 UTC, item 2); one_of counts by length/2, which

@@ -1,9 +1,9 @@
 # A run of the cascade on DGC
 
-- Contract: `DGC` (`dgc` to the checker), its owner's two files `programs/currencies/sovereign/DGC.txt` and `programs/currencies/sovereign/DGC.glp`, copied here as they stood at `7be5fa3b`.
-- The paper: `https://github.com/EShapiro2/sgc-sovereign-grassroots-currencies` at `003dae5d`, for the paper's own record.
-- The tools: this repository at `7be5fa3b` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-09 19:26 UTC by `cascade.sh dgc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `DGC` (`dgc` to the checker), its owner's two files `programs/currencies/sovereign/DGC.txt` and `programs/currencies/sovereign/DGC.glp`, copied here as they stood at `e407c6af`.
+- The paper: `git@github.com:EShapiro2/SGC-Sovereign-Grassroots-Currencies.git` at `003dae5d`, for the paper's own record.
+- The tools: this repository at `e407c6af` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:26 UTC by `cascade.sh dgc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

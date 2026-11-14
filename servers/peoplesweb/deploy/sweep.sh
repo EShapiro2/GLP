@@ -2,8 +2,9 @@
 # The hourly sweep of peoplesweb.org: drop the phones' debugging logs older
 # than thirty days, pull the clone, bring the papers up to date, rebuild the
 # worlds and the site, copy the site to Caddy's root, and restart the live
-# server so it serves the new worlds.  A pull that brings nothing still rebuilds (half a
-# second) and restarts only if the build changed anything.
+# server so it serves the new worlds, and build the test site (deploy/test.sh).
+# A pull that brings nothing still rebuilds (half a second) and restarts only
+# if the build changed anything.
 set -e
 # The phones' debugging logs (servers/debuglog): a run whose last event, the
 # file's last append, is more than thirty days old is deleted, and a phone left
@@ -25,7 +26,17 @@ new=$(git rev-parse HEAD)
 # does not stop the sweep.
 mkdir -p /var/lib/glp/papers
 python3 -I servers/peoplesweb/tools/papers_sync.py || true
+# The PDFs committed to the branch papers of GLP (tools/papers_publish.py),
+# with the token in /etc/glp/github-papers-token, which Udi places; without it
+# nothing is published, and the site links the PDFs it serves.
+python3 -I servers/peoplesweb/tools/papers_publish.py || true
 chown -R glp:glp /var/lib/glp/papers
 sudo -u glp env PAPERS_DIR=/var/lib/glp/papers python3 -I servers/peoplesweb/tools/build.py
-rsync -a --delete servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
+# The test site is under /test of Caddy's root and is not the live build's to
+# delete (deploy/test.sh).
+rsync -a --delete --exclude /test/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
 [ "$old" = "$new" ] || systemctl restart peoplesweb
+# The test site, peoplesweb.org/test: the site as the branch GSA-site has it,
+# over the repository as main has it.  Last, so that a failure there leaves
+# the live site published.
+sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/test, was not built" >&2

@@ -23,16 +23,20 @@
 @Timeout.none
 library;
 
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
+
+import 'boot_program.dart';
 
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
 
+/// The agents' program, a program directory's self.glp (boot_program.dart).
+const _program = '''
 KeyMsg ::= key(Key) ; ask(Done?).
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(KeyMsg)), Stream(NetMsg(KeyMsg)))?).
@@ -40,8 +44,6 @@ agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
 procedure start(Stream(Constant)?, Stream(NetMsg(KeyMsg))?).
 start([P | _], N) :- agent_init(P?, N?).
 start([], _).
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 
 procedure agent_init(Constant?, Stream(NetMsg(KeyMsg))?).
 agent_init(bob, In) :-
@@ -66,8 +68,6 @@ procedure reply(Done).
 reply(done).
 ''';
 
-String get _rootSelf => File('../programs/self.glp').absolute.path;
-
 void main() {
   late IsolateManager manager;
 
@@ -76,8 +76,7 @@ void main() {
 
   test('a message sent to the key a peer\'s self_key/1 answered reaches the '
       'peer, and the value on its link comes back', () async {
-    final config = BootLoader().load(_boot);
-    config.rootSelfGlpPath = _rootSelf;
+    final config = bootWithProgram(_boot, _program);
 
     await manager.boot(config);
     manager.start();

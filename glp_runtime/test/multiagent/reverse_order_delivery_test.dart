@@ -42,7 +42,7 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
     router.routeSend('alice', destId, Uint8List.fromList(msg.payload), 'w');
   };
   router.onDeliver = (toId, fromPk, payload, messageId, senderMessageId, t) {
-    final (:name, :value, :serial) =
+    final (:name, :value, :serial, senderEpoch: _) =
         PayloadCodec.deserializeValuePayload(payload);
     ctxBob.handleMadAssignment(
       globalName: name,
@@ -60,8 +60,9 @@ import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
   final (writerW, readerW) = aliceRt.heap.allocateVariable();
   ctxAlice.send(
     StructTerm('msg', [VarRef(readerW)]),
-    true, // isWriter: destination serializer _w(bob, 0)
+    true, // isWriter: destination serializer _w(bob, 0, 0)
     'bob',
+    0,
     0,
     'bob',
   );

@@ -2,43 +2,90 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.1 and cites a clause as WC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCoop, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-09, written by GO #3 Cowork.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: WC.glp beside this file.
 WC: Workers' Cooperative
-WC instantiates the bylaws of GCoop and restricts it.
+WC instantiates GCoop and restricts it.
 A workers' cooperative is a cooperative whose members work for Orga.
 Alice and Bob are persons, Orga a workers' cooperative.
 1. ■ Pay.  Orga may pay Bob, a member, Dollar-denominated coins for his work, as the members decide.
 2. ■ Distribution.  The members may decide to distribute Dollar-denominated coins Orga holds, which Orga then pays to the members equally.
 Pragmas
-Look: 🛠️, cooperative
+Look: 🛠️, sharing
 Organisations: the organisations Alice participates in, and her roles in each.
-Founding: Alice [Found] <organisation> <bylaws> <role>
-Acts of the organisation: Bob [Propose] <act>
-  Bob [Vote]
-  Bob [Propose as named] <act>
-  Bob [Vote as named] <credential>
-Participation: Bob [Join]
-  Orga: Bob asks to participate.
-  Bob [Leave]
-  Orga [Expel]
-Officers: Orga [Appoint] <role>
-  Bob: Orga asks you to take a role.
-  Orga [Dismiss] <role>
-  Bob [Resign role] <role>
-Amendment: Orga [Amend] <bylaws>
 Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move expel] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move coop board] <motion>
+  Otto [Move coop join] <motion>
+  Otto [Move wc pay] <denomination> <amount> <motion>
+  Otto [Move wc distribute] <denomination> <coins each> <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Membership: Bob [Leave]
+  Otto [Expel] <person Bob>
+  Bob [Coop join] <person Otto>
+  Otto: Bob asks you to approve this: coop join.
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
 Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
 Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Membership: Bob [Join cooperative]
-  Orga: Bob asks to become a member.
-Board: Orga [Elect to board]
-Pay: Orga [Pay member] <amount>
-Distribution: Orga [Distribute] <coins each>
-Implementation pragmas
-Decision: Orga stands on the act x describes once it holds decided(Orga, x).
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Board: Otto [Coop board] <person Bob>
+  Bob: Otto asks you to approve this: coop board.
+Pay: Otto [Wc pay] <person Bob> <denomination> <issuer> <amount>
+Distribution: Otto [Wc distribute] <denomination> <issuer> <coins each>

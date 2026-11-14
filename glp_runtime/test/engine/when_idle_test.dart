@@ -20,13 +20,14 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
 import 'package:test/test.dart';
+
+import '../multiagent/boot_program.dart';
 
 /// The madGLP agents.  a_init/2 cold-calls b and leaves report/0 waiting on
 /// when_idle; c_init/2 cold-calls b and leaves sender/1 waiting on when_idle,
@@ -282,9 +283,12 @@ void main() {
     test('in an agent isolate too: the goal passes after the Sends',
         () async {
       // a's start is the only event a has: b sends nothing back.
-      final config = BootLoader().load(
-          'procedure boot.\nboot :- agent(ch(_?, _), ch(_?, _))@a, say(a, ch(_?, _))@a, agent(ch(_?, _), ch(_?, _))@b, say(b, ch(_?, _))@b.\nexported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).\nagent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).\nprocedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).\nstart([a | _], N) :- a_init(a, N?).\nstart([b | _], N) :- b_init(b, N?).\nstart(_, _) :- otherwise | true.\nexported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).\nsay(P, ch(_, [P?])).\n$_mad');
-      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
+      // The boot carries its clause and its persons, and the agents' program
+      // is a program directory (TGLP 6ce148a, "Entry and the absence of a
+      // boot module").
+      final config = bootWithProgram(
+          'procedure boot.\nboot :- agent(ch(_?, _), ch(_?, _))@a, say(a, ch(_?, _))@a, agent(ch(_?, _), ch(_?, _))@b, say(b, ch(_?, _))@b.\nexported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).\nsay(P, ch(_, [P?])).\n',
+          'exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).\nagent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).\nprocedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).\nstart([a | _], N) :- a_init(a, N?).\nstart([b | _], N) :- b_init(b, N?).\nstart(_, _) :- otherwise | true.\n$_mad');
       final manager = IsolateManager();
       try {
         await manager.boot(config);

@@ -62,7 +62,6 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
@@ -94,8 +93,6 @@ class SuperAppHost {
   /// The network the agent runs over.
   final GlpNetwork network;
 
-  /// The agent's key pair, the layer's ([AgentRuntime.keyPair]).
-  final ({PubKey pub, Uint8List priv}) keyPair;
 
   /// The entry the person's first act names ([superappEntry]).
   final String entry;
@@ -167,7 +164,6 @@ class SuperAppHost {
     required this.program,
     required this.rootSelfGlpPath,
     required this.network,
-    required this.keyPair,
     required this.manifest,
     this.entry = superappEntry,
     this.services = const [],
@@ -178,14 +174,15 @@ class SuperAppHost {
           agentId: agentId,
           program: program,
           rootSelfGlpPath: rootSelfGlpPath,
-          keyPair: keyPair,
           network: network,
           stateStore: stateStore,
           installedApp: installedApp,
         );
 
-  /// The agent's key, as 64 lowercase hex characters: its name.
-  String get key => keyPair.pub.hex;
+  /// The agent's key, as 64 lowercase hex characters: its name, the layer's
+  /// (GNA, decision 39: the layer holds the key pair; the host holds no
+  /// private key).
+  String get key => network.getIdentity().hex;
 
   /// Start the agent: compile the program, post the initial goal, and, at
   /// the agent's first start, send on the person channel the act that starts
@@ -233,6 +230,11 @@ class SuperAppHost {
   /// false where the save failed, the store keeping the state saved before
   /// it, or there is no store.
   Future<bool> save() => agent.save();
+
+  /// The app resumed from the background: the agent takes events again, and
+  /// the running mark is set ([AgentRuntime.resume]; IGLP db0a117,
+  /// Implementation Notes, "Persistence", When).
+  Future<void> resume() => agent.resume();
 
   void dispose() => agent.dispose();
 

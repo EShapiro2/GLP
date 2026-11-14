@@ -1,0 +1,7 @@
+%% A procedure that takes Term? accepts every consumed term, so one of its
+%% clauses has a variable there (TGLP well-typing.tex, after Definition
+%% "Well-Typed GLP Program").  Refused: no clause of kind/2 has one.
+
+procedure kind(Term?, String).
+kind(var(_), variable).
+kind([], nil).

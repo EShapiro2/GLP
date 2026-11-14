@@ -296,7 +296,6 @@ friend_version(2).
       agentId: id,
       program: coreDir,
       rootSelfGlpPath: rootSelfGlpPath,
-      keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
       network: HeadlessGlpNetwork(layer),
     );
     addTearDown(agent.dispose);
@@ -406,7 +405,6 @@ friend_version(2).
         agentId: id,
         program: program,
         rootSelfGlpPath: rootSelfGlpPath,
-        keyPair: (pub: key, priv: Uint8List.fromList(identity.privateKey)),
         network: HeadlessGlpNetwork(layer),
       );
       addTearDown(agent.dispose);
@@ -616,8 +614,8 @@ friend_version(2).
   // whose acts are home's requests on the person's grants).  Alice's names
   // the server, which her operating system declares to its layer; Bob's names
   // none.  Alice invites by link: her operating system makes the link, signs
-  // it, registers it with the server and tells her it, invitation(Link), as
-  // text.  Bob opens the text: his operating system verifies the inviter's
+  // it, registers it with the server and tells her it, invitation(Address), as
+  // its web address.  Bob opens the link's text: his operating system verifies the inviter's
   // signature and the expiry, declares Alice a peer and the server the link
   // names, and redeems it, signed by him; the server answers each with the
   // other's key and address, each declares the other at it and punches, and
@@ -651,14 +649,18 @@ friend_version(2).
     await bob.agent.injectUserInput(
         _struct('link_phone', [_const(bob.key.hex), _nil, _nil]));
 
-    // Alice invites by link, and is told the link, as text.
+    // Alice invites by link, and is told the link, as its web address (GNA
+    // Section 6, "Invitation links": "as a web address,
+    // https://peoplesweb.org/i# followed by the link's text").
     await alice.agent.injectUserInput(_grant(_const('invite_link')));
     final invitation = await alice.toldOne('invitation');
-    final link = invitation.args[0];
-    expect(_value(link), matches(RegExp(r'^[0-9a-f]+$')),
+    final address = _value(invitation.args[0]);
+    expect(address, matches(RegExp(r'^https://peoplesweb\.org/i#[0-9a-f]+$')),
         reason: 'a signed term is text, the hex of the signed content');
 
-    // Bob opens it.
+    // Bob taps it: his phone hands his app the link's text, which follows
+    // the #, and he opens it.
+    final link = _const(address.substring(address.indexOf('#') + 1));
     await bob.agent.injectUserInput(_grant(_struct('open_link', [link])));
 
     // Each is told the other a friend: the link redeemed, the two punched,
@@ -779,7 +781,6 @@ friend_version(2).
       agentId: 'directory',
       program: directoryPath,
       rootSelfGlpPath: rootSelfGlpPath,
-      keyPair: (pub: dirKey, priv: Uint8List.fromList(dirIdentity.privateKey)),
       network: HeadlessGlpNetwork(dirLayer),
     );
     addTearDown(dirAgent.dispose);

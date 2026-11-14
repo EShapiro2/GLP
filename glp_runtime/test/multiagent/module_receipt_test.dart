@@ -39,6 +39,8 @@ import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart' as op;
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/identity.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
@@ -48,12 +50,17 @@ import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:test/test.dart';
+import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
-final PersonIdentity _compiler = PersonIdentity.generate();
+/// The compiling person's layer, which holds the key pair and signs: the
+/// signer an engine certifies by (the GLP paper f265fec, "Identity and
+/// signature").
+final AgentSigner _compiler =
+    LayerSigner(SimulationNetworkClient.alone(PersonIdentity.generate().keyPair));
 
 /// A compiled program exporting hello/1, its certificate [signer]'s, or
 /// refused one where [signer] is null.
-Artefact _artefact(PersonIdentity? signer) => Artefact.fromCompiled(
+Artefact _artefact(AgentSigner? signer) => Artefact.fromCompiled(
       ops: [
         op.Label('hello/1'),
         op.ClauseTry(),
@@ -130,9 +137,10 @@ Uint8List _shipValue(Uint8List bytes) =>
     encodeMessageToBytes(WireValueMessage(WireAssignment(
       gIsReader: true,
       gAgent: Uint8List.fromList(utf8.encode('alice')),
+      gEpoch: 1,
       gIndex: 1,
       value: WStruct('ship', [WConst(WModule(bytes))]),
-    )));
+    ), senderEpoch: 1));
 
 /// A cold call to bob carrying msg(bob, ship(M)).
 Uint8List _shipColdCall(Uint8List bytes) =>
@@ -143,7 +151,7 @@ Uint8List _shipColdCall(Uint8List bytes) =>
         WStruct('ship', [WConst(WModule(bytes))]),
       ]),
       serial: 1,
-    )));
+    ), senderEpoch: 1));
 
 /// Run [f], giving back what it printed.
 List<String> _printed(void Function() f) {
@@ -162,7 +170,7 @@ void main() {
         final payload = _shipValue(bytes);
         if (reason == null) {
           final (g, value) = PayloadCodec.deserializeGlobalSendPayload(payload);
-          expect('$g', '_r(alice, 1)');
+          expect('$g', '_r(alice, 1, 1)');
           final m = (value as StructTerm).args.single;
           expect(m, isA<ModuleTerm>());
           expect((m as ModuleTerm).name, 'probe');
@@ -186,7 +194,7 @@ void main() {
       rt = GlpRuntime();
       bob = MadContext(agentId: 'bob', runtime: rt);
       writer = rt.heap.allocateVariable().$1;
-      bob.wp.addLocalizeEntry(writer, 'alice', 1);
+      bob.wp.addLocalizeEntry(writer, GlobalName.reader('alice', 1));
     });
 
     test('carrying a certified module is received: the writer is assigned, '
@@ -197,7 +205,7 @@ void main() {
       final v = rt.heap.getValue(writer) as StructTerm;
       expect(v.functor, 'ship');
       expect(v.args.single, isA<ModuleTerm>());
-      expect(bob.wp.findByRemote('alice', 1), isNull);
+      expect(bob.wp.findByRemote(GlobalName.reader('alice', 1)), isNull);
       expect(bob.mp.totalLength, 1, reason: 'ack(_r(alice, 1))');
     });
 
@@ -214,7 +222,7 @@ void main() {
         expect(printed.single, contains(reason!));
         expect(rt.heap.isFullyBound(writer), isFalse,
             reason: 'nothing is delivered, as a Module or as text');
-        expect(bob.wp.findByRemote('alice', 1), isNotNull,
+        expect(bob.wp.findByRemote(GlobalName.reader('alice', 1)), isNotNull,
             reason: 'no Receive took the message: the entry stands');
         expect(bob.mp.totalLength, 0, reason: 'nothing is acknowledged');
       });

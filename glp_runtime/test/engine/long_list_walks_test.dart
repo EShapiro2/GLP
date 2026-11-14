@@ -173,18 +173,18 @@ void main() {
         'round-trip', () {
       final (g, value) = PayloadCodec.deserializeGlobalSendPayload(
           PayloadCodec.createGlobalSendPayload(
-              GlobalName.reader('alice', 7), _ints(_n)));
-      expect('$g', '_r(alice, 7)');
+              GlobalName.reader('alice', 7), _ints(_n), senderEpoch: 1));
+      expect('$g', '_r(alice, 1, 7)');
       expect(_elements(value).length, _n);
 
       final (g0, cell) = PayloadCodec.deserializeGlobalSendPayload(
           PayloadCodec.createSerializerPayload(
               GlobalName.writer('bob', 0), _ints(_n),
-              serial: 1));
-      expect('$g0', '_w(bob, 0)');
+              serial: 1, senderEpoch: 1));
+      expect('$g0', '_w(bob, 0, 0)');
       final c = cell as StructTerm;
       expect(_elements(c.args[0]).length, _n);
-      expect('${c.args[1]}', '_w(bob, 0)');
+      expect('${c.args[1]}', '_w(bob, 0, 0)');
     });
   });
 
@@ -237,13 +237,13 @@ void main() {
       for (var i = _n - 1; i >= 0; i--) {
         readers = StructTerm('.', [VarRef(addrs[i]), readers]);
       }
-      ctx.send(readers, false, 'bob', 3, 'bob');
+      ctx.send(readers, false, 'bob', 1, 3, 'bob');
       ctx.flushMessages();
       final (_, sent) =
           PayloadCodec.deserializeGlobalSendPayload(payloads.single);
       final names = extractGlobalNames(sent);
       expect(names.map((g) => '$g'),
-          [for (var i = 1; i <= _n; i++) '_r(alice, $i)'],
+          [for (var i = 1; i <= _n; i++) '_r(alice, 1, $i)'],
           reason: 'Globalize allocates the indices in the order the readers '
               'occur, from 1');
     });
@@ -310,16 +310,14 @@ empty(Xs) :- Xs? =?= [] | true.
     test('sign and signature of a list of 50,000 give it back, in order',
         () async {
       final out = <String>[];
+      // The simulation's layer holds the key pair and signs; the engine
+      // signs by it (the GLP paper f265fec, "Identity and signature").
       final identity = PersonIdentity.generate();
-      final e = GlpEngine(rootSelfGlpPath: _root, identity: identity);
+      final client =
+          SimulationNetworkClient.alone(identity.keyPair, selfId: 'alice');
+      final e = GlpEngine(rootSelfGlpPath: _root, identity: LayerSigner(client));
       e.enableMadGLP(agentId: 'alice');
       e.runtime.outputCallback = out.add;
-      final dirOf = NetworkDirectory()..register('alice', identity.pub);
-      final client = SimulationNetworkClient(
-          selfId: 'alice',
-          directory: dirOf,
-          keyPair: identity.keyPair,
-          sendToRouter: (_, _, _) {});
       e.madContext!.network = client;
       e.maxCycles = 10000000;
       // Under the root, programs/ (TGLP modules.tex, "Scope construction": "A

@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 
 typedef AirKeyPair = ({PubKey pub, Uint8List priv});
 
@@ -113,10 +114,14 @@ class AirNetwork extends GlpNetwork {
   @override
   List<Underlay> peerUnderlays(PubKey pk) => const [Underlay.pan];
   @override
-  Uint8List sign(Uint8List message) => throw UnimplementedError();
+  // The layer holds the private key and signs: the runtime signs by it, for
+  // the certificate its compiler writes and sign/3 (the GLP paper f265fec,
+  // "Identity and signature").
+  Uint8List sign(Uint8List message) =>
+      PersonIdentity(keyPair.pub, keyPair.priv).sign(message);
   @override
   bool verify(PubKey signer, Uint8List message, Uint8List signature) =>
-      throw UnimplementedError();
+      PersonIdentity.verify(signer, message, signature);
   @override
   List<DiscoveredPeer> getPeers() => const [];
   @override

@@ -26,16 +26,20 @@
 @Timeout.none
 library;
 
-import 'dart:io';
-
 import 'package:test/test.dart';
-import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
+
+import 'boot_program.dart';
 
 const _boot = '''
 procedure boot.
 boot :- agent(ch(_?, _), ch(_?, _))@alice, say(alice, ch(_?, _))@alice, agent(ch(_?, _), ch(_?, _))@bob, say(bob, ch(_?, _))@bob, agent(ch(_?, _), ch(_?, _))@carol, say(carol, ch(_?, _))@carol.
+exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+say(P, ch(_, [P?])).
+''';
 
+/// The agents' program, a program directory's self.glp (boot_program.dart).
+const _program = '''
 NbMsg ::= poke.
 
 exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(NbMsg)), Stream(NetMsg(NbMsg)))?).
@@ -51,11 +55,7 @@ procedure watch(Stream(Presence)?).
 watch([P | S]) :- ground(P?) | send_to_user([P?]), watch(S?).
 watch([]) :- send_to_user([closed]).
 
-exported procedure say(Constant?, Channel(Stream(Constant), Stream(Constant))?).
-say(P, ch(_, [P?])).
 ''';
-
-String get _rootSelf => File('../programs/self.glp').absolute.path;
 
 void main() {
   late IsolateManager manager;
@@ -67,8 +67,7 @@ void main() {
       'declared a peer and for one whose PAN is open as the declaring '
       "agent's is, gone when the harness cuts the adjacency, and seen again "
       'when it restores it', () async {
-    final config = BootLoader().load(_boot);
-    config.rootSelfGlpPath = _rootSelf;
+    final config = bootWithProgram(_boot, _program);
 
     await manager.boot(config);
     manager.start();

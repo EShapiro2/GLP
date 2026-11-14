@@ -1,9 +1,9 @@
 # A run of the cascade on GFP
 
-- Contract: `GFP` (`gfp` to the checker), its owner's two files `programs/gsc/GFP.txt` and `programs/gsc/GFP.glp`, copied here as they stood at `84b3b59e`.
-- The paper: `https://github.com/EShapiro2/jurix-formal-grassroots-social-contracts` at `7a27266b`, for the paper's own record.
-- The tools: this repository at `84b3b59e` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-09 19:28 UTC by `cascade.sh gfp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GFP` (`gfp` to the checker), its owner's two files `programs/gsc/GFP.txt` and `programs/gsc/GFP.glp`, copied here as they stood at `2629717a`.
+- The paper: `git@github.com:EShapiro2/Jurix-Formal-Grassroots-Social-Contracts.git` at `61227299`, for the paper's own record.
+- The tools: this repository at `2629717a` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-13 00:34 UTC by `cascade.sh gfp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|

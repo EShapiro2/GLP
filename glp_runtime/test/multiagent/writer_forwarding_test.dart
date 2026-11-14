@@ -137,7 +137,7 @@ void main() {
       // p exports the writer of its pair (X_p, X_p?) to q: entry (X_p, q) at
       // index 1, global name _w(p, 1) — p is the link's anchor.
       final (xW, xR) = pRt.heap.allocateVariable();
-      ctxP.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 'q');
+      ctxP.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 0, 'q');
       net.settle();
 
       // q localized _w(p,1): a writer Y_q with the record (Y_q, p, 1) and the
@@ -154,7 +154,7 @@ void main() {
 
       // q re-exports Y_q to r: the original name _w(p,1) is emitted, and q's
       // record and goal are removed — q leaves the link (Globalize case 4).
-      ctxQ.send(StructTerm('n', [VarRef(yq)]), true, 'r', 0, 'r');
+      ctxQ.send(StructTerm('n', [VarRef(yq)]), true, 'r', 0, 0, 'r');
       _expectClean(ctxQ);
       net.settle();
 
@@ -176,7 +176,7 @@ void main() {
       expect(net.deliveryLog.length, mark,
           reason: 'a held value must not go out before authorisation');
       expect(ctxR.mp.heldCount, 1);
-      expect(ctxR.hasReportedLink('p', 1, true), isTrue);
+      expect(ctxR.hasReportedLink(GlobalName.writer('p', 1)), isTrue);
       expect((pRt.heap.derefAddr(xR) as Object?) is ConstTerm, isFalse,
           reason: 'and must not be applied at the anchor either');
 
@@ -185,7 +185,7 @@ void main() {
       // ends — until p's program authorises in turn.
       net.answerAll(true);
       net.settle();
-      expect(ctxP.hasReportedLink('p', 1, true), isTrue,
+      expect(ctxP.hasReportedLink(GlobalName.writer('p', 1)), isTrue,
           reason: 'the anchor holds an assignment from an agent it did not '
               'export the name to');
       expect((pRt.heap.derefAddr(xR) as Object?) is ConstTerm, isFalse);
@@ -226,18 +226,18 @@ void main() {
       final sNetIn = net.bootSerializer('s');
 
       final (xW, xR) = pRt.heap.allocateVariable();
-      ctxP.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 'q');
+      ctxP.send(StructTerm('m', [VarRef(xW)]), true, 'q', 0, 0, 'q');
       net.settle();
 
       // q → r
       final yq = _importedVar(qRt, qNetIn, 0);
-      ctxQ.send(StructTerm('n', [VarRef(yq)]), true, 'r', 0, 'r');
+      ctxQ.send(StructTerm('n', [VarRef(yq)]), true, 'r', 0, 0, 'r');
       net.settle();
 
       // r → s: r localized the forwarded name and re-exports it in turn.
       final zr = _importedVar(rRt, rNetIn, 0);
       expect(ctxR.up.lookup(zr)!.anchor, 'p');
-      ctxR.send(StructTerm('o', [VarRef(zr)]), true, 's', 0, 's');
+      ctxR.send(StructTerm('o', [VarRef(zr)]), true, 's', 0, 0, 's');
       net.settle();
 
       // s holds the sending end, still anchored at p after two forwardings.
@@ -256,10 +256,10 @@ void main() {
       expect(net.deliveryLog.length, mark,
           reason: 'a held value must not go out before authorisation');
       expect(ctxS.mp.heldCount, 1);
-      expect(ctxS.hasReportedLink('p', 1, true), isTrue);
+      expect(ctxS.hasReportedLink(GlobalName.writer('p', 1)), isTrue);
       net.answerAll(true);
       net.settle();
-      expect(ctxP.hasReportedLink('p', 1, true), isTrue);
+      expect(ctxP.hasReportedLink(GlobalName.writer('p', 1)), isTrue);
       net.answerAll(true);
       net.settle();
 
@@ -297,7 +297,7 @@ void main() {
       final qNetIn = net.bootSerializer('q');
 
       final (xW, xR) = pRt.heap.allocateVariable();
-      ctxP.send(StructTerm('m', [VarRef(xW), VarRef(xR)]), true, 'q', 0, 'q');
+      ctxP.send(StructTerm('m', [VarRef(xW), VarRef(xR)]), true, 'q', 0, 0, 'q');
       net.settle();
 
       // q's term is m(Y_q, Z_q?): a writer with a record, and a reader with an

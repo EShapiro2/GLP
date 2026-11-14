@@ -12,5 +12,6 @@ peoplesweb.org {
 	reverse_proxy /api/* 127.0.0.1:8080
 	reverse_proxy /directory* 127.0.0.1:8090
 	reverse_proxy /log* 127.0.0.1:8095
+	header /.well-known/apple-app-site-association Content-Type application/json
 	file_server
 }

@@ -5,7 +5,7 @@
 /// produces from a flat program: a BODY followed by a CERTIFICATE. The body's
 /// sections, in order:
 ///
-///   1. Header        — magic `GLPW`, u8 code-format version (3), string
+///   1. Header        — magic `GLPW`, u8 code-format version (4), string
 ///                      instruction-set version, string program name. Neither
 ///                      identity is in the header: both are in the certificate,
 ///                      where they are signed.
@@ -42,21 +42,25 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
-import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show AgentSigner, PersonIdentity;
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
 
 /// Magic `GLPW`.
 const List<int> artefactMagic = [0x47, 0x4C, 0x50, 0x57];
 
-/// Code-format version this implementation writes and accepts: 3 (IGLP Code
-/// Format appendix, "Program Artefact": "u8 code-format version (this
-/// document: 3)").  "Version 2 added the message kind byte, version 3 the
-/// serializer message's serial" ("Format Versioning"); the certified artefact
-/// layout above came with version 2.  The loader refuses a version it does not
-/// support, 2 among them: a version-2 runtime sends cold calls without a
+/// Code-format version this implementation writes and accepts: 4 (IGLP
+/// db0a117, Code Format appendix, "Program Artefact": "u8 code-format version
+/// (this document: 4)").  "Version 2 added the message kind byte, version 3
+/// the serializer message's serial, version 4 the epoch in a global name, the
+/// sender's epoch in a message and the kind gone" ("Format Versioning"); the
+/// certified artefact layout above came with version 2.  The loader refuses a
+/// version it does not support, 3 among them: a version-3 runtime names no
+/// epoch, so its messages and this runtime's are not one another's; and a
+/// version-2 runtime sends cold calls without a
 /// serial.
-const int wireFormatVersion = 3;
+const int wireFormatVersion = 4;
 
 /// The instruction-set version this implementation writes in an artefact's
 /// header (IGLP, Code Format appendix, "Format Versioning": new instructions
@@ -143,7 +147,7 @@ class Certificate {
 
   /// A certificate written by [signer] over the two identities.
   factory Certificate.signed(
-      {required PersonIdentity signer,
+      {required AgentSigner signer,
       required Uint8List hSrc,
       required Uint8List hBin}) {
     return Certificate(
@@ -214,7 +218,7 @@ class Artefact {
   final Uint8List _hSrc;
 
   /// The compiling person, or null where no one certifies the module.
-  final PersonIdentity? _signer;
+  final AgentSigner? _signer;
 
   /// A certificate read from bytes, or written once from the body.
   Certificate? _certificate;
@@ -228,7 +232,7 @@ class Artefact {
     required this.typeDefsText,
     required this.exports,
     required this.symbols,
-    PersonIdentity? signer,
+    AgentSigner? signer,
   })  : _hSrc = hM,
         _signer = signer {
     if (hM.length != 32) {
@@ -386,7 +390,7 @@ class Artefact {
     required String isaVersion,
     String typeDefsText = '',
     List<ArtefactExport> exports = const [],
-    PersonIdentity? signer,
+    AgentSigner? signer,
   }) {
     // Procedure-entry labels: a `name/arity` signature, not an internal label.
     final internalSuffix = RegExp(r'_c\d+$');

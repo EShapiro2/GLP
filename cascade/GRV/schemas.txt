@@ -1,29 +1,69 @@
-establish: identity(Alice) <-
+Environment predicates: link
+
+Reflexive predicates: friend, knows
+
+establish: identity(Alice), person(Alice) <-
     not identity(Alice) guarded by Alice
 
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), identity(Bob) guarded by Alice, Bob
+    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
 
 introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
+    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
 
 unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
-    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
+    identity(Alice), person(Alice), friend(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-open_server: server(Carol) <-
-    identity(Carol), not server(Carol) guarded by Carol
+enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), service(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
+    identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
 
-register: registered_with(Alice, Carol, s), registered(Carol, Alice, s, e) <-
-    identity(Alice), knows(Alice, Carol), not registered_with(Alice, Carol, s), identity(Carol), server(Carol), not registered(Carol, Alice, s, _), not used(Carol, Alice, s) guarded by Alice
+make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
+    identity(Bob), person(Bob), not guardian_of(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), identity(Carol), service(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Bob, Alice, Erin
 
-redeem: redeemed(Bob, a, s), used(Carol, a, s), not registered(Carol, a, s, e) <-
-    identity(Bob), knows(Bob, Carol), identity(Carol), server(Carol), registered(Carol, a, s, e) guarded by Bob
+end_guardian: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
+    identity(Alice), person(Alice), guardian_of(Alice, Carol), identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Alice), guarded_by(Carol, Bob), forall Erin (guarded_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
 
-present: waiting(Carol, Alice, Bob) <-
-    identity(Alice), knows(Alice, Carol), friend(Alice, Bob), identity(Carol), server(Carol), not waiting(Carol, Alice, Bob) guarded by Alice
+resign: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
+    identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
 
-match: matched(Carol, a, b), not waiting(Carol, a, b), not waiting(Carol, b, a) <-
-    identity(Carol), server(Carol), waiting(Carol, a, b), waiting(Carol, b, a)
+guardian_unfriend: not friend(Bob, Carol), not guardian_of(Bob, Carol), not friend(Carol, Bob), not guarded_by(Carol, Bob) <-
+    identity(Bob), person(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
+
+ward_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Bob), person(Bob) guarded by Carol, Bob
+
+ward_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
+
+ward_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
+    identity(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol) guarded by Alice
+
+ward_end: not friend(Carol, Bob), not friend(Bob, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
+
+wards_acquaint: knows(Carol, Dave), knows(Dave, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Dave), service(Dave), guarded_by(Dave, Bob) guarded by Carol, Dave
+
+wards_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
+
+retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> not guardian_of(Erin, Carol)) <-
+    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Alice), person(Alice), guardian_of(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
+
+open_server: rendezvous(Dave) <-
+    identity(Carol), person(Carol), guardian_of(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, Carol), not rendezvous(Dave) guarded by Carol, Dave
+
+invite_by_link: registered_with(Alice, Dave, s), registered(Dave, Alice, s, e) <-
+    identity(Alice), person(Alice), knows(Alice, Dave), link(Alice, s, e), not registered_with(Alice, Dave, s), identity(Dave), rendezvous(Dave), not registered(Dave, Alice, s, _), not used(Dave, Alice, s) guarded by Alice
+
+redeem: redeemed(Bob, a, s), used(Dave, a, s), not registered(Dave, a, s, e) <-
+    identity(Bob), person(Bob), knows(Bob, Dave), identity(Dave), rendezvous(Dave), registered(Dave, a, s, e) guarded by Bob
+
+present: waiting(Dave, Alice, Bob) <-
+    identity(Alice), person(Alice), knows(Alice, Dave), friend(Alice, Bob), identity(Dave), rendezvous(Dave), not waiting(Dave, Alice, Bob) guarded by Alice
+
+match: matched(Dave, a, b), not waiting(Dave, a, b), not waiting(Dave, b, a) <-
+    identity(Dave), rendezvous(Dave), waiting(Dave, a, b), waiting(Dave, b, a)

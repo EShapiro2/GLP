@@ -95,6 +95,8 @@ latex_arg(real(X), T, [X?|T?]).
 latex_arg(any, T, ['\\ast'|T?]).
 % An item, item(y) (def:numbers, GSC 4401dd6).
 latex_arg(item_of(Y), T, ['\\mathrm{item}('|R?]) :- latex_arg(Y?, [')'|T?], R).
+% A constant value, its name as a variable's is written.
+latex_arg(val(C), T, [C?|T?]).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).
@@ -534,6 +536,7 @@ latex_expr(any, T, R?) :- latex_arg(any, T?, R).
 % \mathrm{author}(y) and \mathrm{item}(y).
 latex_expr(author_of(Y), T, ['\\mathrm{author}('|R?]) :- latex_arg(Y?, [')'|T?], R).
 latex_expr(item_of(Y), T, ['\\mathrm{item}('|R?]) :- latex_arg(Y?, [')'|T?], R).
+latex_expr(val(C), T, [C?|T?]).
 
 % An operand in parentheses where it is a sum or a difference.
 procedure latex_operand(Expr?, Chunks?, Chunks).
@@ -556,6 +559,7 @@ latex_operand(sgn(Y, J), T, R?) :- latex_arg(sgn(Y?, J?), T?, R).
 latex_operand(any, T, R?) :- latex_arg(any, T?, R).
 latex_operand(author_of(Y), T, R?) :- latex_expr(author_of(Y?), T?, R).
 latex_operand(item_of(Y), T, R?) :- latex_expr(item_of(Y?), T?, R).
+latex_operand(val(C), T, [C?|T?]).
 
 procedure latex_exprs(Exprs?, Chunks?, Chunks).
 latex_exprs([], T, T?).

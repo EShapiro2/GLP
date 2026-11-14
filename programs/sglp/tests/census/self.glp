@@ -67,7 +67,7 @@ exported procedure census_persons(Integer?, Constant, List(Person)).
 census_persons(Seed, Ok?, Ps?) :- harness # persons(Seed?, Ok, Ps).
 
 %% The sGLP source in the term form, village_sglp.glp, for the transformation
-%% (programs/sglp/transform.glp).
+%% (programs/sglp/transform/transform.glp).
 imported procedure village_sglp#source(SglpTerms, SglpTerms).
 exported procedure source(SglpTerms, SglpTerms).
 source(V?, S?) :- village_sglp # source(V, S).

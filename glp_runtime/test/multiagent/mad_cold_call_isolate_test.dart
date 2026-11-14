@@ -120,6 +120,7 @@ void aliceIsolate(SendPort mainPort) async {
       final globalizeResult = globalize(
         variables: [TermVar.writer(w, readerAddr: r)],
         localAgent: 'alice',
+        localEpoch: 1,
         remoteAgent: 'bob',
         table: ctx.wp,
         records: ctx.up,
