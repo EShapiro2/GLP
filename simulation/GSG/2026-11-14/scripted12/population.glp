@@ -1,0 +1,217 @@
+%% Printed by programs/sglp/transform/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(given, cva_population)
+
+%% The run declaration of the source:
+%% (run(12, [mix(requests, [share(scripted, 1.0)]), mix(approvals, [share(agreeable, 0.67), share(choosy, 0.33)])], 4, day, 1))
+
+Profiles ::= agent(Dimension1, Dimension2).
+Dimension1 ::= scripted.
+Dimension2 ::= agreeable ; choosy.
+Ask ::= ask(Constant, Question).
+Question ::= request_r(Request?) ; approval_w(Approval).
+
+%% A person, its key, its role and its attributes (Section 3, Definition "Person, Census"): the source defines no Person, so it is that of the persons run n agents draws on a canonical platform, person(K, agent, []), K a Key.
+Person ::= person(Key, Constant, List(Constant)).
+
+%% The person procedures, in the profiles module.
+imported procedure profiles#script_request(Request, Person?, Integer?, MutualRef?).
+imported procedure profiles#agree(Approval?, Person?, Integer?, MutualRef?).
+imported procedure profiles#choose(Approval?, Person?, Integer?, MutualRef?).
+
+%% The person process (sGLP's paper, Section 3, Definition "Person Process"; Section 4, "The person process").
+exported procedure person(Integer?, Profiles?, Person?, MutualRef?, MutualRef?, Integer?, MutualRef?, Stream(Ask)?).
+person(A, agent(scripted, D2), H, Mon, Scr, Seed, Log, [ask('Request?', request_r(E?)) | As])
+:-
+ground(H?)
+|
+split_random_seed(Seed?, K, S)
+,
+profiles # script_request(Y, H?, K?, Scr?)
+,
+relay_1(A?, 'Request?', E, Y?, Mon?, Log?)
+,
+person(A?, agent(scripted, D2?), H?, Mon?, Scr?, S?, Log?, As?)
+.
+person(A, agent(D1, agreeable), H, Mon, Scr, Seed, Log, [ask('Approval', approval_w(E)) | As])
+:-
+ground(H?)
+|
+split_random_seed(Seed?, K, S)
+,
+profiles # agree(Y?, H?, K?, Scr?)
+,
+relay_2(A?, 'Approval', E?, Y, Mon?, Log?)
+,
+person(A?, agent(D1?, agreeable), H?, Mon?, Scr?, S?, Log?, As?)
+.
+person(A, agent(D1, choosy), H, Mon, Scr, Seed, Log, [ask('Approval', approval_w(E)) | As])
+:-
+ground(H?)
+|
+split_random_seed(Seed?, K, S)
+,
+profiles # choose(Y?, H?, K?, Scr?)
+,
+relay_2(A?, 'Approval', E?, Y, Mon?, Log?)
+,
+person(A?, agent(D1?, choosy), H?, Mon?, Scr?, S?, Log?, As?)
+.
+person(_, _, _, _, _, _, _, []).
+
+%% The relay of an interactive type (Definition "Copy, Relay").
+procedure relay_1(Integer?, Constant?, Request, Request?, MutualRef?, MutualRef?).
+relay_1(A, Type, X?, Y, Mon, Log)
+:-
+answer_1(A?, Type?, Y?, X, Mon?, Log?)
+.
+
+%% The relay of an interactive type (Definition "Copy, Relay").
+procedure relay_2(Integer?, Constant?, Approval?, Approval, MutualRef?, MutualRef?).
+relay_2(A, Type, approval(X1, X2, X3?), approval(X1?, X2?, Y3), Mon, Log)
+:-
+ground(X1?)
+,
+ground(X2?)
+|
+answer_2(A?, Type?, X1?, X2?, Y3?, X3, Mon?, Log?)
+.
+
+%% The answer, handed over and logged (Section 4, "The person process" and "The log").
+procedure answer_1(Integer?, Constant?, Request?, Request, MutualRef?, MutualRef?).
+answer_1(A, Type, Y, Y?, Mon, Log)
+:-
+ground(Y?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, Y?), Log?, _)
+.
+
+%% The answer, handed over and logged (Section 4, "The person process" and "The log").
+procedure answer_2(Integer?, Constant?, Asking?, List(Word)?, YesNo?, YesNo, MutualRef?, MutualRef?).
+answer_2(A, Type, X1, X2, Y3, Y3?, Mon, Log)
+:-
+ground(Y3?)
+|
+stream_append(time(Time), Mon?, _)
+,
+stream_append(entry(Time?, A?, Type?, approval(X1?, X2?, Y3?)), Log?, _)
+.
+
+%% The screen of an agent (sGLP's paper, Section 3, Definition "Screen, Seen"; Section 4, "The screen" and "The log").
+Seen(X) ::= seen(List(X)?).
+exported procedure(X) screen(Integer?, Stream(X)?, List(X)?, Stream(Seen(X))?, MutualRef?, MutualRef?).
+screen(A, [E|O], Os, Rs, Mon, Log) :- ground(E?) | stream_append(time(Time), Mon?, _), stream_append(entry(Time?, A?, output, E?), Log?, _), screen(A?, O?, [E?|Os?], Rs?, Mon?, Log?).
+screen(A, O, Os, [seen(Os?)|Rs], Mon, Log) :- ground(Os?) | screen(A?, O?, Os?, Rs?, Mon?, Log?).
+screen(_, [], _, [], _, _).
+
+%% An agent's screen on the program's output O to its person, and its reference, Scr, on which the person goals request seen(L).
+exported procedure(X) start_screen(Integer?, Stream(X)?, MutualRef?, MutualRef?, MutualRef).
+start_screen(A, O, Mon, Log, Scr?) :- allocate_mutual_reference(Scr, Rs), screen(A?, O?, [], Rs?, Mon?, Log?).
+
+%% The run declaration: its persons, horizon, seed and thresholds.
+exported procedure declaration(Integer, Number, Span, Integer, Integer).
+declaration(12, 4, day, 1, 67)
+.
+
+%% The persons of the run, drawn by its census (sGLP's paper, Section 3, Definition "Person, Census", and after Definition "Well-Formed"; Appendix B).
+exported procedure persons(Integer?, Stream(Key)?, Constant, List(Person), Integer).
+persons(B, Ks, Ok?, Ps?, B?) :- integer(B?) | agent_persons(Ks?, Ps0), checked(Ps0?, Ok, Ps).
+procedure agent_persons(Stream(Key)?, List(Person)).
+agent_persons([], []).
+agent_persons([K|Ks], [person(K?, agent, [])|Ps?]) :- agent_persons(Ks?, Ps).
+procedure checked(List(Person)?, Constant, List(Person)).
+checked([], no, []).
+checked([P|Ps], Ok?, [P?|Ps?]) :- ground(P?), ground(Ps?) | roles_ok([P?|Ps?], Ok).
+procedure roles_ok(List(Person)?, Constant).
+roles_ok([], yes).
+roles_ok([person(_, agent, _) | Ps], Ok?)
+:-
+roles_ok(Ps?, Ok)
+.
+roles_ok([_|_], no) :- otherwise | true.
+
+%% An agent's stochastic person, one profile per dimension of the role of its person, drawn from its seed (Appendix B).
+exported procedure stochastic_person(Integer?, Person?, Integer?, Profiles, Integer).
+stochastic_person(B, person(_, agent, _), T1, agent(P1?, P2?), S?)
+:-
+random(B?, 100, K1, B1)
+,
+random(B1?, 100, K2, S)
+,
+requests(K1?, P1)
+,
+approvals(K2?, T1?, P2)
+.
+
+%% The draw of the dimension(requests)
+procedure requests(Integer?, Dimension1).
+requests(_, scripted)
+.
+
+%% The draw of the dimension(approvals)
+procedure approvals(Integer?, Integer?, Dimension2).
+approvals(K, T1, agreeable)
+:-
+'=<'(K?, T1?)
+|
+true
+.
+approvals(K, T1, choosy)
+:-
+'>'(K?, T1?)
+|
+true
+.
+
+%% The run's entries of one arity, for the harness of every canonical CVA platform (programs/sglp/cva/).
+exported procedure run_declaration(Integer, Number, Span, Integer).
+run_declaration(12, 4, day, 1)
+.
+
+%% An agent's seat on the platform: its key, and the writers of its ask stream and of the program's output to its person, which its initial goal writes.
+Seat(X) ::= seat(Key, Stream(Ask)?, Stream(X)?).
+exported procedure cva_check(Integer?, Stream(Key)?, Constant).
+cva_check(B, Ks, Ok?) :- persons(B?, Ks?, Ok, _, _).
+exported procedure(X) cva_agents(Integer?, Stream(Key)?, MutualRef?, MutualRef?, Stream(Key), Stream(Seat(X))).
+cva_agents(B, Ks, Mon, Log, Keys?, Seats?) :- persons(B?, Ks?, _, Ps, B1), seats(1, Ps?, B1?, Mon?, Log?, Keys, Seats).
+procedure(X) seats(Integer?, List(Person)?, Integer?, MutualRef?, MutualRef?, Stream(Key), Stream(Seat(X))).
+seats(_, [], _, _, _, [], []).
+seats(A, [person(K, R, V)|Ps], B, Mon, Log, [K?|Ks?], [seat(K?, Asks, O)|Ss?]) :- integer(A?), integer(B?), ground(K?), ground(V?) | split_random_seed(B?, S, B2), stochastic_agent(A?, S?, person(K?, R?, V?), Mon?, Log?, Asks?, O?), A1 := A? + 1, seats(A1?, Ps?, B2?, Mon?, Log?, Ks, Ss).
+procedure(X) stochastic_agent(Integer?, Integer?, Person?, MutualRef?, MutualRef?, Stream(Ask)?, Stream(X)?).
+stochastic_agent(A, B, H, Mon, Log, Asks, O)
+:-
+ground(H?)
+|
+stochastic_person(B?, H?, 67, P, S)
+,
+split_random_seed(S?, Seed, _)
+,
+start_screen(A?, O?, Mon?, Log?, Scr)
+,
+person(A?, P?, H?, Mon?, Scr?, Seed?, Log?, Asks?)
+.
+
+%% An agent of the population's draw: its number and its stochastic person (Appendix B, "Seeds").
+Drawn ::= agent(Integer, Profiles).
+exported procedure cva_draw(Integer?, Stream(Key)?, Stream(Drawn)).
+cva_draw(B, Ks, D?) :- persons(B?, Ks?, _, Ps, B1), drawn(1, Ps?, B1?, D).
+procedure drawn(Integer?, List(Person)?, Integer?, Stream(Drawn)).
+drawn(_, [], _, []).
+drawn(A, [H | Hs], B, [agent(A?, P?) | D?])
+:-
+integer(A?)
+,
+integer(B?)
+,
+ground(H?)
+|
+split_random_seed(B?, B1, B2)
+,
+stochastic_person(B1?, H?, 67, P, _)
+,
+':='(A1, '+'(A?, 1))
+,
+drawn(A1?, Hs?, B2?, D)
+.

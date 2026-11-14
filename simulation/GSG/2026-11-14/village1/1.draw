@@ -1,0 +1,17 @@
+draw local 10 open 6 keen 6 choosy 10
+agent 1 local keen
+agent 2 local choosy
+agent 3 local choosy
+agent 4 local choosy
+agent 5 local keen
+agent 6 open choosy
+agent 7 local keen
+agent 8 local keen
+agent 9 open choosy
+agent 10 local choosy
+agent 11 open keen
+agent 12 open choosy
+agent 13 local choosy
+agent 14 open keen
+agent 15 local choosy
+agent 16 open choosy

@@ -1,0 +1,827 @@
+%% Printed by programs/sglp/transform/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(given, cva_profiles)
+
+GsFam ::= fam(Integer, List(Key), List(Key)).
+
+GsAttr ::= village(Integer) ; household(List(Key)) ; knows(List(Key)) ; families(List(GsFam)).
+
+Person ::= person(Key, Constant, List(GsAttr)).
+
+GsKeys ::= ks(Key, Key).
+
+GsPick ::= pick(Key) ; nothing.
+
+GsKeys1 ::= [Key | List(Key)].
+
+GsTodo ::= establish ; acquaint(Key) ; steady.
+
+GsPair ::= acq(Key, Key).
+exported procedure gs_villages3(Integer?, List(Person)).
+gs_villages3(S, Ps?)
+:-
+gs_keys(Ks)
+,
+gs_census(Ks?, S?, Ps)
+.
+procedure gs_draw(List(GsKeys)?, Integer?, Integer?, Integer?, List(GsFam), Integer).
+gs_draw([], _, _, S, [], S?)
+.
+gs_draw([ks(P1, P2) | Ks], V, F, S, [fam(V?, Pa?, []) | Fs?], S2?)
+:-
+ground(V?)
+|
+random(S?, 100, K1, S1)
+,
+gs_parents(K1?, P1?, P2?, Pa)
+,
+gs_next(V?, F?, V1, F1)
+,
+gs_draw(Ks?, V1?, F1?, S1?, Fs, S2)
+.
+procedure gs_persons(List(GsFam)?, List(GsFam)?, List(GsPair)?, List(Person)).
+gs_persons([], _, _, [])
+.
+gs_persons([fam(V, Pa, _) | Fs], All, Pairs, Ps?)
+:-
+ground(V?)
+,
+ground(Pa?)
+,
+ground(All?)
+,
+ground(Pairs?)
+|
+gs_adult_persons(Pa?, V?, Pa?, All?, Pairs?, Ps1)
+,
+gs_persons(Fs?, All?, Pairs?, Ps2)
+,
+gs_app_persons(Ps1?, Ps2?, Ps)
+.
+procedure gs_adult_persons(List(Key)?, Integer?, List(Key)?, List(GsFam)?, List(GsPair)?, List(Person)).
+gs_adult_persons([], _, _, _, _, [])
+.
+gs_adult_persons([P | Pa], V, Pa0, All, Pairs, [person(P?, adult, [village(V?), household(Pa0?), knows(Kn?), families(All?)]) | Ps?])
+:-
+ground(P?)
+,
+ground(V?)
+,
+ground(Pa0?)
+,
+ground(All?)
+,
+ground(Pairs?)
+|
+gs_village_parents(All?, V?, P?, Vp)
+,
+gs_acq_of(P?, Pairs?, Ac)
+,
+gs_app(Vp?, Ac?, Kn)
+,
+gs_adult_persons(Pa?, V?, Pa0?, All?, Pairs?, Ps)
+.
+procedure gs_last_view(List(Output)?, List(Atom)).
+gs_last_view([], [])
+.
+gs_last_view([view(_, As, _, _, _) | _], As?)
+.
+gs_last_view([_ | L], As?)
+:-
+otherwise
+|
+gs_last_view(L?, As)
+.
+procedure gs_census(List(GsKeys)?, Integer?, List(Person)).
+gs_census(Ks, S, Ps?)
+:-
+gs_draw(Ks?, 1, 1, S?, Fs, S1)
+,
+gs_persons_all(Fs?, S1?, Ps)
+.
+procedure gs_persons_all(List(GsFam)?, Integer?, List(Person)).
+gs_persons_all(Fs, S, Ps?)
+:-
+ground(Fs?)
+|
+gs_acq(Fs?, Fs?, S?, Pairs)
+,
+gs_persons_pairs(Fs?, Pairs?, Ps)
+.
+procedure gs_persons_pairs(List(GsFam)?, List(GsPair)?, List(Person)).
+gs_persons_pairs(Fs, Pairs, Ps?)
+:-
+ground(Fs?)
+,
+ground(Pairs?)
+|
+gs_persons(Fs?, Fs?, Pairs?, Ps)
+.
+procedure gs_acq(List(GsFam)?, List(GsFam)?, Integer?, List(GsPair)).
+gs_acq([], _, _, [])
+.
+gs_acq([fam(V, Pa, _) | Fs], All, S, Pairs?)
+:-
+ground(V?)
+,
+ground(All?)
+|
+gs_other_parents(All?, V?, Op)
+,
+gs_acq_parents(Pa?, Op?, S?, Pairs1, S1)
+,
+gs_acq(Fs?, All?, S1?, Pairs2)
+,
+gs_app_pairs(Pairs1?, Pairs2?, Pairs)
+.
+procedure gs_acq_parents(List(Key)?, List(Key)?, Integer?, List(GsPair), Integer).
+gs_acq_parents([], _, S, [], S?)
+.
+gs_acq_parents([P | Pa], Op, S, Pairs?, S2?)
+:-
+ground(P?)
+,
+ground(Op?)
+|
+gs_two(Op?, S?, Ac, S1)
+,
+gs_pairs_of(P?, Ac?, Pairs1)
+,
+gs_acq_parents(Pa?, Op?, S1?, Pairs2, S2)
+,
+gs_app_pairs(Pairs1?, Pairs2?, Pairs)
+.
+procedure gs_pairs_of(Key?, List(Key)?, List(GsPair)).
+gs_pairs_of(_, [], [])
+.
+gs_pairs_of(P, [A | As], [acq(P?, A?) | Pairs?])
+:-
+ground(P?)
+|
+gs_pairs_of(P?, As?, Pairs)
+.
+procedure gs_app_pairs(List(GsPair)?, List(GsPair)?, List(GsPair)).
+gs_app_pairs([], Ys, Ys?)
+.
+gs_app_pairs([X | Xs], Ys, [X? | Zs?])
+:-
+gs_app_pairs(Xs?, Ys?, Zs)
+.
+procedure gs_acq_of(Key?, List(GsPair)?, List(Key)).
+gs_acq_of(_, [], [])
+.
+gs_acq_of(P, [acq(P1, A) | Pairs], [A? | Ac?])
+:-
+'=?='(P?, P1?)
+,
+ground(P?)
+|
+gs_acq_of(P?, Pairs?, Ac)
+.
+gs_acq_of(P, [acq(B, P2) | Pairs], [B? | Ac?])
+:-
+'=?='(P?, P2?)
+,
+ground(P?)
+|
+gs_acq_of(P?, Pairs?, Ac)
+.
+gs_acq_of(P, [_ | Pairs], Ac?)
+:-
+otherwise
+|
+gs_acq_of(P?, Pairs?, Ac)
+.
+procedure gs_parents(Integer?, Key?, Key?, List(Key)).
+gs_parents(K, P1, P2, [P1?, P2?])
+:-
+'=<'(K?, 70)
+|
+true
+.
+gs_parents(K, P1, _, [P1?])
+:-
+'>'(K?, 70)
+|
+true
+.
+procedure gs_next(Integer?, Integer?, Integer, Integer).
+gs_next(V, 10, V1?, 1)
+:-
+':='(V1, '+'(V?, 1))
+.
+gs_next(V, F, V?, F1?)
+:-
+'<'(F?, 10)
+|
+':='(F1, '+'(F?, 1))
+.
+procedure gs_app_persons(List(Person)?, List(Person)?, List(Person)).
+gs_app_persons([], Ys, Ys?)
+.
+gs_app_persons([X | Xs], Ys, [X? | Zs?])
+:-
+gs_app_persons(Xs?, Ys?, Zs)
+.
+procedure gs_village_parents(List(GsFam)?, Integer?, Key?, List(Key)).
+gs_village_parents([], _, _, [])
+.
+gs_village_parents([fam(V, Pa, _) | Fs], V0, Me, Vp?)
+:-
+'=?='(V?, V0?)
+,
+ground(V0?)
+,
+ground(Me?)
+|
+gs_without(Pa?, Me?, Pa1)
+,
+gs_village_parents(Fs?, V0?, Me?, Vp1)
+,
+gs_app(Pa1?, Vp1?, Vp)
+.
+gs_village_parents([fam(_, _, _) | Fs], V0, Me, Vp?)
+:-
+otherwise
+|
+gs_village_parents(Fs?, V0?, Me?, Vp)
+.
+procedure gs_other_parents(List(GsFam)?, Integer?, List(Key)).
+gs_other_parents([], _, [])
+.
+gs_other_parents([fam(V, _, _) | Fs], V0, Op?)
+:-
+'=?='(V?, V0?)
+,
+ground(V0?)
+|
+gs_other_parents(Fs?, V0?, Op)
+.
+gs_other_parents([fam(_, Pa, _) | Fs], V0, Op?)
+:-
+otherwise
+|
+gs_other_parents(Fs?, V0?, Op1)
+,
+gs_app(Pa?, Op1?, Op)
+.
+procedure gs_app(List(Key)?, List(Key)?, List(Key)).
+gs_app([], Ys, Ys?)
+.
+gs_app([X | Xs], Ys, [X? | Zs?])
+:-
+gs_app(Xs?, Ys?, Zs)
+.
+procedure gs_two(List(Key)?, Integer?, List(Key), Integer).
+gs_two([], S, [], S?)
+.
+gs_two([X], S, [X?], S?)
+.
+gs_two([X, Y | Xs], S, Two?, S2?)
+:-
+ground(X?)
+,
+ground(Y?)
+,
+ground(Xs?)
+|
+gs_pick([X?, Y? | Xs?], S?, A, S1)
+,
+gs_two1(A?, [X?, Y? | Xs?], S1?, Two, S2)
+.
+procedure gs_two1(Key?, List(Key)?, Integer?, List(Key), Integer).
+gs_two1(A, Xs, S, Two?, S1?)
+:-
+ground(A?)
+|
+gs_without(Xs?, A?, Rest)
+,
+gs_two2(Rest?, A?, S?, Two, S1)
+.
+procedure gs_two2(List(Key)?, Key?, Integer?, List(Key), Integer).
+gs_two2([], A, S, [A?], S?)
+.
+gs_two2([X | Xs], A, S, [A?, B?], S1?)
+:-
+gs_pick([X? | Xs?], S?, B, S1)
+.
+procedure gs_pick(GsKeys1?, Integer?, Key, Integer).
+gs_pick([X0 | Xs], S, X?, S1?)
+:-
+ground(X0?)
+,
+ground(Xs?)
+|
+gs_length(Xs?, N0)
+,
+':='(N, '+'(N0?, 1))
+,
+random(S?, N?, K, S1)
+,
+gs_nth(K?, X0?, Xs?, X)
+.
+procedure gs_length(List(Key)?, Integer).
+gs_length([], 0)
+.
+gs_length([_ | Xs], N?)
+:-
+gs_length(Xs?, N1)
+,
+':='(N, '+'(N1?, 1))
+.
+procedure gs_nth(Integer?, Key?, List(Key)?, Key).
+gs_nth(1, X0, _, X0?)
+.
+gs_nth(K, _, [X1 | Xs], X?)
+:-
+'>'(K?, 1)
+|
+':='(K1, '-'(K?, 1))
+,
+gs_nth(K1?, X1?, Xs?, X)
+.
+gs_nth(K, X0, [], X0?)
+:-
+'>'(K?, 1)
+|
+true
+.
+procedure gs_without(List(Key)?, Key?, List(Key)).
+gs_without([], _, [])
+.
+gs_without([X | Xs], Y, Zs?)
+:-
+'=?='(X?, Y?)
+,
+ground(Y?)
+|
+gs_without(Xs?, Y?, Zs)
+.
+gs_without([X | Xs], Y, [X? | Zs?])
+:-
+otherwise
+,
+ground(Y?)
+|
+gs_without(Xs?, Y?, Zs)
+.
+procedure gs_minus(List(Key)?, List(Key)?, List(Key)).
+gs_minus(Xs, [], Xs?)
+.
+gs_minus(Xs, [Y | Ys], Zs?)
+:-
+gs_without(Xs?, Y?, Xs1)
+,
+gs_minus(Xs1?, Ys?, Zs)
+.
+procedure gs_inter(List(Key)?, List(Key)?, List(Key)).
+gs_inter([], _, [])
+.
+gs_inter([X | Xs], Ys, Zs?)
+:-
+ground(X?)
+,
+ground(Ys?)
+|
+gs_mem(X?, Ys?, In)
+,
+gs_inter1(In?, X?, Xs?, Ys?, Zs)
+.
+procedure gs_inter1(YesNo?, Key?, List(Key)?, List(Key)?, List(Key)).
+gs_inter1(yes, X, Xs, Ys, [X? | Zs?])
+:-
+gs_inter(Xs?, Ys?, Zs)
+.
+gs_inter1(no, _, Xs, Ys, Zs?)
+:-
+gs_inter(Xs?, Ys?, Zs)
+.
+procedure gs_mem(Key?, List(Key)?, YesNo).
+gs_mem(_, [], no)
+.
+gs_mem(X, [Y | _], yes)
+:-
+'=?='(X?, Y?)
+|
+true
+.
+gs_mem(X, [_ | Ys], R?)
+:-
+otherwise
+|
+gs_mem(X?, Ys?, R)
+.
+procedure gs_attr_knows(List(GsAttr)?, List(Key)).
+gs_attr_knows([], [])
+.
+gs_attr_knows([knows(Kn) | _], Kn?)
+.
+gs_attr_knows([_ | As], Kn?)
+:-
+otherwise
+|
+gs_attr_knows(As?, Kn)
+.
+procedure gs_attr_village(List(GsAttr)?, Integer).
+gs_attr_village([], 0)
+.
+gs_attr_village([village(V) | _], V?)
+.
+gs_attr_village([_ | As], V?)
+:-
+otherwise
+|
+gs_attr_village(As?, V)
+.
+procedure gs_attr_families(List(GsAttr)?, List(GsFam)).
+gs_attr_families([], [])
+.
+gs_attr_families([families(Fs) | _], Fs?)
+.
+gs_attr_families([_ | As], Fs?)
+:-
+otherwise
+|
+gs_attr_families(As?, Fs)
+.
+procedure gs_friends(List(Atom)?, List(Key)).
+gs_friends([], [])
+.
+gs_friends([friend(Q) | As], [Q? | Fs?])
+:-
+gs_friends(As?, Fs)
+.
+gs_friends([_ | As], Fs?)
+:-
+otherwise
+|
+gs_friends(As?, Fs)
+.
+procedure gs_all_parents(List(GsFam)?, List(Key)).
+gs_all_parents([], [])
+.
+gs_all_parents([fam(_, Pa, _) | Fs], Ps?)
+:-
+gs_all_parents(Fs?, Ps1)
+,
+gs_app(Pa?, Ps1?, Ps)
+.
+procedure gs_first_missing(List(Key)?, List(Key)?, GsPick).
+gs_first_missing([], _, nothing)
+.
+gs_first_missing([X | Xs], Ks, P?)
+:-
+ground(X?)
+,
+ground(Ks?)
+|
+gs_mem(X?, Ks?, In)
+,
+gs_first_missing1(In?, X?, Xs?, Ks?, P)
+.
+procedure gs_first_missing1(YesNo?, Key?, List(Key)?, List(Key)?, GsPick).
+gs_first_missing1(no, X, _, _, pick(X?))
+.
+gs_first_missing1(yes, _, Xs, Ks, P?)
+:-
+gs_first_missing(Xs?, Ks?, P)
+.
+procedure gs_pick_or_nothing(List(Key)?, Integer?, GsPick).
+gs_pick_or_nothing([], _, nothing)
+.
+gs_pick_or_nothing([X | Xs], S, pick(Q?))
+:-
+gs_pick([X? | Xs?], S?, Q, _)
+.
+procedure gs_has_identity(List(Atom)?, YesNo).
+gs_has_identity([], no)
+.
+gs_has_identity([identity | _], yes)
+.
+gs_has_identity([_ | As], R?)
+:-
+otherwise
+|
+gs_has_identity(As?, R)
+.
+procedure gs_knows_atoms(List(Atom)?, List(Key)).
+gs_knows_atoms([], [])
+.
+gs_knows_atoms([knows(Q) | As], [Q? | Qs?])
+:-
+gs_knows_atoms(As?, Qs)
+.
+gs_knows_atoms([_ | As], Qs?)
+:-
+otherwise
+|
+gs_knows_atoms(As?, Qs)
+.
+procedure gs_request(Token?, Slot(Request)?, Request?).
+gs_request(stop, _, _)
+.
+gs_request(go(_), slot(V?), V)
+.
+procedure gs_offer(Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_offer(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Me?)
+,
+ground(Ks?)
+,
+ground(As?)
+|
+gs_attr_families(As?, All)
+,
+gs_attr_village(As?, V)
+,
+gs_friends(Atoms?, Fr)
+,
+gs_cands(All?, V?, Me?, Ks?, Fr?, Vc, Oc)
+,
+random(S?, 100, D, S1)
+,
+gs_offer_from(D?, Local?, Vc?, Oc?, Me?, Ks?, S1?, slot(W))
+.
+procedure gs_cands(List(GsFam)?, Integer?, Key?, List(Key)?, List(Key)?, List(Key), List(Key)).
+gs_cands(All, V, Me, Ks, Fr, Vc?, Oc?)
+:-
+ground(All?)
+,
+ground(V?)
+,
+ground(Ks?)
+,
+ground(Fr?)
+|
+gs_village_parents(All?, V?, Me?, Vp)
+,
+gs_other_parents(All?, V?, Op)
+,
+gs_inter(Vp?, Ks?, Vk)
+,
+gs_minus(Vk?, Fr?, Vc)
+,
+gs_inter(Op?, Ks?, Ok)
+,
+gs_minus(Ok?, Fr?, Oc)
+.
+procedure gs_offer_from(Integer?, Integer?, List(Key)?, List(Key)?, Key?, List(Key)?, Integer?, Slot(Request)?).
+gs_offer_from(D, Local, Vc, Oc, Me, Ks, S, slot(W?))
+:-
+'=<'(D?, Local?)
+|
+gs_offer_to(Vc?, Oc?, Me?, Ks?, S?, slot(W))
+.
+gs_offer_from(D, Local, Vc, Oc, Me, Ks, S, slot(W?))
+:-
+'>'(D?, Local?)
+|
+gs_offer_to(Oc?, Vc?, Me?, Ks?, S?, slot(W))
+.
+procedure gs_offer_to(List(Key)?, List(Key)?, Key?, List(Key)?, Integer?, Slot(Request)?).
+gs_offer_to([X | Xs], _, Me, _, S, slot(propose(befriend(Me?, Q?))))
+:-
+gs_pick([X? | Xs?], S?, Q, _)
+.
+gs_offer_to([], [X | Xs], Me, _, S, slot(propose(befriend(Me?, Q?))))
+:-
+gs_pick([X? | Xs?], S?, Q, _)
+.
+gs_offer_to([], [], Me, _, _, slot(propose(establish(Me?))))
+.
+procedure gs_introduce(Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_introduce(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(As?)
+,
+ground(Atoms?)
+,
+ground(Me?)
+|
+gs_friends(Atoms?, Fr)
+,
+gs_attr_families(As?, All)
+,
+gs_all_parents(All?, Ap)
+,
+gs_inter(Fr?, Ap?, Fp)
+,
+gs_without(Fp?, Me?, Fq)
+,
+gs_two(Fq?, S?, Two, S1)
+,
+gs_introduce1(Two?, Local?, Me?, Ks?, As?, Atoms?, S1?, slot(W))
+.
+procedure gs_introduce1(List(Key)?, Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_introduce1([Q, C], _, Me, _, _, _, _, slot(propose(introduce(Me?, Q?, C?))))
+.
+gs_introduce1(_, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+otherwise
+|
+gs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure gs_end_friendship1(GsPick?, Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_end_friendship1(pick(Q), _, Me, _, _, _, _, slot(propose(unfriend(Me?, Q?))))
+.
+gs_end_friendship1(nothing, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+gs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure gs_say(Slot(YesNo)?, YesNo?).
+gs_say(slot(V?), V)
+.
+procedure gs_yes_if(Integer?, Integer?, YesNo).
+gs_yes_if(K, P, yes)
+:-
+'=<'(K?, P?)
+|
+true
+.
+gs_yes_if(K, P, no)
+:-
+'>'(K?, P?)
+|
+true
+.
+
+%% person(local)
+%% binds(Request, local_request)
+exported procedure local_request(Request, Person?, Integer?, MutualRef?).
+local_request(R?, person(Me, _, As), S, Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+gs_menu(95, Me?, As?, L?, S?, slot(R))
+.
+
+%% person(open)
+%% binds(Request, open_request)
+exported procedure open_request(Request, Person?, Integer?, MutualRef?).
+open_request(R?, person(Me, _, As), S, Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+gs_menu(60, Me?, As?, L?, S?, slot(R))
+.
+procedure gs_menu(Integer?, Key?, List(GsAttr)?, List(Output)?, Integer?, Slot(Request)?).
+gs_menu(Local, Me, As, L, S, slot(W?))
+:-
+gs_last_view(L?, Atoms)
+,
+gs_menu1(Atoms?, Local?, Me?, As?, S?, slot(W))
+.
+procedure gs_menu1(List(Atom)?, Integer?, Key?, List(GsAttr)?, Integer?, Slot(Request)?).
+gs_menu1(Atoms, Local, Me, As, S, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(As?)
+,
+ground(Me?)
+|
+gs_has_identity(Atoms?, Id)
+,
+gs_attr_knows(As?, Kn)
+,
+gs_knows_atoms(Atoms?, Kw)
+,
+gs_knows_atoms(Atoms?, Ks)
+,
+gs_first_missing(Kn?, Kw?, Q)
+,
+gs_todo(Id?, Q?, T)
+,
+gs_do(T?, Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure gs_todo(YesNo?, GsPick?, GsTodo).
+gs_todo(no, _, establish)
+.
+gs_todo(yes, pick(Q), acquaint(Q?))
+.
+gs_todo(yes, nothing, steady)
+.
+procedure gs_do(GsTodo?, Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_do(establish, _, Me, _, _, _, _, slot(W?))
+:-
+rated(0.0022222222222222222, Tok)
+,
+gs_request(Tok?, slot(W), propose(establish(Me?)))
+.
+gs_do(acquaint(Q), _, Me, _, _, _, _, slot(W?))
+:-
+rated(0.0022222222222222222, Tok)
+,
+gs_request(Tok?, slot(W), propose(acquaint(Me?, Q?)))
+.
+gs_do(steady, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+random(S?, 52, K, S1)
+,
+rated(0.0005555555555555556, Tok)
+,
+gs_act(Tok?, K?, Local?, Me?, Ks?, As?, Atoms?, S1?, slot(W))
+.
+procedure gs_act(Token?, Integer?, Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_act(stop, _, _, _, _, _, _, _, _)
+.
+gs_act(go(_), K, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+'=<'(K?, 45)
+|
+gs_offer(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+gs_act(go(_), K, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+'>'(K?, 45)
+,
+'=<'(K?, 51)
+|
+gs_introduce(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+gs_act(go(_), 52, Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+gs_end_friendship(Local?, Me?, Ks?, As?, Atoms?, S?, slot(W))
+.
+procedure gs_end_friendship(Integer?, Key?, List(Key)?, List(GsAttr)?, List(Atom)?, Integer?, Slot(Request)?).
+gs_end_friendship(Local, Me, Ks, As, Atoms, S, slot(W?))
+:-
+ground(Me?)
+,
+ground(Atoms?)
+|
+gs_friends(Atoms?, Fr)
+,
+random(S?, 2147483646, S1, S2)
+,
+gs_pick_or_nothing(Fr?, S1?, Q)
+,
+gs_end_friendship1(Q?, Local?, Me?, Ks?, As?, Atoms?, S2?, slot(W))
+.
+
+%% person(keen)
+%% binds(Approval, keen_approval)
+exported procedure keen_approval(Approval?, Person?, Integer?, MutualRef?).
+keen_approval(approval(hello(_, _), _, A?), _, _, _)
+:-
+gs_say(slot(A), yes)
+.
+keen_approval(approval(attempt(_, _, _, acquaint(_, _), _), _, A?), _, _, _)
+:-
+gs_say(slot(A), yes)
+.
+keen_approval(approval(attempt(_, _, _, introduce(_, _, _), _), _, A?), _, _, _)
+:-
+gs_say(slot(A), yes)
+.
+keen_approval(approval(attempt(_, _, _, C, _), _, A?), _, S, _)
+:-
+otherwise
+|
+rated(0.0005555555555555556, Tok)
+,
+gs_answer(Tok?, 90, C?, S?, slot(A))
+.
+
+%% person(choosy)
+%% binds(Approval, choosy_approval)
+exported procedure choosy_approval(Approval?, Person?, Integer?, MutualRef?).
+choosy_approval(approval(hello(_, _), _, A?), _, _, _)
+:-
+gs_say(slot(A), yes)
+.
+choosy_approval(approval(attempt(_, _, _, acquaint(_, _), _), _, A?), _, _, _)
+:-
+gs_say(slot(A), yes)
+.
+choosy_approval(approval(attempt(_, _, _, introduce(_, _, _), _), _, A?), _, _, _)
+:-
+gs_say(slot(A), yes)
+.
+choosy_approval(approval(attempt(_, _, _, C, _), _, A?), _, S, _)
+:-
+otherwise
+|
+rated(0.0005555555555555556, Tok)
+,
+gs_answer(Tok?, 50, C?, S?, slot(A))
+.
+procedure gs_answer(Token?, Integer?, Class?, Integer?, Slot(YesNo)?).
+gs_answer(stop, _, _, _, _)
+.
+gs_answer(go(_), P, befriend(_, _), S, slot(A?))
+:-
+random(S?, 100, K, _)
+,
+gs_yes_if(K?, P?, A)
+.
+gs_answer(go(_), _, _, _, slot(yes))
+:-
+otherwise
+|
+true
+.
+procedure gs_keys(List(GsKeys)).
+gs_keys([ks(v1h01a, v1h01b), ks(v1h02a, v1h02b), ks(v1h03a, v1h03b), ks(v1h04a, v1h04b), ks(v1h05a, v1h05b), ks(v1h06a, v1h06b), ks(v1h07a, v1h07b), ks(v1h08a, v1h08b), ks(v1h09a, v1h09b), ks(v1h10a, v1h10b), ks(v2h01a, v2h01b), ks(v2h02a, v2h02b), ks(v2h03a, v2h03b), ks(v2h04a, v2h04b), ks(v2h05a, v2h05b), ks(v2h06a, v2h06b), ks(v2h07a, v2h07b), ks(v2h08a, v2h08b), ks(v2h09a, v2h09b), ks(v2h10a, v2h10b), ks(v3h01a, v3h01b), ks(v3h02a, v3h02b), ks(v3h03a, v3h03b), ks(v3h04a, v3h04b), ks(v3h05a, v3h05b), ks(v3h06a, v3h06b), ks(v3h07a, v3h07b), ks(v3h08a, v3h08b), ks(v3h09a, v3h09b), ks(v3h10a, v3h10b)])
+.
