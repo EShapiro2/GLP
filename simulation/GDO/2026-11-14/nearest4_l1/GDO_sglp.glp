@@ -1,0 +1,692 @@
+%% ---------------------------------------------------------------------------
+%% GDO_sglp.glp --- GDO's sGLP source: the simulation of the grassroots directed
+%% overlay under sGLP, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form"), over the canonical CVA platform
+%% of programs/lbm/GDO.glp, whose interface the cascade prints as
+%% cascade/GDO/interface.glp:
+%%   programs/sglp/transform.sh --interface cascade/GDO/interface.glp --source programs/sglp/lbm/GDO_sglp.glp --out <dir>
+%% Written on CSSN's pattern (programs/sglp/cssn/CSSN_sglp.glp; CSSN, Section 5) by
+%% LBM (Ohad), 2026-11-03.  The questions are the platform's two: Menu,
+%% the request question, Request?, and Approval, approval(Asking, Words, YesNo?); its
+%% output, Output, is view(Atoms, Known, Approved, Tabs) or refused(Class, Key, Reason).
+%%
+%% What it simulates.  GDO's clauses say who MAY point (GDO:1 to GDO:3); the
+%% paper's Location-Based, Bounded Out-Degree Instance says which permitted act
+%% a person's machine TAKES: d > 0 an integer and e > 0; a person has a location;
+%% Pointing to friend is taken iff either Alice points to less than d persons and
+%% Bob is closest to Alice among all of Alice's unpointed friends, or Bob is
+%% closer to Alice by more than e than some person pointed to by Alice;
+%% Transitive pointing is taken iff Carol is closer to Alice by more than e than
+%% some person pointed to by Alice; Ceasing to point is taken iff Alice points
+%% to more than d persons, with Bob furthest from Alice among them.  Here the
+%% instance is the stochastic person's menu: at each tick it reads its screen
+%% (the atoms of the last view: knows, friend, points_to) and its attributes
+%% (its location, the table of every person's location, d, e and the metric)
+%% and answers with the one act the instance takes, in the order ceasing,
+%% pointing to friend, transitive pointing; a transitive pointing names, beside
+%% Carol, a person Bob the person points to, drawn uniformly, since the
+%% contract records at Alice nothing of whom Bob points to --- Bob's machine
+%% refuses it where he does not point to Carol (as a parent's request is refused
+%% in CSSN where the children do not know each other).  Where the instance
+%% takes nothing, the person introduces a person they point to to a friend
+%% (GKK:3, "gossip"), so that transitive pointing has persons to reach, and
+%% where that too is impossible answers with an act its own machine refuses.
+%%
+%% Configuration.  One line, gd_config(cfg(Geometry, Metric, Nearest, Random, D,
+%% E, MapSeed, Step, Movers, Meet, Part)), read by the census: Geometry uniform (persons uniform on a square
+%% of 10 km), villages (four clusters, 2 km square each, round the quarters'
+%% centres) or manhattan (gd_town200: two hundred drivers at real pickup points of Manhattan,
+%% the frame rotated onto the street grid, so that l1 is street distance); Metric l1 (Manhattan) or l2 (Euclidean), in metres; Nearest, the
+%% number of nearest persons each knows at the start (plus Random drawn
+%% uniformly), Random that number drawn uniformly from the rest; D and E the
+%% instance's d and e; MapSeed the seed of the map, so
+%% that the census is a function of the configuration alone and the run's seed
+%% varies the persons' behaviour only (the map is then printed without the
+%% run, by gd_town40(0, Ps)).  The number of persons is the census named in
+%% the run declaration, gd_town40 or gd_town100; the horizon and the run's
+%% seed are the run declaration's.  To change a parameter, edit that line and
+%% run again; record.sh keeps the source as it stood with each record.
+%%
+%% The profiles.  One dimension, tempo, of the one role agent: eager answers the
+%% instance 24 times a day on average, lazy 4 times; both approve every approval
+%% at once (an acquaintance's hello, an offer of friendship, an introduction;
+%% GDO's own acts ask no approval, Bob reading).  Every name of the source
+%% starts with gd, apart from the profiles' and the platform's own.
+%% ---------------------------------------------------------------------------
+
+exported procedure source(SglpTerms).
+source([
+   %% The types.  Person is person(Key, agent, Attributes); GdAttr the attributes: the location,
+   %% the persons known at the start, the table of all locations, d, e and the metric.
+   type('GdLoc', [loc('Key', 'Integer', 'Integer', 'Integer')]),
+   type('GdXY', [xy('Integer', 'Integer')]),
+   type('GdCfg', [cfg('Constant', 'Constant', 'Integer', 'Integer', 'Integer', 'Integer', 'Integer', 'Integer', 'Integer', 'Integer', 'Integer')]),
+   type('GdAttr', [at('Integer', 'Integer'), knows('List'('Key')), table('List'('GdLoc')), cfg('GdCfg')]),
+   type('Person', [person('Key', 'Constant', 'List'('GdAttr'))]),
+   type('GdPick', [pick('Key'), nothing]),
+   type('GdKeys1', [['Key' | 'List'('Key')]]),
+   type('GdDk', [dk('Number', 'Key')]),
+   type('GdNear', [near('Number', 'Key'), nonear]),
+   type('GdTodo', [establish, acquaint('Key'), befriend('Key'), steady]),
+   type('GdMove', [meet('Key'), part('Key'), stay]),
+   type('GdPair', [ac('Key', 'Key')]),
+   type('GdLast', [nolast, last('List'('Atom'))]),
+   type('GdHist', [hist('List'('Atom'), 'Integer', 'List'('Key'), 'List'('Key'), 'List'('GdPair'))]),
+   type('GdAct', [unpoint('Key'), point('Key'), through('Key', 'Key'), gossip('Key', 'Key'), idle('Key'), none]),
+
+   %% THE CONFIGURATION.  cfg(Geometry, Metric, Nearest, Random, D, E, MapSeed, Step, Movers, Meet, Part): Step the
+   %% daily step of a walking person in metres and Movers how many persons walk, the first Movers of the
+   %% census, the rest staying put (0 and 0 for a town that stands still); Meet and Part the chances in
+   %% 1000, at each tick, of meeting a stranger and of ending a friendship, 0 for a friendship graph that
+   %% stands --- a person with nothing else to do ticks once a day, so for them these are chances a day.
+   decl(gd_config('GdCfg')),
+   clause(gd_config(cfg(uniform, l1, 4, 2, 3, 500, 7, 0, 0, 0, 0)), [], []),
+
+   %% THE CENSUS.  gd_town40(S, Ps) and gd_town100(S, Ps): the persons of the key table, placed by the
+   %% configuration's geometry from its map seed (the run's S is not used), each knowing at the start
+   %% their Nearest nearest persons and Random more drawn uniformly from the rest.
+   decl(gd_town40(dual('Integer'), 'List'('Person'))),
+   clause(gd_town40(var('_'), var('Ps?')), [], [gd_keys40(var('Ks')), gd_config(var('C')), gd_census(var('Ks?'), var('C?'), var('Ps'))]),
+   decl(gd_town200(dual('Integer'), 'List'('Person'))),
+   clause(gd_town200(var('_'), var('Ps?')), [], [gd_keys200(var('Ks')), gd_config(var('C')), gd_census(var('Ks?'), var('C?'), var('Ps'))]),
+   decl(gd_town100(dual('Integer'), 'List'('Person'))),
+   clause(gd_town100(var('_'), var('Ps?')), [], [gd_keys100(var('Ks')), gd_config(var('C')), gd_census(var('Ks?'), var('C?'), var('Ps'))]),
+   decl(gd_census(dual('List'('Key')), dual('GdCfg'), 'List'('Person'))),
+   clause(gd_census(var('Ks'), var('C'), var('Ps?')), [ground(var('Ks?')), ground(var('C?'))],
+          [gd_cfg_geo(var('C?'), var('Geo')), gd_cfg_mapseed(var('C?'), var('MS')), gd_cfg_movers(var('C?'), var('Mv')),
+           gd_place(var('Geo?'), var('Ks?'), 1, 1, var('Mv?'), var('MS?'), var('Locs'), var('S1')),
+           gd_persons(var('Ks?'), var('Locs?'), var('C?'), var('S1?'), var('Ps'))]),
+   %% The configuration's fields.
+   decl(gd_cfg_geo(dual('GdCfg'), 'Constant')),
+   clause(gd_cfg_geo(cfg(var('G'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_')), var('G?')), [], []),
+   decl(gd_cfg_metric(dual('GdCfg'), 'Constant')),
+   clause(gd_cfg_metric(cfg(var('_'), var('M'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_')), var('M?')), [], []),
+   decl(gd_cfg_nearest(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_nearest(cfg(var('_'), var('_'), var('K'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_')), var('K?')), [], []),
+   decl(gd_cfg_random(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_random(cfg(var('_'), var('_'), var('_'), var('R'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_')), var('R?')), [], []),
+   decl(gd_cfg_bound(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_bound(cfg(var('_'), var('_'), var('_'), var('_'), var('D'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_')), var('D?')), [], []),
+   decl(gd_cfg_slack(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_slack(cfg(var('_'), var('_'), var('_'), var('_'), var('_'), var('E'), var('_'), var('_'), var('_'), var('_'), var('_')), var('E?')), [], []),
+   decl(gd_cfg_mapseed(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_mapseed(cfg(var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('MS'), var('_'), var('_'), var('_'), var('_')), var('MS?')), [], []),
+   decl(gd_cfg_step(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_step(cfg(var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('St'), var('_'), var('_'), var('_')), var('St?')), [], []),
+   decl(gd_cfg_meet(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_meet(cfg(var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('Mt'), var('_')), var('Mt?')), [], []),
+   decl(gd_cfg_part(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_part(cfg(var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('Pt')), var('Pt?')), [], []),
+   decl(gd_cfg_movers(dual('GdCfg'), 'Integer')),
+   clause(gd_cfg_movers(cfg(var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('Mv'), var('_'), var('_')), var('Mv?')), [], []),
+   %% gd_place(Geo?, Ks?, I?, J?, Movers?, S?, Locs, S1): the locations, loc(Key, X, Y, W), in metres on a square of
+   %% 10 km: uniform, each coordinate drawn in 1..10000; villages, the I-th person in village I of four,
+   %% cycling, at the village's centre plus an offset drawn in -999..1000 on each axis; W is 1 for the
+   %% first Movers persons of the census, who walk, and 0 for the rest, who stay put, J the person's place.
+   decl(gd_place(dual('Constant'), dual('List'('Key')), dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), 'List'('GdLoc'), 'Integer')),
+   clause(gd_place(var('_'), [], var('_'), var('_'), var('_'), var('S'), [], var('S?')), [], []),
+   clause(gd_place(uniform, [var('Q') | var('Ks')], var('I'), var('J'), var('Mv'), var('S'), [loc(var('Q?'), var('X?'), var('Y?'), var('W?')) | var('Ls?')], var('S3?')), [ground(var('J?')), ground(var('Mv?'))],
+          [random(var('S?'), 10000, var('X'), var('S1')), random(var('S1?'), 10000, var('Y'), var('S2')),
+           gd_walker(var('J?'), var('Mv?'), var('W')), ':='(var('J1'), '+'(var('J?'), 1)),
+           gd_place(uniform, var('Ks?'), var('I?'), var('J1?'), var('Mv?'), var('S2?'), var('Ls'), var('S3'))]),
+   clause(gd_place(villages, [var('Q') | var('Ks')], var('I'), var('J'), var('Mv'), var('S'), [loc(var('Q?'), var('X?'), var('Y?'), var('W?')) | var('Ls?')], var('S3?')), [ground(var('I?')), ground(var('J?')), ground(var('Mv?'))],
+          [gd_centre(var('I?'), var('CX'), var('CY')),
+           random(var('S?'), 2000, var('DX'), var('S1')), random(var('S1?'), 2000, var('DY'), var('S2')),
+           ':='(var('X'), '-'('+'(var('CX?'), var('DX?')), 1000)), ':='(var('Y'), '-'('+'(var('CY?'), var('DY?')), 1000)),
+           gd_next_village(var('I?'), var('I1')),
+           gd_walker(var('J?'), var('Mv?'), var('W')), ':='(var('J1'), '+'(var('J?'), 1)),
+           gd_place(villages, var('Ks?'), var('I1?'), var('J1?'), var('Mv?'), var('S2?'), var('Ls'), var('S3'))]),
+   clause(gd_place(manhattan, var('Ks'), var('_'), var('J'), var('Mv'), var('S'), var('Locs?'), var('S?')), [],
+          [gd_manhattan(var('XYs')), gd_place_at(var('Ks?'), var('XYs?'), var('J?'), var('Mv?'), var('Locs'))]),
+   %% gd_place_at(Ks?, XYs?, J?, Movers?, Locs): the keys at the places of the table, in order.
+   decl(gd_place_at(dual('List'('Key')), dual('List'('GdXY')), dual('Integer'), dual('Integer'), 'List'('GdLoc'))),
+   clause(gd_place_at([], var('_'), var('_'), var('_'), []), [], []),
+   clause(gd_place_at([var('_') | var('_')], [], var('_'), var('_'), []), [], []),
+   clause(gd_place_at([var('Q') | var('Ks')], [xy(var('X'), var('Y')) | var('XYs')], var('J'), var('Mv'), [loc(var('Q?'), var('X?'), var('Y?'), var('W?')) | var('Ls?')]), [ground(var('J?')), ground(var('Mv?'))],
+          [gd_walker(var('J?'), var('Mv?'), var('W')), ':='(var('J1'), '+'(var('J?'), 1)), gd_place_at(var('Ks?'), var('XYs?'), var('J1?'), var('Mv?'), var('Ls'))]),
+   decl(gd_walker(dual('Integer'), dual('Integer'), 'Integer')),
+   clause(gd_walker(var('J'), var('Mv'), 1), ['=<'(var('J?'), var('Mv?'))], [true]),
+   clause(gd_walker(var('J'), var('Mv'), 0), ['>'(var('J?'), var('Mv?'))], [true]),
+   decl(gd_centre(dual('Integer'), 'Integer', 'Integer')),
+   clause(gd_centre(1, 2500, 2500), [], []),
+   clause(gd_centre(2, 7500, 2500), [], []),
+   clause(gd_centre(3, 2500, 7500), [], []),
+   clause(gd_centre(4, 7500, 7500), [], []),
+   decl(gd_next_village(dual('Integer'), 'Integer')),
+   clause(gd_next_village(4, 1), [], []),
+   clause(gd_next_village(var('I'), var('I1?')), ['<'(var('I?'), 4)], [':='(var('I1'), '+'(var('I?'), 1))]),
+   %% gd_persons(Ks?, Locs?, C?, S?, Ps): the persons, each with its attributes: its location at the start, the
+   %% persons it knows at the start, the table of every location at the start, and the configuration.
+   decl(gd_persons(dual('List'('Key')), dual('List'('GdLoc')), dual('GdCfg'), dual('Integer'), 'List'('Person'))),
+   clause(gd_persons([], var('_'), var('_'), var('_'), []), [], []),
+   clause(gd_persons([var('Me') | var('Ks')], var('Locs'), var('C'), var('S'), [var('P?') | var('Ps?')]),
+          [ground(var('Me?')), ground(var('Locs?')), ground(var('C?'))],
+          [gd_cfg_metric(var('C?'), var('Met')),
+           gd_loc_of(var('Me?'), var('Locs?'), var('X'), var('Y'), var('_')),
+           gd_sorted(var('Met?'), var('X?'), var('Y?'), var('Locs?'), var('Me?'), 0, 0, 0, var('Sorted')),
+           gd_person1(var('Sorted?'), var('Me?'), var('X?'), var('Y?'), var('Locs?'), var('C?'), var('S?'), var('P'), var('S1')),
+           gd_persons(var('Ks?'), var('Locs?'), var('C?'), var('S1?'), var('Ps'))]),
+   decl(gd_person1(dual('List'('GdDk')), dual('Key'), dual('Integer'), dual('Integer'), dual('List'('GdLoc')), dual('GdCfg'), dual('Integer'), 'Person', 'Integer')),
+   clause(gd_person1(var('Sorted'), var('Me'), var('X'), var('Y'), var('Locs'), var('C'), var('S'), var('P?'), var('S1?')), [ground(var('Sorted?')), ground(var('C?'))],
+          [gd_cfg_nearest(var('C?'), var('K')),
+           gd_take(var('K?'), var('Sorted?'), var('Near')),
+           gd_keys_of(var('Sorted?'), var('AllK')),
+           gd_person2(var('Near?'), var('AllK?'), var('Me?'), var('X?'), var('Y?'), var('Locs?'), var('C?'), var('S?'), var('P'), var('S1'))]),
+   decl(gd_person2(dual('List'('Key')), dual('List'('Key')), dual('Key'), dual('Integer'), dual('Integer'), dual('List'('GdLoc')), dual('GdCfg'), dual('Integer'), 'Person', 'Integer')),
+   clause(gd_person2(var('Near'), var('AllK'), var('Me'), var('X'), var('Y'), var('Locs'), var('C'), var('S'),
+                     person(var('Me?'), agent, [at(var('X?'), var('Y?')), knows(var('Kn?')), table(var('Locs?')), cfg(var('C?'))]), var('S1?')), [ground(var('Near?')), ground(var('C?'))],
+          [gd_cfg_random(var('C?'), var('R')),
+           gd_minus(var('AllK?'), var('Near?'), var('Rest')),
+           gd_some(var('R?'), var('Rest?'), var('S?'), var('Some'), var('S1')),
+           gd_app(var('Near?'), var('Some?'), var('Kn'))]),
+   %% gd_some(R?, Xs?, S?, Some, S1): R keys drawn uniformly from Xs without replacement, fewer where Xs has fewer.
+   decl(gd_some(dual('Integer'), dual('List'('Key')), dual('Integer'), 'List'('Key'), 'Integer')),
+   clause(gd_some(0, var('_'), var('S'), [], var('S?')), [], []),
+   clause(gd_some(var('R'), [], var('S'), [], var('S?')), ['>'(var('R?'), 0)], [true]),
+   clause(gd_some(var('R'), [var('X') | var('Xs')], var('S'), [var('A?') | var('As?')], var('S2?')), ['>'(var('R?'), 0), ground(var('X?')), ground(var('Xs?'))],
+          [gd_pick([var('X?') | var('Xs?')], var('S?'), var('A'), var('S1')), ':='(var('R1'), '-'(var('R?'), 1)), gd_some1(var('R1?'), [var('X?') | var('Xs?')], var('A?'), var('S1?'), var('As'), var('S2'))]),
+   decl(gd_some1(dual('Integer'), dual('List'('Key')), dual('Key'), dual('Integer'), 'List'('Key'), 'Integer')),
+   clause(gd_some1(var('R'), var('Xs'), var('A'), var('S'), var('As?'), var('S1?')), [ground(var('A?'))], [gd_without(var('Xs?'), var('A?'), var('Rest')), gd_some(var('R?'), var('Rest?'), var('S?'), var('As'), var('S1'))]),
+   %% gd_loc_of(Me?, Locs?, X, Y, W): Me's location in the table and whether Me walks, (0, 0, 0) where it has none.
+   decl(gd_loc_of(dual('Key'), dual('List'('GdLoc')), 'Integer', 'Integer', 'Integer')),
+   clause(gd_loc_of(var('_'), [], 0, 0, 0), [], []),
+   clause(gd_loc_of(var('Me'), [loc(var('Q'), var('X'), var('Y'), var('W')) | var('_')], var('X?'), var('Y?'), var('W?')), ['=?='(var('Me?'), var('Q?'))], [true]),
+   clause(gd_loc_of(var('Me'), [var('_') | var('Ls')], var('X?'), var('Y?'), var('W?')), [otherwise, ground(var('Me?'))], [gd_loc_of(var('Me?'), var('Ls?'), var('X'), var('Y'), var('W'))]),
+   %% gd_dist(Met?, X?, Y?, X1?, Y1?, Dst): the distance by the metric, l1 Manhattan or l2 Euclidean.
+   decl(gd_dist(dual('Constant'), dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), 'Number')),
+   clause(gd_dist(l1, var('X'), var('Y'), var('X1'), var('Y1'), var('Dst?')), [],
+          [':='(var('Dst'), '+'(abs('-'(var('X?'), var('X1?'))), abs('-'(var('Y?'), var('Y1?')))))]),
+   clause(gd_dist(l2, var('X'), var('Y'), var('X1'), var('Y1'), var('Dst?')), [],
+          [':='(var('Dst'), sqrt('+'('*'('-'(var('X?'), var('X1?')), '-'(var('X?'), var('X1?'))), '*'('-'(var('Y?'), var('Y1?')), '-'(var('Y?'), var('Y1?'))))))]),
+   %% gd_sorted(Met?, X?, Y?, Locs?, Me?, MS?, Step?, T?, Sorted): every person but Me as dk(Distance, Key),
+   %% nearest first, each at its location on day T of its walk (gd_pos_at), Me at (X, Y).
+   decl(gd_sorted(dual('Constant'), dual('Integer'), dual('Integer'), dual('List'('GdLoc')), dual('Key'), dual('Integer'), dual('Integer'), dual('Integer'), 'List'('GdDk'))),
+   clause(gd_sorted(var('_'), var('_'), var('_'), [], var('_'), var('_'), var('_'), var('_'), []), [], []),
+   clause(gd_sorted(var('Met'), var('X'), var('Y'), [loc(var('Q'), var('_'), var('_'), var('_')) | var('Ls')], var('Me'), var('MS'), var('Step'), var('T'), var('Sorted?')),
+          ['=?='(var('Q?'), var('Me?')), ground(var('Met?')), ground(var('X?')), ground(var('Y?'))],
+          [gd_sorted(var('Met?'), var('X?'), var('Y?'), var('Ls?'), var('Me?'), var('MS?'), var('Step?'), var('T?'), var('Sorted'))]),
+   clause(gd_sorted(var('Met'), var('X'), var('Y'), [loc(var('Q'), var('X1'), var('Y1'), var('W')) | var('Ls')], var('Me'), var('MS'), var('Step'), var('T'), var('Sorted?')),
+          [otherwise, ground(var('Met?')), ground(var('X?')), ground(var('Y?')), ground(var('Me?')), ground(var('Step?'))],
+          [':='(var('St1'), '*'(var('Step?'), var('W?'))),
+           gd_pos_at(var('X1?'), var('Y1?'), var('MS?'), var('St1?'), var('T?'), var('X2'), var('Y2')),
+           gd_dist(var('Met?'), var('X?'), var('Y?'), var('X2?'), var('Y2?'), var('Dst')),
+           gd_sorted(var('Met?'), var('X?'), var('Y?'), var('Ls?'), var('Me?'), var('MS?'), var('Step?'), var('T?'), var('S1')),
+           gd_insert(dk(var('Dst?'), var('Q?')), var('S1?'), var('Sorted'))]),
+   %% THE WALK.  gd_pos_at(X0?, Y0?, MS?, Step?, T?, X, Y): where a person who started at (X0, Y0) is on day T,
+   %% going from place to place: a destination drawn, Step metres a day towards it along the streets (the
+   %% x-way first, then the y-way, so the path is an L of the grid), and at it the next destination drawn;
+   %% the destinations are the real places of the town, Manhattan's drivers' pickup points (gd_manhattan),
+   %% and on a square points drawn uniformly in it.  The draws are a generator of the person's own, the
+   %% minimal standard (48271 modulo 2147483647) seeded by the start and the map's seed, so that the trips
+   %% are a function of the configuration alone and are replayed by overlay.awk and the replay page.
+   decl(gd_pos_at(dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), 'Integer', 'Integer')),
+   clause(gd_pos_at(var('X0'), var('Y0'), var('_'), 0, var('_'), var('X0?'), var('Y0?')), [], []),
+   clause(gd_pos_at(var('X0'), var('Y0'), var('MS'), var('Step'), var('T'), var('X?'), var('Y?')), ['>'(var('Step?'), 0)],
+          [':='(var('S0'), '+'('+'('*'(var('X0?'), 10007), var('Y0?')), '+'(var('MS?'), 1))),
+           gd_config(var('C')), gd_cfg_geo(var('C?'), var('Geo')), gd_side(var('Geo?'), var('B')),
+           gd_target(var('Geo?'), var('B?'), var('S0?'), var('TX'), var('TY'), var('S1')),
+           gd_walk(var('T?'), var('Step?'), var('S1?'), var('B?'), var('Geo?'), var('X0?'), var('Y0?'), var('TX?'), var('TY?'), var('X'), var('Y'))]),
+   %% gd_side(Geo?, B): the side of the square the walk is clamped to, 10 km, or 21 km for Manhattan, the island's length.
+   decl(gd_side(dual('Constant'), 'Integer')),
+   clause(gd_side(manhattan, 21000), [], []),
+   clause(gd_side(var('_'), 10000), [otherwise], [true]),
+   %% gd_target(Geo?, B?, S?, TX, TY, S1): the next destination: in Manhattan one of the drivers' places, drawn
+   %% by one draw of the generator, S mod 200 + 1; on a square a point drawn uniformly, two draws.
+   decl(gd_target(dual('Constant'), dual('Integer'), dual('Integer'), 'Integer', 'Integer', 'Integer')),
+   clause(gd_target(manhattan, var('_'), var('S'), var('TX?'), var('TY?'), var('S1?')), [],
+          [':='(var('S1'), mod('*'(var('S?'), 48271), 2147483647)), ':='(var('K'), '+'(mod(var('S1?'), 200), 1)),
+           gd_manhattan(var('XYs')), gd_nth_xy(var('K?'), var('XYs?'), var('TX'), var('TY'))]),
+   clause(gd_target(var('_'), var('B'), var('S'), var('TX?'), var('TY?'), var('S2?')), [otherwise],
+          [':='(var('S1'), mod('*'(var('S?'), 48271), 2147483647)), ':='(var('S2'), mod('*'(var('S1?'), 48271), 2147483647)),
+           ':='(var('TX'), mod(var('S1?'), '+'(var('B?'), 1))), ':='(var('TY'), mod(var('S2?'), '+'(var('B?'), 1)))]),
+   decl(gd_nth_xy(dual('Integer'), dual('List'('GdXY')), 'Integer', 'Integer')),
+   clause(gd_nth_xy(var('_'), [], 0, 0), [], []),
+   clause(gd_nth_xy(1, [xy(var('X'), var('Y')) | var('_')], var('X?'), var('Y?')), [], []),
+   clause(gd_nth_xy(var('K'), [var('_') | var('XYs')], var('X?'), var('Y?')), ['>'(var('K?'), 1)], [':='(var('K1'), '-'(var('K?'), 1)), gd_nth_xy(var('K1?'), var('XYs?'), var('X'), var('Y'))]),
+   %% gd_walk(T?, Step?, S?, B?, Geo?, X?, Y?, TX?, TY?, X2, Y2): T days of the trip, Step a day.
+   decl(gd_walk(dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), dual('Constant'), dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), 'Integer', 'Integer')),
+   clause(gd_walk(var('T'), var('_'), var('_'), var('_'), var('_'), var('X'), var('Y'), var('_'), var('_'), var('X?'), var('Y?')), ['=<'(var('T?'), 0)], [true]),
+   clause(gd_walk(var('T'), var('Step'), var('S'), var('B'), var('Geo'), var('X'), var('Y'), var('TX'), var('TY'), var('X2?'), var('Y2?')), ['>'(var('T?'), 0), ground(var('Step?')), ground(var('X?')), ground(var('Y?')), ground(var('TX?')), ground(var('TY?'))],
+          [gd_towards(var('X?'), var('TX?'), var('Step?'), var('X1'), var('Rem')),
+           gd_towards(var('Y?'), var('TY?'), var('Rem?'), var('Y1'), var('_')),
+           gd_arrived(var('X1?'), var('Y1?'), var('TX?'), var('TY?'), var('Geo?'), var('B?'), var('S?'), var('TX1'), var('TY1'), var('S1')),
+           ':='(var('T1'), '-'(var('T?'), 1)),
+           gd_walk(var('T1?'), var('Step?'), var('S1?'), var('B?'), var('Geo?'), var('X1?'), var('Y1?'), var('TX1?'), var('TY1?'), var('X2'), var('Y2'))]),
+   %% gd_towards(X?, TX?, Budget?, X1, Rem): X moved towards TX by at most Budget, Rem what is left of it.
+   decl(gd_towards(dual('Integer'), dual('Integer'), dual('Integer'), 'Integer', 'Integer')),
+   clause(gd_towards(var('X'), var('TX'), var('Bd'), var('TX?'), var('Rem?')), ['=<'(abs('-'(var('TX?'), var('X?'))), var('Bd?'))], [':='(var('Rem'), '-'(var('Bd?'), abs('-'(var('TX?'), var('X?')))))]),
+   clause(gd_towards(var('X'), var('TX'), var('Bd'), var('X1?'), 0), ['>'(var('TX?'), var('X?')), '>'('-'(var('TX?'), var('X?')), var('Bd?'))], [':='(var('X1'), '+'(var('X?'), var('Bd?')))]),
+   clause(gd_towards(var('X'), var('TX'), var('Bd'), var('X1?'), 0), ['<'(var('TX?'), var('X?')), '>'('-'(var('X?'), var('TX?')), var('Bd?'))], [':='(var('X1'), '-'(var('X?'), var('Bd?')))]),
+   %% gd_arrived(X?, Y?, TX?, TY?, Geo?, B?, S?, TX1, TY1, S1): the destination, the next one drawn where this one is reached.
+   decl(gd_arrived(dual('Integer'), dual('Integer'), dual('Integer'), dual('Integer'), dual('Constant'), dual('Integer'), dual('Integer'), 'Integer', 'Integer', 'Integer')),
+   clause(gd_arrived(var('X'), var('Y'), var('TX'), var('TY'), var('Geo'), var('B'), var('S'), var('TX1?'), var('TY1?'), var('S1?')), ['=:='(var('X?'), var('TX?')), '=:='(var('Y?'), var('TY?'))],
+          [gd_target(var('Geo?'), var('B?'), var('S?'), var('TX1'), var('TY1'), var('S1'))]),
+   clause(gd_arrived(var('_'), var('_'), var('TX'), var('TY'), var('_'), var('_'), var('S'), var('TX?'), var('TY?'), var('S?')), [otherwise], [true]),
+   decl(gd_insert(dual('GdDk'), dual('List'('GdDk')), 'List'('GdDk'))),
+   clause(gd_insert(dk(var('D'), var('Q')), [], [dk(var('D?'), var('Q?'))]), [], []),
+   clause(gd_insert(dk(var('D'), var('Q')), [dk(var('D1'), var('Q1')) | var('Ds')], [dk(var('D?'), var('Q?')), dk(var('D1?'), var('Q1?')) | var('Ds?')]), ['=<'(var('D?'), var('D1?'))], [true]),
+   clause(gd_insert(dk(var('D'), var('Q')), [dk(var('D1'), var('Q1')) | var('Ds')], [dk(var('D1?'), var('Q1?')) | var('R?')]), ['>'(var('D?'), var('D1?'))], [gd_insert(dk(var('D?'), var('Q?')), var('Ds?'), var('R'))]),
+   decl(gd_take(dual('Integer'), dual('List'('GdDk')), 'List'('Key'))),
+   clause(gd_take(0, var('_'), []), [], []),
+   clause(gd_take(var('K'), [], []), ['>'(var('K?'), 0)], [true]),
+   clause(gd_take(var('K'), [dk(var('_'), var('Q')) | var('Ds')], [var('Q?') | var('Qs?')]), ['>'(var('K?'), 0)], [':='(var('K1'), '-'(var('K?'), 1)), gd_take(var('K1?'), var('Ds?'), var('Qs'))]),
+   decl(gd_keys_of(dual('List'('GdDk')), 'List'('Key'))),
+   clause(gd_keys_of([], []), [], []),
+   clause(gd_keys_of([dk(var('_'), var('Q')) | var('Ds')], [var('Q?') | var('Qs?')]), [], [gd_keys_of(var('Ds?'), var('Qs'))]),
+
+   %% The list helpers, CSSN's: gd_app appends; gd_pick draws one uniformly from a non-empty list; gd_without removes a key; gd_minus
+   %% removes a list; gd_inter keeps those also in a list; gd_mem tests membership; gd_length counts; gd_first_missing finds the first of a
+   %% list not in another; gd_pick_or_nothing draws from a list that may be empty.
+   decl(gd_app(dual('List'('Key')), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_app([], var('Ys'), var('Ys?')), [], []),
+   clause(gd_app([var('X') | var('Xs')], var('Ys'), [var('X?') | var('Zs?')]), [], [gd_app(var('Xs?'), var('Ys?'), var('Zs'))]),
+   decl(gd_pick(dual('GdKeys1'), dual('Integer'), 'Key', 'Integer')),
+   clause(gd_pick([var('X0') | var('Xs')], var('S'), var('X?'), var('S1?')), [ground(var('X0?')), ground(var('Xs?'))],
+          [gd_length(var('Xs?'), var('N0')), ':='(var('N'), '+'(var('N0?'), 1)), random(var('S?'), var('N?'), var('K'), var('S1')), gd_nth(var('K?'), var('X0?'), var('Xs?'), var('X'))]),
+   decl(gd_length(dual('List'('Key')), 'Integer')),
+   clause(gd_length([], 0), [], []),
+   clause(gd_length([var('_') | var('Xs')], var('N?')), [], [gd_length(var('Xs?'), var('N1')), ':='(var('N'), '+'(var('N1?'), 1))]),
+   decl(gd_nth(dual('Integer'), dual('Key'), dual('List'('Key')), 'Key')),
+   clause(gd_nth(1, var('X0'), var('_'), var('X0?')), [], []),
+   clause(gd_nth(var('K'), var('_'), [var('X1') | var('Xs')], var('X?')), ['>'(var('K?'), 1)], [':='(var('K1'), '-'(var('K?'), 1)), gd_nth(var('K1?'), var('X1?'), var('Xs?'), var('X'))]),
+   clause(gd_nth(var('K'), var('X0'), [], var('X0?')), ['>'(var('K?'), 1)], [true]),
+   decl(gd_without(dual('List'('Key')), dual('Key'), 'List'('Key'))),
+   clause(gd_without([], var('_'), []), [], []),
+   clause(gd_without([var('X') | var('Xs')], var('Y'), var('Zs?')), ['=?='(var('X?'), var('Y?')), ground(var('Y?'))], [gd_without(var('Xs?'), var('Y?'), var('Zs'))]),
+   clause(gd_without([var('X') | var('Xs')], var('Y'), [var('X?') | var('Zs?')]), [otherwise, ground(var('Y?'))], [gd_without(var('Xs?'), var('Y?'), var('Zs'))]),
+   decl(gd_minus(dual('List'('Key')), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_minus(var('Xs'), [], var('Xs?')), [], []),
+   clause(gd_minus(var('Xs'), [var('Y') | var('Ys')], var('Zs?')), [], [gd_without(var('Xs?'), var('Y?'), var('Xs1')), gd_minus(var('Xs1?'), var('Ys?'), var('Zs'))]),
+   decl(gd_inter(dual('List'('Key')), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_inter([], var('_'), []), [], []),
+   clause(gd_inter([var('X') | var('Xs')], var('Ys'), var('Zs?')), [ground(var('X?')), ground(var('Ys?'))], [gd_mem(var('X?'), var('Ys?'), var('In')), gd_inter1(var('In?'), var('X?'), var('Xs?'), var('Ys?'), var('Zs'))]),
+   decl(gd_inter1(dual('YesNo'), dual('Key'), dual('List'('Key')), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_inter1(yes, var('X'), var('Xs'), var('Ys'), [var('X?') | var('Zs?')]), [], [gd_inter(var('Xs?'), var('Ys?'), var('Zs'))]),
+   clause(gd_inter1(no, var('_'), var('Xs'), var('Ys'), var('Zs?')), [], [gd_inter(var('Xs?'), var('Ys?'), var('Zs'))]),
+   decl(gd_mem(dual('Key'), dual('List'('Key')), 'YesNo')),
+   clause(gd_mem(var('_'), [], no), [], []),
+   clause(gd_mem(var('X'), [var('Y') | var('_')], yes), ['=?='(var('X?'), var('Y?'))], [true]),
+   clause(gd_mem(var('X'), [var('_') | var('Ys')], var('R?')), [otherwise], [gd_mem(var('X?'), var('Ys?'), var('R'))]),
+   decl(gd_first_missing(dual('List'('Key')), dual('List'('Key')), 'GdPick')),
+   clause(gd_first_missing([], var('_'), nothing), [], []),
+   clause(gd_first_missing([var('X') | var('Xs')], var('Ks'), var('P?')), [ground(var('X?')), ground(var('Ks?'))], [gd_mem(var('X?'), var('Ks?'), var('In')), gd_first_missing1(var('In?'), var('X?'), var('Xs?'), var('Ks?'), var('P'))]),
+   decl(gd_first_missing1(dual('YesNo'), dual('Key'), dual('List'('Key')), dual('List'('Key')), 'GdPick')),
+   clause(gd_first_missing1(no, var('X'), var('_'), var('_'), pick(var('X?'))), [], []),
+   clause(gd_first_missing1(yes, var('_'), var('Xs'), var('Ks'), var('P?')), [], [gd_first_missing(var('Xs?'), var('Ks?'), var('P'))]),
+   decl(gd_pick_or_nothing(dual('List'('Key')), dual('Integer'), 'GdPick')),
+   clause(gd_pick_or_nothing([], var('_'), nothing), [], []),
+   clause(gd_pick_or_nothing([var('X') | var('Xs')], var('S'), pick(var('Q?'))), [], [gd_pick([var('X?') | var('Xs?')], var('S?'), var('Q'), var('_'))]),
+
+   %% The attributes, and what a view shows: gd_friends, gd_knows_atoms and gd_points read the friends, the
+   %% persons known and the persons pointed to recorded in its atoms.
+   decl(gd_attr_at(dual('List'('GdAttr')), 'Integer', 'Integer')),
+   clause(gd_attr_at([], 0, 0), [], []),
+   clause(gd_attr_at([at(var('X'), var('Y')) | var('_')], var('X?'), var('Y?')), [], []),
+   clause(gd_attr_at([var('_') | var('As')], var('X?'), var('Y?')), [otherwise], [gd_attr_at(var('As?'), var('X'), var('Y'))]),
+   decl(gd_attr_knows(dual('List'('GdAttr')), 'List'('Key'))),
+   clause(gd_attr_knows([], []), [], []),
+   clause(gd_attr_knows([knows(var('Kn')) | var('_')], var('Kn?')), [], []),
+   clause(gd_attr_knows([var('_') | var('As')], var('Kn?')), [otherwise], [gd_attr_knows(var('As?'), var('Kn'))]),
+   decl(gd_attr_table(dual('List'('GdAttr')), 'List'('GdLoc'))),
+   clause(gd_attr_table([], []), [], []),
+   clause(gd_attr_table([table(var('T')) | var('_')], var('T?')), [], []),
+   clause(gd_attr_table([var('_') | var('As')], var('T?')), [otherwise], [gd_attr_table(var('As?'), var('T'))]),
+   decl(gd_attr_cfg(dual('List'('GdAttr')), 'GdCfg')),
+   clause(gd_attr_cfg([], cfg(uniform, l1, 0, 0, 1, 0, 0, 0, 0, 0, 0)), [], []),
+   clause(gd_attr_cfg([cfg(var('C')) | var('_')], var('C?')), [], []),
+   clause(gd_attr_cfg([var('_') | var('As')], var('C?')), [otherwise], [gd_attr_cfg(var('As?'), var('C'))]),
+   decl(gd_has_identity(dual('List'('Atom')), 'YesNo')),
+   clause(gd_has_identity([], no), [], []),
+   clause(gd_has_identity([identity | var('_')], yes), [], []),
+   clause(gd_has_identity([var('_') | var('As')], var('R?')), [otherwise], [gd_has_identity(var('As?'), var('R'))]),
+   decl(gd_knows_atoms(dual('List'('Atom')), 'List'('Key'))),
+   clause(gd_knows_atoms([], []), [], []),
+   clause(gd_knows_atoms([knows(var('Q')) | var('As')], [var('Q?') | var('Qs?')]), [], [gd_knows_atoms(var('As?'), var('Qs'))]),
+   clause(gd_knows_atoms([var('_') | var('As')], var('Qs?')), [otherwise], [gd_knows_atoms(var('As?'), var('Qs'))]),
+   decl(gd_friends(dual('List'('Atom')), 'List'('Key'))),
+   clause(gd_friends([], []), [], []),
+   clause(gd_friends([friend(var('Q')) | var('As')], [var('Q?') | var('Fs?')]), [], [gd_friends(var('As?'), var('Fs'))]),
+   clause(gd_friends([var('_') | var('As')], var('Fs?')), [otherwise], [gd_friends(var('As?'), var('Fs'))]),
+   decl(gd_points(dual('List'('Atom')), 'List'('Key'))),
+   clause(gd_points([], []), [], []),
+   clause(gd_points([points_to(var('Q')) | var('As')], [var('Q?') | var('Ps?')]), [], [gd_points(var('As?'), var('Ps'))]),
+   clause(gd_points([var('_') | var('As')], var('Ps?')), [otherwise], [gd_points(var('As?'), var('Ps'))]),
+
+   %% THE PROFILES.  One dimension, tempo: eager answers the instance 12 times a day, lazy 3.
+   %%   person eager.  Request =::= eager_request.  Approval =::= eager_approval.
+   %%   eager_request(R?, person(Me, _, As), S) :- seen(L), gd_menu(12, Me?, [], As?, L?, S?, slot(R)).
+   %% (The request question of the platform's interface since GLP 24dcd47d writes the request, the person reading
+   %% whom it knows from its views; the menu's list of persons, Ks, is kept empty and unused.)
+   %%   eager_approval(approval(_, _, A?), _, _) :- gd_say(slot(A), yes).
+   %%   person lazy.  (the same at 3)
+   %% A person first establishes their identity, then proposes to come to know each person they know
+   %% from outside the app, one per menu, then offers friendship to each of them, one per menu, each of these after an hour on average; then the instance (gd_instance), at the
+   %% tempo's rate.  The act is decided when the answer is due, not when the menu is drawn (gd_menu).
+
+   person(eager),
+   binds('Request', eager_request),
+   binds('Approval', eager_approval),
+   decl(eager_request('Request', dual('Person'), dual('Integer'))),
+   clause(eager_request(var('R?'), person(var('Me'), var('_'), var('As')), var('S')), [], [seen(var('L')), gd_menu(12, var('Me?'), [], var('As?'), var('L?'), var('S?'), slot(var('R')))]),
+   decl(eager_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(eager_approval(approval(var('_'), var('_'), var('A?')), var('_'), var('_')), [], [gd_say(slot(var('A')), yes)]),
+
+   person(lazy),
+   binds('Request', lazy_request),
+   binds('Approval', lazy_approval),
+   decl(lazy_request('Request', dual('Person'), dual('Integer'))),
+   clause(lazy_request(var('R?'), person(var('Me'), var('_'), var('As')), var('S')), [], [seen(var('L')), gd_menu(3, var('Me?'), [], var('As?'), var('L?'), var('S?'), slot(var('R')))]),
+   decl(lazy_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(lazy_approval(approval(var('_'), var('_'), var('A?')), var('_'), var('_')), [], [gd_say(slot(var('A')), yes)]),
+
+   decl(gd_say(dual('Slot'('YesNo')), dual('YesNo'))),
+   clause(gd_say(slot(var('V?')), var('V')), [], []),
+   decl(gd_request(dual('Slot'('Request')), dual('Request'))),
+   clause(gd_request(slot(var('V?')), var('V')), [], []),
+
+   %% THE HISTORY.  gd_history(L?, Me?, H): one pass over the screen, L the elements seen, the last first, giving
+   %% hist(Atoms, N, Met, Ev, Intros): the atoms of the last view; N the person's ticks so far --- its proposals
+   %% in the approved lists of the views, each counted once per stretch of views it is in flight, and the
+   %% refusals of its proposals (gd_day reckons the day from N, no clock being given to a profile); Met the
+   %% strangers it proposed to meet; Ev every person who was ever its friend; Intros the introductions it
+   %% made, ac(A, C).  The lists hold each person once, so the pass is linear and what follows is small.
+   decl(gd_history(dual('List'('Output')), dual('Key'), 'GdHist')),
+   clause(gd_history(var('L'), var('Me'), var('H?')), [ground(var('Me?'))], [gd_hist(var('L?'), var('Me?'), nolast, [], 0, [], [], [], var('H'))]),
+   decl(gd_hist(dual('List'('Output')), dual('Key'), dual('GdLast'), dual('List'('Approved')), dual('Integer'), dual('List'('Key')), dual('List'('Key')), dual('List'('GdPair')), 'GdHist')),
+   clause(gd_hist([], var('_'), var('La'), var('_'), var('N'), var('Met'), var('Ev'), var('In'), hist(var('Atoms?'), var('N?'), var('Met?'), var('Ev?'), var('In?'))), [], [gd_last_atoms(var('La?'), var('Atoms'))]),
+   clause(gd_hist([view(var('_'), var('Atoms'), var('_'), var('Ap'), var('_')) | var('L')], var('Me'), var('La'), var('Prev'), var('N'), var('Met'), var('Ev'), var('In'), var('H?')),
+          [ground(var('Atoms?')), ground(var('Ap?')), ground(var('Me?')), ground(var('Prev?')), ground(var('N?'))],
+          [gd_new_own(var('Ap?'), var('Me?'), var('Prev?'), var('K')), ':='(var('N1'), '+'(var('N?'), var('K?'))),
+           gd_last_keep(var('La?'), var('Atoms?'), var('La1')),
+           gd_met_in(var('Ap?'), var('Me?'), var('M1')), gd_add_keys(var('M1?'), var('Met?'), var('Met1')),
+           gd_friends(var('Atoms?'), var('F1')), gd_add_keys(var('F1?'), var('Ev?'), var('Ev1')),
+           gd_intros_in(var('Ap?'), var('Me?'), var('I1')), gd_add_pairs(var('I1?'), var('In?'), var('In1')),
+           gd_hist(var('L?'), var('Me?'), var('La1?'), var('Ap?'), var('N1?'), var('Met1?'), var('Ev1?'), var('In1?'), var('H'))]),
+   clause(gd_hist([refused(var('P'), var('_'), var('_')) | var('L')], var('Me'), var('La'), var('Prev'), var('N'), var('Met'), var('Ev'), var('In'), var('H?')),
+          [ground(var('P?')), ground(var('Me?')), ground(var('N?'))],
+          [gd_proposer(var('P?'), var('A')), gd_same_key(var('A?'), var('Me?'), var('K')), ':='(var('N1'), '+'(var('N?'), var('K?'))),
+           gd_hist(var('L?'), var('Me?'), var('La?'), var('Prev?'), var('N1?'), var('Met?'), var('Ev?'), var('In?'), var('H'))]),
+   decl(gd_last_keep(dual('GdLast'), dual('List'('Atom')), 'GdLast')),
+   clause(gd_last_keep(nolast, var('Atoms'), last(var('Atoms?'))), [], []),
+   clause(gd_last_keep(last(var('A')), var('_'), last(var('A?'))), [], []),
+   decl(gd_last_atoms(dual('GdLast'), 'List'('Atom'))),
+   clause(gd_last_atoms(nolast, []), [], []),
+   clause(gd_last_atoms(last(var('A')), var('A?')), [], []),
+   %% gd_add_keys(Xs?, Set?, Set1): Set with each of Xs not in it added; gd_add_pairs likewise for pairs.
+   decl(gd_add_keys(dual('List'('Key')), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_add_keys([], var('Set'), var('Set?')), [], []),
+   clause(gd_add_keys([var('X') | var('Xs')], var('Set'), var('Set1?')), [ground(var('X?')), ground(var('Set?'))],
+          [gd_mem(var('X?'), var('Set?'), var('In')), gd_add_key1(var('In?'), var('X?'), var('Set?'), var('S2')), gd_add_keys(var('Xs?'), var('S2?'), var('Set1'))]),
+   decl(gd_add_key1(dual('YesNo'), dual('Key'), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_add_key1(yes, var('_'), var('Set'), var('Set?')), [], []),
+   clause(gd_add_key1(no, var('X'), var('Set'), [var('X?') | var('Set?')]), [], []),
+   decl(gd_add_pairs(dual('List'('GdPair')), dual('List'('GdPair')), 'List'('GdPair'))),
+   clause(gd_add_pairs([], var('Set'), var('Set?')), [], []),
+   clause(gd_add_pairs([var('X') | var('Xs')], var('Set'), var('Set1?')), [ground(var('X?')), ground(var('Set?'))],
+          [gd_mem_pair(var('X?'), var('Set?'), var('In')), gd_add_pair1(var('In?'), var('X?'), var('Set?'), var('S2')), gd_add_pairs(var('Xs?'), var('S2?'), var('Set1'))]),
+   decl(gd_add_pair1(dual('YesNo'), dual('GdPair'), dual('List'('GdPair')), 'List'('GdPair'))),
+   clause(gd_add_pair1(yes, var('_'), var('Set'), var('Set?')), [], []),
+   clause(gd_add_pair1(no, var('X'), var('Set'), [var('X?') | var('Set?')]), [], []),
+   decl(gd_mem_pair(dual('GdPair'), dual('List'('GdPair')), 'YesNo')),
+   clause(gd_mem_pair(var('_'), [], no), [], []),
+   clause(gd_mem_pair(var('X'), [var('Y') | var('_')], yes), ['=?='(var('X?'), var('Y?'))], [true]),
+   clause(gd_mem_pair(var('X'), [var('_') | var('Ys')], var('R?')), [otherwise], [gd_mem_pair(var('X?'), var('Ys?'), var('R'))]),
+   decl(gd_met_in(dual('List'('Approved')), dual('Key'), 'List'('Key'))),
+   clause(gd_met_in([], var('_'), []), [], []),
+   clause(gd_met_in([acquaint(var('M'), var('Q')) | var('Ap')], var('Me'), [var('Q?') | var('Qs?')]), ['=?='(var('M?'), var('Me?')), ground(var('Me?'))], [gd_met_in(var('Ap?'), var('Me?'), var('Qs'))]),
+   clause(gd_met_in([var('_') | var('Ap')], var('Me'), var('Qs?')), [otherwise, ground(var('Me?'))], [gd_met_in(var('Ap?'), var('Me?'), var('Qs'))]),
+   decl(gd_intros_in(dual('List'('Approved')), dual('Key'), 'List'('GdPair'))),
+   clause(gd_intros_in([], var('_'), []), [], []),
+   clause(gd_intros_in([introduce(var('M'), var('B'), var('C')) | var('Ap')], var('Me'), [ac(var('B?'), var('C?')) | var('Cs?')]), ['=?='(var('M?'), var('Me?')), ground(var('Me?'))], [gd_intros_in(var('Ap?'), var('Me?'), var('Cs'))]),
+   clause(gd_intros_in([var('_') | var('Ap')], var('Me'), var('Cs?')), [otherwise, ground(var('Me?'))], [gd_intros_in(var('Ap?'), var('Me?'), var('Cs'))]),
+   decl(gd_new_own(dual('List'('Approved')), dual('Key'), dual('List'('Approved')), 'Integer')),
+   clause(gd_new_own([], var('_'), var('_'), 0), [], []),
+   clause(gd_new_own([var('P') | var('Ps')], var('Me'), var('Prev'), var('N?')), [ground(var('P?')), ground(var('Me?')), ground(var('Prev?'))],
+          [gd_proposer(var('P?'), var('A')), gd_same_key(var('A?'), var('Me?'), var('K1')), gd_mem_p(var('P?'), var('Prev?'), var('In')), gd_not_in(var('In?'), var('K2')),
+           gd_new_own(var('Ps?'), var('Me?'), var('Prev?'), var('N1')), ':='(var('N'), '+'(var('N1?'), '*'(var('K1?'), var('K2?'))))]),
+   decl(gd_same_key(dual('Key'), dual('Key'), 'Integer')),
+   clause(gd_same_key(var('A'), var('B'), 1), ['=?='(var('A?'), var('B?'))], [true]),
+   clause(gd_same_key(var('_'), var('_'), 0), [otherwise], [true]),
+   decl(gd_not_in(dual('YesNo'), 'Integer')),
+   clause(gd_not_in(yes, 0), [], []),
+   clause(gd_not_in(no, 1), [], []),
+   decl(gd_mem_p(dual('Approved'), dual('List'('Approved')), 'YesNo')),
+   clause(gd_mem_p(var('_'), [], no), [], []),
+   clause(gd_mem_p(var('X'), [var('Y') | var('_')], yes), ['=?='(var('X?'), var('Y?'))], [true]),
+   clause(gd_mem_p(var('X'), [var('_') | var('Ys')], var('R?')), [otherwise], [gd_mem_p(var('X?'), var('Ys?'), var('R'))]),
+   decl(gd_proposer(dual('Approved'), 'Key')),
+   clause(gd_proposer(establish(var('A')), var('A?')), [], []),
+   clause(gd_proposer(acquaint(var('A'), var('_')), var('A?')), [], []),
+   clause(gd_proposer(introduce(var('A'), var('_'), var('_')), var('A?')), [], []),
+   clause(gd_proposer(befriend(var('A'), var('_')), var('A?')), [], []),
+   clause(gd_proposer(unfriend(var('A'), var('_')), var('A?')), [], []),
+   clause(gd_proposer(point_friend(var('A'), var('_')), var('A?')), [], []),
+   clause(gd_proposer(point_transitive(var('A'), var('_'), var('_')), var('A?')), [], []),
+   clause(gd_proposer(unpoint(var('A'), var('_')), var('A?')), [], []),
+
+   %% THE MENU.  gd_menu(Rate?, Me?, Ks?, As?, L?, S?, slot(W)): the menu's answer.  The screen as the menu was drawn
+   %% decides only the rate: an hour on average while the person is setting up (no identity, a person known
+   %% from outside not yet known in the app, one not yet a friend), the tempo's rate where the instance takes
+   %% an act or anything moves, and a day where it takes none and nothing moves; the act itself is decided
+   %% when the answer is due, by gd_tick, from the screen as it then stands, so that an act committed
+   %% meanwhile is not proposed again.
+   decl(gd_menu(dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('List'('Output')), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_menu(var('Rate'), var('Me'), var('Ks'), var('As'), var('L'), var('S'), slot(var('W?'))), [ground(var('Me?'))],
+          [gd_history(var('L?'), var('Me?'), var('H')), gd_menu1(var('H?'), var('Rate?'), var('Me?'), var('Ks?'), var('As?'), var('S?'), slot(var('W')))]),
+   decl(gd_menu1(dual('GdHist'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_menu1(var('H'), var('Rate'), var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [ground(var('H?')), ground(var('As?')), ground(var('Me?')), ground(var('Rate?'))],
+          [gd_todo(var('H?'), var('As?'), var('Todo')),
+           random(var('S?'), 2147483646, var('S1'), var('S2')),
+           gd_phase(var('Todo?'), var('H?'), var('Me?'), var('As?'), var('Rate?'), var('S1?'), var('Phase')),
+           gd_do(var('Phase?'), var('Rate?'), var('Me?'), var('Ks?'), var('As?'), var('S2?'), slot(var('W')))]),
+   %% gd_todo(H?, As?, Todo): what the person has to do first: establish; acquaint(Q), Q a person known from
+   %% outside the app not yet known in it; befriend(Q), Q a person known from outside or met and known in the
+   %% app who was never a friend (a friendship ended is not made again, by either side, each holding the
+   %% friend in a view seen; a person met by an introduction is not befriended: they are known, and may be
+   %% pointed to through a friend); or steady.
+   decl(gd_todo(dual('GdHist'), dual('List'('GdAttr')), 'GdTodo')),
+   clause(gd_todo(hist(var('Atoms'), var('_'), var('Met'), var('Ev'), var('_')), var('As'), var('Todo?')), [ground(var('Atoms?')), ground(var('As?'))],
+          [gd_has_identity(var('Atoms?'), var('Id')),
+           gd_attr_knows(var('As?'), var('Kn')),
+           gd_app(var('Kn?'), var('Met?'), var('Kn1')),
+           gd_knows_atoms(var('Atoms?'), var('Kw')),
+           gd_todo1(var('Id?'), var('Kn1?'), var('Kw?'), var('Ev?'), var('Todo'))]),
+   decl(gd_todo1(dual('YesNo'), dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), 'GdTodo')),
+   clause(gd_todo1(var('Id'), var('Kn'), var('Kw'), var('Ev'), var('Todo?')), [ground(var('Kw?')), ground(var('Kn?'))],
+          [gd_first_missing(var('Kn?'), var('Kw?'), var('Unmet')),
+           gd_inter(var('Kn?'), var('Kw?'), var('Known')),
+           gd_first_missing(var('Known?'), var('Ev?'), var('Unfr')),
+           gd_todo_of(var('Id?'), var('Unmet?'), var('Unfr?'), var('Todo'))]),
+   decl(gd_todo_of(dual('YesNo'), dual('GdPick'), dual('GdPick'), 'GdTodo')),
+   clause(gd_todo_of(no, var('_'), var('_'), establish), [], []),
+   clause(gd_todo_of(yes, pick(var('Q')), var('_'), acquaint(var('Q?'))), [], []),
+   clause(gd_todo_of(yes, nothing, pick(var('Q')), befriend(var('Q?'))), [], []),
+   clause(gd_todo_of(yes, nothing, nothing, steady), [], []),
+   %% gd_phase(Todo?, H?, Me?, As?, Rate?, S?, Phase): setup, steady or idle, as above.  A person with nothing to do
+   %% looks once a day, whether or not the persons walk or the friendships change: the walk moves everyone
+   %% a step a day, so a daily look finds it; and every answer to the menu is a request the platform
+   %% evaluates against every person the agent knows, which is what a run's time goes on (the platform's
+   %% app, lookup and keep_spec, not the profiles), so the looks are kept few.
+   decl(gd_phase(dual('GdTodo'), dual('GdHist'), dual('Key'), dual('List'('GdAttr')), dual('Integer'), dual('Integer'), 'Constant')),
+   clause(gd_phase(steady, var('H'), var('Me'), var('As'), var('Rate'), var('S'), var('Phase?')), [],
+          [gd_instance_act(var('Me?'), var('As?'), var('H?'), var('Rate?'), var('S?'), var('Act')), gd_phase1(var('Act?'), var('Phase'))]),
+   clause(gd_phase(var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), setup), [otherwise], [true]),
+   decl(gd_phase1(dual('GdAct'), 'Constant')),
+   clause(gd_phase1(idle(var('_')), idle), [], []),
+   clause(gd_phase1(none, idle), [], []),
+   clause(gd_phase1(var('_'), steady), [otherwise], [true]),
+   decl(gd_do(dual('Constant'), dual('Integer'), dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_do(setup, var('_'), var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [], [rated(gd_tick(var('Me?'), var('Ks?'), var('As?'), 12, var('S?'), slot(var('W'))), rate(1, hour))]),
+   clause(gd_do(steady, 12, var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [], [rated(gd_tick(var('Me?'), var('Ks?'), var('As?'), 12, var('S?'), slot(var('W'))), rate(12, day))]),
+   clause(gd_do(steady, 3, var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [], [rated(gd_tick(var('Me?'), var('Ks?'), var('As?'), 3, var('S?'), slot(var('W'))), rate(3, day))]),
+   clause(gd_do(idle, var('_'), var('Me'), var('Ks'), var('As'), var('S'), slot(var('W?'))), [], [rated(gd_tick(var('Me?'), var('Ks?'), var('As?'), 12, var('S?'), slot(var('W'))), rate(1, day))]),
+   %% THE TICK.  gd_tick(Me?, Ks?, As?, Rate?, S?, slot(W)): the act, from the screen as it stands when the answer is
+   %% due; Rate the tempo's ticks a day, by which the person reckons the day from its ticks (gd_day).
+   decl(gd_tick(dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('Integer'), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_tick(var('Me'), var('Ks'), var('As'), var('Rate'), var('S'), slot(var('W?'))), [ground(var('Me?'))],
+          [seen(var('L')), gd_history(var('L?'), var('Me?'), var('H')), gd_tick1(var('H?'), var('Me?'), var('Ks?'), var('As?'), var('Rate?'), var('S?'), slot(var('W')))]),
+   decl(gd_tick1(dual('GdHist'), dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('Integer'), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_tick1(var('H'), var('Me'), var('Ks'), var('As'), var('Rate'), var('S'), slot(var('W?'))), [ground(var('H?')), ground(var('As?')), ground(var('Me?'))],
+          [gd_todo(var('H?'), var('As?'), var('Todo')), gd_tick3(var('Todo?'), var('H?'), var('Me?'), var('Ks?'), var('As?'), var('Rate?'), var('S?'), slot(var('W')))]),
+   decl(gd_tick3(dual('GdTodo'), dual('GdHist'), dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('Integer'), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_tick3(establish, var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(establish(var('Me?'))))), [], []),
+   clause(gd_tick3(acquaint(var('Q')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(acquaint(var('Me?'), var('Q?'))))), [], []),
+   clause(gd_tick3(befriend(var('Q')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(befriend(var('Me?'), var('Q?'))))), [], []),
+   clause(gd_tick3(steady, var('H'), var('Me'), var('Ks'), var('As'), var('Rate'), var('S'), slot(var('W?'))), [ground(var('As?')), ground(var('H?')), ground(var('Me?'))],
+          [gd_attr_cfg(var('As?'), var('C')), random(var('S?'), 1000, var('R'), var('S1')), gd_move(var('R?'), var('C?'), var('H?'), var('As?'), var('Me?'), var('S1?'), var('Mv'), var('S2')),
+           gd_tick4(var('Mv?'), var('H?'), var('Me?'), var('Ks?'), var('As?'), var('Rate?'), var('S2?'), slot(var('W')))]),
+   decl(gd_tick4(dual('GdMove'), dual('GdHist'), dual('Key'), dual('List'('Key')), dual('List'('GdAttr')), dual('Integer'), dual('Integer'), dual('Slot'('Request')))),
+   clause(gd_tick4(meet(var('Q')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(acquaint(var('Me?'), var('Q?'))))), [], []),
+   clause(gd_tick4(part(var('Q')), var('_'), var('Me'), var('_'), var('_'), var('_'), var('_'), slot(propose(unfriend(var('Me?'), var('Q?'))))), [], []),
+   clause(gd_tick4(stay, var('H'), var('Me'), var('_'), var('As'), var('Rate'), var('S'), slot(var('W?'))), [ground(var('Me?'))],
+          [gd_instance_act(var('Me?'), var('As?'), var('H?'), var('Rate?'), var('S?'), var('Act')), gd_act(var('Act?'), var('Me?'), slot(var('W')))]),
+   %% THE FRIENDSHIP GRAPH'S CHANGE.  gd_move(R?, C?, H?, As?, Me?, S?, Mv, S1): at a tick, with R drawn in 1..1000, meet(Q)
+   %% where R =< Meet, Q a stranger drawn uniformly from the persons of the table the agent does not know;
+   %% part(Q) where Meet < R =< Meet + Part, Q a friend drawn uniformly; stay otherwise, or where there is no
+   %% such person.  Meeting is acquaint(Me, Q) (GKK:2), after which Q is befriended (gd_todo); parting is
+   %% unfriend(Me, Q) (GSG:2), after which neither befriends the other again.
+   decl(gd_move(dual('Integer'), dual('GdCfg'), dual('GdHist'), dual('List'('GdAttr')), dual('Key'), dual('Integer'), 'GdMove', 'Integer')),
+   clause(gd_move(var('R'), var('C'), hist(var('Atoms'), var('_'), var('_'), var('_'), var('_')), var('As'), var('Me'), var('S'), var('Mv?'), var('S1?')), [ground(var('C?')), ground(var('R?'))],
+          [gd_cfg_meet(var('C?'), var('Mt')), gd_cfg_part(var('C?'), var('Pt')), ':='(var('MP'), '+'(var('Mt?'), var('Pt?'))),
+           gd_move1(var('R?'), var('Mt?'), var('MP?'), var('Atoms?'), var('As?'), var('Me?'), var('S?'), var('Mv'), var('S1'))]),
+   decl(gd_move1(dual('Integer'), dual('Integer'), dual('Integer'), dual('List'('Atom')), dual('List'('GdAttr')), dual('Key'), dual('Integer'), 'GdMove', 'Integer')),
+   clause(gd_move1(var('R'), var('Mt'), var('_'), var('Atoms'), var('As'), var('Me'), var('S'), var('Mv?'), var('S1?')), ['=<'(var('R?'), var('Mt?')), ground(var('Atoms?')), ground(var('As?')), ground(var('Me?'))],
+          [gd_attr_table(var('As?'), var('Locs')), gd_table_keys(var('Locs?'), var('All')), gd_knows_atoms(var('Atoms?'), var('Kw')),
+           gd_without(var('All?'), var('Me?'), var('All1')), gd_minus(var('All1?'), var('Kw?'), var('Strangers')),
+           gd_pick_or_nothing(var('Strangers?'), var('S?'), var('P')), gd_move_meet(var('P?'), var('Mv')), random(var('S?'), 2147483646, var('S1'), var('_'))]),
+   clause(gd_move1(var('R'), var('Mt'), var('MP'), var('Atoms'), var('_'), var('_'), var('S'), var('Mv?'), var('S1?')), ['>'(var('R?'), var('Mt?')), '=<'(var('R?'), var('MP?')), ground(var('Atoms?'))],
+          [gd_friends(var('Atoms?'), var('Fr')), gd_pick_or_nothing(var('Fr?'), var('S?'), var('P')), gd_move_part(var('P?'), var('Mv')), random(var('S?'), 2147483646, var('S1'), var('_'))]),
+   clause(gd_move1(var('R'), var('_'), var('MP'), var('_'), var('_'), var('_'), var('S'), stay, var('S?')), ['>'(var('R?'), var('MP?'))], [true]),
+   decl(gd_move_meet(dual('GdPick'), 'GdMove')),
+   clause(gd_move_meet(pick(var('Q')), meet(var('Q?'))), [], []),
+   clause(gd_move_meet(nothing, stay), [], []),
+   decl(gd_move_part(dual('GdPick'), 'GdMove')),
+   clause(gd_move_part(pick(var('Q')), part(var('Q?'))), [], []),
+   clause(gd_move_part(nothing, stay), [], []),
+   decl(gd_table_keys(dual('List'('GdLoc')), 'List'('Key'))),
+   clause(gd_table_keys([], []), [], []),
+   clause(gd_table_keys([loc(var('Q'), var('_'), var('_'), var('_')) | var('Ls')], [var('Q?') | var('Qs?')]), [], [gd_table_keys(var('Ls?'), var('Qs'))]),
+
+
+   %% THE INSTANCE.  gd_instance(Me?, Ks?, As?, Atoms?, S?, slot(W)): the act the instance takes, read off
+   %% the screen and the attributes: with N the persons pointed to, Far the farthest of them, NearF the
+   %% nearest unpointed friend and NearK the nearest unpointed person known ---
+   %%   ceasing, unpoint(Far), where N > d;
+   %%   pointing to friend, point_friend(NearF), where N < d, or N = d and NearF is closer than Far by more than e;
+   %%   transitive pointing, point_transitive(B, NearK), B drawn uniformly from the pointed, where NearK is
+   %%     closer than Far by more than e;
+   %%   otherwise gossip, introduce(A, C), A a friend and C a person pointed to, drawn uniformly, so that
+   %%     A comes to know C; and where there is no such pair, an act the person's own machine refuses,
+   %%     unpoint(Q) of a person Q known at the start and not pointed to, or establish where every one is.
+   decl(gd_instance_act(dual('Key'), dual('List'('GdAttr')), dual('GdHist'), dual('Integer'), dual('Integer'), 'GdAct')),
+   clause(gd_instance_act(var('Me'), var('As'), hist(var('Atoms'), var('N'), var('_'), var('_'), var('Intros')), var('Rate'), var('S'), var('Act?')), [ground(var('Me?')), ground(var('As?')), ground(var('Atoms?')), '>'(var('Rate?'), 0)],
+          [gd_attr_cfg(var('As?'), var('C')),
+           ':='(var('T'), '//'(var('N?'), var('Rate?'))),
+           gd_instance1(var('C?'), var('T?'), var('Me?'), var('As?'), var('Atoms?'), var('Intros?'), var('S?'), var('Act'))]),
+   %% gd_instance1(C?, T?, Me?, As?, Atoms?, Intros?, S?, Act): every person at its location on day T (gd_pos_at).
+   decl(gd_instance1(dual('GdCfg'), dual('Integer'), dual('Key'), dual('List'('GdAttr')), dual('List'('Atom')), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_instance1(var('C'), var('T'), var('Me'), var('As'), var('Atoms'), var('Intros'), var('S'), var('Act?')), [ground(var('C?')), ground(var('T?')), ground(var('Me?')), ground(var('As?')), ground(var('Atoms?'))],
+          [gd_attr_table(var('As?'), var('Locs')),
+           gd_instance2(var('Locs?'), var('C?'), var('T?'), var('Me?'), var('As?'), var('Atoms?'), var('Intros?'), var('S?'), var('Act'))]),
+   decl(gd_instance2(dual('List'('GdLoc')), dual('GdCfg'), dual('Integer'), dual('Key'), dual('List'('GdAttr')), dual('List'('Atom')), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_instance2(var('Locs'), var('C'), var('T'), var('Me'), var('As'), var('Atoms'), var('Intros'), var('S'), var('Act?')), [ground(var('Locs?')), ground(var('C?')), ground(var('T?')), ground(var('Me?')), ground(var('As?')), ground(var('Atoms?'))],
+          [gd_cfg_metric(var('C?'), var('Met')), gd_cfg_bound(var('C?'), var('D')), gd_cfg_slack(var('C?'), var('E')),
+           gd_cfg_mapseed(var('C?'), var('MS')), gd_cfg_step(var('C?'), var('Step')),
+           gd_attr_at(var('As?'), var('X0'), var('Y0')),
+           gd_loc_of(var('Me?'), var('Locs?'), var('_'), var('_'), var('W')),
+           ':='(var('St1'), '*'(var('Step?'), var('W?'))),
+           gd_pos_at(var('X0?'), var('Y0?'), var('MS?'), var('St1?'), var('T?'), var('X'), var('Y')),
+           gd_attr_knows(var('As?'), var('Kn')),
+           gd_friends(var('Atoms?'), var('Fr')),
+           gd_knows_atoms(var('Atoms?'), var('Kw')),
+           gd_points(var('Atoms?'), var('Pt')),
+           gd_sorted(var('Met?'), var('X?'), var('Y?'), var('Locs?'), var('Me?'), var('MS?'), var('Step?'), var('T?'), var('Sorted')),
+           gd_choose(var('Sorted?'), var('Fr?'), var('Kw?'), var('Kn?'), var('Pt?'), var('D?'), var('E?'), var('Intros?'), var('S?'), var('Act'))]),
+   decl(gd_choose(dual('List'('GdDk')), dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('Integer'), dual('Integer'), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_choose(var('Sorted'), var('Fr'), var('Kw'), var('Kn'), var('Pt'), var('D'), var('E'), var('Intros'), var('S'), var('Act?')), [ground(var('Sorted?')), ground(var('Fr?')), ground(var('Kw?')), ground(var('Pt?'))],
+          [gd_length(var('Pt?'), var('N')),
+           gd_farthest(var('Sorted?'), var('Pt?'), nonear, var('Far')),
+           gd_nearest_in(var('Sorted?'), var('Fr?'), var('Pt?'), var('NearF')),
+           gd_nearest_in(var('Sorted?'), var('Kw?'), var('Pt?'), var('NearK')),
+           gd_choose1(var('N?'), var('D?'), var('E?'), var('Far?'), var('NearF?'), var('NearK?'), var('Fr?'), var('Kn?'), var('Pt?'), var('Intros?'), var('S?'), var('Act'))]),
+   %% gd_farthest(Sorted?, Pt?, Acc?, Far): the farthest person pointed to, the last of Sorted in Pt.
+   decl(gd_farthest(dual('List'('GdDk')), dual('List'('Key')), dual('GdNear'), 'GdNear')),
+   clause(gd_farthest([], var('_'), var('Acc'), var('Acc?')), [], []),
+   clause(gd_farthest([dk(var('Dst'), var('Q')) | var('Ds')], var('Pt'), var('Acc'), var('Far?')), [ground(var('Q?')), ground(var('Pt?'))],
+          [gd_mem(var('Q?'), var('Pt?'), var('In')), gd_farthest1(var('In?'), var('Dst?'), var('Q?'), var('Ds?'), var('Pt?'), var('Acc?'), var('Far'))]),
+   decl(gd_farthest1(dual('YesNo'), dual('Number'), dual('Key'), dual('List'('GdDk')), dual('List'('Key')), dual('GdNear'), 'GdNear')),
+   clause(gd_farthest1(yes, var('Dst'), var('Q'), var('Ds'), var('Pt'), var('_'), var('Far?')), [], [gd_farthest(var('Ds?'), var('Pt?'), near(var('Dst?'), var('Q?')), var('Far'))]),
+   clause(gd_farthest1(no, var('_'), var('_'), var('Ds'), var('Pt'), var('Acc'), var('Far?')), [], [gd_farthest(var('Ds?'), var('Pt?'), var('Acc?'), var('Far'))]),
+   %% gd_nearest_in(Sorted?, Set?, Excl?, Near): the nearest person in Set and not in Excl, or nonear.
+   decl(gd_nearest_in(dual('List'('GdDk')), dual('List'('Key')), dual('List'('Key')), 'GdNear')),
+   clause(gd_nearest_in([], var('_'), var('_'), nonear), [], []),
+   clause(gd_nearest_in([dk(var('Dst'), var('Q')) | var('Ds')], var('Set'), var('Excl'), var('Near?')), [ground(var('Q?')), ground(var('Set?')), ground(var('Excl?'))],
+          [gd_mem(var('Q?'), var('Set?'), var('In')), gd_mem(var('Q?'), var('Excl?'), var('Out')), gd_nearest_in1(var('In?'), var('Out?'), var('Dst?'), var('Q?'), var('Ds?'), var('Set?'), var('Excl?'), var('Near'))]),
+   decl(gd_nearest_in1(dual('YesNo'), dual('YesNo'), dual('Number'), dual('Key'), dual('List'('GdDk')), dual('List'('Key')), dual('List'('Key')), 'GdNear')),
+   clause(gd_nearest_in1(yes, no, var('Dst'), var('Q'), var('_'), var('_'), var('_'), near(var('Dst?'), var('Q?'))), [], []),
+   clause(gd_nearest_in1(var('_'), var('_'), var('_'), var('_'), var('Ds'), var('Set'), var('Excl'), var('Near?')), [otherwise], [gd_nearest_in(var('Ds?'), var('Set?'), var('Excl?'), var('Near'))]),
+   %% gd_choose1(N?, D?, E?, Far?, NearF?, NearK?, Fr?, Kn?, Pt?, Intros?, S?, Act): the decision, in the order above.
+   decl(gd_choose1(dual('Integer'), dual('Integer'), dual('Integer'), dual('GdNear'), dual('GdNear'), dual('GdNear'), dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_choose1(var('N'), var('D'), var('_'), near(var('_'), var('Q')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), unpoint(var('Q?'))), ['>'(var('N?'), var('D?'))], [true]),
+   clause(gd_choose1(var('N'), var('D'), var('E'), var('Far'), var('NearF'), var('NearK'), var('Fr'), var('Kn'), var('Pt'), var('Intros'), var('S'), var('Act?')), [otherwise],
+          [gd_choose2(var('N?'), var('D?'), var('E?'), var('Far?'), var('NearF?'), var('NearK?'), var('Fr?'), var('Kn?'), var('Pt?'), var('Intros?'), var('S?'), var('Act'))]),
+   decl(gd_choose2(dual('Integer'), dual('Integer'), dual('Integer'), dual('GdNear'), dual('GdNear'), dual('GdNear'), dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_choose2(var('N'), var('D'), var('_'), var('_'), near(var('_'), var('B')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), point(var('B?'))), ['<'(var('N?'), var('D?'))], [true]),
+   clause(gd_choose2(var('N'), var('D'), var('E'), near(var('Df'), var('_')), near(var('Db'), var('B')), var('_'), var('_'), var('_'), var('_'), var('_'), var('_'), point(var('B?'))), ['>='(var('N?'), var('D?')), '<'(var('Db?'), '-'(var('Df?'), var('E?')))], [true]),
+   clause(gd_choose2(var('_'), var('_'), var('E'), var('Far'), var('_'), var('NearK'), var('Fr'), var('Kn'), var('Pt'), var('Intros'), var('S'), var('Act?')), [otherwise],
+          [gd_choose3(var('E?'), var('Far?'), var('NearK?'), var('Fr?'), var('Kn?'), var('Pt?'), var('Intros?'), var('S?'), var('Act'))]),
+   decl(gd_choose3(dual('Integer'), dual('GdNear'), dual('GdNear'), dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_choose3(var('E'), near(var('Df'), var('_')), near(var('Dc'), var('C')), var('_'), var('_'), [var('P0') | var('Ps')], var('_'), var('S'), through(var('B?'), var('C?'))), ['<'(var('Dc?'), '-'(var('Df?'), var('E?')))],
+          [gd_pick([var('P0?') | var('Ps?')], var('S?'), var('B'), var('_'))]),
+   clause(gd_choose3(var('_'), var('_'), var('_'), var('Fr'), var('Kn'), var('Pt'), var('Intros'), var('S'), var('Act?')), [otherwise],
+          [gd_choose4(var('Fr?'), var('Kn?'), var('Pt?'), var('Intros?'), var('S?'), var('Act'))]),
+   %% gd_choose4(Fr?, Kn?, Pt?, Intros?, S?, Act): the gossip, introduce(A, C), A a friend drawn uniformly and C a person
+   %% pointed to, other than A, drawn uniformly among those not introduced to A before (Intros, the person's
+   %% own introductions), so that no introduction is repeated, a repeated one adding knows(C) at A again
+   %% (GKK:3 forbids nothing).
+   decl(gd_choose4(dual('List'('Key')), dual('List'('Key')), dual('List'('Key')), dual('List'('GdPair')), dual('Integer'), 'GdAct')),
+   clause(gd_choose4([var('F0') | var('Fs')], var('Kn'), var('Pt'), var('Intros'), var('S'), var('Act?')), [ground(var('F0?')), ground(var('Fs?')), ground(var('Pt?')), ground(var('Intros?'))],
+          [gd_pick([var('F0?') | var('Fs?')], var('S?'), var('A'), var('S1')), gd_without(var('Pt?'), var('A?'), var('Cs0')), gd_gossiped(var('A?'), var('Intros?'), var('Cs0?'), var('Cs')), gd_pick_or_nothing(var('Cs?'), var('S1?'), var('Cp')), gd_choose5(var('Cp?'), var('A?'), var('Kn?'), var('Pt?'), var('Act'))]),
+   clause(gd_choose4([], var('Kn'), var('Pt'), var('_'), var('_'), var('Act?')), [], [gd_idle(var('Kn?'), var('Pt?'), var('Act'))]),
+   decl(gd_gossiped(dual('Key'), dual('List'('GdPair')), dual('List'('Key')), 'List'('Key'))),
+   clause(gd_gossiped(var('A'), var('Intros'), var('Cs0'), var('Cs?')), [ground(var('A?'))], [gd_introduced_to(var('Intros?'), var('A?'), var('Done')), gd_minus(var('Cs0?'), var('Done?'), var('Cs'))]),
+   decl(gd_introduced_to(dual('List'('GdPair')), dual('Key'), 'List'('Key'))),
+   clause(gd_introduced_to([], var('_'), []), [], []),
+   clause(gd_introduced_to([ac(var('B'), var('C')) | var('Is')], var('A'), [var('C?') | var('Cs?')]), ['=?='(var('B?'), var('A?')), ground(var('A?'))], [gd_introduced_to(var('Is?'), var('A?'), var('Cs'))]),
+   clause(gd_introduced_to([var('_') | var('Is')], var('A'), var('Cs?')), [otherwise, ground(var('A?'))], [gd_introduced_to(var('Is?'), var('A?'), var('Cs'))]),
+   decl(gd_choose5(dual('GdPick'), dual('Key'), dual('List'('Key')), dual('List'('Key')), 'GdAct')),
+   clause(gd_choose5(pick(var('C')), var('A'), var('_'), var('_'), gossip(var('A?'), var('C?'))), [], []),
+   clause(gd_choose5(nothing, var('_'), var('Kn'), var('Pt'), var('Act?')), [], [gd_idle(var('Kn?'), var('Pt?'), var('Act'))]),
+
+   decl(gd_idle(dual('List'('Key')), dual('List'('Key')), 'GdAct')),
+   clause(gd_idle(var('Kn'), var('Pt'), var('Act?')), [], [gd_first_missing(var('Kn?'), var('Pt?'), var('P')), gd_idle1(var('P?'), var('Act'))]),
+   decl(gd_idle1(dual('GdPick'), 'GdAct')),
+   clause(gd_idle1(pick(var('Q')), idle(var('Q?'))), [], []),
+   clause(gd_idle1(nothing, none), [], []),
+   decl(gd_act(dual('GdAct'), dual('Key'), dual('Slot'('Request')))),
+   clause(gd_act(unpoint(var('Q')), var('Me'), slot(propose(unpoint(var('Me?'), var('Q?'))))), [], []),
+   clause(gd_act(point(var('B')), var('Me'), slot(propose(point_friend(var('Me?'), var('B?'))))), [], []),
+   clause(gd_act(through(var('B'), var('C')), var('Me'), slot(propose(point_transitive(var('Me?'), var('B?'), var('C?'))))), [], []),
+   clause(gd_act(gossip(var('A'), var('C')), var('Me'), slot(propose(introduce(var('Me?'), var('A?'), var('C?'))))), [], []),
+   clause(gd_act(idle(var('Q')), var('Me'), slot(propose(unpoint(var('Me?'), var('Q?'))))), [], []),
+   clause(gd_act(none, var('Me'), slot(propose(establish(var('Me?'))))), [], []),
+
+   %% THE RUN.  The town of forty, for thirty days, half eager and half lazy, seed 1.
+   %%   run gd_town40 [ tempo ~ (eager : 0.5 ; lazy : 0.5) ] until 30 days seed 1.
+   run(gd_town40, [mix(tempo, [share(eager, 0.5), share(lazy, 0.5)])], 30, day, 1),
+
+   %% THE KEY TABLES: forty keys and a hundred, in order; the log's agent a is the a-th.
+   decl(gd_keys40('List'('Key'))),
+   clause(gd_keys40([p01, p02, p03, p04, p05, p06, p07, p08, p09, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20,
+                     p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40]), [], []),
+   decl(gd_keys200('List'('Key'))),
+   clause(gd_keys200([q001, q002, q003, q004, q005, q006, q007, q008, q009, q010, q011, q012, q013, q014, q015, q016, q017, q018, q019, q020, q021, q022, q023, q024, q025, q026, q027, q028, q029, q030, q031, q032, q033, q034, q035, q036, q037, q038, q039, q040, q041, q042, q043, q044, q045, q046, q047, q048, q049, q050, q051, q052, q053, q054, q055, q056, q057, q058, q059, q060, q061, q062, q063, q064, q065, q066, q067, q068, q069, q070, q071, q072, q073, q074, q075, q076, q077, q078, q079, q080, q081, q082, q083, q084, q085, q086, q087, q088, q089, q090, q091, q092, q093, q094, q095, q096, q097, q098, q099, q100, q101, q102, q103, q104, q105, q106, q107, q108, q109, q110, q111, q112, q113, q114, q115, q116, q117, q118, q119, q120, q121, q122, q123, q124, q125, q126, q127, q128, q129, q130, q131, q132, q133, q134, q135, q136, q137, q138, q139, q140, q141, q142, q143, q144, q145, q146, q147, q148, q149, q150, q151, q152, q153, q154, q155, q156, q157, q158, q159, q160, q161, q162, q163, q164, q165, q166, q167, q168, q169, q170, q171, q172, q173, q174, q175, q176, q177, q178, q179, q180, q181, q182, q183, q184, q185, q186, q187, q188, q189, q190, q191, q192, q193, q194, q195, q196, q197, q198, q199, q200]), [], []),
+   %% gd_manhattan(Locs): two hundred drivers of Manhattan, at the pickup points of two hundred of the 5,986 yellow-taxi trips of 2015-01-15 08:00-08:15 (LBM-code, inputs/pickups_2015-01-15_0800-0815_quantized.json, every thirtieth in its spatial order, dealt to the keys in steps of seven), in metres, the frame rotated 29 degrees so that the avenues run up the page and the streets across, and l1 is the street distance; the island is 4.5 km across and 21 km long.
+   decl(gd_manhattan('List'('GdXY'))),
+   clause(gd_manhattan([xy(2139, 335), xy(2452, 1387), xy(1368, 3405), xy(1681, 3643), xy(3381, 2769), xy(2185, 4405), xy(2713, 4877), xy(528, 5002), xy(1366, 5769), xy(1623, 5730), xy(2504, 5562), xy(1398, 6389), xy(1363, 7197), xy(2767, 6366), xy(2293, 6820), xy(2695, 7093), xy(1080, 7547), xy(975, 8508), xy(1078, 8700), xy(3272, 7643), xy(2838, 8195), xy(2414, 9261), xy(2553, 9322), xy(2690, 9784), xy(3516, 8976), xy(2698, 10343), xy(1351, 10049), xy(2226, 10595), xy(2195, 12810), xy(2363, 1113), xy(2323, 1797), xy(1981, 3095), xy(1915, 3936), xy(2656, 3829), xy(2499, 4745), xy(2847, 5342), xy(1333, 4721), xy(811, 6679), xy(1604, 5833), xy(2182, 6186), xy(1356, 6711), xy(2692, 5902), xy(3312, 5889), xy(1878, 7236), xy(2534, 7665), xy(1082, 7946), xy(1865, 7826), xy(1093, 9678), xy(3066, 7850), xy(2680, 8753), xy(3525, 8661), xy(2361, 9274), xy(2510, 10315), xy(3506, 9410), xy(3515, 10085), xy(686, 11259), xy(1350, 11744), xy(1456, 15339), xy(1651, 1643), xy(1787, 2570), xy(1401, 3574), xy(1925, 4476), xy(3253, 4296), xy(3064, 4640), xy(3055, 5455), xy(1354, 5652), xy(1939, 5544), xy(2193, 5468), xy(1639, 6331), xy(1484, 6973), xy(2564, 6373), xy(3171, 6529), xy(2771, 7044), xy(528, 8001), xy(518, 8511), xy(2483, 8209), xy(3062, 7620), xy(3328, 8421), xy(2807, 8837), xy(2826, 9011), xy(2533, 9898), xy(3416, 8940), xy(3292, 9891), xy(560, 10385), xy(1360, 10810), xy(3058, 11581), xy(2689, 200), xy(1972, 2166), xy(2225, 3033), xy(1351, 4576), xy(3032, 3552), xy(2232, 4611), xy(2862, 5083), xy(544, 5441), xy(547, 6487), xy(1610, 5788), xy(1940, 6003), xy(1340, 6642), xy(2740, 5645), xy(2681, 6622), xy(2386, 6959), xy(2873, 7461), xy(1445, 7889), xy(1759, 7656), xy(767, 9499), xy(2717, 8047), xy(2822, 8439), xy(2843, 8815), xy(2839, 9428), xy(2530, 10061), xy(3316, 9396), xy(3081, 10371), xy(663, 10895), xy(576, 12017), xy(2684, 12516), xy(1706, 1459), xy(2726, 2717), xy(2577, 3313), xy(2196, 4267), xy(3285, 3743), xy(2801, 4612), xy(3055, 5116), xy(1632, 5261), xy(1888, 5322), xy(2281, 5277), xy(1309, 6379), xy(2156, 6608), xy(2477, 6134), xy(3083, 6380), xy(2049, 7591), xy(1100, 7315), xy(1083, 8329), xy(2139, 7874), xy(3288, 7378), xy(3264, 8272), xy(2306, 9174), xy(3297, 9068), xy(2665, 9500), xy(2377, 10562), xy(3728, 9967), xy(676, 9810), xy(1374, 10612), xy(2224, 11090), xy(1835, 752), xy(1798, 1666), xy(2156, 2430), xy(1132, 4304), xy(2853, 3194), xy(2541, 4348), xy(2821, 4900), xy(963, 5012), xy(795, 6139), xy(1643, 5745), xy(2526, 5743), xy(1356, 6481), xy(1685, 7332), xy(2548, 6563), xy(2535, 6859), xy(2954, 7185), xy(1520, 7507), xy(544, 9121), xy(797, 9126), xy(2872, 7819), xy(2563, 8675), xy(3245, 8434), xy(2699, 9431), xy(2708, 10031), xy(3240, 9252), xy(2504, 10624), xy(682, 10456), xy(1087, 11488), xy(544, 13500), xy(1903, 1000), xy(2207, 2293), xy(2357, 2866), xy(2245, 3811), xy(3505, 3348), xy(2833, 4333), xy(3345, 4621), xy(1672, 4928), xy(1908, 5058), xy(1911, 5721), xy(1407, 6264), xy(1732, 6506), xy(3055, 5675), xy(3206, 6181), xy(1917, 7471), xy(2523, 7977), xy(1207, 8111), xy(1369, 8174), xy(3402, 6659), xy(3047, 8239), xy(2366, 8611), xy(3212, 8954), xy(2259, 9552), xy(2372, 10479), xy(3513, 9838), xy(3291, 10483), xy(537, 11548), xy(2517, 10778)]), [], []),
+   decl(gd_keys100('List'('Key'))),
+   clause(gd_keys100([p001, p002, p003, p004, p005, p006, p007, p008, p009, p010, p011, p012, p013, p014, p015, p016, p017, p018, p019, p020,
+                      p021, p022, p023, p024, p025, p026, p027, p028, p029, p030, p031, p032, p033, p034, p035, p036, p037, p038, p039, p040,
+                      p041, p042, p043, p044, p045, p046, p047, p048, p049, p050, p051, p052, p053, p054, p055, p056, p057, p058, p059, p060,
+                      p061, p062, p063, p064, p065, p066, p067, p068, p069, p070, p071, p072, p073, p074, p075, p076, p077, p078, p079, p080,
+                      p081, p082, p083, p084, p085, p086, p087, p088, p089, p090, p091, p092, p093, p094, p095, p096, p097, p098, p099, p100]), [], [])]).
