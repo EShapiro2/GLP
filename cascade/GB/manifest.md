@@ -1,10 +1,10 @@
 # A run of the cascade on GB
 
-- Contract: `GB` (`gb` to the checker), its owner's two files `programs/currencies/bonds/GB.txt` and `programs/currencies/bonds/GB.glp`, copied here as they stood at `3c661633`.
+- Contract: `GB` (`gb` to the checker), its owner's two files `programs/currencies/bonds/GB.txt` and `programs/currencies/bonds/GB.glp`, copied here as they stood at `b9c3aaf8`.
 - The paper: `/Users/udi/Grassroots/GB (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/bonds/GB.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/bonds/GB.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 18:12 UTC by `cascade.sh gb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3c661633`; each artefact's source and tool:
+- Run on 2026-11-15 18:23 UTC by `cascade.sh gb`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `b9c3aaf8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
