@@ -118,7 +118,7 @@ for c in $CONTRACTS; do
         pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
         [ -n "$pr" ] || pr=no_pragmas
     elif [ -f "${src%.glp}.txt" ] \
-        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$rd" 2> "$WORK/$c.pr.err"); then
+        && ! pr=$(printf '%s\n' "$rd" > "$WORK/$c.rd" && bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "@$WORK/$c.rd" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
         continue
     fi

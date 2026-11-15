@@ -4254,6 +4254,15 @@ check "CVA compiler, text: ... a platform printed (twin)" "the canonical CVA pla
 cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/GSNP.glp" gsnp 2>&1)
 cva_gsnp_read=$(printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$cva_gsnp_term" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | head -1 | sed -e 's/^R = //')
 cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_read" 2>&1 || true)
+# The term from a file, @<file>: a term over 128 KB cannot be an argument of a command on Linux (Calculus #6 and Helper #8, 2026-11-15 22:48 UTC: WC's and SC's terms).
+cva_tf=$(mktemp)
+printf '%s\n' "$cva_gsnp_read" > "$cva_tf"
+cva_gsnp_pragmas_f=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "@$cva_tf" 2>&1 || true)
+if [ -n "$cva_gsnp_pragmas" ] && [ "$cva_gsnp_pragmas" = "$cva_gsnp_pragmas_f" ]; then _check_pass "CVA pragmas: the term read from a file, @<file>, gives what the term as an argument gives (GSNP.txt)"; else _check_fail "CVA pragmas: the term read from a file, @<file>, gives what the term as an argument gives (GSNP.txt)" "the two outputs differ"; fi
+head -c 200000 /dev/zero | tr '\0' ' ' >> "$cva_tf"
+cva_gsnp_pragmas_b=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "@$cva_tf" 2>&1 || true)
+if [ "$cva_gsnp_pragmas" = "$cva_gsnp_pragmas_b" ]; then _check_pass "CVA pragmas: ... and so does a file of over 128 KB"; else _check_fail "CVA pragmas: ... and so does a file of over 128 KB" "the two outputs differ"; fi
+rm -f "$cva_tf"
 check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "^GSN: Message: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name$" "$cva_gsnp_pragmas"
 # An instance's own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 20:39 UTC, 2): XI, instance_named(xi, xb, [ward = child, ward_link = child_link], []), writing no line of its own, has XB's [Ward link] as [Child link], the act child_link (names); and without the bindings the button names no act (bare).
 cva_in=$(mktemp -d)
