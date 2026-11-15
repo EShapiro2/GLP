@@ -1,0 +1,19 @@
+gsn_gc: the third contract the composition is over: GKK
+gsn_gc: composition of GSN GC: 18 schemas
+gsn_gc: schemas.txt: 18 schemas
+gsn_gc: verdict: syntactically_grassroots
+gsn_gc: VMAT form: 18 displays
+gsn_gc: platform.vglp: 7418 lines
+gsn_gc: platform.glp: 5054 lines
+gsn_gc: interface.glp: 1319 items
+gsn_gc: run: vGLP keeps no plays for gsn_gc
+GC.glp: as printed
+GC.txt: as printed
+GSN.glp: as printed
+GSN.txt: as printed
+interface.glp: as printed
+platform.glp: as printed
+platform.vglp: as printed
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

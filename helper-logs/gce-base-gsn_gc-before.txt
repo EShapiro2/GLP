@@ -1,0 +1,49 @@
+gsn_gc: the third contract the composition is over: GKK
+gsn_gc: composition of GSN GC: 18 schemas
+gsn_gc: schemas.txt: 18 schemas
+gsn_gc: verdict: syntactically_grassroots
+gsn_gc: VMAT form: 18 displays
+gsn_gc: platform.vglp: 7418 lines
+gsn_gc: platform.glp: 5054 lines
+gsn_gc: interface.glp: 1319 items
+gsn_gc: run: vGLP keeps no plays for gsn_gc
+GC.glp: as printed
+GC.txt: as printed
+GSN.glp: as printed
+GSN.txt: as printed
+interface.glp: NOT as printed
+889a890
+>   compiled(listed_choices, 7),
+895c896,908
+<   compiled(list_choices, 4),
+---
+>   compiled(list_choices, 8),
+>   compiled(twins_fit, 12),
+>   compiled(twin_fit, 8),
+>   compiled(same_anchor, 11),
+>   compiled(same_lists, 3),
+platform.glp: NOT as printed
+2995c2995,2998
+< mates_of([lschema(Nm, _, Rs, Lsts) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) | deltas_peers(Ps?, Q), rs_len(Rs?, K), blank_listed(Lsts?, Rs?, Rs0), fit_assigns(K?, Q?, Rs0?, Ps?, As0), on_base(As0?, Lsts?, As), deltas_peers(Ps?, Q1), sort_peers(Q1?, Q2), subsets(Q2?, Ls), list_choices(Lsts?, Ls?, Ps?, Cs), tuples_of(Cs?, Ts), listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
+---
+> mates_of([lschema(Nm, _, Rs, Lsts) | Ss], Ps, M?) :- ground(Nm?), ground(Rs?), ground(Lsts?), ground(Ps?) | deltas_peers(Ps?, Q), rs_len(Rs?, K), blank_listed(Lsts?, Rs?, Rs0), fit_assigns(K?, Q?, Rs0?, Ps?, As0), on_base(As0?, Lsts?, As), deltas_peers(Ps?, Q1), sort_peers(Q1?, Q2), listed_choices(As?, Q2?, Nm?, Rs?, Lsts?, Ps?, M1), mates_of(Ss?, Ps?, M2), app(M1?, M2?, M).
+> 
+> procedure listed_choices(Bindings?, Peers?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
+> listed_choices(As, Q, Nm, Rs, Lsts, Ps, M?) :- ground(As?), ground(Rs?), ground(Lsts?), ground(Ps?) | rs_len(Rs?, K), K1 := (K? + 1), list_choices(Lsts?, Lsts?, Q?, As?, Rs?, K1?, Ps?, Cs), tuples_of(Cs?, Ts0), same_lists(Ts0?, Lsts?, Ts), listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M).
+3018,3021c3021,3076
+< procedure list_choices(Listings?, PeerLists?, Deltas?, ListTuples).
+< list_choices([], _, _, []).
+platform.vglp: NOT as printed
+5333,5336c5333
+<     subsets(Q2?, Ls),
+<     list_choices(Lsts?, Ls?, Ps?, Cs),
+<     tuples_of(Cs?, Ts),
+<     listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
+---
+>     listed_choices(As?, Q2?, Nm?, Rs?, Lsts?, Ps?, M1),
+5338a5336,5344
+> %% The schema-bindings of a schema with listed roles at the assignments As of its roles: at each choice of a list for each listed role (list_choices), the copies of the listed roles the roles after the schema's own.
+> procedure listed_choices(Bindings?, Peers?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

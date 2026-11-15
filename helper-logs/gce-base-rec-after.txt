@@ -1,0 +1,19 @@
+rec: adopted: REC.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+rec: verdict: syntactically_grassroots
+rec: VMAT form: 6 displays
+rec: platform.vglp: 7036 lines
+rec: platform.glp: 4894 lines
+rec: interface.glp: 1308 items
+rec: run: vGLP keeps no plays for rec
+REC.glp: as printed
+REC.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: as printed
+platform.glp: as printed
+platform.vglp: as printed
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

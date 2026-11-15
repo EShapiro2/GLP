@@ -1,0 +1,19 @@
+joint: adopted: JOINT.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+joint: verdict: syntactically_grassroots
+joint: VMAT form: 12 displays
+joint: platform.vglp: 7266 lines
+joint: platform.glp: 4995 lines
+joint: interface.glp: 1315 items
+joint: run: vGLP keeps no plays for joint
+JOINT.glp: as printed
+JOINT.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: as printed
+platform.glp: as printed
+platform.vglp: as printed
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

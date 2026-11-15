@@ -1,0 +1,19 @@
+ldao: adopted: LDAO.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+ldao: verdict: syntactically_grassroots
+ldao: VMAT form: 19 displays
+ldao: platform.vglp: 7440 lines
+ldao: platform.glp: 5036 lines
+ldao: interface.glp: 1315 items
+ldao: run: vGLP keeps no plays for ldao
+LDAO.glp: as printed
+LDAO.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: as printed
+platform.glp: as printed
+platform.vglp: as printed
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed
