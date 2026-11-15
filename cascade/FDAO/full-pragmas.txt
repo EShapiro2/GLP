@@ -1,0 +1,22 @@
+FDAO: Funded DAO
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of DAO: Alice, Bob and Carol are persons, Delos a DAO and Prop a proposal, Votes and Double numbers, Carol possibly Alice or Bob.
+Of GC: A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice. Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
+Of FDAO: Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+DAO:1. ■ Found: Alice may found Delos under a new name of hers.
+DAO:2. ■ Join: Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.
+DAO:3. ■ Proposing. Propose: Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos. Deliver proposal: Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.
+DAO:4. ■ Voting. Vote for: Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos. Vote against: Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos. Deliver vote for: Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos. Deliver vote against: Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
+DAO:5. ■ Deciding. Pass: Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos. Reject: Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos. Deliver pass: Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos. Deliver reject: Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
+DAO:6. ■ Majority. The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
+GC:1. ■ Issue: Alice may issue Sum Alice-coins.
+GC:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
+GC:3. ■ Pay: Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
+GC:4. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
+GC:5. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+FDAO:1. ■ Fund: Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
+FDAO:2. ■ Grant: Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.
+FDAO:3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.
