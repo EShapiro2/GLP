@@ -104,14 +104,14 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # in the checker's form with its roles' names, introduce's agent variable
 # Carol as GKK.glp writes it.
 asread() { run "as_read($1, R)." | sed -e 's/^\(GLP> \)*//' | grep -E '^R = ' | head -1 | sed -e 's/^R = //'; }
-GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
+GKKT=$(term "$GLP_DIR/programs/gsc/gkk_fixture.glp" gkk_fixture)   # the tests' fixture, a plain list of GKK's schemas; the adopted GKK.glp, which declares knows reflexive, is checked at the end of this script
 check "GKK's contract is read from programs/gsc/GKK.glp, in the clause syntax, establish first" \
       "[sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
 GKKV=$(asread "$GKKT")
 check "GKK as the checker reads it: establish forbidding the identity it adds, then acquaint and introduce, each naming its roles" \
       "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], " "$GKKV"
 GKK_SCHEMAS="${GKKT%]}"
-GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
+GSGT=$(term "$GLP_DIR/programs/gsc/gsg_fixture.glp" gsg_fixture)   # the tests' fixture, as gkk_fixture.glp
 check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$GKK_SCHEMAS" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/gsn_fixture.glp" gsn_fixture)   # GSN as GSC wrote it by hand until its adoption (2026-11-15), the tests' fixture; GSN.glp is printed from GSN.txt
 # The fixture gsn_fixture.glp writes GKK's schemas as GSC wrote them by hand, establish adding identity alone; the adopted GSN.glp, which begins with the adopted GKK's schemas, is checked at the end of this script.
@@ -2629,8 +2629,8 @@ check "GnW as adopted is certified with wards, ward its mark, guardian and has_g
 # GFP and GSN as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each begins with the adopted GKK's schemas and is certified; an item and a message are speech acts with a name, a forwarded item is signed over, and a post is delivered once to each member.
 AGFP=$(term "$GLP_DIR/programs/gsc/GFP.glp" gfp)
 AGSN=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GFP as adopted begins with the adopted GKK's schemas" "${AGKK%]}" "$AGFP"
-check "GSN as adopted begins with the adopted GKK's schemas" "${AGKK%]}" "$AGSN"
+check "GFP as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGFP"
+check "GSN as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGSN"
 check "GFP's forward adds the item signed over by the forwarder" "atom(item, ['Bob', sgn('Item', 'Alice')])" "$AGFP"
 out=$(run "check($AGFP, V1)." "check($AGSN, V2).")
 check "GFP as adopted is certified" "V1 = syntactically_grassroots" "$out"
@@ -2638,20 +2638,20 @@ check "GSN as adopted is certified" "V2 = syntactically_grassroots" "$out"
 
 # A contract's term may declare its parameters, its environment predicates and its reflexive predicates together, parametric outermost, then environment, then reflexive (programs/self.glp, SDeclared and SBody; reported by GO #6 and Calculus #6, 2026-11-15: contract_named(gbank, environment([today], reflexive([knows], [...]))) did not type).  A file whose contract_named has such a term loads, the term is checked, and an instance of a parametric one keeps both declarations.
 DECLF="$GLP_DIR/programs/gsc/zz_declared_fixture.glp"
-printf 'procedure contract_named(Constant?, SDeclared).\ncontract_named(both, environment([today], reflexive([friend], %s))).\ncontract_named(all3, parametric([friend], environment([today], reflexive([friend], %s)))).\n' "$AGSG" "$AGSG" > "$DECLF"
+printf 'procedure contract_named(Constant?, SDeclared).\ncontract_named(both, environment([today], reflexive([friend], %s))).\ncontract_named(all3, parametric([friend], environment([today], reflexive([friend], %s)))).\n' "$GSGT" "$GSGT" > "$DECLF"
 DBOTH=$(term "$DECLF" both)
 DALL3=$(term "$DECLF" all3)
 rm -f "$DECLF"
 check "a term declaring environment and reflexive predicates together is read from its file" "environment([today], reflexive([friend], [sas(establish, " "$DBOTH"
 check "a parametric term declaring both is read from its file" "parametric([friend], environment([today], reflexive([friend], [sas(establish, " "$DALL3"
-out=$(run "check($DBOTH, V1)." "instantiate($DALL3, [friend = pal], [], D), check(D?, V2)." "instantiate(parametric([friend], environment([today], $AGSG)), [friend = pal], [], E).")
+out=$(run "check($DBOTH, V1)." "instantiate($DALL3, [friend = pal], [], D), check(D?, V2)." "instantiate(parametric([friend], environment([today], $GSGT)), [friend = pal], [], E).")
 check "a contract declaring both is certified" "V1 = syntactically_grassroots" "$out"
 check "an instance of a parametric contract declaring both keeps both declarations" "D = environment([today], reflexive([pal], [sas(establish, " "$out"
 check "and is certified" "V2 = syntactically_grassroots" "$out"
 check "an instance of a parametric contract declaring environment predicates alone keeps them" "E = environment([today], [sas(establish, " "$out"
 
 # A value variable over constants, const(X) (GSC #17, 2026-11-15; the appendix "Values in Speech-Act Schemas": "Which types the values have --- numbers, strings, dates --- is the realisation's; the contract is parametric in them, and a value variable of a schema has a type, which the schema's term form writes"; Section 3.2: "Speech-act schemas allow values of any type").  The adopted GKK with appoint, which adds role(Bob, Alice, Role) at Bob, Role the name of a role its appointers choose, and act_as, guarded by Bob, which requires role(Bob, Alice, val('Treasurer')): certified, the variable read as a value variable, num(X) in the atom and const(X) among the schema's variables, and printed by its name; written const(X) and num(X), or const(X) and real(X), or const(X) and as a multiplicity, it is of two types; it stands in an inequality of a constraint, and in an equality with a constant; in the matches of def:unobstructed it meets a constant value, so a schema of arity one adding tag(Alice, const('T')) supplies tag(Alice, val(member)) the introductory act requires, and one adding it at another's role blocks tag(Alice, val(banned)) the act forbids, where the same schemas written num('T') do neither; and a parametric contract's predicate is extended with a value argument of the type (extended(P, Q, [const])).
-CKB="${AGKK%]}"
+CKB="${GKKT%]}"
 C_APPOINT="sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
 C_ACTAS="sas(act_as, ['Bob', 'Alice'], ['Alice'], [atom(acted, ['Bob', 'Alice'])], [atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(role, ['Bob', 'Alice', val('Treasurer')])], true, ['Bob'])"
 c_two() { # c_two <type> ; appoint with Role written const(X) in one atom and <type>(X) in another
