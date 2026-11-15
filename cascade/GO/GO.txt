@@ -39,7 +39,7 @@ After g ends y's participation and y's office in z: no longer y is a participant
 After g amends the bylaws of z: z has its bylaws amended.
 Interface pragmas
 Look: 🏛️, governance
-Organisations: the organisations Alice participates in, and her roles in each.
+Organisations: those Alice is a participant of.
 Found: Gov [Found] <organisation> <person> <role>
   Alice: Gov asks you to be the first officer of its organisation Orga.
   Orga: Gov asks to found you.
