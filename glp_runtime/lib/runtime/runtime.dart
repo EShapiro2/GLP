@@ -221,6 +221,13 @@ class GlpRuntime {
   /// the system clock, in milliseconds; now/1 and the time guards read
   /// [machineNow].
   int _clockAhead = 0;
+
+  /// Whether set_clock/1 may set this machine's clock: "the host that starts
+  /// a machine says whether its clock may be set, and the application on a
+  /// smartphone says it may not; there set_clock aborts" (the same
+  /// paragraph).  A test and the REPL leave it so; [AgentRuntime], the
+  /// machine of an agent on a smartphone, says it may not.
+  bool clockSettable = true;
   int get machineNow => DateTime.now().millisecondsSinceEpoch + _clockAhead;
 
   /// set_clock(T): the machine's clock reads [t], Unix milliseconds, and runs

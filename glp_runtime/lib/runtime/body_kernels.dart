@@ -598,6 +598,9 @@ BodyKernelResult setClockKernel(GlpRuntime rt, List<Object?> args) {
   if (t is! ConstTerm || t.value is! int) {
     return kernelAbort('[ABORT] set_clock/1: T must be an integer');
   }
+  if (!rt.clockSettable) {
+    return kernelAbort("[ABORT] set_clock/1: this machine's clock may not be set");
+  }
   rt.setClock(t.value as int);
   return BodyKernelResult.success;
 }
