@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), open_account('Peer', 'Peer', 'Speech'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), partner_deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), withdraw('Peer', 'Peer', 'Peer', 'Integer'), partner_withdraw('Peer', 'Peer', 'Peer', 'Integer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), open_account('Peer', 'Peer', 'Speech'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), partner_deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), withdraw('Peer', 'Peer', 'Peer', 'Integer'), partner_withdraw('Peer', 'Peer', 'Peer', 'Integer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), open_account('Peer', 'Peer', 'Speech'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), partner_deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), withdraw('Peer', 'Peer', 'Peer', 'Speech', 'Integer'), partner_withdraw('Peer', 'Peer', 'Peer', 'Speech', 'Integer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), open_account('Peer', 'Peer', 'Speech'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), partner_deposit('Peer', 'Peer', 'Peer', 'Integer', 'Speech'), withdraw('Peer', 'Peer', 'Peer', 'Speech', 'Integer'), partner_withdraw('Peer', 'Peer', 'Peer', 'Speech', 'Integer')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -1290,8 +1290,8 @@ interface([
   compiled(join_proposal_open_account_3, 4),
   compiled(join_proposal_deposit_5, 6),
   compiled(join_proposal_partner_deposit_5, 6),
-  compiled(join_proposal_withdraw_4, 5),
-  compiled(join_proposal_partner_withdraw_4, 5),
+  compiled(join_proposal_withdraw_5, 6),
+  compiled(join_proposal_partner_withdraw_5, 6),
   compiled(form_proposal, 2),
   compiled(join_request_propose_1, 2),
   compiled(form_request, 2),
