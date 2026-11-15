@@ -23,10 +23,10 @@ GPD:1 ◆ | Carol attests that its schemas say what its clauses say, that it is 
 GPD:2 ■ | Developer Trust.
 GPD:2 ■ Trust: Alice may Alice trusts Carol as a developer, provided Alice knows Carol and not Alice trusts Carol as a developer. Possibly one: Alice=Carol.
 GPD:2 ■ Untrust: Alice may no longer Alice trusts Carol as a developer. Possibly one: Alice=Carol.
-GPD:3 ■ Offer: Carol may Alice holds Prog of Dave, provided Carol holds Prog of Dave, Carol counts Alice as a friend and Alice counts Carol as a friend. Possibly one: Alice=Carol, Alice=Dave, Carol=Dave.
+GPD:3 ■ Offer: Carol may Alice holds Prog signed by Carol of Dave, provided Carol holds Prog of Dave, Carol counts Alice as a friend and Alice counts Carol as a friend. Possibly one: Alice=Carol, Alice=Dave, Carol=Dave.
 GPD:3 ■ | Carol offers it by forwarding it to Alice.
 GPD:4 ■ Install own: Alice may Alice has Prog of Alice installed, provided Alice holds Prog of Alice and not Alice has Prog of Alice installed.
 GPD:4 ■ Install: Alice may Alice has Prog of Carol installed, provided Alice holds Prog of Carol, Alice trusts Carol as a developer and not Alice has Prog of Carol installed. Possibly one: Alice=Carol.
-GPD:5 ■ Invite: Alice and Bob may jointly Bob holds Prog of Carol, Bob has Prog of Carol installed, Alice is a participant of Prog of Carol with Bob and Bob is a participant of Prog of Carol with Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Possibly one: Alice=Carol, Bob=Carol.
+GPD:5 ■ Invite: Alice and Bob may jointly Bob holds Prog signed by Alice of Carol, Bob has Prog signed by Alice of Carol installed, Alice is a participant of Prog of Carol with Bob and Bob is a participant of Prog of Carol with Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Possibly one: Alice=Carol, Bob=Carol.
 GPD:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 GPD:6 ■ Leave: Alice may no longer Alice has Prog of Carol installed, no longer Alice is a participant of Prog of Carol with anyone and no longer anyone is a participant of Prog of Carol with Alice. Possibly one: Alice=Carol.

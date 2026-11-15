@@ -39,19 +39,25 @@ GSV:0 - | Alice is a person, Dave a service.
 GRV:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 GRV:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 GRV:1 ■ Open server: Carol may Dave is a rendezvous server, provided Carol is a guardian of Dave and not Dave is a rendezvous server.
-GRV:2 ■ Invite by link: Alice may Dave has Link registered for Alice, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server and not Dave has Link registered for Alice.
+GRV:2 ■ | Invite by link.
+GRV:2 ■ Sign link: Alice may Alice has signed Link as an invitation link that names Dave, provided Alice knows Dave and not Alice has signed Link as an invitation link that names Dave.
+GRV:2 ■ Invite by link: Alice may Dave has Link registered for Alice, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server, not Dave holds Link spent for Alice and not Dave has Link registered for Alice.
 GRV:2 ■ | Link has a new serial.
-GRV:3 ■ Use link: Bob may no longer Dave has Link registered for Alice, Alice has the address of Bob and Bob has the address of Alice, provided Bob knows Dave and not Dave holds Link expired.
+GRV:3 ■ Use link: Bob may no longer Dave has Link registered for Alice, Dave holds Link spent for Alice, Alice has the address of Bob and Bob has the address of Alice, provided Bob knows Dave and not Dave holds Link expired.
 GRV:3 ■ | The link is then spent.
 GRV:4 ■ | Reconnection.
 GRV:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
 GRV:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice.
 GDS:0 - | A *directory* is a service with a page every person can read.
-GDS:0 - | Alice, Bob and Carol are persons, Dora a service.
+GDS:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
 GDS:1 ■ Open directory: Carol may Dora is a directory, provided Carol is a guardian of Dora and not Dora is a directory.
 GDS:2 ■ | Listing.
-GDS:2 ■ List: Alice may Dora lists Alice, provided Dora is a directory, Dora has verified an email address of Alice and not Dora lists Alice.
+GDS:2 ■ List: Alice and Dora may jointly Dora lists Alice by Mail under Name on its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name on its page.
+GDS:2 ■ List unshown: Alice and Dora may jointly Dora lists Alice by Mail under Name off its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name off its page.
+GDS:2 ■ | Dora consents having verified Mail as an email address of Alice.
 GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
-GDS:2 ■ Delist: Alice may no longer Dora lists Alice.
-GDS:3 ■ Lookup: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice.
+GDS:2 ■ Delist: Alice may no longer Dora lists Alice by Mail under Name on its page.
+GDS:2 ■ Delist unshown: Alice may no longer Dora lists Alice by Mail under Name off its page.
+GDS:3 ■ Lookup: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice by Mail under Name on its page.
+GDS:3 ■ Lookup by address: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice by Mail under Name off its page.
 GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.
