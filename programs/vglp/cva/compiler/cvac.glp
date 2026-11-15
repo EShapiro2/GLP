@@ -799,7 +799,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     base_lines(C?, Was?, Lx2?, Lb00),
     worded_stands(W?, Wss),
     standing_lines(C?, Wss?, Lsd),
-    lapp(Lb00?, Lsd?, Lb0),
+    worded_acts(W?, Wac),
+    consent_lines(Wac?, Lcs),
+    lapp(Lsd?, Lcs?, Lsc),
+    lapp(Lb00?, Lsc?, Lb0),
     worded_lx(W?, Lx6),
     local_lines(Lx6?, Ll),
     lapp(Lb0?, Ll?, Lb),
@@ -1066,9 +1069,36 @@ atom_parts(C, Nt, Lx, ['', '%% The atoms of the contract at their argument types
     app(As1?, As2?, As12),
     app(As0?, As12?, As),
     atom_sigs(As?, Gs0),
-    dedup(Gs0?, Gs1),
+    peer_sigs_all(Gs0?, Gs01),
+    dedup(Gs01?, Gs1),
     drop_today(Gs1?, Gs),
     atom_parts1(Gs?, L).
+%% A predicate has one type at each argument: a variable a quantifier binds, written as a speech-act variable, at an argument where another atom of the contract writes a person, is a person, as G1 of "Bob is a guardian of no one", not exists G1 has_guardian(Bob, G1), beside has_guardian(Carol, Alice); so a signature's speech at a place where another signature of its predicate and arity has peer is peer, and the type Atom has one alternative of that predicate (TGLP: the alternatives of a union have distinct functors).
+procedure peer_sigs_all(Sigs?, Sigs).
+peer_sigs_all(Gs, R?) :- ground(Gs?) | peer_sigs(Gs?, Gs?, R).
+procedure peer_sigs(Sigs?, Sigs?, Sigs).
+peer_sigs([], _, []).
+peer_sigs([sig(F, Ks)|Gs], All, [sig(F?, Ks1?)|Gs1?]) :- ground(F?), ground(Ks?), ground(All?) |
+    peer_kinds(All?, F?, Ks?, Ks1),
+    peer_sigs(Gs?, All?, Gs1).
+procedure peer_kinds(Sigs?, Constant?, Kinds?, Kinds).
+peer_kinds([], _, Ks, Ks?).
+peer_kinds([sig(G, Js)|Gs], F, Ks, R?) :- G? =?= F?, ground(Js?), ground(Ks?) |
+    same_len(Ks?, Js?, B),
+    peer_zip(B?, Ks?, Js?, Ks1),
+    peer_kinds(Gs?, F?, Ks1?, R).
+peer_kinds([_|Gs], F, Ks, R?) :- otherwise | peer_kinds(Gs?, F?, Ks?, R).
+procedure same_len(Kinds?, Kinds?, YesNo).
+same_len([], [], yes).
+same_len([_|Ks], [_|Js], B?) :- same_len(Ks?, Js?, B).
+same_len([], [_|_], no).
+same_len([_|_], [], no).
+%% Ks with peer at each place where it has speech and Js, of its length, has peer.
+procedure peer_zip(YesNo?, Kinds?, Kinds?, Kinds).
+peer_zip(no, Ks, _, Ks?).
+peer_zip(yes, [], _, []).
+peer_zip(yes, [speech|Ks], [peer|Js], [peer|R?]) :- peer_zip(yes, Ks?, Js?, R).
+peer_zip(yes, [K|Ks], [_|Js], [K?|R?]) :- otherwise | peer_zip(yes, Ks?, Js?, R).
 procedure drop_today(Sigs?, Sigs).
 drop_today([], []).
 drop_today([sig(today, _)|Gs], Gs1?) :- drop_today(Gs?, Gs1).
@@ -1714,6 +1744,26 @@ worded_acts(words(pragmas(_, As, _, _, _, _), _, _, _), As?).
 procedure worded_stands(Worded?, PStands).
 worded_stands(words(pragmas(_, _, Ss, _, _, _), _, _, _), Ss?).
 %% The standing tables of the platform (vGLP 7c631b1, Section 5.4, "The contract's words"): schema_standing(S, on(A)) for each standing schema S, A the act whose request makes the standing request, and none for every other; stand_act(M, makes(S)) for the act M whose request makes it, stand_act(M, withdraws(S)) for the act whose request withdraws it, and plain for every other.
+%% The roles of each schema whose persons must consent to its act and are not asked (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"): schema_consents(S, Is) for each act of the pragmas that carries consents(I) with the types of its fields (self.glp, FType), and [] for every other.
+procedure consent_lines(TActs?, Lines).
+consent_lines(As, ['', 'procedure schema_consents(Constant?, Ints).'|L?]) :- ground(As?) |
+    consent_lines1(As?, L).
+procedure consent_lines1(TActs?, Lines).
+consent_lines1([], ['schema_consents(_, []) :- otherwise | true.']).
+consent_lines1([act(S, _, _, _, _, _, Ft)|As], L?) :- ground(S?), ground(Ft?) |
+    consent_roles(Ft?, Is),
+    consent_line(Is?, S?, L1),
+    consent_lines1(As?, L2),
+    lapp(L1?, L2?, L).
+procedure consent_roles(FTypes?, Ints).
+consent_roles([], []).
+consent_roles([consents(I)|Fs], [I?|Is?]) :- consent_roles(Fs?, Is).
+consent_roles([ft(_, _)|Fs], Is?) :- consent_roles(Fs?, Is).
+procedure consent_line(Ints?, Constant?, Lines).
+consent_line([], _, []).
+consent_line([I|Is], S, [T?, '.']) :- ground(I?), ground(Is?), ground(S?) |
+    T0 =.. [schema_consents, S?, [I?|Is?]],
+    term_to_string(T0?, T).
 procedure standing_lines(Contract?, PStands?, Lines).
 standing_lines(_, [], []).
 standing_lines(C, [S0|Ss0], ['', 'procedure schema_standing(Constant?, StandOn).'|L?]) :- ground(C?), ground(S0?), ground(Ss0?) |
@@ -2907,7 +2957,7 @@ export_head(['',
         'PLists    ::= [] ; [PList | PLists].']).
 procedure act_type_lines(YesNo?, Lines).
 act_type_lines(no, ['PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer).']).
-act_type_lines(yes, ['PFType    ::= ft(Integer, Constant).',
+act_type_lines(yes, ['PFType    ::= ft(Integer, Constant) ; consents(Integer).',
         'PFTypes   ::= [] ; [PFType | PFTypes].',
         'PAct      ::= act(Constant, String, PStrings, PSaid, String, PProposer) ; act(Constant, String, PStrings, PSaid, String, PProposer, PFTypes).']).
 %% Whether an act of the pragmas carries the types of its fields.

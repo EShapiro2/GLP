@@ -87,6 +87,9 @@ schema_base(nudge, 1)
 .
 schema_base(_, 1) :- otherwise | true.
 
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
+
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
@@ -1230,9 +1233,18 @@ greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St
     st_id(St?, Me),
     st_ms(St?, S),
     name_class(N?, S?, C),
-    question_words(C?, Me?, Ws),
-    greet_whole(P?, N?, Ws?, R),
+    greet_at(C?, Me?, P?, N?, R),
     merge(R?, Ans1?, Ans).
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger)).
+greet_at(C, Me, P, N, R?) :- ground(C?), ground(Me?) |
+    question_words(C?, Me?, Ws),
+    binding_of(C?, Nm, Bn),
+    consents_me(Nm?, Bn?, Me?, Cs),
+    greet_or_consent(Cs?, P?, N?, Ws?, R).
+%% A called person who must consent to the acquaintance is not asked: their consent stands, and the agent takes it as their yes.
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger)).
+greet_or_consent(no, P, N, Ws, R?) :- greet_whole(P?, N?, Ws?, R).
+greet_or_consent(yes, _, N, _, [greeted(N?)]).
 
 %% --- Introduce: the ihellos --------------------------------------------------
 %% On reading an introduction intro(Q) the agent sends Q ihello, unless Q is itself or known or it has sent one; an arriving ihello is recorded; and where a peer becomes known by the two the agent writes the new view on the output (Section 5.4).
@@ -2695,11 +2707,23 @@ asked_by(At, Id, B?) :- ground(At?), ground(Id?) |
     attempt_id(At?, P),
     attempt_class(At?, C),
     binding_of(C?, Nm, Bn),
+    asked_at(Nm?, Bn?, Id?, P?, B).
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) |
     marked_people(Nm?, Bn?, G),
     mem(Id?, G?, In),
     same(Id?, P?, Me),
     neg(Me?, NotMe),
-    and(In?, NotMe?, B).
+    consents_me(Nm?, Bn?, Id?, Cs),
+    neg(Cs?, Asks),
+    and(In?, NotMe?, B0),
+    and(B0?, Asks?, B).
+%% A person who must consent to an act is a guard of it who is not asked (vGLP, Section 5.4, "The contract's words"): whether the agent Me is the person in a role of the schema Nm, at the binding Bn, that the pragmas mark so (schema_consents).
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) |
+    schema_consents(Nm?, Is),
+    persons_of(Is?, Bn?, Ps),
+    mem(Me?, Ps?, B).
 
 %% Answer: the person's answer recorded, answered(At, yes) by its then-branch
 %% and answered(At, no) by its else-branch; it sends nothing and votes nothing.
