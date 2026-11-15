@@ -54,7 +54,7 @@ def main(out, hold=()):
             shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == n + '.txt' else f))
         for f in ('verdict.txt', 'platform.glp'):
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
-    for f, g in (('README-PUBLIC.md', 'README.md'), ('OWNERS.md', 'OWNERS.md'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
+    for f, g in (('README-PUBLIC.md', 'README.md'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
         if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))
     state(out, names)
     for d in ('tools', 'tests'):

@@ -19,6 +19,7 @@ This directory is published by the project Calculus.  It holds grassroots contra
 ## The rest
 
 - `STATE.txt`: a line for each contract: its name, its owner, and yes or no for certified, compiled and adopted by its owner.
+- `LAYERS.txt`: the layers, a line for each with its number and its contracts in order: GKK is layer 0, and the layer of any other contract is one more than the highest layer among the contracts it is written from.  It is the order of adoption.
 - `OWNERS.md`: for each contract its owner, the owner's text in this repository, and the lines where the text here differs from it.
 - `STATUS.txt`, `VERDICTS.txt`: the cascade's line and the checker's verdict for each contract.
 - `tools/`, `tests/`: the programs that print all of the above, in Python 3 with its standard library, and their test cases.
