@@ -30,6 +30,7 @@ PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Bob": "
 POSS = {"her": "hers", "his": "his", "its": "its", "their": "theirs"}
 WILD = "_"        # in a place: someone; in a state that must not hold, or that ends: anyone
 WILDW = ("someone", "anyone", "no one")
+SIGNED = r"%s(?: signed by %s)+" % (NAME, NAME)   # a place holding a thing with its signatures: 'Item signed by Alice', in a schema Item@Alice
 COUNTS = {"fewer than": "<", "more than": ">", "at most": "<=", "at least": ">="}   # 'fewer than D persons' in a place: <D
 COUNTW = r"(?:%s) (?:[A-Z][A-Za-z]*|\d+) persons" % "|".join(COUNTS)
 SIGNS = {v: k for k, v in COUNTS.items()}
@@ -100,7 +101,7 @@ def tok_rx(tok, seen, fixed=None, subj=None, poss=False, article=False):
     if v in seen:
         return "(?P=%s)%s%s" % (v, re.escape(suf), comma)
     seen.add(v)
-    return "(?P<%s>%s|%s|%s|\\d+)%s%s" % (v, COUNTW, NAME, "|".join(WILDW), re.escape(suf), comma)
+    return "(?P<%s>%s|%s|%s|%s|\\d+)%s%s" % (v, COUNTW, SIGNED, NAME, "|".join(WILDW), re.escape(suf), comma)
 
 
 def wild(s, neg):
@@ -133,7 +134,7 @@ def fill(t, b, subj=None, pron=False):
                 p = PRON.get(b[v], "its" if re.fullmatch(NAME, b[v]) else "their")
                 out.append((POSS[p] if of_hers(tk, i) else p) + comma)
             else:
-                out.append(b[v] + suf + comma)
+                out.append(b[v].replace("@", " signed by ") + suf + comma)
         else:
             out.append(tok)
     for i in filled:      # 'a y-coin' of Alice is 'an Alice-coin'
@@ -325,7 +326,7 @@ def parse_list(text, tpls, what="states"):
             none = "no one" in gd.values()
             if none and (neg or pay[0] == "neg"):
                 continue
-            gd = {k: WILD if v in WILDW else count_code(v) for k, v in gd.items()}
+            gd = {k: WILD if v in WILDW else count_code(v).replace(" signed by ", "@") for k, v in gd.items()}
             if (neg or none or pay[0] == "neg") and any(v[:1] in "<>" for v in gd.values()):
                 continue
             item = (neg or none, pay, gd, text[p:m.end()])
@@ -1020,7 +1021,8 @@ def sub_atoms(lits, rules, head=False):
                 for nl in new:
                     if l[0] and nl[0]:
                         raise Err("a negated atom instantiated by a negated atom")
-                    out.append((l[0] or nl[0], nl[1], tuple(b[a] if a in b else WILD if more_any else a for a in nl[2]) + copies))
+                    sub = lambda a: "@".join(b[x] if x in b else x for x in a.split("@")) if "@" in a else b[a] if a in b else WILD if more_any else a
+                    out.append((l[0] or nl[0], nl[1], tuple(sub(a) for a in nl[2]) + copies))
                 break
         else:
             out.append(l)
@@ -1356,7 +1358,19 @@ def match_lits(pats, lits, b=None):
         for a, v in zip(p[2], l[2]):
             if a[:1] in MARK and v[:1] == a[:1]:
                 a, v = a[1:], v[1:]
-            if PH.fullmatch(a):
+            if "@" in a:                # t@x: a thing with its signatures, the last signer x, the rest t
+                pa, va = a.split("@"), v.split("@")
+                if len(va) < len(pa):
+                    ok = False
+                    continue
+                va = ["@".join(va[:len(va) - len(pa) + 1])] + va[len(va) - len(pa) + 1:]
+                for a1, v1 in zip(pa, va):
+                    if PH.fullmatch(a1):
+                        if nb.setdefault(a1, v1) != v1:
+                            ok = False
+                    elif a1 != v1:
+                        ok = False
+            elif PH.fullmatch(a):
                 if nb.setdefault(a, v) != v:
                     ok = False
             elif a != v:
@@ -1372,7 +1386,8 @@ def pattern(text, lex):
     up = {v: "Zz" + v.upper() + "zz" for v in vs}
     filled = " ".join(fill(tok, up) for tok in toks(text))
     back = {v: k for k, v in up.items()}
-    return [(n, p, tuple(a[0] + back.get(a[1:], a[1:]) if a[:1] in MARK else back.get(a, a) for a in args)) for n, p, args in lits_of(filled, lex)]
+    bk = lambda a: "@".join(back.get(x, x) for x in a.split("@"))
+    return [(n, p, tuple(a[0] + bk(a[1:]) if a[:1] in MARK else bk(a) for a in args)) for n, p, args in lits_of(filled, lex)]
 
 
 def fold_states(lits, lex, actor=None):

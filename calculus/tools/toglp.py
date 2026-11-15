@@ -134,6 +134,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=()):
             return "'_'"
         if a.isdigit():
             return 'val(%s)' % a
+        if '@' in a:                 # a thing with its signatures, Item@Alice@Bob: sgn(sgn(Item, Alice), Bob) (GSC, Section 3.2, signed terms)
+            *t, s = a.split('@')
+            return 'sgn(%s, %s)' % (arg('@'.join(t)), arg(s))
         if a in consts:              # a name of no kind that no one holds, as the role Arbiter: a constant the contract names
             return 'val(%s)' % q(a)
         if a in nums:
@@ -258,7 +261,10 @@ def contract_term(n):
         else:
             out.append(t)
     body = '[' + ',\n '.join(out) + ']'
-    return ('reflexive([%s], %s)' % (', '.join(refl), body) if refl else body), len(acts), roles
+    body = 'reflexive([%s], %s)' % (', '.join(refl), body) if refl else body
+    if any(l[1] == 'today' for e in acts for l in e['head'] + e['body']):     # the current date, the platform's: an environment predicate (GLP programs/currencies/bonds/GB.glp; vGLP README, 10)
+        body = 'environment([today], %s)' % body
+    return body, len(acts), roles
 
 
 def check(t, glp):
