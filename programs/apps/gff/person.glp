@@ -1,11 +1,11 @@
-%% person.glp --- the GFF mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and cued_person/6, the same person whose script ends in a tail the play gives, which the play binds once another person's screen shows what the play waits for (plays.glp).  It is ../gsg/person.glp with GFF-I's scripts and the tail, the steps and the conditions being written in self.glp.
+%% person.glp --- the GFF mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp); and cued_person/6, the same person whose script ends in a tail the play gives, which the play binds once another person's screen shows what the play waits for (plays.glp).  It is ../gsg/person.glp with GFF's scripts and the tail, the steps and the conditions being written in self.glp.
 %%
 %% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each bare, of the request type Request?, taking one request; the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(Id, S, K, A, Ts), when it starts and whenever any changes, and its notices; and the approval questions Start raises (vGLP, Section 5.4, "The compilation").  The person's screen shows the last view written and the notices written after it.  Its script is a list of steps (self.glp, Step), as ../gsg/person.glp says them.  A script whose tail is not yet given stops there: the person takes no further step until the tail is given.
 %%
 %% The roles are the persons of GFF's play (plays.glp): alice, bob, carol and dave; the friendships alice and bob, bob and carol, carol and dave, each the first meeting the second by their key, the second answering yes to its hello, and then offering the second friendship, who answers yes (GKK:2, GSG:1), by which each has a pointer to the other labeled by the other (GDO-L's preamble).  The items are utterances signed by alice at their posting (GFF:1):
 %%   alice  establishes her identity (GKK:1); meets bob and befriends him; posts the first item and the second (GFF:1); then her script ends in the play's tail.
 %%   bob    establishes his identity; answers yes to alice's meeting and friendship; meets carol and befriends her; answers yes to carol's introducing dave to him (GKK:3).
-%%   carol  establishes her identity; answers yes to bob's meeting and friendship; meets dave and befriends him; follows alice's feed through bob, an alice-pointer to bob (GDO-L:1, follow_friend); waits until both items have reached her from bob (GFF-I:2); then her script ends in the play's tail.
+%%   carol  establishes her identity; answers yes to bob's meeting and friendship; meets dave and befriends him; follows alice's feed through bob, an alice-pointer to bob (GDO-L:1, labeled_point_friend); waits until both items have reached her from bob (GFF:2); then her script ends in the play's tail.
 %%   dave   establishes his identity; answers yes to carol's meeting and friendship; then his script ends in the play's tail.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
@@ -50,7 +50,7 @@ script(carol, Me, [Bob, Dave, Alice], T, [own([C1], propose(establish(C1?))), wa
                                           approval(befriend(Bob?, Me?), yes),
                                           own([C2], propose(acquaint(C2?, Dave?))), wait(holds(knows(Dave?))),
                                           own([C3], propose(befriend(C3?, Dave?))), wait(holds(friend(Dave?))),
-                                          own([C4], propose(follow_friend(C4?, Bob?, Alice?))), wait(holds(pointer(Bob?, Alice?))),
+                                          own([C4], propose(labeled_point_friend(C4?, Bob?, Alice?))), wait(holds(pointer(Bob?, Alice?))),
                                           wait(holds(item(speech(utterance('First item'), Alice?), Alice?))),
                                           wait(holds(item(speech(utterance('Second item'), Alice?), Alice?))) | T?]) :-
     ground(Me?), ground(Bob?), ground(Dave?), ground(Alice?) | true.

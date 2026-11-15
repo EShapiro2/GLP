@@ -1,4 +1,4 @@
-%% plays.glp --- the GFF mini-app, compiled from GFF-I, activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/3, with its grants; and, for four executions, with the two ends of each of four root channels handed to them as their conversations, alice's and bob's, bob's and carol's, carol's and dave's, and bob's and dave's, the play standing in for the social graph.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
+%% plays.glp --- the GFF mini-app, compiled from GFF, activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/3, with its grants; and, for four executions, with the two ends of each of four root channels handed to them as their conversations, alice's and bob's, bob's and carol's, carol's and dave's, and bob's and dave's, the play standing in for the social graph.  The persons are scripted (person.glp), each under its role, and the play returns their screens.  A run does not end --- the agent's request question stays open and the person channel never closes --- so once each agent has taken its own transactions until none holds and no trigger is left, the run suspends, and a play's result is read off a partial stream.
 
 imported procedure person#cued_person(Key?, Constant?, List(Key)?, Steps?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
 
@@ -6,7 +6,7 @@ imported procedure person#cued_person(Key?, Constant?, List(Key)?, Steps?, Chann
 Want  ::= holds(Atom) ; lacks(Atom).
 Wants ::= [] ; [Want | Wants].
 
-%% play_feeds(A, B, C, D): GFF's play, alice, bob, carol and dave (person.glp for the scripts up to their tails).  Alice and bob, bob and carol, and carol and dave meet and befriend, each friend having a pointer to the other labeled by the other (GDO-L's preamble); alice posts two items (GFF:1), which reach bob, her friend (GFF-I:2, deliver).  Carol follows alice's feed through bob, her friend, by an alice-pointer to bob (GDO-L:1, follow_friend), and both items reach her from bob.  Once carol's screen shows both, dave follows alice's feed through carol, his friend, likewise, and both items reach him from carol.  Once dave's screen shows both, carol introduces dave to bob (GKK:3); once bob's screen shows that he knows dave, carol introduces bob to dave; once dave knows bob, dave adds an alice-pointer to bob, bob having one to alice (GFF-I:1, follow_transitive).  Once dave's screen shows it, alice posts a third item, which reaches bob, carol and dave, each once.  Once dave's screen shows the third item, carol ceases to point to bob (GDO-L:3, unfollow), her alice-pointer to bob; once carol's screen shows it gone, alice posts a fourth item, which reaches bob and, from bob, dave, and not carol.  Each "once" across two persons is the play's: a watcher on the one person's screen gives the other person the rest of their script, and passes the screen on unchanged.
+%% play_feeds(A, B, C, D): GFF's play, alice, bob, carol and dave (person.glp for the scripts up to their tails).  Alice and bob, bob and carol, and carol and dave meet and befriend, each friend having a pointer to the other labeled by the other (GDO-L's preamble); alice posts two items (GFF:1), which reach bob, her friend (GFF:2, deliver).  Carol follows alice's feed through bob, her friend, by an alice-pointer to bob (GDO-L:1, labeled_point_friend), and both items reach her from bob.  Once carol's screen shows both, dave follows alice's feed through carol, his friend, likewise, and both items reach him from carol.  Once dave's screen shows both, carol introduces dave to bob (GKK:3); once bob's screen shows that he knows dave, carol introduces bob to dave; once dave knows bob, dave adds an alice-pointer to bob, bob having one to alice (GFF:3, labeled_point_transitive).  Once dave's screen shows it, alice posts a third item, which reaches bob, carol and dave, each once.  Once dave's screen shows the third item, carol ceases to point to bob (GDO-L:3, labeled_unpoint), her alice-pointer to bob; once carol's screen shows it gone, alice posts a fourth item, which reaches bob and, from bob, dave, and not carol.  Each "once" across two persons is the play's: a watcher on the one person's screen gives the other person the rest of their script, and passes the screen on unchanged.
 exported procedure play_feeds(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_feeds(A?, B?, C?, D?) :-
     self_module(M),
@@ -20,11 +20,11 @@ play_feeds(A?, B?, C?, D?) :-
     run(miniapp(dave, ch(GD?, WD), ch([conversation(carol, ch(CD?, DC)), conversation(bob, ch(BD?, DB))], _)), T?, M?),
     person # cued_person(dave, dave, [carol, bob, alice], TD?, ch(WD?, GD), D0),
     watch(C0?, C1, [holds(item(speech(utterance('Second item'), alice), alice))],
-          [own([H1], propose(follow_friend(H1?, carol, alice))), wait(holds(pointer(carol, alice))),
+          [own([H1], propose(labeled_point_friend(H1?, carol, alice))), wait(holds(pointer(carol, alice))),
            wait(holds(item(speech(utterance('First item'), alice), alice))),
            wait(holds(item(speech(utterance('Second item'), alice), alice))),
            approval(introduce(carol, dave, bob), yes), wait(holds(knows(bob))),
-           own([H2], propose(follow_transitive(H2?, carol, bob, alice))), wait(holds(pointer(bob, alice)))], TD),
+           own([H2], propose(labeled_point_transitive(H2?, carol, bob, alice))), wait(holds(pointer(bob, alice)))], TD),
     watch(D0?, D1, [holds(item(speech(utterance('Second item'), alice), alice))],
           [own([C5], propose(introduce(C5?, bob, dave))) | TC2?], TC),
     watch(B0?, B, [holds(knows(dave))],
@@ -33,7 +33,7 @@ play_feeds(A?, B?, C?, D?) :-
           [own([P1, P2], propose(post(P1?, speech(utterance('Third item'), P2?)))),
            wait(holds(item(speech(utterance('Third item'), alice), alice))) | TA2?], TA),
     watch(D2?, D, [holds(item(speech(utterance('Third item'), alice), alice))],
-          [own([C7], propose(unfollow(C7?, bob))), wait(lacks(pointer(bob, alice)))], TC3),
+          [own([C7], propose(labeled_unpoint(C7?))), wait(lacks(pointer(bob, alice)))], TC3),
     watch(C1?, C, [holds(pointer(bob, alice)), lacks(pointer(bob, alice))],
           [own([P3, P4], propose(post(P3?, speech(utterance('Fourth item'), P4?)))),
            wait(holds(item(speech(utterance('Fourth item'), alice), alice)))], TA2).
