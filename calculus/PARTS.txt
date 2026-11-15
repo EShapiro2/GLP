@@ -28,5 +28,10 @@ an officer the bylaws name taking the act on the count; Amend is a motion of GO:
 governors are listed by their roles; SC's issue of shares is voted by the shareholders, the weighing of shares the
 platform's; Retire clears every role of the one retired.
 
-To come: an organisation as a party to the currencies' acts (GBank, GCorp, GCoop), which waits on a sentence of the
-contracts' text; ORH, held out until GSC's rule on an environment predicate as a mark.
+ORH, this commit, from Calculus code 858e306, run on GLP branch GSC-kinds a866c7a (migration 4470b07 and GSC's rule that
+a type no act adds is no type of ward): certified, with a platform.glp that loads.  All 62 are now published.
+
+To come: a party, whoever has an identity, in GKK and the currencies, and a ward taking a party's act by those who
+decide for it (Udi, 2026-11-15), so that an organisation holds, pays and issues coins and bonds; and an act of one role
+wherever two roles a contract calls possibly one person cannot be bound to one by GSC's Definition Binding.  Both
+change terms and platforms; the contracts they touch are published again, and this file will say which.
