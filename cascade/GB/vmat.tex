@@ -1,16 +1,1961 @@
-% not compiled:
-gb
-is malformed:
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+issue
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+swap
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+pay
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+redeem
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\text{\textcent}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 issue_bond
-requires an atom of
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+\Alice
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
 today
-which no schema adds, and which is no environment predicate, reflexive predicate or parameter;
+}
+(
+Today
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+Day
+>
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+swap_coin_for_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+Total
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+Total
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+Total
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+swap_bonds
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+\}
+) \uplus 
+\{
+Total
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Term
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+Total
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Term
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+Total
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Term
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+redeem_coin_against_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 redeem_bond
-requires an atom of
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
 today
-which no schema adds, and which is no environment predicate, reflexive predicate or parameter;
+}
+(
+Today
+)
+,
+\text{\textcent}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Day
+\le
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 redeem_bond_against_bond
-requires an atom of
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Term
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Term
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
 today
-which no schema adds, and which is no environment predicate, reflexive predicate or parameter;
-check_named gives the faults.
+}
+(
+Today
+)
+,
+\mathit{
+bond
+}
+(
+Carol
+,
+Term
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Day
+\le
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deposit
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+deposit_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+Dave
+,
+Day
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+release
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+Alice
+,
+\Bob
+,
+Cond
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+Alice
+,
+\Bob
+,
+Cond
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+release_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+Dave
+,
+Day
+,
+Alice
+,
+\Bob
+,
+Cond
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+Dave
+,
+Day
+,
+Alice
+,
+\Bob
+,
+Cond
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+return
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+\Bob
+,
+Bob
+,
+Cond
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+\Bob
+,
+Bob
+,
+Cond
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+return_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+Dave
+,
+Day
+,
+\Bob
+,
+Bob
+,
+Cond
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+Dave
+,
+Day
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+Dave
+,
+Day
+,
+\Bob
+,
+Bob
+,
+Cond
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
