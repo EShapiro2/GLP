@@ -58,7 +58,6 @@
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
 #   gra         GRA   GRH         programs/lbm              ---
 #   cb          CB    GO          programs/go               ---
-#   cc          CC    GO          programs/go               ---
 #   cmb         CMB   GO          programs/go               ---
 #   cnc         CnC   GO          programs/go               ---
 #   gan         GAN   GO          programs/go               ---
@@ -234,7 +233,6 @@ case "$1" in
     lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     cb) FILE=CB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
-    cc) FILE=CC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     cmb) FILE=CMB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     cnc) FILE=CnC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     gan) FILE=GAN; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
@@ -259,7 +257,7 @@ case "$1" in
     gdo_lb) FILE=GDO-LB; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     gra_ss) FILE=GRA-SS; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     sgsg) FILE=SGSG; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc gra gd gd_s gdo_l gdo_lb gra_ss gff_ps gff_fr gff_fr_bc sgsg dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc gra gd gd_s gdo_l gdo_lb gra_ss gff_ps gff_fr gff_fr_bc sgsg dao ldao fdao rec stay lib joint cb cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
