@@ -106,16 +106,17 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 asread() { run "as_read($1, R)." | sed -e 's/^\(GLP> \)*//' | grep -E '^R = ' | head -1 | sed -e 's/^R = //'; }
 GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
 check "GKK's contract is read from programs/gsc/GKK.glp, in the clause syntax, establish first" \
-      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
+      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
 GKKV=$(asread "$GKKT")
 check "GKK as the checker reads it: establish forbidding the identity it adds, then acquaint and introduce, each naming its roles" \
-      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar('Carol')], " "$GKKV"
+      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], " "$GKKV"
 GKK_SCHEMAS="${GKKT%]}"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
 check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$GKK_SCHEMAS" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
+# GKK and GSG are adopted from the Calculus (2026-11-15, GLP branch Calculus c475902) and GSN is not yet: until its adoption GSN.glp writes GKK's schemas as its owner wrote them, establish adding identity alone; at its adoption the expected term is $GKK_SCHEMAS again.
 check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, GKK's schemas first" \
-      "$GKK_SCHEMAS" "$GSNT"
+      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], " "$GSNT"
 GSGV=$(asread "$GSGT")
 GSNV=$(asread "$GSNT")
 # as_read takes a contract in either wrapped form, reflexive(Preds,
@@ -2593,6 +2594,24 @@ check "an atom whose reading role only an environment atom names is untraceable:
 check "the same, an atom of knows naming the reading role: traceable" "V2 = syntactically_grassroots" "$out"
 check "the same, nearby not an environment predicate: nearby, added by no schema, names it, and it is traceable" "V3 = syntactically_grassroots" "$out"
 check "an environment predicate over agents, required at each guarding role, is not reported untraceable" "V4 = syntactically_grassroots" "$out"
+
+# The search of an introduction with wards (wards/wards.glp, GLP dce4192, reported by Calculus #6, 2026-11-15): a mark that a role adds without iota is in no set M (def:kinds, clause 2), so it is left out before the sets are tried.  The instance of GnW with child for ward, nine more marks f1 to f9, each added by an act of a person, and two predicates pp and qq that no act adds, which give every mark a guardianship candidate, is certified as the instance is, within the limit of run; the search over every set of the nine did not end within it.
+FLAGS=""
+for i in 1 2 3 4 5 6 7 8 9; do
+  FLAGS="$FLAGS${FLAGS:+, }sas(flag$i, ['Alice'], [], [atom(f$i, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), not(atom(f$i, ['Alice']))], true, ['Alice'])"
+done
+NOTEPQ="sas(note, ['Alice', 'Bob'], [], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(pp, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(qq, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+out=$(run "instantiate($GNWP, $GNWB, [$FLAGS, $NOTEPQ], D), check(D?, V).")
+check "an instance of GnW with nine marks no ward bears is certified with child its ward mark, the search leaving them out" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
+
+# A signed term whose signer is no role of its schema (reported by Helper #1 for Calculus #6, 2026-11-15: check/2 failed, with no verdict): resign adds item(sgn(Item, Bob)) at Alice, Bob an agent variable holding no atom and no guard; the paper's Definition Speech-act schema has the signer an agent role, so the contract is malformed, the fault not_agent_role, and not_required as no role of the signer requires an atom with Item.
+SGB="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(sign, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item']))], true, ['Alice'])"
+RESIGN="sas(resign, ['Alice', 'Bob'], ['Bob', 'Item'], [atom(item, ['Alice', sgn('Item', 'Bob')])], [atom(identity, ['Alice']), atom(item, ['Alice', 'Item'])], true, ['Alice'])"
+out=$(run "check([$SGB], V1)." "check([$SGB, $RESIGN], V2).")
+check "a contract whose items are signed by their role is certified" "V1 = syntactically_grassroots" "$out"
+check "a signed term whose signer is no role of its schema is malformed, not a failure of check/2" \
+      "V2 = malformed([signed(resign, 1, atom(item, [sgn('Item', 0)]), not_agent_role), signed(resign, 1, atom(item, [sgn('Item', 0)]), not_required)])" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
