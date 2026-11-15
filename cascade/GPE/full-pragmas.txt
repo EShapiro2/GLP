@@ -1,0 +1,8 @@
+GPE: Grassroots Physical Encounters
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GPE: A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GPE:1. ■ Open place: Alice may declare her place open. Close place: Alice may close her place.
+GPE:2. ■ Encounter: Alice and Bob may jointly come to know each other, provided Alice and Bob are nearby each other, Alice has declared the place open and Bob has declared the place open.
