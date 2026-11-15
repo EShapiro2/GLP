@@ -206,7 +206,7 @@
 %%   dawn(p?)      :  at p  not dated, +dated, +date(0)
 %%   advance(p)    :  at p  today(d), -date(t), +date(d), d > t
 %%
-%% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  days/self.glp plays it.
+%% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  today is an environment predicate of the contract, environment([today], ...), an atom an act requires and no act adds, which the device's calendar holds.  days/self.glp plays it.
 %%
 %% linear is a contract whose constraints are in GSC's form, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"; programs/gsc/self.glp at GSC-unob3 62fb0342), so that a contract compiled here has an unguarded schema whose added atom names a variable an equality gives once the atoms its first role requires bind the others (vGLP, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"):
 %%
@@ -332,7 +332,7 @@ contract_named(wardclose, C?) :- wardclose(C).
 contract_named(numbers, C?) :- numbers(C).
 contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
-contract_named(days, C?) :- days(C).
+contract_named(days, environment([today], C?)) :- days(C).
 contract_named(linear, C?) :- linear(C).
 contract_named(forms, C?) :- forms(C).
 contract_named(counts, environment([cap, wt], C?)) :- counts(C).
