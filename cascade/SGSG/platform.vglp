@@ -115,8 +115,6 @@ vouched(Peer, Peer)
 accepted(Peer, Peer, Peer)
 ;
 threshold_vouched(Peer, Peer)
-;
-accepted(Peer, Peer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -151,8 +149,6 @@ atom_of(g(vouched, [p(V1), p(V2)]), shown(vouched(V1?, V2?)))
 atom_of(g(accepted, [p(V1), p(V2), p(V3)]), shown(accepted(V1?, V2?, V3?)))
 .
 atom_of(g(threshold_vouched, [p(V1), p(V2)]), shown(threshold_vouched(V1?, V2?)))
-.
-atom_of(g(accepted, [p(V1), p(V2)]), shown(accepted(V1?, V2?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
@@ -216,7 +212,7 @@ schema_numeric(unfriend, numeric([cj(every, true)], [], []))
 .
 schema_numeric(name_custodian, numeric([cj(every, true)], [], []))
 .
-schema_numeric(identity_record, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(custodian, [svar('X1')]), fcons(true)), num('Share'))), cj(every, eq(num('Double'), mul(num('Share'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(custodian, [svar('X2')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(identity_record, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(custodian, [pvar('X1')]), fcons(true)), num('Share'))), cj(every, eq(num('Double'), mul(num('Share'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(custodian, [pvar('X2')]), fcons(true)), num('Double')))], [], []))
 .
 schema_numeric(tell, numeric([cj(every, true)], [], []))
 .
