@@ -267,8 +267,9 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 %% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
 %% any the wildcard of a cleared atom, as programs/gsc/self.glp writes it (GSC 327e035).
+%% const(X) a value variable over the constants, among a schema's variables and where it occurs (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"; compiler/README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; num(Constant) ; real(Constant) ; any ; val(Constant).
+            ; num(Constant) ; real(Constant) ; any ; val(Constant) ; const(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -341,6 +342,7 @@ contract_named(leaves, C?) :- leaves(C).
 contract_named(consts, C?) :- consts(C).
 contract_named(readings, C?) :- readings(C).
 contract_named(backed, C?) :- backed(C).
+contract_named(roles, C?) :- roles(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -374,6 +376,7 @@ introduction_named(leaves, no_introduction).
 introduction_named(consts, no_introduction).
 introduction_named(readings, no_introduction).
 introduction_named(backed, no_introduction).
+introduction_named(roles, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -531,6 +534,11 @@ pragmas_named(backed, pragmas([list('"Treasurers"', [officer]), list('"Reserve"'
      act(owe, '"Owe"', ['""', '""', '"Amount"'], none, '"Treasurers"', by([1])),
      act(repay, '"Repay"', [], none, '"Treasurers"', by([1])),
      act(join, '"Join"', [], said([[], [person(1), text('" asks you to join its treasurers."')]]), '"Treasurers"', by([1]))])).
+pragmas_named(roles, pragmas([list('"Roles"', [role]), list('"Contacts"', [knows])],
+    [act(acquaint, '"Acquaint"', ['""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(appoint, '"Appoint"', ['""', '""', '"Role"'], none, '"Contacts"', by([1])),
+     act(arbitrate, '"Arbitrate"', [], none, '"Roles"', by([1])),
+     act(resign, '"Resign"', [], none, '"Roles"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -956,3 +964,16 @@ backed([schema(acquaint, [],
           [conjunct([role(3)], 1, atom(officer, [role(3)]), fcons(true), [], [], [fa(role(3), atom(cotreasurer, [role(2)]))])],
           [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true),
              [fcons(le(cardinality([], role(1), atom(owes, [role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, []), fcons(true))))])])]).
+
+%% roles: a value variable over the constants, const(X) (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, ..., and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), as GO's appoint and the acts of GBCC and GNO that require a role by its name: acquaint(a?, b?) adds knows at both; appoint(a?, b ; r), a knowing b, adds role(a, r) at b, r the name a types; arbitrate(b? ; o) requires role(o, arbiter) at b, o local to b's role, arbiter a constant the contract names, and adds done, which it forbids; and resign(b? ; o, r) deletes role(o, r) at b, o and r local to b's role, which b's machine finds in its state.  The place of role's second argument is of the type Constant in appoint, in arbitrate and in resign, and the constant alice types in appoint is the one arbitrate requires.
+procedure roles(Contract).
+roles([schema(acquaint, [],
+         [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]),
+          rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]),
+       schema(appoint, [const(r)],
+         [rs(guarded, [], [], [atom(knows, [role(2)])], []),
+          rs(unguarded, [atom(role, [role(1), num(r)])], [], [atom(knows, [role(1)])], [])]),
+       schema(arbitrate, [pvar(o)],
+         [rs(guarded, [atom(done, [])], [], [atom(role, [pvar(o), val(arbiter)])], [atom(done, [])])]),
+       schema(resign, [pvar(o), const(r)],
+         [rs(guarded, [], [atom(role, [pvar(o), num(r)])], [], [])])]).
