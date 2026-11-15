@@ -146,6 +146,7 @@ ol.cl b{font-weight:600}
 .layer details{margin-top:10px}
 .layer summary{cursor:pointer;font-size:14px;color:var(--blue);font-weight:500;list-style:none}
 .layer summary::-webkit-details-marker{display:none}
+.fullc{margin-top:10px}.fullc summary{list-style:none}.fullc summary::-webkit-details-marker{display:none}.fullc .txt{white-space:pre-wrap;font-size:14px;line-height:1.55;margin-top:10px;max-height:70vh;overflow:auto}
 .code{font:12px/1.55 var(--mono);background:#1d1d1f;color:#e5e5ea;border-radius:12px;padding:14px 16px;max-height:460px;overflow:auto;white-space:pre;margin-top:10px}
 .code a{color:#64b5ff}
 .verdict{font:13px var(--mono);background:#e8f8ee;color:#1c7c3f;border-radius:8px;padding:5px 10px;display:inline-block;word-break:break-word;margin-top:8px}
@@ -920,6 +921,7 @@ function page(c, hood){
       <div class="pre">${esc(c.preamble)}</div>
       <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
       </div>
+      ${c.full ? `<details class="fullc" data-full="${esc(c.full)}"><summary class="btn grey">Full contract</summary><div class="card rules txt">Loading…</div></details>` : ''}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
       ${c.dir ? `<p class="small">In the repository: <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(c.dir)}" target="_blank" rel="noopener"><code>${esc(c.dir)}</code></a>.</p>` : ''}
     </div>
@@ -931,6 +933,13 @@ function page(c, hood){
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
   $('#hoodbtn').onclick = () => go(c.id, !hood);
+  const fd = $('#view').querySelector('details[data-full]');
+  if (fd) fd.addEventListener('toggle', async () => {
+    fd.querySelector('summary').textContent = fd.open ? 'Hide the full contract' : 'Full contract';
+    if (!fd.open || fd.dataset.done) return; fd.dataset.done = 1;
+    try { const r = await fetch(fd.dataset.full); if (!r.ok) throw 0; fd.querySelector('.txt').textContent = await r.text(); }
+    catch (e){ fd.querySelector('.txt').textContent = 'Not available.'; }
+  });
   if (hood){ $('#hood').style.display = 'block'; hoodHtml(c); setTimeout(() => $('#hood').scrollIntoView({behavior:'smooth', block:'start'}), 60); }
 }
 

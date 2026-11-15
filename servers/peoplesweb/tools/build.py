@@ -359,6 +359,18 @@ for n in sorted(set(compiled) | set(cat)):
             os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
             shutil.copy(os.path.join(d, f), os.path.join(WWW, 'stack', n, f))
             c['layers'][k] = {'file': f'stack/{n}/{f}', 'lines': read(os.path.join(d, f)).count('\n')}
+    # The full contract, the Full contract button's text (Udi, 2026-11-15, to
+    # Calculus #6, verbatim: "i want the web to include for each contract a
+    # button you press 'full contract' that show the full contract"): the
+    # contract with every clause it has from the contracts it is written
+    # from, each labelled by its origin, which the Calculus prints into
+    # calculus/<NAME>/full-contract.txt (Calculus #6 to Website, 2026-11-15
+    # 12:33 UTC).  A contract with no such file has no button.
+    fc = os.path.join(GLP, 'calculus', n, 'full-contract.txt')
+    if os.path.exists(fc):
+        os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
+        shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
+        c['full'] = f'stack/{n}/full-contract.txt'
     # A contract that builds on one with no platform is drawn building on the nearest shown ones.
     ps = nearest(n)
     c['extends'] = [p for p in ps if not any(p in set(ancestors(q)) for q in ps if q != p)]
