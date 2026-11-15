@@ -3038,9 +3038,10 @@ admissible_marks([Mk|Ms], C, Io, F, R?) :-
     admissible_marks(Ms?, C?, Io?, F?, R1),
     keep_mark(A?, Mk?, R1?, R).
 
-% Some schema adds each mark in M (def:kinds, clause 2, GSC's paper: "and
-% some schema adds each mark in M"): a mark that no schema adds, an
-% environment predicate among them, is the kind of no ward, and is left out.
+% Some schema adds each type in M (Definition Types, def:kinds, clause 2,
+% GSC a3c95d9: "and some schema adds each type in M"): a mark that no schema
+% adds, an environment predicate among them, is the type of no ward, and is
+% left out.
 procedure mark_added(Contract?, Constant?, Ans).
 mark_added([], _, no).
 mark_added([S|Ss], Mk, R?) :- ground(S?), ground(Ss?), ground(Mk?) |
