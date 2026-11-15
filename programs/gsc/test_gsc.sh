@@ -106,16 +106,17 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 asread() { run "as_read($1, R)." | sed -e 's/^\(GLP> \)*//' | grep -E '^R = ' | head -1 | sed -e 's/^R = //'; }
 GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
 check "GKK's contract is read from programs/gsc/GKK.glp, in the clause syntax, establish first" \
-      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
+      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
 GKKV=$(asread "$GKKT")
 check "GKK as the checker reads it: establish forbidding the identity it adds, then acquaint and introduce, each naming its roles" \
-      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar('Carol')], " "$GKKV"
+      "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], " "$GKKV"
 GKK_SCHEMAS="${GKKT%]}"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
 check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$GKK_SCHEMAS" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
+# GKK and GSG are adopted from the Calculus (2026-11-15, GLP branch Calculus c475902) and GSN is not yet: until its adoption GSN.glp writes GKK's schemas as its owner wrote them, establish adding identity alone; at its adoption the expected term is $GKK_SCHEMAS again.
 check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, GKK's schemas first" \
-      "$GKK_SCHEMAS" "$GSNT"
+      "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], " "$GSNT"
 GSGV=$(asread "$GSGT")
 GSNV=$(asread "$GSNT")
 # as_read takes a contract in either wrapped form, reflexive(Preds,
