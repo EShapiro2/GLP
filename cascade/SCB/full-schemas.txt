@@ -1,0 +1,102 @@
+SCB: Sovereign Central Bank (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:1+GnW:3 ■ Establish: identity(Alice), knows(Alice,Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2+GnW:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+GKK:3+GnW:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1+GnW:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2+GnW:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+GnW:0 - | Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an organisation and how.
+GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave organisations; in clause 4 Alice and Bob are possibly one person.
+GnW:1 ■ Enter: identity(Carol), knows(Carol,Carol), organisation(Carol), has_officer(Carol,Alice), creator(Alice,Carol), officer(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+GnW:1 ■ | Alice chooses Carol's key pair.
+GnW:2 ■ | Guardian decisions.
+GnW:2+GO:4 ■ Appoint: officer(Bob,Carol), has_officer(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob), role(Bob,Carol,Role), has_role(Carol,Bob,Role) <- organisation(Carol), ~retired(Carol), person(Bob), ~officer(Bob,Carol), ~has_officer(Carol,Bob), participant(Bob,Carol) guarded by deciders(Carol), Bob.
+GnW:2+GO:4 ■ Resign: ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- officer(Bob,Carol), has_officer(Carol,Bob) guarded by Bob.
+GnW:2+GO:4 ■ End officer: ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- officer(Bob,Carol), has_officer(Carol,Bob) guarded by deciders(Carol).
+GnW:2+GO:4 ■ Officer unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- friend(Bob,Carol), friend(Carol,Bob), officer(Bob,Carol), has_officer(Carol,Bob) guarded by Bob.
+GnW:2 ■ | Carol may not end a friendship with her officer.
+GnW:3 ■ | Ward and person.
+GnW:3 ■ Ward acquaint: knows(Carol,Bob), knows(Bob,Carol) <- organisation(Carol), has_officer(Carol,Alice), person(Bob) guarded by Carol, Bob.
+GnW:3 ■ Ward befriend: friend(Carol,Bob), friend(Bob,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol) guarded by Carol, Bob, Alice.
+GnW:3 ■ Ward end: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~officer(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+GnW:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob) <- ~officer(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
+GnW:3 ■ Ward unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol) <- has_officer(Carol,Alice), ~officer(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
+GnW:4 ■ | Wards.
+GnW:4 ■ Wards acquaint: knows(Carol,Dave), knows(Dave,Carol) <- organisation(Carol), has_officer(Carol,Alice), organisation(Dave), has_officer(Dave,Bob) guarded by Carol, Dave possibly Alice=Bob.
+GnW:4 ■ Wards befriend: friend(Carol,Dave), friend(Dave,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), organisation(Dave), ~retired(Dave), has_officer(Dave,Bob), knows(Carol,Dave), knows(Dave,Carol), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice, Bob possibly Alice=Bob.
+GnW:4 ■ Wards of one guardian befriend: friend(Carol,Dave), friend(Dave,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), organisation(Dave), ~retired(Dave), has_officer(Dave,Alice), knows(Carol,Dave), knows(Dave,Carol), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice.
+GnW:5+GO:4 ■ Retire: retired(Carol), ~officer(_,Carol), ~has_officer(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~role(_,Carol,_), ~has_role(Carol,_,_) <- ~retired(Carol) guarded by deciders(Carol).
+GnW:5 ■ | Carol can then take no act.
+GO:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+GO:0 - | Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role.
+GO:1 ■ Found: identity(Orga), knows(Orga,Orga), organisation(Orga), creator(Gov,Orga), first_officer(Orga,Alice), officer(Alice,Orga), has_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Gov, Alice, Orga must Orga.
+GO:2 ■ | Acts of the organisation.
+GO:2 ■ Propose: proposed(Orga,Motion) <- proposer(Bob,Orga,Motion), ~proposed(Orga,Motion) guarded by Bob.
+GO:2 ■ Vote: vote(Orga,Motion) <- organisation(Orga), proposed(Orga,Motion) guarded by act_deciders(Orga,Motion).
+GO:2 ■ Act: taken(Orga,Motion) <- taker(Alice,Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
+GO:3 ■ | Participation.
+GO:3 ■ Join: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga) guarded by Bob, deciders(Orga).
+GO:3+SCB:1 ■ Leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob), organisation(Orga) guarded by Bob, governors(Orga).
+GO:3+SCB:1 ■ Officer leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- participant(Bob,Orga), has_participant(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob), organisation(Orga) guarded by Bob, governors(Orga).
+GO:3+SCB:1 ■ Expel: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob), organisation(Orga) guarded by deciders(Orga), Bob, governors(Orga).
+GO:3+SCB:1 ■ Officer expel: ~participant(Bob,Orga), ~has_participant(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- participant(Bob,Orga), has_participant(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob), organisation(Orga) guarded by deciders(Orga), Bob, governors(Orga).
+GO:3 ■ | Every role Bob holds in Orga ends with his participation.
+GO:4 ■ | Officers.
+GO:4 ■ | The decision names his role.
+GO:5 ■ Amend: amended(Orga) <- organisation(Orga) guarded by amenders(Orga).
+GO:6 ○ | Accountability.
+GO:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+GC:0 - | A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
+GC:0 - | Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
+GC:1+GDC:1 ■ Issue: coin(Alice,Alice,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
+GC:2+GB:2+DGC:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total), one_denomination(Alice,Carol,Dave) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+GC:3 ■ Pay: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
+GC:4+GB:3+DGC:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol), one_denomination(Alice,Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GC:5 ○ | Pricing.
+GC:5 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+GB:0 - | A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
+GB:0 - | Alice, Bob, Carol and Dave are persons, Day and Term maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clauses 2 and 3 Carol and Dave are possibly Alice, Bob or one person, and in clause 4 Dave is possibly Alice, Bob or Carol.
+GB:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
+GB:2+DGC:2 ■ Swap coin for bond: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~bond(Bob,Dave,Day,*Total), bond(Alice,Dave,Day,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), bond(Bob,Dave,Day,*Total), one_denomination(Alice,Carol,Dave) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+GB:2+DGC:2 ■ Swap bonds: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), ~bond(Bob,Dave,Term,*Total), bond(Alice,Dave,Term,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), bond(Alice,Carol,Day,*Sum), bond(Bob,Dave,Term,*Total), one_denomination(Alice,Carol,Dave) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+GB:3+DGC:2 ■ Redeem coin against bond: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day), one_denomination(Alice,Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GB:3+DGC:2 ■ Redeem bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), today(Alice,Today), le(Day,Today), bond(Alice,Bob,Day), coin(Bob,Carol), one_denomination(Alice,Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GB:3+DGC:2 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bond(Bob,Carol,Term), bond(Alice,Carol,Term), knows(Alice,Carol) <- knows(Alice,Bob), today(Alice,Today), le(Day,Today), bond(Alice,Bob,Day), bond(Bob,Carol,Term), one_denomination(Alice,Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GB:4 ■ | Escrow.
+GB:4+DGC:2 ■ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum), escrow_one_denomination(Carol,Alice,Bob,Cond) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4+DGC:2 ■ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum), escrow_one_denomination(Carol,Alice,Bob,Cond) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4+DGC:2 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), met(Carol,Cond), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), escrow_one_denomination(Carol,Alice,Bob,Cond) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4+DGC:2 ■ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), met(Carol,Cond), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), escrow_one_denomination(Carol,Alice,Bob,Cond) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4+DGC:2 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), failed(Carol,Cond), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), escrow_one_denomination(Carol,Alice,Bob,Cond) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4+DGC:2 ■ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), failed(Carol,Cond), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), escrow_one_denomination(Carol,Alice,Bob,Cond) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GDC:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+GDC:0 - | Alice and Bob are persons, Dollar a fiat currency, Sum a number.
+GDC:1 ■ First issue: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
+GDC:2 ○ | Denomination.
+GDC:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+GDC:3 ○ | Pricing.
+GDC:3 ○ | Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
+DGC:0 - | A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
+DGC:0 - | Alice, Bob, Carol and Dave are persons, Dollar a fiat currency, Day a maturity date, Today a date, Cond a condition Alice, Bob and Carol agree, Sum a number; in clause 4 Carol is possibly Alice or Bob.
+DGC:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
+DGC:3 ■ Accept: accepts(Alice,Carol,Dollar) <- coin(Alice,Carol), issued_in(Carol,Dollar) guarded by Alice.
+DGC:3 ■ Accept by bond: accepts(Alice,Carol,Dollar) <- bond(Alice,Carol,_), issued_bond_in(Carol,Dollar,_) guarded by Alice.
+DGC:3 ■ | Each such coin paid to Alice counts against the limit, and Alice may accept again.
+DGC:4 ■ Pay: ~coin(Alice,Carol), coin(Bob,Carol), ~accepts(Bob,Carol,Dollar) <- knows(Alice,Bob), issued_in(Carol,Dollar), coin(Alice,Carol), accepts(Bob,Carol,Dollar) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GBank:0 - | A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
+SCB:0 - | A *central bank* is a bank created by an organisation, Gov (GO:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+SCB:0 - | Gov is an organisation, Bob a person, Orga a central bank, Term a term, Rate, Sum, Interest and Total numbers.
+SCB:2 ■ Set policy rate: ~policy_rate(Orga,Term,_), policy_rate(Orga,Term,Rate) <- organisation(Orga) guarded by committee_members(Orga).
+SCB:3 ■ Lend: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total) <- counterparty(Bob,Orga), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Bob, Orga.
+SCB:3 ■ | Bob and Orga swap as many bonds as the coins and the interest on them at the policy rate for that term.
+SCB:4 ■ | Open market.
+SCB:4 ■ | Bob, a counterparty, and Orga may jointly swap coins and bonds they hold (DGC:2).
+SCB:5 ○ | Authority.
+SCB:5 ○ | Gov will create Orga and appoint and remove its officers as the law of the Dollar provides.

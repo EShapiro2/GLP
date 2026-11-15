@@ -31,5 +31,5 @@ AGORA:6 ■ Swap item for coin: ~item(Alice,Item), item(Bob,Item), ~coin(Bob,Dav
 AGORA:6 ■ Swap item for bond: ~item(Alice,Item), item(Bob,Item), ~bond(Bob,Dave,Day,*Sum), bond(Alice,Dave,Day,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), bond(Bob,Dave,Day,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
 AGORA:6 ■ Swap items: ~item(Alice,Item), item(Bob,Item), ~item(Bob,Thing), item(Alice,Thing) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), item(Bob,Thing) guarded by Alice, Bob.
 AGORA:6 ■ Deposit item: ~item(Alice,Item), escrow_item(Carol,Item,Alice,Bob,Cond) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), item(Alice,Item) guarded by Alice, Carol.
-AGORA:6 ■ Release item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Bob,Item) <- knows(Carol,Bob), knows(Bob,Carol), met(Carol,Cond), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Bob.
-AGORA:6 ■ Return item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Alice,Item) <- knows(Carol,Alice), knows(Alice,Carol), failed(Carol,Cond), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Alice.
+AGORA:6 ■ Release item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Bob,Item) <- knows(Carol,Bob), knows(Bob,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Bob.
+AGORA:6 ■ Return item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Alice,Item) <- knows(Carol,Alice), knows(Alice,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Alice.

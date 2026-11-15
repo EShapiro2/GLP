@@ -4,14 +4,26 @@
 % Defines: recommendation: recommended(b, s) at the recommender, endorsement(a, s) at the recommended, shown(c, a, s) at them for each person shown, vouched(b, a, s) at that person.
 % Schemas: REC.glp beside this file, written by tools/contracts.py.
 REC: Recommendations
-Alice, Bob and Carol are persons.  REC extends GKK.
-1. ◆ Recommending.  Alice may recommend Bob, whom they know, for something, a skill or a service, once for each thing; Bob is not asked and keeps the recommendation.
-2. ■ Showing.  Bob may show a recommendation they hold to Carol, whom they know, once; Carol then sees who recommended Bob and for what, but does not thereby come to know the recommender.
-3. ■ Withdrawing.  Alice may withdraw a recommendation; it is gone from Bob and from everyone Bob showed it to, and Alice may not make it again.
-Pragmas
+REC extends GKK.
+Alice, Bob and Carol are persons.
+1. ◆ Recommend: Alice may recommend Bob, whom she knows, for something, a skill or a service, once for each thing; Bob keeps the recommendation.
+2. ■ Show: Bob may show a recommendation he holds to Carol, whom he knows, once; Carol then sees who recommended Bob and for what.
+3. ■ Withdraw: Alice may withdraw a recommendation; it is then gone from Bob and from everyone Bob showed it to, and Alice may not make it again.
+Logic pragmas
+REC extends GKK.
+Alice, Bob and Carol are persons, Skill a skill or a service.
+1. ◆ Recommend: Alice may recommend Bob for Skill, provided Alice knows Bob.
+2. ■ Show: Bob may show Carol Alice's recommendation for Skill, provided Bob holds Alice's recommendation for Skill and Bob knows Carol.
+3. ■ Withdraw: Alice may withdraw her recommendation of Bob for Skill. Alice may not make it again.
+Logic pragmas.
+Vocabulary: x has recommended y for s = recommended(x,y,s); y holds x's recommendation for s = recommendation(y,x,s); y has shown z x's recommendation for s = shown(y,z,x,s); z sees x's recommendation of y for s = sees(z,x,y,s).
+After x recommends y for s, which requires x has not recommended y for s: x has recommended y for s and y holds x's recommendation for s.
+After y shows z x's recommendation for s, which requires y has not shown z x's recommendation for s: y has shown z x's recommendation for s and z sees x's recommendation of y for s.
+After x withdraws x's recommendation of y for s: no longer y holds x's recommendation for s, y has shown no one x's recommendation for s and no one sees x's recommendation of y for s.
+Interface pragmas
 Given: the recommended people Alice vouches for.
-Received: the endorsements Alice holds.
-Seen: the vouched ones Alice saw.
-Recommending: Alice [Recommend] <for what>
-Showing: Bob [Show] <recommendation>
-Withdrawing: Alice [Withdraw recommendation]
+Received: the recommendations Alice holds.
+Seen: what Alice sees.
+Recommend: Alice [Recommend] <skill>
+Show: Bob [Show]
+Withdraw: Alice [Withdraw] <bob> <skill>

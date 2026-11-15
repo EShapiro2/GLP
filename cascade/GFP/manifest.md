@@ -1,10 +1,10 @@
 # A run of the cascade on GFP
 
-- Contract: `GFP` (`gfp` to the checker), its owner's two files `programs/gsc/GFP.txt` and `programs/gsc/GFP.glp`, copied here as they stood at `85e5ad4f`.
+- Contract: `GFP` (`gfp` to the checker), its owner's two files `programs/gsc/GFP.txt` and `programs/gsc/GFP.glp`, copied here as they stood at `2f79191f`.
 - The paper: `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gsc/GFP.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gsc/GFP.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 14:30 UTC by `cascade.sh gfp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `85e5ad4f`; each artefact's source and tool:
+- Run on 2026-11-15 16:52 UTC by `cascade.sh gfp`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `2f79191f`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

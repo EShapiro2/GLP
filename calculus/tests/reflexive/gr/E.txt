@@ -1,0 +1,6 @@
+E: Wrong
+E extends K.
+Alice is a person.
+1. ■ Join: Alice may join.
+Logic pragmas.
+After x joins: x knows x.

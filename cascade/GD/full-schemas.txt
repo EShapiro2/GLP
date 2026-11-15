@@ -1,0 +1,20 @@
+GD: Grassroots Distrust (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+GD:0 - | Alice, Bob and Carol are persons.
+GD:1 ■ Distrust: distrusts(Alice,Carol) <- knows(Alice,Carol), ~friend(Alice,Carol), ~friend(Carol,Alice), ~distrusts(Alice,Carol) guarded by Alice.
+GD:1 ■ Distrust friend: distrusts(Alice,Carol), ~friend(Alice,Carol), ~friend(Carol,Alice) <- knows(Alice,Carol), ~distrusts(Alice,Carol), friend(Alice,Carol), friend(Carol,Alice) guarded by Alice.
+GD:2 ■ Propagate: distrusts(Alice,Carol) <- ~knows(Alice,Carol), friend(Alice,Bob), friend(Bob,Alice), distrusts(Bob,Carol), ~distrusts(Alice,Carol) guarded by Alice.
+GD:3 ■ Cease: ~distrusts(Alice,Carol) <- distrusts(Alice,Carol) guarded by Alice.

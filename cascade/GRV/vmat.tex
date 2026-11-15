@@ -727,6 +727,13 @@ identity
 \mathit{
 person
 }
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
  \in c_
 {
 \Alice
@@ -978,6 +985,56 @@ guardian
 \Bob
 )
 \}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -1059,6 +1116,47 @@ c_
 {
 \mathit{Carol}
 }
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -1177,6 +1275,48 @@ has_guardian
 \ast
 )
 ]
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{
+has_guardian
+}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{
+identity
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+guardian
+}
+(
+\mathit{Dave}
+,
+\Bob
 )
 )
 ,\\
@@ -4490,6 +4630,102 @@ G1
 \}
 \end{align*}
 \iffalse
+sign_link
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+link
+}
+(
+Link
+,
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+link
+}
+(
+Link
+,
+Dave
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\Alice
+)
+\lor
+(
+\mathit{
+ward
+}
+(
+\Alice
+)
+\land
+\exists 
+G1
+\,(
+\mathit{
+has_guardian
+}
+(
+\Alice
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 invite_by_link
 \fi
 \begin{align*}
@@ -4566,6 +4802,16 @@ knows
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+spent
+}
+(
+Link
+,
+\Bob
+)
+,
 \mathit{
 registered
 }
@@ -4574,10 +4820,12 @@ Link
 ,
 \Bob
 )
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{provided } 
@@ -4627,7 +4875,7 @@ c'_
 \Alice
 }
  := 
-c_
+(c_
 {
 \Alice
 }
@@ -4635,6 +4883,17 @@ c_
 \{
 \mathit{
 registered
+}
+(
+Link
+,
+\Bob
+)
+\}
+) \uplus 
+\{
+\mathit{
+spent
 }
 (
 Link

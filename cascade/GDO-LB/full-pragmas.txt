@@ -1,0 +1,14 @@
+GDO-LB: Location-Based GDO
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of GDO: Alice, Bob and Carol are persons.
+Of GDO-LB: A person has a *location*. d > 0, an integer, and e > 0 are parameters of GDO-LB. Alice, Bob and Carol are persons. Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GDO:1, GDO-LB:1. ■ Point friend: Alice may point to Bob, provided Alice and Bob are friends and either Alice points to fewer than D persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than E than some person pointed to by Alice.
+GDO:2, GDO-LB:2. ■ Point transitive: Alice may point to Carol, provided Alice knows Carol, Alice points to Bob, Bob points to Carol and Carol is closer to Alice by more than E than some person pointed to by Alice.
+GDO:3, GDO-LB:3. ■ Unpoint: Alice may cease pointing to Bob, provided the bound is D, Alice points to more than D persons and Bob is furthest from Alice among the persons Alice points to.

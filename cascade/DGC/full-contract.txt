@@ -21,6 +21,6 @@ GB:4, DGC:2. ■ Escrow. Deposit: Alice may deposit coins and bonds with Carol f
 GDC:1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
 GDC:2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 GDC:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
-DGC:1. ■ Issue bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
+DGC:1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
 DGC:3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
-DGC:4. ■ Pay: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
+DGC:4. ■ Pay accepted coins: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.

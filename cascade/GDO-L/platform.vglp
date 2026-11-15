@@ -26,15 +26,17 @@ point_friend(Peer, Peer)
 ;
 point_transitive(Peer, Peer, Peer)
 ;
-unpoint(Peer, Peer)
+unpoint(Peer)
 ;
-follow_friend(Peer, Peer, Peer)
+labeled_point_friend(Peer, Peer, Peer)
 ;
-follow_transitive(Peer, Peer, Peer, Peer)
+labeled_point_transitive(Peer, Peer, Peer, Peer)
 ;
-follow_transitive_friend(Peer, Peer, Peer, Peer)
+labeled_point_transitive_friend(Peer, Peer, Peer, Peer)
 ;
-unfollow(Peer, Peer)
+labeled_unpoint(Peer)
+;
+labeled_unpoint_self(Peer, Peer)
 .
 
 Proposal ::=
@@ -52,22 +54,24 @@ point_friend(Peer, Peer)
 ;
 point_transitive(Peer, Peer, Peer)
 ;
-unpoint(Peer, Peer)
+unpoint(Peer)
 ;
-follow_friend(Peer, Peer, Peer)
+labeled_point_friend(Peer, Peer, Peer)
 ;
-follow_transitive(Peer, Peer, Peer, Peer)
+labeled_point_transitive(Peer, Peer, Peer, Peer)
 ;
-follow_transitive_friend(Peer, Peer, Peer, Peer)
+labeled_point_transitive_friend(Peer, Peer, Peer, Peer)
 ;
-unfollow(Peer, Peer)
+labeled_unpoint(Peer)
+;
+labeled_unpoint_self(Peer, Peer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), req(pointer, [at(2), at(2)])], [2], [], [], [])]), button("Point", [act(point_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(points_to, [at(2)])], [2], [], [], []), act(point_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(points_to, [at(2)])], [3, 2], [], [], [])]), button("Unpoint", [act(unpoint, 1, [1, 2], [req(identity, []), req(points_to, [at(2)])], [2], [], [], [])]), button("Follow", [act(follow_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(pointer, [at(2), at(3)])], [2], [field(3, "label", agent)], [], []), act(follow_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(pointer, [at(2), at(4)]), forb(pointer, [at(3), at(4)])], [3, 2, 4], [], [], []), act(follow_transitive_friend, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(friend, [at(2)]), forb(pointer, [at(3), at(4)])], [3, 2], [field(4, "label", agent)], [], [])]), button("Unfollow", [act(unfollow, 1, [1, 2], [req(identity, []), req(pointer, [at(2), any])], [2], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), req(pointer, [at(2), at(2)])], [2], [], [], [])]), button("Point", [act(point_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(points_to, [at(2)])], [2], [], [], []), act(point_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(points_to, [at(2)]), forb(points_to, [at(3)])], [3, 2], [], [], [])]), button("Unpoint", [act(unpoint, 1, [1], [req(identity, []), req(points_to, [any])], [], [], [], [])]), button("Labeled point", [act(labeled_point_friend, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(pointer, [at(2), at(3)])], [2], [field(3, "label", agent)], [], []), act(labeled_point_transitive, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(pointer, [at(2), at(4)]), forb(pointer, [at(3), at(4)])], [3, 2, 4], [], [], []), act(labeled_point_transitive_friend, 1, [1, 2], [req(identity, []), req(knows, [at(3)]), req(friend, [at(2)]), forb(pointer, [at(3), at(4)])], [3, 2], [field(4, "label", agent)], [], [])]), button("Labeled unpoint", [act(labeled_unpoint, 1, [1], [req(identity, []), req(pointer, [any, any])], [], [], [], []), act(labeled_unpoint_self, 1, [1], [req(identity, []), req(pointer, [at(2), at(2)]), forb(friend, [at(2)])], [2], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -107,7 +111,7 @@ atom_of(g(points_to, [p(V1)]), shown(points_to(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Carol')])], []), rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [atom(identity, [])], [])]), schema(point_friend, [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [])]), schema(point_transitive, [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, [], [rs(guarded, [], [atom(points_to, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])]), schema(follow_friend, [pvar('Dave')], [rs(guarded, [atom(pointer, [role(2), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(pointer, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(follow_transitive, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(pointer, [role(2), pvar('Dave')])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(follow_transitive_friend, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(unfollow, [], [rs(guarded, [], [atom(pointer, [role(2), pvar('Dave')])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [atom(identity, [])], [])]), schema(point_friend, [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(point_transitive, [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, [], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])]), schema(labeled_point_friend, [pvar('Dave')], [rs(guarded, [atom(pointer, [role(2), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(pointer, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(pointer, [pvar('Erin'), pvar('Dave')])], [])]), schema(labeled_point_transitive, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(pointer, [role(2), pvar('Dave')])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(labeled_point_transitive_friend, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(labeled_unpoint, [], [rs(guarded, [], [atom(pointer, [pvar('Carol'), pvar('Dave')])], [atom(identity, [])], [])]), schema(labeled_unpoint_self, [pvar('Dave')], [rs(guarded, [], [atom(pointer, [pvar('Dave'), pvar('Dave')])], [atom(identity, [])], [atom(friend, [pvar('Dave')])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -115,25 +119,27 @@ schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])],
 .
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
-schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Carol')])], []), rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]))
 .
 schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]))
 .
 schema_entry(unfriend, schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [atom(identity, [])], [])]))
 .
-schema_entry(point_friend, schema(point_friend, [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [])]))
+schema_entry(point_friend, schema(point_friend, [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]))
 .
-schema_entry(point_transitive, schema(point_transitive, [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]))
+schema_entry(point_transitive, schema(point_transitive, [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]))
 .
-schema_entry(unpoint, schema(unpoint, [], [rs(guarded, [], [atom(points_to, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])]))
+schema_entry(unpoint, schema(unpoint, [], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])]))
 .
-schema_entry(follow_friend, schema(follow_friend, [pvar('Dave')], [rs(guarded, [atom(pointer, [role(2), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(pointer, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]))
+schema_entry(labeled_point_friend, schema(labeled_point_friend, [pvar('Dave')], [rs(guarded, [atom(pointer, [role(2), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(pointer, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(pointer, [pvar('Erin'), pvar('Dave')])], [])]))
 .
-schema_entry(follow_transitive, schema(follow_transitive, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(pointer, [role(2), pvar('Dave')])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]))
+schema_entry(labeled_point_transitive, schema(labeled_point_transitive, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(pointer, [role(2), pvar('Dave')])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]))
 .
-schema_entry(follow_transitive_friend, schema(follow_transitive_friend, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]))
+schema_entry(labeled_point_transitive_friend, schema(labeled_point_transitive_friend, [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]))
 .
-schema_entry(unfollow, schema(unfollow, [], [rs(guarded, [], [atom(pointer, [role(2), pvar('Dave')])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])]))
+schema_entry(labeled_unpoint, schema(labeled_unpoint, [], [rs(guarded, [], [atom(pointer, [pvar('Carol'), pvar('Dave')])], [atom(identity, [])], [])]))
+.
+schema_entry(labeled_unpoint_self, schema(labeled_unpoint_self, [pvar('Dave')], [rs(guarded, [], [atom(pointer, [pvar('Dave'), pvar('Dave')])], [atom(identity, [])], [atom(friend, [pvar('Dave')])])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -152,25 +158,21 @@ schema_numeric(point_friend, numeric([cj(every, true)], [], []))
 .
 schema_numeric(point_transitive, numeric([cj(every, true)], [], []))
 .
-schema_numeric(unpoint, numeric([cj(every, true)], [], []))
+schema_numeric(unpoint, numeric([cj(every, true)], [pvar('Bob')], []))
 .
-schema_numeric(follow_friend, numeric([cj(every, true)], [pvar('Carol')], []))
+schema_numeric(labeled_point_friend, numeric([cj(every, true)], [pvar('Erin')], []))
 .
-schema_numeric(follow_transitive, numeric([cj(every, true)], [], []))
+schema_numeric(labeled_point_transitive, numeric([cj(every, true)], [], []))
 .
-schema_numeric(follow_transitive_friend, numeric([cj(every, true)], [], []))
+schema_numeric(labeled_point_transitive_friend, numeric([cj(every, true)], [], []))
 .
-schema_numeric(unfollow, numeric([cj(every, true)], [pvar('Dave')], []))
+schema_numeric(labeled_unpoint, numeric([cj(every, true)], [pvar('Carol'), pvar('Dave')], []))
+.
+schema_numeric(labeled_unpoint_self, numeric([cj(every, true)], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
-schema_forms(follow_transitive, [sform(at(1), fnot(fand(fa(role(1), atom(friend, [pvar('Carol')])), fcons(eq(pvar('Carol'), pvar('Dave'))))))])
-.
-schema_forms(follow_transitive_friend, [sform(at(1), fnot(fand(fa(role(1), atom(friend, [pvar('Carol')])), fcons(eq(pvar('Carol'), pvar('Dave'))))))])
-.
-schema_forms(unfollow, [sform(at(1), fnot(fand(fa(role(1), atom(friend, [role(2)])), fcons(eq(role(2), pvar('Dave'))))))])
-.
 schema_forms(_, []) :- otherwise | true.
 
 procedure schema_held(Constant?, HPats).
@@ -181,7 +183,7 @@ schema_base(establish, 1)
 .
 schema_base(acquaint, 1)
 .
-schema_base(introduce, 1)
+schema_base(introduce, 2)
 .
 schema_base(befriend, 1)
 .
@@ -193,21 +195,26 @@ schema_base(point_transitive, 1)
 .
 schema_base(unpoint, 1)
 .
-schema_base(follow_friend, 1)
+schema_base(labeled_point_friend, 1)
 .
-schema_base(follow_transitive, 1)
+schema_base(labeled_point_transitive, 1)
 .
-schema_base(follow_transitive_friend, 1)
+schema_base(labeled_point_transitive_friend, 1)
 .
-schema_base(unfollow, 1)
+schema_base(labeled_unpoint, 1)
+.
+schema_base(labeled_unpoint_self, 1)
 .
 schema_base(_, 1) :- otherwise | true.
+
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
 
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
-reflexive_preds([])
+reflexive_preds([knows])
 .
 
 procedure introduction_preds(Preds).
@@ -229,15 +236,17 @@ binding_of(point_friend(V1, V2), point_friend, [b(role(1), p(V1?)), b(role(2), p
 .
 binding_of(point_transitive(V1, V2, V3), point_transitive, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
 .
-binding_of(unpoint(V1, V2), unpoint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+binding_of(unpoint(V1), unpoint, [b(role(1), p(V1?)), b(pvar('Bob'), lv(unpoint, 'Bob'))])
 .
-binding_of(follow_friend(V1, V2, V3), follow_friend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Carol'), lv(follow_friend, 'Carol'))])
+binding_of(labeled_point_friend(V1, V2, V3), labeled_point_friend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Erin'), lv(labeled_point_friend, 'Erin'))])
 .
-binding_of(follow_transitive(V1, V2, V3, V4), follow_transitive, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(pvar('Dave'), p(V4?))])
+binding_of(labeled_point_transitive(V1, V2, V3, V4), labeled_point_transitive, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(pvar('Dave'), p(V4?))])
 .
-binding_of(follow_transitive_friend(V1, V2, V3, V4), follow_transitive_friend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(pvar('Dave'), p(V4?))])
+binding_of(labeled_point_transitive_friend(V1, V2, V3, V4), labeled_point_transitive_friend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(pvar('Dave'), p(V4?))])
 .
-binding_of(unfollow(V1, V2), unfollow, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), lv(unfollow, 'Dave'))])
+binding_of(labeled_unpoint(V1), labeled_unpoint, [b(role(1), p(V1?)), b(pvar('Carol'), lv(labeled_unpoint, 'Carol')), b(pvar('Dave'), lv(labeled_unpoint, 'Dave'))])
+.
+binding_of(labeled_unpoint_self(V1, V2), labeled_unpoint_self, [b(role(1), p(V1?)), b(pvar('Dave'), p(V2?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -313,17 +322,15 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Carol'), B?, D?, V3)
 .
-class_of(unpoint, B, D, unpoint(V1?, V2?))
+class_of(unpoint, B, D, unpoint(V1?))
 :-
 ground(B?)
 ,
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
-,
-val_peer(role(2), B?, D?, V2)
 .
-class_of(follow_friend, B, D, follow_friend(V1?, V2?, V3?))
+class_of(labeled_point_friend, B, D, labeled_point_friend(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -335,7 +342,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Dave'), B?, D?, V3)
 .
-class_of(follow_transitive, B, D, follow_transitive(V1?, V2?, V3?, V4?))
+class_of(labeled_point_transitive, B, D, labeled_point_transitive(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -349,7 +356,7 @@ val_peer(pvar('Carol'), B?, D?, V3)
 ,
 val_peer(pvar('Dave'), B?, D?, V4)
 .
-class_of(follow_transitive_friend, B, D, follow_transitive_friend(V1?, V2?, V3?, V4?))
+class_of(labeled_point_transitive_friend, B, D, labeled_point_transitive_friend(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -363,7 +370,15 @@ val_peer(pvar('Carol'), B?, D?, V3)
 ,
 val_peer(pvar('Dave'), B?, D?, V4)
 .
-class_of(unfollow, B, D, unfollow(V1?, V2?))
+class_of(labeled_unpoint, B, D, labeled_unpoint(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+.
+class_of(labeled_unpoint_self, B, D, labeled_unpoint_self(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -371,7 +386,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_peer(role(2), B?, D?, V2)
+val_peer(pvar('Dave'), B?, D?, V2)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -389,15 +404,17 @@ name_class(point_friend(V1, V2), _, point_friend(V1?, V2?))
 .
 name_class(point_transitive(V1, V2, V3), _, point_transitive(V1?, V2?, V3?))
 .
-name_class(unpoint(V1, V2), _, unpoint(V1?, V2?))
+name_class(unpoint(V1), _, unpoint(V1?))
 .
-name_class(follow_friend(V1, V2, V3), _, follow_friend(V1?, V2?, V3?))
+name_class(labeled_point_friend(V1, V2, V3), _, labeled_point_friend(V1?, V2?, V3?))
 .
-name_class(follow_transitive(V1, V2, V3, V4), _, follow_transitive(V1?, V2?, V3?, V4?))
+name_class(labeled_point_transitive(V1, V2, V3, V4), _, labeled_point_transitive(V1?, V2?, V3?, V4?))
 .
-name_class(follow_transitive_friend(V1, V2, V3, V4), _, follow_transitive_friend(V1?, V2?, V3?, V4?))
+name_class(labeled_point_transitive_friend(V1, V2, V3, V4), _, labeled_point_transitive_friend(V1?, V2?, V3?, V4?))
 .
-name_class(unfollow(V1, V2), _, unfollow(V1?, V2?))
+name_class(labeled_unpoint(V1), _, labeled_unpoint(V1?))
+.
+name_class(labeled_unpoint_self(V1, V2), _, labeled_unpoint_self(V1?, V2?))
 .
 
 procedure request_name(Class?, PName).
@@ -415,15 +432,17 @@ request_name(point_friend(V1, V2), pname(point_friend(V1?, V2?)))
 .
 request_name(point_transitive(V1, V2, V3), pname(point_transitive(V1?, V2?, V3?)))
 .
-request_name(unpoint(V1, V2), pname(unpoint(V1?, V2?)))
+request_name(unpoint(V1), pname(unpoint(V1?)))
 .
-request_name(follow_friend(V1, V2, V3), pname(follow_friend(V1?, V2?, V3?)))
+request_name(labeled_point_friend(V1, V2, V3), pname(labeled_point_friend(V1?, V2?, V3?)))
 .
-request_name(follow_transitive(V1, V2, V3, V4), pname(follow_transitive(V1?, V2?, V3?, V4?)))
+request_name(labeled_point_transitive(V1, V2, V3, V4), pname(labeled_point_transitive(V1?, V2?, V3?, V4?)))
 .
-request_name(follow_transitive_friend(V1, V2, V3, V4), pname(follow_transitive_friend(V1?, V2?, V3?, V4?)))
+request_name(labeled_point_transitive_friend(V1, V2, V3, V4), pname(labeled_point_transitive_friend(V1?, V2?, V3?, V4?)))
 .
-request_name(unfollow(V1, V2), pname(unfollow(V1?, V2?)))
+request_name(labeled_unpoint(V1), pname(labeled_unpoint(V1?)))
+.
+request_name(labeled_unpoint_self(V1, V2), pname(labeled_unpoint_self(V1?, V2?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -446,15 +465,15 @@ ask_of([q(V2?, 1, [person(V1?), text(" wishes that you know each other.")])], Me
 .
 sentence_of(introduce(V1, V2, V3), Me, Ws?)
 :-
-ground(V2?)
-,
 ground(V1?)
+,
+ground(V2?)
 ,
 ground(V3?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks to introduce "), person(V3?), text(" to you.")])], Me?, Ws)
+ask_of([q(V1?, 2, [person(V2?), text(" asks to introduce "), person(V3?), text(" to you.")])], Me?, Ws)
 .
 sentence_of(befriend(V1, V2), Me, Ws?)
 :-
@@ -516,7 +535,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GDO-L: Grassroots Directed Overlay with Labels\nGDO-L extends GDO.\nAlice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.  A pointer may be labeled by a person, and a pointer labeled by Dave is a Dave-pointer; Alice may have many pointers to Bob, labeled by different persons.  Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.\n1. ■ Labeled pointing to friend.  Alice, who has no Dave-pointer to their friend Bob, may add one, if Bob has a Dave-pointer.\n2. ■ Labeled transitive pointing.  Alice, who knows Carol and has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol.\n3. ■ Ceasing to point.  Alice, who has a Dave-pointer to Bob, may remove it.", with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Carol')])], []), rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [atom(identity, [])], [])]), schema(point_friend, ['Alice', 'Bob'], [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [])]), schema(point_transitive, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(points_to, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])]), schema(follow_friend, ['Alice', 'Bob'], [pvar('Dave'), pvar('Carol')], [rs(guarded, [atom(pointer, [role(2), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(pointer, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), qschema(follow_transitive, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')], [], true, [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(pointer, [role(2), pvar('Dave')])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])], [], [fnot(fand(fa(role(1), atom(friend, [pvar('Carol')])), fcons(eq(pvar('Carol'), pvar('Dave')))))]), qschema(follow_transitive_friend, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')], [], true, [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])], [], [fnot(fand(fa(role(1), atom(friend, [pvar('Carol')])), fcons(eq(pvar('Carol'), pvar('Dave')))))]), qschema(unfollow, ['Alice', 'Bob'], [pvar('Dave')], [], true, [rs(guarded, [], [atom(pointer, [role(2), pvar('Dave')])], [atom(identity, [])], []), rs(unguarded, [], [], [atom(identity, [])], [])], [], [fnot(fand(fa(role(1), atom(friend, [role(2)])), fcons(eq(role(2), pvar('Dave')))))])], pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Pointing", [pointer])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[], [person(1), text(" asks to introduce "), person(3), text(" to you.")]]), "Contacts", by([1])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "Friends", by([1])), act(point_friend, "Point", [], none, "Pointing", by([1])), act(point_transitive, "Point", [], none, "Pointing", by([1])), act(unpoint, "Unpoint", [], none, "Pointing", by([1])), act(follow_friend, "Follow", ["", "", "label"], none, "Pointing", by([1])), act(follow_transitive, "Follow", [], none, "Pointing", by([1])), act(follow_transitive_friend, "Follow", ["", "", "", "label"], none, "Pointing", by([1])), act(unfollow, "Unfollow", [], none, "Pointing", by([1]))], [], nolook, version(1, 1))))
+contract("GDO-L: Grassroots Directed Overlay with Labels\nGDO-L extends and strengthens GDO.\nA pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.\nAlice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.\n1. ■ Labeled point friend: Alice, who has no Dave-pointer to her friend Bob, may add one, if Bob has a Dave-pointer.\n2. ■ Labeled point transitive: Alice, who knows Carol and either has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol.\n3. ■ Labeled unpoint: Alice, who has a Dave-pointer to Carol, may remove it, unless Carol is Dave and her friend.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(pointer, [role(2), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(pointer, [role(1), role(1)])], [atom(identity, [])], [])]), schema(point_friend, ['Alice', 'Bob'], [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(point_transitive, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, ['Alice'], [pvar('Bob')], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])]), schema(labeled_point_friend, ['Alice', 'Bob'], [pvar('Dave'), pvar('Erin')], [rs(guarded, [atom(pointer, [role(2), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(pointer, [role(2), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(pointer, [pvar('Erin'), pvar('Dave')])], [])]), schema(labeled_point_transitive, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(pointer, [role(2), pvar('Dave')])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(labeled_point_transitive_friend, ['Alice', 'Bob'], [pvar('Carol'), pvar('Dave')], [rs(guarded, [atom(pointer, [pvar('Carol'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(friend, [role(2)])], [atom(pointer, [pvar('Carol'), pvar('Dave')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(pointer, [pvar('Carol'), pvar('Dave')])], [])]), schema(labeled_unpoint, ['Alice'], [pvar('Carol'), pvar('Dave')], [rs(guarded, [], [atom(pointer, [pvar('Carol'), pvar('Dave')])], [atom(identity, [])], [])]), schema(labeled_unpoint_self, ['Alice'], [pvar('Dave')], [rs(guarded, [], [atom(pointer, [pvar('Dave'), pvar('Dave')])], [atom(identity, [])], [atom(friend, [pvar('Dave')])])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Pointing", [pointer])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "Friends", by([1])), act(point_friend, "Point", [], none, "Pointing", by([1])), act(point_transitive, "Point", [], none, "Pointing", by([1])), act(unpoint, "Unpoint", [], none, "Pointing", by([1])), act(labeled_point_friend, "Labeled point", ["", "", "label"], none, "Pointing", by([1])), act(labeled_point_transitive, "Labeled point", [], none, "Pointing", by([1])), act(labeled_point_transitive_friend, "Labeled point", ["", "", "", "label"], none, "Pointing", by([1])), act(labeled_unpoint, "Labeled unpoint", [], none, "Pointing", by([1])), act(labeled_unpoint_self, "Labeled unpoint", [], none, "Pointing", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -1544,9 +1563,18 @@ greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St
     st_id(St?, Me),
     st_ms(St?, S),
     name_class(N?, S?, C),
-    question_words(C?, Me?, Ws),
-    greet_whole(P?, N?, Ws?, R),
+    greet_at(C?, Me?, P?, N?, R),
     merge(R?, Ans1?, Ans).
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger)).
+greet_at(C, Me, P, N, R?) :- ground(C?), ground(Me?) |
+    question_words(C?, Me?, Ws),
+    binding_of(C?, Nm, Bn),
+    consents_me(Nm?, Bn?, Me?, Cs),
+    greet_or_consent(Cs?, P?, N?, Ws?, R).
+%% A called person who must consent to the acquaintance is not asked: their consent stands, and the agent takes it as their yes.
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger)).
+greet_or_consent(no, P, N, Ws, R?) :- greet_whole(P?, N?, Ws?, R).
+greet_or_consent(yes, _, N, _, [greeted(N?)]).
 
 %% --- Introduce: the ihellos --------------------------------------------------
 %% On reading an introduction intro(Q) the agent sends Q ihello, unless Q is itself or known or it has sent one; an arriving ihello is recorded; and where a peer becomes known by the two the agent writes the new view on the output (Section 5.4).
@@ -3009,11 +3037,23 @@ asked_by(At, Id, B?) :- ground(At?), ground(Id?) |
     attempt_id(At?, P),
     attempt_class(At?, C),
     binding_of(C?, Nm, Bn),
+    asked_at(Nm?, Bn?, Id?, P?, B).
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) |
     marked_people(Nm?, Bn?, G),
     mem(Id?, G?, In),
     same(Id?, P?, Me),
     neg(Me?, NotMe),
-    and(In?, NotMe?, B).
+    consents_me(Nm?, Bn?, Id?, Cs),
+    neg(Cs?, Asks),
+    and(In?, NotMe?, B0),
+    and(B0?, Asks?, B).
+%% A person who must consent to an act is a guard of it who is not asked (vGLP, Section 5.4, "The contract's words"): whether the agent Me is the person in a role of the schema Nm, at the binding Bn, that the pragmas mark so (schema_consents).
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) |
+    schema_consents(Nm?, Is),
+    persons_of(Is?, Bn?, Ps),
+    mem(Me?, Ps?, B).
 
 %% Answer: the person's answer recorded, answered(At, yes) by its then-branch
 %% and answered(At, no) by its else-branch; it sends nothing and votes nothing.

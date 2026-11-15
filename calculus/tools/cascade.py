@@ -7,7 +7,8 @@ of the abstraction cascade in the GLP repository, as its cascade.sh runs them on
 For each it writes cascade/NAME/: verdict.txt, the verdict of GLP's checker (programs/gsc, check/2); vmat.tex, the
 VMAT form (programs/gsc, compile_contract/2); platform.vglp, the canonical platform (programs/vglp/cva/compiler,
 compile/5, with no introduction named and no Interface pragmas); platform.glp, the platform compiled to GLP (the
-REPL's :emit); and prints a line.  cascade/STATUS.txt has the lines of the last run of all.  Needs the Dart SDK on
+REPL's :emit), counted compiled only if it then loads in GLP, the load's lines in run.log; and prints a line.  A
+parametric contract, a term parametric(...), gets its verdict and its VMAT form and no platform.  cascade/STATUS.txt has the lines of the last run of all.  Needs the Dart SDK on
 the PATH and a clone of GLP beside this directory, or $GLP_DIR; it writes a scratch directory under the clone's
 programs/tests/cascade_emit/ and removes it.
 """
@@ -17,6 +18,9 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import toglp
 
 GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), '/home/user/GLP') if os.path.isdir(d)), None)
+
+
+PARAMETRIC = 'no platform: a parametric contract has none until it is instantiated'
 
 
 def repl(text, timeout=int(os.environ.get('CASCADE_TIMEOUT', 600))):
@@ -75,7 +79,10 @@ def contract_txt(n):
                     names.append(a)
         fields = ['<%s>' % sorted(kinds.get(a, {a.lower()}))[0] for a in names if a != who[0] and a not in mine]
         prag.append('%s: %s [%s]' % (t, who[0], t))        # the fields are added as the reader of the pragmas asks for them
+        must = set(re.findall(r'\b([A-Z][a-z]+) must consent\b', sent))       # a person who must consent is a guard who is not asked (vGLP, 5.4)
         for g in who[1:] + listed:
+            if g in must:
+                continue
             prag.append('  %s: %s asks for your consent to %s.' % (g, who[0], t.lower()))     # a question names persons of the act only
     return '\n'.join(out + prag) + '\n'
 
@@ -111,6 +118,11 @@ def run(n):
     res = 'certified; VMAT %d displays' % sum(1 for l in vm if l == '\\begin{align*}')
     if any(l.startswith('% not compiled') for l in vm):
         res = 'certified; VMAT not compiled: ' + next(l for l in vm if l.startswith('% not compiled'))[:80]
+    if ct.startswith('parametric('):      # a parametric contract is certified and has no platform until it is instantiated (vGLP, 5.4; vGLP #28, 2026-11-15)
+        for f in ('platform.vglp', 'platform.glp', 'run.log', n + '.txt'):
+            if os.path.exists(os.path.join(out, f)):
+                os.remove(os.path.join(out, f))
+        return res + '; ' + PARAMETRIC
     txt = contract_txt(n)
     for _ in range(60):          # the reader of the pragmas says which names a line leaves unnamed: a field is added for each
         put(n + '.txt', txt)
@@ -142,7 +154,13 @@ def run(n):
         if not os.path.exists(g):
             return res + '; not compiled to GLP: ' + ' '.join(l for l in lines if 'rror' in l or '✗' in l)[:160]
         shutil.copy(g, out)
-        return res + '; platform.glp %d lines' % sum(1 for _ in open(g, encoding='utf-8'))
+        res += '; platform.glp %d lines' % sum(1 for _ in open(g, encoding='utf-8'))
+        lines = repl('%s\n:quit\n' % g)          # compiled only if platform.glp loads in GLP
+        bad = [l for l in lines if 'rror' in l or '✗' in l or 'Duplicate' in l]
+        put('run.log', '\n'.join(['load %s' % os.path.relpath(g, GLP)] + (bad or [l for l in lines if l.startswith('✓')])))
+        if bad or not any(l.startswith('✓') for l in lines):
+            return res + '; platform.glp does not load: ' + ' '.join(bad)[:160]
+        return res + '; platform.glp loads'
     finally:
         shutil.rmtree(emit, ignore_errors=True)
 
