@@ -172,8 +172,6 @@ member(Speech, Peer)
 ;
 listed(Peer, Speech)
 ;
-member(Speech)
-;
 posted(Speech, Peer, Speech)
 ;
 group_delivered(Peer, Speech, Speech, Peer)

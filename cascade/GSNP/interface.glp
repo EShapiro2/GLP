@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, person, knows('Peer'), friend('Peer'), item('Speech'), leader('Speech'), member('Speech', 'Peer'), listed('Peer', 'Speech'), member('Speech'), posted('Speech', 'Peer', 'Speech'), group_delivered('Peer', 'Speech', 'Speech', 'Peer'), ai_agent, has_guardian('Peer'), attestation('Speech'), principal('Peer'), guardian('Peer'), attestation_record('Peer', 'Speech'), retired]),
+  type('Atom', [identity, person, knows('Peer'), friend('Peer'), item('Speech'), leader('Speech'), member('Speech', 'Peer'), listed('Peer', 'Speech'), posted('Speech', 'Peer', 'Speech'), group_delivered('Peer', 'Speech', 'Speech', 'Peer'), ai_agent, has_guardian('Peer'), attestation('Speech'), principal('Peer'), guardian('Peer'), attestation_record('Peer', 'Speech'), retired]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),
   type('RArgs', [[], ['RArg' | 'RArgs']]),
