@@ -24,6 +24,15 @@ This directory is published by the project Calculus.  It holds grassroots contra
 - `STATUS.txt`, `VERDICTS.txt`: the cascade's line and the checker's verdict for each contract.
 - `tools/`, `tests/`: the programs that print all of the above, in Python 3 with its standard library, and their test cases.
 
+## Adopting a contract
+
+`tools/adopt.py` is the owner's command, run from this directory's `tools/` with `GLP_DIR` naming the checkout:
+
+- `adopt.py --write NAME DIR` writes the adopted `NAME.txt` into `DIR`: the owner's `%` lines; the lines of `contract.txt`; a line `Logic pragmas`; the lines of `logic-pragmas.txt` after its title; and, where the owner has Interface pragmas, a line `Interface pragmas` and the owner's lines.
+- `adopt.py --paths` writes `PATHS.txt`, the file of each contract: its adopted file, or its directory here.
+- `adopt.py NAME` prints `NAME.glp` beside the adopted file, a module with `contract_named(name, Term)`, the term being the full schemas, complete in itself; and `schemas.txt`, `full-contract.txt`, `full-pragmas.txt`, `flat.txt`, `full-schemas.txt` and `term.glp.txt` into `cascade/NAME/`.
+- `adopt.py --check NAME` exits 0 if those files are what it would print.
+
 ## The relations
 
 A contract's first line says which contracts it is written from and how: it extends, restricts, strengthens, instantiates or composes them.  No contract amends another.
