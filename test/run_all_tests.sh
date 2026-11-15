@@ -4268,6 +4268,27 @@ check "CVA pragmas: ... and pragmas.sh exits 0 (adopted)" "^exit 0$" "$cva_pa_ou
 check "CVA pragmas: a first line with an instantiation's words after with, and relations joined by commas and and (firstline)" "^XJ.txt XK.txt $" "$cva_pa_k"
 check "CVA pragmas: ... two contracts instantiated, and them (firstline)" "^XJ.txt XK.txt XL.txt $" "$cva_pa_l"
 check "CVA pragmas: ... extends, restricts and strengthens two contracts (firstline)" "^XJ.txt XK.txt XM.txt $" "$cva_pa_m"
+# A person who must consent (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"; the Calculus's GnW, Enter; Udi, 2026-11-15): the reader takes the line with no question to Carol and gives the act consents(1), her role; a line that asks her is refused; and the platform the compiler prints holds schema_consents(enter, [1]), by which her agent takes a hello and a start of the act with no question (consent).
+cva_pc=$(mktemp -d)
+printf '%s\n' '% Owner: vGLP.' 'XN: Test' 'Alice is a person, Carol a ward.' '1. ■ Enter: Alice may create Carol, and Carol must consent.' 'Interface pragmas' 'Wards: the wards of Alice.' 'Enter: Alice [Enter] <carol>' > "$cva_pc/XN.txt"
+cva_pc_read="[schema(enter, ['Carol', 'Alice'], [], [rs(guarded, [atom(identity, []), atom(guardian, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(ward, [role(1)])], [], [atom(identity, [])], [])])]"
+cva_pc_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pc/XN.txt" "$cva_pc_read" 2>&1)
+printf '%s\n' '  Carol: Alice asks for your consent.' >> "$cva_pc/XN.txt"
+cva_pc_asked=$(bash "$CVA/compiler/pragmas.sh" "$cva_pc/XN.txt" "$cva_pc_read" 2>&1; echo "exit $?")
+rm -rf "$cva_pc"
+check "CVA pragmas: a person who must consent is named by no line, and the act carries consents(1) (consent)" "act('enter', '\"Enter\"', \['\"carol\"'\], said(\[\[\], \[\]\]), '\"Wards\"', by(\[2\]), \[consents(1)\])" "$cva_pc_out"
+check "CVA pragmas: ... a line that asks them is refused (consent)" "asks a person who must consent to enter, and is not asked" "$cva_pc_asked"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 on it (consent)" "^exit 0$" "$cva_pc_asked"
+cva_pc_c=$("$REPL_RUN" <<HEREDOC 2>&1 | awk '$0 ~ /%% compile begin/{on=1;next} $0 ~ /%% compile end/{on=0} on' | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(xn, $cva_pc_read, syntactically_grassroots, no_introduction, $cva_pc_out).
+:quit
+HEREDOC
+)
+check "CVA compiler: the platform of a contract with a person who must consent holds schema_consents(enter, [1]) (consent)" "^schema_consents(enter, \[1\])" "$cva_pc_c"
+check "CVA compiler: ... a called person who consents is not asked, greet_or_consent(yes, ...) giving their yes (consent)" "^greet_or_consent(yes, _, N, _, \[greeted(N?)\])\." "$cva_pc_c"
+check_not "CVA compiler: ... and it is compiled (consent)" "not compiled" "$cva_pc_c"
 # The line saying what a contract is written from, with several relations, each with the contracts after it (GSC, Section 8, Relations among Contracts: amends, extends, instantiates, implements and restricts; GAI.txt, "GAI extends GnW and amends GFP (...)."; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC): XR extends XB2 and amends XC2, and has the pragmas of both with its own (two); XS implements XC2 (implements); XQ's "copies" is no relation, and the name read is refused (norel).
 cva_pr2=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB2' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pr2/XB2.txt"
