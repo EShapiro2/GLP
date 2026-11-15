@@ -12,6 +12,10 @@ An owner who adopted one of the eleven takes it again: python3 calculus/tools/ad
 The other 28 of part 1 are as at 79ec48f (GSNP as at 029de9f before this); each of the 37 now has interface-adopted.txt
 where it has an act of its own with a line: the Interface lines in the form an adopted file takes, a proposal to the owner.
 
+GB, DGC and AGORA again, from Calculus code dee832e, run on GLP migration 60e40c3 and checked on GSC-supplied 020fe5e:
+Redeem bond and Redeem bond against bond read the current date at the issuer, today(Bob, Today), where they read it
+at the redeemer (Currencies' finding).  An owner who adopted one of the three takes it again.
+
 To come: GO's family, 22 contracts, which are in this directory as first published (f1d2f99) and are not to be adopted
 from it: CB CMB CnC GAN GBCC GBank GCC GCoop GCorp GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC.
 They wait on the listing of every body that decides an act (GSC's check refuses them: amenders, treasurers, directors,
