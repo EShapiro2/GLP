@@ -44,6 +44,7 @@ A helper is a Cloud that does a task for any project's session, so that checks, 
 6. **The report** is one mail to the client's inbox, quoting the task's `Date` line, and a nudge: what was run, at which commit, the verdict, the lines that failed in full, and the commit of any branch pushed.  A helper reports what it saw and decides nothing for its client: a fault it finds it reports, never mends, unless the task says to mend it.
 7. **What a helper cannot do**: the full suite, the macOS and iOS parts, the simulator, the server.  Those are Code's, on the Mac.
 8. **A helper at its start** reads `organisation/claude.md`, `organisation/writing-style-guide.md` and `organisation/claudese.md`, in full, then this file and `docs/typed-glp-manual.md` §18; asks Udi for `EShapiro2/Grassroots-Mail` by `add_repo`; records its session, `bash bin/mail-session Helper-<n> "Helper #<n>" <id>`; installs TeX, Dart and what `bin/glpc` needs; and mails Code, `To: Code`, that it is ready, with its model.  It reads its mail at the start of every turn, on every nudge and before it reports.  Items 5, 6 and 8 of "Cloud", above, bind it.  It talks to Udi only to ask for a repository.
+9. 🔴 **A helper runs on Opus, never on Fable** (Udi, 2026-11-15, to Code #30, verbatim: "i changed their model to opus 5.5, helpers should not run on fable").  The four came up on Fable, though started with Opus named, and Udi set each to Opus himself.  A helper that finds itself on any model but Opus does no task, says so in a mail to Code, and waits; Code tells Udi.
 
 ## Ownership
 
