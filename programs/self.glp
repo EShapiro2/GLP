@@ -334,8 +334,13 @@ PNames ::= [] ; [Constant | PNames].
 Preds ::= [] ; [Constant | Preds].
 SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
 SContract  ::= [] ; [SSchema | SContract].
-SDeclared  ::= SContract ; reflexive(Preds, SContract)
-             ; environment(Preds, SContract)
+% A contract may declare reflexive predicates, environment predicates and
+% parameters together (GSC, Section 8, "Reflexive predicates"; the appendix
+% Values, "Environment predicates"; Definition Parametric contract), in one
+% order: the parameters outermost, then the environment predicates, then the
+% reflexive ones, as programs/gsc reads it (WDeclared).
+SBody      ::= SContract ; reflexive(Preds, SContract).
+SDeclared  ::= SBody ; environment(Preds, SBody)
              ; parametric(SParams, SDeclared).
 % A parametric contract and an instance of it (GSC, Definition Parametric
 % contract, "The term of a parametric contract names its parameters, and that
