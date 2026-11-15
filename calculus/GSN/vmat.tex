@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -681,6 +674,15 @@ leader
 (
 Grupo
 )
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
 \}
 ) \setminus K_
 {
@@ -722,15 +724,6 @@ listed
 ,
 Grupo
 )
- \text{ or } 
-\mathit{
-member
-}
-(
-Grupo
-,
-\ast
-)
  \qquad (
 \Alice
  \in 
@@ -755,43 +748,17 @@ q
  := 
 c_
 q
- \setminus K_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-Grupo
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-)
-,\\
-&
-\text{where } K_
-q
- \text{ holds every atom of } c_
-q
- \text{, with its multiplicity, that matches } 
+ \setminus 
+\{
 \mathit{
 member
 }
 (
 Grupo
 ,
-\ast
+\Alice
 )
+\}
  \qquad (
 q
  \in 
@@ -840,7 +807,7 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
 )
  \in c_
 q
@@ -1327,15 +1294,6 @@ Grupo
 listed
 }
 (
-Bob
-,
-Grupo
-)
-,
-\mathit{
-listed
-}
-(
 \Bob
 ,
 Grupo
@@ -1366,6 +1324,99 @@ Text
 Grupo
 ,
 \Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_leader
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+,
+\mathit{
+group_message
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+posted
+}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
 )
  \notin c_
 {

@@ -907,7 +907,11 @@ c_
 program
 }
 (
+\mathrm{sgn}(
 Prog
+,
+\Bob
+)
 ,
 Dave
 )
@@ -1226,7 +1230,11 @@ c_
 program
 }
 (
+\mathrm{sgn}(
 Prog
+,
+\Bob
+)
 ,
 Carol
 )
@@ -1235,7 +1243,11 @@ Carol
 installed
 }
 (
+\mathrm{sgn}(
 Prog
+,
+\Bob
+)
 ,
 Carol
 )
@@ -2089,6 +2101,13 @@ identity
 \mathit{
 person
 }
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
  \in c_
 {
 \Alice
@@ -2340,6 +2359,56 @@ guardian
 \Bob
 )
 \}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -2421,6 +2490,47 @@ c_
 {
 \mathit{Carol}
 }
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -2539,6 +2649,48 @@ has_guardian
 \ast
 )
 ]
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{
+has_guardian
+}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{
+identity
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+guardian
+}
+(
+\mathit{Dave}
+,
+\Bob
 )
 )
 ,\\
@@ -5875,6 +6027,17 @@ Prog
 ,
 Bob
 )
+,
+\mathit{
+listing_signed
+}
+(
+Prog
+,
+Bob
+,
+\Bob
+)
 \}
 ,\\
 &
@@ -5917,6 +6080,15 @@ guardian
 trusts_developer
 }
 (
+Bob
+)
+,
+\mathit{
+program
+}
+(
+Prog
+,
 Bob
 )
  \in c_
@@ -5987,7 +6159,7 @@ c'_
 \Alice
 }
  := 
-c_
+(c_
 {
 \Alice
 }
@@ -6002,6 +6174,31 @@ Prog
 Bob
 )
 \}
+) \setminus K_
+{
+\Alice
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+listing_signed
+}
+(
+Prog
+,
+Bob
+,
+\ast
+)
 ,\\
 &
 c'_

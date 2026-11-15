@@ -6,7 +6,7 @@ STAY: Grassroots Stays
 5. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 6. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
 7. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
-8. ◆ List place.  Alice may list Place under a new name of hers, provided Alice can host guests at Place.
+8. ◆ List place.  Alice may list Place under a new name of hers, provided Alice can host guests.
 9. ■ Book.  Bob may book a stay at Alice's Place on Night for Sum Alice-coins, with the consent of Alice, provided Bob knows Alice, Alice lists Place, the current date is Today and Night is more than Today.
 10. ■ Cancel.  Alice may cancel Bob's stay at Place on Night for Sum Alice-coins, provided the current date is Today and Night is more than Today.
 11. ■ Review.  Bob may review his stay at Alice's Place on Night, provided Bob has a stay at Alice's Place on Night for Sum Alice-coins, the current date is Today and Night is at most Today.
@@ -21,7 +21,7 @@ Swap: Alice [Swap] <sum> <dave> <total>
   Bob: Alice asks for your consent to swap.
 Pay: Alice [Pay] <sum>
 Redeem: Alice [Redeem] <carol>
-List place: Alice [List place]
+List place: Alice [List place] <place>
 Book: Bob [Book] <place> <night> <sum>
   Alice: Bob asks for your consent to book.
 Cancel: Alice [Cancel] <bob> <sum>

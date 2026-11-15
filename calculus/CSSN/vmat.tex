@@ -339,7 +339,7 @@ friend
 \}
 \end{align*}
 \iffalse
-unfriend
+person_unfriend
 \fi
 \begin{align*}
 &
@@ -740,6 +740,15 @@ leader
 (
 Grupo
 )
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
 \}
 ) \setminus K_
 {
@@ -781,15 +790,6 @@ listed
 ,
 Grupo
 )
- \text{ or } 
-\mathit{
-member
-}
-(
-Grupo
-,
-\ast
-)
  \qquad (
 \Alice
  \in 
@@ -814,43 +814,17 @@ q
  := 
 c_
 q
- \setminus K_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-Grupo
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-)
-,\\
-&
-\text{where } K_
-q
- \text{ holds every atom of } c_
-q
- \text{, with its multiplicity, that matches } 
+ \setminus 
+\{
 \mathit{
 member
 }
 (
 Grupo
 ,
-\ast
+\Alice
 )
+\}
  \qquad (
 q
  \in 
@@ -903,7 +877,7 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
 )
  \in c_
 q
@@ -1470,15 +1444,6 @@ Grupo
 listed
 }
 (
-Bob
-,
-Grupo
-)
-,
-\mathit{
-listed
-}
-(
 \Bob
 ,
 Grupo
@@ -1509,6 +1474,99 @@ Text
 Grupo
 ,
 \Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_leader
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+,
+\mathit{
+group_message
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+posted
+}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
 )
  \notin c_
 {
@@ -1613,13 +1671,6 @@ identity
 \mathit{
 person
 }
-,
-\mathit{
-legal_parent
-}
-(
-\Alice
-)
  \in c_
 {
 \Bob
@@ -1643,7 +1694,7 @@ identity
 \}
 \end{align*}
 \iffalse
-make_guardian
+make_parent
 \fi
 \begin{align*}
 &
@@ -1826,6 +1877,13 @@ identity
 \mathit{
 person
 }
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
  \in c_
 {
 \Alice
@@ -2055,7 +2113,7 @@ G1
 \}
 \end{align*}
 \iffalse
-end_guardian
+end_parent
 \fi
 \begin{align*}
 &
@@ -2077,6 +2135,56 @@ parent
 \Bob
 )
 \}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_parent
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+parent
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_parent
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -2158,6 +2266,47 @@ c_
 {
 \mathit{Carol}
 }
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_parent
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_parent
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -2280,6 +2429,48 @@ has_parent
 )
 ,\\
 &
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{
+has_parent
+}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{
+identity
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+parent
+}
+(
+\mathit{Dave}
+,
+\Bob
+)
+)
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -2287,7 +2478,7 @@ has_parent
 \}
 \end{align*}
 \iffalse
-guardian_unfriend
+parent_unfriend
 \fi
 \begin{align*}
 &
@@ -2645,7 +2836,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_befriend
+child_befriend
 \fi
 \begin{align*}
 &
@@ -2842,7 +3033,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_end
+child_end
 \fi
 \begin{align*}
 &
@@ -3033,7 +3224,7 @@ G1
 \}
 \end{align*}
 \iffalse
-unfriend_2
+unfriend
 \fi
 \begin{align*}
 &
@@ -3224,7 +3415,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_unfriend
+child_unfriend
 \fi
 \begin{align*}
 &
@@ -3682,7 +3873,7 @@ G2
 \}
 \end{align*}
 \iffalse
-wards_befriend
+children_befriend
 \fi
 \begin{align*}
 &
@@ -3954,7 +4145,7 @@ G2
 \}
 \end{align*}
 \iffalse
-wards_of_one_guardian_befriend
+children_of_one_parent_befriend
 \fi
 \begin{align*}
 &
@@ -9177,15 +9368,6 @@ friend
 \mathit{
 identity
 }
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
-\ast
-)
  \in c_
 q
  \qquad (
@@ -9221,7 +9403,7 @@ retired
 \}
 \end{align*}
 \iffalse
-ward_message
+child_message
 \fi
 \begin{align*}
 &
@@ -9342,7 +9524,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_post
+child_post
 \fi
 \begin{align*}
 &
@@ -9617,7 +9799,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_close
+child_close
 \fi
 \begin{align*}
 &
@@ -9715,6 +9897,15 @@ leader
 (
 Grupo
 )
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
 \}
 ) \setminus K_
 {
@@ -9756,15 +9947,6 @@ listed
 ,
 Grupo
 )
- \text{ or } 
-\mathit{
-member
-}
-(
-Grupo
-,
-\ast
-)
  \qquad (
 \Alice
  \in 
@@ -9789,43 +9971,17 @@ q
  := 
 c_
 q
- \setminus K_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-Grupo
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-)
-,\\
-&
-\text{where } K_
-q
- \text{ holds every atom of } c_
-q
- \text{, with its multiplicity, that matches } 
+ \setminus 
+\{
 \mathit{
 member
 }
 (
 Grupo
 ,
-\ast
+\Alice
 )
+\}
  \qquad (
 q
  \in 
@@ -9878,7 +10034,7 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
 )
  \in c_
 q
@@ -9940,7 +10096,7 @@ member
 ,
 Grupo
 ,
-\ast
+\Alice
 )
 )
 ,\\
@@ -10002,7 +10158,7 @@ member
 ,
 Grupo
 ,
-\ast
+\Alice
 )
 )
 ,\\
@@ -10012,7 +10168,7 @@ Grupo
 \}
 \end{align*}
 \iffalse
-guardian_close
+parent_close
 \fi
 \begin{align*}
 &
@@ -10110,6 +10266,15 @@ leader
 (
 Grupo
 )
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
 \}
 ) \setminus K_
 {
@@ -10150,15 +10315,6 @@ listed
 \ast
 ,
 Grupo
-)
- \text{ or } 
-\mathit{
-member
-}
-(
-Grupo
-,
-\ast
 )
  \qquad (
 \Alice
@@ -10216,46 +10372,17 @@ c_
 {
 \Bob
 }
- \setminus K_
-{
-\Bob
-}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-Grupo
-)
-]
-)
-)
-,\\
-&
-\text{where } K_
-{
-\Bob
-}
- \text{ holds every atom of } c_
-{
-\Bob
-}
- \text{, with its multiplicity, that matches } 
+ \setminus 
+\{
 \mathit{
 member
 }
 (
 Grupo
 ,
-\ast
+\Alice
 )
+\}
  \qquad (
 \Bob
  \in 
@@ -10280,46 +10407,17 @@ q
  := 
 c_
 q
- \setminus K_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-Grupo
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
-,\\
-&
-\text{where } K_
-q
- \text{ holds every atom of } c_
-q
- \text{, with its multiplicity, that matches } 
+ \setminus 
+\{
 \mathit{
 member
 }
 (
 Grupo
 ,
-\ast
+\Alice
 )
+\}
  \qquad (
 q
  \in 
@@ -10386,7 +10484,7 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
 )
  \in c_
 q
@@ -10438,7 +10536,7 @@ member
 ,
 Grupo
 ,
-\ast
+\Alice
 )
 )
 ,\\
@@ -10500,7 +10598,7 @@ member
 ,
 Grupo
 ,
-\ast
+\Alice
 )
 )
 ,\\
@@ -10510,7 +10608,7 @@ Grupo
 \}
 \end{align*}
 \iffalse
-ward_join
+child_join
 \fi
 \begin{align*}
 &
@@ -10604,10 +10702,21 @@ Grupo
 )
 ,
 \mathit{
+person
+}
+,
+\mathit{
 friend
 }
 (
 \Alice
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
 )
  \in c_
 {
@@ -10617,6 +10726,20 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
  \in c_
 {
 \mathit{Carol}
@@ -10644,39 +10767,6 @@ Grupo
 person
 }
 (
-\Bob
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
 \Alice
 )
 \lor
@@ -10689,7 +10779,7 @@ child
 )
 \land
 \exists 
-G2
+G1
 \,(
 \mathit{
 has_parent
@@ -10697,7 +10787,7 @@ has_parent
 (
 \Alice
 ,
-G2
+G1
 )
 )
 )
@@ -10722,7 +10812,7 @@ child
 )
 \land
 \exists 
-G3
+G2
 \,(
 \mathit{
 has_parent
@@ -10730,7 +10820,7 @@ has_parent
 (
 \mathit{Carol}
 ,
-G3
+G2
 )
 )
 )
@@ -10742,6 +10832,634 @@ G3
 ,
 \Bob
 ,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+children_join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+has_parent
+}
+(
+\mathit{Dave}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Dave}
+)
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+member
+}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\mathit{Carol}
+)
+\lor
+(
+\mathit{
+child
+}
+(
+\mathit{Carol}
+)
+\land
+\exists 
+G1
+\,(
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\lor
+(
+\mathit{
+child
+}
+(
+\mathit{Dave}
+)
+\land
+\exists 
+G2
+\,(
+\mathit{
+has_parent
+}
+(
+\mathit{Dave}
+,
+G2
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
+\}
+\end{align*}
+\iffalse
+children_of_one_parent_join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+child
+}
+,
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Bob
+)
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+member
+}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\mathit{Carol}
+)
+\lor
+(
+\mathit{
+child
+}
+(
+\mathit{Carol}
+)
+\land
+\exists 
+G1
+\,(
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+child_withdraw
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+parent
+}
+(
+\Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\mathit{Carol}
+)
+\lor
+(
+\mathit{
+child
+}
+(
+\mathit{Carol}
+)
+\land
+\exists 
+G1
+\,(
+\mathit{
+has_parent
+}
+(
+\mathit{Carol}
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
 \mathit{Carol}
 \}
 \end{align*}

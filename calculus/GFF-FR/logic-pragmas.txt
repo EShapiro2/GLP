@@ -1,5 +1,5 @@
 GFF-FR: Fault-Resilient GFF
 GFF-FR extends GFF.
-D > 1, an integer, is a parameter of GFF-FR.
-Alice, Bob and Carol are persons.
-1. ■ Redundant point: Alice adds a Carol-pointer to Bob, provided Alice has a Carol-pointer to someone, Alice has a Carol-pointer to fewer than D persons, Alice and Bob are friends and Bob has a Carol-pointer to someone.
+d > 1, an integer, is a parameter of GFF-FR.
+Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
+1. ■ Redundant point: Alice adds a Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than d persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.

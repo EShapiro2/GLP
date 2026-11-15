@@ -10,8 +10,8 @@ FDAO: Funded DAO
 9. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
 10. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.
 11. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
-12. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos and more than half of the members of Alice's Delos at that time have voted for Prop.
-13. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos and more than half of the members of Alice's Delos at that time have voted against Prop.
+12. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
+13. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
 14. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.
 15. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
 16. ■ Issue.  Alice may issue Sum Alice-coins.
@@ -32,8 +32,8 @@ Join: Alice [Join]
 Propose: Carol [Propose] <prop>
 Vote for: Carol [Vote for]
 Vote against: Carol [Vote against]
-Pass: Alice [Pass]
-Reject: Alice [Reject]
+Pass: Alice [Pass] <votes>
+Reject: Alice [Reject] <votes>
 Issue: Alice [Issue] <sum>
 Swap: Alice [Swap] <sum> <dave> <total>
   Bob: Alice asks for your consent to swap.

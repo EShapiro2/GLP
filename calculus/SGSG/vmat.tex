@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -487,6 +480,13 @@ c_
 \mathit{
 fixed
 }
+,
+\mathit{
+threshold
+}
+(
+Share
+)
 \}
 ,\\
 &
@@ -508,6 +508,44 @@ fixed
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{
+custodian
+}
+(
+\Alice
+,
+X1
+)
+)
+\ge
+Share
+\land
+Double
+=
+Share
+\cdot
+2
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{
+custodian
+}
+(
+\Alice
+,
+X2
+)
+)
+<
+Double
 ,\\
 &
 \text{guarded by } \{
@@ -918,9 +956,7 @@ friend
 }
 ,\\
 &
-\text{guarded by } \{
-\Bob
-\}
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
 restore
@@ -975,6 +1011,13 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+checkpoint
+}
+(
+\Bob
+)
  \in c_
 {
 \Alice
@@ -995,7 +1038,7 @@ state_loss
 &
 \text{provided } 
 \mathit{
-recovered
+friend
 }
 (
 \Alice
@@ -1207,6 +1250,8 @@ accepted
 \Bob
 ,
 Alice
+,
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -1228,13 +1273,31 @@ friend
 \Alice
 )
 \}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
+,
+\mathit{
+records_custodian
+}
+(
+Alice
+,
+\mathit{Carol}
+)
 ,
 \mathit{
 threshold_vouched
@@ -1251,15 +1314,7 @@ friend
 (
 Alice
 )
-,
-\mathit{
-friend
-}
-(
-Alice
-)
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -1271,6 +1326,23 @@ identity
 {
 \Bob
 }
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+vouched
+}
+(
+\Bob
+,
+Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -1281,6 +1353,8 @@ accepted
 \Bob
 ,
 Alice
+,
+\ast
 )
  \notin c_
 {
@@ -1363,7 +1437,6 @@ custodian_of
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -1375,6 +1448,8 @@ accepted
 \mathit{Carol}
 ,
 \Bob
+,
+Carol
 )
 ,
 \mathit{
@@ -1383,15 +1458,7 @@ custodian
 (
 \Bob
 )
-,
-\mathit{
-custodian
-}
-(
-\Bob
-)
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }

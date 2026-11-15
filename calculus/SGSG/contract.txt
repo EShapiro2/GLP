@@ -4,6 +4,6 @@ The *identity record* of Alice is her *identity custodians*, persons she names, 
 Alice, Bob and Carol are persons, Alicia a new identity of Alice.
 1. ■ Identity record: Alice may fix her identity record, once. It then changes only by the replacement of a custodian's lost identity (SGSG:5).
 2. ■ Friendship updates. Tell: Alice tells each of her friends when she becomes a friend of Bob (GSG:1) and when she ends a friendship (GSG:2), and the friend records it. Send record: Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.
-3. ■ Checkpoint: Alice may send each of her friends a checkpoint of her records, and the friend keeps it.
+3. ■ Checkpoint: Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
 4. ■ State recovery. Restore: After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints he keeps, and Alice records them again.
 5. ◆ Identity replacement. Replace: After an identity loss, Alice may establish a new identity, Alicia (GKK:1), and ask her identity custodians to vouch for it. Vouch: Carol, an identity custodian of Alice, may vouch, once, that Alicia is Alice. Accept: Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was. Bob tells Alicia the friends of Alice he records, and tells his friends of the change.

@@ -63,7 +63,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "sum", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "total", number)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "sum", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent)], [], [])]), button("List place", [act(list_place, 1, [1], [req(identity, []), req(hosts, [at(2)]), forb(listed, [at(2)])], [2], [], [], [])]), button("Book", [act(book, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(today, [any]), req(coin, [at(2)])], [2], [field(3, "place", text), field(4, "night", number), field(5, "sum", number)], [], [])]), button("Cancel", [act(cancel, 2, [1, 2], [req(identity, []), req(today, [any]), req(booked, [at(3), at(4)]), req(coin, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], stay, [at(1), any, any, any]), proved(identity, [], coin, [at(1)]), proved(identity, [], review, [at(1), any, any])], [3, 4], [field(1, "bob", person), field(5, "sum", number)], [], [])]), button("Review", [act(review, 2, [1, 2], [req(identity, []), req(stay, [at(1), at(3), at(4), any]), req(today, [any])], [1, 3, 4], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "sum", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "total", number)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "sum", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent)], [], [])]), button("List place", [act(list_place, 1, [1], [req(identity, []), req(hosts, []), forb(listed, [at(2)])], [], [field(2, "place", text)], [], [])]), button("Book", [act(book, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(today, [any]), req(coin, [at(2)])], [2], [field(3, "place", text), field(4, "night", number), field(5, "sum", number)], [], [])]), button("Cancel", [act(cancel, 2, [1, 2], [req(identity, []), req(today, [any]), req(booked, [at(3), at(4)]), req(coin, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], stay, [at(1), any, any, any]), proved(identity, [], coin, [at(1)]), proved(identity, [], review, [at(1), any, any])], [3, 4], [field(1, "bob", person), field(5, "sum", number)], [], [])]), button("Review", [act(review, 2, [1, 2], [req(identity, []), req(stay, [at(1), at(3), at(4), any]), req(today, [any])], [1, 3, 4], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -86,15 +86,13 @@ coin(Peer)
 ;
 listed(Speech)
 ;
-hosts(Speech)
+hosts
 ;
 stay(Peer, Speech, Integer, Integer)
 ;
 booked(Speech, Integer)
 ;
 review(Peer, Speech, Integer)
-;
-stay(Peer, Speech, Integer, Speech)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -106,7 +104,7 @@ atom_of(g(coin, [p(V1)]), shown(coin(V1?)))
 .
 atom_of(g(listed, [s(V1)]), shown(listed(V1?)))
 .
-atom_of(g(hosts, [s(V1)]), shown(hosts(V1?)))
+atom_of(g(hosts, []), shown(hosts))
 .
 atom_of(g(stay, [p(V1), s(V2), n(V3), n(V4)]), shown(stay(V1?, V2?, V3?, V4?)))
 .
@@ -114,16 +112,20 @@ atom_of(g(booked, [s(V1), n(V2)]), shown(booked(V1?, V2?)))
 .
 atom_of(g(review, [p(V1), s(V2), n(V3)]), shown(review(V1?, V2?, V3?)))
 .
-atom_of(g(stay, [p(V1), s(V2), n(V3), s(V4)]), shown(stay(V1?, V2?, V3?, V4?)))
-.
 atom_of(_, unshown) :- otherwise | true.
 
+%% The atoms of the environment predicates the contract declares, given when the platform is deployed and held from startup (vGLP, Section 5.4, "Speech-act schemas as local specifications").
+procedure env_atom(Atom?, GAtoms).
+env_atom(hosts, [g(hosts, [])])
+.
+env_atom(_, []) :- otherwise | true.
+
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(list_place, [svar('Place')], [rs(guarded, [atom(listed, [svar('Place')])], [], [atom(identity, []), atom(hosts, [svar('Place')])], [atom(listed, [svar('Place')])])]), schema(book, [svar('Place'), num('Night'), num('Sum')], [rs(guarded, [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, []), atom(listed, [svar('Place')])], [atom(booked, [svar('Place'), num('Night')])])]), schema(cancel, [svar('Place'), num('Night'), num('Sum')], [rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [atom(identity, [])], []), rs(guarded, [], [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(review, [svar('Place'), num('Night')], [rs(unguarded, [atom(review, [role(2), svar('Place'), num('Night')])], [], [atom(identity, [])], [atom(review, [role(2), svar('Place'), num('Night')])]), rs(guarded, [], [], [atom(identity, []), atom(stay, [role(1), svar('Place'), num('Night'), svar('Sum')]), atom(today, [num('Today')])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(list_place, [svar('Place')], [rs(guarded, [atom(listed, [svar('Place')])], [], [atom(identity, []), atom(hosts, [])], [atom(listed, [svar('Place')])])]), schema(book, [svar('Place'), num('Night'), num('Sum')], [rs(guarded, [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, []), atom(listed, [svar('Place')])], [atom(booked, [svar('Place'), num('Night')])])]), schema(cancel, [svar('Place'), num('Night'), num('Sum')], [rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [atom(identity, [])], []), rs(guarded, [], [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(review, [svar('Place'), num('Night')], [rs(unguarded, [atom(review, [role(2), svar('Place'), num('Night')])], [], [atom(identity, [])], [atom(review, [role(2), svar('Place'), num('Night')])]), rs(guarded, [], [], [atom(identity, []), atom(stay, [role(1), svar('Place'), num('Night'), num('Sum')]), atom(today, [num('Today')])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]))
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]))
 .
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
@@ -137,13 +139,13 @@ schema_entry(pay, schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), 
 .
 schema_entry(redeem, schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]))
 .
-schema_entry(list_place, schema(list_place, [svar('Place')], [rs(guarded, [atom(listed, [svar('Place')])], [], [atom(identity, []), atom(hosts, [svar('Place')])], [atom(listed, [svar('Place')])])]))
+schema_entry(list_place, schema(list_place, [svar('Place')], [rs(guarded, [atom(listed, [svar('Place')])], [], [atom(identity, []), atom(hosts, [])], [atom(listed, [svar('Place')])])]))
 .
 schema_entry(book, schema(book, [svar('Place'), num('Night'), num('Sum')], [rs(guarded, [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, []), atom(listed, [svar('Place')])], [atom(booked, [svar('Place'), num('Night')])])]))
 .
 schema_entry(cancel, schema(cancel, [svar('Place'), num('Night'), num('Sum')], [rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [atom(identity, [])], []), rs(guarded, [], [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(today, [num('Today')])], [])]))
 .
-schema_entry(review, schema(review, [svar('Place'), num('Night')], [rs(unguarded, [atom(review, [role(2), svar('Place'), num('Night')])], [], [atom(identity, [])], [atom(review, [role(2), svar('Place'), num('Night')])]), rs(guarded, [], [], [atom(identity, []), atom(stay, [role(1), svar('Place'), num('Night'), svar('Sum')]), atom(today, [num('Today')])], [])]))
+schema_entry(review, schema(review, [svar('Place'), num('Night')], [rs(unguarded, [atom(review, [role(2), svar('Place'), num('Night')])], [], [atom(identity, [])], [atom(review, [role(2), svar('Place'), num('Night')])]), rs(guarded, [], [], [atom(identity, []), atom(stay, [role(1), svar('Place'), num('Night'), num('Sum')]), atom(today, [num('Today')])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -168,7 +170,7 @@ schema_numeric(book, numeric([cj(at(1), gt(num('Night'), num('Today')))], [num('
 .
 schema_numeric(cancel, numeric([cj(at(2), gt(num('Night'), num('Today')))], [num('Today')], []))
 .
-schema_numeric(review, numeric([cj(at(2), le(num('Night'), num('Today')))], [svar('Sum'), num('Today')], []))
+schema_numeric(review, numeric([cj(at(2), le(num('Night'), num('Today')))], [num('Sum'), num('Today')], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -203,11 +205,14 @@ schema_base(review, 2)
 .
 schema_base(_, 1) :- otherwise | true.
 
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
+
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
-reflexive_preds([])
+reflexive_preds([knows])
 .
 
 procedure introduction_preds(Preds).
@@ -235,7 +240,7 @@ binding_of(book(V1, V2, V3, V4, V5), book, [b(role(1), p(V1?)), b(role(2), p(V2?
 .
 binding_of(cancel(V1, V2, V3, V4, V5), cancel, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Place'), s(V3?)), b(num('Night'), n(V4?)), b(num('Sum'), n(V5?)), b(num('Today'), lv(cancel, 'Today'))])
 .
-binding_of(review(V1, V2, V3, V4), review, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Place'), s(V3?)), b(num('Night'), n(V4?)), b(svar('Sum'), lv(review, 'Sum')), b(num('Today'), lv(review, 'Today'))])
+binding_of(review(V1, V2, V3, V4), review, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Place'), s(V3?)), b(num('Night'), n(V4?)), b(num('Sum'), lv(review, 'Sum')), b(num('Today'), lv(review, 'Today'))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -534,7 +539,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("STAY: Grassroots Stays\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ■ Issue.  Alice may issue Sum Alice-coins.\n5. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.\n6. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.\n7. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.\n8. ◆ List place.  Alice may list Place under a new name of hers, provided Alice can host guests at Place.\n9. ■ Book.  Bob may book a stay at Alice's Place on Night for Sum Alice-coins, with the consent of Alice, provided Bob knows Alice, Alice lists Place, the current date is Today and Night is more than Today.\n10. ■ Cancel.  Alice may cancel Bob's stay at Place on Night for Sum Alice-coins, provided the current date is Today and Night is more than Today.\n11. ■ Review.  Bob may review his stay at Alice's Place on Night, provided Bob has a stay at Alice's Place on Night for Sum Alice-coins, the current date is Today and Night is at most Today.", with(environment([today], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(list_place, ['Alice'], [svar('Place')], [rs(guarded, [atom(listed, [svar('Place')])], [], [atom(identity, []), atom(hosts, [svar('Place')])], [atom(listed, [svar('Place')])])]), nschema(book, ['Bob', 'Alice'], [svar('Place'), num('Night'), num('Sum'), num('Today')], gt(num('Night'), num('Today')), [rs(guarded, [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, []), atom(listed, [svar('Place')])], [atom(booked, [svar('Place'), num('Night')])])]), nschema(cancel, ['Bob', 'Alice'], [svar('Place'), num('Night'), num('Sum'), num('Today')], gt(num('Night'), num('Today')), [rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [atom(identity, [])], []), rs(guarded, [], [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(today, [num('Today')])], [])]), nschema(review, ['Alice', 'Bob'], [svar('Place'), num('Night'), svar('Sum'), num('Today')], le(num('Night'), num('Today')), [rs(unguarded, [atom(review, [role(2), svar('Place'), num('Night')])], [], [atom(identity, [])], [atom(review, [role(2), svar('Place'), num('Night')])]), rs(guarded, [], [], [atom(identity, []), atom(stay, [role(1), svar('Place'), num('Night'), svar('Sum')]), atom(today, [num('Today')])], [])])]), pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(issue, "Issue", ["", "sum"], none, "", by([1])), act(swap, "Swap", ["", "", "", "sum", "dave", "total"], said([[], [person(1), text(" asks for your consent to swap.")]]), "", by([1])), act(pay, "Pay", ["", "", "sum"], none, "", by([1])), act(redeem, "Redeem", ["", "", "carol"], none, "", by([1])), act(list_place, "List place", [], none, "", by([1])), act(book, "Book", ["", "", "place", "night", "sum"], said([[], [person(1), text(" asks for your consent to book.")]]), "", by([1])), act(cancel, "Cancel", ["bob", "", "", "", "sum"], none, "", by([2])), act(review, "Review", [], none, "", by([2]))], [], nolook, version(1, 1))))
+contract("STAY: Grassroots Stays\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ■ Issue.  Alice may issue Sum Alice-coins.\n5. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.\n6. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.\n7. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.\n8. ◆ List place.  Alice may list Place under a new name of hers, provided Alice can host guests.\n9. ■ Book.  Bob may book a stay at Alice's Place on Night for Sum Alice-coins, with the consent of Alice, provided Bob knows Alice, Alice lists Place, the current date is Today and Night is more than Today.\n10. ■ Cancel.  Alice may cancel Bob's stay at Place on Night for Sum Alice-coins, provided the current date is Today and Night is more than Today.\n11. ■ Review.  Bob may review his stay at Alice's Place on Night, provided Bob has a stay at Alice's Place on Night for Sum Alice-coins, the current date is Today and Night is at most Today.", with(environment([today, hosts], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(list_place, ['Alice'], [svar('Place')], [rs(guarded, [atom(listed, [svar('Place')])], [], [atom(identity, []), atom(hosts, [])], [atom(listed, [svar('Place')])])]), nschema(book, ['Bob', 'Alice'], [svar('Place'), num('Night'), num('Sum'), num('Today')], gt(num('Night'), num('Today')), [rs(guarded, [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, []), atom(listed, [svar('Place')])], [atom(booked, [svar('Place'), num('Night')])])]), nschema(cancel, ['Bob', 'Alice'], [svar('Place'), num('Night'), num('Sum'), num('Today')], gt(num('Night'), num('Today')), [rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [atom(stay, [role(2), svar('Place'), num('Night'), num('Sum')])], [atom(identity, [])], []), rs(guarded, [], [atom(booked, [svar('Place'), num('Night')]), times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(today, [num('Today')])], [])]), nschema(review, ['Alice', 'Bob'], [svar('Place'), num('Night'), num('Sum'), num('Today')], le(num('Night'), num('Today')), [rs(unguarded, [atom(review, [role(2), svar('Place'), num('Night')])], [], [atom(identity, [])], [atom(review, [role(2), svar('Place'), num('Night')])]), rs(guarded, [], [], [atom(identity, []), atom(stay, [role(1), svar('Place'), num('Night'), num('Sum')]), atom(today, [num('Today')])], [])])])), pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(issue, "Issue", ["", "sum"], none, "", by([1])), act(swap, "Swap", ["", "", "", "sum", "dave", "total"], said([[], [person(1), text(" asks for your consent to swap.")]]), "", by([1])), act(pay, "Pay", ["", "", "sum"], none, "", by([1])), act(redeem, "Redeem", ["", "", "carol"], none, "", by([1])), act(list_place, "List place", ["", "place"], none, "", by([1])), act(book, "Book", ["", "", "place", "night", "sum"], said([[], [person(1), text(" asks for your consent to book.")]]), "", by([1])), act(cancel, "Cancel", ["bob", "", "", "", "sum"], none, "", by([2])), act(review, "Review", [], none, "", by([2]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -799,8 +804,11 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Integer)?).
-agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?], Cal) :- ground(Id?) |
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Integer)?, List(Atom)?).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Cal, Env) :- ground(Id?), ground(Env?) |
+    env_atoms(Env?, G0),
+    env_atoms(Env?, G1),
+    atoms_of(G1?, V0),
     tabs(Ts),
     request(Rq),
     tag_net(NetIn?, Nt0),
@@ -810,7 +818,11 @@ agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?], Cal) :- ground(Id?) |
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
-        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+        st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+%% The atoms of the environment predicates among those given at deployment (env_atom, printed from the contract).
+procedure env_atoms(List(Atom)?, GAtoms).
+env_atoms([], []).
+env_atoms([A|As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
 
 %% A request question: its question, of the request type Request?, takes the
 %% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.
@@ -1567,9 +1579,18 @@ greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St
     st_id(St?, Me),
     st_ms(St?, S),
     name_class(N?, S?, C),
-    question_words(C?, Me?, Ws),
-    greet_whole(P?, N?, Ws?, R),
+    greet_at(C?, Me?, P?, N?, R),
     merge(R?, Ans1?, Ans).
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger)).
+greet_at(C, Me, P, N, R?) :- ground(C?), ground(Me?) |
+    question_words(C?, Me?, Ws),
+    binding_of(C?, Nm, Bn),
+    consents_me(Nm?, Bn?, Me?, Cs),
+    greet_or_consent(Cs?, P?, N?, Ws?, R).
+%% A called person who must consent to the acquaintance is not asked: their consent stands, and the agent takes it as their yes.
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger)).
+greet_or_consent(no, P, N, Ws, R?) :- greet_whole(P?, N?, Ws?, R).
+greet_or_consent(yes, _, N, _, [greeted(N?)]).
 
 %% --- Introduce: the ihellos --------------------------------------------------
 %% On reading an introduction intro(Q) the agent sends Q ihello, unless Q is itself or known or it has sent one; an arriving ihello is recorded; and where a peer becomes known by the two the agent writes the new view on the output (Section 5.4).
@@ -3032,11 +3053,23 @@ asked_by(At, Id, B?) :- ground(At?), ground(Id?) |
     attempt_id(At?, P),
     attempt_class(At?, C),
     binding_of(C?, Nm, Bn),
+    asked_at(Nm?, Bn?, Id?, P?, B).
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) |
     marked_people(Nm?, Bn?, G),
     mem(Id?, G?, In),
     same(Id?, P?, Me),
     neg(Me?, NotMe),
-    and(In?, NotMe?, B).
+    consents_me(Nm?, Bn?, Id?, Cs),
+    neg(Cs?, Asks),
+    and(In?, NotMe?, B0),
+    and(B0?, Asks?, B).
+%% A person who must consent to an act is a guard of it who is not asked (vGLP, Section 5.4, "The contract's words"): whether the agent Me is the person in a role of the schema Nm, at the binding Bn, that the pragmas mark so (schema_consents).
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) |
+    schema_consents(Nm?, Is),
+    persons_of(Is?, Bn?, Ps),
+    mem(Me?, Ps?, B).
 
 %% Answer: the person's answer recorded, answered(At, yes) by its then-branch
 %% and answered(At, no) by its else-branch; it sends nothing and votes nothing.

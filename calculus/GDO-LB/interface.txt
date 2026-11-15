@@ -4,9 +4,9 @@ GDO-LB: Location-Based GDO
 3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.
 5. ■ Unfriend.  Alice may end her friendship with Bob.
-6. ■ Point friend.  Alice may point to Bob, provided Alice and Bob are friends and either Alice points to fewer than N persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than E than some person pointed to by Alice.
+6. ■ Point friend.  Alice may point to Bob, provided Alice and Bob are friends and either Alice points to fewer than D persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than E than some person pointed to by Alice.
 7. ■ Point transitive.  Alice may point to Carol, provided Alice knows Carol, Alice points to Bob, Bob points to Carol and Carol is closer to Alice by more than E than some person pointed to by Alice.
-8. ■ Unpoint.  Alice may cease pointing to Bob, provided Alice points to more than N persons and Bob is furthest from Alice among the persons Alice points to.
+8. ■ Unpoint.  Alice may cease pointing to Bob, provided the bound is D, Alice points to more than D persons and Bob is furthest from Alice among the persons Alice points to.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -18,4 +18,4 @@ Befriend: Alice [Befriend]
 Unfriend: Alice [Unfriend]
 Point friend: Alice [Point friend]
 Point transitive: Alice [Point transitive]
-Unpoint: Alice [Unpoint] <n>
+Unpoint: Alice [Unpoint]

@@ -1,7 +1,7 @@
 GD: Grassroots Distrust
 GD extends GSG.
 Alice, Bob and Carol are persons.
-1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol.
+1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol, provided Alice knows Carol.
 2. ■ Propagate: Alice may declare distrust of Carol, provided Alice does not know Carol, Alice and Bob are friends and Bob has declared distrust of Carol.
 3. ■ Cease: Alice may withdraw her declaration of distrust of Carol.
 Logic pragmas.

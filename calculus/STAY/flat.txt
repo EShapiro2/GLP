@@ -1,7 +1,8 @@
 STAY: Grassroots Stays (flat text)
 GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
-GKK:1 ○ Establish: Alice may Alice has an identity and Alice knows Alice, provided not Alice has an identity.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: Alice may Alice has an identity, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.
 GKK:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
@@ -14,7 +15,8 @@ GC:4 ■ Redeem: Alice may no longer Alice holds a Bob-coin, Bob holds a Bob-coi
 GC:5 ○ | Pricing.
 GC:5 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 STAY:0 - | Alice and Bob are persons, Place a place and Night a night, Today a date, Sum a number.
-STAY:1 ◆ List place: Alice may Alice lists Place, provided Alice can host guests at Place and not Alice lists Place.
+STAY:0 - | Environment: x can host guests.
+STAY:1 ◆ List place: Alice may Alice lists Place, provided Alice can host guests and not Alice lists Place.
 STAY:2 ■ Book: Bob and Alice may jointly Bob has a stay at Alice's Place on Night for Sum Alice-coins, Alice has Place booked on Night, no longer Bob holds Sum Alice-coins and Alice holds Sum Alice-coins, provided Bob knows Alice, Alice lists Place, the current date is Today for Bob, Night is more than Today and not Alice has Place booked on Night.
 STAY:3 ■ Cancel: Alice may no longer Bob has a stay at Alice's Place on Night for Sum Alice-coins, no longer Alice has Place booked on Night, no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided the current date is Today for Alice and Night is more than Today.
 STAY:4 ■ Review: Bob may Alice keeps Bob's review of Place on Night, provided Bob has a stay at Alice's Place on Night for Sum Alice-coins, the current date is Today for Bob, Night is at most Today and not Alice keeps Bob's review of Place on Night.

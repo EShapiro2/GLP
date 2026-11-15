@@ -7,10 +7,11 @@ GDO-L: Grassroots Directed Overlay with Labels
 6. ■ Point friend.  Alice may point to Bob, provided Alice and Bob are friends.
 7. ■ Point transitive.  Alice may point to Carol, provided Alice knows Carol, Alice points to Bob and Bob points to Carol.
 8. ■ Unpoint.  Alice may cease pointing to Bob.
-9. ■ Labeled point friend.  Alice may add a Dave-pointer to Bob, provided Alice and Bob are friends and Bob has a Dave-pointer to someone.
+9. ■ Labeled point friend.  Alice may add a Dave-pointer to Bob, provided Alice and Bob are friends and Bob has a Dave-pointer to Erin.
 10. ■ Labeled point transitive.  Alice may add a Dave-pointer to Carol, provided Alice knows Carol, Alice has a Dave-pointer to Bob and Bob has a Dave-pointer to Carol.
 11. ■ Labeled point transitive friend.  Alice may add a Dave-pointer to Carol, provided Alice knows Carol, Alice and Bob are friends and Bob has a Dave-pointer to Carol.
-12. ■ Labeled unpoint.  Alice may remove her Dave-pointer to Bob.
+12. ■ Labeled unpoint.  Alice may remove her Dave-pointer to Carol.
+13. ■ Labeled unpoint self.  Alice may remove her Dave-pointer to Dave, provided Alice does not count Dave as a friend.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -27,3 +28,4 @@ Labeled point friend: Alice [Labeled point friend] <dave>
 Labeled point transitive: Alice [Labeled point transitive]
 Labeled point transitive friend: Alice [Labeled point transitive friend] <dave>
 Labeled unpoint: Alice [Labeled unpoint]
+Labeled unpoint self: Alice [Labeled unpoint self]

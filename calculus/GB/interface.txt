@@ -14,10 +14,10 @@ GB: Grassroots Bonds
 13. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today and Day is at most Today.
 14. ■ Deposit.  Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.
 15. ■ Deposit bond.  Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.
-16. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other and Carol finds Cond met.
-17. ■ Release bond.  Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other and Carol finds Cond met.
-18. ■ Return.  Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other and Carol finds Cond failed.
-19. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other and Carol finds Cond failed.
+16. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other.
+17. ■ Release bond.  Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other.
+18. ■ Return.  Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other.
+19. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>

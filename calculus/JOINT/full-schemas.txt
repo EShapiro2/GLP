@@ -1,7 +1,8 @@
 JOINT: Joint Accounts (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
-GKK:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
@@ -15,7 +16,7 @@ GC:5 ○ | Pricing.
 GC:5 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 JOINT:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
 JOINT:1 ■ Open account: account(Alice,Acct), joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~account(Alice,Acct) guarded by Alice, Bob.
-JOINT:2 ■ Deposit: ~coin(Alice,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Alice,Carol,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
-JOINT:2 ■ Partner deposit: ~coin(Bob,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Bob,Carol,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
+JOINT:2 ■ Deposit: ~coin(Alice,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Alice,Carol,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
+JOINT:2 ■ Partner deposit: ~coin(Bob,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Alice,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Bob,Carol,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
 JOINT:3 ■ Withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Alice,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
 JOINT:3 ■ Partner withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Bob,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.

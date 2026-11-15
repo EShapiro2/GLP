@@ -537,6 +537,13 @@ identity
 \mathit{
 person
 }
+,
+\mathit{
+item
+}
+(
+Proof
+)
  \in c_
 {
 \Bob
@@ -551,6 +558,14 @@ identity
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+Proof
+)
+=
+\Bob
 ,\\
 &
 \text{guarded by } \{
@@ -752,6 +767,13 @@ identity
 \mathit{
 person
 }
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
  \in c_
 {
 \Alice
@@ -1028,6 +1050,56 @@ guardian
 \Bob
 )
 \}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -1109,6 +1181,47 @@ c_
 {
 \mathit{Carol}
 }
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -1227,6 +1340,48 @@ has_guardian
 \ast
 )
 ]
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{
+has_guardian
+}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{
+identity
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+guardian
+}
+(
+\mathit{Dave}
+,
+\Bob
 )
 )
 ,\\
@@ -1380,7 +1535,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_acquaint
+ai_agent_acquaint
 \fi
 \begin{align*}
 &
@@ -1479,7 +1634,7 @@ person
 \}
 \end{align*}
 \iffalse
-ward_befriend
+ai_agent_befriend
 \fi
 \begin{align*}
 &
@@ -1683,7 +1838,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_end
+ai_agent_end
 \fi
 \begin{align*}
 &
@@ -1944,7 +2099,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_unfriend
+ai_agent_unfriend
 \fi
 \begin{align*}
 &
@@ -2097,7 +2252,7 @@ G1
 \}
 \end{align*}
 \iffalse
-wards_acquaint
+ai_agents_acquaint
 \fi
 \begin{align*}
 &
@@ -2219,7 +2374,7 @@ Seal
 \}
 \end{align*}
 \iffalse
-wards_befriend
+ai_agents_befriend
 \fi
 \begin{align*}
 &
@@ -2505,7 +2660,7 @@ G2
 \}
 \end{align*}
 \iffalse
-wards_of_one_guardian_befriend
+ai_agents_of_one_guardian_befriend
 \fi
 \begin{align*}
 &
@@ -4706,6 +4861,13 @@ attestation
 (
 Proof
 )
+,
+\mathit{
+has_guardian
+}
+(
+Alice
+)
  \in c_
 {
 \Alice
@@ -4723,39 +4885,6 @@ Item
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -4789,8 +4918,7 @@ Item
 )
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -4834,6 +4962,13 @@ Proof
 )
 ,
 \mathit{
+has_guardian
+}
+(
+Alice
+)
+,
+\mathit{
 item
 }
 (
@@ -4850,39 +4985,6 @@ friend
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{

@@ -5,9 +5,9 @@ GRV: Grassroots Rendezvous
 4. ■ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person.
 5. ■ Person unfriend.  Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
 6. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person.
-7. ■ Make guardian.  The guardians of Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired and Bob is a person.
+7. ■ Make guardian.  The guardians of Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired, Bob is a person, Carol has Alice as a guardian and Bob counts Alice as a friend.
 8. ■ Resign.  Bob may end his guardianship of Carol.
-9. ■ End guardian.  The guardians of Carol may end Bob's guardianship of Carol.
+9. ■ End guardian.  The guardians of Carol, other than Bob, may end Bob's guardianship of Carol.
 10. ■ Guardian unfriend.  Bob may end his friendship with his ward Carol.
 11. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
 12. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends.
@@ -19,10 +19,11 @@ GRV: Grassroots Rendezvous
 18. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
 19. ■ Retire.  The guardians of Carol may retire Carol.
 20. ■ Open server.  Carol may make Dave a rendezvous server, provided Carol is a guardian of Dave.
-21. ■ Invite by link.  Alice may register Link with Dave, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave and Dave is a rendezvous server.
-22. ■ Use link.  Bob may present Link of Alice to Dave, provided Bob knows Dave and Dave does not hold Link expired.
-23. ■ Present.  Alice may present to Dave the signature of Bob over the friendship of Alice and Bob, provided Alice and Bob are friends, Alice knows Dave and Dave is a rendezvous server.
-24. ■ Match.  Dave matches Alice and Bob.
+21. ■ Sign link.  Alice may sign Link as an invitation link that names Dave, provided Alice knows Dave.
+22. ■ Invite by link.  Alice may register Link with Dave, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server and Dave does not hold Link spent for Alice.
+23. ■ Use link.  Bob may present Link of Alice to Dave, provided Bob knows Dave and Dave does not hold Link expired.
+24. ■ Present.  Alice may present to Dave the signature of Bob over the friendship of Alice and Bob, provided Alice and Bob are friends, Alice knows Dave and Dave is a rendezvous server.
+25. ■ Match.  Dave matches Alice and Bob.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -33,8 +34,7 @@ Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Person unfriend: Alice [Person unfriend]
 Enter: Alice [Enter] <carol>
-  Carol: Alice asks for your consent to enter.
-Make guardian: Bob [Make guardian] <carol> <decider>
+Make guardian: Bob [Make guardian] <carol>
   Decider: Bob asks for your consent to make guardian.
   Codecider: Bob asks for your consent to make guardian.
 Resign: Bob [Resign]
@@ -61,6 +61,7 @@ Wards of one guardian befriend: Carol [Wards of one guardian befriend]
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
 Open server: Carol [Open server]
+Sign link: Alice [Sign link] <link>
 Invite by link: Alice [Invite by link]
 Use link: Bob [Use link] <alice> <link>
 Present: Alice [Present]

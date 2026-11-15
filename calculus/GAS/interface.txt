@@ -15,9 +15,9 @@ GAS: Grassroots App Store
 14. ■ Invite.  Alice may invite Bob to join in Prog of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has Prog of Carol installed and Bob trusts Carol as a developer.
 15. ■ Leave.  Alice may leave Prog of Carol.
 16. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person.
-17. ■ Make guardian.  The guardians of Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired and Bob is a person.
+17. ■ Make guardian.  The guardians of Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired, Bob is a person, Carol has Alice as a guardian and Bob counts Alice as a friend.
 18. ■ Resign.  Bob may end his guardianship of Carol.
-19. ■ End guardian.  The guardians of Carol may end Bob's guardianship of Carol.
+19. ■ End guardian.  The guardians of Carol, other than Bob, may end Bob's guardianship of Carol.
 20. ■ Guardian unfriend.  Bob may end his friendship with his ward Carol.
 21. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
 22. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends.
@@ -29,7 +29,7 @@ GAS: Grassroots App Store
 28. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
 29. ■ Retire.  The guardians of Carol may retire Carol.
 30. ■ Open store.  Carol may make Dave a store, provided Carol is a guardian of Dave.
-31. ○ List.  Carol may list in Dave Prog of Bob, provided Carol is a guardian of Dave, Dave is a store and Carol trusts Bob as a developer.
+31. ○ List.  Carol may list in Dave Prog of Bob, provided Carol is a guardian of Dave, Dave is a store, Carol trusts Bob as a developer and Carol holds Prog of Bob.
 32. ○ Delist.  Carol may delist from Dave Prog of Bob, provided Carol is a guardian of Dave.
 33. ■ Trust store.  Alice may declare trust in Dave, provided Dave is a store, Carol is a guardian of Dave, Alice knows Carol and Alice knows Dave.
 34. ■ Untrust store.  Alice may withdraw her declaration of trust in Dave.
@@ -55,8 +55,7 @@ Invite: Alice [Invite]
   Bob: Alice asks for your consent to invite.
 Leave: Alice [Leave]
 Enter: Alice [Enter] <carol>
-  Carol: Alice asks for your consent to enter.
-Make guardian: Bob [Make guardian] <carol> <decider>
+Make guardian: Bob [Make guardian] <carol>
   Decider: Bob asks for your consent to make guardian.
   Codecider: Bob asks for your consent to make guardian.
 Resign: Bob [Resign]
@@ -83,7 +82,7 @@ Wards of one guardian befriend: Carol [Wards of one guardian befriend]
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
 Open store: Carol [Open store]
-List: Carol [List] <prog>
+List: Carol [List]
 Delist: Carol [Delist]
 Trust store: Alice [Trust store]
 Untrust store: Alice [Untrust store]

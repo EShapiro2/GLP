@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -718,7 +711,7 @@ friend
 pointer
 }
 (
-\ast
+Erin
 ,
 Dave
 )
@@ -970,7 +963,7 @@ c_
 pointer
 }
 (
-Bob
+Carol
 ,
 Dave
 )
@@ -986,11 +979,74 @@ identity
 pointer
 }
 (
-Bob
+Carol
 ,
 Dave
 )
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+labeled_unpoint_self
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+pointer
+}
+(
+Dave
+,
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+pointer
+}
+(
+Dave
+,
+Dave
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+Dave
+)
+ \notin c_
 {
 \Alice
 }

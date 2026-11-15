@@ -226,10 +226,10 @@ atom_of(g(friend, [p(V1)]), shown(friend(V1?))).
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])]).
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])]).
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])])).
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])).
 schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])])).
 schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])])).
@@ -258,11 +258,14 @@ schema_base(befriend, 1).
 schema_base(unfriend, 1).
 schema_base(_, 1) :- otherwise | true.
 
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
+
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
-reflexive_preds([]).
+reflexive_preds([knows]).
 
 procedure introduction_preds(Preds).
 introduction_preds([]).
@@ -306,7 +309,7 @@ sentence_of(befriend(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) 
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 exported procedure contract(String, Exported).
-contract('GSG: Grassroots Social Graph\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.\n5. ■ Unfriend.  Alice may end her friendship with Bob.', with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])], pragmas([], [act(establish, 'Establish', [], none, '', by([1])), act(acquaint, 'Acquaint', ['', bob], said([[], [person(1), text(' asks for your consent to acquaint.')]]), '', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks for your consent to introduce.')], []]), '', by([2])), act(befriend, 'Befriend', [], said([[], [person(1), text(' asks for your consent to befriend.')]]), '', by([1])), act(unfriend, 'Unfriend', [], none, '', by([1]))], [], nolook, version(1, 1)))).
+contract('GSG: Grassroots Social Graph\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.\n5. ■ Unfriend.  Alice may end her friendship with Bob.', with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])])]), pragmas([], [act(establish, 'Establish', [], none, '', by([1])), act(acquaint, 'Acquaint', ['', bob], said([[], [person(1), text(' asks for your consent to acquaint.')]]), '', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks for your consent to introduce.')], []]), '', by([2])), act(befriend, 'Befriend', [], said([[], [person(1), text(' asks for your consent to befriend.')]]), '', by([1])), act(unfriend, 'Unfriend', [], none, '', by([1]))], [], nolook, version(1, 1)))).
 
 exported procedure version(Integer, Integer).
 version(1, 1).
@@ -761,7 +764,14 @@ dispatch_hello(no, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, S
 
 procedure greet_unless(YesNo?, Peer?, Proposal?, St?, Stream(Trigger), Stream(Trigger)?, St, Stream(Ask(Question))).
 greet_unless(yes, _, _, St, Ans1?, Ans1, St?, []).
-greet_unless(no, P, N, St, Ans?, Ans1, St?, D?) :- ground(P?), ground(N?), ground(St?) | st_id(St?, Me), st_ms(St?, S), name_class(N?, S?, C), question_words(C?, Me?, Ws), greet_whole(P?, N?, Ws?, R, D), merge(R?, Ans1?, Ans).
+greet_unless(no, P, N, St, Ans?, Ans1, St?, D?) :- ground(P?), ground(N?), ground(St?) | st_id(St?, Me), st_ms(St?, S), name_class(N?, S?, C), greet_at(C?, Me?, P?, N?, R, D), merge(R?, Ans1?, Ans).
+
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger), Stream(Ask(Question))).
+greet_at(C, Me, P, N, R?, D?) :- ground(C?), ground(Me?) | question_words(C?, Me?, Ws), binding_of(C?, Nm, Bn), consents_me(Nm?, Bn?, Me?, Cs), greet_or_consent(Cs?, P?, N?, Ws?, R, D).
+
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger), Stream(Ask(Question))).
+greet_or_consent(no, P, N, Ws, R?, D?) :- greet_whole(P?, N?, Ws?, R, D).
+greet_or_consent(yes, _, N, _, [greeted(N?)], []).
 
 procedure intro_cond(Peer?, St?, YesNo).
 intro_cond(Q, St, R?) :- ground(Q?), ground(St?) | st_id(St?, Id), st_isent(St?, ISe), same(Q?, Id?, S1), mem(Q?, ISe?, S2), known_st(Q?, St?, S3), or(S1?, S2?, S12), or(S12?, S3?, S), neg(S?, R).
@@ -1554,7 +1564,13 @@ mine_of(yes, Rr, K, mine(Rr?, K?)).
 mine_of(no, _, _, notmine).
 
 procedure asked_by(Attempt?, Peer?, YesNo).
-asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), and(In?, NotMe?, B).
+asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), asked_at(Nm?, Bn?, Id?, P?, B).
+
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) | marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), consents_me(Nm?, Bn?, Id?, Cs), neg(Cs?, Asks), and(In?, NotMe?, B0), and(B0?, Asks?, B).
+
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) | schema_consents(Nm?, Is), persons_of(Is?, Bn?, Ps), mem(Me?, Ps?, B).
 
 procedure answer_effect(YesNo?, Attempt?, St?, St).
 answer_effect(YN, At, St, St1?) :- ground(St?) | st_app(St?, Ap), answer_app(YN?, At?, Ap?, Ap1), set_app(St?, Ap1?, St1).

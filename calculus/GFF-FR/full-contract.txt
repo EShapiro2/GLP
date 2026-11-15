@@ -17,7 +17,7 @@ GDO:2. ■ Point transitive: Alice, who knows Carol and points to Bob who points
 GDO:3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.
 GDO-L:1. ■ Labeled point friend: Alice, who has no Dave-pointer to her friend Bob, may add one, if Bob has a Dave-pointer.
 GDO-L:2, GFF:3. ■ Labeled point transitive: Alice, who knows Carol and either has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol, only if Carol knows Alice.
-GDO-L:3. ■ Labeled unpoint: Alice, who has a Dave-pointer to Bob, may remove it.
+GDO-L:3. ■ Labeled unpoint: Alice, who has a Dave-pointer to Carol, may remove it, unless Carol is Dave and her friend.
 GFF:1. ■ Post: Alice has a feed and may post to it an item, created or received.
 GFF:2. ■ Deliver: Alice, who has a Carol-pointer to Bob who knows her, receives from Bob every item of Carol's feed that Bob holds.
 GFF-FR:1. ■ Redundant point: Alice, who has Carol-pointers to at least one person and to fewer than d, adds a Carol-pointer to her friend Bob, who has a Carol-pointer.

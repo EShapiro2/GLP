@@ -1,6 +1,6 @@
 GFF-FR-BC: Fault-Resilient GFF with Back-Channels
 GFF-FR-BC extends GFF-FR.
-Vocabulary: x has received an item of w's feed first from y = received_first(x,w,y); z has received an item of w's feed back from x = received_back(z,w,x).
-After x forwards an item of w's feed to z: z holds an item of w's feed and z has received an item of w's feed back from x.
-GFF-FR-BC:0 - | Alice, Bob, Carol and Dave are persons, Bob and Dave possibly one person.
-GFF-FR-BC:1 ■ Back forward: feed_item(Carol,Dave), received_back(Carol,Dave,Alice) <- pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave), received_first(Alice,Dave,Bob) possibly Bob=Dave.
+Vocabulary: z has received the item t of w's feed back from x = received_back(z,t,w,x).
+After x forwards the item t of w's feed to z, which requires z does not hold the item t of w's feed: z holds the item t of w's feed and z has received the item t of w's feed back from x.
+GFF-FR-BC:0 - | Alice, Bob, Carol and Dave are persons, Item an item, Bob and Dave possibly one person.
+GFF-FR-BC:1 ■ Back forward: item(Carol,Item,Dave), received_back(Carol,Item,Dave,Alice) <- pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave), item(Alice,Item,Dave), received(Alice,Item,Dave,Bob), ~item(Carol,Item,Dave) possibly Bob=Dave.

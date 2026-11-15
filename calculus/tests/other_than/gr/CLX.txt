@@ -1,0 +1,5 @@
+CLX: Club of Officers
+CLX instantiates CLB with the officers of z for those who decide for z.
+Alice and Bob are persons, Orga a club.
+Logic pragmas.
+Roles: the officers of z = officers(z), listed by z has y as a member and y is a member of z.

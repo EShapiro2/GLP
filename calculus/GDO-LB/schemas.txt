@@ -1,8 +1,9 @@
 GDO-LB: Location-Based GDO
 GDO-LB restricts GDO.
-Vocabulary: either x points to fewer than N persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than E than some person pointed to by x = may_point_friend(x,y); y is closer to x by more than E than some person pointed to by x = closer(x,y); y is furthest from x among the persons x points to = furthest(x,y).
-GDO-LB:0 - | A person has a *location*. N > 0, an integer, and E > 0 are parameters of GDO-LB.
+Vocabulary: the bound is n, for x = bound(x,n); either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x = may_point_friend(x,y); y is closer to x by more than e than some person pointed to by x = closer(x,y); y is furthest from x among the persons x points to = furthest(x,y).
+GDO-LB:0 - | A person has a *location*. d > 0, an integer, and e > 0 are parameters of GDO-LB.
 GDO-LB:0 - | Alice, Bob and Carol are persons.
+GDO-LB:0 - | Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.
 GDO-LB:1 ■ Point friend: GDO:1 <- may_point_friend(Alice,Bob).
 GDO-LB:2 ■ Point transitive: GDO:2 <- closer(Alice,Carol).
-GDO-LB:3 ■ Unpoint: GDO:3 <- points_to(Alice,>N), furthest(Alice,Bob).
+GDO-LB:3 ■ Unpoint: GDO:3 <- bound(Actor,D), points_to(Alice,>D), furthest(Alice,Bob).

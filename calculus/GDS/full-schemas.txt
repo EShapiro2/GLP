@@ -1,7 +1,8 @@
 GDS: Grassroots Directory Service (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
-GKK:1+GnW:3 ■ Establish: identity(Alice), knows(Alice,Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:0 - | Reflexive: x knows y.
+GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2+GnW:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 GKK:3+GnW:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
@@ -14,12 +15,12 @@ GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
-GnW:1 ■ Enter: identity(Carol), knows(Carol,Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+GnW:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
-GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by guardians(Carol), Bob.
+GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by guardians(Carol), Bob.
 GnW:2 ■ Resign: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
-GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by guardians(Carol).
+GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by guardians(Carol,-Bob).
 GnW:2 ■ Guardian unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- friend(Bob,Carol), friend(Carol,Bob), guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
 GnW:2 ■ | Carol may not end a friendship with her guardian.
 GnW:3 ■ | Ward and person.
@@ -39,19 +40,25 @@ GSV:0 - | Alice is a person, Dave a service.
 GRV:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 GRV:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 GRV:1 ■ Open server: rendezvous_server(Dave) <- guardian(Carol,Dave), ~rendezvous_server(Dave) guarded by Carol.
-GRV:2 ■ Invite by link: registered(Dave,Link,Alice) <- link(Alice,Link,Dave), knows(Alice,Dave), rendezvous_server(Dave), ~registered(Dave,Link,Alice) guarded by Alice.
+GRV:2 ■ | Invite by link.
+GRV:2 ■ Sign link: link(Alice,Link,Dave) <- knows(Alice,Dave), ~link(Alice,Link,Dave) guarded by Alice.
+GRV:2 ■ Invite by link: registered(Dave,Link,Alice) <- link(Alice,Link,Dave), knows(Alice,Dave), rendezvous_server(Dave), ~spent(Dave,Link,Alice), ~registered(Dave,Link,Alice) guarded by Alice.
 GRV:2 ■ | Link has a new serial.
-GRV:3 ■ Use link: ~registered(Dave,Link,Alice), address(Alice,Bob), address(Bob,Alice) <- knows(Bob,Dave), ~expired(Dave,Link), registered(Dave,Link,Alice) guarded by Bob.
+GRV:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice), address(Alice,Bob), address(Bob,Alice) <- knows(Bob,Dave), ~expired(Dave,Link), registered(Dave,Link,Alice) guarded by Bob.
 GRV:3 ■ | The link is then spent.
 GRV:4 ■ | Reconnection.
 GRV:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
 GRV:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
 GDS:0 - | A *directory* is a service with a page every person can read.
-GDS:0 - | Alice, Bob and Carol are persons, Dora a service.
+GDS:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
 GDS:1 ■ Open directory: directory(Dora) <- guardian(Carol,Dora), ~directory(Dora) guarded by Carol.
 GDS:2 ■ | Listing.
-GDS:2 ■ List: lists(Dora,Alice) <- directory(Dora), verified(Dora,Alice), ~lists(Dora,Alice) guarded by Alice.
+GDS:2 ■ List: lists_shown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_shown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
+GDS:2 ■ List unshown: lists_unshown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_unshown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
+GDS:2 ■ | Dora consents having verified Mail as an email address of Alice.
 GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
-GDS:2 ■ Delist: ~lists(Dora,Alice) <- lists(Dora,Alice) guarded by Alice.
-GDS:3 ■ Lookup: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists(Dora,Alice) guarded by Bob.
+GDS:2 ■ Delist: ~lists_shown(Dora,Alice,Mail,Name) <- lists_shown(Dora,Alice,Mail,Name) guarded by Alice.
+GDS:2 ■ Delist unshown: ~lists_unshown(Dora,Alice,Mail,Name) <- lists_unshown(Dora,Alice,Mail,Name) guarded by Alice.
+GDS:3 ■ Lookup: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists_shown(Dora,Alice,Mail,Name) guarded by Bob.
+GDS:3 ■ Lookup by address: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists_unshown(Dora,Alice,Mail,Name) guarded by Bob.
 GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.

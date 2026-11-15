@@ -5,7 +5,7 @@ GD: Grassroots Distrust
 4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.
 5. ■ Unfriend.  Alice may end her friendship with Bob.
 6. ■ Distrust.  Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends.
-7. ■ Distrust friend.  Alice may declare distrust of her friend Carol.
+7. ■ Distrust friend.  Alice may declare distrust of her friend Carol, provided Alice knows Carol.
 8. ■ Propagate.  Alice may declare distrust of Carol, provided Alice does not know Carol, Alice and Bob are friends and Bob has declared distrust of Carol.
 9. ■ Cease.  Alice may withdraw her declaration of distrust of Carol.
 Pragmas

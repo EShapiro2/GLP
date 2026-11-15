@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -1121,15 +1114,6 @@ Prop
 ,
 Delos
 )
-,
-\mathit{
-majority_for
-}
-(
-Delos
-,
-Prop
-)
  \in c_
 {
 \Alice
@@ -1149,6 +1133,50 @@ Delos
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{
+vote_for
+}
+(
+\Alice
+,
+X1
+,
+Prop
+,
+Delos
+)
+)
+\ge
+Votes
+\land
+Double
+=
+Votes
+\cdot
+2
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+X2
+,
+Delos
+)
+)
+<
+Double
 ,\\
 &
 \text{guarded by } \{
@@ -1211,15 +1239,6 @@ Prop
 ,
 Delos
 )
-,
-\mathit{
-majority_against
-}
-(
-Delos
-,
-Prop
-)
  \in c_
 {
 \Alice
@@ -1239,6 +1258,50 @@ Delos
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{
+vote_against
+}
+(
+\Alice
+,
+X1
+,
+Prop
+,
+Delos
+)
+)
+\ge
+Votes
+\land
+Double
+=
+Votes
+\cdot
+2
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+X2
+,
+Delos
+)
+)
+<
+Double
 ,\\
 &
 \text{guarded by } \{
@@ -1782,6 +1845,19 @@ identity
 &
 \text{provided } 
 \mathit{
+decided
+}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
 voted
 }
 (
@@ -1888,6 +1964,19 @@ identity
 ,\\
 &
 \text{provided } 
+\mathit{
+decided
+}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{
 voted
 }

@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -718,7 +711,7 @@ friend
 pointer
 }
 (
-\ast
+Erin
 ,
 Dave
 )
@@ -1020,7 +1013,7 @@ c_
 pointer
 }
 (
-Bob
+Carol
 ,
 Dave
 )
@@ -1036,11 +1029,74 @@ identity
 pointer
 }
 (
-Bob
+Carol
 ,
 Dave
 )
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+labeled_unpoint_self
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+pointer
+}
+(
+Dave
+,
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+pointer
+}
+(
+Dave
+,
+Dave
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+Dave
+)
+ \notin c_
 {
 \Alice
 }
@@ -1067,9 +1123,11 @@ c_
  \uplus 
 \{
 \mathit{
-feed_item
+item
 }
 (
+Item
+,
 \Alice
 )
 \}
@@ -1080,6 +1138,21 @@ feed_item
 identity
 }
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+,
+\Alice
+)
+ \notin c_
 {
 \Alice
 }
@@ -1103,24 +1176,6 @@ c_
 {
 \Alice
 }
- \uplus 
-\{
-\mathit{
-feed_item
-}
-(
-Carol
-)
-,
-\mathit{
-received
-}
-(
-Carol
-,
-\Bob
-)
-\}
 , \qquad 
 c'_
 {
@@ -1131,6 +1186,28 @@ c_
 {
 \Bob
 }
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+Item
+,
+Carol
+)
+,
+\mathit{
+received
+}
+(
+Item
+,
+Carol
+,
+\Alice
+)
+\}
 ,\\
 &
 \text{provided } 
@@ -1139,10 +1216,17 @@ identity
 }
 ,
 \mathit{
-pointer
+knows
 }
 (
 \Bob
+)
+,
+\mathit{
+item
+}
+(
+Item
 ,
 Carol
 )
@@ -1156,19 +1240,29 @@ identity
 }
 ,
 \mathit{
-knows
+pointer
 }
 (
 \Alice
-)
 ,
-\mathit{
-feed_item
-}
-(
 Carol
 )
  \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+,
+Carol
+)
+ \notin c_
 {
 \Bob
 }

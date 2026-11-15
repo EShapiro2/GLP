@@ -11,7 +11,8 @@ GSN: Grassroots Social Network
 10. ■ Remove.  Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo.
 11. ■ Leave.  Bob may end his membership in Alice's Grupo.
 12. ■ Post.  Bob may send Text to the group Grupo of Alice, provided Bob is a member of the group Grupo of Alice.
-13. ■ Deliver.  Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Bob as a member of the group Grupo and Alice has Carol as a member of the group Grupo.
+13. ■ Deliver.  Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and Alice has Carol as a member of the group Grupo.
+14. ■ Deliver leader.  Alice delivers Text of Bob in Grupo to Alice, provided Alice is the leader of Grupo and Alice has the post Text of Bob in Grupo.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>

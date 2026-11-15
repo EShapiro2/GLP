@@ -6,7 +6,7 @@ CnC        syntactically_grassroots_with_wards(acquaint, [organisation], [guardi
 DAO        syntactically_grassroots
 DGC        syntactically_grassroots
 FDAO       syntactically_grassroots
-GAI        syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(wards_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])
+GAI        syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])
 GAN        syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(ward_acquaint, ward(1, organisation, no_guardian), free(2)), relay(wards_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])
 GAS        syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])
 GB         syntactically_grassroots
@@ -43,7 +43,7 @@ GRA-SS     syntactically_grassroots
 GRV        syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])
 GSG        syntactically_grassroots
 GSN        syntactically_grassroots
-GSNP       syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(wards_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])
+GSNP       syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])
 GSNW       syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])
 GSV        syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])
 GnW        syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])
@@ -51,7 +51,6 @@ JOINT      syntactically_grassroots
 LDAO       syntactically_grassroots
 LIB        syntactically_grassroots
 MCS        syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(ward_acquaint, ward(1, organisation, no_guardian), free(2)), relay(wards_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])
-ORH        not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable), volition(raise, 1, 2), volition(provider_raise, 1, 2)])
 REC        syntactically_grassroots
 SC         syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(ward_acquaint, ward(1, organisation, no_guardian), free(2)), relay(wards_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])
 SCB        syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(ward_acquaint, ward(1, organisation, no_guardian), free(2)), relay(wards_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])

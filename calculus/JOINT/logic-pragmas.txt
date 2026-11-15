@@ -8,7 +8,7 @@ Logic pragmas.
 Vocabulary: x has an account named n = account(x,n); x holds the joint account n with y = joint(x,n,y); x keeps m z-coins in n with y = joint_coin(x,z,n,y,*m).
 x and y hold the joint account n: x holds the joint account n with y and y holds the joint account n with x.
 After x and y open the joint account n under a new name of x's, which requires x does not have an account named n: x has an account named n and x and y hold the joint account n.
-After x moves m z-coins into the joint account n of x and y: no longer x holds m z-coins and x keeps m z-coins in n with y.
-After y moves m z-coins into the joint account n of x and y: no longer y holds m z-coins and x keeps m z-coins in n with y.
+After x moves m z-coins into the joint account n of x and y: no longer x holds m z-coins, x keeps m z-coins in n with y and y knows z.
+After y moves m z-coins into the joint account n of x and y: no longer y holds m z-coins, x keeps m z-coins in n with y and x knows z.
 After x and y move m z-coins from the joint account n to x: no longer x keeps m z-coins in n with y and x holds m z-coins.
 After x and y move m z-coins from the joint account n to y: no longer x keeps m z-coins in n with y and y holds m z-coins.

@@ -15,4 +15,4 @@ GDO:2. ■ Point transitive: Alice, who knows Carol and points to Bob who points
 GDO:3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.
 GDO-L:1. ■ Labeled point friend: Alice, who has no Dave-pointer to her friend Bob, may add one, if Bob has a Dave-pointer.
 GDO-L:2. ■ Labeled point transitive: Alice, who knows Carol and either has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol.
-GDO-L:3. ■ Labeled unpoint: Alice, who has a Dave-pointer to Bob, may remove it.
+GDO-L:3. ■ Labeled unpoint: Alice, who has a Dave-pointer to Carol, may remove it, unless Carol is Dave and her friend.

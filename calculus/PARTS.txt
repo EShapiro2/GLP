@@ -1,0 +1,15 @@
+The republication is in two parts.
+
+Part 1, this commit: the 37 contracts outside GO's family, from Calculus code 2754268, each certified by GLP's checker and
+compiled to a platform.glp that loads, at one run on GLP migration 1119642:
+AGORA CSSN DAO DGC FDAO GAI GAS GB GC GD-S GD GDC GDO-L GDO-LB GDO GDS GFF-FR-BC GFF-FR GFF-PS GFF GFP GKK GPD GPE GRV
+GSG GSN GSNP GSNW GSV GnW JOINT LDAO LIB REC SGSG STAY.
+An owner who adopted one of them before takes it again: python3 calculus/tools/adopt.py --write NAME <dir>.
+
+Part 2, to come: GO's family and GRA's, 24 contracts, which are in this directory as first published (f1d2f99) and are
+not to be adopted from it now:
+CB CMB CnC GAN GBCC GBank GCC GCoop GCorp GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC GRA GRA-SS.
+They wait on const(X) and the wildcard of vGLP on migration, and on the acts of an organisation being written as GO's
+paper has them.  ORH is held out.
+
+In STATE.txt, STATUS.txt and VERDICTS.txt the lines of the 37 are of this run and the lines of the 24 of the first.

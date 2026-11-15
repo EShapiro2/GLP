@@ -14,8 +14,8 @@ x has no participation in p of z: x is a participant of p of z with no one and n
 After x publishes p by signing it, which requires x does not hold p of x: x holds p of x.
 After x declares trust in y as a developer, which requires x does not trust y as a developer: x trusts y as a developer.
 After x withdraws x's declaration of trust in y as a developer: no longer x trusts y as a developer.
-After x offers p of z to y: y holds p of z.
+After x offers p of z to y: y holds p signed by x of z.
 After x installs x's own p, which requires x does not have p of x installed: x has p of x installed.
 After x installs p of z, which requires x does not have p of z installed: x has p of z installed.
-After x invites y to join in p of z: y holds p of z, y has p of z installed, x is a participant of p of z with y and y is a participant of p of z with x.
+After x invites y to join in p of z: y holds p signed by x of z, y has p signed by x of z installed, x is a participant of p of z with y and y is a participant of p of z with x.
 After x leaves p of z: no longer x has p of z installed and x has no participation in p of z.

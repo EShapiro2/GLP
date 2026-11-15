@@ -1,13 +1,14 @@
 STAY: Grassroots Stays
 STAY extends GC.
 Alice and Bob are persons, Place a place and Night a night, Today a date, Sum a number.
-1. ◆ List place: Alice may list Place under a new name of hers, provided Alice can host guests at Place.
+1. ◆ List place: Alice may list Place under a new name of hers, provided Alice can host guests.
 2. ■ Book: Bob may book a stay at Alice's Place on Night for Sum Alice-coins, with the consent of Alice, provided Bob knows Alice, Alice lists Place, the current date is Today and Night is more than Today.
 3. ■ Cancel: Alice may cancel Bob's stay at Place on Night for Sum Alice-coins, provided the current date is Today and Night is more than Today.
 4. ■ Review: Bob may review his stay at Alice's Place on Night, provided Bob has a stay at Alice's Place on Night for Sum Alice-coins, the current date is Today and Night is at most Today.
 Logic pragmas.
-Vocabulary: x can host guests at p = hosts(x,p); x lists p = listed(x,p); the current date is e, for x = today(x,e); y has a stay at x's p on e for n x-coins = stay(y,x,p,e,n); x has p booked on e = booked(x,p,e); x keeps y's review of p on e = review(x,y,p,e).
+Vocabulary: x can host guests = hosts(x); x lists p = listed(x,p); the current date is e, for x = today(x,e); y has a stay at x's p on e for n x-coins = stay(y,x,p,e,n); x has p booked on e = booked(x,p,e); x keeps y's review of p on e = review(x,y,p,e).
 After x lists p under a new name of x's, which requires x does not list p: x lists p.
 After y books a stay at x's p on e for n x-coins, which requires x does not have p booked on e: y has a stay at x's p on e for n x-coins, x has p booked on e, no longer y holds n x-coins and x holds n x-coins.
 After x cancels y's stay at p on e for n x-coins: no longer y has a stay at x's p on e for n x-coins, no longer x has p booked on e, no longer x holds n x-coins and y holds n x-coins.
 After y reviews y's stay at x's p on e, which requires x does not keep y's review of p on e: x keeps y's review of p on e.
+Environment: x can host guests.

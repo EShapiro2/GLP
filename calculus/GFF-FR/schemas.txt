@@ -1,5 +1,5 @@
 GFF-FR: Fault-Resilient GFF
 GFF-FR extends GFF.
-GFF-FR:0 - | D > 1, an integer, is a parameter of GFF-FR.
-GFF-FR:0 - | Alice, Bob and Carol are persons.
-GFF-FR:1 ■ Redundant point: pointer(Alice,Bob,Carol) <- pointer(Alice,_,Carol), pointer(Alice,<D,Carol), friend(Alice,Bob), friend(Bob,Alice), pointer(Bob,_,Carol), ~pointer(Alice,Bob,Carol).
+GFF-FR:0 - | d > 1, an integer, is a parameter of GFF-FR.
+GFF-FR:0 - | Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
+GFF-FR:1 ■ Redundant point: pointer(Alice,Bob,Carol) <- pointer(Alice,Dave,Carol), pointer(Alice,<D,Carol), friend(Alice,Bob), friend(Bob,Alice), pointer(Bob,Erin,Carol), ~pointer(Alice,Bob,Carol) possibly Alice=Dave, Alice=Erin, Bob=Dave, Bob=Erin, Carol=Dave, Carol=Erin, Dave=Erin.
