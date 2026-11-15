@@ -3646,10 +3646,17 @@ condition_places1([], _, _, _, []).
 condition_places1([R|_], G, Vs, Rf, Cs?) :- ground(R?), integer(G?), ground(Vs?), ground(Rf?) |
     rs_lists(R?, _, M0, K, N),
     uncleared(M0?, M),
-    app(K?, M?, Rq),
+    app(K?, M?, Rq0),
+    seen_atoms(Rq0?, Rq),
+    seen_atoms(N?, N1),
     cond_atoms(Rq?, req, G?, Vs?, Rf?, C1),
-    cond_atoms(N?, forb, G?, Vs?, Rf?, C2),
+    cond_atoms(N1?, forb, G?, Vs?, Rf?, C2),
     app(C1?, C2?, Cs).
+%% The atoms of As that a view may show: all but the day, today(d), which the agent holds beside its state and the view never shows (README, 10), so the widget, which offers an act only where the view's atoms hold what it requires, is told no condition on it, and a variable only today(d) holds at the proposer's role is bound by no atom of the view and has a field: "a day that an act records is among its arguments, named by its proposer, and each participant that requires it checks it against the date of its own phone" (vGLP, Section 5.4; Mac #1 through Code #31, vGLP_inbox, 2026-11-15 21:27 UTC: GB's Issue bond was drawn on no phone).
+procedure seen_atoms(Atoms?, Atoms).
+seen_atoms([], []).
+seen_atoms([atom(today, _)|As], Bs?) :- seen_atoms(As?, Bs).
+seen_atoms([A|As], [A?|Bs?]) :- otherwise | seen_atoms(As?, Bs).
 procedure cond_atoms(Atoms?, Constant?, Integer?, Args?, Preds?, Preconds).
 cond_atoms([], _, _, _, _, []).
 cond_atoms([times(_, A)|As], Sg, G, Vs, Rf, Cs?) :- cond_atoms([A?|As?], Sg?, G?, Vs?, Rf?, Cs).
