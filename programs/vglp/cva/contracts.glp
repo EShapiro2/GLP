@@ -511,7 +511,7 @@ pragmas_named(intros, pragmas([list('"Contacts"', [knows])],
     [standing(greet, arrive, leave)])).
 pragmas_named(days, pragmas([list('"Dates"', [date])],
     [act(dawn, '"Dawn"', [], none, '"Dates"', by([1])),
-     act(advance, '"Advance"', [], none, '"Dates"', by([1]))])).
+     act(advance, '"Advance"', ['""', '"Day"'], none, '"Dates"', by([1]))])).
 pragmas_named(linear, pragmas([list('"Levels"', [level])],
     [act(start, '"Start"', [], none, '"Levels"', by([1])),
      act(refuel, '"Refuel"', [], none, '"Levels"', by([1]))])).

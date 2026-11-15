@@ -27,7 +27,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Dawn", [act(dawn, 1, [1], [forb(dated, [])], [], [], [], [])]), button("Advance", [act(advance, 1, [1], [req(today, [at(2)]), req(date, [any])], [2], [], [], [])])])
+Request? =::= social_menu([button("Dawn", [act(dawn, 1, [1], [forb(dated, [])], [], [], [], [])]), button("Advance", [act(advance, 1, [1], [req(date, [any])], [], [field(2, "Day", number)], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -195,7 +195,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with(environment([today], [schema(dawn, [], [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [], [atom(dated, [])])]), nschema(advance, [num(t), num(d)], gt(num(d), num(t)), [rs(guarded, [atom(date, [num(d)])], [atom(date, [num(t)])], [atom(today, [num(d)])], [])])]), pragmas([list("Dates", [date])], [act(dawn, "Dawn", [], none, "Dates", by([1])), act(advance, "Advance", [], none, "Dates", by([1]))], [], nolook, version(1, 1))))
+contract("", with(environment([today], [schema(dawn, [], [rs(guarded, [atom(dated, []), atom(date, [num(0)])], [], [], [atom(dated, [])])]), nschema(advance, [num(t), num(d)], gt(num(d), num(t)), [rs(guarded, [atom(date, [num(d)])], [atom(date, [num(t)])], [atom(today, [num(d)])], [])])]), pragmas([list("Dates", [date])], [act(dawn, "Dawn", [], none, "Dates", by([1])), act(advance, "Advance", ["", "Day"], none, "Dates", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
