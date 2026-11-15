@@ -1,0 +1,4 @@
+Q: Second
+Q instantiates C with blue(x) for marked(x).
+Vocabulary: x is blue = blue(x).
+Q:0 - | Alice is a person.

@@ -1,0 +1,7 @@
+U: Undertaking alone (flat text)
+K:0 - | Alice, Bob and Carol are persons.
+K:1 ■ Give: Alice and Bob may jointly Bob has a token.
+K:1 ■ Take: Alice may Alice has a token.
+U:0 - | Alice is a person.
+U:1 ○ | Care.
+U:1 ○ | Alice will take care.

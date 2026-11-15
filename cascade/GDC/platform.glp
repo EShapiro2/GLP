@@ -2,8 +2,8 @@
 %% (vGLP, Definition "Canonical Compilation").  Do not edit: edit
 %% the .vglp source and compile again.
 
-Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer) ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer) ; dmint(Peer, Integer, Integer) ; swap_dc(Peer, Peer, Peer, Integer, Integer, Peer, Integer) ; swap_cd(Peer, Peer, Peer, Integer, Peer, Integer, Integer) ; swap_dd(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer) ; pay_d(Peer, Peer, Integer, Integer) ; redeem_dc(Peer, Peer, Integer, Peer) ; redeem_cd(Peer, Peer, Integer, Peer) ; redeem_dd(Peer, Peer, Integer, Integer, Peer).
-Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; mint(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer) ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer) ; dmint(Peer, Integer, Integer) ; swap_dc(Peer, Peer, Peer, Integer, Integer, Peer, Integer) ; swap_cd(Peer, Peer, Peer, Integer, Peer, Integer, Integer) ; swap_dd(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer) ; pay_d(Peer, Peer, Integer, Integer) ; redeem_dc(Peer, Peer, Integer, Peer) ; redeem_cd(Peer, Peer, Integer, Peer) ; redeem_dd(Peer, Peer, Integer, Integer, Peer).
+Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; issue(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer) ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer) ; first_issue(Peer, Integer, Speech).
+Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; issue(Peer, Integer) ; swap(Peer, Peer, Peer, Integer, Peer, Integer) ; pay(Peer, Peer, Integer) ; redeem(Peer, Peer, Peer) ; first_issue(Peer, Integer, Speech).
 Request ::= propose(Proposal).
 RequestMenu ::= social_menu(List(MenuEntry)).
 MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).
@@ -13,7 +13,7 @@ MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
 MenuField ::= field(Integer, String, MenuFieldType).
 MenuFieldType ::= person ; key ; agent ; text ; number.
 MenuWord ::= say(String) ; at(Integer).
-Atom ::= identity ; knows(Peer) ; coin(Peer) ; dcoin(Peer, Integer).
+Atom ::= identity ; knows(Peer) ; coin(Peer) ; issued_in(Speech) ; issued_in.
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
 RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs ::= [] ; [RArg | RArgs].
@@ -223,46 +223,33 @@ procedure atom_of(GAtom?, Shown).
 atom_of(g(identity, []), shown(identity)).
 atom_of(g(knows, [p(V1)]), shown(knows(V1?))).
 atom_of(g(coin, [p(V1)]), shown(coin(V1?))).
-atom_of(g(dcoin, [p(V1), n(V2)]), shown(dcoin(V1?, V2?))).
+atom_of(g(issued_in, [s(V1)]), shown(issued_in(V1?))).
+atom_of(g(issued_in, []), shown(issued_in)).
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Carol')])], []), rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar(u), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num(k)], [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]), schema(dmint, [num(f), num(k)], [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])]), schema(swap_dc, [pvar(u), num(f), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_cd, [pvar(u), num(k), pvar(v), num(f1), num(k1)], [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_dd, [pvar(u), num(f), num(k), pvar(v), num(f1), num(k1)], [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay_d, [num(f), num(k)], [rs(guarded, [], [times(num(k), atom(dcoin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(dcoin, [role(2), num(f)]))], [], [atom(identity, [])], [])]), schema(redeem_dc, [num(f), pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]), schema(redeem_cd, [num(f1), pvar(r)], [rs(guarded, [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])]), schema(redeem_dd, [num(f), num(f1), pvar(r)], [rs(guarded, [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])])]).
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, []), atom(issued_in, [svar('Dollar')])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(first_issue, [num('Sum'), svar('Dollar')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)])), atom(issued_in, [svar('Dollar')])], [], [atom(identity, [])], [atom(issued_in, [any])])])]).
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])])).
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])).
-schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Carol')])], []), rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])).
-schema_entry(mint, schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])])).
-schema_entry(swap, schema(swap, [pvar(u), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])])).
-schema_entry(pay, schema(pay, [num(k)], [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])])).
-schema_entry(redeem, schema(redeem, [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])])).
-schema_entry(dmint, schema(dmint, [num(f), num(k)], [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])])).
-schema_entry(swap_dc, schema(swap_dc, [pvar(u), num(f), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])])).
-schema_entry(swap_cd, schema(swap_cd, [pvar(u), num(k), pvar(v), num(f1), num(k1)], [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])])).
-schema_entry(swap_dd, schema(swap_dd, [pvar(u), num(f), num(k), pvar(v), num(f1), num(k1)], [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])])).
-schema_entry(pay_d, schema(pay_d, [num(f), num(k)], [rs(guarded, [], [times(num(k), atom(dcoin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(dcoin, [role(2), num(f)]))], [], [atom(identity, [])], [])])).
-schema_entry(redeem_dc, schema(redeem_dc, [num(f), pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])])).
-schema_entry(redeem_cd, schema(redeem_cd, [num(f1), pvar(r)], [rs(guarded, [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])])).
-schema_entry(redeem_dd, schema(redeem_dd, [num(f), num(f1), pvar(r)], [rs(guarded, [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])])).
+schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])])).
+schema_entry(issue, schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, []), atom(issued_in, [svar('Dollar')])], [])])).
+schema_entry(swap, schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])])).
+schema_entry(pay, schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])])).
+schema_entry(redeem, schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])])).
+schema_entry(first_issue, schema(first_issue, [num('Sum'), svar('Dollar')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)])), atom(issued_in, [svar('Dollar')])], [], [atom(identity, [])], [atom(issued_in, [any])])])).
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
 schema_numeric(establish, numeric([cj(every, true)], [], [])).
 schema_numeric(acquaint, numeric([cj(every, true)], [], [])).
 schema_numeric(introduce, numeric([cj(every, true)], [], [])).
-schema_numeric(mint, numeric([cj(every, true)], [], [])).
+schema_numeric(issue, numeric([cj(every, true)], [svar('Dollar')], [])).
 schema_numeric(swap, numeric([cj(every, true)], [], [])).
 schema_numeric(pay, numeric([cj(every, true)], [], [])).
 schema_numeric(redeem, numeric([cj(every, true)], [], [])).
-schema_numeric(dmint, numeric([cj(every, true)], [], [])).
-schema_numeric(swap_dc, numeric([cj(every, true)], [], [])).
-schema_numeric(swap_cd, numeric([cj(every, true)], [], [])).
-schema_numeric(swap_dd, numeric([cj(every, true)], [], [])).
-schema_numeric(pay_d, numeric([cj(every, true)], [], [])).
-schema_numeric(redeem_dc, numeric([cj(every, true)], [], [])).
-schema_numeric(redeem_cd, numeric([cj(every, true)], [], [])).
-schema_numeric(redeem_dd, numeric([cj(every, true)], [], [])).
+schema_numeric(first_issue, numeric([cj(every, true)], [], [])).
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
@@ -274,20 +261,16 @@ schema_held(_, []) :- otherwise | true.
 procedure schema_base(Constant?, Integer).
 schema_base(establish, 1).
 schema_base(acquaint, 1).
-schema_base(introduce, 1).
-schema_base(mint, 1).
+schema_base(introduce, 2).
+schema_base(issue, 1).
 schema_base(swap, 1).
 schema_base(pay, 1).
 schema_base(redeem, 1).
-schema_base(dmint, 1).
-schema_base(swap_dc, 1).
-schema_base(swap_cd, 1).
-schema_base(swap_dd, 1).
-schema_base(pay_d, 1).
-schema_base(redeem_dc, 1).
-schema_base(redeem_cd, 1).
-schema_base(redeem_dd, 1).
+schema_base(first_issue, 1).
 schema_base(_, 1) :- otherwise | true.
+
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
 
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
@@ -302,69 +285,41 @@ procedure binding_of(Class?, Constant, Binding).
 binding_of(establish(V1), establish, [b(role(1), p(V1?))]).
 binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))]).
 binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))]).
-binding_of(mint(V1, V2), mint, [b(role(1), p(V1?)), b(num(k), n(V2?))]).
-binding_of(swap(V1, V2, V3, V4, V5, V6), swap, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(u), p(V3?)), b(num(k), n(V4?)), b(pvar(v), p(V5?)), b(num(k1), n(V6?))]).
-binding_of(pay(V1, V2, V3), pay, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(k), n(V3?))]).
-binding_of(redeem(V1, V2, V3), redeem, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(r), p(V3?))]).
-binding_of(dmint(V1, V2, V3), dmint, [b(role(1), p(V1?)), b(num(f), n(V2?)), b(num(k), n(V3?))]).
-binding_of(swap_dc(V1, V2, V3, V4, V5, V6, V7), swap_dc, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(u), p(V3?)), b(num(f), n(V4?)), b(num(k), n(V5?)), b(pvar(v), p(V6?)), b(num(k1), n(V7?))]).
-binding_of(swap_cd(V1, V2, V3, V4, V5, V6, V7), swap_cd, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(u), p(V3?)), b(num(k), n(V4?)), b(pvar(v), p(V5?)), b(num(f1), n(V6?)), b(num(k1), n(V7?))]).
-binding_of(swap_dd(V1, V2, V3, V4, V5, V6, V7, V8), swap_dd, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar(u), p(V3?)), b(num(f), n(V4?)), b(num(k), n(V5?)), b(pvar(v), p(V6?)), b(num(f1), n(V7?)), b(num(k1), n(V8?))]).
-binding_of(pay_d(V1, V2, V3, V4), pay_d, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(f), n(V3?)), b(num(k), n(V4?))]).
-binding_of(redeem_dc(V1, V2, V3, V4), redeem_dc, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(f), n(V3?)), b(pvar(r), p(V4?))]).
-binding_of(redeem_cd(V1, V2, V3, V4), redeem_cd, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(f1), n(V3?)), b(pvar(r), p(V4?))]).
-binding_of(redeem_dd(V1, V2, V3, V4, V5), redeem_dd, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(f), n(V3?)), b(num(f1), n(V4?)), b(pvar(r), p(V5?))]).
+binding_of(issue(V1, V2), issue, [b(role(1), p(V1?)), b(num('Sum'), n(V2?)), b(svar('Dollar'), lv(issue, 'Dollar'))]).
+binding_of(swap(V1, V2, V3, V4, V5, V6), swap, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(num('Sum'), n(V4?)), b(pvar('Dave'), p(V5?)), b(num('Total'), n(V6?))]).
+binding_of(pay(V1, V2, V3), pay, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Sum'), n(V3?))]).
+binding_of(redeem(V1, V2, V3), redeem, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))]).
+binding_of(first_issue(V1, V2, V3), first_issue, [b(role(1), p(V1?)), b(num('Sum'), n(V2?)), b(svar('Dollar'), s(V3?))]).
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
 class_of(establish, B, D, establish(V1?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1).
 class_of(acquaint, B, D, acquaint(V1?, V2?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2).
 class_of(introduce, B, D, introduce(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar('Carol'), B?, D?, V3).
-class_of(mint, B, D, mint(V1?, V2?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_num(num(k), B?, V2).
-class_of(swap, B, D, swap(V1?, V2?, V3?, V4?, V5?, V6?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(u), B?, D?, V3), val_num(num(k), B?, V4), val_peer(pvar(v), B?, D?, V5), val_num(num(k1), B?, V6).
-class_of(pay, B, D, pay(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_num(num(k), B?, V3).
-class_of(redeem, B, D, redeem(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(r), B?, D?, V3).
-class_of(dmint, B, D, dmint(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_num(num(f), B?, V2), val_num(num(k), B?, V3).
-class_of(swap_dc, B, D, swap_dc(V1?, V2?, V3?, V4?, V5?, V6?, V7?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(u), B?, D?, V3), val_num(num(f), B?, V4), val_num(num(k), B?, V5), val_peer(pvar(v), B?, D?, V6), val_num(num(k1), B?, V7).
-class_of(swap_cd, B, D, swap_cd(V1?, V2?, V3?, V4?, V5?, V6?, V7?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(u), B?, D?, V3), val_num(num(k), B?, V4), val_peer(pvar(v), B?, D?, V5), val_num(num(f1), B?, V6), val_num(num(k1), B?, V7).
-class_of(swap_dd, B, D, swap_dd(V1?, V2?, V3?, V4?, V5?, V6?, V7?, V8?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar(u), B?, D?, V3), val_num(num(f), B?, V4), val_num(num(k), B?, V5), val_peer(pvar(v), B?, D?, V6), val_num(num(f1), B?, V7), val_num(num(k1), B?, V8).
-class_of(pay_d, B, D, pay_d(V1?, V2?, V3?, V4?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_num(num(f), B?, V3), val_num(num(k), B?, V4).
-class_of(redeem_dc, B, D, redeem_dc(V1?, V2?, V3?, V4?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_num(num(f), B?, V3), val_peer(pvar(r), B?, D?, V4).
-class_of(redeem_cd, B, D, redeem_cd(V1?, V2?, V3?, V4?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_num(num(f1), B?, V3), val_peer(pvar(r), B?, D?, V4).
-class_of(redeem_dd, B, D, redeem_dd(V1?, V2?, V3?, V4?, V5?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_num(num(f), B?, V3), val_num(num(f1), B?, V4), val_peer(pvar(r), B?, D?, V5).
+class_of(issue, B, D, issue(V1?, V2?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_num(num('Sum'), B?, V2).
+class_of(swap, B, D, swap(V1?, V2?, V3?, V4?, V5?, V6?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar('Carol'), B?, D?, V3), val_num(num('Sum'), B?, V4), val_peer(pvar('Dave'), B?, D?, V5), val_num(num('Total'), B?, V6).
+class_of(pay, B, D, pay(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_num(num('Sum'), B?, V3).
+class_of(redeem, B, D, redeem(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_peer(role(2), B?, D?, V2), val_peer(pvar('Carol'), B?, D?, V3).
+class_of(first_issue, B, D, first_issue(V1?, V2?, V3?)) :- ground(B?), ground(D?) | val_peer(role(1), B?, D?, V1), val_num(num('Sum'), B?, V2), val_speech(svar('Dollar'), B?, D?, V3).
 
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(establish(V1), _, establish(V1?)).
 name_class(acquaint(V1, V2), _, acquaint(V1?, V2?)).
 name_class(introduce(V1, V2, V3), _, introduce(V1?, V2?, V3?)).
-name_class(mint(V1, V2), _, mint(V1?, V2?)).
+name_class(issue(V1, V2), _, issue(V1?, V2?)).
 name_class(swap(V1, V2, V3, V4, V5, V6), _, swap(V1?, V2?, V3?, V4?, V5?, V6?)).
 name_class(pay(V1, V2, V3), _, pay(V1?, V2?, V3?)).
 name_class(redeem(V1, V2, V3), _, redeem(V1?, V2?, V3?)).
-name_class(dmint(V1, V2, V3), _, dmint(V1?, V2?, V3?)).
-name_class(swap_dc(V1, V2, V3, V4, V5, V6, V7), _, swap_dc(V1?, V2?, V3?, V4?, V5?, V6?, V7?)).
-name_class(swap_cd(V1, V2, V3, V4, V5, V6, V7), _, swap_cd(V1?, V2?, V3?, V4?, V5?, V6?, V7?)).
-name_class(swap_dd(V1, V2, V3, V4, V5, V6, V7, V8), _, swap_dd(V1?, V2?, V3?, V4?, V5?, V6?, V7?, V8?)).
-name_class(pay_d(V1, V2, V3, V4), _, pay_d(V1?, V2?, V3?, V4?)).
-name_class(redeem_dc(V1, V2, V3, V4), _, redeem_dc(V1?, V2?, V3?, V4?)).
-name_class(redeem_cd(V1, V2, V3, V4), _, redeem_cd(V1?, V2?, V3?, V4?)).
-name_class(redeem_dd(V1, V2, V3, V4, V5), _, redeem_dd(V1?, V2?, V3?, V4?, V5?)).
+name_class(first_issue(V1, V2, V3), _, first_issue(V1?, V2?, V3?)).
 
 procedure request_name(Class?, PName).
 request_name(establish(V1), pname(establish(V1?))).
 request_name(acquaint(V1, V2), pname(acquaint(V1?, V2?))).
 request_name(introduce(V1, V2, V3), pname(introduce(V1?, V2?, V3?))).
-request_name(mint(V1, V2), pname(mint(V1?, V2?))).
+request_name(issue(V1, V2), pname(issue(V1?, V2?))).
 request_name(swap(V1, V2, V3, V4, V5, V6), pname(swap(V1?, V2?, V3?, V4?, V5?, V6?))).
 request_name(pay(V1, V2, V3), pname(pay(V1?, V2?, V3?))).
 request_name(redeem(V1, V2, V3), pname(redeem(V1?, V2?, V3?))).
-request_name(dmint(V1, V2, V3), pname(dmint(V1?, V2?, V3?))).
-request_name(swap_dc(V1, V2, V3, V4, V5, V6, V7), pname(swap_dc(V1?, V2?, V3?, V4?, V5?, V6?, V7?))).
-request_name(swap_cd(V1, V2, V3, V4, V5, V6, V7), pname(swap_cd(V1?, V2?, V3?, V4?, V5?, V6?, V7?))).
-request_name(swap_dd(V1, V2, V3, V4, V5, V6, V7, V8), pname(swap_dd(V1?, V2?, V3?, V4?, V5?, V6?, V7?, V8?))).
-request_name(pay_d(V1, V2, V3, V4), pname(pay_d(V1?, V2?, V3?, V4?))).
-request_name(redeem_dc(V1, V2, V3, V4), pname(redeem_dc(V1?, V2?, V3?, V4?))).
-request_name(redeem_cd(V1, V2, V3, V4), pname(redeem_cd(V1?, V2?, V3?, V4?))).
-request_name(redeem_dd(V1, V2, V3, V4, V5), pname(redeem_dd(V1?, V2?, V3?, V4?, V5?))).
+request_name(first_issue(V1, V2, V3), pname(first_issue(V1?, V2?, V3?))).
 request_name(_, nopname) :- otherwise | true.
 
 procedure tabs(List(Tab)).
@@ -372,15 +327,12 @@ tabs([tab('Contacts', knows), tab('Coins', coin, counted)]).
 
 procedure sentence_of(Class?, Peer?, Asked).
 sentence_of(acquaint(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' wishes that you know each other.')])], Me?, Ws).
-sentence_of(introduce(V1, V2, V3), Me, Ws?) :- ground(V2?), ground(V1?), ground(V3?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to introduce '), person(V3?), text(' to you.')])], Me?, Ws).
+sentence_of(introduce(V1, V2, V3), Me, Ws?) :- ground(V1?), ground(V2?), ground(V3?), ground(Me?) | ask_of([q(V1?, 2, [person(V2?), text(' asks to introduce '), person(V3?), text(' to you.')])], Me?, Ws).
 sentence_of(swap(V1, V2, _, V4, V5, V6), Me, Ws?) :- ground(V2?), ground(V1?), ground(V4?), ground(V5?), ground(V6?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to swap coins with you.'), valued('amount given', V4?), named('issuer wanted', V5?), valued('amount wanted', V6?)])], Me?, Ws).
-sentence_of(swap_dc(V1, V2, _, _, V5, V6, V7), Me, Ws?) :- ground(V2?), ground(V1?), ground(V5?), ground(V6?), ground(V7?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to swap coins with you.'), valued('amount given', V5?), named('issuer wanted', V6?), valued('amount wanted', V7?)])], Me?, Ws).
-sentence_of(swap_cd(V1, V2, _, V4, V5, V6, V7), Me, Ws?) :- ground(V2?), ground(V1?), ground(V4?), ground(V5?), ground(V6?), ground(V7?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to swap coins with you.'), valued('amount given', V4?), named('issuer wanted', V5?), valued('denomination wanted', V6?), valued('amount wanted', V7?)])], Me?, Ws).
-sentence_of(swap_dd(V1, V2, _, _, V5, V6, V7, V8), Me, Ws?) :- ground(V2?), ground(V1?), ground(V5?), ground(V6?), ground(V7?), ground(V8?), ground(Me?) | ask_of([q(V2?, 1, [person(V1?), text(' asks to swap coins with you.'), valued('amount given', V5?), named('issuer wanted', V6?), valued('denomination wanted', V7?), valued('amount wanted', V8?)])], Me?, Ws).
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 exported procedure contract(String, Exported).
-contract('GDC: Grassroots Denominated Coins\nGDC extends GC.\nAlice and Bob are persons.  Dollar names one denomination, and a Dollar-denominated Alice-coin is an Alice-coin issued as Alice\'s debt of one Dollar.\n1. ■ Minting.  Alice may decide to issue Alice-coins denominated by a fiat currency.\n2. ○ Denomination.  A Dollar-denominated Alice-coin is Alice\'s debt of one Dollar, due now; Alice redeems it on presentation at face value, by a Dollar-denominated coin the bearer accepts or by one Dollar.\n3. ○ Pricing.  Alice accepts Dollar-denominated Alice-coins in payment for their offerings at one Dollar each.', with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Carol')])], []), rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num(k)], [rs(guarded, [], [times(num(k), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]), schema(dmint, ['Alice'], [num(f), num(k)], [rs(guarded, [times(num(k), atom(dcoin, [role(1), num(f)]))], [], [atom(identity, [])], [])]), schema(swap_dc, ['Alice', 'Bob'], [pvar(u), num(f), num(k), pvar(v), num(k1)], [rs(guarded, [times(num(k1), atom(coin, [pvar(v)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_cd, ['Alice', 'Bob'], [pvar(u), num(k), pvar(v), num(f1), num(k1)], [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(coin, [pvar(u)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_dd, ['Alice', 'Bob'], [pvar(u), num(f), num(k), pvar(v), num(f1), num(k1)], [rs(guarded, [times(num(k1), atom(dcoin, [pvar(v), num(f1)])), atom(knows, [pvar(v)])], [times(num(k), atom(dcoin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num(k), atom(dcoin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(dcoin, [pvar(v), num(f1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay_d, ['Alice', 'Bob'], [num(f), num(k)], [rs(guarded, [], [times(num(k), atom(dcoin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num(k), atom(dcoin, [role(2), num(f)]))], [], [atom(identity, [])], [])]), schema(redeem_dc, ['Alice', 'Bob'], [num(f), pvar(r)], [rs(guarded, [atom(coin, [pvar(r)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(coin, [pvar(r)])], [atom(identity, [])], [])]), schema(redeem_cd, ['Alice', 'Bob'], [num(f1), pvar(r)], [rs(guarded, [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])]), schema(redeem_dd, ['Alice', 'Bob'], [num(f), num(f1), pvar(r)], [rs(guarded, [atom(dcoin, [pvar(r), num(f1)]), atom(knows, [pvar(r)])], [atom(dcoin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(dcoin, [role(2), num(f)])], [atom(dcoin, [pvar(r), num(f1)])], [atom(identity, [])], [])])], pragmas([list('Contacts', [knows]), list('Coins', [coin])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[], [person(1), text(' asks to introduce '), person(3), text(' to you.')]]), 'Contacts', by([1])), act(mint, 'Mint', ['', amount], none, 'Coins', by([1])), act(dmint, 'Dmint', ['', denomination, amount], none, '', by([1])), act(swap, 'Swap', ['', '', '', 'amount given', 'issuer wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins with you.')]]), '', by([1])), act(swap_dc, 'Swap', ['', '', '', '', 'amount given', 'issuer wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins with you.')]]), '', by([1])), act(swap_cd, 'Swap', ['', '', '', 'amount given', 'issuer wanted', 'denomination wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins with you.')]]), '', by([1])), act(swap_dd, 'Swap', ['', '', '', '', 'amount given', 'issuer wanted', 'denomination wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins with you.')]]), '', by([1])), act(pay, 'Pay', ['', '', amount], none, '', by([1])), act(pay_d, 'Pay', ['', '', '', amount], none, '', by([1])), act(redeem, 'Redeem', ['', '', 'issuer wanted'], none, '', by([1])), act(redeem_dc, 'Redeem', ['', '', '', 'issuer wanted'], none, '', by([1])), act(redeem_cd, 'Redeem', ['', '', 'denomination wanted', 'issuer wanted'], none, '', by([1])), act(redeem_dd, 'Redeem', ['', '', '', 'denomination wanted', 'issuer wanted'], none, '', by([1]))], [], nolook, version(1, 1)))).
+contract('GDC: Grassroots Denominated Coins\nGDC extends and restricts GC.\n*Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice\'s debt of one Dollar.\nAlice and Bob are persons.\n1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.\n2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.\n3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.', with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum'), svar('Dollar')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, []), atom(issued_in, [svar('Dollar')])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(first_issue, ['Alice'], [num('Sum'), svar('Dollar')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)])), atom(issued_in, [svar('Dollar')])], [], [atom(identity, [])], [atom(issued_in, [any])])])], pragmas([list('Contacts', [knows]), list('Coins', [coin])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks to introduce '), person(3), text(' to you.')], []]), 'Contacts', by([2])), act(swap, 'Swap', ['', '', '', 'amount given', 'issuer wanted', 'amount wanted'], said([[], [person(1), text(' asks to swap coins with you.')]]), 'Coins', by([1])), act(pay, 'Pay', ['', '', amount], none, 'Coins', by([1])), act(redeem, 'Redeem', ['', '', 'issuer wanted'], none, 'Coins', by([1])), act(first_issue, 'First issue', ['', amount, denomination], none, '', by([1])), act(issue, 'Issue', ['', amount], none, '', by([1]))], [], nolook, version(1, 1)))).
 
 exported procedure version(Integer, Integer).
 version(1, 1).
@@ -835,7 +787,14 @@ dispatch_hello(no, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, S
 
 procedure greet_unless(YesNo?, Peer?, Proposal?, St?, Stream(Trigger), Stream(Trigger)?, St, Stream(Ask(Question))).
 greet_unless(yes, _, _, St, Ans1?, Ans1, St?, []).
-greet_unless(no, P, N, St, Ans?, Ans1, St?, D?) :- ground(P?), ground(N?), ground(St?) | st_id(St?, Me), st_ms(St?, S), name_class(N?, S?, C), question_words(C?, Me?, Ws), greet_whole(P?, N?, Ws?, R, D), merge(R?, Ans1?, Ans).
+greet_unless(no, P, N, St, Ans?, Ans1, St?, D?) :- ground(P?), ground(N?), ground(St?) | st_id(St?, Me), st_ms(St?, S), name_class(N?, S?, C), greet_at(C?, Me?, P?, N?, R, D), merge(R?, Ans1?, Ans).
+
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger), Stream(Ask(Question))).
+greet_at(C, Me, P, N, R?, D?) :- ground(C?), ground(Me?) | question_words(C?, Me?, Ws), binding_of(C?, Nm, Bn), consents_me(Nm?, Bn?, Me?, Cs), greet_or_consent(Cs?, P?, N?, Ws?, R, D).
+
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger), Stream(Ask(Question))).
+greet_or_consent(no, P, N, Ws, R?, D?) :- greet_whole(P?, N?, Ws?, R, D).
+greet_or_consent(yes, _, N, _, [greeted(N?)], []).
 
 procedure intro_cond(Peer?, St?, YesNo).
 intro_cond(Q, St, R?) :- ground(Q?), ground(St?) | st_id(St?, Id), st_isent(St?, ISe), same(Q?, Id?, S1), mem(Q?, ISe?, S2), known_st(Q?, St?, S3), or(S1?, S2?, S12), or(S12?, S3?, S), neg(S?, R).
@@ -1165,12 +1124,12 @@ held_cand0(C, F, N, K, V, St, Cs?, St1?) :- ground(C?), ground(N?) | st_class(C?
 
 procedure held_cand(ClassRes?, Peer?, Class?, Names?, V?, Cands).
 held_cand(nocls, _, _, _, _, []).
-held_cand(cls(I), F, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term_part_of(I?, C?, Pr), v_id(V?, Id), opens_for(Pr?, Id?, F?, Op), may_propose(I?, V?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
+held_cand(cls(I), _, C, Nm, V, Cs?) :- ground(I?), ground(C?), ground(V?) | term_part_of(I?, C?, Pr), v_id(V?, Id), opens_for(Pr?, Id?, Op), may_propose(I?, V?, B1), and(Op?, B1?, B), keep_pcand(B?, I?, C?, Nm?, [], Cs).
 
-procedure opens_for(PartRes?, Peer?, Peer?, YesNo).
-opens_for(part(pt(_, G, opener(O))), Id, F, B?) :- ground(G?) | same(O?, Id?, B1), mem(F?, G?, B2), and(B1?, B2?, B).
-opens_for(part(pt(_, _, proposed(_))), _, _, no).
-opens_for(nopart, _, _, no).
+procedure opens_for(PartRes?, Peer?, YesNo).
+opens_for(part(pt(_, _, opener(O))), Id, B?) :- same(O?, Id?, B).
+opens_for(part(pt(_, _, proposed(_))), _, no).
+opens_for(nopart, _, no).
 
 procedure vote_cands0(Recs?, V?, St?, Cands, St).
 vote_cands0(R, V, St, Cs?, St1?) :- ground(R?) | vote_cands(R?, R?, V?, St?, [], Cs, St1).
@@ -1628,7 +1587,13 @@ mine_of(yes, Rr, K, mine(Rr?, K?)).
 mine_of(no, _, _, notmine).
 
 procedure asked_by(Attempt?, Peer?, YesNo).
-asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), and(In?, NotMe?, B).
+asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), asked_at(Nm?, Bn?, Id?, P?, B).
+
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) | marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), consents_me(Nm?, Bn?, Id?, Cs), neg(Cs?, Asks), and(In?, NotMe?, B0), and(B0?, Asks?, B).
+
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) | schema_consents(Nm?, Is), persons_of(Is?, Bn?, Ps), mem(Me?, Ps?, B).
 
 procedure answer_effect(YesNo?, Attempt?, St?, St).
 answer_effect(YN, At, St, St1?) :- ground(St?) | st_app(St?, Ap), answer_app(YN?, At?, Ap?, Ap1), set_app(St?, Ap1?, St1).
@@ -4706,20 +4671,24 @@ procedure(T) form_integer(T?, Formed(Integer)).
 form_integer(R, F?) :- integer(R?) | F = formed(R?).
 form_integer(_, refused) :- otherwise | true.
 
+procedure(T) form_module(T?, Formed(Module)).
+form_module(R, F?) :- module(R?) | F = formed(R?).
+form_module(_, refused) :- otherwise | true.
+
 %% --- the construct process of each interactive type ---
 
 Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo ; last_state ; social_menu(List(MenuEntry)) ; approval_sentence.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
-dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(dcoin, [field('Peer', shown), field('Integer', shown)])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(dmint, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay_d, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(redeem_dc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_cd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_dd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown)])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(dmint, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay_d, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(redeem_dc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_cd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_dd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown)])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(dcoin, [field('Peer', shown), field('Integer', shown)])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(dcoin, [field('Peer', shown), field('Integer', shown)])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
+dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(issued_in, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), shown]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(issue, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(first_issue, [field('Peer', shown), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(issue, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(first_issue, [field('Peer', shown), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(issued_in, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), shown]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(issued_in, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), shown])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question, Drawn))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(3)])], [2, 3], [], [], [])]), button('Mint', [act(mint, 1, [1], [req(identity, [])], [], [field(2, amount, number)], [], [])]), button('Dmint', [act(dmint, 1, [1], [req(identity, [])], [], [field(2, denomination, number), field(3, amount, number)], [], [])]), button('Swap', [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, 'amount given', number), field(5, 'issuer wanted', agent), field(6, 'amount wanted', number)], [], []), act(swap_dc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(dcoin, [at(3), at(4)])], [2, 3, 4], [field(5, 'amount given', number), field(6, 'issuer wanted', agent), field(7, 'amount wanted', number)], [], []), act(swap_cd, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, 'amount given', number), field(5, 'issuer wanted', agent), field(6, 'denomination wanted', number), field(7, 'amount wanted', number)], [], []), act(swap_dd, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(dcoin, [at(3), at(4)])], [2, 3, 4], [field(5, 'amount given', number), field(6, 'issuer wanted', agent), field(7, 'denomination wanted', number), field(8, 'amount wanted', number)], [], [])]), button('Pay', [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, amount, number)], [], []), act(pay_d, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(dcoin, [at(2), at(3)])], [2, 3], [field(4, amount, number)], [], [])]), button('Redeem', [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, 'issuer wanted', agent)], [], []), act(redeem_dc, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(dcoin, [at(2), at(3)])], [2, 3], [field(4, 'issuer wanted', agent)], [], []), act(redeem_cd, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, 'denomination wanted', number), field(4, 'issuer wanted', agent)], [], []), act(redeem_dd, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(dcoin, [at(2), at(3)])], [2, 3], [field(4, 'denomination wanted', number), field(5, 'issuer wanted', agent)], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Mint', form(mint, [field('Peer', peer), field(amount, number)])), label('Swap', form(swap, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Pay', form(pay, [field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Redeem', form(redeem, [field('Peer', peer), field('Peer', peer), field('issuer wanted', peer)])), label('Dmint', form(dmint, [field('Peer', peer), field(denomination, number), field(amount, number)])), label('Swap', form(swap_dc, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Swap', form(swap_cd, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('denomination wanted', number), field('amount wanted', number)])), label('Swap', form(swap_dd, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Integer', number), field('amount given', number), field('issuer wanted', peer), field('denomination wanted', number), field('amount wanted', number)])), label('Pay', form(pay_d, [field('Peer', peer), field('Peer', peer), field('Integer', number), field(amount, number)])), label('Redeem', form(redeem_dc, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('issuer wanted', peer)])), label('Redeem', form(redeem_cd, [field('Peer', peer), field('Peer', peer), field('denomination wanted', number), field('issuer wanted', peer)])), label('Redeem', form(redeem_dd, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('denomination wanted', number), field('issuer wanted', peer)]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
-construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(dmint, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay_d, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(redeem_dc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_cd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_dd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown)])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(dmint, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay_d, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(redeem_dc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_cd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_dd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown)])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(dmint, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay_d, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(redeem_dc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_cd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_dd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown)])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(mint, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(dmint, [field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dc, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(swap_cd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(swap_dd, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(pay_d, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown)]), form(redeem_dc, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_cd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown)]), form(redeem_dd, [field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Peer', shown)])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(dcoin, [field('Peer', shown), field('Integer', shown)])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button('Swap', [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, 'amount given', number), field(5, 'issuer wanted', agent), field(6, 'amount wanted', number)], [], [])]), button('Pay', [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, amount, number)], [], [])]), button('Redeem', [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, 'issuer wanted', agent)], [], [])]), button('First issue', [act(first_issue, 1, [1], [req(identity, []), forb(issued_in, [any])], [], [field(2, amount, number), field(3, denomination, text)], [], [])]), button('Issue', [act(issue, 1, [1], [req(identity, []), req(issued_in, [any])], [], [field(2, amount, number)], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Issue', form(issue, [field('Peer', peer), field(amount, number)])), label('Swap', form(swap, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('amount given', number), field('issuer wanted', peer), field('amount wanted', number)])), label('Pay', form(pay, [field('Peer', peer), field('Peer', peer), field(amount, number)])), label('Redeem', form(redeem, [field('Peer', peer), field('Peer', peer), field('issuer wanted', peer)])), label('First issue', form(first_issue, [field('Peer', peer), field(amount, number), field(denomination, rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', text)]), form(program, [field('Module', text)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', peer)])]))), field('Peer', peer)])))]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(issue, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(first_issue, [field('Peer', shown), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(issue, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(first_issue, [field('Peer', shown), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(issue, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(first_issue, [field('Peer', shown), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(issue, [field('Peer', shown), field('Integer', shown)]), form(swap, [field('Peer', shown), field('Peer', shown), field('Peer', shown), field('Integer', shown), field('Peer', shown), field('Integer', shown)]), form(pay, [field('Peer', shown), field('Peer', shown), field('Integer', shown)]), form(redeem, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(first_issue, [field('Peer', shown), field('Integer', shown), field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(coin, [field('Peer', shown)]), form(issued_in, [field('Speech', rec('Speech', form(speech, [field('Utterance', rec('Utterance', menu([form(utterance, [field('String', shown)]), form(program, [field('Module', shown)]), form(speech, [field('Utterance', ref('Utterance')), field('Peer', shown)])]))), field('Peer', shown)])))]), shown])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).
@@ -4756,10 +4725,10 @@ join_proposal_introduce_3(refused, _, _, refused).
 join_proposal_introduce_3(_, refused, _, refused).
 join_proposal_introduce_3(_, _, refused, refused).
 
-procedure join_proposal_mint_2(Formed(Peer)?, Formed(Integer)?, Formed(Proposal)).
-join_proposal_mint_2(formed(X1), formed(X2), formed(mint(X1?, X2?))).
-join_proposal_mint_2(refused, _, refused).
-join_proposal_mint_2(_, refused, refused).
+procedure join_proposal_issue_2(Formed(Peer)?, Formed(Integer)?, Formed(Proposal)).
+join_proposal_issue_2(formed(X1), formed(X2), formed(issue(X1?, X2?))).
+join_proposal_issue_2(refused, _, refused).
+join_proposal_issue_2(_, refused, refused).
 
 procedure join_proposal_swap_6(Formed(Peer)?, Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Peer)?, Formed(Integer)?, Formed(Proposal)).
 join_proposal_swap_6(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(X6), formed(swap(X1?, X2?, X3?, X4?, X5?, X6?))).
@@ -4782,88 +4751,49 @@ join_proposal_redeem_3(refused, _, _, refused).
 join_proposal_redeem_3(_, refused, _, refused).
 join_proposal_redeem_3(_, _, refused, refused).
 
-procedure join_proposal_dmint_3(Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Proposal)).
-join_proposal_dmint_3(formed(X1), formed(X2), formed(X3), formed(dmint(X1?, X2?, X3?))).
-join_proposal_dmint_3(refused, _, _, refused).
-join_proposal_dmint_3(_, refused, _, refused).
-join_proposal_dmint_3(_, _, refused, refused).
+procedure join_utterance_utterance_1(Formed(String)?, Formed(Utterance)).
+join_utterance_utterance_1(formed(X1), formed(utterance(X1?))).
+join_utterance_utterance_1(refused, refused).
 
-procedure join_proposal_swap_dc_7(Formed(Peer)?, Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Peer)?, Formed(Integer)?, Formed(Proposal)).
-join_proposal_swap_dc_7(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(X6), formed(X7), formed(swap_dc(X1?, X2?, X3?, X4?, X5?, X6?, X7?))).
-join_proposal_swap_dc_7(refused, _, _, _, _, _, _, refused).
-join_proposal_swap_dc_7(_, refused, _, _, _, _, _, refused).
-join_proposal_swap_dc_7(_, _, refused, _, _, _, _, refused).
-join_proposal_swap_dc_7(_, _, _, refused, _, _, _, refused).
-join_proposal_swap_dc_7(_, _, _, _, refused, _, _, refused).
-join_proposal_swap_dc_7(_, _, _, _, _, refused, _, refused).
-join_proposal_swap_dc_7(_, _, _, _, _, _, refused, refused).
+procedure join_utterance_program_1(Formed(Module)?, Formed(Utterance)).
+join_utterance_program_1(formed(X1), formed(program(X1?))).
+join_utterance_program_1(refused, refused).
 
-procedure join_proposal_swap_cd_7(Formed(Peer)?, Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Proposal)).
-join_proposal_swap_cd_7(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(X6), formed(X7), formed(swap_cd(X1?, X2?, X3?, X4?, X5?, X6?, X7?))).
-join_proposal_swap_cd_7(refused, _, _, _, _, _, _, refused).
-join_proposal_swap_cd_7(_, refused, _, _, _, _, _, refused).
-join_proposal_swap_cd_7(_, _, refused, _, _, _, _, refused).
-join_proposal_swap_cd_7(_, _, _, refused, _, _, _, refused).
-join_proposal_swap_cd_7(_, _, _, _, refused, _, _, refused).
-join_proposal_swap_cd_7(_, _, _, _, _, refused, _, refused).
-join_proposal_swap_cd_7(_, _, _, _, _, _, refused, refused).
+procedure join_utterance_speech_2(Formed(Utterance)?, Formed(Peer)?, Formed(Utterance)).
+join_utterance_speech_2(formed(X1), formed(X2), formed(speech(X1?, X2?))).
+join_utterance_speech_2(refused, _, refused).
+join_utterance_speech_2(_, refused, refused).
 
-procedure join_proposal_swap_dd_8(Formed(Peer)?, Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Proposal)).
-join_proposal_swap_dd_8(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(X6), formed(X7), formed(X8), formed(swap_dd(X1?, X2?, X3?, X4?, X5?, X6?, X7?, X8?))).
-join_proposal_swap_dd_8(refused, _, _, _, _, _, _, _, refused).
-join_proposal_swap_dd_8(_, refused, _, _, _, _, _, _, refused).
-join_proposal_swap_dd_8(_, _, refused, _, _, _, _, _, refused).
-join_proposal_swap_dd_8(_, _, _, refused, _, _, _, _, refused).
-join_proposal_swap_dd_8(_, _, _, _, refused, _, _, _, refused).
-join_proposal_swap_dd_8(_, _, _, _, _, refused, _, _, refused).
-join_proposal_swap_dd_8(_, _, _, _, _, _, refused, _, refused).
-join_proposal_swap_dd_8(_, _, _, _, _, _, _, refused, refused).
+procedure form_utterance(Utterance?, Formed(Utterance)).
+form_utterance(utterance(R1), F?) :- form_string(R1?, F1), join_utterance_utterance_1(F1?, F).
+form_utterance(program(R1), F?) :- form_module(R1?, F1), join_utterance_program_1(F1?, F).
+form_utterance(speech(R1, R2), F?) :- form_utterance(R1?, F1), form_string(R2?, F2), join_utterance_speech_2(F1?, F2?, F).
+form_utterance(_, refused) :- otherwise | true.
 
-procedure join_proposal_pay_d_4(Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Proposal)).
-join_proposal_pay_d_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(pay_d(X1?, X2?, X3?, X4?))).
-join_proposal_pay_d_4(refused, _, _, _, refused).
-join_proposal_pay_d_4(_, refused, _, _, refused).
-join_proposal_pay_d_4(_, _, refused, _, refused).
-join_proposal_pay_d_4(_, _, _, refused, refused).
+procedure join_speech_speech_2(Formed(Utterance)?, Formed(Peer)?, Formed(Speech)).
+join_speech_speech_2(formed(X1), formed(X2), formed(speech(X1?, X2?))).
+join_speech_speech_2(refused, _, refused).
+join_speech_speech_2(_, refused, refused).
 
-procedure join_proposal_redeem_dc_4(Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Peer)?, Formed(Proposal)).
-join_proposal_redeem_dc_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(redeem_dc(X1?, X2?, X3?, X4?))).
-join_proposal_redeem_dc_4(refused, _, _, _, refused).
-join_proposal_redeem_dc_4(_, refused, _, _, refused).
-join_proposal_redeem_dc_4(_, _, refused, _, refused).
-join_proposal_redeem_dc_4(_, _, _, refused, refused).
+procedure form_speech(Speech?, Formed(Speech)).
+form_speech(speech(R1, R2), F?) :- form_utterance(R1?, F1), form_string(R2?, F2), join_speech_speech_2(F1?, F2?, F).
+form_speech(_, refused) :- otherwise | true.
 
-procedure join_proposal_redeem_cd_4(Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Peer)?, Formed(Proposal)).
-join_proposal_redeem_cd_4(formed(X1), formed(X2), formed(X3), formed(X4), formed(redeem_cd(X1?, X2?, X3?, X4?))).
-join_proposal_redeem_cd_4(refused, _, _, _, refused).
-join_proposal_redeem_cd_4(_, refused, _, _, refused).
-join_proposal_redeem_cd_4(_, _, refused, _, refused).
-join_proposal_redeem_cd_4(_, _, _, refused, refused).
-
-procedure join_proposal_redeem_dd_5(Formed(Peer)?, Formed(Peer)?, Formed(Integer)?, Formed(Integer)?, Formed(Peer)?, Formed(Proposal)).
-join_proposal_redeem_dd_5(formed(X1), formed(X2), formed(X3), formed(X4), formed(X5), formed(redeem_dd(X1?, X2?, X3?, X4?, X5?))).
-join_proposal_redeem_dd_5(refused, _, _, _, _, refused).
-join_proposal_redeem_dd_5(_, refused, _, _, _, refused).
-join_proposal_redeem_dd_5(_, _, refused, _, _, refused).
-join_proposal_redeem_dd_5(_, _, _, refused, _, refused).
-join_proposal_redeem_dd_5(_, _, _, _, refused, refused).
+procedure join_proposal_first_issue_3(Formed(Peer)?, Formed(Integer)?, Formed(Speech)?, Formed(Proposal)).
+join_proposal_first_issue_3(formed(X1), formed(X2), formed(X3), formed(first_issue(X1?, X2?, X3?))).
+join_proposal_first_issue_3(refused, _, _, refused).
+join_proposal_first_issue_3(_, refused, _, refused).
+join_proposal_first_issue_3(_, _, refused, refused).
 
 procedure form_proposal(Proposal?, Formed(Proposal)).
 form_proposal(establish(R1), F?) :- form_string(R1?, F1), join_proposal_establish_1(F1?, F).
 form_proposal(acquaint(R1, R2), F?) :- form_string(R1?, F1), form_string(R2?, F2), join_proposal_acquaint_2(F1?, F2?, F).
 form_proposal(introduce(R1, R2, R3), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), join_proposal_introduce_3(F1?, F2?, F3?, F).
-form_proposal(mint(R1, R2), F?) :- form_string(R1?, F1), form_integer(R2?, F2), join_proposal_mint_2(F1?, F2?, F).
+form_proposal(issue(R1, R2), F?) :- form_string(R1?, F1), form_integer(R2?, F2), join_proposal_issue_2(F1?, F2?, F).
 form_proposal(swap(R1, R2, R3, R4, R5, R6), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), form_integer(R4?, F4), form_string(R5?, F5), form_integer(R6?, F6), join_proposal_swap_6(F1?, F2?, F3?, F4?, F5?, F6?, F).
 form_proposal(pay(R1, R2, R3), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_integer(R3?, F3), join_proposal_pay_3(F1?, F2?, F3?, F).
 form_proposal(redeem(R1, R2, R3), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), join_proposal_redeem_3(F1?, F2?, F3?, F).
-form_proposal(dmint(R1, R2, R3), F?) :- form_string(R1?, F1), form_integer(R2?, F2), form_integer(R3?, F3), join_proposal_dmint_3(F1?, F2?, F3?, F).
-form_proposal(swap_dc(R1, R2, R3, R4, R5, R6, R7), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), form_integer(R4?, F4), form_integer(R5?, F5), form_string(R6?, F6), form_integer(R7?, F7), join_proposal_swap_dc_7(F1?, F2?, F3?, F4?, F5?, F6?, F7?, F).
-form_proposal(swap_cd(R1, R2, R3, R4, R5, R6, R7), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), form_integer(R4?, F4), form_string(R5?, F5), form_integer(R6?, F6), form_integer(R7?, F7), join_proposal_swap_cd_7(F1?, F2?, F3?, F4?, F5?, F6?, F7?, F).
-form_proposal(swap_dd(R1, R2, R3, R4, R5, R6, R7, R8), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_string(R3?, F3), form_integer(R4?, F4), form_integer(R5?, F5), form_string(R6?, F6), form_integer(R7?, F7), form_integer(R8?, F8), join_proposal_swap_dd_8(F1?, F2?, F3?, F4?, F5?, F6?, F7?, F8?, F).
-form_proposal(pay_d(R1, R2, R3, R4), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_integer(R3?, F3), form_integer(R4?, F4), join_proposal_pay_d_4(F1?, F2?, F3?, F4?, F).
-form_proposal(redeem_dc(R1, R2, R3, R4), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_integer(R3?, F3), form_string(R4?, F4), join_proposal_redeem_dc_4(F1?, F2?, F3?, F4?, F).
-form_proposal(redeem_cd(R1, R2, R3, R4), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_integer(R3?, F3), form_string(R4?, F4), join_proposal_redeem_cd_4(F1?, F2?, F3?, F4?, F).
-form_proposal(redeem_dd(R1, R2, R3, R4, R5), F?) :- form_string(R1?, F1), form_string(R2?, F2), form_integer(R3?, F3), form_integer(R4?, F4), form_string(R5?, F5), join_proposal_redeem_dd_5(F1?, F2?, F3?, F4?, F5?, F).
+form_proposal(first_issue(R1, R2, R3), F?) :- form_string(R1?, F1), form_integer(R2?, F2), form_speech(R3?, F3), join_proposal_first_issue_3(F1?, F2?, F3?, F).
 form_proposal(_, refused) :- otherwise | true.
 
 procedure join_request_propose_1(Formed(Proposal)?, Formed(Request)).

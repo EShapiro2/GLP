@@ -1,0 +1,5 @@
+Q: Second
+Q instantiates C with x is blue for x is marked.
+Alice is a person.
+Logic pragmas.
+Vocabulary: x is blue = blue(x).

@@ -1,34 +1,40 @@
-% DGC: Denominated Grassroots Currencies --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
-% Owner: Currencies (SGC).  The paper, /Users/udi/Grassroots/SGC/main_SGC.tex, states it in Section 2.1 and cites a clause by number, and GCC's paper quotes it as what GCC extends; it is named DGC, its owner Currencies, by Udi's ruling of 2026-11-04 (to Currencies #15): the contract names no sovereign, the sovereign being a party like any other.
+% DGC: Denominated Grassroots Currencies --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
+% Owner: Currencies (SGC).
 % Paper: SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727
-% Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), and through it GC and GKK.  DGC amends GB (GSC, Section 8): it deletes GB's schemas over coins and bonds and adds them with the denomination as an argument, and the acceptances; clauses 1, 3, 5, 6 and 7 are GC's with a bond in place of a coin where the act allows one, 2 and 9 are GB's, and 4 and 8 are its own (SGC, Section 2.1).
-% Defines: denomination, an identifier of a fiat currency; a denominated coin and bond, a debt of one unit of its denomination due now or at its date; acceptance of named coins in payment.
-% Last changed: 2026-11-04, written by Currencies #15 Cowork from SGC's Section 2.1 as it stands, each clause with its modality from SGC's Appendix A; the pragmas are Currencies #15's, in GSC's form, GB's with the denomination and the acceptance added.  SGC's clauses are the paper's text of 2026-10-13; the five it shares with GC and GB are to be brought to their current text, with knowing the other party and GB:7's wording, when SGC is next revised (Udi, 2026-11-04: GCC first).
-% Pragmas (2026-11-07): Payment has a button for each of its three acts, pay, payout and spend, spend with a field for Bob, whom no atom Alice's role requires names (Code #25, 2026-11-07 19:41 UTC), the compiler refusing a guarded schema with no button (vGLP, Section 5.4; Code #25, 2026-11-07 15:53 UTC); added by Currencies #17 Cowork.  (2026-11-06): the fields of a line are the variables of its acts that the atoms the proposer's role requires do not bind, in the schemas' order (vGLP's paper at 40f8444, Section 5.4; Code #23, 2026-11-05 11:39 and 14:05 UTC); what the proposer's state binds, the row fills.  Rewritten so by Currencies #15.
-% Schemas: DGC.glp beside this file, GB's with the denomination as the argument after the issuer of every coin and bond, and accept, payout and spend (SGC, Appendix A), the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Adopted from the Calculus, branch Calculus of GLP, c475902, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; DGC.glp and cascade/DGC/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 DGC: Denominated Grassroots Currencies
-Alice, Bob and Carol are persons.  Dollar names one denomination, and an Alice Dollar-denominated coin or bond, Alice-coin and Alice-bond for short, is one issued by Alice.
-1. ■ Minting.  Alice may decide to issue their coins, of any denomination, and their bonds, of any denomination and of a maturity later than their own date.
-2. ○ Date.  Alice keeps their date at the current date.
-3. ■ Swap.  Alice and Bob may jointly decide to swap Dollar-denominated coins and bonds they hold.
-4. ■ Acceptance.  Alice may decide to accept Carol-coins in payment up to a limit of their choosing, if they hold a Carol-coin or a Carol-bond; each Carol-coin paid to Alice counts against the limit, and Alice may decide again.
-5. ■ Payment.  Alice may decide to pay Bob Dollar-denominated coins they hold that Bob accepts.
-6. ■ Redemption.  Alice may decide to redeem a Bob-coin they hold against any Dollar-denominated coin or bond Bob holds, and to take a Bob-coin for a matured Bob-bond they hold.
-7. ○ Pricing.  Alice prices their offerings in Alice-coins and accepts them in payment at those prices.
-8. ○ Denomination.  An Alice-coin and an Alice-bond are each Alice's debt of one Dollar, the coin due now and the bond at its date; Alice redeems an Alice-coin on presentation at face value, by a Dollar-denominated coin or bond the bearer accepts or by one Dollar.
-9. ■ Escrow.  Alice may deposit Dollar-denominated coins and bonds with Carol for Bob; Carol and Bob may jointly decide to release them to Bob, and Carol and Alice to return them to Alice, as the agreed condition is met or fails.
-Pragmas
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Minting: Alice [Mint coin] <denomination> <amount> [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+DGC extends GB and GDC, and restricts GB.
+A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
+Alice, Bob and Carol are persons.
+1. ■ Issue bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
+2. ■ Swap, Redeem, Escrow: GC:2, GC:4, GB:2, GB:3 and GB:4, only if the coins and bonds are of one denomination.
+3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
+4. ■ Pay: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
+Logic pragmas
+DGC extends GB and GDC, and restricts GB.
+A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
+Alice, Bob, Carol and Dave are persons, Dollar a fiat currency, Day a maturity date, Today a date, Cond a condition Alice, Bob and Carol agree, Sum a number; in clause 4 Carol is possibly Alice or Bob.
+1. ■ Issue bond: Alice may issue Sum Dollar-denominated Alice-bonds due Day, provided the current date is Today and Day is more than Today.
+2. ■ Swap: GB:2, only if the coins and bonds of Carol and Dave are of one denomination. Redeem: GB:3, only if the coins and bonds of Bob and Carol are of one denomination. Escrow: GB:4, only if the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+3. ■ Accept: Alice may accept one more Dollar-denominated Carol-coin in payment, provided Alice holds a Dollar-denominated Carol-coin. Accept by bond: Alice may accept one more Dollar-denominated Carol-coin in payment, provided Alice holds a Carol-bond due someone and Carol has issued a Dollar-denominated bond due someone. Each such coin paid to Alice counts against the limit, and Alice may accept again.
+4. ■ Pay: Alice may pay Bob a Carol-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Carol has issued coins of the denomination Dollar.
+Logic pragmas.
+Vocabulary: x has issued an f-denominated bond due e = issued_bond_in(x,f,e); the coins and bonds of z and w are of one denomination, for x = one_denomination(x,z,w); the coins and bonds that z holds in escrow from x for y on k are of one denomination = escrow_one_denomination(z,x,y,k); x accepts an f-denominated z-coin in payment = accepts(x,z,f).
+x holds an f-denominated z-coin: x holds a z-coin and z has issued coins of the denomination f.
+x holds an f-denominated z-bond due e: x holds a z-bond due e and z has issued an f-denominated bond due e.
+After x issues n f-denominated x-bonds due e: x holds n x-bonds due e and x has issued an f-denominated bond due e.
+After x accepts one more f-denominated z-coin in payment: x accepts an f-denominated z-coin in payment.
+After x pays y a z-coin that y accepts as denominated by f: no longer x holds a z-coin, y holds a z-coin and no longer y accepts an f-denominated z-coin in payment.
+Interface pragmas
+Issue bond: Alice [Issue bond 2] <maturity> <amount> <denomination>
+Swap, Redeem, Escrow: Alice [Swap] <amount given> <amount wanted> [Swap coin for bond] <amount given> <maturity wanted> <amount wanted> [Swap bonds] <amount given> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount> [Payout] <amount> [Spend] <payee> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
+  Alice [Redeem] [Redeem coin against bond] <maturity wanted> [Redeem bond] [Redeem bond against bond] <maturity wanted>
+  Alice [Deposit] <amount> <condition> [Deposit bond] <amount> <condition>
   Carol: Alice asks to deposit coins or bonds with you.
-  Carol [Release] <amount>
+  Carol [Release] <amount> [Release bond] <amount>
   Bob: Carol asks to release coins or bonds to you.
-  Carol [Return] <amount>
+  Carol [Return] <amount> [Return bond] <amount>
   Alice: Carol asks to return coins or bonds to you.
+Accept: Alice [Accept] [Accept by bond]
+Pay: Alice [Pay 2] <denomination>

@@ -1,0 +1,5 @@
+A: Apart
+Vocabulary: y is greeted by x = greeted(y,x).
+After x greets y: y is greeted by x.
+A:0 - | Alice and Bob are persons.
+A:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice.

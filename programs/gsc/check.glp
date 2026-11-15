@@ -304,8 +304,10 @@ sgn_carrying1([_|_], A, Xs, Nm, I, W, T, [signed(Nm?, I?, A?, W?)|R?]) :-
 % requires an atom with y among its arguments.
 procedure sgn_required(Args?, RoleSpecs?, Ans).
 sgn_required([], _, yes).
+% A signer that is no role of the schema, read as sgn(Y, 0) (self.glp, sas_arg), requires nothing.
+sgn_required([sgn(_, J)|_], _, no) :- J? < 1 | true.
 sgn_required([sgn(Y, J)|Ss], Rs, R?) :-
-    ground(Y?), integer(J?), ground(Ss?), ground(Rs?) |
+    J? >= 1, ground(Y?), integer(J?), ground(Ss?), ground(Rs?) |
     nth_rs(Rs?, J?, RS),
     req_occurs(RS?, svar(Y?), A),
     sgn_required1(A?, Ss?, Rs?, R).
@@ -327,7 +329,9 @@ sgn_agent1(yes, Ss, Rs, R?) :- ground(Ss?), ground(Rs?) | sgn_agent(Ss?, Rs?, R)
 
 procedure sgn_agent(Args?, RoleSpecs?, Ans).
 sgn_agent([], _, yes).
-sgn_agent([sgn(_, J)|Ss], Rs, R?) :- integer(J?), ground(Ss?), ground(Rs?) |
+% A signer that is no role of the schema, read as sgn(Y, 0), is no agent role.
+sgn_agent([sgn(_, J)|_], _, no) :- J? < 1 | true.
+sgn_agent([sgn(_, J)|Ss], Rs, R?) :- J? >= 1, integer(J?), ground(Ss?), ground(Rs?) |
     nth_rs(Rs?, J?, RS),
     is_party_role(RS?, A),
     sgn_agent1(A?, Ss?, Rs?, R).
@@ -498,11 +502,12 @@ head_schema(S, R?) :- ground(S?) |
     nsch_occ_vars(S?, Os),
     head_schema1(Nm?, H?, Bd?, Os?, R).
 
-% A value variable's type is its head's, real(X) or num(X) (self.glp, Arg),
+% A value variable's type is its head's, real(X), const(X) or num(X) (self.glp, Arg),
 % and its atoms write num(X) of either, so the head is compared as num(X).
 procedure head_untyped(Args?, Args).
 head_untyped([], []).
 head_untyped([real(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
+head_untyped([const(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
 head_untyped([A|As], [A?|R?]) :- otherwise | head_untyped(As?, R).
 
 procedure head_schemas(NContract?, Faults).

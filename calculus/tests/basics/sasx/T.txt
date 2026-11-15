@@ -1,0 +1,9 @@
+T: Two paths (expanded schemas)
+K:0 - | Alice, Bob and Carol are persons.
+K:1+R:1 ■ Grant: token(Bob) <- trusted(Bob,Carol) guarded by Alice, Bob, Carol.
+K:1 ■ Take: token(Alice) <- guarded by Alice.
+U:0 - | Alice is a person.
+U:1 ○ | Care.
+U:1 ○ | Alice will take care.
+R:0 - | Alice, Bob and Carol are persons.
+T:0 - | Alice is a person.

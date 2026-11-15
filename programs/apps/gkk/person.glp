@@ -42,10 +42,10 @@ miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
 procedure script(Constant?, Key?, List(Key)?, Steps).
 script(alice, _, [Bob, Carol], [look, own([A1], propose(establish(A1?))), wait(holds(identity)), own([A2], propose(acquaint(A2?, Bob?))), wait(holds(knows(Bob?))),
                                 own([A3], propose(acquaint(A3?, Carol?))), wait(holds(knows(Carol?))),
-                                own([A4], propose(introduce(A4?, Bob?, Carol?))), look]) :-
+                                own([A4], propose(introduce(Bob?, A4?, Carol?))), look]) :-
     ground(Bob?), ground(Carol?) | true.
 script(bob, Me, [Alice, Carol], [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(Alice?, Me?), yes),
-                                 approval(introduce(Alice?, Me?, Carol?), yes),
+                                 approval(introduce(Me?, Alice?, Carol?), yes),
                                  wait(known(Carol?)), own([B2], propose(acquaint(B2?, Carol?))),
                                  wait(has(knows(Carol?), 2))]) :-
     ground(Me?), ground(Alice?), ground(Carol?) | true.

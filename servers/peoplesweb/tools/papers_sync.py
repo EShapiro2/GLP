@@ -162,6 +162,16 @@ def main():
             if st.get('changed') and st.get('arxiv_updated'):
                 st['ahead'] = when(st['changed']) > when(st['arxiv_updated'])
         state[d] = st
+    # A PDF whose paper has left SOURCES, or been renamed, is removed, and
+    # with it its state, so that neither the site nor the branch papers
+    # keeps it (papers/GGGA.pdf, SRC's under its old name, Code #28,
+    # 2026-11-12).
+    names = {pdf_name(d) + '.pdf' for d in SOURCES}
+    for f in os.listdir(OUT):
+        if f.endswith('.pdf') and f not in names:
+            os.remove(os.path.join(OUT, f))
+            print(f'papers: {f} removed, no paper of that name')
+    state = {d: st for d, st in state.items() if d in SOURCES}
     with open(sp + '.tmp', 'w') as f:
         json.dump(state, f, indent=1, sort_keys=True)
     os.replace(sp + '.tmp', sp)

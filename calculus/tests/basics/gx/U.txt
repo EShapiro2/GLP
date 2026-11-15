@@ -1,0 +1,5 @@
+U: Undertaking alone
+Of K: Alice, Bob and Carol are persons.
+Of U: Alice is a person.
+K:1. ■ Give: Bob may take a token, with the consent of Alice. Take: Alice may take a token.
+U:1. ○ Care. Alice will take care.

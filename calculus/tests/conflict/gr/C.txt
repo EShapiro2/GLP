@@ -1,0 +1,6 @@
+C: Base
+Alice is a person.
+1. ■ Mark: Alice may mark Alice-self.
+Logic pragmas.
+Vocabulary: x is marked = marked(x).
+After x marks x-self: x is marked.

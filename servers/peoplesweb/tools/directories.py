@@ -98,21 +98,23 @@ PROJECTS = [
     ('DSA', 'Digital Speech Acts', ['DSA']),
     ('CCDG', 'Constitutional Consensus', ['CCDG']),
     ('CGMS', 'Constitutional Governance in Metric Spaces', ['CGMS']),
-    # The projects whose papers the site does not present, by name and with no
-    # paper under them, each name in full as the table of inboxes gives it
-    # (Coordination #15, to Website #1, 2026-11-12 13:11 UTC: the papers are
-    # not on arXiv, and whether the site names one is for Udi to approve).
-    ('GBM', 'Grassroots Business Models', []),
-    ('CFRI', '', []),
-    ('IVMAT', '', []),
-    ('GFWC', 'Grassroots Federation Without Consensus', []),
-    ('CDWC', 'Constitutional Democracy Without Consensus', []),
-    ('GPW', 'Grassroots Personal Websites', []),
-    ('Secure-GLP', 'Secure GLP', []),
-    ('P99', '', []),
-    ('DDD', '', []),
-    ('KYC', '', []),
-    ('LBM', 'Location Based Matching', []),
+    # The projects whose papers are not on arXiv, each with its one paper by
+    # title and authors (Udi, 2026-11-14, to Website #2, approving Coordination
+    # #15's question of 2026-11-12 13:11 UTC; the repositories and main files
+    # Coordination #16's, from Appendix A, 2026-11-14 23:30 UTC; the citations
+    # in tools/papers.py, FOUNDATIONAL).  A name in full the table of inboxes
+    # does not give is the paper's title.
+    ('GBM', 'Grassroots Business Models', ['GBM']),
+    ('CFRI', 'Composing Fault-Resilient Implementations', ['CFRI']),
+    ('IVMAT', 'Fault-Resilient Implementations of Volition-Guarded Atomic Transactions', ['IVMAT']),
+    ('GFWC', 'Grassroots Federation Without Consensus', ['GFWC']),
+    ('CDWC', 'Constitutional Democracy Without Consensus', ['CDWC']),
+    ('GPW', 'Grassroots Personal Websites', ['GPW']),
+    ('Secure-GLP', 'Secure GLP', ['Secure-GLP']),
+    ('P99', 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming', ['P99']),
+    ('DDD', 'Digital Speech Acts Dissolve Orphaned Disinformation', ['DDD']),
+    ('KYC', 'Making Digital Speech Accountable', ['KYC']),
+    ('LBM', 'Location Based Matching', ['LBM']),
 ]
 
 # The projects with no paper, in the order the site lists them under Code:
