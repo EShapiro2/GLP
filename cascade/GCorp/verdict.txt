@@ -1,1 +1,1 @@
-syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, created, creator)], [], [identity, person])
+syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(ward_acquaint, ward(1, organisation, no_guardian), free(2)), relay(wards_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])
