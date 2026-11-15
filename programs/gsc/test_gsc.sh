@@ -135,21 +135,22 @@ check_eq "as_read descends an environment contract's reflexive body as unnamed/2
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
 # GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
 GNWI=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
-GSNPT=$(instance "$GLP_DIR/programs/gai/GSNP.glp" gsnp "$GNWI")
-check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
+# GSNP and GAI are adopted from the Calculus by GAI (2026-11-15): each file holds its full schemas, a term of its own and no instance of GnW, knows reflexive.
+GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+check "GSNP's contract is reflexive, in the clause syntax" "reflexive([knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
-check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
-check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
+check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([knows], [schema(" "$GSNPV"
+check "and reads the author of its message, author(Text) = a role" "eq(author_of(svar('Text')), role(" "$GSNPV"
 # A ward role has at most one guardian role (GSC a885275, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
-GAIT=$(instance "$GLP_DIR/programs/gai/GAI.glp" gai "$GNWI")
+GAIT=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
 check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
-      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, operator_of, operated_by)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [identity, person])" \
+      "V = syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 # DGC is adopted from the Calculus by Currencies (2026-11-15): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
-check "DGC's contract is an environment contract" "environment([today], [sas(" "$DGCT"
+check "DGC's contract is an environment contract, knows reflexive within it" "environment([today, one_denomination], reflexive([knows], [sas(" "$DGCT"
 DGCV=$(asread "$DGCT")
-check "as_read gives DGC its wrapper, each schema in the checker's form" "environment([today], [schema(" "$DGCV"
+check "as_read gives DGC its wrappers, each schema in the checker's form" "environment([today, one_denomination], reflexive([knows], [schema(" "$DGCV"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCV" "$(asread "$DGCV")"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
       "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
