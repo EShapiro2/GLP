@@ -1,5 +1,5 @@
 DGC: Denominated Grassroots Currencies
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
 Of GC: A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice. Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
 Of GB: A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date. Alice, Bob, Carol and Dave are persons, Day and Term maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clauses 2 and 3 Carol and Dave are possibly Alice, Bob or one person, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of GDC: *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar. Alice and Bob are persons, Dollar a fiat currency, Sum a number.
