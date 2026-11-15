@@ -1,10 +1,10 @@
 # A run of the cascade on SC
 
-- Contract: `SC` (`sc` to the checker), its owner's two files `programs/go/SC.txt` and `programs/go/SC.glp`, copied here as they stood at `3d8b33a5`.
+- Contract: `SC` (`sc` to the checker), its owner's two files `programs/go/SC.txt` and `programs/go/SC.glp`, copied here as they stood at `34a90d3c`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/SC.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/SC.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 20:40 UTC by `cascade.sh sc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3d8b33a5`; each artefact's source and tool:
+- Run on 2026-11-15 21:29 UTC by `cascade.sh sc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `34a90d3c`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

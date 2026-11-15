@@ -77,7 +77,7 @@ Word ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Numb
 RoleAsk ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked ::= asked(Integer, List(Word)).
 Close ::= close.
-Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 MeetPeer ::= peer(Peer) ; nopeer.
 Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; val(Constant) ; inst(Integer, Integer, Var).
 NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm) ; own_iv(Var) ; ext_iv(NTerm, Var).
@@ -755,8 +755,8 @@ meeting_peer(organisation_acquaint(V1, V2), Me, P?) :- ground(V1?), ground(V2?),
 meeting_peer(organisations_acquaint(V1, V2), Me, P?) :- ground(V1?), ground(V2?), ground(Me?) | meet_other(V1?, V2?, Me?, P).
 meeting_peer(_, _, nopeer) :- otherwise | true.
 
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Integer)?, List(Atom)?, Stream(Ask(Question))).
-agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?) | Thr?], Cal, Env, D?) :- ground(Id?), ground(Env?) | env_atoms(Env?, G0), env_atoms(Env?, G1), atoms_of(G1?, V0), tabs(Ts), request(Rq, D1), tag_net(NetIn?, Nt0), tag_cal(Cal?, Ct), merge(Nt0?, Ct?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [], st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), []), D2), merge(D1?, D2?, D).
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question))).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?) | Thr?], Env, D?) :- ground(Id?), ground(Env?) | env_atoms(Env?, G0), env_atoms(Env?, G1), atoms_of(G1?, V0), tabs(Ts), request(Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [], st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), []), D2), merge(D1?, D2?, D).
 
 procedure env_atoms(List(Atom)?, GAtoms).
 env_atoms([], []).
@@ -777,10 +777,6 @@ ask_next(Ans?, Ans1, D?) :- request(R, D), merge(R?, Ans1?, Ans).
 procedure tag_net(Stream(Net)?, Stream(Trigger)).
 tag_net([M | Ms], [net(M?) | Ts?]) :- tag_net(Ms?, Ts).
 tag_net([], []).
-
-procedure tag_cal(Stream(Integer)?, Stream(Trigger)).
-tag_cal([D | Ds], [day(D?) | Ts?]) :- tag_cal(Ds?, Ts).
-tag_cal([], []).
 
 procedure respond(Attempt?, List(Word)?, Close?, Stream(Trigger), Stream(Ask(Question))).
 respond(S1, S2, S3, S4?, [ask('Approval', approval_w(X?)) | D?]) :- respond1(S1?, S2?, S3?, S4, X, D).
@@ -810,9 +806,12 @@ await_greet(N, yes, [greeted(N?)]).
 await_greet(_, no, []).
 
 procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
-agent_goal([T | Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_local(U?, Th), step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-agent_goal([], [T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_read(U?, Th), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+agent_goal([T | Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_local(U?, Th), dated(St?, St1), step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
+agent_goal([], [T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_read(U?, Th), dated(St?, St1), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 agent_goal([], [], _, [], [], [], [], _, _, _, []).
+
+procedure dated(St?, St).
+dated(St, St1?) :- ground(St?) | now(T), D := floor((T? / 86400000)), st_app(St?, Ap), set_today(D?, Ap?, Ap1), set_app(St?, Ap1?, St1).
 
 procedure then_local(YesNo?, Then).
 then_local(yes, own_unread).
@@ -832,7 +831,6 @@ step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, 
 step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, H?, St1?, D).
 step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_pends(St?, Pd), st_view(St?, V), st_trie(St?, Tr), recheck_find(Pd?, V?, Tr?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-step(day(D), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D1?) :- integer(D?), ground(St?) | st_app(St?, Ap0), st_app(St?, Ap), set_today(D?, Ap?, Ap1), set_app(St?, Ap1?, St1), next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D1).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).

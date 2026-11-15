@@ -2263,7 +2263,7 @@ Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String,
 RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
-Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 %% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
@@ -2464,18 +2464,16 @@ Then      ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
-%% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
+%% Where the contract requires the day, the agent reads the date from its phone whenever it reads a trigger, before it computes a condition, and holds today(d), d that date, beside its app state until the next (dated; vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").  It takes no calendar.
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Integer)?, List(Atom)?).
-agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Cal, Env) :- ground(Id?), ground(Env?) |
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), ground(Env?) |
     env_atoms(Env?, G0),
     env_atoms(Env?, G1),
     atoms_of(G1?, V0),
     tabs(Ts),
     request(Rq),
-    tag_net(NetIn?, Nt0),
-    tag_cal(Cal?, Ct),
-    merge(Nt0?, Ct?, Nt),
+    tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
@@ -2504,9 +2502,6 @@ ask_next(Ans?, Ans1) :-
 procedure tag_net(Stream(Net)?, Stream(Trigger)).
 tag_net([M|Ms], [net(M?)|Ts?]) :- tag_net(Ms?, Ts).
 tag_net([], []).
-procedure tag_cal(Stream(Integer)?, Stream(Trigger)).
-tag_cal([D|Ds], [day(D?)|Ts?]) :- tag_cal(Ds?, Ts).
-tag_cal([], []).
 
 %% A responder: the approval question Start raises shows the attempt and takes yes or no.
 %% The agent goal holds the writer of its close signal and closes it once the
@@ -2543,11 +2538,21 @@ procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger)
     Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
 agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_local(U?, Th),
-    step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    dated(St?, St1),
+    step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_read(U?, Th),
-    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    dated(St?, St1),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 agent_goal([], [], _, [], [], [], [], _, _, _).
+%% The state with the date of the phone: today(d), d the date in UTC, the time now/1 gives, in milliseconds, in whole days, replaced in the state beside the app state, which the conditions read and the view does not show.  The agent holds today(d) as an atom of the machine state of its app state, which no schema adds or deletes, which atom_of does not show and show_state does not compare.
+procedure dated(St?, St).
+dated(St, St1?) :- ground(St?) |
+    now(T),
+    D := floor(T? / 86400000),
+    st_app(St?, Ap),
+    set_today(D?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
 
 %% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
 procedure then_local(YesNo?, Then).
@@ -2617,14 +2622,6 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     st_trie(St?, Tr),
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-%% A date of the calendar: today(d) replaced in the state beside the app state, which the conditions read and the view does not show; the app state changing, the starts and the requests the agent holds are put up again (vGLP, Section 5.4, "The compilation": "on each date of which it replaces today(d) and puts up again the starts and requests it holds").  The agent holds today(d) as an atom of the machine state of its app state, which no schema adds or deletes, which atom_of does not show and show_state does not compare.
-step(day(D), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    integer(D?), ground(St?) |
-    st_app(St?, Ap0),
-    st_app(St?, Ap),
-    set_today(D?, Ap?, Ap1),
-    set_app(St?, Ap1?, St1),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
