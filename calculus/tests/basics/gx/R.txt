@@ -1,0 +1,5 @@
+R: One act, renamed, a consent repeated
+Of K: Alice, Bob and Carol are persons.
+Of R: Alice, Bob and Carol are persons.
+K:1, R:1. ■ Grant: Bob may take a token, with the consent of Alice and Carol, provided Bob is trusted by Carol.
+K:1. ■ Take: Alice may take a token.

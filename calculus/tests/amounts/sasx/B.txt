@@ -1,0 +1,6 @@
+B: Bank (expanded schemas)
+B:0 - | Bob is a person, Orga a bank, Sum, Line, Held and Total numbers.
+B:1 ■ Issue: coin(Bob,Bob,*Sum) <- guarded by Bob.
+B:2 ■ Set: ~line(Orga,Bob,_), line(Orga,Bob,Line) <- guarded by Orga.
+B:3 ■ Credit: ~coin(Bob,Bob,*Sum), coin(Orga,Bob,*Sum) <- coin(Orga,Bob,#Held), line(Orga,Bob,Line), sum(Total,Held,Sum), le(Total,Line), coin(Bob,Bob,*Sum) guarded by Bob.
+B:3 ■ Double: ~coin(Bob,Bob,*2), coin(Orga,Bob,*2) <- gt(Line,2), coin(Bob,Bob,*2) guarded by Bob.

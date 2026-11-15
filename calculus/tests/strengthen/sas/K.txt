@@ -1,0 +1,7 @@
+K: Base
+Vocabulary: x has met y = met(x,y).
+After x and y meet, which requires x has not met y: x has met y and y has met x.
+After x parts from y: no longer x has met y and no longer y has met x.
+K:0 - | Alice and Bob are persons.
+K:1 ■ Meet: met(Alice,Bob), met(Bob,Alice) <- ~met(Alice,Bob) guarded by Alice, Bob.
+K:2 ■ Part: ~met(Alice,Bob), ~met(Bob,Alice) <- met(Alice,Bob), met(Bob,Alice) guarded by Alice.

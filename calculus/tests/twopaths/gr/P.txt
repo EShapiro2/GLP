@@ -1,0 +1,6 @@
+P: Strengthens
+P strengthens C.
+Alice is a person.
+1. ■ Mark: C:1, and then no longer Alice has a pass.
+Logic pragmas.
+Vocabulary: x has a pass = p(x).
