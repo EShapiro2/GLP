@@ -1,10 +1,10 @@
 # A run of the cascade on GSV
 
-- Contract: `GSV` (`gsv` to the checker), its owner's two files `programs/examples/rendezvous/GSV.txt` and `programs/examples/rendezvous/GSV.glp`, copied here as they stood at `2c988f2f`.
+- Contract: `GSV` (`gsv` to the checker), its owner's two files `programs/examples/rendezvous/GSV.txt` and `programs/examples/rendezvous/GSV.glp`, copied here as they stood at `11196429`.
 - The paper: `/Users/udi/Grassroots/GNA (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/examples/rendezvous/GSV.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/examples/rendezvous/GSV.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 14:33 UTC by `cascade.sh gsv`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `2c988f2f`; each artefact's source and tool:
+- Run on 2026-11-15 16:49 UTC by `cascade.sh gsv`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `11196429`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

@@ -65,9 +65,10 @@ def outcome():
     for l in lines(os.path.join(ROOT, 'cascade', 'STATUS.txt')):
         n = l.split()[0]; m = re.search(r'platform\.glp (\d+) lines', l)
         if n in out and m: out[n][1] = int(m.group(1))
+        elif n in out and 'a parametric contract' in l: out[n][1] = 'parametric'      # certified, no platform until instantiated
     return out
 def num(x):
-    return '---' if x is None else '%d' % x
+    return '---' if x is None else '\\emph{param.}' if x == 'parametric' else '%d' % x
 def tot(rows, i):
     return num(None if any(r[i] is None for r in rows) else sum(r[i] for r in rows))
 def main():
@@ -84,7 +85,7 @@ def main():
         for name in layer:
             n, how, own, w, exc, ew = byname[name][:6]
             out.append('%s & %s & %d & %d & %d & %d & %s\\\\' % (esc(n), esc(how) if how else '---', own, w, exc, ew, ' & '.join(num(x) for x in byname[name][6:]) + ' & %s & %s' % (oc[name][0], num(oc[name][1]))))
-    out += ['\\hline', '%d contracts & & %d & %d & %d & %d & %s\\\\' % (len(rows), sum(r[2] for r in rows), sum(r[3] for r in rows), sum(r[4] for r in rows), sum(r[5] for r in rows), ' & '.join(tot(rows, i) for i in (6, 7, 8, 9)) + ' & %d & %d' % (sum(1 for r in rows if oc[r[0]][0] != 'no'), sum(1 for r in rows if oc[r[0]][1]))),
+    out += ['\\hline', '%d contracts & & %d & %d & %d & %d & %s\\\\' % (len(rows), sum(r[2] for r in rows), sum(r[3] for r in rows), sum(r[4] for r in rows), sum(r[5] for r in rows), ' & '.join(tot(rows, i) for i in (6, 7, 8, 9)) + ' & %d & %d' % (sum(1 for r in rows if oc[r[0]][0] != 'no'), sum(1 for r in rows if isinstance(oc[r[0]][1], int)))),
             '\\hline', '\\end{longtable}', '}', '']
     open(os.path.join(ROOT, 'sections', 'contracts-table.tex'), 'w', encoding='utf-8').write('\n'.join(out))
     print('%d contracts; own clauses %d, words %d; expanded clauses %d, words %d' % (len(rows), sum(r[2] for r in rows), sum(r[3] for r in rows), sum(r[4] for r in rows), sum(r[5] for r in rows)))

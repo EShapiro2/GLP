@@ -4490,6 +4490,102 @@ G1
 \}
 \end{align*}
 \iffalse
+sign_link
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+link
+}
+(
+Link
+,
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+link
+}
+(
+Link
+,
+Dave
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\Alice
+)
+\lor
+(
+\mathit{
+ward
+}
+(
+\Alice
+)
+\land
+\exists 
+G1
+\,(
+\mathit{
+has_guardian
+}
+(
+\Alice
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 invite_by_link
 \fi
 \begin{align*}
@@ -4566,6 +4662,16 @@ knows
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+spent
+}
+(
+Link
+,
+\Bob
+)
+,
 \mathit{
 registered
 }
@@ -4574,10 +4680,12 @@ Link
 ,
 \Bob
 )
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{provided } 
@@ -4627,7 +4735,7 @@ c'_
 \Alice
 }
  := 
-c_
+(c_
 {
 \Alice
 }
@@ -4635,6 +4743,17 @@ c_
 \{
 \mathit{
 registered
+}
+(
+Link
+,
+\Bob
+)
+\}
+) \uplus 
+\{
+\mathit{
+spent
 }
 (
 Link
