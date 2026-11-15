@@ -2633,5 +2633,19 @@ out=$(run "check($AGFP, V1)." "check($AGSN, V2).")
 check "GFP as adopted is certified" "V1 = syntactically_grassroots" "$out"
 check "GSN as adopted is certified" "V2 = syntactically_grassroots" "$out"
 
+# A contract's term may declare its parameters, its environment predicates and its reflexive predicates together, parametric outermost, then environment, then reflexive (programs/self.glp, SDeclared and SBody; reported by GO #6 and Calculus #6, 2026-11-15: contract_named(gbank, environment([today], reflexive([knows], [...]))) did not type).  A file whose contract_named has such a term loads, the term is checked, and an instance of a parametric one keeps both declarations.
+DECLF="$GLP_DIR/programs/gsc/zz_declared_fixture.glp"
+printf 'procedure contract_named(Constant?, SDeclared).\ncontract_named(both, environment([today], reflexive([friend], %s))).\ncontract_named(all3, parametric([friend], environment([today], reflexive([friend], %s)))).\n' "$AGSG" "$AGSG" > "$DECLF"
+DBOTH=$(term "$DECLF" both)
+DALL3=$(term "$DECLF" all3)
+rm -f "$DECLF"
+check "a term declaring environment and reflexive predicates together is read from its file" "environment([today], reflexive([friend], [sas(establish, " "$DBOTH"
+check "a parametric term declaring both is read from its file" "parametric([friend], environment([today], reflexive([friend], [sas(establish, " "$DALL3"
+out=$(run "check($DBOTH, V1)." "instantiate($DALL3, [friend = pal], [], D), check(D?, V2)." "instantiate(parametric([friend], environment([today], $AGSG)), [friend = pal], [], E).")
+check "a contract declaring both is certified" "V1 = syntactically_grassroots" "$out"
+check "an instance of a parametric contract declaring both keeps both declarations" "D = environment([today], reflexive([pal], [sas(establish, " "$out"
+check "and is certified" "V2 = syntactically_grassroots" "$out"
+check "an instance of a parametric contract declaring environment predicates alone keeps them" "E = environment([today], [sas(establish, " "$out"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
