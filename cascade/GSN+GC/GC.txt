@@ -1,23 +1,35 @@
-% GC: Grassroots Coins (Grassroots Currencies until 2026-10-25; Udi, to GSC #8: currencies are the family, coins and bonds) --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
-% Owner: Currencies (GC).  The paper, /Users/udi/Grassroots/GC/main_Grassroots_Currencies.tex, prints it in its box in Section 2.1 and cites a clause as GC:1; GSC's paper quotes it beside GSN.
+% GC: Grassroots Coins --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
+% Owner: Currencies (GC).
 % Paper: GC, Grassroots Currencies: Turning Mutual Trust into Liquidity, https://arxiv.org/abs/2202.05619
-% Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none; no clause of it requires a friend.
-% Defines: grassroots coin, a unit of debt that names its issuer; Alice-coin, a grassroots coin issued by Alice.  A coin carries its issuer's public key, so whoever holds one knows its issuer (GC, Section 2.1); the schemas of GC.glp add knows of the issuer at the role that receives a coin.  Person, and knowing a person, are defined with GKK; Alice and Bob are variables naming distinct persons.
-% Last changed: 2026-11-09, the relation 'GC extends GKK.' alone on the box's first line (Udi, 2026-11-09, to Currencies #17; the style guide, 36).  2026-11-07, she for Alice in GC:3 to GC:5, as GSC's box of GC reads (GSC 1f99bbc; Udi, 2026-11-07, to GSC #13: a person takes they, and for readability she for Alice and he for Bob); written by Currencies #17 Cowork.  2026-10-25, the declaration of the names after the title line and the roles' names in each schema's head (GSC #8, 08:40 UTC; Udi approving); the pragmas in GSC's new form, the proposer named before the button, which is pressed in the row of the person who takes the act's other role, the fields a field for each variable of the schema in its order (Code #16, 08:48 UTC), and a line, indented, for each person asked (Udi, 2026-10-25, to GSC #8), and knows of the issuer on receipt (Udi, 2026-10-25, to Currencies #13; review of 2026-10-24, C12).  2026-10-23, each clause opening with its modality after its number, ■ enforced, ◆ attested, ○ undertaken, GC:1 to GC:4 enforced and GC:5 undertaken (GC, Appendix A; GSC's paper, Section 8), and the pragmas after the clauses, which the app built from the contract follows: the first line names a tab and what it lists, each other line names a clause, then a button for each act of it a person proposes, bearing the act's name, the fields the person fills in angle brackets, and, where the act needs another person's will, the question that person is asked (Udi, 2026-10-23, to GSC #6; Coordination #8; GSC #6's draft of 13:49 UTC, with the fields of swap and redeem added by Currencies #12).  2026-10-20.  The clauses as Udi approved them, in chat with GSC #5 (reported by GSC, 2026-10-20 16:52 UTC) and with Currencies #11 (2026-10-20): clauses 2 to 4 require that Alice knows Bob, and clause 2 that Bob knows Alice.
-% Pragmas (2026-11-06): the fields of a line are the variables of its acts that the atoms the proposer's role requires do not bind, in the schemas' order (vGLP's paper at 40f8444, Section 5.4; Code #23, 2026-11-05 11:39 and 14:05 UTC); what the proposer's state binds, the row fills.  Rewritten so by Currencies #15.
-% Schemas: GC.glp beside this file, GKK's three and four over the predicate coin, amounts as the numbers act schemas allow (GSC, Section 3.2), the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Adopted from the Calculus, branch Calculus of GLP, 79ec48f, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; GC.glp and cascade/GC/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 GC: Grassroots Coins
 GC extends GKK.
+A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
 Alice and Bob are persons.
-1. ■ Minting.  Alice may decide to issue Alice-coins.
-2. ■ Swap.  Alice and Bob, who know each other, may jointly decide to swap coins they hold.
-3. ■ Payment.  Alice may decide to pay Bob-coins she holds to Bob, whom she knows.
-4. ■ Redemption.  Alice may decide to redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
-5. ○ Pricing.  Alice prices her offerings in Alice-coins and accepts them in payment at those prices.
-Pragmas
+1. ■ Issue: Alice may issue Alice-coins.
+2. ■ Swap: Alice and Bob, who know each other, may jointly swap coins they hold.
+3. ■ Pay: Alice may pay Bob-coins she holds to Bob, whom she knows.
+4. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+5. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+Logic pragmas
+GC extends GKK.
+A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
+Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
+1. ■ Issue: Alice may issue Sum Alice-coins.
+2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
+3. ■ Pay: Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
+4. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
+5. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+Logic pragmas.
+Vocabulary: x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n); x holds exactly n y-coins = coin(x,y,#n).
+After x issues n x-coins: x holds n x-coins.
+After x and y swap n z-coins for m w-coins: no longer x holds n z-coins, y holds n z-coins, no longer y holds m w-coins, x holds m w-coins, y knows z and x knows w.
+After x pays y n y-coins: no longer x holds n y-coins and y holds n y-coins.
+After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-coin, x holds a z-coin and x knows z.
+Interface pragmas
 Coins: the coins Alice holds.
-Minting: Alice [Mint] <amount>
+Issue: Alice [Issue] <amount>
 Swap: Alice [Swap] <amount given> <issuer wanted> <amount wanted>
   Bob: Alice asks to swap coins with you.
-Payment: Alice [Pay] <amount>
-Redemption: Alice [Redeem] <issuer wanted>
+Pay: Alice [Pay] <amount>
+Redeem: Alice [Redeem] <issuer wanted>

@@ -25,7 +25,18 @@ for n in names:
             p = l[1]
             if not l[0] and p not in NUM and p not in added and p not in env and p not in refl and p not in PARS:
                 req.setdefault(p, set()).add(e['name'])
+    # A role that guards an act is supplied when the vocabulary lists its agents ('listed by ...', lex.rlist) or it is a
+    # parameter; else nothing says who is in it, and GSC's check refuses it, unsupplied(Schema, Role) (GSC-supplied 020fe5ea;
+    # Calculus #6, 2026-11-15 17:46 UTC).
+    rph = {p: t for t, p, a in lex.roles}
+    for e in acts:
+        for g in e['guards']:
+            if '(' in g:
+                p = gcsas.parse_atom(g)[1]
+                if p not in lex.rlist and p not in PARS:
+                    req.setdefault(p, set()).add(e['name'])
+                    phrase.setdefault(p, rph.get(p, '?'))
     if req:
         bad += 1
         print(n + ': ' + '; '.join('%s ("%s"), required by %s' % (p, phrase.get(p, '?'), ', '.join(sorted(a))) for p, a in sorted(req.items())))
-print('%d contracts with a required state none of the four supplies' % bad)
+print('%d contracts with a required state or a guarding role none of the four supplies' % bad)
