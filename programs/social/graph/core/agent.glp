@@ -501,7 +501,7 @@ cert_signed(unsigned, _, _, refused).
 %% wards_verdict1/4; compile.glp, compile_on/3).  not_grassroots(Faults),
 %% malformed(Faults) and any other term, the word grassroots among them, are
 %% refused.
-procedure cert_check(_?, String?, Module?, Verdict).
+procedure cert_check(Term?, String?, Module?, Verdict).
 cert_check(creator_cert(Src1, _, syntactically_grassroots), Src, M, ok(M?)) :-
     Src? =?= Src1? | true.
 cert_check(creator_cert(Src1, _, syntactically_grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
@@ -662,7 +662,7 @@ invite_signed(unsigned, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, Host) :
 
 %% The signed invitation is untyped; it must name the offered source identity
 %% and this agent.
-procedure invite_check(_?, String?, Constant?, Constant).
+procedure invite_check(Term?, String?, Constant?, Constant).
 invite_check(invitation(Src1, Me), Src, Id, true) :- Src? =?= Src1?, Me? =?= Id? | true.
 invite_check(_, _, _, false) :- otherwise | true.
 
@@ -734,7 +734,7 @@ take_joining(_, _, [], [], none).
 %% the mini-app's type, which must be equal at both ends") ---
 
 %% The signed undertaking is untyped; it must name the source identity.
-procedure undertaking_check(_?, String?, Constant).
+procedure undertaking_check(Term?, String?, Constant).
 undertaking_check(undertaking(Src1), Src, true) :- Src? =?= Src1? | true.
 undertaking_check(_, _, false) :- otherwise | true.
 
@@ -946,7 +946,7 @@ app_names([], [], []).
 %% X, the parts handed on as Parts1 to a caller that reads them again: a reader
 %% of a type that is not constant is read once.  A name's parts are untyped,
 %% so the anchor is only ever compared, never produced as an agent.
-procedure anchor_is(Stream(_)?, Constant?, Constant, Stream(_)).
+procedure anchor_is(Stream(Term)?, Constant?, Constant, Stream(Term)).
 anchor_is([F, A | R], X, true, [F?, A? | R?]) :- A? =?= X? | true.
 anchor_is(Parts, _, false, Parts?) :- otherwise | true.
 
@@ -965,7 +965,7 @@ anchor_is(Parts, _, false, Parts?) :- otherwise | true.
 %% bring are anchored at the introducer, while what the other party writes into
 %% them is anchored at that party.  The entries are kept: one volition releases
 %% every link and every round it brings.
-procedure may_release(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+procedure may_release(Stream(Term)?, Constant?, PendingInv?, PendingInv, Constant).
 may_release(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], B?) :-
     ground(Parts?), ground(S?) |
     mr_intro(Parts?, S?, W?, Rest?, Rest1, B).
@@ -973,14 +973,14 @@ may_release(Parts, S, [P | Rest], [P? | Rest1?], B?) :-
     otherwise | may_release(Parts?, S?, Rest?, Rest1, B).
 may_release(_, _, [], [], false).
 
-procedure mr_intro(Stream(_)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
+procedure mr_intro(Stream(Term)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
 mr_intro(_, S, W, Rest, Rest?, true) :- S? =?= W? | true.
 mr_intro(Parts, S, W, Rest, Rest1?, B?) :-
     S? =?\= W? |
     anchor_is(Parts?, W?, Hit, Parts1),
     mr_anchor(Hit?, Parts1?, S?, Rest?, Rest1, B).
 
-procedure mr_anchor(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+procedure mr_anchor(Constant?, Stream(Term)?, Constant?, PendingInv?, PendingInv, Constant).
 mr_anchor(true, _, _, Rest, Rest?, true).
 mr_anchor(false, Parts, S, Rest, Rest1?, B?) :- may_release(Parts?, S?, Rest?, Rest1, B).
 
