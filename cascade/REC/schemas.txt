@@ -1,0 +1,11 @@
+REC: Recommendations
+REC extends GKK.
+Vocabulary: x has recommended y for s = recommended(x,y,s); y holds x's recommendation for s = recommendation(y,x,s); y has shown z x's recommendation for s = shown(y,z,x,s); z sees x's recommendation of y for s = sees(z,x,y,s).
+After x recommends y for s, which requires x has not recommended y for s: x has recommended y for s and y holds x's recommendation for s.
+After y shows z x's recommendation for s, which requires y has not shown z x's recommendation for s: y has shown z x's recommendation for s and z sees x's recommendation of y for s.
+After x withdraws x's recommendation of y for s: no longer y holds x's recommendation for s, y has shown no one x's recommendation for s and no one sees x's recommendation of y for s.
+REC:0 - | Alice, Bob and Carol are persons, Skill a skill or a service.
+REC:1 ◆ Recommend: recommended(Alice,Bob,Skill), recommendation(Bob,Alice,Skill) <- knows(Alice,Bob), ~recommended(Alice,Bob,Skill) guarded by Alice.
+REC:2 ■ Show: shown(Bob,Carol,Alice,Skill), sees(Carol,Alice,Bob,Skill) <- recommendation(Bob,Alice,Skill), knows(Bob,Carol), ~shown(Bob,Carol,Alice,Skill) guarded by Bob.
+REC:3 ■ Withdraw: ~recommendation(Bob,Alice,Skill), ~shown(Bob,_,Alice,Skill), ~sees(_,Alice,Bob,Skill) <- recommendation(Bob,Alice,Skill) guarded by Alice.
+REC:3 ■ | Alice may not make it again.
