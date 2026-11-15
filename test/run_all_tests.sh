@@ -4949,8 +4949,8 @@ HEREDOC
 check "CVA wild leave: carol, a member of two groups alice leads and one bob leads, leaves: her machine lists alice and bob, alice once" "sent(carol, alice, start(attempt(carol, 8, 8, leave(carol, \[alice, bob\]), none)))" "$cva_wild_leave"
 check "CVA wild leave: each leader votes yes with the reading of the atom the condition requires of her, here" "sent(alice, carol, vote(attempt(carol, 8, 8, leave(carol, \[alice, bob\]), none), yes(\[\[\]\], \[g(here, \[\])\])))" "$cva_wild_leave"
 check "CVA wild leave: it commits, and carol holds no membership" "view(carol, \[left\], \[alice, bob\], \[\], " "$cva_wild_leave"
-check "CVA wild leave: every listing of carol is cleared at alice, both groups" "A = \[.*view(alice, \[listed(carol, speech(utterance(g2), carol)), listed(carol, speech(utterance(g1), carol)), here\], \[carol\], \[\], [^)]*)\]), view(alice, \[here\], \[carol\], \[\], " "$cva_wild_leave"
-check "CVA wild leave: ... and at bob" "B = \[.*view(bob, \[listed(carol, speech(utterance(g1), carol)), here\], \[carol\], \[\], [^)]*)\]), view(bob, \[here\], \[carol\], \[\], " "$cva_wild_leave"
+check "CVA wild leave: every listing of carol is cleared at alice, both groups" "A = \[.*view(alice, \[listed(carol, speech(utterance(g2), carol)), listed(carol, speech(utterance(g1), carol)), here\], \[carol\], \[\], \[tab('Bonds', bond), tab('Accepted', accepted), tab('Roles', role), tab('Titles', title)\]), view(alice, \[here\], \[carol\], \[\], " "$cva_wild_leave"
+check "CVA wild leave: ... and at bob" "B = \[.*view(bob, \[listed(carol, speech(utterance(g1), carol)), here\], \[carol\], \[\], \[tab('Bonds', bond), tab('Accepted', accepted), tab('Roles', role), tab('Titles', title)\]), view(bob, \[here\], \[carol\], \[\], " "$cva_wild_leave"
 cva_wild_absent=$("$REPL_RUN" <<HEREDOC
 $CVA/wild/
 :limit 30000000
