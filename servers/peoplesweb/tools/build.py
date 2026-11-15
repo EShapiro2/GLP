@@ -150,16 +150,23 @@ def contract_text(path):
     meta = [l for l in lines if l.startswith('%')]
     body = [l for l in lines if l.strip() and not l.startswith('%')]
     name, title = body[0].split(': ', 1)
-    # The pragmas follow the clauses under 'Pragmas', or under 'Interface
-    # pragmas' and 'Implementation pragmas', their two kinds (GSC's Section 2;
+    # The pragmas follow the clauses.  A contract adopted from the Calculus
+    # (calculus/MIGRATION.md) has its Logic pragmas after its clauses, under
+    # 'Logic pragmas', and its Interface pragmas after them; an earlier text
+    # has them under 'Pragmas', or under 'Interface pragmas' and
+    # 'Implementation pragmas', their two kinds (GSC's Section 2;
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
+    box = next((i for i, l in enumerate(body) if l.strip() in heads + ('Logic pragmas',)), len(body))
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
     clauses, preamble = [], []
-    for l in body[1:end]:
-        m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
+    for l in body[1:box]:
+        # A clause's title ends with a full stop, or, in the Calculus's text,
+        # where the title is the clause's act, with a colon; 'sep' keeps
+        # which, so the page prints the clause as it is written.
+        m = re.match(r'(\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
         if m:
-            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
         elif not clauses:
             # Every line of the box before its clauses, in its order: the
             # extension line, the definitions that are part of the contract
@@ -300,15 +307,20 @@ if os.path.exists(os.path.join(CALC, 'STATE.txt')):
 def calculus_of(n):
     """What the site shows of contract n from the Calculus: its state, and,
     until its owner adopts it, the text proposed; the full contract, from the
-    branch until adoption and from cascade/n/ after it."""
+    branch until adoption and from cascade/n/ after it.  A contract is
+    adopted when STATE.txt says so, or when its record of the cascade has
+    its full contract, which its owner's adoption prints there; so a
+    contract adopted on main shows its owner's full contract whatever the
+    branch says, and still does when the branch is closed."""
     st = calc_state.get(n)
-    if st is None:
+    own = os.path.join(GLP, 'cascade', n, 'full-contract.txt')
+    if st is None and not os.path.exists(own):
         return None
-    v = dict(st)
-    src = os.path.join(GLP, 'cascade', n) if st['adopted'] else os.path.join(CALC, n)
-    if not st['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
+    v = dict(st or {'owner': '', 'certified': True, 'compiled': True})
+    v['adopted'] = bool(st and st['adopted']) or os.path.exists(own)
+    if not v['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
         v['proposed'] = read(os.path.join(CALC, n, 'contract.txt')).strip()
-    fc = os.path.join(src, 'full-contract.txt')
+    fc = own if v['adopted'] else os.path.join(CALC, n, 'full-contract.txt')
     if os.path.exists(fc):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))

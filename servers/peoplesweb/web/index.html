@@ -919,7 +919,7 @@ function page(c, hood){
       ${c.clauses.length ? `<div class="card rules">
       ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
       <div class="pre">${esc(c.preamble)}</div>
-      <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
+      <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
       </div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
