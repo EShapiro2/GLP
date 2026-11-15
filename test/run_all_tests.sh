@@ -4243,6 +4243,13 @@ check "CVA pragmas: ... the inherited button that stands, with its question, rea
 check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
 check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
 check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# A schema whose name the term quotes, being no plain atom, as 'no-show' of the act No-show: its button [No-show] names it, the name in lower case and each space an underscore (programs/vglp/cva/compiler/README.md, 2), and the act is written with that name (quoted).
+cva_pq=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XH' 'Alice is a person.' '1. ■ No-show. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'No-show: Alice [No-show] <amount>' > "$cva_pq/XH.txt"
+cva_pq_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pq/XH.txt" "[schema('no-show', ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])]" 2>&1; echo "exit $?")
+rm -rf "$cva_pq"
+check "CVA pragmas: a button names a schema whose name the term quotes (quoted)" "act('no-show', '\"No-show\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pq_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (quoted)" "^exit 0$" "$cva_pq_out"
 # The line saying what a contract is written from, with several relations, each with the contracts after it (GSC, Section 8, Relations among Contracts: amends, extends, instantiates, implements and restricts; GAI.txt, "GAI extends GnW and amends GFP (...)."; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC): XR extends XB2 and amends XC2, and has the pragmas of both with its own (two); XS implements XC2 (implements); XQ's "copies" is no relation, and the name read is refused (norel).
 cva_pr2=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB2' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pr2/XB2.txt"
