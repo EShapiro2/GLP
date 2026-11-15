@@ -9722,7 +9722,8 @@ if _section CAS; then
 # schemas in GSC's notation printed from the term (schemas.txt), the checker's
 # verdict, the VMAT form, the canonical platform as .vglp and as .glp, the
 # platform's interface in sGLP's term form, and its run with vGLP's scripted
-# persons, with a manifest.
+# persons, with a manifest; for a contract adopted from the Calculus, the
+# artefacts calculus/tools/adopt.py prints, its schemas.txt among them (cascade.sh).
 # This section re-runs cascade.sh --check on every recorded contract and holds
 # the committed artefacts to what the tools print now; a contract with no
 # record is not run.
@@ -9742,7 +9743,12 @@ for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv g
     cas_o="cascade/$cas_n"
     [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
-    for cas_f in "$cas_n.txt" "$cas_n.md" "$cas_n.glp" schemas.txt verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
+    # A contract its owner has adopted from the Calculus also has the artefacts
+    # calculus/tools/adopt.py prints (claude.md "Code", "The record of a
+    # contract adopted from the Calculus"): full-contract.txt, full-pragmas.txt,
+    # flat.txt and full-schemas.txt, its schemas.txt being adopt.py's; and
+    # cascade.sh --check fails where its NAME.glp is not what adopt.py prints.
+    for cas_f in "$cas_n.txt" "$cas_n.md" "$cas_n.glp" schemas.txt full-contract.txt full-pragmas.txt flat.txt full-schemas.txt verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
         [ -f "$GLP_DIR/$cas_o/$cas_f" ] || continue
         check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
     done
