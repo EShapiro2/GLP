@@ -4782,7 +4782,8 @@ HEREDOC
 check "CVA roles: alice appoints bob, typing arbiter, and his state holds role(alice, arbiter)" "view(bob, \[role(alice, arbiter), knows(alice)\]" "$cva_roles"
 check "CVA roles: ... the attempt naming the constant" "start(attempt(alice, [0-9]*, [0-9]*, appoint(alice, bob, arbiter), none))" "$cva_roles"
 check "CVA roles: ... which is the atom arbitrate requires: bob's arbitrate commits, and his state holds done" "view(bob, \[done, role(alice, arbiter), knows(alice)\]" "$cva_roles"
-check "CVA roles: ... and resign, its variable over the constants local to bob's role, deletes the role his machine finds" "view(bob, \[done, knows(alice)\]" "$cva_roles"
+check "CVA roles: ... and the request of resign names the role resigned, a person and a constant, variables of the atom it deletes at its base" "^resign(Peer, Peer, Constant)$" "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: ... and resign(bob, alice, arbiter) deletes that role" "view(bob, \[done, knows(alice)\]" "$cva_roles"
 check_not "CVA roles: ... nothing refused" "refused(" "$cva_roles"
 cva_roles_other=$("$REPL_RUN" <<HEREDOC
 $CVA/roles/

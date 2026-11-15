@@ -122,7 +122,10 @@ if (defined $term && $term ne "") {
         my ($lv, $lb) = local_vars($rarg);
         my %local = map { $_->[0] => 1 } @$lv;
         $readat{$n} = { map { $_->[0] => $_->[1] } grep { $_->[1] } @$lv };
-        $delbase{$n} = { map { $_->[0] => $_->[2] } grep { $_->[2] } @$lv };
+        # A variable of an atom deleted at the base that the constraint also names is as it was, local (local.glp, locals_of).
+        my $carg = $kw eq "nschema" ? $args[$named ? 3 : 2] : $kw eq "qschema" ? $args[$named ? 4 : 3] : "";
+        my %incon = map { $_ => 1 } var_tokens($carg // "");
+        $delbase{$n} = { map { $_->[0] => $_->[2] } grep { $_->[2] && !$incon{$_->[0]} } @$lv };
         $lbase{$n} = $lb if defined $lb;
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
