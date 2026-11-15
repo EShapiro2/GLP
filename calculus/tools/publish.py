@@ -11,6 +11,8 @@ Figure 1 of the paper, and the programs that print them.
     DIR/NAME/full-schemas.txt       its expanded schemas (sasx/)
     DIR/NAME/term.glp.txt           the expanded schemas as the term GLP's checker reads (glp/)
     DIR/NAME/verdict.txt, vmat.tex, interface.txt, platform.vglp, platform.glp    the abstraction cascade (cascade/NAME/)
+    DIR/NAME/interface-adopted.txt  the Interface pragmas of interface.txt keyed by the titles of the contract's own
+                                    clauses, for its owner's adopted file, proposed to the owner (tools/ifadopt.py)
     DIR/README.md, OWNERS.md, MIGRATION.md, STATE.txt (a line for each contract: name, owner, certified, compiled (yes, no or parametric), adopted), STATUS.txt, VERDICTS.txt, tools/, tests/
 """
 import os, shutil, sys
