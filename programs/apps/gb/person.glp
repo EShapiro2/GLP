@@ -137,7 +137,7 @@ script(market_frank, Me, [Diana, Eve, Escrow, Alice], [own([F1], propose(establi
         own([F6], propose(redeem_coin_against_bond(F6?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 11)),
         own([F7], propose(redeem_coin_against_bond(F7?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 10)),
         own([F8], propose(redeem_coin_against_bond(F8?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 9)),
-        approval(release(Escrow?, Me?, Me?, 5), yes), wait(has(coin(Me?), 5)),
+        approval([[D1], [D2]], release(Escrow?, Me?, Me?, D1?, speech(utterance('day 30'), D2?), 5), yes), wait(has(coin(Me?), 5)),
         own([F9], propose(redeem_coin_against_bond(F9?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 8)), look]) :-
     ground(Me?), ground(Diana?), ground(Eve?), ground(Escrow?), ground(Alice?) | true.
 script(market_escrow, Me, [Charlie, Frank], [own([G1], propose(establish(G1?))), wait(holds(identity)),
@@ -145,7 +145,7 @@ script(market_escrow, Me, [Charlie, Frank], [own([G1], propose(establish(G1?))),
         own([M1], propose(acquaint(M1?, Frank?))), wait(holds(knows(Frank?))),
         approval(deposit(Charlie?, Me?, Frank?, 5, Frank?, speech(utterance('day 30'), Charlie?)), yes),
         wait(has(escrow_coin(Frank?, Charlie?, Frank?, speech(utterance('day 30'), Charlie?)), 5)),
-        own([G2], propose(release(G2?, Frank?, Frank?, 5))),
+        own([G2], propose(release(G2?, Frank?, Frank?, Charlie?, speech(utterance('day 30'), Charlie?), 5))),
         wait(lacks(escrow_coin(Frank?, Charlie?, Frank?, speech(utterance('day 30'), Charlie?)))), look]) :-
     ground(Me?), ground(Charlie?), ground(Frank?) | true.
 script(_, _, _, []) :- otherwise | true.
@@ -343,28 +343,36 @@ match_class(deposit_bond(K1, K2, K3, K4, K5, K6, K7), deposit_bond(XK1, XK2, XK3
     match_int(K5?, XK5?, R4?, R5, BK5),
     match_key(K6?, XK6?, R5?, R6, BK6),
     match_speech(K7?, XK7?, R6?, F, BK7).
-match_class(release(K1, K2, K3, K4), release(XK1, XK2, XK3, XK4), Vs, F?, release(BK1?, BK2?, BK3?, BK4?)) :-
+match_class(release(K1, K2, K3, K4, K5, K6), release(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, release(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
     match_key(K3?, XK3?, R2?, R3, BK3),
-    match_int(K4?, XK4?, R3?, F, BK4).
-match_class(release_bond(K1, K2, K3, K4, K5), release_bond(XK1, XK2, XK3, XK4, XK5), Vs, F?, release_bond(BK1?, BK2?, BK3?, BK4?, BK5?)) :-
-    match_key(K1?, XK1?, found(Vs?), R1, BK1),
-    match_key(K2?, XK2?, R1?, R2, BK2),
-    match_key(K3?, XK3?, R2?, R3, BK3),
-    match_int(K4?, XK4?, R3?, R4, BK4),
-    match_int(K5?, XK5?, R4?, F, BK5).
-match_class(return(K1, K2, K3, K4), return(XK1, XK2, XK3, XK4), Vs, F?, return(BK1?, BK2?, BK3?, BK4?)) :-
-    match_key(K1?, XK1?, found(Vs?), R1, BK1),
-    match_key(K2?, XK2?, R1?, R2, BK2),
-    match_key(K3?, XK3?, R2?, R3, BK3),
-    match_int(K4?, XK4?, R3?, F, BK4).
-match_class(return_bond(K1, K2, K3, K4, K5), return_bond(XK1, XK2, XK3, XK4, XK5), Vs, F?, return_bond(BK1?, BK2?, BK3?, BK4?, BK5?)) :-
+    match_key(K4?, XK4?, R3?, R4, BK4),
+    match_speech(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, F, BK6).
+match_class(release_bond(K1, K2, K3, K4, K5, K6, K7), release_bond(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, release_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
     match_key(K3?, XK3?, R2?, R3, BK3),
     match_int(K4?, XK4?, R3?, R4, BK4),
-    match_int(K5?, XK5?, R4?, F, BK5).
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_speech(K6?, XK6?, R5?, R6, BK6),
+    match_int(K7?, XK7?, R6?, F, BK7).
+match_class(return(K1, K2, K3, K4, K5, K6), return(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, return(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_key(K4?, XK4?, R3?, R4, BK4),
+    match_speech(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, F, BK6).
+match_class(return_bond(K1, K2, K3, K4, K5, K6, K7), return_bond(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, return_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_speech(K6?, XK6?, R5?, R6, BK6),
+    match_int(K7?, XK7?, R6?, F, BK7).
 match_class(K, _, _, nomatch, K?) :- otherwise | true.
 
 %% match_key(K, X, F0, F, K1): a hole K, unknown, takes the key X; a key K matches X where the two are equal.
@@ -379,10 +387,11 @@ match_int(I, _, nomatch, nomatch, I?).
 match_int(I, X, found(Vs), found(Vs?), I?) :- I? =:= X? | true.
 match_int(I, _, found(_), nomatch, I?) :- otherwise | true.
 
-%% match_speech(S, X, F0, F, S1): a speech act S, which the script names whole, matches X where the two are equal.
+%% match_speech(S, X, F0, F, S1): a speech act S, which the script names whole, matches X where the two are equal; a speech act whose speaker is a hole, its utterance named, matches X where the utterances are equal, the hole taking X's speaker.
 procedure match_speech(Speech?, Speech?, Found?, Found, Speech).
 match_speech(S, _, nomatch, nomatch, S?).
 match_speech(S, X, found(Vs), found(Vs?), S?) :- ground(S?), ground(X?), S? =?= X? | true.
+match_speech(speech(U, K), speech(XU, XK), found(Vs), found([XK? | Vs?]), speech(U?, K?)) :- ground(U?), unknown(K?), ground(XU?), ground(XK?), U? =?= XU? | true.
 match_speech(S, _, found(_), nomatch, S?) :- otherwise | true.
 
 %% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.

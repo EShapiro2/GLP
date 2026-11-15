@@ -40,13 +40,13 @@ deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
 deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
 ;
-release(Peer, Peer, Peer, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-release_bond(Peer, Peer, Peer, Integer, Integer)
+release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 ;
-return(Peer, Peer, Peer, Integer)
+return(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-return_bond(Peer, Peer, Peer, Integer, Integer)
+return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 .
 Proposal ::=
 establish(Peer)
@@ -79,13 +79,13 @@ deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
 deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
 ;
-release(Peer, Peer, Peer, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-release_bond(Peer, Peer, Peer, Integer, Integer)
+release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 ;
-return(Peer, Peer, Peer, Integer)
+return(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-return_bond(Peer, Peer, Peer, Integer, Integer)
+return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 .
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
