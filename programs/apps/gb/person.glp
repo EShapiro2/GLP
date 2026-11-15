@@ -11,8 +11,8 @@
 %%          Bob-bonds due day 5, swap_coin_for_bond(alice, bob, alice, 2, bob,
 %%          5, 3) (GB:2); once she holds the Bob-bonds, redeems a mature
 %%          Bob-bond against an Alice-coin bob holds, redeem_bond(alice, bob,
-%%          5, alice) (GB:3), the play having written day 5 on her calendar
-%%          once bob answered yes to the loan; once she holds the Alice-coin,
+%%          5, alice) (GB:3), the play having written day 5 on bob's
+%%          calendar once he answered yes to the loan; once she holds the Alice-coin,
 %%          deposits two Alice-coins with carol for bob on the condition
 %%          day 10, deposit(alice, carol, alice, 2, bob, speech(utterance('day
 %%          10'), alice)) (GB:4); looks again.
@@ -71,7 +71,7 @@ script(carol, Me, [Alice], [own([C1], propose(establish(C1?))), wait(holds(ident
                approval(acquaint(Alice?, Me?), yes),
                approval([[B1]], deposit(Alice?, Me?, Alice?, 2, B1?, speech(utterance('day 10'), Alice?)), yes)]) :-
     ground(Me?), ground(Alice?) | true.
-%% The village market of GB's paper, Section 7.1, on the compiled app (play_village, plays.glp): six villagers and an escrow agent, each script its villager's acts of the seven operations, after each has issued and come to know those they transact with (GKK:2), each acquaintance willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party issuing before it answers an acquaintance.  The day is no atom of the view (vGLP, Section 5.4, "Act schemas as local specifications"), so no script waits on it: diana presents a frank-bond before her calendar gives day 28, her own machine refuses it, the bond not mature by her date (GB:3, Redeem bond), and she presents one again once frank has redeemed his fifth diana-coin, the play having written day 28 on her calendar off the refusal.
+%% The village market of GB's paper, Section 7.1, on the compiled app (play_village, plays.glp): six villagers and an escrow agent, each script its villager's acts of the seven operations, after each has issued and come to know those they transact with (GKK:2), each acquaintance willed by both.  Each waits on its own screen, so that a request is made once what it needs of its proposer holds; what it needs of the other party holds by the order of the scripts, each party issuing before it answers an acquaintance.  The day is no atom of the view (vGLP, Section 5.4, "Act schemas as local specifications"), so no script waits on it: once frank has redeemed his fifth diana-coin, diana presents a frank-bond before frank's calendar gives day 28, frank's machine refuses it, the bond not mature by the date at frank, its issuer (GB:3, Redeem bond), and she presents one again, the play having written day 28 on frank's calendar off the refusal.
 script(market_alice, Me, [Bob, Charlie, Eve, Frank], [own([A1], propose(establish(A1?))), wait(holds(identity)),
         own([A2], propose(issue(A2?, 30))), wait(has(coin(Me?), 30)),
         own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
@@ -110,8 +110,8 @@ script(market_diana, Me, [Bob, Frank], [own([D1], propose(establish(D1?))), wait
         own([D3, D4], propose(swap_coin_for_bond(D3?, Bob?, D4?, 20, Bob?, 25, 24))), wait(has(bond(Bob?, 25), 24)),
         own([D5, D6], propose(swap_coin_for_bond(D5?, Frank?, D6?, 15, Frank?, 28, 18))), wait(has(bond(Frank?, 28), 18)),
         wait(has(coin(Me?), 3)),
-        own([D7], propose(redeem_bond(D7?, Frank?, 28, Frank?))), wait(refused_by(redeem_bond(Me?, Frank?, 28, Frank?), Me?)),
         wait(lacks(bond(Frank?, 28), 14)),
+        own([D7], propose(redeem_bond(D7?, Frank?, 28, Frank?))), wait(refused_by(redeem_bond(Me?, Frank?, 28, Frank?), Frank?)),
         own([D8], propose(redeem_bond(D8?, Frank?, 28, Frank?))), wait(lacks(bond(Frank?, 28), 13)), look]) :-
     ground(Me?), ground(Bob?), ground(Frank?) | true.
 script(market_eve, Me, [Alice, Charlie, Frank], [own([E1], propose(establish(E1?))), wait(holds(identity)),
