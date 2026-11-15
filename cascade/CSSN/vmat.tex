@@ -1044,8 +1044,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -1098,6 +1097,10 @@ Grupo
 )
 ,
 \mathit{
+person
+}
+,
+\mathit{
 listed
 }
 (
@@ -1109,39 +1112,6 @@ Grupo
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -1173,8 +1143,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -1200,6 +1169,10 @@ Grupo
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -1231,39 +1204,6 @@ Grupo
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2021,8 +1961,7 @@ parent
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2046,6 +1985,10 @@ has_parent
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -2073,39 +2016,6 @@ has_parent
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2511,36 +2421,7 @@ parent
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-member
-}
-(
-\ast
-,
-\Bob
-)
- \text{ or } 
-\mathit{
-listed
-}
-(
-\Bob
-,
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2574,6 +2455,34 @@ has_parent
 &
 \text{where } K_
 {
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+member
+}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{
+listed
+}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
 \Bob
 }
  \text{ holds every atom of } c_
@@ -2606,6 +2515,10 @@ identity
 }
 ,
 \mathit{
+person
+}
+,
+\mathit{
 friend
 }
 (
@@ -2644,39 +2557,6 @@ has_parent
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2706,8 +2586,7 @@ knows
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2726,8 +2605,7 @@ knows
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -2788,43 +2666,14 @@ parent
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2858,8 +2707,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2878,8 +2726,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -2954,6 +2801,10 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -2989,39 +2840,6 @@ friend
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3250,6 +3068,29 @@ friend
 {
 \Alice
 }
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
 ,\\
 &
 \text{where } K_
@@ -3278,30 +3119,6 @@ listed
 ,
 \ast
 )
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Alice
-)
-\}
-) \setminus K_
-{
-\Bob
-}
 ,\\
 &
 \text{where } K_
@@ -3335,6 +3152,10 @@ listed
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -3375,39 +3196,6 @@ parent
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3441,36 +3229,7 @@ friend
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-member
-}
-(
-\ast
-,
-\Bob
-)
- \text{ or } 
-\mathit{
-listed
-}
-(
-\Bob
-,
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3493,6 +3252,44 @@ friend
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+member
+}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{
+listed
+}
+(
+\Bob
+,
+\ast
+)
 ,\\
 &
 \text{where } K_
@@ -3523,17 +3320,6 @@ listed
 )
 ,\\
 &
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
-,\\
-&
 \text{provided } 
 \mathit{
 identity
@@ -3574,6 +3360,10 @@ friend
  \text{ and } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
  \in c_
 {
@@ -3592,39 +3382,6 @@ parent
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3654,8 +3411,7 @@ knows
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3674,8 +3430,7 @@ knows
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -3685,8 +3440,7 @@ c_
 {
 \mathit{Carol}
 }
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Dave}
@@ -3761,6 +3515,10 @@ parent
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -3790,76 +3548,14 @@ parent
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Dave}
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Dave}
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Dave}
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3895,8 +3591,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3915,8 +3610,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -3926,8 +3620,7 @@ c_
 {
 \mathit{Carol}
 }
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Dave}
@@ -4009,6 +3702,10 @@ friend
 (
 \mathit{Dave}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -4024,6 +3721,10 @@ friend
 (
 \mathit{Carol}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Dave}
@@ -4066,72 +3767,6 @@ friend
 \Bob
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Dave}
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Dave}
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -4167,8 +3802,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -4187,8 +3821,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -4256,6 +3889,10 @@ knows
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -4298,39 +3935,6 @@ friend
 \Bob
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -9697,8 +9301,7 @@ listed
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -9733,6 +9336,10 @@ has_parent
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
@@ -9757,39 +9364,6 @@ Grupo
 \Alice
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -10469,6 +10043,10 @@ parent
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
@@ -10502,103 +10080,6 @@ listed
 Grupo
 )
 ]
-)
-)
-,\\
-&
-\text{provided } 
-\forall 
-\mathit{Carol}
-\,(
-\mathit{
-listed
-}
-(
-\Alice
-,
-\mathit{Carol}
-,
-Grupo
-)
-\rightarrow
-\mathit{
-identity
-}
-(
-\mathit{Carol}
-)
-\land
-\mathit{
-member
-}
-(
-\mathit{Carol}
-,
-Grupo
-,
-\Alice
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{making } 
-\forall 
-\mathit{Carol}
-\,(
-\mathit{
-listed
-}
-(
-\Alice
-,
-\mathit{Carol}
-,
-Grupo
-)
-\rightarrow
-\neg 
-\mathit{
-member
-}
-(
-\mathit{Carol}
-,
-Grupo
-,
-\Alice
 )
 )
 ,\\
@@ -10740,6 +10221,10 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -10794,39 +10279,6 @@ G1
 )
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G2
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 ,
@@ -10860,8 +10312,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -10882,8 +10333,7 @@ listed
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -10893,8 +10343,7 @@ c_
 {
 \mathit{Carol}
 }
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Dave}
@@ -10990,6 +10439,10 @@ friend
 (
 \mathit{Dave}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -11012,6 +10465,10 @@ friend
 (
 \mathit{Carol}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Dave}
@@ -11031,72 +10488,6 @@ Grupo
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Dave}
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Dave}
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11134,8 +10525,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11156,8 +10546,7 @@ listed
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -11246,6 +10635,10 @@ parent
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -11265,39 +10658,6 @@ Grupo
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11333,8 +10693,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11355,8 +10714,7 @@ listed
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -11420,43 +10778,14 @@ parent
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11642,32 +10971,6 @@ c_
 {
 \Bob
 }
- \qquad (
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-has_parent
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
  \setminus 
 \{
 \mathit{
@@ -11677,21 +10980,6 @@ parent
 \Alice
 )
 \}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-has_parent
-}
-(
-\ast
-)
-]
-)
-)
 ,\\
 &
 c'_
@@ -11768,6 +11056,10 @@ parent
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
@@ -11809,95 +11101,6 @@ of_age
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-\forall 
-\mathit{Carol}
-\,(
-\mathit{
-has_parent
-}
-(
-\Alice
-,
-\mathit{Carol}
-)
-\rightarrow
-\mathit{
-identity
-}
-(
-\mathit{Carol}
-)
-\land
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-,
-\Alice
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-child
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_parent
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{making } 
-\forall 
-\mathit{Carol}
-\,(
-\mathit{
-has_parent
-}
-(
-\Alice
-,
-\mathit{Carol}
-)
-\rightarrow
-\neg 
-\mathit{
-parent
-}
-(
-\mathit{Carol}
-,
-\Alice
-)
-)
 ,\\
 &
 \text{guarded by } \{
