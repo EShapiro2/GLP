@@ -972,8 +972,8 @@ roles([schema(acquaint, [],
           rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]),
        schema(appoint, [const(r)],
          [rs(guarded, [], [], [atom(knows, [role(2)])], []),
-          rs(unguarded, [atom(role, [role(1), const(r)])], [], [atom(knows, [role(1)])], [])]),
+          rs(unguarded, [atom(role, [role(1), num(r)])], [], [atom(knows, [role(1)])], [])]),
        schema(arbitrate, [pvar(o)],
          [rs(guarded, [atom(done, [])], [], [atom(role, [pvar(o), val(arbiter)])], [atom(done, [])])]),
        schema(resign, [pvar(o), const(r)],
-         [rs(guarded, [], [atom(role, [pvar(o), const(r)])], [], [])])]).
+         [rs(guarded, [], [atom(role, [pvar(o), num(r)])], [], [])])]).
