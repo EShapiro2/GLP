@@ -390,44 +390,30 @@ fi
 }
 # adopted_print: an adopted contract's artefacts as calculus/tools/adopt.py
 # prints them (calculus/README.md, "Adopting a contract"), into $OUT.  adopt.py
-# writes PATHS.txt beside its tools/ and its prints into cascade/NAME/ and beside
-# the adopted file of the clone $GLP_DIR names; it is run on a scratch calculus/,
-# its tools/ this repository's, and a scratch clone holding this repository's
-# calculus/ and a copy of each adopted file, so that the repository is not
-# written.
+# finds the adopted contracts under programs/ and reads one not adopted from
+# the branch Calculus of this clone; with --out it writes under a scratch
+# directory, cascade/NAME/ and the owner's NAME.glp, so that the repository is
+# not written (adopt.py at f4650ab of the Calculus's repository, Helper #7,
+# 2026-11-15).
 ADOPT_PRINTS="schemas.txt full-contract.txt full-pragmas.txt flat.txt full-schemas.txt"
 adopted_print() {
-    local A="$WORK/adopt" ap
-    mkdir -p "$A/calculus" "$A/glp" || exit 2
-    ln -s "$GLP_DIR/calculus/tools" "$A/calculus/tools"
-    ln -s "$GLP_DIR/calculus" "$A/glp/calculus"
-    if ! GLP_DIR="$GLP_DIR" python3 "$A/calculus/tools/adopt.py" --paths > "$WORK/adopt.out" 2>&1; then
-        say "calculus/tools/adopt.py --paths failed: $(head -1 "$WORK/adopt.out")"
-        exit 1
-    fi
-    ap=$(awk -v n="$FILE" '$1 == n { print $2; exit }' "$A/calculus/PATHS.txt")
-    if [ "$ap" != "$OWNER/$FILE.txt" ]; then
-        say "calculus/tools/adopt.py --paths names ${ap:-no file} for $FILE, not its adopted file $OWNER/$FILE.txt"
-        exit 1
-    fi
-    awk '$2 ~ /\.txt$/ { print $2 }' "$A/calculus/PATHS.txt" | while IFS= read -r p; do
-        mkdir -p "$A/glp/$(dirname "$p")" && cp "$GLP_DIR/$p" "$A/glp/$p"
-    done
-    if ! GLP_DIR="$A/glp" python3 "$A/calculus/tools/adopt.py" "$FILE" > "$WORK/adopt.out" 2>&1; then
+    local A="$WORK/adopt"
+    mkdir -p "$A" || exit 2
+    if ! GLP_DIR="$GLP_DIR" python3 "$GLP_DIR/calculus/tools/adopt.py" "$FILE" --out "$A" > "$WORK/adopt.out" 2>&1; then
         say "calculus/tools/adopt.py $FILE failed: $(head -3 "$WORK/adopt.out")"
         exit 1
     fi
-    if ! cmp -s "$A/glp/$OWNER/$FILE.glp" "$SRC/$FILE.glp"; then
+    if ! cmp -s "$A/$OWNER/$FILE.glp" "$SRC/$FILE.glp"; then
         say "$OWNER/$FILE.glp is not what calculus/tools/adopt.py $FILE prints from $OWNER/$FILE.txt; its owner runs it"
-        diff "$SRC/$FILE.glp" "$A/glp/$OWNER/$FILE.glp" | head -10
+        diff "$SRC/$FILE.glp" "$A/$OWNER/$FILE.glp" | head -10
         exit 1
     fi
     for f in $ADOPT_PRINTS; do
-        if [ ! -f "$A/glp/cascade/$FILE/$f" ]; then
+        if [ ! -f "$A/cascade/$FILE/$f" ]; then
             say "calculus/tools/adopt.py $FILE printed no $f"
             exit 1
         fi
-        cp "$A/glp/cascade/$FILE/$f" "$OUT/$f"
+        cp "$A/cascade/$FILE/$f" "$OUT/$f"
     done
     say "adopted: $FILE.glp and $(echo $ADOPT_PRINTS | sed -e 's/ /, /g') as calculus/tools/adopt.py prints them"
 }
