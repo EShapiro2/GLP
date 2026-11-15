@@ -4289,6 +4289,16 @@ HEREDOC
 check "CVA compiler: the platform of a contract with a person who must consent holds schema_consents(enter, [1]) (consent)" "^schema_consents(enter, \[1\])" "$cva_pc_c"
 check "CVA compiler: ... a called person who consents is not asked, greet_or_consent(yes, ...) giving their yes (consent)" "^greet_or_consent(yes, _, N, _, \[greeted(N?)\])\." "$cva_pc_c"
 check_not "CVA compiler: ... and it is compiled (consent)" "not compiled" "$cva_pc_c"
+# A parametric contract, parametric(Params, Body), is certified and has no platform until it is instantiated (vGLP, Section 5.4; compiler/self.glp, WOffered; Calculus #6, vGLP_inbox.md, 2026-11-15 14:49 UTC, of GO, GBank, GCoop, GCorp and GRA): the compiler says so, with no type error (parametric).
+cva_pp=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 100000000
+compile(xp, parametric([decided], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])]), syntactically_grassroots, no_introduction, no_pragmas).
+:quit
+HEREDOC
+)
+check "CVA compiler: a parametric contract is not compiled, the line saying why (parametric)" "^%% a parametric contract is certified and has no platform until it is instantiated" "$cva_pp"
+check_not "CVA compiler: ... and the goal is well typed (parametric)" "not well-typed" "$cva_pp"
 # The line saying what a contract is written from, with several relations, each with the contracts after it (GSC, Section 8, Relations among Contracts: amends, extends, instantiates, implements and restricts; GAI.txt, "GAI extends GnW and amends GFP (...)."; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC): XR extends XB2 and amends XC2, and has the pragmas of both with its own (two); XS implements XC2 (implements); XQ's "copies" is no relation, and the name read is refused (norel).
 cva_pr2=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB2' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pr2/XB2.txt"
