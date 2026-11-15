@@ -4250,6 +4250,24 @@ cva_pq_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pq/XH.txt" "[schema('no-show'
 rm -rf "$cva_pq"
 check "CVA pragmas: a button names a schema whose name the term quotes (quoted)" "act('no-show', '\"No-show\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pq_out"
 check "CVA pragmas: ... and pragmas.sh exits 0 (quoted)" "^exit 0$" "$cva_pq_out"
+# An adopted contract of the Calculus (calculus/README.md, "Adopting a contract"; Code_inbox.md, 2026-11-15 13:22 UTC, Calculus #6): a clause titled by its act ends its title with a colon; the lines from the line "Logic pragmas" to "Interface pragmas" are skipped, the contract's text ending at that line (adopted); and a first line in the Calculus's form, an instantiation's words after "with", relations joined by commas and "and", "strengthens" among them, "them" for the contracts named before (firstline).
+cva_pa=$(mktemp -d)
+printf '%s\n' '% Owner: vGLP.' 'XJ: Test' 'Alice is a person.' '1. ■ Mint: Alice may mint coins.' 'Logic pragmas' 'Alice is a person.' '1. ■ Mint: Alice may mint coins, provided nothing.' 'Logic pragmas.' 'Vocabulary: x holds a coin = coin(x).' 'Interface pragmas' 'Coins: the coins Alice holds.' 'Mint: Alice [Mint] <amount>' > "$cva_pa/XJ.txt"
+printf '%s\n' 'XK: Test' 'XK instantiates XJ with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Contract to App).' 'Alice is a person.' '1. ■ Burn: Alice may burn coins.' > "$cva_pa/XK.txt"
+printf '%s\n' 'XL: Test' 'XL instantiates XJ and XK with bylaws that delegate no act and restricts them.' 'Alice is a person.' > "$cva_pa/XL.txt"
+printf '%s\n' 'XM: Test' 'XM extends, restricts and strengthens XJ and XK.' 'Alice is a person.' > "$cva_pa/XM.txt"
+cva_pa_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pa/XJ.txt" "[schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])]" 2>&1; echo "exit $?")
+cva_pa_k=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XK.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
+cva_pa_l=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XL.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
+cva_pa_m=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XM.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
+rm -rf "$cva_pa"
+check "CVA pragmas: a clause titled by its act, its title ending in a colon, is named by a pragma line (adopted)" "act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pa_out"
+check "CVA pragmas: ... the contract's text ends at the line Logic pragmas (adopted)" "Mint: Alice may mint coins.\"')" "$cva_pa_out"
+check_not "CVA pragmas: ... no line of the Logic pragmas is read (adopted)" "Vocabulary" "$cva_pa_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (adopted)" "^exit 0$" "$cva_pa_out"
+check "CVA pragmas: a first line with an instantiation's words after with, and relations joined by commas and and (firstline)" "^XJ.txt XK.txt $" "$cva_pa_k"
+check "CVA pragmas: ... two contracts instantiated, and them (firstline)" "^XJ.txt XK.txt XL.txt $" "$cva_pa_l"
+check "CVA pragmas: ... extends, restricts and strengthens two contracts (firstline)" "^XJ.txt XK.txt XM.txt $" "$cva_pa_m"
 # The line saying what a contract is written from, with several relations, each with the contracts after it (GSC, Section 8, Relations among Contracts: amends, extends, instantiates, implements and restricts; GAI.txt, "GAI extends GnW and amends GFP (...)."; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC): XR extends XB2 and amends XC2, and has the pragmas of both with its own (two); XS implements XC2 (implements); XQ's "copies" is no relation, and the name read is refused (norel).
 cva_pr2=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB2' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pr2/XB2.txt"
