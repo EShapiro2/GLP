@@ -41,6 +41,7 @@ DIRECTORIES = [
     ('programs/federation', 'GFWC', [], ''),
     ('programs/p99', 'P99', [], ''),
     ('phones', 'Phones', [], 'phone testing; GSA its specification, Code its code'),
+    ('calculus', 'Calculus', [], "the Calculus: each contract in its text and what its tools print of it, until its owner adopts it; the tools and the tests (Coordination #16, 2026-11-15, by calculus/MIGRATION.md)"),
     ('organisation', 'Coordination', [], "the organisation's rules: claude.md, the style guide and claudese.md"),
     ('programs/apps', 'Code', [], "the apps' boot files and compile.sh"),
     ('programs/apps/gkk', 'GSC', ['GSC'], "GKK's app"),
@@ -98,6 +99,10 @@ PROJECTS = [
     ('DSA', 'Digital Speech Acts', ['DSA']),
     ('CCDG', 'Constitutional Consensus', ['CCDG']),
     ('CGMS', 'Constitutional Governance in Metric Spaces', ['CGMS']),
+    # Calculus, its paper private until Udi says (calculus/MIGRATION.md), by
+    # name and with no paper (Coordination #16, 2026-11-15: the project is
+    # Calculus on the site, never GCC).
+    ('Calculus', 'Grassroots Contracts Calculus', []),
     # The projects whose papers are not on arXiv, each with its one paper by
     # title and authors (Udi, 2026-11-14, to Website #2, approving Coordination
     # #15's question of 2026-11-12 13:11 UTC; the repositories and main files
