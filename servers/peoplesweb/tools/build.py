@@ -260,6 +260,10 @@ def extends_of(c, lines):
             # GFP and restricts the composition'), each checked on its own
             # (GSC #16, 2026-11-11 19:45 UTC, from GSC's Section 9).
             c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
+            # rels_all: every relation the line states to each contract, in
+            # its order, 'GDO-L extends and strengthens GDO' two; the globe
+            # draws an arrow of two relations split along its length.
+            c['rels_all'] = {}
             c['rels_of'], inst, comp, pend = [], None, None, []
             for part in re.split(r'\b(' + '|'.join(RELATIONS + ('composes',)) + r')\b', m.group(2)):
                 if part in RELATIONS + ('composes',):
@@ -271,6 +275,9 @@ def extends_of(c, lines):
                 first = pend[0] if pend and not (inst or comp) else cur
                 for t in named:
                     c['rels'].setdefault(t, first)
+                    for r in (pend if not (inst or comp) else []) + [cur]:
+                        if r not in c['rels_all'].setdefault(t, []):
+                            c['rels_all'][t].append(r)
                     if cur == 'instantiates':
                         inst = inst or t
                     if cur == 'composes':

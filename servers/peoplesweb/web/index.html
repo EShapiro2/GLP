@@ -562,8 +562,23 @@ function drawGlobe(){
     if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`;
   }
   const k = S/265;
+  // The solid arrows' outlines, in units of the globe's scale: the shaft's
+  // half-width at its tail and at its head's base, and the head's half-width.
+  // A pair of contracts with two relations ('GDO-L extends and strengthens
+  // GDO') has one arrow split along its length, its left side the first
+  // relation's outline and its right side the second's; a third relation is a
+  // slim arrow of its own outline along the middle, drawn darker (Udi,
+  // 2026-11-15, to Website #2).
+  const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
+  const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
   // extends and restricts a tapered shaft, amends one of one width.
+  const split = (p, q, A, B, hl, fill, op = '.85') => {
+    const [px, py] = p, [qx, qy] = q, dx = qx-px, dy = qy-py, Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln, nx = -uy, ny = ux;
+    const bx = qx - ux*hl, by = qy - uy*hl;
+    const pts = [[px+nx*A[0],py+ny*A[0]],[bx+nx*A[1],by+ny*A[1]],[bx+nx*A[2],by+ny*A[2]],[qx,qy],[bx-nx*B[2],by-ny*B[2]],[bx-nx*B[1],by-ny*B[1]],[px-nx*B[0],py-ny*B[0]]];
+    return `<polygon points="${pts.map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity="${op}"/>`; };
+  const combo = (p, q, rs, fill) => split(p, q, SOLID[rs[0]], SOLID[rs[1]], 10, fill) + (rs[2] ? split(p, q, SOLID[rs[2]].map(x => x*0.4), SOLID[rs[2]].map(x => x*0.4), 10, fill, '1') : '');
   const taper = (p, q, w0, w1, hl, hw, fill, pad0, pad1) => {
     let [px, py] = p, [qx, qy] = q;
     const dx = qx-px, dy = qy-py, Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln, nx = -uy, ny = ux;
@@ -641,7 +656,9 @@ function drawGlobe(){
     const tan = a => nrm(add3(at(Math.min(total, a + 1e-3)), at(Math.max(0, a - 1e-3)), -1));
     const side = (a, e) => { const P = at(a); return add3(P.map(x => x*Math.cos(e)), nrm(crs(P, tan(a))), Math.sin(e)); };
     const a0 = edgeAngle(p, tan(0)), a1 = total - edgeAngle(q, tan(total));
-    const u = 1/265, hl = (rel === 'restricts' ? 7 : rel === 'amends' ? 9 : 10) * u;
+    const u = 1/265, many = Array.isArray(rel) && solids(rel) ? rel : null;
+    if (Array.isArray(rel)) rel = rel[0];
+    const hl = (many ? 10 : rel === 'restricts' ? 7 : rel === 'amends' ? 9 : 10) * u;
     const hw = (rel === 'restricts' ? 2.8 : rel === 'amends' || rel === 'implements' || rel === 'instantiates' || rel === 'composes' ? 6.5 : 7.5) * u;
     const [w0, w1] = rel === 'restricts' ? [4.2*u, 0.4*u] : rel === 'amends' ? [2.2*u, 2.2*u] : rel === 'strengthens' ? [3.4*u, 3.4*u] : [0.4*u, 4.2*u];
     const aB = a1 - hl;
@@ -667,10 +684,17 @@ function drawGlobe(){
       if (r.length < 2) continue;
       if (dash){ out += `<polyline points="${r.map(a => xy(at(a))).join(' ')}" fill="none" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`; continue; }
       const e = a => w0 + (w1 - w0) * (a - a0) / (aB - a0);
+      if (many){
+        const f = (R, a, z = 1) => (SOLID[R][0] + (SOLID[R][1] - SOLID[R][0]) * (a - a0) / (aB - a0)) * u * z;
+        out += `<polygon points="${[...r.map(a => xy(side(a, f(many[0], a)))), ...r.slice().reverse().map(a => xy(side(a, -f(many[1], a))))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
+        if (many[2]) out += `<polygon points="${[...r.map(a => xy(side(a, f(many[2], a, 0.4)))), ...r.slice().reverse().map(a => xy(side(a, -f(many[2], a, 0.4))))].join(' ')}" fill="${fill}"/>`;
+        continue;
+      }
       out += `<polygon points="${[...r.map(a => xy(side(a, e(a)))), ...r.slice().reverse().map(a => xy(side(a, -e(a))))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
     }
     if (front(aB) && front(a1))
-      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
+      out += many ? `<polygon points="${[xy(side(aB, SOLID[many[0]][2]*u)), xy(at(a1)), xy(side(aB, -SOLID[many[1]][2]*u))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`
+        : `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
     const am = (a0 + a1) / 2 - 4*u;
     if (rel === 'amends' && front(am))
       out += `<line x1="${xy(side(am, 6*u)).replace(',', '" y1="')}" x2="${xy(side(am, -6*u)).replace(',', '" y2="')}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`;
@@ -679,7 +703,8 @@ function drawGlobe(){
   // head touches the other contract's ellipse, which shows that one's colour,
   // so the arrow shows where it comes from (Udi, 2026-11-10).
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
+    const all = c.rels_all && c.rels_all[p];
+    s += paint(p, c.id, all && solids(all) ? all : (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
   }));
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
@@ -704,12 +729,16 @@ function drawGlobe(){
   // The key has each relation the globe draws: of the five of the Calculus
   // (calculus/README.md, The relations), of implements, GSC's, and of amends,
   // while a text in force still states it.
-  const USED = new Set(D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]));
-  const KEY = ['extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r]);
-  const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
-  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
+  const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
+  const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
+  const KEY = ['extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
+    .concat([['extends', 'restricts'], ['extends', 'strengthens'], ['restricts', 'strengthens']].map(rs => [rs, rs.join(' and ')]))
+    .concat([...new Set(ALL.filter(rs => rs.length > 2 && solids(rs)).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
+  const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
+  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
-    s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
+    s += Array.isArray(r) ? combo(p, q, r, kc)
+      : r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
       : r === 'amends' ? taper(p, q, 2.2*kk, 2.2*kk, 9*kk, 6.5*kk, kc, 0, 0) + cross(p, q, 6*kk, kc, 0, 0, kk)
       : r === 'implements' ? stroked(p, q, `${7*kk} ${4*kk}`, kc, 0, 0, kk)
       : r === 'strengthens' ? taper(p, q, 3.4*kk, 3.4*kk, 10*kk, 7.5*kk, kc, 0, 0)
@@ -727,14 +756,14 @@ function drawGlobe(){
   // contract, as it would beside the key.
   const CNT = [['contracts', D.contracts.length],
                ...STAGES.map(([n], i) => [n, D.contracts.filter(c => STAGES.slice(0, i + 1).every(([, reached]) => reached(c))).length])];
-  const cx2 = nar ? kx + 170 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
+  const cx2 = nar ? kx + KW + 20 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
   s += `<g class="key"><rect x="${cx2-12}" y="${cy2-20}" width="150" height="${24*CNT.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   CNT.forEach(([n, k], i) => { const y = cy2 + 24*i;
     if (i === 1) s += `<line x1="${cx2-4}" y1="${y-12}" x2="${cx2+130}" y2="${y-12}" stroke="#d5dee7"/>`;
     s += `<text x="${cx2}" y="${y + 4}" font-size="12.5" fill="#33404d">${n}</text>`
        + `<text x="${cx2 + 130}" y="${y + 4}" font-size="12.5" font-weight="600" text-anchor="end" fill="#33404d">${k}</text>`; });
   s += `</g>`;
-  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 772` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
+  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 ${Math.max(772, 632 + 24*KEY.length + 16)}` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
   const show = (c, e) => {
