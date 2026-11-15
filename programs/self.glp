@@ -582,22 +582,25 @@ send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
 % The super-app's entry template (GSG, 2026-10-13 11:57 UTC and 20:24 UTC;
-% the calendar, 20:59 UTC; Udi: approved): the person's key, the person
-% channel, the channel to the social graph, and the calendar, a stream of
-% dates the super-app writes from the device's clock, one a day, which a
-% mini-app that keeps no dates ignores (GSG paper, "What the super-app grants
-% a mini-app").  Two type parameters, one per channel (vGLP, 2026-10-14 13:21
-% UTC, S2; Udi: yes): D, what the mini-app draws for its person, formed by
-% vGLP's compiler from the wrapped drawn types and the grants' R types, and
-% T, the mini-app's own type, the messages of its root channels; neither
-% contains the other, and a hand-written mini-app chooses both.  One entry
-% name for every mini-app; never run here.
-procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?, Stream(Integer)?).
-miniapp(_, _, _, _).
+% Udi: approved): the person's key, the person channel and the channel to the
+% social graph.  A program is activated with these two channels and receives
+% no dates; one that keeps dates reads the day by now/1 (GLP paper c5c3dfb,
+% appendix-guards.tex, "Predefined types": "the entry templates miniapp/3
+% and miniapp_person/5"; GLP #13, 2026-11-07, Udi approving).  Until
+% 2026-11-11 the template was miniapp/4, its fourth argument a calendar, a
+% stream of dates the super-app wrote, one a day.  Two type parameters, one
+% per channel (vGLP, 2026-10-14 13:21 UTC, S2; Udi: yes): D, what the
+% mini-app draws for its person, formed by vGLP's compiler from the wrapped
+% drawn types and the grants' R types, and T, the mini-app's own type, the
+% messages of its root channels; neither contains the other, and a
+% hand-written mini-app chooses both.  One entry name for every mini-app;
+% never run here.
+procedure(D, T) miniapp(Key?, PersonChannel(D)?, SgChannel(T)?).
+miniapp(_, _, _).
 
 % The mini-app's scripted person (GSG, 2026-10-13 18:52 UTC, O5, and 20:22
 % UTC; Udi: approved): a mini-app exports it beside its entry, as this
-% template's instance at the D of its miniapp/4 instance (vGLP, 2026-10-14
+% template's instance at the D of its miniapp/3 instance (vGLP, 2026-10-14
 % 13:21 UTC, S2) and at S, the type of the screen it reports, chosen by the
 % mini-app (vGLP 2026-10-16 11:25 UTC, item 4; Udi: approved): the person's
 % key, a role choosing the script among the mini-app's own plays, the keys

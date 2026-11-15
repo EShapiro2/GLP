@@ -1,0 +1,4 @@
+Q: Second (expanded schemas)
+C:0 - | Alice is a person.
+C:1 ■ Mark: blue(Alice) <- guarded by Alice.
+Q:0 - | Alice is a person.

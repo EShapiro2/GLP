@@ -9,8 +9,12 @@ import re, sys, os, shutil
 plat, out, name = sys.argv[1:4]
 src = open(plat, encoding='utf-8').read()
 
+# The platform's type definitions, read with its comment lines taken out: a
+# definition the compiler prints over several lines may hold a comment line
+# between two of its alternatives, as Var does, and a comment that ends with a
+# full stop would end the definition there.
 decls = {}
-for m in re.finditer(r'^([A-Z][A-Za-z]*(?:\([A-Z]\))?)\s*::=(.*?)\.\s*$', src, re.M | re.S):
+for m in re.finditer(r'^([A-Z][A-Za-z]*(?:\([A-Z]\))?)\s*::=(.*?)\.\s*$', re.sub(r'^[ \t]*%.*\n', '', src, flags=re.M), re.M | re.S):
     decls.setdefault(m.group(1), m.group(0).strip())
 
 sig = re.search(r'^exported procedure agent\((.*)\)\.\s*$', src, re.M).group(1)

@@ -1,0 +1,16 @@
+% GDO-LB: Location-Based GDO --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GRH (Udi, 2026-11-06, to GRH #1, who named it).  The paper, /Users/udi/Grassroots/GRH/main_GRH.tex, prints it in its box in Section Grassroots Directed Overlay, sections/overlay.tex, and cites a clause as GDO-LB:1.
+% Paper: GRH, Grassroots Ride-Hailing, in preparation
+% Restricts: GDO, Grassroots Directed Overlay, GRH's (programs/lbm), in the terms of GSC's paper, Section 8: each of its clauses is a clause of GDO with a condition added, and each schema it adds has the name, the head and the guard of the GDO schema it replaces and a stronger body; Alice's app proposes the act whenever the condition holds, which is the realisation's.
+% Defines: a person's location, d and e.
+% Last changed: 2026-11-06, written by GRH #1 Cowork from the Location-Based, Bounded Out-Degree Instance that GDO's box held, renamed GDO-LB, Location-Based GDO, since it restricts GDO (Udi, 2026-11-06), and, Udi's text with "only if" for "taken iff", so that it restricts GDO (Udi, to GRH #1).
+% Schemas: GDO-LB.glp beside this file, GKK's and GSG's five and point_friend, point_transitive and unpoint, guarded by Alice as GDO's; it uses constructs GRH asked GSC for, which its header lists.
+% Pragmas: GDO's, GDO-LB having GDO's acts.
+GDO-LB: Location-Based GDO
+GDO-LB restricts GDO.
+Alice, Bob and Carol are persons.  A person has a location.  d > 0 is an integer and e > 0.
+1. ■ Pointing to friend.  GDO:1, only if either Alice points to less than d persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person pointed to by Alice.
+2. ■ Transitive pointing.  GDO:2, only if Carol is closer to Alice by more than e than some person pointed to by Alice.
+3. ■ Ceasing to point.  GDO:3, only if Alice points to more than d persons, with Bob furthest from Alice among them.
+Pragmas
+Pointing: the persons Alice points to.

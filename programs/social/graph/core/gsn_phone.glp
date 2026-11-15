@@ -63,19 +63,19 @@ bob_gsn_run(Me, P, [msg(agent, person, connected(P1)) | Outs], Cmds?) :-
 bob_gsn_run(Me, P, [_ | Outs], Cmds?) :- otherwise | bob_gsn_run(Me?, P?, Outs?, Cmds).
 bob_gsn_run(_, _, [], []).
 
-%% The creator's certification, signed here over the mini-app's source identity, the contract's fourteen act schemas, establish, acquaint, introduce, befriend, unfriend, message, create, join, leave, close, drop, post_own, post and deliver (programs/gsc/GSN.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+%% The creator's certification, signed here over the mini-app's source identity, the contract's fifteen act schemas, establish, acquaint, introduce, befriend, unfriend, message, create, join, leave, remove, close, post_own, post, deliver and deliver_leader (programs/gsc/GSN.glp), and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
 procedure certified(Content?, String, String).
 certified(M, CK?, CSig?) :-
     module(M?) |
     decompose_module(M?, CK, Src, _),
     self_key(K),
-    sign(creator_cert(Src?, [establish, acquaint, introduce, befriend, unfriend, message, create, join, leave, close, drop, post_own, post, deliver], syntactically_grassroots), K?, CSig).
+    sign(creator_cert(Src?, [establish, acquaint, introduce, befriend, unfriend, message, create, join, leave, remove, close, post_own, post, deliver, deliver_leader], syntactically_grassroots), K?, CSig).
 
 %% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gsg_boot.glp.
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
 miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
-    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp/3, M?, H0),
     opaque_type(miniapp_person/5, M?, H),
     person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 

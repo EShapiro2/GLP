@@ -1,30 +1,30 @@
-%% person.glp --- the GSNP mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsnp_boot.glp); the play of this directory calls it beside the entry (plays.glp).  It is GSN's app's person (../gsn/person.glp) with GSNP's scripts.
+%% person.glp --- the GSNP mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The super-app's plays activate it from the module value, as they activate the entry (../gsnp_boot.glp); the play of this directory calls it beside the entry (plays.glp).  It is GSN's app's person (../gsn/person.glp), with one more condition a step waits on, done(K, N), one more step, seek, and GSNP's scripts.
 %%
-%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each showing the agent's own key and the persons it knows and taking one request (vGLP 321127a, Section 5.4); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(S, K), the machine state S and the persons K it knows, when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the question shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the question; look reports menu(K, Ks), K the agent's own key and Ks the persons the request question open shows, once one is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn; seek(Hs, Ks, A) waits until the machine state of the last view holds an atom that A matches, A an item, authored or attestation of a speech act whose signers are each a key or one of the holes Hs, A reading them, and then fills the holes by matching, each with the signer at its place, the signer of (x, p) being p and the author innermost (GAI's paper, Appendix "Contracts with Wards", "Atoms and states"), and writes the same keys, in the order the holes occur in A, the author's first, into the holes Ks, which the steps after it read, so that a person names a signer they do not know by the key they read off the item they hold.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered; and done(K, N) where the approval K, by its request name, has stood pending in a view and then not in the next at least N times, the person seeing their pending approvals in the view (vGLP, Section 5.4, "Triggers": "the person sees their pending approvals in the view"), so that a person whose own state the act does not change, a guardian proposing an act of their AI agent, sees it end.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each taking one request; the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(Id, S, K, A, Ts), its own key Id, the machine state S, the persons K it knows, the approvals A its person made that are pending, and the tabs Ts, when it starts and whenever one changes, and the notices it writes there when an approval its person made ends by a refusal, refused(P, Q, D) (vGLP, Section 5.4, "The compilation"); and the approval questions Start raises.  A step waits on what the last view shows; done(K, N) holds once the approval K, which the person made, was listed by a view and not by the next N times, so the attempt it named has ended; seek(Hs, Ks, A) waits until the state holds an atom matching A, whose unknown signers are the holes Hs, and writes them into Hs and into Ks.
 %%
-%% The roles, by which the super-app's plays choose a script, are the persons of the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4): "Dan, Eve, Carol, Bob and Fay; the friendships Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; Dan writes "Flood on Main Street" and sends it to Eve; Eve forwards it to Carol; Carol forwards it to Bob."  On GSNP's contract on GKK, programs/gai/GSNP.glp, the first of each two comes to know the second by their key, a cold call, the second answering yes to its hello, before befriending, befriend requiring that the two know each other (GKK:2, GSG:1).  The item is the speech act 'Flood on Main Street', signed by dan, its author (GSNP:1, Authorship), whose message carries it as he signed it, and each forward signs it again (GSNP:2, Forwarding):
-%%   dan    establishes his identity (GKK:1); once it is established, comes to know eve by her key (GKK:2); once they know each other, offers her friendship (GSG:1); once they are friends, signs the item; once he sees himself its author, sends it to eve in a message.
+%% The roles, by which the super-app's plays choose a script, are the persons of the play of GAI's GSNP figure: "Dan, Eve, Carol, Bob and Fay; the friendships Dan and Eve, Eve and Carol, Carol and Bob, Bob and Fay; Dan writes "Flood on Main Street" and sends it to Eve; Eve forwards it to Carol; Carol forwards it to Bob."  On GSNP's contract, programs/gai/GSNP.glp, the first of each two comes to know the second by their key, the second answering yes, before befriending, befriend requiring that the two know each other (GKK:2, GSG:1).  The item is the speech act 'Flood on Main Street', signed by dan, its author (GFP:1), whose message carries it as he signed it (GSN:1), and each forward signs it again (GFP:2):
+%%   dan    establishes his identity (GKK:1); once it is established, comes to know eve by her key (GKK:2); once they know each other, offers her friendship (GSG:1); once they are friends, signs the item; once he holds it, sends it to eve in a message.
 %%   eve    establishes her identity; answers yes to dan's asking to come to know her and to his offer of friendship; once his message of the item has reached her, comes to know carol by her key, and once they know each other, offers carol friendship; once they are friends, forwards the item, signed by dan, to carol.
 %%   carol  establishes her identity; answers yes to eve's asking to come to know her and to her offer of friendship; once eve's forward has reached her, comes to know bob by his key, and once they know each other, offers bob friendship; once they are friends, forwards the item, signed by dan and then by eve, to bob.
 %%   bob    establishes his identity; answers yes to carol's asking to come to know him and to her offer of friendship; once her forward has reached him, holding the item signed by dan, eve and carol, comes to know fay by her key, and once they know each other, offers fay friendship; once they are friends, forwards the item to her (GSNP:2), nobody asked.
 %%   fay    establishes her identity; answers yes to bob's asking to come to know her and to his offer of friendship; then holds the item signed by dan, eve, carol and bob.
 %% Each person who takes part in the item's passage offers their next friendship once the item has reached them, and so proposes nothing while an attempt that adds the item to their state is open.
-%% The roles of the play of GAI's Figure "The GAI app" on the full platform (plays.glp, play_agents) are acme_ltd, the developer, alice, alf, her AI agent, and agents_bob, bob's second script, in the order of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; Code_inbox.md, GAI #10 Cowork, 2026-10-31 12:54 and 14:14 UTC), with Acme Ltd's signing of Alf's code before it.  The code of Alf is the speech act 'The code of Alf' signed by acme_ltd, its developer (GAI:1), which alice holds once acme_ltd's message of it has reached her; alice's attestation y is the speech act 'Alf runs code signed by Acme Ltd' she signs (GAI:2), and enter(p?, r? ; y), requiring authored(y) at alice, adds at alf its attestation y and at alice her record agent_of(alf, y) (GnW:1, GAI:2; GSNP.glp); alf's acquaintance with bob and its befriending him are proposed by alice, its guardian, her machine filling y from her record, alf and bob asked (GnW:3, GAI:2); and alice's retiring alf ends its friendships, nobody asked (GnW:5; retire):
-%%   acme_ltd  establishes their identity (GKK:1); comes to know alice by her key (GKK:2) and, once they know each other, offers her friendship (GSG:1); once they are friends, signs the code of Alf (GAI:1; sign); once they hold it as its author, send it to alice in a message (GSN:1).
-%%   alice     establishes her identity; answers yes to acme_ltd's asking to come to know her and to their offer of friendship; once the code has reached her, comes to know bob by his key and, once they know each other, offers him friendship (GKK:2, GSG:1); once they are friends, signs y (GAI:2) and, once she holds it as its author, enters her AI agent alf with it (GnW:1); once she is its principal, proposes alf's acquaintance with bob (GnW:3, GAI:2; agent_acquaint), and once it is done alf's befriending him (GnW:3; agent_befriend); and once that is done retires alf (GnW:5; retire), the play holding her request until bob's screen shows alf's item (plays.glp).
-%%   alf       answers yes to being entered as alice's AI agent with y, then to its acquaintance with bob, and then to its befriending him, each proposed by alice; once bob is its friend, signs the item 'Today\'s summary of the news' (GSNP:1, GAI:1; sign) and, once it holds it as its author, sends it to bob in a message (GSN:1).
-%%   agents_bob  bob establishes his identity; answers yes to alice asking to come to know him and to her offer of friendship; answers yes to alf, an AI agent of alice, coming to know him, which records at him agent_of(alf, y) (GAI:2), and then to alf befriending him (GnW:3); and then holds alf's item.  The play has no unfriend: Retire ends alf's friendships (GnW:5; the paper's Table, its last row).
-%% Each role's person knows the keys of the persons it has a conversation with, in the order the plays give them (dan: eve; eve: dan, carol; carol: eve, bob; bob: carol, fay; fay: bob; acme_ltd: alice; alice: acme_ltd, alf, bob; alf: alice, bob; agents_bob: alf, alice), its own key the first argument; the item's earlier signers, whom carol, bob and fay do not know, are holes in their scripts, filled by matching the item they hold, its signers read off its nested speech acts, the author innermost (seek; GAI's paper, Appendix "Contracts with Wards", "Atoms and states"), so that no script names a signer by a name.
+%% The roles of the play of GAI's Figure "Accountable AI agents" on the full platform (plays.glp, play_agents) are acme_ltd, the developer, alice, alf, her AI agent, and agents_bob, bob's second script: the acts of the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), with Acme Ltd's signing of Alf's code before them.  The code of Alf is the speech act 'The code of Alf' signed by acme_ltd, its developer (GAI:1), which alice holds once acme_ltd's message of it has reached her; alice's attestation y is the speech act 'Alf runs code signed by Acme Ltd' she signs (GAI:2), and enter adds at alf its attestation y and at alice her record agent_of(alf, y) (GnW:1, GAI:2).  Each person proposes an act once their own screen shows what the act requires of the others, so no attempt is refused as unable: by GnW:3 alf and bob come to know each other by an act of the two, which bob proposes, and alice, whose state the act does not change, proposes their friendship; so alice creates alf before she asks to come to know bob, and bob offers alice friendship once he knows alf, as in GAI's app (../gai/person.glp):
+%%   acme_ltd  establishes their identity (GKK:1); comes to know alice by her key (GKK:2) and, once they know each other, offers her friendship (GSG:1); once they are friends, signs the code of Alf (GAI:1; sign); once they hold it, send it to alice in a message (GSN:1).
+%%   alice     establishes her identity; answers yes to acme_ltd's asking to come to know her and to their offer of friendship; once the code has reached her, signs y (GAI:2) and, once she holds it, enters her AI agent alf with it (GnW:1); once she is its principal, asks to come to know bob by his key (GKK:2); answers yes to bob's offer of friendship (GSG:1); once they are friends, proposes alf's befriending bob (GnW:3; agent_befriend); and once that attempt has ended retires alf (GnW:5; retire), the play holding her request until bob's screen shows alf's item (plays.glp).
+%%   alf       answers yes to being entered as alice's AI agent with y, then to bob's wish that they know each other (GnW:3; agent_acquaint), and then to its befriending bob, proposed by alice; once bob is its friend, signs the item 'Today\'s summary of the news' (GFP:1) and, once it holds it, sends it to bob in a message (GSN:1).
+%%   agents_bob  bob establishes his identity; answers yes to alice asking to come to know him; once he knows her, proposes that alf and he know each other (GnW:3; agent_acquaint), which records at him agent_of(alf, y) (GAI:2); once he knows alf, offers alice friendship (GSG:1); answers yes to alf befriending him (GnW:3); and then holds alf's item.  The play has no unfriend: Retire ends alf's friendships (GnW:5; the paper's Table, its last row).
+%% Each role's person knows the keys of the persons it has a conversation with, in the order the plays give them (dan: eve; eve: dan, carol; carol: eve, bob; bob: carol, fay; fay: bob; acme_ltd: alice; alice: acme_ltd, alf, bob; alf: alice, bob; agents_bob: alf, alice), its own key the first argument; the item's earlier signers, whom carol, bob and fay do not know, are holes in their scripts, filled by matching the item they hold, its signers read off its nested speech acts, the author innermost (seek), so that no script names a signer by a name.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
         ; seek(Holes, Holes, Atom).
 Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; has(Atom, Integer)
         ; refused(Proposal, Key, Reason) ; asked(Asked) ; asking ; done(Approved, Integer).
-Last  ::= last(List(Atom), List(Key)) ; nolast.
+Last  ::= last(Key, List(Atom), List(Key)) ; nolast.
 Steps ::= [] ; [Step | Steps].
 Holes ::= [] ; [Key? | Holes].
-Sess  ::= nosess ; sess(Integer, Path, Key, List(Key)).
+Sess  ::= nosess ; sess(Integer, Path).
 Shown ::= shown(Integer, Path, Asking).
 Shows ::= [] ; [Shown | Shows].
 PSt   ::= ps(Sess, List(Output), Shows, Steps).
@@ -44,7 +44,7 @@ script(dan, Me, [Eve], [own([D1], propose(establish(D1?))), wait(holds(identity)
                         own([D2], propose(befriend(D2?, Eve?))),
                         wait(holds(friend(Eve?))),
                         own([D3, D4], propose(sign(D3?, speech(utterance('Flood on Main Street'), D4?)))),
-                        wait(holds(authored(speech(utterance('Flood on Main Street'), Me?)))),
+                        wait(holds(item(speech(utterance('Flood on Main Street'), Me?)))),
                         own([D5, D6], propose(message(D5?, Eve?, speech(utterance('Flood on Main Street'), D6?))))]) :-
     ground(Me?), ground(Eve?) | true.
 script(eve, Me, [Dan, Carol], [own([E1], propose(establish(E1?))), wait(holds(identity)),
@@ -83,37 +83,35 @@ script(acme_ltd, Me, [Alice], [own([K1], propose(establish(K1?))), wait(holds(id
                                own([K2], propose(acquaint(K2?, Alice?))), wait(holds(knows(Alice?))),
                                own([K3], propose(befriend(K3?, Alice?))), wait(holds(friend(Alice?))),
                                own([K4, K5], propose(sign(K4?, speech(utterance('The code of Alf'), K5?)))),
-                               wait(holds(authored(speech(utterance('The code of Alf'), Me?)))),
+                               wait(holds(item(speech(utterance('The code of Alf'), Me?)))),
                                own([K6, K7], propose(message(K6?, Alice?, speech(utterance('The code of Alf'), K7?))))]) :-
     ground(Me?), ground(Alice?) | true.
 script(alice, Me, [Acme, Alf, Bob], [own([A1], propose(establish(A1?))), wait(holds(identity)),
                                      approval(acquaint(Acme?, Me?), yes),
                                      approval(befriend(Acme?, Me?), yes),
                                      wait(holds(item(speech(utterance('The code of Alf'), Acme?)))),
-                                     own([A2], propose(acquaint(A2?, Bob?))), wait(holds(knows(Bob?))),
-                                     own([A3], propose(befriend(A3?, Bob?))), wait(holds(friend(Bob?))),
-                                     own([A4, A5], propose(sign(A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
-                                     wait(holds(authored(speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
-                                     own([A6, A7], propose(enter(A6?, Alf?, speech(utterance('Alf runs code signed by Acme Ltd'), A7?)))),
+                                     own([A2, A3], propose(sign(A2?, speech(utterance('Alf runs code signed by Acme Ltd'), A3?)))),
+                                     wait(holds(item(speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
+                                     own([A4, A5], propose(enter(A4?, Alf?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
                                      wait(holds(principal_of(Alf?))),
-                                     own([A8], propose(agent_acquaint(Alf?, Bob?, A8?, speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
-                                     wait(done(agent_acquaint(Alf?, Bob?, Me?, speech(utterance('Alf runs code signed by Acme Ltd'), Me?)), 1)),
-                                     own([A9], propose(agent_befriend(Alf?, Bob?, A9?))),
+                                     own([A6], propose(acquaint(A6?, Bob?))), wait(holds(knows(Bob?))),
+                                     approval(befriend(Bob?, Me?), yes), wait(holds(friend(Bob?))),
+                                     own([A7], propose(agent_befriend(Alf?, Bob?, A7?))),
                                      wait(done(agent_befriend(Alf?, Bob?, Me?), 1)),
-                                     own([A10], propose(retire(Alf?, A10?)))]) :-
+                                     own([A8], propose(retire(Alf?, A8?)))]) :-
     ground(Me?), ground(Acme?), ground(Alf?), ground(Bob?) | true.
 script(alf, Me, [Alice, Bob], [approval(enter(Alice?, Me?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
-                               approval(agent_acquaint(Me?, Bob?, Alice?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+                               approval(agent_acquaint(Me?, Bob?), yes),
                                approval(agent_befriend(Me?, Bob?, Alice?), yes),
                                wait(holds(friend(Bob?))),
                                own([R1, R2], propose(sign(R1?, speech(utterance('Today\'s summary of the news'), R2?)))),
-                               wait(holds(authored(speech(utterance('Today\'s summary of the news'), Me?)))),
+                               wait(holds(item(speech(utterance('Today\'s summary of the news'), Me?)))),
                                own([R3, R4], propose(message(R3?, Bob?, speech(utterance('Today\'s summary of the news'), R4?))))]) :-
     ground(Me?), ground(Alice?), ground(Bob?) | true.
 script(agents_bob, Me, [Alf, Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)),
-                                      approval(acquaint(Alice?, Me?), yes),
-                                      approval(befriend(Alice?, Me?), yes),
-                                      approval(agent_acquaint(Alf?, Me?, Alice?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+                                      approval(acquaint(Alice?, Me?), yes), wait(holds(knows(Alice?))),
+                                      own([B2], propose(agent_acquaint(Alf?, B2?))), wait(holds(knows(Alf?))),
+                                      own([B3], propose(befriend(B3?, Alice?))),
                                       approval(agent_befriend(Alf?, Me?, Alice?), yes)]) :-
     ground(Me?), ground(Alf?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
@@ -125,9 +123,10 @@ person([draw(0, _, output(T)) | Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
     log_new(Old?, T?, Log, Log1?),
     advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log1, Log2?),
     person(Ds?, Gs1, St1?, Log2).
-person([draw(Id, _, menu_w(menu(Me, Ks, input(P)))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
-    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+%% The request question, bare, of the request type Request? (vGLP 12f629d, Section 5.4, "The compilation"): the person reads the agent's own key and the persons it knows off the last view drawn on construct 0, as the request form does (Section 6.2).
+person([draw(Id, _, request_r(input(P))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?) |
+    advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
     person(Ds?, Gs1, St1?, Log1).
 person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
     ground(Id?), ground(P?), ground(At?) |
@@ -142,19 +141,19 @@ person([_ | Ds], Gs?, St, Log?) :-
 
 %% advance(St, Gs, Gs1, St1, Log, Log1): the script's steps taken as far as they can be, the grants written on Gs, continuing at Gs1.
 procedure advance(PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
-advance(ps(sess(Id, P, _, _), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
+advance(ps(sess(Id, P), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
     ground(Id?), ground(P?) |
     advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [req(R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?) | Ss?]), Log1?, Log1).
-advance(ps(sess(Id, P, Me, _), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
-    ground(Id?), ground(P?) |
-    fill(Me?, Ks?),
-    grant(Id?, P?, R?, Gs, Gs2?),
-    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    owned(L?, ps(sess(Id?, P?), T?, Cs?, [own(Ks?, R?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [own(Ks, R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?) | Ss?]), Log1?, Log1).
-advance(ps(sess(Id, P, Me, Ks), T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
-    ground(Id?), ground(P?), ground(Me?), ground(Ks?) |
-    advance(ps(sess(Id?, P?, Me?, Ks?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(sess(Id, P), T, Cs, [look | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    looked(L?, ps(sess(Id?, P?), T?, Cs?, [look | Ss?]), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(nosess, T, Cs, [look | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look | Ss?]), Log1?, Log1).
 advance(ps(Se, T, Cs, [wait(X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     ground(Se?), ground(T?), ground(Cs?), ground(X?) |
@@ -171,10 +170,30 @@ advance(ps(Se, T, Cs, [seek(Hs, Ks, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
     sought(F?, Hs?, Ks?, A1?, ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
 
+%% owned(L, St, ...): the step own(Ks, R), the agent's own key read off the last view drawn, L, written into each hole of Ks, and R granted; with no view drawn yet, the step waits (vGLP 12f629d, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2).
+procedure owned(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+owned(last(Me, _, _), ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Me?), ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+owned(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% looked(L, St, ...): the step look, which reports menu(K, Ks), the agent's own key and the persons it knows as the last view drawn, L, shows them; with no view drawn yet, the step waits.
+procedure looked(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+looked(last(Me, _, Ks), ps(Se, T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
+    ground(Me?), ground(Ks?) |
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+looked(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
+
 %% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
 procedure fill(Key?, Holes?).
 fill(Me, [Me? | Ks]) :- ground(Me?) | fill(Me?, Ks?).
 fill(_, []).
+
+%% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.
+procedure grant(Integer?, Path?, Request?, PersonIn(Drawn), PersonIn(Drawn)?).
+grant(Id, P, R, [input(Id?, P?, R?) | Gs1?], Gs1) :- ground(R?) | true.
 
 %% sought(F, Hs, Ks, A, St, Gs, Gs1, St1, Log, Log1): the step seek(Hs, Ks, A) taken where its atom is matched, F found(Vs), the holes Hs and Ks filled with the signers Vs, gathered outermost first; and kept where it is not, F nomatch, A the atom as the match passed it back.
 procedure sought(Found?, Holes?, Holes?, Atom?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
@@ -202,7 +221,7 @@ rev_keys([K | Ks], Acc, R?) :- rev_keys(Ks?, [K? | Acc?], R).
 
 %% seek_in(A, L, F, A1): F found(Vs) where the machine state of the last view L holds an atom A matches, Vs its signers at the holes, outermost first, and nomatch where it holds none; A1 is A, passed back.
 procedure seek_in(Atom?, Last?, Found, Atom).
-seek_in(A, last(S, _), F?, A1?) :- seek_atoms(A?, S?, F, A1).
+seek_in(A, last(_, S, _), F?, A1?) :- seek_atoms(A?, S?, F, A1).
 seek_in(A, nolast, nomatch, A?).
 
 procedure seek_atoms(Atom?, List(Atom)?, Found, Atom).
@@ -218,7 +237,6 @@ seek_next(nomatch, A, Bs, F?, A1?) :- seek_atoms(A?, Bs?, F, A1).
 %% match_atom(P, X, Vs, F, P1): F found(Vs1) where the atom P, with holes, matches the atom X, Vs1 the signers of X at P's holes, outermost first, before Vs; nomatch where it does not; P1 is P, passed back.  P is an item, authored or attestation of a speech act.
 procedure match_atom(Atom?, Atom?, List(Key)?, Found, Atom).
 match_atom(item(P), item(X), Vs, F?, item(P1?)) :- match_speech(P?, X?, Vs?, F, P1).
-match_atom(authored(P), authored(X), Vs, F?, authored(P1?)) :- match_speech(P?, X?, Vs?, F, P1).
 match_atom(attestation(P), attestation(X), Vs, F?, attestation(P1?)) :- match_speech(P?, X?, Vs?, F, P1).
 match_atom(P, _, _, nomatch, P?) :- otherwise | true.
 
@@ -239,10 +257,6 @@ match_signer(PK, _, nomatch, nomatch, PK?).
 match_signer(PK, XK, found(Vs), found([XK? | Vs?]), PK?) :- unknown(PK?) | true.
 match_signer(PK, XK, found(Vs), found(Vs?), PK?) :- PK? =?= XK? | true.
 match_signer(PK, _, found(_), nomatch, PK?) :- otherwise | true.
-
-%% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.
-procedure grant(Integer?, Path?, Request?, PersonIn(Drawn), PersonIn(Drawn)?).
-grant(Id, P, R, [input(Id?, P?, R?) | Gs1?], Gs1) :- ground(R?) | true.
 
 procedure waited(YN?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
 waited(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
@@ -276,7 +290,7 @@ shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
 shows(done(K, N), _, T, _, B?) :- ground(K?), ground(T?) |
     ended(K?, T?, n, 0, M),
     at_least(M?, N?, B).
-shows(asking, sess(_, _, _, _), _, _, y).
+shows(asking, sess(_, _), _, _, y).
 shows(asking, nosess, _, _, n).
 
 %% The last view written, or none: the output holds the views and the notices.
@@ -284,7 +298,8 @@ procedure last_of(List(Output)?, Last).
 last_of(T, L?) :- last_view(T?, nolast, L).
 procedure last_view(List(Output)?, Last?, Last).
 last_view([], L, L?).
-last_view([view(S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(S?, K?), L).
+%% The view, view(Id, S, K, A, Ts): the agent's own key, the machine state, the persons it knows, the approvals pending and the tabs (vGLP 12f629d, Section 5.4, "The compilation"), the script looking at the first three.
+last_view([view(Me, S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(Me?, S?, K?), L).
 last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
 
 %% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
@@ -292,15 +307,34 @@ procedure notices_of(List(Output)?, List(Output)).
 notices_of(T, Ns?) :- notices_after(T?, [], Ns).
 procedure notices_after(List(Output)?, List(Output)?, List(Output)).
 notices_after([], Ns, Ns?).
-notices_after([view(_, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([view(_, _, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
 notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
 procedure among_output(Output?, List(Output)?, YN).
 among_output(_, [], n).
 among_output(X, [Y | _], y) :- X? =?= Y? | true.
 among_output(X, [_ | Ys], B?) :- otherwise | among_output(X?, Ys?, B).
 
+%% ended(K, T, W, C, M): M is C and the number of times the approval K, among the approvals a view lists, was listed by one view of T and not by the next; W says whether the view before listed it.
+procedure ended(Approved?, List(Output)?, YN?, Integer?, Integer).
+ended(_, [], _, C, C?).
+ended(K, [view(_, _, _, Ps, _) | Xs], W, C, M?) :- ground(K?), ground(Ps?) |
+    among_approved(K?, Ps?, P),
+    fell(W?, P?, C?, C1),
+    ended(K?, Xs?, P?, C1?, M).
+ended(K, [_ | Xs], W, C, M?) :- otherwise | ended(K?, Xs?, W?, C?, M).
+
+procedure fell(YN?, YN?, Integer?, Integer).
+fell(y, n, C, C1?) :- C1 := C? + 1.
+fell(y, y, C, C?).
+fell(n, _, C, C?).
+
+procedure among_approved(Approved?, List(Approved)?, YN).
+among_approved(_, [], n).
+among_approved(X, [Y | _], y) :- X? =?= Y? | true.
+among_approved(X, [_ | Ys], B?) :- otherwise | among_approved(X?, Ys?, B).
+
 procedure known_in(Key?, Last?, YN).
-known_in(Q, last(_, Ks), B?) :- among_key(Q?, Ks?, B).
+known_in(Q, last(_, _, Ks), B?) :- among_key(Q?, Ks?, B).
 known_in(_, nolast, n).
 
 procedure among_key(Key?, List(Key)?, YN).
@@ -309,7 +343,7 @@ among_key(X, [Y | _], y) :- X? =?= Y? | true.
 among_key(X, [_ | Ys], B?) :- otherwise | among_key(X?, Ys?, B).
 
 procedure count_in(Atom?, Last?, Integer).
-count_in(A, last(S, _), N?) :- count(A?, S?, N).
+count_in(A, last(_, S, _), N?) :- count(A?, S?, N).
 count_in(_, nolast, 0).
 
 procedure count(Atom?, List(Atom)?, Integer).
@@ -320,26 +354,6 @@ count(X, [_ | Ys], N?) :- otherwise | count(X?, Ys?, N).
 procedure at_least(Integer?, Integer?, YN).
 at_least(N, K, y) :- N? >= K? | true.
 at_least(N, K, n) :- N? < K? | true.
-
-%% ended(K, T, W, C, M): M is C and the number of times the approval K stands pending in a view of the output T and not in the next view, W whether it stood pending in the view before T.
-procedure ended(Approved?, List(Output)?, YN?, Integer?, Integer).
-ended(_, [], _, C, C?).
-ended(K, [view(_, _, Ps, _) | Xs], W, C, M?) :- ground(K?), ground(Ps?) |
-    among_approved(K?, Ps?, P),
-    fell(W?, P?, C?, C1),
-    ended(K?, Xs?, P?, C1?, M).
-ended(K, [_ | Xs], W, C, M?) :- otherwise | ended(K?, Xs?, W?, C?, M).
-
-%% fell(W, P, C, C1): C1 is C, and one more where the approval stood pending in the view before, W, and not in this one, P.
-procedure fell(YN?, YN?, Integer?, Integer).
-fell(y, n, C, C1?) :- C1 := C? + 1.
-fell(y, y, C, C?).
-fell(n, _, C, C?).
-
-procedure among_approved(Approved?, List(Approved)?, YN).
-among_approved(_, [], n).
-among_approved(X, [Y | _], y) :- X? =?= Y? | true.
-among_approved(X, [_ | Ys], B?) :- otherwise | among_approved(X?, Ys?, B).
 
 procedure flip(YN?, YN).
 flip(y, n).

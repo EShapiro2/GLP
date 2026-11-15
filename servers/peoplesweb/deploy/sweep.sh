@@ -2,8 +2,9 @@
 # The hourly sweep of peoplesweb.org: drop the phones' debugging logs older
 # than thirty days, pull the clone, bring the papers up to date, rebuild the
 # worlds and the site, copy the site to Caddy's root, and restart the live
-# server so it serves the new worlds.  A pull that brings nothing still rebuilds (half a
-# second) and restarts only if the build changed anything.
+# server so it serves the new worlds, and build the test site (deploy/test.sh).
+# A pull that brings nothing still rebuilds (half a second) and restarts only
+# if the build changed anything.
 set -e
 # The phones' debugging logs (servers/debuglog): a run whose last event, the
 # file's last append, is more than thirty days old is deleted, and a phone left
@@ -16,9 +17,16 @@ if [ -d "$LOGS" ]; then
 	  echo "sweep: dropping the old debugging logs in $LOGS failed" >&2
 fi
 cd /srv/glp
-old=$(git rev-parse HEAD)
+# A pull that changes this script runs the new one at once, from here: the
+# shell has read the old one, which would otherwise run to the end and leave
+# the change to the next sweep (Code #28, 2026-11-12 09:34 UTC).  SWEEP_OLD
+# carries the commit before the pull, so the new run restarts the server.
+old=${SWEEP_OLD:-$(git rev-parse HEAD)}
 sudo -u glp git pull -q --ff-only
 new=$(git rev-parse HEAD)
+if [ -z "$SWEEP_OLD" ] && ! git diff --quiet "$old" "$new" -- servers/peoplesweb/deploy/sweep.sh; then
+	SWEEP_OLD=$old exec sh servers/peoplesweb/deploy/sweep.sh
+fi
 # The papers (tools/papers_sync.py): pulled from their repositories with the
 # read-only token in /etc/glp/github-token, rebuilt where changed, into
 # /var/lib/glp/papers; a failure there keeps the papers as last built and
@@ -31,5 +39,11 @@ python3 -I servers/peoplesweb/tools/papers_sync.py || true
 python3 -I servers/peoplesweb/tools/papers_publish.py || true
 chown -R glp:glp /var/lib/glp/papers
 sudo -u glp env PAPERS_DIR=/var/lib/glp/papers python3 -I servers/peoplesweb/tools/build.py
-rsync -a --delete servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
+# The test site is under /test of Caddy's root and is not the live build's to
+# delete (deploy/test.sh).
+rsync -a --delete --exclude /test/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
 [ "$old" = "$new" ] || systemctl restart peoplesweb
+# The test site, peoplesweb.org/test: the site as the branch Website-site has it,
+# over the repository as main has it.  Last, so that a failure there leaves
+# the live site published.
+sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/test, was not built" >&2

@@ -1,0 +1,3 @@
+What we see: the six persons known at the start all drawn uniformly, so the friendships are not local; nobody moves.
+Against the optimum: stretch 1.68 with 49% of the pointings optimal, where the best overlay of friends alone would be 3213 m (2.17 of the optimum): transitive pointing lowers the mean edge from 3213 to 2490 m, 41 of 120 edges reaching a person who is not a friend — but 1553 of its 1598 requests were refused by the peer, Alice's machine knowing nothing of whom Bob points to.
+To improve: the contract — a clause by which a person tells those who point to them whom they point to would make transitive pointing cheap; as it is, it is trial and refusal.

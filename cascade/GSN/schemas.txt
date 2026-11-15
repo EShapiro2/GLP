@@ -39,3 +39,6 @@ post: posted(Alice, x, n) <-
 
 deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
     identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
+
+deliver_leader: received_in(Alice, x, Alice, n) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), not received_in(Alice, x, Alice, n)

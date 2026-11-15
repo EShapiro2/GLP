@@ -632,11 +632,12 @@ check_eq "GSG's befriend compiles to the display of Section 5.1" \
          "$befriend_paper" "$(compiled_in gsg "$GSGT" befriend)"
 
 # A contract compiles schema by schema (Section 5.1), and only after it is
-# checked: GSN's fourteen schemas, GKK's establish, acquaint and introduce,
-# GSG's befriend and unfriend, message, and the eight of a group, to
-# fourteen displays (GSN.glp at GLP 51b72a13).
+# checked: GSN's fifteen schemas, GKK's establish, acquaint and introduce,
+# GSG's befriend and unfriend, message, and the nine of a group, deliver_leader
+# among them (the leader's own receipt, the audit's finding of 2026-11-12), to
+# fifteen displays.
 out=$(run "compile_contract(gsn, $GSNT).")
-check_eq "GSN compiles to fourteen displays" "14" \
+check_eq "GSN compiles to fifteen displays" "15" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
 # sg_chain_cut on GSG, which fails volition (above): sg_gossip certifies on

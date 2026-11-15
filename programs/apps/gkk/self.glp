@@ -1,7 +1,7 @@
 %% ---------------------------------------------------------------------------
 %% programs/apps/gkk --- the app of GKK, Grassroots Keys and Knowledge (GSC's contract, programs/gsc/GKK.txt and GKK.glp; Coordination Appendix C), the base mini-app of the grassroots app, which every other mini-app extends, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").
 %%
-%% The directory is a certified program of its own: the platform, the mini-app entry miniapp/4 that wraps it (miniapp.glp), its scripted person (person.glp) and the play that activates it by run/3, three executions over two conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gkk.glpw is what the super-app installs.
+%% The directory is a certified program of its own: the platform, the mini-app entry miniapp/3 that wraps it (miniapp.glp), its scripted person (person.glp) and the play that activates it by run/3, three executions over two conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gkk.glpw is what the super-app installs.
 %%
 %% The types of platform.vglp, written again for the declarations of this directory's modules, but for those the compilation forms --- Question, Drawn and Ask(Q) --- which the linker writes into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names them (vGLP, Section 6.3, "The canonical compilation") (the plays of programs/vglp/cva/social_graph likewise).  The compiled module's own definitions shadow these within it, and the two must agree.
 %% ---------------------------------------------------------------------------
@@ -39,10 +39,10 @@ Route    ::= route(Key, Stream(Net)?).
 Routes   ::= [] ; [Route | Routes].
 Sending  ::= went ; held(Net).
 
-%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types: Drawn, what its dispatcher draws for its person, and Net, the messages of its root channels, the platform's network messages (miniapp.glp).
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+%% The mini-app's entry, the instance of the root's entry template miniapp/3 (programs/self.glp) at the mini-app's two types: Drawn, what its dispatcher draws for its person, and Net, the messages of its root channels, the platform's network messages (miniapp.glp).
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 %% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen, the screen it reports.
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).

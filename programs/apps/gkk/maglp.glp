@@ -1,8 +1,8 @@
 %% maglp.glp --- the GKK mini-app as maGLP: the program an agent runs when its person's first act names this entry, gkk_agent (self.glp, agent/2), the agent's initial goal being agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot": "A boot defines no agent/2: the program it loads answers the initial goal, in a simulation as on a phone, and the person goal's first act names the entry the program starts").
 %%
-%% The agent's key pair is made when the runtime spawns the agent, before anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity and signature"), and self_key/1 assigns its public key.  The person's acts after the first are the agents the person names, call(Q), and the grants on the mini-app's questions: what the person writes may name any agent, and this is how an agent learns of an agent it has not met (GLP-Spec maglp.tex, after Definition "Multiagent GLP").  For each agent Q the person names, the agent makes a conversation and cold-calls Q with it, msg(Q, conv(K, Kq, Ch)) on its network output (the Cold-call transaction): K its key, Kq a writer for Q's key, and Ch Q's end of the conversation's root channel; once Q's agent assigns Kq, the conversation opens and the person is told the key, called(Q, Kq).  A cold call that reaches the agent has its key assigned to the caller's writer and opens the conversation with the caller.  The agent runs the mini-app, miniapp/4, with its key and the conversations, as the social graph hands a mini-app its conversations (miniapp.glp).
+%% The agent's key pair is made when the runtime spawns the agent, before anything is compiled or sent (GLP-Spec appendix-guards.tex, "Identity and signature"), and self_key/1 assigns its public key.  The person's acts after the first are the agents the person names, call(Q), and the grants on the mini-app's questions: what the person writes may name any agent, and this is how an agent learns of an agent it has not met (GLP-Spec maglp.tex, after Definition "Multiagent GLP").  For each agent Q the person names, the agent makes a conversation and cold-calls Q with it, msg(Q, conv(K, Kq, Ch)) on its network output (the Cold-call transaction): K its key, Kq a writer for Q's key, and Ch Q's end of the conversation's root channel; once Q's agent assigns Kq, the conversation opens and the person is told the key, called(Q, Kq).  A cold call that reaches the agent has its key assigned to the caller's writer and opens the conversation with the caller.  The agent runs the mini-app, miniapp/3, with its key and the conversations, as the social graph hands a mini-app its conversations (miniapp.glp).
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
 
 %% The agent: its key, which self_key/1 assigns, and the agent run with it.
 exported procedure gkk_agent(MaIns?, MaOuts, Stream(NetMsg(MaConv))?, Stream(NetMsg(MaConv))).
@@ -19,7 +19,7 @@ run_agent(K, PIn, POut?, NIn, NOut?) :-
     opened(Pending?, Mine, Notices),
     answer_in(NIn?, K?, Theirs),
     merge(Mine?, Theirs?, Down),
-    miniapp # miniapp(K?, ch(Grants?, MOut), ch(Down?, Up), []),
+    miniapp # miniapp(K?, ch(Grants?, MOut), ch(Down?, Up)),
     mix(MOut?, Notices?, POut),
     sink(Up?).
 

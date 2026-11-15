@@ -13,14 +13,14 @@ Fourteen schemas: GKK's `establish`, `acquaint` and `introduce`, GSG's `befriend
 1. The act schemas, `programs/gsc/GSN.glp`; the checker's verdict `syntactically_grassroots`.
 2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSN.glp; `bash programs/apps/compile.sh --check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
-4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`.
+4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`.
 
 ## The files
 
 | File | What it holds |
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GSN, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Request =::= social_menu(...)`, the request labels its pragmas give, its request question bare, of the request type `Request?` (vGLP, Section 5.4, "The compilation") |
-| `miniapp.glp` | `miniapp/4`, the same file as `../gsg/miniapp.glp` |
+| `miniapp.glp` | `miniapp/3`, the same file as `../gsg/miniapp.glp` |
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice` or `bob` |
 | `plays.glp` | `play_network/2`, the mini-app with no super-app |
 | `self.glp` | the platform's types written again, the router's types, and the exports |

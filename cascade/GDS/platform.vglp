@@ -1,16 +1,3 @@
 %% not compiled(gds)
-%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a guarded
-%% part with an opener, of a schema with a listed role whose base is not a guarding role, has a guard
-%% who guards another guarded part of its class not determined likewise, with the same opener, or
-%% has two guards or more and another guarded part of its class has another guard set:
-%% the schema and the other(make_guardian, make_guardian)
-%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a guarded
-%% part with an opener, of a schema with a listed role whose base is not a guarding role, has a guard
-%% who guards another guarded part of its class not determined likewise, with the same opener, or
-%% has two guards or more and another guarded part of its class has another guard set:
-%% the schema and the other(end_guardian, end_guardian)
-%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a guarded
-%% part with an opener, of a schema with a listed role whose base is not a guarding role, has a guard
-%% who guards another guarded part of its class not determined likewise, with the same opener, or
-%% has two guards or more and another guarded part of its class has another guard set:
-%% the schema and the other(retire, retire)
+%% a guarded schema has no button in the contract's pragmas:(lookup)
+%% a guarded schema has no button in the contract's pragmas:(lookup_unlisted)

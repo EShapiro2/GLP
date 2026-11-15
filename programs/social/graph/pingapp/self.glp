@@ -4,7 +4,7 @@
 %% load_file/2, verifies its two certifications, installs it, and activates it
 %% by run/3 (GSG paper, Section 3).
 %%
-%% Its entry is the super-app's entry template miniapp/4, declared once in
+%% Its entry is the super-app's entry template miniapp/3, declared once in
 %% the root programs/self.glp, at its own two types, PingShown what it draws
 %% for its person and PingMsg its root channels' messages (vGLP, 2026-10-14
 %% 13:21 UTC, S2: a hand-written mini-app chooses both), and its scripted
@@ -47,9 +47,9 @@ HeldList  ::= [] ; [HeldProbe | HeldList].
 %% conversation with the friend, or none, there being no such conversation.
 ProbeStatus ::= sent ; none.
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?).
+exported procedure miniapp(Key?, PersonChannel(PingShown)?, SgChannel(PingMsg)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(AppUi)).
 exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(PingShown), PersonIn(PingShown))?, Stream(AppUi)).

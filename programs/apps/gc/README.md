@@ -19,14 +19,14 @@ GKK:1 is the schema `establish`, guarded by the person, which adds `identity` at
 1. The act schemas, `programs/currencies/coins/GC.glp`; the checker's verdict `syntactically_grassroots`.
 2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, "The compilation"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GC.glp, the platform of the recorded run of the cascade on GC, `cascade/GC/platform.vglp`.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
 3. GLP: the canonical compilation (vGLP, Section 6.3) compiles `platform.vglp` when the directory loads.
-4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/4`, which the super-app activates by `run/3`.
+4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`, which the super-app activates by `run/3`.
 
 ## The files
 
 | File | What it holds |
 |---|---|
 | `platform.vglp` | the canonical CVA platform of GC, as printed, with the words of its pragmas and its two widget declarations, `Approval =::= approval_sentence.` and `Request =::= social_menu(...)`, the request labels and placements its pragmas give |
-| `miniapp.glp` | `miniapp/4`: the agent, its dispatcher, and the agent's network over the conversations; GSG's app's file, the same in each app (`../gsg/README.md`) |
+| `miniapp.glp` | `miniapp/3`: the agent, its dispatcher, and the agent's network over the conversations; GSG's app's file, the same in each app (`../gsg/README.md`) |
 | `person.glp` | `miniapp_person/5`: the scripted person, by role, with the keys the person knows, by which its script names its peers, `alice` or `bob` |
 | `plays.glp` | `play_coins/2`, the mini-app with no super-app, and `play_village/6`, the village market of GC's paper on it |
 | `self.glp` | the platform's types written again, and the exports |

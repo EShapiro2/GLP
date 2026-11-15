@@ -1,0 +1,95 @@
+% CnC: Consumers' Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as CnC:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GCoop and TC.
+% Last changed: 2026-11-12, by GO #5.
+% Schemas: CnC.glp beside this file.
+CnC: Consumers' Cooperative
+CnC extends GCoop and TC.
+A consumers' cooperative is a cooperative that is a trading company whose customers are its members; its fee is a number of Dollars the members set, and the cost of a good is the coins Orga paid for it.
+Alice, Bob and Eve are persons, Orga a consumers' cooperative.
+1. ■ Membership.  GCoop:2, where Bob pays Orga the fee on becoming a member.
+2. ■ Officers.  TC:2, where the members appoint and remove the buyers, keepers and sellers.
+3. ■ Sale.  TC:5, where Eve is a member and pays the cost of the good.
+Pragmas
+Look: 🧺, sharing
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion>
+  Otto [Move orgs acquaint] <motion>
+  Bruno [Moveb orgs acquaint] <motion of the other organisation>
+  Otto [Move org befriend] <role> <motion>
+  Otto [Move org unfriend] <motion>
+  Otto [Move orgs befriend] <role> <role> <motion>
+  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion>
+  Otto [Move expel] <motion>
+  Otto [Move appoint] <role> <motion>
+  Otto [Move dismiss] <role> <motion>
+  Otto [Move amend] <bylaws> <new bylaws> <motion>
+  Otto [Move coop board] <motion>
+  Otto [Move coop join] <denomination> <amount> <motion>
+  Otto [Move cnc fee] <amount> <motion>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob>
+  Bob: Otto asks you to approve this: org acquaint.
+  Otto [Org befriend] <person Bob> <person Alice> <role>
+  Bob: Otto asks you to approve this: org befriend.
+  Alice: Otto asks you to approve this: org befriend.
+  Otto [Org unfriend] <person Bob>
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
+  Bruno: Otto asks you to approve this: orgs befriend.
+  Alice: Otto asks you to approve this: orgs befriend.
+  Bob: Otto asks you to approve this: orgs befriend.
+Joint guardianship: Bob [Officer unfriend]
+  Otto [Appoint] <person Bob> <role>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role>
+  Bob [Resign role]
+Retiring: Otto [Retire]
+Participation: Bob [Join] <person Otto>
+  Otto: Bob asks you to approve this: join.
+Membership: Bob [Leave]
+  Otto [Expel] <person Bob>
+  Bob [Coop join] <person Otto> <amount>
+  Otto: Bob asks you to approve this: coop join.
+  Otto [Cnc fee] <amount>
+Amendment: Otto [Amend] <new bylaws>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Board: Otto [Coop board] <person Bob>
+  Bob: Otto asks you to approve this: coop board.
+Purchase: Alice [Tc purchase] <person Dave> <denomination> <issuer> <amount> <good>
+  Dave: Alice asks you to approve this: tc purchase.
+Receipt: Bob [Tc receive] <good> <amount>
+Sale: Carol [Tc sale] <person Eve> <denomination> <issuer> <amount> <good>
+  Eve: Carol asks you to approve this: tc sale.

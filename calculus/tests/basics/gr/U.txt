@@ -1,0 +1,4 @@
+U: Undertaking alone
+U extends K.
+Alice is a person.
+1. ○ Care. Alice will take care.

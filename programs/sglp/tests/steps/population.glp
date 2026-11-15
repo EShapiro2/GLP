@@ -75,7 +75,7 @@ stream_append(entry(Time?, A?, Type?, ready(Y1?)), Log?, _)
 .
 
 %% The build of a question shown whole: the copy, its skeleton for the log, and the answer of each position the person writes (Section 3, Definition "Relay").
-procedure present_1(Integer?, Constant?, Panel?, Panel, _, Integer?, Integer, Stream(Slot(_)), Stream(Slot(_))?, MutualRef?, MutualRef?).
+procedure present_1(Integer?, Constant?, Panel?, Panel, Term, Integer?, Integer, Stream(Slot(Term)), Stream(Slot(Term))?, MutualRef?, MutualRef?).
 present_1(_, _, panel([]), panel([]), panel([]), C0, C0?, Fs0?, Fs0, _, _)
 .
 present_1(A, Type, panel([card(Z1, Z2?) | Z4]), panel([card(Z1?, Z3) | Z5?]), panel([card(Z1?, '$h'(C0?, 0)) | S1?]), C0, N2?, [slot(F1) | G1?], Fs0, Mon, Log)
@@ -92,7 +92,7 @@ present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?)
 .
 
 %% The answer to a question shown whole, handed over and logged in it (Section 4, "The person process" and "The log").
-procedure answer_2(Integer?, Constant?, Integer?, Integer?, _?, YesNo?, YesNo, MutualRef?, MutualRef?).
+procedure answer_2(Integer?, Constant?, Integer?, Integer?, Term?, YesNo?, YesNo, MutualRef?, MutualRef?).
 answer_2(A, Type, C, J, F, Y, Y?, Mon, Log)
 :-
 ground(Y?)
@@ -107,7 +107,7 @@ stream_append(entry(Time?, A?, Type?, E?), Log?, _)
 .
 
 %% The build of a question shown whole: the copy, its skeleton for the log, and the answer of each position the person writes (Section 3, Definition "Relay").
-procedure present_2(Integer?, Constant?, List(Card)?, List(Card), _, Integer?, Integer, Stream(Slot(_)), Stream(Slot(_))?, MutualRef?, MutualRef?).
+procedure present_2(Integer?, Constant?, List(Card)?, List(Card), Term, Integer?, Integer, Stream(Slot(Term)), Stream(Slot(Term))?, MutualRef?, MutualRef?).
 present_2(_, _, [], [], [], C0, C0?, Fs0?, Fs0, _, _)
 .
 present_2(A, Type, [card(Z1, Z2?) | Z4], [card(Z1?, Z3) | Z5?], [card(Z1?, '$h'(C0?, 0)) | S1?], C0, N2?, [slot(F1) | G1?], Fs0, Mon, Log)

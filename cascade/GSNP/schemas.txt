@@ -89,3 +89,6 @@ deliver: delivered(Alice, y, Bob, n), item(Bob, sgn(y, Alice)) <-
 
 deliver_own: delivered(Alice, y, Bob, n), item(Bob, y) <-
     identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, y, Bob, n), identity(Bob), member(Bob, <Alice>.n), author(y) = Alice
+
+deliver_leader: delivered(Alice, y, Alice, n), item(Alice, y) <-
+    identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), not delivered(Alice, y, Alice, n), author(y) != Alice

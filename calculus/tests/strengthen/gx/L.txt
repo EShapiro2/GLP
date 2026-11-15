@@ -1,0 +1,6 @@
+L: Lists
+Of K: Alice and Bob are persons.
+Of L: Alice and Bob are persons, Tag a tag.
+K:1, L:1. ■ Meet: Alice and Bob may jointly meet, and then Alice lists Bob.
+K:2, L:1. ■ Part: Alice may part from Bob, and then no longer Alice lists Bob and Alice has no tag of Bob.
+L:2. ■ Tag: Alice may tag Bob with Tag, provided Alice lists Bob.
