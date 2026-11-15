@@ -29,7 +29,13 @@
 %% the one act, carol losing every has_role(_, _).  carol then points to
 %% alice, to whom she issued a bond, with the label x and again with the label
 %% y, and removes the first, unpoint(carol, alice, x), the request naming the
-%% pointer she removes: the pointer labelled y stays.
+%% pointer she removes: the pointer labelled y stays.  Last, offices, whose
+%% titles are constants: alice, holding no office, requests serve(alice,
+%% carol), which requires office(carol, _): refused, unable.  carol gives bob
+%% the offices clerk and treasurer and alice the office clerk, each answering
+%% yes; bob requests serve(bob, carol), carol answering yes, and it commits.
+%% carol dissolves, dissolve(carol): her agent lists alice and bob, bob once,
+%% and each loses every office in carol in the one act.
 %% ---------------------------------------------------------------------------
 
 %% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
@@ -56,14 +62,22 @@ play_wild(LA?, LB?, LC?, N?) :-
           wait(holds(role(carol, speech(utterance(chair), carol)))),
           own([A4], propose(rest(A4?))),
           wait(refused(rest(alice), alice, unable)),
-          approval(report(carol, alice, [speech(utterance(chair), carol), speech(utterance(clerk), carol)]), yes)],
+          approval(report(carol, alice, [speech(utterance(chair), carol), speech(utterance(clerk), carol)]), yes),
+          own([A5], propose(serve(A5?, carol))),
+          wait(refused(serve(alice, carol), alice, unable)),
+          approval(office(carol, alice, clerk), yes)],
          [own([B1], propose(boast(B1?))),
           wait(refused(boast(bob), bob, unable)),
           approval(appoint(carol, bob, speech(utterance(chair), carol)), yes),
           approval(appoint(carol, bob, speech(utterance(clerk), carol)), yes),
           wait(holds(role(carol, speech(utterance(clerk), carol)))),
           own([B2], propose(boast(B2?))),
-          wait(holds(officer))],
+          wait(holds(officer)),
+          approval(office(carol, bob, clerk), yes),
+          approval(office(carol, bob, treasurer), yes),
+          wait(holds(office(carol, treasurer))),
+          own([B3], propose(serve(B3?, carol))),
+          wait(holds(serving(carol)))],
          [own([V1], propose(vow(V1?))),
           wait(holds(vowed)),
           own([V2], propose(rest(V2?))),
@@ -88,7 +102,17 @@ play_wild(LA?, LB?, LC?, N?) :-
           own([P3, P4], propose(point(P3?, alice, speech(utterance(y), P4?)))),
           wait(holds(pointer(alice, speech(utterance(y), carol)))),
           own([P5, P6], propose(unpoint(P5?, alice, speech(utterance(x), P6?)))),
-          wait(lacks(pointer(alice, speech(utterance(x), carol))))],
+          wait(lacks(pointer(alice, speech(utterance(x), carol)))),
+          own([O1], propose(office(O1?, bob, clerk))),
+          wait(holds(has_office(bob, clerk))),
+          own([O2], propose(office(O2?, bob, treasurer))),
+          wait(holds(has_office(bob, treasurer))),
+          own([O3], propose(office(O3?, alice, clerk))),
+          wait(holds(has_office(alice, clerk))),
+          approval(serve(bob, carol), yes),
+          wait(holds(served_by(bob))),
+          own([O4], propose(dissolve(O4?))),
+          wait(holds(dissolved))],
          LA, LB, LC, N).
 
 %% alice, bob and carol, each with its dispatcher and scripted person, their

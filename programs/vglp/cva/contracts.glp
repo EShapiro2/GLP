@@ -548,6 +548,9 @@ pragmas_named(wild, pragmas([list('"Bonds"', [bond]), list('"Accepted"', [accept
      act(rest, '"Rest"', [], none, '"Bonds"', by([1])),
      act(point, '"Point"', ['""', '""', '"label"'], none, '"Bonds"', by([1])),
      act(unpoint, '"Unpoint"', [], none, '"Bonds"', by([1])),
+     act(office, '"Office"', ['""', '"bob"', '"title"'], said([[], [person(1), text('" gives you an office."')]]), '"Bonds"', by([1])),
+     act(serve, '"Serve"', [], said([[], [person(1), text('" asks to serve you."')]]), '"Bonds"', by([1])),
+     act(dissolve, '"Dissolve"', [], none, '"Bonds"', by([1])),
      act(retire, '"Retire"', [], none, '"Bonds"', by([1]))])).
 pragmas_named(roles, pragmas([list('"Roles"', [role]), list('"Contacts"', [knows])],
     [act(acquaint, '"Acquaint"', ['""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
@@ -992,10 +995,14 @@ backed([schema(acquaint, [],
 %%   rest(b?)            :  at b  not rested, +rested, and (not role(_, _) at b) or (retired at b)
 %%   point(a? ; c, l)    :  at a  issued(c, _), not pointer(c, l), +pointer(c, l)
 %%   unpoint(a? ; c, l)  :  at a  -pointer(c, l)
+%%   office(c?, b? ; const t) :  at c  not has_office(b, t), +has_office(b, t)   at b  not office(c, t), +office(c, t)
+%%   serve(b?, c?)       :  at b  office(c, _), not serving(c), +serving(c)   at c  not served_by(b), +served_by(b)
+%%   dissolve(c?, e[has_office(c, *, _)]) :  at c  not dissolved, +dissolved, -has_office(_, _)
+%%                          at each e  office(c, _), -office(c, _)
 %%   retire(c?, e[has_role(c, *, _)]) :  at c  not retired, +retired, -has_role(_, _)
 %%                          at each e  role(c, _), -role(c, _)
 %%
-%% accept requires at Alice a bond of Carol of some maturity, bond(c, _), a wildcard in an atom a role requires: her machine finds a maturity in her state, and the act neither names nor records it, as DGC's Accept by bond.  boast's exists has the wildcard in its anchor, at the place of the person in whom Bob holds a role.  report's conjunct has it in its anchor likewise, its instances the roles Carol has given, each once whoever holds it, "restricted to the variables the conjunct's literals name and without repetition".  vow has no wildcard: its exists binds g at a person's place of its anchor, accepted(g), which GSC's reader writes a speech-act variable, and the compiler an agent variable, of the kind of its place (vGLP, Section 5.4: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor"; compiler/cvac.glp, bound_kinds), so that "Bob has accepted no one" is false of a person who has accepted someone.  rest has a negated atom with wildcards inside a safe formula, not role(_, _), which holds exactly where the state has no atom it matches, "a wildcard in a negated atom is universally quantified, the atom forbidding ... every atom of the state that it matches": the compiler writes the atom the quantifier exists w1 w2 role(w1, w2) (compiler/cvac.glp, wild_fa).  unpoint, as GFF's labeled_unpoint, deletes pointer(c, l) at its base, Alice, c and l in no other atom: they are no local variables, "but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers", its request unpoint(Peer, Peer, Speech) and its pragma line naming no field, the pointer she holds binding both.  retire's listed role has it in its anchor, has_role(c, e, _), the people Carol has in some role, each once, as GO's retire; each of them is required to hold a role in Carol, role(c, _), a wildcard in an atom a listed role requires, as the Calculus's GSN close required member(e, g, _) of every listed member, and loses every role in her, the cleared role(c, _), a wildcard in a negated atom, as it was.
+%% accept requires at Alice a bond of Carol of some maturity, bond(c, _), a wildcard in an atom a role requires: her machine finds a maturity in her state, and the act neither names nor records it, as DGC's Accept by bond.  boast's exists has the wildcard in its anchor, at the place of the person in whom Bob holds a role.  report's conjunct has it in its anchor likewise, its instances the roles Carol has given, each once whoever holds it, "restricted to the variables the conjunct's literals name and without repetition".  vow has no wildcard: its exists binds g at a person's place of its anchor, accepted(g), which GSC's reader writes a speech-act variable, and the compiler an agent variable, of the kind of its place (vGLP, Section 5.4: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor"; compiler/cvac.glp, bound_kinds), so that "Bob has accepted no one" is false of a person who has accepted someone.  rest has a negated atom with wildcards inside a safe formula, not role(_, _), which holds exactly where the state has no atom it matches, "a wildcard in a negated atom is universally quantified, the atom forbidding ... every atom of the state that it matches": the compiler writes the atom the quantifier exists w1 w2 role(w1, w2) (compiler/cvac.glp, wild_fa).  unpoint, as GFF's labeled_unpoint, deletes pointer(c, l) at its base, Alice, c and l in no other atom: they are no local variables, "but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers", its request unpoint(Peer, Peer, Speech) and its pragma line naming no field, the pointer she holds binding both.  office, serve and dissolve are accept and retire at a constant's place, an office's title being a variable over the constants, const(t), as the name of a role in GO: serve's office(c, _) is a variable over the constants local to its role, and dissolve's listed role has the wildcard in its anchor, has_office(c, e, _).  retire's listed role has it in its anchor, has_role(c, e, _), the people Carol has in some role, each once, as GO's retire; each of them is required to hold a role in Carol, role(c, _), a wildcard in an atom a listed role requires, as the Calculus's GSN close required member(e, g, _) of every listed member, and loses every role in her, the cleared role(c, _), a wildcard in a negated atom, as it was.
 procedure wild(Contract).
 wild([sas(issue, ['Carol', 'Alice'], ['D'],
           [atom(bond, ['Alice', 'Carol', num('D')]), atom(issued, ['Carol', 'Alice', num('D')])],
@@ -1033,6 +1040,18 @@ wild([sas(issue, ['Carol', 'Alice'], ['D'],
           [not(atom(pointer, ['Alice', 'Carol', 'Label']))],
           [atom(pointer, ['Alice', 'Carol', 'Label'])],
           true, ['Alice']),
+      sas(office, ['Carol', 'Bob'], ['Title'],
+          [atom(has_office, ['Carol', 'Bob', const('Title')]), atom(office, ['Bob', 'Carol', const('Title')])],
+          [not(atom(has_office, ['Carol', 'Bob', const('Title')])), not(atom(office, ['Bob', 'Carol', const('Title')]))],
+          true, ['Carol', 'Bob']),
+      sas(serve, ['Bob', 'Carol'], [],
+          [atom(serving, ['Bob', 'Carol']), atom(served_by, ['Carol', 'Bob'])],
+          [atom(office, ['Bob', 'Carol', '_']), not(atom(serving, ['Bob', 'Carol'])), not(atom(served_by, ['Carol', 'Bob']))],
+          true, ['Bob', 'Carol']),
+      sas(dissolve, ['Carol'], [],
+          [atom(dissolved, ['Carol']), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [not(atom(office, ['E', 'Carol', '_']))]), not(atom(has_office, ['Carol', '_', '_']))],
+          [not(atom(dissolved, ['Carol'])), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [atom(office, ['E', 'Carol', '_'])])],
+          true, ['Carol']),
       sas(retire, ['Carol'], [],
           [atom(retired, ['Carol']), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [not(atom(role, ['E', 'Carol', '_']))]), not(atom(has_role, ['Carol', '_', '_']))],
           [not(atom(retired, ['Carol'])), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [atom(role, ['E', 'Carol', '_'])])],
