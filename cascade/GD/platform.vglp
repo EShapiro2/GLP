@@ -28,7 +28,7 @@ distrust_friend(Peer, Peer)
 ;
 propagate(Peer, Peer, Peer)
 ;
-cease(Peer)
+cease(Peer, Peer)
 .
 
 Proposal ::=
@@ -48,14 +48,14 @@ distrust_friend(Peer, Peer)
 ;
 propagate(Peer, Peer, Peer)
 ;
-cease(Peer)
+cease(Peer, Peer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button("Distrust", [act(distrust, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)]), forb(distrusts, [at(2)])], [2], [], [], [])]), button("Distrust friend", [act(distrust_friend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(friend, [at(2)]), forb(distrusts, [at(2)])], [2], [], [], [])]), button("Propagate", [act(propagate, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(knows, [at(3)]), forb(distrusts, [at(3)])], [2], [field(3, "person", agent)], [], [])]), button("Cease", [act(cease, 1, [1], [req(identity, []), req(distrusts, [any])], [], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button("Distrust", [act(distrust, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)]), forb(distrusts, [at(2)])], [2], [], [], [])]), button("Distrust friend", [act(distrust_friend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(friend, [at(2)]), forb(distrusts, [at(2)])], [2], [], [], [])]), button("Propagate", [act(propagate, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(knows, [at(3)]), forb(distrusts, [at(3)])], [2], [field(3, "person", agent)], [], [])]), button("Cease", [act(cease, 1, [1], [req(identity, []), req(distrusts, [at(2)])], [2], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -91,7 +91,7 @@ atom_of(g(distrusts, [p(V1)]), shown(distrusts(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(distrust, [], [rs(guarded, [atom(distrusts, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(distrusts, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(distrust_friend, [], [rs(guarded, [atom(distrusts, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(propagate, [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]), schema(cease, [], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(distrust, [], [rs(guarded, [atom(distrusts, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(distrusts, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(distrust_friend, [], [rs(guarded, [atom(distrusts, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(propagate, [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]), schema(cease, [pvar('Carol')], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -111,7 +111,7 @@ schema_entry(distrust_friend, schema(distrust_friend, [], [rs(guarded, [atom(dis
 .
 schema_entry(propagate, schema(propagate, [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]))
 .
-schema_entry(cease, schema(cease, [], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])]))
+schema_entry(cease, schema(cease, [pvar('Carol')], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -132,7 +132,7 @@ schema_numeric(distrust_friend, numeric([cj(every, true)], [], []))
 .
 schema_numeric(propagate, numeric([cj(every, true)], [], []))
 .
-schema_numeric(cease, numeric([cj(every, true)], [pvar('Carol')], []))
+schema_numeric(cease, numeric([cj(every, true)], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -194,7 +194,7 @@ binding_of(distrust_friend(V1, V2), distrust_friend, [b(role(1), p(V1?)), b(role
 .
 binding_of(propagate(V1, V2, V3), propagate, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
 .
-binding_of(cease(V1), cease, [b(role(1), p(V1?)), b(pvar('Carol'), lv(cease, 'Carol'))])
+binding_of(cease(V1, V2), cease, [b(role(1), p(V1?)), b(pvar('Carol'), p(V2?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -280,13 +280,15 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Carol'), B?, D?, V3)
 .
-class_of(cease, B, D, cease(V1?))
+class_of(cease, B, D, cease(V1?, V2?))
 :-
 ground(B?)
 ,
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+,
+val_peer(pvar('Carol'), B?, D?, V2)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -306,7 +308,7 @@ name_class(distrust_friend(V1, V2), _, distrust_friend(V1?, V2?))
 .
 name_class(propagate(V1, V2, V3), _, propagate(V1?, V2?, V3?))
 .
-name_class(cease(V1), _, cease(V1?))
+name_class(cease(V1, V2), _, cease(V1?, V2?))
 .
 
 procedure request_name(Class?, PName).
@@ -326,7 +328,7 @@ request_name(distrust_friend(V1, V2), pname(distrust_friend(V1?, V2?)))
 .
 request_name(propagate(V1, V2, V3), pname(propagate(V1?, V2?, V3?)))
 .
-request_name(cease(V1), pname(cease(V1?)))
+request_name(cease(V1, V2), pname(cease(V1?, V2?)))
 .
 request_name(_, nopname) :- otherwise | true.
 

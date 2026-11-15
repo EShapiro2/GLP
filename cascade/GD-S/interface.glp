@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), distrust('Peer', 'Peer'), distrust_friend('Peer', 'Peer'), propagate('Peer', 'Peer', 'Peer'), cease('Peer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), distrust('Peer', 'Peer'), distrust_friend('Peer', 'Peer'), propagate('Peer', 'Peer', 'Peer'), cease('Peer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), distrust('Peer', 'Peer'), distrust_friend('Peer', 'Peer'), propagate('Peer', 'Peer', 'Peer'), cease('Peer', 'Peer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), distrust('Peer', 'Peer'), distrust_friend('Peer', 'Peer'), propagate('Peer', 'Peer', 'Peer'), cease('Peer', 'Peer')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -1280,7 +1280,7 @@ interface([
   compiled(join_proposal_distrust_2, 3),
   compiled(join_proposal_distrust_friend_2, 3),
   compiled(join_proposal_propagate_3, 4),
-  compiled(join_proposal_cease_1, 2),
+  compiled(join_proposal_cease_2, 3),
   compiled(form_proposal, 2),
   compiled(join_request_propose_1, 2),
   compiled(form_request, 2),
