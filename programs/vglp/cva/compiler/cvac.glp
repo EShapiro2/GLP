@@ -240,7 +240,9 @@ procedure q_lines(QContract?, Constant?, Lines).
 q_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
     q_faults(C?, L0),
     wild_faults(C?, L1),
-    lapp(L0?, L1?, L01),
+    bound_faults(C?, L2),
+    lapp(L1?, L2?, L12),
+    lapp(L0?, L12?, L01),
     head_line(L01?, Nm?, L).
 procedure q_faults(QContract?, Lines).
 q_faults([], []).
@@ -711,10 +713,14 @@ const_lines([L|Ls], C, [L?|Ls1?]) :- otherwise | const_lines(Ls?, C?, Ls1).
 %% A wildcard in an atom a role requires, or in the anchor of a quantifier, is a variable of its own (wild_schemas, below), so the schemas every procedure of the compiler reads are those with each such wildcard written as that variable.
 procedure decl_schemas(Declared?, QContract).
 decl_schemas(D, R?) :- ground(D?) |
-    decl_norm(D?, C0),
-    decl_norm(D?, C1),
-    wild_table(C1?, Gs),
-    wild_schemas(C0?, Gs?, R).
+    decl_norm(D?, C00),
+    bound_kinds(C00?, C01),
+    bound_kinds(C01?, C0),
+    wild_twice_c(C0?, Ca, Cb),
+    wild_table(Ca?, Gs),
+    wild_schemas(Cb?, Gs?, R).
+procedure wild_twice_c(QContract?, QContract, QContract).
+wild_twice_c(C, C?, C?) :- ground(C?) | true.
 procedure decl_norm(Declared?, QContract).
 decl_norm([], []).
 decl_norm([S|Ss], R?) :- norm_schemas([S?|Ss?], R0), consts_off(R0?, R).
@@ -736,6 +742,307 @@ norm_roles([R|Rs], I, [R?|Rs1?]) :- otherwise, integer(I?) | I1 := I? + 1, norm_
 procedure role_in(YesNo?, Integer?, Args?, Args).
 role_in(yes, _, As, As?).
 role_in(no, I, As, [role(I?)|As?]).
+%% --- The variables a quantifier binds, each of the kind of its place -----------
+%% vGLP, Section 5.4, "Speech-act schemas as local specifications": "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds", every variable a quantifier binds occurring among its anchor's arguments ("A an atom, the quantifier's anchor, among whose arguments every variable of x occurs").  GSC's reader writes a variable a quantifier binds as a speech-act variable, svar(X), unless the schema writes it a number or it holds an atom (programs/gsc/self.glp); the printed text matches a speech-act variable with a speech act alone (kind_ok), so one standing at a person's place of its anchor matched no atom, and "Bob is a guardian of no one", not exists G1 has_guardian(Bob, G1), held in every state.  So a variable a quantifier binds is written of the kind of the place it stands at in its anchor, before any procedure reads the contract (bound_kinds): an agent variable, pvar(X), at a person's place, and a value variable, num(X), at a number's, through the quantifier's scope, its anchor, its condition and its conclusion or conditional literals; the kind of the place is the one the other atoms of the contract give it, the variables that quantifiers bind in their own anchors giving none (bk_masked).  It is done twice, so that a place typed only by a variable another quantifier binds, as that of a conditional literal, has its kind by then.  Refused, with the line (bound_faults): a variable a quantifier binds, still written a speech-act variable, at a place of its anchor that is not a speech act's, no other atom of the contract typing the place, the variable standing at places of two kinds, the place a constant's, a community name's, an item's or a real's, or its kind following only from a longer chain of quantifiers.
+%% A quantifier that binds a listed role, fforall([role(I)], ...) and conjunct([role(I)], ...), binds a role, and is as it is.
+Sb    ::= sb(Constant, Arg).
+Sbs   ::= [] ; [Sb | Sbs].
+BMode ::= mask ; kinds(Sigs).
+procedure bound_kinds(QContract?, QContract).
+bound_kinds(C, R?) :- ground(C?) |
+    bk_schemas(C?, mask, Cm),
+    wild_table(Cm?, T),
+    bk_schemas(C?, kinds(T?), R).
+%% The contract with, under mask, each variable a quantifier binds, written svar(X), the wildcard in its anchor, so that the anchor gives its place no type; and, under kinds(T), each written of the kind the table T gives its place.
+procedure bk_schemas(QContract?, BMode?, QContract).
+bk_schemas([], _, []).
+bk_schemas([schema(S, Hd, Rs)|Ss], Md, [schema(S?, Hd?, Rs?)|Ns?]) :- bk_schemas(Ss?, Md?, Ns).
+bk_schemas([cschema(S, Hd, X, Rs)|Ss], Md, [cschema(S?, Hd?, X?, Rs?)|Ns?]) :- bk_schemas(Ss?, Md?, Ns).
+bk_schemas([nschema(S, Hd, C, Rs)|Ss], Md, [nschema(S?, Hd?, C1?, Rs?)|Ns?]) :- ground(Md?) | bk_con(C?, Md?, C1), bk_schemas(Ss?, Md?, Ns).
+bk_schemas([qschema(S, Hd, Bd, C, Rs, Cj, Fs)|Ss], Md, [qschema(S?, Hd?, Bd?, C1?, Rs?, Cj1?, Fs1?)|Ns?]) :- ground(Md?) |
+    bk_con(C?, Md?, C1),
+    bk_conjs(Cj?, Md?, Cj1),
+    bk_forms(Fs?, Md?, Fs1),
+    bk_schemas(Ss?, Md?, Ns).
+procedure bk_conjs(Conjuncts?, BMode?, Conjuncts).
+bk_conjs([], _, []).
+bk_conjs([conjunct([role(I)], Bi, A, Phi, CA, CD, Lits)|Cs], Md, [conjunct([role(I?)], Bi?, A?, Phi1?, CA?, CD?, Lits?)|Cs1?]) :- ground(Md?) |
+    bk_form(Phi?, Md?, Phi1),
+    bk_conjs(Cs?, Md?, Cs1).
+bk_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, Lits)|Cs], Md, [conjunct(Xs1?, Bi?, A1?, Phi1?, CA1?, CD1?, Lits1?)|Cs1?]) :- otherwise, ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    bk_conj(Sb?, Md?, Phi?, CA?, CD?, Lits?, Phi1, CA1, CD1, Lits1),
+    bk_conjs(Cs?, Md?, Cs1).
+procedure bk_conj(Sbs?, BMode?, Form?, HMults?, HMults?, Forms?, Form, HMults, HMults, Forms).
+bk_conj(Sb, Md, Phi, CA, CD, Lits, Phi1?, CA1?, CD1?, Lits1?) :- ground(Sb?) |
+    sb_form(Phi?, Sb?, Phi0),
+    bk_form(Phi0?, Md?, Phi1),
+    sb_hms(CA?, Sb?, CA1),
+    sb_hms(CD?, Sb?, CD1),
+    sb_forms(Lits?, Sb?, Lits1).
+procedure bk_forms(Forms?, BMode?, Forms).
+bk_forms([], _, []).
+bk_forms([F|Fs], Md, [F1?|Fs1?]) :- ground(Md?) | bk_form(F?, Md?, F1), bk_forms(Fs?, Md?, Fs1).
+procedure bk_form(Form?, BMode?, Form).
+bk_form(fa(H, M), _, fa(H?, M?)).
+bk_form(fcons(C), Md, fcons(C1?)) :- bk_con(C?, Md?, C1).
+bk_form(fnot(F), Md, fnot(F1?)) :- bk_form(F?, Md?, F1).
+bk_form(fand(F, G), Md, fand(F1?, G1?)) :- ground(Md?) | bk_form(F?, Md?, F1), bk_form(G?, Md?, G1).
+bk_form(for(F, G), Md, for(F1?, G1?)) :- ground(Md?) | bk_form(F?, Md?, F1), bk_form(G?, Md?, G1).
+bk_form(fexists(Xs, H, A, F), Md, fexists(Xs1?, H?, A1?, F1?)) :- ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1).
+bk_form(fforall([role(I)], H, A, F, Ps), Md, fforall([role(I?)], H?, A?, F1?, Ps1?)) :- ground(Md?) |
+    bk_form(F?, Md?, F1),
+    bk_forms(Ps?, Md?, Ps1).
+bk_form(fforall(Xs, H, A, F, Ps), Md, fforall(Xs1?, H?, A1?, F1?, Ps1?)) :- otherwise, ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    bk_scope(Sb?, Md?, F?, Ps?, F1, Ps1).
+procedure bk_scope(Sbs?, BMode?, Form?, Forms?, Form, Forms).
+bk_scope(Sb, Md, F, Ps, F1?, Ps1?) :- ground(Sb?), ground(Md?) |
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1),
+    sb_forms(Ps?, Sb?, Ps0),
+    bk_forms(Ps0?, Md?, Ps1).
+procedure bk_con(Constraint?, BMode?, Constraint).
+bk_con(and(A, B), Md, and(A1?, B1?)) :- ground(Md?) | bk_con(A?, Md?, A1), bk_con(B?, Md?, B1).
+bk_con(or(A, B), Md, or(A1?, B1?)) :- ground(Md?) | bk_con(A?, Md?, A1), bk_con(B?, Md?, B1).
+bk_con(implies(A, B), Md, implies(A1?, B1?)) :- ground(Md?) | bk_con(A?, Md?, A1), bk_con(B?, Md?, B1).
+bk_con(not(A), Md, not(A1?)) :- bk_con(A?, Md?, A1).
+bk_con(eq(X, Y), Md, eq(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(ne(X, Y), Md, ne(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(le(X, Y), Md, le(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(lt(X, Y), Md, lt(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(ge(X, Y), Md, ge(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(gt(X, Y), Md, gt(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(rel(R, Es), Md, rel(R?, Es1?)) :- bk_exprs(Es?, Md?, Es1).
+bk_con(program(E), Md, program(E1?)) :- bk_expr(E?, Md?, E1).
+bk_con(C, _, C?) :- otherwise | true.
+procedure bk_exprs(Exprs?, BMode?, Exprs).
+bk_exprs([], _, []).
+bk_exprs([E|Es], Md, [E1?|Es1?]) :- ground(Md?) | bk_expr(E?, Md?, E1), bk_exprs(Es?, Md?, Es1).
+procedure bk_expr(Expr?, BMode?, Expr).
+bk_expr(plus(X, Y), Md, plus(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_expr(minus(X, Y), Md, minus(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_expr(mul(X, Y), Md, mul(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_expr(fn(F, Es), Md, fn(F?, Es1?)) :- bk_exprs(Es?, Md?, Es1).
+bk_expr(cardinality(Xs, H, A, F), Md, cardinality(Xs1?, H?, A1?, F1?)) :- ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1).
+bk_expr(sum(Xs, H, A, F, U), Md, sum(Xs1?, H?, A1?, F1?, U1?)) :- ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    bk_sum(Sb?, Md?, F?, U?, F1, U1).
+bk_expr(E, _, E?) :- otherwise | true.
+procedure bk_sum(Sbs?, BMode?, Form?, Expr?, Form, Expr).
+bk_sum(Sb, Md, F, U, F1?, U1?) :- ground(Sb?), ground(Md?) |
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1),
+    sb_expr(U?, Sb?, U0),
+    bk_expr(U0?, Md?, U1).
+%% The variables Xs a quantifier binds and its anchor A: under mask, the anchor with each svar(X) of Xs the wildcard, and nothing more; under kinds(T), each svar(X) of Xs that stands at a person's place of A an agent variable, and at a number's a value variable, in Xs and in A, and the substitution for the rest of the quantifier's scope.
+procedure bk_bind(BMode?, Args?, Atom?, Args, Atom, Sbs).
+bk_bind(mask, Xs, A, Xs?, A1?, []) :- ground(Xs?) |
+    mask_subs(Xs?, Sm),
+    sb_atom(A?, Sm?, A1).
+bk_bind(kinds(T), Xs, A, Xs1?, A1?, Sb?) :- ground(Xs?), ground(A?) |
+    kind_subs(Xs?, A?, T?, Sb0),
+    bk_bind1(Sb0?, Xs?, A?, Xs1, A1, Sb).
+procedure bk_bind1(Sbs?, Args?, Atom?, Args, Atom, Sbs).
+bk_bind1(Sb, Xs, A, Xs1?, A1?, Sb?) :- ground(Sb?) | sb_args(Xs?, Sb?, Xs1), sb_atom(A?, Sb?, A1).
+procedure mask_subs(Args?, Sbs).
+mask_subs([], []).
+mask_subs([svar(N)|Xs], [sb(N?, any)|S?]) :- mask_subs(Xs?, S).
+mask_subs([_|Xs], S?) :- otherwise | mask_subs(Xs?, S).
+procedure kind_subs(Args?, Atom?, Sigs?, Sbs).
+kind_subs(Xs, atom(F, As), T, S?) :- ground(F?), ground(As?) |
+    place_kinds(F?, As?, T?, Ks),
+    kind_subs1(Xs?, As?, Ks?, S).
+kind_subs(_, times(_, _), _, []).
+kind_subs(_, rest(_, _, _), _, []).
+procedure kind_subs1(Args?, Args?, Kinds?, Sbs).
+kind_subs1([], _, _, []).
+kind_subs1([svar(N)|Xs], As, Ks, S?) :- ground(N?), ground(As?), ground(Ks?) |
+    var_kind(As?, Ks?, N?, K),
+    kind_sub(K?, N?, S1),
+    kind_subs1(Xs?, As?, Ks?, S2),
+    app(S1?, S2?, S).
+kind_subs1([_|Xs], As, Ks, S?) :- otherwise | kind_subs1(Xs?, As?, Ks?, S).
+%% The kind of the first place of As at which svar(N) stands; wild where it stands at none.
+procedure var_kind(Args?, Kinds?, Constant?, Kind).
+var_kind([], _, _, wild).
+var_kind([svar(M)|_], [K|_], N, K?) :- M? =?= N? | true.
+var_kind([_|As], [_|Ks], N, K?) :- otherwise | var_kind(As?, Ks?, N?, K).
+var_kind([_|_], [], _, wild).
+procedure kind_sub(Kind?, Constant?, Sbs).
+kind_sub(peer, N, [sb(N?, pvar(N?))]) :- ground(N?) | true.
+kind_sub(num, N, [sb(N?, num(N?))]) :- ground(N?) | true.
+kind_sub(_, _, []) :- otherwise | true.
+%% The substitution Sb, svar(X) to its argument, through an argument, an atom, a literal, a safe formula, a constraint and an expression.
+procedure sb_arg(Arg?, Sbs?, Arg).
+sb_arg(svar(N), Sb, A?) :- sb_look(Sb?, N?, A).
+sb_arg(item_of(X), Sb, item_of(X1?)) :- sb_arg(X?, Sb?, X1).
+sb_arg(A, _, A?) :- otherwise | true.
+procedure sb_look(Sbs?, Constant?, Arg).
+sb_look([], N, svar(N?)).
+sb_look([sb(M, A)|_], N, A?) :- M? =?= N? | true.
+sb_look([_|Sb], N, A?) :- otherwise | sb_look(Sb?, N?, A).
+procedure sb_args(Args?, Sbs?, Args).
+sb_args([], _, []).
+sb_args([A|As], Sb, [B?|Bs?]) :- ground(Sb?) | sb_arg(A?, Sb?, B), sb_args(As?, Sb?, Bs).
+procedure sb_atom(Atom?, Sbs?, Atom).
+sb_atom(atom(F, As), Sb, atom(F?, Bs?)) :- sb_args(As?, Sb?, Bs).
+sb_atom(times(K, A), Sb, times(K1?, A1?)) :- ground(Sb?) | sb_arg(K?, Sb?, K1), sb_atom(A?, Sb?, A1).
+sb_atom(rest(K, J, A), Sb, rest(K1?, J1?, A1?)) :- ground(Sb?) | sb_arg(K?, Sb?, K1), sb_arg(J?, Sb?, J1), sb_atom(A?, Sb?, A1).
+procedure sb_hms(HMults?, Sbs?, HMults).
+sb_hms([], _, []).
+sb_hms([hm(J, M)|Hs], Sb, [hm(J?, M1?)|Hs1?]) :- ground(Sb?) | sb_atom(M?, Sb?, M1), sb_hms(Hs?, Sb?, Hs1).
+procedure sb_forms(Forms?, Sbs?, Forms).
+sb_forms([], _, []).
+sb_forms([F|Fs], Sb, [F1?|Fs1?]) :- ground(Sb?) | sb_form(F?, Sb?, F1), sb_forms(Fs?, Sb?, Fs1).
+procedure sb_form(Form?, Sbs?, Form).
+sb_form(F, [], F?).
+sb_form(fa(H, M), [S|Sb], fa(H1?, M1?)) :- ground(S?), ground(Sb?) | sb_arg(H?, [S?|Sb?], H1), sb_atom(M?, [S?|Sb?], M1).
+sb_form(fnot(F), [S|Sb], fnot(F1?)) :- sb_form(F?, [S?|Sb?], F1).
+sb_form(fand(F, G), [S|Sb], fand(F1?, G1?)) :- ground(S?), ground(Sb?) | sb_form(F?, [S?|Sb?], F1), sb_form(G?, [S?|Sb?], G1).
+sb_form(for(F, G), [S|Sb], for(F1?, G1?)) :- ground(S?), ground(Sb?) | sb_form(F?, [S?|Sb?], F1), sb_form(G?, [S?|Sb?], G1).
+sb_form(fexists(Xs, H, A, F), [S|Sb], fexists(Xs?, H1?, A1?, F1?)) :- ground(S?), ground(Sb?) |
+    sb_arg(H?, [S?|Sb?], H1), sb_atom(A?, [S?|Sb?], A1), sb_form(F?, [S?|Sb?], F1).
+sb_form(fforall(Xs, H, A, F, Ps), [S|Sb], fforall(Xs?, H1?, A1?, F1?, Ps1?)) :- ground(S?), ground(Sb?) |
+    sb_arg(H?, [S?|Sb?], H1), sb_atom(A?, [S?|Sb?], A1), sb_form(F?, [S?|Sb?], F1), sb_forms(Ps?, [S?|Sb?], Ps1).
+sb_form(fcons(C), [S|Sb], fcons(C1?)) :- sb_con(C?, [S?|Sb?], C1).
+procedure sb_con(Constraint?, Sbs?, Constraint).
+sb_con(true, _, true).
+sb_con(and(A, B), Sb, and(A1?, B1?)) :- ground(Sb?) | sb_con(A?, Sb?, A1), sb_con(B?, Sb?, B1).
+sb_con(or(A, B), Sb, or(A1?, B1?)) :- ground(Sb?) | sb_con(A?, Sb?, A1), sb_con(B?, Sb?, B1).
+sb_con(implies(A, B), Sb, implies(A1?, B1?)) :- ground(Sb?) | sb_con(A?, Sb?, A1), sb_con(B?, Sb?, B1).
+sb_con(not(A), Sb, not(A1?)) :- sb_con(A?, Sb?, A1).
+sb_con(eq(X, Y), Sb, eq(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(ne(X, Y), Sb, ne(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(le(X, Y), Sb, le(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(lt(X, Y), Sb, lt(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(ge(X, Y), Sb, ge(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(gt(X, Y), Sb, gt(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(succ(X, Y), Sb, succ(X1?, Y1?)) :- ground(Sb?) | sb_arg(X?, Sb?, X1), sb_arg(Y?, Sb?, Y1).
+sb_con(signed(U, Y), Sb, signed(U1?, Y?)) :- sb_arg(U?, Sb?, U1).
+sb_con(unsigned(U, Y), Sb, unsigned(U1?, Y?)) :- sb_arg(U?, Sb?, U1).
+sb_con(rel(R, Es), Sb, rel(R?, Es1?)) :- sb_exprs(Es?, Sb?, Es1).
+sb_con(program(E), Sb, program(E1?)) :- sb_expr(E?, Sb?, E1).
+procedure sb_exprs(Exprs?, Sbs?, Exprs).
+sb_exprs([], _, []).
+sb_exprs([E|Es], Sb, [E1?|Es1?]) :- ground(Sb?) | sb_expr(E?, Sb?, E1), sb_exprs(Es?, Sb?, Es1).
+procedure sb_expr(Expr?, Sbs?, Expr).
+sb_expr(svar(N), Sb, A?) :- sb_look(Sb?, N?, A).
+sb_expr(plus(X, Y), Sb, plus(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_expr(minus(X, Y), Sb, minus(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_expr(mul(X, Y), Sb, mul(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_expr(fn(F, Es), Sb, fn(F?, Es1?)) :- sb_exprs(Es?, Sb?, Es1).
+sb_expr(cardinality(Xs, H, A, F), Sb, cardinality(Xs?, H1?, A1?, F1?)) :- ground(Sb?) |
+    sb_arg(H?, Sb?, H1), sb_atom(A?, Sb?, A1), sb_form(F?, Sb?, F1).
+sb_expr(sum(Xs, H, A, F, U), Sb, sum(Xs?, H1?, A1?, F1?, U1?)) :- ground(Sb?) |
+    sb_arg(H?, Sb?, H1), sb_atom(A?, Sb?, A1), sb_form(F?, Sb?, F1), sb_expr(U?, Sb?, U1).
+sb_expr(author_of(Y), Sb, author_of(Y1?)) :- sb_arg(Y?, Sb?, Y1).
+sb_expr(item_of(Y), Sb, item_of(Y1?)) :- sb_arg(Y?, Sb?, Y1).
+sb_expr(E, _, E?) :- otherwise | true.
+%% Whether a variable a quantifier binds is still written svar(X) at a place of its anchor that is not a speech act's by the other atoms of the contract (bk_masked's table): the schemas with one, each with the line.
+procedure bound_faults(QContract?, Lines).
+bound_faults(C, L?) :- ground(C?) |
+    bk_schemas(C?, mask, Cm),
+    wild_table(Cm?, T),
+    bound_faults1(C?, T?, L).
+procedure bound_faults1(QContract?, Sigs?, Lines).
+bound_faults1([], _, []).
+bound_faults1([nschema(S, _, C, _)|Ss], T, L?) :- ground(S?), ground(T?) |
+    bq_con(C?, Qs),
+    bq_bad(Qs?, T?, B),
+    bound_lines(B?, S?, L1),
+    bound_faults1(Ss?, T?, L2),
+    lapp(L1?, L2?, L).
+bound_faults1([qschema(S, _, _, C, _, Cj, Fs)|Ss], T, L?) :- ground(S?), ground(T?) |
+    bq_con(C?, Q1),
+    bq_conjs(Cj?, Q2),
+    bq_forms(Fs?, Q3),
+    app(Q2?, Q3?, Q23),
+    app(Q1?, Q23?, Qs),
+    bq_bad(Qs?, T?, B),
+    bound_lines(B?, S?, L1),
+    bound_faults1(Ss?, T?, L2),
+    lapp(L1?, L2?, L).
+bound_faults1([_|Ss], T, L?) :- otherwise | bound_faults1(Ss?, T?, L).
+procedure bound_lines(YesNo?, Constant?, Lines).
+bound_lines(no, _, []).
+bound_lines(yes, S, ['%% it has a variable a quantifier binds, written as a speech-act variable, at a place of its anchor that is not a speech act\'s: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so the variable is of the kind of its place, a person at a person\'s and a number at a number\'s, and here no other atom of the contract gives the place a type, or the variable stands at places of two kinds, or the place is a constant\'s, a community name\'s, an item\'s or a real\'s, of which the compiler carries no variable a quantifier binds, or its kind follows only from a chain of quantifiers longer than the compiler follows:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+%% The quantifiers, but those binding a listed role: qa(Xs, A), the variables one binds and its anchor.
+QA  ::= qa(Args, Atom).
+QAs ::= [] ; [QA | QAs].
+procedure bq_conjs(Conjuncts?, QAs).
+bq_conjs([], []).
+bq_conjs([conjunct([role(_)], _, _, Phi, _, _, _)|Cs], Q?) :- bq_form(Phi?, Q1), bq_conjs(Cs?, Q2), app(Q1?, Q2?, Q).
+bq_conjs([conjunct(Xs, _, A, Phi, _, _, _)|Cs], [qa(Xs?, A?)|Q?]) :- otherwise | bq_form(Phi?, Q1), bq_conjs(Cs?, Q2), app(Q1?, Q2?, Q).
+procedure bq_forms(Forms?, QAs).
+bq_forms([], []).
+bq_forms([F|Fs], Q?) :- bq_form(F?, Q1), bq_forms(Fs?, Q2), app(Q1?, Q2?, Q).
+procedure bq_form(Form?, QAs).
+bq_form(fa(_, _), []).
+bq_form(fcons(C), Q?) :- bq_con(C?, Q).
+bq_form(fnot(F), Q?) :- bq_form(F?, Q).
+bq_form(fand(F, G), Q?) :- bq_form(F?, Q1), bq_form(G?, Q2), app(Q1?, Q2?, Q).
+bq_form(for(F, G), Q?) :- bq_form(F?, Q1), bq_form(G?, Q2), app(Q1?, Q2?, Q).
+bq_form(fexists(Xs, _, A, F), [qa(Xs?, A?)|Q?]) :- bq_form(F?, Q).
+bq_form(fforall([role(_)], _, _, F, Ps), Q?) :- bq_form(F?, Q1), bq_forms(Ps?, Q2), app(Q1?, Q2?, Q).
+bq_form(fforall(Xs, _, A, F, Ps), [qa(Xs?, A?)|Q?]) :- otherwise | bq_form(F?, Q1), bq_forms(Ps?, Q2), app(Q1?, Q2?, Q).
+procedure bq_con(Constraint?, QAs).
+bq_con(and(A, B), Q?) :- bq_con(A?, Q1), bq_con(B?, Q2), app(Q1?, Q2?, Q).
+bq_con(or(A, B), Q?) :- bq_con(A?, Q1), bq_con(B?, Q2), app(Q1?, Q2?, Q).
+bq_con(implies(A, B), Q?) :- bq_con(A?, Q1), bq_con(B?, Q2), app(Q1?, Q2?, Q).
+bq_con(not(A), Q?) :- bq_con(A?, Q).
+bq_con(eq(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(ne(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(le(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(lt(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(ge(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(gt(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(rel(_, Es), Q?) :- bq_exprs(Es?, Q).
+bq_con(program(E), Q?) :- bq_expr(E?, Q).
+bq_con(C, []) :- otherwise, ground(C?) | true.
+procedure bq_exprs(Exprs?, QAs).
+bq_exprs([], []).
+bq_exprs([E|Es], Q?) :- bq_expr(E?, Q1), bq_exprs(Es?, Q2), app(Q1?, Q2?, Q).
+procedure bq_expr(Expr?, QAs).
+bq_expr(plus(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_expr(minus(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_expr(mul(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_expr(fn(_, Es), Q?) :- bq_exprs(Es?, Q).
+bq_expr(cardinality(Xs, _, A, F), [qa(Xs?, A?)|Q?]) :- bq_form(F?, Q).
+bq_expr(sum(Xs, _, A, F, U), [qa(Xs?, A?)|Q?]) :- bq_form(F?, Q1), bq_expr(U?, Q2), app(Q1?, Q2?, Q).
+bq_expr(E, []) :- otherwise, ground(E?) | true.
+procedure bq_bad(QAs?, Sigs?, YesNo).
+bq_bad([], _, no).
+bq_bad([qa(Xs, atom(F, As))|Qs], T, B?) :- ground(Xs?), ground(F?), ground(As?), ground(T?) |
+    sb_masked(As?, Xs?, Am),
+    place_kinds(F?, Am?, T?, Ks),
+    bq_args(As?, Ks?, Xs?, B1),
+    bq_bad(Qs?, T?, B2),
+    or(B1?, B2?, B).
+bq_bad([_|Qs], T, B?) :- otherwise | bq_bad(Qs?, T?, B).
+procedure sb_masked(Args?, Args?, Args).
+sb_masked(As, Xs, Am?) :- mask_subs(Xs?, Sm), sb_args(As?, Sm?, Am).
+%% Whether an argument svar(X), X of Xs, stands at a place whose kind is not speech.
+procedure bq_args(Args?, Kinds?, Args?, YesNo).
+bq_args([], _, _, no).
+bq_args([svar(N)|As], [K|Ks], Xs, B?) :- ground(N?), ground(K?), ground(Xs?) |
+    mem(svar(N?), Xs?, In),
+    not_speech(K?, Ns),
+    and(In?, Ns?, B1),
+    bq_args(As?, Ks?, Xs?, B2),
+    or(B1?, B2?, B).
+bq_args([_|As], [_|Ks], Xs, B?) :- otherwise | bq_args(As?, Ks?, Xs?, B).
+bq_args([_|_], [], _, no).
+procedure not_speech(Kind?, YesNo).
+not_speech(speech, no).
+not_speech(_, yes) :- otherwise | true.
 %% --- The wildcard in an unnegated atom --------------------------------------
 %% vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches ...; a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity" (GSC, programs/gsc/self.glp: "In an unnegated atom it is a variable of its own, one per occurrence").
 %% (1) A wildcard among the arguments of an atom a role requires, an agent role or a listed role, is written as a variable of the schema that no atom of it names, '_1', '_2', ..., in the order of the schema, of the kind its place has (wild_made), and listed in the schema's head: it occurs in that one atom, required at one role, so it is local to that role (local.glp, locals_of: "A variable that occurs only in atoms the schema requires or deletes at one role ... is local to that role"), "a schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state", the class term and the request do not name it, no field is for it, and, no atom added or deleted naming it, the effect does not depend on it.
