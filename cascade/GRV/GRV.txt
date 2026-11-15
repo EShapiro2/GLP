@@ -32,6 +32,8 @@ Interface pragmas
 Look: 🛰️, network
 Open server: Carol [Open server]
 Invite by link: Alice [Invite by link]
+Use link: Bob [Use link] <alice> <link>
+Reconnection: Alice [Present]
 Implementation pragmas
 Use link, Reconnection: the address of a person is the one at which the server's networking layer observes them, read by peer_address/2; a person given an address punches towards it by punch_udp/1, and the smaller key initiates.
 Invite by link: an invitation link expires an hour after it is made.
