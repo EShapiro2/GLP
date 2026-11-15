@@ -43,8 +43,8 @@ clone, by git show; with that branch not fetched, it names the contract as missi
 
 It reads GLP at $GLP_DIR, the checkout this calculus/ is in, or a clone named GLP beside the directory above this one.  It runs from tools/ on the branch
 code and from calculus/tools/ in GLP: it uses the gcsas.py, toglp.py, expand.py and revtex.py beside it, and builds
-their rev/ and gr/ in a temporary directory from every contract of PATHS.txt, so that each compiles as it does in the
-Calculus.  Python's standard library and nothing else.
+their rev/ and gr/ in a temporary directory from NAME and every contract it is written from, by the first lines, so
+that it compiles as it does in the Calculus.  Python's standard library and nothing else.
 """
 import os, re, shutil, subprocess, sys, tempfile
 
@@ -108,7 +108,11 @@ def adopted_file(name):
 
 
 def git(*a):
-    return subprocess.run(['git', '-C', GLP] + list(a), capture_output=True)
+    """git in the clone of GLP; where GLP is a scratch directory with calculus/ linked into it, as cascade.sh makes it,
+    in the clone that calculus/ is in."""
+    c = os.path.join(GLP, 'calculus')
+    where = os.path.dirname(os.path.realpath(c)) if os.path.exists(c) else GLP
+    return subprocess.run(['git', '-C', where] + list(a), capture_output=True)
 
 
 def calc_ref():
@@ -236,8 +240,26 @@ def texts(name, path):
     return calculus_text(name)
 
 
+def written_from(name, ps):
+    """{NAME: (contract, Logic pragmas)} of NAME and every contract it is written from, by the first lines, each from
+    its line of the paths."""
+    out, todo = {}, [name]
+    while todo:
+        n = todo.pop()
+        if n in out:
+            continue
+        if n not in ps:
+            die('%s, which a contract compiled is written from, is not among the contracts found' % n)
+        out[n] = texts(n, ps[n])
+        ls = lines(out[n][0])
+        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes)\b', ls[1]):
+            first = re.sub(r' \([^()]*\)', '', ls[1])
+            todo += [w for w in re.findall(r'[A-Za-z][A-Za-z-]*', first[len(n):]) if w in ps]
+    return out
+
+
 def compiled(name):
-    """{file: text} of what NAME compiles to, from a temporary rev/ and gr/ of every contract of PATHS.txt."""
+    """{file: text} of what NAME compiles to, from a temporary rev/ and gr/ of NAME and the contracts it is written from."""
     ps = paths()
     if name not in ps:
         die('%s is not in %s: not adopted in %s%s' % (name, PATHS if os.path.exists(PATHS) else 'the contracts found', GLP,
@@ -246,8 +268,7 @@ def compiled(name):
     try:
         for d in ('rev', 'gr', 'tools'):
             os.makedirs(os.path.join(tmp, d))
-        for n, p in ps.items():
-            rev, gr = texts(n, p)
+        for n, (rev, gr) in written_from(name, ps).items():
             for d, t in (('rev', rev), ('gr', gr)):
                 with open(os.path.join(tmp, d, n + '.txt'), 'w', encoding='utf-8', newline='') as f:
                     f.write(t)
