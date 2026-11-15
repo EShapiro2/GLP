@@ -204,28 +204,33 @@ script(eve, Me, [Alice, Bob, _, Frank, Carol, Dave], [approval(enter(Me?, Bob?),
                                                       own([E5], propose(befriend(E5?, Frank?))), wait(holds(friend(Frank?)))]) :-
     ground(Me?), ground(Alice?), ground(Bob?), ground(Frank?), ground(Carol?), ground(Dave?) | true.
 %% The scenario of the app, CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app", in which each run has one live person and the other three are scripted (glp_multiagent/test/apps_screens_test.dart): the roles fig_alice, fig_bob, fig_carol and fig_dave, each the script of that person in every run in which they are scripted.  Carol enters with Alice (enter(p?, r?)), and Dave with Bob; Alice and Bob come to know each other (GKK:2; acquaint(p?, q?)) and befriend (GSG:1), Alice proposing; Alice requests that Carol and Dave come to know each other, naming Bob, and Bob, Carol and Dave approve (CSSN:2; child_acquaint_2(r?, s?, p?, q?)); Alice, looking at Carol's phone until it shows that Carol knows Dave, requests that they befriend, naming Bob, and Bob, Carol and Dave approve (GnW:4; child_befriend(r?, s?, p?, q?)); Carol ends the friendship with Dave (GSG:2; unfriend(p?, q)); and Bob declares Dave of age (CSSN:4; of_age(p?, r)), which is Bob's at his phone only, since Bob's state does not change when Carol ends the friendship and a scripted Bob does not look at Dave's phone.  The scenario of CSSN #9 Cowork, Code_inbox.md, 2026-10-20 19:44 UTC, item 3.  A scripted Alice is the village's person, village_person/6, looking at Carol's phone, which the harness hands her (self.glp).
-script(fig_alice, _, [Bob, Carol, Dave], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+script(fig_alice, Me, [Bob, Carol, Dave], [own([A1], propose(establish(A1?))), wait(holds(identity)),
                                           own([A2], propose(enter(Carol?, A2?))), wait(holds(parent(Carol?))),
                                           own([A3], propose(acquaint(A3?, Bob?))), wait(holds(knows(Bob?))),
                                           own([A4], propose(befriend(A4?, Bob?))), wait(holds(friend(Bob?))),
-                                          wait(known(Dave?)),
+                                          own([A4a], propose(child_acquaint(Carol?, Bob?, A4a?))), at(Carol?, holds(knows(Bob?))),
+                                          approval(child_acquaint(Dave?, Me?, Bob?), yes), wait(holds(knows(Dave?))),
                                           own([A5], propose(children_acquaint(Carol?, Dave?, A5?, Bob?))), at(Carol?, holds(knows(Dave?))),
                                           own([A6], propose(children_befriend(Carol?, Dave?, A6?, Bob?)))]) :-
-    ground(Bob?), ground(Carol?), ground(Dave?) | true.
+    ground(Me?), ground(Bob?), ground(Carol?), ground(Dave?) | true.
 script(fig_bob, Me, [Alice, Carol, Dave], [own([B1], propose(establish(B1?))), wait(holds(identity)),
                                            own([B2], propose(enter(Dave?, B2?))), wait(holds(parent(Dave?))),
                                            approval(acquaint(Alice?, Me?), yes),
                                            approval(befriend(Alice?, Me?), yes),
+                                           approval(child_acquaint(Carol?, Me?, Alice?), yes), wait(holds(knows(Carol?))),
+                                           own([B3], propose(child_acquaint(Dave?, Alice?, B3?))),
                                            approval(children_acquaint(Carol?, Dave?, Alice?, Me?), yes),
                                            approval(children_befriend(Carol?, Dave?, Alice?, Me?), yes)]) :-
     ground(Me?), ground(Alice?), ground(Carol?), ground(Dave?) | true.
 script(fig_carol, Me, [Alice, Bob, Dave], [approval(enter(Me?, Alice?), yes),
+                                           approval(child_acquaint(Me?, Bob?, Alice?), yes),
                                            approval(children_acquaint(Me?, Dave?, Alice?, Bob?), yes),
                                            approval(children_befriend(Me?, Dave?, Alice?, Bob?), yes),
                                            wait(holds(friend(Dave?))), wait(known(Dave?)),
                                            own([C1], propose(child_end(C1?, Dave?)))]) :-
     ground(Me?), ground(Alice?), ground(Bob?), ground(Dave?) | true.
 script(fig_dave, Me, [Alice, Bob, Carol], [approval(enter(Me?, Bob?), yes),
+                                           approval(child_acquaint(Me?, Alice?, Bob?), yes),
                                            approval(children_acquaint(Carol?, Me?, Alice?, Bob?), yes),
                                            approval(children_befriend(Carol?, Me?, Alice?, Bob?), yes)]) :-
     ground(Me?), ground(Alice?), ground(Bob?), ground(Carol?) | true.
