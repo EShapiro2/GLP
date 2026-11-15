@@ -1,0 +1,22 @@
+GDC: Grassroots Denominated Coins (flat text)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:1 ○ Establish: Alice may Alice has an identity and Alice knows Alice, provided not Alice has an identity.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.
+GKK:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
+GC:0 - | A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
+GC:0 - | Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
+GC:1+GDC:1 ■ Issue: Alice may Alice holds Sum Alice-coins, provided Alice has issued coins of the denomination Dollar.
+GC:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins, no longer Bob holds Total Dave-coins, Alice holds Total Dave-coins, Bob knows Carol and Alice knows Dave, provided Alice knows Bob and Bob knows Alice. Possibly one: Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+GC:3 ■ Pay: Alice may no longer Alice holds Sum Bob-coins and Bob holds Sum Bob-coins, provided Alice knows Bob.
+GC:4 ■ Redeem: Alice may no longer Alice holds a Bob-coin, Bob holds a Bob-coin, no longer Bob holds a Carol-coin, Alice holds a Carol-coin and Alice knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
+GC:5 ○ | Pricing.
+GC:5 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+GDC:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+GDC:0 - | Alice and Bob are persons, Dollar a fiat currency, Sum a number.
+GDC:1 ■ First issue: Alice may Alice holds Sum Alice-coins and Alice has issued coins of the denomination Dollar, provided not Alice has issued coins of the denomination anyone.
+GDC:2 ○ | Denomination.
+GDC:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+GDC:3 ○ | Pricing.
+GDC:3 ○ | Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
