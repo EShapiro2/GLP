@@ -54,7 +54,7 @@ sub var_tokens {
 sub local_vars {
     my ($roles) = @_;
     $roles =~ s/^\[//; $roles =~ s/\]$//;
-    my (%at, %elsewhere, %del, %add, $lb);
+    my (%at, %elsewhere, %del, %add, %delat, $lb);
     my $r = 0;
     for my $spec (top_args($roles)) {
         $r++;
@@ -62,6 +62,15 @@ sub local_vars {
         my ($body) = inside($spec, length $f);
         my @p = top_args($body);
         if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind); $lb //= $1 if $kind =~ /^q?listed\((\d+)/ }
+        # The variables among the arguments of the atoms the role deletes, a cleared atom, with the wildcard, and a multiplicity apart (vGLP, Section 5.4: a variable of an atom the schema deletes at its base is no local variable).
+        if (defined $p[2]) {
+            (my $dl = $p[2]) =~ s/^\[//; $dl =~ s/\]$//;
+            for my $m (top_args($dl)) {
+                next if $m =~ /\bany\b|\bext_any\(/;
+                1 while $m =~ s/^\s*(?:times|rest)\((.*)\)\s*$/ (top_args($1))[-1] /e;
+                $delat{$_}{$r} = 1 for var_tokens($m);
+            }
+        }
         for my $k (1 .. $#p) {
             for my $x (var_tokens($p[$k])) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
@@ -76,20 +85,22 @@ sub local_vars {
     for my $x (keys %at) {
         next if $elsewhere{$x} || keys %{ $at{$x} } != 1;
         my ($r0) = keys %{ $at{$x} };
-        if (!$add{$x}) { push @out, [$x, 0] }
-        elsif (!$del{$x} && !$add{$x}{$r0}) { push @out, [$x, $r0] }
+        if (!$add{$x}) { push @out, [$x, 0, $delat{$x}{$r0} ? $r0 : 0] }
+        elsif (!$del{$x} && !$add{$x}{$r0}) { push @out, [$x, $r0, 0] }
     }
     return (\@out, $lb);
 }
 my (@snames, %svars, %preds, %locals);
 # A variable read at a role is local only where that role is not the base of the schema (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there"; "the request names it, as it names a variable that only the base\x27s atoms hold and other roles record, the person who proposes choosing it, as Alice chooses whom she introduces"): the base the base of its listed roles or the role its line names before its button, the variable read at the base put back among the request\x27s variables once that line is read.
-my (%readat, %lbase, %hvars, %based);
+my (%readat, %lbase, %hvars, %based, %delbase);
 sub base_read {
     my ($S, $pl) = @_;
     return if $based{$S}++;
     my $b = $lbase{$S} // $pl;
     my $back = 0;
     for my $v (keys %{ $readat{$S} || {} }) { next unless $readat{$S}{$v} == $b && $locals{$S}{$v}; delete $locals{$S}{$v}; $back = 1 }
+    # A variable of an atom the schema deletes at its base is no local variable: "the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it" (vGLP, Section 5.4, "Speech-act schemas as local specifications").
+    for my $v (keys %{ $delbase{$S} || {} }) { next unless $delbase{$S}{$v} == $b && $locals{$S}{$v}; delete $locals{$S}{$v}; $back = 1 }
     $svars{$S} = [ grep { !$locals{$S}{$_} } @{ $hvars{$S} } ] if $back;
 }
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
@@ -111,6 +122,7 @@ if (defined $term && $term ne "") {
         my ($lv, $lb) = local_vars($rarg);
         my %local = map { $_->[0] => 1 } @$lv;
         $readat{$n} = { map { $_->[0] => $_->[1] } grep { $_->[1] } @$lv };
+        $delbase{$n} = { map { $_->[0] => $_->[2] } grep { $_->[2] } @$lv };
         $lbase{$n} = $lb if defined $lb;
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);

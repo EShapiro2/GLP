@@ -507,8 +507,29 @@ locals_of([], _, _, []).
 locals_of([V|Vs], Rs, B, Ls?) :- ground(V?), ground(Rs?), integer(B?) |
     occ_roles(Rs?, 1, V?, Kr0, Ot, Dl, Ad),
     dedup(Kr0?, Kr),
+    base_deletes(Rs?, 1, B?, V?, Bd),
     locals_of(Vs?, Rs?, B?, Ls1),
-    local_one(Kr?, Ot?, Dl?, Ad?, B?, V?, Ls1?, Ls).
+    local_unless(Bd?, Kr?, Ot?, Dl?, Ad?, B?, V?, Ls1?, Ls).
+%% "... is local to that role, ..., but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers" (vGLP, Section 5.4, "Speech-act schemas as local specifications"): a variable among the arguments of an atom the role B, the base, deletes, a name term's and a signed term's included, is not local.  A cleared atom is cleared, not deleted, and gives none; and the paper does not say it of a variable that is only the multiplicity of a deleted atom, which is as it was.
+procedure local_unless(YesNo?, Ints?, YesNo?, YesNo?, Ints?, Integer?, Arg?, Locs?, Locs).
+local_unless(yes, _, _, _, _, _, _, Ls, Ls?).
+local_unless(no, Kr, Ot, Dl, Ad, B, V, Ls, R?) :- local_one(Kr?, Ot?, Dl?, Ad?, B?, V?, Ls?, R).
+%% Whether the role of index B, from I, deletes an atom, not a cleared one, with V among its arguments.
+procedure base_deletes(RoleSpecs?, Integer?, Integer?, Arg?, YesNo).
+base_deletes([], _, _, _, no).
+base_deletes([R|_], I, B, V, D?) :- I? =:= B? |
+    rs_lists(R?, _, M, _, _),
+    uncleared(M?, M1),
+    own_args(M1?, A0),
+    flat_args(A0?, A),
+    mem(V?, A?, D).
+base_deletes([_|Rs], I, B, V, D?) :- otherwise, integer(I?) | I1 := I? + 1, base_deletes(Rs?, I1?, B?, V?, D).
+%% The arguments of the atoms, their multiplicities apart.
+procedure own_args(Atoms?, Args).
+own_args([], []).
+own_args([atom(_, As)|Xs], R?) :- own_args(Xs?, R1), app(As?, R1?, R).
+own_args([times(_, A)|Xs], R?) :- own_args([A?|Xs?], R).
+own_args([rest(_, _, A)|Xs], R?) :- own_args([A?|Xs?], R).
 %% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V; whether a role forbids one, or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
 procedure occ_roles(RoleSpecs?, Integer?, Arg?, Ints, YesNo, YesNo, Ints).
 occ_roles([], _, _, [], no, no, []).

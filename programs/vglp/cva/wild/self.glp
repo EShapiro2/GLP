@@ -26,7 +26,10 @@
 %% two hold it, and alice gains title(carol, r) for each.  carol retires,
 %% retire(carol): her agent lists alice and bob, the people she has in some
 %% role, bob once; each holds role(carol, _), and loses every role in carol in
-%% the one act, carol losing every has_role(_, _).
+%% the one act, carol losing every has_role(_, _).  carol then points to
+%% alice, to whom she issued a bond, with the label x and again with the label
+%% y, and removes the first, unpoint(carol, alice, x), the request naming the
+%% pointer she removes: the pointer labelled y stays.
 %% ---------------------------------------------------------------------------
 
 %% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
@@ -79,7 +82,13 @@ play_wild(LA?, LB?, LC?, N?) :-
           own([C8], propose(report(C8?, alice))),
           wait(holds(reported(alice))),
           own([C9], propose(retire(C9?))),
-          wait(holds(retired))],
+          wait(holds(retired)),
+          own([P1, P2], propose(point(P1?, alice, speech(utterance(x), P2?)))),
+          wait(holds(pointer(alice, speech(utterance(x), carol)))),
+          own([P3, P4], propose(point(P3?, alice, speech(utterance(y), P4?)))),
+          wait(holds(pointer(alice, speech(utterance(y), carol)))),
+          own([P5, P6], propose(unpoint(P5?, alice, speech(utterance(x), P6?)))),
+          wait(lacks(pointer(alice, speech(utterance(x), carol))))],
          LA, LB, LC, N).
 
 %% alice, bob and carol, each with its dispatcher and scripted person, their
