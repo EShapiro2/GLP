@@ -54,7 +54,7 @@ MCS GO yes yes no
 REC GCE yes yes no
 SC GO yes yes no
 SCB GO yes yes no
-SGSG none yes yes no
+SGSG SPM yes yes no
 SPLLC GO yes yes no
 STAY GCE yes yes no
 TC GO yes yes no
