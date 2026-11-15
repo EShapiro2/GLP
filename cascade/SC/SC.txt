@@ -12,23 +12,27 @@ Orga is a shareholding corporation.
 2. ■ Dividend. Set dividend: The directors may set a dividend, a number of Dollars a share. Claim: A shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
 3. ■ Redeem: GC:4 and GB:3, only if the coin is of a denomination other than Share.
 Logic pragmas
-SC instantiates GCorp with shareholding corporation bylaws, and restricts and extends it.
+SC instantiates GCorp with shareholding corporation bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
 *Share* is a denomination, and a *share* of Orga is an Orga-coin denominated in Share. A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer; the shareholders decide the issue of shares and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
-Alice, Bob and Carol are persons, Orga a shareholding corporation, Dollar a denomination, Div a dividend, a number of Dollars a share, Sum, Held and Total numbers; Carol is possibly Alice, Bob or Orga.
-1. ■ Issue shares: Those who decide the issue of shares of Orga may issue Sum shares of Orga to Bob, provided Orga is an organisation and Orga knows Bob. The first shares are issued to its first officer.
-2. ■ Dividend. Set dividend: The directors of Orga may set Div as a dividend of Orga, provided Orga is an organisation. Claim: Bob may claim Total Dollar-denominated Carol-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Carol has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Carol-coin in payment.
+Alice, Bob, Carol and Erin are persons, Orga a shareholding corporation, Dollar a denomination, Div a dividend, a number of Dollars a share, Sum, Held, Total, Votes and More numbers; Carol is possibly Alice, Bob or Orga.
+1. ■ Issue shares: Alice may issue Sum shares of Orga to Bob, provided Alice is a director of Orga, Orga is an organisation, Orga knows Bob and the votes to issue Sum shares of Orga to Bob carry a majority of the shares of Orga. Vote on issue: Erin may vote to issue Sum shares of Orga to Bob, provided Erin holds a share of Orga and Orga knows Bob. Vote on first issue: Erin may vote to issue Sum shares of Orga to Bob, provided Orga has Erin as its first officer, Orga has not issued shares and Orga knows Bob. The first shares are issued to its first officer.
+2. ■ Dividend. Set dividend: Alice may set Div as a dividend of Orga, provided Alice is a director of Orga, Orga holds the votes of at least Votes persons to set Div as a dividend, More is Votes plus 1 and Orga has fewer than More persons in the role Director. Vote on dividend: Erin may vote to set Div as a dividend of Orga, provided Erin is a director of Orga. Claim: Bob may claim Total Dollar-denominated Carol-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Carol has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Carol-coin in payment.
 3. ■ Redeem: GB:3 Redeem, only if the Bob-coin that Alice redeems is of a denomination other than Share. Redeem coin against bond: GB:3 Redeem coin against bond, only if the Bob-coin that Alice redeems is of a denomination other than Share.
 Logic pragmas.
-Vocabulary: z has issued shares = issued_shares(z); x holds a share of z = share(x,z); x holds n shares of z = share(x,z,*n); x holds exactly n shares of z = share(x,z,#n); z has v as a dividend = dividend(z,v); z has paid y the dividend v in the denomination f = paid_dividend(z,y,v,f); the y-coin that x redeems is of a denomination other than Share = other_denomination(x,y,Share).
-Roles: the directors of z = directors(z); those who decide the issue of shares of z = share_deciders(z).
-After g issues n shares of z to y: y holds n shares of z and z has issued shares.
-After g sets v as a dividend of z, which requires z does not have v as a dividend: z has v as a dividend.
+Vocabulary: z has issued shares = issued_shares(z); x holds a share of z = share(x,z); x holds n shares of z = share(x,z,*n); x holds exactly n shares of z = share(x,z,#n); z has v as a dividend = dividend(z,v); z has paid y the dividend v in the denomination f = paid_dividend(z,y,v,f); the y-coin that x redeems is of a denomination other than Share = other_denomination(x,y,Share); z holds v's vote to set u as a dividend = vote_dividend(z,v,u); z holds v's vote to issue n shares of z to y = vote_issue(z,v,y,n); the votes to issue n shares of z to y carry a majority of the shares of z = share_majority(z,y,n).
+Roles: the directors of z = directors(z).
+x is a director of z: x holds the role Director in z.
+After v votes to issue n shares of z to y, which requires z does not hold v's vote to issue n shares of z to y: z holds v's vote to issue n shares of z to y.
+After x issues n shares of z to y: y holds n shares of z, z has issued shares and z holds no one's vote to issue n shares of z to y.
+After w votes to set u as a dividend of z, which requires z does not hold w's vote to set u as a dividend: z holds w's vote to set u as a dividend.
+After x sets v as a dividend of z, which requires z does not have v as a dividend: z has v as a dividend and z holds no one's vote to set v as a dividend.
 After y claims n f-denominated w-coins from z as the dividend v, which requires z has not paid y the dividend v in the denomination f: no longer z holds n w-coins, y holds n w-coins and z has paid y the dividend v in the denomination f.
+Environment: the y-coin that x redeems is of a denomination other than Share; the votes to issue n shares of z to y carry a majority of the shares of z.
 Interface pragmas
 Look: 📈, money
 Shareholdings: the shares Alice holds.
-Issue shares: Decider [Issue shares] <person> <organisation> <amount>
-  Codecider: Decider asks to issue shares of Orga to Bob.
-Dividend: Decider [Set dividend] <organisation> <dividend>
-  Codecider: Decider asks to set a dividend of Orga.
+Issue shares: Alice [Issue shares] <person> <amount>
+  Erin [Vote on issue] <person> <amount> [Vote on first issue] <organisation> <person> <amount>
+Dividend: Alice [Set dividend] <dividend> <votes>
+  Erin [Vote on dividend] <dividend>
   Bob [Claim] <total> <dividend>
