@@ -1566,6 +1566,21 @@ realisable([constraint_not_linear(_, _)|_], no).
 realisable([constraint_not_conjunction(_, _)|_], no).
 realisable([signing_not_agent(_, _)|_], no).
 realisable([signing_not_speech_act(_, _)|_], no).
+%% The faults GSC's checker writes since (programs/gsc/self.glp, Fault, at migration f470e2f8; GSC #18, vGLP_inbox, 2026-11-15 19:45 UTC): the type is GSC's, and the compiler's copy takes every constructor of it.
+realisable([not_in_vars(_, _)|_], no).
+realisable([not_holder(_, _)|_], no).
+realisable([unsupplied(_, _)|_], no).
+realisable([deleted_not_required(_, _, _)|_], no).
+realisable([listed_reading(_, _)|_], no).
+realisable([no_signature_atom(_)|_], no).
+realisable([multiplicity_wildcard(_, _, _)|_], no).
+realisable([condition_holder(_, _)|_], no).
+realisable([head_formula(_)|_], no).
+realisable([quantified_condition(_, _)|_], no).
+realisable([listed_agent_role(_, _)|_], no).
+realisable([guard_not_role(_, _)|_], no).
+realisable([value_type(_, _)|_], no).
+realisable([item_argument(_, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Lines).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-

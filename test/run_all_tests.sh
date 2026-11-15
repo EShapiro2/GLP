@@ -3940,6 +3940,7 @@ check "CVA compiler: vGLP's backed, a safe formula across roles, certified by GS
 check "CVA compiler: vGLP's consts, constants the contract names, val(cb) and val(cc), arguments of atoms, compiled to the platform it prints (vGLP 0eeea71)" "consts/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's roles, a value variable over the constants, const(r), an argument of an atom another act requires as a constant the contract names, compiled to the platform it prints (vGLP, Section 5.4; compiler/README.md, 30)" "roles/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's wild, a wildcard in an atom a role requires and in the anchor of a quantifier, written in the clause syntax, read by GSC's as_read/2 and certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4)" "wild/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's wards, coparent taking a listed guarding role whose base, the ward, is its second role and no guard, and meet of four guarding roles, certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4; CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC)" "wards/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -3957,6 +3958,7 @@ compile(gossip, [], not_grassroots([untraceable([p])])).
 compile(nointro, [], not_grassroots([no_introductory_act])).
 compile(jointly, [], not_grassroots([obstructed_jointly(meet)])).
 compile(nonlinear, [], malformed([constraint_not_linear(s, mul(num(x), num(y)))])).
+compile(notvars, [], malformed([not_in_vars(leave, has_role), not_holder(leave, has_role), unsupplied(s, p), deleted_not_required(s, 1, atom(x, [])), listed_reading(s, 1), no_signature_atom(s), multiplicity_wildcard(s, 1, atom(x, [])), condition_holder(s, p), head_formula(s), quantified_condition(s, p), listed_agent_role(s, p), guard_not_role(s, p), value_type(s, p), item_argument(s, p)])).
 compile(one_req, [schema(s1, [], [rs(guarded, [atom(x, [])], [], [atom(r1, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])]), schema(s2, [], [rs(guarded, [atom(x, [])], [], [atom(r3, [])], []), rs(guarded, [atom(y, [])], [], [atom(r2, [])], [])])], syntactically_grassroots).
 compile(two_gsets, [schema(s1, [], [rs(guarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(unguarded, [atom(z, [])], [], [], [])]), schema(s2, [], [rs(unguarded, [atom(x, [])], [], [], []), rs(guarded, [atom(y, [])], [], [], []), rs(guarded, [atom(z, [])], [], [], [])])], syntactically_grassroots).
 compile(unguarded_reqs, [schema(u1, [], [rs(unguarded, [atom(x, [role(2)])], [], [atom(r, [role(2)])], []), rs(unguarded, [atom(y, [role(1)])], [], [atom(w, [role(1)])], [])]), schema(u2, [], [rs(unguarded, [atom(y, [role(2)])], [], [atom(w, [role(2)])], []), rs(unguarded, [atom(x, [role(1)])], [], [], [])])], syntactically_grassroots).
@@ -4046,6 +4048,8 @@ check "CVA compiler: a contract whose one fault is that it has no unobstructed i
 # The verdicts of programs/gsc at GSC-unob3 62fb0342, every value case decided (GSC bcc1891, Appendix "Values in Act Schemas"), of the compiler's Verdict type: obstructed_jointly, a fault of an introductory act, as obstructed is; and a constraint that is not linear, a fault of the schema's form in a verdict malformed.
 check "CVA compiler: a contract whose one fault is an introductory act obstructed jointly, no choice of its values meeting every condition of def:unobstructed, passing the checks, as one with no unobstructed introductory act (jointly)" "%% not compiled, having no pragmas(jointly)" "$cva_refuse"
 check "CVA compiler: a contract malformed, a product of two value variables in its constraint, is not compiled (nonlinear)" "%% not compiled(nonlinear)" "$cva_refuse"
+check "CVA compiler: a verdict malformed with each fault GSC's checker writes since, not_in_vars first, types and is refused by its line (notvars; GSC #18, 2026-11-15; GO #6's SCB)" "%% not compiled(notvars)" "$cva_refuse"
+check_not "CVA compiler: ... and no goal of the refusals is ill-typed" "not well-typed" "$cva_refuse"
 # A verdict malformed, of a schema's form (GSC, Definition "Act schema", as programs/gsc/self.glp writes its faults), is refused whole, its faults of the compiler's Verdict type.
 # A reading role, "a non-guarding role that adds and deletes nothing, admitted where a guarding role requires an atom naming it" (vGLP dd37d2a, Section 5.4, "Speech-act schemas as local specifications"; GSC 0380a8a): one with no such atom is a fault of volition, changes_nothing in a verdict not_grassroots, as programs/gsc gives it from GLP e2b5a802 on, and is not compiled; one with it passes the checks.
 check "CVA compiler: a reading role that no guarding role's required atom names, the fault changes_nothing of volition in a verdict not_grassroots, is not compiled (inert)" "%% not compiled(inert)" "$cva_refuse"
@@ -5694,9 +5698,9 @@ cva_atom() { # cva_atom <platform.vglp>: the alternatives of Atom, one line
 check "CVA machine states: the social graph's atoms, identity, knows(Peer) and friend(Peer)" "^identity knows(Peer) friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
 check "CVA machine states: the currency's atoms, GKK's identity and knows(Peer) and its own coin(Peer)" "^identity knows(Peer) coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
-check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place and a community name at a name term's" "^identity knows(Peer) friend(Peer) received(Speech, Peer) member(CName) listed(Peer, Speech) closed(Speech) posted(Speech, Speech) delivered(Speech, Peer, Speech) received_in(Speech, Peer, Speech) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
+check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place" "^identity knows(Peer) friend(Peer) message(Peer, Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) group_message(Peer, Speech, Speech, Peer) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
 # GSNP holds no atom authored since GSNP d0d98714 (2026-11-07, "item with its holder, author_of, GFP's, in place of authored"), and item comes before attestation, the atoms in the order of their predicates' first occurrence.
-check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity person knows(Peer) friend(Peer) item(Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) member(Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) ai_agent has_guardian(Peer) attestation(Speech) principal(Peer) guardian(Peer) attestation_record(Peer, Speech) retired $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
+check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity person knows(Peer) friend(Peer) item(Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) ai_agent has_guardian(Peer) attestation(Speech) principal(Peer) guardian(Peer) attestation_record(Peer, Speech) retired $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
 cva_friends_load=$("$REPL_RUN" <<HEREDOC
 $CVA/friends/
@@ -5915,6 +5919,53 @@ check "CVA wardclose: carol's screen: the group closed, her membership and her l
 check "CVA wardclose: dave's membership ended in the one act, and he comes to know alice" "D = \[.*view(dave, \[friend(bob), friend(carol)\], \[bob, carol\], \[\], \[tab('Friends', friend)\]), view(dave, \[friend(bob), friend(carol)\], \[alice, bob, carol\], \[\], \[tab('Friends', friend)\]) | " "$cva_wardclose"
 check "CVA wardclose: alice's screen: she adopted carol and comes to know dave, her person acting once on the close, the request, pending by its request name, child_close(carol, alice, n), with no list in it, until the close commits (vGLP e286276, Section 5.4, \"The compilation\")" "A = \[view(alice, \[\], \[\], \[\], \[tab('Friends', friend)\]), view(alice, \[\], \[\], \[adopt(alice, carol)\], \[tab('Friends', friend)\]), view(alice, \[\], \[carol\], \[adopt(alice, carol)\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol\], \[\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol\], \[child_close(carol, alice, $CVA_WC_N)\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol\], \[\], \[tab('Friends', friend)\]), view(alice, \[parenting(carol)\], \[carol, dave\], \[\], \[tab('Friends', friend)\]) | " "$cva_wardclose"
 check_not "CVA wardclose: alice's person is never asked on the close, and no notice is written: the yield ends no approval" "gave(attempt([a-z]*, [0-9]*, [0-9]*, child_close\|gave(child_close\|refused(\|yielded(" "$cva_wardclose"
+
+# vGLP's contract wards (programs/vglp/cva/contracts.glp): GnW's make_guardian and wards_acquaint with no identity (CSSN's make_parent and children_acquaint).  coparent(q?, r, p?, r[parent(*)]?) has three guarding roles, one of them listed, and its base is r, the ward, its second role, who guards nothing: "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part, as the ward whose state lists her guardians opens the acts they take jointly" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), on the request of a guard, "the Request of rho_N to the opener of the guarded parts with an opener named N" ("The compilation"), "the members of G_alpha \ {i} other than its requester ... asked" (Definition "Attempt").  Until this change the platform took as the opener the person in the schema's first role, here a guard, so the part had neither opener nor proposer and the request stood unproposed (CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC, 1).  pair(c?, d?, a?, b?) has four guarding roles, its base a, who proposes it, the three others asked (ibid., 2).
+CVA_WD_R1="request(rho(coparent(bob, carol, alice)), 9)"
+CVA_WD_C1="coparent(bob, carol, alice, \[alice\])"
+CVA_WD_R2="request(rho(coparent(dave, carol, bob)), 9)"
+CVA_WD_C2="coparent(dave, carol, bob, \[alice, bob\])"
+CVA_WD_M="pair(carol, dave, alice, bob)"
+cva_wards_load=$("$REPL_RUN" <<HEREDOC
+$CVA/wards/
+:quit
+HEREDOC
+2>&1)
+check "CVA wards: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/wards" "$cva_wards_load"
+check_not "CVA wards: no type errors" "Type checking failed" "$cva_wards_load"
+cva_wards=$("$REPL_RUN" <<HEREDOC
+$CVA/wards/
+:limit 6000000
+play_wards(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA wards: the base of coparent is the ward, its second role" "^schema_base(coparent, 2)$" "$(cat "$CVA/wards/platform.vglp")"
+check "CVA wards: the play runs to rest" "→ suspended" "$cva_wards"
+check "CVA wards: alice's request of coparent(bob, carol, alice) is a Request of rho_N to carol's machine, the person in the base, the opener of the parts named N" "sent(alice, carol, $CVA_WD_R1)" "$cva_wards"
+check "CVA wards: carol's machine, holding it, completes the list of her parents and proposes coparent(bob, carol, alice, [alice]), naming the request, its start told to bob and alice" "sent(alice, carol, $CVA_WD_R1), sent(carol, bob, start(attempt(carol, 7, 7, $CVA_WD_C1, $CVA_WD_R1))), sent(carol, alice, start(attempt(carol, 7, 7, $CVA_WD_C1, $CVA_WD_R1)))" "$cva_wards"
+check "CVA wards: bob, the person made a parent, a guard and not the requester, is asked and answers yes" "B = \[.*gave($CVA_WD_C1, yes)" "$cva_wards"
+check "CVA wards: alice's machine votes yes unasked, the request the attempt names pending at her, and it commits at bob and alice" "sent(alice, carol, vote(attempt(carol, 7, 7, $CVA_WD_C1, $CVA_WD_R1), yes(\[\[\]\]))), .*sent(carol, bob, outcome(attempt(carol, 7, 7, $CVA_WD_C1, $CVA_WD_R1), commit(\[\]))), sent(carol, alice, outcome(attempt(carol, 7, 7, $CVA_WD_C1, $CVA_WD_R1), commit(\[\])))" "$cva_wards"
+check_not "CVA wards: alice's person is not asked on the act she requested" "A = \[.*gave($CVA_WD_C1" "$cva_wards"
+check "CVA wards: bob is a parent of carol" "B = \[.*view(bob, \[parenting(carol), " "$cva_wards"
+check "CVA wards: ... and carol lists him" "C = \[.*view(carol, \[parent(bob), " "$cva_wards"
+check "CVA wards: bob's request of coparent(dave, carol, bob) goes to carol's machine, which proposes coparent(dave, carol, bob, [alice, bob]), the list of her two parents, its start told to dave, bob and alice" "sent(bob, carol, $CVA_WD_R2), sent(carol, dave, start(attempt(carol, 8, 8, $CVA_WD_C2, $CVA_WD_R2))), sent(carol, bob, start(attempt(carol, 8, 8, $CVA_WD_C2, $CVA_WD_R2))), sent(carol, alice, start(attempt(carol, 8, 8, $CVA_WD_C2, $CVA_WD_R2)))" "$cva_wards"
+check "CVA wards: dave, the person made a parent, is asked and answers yes" "D = \[.*gave($CVA_WD_C2, yes)" "$cva_wards"
+check "CVA wards: alice, the other parent carol lists, a guard of the listed role, is asked and answers yes" "A = \[.*gave($CVA_WD_C2, yes)" "$cva_wards"
+check_not "CVA wards: bob's person, the requester, is not asked on it" "B = \[.*gave($CVA_WD_C2" "$cva_wards"
+check "CVA wards: it commits at dave, bob and alice" "sent(carol, dave, outcome(attempt(carol, 8, 8, $CVA_WD_C2, $CVA_WD_R2), commit(\[\]))), sent(carol, bob, outcome(attempt(carol, 8, 8, $CVA_WD_C2, $CVA_WD_R2), commit(\[\]))), sent(carol, alice, outcome(attempt(carol, 8, 8, $CVA_WD_C2, $CVA_WD_R2), commit(\[\])))" "$cva_wards"
+check "CVA wards: carol lists dave, bob and alice as her parents" "C = \[.*view(carol, \[parent(dave), parent(bob), .*parent(alice)" "$cva_wards"
+check "CVA wards: pair, of four guards, is proposed by alice, the person in its base, its start told to carol, dave and bob" "sent(alice, carol, start(attempt(alice, 13, 13, $CVA_WD_M, none))), sent(alice, dave, start(attempt(alice, 13, 13, $CVA_WD_M, none))), sent(alice, bob, start(attempt(alice, 13, 13, $CVA_WD_M, none)))" "$cva_wards"
+check "CVA wards: carol, a guard of pair, is asked and answers yes" "C = \[.*gave($CVA_WD_M, yes)" "$cva_wards"
+check "CVA wards: dave is asked and answers yes" "D = \[.*gave($CVA_WD_M, yes)" "$cva_wards"
+check "CVA wards: bob is asked and answers yes" "B = \[.*gave($CVA_WD_M, yes)" "$cva_wards"
+check "CVA wards: pair commits at carol, dave and bob" "sent(alice, carol, outcome(attempt(alice, 13, 13, $CVA_WD_M, none), commit(\[\]))), sent(alice, dave, outcome(attempt(alice, 13, 13, $CVA_WD_M, none), commit(\[\]))), sent(alice, bob, outcome(attempt(alice, 13, 13, $CVA_WD_M, none), commit(\[\])))" "$cva_wards"
+check "CVA wards: carol has met dave" "C = \[.*view(carol, \[met(dave), " "$cva_wards"
+check "CVA wards: ... and dave carol" "D = \[.*view(dave, \[met(carol), " "$cva_wards"
+check_not "CVA wards: no notice is written" "refused(\|yielded(" "$cva_wards"
+# The schema-bindings of a class of a schema with listed roles (mates_of): a listed role takes only the participants at whom its deleted and added atoms fit, and two listed roles of one anchor one list, so the lists tried are not every set of the participants for each listed role (GAI #15, Code_inbox.md, 2026-11-15 17:22 UTC: Retire, of three listed roles, cost the GAI app's play 17 to 20 million reductions where it now costs under 2.5 million).
+check "CVA wards: the lists a listed role may take are of the people at whom it fits" "^    twins_fit(All?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi),$" "$(cat "$CVA/wards/platform.vglp")"
+check "CVA wards: ... and the listed roles of one anchor take one list" "^    same_lists(Ts0?, Lsts?, Ts),$" "$(cat "$CVA/wards/platform.vglp")"
 
 # Numbers in act schemas (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "an argument of an atom may be a number or a numeric variable, a schema may carry a constraint on its numeric variables, and an atom it adds or deletes may carry a multiplicity, a number or a numeric variable, for that many copies of it.  A numeric variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role; a constraint is local to the role whose local variables it names, and to every role where it names none.  Every other numeric variable is bound by the schema-binding, as a speech-act variable is, and a request names it, so the request form takes it"; vGLP #18 Cowork to Code, Code_inbox.md, 2026-10-20 21:11 UTC, items 1 and 3).  vGLP's contract numbers (programs/vglp/cva/contracts.glp): start, refuel(p? ; k) adding k fuel, step(p ; t, t1), unguarded, deleting a fuel and level(t) and adding level(t1), succ(t, t1), and claim(p?, q ; d, t), q's role keeping level(t), t local to it and le(d, t) checked by q's machine.  bob starts, asks for two units of fuel, and his machine steps his level once for each, an unguarded part it opens; alice claims 3 of bob, refused unable by bob's machine, his level 2, and then 2, which commits (numbers/self.glp).
 cva_numbers_load=$("$REPL_RUN" <<HEREDOC
