@@ -8,7 +8,8 @@ GDAO: Grassroots DAO
 GDAO instantiates GCoop with DAO bylaws.
 A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
 Logic pragmas
-GDAO instantiates GCoop with DAO bylaws.
+GDAO instantiates GCoop with DAO bylaws; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z.
 A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
+Orga is a DAO, Votes and Double numbers.
 Interface pragmas
 Look: 🗳️, governance
