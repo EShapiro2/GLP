@@ -1,7 +1,7 @@
 % DGC: Denominated Grassroots Currencies --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
 % Owner: Currencies (SGC).
 % Paper: SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727
-% Adopted from the Calculus, branch Calculus of GLP, 79ec48f, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; DGC.glp and cascade/DGC/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
+% Adopted from the Calculus, branch Calculus of GLP, 0dc61c1, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; DGC.glp and cascade/DGC/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 DGC: Denominated Grassroots Currencies
 DGC extends GB and GDC, and restricts and strengthens GB.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
