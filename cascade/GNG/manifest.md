@@ -1,10 +1,10 @@
 # A run of the cascade on GNG
 
-- Contract: `GNG` (`gng` to the checker), its owner's two files `programs/go/GNG.txt` and `programs/go/GNG.glp`, copied here as they stood at `3d8b33a5`.
+- Contract: `GNG` (`gng` to the checker), its owner's two files `programs/go/GNG.txt` and `programs/go/GNG.glp`, copied here as they stood at `6f9298ad`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/GNG.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/GNG.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 20:37 UTC by `cascade.sh gng`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3d8b33a5`; each artefact's source and tool:
+- Run on 2026-11-15 21:43 UTC by `cascade.sh gng`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `6f9298ad`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
