@@ -102,6 +102,19 @@ WSchema   ::= schema(Constant, Args, RoleSpecs)
 WContract ::= [] ; [WSchema | WContract].
 WBody     ::= WContract ; reflexive(Preds, WContract).
 WDeclared ::= WBody ; environment(Preds, WBody).
+%% A contract as it is offered to the compiler: a contract, or a parametric one, parametric(Params, Body), a relation of its schemas left open (GSC, Definition Parametric contract), which is certified and has no platform until it is instantiated (vGLP, Section 5.4: the compiler takes a contract whose schemas are given; Udi, 2026-11-10, of GO, reported by vGLP #25: "GO is parametric, not sure it can be executed on its own, without instantiating it further"): the compiler prints the line saying so (not_instantiated).
+WOffered  ::= WDeclared ; parametric(Preds, WDeclared).
+WDeclOpt  ::= wdecl(WDeclared) ; wparam.
+procedure wdeclared_of(WOffered?, WDeclOpt).
+wdeclared_of(parametric(_, _), wparam).
+wdeclared_of([], wdecl([])).
+wdeclared_of([S|Ss], wdecl([S?|Ss?])).
+wdeclared_of(reflexive(Rf, C), wdecl(reflexive(Rf?, C?))).
+wdeclared_of(environment(Ps, B), wdecl(environment(Ps?, B?))).
+procedure not_instantiated(Constant?).
+not_instantiated(Nm) :- ground(Nm?) |
+    said('%% not compiled', Nm?, H),
+    send_to_user(['%% compile begin', H?, '%% a parametric contract is certified and has no platform until it is instantiated: the compiler takes a contract whose schemas are given (vGLP, Section 5.4, "Speech-act schemas as local specifications")', '%% compile end']).
 procedure unnamed(WDeclared?, Declared).
 unnamed([], []).
 unnamed([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
@@ -267,17 +280,26 @@ Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStan
 StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
-exported procedure compile(Constant?, WDeclared?, Verdict?).
-compile(Nm, D, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
+exported procedure compile(Constant?, WOffered?, Verdict?).
+compile(Nm, O, V) :- wdeclared_of(O?, R), compile_w3(R?, Nm?, V?).
+procedure compile_w3(WDeclOpt?, Constant?, Verdict?).
+compile_w3(wparam, Nm, _) :- not_instantiated(Nm?).
+compile_w3(wdecl(D), Nm, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
-compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?).
+compile(Nm, O, V, I) :- wdeclared_of(O?, R), compile_w4(R?, Nm?, V?, I?).
+procedure compile_w4(WDeclOpt?, Constant?, Verdict?, Intro?).
+compile_w4(wparam, Nm, _, _) :- not_instantiated(Nm?).
+compile_w4(wdecl(D), Nm, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
 %% The contract's environment predicates, environment(Preds, Body) (programs/gsc/self.glp, WDeclared), go to the compiler beside the contract: "An environment predicate is the day, by the calendar, or a value the contract declares and does not fix ...: given when the platform is deployed, held from startup" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 %% The contract as read, with its names, goes to the compiler whole besides, which prints it in the platform's contract(Text, Schemas) (cvac.glp, export_lines).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
-compile(Nm, D, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?).
+compile(Nm, O, V, I, P) :- wdeclared_of(O?, R), compile_w5(R?, Nm?, V?, I?, P?).
+procedure compile_w5(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?).
+compile_w5(wparam, Nm, _, _, _) :- not_instantiated(Nm?).
+compile_w5(wdecl(D), Nm, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
 procedure env_of(WDeclared?, Preds).
 env_of(environment(Ps, _), Ps?).
 env_of(_, []) :- otherwise | true.
