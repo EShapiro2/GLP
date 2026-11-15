@@ -43,7 +43,7 @@ script(bob, Me, [Alice, Carol, Dave], T, [own([B1], propose(establish(B1?))), wa
                                           approval(befriend(Alice?, Me?), yes),
                                           own([B2], propose(acquaint(B2?, Carol?))), wait(holds(knows(Carol?))),
                                           own([B3], propose(befriend(B3?, Carol?))), wait(holds(friend(Carol?))),
-                                          approval(introduce(Carol?, Me?, Dave?), yes) | T?]) :-
+                                          approval(introduce(Me?, Carol?, Dave?), yes) | T?]) :-
     ground(Me?), ground(Alice?), ground(Carol?), ground(Dave?) | true.
 script(carol, Me, [Bob, Dave, Alice], T, [own([C1], propose(establish(C1?))), wait(holds(identity)),
                                           approval(acquaint(Bob?, Me?), yes),

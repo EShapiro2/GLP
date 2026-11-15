@@ -1,10 +1,10 @@
 # A run of the cascade on GDO-L
 
-- Contract: `GDO-L` (`gdo_l` to the checker), its owner's two files `programs/gff/GDO-L.txt` and `programs/gff/GDO-L.glp`, copied here as they stood at `58e9cb15`.
+- Contract: `GDO-L` (`gdo_l` to the checker), its owner's two files `programs/gff/GDO-L.txt` and `programs/gff/GDO-L.glp`, copied here as they stood at `bf297941`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/GDO-L.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/GDO-L.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 16:49 UTC by `cascade.sh gdo_l`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `58e9cb15`; each artefact's source and tool:
+- Run on 2026-11-15 17:27 UTC by `cascade.sh gdo_l`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `bf297941`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
