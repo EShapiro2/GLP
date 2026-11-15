@@ -54,7 +54,7 @@ sub var_tokens {
 sub local_vars {
     my ($roles) = @_;
     $roles =~ s/^\[//; $roles =~ s/\]$//;
-    my (%at, %elsewhere, %del, %add, $lb);
+    my (%at, %elsewhere, %del, %add, %delat, $lb);
     my $r = 0;
     for my $spec (top_args($roles)) {
         $r++;
@@ -62,6 +62,15 @@ sub local_vars {
         my ($body) = inside($spec, length $f);
         my @p = top_args($body);
         if ($f eq "crs") { my $kind = shift @p; $elsewhere{$_} = 1 for var_tokens($kind); $lb //= $1 if $kind =~ /^q?listed\((\d+)/ }
+        # The variables among the arguments of the atoms the role deletes, a cleared atom, with the wildcard, and a multiplicity apart (vGLP, Section 5.4: a variable of an atom the schema deletes at its base is no local variable).
+        if (defined $p[2]) {
+            (my $dl = $p[2]) =~ s/^\[//; $dl =~ s/\]$//;
+            for my $m (top_args($dl)) {
+                next if $m =~ /\bany\b|\bext_any\(/;
+                1 while $m =~ s/^\s*(?:times|rest)\((.*)\)\s*$/ (top_args($1))[-1] /e;
+                $delat{$_}{$r} = 1 for var_tokens($m);
+            }
+        }
         for my $k (1 .. $#p) {
             for my $x (var_tokens($p[$k])) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
@@ -76,20 +85,22 @@ sub local_vars {
     for my $x (keys %at) {
         next if $elsewhere{$x} || keys %{ $at{$x} } != 1;
         my ($r0) = keys %{ $at{$x} };
-        if (!$add{$x}) { push @out, [$x, 0] }
-        elsif (!$del{$x} && !$add{$x}{$r0}) { push @out, [$x, $r0] }
+        if (!$add{$x}) { push @out, [$x, 0, $delat{$x}{$r0} ? $r0 : 0] }
+        elsif (!$del{$x} && !$add{$x}{$r0}) { push @out, [$x, $r0, 0] }
     }
     return (\@out, $lb);
 }
 my (@snames, %svars, %preds, %locals);
 # A variable read at a role is local only where that role is not the base of the schema (vGLP 7892aeb, Section 5.4: "A variable is also local to a role other than the base of the schema ... and read there"; "the request names it, as it names a variable that only the base\x27s atoms hold and other roles record, the person who proposes choosing it, as Alice chooses whom she introduces"): the base the base of its listed roles or the role its line names before its button, the variable read at the base put back among the request\x27s variables once that line is read.
-my (%readat, %lbase, %hvars, %based);
+my (%readat, %lbase, %hvars, %based, %delbase);
 sub base_read {
     my ($S, $pl) = @_;
     return if $based{$S}++;
     my $b = $lbase{$S} // $pl;
     my $back = 0;
     for my $v (keys %{ $readat{$S} || {} }) { next unless $readat{$S}{$v} == $b && $locals{$S}{$v}; delete $locals{$S}{$v}; $back = 1 }
+    # A variable of an atom the schema deletes at its base is no local variable: "the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it" (vGLP, Section 5.4, "Speech-act schemas as local specifications").
+    for my $v (keys %{ $delbase{$S} || {} }) { next unless $delbase{$S}{$v} == $b && $locals{$S}{$v}; delete $locals{$S}{$v}; $back = 1 }
     $svars{$S} = [ grep { !$locals{$S}{$_} } @{ $hvars{$S} } ] if $back;
 }
 $preds{$1} = 1 while defined $term && $term =~ /\batom\((\w+),/g;
@@ -111,6 +122,10 @@ if (defined $term && $term ne "") {
         my ($lv, $lb) = local_vars($rarg);
         my %local = map { $_->[0] => 1 } @$lv;
         $readat{$n} = { map { $_->[0] => $_->[1] } grep { $_->[1] } @$lv };
+        # A variable of an atom deleted at the base that the constraint also names is as it was, local (local.glp, locals_of).
+        my $carg = $kw eq "nschema" ? $args[$named ? 3 : 2] : $kw eq "qschema" ? $args[$named ? 4 : 3] : "";
+        my %incon = map { $_ => 1 } var_tokens($carg // "");
+        $delbase{$n} = { map { $_->[0] => $_->[2] } grep { $_->[2] && !$incon{$_->[0]} } @$lv };
         $lbase{$n} = $lb if defined $lb;
         $a =~ s/^\[//; $a =~ s/\]$//;
         my @hv = map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($a =~ /\w+\((\x27(?:[^\x27\\]|\\.)*\x27|\w+)\)/g);
@@ -236,6 +251,8 @@ for my $n (keys %cons) {
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
 my %named_by_button;
+# The schema a button names (README.md, 2): its text in lower case, each run of spaces an underscore, and every character that is no letter, digit, underscore or hyphen left out, as the apostrophe of [Redeem member\x27s coin], the schema redeem_members_coin (Calculus #6, vGLP_inbox.md, 2026-11-15 16:04 UTC).
+sub act_name { my ($b) = @_; (my $a = lc $b) =~ s/ +/_/g; $a =~ s/[^a-z0-9_-]//g; return $a }
 # The guarding roles of a schema whose persons must consent to its act and are not asked (below).
 my %consent_of;
 sub realising {
@@ -283,7 +300,7 @@ sub read_bindings {
 }
 sub bound_button {
     my ($b) = @_;
-    (my $a = lc $b) =~ s/ +/_/g;
+    my $a = act_name($b);
     return $b unless exists $bind{$a};
     (my $n = $bind{$a}) =~ s/_/ /g;
     return ucfirst $n;
@@ -499,7 +516,7 @@ for my $f (@order) {
             $pi++;
             my $k = "$f\x02$ln\x02$pi";
             push @line_keys, $k;
-            $line_buttons{$k} = [ map { (my $a = lc $_) =~ s/ +/_/g; $a } ($part =~ /\[([^\]]+)\]/g) ];
+            $line_buttons{$k} = [ map { act_name($_) } ($part =~ /\[([^\]]+)\]/g) ];
             (my $nm = $f) =~ s{.*/}{}; $nm =~ s/\.txt$//;
             (my $txt = $part) =~ s/^\s+//;
             $line_shown{$k} = "$nm: $title: $txt";
@@ -656,7 +673,7 @@ for my $f (@order) {
                     my @fields;
                     while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
                     $tail =~ /^(\[|$)/ or die "pragmas.sh: $f: the pragma \"$title\" has words it cannot read: $tail\n";
-                    (my $ba = lc $buttons[0]) =~ s/ +/_/g;
+                    my $ba = act_name($buttons[0]);
                     if ($replaced{$lk} && $replaced{$lk}{$ba}) {
                         (my $g = (split /\x02/, $replaced{$lk}{$ba})[0]) =~ s{.*/}{};
                         push @lines_out, "$name: $title: $pr->{name} [$buttons[0]]" . join("", map { " <$_>" } @fields) . ": replaced by the line of $g with a button of the same name, the other buttons of the line standing";
@@ -664,7 +681,7 @@ for my $f (@order) {
                     }
                     # An inherited button stands while the contract has an act it names, and goes with its fields and its questions where it has none (vGLP 40f8444, Section 5.4, "The contract’s words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it"), as GC’s [Mint] in DGC, whose term has no mint; a button of the contract itself that names no act is a fault (below).
                     if ($f ne $top && @snames) {
-                        my @gone = grep { (my $a = lc $_) =~ s/ +/_/g; !grep { exists $roles{$_} } realising($a) } @buttons;
+                        my @gone = grep { my $a = act_name($_); !grep { exists $roles{$_} } realising($a) } @buttons;
                         if (@gone) {
                             push @lines_out, "$name: $title: $pr->{name} " . join("", map { "[$_]" } @gone) . ": gone, the contract having no act it names";
                             my %g = map { $_ => 1 } @gone;
@@ -674,7 +691,7 @@ for my $f (@order) {
                     }
                     my (%said, %by, %plof, %fit, %err, %reals);
                     for my $button (@buttons) {
-                        (my $a = lc $button) =~ s/ +/_/g;
+                        my $a = act_name($button);
                         my @real = realising($a);
                         $reals{$button} = [@real];
                         $covered{$_} = $button for @real;
@@ -776,7 +793,7 @@ sub field_slots {
         (my $vn = $v->[1][0][0] // "") =~ s/^\x27|\x27$//g;
         next if $locals{$S} && $locals{$S}{$vn};
         $i++;
-        next unless $v->[0] =~ /^(pvar|svar|num|real)$/;
+        next unless $v->[0] =~ /^(pvar|svar|num|real|const)$/;
         push @sl, [$v->[0], $i, $vn];
     }
     return @sl;
@@ -788,7 +805,7 @@ sub atom_keys {
     my ($fn, $as) = @$t;
     return ("r$as->[0][0]") if ($fn eq "role" || $fn eq "own") && @$as == 1 && $as->[0][0] =~ /^\d+$/;
     my $uq = sub { (my $x = $_[0]) =~ s/^\x27|\x27$//g; return $x };
-    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|real|own_var)$/ && @$as == 1;
+    return ("v" . $uq->($as->[0][0])) if $fn =~ /^(pvar|svar|num|real|const|own_var)$/ && @$as == 1;
     return (atom_keys($as->[0]), "v" . $uq->($as->[1][0])) if $fn eq "ext" && @$as == 2;
     return map { atom_keys($_) } @$as;
 }

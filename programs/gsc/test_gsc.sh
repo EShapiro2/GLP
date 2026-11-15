@@ -104,14 +104,14 @@ echo "=== gsc: the syntactically-grassroots checker ==="
 # in the checker's form with its roles' names, introduce's agent variable
 # Carol as GKK.glp writes it.
 asread() { run "as_read($1, R)." | sed -e 's/^\(GLP> \)*//' | grep -E '^R = ' | head -1 | sed -e 's/^R = //'; }
-GKKT=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
+GKKT=$(term "$GLP_DIR/programs/gsc/gkk_fixture.glp" gkk_fixture)   # the tests' fixture, a plain list of GKK's schemas; the adopted GKK.glp, which declares knows reflexive, is checked at the end of this script
 check "GKK's contract is read from programs/gsc/GKK.glp, in the clause syntax, establish first" \
       "[sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], " "$GKKT"
 GKKV=$(asread "$GKKT")
 check "GKK as the checker reads it: establish forbidding the identity it adds, then acquaint and introduce, each naming its roles" \
       "[schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], " "$GKKV"
 GKK_SCHEMAS="${GKKT%]}"
-GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
+GSGT=$(term "$GLP_DIR/programs/gsc/gsg_fixture.glp" gsg_fixture)   # the tests' fixture, as gkk_fixture.glp
 check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$GKK_SCHEMAS" "$GSGT"
 GSNT=$(term "$GLP_DIR/programs/gsc/gsn_fixture.glp" gsn_fixture)   # GSN as GSC wrote it by hand until its adoption (2026-11-15), the tests' fixture; GSN.glp is printed from GSN.txt
 # The fixture gsn_fixture.glp writes GKK's schemas as GSC wrote them by hand, establish adding identity alone; the adopted GSN.glp, which begins with the adopted GKK's schemas, is checked at the end of this script.
@@ -135,21 +135,22 @@ check_eq "as_read descends an environment contract's reflexive body as unnamed/2
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
 # GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
 GNWI=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
-GSNPT=$(instance "$GLP_DIR/programs/gai/GSNP.glp" gsnp "$GNWI")
-check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
+# GSNP and GAI are adopted from the Calculus by GAI (2026-11-15): each file holds its full schemas, a term of its own and no instance of GnW, knows reflexive.
+GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+check "GSNP's contract is reflexive, in the clause syntax" "reflexive([knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
-check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([friend, knows], [schema(" "$GSNPV"
-check "and reads its author(y) = Alice" "eq(author_of(svar(y)), role(" "$GSNPV"
+check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([knows], [schema(" "$GSNPV"
+check "and reads the author of its message, author(Text) = a role" "eq(author_of(svar('Text')), role(" "$GSNPV"
 # A ward role has at most one guardian role (GSC a885275, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
-GAIT=$(instance "$GLP_DIR/programs/gai/GAI.glp" gai "$GNWI")
+GAIT=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
 check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
-      "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, operator_of, operated_by)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [identity, person])" \
+      "V = syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
 # DGC is adopted from the Calculus by Currencies (2026-11-15): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
-check "DGC's contract is an environment contract" "environment([today], [sas(" "$DGCT"
+check "DGC's contract is an environment contract, knows reflexive within it" "environment([today, one_denomination], reflexive([knows], [sas(" "$DGCT"
 DGCV=$(asread "$DGCT")
-check "as_read gives DGC its wrapper, each schema in the checker's form" "environment([today], [schema(" "$DGCV"
+check "as_read gives DGC its wrappers, each schema in the checker's form" "environment([today, one_denomination], reflexive([knows], [schema(" "$DGCV"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCV" "$(asread "$DGCV")"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
       "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
@@ -2629,8 +2630,8 @@ check "GnW as adopted is certified with wards, ward its mark, guardian and has_g
 # GFP and GSN as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each begins with the adopted GKK's schemas and is certified; an item and a message are speech acts with a name, a forwarded item is signed over, and a post is delivered once to each member.
 AGFP=$(term "$GLP_DIR/programs/gsc/GFP.glp" gfp)
 AGSN=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-check "GFP as adopted begins with the adopted GKK's schemas" "${AGKK%]}" "$AGFP"
-check "GSN as adopted begins with the adopted GKK's schemas" "${AGKK%]}" "$AGSN"
+check "GFP as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGFP"
+check "GSN as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGSN"
 check "GFP's forward adds the item signed over by the forwarder" "atom(item, ['Bob', sgn('Item', 'Alice')])" "$AGFP"
 out=$(run "check($AGFP, V1)." "check($AGSN, V2).")
 check "GFP as adopted is certified" "V1 = syntactically_grassroots" "$out"
@@ -2638,17 +2639,69 @@ check "GSN as adopted is certified" "V2 = syntactically_grassroots" "$out"
 
 # A contract's term may declare its parameters, its environment predicates and its reflexive predicates together, parametric outermost, then environment, then reflexive (programs/self.glp, SDeclared and SBody; reported by GO #6 and Calculus #6, 2026-11-15: contract_named(gbank, environment([today], reflexive([knows], [...]))) did not type).  A file whose contract_named has such a term loads, the term is checked, and an instance of a parametric one keeps both declarations.
 DECLF="$GLP_DIR/programs/gsc/zz_declared_fixture.glp"
-printf 'procedure contract_named(Constant?, SDeclared).\ncontract_named(both, environment([today], reflexive([friend], %s))).\ncontract_named(all3, parametric([friend], environment([today], reflexive([friend], %s)))).\n' "$AGSG" "$AGSG" > "$DECLF"
+printf 'procedure contract_named(Constant?, SDeclared).\ncontract_named(both, environment([today], reflexive([friend], %s))).\ncontract_named(all3, parametric([friend], environment([today], reflexive([friend], %s)))).\n' "$GSGT" "$GSGT" > "$DECLF"
 DBOTH=$(term "$DECLF" both)
 DALL3=$(term "$DECLF" all3)
 rm -f "$DECLF"
 check "a term declaring environment and reflexive predicates together is read from its file" "environment([today], reflexive([friend], [sas(establish, " "$DBOTH"
 check "a parametric term declaring both is read from its file" "parametric([friend], environment([today], reflexive([friend], [sas(establish, " "$DALL3"
-out=$(run "check($DBOTH, V1)." "instantiate($DALL3, [friend = pal], [], D), check(D?, V2)." "instantiate(parametric([friend], environment([today], $AGSG)), [friend = pal], [], E).")
+out=$(run "check($DBOTH, V1)." "instantiate($DALL3, [friend = pal], [], D), check(D?, V2)." "instantiate(parametric([friend], environment([today], $GSGT)), [friend = pal], [], E).")
 check "a contract declaring both is certified" "V1 = syntactically_grassroots" "$out"
 check "an instance of a parametric contract declaring both keeps both declarations" "D = environment([today], reflexive([pal], [sas(establish, " "$out"
 check "and is certified" "V2 = syntactically_grassroots" "$out"
 check "an instance of a parametric contract declaring environment predicates alone keeps them" "E = environment([today], [sas(establish, " "$out"
+
+# A value variable over constants, const(X) (GSC #17, 2026-11-15; the appendix "Values in Speech-Act Schemas": "Which types the values have --- numbers, strings, dates --- is the realisation's; the contract is parametric in them, and a value variable of a schema has a type, which the schema's term form writes"; Section 3.2: "Speech-act schemas allow values of any type").  The adopted GKK with appoint, which adds role(Bob, Alice, Role) at Bob, Role the name of a role its appointers choose, and act_as, guarded by Bob, which requires role(Bob, Alice, val('Treasurer')): certified, the variable read as a value variable, num(X) in the atom and const(X) among the schema's variables, and printed by its name; written const(X) and num(X), or const(X) and real(X), or const(X) and as a multiplicity, it is of two types; it stands in an inequality of a constraint, and in an equality with a constant; in the matches of def:unobstructed it meets a constant value, so a schema of arity one adding tag(Alice, const('T')) supplies tag(Alice, val(member)) the introductory act requires, and one adding it at another's role blocks tag(Alice, val(banned)) the act forbids, where the same schemas written num('T') do neither; and a parametric contract's predicate is extended with a value argument of the type (extended(P, Q, [const])).
+CKB="${GKKT%]}"
+C_APPOINT="sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+C_ACTAS="sas(act_as, ['Bob', 'Alice'], ['Alice'], [atom(acted, ['Bob', 'Alice'])], [atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(role, ['Bob', 'Alice', val('Treasurer')])], true, ['Bob'])"
+c_two() { # c_two <type> ; appoint with Role written const(X) in one atom and <type>(X) in another
+  printf '%s' "sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')]), atom(roled, ['Alice', 'Bob', $1('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+}
+C_MULT="sas(appoint, ['Alice', 'Bob'], ['Role'], [times(const('Role'), atom(role, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+C_REAPPOINT="sas(reappoint, ['Alice', 'Bob'], ['Role', 'New'], [not(atom(role, ['Bob', 'Alice', const('Role')])), atom(role, ['Bob', 'Alice', const('New')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(role, ['Bob', 'Alice', const('Role')])], ne(const('Role'), const('New')), ['Alice', 'Bob'])"
+C_TREASURE="sas(treasure, ['Alice', 'Bob'], ['Role'], [atom(treasurer, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(role, ['Bob', 'Alice', const('Role')])], eq(const('Role'), val('Treasurer')), ['Alice', 'Bob'])"
+out=$(run "check($CKB, $C_APPOINT, $C_ACTAS], V1)." "as_read($CKB, $C_APPOINT, $C_ACTAS], R)." \
+          "check($CKB, $(c_two num)], V2)." "check($CKB, $(c_two real)], V3)." "check($CKB, $C_MULT], V4)." \
+          "check($CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT, $C_TREASURE], V5)." \
+          "notation_contract($CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT])." \
+          "compile_schema_in(t, $CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT], reappoint).")
+check "a contract adding role with a variable over constants and requiring it with a constant is certified" "V1 = syntactically_grassroots" "$out"
+check "the variable over constants is read as a value variable, const(X) among the schema's variables and num(X) in its atom" \
+      "schema(appoint, ['Alice', 'Bob'], [const('Role')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(role, [role(1), num('Role')])], [], [atom(identity, [])], [])])" "$out"
+check "the constant beside it is read as a constant value" "atom(role, [pvar('Alice'), val('Treasurer')])" "$out"
+check "a variable written const(X) and num(X) is of two types" "V2 = malformed([value_type(appoint, 'Role')])" "$out"
+check "a variable written const(X) and real(X) is of two types" "V3 = malformed([value_type(appoint, 'Role')])" "$out"
+check "a variable written const(X) as a multiplicity is of two types" "V4 = malformed([value_type(appoint, 'Role')])" "$out"
+check "variables over constants in an inequality of a constraint, and in an equality with a constant, are certified" "V5 = syntactically_grassroots" "$out"
+check "the notation prints the variable over constants by its name" \
+      "appoint:role(Bob,Alice,Role)<-identity(Alice),knows(Alice,Bob),identity(Bob)guardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+check "and the inequality of two" \
+      "identity(Bob),role(Bob,Alice,Role),Role!=NewguardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+check "the compilation prints the variable over constants by its name" \
+      'c'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{role}(\Alice,Role)\})\uplus\{\mathit{role}(\Alice,New)\}' "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+C_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+c_supply() { # c_supply <type> ; acquaint requires tag(Alice, val(member)), which tag, of arity one, adds with a variable of the type
+  printf '%s' "[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', $1('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', val(member)])], true, ['Alice', 'Bob'])]"
+}
+c_block() { # c_block <type> ; acquaint forbids tag(Alice, val(banned)), which tag adds at Alice with a variable of the type, at a binding with Carol anyone
+  printf '%s' "[$C_EST, sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), not(atom(tag, ['Alice', val(banned)]))], true, ['Alice', 'Bob']), sas(tag, ['Carol', 'Alice'], ['T'], [atom(tag, ['Alice', $1('T')]), atom(tagged, ['Carol', 'Alice'])], [atom(identity, ['Carol']), atom(identity, ['Alice']), atom(knows, ['Carol', 'Alice'])], true, ['Carol', 'Alice'])]"
+}
+C_INTRO="[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', const('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], ['T'], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', const('T')])], true, ['Alice', 'Bob'])]"
+out=$(run "check($(c_supply const), V1)." "check($(c_supply num), V2)." "check($(c_block const), V3)." "check($(c_block num), V4)." "check($C_INTRO, V5).")
+check "a constant the introductory act requires is supplied by a schema of arity one adding it with a variable over constants" "V1 = syntactically_grassroots" "$out"
+check "and not by one adding it with a variable over the whole numbers" \
+      "V2 = not_grassroots([obstructed(acquaint, 1, atom(tag, [val(member)]), unobtainable)])" "$out"
+check "a constant the introductory act forbids is blocked by a schema adding it with a variable over constants" \
+      "V3 = not_grassroots([obstructed(acquaint, 1, atom(tag, [val(banned)]), blocked_by(tag, 2, atom(tag, [num('T')])))])" "$out"
+check "and not by one adding it with a variable over the whole numbers" "V4 = syntactically_grassroots" "$out"
+check "a variable over constants of the introductory act is a value its introduction chooses" "V5 = syntactically_grassroots" "$out"
+GNWC="[ward = org, extended(guardian_of, officer_of, [const]), extended(guarded_by, officer, [const])]"
+out=$(run "instance_faults($GNWP, $GNWC, F)." "instantiate($GNWP, $GNWC, [], D), check(D?, V)." "instantiate($GNWP, $GNWC, [], D).")
+check "an instance of GnW with officers each holding a role, a variable over constants, has no fault" "F = []" "$out"
+check "it is certified with wards, its guardianship the office" \
+      "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)]" "$out"
+check "its atoms of the office carry the variable over constants" "atom(officer_of, ['Bob', 'Carol', const(iv" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

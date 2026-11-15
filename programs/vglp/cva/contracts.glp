@@ -206,7 +206,7 @@
 %%   dawn(p?)      :  at p  not dated, +dated, +date(0)
 %%   advance(p)    :  at p  today(d), -date(t), +date(d), d > t
 %%
-%% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  days/self.glp plays it.
+%% The first date is 0.  advance is unguarded, opened by p, t local to p's role and d bound by the today(d) p's state holds, so it is proposed once a day by the own-trigger Propose: on a date d past the date p holds, and not again until the next.  today is an environment predicate of the contract, environment([today], ...), an atom an act requires and no act adds, which the device's calendar holds.  days/self.glp plays it.
 %%
 %% linear is a contract whose constraints are in GSC's form, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"; programs/gsc/self.glp at GSC-unob3 62fb0342), so that a contract compiled here has an unguarded schema whose added atom names a variable an equality gives once the atoms its first role requires bind the others (vGLP, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"):
 %%
@@ -267,8 +267,9 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
             ; ext(NameTerm, Constant).
 %% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
 %% any the wildcard of a cleared atom, as programs/gsc/self.glp writes it (GSC 327e035).
+%% const(X) a value variable over the constants, among a schema's variables and where it occurs (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"; compiler/README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-            ; num(Constant) ; real(Constant) ; any ; val(Constant).
+            ; num(Constant) ; real(Constant) ; any ; val(Constant) ; const(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -296,7 +297,9 @@ Exprs      ::= [] ; [Expr | Exprs].
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs)
-            ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms).
+            ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms)
+            ; SSchema.
+%% SSchema is a schema of the clause syntax, sas/7, the root programs/self.glp's, which GSC's reader, as_read/2, takes to the term form (programs/gsc/self.glp): wild is written in it.
 %% A safe formula and a quantified conjunct, as programs/gsc/self.glp writes them.
 Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
              ; fexists(Args, Arg, Atom, Form)
@@ -331,7 +334,7 @@ contract_named(wardclose, C?) :- wardclose(C).
 contract_named(numbers, C?) :- numbers(C).
 contract_named(bonds, C?) :- bonds(C).
 contract_named(intros, C?) :- intros(C).
-contract_named(days, C?) :- days(C).
+contract_named(days, environment([today], C?)) :- days(C).
 contract_named(linear, C?) :- linear(C).
 contract_named(forms, C?) :- forms(C).
 contract_named(counts, environment([cap, wt], C?)) :- counts(C).
@@ -341,6 +344,8 @@ contract_named(leaves, C?) :- leaves(C).
 contract_named(consts, C?) :- consts(C).
 contract_named(readings, C?) :- readings(C).
 contract_named(backed, C?) :- backed(C).
+contract_named(wild, C?) :- wild(C).
+contract_named(roles, C?) :- roles(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -374,6 +379,8 @@ introduction_named(leaves, no_introduction).
 introduction_named(consts, no_introduction).
 introduction_named(readings, no_introduction).
 introduction_named(backed, no_introduction).
+introduction_named(wild, no_introduction).
+introduction_named(roles, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -531,6 +538,25 @@ pragmas_named(backed, pragmas([list('"Treasurers"', [officer]), list('"Reserve"'
      act(owe, '"Owe"', ['""', '""', '"Amount"'], none, '"Treasurers"', by([1])),
      act(repay, '"Repay"', [], none, '"Treasurers"', by([1])),
      act(join, '"Join"', [], said([[], [person(1), text('" asks you to join its treasurers."')]]), '"Treasurers"', by([1]))])).
+pragmas_named(wild, pragmas([list('"Bonds"', [bond]), list('"Accepted"', [accepted]), list('"Roles"', [role]), list('"Titles"', [title])],
+    [act(issue, '"Issue"', ['""', '"alice"', '"maturity"'], said([[], [person(1), text('" issues you a bond."')]]), '"Bonds"', by([1])),
+     act(accept, '"Accept"', [], said([[], [person(1), text('" asks you to accept her by a bond."')]]), '"Bonds"', by([1])),
+     act(appoint, '"Appoint"', ['""', '"bob"', '"role"'], said([[], [person(1), text('" appoints you."')]]), '"Bonds"', by([1])),
+     act(boast, '"Boast"', [], none, '"Bonds"', by([1])),
+     act(report, '"Report"', ['""', '"alice"'], said([[], [person(1), text('" reports her roles to you."')]]), '"Bonds"', by([1])),
+     act(vow, '"Vow"', [], none, '"Bonds"', by([1])),
+     act(rest, '"Rest"', [], none, '"Bonds"', by([1])),
+     act(point, '"Point"', ['""', '""', '"label"'], none, '"Bonds"', by([1])),
+     act(unpoint, '"Unpoint"', [], none, '"Bonds"', by([1])),
+     act(office, '"Office"', ['""', '"bob"', '"title"'], said([[], [person(1), text('" gives you an office."')]]), '"Bonds"', by([1])),
+     act(serve, '"Serve"', [], said([[], [person(1), text('" asks to serve you."')]]), '"Bonds"', by([1])),
+     act(dissolve, '"Dissolve"', [], none, '"Bonds"', by([1])),
+     act(retire, '"Retire"', [], none, '"Bonds"', by([1]))])).
+pragmas_named(roles, pragmas([list('"Roles"', [role]), list('"Contacts"', [knows])],
+    [act(acquaint, '"Acquaint"', ['""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(appoint, '"Appoint"', ['""', '""', '"Role"'], none, '"Contacts"', by([1])),
+     act(arbitrate, '"Arbitrate"', [], none, '"Roles"', by([1])),
+     act(resign, '"Resign"', [], none, '"Roles"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -956,3 +982,89 @@ backed([schema(acquaint, [],
           [conjunct([role(3)], 1, atom(officer, [role(3)]), fcons(true), [], [], [fa(role(3), atom(cotreasurer, [role(2)]))])],
           [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true),
              [fcons(le(cardinality([], role(1), atom(owes, [role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, []), fcons(true))))])])]).
+
+%% wild: a wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"), written in the clause syntax, sas/7, as an owner writes a contract, which compile.sh has GSC's reader read, as_read/2, and GSC's checker certify, check/2, syntactically grassroots:
+%%
+%%   issue(c?, a? ; d)   :  at c  not issued(a, d), +issued(a, d)       at a  not bond(c, d), +bond(c, d)
+%%   accept(a?, c?)      :  at a  bond(c, _), not accepted(c), +accepted(c)
+%%                          at c  not accepted_by(a), +accepted_by(a)
+%%   appoint(c?, b? ; r) :  at c  not has_role(b, r), +has_role(b, r)   at b  not role(c, r), +role(c, r)
+%%   boast(b?)           :  at b  not officer, +officer, and exists r (role(_, r) at b)
+%%   report(c?, a?)      :  at c  not reported(a), +reported(a), and forall r (has_role(_, r) at c -> +title(c, r) at a)
+%%   vow(b?)             :  at b  not vowed, +vowed, and not exists g (accepted(g) at b)
+%%   rest(b?)            :  at b  not rested, +rested, and (not role(_, _) at b) or (retired at b)
+%%   point(a? ; c, l)    :  at a  issued(c, _), not pointer(c, l), +pointer(c, l)
+%%   unpoint(a? ; c, l)  :  at a  -pointer(c, l)
+%%   office(c?, b? ; const t) :  at c  not has_office(b, t), +has_office(b, t)   at b  not office(c, t), +office(c, t)
+%%   serve(b?, c?)       :  at b  office(c, _), not serving(c), +serving(c)   at c  not served_by(b), +served_by(b)
+%%   dissolve(c?, e[has_office(c, *, _)]) :  at c  not dissolved, +dissolved, -has_office(_, _)
+%%                          at each e  office(c, _), -office(c, _)
+%%   retire(c?, e[has_role(c, *, _)]) :  at c  not retired, +retired, -has_role(_, _)
+%%                          at each e  role(c, _), -role(c, _)
+%%
+%% accept requires at Alice a bond of Carol of some maturity, bond(c, _), a wildcard in an atom a role requires: her machine finds a maturity in her state, and the act neither names nor records it, as DGC's Accept by bond.  boast's exists has the wildcard in its anchor, at the place of the person in whom Bob holds a role.  report's conjunct has it in its anchor likewise, its instances the roles Carol has given, each once whoever holds it, "restricted to the variables the conjunct's literals name and without repetition".  vow has no wildcard: its exists binds g at a person's place of its anchor, accepted(g), which GSC's reader writes a speech-act variable, and the compiler an agent variable, of the kind of its place (vGLP, Section 5.4: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor"; compiler/cvac.glp, bound_kinds), so that "Bob has accepted no one" is false of a person who has accepted someone.  rest has a negated atom with wildcards inside a safe formula, not role(_, _), which holds exactly where the state has no atom it matches, "a wildcard in a negated atom is universally quantified, the atom forbidding ... every atom of the state that it matches": the compiler writes the atom the quantifier exists w1 w2 role(w1, w2) (compiler/cvac.glp, wild_fa).  unpoint, as GFF's labeled_unpoint, deletes pointer(c, l) at its base, Alice, c and l in no other atom: they are no local variables, "but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers", its request unpoint(Peer, Peer, Speech) and its pragma line naming no field, the pointer she holds binding both.  office, serve and dissolve are accept and retire at a constant's place, an office's title being a variable over the constants, const(t), as the name of a role in GO: serve's office(c, _) is a variable over the constants local to its role, and dissolve's listed role has the wildcard in its anchor, has_office(c, e, _).  retire's listed role has it in its anchor, has_role(c, e, _), the people Carol has in some role, each once, as GO's retire; each of them is required to hold a role in Carol, role(c, _), a wildcard in an atom a listed role requires, as the Calculus's GSN close required member(e, g, _) of every listed member, and loses every role in her, the cleared role(c, _), a wildcard in a negated atom, as it was.
+procedure wild(Contract).
+wild([sas(issue, ['Carol', 'Alice'], ['D'],
+          [atom(bond, ['Alice', 'Carol', num('D')]), atom(issued, ['Carol', 'Alice', num('D')])],
+          [not(atom(bond, ['Alice', 'Carol', num('D')])), not(atom(issued, ['Carol', 'Alice', num('D')]))],
+          true, ['Carol', 'Alice']),
+      sas(accept, ['Alice', 'Carol'], [],
+          [atom(accepted, ['Alice', 'Carol']), atom(accepted_by, ['Carol', 'Alice'])],
+          [atom(bond, ['Alice', 'Carol', '_']), not(atom(accepted, ['Alice', 'Carol'])), not(atom(accepted_by, ['Carol', 'Alice']))],
+          true, ['Alice', 'Carol']),
+      sas(appoint, ['Carol', 'Bob'], ['Role'],
+          [atom(has_role, ['Carol', 'Bob', 'Role']), atom(role, ['Bob', 'Carol', 'Role'])],
+          [not(atom(has_role, ['Carol', 'Bob', 'Role'])), not(atom(role, ['Bob', 'Carol', 'Role']))],
+          true, ['Carol', 'Bob']),
+      sas(boast, ['Bob'], [],
+          [atom(officer, ['Bob'])],
+          [not(atom(officer, ['Bob'])), exists(['Role'], atom(role, ['Bob', '_', 'Role']), true)],
+          true, ['Bob']),
+      sas(report, ['Carol', 'Alice'], [],
+          [atom(reported, ['Carol', 'Alice']), forall(['Role'], atom(has_role, ['Carol', '_', 'Role']), true, [atom(title, ['Alice', 'Carol', 'Role'])])],
+          [not(atom(reported, ['Carol', 'Alice']))],
+          true, ['Carol', 'Alice']),
+      sas(vow, ['Bob'], [],
+          [atom(vowed, ['Bob'])],
+          [not(atom(vowed, ['Bob'])), not(exists(['G'], atom(accepted, ['Bob', 'G']), true))],
+          true, ['Bob']),
+      sas(rest, ['Bob'], [],
+          [atom(rested, ['Bob'])],
+          [not(atom(rested, ['Bob'])), or(not(atom(role, ['Bob', '_', '_'])), atom(retired, ['Bob']))],
+          true, ['Bob']),
+      sas(point, ['Alice', 'Carol'], ['Carol', 'Label'],
+          [atom(pointer, ['Alice', 'Carol', 'Label'])],
+          [atom(issued, ['Alice', 'Carol', '_']), not(atom(pointer, ['Alice', 'Carol', 'Label']))],
+          true, ['Alice']),
+      sas(unpoint, ['Alice', 'Carol'], ['Carol', 'Label'],
+          [not(atom(pointer, ['Alice', 'Carol', 'Label']))],
+          [atom(pointer, ['Alice', 'Carol', 'Label'])],
+          true, ['Alice']),
+      sas(office, ['Carol', 'Bob'], ['Title'],
+          [atom(has_office, ['Carol', 'Bob', const('Title')]), atom(office, ['Bob', 'Carol', const('Title')])],
+          [not(atom(has_office, ['Carol', 'Bob', const('Title')])), not(atom(office, ['Bob', 'Carol', const('Title')]))],
+          true, ['Carol', 'Bob']),
+      sas(serve, ['Bob', 'Carol'], [],
+          [atom(serving, ['Bob', 'Carol']), atom(served_by, ['Carol', 'Bob'])],
+          [atom(office, ['Bob', 'Carol', '_']), not(atom(serving, ['Bob', 'Carol'])), not(atom(served_by, ['Carol', 'Bob']))],
+          true, ['Bob', 'Carol']),
+      sas(dissolve, ['Carol'], [],
+          [atom(dissolved, ['Carol']), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [not(atom(office, ['E', 'Carol', '_']))]), not(atom(has_office, ['Carol', '_', '_']))],
+          [not(atom(dissolved, ['Carol'])), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [atom(office, ['E', 'Carol', '_'])])],
+          true, ['Carol']),
+      sas(retire, ['Carol'], [],
+          [atom(retired, ['Carol']), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [not(atom(role, ['E', 'Carol', '_']))]), not(atom(has_role, ['Carol', '_', '_']))],
+          [not(atom(retired, ['Carol'])), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [atom(role, ['E', 'Carol', '_'])])],
+          true, ['Carol'])]).
+%% roles: a value variable over the constants, const(X) (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, ..., and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), as GO's appoint and the acts of GBCC and GNO that require a role by its name: acquaint(a?, b?) adds knows at both; appoint(a?, b ; r), a knowing b, adds role(a, r) at b, r the name a types; arbitrate(b? ; o) requires role(o, arbiter) at b, o local to b's role, arbiter a constant the contract names, and adds done, which it forbids; and resign(b? ; o, r) deletes role(o, r) at b, its base, so o and r are bound by the schema-binding and its request names them, resign(Peer, Peer, Constant), b choosing which role he resigns (vGLP, Section 5.4: "but for a variable of an atom the schema deletes at the base of the schema").  The place of role's second argument is of the type Constant in appoint, in arbitrate and in resign, and the constant alice types in appoint is the one arbitrate requires.
+procedure roles(Contract).
+roles([schema(acquaint, [],
+         [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]),
+          rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]),
+       schema(appoint, [const(r)],
+         [rs(guarded, [], [], [atom(knows, [role(2)])], []),
+          rs(unguarded, [atom(role, [role(1), num(r)])], [], [atom(knows, [role(1)])], [])]),
+       schema(arbitrate, [pvar(o)],
+         [rs(guarded, [atom(done, [])], [], [atom(role, [pvar(o), val(arbiter)])], [atom(done, [])])]),
+       schema(resign, [pvar(o), const(r)],
+         [rs(guarded, [], [atom(role, [pvar(o), num(r)])], [], [])])]).

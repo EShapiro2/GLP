@@ -27,7 +27,9 @@ THE ADOPTED FILE, programs/<dir>/NAME.txt, line by line:
    contract's; its own line "Logic pragmas.", where it has one, stays where it is, between the contract written in
    the grammar and the vocabulary, so that the file splits back into the two, byte for byte;
 5. where the owner has Interface pragmas, the line "Interface pragmas" and the owner's lines after its heading of
-   pragmas ("Pragmas" or "Interface pragmas"), Implementation pragmas included, as they are.
+   pragmas ("Pragmas" or "Interface pragmas"), Implementation pragmas included, as they are.  Under the heading
+   "Implementation pragmas" a line "Introduction: PRED." names the contract's introduction predicate, PRED a basic
+   state's predicate, as knows; at most one such line.
 It splits back: the contract is the lines from the first that does not begin with % up to "Logic pragmas"; the Logic
 pragmas are the title and the lines after "Logic pragmas" up to "Interface pragmas" or the end.  No line of a
 contract or of its Logic pragmas is either heading.
@@ -35,7 +37,10 @@ contract or of its Logic pragmas is either heading.
 NAME.glp is the full schemas, the term of term.glp.txt, complete in itself, in the form of programs/gsc/README.md,
 "Writing a contract": procedure contract_named(Constant?, SDeclared) and one clause, contract_named(name, Term), the
 name in lower case, every other character an underscore.  A bare term would not load: programs/gsc, the checker,
-is one project, and a NAME.glp there is one of its modules.
+is one project, and a NAME.glp there is one of its modules.  Where the adopted file has the line "Introduction: PRED."
+under "Implementation pragmas", NAME.glp also has, after it, the type Intro, procedure introduction_named(Constant?,
+Intro) and introduction_named(name, introduction(PRED)), as a NAME.glp written by hand had them, which cascade.sh and
+the compile.sh of programs/cssn and programs/apps read; with no such line, none, and those read no_introduction.
 
 A contract not adopted is read from calculus/NAME/ in the checkout, or, where the checkout has no calculus/NAME/, as
 on the branches migration and main, from calculus/NAME/ of the branch Calculus (origin/Calculus or Calculus) of the
@@ -54,6 +59,8 @@ GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.dirname(ROOT), os.p
 PATHS = os.path.join(ROOT, 'PATHS.txt')
 CALC_REFS = ('origin/Calculus', 'Calculus')      # the branch of GLP where calculus/NAME/ of every contract is
 LP, IP = 'Logic pragmas', 'Interface pragmas'
+IMPL = 'Implementation pragmas'
+INTRO = re.compile(r'^Introduction\s*:\s*([a-z][a-z0-9_]*)\.?\s*$')
 IFACE = ('Pragmas', 'Interface pragmas')
 OUTS = [('sas', '%s.txt', 'schemas.txt'), ('exp', '%s.txt', 'full-contract.txt'), ('gx', '%s.txt', 'full-pragmas.txt'),
         ('flat', '%s.txt', 'flat.txt'), ('sasx', '%s.txt', 'full-schemas.txt'), ('glp', '%s.glp.txt', 'term.glp.txt')]
@@ -294,7 +301,8 @@ def targets(name, root=None):
     manifest.md) is cascade.sh's.  A contract not yet adopted has no NAME.txt and no NAME.glp beside it."""
     root = root or GLP
     out, path = compiled(name)
-    glp = module(name, out.pop('term.glp.txt'))      # the term goes into NAME.glp, and term.glp.txt is not written
+    intro = introduction(name, read(os.path.join(GLP, path))) if path.endswith('.txt') else None
+    glp = module(name, out.pop('term.glp.txt'), intro)      # the term goes into NAME.glp, and term.glp.txt is not written
     rec = os.path.join(root, 'cascade', name)
     files = {os.path.join(rec, f): t for f, t in out.items()}
     files[os.path.join(rec, name + '.glp')] = glp
@@ -304,16 +312,44 @@ def targets(name, root=None):
     return files
 
 
-def module(name, term):
+def introduction(name, text):
+    """The introduction predicate of an adopted file: PRED of its line "Introduction: PRED." under the heading
+    "Implementation pragmas", among the lines after "Interface pragmas"; None where it has none."""
+    iface = split(text)[3] or []
+    found, impl = [], False
+    for l in iface:
+        s = l.strip()
+        if s == IMPL:
+            impl = True
+        elif s in IFACE:
+            impl = False
+        elif impl and s.startswith('Introduction'):
+            m = INTRO.match(s)
+            if not m:
+                die('%s: the line "%s" of its Implementation pragmas is not "Introduction: PRED.", PRED a predicate' % (name, s))
+            found.append(m.group(1))
+    if len(found) > 1:
+        die('%s: %d lines "Introduction: ..." in its Implementation pragmas; a contract has one introduction predicate' % (name, len(found)))
+    return found[0] if found else None
+
+
+def module(name, term, intro=None):
     """NAME.glp: the full schemas, the Calculus's term.glp.txt, in the form of programs/gsc/README.md, "Writing a
     contract": a file of its own, procedure contract_named(Constant?, SDeclared), one clause returning the contract
     under its name, the name in lower case with every other character an underscore, as cascade.py names it."""
     ident = re.sub(r'[^a-z0-9]', '_', name.lower())
     head = ('%%%% %s.glp --- printed by adopt.py from %s.txt: the contract\'s full schemas, the Calculus\'s term.glp.txt,\n'
             '%%%% complete in itself.  Not to be edited: edit %s.txt and run adopt.py %s.\n' % (name, name, name, name))
-    return head + ('%% contract_named(%s, C): the contract, %s.\n'
+    body = head + ('%% contract_named(%s, C): the contract, %s.\n'
                    'procedure contract_named(Constant?, SDeclared).\n'
                    'contract_named(%s, %s).\n' % (ident, name, ident, term.rstrip('\n')))
+    if intro:
+        body += ('\n%% introduction_named(%s, I): the contract\'s introduction predicate, %s, from the line "Introduction: %s."\n'
+                 '%% of its Implementation pragmas, in the form of programs/vglp/cva/contracts.glp.\n'
+                 'Intro ::= no_introduction ; introduction(Constant).\n'
+                 'procedure introduction_named(Constant?, Intro).\n'
+                 'introduction_named(%s, introduction(%s)).\n' % (ident, intro, intro, ident, intro))
+    return body
 
 
 def main():

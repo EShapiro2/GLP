@@ -230,16 +230,20 @@ atom_of(g(open_place, []), shown(open_place)).
 atom_of(g(nearby, [p(V1)]), shown(nearby(V1?))).
 atom_of(_, unshown) :- otherwise | true.
 
+procedure env_atom(Atom?, GAtoms).
+env_atom(nearby(V1), [g(nearby, [p(V1?)])]).
+env_atom(_, []) :- otherwise | true.
+
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [])])]).
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [atom(knows, [role(1)])])])]).
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])])).
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])).
 schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])])).
 schema_entry(open_place, schema(open_place, [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])])).
 schema_entry(close_place, schema(close_place, [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])])).
-schema_entry(encounter, schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [])])).
+schema_entry(encounter, schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [atom(knows, [role(1)])])])).
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
@@ -282,7 +286,7 @@ procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
-reflexive_preds([]).
+reflexive_preds([knows]).
 
 procedure introduction_preds(Preds).
 introduction_preds([]).
@@ -329,7 +333,7 @@ sentence_of(introduce(V1, V2, V3), Me, Ws?) :- ground(V1?), ground(V2?), ground(
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 exported procedure contract(String, Exported).
-contract('GPE: Grassroots Physical Encounters\nGPE extends GKK (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).\nA person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.\nAlice and Bob are persons.\n1. ■ Open place: Alice may declare the place she is in open. Close place: Alice may close it.\n2. ■ Encounter: Alice and Bob, nearby each other, who have both declared the place open, may jointly come to know each other.', with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, ['Alice'], [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, ['Alice'], [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [])])], pragmas([list('Contacts', [knows]), list('Nearby', [nearby])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks to introduce '), person(3), text(' to you.')], []]), 'Contacts', by([2])), act(open_place, 'Open place', [], none, 'Nearby', by([1])), act(close_place, 'Close place', [], none, 'Nearby', by([1]))], [standing(encounter, open_place, close_place)], look('📶', network), version(1, 1)))).
+contract('GPE: Grassroots Physical Encounters\nGPE extends GKK (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).\nA person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.\nAlice and Bob are persons.\n1. ■ Open place: Alice may declare the place she is in open. Close place: Alice may close it.\n2. ■ Encounter: Alice and Bob, nearby each other, who have both declared the place open, may jointly come to know each other.', with(environment([nearby], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, ['Alice'], [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, ['Alice'], [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [atom(knows, [role(1)])])])])), pragmas([list('Contacts', [knows]), list('Nearby', [nearby])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks to introduce '), person(3), text(' to you.')], []]), 'Contacts', by([2])), act(open_place, 'Open place', [], none, 'Nearby', by([1])), act(close_place, 'Close place', [], none, 'Nearby', by([1]))], [standing(encounter, open_place, close_place)], look('📶', network), version(1, 1)))).
 
 exported procedure version(Integer, Integer).
 version(1, 1).
@@ -338,8 +342,12 @@ procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(acquaint(V1, V2), Me, P?) :- ground(V1?), ground(V2?), ground(Me?) | meet_other(V1?, V2?, Me?, P).
 meeting_peer(_, _, nopeer) :- otherwise | true.
 
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
-agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?) | Thr?], D?) :- ground(Id?) | tabs(Ts), request(Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [], st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), []), D2), merge(D1?, D2?, D).
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question))).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?) | Thr?], Env, D?) :- ground(Id?), ground(Env?) | env_atoms(Env?, G0), env_atoms(Env?, G1), atoms_of(G1?, V0), tabs(Ts), request(Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [], st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), []), D2), merge(D1?, D2?, D).
+
+procedure env_atoms(List(Atom)?, GAtoms).
+env_atoms([], []).
+env_atoms([A | As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
 
 procedure request(Stream(Trigger), Stream(Ask(Question))).
 request(S1?, [ask('Request?', request_r(X)) | D?]) :- request1(S1, X?, D).

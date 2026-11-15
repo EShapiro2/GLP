@@ -7,6 +7,8 @@
 %% ---------------------------------------------------------------------------
 
 Peer     ::= Key.
+Speech   ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; program(Module) ; Speech.
 Class ::=
 establish(Peer)
 ;
@@ -14,43 +16,37 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer, Integer)
-;
-mint_bond(Peer, Integer, Integer)
-;
-first_date(Peer, Integer)
-;
-advance(Peer, Integer)
+issue(Peer, Integer)
 ;
 swap(Peer, Peer, Peer, Integer, Peer, Integer)
-;
-swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
-;
-swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer)
-;
-swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
 ;
 pay(Peer, Peer, Integer)
 ;
 redeem(Peer, Peer, Peer)
 ;
-redeem_cb(Peer, Peer, Peer, Integer)
+issue_bond(Peer, Integer, Integer)
 ;
-redeem_bc(Peer, Peer, Integer, Peer)
+swap_coin_for_bond(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
 ;
-redeem_bb(Peer, Peer, Integer, Peer, Integer)
+swap_bonds(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
 ;
-deposit_c(Peer, Peer, Peer, Integer)
+redeem_coin_against_bond(Peer, Peer, Peer, Integer)
 ;
-deposit_b(Peer, Peer, Peer, Integer, Integer)
+redeem_bond(Peer, Peer, Integer, Peer)
 ;
-release_c(Peer, Peer, Peer, Integer)
+redeem_bond_against_bond(Peer, Peer, Integer, Peer, Integer)
 ;
-release_b(Peer, Peer, Peer, Integer, Integer)
+deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
-return_c(Peer, Peer, Peer, Integer)
+deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
 ;
-return_b(Peer, Peer, Peer, Integer, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
+;
+release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
+;
+return(Peer, Peer, Peer, Peer, Speech, Integer)
+;
+return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 .
 Proposal ::=
 establish(Peer)
@@ -59,39 +55,37 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer, Integer)
-;
-mint_bond(Peer, Integer, Integer)
+issue(Peer, Integer)
 ;
 swap(Peer, Peer, Peer, Integer, Peer, Integer)
-;
-swap_cb(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
-;
-swap_bc(Peer, Peer, Peer, Integer, Integer, Peer, Integer)
-;
-swap_bb(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
 ;
 pay(Peer, Peer, Integer)
 ;
 redeem(Peer, Peer, Peer)
 ;
-redeem_cb(Peer, Peer, Peer, Integer)
+issue_bond(Peer, Integer, Integer)
 ;
-redeem_bc(Peer, Peer, Integer, Peer)
+swap_coin_for_bond(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
 ;
-redeem_bb(Peer, Peer, Integer, Peer, Integer)
+swap_bonds(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
 ;
-deposit_c(Peer, Peer, Peer, Integer)
+redeem_coin_against_bond(Peer, Peer, Peer, Integer)
 ;
-deposit_b(Peer, Peer, Peer, Integer, Integer)
+redeem_bond(Peer, Peer, Integer, Peer)
 ;
-release_c(Peer, Peer, Peer, Integer)
+redeem_bond_against_bond(Peer, Peer, Integer, Peer, Integer)
 ;
-release_b(Peer, Peer, Peer, Integer, Integer)
+deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
-return_c(Peer, Peer, Peer, Integer)
+deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
 ;
-return_b(Peer, Peer, Peer, Integer, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
+;
+release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
+;
+return(Peer, Peer, Peer, Peer, Speech, Integer)
+;
+return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 .
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
@@ -105,7 +99,7 @@ Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
            ; yield(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Atom     ::= identity ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; date(Integer) ; dated.
+Atom     ::= identity ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; escrow_coin(Peer, Peer, Peer, Speech) ; escrow_bond(Peer, Integer, Peer, Peer, Speech).
 Approved ::= Proposal.
 Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).

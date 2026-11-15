@@ -1,0 +1,4 @@
+OA: An Organisation's Act (flat text)
+OA:0 - | Alice, Bob and Carol are persons, Orga an organisation, Iris an issuer, Sum, Votes and Double numbers.
+OA:1 ■ Pay: Alice may no longer Orga holds Sum Iris-coins, Bob holds Sum Iris-coins and no longer Orga holds anyone's vote to pay Bob Sum Iris-coins, provided Alice is a participant of Orga, Orga holds the votes of at least Votes persons to pay Bob Sum Iris-coins, Double is Votes times 2 and Orga has fewer than Double persons as a participant.
+OA:1 ■ Vote to pay: Carol may Orga holds Carol's vote to pay Bob Sum Iris-coins, provided Carol is a participant of Orga, Orga has Bob as a participant and not Orga holds Carol's vote to pay Bob Sum Iris-coins.

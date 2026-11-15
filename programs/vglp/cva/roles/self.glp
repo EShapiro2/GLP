@@ -1,0 +1,76 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of vGLP's contract roles
+%% (../contracts.glp, contract_named(roles, C): acquaint(a?, b?) adds knows at
+%% both; appoint(a?, b ; r), a knowing b, adds role(a, r) at b; arbitrate(b? ;
+%% o) requires role(o, arbiter) at b and adds done; resign(b? ; o, r) deletes
+%% role(o, r) at b; r a value variable over the constants, const(r), and
+%% arbiter a constant the contract names, val(arbiter)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it: "a value variable, whose type,
+%% a whole number, a real or a constant, the schema writes with it, ..., and a
+%% variable over the constants taking the name its proposer types, as the name
+%% of the role to which an organisation appoints an officer, which another act
+%% requires as a constant the contract names" (vGLP, Section 5.4, "Speech-act
+%% schemas as local specifications").
+%%
+%% play_roles: alice asks to be acquainted with bob, and bob answers yes; she
+%% appoints him, typing arbiter, appoint(alice, bob, arbiter), and his state
+%% holds role(alice, arbiter), the atom arbitrate requires: bob arbitrates,
+%% arbitrate(bob), and his state holds done; then he resigns,
+%% resign(bob, alice, arbiter), the request naming the role he resigns, o and
+%% r being variables of the atom the act deletes at its base (vGLP, Section
+%% 5.4: "the person who proposes chooses which of their own records the act
+%% removes, so the schema-binding binds that variable and the request names
+%% it"), and it holds role(alice, arbiter) no more.
+%%
+%% play_roles_other: the same, alice typing clerk: bob's state holds
+%% role(alice, clerk), which is not the atom arbitrate requires, and his
+%% arbitrate is refused, unable.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_roles(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_roles(LA?, LB?, N?) :-
+    pair([own([A1], propose(acquaint(A1?, bob))),
+          wait(holds(knows(bob))),
+          own([A2], propose(appoint(A2?, bob, arbiter)))],
+         [approval(acquaint(alice, bob), yes),
+          wait(holds(role(alice, arbiter))),
+          own([B1], propose(arbitrate(B1?))),
+          wait(holds(done)),
+          own([B2], propose(resign(B2?, alice, arbiter))),
+          wait(lacks(role(alice, arbiter)))],
+         LA, LB, N).
+
+exported procedure play_roles_other(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_roles_other(LA?, LB?, N?) :-
+    pair([own([A1], propose(acquaint(A1?, bob))),
+          wait(holds(knows(bob))),
+          own([A2], propose(appoint(A2?, bob, clerk)))],
+         [approval(acquaint(alice, bob), yes),
+          wait(holds(role(alice, clerk))),
+          own([B1], propose(arbitrate(B1?))),
+          wait(refused(arbitrate(bob), bob, unable))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

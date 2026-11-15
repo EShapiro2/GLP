@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-c
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-c
 )
  \in c_
 {
@@ -169,6 +162,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
  \in c_
 {
@@ -422,6 +422,13 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -465,7 +472,7 @@ c_
 points_to
 }
 (
-c
+Carol
 )
 \}
 , \qquad 
@@ -489,7 +496,7 @@ identity
 knows
 }
 (
-c
+Carol
 )
 ,
 \mathit{
@@ -511,11 +518,24 @@ identity
 points_to
 }
 (
-c
+Carol
 )
  \in c_
 {
 \Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+points_to
+}
+(
+Carol
+)
+ \notin c_
+{
+\Alice
 }
 ,\\
 &
@@ -543,19 +563,9 @@ c_
 points_to
 }
 (
-\Bob
+Bob
 )
 \}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
 ,\\
 &
 \text{provided } 
@@ -567,19 +577,11 @@ identity
 points_to
 }
 (
-\Bob
+Bob
 )
  \in c_
 {
 \Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
 }
 ,\\
 &

@@ -34,6 +34,16 @@ SIGNED = r"%s(?: signed by %s)+" % (NAME, NAME)   # a place holding a thing with
 COUNTS = {"fewer than": "<", "more than": ">", "at most": "<=", "at least": ">="}   # 'fewer than D persons' in a place: <D
 COUNTW = r"(?:%s) (?:[A-Z][A-Za-z]*|\d+) persons" % "|".join(COUNTS)
 SIGNS = {v: k for k, v in COUNTS.items()}
+POSS_IN = re.compile(r"the (\w+?)s of ((?:%s) (?:[A-Z][A-Za-z]*|\d+) persons)" % "|".join(COUNTS))   # 'the votes of at least V persons' is read as 'at least V persons's vote'
+POSS_OUT = re.compile(r"((?:%s) (?:[A-Z][A-Za-z]*|\d+) persons)'s (\w+)" % "|".join(COUNTS))      # and printed so (GO #6, Calculus #6, 2026-11-15 16:37 UTC)
+
+
+def poss_in(l):
+    return POSS_IN.sub(lambda m: "%s's %s" % (m.group(2), m.group(1)), l)
+
+
+def poss_out(l):
+    return POSS_OUT.sub(lambda m: "the %ss of %s" % (m.group(2), m.group(1)), l)
 
 
 def count_code(v):
@@ -41,7 +51,10 @@ def count_code(v):
     return COUNTS[m.group(1)] + m.group(2) if m else v
 NOUNS = set()     # 'the role r' in a basic state: 'no role' and 'some role' are written for 'the role no one', 'the role someone'
 MARK = "*#"   # the last argument of an atom: *n, n copies; #n, exactly n copies and no more
-ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k)."   # of every contract
+PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
+ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
+REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
+ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
 ACTOR = "Actor"   # in a citation: the first of those who take the act cited
 IRREG = {"is": "be", "has": "have", "does": "do", "goes": "go"}
 
@@ -248,12 +261,39 @@ class Lex:
         self.req = {}     # act phrase -> the conditions it requires: 'After x ..., which requires c: effects.'
         self.rlist = {}   # role predicate -> the states that list its agents: 'those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z'
         self.short = {}   # basic state -> (the state as a sentence writes it, its holder's place): 'e is late, for x = late(x,e)'
+        self.refl = []    # basic states of two places declared reflexive: 'Reflexive: x knows y.', every agent holding x knows x
+        self.env = []     # basic states declared environment predicates: 'Environment: x is nearby y.', given by the platform
+        self.par = []     # basic states declared parameters: 'Parameters: x is entitled to propose m in z.'
 
     def copy(self):
         l = Lex()
         l.basic, l.roles, l.defs, l.req, l.short = list(self.basic), list(self.roles), list(self.defs), dict(self.req), dict(self.short)
         l.rlist = dict(self.rlist)
+        l.refl = list(self.refl)
+        l.env = list(self.env)
+        l.par = list(self.par)
         return l
+
+    def refl_preds(self):
+        """The predicates of the states declared reflexive."""
+        out = set()
+        for t in self.refl:
+            b = [(p, a) for tt, p, a in self.basic if tt == t]
+            if not b or len(b[0][1]) != 2:
+                raise Err("'Reflexive: %s.' names no basic state of two places" % t)
+            out.add(b[0][0])
+        return out
+
+    def env_preds(self, attr="env"):
+        """The predicates of the states declared environment predicates, or with attr 'par' parameters."""
+        out = set()
+        norm = lambda t: t.replace(",", "")
+        for t in getattr(self, attr):
+            b = [p for tt, p, a in self.basic if norm(tt) == norm(t)]
+            if not b:
+                raise Err("'%s%s.' names no basic state" % (ENVL if attr == "env" else PARL, t))
+            out.add(b[0])
+        return out
 
     def add(self, other):
         for attr in ("basic", "roles", "defs"):
@@ -266,6 +306,9 @@ class Lex:
             self.short.setdefault(k, v)
         for k, v in other.rlist.items():
             self.rlist.setdefault(k, v)
+        self.refl.extend(t for t in other.refl if t not in self.refl)
+        self.env.extend(t for t in other.env if t not in self.env)
+        self.par.extend(t for t in other.par if t not in self.par)
 
     def states(self):
         """Templates of states, longest first, each with its payload."""
@@ -380,7 +423,15 @@ def unfold(text, lex, neg=False, actor=None):
 
 
 def persons_of(text, lex):
-    """A list of persons: [(text, guard term)]."""
+    """A list of persons: [(text, guard term)].  A role may be followed by ', other than NAME', a person who is not of
+    those who take the act for it, written as the argument -NAME of its guard term: deciders(Carol,-Bob)."""
+    m = re.fullmatch(r"(.*), other than (%s),?" % NAME, text.strip())
+    if m:
+        out = persons_of(m.group(1), lex)
+        if not out or "(" not in out[-1][1]:
+            raise Err("'other than' after no role: " + text)
+        out[-1] = (out[-1][0] + ", other than " + m.group(2) + ",", out[-1][1][:-1] + ",-" + m.group(2) + ")")
+        return out
     out = []
     for _, pay, b, s in parse_list(text, lex.persons(), "persons"):
         if pay[0] == "name":
@@ -392,6 +443,11 @@ def persons_of(text, lex):
 
 def lits_of(text, lex, actor=None):
     return [(n, p, a) for n, _, _, p, a in unfold(text, lex, actor=actor)]
+
+
+def self_atom(pred, args, rp):
+    """An atom of a reflexive predicate naming one agent twice, x knows x."""
+    return pred in rp and len(args) == 2 and args[0] == args[1]
 
 
 def phrases_of(text, lex, actor=None):
@@ -411,8 +467,9 @@ def strip_refs(s):
 def read_gr(name, d="gr"):
     c = Contract()
     c.name = name
-    lines = [l.rstrip("\n") for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
+    lines = [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
     c.title = lines[0]
+    c.params = params_of(lines, name)
     c.first = None
     c.own = Lex()
     c.header = []      # (kind, line): vocabulary, roles, definitions, prose and names, in order
@@ -420,11 +477,20 @@ def read_gr(name, d="gr"):
     for i, l in enumerate(lines[1:]):
         m = CLAUSE.match(l)
         if m:
-            c.clauses.append((int(m.group(1)), m.group(2), m.group(3)))
+            c.clauses.append((int(m.group(1)), m.group(2), params_in(m.group(3), c.params)))
         elif l == PRAGMAS:
             continue
         elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes)\b", l):
             c.first = l
+        elif l.startswith(REFL):
+            c.own.refl.extend(t for t in l[len(REFL):].rstrip(".").split("; ") if t not in c.own.refl)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif l.startswith(ENVL):
+            c.own.env.extend(t for t in params_in(l[len(ENVL):], c.params).rstrip(".").split("; ") if t not in c.own.env)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif l.startswith(PARL):
+            c.own.par.extend(t for t in params_in(l[len(PARL):], c.params).rstrip(".").split("; ") if t not in c.own.par)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
         elif l.startswith("Vocabulary: ") or l.startswith("Roles: "):
             kind, rest = l.split(": ", 1)
             for e in rest.rstrip(".").split("; "):
@@ -433,6 +499,9 @@ def read_gr(name, d="gr"):
                 if ", listed by " in a:
                     a, by = a.split(", listed by ", 1)
                 _, p, args = parse_atom(a)
+                if any(x in args for x in c.params):
+                    raise Err("the parameter %s is a place of %s" % ([x for x in c.params if x in args][0], a))
+                t = params_in(t, c.params)
                 if by:
                     c.own.rlist[p] = by
                 NOUNS.update(re.findall(r"\bthe ([a-z]+) [b-z](?= |$)", t))
@@ -443,7 +512,7 @@ def read_gr(name, d="gr"):
                 (c.own.basic if kind == "Vocabulary" else c.own.roles).append((t, p, args))
             c.header.append(("lex", l))
         elif ": " in l and "*" not in l and tvars(l.split(": ", 1)[0]) and l.endswith("."):
-            t, r = l[:-1].split(": ", 1)
+            t, r = params_in(l[:-1], c.params).split(": ", 1)
             act = t.startswith("After ")
             t = t[6:] if act else t
             if act and ", which requires " in t:
@@ -453,6 +522,30 @@ def read_gr(name, d="gr"):
         else:
             c.header.append(("prose", l))
     return c
+
+
+def params_of(lines, name):
+    """The parameters a contract declares in lower case in a prose line, as GFF-FR's 'd > 1, an integer, is a
+    parameter of GFF-FR.' and GDO-LB's 'd > 0, an integer, and e > 0 are parameters of GDO-LB.': {letter: its name}.
+    A lower-case letter is a place of the grammar, so in the clauses the parameter is read as a name, its capital;
+    the recovered clauses write the letter again (decompile)."""
+    out = {}
+    for l in lines:
+        if re.search(r" (?:is a parameter|are parameters) of %s\.$" % re.escape(name), l):
+            for x in re.findall(r"(?<![A-Za-z])([b-z]) (?:[<>]=?|=) ", l):
+                out[x] = x.upper()
+    names = set(re.findall(NAME, " ".join(l for l in lines if re.match(NAME + r"(?:, " + NAME + r")*(?: and " + NAME + r")? (?:is|are) ", l))))
+    for x, y in out.items():
+        if y in names:
+            raise Err("the parameter %s would be read as %s, which the names line names" % (x, y))
+    return out
+
+
+def params_in(text, params):
+    """A clause with each lower-case parameter read as its name."""
+    for x, y in params.items():
+        text = re.sub(r"(?<![A-Za-z'*-])%s(?![A-Za-z'-])" % x, y, text)
+    return text
 
 
 def first_line(c, known):
@@ -487,6 +580,23 @@ def plural(w):
     if re.search(r"[^aeiou]y$", w):
         return w[:-1] + "ies"
     return w + ("es" if re.search(r"(s|sh|ch|x|z)$", w) else "s")
+
+
+def rename_act(e, new, old):
+    """An act of a contract instantiated by a word takes the new word in its name, as the full contract has it: GnW's
+    Make guardian is CSSN's Make parent, Wards befriend its Children befriend.  The name its own contract gives it
+    stays its original name, oname, by which it is joined and cited."""
+    if e.get("kind") not in ("act", "cite") or "name" not in e:
+        return
+    (_, nw), (_, ow) = article(new), article(old)
+    def one(m):
+        w = m.group(0)
+        to = plural(nw) if w.lower() == plural(ow).lower() else nw
+        return cap(to) if w[:1].isupper() else to
+    name = re.sub(r"(?i)\b(?:%s|%s)\b" % (re.escape(plural(ow)), re.escape(ow)), one, e["name"])
+    if name != e["name"]:
+        e.setdefault("oname", e["name"])
+        e["name"] = name
 
 
 def word_sub(new, old):
@@ -624,6 +734,7 @@ class World:
                     pl.defs = [(t, subst_states(r, pl, tb, new, act, put), act) for t, r, act in pl.defs]
                     pl.req = {t: subst_states(v, pl, tb, new, False, put) for t, v in pl.req.items()}
                     pl.basic = [e for e in pl.basic if e[0] != tb]
+                    pl.par = [t for t in pl.par if t.replace(",", "") != tb.replace(",", "")]   # a parameter the first line binds is no longer one
                 if sf is None:
                     new, old = item.split(" for ", 1)
                     ft, fp = word_sub(new, old)
@@ -633,6 +744,9 @@ class World:
                     pl.req = {ft(t): ft(v) for t, v in pl.req.items()}
                     pl.short = {ft(t): (ft(v[0]), v[1]) for t, v in pl.short.items()}
                     pl.rlist = {fp(k): ft(v) for k, v in pl.rlist.items()}
+                    pl.refl = [ft(t) for t in pl.refl]
+                    pl.env = [ft(t) for t in pl.env]
+                    pl.par = [ft(t) for t in pl.par]
             lex.add(pl)
         lex.add(arith())
         self.lex[n] = lex
@@ -653,6 +767,7 @@ class World:
             lex.defs = [(t, subst_states(r, lex, tb, new, act, put), act) for t, r, act in lex.defs]
             lex.req = {t: subst_states(v, lex, tb, new, False, put) for t, v in lex.req.items()}
             lex.basic = [e for e in lex.basic if e[0] != tb]
+            lex.par = [t for t in lex.par if t.replace(",", "") != tb.replace(",", "")]   # a parameter the first line binds is no longer one
 
     def binds(self, n):
         """The states that n and the contracts it is written from put for states: [(item, the contract instantiated)]."""
@@ -778,6 +893,12 @@ def compile_contract(w, n):
                     eff, cnd = unfold(fill(r, b), lex, actor=who), unfold(conds, lex, actor=who)
                     if t in lex.req:
                         cnd = cnd + unfold(fill(lex.req[t], b), lex, actor=who)
+                    rp = lex.refl_preds()
+                    if any(self_atom(x[3], x[4], rp) for x in eff):
+                        raise Err("an act adds or ends a state its holder holds of itself, which the pragmas declare reflexive")
+                    if any(x[0] and self_atom(x[3], x[4], rp) for x in cnd):
+                        raise Err("a condition that a reflexive state not hold of its holder itself")
+                    cnd = [x for x in cnd if not self_atom(x[3], x[4], rp)]      # it holds: taken as holding
                     head = [(x[0], x[3], x[4]) for x in eff]
                     if any(WILD in x[4] for x in eff if not x[0]) or any(a[:1] in "<>" for x in eff for a in x[4]):
                         raise Err("an act cannot make a state hold of someone unnamed, or of a number of persons")
@@ -871,11 +992,11 @@ def write_sas(w, n, sas):
 def put(d, n, lines):
     os.makedirs(os.path.join(ROOT, d), exist_ok=True)
     with open(os.path.join(ROOT, d, n + ".txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write("\n".join(poss_out(l) for l in lines) + "\n")
 
 
 def get(d, n):
-    return [l.rstrip("\n") for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
+    return [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
 
 
 # ---- the kinds of names; a citation in the names of its own contract -----------------
@@ -959,7 +1080,7 @@ def names_of(e, text=False):
     for l in e.get("head", []) + e["body"] + e.get("then", []):
         out.update(l[2])
     for g in e["guards"]:
-        out.update(parse_atom(g)[2] if "(" in g else [g])
+        out.update(x.lstrip("-") for x in parse_atom(g)[2]) if "(" in g else out.add(g)
     return {x.lstrip(MARK) for x in out if x != WILD and x[:1] not in "<>" and not x.isdigit()}
 
 
@@ -995,7 +1116,7 @@ def map_guard(g, mp):
     if "(" not in g:
         return mp.get(g, g)
     _, p, a = parse_atom(g)
-    return "%s(%s)" % (p, ",".join(mp.get(x, x) for x in a))
+    return "%s(%s)" % (p, ",".join("-" + mp.get(x[1:], x[1:]) if x.startswith("-") else mp.get(x, x) for x in a))
 
 
 # ---- the operations, on the schemas --------------------------------------------------
@@ -1041,14 +1162,15 @@ def instantiate_schemas(entries, items):
                 e = dict(e)
                 if e["kind"] == "act":
                     e["head"], e["body"] = sub_atoms(e["head"], [((pred, args), newl)], True), sub_atoms(e["body"], [((pred, args), newl)])
-                    for x in {a for nl in newl for a in nl[2] if a not in args}:   # a name the act only requires: someone
+                    for x in {a for nl in newl for a in nl[2] if a not in args and re.fullmatch(r"[a-z]", a)}:   # a name the act only requires: someone; a constant (Treasurer) stays
                         if not any(x in l[2] for l in e["head"]):
                             e["body"] = [(n, q, tuple(WILD if a == x else a for a in aa)) for n, q, aa in e["body"]]
                     gs = []
                     for g in e["guards"]:
                         if "(" in g and parse_atom(g)[1] == pred:
-                            b = dict(zip(args, parse_atom(g)[2]))
-                            g = "%s(%s)" % (newl[0][1], ",".join(b.get(a, a) for a in newl[0][2]))
+                            ga = parse_atom(g)[2]
+                            b = dict(zip(args, [x for x in ga if not x.startswith("-")]))
+                            g = "%s(%s)" % (newl[0][1], ",".join([b.get(a, a) for a in newl[0][2]] + [x for x in ga if x.startswith("-")]))
                         gs.append(g)
                     e["guards"] = gs
                 out.append(e)
@@ -1061,6 +1183,7 @@ def instantiate_schemas(entries, items):
                 if e["kind"] == "kept":
                     e["text"] = ft(e["text"])
                 else:
+                    rename_act(e, new, old)
                     e["head"] = [(x, fp(p), a) for x, p, a in e["head"]]
                     e["body"] = [(x, fp(p), a) for x, p, a in e["body"]]
                     e["guards"] = [fp(g) if "(" in g else g for g in e["guards"]]
@@ -1096,6 +1219,21 @@ def both(a, b, fields):
     if "oname" in b and "oname" not in a:
         o["oname"], o["name"], o["mark"] = b["oname"], b["name"], b["mark"]
     return o
+
+
+def unclash(entries):
+    """Two acts of one name, one of them joined from two contracts that name it differently: the joined act takes
+    the first of its other names, from the clauses it comes from, that no act of the contract has, so that every act
+    has a name of its own; GSNW's GSG:2+GSN:3+GnW:3, Unfriend in GSN and Person unfriend in GnW, beside GnW:3's
+    Unfriend, keeps GnW's Person unfriend."""
+    acts = [e for e in entries if e["kind"] == "act"]
+    for e in acts:
+        if "+" not in e["label"] or sum(1 for f in acts if f["name"] == e["name"]) < 2:
+            continue
+        used = {f["name"] for f in acts}
+        alt = next((m for m in e.get("names", {}).values() if m not in used), None)
+        if alt:
+            e["name"] = alt
 
 
 def inherit(entries, have, new, fields):
@@ -1157,6 +1295,7 @@ def expand_schemas(w, n):
                 entries[i] = o
         else:
             entries.append(dict(e, names={e["label"]: e["name"]}) if e["kind"] == "act" else e)
+    unclash(entries)
     w.sasx[n] = entries
     return entries
 
@@ -1210,11 +1349,17 @@ def instantiate_text(w, entries, items, p, n):
                     if kind == "state":
                         e["effects"], e["conds"] = sub_phrases(e["effects"], [(rx, new)], lex, True), sub_phrases(e["conds"], [(rx, new)], lex)
                         for x in extras(new):
+                            if re.fullmatch(NAME, x):    # a name the first line writes, a count or a constant, stays, as in instantiate_schemas
+                                continue
                             xr = r"(?<![A-Za-z])%s(?![A-Za-z])" % x
                             if not any(re.search(xr, ph) for _, ph in e["effects"]):
                                 e["conds"] = [(c, re.sub(xr, "anyone" if c else "someone", ph)) for c, ph in e["conds"]]
                     else:
-                        e["persons"] = [low(fill(new, rx.fullmatch(x).groupdict())) if rx.fullmatch(x) else x for x in e["persons"]]
+                        def role_sub(x):
+                            m = re.fullmatch(r"(.*?)((?:, other than %s,)*)" % NAME, x)      # a role and those other than whom
+                            r = rx.fullmatch(m.group(1))
+                            return low(fill(new, r.groupdict())) + m.group(2) if r else x
+                        e["persons"] = [role_sub(x) for x in e["persons"]]
                 out.append(e)
         else:
             new, old = item.split(" for ", 1)
@@ -1224,6 +1369,7 @@ def instantiate_text(w, entries, items, p, n):
                 if e["kind"] == "kept":
                     e["text"] = ft(e["text"])
                 else:
+                    rename_act(e, new, old)
                     e["effects"] = [(x, ft(s)) for x, s in e["effects"]]
                     e["conds"] = [(x, ft(s)) for x, s in e["conds"]]
                     e["persons"] = [ft(s) for s in e["persons"]]
@@ -1257,6 +1403,7 @@ def expand_text(w, n, own):
                 entries[i] = o
         else:
             entries.append(dict(e, names={e["label"]: e["name"]}) if e["kind"] == "act" else e)
+    unclash(entries)
     w.flat[n] = entries
     return entries
 
@@ -1289,6 +1436,8 @@ def phi(lines, lex):
         mm = re.match(r"(.*?) may (?:jointly )?(.*)$", body)
         persons = persons_of(mm.group(1), lex) if mm else []
         eff, cnd = lits_of(mm.group(2) if mm else low(body), lex), lits_of(conds, lex)
+        rp = lex.refl_preds()
+        cnd = [x for x in cnd if x[0] or not self_atom(x[1], x[2], rp)]
         out.append(dict(kind="act", label=label, mark=mark, name=name, head=eff, same=same, must=must,
                         body=cnd + [(False, p, a) for x, p, a in eff if x and WILD not in a], guards=[g for _, g in persons]))
     return out
@@ -1314,7 +1463,9 @@ def guard_text(g, ir):
     if "(" not in g:
         return g
     _, p, a = parse_atom(g)
-    return fill(ir[p][0], dict(zip(ir[p][1], a)))
+    ex = [x[1:] for x in a if x.startswith("-")]
+    a = [x for x in a if not x.startswith("-")]
+    return fill(ir[p][0], dict(zip(ir[p][1], a))) + "".join(", other than %s," % x for x in ex)
 
 
 def conditions(e):
@@ -1577,7 +1728,10 @@ def decompile(w, n):
     body, by = [], {}
     for e in entries:
         if e["label"].endswith(":0"):
-            head_lines.append(("prose", e["text"]))
+            if e["label"] == n + ":0" and (e["text"].startswith(REFL) or e["text"].startswith(ENVL) or e["text"].startswith(PARL)):
+                head_lines.append(e["text"])      # a declaration of the Logic pragmas, after the lexicon lines
+            else:
+                head_lines.append(("prose", e["text"]))
             continue
         if e["kind"] == "kept":
             s = e["text"]
@@ -1602,7 +1756,10 @@ def decompile(w, n):
     # the contract: its prose and names lines, its clauses; then its Logic pragmas, the lexicon lines
     out += [l[1] for l in head_lines if not isinstance(l, str)]
     for num in body:
-        out.append("%d. %s %s" % (num, by[num][0], " ".join(by[num][1])))
+        line = " ".join(by[num][1])
+        for x, y in w.contract(n).params.items():       # a lower-case parameter written as the contract writes it
+            line = re.sub(r"(?<![A-Za-z'*-])%s(?![A-Za-z'-])" % y, x, line)
+        out.append("%d. %s %s" % (num, by[num][0], line))
     lexl = [l for l in head_lines if isinstance(l, str) and l != PRAGMAS]
     if lexl:
         out += [PRAGMAS] + lexl

@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -1144,13 +1137,6 @@ knows
 )
 ,
 \mathit{
-today
-}
-(
-Today
-)
-,
-\mathit{
 one_denomination
 }
 (
@@ -1175,6 +1161,13 @@ Day
 \mathit{
 identity
 }
+,
+\mathit{
+today
+}
+(
+Today
+)
 ,
 \text{\textcent}
 (
@@ -1286,13 +1279,6 @@ knows
 )
 ,
 \mathit{
-today
-}
-(
-Today
-)
-,
-\mathit{
 one_denomination
 }
 (
@@ -1317,6 +1303,13 @@ Day
 \mathit{
 identity
 }
+,
+\mathit{
+today
+}
+(
+Today
+)
 ,
 \mathit{
 bond
@@ -1362,7 +1355,7 @@ Sum
 \cdot
 \text{\textcent}
 (
-Dave
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -1383,7 +1376,7 @@ Sum
 escrow_coin
 }
 (
-Dave
+\mathit{Carol}
 ,
 \Alice
 ,
@@ -1391,7 +1384,30 @@ Bob
 ,
 Cond
 )
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
 \}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -1418,7 +1434,7 @@ Sum
 \cdot
 \text{\textcent}
 (
-Dave
+\mathit{Carol}
 )
 \}
  \subseteq c_
@@ -1436,9 +1452,30 @@ knows
 (
 \Alice
 )
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
 ,
 \mathit{
-escrow_one_denomination
+issued_in
+}
+(
+Dollar
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+escrow_denomination
 }
 (
 \Alice
@@ -1446,8 +1483,10 @@ escrow_one_denomination
 Bob
 ,
 Cond
+,
+\ast
 )
- \in c_
+ \notin c_
 {
 \Bob
 }
@@ -1481,7 +1520,7 @@ Sum
 bond
 }
 (
-Dave
+\mathit{Carol}
 ,
 Day
 )
@@ -1504,7 +1543,7 @@ Sum
 escrow_bond
 }
 (
-Dave
+\mathit{Carol}
 ,
 Day
 ,
@@ -1514,7 +1553,30 @@ Bob
 ,
 Cond
 )
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
 \}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -1543,7 +1605,7 @@ Sum
 bond
 }
 (
-Dave
+\mathit{Carol}
 ,
 Day
 )
@@ -1563,9 +1625,32 @@ knows
 (
 \Alice
 )
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
 ,
 \mathit{
-escrow_one_denomination
+issued_bond_in
+}
+(
+Dollar
+,
+Day
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+escrow_denomination
 }
 (
 \Alice
@@ -1573,8 +1658,10 @@ escrow_one_denomination
 Bob
 ,
 Cond
+,
+\ast
 )
- \in c_
+ \notin c_
 {
 \Bob
 }
@@ -1656,24 +1743,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-met
-}
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-Alice
-,
-\Bob
-,
-Cond
 )
 ,
 Sum
@@ -1796,24 +1865,6 @@ knows
 \Bob
 )
 ,
-\mathit{
-met
-}
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-Alice
-,
-\Bob
-,
-Cond
-)
-,
 Sum
 \cdot
 \mathit{
@@ -1928,24 +1979,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-failed
-}
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-\Bob
-,
-Bob
-,
-Cond
 )
 ,
 Sum
@@ -2068,24 +2101,6 @@ knows
 \Bob
 )
 ,
-\mathit{
-failed
-}
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-\Bob
-,
-Bob
-,
-Cond
-)
-,
 Sum
 \cdot
 \mathit{
@@ -2190,7 +2205,7 @@ issued_in
 \}
 \end{align*}
 \iffalse
-issue_bond_2
+issue_denominated_bond
 \fi
 \begin{align*}
 &
@@ -2255,6 +2270,332 @@ Today
 \}
 \end{align*}
 \iffalse
+deposit_more
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+\mathit{Carol}
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\mathit{Carol}
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_in
+}
+(
+Dollar
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+deposit_bond_more
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+\mathit{Carol}
+,
+Day
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+\mathit{Carol}
+,
+Day
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+\mathit{Carol}
+,
+Day
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_bond_in
+}
+(
+Dollar
+,
+Day
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
 accept
 \fi
 \begin{align*}
@@ -2270,6 +2611,8 @@ c_
 }
  \uplus 
 \{
+Limit
+\cdot
 \mathit{
 accepts
 }
@@ -2341,6 +2684,8 @@ c_
 }
  \uplus 
 \{
+Limit
+\cdot
 \mathit{
 accepts
 }
@@ -2373,7 +2718,7 @@ bond
 (
 \Bob
 ,
-\ast
+Day
 )
  \in c_
 {
@@ -2390,7 +2735,7 @@ issued_bond_in
 (
 Dollar
 ,
-\ast
+Due
 )
  \in c_
 {
@@ -2403,7 +2748,7 @@ Dollar
 \}
 \end{align*}
 \iffalse
-pay_2
+pay_accepted_coins
 \fi
 \begin{align*}
 &

@@ -1,21 +1,26 @@
 # A run of the cascade on GFF-FR-BC
 
-- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `763e06ce`.
-- The paper: `https://github.com/EShapiro2/GFF-Grassroots-Feeds-and-Followers.git` at `791e2f24`, for the paper's own record.
-- The tools: this repository at `763e06ce` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-13 00:34 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `b9c3aaf8`.
+- The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
+- Adopted from the Calculus: `programs/gff/GFF-FR-BC.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/GFF-FR-BC.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
+- Run on 2026-11-15 18:28 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `b9c3aaf8`; each artefact's source and tool:
 
-| Artefact | What it holds |
-|---|---|
-| `GFF-FR-BC.txt` | the contract |
-| `GFF-FR-BC.glp` | the act schemas, as terms |
-| `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
-| `verdict.txt` | the checker's verdict: `syntactically_grassroots` |
-| `vmat.tex` | the VMAT form, 16 displays, one per schema |
-| `platform.vglp` | the canonical CVA platform, as printed |
-| `platform.glp` | the platform compiled to GLP, as emitted |
-| `interface.glp` | the platform's interface in sGLP's term form, as programs/sglp/cva/interface.sh prints it |
-| (no run) | vGLP keeps no plays for gff_fr_bc |
+| Artefact | Source | Tool | What it holds |
+|---|---|---|---|
+| `GFF-FR-BC.txt` | `programs/gff/GFF-FR-BC.txt` | copied | the contract, its Logic pragmas and its Interface pragmas |
+| `GFF-FR-BC.glp` | `programs/gff/GFF-FR-BC.txt` | calculus/tools/adopt.py, copied from `programs/gff/GFF-FR-BC.glp` | the full schemas, the term the checker reads |
+| `schemas.txt` | `GFF-FR-BC.txt`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |
+| `full-contract.txt` | `GFF-FR-BC.txt` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |
+| `full-pragmas.txt` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |
+| `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
+| `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
+| `verdict.txt` | `GFF-FR-BC.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots` |
+| `vmat.tex` | `GFF-FR-BC.glp` | programs/gsc, compile_contract/2 | the VMAT form, 17 displays, one per schema |
+| `platform.vglp` | `GFF-FR-BC.glp` read by programs/gsc's as_read/2, and `GFF-FR-BC.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
+| `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
+| `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
+| (no run) | | | vGLP keeps no plays for gff_fr_bc |
 
 What the tools refused or lacked:
 - run: vGLP keeps no plays for gff_fr_bc
